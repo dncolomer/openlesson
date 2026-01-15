@@ -1,0 +1,289 @@
+@import "tailwindcss";
+
+/* ============================================
+   OPENLESSON DESIGN SYSTEM
+   Clean, focused learning interface
+   ============================================ */
+
+:root {
+  /* Primary Colors - Learning-focused palette */
+  --color-cream: #FAFAFA;
+  --color-ivory: #F5F5F5;
+  --color-sand: #E5E5E5;
+  
+  /* Brand Accent - Deep Indigo (knowledge, depth) */
+  --color-indigo: #4F46E5;
+  --color-indigo-light: #6366F1;
+  --color-indigo-dark: #4338CA;
+  
+  /* Secondary Accent - Emerald (growth, success) */
+  --color-emerald: #10B981;
+  --color-emerald-light: #34D399;
+  --color-emerald-dark: #059669;
+  
+  /* Neutrals */
+  --color-charcoal: #1F2937;
+  --color-graphite: #374151;
+  --color-stone: #6B7280;
+  --color-pebble: #9CA3AF;
+  
+  /* Semantic Colors */
+  --color-success: #10B981;
+  --color-warning: #F59E0B;
+  --color-error: #EF4444;
+  --color-info: #3B82F6;
+  
+  /* Shadows */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.12);
+  --shadow-xl: 0 24px 48px rgba(0, 0, 0, 0.16);
+  
+  /* Applied Colors */
+  --background: var(--color-cream);
+  --foreground: var(--color-charcoal);
+  --muted: var(--color-stone);
+  --accent: var(--color-indigo);
+  --accent-foreground: #ffffff;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  
+  /* Custom Colors */
+  --color-cream: var(--color-cream);
+  --color-ivory: var(--color-ivory);
+  --color-sand: var(--color-sand);
+  --color-indigo: var(--color-indigo);
+  --color-indigo-light: var(--color-indigo-light);
+  --color-indigo-dark: var(--color-indigo-dark);
+  --color-emerald: var(--color-emerald);
+  --color-emerald-light: var(--color-emerald-light);
+  --color-emerald-dark: var(--color-emerald-dark);
+  --color-charcoal: var(--color-charcoal);
+  --color-graphite: var(--color-graphite);
+  --color-stone: var(--color-stone);
+  --color-pebble: var(--color-pebble);
+  --color-success: var(--color-success);
+  --color-warning: var(--color-warning);
+  --color-error: var(--color-error);
+  --color-info: var(--color-info);
+  
+  /* Typography */
+  --font-sans: var(--font-inter);
+}
+
+/* ============================================
+   BASE STYLES
+   ============================================ */
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans), system-ui, sans-serif;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Headings */
+h1, h2, h3, h4 {
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+}
+
+/* Selection styling */
+::selection {
+  background: var(--color-indigo);
+  color: white;
+}
+
+/* Focus styles */
+:focus-visible {
+  outline: 2px solid var(--color-indigo);
+  outline-offset: 2px;
+}
+
+/* ============================================
+   UTILITY CLASSES
+   ============================================ */
+
+.text-balance {
+  text-wrap: balance;
+}
+
+.gradient-text {
+  background: linear-gradient(135deg, var(--color-indigo) 0%, var(--color-indigo-light) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Glass effect */
+.glass {
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-ivory);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-pebble);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-stone);
+}
+
+/* ============================================
+   COMPONENT BASE STYLES
+   ============================================ */
+
+/* Buttons */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.875rem 1.75rem;
+  font-family: var(--font-sans), system-ui, sans-serif;
+  font-weight: 500;
+  font-size: 0.9375rem;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  border: none;
+  text-decoration: none;
+}
+
+.btn-primary {
+  background: var(--color-indigo);
+  color: white;
+  box-shadow: var(--shadow-md), 0 0 0 0 transparent;
+}
+
+.btn-primary:hover {
+  background: var(--color-indigo-dark);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-lg), 0 0 0 4px rgba(79, 70, 229, 0.1);
+}
+
+.btn-primary:active {
+  transform: translateY(0);
+}
+
+.btn-secondary {
+  background: white;
+  color: var(--color-charcoal);
+  border: 1.5px solid var(--color-sand);
+}
+
+.btn-secondary:hover {
+  border-color: var(--color-indigo);
+  color: var(--color-indigo);
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--color-graphite);
+}
+
+.btn-ghost:hover {
+  background: var(--color-ivory);
+  color: var(--color-charcoal);
+}
+
+/* Input fields */
+.input {
+  width: 100%;
+  padding: 0.875rem 1rem;
+  font-size: 1rem;
+  background: white;
+  border: 1.5px solid var(--color-sand);
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+
+.input:focus {
+  outline: none;
+  border-color: var(--color-indigo);
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+}
+
+.input::placeholder {
+  color: var(--color-pebble);
+}
+
+/* Cards */
+.card {
+  background: white;
+  border-radius: 16px;
+  box-shadow: var(--shadow-md);
+  overflow: hidden;
+}
+
+.card-hover {
+  transition: all 0.3s ease;
+}
+
+.card-hover:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-xl);
+}
+
+/* ============================================
+   ANIMATIONS
+   ============================================ */
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+@keyframes pulse-soft {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+
+.animate-pulse-soft {
+  animation: pulse-soft 3s ease-in-out infinite;
+}
+
+.shimmer {
+  background: linear-gradient(
+    90deg,
+    var(--color-ivory) 0%,
+    var(--color-cream) 50%,
+    var(--color-ivory) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 2s infinite;
+}

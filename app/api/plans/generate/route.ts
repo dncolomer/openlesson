@@ -56,7 +56,7 @@ export async function POST(request: Request) {
         metadata: {
           difficulty,
           tags: [topic.toLowerCase()],
-          model_used: "anthropic/claude-sonnet-4",
+          model_used: "google/gemini-3-pro-preview",
         },
         status: "active",
       })

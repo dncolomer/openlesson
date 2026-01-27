@@ -6,7 +6,7 @@ import type {
 } from "./types";
 
 const OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions";
-const DEFAULT_MODEL = "anthropic/claude-sonnet-4";
+const DEFAULT_MODEL = "google/gemini-3-pro-preview";
 
 interface OpenRouterConfig {
   model?: string;

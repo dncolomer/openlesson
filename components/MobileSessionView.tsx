@@ -1631,12 +1631,17 @@ export function MobileSessionView({
                 </div>
               </button>
 
-              {/* Browser Inference Toggle (neutral) */}
+              {/* Browser Inference Toggle — hidden in UI while we
+                  stabilise the feature, but the underlying state &
+                  downstream logic remain wired so we can bring it back
+                  by removing the `hidden` wrapper. */}
               <button
                 type="button"
                 onClick={() => webGPUAvailable && !isButtonDisabled && setLocalInferenceEnabled(!localInferenceEnabled)}
                 disabled={!webGPUAvailable || isButtonDisabled}
-                className="w-full mb-5 p-3.5 rounded-xl border bg-neutral-900 border-neutral-800 enabled:active:bg-neutral-800/60 enabled:active:border-neutral-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-3 text-left"
+                aria-hidden="true"
+                tabIndex={-1}
+                className="hidden w-full mb-5 p-3.5 rounded-xl border bg-neutral-900 border-neutral-800 enabled:active:bg-neutral-800/60 enabled:active:border-neutral-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors items-center gap-3 text-left"
               >
                 <div className="relative shrink-0 w-11 h-6 rounded-full bg-neutral-700">
                   <div className={`absolute top-0.5 w-5 h-5 rounded-full bg-neutral-100 shadow transition-transform ${localInferenceEnabled ? 'translate-x-5' : 'translate-x-0.5'}`} />

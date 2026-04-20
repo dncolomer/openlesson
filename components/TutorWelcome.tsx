@@ -50,7 +50,7 @@ export function TutorWelcome({
   ttsLanguage,
 }: TutorWelcomeProps) {
   const { t } = useI18n();
-  const avatarInitial = (tutorName || "T").charAt(0).toUpperCase();
+  const avatarInitial = (tutorName || "Helios").charAt(0).toUpperCase();
 
   // Assembled from three i18n keys so translators can customize each line.
   // Mobile uses a different "panelIntro" line because there is no left/right

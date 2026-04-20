@@ -157,7 +157,7 @@ export function TutorWelcome({
           disabled={isStarting}
           className={`${
             compactMobile ? "py-3.5 px-6" : "py-3 px-6"
-          } min-w-[170px] text-sm font-semibold rounded-full bg-green-500 text-neutral-950 hover:bg-green-400 active:bg-green-400 disabled:opacity-70 disabled:cursor-wait transition-colors flex items-center justify-center gap-2 shadow-[0_0_32px_rgba(34,197,94,0.28)]`}
+          } w-[210px] text-sm font-semibold rounded-full bg-green-500 text-neutral-950 hover:bg-green-400 active:bg-green-400 disabled:opacity-70 disabled:cursor-wait transition-colors flex items-center justify-center gap-2 shadow-[0_0_32px_rgba(34,197,94,0.28)]`}
         >
           {isStarting ? (
             <svg
@@ -201,7 +201,7 @@ export function TutorWelcome({
             }}
             className={`${
               compactMobile ? "py-3.5 px-6" : "py-3 px-6"
-            } min-w-[170px] text-sm font-semibold rounded-full bg-neutral-800 text-neutral-100 border-2 border-neutral-600 hover:bg-neutral-700 hover:border-neutral-500 hover:text-white active:bg-neutral-700 transition-colors flex items-center justify-center gap-2 shadow-lg shadow-black/30`}
+            } w-[210px] text-sm font-semibold rounded-full bg-neutral-800 text-neutral-100 border-2 border-neutral-600 hover:bg-neutral-700 hover:border-neutral-500 hover:text-white active:bg-neutral-700 transition-colors flex items-center justify-center gap-2 shadow-lg shadow-black/30`}
           >
             <svg
               className="w-4 h-4 shrink-0"
@@ -235,7 +235,7 @@ export function TutorWelcome({
             }}
             className={`${
               compactMobile ? "py-3.5 px-6" : "py-3 px-6"
-            } min-w-[170px] text-sm font-semibold rounded-full bg-neutral-800 text-neutral-100 border-2 border-neutral-600 hover:bg-neutral-700 hover:border-neutral-500 hover:text-white active:bg-neutral-700 transition-colors flex items-center justify-center gap-2 shadow-lg shadow-black/30`}
+            } w-[210px] text-sm font-semibold rounded-full bg-neutral-800 text-neutral-100 border-2 border-neutral-600 hover:bg-neutral-700 hover:border-neutral-500 hover:text-white active:bg-neutral-700 transition-colors flex items-center justify-center gap-2 shadow-lg shadow-black/30`}
           >
             <svg
               className="w-4 h-4 shrink-0"

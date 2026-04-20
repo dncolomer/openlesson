@@ -3065,21 +3065,20 @@ export function SessionView({ sessionId }: { sessionId: string }) {
                 onResume={showWelcomePanel ? handleWelcomePlay : handleResume}
               />
             </div>
-            {/* Left-side: Back to Dashboard button, only when paused */}
-            {isPaused && (
-              <div className="absolute left-3 top-1/2 -translate-y-1/2 shrink-0 z-10">
-                <button
-                  onClick={() => router.push("/dashboard")}
-                  className="flex items-center gap-1.5 px-2 py-1 rounded-md text-[10px] font-medium text-neutral-400 hover:text-white bg-neutral-900/80 hover:bg-neutral-800 border border-neutral-800 hover:border-neutral-700 transition-colors"
-                  title={t('session.backToDashboard')}
-                >
-                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                  </svg>
-                  <span>{t('session.backToDashboard')}</span>
-                </button>
-              </div>
-            )}
+            {/* Left-side: Back to Dashboard — always visible so users can
+                leave the session without having to pause first. */}
+            <div className="absolute left-3 top-1/2 -translate-y-1/2 shrink-0 z-10">
+              <button
+                onClick={() => router.push("/dashboard")}
+                className="flex items-center gap-1.5 px-2 py-1 rounded-md text-[10px] font-medium text-neutral-400 hover:text-white bg-neutral-900/80 hover:bg-neutral-800 border border-neutral-800 hover:border-neutral-700 transition-colors"
+                title={t('session.backToDashboard')}
+              >
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                </svg>
+                <span>{t('session.backToDashboard')}</span>
+              </button>
+            </div>
             {/* Quick layout preset buttons - absolute so they don't disturb centering of control bar */}
             <div className="absolute right-3 top-1/2 -translate-y-1/2 shrink-0 flex items-center gap-1 z-10">
               {/* Auto / Manual advance toggle */}

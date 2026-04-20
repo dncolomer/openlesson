@@ -155,6 +155,36 @@ export function SessionView({ sessionId }: { sessionId: string }) {
   const prevToolRef = useRef<Tool | null>(null);
   const resizablePaneRef = useRef<ResizablePaneHandle>(null);
   const resizablePaneRef2 = useRef<ResizablePaneHandle>(null);
+  // Source-of-truth for which of the three workspace views are visible.
+  // Kept in sync with the ResizablePane collapsed state via the toggle
+  // UI in the top bar. At least one must be true at all times. Initialized
+  // from the persisted pane layout so refreshes preserve user choice.
+  const [paneVisibility, setPaneVisibility] = useState<{
+    tools: boolean;
+    tutor: boolean;
+    plan: boolean;
+  }>(() => {
+    if (typeof window === "undefined") return { tools: true, tutor: true, plan: true };
+    const readCollapsed = (key: string): null | "left" | "right" => {
+      try {
+        const raw = window.localStorage.getItem(key);
+        if (!raw) return null;
+        const parsed = JSON.parse(raw);
+        return parsed.collapsedSide === "left" || parsed.collapsedSide === "right"
+          ? parsed.collapsedSide
+          : null;
+      } catch {
+        return null;
+      }
+    };
+    const outer = readCollapsed("session-split");
+    const inner = readCollapsed("session-split-right");
+    return {
+      tools: outer !== "left",
+      tutor: outer !== "right" && inner !== "left",
+      plan: outer !== "right" && inner !== "right",
+    };
+  });
   const [objectives, setObjectives] = useState<string[]>([]);
   const [objectiveStatuses, setObjectiveStatuses] = useState<("red" | "yellow" | "green" | "blue")[]>([]);
 
@@ -230,6 +260,8 @@ export function SessionView({ sessionId }: { sessionId: string }) {
       resizablePaneRef.current?.setLayout({ collapsedSide: "left" });
       // Inner split: collapse Plan (right) so tutor panel gets the full area
       resizablePaneRef2.current?.setLayout({ collapsedSide: "right" });
+      // Keep the visibility toggles in sync with the actual layout.
+      setPaneVisibility({ tools: false, tutor: true, plan: false });
     }, 80);
     return () => window.clearTimeout(id);
   }, [showWelcomePanel, showWelcomeModal, welcomeOpenNonce]);
@@ -1918,6 +1950,17 @@ export function SessionView({ sessionId }: { sessionId: string }) {
         window.setTimeout(() => {
           resizablePaneRef.current?.setLayout(prev.outer);
           resizablePaneRef2.current?.setLayout(prev.inner);
+          // Reverse-map the collapsed states back to the 3 visibility
+          // toggles so the UI controls match the restored layout.
+          const outerLeft = prev.outer.collapsedSide === "left";
+          const outerRight = prev.outer.collapsedSide === "right";
+          const innerLeft = prev.inner.collapsedSide === "left";
+          const innerRight = prev.inner.collapsedSide === "right";
+          setPaneVisibility({
+            tools: !outerLeft,
+            tutor: !outerRight && !innerLeft,
+            plan: !outerRight && !innerRight,
+          });
         }, 120);
       }
     }
@@ -3032,51 +3075,74 @@ export function SessionView({ sessionId }: { sessionId: string }) {
                 </div>
               </button>
               <div className="w-px h-5 bg-neutral-800 mx-1" />
-              <button
-                onClick={() => {
-                  resizablePaneRef.current?.setLayout({ leftWidth: 33.333, collapsedSide: null });
-                  resizablePaneRef2.current?.setLayout({ leftWidth: 50, collapsedSide: null });
-                }}
-                className="flex items-center gap-1.5 px-2 py-1 rounded-md text-[10px] font-medium text-neutral-400 hover:text-white bg-neutral-900/80 hover:bg-neutral-800 border border-neutral-800 hover:border-neutral-700 transition-colors"
-                title={t('session.layoutEqual')}
-              >
-                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                  <rect x="3" y="5" width="5.5" height="14" rx="1" />
-                  <rect x="9.25" y="5" width="5.5" height="14" rx="1" />
-                  <rect x="15.5" y="5" width="5.5" height="14" rx="1" />
-                </svg>
-                <span>{t('session.layoutEqual')}</span>
-              </button>
-              <button
-                onClick={() => {
-                  resizablePaneRef.current?.setLayout({ leftWidth: 50, collapsedSide: null });
-                  resizablePaneRef2.current?.setLayout({ collapsedSide: "right" });
-                }}
-                className="flex items-center gap-1.5 px-2 py-1 rounded-md text-[10px] font-medium text-neutral-400 hover:text-white bg-neutral-900/80 hover:bg-neutral-800 border border-neutral-800 hover:border-neutral-700 transition-colors"
-                title={t('session.layoutHidePlan')}
-              >
-                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                  <rect x="3" y="5" width="8" height="14" rx="1" />
-                  <rect x="12" y="5" width="8" height="14" rx="1" />
-                  <path strokeLinecap="round" d="M15 8l5 5M20 8l-5 5" />
-                </svg>
-                <span>{t('session.layoutHidePlan')}</span>
-              </button>
-              <button
-                onClick={() => {
-                  resizablePaneRef.current?.setLayout({ collapsedSide: "left" });
-                  resizablePaneRef2.current?.setLayout({ leftWidth: 50, collapsedSide: null });
-                }}
-                className="flex items-center gap-1.5 px-2 py-1 rounded-md text-[10px] font-medium text-neutral-400 hover:text-white bg-neutral-900/80 hover:bg-neutral-800 border border-neutral-800 hover:border-neutral-700 transition-colors"
-                title={t('session.layoutHideTools')}
-              >
-                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                  <rect x="3" y="5" width="8" height="14" rx="1" />
-                  <rect x="12" y="5" width="8" height="14" rx="1" />
-                  <path strokeLinecap="round" d="M4 8l5 5M9 8l-5 5" />
-                </svg>
-                <span>{t('session.layoutHideTools')}</span>
-              </button>
+              {/* Per-view visibility toggles. At least one view must stay
+                  visible; the last-enabled toggle is disabled to prevent
+                  a fully-empty workspace. Each click writes the outer +
+                  inner ResizablePane collapsed state directly. */}
+              {(() => {
+                const toolsVisible = paneVisibility.tools;
+                const tutorVisible = paneVisibility.tutor;
+                const planVisible = paneVisibility.plan;
+                const countVisible = Number(toolsVisible) + Number(tutorVisible) + Number(planVisible);
+                const applyVisibility = (tools: boolean, tutor: boolean, plan: boolean) => {
+                  setPaneVisibility({ tools, tutor, plan });
+                  // Outer pane: left = Tools, right = (Tutor + Plan)
+                  if (!tutor && !plan) {
+                    resizablePaneRef.current?.setLayout({ collapsedSide: "right" });
+                  } else if (!tools) {
+                    resizablePaneRef.current?.setLayout({ collapsedSide: "left" });
+                  } else {
+                    resizablePaneRef.current?.setLayout({ collapsedSide: null });
+                  }
+                  // Inner pane: left = Tutor, right = Plan
+                  if (!tutor && plan) {
+                    resizablePaneRef2.current?.setLayout({ collapsedSide: "left" });
+                  } else if (tutor && !plan) {
+                    resizablePaneRef2.current?.setLayout({ collapsedSide: "right" });
+                  } else {
+                    resizablePaneRef2.current?.setLayout({ collapsedSide: null });
+                  }
+                };
+                const Toggle = ({
+                  label, active, onClick, disabled,
+                }: { label: string; active: boolean; onClick: () => void; disabled: boolean }) => (
+                  <button
+                    type="button"
+                    onClick={onClick}
+                    disabled={disabled}
+                    title={label}
+                    className={`px-2.5 py-1 text-[10px] font-medium rounded-md border transition-colors ${
+                      active
+                        ? "bg-neutral-100 text-neutral-900 border-neutral-100 hover:bg-white"
+                        : "bg-neutral-900/80 text-neutral-400 border-neutral-800 hover:text-white hover:bg-neutral-800 hover:border-neutral-700"
+                    } ${disabled ? "opacity-60 cursor-not-allowed" : ""}`}
+                  >
+                    {label}
+                  </button>
+                );
+                return (
+                  <div className="flex items-center gap-1">
+                    <Toggle
+                      label={t('tools.tools')}
+                      active={toolsVisible}
+                      disabled={toolsVisible && countVisible === 1}
+                      onClick={() => applyVisibility(!toolsVisible, tutorVisible, planVisible)}
+                    />
+                    <Toggle
+                      label={t('probes.tutor')}
+                      active={tutorVisible}
+                      disabled={tutorVisible && countVisible === 1}
+                      onClick={() => applyVisibility(toolsVisible, !tutorVisible, planVisible)}
+                    />
+                    <Toggle
+                      label={t('session.sessionPlan')}
+                      active={planVisible}
+                      disabled={planVisible && countVisible === 1}
+                      onClick={() => applyVisibility(toolsVisible, tutorVisible, !planVisible)}
+                    />
+                  </div>
+                );
+              })()}
             </div>
           </div>
         )}

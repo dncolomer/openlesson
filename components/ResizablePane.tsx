@@ -208,29 +208,9 @@ export const ResizablePane = forwardRef<ResizablePaneHandle, ResizablePaneProps>
 
   return (
     <div ref={containerRef} className="flex flex-1 h-full min-h-0 overflow-hidden relative">
-      {/* ---- Left collapsed strip ---- */}
-      {collapsedSide === "left" && (
-        <div className="flex-shrink-0 w-7 bg-neutral-900 border-r border-neutral-800 flex flex-col items-center justify-center relative group cursor-pointer hover:bg-neutral-800/80 transition-colors"
-          onClick={expand}
-          title={`Expand ${leftLabel}`}
-        >
-          {/* Rotated label */}
-          <span
-            className="absolute text-[9px] font-medium text-neutral-500 uppercase tracking-widest whitespace-nowrap select-none pointer-events-none"
-            style={{
-              writingMode: "vertical-rl",
-              textOrientation: "mixed",
-              transform: "rotate(180deg)",
-            }}
-          >
-            {leftLabel}
-          </span>
-          {/* Expand chevron */}
-          <div className="absolute top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity">
-            <ChevronRight className="w-3.5 h-3.5 text-neutral-400" />
-          </div>
-        </div>
-      )}
+      {/* Left/right collapsed strips removed — a hidden panel is fully
+          hidden with no visible affordance. Visibility is driven by the
+          view toggles in SessionView's top bar. */}
 
       {/* ---- Left panel ---- */}
       <div
@@ -284,30 +264,6 @@ export const ResizablePane = forwardRef<ResizablePaneHandle, ResizablePaneProps>
       >
         {right}
       </div>
-
-      {/* ---- Right collapsed strip ---- */}
-      {collapsedSide === "right" && (
-        <div
-          className="flex-shrink-0 w-7 bg-neutral-900 border-l border-neutral-800 flex flex-col items-center justify-center relative group cursor-pointer hover:bg-neutral-800/80 transition-colors"
-          onClick={expand}
-          title={`Expand ${rightLabel}`}
-        >
-          {/* Rotated label */}
-          <span
-            className="absolute text-[9px] font-medium text-neutral-500 uppercase tracking-widest whitespace-nowrap select-none pointer-events-none"
-            style={{
-              writingMode: "vertical-rl",
-              textOrientation: "mixed",
-            }}
-          >
-            {rightLabel}
-          </span>
-          {/* Expand chevron */}
-          <div className="absolute top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity">
-            <ChevronLeft className="w-3.5 h-3.5 text-neutral-400" />
-          </div>
-        </div>
-      )}
     </div>
   );
 });

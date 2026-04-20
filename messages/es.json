@@ -1968,5 +1968,17 @@
     "title": "Planes de Aprendizaje",
     "noPlansYet": "Aún no hay planes de aprendizaje.",
     "createFirstPlan": "Crea tu primer plan"
+  },
+  "welcome": {
+    "greeting": "Hola — soy {name}, tu tutor.",
+    "panelIntro": "Bienvenido a tu Entorno de Aprendizaje Integrado (ILE). A la izquierda están tus Herramientas (Chat, Lienzo, Cuaderno y más), a la derecha tu Plan de sesión, y aquí mismo yo te guiaré con una pregunta a la vez. Usa las flechas para navegar entre preguntas conforme vayan llegando.",
+    "callToAction": "Lo más importante: piensa en voz alta mientras trabajas. Esto se llama Protocolo de Pensar en Voz Alta (Think-Aloud Protocol) — di lo que te pase por la cabeza, aunque suene desordenado o incierto. Te escucho todo el tiempo, y tu razonamiento verbal es cómo descubro dónde te atascas y qué preguntarte a continuación. Cuando estés listo, pulsa Iniciar sesión y empezaré con tu primera pregunta guía.",
+    "play": "Iniciar sesión",
+    "starting": "Iniciando…",
+    "skipTyping": "Saltar animación",
+    "openSessionPlan": "Abrir plan de sesión",
+    "hearAgain": "Escuchar de nuevo",
+    "listenToTutor": "Escuchar al tutor",
+    "stopNarration": "Detener"
   }
 }

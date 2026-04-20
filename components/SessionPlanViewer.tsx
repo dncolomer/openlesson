@@ -1,8 +1,19 @@
 "use client";
 
 import { useState } from "react";
-import { type SessionPlan } from "@/lib/storage";
+import { type SessionPlan, type ToolAction } from "@/lib/storage";
 import { useI18n } from "@/lib/i18n";
+
+/**
+ * Telemetry callback: fires on every user interaction in this panel.
+ * SessionView wires this to `logTool("session_plan", action, metadata)`
+ * so events are persisted to Supabase `session_tool` AND surfaced in the
+ * Logs UI.
+ */
+export type SessionPlanToolEvent = (
+  action: ToolAction,
+  metadata?: Record<string, unknown>,
+) => void;
 
 interface SessionPlanViewerProps {
   plan: SessionPlan | null;
@@ -16,10 +27,11 @@ interface SessionPlanViewerProps {
   onOpenResources?: (stepDescription: string) => void;
   onOpenPractice?: (stepDescription: string) => void;
   onAskAssistant?: (stepDescription: string) => void;
+  onToolEvent?: SessionPlanToolEvent;
   isSessionActive?: boolean;
 }
 
-export function SessionPlanViewer({ plan, loading, error, onAdvanceStep, onRollbackToStep, autoAdvance = true, onToggleAutoAdvance, sessionId, onOpenResources, onOpenPractice, onAskAssistant, isSessionActive = false }: SessionPlanViewerProps) {
+export function SessionPlanViewer({ plan, loading, error, onAdvanceStep, onRollbackToStep, autoAdvance = true, onToggleAutoAdvance, sessionId, onOpenResources, onOpenPractice, onAskAssistant, onToolEvent, isSessionActive = false }: SessionPlanViewerProps) {
   const { t } = useI18n();
   const [advancing, setAdvancing] = useState(false);
   const [rollingBack, setRollingBack] = useState(false);
@@ -30,7 +42,15 @@ export function SessionPlanViewer({ plan, loading, error, onAdvanceStep, onRollb
   const [analyzingAdvance, setAnalyzingAdvance] = useState(false);
 
   const toggleStep = (stepId: string) => {
-    setExpandedSteps(prev => {
+    // stepId may be suffixed with "_collapsed" when collapsing an
+    // expanded-active step; strip that for telemetry.
+    const bareId = stepId.replace(/_collapsed$/, "");
+    const willCollapse = expandedSteps.has(stepId);
+    onToolEvent?.(willCollapse ? "step_collapse" : "step_expand", {
+      stepId: bareId,
+      currentStepIndex: plan?.currentStepIndex,
+    });
+    setExpandedSteps((prev) => {
       const next = new Set(prev);
       if (next.has(stepId)) {
         next.delete(stepId);
@@ -44,6 +64,11 @@ export function SessionPlanViewer({ plan, loading, error, onAdvanceStep, onRollb
   const handleAdvanceStep = async (e: React.MouseEvent) => {
     e.stopPropagation();
     if (!onAdvanceStep || advancing) return;
+
+    onToolEvent?.("advance", {
+      fromStepIndex: plan?.currentStepIndex ?? 0,
+      autoAdvance,
+    });
 
     if (autoAdvance) {
       setAdvancing(true);
@@ -94,6 +119,10 @@ export function SessionPlanViewer({ plan, loading, error, onAdvanceStep, onRollb
   };
 
   const handleForceAdvance = async () => {
+    onToolEvent?.("force_advance", {
+      fromStepIndex: plan?.currentStepIndex ?? 0,
+      reasoning: advanceDialogReasoning.slice(0, 120),
+    });
     setShowAdvanceDialog(false);
     if (!onAdvanceStep) return;
     setAdvancing(true);
@@ -107,6 +136,10 @@ export function SessionPlanViewer({ plan, loading, error, onAdvanceStep, onRollb
   const handleRollbackToStep = async (e: React.MouseEvent, stepIndex: number) => {
     e.stopPropagation();
     if (!onRollbackToStep || rollingBack) return;
+    onToolEvent?.("rollback", {
+      targetStepIndex: stepIndex,
+      fromStepIndex: plan?.currentStepIndex ?? 0,
+    });
     setRollingBack(true);
     setRollbackTargetIdx(stepIndex);
     try {
@@ -235,10 +268,10 @@ export function SessionPlanViewer({ plan, loading, error, onAdvanceStep, onRollb
                   className={`w-full flex-1 min-h-[3rem] text-left ${cardBase}`}
                 >
                   <div className="flex items-center gap-4 px-5 py-3.5">
-                    <span className={`shrink-0 font-mono text-[10px] tabular-nums ${isActive ? "text-neutral-300" : "text-neutral-600"}`}>
+                    <span className={`shrink-0 font-mono text-[11px] tabular-nums ${isActive ? "text-neutral-300" : "text-neutral-600"}`}>
                       {String(idx + 1).padStart(2, "0")}
                     </span>
-                    <span className={`text-[13px] leading-snug truncate flex-1 ${textClass}`}>
+                    <span className={`text-[15px] leading-snug truncate flex-1 ${textClass}`}>
                       {step.description}
                     </span>
                     {isCompleted && (
@@ -266,10 +299,10 @@ export function SessionPlanViewer({ plan, loading, error, onAdvanceStep, onRollb
                   onClick={() => isActive ? toggleStep(step.id + "_collapsed") : toggleStep(step.id)}
                   className="w-full flex items-start gap-4 text-left"
                 >
-                  <span className={`shrink-0 mt-1 font-mono text-[10px] tabular-nums ${isActive ? "text-neutral-300" : "text-neutral-600"}`}>
+                  <span className={`shrink-0 mt-1 font-mono text-[11px] tabular-nums ${isActive ? "text-neutral-300" : "text-neutral-600"}`}>
                     {String(idx + 1).padStart(2, "0")}
                   </span>
-                  <p className={`flex-1 min-w-0 leading-relaxed ${isActive ? "text-[15px]" : "text-[13px]"} ${textClass}`}>
+                  <p className={`flex-1 min-w-0 leading-relaxed ${isActive ? "text-[17px]" : "text-[15px]"} ${textClass}`}>
                     {step.description}
                   </p>
                   {isCompleted && (
@@ -308,7 +341,14 @@ export function SessionPlanViewer({ plan, loading, error, onAdvanceStep, onRollb
                       </button>
                     )}
                     <button
-                      onClick={() => onOpenResources?.(step.description)}
+                      onClick={() => {
+                        onToolEvent?.("open_resources", {
+                          stepId: step.id,
+                          stepIndex: idx,
+                          stepPreview: step.description.slice(0, 60),
+                        });
+                        onOpenResources?.(step.description);
+                      }}
                       disabled={!isSessionActive}
                       title={t('sessionPlan.resources')}
                       className="py-1.5 text-[11px] font-medium rounded-md bg-neutral-900 border border-neutral-700 text-neutral-300 hover:bg-neutral-800 hover:border-neutral-600 hover:text-white disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-1.5"
@@ -319,7 +359,14 @@ export function SessionPlanViewer({ plan, loading, error, onAdvanceStep, onRollb
                       <span className="hidden @[18rem]:inline truncate">{t('sessionPlan.resources')}</span>
                     </button>
                     <button
-                      onClick={() => onOpenPractice?.(step.description)}
+                      onClick={() => {
+                        onToolEvent?.("open_practice", {
+                          stepId: step.id,
+                          stepIndex: idx,
+                          stepPreview: step.description.slice(0, 60),
+                        });
+                        onOpenPractice?.(step.description);
+                      }}
                       disabled={!isSessionActive}
                       title={t('sessionPlan.practice')}
                       className="py-1.5 text-[11px] font-medium rounded-md bg-neutral-900 border border-neutral-700 text-neutral-300 hover:bg-neutral-800 hover:border-neutral-600 hover:text-white disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-1.5"
@@ -330,7 +377,14 @@ export function SessionPlanViewer({ plan, loading, error, onAdvanceStep, onRollb
                       <span className="hidden @[18rem]:inline truncate">{t('sessionPlan.practice')}</span>
                     </button>
                     <button
-                      onClick={() => onAskAssistant?.(step.description)}
+                      onClick={() => {
+                        onToolEvent?.("ask_assistant", {
+                          stepId: step.id,
+                          stepIndex: idx,
+                          stepPreview: step.description.slice(0, 60),
+                        });
+                        onAskAssistant?.(step.description);
+                      }}
                       disabled={!isSessionActive}
                       title={t('sessionPlan.ask')}
                       className="py-1.5 text-[11px] font-medium rounded-md bg-neutral-900 border border-neutral-700 text-neutral-300 hover:bg-neutral-800 hover:border-neutral-600 hover:text-white disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-1.5"
@@ -398,7 +452,13 @@ export function SessionPlanViewer({ plan, loading, error, onAdvanceStep, onRollb
             </p>
             <div className="flex gap-2.5">
               <button
-                onClick={() => setShowAdvanceDialog(false)}
+                onClick={() => {
+                  onToolEvent?.("cancel_advance", {
+                    fromStepIndex: plan?.currentStepIndex ?? 0,
+                    reasoning: advanceDialogReasoning.slice(0, 120),
+                  });
+                  setShowAdvanceDialog(false);
+                }}
                 className="flex-1 py-2.5 text-sm text-neutral-400 border border-neutral-700 hover:border-neutral-600 rounded-lg transition-colors"
               >
                 {t('sessionPlan.stayOnStep')}

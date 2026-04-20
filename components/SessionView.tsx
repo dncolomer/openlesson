@@ -34,6 +34,7 @@ import {
   type ObserverMode,
   type Frequency,
   type ToolName,
+  type ToolAction,
   type RequestType,
 } from "@/lib/storage";
 import { playArchiveSound, playStepCompleteSound, playSessionCompleteSound } from "@/lib/sounds";
@@ -44,7 +45,6 @@ import { SessionPlanViewer } from "./SessionPlanViewer";
 import { ResizablePane, type ResizablePaneHandle } from "./ResizablePane";
 import { WhiteboardCanvas } from "./WhiteboardCanvas";
 import { ToolsPanel, type Tool } from "./ToolsPanel";
-import { ToolsHelp } from "./ToolsHelp";
 import { LLMChat, type ChatMessage } from "./LLMChat";
 import { DataInputTool } from "./DataInputTool";
 import { LogsTool, type LogEntry } from "./LogsTool";
@@ -64,6 +64,7 @@ import { useSessionHeartbeat, type StorageHeartbeatResult, type AnalysisHeartbea
 import { retryWithResult } from "@/lib/retry";
 import { useI18n } from "@/lib/i18n";
 import { tutoringLocales, tutoringLanguageNames } from "@/lib/tutoring-languages";
+import { isSessionWelcomeSeen, markSessionWelcomeSeen } from "@/lib/welcomeState";
 
 
 // Check if a new probe is a duplicate of any existing probe (normalized comparison)
@@ -196,8 +197,52 @@ export function SessionView({ sessionId }: { sessionId: string }) {
     return localStorage.getItem("tutorial-banner-dismissed") !== "true";
   });
 
-  // Block ILE tools when not actively monitoring
-  const shouldBlockTools = session && !showWelcomeModal && (!isRecording || isPaused);
+  // In-panel tutor welcome (typed intro + Play button). Shown the first time
+  // a user lands on a fresh session (no existing probes AND welcome not yet
+  // acknowledged). Clicking Play inside the panel is what fetches the opening
+  // probe — we defer that network call out of the settings modal.
+  const [showWelcomePanel, setShowWelcomePanel] = useState(false);
+  const [isStartingSession, setIsStartingSession] = useState(false);
+  // Bumped every time we open the welcome panel so the collapse effect
+  // re-fires even if `showWelcomePanel` was already true (e.g. clicking
+  // Help twice in a row without closing in between).
+  const [welcomeOpenNonce, setWelcomeOpenNonce] = useState(0);
+  // Layout snapshot captured on Help click so clicking Play restores
+  // the user's previous pane sizes instead of leaving the tools hidden.
+  const helpPreviousLayoutRef = useRef<{
+    outer: { leftWidth?: number; collapsedSide: null | "left" | "right" };
+    inner: { leftWidth?: number; collapsedSide: null | "left" | "right" };
+  } | null>(null);
+
+  // When the in-panel welcome opens, collapse everything except the tutor
+  // panel so the user's attention is on the greeting. We restore nothing on
+  // exit — the user's last-used / persisted layout stays as configured by
+  // the time they click Play (they can re-open tools manually or via the
+  // existing layout preset buttons).
+  useEffect(() => {
+    if (!showWelcomePanel) return;
+    if (showWelcomeModal) return; // wait until the settings modal is gone
+    // Defer one frame so the ResizablePane refs are definitely attached,
+    // and so that any competing layout effect (e.g. the auto-expand-left
+    // triggered by activeTool changes) lands first and we collapse last.
+    const id = window.setTimeout(() => {
+      // Outer split: collapse Tools (left) so right-hand workspace is full width
+      resizablePaneRef.current?.setLayout({ collapsedSide: "left" });
+      // Inner split: collapse Plan (right) so tutor panel gets the full area
+      resizablePaneRef2.current?.setLayout({ collapsedSide: "right" });
+    }, 80);
+    return () => window.clearTimeout(id);
+  }, [showWelcomePanel, showWelcomeModal, welcomeOpenNonce]);
+
+  // Block ILE tools when not actively monitoring. Also allow interaction
+  // during the in-panel tutor welcome — the user needs to click Play and
+  // optionally Open Session Plan from the welcome surface before recording
+  // has actually started.
+  const shouldBlockTools =
+    session &&
+    !showWelcomeModal &&
+    !showWelcomePanel &&
+    (!isRecording || isPaused);
 
   // Mobile detection
 
@@ -275,9 +320,9 @@ export function SessionView({ sessionId }: { sessionId: string }) {
       : 0;
 
     if (prevTool && prevTool !== activeTool) {
-      logToolUsage(session.id, prevTool as ToolName, "close", elapsedTime, {});
+      logTool(prevTool as ToolName, "close", { via: "tool_switch" });
     }
-    logToolUsage(session.id, activeTool as ToolName, "open", elapsedTime, {});
+    logTool(activeTool as ToolName, "open", { via: "tool_switch" });
     // Feed tool events into local context buffer
     if (localInferenceEnabledRef.current && localContextRef.current) {
       localContextRef.current.addToolEvent(`opened ${activeTool}`);
@@ -1071,6 +1116,14 @@ export function SessionView({ sessionId }: { sessionId: string }) {
           // Auto-advance: accept the new plan with advanced step
           setSessionPlan(planData.plan);
           sessionPlanRef.current = planData.plan;
+          const nextStepDesc =
+            planData.plan?.steps?.[newStepIndex]?.description?.slice(0, 80) ?? "";
+          addHeartbeatLog({
+            timestamp: Date.now(),
+            level: "info",
+            source: "plan",
+            message: `Plan advanced: step ${previousStepIndex + 1} → ${newStepIndex + 1} of ${totalSteps}${nextStepDesc ? ` — ${nextStepDesc}` : ""}`,
+          });
         } else if (llmWantsAdvance && !autoAdvanceRef.current) {
           // Manual mode: LLM says ready to advance, but user controls when
           // Keep current plan (don't advance), but update other fields
@@ -1088,6 +1141,12 @@ export function SessionView({ sessionId }: { sessionId: string }) {
             setSessionPlan(planWithoutAdvance);
             sessionPlanRef.current = planWithoutAdvance;
           }
+          addHeartbeatLog({
+            timestamp: Date.now(),
+            level: "info",
+            source: "plan",
+            message: `LLM suggests advance (step ${previousStepIndex + 1} → ${newStepIndex + 1}) — manual mode, waiting for user`,
+          });
         } else if (isValidPlan(planData.plan)) {
           setSessionPlan(planData.plan);
           sessionPlanRef.current = planData.plan;
@@ -1115,6 +1174,12 @@ export function SessionView({ sessionId }: { sessionId: string }) {
           
           if (isPlanComplete) {
             playSessionCompleteSound();
+            addHeartbeatLog({
+              timestamp: Date.now(),
+              level: "info",
+              source: "plan",
+              message: `Plan complete (${totalSteps}/${totalSteps} steps) — session paused`,
+            });
             setTimeout(() => {
               setShowPlanCompleteModal(true);
               if (isRecording && !isPaused) {
@@ -1123,6 +1188,14 @@ export function SessionView({ sessionId }: { sessionId: string }) {
             }, 1500);
           } else {
             playStepCompleteSound();
+          }
+          if (activeProbesForArchive.length > 0) {
+            addHeartbeatLog({
+              timestamp: Date.now(),
+              level: "info",
+              source: "probe",
+              message: `${activeProbesForArchive.length} probe${activeProbesForArchive.length === 1 ? "" : "s"} auto-archived (step transition)`,
+            });
           }
         } else if (planData.probesToArchive && planData.probesToArchive.length > 0) {
           let updatedSession = currentSession;
@@ -1140,6 +1213,12 @@ export function SessionView({ sessionId }: { sessionId: string }) {
           
           if (planData.probesToArchive.length > 0) {
             playArchiveSound();
+            addHeartbeatLog({
+              timestamp: Date.now(),
+              level: "info",
+              source: "probe",
+              message: `${planData.probesToArchive.length} probe${planData.probesToArchive.length === 1 ? "" : "s"} auto-archived by analysis`,
+            });
           }
         }
         
@@ -1174,6 +1253,30 @@ export function SessionView({ sessionId }: { sessionId: string }) {
             setActiveProbe(savedProbe);
             setViewingProbeIndex(updatedSession.probes.length - 1);
             lastProbeTimeRef.current = Date.now();
+
+            const probePreview = planData.nextRequest.text.slice(0, 80);
+            addHeartbeatLog({
+              timestamp: Date.now(),
+              level: "info",
+              source: "probe",
+              message: `New probe (${planData.nextRequest.type || "question"}, gap=${(planData.gapScore ?? 0.5).toFixed(2)}): ${probePreview}${planData.nextRequest.text.length > 80 ? "…" : ""}`,
+            });
+          } else if (planData.canGenerateProbe !== false) {
+            // LLM wanted to send one but we rejected it — record the reason
+            // so operators can debug why probes aren't landing.
+            const reason = isDupe
+              ? "duplicate"
+              : currentOpenProbeCount >= 5
+                ? `open-probe cap (${currentOpenProbeCount}/5)`
+                : !cooldownMet
+                  ? `cooldown (${Math.round((PROBE_COOLDOWN_MS - timeSinceLastProbe) / 1000)}s remaining)`
+                  : "unknown";
+            addHeartbeatLog({
+              timestamp: Date.now(),
+              level: "warning",
+              source: "probe",
+              message: `New probe suppressed: ${reason}`,
+            });
           }
         }
       }
@@ -1215,6 +1318,13 @@ export function SessionView({ sessionId }: { sessionId: string }) {
             { maxRetries: 2, baseDelayMs: 500 },
           );
           result.audio.saved = saveResult.success && !!saveResult.data;
+          if (!result.audio.saved) {
+            // Surface the underlying error so the LogsTool shows an entry
+            // next to the incremented `failed` counter.
+            result.audio.error = saveResult.error
+              ? String((saveResult.error as Error)?.message ?? saveResult.error)
+              : "audio upload returned no data";
+          }
         }
       }
 
@@ -1236,14 +1346,14 @@ export function SessionView({ sessionId }: { sessionId: string }) {
         const whiteboardKey = `canvas_${currentSession.id}`;
         const whiteboardResult = await saveWithDedupString(whiteboardDataRef.current, whiteboardKey);
         if (whiteboardResult.saved) {
-          await logToolUsage(currentSession.id, 'canvas', 'canvas_draw', Date.now(), { data: whiteboardDataRef.current });
+          await logTool("canvas", "canvas_draw", { data: whiteboardDataRef.current });
         }
       }
       if (notebookContentRef.current && notebookContentRef.current.trim().length > 0) {
         const notebookKey = `notebook_${currentSession.id}`;
         const notebookResult = await saveWithDedupString(notebookContentRef.current, notebookKey);
         if (notebookResult.saved) {
-          await logToolUsage(currentSession.id, 'notebook', 'notebook_edit', Date.now(), { data: notebookContentRef.current });
+          await logTool("notebook", "notebook_edit", { data: notebookContentRef.current });
         }
       }
 
@@ -1263,6 +1373,9 @@ export function SessionView({ sessionId }: { sessionId: string }) {
           { maxRetries: 2, baseDelayMs: 500 },
         );
         result.eeg.saved = saveResult.success;
+        if (!result.eeg.saved && saveResult.error) {
+          result.eeg.error = String((saveResult.error as Error)?.message ?? saveResult.error);
+        }
       }
 
       // Facial: flush buffer if webcam enabled (with retry)
@@ -1278,6 +1391,9 @@ export function SessionView({ sessionId }: { sessionId: string }) {
           { maxRetries: 2, baseDelayMs: 500 },
         );
         result.facial.saved = saveResult.success;
+        if (!result.facial.saved && saveResult.error) {
+          result.facial.error = String((saveResult.error as Error)?.message ?? saveResult.error);
+        }
       }
 
       return result;
@@ -1300,6 +1416,87 @@ export function SessionView({ sessionId }: { sessionId: string }) {
     setLogs([...logsRef.current]);
   }, []);
 
+  // Forward ref for heartbeat.recordTransferEvent — the heartbeat object is
+  // declared below, so we can't close over it directly inside `logTool`. The
+  // ref is populated in an effect right after the heartbeat is created.
+  const recordTransferEventRef = useRef<
+    ((channel: "tools", saved: boolean, error?: string) => void) | null
+  >(null);
+
+  /**
+   * Log a tool event. Does THREE things:
+   *   1. Persists it to Supabase (`session-tool` bucket + `session_tool`
+   *      table) via `logToolUsage`.
+   *   2. Records a transfer event on the `tools` channel so sent/saved/failed
+   *      counters in the Data Transfer Health table stay in sync (same
+   *      pattern as audio / eeg / facial / screenshots).
+   *   3. Emits a log entry with `source: "tool"` so the event appears in the
+   *      Logs UI (filterable by source).
+   */
+  const logTool = useCallback(
+    async (
+      toolName: ToolName,
+      action: ToolAction,
+      metadata: Record<string, unknown> = {},
+    ) => {
+      const currentSession = sessionRef.current;
+      if (!currentSession) return;
+      const now = Date.now();
+      const elapsedMs = currentSession.startedAt
+        ? now - new Date(currentSession.startedAt).getTime()
+        : 0;
+
+      // 1 + 2. Persist to Supabase, capture granular result for the counter.
+      let persistError: string | undefined;
+      let persistOk = false;
+      try {
+        const result = await logToolUsage(currentSession.id, toolName, action, now, metadata);
+        persistOk = result.success;
+        persistError = result.error;
+      } catch (err) {
+        persistError = String((err as Error)?.message ?? err);
+      }
+
+      recordTransferEventRef.current?.("tools", persistOk, persistError);
+
+      // 3. Compact metadata preview (guard against huge payloads like full
+      // whiteboard/notebook strings so we don't flood the UI).
+      const metaKeys = Object.keys(metadata);
+      let metaStr = "";
+      if (metaKeys.length > 0) {
+        try {
+          const compact: Record<string, unknown> = {};
+          for (const k of metaKeys) {
+            const v = metadata[k];
+            if (typeof v === "string" && v.length > 60) {
+              compact[k] = `${v.slice(0, 60)}… (${v.length}c)`;
+            } else if (Array.isArray(v)) {
+              compact[k] = `Array(${v.length})`;
+            } else {
+              compact[k] = v;
+            }
+          }
+          metaStr = ` ${JSON.stringify(compact).slice(0, 160)}`;
+        } catch {
+          metaStr = ` [${metaKeys.join(", ")}]`;
+        }
+      }
+
+      // The per-channel failure log is already emitted by
+      // `recordTransferEvent`, so here we only log the high-level success
+      // event (keeps the log from double-reporting failures).
+      if (persistOk) {
+        addHeartbeatLog({
+          timestamp: now,
+          level: "info",
+          source: "tool",
+          message: `${toolName}/${action} @${Math.round(elapsedMs / 1000)}s${metaStr}`,
+        });
+      }
+    },
+    [addHeartbeatLog],
+  );
+
   const heartbeat = useSessionHeartbeat({
     storageIntervalMs: STORAGE_INTERVAL_MS,
     analysisIntervalMs: ANALYSIS_INTERVAL_MS,
@@ -1307,6 +1504,11 @@ export function SessionView({ sessionId }: { sessionId: string }) {
     onAnalysisHeartbeat: runAnalysisHeartbeat,
     onLog: addHeartbeatLog,
   });
+
+  // Expose the heartbeat's transfer-event recorder to `logTool` (which is
+  // defined above the heartbeat). Kept in a ref so we don't need to pass
+  // `heartbeat` as a dep of every `logTool` caller.
+  recordTransferEventRef.current = heartbeat.recordTransferEvent;
 
   const checkMicrophone = async () => {
     setMicStatus("checking");
@@ -1435,19 +1637,38 @@ export function SessionView({ sessionId }: { sessionId: string }) {
   };
 
   // ---- Screenshot Handlers ----
+  // Screenshots run on their own interval (decoupled from the storage
+  // heartbeat), so we report every save attempt directly to the heartbeat
+  // hook via `recordTransferEvent`. That keeps the Data Transfer Health
+  // table's `screenshots` row in sync and surfaces failures in the event log.
   const handleStartScreenCapture = useCallback(async () => {
     if (!screenCaptureRef.current) {
       screenCaptureRef.current = createScreenCapture({
         onScreenshotCaptured: async (blob: Blob, timestamp: number) => {
+          const screenshotKey = `screenshot_${sessionId}`;
           try {
-            const screenshotKey = `screenshot_${sessionId}`;
-            const result = await saveWithDedupBlob(blob, screenshotKey);
-            if (result.saved) {
-              await saveScreenshot(sessionId, blob, timestamp);
-              setScreenshotCount(c => c + 1);
+            const dedup = await saveWithDedupBlob(blob, screenshotKey);
+            // Dedup hit (content unchanged) is a no-op, not an attempt.
+            if (!dedup.saved) return;
+
+            const path = await saveScreenshot(sessionId, blob, timestamp);
+            if (path) {
+              setScreenshotCount((c) => c + 1);
+              heartbeat.recordTransferEvent("screenshots", true);
+            } else {
+              heartbeat.recordTransferEvent(
+                "screenshots",
+                false,
+                "saveScreenshot returned null (upload rejected)",
+              );
             }
           } catch (error) {
             console.error("[Screenshot] Failed to save:", error);
+            heartbeat.recordTransferEvent(
+              "screenshots",
+              false,
+              String((error as Error)?.message ?? error),
+            );
           }
         },
         intervalMs: 5000,
@@ -1457,7 +1678,7 @@ export function SessionView({ sessionId }: { sessionId: string }) {
       });
     }
     await screenCaptureRef.current.start();
-  }, [sessionId]);
+  }, [sessionId, heartbeat]);
 
   const handleStopScreenCapture = useCallback(() => {
     screenCaptureRef.current?.stop();
@@ -1615,6 +1836,95 @@ export function SessionView({ sessionId }: { sessionId: string }) {
     // Session stays paused, just navigate away
     router.push("/");
   };
+
+  /**
+   * Fetch the opening probe from the API and persist it. Extracted so that
+   * the in-panel Tutor Welcome flow can defer this network call until the
+   * user clicks Play, rather than firing it inside the settings modal.
+   */
+  const fetchAndSaveOpeningProbe = useCallback(async () => {
+    const s = sessionRef.current;
+    if (!s) return;
+    try {
+      const probeRes = await fetch("/api/opening-probe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          problem: s.problem,
+          objectives,
+          sessionId: s.id,
+          tutoringLanguage,
+        }),
+      });
+      if (!probeRes.ok) return;
+      const { probe: probeText } = await probeRes.json();
+      if (!probeText?.trim()) return;
+      const savedProbe = await addProbe(s.id, {
+        timestamp: 0,
+        gapScore: 0,
+        signals: ["opening"],
+        text: probeText,
+        requestType: "question",
+      });
+      const base = { ...s, probes: [] };
+      const updated = addProbeToSession(base, savedProbe);
+      setSession(updated);
+      sessionRef.current = updated;
+      setActiveProbe(savedProbe);
+      setViewingProbeIndex(updated.probes.length - 1);
+    } catch (err) {
+      console.error("[SessionView] Opening probe fetch failed:", err);
+    }
+  }, [objectives, tutoringLanguage]);
+
+  /**
+   * The user clicked the Play button inside the tutor welcome panel. This
+   * is the moment we actually fetch the opening probe. We also mark the
+   * welcome as "seen" so a page refresh doesn't re-play the welcome.
+   */
+  const handleWelcomePlay = useCallback(async () => {
+    const s = sessionRef.current;
+    if (!s) return;
+    setIsStartingSession(true);
+    try {
+      // Bring the session back to an actively-recording state. Three cases:
+      //   1. Fresh session: `!isRecording` → startRecording (first mic req).
+      //   2. Paused session (e.g. Help was just clicked): `isPaused` →
+      //      handleResume restarts the recorder/heartbeat/streams.
+      //   3. Already active: no-op.
+      if (!isRecording) {
+        await startRecording();
+      } else if (isPaused) {
+        await handleResume();
+      }
+      // Only fetch the opening probe on fresh sessions. If the session
+      // already has probes (e.g. Help button re-runs the welcome flow),
+      // we preserve the existing probe history.
+      const hasActive = s.probes.some(p => !p.archived);
+      if (!hasActive) {
+        await fetchAndSaveOpeningProbe();
+      }
+    } finally {
+      markSessionWelcomeSeen(s.id);
+      setShowWelcomePanel(false);
+      setIsStartingSession(false);
+      // If the welcome was opened via the Help button, restore the
+      // user's previous pane layout so tools/plan don't stay hidden.
+      const prev = helpPreviousLayoutRef.current;
+      if (prev) {
+        helpPreviousLayoutRef.current = null;
+        // Give the welcome-panel collapse effect a beat to finish before
+        // we overwrite it, otherwise its 80ms timer races us.
+        window.setTimeout(() => {
+          resizablePaneRef.current?.setLayout(prev.outer);
+          resizablePaneRef2.current?.setLayout(prev.inner);
+        }, 120);
+      }
+    }
+    // startRecording / handleResume are defined inline and reference many
+    // setters/refs; including them as deps would cause noise.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fetchAndSaveOpeningProbe, isRecording, isPaused]);
 
   // Archive a probe (immediately, without LLM validation)
   const handleArchiveProbe = async (probeId: string) => {
@@ -2391,37 +2701,32 @@ export function SessionView({ sessionId }: { sessionId: string }) {
                             setPlanError("Failed to create session plan. Please try again.");
                           }
                           
-                          // Archive existing probes and generate new opening probe
+                          // Archive existing probes. Whether we fetch the
+                          // opening probe *now* or defer until the user
+                          // clicks the in-panel Play button depends on
+                          // whether this is a fresh, never-started session.
                           if (session.probes.length > 0) {
                             for (const probe of session.probes) {
                               await archiveProbe(probe.id);
                             }
                           }
-                          setSession({ ...session, probes: [] });
+                          const clearedSession = { ...session, probes: [] };
+                          setSession(clearedSession);
+                          sessionRef.current = clearedSession;
                           setActiveProbe(null);
                           setViewingProbeIndex(-1);
-                          
-                          const probeRes = await fetch("/api/opening-probe", {
-                            method: "POST",
-                            headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify({ problem: session.problem, objectives, sessionId: session.id, tutoringLanguage }),
-                          });
-                          if (probeRes.ok) {
-                            const { probe: probeText } = await probeRes.json();
-                            if (probeText?.trim()) {
-                              const savedProbe = await addProbe(session.id, {
-                                timestamp: 0,
-                                gapScore: 0,
-                                signals: ["opening"],
-                                text: probeText,
-                                requestType: "question",
-                              });
-                              const updated = addProbeToSession({ ...session, probes: [] }, savedProbe);
-                              setSession(updated);
-                              sessionRef.current = updated;
-                              setActiveProbe(savedProbe);
-                              setViewingProbeIndex(updated.probes.length - 1);
-                            }
+
+                          // A session is "fresh" if the user has not yet
+                          // clicked Play for it. In that case we show the
+                          // typed tutor welcome + Play button and defer the
+                          // opening probe fetch until Play is clicked. We
+                          // just archived any existing probes above, so
+                          // welcome-seen is the single source of truth.
+                          const isFreshSession = !isSessionWelcomeSeen(session.id);
+                          if (isFreshSession) {
+                            setShowWelcomePanel(true);
+                          } else {
+                            await fetchAndSaveOpeningProbe();
                           }
                           
                           // Plan prep done
@@ -2567,11 +2872,20 @@ export function SessionView({ sessionId }: { sessionId: string }) {
                 );
               }
 
-              // Phase 2: Ready (already confirmed before, e.g. page refresh)
+              // Phase 2: Ready (already confirmed before, e.g. page refresh).
+              // If the user has never clicked Play on this session we drop
+              // them into the in-panel tutor welcome. Otherwise straight in.
               return (
                 <button
                   onClick={() => {
                     setIsPaused(false);
+                    if (
+                      session &&
+                      !isSessionWelcomeSeen(session.id) &&
+                      session.probes.filter(p => !p.archived).length === 0
+                    ) {
+                      setShowWelcomePanel(true);
+                    }
                     setShowWelcomeModal(false);
                   }}
                   className="w-full py-3 px-4 text-sm font-medium rounded-xl transition-colors bg-neutral-100 text-neutral-900 hover:bg-white"
@@ -2588,6 +2902,48 @@ export function SessionView({ sessionId }: { sessionId: string }) {
       <ToolsPanel 
               activeTool={activeTool} 
               onToolChange={(tool) => {
+                // "help" is a command, not a view: it pauses the session
+                // and re-runs the tutor welcome (typed greeting + Play
+                // button) with the layout collapsed to only-tutor-open.
+                // Probes and session data are preserved — clicking Start
+                // session from the welcome resumes recording.
+                if (tool === "help") {
+                  // Snapshot the current pane layout from localStorage
+                  // so we can restore it when the user clicks Play. We
+                  // only capture if we don't already have one in-flight
+                  // (handles Help-clicked-again-while-welcome-open).
+                  if (!helpPreviousLayoutRef.current) {
+                    const readLayout = (key: string) => {
+                      try {
+                        const raw = localStorage.getItem(key);
+                        if (!raw) return { collapsedSide: null as null | "left" | "right" };
+                        const parsed = JSON.parse(raw);
+                        return {
+                          leftWidth: typeof parsed.leftWidth === "number" ? parsed.leftWidth : undefined,
+                          collapsedSide: parsed.collapsedSide === "left" || parsed.collapsedSide === "right"
+                            ? parsed.collapsedSide
+                            : null,
+                        };
+                      } catch {
+                        return { collapsedSide: null as null | "left" | "right" };
+                      }
+                    };
+                    helpPreviousLayoutRef.current = {
+                      outer: readLayout("session-split"),
+                      inner: readLayout("session-split-right"),
+                    };
+                  }
+                  if (isRecording && !isPaused) {
+                    handlePause().catch(err =>
+                      console.error("[SessionView] Help pause failed:", err),
+                    );
+                  }
+                  setShowWelcomePanel(true);
+                  // Force the collapse effect to re-fire even if the
+                  // welcome panel was already open.
+                  setWelcomeOpenNonce(n => n + 1);
+                  return;
+                }
                 setActiveTool(tool);
                 setShowGrokipediaOnly(tool === "grokipedia");
                 // Clear RAG notification when opening RAG tool
@@ -2901,9 +3257,10 @@ export function SessionView({ sessionId }: { sessionId: string }) {
                         )}
                       </div>
                     )}
-                    {/* Bottom tools wrapper */}
+                    {/* Bottom tools wrapper. Help is a command (restarts
+                        the tutor welcome) rather than a view — handled in
+                        the ToolsPanel onToolChange below. */}
                     <div className="mt-auto flex flex-col">
-                      {activeTool === "help" && <ToolsHelp />}
                       <div className={activeTool === "data-input" ? "h-full" : "hidden"}>
                       <DataInputTool
                         isRecording={isRecording}
@@ -3061,11 +3418,27 @@ export function SessionView({ sessionId }: { sessionId: string }) {
                         onOpenResources={handleStepResources}
                         onOpenPractice={handleStepPractice}
                         onAskAssistant={handleStepAskAssistant}
+                        onToolEvent={(action, metadata) =>
+                          logTool("probe", action, metadata ?? {})
+                        }
                         archivingProbeId={archivingProbeId}
                         isInitializing={planLoading || openingProbeLoading}
                         isGeneratingProbe={isGeneratingProbe}
                         sessionPlan={sessionPlan}
                         isSessionActive={isRecording && !isPaused}
+                        showWelcome={showWelcomePanel}
+                        onWelcomePlay={handleWelcomePlay}
+                        onOpenSessionPlan={() => {
+                          // Expand inner pane so Plan is visible next to
+                          // the tutor. Leaves the outer (tools) pane as-is.
+                          resizablePaneRef2.current?.setLayout({
+                            leftWidth: 50,
+                            collapsedSide: null,
+                          });
+                        }}
+                        isStartingSession={isStartingSession}
+                        sessionId={session.id}
+                        ttsLanguage={tutoringLanguage}
                       />
                     </div>
                   }
@@ -3087,6 +3460,9 @@ export function SessionView({ sessionId }: { sessionId: string }) {
                           onOpenResources={handleStepResources}
                           onOpenPractice={handleStepPractice}
                           onAskAssistant={handleStepAskAssistant}
+                          onToolEvent={(action, metadata) =>
+                            logTool("session_plan", action, metadata ?? {})
+                          }
                           isSessionActive={isRecording && !isPaused}
                         />
                       </div>

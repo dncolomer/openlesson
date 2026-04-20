@@ -1968,5 +1968,17 @@
     "title": "Lernpläne",
     "noPlansYet": "Noch keine Lernpläne.",
     "createFirstPlan": "Erstelle deinen ersten Plan"
+  },
+  "welcome": {
+    "greeting": "Hallo — ich bin {name}, dein Tutor.",
+    "panelIntro": "Willkommen in deiner Integrierten Lernumgebung (ILE). Links findest du deine Werkzeuge (Chat, Leinwand, Notizbuch und mehr), rechts deinen Sitzungsplan, und hier führe ich dich mit einer Frage nach der anderen. Verwende die Pfeile, um zwischen den Fragen zu wechseln, sobald sie erscheinen.",
+    "callToAction": "Das Wichtigste: denke laut, während du arbeitest. Das nennt sich Think-Aloud-Protokoll (Lautes Denken) — sag einfach, was dir durch den Kopf geht, auch wenn es chaotisch oder unsicher klingt. Ich höre die ganze Zeit zu, und deine laut ausgesprochenen Überlegungen zeigen mir, wo du feststeckst und was ich als Nächstes fragen soll. Wenn du bereit bist, drück auf Sitzung starten, und ich beginne mit deiner ersten Leitfrage.",
+    "play": "Sitzung starten",
+    "starting": "Starte…",
+    "skipTyping": "Animation überspringen",
+    "openSessionPlan": "Sitzungsplan öffnen",
+    "hearAgain": "Nochmal anhören",
+    "listenToTutor": "Tutor anhören",
+    "stopNarration": "Stopp"
   }
 }

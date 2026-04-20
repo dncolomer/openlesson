@@ -30,6 +30,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useI18n } from "@/lib/i18n";
 import { createClient } from "@/lib/supabase/client";
+import { isSessionWelcomeSeen, markSessionWelcomeSeen } from "@/lib/welcomeState";
 import { playStepCompleteSound, playSessionCompleteSound } from "@/lib/sounds";
 import { LocalInferenceManager, type InitProgress, type LocalAnalysisContext } from "@/lib/local-inference";
 import { LocalContextBuffer } from "@/lib/local-context";
@@ -133,6 +134,26 @@ export function MobileSessionView({
   // UI state
   const [activeTab, setActiveTab] = useState(0);
   const [archivingProbeId, setArchivingProbeId] = useState<string | null>(null);
+
+  // In-panel tutor welcome (typed intro + Play button). Mirrors desktop.
+  // Initialized from whether this session is "fresh" — no active probes AND
+  // the welcome has never been acknowledged. This handles the case where
+  // the settings modal is skipped entirely (active session, language set)
+  // so we still greet new users.
+  const [showWelcomePanel, setShowWelcomePanel] = useState(() => {
+    if (!initialSession) return false;
+    if (typeof window === "undefined") return false;
+    const hasActive = (initialSession.probes ?? []).some(p => !p.archived);
+    if (hasActive) return false;
+    return !isSessionWelcomeSeen(initialSession.id);
+  });
+  const [isStartingSession, setIsStartingSession] = useState(false);
+
+  // When the in-panel welcome opens, force the probes tab so the user sees
+  // the tutor greeting immediately.
+  useEffect(() => {
+    if (showWelcomePanel) setActiveTab(0);
+  }, [showWelcomePanel]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(!initialSession);
   const [whiteboardData, setWhiteboardData] = useState<string | null>(null);
@@ -700,6 +721,67 @@ export function MobileSessionView({
     }
   }, [session]);
 
+  /**
+   * Fetch the opening probe and persist it. Extracted so the in-panel
+   * Tutor Welcome Play button can defer this network call.
+   */
+  const fetchAndSaveOpeningProbe = useCallback(async () => {
+    const s = sessionRef.current;
+    if (!s) return;
+    try {
+      const probeRes = await fetch("/api/opening-probe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          problem: s.problem,
+          objectives: s.objectives,
+          sessionId: s.id,
+          tutoringLanguage,
+        }),
+      });
+      if (!probeRes.ok) return;
+      const { probe: probeText } = await probeRes.json();
+      if (!probeText?.trim()) return;
+      const savedProbe = await addProbe(s.id, {
+        timestamp: 0,
+        gapScore: 0,
+        signals: ["opening"],
+        text: probeText,
+        requestType: "question",
+      });
+      setSession(prev => (prev ? { ...prev, probes: [savedProbe] } : null));
+      setProbes([savedProbe]);
+    } catch (err) {
+      console.error("[MobileSessionView] Opening probe fetch failed:", err);
+    }
+  }, [tutoringLanguage]);
+
+  /**
+   * The user clicked Play inside the tutor welcome panel. Fetch the opening
+   * probe and mark welcome seen so a refresh doesn't re-play the intro.
+   */
+  const handleWelcomePlay = useCallback(async () => {
+    const s = sessionRef.current;
+    if (!s) return;
+    setIsStartingSession(true);
+    try {
+      // Actually start the session (mic + recorder + status sync) so the
+      // welcome Start button is a real "begin" CTA. Skip if already
+      // running (paused → resume is handled by the top bar).
+      if (!isRecording) {
+        await handleStartSession();
+      }
+      await fetchAndSaveOpeningProbe();
+    } finally {
+      markSessionWelcomeSeen(s.id);
+      setShowWelcomePanel(false);
+      setIsStartingSession(false);
+    }
+    // handleStartSession is stable (useCallback) but depends on session;
+    // listing it would re-create this callback on every session update.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fetchAndSaveOpeningProbe, isRecording]);
+
   // Prepare session with language selection
   const prepareSession = useCallback(async () => {
     if (!session || isPreparing) return;
@@ -780,7 +862,8 @@ export function MobileSessionView({
         setSessionPlan(newPlan);
       }
       
-      // Archive existing probes and generate new opening probe
+      // Archive existing probes. Opening-probe fetch is deferred to the
+      // in-panel Play button on fresh sessions (mirrors desktop behavior).
       if (session.probes.length > 0) {
         for (const probe of session.probes) {
           await archiveProbe(probe.id);
@@ -788,27 +871,14 @@ export function MobileSessionView({
       }
       setSession({ ...session, probes: [] });
       setProbes([]);
-      
-      const probeRes = await fetch("/api/opening-probe", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ problem: session.problem, objectives: session.objectives, sessionId: session.id, tutoringLanguage }),
-      });
-      if (probeRes.ok) {
-        const { probe: probeText } = await probeRes.json();
-        if (probeText?.trim()) {
-          const savedProbe = await addProbe(session.id, {
-            timestamp: 0,
-            gapScore: 0,
-            signals: ["opening"],
-            text: probeText,
-            requestType: "question",
-          });
-          setSession(prev => prev ? { ...prev, probes: [savedProbe] } : null);
-          setProbes([savedProbe]);
-        }
+
+      const isFreshSession = !isSessionWelcomeSeen(session.id);
+      if (isFreshSession) {
+        setShowWelcomePanel(true);
+      } else {
+        await fetchAndSaveOpeningProbe();
       }
-      
+
       // Plan prep done
       setPlanLoading(false);
       setOpeningProbeLoading(false);
@@ -1693,7 +1763,20 @@ export function MobileSessionView({
           {/* Phase 2: Ready (already confirmed before) */}
           {languageConfirmed && (
             <button
-              onClick={() => setShowWelcomeModal(false)}
+              onClick={() => {
+                // If user never clicked Play on this session, drop into
+                // the in-panel tutor welcome rather than going straight
+                // into the main UI.
+                if (
+                  session &&
+                  !isSessionWelcomeSeen(session.id) &&
+                  (probes.filter(p => !p.archived).length === 0)
+                ) {
+                  setShowWelcomePanel(true);
+                  setActiveTab(0); // make sure probes tab is visible
+                }
+                setShowWelcomeModal(false);
+              }}
               className="w-full py-3.5 px-4 text-sm font-medium rounded-xl transition-colors bg-neutral-100 text-neutral-900 active:bg-white"
             >
               {t('session.getStarted')}
@@ -1716,6 +1799,12 @@ export function MobileSessionView({
           onToggleFocus={handleToggleFocus}
           archivingProbeId={archivingProbeId}
           isGeneratingProbe={isGeneratingProbe}
+          showWelcome={showWelcomePanel}
+          onWelcomePlay={handleWelcomePlay}
+          onOpenSessionPlan={() => setActiveTab(1)}
+          isStartingSession={isStartingSession}
+          sessionId={session?.id}
+          ttsLanguage={tutoringLanguage}
         />
       ),
     },

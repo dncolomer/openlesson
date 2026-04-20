@@ -1,10 +1,24 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { type Probe, type ToolName } from "@/lib/storage";
+import { type Probe, type ToolName, type ToolAction } from "@/lib/storage";
 import { useI18n } from "@/lib/i18n";
+import { useTypewriter } from "@/lib/useTypewriter";
+import { isProbeTyped, markProbeTyped } from "@/lib/welcomeState";
+import { TutorWelcome } from "./TutorWelcome";
+import { ListenButton } from "./ListenButton";
 
 const MAX_PROBES = 5;
+
+/**
+ * Telemetry callback: fires on every user interaction in this panel.
+ * SessionView wires this to `logTool("probe", action, metadata)` so events
+ * are persisted to Supabase `session_tool` AND surfaced in the Logs UI.
+ */
+export type ProbesPanelToolEvent = (
+  action: ToolAction,
+  metadata?: Record<string, unknown>,
+) => void;
 
 interface ProbesPanelProps {
   probes: Probe[];
@@ -14,12 +28,30 @@ interface ProbesPanelProps {
   onOpenResources?: (text: string) => void;
   onOpenPractice?: (text: string) => void;
   onAskAssistant?: (text: string) => void;
+  onToolEvent?: ProbesPanelToolEvent;
   archivingProbeId?: string | null;
   isInitializing?: boolean;
   isGeneratingProbe?: boolean;
   sessionPlan?: { steps?: Array<{ id: string; order: number; description: string }> } | null;
   isSessionActive?: boolean;
   tutorName?: string;
+  /**
+   * Fresh-session onboarding. When true the panel shows the typed welcome
+   * text + Play button instead of the normal empty state. Parent is
+   * responsible for tracking welcome-seen state and passing `false` after
+   * the user clicks play (or on a refresh after play).
+   */
+  showWelcome?: boolean;
+  /** Fired when the user clicks the welcome Play button. */
+  onWelcomePlay?: () => void;
+  /** Fired when the user clicks the welcome "Open Session Plan" button. */
+  onOpenSessionPlan?: () => void;
+  /** Parent is currently fetching the opening probe (shows spinner on Play). */
+  isStartingSession?: boolean;
+  /** Session id — used to gate the one-time TTS narration of the welcome. */
+  sessionId?: string;
+  /** BCP-47 language override for TTS. */
+  ttsLanguage?: string;
 }
 
 export function ProbesPanel({
@@ -28,11 +60,18 @@ export function ProbesPanel({
   onOpenResources,
   onOpenPractice,
   onAskAssistant,
+  onToolEvent,
   archivingProbeId,
   isInitializing = false,
   isGeneratingProbe = false,
   isSessionActive = false,
   tutorName,
+  showWelcome = false,
+  onWelcomePlay,
+  onOpenSessionPlan,
+  isStartingSession = false,
+  sessionId,
+  ttsLanguage,
 }: ProbesPanelProps) {
   const { t } = useI18n();
 
@@ -55,11 +94,71 @@ export function ProbesPanel({
   const canGoPrev = currentIndex > 0;
   const canGoNext = currentIndex < activeProbes.length - 1;
 
-  const goPrev = () => setCurrentIndex(i => Math.max(0, i - 1));
-  const goNext = () => setCurrentIndex(i => Math.min(activeProbes.length - 1, i + 1));
+  const goPrev = () => {
+    setCurrentIndex((i) => Math.max(0, i - 1));
+    onToolEvent?.("nav_prev", {
+      fromIndex: currentIndex,
+      total: activeProbes.length,
+      probeId: activeProbes[currentIndex]?.id,
+    });
+  };
+  const goNext = () => {
+    setCurrentIndex((i) => Math.min(activeProbes.length - 1, i + 1));
+    onToolEvent?.("nav_next", {
+      fromIndex: currentIndex,
+      total: activeProbes.length,
+      probeId: activeProbes[currentIndex]?.id,
+    });
+  };
 
   // Tutor avatar — stylized monogram placeholder
   const avatarInitial = displayTutorName.charAt(0).toUpperCase();
+
+  // Typewriter for the currently-shown probe. Only animates probes the user
+  // hasn't seen before; revisits render instantly.
+  const currentProbeId = currentProbe?.id;
+  const [probeTypingDone, setProbeTypingDone] = useState(true);
+  const alreadyTyped = currentProbeId ? isProbeTyped(currentProbeId) : true;
+  const { displayed: probeDisplayed } = useTypewriter(currentProbe?.text ?? "", {
+    instant: alreadyTyped,
+    speedMs: 45,
+    enabled: !!currentProbe,
+    onDone: () => {
+      if (currentProbeId) markProbeTyped(currentProbeId);
+      setProbeTypingDone(true);
+    },
+  });
+
+  // Reset the "done" flag whenever we move to a new, un-typed probe
+  useEffect(() => {
+    if (!currentProbeId) {
+      setProbeTypingDone(true);
+    } else {
+      setProbeTypingDone(isProbeTyped(currentProbeId));
+    }
+  }, [currentProbeId]);
+
+  // Parent-controlled welcome surface. Takes precedence over both the
+  // empty state and the active-probe carousel — this lets the Help
+  // button re-open the welcome even when probes already exist.
+  if (showWelcome) {
+    return (
+      <div className="relative flex-1 min-w-0 flex flex-col bg-[#0a0a0a] h-full overflow-hidden">
+        <div className="relative flex-1 min-h-0 flex flex-col overflow-hidden">
+          <TutorWelcome
+            tutorName={displayTutorName}
+            onPlay={() => onWelcomePlay?.()}
+            onOpenSessionPlan={
+              onOpenSessionPlan ? () => onOpenSessionPlan() : undefined
+            }
+            isStarting={isStartingSession}
+            sessionId={sessionId}
+            ttsLanguage={ttsLanguage}
+          />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="relative flex-1 min-w-0 flex flex-col bg-[#0a0a0a] h-full overflow-hidden">
@@ -149,16 +248,36 @@ export function ProbesPanel({
                   &ldquo;
                 </span>
                 <p className="relative text-xl leading-relaxed tracking-tight text-center text-neutral-200">
-                  {currentProbe.text}
+                  {probeDisplayed}
+                  {!probeTypingDone && (
+                    <span
+                      className="inline-block w-[2px] h-[1.1em] align-[-0.15em] ml-0.5 bg-amber-400/80 animate-pulse"
+                      aria-hidden="true"
+                    />
+                  )}
                 </p>
               </div>
+
+              {/* Listen-to-tutor TTS for the current probe. cacheKey bound
+                  to the probe id so navigating probes invalidates playback. */}
+              <ListenButton
+                text={currentProbe.text}
+                language={ttsLanguage}
+                cacheKey={`probe:${currentProbe.id}`}
+              />
             </div>
 
             {/* Action row */}
             <div className="shrink-0 pt-4">
               <div className="grid grid-cols-4 gap-2.5 @container">
                 <button
-                  onClick={() => onOpenResources?.(currentProbe.text)}
+                  onClick={() => {
+                    onToolEvent?.("open_resources", {
+                      probeId: currentProbe.id,
+                      probePreview: currentProbe.text.slice(0, 60),
+                    });
+                    onOpenResources?.(currentProbe.text);
+                  }}
                   disabled={!isSessionActive}
                   title={t('sessionPlan.resources')}
                   className="py-3 px-3 text-[12px] font-medium rounded-xl bg-neutral-900 border border-neutral-800 text-neutral-300 hover:bg-neutral-800 hover:border-neutral-700 hover:text-white disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
@@ -169,7 +288,13 @@ export function ProbesPanel({
                   <span className="hidden @[20rem]:inline truncate">{t('sessionPlan.resources')}</span>
                 </button>
                 <button
-                  onClick={() => onOpenPractice?.(currentProbe.text)}
+                  onClick={() => {
+                    onToolEvent?.("open_practice", {
+                      probeId: currentProbe.id,
+                      probePreview: currentProbe.text.slice(0, 60),
+                    });
+                    onOpenPractice?.(currentProbe.text);
+                  }}
                   disabled={!isSessionActive}
                   title={t('sessionPlan.practice')}
                   className="py-3 px-3 text-[12px] font-medium rounded-xl bg-neutral-900 border border-neutral-800 text-neutral-300 hover:bg-neutral-800 hover:border-neutral-700 hover:text-white disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
@@ -180,7 +305,13 @@ export function ProbesPanel({
                   <span className="hidden @[20rem]:inline truncate">{t('sessionPlan.practice')}</span>
                 </button>
                 <button
-                  onClick={() => onAskAssistant?.(currentProbe.text)}
+                  onClick={() => {
+                    onToolEvent?.("ask_assistant", {
+                      probeId: currentProbe.id,
+                      probePreview: currentProbe.text.slice(0, 60),
+                    });
+                    onAskAssistant?.(currentProbe.text);
+                  }}
                   disabled={!isSessionActive}
                   title={t('sessionPlan.ask')}
                   className="py-3 px-3 text-[12px] font-medium rounded-xl bg-neutral-900 border border-neutral-800 text-neutral-300 hover:bg-neutral-800 hover:border-neutral-700 hover:text-white disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
@@ -191,7 +322,14 @@ export function ProbesPanel({
                   <span className="hidden @[20rem]:inline truncate">{t('sessionPlan.ask')}</span>
                 </button>
                 <button
-                  onClick={() => onArchiveProbe?.(currentProbe.id)}
+                  onClick={() => {
+                    onToolEvent?.("archive", {
+                      probeId: currentProbe.id,
+                      probePreview: currentProbe.text.slice(0, 60),
+                      via: "done_button",
+                    });
+                    onArchiveProbe?.(currentProbe.id);
+                  }}
                   disabled={archivingProbeId === currentProbe.id}
                   title={t('session.markAsDone')}
                   className="py-3 px-3 text-[12px] font-medium rounded-xl bg-neutral-100 text-neutral-900 hover:bg-white disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
@@ -210,38 +348,50 @@ export function ProbesPanel({
                 </button>
               </div>
 
-              {/* Carousel dots */}
-              {activeProbes.length > 1 && (
-                <div className="flex items-center justify-center gap-1.5 mt-3">
-                  {activeProbes.map((_, i) => (
-                    <button
-                      key={i}
-                      onClick={() => setCurrentIndex(i)}
-                      className={`h-1.5 rounded-full transition-all ${
-                        i === currentIndex
-                          ? "w-5 bg-neutral-300"
-                          : "w-1.5 bg-neutral-700 hover:bg-neutral-600"
-                      }`}
-                      aria-label={`${t('probes.goToProbe')} ${i + 1}`}
-                    />
-                  ))}
-                  {/* Placeholder dots for remaining empty slots */}
-                  {Array.from({ length: Math.max(0, MAX_PROBES - activeProbes.length) }).map((_, i) => (
-                    <div
-                      key={`ph-${i}`}
-                      className="h-1.5 w-1.5 rounded-full bg-neutral-900 border border-neutral-800"
-                    />
-                  ))}
-                </div>
-              )}
+              {/* Carousel dots — always rendered (placeholders for empty
+                  slots) so the row reserves its vertical space and the
+                  action buttons don't shift when probes are added. */}
+              <div className="flex items-center justify-center gap-1.5 mt-3 h-1.5">
+                {activeProbes.map((_, i) => (
+                  <button
+                    key={i}
+                    onClick={() => {
+                      if (i !== currentIndex) {
+                        onToolEvent?.("nav_jump", {
+                          fromIndex: currentIndex,
+                          toIndex: i,
+                          total: activeProbes.length,
+                          probeId: activeProbes[i]?.id,
+                        });
+                      }
+                      setCurrentIndex(i);
+                    }}
+                    className={`h-1.5 rounded-full transition-all ${
+                      i === currentIndex
+                        ? "w-5 bg-neutral-300"
+                        : "w-1.5 bg-neutral-700 hover:bg-neutral-600"
+                    }`}
+                    aria-label={`${t('probes.goToProbe')} ${i + 1}`}
+                  />
+                ))}
+                {Array.from({ length: Math.max(0, MAX_PROBES - activeProbes.length) }).map((_, i) => (
+                  <div
+                    key={`ph-${i}`}
+                    className="h-1.5 w-1.5 rounded-full bg-neutral-900 border border-neutral-800"
+                  />
+                ))}
+              </div>
 
-              {/* Generating indicator */}
-              {isGeneratingProbe && (
-                <div className="flex items-center justify-center gap-2 mt-2">
-                  <div className="w-2 h-2 rounded-full bg-amber-500/70 animate-pulse" />
-                  <span className="text-[10px] text-neutral-500">{t('probes.generatingProbe')}</span>
-                </div>
-              )}
+              {/* Generating indicator — always takes its slot to prevent
+                  a layout shift when a new probe is being fetched. */}
+              <div className="flex items-center justify-center gap-2 mt-2 h-3">
+                {isGeneratingProbe && (
+                  <>
+                    <div className="w-2 h-2 rounded-full bg-amber-500/70 animate-pulse" />
+                    <span className="text-[10px] text-neutral-500">{t('probes.generatingProbe')}</span>
+                  </>
+                )}
+              </div>
             </div>
           </>
         )}

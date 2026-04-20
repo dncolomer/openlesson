@@ -3,6 +3,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { type Probe, type SessionPlan } from "@/lib/storage";
 import { useI18n } from "@/lib/i18n";
+import { useTypewriter } from "@/lib/useTypewriter";
+import { isProbeTyped, markProbeTyped } from "@/lib/welcomeState";
+import { TutorWelcome } from "./TutorWelcome";
+import { ListenButton } from "./ListenButton";
 
 const MAX_PROBES = 5;
 
@@ -14,6 +18,15 @@ interface MobileProbesTabProps {
   archivingProbeId?: string | null;
   isGeneratingProbe?: boolean;
   tutorName?: string;
+  /** Show the fresh-session typed welcome + Play button. */
+  showWelcome?: boolean;
+  onWelcomePlay?: () => void;
+  onOpenSessionPlan?: () => void;
+  isStartingSession?: boolean;
+  /** Session id — used to gate the one-time TTS narration of the welcome. */
+  sessionId?: string;
+  /** BCP-47 language override for TTS. */
+  ttsLanguage?: string;
 }
 
 export function MobileProbesTab({
@@ -22,6 +35,12 @@ export function MobileProbesTab({
   archivingProbeId,
   isGeneratingProbe = false,
   tutorName,
+  showWelcome = false,
+  onWelcomePlay,
+  onOpenSessionPlan,
+  isStartingSession = false,
+  sessionId,
+  ttsLanguage,
 }: MobileProbesTabProps) {
   const { t } = useI18n();
 
@@ -48,6 +67,49 @@ export function MobileProbesTab({
   const goNext = () => setCurrentIndex(i => Math.min(activeProbes.length - 1, i + 1));
 
   const avatarInitial = displayTutorName.charAt(0).toUpperCase();
+
+  // Typewriter for the currently-shown probe
+  const currentProbeId = currentProbe?.id;
+  const [probeTypingDone, setProbeTypingDone] = useState(true);
+  const alreadyTyped = currentProbeId ? isProbeTyped(currentProbeId) : true;
+  const { displayed: probeDisplayed } = useTypewriter(currentProbe?.text ?? "", {
+    instant: alreadyTyped,
+    speedMs: 45,
+    enabled: !!currentProbe,
+    onDone: () => {
+      if (currentProbeId) markProbeTyped(currentProbeId);
+      setProbeTypingDone(true);
+    },
+  });
+
+  useEffect(() => {
+    if (!currentProbeId) {
+      setProbeTypingDone(true);
+    } else {
+      setProbeTypingDone(isProbeTyped(currentProbeId));
+    }
+  }, [currentProbeId]);
+
+  // Fresh-session welcome takes precedence over the empty state
+  // Parent-controlled welcome surface — overrides the probe carousel so
+  // the Help button can re-open the welcome mid-session.
+  if (showWelcome) {
+    return (
+      <div className="relative flex-1 min-w-0 flex flex-col bg-[#0a0a0a] h-full overflow-hidden">
+        <TutorWelcome
+          tutorName={displayTutorName}
+          onPlay={() => onWelcomePlay?.()}
+          onOpenSessionPlan={
+            onOpenSessionPlan ? () => onOpenSessionPlan() : undefined
+          }
+          isStarting={isStartingSession}
+          sessionId={sessionId}
+          ttsLanguage={ttsLanguage}
+          compactMobile
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="relative flex-1 min-w-0 flex flex-col bg-[#0a0a0a] h-full overflow-hidden">
@@ -131,9 +193,23 @@ export function MobileProbesTab({
                   &ldquo;
                 </span>
                 <p className="relative text-xl leading-relaxed tracking-tight text-center text-neutral-200">
-                  {currentProbe.text}
+                  {probeDisplayed}
+                  {!probeTypingDone && (
+                    <span
+                      className="inline-block w-[2px] h-[1.1em] align-[-0.15em] ml-0.5 bg-amber-400/80 animate-pulse"
+                      aria-hidden="true"
+                    />
+                  )}
                 </p>
               </div>
+
+              {/* Listen-to-tutor TTS. cacheKey bound to the probe id so
+                  navigating probes invalidates the cached audio. */}
+              <ListenButton
+                text={currentProbe.text}
+                language={ttsLanguage}
+                cacheKey={`probe:${currentProbe.id}`}
+              />
             </div>
 
             {/* Action row */}
@@ -156,38 +232,40 @@ export function MobileProbesTab({
                 <span>{t('probes.done')}</span>
               </button>
 
-              {/* Carousel dots */}
-              {activeProbes.length > 1 && (
-                <div className="flex items-center justify-center gap-1.5 mt-3">
-                  {activeProbes.map((_, i) => (
-                    <button
-                      key={i}
-                      onClick={() => setCurrentIndex(i)}
-                      className={`h-1.5 rounded-full transition-all ${
-                        i === currentIndex
-                          ? "w-5 bg-neutral-300"
-                          : "w-1.5 bg-neutral-700 active:bg-neutral-600"
-                      }`}
-                      aria-label={`${t('probes.goToProbe')} ${i + 1}`}
-                    />
-                  ))}
-                  {/* Placeholder dots for remaining empty slots */}
-                  {Array.from({ length: Math.max(0, MAX_PROBES - activeProbes.length) }).map((_, i) => (
-                    <div
-                      key={`ph-${i}`}
-                      className="h-1.5 w-1.5 rounded-full bg-neutral-900 border border-neutral-800"
-                    />
-                  ))}
-                </div>
-              )}
+              {/* Carousel dots — always rendered (placeholders for empty
+                  slots) so the row reserves its vertical space and the
+                  action button above doesn't shift when probes are added. */}
+              <div className="flex items-center justify-center gap-1.5 mt-3 h-1.5">
+                {activeProbes.map((_, i) => (
+                  <button
+                    key={i}
+                    onClick={() => setCurrentIndex(i)}
+                    className={`h-1.5 rounded-full transition-all ${
+                      i === currentIndex
+                        ? "w-5 bg-neutral-300"
+                        : "w-1.5 bg-neutral-700 active:bg-neutral-600"
+                    }`}
+                    aria-label={`${t('probes.goToProbe')} ${i + 1}`}
+                  />
+                ))}
+                {Array.from({ length: Math.max(0, MAX_PROBES - activeProbes.length) }).map((_, i) => (
+                  <div
+                    key={`ph-${i}`}
+                    className="h-1.5 w-1.5 rounded-full bg-neutral-900 border border-neutral-800"
+                  />
+                ))}
+              </div>
 
-              {/* Generating indicator */}
-              {isGeneratingProbe && (
-                <div className="flex items-center justify-center gap-2 mt-2">
-                  <div className="w-2 h-2 rounded-full bg-amber-500/70 animate-pulse" />
-                  <span className="text-[10px] text-neutral-500">{t('probes.generatingProbe')}</span>
-                </div>
-              )}
+              {/* Generating indicator — always takes its slot to prevent
+                  a layout shift when a new probe is being fetched. */}
+              <div className="flex items-center justify-center gap-2 mt-2 h-3">
+                {isGeneratingProbe && (
+                  <>
+                    <div className="w-2 h-2 rounded-full bg-amber-500/70 animate-pulse" />
+                    <span className="text-[10px] text-neutral-500">{t('probes.generatingProbe')}</span>
+                  </>
+                )}
+              </div>
             </div>
           </>
         )}

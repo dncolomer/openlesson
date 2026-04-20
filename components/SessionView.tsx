@@ -159,11 +159,8 @@ export function SessionView({ sessionId }: { sessionId: string }) {
   // Kept in sync with the ResizablePane collapsed state via the toggle
   // UI in the top bar. At least one must be true at all times. Initialized
   // from the persisted pane layout so refreshes preserve user choice.
-  const [paneVisibility, setPaneVisibility] = useState<{
-    tools: boolean;
-    tutor: boolean;
-    plan: boolean;
-  }>(() => {
+  type PaneVis = { tools: boolean; tutor: boolean; plan: boolean };
+  const [paneVisibility, setPaneVisibility] = useState<PaneVis>(() => {
     if (typeof window === "undefined") return { tools: true, tutor: true, plan: true };
     const readCollapsed = (key: string): null | "left" | "right" => {
       try {
@@ -185,6 +182,34 @@ export function SessionView({ sessionId }: { sessionId: string }) {
       plan: outer !== "right" && inner !== "right",
     };
   });
+  // Canonical applier: writes both the toggle state AND the underlying
+  // ResizablePane collapsed states, so the UI and the actual layout are
+  // always in lockstep. At least one of the three must be true.
+  const applyPaneVisibility = useCallback((next: PaneVis) => {
+    if (!next.tools && !next.tutor && !next.plan) return;
+    setPaneVisibility(next);
+    // Outer pane: left = Tools, right = (Tutor + Plan combined)
+    if (!next.tutor && !next.plan) {
+      resizablePaneRef.current?.setLayout({ collapsedSide: "right" });
+    } else if (!next.tools) {
+      resizablePaneRef.current?.setLayout({ collapsedSide: "left" });
+    } else {
+      resizablePaneRef.current?.setLayout({ collapsedSide: null });
+    }
+    // Inner pane: left = Tutor, right = Plan
+    if (!next.tutor && next.plan) {
+      resizablePaneRef2.current?.setLayout({ collapsedSide: "left" });
+    } else if (next.tutor && !next.plan) {
+      resizablePaneRef2.current?.setLayout({ collapsedSide: "right" });
+    } else {
+      resizablePaneRef2.current?.setLayout({ collapsedSide: null });
+    }
+  }, []);
+  // Turn a single view on without touching the other two.
+  const ensureVisible = useCallback((view: keyof PaneVis) => {
+    if (paneVisibility[view]) return;
+    applyPaneVisibility({ ...paneVisibility, [view]: true });
+  }, [paneVisibility, applyPaneVisibility]);
   const [objectives, setObjectives] = useState<string[]>([]);
   const [objectiveStatuses, setObjectiveStatuses] = useState<("red" | "yellow" | "green" | "blue")[]>([]);
 
@@ -342,9 +367,10 @@ export function SessionView({ sessionId }: { sessionId: string }) {
   // Track tool open/close events + auto-expand tool panel if collapsed
   useEffect(() => {
     if (!session?.id || !activeTool) return;
-    
-    // Auto-expand the tool panel (left pane) whenever a tool is selected
-    resizablePaneRef.current?.expandLeft();
+
+    // Auto-show the tools view whenever a tool is selected. This keeps
+    // the top-bar Tools toggle in sync with the user's intent.
+    ensureVisible("tools");
 
     const prevTool = prevToolRef.current;
     const elapsedTime = session.startedAt 
@@ -3077,32 +3103,10 @@ export function SessionView({ sessionId }: { sessionId: string }) {
               <div className="w-px h-5 bg-neutral-800 mx-1" />
               {/* Per-view visibility toggles. At least one view must stay
                   visible; the last-enabled toggle is disabled to prevent
-                  a fully-empty workspace. Each click writes the outer +
-                  inner ResizablePane collapsed state directly. */}
+                  a fully-empty workspace. */}
               {(() => {
-                const toolsVisible = paneVisibility.tools;
-                const tutorVisible = paneVisibility.tutor;
-                const planVisible = paneVisibility.plan;
-                const countVisible = Number(toolsVisible) + Number(tutorVisible) + Number(planVisible);
-                const applyVisibility = (tools: boolean, tutor: boolean, plan: boolean) => {
-                  setPaneVisibility({ tools, tutor, plan });
-                  // Outer pane: left = Tools, right = (Tutor + Plan)
-                  if (!tutor && !plan) {
-                    resizablePaneRef.current?.setLayout({ collapsedSide: "right" });
-                  } else if (!tools) {
-                    resizablePaneRef.current?.setLayout({ collapsedSide: "left" });
-                  } else {
-                    resizablePaneRef.current?.setLayout({ collapsedSide: null });
-                  }
-                  // Inner pane: left = Tutor, right = Plan
-                  if (!tutor && plan) {
-                    resizablePaneRef2.current?.setLayout({ collapsedSide: "left" });
-                  } else if (tutor && !plan) {
-                    resizablePaneRef2.current?.setLayout({ collapsedSide: "right" });
-                  } else {
-                    resizablePaneRef2.current?.setLayout({ collapsedSide: null });
-                  }
-                };
+                const { tools, tutor, plan } = paneVisibility;
+                const countVisible = Number(tools) + Number(tutor) + Number(plan);
                 const Toggle = ({
                   label, active, onClick, disabled,
                 }: { label: string; active: boolean; onClick: () => void; disabled: boolean }) => (
@@ -3124,21 +3128,21 @@ export function SessionView({ sessionId }: { sessionId: string }) {
                   <div className="flex items-center gap-1">
                     <Toggle
                       label={t('tools.tools')}
-                      active={toolsVisible}
-                      disabled={toolsVisible && countVisible === 1}
-                      onClick={() => applyVisibility(!toolsVisible, tutorVisible, planVisible)}
+                      active={tools}
+                      disabled={tools && countVisible === 1}
+                      onClick={() => applyPaneVisibility({ ...paneVisibility, tools: !tools })}
                     />
                     <Toggle
                       label={t('probes.tutor')}
-                      active={tutorVisible}
-                      disabled={tutorVisible && countVisible === 1}
-                      onClick={() => applyVisibility(toolsVisible, !tutorVisible, planVisible)}
+                      active={tutor}
+                      disabled={tutor && countVisible === 1}
+                      onClick={() => applyPaneVisibility({ ...paneVisibility, tutor: !tutor })}
                     />
                     <Toggle
                       label={t('session.sessionPlan')}
-                      active={planVisible}
-                      disabled={planVisible && countVisible === 1}
-                      onClick={() => applyVisibility(toolsVisible, tutorVisible, !planVisible)}
+                      active={plan}
+                      disabled={plan && countVisible === 1}
+                      onClick={() => applyPaneVisibility({ ...paneVisibility, plan: !plan })}
                     />
                   </div>
                 );
@@ -3505,14 +3509,8 @@ export function SessionView({ sessionId }: { sessionId: string }) {
                         isSessionActive={isRecording && !isPaused}
                         showWelcome={showWelcomePanel}
                         onWelcomePlay={handleWelcomePlay}
-                        onOpenSessionPlan={() => {
-                          // Expand inner pane so Plan is visible next to
-                          // the tutor. Leaves the outer (tools) pane as-is.
-                          resizablePaneRef2.current?.setLayout({
-                            leftWidth: 50,
-                            collapsedSide: null,
-                          });
-                        }}
+                        onOpenSessionPlan={() => ensureVisible("plan")}
+                        onOpenTools={() => ensureVisible("tools")}
                         isStartingSession={isStartingSession}
                         sessionId={session.id}
                         ttsLanguage={tutoringLanguage}

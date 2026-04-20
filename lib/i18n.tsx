@@ -46,6 +46,43 @@ export function useI18n() {
   return useContext(I18nContext);
 }
 
+/**
+ * Translate a key against an explicit locale, independent of the active
+ * UI locale. Useful for content that should follow the tutoring language
+ * (e.g. the tutor's welcome greeting) rather than the UI chrome language.
+ * Falls back to English if the requested locale is unknown or the key is
+ * missing in that locale.
+ */
+export function translateWithLocale(
+  locale: string,
+  key: string,
+  params?: Record<string, string | number>,
+): string {
+  const tryResolve = (loc: string): string | null => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const bundle: any = (messages as Record<string, any>)[loc];
+    if (!bundle) return null;
+    let value: unknown = bundle;
+    for (const k of key.split('.')) {
+      if (value && typeof value === 'object' && k in value) {
+        value = (value as Record<string, unknown>)[k];
+      } else {
+        return null;
+      }
+    }
+    return typeof value === 'string' ? value : null;
+  };
+
+  const resolved = tryResolve(locale) ?? tryResolve('en');
+  if (resolved === null) return key;
+  if (params) {
+    return resolved.replace(/\{(\w+)\}/g, (_, paramKey) =>
+      String(params[paramKey] ?? `{${paramKey}}`),
+    );
+  }
+  return resolved;
+}
+
 function I18nProviderInner({ children }: { children: React.ReactNode }) {
   const [locale, setLocaleState] = useState<Locale>('en');
   const [isInitialized, setIsInitialized] = useState(false);

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useI18n } from "@/lib/i18n";
+import { useI18n, translateWithLocale } from "@/lib/i18n";
 import { useTypewriter } from "@/lib/useTypewriter";
 import { ListenButton } from "./ListenButton";
 
@@ -49,16 +49,24 @@ export function TutorWelcome({
   sessionId,
   ttsLanguage,
 }: TutorWelcomeProps) {
-  const { t } = useI18n();
+  const { locale: uiLocale } = useI18n();
   const avatarInitial = (tutorName || "Helios").charAt(0).toUpperCase();
+
+  // The welcome surface (typed greeting + button labels) follows the
+  // *tutoring* language — the language the tutor will actually speak to
+  // the user — rather than the UI chrome language. Falls back to UI
+  // locale, then English, via translateWithLocale.
+  const lang = ttsLanguage ?? uiLocale;
+  const tt = (key: string, params?: Record<string, string | number>) =>
+    translateWithLocale(lang, key, params);
 
   // Assembled from three i18n keys so translators can customize each line.
   // Mobile uses a different "panelIntro" line because there is no left/right
   // panel layout — tools and plan live on swipe tabs instead.
   const lines = [
-    t("welcome.greeting", { name: tutorName }),
-    t(compactMobile ? "welcome.panelIntroMobile" : "welcome.panelIntro"),
-    t("welcome.callToAction"),
+    tt("welcome.greeting", { name: tutorName }),
+    tt(compactMobile ? "welcome.panelIntroMobile" : "welcome.panelIntro"),
+    tt("welcome.callToAction"),
   ];
   const fullText = lines.join("\n\n");
 
@@ -70,7 +78,7 @@ export function TutorWelcome({
     onDone: () => setTypingDone(true),
   });
 
-  const playLabel = isStarting ? t("welcome.starting") : t("welcome.play");
+  const playLabel = isStarting ? tt("welcome.starting") : tt("welcome.play");
 
   return (
     <div className="flex-1 min-h-0 flex flex-col items-center justify-center gap-6 overflow-y-auto px-4 py-6 text-center">
@@ -105,7 +113,7 @@ export function TutorWelcome({
         onClick={() => {
           if (!typingDone) skip();
         }}
-        aria-label={typingDone ? undefined : t("welcome.skipTyping")}
+        aria-label={typingDone ? undefined : tt("welcome.skipTyping")}
         className="relative max-w-[52ch] cursor-text text-left focus:outline-none"
       >
         <p className="relative text-lg leading-relaxed tracking-tight text-neutral-200 whitespace-pre-line">
@@ -202,7 +210,7 @@ export function TutorWelcome({
                 d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"
               />
             </svg>
-            <span>{t("welcome.openSessionPlan")}</span>
+            <span>{tt("welcome.openSessionPlan")}</span>
           </button>
         )}
       </div>

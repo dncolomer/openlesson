@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useI18n } from "@/lib/i18n";
+import { useI18n, translateWithLocale } from "@/lib/i18n";
 
 /**
  * Map the app's 6-locale i18n code to an xAI-supported BCP-47 code for TTS.
@@ -54,7 +54,11 @@ export function ListenButton({
   size = "sm",
   className = "",
 }: ListenButtonProps) {
-  const { t, locale } = useI18n();
+  const { locale } = useI18n();
+  // Button label follows the tutoring language (inferred from the
+  // `language` prop when provided) rather than the UI chrome language,
+  // so narration and label feel consistent.
+  const labelLocale = language ?? locale;
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const audioUrlRef = useRef<string | null>(null);
@@ -172,8 +176,8 @@ export function ListenButton({
   const iconSize = size === "md" ? "w-4 h-4" : "w-3.5 h-3.5";
 
   const label = isSpeaking
-    ? t("welcome.stopNarration")
-    : t("welcome.listenToTutor");
+    ? translateWithLocale(labelLocale, "welcome.stopNarration")
+    : translateWithLocale(labelLocale, "welcome.listenToTutor");
 
   return (
     <button

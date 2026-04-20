@@ -751,8 +751,9 @@
   "sessionEnd": {
     "endSession": "Zakończ sesję",
     "keepGoing": "Kontynuuj",
-    "confirmEndTitle": "Zakończyć sesję?",
-    "confirmEndMessage": "Czy na pewno chcesz zakończyć tę sesję? Dane sesji zostaną zapisane i zostaniesz przekierowany do strony z wynikami."
+    "confirmEndTitle": "Zakończyć tę sesję?",
+    "confirmEndMessage": "Zakończenie sesji jest trwałe — nie będziesz mógł jej wznowić. Jeśli chcesz tylko na chwilę wyjść, wstrzymaj sesję i kliknij Wróć do panelu; zawsze możesz wrócić i kontynuować od miejsca, w którym skończyłeś.",
+    "pauseAndLeave": "Wstrzymaj i wróć do panelu"
   },
   "planning": {
     "analyzingHistory": "Analizowanie historii uczenia...",

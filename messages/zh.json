@@ -751,8 +751,9 @@
   "sessionEnd": {
     "endSession": "结束课程",
     "keepGoing": "继续",
-    "confirmEndTitle": "结束课程？",
-    "confirmEndMessage": "您确定要结束此课程吗？您的课程数据将被保存，您将被带到结果页面。"
+    "confirmEndTitle": "结束这个会话吗？",
+    "confirmEndMessage": "结束会话是永久性的——之后无法恢复。如果你只是想暂时离开，请暂停会话并点击「返回主面板」；你随时可以回来继续未完成的部分。",
+    "pauseAndLeave": "暂停并返回主面板"
   },
   "planning": {
     "analyzingHistory": "正在分析您的学习历史...",

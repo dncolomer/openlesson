@@ -751,8 +751,9 @@
   "sessionEnd": {
     "endSession": "Kết thúc phiên",
     "keepGoing": "Tiếp tục",
-    "confirmEndTitle": "Kết thúc phiên?",
-    "confirmEndMessage": "Bạn có chắc chắn muốn kết thúc phiên học này không? Dữ liệu phiên của bạn sẽ được lưu và bạn sẽ được đưa đến trang kết quả."
+    "confirmEndTitle": "Kết thúc phiên học này?",
+    "confirmEndMessage": "Kết thúc phiên học là vĩnh viễn — bạn không thể tiếp tục sau đó. Nếu chỉ muốn tạm rời, hãy tạm dừng và nhấn Quay về Bảng điều khiển; bạn có thể quay lại tiếp tục bất cứ lúc nào.",
+    "pauseAndLeave": "Tạm dừng & về Bảng điều khiển"
   },
   "planning": {
     "analyzingHistory": "Đang phân tích lịch sử học tập của bạn...",

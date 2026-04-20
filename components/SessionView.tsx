@@ -218,6 +218,10 @@ export function SessionView({ sessionId }: { sessionId: string }) {
   
   // Plan complete modal (shown when all steps are done)
   const [showPlanCompleteModal, setShowPlanCompleteModal] = useState(false);
+  // Stop-button confirmation — ending is irreversible so we gate the Stop
+  // click through an explicit warning that also nudges users toward the
+  // non-destructive "pause + back to dashboard" alternative.
+  const [showEndConfirm, setShowEndConfirm] = useState(false);
 
   // Mobile detection
   const [isMobile, setIsMobile] = useState(false);
@@ -3060,7 +3064,7 @@ export function SessionView({ sessionId }: { sessionId: string }) {
                 // the welcome. Otherwise fall through to the normal
                 // recording handlers.
                 onStartRecording={showWelcomePanel ? handleWelcomePlay : startRecording}
-                onStopRecording={stopRecording}
+                onStopRecording={() => setShowEndConfirm(true)}
                 onPause={handlePause}
                 onResume={showWelcomePanel ? handleWelcomePlay : handleResume}
               />
@@ -3608,6 +3612,65 @@ export function SessionView({ sessionId }: { sessionId: string }) {
       )}
 
       {/* SessionPrepModal removed -- loading progress now inline in welcome modal */}
+
+      {/* End Session Confirmation — Stop is irreversible, so we warn and
+          suggest the non-destructive pause + back-to-dashboard route. */}
+      {showEndConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/70 backdrop-blur-md" onClick={() => setShowEndConfirm(false)} />
+          <div className="relative z-10 w-full max-w-md bg-neutral-900 border border-neutral-800 rounded-2xl shadow-2xl overflow-hidden">
+            <div className="px-6 pt-6 pb-5 border-b border-neutral-800/70">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-red-500/15 border border-red-500/30 flex items-center justify-center shrink-0">
+                  <svg className="w-5 h-5 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                </div>
+                <h3 className="text-base font-semibold text-white">
+                  {t('sessionEnd.confirmEndTitle')}
+                </h3>
+              </div>
+              <p className="mt-3 text-[13px] leading-relaxed text-neutral-400">
+                {t('sessionEnd.confirmEndMessage')}
+              </p>
+            </div>
+            <div className="px-6 py-4 flex flex-col gap-2">
+              <button
+                onClick={async () => {
+                  setShowEndConfirm(false);
+                  if (!isPaused) {
+                    try { await handlePause(); } catch (e) { console.error(e); }
+                  }
+                  router.push("/dashboard");
+                }}
+                className="w-full py-2.5 px-4 text-sm font-medium rounded-xl bg-neutral-100 text-neutral-900 hover:bg-white transition-colors flex items-center justify-center gap-2"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                </svg>
+                {t('sessionEnd.pauseAndLeave')}
+              </button>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setShowEndConfirm(false)}
+                  className="flex-1 py-2.5 px-4 text-sm text-neutral-300 bg-neutral-900 border border-neutral-800 hover:bg-neutral-800 hover:border-neutral-700 hover:text-white rounded-xl transition-colors"
+                >
+                  {t('sessionEnd.keepGoing')}
+                </button>
+                <button
+                  onClick={async () => {
+                    setShowEndConfirm(false);
+                    try { await stopRecording(); } catch (e) { console.error(e); }
+                  }}
+                  className="flex-1 py-2.5 px-4 text-sm font-medium text-red-300 bg-red-500/10 border border-red-500/30 hover:bg-red-500/20 hover:text-red-200 rounded-xl transition-colors"
+                >
+                  {t('sessionEnd.endSession')}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Plan Complete Modal - shown when all steps are done */}
       {showPlanCompleteModal && (

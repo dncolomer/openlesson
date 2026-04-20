@@ -751,8 +751,9 @@
   "sessionEnd": {
     "endSession": "Sitzung beenden",
     "keepGoing": "Weitermachen",
-    "confirmEndTitle": "Sitzung beenden?",
-    "confirmEndMessage": "Bist du sicher, dass du diese Sitzung beenden möchtest? Deine Sitzungsdaten werden gespeichert und du wirst zur Ergebnisseite geleitet."
+    "confirmEndTitle": "Diese Sitzung beenden?",
+    "confirmEndMessage": "Das Beenden der Sitzung ist endgültig — du kannst sie danach nicht wieder aufnehmen. Wenn du nur kurz weggehen möchtest, pausiere die Sitzung und klick auf Zurück zum Dashboard; du kannst jederzeit zurückkehren und dort weitermachen, wo du aufgehört hast.",
+    "pauseAndLeave": "Pausieren & zum Dashboard"
   },
   "planning": {
     "analyzingHistory": "Lernverlauf wird analysiert...",

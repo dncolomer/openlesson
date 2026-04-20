@@ -803,8 +803,9 @@
   "sessionEnd": {
     "endSession": "Terminar sesión",
     "keepGoing": "Continuar",
-    "confirmEndTitle": "¿Terminar sesión?",
-    "confirmEndMessage": "¿Estás seguro de que quieres terminar esta sesión? Los datos de tu sesión se guardarán y serás llevado a la página de resultados."
+    "confirmEndTitle": "¿Terminar esta sesión?",
+    "confirmEndMessage": "Terminar la sesión es permanente — no podrás retomarla después. Si solo quieres alejarte un momento, pausa la sesión y pulsa Volver al panel; siempre puedes regresar y continuar donde lo dejaste.",
+    "pauseAndLeave": "Pausar y volver al panel"
   },
   "planning": {
     "analyzingHistory": "Analizando tu historial de aprendizaje...",

@@ -808,8 +808,9 @@
   "sessionEnd": {
     "endSession": "End session",
     "keepGoing": "Keep going",
-    "confirmEndTitle": "End Session?",
-    "confirmEndMessage": "Are you sure you want to end this session? Your session data will be saved and you'll be taken to the results page."
+    "confirmEndTitle": "End this session?",
+    "confirmEndMessage": "Ending the session is permanent — you can't resume it afterwards. If you just want to step away, pause the session and click Back to Dashboard instead; you can always come back and continue where you left off.",
+    "pauseAndLeave": "Pause & back to dashboard"
   },
   "planning": {
     "analyzingHistory": "Analyzing your learning history...",

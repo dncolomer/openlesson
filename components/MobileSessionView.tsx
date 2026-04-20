@@ -2085,27 +2085,55 @@ export function MobileSessionView({
         )}
       </header>
 
-      {/* End Session Confirmation Modal */}
+      {/* End Session Confirmation Modal — ending is irreversible, so we
+          warn and offer a non-destructive "pause + back to dashboard"
+          alternative. */}
       {showEndConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-md p-4">
-          <div className="bg-neutral-900 border border-neutral-800 rounded-2xl p-5 max-w-sm w-full">
-            <h3 className="text-sm font-semibold text-white mb-2">{t('sessionEnd.confirmEndTitle')}</h3>
-            <p className="text-neutral-400 mb-4 text-xs leading-relaxed">
-              {t('sessionEnd.confirmEndMessage')}
-            </p>
-            <div className="flex gap-2">
+          <div className="bg-neutral-900 border border-neutral-800 rounded-2xl max-w-sm w-full overflow-hidden">
+            <div className="px-5 pt-5 pb-4 border-b border-neutral-800/70">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-full bg-red-500/15 border border-red-500/30 flex items-center justify-center shrink-0">
+                  <svg className="w-4.5 h-4.5 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                </div>
+                <h3 className="text-sm font-semibold text-white">{t('sessionEnd.confirmEndTitle')}</h3>
+              </div>
+              <p className="mt-3 text-xs leading-relaxed text-neutral-400">
+                {t('sessionEnd.confirmEndMessage')}
+              </p>
+            </div>
+            <div className="px-5 py-4 flex flex-col gap-2">
               <button
-                onClick={() => setShowEndConfirm(false)}
-                className="flex-1 py-2.5 text-xs text-neutral-300 bg-neutral-900 border border-neutral-800 active:bg-neutral-800 active:border-neutral-700 active:text-white rounded-xl transition-colors"
+                onClick={async () => {
+                  setShowEndConfirm(false);
+                  if (!isPaused) {
+                    try { await pauseRecording(); } catch (e) { console.error(e); }
+                  }
+                  router.push("/dashboard");
+                }}
+                className="w-full py-2.5 text-xs font-medium text-neutral-900 bg-neutral-100 active:bg-white rounded-xl transition-colors flex items-center justify-center gap-2"
               >
-                {t('common.keepGoing')}
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                </svg>
+                {t('sessionEnd.pauseAndLeave')}
               </button>
-              <button
-                onClick={stopRecording}
-                className="flex-1 py-2.5 text-xs font-medium text-neutral-900 bg-neutral-100 active:bg-white rounded-xl transition-colors"
-              >
-                {t('sessionEnd.endSession')}
-              </button>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setShowEndConfirm(false)}
+                  className="flex-1 py-2.5 text-xs text-neutral-300 bg-neutral-900 border border-neutral-800 active:bg-neutral-800 active:border-neutral-700 active:text-white rounded-xl transition-colors"
+                >
+                  {t('common.keepGoing')}
+                </button>
+                <button
+                  onClick={stopRecording}
+                  className="flex-1 py-2.5 text-xs font-medium text-red-300 bg-red-500/10 border border-red-500/30 active:bg-red-500/20 active:text-red-200 rounded-xl transition-colors"
+                >
+                  {t('sessionEnd.endSession')}
+                </button>
+              </div>
             </div>
           </div>
         </div>

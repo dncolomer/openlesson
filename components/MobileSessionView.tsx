@@ -765,22 +765,31 @@ export function MobileSessionView({
     if (!s) return;
     setIsStartingSession(true);
     try {
-      // Actually start the session (mic + recorder + status sync) so the
-      // welcome Start button is a real "begin" CTA. Skip if already
-      // running (paused → resume is handled by the top bar).
+      // Bring the session to an actively-recording state. Three cases:
+      //   1. Fresh session: startRecording via handleStartSession (mic req).
+      //   2. Paused session (Help was clicked): resumeRecording restarts
+      //      the recorder and flips status back to active.
+      //   3. Already recording: no-op.
       if (!isRecording) {
         await handleStartSession();
+      } else if (isPaused) {
+        await resumeRecording();
       }
-      await fetchAndSaveOpeningProbe();
+      // Only fetch the opening probe on fresh sessions. If probes already
+      // exist (e.g. Help re-ran the welcome), preserve the history.
+      const hasActive = (sessionRef.current?.probes ?? []).some(p => !p.archived);
+      if (!hasActive) {
+        await fetchAndSaveOpeningProbe();
+      }
     } finally {
       markSessionWelcomeSeen(s.id);
       setShowWelcomePanel(false);
       setIsStartingSession(false);
     }
-    // handleStartSession is stable (useCallback) but depends on session;
-    // listing it would re-create this callback on every session update.
+    // handleStartSession / resumeRecording are stable-ish and including
+    // them as deps would cause noise.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [fetchAndSaveOpeningProbe, isRecording]);
+  }, [fetchAndSaveOpeningProbe, isRecording, isPaused]);
 
   // Prepare session with language selection
   const prepareSession = useCallback(async () => {
@@ -1977,6 +1986,28 @@ export function MobileSessionView({
                 <div className="w-px h-5 bg-neutral-800 mx-1" />
               </>
             )}
+
+            {/* Help — pauses the session and re-opens the tutor welcome
+                (typed greeting + Start session button). Preserves probes
+                and session data; clicking Start session resumes recording. */}
+            <button
+              onClick={() => {
+                if (isRecording && !isPaused) {
+                  pauseRecording().catch(err =>
+                    console.error("[MobileSessionView] Help pause failed:", err),
+                  );
+                }
+                setShowWelcomePanel(true);
+                setActiveTab(0); // ensure probes tab is visible
+              }}
+              className="w-8 h-8 flex items-center justify-center rounded-lg text-neutral-500 hover:text-white hover:bg-neutral-800 active:bg-neutral-800 transition-colors"
+              title={t('tools.help')}
+              aria-label={t('tools.help')}
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </button>
 
             <button
               onClick={() => router.push('/dashboard')}

@@ -53,9 +53,11 @@ export function TutorWelcome({
   const avatarInitial = (tutorName || "T").charAt(0).toUpperCase();
 
   // Assembled from three i18n keys so translators can customize each line.
+  // Mobile uses a different "panelIntro" line because there is no left/right
+  // panel layout — tools and plan live on swipe tabs instead.
   const lines = [
     t("welcome.greeting", { name: tutorName }),
-    t("welcome.panelIntro"),
+    t(compactMobile ? "welcome.panelIntroMobile" : "welcome.panelIntro"),
     t("welcome.callToAction"),
   ];
   const fullText = lines.join("\n\n");

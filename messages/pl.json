@@ -1972,6 +1972,7 @@
   "welcome": {
     "greeting": "Cześć — jestem {name}, twoim korepetytorem.",
     "panelIntro": "Witaj w swoim Zintegrowanym Środowisku Nauki (ILE). Po lewej znajdziesz Narzędzia (Czat, Tablica, Notatnik i inne), po prawej Plan sesji, a tutaj ja — będę cię prowadzić, zadając jedno pytanie naraz. Użyj strzałek, aby przechodzić między pytaniami, gdy się pojawią.",
+    "panelIntroMobile": "Witaj w swoim Zintegrowanym Środowisku Nauki (ILE). Przesuń palcem w lewo lub w prawo, aby uzyskać dostęp do Planu sesji i innych narzędzi. Tutaj będę cię prowadzić, zadając jedno pytanie naraz — użyj strzałek, aby przechodzić między pytaniami, gdy się pojawią.",
     "callToAction": "Najważniejsza rzecz: myśl na głos podczas pracy. To się nazywa Protokół Głośnego Myślenia (Think-Aloud Protocol) — mów to, co ci przychodzi do głowy, nawet jeśli brzmi chaotycznie lub niepewnie. Słucham cię przez cały czas, a twoje wypowiedziane rozumowanie pozwala mi zrozumieć, gdzie utknąłeś i o co zapytać dalej. Gdy będziesz gotowy, kliknij Rozpocznij sesję, a zacznę od pierwszego pytania prowadzącego.",
     "play": "Rozpocznij sesję",
     "starting": "Uruchamianie…",

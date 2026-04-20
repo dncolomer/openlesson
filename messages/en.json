@@ -2007,6 +2007,7 @@
   "welcome": {
     "greeting": "Hi — I'm {name}, your tutor.",
     "panelIntro": "Welcome to your Integrated Learning Environment (ILE). On the left you'll find your Tools (Chat, Canvas, Notebook, and more), on the right your Session Plan, and right here I'll guide you with one question at a time. Use the arrows to step back and forth through questions as they arrive.",
+    "panelIntroMobile": "Welcome to your Integrated Learning Environment (ILE). Swipe left or right to access your Session Plan and other tools. Right here I'll guide you with one question at a time — use the arrows to step back and forth through questions as they arrive.",
     "callToAction": "The most important thing: think out loud as you work. This is called the Think-Aloud Protocol — just say whatever's going through your head, even if it sounds messy or uncertain. I'm listening the whole time, and your spoken reasoning is how I figure out where you're stuck and what question to ask next. When you're ready, hit Start session and I'll kick things off with your first guiding question.",
     "play": "Start session",
     "starting": "Starting…",

@@ -2984,10 +2984,16 @@ export function SessionView({ sessionId }: { sessionId: string }) {
                 isRecording={isRecording}
                 isPaused={isPaused}
                 elapsedSeconds={elapsedSeconds}
-                onStartRecording={startRecording}
+                // If the tutor welcome is showing, pressing Play in the
+                // top bar should behave identically to pressing Start
+                // session in the panel: start/resume recording, fetch
+                // the opening probe (fresh sessions only), and close
+                // the welcome. Otherwise fall through to the normal
+                // recording handlers.
+                onStartRecording={showWelcomePanel ? handleWelcomePlay : startRecording}
                 onStopRecording={stopRecording}
                 onPause={handlePause}
-                onResume={handleResume}
+                onResume={showWelcomePanel ? handleWelcomePlay : handleResume}
               />
             </div>
             {/* Left-side: Back to Dashboard button, only when paused */}

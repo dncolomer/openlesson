@@ -1942,9 +1942,10 @@ export function MobileSessionView({
           <div className="flex items-center gap-1 shrink-0">
             {isRecording && (
               <>
-                {/* Play / Resume */}
+                {/* Play / Resume — if the tutor welcome is showing,
+                    behave like pressing Start session in the panel. */}
                 <button
-                  onClick={resumeRecording}
+                  onClick={showWelcomePanel ? handleWelcomePlay : resumeRecording}
                   disabled={!isPaused}
                   className={`flex items-center justify-center w-8 h-8 rounded-lg transition-all active:scale-[0.95] ${
                     !isPaused
@@ -2038,7 +2039,7 @@ export function MobileSessionView({
 
             {micStatus === "idle" && (
               <button
-                onClick={handleStartSession}
+                onClick={showWelcomePanel ? handleWelcomePlay : handleStartSession}
                 className="w-full py-1.5 px-3 bg-neutral-100 text-neutral-900 rounded-xl text-xs font-medium flex items-center justify-center gap-2 active:bg-white active:scale-[0.98] transition-all"
               >
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>

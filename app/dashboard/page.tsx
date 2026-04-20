@@ -62,7 +62,7 @@ export default function DashboardPage() {
   // Sessions tab
   const [sessions, setSessions] = useState<Session[]>([]);
   const [sessionSearch, setSessionSearch] = useState("");
-  const [sessionStatusFilter, setSessionStatusFilter] = useState<string>("all");
+  const [sessionStatusFilter, setSessionStatusFilter] = useState<Set<string>>(new Set(["active", "paused"]));
   const [sessionPage, setSessionPage] = useState(1);
   const sessionPageSize = 10;
 
@@ -426,7 +426,7 @@ export default function DashboardPage() {
   const filteredSessions = sessions.filter((s) => {
     const matchesSearch = sessionSearch === "" || 
       s.problem.toLowerCase().includes(sessionSearch.toLowerCase());
-    const matchesStatus = sessionStatusFilter === "all" || s.status === sessionStatusFilter;
+    const matchesStatus = sessionStatusFilter.size === 0 || sessionStatusFilter.has(s.status);
     return matchesSearch && matchesStatus;
   });
 
@@ -509,16 +509,35 @@ export default function DashboardPage() {
                   className="w-full bg-neutral-900 border border-neutral-800 rounded-lg px-3 py-2 text-sm text-neutral-200 placeholder:text-neutral-600 focus:outline-none focus:border-neutral-600"
                 />
               </div>
-              <select
-                value={sessionStatusFilter}
-                onChange={(e) => setSessionStatusFilter(e.target.value)}
-                className="bg-neutral-900 border border-neutral-800 rounded-lg px-3 py-2 text-sm text-neutral-200 focus:outline-none focus:border-neutral-600"
-              >
-                <option value="all">{t('dashboard.allStatus')}</option>
-                <option value="active">{t('dashboard.active')}</option>
-                <option value="paused">{t('dashboard.paused')}</option>
-                <option value="completed">{t('dashboard.completed')}</option>
-              </select>
+              <div className="flex items-center gap-3 bg-neutral-900 border border-neutral-800 rounded-lg px-3 py-2">
+                {[
+                  { value: "active", label: t('dashboard.active') },
+                  { value: "paused", label: t('dashboard.paused') },
+                  { value: "completed", label: t('dashboard.completed') },
+                ].map((opt) => (
+                  <label key={opt.value} className="inline-flex items-center gap-1.5 cursor-pointer select-none group">
+                    <input
+                      type="checkbox"
+                      checked={sessionStatusFilter.has(opt.value)}
+                      onChange={() => {
+                        setSessionStatusFilter((prev) => {
+                          const next = new Set(prev);
+                          if (next.has(opt.value)) {
+                            next.delete(opt.value);
+                          } else {
+                            next.add(opt.value);
+                          }
+                          return next;
+                        });
+                      }}
+                      className="w-3.5 h-3.5 rounded bg-neutral-800 border-neutral-600 text-blue-500 focus:ring-1 focus:ring-blue-500 focus:ring-offset-0 accent-blue-500"
+                    />
+                    <span className="text-sm text-neutral-400 group-hover:text-neutral-200 transition-colors">
+                      {opt.label}
+                    </span>
+                  </label>
+                ))}
+              </div>
             </div>
 
             {filteredSessions.length === 0 ? (

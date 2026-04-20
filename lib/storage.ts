@@ -724,11 +724,11 @@ export async function saveFacialData(
 
 export type ToolName = "chat" | "canvas" | "notebook" | "grokipedia" | "exercise" | "reading" | "rag" | "help" | "data-input" | "logs" | "goals" | "probe" | "session_plan";
 
-export type ToolAction = 
-  | "open" 
-  | "close" 
-  | "send_message" 
-  | "canvas_draw" 
+export type ToolAction =
+  | "open"
+  | "close"
+  | "send_message"
+  | "canvas_draw"
   | "canvas_save"
   | "notebook_edit"
   | "notebook_save"
@@ -739,7 +739,32 @@ export type ToolAction =
   | "generate"
   | "archive"
   | "advance"
-  | "revert";
+  | "revert"
+  // Probe / Tutor panel interactions
+  | "open_resources"
+  | "open_practice"
+  | "ask_assistant"
+  | "toggle_focus"
+  | "nav_prev"
+  | "nav_next"
+  | "nav_jump"
+  // Session plan panel interactions
+  | "step_expand"
+  | "step_collapse"
+  | "rollback"
+  | "force_advance"
+  | "cancel_advance";
+
+export interface LogToolUsageResult {
+  /** True only if BOTH the storage upload and the DB insert succeeded. */
+  success: boolean;
+  /** True if the Storage upload itself succeeded (independent of DB insert). */
+  uploadOk: boolean;
+  /** True if the `session_tool` row insert succeeded. */
+  insertOk: boolean;
+  /** Primary error message, if any. */
+  error?: string;
+}
 
 export async function logToolUsage(
   sessionId: string,
@@ -747,54 +772,38 @@ export async function logToolUsage(
   toolAction: ToolAction,
   timestampMs: number,
   toolData: Record<string, unknown> = {}
-): Promise<boolean> {
+): Promise<LogToolUsageResult> {
   try {
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return false;
+    if (!user) {
+      return { success: false, uploadOk: false, insertOk: false, error: "not authenticated" };
+    }
 
     const toolDataJson = JSON.stringify(toolData);
     const toolStoragePath = `${user.id}/${sessionId}/tool_${timestampMs}.json`;
 
-    console.log("[logToolUsage] Data to upload:", {
-      sessionId,
-      toolName,
-      toolAction,
-      dataSize: toolDataJson.length,
-      toolDataKeys: Object.keys(toolData),
-    });
-    if (toolData.data) {
-      const dataStr = String(toolData.data);
-      console.log("[logToolUsage] toolData.data preview:", dataStr.substring(0, 200) + "...");
-    }
-
+    let uploadOk = false;
+    let uploadError: string | undefined;
     try {
-      const { data: uploadData, error: uploadError } = await supabase.storage
+      const { error } = await supabase.storage
         .from("session-tool")
         .upload(toolStoragePath, toolDataJson, {
           contentType: "application/json",
           upsert: true,
         });
-      
-      console.log("[logToolUsage] Storage upload result:", { uploadData, uploadError });
-      
-      if (!uploadError) {
-        const { data: downloadData, error: downloadError } = await supabase.storage
-          .from("session-tool")
-          .download(toolStoragePath);
-        
-        if (downloadError) {
-          console.error("[logToolUsage] Storage download verify failed:", downloadError);
-        } else {
-          const text = await downloadData.text();
-          console.log("[logToolUsage] Storage verify - downloaded size:", text.length, "startsWith:", text.substring(0, 50));
-        }
+      if (error) {
+        uploadError = error.message;
+      } else {
+        uploadOk = true;
       }
     } catch (e) {
-      console.error("[logToolUsage] Storage upload failed:", e);
+      uploadError = String((e as Error)?.message ?? e);
     }
 
-    const { error } = await supabase
+    let insertOk = false;
+    let insertError: string | undefined;
+    const { error: dbError } = await supabase
       .from("session_tool")
       .insert({
         session_id: sessionId,
@@ -805,15 +814,27 @@ export async function logToolUsage(
         tool_action: toolAction,
         metadata: toolData,
       });
-
-    if (error) {
-      console.warn("[logToolUsage] DB insert failed (non-critical):", error.message);
+    if (dbError) {
+      insertError = dbError.message;
+    } else {
+      insertOk = true;
     }
 
-    return true;
+    const success = uploadOk && insertOk;
+    const error = !success
+      ? [uploadError && `upload: ${uploadError}`, insertError && `db: ${insertError}`]
+          .filter(Boolean)
+          .join("; ") || undefined
+      : undefined;
+
+    return { success, uploadOk, insertOk, error };
   } catch (e) {
-    console.warn("[logToolUsage] Failed (non-critical):", e);
-    return true;
+    return {
+      success: false,
+      uploadOk: false,
+      insertOk: false,
+      error: String((e as Error)?.message ?? e),
+    };
   }
 }
 

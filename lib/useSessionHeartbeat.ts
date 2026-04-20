@@ -43,18 +43,39 @@ export interface PipelineErrors {
 // Types
 // ──────────────────────────────────────────────
 
+/** A single data channel the heartbeat tracks for transfer-health reporting. */
+export type TransferChannel = "audio" | "eeg" | "facial" | "screenshots" | "tools";
+
 export interface TransferHealthCounters {
   audio: { sent: number; saved: number; failed: number };
   eeg: { sent: number; saved: number; failed: number };
   facial: { sent: number; saved: number; failed: number };
+  /** Screenshots are captured on their own interval (not inside the storage
+   *  heartbeat), and are reported via `recordTransferEvent()`. */
+  screenshots: { sent: number; saved: number; failed: number };
+  /** Tool events (user clicks in panels, whiteboard saves, tool open/close).
+   *  Reported via `recordTransferEvent()` from the `logTool()` helper. */
+  tools: { sent: number; saved: number; failed: number };
+}
+
+/** Per-channel outcome emitted by the storage heartbeat callback. */
+export interface ChannelResult {
+  attempted: boolean;
+  saved: boolean;
+  /** Optional underlying error, used to surface failures in the event log. */
+  error?: string;
 }
 
 /** Result returned by the storage heartbeat callback */
 export interface StorageHeartbeatResult {
   /** Per-channel outcome from this heartbeat cycle */
-  audio?: { attempted: boolean; saved: boolean };
-  eeg?: { attempted: boolean; saved: boolean };
-  facial?: { attempted: boolean; saved: boolean };
+  audio?: ChannelResult;
+  eeg?: ChannelResult;
+  facial?: ChannelResult;
+  /** Screenshots can be reported here if the storage heartbeat captures them,
+   *  but typically screenshots use `recordTransferEvent()` because they run on
+   *  their own interval. */
+  screenshots?: ChannelResult;
   /** Error message if the entire heartbeat failed */
   error?: string;
 }
@@ -114,6 +135,16 @@ export interface UseSessionHeartbeatReturn {
   isRunning: boolean;
   /** Clear pipeline errors (e.g., after user dismisses) */
   clearErrors: () => void;
+  /**
+   * Manually record a transfer event for a channel.
+   *
+   * Used by data sources that run on their own interval (e.g. screenshot
+   * capture) and are therefore NOT part of the storage-heartbeat callback
+   * result. Increments the matching sent/saved/failed counters, emits a
+   * structured log entry on failure, and triggers a re-render so the UI
+   * health table stays in sync.
+   */
+  recordTransferEvent: (channel: TransferChannel, saved: boolean, error?: string) => void;
 }
 
 // ──────────────────────────────────────────────
@@ -134,8 +165,27 @@ function createEmptyTransferHealth(): TransferHealthCounters {
     audio: { sent: 0, saved: 0, failed: 0 },
     eeg: { sent: 0, saved: 0, failed: 0 },
     facial: { sent: 0, saved: 0, failed: 0 },
+    screenshots: { sent: 0, saved: 0, failed: 0 },
+    tools: { sent: 0, saved: 0, failed: 0 },
   };
 }
+
+/**
+ * Channels whose events are produced BY the storage heartbeat's
+ * `onStorageHeartbeat` callback (so the tick handler reads them from the
+ * result object). `screenshots` and `tools` are reported via
+ * `recordTransferEvent()` instead — they run on their own cadence.
+ *
+ * Typed narrower than `TransferChannel` so `result[channel]` in the tick
+ * handler is type-safe.
+ */
+type StorageHeartbeatChannel = "audio" | "eeg" | "facial";
+
+const STORAGE_HEARTBEAT_CHANNELS: readonly StorageHeartbeatChannel[] = [
+  "audio",
+  "eeg",
+  "facial",
+] as const;
 
 export function useSessionHeartbeat(
   options: UseSessionHeartbeatOptions,
@@ -236,8 +286,13 @@ export function useSessionHeartbeat(
         onStorageRef.current().then((result) => {
           const durationMs = Date.now() - startMs;
 
-          // Update per-channel counters
-          for (const channel of ["audio", "eeg", "facial"] as const) {
+          // Update per-channel counters and surface per-channel failures as
+          // log entries. Without this, a retry that exhausts its attempts
+          // bumps `failed` in the health table but leaves the event log
+          // silent, making it look like there's no error at all.
+          // Note: `screenshots` and `tools` report via `recordTransferEvent`
+          // on their own cadence, not through the storage heartbeat result.
+          for (const channel of STORAGE_HEARTBEAT_CHANNELS) {
             const ch = result[channel];
             if (ch?.attempted) {
               transferHealthRef.current[channel].sent++;
@@ -245,6 +300,13 @@ export function useSessionHeartbeat(
                 transferHealthRef.current[channel].saved++;
               } else {
                 transferHealthRef.current[channel].failed++;
+                emitLog(
+                  "error",
+                  ch.error
+                    ? `${channel} save failed: ${ch.error}`
+                    : `${channel} save failed (no error detail reported)`,
+                  channel,
+                );
               }
             }
           }
@@ -424,6 +486,27 @@ export function useSessionHeartbeat(
     setPipelineErrors({});
   }, []);
 
+  const recordTransferEvent = useCallback(
+    (channel: TransferChannel, saved: boolean, error?: string) => {
+      const counter = transferHealthRef.current[channel];
+      counter.sent++;
+      if (saved) {
+        counter.saved++;
+      } else {
+        counter.failed++;
+        emitLog(
+          "error",
+          error
+            ? `${channel} save failed: ${error}`
+            : `${channel} save failed (no error detail reported)`,
+          channel,
+        );
+      }
+      syncTransferHealth();
+    },
+    [emitLog, syncTransferHealth],
+  );
+
   return {
     start,
     stop,
@@ -439,6 +522,7 @@ export function useSessionHeartbeat(
     transferHealthRef,
     isRunning,
     clearErrors,
+    recordTransferEvent,
   };
 }
 

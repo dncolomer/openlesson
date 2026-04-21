@@ -212,8 +212,32 @@ export function MobileProbesTab({
               />
             </div>
 
+            {/* "Helios is listening / thinking" status line — continuous
+                feedback so the user isn't staring at silence between probes. */}
+            <div className="shrink-0 flex items-center justify-center gap-2 py-2 text-[11px] text-neutral-500">
+              {isGeneratingProbe ? (
+                <>
+                  <span className="inline-flex items-center gap-0.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-400/80 animate-pulse" />
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-400/80 animate-pulse [animation-delay:0.15s]" />
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-400/80 animate-pulse [animation-delay:0.3s]" />
+                  </span>
+                  <span>{t('probes.heliosThinking', { name: displayTutorName })}</span>
+                </>
+              ) : (
+                <>
+                  <span className="inline-flex items-center gap-0.5">
+                    <span className="w-1 h-1 rounded-full bg-neutral-500 animate-pulse" />
+                    <span className="w-1 h-1 rounded-full bg-neutral-500 animate-pulse [animation-delay:0.2s]" />
+                    <span className="w-1 h-1 rounded-full bg-neutral-500 animate-pulse [animation-delay:0.4s]" />
+                  </span>
+                  <span>{t('probes.heliosListening', { name: displayTutorName })}</span>
+                </>
+              )}
+            </div>
+
             {/* Action row */}
-            <div className="shrink-0 pt-4">
+            <div className="shrink-0 pt-2">
               <button
                 onClick={() => onArchiveProbe?.(currentProbe.id)}
                 disabled={archivingProbeId === currentProbe.id}
@@ -256,16 +280,6 @@ export function MobileProbesTab({
                 ))}
               </div>
 
-              {/* Generating indicator — always takes its slot to prevent
-                  a layout shift when a new probe is being fetched. */}
-              <div className="flex items-center justify-center gap-2 mt-2 h-3">
-                {isGeneratingProbe && (
-                  <>
-                    <div className="w-2 h-2 rounded-full bg-amber-500/70 animate-pulse" />
-                    <span className="text-[10px] text-neutral-500">{t('probes.generatingProbe')}</span>
-                  </>
-                )}
-              </div>
             </div>
           </>
         )}

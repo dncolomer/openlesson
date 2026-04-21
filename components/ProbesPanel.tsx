@@ -276,7 +276,7 @@ export function ProbesPanel({
                   Lives inside the centered tutor+message group so it sits
                   right after the probe text rather than being anchored to
                   the bottom of the panel with a big empty gap above. */}
-              <div className="shrink-0 w-full px-2">
+              <div className="shrink-0 w-full max-w-[560px] px-2">
                 <div className="rounded-2xl border border-neutral-800 bg-neutral-950/40 p-3">
                   <p className="mb-2 text-center text-[11px] leading-tight text-neutral-500">
                     {t('probes.stuckHint', {

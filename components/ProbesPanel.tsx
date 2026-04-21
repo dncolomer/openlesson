@@ -276,7 +276,7 @@ export function ProbesPanel({
                   Lives inside the centered tutor+message group so it sits
                   right after the probe text rather than being anchored to
                   the bottom of the panel with a big empty gap above. */}
-              <div className="shrink-0 w-full max-w-[420px]">
+              <div className="shrink-0 w-full px-2">
                 <div className="rounded-2xl border border-neutral-800 bg-neutral-950/40 p-3">
                   <p className="mb-2 text-center text-[11px] leading-tight text-neutral-500">
                     {t('probes.stuckHint', {
@@ -367,36 +367,9 @@ export function ProbesPanel({
               </div>
             </div>
 
-            {/* "Helios is listening / thinking" status line — anchored to
-                the bottom of the panel so users have continuous feedback
-                during the ~15–40 s between probes instead of silence. */}
-            {isSessionActive && (
-              <div className="shrink-0 flex items-center justify-center gap-2 py-2 text-[11px] text-neutral-500">
-                {isGeneratingProbe ? (
-                  <>
-                    <span className="inline-flex items-center gap-0.5">
-                      <span className="w-1.5 h-1.5 rounded-full bg-amber-400/80 animate-pulse" />
-                      <span className="w-1.5 h-1.5 rounded-full bg-amber-400/80 animate-pulse [animation-delay:0.15s]" />
-                      <span className="w-1.5 h-1.5 rounded-full bg-amber-400/80 animate-pulse [animation-delay:0.3s]" />
-                    </span>
-                    <span>{t('probes.heliosThinking', { name: displayTutorName })}</span>
-                  </>
-                ) : (
-                  <>
-                    <span className="inline-flex items-center gap-0.5">
-                      <span className="w-1 h-1 rounded-full bg-neutral-500 animate-pulse" />
-                      <span className="w-1 h-1 rounded-full bg-neutral-500 animate-pulse [animation-delay:0.2s]" />
-                      <span className="w-1 h-1 rounded-full bg-neutral-500 animate-pulse [animation-delay:0.4s]" />
-                    </span>
-                    <span>{t('probes.heliosListening', { name: displayTutorName })}</span>
-                  </>
-                )}
-              </div>
-            )}
-
             {/* Carousel dots — always rendered (placeholders for empty
                 slots) so the row reserves its vertical space. */}
-            <div className="shrink-0 flex items-center justify-center gap-1.5 pb-2 h-1.5">
+            <div className="shrink-0 flex items-center justify-center gap-1.5 py-3 h-1.5">
               {activeProbes.map((_, i) => (
                 <button
                   key={i}

@@ -375,6 +375,12 @@ export function ProbesPanel({
                     </button>
                   </div>
                 </div>
+                {/* Reassurance hint — the wait between probes can feel
+                    silent, so we explicitly tell users to keep narrating
+                    and that the next guiding task is on its way. */}
+                <p className="mt-2 px-2 text-center text-[11px] leading-snug text-neutral-500">
+                  {t('probes.thinkAloudHint', { name: displayTutorName })}
+                </p>
               </div>
             </div>
 

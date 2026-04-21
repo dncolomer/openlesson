@@ -850,6 +850,7 @@
     "heliosListening": "{name} đang lắng nghe",
     "heliosThinking": "{name} đang suy nghĩ",
     "stuckHint": "Bí rồi? Thử {resources}, {practice} hoặc {ask}.",
+    "thinkAloudHint": "Hãy tiếp tục nghĩ thành tiếng — {name} sẽ gửi câu hỏi và nhiệm vụ dẫn dắt mới rất sớm.",
     "tutor": "Helios",
     "waitingForTutor": "Gia sư sẽ đưa ra nhiệm vụ hướng dẫn tại đây khi phiên học diễn ra.",
     "previous": "Trước",

@@ -850,6 +850,7 @@
     "heliosListening": "{name} 正在聆听",
     "heliosThinking": "{name} 正在思考",
     "stuckHint": "卡住了？试试 {resources}、{practice} 或 {ask}。",
+    "thinkAloudHint": "继续大声说出你的想法——{name} 很快会发送新的引导任务和问题。",
     "tutor": "Helios",
     "waitingForTutor": "导师会在课程进行中在这里分享引导任务。",
     "previous": "上一个",

@@ -850,6 +850,7 @@
     "heliosListening": "{name} słucha",
     "heliosThinking": "{name} myśli",
     "stuckHint": "Utknąłeś? Wypróbuj {resources}, {practice} lub {ask}.",
+    "thinkAloudHint": "Mów dalej na głos — {name} już niedługo wyśle kolejne zadania i pytania prowadzące.",
     "tutor": "Helios",
     "waitingForTutor": "Twój korepetytor udostępni tutaj zadanie wprowadzające w miarę postępu sesji.",
     "previous": "Poprzedni",

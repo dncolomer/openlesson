@@ -243,6 +243,12 @@ export function MobileProbesTab({
                 <span>{t('probes.done')}</span>
               </button>
 
+              {/* Reassurance hint — keep narrating while waiting for the
+                  next guiding task. */}
+              <p className="mt-2 px-1 text-center text-[11px] leading-snug text-neutral-500">
+                {t('probes.thinkAloudHint', { name: displayTutorName })}
+              </p>
+
               {/* Carousel dots — always rendered (placeholders for empty
                   slots) so the row reserves its vertical space and the
                   action button above doesn't shift when probes are added. */}

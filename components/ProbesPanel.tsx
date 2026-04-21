@@ -147,7 +147,11 @@ export function ProbesPanel({
   if (showWelcome) {
     return (
       <div className="relative flex-1 min-w-0 flex flex-col bg-[#0a0a0a] h-full overflow-hidden">
-        <div className="relative flex-1 min-h-0 flex flex-col overflow-hidden">
+        {/* Same ambient glass background as the main probe view. */}
+        <div className="tutor-ambient" aria-hidden="true">
+          <span />
+        </div>
+        <div className="relative z-10 flex-1 min-h-0 flex flex-col overflow-hidden">
           <TutorWelcome
             tutorName={displayTutorName}
             onPlay={() => onWelcomePlay?.()}
@@ -168,6 +172,13 @@ export function ProbesPanel({
 
   return (
     <div className="relative flex-1 min-w-0 flex flex-col bg-[#0a0a0a] h-full overflow-hidden">
+      {/* Ambient glass-window background — slow-drifting colored light
+          leaking in from "outside" the panel. Subliminal by design so it
+          doesn't compete with the probe text. */}
+      <div className="tutor-ambient" aria-hidden="true">
+        <span />
+      </div>
+
       {/* Position counter (top-right corner) */}
       {activeProbes.length > 0 && (
         <div className="absolute top-3 right-4 z-10 font-mono text-[10px] text-neutral-600 tabular-nums pointer-events-none">
@@ -176,7 +187,7 @@ export function ProbesPanel({
       )}
 
       {/* Main message area */}
-      <div className="relative flex-1 min-h-0 flex flex-col px-4 py-4 overflow-hidden">
+      <div className="relative z-10 flex-1 min-h-0 flex flex-col px-4 py-4 overflow-hidden">
         {isInitializing && activeProbes.length === 0 ? (
           <div className="flex-1 flex flex-col items-center justify-center gap-3">
             <div className="w-6 h-6 border border-neutral-800 border-t-amber-500/70 rounded-full animate-spin" />

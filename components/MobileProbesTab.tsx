@@ -96,23 +96,34 @@ export function MobileProbesTab({
   if (showWelcome) {
     return (
       <div className="relative flex-1 min-w-0 flex flex-col bg-[#0a0a0a] h-full overflow-hidden">
-        <TutorWelcome
-          tutorName={displayTutorName}
-          onPlay={() => onWelcomePlay?.()}
-          onOpenSessionPlan={
-            onOpenSessionPlan ? () => onOpenSessionPlan() : undefined
-          }
-          isStarting={isStartingSession}
-          sessionId={sessionId}
-          ttsLanguage={ttsLanguage}
-          compactMobile
-        />
+        <div className="tutor-ambient" aria-hidden="true">
+          <span />
+        </div>
+        <div className="relative z-10 flex-1 min-h-0 flex flex-col">
+          <TutorWelcome
+            tutorName={displayTutorName}
+            onPlay={() => onWelcomePlay?.()}
+            onOpenSessionPlan={
+              onOpenSessionPlan ? () => onOpenSessionPlan() : undefined
+            }
+            isStarting={isStartingSession}
+            sessionId={sessionId}
+            ttsLanguage={ttsLanguage}
+            compactMobile
+          />
+        </div>
       </div>
     );
   }
 
   return (
     <div className="relative flex-1 min-w-0 flex flex-col bg-[#0a0a0a] h-full overflow-hidden">
+      {/* Ambient glass-window background — same subliminal effect as
+          desktop, gives the panel a sense of place even on small screens. */}
+      <div className="tutor-ambient" aria-hidden="true">
+        <span />
+      </div>
+
       {/* Position counter (top-right corner) */}
       {activeProbes.length > 0 && (
         <div className="absolute top-3 right-4 z-10 font-mono text-[10px] text-neutral-600 tabular-nums pointer-events-none">
@@ -121,7 +132,7 @@ export function MobileProbesTab({
       )}
 
       {/* Main message area */}
-      <div className="relative flex-1 min-h-0 flex flex-col px-4 py-4 overflow-hidden">
+      <div className="relative z-10 flex-1 min-h-0 flex flex-col px-4 py-4 overflow-hidden">
         {!currentProbe ? (
           <div className="flex-1 flex flex-col items-center justify-center gap-4 text-center">
             {/* Silent tutor avatar */}

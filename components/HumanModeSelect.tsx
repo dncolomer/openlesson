@@ -239,7 +239,7 @@ export function HumanModeSelect({ initialTopic = "", compact = false }: HumanMod
           rows={3}
           disabled={inputDisabled}
           className={`w-full px-4 pt-3.5 pb-4 border rounded-2xl text-white text-[15px] focus:outline-none resize-none transition-colors bg-slate-900/50 border-slate-800 focus:border-slate-600 placeholder-slate-600 ${
-            compact ? "h-24" : "h-28"
+            compact ? "h-44" : "h-28"
           }`}
         />
       </div>

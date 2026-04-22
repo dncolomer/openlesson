@@ -36,22 +36,19 @@ export default function Home() {
 
             {/* Right column — tabbed pane with mode toggle + content */}
             <div className="order-1 lg:order-2 flex flex-col">
-              {/* Shared header: title + subtitle apply to both tabs.
-                  Centered so the heading anchors the whole right column. */}
-              <div className="mb-5 text-center">
-                <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white tracking-tight leading-tight mb-2">
+              {/* Shared header row: title + tab toggle on a single line
+                  above the prompt box. Title left, toggle right. Title
+                  font scale shrinks at intermediate widths to keep the
+                  row from wrapping until the column is genuinely too
+                  narrow (mobile). */}
+              <div className="mb-5 flex flex-col sm:flex-row items-center sm:items-end justify-between gap-3 sm:gap-4">
+                <h1 className="text-2xl sm:text-xl md:text-2xl lg:text-[22px] xl:text-2xl 2xl:text-3xl font-bold text-white tracking-tight leading-tight text-center sm:text-left min-w-0 flex-1">
                   {t("home.heroTitle")}
                 </h1>
-                <p className="text-slate-400 text-sm leading-relaxed max-w-xl mx-auto">
-                  {t("home.heroSubtitle")}
-                </p>
-              </div>
 
-              {/* Mode toggle lives INSIDE the right pane so the left
-                  carousel stays the same across tabs. Centered to match
-                  the heading above. */}
-              <div className="mb-5 flex justify-center">
-                <div className="inline-flex bg-slate-900/80 rounded-xl p-1 gap-1 border border-slate-800">
+                {/* Mode toggle lives INSIDE the right pane so the left
+                    carousel stays the same across tabs. */}
+                <div className="shrink-0 inline-flex bg-slate-900/80 rounded-xl p-1 gap-1 border border-slate-800">
                   <button
                     onClick={() => setMode("human")}
                     className={`px-5 py-1.5 text-sm font-medium rounded-lg transition-all ${

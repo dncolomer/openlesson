@@ -103,13 +103,6 @@ export function CommunityPlansCarousel({ fillHeight = false }: CommunityPlansCar
       onBlur={() => setPaused(false)}
       className={fillHeight ? "w-full h-full flex flex-col min-w-0" : "w-full max-w-6xl mx-auto px-4 sm:px-6"}
     >
-      {/* Label stripe above the banner */}
-      <div className={fillHeight ? "flex items-center justify-between mb-3 shrink-0" : "flex items-center justify-between mb-3"}>
-        <h3 className="text-xs font-medium uppercase tracking-[0.18em] text-slate-500">
-          {t("home.communityPlans")}
-        </h3>
-      </div>
-
       {/* Banner frame — fills available height when side-by-side, otherwise
           uses a cinematic 16:7/16:6 aspect ratio. */}
       <div

@@ -4,24 +4,6 @@ import { useState, useRef, useEffect, useCallback, forwardRef, useImperativeHand
 
 type CollapsedSide = null | "left" | "right";
 
-// --- Inline SVG icon components ---
-
-function ChevronLeft({ className }: { className?: string }) {
-  return (
-    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-    </svg>
-  );
-}
-
-function ChevronRight({ className }: { className?: string }) {
-  return (
-    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-    </svg>
-  );
-}
-
 export interface ResizablePaneHandle {
   expandLeft: () => void;
   expandRight: () => void;
@@ -34,7 +16,9 @@ interface ResizablePaneProps {
   defaultLeftWidth?: number;
   minLeftWidth?: number;
   minRightWidth?: number;
+  /** @deprecated no longer used; kept for backward-compatible props */
   leftLabel?: string;
+  /** @deprecated no longer used; kept for backward-compatible props */
   rightLabel?: string;
   storageKey?: string;
 }
@@ -45,8 +29,6 @@ export const ResizablePane = forwardRef<ResizablePaneHandle, ResizablePaneProps>
   defaultLeftWidth = 50,
   minLeftWidth = 20,
   minRightWidth = 20,
-  leftLabel = "Left Panel",
-  rightLabel = "Right Panel",
   storageKey,
 }, ref) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -137,27 +119,7 @@ export const ResizablePane = forwardRef<ResizablePaneHandle, ResizablePaneProps>
     };
   }, [isDragging, minLeftWidth, minRightWidth, collapsedSide, persistState]);
 
-  // --- Collapse / Expand ---
-  const collapseLeft = useCallback(() => {
-    if (collapsedSide === null) {
-      savedLeftWidthRef.current = leftWidth;
-    }
-    setIsTransitioning(true);
-    setCollapsedSide("left");
-    persistState(savedLeftWidthRef.current, "left");
-    setTimeout(() => setIsTransitioning(false), 250);
-  }, [collapsedSide, leftWidth, persistState]);
-
-  const collapseRight = useCallback(() => {
-    if (collapsedSide === null) {
-      savedLeftWidthRef.current = leftWidth;
-    }
-    setIsTransitioning(true);
-    setCollapsedSide("right");
-    persistState(savedLeftWidthRef.current, "right");
-    setTimeout(() => setIsTransitioning(false), 250);
-  }, [collapsedSide, leftWidth, persistState]);
-
+  // --- Expand ---
   const expand = useCallback(() => {
     setIsTransitioning(true);
     setLeftWidth(savedLeftWidthRef.current);
@@ -223,38 +185,12 @@ export const ResizablePane = forwardRef<ResizablePaneHandle, ResizablePaneProps>
       {/* ---- Separator bar ---- */}
       {collapsedSide === null && (
         <div
-          className={`w-1.5 cursor-col-resize bg-neutral-800 hover:bg-blue-500/70 flex-shrink-0 relative group transition-colors ${
+          className={`w-1.5 cursor-col-resize bg-neutral-800 hover:bg-blue-500/70 flex-shrink-0 transition-colors ${
             isDragging ? "bg-blue-500" : ""
           }`}
           onMouseDown={handleMouseDown}
           onDoubleClick={handleDoubleClick}
-        >
-          {/* Chevron buttons — visible on hover */}
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-10 pointer-events-none">
-            <button
-              className="pointer-events-auto w-5 h-5 rounded bg-neutral-700 hover:bg-neutral-600 flex items-center justify-center border border-neutral-600 shadow-sm"
-              onClick={(e) => {
-                e.stopPropagation();
-                collapseLeft();
-              }}
-              onMouseDown={(e) => e.stopPropagation()}
-              title={`Collapse ${leftLabel}`}
-            >
-              <ChevronLeft className="w-3 h-3 text-neutral-300" />
-            </button>
-            <button
-              className="pointer-events-auto w-5 h-5 rounded bg-neutral-700 hover:bg-neutral-600 flex items-center justify-center border border-neutral-600 shadow-sm"
-              onClick={(e) => {
-                e.stopPropagation();
-                collapseRight();
-              }}
-              onMouseDown={(e) => e.stopPropagation()}
-              title={`Collapse ${rightLabel}`}
-            >
-              <ChevronRight className="w-3 h-3 text-neutral-300" />
-            </button>
-          </div>
-        </div>
+        />
       )}
 
       {/* ---- Right panel ---- */}

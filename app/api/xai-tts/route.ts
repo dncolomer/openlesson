@@ -4,7 +4,7 @@ export const runtime = "nodejs";
 export const maxDuration = 30;
 
 const XAI_TTS_URL = "https://api.x.ai/v1/tts";
-const DEFAULT_VOICE = "ara"; // warm, friendly — fits a tutor greeting
+const DEFAULT_VOICE = "leo"; // warm, friendly — fits a tutor greeting
 
 /**
  * Server-side proxy for xAI's Text-to-Speech endpoint. Keeps the API key

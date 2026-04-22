@@ -167,7 +167,8 @@ export function SessionView({ sessionId }: { sessionId: string }) {
     const inner = readCollapsed("session-split-right");
     return {
       tools: outer !== "left",
-      tutor: outer !== "right" && inner !== "left",
+      // Tutor (Helios) pane is always visible — it cannot be hidden.
+      tutor: true,
       plan: outer !== "right" && inner !== "right",
     };
   });
@@ -175,6 +176,9 @@ export function SessionView({ sessionId }: { sessionId: string }) {
   // ResizablePane collapsed states, so the UI and the actual layout are
   // always in lockstep. At least one of the three must be true.
   const applyPaneVisibility = useCallback((next: PaneVis) => {
+    // Helios (tutor) pane is always visible — force the invariant here so
+    // no call site can ever hide it, regardless of persisted state.
+    next = { ...next, tutor: true };
     if (!next.tools && !next.tutor && !next.plan) return;
     setPaneVisibility(next);
     // Outer pane: left = Tools, right = (Tutor + Plan combined)
@@ -199,6 +203,18 @@ export function SessionView({ sessionId }: { sessionId: string }) {
     if (paneVisibility[view]) return;
     applyPaneVisibility({ ...paneVisibility, [view]: true });
   }, [paneVisibility, applyPaneVisibility]);
+
+  // Helios (tutor) pane is always visible — on mount, if a persisted layout
+  // from before this invariant existed has the tutor pane collapsed, force
+  // it open so the underlying ResizablePane state matches paneVisibility.
+  useEffect(() => {
+    const id = window.setTimeout(() => {
+      applyPaneVisibility({ ...paneVisibility, tutor: true });
+    }, 0);
+    return () => window.clearTimeout(id);
+    // Run once on mount.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const [objectives, setObjectives] = useState<string[]>([]);
   const [objectiveStatuses, setObjectiveStatuses] = useState<("red" | "yellow" | "green" | "blue")[]>([]);
 
@@ -380,6 +396,11 @@ export function SessionView({ sessionId }: { sessionId: string }) {
   };
 
   const handleStepAskAssistant = (stepDescription: string) => {
+    // Make sure the tools pane is visible. The `activeTool` effect only
+    // reopens the pane when the value actually changes, so if "chat" was
+    // already the active tool before the user closed the tools pane,
+    // calling setActiveTool("chat") here is a no-op and wouldn't reopen it.
+    ensureVisible("tools");
     setActiveTool("chat");
     setPendingChatMessage(`Help me understand and work through this step: "${stepDescription}"`);
   };
@@ -1894,7 +1915,8 @@ export function SessionView({ sessionId }: { sessionId: string }) {
           const innerRight = prev.inner.collapsedSide === "right";
           setPaneVisibility({
             tools: !outerLeft,
-            tutor: !outerRight && !innerLeft,
+            // Helios (tutor) pane is always visible — it cannot be hidden.
+            tutor: true,
             plan: !outerRight && !innerRight,
           });
         }, 120);
@@ -3066,7 +3088,8 @@ export function SessionView({ sessionId }: { sessionId: string }) {
                       label={t('probes.tutor')}
                       icon={TutorIcon}
                       active={tutor}
-                      disabled={tutor && countVisible === 1}
+                      // Helios pane is always visible and cannot be hidden.
+                      disabled
                       onClick={() => applyPaneVisibility({ ...paneVisibility, tutor: !tutor })}
                     />
                     <Toggle

@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSessionPlan, updateSessionPlan, validatePlanSteps, logToolUsage, getRecentTranscripts, type SessionPlanStep } from "@/lib/storage";
 import { createClient } from "@/lib/supabase/server";
-import { updateSessionPlanLLM } from "@/lib/openrouter";
-import { getUserPrompts } from "@/lib/prompts";
+import { updateSessionPlanLLM } from "@/lib/xai";
+import { getUserPrompts } from "@/lib/user-prompts";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -53,20 +53,24 @@ export async function POST(request: NextRequest) {
           getRecentTranscripts(sessionId, 180000),
           getUserPrompts(supabase, user.id),
         ]);
-        const transcriptText = transcripts.map(t => t.content).join("\n\n");
 
-        if (transcriptText.length > 0) {
+        if (transcripts.length > 0) {
+          const fileIds = transcripts
+            .slice(-10)
+            .map(t => t.xaiFileId)
+            .filter((id): id is string => !!id && id !== "_empty");
+
           const evalResult = await updateSessionPlanLLM({
             goal: currentPlan.goal,
             strategy: currentPlan.strategy,
             steps: currentPlan.steps,
             currentStepIndex: currentPlan.currentStepIndex,
-            transcript: transcriptText,
             previousProbes: previousProbes || [],
             focusedProbes: focusedProbes || [],
             openProbeCount: openProbeCount ?? 0,
             lastProbeTimestamp: 0,
             promptOverrides,
+            sessionFileIds: fileIds,
           });
 
           if (evalResult.success && evalResult.result && !evalResult.result.canAutoAdvance) {

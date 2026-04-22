@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createSessionPlanLLM } from "@/lib/openrouter";
+import { createSessionPlanLLM } from "@/lib/xai";
 import { createSessionPlan, getUserCalibration, getSessionPlan } from "@/lib/storage";
-import { getUserPrompts } from "@/lib/prompts";
+import { getUserPrompts } from "@/lib/user-prompts";
 import { createClient } from "@/lib/supabase/server";
 import { getLanguageName } from "@/lib/tutoring-languages";
 

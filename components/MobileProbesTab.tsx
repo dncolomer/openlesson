@@ -6,6 +6,7 @@ import { useI18n } from "@/lib/i18n";
 import { useTypewriter } from "@/lib/useTypewriter";
 import { isProbeTyped, markProbeTyped } from "@/lib/welcomeState";
 import { TutorWelcome } from "./TutorWelcome";
+import { TutorBackground } from "./TutorBackground";
 import { ListenButton } from "./ListenButton";
 
 const MAX_PROBES = 5;
@@ -96,9 +97,7 @@ export function MobileProbesTab({
   if (showWelcome) {
     return (
       <div className="relative flex-1 min-w-0 flex flex-col bg-[#0a0a0a] h-full overflow-hidden">
-        <div className="tutor-ambient" aria-hidden="true">
-          <span />
-        </div>
+        <TutorBackground />
         <div className="relative z-10 flex-1 min-h-0 flex flex-col">
           <TutorWelcome
             tutorName={displayTutorName}
@@ -112,24 +111,22 @@ export function MobileProbesTab({
             compactMobile
           />
         </div>
+        <a
+          href="https://x.com/piotrbinkowski"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="absolute bottom-2 left-3 z-10 text-[10px] text-neutral-700 hover:text-neutral-500 transition-colors"
+        >
+          Art by Piotr Binkowski
+        </a>
       </div>
     );
   }
 
   return (
     <div className="relative flex-1 min-w-0 flex flex-col bg-[#0a0a0a] h-full overflow-hidden">
-      {/* Ambient glass-window background — same subliminal effect as
-          desktop, gives the panel a sense of place even on small screens. */}
-      <div className="tutor-ambient" aria-hidden="true">
-        <span />
-      </div>
-
-      {/* Position counter (top-right corner) */}
-      {activeProbes.length > 0 && (
-        <div className="absolute top-3 right-4 z-10 font-mono text-[10px] text-neutral-600 tabular-nums pointer-events-none">
-          {String(currentIndex + 1).padStart(2, "0")} / {String(total).padStart(2, "0")}
-        </div>
-      )}
+      {/* Faint frosted-glass background image — one random pick per session. */}
+      <TutorBackground />
 
       {/* Main message area */}
       <div className="relative z-10 flex-1 min-h-0 flex flex-col px-4 py-4 overflow-hidden">
@@ -154,44 +151,85 @@ export function MobileProbesTab({
           </div>
         ) : (
           <>
-            {/* Carousel nav arrows - left */}
-            {canGoPrev && (
-              <button
-                onClick={goPrev}
-                className="absolute left-1 top-1/2 -translate-y-1/2 z-20 w-10 h-10 rounded-full bg-neutral-900/80 border border-neutral-800 text-neutral-400 active:bg-neutral-800 active:text-white backdrop-blur-sm transition-all flex items-center justify-center"
-                aria-label={t('probes.previous')}
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-                </svg>
-              </button>
-            )}
-            {/* Carousel nav arrows - right */}
-            {canGoNext && (
-              <button
-                onClick={goNext}
-                className="absolute right-1 top-1/2 -translate-y-1/2 z-20 w-10 h-10 rounded-full bg-neutral-900/80 border border-neutral-800 text-neutral-400 active:bg-neutral-800 active:text-white backdrop-blur-sm transition-all flex items-center justify-center"
-                aria-label={t('probes.next')}
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                </svg>
-              </button>
-            )}
-
             {/* Tutor + message group — centered vertically in available space */}
             <div className="flex-1 min-h-0 flex flex-col items-center justify-center gap-5 overflow-y-auto">
-              {/* Avatar */}
+              {/* Avatar + flanking red nav arrows. The arrows replace the
+                  edge-anchored grey chevrons and act as a notification
+                  cue: they appear red-tinted only while active probes
+                  exist, drawing the eye toward the tutor's new guidance. */}
               <div className="shrink-0 flex flex-col items-center">
-                <div className="relative">
-                  <div className="w-28 h-28 rounded-full bg-gradient-to-br from-amber-500/15 via-neutral-800 to-neutral-900 border border-neutral-800 flex items-center justify-center overflow-hidden">
-                    <span className="text-3xl font-serif text-neutral-200">{avatarInitial}</span>
+                <div className="flex items-center gap-3">
+                  {/* Left arrow — floats next to avatar */}
+                  <button
+                    onClick={canGoPrev ? goPrev : undefined}
+                    disabled={!canGoPrev}
+                    aria-label={t('probes.previous')}
+                    className={`w-10 h-10 rounded-full border flex items-center justify-center transition-all ${
+                      canGoPrev
+                        ? "bg-red-500/15 border-red-500/60 text-red-300 active:bg-red-500/25 active:text-red-100 shadow-[0_0_16px_rgba(239,68,68,0.25)]"
+                        : "bg-neutral-900/40 border-neutral-800 text-neutral-700 opacity-40 cursor-not-allowed"
+                    }`}
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+                    </svg>
+                  </button>
+
+                  {/* Avatar with notification ring + badge */}
+                  <div className="relative">
+                    <div
+                      className={`w-28 h-28 rounded-full bg-gradient-to-br from-amber-500/15 via-neutral-800 to-neutral-900 border flex items-center justify-center overflow-hidden transition-colors ${
+                        activeProbes.length > 0
+                          ? "border-red-500/70 ring-2 ring-red-500/40 ring-offset-2 ring-offset-[#0a0a0a]"
+                          : "border-neutral-800"
+                      }`}
+                    >
+                      <span className="text-3xl font-serif text-neutral-200">{avatarInitial}</span>
+                    </div>
+                    {/* Soft glow — shifts red when notifications are active */}
+                    <div
+                      className={`absolute inset-0 rounded-full pointer-events-none ${
+                        activeProbes.length > 0
+                          ? "shadow-[0_0_32px_rgba(239,68,68,0.35)]"
+                          : "shadow-[0_0_30px_rgba(245,158,11,0.08)]"
+                      }`}
+                    />
+                    {/* Notification badge — app-style red pill with count */}
+                    {activeProbes.length > 0 && (
+                      <div
+                        className="absolute -top-1 -right-1 min-w-[22px] h-[22px] px-1.5 rounded-full bg-red-500 border-2 border-[#0a0a0a] flex items-center justify-center shadow-[0_0_12px_rgba(239,68,68,0.6)]"
+                        aria-label={`${activeProbes.length} ${t('probes.tutor')}`}
+                      >
+                        <span className="text-[11px] font-bold text-white tabular-nums leading-none">
+                          {activeProbes.length}
+                        </span>
+                      </div>
+                    )}
                   </div>
-                  {/* Soft glow */}
-                  <div className="absolute inset-0 rounded-full shadow-[0_0_30px_rgba(245,158,11,0.08)] pointer-events-none" />
+
+                  {/* Right arrow — floats next to avatar */}
+                  <button
+                    onClick={canGoNext ? goNext : undefined}
+                    disabled={!canGoNext}
+                    aria-label={t('probes.next')}
+                    className={`w-10 h-10 rounded-full border flex items-center justify-center transition-all ${
+                      canGoNext
+                        ? "bg-red-500/15 border-red-500/60 text-red-300 active:bg-red-500/25 active:text-red-100 shadow-[0_0_16px_rgba(239,68,68,0.25)]"
+                        : "bg-neutral-900/40 border-neutral-800 text-neutral-700 opacity-40 cursor-not-allowed"
+                    }`}
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                    </svg>
+                  </button>
                 </div>
-                <div className="mt-2">
+                <div className="mt-2 flex flex-col items-center gap-0.5">
                   <span className="text-sm font-medium text-neutral-200">{displayTutorName}</span>
+                  {activeProbes.length > 0 && (
+                    <span className="font-mono text-[10px] text-white tabular-nums">
+                      {String(currentIndex + 1).padStart(2, "0")} / {String(total).padStart(2, "0")}
+                    </span>
+                  )}
                 </div>
               </div>
 
@@ -277,6 +315,14 @@ export function MobileProbesTab({
           </>
         )}
       </div>
+      <a
+        href="https://x.com/piotrbinkowski"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="absolute bottom-2 left-3 z-10 text-[10px] text-neutral-700 hover:text-neutral-500 transition-colors"
+      >
+        Art by Piotr Binkowski
+      </a>
     </div>
   );
 }

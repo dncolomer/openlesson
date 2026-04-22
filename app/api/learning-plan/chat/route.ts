@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { callOpenRouterJSON, systemMessage, userMessage, buildImageContent, DEFAULT_MODEL, MessageContent } from "@/lib/openrouter-client";
+import { callXaiJSON, systemMessage, userMessage, buildImageContent, DEFAULT_MODEL, MessageContent } from "@/lib/xai-client";
 
 const SYSTEM_PROMPT = `You are an AI Learning Planner assistant. Your role is to help users understand and customize their learning plans.
 
@@ -136,7 +136,7 @@ Respond with JSON containing your explanation and the complete updated sessions 
       userContent = prompt;
     }
 
-    const aiResponse = await callOpenRouterJSON<ChatResponse>(
+    const aiResponse = await callXaiJSON<ChatResponse>(
       [systemMessage(fullSystemPrompt), { role: "user", content: userContent }],
       {
         model,

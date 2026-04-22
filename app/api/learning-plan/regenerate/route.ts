@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { callOpenRouterJSON, userMessage, DEFAULT_MODEL } from "@/lib/openrouter-client";
+import { callXaiJSON, userMessage, DEFAULT_MODEL } from "@/lib/xai-client";
 
 interface NodeData {
   id: string;
@@ -86,7 +86,7 @@ Rules:
 - Descriptions: 1 sentence explaining the concept
 - Include 3-8 nodes total`;
 
-    const response = await callOpenRouterJSON<PlanData>(
+    const response = await callXaiJSON<PlanData>(
       [userMessage(prompt)],
       {
         model: DEFAULT_MODEL,

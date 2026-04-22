@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
-import { createClient as createSupabaseAdmin } from "@supabase/supabase-js";
-
+import { createAdminClient } from "@/lib/supabase/admin";
 export const runtime = "nodejs";
 
 function getStripe() {
@@ -12,10 +11,7 @@ function getStripe() {
 
 // Use service role for webhook — no user context
 function getAdminClient() {
-  return createSupabaseAdmin(
-    process.env.NEXT_PUBLIC_SUPABASE_URL || "",
-    process.env.SUPABASE_SERVICE_ROLE_KEY || ""
-  );
+  return createAdminClient();
 }
 
 export async function POST(request: NextRequest) {

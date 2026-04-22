@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { generateOpeningProbe } from "@/lib/openrouter";
-import { getUserPrompts } from "@/lib/prompts";
+import { generateOpeningProbe } from "@/lib/xai";
+import { getUserPrompts } from "@/lib/user-prompts";
 import { createClient } from "@/lib/supabase/server";
 import { getLanguageName } from "@/lib/tutoring-languages";
 

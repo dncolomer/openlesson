@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { generateObjectives } from "@/lib/openrouter";
-import { getUserPrompts } from "@/lib/prompts";
+import { generateObjectives } from "@/lib/xai";
+import { getUserPrompts } from "@/lib/user-prompts";
 
 export const runtime = "nodejs";
 export const maxDuration = 15;

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getProviderInfo, getAvailableModels } from "@/lib/ai-provider";
+import { getProviderInfo, AVAILABLE_MODELS } from "@/lib/xai-client";
 
 /**
  * GET /api/ai-provider
@@ -9,11 +9,10 @@ import { getProviderInfo, getAvailableModels } from "@/lib/ai-provider";
 export async function GET() {
   try {
     const info = getProviderInfo();
-    const models = getAvailableModels();
 
     return NextResponse.json({
       ...info,
-      availableModels: models,
+      availableModels: AVAILABLE_MODELS,
     });
   } catch (error) {
     console.error("Error fetching AI provider info:", error);

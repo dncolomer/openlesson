@@ -29,7 +29,7 @@ interface EEGDataWithPowers {
   id: string;
   sessionId: string;
   timestamp: number;
-  storagePath: string;
+  xaiFileId: string;
   chunkIndex: number;
   bandPowers?: { delta: number; theta: number; alpha: number; beta: number; gamma: number } | null;
 }
@@ -253,6 +253,8 @@ function AnalyticsContent() {
   const [screenshotFullUrls, setScreenshotFullUrls] = useState<Record<string, string>>({});
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
   const [screenshotLoadCount, setScreenshotLoadCount] = useState(10);
+  // Transcript text (loaded lazily from xAI)
+  const [transcriptTexts, setTranscriptTexts] = useState<Record<string, string>>({});
 
   // Timeline range (0..1 normalized)
   const [rangeStart, setRangeStart] = useState(0);
@@ -315,20 +317,19 @@ function AnalyticsContent() {
     load();
   }, [audioChunks]);
 
-  // Load facial JSON blobs from storage
+  // Load facial JSON blobs (now stored on xAI; fetched via our proxy)
   useEffect(() => {
     if (facialData.length === 0) return;
     const load = async () => {
-      const supabase = (await import("@/lib/supabase/client")).createClient();
       const chunks: FacialChunkData[] = [];
       const toLoad = facialData.slice(0, 50);
       for (const fd of toLoad) {
+        if (!fd.xaiFileId) continue;
         try {
-          const { data } = await supabase.storage.from("session-facial").download(fd.storagePath);
-          if (data) {
-            const parsed = JSON.parse(await data.text());
-            chunks.push({ timestamp: fd.timestamp, data: parsed.data || [] });
-          }
+          const res = await fetch(`/api/session-files/download?fileId=${encodeURIComponent(fd.xaiFileId)}`);
+          if (!res.ok) continue;
+          const parsed = JSON.parse(await res.text());
+          chunks.push({ timestamp: fd.timestamp, data: parsed.data || [] });
         } catch { /* skip */ }
       }
       setFacialChunks(chunks);
@@ -358,6 +359,29 @@ function AnalyticsContent() {
   const filteredTools = useMemo(() => toolEvents.filter((t) => inRange(t.timestamp)), [toolEvents, inRange]);
   const filteredAudio = useMemo(() => audioChunks.filter((a) => inRange(a.timestamp)), [audioChunks, inRange]);
 
+  // Load transcript text on demand (xAI proxy)
+  useEffect(() => {
+    if (filteredTranscripts.length === 0) return;
+    const toLoad = filteredTranscripts.filter((t) => !transcriptTexts[t.id]).slice(0, 100);
+    if (toLoad.length === 0) return;
+    let cancelled = false;
+    (async () => {
+      const loaded: Record<string, string> = {};
+      for (const tr of toLoad) {
+        if (!tr.xaiFileId) continue;
+        try {
+          const res = await fetch(`/api/session-files/download?fileId=${encodeURIComponent(tr.xaiFileId)}`);
+          if (res.ok) loaded[tr.id] = await res.text();
+        } catch { /* skip */ }
+      }
+      if (!cancelled && Object.keys(loaded).length > 0) {
+        setTranscriptTexts((prev) => ({ ...prev, ...loaded }));
+      }
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filteredTranscripts]);
+
   // Screenshots: lazy loading with thumbnails, max 10 at a time
   const visibleScreenshots = useMemo(
     () => filteredScreenshots.slice(0, screenshotLoadCount),
@@ -368,23 +392,16 @@ function AnalyticsContent() {
     if (visibleScreenshots.length === 0) return;
     const toSign = visibleScreenshots.filter((ss) => !screenshotThumbUrls[ss.id]);
     if (toSign.length === 0) return;
-    const load = async () => {
-      const supabase = (await import("@/lib/supabase/client")).createClient();
-      const results = await Promise.all(
-        toSign.map(async (ss) => {
-          const { data } = await supabase.storage
-            .from("session-screens")
-            .createSignedUrl(ss.storagePath, 3600, {
-              transform: { width: 320, height: 180, quality: 60 },
-            });
-          return { id: ss.id, url: data?.signedUrl || "" };
-        })
-      );
-      const newUrls: Record<string, string> = {};
-      results.forEach((r) => { if (r.url) newUrls[r.id] = r.url; });
+    // xAI Files don't expose image transforms — use the full image URL.
+    const newUrls: Record<string, string> = {};
+    for (const ss of toSign) {
+      if (ss.xaiFileId) {
+        newUrls[ss.id] = `/api/session-files/download?fileId=${encodeURIComponent(ss.xaiFileId)}`;
+      }
+    }
+    if (Object.keys(newUrls).length > 0) {
       setScreenshotThumbUrls((prev) => ({ ...prev, ...newUrls }));
-    };
-    load();
+    }
   }, [visibleScreenshots, screenshotThumbUrls]);
 
   const openScreenshotLightbox = useCallback(async (ss: SessionScreenshot) => {
@@ -392,14 +409,10 @@ function AnalyticsContent() {
       setLightboxUrl(screenshotFullUrls[ss.id]);
       return;
     }
-    const supabase = (await import("@/lib/supabase/client")).createClient();
-    const { data } = await supabase.storage
-      .from("session-screens")
-      .createSignedUrl(ss.storagePath, 3600);
-    if (data?.signedUrl) {
-      setScreenshotFullUrls((prev) => ({ ...prev, [ss.id]: data.signedUrl }));
-      setLightboxUrl(data.signedUrl);
-    }
+    if (!ss.xaiFileId) return;
+    const url = `/api/session-files/download?fileId=${encodeURIComponent(ss.xaiFileId)}`;
+    setScreenshotFullUrls((prev) => ({ ...prev, [ss.id]: url }));
+    setLightboxUrl(url);
   }, [screenshotFullUrls]);
 
   // ---- Data density for sparkline ----
@@ -560,7 +573,7 @@ function AnalyticsContent() {
                       <span className="text-neutral-600 font-mono shrink-0 w-14 text-right">
                         {formatOffset(tr.timestamp - sessionStartMs)}
                       </span>
-                      <p className="text-neutral-300 leading-relaxed">{tr.content}</p>
+                      <p className="text-neutral-300 leading-relaxed">{transcriptTexts[tr.id] || "…"}</p>
                     </div>
                   ))}
                 </div>

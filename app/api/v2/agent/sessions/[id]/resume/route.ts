@@ -6,7 +6,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { authenticateRequest, errorResponse } from "@/lib/agent-v2/auth";
 import { createProof, serializeProof } from "@/lib/agent-v2/proofs";
-import { generateOpeningProbe } from "@/lib/openrouter";
+import { generateOpeningProbe } from "@/lib/xai";
 import { getLanguageName } from "@/lib/tutoring-languages";
 
 export const runtime = "nodejs";

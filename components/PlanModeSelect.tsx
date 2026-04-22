@@ -1,10 +1,12 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { createBrowserClient } from "@supabase/ssr";
 import { useRouter } from "next/navigation";
-import { isValidYouTubeUrl, EXAMPLE_YOUTUBE_VIDEOS, getYouTubeThumbnail } from "@/lib/youtube";
 import { useI18n } from "@/lib/i18n";
+import { FileDropZone, type AttachedFile } from "@/components/FileDropZone";
+
+const MAX_ATTACHED_FILES = 5;
 
 const WEEKS_OPTIONS = [
   { value: 1, label: "planMode.week1" },
@@ -25,7 +27,6 @@ const DEFAULT_EXAMPLE_TOPICS = [
 ];
 
 type ThemeColor = "neutral" | "teal" | "slate" | "blue" | "amber" | "violet";
-type InputTab = "topic" | "youtube";
 
 const themeStyles: Record<ThemeColor, {
   textarea: string;
@@ -119,6 +120,7 @@ interface PlanModeSelectProps {
   subtitle?: string;
   placeholder?: string;
   exampleTopics?: string[];
+  /** @deprecated YouTube tab has been removed. Prop kept for backward compatibility. */
   showYouTubeTab?: boolean;
 }
 
@@ -128,7 +130,6 @@ export function PlanModeSelect({
   subtitle,
   placeholder,
   exampleTopics,
-  showYouTubeTab = true,
 }: PlanModeSelectProps) {
   const { t } = useI18n();
   const defaultTitle = t('planMode.buildYourLearningPath');
@@ -137,20 +138,15 @@ export function PlanModeSelect({
   
   const displayTitle = title ?? defaultTitle;
   const displayPlaceholder = placeholder ?? defaultPlaceholder;
-  
-  const defaultSubtitle = showYouTubeTab 
-    ? t('planMode.subtitleWithYoutube')
-    : t('planMode.subtitleWithoutYoutube');
-  const displaySubtitle = subtitle ?? defaultSubtitle;
-  const [activeTab, setActiveTab] = useState<InputTab>("topic");
+
+  const displaySubtitle = subtitle ?? t('planMode.subtitleWithoutYoutube');
   const [topic, setTopic] = useState("");
-  const [youtubeUrl, setYoutubeUrl] = useState("");
   const [weeks, setWeeks] = useState(4);
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState("");
   const [user, setUser] = useState<{ id: string } | null>(null);
-  const [pastedImage, setPastedImage] = useState<{ data: string; mimeType: string; preview: string } | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [attachedFiles, setAttachedFiles] = useState<AttachedFile[]>([]);
+  const [showFileZone, setShowFileZone] = useState(false);
   const router = useRouter();
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -165,21 +161,8 @@ export function PlanModeSelect({
     });
   }, []);
 
-  const handleImageFile = useCallback((file: File) => {
-    if (!file.type.startsWith("image/")) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      const result = reader.result as string;
-      // result is data:mime;base64,xxx — extract base64 part
-      const base64 = result.split(",")[1];
-      setPastedImage({ data: base64, mimeType: file.type, preview: result });
-    };
-    reader.readAsDataURL(file);
-  }, []);
-
-  // Listen for paste events on the whole form
+  // Paste listener: images pasted anywhere on the page are added to attachedFiles
   useEffect(() => {
-    if (activeTab !== "topic") return;
     const handler = (e: ClipboardEvent) => {
       const items = e.clipboardData?.items;
       if (!items) return;
@@ -187,29 +170,32 @@ export function PlanModeSelect({
         if (item.type.startsWith("image/")) {
           e.preventDefault();
           const file = item.getAsFile();
-          if (file) handleImageFile(file);
+          if (!file) break;
+          if (attachedFiles.length >= MAX_ATTACHED_FILES) break;
+          const reader = new FileReader();
+          reader.onload = () => {
+            const dataUrl = reader.result as string;
+            const base64 = dataUrl.split(",")[1];
+            setAttachedFiles(prev =>
+              prev.length < MAX_ATTACHED_FILES
+                ? [...prev, { name: file.name || "pasted-image.png", mimeType: file.type, data: base64, size: file.size, preview: dataUrl }]
+                : prev
+            );
+            setShowFileZone(true);
+          };
+          reader.readAsDataURL(file);
           break;
         }
       }
     };
     document.addEventListener("paste", handler);
     return () => document.removeEventListener("paste", handler);
-  }, [activeTab, handleImageFile]);
+  }, [attachedFiles.length]);
 
   const handleGeneratePlan = async () => {
-    if (activeTab === "topic" && !topic.trim()) {
+    if (!topic.trim()) {
       setError(t('planMode.enterTopic'));
       return;
-    }
-    if (activeTab === "youtube") {
-      if (!youtubeUrl.trim()) {
-        setError(t('planMode.enterYoutubeUrl'));
-        return;
-      }
-      if (!isValidYouTubeUrl(youtubeUrl.trim())) {
-        setError(t('planMode.validYoutubeUrl'));
-        return;
-      }
     }
 
     setIsGenerating(true);
@@ -217,26 +203,21 @@ export function PlanModeSelect({
 
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      
+
       if (!user) {
         router.push("/login?redirect=plan");
         return;
       }
 
-      // Different API endpoints based on tab
-      const endpoint = activeTab === "youtube" 
-        ? "/api/learning-plan/generate-from-video"
-        : "/api/learning-plan/generate";
-      
-      const body = activeTab === "youtube"
-        ? { youtubeUrl: youtubeUrl.trim(), days: weeks * 7 }
-        : { 
-            topic: topic.trim(), 
-            days: weeks * 7,
-            ...(pastedImage ? { image: { data: pastedImage.data, mimeType: pastedImage.mimeType } } : {}),
-          };
+      const body = {
+        topic: topic.trim(),
+        days: weeks * 7,
+        ...(attachedFiles.length > 0 ? {
+          files: attachedFiles.map(f => ({ name: f.name, mimeType: f.mimeType, data: f.data }))
+        } : {}),
+      };
 
-      const response = await fetch(endpoint, {
+      const response = await fetch("/api/learning-plan/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
@@ -263,20 +244,7 @@ export function PlanModeSelect({
     }
   };
 
-  // Get current input value and placeholder based on tab
-  const currentValue = activeTab === "youtube" ? youtubeUrl : topic;
-  const youtubePlaceholder = t('planMode.youtubePlaceholder');
-  const currentPlaceholder = activeTab === "youtube" 
-    ? youtubePlaceholder
-    : displayPlaceholder;
-  const currentOnChange = activeTab === "youtube" 
-    ? (e: React.ChangeEvent<HTMLTextAreaElement>) => setYoutubeUrl(e.target.value)
-    : (e: React.ChangeEvent<HTMLTextAreaElement>) => setTopic(e.target.value);
-
-  // Check if generate button should be disabled
-  const isGenerateDisabled = activeTab === "youtube" 
-    ? !youtubeUrl.trim() || isGenerating
-    : !topic.trim() || isGenerating;
+  const isGenerateDisabled = !topic.trim() || isGenerating;
 
   return (
     <div className="w-full max-w-2xl p-6">
@@ -289,46 +257,14 @@ export function PlanModeSelect({
         </p>
       </div>
 
-      {/* Tab Selector - only show if YouTube tab is enabled */}
-      {showYouTubeTab && (
-        <div className="flex mb-4 border-b border-neutral-800">
-          <button
-            onClick={() => { setActiveTab("topic"); setError(""); }}
-            className={`flex-1 py-3 px-4 text-sm font-medium transition-colors ${
-              activeTab === "topic" ? styles.tabActive : styles.tabInactive
-            }`}
-          >
-            <span className="flex items-center justify-center gap-2">
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-              </svg>
-              {t('planMode.topicTab')}
-            </span>
-          </button>
-          <button
-            onClick={() => { setActiveTab("youtube"); setError(""); }}
-            className={`flex-1 py-3 px-4 text-sm font-medium transition-colors ${
-              activeTab === "youtube" ? styles.tabActive : styles.tabInactive
-            }`}
-          >
-            <span className="flex items-center justify-center gap-2">
-              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
-              </svg>
-              {t('planMode.youtubeTab')}
-            </span>
-          </button>
-        </div>
-      )}
-
       {/* Input Area */}
       <div className="mb-8">
         <div className="relative">
           <textarea
-            value={currentValue}
-            onChange={currentOnChange}
+            value={topic}
+            onChange={(e) => setTopic(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder={currentPlaceholder}
+            placeholder={displayPlaceholder}
             rows={3}
             className={`w-full h-28 px-4 pt-3.5 pb-14 pr-32 border rounded-2xl text-white text-[15px] focus:outline-none resize-none transition-colors ${styles.textarea}`}
             disabled={isGenerating}
@@ -351,46 +287,34 @@ export function PlanModeSelect({
             {isGenerating ? t('planMode.analyzing') : t('planMode.generate')}
           </button>
         </div>
-        {/* Image paste/upload area (topic tab only) */}
-        {activeTab === "topic" && (
-          <div className="mt-3 flex items-center gap-3">
-            {pastedImage ? (
-              <div className="flex items-center gap-2 px-3 py-2 bg-neutral-900 border border-neutral-700 rounded-lg">
-                <img src={pastedImage.preview} alt="Pasted" className="w-10 h-10 object-cover rounded" />
-                <span className="text-xs text-neutral-400 max-w-[140px] truncate">{t('planMode.imageAttached')}</span>
-                <button
-                  onClick={() => setPastedImage(null)}
-                  className="text-neutral-500 hover:text-red-400 transition-colors ml-1"
-                >
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
-            ) : (
-              <button
-                onClick={() => fileInputRef.current?.click()}
-                className={`flex items-center gap-1.5 px-3 py-1.5 text-xs border rounded-lg transition-colors ${styles.topicPill}`}
-              >
-                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                </svg>
-                {t('planMode.pasteOrUploadImage')}
-              </button>
-            )}
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (file) handleImageFile(file);
-                e.target.value = "";
-              }}
+
+        {/* Attachment area */}
+        <div className="mt-3 space-y-2">
+          <button
+            onClick={() => setShowFileZone(!showFileZone)}
+            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs border rounded-lg transition-colors ${
+              attachedFiles.length > 0
+                ? "text-blue-400 border-blue-500/40 bg-blue-500/10"
+                : styles.topicPill
+            }`}
+          >
+            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M18.375 12.739l-7.693 7.693a4.5 4.5 0 01-6.364-6.364l10.94-10.94A3 3 0 1119.5 7.372L8.552 18.32m.009-.01l-.01.01m5.699-9.941l-7.81 7.81a1.5 1.5 0 002.112 2.13" />
+            </svg>
+            {attachedFiles.length > 0
+              ? `${attachedFiles.length} ${attachedFiles.length === 1 ? t('planFiles.fileAttached') : t('planFiles.filesAttached')}`
+              : t('planFiles.attachFiles')}
+          </button>
+
+          {showFileZone && (
+            <FileDropZone
+              files={attachedFiles}
+              onChange={setAttachedFiles}
+              className="mt-1"
             />
-          </div>
-        )}
+          )}
+        </div>
+
         {error && (
           <p className="mt-3 text-sm text-red-400">{error}</p>
         )}
@@ -418,59 +342,19 @@ export function PlanModeSelect({
         </div>
       </div>
 
-      {/* Example Pills - Different for each tab */}
-      {activeTab === "topic" || !showYouTubeTab ? (
-        <div className="flex flex-wrap gap-2">
-          {defaultExampleTopics.map((topicItem) => (
-            <button
-              key={topicItem}
-              onClick={() => setTopic(topicItem)}
-              disabled={isGenerating}
-              className={`px-3 py-1.5 text-xs border rounded-full transition-colors ${styles.topicPill}`}
-            >
-              {topicItem}
-            </button>
-          ))}
-        </div>
-      ) : (
-        <div>
-          <label className={`block text-sm mb-3 ${styles.label}`}>
-            {t('planMode.tryVideos')}
-          </label>
-          <div className="grid grid-cols-3 gap-3">
-            {EXAMPLE_YOUTUBE_VIDEOS.map((video) => (
-              <button
-                key={video.url}
-                onClick={() => setYoutubeUrl(video.url)}
-                disabled={isGenerating}
-                className="group relative aspect-video rounded-xl overflow-hidden border border-neutral-800 hover:border-neutral-600 transition-all hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {/* Thumbnail */}
-                <img
-                  src={getYouTubeThumbnail(video.url, "medium") || ""}
-                  alt={video.title}
-                  className="w-full h-full object-cover"
-                />
-                {/* Overlay gradient */}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-                {/* Play icon */}
-                <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                  <div className="w-10 h-10 rounded-full bg-red-600 flex items-center justify-center">
-                    <svg className="w-5 h-5 text-white ml-0.5" viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M8 5v14l11-7z" />
-                    </svg>
-                  </div>
-                </div>
-                {/* Text overlay */}
-                <div className="absolute bottom-0 left-0 right-0 p-2">
-                  <p className="text-white text-xs font-medium truncate">{video.title}</p>
-                  <p className="text-neutral-400 text-[10px] truncate">{video.channel}</p>
-                </div>
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
+      {/* Example topic pills */}
+      <div className="flex flex-wrap gap-2">
+        {defaultExampleTopics.map((topicItem) => (
+          <button
+            key={topicItem}
+            onClick={() => setTopic(topicItem)}
+            disabled={isGenerating}
+            className={`px-3 py-1.5 text-xs border rounded-full transition-colors ${styles.topicPill}`}
+          >
+            {topicItem}
+          </button>
+        ))}
+      </div>
     </div>
   );
 }

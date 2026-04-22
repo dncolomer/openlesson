@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createSessionPlanLLM } from "@/lib/openrouter";
+import { createSessionPlanLLM } from "@/lib/xai";
 import { createClient } from "@/lib/supabase/server";
 
 export const runtime = "nodejs";

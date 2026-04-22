@@ -315,7 +315,7 @@ export default function AgenticApiV2DocsPage() {
                     ┌───────────────┼───────────────┐
                     ▼               ▼               ▼
             ┌─────────────┐  ┌─────────────┐  ┌─────────────┐
-            │  Supabase   │  │  OpenRouter │  │   Solana    │
+            │  Supabase   │  │     xAI     │  │   Solana    │
             │  (DB/Auth)  │  │  (AI/LLM)   │  │ (Proofs)    │
             └─────────────┘  └─────────────┘  └─────────────┘`}</CodeBlock>
 
@@ -420,7 +420,6 @@ Example: sk_a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4`}</CodeBlock>
               <EndpointCard method="POST" path="/plans/{id}/adapt" scope="plans:write" description="AI-powered plan adaptation" />
               <EndpointCard method="POST" path="/plans/{id}/expand" scope="plans:write" description="Expand a node with sub-sessions" />
               <EndpointCard method="POST" path="/plans/{id}/assess" scope="plans:read" description="Assess user level for plan" />
-              <EndpointCard method="POST" path="/plans/from-video" scope="plans:write" description="Create plan from YouTube video" />
             </div>
 
             <SubHeading>Create Learning Plan</SubHeading>

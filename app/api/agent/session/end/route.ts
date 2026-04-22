@@ -1,15 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient as createAdminClient } from "@supabase/supabase-js";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { hashApiKey } from "@/lib/x402";
-import { generateReport } from "@/lib/openrouter";
-import { getUserPrompts } from "@/lib/prompts";
+import { generateReport } from "@/lib/xai";
+import { getUserPrompts } from "@/lib/user-prompts";
+import { getFileTextContent } from "@/lib/xai-files";
 
 async function getServiceRoleClient() {
-  return createAdminClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  );
+  return createAdminClient();
 }
 
 async function authenticateRequest(
@@ -38,8 +36,8 @@ async function authenticateRequest(
 }
 
 async function fetchTranscriptsFromStorage(
-  supabase: SupabaseClient,
-  transcriptRecords: { storage_path: string; chunk_index: number }[]
+  _supabase: SupabaseClient,
+  transcriptRecords: { xai_file_id: string; chunk_index: number }[]
 ): Promise<string> {
   const sortedRecords = [...transcriptRecords].sort(
     (a, b) => a.chunk_index - b.chunk_index
@@ -48,23 +46,9 @@ async function fetchTranscriptsFromStorage(
   const transcripts: string[] = [];
 
   for (const record of sortedRecords) {
-    try {
-      const { data, error } = await supabase.storage
-        .from("session-transcript")
-        .download(record.storage_path);
-
-      if (error || !data) {
-        console.warn("[agent-session-end] Failed to download transcript:", record.storage_path);
-        continue;
-      }
-
-      const text = await data.text();
-      if (text.trim()) {
-        transcripts.push(text);
-      }
-    } catch (e) {
-      console.warn("[agent-session-end] Error fetching transcript:", e);
-    }
+    if (!record.xai_file_id || record.xai_file_id === "_empty") continue;
+    const text = await getFileTextContent(record.xai_file_id);
+    if (text && text.trim()) transcripts.push(text.trim());
   }
 
   return transcripts.join("\n\n");
@@ -137,7 +121,7 @@ export async function POST(req: NextRequest) {
 
     const { data: transcriptRecords, error: transcriptError } = await supabase
       .from("session_transcript")
-      .select("storage_path, chunk_index, word_count, timestamp_ms")
+      .select("xai_file_id, chunk_index, word_count, timestamp_ms")
       .eq("session_id", session_id)
       .order("chunk_index", { ascending: true });
 

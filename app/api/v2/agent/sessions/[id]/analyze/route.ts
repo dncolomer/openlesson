@@ -6,10 +6,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { authenticateRequest, errorResponse } from "@/lib/agent-v2/auth";
 import { createProof, serializeProof, hashData } from "@/lib/agent-v2/proofs";
-import { analyzeGap, updateSessionPlanLLM } from "@/lib/openrouter";
+import { analyzeGap, updateSessionPlanLLM } from "@/lib/xai";
 import type { AnalysisInput } from "@/lib/agent-v2/types";
-import type { SessionPlanStep, FocusedProbeInfo } from "@/lib/openrouter";
+import type { SessionPlanStep, FocusedProbeInfo } from "@/lib/xai";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { uploadFileToXAI, getFileTextContent } from "@/lib/xai-files";
+import { storeAnalysisResult } from "@/lib/session-analysis";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -61,36 +63,32 @@ async function storeTranscriptChunk(
   sessionId: string,
   transcript: string,
   timestampMs: number
-): Promise<{ chunkIndex: number; storagePath: string } | null> {
+): Promise<{ chunkIndex: number; xaiFileId: string } | null> {
   if (!transcript || transcript.trim().length === 0) return null;
 
-  // Determine next chunk index
   const { count } = await supabase
     .from("session_transcript")
     .select("id", { count: "exact", head: true })
     .eq("session_id", sessionId);
 
   const chunkIndex = count ?? 0;
-  const storagePath = `${sessionId}/chunk_${chunkIndex}.txt`;
   const wordCount = transcript.split(/\s+/).filter((w) => w.length > 0).length;
 
-  // Upload to storage
-  const { error: uploadErr } = await supabase.storage
-    .from("session-transcript")
-    .upload(storagePath, new Blob([transcript], { type: "text/plain" }), {
-      contentType: "text/plain",
-      upsert: false,
-    });
-
-  if (uploadErr) {
-    console.error("[v2/analyze] Storage upload error:", uploadErr);
+  // Upload transcript to xAI Files
+  const fileName = `${sessionId}_chunk_${chunkIndex}.txt`;
+  const base64 = Buffer.from(transcript, "utf-8").toString("base64");
+  let xaiFileId: string;
+  try {
+    const uploaded = await uploadFileToXAI(fileName, "text/plain", base64);
+    xaiFileId = uploaded.file_id;
+  } catch (err) {
+    console.error("[v2/analyze] xAI transcript upload failed:", err);
     return null;
   }
 
-  // Insert record
   const { error: insertErr } = await supabase.from("session_transcript").insert({
     session_id: sessionId,
-    storage_path: storagePath,
+    xai_file_id: xaiFileId,
     chunk_index: chunkIndex,
     word_count: wordCount,
     timestamp_ms: timestampMs,
@@ -101,7 +99,7 @@ async function storeTranscriptChunk(
     return null;
   }
 
-  return { chunkIndex, storagePath };
+  return { chunkIndex, xaiFileId };
 }
 
 function buildContextDescription(
@@ -310,37 +308,18 @@ export async function POST(
 
       const contextDescription = buildContextDescription(body.context, inputTypes);
 
-      // Fetch recent transcript for context (last 3 chunks)
+      // Fetch xAI file IDs for the recent transcript chunks. Grok will read
+      // them agentically via attachment_search inside updateSessionPlanLLM.
       const { data: recentTranscripts } = await supabase
         .from("session_transcript")
-        .select("storage_path, chunk_index")
+        .select("xai_file_id, chunk_index")
         .eq("session_id", sessionId)
         .order("chunk_index", { ascending: false })
-        .limit(3);
+        .limit(5);
 
-      let recentTranscriptText = transcript; // Start with current transcript
-      if (recentTranscripts && recentTranscripts.length > 0) {
-        const sortedRecent = [...recentTranscripts].sort(
-          (a, b) => a.chunk_index - b.chunk_index
-        );
-        const chunks: string[] = [];
-        for (const rec of sortedRecent) {
-          try {
-            const { data: blob } = await supabase.storage
-              .from("session-transcript")
-              .download(rec.storage_path);
-            if (blob) {
-              const text = await blob.text();
-              if (text.trim()) chunks.push(text.trim());
-            }
-          } catch {
-            // Skip failed downloads
-          }
-        }
-        if (chunks.length > 0) {
-          recentTranscriptText = chunks.join("\n\n");
-        }
-      }
+      const sessionFileIds = (recentTranscripts || [])
+        .map((r: { xai_file_id: string | null }) => r.xai_file_id)
+        .filter((id: string | null): id is string => !!id && id !== "_empty");
 
       const updateResult = await updateSessionPlanLLM({
         goal: plan.goal,
@@ -348,16 +327,40 @@ export async function POST(
         steps: plan.steps,
         currentStepIndex: plan.current_step_index,
         contextDescription,
-        transcript: recentTranscriptText,
         previousProbes: previousProbeTexts,
         activeProbes: activeProbeTexts,
         focusedProbes: focusedProbeInfos,
         openProbeCount,
         lastProbeTimestamp,
+        sessionFileIds,
       });
 
       if (updateResult.success && updateResult.result) {
         const r = updateResult.result;
+
+        // Fire-and-forget: persist to xAI + session_analysis
+        storeAnalysisResult({
+          supabase,
+          sessionId,
+          userId: auth.user_id,
+          source: "v2_analyze",
+          result: {
+            gapScore: r.gapScore,
+            planChanged: r.planChanged,
+            canAutoAdvance: r.canAutoAdvance,
+            signals: r.signals,
+            reasoning: r.reasoning,
+            advanceReasoning: r.advanceReasoning,
+            nextRequest: r.nextRequest,
+            currentStepIndex: r.currentStepIndex,
+            probesToArchive: r.probesToArchive,
+            updatedSteps: r.updatedSteps as Array<Record<string, unknown>> | undefined,
+          },
+          extra: {
+            context_file_count: sessionFileIds.length,
+            input_types: inputTypes,
+          },
+        }).catch(err => console.error("[v2/analyze] storeAnalysisResult failed:", err));
 
         // Use LLM gap analysis as primary (overrides audio-only analysis)
         gapScore = r.gapScore;

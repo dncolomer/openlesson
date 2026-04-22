@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createServerClient } from "@supabase/ssr";
-import { cookies } from "next/headers";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { createClient } from "@/lib/supabase/server";
+import { transcribeAudio } from "@/lib/xai-stt";
+import { uploadFileToXAI } from "@/lib/xai-files";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -9,7 +11,7 @@ const HESITATION_MARKERS = ["um", "uh", "hmm", "huh", "er", "ah", "like,", "you 
 const SELF_CORRECTION_MARKERS = ["actually", "no wait", "let me rethink", "scratch that", "I mean", "correction", "wait no"];
 const QUESTION_MARKERS = ["?", "why", "how", "what if", "could it be", "I wonder"];
 
-async function getAudioFromSupabase(supabase: ReturnType<typeof createServerClient>, storagePath: string): Promise<{ buffer: Buffer; mimeType: string } | null> {
+async function getAudioFromSupabase(supabase: SupabaseClient, storagePath: string): Promise<{ buffer: Buffer; mimeType: string } | null> {
   const { data, error } = await supabase.storage.from("session-audio").download(storagePath);
   
   if (error || !data) {
@@ -20,17 +22,23 @@ async function getAudioFromSupabase(supabase: ReturnType<typeof createServerClie
   const arrayBuffer = await data.arrayBuffer();
   const buffer = Buffer.from(arrayBuffer);
   
-  // Determine mime type from extension
-  const ext = storagePath.split(".").pop()?.toLowerCase() || "webm";
+  // Determine mime type from extension.
+  // xAI STT supports: WAV, MP3, OGG, Opus, FLAC, AAC, MP4, M4A, MKV.
+  // WebM is NOT supported — map to ogg (webm+opus ≈ ogg+opus).
+  const ext = storagePath.split(".").pop()?.toLowerCase() || "mp4";
   const mimeMap: Record<string, string> = {
-    webm: "audio/webm",
     mp4: "audio/mp4",
     m4a: "audio/mp4",
     mp3: "audio/mpeg",
     wav: "audio/wav",
     ogg: "audio/ogg",
+    opus: "audio/ogg",
+    flac: "audio/flac",
+    aac: "audio/aac",
+    mkv: "video/x-matroska",
+    webm: "audio/ogg", // legacy webm+opus → re-label as ogg for xAI
   };
-  const mimeType = mimeMap[ext] || "audio/webm";
+  const mimeType = mimeMap[ext] || "audio/mp4";
   
   return { buffer, mimeType };
 }
@@ -58,17 +66,7 @@ export async function POST(request: NextRequest) {
     const parsedChunkIndex = parseInt(chunkIndex);
     const parsedTimestampMs = parseInt(timestampMs);
 
-    const cookieStore = await cookies();
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          getAll() { return cookieStore.getAll(); },
-          setAll() {},
-        },
-      }
-    );
+    const supabase = await createClient();
 
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) {
@@ -91,13 +89,15 @@ export async function POST(request: NextRequest) {
       
       buffer = audioData.buffer;
       mimeType = audioData.mimeType;
-      fileName = storagePath.split("/").pop() || "audio.webm";
+      // Rename legacy .webm files to .ogg for xAI compatibility
+      const rawFn = storagePath.split("/").pop() || "audio.mp4";
+      fileName = rawFn.endsWith(".webm") ? rawFn.replace(/\.webm$/, ".ogg") : rawFn;
       
       console.log("[transcribe-chunk] Fetched audio from storage:", { size: buffer.length, mimeType });
       
     } else if (audioFile) {
       // LEGACY MODE: Receive audio file directly (backward compatibility)
-      const allowedTypes = ["audio/webm", "audio/mp4", "audio/mpeg", "audio/wav", "audio/ogg", "audio/mp3"];
+      const allowedTypes = ["audio/webm", "audio/mp4", "audio/mpeg", "audio/wav", "audio/ogg", "audio/mp3", "audio/aac", "audio/flac"];
       const isAllowed = allowedTypes.some(type => 
         audioFile.type === type || audioFile.type.startsWith(type + ";")
       );
@@ -108,8 +108,13 @@ export async function POST(request: NextRequest) {
 
       const arrayBuffer = await audioFile.arrayBuffer();
       buffer = Buffer.from(arrayBuffer);
-      mimeType = audioFile.type.split(";")[0].trim() || "audio/webm";
-      fileName = audioFile.name;
+      // Map webm → ogg for xAI compatibility
+      let rawMime = audioFile.type.split(";")[0].trim() || "audio/mp4";
+      if (rawMime === "audio/webm") rawMime = "audio/ogg";
+      mimeType = rawMime;
+      fileName = audioFile.name.endsWith(".webm")
+        ? audioFile.name.replace(/\.webm$/, ".ogg")
+        : audioFile.name;
     } else {
       return NextResponse.json({ error: "Missing either storage_path or audio file" }, { status: 400 });
     }
@@ -124,63 +129,15 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Determine audio format for OpenRouter
-    let ext = mimeType.split("/")[1] || "webm";
-    const formatMap: Record<string, string> = {
-      webm: "wav",
-      mp4: "m4a",
-      mp3: "mp3",
-      ogg: "ogg",
-      wav: "wav",
-    };
-    const audioFormat = formatMap[ext] || "wav";
-    const audioBase64 = buffer.toString("base64");
+    console.log("[transcribe-chunk] Audio info:", { mimeType, bufferSize: buffer.length });
 
-    console.log("[transcribe-chunk] Audio info:", { mimeType, ext, bufferSize: buffer.length });
-
-    // Audio transcription always goes through OpenRouter (Google Gemini model)
-    const { getChatUrl, getChatHeaders, getProviderForModel } = await import("@/lib/ai-provider");
-    const audioModel = "google/gemini-2.5-flash"; // Must use audio-capable model
-    const audioProvider = getProviderForModel(audioModel); // Always resolves to "openrouter"
-
-    const prompt = "Transcribe this audio. Output ONLY the transcript text, nothing else. Include filler words like um, uh. If the audio is silent, empty, or contains no speech, respond with exactly: [NO_SPEECH]";
-
-    console.log("[transcribe-chunk] Calling transcription API via", audioProvider);
-
-    const response = await fetch(getChatUrl(audioProvider), {
-      method: "POST",
-      headers: getChatHeaders(audioProvider),
-      body: JSON.stringify({
-        model: audioModel,
-        messages: [
-          {
-            role: "user",
-            content: [
-              { type: "text", text: prompt },
-              {
-                type: "input_audio",
-                input_audio: {
-                  data: audioBase64,
-                  format: audioFormat,
-                },
-              },
-            ],
-          },
-        ],
-        max_tokens: 4000,
-      }),
-    });
-
-    console.log("[transcribe-chunk] Transcription response status:", response.status);
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error("[transcribe-chunk] Transcription API error:", response.status, errorText);
-      return NextResponse.json({ error: `Transcription failed: ${response.status} - ${errorText.substring(0, 200)}` }, { status: 500 });
+    // Transcribe via xAI Speech-to-Text
+    const sttResult = await transcribeAudio(buffer, fileName, mimeType);
+    if (!sttResult) {
+      return NextResponse.json({ error: "xAI STT transcription failed" }, { status: 500 });
     }
 
-    const data = await response.json();
-    let transcription = data.choices?.[0]?.message?.content?.trim() || "";
+    let transcription = (sttResult.text || "").trim();
 
     // Check for empty/silent audio markers or hallucinated content
     const lowerTranscript = transcription.toLowerCase();
@@ -208,35 +165,29 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Use the storage path if provided, otherwise generate new one
     const audioStoragePath = storagePath || `${user.id}/${sessionId}/chunk_${parsedChunkIndex}_${Date.now()}.webm`;
-    const transcriptStoragePath = storagePath 
-      ? storagePath.replace("/session-audio/", "/session-transcript/").replace(/\.\w+$/, ".txt")
-      : `${user.id}/${sessionId}/chunk_${parsedChunkIndex}_${Date.now()}.txt`;
-
-    console.log("[transcribe-chunk] Storage paths:", { audioStoragePath, transcriptStoragePath });
-
-    // Only upload transcript to storage (audio already exists in Supabase)
-    try {
-      await supabase.storage
-        .from("session-transcript")
-        .upload(transcriptStoragePath, transcription, {
-          contentType: "text/plain",
-          upsert: false,
-        });
-    } catch (e) {
-      console.warn("Transcript upload failed (non-critical):", e);
-    }
 
     const lower = transcription.toLowerCase();
     const wordCount = transcription.split(/\s+/).filter((w: string) => w.length > 0).length;
+
+    // Upload transcript chunk to xAI Files (plain text)
+    const transcriptFileName = `${sessionId}_chunk_${parsedChunkIndex}.txt`;
+    const transcriptBase64 = Buffer.from(transcription, "utf-8").toString("base64");
+    let xaiFileId: string | null = null;
+    try {
+      const uploaded = await uploadFileToXAI(transcriptFileName, "text/plain", transcriptBase64);
+      xaiFileId = uploaded.file_id;
+    } catch (e) {
+      console.error("[transcribe-chunk] xAI transcript upload failed:", e);
+      return NextResponse.json({ error: "Transcript upload to xAI failed" }, { status: 502 });
+    }
+
     const toolData = {
       has_hesitation: HESITATION_MARKERS.some((m) => lower.includes(m)),
       has_self_correction: SELF_CORRECTION_MARKERS.some((m) => lower.includes(m)),
       has_questions: QUESTION_MARKERS.some((m) => lower.includes(m)),
       word_count: wordCount,
       original_filename: fileName,
-      transcript_path: transcriptStoragePath,
     };
 
     // Insert to session_audio table (only if new path, avoid duplicates)
@@ -257,7 +208,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Insert to session_transcript table
+    // Insert to session_transcript table (xAI file reference)
     try {
       await supabase
         .from("session_transcript")
@@ -265,7 +216,7 @@ export async function POST(request: NextRequest) {
           session_id: sessionId,
           user_id: user.id,
           timestamp_ms: parsedTimestampMs,
-          storage_path: transcriptStoragePath,
+          xai_file_id: xaiFileId,
           chunk_index: parsedChunkIndex,
           word_count: wordCount,
           metadata: toolData,

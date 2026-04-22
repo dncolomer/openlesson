@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { callOpenRouterText, userMessage, DEFAULT_MODEL } from "@/lib/openrouter-client";
+import { callXaiText, userMessage, DEFAULT_MODEL } from "@/lib/xai-client";
 
 export async function GET(req: NextRequest) {
   try {
@@ -76,7 +76,7 @@ Include a very brief (5 words max) description of why each is useful.`;
         return NextResponse.json({ error: "Invalid type" }, { status: 400 });
     }
 
-    const response = await callOpenRouterText(
+    const response = await callXaiText(
       [userMessage(prompt)],
       {
         model: DEFAULT_MODEL,
@@ -86,7 +86,7 @@ Include a very brief (5 words max) description of why each is useful.`;
     );
 
     if (!response.success || !response.data) {
-      console.error("OpenRouter API error:", response.error);
+      console.error("xAI API error:", response.error);
       return NextResponse.json({ error: "Failed to generate material" }, { status: 500 });
     }
 

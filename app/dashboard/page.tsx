@@ -6,13 +6,13 @@ import { Navbar } from "@/components/Navbar";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { getSessions, deleteSession, restartSession, getLearningPlans, type Session, type LearningPlan } from "@/lib/storage";
-import { DEFAULT_PROMPTS, PROMPT_META, type PromptKey, type UserPrompts } from "@/lib/openrouter";
+import { DEFAULT_PROMPTS, PROMPT_META, type PromptKey, type UserPrompts } from "@/lib/prompts";
 
 import { useI18n } from "@/lib/i18n";
 
 type Tab = "sessions" | "plans" | "usage" | "config";
 
-interface OpenRouterModel {
+interface AvailableModel {
   id: string;
   label: string;
   description: string;
@@ -80,23 +80,19 @@ export default function DashboardPage() {
   const [keyCopied, setKeyCopied] = useState(false);
 
   // Config tab
-  const [availableModels, setAvailableModels] = useState<OpenRouterModel[]>([]);
-  const [tutorModel, setTutorModel] = useState<string>("x-ai/grok-4");
-  const [askModel, setAskModel] = useState<string>("x-ai/grok-4");
-  const [plannerModel, setPlannerModel] = useState<string>("x-ai/grok-4");
-  const [coderModel, setCoderModel] = useState<string>("x-ai/grok-4");
+  const [availableModels, setAvailableModels] = useState<AvailableModel[]>([]);
+  const [tutorModel, setTutorModel] = useState<string>("grok-4-0709");
+  const [askModel, setAskModel] = useState<string>("grok-4-0709");
+  const [plannerModel, setPlannerModel] = useState<string>("grok-4-0709");
+  const [coderModel, setCoderModel] = useState<string>("grok-4-0709");
   const [modelsLoading, setModelsLoading] = useState(true);
   const [modelSaving, setModelSaving] = useState(false);
   const [modelSaved, setModelSaved] = useState(false);
 
   // AI Provider info
   const [providerInfo, setProviderInfo] = useState<{
-    provider: string;
-    label: string;
     defaultModel: string;
-    chatUrl: string;
     hasXAIKey: boolean;
-    hasOpenRouterKey: boolean;
   } | null>(null);
 
   const [userPrompts, setUserPrompts] = useState<UserPrompts>({});
@@ -238,7 +234,7 @@ export default function DashboardPage() {
 
       // Load available models
       try {
-        const modelsRes = await fetch("/api/openrouter/models");
+        const modelsRes = await fetch("/api/models");
         const modelsData = await modelsRes.json();
         if (modelsData.models) {
           setAvailableModels(modelsData.models);
@@ -1008,34 +1004,19 @@ export default function DashboardPage() {
               {providerInfo ? (
                 <div className="space-y-3">
                   <div className="flex items-center gap-3">
-                    <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-full ${
-                      providerInfo.provider === "xai"
-                        ? "bg-blue-500/10 text-blue-400 border border-blue-500/20"
-                        : "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
-                    }`}>
-                      {providerInfo.provider === "xai" ? (
-                        <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M13.982 10.622 20.54 3h-1.554l-5.693 6.618L8.745 3H3.5l6.876 10.007L3.5 21h1.554l6.012-6.989L15.868 21h5.245l-7.131-10.378Zm-2.128 2.474-.697-.997-5.543-7.93H8l4.474 6.4.697.996 5.815 8.318h-2.387l-4.745-6.787Z"/></svg>
-                      ) : (
-                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
-                      )}
-                      {providerInfo.label}
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">
+                      <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M13.982 10.622 20.54 3h-1.554l-5.693 6.618L8.745 3H3.5l6.876 10.007L3.5 21h1.554l6.012-6.989L15.868 21h5.245l-7.131-10.378Zm-2.128 2.474-.697-.997-5.543-7.93H8l4.474 6.4.697.996 5.815 8.318h-2.387l-4.745-6.787Z"/></svg>
+                      xAI Direct
                     </span>
                     <span className="text-xs text-neutral-500">
                       {t('dashboard.defaultModel')} <code className="text-neutral-400">{providerInfo.defaultModel}</code>
                     </span>
                   </div>
                   <div className="flex gap-4 text-xs">
-                    <span className={providerInfo.hasOpenRouterKey ? "text-emerald-500" : "text-red-500"}>
-                      {providerInfo.hasOpenRouterKey ? t('dashboard.openRouterConfigured') : t('dashboard.openRouterMissing')}
-                    </span>
-                    <span className={providerInfo.hasXAIKey ? "text-emerald-500" : "text-neutral-600"}>
+                    <span className={providerInfo.hasXAIKey ? "text-emerald-500" : "text-red-500"}>
                       {providerInfo.hasXAIKey ? t('dashboard.xAiConfigured') : t('dashboard.xAiNotSet')}
                     </span>
                   </div>
-                  <p className="text-[11px] text-neutral-600">
-                    {t('dashboard.switchProviderInfo')}
-                    {providerInfo.provider === "xai" && ` ${t('dashboard.nonGrokFallback')}`}
-                  </p>
                 </div>
               ) : (
                 <p className="text-sm text-neutral-500">{t('dashboard.loadingProvider')}</p>
@@ -1066,27 +1047,10 @@ export default function DashboardPage() {
                     </label>
                     <p className="text-xs text-neutral-500 mb-3">{slot.desc}</p>
                     <div className="w-full bg-neutral-950 border border-neutral-700 rounded-lg px-3 py-2 text-sm text-neutral-300">
-                      {providerInfo?.provider === "xai" ? (
-                        <>Grok 4.20 Beta <span className="text-neutral-500">(grok-4.20-beta-0309-reasoning)</span></>
-                      ) : (
-                        <>Grok 4 <span className="text-neutral-500">(x-ai/grok-4)</span></>
-                      )}
+                      Grok 4.20 Beta <span className="text-neutral-500">(grok-4.20-beta-0309-reasoning)</span>
                     </div>
                   </div>
                 ))}
-
-                <div className="p-4 rounded-lg border border-neutral-800 bg-neutral-900/50">
-                  <label className="block text-sm font-medium text-neutral-300 mb-1">
-                    {t('dashboard.audioVisionModel')}
-                  </label>
-                  <p className="text-xs text-neutral-500 mb-3">
-                    {t('dashboard.audioVisionDesc')}
-                  </p>
-                  <div className="w-full bg-neutral-950 border border-neutral-700 rounded-lg px-3 py-2 text-sm text-neutral-300">
-                    Gemini 2.5 Flash <span className="text-neutral-500">(google/gemini-2.5-flash)</span>
-                    <span className="text-[10px] text-neutral-600 ml-2">via OpenRouter</span>
-                  </div>
-                </div>
               </div>
             </div>
 

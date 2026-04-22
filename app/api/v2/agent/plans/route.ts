@@ -8,10 +8,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { authenticateRequest, errorResponse } from "@/lib/agent-v2/auth";
 import { createProof, serializeProof } from "@/lib/agent-v2/proofs";
 import {
-  callOpenRouterJSON,
+  callXaiJSON,
   userMessage,
   DEFAULT_MODEL,
-} from "@/lib/openrouter-client";
+} from "@/lib/xai-client";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -182,7 +182,7 @@ Rules:
 - Descriptions: 1-2 sentences explaining the concept and relevance`;
 
     // Call AI
-    const aiResponse = await callOpenRouterJSON<GeneratedPlan>(
+    const aiResponse = await callXaiJSON<GeneratedPlan>(
       [userMessage(prompt)],
       {
         model: DEFAULT_MODEL,

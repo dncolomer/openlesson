@@ -32,6 +32,7 @@ interface SessionItemProps {
   supabase?: ReturnType<typeof createBrowserClient>;
   onNavigateToNode?: (nodeId: string) => void;
   planTopic?: string;
+  planId?: string;
 }
 
 export function SessionItem({ 
@@ -39,7 +40,7 @@ export function SessionItem({
   highlighted, highlightOpacity = 1,
   isExpanded = false, onToggleExpand,
   allNodes = [], isOwner = true,
-  supabase: propSupabase, onNavigateToNode, planTopic
+  supabase: propSupabase, onNavigateToNode, planTopic, planId
 }: SessionItemProps) {
   const { t } = useI18n();
   const router = useRouter();
@@ -88,7 +89,7 @@ export function SessionItem({
       }
       await supabase.from("plan_nodes").update({ status: "in_progress" }).eq("id", node.id);
       const { createSession } = await import("@/lib/storage");
-      const session = await createSession(node.title, undefined, editedPlanningPrompt || undefined);
+      const session = await createSession(node.title, undefined, editedPlanningPrompt || undefined, undefined, planId || undefined);
       await supabase.from("plan_nodes").update({ session_id: session.id }).eq("id", node.id);
       router.push(`/session?id=${session.id}`);
     } catch (err) {

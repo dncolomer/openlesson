@@ -43,9 +43,8 @@ The core thesis is simple: when you speak your reasoning out loud, gaps become a
 | Styling | Tailwind CSS |
 | State | Zustand |
 | Database & Auth | Supabase (PostgreSQL + RLS + Auth) |
-| LLM | OpenRouter API |
+| LLM + STT + TTS + Images + Files | xAI (api.x.ai) |
 | Payments | Stripe |
-| Text-to-Speech | ElevenLabs |
 | Graph Visualization | React Flow (@xyflow/react) |
 | Code Editor | Monaco Editor |
 | EEG | Muse headband via Web Bluetooth |
@@ -58,7 +57,7 @@ The core thesis is simple: when you speak your reasoning out loud, gaps become a
 
 - Node.js 18+
 - A Supabase project
-- An OpenRouter API key
+- An xAI API key (https://console.x.ai)
 
 ### Setup
 
@@ -85,7 +84,7 @@ Required environment variables:
 
 | Variable | Description |
 |---|---|
-| `OPENROUTER_API_KEY` | OpenRouter API key for LLM calls |
+| `XAI_API_KEY` | xAI API key (LLM, STT, TTS, images, files) |
 | `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anonymous key |
 | `SUPABASE_SERVICE_ROLE_KEY` | Supabase service role key |
@@ -95,7 +94,6 @@ Optional:
 
 | Variable | Description |
 |---|---|
-| `ELEVENLABS_API_KEY` | ElevenLabs API key for text-to-speech |
 | `STRIPE_SECRET_KEY` | Stripe secret key for payments |
 | `STRIPE_WEBHOOK_SECRET` | Stripe webhook signing secret |
 | `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | Stripe publishable key |

@@ -1,18 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
-import { createClient as createAdminClient } from "@supabase/supabase-js";
+import { createAdminClient } from "@/lib/supabase/admin";
+
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { hashApiKey, getX402Price, getX402Description } from "@/lib/x402";
-import { analyzeGap } from "@/lib/openrouter";
-import { getUserPrompts } from "@/lib/prompts";
+import { analyzeGap } from "@/lib/xai";
+import { getUserPrompts } from "@/lib/user-prompts";
 import { getLanguageName } from "@/lib/tutoring-languages";
 
 async function getServiceRoleClient() {
-  return createAdminClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  );
+  return createAdminClient();
 }
 
 async function authenticateRequest(

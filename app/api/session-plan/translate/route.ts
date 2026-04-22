@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSessionPlan, updateSessionPlan, getSession } from "@/lib/storage";
-import { callOpenRouterJSON, userMessage } from "@/lib/openrouter-client";
+import { callXaiJSON, userMessage, DEFAULT_MODEL } from "@/lib/xai-client";
 import { createClient } from "@/lib/supabase/server";
 import { getLanguageName } from "@/lib/tutoring-languages";
 
@@ -105,7 +105,7 @@ Return ONLY valid JSON (no markdown, no explanation):
   ]
 }`;
 
-    const response = await callOpenRouterJSON<{
+    const response = await callXaiJSON<{
       goal: string;
       strategy: string;
       description: string;
@@ -113,7 +113,7 @@ Return ONLY valid JSON (no markdown, no explanation):
     }>(
       [userMessage(translationPrompt)],
       {
-        model: "anthropic/claude-sonnet-4",
+        model: DEFAULT_MODEL,
         maxTokens: 1500,
         temperature: 0.3,
       }

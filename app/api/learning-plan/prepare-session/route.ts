@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { callOpenRouterText, userMessage, generateEmbeddings, DEFAULT_MODEL } from "@/lib/openrouter-client";
+import { callXaiText, userMessage, DEFAULT_MODEL } from "@/lib/xai-client";
 
 export async function POST(req: NextRequest) {
   try {
@@ -11,46 +11,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { topic, planNodeId } = await req.json();
+    const { topic } = await req.json();
 
     if (!topic || typeof topic !== "string") {
       return NextResponse.json({ error: "Topic is required" }, { status: 400 });
     }
 
-    // RAG: Search for relevant transcript chunks
-    let relevantChunks: Array<{
-      id: string;
-      content: string;
-      session_id: string | null;
-      created_at: string;
-    }> = [];
-
-    const embeddingResponse = await generateEmbeddings([topic]);
-    if (embeddingResponse.success && embeddingResponse.embeddings?.[0]) {
-      const { data: chunks, error } = await supabase.rpc("match_transcript_rag_chunks", {
-        query_embedding: embeddingResponse.embeddings[0],
-        match_user_id: user.id,
-        match_session_id: planNodeId || null,
-        match_limit: 3,
-      });
-
-      if (!error && chunks) {
-        relevantChunks = chunks.map((c: { id: string; content: string; session_id: string | null; created_at: string }) => ({
-          id: c.id,
-          content: c.content,
-          session_id: c.session_id,
-          created_at: c.created_at,
-        }));
-      }
-    }
-
     const prompt = `Generate preparation material for a tutoring session on the topic: "${topic}"
-
-${relevantChunks.length > 0 ? `## Relevant Past Sessions Context
-The student has previously worked on related topics. Here are relevant excerpts from their past sessions:
-${relevantChunks.map((c, i) => `${i + 1}. "${c.content.slice(0, 300)}..."`).join("\n")}
-
-Use this context to tailor the preparation to what the student has already explored.` : ""}
 
 Create a comprehensive guide that includes:
 
@@ -71,7 +38,7 @@ Create a comprehensive guide that includes:
 
 Format the response in clear markdown. Be concise but helpful. The goal is to help the learner feel prepared, not overwhelmed.`;
 
-    const response = await callOpenRouterText(
+    const response = await callXaiText(
       [userMessage(prompt)],
       {
         model: DEFAULT_MODEL,
@@ -81,17 +48,13 @@ Format the response in clear markdown. Be concise but helpful. The goal is to he
     );
 
     if (!response.success || !response.data) {
-      console.error("OpenRouter error:", response.error);
+      console.error("xAI error:", response.error);
       return NextResponse.json({ error: "Failed to generate material" }, { status: 500 });
     }
 
     return NextResponse.json({
       content: response.data,
-      relevantChunks: relevantChunks.map(c => ({
-        id: c.id,
-        preview: c.content.slice(0, 150) + (c.content.length > 150 ? "..." : ""),
-        sessionId: c.session_id,
-      })),
+      relevantChunks: [],
     });
   } catch (error) {
     console.error("Prepare session error:", error);

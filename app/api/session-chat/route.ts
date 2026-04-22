@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { callOpenRouterText, systemMessage, userMessage, DEFAULT_MODEL, RECOMMENDED_TEMPS } from "@/lib/openrouter-client";
+import { callXaiText, systemMessage, userMessage, DEFAULT_MODEL, RECOMMENDED_TEMPS } from "@/lib/xai-client";
 import { createClient } from "@/lib/supabase/server";
 import { getLanguageName } from "@/lib/tutoring-languages";
 
@@ -53,7 +53,7 @@ export async function POST(request: NextRequest) {
       })),
     ];
 
-    const response = await callOpenRouterText(
+    const response = await callXaiText(
       conversationMessages,
       {
         model: model || DEFAULT_MODEL,

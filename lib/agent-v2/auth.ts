@@ -3,7 +3,8 @@
 // ============================================
 
 import { NextRequest, NextResponse } from "next/server";
-import { createClient as createAdminClient } from "@supabase/supabase-js";
+import { createAdminClient } from "@/lib/supabase/admin";
+
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { hashApiKey } from "@/lib/x402";
 import type { AuthContext, ApiKeyScope, ApiError } from "./types";
@@ -12,10 +13,7 @@ import type { AuthContext, ApiKeyScope, ApiError } from "./types";
  * Get a Supabase client with service role (bypasses RLS)
  */
 export async function getServiceClient(): Promise<SupabaseClient> {
-  return createAdminClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  );
+  return createAdminClient();
 }
 
 /**

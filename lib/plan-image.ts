@@ -1,13 +1,11 @@
 /**
  * Plan Cover Image Generation
- * Uses OpenRouter's Gemini Nano Banana (google/gemini-2.5-flash-image-preview)
- * to generate cinematic cover images for learning plans.
+ * Uses xAI's grok-imagine-image to generate cover images for learning plans.
+ * API ref: https://docs.x.ai/developers/rest-api-reference/inference/images
  */
 
-import { getChatApiKey } from "@/lib/ai-provider";
-
-const IMAGE_MODEL = "google/gemini-2.5-flash-image";
-const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
+const XAI_IMAGE_URL = "https://api.x.ai/v1/images/generations";
+const IMAGE_MODEL = "grok-imagine-image";
 
 /**
  * Generate a cinematic cover image for a learning plan.
@@ -17,71 +15,50 @@ export async function generatePlanCoverImage(description: string): Promise<{
   base64: string;
   mimeType: string;
 } | null> {
-  const apiKey = getChatApiKey("openrouter");
+  const apiKey = process.env.XAI_API_KEY;
+  if (!apiKey) {
+    console.error("[plan-image] XAI_API_KEY not configured");
+    return null;
+  }
 
-  const prompt = `Generate a cinematic, visually stunning cover image for a learning plan about: "${description}". 
-The image should be atmospheric, with dramatic lighting and rich colors. Think movie poster or high-end editorial photography aesthetic. 
-Wide 16:9 composition. No text, no letters, no words, no watermarks in the image.
-The subject matter should visually represent the topic in an abstract or metaphorical way.`;
+  const prompt = `Cinematic, visually stunning cover image for a learning plan about: "${description}". Atmospheric, dramatic lighting, rich colors. Movie poster or high-end editorial photography aesthetic. Wide composition. No text, letters, words, or watermarks. Subject matter should visually represent the topic in an abstract or metaphorical way.`;
 
   try {
-    const response = await fetch(OPENROUTER_URL, {
+    const response = await fetch(XAI_IMAGE_URL, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${apiKey}`,
         "Content-Type": "application/json",
-        "HTTP-Referer": "https://openlesson.academy",
-        "X-Title": "openLesson",
       },
       body: JSON.stringify({
         model: IMAGE_MODEL,
-        messages: [
-          {
-            role: "user",
-            content: prompt,
-          },
-        ],
-        modalities: ["image", "text"],
-        image_config: {
-          aspect_ratio: "16:9",
-          image_size: "1K",
-        },
+        prompt,
+        aspect_ratio: "16:9",
+        response_format: "b64_json",
+        n: 1,
       }),
     });
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error("Image generation failed:", response.status, errorText);
+      console.error("[plan-image] xAI image generation failed:", response.status, errorText);
       return null;
     }
 
     const result = await response.json();
+    const item = result.data?.[0];
 
-    const message = result.choices?.[0]?.message;
-    if (!message?.images?.length) {
-      console.error("No images in response:", JSON.stringify(result).slice(0, 500));
-      return null;
-    }
-
-    const imageUrl = message.images[0].image_url?.url;
-    if (!imageUrl || !imageUrl.startsWith("data:")) {
-      console.error("Invalid image URL format");
-      return null;
-    }
-
-    // Parse data URL: "data:image/png;base64,<base64data>"
-    const match = imageUrl.match(/^data:(image\/\w+);base64,(.+)$/);
-    if (!match) {
-      console.error("Could not parse base64 data URL");
+    if (!item?.b64_json) {
+      console.error("[plan-image] No b64_json in response:", JSON.stringify(result).slice(0, 500));
       return null;
     }
 
     return {
-      mimeType: match[1],
-      base64: match[2],
+      mimeType: item.mime_type || "image/png",
+      base64: item.b64_json,
     };
   } catch (error) {
-    console.error("Image generation error:", error);
+    console.error("[plan-image] Image generation error:", error);
     return null;
   }
 }
@@ -91,17 +68,17 @@ The subject matter should visually represent the topic in an abstract or metapho
  * Returns the public URL of the uploaded image.
  */
 export async function uploadPlanCover(
-  supabase: { storage: { from: (bucket: string) => { upload: Function; getPublicUrl: Function } } },
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  supabase: { storage: { from: (bucket: string) => { upload: any; getPublicUrl: any } } },
   userId: string,
   planId: string,
   base64Data: string,
   mimeType: string
 ): Promise<string | null> {
   try {
-    const ext = mimeType === "image/jpeg" ? "jpg" : "png";
+    const ext = mimeType === "image/jpeg" ? "jpg" : mimeType === "image/webp" ? "webp" : "png";
     const path = `${userId}/${planId}.${ext}`;
 
-    // Convert base64 to buffer
     const buffer = Buffer.from(base64Data, "base64");
 
     const { error } = await supabase.storage
@@ -112,7 +89,7 @@ export async function uploadPlanCover(
       });
 
     if (error) {
-      console.error("Upload error:", error);
+      console.error("[plan-image] Upload error:", error);
       return null;
     }
 
@@ -122,7 +99,7 @@ export async function uploadPlanCover(
 
     return urlData?.publicUrl || null;
   } catch (error) {
-    console.error("Upload error:", error);
+    console.error("[plan-image] Upload error:", error);
     return null;
   }
 }
@@ -134,8 +111,10 @@ export async function uploadPlanCover(
  */
 export async function generateAndStorePlanCover(
   supabase: {
-    storage: { from: (bucket: string) => { upload: Function; getPublicUrl: Function } };
-    from: (table: string) => { update: Function };
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    storage: { from: (bucket: string) => { upload: any; getPublicUrl: any } };
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    from: (table: string) => { update: any };
   },
   userId: string,
   planId: string,
@@ -154,7 +133,7 @@ export async function generateAndStorePlanCover(
 
   if (!publicUrl) return null;
 
-  // Update the plan record
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   await (supabase.from("learning_plans") as any)
     .update({ cover_image_url: publicUrl })
     .eq("id", planId);

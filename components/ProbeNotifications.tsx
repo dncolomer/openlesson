@@ -16,7 +16,6 @@ function getToolLabel(tool: string, t: (key: string) => string): string {
     notebook: t('tools.notebook'),
     grokipedia: t('tools.grokipedia'),
     plan: t('probes.session'),
-    rag: t('tools.ragMatches'),
     exercise: t('tools.practice'),
     reading: t('tools.theory'),
     help: t('tools.help'),

@@ -28,6 +28,9 @@ export class AudioRecorder {
   private ownsStream: boolean = false;
   private chunks: AudioChunk[] = [];
   private allChunks: Blob[] = [];
+  /** First data event blob — contains the container header (EBML / ftyp+moov / OggS).
+   *  Prepended to every subsequent fragment so each upload is a valid standalone file. */
+  private headerBlob: Blob | null = null;
   private config: AudioRecorderConfig;
   private startTime: number = 0;
   private isRecording: boolean = false;
@@ -74,14 +77,32 @@ export class AudioRecorder {
       this.startTime = Date.now();
       this.chunks = [];
       this.allChunks = [];
+      this.headerBlob = null;
       this.isRecording = true;
       this.chunkIndex = 0;
 
       this.mediaRecorder.ondataavailable = (event) => {
         console.log("[AudioRecorder] ondataavailable fired", { size: event.data.size, timeSlice: this.config.chunkDurationMs });
         if (event.data.size > 0) {
+          // The first data event includes the container header (EBML for WebM,
+          // ftyp/moov for MP4, OggS page for OGG). Subsequent events are bare
+          // codec frames that are NOT standalone valid files.
+          // We save the first event as the header and prepend it to every
+          // subsequent fragment so each upload is a valid standalone file that
+          // xAI STT can decode.
+          if (this.headerBlob === null) {
+            this.headerBlob = event.data;
+          }
+
+          // Build a standalone blob: header + current fragment.
+          // For chunk 0 this is just the header itself (already valid).
+          const standaloneBlob =
+            this.chunkIndex === 0
+              ? event.data
+              : new Blob([this.headerBlob, event.data], { type: this.getMimeType() });
+
           const chunk: AudioChunk = {
-            blob: event.data,
+            blob: standaloneBlob,
             timestamp: Date.now() - this.startTime,
             duration: this.config.chunkDurationMs,
             chunkIndex: this.chunkIndex,
@@ -181,12 +202,19 @@ export class AudioRecorder {
   }
 
   private getSupportedMimeType(): string {
+    // Prefer formats supported by xAI STT (WAV, MP3, OGG, Opus, FLAC, AAC,
+    // MP4, M4A, MKV). WebM is NOT natively supported, but webm+opus is the
+    // most universally available MediaRecorder format across browsers
+    // (Chrome, Firefox, Safari 18.4+). When webm is selected, the storage
+    // layer re-labels it as .ogg and the STT routes send audio/ogg — the
+    // raw opus frames are identical in both containers.
     const types = [
-      "audio/mp4",
+      "audio/mp4",               // Safari (always valid standalone chunks)
+      "audio/ogg;codecs=opus",   // Firefox
+      "audio/webm;codecs=opus",  // Chrome, Edge, Safari 18.4+
+      "audio/ogg",
       "audio/aac",
-      "audio/webm;codecs=opus",
       "audio/webm",
-      "audio/ogg;codecs=opus",
     ];
 
     for (const type of types) {
@@ -195,21 +223,30 @@ export class AudioRecorder {
       }
     }
 
-    return "audio/webm";
+    return "audio/webm;codecs=opus";
   }
 
   getRecentAudio(durationMs?: number): Blob | null {
     if (this.chunks.length === 0) return null;
 
-    let chunksToUse = this.chunks;
-
+    // Each chunk's blob is already a standalone valid file (header + payload).
+    // Return the most recent chunk that covers the requested duration.
+    // With timeslice=5000ms and chunkDurationMs=60000ms each chunk is ~5s,
+    // so for a 5s request we just return the last chunk.
     if (durationMs) {
-      const chunksNeeded = Math.ceil(durationMs / this.config.chunkDurationMs);
-      chunksToUse = this.chunks.slice(-chunksNeeded);
+      const chunksNeeded = Math.ceil(durationMs / 5000); // timeslice is 5s
+      const selected = this.chunks.slice(-chunksNeeded);
+      if (selected.length === 1) {
+        // Single chunk — already a valid standalone file
+        return selected[0].blob;
+      }
+      // Multiple chunks requested — return the most recent one since each is standalone.
+      // Concatenating standalone files would produce an invalid file.
+      return selected[selected.length - 1].blob;
     }
 
-    const blobs = chunksToUse.map((c) => c.blob);
-    return new Blob(blobs, { type: this.getMimeType() });
+    // No duration specified — return the last chunk
+    return this.chunks[this.chunks.length - 1].blob;
   }
 
   getFullAudio(): Blob | null {
@@ -219,14 +256,16 @@ export class AudioRecorder {
 
   getAudioFormat(): string {
     const mimeType = this.getMimeType();
-    if (mimeType.includes("webm")) return "webm";
-    if (mimeType.includes("ogg")) return "ogg";
     if (mimeType.includes("mp4")) return "mp4";
-    return "webm";
+    if (mimeType.includes("ogg")) return "ogg";
+    if (mimeType.includes("aac")) return "aac";
+    // webm with opus codec → treat as ogg for xAI compatibility
+    if (mimeType.includes("webm")) return "ogg";
+    return "mp4";
   }
 
   private getMimeType(): string {
-    return this.mediaRecorder?.mimeType || "audio/webm";
+    return this.mediaRecorder?.mimeType || "audio/mp4";
   }
 
   getIsRecording(): boolean {

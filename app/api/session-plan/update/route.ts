@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { updateSessionPlanLLM } from "@/lib/openrouter";
+import { updateSessionPlanLLM } from "@/lib/xai";
 import { getSessionPlan, updateSessionPlan, validatePlanSteps, type SessionPlanStep, getRecentTranscripts, getRecentToolEvents, getRecentFacialData, getRecentEEGData, getRecentScreenshots } from "@/lib/storage";
-import { getUserPrompts } from "@/lib/prompts";
+import { getUserPrompts } from "@/lib/user-prompts";
 import { createClient } from "@/lib/supabase/server";
+import { storeAnalysisResult } from "@/lib/session-analysis";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -52,47 +53,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Build context description from fetched sensor data
-    let contextDescription = "Recent session activity:\n";
-    
-    // Transcript - most important for gap analysis
-    // Split into "recent" (last 30s) and "earlier" for context
-    const now = Date.now();
-    const recentCutoff = now - 30000; // last 30 seconds
-    const recentTranscripts = transcripts.filter(t => t.timestamp >= recentCutoff);
-    const earlierTranscripts = transcripts.filter(t => t.timestamp < recentCutoff);
-    
-    if (transcripts.length > 0) {
-      if (earlierTranscripts.length > 0) {
-        contextDescription += `- Earlier transcript context (${earlierTranscripts.length} chunks, for background):\n`;
-        earlierTranscripts.forEach((t, i) => {
-          contextDescription += `  ${i + 1}. [${new Date(t.timestamp).toLocaleTimeString()}] ${t.content.slice(0, 300)}${t.content.length > 300 ? '...' : ''}\n`;
-        });
-      }
-      if (recentTranscripts.length > 0) {
-        contextDescription += `- MOST RECENT speech (last 30s, ${recentTranscripts.length} chunks — focus gap analysis here):\n`;
-        recentTranscripts.forEach((t, i) => {
-          contextDescription += `  ${i + 1}. [${new Date(t.timestamp).toLocaleTimeString()}] ${t.content}\n`;
-        });
-      }
-    }
-    
+    // Build a high-level context description (counts only — actual content
+    // lives on xAI Files and Grok will agentically search via input_file).
+    const contextLines: string[] = ["Recent session activity available via attached files:"];
+    if (transcripts.length > 0) contextLines.push(`- ${transcripts.length} transcript chunk(s)`);
     if (toolEvents.length > 0) {
       const toolTypes = [...new Set(toolEvents.map(e => e.toolName))];
-      contextDescription += `- Tools used: ${toolTypes.join(", ")}\n`;
+      contextLines.push(`- Tool events: ${toolTypes.join(", ")}`);
     }
-    
-    if (facialData.length > 0) {
-      contextDescription += `- ${facialData.length} facial data point(s) recorded\n`;
-    }
-    
-    if (eegData.length > 0) {
-      contextDescription += `- ${eegData.length} EEG data chunk(s) recorded\n`;
-    }
-    
-    if (screenshots.length > 0) {
-      contextDescription += `- ${screenshots.length} screenshot(s) available for analysis\n`;
-    }
+    if (facialData.length > 0) contextLines.push(`- ${facialData.length} facial data chunk(s)`);
+    if (eegData.length > 0) contextLines.push(`- ${eegData.length} EEG chunk(s)`);
+    if (screenshots.length > 0) contextLines.push(`- ${screenshots.length} screenshot(s)`);
+    const contextDescription = contextLines.join("\n");
 
     // If no transcripts, just return waiting state (no nudges)
     if (transcripts.length === 0) {
@@ -109,23 +81,31 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Combine transcripts into single context
-    const transcriptText = transcripts.map(t => t.content).join("\n\n");
+    // Collect xAI file IDs across all artifact kinds so Grok can read what it
+    // needs agentically. Cap each kind to bound tool-search cost per heartbeat.
+    const sessionFileIds: string[] = [
+      ...transcripts.slice(-10).map(t => t.xaiFileId),
+      ...toolEvents.slice(-10).map(t => t.xaiFileId),
+      ...facialData.slice(-3).map(f => f.xaiFileId),
+      ...eegData.slice(-3).map(e => e.xaiFileId),
+      ...screenshots.slice(-3).map(s => s.xaiFileId),
+    ].filter((id): id is string => !!id && id !== "_empty");
 
-    // Update the plan using LLM with full sensor data
+    // Update the plan using LLM. Passing sessionFileIds switches to the
+    // Responses API + input_file agentic path inside updateSessionPlanLLM.
     const result = await updateSessionPlanLLM({
       goal: currentPlan.goal,
       strategy: currentPlan.strategy,
       steps: currentPlan.steps,
       currentStepIndex: currentPlan.currentStepIndex,
       contextDescription,
-      transcript: transcriptText,
       previousProbes: previousProbes || [],
       activeProbes: activeProbes || [],
       focusedProbes: focusedProbes || [],
       openProbeCount: openProbeCount ?? 0,
       lastProbeTimestamp: lastProbeTimestamp ?? 0,
       promptOverrides,
+      sessionFileIds,
     });
 
     if (!result.success || !result.result) {
@@ -136,6 +116,27 @@ export async function POST(request: NextRequest) {
     }
 
     const { planChanged, updatedSteps, currentStepIndex, nextRequest, probesToArchive, canGenerateProbe, reasoning, gapScore, signals, canAutoAdvance, advanceReasoning } = result.result;
+
+    // Fire-and-forget: persist the analysis result to xAI + session_analysis table
+    storeAnalysisResult({
+      supabase,
+      sessionId,
+      userId: user.id,
+      source: "heartbeat",
+      result: {
+        gapScore, planChanged, canAutoAdvance, signals, reasoning,
+        advanceReasoning, nextRequest, currentStepIndex, probesToArchive,
+        updatedSteps: updatedSteps as Array<Record<string, unknown>> | undefined,
+      },
+      extra: {
+        context_file_count: sessionFileIds.length,
+        transcripts: transcripts.length,
+        tool_events: toolEvents.length,
+        facial: facialData.length,
+        eeg: eegData.length,
+        screenshots: screenshots.length,
+      },
+    }).catch(err => console.error("[session-plan/update] storeAnalysisResult failed:", err));
 
     // Update plan in database if it changed
     let updatedPlan = currentPlan;
@@ -206,7 +207,7 @@ export async function POST(request: NextRequest) {
       signals: signals || [],
       canAutoAdvance: canAutoAdvance ?? false,
       advanceReasoning: advanceReasoning ?? "",
-      transcript: transcriptText.slice(0, 1000),
+      transcript: "",
     });
   } catch (error) {
     console.error("Update session plan error:", error);

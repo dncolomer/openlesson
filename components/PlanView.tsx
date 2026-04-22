@@ -8,11 +8,11 @@ import Image from "next/image";
 import { PlanChat } from "@/components/PlanChat";
 import { Navbar } from "@/components/Navbar";
 import { RemixModal } from "@/components/RemixModal";
-import { getYouTubeThumbnail } from "@/lib/youtube";
 import { useI18n } from "../lib/i18n";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { PlanAnalytics } from "@/components/PlanAnalytics";
+import { PlanFilesTab } from "@/components/PlanFilesTab";
 
 export interface PlanNode {
   id: string;
@@ -80,7 +80,7 @@ export function PlanView({ initialPlan, initialNodes }: PlanViewProps) {
   const [isEditingDescription, setIsEditingDescription] = useState(false);
   const [editDescription, setEditDescription] = useState("");
   const [savingDescription, setSavingDescription] = useState(false);
-  const [activeTab, setActiveTab] = useState<"graph" | "notes" | "analytics">("graph");
+  const [activeTab, setActiveTab] = useState<"graph" | "notes" | "analytics" | "files">("graph");
   const [notesContent, setNotesContent] = useState(initialPlan?.notes || "");
   const [isEditingNotes, setIsEditingNotes] = useState(false);
   const [savingNotes, setSavingNotes] = useState(false);
@@ -338,6 +338,11 @@ export function PlanView({ initialPlan, initialNodes }: PlanViewProps) {
         <path strokeLinecap="round" strokeLinejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" />
       </svg>
     )},
+    { key: "files" as const, label: t('planView.files'), icon: (
+      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M18.375 12.739l-7.693 7.693a4.5 4.5 0 01-6.364-6.364l10.94-10.94A3 3 0 1119.5 7.372L8.552 18.32m.009-.01l-.01.01m5.699-9.941l-7.81 7.81a1.5 1.5 0 002.112 2.13" />
+      </svg>
+    )},
   ];
 
   return (
@@ -380,22 +385,6 @@ export function PlanView({ initialPlan, initialNodes }: PlanViewProps) {
               </svg>
             )}
           </button>
-        )}
-
-        {/* YouTube badge */}
-        {plan.source_type === "youtube" && plan.source_url && (
-          <a
-            href={plan.source_url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="absolute top-3 left-3 flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-black/50 backdrop-blur-sm border border-white/10 text-red-400 hover:text-red-300 transition-colors text-xs font-medium"
-          >
-            <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814z"/>
-              <path d="M9.545 15.568V8.432L15.818 12l-6.273 3.568z" fill="white"/>
-            </svg>
-            YouTube
-          </a>
         )}
 
         {/* Title + metadata overlay at bottom of hero */}
@@ -685,6 +674,13 @@ export function PlanView({ initialPlan, initialNodes }: PlanViewProps) {
 
         {activeTab === "analytics" && (
           <PlanAnalytics 
+            planId={planId}
+            isOwner={isOwner}
+          />
+        )}
+
+        {activeTab === "files" && (
+          <PlanFilesTab
             planId={planId}
             isOwner={isOwner}
           />

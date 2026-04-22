@@ -55,6 +55,7 @@ import { LocalContextBuffer } from "@/lib/local-context";
 // ModelLoadingModal no longer used -- loading UI is inline in welcome modal
 
 import { PopOutBanner } from "./PopOutBanner";
+import { PlanResourcesPanel } from "./PlanResourcesPanel";
 import { 
   useSessionSync, 
   openPopOutWindow, 
@@ -121,18 +122,6 @@ export function SessionView({ sessionId }: { sessionId: string }) {
   // Tutor-end dialog
   const [showEndDialog, setShowEndDialog] = useState(false);
   const [endReason, setEndReason] = useState("");
-
-  // RAG / Calibration (session prep)
-  const [calibrationLoading, setCalibrationLoading] = useState(false);
-  const [calibrationAttempted, setCalibrationAttempted] = useState(false);
-  const [ragChunks, setRagChunks] = useState<Array<{
-    id: string;
-    content: string;
-    similarity: number;
-    createdAt: string;
-    topic?: string;
-  }>>([]);
-  const [selectedChunks, setSelectedChunks] = useState<Set<string>>(new Set());
 
   // Prep material cards
   const [prepCards, setPrepCards] = useState<Array<{ id: string; title: string; content: string }>>([]);
@@ -325,48 +314,6 @@ export function SessionView({ sessionId }: { sessionId: string }) {
   const [isPopOutActive, setIsPopOutActive] = useState(false);
   const popOutWindowRef = useRef<Window | null>(null);
   const popOutDismissedRef = useRef<boolean>(false); // Track if user explicitly dismissed
-
-  // RAG matching state (extended)
-  const [ragLoading, setRagLoading] = useState(false);
-  const [ragModifier, setRagModifier] = useState("");
-  const [ragSelectedChunks, setRagSelectedChunks] = useState<Set<string>>(new Set());
-  const [ragExpandedChunks, setRagExpandedChunks] = useState<Set<string>>(new Set());
-  const [ragHasNotification, setRagHasNotification] = useState(false);
-
-  const runRagMatching = async (modifier?: string) => {
-    if (!session?.problem || !session?.id) return;
-    setRagLoading(true);
-    try {
-      const params = new URLSearchParams({
-        query: modifier ? `${session.problem} ${modifier}` : session.problem,
-        sessionId: session.id,
-      });
-      const response = await fetch(`/api/rag-match?${params}`);
-      if (response.ok) {
-        const data = await response.json();
-        setRagChunks(data.chunks || []);
-        // Auto-select chunks with > 50% similarity
-        const selected = new Set<string>();
-        data.chunks?.forEach((c: { id: string; similarity: number }) => {
-          if (c.similarity > 0.5) selected.add(c.id);
-        });
-        setRagSelectedChunks(selected);
-        // Show notification if we have 3 or more matches
-        setRagHasNotification((data.chunks?.length || 0) >= 3);
-      }
-    } catch (err) {
-      console.error("RAG matching error:", err);
-    } finally {
-      setRagLoading(false);
-    }
-  };
-
-  // Run RAG matching when tool is opened for the first time
-  useEffect(() => {
-    if (activeTool === "rag" && ragChunks.length === 0 && !ragLoading) {
-      runRagMatching();
-    }
-  }, [activeTool]);
 
   // Track tool open/close events + auto-expand tool panel if collapsed
   useEffect(() => {
@@ -850,37 +797,6 @@ export function SessionView({ sessionId }: { sessionId: string }) {
     return () => { cancelled = true; };
   }, [sessionId, router]);
 
-  // Load RAG chunks on mount
-  useEffect(() => {
-    async function loadCalibration() {
-      if (!session?.problem) return;
-      setCalibrationLoading(true);
-      try {
-        const response = await fetch("/api/calibrate-session", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ problem: session.problem, sessionId: session.id }),
-        });
-        if (response.ok) {
-          const data = await response.json();
-          const chunks = data.chunks || [];
-          setRagChunks(chunks);
-          // Pre-select chunks with similarity > 70%
-          const highRelevance = new Set<string>(chunks.filter((c: { similarity: number }) => c.similarity > 0.7).map((c: { id: string }) => c.id));
-          setSelectedChunks(highRelevance);
-        }
-      } catch (err) {
-        console.error("Calibration error:", err);
-      } finally {
-        setCalibrationLoading(false);
-        setCalibrationAttempted(true);
-      }
-    }
-    if (session?.problem) {
-      loadCalibration();
-    }
-  }, [session?.problem, session?.id]);
-
   // Load prep material
   const loadPrepMaterial = async (type: string) => {
     if (!session?.problem) return;
@@ -899,23 +815,6 @@ export function SessionView({ sessionId }: { sessionId: string }) {
       console.error("Prep material error:", err);
     } finally {
       setPrepLoading(null);
-    }
-  };
-
-  // Save selected RAG chunks to session when selection changes
-  const saveSelectedRagChunks = async (chunkIds: string[]) => {
-    if (!session?.id) return;
-    try {
-      await fetch("/api/save-session-rag-chunks", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-          sessionId: session.id, 
-          chunkIds 
-        }),
-      });
-    } catch (err) {
-      console.error("Failed to save RAG chunks:", err);
     }
   };
 
@@ -1379,13 +1278,20 @@ export function SessionView({ sessionId }: { sessionId: string }) {
             () => saveAudioChunk(currentSession.id, recentAudio, idx, Date.now()),
             { maxRetries: 2, baseDelayMs: 500 },
           );
-          result.audio.saved = saveResult.success && !!saveResult.data;
-          if (!result.audio.saved) {
-            // Surface the underlying error so the LogsTool shows an entry
-            // next to the incremented `failed` counter.
-            result.audio.error = saveResult.error
-              ? String((saveResult.error as Error)?.message ?? saveResult.error)
-              : "audio upload returned no data";
+          if (saveResult.success && saveResult.data === null) {
+            // saveAudioChunk returns null when the chunk is below the
+            // minimum size threshold (silence / near-silence). This is an
+            // intentional skip, not a failure — don't count it as an error.
+            result.audio = { attempted: false, saved: false };
+          } else {
+            result.audio.saved = saveResult.success && !!saveResult.data;
+            if (!result.audio.saved) {
+              // Surface the underlying error so the LogsTool shows an entry
+              // next to the incremented `failed` counter.
+              result.audio.error = saveResult.error
+                ? String((saveResult.error as Error)?.message ?? saveResult.error)
+                : "audio upload returned no data";
+            }
           }
         }
       }
@@ -3024,10 +2930,6 @@ export function SessionView({ sessionId }: { sessionId: string }) {
                 }
                 setActiveTool(tool);
                 setShowGrokipediaOnly(tool === "grokipedia");
-                // Clear RAG notification when opening RAG tool
-                if (tool === "rag") {
-                  setRagHasNotification(false);
-                }
                 if (tool === "grokipedia") {
                   setPrepToolContent(null);
                 } else if (tool === "exercise" || tool === "reading") {
@@ -3036,8 +2938,8 @@ export function SessionView({ sessionId }: { sessionId: string }) {
                 }
               }} 
               problem={session.problem} 
-              ragNotification={ragHasNotification}
               sessionId={session.id}
+              planId={session.metadata?.plan_id as string | undefined}
               disabledTools={shouldBlockTools ? ["exercise", "reading"] as Tool[] : []}
             />
 
@@ -3232,142 +3134,6 @@ export function SessionView({ sessionId }: { sessionId: string }) {
                       </div>
                     )}
 
-                    {activeTool === "rag" && (
-                      <div className="h-full p-4 overflow-auto">
-                        {ragLoading && (
-                          <div className="flex flex-col items-center justify-center h-64">
-                            <div className="w-6 h-6 border border-neutral-800 border-t-neutral-300 rounded-full animate-spin mb-3" />
-                            <p className="text-sm text-neutral-500">{t('session.findingChunks')}</p>
-                          </div>
-                        )}
-                        {!ragLoading && ragChunks.length === 0 && (
-                          <div className="flex flex-col items-center justify-center h-64 gap-4">
-                            <p className="text-sm text-neutral-500">{t('session.noChunksFound')}</p>
-                            <button
-                              onClick={() => runRagMatching()}
-                              className="px-4 py-2 bg-neutral-100 hover:bg-white text-neutral-900 text-sm font-medium rounded-xl transition-colors"
-                            >
-                              {t('common.retry')}
-                            </button>
-                          </div>
-                        )}
-                        {!ragLoading && ragChunks.length > 0 && (
-                          <div className="space-y-4">
-                            <div className="flex items-center justify-between">
-                              <h3 className="text-sm font-medium text-white">{t('session.matchingChunks')}</h3>
-                              <span className="text-xs text-neutral-500">{t('session.chunksFound', { count: ragChunks.length })}</span>
-                            </div>
-
-                            {/* Modifier input */}
-                            <div className="flex gap-2">
-                              <input
-                                type="text"
-                                value={ragModifier}
-                                onChange={(e) => setRagModifier(e.target.value)}
-                                placeholder={t('session.addModifier')}
-                                className="flex-1 px-3 py-2 bg-neutral-900 border border-neutral-800 hover:border-neutral-700 rounded-xl text-sm text-white placeholder-neutral-500 focus:outline-none focus:border-neutral-600 transition-colors"
-                              />
-                              <button
-                                onClick={() => runRagMatching(ragModifier)}
-                                disabled={ragLoading || !ragModifier.trim()}
-                                className="px-4 py-2 bg-neutral-100 hover:bg-white disabled:bg-neutral-800 disabled:text-neutral-500 disabled:cursor-not-allowed text-neutral-900 text-sm font-medium rounded-xl transition-colors"
-                              >
-                                {t('common.retry')}
-                              </button>
-                            </div>
-
-                            {/* Chunks list */}
-                            <div className="space-y-3">
-                              {ragChunks.map((chunk, idx) => {
-                                const isSelected = ragSelectedChunks.has(chunk.id);
-                                const isExpanded = ragExpandedChunks.has(chunk.id);
-                                const similarityPct = Math.round((chunk.similarity || 0) * 100);
-
-                                return (
-                                  <div
-                                    key={chunk.id}
-                                    className={`rounded-xl border transition-all ${
-                                      isSelected
-                                        ? "bg-neutral-800/70 border-neutral-700"
-                                        : "bg-neutral-900 border-neutral-800 hover:bg-neutral-800/50 hover:border-neutral-700"
-                                    }`}
-                                  >
-                                    <div
-                                      className="p-3 flex items-start gap-3 cursor-pointer"
-                                      onClick={() => {
-                                        if (isExpanded) {
-                                          const newExpanded = new Set(ragExpandedChunks);
-                                          newExpanded.delete(chunk.id);
-                                          setRagExpandedChunks(newExpanded);
-                                        } else {
-                                          setRagExpandedChunks(new Set(ragExpandedChunks).add(chunk.id));
-                                        }
-                                      }}
-                                    >
-                                      <input
-                                        type="checkbox"
-                                        checked={isSelected}
-                                        onChange={(e) => {
-                                          e.stopPropagation();
-                                          const newSelected = new Set(ragSelectedChunks);
-                                          if (e.target.checked) {
-                                            newSelected.add(chunk.id);
-                                          } else {
-                                            newSelected.delete(chunk.id);
-                                          }
-                                          setRagSelectedChunks(newSelected);
-                                        }}
-                                        className="mt-1 w-4 h-4 rounded border-neutral-700 bg-neutral-900 text-neutral-200 focus:ring-neutral-600/50"
-                                      />
-                                      <div className="flex-1 min-w-0">
-                                        <div className="flex items-center gap-2 mb-1">
-                                          <span className="text-xs font-medium text-white">{t('session.chunk', { idx: idx + 1 })}</span>
-                                          <span className={`text-[10px] px-1.5 py-0.5 rounded font-mono tabular-nums ${
-                                            similarityPct > 50
-                                              ? "bg-neutral-100 text-neutral-900"
-                                              : "bg-neutral-800 text-neutral-400"
-                                          }`}>
-                                            {t('session.match', { percent: similarityPct })}
-                                          </span>
-                                          {chunk.topic && (
-                                            <span className="text-[10px] text-neutral-500">
-                                              {t('session.from', { topic: chunk.topic })}
-                                            </span>
-                                          )}
-                                        </div>
-                                        <p className="text-xs text-neutral-400 line-clamp-2">
-                                          {chunk.content?.slice(0, 150)}...
-                                        </p>
-                                        {isExpanded && (
-                                          <p className="text-xs text-neutral-400 mt-2 whitespace-pre-wrap">
-                                            {chunk.content}
-                                          </p>
-                                        )}
-                                      </div>
-                                      <svg 
-                                        className={`w-4 h-4 text-neutral-500 transition-transform ${isExpanded ? 'rotate-180' : ''}`} 
-                                        fill="none" 
-                                        viewBox="0 0 24 24" 
-                                        stroke="currentColor"
-                                      >
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                                      </svg>
-                                    </div>
-                                  </div>
-                                );
-                              })}
-                            </div>
-
-                            {/* Summary */}
-                            <div className="pt-3 border-t border-neutral-800">
-                              <p className="text-xs text-neutral-500">
-                                {t('session.chunksSelected', { selected: ragSelectedChunks.size, total: ragChunks.length })}
-                              </p>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    )}
                     {/* Bottom tools wrapper. Help is a command (restarts
                         the tutor welcome) rather than a view — handled in
                         the ToolsPanel onToolChange below. */}
@@ -3405,6 +3171,11 @@ export function SessionView({ sessionId }: { sessionId: string }) {
                       />
                     )}
                     </div>
+                    {activeTool === "plan-resources" && session?.metadata?.plan_id && !isMobile && (
+                      <div className="h-full overflow-hidden">
+                        <PlanResourcesPanel planId={session.metadata.plan_id as string} />
+                      </div>
+                    )}
                     {(activeTool === "grokipedia" || activeTool === "exercise" || activeTool === "reading") && (
                       <div className="h-full flex flex-col">
                         {activeTool === "grokipedia" && showGrokipediaOnly && session?.problem && (

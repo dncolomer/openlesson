@@ -68,8 +68,7 @@ export default function PrivacyPage() {
             <p className="mb-3">{t('privacy.thirdPartyIntro')}</p>
             <ul className="list-disc pl-5 space-y-1">
               <li><strong className="text-neutral-300">Supabase</strong> — {t('privacy.thirdPartySupabase')}</li>
-              <li><strong className="text-neutral-300">OpenRouter</strong> — {t('privacy.thirdPartyOpenRouter')}</li>
-              <li><strong className="text-neutral-300">ElevenLabs</strong> — {t('privacy.thirdPartyElevenLabs')}</li>
+              <li><strong className="text-neutral-300">xAI</strong> — {t('privacy.thirdPartyXai')}</li>
               <li><strong className="text-neutral-300">Stripe</strong> — {t('privacy.thirdPartyStripe')}</li>
               <li><strong className="text-neutral-300">Vercel</strong> — {t('privacy.thirdPartyVercel')}</li>
             </ul>

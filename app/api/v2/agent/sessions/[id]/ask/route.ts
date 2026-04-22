@@ -6,15 +6,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { authenticateRequest, errorResponse } from "@/lib/agent-v2/auth";
 import { createProof, serializeProof, hashData } from "@/lib/agent-v2/proofs";
-import { DEFAULT_PROMPTS } from "@/lib/openrouter";
+import { DEFAULT_PROMPTS } from "@/lib/prompts";
 import {
-  callOpenRouterText,
+  callXaiText,
   userMessage,
   systemMessage,
   assistantMessage,
   RECOMMENDED_TEMPS,
-} from "@/lib/openrouter-client";
-import type { Message } from "@/lib/openrouter-client";
+} from "@/lib/xai-client";
+import type { Message } from "@/lib/xai-client";
 
 export const runtime = "nodejs";
 export const maxDuration = 30;
@@ -216,7 +216,7 @@ export async function POST(
     messages.push(userMessage(body.question));
 
     // ── 6. Call LLM ───────────────────────────────────────────────────
-    const response = await callOpenRouterText(messages, {
+    const response = await callXaiText(messages, {
       maxTokens: 800,
       temperature: RECOMMENDED_TEMPS.chat,
     });

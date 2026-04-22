@@ -7,11 +7,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { authenticateRequest, errorResponse } from "@/lib/agent-v2/auth";
 import { createProof, serializeProof } from "@/lib/agent-v2/proofs";
 import {
-  callOpenRouterJSON,
+  callXaiJSON,
   systemMessage,
   userMessage,
   DEFAULT_MODEL,
-} from "@/lib/openrouter-client";
+} from "@/lib/xai-client";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -189,7 +189,7 @@ USER INSTRUCTION: "${instruction.trim()}"
 Apply the requested changes and return the complete updated node list as JSON.`;
 
     // Call AI
-    const aiResponse = await callOpenRouterJSON<AdaptResponse>(
+    const aiResponse = await callXaiJSON<AdaptResponse>(
       [systemMessage(ADAPT_SYSTEM_PROMPT), userMessage(userPrompt)],
       {
         model: DEFAULT_MODEL,

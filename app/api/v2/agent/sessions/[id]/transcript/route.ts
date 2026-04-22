@@ -5,7 +5,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { authenticateRequest, errorResponse } from "@/lib/agent-v2/auth";
-import type { SupabaseClient } from "@supabase/supabase-js";
+import { getFileTextContent } from "@/lib/xai-files";
 
 export const runtime = "nodejs";
 export const maxDuration = 30;
@@ -13,32 +13,10 @@ export const maxDuration = 30;
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 interface TranscriptRecord {
-  storage_path: string;
+  xai_file_id: string;
   chunk_index: number;
   word_count: number;
   timestamp_ms: number;
-}
-
-async function downloadChunk(
-  supabase: SupabaseClient,
-  storagePath: string
-): Promise<string | null> {
-  try {
-    const { data, error } = await supabase.storage
-      .from("session-transcript")
-      .download(storagePath);
-
-    if (error || !data) {
-      console.warn("[v2/transcript] Download error:", storagePath, error);
-      return null;
-    }
-
-    const text = await data.text();
-    return text.trim() || null;
-  } catch (e) {
-    console.warn("[v2/transcript] Download exception:", e);
-    return null;
-  }
 }
 
 // ─── GET Handler ─────────────────────────────────────────────────────────────
@@ -88,7 +66,7 @@ export async function GET(
     // ── Fetch transcript records ───────────────────────────────────────
     let query = supabase
       .from("session_transcript")
-      .select("storage_path, chunk_index, word_count, timestamp_ms")
+      .select("xai_file_id, chunk_index, word_count, timestamp_ms")
       .eq("session_id", sessionId)
       .order("chunk_index", { ascending: true });
 
@@ -138,15 +116,16 @@ export async function GET(
       });
     }
 
-    // ── Download all chunks ────────────────────────────────────────────
+    // ── Download all chunks (from xAI) ─────────────────────────────────
     const chunkTexts: { index: number; text: string; timestamp_ms: number; word_count: number }[] = [];
 
     for (const record of transcriptRecords) {
-      const text = await downloadChunk(supabase, record.storage_path);
-      if (text) {
+      if (!record.xai_file_id || record.xai_file_id === "_empty") continue;
+      const text = await getFileTextContent(record.xai_file_id);
+      if (text && text.trim()) {
         chunkTexts.push({
           index: record.chunk_index,
-          text,
+          text: text.trim(),
           timestamp_ms: record.timestamp_ms,
           word_count: record.word_count,
         });

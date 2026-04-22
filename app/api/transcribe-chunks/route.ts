@@ -1,110 +1,125 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createServerClient } from "@supabase/ssr";
-import { cookies } from "next/headers";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { createClient } from "@/lib/supabase/server";
+import { transcribeAudio } from "@/lib/xai-stt";
+import { uploadFileToXAI } from "@/lib/xai-files";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
-type SupabaseServerClient = ReturnType<typeof createServerClient>;
+type SupabaseServerClient = SupabaseClient;
+
+// Extension → MIME type mapping for xAI STT.
+// xAI STT supports: WAV, MP3, OGG, Opus, FLAC, AAC, MP4, M4A, MKV.
+// WebM is NOT supported — map to ogg (webm+opus ≈ ogg+opus).
+const MIME_MAP: Record<string, string> = {
+  mp4: "audio/mp4",
+  m4a: "audio/mp4",
+  mp3: "audio/mpeg",
+  wav: "audio/wav",
+  ogg: "audio/ogg",
+  opus: "audio/ogg",
+  flac: "audio/flac",
+  aac: "audio/aac",
+  mkv: "video/x-matroska",
+  webm: "audio/ogg", // legacy files recorded as webm+opus → re-label as ogg
+};
+
+/**
+ * Insert a session_transcript marker row so the chunk is not re-attempted
+ * on the next poll. Uses xai_file_id="_empty" sentinel (column is NOT NULL)
+ * and word_count: 0 to indicate silence / STT failure.
+ */
+async function insertEmptyTranscript(
+  supabase: SupabaseServerClient,
+  sessionId: string,
+  userId: string,
+  timestampMs: number,
+  chunkIndex: number
+) {
+  try {
+    await supabase.from("session_transcript").insert({
+      session_id: sessionId,
+      user_id: userId,
+      timestamp_ms: timestampMs,
+      xai_file_id: "_empty",
+      chunk_index: chunkIndex,
+      word_count: 0,
+      metadata: { empty: true },
+    });
+  } catch (e) {
+    // Non-critical — worst case the chunk is re-attempted next poll
+    console.warn("[transcribe-chunks] Failed to insert empty transcript marker:", e);
+  }
+}
 
 async function transcribeChunk(supabase: SupabaseServerClient, storagePath: string, sessionId: string, chunkIndex: number, timestampMs: number, userId: string): Promise<string> {
   try {
     const { data: audioData } = await supabase.storage
       .from("session-audio")
       .download(storagePath);
-    
+
     if (!audioData) {
       console.warn("[transcribe-chunks] Failed to download audio:", storagePath);
       return "";
     }
-    
+
     const arrayBuffer = await audioData.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
-    
+
     if (buffer.length < 1000) {
       return "";
     }
-    
-    const ext = storagePath.split(".").pop()?.toLowerCase() || "webm";
-    const formatMap: Record<string, string> = {
-      webm: "webm",
-      mp4: "mp4",
-      m4a: "mp4",
-      mp3: "mpeg",
-      wav: "wav",
-      ogg: "ogg",
-    };
-    const audioFormat = formatMap[ext] || "webm";
-    
-    const base64 = buffer.toString("base64");
-    
-    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${process.env.OPENROUTER_API_KEY}`,
-        "HTTP-Referer": process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000",
-        "X-Title": "Socrates Transcription",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages: [
-          {
-            role: "system",
-            content: "You are a transcriptionist. Transcribe the audio exactly as spoken. Return only the transcription, nothing else. If there's no speech, return exactly: [NO_SPEECH]"
-          },
-          {
-            role: "user",
-            content: [
-              { type: "text", text: "Transcribe this audio:" },
-              { type: "input_audio", input_audio: { format: audioFormat, data: base64 } }
-            ]
-          }
-        ],
-        max_tokens: 4096,
-      }),
-    });
-    
-    if (!response.ok) {
-      console.warn("[transcribe-chunks] Transcription API error:", response.status);
+
+    const ext = storagePath.split(".").pop()?.toLowerCase() || "mp4";
+    const mimeType = MIME_MAP[ext] || "audio/mp4";
+    // If the file has a .webm extension (legacy), rename to .ogg for xAI
+    const rawFileName = storagePath.split("/").pop() || `chunk.${ext}`;
+    const fileName = rawFileName.endsWith(".webm")
+      ? rawFileName.replace(/\.webm$/, ".ogg")
+      : rawFileName;
+
+    const sttResult = await transcribeAudio(buffer, fileName, mimeType);
+    if (!sttResult) {
+      console.warn("[transcribe-chunks] xAI STT failed for", storagePath);
+      // Insert a marker row so we don't re-attempt this chunk every poll
+      await insertEmptyTranscript(supabase, sessionId, userId, timestampMs, chunkIndex);
       return "";
     }
-    
-    const data = await response.json();
-    let transcription = data.choices?.[0]?.message?.content?.trim() || "";
-    
+
+    let transcription = (sttResult.text || "").trim();
+
     const lowerTranscript = transcription.toLowerCase();
-    const isNoSpeech = 
-      transcription === "[NO_SPEECH]" ||
-      lowerTranscript.includes("[no_speech]") ||
+    const isNoSpeech =
       lowerTranscript.includes("no speech") ||
       lowerTranscript.includes("no audio") ||
       lowerTranscript.includes("silent") ||
-      transcription.length < 30;
-    
+      transcription.length < 5;
+
     if (isNoSpeech) {
       transcription = "";
     }
-    
+
     if (!transcription) {
+      // Insert a marker row (word_count: 0) so this chunk is skipped on next poll
+      await insertEmptyTranscript(supabase, sessionId, userId, timestampMs, chunkIndex);
       return "";
     }
-    
+
     const wordCount = transcription.split(/\s+/).filter((w: string) => w.length > 0).length;
-    
-    const transcriptStoragePath = storagePath.replace("/session-audio/", "/session-transcript/").replace(/\.\w+$/, ".txt");
-    
+
+    // Upload transcript to xAI Files
+    const transcriptFileName = `${sessionId}_chunk_${chunkIndex}.txt`;
+    const transcriptBase64 = Buffer.from(transcription, "utf-8").toString("base64");
+    let xaiFileId: string | null = null;
     try {
-      await supabase.storage
-        .from("session-transcript")
-        .upload(transcriptStoragePath, transcription, {
-          contentType: "text/plain",
-          upsert: false,
-        });
+      const uploaded = await uploadFileToXAI(transcriptFileName, "text/plain", transcriptBase64);
+      xaiFileId = uploaded.file_id;
     } catch (e) {
-      console.warn("Transcript upload failed (non-critical):", e);
+      console.error("[transcribe-chunks] xAI transcript upload failed:", e);
+      return "";
     }
-    
+
     try {
       await supabase
         .from("session_transcript")
@@ -112,15 +127,15 @@ async function transcribeChunk(supabase: SupabaseServerClient, storagePath: stri
           session_id: sessionId,
           user_id: userId,
           timestamp_ms: timestampMs,
-          storage_path: transcriptStoragePath,
+          xai_file_id: xaiFileId,
           chunk_index: chunkIndex,
           word_count: wordCount,
-          metadata: { transcript_path: transcriptStoragePath },
+          metadata: {},
         });
     } catch (e) {
       console.warn("session_transcript insert failed (non-critical):", e);
     }
-    
+
     return transcription;
   } catch (e) {
     console.warn("[transcribe-chunks] Transcription failed:", e);
@@ -136,17 +151,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Missing sessionId" }, { status: 400 });
     }
 
-    const cookieStore = await cookies();
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          getAll() { return cookieStore.getAll(); },
-          setAll() {},
-        },
-      }
-    );
+    const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

@@ -1,17 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient as createAdminClient, SupabaseClient } from "@supabase/supabase-js";
+import { SupabaseClient } from "@supabase/supabase-js";
+import { createAdminClient } from "@/lib/supabase/admin";
 import {
   hashApiKey,
   getX402Price,
   getX402Description,
 } from "@/lib/x402";
-import { callOpenRouterJSON, userMessage, DEFAULT_MODEL } from "@/lib/openrouter-client";
+import { callXaiJSON, userMessage, DEFAULT_MODEL } from "@/lib/xai-client";
 
 async function getServiceRoleClient() {
-  return createAdminClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  );
+  return createAdminClient();
 }
 
 const DAYS_TO_NODES: Record<number, { min: number; max: number }> = {
@@ -122,7 +120,7 @@ Rules:
 - Keep titles concise (3-8 words)
 - Descriptions: 1 sentence explaining the concept`;
 
-    const response = await callOpenRouterJSON<PlanData>(
+    const response = await callXaiJSON<PlanData>(
       [userMessage(prompt)],
       {
         model: DEFAULT_MODEL,
@@ -132,7 +130,7 @@ Rules:
     );
 
     if (!response.success || !response.data) {
-      console.error("OpenRouter error:", response.error);
+      console.error("xAI error:", response.error);
       return NextResponse.json(
         { error: "Failed to generate plan" },
         { status: 500 }

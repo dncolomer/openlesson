@@ -4,16 +4,16 @@ import { useState } from "react";
 import { useI18n } from "@/lib/i18n";
 import { QRCodeModal } from "./QRCodeModal";
 
-export type Tool = "chat" | "canvas" | "notebook" | "grokipedia" | "exercise" | "reading" | "rag" | "help" | "data-input" | "logs";
+export type Tool = "chat" | "canvas" | "notebook" | "grokipedia" | "exercise" | "reading" | "help" | "data-input" | "logs" | "plan-resources";
 
 interface ToolsPanelProps {
   activeTool: Tool;
   onToolChange: (tool: Tool) => void;
   problem: string;
   className?: string;
-  ragNotification?: boolean;
   errorNotification?: boolean;
   sessionId?: string;
+  planId?: string;
   disabledTools?: Tool[];
 }
 
@@ -35,12 +35,6 @@ function ToolIcon({ id }: { id: Tool }) {
       return (
         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-        </svg>
-      );
-    case "rag":
-      return (
-        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
         </svg>
       );
     case "grokipedia":
@@ -80,17 +74,24 @@ function ToolIcon({ id }: { id: Tool }) {
           <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
         </svg>
       );
+    case "plan-resources":
+      return (
+        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M18.375 12.739l-7.693 7.693a4.5 4.5 0 01-6.364-6.364l10.94-10.94A3 3 0 1119.5 7.372L8.552 18.32m.009-.01l-.01.01m5.699-9.941l-7.81 7.81a1.5 1.5 0 002.112 2.13" />
+        </svg>
+      );
   }
 }
 
 const bottomTools: Tool[] = ["help", "data-input", "logs"];
 
 export function ToolsPanel({ 
-  activeTool, onToolChange, problem, className = "", ragNotification = false, errorNotification = false,
-  sessionId, disabledTools = [],
+  activeTool, onToolChange, problem, className = "", errorNotification = false,
+  sessionId, planId, disabledTools = [],
 }: ToolsPanelProps) {
   const { t } = useI18n();
-  const mainTools: Tool[] = ["chat", "canvas", "notebook", "grokipedia", "exercise", "reading"];
+  const baseMainTools: Tool[] = ["chat", "canvas", "notebook", "grokipedia", "exercise", "reading"];
+  const mainTools: Tool[] = planId ? [...baseMainTools, "plan-resources"] : baseMainTools;
   const [showQRModal, setShowQRModal] = useState(false);
 
   const getToolLabel = (id: Tool): string => {
@@ -98,13 +99,14 @@ export function ToolsPanel({
       case "chat": return t('tools.teachingAssistant');
       case "canvas": return t('tools.canvas');
       case "notebook": return t('tools.notebook');
-      case "rag": return t('tools.ragMatches');
+
       case "grokipedia": return t('tools.grokipedia');
       case "exercise": return t('tools.practice');
       case "reading": return t('tools.theory');
       case "help": return t('tools.help');
       case "data-input": return t('tools.dataInput');
       case "logs": return t('tools.logs');
+      case "plan-resources": return t('tools.planResources');
     }
   };
 
@@ -152,9 +154,6 @@ export function ToolsPanel({
           >
             <ToolIcon id={toolId} />
             <span>{getToolLabel(toolId)}</span>
-            {toolId === "rag" && ragNotification && (
-              <span className="ml-auto w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
-            )}
             {toolId === "logs" && errorNotification && (
               <span className="ml-auto w-2 h-2 rounded-full bg-red-500 animate-pulse" />
             )}

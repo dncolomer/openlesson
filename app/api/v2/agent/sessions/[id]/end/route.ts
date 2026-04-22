@@ -8,7 +8,8 @@ import { authenticateRequest, errorResponse } from "@/lib/agent-v2/auth";
 import { createProof, serializeProof, createSessionBatchProof } from "@/lib/agent-v2/proofs";
 import { isSolanaConfigured, anchorBatchOnChain } from "@/lib/agent-v2/solana";
 import { getOrCreateUserWallet } from "@/lib/agent-v2/solana-custodial";
-import { generateReport } from "@/lib/openrouter";
+import { generateReport } from "@/lib/xai";
+import { getFileTextContent } from "@/lib/xai-files";
 import type { ProofBatch } from "@/lib/agent-v2/types";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -18,30 +19,16 @@ export const maxDuration = 60;
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 async function fetchTranscriptsFromStorage(
-  supabase: SupabaseClient,
-  transcriptRecords: { storage_path: string; chunk_index: number }[]
+  _supabase: SupabaseClient,
+  transcriptRecords: { xai_file_id: string; chunk_index: number }[]
 ): Promise<string> {
   const sorted = [...transcriptRecords].sort((a, b) => a.chunk_index - b.chunk_index);
   const chunks: string[] = [];
 
   for (const record of sorted) {
-    try {
-      const { data, error } = await supabase.storage
-        .from("session-transcript")
-        .download(record.storage_path);
-
-      if (error || !data) {
-        console.warn("[v2/sessions/:id/end] Transcript download error:", record.storage_path);
-        continue;
-      }
-
-      const text = await data.text();
-      if (text.trim()) {
-        chunks.push(text);
-      }
-    } catch (e) {
-      console.warn("[v2/sessions/:id/end] Transcript fetch error:", e);
-    }
+    if (!record.xai_file_id || record.xai_file_id === "_empty") continue;
+    const text = await getFileTextContent(record.xai_file_id);
+    if (text && text.trim()) chunks.push(text.trim());
   }
 
   return chunks.join("\n\n");
@@ -134,7 +121,7 @@ export async function POST(
     // ── Fetch transcripts from storage ─────────────────────────────────
     const { data: transcriptRecords, error: transcriptErr } = await supabase
       .from("session_transcript")
-      .select("storage_path, chunk_index, word_count, timestamp_ms")
+      .select("xai_file_id, chunk_index, word_count, timestamp_ms")
       .eq("session_id", sessionId)
       .order("chunk_index", { ascending: true });
 

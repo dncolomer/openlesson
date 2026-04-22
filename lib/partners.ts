@@ -1,5 +1,4 @@
-import { createClient as createSupabaseAdmin } from "@supabase/supabase-js";
-
+import { createAdminClient } from "@/lib/supabase/admin";
 export type PartnerTier = "bronze" | "silver" | "gold";
 
 export const PARTNER_TIERS: Record<PartnerTier, { stakeAmount: number; revenueShare: number; label: string }> = {
@@ -11,10 +10,7 @@ export const PARTNER_TIERS: Record<PartnerTier, { stakeAmount: number; revenueSh
 export const UNSTAKE_LOCKUP_DAYS = 60;
 
 export function getAdminClient() {
-  return createSupabaseAdmin(
-    process.env.NEXT_PUBLIC_SUPABASE_URL || "",
-    process.env.SUPABASE_SERVICE_ROLE_KEY || ""
-  );
+  return createAdminClient();
 }
 
 export function getTierFromStake(stakeAmount: number): PartnerTier {

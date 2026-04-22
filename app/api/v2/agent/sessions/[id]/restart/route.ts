@@ -6,7 +6,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { authenticateRequest, errorResponse } from "@/lib/agent-v2/auth";
 import { createProof, serializeProof } from "@/lib/agent-v2/proofs";
-import { createSessionPlanLLM, generateOpeningProbe } from "@/lib/openrouter";
+import { createSessionPlanLLM, generateOpeningProbe } from "@/lib/xai";
 import { getLanguageName } from "@/lib/tutoring-languages";
 
 export const runtime = "nodejs";
@@ -78,15 +78,18 @@ export async function POST(
     if (!preserve_transcript) {
       const { data: transcriptRecords } = await supabase
         .from("session_transcript")
-        .select("storage_path")
+        .select("xai_file_id")
         .eq("session_id", sessionId);
 
       if (transcriptRecords && transcriptRecords.length > 0) {
-        // Delete storage files
-        const paths = transcriptRecords.map((r: { storage_path: string }) => r.storage_path);
-        await supabase.storage.from("session-transcript").remove(paths);
+        // Best-effort delete xAI files
+        const { deleteFileFromXAI } = await import("@/lib/xai-files");
+        await Promise.all(
+          transcriptRecords
+            .filter((r: { xai_file_id: string | null }) => !!r.xai_file_id && r.xai_file_id !== "_empty")
+            .map((r: { xai_file_id: string }) => deleteFileFromXAI(r.xai_file_id).catch(() => {}))
+        );
 
-        // Delete transcript records
         await supabase
           .from("session_transcript")
           .delete()

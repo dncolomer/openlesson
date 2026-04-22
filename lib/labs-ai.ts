@@ -2,7 +2,7 @@
 // AI PROBE GENERATOR - Generates targeted questions via Grok 4.20
 // ============================================
 
-import { callOpenRouter, type Message } from "./openrouter-client";
+import { callXai, type Message } from "./xai-client";
 
 export interface Probe {
   id: number;
@@ -40,7 +40,7 @@ export async function generateProbes(topic: string): Promise<Probe[]> {
   ];
 
   try {
-    const response = await callOpenRouter<Probe[]>(messages, {
+    const response = await callXai<Probe[]>(messages, {
       model: "grok-4.20-beta-0309-reasoning",
       maxTokens: 800,
       temperature: 0.7,

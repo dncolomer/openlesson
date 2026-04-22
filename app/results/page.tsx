@@ -54,37 +54,25 @@ function ResultsContent() {
 
     const loadSummary = async () => {
       const supabase = (await import("@/lib/supabase/client")).createClient();
-      
+
       const user = (await supabase.auth.getUser()).data.user;
       if (!user) return;
 
+      // Audio still lives in Supabase Storage; everything else lives on xAI Files,
+      // counted via DB rows.
       const storagePath = `${user.id}/${sessionId}`;
-
-      const [audioFiles, transcriptFiles, eegFiles, toolFiles, transcriptChunksRes] = await Promise.all([
+      const [audioFiles, transcriptCountRes, eegCountRes, toolCountRes] = await Promise.all([
         supabase.storage.from("session-audio").list(storagePath, { limit: 100 }),
-        supabase.storage.from("session-transcript").list(storagePath, { limit: 100 }),
-        supabase.storage.from("session-eeg").list(storagePath, { limit: 100 }),
-        supabase.storage.from("session-tool").list(storagePath, { limit: 100 }),
-        supabase
-          .from("transcript_rag_chunks")
-          .select("chunk_index", { count: "exact", head: true })
-          .eq("session_id", sessionId),
+        supabase.from("session_transcript").select("id", { count: "exact", head: true }).eq("session_id", sessionId),
+        supabase.from("session_eeg").select("id", { count: "exact", head: true }).eq("session_id", sessionId),
+        supabase.from("session_tool").select("id", { count: "exact", head: true }).eq("session_id", sessionId),
       ]);
 
-      const audioCount = audioFiles.data?.length || 0;
-      const transcriptCount = transcriptFiles.data?.length || 0;
-      const eegCount = eegFiles.data?.length || 0;
-      const toolCount = toolFiles.data?.length || 0;
-
-      const finalTranscriptCount = 
-        (transcriptChunksRes.count || 0) ||
-        transcriptCount;
-
       setSummary({
-        audioChunks: audioCount,
-        transcripts: finalTranscriptCount,
-        eegChunks: eegCount,
-        toolData: toolCount,
+        audioChunks: audioFiles.data?.length || 0,
+        transcripts: transcriptCountRes.count || 0,
+        eegChunks: eegCountRes.count || 0,
+        toolData: toolCountRes.count || 0,
       });
     };
 

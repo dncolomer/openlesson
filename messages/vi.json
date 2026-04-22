@@ -2010,8 +2010,8 @@
   },
   "welcome": {
     "greeting": "Chào bạn — tôi là {name}, gia sư của bạn.",
-    "panelIntro": "Chào mừng đến với Môi trường Học tập Tích hợp (ILE) của bạn. Bên trái là Công cụ (Trò chuyện, Bảng vẽ, Sổ ghi chép, v.v.), bên phải là Kế hoạch phiên học, và ngay đây tôi sẽ hướng dẫn bạn từng câu hỏi một. Dùng các mũi tên để xem lại các câu hỏi khi chúng xuất hiện.",
-    "panelIntroMobile": "Chào mừng đến với Môi trường Học tập Tích hợp (ILE) của bạn. Vuốt sang trái hoặc phải để truy cập Kế hoạch phiên học và các công cụ khác. Ngay đây tôi sẽ hướng dẫn bạn từng câu hỏi một — dùng các mũi tên để xem lại các câu hỏi khi chúng xuất hiện.",
+    "panelIntro": "Chào mừng đến với Môi trường Học tập Tích hợp (ILE) của bạn. Bên trái là Công cụ (Trò chuyện, Bảng vẽ, Sổ ghi chép, v.v.), bên phải là Kế hoạch phiên học, và ngay đây tôi sẽ hướng dẫn bạn từng câu hỏi một. Dùng các mũi tên để xem lại các câu hỏi khi chúng xuất hiện. Khi bạn cảm thấy đã xong một bước trong Kế hoạch phiên học, hãy nhấn Hoàn thành ở bước đó — tôi sẽ kiểm tra nhanh và đưa bạn sang bước tiếp theo.",
+    "panelIntroMobile": "Chào mừng đến với Môi trường Học tập Tích hợp (ILE) của bạn. Vuốt sang trái hoặc phải để truy cập Kế hoạch phiên học và các công cụ khác. Ngay đây tôi sẽ hướng dẫn bạn từng câu hỏi một — dùng các mũi tên để xem lại các câu hỏi khi chúng xuất hiện. Khi bạn cảm thấy đã xong một bước trong Kế hoạch phiên học, hãy chạm Hoàn thành ở bước đó — tôi sẽ kiểm tra nhanh và đưa bạn sang bước tiếp theo.",
     "callToAction": "Điều quan trọng nhất: hãy nghĩ thành tiếng khi bạn làm việc. Đây gọi là Giao thức Tư duy Thành tiếng (Think-Aloud Protocol) — cứ nói ra bất cứ điều gì trong đầu bạn, kể cả khi nghe có vẻ lộn xộn hay không chắc chắn. Tôi lắng nghe suốt quá trình, và suy luận nói ra của bạn giúp tôi biết bạn đang mắc ở đâu và nên hỏi gì tiếp theo. Khi đã sẵn sàng, hãy nhấn Bắt đầu phiên và tôi sẽ khởi đầu bằng câu hỏi dẫn dắt đầu tiên.",
     "play": "Bắt đầu phiên",
     "starting": "Đang bắt đầu…",

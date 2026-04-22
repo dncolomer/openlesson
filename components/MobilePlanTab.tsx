@@ -175,11 +175,15 @@ export function MobilePlanTab({
 
   return (
     <div className="flex flex-col h-full bg-[#0a0a0a]">
-      {/* Auto/Manual toggle - neutral style (no color coding) */}
+      {/* Auto/Manual toggle — hidden in UI (manual mode is the default).
+          `onToggleAutoAdvance` is still passed in from the parent and the
+          state is still honored; remove the `hidden` wrapper to bring the
+          toggle back. */}
       {onToggleAutoAdvance && (
-        <div className="shrink-0 px-4 pt-4 pb-2">
+        <div className="hidden shrink-0 px-4 pt-4 pb-2" aria-hidden="true">
           <button
             onClick={() => onToggleAutoAdvance(!autoAdvance)}
+            tabIndex={-1}
             className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl bg-neutral-900 border border-neutral-800 active:bg-neutral-800/60 transition-colors"
           >
             <div className="flex items-center gap-2.5">

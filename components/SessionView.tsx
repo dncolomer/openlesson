@@ -99,7 +99,10 @@ export function SessionView({ sessionId }: { sessionId: string }) {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [tutoringLanguage, setTutoringLanguage] = useState(locale);
-  const [autoAdvance, setAutoAdvance] = useState(true);
+  // Manual-advance by default: the student clicks Complete on a plan step
+  // when they're done. Auto-advance mode is kept wired for future toggling
+  // but the UI affordance is hidden (see note at the hidden toggles below).
+  const [autoAdvance, setAutoAdvance] = useState(false);
 
   // Mic check
   const [micStatus, setMicStatus] = useState<"idle" | "checking" | "ready" | "denied">("idle");
@@ -2566,12 +2569,16 @@ export function SessionView({ sessionId }: { sessionId: string }) {
                       </select>
                     </div>
 
-                    {/* Auto-advance toggle (neutral style) */}
+                    {/* Auto-advance toggle — hidden in UI (manual mode is the
+                        default). Underlying state remains wired; remove the
+                        `hidden` wrapper to bring the toggle back. */}
                     <button
                       type="button"
                       onClick={() => !isButtonDisabled && setAutoAdvance(!autoAdvance)}
                       disabled={isButtonDisabled}
-                      className="w-full mb-3 p-3 rounded-xl border bg-neutral-900 border-neutral-800 hover:bg-neutral-800/60 hover:border-neutral-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-3 text-left"
+                      aria-hidden="true"
+                      tabIndex={-1}
+                      className="hidden w-full mb-3 p-3 rounded-xl border bg-neutral-900 border-neutral-800 hover:bg-neutral-800/60 hover:border-neutral-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors items-center gap-3 text-left"
                     >
                       <div className="relative shrink-0 w-9 h-5 rounded-full bg-neutral-700">
                         <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-neutral-100 shadow transition-transform ${autoAdvance ? 'translate-x-[18px]' : 'translate-x-0.5'}`} />
@@ -3010,10 +3017,14 @@ export function SessionView({ sessionId }: { sessionId: string }) {
             </div>
             {/* Quick layout preset buttons - absolute so they don't disturb centering of control bar */}
             <div className="absolute right-3 top-1/2 -translate-y-1/2 shrink-0 flex items-center gap-1 z-10">
-              {/* Auto / Manual advance toggle */}
+              {/* Auto / Manual advance toggle — hidden in UI (manual mode is
+                  the default). Underlying state remains wired so we can
+                  restore the affordance by removing the `hidden` wrapper. */}
               <button
                 onClick={() => setAutoAdvance(!autoAdvance)}
-                className="flex items-center gap-1.5 px-2 py-1 rounded-md text-[10px] font-medium text-neutral-300 hover:text-white bg-neutral-900/80 hover:bg-neutral-800 border border-neutral-800 hover:border-neutral-700 transition-colors"
+                className="hidden items-center gap-1.5 px-2 py-1 rounded-md text-[10px] font-medium text-neutral-300 hover:text-white bg-neutral-900/80 hover:bg-neutral-800 border border-neutral-800 hover:border-neutral-700 transition-colors"
+                aria-hidden="true"
+                tabIndex={-1}
                 title={autoAdvance ? t('sessionPlan.aiControlsAdvancement') : t('sessionPlan.youControlAdvancement')}
               >
                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
@@ -3028,7 +3039,6 @@ export function SessionView({ sessionId }: { sessionId: string }) {
                   <div className={`absolute top-0.5 w-2.5 h-2.5 rounded-full bg-neutral-100 shadow transition-transform ${autoAdvance ? 'translate-x-3.5' : 'translate-x-0.5'}`} />
                 </div>
               </button>
-              <div className="w-px h-5 bg-neutral-800 mx-1" />
               {/* Per-view visibility toggles. At least one view must stay
                   visible; the last-enabled toggle is disabled to prevent
                   a fully-empty workspace. Fixed width + icon so the three

@@ -113,7 +113,10 @@ export function MobileSessionView({
   const [tutoringLanguage, setTutoringLanguage] = useState<SupportedLocale>(
     (initialSession?.metadata?.tutoringLanguage as SupportedLocale) || 'en'
   );
-  const [autoAdvance, setAutoAdvance] = useState(true);
+  // Manual-advance by default: the student clicks Complete on a plan step
+  // when they're done. Auto-advance mode is kept wired for future toggling
+  // but the UI affordance is hidden (see note at the hidden toggles below).
+  const [autoAdvance, setAutoAdvance] = useState(false);
   const [isPreparing, setIsPreparing] = useState(false);
   const [planLoading, setPlanLoading] = useState(false);
   const [openingProbeLoading, setOpeningProbeLoading] = useState(false);
@@ -1610,12 +1613,16 @@ export function MobileSessionView({
                 </select>
               </div>
 
-              {/* Auto-advance toggle (neutral) */}
+              {/* Auto-advance toggle — hidden in UI (manual mode is the
+                  default). Underlying state remains wired; remove the
+                  `hidden` wrapper to bring the toggle back. */}
               <button
                 type="button"
                 onClick={() => !isButtonDisabled && setAutoAdvance(!autoAdvance)}
                 disabled={isButtonDisabled}
-                className="w-full mb-3 p-3.5 rounded-xl border bg-neutral-900 border-neutral-800 active:bg-neutral-800/60 active:border-neutral-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-3 text-left"
+                aria-hidden="true"
+                tabIndex={-1}
+                className="hidden w-full mb-3 p-3.5 rounded-xl border bg-neutral-900 border-neutral-800 active:bg-neutral-800/60 active:border-neutral-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors items-center gap-3 text-left"
               >
                 <div className="relative shrink-0 w-11 h-6 rounded-full bg-neutral-700">
                   <div className={`absolute top-0.5 w-5 h-5 rounded-full bg-neutral-100 shadow transition-transform ${autoAdvance ? 'translate-x-5' : 'translate-x-0.5'}`} />

@@ -491,7 +491,8 @@ export function MobileSessionView({
         body: JSON.stringify({
           sessionId: currentSession.id,
           previousProbes: currentSession.probes.map((p: Probe) => p.text),
-          activeProbes: openProbes.map((p: Probe) => p.text),
+          // Send {id, text} so the LLM can echo real UUIDs in probes_to_archive.
+          activeProbes: openProbes.map((p: Probe) => ({ id: p.id, text: p.text })),
           focusedProbes,
           openProbeCount: openProbes.length,
           lastProbeTimestamp: lastProbeTimeRef.current || 0,

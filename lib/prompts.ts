@@ -300,7 +300,11 @@ TRANSCRIPT CONTEXT (up to 3 minutes of session audio, most recent speech is most
 ALL Probes Already Presented (do NOT repeat any of these):
 {previous_probes}
 
-CURRENTLY ACTIVE (OPEN) PROBES — these are visible to the student right now:
+CURRENTLY ACTIVE (OPEN) PROBES — these are visible to the student right now.
+Each line is formatted as "- [<probe_id>]: <text>". The bracketed <probe_id> is
+the CANONICAL probe identifier — you MUST echo it verbatim (the full UUID
+string, exactly as written, including hyphens) in probes_to_archive when
+archiving. Do NOT return ordinals like "1" or "2":
 {active_probes}
 
 PROBE MANAGEMENT:
@@ -333,7 +337,7 @@ AVAILABLE ILE TOOLS (for tool suggestions):
 IMPORTANT CONSTRAINT: There can be a maximum of 5 open (non-archived) probes at any time. If open_probe_count is already 5:
 - You MUST NOT generate a new probe unless you can archive at least one existing probe
 - Evaluate the focused probes and any probes that seem addressed based on the transcript/context
-- If you determine a probe has been adequately addressed, include its ID in "probes_to_archive"
+- If you determine a probe has been adequately addressed, include its exact bracketed [<probe_id>] from the ACTIVE PROBES list above in "probes_to_archive" (echo the UUID verbatim — never ordinals, never paraphrases)
 
 CRITICAL RULES:
 - Do NOT repeat or rephrase any probe already listed above. Each new probe must cover NEW ground. If you cannot think of a meaningfully different probe, set can_generate_probe to false rather than repeating.
@@ -391,7 +395,7 @@ Return ONLY valid JSON:
     "text": "The actual text to show the student",
     "suggested_tools": ["canvas", "notebook"]
   } | null,
-  "probes_to_archive": ["probe_id_1", "probe_id_2"],
+  "probes_to_archive": ["<exact uuid copied from an ACTIVE PROBE bracket>", "..."],
   "can_generate_probe": true/false,
   "can_auto_advance": true/false,
   "advance_reasoning": "Brief explanation of why the step can or cannot auto-advance (used in manual mode dialog)",

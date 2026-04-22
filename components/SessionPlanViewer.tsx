@@ -19,7 +19,7 @@ interface SessionPlanViewerProps {
   plan: SessionPlan | null;
   loading?: boolean;
   error?: string | null;
-  onAdvanceStep?: () => Promise<void>;
+  onAdvanceStep?: (forceAdvance?: boolean) => Promise<void>;
   onRollbackToStep?: (stepIndex: number) => Promise<void>;
   autoAdvance?: boolean;
   onToggleAutoAdvance?: (value: boolean) => void;
@@ -97,7 +97,11 @@ export function SessionPlanViewer({ plan, loading, error, onAdvanceStep, onRollb
           if (data.canAutoAdvance) {
             setAdvancing(true);
             try {
-              await onAdvanceStep();
+              // Readiness was just checked by /api/session-plan/update;
+              // force the advance so /api/session-plan/advance-step doesn't
+              // redundantly re-run the slow xAI eval (which blew the 60s
+              // Vercel timeout).
+              await onAdvanceStep(true);
             } finally {
               setAdvancing(false);
             }
@@ -127,7 +131,9 @@ export function SessionPlanViewer({ plan, loading, error, onAdvanceStep, onRollb
     if (!onAdvanceStep) return;
     setAdvancing(true);
     try {
-      await onAdvanceStep();
+      // User explicitly overrode the readiness dialog — force advance so
+      // we don't re-run the LLM eval (which already ran and said "not yet").
+      await onAdvanceStep(true);
     } finally {
       setAdvancing(false);
     }

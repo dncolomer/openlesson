@@ -506,7 +506,10 @@ export async function updateSessionPlanLLM(options: {
    *  is read by Grok agentically via attached files. */
   contextDescription?: string;
   previousProbes: string[];
-  activeProbes?: string[];
+  /** Currently open (non-archived) probes visible to the student. Must
+   *  include each probe's real UUID so the LLM can return them verbatim
+   *  in probes_to_archive (otherwise it hallucinates ordinals like "1"). */
+  activeProbes?: FocusedProbeInfo[];
   focusedProbes?: FocusedProbeInfo[];
   openProbeCount?: number;
   lastProbeTimestamp?: number;
@@ -540,8 +543,12 @@ export async function updateSessionPlanLLM(options: {
     .replace("{previous_probes}", options.previousProbes.length > 0
       ? options.previousProbes.map((p, i) => `${i + 1}. ${p}`).join("\n")
       : "None yet")
+    // IMPORTANT: include each probe's real UUID in the rendering. The
+    // model is instructed to echo these verbatim in probes_to_archive; if
+    // we only show ordinals the model hallucinates "1", "2" which then
+    // explodes against the probes.id UUID column (Postgres 22P02).
     .replace("{active_probes}", options.activeProbes && options.activeProbes.length > 0
-      ? options.activeProbes.map((p, i) => `${i + 1}. ${p}`).join("\n")
+      ? options.activeProbes.map(p => `- [${p.id}]: "${p.text}"`).join("\n")
       : "None")
     .replace("{open_probe_count}", (options.openProbeCount ?? 0).toString())
     .replace("{focused_probes}", focusedProbesText)

@@ -12,6 +12,7 @@ import type { SessionPlanStep, FocusedProbeInfo } from "@/lib/xai";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { uploadFileToXAI, getFileTextContent } from "@/lib/xai-files";
 import { storeAnalysisResult } from "@/lib/session-analysis";
+import { isUuid } from "@/lib/storage";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -300,7 +301,11 @@ export async function POST(
 
     if (plan) {
       const previousProbeTexts = allProbes.map((p) => p.text).filter(Boolean);
-      const activeProbeTexts = activeProbes.map((p) => p.text).filter(Boolean);
+      // Pass active probes as {id, text} so the LLM can echo real UUIDs
+      // back in probes_to_archive (otherwise it hallucinates ordinals).
+      const activeProbeInfos: FocusedProbeInfo[] = activeProbes
+        .filter((p) => !!p.text)
+        .map((p) => ({ id: p.id, text: p.text }));
       const focusedProbeInfos: FocusedProbeInfo[] = focusedProbes.map((p) => ({
         id: p.id,
         text: p.text,
@@ -328,7 +333,7 @@ export async function POST(
         currentStepIndex: plan.current_step_index,
         contextDescription,
         previousProbes: previousProbeTexts,
-        activeProbes: activeProbeTexts,
+        activeProbes: activeProbeInfos,
         focusedProbes: focusedProbeInfos,
         openProbeCount,
         lastProbeTimestamp,
@@ -424,8 +429,10 @@ export async function POST(
             .eq("id", plan.id);
         }
 
-        // Probes to archive
-        probesToArchive = r.probesToArchive || [];
+        // Probes to archive — filter out any non-UUID ids that the LLM
+        // might still emit (e.g. "1", "probe_1"), otherwise the .in()
+        // query below 500s with Postgres 22P02.
+        probesToArchive = (r.probesToArchive || []).filter(isUuid);
 
         // Archive probes if suggested
         if (probesToArchive.length > 0) {

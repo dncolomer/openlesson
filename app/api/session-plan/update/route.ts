@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { updateSessionPlanLLM } from "@/lib/xai";
-import { getSessionPlan, updateSessionPlan, validatePlanSteps, type SessionPlanStep, getRecentTranscripts, getRecentToolEvents, getRecentFacialData, getRecentEEGData, getRecentScreenshots } from "@/lib/storage";
+import { getSessionPlan, updateSessionPlan, validatePlanSteps, type SessionPlanStep, getRecentTranscripts, getRecentToolEvents, getRecentFacialData, getRecentEEGData, getRecentScreenshots, isUuid } from "@/lib/storage";
 import { getUserPrompts } from "@/lib/user-prompts";
 import { createClient } from "@/lib/supabase/server";
 import { storeAnalysisResult } from "@/lib/session-analysis";
@@ -100,7 +100,19 @@ export async function POST(request: NextRequest) {
       currentStepIndex: currentPlan.currentStepIndex,
       contextDescription,
       previousProbes: previousProbes || [],
-      activeProbes: activeProbes || [],
+      // Accept both the legacy shape (string[]) and the new shape
+      // ({id, text}[]). Coerce to {id, text}[] for the LLM so it can
+      // return real UUIDs in probes_to_archive.
+      activeProbes: Array.isArray(activeProbes)
+        ? (activeProbes as unknown[]).flatMap((p) => {
+            if (typeof p === "string") return [{ id: "", text: p }];
+            if (p && typeof p === "object" && "text" in p) {
+              const obj = p as { id?: unknown; text?: unknown };
+              return [{ id: typeof obj.id === "string" ? obj.id : "", text: typeof obj.text === "string" ? obj.text : "" }];
+            }
+            return [];
+          })
+        : [],
       focusedProbes: focusedProbes || [],
       openProbeCount: openProbeCount ?? 0,
       lastProbeTimestamp: lastProbeTimestamp ?? 0,
@@ -115,7 +127,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { planChanged, updatedSteps, currentStepIndex, nextRequest, probesToArchive, canGenerateProbe, reasoning, gapScore, signals, canAutoAdvance, advanceReasoning } = result.result;
+    const { planChanged, updatedSteps, currentStepIndex, nextRequest, canGenerateProbe, reasoning, gapScore, signals, canAutoAdvance, advanceReasoning } = result.result;
+    // Drop any non-UUID probe IDs the LLM might still emit before returning
+    // them to the client; archiveProbe() on the client filters too, but
+    // centralizing here keeps all downstream code safe (including the
+    // fire-and-forget storeAnalysisResult below).
+    const probesToArchive = (result.result.probesToArchive || []).filter(isUuid);
 
     // Fire-and-forget: persist the analysis result to xAI + session_analysis table
     storeAnalysisResult({

@@ -378,9 +378,24 @@ export async function updateProbeRevealed(probeId: string, isRevealed: boolean):
     .eq("id", probeId);
 }
 
+// RFC4122 UUID matcher (any version) used to guard the probes.id UUID
+// column against stray ordinal IDs hallucinated by the LLM. Without this
+// Postgres throws 22P02 "invalid input syntax for type uuid".
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+export function isUuid(value: unknown): value is string {
+  return typeof value === "string" && UUID_RE.test(value);
+}
+
 export async function archiveProbe(probeId: string): Promise<void> {
+  // Guard against non-UUID ids (e.g. "1", "probe_1") that can sneak in
+  // from LLM output when a probe list was rendered without real UUIDs.
+  if (!isUuid(probeId)) {
+    console.warn(`[archiveProbe] skipping non-UUID probeId: ${JSON.stringify(probeId)}`);
+    return;
+  }
+
   const supabase = createClient();
-  
+
   const { data: probe } = await supabase
     .from("probes")
     .select("session_id, timestamp_ms, text, gap_score, signals, request_type, plan_step_id")

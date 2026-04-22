@@ -520,7 +520,7 @@ export function SessionView({ sessionId }: { sessionId: string }) {
     handleClose?: () => void;
     handleArchiveProbe?: (probeId: string) => Promise<void>;
     handleToggleFocus?: (probeId: string, focused: boolean) => void;
-    handleAdvanceStep?: () => Promise<void>;
+    handleAdvanceStep?: (forceAdvance?: boolean) => Promise<void>;
     handleRollbackToStep?: (stepIndex: number) => Promise<void>;
   }>({});
 
@@ -1053,7 +1053,8 @@ export function SessionView({ sessionId }: { sessionId: string }) {
         body: JSON.stringify({
           sessionId: currentSession.id,
           previousProbes: currentSession.probes.map((p) => p.text),
-          activeProbes: openProbes.map(p => p.text),
+          // Send {id, text} so the LLM can echo real UUIDs in probes_to_archive.
+          activeProbes: openProbes.map(p => ({ id: p.id, text: p.text })),
           focusedProbes,
           openProbeCount: openProbes.length,
           lastProbeTimestamp: lastProbeTimeRef.current || 0,

@@ -81,6 +81,7 @@
   "home": {
     "learn": "Học",
     "plan": "Kế hoạch",
+    "human": "Người",
     "agentic": "Agentic",
     "heroTitle": "Bạn Muốn Học Gì Hôm Nay?",
     "heroSubtitle": "Gia sư AI cá nhân của bạn hướng dẫn bạn qua mọi chủ đề. Nói suy nghĩ của bạn — nhận được câu hỏi đúng để hiểu sâu hơn.",
@@ -91,6 +92,13 @@
     "topicBrowserScrollRight": "Cuộn sang phải",
     "recentPlans": "Kế hoạch gần đây",
     "recentSessions": "Phiên gần đây",
+    "communityPlans": "Khám phá kế hoạch của người khác",
+    "exploreThisPlan": "Khám phá kế hoạch này",
+    "remixes": "lần phối lại",
+    "quickSession": "Phiên nhanh",
+    "generatePlan": "Tạo kế hoạch",
+    "startingSession": "Đang bắt đầu...",
+    "attachmentsHint": "Tệp đính kèm được dùng khi tạo kế hoạch.",
     "showAll": "Hiển thị tất cả →",
     "statusCompleted": "đã hoàn thành"
   },

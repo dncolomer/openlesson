@@ -81,6 +81,7 @@
   "home": {
     "learn": "Aprender",
     "plan": "Plan",
+    "human": "Humano",
     "agentic": "Agente",
     "heroTitle": "¿Qué quieres aprender hoy?",
     "heroSubtitle": "Tu tutor personal de IA te guía a través de cualquier tema. Habla tus pensamientos — recibe las preguntas correctas para profundizar tu comprensión.",
@@ -91,6 +92,13 @@
     "topicBrowserScrollRight": "Desplazar a la derecha",
     "recentPlans": "Planes recientes",
     "recentSessions": "Sesiones recientes",
+    "communityPlans": "Explorar planes de otros",
+    "exploreThisPlan": "Explorar este plan",
+    "remixes": "remezclas",
+    "quickSession": "Sesión rápida",
+    "generatePlan": "Generar plan",
+    "startingSession": "Iniciando...",
+    "attachmentsHint": "Los archivos adjuntos se usan al generar un plan.",
     "showAll": "Mostrar todo →",
     "statusCompleted": "completado"
   },

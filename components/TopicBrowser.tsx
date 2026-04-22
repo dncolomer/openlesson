@@ -907,12 +907,18 @@ function getTopics(locale: string): TopicCategory[] {
 interface TopicBrowserProps {
   onSelectTopic: (topic: string) => void;
   fullWidth?: boolean;
+  /**
+   * Compact rendering: fewer topics per view (3 in "All", 6 in a
+   * single-category filter) and a tighter 1-column grid. Used in the
+   * right-hand split pane on the landing page.
+   */
+  compact?: boolean;
 }
 
 const ALL_LABEL = "All";
 const SCROLL_AMOUNT = 200;
 
-export function TopicBrowser({ onSelectTopic, fullWidth = false }: TopicBrowserProps) {
+export function TopicBrowser({ onSelectTopic, fullWidth = false, compact = false }: TopicBrowserProps) {
   const { t, locale } = useI18n();
   const topicCatalogue = useMemo(() => {
     return getTopics(locale);
@@ -964,9 +970,12 @@ export function TopicBrowser({ onSelectTopic, fullWidth = false }: TopicBrowserP
       const j = Math.floor(Math.random() * (i + 1));
       [pool[i], pool[j]] = [pool[j], pool[i]];
     }
-    // Show more when filtered to a single category
-    return pool.slice(0, filter === ALL_LABEL ? 12 : 20);
-  }, []);
+    // Compact mode shows fewer (3/6) so the picker stays small enough
+    // to sit comfortably inside the right pane of the split hero.
+    const allLimit = compact ? 3 : 12;
+    const catLimit = compact ? 6 : 20;
+    return pool.slice(0, filter === ALL_LABEL ? allLimit : catLimit);
+  }, [compact]);
 
   useEffect(() => {
     setVisibleTopics(buildTopics(activeFilter));
@@ -986,8 +995,8 @@ export function TopicBrowser({ onSelectTopic, fullWidth = false }: TopicBrowserP
   return (
     <div className={`w-full ${fullWidth ? "" : "max-w-5xl"} mx-auto`}>
       {/* Section header */}
-      <div className="flex items-center justify-between mb-5">
-        <p className="text-sm text-slate-500">
+      <div className={`flex items-center justify-between ${compact ? "mb-3" : "mb-5"}`}>
+        <p className={`text-slate-500 ${compact ? "text-xs" : "text-sm"}`}>
           {t('home.topicBrowserPrompt')}
         </p>
         <button
@@ -1000,7 +1009,7 @@ export function TopicBrowser({ onSelectTopic, fullWidth = false }: TopicBrowserP
       </div>
 
       {/* Category filter strip */}
-      <div className="flex items-center gap-2 mb-5">
+      <div className={`flex items-center gap-2 ${compact ? "mb-3" : "mb-5"}`}>
         <button
           onClick={() => scroll("left")}
           disabled={!canScrollLeft}
@@ -1058,15 +1067,28 @@ export function TopicBrowser({ onSelectTopic, fullWidth = false }: TopicBrowserP
         </button>
       </div>
 
-      {/* Topic cards grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+      {/* Topic cards grid — compact mode uses a 1-column list with
+          smaller padding so ~3 topics fit the right pane comfortably. */}
+      <div
+        className={
+          compact
+            ? "grid grid-cols-1 gap-2"
+            : "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5"
+        }
+      >
         {visibleTopics.map(({ topic, category, emoji }) => (
           <button
             key={topic}
             onClick={() => onSelectTopic(topic)}
-            className="group text-left p-4 rounded-xl border border-slate-800 bg-slate-900/50 hover:bg-slate-800/80 hover:border-slate-600 transition-all duration-200"
+            className={`group text-left rounded-xl border border-slate-800 bg-slate-900/50 hover:bg-slate-800/80 hover:border-slate-600 transition-all duration-200 ${
+              compact ? "p-3" : "p-4"
+            }`}
           >
-            <p className="text-[13px] text-slate-300 group-hover:text-white leading-snug mb-2.5">
+            <p
+              className={`text-slate-300 group-hover:text-white leading-snug ${
+                compact ? "text-[12.5px] mb-1.5" : "text-[13px] mb-2.5"
+              }`}
+            >
               {topic}
             </p>
             <div className="flex items-center gap-1.5">

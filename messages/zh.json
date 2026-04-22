@@ -81,6 +81,7 @@
   "home": {
     "learn": "学习",
     "plan": "计划",
+    "human": "人类",
     "agentic": "智能体",
     "heroTitle": "今天想学什么？",
     "heroSubtitle": "您的个人AI导师，引导您学习任何主题。说出您的想法 — 获得正确的问题来深化您的理解。",
@@ -91,6 +92,13 @@
     "topicBrowserScrollRight": "向右滚动",
     "recentPlans": "最近计划",
     "recentSessions": "最近课程",
+    "communityPlans": "探索他人的计划",
+    "exploreThisPlan": "查看此计划",
+    "remixes": "次再创作",
+    "quickSession": "快速会话",
+    "generatePlan": "生成计划",
+    "startingSession": "启动中...",
+    "attachmentsHint": "附件将在生成计划时使用。",
     "showAll": "显示全部 →",
     "statusCompleted": "已完成"
   },

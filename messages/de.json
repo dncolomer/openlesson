@@ -81,6 +81,7 @@
   "home": {
     "learn": "Lernen",
     "plan": "Planen",
+    "human": "Mensch",
     "agentic": "Agentisch",
     "heroTitle": "Was möchtest du heute lernen?",
     "heroSubtitle": "Dein persönlicher KI-Tutor, der dich durch jedes Thema führt. Sprich deine Gedanken aus — erhalte die richtigen Fragen, um dein Verständnis zu vertiefen.",
@@ -91,6 +92,13 @@
     "topicBrowserScrollRight": "Nach rechts scrollen",
     "recentPlans": "Neueste Pläne",
     "recentSessions": "Neueste Sitzungen",
+    "communityPlans": "Pläne anderer erkunden",
+    "exploreThisPlan": "Diesen Plan erkunden",
+    "remixes": "Remixe",
+    "quickSession": "Schnelle Sitzung",
+    "generatePlan": "Plan erstellen",
+    "startingSession": "Starte...",
+    "attachmentsHint": "Anhänge werden bei der Plan-Erstellung verwendet.",
     "showAll": "Alle anzeigen →",
     "statusCompleted": "abgeschlossen"
   },

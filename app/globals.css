@@ -338,3 +338,20 @@ body {
   filter: blur(6px) brightness(0.5) saturate(0.45);
   opacity: 0.6;
 }
+
+/* ─────────────────────────────────────────────────────────────────────────
+ * Hero carousel Ken-Burns drift — very slow zoom-in on the active slide.
+ * The animation resets on each slide change because we only apply the
+ * class to the active image element (conditional via React).
+ * ──────────────────────────────────────────────────────────────────────── */
+@keyframes herozoom {
+  0%   { transform: scale(1); }
+  100% { transform: scale(1.08); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-\[herozoom_12s_ease-out_forwards\] {
+    animation: none !important;
+    transform: scale(1) !important;
+  }
+}

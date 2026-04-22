@@ -81,6 +81,7 @@
   "home": {
     "learn": "Learn",
     "plan": "Plan",
+    "human": "Human",
     "agentic": "Agentic",
     "heroTitle": "What Do You Want to Learn Today?",
     "heroSubtitle": "Your personal AI tutor that guides you through any topic. Speak your thoughts — get the right questions to deepen your understanding.",
@@ -91,6 +92,13 @@
     "topicBrowserScrollRight": "Scroll right",
     "recentPlans": "Recent plans",
     "recentSessions": "Recent sessions",
+    "communityPlans": "Explore plans from others",
+    "exploreThisPlan": "Explore this plan",
+    "remixes": "remixes",
+    "quickSession": "Quick Session",
+    "generatePlan": "Generate Plan",
+    "startingSession": "Starting...",
+    "attachmentsHint": "Attachments are used when generating a plan.",
     "showAll": "Show all →",
     "statusCompleted": "completed"
   },

@@ -81,6 +81,7 @@
   "home": {
     "learn": "Ucz się",
     "plan": "Planuj",
+    "human": "Człowiek",
     "agentic": "Agentowy",
     "heroTitle": "Czego chcesz się dziś nauczyć?",
     "heroSubtitle": "Twój osobisty korepetytor AI, który prowadzi Cię przez każdy temat. Mów na głos — otrzymuj właściwe pytania pogłębiające zrozumienie.",
@@ -89,10 +90,17 @@
     "topicBrowserAll": "Wszystkie",
     "topicBrowserScrollLeft": "Przewiń w lewo",
     "topicBrowserScrollRight": "Przewiń w prawo",
-    "recentPlans": "Recent plans",
-    "recentSessions": "Recent sessions",
-    "showAll": "Show all →",
-    "statusCompleted": "completed"
+    "recentPlans": "Ostatnie plany",
+    "recentSessions": "Ostatnie sesje",
+    "communityPlans": "Zobacz plany innych",
+    "exploreThisPlan": "Zobacz ten plan",
+    "remixes": "remiksów",
+    "quickSession": "Szybka sesja",
+    "generatePlan": "Stwórz plan",
+    "startingSession": "Startuję...",
+    "attachmentsHint": "Załączniki są używane przy tworzeniu planu.",
+    "showAll": "Pokaż wszystkie →",
+    "statusCompleted": "ukończone"
   },
   "auth": {
     "welcomeBack": "Witaj ponownie",

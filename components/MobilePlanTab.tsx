@@ -1,18 +1,23 @@
 "use client";
 
 import { useState } from "react";
-import { type SessionPlan } from "@/lib/storage";
+import { type SessionPlan, type ToolAction } from "@/lib/storage";
 import { useI18n } from "@/lib/i18n";
 
 interface MobilePlanTabProps {
   plan: SessionPlan | null;
   loading?: boolean;
   error?: string | null;
-  onAdvanceStep?: () => Promise<void>;
+  onAdvanceStep?: (forceAdvance?: boolean) => Promise<void>;
   onRollbackToStep?: (stepIndex: number) => Promise<void>;
   autoAdvance?: boolean;
   onToggleAutoAdvance?: (value: boolean) => void;
   sessionId?: string;
+  /** Mirror of the desktop SessionPlanViewer onToolEvent hook. Parents
+   *  should wire this to logTool("session_plan", action, metadata) so
+   *  mobile Complete-clicks, disagreements, and eval failures land in
+   *  the same session_tool / xAI Files pipeline as desktop. */
+  onToolEvent?: (action: ToolAction, metadata?: Record<string, unknown>) => void;
 }
 
 export function MobilePlanTab({
@@ -24,6 +29,7 @@ export function MobilePlanTab({
   autoAdvance = true,
   onToggleAutoAdvance,
   sessionId,
+  onToolEvent,
 }: MobilePlanTabProps) {
   const { t } = useI18n();
   const [advancing, setAdvancing] = useState(false);
@@ -49,6 +55,21 @@ export function MobilePlanTab({
   const handleAdvanceStep = async (e: React.MouseEvent) => {
     e.stopPropagation();
     if (!onAdvanceStep || advancing) return;
+
+    // Capture step context at click time (see SessionPlanViewer for the
+    // rationale — same logging contract).
+    const fromStepIndex = plan?.currentStepIndex ?? 0;
+    const currentStep = plan?.steps?.[fromStepIndex];
+    const clickMeta = {
+      source: "client" as const,
+      fromStepIndex,
+      autoAdvance,
+      via: "complete_button" as const,
+      stepId: currentStep?.id,
+      stepDescription: currentStep?.description,
+      stepType: currentStep?.type,
+    };
+    onToolEvent?.("advance", clickMeta);
 
     if (autoAdvance) {
       setAdvancing(true);
@@ -77,19 +98,37 @@ export function MobilePlanTab({
           if (data.canAutoAdvance) {
             setAdvancing(true);
             try {
-              await onAdvanceStep();
+              // Readiness already checked by /api/session-plan/update;
+              // force the advance so /api/session-plan/advance-step doesn't
+              // redundantly re-run the slow xAI eval (same 60s-timeout fix
+              // we applied on desktop).
+              await onAdvanceStep(true);
             } finally {
               setAdvancing(false);
             }
           } else {
+            // Disagreement: student clicked Complete but LLM said "not yet".
+            onToolEvent?.("advance_blocked_by_llm", {
+              ...clickMeta,
+              advanceReasoning: (data.advanceReasoning || "").slice(0, 500),
+              gapScore: data.gapScore,
+            });
             setAdvanceDialogReasoning(data.advanceReasoning || t('sessionPlan.aiSuggestsStayingDefault'));
             setShowAdvanceDialog(true);
           }
         } else {
+          onToolEvent?.("advance_eval_failed", {
+            ...clickMeta,
+            httpStatus: res.status,
+          });
           setAdvanceDialogReasoning(t('sessionPlan.unableToAnalyze'));
           setShowAdvanceDialog(true);
         }
-      } catch {
+      } catch (err) {
+        onToolEvent?.("advance_eval_failed", {
+          ...clickMeta,
+          error: err instanceof Error ? err.message : String(err),
+        });
         setAdvanceDialogReasoning(t('sessionPlan.unableToAnalyze'));
         setShowAdvanceDialog(true);
       } finally {
@@ -99,11 +138,24 @@ export function MobilePlanTab({
   };
 
   const handleForceAdvance = async () => {
+    const fromStepIndex = plan?.currentStepIndex ?? 0;
+    const currentStep = plan?.steps?.[fromStepIndex];
+    onToolEvent?.("force_advance", {
+      source: "client",
+      fromStepIndex,
+      via: "force_advance_dialog",
+      stepId: currentStep?.id,
+      stepDescription: currentStep?.description,
+      stepType: currentStep?.type,
+      reasoning: advanceDialogReasoning.slice(0, 120),
+    });
     setShowAdvanceDialog(false);
     if (!onAdvanceStep) return;
     setAdvancing(true);
     try {
-      await onAdvanceStep();
+      // User explicitly overrode the readiness dialog — force advance so
+      // we don't re-run the LLM eval (which already ran and said "not yet").
+      await onAdvanceStep(true);
     } finally {
       setAdvancing(false);
     }
@@ -372,7 +424,20 @@ export function MobilePlanTab({
             </p>
             <div className="flex gap-3">
               <button
-                onClick={() => setShowAdvanceDialog(false)}
+                onClick={() => {
+                  const fromStepIndex = plan?.currentStepIndex ?? 0;
+                  const currentStep = plan?.steps?.[fromStepIndex];
+                  onToolEvent?.("cancel_advance", {
+                    source: "client",
+                    fromStepIndex,
+                    via: "force_advance_dialog",
+                    stepId: currentStep?.id,
+                    stepDescription: currentStep?.description,
+                    stepType: currentStep?.type,
+                    reasoning: advanceDialogReasoning.slice(0, 120),
+                  });
+                  setShowAdvanceDialog(false);
+                }}
                 className="flex-1 py-3 text-sm text-neutral-400 border border-neutral-700 active:border-neutral-600 rounded-xl transition-colors"
               >
                 {t('sessionPlan.stayOnStep')}

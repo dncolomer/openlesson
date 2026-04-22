@@ -798,7 +798,13 @@ export type ToolAction =
   | "step_collapse"
   | "rollback"
   | "force_advance"
-  | "cancel_advance";
+  | "cancel_advance"
+  // Readiness-gate outcomes (manual-advance mode). These capture
+  // "student thinks they're done vs LLM thinks they're done" disagreements
+  // so we can later learn where the student's self-assessment matches
+  // (or diverges from) the model's evaluation.
+  | "advance_blocked_by_llm"
+  | "advance_eval_failed";
 
 export interface LogToolUsageResult {
   /** True only if BOTH the storage upload and the DB insert succeeded. */

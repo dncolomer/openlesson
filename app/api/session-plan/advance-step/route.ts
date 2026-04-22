@@ -46,8 +46,21 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Discriminator for the bookkeeping log below so later analytics can
+    // cleanly separate student-initiated advances from LLM-auto-advances
+    // (both currently land in session_tool with tool_action='advance').
+    //   - "user_click": client sent forceAdvance (Complete button, or
+    //     dialog override after a disagreement).
+    //   - "auto_eval_pass": the route's own LLM readiness eval ran and
+    //     said the student was ready.
+    //   - "auto_eval_skipped": eval couldn't run (no transcripts, or the
+    //     LLM errored) — we fell through to a mechanical advance.
+    let trigger: "user_click" | "auto_eval_pass" | "auto_eval_skipped" = "user_click";
+    let evalGapScore: number | undefined;
+
     // Unless forceAdvance, evaluate whether the student is ready to move on
     if (!forceAdvance) {
+      trigger = "auto_eval_skipped";
       try {
         const [transcripts, promptOverrides] = await Promise.all([
           getRecentTranscripts(sessionId, 180000),
@@ -83,10 +96,16 @@ export async function POST(request: NextRequest) {
               nextRequest: evalResult.result.nextRequest,
             });
           }
+
+          if (evalResult.success && evalResult.result) {
+            trigger = "auto_eval_pass";
+            evalGapScore = evalResult.result.gapScore;
+          }
         }
       } catch (err) {
         console.warn("[advance-step] Evaluation failed, allowing advance:", err);
-        // Fall through to mechanical advance if evaluation fails
+        // Fall through to mechanical advance if evaluation fails.
+        // trigger stays "auto_eval_skipped".
       }
     }
 
@@ -145,6 +164,10 @@ export async function POST(request: NextRequest) {
       "advance",
       timestamp,
       {
+        source: "server",
+        trigger,
+        forceAdvance: Boolean(forceAdvance),
+        evalGapScore,
         previousStepIndex: currentStepIndex,
         newStepIndex: nextIndex,
         stepContent: {

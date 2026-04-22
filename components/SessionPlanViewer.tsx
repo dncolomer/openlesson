@@ -65,10 +65,22 @@ export function SessionPlanViewer({ plan, loading, error, onAdvanceStep, onRollb
     e.stopPropagation();
     if (!onAdvanceStep || advancing) return;
 
-    onToolEvent?.("advance", {
-      fromStepIndex: plan?.currentStepIndex ?? 0,
+    // Capture the current step's descriptive context at click time so the
+    // downstream tool-event log (and the xAI file it becomes) can later be
+    // analysed for "student thought this step was done" signals even if
+    // the plan drifts afterwards.
+    const fromStepIndex = plan?.currentStepIndex ?? 0;
+    const currentStep = plan?.steps?.[fromStepIndex];
+    const clickMeta = {
+      source: "client" as const,
+      fromStepIndex,
       autoAdvance,
-    });
+      via: "complete_button" as const,
+      stepId: currentStep?.id,
+      stepDescription: currentStep?.description,
+      stepType: currentStep?.type,
+    };
+    onToolEvent?.("advance", clickMeta);
 
     if (autoAdvance) {
       setAdvancing(true);
@@ -91,7 +103,7 @@ export function SessionPlanViewer({ plan, loading, error, onAdvanceStep, onRollb
             lastProbeTimestamp: 0,
           }),
         });
-        
+
         if (res.ok) {
           const data = await res.json();
           if (data.canAutoAdvance) {
@@ -106,14 +118,30 @@ export function SessionPlanViewer({ plan, loading, error, onAdvanceStep, onRollb
               setAdvancing(false);
             }
           } else {
+            // Disagreement: student clicked Complete but the LLM eval
+            // judged the step not yet done. Log it so we can later learn
+            // where student self-assessment diverges from the model.
+            onToolEvent?.("advance_blocked_by_llm", {
+              ...clickMeta,
+              advanceReasoning: (data.advanceReasoning || "").slice(0, 500),
+              gapScore: data.gapScore,
+            });
             setAdvanceDialogReasoning(data.advanceReasoning || t('sessionPlan.aiSuggestsStayingDefault'));
             setShowAdvanceDialog(true);
           }
         } else {
+          onToolEvent?.("advance_eval_failed", {
+            ...clickMeta,
+            httpStatus: res.status,
+          });
           setAdvanceDialogReasoning(t('sessionPlan.unableToAnalyze'));
           setShowAdvanceDialog(true);
         }
-      } catch {
+      } catch (err) {
+        onToolEvent?.("advance_eval_failed", {
+          ...clickMeta,
+          error: err instanceof Error ? err.message : String(err),
+        });
         setAdvanceDialogReasoning(t('sessionPlan.unableToAnalyze'));
         setShowAdvanceDialog(true);
       } finally {
@@ -123,8 +151,15 @@ export function SessionPlanViewer({ plan, loading, error, onAdvanceStep, onRollb
   };
 
   const handleForceAdvance = async () => {
+    const fromStepIndex = plan?.currentStepIndex ?? 0;
+    const currentStep = plan?.steps?.[fromStepIndex];
     onToolEvent?.("force_advance", {
-      fromStepIndex: plan?.currentStepIndex ?? 0,
+      source: "client",
+      fromStepIndex,
+      via: "force_advance_dialog",
+      stepId: currentStep?.id,
+      stepDescription: currentStep?.description,
+      stepType: currentStep?.type,
       reasoning: advanceDialogReasoning.slice(0, 120),
     });
     setShowAdvanceDialog(false);
@@ -459,8 +494,15 @@ export function SessionPlanViewer({ plan, loading, error, onAdvanceStep, onRollb
             <div className="flex gap-2.5">
               <button
                 onClick={() => {
+                  const fromStepIndex = plan?.currentStepIndex ?? 0;
+                  const currentStep = plan?.steps?.[fromStepIndex];
                   onToolEvent?.("cancel_advance", {
-                    fromStepIndex: plan?.currentStepIndex ?? 0,
+                    source: "client",
+                    fromStepIndex,
+                    via: "force_advance_dialog",
+                    stepId: currentStep?.id,
+                    stepDescription: currentStep?.description,
+                    stepType: currentStep?.type,
                     reasoning: advanceDialogReasoning.slice(0, 120),
                   });
                   setShowAdvanceDialog(false);

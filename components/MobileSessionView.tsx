@@ -1841,6 +1841,16 @@ export function MobileSessionView({
           autoAdvance={autoAdvance}
           onToggleAutoAdvance={setAutoAdvance}
           sessionId={session?.id}
+          onToolEvent={(action, metadata) => {
+            if (!session?.id) return;
+            // Fire-and-forget: mobile has no transfer-health UI so we
+            // just persist to session_tool + xAI Files via the standard
+            // path. Desktop uses logTool() which wraps this and also
+            // updates the transfer-health counter + Logs UI.
+            logToolUsage(session.id, "session_plan", action, Date.now(), metadata ?? {}).catch((err) =>
+              console.warn("[MobileSessionView] logToolUsage failed:", err)
+            );
+          }}
         />
       ),
     },

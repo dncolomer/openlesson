@@ -659,7 +659,11 @@
     "retry": "Retry",
     "backToDashboard": "Back to Dashboard",
     "noSessionId": "No session ID provided.",
-    "dataContribution": "Your data is contributing to the Global Human Conversation dataset to help advance AI understanding of human learning. Thank you!"
+    "dataContribution": "Your data is contributing to the Global Human Conversation dataset to help advance AI understanding of human learning. Thank you!",
+    "continueLearningSuggestions": "Continue Learning",
+    "continueLearningSuggestionsDesc": "Based on your session, here are suggested follow-up topics to explore:",
+    "generatingFollowUps": "Generating follow-up suggestions...",
+    "noFollowUpSuggestions": "No follow-up suggestions available."
   },
   "analytics": {
     "breadcrumb": "Session Analytics",

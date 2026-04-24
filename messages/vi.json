@@ -659,7 +659,11 @@
     "dataContributionPart2": "để giúp AI hiểu học tập của con người. Cảm ơn bạn!",
     "dataContributionPart3": "với bất kỳ câu hỏi nào",
     "datasetName": "Global Human Conversation dataset",
-    "noSessionId": "Không có ID phiên."
+    "noSessionId": "Không có ID phiên.",
+    "continueLearningSuggestions": "Tiếp Tục Học",
+    "continueLearningSuggestionsDesc": "Dựa trên phiên của bạn, đây là các chủ đề theo dõi được đề xuất:",
+    "generatingFollowUps": "Đang tạo gợi ý theo dõi...",
+    "noFollowUpSuggestions": "Không có gợi ý theo dõi."
   },
   "session": {
     "mobileDetected": "Phát hiện thiết bị di động",

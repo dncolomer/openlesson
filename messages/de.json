@@ -659,7 +659,11 @@
     "dataContributionPart2": "bei, um das KI-Verständnis von menschlichem Lernen voranzubringen. Danke!",
     "dataContributionPart3": "bei Fragen",
     "datasetName": "Global Human Conversation dataset",
-    "noSessionId": "Keine Sitzungs-ID angegeben."
+    "noSessionId": "Keine Sitzungs-ID angegeben.",
+    "continueLearningSuggestions": "Weiterlernen",
+    "continueLearningSuggestionsDesc": "Basierend auf deiner Sitzung sind hier empfohlene Folgethemen:",
+    "generatingFollowUps": "Folgevorschläge werden erstellt...",
+    "noFollowUpSuggestions": "Keine Folgevorschläge verfügbar."
   },
   "session": {
     "mobileDetected": "Mobilgerät erkannt",

@@ -659,7 +659,11 @@
     "dataContributionPart2": "aby pomóc w rozwoju AI w rozumieniu ludzkiego uczenia się. Dziękujemy!",
     "dataContributionPart3": "z jakimikolwiek pytaniami",
     "datasetName": "Global Human Conversation dataset",
-    "noSessionId": "Nie podano ID sesji."
+    "noSessionId": "Nie podano ID sesji.",
+    "continueLearningSuggestions": "Kontynuuj Naukę",
+    "continueLearningSuggestionsDesc": "Na podstawie twojej sesji, oto sugerowane tematy do dalszej nauki:",
+    "generatingFollowUps": "Generowanie sugestii dalszych kroków...",
+    "noFollowUpSuggestions": "Brak sugestii dalszych kroków."
   },
   "session": {
     "mobileDetected": "Wykryto urządzenie mobilne",

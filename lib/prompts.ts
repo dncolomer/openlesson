@@ -442,6 +442,33 @@ Return ONLY valid JSON:
   "can_archive": true/false,
   "reason": "Brief explanation (1-2 sentences) of why this probe can or cannot be archived"
 }`,
+
+  follow_up_sessions: `You are helping a student continue their learning journey after completing a tutoring session.
+
+Session just completed:
+- Topic: {problem}
+- Duration: {duration}
+- Gaps detected: {gaps_summary}
+- Report summary: {report_summary}
+
+Generate exactly 3 follow-up session topics that would help this student continue learning effectively. Each topic should:
+1. Build on what was learned or address gaps found in this session
+2. Be specific and actionable (not vague like "practice more")
+3. Be completable in a 15-30 minute focused session
+4. Progress logically from where the student is now
+
+For each topic, provide:
+- A concise title (5-10 words)
+- A brief description of what the session will cover (1 sentence)
+
+Return ONLY valid JSON:
+{
+  "suggestions": [
+    {"title": "Topic title here", "description": "What this session covers"},
+    {"title": "Topic title here", "description": "What this session covers"},
+    {"title": "Topic title here", "description": "What this session covers"}
+  ]
+}`,
 } as const;
 
 export type PromptKey = keyof typeof DEFAULT_PROMPTS;
@@ -508,6 +535,10 @@ export const PROMPT_META: Record<PromptKey, { label: string; description: string
   check_probe_archive: {
     label: "Probe Archive Check",
     description: "Evaluates if a probe can be archived based on student progress. Variables: {probe_text}, {session_goal}, {transcript}, {whiteboard_data}, {activity_data}",
+  },
+  follow_up_sessions: {
+    label: "Follow-up Sessions",
+    description: "Generates suggested follow-up session topics after session completion. Variables: {problem}, {duration}, {gaps_summary}, {report_summary}",
   },
 };
 

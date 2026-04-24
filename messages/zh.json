@@ -659,7 +659,11 @@
     "dataContributionPart2": "做出贡献，以帮助推进AI对人类学习的理解。感谢您！",
     "dataContributionPart3": "如有任何问题",
     "datasetName": "Global Human Conversation dataset",
-    "noSessionId": "未提供课程ID。"
+    "noSessionId": "未提供课程ID。",
+    "continueLearningSuggestions": "继续学习",
+    "continueLearningSuggestionsDesc": "根据您的课程，以下是建议的后续主题：",
+    "generatingFollowUps": "正在生成后续建议...",
+    "noFollowUpSuggestions": "暂无后续建议。"
   },
   "session": {
     "mobileDetected": "检测到移动设备",

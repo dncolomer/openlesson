@@ -1,11 +1,12 @@
 "use client";
 
 import { useEffect, useState, Suspense } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   getSession,
   saveSession,
+  createSession,
   type Session,
 } from "@/lib/storage";
 import { Navbar } from "@/components/Navbar";
@@ -19,8 +20,14 @@ interface SessionSummary {
   toolData: number;
 }
 
+interface FollowUpSuggestion {
+  title: string;
+  description: string;
+}
+
 function ResultsContent() {
   const { t } = useI18n();
+  const router = useRouter();
   const searchParams = useSearchParams();
   const sessionId = searchParams.get("id");
   const [session, setSession] = useState<Session | null>(null);
@@ -28,6 +35,9 @@ function ResultsContent() {
   const [loading, setLoading] = useState(true);
   const [reportLoading, setReportLoading] = useState(false);
   const [reportError, setReportError] = useState<string | null>(null);
+  const [followUps, setFollowUps] = useState<FollowUpSuggestion[]>([]);
+  const [followUpsLoading, setFollowUpsLoading] = useState(false);
+  const [startingSession, setStartingSession] = useState<string | null>(null);
 
   useEffect(() => {
     if (!sessionId) {
@@ -121,6 +131,75 @@ function ResultsContent() {
       setReportError(t('results.reportError'));
     } finally {
       setReportLoading(false);
+    }
+  };
+
+  // Fetch follow-up suggestions when session has a report
+  useEffect(() => {
+    if (!session || !session.report || followUps.length > 0 || followUpsLoading) return;
+    
+    const fetchFollowUps = async () => {
+      setFollowUpsLoading(true);
+      try {
+        const durationMin = Math.round(session.durationMs / 60000);
+        const gapsSummary = session.probes
+          .map((p, i) => `${i + 1}. ${p.text} (gap: ${p.gapScore.toFixed(2)})`)
+          .join("\n");
+
+        const res = await fetch("/api/generate-follow-ups", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            sessionId,
+            problem: session.problem,
+            duration: `${durationMin} minutes`,
+            gapsSummary,
+            reportSummary: session.report?.substring(0, 500) || "",
+          }),
+        });
+
+        if (res.ok) {
+          const { suggestions } = await res.json();
+          if (suggestions && Array.isArray(suggestions)) {
+            setFollowUps(suggestions);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to fetch follow-up suggestions:", err);
+      } finally {
+        setFollowUpsLoading(false);
+      }
+    };
+
+    fetchFollowUps();
+  }, [session, sessionId, followUps.length, followUpsLoading]);
+
+  const handleStartFollowUp = async (suggestion: FollowUpSuggestion) => {
+    setStartingSession(suggestion.title);
+    try {
+      // Check usage first
+      const usageRes = await fetch("/api/check-usage");
+      if (usageRes.ok) {
+        const usage = await usageRes.json();
+        if (!usage.allowed) {
+          alert(t("problemInput.sessionLimitReached"));
+          return;
+        }
+      }
+
+      // Create the new session with the suggested topic
+      const newSession = await createSession(suggestion.title);
+      
+      // Track usage
+      fetch("/api/check-usage", { method: "POST" }).catch(() => {});
+      
+      // Navigate to the new session
+      router.push(`/session?id=${newSession.id}`);
+    } catch (err) {
+      console.error("Failed to start follow-up session:", err);
+      alert("Failed to start session. Please try again.");
+    } finally {
+      setStartingSession(null);
     }
   };
 
@@ -234,6 +313,55 @@ function ResultsContent() {
             </div>
           </div>
         ) : null}
+
+        {/* Follow-up Session Suggestions */}
+        {session.report && (
+          <div className="mt-6 rounded-xl border border-neutral-800 bg-neutral-900/50 p-5">
+            <h3 className="text-sm font-medium text-neutral-300 mb-1">{t('results.continueLearningSuggestions')}</h3>
+            <p className="text-xs text-neutral-500 mb-4">{t('results.continueLearningSuggestionsDesc')}</p>
+            
+            {followUpsLoading ? (
+              <div className="flex items-center gap-3 py-4 justify-center">
+                <div className="animate-spin w-4 h-4 border-2 border-emerald-500 border-t-transparent rounded-full" />
+                <p className="text-sm text-neutral-500">{t('results.generatingFollowUps')}</p>
+              </div>
+            ) : followUps.length > 0 ? (
+              <div className="space-y-3">
+                {followUps.map((suggestion, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => handleStartFollowUp(suggestion)}
+                    disabled={startingSession !== null}
+                    className="w-full text-left p-4 rounded-lg border border-neutral-700 bg-neutral-800/50 hover:bg-neutral-800 hover:border-emerald-600/50 transition-all group disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1 min-w-0">
+                        <h4 className="text-sm font-medium text-white group-hover:text-emerald-400 transition-colors">
+                          {suggestion.title}
+                        </h4>
+                        <p className="text-xs text-neutral-500 mt-1 line-clamp-2">
+                          {suggestion.description}
+                        </p>
+                      </div>
+                      <div className="flex-shrink-0 mt-0.5">
+                        {startingSession === suggestion.title ? (
+                          <div className="animate-spin w-4 h-4 border-2 border-emerald-500 border-t-transparent rounded-full" />
+                        ) : (
+                          <svg className="w-5 h-5 text-neutral-600 group-hover:text-emerald-500 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                        )}
+                      </div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-neutral-500 text-center py-4">{t('results.noFollowUpSuggestions')}</p>
+            )}
+          </div>
+        )}
 
         <div className="flex justify-center mt-8 pb-8">
           <Link

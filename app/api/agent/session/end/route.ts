@@ -147,6 +147,37 @@ export async function POST(req: NextRequest) {
     const wordCount = fullTranscript.split(/\s+/).filter(w => w.length > 0).length;
     const probeCount = probes?.length || 0;
 
+    // ── Fetch analysis records for file IDs ────────────────────────────
+    const { data: analysisRecords, error: analysisError } = await supabase
+      .from("session_analysis")
+      .select("xai_file_id")
+      .eq("session_id", session_id);
+
+    if (analysisError) {
+      console.error("[agent-session-end] Analysis query error:", analysisError);
+    }
+
+    // ── Collect all xAI file IDs for report generation ─────────────────
+    const sessionFileIds: string[] = [];
+
+    // Add transcript file IDs
+    if (transcriptRecords) {
+      for (const r of transcriptRecords) {
+        if (r.xai_file_id && r.xai_file_id !== "_empty") {
+          sessionFileIds.push(r.xai_file_id);
+        }
+      }
+    }
+
+    // Add analysis file IDs
+    if (analysisRecords) {
+      for (const r of analysisRecords as Array<{ xai_file_id: string | null }>) {
+        if (r.xai_file_id) {
+          sessionFileIds.push(r.xai_file_id);
+        }
+      }
+    }
+
     const avgGapScore = probes && probes.length > 0
       ? probes.reduce((sum, p) => sum + (p.gap_score || 0), 0) / probes.length
       : 0;
@@ -205,6 +236,7 @@ export async function POST(req: NextRequest) {
       avgGapScore,
       probesSummary,
       promptOverrides,
+      fileIds: sessionFileIds.length > 0 ? sessionFileIds : undefined,
     });
 
     if (!reportResult.success) {

@@ -8,7 +8,7 @@ export const maxDuration = 60;
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { problem, duration, probeCount, avgGapScore, probesSummary, eegContext } = body;
+    const { problem, duration, probeCount, avgGapScore, probesSummary, eegContext, fileIds } = body;
 
     if (!problem) {
       return NextResponse.json({ error: "Missing problem" }, { status: 400 });
@@ -24,6 +24,7 @@ export async function POST(request: NextRequest) {
       probesSummary: probesSummary || "",
       eegContext,
       promptOverrides,
+      fileIds: fileIds && fileIds.length > 0 ? fileIds : undefined,
     });
 
     if (!result.success) {

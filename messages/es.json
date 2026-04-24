@@ -659,7 +659,11 @@
     "dataContributionPart2": "para ayudar a avanzar la comprensión de IA sobre el aprendizaje humano. ¡Gracias!",
     "dataContributionPart3": "con cualquier pregunta",
     "datasetName": "Global Human Conversation dataset",
-    "noSessionId": "No se proporcionó ID de sesión."
+    "noSessionId": "No se proporcionó ID de sesión.",
+    "continueLearningSuggestions": "Continuar Aprendiendo",
+    "continueLearningSuggestionsDesc": "Basado en tu sesión, aquí hay temas de seguimiento sugeridos:",
+    "generatingFollowUps": "Generando sugerencias de seguimiento...",
+    "noFollowUpSuggestions": "No hay sugerencias de seguimiento disponibles."
   },
   "analytics": {
     "breadcrumb": "Analíticas de Sesión",

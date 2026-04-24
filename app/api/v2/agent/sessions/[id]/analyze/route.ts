@@ -408,26 +408,19 @@ export async function POST(
             .filter(Boolean);
         }
 
-        // Update plan in DB if changed
-        if (planChanged && r.updatedSteps) {
-          await supabase
-            .from("session_plans")
-            .update({
-              steps: r.updatedSteps,
-              current_step_index: currentStepIndex,
-              updated_at: new Date().toISOString(),
-            })
-            .eq("id", plan.id);
-        } else if (currentStepIndex !== oldStepIndex) {
-          // Just step index changed
-          await supabase
-            .from("session_plans")
-            .update({
-              current_step_index: currentStepIndex,
-              updated_at: new Date().toISOString(),
-            })
-            .eq("id", plan.id);
+        // NOTE: The LLM may suggest step changes (planChanged, updatedSteps,
+        // currentStepIndex) but we intentionally do NOT persist them to the DB.
+        // Step mutations are only allowed via the mechanical advance-step route
+        // (user-initiated). The LLM's suggestions are already stored as
+        // evaluation feedback via storeAnalysisResult above.
+        if (planChanged || currentStepIndex !== oldStepIndex) {
+          console.log(`[v2/analyze] LLM suggested plan change (planChanged=${planChanged}, ` +
+            `suggestedStepIndex=${currentStepIndex}, currentStepIndex=${oldStepIndex}) ` +
+            `— stored as evaluation data, NOT persisted to session_plans`);
         }
+        // Reset currentStepIndex to actual DB value so downstream logic
+        // (probe generation, response) uses the real current step.
+        currentStepIndex = oldStepIndex;
 
         // Probes to archive — filter out any non-UUID ids that the LLM
         // might still emit (e.g. "1", "probe_1"), otherwise the .in()
@@ -445,7 +438,7 @@ export async function POST(
 
         // Create new probe if guidance suggests one
         if (r.canGenerateProbe && r.nextRequest && r.nextRequest.text) {
-          const currentSteps = r.updatedSteps || plan.steps;
+          const currentSteps = plan.steps;
           const stepForProbe =
             currentStepIndex >= 0 && currentStepIndex < currentSteps.length
               ? currentSteps[currentStepIndex]

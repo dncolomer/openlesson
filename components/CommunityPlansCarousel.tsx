@@ -132,7 +132,7 @@ export function CommunityPlansCarousel({ fillHeight = false }: CommunityPlansCar
                   alt=""
                   loading={i === 0 ? "eager" : "lazy"}
                   decoding="async"
-                  className={`absolute inset-0 w-full h-full object-cover ${
+                  className={`absolute inset-0 w-full h-full object-cover object-center scale-[1.15] ${
                     active ? "animate-[herozoom_12s_ease-out_forwards]" : ""
                   }`}
                 />

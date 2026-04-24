@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback, useRef, type ReactNode } from "react"
 import { SwipeableTabs } from "./SwipeableTabs";
 import { MobileProbesTab } from "./MobileProbesTab";
 import { MobilePlanTab } from "./MobilePlanTab";
-import { MobileWhiteboardCanvas } from "./MobileWhiteboardCanvas";
+import { MobileExcalidrawCanvas } from "./MobileExcalidrawCanvas";
 import { AudioRecorder } from "@/lib/audio";
 import { 
   type Probe, 
@@ -36,6 +36,7 @@ import { LocalInferenceManager, type InitProgress, type LocalAnalysisContext } f
 import { LocalContextBuffer } from "@/lib/local-context";
 import { useSessionHeartbeat, type StorageHeartbeatResult, type AnalysisHeartbeatResult } from "@/lib/useSessionHeartbeat";
 import { retryWithResult } from "@/lib/retry";
+import { ConfirmDialog } from "./ui/ConfirmDialog";
 // ModelLoadingModal no longer used -- loading UI is inline in welcome modal
 import type { RequestType } from "@/lib/storage";
 
@@ -160,6 +161,11 @@ export function MobileSessionView({
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(!initialSession);
   const [whiteboardData, setWhiteboardData] = useState<string | null>(null);
+  // "Submit to Helios" dirty tracking — true when the user has edited the
+  // canvas since the last submit. Initial true so the first submit is
+  // allowed (provided there's canvas content). Lives in parent so it
+  // survives remounts of the mobile whiteboard tab.
+  const [canvasDirtyForHelios, setCanvasDirtyForHelios] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [showEndConfirm, setShowEndConfirm] = useState(false);
   const [isCelebrating, setIsCelebrating] = useState(false);
@@ -643,6 +649,39 @@ export function MobileSessionView({
     onStorageHeartbeat: runStorageHeartbeat,
     onAnalysisHeartbeat: runAnalysisHeartbeat,
   });
+
+  /**
+   * Manual "Submit to Helios" — mirror of the desktop handler. Forces a
+   * storage flush (so the latest canvas is on the server) and then kicks
+   * off an analysis heartbeat out of band from the 10s timer. Both
+   * run-functions have internal reentrancy guards (`isAnalyzingRef`), so
+   * racing with the periodic tick is safe.
+   */
+  const handleSubmitToHelios = useCallback(async () => {
+    const currentSession = sessionRef.current;
+    if (currentSession) {
+      // Fire-and-forget — we don't want the log round-trip to block submit.
+      logToolUsage(currentSession.id, "canvas", "submit_to_helios", Date.now(), {
+        hasCanvas: !!whiteboardDataRef.current,
+      }).catch((err) => console.warn("[Mobile] logToolUsage failed:", err));
+    }
+
+    try {
+      await runStorageHeartbeat();
+    } catch (err) {
+      console.warn("[Mobile SubmitToHelios] storage heartbeat failed:", err);
+    }
+    try {
+      await runAnalysisHeartbeat();
+    } catch (err) {
+      console.warn("[Mobile SubmitToHelios] analysis heartbeat failed:", err);
+    }
+
+    // Disable the button until the user edits again. Applied even on
+    // heartbeat failure: the submission was made, we don't want the user
+    // to keep retrying with the exact same content.
+    setCanvasDirtyForHelios(false);
+  }, [runStorageHeartbeat, runAnalysisHeartbeat]);
 
   // Heartbeat lifecycle - managed by the hook, controlled by recording state
   useEffect(() => {
@@ -1450,6 +1489,185 @@ export function MobileSessionView({
     }
   }, [session]);
 
+  // ── Skip to step ────────────────────────────────────────────────
+  const handleSkipToStep = useCallback(async (stepIndex: number) => {
+    if (!session) return;
+    const currentSession = sessionRef.current || session;
+
+    try {
+      const res = await fetch("/api/session-plan/skip-steps", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sessionId: session.id, skipToIndex: stepIndex }),
+      });
+
+      if (!res.ok) throw new Error("Failed to skip steps");
+
+      const { plan: updatedPlan } = await res.json();
+      if (!isValidPlan(updatedPlan)) return;
+
+      setSessionPlan(updatedPlan);
+      sessionPlanRef.current = updatedPlan;
+
+      // Reset probes for the new step
+      try {
+        const resetRes = await fetch("/api/session-plan/reset-probes", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ sessionId: session.id }),
+        });
+
+        if (resetRes.ok) {
+          const resetData = await resetRes.json();
+          const updatedSession: Session = {
+            ...currentSession,
+            probes: currentSession.probes.map((p: Probe) => ({ ...p, archived: true })),
+          };
+
+          let finalSession: Session = updatedSession;
+          if (resetData.newProbe) {
+            const newProbe: Probe = {
+              id: resetData.newProbe.id,
+              timestamp: resetData.newProbe.timestamp,
+              gapScore: resetData.newProbe.gapScore,
+              signals: resetData.newProbe.signals,
+              text: resetData.newProbe.text,
+              requestType: resetData.newProbe.requestType,
+              planStepId: resetData.newProbe.planStepId,
+              archived: false,
+              focused: false,
+            };
+            finalSession = addProbeToSession(updatedSession, newProbe);
+            lastProbeTimeRef.current = Date.now();
+          }
+
+          setSession(finalSession);
+          sessionRef.current = finalSession;
+          setProbes(finalSession.probes);
+        }
+      } catch (probeErr) {
+        console.warn("[Mobile] Failed to reset probes after skip:", probeErr);
+      }
+    } catch (err) {
+      console.error("[Mobile] Skip to step error:", err);
+    }
+  }, [session]);
+
+  // ── Regenerate remaining plan steps ────────────────────────────
+  const handleRegeneratePlan = useCallback(async (reason?: string) => {
+    if (!session) return;
+    const currentSession = sessionRef.current || session;
+
+    try {
+      setIsGeneratingProbe(true);
+      const res = await fetch("/api/session-plan/regenerate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sessionId: session.id, reason }),
+      });
+
+      if (!res.ok) throw new Error("Failed to regenerate plan");
+
+      const { plan: updatedPlan } = await res.json();
+      if (!isValidPlan(updatedPlan)) return;
+
+      setSessionPlan(updatedPlan);
+      sessionPlanRef.current = updatedPlan;
+
+      // Reset probes for the new current step
+      try {
+        const resetRes = await fetch("/api/session-plan/reset-probes", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ sessionId: session.id }),
+        });
+
+        if (resetRes.ok) {
+          const resetData = await resetRes.json();
+          const updatedSession: Session = {
+            ...currentSession,
+            probes: currentSession.probes.map((p: Probe) => ({ ...p, archived: true })),
+          };
+
+          let finalSession: Session = updatedSession;
+          if (resetData.newProbe) {
+            const newProbe: Probe = {
+              id: resetData.newProbe.id,
+              timestamp: resetData.newProbe.timestamp,
+              gapScore: resetData.newProbe.gapScore,
+              signals: resetData.newProbe.signals,
+              text: resetData.newProbe.text,
+              requestType: resetData.newProbe.requestType,
+              planStepId: resetData.newProbe.planStepId,
+              archived: false,
+              focused: false,
+            };
+            finalSession = addProbeToSession(updatedSession, newProbe);
+            lastProbeTimeRef.current = Date.now();
+          }
+
+          setSession(finalSession);
+          sessionRef.current = finalSession;
+          setProbes(finalSession.probes);
+        }
+      } catch (probeErr) {
+        console.warn("[Mobile] Failed to reset probes after regenerate:", probeErr);
+      }
+    } catch (err) {
+      console.error("[Mobile] Regenerate plan error:", err);
+    } finally {
+      setIsGeneratingProbe(false);
+    }
+  }, [session]);
+
+  // ── Reset probes (standalone) ──────────────────────────────────
+  const handleResetProbes = useCallback(async () => {
+    if (!session) return;
+    const currentSession = sessionRef.current || session;
+
+    try {
+      setIsGeneratingProbe(true);
+      const res = await fetch("/api/session-plan/reset-probes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sessionId: session.id }),
+      });
+
+      if (!res.ok) throw new Error("Failed to reset probes");
+
+      const resetData = await res.json();
+      const updatedSession: Session = {
+        ...currentSession,
+        probes: currentSession.probes.map((p: Probe) => ({ ...p, archived: true })),
+      };
+
+      let finalSession: Session = updatedSession;
+      if (resetData.newProbe) {
+        const newProbe: Probe = {
+          id: resetData.newProbe.id,
+          timestamp: resetData.newProbe.timestamp,
+          gapScore: resetData.newProbe.gapScore,
+          signals: resetData.newProbe.signals,
+          text: resetData.newProbe.text,
+          requestType: resetData.newProbe.requestType,
+          planStepId: resetData.newProbe.planStepId,
+          archived: false,
+          focused: false,
+        };
+        finalSession = addProbeToSession(updatedSession, newProbe);
+        lastProbeTimeRef.current = Date.now();
+      }
+
+      setSession(finalSession);
+      sessionRef.current = finalSession;
+      setProbes(finalSession.probes);
+    } catch (err) {
+      console.error("[Mobile] Reset probes error:", err);
+    } finally {
+      setIsGeneratingProbe(false);
+    }
+  }, [session]);
+
   // Camera functions
   const openCamera = useCallback(async () => {
     try {
@@ -1819,6 +2037,7 @@ export function MobileSessionView({
           sessionPlan={sessionPlan}
           onArchiveProbe={handleArchiveProbe}
           onToggleFocus={handleToggleFocus}
+          onResetProbes={handleResetProbes}
           archivingProbeId={archivingProbeId}
           isGeneratingProbe={isGeneratingProbe}
           showWelcome={showWelcomePanel}
@@ -1827,6 +2046,7 @@ export function MobileSessionView({
           isStartingSession={isStartingSession}
           sessionId={session?.id}
           ttsLanguage={tutoringLanguage}
+          isSessionActive={isRecording && !isPaused}
         />
       ),
     },
@@ -1838,9 +2058,12 @@ export function MobileSessionView({
           plan={sessionPlan}
           onAdvanceStep={handleAdvanceStep}
           onRollbackToStep={handleRollbackToStep}
+          onSkipToStep={handleSkipToStep}
+          onRegeneratePlan={handleRegeneratePlan}
           autoAdvance={autoAdvance}
           onToggleAutoAdvance={setAutoAdvance}
           sessionId={session?.id}
+          isSessionActive={isRecording && !isPaused}
           onToolEvent={(action, metadata) => {
             if (!session?.id) return;
             // Fire-and-forget: mobile has no transfer-health UI so we
@@ -1859,7 +2082,7 @@ export function MobileSessionView({
       label: t('tools.canvas'),
       content: (
         <div className="h-full relative">
-          <MobileWhiteboardCanvas
+          <MobileExcalidrawCanvas
             initialData={whiteboardData || undefined}
             pendingImage={pendingWhiteboardImage}
             onPendingImageUsed={() => setPendingWhiteboardImage(null)}
@@ -1867,8 +2090,12 @@ export function MobileSessionView({
               console.log("[Mobile] Canvas changed, size:", dataUrl.length);
               whiteboardDataRef.current = dataUrl;
               setWhiteboardData(dataUrl);
+              // Any edit re-arms the submit button.
+              setCanvasDirtyForHelios(true);
             }}
             onOpenCamera={openCamera}
+            onSubmitToHelios={handleSubmitToHelios}
+            canSubmitToHelios={canvasDirtyForHelios}
           />
         </div>
       ),
@@ -2106,94 +2333,48 @@ export function MobileSessionView({
       {/* End Session Confirmation Modal — ending is irreversible, so we
           warn and offer a non-destructive "pause + back to dashboard"
           alternative. */}
-      {showEndConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-md p-4">
-          <div className="bg-neutral-900 border border-neutral-800 rounded-2xl max-w-sm w-full overflow-hidden">
-            <div className="px-5 pt-5 pb-4 border-b border-neutral-800/70">
-              <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-full bg-red-500/15 border border-red-500/30 flex items-center justify-center shrink-0">
-                  <svg className="w-4.5 h-4.5 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                  </svg>
-                </div>
-                <h3 className="text-sm font-semibold text-white">{t('sessionEnd.confirmEndTitle')}</h3>
-              </div>
-              <p className="mt-3 text-xs leading-relaxed text-neutral-400">
-                {t('sessionEnd.confirmEndMessage')}
-              </p>
-            </div>
-            <div className="px-5 py-4 flex flex-col gap-2">
-              <button
-                onClick={async () => {
-                  setShowEndConfirm(false);
-                  if (!isPaused) {
-                    try { await pauseRecording(); } catch (e) { console.error(e); }
-                  }
-                  router.push("/dashboard");
-                }}
-                className="w-full py-2.5 text-xs font-medium text-neutral-900 bg-neutral-100 active:bg-white rounded-xl transition-colors flex items-center justify-center gap-2"
-              >
-                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                </svg>
-                {t('sessionEnd.pauseAndLeave')}
-              </button>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setShowEndConfirm(false)}
-                  className="flex-1 py-2.5 text-xs text-neutral-300 bg-neutral-900 border border-neutral-800 active:bg-neutral-800 active:border-neutral-700 active:text-white rounded-xl transition-colors"
-                >
-                  {t('common.keepGoing')}
-                </button>
-                <button
-                  onClick={stopRecording}
-                  className="flex-1 py-2.5 text-xs font-medium text-red-300 bg-red-500/10 border border-red-500/30 active:bg-red-500/20 active:text-red-200 rounded-xl transition-colors"
-                >
-                  {t('sessionEnd.endSession')}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmDialog
+        open={showEndConfirm}
+        onCancel={() => setShowEndConfirm(false)}
+        onConfirm={() => {
+          setShowEndConfirm(false);
+          stopRecording();
+        }}
+        onTertiary={async () => {
+          setShowEndConfirm(false);
+          if (!isPaused) {
+            try { await pauseRecording(); } catch (e) { console.error(e); }
+          }
+          router.push("/dashboard");
+        }}
+        variant="destructive"
+        title={t('sessionEnd.confirmEndTitle')}
+        description={t('sessionEnd.confirmEndMessage')}
+        confirmLabel={t('sessionEnd.endSession')}
+        cancelLabel={t('common.keepGoing')}
+        tertiaryLabel={t('sessionEnd.pauseAndLeave')}
+        tertiaryIcon={
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+          </svg>
+        }
+      />
 
       {/* Plan Complete Modal */}
-      {showPlanCompleteModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-md p-4">
-          <div className="bg-neutral-900 border border-neutral-800 rounded-2xl max-w-sm w-full overflow-hidden">
-            <div className="px-5 pt-5 pb-4 border-b border-neutral-800/70">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-neutral-800 border border-neutral-700 flex items-center justify-center">
-                  <svg className="w-5 h-5 text-neutral-200" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                  </svg>
-                </div>
-                <h3 className="text-base font-semibold text-white">{t('session.sessionComplete')}</h3>
-              </div>
-            </div>
-            <div className="px-5 py-5">
-              <p className="text-neutral-400 text-xs mb-5 leading-relaxed">
-                {t('session.congratulationsComplete')}
-              </p>
-              <button
-                onClick={() => {
-                  setShowPlanCompleteModal(false);
-                  stopRecording();
-                }}
-                className="w-full py-3 px-4 bg-neutral-100 active:bg-white text-neutral-900 font-medium text-sm rounded-xl transition-colors"
-              >
-                {t('sessionEnd.endSession')}
-              </button>
-              <button
-                onClick={() => setShowPlanCompleteModal(false)}
-                className="w-full mt-2 py-2 px-4 text-xs text-neutral-400 active:text-white transition-colors"
-              >
-                {t('common.keepGoing')}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmDialog
+        open={showPlanCompleteModal}
+        onCancel={() => setShowPlanCompleteModal(false)}
+        onConfirm={() => {
+          setShowPlanCompleteModal(false);
+          stopRecording();
+        }}
+        variant="neutral"
+        title={t('session.sessionComplete')}
+        description={t('session.congratulationsComplete')}
+        confirmLabel={t('sessionEnd.endSession')}
+        cancelLabel={t('common.keepGoing')}
+        confirmTone="primary"
+      />
 
       {/* Camera Overlay - Full screen, outside tab content */}
       {cameraMode !== 'closed' && (

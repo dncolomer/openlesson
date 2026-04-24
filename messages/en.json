@@ -1430,7 +1430,12 @@
     "uploadImage": "Upload Image",
     "clear": "Clear",
     "place": "Place",
-    "cancelLabel": "Cancel"
+    "cancelLabel": "Cancel",
+    "submitToHelios": "Submit to Helios",
+    "submitting": "Submitting…",
+    "submitHint": "Ask the tutor to look at what you've got so far",
+    "alreadySubmitted": "No changes since your last submission",
+    "nothingToSubmit": "Nothing to submit yet"
   },
   "language": {
     "select": "Language",

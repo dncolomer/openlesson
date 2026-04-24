@@ -8,6 +8,7 @@ import { isProbeTyped, markProbeTyped } from "@/lib/welcomeState";
 import { TutorWelcome } from "./TutorWelcome";
 import { TutorBackground } from "./TutorBackground";
 import { ListenButton } from "./ListenButton";
+import { ConfirmDialog } from "./ui/ConfirmDialog";
 
 const MAX_PROBES = 5;
 
@@ -16,6 +17,12 @@ interface MobileProbesTabProps {
   sessionPlan?: SessionPlan | null;
   onArchiveProbe?: (probeId: string) => Promise<void>;
   onToggleFocus?: (probeId: string, focused: boolean) => void;
+  /**
+   * Destructive — archives every active probe for this session and
+   * generates a fresh one for the current plan step. Called with user
+   * confirmation only.
+   */
+  onResetProbes?: () => Promise<void>;
   archivingProbeId?: string | null;
   isGeneratingProbe?: boolean;
   tutorName?: string;
@@ -28,11 +35,14 @@ interface MobileProbesTabProps {
   sessionId?: string;
   /** BCP-47 language override for TTS. */
   ttsLanguage?: string;
+  /** True while recording + not paused — gates destructive reset. */
+  isSessionActive?: boolean;
 }
 
 export function MobileProbesTab({
   probes,
   onArchiveProbe,
+  onResetProbes,
   archivingProbeId,
   isGeneratingProbe = false,
   tutorName,
@@ -42,12 +52,35 @@ export function MobileProbesTab({
   isStartingSession = false,
   sessionId,
   ttsLanguage,
+  isSessionActive = false,
 }: MobileProbesTabProps) {
   const { t } = useI18n();
 
   const activeProbes = useMemo(() => probes.filter(p => !p.archived), [probes]);
 
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [resettingProbes, setResettingProbes] = useState(false);
+  const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
+
+  // Reset Helios — destructive. We archive every active probe and blow
+  // away the guiding-question chain Helios has built up for this
+  // session, so we require explicit confirmation through the shared
+  // ConfirmDialog (matches desktop).
+  const handleResetHelios = () => {
+    if (!onResetProbes || resettingProbes) return;
+    setResetConfirmOpen(true);
+  };
+
+  const confirmResetHelios = async () => {
+    if (!onResetProbes || resettingProbes) return;
+    setResetConfirmOpen(false);
+    setResettingProbes(true);
+    try {
+      await onResetProbes();
+    } finally {
+      setResettingProbes(false);
+    }
+  };
 
   // Keep index in bounds when list changes
   useEffect(() => {
@@ -148,6 +181,29 @@ export function MobileProbesTab({
                 {t('probes.waitingForTutor')}
               </p>
             )}
+            {/* Reset Helios — allow forcing a fresh probe even when the panel
+                is empty (e.g., the tutor stalled or we want a different
+                question). The handler already handles the zero-probe case. */}
+            {onResetProbes && !isGeneratingProbe && (
+              <button
+                onClick={handleResetHelios}
+                disabled={resettingProbes}
+                aria-label="Reset Helios"
+                className="mt-2 inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-neutral-700 bg-neutral-800 text-xs text-neutral-300 active:text-neutral-100 active:border-neutral-600 active:bg-neutral-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              >
+                {resettingProbes ? (
+                  <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                  </svg>
+                ) : (
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                )}
+                <span>Reset {displayTutorName}</span>
+              </button>
+            )}
           </div>
         ) : (
           <>
@@ -224,7 +280,28 @@ export function MobileProbesTab({
                   </button>
                 </div>
                 <div className="mt-2 flex flex-col items-center gap-0.5">
-                  <span className="text-sm font-medium text-neutral-200">{displayTutorName}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium text-neutral-200">{displayTutorName}</span>
+                    {onResetProbes && (
+                      <button
+                        onClick={handleResetHelios}
+                        disabled={resettingProbes}
+                        aria-label="Reset Helios"
+                        className="p-1.5 rounded-md text-neutral-400 active:text-neutral-100 active:bg-neutral-800/60 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                      >
+                        {resettingProbes ? (
+                          <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                          </svg>
+                        ) : (
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                          </svg>
+                        )}
+                      </button>
+                    )}
+                  </div>
                   {activeProbes.length > 0 && (
                     <span className="font-mono text-[10px] text-white tabular-nums">
                       {String(currentIndex + 1).padStart(2, "0")} / {String(total).padStart(2, "0")}
@@ -323,6 +400,22 @@ export function MobileProbesTab({
       >
         Art by Piotr Binkowski
       </a>
+
+      {/* Reset Helios confirmation — see desktop twin for rationale. */}
+      <ConfirmDialog
+        open={resetConfirmOpen}
+        onCancel={() => setResetConfirmOpen(false)}
+        onConfirm={confirmResetHelios}
+        variant="destructive"
+        title="Reset Helios?"
+        description={
+          activeProbes.length > 0
+            ? `This will permanently archive the ${activeProbes.length} current ${activeProbes.length === 1 ? "probe" : "probes"} and generate a fresh question for the current step. This action cannot be undone.`
+            : "This will generate a fresh question for the current step. Any in-flight probe will be archived."
+        }
+        confirmLabel="Reset Helios"
+        cancelLabel="Cancel"
+      />
     </div>
   );
 }

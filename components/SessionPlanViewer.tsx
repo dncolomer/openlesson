@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { type SessionPlan, type ToolAction } from "@/lib/storage";
 import { useI18n } from "@/lib/i18n";
+import { ConfirmDialog } from "./ui/ConfirmDialog";
 
 /**
  * Telemetry callback: fires on every user interaction in this panel.
@@ -21,6 +22,8 @@ interface SessionPlanViewerProps {
   error?: string | null;
   onAdvanceStep?: (forceAdvance?: boolean) => Promise<void>;
   onRollbackToStep?: (stepIndex: number) => Promise<void>;
+  onSkipToStep?: (stepIndex: number) => Promise<void>;
+  onRegeneratePlan?: (reason?: string) => Promise<void>;
   autoAdvance?: boolean;
   onToggleAutoAdvance?: (value: boolean) => void;
   sessionId?: string;
@@ -31,7 +34,7 @@ interface SessionPlanViewerProps {
   isSessionActive?: boolean;
 }
 
-export function SessionPlanViewer({ plan, loading, error, onAdvanceStep, onRollbackToStep, autoAdvance = true, onToggleAutoAdvance, sessionId, onOpenResources, onOpenPractice, onAskAssistant, onToolEvent, isSessionActive = false }: SessionPlanViewerProps) {
+export function SessionPlanViewer({ plan, loading, error, onAdvanceStep, onRollbackToStep, onSkipToStep, onRegeneratePlan, autoAdvance = true, onToggleAutoAdvance, sessionId, onOpenResources, onOpenPractice, onAskAssistant, onToolEvent, isSessionActive = false }: SessionPlanViewerProps) {
   const { t } = useI18n();
   const [advancing, setAdvancing] = useState(false);
   const [rollingBack, setRollingBack] = useState(false);
@@ -40,6 +43,15 @@ export function SessionPlanViewer({ plan, loading, error, onAdvanceStep, onRollb
   const [showAdvanceDialog, setShowAdvanceDialog] = useState(false);
   const [advanceDialogReasoning, setAdvanceDialogReasoning] = useState("");
   const [analyzingAdvance, setAnalyzingAdvance] = useState(false);
+  const [skipping, setSkipping] = useState(false);
+  const [skipTargetIdx, setSkipTargetIdx] = useState<number | null>(null);
+  // Separate "pending confirmation" index from the "in flight" index so
+  // the ConfirmDialog has one source of truth for open/closed state and
+  // the spinner on the button only shows once the user actually confirms.
+  const [skipPendingIdx, setSkipPendingIdx] = useState<number | null>(null);
+  const [regenerating, setRegenerating] = useState(false);
+  const [showRegenerateDialog, setShowRegenerateDialog] = useState(false);
+  const [regenerateReason, setRegenerateReason] = useState("");
 
   const toggleStep = (stepId: string) => {
     // stepId may be suffixed with "_collapsed" when collapsing an
@@ -191,6 +203,53 @@ export function SessionPlanViewer({ plan, loading, error, onAdvanceStep, onRollb
     }
   };
 
+  const handleSkipToStep = (e: React.MouseEvent, stepIndex: number) => {
+    e.stopPropagation();
+    if (!onSkipToStep || skipping) return;
+    // Open confirmation. Actual skip runs in `confirmSkipToStep`.
+    setSkipPendingIdx(stepIndex);
+  };
+
+  const confirmSkipToStep = async () => {
+    const stepIndex = skipPendingIdx;
+    if (stepIndex == null || !onSkipToStep || skipping) return;
+    const fromIdx = plan?.currentStepIndex ?? 0;
+    const skippedCount = stepIndex - fromIdx;
+    onToolEvent?.("skip", {
+      fromStepIndex: fromIdx,
+      toStepIndex: stepIndex,
+      skippedCount,
+    });
+    setSkipPendingIdx(null);
+    setSkipping(true);
+    setSkipTargetIdx(stepIndex);
+    try {
+      await onSkipToStep(stepIndex);
+    } finally {
+      setSkipping(false);
+      setSkipTargetIdx(null);
+    }
+  };
+
+  const handleRegeneratePlan = async () => {
+    if (!onRegeneratePlan || regenerating) return;
+    onToolEvent?.("regenerate", {
+      currentStepIndex: plan?.currentStepIndex ?? 0,
+      totalSteps: plan?.steps?.length ?? 0,
+      reason: regenerateReason || null,
+    });
+    setShowRegenerateDialog(false);
+    setRegenerating(true);
+    try {
+      await onRegeneratePlan(regenerateReason || undefined);
+    } finally {
+      setRegenerating(false);
+      setRegenerateReason("");
+    }
+  };
+
+
+
   // Enhanced validation - check for various corruption states
   const isCorrupted = plan && (
     !plan.steps || 
@@ -300,15 +359,17 @@ export function SessionPlanViewer({ plan, loading, error, onAdvanceStep, onRollb
 
           // Collapsed view
           if (!isExpanded) {
+            const canSkip = !autoAdvance && !isActive && !isCompleted && !isSkipped && !!onSkipToStep && idx > (plan.currentStepIndex ?? 0);
             return (
               <div key={step.id} className="relative group">
                 {/* Timeline dot — centered on the line (x=15 in container, row starts at x=40) */}
                 <div className={`absolute -left-[25px] top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full transition-all ${dotClass}`} />
+                {/* Expand/collapse — full row, but leave room on right for skip button */}
                 <button
                   onClick={() => toggleStep(step.id)}
                   className={`w-full flex-1 min-h-[3rem] text-left ${cardBase}`}
                 >
-                  <div className="flex items-center gap-4 px-5 py-3.5">
+                  <div className={`flex items-center gap-4 px-5 py-3.5 ${canSkip ? "pr-24" : ""}`}>
                     <span className={`shrink-0 font-mono text-[11px] tabular-nums ${isActive ? "text-neutral-300" : "text-neutral-600"}`}>
                       {String(idx + 1).padStart(2, "0")}
                     </span>
@@ -325,6 +386,22 @@ export function SessionPlanViewer({ plan, loading, error, onAdvanceStep, onRollb
                     </svg>
                   </div>
                 </button>
+                {/* Skip to here — sibling of the expand button to avoid nested <button> */}
+                {canSkip && (
+                  <button
+                    onClick={(e) => handleSkipToStep(e, idx)}
+                    disabled={skipping}
+                    title="Skip to this step"
+                    className="absolute right-10 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 px-2 py-1 text-[10px] font-medium rounded-md bg-white/10 border border-white/20 text-white hover:bg-white/20 transition-all"
+                  >
+                    {skipping && skipTargetIdx === idx ? (
+                      <svg className="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                      </svg>
+                    ) : "Skip to"}
+                  </button>
+                )}
               </div>
             );
           }
@@ -438,6 +515,35 @@ export function SessionPlanViewer({ plan, loading, error, onAdvanceStep, onRollb
                   </div>
                 )}
 
+                {/* Skip to here button — pending steps ahead of current, manual mode */}
+                {!autoAdvance && !isActive && !isCompleted && !isSkipped && onSkipToStep && idx > (plan.currentStepIndex ?? 0) && (
+                  <div className="@container mt-2.5">
+                    <button
+                      onClick={(e) => handleSkipToStep(e, idx)}
+                      disabled={skipping}
+                      title="Skip to this step"
+                      className="px-2.5 py-1.5 text-[11px] font-medium rounded-md bg-white/10 border border-white/20 text-white hover:bg-white/20 disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center gap-1.5"
+                    >
+                      {skipping && skipTargetIdx === idx ? (
+                        <>
+                          <svg className="w-3.5 h-3.5 shrink-0 animate-spin" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                          </svg>
+                          <span className="hidden @[14rem]:inline truncate">Skipping...</span>
+                        </>
+                      ) : (
+                        <>
+                          <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M13 5l7 7-7 7M5 5l7 7-7 7" />
+                          </svg>
+                          <span className="hidden @[14rem]:inline truncate">Skip to here</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                )}
+
                 {/* Rollback button - only on completed steps, hidden in auto mode */}
                 {!autoAdvance && isCompleted && onRollbackToStep && (
                   <div className="@container mt-2.5">
@@ -473,55 +579,109 @@ export function SessionPlanViewer({ plan, loading, error, onAdvanceStep, onRollb
         })}
       </div>
 
-      {/* Advance Confirmation Dialog */}
-      {showAdvanceDialog && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-          <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-5 max-w-sm mx-4 shadow-2xl">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="w-10 h-10 rounded-full bg-amber-500/20 flex items-center justify-center">
-                <svg className="w-5 h-5 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                </svg>
-              </div>
-              <h3 className="text-base font-semibold text-white">{t('sessionPlan.aiSuggestsStaying')}</h3>
-            </div>
-            <p className="text-sm text-neutral-400 mb-4 leading-relaxed">
-              {advanceDialogReasoning}
-            </p>
-            <p className="text-xs text-neutral-500 mb-4">
-              {t('sessionPlan.canStillAdvance')}
-            </p>
-            <div className="flex gap-2.5">
-              <button
-                onClick={() => {
-                  const fromStepIndex = plan?.currentStepIndex ?? 0;
-                  const currentStep = plan?.steps?.[fromStepIndex];
-                  onToolEvent?.("cancel_advance", {
-                    source: "client",
-                    fromStepIndex,
-                    via: "force_advance_dialog",
-                    stepId: currentStep?.id,
-                    stepDescription: currentStep?.description,
-                    stepType: currentStep?.type,
-                    reasoning: advanceDialogReasoning.slice(0, 120),
-                  });
-                  setShowAdvanceDialog(false);
-                }}
-                className="flex-1 py-2.5 text-sm text-neutral-400 border border-neutral-700 hover:border-neutral-600 rounded-lg transition-colors"
-              >
-                {t('sessionPlan.stayOnStep')}
-              </button>
-              <button
-                onClick={handleForceAdvance}
-                className="flex-1 py-2.5 text-sm text-white bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/30 rounded-lg transition-colors"
-              >
-                {t('sessionPlan.continueAnyway')}
-              </button>
-            </div>
-          </div>
+      {/* Plan control actions — manual mode only */}
+      {!autoAdvance && isSessionActive && onRegeneratePlan && (
+        <div className="flex items-center gap-2 pt-3 mt-1 border-t border-neutral-800/60 px-1">
+          <button
+            onClick={() => setShowRegenerateDialog(true)}
+            disabled={regenerating}
+            title="Regenerate remaining steps"
+            className="flex-1 py-2 text-[11px] font-medium rounded-lg bg-neutral-900 border border-neutral-800 text-neutral-400 hover:bg-neutral-800 hover:border-neutral-700 hover:text-neutral-200 disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-1.5"
+          >
+            {regenerating ? (
+              <svg className="w-3 h-3 animate-spin shrink-0" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+              </svg>
+            ) : (
+              <svg className="w-3 h-3 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+            )}
+            <span>Regenerate Plan</span>
+          </button>
         </div>
       )}
 
+      {/* Regenerate Plan Dialog — optional textarea body so the user can
+          explain why; wired through as the `reason` argument on the
+          parent-provided onRegeneratePlan callback. */}
+      <ConfirmDialog
+        open={showRegenerateDialog}
+        onCancel={() => { setShowRegenerateDialog(false); setRegenerateReason(""); }}
+        onConfirm={handleRegeneratePlan}
+        variant="info"
+        title="Regenerate Remaining Steps"
+        description="This will replace all remaining steps with a fresh plan. Completed steps will be preserved."
+        confirmLabel="Regenerate"
+        cancelLabel="Cancel"
+        confirmBusy={regenerating}
+      >
+        <textarea
+          value={regenerateReason}
+          onChange={(e) => setRegenerateReason(e.target.value)}
+          placeholder="Optional: why are you regenerating? (e.g. 'I want to focus more on X')"
+          className="w-full px-3 py-2 text-sm bg-neutral-800 border border-neutral-700 rounded-lg text-neutral-200 placeholder-neutral-600 resize-none focus:outline-none focus:border-neutral-600"
+          rows={2}
+        />
+      </ConfirmDialog>
+
+      {/* Advance Confirmation Dialog — shown when the readiness eval
+          says "not yet" but the user wants to override anyway. */}
+      <ConfirmDialog
+        open={showAdvanceDialog}
+        onCancel={() => {
+          const fromStepIndex = plan?.currentStepIndex ?? 0;
+          const currentStep = plan?.steps?.[fromStepIndex];
+          onToolEvent?.("cancel_advance", {
+            source: "client",
+            fromStepIndex,
+            via: "force_advance_dialog",
+            stepId: currentStep?.id,
+            stepDescription: currentStep?.description,
+            stepType: currentStep?.type,
+            reasoning: advanceDialogReasoning.slice(0, 120),
+          });
+          setShowAdvanceDialog(false);
+        }}
+        onConfirm={handleForceAdvance}
+        variant="warning"
+        title={t('sessionPlan.aiSuggestsStaying')}
+        description={advanceDialogReasoning}
+        confirmLabel={t('sessionPlan.continueAnyway')}
+        cancelLabel={t('sessionPlan.stayOnStep')}
+      >
+        <p className="text-xs text-neutral-500">
+          {t('sessionPlan.canStillAdvance')}
+        </p>
+      </ConfirmDialog>
+
+      {/* Skip-to-step confirmation — irreversible, so we force an
+          explicit acknowledgement. Opens when a canSkip button is
+          clicked; confirming kicks off the async skip flow which also
+          archives active probes and regenerates a fresh one for the
+          new current step (see handleSkipToStep in SessionView). */}
+      {(() => {
+        const pendingIdx = skipPendingIdx;
+        const fromIdx = plan?.currentStepIndex ?? 0;
+        const skippedCount = pendingIdx == null ? 0 : pendingIdx - fromIdx;
+        const stepWord = skippedCount === 1 ? "step" : "steps";
+        return (
+          <ConfirmDialog
+            open={pendingIdx != null}
+            onCancel={() => setSkipPendingIdx(null)}
+            onConfirm={confirmSkipToStep}
+            variant="warning"
+            title={`Skip ahead ${skippedCount} ${stepWord}?`}
+            description={
+              "This is irreversible — skipped steps will be marked as complete and you will not be able to return to them in this session.\n\nYour current probes will also be archived and a fresh one generated for the new step."
+            }
+            confirmLabel="Skip ahead"
+            cancelLabel="Stay on step"
+            confirmTone="warning"
+          />
+        );
+      })()}
     </div>
   );
 }

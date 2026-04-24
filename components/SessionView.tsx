@@ -43,7 +43,7 @@ import { ProbesPanel } from "./ProbesPanel";
 import { SessionControlBar } from "./SessionControlBar";
 import { SessionPlanViewer } from "./SessionPlanViewer";
 import { ResizablePane, type ResizablePaneHandle } from "./ResizablePane";
-import { WhiteboardCanvas } from "./WhiteboardCanvas";
+import { ExcalidrawCanvas } from "./ExcalidrawCanvas";
 import { ToolsPanel, type Tool } from "./ToolsPanel";
 import { LLMChat, type ChatMessage } from "./LLMChat";
 import { DataInputTool } from "./DataInputTool";
@@ -56,6 +56,7 @@ import { LocalContextBuffer } from "@/lib/local-context";
 
 import { PopOutBanner } from "./PopOutBanner";
 import { PlanResourcesPanel } from "./PlanResourcesPanel";
+import { ConfirmDialog } from "./ui/ConfirmDialog";
 import { 
   useSessionSync, 
   openPopOutWindow, 
@@ -82,6 +83,59 @@ function isDuplicateProbe(newText: string, existingProbes: { text: string; archi
     }
     return false;
   });
+}
+
+/**
+ * Small inline button for the notebook footer. Kept as a separate component
+ * so it can own its own `isSubmitting` state without bloating SessionView's
+ * already-large state surface — the parent just passes an async onSubmit.
+ *
+ * The `disabled` prop covers two distinct reasons to block submission:
+ *   1. Notebook empty (nothing to submit).
+ *   2. Notebook content unchanged since last submit (no point re-asking).
+ * The parent decides which; we just reflect the result.
+ */
+function NotebookSubmitButton({
+  onSubmit,
+  disabled,
+  disabledReason,
+}: {
+  onSubmit: () => Promise<void> | void;
+  disabled?: boolean;
+  disabledReason?: string;
+}) {
+  const { t } = useI18n();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const handleClick = async () => {
+    if (isSubmitting || disabled) return;
+    setIsSubmitting(true);
+    try {
+      await onSubmit();
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+  return (
+    <button
+      onClick={handleClick}
+      disabled={isSubmitting || disabled}
+      title={disabled ? (disabledReason ?? '') : t('whiteboard.submitHint')}
+      aria-label={t('whiteboard.submitToHelios')}
+      className="inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] text-white bg-white/10 border border-white/30 hover:bg-white/20 hover:border-white/50 disabled:opacity-40 disabled:cursor-not-allowed rounded-md transition-colors"
+    >
+      {isSubmitting ? (
+        <svg className="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24">
+          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+        </svg>
+      ) : (
+        <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M5 12l5 5L20 7" />
+        </svg>
+      )}
+      <span>{isSubmitting ? t('whiteboard.submitting') : t('whiteboard.submitToHelios')}</span>
+    </button>
+  );
 }
 
 // Configuration
@@ -135,6 +189,14 @@ export function SessionView({ sessionId }: { sessionId: string }) {
 
   // Notebook
   const [notebookContent, setNotebookContent] = useState("");
+
+  // "Submit to Helios" dirty tracking — becomes true on any edit and is
+  // cleared on a successful submit. Initial value `true` so the first-ever
+  // submit is allowed (provided the tool has non-empty content). The state
+  // lives here rather than inside the tool components so tool-switching
+  // doesn't reset it.
+  const [canvasDirtyForHelios, setCanvasDirtyForHelios] = useState(true);
+  const [notebookDirtyForHelios, setNotebookDirtyForHelios] = useState(true);
 
 
 
@@ -1503,6 +1565,65 @@ export function SessionView({ sessionId }: { sessionId: string }) {
   // `heartbeat` as a dep of every `logTool` caller.
   recordTransferEventRef.current = heartbeat.recordTransferEvent;
 
+  /**
+   * Manual "Submit to Helios" — triggered by the user from the canvas or
+   * notebook toolbar. This is an out-of-band analysis request: the tutor
+   * normally polls every `ANALYSIS_INTERVAL_MS`, but the user explicitly
+   * wants attention *now* (e.g. "I've sketched my answer, please look").
+   *
+   * Two steps:
+   *   1. Flush tool state to Supabase via `runStorageHeartbeat`. The
+   *      analysis endpoint reads the most recent notebook/canvas uploads
+   *      by `sessionId`, so we must ensure the latest edits are stored
+   *      before asking Helios to look.
+   *   2. Fire `runAnalysisHeartbeat`. Both run-functions are guarded
+   *      against concurrent invocation (`isAnalyzingRef`, hook-level
+   *      `isAnalysisRunningRef`), so racing with the 10s timer is safe.
+   *
+   * `logTool` is called up front so the click is always recorded, even if
+   * the analysis early-exits (e.g. observer off, muted, already running).
+   */
+  const handleSubmitToHelios = useCallback(
+    async (toolName: "canvas" | "notebook") => {
+      const metadata: Record<string, unknown> = {};
+      if (toolName === "notebook") {
+        metadata.contentLength = notebookContentRef.current?.length ?? 0;
+      } else {
+        metadata.hasCanvas = !!whiteboardDataRef.current;
+      }
+      // Fire-and-forget the log; we don't want the network round-trip to
+      // delay the user-perceived submit.
+      void logTool(toolName, "submit_to_helios", metadata);
+
+      try {
+        // 1. Push latest tool state to storage so the backend has it.
+        await runStorageHeartbeat();
+      } catch (err) {
+        console.warn("[SubmitToHelios] storage heartbeat failed:", err);
+        // Continue anyway — analysis can still run against the previously
+        // stored state; better than silently doing nothing.
+      }
+
+      try {
+        // 2. Ask Helios to analyse now.
+        await runAnalysisHeartbeat();
+      } catch (err) {
+        console.warn("[SubmitToHelios] analysis heartbeat failed:", err);
+      }
+
+      // Clear the dirty flag so the button disables until the user edits
+      // again. We do this even if the analysis heartbeat threw — the user
+      // has done everything they can; re-enabling the button would invite
+      // spam retries without new content.
+      if (toolName === "canvas") {
+        setCanvasDirtyForHelios(false);
+      } else {
+        setNotebookDirtyForHelios(false);
+      }
+    },
+    [logTool, runStorageHeartbeat, runAnalysisHeartbeat],
+  );
+
   const checkMicrophone = async () => {
     setMicStatus("checking");
     setError(null);
@@ -2430,6 +2551,211 @@ export function SessionView({ sessionId }: { sessionId: string }) {
     }
   };
 
+  // ── Skip to step ────────────────────────────────────────────────
+  const handleSkipToStep = async (stepIndex: number) => {
+    if (!session) return;
+    const currentSession = sessionRef.current || session;
+
+    try {
+      const res = await fetch("/api/session-plan/skip-steps", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sessionId: session.id, skipToIndex: stepIndex }),
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        console.error("Skip steps failed:", errorData);
+        return;
+      }
+
+      const { plan: updatedPlan } = await res.json();
+
+      if (!updatedPlan?.steps?.length || !updatedPlan?.goal) {
+        console.warn("[Skip Steps] Received invalid plan, keeping previous state");
+        return;
+      }
+
+      setSessionPlan(updatedPlan);
+      sessionPlanRef.current = updatedPlan;
+
+      // Archive all active probes + generate a fresh one for the new step
+      try {
+        const resetRes = await fetch("/api/session-plan/reset-probes", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ sessionId: session.id }),
+        });
+
+        if (resetRes.ok) {
+          const resetData = await resetRes.json();
+
+          // Mark all local probes as archived
+          const updatedSession: Session = {
+            ...currentSession,
+            probes: currentSession.probes.map(p => ({ ...p, archived: true })),
+          };
+
+          // Add the new probe if we got one
+          let finalSession: Session = updatedSession;
+          if (resetData.newProbe) {
+            const newProbe: Probe = {
+              id: resetData.newProbe.id,
+              timestamp: resetData.newProbe.timestamp,
+              gapScore: resetData.newProbe.gapScore,
+              signals: resetData.newProbe.signals,
+              text: resetData.newProbe.text,
+              requestType: resetData.newProbe.requestType,
+              planStepId: resetData.newProbe.planStepId,
+              archived: false,
+              focused: false,
+            };
+            finalSession = addProbeToSession(updatedSession, newProbe);
+            setActiveProbe(newProbe);
+            setViewingProbeIndex(finalSession.probes.length - 1);
+            lastProbeTimeRef.current = Date.now();
+          }
+
+          setSession(finalSession);
+          sessionRef.current = finalSession;
+        }
+      } catch (probeErr) {
+        console.warn("Failed to reset probes after skip:", probeErr);
+      }
+    } catch (err) {
+      console.error("Skip to step error:", err);
+    }
+  };
+
+  // ── Regenerate remaining plan steps ────────────────────────────
+  const handleRegeneratePlan = async (reason?: string) => {
+    if (!session) return;
+    const currentSession = sessionRef.current || session;
+
+    try {
+      setIsGeneratingProbe(true);
+      const res = await fetch("/api/session-plan/regenerate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sessionId: session.id, reason }),
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        console.error("Regenerate plan failed:", errorData);
+        return;
+      }
+
+      const { plan: updatedPlan } = await res.json();
+
+      if (!updatedPlan?.steps?.length || !updatedPlan?.goal) {
+        console.warn("[Regenerate] Received invalid plan, keeping previous state");
+        return;
+      }
+
+      setSessionPlan(updatedPlan);
+      sessionPlanRef.current = updatedPlan;
+
+      // Reset probes for the new current step
+      try {
+        const resetRes = await fetch("/api/session-plan/reset-probes", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ sessionId: session.id }),
+        });
+
+        if (resetRes.ok) {
+          const resetData = await resetRes.json();
+          const updatedSession: Session = {
+            ...currentSession,
+            probes: currentSession.probes.map(p => ({ ...p, archived: true })),
+          };
+
+          let finalSession: Session = updatedSession;
+          if (resetData.newProbe) {
+            const newProbe: Probe = {
+              id: resetData.newProbe.id,
+              timestamp: resetData.newProbe.timestamp,
+              gapScore: resetData.newProbe.gapScore,
+              signals: resetData.newProbe.signals,
+              text: resetData.newProbe.text,
+              requestType: resetData.newProbe.requestType,
+              planStepId: resetData.newProbe.planStepId,
+              archived: false,
+              focused: false,
+            };
+            finalSession = addProbeToSession(updatedSession, newProbe);
+            setActiveProbe(newProbe);
+            setViewingProbeIndex(finalSession.probes.length - 1);
+            lastProbeTimeRef.current = Date.now();
+          }
+
+          setSession(finalSession);
+          sessionRef.current = finalSession;
+        }
+      } catch (probeErr) {
+        console.warn("Failed to reset probes after regenerate:", probeErr);
+      }
+    } catch (err) {
+      console.error("Regenerate plan error:", err);
+    } finally {
+      setIsGeneratingProbe(false);
+    }
+  };
+
+  // ── Reset probes (standalone) ──────────────────────────────────
+  const handleResetProbes = async () => {
+    if (!session) return;
+    const currentSession = sessionRef.current || session;
+
+    try {
+      setIsGeneratingProbe(true);
+      const res = await fetch("/api/session-plan/reset-probes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sessionId: session.id }),
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        console.error("Reset probes failed:", errorData);
+        return;
+      }
+
+      const resetData = await res.json();
+      const updatedSession: Session = {
+        ...currentSession,
+        probes: currentSession.probes.map(p => ({ ...p, archived: true })),
+      };
+
+      let finalSession: Session = updatedSession;
+      if (resetData.newProbe) {
+        const newProbe: Probe = {
+          id: resetData.newProbe.id,
+          timestamp: resetData.newProbe.timestamp,
+          gapScore: resetData.newProbe.gapScore,
+          signals: resetData.newProbe.signals,
+          text: resetData.newProbe.text,
+          requestType: resetData.newProbe.requestType,
+          planStepId: resetData.newProbe.planStepId,
+          archived: false,
+          focused: false,
+        };
+        finalSession = addProbeToSession(updatedSession, newProbe);
+        setActiveProbe(newProbe);
+        setViewingProbeIndex(finalSession.probes.length - 1);
+        lastProbeTimeRef.current = Date.now();
+      }
+
+      setSession(finalSession);
+      sessionRef.current = finalSession;
+    } catch (err) {
+      console.error("Reset probes error:", err);
+    } finally {
+      setIsGeneratingProbe(false);
+    }
+  };
+
   // Populate action handlers ref for pop-out window communication
   useEffect(() => {
     actionHandlersRef.current = {
@@ -3144,26 +3470,43 @@ export function SessionView({ sessionId }: { sessionId: string }) {
                     )}
 
                     {activeTool === "canvas" && (
-                      <WhiteboardCanvas
+                      <ExcalidrawCanvas
                         initialData={whiteboardData || undefined}
-                        onCanvasChange={(dataUrl) => {
-                          setWhiteboardData(dataUrl);
+                        onCanvasChange={(data) => {
+                          setWhiteboardData(data);
+                          // Any canvas change re-arms the submit button.
+                          setCanvasDirtyForHelios(true);
                           if (sessionRef.current) {
-                            sessionRef.current = { ...sessionRef.current, metadata: { ...sessionRef.current.metadata, whiteboardData: dataUrl } };
+                            sessionRef.current = { ...sessionRef.current, metadata: { ...sessionRef.current.metadata, whiteboardData: data } };
                           }
                         }}
+                        onSubmitToHelios={() => handleSubmitToHelios("canvas")}
+                        canSubmitToHelios={canvasDirtyForHelios}
                       />
                     )}
                     {activeTool === "notebook" && (
                       <div className="h-full rounded-lg border border-neutral-800 bg-neutral-900/50 flex flex-col">
                         <textarea
                           value={notebookContent}
-                          onChange={(e) => setNotebookContent(e.target.value)}
+                          onChange={(e) => {
+                            setNotebookContent(e.target.value);
+                            // Any keystroke re-arms the submit button.
+                            setNotebookDirtyForHelios(true);
+                          }}
                           placeholder={t('session.notebookPlaceholder')}
                           className="flex-1 w-full bg-transparent border-none resize-none p-4 text-sm text-white placeholder-neutral-600 focus:outline-none focus:ring-0"
                         />
-                        <div className="shrink-0 px-3 py-2 border-t border-neutral-800">
+                        <div className="shrink-0 px-3 py-2 border-t border-neutral-800 flex items-center justify-between gap-3">
                           <span className="text-[10px] text-neutral-600">{t('session.characters', { count: notebookContent.length })}</span>
+                          <NotebookSubmitButton
+                            onSubmit={() => handleSubmitToHelios("notebook")}
+                            disabled={notebookContent.trim().length === 0 || !notebookDirtyForHelios}
+                            disabledReason={
+                              notebookContent.trim().length === 0
+                                ? t('whiteboard.nothingToSubmit')
+                                : t('whiteboard.alreadySubmitted')
+                            }
+                          />
                         </div>
                       </div>
                     )}
@@ -3334,6 +3677,7 @@ export function SessionView({ sessionId }: { sessionId: string }) {
                         onOpenResources={handleStepResources}
                         onOpenPractice={handleStepPractice}
                         onAskAssistant={handleStepAskAssistant}
+                        onResetProbes={handleResetProbes}
                         onToolEvent={(action, metadata) =>
                           logTool("probe", action, metadata ?? {})
                         }
@@ -3364,6 +3708,8 @@ export function SessionView({ sessionId }: { sessionId: string }) {
                           error={planError ?? null}
                           onAdvanceStep={handleAdvanceStep}
                           onRollbackToStep={handleRollbackToStep}
+                          onSkipToStep={handleSkipToStep}
+                          onRegeneratePlan={handleRegeneratePlan}
                           autoAdvance={autoAdvance}
                           onToggleAutoAdvance={setAutoAdvance}
                           sessionId={session.id}
@@ -3399,118 +3745,64 @@ export function SessionView({ sessionId }: { sessionId: string }) {
 
         </div>
       </div>
-      {showEndDialog && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md">
-          <div className="bg-neutral-900 border border-neutral-800 rounded-2xl p-6 w-full max-w-md">
-            <h3 className="text-base font-semibold text-white mb-2">{t('session.tutorSuggestsEnd')}</h3>
-            <p className="text-neutral-400 mb-5 text-sm leading-relaxed">{endReason}</p>
-            <div className="flex gap-2.5">
-              <button onClick={() => setShowEndDialog(false)} className="flex-1 py-2.5 text-sm text-neutral-300 bg-neutral-900 border border-neutral-800 hover:bg-neutral-800 hover:border-neutral-700 hover:text-white rounded-xl transition-colors">
-                {t('common.keepGoing')}
-              </button>
-              <button onClick={handleConfirmEnd} className="flex-1 py-2.5 text-sm font-medium text-neutral-900 bg-neutral-100 hover:bg-white rounded-xl transition-colors">
-                {t('sessionEnd.endSession')}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmDialog
+        open={showEndDialog}
+        onCancel={() => setShowEndDialog(false)}
+        onConfirm={handleConfirmEnd}
+        variant="info"
+        title={t('session.tutorSuggestsEnd')}
+        description={endReason}
+        confirmLabel={t('sessionEnd.endSession')}
+        cancelLabel={t('common.keepGoing')}
+        confirmTone="primary"
+      />
 
       {/* SessionPrepModal removed -- loading progress now inline in welcome modal */}
 
       {/* End Session Confirmation — Stop is irreversible, so we warn and
           suggest the non-destructive pause + back-to-dashboard route. */}
-      {showEndConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/70 backdrop-blur-md" onClick={() => setShowEndConfirm(false)} />
-          <div className="relative z-10 w-full max-w-md bg-neutral-900 border border-neutral-800 rounded-2xl shadow-2xl overflow-hidden">
-            <div className="px-6 pt-6 pb-5 border-b border-neutral-800/70">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-red-500/15 border border-red-500/30 flex items-center justify-center shrink-0">
-                  <svg className="w-5 h-5 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                  </svg>
-                </div>
-                <h3 className="text-base font-semibold text-white">
-                  {t('sessionEnd.confirmEndTitle')}
-                </h3>
-              </div>
-              <p className="mt-3 text-[13px] leading-relaxed text-neutral-400">
-                {t('sessionEnd.confirmEndMessage')}
-              </p>
-            </div>
-            <div className="px-6 py-4 flex flex-col gap-2">
-              <button
-                onClick={async () => {
-                  setShowEndConfirm(false);
-                  if (!isPaused) {
-                    try { await handlePause(); } catch (e) { console.error(e); }
-                  }
-                  router.push("/dashboard");
-                }}
-                className="w-full py-2.5 px-4 text-sm font-medium rounded-xl bg-neutral-100 text-neutral-900 hover:bg-white transition-colors flex items-center justify-center gap-2"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                </svg>
-                {t('sessionEnd.pauseAndLeave')}
-              </button>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setShowEndConfirm(false)}
-                  className="flex-1 py-2.5 px-4 text-sm text-neutral-300 bg-neutral-900 border border-neutral-800 hover:bg-neutral-800 hover:border-neutral-700 hover:text-white rounded-xl transition-colors"
-                >
-                  {t('sessionEnd.keepGoing')}
-                </button>
-                <button
-                  onClick={async () => {
-                    setShowEndConfirm(false);
-                    try { await stopRecording(); } catch (e) { console.error(e); }
-                  }}
-                  className="flex-1 py-2.5 px-4 text-sm font-medium text-red-300 bg-red-500/10 border border-red-500/30 hover:bg-red-500/20 hover:text-red-200 rounded-xl transition-colors"
-                >
-                  {t('sessionEnd.endSession')}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmDialog
+        open={showEndConfirm}
+        onCancel={() => setShowEndConfirm(false)}
+        onConfirm={async () => {
+          setShowEndConfirm(false);
+          try { await stopRecording(); } catch (e) { console.error(e); }
+        }}
+        onTertiary={async () => {
+          setShowEndConfirm(false);
+          if (!isPaused) {
+            try { await handlePause(); } catch (e) { console.error(e); }
+          }
+          router.push("/dashboard");
+        }}
+        variant="destructive"
+        title={t('sessionEnd.confirmEndTitle')}
+        description={t('sessionEnd.confirmEndMessage')}
+        confirmLabel={t('sessionEnd.endSession')}
+        cancelLabel={t('sessionEnd.keepGoing')}
+        tertiaryLabel={t('sessionEnd.pauseAndLeave')}
+        tertiaryIcon={
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+          </svg>
+        }
+      />
 
       {/* Plan Complete Modal - shown when all steps are done */}
-      {showPlanCompleteModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/70 backdrop-blur-md" />
-          <div className="relative z-10 w-full max-w-md bg-neutral-900 border border-neutral-800 rounded-2xl shadow-2xl overflow-hidden">
-            <div className="px-6 pt-6 pb-5 border-b border-neutral-800/70">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-neutral-800 border border-neutral-700 flex items-center justify-center">
-                  <svg className="w-5 h-5 text-neutral-200" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                  </svg>
-                </div>
-                <h2 className="text-base font-semibold text-white">{t('session.sessionComplete')}</h2>
-              </div>
-            </div>
-
-            <div className="px-6 py-5">
-              <p className="text-neutral-400 text-sm leading-relaxed mb-5">
-                {t('session.congratulationsComplete')}
-              </p>
-
-              <button
-                onClick={() => {
-                  setShowPlanCompleteModal(false);
-                  handleConfirmEnd();
-                }}
-                className="w-full py-3 px-4 text-sm font-medium bg-neutral-100 hover:bg-white text-neutral-900 rounded-xl transition-colors"
-              >
-                {t('sessionEnd.endSession')}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmDialog
+        open={showPlanCompleteModal}
+        onCancel={() => setShowPlanCompleteModal(false)}
+        onConfirm={() => {
+          setShowPlanCompleteModal(false);
+          handleConfirmEnd();
+        }}
+        variant="neutral"
+        title={t('session.sessionComplete')}
+        description={t('session.congratulationsComplete')}
+        confirmLabel={t('sessionEnd.endSession')}
+        confirmTone="primary"
+        hideCancel
+      />
     </div>
   );
 }

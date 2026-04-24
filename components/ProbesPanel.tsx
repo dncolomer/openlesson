@@ -8,6 +8,7 @@ import { isProbeTyped, markProbeTyped } from "@/lib/welcomeState";
 import { TutorWelcome } from "./TutorWelcome";
 import { TutorBackground } from "./TutorBackground";
 import { ListenButton } from "./ListenButton";
+import { ConfirmDialog } from "./ui/ConfirmDialog";
 
 const MAX_PROBES = 5;
 
@@ -29,6 +30,13 @@ interface ProbesPanelProps {
   onOpenResources?: (text: string) => void;
   onOpenPractice?: (text: string) => void;
   onAskAssistant?: (text: string) => void;
+  /**
+   * Clears all active probes for the current session and generates a
+   * fresh probe for the current plan step. Destructive — callers should
+   * confirm before firing; this panel also asks the user for explicit
+   * confirmation before invoking.
+   */
+  onResetProbes?: () => Promise<void>;
   onToolEvent?: ProbesPanelToolEvent;
   archivingProbeId?: string | null;
   isInitializing?: boolean;
@@ -63,6 +71,7 @@ export function ProbesPanel({
   onOpenResources,
   onOpenPractice,
   onAskAssistant,
+  onResetProbes,
   onToolEvent,
   archivingProbeId,
   isInitializing = false,
@@ -82,6 +91,33 @@ export function ProbesPanel({
   const activeProbes = useMemo(() => probes.filter(p => !p.archived), [probes]);
 
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [resettingProbes, setResettingProbes] = useState(false);
+  const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
+
+  // Reset Helios — destructive. Archives every active probe in this
+  // session and generates a fresh one for the current plan step. We
+  // require explicit confirmation because users lose the chain of
+  // guiding questions Helios has built up.
+  const handleResetHelios = () => {
+    if (!onResetProbes || resettingProbes) return;
+    setResetConfirmOpen(true);
+  };
+
+  const confirmResetHelios = async () => {
+    if (!onResetProbes || resettingProbes) return;
+    const probeCount = activeProbes.length;
+    onToolEvent?.("reset", {
+      activeProbesCleared: probeCount,
+      currentProbeId: activeProbes[currentIndex]?.id,
+    });
+    setResetConfirmOpen(false);
+    setResettingProbes(true);
+    try {
+      await onResetProbes();
+    } finally {
+      setResettingProbes(false);
+    }
+  };
 
   // Keep index in bounds when list changes
   useEffect(() => {
@@ -207,6 +243,30 @@ export function ProbesPanel({
                 {t('probes.waitingForTutor')}
               </p>
             )}
+            {/* Reset Helios — allow forcing a fresh probe even when the panel
+                is empty (e.g., the tutor stalled or we want a different
+                question). The handler already handles the zero-probe case. */}
+            {onResetProbes && isSessionActive && !isGeneratingProbe && (
+              <button
+                onClick={handleResetHelios}
+                disabled={resettingProbes}
+                title="Reset Helios — generates a fresh question for the current step"
+                aria-label="Reset Helios"
+                className="mt-1 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-neutral-800 text-[11px] text-neutral-500 hover:text-neutral-200 hover:border-neutral-700 hover:bg-neutral-800/40 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              >
+                {resettingProbes ? (
+                  <svg className="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                  </svg>
+                ) : (
+                  <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                )}
+                <span>Reset {displayTutorName}</span>
+              </button>
+            )}
           </div>
         ) : (
           <>
@@ -283,7 +343,29 @@ export function ProbesPanel({
                   </button>
                 </div>
                 <div className="mt-2 flex flex-col items-center gap-0.5">
-                  <span className="text-sm font-medium text-neutral-200">{displayTutorName}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium text-neutral-200">{displayTutorName}</span>
+                    {onResetProbes && isSessionActive && (
+                      <button
+                        onClick={handleResetHelios}
+                        disabled={resettingProbes}
+                        title="Reset Helios — clears all active probes and generates a fresh one"
+                        aria-label="Reset Helios"
+                        className="p-1 rounded-md text-neutral-500 hover:text-neutral-200 hover:bg-neutral-800/60 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                      >
+                        {resettingProbes ? (
+                          <svg className="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                          </svg>
+                        ) : (
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                          </svg>
+                        )}
+                      </button>
+                    )}
+                  </div>
                   {activeProbes.length > 0 && (
                     <span className="font-mono text-[10px] text-white tabular-nums">
                       {String(currentIndex + 1).padStart(2, "0")} / {String(total).padStart(2, "0")}
@@ -464,6 +546,23 @@ export function ProbesPanel({
       >
         Art by Piotr Binkowski
       </a>
+
+      {/* Reset Helios confirmation — destructive, archives the full
+          chain of guiding questions built up in this session. */}
+      <ConfirmDialog
+        open={resetConfirmOpen}
+        onCancel={() => setResetConfirmOpen(false)}
+        onConfirm={confirmResetHelios}
+        variant="destructive"
+        title="Reset Helios?"
+        description={
+          activeProbes.length > 0
+            ? `This will permanently archive the ${activeProbes.length} current ${activeProbes.length === 1 ? "probe" : "probes"} and generate a fresh question for the current step. This action cannot be undone.`
+            : "This will generate a fresh question for the current step. Any in-flight probe will be archived."
+        }
+        confirmLabel="Reset Helios"
+        cancelLabel="Cancel"
+      />
     </div>
   );
 }

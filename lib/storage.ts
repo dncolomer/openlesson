@@ -804,7 +804,16 @@ export type ToolAction =
   // so we can later learn where the student's self-assessment matches
   // (or diverges from) the model's evaluation.
   | "advance_blocked_by_llm"
-  | "advance_eval_failed";
+  | "advance_eval_failed"
+  // Self-driving controls: skip, regenerate, reset probes
+  | "skip"
+  | "regenerate"
+  | "reset_probes"
+  | "reset"
+  // Manual "Submit to Helios" — user explicitly asks the tutor to look at
+  // the current notebook/canvas state. Triggers an analysis heartbeat out
+  // of band from the 10s timer.
+  | "submit_to_helios";
 
 export interface LogToolUsageResult {
   /** True only if BOTH the storage upload and the DB insert succeeded. */

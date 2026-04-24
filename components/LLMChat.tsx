@@ -7,6 +7,7 @@ import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
 import "katex/dist/katex.min.css";
 import { useI18n } from "../lib/i18n";
+import { ConfirmDialog } from "./ui/ConfirmDialog";
 
 // Process content to handle common LaTeX escaping issues from LLMs
 function processLatexContent(content: string): string {
@@ -242,28 +243,16 @@ export function LLMChat({ problem, messages: externalMessages, onMessagesChange,
         <div ref={messagesEndRef} />
       </div>
 
-      {showClearConfirm && (
-        <>
-          <div className="fixed inset-0 bg-black/50 z-40" onClick={() => setShowClearConfirm(false)} />
-          <div className="absolute bottom-20 left-1/2 -translate-x-1/2 z-50 bg-neutral-800 border border-neutral-700 rounded-xl p-4 shadow-xl">
-            <p className="text-sm text-neutral-200 mb-3">{t('llmChat.clearConfirm')}</p>
-            <div className="flex gap-2">
-              <button
-                onClick={() => setShowClearConfirm(false)}
-                className="flex-1 px-3 py-2 text-sm bg-neutral-700 hover:bg-neutral-600 text-white rounded-lg transition-colors"
-              >
-                {t('common.cancel')}
-              </button>
-              <button
-                onClick={handleClear}
-                className="flex-1 px-3 py-2 text-sm bg-red-600 hover:bg-red-500 text-white rounded-lg transition-colors"
-              >
-                {t('llmChat.clearChat')}
-              </button>
-            </div>
-          </div>
-        </>
-      )}
+      <ConfirmDialog
+        open={showClearConfirm}
+        onCancel={() => setShowClearConfirm(false)}
+        onConfirm={handleClear}
+        variant="destructive"
+        title={t('llmChat.clearChat')}
+        description={t('llmChat.clearConfirm')}
+        confirmLabel={t('llmChat.clearChat')}
+        cancelLabel={t('common.cancel')}
+      />
 
       <form onSubmit={handleSubmit} className="px-4 py-4 bg-[#0a0a0a]">
         <div className="flex gap-2 items-stretch">

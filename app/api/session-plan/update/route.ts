@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { updateSessionPlanLLM } from "@/lib/xai";
-import { getSessionPlan, updateSessionPlan, validatePlanSteps, type SessionPlanStep, getRecentTranscripts, getRecentToolEvents, getRecentFacialData, getRecentEEGData, getRecentScreenshots, isUuid } from "@/lib/storage";
+import { getSessionPlan, getRecentTranscripts, getRecentToolEvents, getRecentFacialData, getRecentEEGData, getRecentScreenshots, isUuid } from "@/lib/storage";
 import { getUserPrompts } from "@/lib/user-prompts";
 import { createClient } from "@/lib/supabase/server";
 import { storeAnalysisResult } from "@/lib/session-analysis";
@@ -155,66 +155,19 @@ export async function POST(request: NextRequest) {
       },
     }).catch(err => console.error("[session-plan/update] storeAnalysisResult failed:", err));
 
-    // Update plan in database if it changed
-    let updatedPlan = currentPlan;
-    if (planChanged && updatedSteps) {
-      const normalizedSteps: SessionPlanStep[] = updatedSteps.map((step, idx) => ({
-        id: step.id || `step_${idx + 1}_${Date.now()}`,
-        description: step.description,
-        type: step.type,
-        order: step.order,
-        status: idx < currentStepIndex 
-          ? "completed" 
-          : idx === currentStepIndex 
-            ? "in_progress" 
-            : "pending",
-      }));
-
-      try {
-        validatePlanSteps(normalizedSteps);
-        updatedPlan = await updateSessionPlan(currentPlan.id, {
-          steps: normalizedSteps,
-          currentStepIndex,
-        }, supabase);
-      } catch (validationError) {
-        console.warn('[Plan Update] LLM returned invalid steps, falling back to current steps with status updates:', validationError);
-        const fallbackSteps: SessionPlanStep[] = currentPlan.steps.map((step, idx) => ({
-          id: step.id,
-          description: step.description,
-          type: step.type,
-          order: step.order,
-          status: idx < currentStepIndex 
-            ? "completed" 
-            : idx === currentStepIndex 
-              ? "in_progress" 
-              : step.status === "skipped" ? "skipped" : "pending",
-        }));
-        updatedPlan = await updateSessionPlan(currentPlan.id, {
-          steps: fallbackSteps,
-          currentStepIndex,
-        }, supabase);
-      }
-    } else if (currentStepIndex !== currentPlan.currentStepIndex) {
-      const normalizedSteps: SessionPlanStep[] = currentPlan.steps.map((step, idx) => ({
-        id: step.id,
-        description: step.description,
-        type: step.type,
-        order: step.order,
-        status: idx < currentStepIndex 
-          ? "completed" 
-          : idx === currentStepIndex 
-            ? "in_progress" 
-            : step.status === "skipped" ? "skipped" : "pending",
-      }));
-
-      updatedPlan = await updateSessionPlan(currentPlan.id, {
-        steps: normalizedSteps,
-        currentStepIndex,
-      }, supabase);
+    // NOTE: The LLM may suggest step changes (planChanged, updatedSteps,
+    // currentStepIndex) but we intentionally do NOT persist them to the DB.
+    // Step mutations are only allowed via the mechanical advance-step route
+    // (user-initiated). The LLM's suggestions are already stored as
+    // evaluation feedback via storeAnalysisResult above.
+    if (planChanged) {
+      console.log(`[session-plan/update] LLM suggested plan change (planChanged=${planChanged}, ` +
+        `suggestedStepIndex=${currentStepIndex}, currentStepIndex=${currentPlan.currentStepIndex}) ` +
+        `— stored as evaluation data, NOT persisted to session_plans`);
     }
 
     return NextResponse.json({
-      plan: updatedPlan,
+      plan: currentPlan,
       planChanged,
       nextRequest,
       probesToArchive,

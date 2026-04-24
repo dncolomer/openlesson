@@ -666,7 +666,10 @@
     "noFollowUpSuggestions": "No follow-up suggestions available.",
     "createLearningPlan": "Create a Learning Plan",
     "createLearningPlanDesc": "Want to dive deeper? Generate a structured learning plan with multiple sessions.",
-    "planTopicPlaceholder": "Enter a topic to create a learning plan..."
+    "planTopicPlaceholder": "Enter a topic to create a learning plan...",
+    "suggestingTopic": "Suggesting a topic based on your session...",
+    "aiSuggestedTopic": "Suggested topic based on your session:",
+    "clickToUse": "Click to use"
   },
   "analytics": {
     "breadcrumb": "Session Analytics",

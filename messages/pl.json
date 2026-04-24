@@ -666,7 +666,10 @@
     "noFollowUpSuggestions": "Brak sugestii dalszych kroków.",
     "createLearningPlan": "Utwórz Plan Nauki",
     "createLearningPlanDesc": "Chcesz zgłębić temat? Wygeneruj ustrukturyzowany plan nauki z wieloma sesjami.",
-    "planTopicPlaceholder": "Wprowadź temat, aby utworzyć plan nauki..."
+    "planTopicPlaceholder": "Wprowadź temat, aby utworzyć plan nauki...",
+    "suggestingTopic": "Sugerowanie tematu na podstawie twojej sesji...",
+    "aiSuggestedTopic": "Sugerowany temat na podstawie twojej sesji:",
+    "clickToUse": "Kliknij, aby użyć"
   },
   "session": {
     "mobileDetected": "Wykryto urządzenie mobilne",

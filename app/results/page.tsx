@@ -12,6 +12,7 @@ import {
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { useI18n } from "@/lib/i18n";
+import { FileDropZone, type AttachedFile } from "@/components/FileDropZone";
 
 interface SessionSummary {
   audioChunks: number;
@@ -44,6 +45,10 @@ function ResultsContent() {
   const [planWeeks, setPlanWeeks] = useState(4);
   const [generatingPlan, setGeneratingPlan] = useState(false);
   const [planError, setPlanError] = useState<string | null>(null);
+  const [attachedFiles, setAttachedFiles] = useState<AttachedFile[]>([]);
+  const [showFileZone, setShowFileZone] = useState(false);
+  const [suggestedPlanTopic, setSuggestedPlanTopic] = useState<string | null>(null);
+  const [suggestingTopic, setSuggestingTopic] = useState(false);
 
   useEffect(() => {
     if (!sessionId) {
@@ -180,6 +185,45 @@ function ResultsContent() {
     fetchFollowUps();
   }, [session, sessionId, followUps.length, followUpsLoading]);
 
+  // Fetch suggested plan topic when session has a report
+  useEffect(() => {
+    if (!session || !session.report || suggestedPlanTopic !== null || suggestingTopic) return;
+    
+    const fetchSuggestedTopic = async () => {
+      setSuggestingTopic(true);
+      try {
+        const res = await fetch("/api/suggest-plan-topic", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            sessionId,
+            problem: session.problem,
+            report: session.report,
+          }),
+        });
+
+        if (res.ok) {
+          const { suggestion } = await res.json();
+          if (suggestion) {
+            setSuggestedPlanTopic(suggestion);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to fetch suggested plan topic:", err);
+      } finally {
+        setSuggestingTopic(false);
+      }
+    };
+
+    fetchSuggestedTopic();
+  }, [session, sessionId, suggestedPlanTopic, suggestingTopic]);
+
+  const handleUseSuggestedTopic = () => {
+    if (suggestedPlanTopic) {
+      setPlanTopic(suggestedPlanTopic);
+    }
+  };
+
   const handleStartFollowUp = async (suggestion: FollowUpSuggestion) => {
     setStartingSession(suggestion.title);
     try {
@@ -218,13 +262,24 @@ function ResultsContent() {
     setGeneratingPlan(true);
     
     try {
+      const body: Record<string, unknown> = {
+        topic: planTopic.trim(),
+        days: planWeeks * 7,
+      };
+
+      // Include attached files if any
+      if (attachedFiles.length > 0) {
+        body.files = attachedFiles.map((f) => ({
+          name: f.name,
+          mimeType: f.mimeType,
+          data: f.data,
+        }));
+      }
+
       const response = await fetch("/api/learning-plan/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          topic: planTopic.trim(),
-          days: planWeeks * 7,
-        }),
+        body: JSON.stringify(body),
       });
 
       if (!response.ok) {
@@ -407,6 +462,35 @@ function ResultsContent() {
             <h3 className="text-sm font-medium text-neutral-300 mb-1">{t('results.createLearningPlan')}</h3>
             <p className="text-xs text-neutral-500 mb-4">{t('results.createLearningPlanDesc')}</p>
             
+            {/* AI Suggested Topic */}
+            {(suggestingTopic || suggestedPlanTopic) && (
+              <div className="mb-4">
+                {suggestingTopic ? (
+                  <div className="flex items-center gap-2 text-xs text-neutral-500">
+                    <div className="animate-spin w-3 h-3 border border-blue-500 border-t-transparent rounded-full" />
+                    {t('results.suggestingTopic')}
+                  </div>
+                ) : suggestedPlanTopic && !planTopic ? (
+                  <button
+                    onClick={handleUseSuggestedTopic}
+                    disabled={generatingPlan}
+                    className="w-full text-left p-3 rounded-lg border border-blue-500/30 bg-blue-500/10 hover:bg-blue-500/20 transition-colors group"
+                  >
+                    <div className="flex items-start gap-2">
+                      <svg className="w-4 h-4 text-blue-400 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                      </svg>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs text-blue-400 mb-1">{t('results.aiSuggestedTopic')}</p>
+                        <p className="text-sm text-white group-hover:text-blue-300 transition-colors">{suggestedPlanTopic}</p>
+                      </div>
+                      <span className="text-xs text-blue-400/70 flex-shrink-0">{t('results.clickToUse')}</span>
+                    </div>
+                  </button>
+                ) : null}
+              </div>
+            )}
+            
             <div className="space-y-3">
               <textarea
                 value={planTopic}
@@ -420,7 +504,27 @@ function ResultsContent() {
                 className="w-full px-4 py-3 border rounded-xl text-white text-sm focus:outline-none resize-none transition-colors bg-neutral-800/50 border-neutral-700 focus:border-neutral-600 placeholder-neutral-600"
               />
               
+              {/* Tool row: Attachments + Duration + Generate */}
               <div className="flex flex-wrap items-center gap-3">
+                {/* Attach files button */}
+                <button
+                  type="button"
+                  onClick={() => setShowFileZone((v) => !v)}
+                  disabled={generatingPlan}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 text-xs border rounded-lg transition-colors ${
+                    attachedFiles.length > 0
+                      ? "text-blue-400 border-blue-500/40 bg-blue-500/10"
+                      : "text-neutral-400 hover:text-white bg-neutral-800/50 hover:bg-neutral-800 border-neutral-700 hover:border-neutral-600"
+                  }`}
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M18.375 12.739l-7.693 7.693a4.5 4.5 0 01-6.364-6.364l10.94-10.94A3 3 0 1119.5 7.372L8.552 18.32m.009-.01l-.01.01m5.699-9.941l-7.81 7.81a1.5 1.5 0 002.112 2.13" />
+                  </svg>
+                  {attachedFiles.length > 0
+                    ? `${attachedFiles.length} ${attachedFiles.length === 1 ? t("planFiles.fileAttached") : t("planFiles.filesAttached")}`
+                    : t("planFiles.attachFiles")}
+                </button>
+
                 <div className="flex items-center gap-2">
                   <label className="text-xs text-neutral-500">
                     {t('planMode.howLongPlan')}
@@ -460,6 +564,21 @@ function ResultsContent() {
                   )}
                 </button>
               </div>
+
+              {/* File drop zone (expanded) */}
+              {showFileZone && (
+                <div className="space-y-2">
+                  <FileDropZone
+                    files={attachedFiles}
+                    onChange={setAttachedFiles}
+                  />
+                  {attachedFiles.length > 0 && (
+                    <p className="text-[11px] text-neutral-500 leading-snug">
+                      {t("home.attachmentsHint")}
+                    </p>
+                  )}
+                </div>
+              )}
               
               {planError && (
                 <p className="text-xs text-red-400">{planError}</p>

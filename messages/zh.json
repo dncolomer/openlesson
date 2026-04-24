@@ -666,7 +666,10 @@
     "noFollowUpSuggestions": "暂无后续建议。",
     "createLearningPlan": "创建学习计划",
     "createLearningPlanDesc": "想要深入学习？生成一个包含多个课程的结构化学习计划。",
-    "planTopicPlaceholder": "输入主题以创建学习计划..."
+    "planTopicPlaceholder": "输入主题以创建学习计划...",
+    "suggestingTopic": "根据您的课程建议主题...",
+    "aiSuggestedTopic": "根据您的课程建议的主题：",
+    "clickToUse": "点击使用"
   },
   "session": {
     "mobileDetected": "检测到移动设备",

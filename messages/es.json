@@ -666,7 +666,10 @@
     "noFollowUpSuggestions": "No hay sugerencias de seguimiento disponibles.",
     "createLearningPlan": "Crear un Plan de Aprendizaje",
     "createLearningPlanDesc": "¿Quieres profundizar más? Genera un plan de aprendizaje estructurado con múltiples sesiones.",
-    "planTopicPlaceholder": "Ingresa un tema para crear un plan de aprendizaje..."
+    "planTopicPlaceholder": "Ingresa un tema para crear un plan de aprendizaje...",
+    "suggestingTopic": "Sugiriendo un tema basado en tu sesión...",
+    "aiSuggestedTopic": "Tema sugerido basado en tu sesión:",
+    "clickToUse": "Clic para usar"
   },
   "analytics": {
     "breadcrumb": "Analíticas de Sesión",

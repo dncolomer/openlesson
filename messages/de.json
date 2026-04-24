@@ -666,7 +666,10 @@
     "noFollowUpSuggestions": "Keine Folgevorschläge verfügbar.",
     "createLearningPlan": "Lernplan erstellen",
     "createLearningPlanDesc": "Möchtest du tiefer eintauchen? Erstelle einen strukturierten Lernplan mit mehreren Sitzungen.",
-    "planTopicPlaceholder": "Gib ein Thema ein, um einen Lernplan zu erstellen..."
+    "planTopicPlaceholder": "Gib ein Thema ein, um einen Lernplan zu erstellen...",
+    "suggestingTopic": "Thema basierend auf deiner Sitzung wird vorgeschlagen...",
+    "aiSuggestedTopic": "Vorgeschlagenes Thema basierend auf deiner Sitzung:",
+    "clickToUse": "Klicken zum Verwenden"
   },
   "session": {
     "mobileDetected": "Mobilgerät erkannt",

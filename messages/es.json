@@ -663,7 +663,10 @@
     "continueLearningSuggestions": "Continuar Aprendiendo",
     "continueLearningSuggestionsDesc": "Basado en tu sesión, aquí hay temas de seguimiento sugeridos:",
     "generatingFollowUps": "Generando sugerencias de seguimiento...",
-    "noFollowUpSuggestions": "No hay sugerencias de seguimiento disponibles."
+    "noFollowUpSuggestions": "No hay sugerencias de seguimiento disponibles.",
+    "createLearningPlan": "Crear un Plan de Aprendizaje",
+    "createLearningPlanDesc": "¿Quieres profundizar más? Genera un plan de aprendizaje estructurado con múltiples sesiones.",
+    "planTopicPlaceholder": "Ingresa un tema para crear un plan de aprendizaje..."
   },
   "analytics": {
     "breadcrumb": "Analíticas de Sesión",

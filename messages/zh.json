@@ -663,7 +663,10 @@
     "continueLearningSuggestions": "继续学习",
     "continueLearningSuggestionsDesc": "根据您的课程，以下是建议的后续主题：",
     "generatingFollowUps": "正在生成后续建议...",
-    "noFollowUpSuggestions": "暂无后续建议。"
+    "noFollowUpSuggestions": "暂无后续建议。",
+    "createLearningPlan": "创建学习计划",
+    "createLearningPlanDesc": "想要深入学习？生成一个包含多个课程的结构化学习计划。",
+    "planTopicPlaceholder": "输入主题以创建学习计划..."
   },
   "session": {
     "mobileDetected": "检测到移动设备",

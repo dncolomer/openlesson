@@ -663,7 +663,10 @@
     "continueLearningSuggestions": "Tiếp Tục Học",
     "continueLearningSuggestionsDesc": "Dựa trên phiên của bạn, đây là các chủ đề theo dõi được đề xuất:",
     "generatingFollowUps": "Đang tạo gợi ý theo dõi...",
-    "noFollowUpSuggestions": "Không có gợi ý theo dõi."
+    "noFollowUpSuggestions": "Không có gợi ý theo dõi.",
+    "createLearningPlan": "Tạo Kế Hoạch Học Tập",
+    "createLearningPlanDesc": "Muốn tìm hiểu sâu hơn? Tạo một kế hoạch học tập có cấu trúc với nhiều phiên.",
+    "planTopicPlaceholder": "Nhập chủ đề để tạo kế hoạch học tập..."
   },
   "session": {
     "mobileDetected": "Phát hiện thiết bị di động",

@@ -663,7 +663,10 @@
     "continueLearningSuggestions": "Kontynuuj Naukę",
     "continueLearningSuggestionsDesc": "Na podstawie twojej sesji, oto sugerowane tematy do dalszej nauki:",
     "generatingFollowUps": "Generowanie sugestii dalszych kroków...",
-    "noFollowUpSuggestions": "Brak sugestii dalszych kroków."
+    "noFollowUpSuggestions": "Brak sugestii dalszych kroków.",
+    "createLearningPlan": "Utwórz Plan Nauki",
+    "createLearningPlanDesc": "Chcesz zgłębić temat? Wygeneruj ustrukturyzowany plan nauki z wieloma sesjami.",
+    "planTopicPlaceholder": "Wprowadź temat, aby utworzyć plan nauki..."
   },
   "session": {
     "mobileDetected": "Wykryto urządzenie mobilne",

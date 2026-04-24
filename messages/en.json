@@ -663,7 +663,10 @@
     "continueLearningSuggestions": "Continue Learning",
     "continueLearningSuggestionsDesc": "Based on your session, here are suggested follow-up topics to explore:",
     "generatingFollowUps": "Generating follow-up suggestions...",
-    "noFollowUpSuggestions": "No follow-up suggestions available."
+    "noFollowUpSuggestions": "No follow-up suggestions available.",
+    "createLearningPlan": "Create a Learning Plan",
+    "createLearningPlanDesc": "Want to dive deeper? Generate a structured learning plan with multiple sessions.",
+    "planTopicPlaceholder": "Enter a topic to create a learning plan..."
   },
   "analytics": {
     "breadcrumb": "Session Analytics",

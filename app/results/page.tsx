@@ -38,6 +38,12 @@ function ResultsContent() {
   const [followUps, setFollowUps] = useState<FollowUpSuggestion[]>([]);
   const [followUpsLoading, setFollowUpsLoading] = useState(false);
   const [startingSession, setStartingSession] = useState<string | null>(null);
+  
+  // Plan generation state
+  const [planTopic, setPlanTopic] = useState("");
+  const [planWeeks, setPlanWeeks] = useState(4);
+  const [generatingPlan, setGeneratingPlan] = useState(false);
+  const [planError, setPlanError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!sessionId) {
@@ -203,6 +209,38 @@ function ResultsContent() {
     }
   };
 
+  const handleGeneratePlan = async () => {
+    if (!planTopic.trim()) {
+      setPlanError(t("planMode.enterTopic"));
+      return;
+    }
+    setPlanError(null);
+    setGeneratingPlan(true);
+    
+    try {
+      const response = await fetch("/api/learning-plan/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          topic: planTopic.trim(),
+          days: planWeeks * 7,
+        }),
+      });
+
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        throw new Error(err.error || "Failed to generate plan");
+      }
+      
+      const data = await response.json();
+      router.push(`/plan/${data.planId}`);
+    } catch (err) {
+      setPlanError(err instanceof Error ? err.message : t("planMode.somethingWrong"));
+    } finally {
+      setGeneratingPlan(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#0a0a0a]">
@@ -360,6 +398,73 @@ function ResultsContent() {
             ) : (
               <p className="text-sm text-neutral-500 text-center py-4">{t('results.noFollowUpSuggestions')}</p>
             )}
+          </div>
+        )}
+
+        {/* Generate Learning Plan Section */}
+        {session.report && (
+          <div className="mt-6 rounded-xl border border-neutral-800 bg-neutral-900/50 p-5">
+            <h3 className="text-sm font-medium text-neutral-300 mb-1">{t('results.createLearningPlan')}</h3>
+            <p className="text-xs text-neutral-500 mb-4">{t('results.createLearningPlanDesc')}</p>
+            
+            <div className="space-y-3">
+              <textarea
+                value={planTopic}
+                onChange={(e) => {
+                  setPlanTopic(e.target.value);
+                  if (planError) setPlanError(null);
+                }}
+                placeholder={t('results.planTopicPlaceholder')}
+                rows={2}
+                disabled={generatingPlan}
+                className="w-full px-4 py-3 border rounded-xl text-white text-sm focus:outline-none resize-none transition-colors bg-neutral-800/50 border-neutral-700 focus:border-neutral-600 placeholder-neutral-600"
+              />
+              
+              <div className="flex flex-wrap items-center gap-3">
+                <div className="flex items-center gap-2">
+                  <label className="text-xs text-neutral-500">
+                    {t('planMode.howLongPlan')}
+                  </label>
+                  <select
+                    value={planWeeks}
+                    onChange={(e) => setPlanWeeks(Number(e.target.value))}
+                    disabled={generatingPlan}
+                    className="appearance-none bg-neutral-800/50 border border-neutral-700 hover:border-neutral-600 focus:border-neutral-500 focus:outline-none rounded-lg pl-3 pr-7 py-1.5 text-xs text-neutral-200 cursor-pointer transition-colors"
+                  >
+                    <option value={1}>{t('planMode.week1')}</option>
+                    <option value={2}>{t('planMode.week2')}</option>
+                    <option value={4}>{t('planMode.month1')}</option>
+                    <option value={8}>{t('planMode.month2')}</option>
+                    <option value={12}>{t('planMode.month3')}</option>
+                    <option value={26}>{t('planMode.month6')}</option>
+                  </select>
+                </div>
+                
+                <button
+                  onClick={handleGeneratePlan}
+                  disabled={!planTopic.trim() || generatingPlan}
+                  className="ml-auto py-2 px-4 text-sm font-medium rounded-lg bg-slate-200 text-slate-900 hover:bg-white disabled:bg-neutral-800 disabled:text-neutral-600 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+                >
+                  {generatingPlan ? (
+                    <>
+                      <div className="animate-spin w-4 h-4 border-2 border-slate-900 border-t-transparent rounded-full" />
+                      {t('planMode.analyzing')}
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                      </svg>
+                      {t('home.generatePlan')}
+                    </>
+                  )}
+                </button>
+              </div>
+              
+              {planError && (
+                <p className="text-xs text-red-400">{planError}</p>
+              )}
+            </div>
           </div>
         )}
 

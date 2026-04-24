@@ -663,7 +663,10 @@
     "continueLearningSuggestions": "Weiterlernen",
     "continueLearningSuggestionsDesc": "Basierend auf deiner Sitzung sind hier empfohlene Folgethemen:",
     "generatingFollowUps": "Folgevorschläge werden erstellt...",
-    "noFollowUpSuggestions": "Keine Folgevorschläge verfügbar."
+    "noFollowUpSuggestions": "Keine Folgevorschläge verfügbar.",
+    "createLearningPlan": "Lernplan erstellen",
+    "createLearningPlanDesc": "Möchtest du tiefer eintauchen? Erstelle einen strukturierten Lernplan mit mehreren Sitzungen.",
+    "planTopicPlaceholder": "Gib ein Thema ein, um einen Lernplan zu erstellen..."
   },
   "session": {
     "mobileDetected": "Mobilgerät erkannt",

@@ -391,6 +391,11 @@ export function SessionView({ sessionId }: { sessionId: string }) {
   const [prepToolLoading, setPrepToolLoading] = useState(false);
   const [showGrokipediaOnly, setShowGrokipediaOnly] = useState(false);
 
+  // Grokipedia search suggestions
+  const [grokipediaSuggestions, setGrokipediaSuggestions] = useState<string[]>([]);
+  const [grokipediaSuggestionsLoading, setGrokipediaSuggestionsLoading] = useState(false);
+  const [grokipediaManualTerm, setGrokipediaManualTerm] = useState("");
+
   // Pop-out window state
   const [isPopOutActive, setIsPopOutActive] = useState(false);
   const popOutWindowRef = useRef<Window | null>(null);
@@ -444,6 +449,36 @@ export function SessionView({ sessionId }: { sessionId: string }) {
       console.error("Prep material error:", err);
     } finally {
       setPrepToolLoading(false);
+    }
+  };
+
+  // Fetch Grokipedia search suggestions from LLM
+  const fetchGrokipediaSuggestions = async () => {
+    if (!session?.problem) return;
+    
+    setGrokipediaSuggestionsLoading(true);
+    try {
+      const currentStep = sessionPlanRef.current?.steps?.[sessionPlanRef.current.currentStepIndex];
+      const activeProbes = session.probes?.filter(p => !p.archived) || [];
+      
+      const response = await fetch("/api/suggest-grokipedia-terms", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sessionProblem: session.problem,
+          currentPlanStep: currentStep?.description,
+          activeProbes: activeProbes.map(p => ({ text: p.text })),
+        }),
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setGrokipediaSuggestions(data.terms || []);
+      }
+    } catch (err) {
+      console.error("Grokipedia suggestions error:", err);
+    } finally {
+      setGrokipediaSuggestionsLoading(false);
     }
   };
 
@@ -3556,23 +3591,120 @@ export function SessionView({ sessionId }: { sessionId: string }) {
                     {(activeTool === "grokipedia" || activeTool === "exercise" || activeTool === "reading") && (
                       <div className="h-full flex flex-col">
                         {activeTool === "grokipedia" && showGrokipediaOnly && session?.problem && (
-                          <div className="flex-1 min-h-0 p-4 overflow-auto flex flex-col items-center justify-center gap-6">
-                            <div className="text-center">
-                              <h3 className="text-lg font-medium text-white mb-2">{t('session.grokipedia')}</h3>
-                              <p className="text-sm text-neutral-400">{t('session.grokipediaDesc')}</p>
+                          <div className="flex-1 min-h-0 p-4 overflow-auto">
+                            <div className="max-w-md mx-auto space-y-6">
+                              {/* Header */}
+                              <div className="text-center">
+                                <h3 className="text-lg font-medium text-white mb-2">{t('session.grokipedia')}</h3>
+                                <p className="text-sm text-neutral-400">{t('session.grokipediaDesc')}</p>
+                              </div>
+
+                              {/* Manual search input */}
+                              <div className="flex gap-2">
+                                <input
+                                  type="text"
+                                  value={grokipediaManualTerm}
+                                  onChange={(e) => setGrokipediaManualTerm(e.target.value)}
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter' && grokipediaManualTerm.trim()) {
+                                      window.open(`https://grokipedia.com/search?q=${encodeURIComponent(grokipediaManualTerm.trim())}`, '_blank');
+                                    }
+                                  }}
+                                  placeholder={t('session.grokipediaSearchPlaceholder')}
+                                  className="flex-1 px-4 py-2.5 bg-neutral-900 border border-neutral-700 rounded-xl text-white placeholder-neutral-500 text-sm focus:outline-none focus:border-neutral-500 transition-colors"
+                                />
+                                <a
+                                  href={grokipediaManualTerm.trim() ? `https://grokipedia.com/search?q=${encodeURIComponent(grokipediaManualTerm.trim())}` : '#'}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  onClick={(e) => {
+                                    if (!grokipediaManualTerm.trim()) {
+                                      e.preventDefault();
+                                    }
+                                  }}
+                                  className={`px-4 py-2.5 rounded-xl text-sm font-medium transition-colors inline-flex items-center gap-2 ${
+                                    grokipediaManualTerm.trim()
+                                      ? 'bg-neutral-100 hover:bg-white text-neutral-900'
+                                      : 'bg-neutral-800 text-neutral-500 cursor-not-allowed'
+                                  }`}
+                                >
+                                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                  </svg>
+                                  {t('session.grokipediaSearch')}
+                                </a>
+                              </div>
+
+                              {/* Topic search shortcut */}
+                              <div className="pt-2 border-t border-neutral-800">
+                                <p className="text-xs text-neutral-500 mb-3">{t('session.grokipediaTopicSearch')}</p>
+                                <a
+                                  href={`https://grokipedia.com/search?q=${encodeURIComponent(session.problem)}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="w-full px-4 py-2.5 bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-white text-sm rounded-xl transition-colors inline-flex items-center justify-center gap-2"
+                                >
+                                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                    <circle cx="12" cy="12" r="10" />
+                                    <path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+                                  </svg>
+                                  <span className="truncate">{session.problem}</span>
+                                </a>
+                              </div>
+
+                              {/* Suggested searches section */}
+                              <div className="pt-2 border-t border-neutral-800">
+                                <div className="flex items-center justify-between mb-3">
+                                  <p className="text-xs text-neutral-500">{t('session.grokipediaSuggestedSearches')}</p>
+                                  <button
+                                    onClick={fetchGrokipediaSuggestions}
+                                    disabled={grokipediaSuggestionsLoading}
+                                    className="text-xs text-neutral-400 hover:text-white transition-colors inline-flex items-center gap-1.5 disabled:opacity-50"
+                                  >
+                                    {grokipediaSuggestionsLoading ? (
+                                      <>
+                                        <div className="w-3 h-3 border border-neutral-600 border-t-neutral-300 rounded-full animate-spin" />
+                                        {t('common.loading')}
+                                      </>
+                                    ) : grokipediaSuggestions.length > 0 ? (
+                                      <>
+                                        <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                          <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                        </svg>
+                                        {t('session.grokipediaRefresh')}
+                                      </>
+                                    ) : (
+                                      <>
+                                        <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                          <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                                        </svg>
+                                        {t('session.grokipediaGenerate')}
+                                      </>
+                                    )}
+                                  </button>
+                                </div>
+
+                                {grokipediaSuggestions.length > 0 ? (
+                                  <div className="flex flex-wrap gap-2">
+                                    {grokipediaSuggestions.map((term, idx) => (
+                                      <a
+                                        key={idx}
+                                        href={`https://grokipedia.com/search?q=${encodeURIComponent(term)}`}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="px-3 py-1.5 bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 hover:border-neutral-600 text-neutral-300 hover:text-white text-sm rounded-lg transition-colors"
+                                      >
+                                        {term}
+                                      </a>
+                                    ))}
+                                  </div>
+                                ) : !grokipediaSuggestionsLoading && (
+                                  <p className="text-xs text-neutral-600 text-center py-4">
+                                    {t('session.grokipediaNoSuggestions')}
+                                  </p>
+                                )}
+                              </div>
                             </div>
-                            <a
-                              href={`https://grokipedia.com/search?q=${encodeURIComponent(session.problem)}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="px-6 py-3 bg-neutral-100 hover:bg-white text-neutral-900 text-sm font-medium rounded-xl transition-colors inline-flex items-center gap-2"
-                            >
-                              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                <circle cx="12" cy="12" r="10" />
-                                <path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
-                              </svg>
-                              {t('session.openGrokipedia')}
-                            </a>
                           </div>
                         )}
                         {((activeTool === "grokipedia" && !showGrokipediaOnly) || activeTool === "exercise" || activeTool === "reading") && !prepToolContent && !prepToolLoading && (

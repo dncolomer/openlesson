@@ -1543,7 +1543,7 @@
     "failedToLoadNodes": "Nie udało się załadować węzłów",
     "planBuilder": "Plan Builder",
     "notes": "Notes",
-    "analytics": "Analytics",
+    "performance": "Wyniki",
     "files": "Files",
     "regenerateCoverImage": "Regenerate cover image",
     "generateCoverImage": "Generate cover image",
@@ -1551,6 +1551,28 @@
     "clickToEdit": "Click to edit",
     "addNotes": "Add notes to this plan...",
     "noNotes": "No notes for this plan yet."
+  },
+  "performanceChat": {
+    "signInRequired": "Zaloguj się, aby zobaczyć analizę wyników",
+    "welcomeTitle": "Analiza Wyników",
+    "welcomeDescription": "Zapytaj mnie o wyniki nauki w tym planie. Mogę analizować raporty z sesji, identyfikować wzorce i sugerować ulepszenia.",
+    "exampleQuestions": "Spróbuj zapytać:",
+    "example1": "Jak mi idzie ogólnie?",
+    "example2": "Które tematy wymagają więcej pracy?",
+    "example3": "Pokaż mój postęp w czasie",
+    "placeholder": "Zapytaj o wyniki...",
+    "errorMessage": "Przepraszam, nie mogłem przetworzyć Twojego zapytania. Spróbuj ponownie.",
+    "noSessions": "Brak danych sesji dla tego planu."
+  },
+  "sessionPerformanceChat": {
+    "title": "Analiza Sesji",
+    "description": "Zapytaj Heliosa o Twoje wyniki w tej sesji.",
+    "exampleQuestions": "Spróbuj zapytać:",
+    "example1": "Jak mi poszło?",
+    "example2": "Co powinienem poprawić?",
+    "example3": "Podsumuj moje luki",
+    "placeholder": "Zapytaj o tę sesję...",
+    "errorMessage": "Przepraszam, nie mogłem przeanalizować tej sesji. Spróbuj ponownie."
   },
   "planChat": {
     "chat": "Czat",

@@ -1543,7 +1543,7 @@
     "failedToLoadNodes": "加载节点失败",
     "planBuilder": "计划构建器",
     "notes": "笔记",
-    "analytics": "分析",
+    "performance": "表现",
     "files": "文件",
     "regenerateCoverImage": "重新生成封面图片",
     "generateCoverImage": "生成封面图片",
@@ -1551,6 +1551,29 @@
     "clickToEdit": "点击编辑",
     "addNotes": "为此计划添加笔记...",
     "noNotes": "此计划还没有笔记。"
+  },
+  "performanceChat": {
+    "signInRequired": "登录以查看表现洞察",
+    "welcomeTitle": "表现洞察",
+    "welcomeDescription": "向我询问关于此计划学习表现的任何问题。我可以分析课程报告、识别模式并提供改进建议。",
+    "exampleQuestions": "试试问：",
+    "example1": "我的总体表现如何？",
+    "example2": "哪些主题需要更多练习？",
+    "example3": "显示我的进步趋势",
+    "placeholder": "询问关于表现...",
+    "errorMessage": "抱歉，无法处理您的请求。请重试。",
+    "noSessions": "此计划还没有课程数据。"
+  },
+  "sessionPerformanceChat": {
+    "greeting": "恭喜你完成了这节课程！",
+    "intro": "我是Helios，一直在观察你的学习之旅。我注意到你在学习这个主题时展现了一些有趣的模式——有真正的优势，也有一些可以改进的地方。",
+    "callToAction": "问我任何关于你表现的问题。我会帮助你理解哪些做得好，以及下一步应该关注什么。",
+    "exampleQuestions": "试试问：",
+    "example1": "我表现如何？",
+    "example2": "我应该改进什么？",
+    "example3": "总结我的知识差距",
+    "placeholder": "询问关于此课程...",
+    "errorMessage": "抱歉，无法分析此课程。请重试。"
   },
   "planChat": {
     "chat": "聊天",

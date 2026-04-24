@@ -1543,7 +1543,7 @@
     "failedToLoadNodes": "Knoten konnten nicht geladen werden",
     "planBuilder": "Plan-Ersteller",
     "notes": "Notizen",
-    "analytics": "Analysen",
+    "performance": "Leistung",
     "files": "Dateien",
     "regenerateCoverImage": "Titelbild neu generieren",
     "generateCoverImage": "Titelbild generieren",
@@ -1551,6 +1551,28 @@
     "clickToEdit": "Klicken zum Bearbeiten",
     "addNotes": "Notizen zu diesem Plan hinzufügen...",
     "noNotes": "Noch keine Notizen für diesen Plan."
+  },
+  "performanceChat": {
+    "signInRequired": "Melde dich an, um Leistungseinblicke zu sehen",
+    "welcomeTitle": "Leistungseinblicke",
+    "welcomeDescription": "Frage mich alles über die Lernleistung in diesem Plan. Ich kann Sitzungsberichte analysieren, Muster erkennen und Verbesserungsvorschläge geben.",
+    "exampleQuestions": "Versuche zu fragen:",
+    "example1": "Wie läuft es insgesamt?",
+    "example2": "Welche Themen brauchen mehr Übung?",
+    "example3": "Zeige mir meinen Fortschritt über die Zeit",
+    "placeholder": "Frage zur Leistung...",
+    "errorMessage": "Entschuldigung, ich konnte deine Anfrage nicht verarbeiten. Bitte versuche es erneut.",
+    "noSessions": "Noch keine Sitzungsdaten für diesen Plan."
+  },
+  "sessionPerformanceChat": {
+    "title": "Sitzungseinblicke",
+    "description": "Frage Helios nach deiner Leistung in dieser Sitzung.",
+    "exampleQuestions": "Versuche zu fragen:",
+    "example1": "Wie habe ich abgeschnitten?",
+    "example2": "Was sollte ich verbessern?",
+    "example3": "Fasse meine Lücken zusammen",
+    "placeholder": "Frage zu dieser Sitzung...",
+    "errorMessage": "Entschuldigung, ich konnte diese Sitzung nicht analysieren. Bitte versuche es erneut."
   },
   "planChat": {
     "chat": "Chat",

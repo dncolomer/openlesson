@@ -1639,7 +1639,7 @@
     "failedToLoadNodes": "Failed to load nodes",
     "planBuilder": "Plan Builder",
     "notes": "Notes",
-    "analytics": "Analytics",
+    "performance": "Performance",
     "files": "Files",
     "regenerateCoverImage": "Regenerate cover image",
     "generateCoverImage": "Generate cover image",
@@ -1647,6 +1647,29 @@
     "clickToEdit": "Click to edit",
     "addNotes": "Add notes to this plan...",
     "noNotes": "No notes for this plan yet."
+  },
+  "performanceChat": {
+    "signInRequired": "Sign in to view performance insights",
+    "welcomeTitle": "Performance Insights",
+    "welcomeDescription": "Ask me anything about learning performance on this plan. I can analyze session reports, identify patterns, and provide improvement suggestions.",
+    "exampleQuestions": "Try asking:",
+    "example1": "How am I doing overall?",
+    "example2": "What topics need more work?",
+    "example3": "Show me my progress over time",
+    "placeholder": "Ask about performance...",
+    "errorMessage": "Sorry, I couldn't process your request. Please try again.",
+    "noSessions": "No session data found for this plan yet."
+  },
+  "sessionPerformanceChat": {
+    "greeting": "Well done on completing this session!",
+    "intro": "I'm Helios, and I've been observing your learning journey. I noticed some interesting patterns in how you approached this topic — some real strengths, and a few areas where we can sharpen things up.",
+    "callToAction": "Ask me anything about your performance. I'm here to help you understand what went well and where to focus next.",
+    "exampleQuestions": "Try asking:",
+    "example1": "How did I do?",
+    "example2": "What should I improve?",
+    "example3": "Summarize my gaps",
+    "placeholder": "Ask about this session...",
+    "errorMessage": "Sorry, I couldn't analyze this session. Please try again."
   },
   "planChat": {
     "chat": "Chat",

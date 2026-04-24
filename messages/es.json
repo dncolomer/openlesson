@@ -1604,7 +1604,7 @@
     "failedToLoadNodes": "Error al cargar nodos",
     "planBuilder": "Constructor de Plan",
     "notes": "Notas",
-    "analytics": "Analíticas",
+    "performance": "Rendimiento",
     "files": "Archivos",
     "regenerateCoverImage": "Regenerar imagen de portada",
     "generateCoverImage": "Generar imagen de portada",
@@ -1612,6 +1612,29 @@
     "clickToEdit": "Clic para editar",
     "addNotes": "Agregar notas a este plan...",
     "noNotes": "Aún no hay notas para este plan."
+  },
+  "performanceChat": {
+    "signInRequired": "Inicia sesión para ver información de rendimiento",
+    "welcomeTitle": "Información de Rendimiento",
+    "welcomeDescription": "Pregúntame cualquier cosa sobre el rendimiento de aprendizaje en este plan. Puedo analizar informes de sesiones, identificar patrones y proporcionar sugerencias de mejora.",
+    "exampleQuestions": "Intenta preguntar:",
+    "example1": "¿Cómo voy en general?",
+    "example2": "¿Qué temas necesitan más trabajo?",
+    "example3": "Muéstrame mi progreso a lo largo del tiempo",
+    "placeholder": "Preguntar sobre rendimiento...",
+    "errorMessage": "Lo siento, no pude procesar tu solicitud. Por favor intenta de nuevo.",
+    "noSessions": "Aún no hay datos de sesiones para este plan."
+  },
+  "sessionPerformanceChat": {
+    "greeting": "¡Felicidades por completar esta sesión!",
+    "intro": "Soy Helios, y he estado observando tu viaje de aprendizaje. Noté algunos patrones interesantes en cómo abordaste este tema — algunas fortalezas reales, y algunas áreas donde podemos mejorar.",
+    "callToAction": "Pregúntame lo que quieras sobre tu rendimiento. Estoy aquí para ayudarte a entender qué salió bien y en qué enfocarte después.",
+    "exampleQuestions": "Intenta preguntar:",
+    "example1": "¿Cómo me fue?",
+    "example2": "¿Qué debo mejorar?",
+    "example3": "Resume mis brechas",
+    "placeholder": "Preguntar sobre esta sesión...",
+    "errorMessage": "Lo siento, no pude analizar esta sesión. Por favor intenta de nuevo."
   },
   "planChat": {
     "chat": "Chat",

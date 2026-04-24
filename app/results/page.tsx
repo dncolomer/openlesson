@@ -10,16 +10,10 @@ import {
   type Session,
 } from "@/lib/storage";
 import { Navbar } from "@/components/Navbar";
-import { Footer } from "@/components/Footer";
 import { useI18n } from "@/lib/i18n";
 import { FileDropZone, type AttachedFile } from "@/components/FileDropZone";
-
-interface SessionSummary {
-  audioChunks: number;
-  transcripts: number;
-  eegChunks: number;
-  toolData: number;
-}
+import { SessionPerformanceChat } from "@/components/SessionPerformanceChat";
+import { TutorBackground } from "@/components/TutorBackground";
 
 interface FollowUpSuggestion {
   title: string;
@@ -32,10 +26,8 @@ function ResultsContent() {
   const searchParams = useSearchParams();
   const sessionId = searchParams.get("id");
   const [session, setSession] = useState<Session | null>(null);
-  const [summary, setSummary] = useState<SessionSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [reportLoading, setReportLoading] = useState(false);
-  const [reportError, setReportError] = useState<string | null>(null);
   const [followUps, setFollowUps] = useState<FollowUpSuggestion[]>([]);
   const [followUpsLoading, setFollowUpsLoading] = useState(false);
   const [startingSession, setStartingSession] = useState<string | null>(null);
@@ -70,39 +62,8 @@ function ResultsContent() {
     loadSession();
   }, [sessionId]);
 
-  useEffect(() => {
-    if (!sessionId || !session) return;
-
-    const loadSummary = async () => {
-      const supabase = (await import("@/lib/supabase/client")).createClient();
-
-      const user = (await supabase.auth.getUser()).data.user;
-      if (!user) return;
-
-      // Audio still lives in Supabase Storage; everything else lives on xAI Files,
-      // counted via DB rows.
-      const storagePath = `${user.id}/${sessionId}`;
-      const [audioFiles, transcriptCountRes, eegCountRes, toolCountRes] = await Promise.all([
-        supabase.storage.from("session-audio").list(storagePath, { limit: 100 }),
-        supabase.from("session_transcript").select("id", { count: "exact", head: true }).eq("session_id", sessionId),
-        supabase.from("session_eeg").select("id", { count: "exact", head: true }).eq("session_id", sessionId),
-        supabase.from("session_tool").select("id", { count: "exact", head: true }).eq("session_id", sessionId),
-      ]);
-
-      setSummary({
-        audioChunks: audioFiles.data?.length || 0,
-        transcripts: transcriptCountRes.count || 0,
-        eegChunks: eegCountRes.count || 0,
-        toolData: toolCountRes.count || 0,
-      });
-    };
-
-    loadSummary();
-  }, [sessionId, session]);
-
   const generateAndSaveReport = async (s: Session) => {
     setReportLoading(true);
-    setReportError(null);
     try {
       const durationMin = Math.round(s.durationMs / 60000);
 
@@ -123,23 +84,16 @@ function ResultsContent() {
         }),
       });
 
-      if (!res.ok) {
-        setReportError(t('results.reportFailed'));
-        return;
-      }
+      if (!res.ok) return;
 
       const { report } = await res.json();
-      if (!report) {
-        setReportError(t('results.reportEmpty'));
-        return;
-      }
+      if (!report) return;
 
       const updatedSession = { ...s, report, reportGeneratedAt: new Date().toISOString() };
       setSession(updatedSession);
       await saveSession(updatedSession);
     } catch (err) {
       console.error("Report generation failed:", err);
-      setReportError(t('results.reportError'));
     } finally {
       setReportLoading(false);
     }
@@ -329,274 +283,235 @@ function ResultsContent() {
         ]}
       />
 
-      <div className="flex-1 max-w-3xl mx-auto w-full px-4 sm:px-6 py-6 sm:py-8">
-        <div className="mb-6">
-          <h2 className="text-lg sm:text-xl font-semibold text-white mb-2">{session.problem}</h2>
-          <div className="flex items-center gap-3 text-xs text-neutral-500">
-            <span>
-              {new Date(session.startedAt).toLocaleDateString("en-US", {
-                weekday: "short",
-                month: "short",
-                day: "numeric",
-                hour: "2-digit",
-                minute: "2-digit",
-              })}
-            </span>
-
-          </div>
-        </div>
-
-        {summary && (
-          <div className="mb-8">
-            <div className="mb-2">
-              <h3 className="text-xs font-medium text-neutral-500 uppercase tracking-wider">
-                {t('results.storedData')}
-              </h3>
-              <p className="text-[10px] text-neutral-600 mt-0.5">
-                {t('results.storedDataDesc')}
-              </p>
-            </div>
-            <div className="grid grid-cols-4 gap-3">
-              <SummaryCard label={t('results.audio')} value={summary.audioChunks} />
-              <SummaryCard label={t('results.transcripts')} value={summary.transcripts} />
-              <SummaryCard label={t('results.eeg')} value={summary.eegChunks} />
-              <SummaryCard label={t('results.tools')} value={summary.toolData} />
-            </div>
-            <p className="text-[10px] text-neutral-500 mt-3">
-              {t('results.dataContributionPart1')}{" "}
-              <a href="https://huggingface.co/datasets/unsys/ghc" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">
-                {t('results.datasetName')}
-              </a>{" "}
-              {t('results.dataContributionPart2')}{" "}
-              <a href="https://x.com/uncertainsys" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">
-                {t('results.contactOnX')}
-              </a>{" "}
-              {t('results.dataContributionPart3')}.
-            </p>
-          </div>
-        )}
-
-        {session.report ? (
-          <div className="rounded-xl border border-neutral-800 bg-neutral-900/50 p-5">
-            <h3 className="text-sm font-medium text-neutral-300 mb-3">{t('results.sessionReport')}</h3>
-            <div
-              className="prose prose-sm prose-invert max-w-none text-neutral-400 leading-relaxed text-sm"
-              dangerouslySetInnerHTML={{ __html: markdownToHtml(session.report) }}
-            />
-          </div>
-        ) : reportLoading ? (
-          <div className="rounded-xl border border-neutral-800 bg-neutral-900/50 p-5">
-            <h3 className="text-sm font-medium text-neutral-300 mb-3">{t('results.sessionReport')}</h3>
-            <div className="flex items-center gap-3 py-6 justify-center">
-              <div className="animate-spin w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full" />
-              <p className="text-sm text-neutral-500">{t('results.generatingReport')}</p>
-            </div>
-          </div>
-        ) : reportError ? (
-          <div className="rounded-xl border border-red-900/50 bg-red-950/20 p-5">
-            <h3 className="text-sm font-medium text-neutral-300 mb-3">{t('results.sessionReport')}</h3>
-            <div className="flex flex-col items-center gap-3 py-4">
-              <p className="text-sm text-red-400">{reportError}</p>
-              <button
-                onClick={() => generateAndSaveReport(session)}
-                className="px-4 py-1.5 text-sm bg-neutral-800 hover:bg-neutral-700 text-neutral-200 rounded-lg transition-colors"
-              >
-                {t('results.retry')}
-              </button>
-            </div>
-          </div>
-        ) : null}
-
-        {/* Follow-up Session Suggestions */}
-        {session.report && (
-          <div className="mt-6 rounded-xl border border-neutral-800 bg-neutral-900/50 p-5">
-            <h3 className="text-sm font-medium text-neutral-300 mb-1">{t('results.continueLearningSuggestions')}</h3>
-            <p className="text-xs text-neutral-500 mb-4">{t('results.continueLearningSuggestionsDesc')}</p>
-            
-            {followUpsLoading ? (
-              <div className="flex items-center gap-3 py-4 justify-center">
-                <div className="animate-spin w-4 h-4 border-2 border-emerald-500 border-t-transparent rounded-full" />
-                <p className="text-sm text-neutral-500">{t('results.generatingFollowUps')}</p>
-              </div>
-            ) : followUps.length > 0 ? (
-              <div className="space-y-3">
-                {followUps.map((suggestion, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => handleStartFollowUp(suggestion)}
-                    disabled={startingSession !== null}
-                    className="w-full text-left p-4 rounded-lg border border-neutral-700 bg-neutral-800/50 hover:bg-neutral-800 hover:border-emerald-600/50 transition-all group disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex-1 min-w-0">
-                        <h4 className="text-sm font-medium text-white group-hover:text-emerald-400 transition-colors">
-                          {suggestion.title}
-                        </h4>
-                        <p className="text-xs text-neutral-500 mt-1 line-clamp-2">
-                          {suggestion.description}
-                        </p>
-                      </div>
-                      <div className="flex-shrink-0 mt-0.5">
-                        {startingSession === suggestion.title ? (
-                          <div className="animate-spin w-4 h-4 border-2 border-emerald-500 border-t-transparent rounded-full" />
-                        ) : (
-                          <svg className="w-5 h-5 text-neutral-600 group-hover:text-emerald-500 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                          </svg>
-                        )}
-                      </div>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            ) : (
-              <p className="text-sm text-neutral-500 text-center py-4">{t('results.noFollowUpSuggestions')}</p>
-            )}
-          </div>
-        )}
-
-        {/* Generate Learning Plan Section */}
-        {session.report && (
-          <div className="mt-6 rounded-xl border border-neutral-800 bg-neutral-900/50 p-5">
-            <h3 className="text-sm font-medium text-neutral-300 mb-1">{t('results.createLearningPlan')}</h3>
-            <p className="text-xs text-neutral-500 mb-4">{t('results.createLearningPlanDesc')}</p>
-            
-            {/* AI Suggested Topic */}
-            {(suggestingTopic || suggestedPlanTopic) && (
-              <div className="mb-4">
-                {suggestingTopic ? (
-                  <div className="flex items-center gap-2 text-xs text-neutral-500">
-                    <div className="animate-spin w-3 h-3 border border-blue-500 border-t-transparent rounded-full" />
-                    {t('results.suggestingTopic')}
-                  </div>
-                ) : suggestedPlanTopic && !planTopic ? (
-                  <button
-                    onClick={handleUseSuggestedTopic}
-                    disabled={generatingPlan}
-                    className="w-full text-left p-3 rounded-lg border border-blue-500/30 bg-blue-500/10 hover:bg-blue-500/20 transition-colors group"
-                  >
-                    <div className="flex items-start gap-2">
-                      <svg className="w-4 h-4 text-blue-400 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-                      </svg>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs text-blue-400 mb-1">{t('results.aiSuggestedTopic')}</p>
-                        <p className="text-sm text-white group-hover:text-blue-300 transition-colors">{suggestedPlanTopic}</p>
-                      </div>
-                      <span className="text-xs text-blue-400/70 flex-shrink-0">{t('results.clickToUse')}</span>
-                    </div>
-                  </button>
-                ) : null}
-              </div>
-            )}
-            
-            <div className="space-y-3">
-              <textarea
-                value={planTopic}
-                onChange={(e) => {
-                  setPlanTopic(e.target.value);
-                  if (planError) setPlanError(null);
-                }}
-                placeholder={t('results.planTopicPlaceholder')}
-                rows={2}
-                disabled={generatingPlan}
-                className="w-full px-4 py-3 border rounded-xl text-white text-sm focus:outline-none resize-none transition-colors bg-neutral-800/50 border-neutral-700 focus:border-neutral-600 placeholder-neutral-600"
-              />
-              
-              {/* Tool row: Attachments + Duration + Generate */}
-              <div className="flex flex-wrap items-center gap-3">
-                {/* Attach files button */}
-                <button
-                  type="button"
-                  onClick={() => setShowFileZone((v) => !v)}
-                  disabled={generatingPlan}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 text-xs border rounded-lg transition-colors ${
-                    attachedFiles.length > 0
-                      ? "text-blue-400 border-blue-500/40 bg-blue-500/10"
-                      : "text-neutral-400 hover:text-white bg-neutral-800/50 hover:bg-neutral-800 border-neutral-700 hover:border-neutral-600"
-                  }`}
-                >
-                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M18.375 12.739l-7.693 7.693a4.5 4.5 0 01-6.364-6.364l10.94-10.94A3 3 0 1119.5 7.372L8.552 18.32m.009-.01l-.01.01m5.699-9.941l-7.81 7.81a1.5 1.5 0 002.112 2.13" />
-                  </svg>
-                  {attachedFiles.length > 0
-                    ? `${attachedFiles.length} ${attachedFiles.length === 1 ? t("planFiles.fileAttached") : t("planFiles.filesAttached")}`
-                    : t("planFiles.attachFiles")}
-                </button>
-
-                <div className="flex items-center gap-2">
-                  <label className="text-xs text-neutral-500">
-                    {t('planMode.howLongPlan')}
-                  </label>
-                  <select
-                    value={planWeeks}
-                    onChange={(e) => setPlanWeeks(Number(e.target.value))}
-                    disabled={generatingPlan}
-                    className="appearance-none bg-neutral-800/50 border border-neutral-700 hover:border-neutral-600 focus:border-neutral-500 focus:outline-none rounded-lg pl-3 pr-7 py-1.5 text-xs text-neutral-200 cursor-pointer transition-colors"
-                  >
-                    <option value={1}>{t('planMode.week1')}</option>
-                    <option value={2}>{t('planMode.week2')}</option>
-                    <option value={4}>{t('planMode.month1')}</option>
-                    <option value={8}>{t('planMode.month2')}</option>
-                    <option value={12}>{t('planMode.month3')}</option>
-                    <option value={26}>{t('planMode.month6')}</option>
-                  </select>
-                </div>
-                
-                <button
-                  onClick={handleGeneratePlan}
-                  disabled={!planTopic.trim() || generatingPlan}
-                  className="ml-auto py-2 px-4 text-sm font-medium rounded-lg bg-slate-200 text-slate-900 hover:bg-white disabled:bg-neutral-800 disabled:text-neutral-600 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
-                >
-                  {generatingPlan ? (
-                    <>
-                      <div className="animate-spin w-4 h-4 border-2 border-slate-900 border-t-transparent rounded-full" />
-                      {t('planMode.analyzing')}
-                    </>
-                  ) : (
-                    <>
-                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
-                      </svg>
-                      {t('home.generatePlan')}
-                    </>
-                  )}
-                </button>
-              </div>
-
-              {/* File drop zone (expanded) */}
-              {showFileZone && (
-                <div className="space-y-2">
-                  <FileDropZone
-                    files={attachedFiles}
-                    onChange={setAttachedFiles}
-                  />
-                  {attachedFiles.length > 0 && (
-                    <p className="text-[11px] text-neutral-500 leading-snug">
-                      {t("home.attachmentsHint")}
-                    </p>
-                  )}
-                </div>
-              )}
-              
-              {planError && (
-                <p className="text-xs text-red-400">{planError}</p>
-              )}
-            </div>
-          </div>
-        )}
-
-        <div className="flex justify-center mt-8 pb-8">
-          <Link
-            href="/dashboard"
-            className="px-6 py-2.5 bg-white/10 hover:bg-white/15 text-white text-sm font-medium rounded-xl transition-colors"
-          >
-            {t('results.backToDashboard')}
-          </Link>
+      {/* Session header */}
+      <div className="px-4 sm:px-6 py-4 border-b border-neutral-800/50">
+        <h2 className="text-lg font-semibold text-white mb-1">{session.problem}</h2>
+        <div className="flex items-center gap-3 text-xs text-neutral-500">
+          <span>
+            {new Date(session.startedAt).toLocaleDateString("en-US", {
+              weekday: "short",
+              month: "short",
+              day: "numeric",
+              hour: "2-digit",
+              minute: "2-digit",
+            })}
+          </span>
+          <span>•</span>
+          <span>{Math.round(session.durationMs / 60000)} min</span>
+          <span>•</span>
+          <span>{session.probes.length} probes</span>
         </div>
       </div>
-      <Footer />
+
+      {/* 50/50 Split Content */}
+      <div className="flex-1 flex flex-col lg:flex-row min-h-0">
+        {/* Left side - Helios Performance Chat with background */}
+        <div className="relative lg:w-1/2 flex flex-col border-b lg:border-b-0 lg:border-r border-neutral-800/50 min-h-[400px] lg:min-h-0 overflow-hidden">
+          {/* Frosted glass background */}
+          <TutorBackground />
+          
+          <div className="relative z-10 flex-1 p-4">
+            {session.report || !reportLoading ? (
+              <SessionPerformanceChat 
+                sessionId={sessionId!} 
+                sessionTopic={session.problem}
+              />
+            ) : (
+              <div className="flex-1 flex flex-col items-center justify-center h-full rounded-xl">
+                <div className="w-16 h-16 mb-4 rounded-full bg-gradient-to-br from-violet-500/15 via-neutral-800 to-neutral-900 border border-neutral-800 flex items-center justify-center">
+                  <span className="text-xl font-serif text-neutral-400">H</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="animate-spin w-4 h-4 border-2 border-violet-500 border-t-transparent rounded-full" />
+                  <p className="text-sm text-neutral-500">{t('results.generatingReport')}</p>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Right side - Suggestions & Plan Generation */}
+        <div className="lg:w-1/2 flex flex-col overflow-y-auto">
+          <div className="flex-1 p-4 space-y-4">
+            {/* Follow-up Session Suggestions */}
+            <div className="rounded-xl border border-neutral-800 bg-neutral-900/50 p-4">
+              <h3 className="text-sm font-medium text-neutral-300 mb-1">{t('results.continueLearningSuggestions')}</h3>
+              <p className="text-[11px] text-neutral-500 mb-3">{t('results.continueLearningSuggestionsDesc')}</p>
+              
+              {followUpsLoading ? (
+                <div className="flex items-center gap-2 py-3 justify-center">
+                  <div className="animate-spin w-3.5 h-3.5 border-2 border-emerald-500 border-t-transparent rounded-full" />
+                  <p className="text-xs text-neutral-500">{t('results.generatingFollowUps')}</p>
+                </div>
+              ) : followUps.length > 0 ? (
+                <div className="space-y-2">
+                  {followUps.map((suggestion, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => handleStartFollowUp(suggestion)}
+                      disabled={startingSession !== null}
+                      className="w-full text-left p-3 rounded-lg border border-neutral-700 bg-neutral-800/50 hover:bg-neutral-800 hover:border-emerald-600/50 transition-all group disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex-1 min-w-0">
+                          <h4 className="text-xs font-medium text-white group-hover:text-emerald-400 transition-colors">
+                            {suggestion.title}
+                          </h4>
+                          <p className="text-[10px] text-neutral-500 mt-0.5 line-clamp-2">
+                            {suggestion.description}
+                          </p>
+                        </div>
+                        <div className="flex-shrink-0">
+                          {startingSession === suggestion.title ? (
+                            <div className="animate-spin w-4 h-4 border-2 border-emerald-500 border-t-transparent rounded-full" />
+                          ) : (
+                            <svg className="w-4 h-4 text-neutral-600 group-hover:text-emerald-500 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                          )}
+                        </div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs text-neutral-500 text-center py-3">{t('results.noFollowUpSuggestions')}</p>
+              )}
+            </div>
+
+            {/* Generate Learning Plan Section */}
+            <div className="rounded-xl border border-neutral-800 bg-neutral-900/50 p-4">
+              <h3 className="text-sm font-medium text-neutral-300 mb-1">{t('results.createLearningPlan')}</h3>
+              <p className="text-[11px] text-neutral-500 mb-3">{t('results.createLearningPlanDesc')}</p>
+              
+              {/* AI Suggested Topic */}
+              {(suggestingTopic || suggestedPlanTopic) && (
+                <div className="mb-3">
+                  {suggestingTopic ? (
+                    <div className="flex items-center gap-2 text-xs text-neutral-500">
+                      <div className="animate-spin w-3 h-3 border border-blue-500 border-t-transparent rounded-full" />
+                      {t('results.suggestingTopic')}
+                    </div>
+                  ) : suggestedPlanTopic && !planTopic ? (
+                    <button
+                      onClick={handleUseSuggestedTopic}
+                      disabled={generatingPlan}
+                      className="w-full text-left p-2.5 rounded-lg border border-blue-500/30 bg-blue-500/10 hover:bg-blue-500/20 transition-colors group"
+                    >
+                      <div className="flex items-start gap-2">
+                        <svg className="w-3.5 h-3.5 text-blue-400 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                        </svg>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[10px] text-blue-400 mb-0.5">{t('results.aiSuggestedTopic')}</p>
+                          <p className="text-xs text-white group-hover:text-blue-300 transition-colors">{suggestedPlanTopic}</p>
+                        </div>
+                        <span className="text-[10px] text-blue-400/70 flex-shrink-0">{t('results.clickToUse')}</span>
+                      </div>
+                    </button>
+                  ) : null}
+                </div>
+              )}
+              
+              <div className="space-y-3">
+                <textarea
+                  value={planTopic}
+                  onChange={(e) => {
+                    setPlanTopic(e.target.value);
+                    if (planError) setPlanError(null);
+                  }}
+                  placeholder={t('results.planTopicPlaceholder')}
+                  rows={2}
+                  disabled={generatingPlan}
+                  className="w-full px-3 py-2.5 border rounded-xl text-white text-sm focus:outline-none resize-none transition-colors bg-neutral-800/50 border-neutral-700 focus:border-neutral-600 placeholder-neutral-600"
+                />
+                
+                {/* Tool row: Attachments + Duration + Generate */}
+                <div className="flex flex-wrap items-center gap-2">
+                  {/* Attach files button */}
+                  <button
+                    type="button"
+                    onClick={() => setShowFileZone((v) => !v)}
+                    disabled={generatingPlan}
+                    className={`flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] border rounded-lg transition-colors ${
+                      attachedFiles.length > 0
+                        ? "text-blue-400 border-blue-500/40 bg-blue-500/10"
+                        : "text-neutral-400 hover:text-white bg-neutral-800/50 hover:bg-neutral-800 border-neutral-700 hover:border-neutral-600"
+                    }`}
+                  >
+                    <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M18.375 12.739l-7.693 7.693a4.5 4.5 0 01-6.364-6.364l10.94-10.94A3 3 0 1119.5 7.372L8.552 18.32m.009-.01l-.01.01m5.699-9.941l-7.81 7.81a1.5 1.5 0 002.112 2.13" />
+                    </svg>
+                    {attachedFiles.length > 0
+                      ? `${attachedFiles.length} ${attachedFiles.length === 1 ? t("planFiles.fileAttached") : t("planFiles.filesAttached")}`
+                      : t("planFiles.attachFiles")}
+                  </button>
+
+                  <div className="flex items-center gap-1.5">
+                    <label className="text-[11px] text-neutral-500">
+                      {t('planMode.howLongPlan')}
+                    </label>
+                    <select
+                      value={planWeeks}
+                      onChange={(e) => setPlanWeeks(Number(e.target.value))}
+                      disabled={generatingPlan}
+                      className="appearance-none bg-neutral-800/50 border border-neutral-700 hover:border-neutral-600 focus:border-neutral-500 focus:outline-none rounded-lg pl-2 pr-5 py-1 text-[11px] text-neutral-200 cursor-pointer transition-colors"
+                    >
+                      <option value={1}>{t('planMode.week1')}</option>
+                      <option value={2}>{t('planMode.week2')}</option>
+                      <option value={4}>{t('planMode.month1')}</option>
+                      <option value={8}>{t('planMode.month2')}</option>
+                      <option value={12}>{t('planMode.month3')}</option>
+                      <option value={26}>{t('planMode.month6')}</option>
+                    </select>
+                  </div>
+                  
+                  <button
+                    onClick={handleGeneratePlan}
+                    disabled={!planTopic.trim() || generatingPlan}
+                    className="ml-auto py-1.5 px-3 text-xs font-medium rounded-lg bg-slate-200 text-slate-900 hover:bg-white disabled:bg-neutral-800 disabled:text-neutral-600 disabled:cursor-not-allowed transition-colors flex items-center gap-1.5"
+                  >
+                    {generatingPlan ? (
+                      <>
+                        <div className="animate-spin w-3 h-3 border-2 border-slate-900 border-t-transparent rounded-full" />
+                        {t('planMode.analyzing')}
+                      </>
+                    ) : (
+                      <>
+                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                        </svg>
+                        {t('home.generatePlan')}
+                      </>
+                    )}
+                  </button>
+                </div>
+
+                {/* File drop zone (expanded) */}
+                {showFileZone && (
+                  <div className="space-y-2">
+                    <FileDropZone
+                      files={attachedFiles}
+                      onChange={setAttachedFiles}
+                    />
+                    {attachedFiles.length > 0 && (
+                      <p className="text-[10px] text-neutral-500 leading-snug">
+                        {t("home.attachmentsHint")}
+                      </p>
+                    )}
+                  </div>
+                )}
+                
+                {planError && (
+                  <p className="text-xs text-red-400">{planError}</p>
+                )}
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
@@ -613,28 +528,4 @@ export default function ResultsPage() {
       <ResultsContent />
     </Suspense>
   );
-}
-
-function SummaryCard({ label, value }: { label: string; value: number }) {
-  return (
-    <div className="rounded-xl border border-neutral-800 bg-neutral-900/50 p-3 text-center">
-      <p className="text-[11px] text-neutral-600 uppercase tracking-wider">{label}</p>
-      <p className="text-xl font-bold text-white mt-1">{value}</p>
-    </div>
-  );
-}
-
-function markdownToHtml(markdown: string): string {
-  return markdown
-    .replace(/^### (.*$)/gm, '<h3 class="text-neutral-200 font-medium mt-4 mb-2 text-sm">$1</h3>')
-    .replace(/^## (.*$)/gm, '<h2 class="text-neutral-200 font-medium mt-5 mb-2">$1</h2>')
-    .replace(/^# (.*$)/gm, '<h1 class="text-white font-semibold mt-6 mb-3">$1</h1>')
-    .replace(/\*\*(.*?)\*\*/g, '<strong class="text-neutral-200">$1</strong>')
-    .replace(/\*(.*?)\*/g, "<em>$1</em>")
-    .replace(/^- (.*$)/gm, '<li class="ml-4">$1</li>')
-    .replace(/^(\d+)\. (.*$)/gm, '<li class="ml-4">$2</li>')
-    .replace(/\n\n/g, '</p><p class="mb-2">')
-    .replace(/\n/g, "<br/>")
-    .replace(/^/, '<p class="mb-2">')
-    .replace(/$/, "</p>");
 }

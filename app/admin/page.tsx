@@ -10,7 +10,6 @@ interface Stats {
   totalSessions: number;
   completedSessions: number;
   totalPlans: number;
-  totalPartners: number;
   totalOrganizations: number;
 }
 
@@ -55,12 +54,11 @@ export default function AdminPage() {
 
   const loadStats = async () => {
     try {
-      const [usersRes, sessionsRes, completedRes, plansRes, partnersRes, orgsRes] = await Promise.all([
+      const [usersRes, sessionsRes, completedRes, plansRes, orgsRes] = await Promise.all([
         supabase.from("profiles").select("id", { count: "exact", head: true }),
         supabase.from("sessions").select("id", { count: "exact", head: true }),
         supabase.from("sessions").select("id", { count: "exact", head: true }).eq("status", "completed"),
         supabase.from("learning_plans").select("id", { count: "exact", head: true }),
-        supabase.from("partners").select("id", { count: "exact", head: true }),
         supabase.from("organizations").select("id", { count: "exact", head: true }),
       ]);
 
@@ -69,7 +67,6 @@ export default function AdminPage() {
         totalSessions: sessionsRes.count || 0,
         completedSessions: completedRes.count || 0,
         totalPlans: plansRes.count || 0,
-        totalPartners: partnersRes.count || 0,
         totalOrganizations: orgsRes.count || 0,
       });
     } catch (err) {
@@ -119,10 +116,6 @@ export default function AdminPage() {
             <div className="text-neutral-400 text-sm mt-1">Learning Plans</div>
           </div>
           <div className="bg-neutral-900/50 border border-neutral-800 rounded-lg p-6">
-            <div className="text-3xl font-bold text-white">{stats?.totalPartners || 0}</div>
-            <div className="text-neutral-400 text-sm mt-1">Partners</div>
-          </div>
-          <div className="bg-neutral-900/50 border border-neutral-800 rounded-lg p-6">
             <div className="text-3xl font-bold text-white">{stats?.totalOrganizations || 0}</div>
             <div className="text-neutral-400 text-sm mt-1">Organizations</div>
           </div>
@@ -150,16 +143,6 @@ export default function AdminPage() {
           </Link>
 
           <Link 
-            href="/admin/partners" 
-            className="block bg-neutral-900/50 border border-neutral-800 rounded-lg p-6 hover:border-neutral-700 transition-colors"
-          >
-            <h2 className="text-lg font-semibold text-white mb-2">Partner Program</h2>
-            <p className="text-neutral-400 text-sm">
-              Manage partners, view referrals, and issue payouts
-            </p>
-          </Link>
-
-          <Link 
             href="/admin/organizations" 
             className="block bg-neutral-900/50 border border-neutral-800 rounded-lg p-6 hover:border-neutral-700 transition-colors"
           >
@@ -179,15 +162,6 @@ export default function AdminPage() {
             </p>
           </Link>
 
-          <Link 
-            href="/admin/leads" 
-            className="block bg-neutral-900/50 border border-neutral-800 rounded-lg p-6 hover:border-neutral-700 transition-colors"
-          >
-            <h2 className="text-lg font-semibold text-white mb-2">Leads</h2>
-            <p className="text-neutral-400 text-sm">
-              View and manage leads from solutions pages (Enterprise, Schools, HR)
-            </p>
-          </Link>
         </div>
     </div>
   );

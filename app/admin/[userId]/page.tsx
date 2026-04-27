@@ -340,15 +340,6 @@ export default function UserDetailPage() {
                   <div className="flex gap-3 text-xs text-neutral-500 items-center">
                     <span>{formatDate(lesson.created_at)}</span>
                     {lesson.duration_ms > 0 && <span>{formatDuration(lesson.duration_ms)}</span>}
-                    <span className={lesson.has_audio ? "text-green-400" : "text-neutral-600"}>
-                      Audio: {lesson.has_audio ? "✓" : "✗"}
-                    </span>
-                    <span className={lesson.report_generated_at ? "text-green-400" : "text-neutral-600"}>
-                      Transcript: {lesson.report_generated_at ? "✓" : "✗"}
-                    </span>
-                    <span className={lesson.has_eeg ? "text-green-400" : "text-neutral-600"}>
-                      EEG: {lesson.has_eeg ? "✓" : "✗"}
-                    </span>
                   </div>
                 </div>
                 ))}

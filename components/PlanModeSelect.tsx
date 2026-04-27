@@ -26,7 +26,7 @@ const DEFAULT_EXAMPLE_TOPICS = [
   "planMode.examplePersonalFinance",
 ];
 
-type ThemeColor = "neutral" | "teal" | "slate" | "blue" | "amber" | "violet";
+type ThemeColor = "neutral" | "teal" | "slate" | "blue" | "amber" | "violet" | "glass";
 
 const themeStyles: Record<ThemeColor, {
   textarea: string;
@@ -111,6 +111,18 @@ const themeStyles: Record<ThemeColor, {
     description: "text-violet-400/60",
     tabActive: "bg-violet-500/20 text-violet-300 border-b-2 border-violet-400",
     tabInactive: "text-violet-500/60 hover:text-violet-400 border-b-2 border-transparent",
+  },
+  glass: {
+    textarea: "bg-white/10 border-white/20 focus:border-white/40 placeholder-white/50 text-white",
+    button: "bg-white hover:bg-white/90 text-slate-900",
+    buttonDisabled: "disabled:bg-white/20 disabled:text-white/50",
+    weekActive: "bg-white/20 text-white border-white/40",
+    weekInactive: "bg-white/5 border-white/20 text-white/60 hover:border-white/30 hover:text-white",
+    topicPill: "text-white/60 hover:text-white bg-white/10 hover:bg-white/20 border-white/20 hover:border-white/30",
+    label: "text-white/70",
+    description: "text-white/60",
+    tabActive: "bg-white/20 text-white border-b-2 border-white",
+    tabInactive: "text-white/60 hover:text-white border-b-2 border-transparent",
   },
 };
 

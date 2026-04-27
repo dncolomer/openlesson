@@ -6,7 +6,6 @@ import { PlanModeSelect } from "@/components/PlanModeSelect";
 import { Footer } from "@/components/Footer";
 import { Navbar } from "@/components/Navbar";
 import { SolutionsBand } from "@/components/SolutionsBand";
-import { RoadmapBadge } from "@/components/FeatureStatus";
 import { DemoBanner } from "@/components/DemoBanner";
 import { useI18n } from "@/lib/i18n";
 
@@ -34,121 +33,81 @@ export default function CertifyPage() {
       <Navbar />
       <SolutionsBand />
 
-      <div className="flex-1 grid grid-cols-1 lg:grid-cols-[60%_40%]">
-        {/* Left Column - Scrollable with lighter background (shows below on mobile) */}
-        <div className="order-2 lg:order-1 bg-slate-900/40 lg:border-r border-t lg:border-t-0 border-slate-800 lg:h-[calc(100vh-113px)] lg:overflow-y-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
+      <div className="flex-1 grid grid-cols-1 lg:grid-cols-2">
+        {/* Left Column - Scrollable content */}
+        <div className="order-2 lg:order-1 bg-[#0a0a0a] lg:border-r border-t lg:border-t-0 border-slate-800 lg:h-[calc(100vh-113px)] lg:overflow-y-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
           <div className="w-full flex flex-col gap-8">
-            {/* Mockup */}
-            <div className="rounded-2xl border border-slate-700 bg-slate-800/30 overflow-hidden flex flex-col relative">
-              <RoadmapBadge label={t('certify.mockupLabel')} eta={t('certify.mockupEta')} />
-              <div className="bg-slate-700/50 px-5 py-2.5 border-b border-slate-700 flex items-center justify-between">
-                <span className="text-sm font-medium text-slate-300">{t('certify.mockupTitle')}</span>
-                <span className="text-xs text-slate-500">{t('certify.mockupSubtitle')}</span>
-              </div>
-              <div className="p-5 flex flex-col">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-14 h-14 rounded-full border-4 border-slate-500 flex items-center justify-center">
-                      <span className="text-lg font-bold text-slate-300">45%</span>
-                    </div>
-                    <div>
-                      <p className="text-base font-medium text-white">{t('certify.inProgress')}</p>
-                      <p className="text-xs text-slate-500">{t('certify.target')}: {t('certify.june2026')}</p>
-                    </div>
-                  </div>
-                  <div className="flex gap-2">
-                    <button className="text-xs bg-slate-600/50 hover:bg-slate-600 text-slate-300 px-3 py-1.5 rounded-lg transition-colors">
-                      {t('certify.blueprint')}
-                    </button>
-                    <button className="text-xs bg-white/10 hover:bg-white/20 text-white px-3 py-1.5 rounded-lg transition-colors">
-                      {t('certify.schedule')}
-                    </button>
-                  </div>
-                </div>
-                
-                <div className="relative my-4">
-                  <div className="absolute top-4 left-0 right-0 h-0.5 bg-slate-700" />
-                  <div className="absolute top-4 left-0 h-0.5 bg-slate-500" style={{ width: "45%" }} />
-                  <div className="relative flex justify-between">
-                    {[
-                      { label: "Cloud Basics", status: "complete", icon: "✓" },
-                      { label: "IAM & S3", status: "complete", icon: "✓" },
-                      { label: "EC2", status: "current", icon: "●" },
-                      { label: "Databases", status: "upcoming", icon: "○" },
-                      { label: "Networking", status: "upcoming", icon: "○" },
-                      { label: "Security", status: "upcoming", icon: "○" },
-                    ].map(({ label, status, icon }) => (
-                      <div key={label} className="flex flex-col items-center">
-                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium mb-1.5 ${
-                          status === "complete" ? "bg-slate-600 text-white" :
-                          status === "current" ? "bg-slate-700 text-slate-300 border-2 border-slate-500" :
-                          "bg-slate-800 text-slate-600 border border-slate-700"
-                        }`}>
-                          {icon}
-                        </div>
-                        <span className={`text-[9px] text-center ${
-                          status === "complete" ? "text-slate-400" :
-                          status === "current" ? "text-slate-300" :
-                          "text-slate-600"
-                        }`}>{label}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-3 gap-3 mt-4 pt-4 border-t border-slate-700">
-                  <div>
-                    <p className="text-[10px] text-slate-500 uppercase mb-0.5">{t('certify.practiceScore')}</p>
-                    <p className="text-lg font-bold text-white">72%</p>
-                    <p className="text-[10px] text-emerald-400">{t('certify.thisWeek')}</p>
-                  </div>
-                  <div>
-                    <p className="text-[10px] text-slate-500 uppercase mb-0.5">{t('certify.weakAreas')}</p>
-                    <p className="text-lg font-bold text-white">3</p>
-                    <p className="text-[10px] text-rose-400">Multi-AZ</p>
-                  </div>
-                  <div>
-                    <p className="text-[10px] text-slate-500 uppercase mb-0.5">{t('certify.streak')}</p>
-                    <p className="text-lg font-bold text-white">12 {t('certify.days')}</p>
-                    <p className="text-[10px] text-slate-500">{t('certify.keepItUp')}</p>
-                  </div>
-                </div>
-              </div>
+            {/* Hero Section */}
+            <div>
+              <h2 className="text-2xl font-bold text-white mb-3">Pass Your Certification — First Try</h2>
+              <p className="text-slate-400 leading-relaxed">
+                Stop memorizing dumps and start building genuine understanding. OpenLesson uses adaptive AI tutoring to help you master certification topics through Socratic dialogue, not rote memorization.
+              </p>
             </div>
 
-            {/* Value Proposition - Updated to bullet format */}
+            {/* The Challenge */}
             <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-white">{t('certify.problemTitle')}</h3>
-              <ul className="space-y-2">
-                <li className="flex items-start gap-2 text-sm text-slate-400">
+              <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+                <span className="w-8 h-8 rounded-lg bg-red-500/10 flex items-center justify-center">
+                  <span className="text-red-400 text-sm">!</span>
+                </span>
+                The Challenge
+              </h3>
+              <ul className="space-y-3">
+                <li className="flex items-start gap-3 text-sm text-slate-400">
                   <span className="text-red-400 mt-0.5">✗</span>
-                  <span>{t('certify.problem1')}</span>
+                  <span>Brain dumps give false confidence without real understanding</span>
                 </li>
-                <li className="flex items-start gap-2 text-sm text-slate-400">
+                <li className="flex items-start gap-3 text-sm text-slate-400">
                   <span className="text-red-400 mt-0.5">✗</span>
-                  <span>{t('certify.problem2')}</span>
+                  <span>Expensive boot camps and courses with no personalization</span>
                 </li>
-                <li className="flex items-start gap-2 text-sm text-slate-400">
+                <li className="flex items-start gap-3 text-sm text-slate-400">
                   <span className="text-red-400 mt-0.5">✗</span>
-                  <span>{t('certify.problem3')}</span>
+                  <span>Unclear what to study and how to prioritize your time</span>
                 </li>
               </ul>
-              
-              <h3 className="text-lg font-semibold text-white pt-4">{t('certify.howItHelps')}</h3>
-              <ul className="space-y-2">
-                <li className="flex items-start gap-2 text-sm text-slate-400">
+            </div>
+
+            {/* The Solution */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+                <span className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center">
+                  <span className="text-emerald-400 text-sm">✓</span>
+                </span>
+                How OpenLesson Helps
+              </h3>
+              <ul className="space-y-3">
+                <li className="flex items-start gap-3 text-sm text-slate-400">
                   <span className="text-emerald-400 mt-0.5">✓</span>
-                  <span>{t('certify.solution1')}</span>
+                  <span>AI tutor that builds deep understanding through intelligent questioning</span>
                 </li>
-                <li className="flex items-start gap-2 text-sm text-slate-400">
+                <li className="flex items-start gap-3 text-sm text-slate-400">
                   <span className="text-emerald-400 mt-0.5">✓</span>
-                  <span>{t('certify.solution2')}</span>
+                  <span>Personalized study plans that focus on your weak areas</span>
                 </li>
-                <li className="flex items-start gap-2 text-sm text-slate-400">
+                <li className="flex items-start gap-3 text-sm text-slate-400">
                   <span className="text-emerald-400 mt-0.5">✓</span>
-                  <span>{t('certify.solution3')}</span>
+                  <span>Progress tracking so you know exactly when you&apos;re ready</span>
                 </li>
               </ul>
+            </div>
+
+            {/* Analytics Highlight */}
+            <div className="rounded-2xl border border-slate-800 bg-gradient-to-br from-slate-800/50 to-slate-900/50 p-6">
+              <div className="flex items-start gap-4">
+                <div className="w-12 h-12 rounded-xl bg-blue-500/10 flex items-center justify-center shrink-0">
+                  <svg className="w-6 h-6 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75ZM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625ZM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z" />
+                  </svg>
+                </div>
+                <div>
+                  <h4 className="text-white font-semibold mb-2">Performance Analytics</h4>
+                  <p className="text-sm text-slate-400 leading-relaxed">
+                    OpenLesson gives you the power to dive into your individual performance analytics. Track mastery across certification domains, identify weak spots, and know exactly when you&apos;re exam-ready.
+                  </p>
+                </div>
+              </div>
             </div>
 
             {/* Certification Badges */}
@@ -172,22 +131,29 @@ export default function CertifyPage() {
         </div>
 
         {/* Right Column - Sticky at top (shows on top on mobile) */}
-        <div className="order-1 lg:order-2 lg:sticky lg:top-[113px] lg:h-[calc(100vh-113px)] flex items-center justify-center px-4 sm:px-6 lg:px-8 py-6 lg:py-4">
-          <div className="w-full flex flex-col">
+        <div className="order-1 lg:order-2 lg:sticky lg:top-[113px] lg:h-[calc(100vh-113px)] flex items-center justify-center px-4 sm:px-6 lg:px-8 py-6 lg:py-4 relative overflow-hidden">
+          {/* Background image with blur */}
+          <div 
+            className="absolute inset-0 bg-cover bg-center"
+            style={{ backgroundImage: "url('/career.jpg')" }}
+          />
+          <div className="absolute inset-0 backdrop-blur-sm bg-[#0a0a0a]/60" />
+          
+          <div className="w-full flex flex-col relative z-10">
             {/* Solution Label */}
             <div className="flex justify-center mb-4">
-              <span className="text-xs text-slate-500 uppercase tracking-widest">{t('certify.label')}</span>
+              <span className="text-xs text-white/70 uppercase tracking-widest">{t('certify.label')}</span>
             </div>
 
             {/* Mode Toggle */}
             <div className="flex justify-center mb-5">
-              <div className="bg-slate-900/80 rounded-xl p-1 flex gap-1 border border-slate-800">
+              <div className="bg-white/10 backdrop-blur-sm rounded-xl p-1 flex gap-1 border border-white/20">
                 <button
                   onClick={() => setMode("session")}
                   className={`px-5 py-2 text-sm font-medium rounded-lg transition-all ${
                     mode === "session"
-                      ? "bg-slate-700/50 text-slate-200 shadow-sm border border-slate-600"
-                      : "text-slate-500 hover:text-white"
+                      ? "bg-white text-slate-900 shadow-sm"
+                      : "text-white/70 hover:text-white hover:bg-white/10"
                   }`}
                 >
                   {t('certify.practiceNow')}
@@ -196,8 +162,8 @@ export default function CertifyPage() {
                   onClick={() => setMode("plan")}
                   className={`px-5 py-2 text-sm font-medium rounded-lg transition-all ${
                     mode === "plan"
-                      ? "bg-slate-700/50 text-slate-200 shadow-sm border border-slate-600"
-                      : "text-slate-500 hover:text-white"
+                      ? "bg-white text-slate-900 shadow-sm"
+                      : "text-white/70 hover:text-white hover:bg-white/10"
                   }`}
                 >
                   {t('certify.buildRoadmap')}
@@ -211,7 +177,7 @@ export default function CertifyPage() {
                   <h2 className="text-2xl sm:text-3xl font-bold text-white mb-2 tracking-tight">
                     {t('certify.title')}
                   </h2>
-                  <p className="text-slate-500 max-w-md mx-auto text-sm leading-relaxed">
+                  <p className="text-white/70 max-w-md mx-auto text-sm leading-relaxed">
                     {t('certify.subtitle')}
                   </p>
                 </div>
@@ -219,13 +185,13 @@ export default function CertifyPage() {
                 <div className="w-full max-w-lg mx-auto">
                   <ProblemInput 
                     initialTopic={selectedTopic} 
-                    theme="slate" 
+                    theme="glass" 
                     placeholder={t('certify.placeholder')}
                   />
                 </div>
 
                 <div className="mt-6 flex-1 flex flex-col">
-                  <p className="text-sm text-slate-500 mb-3 text-center">
+                  <p className="text-sm text-white/70 mb-3 text-center">
                     {t('certify.popularTopics')}
                   </p>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 flex-1">
@@ -233,14 +199,14 @@ export default function CertifyPage() {
                       <button
                         key={topic}
                         onClick={() => setSelectedTopic(topic)}
-                        className="text-left p-3 rounded-xl border border-slate-800 bg-slate-900/50 hover:bg-slate-800/80 hover:border-slate-600 transition-all duration-200"
+                        className="text-left p-3 rounded-xl border border-white/20 bg-white/10 hover:bg-white/20 hover:border-white/30 transition-all duration-200"
                       >
-                        <p className="text-[13px] text-slate-300 hover:text-white leading-snug mb-1.5">
+                        <p className="text-[13px] text-white leading-snug mb-1.5">
                           {topic}
                         </p>
                         <div className="flex items-center gap-1.5">
                           <span className="text-xs">{emoji}</span>
-                          <span className="text-[11px] text-slate-600">{category}</span>
+                          <span className="text-[11px] text-white/60">{category}</span>
                         </div>
                       </button>
                     ))}
@@ -252,7 +218,7 @@ export default function CertifyPage() {
             {mode === "plan" && (
               <div className="w-full flex-1 flex flex-col">
                 <PlanModeSelect 
-                  theme="slate"
+                  theme="glass"
                   title={t('certify.buildRoadmap')}
                   subtitle={t('certify.buildRoadmapSubtitle')}
                   placeholder={t('certify.placeholder')}

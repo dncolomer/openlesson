@@ -6,7 +6,7 @@ import Link from "next/link";
 import { createSession } from "@/lib/storage";
 import { useI18n } from "@/lib/i18n";
 
-type ThemeColor = "neutral" | "teal" | "slate" | "blue" | "amber" | "violet";
+type ThemeColor = "neutral" | "teal" | "slate" | "blue" | "amber" | "violet" | "glass";
 
 const themeStyles: Record<ThemeColor, {
   textarea: string;
@@ -42,6 +42,11 @@ const themeStyles: Record<ThemeColor, {
     textarea: "bg-violet-950/50 border-violet-900/50 focus:border-violet-700 placeholder-violet-600/50",
     button: "bg-violet-500 hover:bg-violet-400 text-white",
     buttonDisabled: "disabled:bg-violet-900/50 disabled:text-violet-700",
+  },
+  glass: {
+    textarea: "bg-white/10 border-white/20 focus:border-white/40 placeholder-white/50 text-white",
+    button: "bg-white hover:bg-white/90 text-slate-900",
+    buttonDisabled: "disabled:bg-white/20 disabled:text-white/50",
   },
 };
 

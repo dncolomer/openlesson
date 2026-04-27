@@ -5,6 +5,7 @@ import { ProblemInput } from "@/components/ProblemInput";
 import { PlanModeSelect } from "@/components/PlanModeSelect";
 import { Footer } from "@/components/Footer";
 import { Navbar } from "@/components/Navbar";
+import { SolutionsBand } from "@/components/SolutionsBand";
 import { RoadmapBadge } from "@/components/FeatureStatus";
 import { DemoBanner } from "@/components/DemoBanner";
 import { useI18n } from "@/lib/i18n";
@@ -31,11 +32,12 @@ export default function CertifyPage() {
     <main className="min-h-screen flex flex-col bg-[#0a0a0a]">
       <DemoBanner />
       <Navbar />
+      <SolutionsBand />
 
-      <div className="flex-1 flex flex-col lg:flex-row">
+      <div className="flex-1 grid grid-cols-1 lg:grid-cols-[60%_40%]">
         {/* Left Column - Scrollable with lighter background (shows below on mobile) */}
-        <div className="order-2 lg:order-1 lg:w-1/2 bg-slate-900/40 lg:border-r border-t lg:border-t-0 border-slate-800 lg:h-[calc(100vh-113px)] lg:overflow-y-auto px-4 sm:px-6 py-6 lg:py-8">
-          <div className="w-full max-w-xl mx-auto flex flex-col gap-8">
+        <div className="order-2 lg:order-1 bg-slate-900/40 lg:border-r border-t lg:border-t-0 border-slate-800 lg:h-[calc(100vh-113px)] lg:overflow-y-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
+          <div className="w-full flex flex-col gap-8">
             {/* Mockup */}
             <div className="rounded-2xl border border-slate-700 bg-slate-800/30 overflow-hidden flex flex-col relative">
               <RoadmapBadge label={t('certify.mockupLabel')} eta={t('certify.mockupEta')} />
@@ -170,8 +172,8 @@ export default function CertifyPage() {
         </div>
 
         {/* Right Column - Sticky at top (shows on top on mobile) */}
-        <div className="order-1 lg:order-2 w-full lg:w-1/2 lg:sticky lg:top-[113px] lg:h-[calc(100vh-113px)] flex items-center justify-center px-4 sm:px-6 py-6 lg:py-4">
-          <div className="w-full max-w-xl flex flex-col">
+        <div className="order-1 lg:order-2 lg:sticky lg:top-[113px] lg:h-[calc(100vh-113px)] flex items-center justify-center px-4 sm:px-6 lg:px-8 py-6 lg:py-4">
+          <div className="w-full flex flex-col">
             {/* Solution Label */}
             <div className="flex justify-center mb-4">
               <span className="text-xs text-slate-500 uppercase tracking-widest">{t('certify.label')}</span>

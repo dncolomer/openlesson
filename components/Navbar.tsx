@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
@@ -21,8 +21,6 @@ export function Navbar({ breadcrumbs = [], showNav = true }: NavbarProps) {
   const router = useRouter();
   const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [solutionsOpen, setSolutionsOpen] = useState(false);
-  const solutionsRef = useRef<HTMLDivElement>(null);
   const { t } = useI18n();
 
   const supabase = createBrowserClient(
@@ -44,31 +42,12 @@ export function Navbar({ breadcrumbs = [], showNav = true }: NavbarProps) {
     };
   }, [supabase]);
 
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (solutionsRef.current && !solutionsRef.current.contains(event.target as Node)) {
-        setSolutionsOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
-
   const handleSignOut = async () => {
     await supabase.auth.signOut();
     setIsLoggedIn(false);
     router.push("/");
     router.refresh();
   };
-
-  const solutionsItems = [
-    { href: "/", label: t('nav.forIndividuals'), desc: t('nav.personalLearning') },
-    { href: "/enterprise", label: t('nav.forSales'), desc: t('nav.teamTraining') },
-    { href: "/eval", label: t('nav.forHR'), desc: t('nav.candidateTesting') },
-    { href: "/homeschool", label: t('nav.forFamilies'), desc: t('nav.homeschool') },
-    { href: "/schools", label: t('nav.forSchools'), desc: t('nav.teachers') },
-    { href: "/certify", label: t('nav.forCareers'), desc: t('nav.certificationPrep') },
-  ];
 
   const navLinks = [
     { href: "/labs", label: t('nav.labs') },
@@ -108,34 +87,6 @@ export function Navbar({ breadcrumbs = [], showNav = true }: NavbarProps) {
         {/* Desktop Navigation */}
         {showNav && (
           <div className="hidden md:flex items-center gap-4">
-            {/* Solutions Dropdown */}
-            <div className="relative" ref={solutionsRef}>
-              <button
-                onClick={() => setSolutionsOpen(!solutionsOpen)}
-                className="text-xs sm:text-sm text-slate-500 hover:text-white transition-colors inline-flex items-center gap-1"
-              >
-                {t('nav.solutions')}
-                <svg className={`w-3 h-3 transition-transform ${solutionsOpen ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                </svg>
-              </button>
-              {solutionsOpen && (
-                <div className="absolute top-full left-0 mt-2 w-64 bg-slate-900 border border-slate-800 rounded-xl shadow-xl py-2 z-50">
-                  {solutionsItems.map((item) => (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      onClick={() => setSolutionsOpen(false)}
-                      className="block px-4 py-2 hover:bg-slate-800 transition-colors"
-                    >
-                      <p className="text-sm text-white">{item.label}</p>
-                      <p className="text-[10px] text-slate-500">{item.desc}</p>
-                    </Link>
-                  ))}
-                </div>
-              )}
-            </div>
-
             {navLinks.map((link) => (
               <Link 
                 key={link.href} 
@@ -187,20 +138,6 @@ export function Navbar({ breadcrumbs = [], showNav = true }: NavbarProps) {
       {showNav && mobileMenuOpen && (
         <div className="md:hidden mt-4 pb-4 border-t border-slate-800 pt-4">
           <nav className="flex flex-col gap-4">
-            <div className="mb-2">
-              <span className="text-xs text-slate-600 uppercase tracking-wider">{t('nav.solutions')}</span>
-            </div>
-            {solutionsItems.map((item) => (
-              <Link 
-                key={item.href} 
-                href={item.href} 
-                onClick={() => setMobileMenuOpen(false)}
-                className="text-sm text-slate-400 hover:text-white transition-colors pl-2 border-l border-slate-800"
-              >
-                {item.label}
-              </Link>
-            ))}
-            <div className="border-t border-slate-800 my-2" />
             {navLinks.map((link) => (
               <Link 
                 key={link.href} 

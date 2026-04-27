@@ -64,6 +64,7 @@ export function Navbar({ breadcrumbs = [], showNav = true }: NavbarProps) {
     { href: "/homeschool", label: t('nav.forFamilies') },
     { href: "/schools", label: t('nav.forSchools') },
     { href: "/certify", label: t('nav.forCareers') },
+    { href: "/agent", label: t('nav.forAIAgent') },
   ];
 
   return (

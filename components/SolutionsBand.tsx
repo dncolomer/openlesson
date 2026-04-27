@@ -52,6 +52,14 @@ function TrophyIcon({ className }: { className?: string }) {
   );
 }
 
+function CpuIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 3v1.5M4.5 8.25H3m18 0h-1.5M4.5 12H3m18 0h-1.5m-15 3.75H3m18 0h-1.5M8.25 19.5V21M12 3v1.5m0 15V21m3.75-18v1.5m0 15V21m-9-1.5h10.5a2.25 2.25 0 0 0 2.25-2.25V6.75a2.25 2.25 0 0 0-2.25-2.25H6.75A2.25 2.25 0 0 0 4.5 6.75v10.5a2.25 2.25 0 0 0 2.25 2.25Zm.75-12h9v9h-9v-9Z" />
+    </svg>
+  );
+}
+
 export function SolutionsBand() {
   const pathname = usePathname();
   const { t } = useI18n();
@@ -63,6 +71,7 @@ export function SolutionsBand() {
     { href: "/homeschool", label: t('nav.forFamilies'), shortDesc: t('nav.homeschoolShort'), icon: HomeIcon },
     { href: "/schools", label: t('nav.forSchools'), shortDesc: t('nav.teachersShort'), icon: AcademicCapIcon },
     { href: "/certify", label: t('nav.forCareers'), shortDesc: t('nav.certificationPrepShort'), icon: TrophyIcon },
+    { href: "/agent", label: t('nav.forAIAgent'), shortDesc: t('nav.aiAgentShort'), icon: CpuIcon },
   ];
 
   const isActive = (href: string) => {

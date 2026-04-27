@@ -330,7 +330,7 @@ export default function UserDetailPage() {
             <React.Fragment>
               <div className="space-y-3">
                 {paginatedLessons.map((lesson) => (
-                <div key={lesson.id} className="p-3 bg-neutral-800/50 rounded-lg">
+                <Link key={lesson.id} href={`/admin/sessions/${lesson.id}`} className="block p-3 bg-neutral-800/50 rounded-lg hover:bg-neutral-800/70 transition-colors">
                   <div className="flex items-start justify-between mb-1">
                     <div className="text-sm text-neutral-200 line-clamp-1">{lesson.problem}</div>
                     <span className={`ml-2 px-1.5 py-0.5 text-xs rounded ${getStatusColor(lesson.status)}`}>
@@ -341,7 +341,7 @@ export default function UserDetailPage() {
                     <span>{formatDate(lesson.created_at)}</span>
                     {lesson.duration_ms > 0 && <span>{formatDuration(lesson.duration_ms)}</span>}
                   </div>
-                </div>
+                </Link>
                 ))}
               </div>
               
@@ -383,7 +383,7 @@ export default function UserDetailPage() {
             <React.Fragment>
               <div className="space-y-3">
                 {paginatedPlans.map((plan) => (
-                <div key={plan.id} className="p-3 bg-neutral-800/50 rounded-lg">
+                <Link key={plan.id} href={`/admin/plans/${plan.id}`} className="block p-3 bg-neutral-800/50 rounded-lg hover:bg-neutral-800/70 transition-colors">
                   <div className="flex items-start justify-between mb-1">
                     <div className="text-sm text-neutral-200 line-clamp-1">{plan.root_topic}</div>
                     <span className={`ml-2 px-1.5 py-0.5 text-xs rounded ${getStatusColor(plan.status)}`}>
@@ -394,7 +394,7 @@ export default function UserDetailPage() {
                     <span>{formatDate(plan.created_at)}</span>
                     {plan.is_public && <span className="text-cyan-400">Public</span>}
                   </div>
-                </div>
+                </Link>
                 ))}
               </div>
               

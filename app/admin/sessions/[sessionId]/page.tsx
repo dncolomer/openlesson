@@ -3,7 +3,6 @@
 import React, { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/client";
 
 interface SessionOwner {
   id: string;
@@ -42,79 +41,26 @@ export default function AdminSessionDetailPage() {
   const [session, setSession] = useState<SessionDetail | null>(null);
   const [planNode, setPlanNode] = useState<PlanNode | null>(null);
 
-  const supabase = createClient();
-
   useEffect(() => {
-    checkAdminAndLoadSession();
+    loadSessionDetail();
   }, [sessionId]);
-
-  const checkAdminAndLoadSession = async () => {
-    try {
-      const { data: { user: authUser } } = await supabase.auth.getUser();
-
-      if (!authUser) {
-        router.push("/login");
-        return;
-      }
-
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("is_admin")
-        .eq("id", authUser.id)
-        .single();
-
-      if (!profile?.is_admin) {
-        setError("Admin access required");
-        setLoading(false);
-        return;
-      }
-
-      loadSessionDetail();
-    } catch (err) {
-      console.error("Admin check error:", err);
-      setError("Failed to verify admin status");
-      setLoading(false);
-    }
-  };
 
   const loadSessionDetail = async () => {
     try {
-      // Load session
-      const { data: sessionData, error: sessionError } = await supabase
-        .from("sessions")
-        .select("id, user_id, problem, status, created_at, duration_ms, plan_node_id")
-        .eq("id", sessionId)
-        .single();
+      const res = await fetch(`/api/admin/sessions/${sessionId}`);
+      const data = await res.json();
 
-      if (sessionError) throw sessionError;
-
-      // Load owner profile
-      const { data: ownerData } = await supabase
-        .from("profiles")
-        .select("id, username, email")
-        .eq("id", sessionData.user_id)
-        .single();
-
-      setSession({ ...sessionData, owner: ownerData || undefined });
-
-      // Load plan node if exists
-      if (sessionData.plan_node_id) {
-        const { data: nodeData } = await supabase
-          .from("plan_nodes")
-          .select("id, plan_id, label")
-          .eq("id", sessionData.plan_node_id)
-          .single();
-
-        if (nodeData) {
-          const { data: planData } = await supabase
-            .from("learning_plans")
-            .select("id, root_topic")
-            .eq("id", nodeData.plan_id)
-            .single();
-
-          setPlanNode({ ...nodeData, plan: planData || undefined });
+      if (!res.ok) {
+        if (res.status === 401) {
+          router.push("/login");
+          return;
         }
+        setError(data.error || "Failed to load session");
+        return;
       }
+
+      setSession(data.session);
+      setPlanNode(data.planNode);
     } catch (err) {
       console.error("Load session error:", err);
       setError("Failed to load session");

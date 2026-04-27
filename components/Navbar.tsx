@@ -57,6 +57,15 @@ export function Navbar({ breadcrumbs = [], showNav = true }: NavbarProps) {
     { href: "/dashboard", label: t('nav.dashboard') },
   ];
 
+  const solutionLinks = [
+    { href: "/", label: t('nav.forIndividuals') },
+    { href: "/enterprise", label: t('nav.forSales') },
+    { href: "/eval", label: t('nav.forHR') },
+    { href: "/homeschool", label: t('nav.forFamilies') },
+    { href: "/schools", label: t('nav.forSchools') },
+    { href: "/certify", label: t('nav.forCareers') },
+  ];
+
   return (
     <header className="border-b border-slate-800/60 px-4 sm:px-6 py-4 backdrop-blur-sm bg-[#0a0a0a]/80 sticky top-0 z-20">
       <div className="flex items-center justify-between">
@@ -138,6 +147,23 @@ export function Navbar({ breadcrumbs = [], showNav = true }: NavbarProps) {
       {showNav && mobileMenuOpen && (
         <div className="md:hidden mt-4 pb-4 border-t border-slate-800 pt-4">
           <nav className="flex flex-col gap-4">
+            {/* Solutions Section - visible only on mobile/tablet where SolutionsBand is hidden */}
+            <div className="lg:hidden">
+              <p className="text-xs text-slate-600 uppercase tracking-wide mb-2">{t('nav.solutions')}</p>
+              <div className="flex flex-col gap-2 pl-2 mb-4">
+                {solutionLinks.map((link) => (
+                  <Link 
+                    key={link.href} 
+                    href={link.href} 
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="text-sm text-slate-400 hover:text-white transition-colors"
+                  >
+                    {link.label}
+                  </Link>
+                ))}
+              </div>
+            </div>
+
             {navLinks.map((link) => (
               <Link 
                 key={link.href} 

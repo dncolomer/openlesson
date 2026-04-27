@@ -57,12 +57,12 @@ export function SolutionsBand() {
   const { t } = useI18n();
 
   const solutions = [
-    { href: "/", label: t('nav.forIndividuals'), desc: t('nav.personalLearning'), icon: UserIcon },
-    { href: "/enterprise", label: t('nav.forSales'), desc: t('nav.teamTraining'), icon: BriefcaseIcon },
-    { href: "/eval", label: t('nav.forHR'), desc: t('nav.candidateTesting'), icon: ClipboardIcon },
-    { href: "/homeschool", label: t('nav.forFamilies'), desc: t('nav.homeschool'), icon: HomeIcon },
-    { href: "/schools", label: t('nav.forSchools'), desc: t('nav.teachers'), icon: AcademicCapIcon },
-    { href: "/certify", label: t('nav.forCareers'), desc: t('nav.certificationPrep'), icon: TrophyIcon },
+    { href: "/", label: t('nav.forIndividuals'), shortDesc: t('nav.personalLearningShort'), icon: UserIcon },
+    { href: "/enterprise", label: t('nav.forSales'), shortDesc: t('nav.teamTrainingShort'), icon: BriefcaseIcon },
+    { href: "/eval", label: t('nav.forHR'), shortDesc: t('nav.candidateTestingShort'), icon: ClipboardIcon },
+    { href: "/homeschool", label: t('nav.forFamilies'), shortDesc: t('nav.homeschoolShort'), icon: HomeIcon },
+    { href: "/schools", label: t('nav.forSchools'), shortDesc: t('nav.teachersShort'), icon: AcademicCapIcon },
+    { href: "/certify", label: t('nav.forCareers'), shortDesc: t('nav.certificationPrepShort'), icon: TrophyIcon },
   ];
 
   const isActive = (href: string) => {
@@ -71,7 +71,7 @@ export function SolutionsBand() {
   };
 
   return (
-    <div className="border-b border-slate-800/60 bg-slate-900/40 backdrop-blur-sm">
+    <div className="hidden lg:block border-b border-slate-800/60 bg-slate-900/40 backdrop-blur-sm">
       <div className="px-4 sm:px-6">
         <nav className="flex items-stretch justify-between py-3 gap-1">
           {solutions.map((solution) => {
@@ -81,23 +81,23 @@ export function SolutionsBand() {
               <Link
                 key={solution.href}
                 href={solution.href}
-                className={`flex-1 flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all ${
+                className={`flex-1 flex items-center gap-2 xl:gap-3 px-2 xl:px-3 py-2.5 rounded-lg transition-all ${
                   active
                     ? "bg-slate-800 text-white"
                     : "text-slate-500 hover:text-white hover:bg-slate-800/50"
                 }`}
               >
-                <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${
+                <div className={`w-8 h-8 xl:w-9 xl:h-9 rounded-lg flex items-center justify-center shrink-0 ${
                   active ? "bg-slate-700" : "bg-slate-800/80"
                 }`}>
-                  <Icon className="w-5 h-5" />
+                  <Icon className="w-4 h-4 xl:w-5 xl:h-5" />
                 </div>
                 <div className="text-left min-w-0">
-                  <p className={`text-sm font-medium truncate ${active ? "text-white" : ""}`}>
+                  <p className={`text-xs xl:text-sm font-medium truncate ${active ? "text-white" : ""}`}>
                     {solution.label}
                   </p>
-                  <p className="text-[10px] text-slate-500 truncate">
-                    {solution.desc}
+                  <p className="text-[9px] xl:text-[10px] text-slate-500 truncate">
+                    {solution.shortDesc}
                   </p>
                 </div>
               </Link>

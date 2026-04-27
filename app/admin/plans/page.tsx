@@ -306,16 +306,19 @@ export default function AdminPlansPage() {
               plans.map((plan) => (
                 <tr key={plan.id} className="border-b border-neutral-800/50 hover:bg-neutral-800/20">
                   <td className="px-4 py-3">
-                    {plan.owner ? (
-                      <Link href={`/admin/${plan.user_id}`} className="text-blue-400 hover:text-blue-300 text-sm">
-                        {plan.owner.username || plan.owner.email || plan.user_id.slice(0, 8)}
-                      </Link>
-                    ) : (
-                      <span className="text-neutral-500 text-sm">{plan.user_id.slice(0, 8)}...</span>
-                    )}
+                    <Link href={`/admin/${plan.user_id}`} className="block hover:opacity-80">
+                      <div className="text-blue-400 hover:text-blue-300 text-sm">
+                        {plan.owner?.email || plan.user_id.slice(0, 8)}
+                      </div>
+                      {plan.owner?.username && (
+                        <div className="text-neutral-500 text-xs">
+                          @{plan.owner.username}
+                        </div>
+                      )}
+                    </Link>
                   </td>
                   <td className="px-4 py-3">
-                    <Link href={`/plan/${plan.id}`} className="text-sm text-neutral-200 hover:text-white">
+                    <Link href={`/admin/plans/${plan.id}`} className="text-sm text-neutral-200 hover:text-white">
                       {plan.root_topic.length > 60 ? plan.root_topic.slice(0, 60) + "..." : plan.root_topic}
                     </Link>
                   </td>

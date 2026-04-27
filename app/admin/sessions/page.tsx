@@ -116,11 +116,16 @@ export default function SessionsPage() {
 
       const userIds = [...new Set(sessionsData.map((s: { user_id: string }) => s.user_id))];
 
-      // Skip user profile lookup to avoid RLS issues - just use ID as fallback
+      // Fetch user profiles
       const userMap = new Map<string, UserProfile>();
-      for (const uid of userIds) {
-        userMap.set(uid as string, { id: uid as string, username: null, email: (uid as string).slice(0, 8) });
-      }
+      const { data: profiles } = await supabase
+        .from("profiles")
+        .select("id, username, email")
+        .in("id", userIds);
+
+      profiles?.forEach((p: { id: string; username: string | null; email: string | null }) => {
+        userMap.set(p.id, p);
+      });
 
       const sessionsWithData: Session[] = sessionsData.map((s: { id: string; user_id: string; problem: string; status: string; created_at: string; duration_ms: number | null }) => ({
         id: s.id,
@@ -288,12 +293,16 @@ export default function SessionsPage() {
                 sessions.map((session) => (
                   <tr key={session.id} className="border-b border-neutral-800/50 hover:bg-neutral-800/20">
                     <td className="p-4">
-                      <div className="text-white text-sm">
-                        {session.user?.username || session.user?.email || "Unknown"}
-                      </div>
-                      <div className="text-neutral-500 text-xs">
-                        {session.user?.email || session.user_id?.slice(0, 8)}
-                      </div>
+                      <Link href={`/admin/${session.user_id}`} className="block hover:opacity-80">
+                        <div className="text-blue-400 hover:text-blue-300 text-sm">
+                          {session.user?.email || session.user_id?.slice(0, 8)}
+                        </div>
+                        {session.user?.username && (
+                          <div className="text-neutral-500 text-xs">
+                            @{session.user.username}
+                          </div>
+                        )}
+                      </Link>
                     </td>
                     <td className="p-4">
                       <div className="text-neutral-300 text-sm max-w-[200px] truncate" title={session.problem}>

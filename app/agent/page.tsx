@@ -18,6 +18,7 @@ export default function AgentPage() {
         <div className="order-2 lg:order-1 bg-[#0a0a0a] lg:border-r border-t lg:border-t-0 border-slate-800 lg:h-[calc(100vh-113px)] lg:overflow-y-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
           <div className="w-full flex flex-col gap-8">
             {/* Hero Section */}
+            {/* touch: force redeploy */}
             <div>
               <h2 className="text-2xl font-bold text-white mb-3">Give Your AI Agent a Brain for Teaching</h2>
               <p className="text-slate-400 leading-relaxed">

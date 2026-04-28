@@ -26,8 +26,10 @@ interface SessionListProps {
   highlightedNodes?: Set<string>;
   highlightOpacity?: number;
   isOwner?: boolean;
+  isGroupPlan?: boolean;
   supabase?: ReturnType<typeof createBrowserClient>;
   planTopic?: string;
+  planId?: string;
 }
 
 function getOrderedSessions(nodes: PlanNode[]): PlanNode[] {
@@ -66,7 +68,7 @@ function getOrderedSessions(nodes: PlanNode[]): PlanNode[] {
   return ordered;
 }
 
-export function SessionList({ nodes, onSelect, onDelete, onFork, highlightedNodes, highlightOpacity = 1, isOwner = true, supabase, planTopic }: SessionListProps) {
+export function SessionList({ nodes, onSelect, onDelete, onFork, highlightedNodes, highlightOpacity = 1, isOwner = true, isGroupPlan = false, supabase, planTopic, planId }: SessionListProps) {
   const [showCompleted, setShowCompleted] = useState(false);
   const [expandedNodeId, setExpandedNodeId] = useState<string | null>(null);
   const { t } = useI18n();
@@ -117,9 +119,11 @@ export function SessionList({ nodes, onSelect, onDelete, onFork, highlightedNode
             onToggleExpand={() => toggleExpand(node.id)}
             allNodes={nodes}
             isOwner={isOwner}
+            isGroupPlan={isGroupPlan}
             supabase={supabase}
             onNavigateToNode={navigateToNode}
             planTopic={planTopic}
+            planId={planId}
           />
         ))}
 
@@ -163,9 +167,11 @@ export function SessionList({ nodes, onSelect, onDelete, onFork, highlightedNode
                     onToggleExpand={() => toggleExpand(node.id)}
                     allNodes={nodes}
                     isOwner={isOwner}
+                    isGroupPlan={isGroupPlan}
                     supabase={supabase}
                     onNavigateToNode={navigateToNode}
                     planTopic={planTopic}
+                    planId={planId}
                   />
                 ))}
               </div>

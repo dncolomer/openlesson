@@ -41,6 +41,7 @@ interface PlanChatProps {
   planId?: string;
   isOwner?: boolean;
   currentUserId?: string | null;
+  isGroupPlan?: boolean;
 }
 
 const MODEL_STORAGE_KEY = "planner-model";
@@ -66,7 +67,7 @@ function nodesHaveChanged(oldNodes: PlanNode[], newNodes: PlanNode[]): Set<strin
   return changedIds;
 }
 
-export function PlanChat({ plan, nodes: initialNodes, onRefresh, onNodesUpdate, supabase, planId, isOwner = true, currentUserId }: PlanChatProps) {
+export function PlanChat({ plan, nodes: initialNodes, onRefresh, onNodesUpdate, supabase, planId, isOwner = true, currentUserId, isGroupPlan = false }: PlanChatProps) {
   const router = useRouter();
   const { t } = useI18n();
   const [nodes, setNodes] = useState(initialNodes);
@@ -226,37 +227,41 @@ export function PlanChat({ plan, nodes: initialNodes, onRefresh, onNodesUpdate, 
     >
       {/* ─── DESKTOP LAYOUT ─── */}
       
-      {/* Chat Panel - Desktop only (left, narrower) */}
-      <div 
-        className="hidden md:flex flex-col h-full min-h-0 flex-none"
-        style={{ width: `${leftWidth}%` }}
-      >
-        <div className="flex-1 bg-neutral-900/50 rounded-xl border border-neutral-800/60 overflow-hidden flex flex-col p-4 shadow-lg shadow-black/10">
-          <ChatPanel
-            planId={plan.id}
-            model={model}
-            onModelChange={handleModelChange}
-            onRefresh={onRefresh}
-            onNodesUpdate={onNodesUpdate}
-            supabase={supabase}
-            isOwner={isOwner}
-            currentUserId={currentUserId}
-          />
+      {/* Chat Panel - Desktop only (left, narrower) — hidden for group plan participants */}
+      {isOwner && (
+        <div 
+          className="hidden md:flex flex-col h-full min-h-0 flex-none"
+          style={{ width: `${leftWidth}%` }}
+        >
+          <div className="flex-1 bg-neutral-900/50 rounded-xl border border-neutral-800/60 overflow-hidden flex flex-col p-4 shadow-lg shadow-black/10">
+            <ChatPanel
+              planId={plan.id}
+              model={model}
+              onModelChange={handleModelChange}
+              onRefresh={onRefresh}
+              onNodesUpdate={onNodesUpdate}
+              supabase={supabase}
+              isOwner={isOwner}
+              currentUserId={currentUserId}
+            />
+          </div>
         </div>
-      </div>
+      )}
 
-      {/* Draggable Divider - Desktop only */}
-      <div 
-        className="hidden md:flex items-center justify-center w-1.5 cursor-col-resize group"
-        onMouseDown={(e) => { e.preventDefault(); setIsDragging(true); }}
-      >
-        <div className={`w-0.5 h-full rounded-full transition-colors ${isDragging ? "bg-blue-500" : "bg-neutral-700 group-hover:bg-neutral-500"}`} />
-      </div>
+      {/* Draggable Divider - Desktop only, owner only */}
+      {isOwner && (
+        <div 
+          className="hidden md:flex items-center justify-center w-1.5 cursor-col-resize group"
+          onMouseDown={(e) => { e.preventDefault(); setIsDragging(true); }}
+        >
+          <div className={`w-0.5 h-full rounded-full transition-colors ${isDragging ? "bg-blue-500" : "bg-neutral-700 group-hover:bg-neutral-500"}`} />
+        </div>
+      )}
 
-      {/* Sessions Panel - Desktop (right, wider) */}
+      {/* Sessions Panel - Desktop (right, wider — full width for group participants) */}
       <div 
         className="hidden md:flex flex-col h-full min-h-0 flex-none"
-        style={{ width: `${100 - leftWidth - 0.5}%` }}
+        style={{ width: isOwner ? `${100 - leftWidth - 0.5}%` : "100%" }}
       >
         <div className="flex-1 bg-neutral-900/50 rounded-xl border border-neutral-800/60 overflow-hidden shadow-lg shadow-black/10">
           <SessionList
@@ -267,8 +272,10 @@ export function PlanChat({ plan, nodes: initialNodes, onRefresh, onNodesUpdate, 
             highlightedNodes={highlightedNodes}
             highlightOpacity={highlightOpacity}
             isOwner={isOwner}
+            isGroupPlan={isGroupPlan}
             supabase={supabase}
             planTopic={plan.root_topic}
+            planId={planId || plan.id}
           />
         </div>
       </div>
@@ -286,8 +293,10 @@ export function PlanChat({ plan, nodes: initialNodes, onRefresh, onNodesUpdate, 
             highlightedNodes={highlightedNodes}
             highlightOpacity={highlightOpacity}
             isOwner={isOwner}
+            isGroupPlan={isGroupPlan}
             supabase={supabase}
             planTopic={plan.root_topic}
+            planId={planId || plan.id}
           />
         </div>
       </div>

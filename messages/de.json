@@ -1559,7 +1559,12 @@
     "notesPlaceholder": "Schreibe Notizen zu diesem Plan... (Markdown unterstützt)",
     "clickToEdit": "Klicken zum Bearbeiten",
     "addNotes": "Notizen zu diesem Plan hinzufügen...",
-    "noNotes": "Noch keine Notizen für diesen Plan."
+    "noNotes": "Noch keine Notizen für diesen Plan.",
+    "groupPlan": "Group Plan",
+    "makeGroupPlan": "Make Group Plan",
+    "group": "Group",
+    "groupParticipant": "Participant",
+    "signInToJoin": "Sign in to join"
   },
   "performanceChat": {
     "signInRequired": "Melde dich an, um Leistungseinblicke zu sehen",

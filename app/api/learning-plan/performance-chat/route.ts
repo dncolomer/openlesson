@@ -61,10 +61,10 @@ export async function POST(req: NextRequest) {
       .eq("id", user.id)
       .single();
 
-    // Get the plan to check ownership
+    // Get the plan to check ownership and group status
     const { data: plan } = await supabase
       .from("learning_plans")
-      .select("id, user_id, root_topic, title")
+      .select("id, user_id, root_topic, title, is_group")
       .eq("id", planId)
       .single();
 
@@ -74,10 +74,12 @@ export async function POST(req: NextRequest) {
 
     const isOwner = plan.user_id === user.id;
     const isOrgAdmin = profile?.is_org_admin || profile?.is_admin;
+    const isGroupPlan = plan.is_group === true;
 
     // Determine access level
     // - Plan owners: see all users on their plan
     // - Org admins: see all users in their org
+    // - Group plan participants (non-owner): see only themselves
     // - Regular users: see only themselves
     let canSeeAllUsers = isOwner || isOrgAdmin;
 
@@ -94,7 +96,8 @@ export async function POST(req: NextRequest) {
         user.id,
         canSeeAllUsers,
         profile?.organization_id,
-        isOrgAdmin
+        isOrgAdmin,
+        isGroupPlan
       );
 
       if (performanceData.users.length === 0) {
@@ -224,8 +227,18 @@ async function fetchPerformanceData(
   requestingUserId: string,
   canSeeAllUsers: boolean,
   organizationId?: string | null,
-  isOrgAdmin?: boolean
+  isOrgAdmin?: boolean,
+  isGroupPlan?: boolean
 ): Promise<PerformanceDataPayload> {
+
+  // ── Group plans: use plan_node_sessions join table ──
+  if (isGroupPlan) {
+    return fetchGroupPlanPerformanceData(
+      supabase, planId, planTitle, requestingUserId, canSeeAllUsers
+    );
+  }
+
+  // ── Standard plans: use existing plan_nodes.session_id join ──
   // Build the query to get sessions linked to this plan via plan_nodes
   let query = supabase
     .from("sessions")
@@ -313,6 +326,130 @@ async function fetchPerformanceData(
     if (isCompleted) {
       userData.summary.completed_sessions++;
     }
+    userData.summary.total_duration_minutes += durationMinutes;
+  }
+
+  return {
+    plan_title: planTitle,
+    plan_id: planId,
+    generated_at: new Date().toISOString(),
+    users: Array.from(userMap.values()),
+  };
+}
+
+/**
+ * Fetch performance data for group plans using the plan_node_sessions
+ * join table.  For the plan owner this calls the SECURITY DEFINER
+ * RPC so it can read ALL participants' sessions (bypassing session
+ * RLS).  For non-owners it falls back to querying only their own
+ * rows.
+ */
+async function fetchGroupPlanPerformanceData(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  planId: string,
+  planTitle: string,
+  requestingUserId: string,
+  canSeeAllUsers: boolean,
+): Promise<PerformanceDataPayload> {
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let rows: any[] = [];
+
+  if (canSeeAllUsers) {
+    // Owner path: use SECURITY DEFINER RPC to read all sessions
+    const { data, error } = await supabase.rpc("get_group_plan_sessions", {
+      p_plan_id: planId,
+    });
+    if (error) {
+      console.error("[performance-chat] RPC error:", error);
+    } else {
+      rows = data || [];
+    }
+  } else {
+    // Participant path: only their own plan_node_sessions
+    const { data: links, error: linkError } = await supabase
+      .from("plan_node_sessions")
+      .select("session_id, plan_node_id")
+      .eq("plan_id", planId)
+      .eq("user_id", requestingUserId);
+
+    if (linkError || !links || links.length === 0) {
+      return {
+        plan_title: planTitle,
+        plan_id: planId,
+        generated_at: new Date().toISOString(),
+        users: [],
+      };
+    }
+
+    const sessionIds = links.map(l => l.session_id);
+    const nodeIds = links.map(l => l.plan_node_id);
+
+    // Sessions are owned by the user so RLS allows this
+    const { data: sessions } = await supabase
+      .from("sessions")
+      .select("id, problem, status, duration_ms, created_at, report, user_id")
+      .in("id", sessionIds);
+
+    // Nodes are readable because of the group plan RLS policy
+    const { data: nodes } = await supabase
+      .from("plan_nodes")
+      .select("id, title")
+      .in("id", nodeIds);
+
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("username")
+      .eq("id", requestingUserId)
+      .single();
+
+    const nodeMap = new Map((nodes || []).map(n => [n.id, n.title]));
+    const linkMap = new Map(links.map(l => [l.session_id, l.plan_node_id]));
+
+    rows = (sessions || []).map(s => ({
+      session_id: s.id,
+      user_id: s.user_id,
+      username: profile?.username || "unknown",
+      problem: s.problem,
+      status: s.status,
+      duration_ms: s.duration_ms,
+      report: s.report,
+      created_at: s.created_at,
+      ended_at: null,
+      node_id: linkMap.get(s.id),
+      node_title: nodeMap.get(linkMap.get(s.id) || "") || null,
+    }));
+  }
+
+  // Group rows by user
+  const userMap = new Map<string, UserPerformanceData>();
+
+  for (const row of rows) {
+    const uid = row.user_id;
+    if (!userMap.has(uid)) {
+      userMap.set(uid, {
+        username: row.username || "unknown",
+        user_id: uid,
+        sessions: [],
+        summary: { total_sessions: 0, completed_sessions: 0, total_duration_minutes: 0 },
+      });
+    }
+    const userData = userMap.get(uid)!;
+    const durationMinutes = Math.round((row.duration_ms || 0) / 60000);
+    const isCompleted = row.status === "completed" || row.status === "ended_by_tutor";
+
+    userData.sessions.push({
+      id: row.session_id,
+      node_title: row.node_title || null,
+      problem: row.problem,
+      status: row.status,
+      duration_minutes: durationMinutes,
+      started_at: row.created_at,
+      report: row.report,
+    });
+
+    userData.summary.total_sessions++;
+    if (isCompleted) userData.summary.completed_sessions++;
     userData.summary.total_duration_minutes += durationMinutes;
   }
 

@@ -21,10 +21,11 @@ interface PerformanceChatProps {
   planId: string;
   isOwner: boolean;
   currentUserId: string | null;
+  isGroupPlan?: boolean;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-export function PerformanceChat({ planId, isOwner, currentUserId }: PerformanceChatProps) {
+export function PerformanceChat({ planId, isOwner, currentUserId, isGroupPlan = false }: PerformanceChatProps) {
   const { t } = useI18n();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");

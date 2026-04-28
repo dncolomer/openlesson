@@ -1528,6 +1528,8 @@ export interface LearningPlan {
   notes?: string;
   // AI-generated cover image
   cover_image_url?: string;
+  // Group plan (collaborative, no-fork direct participation)
+  is_group?: boolean;
 }
 
 export interface PlanNode {

@@ -1559,7 +1559,12 @@
     "notesPlaceholder": "为此计划写笔记...（支持Markdown）",
     "clickToEdit": "点击编辑",
     "addNotes": "为此计划添加笔记...",
-    "noNotes": "此计划还没有笔记。"
+    "noNotes": "此计划还没有笔记。",
+    "groupPlan": "Group Plan",
+    "makeGroupPlan": "Make Group Plan",
+    "group": "Group",
+    "groupParticipant": "Participant",
+    "signInToJoin": "Sign in to join"
   },
   "performanceChat": {
     "signInRequired": "登录以查看表现洞察",

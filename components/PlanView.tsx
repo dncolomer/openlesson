@@ -33,6 +33,7 @@ export interface LearningPlan {
   user_id?: string;
   description?: string;
   is_public?: boolean;
+  is_group?: boolean;
   author_username?: string;
   original_plan_id?: string;
   remix_count?: number;
@@ -174,7 +175,7 @@ export function PlanView({ initialPlan, initialNodes }: PlanViewProps) {
         return;
       }
 
-      if (!planData.is_public) {
+      if (!planData.is_public && !planData.is_group) {
         if (!user) {
           router.push("/login?redirect=/plan/" + planId);
           return;
@@ -184,6 +185,12 @@ export function PlanView({ initialPlan, initialNodes }: PlanViewProps) {
           setLoading(false);
           return;
         }
+      }
+
+      // Group plans require authentication
+      if (planData.is_group && !planData.is_public && !user) {
+        router.push("/login?redirect=/plan/" + planId);
+        return;
       }
 
       if (planData.profiles) {
@@ -229,6 +236,63 @@ export function PlanView({ initialPlan, initialNodes }: PlanViewProps) {
         }
 
         setNodes(finalNodes);
+
+        // For group plan participants (non-owner): overlay their own
+        // session statuses from plan_node_sessions
+        if (planData.is_group && user && planData.user_id !== user.id) {
+          const { data: pnsLinks } = await supabase
+            .from("plan_node_sessions")
+            .select("plan_node_id, session_id")
+            .eq("plan_id", planId)
+            .eq("user_id", user.id);
+
+          if (pnsLinks && pnsLinks.length > 0) {
+            const pnsSessionIds = pnsLinks.map(l => l.session_id);
+            const { data: pnsSessions } = await supabase
+              .from("sessions")
+              .select("id, status")
+              .in("id", pnsSessionIds);
+
+            if (pnsSessions) {
+              // Map node_id -> best session status
+              const nodeStatusMap = new Map<string, string>();
+              const sessionStatusMap = new Map(pnsSessions.map(s => [s.id, s.status]));
+              for (const link of pnsLinks) {
+                const sStatus = sessionStatusMap.get(link.session_id);
+                if (!sStatus) continue;
+                const existing = nodeStatusMap.get(link.plan_node_id);
+                // Completed > in_progress/active > not_started
+                if (sStatus === "completed" || sStatus === "ended_by_tutor") {
+                  nodeStatusMap.set(link.plan_node_id, "completed");
+                } else if ((sStatus === "active" || sStatus === "paused") && existing !== "completed") {
+                  nodeStatusMap.set(link.plan_node_id, "in_progress");
+                }
+              }
+
+              // Also build a map of node -> active session for resuming
+              const nodeActiveSessionMap = new Map<string, string>();
+              for (const link of pnsLinks) {
+                const sStatus = sessionStatusMap.get(link.session_id);
+                if (sStatus === "active" || sStatus === "paused") {
+                  nodeActiveSessionMap.set(link.plan_node_id, link.session_id);
+                }
+              }
+
+              setNodes(prev => prev.map(n => {
+                const overrideStatus = nodeStatusMap.get(n.id);
+                const activeSessionId = nodeActiveSessionMap.get(n.id);
+                if (overrideStatus || activeSessionId) {
+                  return {
+                    ...n,
+                    status: overrideStatus || n.status,
+                    session_id: activeSessionId || n.session_id,
+                  };
+                }
+                return n;
+              }));
+            }
+          }
+        }
       }
 
       setLoading(false);
@@ -454,7 +518,7 @@ export function PlanView({ initialPlan, initialNodes }: PlanViewProps) {
 
             {/* Action buttons */}
             <div className="flex items-center gap-2 flex-shrink-0">
-              {plan.is_public && (
+              {(plan.is_public || plan.is_group) && (
                 <button
                   onClick={handleShare}
                   className="text-xs px-3 py-1.5 rounded-full bg-white/10 backdrop-blur-sm border border-white/10 text-white/70 hover:text-white hover:bg-white/20 transition-all"
@@ -463,45 +527,89 @@ export function PlanView({ initialPlan, initialNodes }: PlanViewProps) {
                 </button>
               )}
               {isOwner ? (
-                <button
-                  onClick={async () => {
-                    try {
-                      const isPublic = plan.is_public ?? false;
-                      const res = await fetch(`/api/learning-plans/${planId}/visibility`, {
-                        method: "PUT",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ is_public: !isPublic }),
-                      });
-                      const data = await res.json();
-                      if (data.success) {
-                        setPlan({ ...plan, is_public: !isPublic });
+                <>
+                  {/* Group plan toggle */}
+                  <button
+                    onClick={async () => {
+                      try {
+                        const isGroup = plan.is_group ?? false;
+                        const res = await fetch(`/api/learning-plans/${planId}/group`, {
+                          method: "PUT",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ is_group: !isGroup }),
+                        });
+                        const data = await res.json();
+                        if (data.success) {
+                          setPlan({ ...plan, is_group: !isGroup });
+                        }
+                      } catch (err) {
+                        console.error("Error toggling group mode:", err);
                       }
-                    } catch (err) {
-                      console.error("Error toggling visibility:", err);
-                    }
-                  }}
-                  className={`text-xs px-3 py-1.5 rounded-full backdrop-blur-sm border transition-all ${
-                    plan.is_public
-                      ? "bg-green-500/15 border-green-500/30 text-green-400 hover:bg-green-500/25"
-                      : "bg-white/10 border-white/10 text-white/70 hover:text-white hover:bg-white/20"
-                  }`}
-                >
-                  {plan.is_public ? t('planView.public') : t('planView.makePublic')}
-                </button>
+                    }}
+                    className={`text-xs px-3 py-1.5 rounded-full backdrop-blur-sm border transition-all ${
+                      plan.is_group
+                        ? "bg-violet-500/15 border-violet-500/30 text-violet-400 hover:bg-violet-500/25"
+                        : "bg-white/10 border-white/10 text-white/70 hover:text-white hover:bg-white/20"
+                    }`}
+                  >
+                    {plan.is_group ? t('planView.groupPlan') : t('planView.makeGroupPlan')}
+                  </button>
+                  {/* Public / Share toggle */}
+                  <button
+                    onClick={async () => {
+                      try {
+                        const isPublic = plan.is_public ?? false;
+                        const res = await fetch(`/api/learning-plans/${planId}/visibility`, {
+                          method: "PUT",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ is_public: !isPublic }),
+                        });
+                        const data = await res.json();
+                        if (data.success) {
+                          setPlan({ ...plan, is_public: !isPublic });
+                        }
+                      } catch (err) {
+                        console.error("Error toggling visibility:", err);
+                      }
+                    }}
+                    className={`text-xs px-3 py-1.5 rounded-full backdrop-blur-sm border transition-all ${
+                      plan.is_public
+                        ? "bg-green-500/15 border-green-500/30 text-green-400 hover:bg-green-500/25"
+                        : "bg-white/10 border-white/10 text-white/70 hover:text-white hover:bg-white/20"
+                    }`}
+                  >
+                    {plan.is_public ? t('planView.public') : t('planView.makePublic')}
+                  </button>
+                </>
               ) : currentUserId ? (
-                <button
-                  onClick={() => setShowRemixModal(true)}
-                  className="text-xs px-3 py-1.5 rounded-full bg-blue-500/15 border border-blue-500/30 text-blue-400 hover:bg-blue-500/25 transition-all"
-                >
-                  {t('planView.forkRemix')}
-                </button>
+                plan.is_group ? (
+                  <span className="text-xs px-3 py-1.5 rounded-full bg-violet-500/10 border border-violet-500/20 text-violet-400">
+                    {t('planView.groupParticipant')}
+                  </span>
+                ) : (
+                  <button
+                    onClick={() => setShowRemixModal(true)}
+                    className="text-xs px-3 py-1.5 rounded-full bg-blue-500/15 border border-blue-500/30 text-blue-400 hover:bg-blue-500/25 transition-all"
+                  >
+                    {t('planView.forkRemix')}
+                  </button>
+                )
               ) : (
-                <Link
-                  href="/register"
-                  className="text-xs px-3 py-1.5 rounded-full bg-blue-500/15 border border-blue-500/30 text-blue-400 hover:bg-blue-500/25 transition-all"
-                >
-                  {t('planView.forkRemix')}
-                </Link>
+                plan.is_group ? (
+                  <Link
+                    href={`/login?redirect=/p/${planId}/${encodeURIComponent((plan.root_topic || "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, ""))}`}
+                    className="text-xs px-3 py-1.5 rounded-full bg-violet-500/15 border border-violet-500/30 text-violet-400 hover:bg-violet-500/25 transition-all"
+                  >
+                    {t('planView.signInToJoin')}
+                  </Link>
+                ) : (
+                  <Link
+                    href="/register"
+                    className="text-xs px-3 py-1.5 rounded-full bg-blue-500/15 border border-blue-500/30 text-blue-400 hover:bg-blue-500/25 transition-all"
+                  >
+                    {t('planView.forkRemix')}
+                  </Link>
+                )
               )}
             </div>
           </div>
@@ -511,6 +619,11 @@ export function PlanView({ initialPlan, initialNodes }: PlanViewProps) {
       {/* Metadata bar */}
       <div className="px-4 py-2 flex items-center gap-3 text-xs flex-shrink-0 border-b border-neutral-800/50">
         <div className="flex items-center gap-2 flex-1 min-w-0">
+          {plan.is_group && (
+            <span className="text-violet-400 bg-violet-500/10 border border-violet-500/20 px-1.5 py-0.5 rounded text-[10px] font-medium uppercase tracking-wider">
+              {t('planView.group')}
+            </span>
+          )}
           {plan.is_public && plan.author_username && (
             <span className="text-neutral-500">{t('planView.by')} <span className="text-neutral-400">@{plan.author_username}</span></span>
           )}
@@ -599,6 +712,7 @@ export function PlanView({ initialPlan, initialNodes }: PlanViewProps) {
             onNodesUpdate={handleNodesUpdate}
             isOwner={isOwner}
             currentUserId={currentUserId}
+            isGroupPlan={plan.is_group === true}
           />
         )}
 
@@ -677,6 +791,7 @@ export function PlanView({ initialPlan, initialNodes }: PlanViewProps) {
             planId={planId}
             isOwner={isOwner}
             currentUserId={currentUserId}
+            isGroupPlan={plan.is_group === true}
           />
         )}
 

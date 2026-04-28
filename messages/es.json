@@ -1620,7 +1620,12 @@
     "notesPlaceholder": "Escribe notas sobre este plan... (Markdown soportado)",
     "clickToEdit": "Clic para editar",
     "addNotes": "Agregar notas a este plan...",
-    "noNotes": "Aún no hay notas para este plan."
+    "noNotes": "Aún no hay notas para este plan.",
+    "groupPlan": "Group Plan",
+    "makeGroupPlan": "Make Group Plan",
+    "group": "Group",
+    "groupParticipant": "Participant",
+    "signInToJoin": "Sign in to join"
   },
   "performanceChat": {
     "signInRequired": "Inicia sesión para ver información de rendimiento",

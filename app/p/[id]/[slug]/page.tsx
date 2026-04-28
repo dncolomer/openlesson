@@ -37,7 +37,7 @@ async function getPlan(planId: string) {
     .from("learning_plans")
     .select("*, profiles:author_id(username)")
     .eq("id", planId)
-    .eq("is_public", true)
+    .or("is_public.eq.true,is_group.eq.true")
     .single();
 
   if (error || !plan) {

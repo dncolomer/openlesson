@@ -29,6 +29,7 @@ interface SessionItemProps {
   onToggleExpand?: () => void;
   allNodes?: PlanNode[];
   isOwner?: boolean;
+  isGroupPlan?: boolean;
   supabase?: ReturnType<typeof createBrowserClient>;
   onNavigateToNode?: (nodeId: string) => void;
   planTopic?: string;
@@ -39,7 +40,7 @@ export function SessionItem({
   node, index, onSelect, onDelete, onFork, 
   highlighted, highlightOpacity = 1,
   isExpanded = false, onToggleExpand,
-  allNodes = [], isOwner = true,
+  allNodes = [], isOwner = true, isGroupPlan = false,
   supabase: propSupabase, onNavigateToNode, planTopic, planId
 }: SessionItemProps) {
   const { t } = useI18n();
@@ -84,14 +85,49 @@ export function SessionItem({
 
     setIsStarting(true);
     try {
-      if (editedPlanningPrompt !== (node.planning_prompt || "")) {
-        await supabase.from("plan_nodes").update({ planning_prompt: editedPlanningPrompt || null }).eq("id", node.id);
+      if (isGroupPlan && !isOwner) {
+        // Group plan participant: use the dedicated API
+        const res = await fetch("/api/group-plan/start-session", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            planId,
+            nodeId: node.id,
+            nodeTitle: node.title,
+            planningPrompt: editedPlanningPrompt || undefined,
+          }),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data.error || "Failed to start session");
+        }
+        if (data.resumed) {
+          router.push(`/session?id=${data.session.id}`);
+        } else {
+          router.push(`/session?id=${data.session.id}`);
+        }
+      } else {
+        // Owner path: original flow
+        if (editedPlanningPrompt !== (node.planning_prompt || "")) {
+          await supabase.from("plan_nodes").update({ planning_prompt: editedPlanningPrompt || null }).eq("id", node.id);
+        }
+        await supabase.from("plan_nodes").update({ status: "in_progress" }).eq("id", node.id);
+        const { createSession } = await import("@/lib/storage");
+        const session = await createSession(node.title, undefined, editedPlanningPrompt || undefined, undefined, planId || undefined);
+        await supabase.from("plan_nodes").update({ session_id: session.id }).eq("id", node.id);
+
+        // Also record in plan_node_sessions for consistency (owner's sessions too)
+        if (planId) {
+          await supabase.from("plan_node_sessions").insert({
+            plan_node_id: node.id,
+            session_id: session.id,
+            user_id: (await supabase.auth.getUser()).data.user?.id,
+            plan_id: planId,
+          }).then(() => {});
+        }
+
+        router.push(`/session?id=${session.id}`);
       }
-      await supabase.from("plan_nodes").update({ status: "in_progress" }).eq("id", node.id);
-      const { createSession } = await import("@/lib/storage");
-      const session = await createSession(node.title, undefined, editedPlanningPrompt || undefined, undefined, planId || undefined);
-      await supabase.from("plan_nodes").update({ session_id: session.id }).eq("id", node.id);
-      router.push(`/session?id=${session.id}`);
     } catch (err) {
       console.error("Failed to start session:", err);
       setIsStarting(false);
@@ -178,7 +214,7 @@ export function SessionItem({
 
           {/* Right side: status label on hover + chevron */}
           <div className="flex items-center gap-1.5 flex-shrink-0">
-            {!isExpanded && !isCompleted && !isLocked && isOwner && (
+            {!isExpanded && !isCompleted && !isLocked && (isOwner || isGroupPlan) && (
               <span className="text-[10px] text-neutral-600 opacity-0 group-hover:opacity-100 transition-opacity hidden sm:inline">
                 {activeSession ? t('sessionItem.resume') : t('sessionItem.expand')}
               </span>
@@ -265,7 +301,7 @@ export function SessionItem({
           )}
 
           {/* Actions */}
-          {!isLocked && isOwner && (
+          {!isLocked && (isOwner || isGroupPlan) && (
             <div className="flex gap-2 pt-1">
               <button
                 onClick={(e) => { e.stopPropagation(); setShowPreview(true); }}

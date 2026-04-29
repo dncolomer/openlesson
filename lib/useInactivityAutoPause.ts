@@ -82,34 +82,76 @@ export function useInactivityAutoPause({
     if (typeof window === "undefined") return;
     if (!isRecording || isPaused) return;
 
-    const markActivity = () => {
-      lastActivityAtRef.current = Date.now();
+    const markActivity = (source: string) => {
+      const now = Date.now();
+      const idleFor = now - lastActivityAtRef.current;
+      lastActivityAtRef.current = now;
       firedRef.current = false;
+      if (debug && idleFor > 30 * 1000) {
+        console.log(`[inactivity] reset by ${source} after ${Math.round(idleFor / 1000)}s idle`);
+      }
     };
 
-    // Reset on (re)enable
-    markActivity();
+    const handlers: Array<[keyof WindowEventMap, (e: Event) => void]> = [];
 
-    const events: (keyof WindowEventMap)[] = [
-      "mousemove",
+    // Intentional input — always counts.
+    const intentional: (keyof WindowEventMap)[] = [
       "mousedown",
       "keydown",
       "touchstart",
-      "touchmove",
       "pointerdown",
-      "pointermove",
       "wheel",
       "scroll",
     ];
-    for (const ev of events) {
-      window.addEventListener(ev, markActivity, { passive: true });
+    for (const ev of intentional) {
+      const h = () => markActivity(ev);
+      window.addEventListener(ev, h, { passive: true });
+      handlers.push([ev, h]);
     }
-    return () => {
-      for (const ev of events) {
-        window.removeEventListener(ev, markActivity);
+
+    // Mouse/pointer move — only counts for non-trivial movement so that
+    // subconscious mouse jitter doesn't keep a forgotten tab alive forever.
+    // We require at least 25 px of total movement across a 2 s window.
+    let pxAccum = 0;
+    let lastX: number | null = null;
+    let lastY: number | null = null;
+    let pxResetAt = Date.now();
+    const MOVE_PX_THRESHOLD = 25;
+    const MOVE_WINDOW_MS = 2000;
+    const onMove = (e: Event) => {
+      const me = e as MouseEvent;
+      if (lastX !== null && lastY !== null) {
+        pxAccum += Math.abs(me.clientX - lastX) + Math.abs(me.clientY - lastY);
+      }
+      lastX = me.clientX;
+      lastY = me.clientY;
+      if (Date.now() - pxResetAt > MOVE_WINDOW_MS) {
+        pxAccum = 0;
+        pxResetAt = Date.now();
+      }
+      if (pxAccum >= MOVE_PX_THRESHOLD) {
+        pxAccum = 0;
+        pxResetAt = Date.now();
+        markActivity("mousemove");
       }
     };
-  }, [isRecording, isPaused]);
+    window.addEventListener("mousemove", onMove, { passive: true });
+    handlers.push(["mousemove", onMove]);
+    window.addEventListener("pointermove", onMove, { passive: true });
+    handlers.push(["pointermove", onMove]);
+
+    // touchmove is almost always intentional (scrolling on touch devices is
+    // a discrete gesture), so we still count every touchmove.
+    const onTouchMove = () => markActivity("touchmove");
+    window.addEventListener("touchmove", onTouchMove, { passive: true });
+    handlers.push(["touchmove", onTouchMove]);
+
+    return () => {
+      for (const [ev, h] of handlers) {
+        window.removeEventListener(ev, h);
+      }
+    };
+  }, [isRecording, isPaused, debug]);
 
   // ── Audio RMS monitor ────────────────────────────────────────────────
   useEffect(() => {
@@ -189,22 +231,26 @@ export function useInactivityAutoPause({
     lastActivityAtRef.current = Date.now();
     firedRef.current = false;
 
-    let debugTick = 0;
+    if (debug) {
+      console.log(
+        `[inactivity] monitor armed: threshold=${Math.round(thresholdMs / 1000)}s` +
+        ` rmsThreshold=${audioRmsThreshold}` +
+        ` (move >=25px, mousedown/keydown/touch/scroll/wheel all reset)`,
+      );
+    }
+
+    let lastLogAt = Date.now();
 
     const intervalId = window.setInterval(() => {
       const idleFor = Date.now() - lastActivityAtRef.current;
 
-      if (debug) {
-        // Log every 15 s so we can verify the hook is alive without flooding
-        debugTick++;
-        if (debugTick % 15 === 0) {
-          console.log(
-            `[inactivity] idle=${Math.round(idleFor / 1000)}s` +
-            ` threshold=${Math.round(thresholdMs / 1000)}s` +
-            ` rms=${lastRmsRef.current.toFixed(4)}` +
-            ` rmsThreshold=${audioRmsThreshold}`,
-          );
-        }
+      if (debug && Date.now() - lastLogAt >= 30 * 1000) {
+        lastLogAt = Date.now();
+        console.log(
+          `[inactivity] idle=${Math.round(idleFor / 1000)}s` +
+          ` / ${Math.round(thresholdMs / 1000)}s` +
+          ` | rms=${lastRmsRef.current.toFixed(4)}`,
+        );
       }
 
       if (firedRef.current) return;

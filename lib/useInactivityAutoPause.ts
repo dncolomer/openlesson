@@ -18,14 +18,29 @@ interface UseInactivityAutoPauseOptions {
   thresholdMs?: number;
   /**
    * RMS amplitude (0-1) that counts as "voice".  The analyser values are
-   * time-domain floats in [-1, 1], so an RMS of ~0.01 is a reasonable
-   * floor above background noise.
+   * time-domain floats in [-1, 1].  Typical speech sits around 0.05-0.15,
+   * while a quiet room mic floor is around 0.005-0.02.  We pick 0.04 so
+   * background noise / HVAC / keyboard-tick-through-mic doesn't keep the
+   * session alive forever, while normal conversational speech triggers
+   * comfortably.
    */
   audioRmsThreshold?: number;
   /**
-   * Sampling interval for RMS analysis and timer checks.  Defaults to 1 s.
+   * Number of consecutive above-threshold samples required to count as
+   * real voice.  Samples are taken every 250 ms, so the default of 3
+   * means ~750 ms of sustained sound — enough to filter out one-off
+   * clicks, knocks and transient spikes.
+   */
+  audioConsecutiveSamples?: number;
+  /**
+   * Sampling interval for the inactivity check timer.  Defaults to 1 s.
    */
   checkIntervalMs?: number;
+  /**
+   * If true, logs periodic RMS + idle-time diagnostics to the console.
+   * Useful when tuning thresholds.  Defaults to false.
+   */
+  debug?: boolean;
 }
 
 /**
@@ -45,8 +60,10 @@ export function useInactivityAutoPause({
   isPaused,
   onAutoPause,
   thresholdMs = 5 * 60 * 1000,
-  audioRmsThreshold = 0.01,
+  audioRmsThreshold = 0.04,
+  audioConsecutiveSamples = 3,
   checkIntervalMs = 1000,
+  debug = false,
 }: UseInactivityAutoPauseOptions) {
   // Latch callback in a ref so the main effect doesn't re-subscribe on every
   // render (the caller typically passes a freshly-bound `handlePause`).
@@ -57,6 +74,8 @@ export function useInactivityAutoPause({
 
   const lastActivityAtRef = useRef<number>(Date.now());
   const firedRef = useRef<boolean>(false);
+  // Latch the most recent RMS purely for debug logging.
+  const lastRmsRef = useRef<number>(0);
 
   // ── Input event listeners ─────────────────────────────────────────────
   useEffect(() => {
@@ -102,9 +121,9 @@ export function useInactivityAutoPause({
     let source: MediaStreamAudioSourceNode | null = null;
     let rafId: number | null = null;
     let timeDomain: Float32Array<ArrayBuffer> | null = null;
+    let consecutiveVoiced = 0;
 
     try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const Ctx: typeof AudioContext | undefined =
         (window as unknown as { AudioContext?: typeof AudioContext; webkitAudioContext?: typeof AudioContext })
           .AudioContext ||
@@ -135,10 +154,18 @@ export function useInactivityAutoPause({
         sum += v * v;
       }
       const rms = Math.sqrt(sum / timeDomain.length);
+      lastRmsRef.current = rms;
+
       if (rms > audioRmsThreshold) {
-        lastActivityAtRef.current = Date.now();
-        firedRef.current = false;
+        consecutiveVoiced++;
+        if (consecutiveVoiced >= audioConsecutiveSamples) {
+          lastActivityAtRef.current = Date.now();
+          firedRef.current = false;
+        }
+      } else {
+        consecutiveVoiced = 0;
       }
+
       rafId = window.setTimeout(tick, 250) as unknown as number;
     };
     tick();
@@ -153,7 +180,7 @@ export function useInactivityAutoPause({
       } catch {}
       audioCtx?.close().catch(() => {});
     };
-  }, [stream, isRecording, isPaused, audioRmsThreshold]);
+  }, [stream, isRecording, isPaused, audioRmsThreshold, audioConsecutiveSamples]);
 
   // ── Inactivity check ticker ──────────────────────────────────────────
   useEffect(() => {
@@ -162,11 +189,28 @@ export function useInactivityAutoPause({
     lastActivityAtRef.current = Date.now();
     firedRef.current = false;
 
+    let debugTick = 0;
+
     const intervalId = window.setInterval(() => {
-      if (firedRef.current) return;
       const idleFor = Date.now() - lastActivityAtRef.current;
+
+      if (debug) {
+        // Log every 15 s so we can verify the hook is alive without flooding
+        debugTick++;
+        if (debugTick % 15 === 0) {
+          console.log(
+            `[inactivity] idle=${Math.round(idleFor / 1000)}s` +
+            ` threshold=${Math.round(thresholdMs / 1000)}s` +
+            ` rms=${lastRmsRef.current.toFixed(4)}` +
+            ` rmsThreshold=${audioRmsThreshold}`,
+          );
+        }
+      }
+
+      if (firedRef.current) return;
       if (idleFor >= thresholdMs) {
         firedRef.current = true;
+        if (debug) console.log("[inactivity] firing onAutoPause");
         try {
           onAutoPauseRef.current();
         } catch (err) {
@@ -176,5 +220,6 @@ export function useInactivityAutoPause({
     }, checkIntervalMs);
 
     return () => clearInterval(intervalId);
-  }, [isRecording, isPaused, thresholdMs, checkIntervalMs]);
+  }, [isRecording, isPaused, thresholdMs, checkIntervalMs, audioRmsThreshold, debug]);
 }
+

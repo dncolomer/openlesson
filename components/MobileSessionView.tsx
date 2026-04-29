@@ -1028,6 +1028,7 @@ export function MobileSessionView({
     isPaused,
     onAutoPause: handleInactivityAutoPause,
     thresholdMs: 5 * 60 * 1000,
+    debug: true,
   });
 
   useEffect(() => {

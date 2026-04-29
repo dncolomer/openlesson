@@ -1973,6 +1973,7 @@ export function SessionView({ sessionId }: { sessionId: string }) {
     isPaused,
     onAutoPause: handleInactivityAutoPause,
     thresholdMs: 5 * 60 * 1000,
+    debug: true,
   });
 
   // Clear the inactivity flag whenever the user manually resumes.

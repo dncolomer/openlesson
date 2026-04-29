@@ -751,6 +751,7 @@
     "pause": "Tạm dừng",
     "resume": "Tiếp tục",
     "paused": "Đã tạm dừng",
+    "autoPausedInactivity": "Auto-paused (5 min inactivity)",
     "end": "Kết thúc",
     "openOnSmartphone": "Mở trên điện thoại",
     "popOutWindowActive": "Cửa sổ popup đang hoạt động",

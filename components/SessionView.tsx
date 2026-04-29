@@ -63,6 +63,7 @@ import {
   type SessionAction 
 } from "@/lib/broadcast-sync";
 import { useSessionHeartbeat, type StorageHeartbeatResult, type AnalysisHeartbeatResult } from "@/lib/useSessionHeartbeat";
+import { useInactivityAutoPause } from "@/lib/useInactivityAutoPause";
 import { retryWithResult } from "@/lib/retry";
 import { useI18n } from "@/lib/i18n";
 import { tutoringLocales, tutoringLanguageNames } from "@/lib/tutoring-languages";
@@ -148,6 +149,7 @@ export function SessionView({ sessionId }: { sessionId: string }) {
   const [session, setSession] = useState<Session | null>(null);
   const [isRecording, setIsRecording] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
+  const [autoPausedForInactivity, setAutoPausedForInactivity] = useState(false);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -1958,6 +1960,26 @@ export function SessionView({ sessionId }: { sessionId: string }) {
     muteTimerRef.current = setTimeout(() => { setIsMuted(false); setMuteRemaining(0); }, durationMs);
   };
 
+  // Auto-pause after 5 min of silence + no input — cost-saving measure.
+  const handleInactivityAutoPause = useCallback(() => {
+    if (!isRecording || isPaused) return;
+    setAutoPausedForInactivity(true);
+    void handlePause();
+  }, [isRecording, isPaused]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useInactivityAutoPause({
+    stream,
+    isRecording,
+    isPaused,
+    onAutoPause: handleInactivityAutoPause,
+    thresholdMs: 5 * 60 * 1000,
+  });
+
+  // Clear the inactivity flag whenever the user manually resumes.
+  useEffect(() => {
+    if (!isPaused) setAutoPausedForInactivity(false);
+  }, [isPaused]);
+
   // Reset session - deletes probes but keeps data chunks
   const handleReset = async () => {
     if (!session) return;
@@ -3361,6 +3383,14 @@ export function SessionView({ sessionId }: { sessionId: string }) {
                 onPause={handlePause}
                 onResume={showWelcomePanel ? handleWelcomePlay : handleResume}
               />
+              {autoPausedForInactivity && isPaused && (
+                <div className="mt-1 px-3 py-1 rounded-md bg-amber-500/10 border border-amber-500/20 text-amber-400 text-[11px] flex items-center gap-1.5">
+                  <svg className="w-3 h-3 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span>{t('session.autoPausedInactivity')}</span>
+                </div>
+              )}
             </div>
             {/* Left-side: Back to Dashboard — always visible so users can
                 leave the session without having to pause first. */}

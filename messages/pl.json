@@ -751,6 +751,7 @@
     "pause": "Pauza",
     "resume": "Wznów",
     "paused": "Wstrzymane",
+    "autoPausedInactivity": "Auto-paused (5 min inactivity)",
     "end": "Zakończ",
     "openOnSmartphone": "Otwórz na smartfonie",
     "popOutWindowActive": "Okno popup aktywne",

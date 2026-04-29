@@ -751,6 +751,7 @@
     "pause": "暂停",
     "resume": "继续",
     "paused": "已暂停",
+    "autoPausedInactivity": "Auto-paused (5 min inactivity)",
     "end": "结束",
     "openOnSmartphone": "在手机上打开",
     "popOutWindowActive": "弹出窗口已激活",

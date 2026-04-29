@@ -803,6 +803,7 @@
     "pause": "Pausar",
     "resume": "Reanudar",
     "paused": "Pausado",
+    "autoPausedInactivity": "Auto-paused (5 min inactivity)",
     "end": "Terminar",
     "openOnSmartphone": "Abrir en teléfono",
     "popOutWindowActive": "Ventana popup activa",

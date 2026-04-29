@@ -806,6 +806,7 @@
     "paused": "Paused",
     "recording": "Recording",
     "stopped": "Ready",
+    "autoPausedInactivity": "Auto-paused (5 min inactivity)",
     "tutorialBannerTitle": "New here? Try our Simple Tutorial first",
     "tutorialBannerDesc": "A quick 10-minute guided tutorial that covers the basics so you're ready to use the full Integrated Learning Environment (ILE).",
     "trySimpleTutorial": "Start Simple Tutorial",

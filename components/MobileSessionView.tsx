@@ -35,6 +35,7 @@ import { playStepCompleteSound, playSessionCompleteSound } from "@/lib/sounds";
 import { LocalInferenceManager, type InitProgress, type LocalAnalysisContext } from "@/lib/local-inference";
 import { LocalContextBuffer } from "@/lib/local-context";
 import { useSessionHeartbeat, type StorageHeartbeatResult, type AnalysisHeartbeatResult } from "@/lib/useSessionHeartbeat";
+import { useInactivityAutoPause } from "@/lib/useInactivityAutoPause";
 import { retryWithResult } from "@/lib/retry";
 import { ConfirmDialog } from "./ui/ConfirmDialog";
 // ModelLoadingModal no longer used -- loading UI is inline in welcome modal
@@ -130,6 +131,8 @@ export function MobileSessionView({
   const [isPaused, setIsPaused] = useState(
     initialSession ? initialSession.status === "paused" : false
   );
+  const [autoPausedForInactivity, setAutoPausedForInactivity] = useState(false);
+  const [micStream, setMicStream] = useState<MediaStream | null>(null);
   const [elapsedSeconds, setElapsedSeconds] = useState(
     initialSession?.durationMs ? Math.floor(initialSession.durationMs / 1000) : 0
   );
@@ -751,6 +754,7 @@ export function MobileSessionView({
 
       recorderRef.current = recorder;
       await recorder.start(stream);
+      setMicStream(stream);
       await startSession(session.id);
       timerBaseRef.current = Date.now();
       setIsRecording(true);
@@ -979,6 +983,10 @@ export function MobileSessionView({
 
     await recorderRef.current?.stop();
     recorderRef.current = null;
+    if (micStream) {
+      micStream.getTracks().forEach(t => t.stop());
+      setMicStream(null);
+    }
     
     setIsRecording(false);
     setIsPaused(false);
@@ -1006,6 +1014,25 @@ export function MobileSessionView({
     timerBaseRef.current = Date.now() - elapsedSeconds * 1000;
     await pauseSession(session.id);
   }, [session, elapsedSeconds]);
+
+  // Auto-pause after 5 min of silence + no input — cost-saving measure.
+  const handleInactivityAutoPause = useCallback(() => {
+    if (!isRecording || isPaused) return;
+    setAutoPausedForInactivity(true);
+    void pauseRecording();
+  }, [isRecording, isPaused, pauseRecording]);
+
+  useInactivityAutoPause({
+    stream: micStream,
+    isRecording,
+    isPaused,
+    onAutoPause: handleInactivityAutoPause,
+    thresholdMs: 5 * 60 * 1000,
+  });
+
+  useEffect(() => {
+    if (!isPaused) setAutoPausedForInactivity(false);
+  }, [isPaused]);
 
   // Resume recording
   const resumeRecording = useCallback(async () => {
@@ -1042,6 +1069,7 @@ export function MobileSessionView({
 
       recorderRef.current = recorder;
       await recorder.start(stream);
+      setMicStream(stream);
       setIsPaused(false);
       setIsRecording(true);
       timerBaseRef.current = Date.now() - elapsedSeconds * 1000;
@@ -2182,6 +2210,11 @@ export function MobileSessionView({
             <span className="text-xs font-medium text-neutral-400 truncate">
               {isRecording && !isPaused ? t('session.recording') : isPaused ? t('session.paused') : t('session.session')}
             </span>
+            {autoPausedForInactivity && isPaused && (
+              <span className="ml-1 text-[10px] text-amber-400 truncate" title={t('session.autoPausedInactivity')}>
+                · {t('session.autoPausedInactivity')}
+              </span>
+            )}
           </div>
 
           <div className="flex items-center gap-1 shrink-0">

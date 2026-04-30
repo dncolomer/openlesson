@@ -27,7 +27,7 @@ This guide details the complete surface area for interacting with the openLesson
 | `POST` | `/api/v2/agent/sessions/{id}/end` | Finalizes session, generating summary and final proof package. | Returns detailed report & batch proof. |
 
 ### III. Assistant & Analytics
-*   **Teaching Assistant:** `POST /sessions/{id}/ask` - Use this when the user gets stuck on a specific concept *during* an active session for immediate Q&A that updates history.
+*   **Helios Chat:** `POST /sessions/{id}/ask` - Use this when the user gets stuck on a specific concept *during* an active session. Forwards the question to Helios (Socratic, concise) with full conversation history.
 *   **Analytics:** `GET /analytics/user` - High-level overview of lifetime progress and achievements across all plans/sessions.
 
 ## 🔑 Best Practices for Agents (Implementation Guide)

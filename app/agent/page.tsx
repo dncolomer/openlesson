@@ -92,7 +92,7 @@ export default function AgentPage() {
                   <h4 className="text-white font-semibold mb-2">Drop-in Agent API v2</h4>
                   <p className="text-sm text-slate-400 leading-relaxed">
                     Base URL: <code className="text-blue-400">/api/v2/agent</code>. Full endpoint surface for plans, sessions,
-                    multimodal analysis, teaching assistant Q&amp;A, cryptographic proofs, and analytics. Pro subscription required.
+                    multimodal analysis, Helios Chat Q&amp;A, cryptographic proofs, and analytics. Pro subscription required.
                   </p>
                 </div>
               </div>

@@ -13,7 +13,7 @@ const TOC_SECTIONS = [
   { id: "learning-plans", title: "Learning Plan Management", level: 1 },
   { id: "sessions", title: "Session Management", level: 1 },
   { id: "analysis", title: "Analysis Heartbeat", level: 1 },
-  { id: "teaching-assistant", title: "Teaching Assistant", level: 1 },
+  { id: "helios-chat", title: "Helios Chat", level: 1 },
   { id: "analytics", title: "Analytics & Progress", level: 1 },
   { id: "proofs", title: "Cryptographic Proofs", level: 1 },
   { id: "solana", title: "Solana Program", level: 1 },
@@ -228,7 +228,7 @@ export default function AgenticApiV2DocsPage() {
                 { icon: "📚", title: "Learning Plans", desc: "Create, adapt, and manage personalized learning curricula" },
                 { icon: "🎯", title: "Sessions", desc: "Start, pause, resume, restart sessions with full flexibility" },
                 { icon: "🧠", title: "Analysis", desc: "Submit audio, images, text for real-time reasoning analysis" },
-                { icon: "💬", title: "Teaching Assistant", desc: "Forward questions to Socratic teaching assistant" },
+                { icon: "💬", title: "Helios Chat", desc: "Forward questions to Helios, the Socratic companion" },
                 { icon: "📊", title: "Analytics", desc: "Track progress, gaps, and learning trends" },
                 { icon: "🔐", title: "Cryptographic Proofs", desc: "Verifiable on-chain evidence of genuine learning" },
               ].map((item) => (
@@ -354,7 +354,7 @@ Example: sk_a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4`}</CodeBlock>
                   ["sessions:read", "View sessions"],
                   ["sessions:write", "Create/modify sessions"],
                   ["analysis:write", "Submit analysis data"],
-                  ["assistant:read", "Query teaching assistant"],
+                  ["assistant:read", "Query Helios"],
                   ["analytics:read", "View analytics"],
                   ["proofs:read", "View proofs"],
                   ["proofs:anchor", "Anchor proofs on-chain"],
@@ -684,15 +684,15 @@ Example: sk_a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4`}</CodeBlock>
               </tbody>
             </TableWrapper>
 
-            {/* Teaching Assistant */}
-            <SectionHeading id="teaching-assistant">Teaching Assistant Integration</SectionHeading>
+            {/* Helios Chat */}
+            <SectionHeading id="helios-chat">Helios Chat Integration</SectionHeading>
 
             <InfoBox type="warning">
-              <strong>Critical:</strong> Agents must NOT answer educational questions directly. 
-              Always forward questions to the teaching assistant to maintain pedagogical integrity.
+              <strong>Critical:</strong> Agents must NOT answer educational questions directly.
+              Always forward questions to Helios to maintain pedagogical integrity.
             </InfoBox>
 
-            <SubHeading>Ask Teaching Assistant</SubHeading>
+            <SubHeading>Ask Helios</SubHeading>
             <CodeBlock>{`POST /api/v2/agent/sessions/{id}/ask
 
 {
@@ -718,7 +718,7 @@ Example: sk_a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4`}</CodeBlock>
 }`}</CodeBlock>
 
             <p className="text-slate-400 text-sm mt-4">
-              The teaching assistant follows strict pedagogical rules: never gives direct answers, 
+              Helios follows strict pedagogical rules: never gives direct answers,
               uses Socratic questioning, and keeps responses concise (max 80 words).
             </p>
 
@@ -947,7 +947,7 @@ genuine learning through the Socratic method.
 
 1. **Never Answer Directly**: You must NEVER answer educational questions 
    yourself. Always use the /ask endpoint to forward questions to 
-   OpenLesson's teaching assistant.
+   Helios, OpenLesson's Socratic companion.
 
 2. **Guide, Don't Tell**: Present probes and questions from OpenLesson to 
    encourage the user to think deeply. Let them struggle productively.
@@ -978,7 +978,7 @@ genuine learning through the Socratic method.
 
 ### Handling Struggles
 - gap_score > 0.7: User is confused. Consider simpler questions.
-- User asks for help: Use the teaching assistant endpoint.
+- User asks for help: Use the Helios /ask endpoint.
 - User finds it too hard: Adapt the plan.
 
 ### Ending Sessions

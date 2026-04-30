@@ -911,9 +911,9 @@
     "leftSidebar": "Thanh bên trái",
     "centerPanel": "Bảng điều khiển trung tâm",
     "rightPanel": "Bảng điều khiển phải — Giám sát học sinh",
-    "teachingAssistant": "Trợ giảng",
-    "teachingAssistantDesc": "Chat với gia sư AI trả lời câu hỏi và giúp bạn suy nghĩ.",
-    "chatWelcome": "Chào! Tôi ở đây để giúp bạn học tập. Hãy thoải mái hỏi tôi về chủ đề, yêu cầu giải thích hoặc thảo luận theo cách khác.\n\nNhớ nhé - tôi là một trợ lý riêng biệt với gia sư. Hãy cho tôi biết tôi có thể giúp gì!",
+    "helios": "Helios Chat",
+    "heliosDesc": "Trò chuyện trực tiếp với Helios. Cùng một Helios đưa ra các probe ở bảng bên — giờ sẵn sàng thu hẹp khoảng trống của bạn qua hội thoại.",
+    "chatWelcome": "Chào — tôi là Helios. Tôi cũng là người đưa ra các probe ở bảng bên; ở đây bạn có thể trò chuyện trực tiếp với tôi. Bạn đang làm gì vậy?",
     "canvas": "Canvas / Ảnh",
     "canvasDesc": "Bảng trắng cho sơ đồ, phác thảo và tư duy thị giác. Hỗ trợ dán từ clipboard.",
     "notebook": "Sổ tay",
@@ -1509,11 +1509,11 @@
     "creating": "Đang tạo kế hoạch phiên...",
     "noPlanYet": "Chưa có kế hoạch nào"
   },
-  "llmChat": {
-    "assistant": "Trợ lý",
+  "heliosChat": {
+    "assistant": "Helios",
     "clearChat": "Xóa chat",
     "clearConfirm": "Xóa lịch sử chat?",
-    "placeholder": "Hỏi tôi bất cứ điều gì...",
+    "placeholder": "Hỏi Helios…",
     "errorMessage": "Sorry, I encountered an error. Please try again."
   },
   "sessionItem": {

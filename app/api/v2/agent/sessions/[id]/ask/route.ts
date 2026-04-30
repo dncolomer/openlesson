@@ -1,5 +1,5 @@
 // ============================================
-// OpenLesson Agentic API v2 - Teaching Assistant
+// OpenLesson Agentic API v2 - Helios Chat (forwards questions to Helios, the Socratic companion)
 // POST /api/v2/agent/sessions/:id/ask
 // ============================================
 

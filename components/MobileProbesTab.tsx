@@ -37,10 +37,14 @@ interface MobileProbesTabProps {
   ttsLanguage?: string;
   /** True while recording + not paused — gates destructive reset. */
   isSessionActive?: boolean;
+  /** True while the mic picks up speech-level audio. Drives the
+   *  background tile-reveal animation. */
+  isSpeaking?: boolean;
 }
 
 export function MobileProbesTab({
   probes,
+  sessionPlan,
   onArchiveProbe,
   onResetProbes,
   archivingProbeId,
@@ -53,6 +57,7 @@ export function MobileProbesTab({
   sessionId,
   ttsLanguage,
   isSessionActive = false,
+  isSpeaking = false,
 }: MobileProbesTabProps) {
   const { t } = useI18n();
 
@@ -130,7 +135,14 @@ export function MobileProbesTab({
   if (showWelcome) {
     return (
       <div className="relative flex-1 min-w-0 flex flex-col bg-[#0a0a0a] h-full overflow-hidden">
-        <TutorBackground />
+        <TutorBackground isSpeaking={isSpeaking} stepIndex={sessionPlan?.currentStepIndex} />
+        {/* Red "I am listening" pulse on the panel frame — replaces
+            the desktop actions-box glow since mobile doesn't render
+            the multi-button actions row. */}
+        <div
+          className={`mobile-panel-glow ${isSpeaking ? "mobile-panel-glow--speaking" : ""}`}
+          aria-hidden="true"
+        />
         <div className="relative z-10 flex-1 min-h-0 flex flex-col">
           <TutorWelcome
             tutorName={displayTutorName}
@@ -159,7 +171,14 @@ export function MobileProbesTab({
   return (
     <div className="relative flex-1 min-w-0 flex flex-col bg-[#0a0a0a] h-full overflow-hidden">
       {/* Faint frosted-glass background image — one random pick per session. */}
-      <TutorBackground />
+      <TutorBackground isSpeaking={isSpeaking} stepIndex={sessionPlan?.currentStepIndex} />
+
+      {/* Red "I am listening" pulse on the panel frame — the mobile
+          equivalent of the desktop actions-box glow. */}
+      <div
+        className={`mobile-panel-glow ${isSpeaking ? "mobile-panel-glow--speaking" : ""}`}
+        aria-hidden="true"
+      />
 
       {/* Main message area */}
       <div className="relative z-10 flex-1 min-h-0 flex flex-col px-4 py-4 overflow-hidden">
@@ -357,12 +376,6 @@ export function MobileProbesTab({
                 )}
                 <span>{t('probes.done')}</span>
               </button>
-
-              {/* Reassurance hint — keep narrating while waiting for the
-                  next guiding task. */}
-              <p className="mt-2 px-1 text-center text-[11px] leading-snug text-neutral-500">
-                {t('probes.thinkAloudHint', { name: displayTutorName })}
-              </p>
 
               {/* Carousel dots — always rendered (placeholders for empty
                   slots) so the row reserves its vertical space and the

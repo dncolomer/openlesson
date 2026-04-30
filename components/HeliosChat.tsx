@@ -27,7 +27,7 @@ export interface ChatMessage {
   content: string;
 }
 
-interface LLMChatProps {
+interface HeliosChatProps {
   problem: string;
   messages?: ChatMessage[];
   onMessagesChange?: (messages: ChatMessage[]) => void;
@@ -38,30 +38,46 @@ interface LLMChatProps {
   onPendingMessageHandled?: () => void;
 }
 
+// Helios first-person welcome — unified across probe panel and chat.
+// The voice matches the BASE_SYSTEM_PROMPT in /api/session-chat.
 const CHAT_WELCOME_MESSAGES: Record<string, string> = {
-  en: "Hi! I'm here to help you with your learning. Feel free to ask me questions about the topic, get clarifications, or discuss concepts in a different way.\n\nRemember - I'm a separate assistant from the tutor. Let me know how I can help!",
-  es: "¡Hola! Estoy aquí para ayudarte con tu aprendizaje. Siéntete libre de preguntarme sobre el tema, pedir aclaraciones o discutir conceptos de otra manera.\n\nRecuerda - soy un asistente separado del tutor. ¡Dime cómo puedo ayudarte!",
-  vi: "Chào! Tôi ở đây để giúp bạn học tập. Hãy thoải mái hỏi tôi về chủ đề, yêu cầu giải thích hoặc thảo luận theo cách khác.\n\nNhớ nhé - tôi là một trợ lý riêng biệt với gia sư. Hãy cho tôi biết tôi có thể giúp gì!",
-  zh: "你好！我在这里帮助你学习。你可以随意问我关于这个主题的问题，获取解释，或者用不同的方式讨论概念。\n\n请记住 - 我是一个独立于导师的助手。让我知道你需要什么帮助！",
-  de: "Hallo! Ich bin hier, um dir beim Lernen zu helfen. Frag mich ruhig zum Thema, bitte um Erklärungen oder diskutiere Konzepte auf andere Weise.\n\nDenk daran - ich bin ein separater Assistent vom Tutor. Sag mir, wie ich helfen kann!",
-  pl: "Cześć! Jestem tu, żeby pomóc Ci w nauce. Śmiało pytaj o temat, proś o wyjaśnienia lub omawiaj koncepcje w inny sposób.\n\nPamiętaj - jestem osobnym asystentem od korepetytora. Daj znać, jak mogę pomóc!",
-  ca: "Hola! Soc aquí per ajudar-te amb el teu aprenentatge. No dubtis a preguntar-me sobre el tema, demanar aclariments o discutir conceptes d'una altra manera.\n\nRecorda - soc un assistent separat del tutor. Digues-me com puc ajudar!",
+  en: "Hey — I'm Helios. I also surface the probes in the side panel; here in Helios Chat you can just talk to me directly.\n\nWhat are you working through right now?",
+  es: "Hola — soy Helios. También soy quien propone las sondas en el panel lateral; aquí en Helios Chat puedes hablar conmigo directamente.\n\n¿En qué estás trabajando ahora mismo?",
+  vi: "Chào — tôi là Helios. Tôi cũng là người đưa ra các probe ở bảng bên; ở Helios Chat bạn có thể trò chuyện trực tiếp với tôi.\n\nBạn đang làm gì vậy?",
+  zh: "嘿 — 我是 Helios。侧边栏里的探询问题也是我提的；在 Helios Chat 里你可以直接和我对话。\n\n你现在在研究什么？",
+  de: "Hey — ich bin Helios. Ich bringe auch die Probes in der Seitenleiste an; hier im Helios Chat kannst du einfach direkt mit mir reden.\n\nWoran arbeitest du gerade?",
+  pl: "Cześć — jestem Helios. To ja generuję sondy w panelu bocznym; tutaj w Helios Chat możesz po prostu porozmawiać ze mną bezpośrednio.\n\nNad czym teraz pracujesz?",
+  ca: "Hola — sóc Helios. També soc qui fa aparèixer les sondes al panell lateral; aquí al Helios Chat pots parlar amb mi directament.\n\nEn què estàs treballant ara mateix?",
 };
 
-export function LLMChat({ problem, messages: externalMessages, onMessagesChange, sessionId, tutoringLanguage, pendingMessage, onPendingMessageHandled }: LLMChatProps) {
+// Small circular avatar with a violet gradient and a serif "H" — matches the
+// Helios avatar used in PerformanceChat so the brand reads as one entity.
+function HeliosAvatar({ size = 28 }: { size?: number }) {
+  return (
+    <div
+      className="shrink-0 rounded-full bg-gradient-to-br from-violet-500/20 via-neutral-800 to-neutral-900 border border-neutral-700 flex items-center justify-center"
+      style={{ width: size, height: size }}
+      aria-hidden
+    >
+      <span className="font-serif text-neutral-200" style={{ fontSize: size * 0.5 }}>H</span>
+    </div>
+  );
+}
+
+export function HeliosChat({ problem, messages: externalMessages, onMessagesChange, sessionId, tutoringLanguage, pendingMessage, onPendingMessageHandled }: HeliosChatProps) {
   const { t } = useI18n();
-  
+
   // Get localized welcome message based on tutoring language
   const getWelcomeContent = () => {
-    return tutoringLanguage && CHAT_WELCOME_MESSAGES[tutoringLanguage] 
-      ? CHAT_WELCOME_MESSAGES[tutoringLanguage] 
+    return tutoringLanguage && CHAT_WELCOME_MESSAGES[tutoringLanguage]
+      ? CHAT_WELCOME_MESSAGES[tutoringLanguage]
       : CHAT_WELCOME_MESSAGES.en;
   };
-  
+
   // Use external state if provided, otherwise use internal state
   const [internalMessages, setInternalMessages] = useState<ChatMessage[]>([]);
   const messages = externalMessages ?? internalMessages;
-  
+
   // Initialize or update welcome message when tutoringLanguage changes
   useEffect(() => {
     const welcomeMsg = {
@@ -69,7 +85,7 @@ export function LLMChat({ problem, messages: externalMessages, onMessagesChange,
       role: "assistant" as const,
       content: getWelcomeContent(),
     };
-    
+
     if (externalMessages !== undefined) {
       // Using external state - update the welcome message in external state
       if (externalMessages.length === 0) {
@@ -83,7 +99,7 @@ export function LLMChat({ problem, messages: externalMessages, onMessagesChange,
       setInternalMessages([welcomeMsg]);
     }
   }, [tutoringLanguage]);
-  
+
   // Helper to update messages - handles both internal state and external callback
   const updateMessages = (newMessages: ChatMessage[]) => {
     if (onMessagesChange) {
@@ -92,7 +108,7 @@ export function LLMChat({ problem, messages: externalMessages, onMessagesChange,
       setInternalMessages(newMessages);
     }
   };
-  
+
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
@@ -149,11 +165,11 @@ export function LLMChat({ problem, messages: externalMessages, onMessagesChange,
         updateMessages([...messages, userMsg, assistantMessage]);
       }
     } catch (error) {
-      console.error("Chat error:", error);
+      console.error("Helios Chat error:", error);
       const errorMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
         role: "assistant",
-        content: t('llmChat.errorMessage'),
+        content: t('heliosChat.errorMessage'),
       };
       updateMessages([...messages, userMsg, errorMessage]);
     } finally {
@@ -167,7 +183,7 @@ export function LLMChat({ problem, messages: externalMessages, onMessagesChange,
     await sendMessage(input);
   };
 
-  // Auto-submit pendingMessage from parent (e.g. "Ask Assistant" button on plan steps)
+  // Auto-submit pendingMessage from parent (e.g. "Ask Helios" button on plan steps)
   useEffect(() => {
     if (pendingMessage) {
       sendMessage(pendingMessage);
@@ -194,11 +210,14 @@ export function LLMChat({ problem, messages: externalMessages, onMessagesChange,
   return (
     <div className="flex flex-col h-full">
       <div className="flex items-center justify-between px-4 py-2 border-b border-neutral-800">
-        <h3 className="text-sm font-medium text-white">{t('llmChat.assistant')}</h3>
+        <div className="flex items-center gap-2">
+          <HeliosAvatar size={22} />
+          <h3 className="text-sm font-medium text-white">{t('heliosChat.assistant')}</h3>
+        </div>
         <button
           onClick={() => setShowClearConfirm(true)}
           className="p-1.5 text-neutral-500 hover:text-neutral-300 hover:bg-neutral-800 rounded-lg transition-colors"
-          title={t('llmChat.clearChat')}
+          title={t('heliosChat.clearChat')}
         >
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -209,8 +228,9 @@ export function LLMChat({ problem, messages: externalMessages, onMessagesChange,
         {messages.map((message) => (
           <div
             key={message.id}
-            className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}
+            className={`flex items-start gap-2 ${message.role === "user" ? "justify-end" : "justify-start"}`}
           >
+            {message.role === "assistant" && <HeliosAvatar size={28} />}
             <div
               className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-sm ${
                 message.role === "user"
@@ -230,7 +250,8 @@ export function LLMChat({ problem, messages: externalMessages, onMessagesChange,
           </div>
         ))}
         {isLoading && (
-          <div className="flex justify-start">
+          <div className="flex items-start gap-2 justify-start">
+            <HeliosAvatar size={28} />
             <div className="bg-neutral-800 rounded-2xl px-4 py-2.5">
               <div className="flex gap-1">
                 <div className="w-2 h-2 rounded-full bg-neutral-500 animate-bounce" style={{ animationDelay: "0ms" }} />
@@ -248,9 +269,9 @@ export function LLMChat({ problem, messages: externalMessages, onMessagesChange,
         onCancel={() => setShowClearConfirm(false)}
         onConfirm={handleClear}
         variant="destructive"
-        title={t('llmChat.clearChat')}
-        description={t('llmChat.clearConfirm')}
-        confirmLabel={t('llmChat.clearChat')}
+        title={t('heliosChat.clearChat')}
+        description={t('heliosChat.clearConfirm')}
+        confirmLabel={t('heliosChat.clearChat')}
         cancelLabel={t('common.cancel')}
       />
 
@@ -261,7 +282,7 @@ export function LLMChat({ problem, messages: externalMessages, onMessagesChange,
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder={t('llmChat.placeholder')}
+            placeholder={t('heliosChat.placeholder')}
             className="flex-1 bg-neutral-900 border border-neutral-700 rounded-xl px-4 py-3 text-sm text-white placeholder-neutral-500 resize-none focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/50"
             rows={1}
             disabled={isLoading}

@@ -11,7 +11,7 @@ const MAX_OPEN_PROBES = 5;
 // Tool labels for display - using translation function
 function getToolLabel(tool: string, t: (key: string) => string): string {
   const labels: Record<string, string> = {
-    chat: t('tools.teachingAssistant'),
+    chat: t('tools.helios'),
     canvas: t('tools.canvas'),
     notebook: t('tools.notebook'),
     grokipedia: t('tools.grokipedia'),

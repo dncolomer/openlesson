@@ -15,7 +15,7 @@
 4. [Learning Plan Management](#4-learning-plan-management)
 5. [Session Management](#5-session-management)
 6. [Analysis Heartbeat](#6-analysis-heartbeat)
-7. [Teaching Assistant Integration](#7-teaching-assistant-integration)
+7. [Helios Chat Integration](#7-helios-chat-integration)
 8. [Analytics & Progress](#8-analytics--progress)
 9. [Cryptographic Proof System](#9-cryptographic-proof-system)
 10. [Solana Program Specification](#10-solana-program-specification)
@@ -53,7 +53,7 @@ This specification defines a complete replacement for the existing `/api/agent/*
 | Session flexibility | Basic start/end | Pause, resume, restart, switch |
 | Plan management | Generate only | Full CRUD + adaptation + assessment |
 | Analysis input | Audio only | Audio, images, text |
-| Teaching assistant | Not integrated | Full integration with conversation history |
+| Teaching assistant | Not integrated | Full Helios Chat integration with conversation history |
 | Proofs | None | Cryptographic proofs + Solana anchoring |
 | Analytics | Basic summary | Full analytics endpoints |
 | Payment | Per-request | Bundled with Pro tier |
@@ -191,7 +191,7 @@ type ApiKeyScope =
   | 'sessions:read'     // View sessions
   | 'sessions:write'    // Create/modify sessions
   | 'analysis:write'    // Submit analysis data
-  | 'assistant:read'    // Query teaching assistant
+  | 'assistant:read'    // Query Helios
   | 'analytics:read'    // View analytics
   | 'proofs:read'       // View proofs
   | 'proofs:anchor'     // Anchor proofs on-chain
@@ -1398,13 +1398,13 @@ Supported image formats: `png`, `jpeg`, `webp`
 
 ---
 
-## 7. Teaching Assistant Integration
+## 7. Helios Chat Integration
 
 ### 7.1 Overview
 
-The agent must NOT answer educational questions directly. Instead, it forwards questions to OpenLesson's teaching assistant, which follows Socratic methodology.
+The agent must NOT answer educational questions directly. Instead, it forwards questions to **Helios**, OpenLesson's Socratic companion, which follows Socratic methodology. Helios is the same entity that surfaces probes in the session panel — the `/ask` endpoint is simply the direct conversational surface of the same mind.
 
-### 7.2 Ask Teaching Assistant
+### 7.2 Ask Helios
 
 **POST `/api/v2/agent/sessions/{id}/ask`**
 
@@ -1497,15 +1497,16 @@ Required scope: `assistant:read`
 }
 ```
 
-### 7.4 Teaching Assistant Behavior
+### 7.4 Helios Behavior
 
-The teaching assistant follows strict pedagogical rules:
+Helios follows strict pedagogical rules:
 
 1. **Never gives direct answers** - always guides with questions
 2. **Replies are concise** - 1-3 short paragraphs, max 80 words
-3. **Encourages probe engagement** - points back to tutor's questions
+3. **Encourages probe engagement** - points back to the probes in the side panel
 4. **Uses Socratic method** - questions that reveal understanding gaps
 5. **Supports multiple languages** - respects `tutoring_language` setting
+6. **One entity, two surfaces** - Helios in chat is the same Helios that runs the probes
 
 ---
 
@@ -2556,7 +2557,7 @@ genuine learning through the Socratic method.
 
 1. **Never Answer Directly**: You must NEVER answer educational questions 
    yourself. Always use the `/ask` endpoint to forward questions to 
-   OpenLesson's teaching assistant.
+   Helios, OpenLesson's Socratic companion.
 
 2. **Guide, Don't Tell**: Present probes and questions from OpenLesson to 
    encourage the user to think deeply. Let them struggle productively.
@@ -2592,7 +2593,7 @@ genuine learning through the Socratic method.
 ### Handling Struggles
 
 - If gap_score > 0.7: User is confused. Consider simpler sub-questions.
-- If user explicitly asks for help: Use the teaching assistant endpoint.
+- If user explicitly asks for help: Use the Helios `/ask` endpoint.
 - If user wants to skip: That's okay - session plans are flexible.
 - If user finds it too easy/hard: Adapt the plan: `POST /api/v2/agent/plans/{id}/adapt`
 
@@ -2729,7 +2730,7 @@ USER: I'm not sure. Can you explain how probabilities work in quantum states?
   "context": { "relevant_probe_ids": ["probe-002"] }
 }
 
-AGENT: [relaying teaching assistant response]
+AGENT: [relaying Helios response]
       
       Think about it this way: the amplitude is like a "probability amplitude." 
       To get the actual probability, you square the absolute value. So if your 
@@ -2978,7 +2979,7 @@ Link: </api/v2/agent>; rel="successor-version"
 | `GET /api/agent/session/summary` | `GET /api/v2/agent/analytics/sessions/{id}` | Expanded analytics |
 | (new) | `POST /api/v2/agent/sessions/{id}/pause` | New endpoint |
 | (new) | `POST /api/v2/agent/sessions/{id}/resume` | New endpoint |
-| (new) | `POST /api/v2/agent/sessions/{id}/ask` | Teaching assistant |
+| (new) | `POST /api/v2/agent/sessions/{id}/ask` | Helios Chat |
 | (new) | `POST /api/v2/agent/plans/{id}/adapt` | Plan adaptation |
 | (new) | `GET /api/v2/agent/proofs/*` | Proof system |
 
@@ -3058,7 +3059,7 @@ X-RateLimit-Reset: 1713052800
 | `session_resumed` | 4 | Session resumed |
 | `session_ended` | 5 | Session ended |
 | `analysis_heartbeat` | 6 | Analysis chunk processed |
-| `assistant_query` | 7 | Teaching assistant queried |
+| `assistant_query` | 7 | Helios queried |
 | `session_batch` | 8 | Session batch (Merkle root) |
 
 ---

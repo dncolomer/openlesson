@@ -27,7 +27,7 @@ The core thesis is simple: when you speak your reasoning out loud, gaps become a
 - **Multi-session learning plans** — Directed graph of learning sessions for any topic, visualized with React Flow
 - **Whiteboard canvas** — Built-in drawing tool; AI can analyze drawings for reasoning gaps
 - **Notebook** — Text-based note-taking with AI gap analysis
-- **LLM chat** — Direct text conversation with the teaching assistant
+- **Helios Chat** — Direct text conversation with Helios, your Socratic companion
 - **Session reports** — AI-generated post-session reports covering gaps, progress, strengths, and next steps
 - **Muse EEG integration** — Real-time brainwave monitoring via Muse headband over Web Bluetooth
 - **Face tracking** — MediaPipe-based engagement and attention signals
@@ -121,7 +121,7 @@ The app will be available at `http://localhost:3000`.
 │   ├── SessionView.tsx   # Core session UI
 │   ├── PlanFlow.tsx      # Learning plan directed graph
 │   ├── WhiteboardCanvas  # Drawing canvas
-│   ├── LLMChat.tsx       # Teaching assistant chat
+│   ├── HeliosChat.tsx    # Helios Chat (Socratic companion)
 │   └── ...               # ~50 components total
 ├── lib/                  # Core libraries
 │   ├── openrouter.ts     # LLM orchestration (prompts, gap detection, probes)

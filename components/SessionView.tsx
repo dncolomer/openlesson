@@ -45,7 +45,7 @@ import { SessionPlanViewer } from "./SessionPlanViewer";
 import { ResizablePane, type ResizablePaneHandle } from "./ResizablePane";
 import { ExcalidrawCanvas } from "./ExcalidrawCanvas";
 import { ToolsPanel, type Tool } from "./ToolsPanel";
-import { LLMChat, type ChatMessage } from "./LLMChat";
+import { HeliosChat, type ChatMessage } from "./HeliosChat";
 import { DataInputTool } from "./DataInputTool";
 import { LogsTool, type LogEntry } from "./LogsTool";
 import { createScreenCapture } from "@/lib/screen-capture";
@@ -64,6 +64,7 @@ import {
 } from "@/lib/broadcast-sync";
 import { useSessionHeartbeat, type StorageHeartbeatResult, type AnalysisHeartbeatResult } from "@/lib/useSessionHeartbeat";
 import { useInactivityAutoPause } from "@/lib/useInactivityAutoPause";
+import { useVoiceActivity } from "@/lib/useVoiceActivity";
 import { retryWithResult } from "@/lib/retry";
 import { useI18n } from "@/lib/i18n";
 import { tutoringLocales, tutoringLanguageNames } from "@/lib/tutoring-languages";
@@ -202,7 +203,7 @@ export function SessionView({ sessionId }: { sessionId: string }) {
 
 
 
-  // Teaching Assistant Chat
+  // Helios Chat
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [pendingChatMessage, setPendingChatMessage] = useState<string | null>(null);
 
@@ -484,7 +485,7 @@ export function SessionView({ sessionId }: { sessionId: string }) {
     }
   };
 
-  // Step action handlers — Resources, Practice, Ask Assistant
+  // Step action handlers — Resources, Practice, Ask Helios
   const handleStepResources = (stepDescription: string) => {
     setActiveTool("reading");
     setPrepToolContent(null);
@@ -497,7 +498,7 @@ export function SessionView({ sessionId }: { sessionId: string }) {
     loadPrepToolContent("exercise", stepDescription);
   };
 
-  const handleStepAskAssistant = (stepDescription: string) => {
+  const handleStepAskHelios = (stepDescription: string) => {
     // Make sure the tools pane is visible. The `activeTool` effect only
     // reopens the pane when the value actually changes, so if "chat" was
     // already the active tool before the user closed the tools pane,
@@ -1974,6 +1975,14 @@ export function SessionView({ sessionId }: { sessionId: string }) {
     onAutoPause: handleInactivityAutoPause,
     thresholdMs: 5 * 60 * 1000,
     debug: true,
+  });
+
+  // Real-time voice activity for Helios background tile-reveal + action
+  // box highlight. Shares the same mic stream as inactivity detection.
+  const isSpeaking = useVoiceActivity({
+    stream,
+    isRecording,
+    isPaused,
   });
 
   // Clear the inactivity flag whenever the user manually resumes.
@@ -3524,7 +3533,7 @@ export function SessionView({ sessionId }: { sessionId: string }) {
                   )}
                   <div className="flex-1 min-h-0 overflow-hidden relative">
                     {activeTool === "chat" && (
-                      <LLMChat 
+                      <HeliosChat 
                         problem={session.problem}
                         messages={chatMessages}
                         onMessagesChange={setChatMessages}
@@ -3839,7 +3848,7 @@ export function SessionView({ sessionId }: { sessionId: string }) {
                         onToolSelect={(tool) => setActiveTool(tool as Tool)}
                         onOpenResources={handleStepResources}
                         onOpenPractice={handleStepPractice}
-                        onAskAssistant={handleStepAskAssistant}
+                        onAskAssistant={handleStepAskHelios}
                         onResetProbes={handleResetProbes}
                         onToolEvent={(action, metadata) =>
                           logTool("probe", action, metadata ?? {})
@@ -3856,6 +3865,7 @@ export function SessionView({ sessionId }: { sessionId: string }) {
                         isStartingSession={isStartingSession}
                         sessionId={session.id}
                         ttsLanguage={tutoringLanguage}
+                        isSpeaking={isSpeaking}
                       />
                     </div>
                   }
@@ -3878,7 +3888,7 @@ export function SessionView({ sessionId }: { sessionId: string }) {
                           sessionId={session.id}
                           onOpenResources={handleStepResources}
                           onOpenPractice={handleStepPractice}
-                          onAskAssistant={handleStepAskAssistant}
+                          onAskAssistant={handleStepAskHelios}
                           onToolEvent={(action, metadata) =>
                             logTool("session_plan", action, metadata ?? {})
                           }

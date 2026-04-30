@@ -36,6 +36,7 @@ import { LocalInferenceManager, type InitProgress, type LocalAnalysisContext } f
 import { LocalContextBuffer } from "@/lib/local-context";
 import { useSessionHeartbeat, type StorageHeartbeatResult, type AnalysisHeartbeatResult } from "@/lib/useSessionHeartbeat";
 import { useInactivityAutoPause } from "@/lib/useInactivityAutoPause";
+import { useVoiceActivity } from "@/lib/useVoiceActivity";
 import { retryWithResult } from "@/lib/retry";
 import { ConfirmDialog } from "./ui/ConfirmDialog";
 // ModelLoadingModal no longer used -- loading UI is inline in welcome modal
@@ -1029,6 +1030,13 @@ export function MobileSessionView({
     onAutoPause: handleInactivityAutoPause,
     thresholdMs: 5 * 60 * 1000,
     debug: true,
+  });
+
+  // Real-time voice activity for Helios background tile-reveal.
+  const isSpeaking = useVoiceActivity({
+    stream: micStream,
+    isRecording,
+    isPaused,
   });
 
   useEffect(() => {
@@ -2076,6 +2084,7 @@ export function MobileSessionView({
           sessionId={session?.id}
           ttsLanguage={tutoringLanguage}
           isSessionActive={isRecording && !isPaused}
+          isSpeaking={isSpeaking}
         />
       ),
     },

@@ -963,9 +963,9 @@
     "leftSidebar": "Barra Lateral Izquierda",
     "centerPanel": "Panel Central",
     "rightPanel": "Panel Derecho — Monitoreo de Estudiante",
-    "teachingAssistant": "Asistente de Enseñanza",
-    "teachingAssistantDesc": "Chatea con un tutor IA que responde tus preguntas y te ayuda a pensar.",
-    "chatWelcome": "¡Hola! Estoy aquí para ayudarte con tu aprendizaje. Siéntete libre de preguntarme sobre el tema, pedir aclaraciones o discutir conceptos de otra manera.\n\nRecuerda - soy un asistente separado del tutor. ¡Dime cómo puedo ayudarte!",
+    "helios": "Helios Chat",
+    "heliosDesc": "Chatea directamente con Helios. La misma mente que propone sondas en el panel — ahora lista para reducir tus lagunas en una conversación.",
+    "chatWelcome": "Hola — soy Helios. También soy quien genera las sondas en el panel lateral; aquí puedes hablar conmigo directamente. ¿En qué estás trabajando?",
     "canvas": "Lienzo / Imágenes",
     "canvasDesc": "Pizarra para diagramas, bocetos y pensamiento visual. Soporta pegar desde portapapeles.",
     "notebook": "Cuaderno",
@@ -1570,11 +1570,11 @@
     "creating": "Creando tu plan de sesión...",
     "noPlanYet": "Aún no hay plan creado"
   },
-  "llmChat": {
-    "assistant": "Asistente",
+  "heliosChat": {
+    "assistant": "Helios",
     "clearChat": "Limpiar chat",
     "clearConfirm": "¿Limpiar historial del chat?",
-    "placeholder": "Pregúntame cualquier cosa...",
+    "placeholder": "Pregúntale a Helios…",
     "errorMessage": "Lo siento, encontré un error. Por favor intenta de nuevo."
   },
   "sessionItem": {

@@ -41,7 +41,10 @@ interface ProbesPanelProps {
   archivingProbeId?: string | null;
   isInitializing?: boolean;
   isGeneratingProbe?: boolean;
-  sessionPlan?: { steps?: Array<{ id: string; order: number; description: string }> } | null;
+  sessionPlan?: {
+    steps?: Array<{ id: string; order: number; description: string }>;
+    currentStepIndex?: number;
+  } | null;
   isSessionActive?: boolean;
   tutorName?: string;
   /**
@@ -63,6 +66,9 @@ interface ProbesPanelProps {
   sessionId?: string;
   /** BCP-47 language override for TTS. */
   ttsLanguage?: string;
+  /** True while the mic picks up speech-level audio. Drives the
+   *  background tile-reveal animation and the actions-box highlight. */
+  isSpeaking?: boolean;
 }
 
 export function ProbesPanel({
@@ -76,6 +82,7 @@ export function ProbesPanel({
   archivingProbeId,
   isInitializing = false,
   isGeneratingProbe = false,
+  sessionPlan,
   isSessionActive = false,
   tutorName,
   showWelcome = false,
@@ -85,6 +92,7 @@ export function ProbesPanel({
   isStartingSession = false,
   sessionId,
   ttsLanguage,
+  isSpeaking = false,
 }: ProbesPanelProps) {
   const { t } = useI18n();
 
@@ -185,7 +193,7 @@ export function ProbesPanel({
     return (
       <div className="relative flex-1 min-w-0 flex flex-col bg-[#0a0a0a] h-full overflow-hidden">
         {/* Faint frosted-glass background image — one random pick per session. */}
-        <TutorBackground />
+        <TutorBackground isSpeaking={isSpeaking} stepIndex={sessionPlan?.currentStepIndex} />
         <div className="relative z-10 flex-1 min-h-0 flex flex-col overflow-hidden">
           <TutorWelcome
             tutorName={displayTutorName}
@@ -216,7 +224,7 @@ export function ProbesPanel({
   return (
     <div className="relative flex-1 min-w-0 flex flex-col bg-[#0a0a0a] h-full overflow-hidden">
       {/* Faint frosted-glass background image — one random pick per session. */}
-      <TutorBackground />
+      <TutorBackground isSpeaking={isSpeaking} stepIndex={sessionPlan?.currentStepIndex} />
 
       {/* Main message area */}
       <div className="relative z-10 flex-1 min-h-0 flex flex-col px-4 py-4 overflow-hidden">
@@ -407,13 +415,25 @@ export function ProbesPanel({
                   right after the probe text rather than being anchored to
                   the bottom of the panel with a big empty gap above. */}
               <div className="shrink-0 w-full max-w-[560px] px-2">
-                <div className="rounded-2xl border border-neutral-800 bg-neutral-950/40 p-3">
-                  <p className="mb-2 text-center text-[11px] leading-tight text-neutral-500">
-                    {t('probes.stuckHint', {
-                      resources: t('sessionPlan.resources'),
-                      practice: t('sessionPlan.practice'),
-                      ask: t('sessionPlan.ask'),
-                    })}
+                <div className={`actions-box rounded-2xl border p-3 ${
+                  isSpeaking
+                    ? "actions-box-speaking"
+                    : "border-neutral-800 bg-neutral-950/40"
+                }`}>
+                  <p className={`mb-3 flex items-center justify-center gap-2 text-center text-[13px] font-medium leading-snug tracking-tight transition-colors ${
+                    isSpeaking
+                      ? "text-red-300"
+                      : "text-amber-300/90"
+                  }`}>
+                    <span
+                      className={`inline-block w-2 h-2 rounded-full shrink-0 ${
+                        isSpeaking
+                          ? "bg-red-400 shadow-[0_0_10px_rgba(248,113,113,0.9)] animate-pulse"
+                          : "bg-amber-400/80 shadow-[0_0_8px_rgba(251,191,36,0.6)]"
+                      }`}
+                      aria-hidden="true"
+                    />
+                    Think out loud. Talk to yourself. I am listening — even when you're typing or drawing.
                   </p>
                   <div className="grid grid-cols-4 gap-2.5 @container">
                     <button
@@ -494,12 +514,6 @@ export function ProbesPanel({
                     </button>
                   </div>
                 </div>
-                {/* Reassurance hint — the wait between probes can feel
-                    silent, so we explicitly tell users to keep narrating
-                    and that the next guiding task is on its way. */}
-                <p className="mt-2 px-2 text-center text-[11px] leading-snug text-neutral-500">
-                  {t('probes.thinkAloudHint', { name: displayTutorName })}
-                </p>
               </div>
             </div>
 

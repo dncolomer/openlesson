@@ -911,9 +911,9 @@
     "leftSidebar": "Linke Seitenleiste",
     "centerPanel": "Mittleres Panel",
     "rightPanel": "Rechtes Panel — Schülerüberwachung",
-    "teachingAssistant": "Lehrassistent",
-    "teachingAssistantDesc": "Chatte mit einem KI-Tutor, der deine Fragen beantwortet und dir beim Denken hilft.",
-    "chatWelcome": "Hallo! Ich bin hier, um dir beim Lernen zu helfen. Frag mich ruhig zum Thema, bitte um Erklärungen oder diskutiere Konzepte auf andere Weise.\n\nDenk daran - ich bin ein separater Assistent vom Tutor. Sag mir, wie ich helfen kann!",
+    "helios": "Helios Chat",
+    "heliosDesc": "Chatte direkt mit Helios. Derselbe Verstand, der im Panel Probes erzeugt — jetzt bereit, deine Lücken im Gespräch einzugrenzen.",
+    "chatWelcome": "Hey — ich bin Helios. Ich erzeuge auch die Probes in der Seitenleiste; hier kannst du einfach direkt mit mir reden. Woran arbeitest du gerade?",
     "canvas": "Leinwand / Bilder",
     "canvasDesc": "Whiteboard für Diagramme, Skizzen und visuelles Denken. Unterstützt Einfügen aus der Zwischenablage.",
     "notebook": "Notizbuch",
@@ -1509,11 +1509,11 @@
     "creating": "Erstelle deinen Sitzungsplan...",
     "noPlanYet": "Noch kein Plan erstellt"
   },
-  "llmChat": {
-    "assistant": "Assistent",
+  "heliosChat": {
+    "assistant": "Helios",
     "clearChat": "Chat löschen",
     "clearConfirm": "Chatverlauf löschen?",
-    "placeholder": "Frag mich irgendwas...",
+    "placeholder": "Frag Helios…",
     "errorMessage": "Entschuldigung, ein Fehler ist aufgetreten. Bitte versuche es erneut."
   },
   "sessionItem": {

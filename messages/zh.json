@@ -911,9 +911,9 @@
     "leftSidebar": "左侧边栏",
     "centerPanel": "中央面板",
     "rightPanel": "右侧面板 — 学生监控",
-    "teachingAssistant": "教学助手",
-    "teachingAssistantDesc": "与AI导师聊天，回答您的问题并帮助您思考问题。",
-    "chatWelcome": "你好！我在这里帮助你学习。你可以随意问我关于这个主题的问题，获取解释，或者用不同的方式讨论概念。\n\n请记住 - 我是一个独立于导师的助手。让我知道你需要什么帮助！",
+    "helios": "Helios Chat",
+    "heliosDesc": "直接与 Helios 聊天。在侧边栏提出探询问题的同一个 Helios — 现在可以通过对话帮你缩小理解上的差距。",
+    "chatWelcome": "嘿 — 我是 Helios。侧边栏里的探询问题也是我提的；在这里你可以直接和我对话。你在研究什么？",
     "canvas": "画布 / 图片",
     "canvasDesc": "用于图表、草图和视觉思考的白板。支持从剪贴板粘贴。",
     "notebook": "笔记本",
@@ -1509,11 +1509,11 @@
     "creating": "正在创建课程计划...",
     "noPlanYet": "尚未创建计划"
   },
-  "llmChat": {
-    "assistant": "助手",
+  "heliosChat": {
+    "assistant": "Helios",
     "clearChat": "清除聊天",
     "clearConfirm": "清除聊天历史？",
-    "placeholder": "问我任何问题...",
+    "placeholder": "向 Helios 提问……",
     "errorMessage": "抱歉，我遇到错误。请重试。"
   },
   "sessionItem": {

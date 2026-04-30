@@ -96,7 +96,7 @@ export function ToolsPanel({
 
   const getToolLabel = (id: Tool): string => {
     switch (id) {
-      case "chat": return t('tools.teachingAssistant');
+      case "chat": return t('tools.helios');
       case "canvas": return t('tools.canvas');
       case "notebook": return t('tools.notebook');
 

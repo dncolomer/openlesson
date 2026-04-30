@@ -911,9 +911,9 @@
     "leftSidebar": "Lewy pasek boczny",
     "centerPanel": "Środkowy panel",
     "rightPanel": "Prawy panel — Monitorowanie ucznia",
-    "teachingAssistant": "Asystent nauczyciela",
-    "teachingAssistantDesc": "Czatuj z korepetytorem AI, który odpowiada na Twoje pytania i pomaga Ci myśleć.",
-    "chatWelcome": "Cześć! Jestem tu, żeby pomóc Ci w nauce. Śmiało pytaj o temat, proś o wyjaśnienia lub omawiaj koncepcje w inny sposób.\n\nPamiętaj - jestem osobnym asystentem od korepetytora. Daj znać, jak mogę pomóc!",
+    "helios": "Helios Chat",
+    "heliosDesc": "Rozmawiaj bezpośrednio z Heliosem. Ten sam umysł, który generuje sondy w panelu — teraz gotowy, by zawęzić Twoje luki w rozmowie.",
+    "chatWelcome": "Cześć — jestem Helios. To ja generuję sondy w panelu bocznym; tutaj możesz po prostu porozmawiać ze mną bezpośrednio. Nad czym pracujesz?",
     "canvas": "Płótno / Obrazy",
     "canvasDesc": "Tablica na diagramy, szkice i myślenie wizualne. Obsługuje wklejanie ze schowka.",
     "notebook": "Notatnik",
@@ -1509,11 +1509,11 @@
     "creating": "Tworzenie planu sesji...",
     "noPlanYet": "Jeszcze nie utworzono planu"
   },
-  "llmChat": {
-    "assistant": "Asystent",
+  "heliosChat": {
+    "assistant": "Helios",
     "clearChat": "Wyczyść czat",
     "clearConfirm": "Wyczyścić historię czatu?",
-    "placeholder": "Zapytaj mnie o cokolwiek...",
+    "placeholder": "Zapytaj Heliosa…",
     "errorMessage": "Sorry, I encountered an error. Please try again."
   },
   "sessionItem": {

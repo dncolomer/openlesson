@@ -2,11 +2,6 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
-import remarkMath from "remark-math";
-import rehypeKatex from "rehype-katex";
-import "katex/dist/katex.min.css";
 import { AudioRecorder } from "@/lib/audio";
 import { FacialDataPoint } from "./FaceTracker";
 import {
@@ -182,10 +177,6 @@ export function SessionView({ sessionId }: { sessionId: string }) {
   // Tutor-end dialog
   const [showEndDialog, setShowEndDialog] = useState(false);
   const [endReason, setEndReason] = useState("");
-
-  // Prep material cards
-  const [prepCards, setPrepCards] = useState<Array<{ id: string; title: string; content: string }>>([]);
-  const [prepLoading, setPrepLoading] = useState<string | null>(null);
 
   // Whiteboard
   const [whiteboardData, setWhiteboardData] = useState<string | null>(null);
@@ -389,10 +380,9 @@ export function SessionView({ sessionId }: { sessionId: string }) {
   const [languageConfirmed, setLanguageConfirmed] = useState(false);
   const [isPreparing, setIsPreparing] = useState(false);
 
-  // Prep material for tools
-  const [prepToolContent, setPrepToolContent] = useState<{ title: string; content: string } | null>(null);
-  const [prepToolLoading, setPrepToolLoading] = useState(false);
-  const [showGrokipediaOnly, setShowGrokipediaOnly] = useState(false);
+  // (Prep material state used to live here for the now-removed
+  // Practice/Theory side panels. That content has been merged into
+  // the Helios chat surface — see fetchAndInjectPrepIntoChat below.)
 
   // Grokipedia search suggestions
   const [grokipediaSuggestions, setGrokipediaSuggestions] = useState<string[]>([]);
@@ -429,32 +419,6 @@ export function SessionView({ sessionId }: { sessionId: string }) {
     prevToolRef.current = activeTool;
   }, [activeTool, session?.id, session?.startedAt]);
 
-  const loadPrepToolContent = async (type: string, stepContext?: string) => {
-    if (!session?.problem) return;
-    if (type === "grokipedia") {
-      setShowGrokipediaOnly(true);
-      setPrepToolContent(null);
-      return;
-    }
-    setShowGrokipediaOnly(false);
-    setPrepToolLoading(true);
-    try {
-      let url = `/api/prep-material?topic=${encodeURIComponent(session.problem)}&type=${type}`;
-      if (stepContext) {
-        url += `&step=${encodeURIComponent(stepContext)}`;
-      }
-      const response = await fetch(url);
-      if (response.ok) {
-        const data = await response.json();
-        setPrepToolContent(data);
-      }
-    } catch (err) {
-      console.error("Prep material error:", err);
-    } finally {
-      setPrepToolLoading(false);
-    }
-  };
-
   // Fetch Grokipedia search suggestions from LLM
   const fetchGrokipediaSuggestions = async () => {
     if (!session?.problem) return;
@@ -485,17 +449,136 @@ export function SessionView({ sessionId }: { sessionId: string }) {
     }
   };
 
-  // Step action handlers — Resources, Practice, Ask Helios
+  // Step action handlers — Resources (Theory), Practice, Ask Helios.
+  //
+  // Theory and Practice used to open their own panels driven by
+  // /api/prep-material. They've been folded into the Helios chat
+  // surface so there's a single conversational thread of truth: the
+  // action buttons now post a user-stub message into chat ("Give me
+  // the theory for this step…"), fetch the same prep-material
+  // markdown, and append it as a rich assistant message. Same content,
+  // same Markdown+KaTeX rendering — just inside the chat history so
+  // it stays linked to the rest of the conversation and doesn't get
+  // lost when the user switches tools.
+  //
+  // We inject a placeholder assistant message flagged with
+  // `pending: true` — HeliosChat renders that as the same bouncing-
+  // dots typing indicator used during a normal chat round-trip, so
+  // visually there's no difference between waiting for Helios to
+  // reply and waiting for prep-material. The optional `pendingLabel`
+  // sits next to the dots ("Preparing practice tasks for you…") so
+  // the user knows what's coming. Once the fetch resolves we replace
+  // the placeholder with the rendered markdown, clearing the pending
+  // flags. On error we swap in a short apology — same id, also no
+  // longer pending.
+  const fetchAndInjectPrepIntoChat = async (
+    type: "reading" | "exercise",
+    stepDescription: string,
+    userStub: string,
+    pendingLabel: string,
+    fallbackTitle: string,
+  ) => {
+    if (!session?.problem) return;
+    ensureVisible("tools");
+    setActiveTool("chat");
+
+    const cardKind = type === "exercise" ? "practice" : "theory";
+
+    const userMsg: ChatMessage = {
+      id: `${Date.now()}-u`,
+      role: "user",
+      content: userStub,
+    };
+    const placeholderId = `${Date.now()}-a`;
+    const placeholder: ChatMessage = {
+      id: placeholderId,
+      role: "assistant",
+      content: "",
+      // Render the placeholder as the same kind of smart card we'll
+      // swap real content into — that way the dots → markdown
+      // transition happens inside the same framed shell with no
+      // layout jump.
+      kind: cardKind,
+      pending: true,
+      pendingLabel,
+    };
+
+    // Snapshot the current chatMessages now so we don't fight a
+    // concurrent welcome-init effect inside HeliosChat.
+    setChatMessages([...chatMessages, userMsg, placeholder]);
+
+    try {
+      const url =
+        `/api/prep-material?topic=${encodeURIComponent(session.problem)}` +
+        `&type=${type}` +
+        `&step=${encodeURIComponent(stepDescription)}`;
+      const response = await fetch(url);
+      if (!response.ok) throw new Error(`prep-material ${response.status}`);
+      const data = (await response.json()) as { title?: string; content?: string };
+
+      const title = (data.title ?? fallbackTitle).trim();
+      const body = (data.content ?? "").trim();
+
+      // Replace placeholder by id so out-of-order fetches don't clobber
+      // each other if the user clicks twice in quick succession. The
+      // smart card chrome already renders the title in its header
+      // strip, so we don't prepend it to the markdown body.
+      setChatMessages(prev =>
+        prev.map(m =>
+          m.id === placeholderId
+            ? {
+                ...m,
+                content: body,
+                cardTitle: title,
+                pending: false,
+                pendingLabel: undefined,
+              }
+            : m,
+        ),
+      );
+    } catch (err) {
+      console.error("Prep material → chat error:", err);
+      // On error, fall back to a regular Helios bubble (drop the
+      // card kind) so the apology reads as conversational, not as
+      // a failed-but-still-card artifact.
+      setChatMessages(prev =>
+        prev.map(m =>
+          m.id === placeholderId
+            ? {
+                ...m,
+                content:
+                  type === "exercise"
+                    ? "I couldn't pull together a practice set just now. Try again in a moment, or tell me what specifically you'd like to practice."
+                    : "I couldn't pull the theory for this step right now. Try again, or ask me a specific question and I'll explain.",
+                kind: undefined,
+                cardTitle: undefined,
+                pending: false,
+                pendingLabel: undefined,
+              }
+            : m,
+        ),
+      );
+    }
+  };
+
   const handleStepResources = (stepDescription: string) => {
-    setActiveTool("reading");
-    setPrepToolContent(null);
-    loadPrepToolContent("reading", stepDescription);
+    void fetchAndInjectPrepIntoChat(
+      "reading",
+      stepDescription,
+      `Give me the theory for this step: "${stepDescription}"`,
+      "Preparing the theory for you…",
+      "Theory",
+    );
   };
 
   const handleStepPractice = (stepDescription: string) => {
-    setActiveTool("exercise");
-    setPrepToolContent(null);
-    loadPrepToolContent("exercise", stepDescription);
+    void fetchAndInjectPrepIntoChat(
+      "exercise",
+      stepDescription,
+      `Give me practice tasks for this step: "${stepDescription}"`,
+      "Preparing practice tasks for you…",
+      "Practice",
+    );
   };
 
   const handleStepAskHelios = (stepDescription: string) => {
@@ -920,27 +1003,6 @@ export function SessionView({ sessionId }: { sessionId: string }) {
     load();
     return () => { cancelled = true; };
   }, [sessionId, router]);
-
-  // Load prep material
-  const loadPrepMaterial = async (type: string) => {
-    if (!session?.problem) return;
-    setPrepLoading(type);
-    try {
-      const response = await fetch(`/api/prep-material?topic=${encodeURIComponent(session.problem)}&type=${type}`);
-      if (response.ok) {
-        const data = await response.json();
-        // Add card to list (avoid duplicates)
-        setPrepCards(prev => {
-          if (prev.some(c => c.id === type)) return prev;
-          return [...prev, { id: type, title: data.title, content: data.content }];
-        });
-      }
-    } catch (err) {
-      console.error("Prep material error:", err);
-    } finally {
-      setPrepLoading(null);
-    }
-  };
 
   // ---- Muse EEG ----
   const handleConnectMuse = async () => {
@@ -3352,18 +3414,11 @@ export function SessionView({ sessionId }: { sessionId: string }) {
                   return;
                 }
                 setActiveTool(tool);
-                setShowGrokipediaOnly(tool === "grokipedia");
-                if (tool === "grokipedia") {
-                  setPrepToolContent(null);
-                } else if (tool === "exercise" || tool === "reading") {
-                  setPrepToolContent(null);
-                  loadPrepToolContent(tool);
-                }
               }} 
               problem={session.problem} 
               sessionId={session.id}
               planId={session.metadata?.plan_id as string | undefined}
-              disabledTools={shouldBlockTools ? ["exercise", "reading"] as Tool[] : []}
+              disabledTools={[]}
             />
 
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
@@ -3628,9 +3683,14 @@ export function SessionView({ sessionId }: { sessionId: string }) {
                         <PlanResourcesPanel planId={session.metadata.plan_id as string} />
                       </div>
                     )}
-                    {(activeTool === "grokipedia" || activeTool === "exercise" || activeTool === "reading") && (
+                    {/* Grokipedia search shortcut. Practice/Theory used to
+                        share this render block when they had their own
+                        panels — they've since been merged into the
+                        Helios chat surface, so this block is now
+                        Grokipedia-only. */}
+                    {activeTool === "grokipedia" && (
                       <div className="h-full flex flex-col">
-                        {activeTool === "grokipedia" && showGrokipediaOnly && session?.problem && (
+                        {session?.problem && (
                           <div className="flex-1 min-h-0 p-4 overflow-auto">
                             <div className="max-w-md mx-auto space-y-6">
                               {/* Header */}
@@ -3746,83 +3806,6 @@ export function SessionView({ sessionId }: { sessionId: string }) {
                               </div>
                             </div>
                           </div>
-                        )}
-                        {((activeTool === "grokipedia" && !showGrokipediaOnly) || activeTool === "exercise" || activeTool === "reading") && !prepToolContent && !prepToolLoading && (
-                          <div className="flex-1 min-h-0 p-4 flex flex-col items-center justify-center gap-4">
-                            <button
-                              onClick={() => loadPrepToolContent(activeTool)}
-                              className="px-6 py-3 bg-neutral-100 hover:bg-white text-neutral-900 text-sm font-medium rounded-xl transition-colors"
-                            >
-                              {activeTool === "exercise" ? t('session.loadPractice') : t('session.loadTheory')}
-                            </button>
-                          </div>
-                        )}
-                        {prepToolLoading && (
-                          <div className="flex-1 min-h-0 p-4 flex flex-col items-center justify-center">
-                            <div className="w-6 h-6 border border-neutral-800 border-t-neutral-300 rounded-full animate-spin mb-3" />
-                            <p className="text-sm text-neutral-500">{t('common.loading')}</p>
-                          </div>
-                        )}
-                        {prepToolContent && !prepToolLoading && (
-                          (activeTool === "exercise" || activeTool === "reading") ? (
-                            <>
-                              <div className="flex-1 min-h-0 overflow-auto p-4">
-                                <h3 className="text-lg font-medium text-white mb-4">{prepToolContent.title}</h3>
-                                <div className={`prose prose-invert prose-sm max-w-none text-neutral-300 ${activeTool === "exercise" ? "[&_p]:mb-4 [&_p]:leading-relaxed [&_ol]:mb-4 [&_ol]:pl-5 [&_ol]:space-y-3 [&_ul]:mb-4 [&_ul]:pl-5 [&_ul]:space-y-3 [&_li]:leading-relaxed [&_h1]:text-white [&_h1]:text-base [&_h1]:font-semibold [&_h1]:mt-6 [&_h1]:mb-3 [&_h2]:text-white [&_h2]:text-sm [&_h2]:font-semibold [&_h2]:mt-5 [&_h2]:mb-2 [&_h3]:text-neutral-200 [&_h3]:text-sm [&_h3]:font-medium [&_h3]:mt-4 [&_h3]:mb-2 [&_strong]:text-white [&_hr]:my-4 [&_hr]:border-neutral-700" : ""}`}>
-                                  <ReactMarkdown
-                                    remarkPlugins={[remarkGfm, remarkMath]}
-                                    rehypePlugins={[rehypeKatex]}
-                                    components={activeTool === "reading" ? {
-                                      a: ({ href, children }) => (
-                                        <a
-                                          href={href}
-                                          target="_blank"
-                                          rel="noopener noreferrer"
-                                          className="no-underline inline-flex items-center gap-1.5 px-3 py-1.5 my-1 rounded-lg bg-neutral-900 text-white border border-neutral-700 hover:bg-neutral-800 hover:border-neutral-600 transition-all text-sm font-medium"
-                                        >
-                                          <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                                          </svg>
-                                          {children}
-                                        </a>
-                                      ),
-                                    } : undefined}
-                                  >
-                                    {prepToolContent.content}
-                                  </ReactMarkdown>
-                                </div>
-                              </div>
-                            </>
-                          ) : (
-                            <div className="flex-1 min-h-0 p-4 overflow-auto">
-                              <div className="rounded-xl border border-neutral-800 bg-neutral-900/50 p-6">
-                                <div className="flex items-center justify-between mb-4">
-                                  <h3 className="text-lg font-medium text-white">{prepToolContent.title}</h3>
-                                </div>
-                                <div className="prose prose-invert prose-sm max-w-none text-neutral-300">
-                                  <ReactMarkdown
-                                    remarkPlugins={[remarkGfm, remarkMath]}
-                                    rehypePlugins={[rehypeKatex]}
-                                  >
-                                    {prepToolContent.content}
-                                  </ReactMarkdown>
-                                </div>
-                                {activeTool === "grokipedia" && session?.problem && (
-                                  <a
-                                    href={`https://grokipedia.com/search?q=${encodeURIComponent(session.problem)}`}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="mt-4 inline-flex items-center gap-2 text-white hover:text-neutral-300 text-sm"
-                                  >
-                                    {t('session.openGrokipedia')}
-                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                      <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                                    </svg>
-                                  </a>
-                                )}
-                              </div>
-                            </div>
-                          )
                         )}
                       </div>
                     )}

@@ -4,7 +4,14 @@ import { useState } from "react";
 import { useI18n } from "@/lib/i18n";
 import { QRCodeModal } from "./QRCodeModal";
 
-export type Tool = "chat" | "canvas" | "notebook" | "grokipedia" | "exercise" | "reading" | "help" | "data-input" | "logs" | "plan-resources";
+// Note: "exercise" (Practice) and "reading" (Theory) have been folded
+// into the Helios chat surface — those buttons now inject a rich
+// assistant message into the chat instead of opening their own panel.
+// They no longer appear in the desktop sidebar. The Tool union still
+// keeps them around as accepted values *only* if other call sites
+// reference them historically; here we drop them entirely so the
+// compiler will surface anything still trying to set them.
+export type Tool = "chat" | "canvas" | "notebook" | "grokipedia" | "help" | "data-input" | "logs" | "plan-resources";
 
 interface ToolsPanelProps {
   activeTool: Tool;
@@ -44,18 +51,6 @@ function ToolIcon({ id }: { id: Tool }) {
           <path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
         </svg>
       );
-    case "exercise":
-      return (
-        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-        </svg>
-      );
-    case "reading":
-      return (
-        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-        </svg>
-      );
     case "help":
       return (
         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -90,7 +85,11 @@ export function ToolsPanel({
   sessionId, planId, disabledTools = [],
 }: ToolsPanelProps) {
   const { t } = useI18n();
-  const baseMainTools: Tool[] = ["chat", "canvas", "notebook", "grokipedia", "exercise", "reading"];
+  // Practice (exercise) and Theory (reading) used to live here as their
+  // own panels. They've been merged into the Helios chat surface — the
+  // action buttons in ProbesPanel / SessionPlanViewer now inject a rich
+  // assistant message into chat instead. Keep this list lean.
+  const baseMainTools: Tool[] = ["chat", "canvas", "notebook", "grokipedia"];
   const mainTools: Tool[] = planId ? [...baseMainTools, "plan-resources"] : baseMainTools;
   const [showQRModal, setShowQRModal] = useState(false);
 
@@ -101,8 +100,6 @@ export function ToolsPanel({
       case "notebook": return t('tools.notebook');
 
       case "grokipedia": return t('tools.grokipedia');
-      case "exercise": return t('tools.practice');
-      case "reading": return t('tools.theory');
       case "help": return t('tools.help');
       case "data-input": return t('tools.dataInput');
       case "logs": return t('tools.logs');

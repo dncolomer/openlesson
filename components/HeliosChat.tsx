@@ -21,10 +21,46 @@ function processLatexContent(content: string): string {
     .replace(/\\\\\)/g, '\\)'); // \\) -> \)
 }
 
+/**
+ * Optional rich-message kinds. When set on an assistant message the
+ * chat renders it as a full-width "smart card" instead of the regular
+ * Helios speech bubble — header strip + icon + label up top, markdown
+ * body below. Used for prep-material that the Helios prep endpoint
+ * produces (theory / practice for a given step).
+ *
+ * Intentionally a string union (not a boolean) so we can add more
+ * card kinds later without another flag.
+ */
+export type ChatMessageKind = "theory" | "practice";
+
 export interface ChatMessage {
   id: string;
   role: "user" | "assistant";
   content: string;
+  /**
+   * When set and `role === "assistant"`, the message renders as a
+   * full-width smart card matching this kind.
+   */
+  kind?: ChatMessageKind;
+  /** Optional card title shown in the header strip next to the kind label. */
+  cardTitle?: string;
+  /**
+   * When true and `role === "assistant"`, the message renders as a
+   * typing-style bouncing-dots placeholder instead of its `content`.
+   * Lets parent components (e.g. SessionView's Practice/Theory step
+   * actions) inject a placeholder message that visually matches the
+   * built-in "Helios is replying" indicator and replace it with real
+   * markdown once the fetch resolves.
+   *
+   * Optional `pendingLabel` is rendered next to the dots — for things
+   * like "Preparing practice tasks…".
+   *
+   * When `pending` is set together with `kind`, the placeholder is
+   * rendered card-shaped so swapping in the real content doesn't
+   * cause a layout jump.
+   */
+  pending?: boolean;
+  pendingLabel?: string;
 }
 
 interface HeliosChatProps {
@@ -60,6 +96,76 @@ function HeliosAvatar({ size = 28 }: { size?: number }) {
       aria-hidden
     >
       <span className="font-serif text-neutral-200" style={{ fontSize: size * 0.5 }}>H</span>
+    </div>
+  );
+}
+
+// Visual chrome shared by Theory / Practice smart cards and their
+// pending placeholders. Centralised so the swap-in of real content
+// after the fetch resolves doesn't visibly change card width / border.
+//
+// Both kinds use a neutral grey/white frame — the kind icon and
+// label are enough to differentiate them, and the framing reads as
+// "structured artifact" without competing with the chat palette
+// (which is already neutral). Body stays neutral so markdown still
+// reads as part of the chat surface, just framed.
+const CARD_KIND_META: Record<
+  ChatMessageKind,
+  { label: string; icon: React.ReactNode; headerClass: string; ringClass: string }
+> = {
+  theory: {
+    label: "Theory",
+    headerClass:
+      "bg-neutral-800/60 text-neutral-200 border-b border-neutral-700",
+    ringClass: "border-neutral-700",
+    icon: (
+      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+      </svg>
+    ),
+  },
+  practice: {
+    label: "Practice",
+    headerClass:
+      "bg-neutral-800/60 text-neutral-200 border-b border-neutral-700",
+    ringClass: "border-neutral-700",
+    icon: (
+      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+      </svg>
+    ),
+  },
+};
+
+function SmartCardShell({
+  kind,
+  title,
+  children,
+}: {
+  kind: ChatMessageKind;
+  title?: string;
+  children: React.ReactNode;
+}) {
+  const meta = CARD_KIND_META[kind];
+  return (
+    <div
+      className={`w-full rounded-2xl border ${meta.ringClass} bg-neutral-900/60 overflow-hidden shadow-[0_1px_0_rgba(255,255,255,0.03)_inset]`}
+    >
+      <div
+        className={`flex items-center gap-2 px-4 py-2 text-[11px] font-medium uppercase tracking-wider ${meta.headerClass}`}
+      >
+        {meta.icon}
+        <span>{meta.label}</span>
+        {title && (
+          <>
+            <span className="text-neutral-500/60">·</span>
+            <span className="truncate text-neutral-300 normal-case tracking-normal text-xs font-normal">
+              {title}
+            </span>
+          </>
+        )}
+      </div>
+      <div className="px-4 py-3">{children}</div>
     </div>
   );
 }
@@ -225,30 +331,105 @@ export function HeliosChat({ problem, messages: externalMessages, onMessagesChan
         </button>
       </div>
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {messages.map((message) => (
-          <div
-            key={message.id}
-            className={`flex items-start gap-2 ${message.role === "user" ? "justify-end" : "justify-start"}`}
-          >
-            {message.role === "assistant" && <HeliosAvatar size={28} />}
+        {messages.map((message) => {
+          // ── Smart card (theory / practice) ────────────────────────
+          // Full-width artifact embedded in the chat stream. Used for
+          // both the pending placeholder (so the swap-in of real
+          // content doesn't shift layout) and the rendered card.
+          if (message.role === "assistant" && message.kind) {
+            const isPending = !!message.pending;
+            return (
+              <div key={message.id} className="w-full">
+                <SmartCardShell kind={message.kind} title={message.cardTitle}>
+                  {isPending ? (
+                    <div className="flex items-center gap-3 py-1">
+                      <div className="flex gap-1">
+                        <div className="w-2 h-2 rounded-full bg-neutral-500 animate-bounce" style={{ animationDelay: "0ms" }} />
+                        <div className="w-2 h-2 rounded-full bg-neutral-500 animate-bounce" style={{ animationDelay: "150ms" }} />
+                        <div className="w-2 h-2 rounded-full bg-neutral-500 animate-bounce" style={{ animationDelay: "300ms" }} />
+                      </div>
+                      {message.pendingLabel && (
+                        <span className="text-xs text-neutral-400">
+                          {message.pendingLabel}
+                        </span>
+                      )}
+                    </div>
+                  ) : (
+                    // Card body uses the same markdown-prose styles as
+                    // a regular Helios bubble, but with extra spacing
+                    // tuned for longer reference content. Practice
+                    // (numbered tasks) gets list affordances.
+                    <div
+                      className={`prose prose-invert prose-sm max-w-none text-neutral-200 [&_.katex]:text-inherit ${
+                        message.kind === "practice"
+                          ? "[&_p]:mb-3 [&_p]:leading-relaxed [&_ol]:mb-3 [&_ol]:pl-5 [&_ol]:space-y-2 [&_ul]:mb-3 [&_ul]:pl-5 [&_ul]:space-y-2 [&_li]:leading-relaxed [&_strong]:text-white"
+                          : "[&_a]:no-underline [&_a]:inline-flex [&_a]:items-center [&_a]:gap-1.5 [&_a]:px-3 [&_a]:py-1.5 [&_a]:my-1 [&_a]:rounded-lg [&_a]:bg-neutral-900 [&_a]:text-white [&_a]:border [&_a]:border-neutral-700 hover:[&_a]:bg-neutral-800 hover:[&_a]:border-neutral-600 [&_a]:text-sm [&_a]:font-medium"
+                      }`}
+                    >
+                      <ReactMarkdown
+                        remarkPlugins={[remarkGfm, remarkMath]}
+                        rehypePlugins={[[rehypeKatex, { throwOnError: false, strict: false }]]}
+                      >
+                        {processLatexContent(message.content)}
+                      </ReactMarkdown>
+                    </div>
+                  )}
+                </SmartCardShell>
+              </div>
+            );
+          }
+
+          // ── Regular bubble pending placeholder ────────────────────
+          // Same bouncing dots used for an in-flight chat fetch.
+          if (message.role === "assistant" && message.pending) {
+            return (
+              <div
+                key={message.id}
+                className="flex items-start gap-2 justify-start"
+              >
+                <HeliosAvatar size={28} />
+                <div className="bg-neutral-800 rounded-2xl px-4 py-2.5 flex items-center gap-3">
+                  <div className="flex gap-1">
+                    <div className="w-2 h-2 rounded-full bg-neutral-500 animate-bounce" style={{ animationDelay: "0ms" }} />
+                    <div className="w-2 h-2 rounded-full bg-neutral-500 animate-bounce" style={{ animationDelay: "150ms" }} />
+                    <div className="w-2 h-2 rounded-full bg-neutral-500 animate-bounce" style={{ animationDelay: "300ms" }} />
+                  </div>
+                  {message.pendingLabel && (
+                    <span className="text-xs text-neutral-400">
+                      {message.pendingLabel}
+                    </span>
+                  )}
+                </div>
+              </div>
+            );
+          }
+
+          // ── Regular speech bubble (default) ───────────────────────
+          return (
             <div
-              className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-sm ${
-                message.role === "user"
-                  ? "bg-blue-600 text-white"
-                  : "bg-neutral-800 text-neutral-200"
-              }`}
+              key={message.id}
+              className={`flex items-start gap-2 ${message.role === "user" ? "justify-end" : "justify-start"}`}
             >
-              <div className="prose prose-invert prose-sm max-w-none [&_.katex]:text-inherit">
-                <ReactMarkdown
-                  remarkPlugins={[remarkGfm, remarkMath]}
-                  rehypePlugins={[[rehypeKatex, { throwOnError: false, strict: false }]]}
-                >
-                  {processLatexContent(message.content)}
-                </ReactMarkdown>
+              {message.role === "assistant" && <HeliosAvatar size={28} />}
+              <div
+                className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-sm ${
+                  message.role === "user"
+                    ? "bg-blue-600 text-white"
+                    : "bg-neutral-800 text-neutral-200"
+                }`}
+              >
+                <div className="prose prose-invert prose-sm max-w-none [&_.katex]:text-inherit">
+                  <ReactMarkdown
+                    remarkPlugins={[remarkGfm, remarkMath]}
+                    rehypePlugins={[[rehypeKatex, { throwOnError: false, strict: false }]]}
+                  >
+                    {processLatexContent(message.content)}
+                  </ReactMarkdown>
+                </div>
               </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
         {isLoading && (
           <div className="flex items-start gap-2 justify-start">
             <HeliosAvatar size={28} />

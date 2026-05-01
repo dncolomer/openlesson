@@ -203,13 +203,13 @@ export function MobileProbesTab({
           {sessionControls}
         </div>
       )}
-      <div className="relative z-10 flex-1 min-h-0 flex flex-col px-4 py-4 overflow-hidden">
+      <div className="relative z-10 flex-1 min-h-0 flex flex-col px-3 py-3 overflow-hidden">
         {!currentProbe ? (
-          <div className="flex-1 flex flex-col items-center justify-center gap-4 text-center">
+            <div className="flex-1 flex flex-col items-center justify-center gap-3 text-center overflow-y-auto">
             {/* Silent tutor avatar */}
             <div className="relative">
-              <div className="w-28 h-28 rounded-full bg-gradient-to-br from-neutral-800 to-neutral-900 border border-neutral-800 flex items-center justify-center opacity-50">
-                <span className="text-3xl font-serif text-neutral-600">{avatarInitial}</span>
+              <div className="w-20 h-20 rounded-full bg-gradient-to-br from-neutral-800 to-neutral-900 border border-neutral-800 flex items-center justify-center opacity-50">
+                <span className="text-2xl font-serif text-neutral-600">{avatarInitial}</span>
               </div>
             </div>
             {isGeneratingProbe ? (
@@ -258,8 +258,8 @@ export function MobileProbesTab({
           </div>
         ) : (
           <>
-            {/* Tutor + message group — centered vertically in available space */}
-            <div className="flex-1 min-h-0 flex flex-col items-center justify-center gap-5 overflow-y-auto">
+            {/* Tutor + message group — compact enough for small screens. */}
+            <div className="flex-1 min-h-0 flex flex-col items-center justify-start gap-3 overflow-y-auto overscroll-contain pb-2">
               {/* Avatar + flanking red nav arrows. The arrows replace the
                   edge-anchored grey chevrons and act as a notification
                   cue: they appear red-tinted only while active probes
@@ -271,13 +271,13 @@ export function MobileProbesTab({
                     onClick={canGoPrev ? goPrev : undefined}
                     disabled={!canGoPrev}
                     aria-label={t('probes.previous')}
-                    className={`w-10 h-10 rounded-full border flex items-center justify-center transition-all ${
+                    className={`w-8 h-8 rounded-full border flex items-center justify-center transition-all ${
                       canGoPrev
                         ? "bg-red-500/15 border-red-500/60 text-red-300 active:bg-red-500/25 active:text-red-100 shadow-[0_0_16px_rgba(239,68,68,0.25)]"
                         : "bg-neutral-900/40 border-neutral-800 text-neutral-700 opacity-40 cursor-not-allowed"
                     }`}
                   >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
                     </svg>
                   </button>
@@ -285,13 +285,13 @@ export function MobileProbesTab({
                   {/* Avatar with notification ring + badge */}
                   <div className="relative">
                     <div
-                      className={`w-28 h-28 rounded-full bg-gradient-to-br from-amber-500/15 via-neutral-800 to-neutral-900 border flex items-center justify-center overflow-hidden transition-colors ${
+                      className={`w-20 h-20 rounded-full bg-gradient-to-br from-amber-500/15 via-neutral-800 to-neutral-900 border flex items-center justify-center overflow-hidden transition-colors ${
                         activeProbes.length > 0
                           ? "border-red-500/70 ring-2 ring-red-500/40 ring-offset-2 ring-offset-[#0a0a0a]"
                           : "border-neutral-800"
                       }`}
                     >
-                      <span className="text-3xl font-serif text-neutral-200">{avatarInitial}</span>
+                      <span className="text-2xl font-serif text-neutral-200">{avatarInitial}</span>
                     </div>
                     {/* Soft glow — shifts red when notifications are active */}
                     <div
@@ -304,7 +304,7 @@ export function MobileProbesTab({
                     {/* Notification badge — app-style red pill with count */}
                     {activeProbes.length > 0 && (
                       <div
-                        className="absolute -top-1 -right-1 min-w-[22px] h-[22px] px-1.5 rounded-full bg-red-500 border-2 border-[#0a0a0a] flex items-center justify-center shadow-[0_0_12px_rgba(239,68,68,0.6)]"
+                        className="absolute -top-1 -right-1 min-w-[20px] h-[20px] px-1 rounded-full bg-red-500 border-2 border-[#0a0a0a] flex items-center justify-center shadow-[0_0_12px_rgba(239,68,68,0.6)]"
                         aria-label={`${activeProbes.length} ${t('probes.tutor')}`}
                       >
                         <span className="text-[11px] font-bold text-white tabular-nums leading-none">
@@ -319,13 +319,13 @@ export function MobileProbesTab({
                     onClick={canGoNext ? goNext : undefined}
                     disabled={!canGoNext}
                     aria-label={t('probes.next')}
-                    className={`w-10 h-10 rounded-full border flex items-center justify-center transition-all ${
+                    className={`w-8 h-8 rounded-full border flex items-center justify-center transition-all ${
                       canGoNext
                         ? "bg-red-500/15 border-red-500/60 text-red-300 active:bg-red-500/25 active:text-red-100 shadow-[0_0_16px_rgba(239,68,68,0.25)]"
                         : "bg-neutral-900/40 border-neutral-800 text-neutral-700 opacity-40 cursor-not-allowed"
                     }`}
                   >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
                     </svg>
                   </button>
@@ -362,14 +362,14 @@ export function MobileProbesTab({
               </div>
 
               {/* The message */}
-              <div className="relative max-w-[52ch] px-2">
+              <div className="relative max-w-[38ch] px-2">
                 <span
-                  className="absolute -top-4 -left-1 text-5xl font-serif text-neutral-800 select-none pointer-events-none leading-none"
+                  className="absolute -top-3 -left-1 text-4xl font-serif text-neutral-800 select-none pointer-events-none leading-none"
                   aria-hidden="true"
                 >
                   &ldquo;
                 </span>
-                <p className="relative text-xl leading-relaxed tracking-tight text-center text-neutral-200">
+                <p className="relative text-base leading-relaxed tracking-tight text-center text-neutral-200">
                   {probeDisplayed}
                   {!probeTypingDone && (
                     <span
@@ -382,21 +382,23 @@ export function MobileProbesTab({
 
               {/* Listen-to-tutor TTS. cacheKey bound to the probe id so
                   navigating probes invalidates the cached audio. */}
-              <ListenButton
-                text={currentProbe.text}
-                language={ttsLanguage}
-                cacheKey={`probe:${currentProbe.id}`}
-              />
+              <div className="scale-90 origin-center">
+                <ListenButton
+                  text={currentProbe.text}
+                  language={ttsLanguage}
+                  cacheKey={`probe:${currentProbe.id}`}
+                />
+              </div>
             </div>
 
             {/* Action row */}
-            <div className="shrink-0 pt-4">
-              <div className="grid grid-cols-5 gap-2 rounded-2xl border border-neutral-800 bg-neutral-950/40 p-2">
+            <div className="shrink-0 pt-2">
+              <div className="grid grid-cols-5 gap-1.5 rounded-2xl border border-neutral-800 bg-neutral-950/40 p-1.5">
                 <button
                   onClick={() => onOpenResources?.(currentProbe.text)}
                   disabled={!isSessionActive}
                   title={t('sessionPlan.resources')}
-                  className="py-3 px-2 text-[11px] font-medium rounded-xl bg-neutral-800 border border-neutral-700 text-neutral-200 active:bg-neutral-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center justify-center"
+                  className="py-2.5 px-2 text-[11px] font-medium rounded-xl bg-neutral-800 border border-neutral-700 text-neutral-200 active:bg-neutral-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center justify-center"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
@@ -406,7 +408,7 @@ export function MobileProbesTab({
                   onClick={() => onOpenPractice?.(currentProbe.text)}
                   disabled={!isSessionActive}
                   title={t('sessionPlan.practice')}
-                  className="py-3 px-2 text-[11px] font-medium rounded-xl bg-neutral-800 border border-neutral-700 text-neutral-200 active:bg-neutral-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center justify-center"
+                  className="py-2.5 px-2 text-[11px] font-medium rounded-xl bg-neutral-800 border border-neutral-700 text-neutral-200 active:bg-neutral-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center justify-center"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
@@ -416,7 +418,7 @@ export function MobileProbesTab({
                   onClick={() => onAskAssistant?.(currentProbe.text)}
                   disabled={!isSessionActive}
                   title={t('sessionPlan.ask')}
-                  className="py-3 px-2 text-[11px] font-medium rounded-xl bg-neutral-800 border border-neutral-700 text-neutral-200 active:bg-neutral-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center justify-center"
+                  className="py-2.5 px-2 text-[11px] font-medium rounded-xl bg-neutral-800 border border-neutral-700 text-neutral-200 active:bg-neutral-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center justify-center"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
@@ -426,7 +428,7 @@ export function MobileProbesTab({
                   onClick={() => onShareScreen?.()}
                   disabled={!isSessionActive}
                   title={t('probes.shareScreen')}
-                  className="py-3 px-2 text-[11px] font-medium rounded-xl bg-neutral-800 border border-neutral-700 text-neutral-200 active:bg-neutral-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center justify-center"
+                  className="py-2.5 px-2 text-[11px] font-medium rounded-xl bg-neutral-800 border border-neutral-700 text-neutral-200 active:bg-neutral-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center justify-center"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
@@ -436,7 +438,7 @@ export function MobileProbesTab({
                   onClick={() => onArchiveProbe?.(currentProbe.id)}
                   disabled={archivingProbeId === currentProbe.id}
                   title={t('probes.done')}
-                  className="py-3 px-2 text-[11px] font-medium rounded-xl bg-neutral-100 text-neutral-900 active:bg-white disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center justify-center"
+                  className="py-2.5 px-2 text-[11px] font-medium rounded-xl bg-neutral-100 text-neutral-900 active:bg-white disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center justify-center"
                 >
                   {archivingProbeId === currentProbe.id ? (
                     <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">

@@ -1,7 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback, useRef, type ReactNode } from "react";
-import { SwipeableTabs } from "./SwipeableTabs";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { MobileProbesTab } from "./MobileProbesTab";
 import { MobilePlanTab } from "./MobilePlanTab";
 import { MobileExcalidrawCanvas } from "./MobileExcalidrawCanvas";
@@ -72,22 +71,22 @@ const languageNames = tutoringLanguageNames;
 
 const tabIcons = [
   (
-    <svg key="probes" className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+    <svg key="probes" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
     </svg>
   ),
   (
-    <svg key="chat" className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+    <svg key="chat" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
     </svg>
   ),
   (
-    <svg key="plan" className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+    <svg key="plan" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
     </svg>
   ),
   (
-    <svg key="canvas" className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+    <svg key="canvas" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
     </svg>
   ),
@@ -2441,25 +2440,13 @@ export function MobileSessionView({
           </div>
         </div>
 
-        {/* Pre-recording states (start / mic checks / errors) */}
-        {(error || micStatus === "idle" || micStatus === "checking" || micStatus === "denied" || isSaving) && !isRecording && (
+        {/* Pre-recording feedback. Start lives inside Helios now. */}
+        {(error || micStatus === "checking" || micStatus === "denied" || isSaving) && !isRecording && (
           <div className="mt-1.5">
             {error && (
               <div className="mb-1.5 p-2 bg-red-500/10 border border-red-500/20 rounded-lg">
                 <p className="text-[10px] text-red-400">{error}</p>
               </div>
-            )}
-
-            {micStatus === "idle" && (
-              <button
-                onClick={showWelcomePanel ? handleWelcomePlay : handleStartSession}
-                className="w-full py-1.5 px-3 bg-neutral-100 text-neutral-900 rounded-xl text-xs font-medium flex items-center justify-center gap-2 active:bg-white active:scale-[0.98] transition-all"
-              >
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
-                </svg>
-                {t('session.startSession')}
-              </button>
             )}
 
             {micStatus === "checking" && (
@@ -2629,12 +2616,11 @@ export function MobileSessionView({
         </div>
       )}
 
-      {/* Main Content - Swipeable */}
+      {/* Main Content */}
       <div className="flex-1 min-h-0 relative overflow-hidden">
-        <SwipeableTabContent
+        <StableTabContent
           tabs={tabs}
           activeTab={activeTab}
-          onTabChange={setActiveTab}
         />
       </div>
 
@@ -2644,20 +2630,23 @@ export function MobileSessionView({
         style={{ paddingBottom: "max(8px, env(safe-area-inset-bottom))" }}
       >
         <div className="max-w-md mx-auto">
-          <div className="flex items-center justify-around">
+          <div className="grid grid-cols-4 gap-1">
             {tabs.map((tab, index) => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(index)}
                 aria-label={tab.label}
                 title={tab.label}
-                className={`flex items-center justify-center w-14 h-12 rounded-lg transition-all active:scale-[0.95] ${
+                className={`flex flex-col items-center justify-center h-12 rounded-xl transition-all active:scale-[0.95] ${
                   activeTab === index
-                    ? "text-white"
-                    : "text-neutral-500"
+                    ? "text-white bg-neutral-800"
+                    : "text-neutral-500 active:bg-neutral-800/60"
                 }`}
               >
                 {tabIcons[index]}
+                <span className="mt-0.5 max-w-full truncate px-1 text-[9px] leading-none">
+                  {tab.label}
+                </span>
               </button>
             ))}
           </div>
@@ -2667,147 +2656,17 @@ export function MobileSessionView({
   );
 }
 
-interface SwipeableTabContentProps {
+interface StableTabContentProps {
   tabs: { id: string; label: string; content: React.ReactNode }[];
   activeTab: number;
-  onTabChange: (index: number) => void;
 }
 
-function SwipeableTabContent({ tabs, activeTab, onTabChange }: SwipeableTabContentProps) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const touchStartRef = useRef<{ x: number; y: number; time: number } | null>(null);
-  const touchCurrentRef = useRef<number>(0);
-  const [isDragging, setIsDragging] = useState(false);
-  const [dragOffset, setDragOffset] = useState(0);
-  const [isFirstMove, setIsFirstMove] = useState(false);
-
-  useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
-
-    const handleTouchStart = (e: TouchEvent) => {
-      const target = e.target as HTMLElement | null;
-      if (target && target.closest('[data-no-swipe="true"]')) {
-        touchStartRef.current = null;
-        return;
-      }
-      const touch = e.touches[0];
-      touchStartRef.current = {
-        x: touch.clientX,
-        y: touch.clientY,
-        time: Date.now(),
-      };
-      touchCurrentRef.current = touch.clientX;
-      setIsDragging(true);
-      setIsFirstMove(true);
-    };
-
-    const handleTouchMove = (e: TouchEvent) => {
-      if (!touchStartRef.current) return;
-
-      const touch = e.touches[0];
-      const deltaX = touch.clientX - touchStartRef.current.x;
-      const deltaY = touch.clientY - touchStartRef.current.y;
-
-      if (Math.abs(deltaY) > Math.abs(deltaX) && Math.abs(deltaY) > 10) {
-        touchStartRef.current = null;
-        setIsDragging(false);
-        setDragOffset(0);
-        return;
-      }
-
-      if (isFirstMove && Math.abs(deltaX) > 10) {
-        e.preventDefault();
-        setIsFirstMove(false);
-      }
-
-      touchCurrentRef.current = touch.clientX;
-      
-      let offset = deltaX;
-      if ((activeTab === 0 && deltaX > 0) || (activeTab === tabs.length - 1 && deltaX < 0)) {
-        offset = deltaX * 0.3;
-      }
-      
-      setDragOffset(offset);
-    };
-
-    const handleTouchEnd = () => {
-      if (!touchStartRef.current) {
-        setIsDragging(false);
-        setDragOffset(0);
-        return;
-      }
-
-      const deltaX = touchCurrentRef.current - touchStartRef.current.x;
-      const deltaTime = Date.now() - touchStartRef.current.time;
-      const velocity = Math.abs(deltaX) / deltaTime;
-
-      const containerWidth = containerRef.current?.offsetWidth || 300;
-      const threshold = containerWidth * 0.2;
-      const velocityThreshold = 0.3;
-
-      let newTab = activeTab;
-
-      if (Math.abs(deltaX) > threshold || velocity > velocityThreshold) {
-        if (deltaX < 0 && activeTab < tabs.length - 1) {
-          newTab = activeTab + 1;
-        } else if (deltaX > 0 && activeTab > 0) {
-          newTab = activeTab - 1;
-        }
-      }
-
-      onTabChange(newTab);
-      touchStartRef.current = null;
-      setIsDragging(false);
-      setDragOffset(0);
-      setIsFirstMove(false);
-    };
-
-    container.addEventListener("touchstart", handleTouchStart, { passive: true });
-    container.addEventListener("touchmove", handleTouchMove, { passive: false });
-    container.addEventListener("touchend", handleTouchEnd, { passive: true });
-
-    return () => {
-      container.removeEventListener("touchstart", handleTouchStart);
-      container.removeEventListener("touchmove", handleTouchMove);
-      container.removeEventListener("touchend", handleTouchEnd);
-    };
-  }, [activeTab, onTabChange, tabs.length, isFirstMove]);
-
-  const getContentTransform = () => {
-    const stepPercent = 100 / tabs.length;
-    const baseOffset = -activeTab * stepPercent;
-    if (isDragging && containerRef.current) {
-      const containerWidth = containerRef.current.offsetWidth;
-      const dragPercent = (dragOffset / containerWidth) * stepPercent;
-      return `translateX(calc(${baseOffset}% + ${dragPercent}%))`;
-    }
-    return `translateX(${baseOffset}%)`;
-  };
+function StableTabContent({ tabs, activeTab }: StableTabContentProps) {
+  const active = tabs[Math.min(Math.max(activeTab, 0), tabs.length - 1)];
 
   return (
-    <div
-      ref={containerRef}
-      className="absolute inset-0 overflow-hidden"
-    >
-      <div
-        className="absolute top-0 bottom-0 left-0 flex"
-        style={{
-          transform: getContentTransform(),
-          transition: isDragging ? "none" : "transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-          width: `${tabs.length * 100}%`,
-        }}
-      >
-        {tabs.map((tab) => (
-          <div
-            key={tab.id}
-            className="h-full overflow-hidden"
-            style={{ width: `${100 / tabs.length}%` }}
-          >
-            {tab.content}
-          </div>
-        ))}
-      </div>
+    <div className="absolute inset-0 overflow-hidden" key={active.id}>
+      {active.content}
     </div>
   );
 }

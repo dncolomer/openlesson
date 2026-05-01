@@ -319,7 +319,7 @@ export function MobileSessionView({
   // Start/stop timer based on recording state (and paused state)
   useEffect(() => {
     if (isRecording && !isPaused && !timerRef.current) {
-      const baseMs = timerBaseRef.current || (session?.durationMs ?? Date.now());
+      const baseMs = timerBaseRef.current || (Date.now() - (session?.durationMs ?? 0));
       timerRef.current = setInterval(() => {
         setElapsedSeconds(Math.floor((Date.now() - baseMs) / 1000));
       }, 1000);
@@ -2382,108 +2382,6 @@ export function MobileSessionView({
           </div>
         </>
       )}
-
-      {/* Compact Header */}
-      <header className={`shrink-0 px-3 py-1.5 border-b border-neutral-800/80 bg-[#0a0a0a] transition-all duration-300 ${isCelebrating ? 'animate-step-celebrate' : ''}`}>
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2 min-w-0">
-            {isRecording && !isPaused ? (
-              <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse shrink-0" />
-            ) : isPaused ? (
-              <div className="w-2 h-2 rounded-full bg-amber-500 shrink-0" />
-            ) : (
-              <div className="w-2 h-2 rounded-full bg-neutral-600 shrink-0" />
-            )}
-            <span className="text-xs font-medium text-neutral-400 truncate">
-              {isRecording && !isPaused ? t('session.recording') : isPaused ? t('session.paused') : t('session.session')}
-            </span>
-            {autoPausedForInactivity && isPaused && (
-              <span className="ml-1 text-[10px] text-amber-400 truncate" title={t('session.autoPausedInactivity')}>
-                · {t('session.autoPausedInactivity')}
-              </span>
-            )}
-          </div>
-
-          <div className="flex items-center gap-1 shrink-0">
-            {/* Help — pauses the session and re-opens the tutor welcome
-                (typed greeting + Start session button). Preserves probes
-                and session data; clicking Start session resumes recording. */}
-            <button
-              onClick={() => {
-                if (isRecording && !isPaused) {
-                  pauseRecording().catch(err =>
-                    console.error("[MobileSessionView] Help pause failed:", err),
-                  );
-                }
-                setShowWelcomePanel(true);
-                setActiveTab(0); // ensure probes tab is visible
-              }}
-              className="w-8 h-8 flex items-center justify-center rounded-lg text-neutral-500 hover:text-white hover:bg-neutral-800 active:bg-neutral-800 transition-colors"
-              title={t('tools.help')}
-              aria-label={t('tools.help')}
-            >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            </button>
-
-            <button
-              onClick={() => router.push('/dashboard')}
-              className="w-8 h-8 flex items-center justify-center rounded-lg text-neutral-500 hover:text-white hover:bg-neutral-800 transition-colors"
-              title="Close"
-              aria-label="Close"
-            >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
-        </div>
-
-        {/* Pre-recording feedback. Start lives inside Helios now. */}
-        {(error || micStatus === "checking" || micStatus === "denied" || isSaving) && !isRecording && (
-          <div className="mt-1.5">
-            {error && (
-              <div className="mb-1.5 p-2 bg-red-500/10 border border-red-500/20 rounded-lg">
-                <p className="text-[10px] text-red-400">{error}</p>
-              </div>
-            )}
-
-            {micStatus === "checking" && (
-              <div className="w-full py-1.5 px-3 bg-neutral-900 border border-neutral-800 rounded-xl flex items-center justify-center gap-2">
-                <div className="w-4 h-4 border border-neutral-700 border-t-neutral-300 rounded-full animate-spin" />
-                <span className="text-xs text-neutral-400">{t('session.checkingMic')}</span>
-              </div>
-            )}
-
-            {micStatus === "denied" && (
-              <button
-                onClick={checkMicrophone}
-                className="w-full py-1.5 px-3 bg-red-500/10 border border-red-500/30 rounded-xl text-xs font-medium text-red-400 flex items-center justify-center gap-2"
-              >
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
-                </svg>
-                {t('session.retryMicrophoneAccess')}
-              </button>
-            )}
-
-            {isSaving && (
-              <div className="flex items-center justify-center gap-2 py-1">
-                <div className="w-4 h-4 border border-neutral-700 border-t-neutral-300 rounded-full animate-spin" />
-                <span className="text-xs text-neutral-400">{t('session.savingSession')}</span>
-              </div>
-            )}
-          </div>
-        )}
-
-        {isSaving && isRecording && (
-          <div className="mt-1.5 flex items-center justify-center gap-2 py-1">
-            <div className="w-4 h-4 border border-neutral-700 border-t-neutral-300 rounded-full animate-spin" />
-            <span className="text-xs text-neutral-400">{t('session.savingSession')}</span>
-          </div>
-        )}
-      </header>
 
       {/* End Session Confirmation Modal — ending is irreversible, so we
           warn and offer a non-destructive "pause + back to dashboard"

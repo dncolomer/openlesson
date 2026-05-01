@@ -37,6 +37,7 @@ export interface ChatMessage {
   id: string;
   role: "user" | "assistant";
   content: string;
+  imageDataUrl?: string;
   /**
    * When set and `role === "assistant"`, the message renders as a
    * full-width smart card matching this kind.
@@ -63,14 +64,19 @@ export interface ChatMessage {
   pendingLabel?: string;
 }
 
+export interface PendingChatMessage {
+  text: string;
+  imageDataUrl?: string;
+}
+
 interface HeliosChatProps {
   problem: string;
   messages?: ChatMessage[];
   onMessagesChange?: (messages: ChatMessage[]) => void;
   sessionId?: string;
   tutoringLanguage?: string;
-  /** When set to a non-null string, auto-submits it as a user message and clears via the callback */
-  pendingMessage?: string | null;
+  /** When set, auto-submits it as a user message and clears via the callback */
+  pendingMessage?: string | PendingChatMessage | null;
   onPendingMessageHandled?: () => void;
 }
 
@@ -226,13 +232,16 @@ export function HeliosChat({ problem, messages: externalMessages, onMessagesChan
   }, [messages]);
 
   // Core send logic shared by form submit and programmatic pendingMessage
-  const sendMessage = async (text: string) => {
+  const sendMessage = async (payload: string | PendingChatMessage) => {
+    const text = typeof payload === "string" ? payload : payload.text;
+    const imageDataUrl = typeof payload === "string" ? undefined : payload.imageDataUrl;
     if (!text.trim() || isLoading) return;
 
     const userMsg: ChatMessage = {
       id: Date.now().toString(),
       role: "user",
       content: text.trim(),
+      imageDataUrl,
     };
 
     updateMessages([...messages, userMsg]);
@@ -243,6 +252,7 @@ export function HeliosChat({ problem, messages: externalMessages, onMessagesChan
       const conversationHistory = messages.map((m) => ({
         role: m.role,
         content: m.content,
+        imageDataUrl: m.imageDataUrl,
       }));
 
       const response = await fetch("/api/session-chat", {
@@ -250,7 +260,7 @@ export function HeliosChat({ problem, messages: externalMessages, onMessagesChan
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           problem,
-          messages: [...conversationHistory, { role: "user", content: userMsg.content }],
+          messages: [...conversationHistory, { role: "user", content: userMsg.content, imageDataUrl: userMsg.imageDataUrl }],
           sessionId,
         }),
       });
@@ -425,6 +435,13 @@ export function HeliosChat({ problem, messages: externalMessages, onMessagesChan
                   >
                     {processLatexContent(message.content)}
                   </ReactMarkdown>
+                  {message.imageDataUrl && (
+                    <img
+                      src={message.imageDataUrl}
+                      alt="Submitted canvas"
+                      className="mt-3 max-h-64 rounded-lg border border-white/20 object-contain"
+                    />
+                  )}
                 </div>
               </div>
             </div>

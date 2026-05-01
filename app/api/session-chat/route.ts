@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { callXaiText, systemMessage, userMessage, DEFAULT_MODEL, RECOMMENDED_TEMPS } from "@/lib/xai-client";
+import { buildImageContent, callXaiText, systemMessage, userMessage, DEFAULT_MODEL, RECOMMENDED_TEMPS } from "@/lib/xai-client";
 import { createClient } from "@/lib/supabase/server";
 import { getLanguageName } from "@/lib/tutoring-languages";
 
@@ -16,6 +16,12 @@ Pedagogy (Socratic essence):
 - Don't hand over answers. Briefly acknowledge what they said, then ask ONE targeted question that narrows the specific gap you heard.
 - If they ask about a probe from the panel, point them back to engage with it directly rather than solving it for them.
 - Be specific. No filler, no "great question!"`;
+
+function imageDataUrlToImageInput(dataUrl: string) {
+  const match = dataUrl.match(/^data:([^;]+);base64,(.+)$/);
+  if (!match) return null;
+  return { mimeType: match[1], data: match[2] };
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -45,13 +51,20 @@ export async function POST(request: NextRequest) {
       ? `IMPORTANT: Respond in ${languageName} throughout.\n\n${BASE_SYSTEM_PROMPT}`
       : BASE_SYSTEM_PROMPT;
 
+    const inputMessages = (messages || []) as Array<{ role: string; content: string; imageDataUrl?: string }>;
     const conversationMessages = [
       systemMessage(systemPrompt),
       userMessage(`The user is working on: ${problem}`),
-      ...(messages || []).map((m: { role: string; content: string }) => ({
-        role: m.role as "user" | "assistant",
-        content: m.content,
-      })),
+      ...inputMessages.map((m, index) => {
+        const isLatestMessage = index === inputMessages.length - 1;
+        const image = isLatestMessage && m.role === "user" && m.imageDataUrl
+          ? imageDataUrlToImageInput(m.imageDataUrl)
+          : null;
+        return {
+          role: m.role as "user" | "assistant",
+          content: image ? buildImageContent(m.content, image) : m.content,
+        };
+      }),
     ];
 
     const response = await callXaiText(

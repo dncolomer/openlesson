@@ -40,7 +40,7 @@ import { SessionPlanViewer } from "./SessionPlanViewer";
 import { ResizablePane, type ResizablePaneHandle } from "./ResizablePane";
 import { ExcalidrawCanvas } from "./ExcalidrawCanvas";
 import { ToolsPanel, type Tool } from "./ToolsPanel";
-import { HeliosChat, type ChatMessage } from "./HeliosChat";
+import { HeliosChat, type ChatMessage, type PendingChatMessage } from "./HeliosChat";
 import { DataInputTool } from "./DataInputTool";
 import { LogsTool, type LogEntry } from "./LogsTool";
 import { createScreenCapture } from "@/lib/screen-capture";
@@ -60,6 +60,7 @@ import {
 import { useSessionHeartbeat, type StorageHeartbeatResult, type AnalysisHeartbeatResult } from "@/lib/useSessionHeartbeat";
 import { useInactivityAutoPause } from "@/lib/useInactivityAutoPause";
 import { useVoiceActivity } from "@/lib/useVoiceActivity";
+import { useThinkAloudTranscript, type ThinkAloudThought } from "@/lib/useThinkAloudTranscript";
 import { retryWithResult } from "@/lib/retry";
 import { useI18n } from "@/lib/i18n";
 import { tutoringLocales, tutoringLanguageNames } from "@/lib/tutoring-languages";
@@ -196,7 +197,7 @@ export function SessionView({ sessionId }: { sessionId: string }) {
 
   // Helios Chat
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
-  const [pendingChatMessage, setPendingChatMessage] = useState<string | null>(null);
+  const [pendingChatMessage, setPendingChatMessage] = useState<string | PendingChatMessage | null>(null);
 
   // New 3-panel layout state
   const [activeTool, setActiveTool] = useState<Tool>("chat");
@@ -581,14 +582,18 @@ export function SessionView({ sessionId }: { sessionId: string }) {
     );
   };
 
+  const openHeliosChatWithMessage = useCallback((message: string | PendingChatMessage) => {
+    ensureVisible("tools");
+    setActiveTool("chat");
+    setPendingChatMessage(message);
+  }, [ensureVisible]);
+
   const handleStepAskHelios = (stepDescription: string) => {
     // Make sure the tools pane is visible. The `activeTool` effect only
     // reopens the pane when the value actually changes, so if "chat" was
     // already the active tool before the user closed the tools pane,
     // calling setActiveTool("chat") here is a no-op and wouldn't reopen it.
-    ensureVisible("tools");
-    setActiveTool("chat");
-    setPendingChatMessage(`Help me understand and work through this step: "${stepDescription}"`);
+    openHeliosChatWithMessage(`Help me understand and work through this step: "${stepDescription}"`);
   };
 
   // Muse EEG
@@ -1684,12 +1689,16 @@ export function SessionView({ sessionId }: { sessionId: string }) {
    * the analysis early-exits (e.g. observer off, muted, already running).
    */
   const handleSubmitToHelios = useCallback(
-    async (toolName: "canvas" | "notebook") => {
+    async (toolName: "canvas" | "notebook", canvasDataUrl?: string | null) => {
+      if (toolName === "canvas" && canvasDataUrl) {
+        whiteboardDataRef.current = canvasDataUrl;
+        setWhiteboardData(canvasDataUrl);
+      }
       const metadata: Record<string, unknown> = {};
       if (toolName === "notebook") {
         metadata.contentLength = notebookContentRef.current?.length ?? 0;
       } else {
-        metadata.hasCanvas = !!whiteboardDataRef.current;
+        metadata.hasCanvas = !!(canvasDataUrl || whiteboardDataRef.current);
       }
       // Fire-and-forget the log; we don't want the network round-trip to
       // delay the user-perceived submit.
@@ -1717,11 +1726,20 @@ export function SessionView({ sessionId }: { sessionId: string }) {
       // spam retries without new content.
       if (toolName === "canvas") {
         setCanvasDirtyForHelios(false);
+        const imageDataUrl = canvasDataUrl || whiteboardDataRef.current || undefined;
+        openHeliosChatWithMessage({
+          text: "Here is my current canvas. Help me reason through what I have drawn without just giving me the answer.",
+          imageDataUrl,
+        });
       } else {
         setNotebookDirtyForHelios(false);
+        const content = notebookContentRef.current?.trim() ?? "";
+        if (content) {
+          openHeliosChatWithMessage(`Here are my notebook notes. Help me reason through them without just giving me the answer:\n\n${content}`);
+        }
       }
     },
-    [logTool, runStorageHeartbeat, runAnalysisHeartbeat],
+    [logTool, runStorageHeartbeat, runAnalysisHeartbeat, openHeliosChatWithMessage],
   );
 
   const checkMicrophone = async () => {
@@ -2046,6 +2064,15 @@ export function SessionView({ sessionId }: { sessionId: string }) {
     isRecording,
     isPaused,
   });
+
+  const thinkAloudTranscript = useThinkAloudTranscript({
+    enabled: isRecording && !isPaused,
+    tutoringLanguage,
+  });
+
+  const handleThinkAloudThoughtClick = useCallback((thought: ThinkAloudThought) => {
+    openHeliosChatWithMessage(`I was thinking aloud and want to work through this: "${thought.text}"`);
+  }, [openHeliosChatWithMessage]);
 
   // Clear the inactivity flag whenever the user manually resumes.
   useEffect(() => {
@@ -3610,7 +3637,7 @@ export function SessionView({ sessionId }: { sessionId: string }) {
                             sessionRef.current = { ...sessionRef.current, metadata: { ...sessionRef.current.metadata, whiteboardData: data } };
                           }
                         }}
-                        onSubmitToHelios={() => handleSubmitToHelios("canvas")}
+                        onSubmitToHelios={(dataUrl) => handleSubmitToHelios("canvas", dataUrl)}
                         canSubmitToHelios={canvasDirtyForHelios}
                       />
                     )}
@@ -3849,6 +3876,13 @@ export function SessionView({ sessionId }: { sessionId: string }) {
                         sessionId={session.id}
                         ttsLanguage={tutoringLanguage}
                         isSpeaking={isSpeaking}
+                        thinkAloudThoughts={thinkAloudTranscript.thoughts}
+                        thinkAloudInterimText={thinkAloudTranscript.interimText}
+                        thinkAloudListening={thinkAloudTranscript.isListening}
+                        thinkAloudSupported={thinkAloudTranscript.isSupported}
+                        thinkAloudError={thinkAloudTranscript.error}
+                        onThinkAloudThoughtClick={handleThinkAloudThoughtClick}
+                        onClearThinkAloudThoughts={thinkAloudTranscript.clearThoughts}
                       />
                     </div>
                   }
@@ -4003,5 +4037,3 @@ function computeBandPowers(af7: number[], af8: number[]) {
 
   return { delta: avg.delta || 0, theta: avg.theta || 0, alpha: avg.alpha || 0, beta: avg.beta || 0, gamma: avg.gamma || 0 };
 }
-
-

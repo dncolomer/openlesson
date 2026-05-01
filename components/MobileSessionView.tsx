@@ -5,6 +5,7 @@ import { SwipeableTabs } from "./SwipeableTabs";
 import { MobileProbesTab } from "./MobileProbesTab";
 import { MobilePlanTab } from "./MobilePlanTab";
 import { MobileExcalidrawCanvas } from "./MobileExcalidrawCanvas";
+import { HeliosChat, type ChatMessage, type PendingChatMessage } from "./HeliosChat";
 import { AudioRecorder } from "@/lib/audio";
 import { 
   type Probe, 
@@ -37,6 +38,7 @@ import { LocalContextBuffer } from "@/lib/local-context";
 import { useSessionHeartbeat, type StorageHeartbeatResult, type AnalysisHeartbeatResult } from "@/lib/useSessionHeartbeat";
 import { useInactivityAutoPause } from "@/lib/useInactivityAutoPause";
 import { useVoiceActivity } from "@/lib/useVoiceActivity";
+import { useThinkAloudTranscript, type ThinkAloudThought } from "@/lib/useThinkAloudTranscript";
 import { retryWithResult } from "@/lib/retry";
 import { ConfirmDialog } from "./ui/ConfirmDialog";
 // ModelLoadingModal no longer used -- loading UI is inline in welcome modal
@@ -71,6 +73,11 @@ const tabIcons = [
   (
     <svg key="probes" className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+    </svg>
+  ),
+  (
+    <svg key="chat" className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
     </svg>
   ),
   (
@@ -165,6 +172,8 @@ export function MobileSessionView({
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(!initialSession);
   const [whiteboardData, setWhiteboardData] = useState<string | null>(null);
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [pendingChatMessage, setPendingChatMessage] = useState<string | PendingChatMessage | null>(null);
   // "Submit to Helios" dirty tracking — true when the user has edited the
   // canvas since the last submit. Initial true so the first submit is
   // allowed (provided there's canvas content). Lives in parent so it
@@ -654,6 +663,109 @@ export function MobileSessionView({
     onAnalysisHeartbeat: runAnalysisHeartbeat,
   });
 
+  const openHeliosChatWithMessage = useCallback((message: string | PendingChatMessage) => {
+    setActiveTab(1);
+    setPendingChatMessage(message);
+  }, []);
+
+  const fetchAndInjectPrepIntoChat = useCallback(async (
+    type: "reading" | "exercise",
+    stepDescription: string,
+    userStub: string,
+    pendingLabel: string,
+    fallbackTitle: string,
+  ) => {
+    const currentSession = sessionRef.current;
+    if (!currentSession?.problem) return;
+    setActiveTab(1);
+
+    const cardKind = type === "exercise" ? "practice" : "theory";
+    const now = Date.now();
+    const userMsg: ChatMessage = {
+      id: `${now}-u`,
+      role: "user",
+      content: userStub,
+    };
+    const placeholderId = `${now}-a`;
+    const placeholder: ChatMessage = {
+      id: placeholderId,
+      role: "assistant",
+      content: "",
+      kind: cardKind,
+      cardTitle: fallbackTitle,
+      pending: true,
+      pendingLabel,
+    };
+
+    setChatMessages((prev) => [...prev, userMsg, placeholder]);
+
+    try {
+      const res = await fetch("/api/prep-material", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type,
+          topic: stepDescription,
+          problem: currentSession.problem,
+          sessionId: currentSession.id,
+          tutoringLanguage,
+        }),
+      });
+      if (!res.ok) throw new Error(`prep-material ${res.status}`);
+      const data = await res.json();
+      const content = typeof data.content === "string" && data.content.trim()
+        ? data.content
+        : type === "exercise"
+          ? "I couldn't find a practice set for that yet. Ask me what part you'd like to practice."
+          : "I couldn't find theory notes for that yet. Ask me which part you want explained.";
+      setChatMessages((prev) => prev.map((msg) =>
+        msg.id === placeholderId
+          ? { ...msg, content, pending: false, pendingLabel: undefined }
+          : msg
+      ));
+    } catch (err) {
+      console.error("[Mobile] Prep material -> chat error:", err);
+      setChatMessages((prev) => prev.map((msg) =>
+        msg.id === placeholderId
+          ? {
+              ...msg,
+              content: type === "exercise"
+                ? "I couldn't pull together a practice set just now. Try again in a moment, or tell me what specifically you'd like to practice."
+                : "I couldn't pull the theory for this step right now. Try again, or ask me a specific question and I'll explain.",
+              kind: undefined,
+              cardTitle: undefined,
+              pending: false,
+              pendingLabel: undefined,
+            }
+          : msg
+      ));
+    }
+  }, [tutoringLanguage]);
+
+  const handleStepResources = useCallback((stepDescription: string) => {
+    void fetchAndInjectPrepIntoChat(
+      "reading",
+      stepDescription,
+      `Give me the theory for this step: "${stepDescription}"`,
+      "Preparing the theory for you...",
+      "Theory",
+    );
+  }, [fetchAndInjectPrepIntoChat]);
+
+  const handleStepPractice = useCallback((stepDescription: string) => {
+    void fetchAndInjectPrepIntoChat(
+      "exercise",
+      stepDescription,
+      `Give me practice tasks for this step: "${stepDescription}"`,
+      "Preparing practice tasks for you...",
+      "Practice",
+    );
+  }, [fetchAndInjectPrepIntoChat]);
+
+  const handleStepAskHelios = useCallback((stepDescription: string) => {
+    openHeliosChatWithMessage(`Help me understand and work through this step: "${stepDescription}"`);
+  }, [openHeliosChatWithMessage]);
+
   /**
    * Manual "Submit to Helios" — mirror of the desktop handler. Forces a
    * storage flush (so the latest canvas is on the server) and then kicks
@@ -661,12 +773,16 @@ export function MobileSessionView({
    * run-functions have internal reentrancy guards (`isAnalyzingRef`), so
    * racing with the periodic tick is safe.
    */
-  const handleSubmitToHelios = useCallback(async () => {
+  const handleSubmitToHelios = useCallback(async (canvasDataUrl?: string | null) => {
+    if (canvasDataUrl) {
+      whiteboardDataRef.current = canvasDataUrl;
+      setWhiteboardData(canvasDataUrl);
+    }
     const currentSession = sessionRef.current;
     if (currentSession) {
       // Fire-and-forget — we don't want the log round-trip to block submit.
       logToolUsage(currentSession.id, "canvas", "submit_to_helios", Date.now(), {
-        hasCanvas: !!whiteboardDataRef.current,
+        hasCanvas: !!(canvasDataUrl || whiteboardDataRef.current),
       }).catch((err) => console.warn("[Mobile] logToolUsage failed:", err));
     }
 
@@ -685,7 +801,11 @@ export function MobileSessionView({
     // heartbeat failure: the submission was made, we don't want the user
     // to keep retrying with the exact same content.
     setCanvasDirtyForHelios(false);
-  }, [runStorageHeartbeat, runAnalysisHeartbeat]);
+    openHeliosChatWithMessage({
+      text: "Here is my current canvas. Help me reason through what I have drawn without just giving me the answer.",
+      imageDataUrl: canvasDataUrl || whiteboardDataRef.current || undefined,
+    });
+  }, [runStorageHeartbeat, runAnalysisHeartbeat, openHeliosChatWithMessage]);
 
   // Heartbeat lifecycle - managed by the hook, controlled by recording state
   useEffect(() => {
@@ -1038,6 +1158,15 @@ export function MobileSessionView({
     isRecording,
     isPaused,
   });
+
+  const thinkAloudTranscript = useThinkAloudTranscript({
+    enabled: isRecording && !isPaused,
+    tutoringLanguage,
+  });
+
+  const handleThinkAloudThoughtClick = useCallback((thought: ThinkAloudThought) => {
+    openHeliosChatWithMessage(`I was thinking aloud and want to work through this: "${thought.text}"`);
+  }, [openHeliosChatWithMessage]);
 
   useEffect(() => {
     if (!isPaused) setAutoPausedForInactivity(false);
@@ -2074,17 +2203,43 @@ export function MobileSessionView({
           sessionPlan={sessionPlan}
           onArchiveProbe={handleArchiveProbe}
           onToggleFocus={handleToggleFocus}
+          onOpenResources={handleStepResources}
+          onOpenPractice={handleStepPractice}
+          onAskAssistant={handleStepAskHelios}
+          onShareScreen={() => setActiveTab(3)}
           onResetProbes={handleResetProbes}
           archivingProbeId={archivingProbeId}
           isGeneratingProbe={isGeneratingProbe}
           showWelcome={showWelcomePanel}
           onWelcomePlay={handleWelcomePlay}
-          onOpenSessionPlan={() => setActiveTab(1)}
+          onOpenSessionPlan={() => setActiveTab(2)}
           isStartingSession={isStartingSession}
           sessionId={session?.id}
           ttsLanguage={tutoringLanguage}
           isSessionActive={isRecording && !isPaused}
           isSpeaking={isSpeaking}
+          thinkAloudThoughts={thinkAloudTranscript.thoughts}
+          thinkAloudInterimText={thinkAloudTranscript.interimText}
+          thinkAloudListening={thinkAloudTranscript.isListening}
+          thinkAloudSupported={thinkAloudTranscript.isSupported}
+          thinkAloudError={thinkAloudTranscript.error}
+          onThinkAloudThoughtClick={handleThinkAloudThoughtClick}
+          onClearThinkAloudThoughts={thinkAloudTranscript.clearThoughts}
+        />
+      ),
+    },
+    {
+      id: "chat",
+      label: t('tools.helios'),
+      content: (
+        <HeliosChat
+          problem={session.problem}
+          messages={chatMessages}
+          onMessagesChange={setChatMessages}
+          sessionId={session.id}
+          tutoringLanguage={tutoringLanguage}
+          pendingMessage={pendingChatMessage}
+          onPendingMessageHandled={() => setPendingChatMessage(null)}
         />
       ),
     },

@@ -16,7 +16,7 @@ const Excalidraw = dynamic(
 interface ExcalidrawCanvasProps {
   initialData?: string;
   onCanvasChange?: (data: string) => void;
-  onSubmitToHelios?: () => Promise<void> | void;
+  onSubmitToHelios?: (dataUrl?: string | null) => Promise<void> | void;
   canSubmitToHelios?: boolean;
 }
 
@@ -154,13 +154,14 @@ export function ExcalidrawCanvas({
     setIsSubmittingToHelios(true);
     try {
       // Force immediate PNG export before submitting
+      let dataUrl: string | null = null;
       if (onCanvasChange) {
-        const dataUrl = await exportToPNG();
+        dataUrl = await exportToPNG();
         if (dataUrl) {
           onCanvasChange(dataUrl);
         }
       }
-      await onSubmitToHelios();
+      await onSubmitToHelios(dataUrl);
     } finally {
       setIsSubmittingToHelios(false);
     }

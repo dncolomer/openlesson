@@ -9,6 +9,8 @@ import { TutorWelcome } from "./TutorWelcome";
 import { TutorBackground } from "./TutorBackground";
 import { ListenButton } from "./ListenButton";
 import { ConfirmDialog } from "./ui/ConfirmDialog";
+import { ThinkAloudTraces } from "./ThinkAloudTraces";
+import { type ThinkAloudThought } from "@/lib/useThinkAloudTranscript";
 
 const MAX_PROBES = 5;
 
@@ -17,6 +19,10 @@ interface MobileProbesTabProps {
   sessionPlan?: SessionPlan | null;
   onArchiveProbe?: (probeId: string) => Promise<void>;
   onToggleFocus?: (probeId: string, focused: boolean) => void;
+  onOpenResources?: (text: string) => void;
+  onOpenPractice?: (text: string) => void;
+  onAskAssistant?: (text: string) => void;
+  onShareScreen?: () => void;
   /**
    * Destructive — archives every active probe for this session and
    * generates a fresh one for the current plan step. Called with user
@@ -40,12 +46,23 @@ interface MobileProbesTabProps {
   /** True while the mic picks up speech-level audio. Drives the
    *  background tile-reveal animation. */
   isSpeaking?: boolean;
+  thinkAloudThoughts?: ThinkAloudThought[];
+  thinkAloudInterimText?: string;
+  thinkAloudListening?: boolean;
+  thinkAloudSupported?: boolean;
+  thinkAloudError?: string | null;
+  onThinkAloudThoughtClick?: (thought: ThinkAloudThought) => void;
+  onClearThinkAloudThoughts?: () => void;
 }
 
 export function MobileProbesTab({
   probes,
   sessionPlan,
   onArchiveProbe,
+  onOpenResources,
+  onOpenPractice,
+  onAskAssistant,
+  onShareScreen,
   onResetProbes,
   archivingProbeId,
   isGeneratingProbe = false,
@@ -58,6 +75,13 @@ export function MobileProbesTab({
   ttsLanguage,
   isSessionActive = false,
   isSpeaking = false,
+  thinkAloudThoughts = [],
+  thinkAloudInterimText = "",
+  thinkAloudListening = false,
+  thinkAloudSupported = false,
+  thinkAloudError,
+  onThinkAloudThoughtClick,
+  onClearThinkAloudThoughts,
 }: MobileProbesTabProps) {
   const { t } = useI18n();
 
@@ -136,13 +160,6 @@ export function MobileProbesTab({
     return (
       <div className="relative flex-1 min-w-0 flex flex-col bg-[#0a0a0a] h-full overflow-hidden">
         <TutorBackground isSpeaking={isSpeaking} stepIndex={sessionPlan?.currentStepIndex} />
-        {/* Red "I am listening" pulse on the panel frame — replaces
-            the desktop actions-box glow since mobile doesn't render
-            the multi-button actions row. */}
-        <div
-          className={`mobile-panel-glow ${isSpeaking ? "mobile-panel-glow--speaking" : ""}`}
-          aria-hidden="true"
-        />
         <div className="relative z-10 flex-1 min-h-0 flex flex-col">
           <TutorWelcome
             tutorName={displayTutorName}
@@ -172,13 +189,6 @@ export function MobileProbesTab({
     <div className="relative flex-1 min-w-0 flex flex-col bg-[#0a0a0a] h-full overflow-hidden">
       {/* Faint frosted-glass background image — one random pick per session. */}
       <TutorBackground isSpeaking={isSpeaking} stepIndex={sessionPlan?.currentStepIndex} />
-
-      {/* Red "I am listening" pulse on the panel frame — the mobile
-          equivalent of the desktop actions-box glow. */}
-      <div
-        className={`mobile-panel-glow ${isSpeaking ? "mobile-panel-glow--speaking" : ""}`}
-        aria-hidden="true"
-      />
 
       {/* Main message area */}
       <div className="relative z-10 flex-1 min-h-0 flex flex-col px-4 py-4 overflow-hidden">
@@ -223,6 +233,16 @@ export function MobileProbesTab({
                 <span>Reset {displayTutorName}</span>
               </button>
             )}
+            <ThinkAloudTraces
+              thoughts={thinkAloudThoughts}
+              interimText={thinkAloudInterimText}
+              isListening={thinkAloudListening}
+              isSupported={thinkAloudSupported}
+              error={thinkAloudError}
+              onThoughtClick={(thought) => onThinkAloudThoughtClick?.(thought)}
+              onClearThoughts={onClearThinkAloudThoughts}
+              compact
+            />
           </div>
         ) : (
           <>
@@ -359,23 +379,78 @@ export function MobileProbesTab({
 
             {/* Action row */}
             <div className="shrink-0 pt-4">
-              <button
-                onClick={() => onArchiveProbe?.(currentProbe.id)}
-                disabled={archivingProbeId === currentProbe.id}
-                className="w-full py-3.5 px-4 text-sm font-medium rounded-xl bg-neutral-100 text-neutral-900 active:bg-white disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
-              >
-                {archivingProbeId === currentProbe.id ? (
-                  <svg className="w-4 h-4 animate-spin shrink-0" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+              <div className="grid grid-cols-5 gap-2 rounded-2xl border border-neutral-800 bg-neutral-950/40 p-2">
+                <button
+                  onClick={() => onOpenResources?.(currentProbe.text)}
+                  disabled={!isSessionActive}
+                  title={t('sessionPlan.resources')}
+                  className="py-3 px-2 text-[11px] font-medium rounded-xl bg-neutral-800 border border-neutral-700 text-neutral-200 active:bg-neutral-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center justify-center"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
                   </svg>
-                ) : (
-                  <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                </button>
+                <button
+                  onClick={() => onOpenPractice?.(currentProbe.text)}
+                  disabled={!isSessionActive}
+                  title={t('sessionPlan.practice')}
+                  className="py-3 px-2 text-[11px] font-medium rounded-xl bg-neutral-800 border border-neutral-700 text-neutral-200 active:bg-neutral-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center justify-center"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
                   </svg>
-                )}
-                <span>{t('probes.done')}</span>
-              </button>
+                </button>
+                <button
+                  onClick={() => onAskAssistant?.(currentProbe.text)}
+                  disabled={!isSessionActive}
+                  title={t('sessionPlan.ask')}
+                  className="py-3 px-2 text-[11px] font-medium rounded-xl bg-neutral-800 border border-neutral-700 text-neutral-200 active:bg-neutral-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center justify-center"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+                  </svg>
+                </button>
+                <button
+                  onClick={() => onShareScreen?.()}
+                  disabled={!isSessionActive}
+                  title={t('probes.shareScreen')}
+                  className="py-3 px-2 text-[11px] font-medium rounded-xl bg-neutral-800 border border-neutral-700 text-neutral-200 active:bg-neutral-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center justify-center"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                  </svg>
+                </button>
+                <button
+                  onClick={() => onArchiveProbe?.(currentProbe.id)}
+                  disabled={archivingProbeId === currentProbe.id}
+                  title={t('probes.done')}
+                  className="py-3 px-2 text-[11px] font-medium rounded-xl bg-neutral-100 text-neutral-900 active:bg-white disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center justify-center"
+                >
+                  {archivingProbeId === currentProbe.id ? (
+                    <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                    </svg>
+                  ) : (
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                    </svg>
+                  )}
+                </button>
+              </div>
+
+              <div className="mt-3">
+                <ThinkAloudTraces
+                  thoughts={thinkAloudThoughts}
+                  interimText={thinkAloudInterimText}
+                  isListening={thinkAloudListening}
+                  isSupported={thinkAloudSupported}
+                  error={thinkAloudError}
+                  onThoughtClick={(thought) => onThinkAloudThoughtClick?.(thought)}
+                  onClearThoughts={onClearThinkAloudThoughts}
+                  compact
+                />
+              </div>
 
               {/* Carousel dots — always rendered (placeholders for empty
                   slots) so the row reserves its vertical space and the

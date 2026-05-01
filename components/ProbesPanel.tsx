@@ -9,6 +9,8 @@ import { TutorWelcome } from "./TutorWelcome";
 import { TutorBackground } from "./TutorBackground";
 import { ListenButton } from "./ListenButton";
 import { ConfirmDialog } from "./ui/ConfirmDialog";
+import { ThinkAloudTraces } from "./ThinkAloudTraces";
+import { type ThinkAloudThought } from "@/lib/useThinkAloudTranscript";
 
 const MAX_PROBES = 5;
 
@@ -30,6 +32,13 @@ interface ProbesPanelProps {
   onOpenResources?: (text: string) => void;
   onOpenPractice?: (text: string) => void;
   onAskAssistant?: (text: string) => void;
+  thinkAloudThoughts?: ThinkAloudThought[];
+  thinkAloudInterimText?: string;
+  thinkAloudListening?: boolean;
+  thinkAloudSupported?: boolean;
+  thinkAloudError?: string | null;
+  onThinkAloudThoughtClick?: (thought: ThinkAloudThought) => void;
+  onClearThinkAloudThoughts?: () => void;
   /**
    * Clears all active probes for the current session and generates a
    * fresh probe for the current plan step. Destructive — callers should
@@ -67,16 +76,24 @@ interface ProbesPanelProps {
   /** BCP-47 language override for TTS. */
   ttsLanguage?: string;
   /** True while the mic picks up speech-level audio. Drives the
-   *  background tile-reveal animation and the actions-box highlight. */
+   *  background tile-reveal animation. */
   isSpeaking?: boolean;
 }
 
 export function ProbesPanel({
   probes,
   onArchiveProbe,
+  onToolSelect,
   onOpenResources,
   onOpenPractice,
   onAskAssistant,
+  thinkAloudThoughts = [],
+  thinkAloudInterimText = "",
+  thinkAloudListening = false,
+  thinkAloudSupported = false,
+  thinkAloudError,
+  onThinkAloudThoughtClick,
+  onClearThinkAloudThoughts,
   onResetProbes,
   onToolEvent,
   archivingProbeId,
@@ -275,6 +292,17 @@ export function ProbesPanel({
                 <span>Reset {displayTutorName}</span>
               </button>
             )}
+            <div className="w-full max-w-[680px] px-2">
+              <ThinkAloudTraces
+                thoughts={thinkAloudThoughts}
+                interimText={thinkAloudInterimText}
+                isListening={thinkAloudListening}
+                isSupported={thinkAloudSupported}
+                error={thinkAloudError}
+                onThoughtClick={(thought) => onThinkAloudThoughtClick?.(thought)}
+                onClearThoughts={onClearThinkAloudThoughts}
+              />
+            </div>
           </div>
         ) : (
           <>
@@ -414,28 +442,9 @@ export function ProbesPanel({
                   Lives inside the centered tutor+message group so it sits
                   right after the probe text rather than being anchored to
                   the bottom of the panel with a big empty gap above. */}
-              <div className="shrink-0 w-full max-w-[560px] px-2">
-                <div className={`actions-box rounded-2xl border p-3 ${
-                  isSpeaking
-                    ? "actions-box-speaking"
-                    : "border-neutral-800 bg-neutral-950/40"
-                }`}>
-                  <p className={`mb-3 flex items-center justify-center gap-2 text-center text-[13px] font-medium leading-snug tracking-tight transition-colors ${
-                    isSpeaking
-                      ? "text-red-300"
-                      : "text-amber-300/90"
-                  }`}>
-                    <span
-                      className={`inline-block w-2 h-2 rounded-full shrink-0 ${
-                        isSpeaking
-                          ? "bg-red-400 shadow-[0_0_10px_rgba(248,113,113,0.9)] animate-pulse"
-                          : "bg-amber-400/80 shadow-[0_0_8px_rgba(251,191,36,0.6)]"
-                      }`}
-                      aria-hidden="true"
-                    />
-                    Think out loud. Talk to yourself. I am listening — even when you're typing or drawing.
-                  </p>
-                  <div className="grid grid-cols-4 gap-2.5 @container">
+              <div className="shrink-0 w-full max-w-[680px] px-2">
+                <div className="actions-box rounded-2xl border border-neutral-800 bg-neutral-950/40 p-3">
+                  <div className="grid grid-cols-5 gap-2.5 @container">
                     <button
                       onClick={() => {
                         onToolEvent?.("open_resources", {
@@ -489,6 +498,24 @@ export function ProbesPanel({
                     </button>
                     <button
                       onClick={() => {
+                        onToolEvent?.("open", {
+                          probeId: currentProbe.id,
+                          probePreview: currentProbe.text.slice(0, 60),
+                          via: "share_screen_button",
+                        });
+                        onToolSelect?.("data-input");
+                      }}
+                      disabled={!isSessionActive}
+                      title={t('probes.shareScreen')}
+                      className="py-3 px-3 text-[12px] font-medium rounded-xl bg-neutral-800 border border-neutral-700 text-neutral-200 hover:bg-neutral-700 hover:border-neutral-600 hover:text-white disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+                    >
+                      <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                      </svg>
+                      <span className="hidden @[20rem]:inline truncate">{t('probes.shareScreen')}</span>
+                    </button>
+                    <button
+                      onClick={() => {
                         onToolEvent?.("archive", {
                           probeId: currentProbe.id,
                           probePreview: currentProbe.text.slice(0, 60),
@@ -513,6 +540,17 @@ export function ProbesPanel({
                       <span className="hidden @[20rem]:inline truncate">{t('probes.done')}</span>
                     </button>
                   </div>
+                </div>
+                <div className="mt-3">
+                  <ThinkAloudTraces
+                    thoughts={thinkAloudThoughts}
+                    interimText={thinkAloudInterimText}
+                    isListening={thinkAloudListening}
+                    isSupported={thinkAloudSupported}
+                    error={thinkAloudError}
+                    onThoughtClick={(thought) => onThinkAloudThoughtClick?.(thought)}
+                    onClearThoughts={onClearThinkAloudThoughts}
+                  />
                 </div>
               </div>
             </div>

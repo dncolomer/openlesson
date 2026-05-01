@@ -23,7 +23,7 @@ interface MobileExcalidrawCanvasProps {
    * flush tool state to storage and trigger an analysis heartbeat so the
    * tutor can react to what's currently on the canvas.
    */
-  onSubmitToHelios?: () => Promise<void> | void;
+  onSubmitToHelios?: (dataUrl?: string | null) => Promise<void> | void;
   /**
    * When false, the Submit to Helios button is disabled. Parent flips this
    * based on whether the canvas has changed since the last submission.
@@ -166,13 +166,14 @@ export function MobileExcalidrawCanvas({
     setIsSubmittingToHelios(true);
     try {
       // Force immediate PNG export before submitting
+      let dataUrl: string | null = null;
       if (onCanvasChange) {
-        const dataUrl = await exportToPNG();
+        dataUrl = await exportToPNG();
         if (dataUrl) {
           onCanvasChange(dataUrl);
         }
       }
-      await onSubmitToHelios();
+      await onSubmitToHelios(dataUrl);
     } finally {
       setIsSubmittingToHelios(false);
     }

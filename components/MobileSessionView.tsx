@@ -5,6 +5,7 @@ import { SwipeableTabs } from "./SwipeableTabs";
 import { MobileProbesTab } from "./MobileProbesTab";
 import { MobilePlanTab } from "./MobilePlanTab";
 import { MobileExcalidrawCanvas } from "./MobileExcalidrawCanvas";
+import { SessionControlBar } from "./SessionControlBar";
 import { HeliosChat, type ChatMessage, type PendingChatMessage } from "./HeliosChat";
 import { AudioRecorder } from "@/lib/audio";
 import { 
@@ -2218,6 +2219,28 @@ export function MobileSessionView({
           ttsLanguage={tutoringLanguage}
           isSessionActive={isRecording && !isPaused}
           isSpeaking={isSpeaking}
+          sessionControls={(
+            <div className="space-y-2">
+              <SessionControlBar
+                variant="panel"
+                isRecording={isRecording}
+                isPaused={isPaused}
+                elapsedSeconds={elapsedSeconds}
+                onStartRecording={showWelcomePanel ? handleWelcomePlay : handleStartSession}
+                onStopRecording={() => setShowEndConfirm(true)}
+                onPause={pauseRecording}
+                onResume={showWelcomePanel ? handleWelcomePlay : resumeRecording}
+              />
+              {autoPausedForInactivity && isPaused && (
+                <div className="mx-auto max-w-[680px] px-3 py-1 rounded-md bg-amber-500/10 border border-amber-500/20 text-amber-400 text-[11px] flex items-center gap-1.5">
+                  <svg className="w-3 h-3 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span>{t('session.autoPausedInactivity')}</span>
+                </div>
+              )}
+            </div>
+          )}
           thinkAloudThoughts={thinkAloudTranscript.thoughts}
           thinkAloudInterimText={thinkAloudTranscript.interimText}
           thinkAloudListening={thinkAloudTranscript.isListening}
@@ -2383,59 +2406,6 @@ export function MobileSessionView({
           </div>
 
           <div className="flex items-center gap-1 shrink-0">
-            {isRecording && (
-              <>
-                {/* Play / Resume — if the tutor welcome is showing,
-                    behave like pressing Start session in the panel. */}
-                <button
-                  onClick={showWelcomePanel ? handleWelcomePlay : resumeRecording}
-                  disabled={!isPaused}
-                  className={`flex items-center justify-center w-8 h-8 rounded-lg transition-all active:scale-[0.95] ${
-                    !isPaused
-                      ? "text-green-500/20"
-                      : "text-green-400 bg-green-500/10"
-                  }`}
-                  title={t('session.resume')}
-                  aria-label={t('session.resume')}
-                >
-                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M8 5v14l11-7z" />
-                  </svg>
-                </button>
-
-                {/* Pause */}
-                <button
-                  onClick={pauseRecording}
-                  disabled={isPaused}
-                  className={`flex items-center justify-center w-8 h-8 rounded-lg transition-all active:scale-[0.95] ${
-                    isPaused
-                      ? "text-amber-500/20"
-                      : "text-amber-400 bg-amber-500/10"
-                  }`}
-                  title={t('session.pause')}
-                  aria-label={t('session.pause')}
-                >
-                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M6 4h4v16H6zm8 0h4v16h-4z" />
-                  </svg>
-                </button>
-
-                {/* Stop / End */}
-                <button
-                  onClick={() => setShowEndConfirm(true)}
-                  className="flex items-center justify-center w-8 h-8 rounded-lg transition-all active:scale-[0.95] text-red-400 bg-red-500/10"
-                  title={t('session.end')}
-                  aria-label={t('session.end')}
-                >
-                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                    <rect x="6" y="6" width="12" height="12" rx="1" />
-                  </svg>
-                </button>
-
-                <div className="w-px h-5 bg-neutral-800 mx-1" />
-              </>
-            )}
-
             {/* Help — pauses the session and re-opens the tutor welcome
                 (typed greeting + Start session button). Preserves probes
                 and session data; clicking Start session resumes recording. */}

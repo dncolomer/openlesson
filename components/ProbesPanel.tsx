@@ -39,6 +39,7 @@ interface ProbesPanelProps {
   thinkAloudError?: string | null;
   onThinkAloudThoughtClick?: (thought: ThinkAloudThought) => void;
   onClearThinkAloudThoughts?: () => void;
+  sessionControls?: React.ReactNode;
   /**
    * Clears all active probes for the current session and generates a
    * fresh probe for the current plan step. Destructive — callers should
@@ -94,6 +95,7 @@ export function ProbesPanel({
   thinkAloudError,
   onThinkAloudThoughtClick,
   onClearThinkAloudThoughts,
+  sessionControls,
   onResetProbes,
   onToolEvent,
   archivingProbeId,
@@ -212,6 +214,11 @@ export function ProbesPanel({
         {/* Faint frosted-glass background image — one random pick per session. */}
         <TutorBackground isSpeaking={isSpeaking} stepIndex={sessionPlan?.currentStepIndex} />
         <div className="relative z-10 flex-1 min-h-0 flex flex-col overflow-hidden">
+          {sessionControls && (
+            <div className="shrink-0 px-4 pt-4">
+              {sessionControls}
+            </div>
+          )}
           <TutorWelcome
             tutorName={displayTutorName}
             onPlay={() => onWelcomePlay?.()}
@@ -244,6 +251,11 @@ export function ProbesPanel({
       <TutorBackground isSpeaking={isSpeaking} stepIndex={sessionPlan?.currentStepIndex} />
 
       {/* Main message area */}
+      {sessionControls && (
+        <div className="relative z-10 shrink-0 px-4 pt-4">
+          {sessionControls}
+        </div>
+      )}
       <div className="relative z-10 flex-1 min-h-0 flex flex-col px-4 py-4 overflow-hidden">
         {isInitializing && activeProbes.length === 0 ? (
           <div className="flex-1 flex flex-col items-center justify-center gap-3">

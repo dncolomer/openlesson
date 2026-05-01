@@ -3456,34 +3456,9 @@ export function SessionView({ sessionId }: { sessionId: string }) {
             <button onClick={() => setError(null)} className="ml-auto text-red-400/60 hover:text-red-400 text-xs">✕</button>
           </div>
         )}
-        {/* Session control bar + layout preset buttons */}
+        {/* Top navigation + layout preset buttons */}
         {!showWelcomeModal && (
-          <div className="relative flex items-center">
-            <div className="flex-1 min-w-0">
-              <SessionControlBar
-                isRecording={isRecording}
-                isPaused={isPaused}
-                elapsedSeconds={elapsedSeconds}
-                // If the tutor welcome is showing, pressing Play in the
-                // top bar should behave identically to pressing Start
-                // session in the panel: start/resume recording, fetch
-                // the opening probe (fresh sessions only), and close
-                // the welcome. Otherwise fall through to the normal
-                // recording handlers.
-                onStartRecording={showWelcomePanel ? handleWelcomePlay : startRecording}
-                onStopRecording={() => setShowEndConfirm(true)}
-                onPause={handlePause}
-                onResume={showWelcomePanel ? handleWelcomePlay : handleResume}
-              />
-              {autoPausedForInactivity && isPaused && (
-                <div className="mt-1 px-3 py-1 rounded-md bg-amber-500/10 border border-amber-500/20 text-amber-400 text-[11px] flex items-center gap-1.5">
-                  <svg className="w-3 h-3 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  <span>{t('session.autoPausedInactivity')}</span>
-                </div>
-              )}
-            </div>
+          <div className="relative flex items-center h-12 shrink-0 bg-neutral-900/95 border-b border-neutral-800 shadow-lg shadow-black/30">
             {/* Left-side: Back to Dashboard — always visible so users can
                 leave the session without having to pause first. */}
             <div className="absolute left-3 top-1/2 -translate-y-1/2 shrink-0 z-10">
@@ -3876,6 +3851,28 @@ export function SessionView({ sessionId }: { sessionId: string }) {
                         sessionId={session.id}
                         ttsLanguage={tutoringLanguage}
                         isSpeaking={isSpeaking}
+                        sessionControls={(
+                          <div className="space-y-2">
+                            <SessionControlBar
+                              variant="panel"
+                              isRecording={isRecording}
+                              isPaused={isPaused}
+                              elapsedSeconds={elapsedSeconds}
+                              onStartRecording={showWelcomePanel ? handleWelcomePlay : startRecording}
+                              onStopRecording={() => setShowEndConfirm(true)}
+                              onPause={handlePause}
+                              onResume={showWelcomePanel ? handleWelcomePlay : handleResume}
+                            />
+                            {autoPausedForInactivity && isPaused && (
+                              <div className="mx-auto max-w-[680px] px-3 py-1 rounded-md bg-amber-500/10 border border-amber-500/20 text-amber-400 text-[11px] flex items-center gap-1.5">
+                                <svg className="w-3 h-3 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                <span>{t('session.autoPausedInactivity')}</span>
+                              </div>
+                            )}
+                          </div>
+                        )}
                         thinkAloudThoughts={thinkAloudTranscript.thoughts}
                         thinkAloudInterimText={thinkAloudTranscript.interimText}
                         thinkAloudListening={thinkAloudTranscript.isListening}

@@ -53,6 +53,7 @@ interface MobileProbesTabProps {
   thinkAloudError?: string | null;
   onThinkAloudThoughtClick?: (thought: ThinkAloudThought) => void;
   onClearThinkAloudThoughts?: () => void;
+  sessionControls?: React.ReactNode;
 }
 
 export function MobileProbesTab({
@@ -82,6 +83,7 @@ export function MobileProbesTab({
   thinkAloudError,
   onThinkAloudThoughtClick,
   onClearThinkAloudThoughts,
+  sessionControls,
 }: MobileProbesTabProps) {
   const { t } = useI18n();
 
@@ -161,6 +163,11 @@ export function MobileProbesTab({
       <div className="relative flex-1 min-w-0 flex flex-col bg-[#0a0a0a] h-full overflow-hidden">
         <TutorBackground isSpeaking={isSpeaking} stepIndex={sessionPlan?.currentStepIndex} />
         <div className="relative z-10 flex-1 min-h-0 flex flex-col">
+          {sessionControls && (
+            <div className="shrink-0 px-3 pt-3">
+              {sessionControls}
+            </div>
+          )}
           <TutorWelcome
             tutorName={displayTutorName}
             onPlay={() => onWelcomePlay?.()}
@@ -191,6 +198,11 @@ export function MobileProbesTab({
       <TutorBackground isSpeaking={isSpeaking} stepIndex={sessionPlan?.currentStepIndex} />
 
       {/* Main message area */}
+      {sessionControls && (
+        <div className="relative z-10 shrink-0 px-3 pt-3">
+          {sessionControls}
+        </div>
+      )}
       <div className="relative z-10 flex-1 min-h-0 flex flex-col px-4 py-4 overflow-hidden">
         {!currentProbe ? (
           <div className="flex-1 flex flex-col items-center justify-center gap-4 text-center">

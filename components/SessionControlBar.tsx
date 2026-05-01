@@ -10,6 +10,7 @@ interface SessionControlBarProps {
   onStopRecording: () => void;
   onPause: () => void;
   onResume: () => void;
+  variant?: "top" | "panel";
 }
 
 export function SessionControlBar({
@@ -20,6 +21,7 @@ export function SessionControlBar({
   onStopRecording,
   onPause,
   onResume,
+  variant = "top",
 }: SessionControlBarProps) {
   const { t } = useI18n();
   const isStopped = !isRecording && !isPaused;
@@ -31,10 +33,12 @@ export function SessionControlBar({
     return `${minutes}:${seconds.toString().padStart(2, "0")}`;
   };
 
+  const isPanel = variant === "panel";
+
   return (
     <div className="w-full shrink-0 flex flex-col items-center">
       {/* The bar itself */}
-      <div className="w-full flex items-center justify-center gap-3 px-4 py-2.5 bg-neutral-900/95 border-b border-neutral-700/80 shadow-2xl shadow-black/50 backdrop-blur-md">
+      <div className={`${isPanel ? "w-full max-w-[680px] rounded-2xl border border-neutral-800 bg-neutral-950/55 px-3 py-2 shadow-lg shadow-black/30" : "w-full px-4 py-2.5 bg-neutral-900/95 border-b border-neutral-700/80 shadow-2xl shadow-black/50"} flex items-center justify-center gap-3 backdrop-blur-md`}>
         {/* Status indicator */}
         <div className="flex items-center gap-2">
           <div className={`rounded-full transition-all ${
@@ -64,7 +68,7 @@ export function SessionControlBar({
               else if (isPaused) onResume();
             }}
             disabled={isPlaying}
-            className={`flex items-center justify-center w-9 h-9 rounded-lg transition-all ${
+            className={`flex items-center justify-center ${isPanel ? "w-8 h-8" : "w-9 h-9"} rounded-lg transition-all ${
               isPlaying
                 ? "text-green-500/20 cursor-default"
                 : "text-green-400 hover:bg-green-500/20 hover:text-green-300"
@@ -80,7 +84,7 @@ export function SessionControlBar({
           <button
             onClick={() => onPause()}
             disabled={!isPlaying}
-            className={`flex items-center justify-center w-9 h-9 rounded-lg transition-all ${
+            className={`flex items-center justify-center ${isPanel ? "w-8 h-8" : "w-9 h-9"} rounded-lg transition-all ${
               !isPlaying
                 ? "text-amber-500/20 cursor-default"
                 : "text-amber-400 hover:bg-amber-500/20 hover:text-amber-300"
@@ -96,7 +100,7 @@ export function SessionControlBar({
           <button
             onClick={() => onStopRecording()}
             disabled={isStopped}
-            className={`flex items-center justify-center w-9 h-9 rounded-lg transition-all ${
+            className={`flex items-center justify-center ${isPanel ? "w-8 h-8" : "w-9 h-9"} rounded-lg transition-all ${
               isStopped
                 ? "text-red-500/20 cursor-default"
                 : "text-red-400 hover:bg-red-500/20 hover:text-red-300"

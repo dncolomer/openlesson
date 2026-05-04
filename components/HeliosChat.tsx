@@ -224,12 +224,7 @@ export function HeliosChat({ problem, messages: externalMessages, onMessagesChan
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
-
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
 
   // Core send logic shared by form submit and programmatic pendingMessage
   const sendMessage = async (payload: string | PendingChatMessage) => {
@@ -290,7 +285,6 @@ export function HeliosChat({ problem, messages: externalMessages, onMessagesChan
       updateMessages([...messages, userMsg, errorMessage]);
     } finally {
       setIsLoading(false);
-      inputRef.current?.focus();
     }
   };
 
@@ -340,7 +334,7 @@ export function HeliosChat({ problem, messages: externalMessages, onMessagesChan
           </svg>
         </button>
       </div>
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-4 overscroll-contain">
         {messages.map((message) => {
           // ── Smart card (theory / practice) ────────────────────────
           // Full-width artifact embedded in the chat stream. Used for
@@ -459,7 +453,6 @@ export function HeliosChat({ problem, messages: externalMessages, onMessagesChan
             </div>
           </div>
         )}
-        <div ref={messagesEndRef} />
       </div>
 
       <ConfirmDialog

@@ -106,19 +106,15 @@ export function MobileSessionView({
   const [probes, setProbes] = useState<Probe[]>(initialSession?.probes ?? []);
   
   // Preparation modal state
-  // Active sessions that already have tutoringLanguage: skip modal
-  // Paused sessions: always show modal to allow resume
+  // Sessions that already have tutoringLanguage skip the prep modal;
+  // resume/start controls live inside the Helios panel on mobile.
   const [showWelcomeModal, setShowWelcomeModal] = useState(
     initialSession 
-      ? initialSession.status === "paused" 
-        ? true 
-        : initialSession.status === "active" && initialSession.metadata?.tutoringLanguage 
-          ? false 
-          : true
+      ? !initialSession.metadata?.tutoringLanguage
       : true
   );
   const [languageConfirmed, setLanguageConfirmed] = useState(
-    initialSession?.metadata?.tutoringLanguage && initialSession?.status !== "paused" ? true : false
+    !!initialSession?.metadata?.tutoringLanguage
   );
   const [tutoringLanguage, setTutoringLanguage] = useState<SupportedLocale>(
     (initialSession?.metadata?.tutoringLanguage as SupportedLocale) || 'en'
@@ -243,14 +239,10 @@ export function MobileSessionView({
           setIsPaused(sessionData.status === "paused");
           // Sync elapsed time from session duration
           setElapsedSeconds(sessionData.durationMs ? Math.floor(sessionData.durationMs / 1000) : 0);
-          // Paused sessions: show modal to resume. Active sessions with language: skip modal.
-          if (sessionData.status === "active" && sessionData.metadata?.tutoringLanguage) {
-            setShowWelcomeModal(false);
-          }
-          // Otherwise keep showWelcomeModal true (default) to show the modal
           if (sessionData.metadata?.tutoringLanguage) {
             setLanguageConfirmed(true);
             setTutoringLanguage(sessionData.metadata.tutoringLanguage as SupportedLocale);
+            setShowWelcomeModal(false);
           }
         }
         if (planData) {
@@ -1077,8 +1069,11 @@ export function MobileSessionView({
         }
       }
 
-      // All done - Phase 2 will show "Get Started"
+      // All done: mobile goes straight to the session UI. The Helios panel
+      // contains the Play/Resume controls, so a second "Get Started" screen
+      // is unnecessary.
       setPrepStage("done");
+      setShowWelcomeModal(false);
     } catch (err) {
       console.error("Failed to prepare session:", err);
       setPlanError("Failed to prepare session");
@@ -2154,39 +2149,7 @@ export function MobileSessionView({
                 </div>
               )}
 
-              {/* Ready to go */}
-              {prepStage === "done" && languageConfirmed && !isPreparing && (
-                <button
-                  onClick={() => setShowWelcomeModal(false)}
-                  className="mt-4 w-full py-3.5 px-4 text-sm font-medium rounded-xl transition-colors bg-neutral-100 text-neutral-900 active:bg-white"
-                >
-                  {t('session.getStarted')}
-                </button>
-              )}
             </>
-          )}
-
-          {/* Phase 2: Ready (already confirmed before) */}
-          {languageConfirmed && (
-            <button
-              onClick={() => {
-                // If user never clicked Play on this session, drop into
-                // the in-panel tutor welcome rather than going straight
-                // into the main UI.
-                if (
-                  session &&
-                  !isSessionWelcomeSeen(session.id) &&
-                  (probes.filter(p => !p.archived).length === 0)
-                ) {
-                  setShowWelcomePanel(true);
-                  setActiveTab(0); // make sure probes tab is visible
-                }
-                setShowWelcomeModal(false);
-              }}
-              className="w-full py-3.5 px-4 text-sm font-medium rounded-xl transition-colors bg-neutral-100 text-neutral-900 active:bg-white"
-            >
-              {t('session.getStarted')}
-            </button>
           )}
         </div>
       </div>

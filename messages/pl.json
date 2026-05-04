@@ -128,7 +128,19 @@
     "creatingAccount": "Tworzenie konta...",
     "createAccountBtn": "Utwórz konto",
     "alreadyHaveAccount": "Masz już konto?",
-    "signInLink": "Zaloguj się"
+    "signInLink": "Zaloguj się",
+    "forgotPassword": "Nie pamiętasz hasła?",
+    "sendingRecoveryEmail": "Wysyłanie emaila odzyskiwania...",
+    "enterEmailForRecovery": "Wpisz swój email, aby otrzymać link do zresetowania hasła.",
+    "recoveryEmailSent": "Email resetowania hasła wysłany. Sprawdź swoją skrzynkę.",
+    "resetPassword": "Zresetuj hasło",
+    "resetPasswordSubtitle": "Wpisz nowe hasło po otwarciu linku odzyskiwania.",
+    "newPassword": "Nowe hasło",
+    "verifyingRecoveryLink": "Sprawdzanie linku odzyskiwania...",
+    "updatingPassword": "Aktualizowanie hasła...",
+    "updatePassword": "Aktualizuj hasło",
+    "passwordUpdated": "Hasło zaktualizowane. Możesz teraz zalogować się nowym hasłem.",
+    "backToSignIn": "Powrót do logowania"
   },
   "problemInput": {
     "placeholder": "Czego chcesz się dziś nauczyć? (np. Wyjaśnij rekurencję, Jak działa GPS?)",

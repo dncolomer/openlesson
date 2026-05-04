@@ -128,7 +128,19 @@
     "creatingAccount": "创建账户中...",
     "createAccountBtn": "创建账户",
     "alreadyHaveAccount": "已有账户？",
-    "signInLink": "登录"
+    "signInLink": "登录",
+    "forgotPassword": "忘记密码？",
+    "sendingRecoveryEmail": "正在发送恢复邮件...",
+    "enterEmailForRecovery": "请输入邮箱以接收密码重置链接。",
+    "recoveryEmailSent": "密码重置邮件已发送。请检查您的收件箱。",
+    "resetPassword": "重置密码",
+    "resetPasswordSubtitle": "打开恢复链接后输入新密码。",
+    "newPassword": "新密码",
+    "verifyingRecoveryLink": "正在验证恢复链接...",
+    "updatingPassword": "正在更新密码...",
+    "updatePassword": "更新密码",
+    "passwordUpdated": "密码已更新。您现在可以使用新密码登录。",
+    "backToSignIn": "返回登录"
   },
   "problemInput": {
     "placeholder": "你今天想学什么？（例如：解释递归，GPS是如何工作的？）",

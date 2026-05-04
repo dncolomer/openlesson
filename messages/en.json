@@ -128,7 +128,19 @@
     "creatingAccount": "Creating account...",
     "createAccountBtn": "Create Account",
     "alreadyHaveAccount": "Already have an account?",
-    "signInLink": "Sign in"
+    "signInLink": "Sign in",
+    "forgotPassword": "Forgot password?",
+    "sendingRecoveryEmail": "Sending recovery email...",
+    "enterEmailForRecovery": "Enter your email to receive a password reset link.",
+    "recoveryEmailSent": "Password reset email sent. Check your inbox.",
+    "resetPassword": "Reset password",
+    "resetPasswordSubtitle": "Enter a new password after opening your recovery link.",
+    "newPassword": "New password",
+    "verifyingRecoveryLink": "Verifying recovery link...",
+    "updatingPassword": "Updating password...",
+    "updatePassword": "Update password",
+    "passwordUpdated": "Password updated. You can now sign in with your new password.",
+    "backToSignIn": "Back to sign in"
   },
   "problemInput": {
     "placeholder": "What do you want to learn today? (e.g., Explain recursion, How does GPS work?)",

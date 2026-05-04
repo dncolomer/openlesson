@@ -128,7 +128,19 @@
     "creatingAccount": "Đang tạo tài khoản...",
     "createAccountBtn": "Tạo tài khoản",
     "alreadyHaveAccount": "Đã có tài khoản?",
-    "signInLink": "Đăng nhập"
+    "signInLink": "Đăng nhập",
+    "forgotPassword": "Quên mật khẩu?",
+    "sendingRecoveryEmail": "Đang gửi email khôi phục...",
+    "enterEmailForRecovery": "Nhập email của bạn để nhận liên kết đặt lại mật khẩu.",
+    "recoveryEmailSent": "Đã gửi email đặt lại mật khẩu. Hãy kiểm tra hộp thư của bạn.",
+    "resetPassword": "Đặt lại mật khẩu",
+    "resetPasswordSubtitle": "Nhập mật khẩu mới sau khi mở liên kết khôi phục.",
+    "newPassword": "Mật khẩu mới",
+    "verifyingRecoveryLink": "Đang xác minh liên kết khôi phục...",
+    "updatingPassword": "Đang cập nhật mật khẩu...",
+    "updatePassword": "Cập nhật mật khẩu",
+    "passwordUpdated": "Mật khẩu đã được cập nhật. Bây giờ bạn có thể đăng nhập bằng mật khẩu mới.",
+    "backToSignIn": "Quay lại đăng nhập"
   },
   "problemInput": {
     "placeholder": "Bạn muốn học gì hôm nay? (ví dụ: Giải thích đệ quy, GPS hoạt động như thế nào?)",

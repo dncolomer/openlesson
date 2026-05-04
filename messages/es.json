@@ -128,7 +128,19 @@
     "creatingAccount": "Creando cuenta...",
     "createAccountBtn": "Crear cuenta",
     "alreadyHaveAccount": "¿Ya tienes cuenta?",
-    "signInLink": "Iniciar sesión"
+    "signInLink": "Iniciar sesión",
+    "forgotPassword": "¿Olvidaste tu contraseña?",
+    "sendingRecoveryEmail": "Enviando email de recuperación...",
+    "enterEmailForRecovery": "Ingresa tu correo para recibir un enlace de restablecimiento de contraseña.",
+    "recoveryEmailSent": "Email de restablecimiento enviado. Revisa tu bandeja de entrada.",
+    "resetPassword": "Restablecer contraseña",
+    "resetPasswordSubtitle": "Ingresa una nueva contraseña después de abrir tu enlace de recuperación.",
+    "newPassword": "Nueva contraseña",
+    "verifyingRecoveryLink": "Verificando enlace de recuperación...",
+    "updatingPassword": "Actualizando contraseña...",
+    "updatePassword": "Actualizar contraseña",
+    "passwordUpdated": "Contraseña actualizada. Ahora puedes iniciar sesión con tu nueva contraseña.",
+    "backToSignIn": "Volver a iniciar sesión"
   },
   "problemInput": {
     "placeholder": "¿Qué quieres aprender hoy? (ej., Explica recursión, ¿Cómo funciona el GPS?)",

@@ -128,7 +128,19 @@
     "creatingAccount": "Konto wird erstellt...",
     "createAccountBtn": "Konto erstellen",
     "alreadyHaveAccount": "Bereits ein Konto?",
-    "signInLink": "Anmelden"
+    "signInLink": "Anmelden",
+    "forgotPassword": "Passwort vergessen?",
+    "sendingRecoveryEmail": "Wiederherstellungs-E-Mail wird gesendet...",
+    "enterEmailForRecovery": "Gib deine E-Mail ein, um einen Link zum Zurücksetzen des Passworts zu erhalten.",
+    "recoveryEmailSent": "E-Mail zum Zurücksetzen des Passworts gesendet. Prüfe deinen Posteingang.",
+    "resetPassword": "Passwort zurücksetzen",
+    "resetPasswordSubtitle": "Gib ein neues Passwort ein, nachdem du deinen Wiederherstellungslink geöffnet hast.",
+    "newPassword": "Neues Passwort",
+    "verifyingRecoveryLink": "Wiederherstellungslink wird geprüft...",
+    "updatingPassword": "Passwort wird aktualisiert...",
+    "updatePassword": "Passwort aktualisieren",
+    "passwordUpdated": "Passwort aktualisiert. Du kannst dich jetzt mit deinem neuen Passwort anmelden.",
+    "backToSignIn": "Zurück zur Anmeldung"
   },
   "problemInput": {
     "placeholder": "Was möchtest du heute lernen? (z.B. Erkläre Rekursion, Wie funktioniert GPS?)",

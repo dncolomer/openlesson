@@ -11,7 +11,9 @@ function LoginForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [recoveryLoading, setRecoveryLoading] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
   const { t } = useI18n();
@@ -19,6 +21,7 @@ function LoginForm() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    setMessage(null);
     setLoading(true);
 
     try {
@@ -40,6 +43,36 @@ function LoginForm() {
       setError(t('common.error'));
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handlePasswordRecovery = async () => {
+    setError(null);
+    setMessage(null);
+
+    if (!email) {
+      setError(t('auth.enterEmailForRecovery'));
+      return;
+    }
+
+    setRecoveryLoading(true);
+
+    try {
+      const supabase = createClient();
+      const { error: authError } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+
+      if (authError) {
+        setError(authError.message);
+        return;
+      }
+
+      setMessage(t('auth.recoveryEmailSent'));
+    } catch {
+      setError(t('common.error'));
+    } finally {
+      setRecoveryLoading(false);
     }
   };
 
@@ -83,12 +116,27 @@ function LoginForm() {
           </div>
         )}
 
+        {message && (
+          <div className="p-3 bg-emerald-500/5 border border-emerald-500/20 rounded-xl text-emerald-400 text-xs">
+            {message}
+          </div>
+        )}
+
         <button
           type="submit"
-          disabled={loading}
+          disabled={loading || recoveryLoading}
           className="w-full py-2.5 bg-white hover:bg-neutral-200 disabled:bg-neutral-800 disabled:text-neutral-600 text-black text-sm font-medium rounded-xl transition-colors mt-2"
         >
           {loading ? t('auth.signingIn') : t('auth.signIn')}
+        </button>
+
+        <button
+          type="button"
+          onClick={handlePasswordRecovery}
+          disabled={loading || recoveryLoading}
+          className="w-full py-2 text-neutral-400 hover:text-white disabled:text-neutral-700 text-xs font-medium transition-colors"
+        >
+          {recoveryLoading ? t('auth.sendingRecoveryEmail') : t('auth.forgotPassword')}
         </button>
       </form>
 

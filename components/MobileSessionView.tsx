@@ -1048,6 +1048,7 @@ export function MobileSessionView({
     const s = sessionRef.current;
     if (!s) return;
     setIsStartingSession(true);
+    setActiveTab(1);
     try {
       // Bring the session to an actively-recording state. Three cases:
       //   1. Fresh session: startRecording via handleStartSession (mic req).
@@ -2319,7 +2320,6 @@ export function MobileSessionView({
           isGeneratingProbe={isGeneratingProbe}
           showWelcome={showWelcomePanel}
           onWelcomePlay={handleWelcomePlay}
-          onOpenSessionPlan={() => setActiveTab(0)}
           isStartingSession={isStartingSession}
           sessionId={session?.id}
           ttsLanguage={tutoringLanguage}

@@ -2291,6 +2291,7 @@ export function SessionView({ sessionId }: { sessionId: string }) {
     const s = sessionRef.current;
     if (!s) return;
     setIsStartingSession(true);
+    setActiveTool("chat");
     try {
       // Bring the session back to an actively-recording state. Three cases:
       //   1. Fresh session: `!isRecording` → startRecording (first mic req).
@@ -3548,7 +3549,7 @@ export function SessionView({ sessionId }: { sessionId: string }) {
       )}
 
       <ToolsPanel 
-              activeTool={activeTool} 
+              activeTool={showWelcomePanel ? null : activeTool} 
               onToolChange={(tool) => {
                 // "help" is a command, not a view: it pauses the session
                 // and re-runs the tutor welcome (typed greeting + Play
@@ -3877,8 +3878,6 @@ export function SessionView({ sessionId }: { sessionId: string }) {
                         isSessionActive={isRecording && !isPaused}
                         showWelcome={showWelcomePanel}
                         onWelcomePlay={handleWelcomePlay}
-                        onOpenSessionPlan={() => ensureVisible("plan")}
-                        onOpenTools={() => ensureVisible("tools")}
                         isStartingSession={isStartingSession}
                         sessionId={session.id}
                         ttsLanguage={tutoringLanguage}

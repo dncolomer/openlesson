@@ -36,7 +36,6 @@ interface MobileProbesTabProps {
   /** Show the fresh-session typed welcome + Play button. */
   showWelcome?: boolean;
   onWelcomePlay?: () => void;
-  onOpenSessionPlan?: () => void;
   isStartingSession?: boolean;
   /** Session id — used to gate the one-time TTS narration of the welcome. */
   sessionId?: string;
@@ -77,7 +76,6 @@ export function MobileProbesTab({
   tutorName,
   showWelcome = false,
   onWelcomePlay,
-  onOpenSessionPlan,
   isStartingSession = false,
   sessionId,
   ttsLanguage,
@@ -191,9 +189,6 @@ export function MobileProbesTab({
           <TutorWelcome
             tutorName={displayTutorName}
             onPlay={() => onWelcomePlay?.()}
-            onOpenSessionPlan={
-              onOpenSessionPlan ? () => onOpenSessionPlan() : undefined
-            }
             isStarting={isStartingSession}
             sessionId={sessionId}
             ttsLanguage={ttsLanguage}

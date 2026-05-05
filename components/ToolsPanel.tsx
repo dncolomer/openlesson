@@ -14,7 +14,7 @@ import { QRCodeModal } from "./QRCodeModal";
 export type Tool = "chat" | "canvas" | "notebook" | "grokipedia" | "help" | "data-input" | "logs" | "plan-resources";
 
 interface ToolsPanelProps {
-  activeTool: Tool;
+  activeTool: Tool | null;
   onToolChange: (tool: Tool) => void;
   problem: string;
   className?: string;

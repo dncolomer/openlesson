@@ -68,10 +68,6 @@ interface ProbesPanelProps {
   showWelcome?: boolean;
   /** Fired when the user clicks the welcome Play button. */
   onWelcomePlay?: () => void;
-  /** Fired when the user clicks the welcome "Open Session Plan" button. */
-  onOpenSessionPlan?: () => void;
-  /** Fired when the user clicks the welcome "Open Tools" button. */
-  onOpenTools?: () => void;
   /** Parent is currently fetching the opening probe (shows spinner on Play). */
   isStartingSession?: boolean;
   /** Session id — used to gate the one-time TTS narration of the welcome. */
@@ -114,8 +110,6 @@ export function ProbesPanel({
   tutorName,
   showWelcome = false,
   onWelcomePlay,
-  onOpenSessionPlan,
-  onOpenTools,
   isStartingSession = false,
   sessionId,
   ttsLanguage,
@@ -245,12 +239,6 @@ export function ProbesPanel({
           <TutorWelcome
             tutorName={displayTutorName}
             onPlay={() => onWelcomePlay?.()}
-            onOpenSessionPlan={
-              onOpenSessionPlan ? () => onOpenSessionPlan() : undefined
-            }
-            onOpenTools={
-              onOpenTools ? () => onOpenTools() : undefined
-            }
             isStarting={isStartingSession}
             sessionId={sessionId}
             ttsLanguage={ttsLanguage}

@@ -5,7 +5,7 @@ import { MobileProbesTab } from "./MobileProbesTab";
 import { MobilePlanTab } from "./MobilePlanTab";
 import { MobileExcalidrawCanvas } from "./MobileExcalidrawCanvas";
 import { SessionControlBar } from "./SessionControlBar";
-import { HeliosChat, type ChatMessage, type PendingChatMessage } from "./HeliosChat";
+import { HeliosChat, type ChatMessage, type PendingChatMessage, type StuckAction } from "./HeliosChat";
 import { AudioRecorder } from "@/lib/audio";
 import { 
   type Probe, 
@@ -698,7 +698,7 @@ export function MobileSessionView({
       });
 
       if (!res.ok) {
-        return { success: false, durationMs: Date.now() - startMs, error: "Stuck policy unavailable" };
+        return { success: true, durationMs: Date.now() - startMs, stuck: false };
       }
 
       const data = await res.json();
@@ -835,6 +835,49 @@ export function MobileSessionView({
   const handleStepAskHelios = useCallback((stepDescription: string) => {
     openHeliosChatWithMessage(`Help me understand and work through this step: "${stepDescription}"`);
   }, [openHeliosChatWithMessage]);
+
+  const handleStuckAction = useCallback((action: StuckAction) => {
+    const currentStep = sessionPlanRef.current?.steps?.[sessionPlanRef.current.currentStepIndex]?.description || sessionRef.current?.problem || "this step";
+
+    if (action === "theory") {
+      handleStepResources(currentStep);
+      return;
+    }
+
+    if (action === "practice") {
+      handleStepPractice(currentStep);
+      return;
+    }
+
+    if (action === "canvas") {
+      setActiveTab(3);
+      return;
+    }
+
+    if (action === "notebook") {
+      openHeliosChatWithMessage(`I'm stuck on this step: "${currentStep}". Help me summarize what I know and what I don't know yet.`);
+      return;
+    }
+
+    if (action === "break") {
+      if (isRecording && !isPaused) {
+        setIsPaused(true);
+        const currentSession = sessionRef.current;
+        if (currentSession) {
+          pauseSession(currentSession.id).catch(err => console.error("[Mobile] Failed to pause for stuck break:", err));
+        }
+      }
+      setActiveTab(1);
+      setChatMessages(prev => [...prev, {
+        id: `stuck_break_${Date.now()}`,
+        role: "assistant",
+        content: "Take two minutes away from the problem. When you come back, write the single smallest thing you know for sure, then we will restart from there.",
+      }]);
+      return;
+    }
+
+    openHeliosChatWithMessage(`I'm stuck on this step: "${currentStep}". Help me identify the next small move without giving away the answer.`);
+  }, [handleStepPractice, handleStepResources, isPaused, isRecording, openHeliosChatWithMessage]);
 
   /**
    * Manual "Submit to Helios" — mirror of the desktop handler. Forces a
@@ -2316,6 +2359,8 @@ export function MobileSessionView({
           tutoringLanguage={tutoringLanguage}
           pendingMessage={pendingChatMessage}
           onPendingMessageHandled={() => setPendingChatMessage(null)}
+          onStuckAction={handleStuckAction}
+          stuckActions={["ask", "theory", "practice", "canvas", "break"]}
         />
       ),
     },

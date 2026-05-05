@@ -32,6 +32,7 @@ function processLatexContent(content: string): string {
  * card kinds later without another flag.
  */
 export type ChatMessageKind = "theory" | "practice" | "stuck";
+export type StuckAction = "ask" | "theory" | "practice" | "canvas" | "notebook" | "break";
 
 export interface ChatMessage {
   id: string;
@@ -78,6 +79,8 @@ interface HeliosChatProps {
   /** When set, auto-submits it as a user message and clears via the callback */
   pendingMessage?: string | PendingChatMessage | null;
   onPendingMessageHandled?: () => void;
+  onStuckAction?: (action: StuckAction) => void;
+  stuckActions?: StuckAction[];
 }
 
 // Helios first-person welcome — unified across probe panel and chat.
@@ -187,7 +190,16 @@ function SmartCardShell({
   );
 }
 
-export function HeliosChat({ problem, messages: externalMessages, onMessagesChange, sessionId, tutoringLanguage, pendingMessage, onPendingMessageHandled }: HeliosChatProps) {
+const STUCK_ACTIONS: Array<{ action: StuckAction; label: string }> = [
+  { action: "ask", label: "Ask Helios" },
+  { action: "theory", label: "Get theory" },
+  { action: "practice", label: "Try practice" },
+  { action: "canvas", label: "Use Canvas" },
+  { action: "notebook", label: "Use Notebook" },
+  { action: "break", label: "Take a break" },
+];
+
+export function HeliosChat({ problem, messages: externalMessages, onMessagesChange, sessionId, tutoringLanguage, pendingMessage, onPendingMessageHandled, onStuckAction, stuckActions }: HeliosChatProps) {
   const { t } = useI18n();
 
   // Get localized welcome message based on tutoring language
@@ -389,6 +401,20 @@ export function HeliosChat({ problem, messages: externalMessages, onMessagesChan
                       >
                         {processLatexContent(message.content)}
                       </ReactMarkdown>
+                      {message.kind === "stuck" && onStuckAction && !isPending && (
+                        <div className="mt-4 flex flex-wrap gap-2">
+                          {STUCK_ACTIONS.filter(({ action }) => !stuckActions || stuckActions.includes(action)).map(({ action, label }) => (
+                            <button
+                              key={action}
+                              type="button"
+                              onClick={() => onStuckAction(action)}
+                              className="rounded-full border border-amber-300/25 bg-amber-300/10 px-3 py-1.5 text-xs font-medium text-amber-100 transition-colors hover:border-amber-200/50 hover:bg-amber-300/20"
+                            >
+                              {label}
+                            </button>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   )}
                 </SmartCardShell>

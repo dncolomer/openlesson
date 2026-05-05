@@ -350,7 +350,6 @@ export function useSessionHeartbeat(
               lastStorageSuccess: Date.now(),
               consecutiveStorageFailures: 0,
             }));
-            emitLog("info", `Storage heartbeat OK (${durationMs}ms)`, "storage");
           }
 
           isStorageRunningRef.current = false;
@@ -392,11 +391,6 @@ export function useSessionHeartbeat(
               lastAnalysisSuccess: Date.now(),
               consecutiveAnalysisFailures: 0,
             }));
-            emitLog(
-              "info",
-              `Analysis heartbeat OK (${durationMs}ms)${result.gapScore !== undefined ? ` gap=${result.gapScore.toFixed(2)}` : ""}`,
-              "analysis",
-            );
           } else {
             analysisFailStreakRef.current++;
             setPipelineErrors((prev) => ({
@@ -431,13 +425,7 @@ export function useSessionHeartbeat(
 
         promise.then((result) => {
           const durationMs = result.durationMs ?? (Date.now() - startMs);
-          if (result.success) {
-            emitLog(
-              "info",
-              `Stuck heartbeat OK (${durationMs}ms)${result.stuck !== undefined ? ` stuck=${result.stuck}` : ""}`,
-              "stuck",
-            );
-          } else {
+          if (!result.success) {
             emitLog("error", `Stuck heartbeat failed (${durationMs}ms): ${result.error}`, "stuck");
           }
 

@@ -7,7 +7,6 @@ import {
   getRecentScreenshots,
   getRecentToolEvents,
   getRecentTranscripts,
-  getSession,
   getSessionPlan,
   logToolUsage,
 } from "@/lib/storage";
@@ -35,8 +34,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
     }
 
-    const [session, plan, promptOverrides, transcripts, toolEvents, screenshots] = await Promise.all([
-      getSession(sessionId),
+    const [sessionResult, probesResult, plan, promptOverrides, transcripts, toolEvents, screenshots] = await Promise.all([
+      supabase
+        .from("sessions")
+        .select("id, problem, metadata")
+        .eq("id", sessionId)
+        .eq("user_id", user.id)
+        .maybeSingle(),
+      supabase
+        .from("probes")
+        .select("archived")
+        .eq("session_id", sessionId),
       getSessionPlan(sessionId, supabase),
       getUserPrompts(supabase, user.id),
       getRecentTranscripts(sessionId, 180000),
@@ -44,9 +52,18 @@ export async function POST(request: NextRequest) {
       getRecentScreenshots(sessionId, 180000),
     ]);
 
+    const session = sessionResult.data;
     if (!session) {
-      return NextResponse.json({ error: "Session not found" }, { status: 404 });
+      return NextResponse.json({
+        stuck: false,
+        severity: "low",
+        title: "",
+        recommendationMarkdown: "",
+        reason: "Session context unavailable for stuck policy evaluation",
+      });
     }
+
+    const probes = probesResult.data || [];
 
     const currentStep = plan?.steps?.[plan.currentStepIndex]?.description || "";
     const now = Date.now();
@@ -69,19 +86,29 @@ export async function POST(request: NextRequest) {
       `Seconds since latest tool event: ${latestToolAge ?? "none"}`,
       `Tool event sequence: ${toolEvents.slice(-12).map(e => `${e.toolName}/${e.toolAction}`).join(" -> ") || "none"}`,
       `Recent screenshots: ${screenshots.length}`,
-      `Open probes: ${session.probes.filter(p => !p.archived).length}`,
+      `Open probes: ${probes.filter(p => !p.archived).length}`,
     ].join("\n");
 
-    const languageCode = bodyLanguage || session.metadata?.tutoringLanguage;
+    const sessionFileIds = [
+      ...transcripts.slice(-10).map(t => t.xaiFileId),
+      ...toolEvents.slice(-10).map(t => t.xaiFileId),
+      ...screenshots.slice(-3).map(s => s.xaiFileId),
+    ].filter((id): id is string => !!id && id !== "_empty");
+
+    const metadata = session.metadata as { tutoringLanguage?: string } | null;
+    const languageCode = bodyLanguage || metadata?.tutoringLanguage;
     const languageName = languageCode ? getLanguageName(languageCode) : undefined;
 
     const result = await generateStuckPolicyRecommendation({
       problem: session.problem,
       currentStep,
       activitySummary,
-      transcript: "Transcript text is stored in recent transcript files; use activity timing and word counts to decide whether an intervention is warranted.",
+      transcript: sessionFileIds.length > 0
+        ? "Use the attached transcript files via xAI attachment search."
+        : "No recent transcript files are available; use activity timing and word counts to decide whether an intervention is warranted.",
       secondsSinceLastStuckCard,
       stuckCardCount,
+      sessionFileIds,
       promptOverrides,
       tutoringLanguage: languageName,
     });

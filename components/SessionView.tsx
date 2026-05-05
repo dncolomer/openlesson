@@ -40,7 +40,7 @@ import { SessionPlanViewer } from "./SessionPlanViewer";
 import { ResizablePane, type ResizablePaneHandle } from "./ResizablePane";
 import { ExcalidrawCanvas } from "./ExcalidrawCanvas";
 import { ToolsPanel, type Tool } from "./ToolsPanel";
-import { HeliosChat, type ChatMessage, type PendingChatMessage } from "./HeliosChat";
+import { HeliosChat, type ChatMessage, type PendingChatMessage, type StuckAction } from "./HeliosChat";
 import { DataInputTool } from "./DataInputTool";
 import { LogsTool, type LogEntry } from "./LogsTool";
 import { createScreenCapture } from "@/lib/screen-capture";
@@ -617,6 +617,50 @@ export function SessionView({ sessionId }: { sessionId: string }) {
     // calling setActiveTool("chat") here is a no-op and wouldn't reopen it.
     openHeliosChatWithMessage(`Help me understand and work through this step: "${stepDescription}"`);
   };
+
+  const handleStuckAction = useCallback((action: StuckAction) => {
+    const currentStep = sessionPlanRef.current?.steps?.[sessionPlanRef.current.currentStepIndex]?.description || sessionRef.current?.problem || "this step";
+
+    if (action === "theory") {
+      handleStepResources(currentStep);
+      return;
+    }
+
+    if (action === "practice") {
+      handleStepPractice(currentStep);
+      return;
+    }
+
+    if (action === "canvas") {
+      ensureVisible("tools");
+      setActiveTool("canvas");
+      return;
+    }
+
+    if (action === "notebook") {
+      ensureVisible("tools");
+      setActiveTool("notebook");
+      return;
+    }
+
+    if (action === "break") {
+      if (isRecordingRef.current && !isPaused) {
+        setIsPaused(true);
+        const currentSession = sessionRef.current;
+        if (currentSession) {
+          pauseSession(currentSession.id).catch(err => console.error("Failed to pause for stuck break:", err));
+        }
+      }
+      setChatMessages(prev => [...prev, {
+        id: `stuck_break_${Date.now()}`,
+        role: "assistant",
+        content: "Take two minutes away from the problem. When you come back, write the single smallest thing you know for sure, then we will restart from there.",
+      }]);
+      return;
+    }
+
+    openHeliosChatWithMessage(`I'm stuck on this step: "${currentStep}". Help me identify the next small move without giving away the answer.`);
+  }, [ensureVisible, handleStepPractice, handleStepResources, isPaused, openHeliosChatWithMessage]);
 
   // Muse EEG
   const [museStatus, setMuseStatus] = useState<"disconnected" | "connecting" | "connected" | "streaming">("disconnected");
@@ -1498,7 +1542,7 @@ export function SessionView({ sessionId }: { sessionId: string }) {
       });
 
       if (!res.ok) {
-        return { success: false, durationMs: Date.now() - startMs, error: "Stuck policy unavailable" };
+        return { success: true, durationMs: Date.now() - startMs, stuck: false };
       }
 
       const data = await res.json();
@@ -1515,6 +1559,12 @@ export function SessionView({ sessionId }: { sessionId: string }) {
         setChatMessages(prev => [...prev, stuckCard]);
         lastStuckCardTimeRef.current = Date.now();
         stuckCardCountRef.current += 1;
+        addHeartbeatLog({
+          timestamp: Date.now(),
+          level: "warning",
+          source: "stuck",
+          message: `Stuck card inserted (${data.severity || "medium"}): ${data.title || "Stuck Check"}${data.reason ? ` — ${data.reason}` : ""}`,
+        });
       }
 
       return { success: true, durationMs: Date.now() - startMs, stuck: Boolean(data?.stuck) };
@@ -3689,6 +3739,8 @@ export function SessionView({ sessionId }: { sessionId: string }) {
                         tutoringLanguage={tutoringLanguage}
                         pendingMessage={pendingChatMessage}
                         onPendingMessageHandled={() => setPendingChatMessage(null)}
+                        onStuckAction={handleStuckAction}
+                        stuckActions={["ask", "theory", "practice", "canvas", "notebook", "break"]}
                       />
                     )}
 

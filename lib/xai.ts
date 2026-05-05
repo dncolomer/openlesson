@@ -747,6 +747,7 @@ export async function generateStuckPolicyRecommendation(options: {
   transcript: string;
   secondsSinceLastStuckCard: number;
   stuckCardCount: number;
+  sessionFileIds?: string[];
   promptOverrides?: UserPrompts;
   tutoringLanguage?: string;
 }): Promise<{ success: boolean; result?: StuckPolicyRecommendationResult; error?: string }> {
@@ -770,14 +771,41 @@ export async function generateStuckPolicyRecommendation(options: {
     reason?: string;
   }
 
-  const response = await callXaiJSON<RawStuckPolicyResult>(
-    [userMessage(prompt)],
-    {
+  const jsonSchema = {
+    name: "stuck_policy_recommendation",
+    schema: {
+      type: "object",
+      properties: {
+        stuck: { type: "boolean" },
+        severity: { type: "string", enum: ["low", "medium", "high"] },
+        title: { type: "string" },
+        recommendation_markdown: { type: "string" },
+        reason: { type: "string" },
+      },
+      required: ["stuck", "severity", "title", "recommendation_markdown", "reason"],
+      additionalProperties: false,
+    },
+  };
+
+  const fileIds = options.sessionFileIds?.filter(Boolean) || [];
+  const response = fileIds.length > 0
+    ? await callXaiResponsesWithFiles<RawStuckPolicyResult>(prompt, fileIds, {
       model: MODEL,
-      maxTokens: 700,
+      maxOutputTokens: 700,
       temperature: 0.3,
-    }
-  );
+      jsonSchema,
+      retries: 2,
+      retryDelay: 500,
+      fetchTimeout: 30_000,
+    })
+    : await callXaiJSON<RawStuckPolicyResult>(
+      [userMessage(prompt)],
+      {
+        model: MODEL,
+        maxTokens: 700,
+        temperature: 0.3,
+      }
+    );
 
   if (!response.success || !response.data) {
     return { success: false, error: response.error || "No stuck policy result generated" };

@@ -564,6 +564,9 @@ RECENT SESSION ACTIVITY:
 RECENT TRANSCRIPT:
 {transcript}
 
+ATTACHED SESSION FILES:
+Recent transcripts, tool events, and screenshots may be attached as xAI input_file documents. Use xAI's attachment search to inspect them when deciding whether the learner is stuck. The activity summary is only an index; prefer evidence from the attached files when available.
+
 CHAT CONTEXT:
 - Time since last stuck card: {seconds_since_last_stuck_card}s
 - Existing stuck cards this session: {stuck_card_count}
@@ -584,7 +587,8 @@ Rules:
 - Return stuck=true only when a practical intervention would likely help more than waiting.
 - This is NOT a probe. Do not ask a deep Socratic probe as the main output.
 - If stuck=true, write markdown for a visually prominent card. Be concise, practical, and specific to the current step.
-- Include 2-4 recovery options. It is allowed to recommend theory, practice, asking Helios, using tools, or taking a short break.
+- Do NOT include a list of recovery options in the markdown. The interface shows recovery buttons separately.
+- The markdown should only explain why you are interrupting and name the immediate blocker in 1-3 short sentences.
 - Do not solve the problem directly.
 - Use warm, direct language. No motivational fluff.
 

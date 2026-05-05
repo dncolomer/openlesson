@@ -52,6 +52,7 @@ export function LogsTool({ logs, transferHealth, onClear }: LogsToolProps) {
       "analysis",
       "plan",
       "probe",
+      "stuck",
       "audio",
       "eeg",
       "facial",
@@ -71,11 +72,13 @@ export function LogsTool({ logs, transferHealth, onClear }: LogsToolProps) {
     });
   }, [logs, levelFilter, sourceFilter]);
 
+  const visibleLogs = useMemo(() => filteredLogs.slice(-200), [filteredLogs]);
+
   useEffect(() => {
     if (autoScroll && containerRef.current) {
       containerRef.current.scrollTop = containerRef.current.scrollHeight;
     }
-  }, [filteredLogs, autoScroll]);
+  }, [visibleLogs, autoScroll]);
 
   const formatTime = (timestamp: number) => {
     const date = new Date(timestamp);
@@ -198,7 +201,13 @@ export function LogsTool({ logs, transferHealth, onClear }: LogsToolProps) {
             <p className="text-neutral-500 text-xs">{t("logs.noLogs")}</p>
           </div>
         ) : (
-          filteredLogs.map((log) => (
+          <>
+            {filteredLogs.length > visibleLogs.length && (
+              <div className="px-2 py-1 text-[10px] text-neutral-500 text-center">
+                Showing latest {visibleLogs.length} of {filteredLogs.length} matching logs
+              </div>
+            )}
+            {visibleLogs.map((log) => (
             <div
               key={log.id}
               className={`p-2 rounded border text-xs ${getLevelColor(log.level)}`}
@@ -214,7 +223,8 @@ export function LogsTool({ logs, transferHealth, onClear }: LogsToolProps) {
                 </div>
               </div>
             </div>
-          ))
+            ))}
+          </>
         )}
       </div>
 

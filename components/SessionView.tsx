@@ -2307,6 +2307,15 @@ export function SessionView({ sessionId }: { sessionId: string }) {
     if (!s) return;
     setIsStartingSession(true);
     setActiveTool("chat");
+    let didRevealChat = false;
+    const revealChat = () => {
+      if (didRevealChat) return;
+      didRevealChat = true;
+      setShowWelcomePanel(false);
+      setPaneVisibility({ tools: true, tutor: true, plan: false });
+      resizablePaneRef.current?.setLayout({ collapsedSide: null });
+      resizablePaneRef2.current?.setLayout({ collapsedSide: "right" });
+    };
     try {
       // Bring the session back to an actively-recording state. Three cases:
       //   1. Fresh session: `!isRecording` → startRecording (first mic req).
@@ -2318,6 +2327,7 @@ export function SessionView({ sessionId }: { sessionId: string }) {
       } else if (isPaused) {
         await handleResume();
       }
+      revealChat();
       // Only fetch the opening probe on fresh sessions. If the session
       // already has probes (e.g. Help button re-runs the welcome flow),
       // we preserve the existing probe history.
@@ -2327,7 +2337,7 @@ export function SessionView({ sessionId }: { sessionId: string }) {
       }
     } finally {
       markSessionWelcomeSeen(s.id);
-      setShowWelcomePanel(false);
+      revealChat();
       setIsStartingSession(false);
       // If the welcome was opened via the Help button, restore the
       // user's previous pane layout so tools/plan don't stay hidden.

@@ -1064,6 +1064,13 @@ export function MobileSessionView({
     if (!s) return;
     setIsStartingSession(true);
     setActiveTab(1);
+    let didRevealChat = false;
+    const revealChat = () => {
+      if (didRevealChat) return;
+      didRevealChat = true;
+      setActiveTab(1);
+      setShowWelcomePanel(false);
+    };
     try {
       // Bring the session to an actively-recording state. Three cases:
       //   1. Fresh session: startRecording via handleStartSession (mic req).
@@ -1075,6 +1082,7 @@ export function MobileSessionView({
       } else if (isPaused) {
         await resumeRecording();
       }
+      revealChat();
       // Only fetch the opening probe on fresh sessions. If probes already
       // exist (e.g. Help re-ran the welcome), preserve the history.
       const hasActive = (sessionRef.current?.probes ?? []).some(p => !p.archived);
@@ -1083,7 +1091,7 @@ export function MobileSessionView({
       }
     } finally {
       markSessionWelcomeSeen(s.id);
-      setShowWelcomePanel(false);
+      revealChat();
       setIsStartingSession(false);
     }
     // handleStartSession / resumeRecording are stable-ish and including

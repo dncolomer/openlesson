@@ -2,7 +2,6 @@
 
 import { useEffect, useState, useCallback, useRef } from "react";
 import { MobileProbesTab } from "./MobileProbesTab";
-import { MobilePlanTab } from "./MobilePlanTab";
 import { MobileExcalidrawCanvas } from "./MobileExcalidrawCanvas";
 import { SessionControlBar } from "./SessionControlBar";
 import { HeliosChat, type ChatMessage, type PendingChatMessage, type StuckAction } from "./HeliosChat";
@@ -29,7 +28,7 @@ import {
 } from "@/lib/storage";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useI18n } from "@/lib/i18n";
+import { translateWithLocale, useI18n } from "@/lib/i18n";
 import { createClient } from "@/lib/supabase/client";
 import { isSessionWelcomeSeen, markSessionWelcomeSeen } from "@/lib/welcomeState";
 import { playStepCompleteSound, playSessionCompleteSound } from "@/lib/sounds";
@@ -80,11 +79,6 @@ const tabIcons = [
   (
     <svg key="chat" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
-    </svg>
-  ),
-  (
-    <svg key="plan" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
     </svg>
   ),
   (
@@ -192,6 +186,7 @@ export function MobileSessionView({
   const [whiteboardData, setWhiteboardData] = useState<string | null>(null);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [pendingChatMessage, setPendingChatMessage] = useState<string | PendingChatMessage | null>(null);
+  const [activeStuckCheck, setActiveStuckCheck] = useState<string | null>(null);
   // "Submit to Helios" dirty tracking — true when the user has edited the
   // canvas since the last submit. Initial true so the first submit is
   // allowed (provided there's canvas content). Lives in parent so it
@@ -445,7 +440,6 @@ export function MobileSessionView({
 
       // Generate probe locally
       const openProbes = currentSession.probes.filter((p: Probe) => !p.archived);
-      if (openProbes.length >= 5) return;
 
       // Hard cooldown: don't generate probes too rapidly
       const timeSinceLastLocal = Date.now() - (lastProbeTimeRef.current || 0);
@@ -490,6 +484,7 @@ export function MobileSessionView({
         setSession(updatedSession);
         sessionRef.current = updatedSession;
         setProbes(updatedSession.probes);
+        addProbeToHeliosChat(localProbe.text);
         lastProbeTimeRef.current = Date.now();
       }
     } catch (err) {
@@ -643,7 +638,7 @@ export function MobileSessionView({
         const cooldownMet = lastProbeTimeRef.current === 0 || timeSinceLastProbe >= PROBE_COOLDOWN_MS;
         const isDupe = isDuplicateProbe(planData.nextRequest.text, latestSession.probes);
 
-        if (planData.canGenerateProbe !== false && currentOpenProbeCount < 5 && cooldownMet && !isDupe) {
+        if (planData.canGenerateProbe !== false && cooldownMet && !isDupe) {
           const savedProbe = await addProbe(currentSession.id, {
             timestamp: Date.now() - new Date(currentSession.startedAt).getTime(),
             gapScore: planData.gapScore ?? 0.5,
@@ -657,6 +652,7 @@ export function MobileSessionView({
           setSession(updatedSession);
           sessionRef.current = updatedSession;
           setProbes(updatedSession.probes);
+          addProbeToHeliosChat(savedProbe.text);
           lastProbeTimeRef.current = Date.now();
         }
       }
@@ -702,19 +698,11 @@ export function MobileSessionView({
       }
 
       const data = await res.json();
-      if (data?.stuck && data.recommendationMarkdown) {
-        const stuckCard: ChatMessage = {
-          id: `stuck_${Date.now()}`,
-          role: "assistant",
-          kind: "stuck",
-          cardTitle: data.title || "Stuck Check",
-          content: data.recommendationMarkdown,
-        };
-        setActiveTab(1);
-        setChatMessages(prev => [...prev, stuckCard]);
-        lastStuckCardTimeRef.current = Date.now();
-        stuckCardCountRef.current += 1;
-      }
+        if (data?.stuck && data.recommendationMarkdown) {
+          setActiveStuckCheck(String(data.recommendationMarkdown).replace(/\s+/g, " ").trim().slice(0, 180));
+          lastStuckCardTimeRef.current = Date.now();
+          stuckCardCountRef.current += 1;
+        }
 
       return { success: true, durationMs: Date.now() - startMs, stuck: Boolean(data?.stuck) };
     } catch (err) {
@@ -736,6 +724,21 @@ export function MobileSessionView({
   const openHeliosChatWithMessage = useCallback((message: string | PendingChatMessage) => {
     setActiveTab(1);
     setPendingChatMessage(message);
+  }, []);
+
+  const addProbeToHeliosChat = useCallback((text: string) => {
+    const content = text.trim();
+    if (!content) return;
+    const prefix = translateWithLocale(tutoringLanguage, "heliosChat.probeLeadIn");
+    const conversationalContent = `${prefix}\n\n${content}`;
+    setChatMessages(prev => [
+      ...prev,
+      {
+        id: `probe_chat_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+        role: "assistant",
+        content: conversationalContent,
+      },
+    ]);
   }, []);
 
   const fetchAndInjectPrepIntoChat = useCallback(async (
@@ -1466,6 +1469,7 @@ export function MobileSessionView({
             setSession(updatedSession);
             sessionRef.current = updatedSession;
             setProbes(updatedSession.probes);
+            addProbeToHeliosChat(localProbe.text);
             lastProbeTimeRef.current = Date.now();
           } else {
             setError("Local inference failed to generate a probe for this step.");
@@ -1508,6 +1512,7 @@ export function MobileSessionView({
         setSession(updatedSession);
         sessionRef.current = updatedSession;
         setProbes(updatedSession.probes);
+        addProbeToHeliosChat(feedbackProbe.text);
         return;
       }
 
@@ -1587,6 +1592,7 @@ export function MobileSessionView({
               setSession(updatedSession);
               sessionRef.current = updatedSession;
               setProbes(updatedSession.probes);
+              addProbeToHeliosChat(savedProbe.text);
               lastProbeTimeRef.current = Date.now();
             }
           }
@@ -1681,6 +1687,7 @@ export function MobileSessionView({
           setSession(updatedSession);
           sessionRef.current = updatedSession;
           setProbes(updatedSession.probes);
+          addProbeToHeliosChat(localProbe.text);
           lastProbeTimeRef.current = Date.now();
         } else {
           setError("Local inference failed to generate a probe for this step.");
@@ -1757,6 +1764,7 @@ export function MobileSessionView({
               setSession(updatedSession);
               sessionRef.current = updatedSession;
               setProbes(updatedSession.probes);
+              addProbeToHeliosChat(savedProbe.text);
               lastProbeTimeRef.current = Date.now();
             }
           }
@@ -1826,6 +1834,7 @@ export function MobileSessionView({
           setSession(finalSession);
           sessionRef.current = finalSession;
           setProbes(finalSession.probes);
+          if (resetData.newProbe) addProbeToHeliosChat(resetData.newProbe.text);
         }
       } catch (probeErr) {
         console.warn("[Mobile] Failed to reset probes after skip:", probeErr);
@@ -1891,6 +1900,7 @@ export function MobileSessionView({
           setSession(finalSession);
           sessionRef.current = finalSession;
           setProbes(finalSession.probes);
+          if (resetData.newProbe) addProbeToHeliosChat(resetData.newProbe.text);
         }
       } catch (probeErr) {
         console.warn("[Mobile] Failed to reset probes after regenerate:", probeErr);
@@ -1943,6 +1953,7 @@ export function MobileSessionView({
       setSession(finalSession);
       sessionRef.current = finalSession;
       setProbes(finalSession.probes);
+      if (resetData.newProbe) addProbeToHeliosChat(resetData.newProbe.text);
     } catch (err) {
       console.error("[Mobile] Reset probes error:", err);
     } finally {
@@ -2301,13 +2312,14 @@ export function MobileSessionView({
           onOpenResources={handleStepResources}
           onOpenPractice={handleStepPractice}
           onAskAssistant={handleStepAskHelios}
-          onShareScreen={() => setActiveTab(3)}
+          onShareScreen={() => setActiveTab(2)}
+          onAdvanceStep={() => handleAdvanceStep()}
           onResetProbes={handleResetProbes}
           archivingProbeId={archivingProbeId}
           isGeneratingProbe={isGeneratingProbe}
           showWelcome={showWelcomePanel}
           onWelcomePlay={handleWelcomePlay}
-          onOpenSessionPlan={() => setActiveTab(2)}
+          onOpenSessionPlan={() => setActiveTab(0)}
           isStartingSession={isStartingSession}
           sessionId={session?.id}
           ttsLanguage={tutoringLanguage}
@@ -2315,6 +2327,8 @@ export function MobileSessionView({
           isSpeaking={isSpeaking}
           aestheticImages={selectedAesthetic?.images}
           aestheticName={selectedAesthetic?.name}
+          stuckCheckText={activeStuckCheck}
+          onDismissStuckCheck={() => setActiveStuckCheck(null)}
           sessionControls={(
             <div className="space-y-2">
               <SessionControlBar
@@ -2343,6 +2357,7 @@ export function MobileSessionView({
           thinkAloudSupported={thinkAloudTranscript.isSupported}
           thinkAloudError={thinkAloudTranscript.error}
           onThinkAloudThoughtClick={handleThinkAloudThoughtClick}
+          onManualChatSubmit={(text) => openHeliosChatWithMessage(text)}
           onClearThinkAloudThoughts={thinkAloudTranscript.clearThoughts}
         />
       ),
@@ -2361,33 +2376,7 @@ export function MobileSessionView({
           onPendingMessageHandled={() => setPendingChatMessage(null)}
           onStuckAction={handleStuckAction}
           stuckActions={["ask", "theory", "practice", "canvas", "break"]}
-        />
-      ),
-    },
-    {
-      id: "plan",
-      label: t('session.plan'),
-      content: (
-        <MobilePlanTab
-          plan={sessionPlan}
-          onAdvanceStep={handleAdvanceStep}
-          onRollbackToStep={handleRollbackToStep}
-          onSkipToStep={handleSkipToStep}
-          onRegeneratePlan={handleRegeneratePlan}
-          autoAdvance={autoAdvance}
-          onToggleAutoAdvance={setAutoAdvance}
-          sessionId={session?.id}
-          isSessionActive={isRecording && !isPaused}
-          onToolEvent={(action, metadata) => {
-            if (!session?.id) return;
-            // Fire-and-forget: mobile has no transfer-health UI so we
-            // just persist to session_tool + xAI Files via the standard
-            // path. Desktop uses logTool() which wraps this and also
-            // updates the transfer-health counter + Logs UI.
-            logToolUsage(session.id, "session_plan", action, Date.now(), metadata ?? {}).catch((err) =>
-              console.warn("[MobileSessionView] logToolUsage failed:", err)
-            );
-          }}
+          isMicOn={isRecording && !isPaused}
         />
       ),
     },

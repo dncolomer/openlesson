@@ -580,15 +580,15 @@ AVAILABLE RECOVERY OPTIONS:
 - Use Grokipedia to look up a missing concept
 - Take a short break, step aside, and come back later
 
-Decide if the student is stuck enough to interrupt by opening Helios Chat with a special stuck card. Consider silence, repeated uncertainty, circular reasoning, inactivity, staying on the same step without progress, or tool activity that suggests flailing.
+Decide if the student is truly stuck enough to show a small amber status in the existing action bar. Be conservative: thinking-aloud quirks, hedging, "maybe", "hmm", self-correction, or brief uncertainty are normal reasoning, not stuckness. Prefer waiting unless there is sustained inactivity, repeated circular attempts, explicit requests for help, or no meaningful progress across multiple heartbeats.
 
 Rules:
-- Return stuck=false if they seem productively thinking, recently made progress, or were just nudged.
-- Return stuck=true only when a practical intervention would likely help more than waiting.
+- Return stuck=false if they seem productively thinking, exploring possibilities, recently made progress, or were just nudged.
+- Return stuck=true only when a practical intervention would clearly help more than giving them more time.
 - This is NOT a probe. Do not ask a deep Socratic probe as the main output.
-- If stuck=true, write markdown for a visually prominent card. Be concise, practical, and specific to the current step.
+- If stuck=true, write one concise sentence for the action bar. Be practical and specific to the current step.
 - Do NOT include a list of recovery options in the markdown. The interface shows recovery buttons separately.
-- The markdown should only explain why you are interrupting and name the immediate blocker in 1-3 short sentences.
+- The markdown should name the immediate blocker in one short sentence. No heading.
 - Do not solve the problem directly.
 - Use warm, direct language. No motivational fluff.
 

@@ -12,8 +12,6 @@ import { ConfirmDialog } from "./ui/ConfirmDialog";
 import { ThinkAloudTraces } from "./ThinkAloudTraces";
 import { type ThinkAloudThought } from "@/lib/useThinkAloudTranscript";
 
-const MAX_PROBES = 5;
-
 /**
  * Telemetry callback: fires on every user interaction in this panel.
  * SessionView wires this to `logTool("probe", action, metadata)` so events
@@ -32,12 +30,16 @@ interface ProbesPanelProps {
   onOpenResources?: (text: string) => void;
   onOpenPractice?: (text: string) => void;
   onAskAssistant?: (text: string) => void;
+  onAdvanceStep?: () => Promise<void> | void;
+  stuckCheckText?: string | null;
+  onDismissStuckCheck?: () => void;
   thinkAloudThoughts?: ThinkAloudThought[];
   thinkAloudInterimText?: string;
   thinkAloudListening?: boolean;
   thinkAloudSupported?: boolean;
   thinkAloudError?: string | null;
   onThinkAloudThoughtClick?: (thought: ThinkAloudThought) => void;
+  onManualChatSubmit?: (text: string) => void;
   onClearThinkAloudThoughts?: () => void;
   sessionControls?: React.ReactNode;
   /**
@@ -90,12 +92,16 @@ export function ProbesPanel({
   onOpenResources,
   onOpenPractice,
   onAskAssistant,
+  onAdvanceStep,
+  stuckCheckText,
+  onDismissStuckCheck,
   thinkAloudThoughts = [],
   thinkAloudInterimText = "",
   thinkAloudListening = false,
   thinkAloudSupported = false,
   thinkAloudError,
   onThinkAloudThoughtClick,
+  onManualChatSubmit,
   onClearThinkAloudThoughts,
   sessionControls,
   onResetProbes,
@@ -120,6 +126,7 @@ export function ProbesPanel({
   const { t } = useI18n();
 
   const activeProbes = useMemo(() => probes.filter(p => !p.archived), [probes]);
+  const planSteps = sessionPlan?.steps ?? [];
 
   const [currentIndex, setCurrentIndex] = useState(0);
   const [resettingProbes, setResettingProbes] = useState(false);
@@ -152,48 +159,54 @@ export function ProbesPanel({
 
   // Keep index in bounds when list changes
   useEffect(() => {
-    if (currentIndex >= activeProbes.length && activeProbes.length > 0) {
-      setCurrentIndex(activeProbes.length - 1);
-    } else if (activeProbes.length === 0) {
+    if (currentIndex >= planSteps.length && planSteps.length > 0) {
+      setCurrentIndex(planSteps.length - 1);
+    } else if (planSteps.length === 0) {
       setCurrentIndex(0);
     }
-  }, [activeProbes.length, currentIndex]);
+  }, [planSteps.length, currentIndex]);
 
   const displayTutorName = tutorName || t('probes.tutor');
-  const currentProbe = activeProbes[currentIndex];
-  const total = Math.max(activeProbes.length, 1);
+  const currentStep = planSteps[currentIndex];
+  const currentStepText = currentStep?.description ?? "";
+  const currentStepId = currentStep?.id ?? `step-${currentIndex}`;
+  const isCurrentPlanStep = currentIndex === (sessionPlan?.currentStepIndex ?? 0);
+  const total = Math.max(planSteps.length, 1);
   const canGoPrev = currentIndex > 0;
-  const canGoNext = currentIndex < activeProbes.length - 1;
+  const canGoNext = currentIndex < planSteps.length - 1;
 
   const goPrev = () => {
     setCurrentIndex((i) => Math.max(0, i - 1));
     onToolEvent?.("nav_prev", {
       fromIndex: currentIndex,
-      total: activeProbes.length,
-      probeId: activeProbes[currentIndex]?.id,
+      total: planSteps.length,
+      stepId: currentStep?.id,
+      stepIndex: currentIndex,
     });
   };
   const goNext = () => {
-    setCurrentIndex((i) => Math.min(activeProbes.length - 1, i + 1));
+    setCurrentIndex((i) => Math.min(planSteps.length - 1, i + 1));
     onToolEvent?.("nav_next", {
       fromIndex: currentIndex,
-      total: activeProbes.length,
-      probeId: activeProbes[currentIndex]?.id,
+      total: planSteps.length,
+      stepId: currentStep?.id,
+      stepIndex: currentIndex,
     });
   };
 
   // Tutor avatar — stylized monogram placeholder
   const avatarInitial = displayTutorName.charAt(0).toUpperCase();
 
-  // Typewriter for the currently-shown probe. Only animates probes the user
-  // hasn't seen before; revisits render instantly.
-  const currentProbeId = currentProbe?.id;
+  // Typewriter for the currently-shown plan step. Reuse the existing probe
+  // typed cache prefix to preserve the panel's visual behavior with minimal
+  // churn while keying by step id.
+  const currentProbeId = currentStepId;
   const [probeTypingDone, setProbeTypingDone] = useState(true);
   const alreadyTyped = currentProbeId ? isProbeTyped(currentProbeId) : true;
-  const { displayed: probeDisplayed } = useTypewriter(currentProbe?.text ?? "", {
+  const { displayed: probeDisplayed } = useTypewriter(currentStepText, {
     instant: alreadyTyped,
     speedMs: 45,
-    enabled: !!currentProbe,
+    enabled: !!currentStep,
     onDone: () => {
       if (currentProbeId) markProbeTyped(currentProbeId);
       setProbeTypingDone(true);
@@ -208,6 +221,12 @@ export function ProbesPanel({
       setProbeTypingDone(isProbeTyped(currentProbeId));
     }
   }, [currentProbeId]);
+
+  const actionButtonClass = `py-3 px-3 text-[12px] font-medium rounded-xl border disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2 ${
+    stuckCheckText
+      ? "bg-red-500/10 border-red-400/35 text-red-100 hover:bg-red-500/15 hover:border-red-300/50 hover:text-white"
+      : "bg-neutral-800 border-neutral-700 text-neutral-200 hover:bg-neutral-700 hover:border-neutral-600 hover:text-white"
+  }`;
 
   // Parent-controlled welcome surface. Takes precedence over both the
   // empty state and the active-probe carousel — this lets the Help
@@ -258,12 +277,12 @@ export function ProbesPanel({
         </div>
       )}
       <div className="relative z-10 flex-1 min-h-0 flex flex-col px-4 py-4 overflow-hidden">
-        {isInitializing && activeProbes.length === 0 ? (
+        {isInitializing && planSteps.length === 0 ? (
           <div className="flex-1 flex flex-col items-center justify-center gap-3">
             <div className="w-6 h-6 border border-neutral-800 border-t-amber-500/70 rounded-full animate-spin" />
             <p className="text-xs text-neutral-500">{t('probes.preparing')}</p>
           </div>
-        ) : !currentProbe ? (
+        ) : !currentStep ? (
           <div className="flex-1 flex flex-col items-center justify-center gap-4 text-center">
             {/* Silent tutor avatar */}
             <div className="relative">
@@ -284,7 +303,7 @@ export function ProbesPanel({
             {/* Reset Helios — allow forcing a fresh probe even when the panel
                 is empty (e.g., the tutor stalled or we want a different
                 question). The handler already handles the zero-probe case. */}
-            {onResetProbes && isSessionActive && !isGeneratingProbe && (
+            {false && onResetProbes && isSessionActive && !isGeneratingProbe && (
               <button
                 onClick={handleResetHelios}
                 disabled={resettingProbes}
@@ -313,6 +332,7 @@ export function ProbesPanel({
                 isSupported={thinkAloudSupported}
                 error={thinkAloudError}
                 onThoughtClick={(thought) => onThinkAloudThoughtClick?.(thought)}
+                onManualSubmit={onManualChatSubmit}
                 onClearThoughts={onClearThinkAloudThoughts}
               />
             </div>
@@ -347,7 +367,7 @@ export function ProbesPanel({
                   <div className="relative">
                     <div
                       className={`w-28 h-28 rounded-full bg-gradient-to-br from-amber-500/15 via-neutral-800 to-neutral-900 border flex items-center justify-center overflow-hidden transition-colors ${
-                        activeProbes.length > 0
+                        isCurrentPlanStep
                           ? "border-red-500/70 ring-2 ring-red-500/40 ring-offset-2 ring-offset-[#0a0a0a]"
                           : "border-neutral-800"
                       }`}
@@ -357,22 +377,11 @@ export function ProbesPanel({
                     {/* Soft glow — shifts red when notifications are active */}
                     <div
                       className={`absolute inset-0 rounded-full pointer-events-none ${
-                        activeProbes.length > 0
+                        isCurrentPlanStep
                           ? "shadow-[0_0_32px_rgba(239,68,68,0.35)]"
                           : "shadow-[0_0_30px_rgba(245,158,11,0.08)]"
                       }`}
                     />
-                    {/* Notification badge — app-style red pill with count */}
-                    {activeProbes.length > 0 && (
-                      <div
-                        className="absolute -top-1 -right-1 min-w-[22px] h-[22px] px-1.5 rounded-full bg-red-500 border-2 border-[#0a0a0a] flex items-center justify-center shadow-[0_0_12px_rgba(239,68,68,0.6)]"
-                        aria-label={`${activeProbes.length} ${t('probes.tutor')}`}
-                      >
-                        <span className="text-[11px] font-bold text-white tabular-nums leading-none">
-                          {activeProbes.length}
-                        </span>
-                      </div>
-                    )}
                   </div>
 
                   {/* Right arrow — floats next to avatar */}
@@ -394,7 +403,7 @@ export function ProbesPanel({
                 <div className="mt-2 flex flex-col items-center gap-0.5">
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-medium text-neutral-200">{displayTutorName}</span>
-                    {onResetProbes && isSessionActive && (
+                    {false && onResetProbes && isSessionActive && (
                       <button
                         onClick={handleResetHelios}
                         disabled={resettingProbes}
@@ -415,10 +424,13 @@ export function ProbesPanel({
                       </button>
                     )}
                   </div>
-                  {activeProbes.length > 0 && (
-                    <span className="font-mono text-[10px] text-white tabular-nums">
-                      {String(currentIndex + 1).padStart(2, "0")} / {String(total).padStart(2, "0")}
-                    </span>
+                  {planSteps.length > 0 && (
+                    <div className="mt-1 h-1 w-24 overflow-hidden rounded-full bg-neutral-800" aria-label={`Step ${currentIndex + 1} of ${total}`}>
+                      <div
+                        className="h-full rounded-full bg-red-400 transition-all duration-300 ease-out"
+                        style={{ width: `${((currentIndex + 1) / total) * 100}%` }}
+                      />
+                    </div>
                   )}
                 </div>
               </div>
@@ -443,12 +455,11 @@ export function ProbesPanel({
                 </p>
               </div>
 
-              {/* Listen-to-tutor TTS for the current probe. cacheKey bound
-                  to the probe id so navigating probes invalidates playback. */}
+              {/* Listen-to-tutor TTS for the current step. */}
               <ListenButton
-                text={currentProbe.text}
+                text={currentStepText}
                 language={ttsLanguage}
-                cacheKey={`probe:${currentProbe.id}`}
+                cacheKey={`step:${currentStepId}`}
               />
 
               {/* Action row — framed card with a subtle "stuck?" hint.
@@ -456,19 +467,28 @@ export function ProbesPanel({
                   right after the probe text rather than being anchored to
                   the bottom of the panel with a big empty gap above. */}
               <div className="shrink-0 w-full max-w-[680px] px-2">
-                <div className="actions-box rounded-2xl border border-neutral-800 bg-neutral-950/40 p-3">
+                <div className={`actions-box rounded-2xl border p-3 transition-colors ${stuckCheckText ? "border-red-400/40 bg-red-500/10" : "border-neutral-800 bg-neutral-950/40"}`}>
+                  {stuckCheckText && (
+                    <div className="mb-3 flex items-start justify-between gap-3 rounded-xl border border-red-400/25 bg-red-400/10 px-3 py-2 text-xs text-red-100">
+                      <p className="leading-relaxed">{stuckCheckText}</p>
+                      <button type="button" onClick={onDismissStuckCheck} className="shrink-0 rounded-md px-2 py-1 text-[11px] text-red-100/80 hover:bg-red-300/10 hover:text-red-50">
+                        {t("common.dismiss")}
+                      </button>
+                    </div>
+                  )}
                   <div className="grid grid-cols-5 gap-2.5 @container">
                     <button
                       onClick={() => {
                         onToolEvent?.("open_resources", {
-                          probeId: currentProbe.id,
-                          probePreview: currentProbe.text.slice(0, 60),
+                          stepId: currentStep.id,
+                          stepIndex: currentIndex,
+                          stepDescription: currentStepText.slice(0, 120),
                         });
-                        onOpenResources?.(currentProbe.text);
+                        onOpenResources?.(currentStepText);
                       }}
                       disabled={!isSessionActive}
                       title={t('sessionPlan.resources')}
-                      className="py-3 px-3 text-[12px] font-medium rounded-xl bg-neutral-800 border border-neutral-700 text-neutral-200 hover:bg-neutral-700 hover:border-neutral-600 hover:text-white disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+                      className={actionButtonClass}
                     >
                       <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
@@ -478,14 +498,15 @@ export function ProbesPanel({
                     <button
                       onClick={() => {
                         onToolEvent?.("open_practice", {
-                          probeId: currentProbe.id,
-                          probePreview: currentProbe.text.slice(0, 60),
+                          stepId: currentStep.id,
+                          stepIndex: currentIndex,
+                          stepDescription: currentStepText.slice(0, 120),
                         });
-                        onOpenPractice?.(currentProbe.text);
+                        onOpenPractice?.(currentStepText);
                       }}
                       disabled={!isSessionActive}
                       title={t('sessionPlan.practice')}
-                      className="py-3 px-3 text-[12px] font-medium rounded-xl bg-neutral-800 border border-neutral-700 text-neutral-200 hover:bg-neutral-700 hover:border-neutral-600 hover:text-white disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+                      className={actionButtonClass}
                     >
                       <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
@@ -495,14 +516,15 @@ export function ProbesPanel({
                     <button
                       onClick={() => {
                         onToolEvent?.("ask_assistant", {
-                          probeId: currentProbe.id,
-                          probePreview: currentProbe.text.slice(0, 60),
+                          stepId: currentStep.id,
+                          stepIndex: currentIndex,
+                          stepDescription: currentStepText.slice(0, 120),
                         });
-                        onAskAssistant?.(currentProbe.text);
+                        onAskAssistant?.(currentStepText);
                       }}
                       disabled={!isSessionActive}
                       title={t('sessionPlan.ask')}
-                      className="py-3 px-3 text-[12px] font-medium rounded-xl bg-neutral-800 border border-neutral-700 text-neutral-200 hover:bg-neutral-700 hover:border-neutral-600 hover:text-white disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+                      className={actionButtonClass}
                     >
                       <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
@@ -512,15 +534,16 @@ export function ProbesPanel({
                     <button
                       onClick={() => {
                         onToolEvent?.("open", {
-                          probeId: currentProbe.id,
-                          probePreview: currentProbe.text.slice(0, 60),
+                          stepId: currentStep.id,
+                          stepIndex: currentIndex,
+                          stepDescription: currentStepText.slice(0, 120),
                           via: "share_screen_button",
                         });
                         onToolSelect?.("data-input");
                       }}
                       disabled={!isSessionActive}
                       title={t('probes.shareScreen')}
-                      className="py-3 px-3 text-[12px] font-medium rounded-xl bg-neutral-800 border border-neutral-700 text-neutral-200 hover:bg-neutral-700 hover:border-neutral-600 hover:text-white disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+                      className={actionButtonClass}
                     >
                       <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
@@ -530,26 +553,20 @@ export function ProbesPanel({
                     <button
                       onClick={() => {
                         onToolEvent?.("archive", {
-                          probeId: currentProbe.id,
-                          probePreview: currentProbe.text.slice(0, 60),
+                          stepId: currentStep.id,
+                          stepIndex: currentIndex,
+                          stepDescription: currentStepText.slice(0, 120),
                           via: "done_button",
                         });
-                        onArchiveProbe?.(currentProbe.id);
+                        onAdvanceStep?.();
                       }}
-                      disabled={archivingProbeId === currentProbe.id}
+                      disabled={!isSessionActive || !isCurrentPlanStep || !!stuckCheckText}
                       title={t('session.markAsDone')}
                       className="py-3 px-3 text-[12px] font-medium rounded-xl bg-neutral-100 text-neutral-900 hover:bg-white disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
                     >
-                      {archivingProbeId === currentProbe.id ? (
-                        <svg className="w-4 h-4 animate-spin shrink-0" fill="none" viewBox="0 0 24 24">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                        </svg>
-                      ) : (
-                        <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                        </svg>
-                      )}
+                      <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                      </svg>
                       <span className="hidden @[20rem]:inline truncate">{t('probes.done')}</span>
                     </button>
                   </div>
@@ -562,6 +579,7 @@ export function ProbesPanel({
                     isSupported={thinkAloudSupported}
                     error={thinkAloudError}
                     onThoughtClick={(thought) => onThinkAloudThoughtClick?.(thought)}
+                    onManualSubmit={onManualChatSubmit}
                     onClearThoughts={onClearThinkAloudThoughts}
                   />
                 </div>
@@ -571,7 +589,7 @@ export function ProbesPanel({
             {/* Carousel dots — always rendered (placeholders for empty
                 slots) so the row reserves its vertical space. */}
             <div className="shrink-0 flex items-center justify-center gap-1.5 py-3 h-1.5">
-              {activeProbes.map((_, i) => (
+              {planSteps.map((step, i) => (
                 <button
                   key={i}
                   onClick={() => {
@@ -579,8 +597,9 @@ export function ProbesPanel({
                       onToolEvent?.("nav_jump", {
                         fromIndex: currentIndex,
                         toIndex: i,
-                        total: activeProbes.length,
-                        probeId: activeProbes[i]?.id,
+                        total: planSteps.length,
+                        stepId: step.id,
+                        stepIndex: i,
                       });
                     }
                     setCurrentIndex(i);
@@ -590,13 +609,7 @@ export function ProbesPanel({
                       ? "w-5 bg-neutral-300"
                       : "w-1.5 bg-neutral-700 hover:bg-neutral-600"
                   }`}
-                  aria-label={`${t('probes.goToProbe')} ${i + 1}`}
-                />
-              ))}
-              {Array.from({ length: Math.max(0, MAX_PROBES - activeProbes.length) }).map((_, i) => (
-                <div
-                  key={`ph-${i}`}
-                  className="h-1.5 w-1.5 rounded-full bg-neutral-900 border border-neutral-800"
+                  aria-label={t("probes.goToStep", { number: i + 1 })}
                 />
               ))}
             </div>
@@ -612,22 +625,6 @@ export function ProbesPanel({
         Art by Piotr Binkowski
       </a>
 
-      {/* Reset Helios confirmation — destructive, archives the full
-          chain of guiding questions built up in this session. */}
-      <ConfirmDialog
-        open={resetConfirmOpen}
-        onCancel={() => setResetConfirmOpen(false)}
-        onConfirm={confirmResetHelios}
-        variant="destructive"
-        title="Reset Helios?"
-        description={
-          activeProbes.length > 0
-            ? `This will permanently archive the ${activeProbes.length} current ${activeProbes.length === 1 ? "probe" : "probes"} and generate a fresh question for the current step. This action cannot be undone.`
-            : "This will generate a fresh question for the current step. Any in-flight probe will be archived."
-        }
-        confirmLabel="Reset Helios"
-        cancelLabel="Cancel"
-      />
     </div>
   );
 }

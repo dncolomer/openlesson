@@ -62,7 +62,7 @@ import { useInactivityAutoPause } from "@/lib/useInactivityAutoPause";
 import { useVoiceActivity } from "@/lib/useVoiceActivity";
 import { useThinkAloudTranscript, type ThinkAloudThought } from "@/lib/useThinkAloudTranscript";
 import { retryWithResult } from "@/lib/retry";
-import { useI18n } from "@/lib/i18n";
+import { translateWithLocale, useI18n } from "@/lib/i18n";
 import { tutoringLocales, tutoringLanguageNames } from "@/lib/tutoring-languages";
 import { isSessionWelcomeSeen, markSessionWelcomeSeen } from "@/lib/welcomeState";
 import { fetchAestheticPackages, type AestheticPackage } from "@/lib/aesthetics";
@@ -200,6 +200,7 @@ export function SessionView({ sessionId }: { sessionId: string }) {
   // Helios Chat
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [pendingChatMessage, setPendingChatMessage] = useState<string | PendingChatMessage | null>(null);
+  const [activeStuckCheck, setActiveStuckCheck] = useState<string | null>(null);
 
   // New 3-panel layout state
   const [activeTool, setActiveTool] = useState<Tool>("chat");
@@ -609,6 +610,21 @@ export function SessionView({ sessionId }: { sessionId: string }) {
     setActiveTool("chat");
     setPendingChatMessage(message);
   }, [ensureVisible]);
+
+  const addProbeToHeliosChat = useCallback((text: string) => {
+    const content = text.trim();
+    if (!content) return;
+    const prefix = translateWithLocale(tutoringLanguage, "heliosChat.probeLeadIn");
+    const conversationalContent = `${prefix}\n\n${content}`;
+    setChatMessages(prev => [
+      ...prev,
+      {
+        id: `probe_chat_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+        role: "assistant",
+        content: conversationalContent,
+      },
+    ]);
+  }, []);
 
   const handleStepAskHelios = (stepDescription: string) => {
     // Make sure the tools pane is visible. The `activeTool` effect only
@@ -1179,10 +1195,6 @@ export function SessionView({ sessionId }: { sessionId: string }) {
 
       // Step 2: Generate a probe locally (no plan update)
       const openProbes = currentSession.probes.filter(p => !p.archived);
-      if (openProbes.length >= 5) {
-        // Too many open probes, skip generation
-        return;
-      }
 
       // Hard cooldown: don't generate probes too rapidly
       const timeSinceLastLocal = Date.now() - (lastProbeTimeRef.current || 0);
@@ -1231,6 +1243,7 @@ export function SessionView({ sessionId }: { sessionId: string }) {
         sessionRef.current = updatedSession;
         setActiveProbe(localProbe);
         setViewingProbeIndex(updatedSession.probes.length - 1);
+        addProbeToHeliosChat(localProbe.text);
         lastProbeTimeRef.current = Date.now();
       }
     } catch (err) {
@@ -1453,7 +1466,7 @@ export function SessionView({ sessionId }: { sessionId: string }) {
           const allProbes = (sessionRef.current?.probes || currentSession.probes);
           const isDupe = isDuplicateProbe(planData.nextRequest.text, allProbes);
 
-          if (planData.canGenerateProbe !== false && currentOpenProbeCount < 5 && cooldownMet && !isDupe) {
+          if (planData.canGenerateProbe !== false && cooldownMet && !isDupe) {
             const savedProbe = await addProbe(currentSession.id, {
               timestamp: Date.now() - new Date(currentSession.startedAt).getTime(),
               gapScore: planData.gapScore ?? 0.5,
@@ -1473,6 +1486,7 @@ export function SessionView({ sessionId }: { sessionId: string }) {
 
             setActiveProbe(savedProbe);
             setViewingProbeIndex(updatedSession.probes.length - 1);
+            addProbeToHeliosChat(savedProbe.text);
             lastProbeTimeRef.current = Date.now();
 
             const probePreview = planData.nextRequest.text.slice(0, 80);
@@ -1487,9 +1501,7 @@ export function SessionView({ sessionId }: { sessionId: string }) {
             // so operators can debug why probes aren't landing.
             const reason = isDupe
               ? "duplicate"
-              : currentOpenProbeCount >= 5
-                ? `open-probe cap (${currentOpenProbeCount}/5)`
-                : !cooldownMet
+              : !cooldownMet
                   ? `cooldown (${Math.round((PROBE_COOLDOWN_MS - timeSinceLastProbe) / 1000)}s remaining)`
                   : "unknown";
             addHeartbeatLog({
@@ -1547,23 +1559,14 @@ export function SessionView({ sessionId }: { sessionId: string }) {
 
       const data = await res.json();
       if (data?.stuck && data.recommendationMarkdown) {
-        const stuckCard: ChatMessage = {
-          id: `stuck_${Date.now()}`,
-          role: "assistant",
-          kind: "stuck",
-          cardTitle: data.title || "Stuck Check",
-          content: data.recommendationMarkdown,
-        };
-        ensureVisible("tools");
-        setActiveTool("chat");
-        setChatMessages(prev => [...prev, stuckCard]);
+        setActiveStuckCheck(String(data.recommendationMarkdown).replace(/\s+/g, " ").trim().slice(0, 180));
         lastStuckCardTimeRef.current = Date.now();
         stuckCardCountRef.current += 1;
         addHeartbeatLog({
           timestamp: Date.now(),
           level: "warning",
           source: "stuck",
-          message: `Stuck card inserted (${data.severity || "medium"}): ${data.title || "Stuck Check"}${data.reason ? ` — ${data.reason}` : ""}`,
+          message: `Stuck check shown (${data.severity || "medium"}): ${data.title || "Stuck Check"}${data.reason ? ` — ${data.reason}` : ""}`,
         });
       }
 
@@ -1572,7 +1575,7 @@ export function SessionView({ sessionId }: { sessionId: string }) {
       console.error("Stuck heartbeat error:", err);
       return { success: false, durationMs: Date.now() - startMs, error: String(err) };
     }
-  }, [ensureVisible, isPaused, tutoringLanguage]);
+  }, [isPaused, tutoringLanguage]);
 
   // ---- Storage Heartbeat (5s) ----
   // Returns structured result for the heartbeat hook to track health
@@ -2273,10 +2276,11 @@ export function SessionView({ sessionId }: { sessionId: string }) {
       sessionRef.current = updated;
       setActiveProbe(savedProbe);
       setViewingProbeIndex(updated.probes.length - 1);
+      addProbeToHeliosChat(savedProbe.text);
     } catch (err) {
       console.error("[SessionView] Opening probe fetch failed:", err);
     }
-  }, [objectives, tutoringLanguage]);
+  }, [objectives, tutoringLanguage, addProbeToHeliosChat]);
 
   /**
    * The user clicked the Play button inside the tutor welcome panel. This
@@ -2548,6 +2552,7 @@ export function SessionView({ sessionId }: { sessionId: string }) {
         sessionRef.current = updatedSession;
         setActiveProbe(feedbackProbe);
         setViewingProbeIndex(updatedSession.probes.length - 1);
+        addProbeToHeliosChat(feedbackProbe.text);
         
         // Also create the next request probe if the LLM suggested one
         if (data.nextRequest && openProbes.length < 4) {
@@ -2644,6 +2649,7 @@ export function SessionView({ sessionId }: { sessionId: string }) {
                 sessionRef.current = updatedSession;
                 setActiveProbe(savedProbe);
                 setViewingProbeIndex(updatedSession.probes.length - 1);
+                addProbeToHeliosChat(savedProbe.text);
               }
             }
           } catch (probeErr) {
@@ -2738,6 +2744,7 @@ export function SessionView({ sessionId }: { sessionId: string }) {
           sessionRef.current = updatedSession;
           setActiveProbe(localProbe);
           setViewingProbeIndex(updatedSession.probes.length - 1);
+          addProbeToHeliosChat(localProbe.text);
           lastProbeTimeRef.current = Date.now();
         } else {
           console.warn("[LocalInference] Failed to generate a probe for this step.");
@@ -2825,6 +2832,7 @@ export function SessionView({ sessionId }: { sessionId: string }) {
               sessionRef.current = updatedSession;
               setActiveProbe(savedProbe);
               setViewingProbeIndex(updatedSession.probes.length - 1);
+              addProbeToHeliosChat(savedProbe.text);
             }
           }
         } catch (probeErr) {
@@ -2900,6 +2908,7 @@ export function SessionView({ sessionId }: { sessionId: string }) {
             finalSession = addProbeToSession(updatedSession, newProbe);
             setActiveProbe(newProbe);
             setViewingProbeIndex(finalSession.probes.length - 1);
+            addProbeToHeliosChat(newProbe.text);
             lastProbeTimeRef.current = Date.now();
           }
 
@@ -2974,6 +2983,7 @@ export function SessionView({ sessionId }: { sessionId: string }) {
             finalSession = addProbeToSession(updatedSession, newProbe);
             setActiveProbe(newProbe);
             setViewingProbeIndex(finalSession.probes.length - 1);
+            addProbeToHeliosChat(newProbe.text);
             lastProbeTimeRef.current = Date.now();
           }
 
@@ -3031,6 +3041,7 @@ export function SessionView({ sessionId }: { sessionId: string }) {
         finalSession = addProbeToSession(updatedSession, newProbe);
         setActiveProbe(newProbe);
         setViewingProbeIndex(finalSession.probes.length - 1);
+        addProbeToHeliosChat(newProbe.text);
         lastProbeTimeRef.current = Date.now();
       }
 
@@ -3614,105 +3625,6 @@ export function SessionView({ sessionId }: { sessionId: string }) {
                 <span>{t('session.backToDashboard')}</span>
               </button>
             </div>
-            {/* Quick layout preset buttons - absolute so they don't disturb centering of control bar */}
-            <div className="absolute right-3 top-1/2 -translate-y-1/2 shrink-0 flex items-center gap-1 z-10">
-              {/* Auto / Manual advance toggle — hidden in UI (manual mode is
-                  the default). Underlying state remains wired so we can
-                  restore the affordance by removing the `hidden` wrapper. */}
-              <button
-                onClick={() => setAutoAdvance(!autoAdvance)}
-                className="hidden items-center gap-1.5 px-2 py-1 rounded-md text-[10px] font-medium text-neutral-300 hover:text-white bg-neutral-900/80 hover:bg-neutral-800 border border-neutral-800 hover:border-neutral-700 transition-colors"
-                aria-hidden="true"
-                tabIndex={-1}
-                title={autoAdvance ? t('sessionPlan.aiControlsAdvancement') : t('sessionPlan.youControlAdvancement')}
-              >
-                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                  {autoAdvance ? (
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
-                  ) : (
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6l4 2m6-2a10 10 0 11-20 0 10 10 0 0120 0z" />
-                  )}
-                </svg>
-                <span>{autoAdvance ? t('sessionPlan.autoAdvance') : t('sessionPlan.manualMode')}</span>
-                <div className="relative w-7 h-3.5 rounded-full bg-neutral-700">
-                  <div className={`absolute top-0.5 w-2.5 h-2.5 rounded-full bg-neutral-100 shadow transition-transform ${autoAdvance ? 'translate-x-3.5' : 'translate-x-0.5'}`} />
-                </div>
-              </button>
-              {/* Per-view visibility toggles. At least one view must stay
-                  visible; the last-enabled toggle is disabled to prevent
-                  a fully-empty workspace. Fixed width + icon so the three
-                  pills are visually uniform regardless of translated label. */}
-              {(() => {
-                const { tools, tutor, plan } = paneVisibility;
-                const countVisible = Number(tools) + Number(tutor) + Number(plan);
-                const Toggle = ({
-                  label, icon, active, onClick, disabled,
-                }: {
-                  label: string;
-                  icon: React.ReactNode;
-                  active: boolean;
-                  onClick: () => void;
-                  disabled: boolean;
-                }) => (
-                  <button
-                    type="button"
-                    onClick={onClick}
-                    disabled={disabled}
-                    title={label}
-                    className={`w-[104px] px-2 py-1 text-[10px] font-medium rounded-md border transition-colors flex items-center justify-center gap-1.5 ${
-                      active
-                        ? "bg-neutral-100 text-neutral-900 border-neutral-100 hover:bg-white"
-                        : "bg-neutral-900/80 text-neutral-400 border-neutral-800 hover:text-white hover:bg-neutral-800 hover:border-neutral-700"
-                    } ${disabled ? "opacity-60 cursor-not-allowed" : ""}`}
-                  >
-                    {icon}
-                    <span className="truncate">{label}</span>
-                  </button>
-                );
-                const ToolsIcon = (
-                  <svg className="w-3 h-3 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden="true">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                  </svg>
-                );
-                const TutorIcon = (
-                  <svg className="w-3 h-3 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden="true">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                  </svg>
-                );
-                const PlanIcon = (
-                  <svg className="w-3 h-3 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden="true">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-                  </svg>
-                );
-                return (
-                  <div className="flex items-center gap-1">
-                    <Toggle
-                      label={t('tools.tools')}
-                      icon={ToolsIcon}
-                      active={tools}
-                      disabled={tools && countVisible === 1}
-                      onClick={() => applyPaneVisibility({ ...paneVisibility, tools: !tools })}
-                    />
-                    <Toggle
-                      label={t('probes.tutor')}
-                      icon={TutorIcon}
-                      active={tutor}
-                      // Helios pane is always visible and cannot be hidden.
-                      disabled
-                      onClick={() => applyPaneVisibility({ ...paneVisibility, tutor: !tutor })}
-                    />
-                    <Toggle
-                      label={t('session.sessionPlan')}
-                      icon={PlanIcon}
-                      active={plan}
-                      disabled={plan && countVisible === 1}
-                      onClick={() => applyPaneVisibility({ ...paneVisibility, plan: !plan })}
-                    />
-                  </div>
-                );
-              })()}
-            </div>
           </div>
         )}
         <div className="flex-1 flex min-h-0 overflow-hidden">
@@ -3723,7 +3635,7 @@ export function SessionView({ sessionId }: { sessionId: string }) {
               defaultLeftWidth={40}
               leftLabel={t('session.tools')}
               rightLabel={t('session.studentMonitoring')}
-              storageKey="session-split"
+              storageKey="session-split-tools-helios"
               left={
                 <div className="flex flex-col min-w-0 p-4 overflow-hidden h-full relative">
                   {shouldBlockTools && !["data-input", "help", "logs"].includes(activeTool) && (
@@ -3741,10 +3653,11 @@ export function SessionView({ sessionId }: { sessionId: string }) {
                         onPendingMessageHandled={() => setPendingChatMessage(null)}
                         onStuckAction={handleStuckAction}
                         stuckActions={["ask", "theory", "practice", "canvas", "notebook", "break"]}
+                        isMicOn={isRecording && !isPaused}
                       />
                     )}
 
-                    {activeTool === "canvas" && (
+                    <div className={activeTool === "canvas" ? "h-full" : "hidden"}>
                       <ExcalidrawCanvas
                         initialData={whiteboardData || undefined}
                         onCanvasChange={(data) => {
@@ -3758,7 +3671,7 @@ export function SessionView({ sessionId }: { sessionId: string }) {
                         onSubmitToHelios={(dataUrl) => handleSubmitToHelios("canvas", dataUrl)}
                         canSubmitToHelios={canvasDirtyForHelios}
                       />
-                    )}
+                    </div>
                     {activeTool === "notebook" && (
                       <div className="h-full rounded-lg border border-neutral-800 bg-neutral-900/50 flex flex-col">
                         <textarea
@@ -3958,13 +3871,6 @@ export function SessionView({ sessionId }: { sessionId: string }) {
                 </div>
               }
               right={
-                <ResizablePane
-                  ref={resizablePaneRef2}
-                  defaultLeftWidth={50}
-                  leftLabel={t('probes.guidingTasks')}
-                  rightLabel={t('session.sessionPlan')}
-                  storageKey="session-split-right"
-                  left={
                     <div className="relative h-full">
                       {shouldBlockTools && (
                         <div className="absolute inset-0 z-10 bg-black/30 cursor-not-allowed" />
@@ -3977,6 +3883,7 @@ export function SessionView({ sessionId }: { sessionId: string }) {
                         onOpenResources={handleStepResources}
                         onOpenPractice={handleStepPractice}
                         onAskAssistant={handleStepAskHelios}
+                        onAdvanceStep={() => handleAdvanceStep()}
                         onResetProbes={handleResetProbes}
                         onToolEvent={(action, metadata) =>
                           logTool("probe", action, metadata ?? {})
@@ -3996,6 +3903,8 @@ export function SessionView({ sessionId }: { sessionId: string }) {
                         isSpeaking={isSpeaking}
                         aestheticImages={selectedAesthetic?.images}
                         aestheticName={selectedAesthetic?.name}
+                        stuckCheckText={activeStuckCheck}
+                        onDismissStuckCheck={() => setActiveStuckCheck(null)}
                         sessionControls={(
                           <div className="space-y-2">
                             <SessionControlBar
@@ -4024,39 +3933,10 @@ export function SessionView({ sessionId }: { sessionId: string }) {
                         thinkAloudSupported={thinkAloudTranscript.isSupported}
                         thinkAloudError={thinkAloudTranscript.error}
                         onThinkAloudThoughtClick={handleThinkAloudThoughtClick}
+                        onManualChatSubmit={(text) => openHeliosChatWithMessage(text)}
                         onClearThinkAloudThoughts={thinkAloudTranscript.clearThoughts}
                       />
                     </div>
-                  }
-                  right={
-                    <div className="flex-1 min-w-0 flex flex-col bg-[#0a0a0a] h-full overflow-hidden relative">
-                      {shouldBlockTools && (
-                        <div className="absolute inset-0 z-10 bg-black/30 cursor-not-allowed" />
-                      )}
-                      <div className="flex-1 min-h-0 min-w-0 overflow-y-auto overflow-x-hidden">
-                        <SessionPlanViewer
-                          plan={sessionPlan ?? null}
-                          loading={planLoading}
-                          error={planError ?? null}
-                          onAdvanceStep={handleAdvanceStep}
-                          onRollbackToStep={handleRollbackToStep}
-                          onSkipToStep={handleSkipToStep}
-                          onRegeneratePlan={handleRegeneratePlan}
-                          autoAdvance={autoAdvance}
-                          onToggleAutoAdvance={setAutoAdvance}
-                          sessionId={session.id}
-                          onOpenResources={handleStepResources}
-                          onOpenPractice={handleStepPractice}
-                          onAskAssistant={handleStepAskHelios}
-                          onToolEvent={(action, metadata) =>
-                            logTool("session_plan", action, metadata ?? {})
-                          }
-                          isSessionActive={isRecording && !isPaused}
-                        />
-                      </div>
-                    </div>
-                  }
-                />
               }
             />
           </div>

@@ -9,11 +9,23 @@ import "katex/dist/katex.min.css";
 import { useI18n } from "../lib/i18n";
 import { ConfirmDialog } from "./ui/ConfirmDialog";
 
+const XAI_LANG_MAP: Record<string, string> = {
+  en: "en",
+  zh: "zh",
+  vi: "vi",
+  de: "de",
+  pl: "auto",
+  es: "es-ES",
+};
+
 // Process content to handle common LaTeX escaping issues from LLMs
 function processLatexContent(content: string): string {
   // Fix double-escaped backslashes that LLMs sometimes produce
   // e.g., \\frac -> \frac, \\sum -> \sum
   return content
+    .replace(/<system-reminder>[\s\S]*?<\/system-reminder>/gi, "")
+    .replace(/<\/?(?:system|developer|assistant|user|tool|system-reminder)[^>]*>/gi, "")
+    .replace(/```(?:system|developer|tool|assistant|user)[\s\S]*?```/gi, "")
     .replace(/\\\\([a-zA-Z]+)/g, '\\$1')  // \\command -> \command
     .replace(/\\\\\[/g, '\\[')  // \\[ -> \[
     .replace(/\\\\\]/g, '\\]')  // \\] -> \]
@@ -81,18 +93,19 @@ interface HeliosChatProps {
   onPendingMessageHandled?: () => void;
   onStuckAction?: (action: StuckAction) => void;
   stuckActions?: StuckAction[];
+  isMicOn?: boolean;
 }
 
 // Helios first-person welcome — unified across probe panel and chat.
 // The voice matches the BASE_SYSTEM_PROMPT in /api/session-chat.
 const CHAT_WELCOME_MESSAGES: Record<string, string> = {
-  en: "Hey — I'm Helios. I also surface the probes in the side panel; here in Helios Chat you can just talk to me directly.\n\nWhat are you working through right now?",
-  es: "Hola — soy Helios. También soy quien propone las sondas en el panel lateral; aquí en Helios Chat puedes hablar conmigo directamente.\n\n¿En qué estás trabajando ahora mismo?",
-  vi: "Chào — tôi là Helios. Tôi cũng là người đưa ra các probe ở bảng bên; ở Helios Chat bạn có thể trò chuyện trực tiếp với tôi.\n\nBạn đang làm gì vậy?",
-  zh: "嘿 — 我是 Helios。侧边栏里的探询问题也是我提的；在 Helios Chat 里你可以直接和我对话。\n\n你现在在研究什么？",
-  de: "Hey — ich bin Helios. Ich bringe auch die Probes in der Seitenleiste an; hier im Helios Chat kannst du einfach direkt mit mir reden.\n\nWoran arbeitest du gerade?",
-  pl: "Cześć — jestem Helios. To ja generuję sondy w panelu bocznym; tutaj w Helios Chat możesz po prostu porozmawiać ze mną bezpośrednio.\n\nNad czym teraz pracujesz?",
-  ca: "Hola — sóc Helios. També soc qui fa aparèixer les sondes al panell lateral; aquí al Helios Chat pots parlar amb mi directament.\n\nEn què estàs treballant ara mateix?",
+  en: "Hey, I'm Helios. I'm here with you for this session, following your thinking and helping you turn the next step into something clearer.\n\nWhere would you like to begin?",
+  es: "Hola — soy Helios. Este chat es donde mis preguntas y tus respuestas fluyen juntas.\n\n¿En qué estás trabajando ahora mismo?",
+  vi: "Chào — tôi là Helios. Đây là nơi các câu hỏi của tôi và câu trả lời của bạn cùng tiếp diễn.\n\nBạn đang làm gì vậy?",
+  zh: "嘿 — 我是 Helios。我的问题和你的回应都会在这个聊天里连续展开。\n\n你现在在研究什么？",
+  de: "Hey — ich bin Helios. In diesem Chat laufen meine Fragen und deine Antworten zusammen.\n\nWoran arbeitest du gerade?",
+  pl: "Cześć — jestem Helios. Tutaj moje pytania i twoje odpowiedzi płyną razem.\n\nNad czym teraz pracujesz?",
+  ca: "Hola — sóc Helios. En aquest xat les meves preguntes i les teves respostes avancen juntes.\n\nEn què estàs treballant ara mateix?",
 };
 
 // Small circular avatar with a violet gradient and a serif "H" — matches the
@@ -190,6 +203,14 @@ function SmartCardShell({
   );
 }
 
+const markdownComponents = {
+  a: ({ href, children, ...props }: React.AnchorHTMLAttributes<HTMLAnchorElement>) => (
+    <a href={href} target="_blank" rel="noopener noreferrer" {...props}>
+      {children}
+    </a>
+  ),
+};
+
 const STUCK_ACTIONS: Array<{ action: StuckAction; label: string }> = [
   { action: "ask", label: "Ask Helios" },
   { action: "theory", label: "Get theory" },
@@ -199,7 +220,7 @@ const STUCK_ACTIONS: Array<{ action: StuckAction; label: string }> = [
   { action: "break", label: "Take a break" },
 ];
 
-export function HeliosChat({ problem, messages: externalMessages, onMessagesChange, sessionId, tutoringLanguage, pendingMessage, onPendingMessageHandled, onStuckAction, stuckActions }: HeliosChatProps) {
+export function HeliosChat({ problem, messages: externalMessages, onMessagesChange, sessionId, tutoringLanguage, pendingMessage, onPendingMessageHandled, onStuckAction, stuckActions, isMicOn = false }: HeliosChatProps) {
   const { t } = useI18n();
 
   // Get localized welcome message based on tutoring language
@@ -208,6 +229,8 @@ export function HeliosChat({ problem, messages: externalMessages, onMessagesChan
       ? CHAT_WELCOME_MESSAGES[tutoringLanguage]
       : CHAT_WELCOME_MESSAGES.en;
   };
+
+  const [generatedWelcome, setGeneratedWelcome] = useState<string | null>(null);
 
   // Use external state if provided, otherwise use internal state
   const [internalMessages, setInternalMessages] = useState<ChatMessage[]>([]);
@@ -218,7 +241,7 @@ export function HeliosChat({ problem, messages: externalMessages, onMessagesChan
     const welcomeMsg = {
       id: "welcome",
       role: "assistant" as const,
-      content: getWelcomeContent(),
+      content: generatedWelcome || getWelcomeContent(),
     };
 
     if (externalMessages !== undefined) {
@@ -233,7 +256,30 @@ export function HeliosChat({ problem, messages: externalMessages, onMessagesChan
       // Using internal state - initialize with welcome message
       setInternalMessages([welcomeMsg]);
     }
-  }, [tutoringLanguage]);
+  }, [tutoringLanguage, generatedWelcome]);
+
+  useEffect(() => {
+    if (!sessionId || generatedWelcome) return;
+    let cancelled = false;
+
+    fetch("/api/session-chat/welcome", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ sessionId, problem, tutoringLanguage }),
+    })
+      .then((response) => response.ok ? response.json() : null)
+      .then((data) => {
+        const message = typeof data?.message === "string" ? data.message.trim() : "";
+        if (!cancelled && message) setGeneratedWelcome(message);
+      })
+      .catch((error) => {
+        console.warn("Helios welcome generation failed:", error);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [sessionId, problem, tutoringLanguage, generatedWelcome]);
 
   // Helper to update messages - handles both internal state and external callback
   const updateMessages = (newMessages: ChatMessage[]) => {
@@ -247,7 +293,89 @@ export function HeliosChat({ problem, messages: externalMessages, onMessagesChan
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
-  const inputRef = useRef<HTMLTextAreaElement>(null);
+  const [autoVoiceEnabled, setAutoVoiceEnabled] = useState(false);
+  const [voiceReadyMessageIds, setVoiceReadyMessageIds] = useState<Set<string>>(new Set());
+  const spokenMessageIdsRef = useRef<Set<string>>(new Set());
+  const autoVoiceAudioRef = useRef<HTMLAudioElement | null>(null);
+  const autoVoiceAbortRef = useRef<AbortController | null>(null);
+  const autoVoiceUrlRef = useRef<string | null>(null);
+
+  const stopAutoVoice = () => {
+    try {
+      autoVoiceAbortRef.current?.abort();
+    } catch {
+      /* ignore */
+    }
+    autoVoiceAbortRef.current = null;
+    if (autoVoiceAudioRef.current) {
+      try {
+        autoVoiceAudioRef.current.pause();
+      } catch {
+        /* ignore */
+      }
+      autoVoiceAudioRef.current = null;
+    }
+    if (autoVoiceUrlRef.current) {
+      URL.revokeObjectURL(autoVoiceUrlRef.current);
+      autoVoiceUrlRef.current = null;
+    }
+  };
+
+  useEffect(() => {
+    return () => stopAutoVoice();
+  }, []);
+
+  useEffect(() => {
+    if (!autoVoiceEnabled) return;
+    const latestAssistantMessage = [...messages]
+      .reverse()
+      .find((message) =>
+        message.role === "assistant" &&
+        !message.pending &&
+        message.content.trim() &&
+        !spokenMessageIdsRef.current.has(message.id)
+      );
+    if (!latestAssistantMessage) return;
+
+    spokenMessageIdsRef.current.add(latestAssistantMessage.id);
+    stopAutoVoice();
+
+    const controller = new AbortController();
+    autoVoiceAbortRef.current = controller;
+    const lang = tutoringLanguage ? XAI_LANG_MAP[tutoringLanguage] ?? "auto" : "auto";
+
+    fetch("/api/xai-tts", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text: latestAssistantMessage.content, language: lang }),
+      signal: controller.signal,
+    })
+      .then((response) => response.ok ? response.blob() : null)
+      .then(async (blob) => {
+        if (!blob || controller.signal.aborted) return;
+        const url = URL.createObjectURL(blob);
+        autoVoiceUrlRef.current = url;
+        setVoiceReadyMessageIds((current) => new Set(current).add(latestAssistantMessage.id));
+        const audio = new Audio(url);
+        autoVoiceAudioRef.current = audio;
+        try {
+          await audio.play();
+        } catch {
+          /* Browser autoplay policy or audio failure — silent. */
+        }
+      })
+      .catch(() => {
+        setVoiceReadyMessageIds((current) => new Set(current).add(latestAssistantMessage.id));
+        /* abort or network failure — silent */
+      });
+  }, [messages, autoVoiceEnabled, tutoringLanguage]);
+
+  const visibleMessages = messages.filter((message) => {
+    if (!autoVoiceEnabled || !isMicOn) return true;
+    if (message.role !== "assistant" || message.pending) return true;
+    if (message.id === "welcome") return true;
+    return spokenMessageIdsRef.current.has(message.id) && voiceReadyMessageIds.has(message.id);
+  });
 
   // Core send logic shared by form submit and programmatic pendingMessage
   const sendMessage = async (payload: string | PendingChatMessage) => {
@@ -347,18 +475,47 @@ export function HeliosChat({ problem, messages: externalMessages, onMessagesChan
           <HeliosAvatar size={22} />
           <h3 className="text-sm font-medium text-white">{t('heliosChat.assistant')}</h3>
         </div>
-        <button
-          onClick={() => setShowClearConfirm(true)}
-          className="p-1.5 text-neutral-500 hover:text-neutral-300 hover:bg-neutral-800 rounded-lg transition-colors"
-          title={t('heliosChat.clearChat')}
-        >
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-          </svg>
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => {
+              setAutoVoiceEnabled((enabled) => {
+                if (enabled) {
+                  stopAutoVoice();
+                } else {
+                  const existingAssistantIds = messages
+                    .filter((message) => message.role === "assistant" && !message.pending)
+                    .map((message) => message.id);
+                  spokenMessageIdsRef.current = new Set(existingAssistantIds);
+                  setVoiceReadyMessageIds(new Set(existingAssistantIds));
+                }
+                return !enabled;
+              });
+            }}
+            className={`inline-flex items-center gap-1.5 rounded-full border px-2 py-1 text-[10px] font-medium transition-colors ${
+              autoVoiceEnabled
+                ? "border-cyan-400/50 bg-cyan-500/10 text-cyan-200"
+                : "border-neutral-800 bg-neutral-900/80 text-neutral-500 hover:text-neutral-300"
+            }`}
+            title={t("heliosChat.autoVoiceTitle")}
+            aria-pressed={autoVoiceEnabled}
+          >
+            <span className={`h-1.5 w-1.5 rounded-full ${autoVoiceEnabled ? "bg-cyan-300" : "bg-neutral-600"}`} />
+            {autoVoiceEnabled ? t("heliosChat.voiceOn") : t("heliosChat.voiceOff")}
+          </button>
+          <button
+            onClick={() => setShowClearConfirm(true)}
+            className="p-1.5 text-neutral-500 hover:text-neutral-300 hover:bg-neutral-800 rounded-lg transition-colors"
+            title={t('heliosChat.clearChat')}
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            </svg>
+          </button>
+        </div>
       </div>
       <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-4 overscroll-contain">
-        {messages.map((message) => {
+        {visibleMessages.map((message) => {
           // ── Smart card (theory / practice) ────────────────────────
           // Full-width artifact embedded in the chat stream. Used for
           // both the pending placeholder (so the swap-in of real
@@ -398,6 +555,7 @@ export function HeliosChat({ problem, messages: externalMessages, onMessagesChan
                       <ReactMarkdown
                         remarkPlugins={[remarkGfm, remarkMath]}
                         rehypePlugins={[[rehypeKatex, { throwOnError: false, strict: false }]]}
+                        components={markdownComponents}
                       >
                         {processLatexContent(message.content)}
                       </ReactMarkdown>
@@ -465,6 +623,7 @@ export function HeliosChat({ problem, messages: externalMessages, onMessagesChan
                   <ReactMarkdown
                     remarkPlugins={[remarkGfm, remarkMath]}
                     rehypePlugins={[[rehypeKatex, { throwOnError: false, strict: false }]]}
+                    components={markdownComponents}
                   >
                     {processLatexContent(message.content)}
                   </ReactMarkdown>
@@ -505,35 +664,6 @@ export function HeliosChat({ problem, messages: externalMessages, onMessagesChan
         cancelLabel={t('common.cancel')}
       />
 
-      <form onSubmit={handleSubmit} className="px-4 py-4 bg-[#0a0a0a]">
-        <div className="flex gap-2 items-stretch">
-          <textarea
-            ref={inputRef}
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder={t('heliosChat.placeholder')}
-            className="flex-1 bg-neutral-900 border border-neutral-700 rounded-xl px-4 py-3 text-sm text-white placeholder-neutral-500 resize-none focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/50"
-            rows={1}
-            disabled={isLoading}
-          />
-          <button
-            type="submit"
-            disabled={!input.trim() || isLoading}
-            className="px-4 py-3 border border-cyan-500/50 hover:bg-cyan-500/10 disabled:opacity-50 disabled:cursor-not-allowed text-cyan-400 rounded-xl transition-colors flex items-center justify-center"
-          >
-            {isLoading ? (
-              <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-              </svg>
-            ) : (
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-              </svg>
-            )}
-          </button>
-        </div>
-      </form>
     </div>
   );
 }

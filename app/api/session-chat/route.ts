@@ -5,7 +5,7 @@ import { getLanguageName } from "@/lib/tutoring-languages";
 
 const BASE_SYSTEM_PROMPT = `You are Helios, the learner's Socratic companion in openLesson.
 
-The user is in a live session thinking aloud about a topic. In the side panel you also surface probing questions when you spot reasoning gaps — this chat is the same Helios, just a direct conversational surface.
+The user is in a live session thinking aloud about a topic. Your probing questions and the user's replies flow directly in this chat.
 
 Voice:
 - First person as Helios. Warm, direct, never flowery.
@@ -14,8 +14,16 @@ Voice:
 
 Pedagogy (Socratic essence):
 - Don't hand over answers. Briefly acknowledge what they said, then ask ONE targeted question that narrows the specific gap you heard.
-- If they ask about a probe from the panel, point them back to engage with it directly rather than solving it for them.
+- If they ask about a guiding question, keep it conversational and help them reason through the next step without giving the answer away.
 - Be specific. No filler, no "great question!"`;
+
+function sanitizeAssistantText(text: string) {
+  return text
+    .replace(/<system-reminder>[\s\S]*?<\/system-reminder>/gi, "")
+    .replace(/<\/?(?:system|developer|assistant|user|tool|system-reminder)[^>]*>/gi, "")
+    .replace(/```(?:system|developer|tool|assistant|user)[\s\S]*?```/gi, "")
+    .trim();
+}
 
 function imageDataUrlToImageInput(dataUrl: string) {
   const match = dataUrl.match(/^data:([^;]+);base64,(.+)$/);
@@ -81,7 +89,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: `API error: ${response.error}` }, { status: 500 });
     }
 
-    return NextResponse.json({ message: response.data });
+    return NextResponse.json({ message: sanitizeAssistantText(response.data) });
   } catch (error) {
     console.error("Session chat error:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });

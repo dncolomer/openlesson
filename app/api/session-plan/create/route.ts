@@ -31,11 +31,15 @@ export async function POST(request: NextRequest) {
     // Get tutoring language from body or session metadata
     let tutoringLanguage = bodyLanguage;
     if (!tutoringLanguage) {
-      const { data: sessionData } = await supabase
+      const { data: sessionData, error: sessionError } = await supabase
         .from("sessions")
         .select("metadata")
         .eq("id", sessionId)
         .single();
+      if (sessionError) {
+        console.error("[session-plan/create] Failed to load session metadata:", sessionError);
+        return NextResponse.json({ error: `Could not load session metadata: ${sessionError.message}` }, { status: 500 });
+      }
       if (sessionData?.metadata?.tutoringLanguage) {
         tutoringLanguage = sessionData.metadata.tutoringLanguage;
       }
@@ -46,10 +50,14 @@ export async function POST(request: NextRequest) {
     if (force) {
       const existingPlan = await getSessionPlan(sessionId, supabase);
       if (existingPlan) {
-        await supabase
+        const { error: deleteError } = await supabase
           .from("session_plans")
           .delete()
           .eq("id", existingPlan.id);
+        if (deleteError) {
+          console.error("[session-plan/create] Failed to delete existing plan:", deleteError);
+          return NextResponse.json({ error: `Could not replace existing plan: ${deleteError.message}` }, { status: 500 });
+        }
       }
     }
 

@@ -85,6 +85,21 @@ function isDuplicateProbe(newText: string, existingProbes: { text: string; archi
   });
 }
 
+async function readErrorResponse(response: Response, fallback: string) {
+  const text = await response.text().catch(() => "");
+  if (!text.trim()) return `${fallback} (HTTP ${response.status})`;
+  try {
+    const parsed = JSON.parse(text) as { error?: unknown; message?: unknown };
+    const message = parsed.error || parsed.message;
+    if (typeof message === "string" && message.trim()) {
+      return `${message} (HTTP ${response.status})`;
+    }
+  } catch {
+    // Non-JSON error body; include a short preview for debugging.
+  }
+  return `${fallback} (HTTP ${response.status}): ${text.slice(0, 300)}`;
+}
+
 /**
  * Small inline button for the notebook footer. Kept as a separate component
  * so it can own its own `isSubmitting` state without bloating SessionView's
@@ -3336,9 +3351,9 @@ export function SessionView({ sessionId }: { sessionId: string }) {
                               newPlan = plan;
                               console.log("[SessionView] Created plan goal:", plan?.goal);
                             } else {
-                              const errorData = await planRes.json().catch(() => ({}));
-                              console.error("[SessionView] Create plan failed:", errorData);
-                              setPlanError(errorData.error || "Failed to create session plan");
+                              const errorMessage = await readErrorResponse(planRes, "Failed to create session plan");
+                              console.error("[SessionView] Create plan failed:", errorMessage);
+                              setPlanError(errorMessage);
                             }
                           }
                           

@@ -22,6 +22,7 @@ interface ToolsPanelProps {
   sessionId?: string;
   planId?: string;
   disabledTools?: Tool[];
+  onBackToDashboard?: () => void;
 }
 
 function ToolIcon({ id }: { id: Tool }) {
@@ -82,7 +83,7 @@ const bottomTools: Tool[] = ["help", "data-input", "logs"];
 
 export function ToolsPanel({ 
   activeTool, onToolChange, problem, className = "", errorNotification = false,
-  sessionId, planId, disabledTools = [],
+  sessionId, planId, disabledTools = [], onBackToDashboard,
 }: ToolsPanelProps) {
   const { t } = useI18n();
   // Practice (exercise) and Theory (reading) used to live here as their
@@ -156,6 +157,20 @@ export function ToolsPanel({
             )}
           </button>
         ))}
+
+        {onBackToDashboard && (
+          <button
+            type="button"
+            onClick={onBackToDashboard}
+            className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium transition-all bg-neutral-800/50 text-neutral-400 border border-neutral-700/50 hover:bg-neutral-800 hover:text-neutral-300"
+            title={t('session.backToDashboard')}
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            </svg>
+            <span>{t('session.backToDashboard')}</span>
+          </button>
+        )}
 
         {/* Mobile / QR button */}
         {sessionId && (

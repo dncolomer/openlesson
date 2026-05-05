@@ -3598,6 +3598,7 @@ export function SessionView({ sessionId }: { sessionId: string }) {
               sessionId={session.id}
               planId={session.metadata?.plan_id as string | undefined}
               disabledTools={[]}
+              onBackToDashboard={() => router.push("/dashboard")}
             />
 
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
@@ -3606,25 +3607,6 @@ export function SessionView({ sessionId }: { sessionId: string }) {
           <div className="px-4 py-2 bg-red-500/10 border-b border-red-500/30 flex items-center gap-2">
             <span className="text-xs text-red-400">{error}</span>
             <button onClick={() => setError(null)} className="ml-auto text-red-400/60 hover:text-red-400 text-xs">✕</button>
-          </div>
-        )}
-        {/* Top navigation + layout preset buttons */}
-        {!showWelcomeModal && (
-          <div className="relative flex items-center h-12 shrink-0 bg-neutral-900/95 border-b border-neutral-800 shadow-lg shadow-black/30">
-            {/* Left-side: Back to Dashboard — always visible so users can
-                leave the session without having to pause first. */}
-            <div className="absolute left-3 top-1/2 -translate-y-1/2 shrink-0 z-10">
-              <button
-                onClick={() => router.push("/dashboard")}
-                className="flex items-center gap-1.5 px-2 py-1 rounded-md text-[10px] font-medium text-neutral-400 hover:text-white bg-neutral-900/80 hover:bg-neutral-800 border border-neutral-800 hover:border-neutral-700 transition-colors"
-                title={t('session.backToDashboard')}
-              >
-                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                </svg>
-                <span>{t('session.backToDashboard')}</span>
-              </button>
-            </div>
           </div>
         )}
         <div className="flex-1 flex min-h-0 overflow-hidden">

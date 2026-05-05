@@ -31,7 +31,7 @@ function processLatexContent(content: string): string {
  * Intentionally a string union (not a boolean) so we can add more
  * card kinds later without another flag.
  */
-export type ChatMessageKind = "theory" | "practice";
+export type ChatMessageKind = "theory" | "practice" | "stuck";
 
 export interface ChatMessage {
   id: string;
@@ -138,6 +138,17 @@ const CARD_KIND_META: Record<
     icon: (
       <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+      </svg>
+    ),
+  },
+  stuck: {
+    label: "Stuck Check",
+    headerClass:
+      "bg-amber-500/15 text-amber-100 border-b border-amber-400/30",
+    ringClass: "border-amber-400/40 shadow-[0_0_28px_rgba(245,158,11,0.12)]",
+    icon: (
+      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m0 3.75h.008v.008H12V16.5zm-8.485 2.25L10.06 4.69a2.25 2.25 0 013.88 0l6.545 11.81A2.25 2.25 0 0118.545 20H5.455a2.25 2.25 0 01-1.94-3.5z" />
       </svg>
     ),
   },
@@ -367,6 +378,8 @@ export function HeliosChat({ problem, messages: externalMessages, onMessagesChan
                       className={`prose prose-invert prose-sm max-w-none text-neutral-200 [&_.katex]:text-inherit ${
                         message.kind === "practice"
                           ? "[&_p]:mb-3 [&_p]:leading-relaxed [&_ol]:mb-3 [&_ol]:pl-5 [&_ol]:space-y-2 [&_ul]:mb-3 [&_ul]:pl-5 [&_ul]:space-y-2 [&_li]:leading-relaxed [&_strong]:text-white"
+                          : message.kind === "stuck"
+                            ? "[&_p]:mb-3 [&_p]:leading-relaxed [&_ul]:mb-2 [&_ul]:pl-5 [&_ul]:space-y-1.5 [&_li]:leading-relaxed [&_strong]:text-amber-100"
                           : "[&_a]:no-underline [&_a]:inline-flex [&_a]:items-center [&_a]:gap-1.5 [&_a]:px-3 [&_a]:py-1.5 [&_a]:my-1 [&_a]:rounded-lg [&_a]:bg-neutral-900 [&_a]:text-white [&_a]:border [&_a]:border-neutral-700 hover:[&_a]:bg-neutral-800 hover:[&_a]:border-neutral-600 [&_a]:text-sm [&_a]:font-medium"
                       }`}
                     >

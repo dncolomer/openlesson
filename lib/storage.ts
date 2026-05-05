@@ -813,7 +813,8 @@ export type ToolAction =
   // Manual "Submit to Helios" — user explicitly asks the tutor to look at
   // the current notebook/canvas state. Triggers an analysis heartbeat out
   // of band from the 10s timer.
-  | "submit_to_helios";
+  | "submit_to_helios"
+  | "stuck_card";
 
 export interface LogToolUsageResult {
   /** True only if BOTH the storage upload and the DB insert succeeded. */

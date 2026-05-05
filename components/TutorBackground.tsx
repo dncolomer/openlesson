@@ -20,13 +20,9 @@ const TUTOR_BACKGROUNDS = [
   "/tutor-backgrounds/HGKAWi6WgAAV7wr.jpeg",
 ];
 
-/** Pick a random image, optionally avoiding one path so successive
- *  picks don't accidentally repeat. */
-function pickRandom(exclude?: string | null): string {
-  const pool =
-    exclude != null
-      ? TUTOR_BACKGROUNDS.filter((p) => p !== exclude)
-      : TUTOR_BACKGROUNDS;
+function pickRandomFrom(images: string[], exclude?: string | null): string {
+  const source = images.length > 0 ? images : TUTOR_BACKGROUNDS;
+  const pool = exclude != null && source.length > 1 ? source.filter((p) => p !== exclude) : source;
   return pool[Math.floor(Math.random() * pool.length)];
 }
 
@@ -46,6 +42,7 @@ interface TutorBackgroundProps {
    * the very first render.
    */
   stepIndex?: number;
+  images?: string[];
 }
 
 /**
@@ -57,10 +54,11 @@ interface TutorBackgroundProps {
  */
 export function TutorBackground({
   stepIndex,
+  images = TUTOR_BACKGROUNDS,
 }: TutorBackgroundProps = {}) {
   // Stable initial pick.  useMemo guarantees it's computed exactly
   // once for this component instance.
-  const initial = useMemo(() => pickRandom(), []);
+  const initial = useMemo(() => pickRandomFrom(images), [images]);
 
   // Source + "last-seen step" kept together in a single state so
   // updating them during render is atomic.  React's "derive state
@@ -70,9 +68,18 @@ export function TutorBackground({
   const [state, setState] = useState<{
     src: string;
     lastStep: number | undefined;
-  }>({ src: initial, lastStep: stepIndex });
+    images: string[];
+  }>({ src: initial, lastStep: stepIndex, images });
 
-  if (state.lastStep !== stepIndex) {
+  if (state.images !== images) {
+    setState({
+      src: pickRandomFrom(images, state.src),
+      lastStep: stepIndex,
+      images,
+    });
+  }
+
+  if (state.images === images && state.lastStep !== stepIndex) {
     // Only reroll on actual step *transitions* — not on undefined →
     // number (plan loaded in after mount) or number → undefined
     // (plan cleared).  Those boundaries aren't meaningful navigation
@@ -80,8 +87,9 @@ export function TutorBackground({
     const isRealTransition =
       state.lastStep !== undefined && stepIndex !== undefined;
     setState({
-      src: isRealTransition ? pickRandom(state.src) : state.src,
+      src: isRealTransition ? pickRandomFrom(images, state.src) : state.src,
       lastStep: stepIndex,
+      images,
     });
   }
 

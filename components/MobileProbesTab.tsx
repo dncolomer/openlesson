@@ -54,6 +54,8 @@ interface MobileProbesTabProps {
   onThinkAloudThoughtClick?: (thought: ThinkAloudThought) => void;
   onClearThinkAloudThoughts?: () => void;
   sessionControls?: React.ReactNode;
+  aestheticImages?: string[];
+  aestheticName?: string;
 }
 
 export function MobileProbesTab({
@@ -84,6 +86,8 @@ export function MobileProbesTab({
   onThinkAloudThoughtClick,
   onClearThinkAloudThoughts,
   sessionControls,
+  aestheticImages,
+  aestheticName,
 }: MobileProbesTabProps) {
   const { t } = useI18n();
 
@@ -161,7 +165,7 @@ export function MobileProbesTab({
   if (showWelcome) {
     return (
       <div className="relative flex-1 min-w-0 flex flex-col bg-[#0a0a0a] h-full overflow-hidden">
-        <TutorBackground isSpeaking={isSpeaking} stepIndex={sessionPlan?.currentStepIndex} />
+        <TutorBackground isSpeaking={isSpeaking} stepIndex={sessionPlan?.currentStepIndex} images={aestheticImages} />
         <div className="relative z-10 flex-1 min-h-0 flex flex-col">
           {sessionControls && (
             <div className="shrink-0 px-3 pt-3">
@@ -180,14 +184,11 @@ export function MobileProbesTab({
             compactMobile
           />
         </div>
-        <a
-          href="https://x.com/piotrbinkowski"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="absolute bottom-2 left-3 z-10 text-[10px] text-neutral-700 hover:text-neutral-500 transition-colors"
-        >
-          Art by Piotr Binkowski
-        </a>
+        {aestheticName && (
+          <div className="absolute bottom-2 left-3 z-10 text-[10px] text-neutral-700">
+            {aestheticName}
+          </div>
+        )}
       </div>
     );
   }
@@ -195,7 +196,7 @@ export function MobileProbesTab({
   return (
     <div className="relative flex-1 min-w-0 flex flex-col bg-[#0a0a0a] h-full overflow-hidden">
       {/* Faint frosted-glass background image — one random pick per session. */}
-      <TutorBackground isSpeaking={isSpeaking} stepIndex={sessionPlan?.currentStepIndex} />
+      <TutorBackground isSpeaking={isSpeaking} stepIndex={sessionPlan?.currentStepIndex} images={aestheticImages} />
 
       {/* Main message area */}
       {sessionControls && (

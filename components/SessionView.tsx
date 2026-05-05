@@ -57,7 +57,7 @@ import {
   openPopOutWindow, 
   type SessionAction 
 } from "@/lib/broadcast-sync";
-import { useSessionHeartbeat, type StorageHeartbeatResult, type AnalysisHeartbeatResult } from "@/lib/useSessionHeartbeat";
+import { useSessionHeartbeat, type StorageHeartbeatResult, type AnalysisHeartbeatResult, type StuckHeartbeatResult } from "@/lib/useSessionHeartbeat";
 import { useInactivityAutoPause } from "@/lib/useInactivityAutoPause";
 import { useVoiceActivity } from "@/lib/useVoiceActivity";
 import { useThinkAloudTranscript, type ThinkAloudThought } from "@/lib/useThinkAloudTranscript";
@@ -65,6 +65,8 @@ import { retryWithResult } from "@/lib/retry";
 import { useI18n } from "@/lib/i18n";
 import { tutoringLocales, tutoringLanguageNames } from "@/lib/tutoring-languages";
 import { isSessionWelcomeSeen, markSessionWelcomeSeen } from "@/lib/welcomeState";
+import { fetchAestheticPackages, type AestheticPackage } from "@/lib/aesthetics";
+import { AestheticPicker } from "./AestheticPicker";
 
 
 // Check if a new probe is a duplicate of any existing probe (normalized comparison)
@@ -380,6 +382,26 @@ export function SessionView({ sessionId }: { sessionId: string }) {
   const sessionPlanRef = useRef<SessionPlan | null>(null);
   const [languageConfirmed, setLanguageConfirmed] = useState(false);
   const [isPreparing, setIsPreparing] = useState(false);
+  const [aestheticPackages, setAestheticPackages] = useState<AestheticPackage[]>([]);
+  const [aestheticsLoading, setAestheticsLoading] = useState(true);
+  const [selectedAestheticId, setSelectedAestheticId] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    setAestheticsLoading(true);
+    fetchAestheticPackages()
+      .then((packages) => {
+        if (cancelled) return;
+        setAestheticPackages(packages);
+        setSelectedAestheticId((current) => current ?? packages[0]?.id ?? null);
+      })
+      .finally(() => {
+        if (!cancelled) setAestheticsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // (Prep material state used to live here for the now-removed
   // Practice/Theory side panels. That content has been merged into
@@ -625,6 +647,8 @@ export function SessionView({ sessionId }: { sessionId: string }) {
   const sessionRef = useRef<Session | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const lastProbeTimeRef = useRef(0);
+  const lastStuckCardTimeRef = useRef(0);
+  const stuckCardCountRef = useRef(0);
   const isAnalyzingRef = useRef(false);
   const muteTimerRef = useRef<NodeJS.Timeout | null>(null);
   const chunkIndexRef = useRef(0);
@@ -1445,6 +1469,61 @@ export function SessionView({ sessionId }: { sessionId: string }) {
     }
   }, []);
 
+  const runStuckHeartbeat = useCallback(async (): Promise<StuckHeartbeatResult> => {
+    const startMs = Date.now();
+    const currentSession = sessionRef.current;
+
+    if (!currentSession) return { success: true, durationMs: 0 };
+    if (observerModeRef.current === "off") return { success: true, durationMs: 0 };
+    if (isMutedRef.current) return { success: true, durationMs: 0 };
+    if (!isRecordingRef.current || isPaused) return { success: true, durationMs: 0 };
+
+    const secondsSinceLast = lastStuckCardTimeRef.current
+      ? Math.floor((Date.now() - lastStuckCardTimeRef.current) / 1000)
+      : 9999;
+    if (secondsSinceLast < 90) {
+      return { success: true, durationMs: Date.now() - startMs, stuck: false };
+    }
+
+    try {
+      const res = await fetch("/api/session/stuck-policy", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sessionId: currentSession.id,
+          lastStuckCardTimestamp: lastStuckCardTimeRef.current || 0,
+          stuckCardCount: stuckCardCountRef.current,
+          tutoringLanguage,
+        }),
+      });
+
+      if (!res.ok) {
+        return { success: false, durationMs: Date.now() - startMs, error: "Stuck policy unavailable" };
+      }
+
+      const data = await res.json();
+      if (data?.stuck && data.recommendationMarkdown) {
+        const stuckCard: ChatMessage = {
+          id: `stuck_${Date.now()}`,
+          role: "assistant",
+          kind: "stuck",
+          cardTitle: data.title || "Stuck Check",
+          content: data.recommendationMarkdown,
+        };
+        ensureVisible("tools");
+        setActiveTool("chat");
+        setChatMessages(prev => [...prev, stuckCard]);
+        lastStuckCardTimeRef.current = Date.now();
+        stuckCardCountRef.current += 1;
+      }
+
+      return { success: true, durationMs: Date.now() - startMs, stuck: Boolean(data?.stuck) };
+    } catch (err) {
+      console.error("Stuck heartbeat error:", err);
+      return { success: false, durationMs: Date.now() - startMs, error: String(err) };
+    }
+  }, [ensureVisible, isPaused, tutoringLanguage]);
+
   // ---- Storage Heartbeat (5s) ----
   // Returns structured result for the heartbeat hook to track health
   const runStorageHeartbeat = useCallback(async (): Promise<StorageHeartbeatResult> => {
@@ -1660,8 +1739,10 @@ export function SessionView({ sessionId }: { sessionId: string }) {
   const heartbeat = useSessionHeartbeat({
     storageIntervalMs: STORAGE_INTERVAL_MS,
     analysisIntervalMs: ANALYSIS_INTERVAL_MS,
+    stuckIntervalMs: ANALYSIS_INTERVAL_MS,
     onStorageHeartbeat: runStorageHeartbeat,
     onAnalysisHeartbeat: runAnalysisHeartbeat,
+    onStuckHeartbeat: runStuckHeartbeat,
     onLog: addHeartbeatLog,
   });
 
@@ -2997,6 +3078,8 @@ export function SessionView({ sessionId }: { sessionId: string }) {
     );
   }
 
+  const selectedAesthetic = aestheticPackages.find((pkg) => pkg.id === selectedAestheticId) ?? aestheticPackages[0];
+
   return (
     <div className="h-screen flex bg-[#0a0a0a] overflow-hidden">
       {showWelcomeModal && (
@@ -3050,6 +3133,14 @@ export function SessionView({ sessionId }: { sessionId: string }) {
                         ))}
                       </select>
                     </div>
+
+                    <AestheticPicker
+                      packages={aestheticPackages}
+                      selectedId={selectedAesthetic?.id ?? selectedAestheticId}
+                      onSelect={setSelectedAestheticId}
+                      disabled={isButtonDisabled}
+                      loading={aestheticsLoading}
+                    />
 
                     {/* Auto-advance toggle — hidden in UI (manual mode is the
                         default). Underlying state remains wired; remove the
@@ -3851,6 +3942,8 @@ export function SessionView({ sessionId }: { sessionId: string }) {
                         sessionId={session.id}
                         ttsLanguage={tutoringLanguage}
                         isSpeaking={isSpeaking}
+                        aestheticImages={selectedAesthetic?.images}
+                        aestheticName={selectedAesthetic?.name}
                         sessionControls={(
                           <div className="space-y-2">
                             <SessionControlBar

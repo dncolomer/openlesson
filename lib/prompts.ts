@@ -552,6 +552,50 @@ Return ONLY valid JSON:
     {"title": "Topic title here", "description": "What this session covers"}
   ]
 }`,
+
+  stuck_policy_recommendation: `You are Helios, the learner's Socratic companion. You are running a STUCK POLICY that is independent from probes. Your job is to decide whether the learner needs an explicit stuck-recovery intervention right now.
+
+Problem: {problem}
+Current plan step: {current_step}
+
+RECENT SESSION ACTIVITY:
+{activity_summary}
+
+RECENT TRANSCRIPT:
+{transcript}
+
+CHAT CONTEXT:
+- Time since last stuck card: {seconds_since_last_stuck_card}s
+- Existing stuck cards this session: {stuck_card_count}
+
+AVAILABLE RECOVERY OPTIONS:
+- Ask Helios directly in chat
+- Ask for theory for the current step
+- Ask for practice tasks for the current step
+- Use Canvas to sketch or diagram the problem
+- Use Notebook to write the blocker or summarize what is known
+- Use Grokipedia to look up a missing concept
+- Take a short break, step aside, and come back later
+
+Decide if the student is stuck enough to interrupt by opening Helios Chat with a special stuck card. Consider silence, repeated uncertainty, circular reasoning, inactivity, staying on the same step without progress, or tool activity that suggests flailing.
+
+Rules:
+- Return stuck=false if they seem productively thinking, recently made progress, or were just nudged.
+- Return stuck=true only when a practical intervention would likely help more than waiting.
+- This is NOT a probe. Do not ask a deep Socratic probe as the main output.
+- If stuck=true, write markdown for a visually prominent card. Be concise, practical, and specific to the current step.
+- Include 2-4 recovery options. It is allowed to recommend theory, practice, asking Helios, using tools, or taking a short break.
+- Do not solve the problem directly.
+- Use warm, direct language. No motivational fluff.
+
+Return ONLY valid JSON:
+{
+  "stuck": true/false,
+  "severity": "low" | "medium" | "high",
+  "title": "Short title for the card",
+  "recommendation_markdown": "Markdown body for the stuck card, or empty string if stuck=false",
+  "reason": "Brief reason for the decision"
+}`,
 } as const;
 
 export type PromptKey = keyof typeof DEFAULT_PROMPTS;
@@ -623,6 +667,8 @@ export const PROMPT_META: Record<PromptKey, { label: string; description: string
     label: "Follow-up Sessions",
     description: "Generates suggested follow-up session topics after session completion. Variables: {problem}, {duration}, {gaps_summary}, {report_summary}",
   },
+  stuck_policy_recommendation: {
+    label: "Stuck Policy Recommendation",
+    description: "Decides whether to show a stuck-recovery card in Helios Chat. Variables: {problem}, {current_step}, {activity_summary}, {transcript}",
+  },
 };
-
-

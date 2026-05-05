@@ -5,6 +5,7 @@
  *
  * Encapsulates:
  *   - 1-second master tick driving storage (5s) and analysis (10s) cycles
+ *   - Optional stuck-policy heartbeat running on its own cadence
  *   - Reentrancy guards for both heartbeats
  *   - Health tracking (last success timestamps, consecutive failures)
  *   - Adaptive throttling on repeated failures
@@ -91,15 +92,26 @@ export interface AnalysisHeartbeatResult {
   error?: string;
 }
 
+export interface StuckHeartbeatResult {
+  success: boolean;
+  durationMs?: number;
+  stuck?: boolean;
+  error?: string;
+}
+
 export interface UseSessionHeartbeatOptions {
   /** Storage heartbeat interval in ms (default: 5000) */
   storageIntervalMs?: number;
   /** Analysis heartbeat interval in ms (default: 10000) */
   analysisIntervalMs?: number;
+  /** Stuck-policy heartbeat interval in ms (defaults to analysisIntervalMs) */
+  stuckIntervalMs?: number;
   /** Called every storage cycle. Must handle its own error catching. */
   onStorageHeartbeat: () => Promise<StorageHeartbeatResult>;
   /** Called every analysis cycle. Must handle its own error catching. */
   onAnalysisHeartbeat: () => Promise<AnalysisHeartbeatResult>;
+  /** Optional stuck-policy heartbeat, independent from probes/analysis. */
+  onStuckHeartbeat?: () => Promise<StuckHeartbeatResult>;
   /** Callback to append structured log entries */
   onLog?: (entry: Omit<LogEntry, "id">) => void;
   /** Maximum consecutive failures before throttling kicks in (default: 3) */
@@ -123,6 +135,8 @@ export interface UseSessionHeartbeatReturn {
   isStorageRunning: boolean;
   /** Whether an analysis heartbeat is currently in flight */
   isAnalysisRunning: boolean;
+  /** Whether a stuck-policy heartbeat is currently in flight */
+  isStuckRunning: boolean;
   /** Health metrics for UI indicators */
   health: HeartbeatHealth;
   /** Pipeline error state */
@@ -193,8 +207,10 @@ export function useSessionHeartbeat(
   const {
     storageIntervalMs = DEFAULT_STORAGE_INTERVAL_MS,
     analysisIntervalMs = DEFAULT_ANALYSIS_INTERVAL_MS,
+    stuckIntervalMs = analysisIntervalMs,
     onStorageHeartbeat,
     onAnalysisHeartbeat,
+    onStuckHeartbeat,
     onLog,
     throttleAfterFailures = DEFAULT_THROTTLE_AFTER_FAILURES,
   } = options;
@@ -204,20 +220,25 @@ export function useSessionHeartbeat(
   onStorageRef.current = onStorageHeartbeat;
   const onAnalysisRef = useRef(onAnalysisHeartbeat);
   onAnalysisRef.current = onAnalysisHeartbeat;
+  const onStuckRef = useRef(onStuckHeartbeat);
+  onStuckRef.current = onStuckHeartbeat;
   const onLogRef = useRef(onLog);
   onLogRef.current = onLog;
 
   // Derived tick counts
   const storageTicks = Math.round(storageIntervalMs / TICK_MS);
   const analysisTicks = Math.round(analysisIntervalMs / TICK_MS);
-  const cycleTicks = lcm(storageTicks, analysisTicks);
+  const stuckTicks = Math.round(stuckIntervalMs / TICK_MS);
+  const cycleTicks = lcm(lcm(storageTicks, analysisTicks), stuckTicks);
 
   // ── Refs (mutable, no re-renders) ──
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const counterRef = useRef(0);
   const isStorageRunningRef = useRef(false);
   const isAnalysisRunningRef = useRef(false);
+  const isStuckRunningRef = useRef(false);
   const analysisPromiseRef = useRef<Promise<AnalysisHeartbeatResult> | null>(null);
+  const stuckPromiseRef = useRef<Promise<StuckHeartbeatResult> | null>(null);
 
   // Consecutive failure tracking for adaptive throttling
   const storageFailStreakRef = useRef(0);
@@ -228,6 +249,7 @@ export function useSessionHeartbeat(
   const [analysisBeat, setAnalysisBeat] = useState(0);
   const [isStorageRunning, setIsStorageRunning] = useState(false);
   const [isAnalysisRunning, setIsAnalysisRunning] = useState(false);
+  const [isStuckRunning, setIsStuckRunning] = useState(false);
   const [isRunning, setIsRunning] = useState(false);
 
   const [health, setHealth] = useState<HeartbeatHealth>({
@@ -397,9 +419,40 @@ export function useSessionHeartbeat(
       }
     }
 
+    // ── Stuck-policy heartbeat ──
+    if (onStuckRef.current && second % stuckTicks === 0) {
+      if (!isStuckRunningRef.current) {
+        isStuckRunningRef.current = true;
+        setIsStuckRunning(true);
+
+        const startMs = Date.now();
+        const promise = onStuckRef.current();
+        stuckPromiseRef.current = promise;
+
+        promise.then((result) => {
+          const durationMs = result.durationMs ?? (Date.now() - startMs);
+          if (result.success) {
+            emitLog(
+              "info",
+              `Stuck heartbeat OK (${durationMs}ms)${result.stuck !== undefined ? ` stuck=${result.stuck}` : ""}`,
+              "stuck",
+            );
+          } else {
+            emitLog("error", `Stuck heartbeat failed (${durationMs}ms): ${result.error}`, "stuck");
+          }
+
+          isStuckRunningRef.current = false;
+          setIsStuckRunning(false);
+          stuckPromiseRef.current = null;
+        });
+      } else {
+        emitLog("warning", "Stuck heartbeat skipped (previous still running)", "stuck");
+      }
+    }
+
     // Advance counter
     counterRef.current = (second + 1) % cycleTicks;
-  }, [storageTicks, analysisTicks, cycleTicks, throttleAfterFailures, emitLog, syncTransferHealth]);
+  }, [storageTicks, analysisTicks, stuckTicks, cycleTicks, throttleAfterFailures, emitLog, syncTransferHealth]);
 
   // ── Public API ──
 
@@ -462,6 +515,15 @@ export function useSessionHeartbeat(
       }
     }
 
+    if (stuckPromiseRef.current) {
+      emitLog("info", "Waiting for in-flight stuck heartbeat to complete...");
+      try {
+        await stuckPromiseRef.current;
+      } catch {
+        // Swallow — we just need it to finish
+      }
+    }
+
     // Final flush: run one last storage and analysis heartbeat
     emitLog("info", "Running final heartbeat flush...");
     try {
@@ -476,6 +538,14 @@ export function useSessionHeartbeat(
         await onAnalysisRef.current();
       } catch (err) {
         emitLog("error", `Final analysis flush failed: ${err}`);
+      }
+    }
+
+    if (onStuckRef.current && !isStuckRunningRef.current) {
+      try {
+        await onStuckRef.current();
+      } catch (err) {
+        emitLog("error", `Final stuck flush failed: ${err}`);
       }
     }
 
@@ -516,6 +586,7 @@ export function useSessionHeartbeat(
     analysisBeat,
     isStorageRunning,
     isAnalysisRunning,
+    isStuckRunning,
     health,
     pipelineErrors,
     transferHealth,

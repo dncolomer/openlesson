@@ -539,6 +539,14 @@ export interface SessionPlanUpdateResult {
   advanceReasoning: string;
 }
 
+export interface StuckPolicyRecommendationResult {
+  stuck: boolean;
+  severity: "low" | "medium" | "high";
+  title: string;
+  recommendationMarkdown: string;
+  reason: string;
+}
+
 export interface FocusedProbeInfo {
   id: string;
   text: string;
@@ -730,4 +738,64 @@ export async function updateSessionPlanLLM(options: {
   };
 
   return { success: true, result };
+}
+
+export async function generateStuckPolicyRecommendation(options: {
+  problem: string;
+  currentStep?: string;
+  activitySummary: string;
+  transcript: string;
+  secondsSinceLastStuckCard: number;
+  stuckCardCount: number;
+  promptOverrides?: UserPrompts;
+  tutoringLanguage?: string;
+}): Promise<{ success: boolean; result?: StuckPolicyRecommendationResult; error?: string }> {
+  let prompt = getPrompt("stuck_policy_recommendation", options.promptOverrides)
+    .replace("{problem}", options.problem)
+    .replace("{current_step}", options.currentStep || "No current step available")
+    .replace("{activity_summary}", options.activitySummary || "No recent activity available")
+    .replace("{transcript}", options.transcript || "No recent transcript available")
+    .replace("{seconds_since_last_stuck_card}", options.secondsSinceLastStuckCard.toString())
+    .replace("{stuck_card_count}", options.stuckCardCount.toString());
+
+  if (options.tutoringLanguage) {
+    prompt = `IMPORTANT: Respond in ${options.tutoringLanguage} throughout. Keep JSON keys exactly as specified.\n\n${prompt}`;
+  }
+
+  interface RawStuckPolicyResult {
+    stuck?: boolean;
+    severity?: "low" | "medium" | "high";
+    title?: string;
+    recommendation_markdown?: string;
+    reason?: string;
+  }
+
+  const response = await callXaiJSON<RawStuckPolicyResult>(
+    [userMessage(prompt)],
+    {
+      model: MODEL,
+      maxTokens: 700,
+      temperature: 0.3,
+    }
+  );
+
+  if (!response.success || !response.data) {
+    return { success: false, error: response.error || "No stuck policy result generated" };
+  }
+
+  const raw = response.data;
+  const severity = raw.severity === "high" || raw.severity === "medium" || raw.severity === "low"
+    ? raw.severity
+    : "medium";
+
+  return {
+    success: true,
+    result: {
+      stuck: Boolean(raw.stuck),
+      severity,
+      title: raw.title || "Stuck Check",
+      recommendationMarkdown: raw.recommendation_markdown || "",
+      reason: raw.reason || "",
+    },
+  };
 }

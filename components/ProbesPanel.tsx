@@ -79,6 +79,8 @@ interface ProbesPanelProps {
   /** True while the mic picks up speech-level audio. Drives the
    *  background tile-reveal animation. */
   isSpeaking?: boolean;
+  aestheticImages?: string[];
+  aestheticName?: string;
 }
 
 export function ProbesPanel({
@@ -112,6 +114,8 @@ export function ProbesPanel({
   sessionId,
   ttsLanguage,
   isSpeaking = false,
+  aestheticImages,
+  aestheticName,
 }: ProbesPanelProps) {
   const { t } = useI18n();
 
@@ -212,7 +216,7 @@ export function ProbesPanel({
     return (
       <div className="relative flex-1 min-w-0 flex flex-col bg-[#0a0a0a] h-full overflow-hidden">
         {/* Faint frosted-glass background image — one random pick per session. */}
-        <TutorBackground isSpeaking={isSpeaking} stepIndex={sessionPlan?.currentStepIndex} />
+        <TutorBackground isSpeaking={isSpeaking} stepIndex={sessionPlan?.currentStepIndex} images={aestheticImages} />
         <div className="relative z-10 flex-1 min-h-0 flex flex-col overflow-hidden">
           {sessionControls && (
             <div className="shrink-0 px-4 pt-4">
@@ -233,14 +237,11 @@ export function ProbesPanel({
             ttsLanguage={ttsLanguage}
           />
         </div>
-        <a
-          href="https://x.com/piotrbinkowski"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="absolute bottom-2 left-3 z-10 text-[10px] text-neutral-700 hover:text-neutral-500 transition-colors"
-        >
-          Art by Piotr Binkowski
-        </a>
+        {aestheticName && (
+          <div className="absolute bottom-2 left-3 z-10 text-[10px] text-neutral-700">
+            {aestheticName}
+          </div>
+        )}
       </div>
     );
   }
@@ -248,7 +249,7 @@ export function ProbesPanel({
   return (
     <div className="relative flex-1 min-w-0 flex flex-col bg-[#0a0a0a] h-full overflow-hidden">
       {/* Faint frosted-glass background image — one random pick per session. */}
-      <TutorBackground isSpeaking={isSpeaking} stepIndex={sessionPlan?.currentStepIndex} />
+      <TutorBackground isSpeaking={isSpeaking} stepIndex={sessionPlan?.currentStepIndex} images={aestheticImages} />
 
       {/* Main message area */}
       {sessionControls && (

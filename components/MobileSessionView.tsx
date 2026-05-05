@@ -35,7 +35,7 @@ import { isSessionWelcomeSeen, markSessionWelcomeSeen } from "@/lib/welcomeState
 import { playStepCompleteSound, playSessionCompleteSound } from "@/lib/sounds";
 import { LocalInferenceManager, type InitProgress, type LocalAnalysisContext } from "@/lib/local-inference";
 import { LocalContextBuffer } from "@/lib/local-context";
-import { useSessionHeartbeat, type StorageHeartbeatResult, type AnalysisHeartbeatResult } from "@/lib/useSessionHeartbeat";
+import { useSessionHeartbeat, type StorageHeartbeatResult, type AnalysisHeartbeatResult, type StuckHeartbeatResult } from "@/lib/useSessionHeartbeat";
 import { useInactivityAutoPause } from "@/lib/useInactivityAutoPause";
 import { useVoiceActivity } from "@/lib/useVoiceActivity";
 import { useThinkAloudTranscript, type ThinkAloudThought } from "@/lib/useThinkAloudTranscript";
@@ -43,6 +43,8 @@ import { retryWithResult } from "@/lib/retry";
 import { ConfirmDialog } from "./ui/ConfirmDialog";
 // ModelLoadingModal no longer used -- loading UI is inline in welcome modal
 import type { RequestType } from "@/lib/storage";
+import { fetchAestheticPackages, type AestheticPackage } from "@/lib/aesthetics";
+import { AestheticPicker } from "./AestheticPicker";
 
 // Check if a new probe is a duplicate of any existing probe (normalized comparison)
 function isDuplicateProbe(newText: string, existingProbes: { text: string; archived?: boolean }[]): boolean {
@@ -127,6 +129,26 @@ export function MobileSessionView({
   const [planLoading, setPlanLoading] = useState(false);
   const [openingProbeLoading, setOpeningProbeLoading] = useState(false);
   const [planError, setPlanError] = useState<string | null>(null);
+  const [aestheticPackages, setAestheticPackages] = useState<AestheticPackage[]>([]);
+  const [aestheticsLoading, setAestheticsLoading] = useState(true);
+  const [selectedAestheticId, setSelectedAestheticId] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    setAestheticsLoading(true);
+    fetchAestheticPackages()
+      .then((packages) => {
+        if (cancelled) return;
+        setAestheticPackages(packages);
+        setSelectedAestheticId((current) => current ?? packages[0]?.id ?? null);
+      })
+      .finally(() => {
+        if (!cancelled) setAestheticsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
   
   // Recording state - initialize from session status if provided
   const [isRecording, setIsRecording] = useState(
@@ -212,6 +234,8 @@ export function MobileSessionView({
   const sessionRef = useRef<Session | null>(session);
   const sessionPlanRef = useRef<SessionPlan | null>(sessionPlan);
   const lastProbeTimeRef = useRef(0);
+  const lastStuckCardTimeRef = useRef(0);
+  const stuckCardCountRef = useRef(0);
   const isAnalyzingRef = useRef(false);
   const autoAdvanceRef = useRef(autoAdvance);
 
@@ -647,12 +671,66 @@ export function MobileSessionView({
     }
   }, []);
 
+  const runStuckHeartbeat = useCallback(async (): Promise<StuckHeartbeatResult> => {
+    const startMs = Date.now();
+    const currentSession = sessionRef.current;
+
+    if (!currentSession) return { success: true, durationMs: 0 };
+    if (!isRecording || isPaused) return { success: true, durationMs: 0 };
+
+    const secondsSinceLast = lastStuckCardTimeRef.current
+      ? Math.floor((Date.now() - lastStuckCardTimeRef.current) / 1000)
+      : 9999;
+    if (secondsSinceLast < 90) {
+      return { success: true, durationMs: Date.now() - startMs, stuck: false };
+    }
+
+    try {
+      const res = await fetch("/api/session/stuck-policy", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sessionId: currentSession.id,
+          lastStuckCardTimestamp: lastStuckCardTimeRef.current || 0,
+          stuckCardCount: stuckCardCountRef.current,
+          tutoringLanguage,
+        }),
+      });
+
+      if (!res.ok) {
+        return { success: false, durationMs: Date.now() - startMs, error: "Stuck policy unavailable" };
+      }
+
+      const data = await res.json();
+      if (data?.stuck && data.recommendationMarkdown) {
+        const stuckCard: ChatMessage = {
+          id: `stuck_${Date.now()}`,
+          role: "assistant",
+          kind: "stuck",
+          cardTitle: data.title || "Stuck Check",
+          content: data.recommendationMarkdown,
+        };
+        setActiveTab(1);
+        setChatMessages(prev => [...prev, stuckCard]);
+        lastStuckCardTimeRef.current = Date.now();
+        stuckCardCountRef.current += 1;
+      }
+
+      return { success: true, durationMs: Date.now() - startMs, stuck: Boolean(data?.stuck) };
+    } catch (err) {
+      console.error("[Mobile] Stuck heartbeat error:", err);
+      return { success: false, durationMs: Date.now() - startMs, error: String(err) };
+    }
+  }, [isPaused, isRecording, tutoringLanguage]);
+
   // ---- Mobile Heartbeat Hook ----
   const heartbeat = useSessionHeartbeat({
     storageIntervalMs: 5000,
     analysisIntervalMs: 10000,
+    stuckIntervalMs: 10000,
     onStorageHeartbeat: runStorageHeartbeat,
     onAnalysisHeartbeat: runAnalysisHeartbeat,
+    onStuckHeartbeat: runStuckHeartbeat,
   });
 
   const openHeliosChatWithMessage = useCallback((message: string | PendingChatMessage) => {
@@ -1918,6 +1996,8 @@ export function MobileSessionView({
     );
   }
 
+  const selectedAesthetic = aestheticPackages.find((pkg) => pkg.id === selectedAestheticId) ?? aestheticPackages[0];
+
   // Welcome/Preparation Modal
   if (showWelcomeModal) {
     const isSessionReady = sessionPlan && !planLoading && !openingProbeLoading && probes.length > 0;
@@ -1991,6 +2071,15 @@ export function MobileSessionView({
                   ))}
                 </select>
               </div>
+
+              <AestheticPicker
+                packages={aestheticPackages}
+                selectedId={selectedAesthetic?.id ?? selectedAestheticId}
+                onSelect={setSelectedAestheticId}
+                disabled={isButtonDisabled}
+                loading={aestheticsLoading}
+                compact
+              />
 
               {/* Auto-advance toggle — hidden in UI (manual mode is the
                   default). Underlying state remains wired; remove the
@@ -2181,6 +2270,8 @@ export function MobileSessionView({
           ttsLanguage={tutoringLanguage}
           isSessionActive={isRecording && !isPaused}
           isSpeaking={isSpeaking}
+          aestheticImages={selectedAesthetic?.images}
+          aestheticName={selectedAesthetic?.name}
           sessionControls={(
             <div className="space-y-2">
               <SessionControlBar

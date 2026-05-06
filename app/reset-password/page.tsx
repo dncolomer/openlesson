@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Navbar } from "@/components/Navbar";
 import { createClient } from "@/lib/supabase/client";
@@ -12,11 +12,13 @@ export default function ResetPasswordPage() {
   const [message, setMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [sessionLoading, setSessionLoading] = useState(false);
+  const hasExchangedRecoveryCode = useRef(false);
   const { t } = useI18n();
 
   useEffect(() => {
     const code = new URLSearchParams(window.location.search).get("code");
-    if (!code) return;
+    if (!code || hasExchangedRecoveryCode.current) return;
+    hasExchangedRecoveryCode.current = true;
 
     let cancelled = false;
     setSessionLoading(true);
@@ -25,6 +27,7 @@ export default function ResetPasswordPage() {
       try {
         const { error: authError } = await createClient().auth.exchangeCodeForSession(code);
         if (!cancelled && authError) setError(authError.message);
+        if (!cancelled && !authError) window.history.replaceState(null, "", window.location.pathname);
       } catch {
         if (!cancelled) setError(t('common.error'));
       } finally {

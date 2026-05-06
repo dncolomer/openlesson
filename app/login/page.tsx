@@ -14,6 +14,7 @@ function LoginForm() {
   const [message, setMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [recoveryLoading, setRecoveryLoading] = useState(false);
+  const [magicLinkLoading, setMagicLinkLoading] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
   const { t } = useI18n();
@@ -76,6 +77,43 @@ function LoginForm() {
     }
   };
 
+  const handleMagicLink = async () => {
+    setError(null);
+    setMessage(null);
+
+    if (!email) {
+      setError(t('auth.enterEmailForMagicLink'));
+      return;
+    }
+
+    setMagicLinkLoading(true);
+
+    try {
+      const redirectTo = searchParams.get("redirect") || "/dashboard";
+      const callbackUrl = new URL("/auth/callback", window.location.origin);
+      callbackUrl.searchParams.set("next", redirectTo);
+
+      const supabase = createClient();
+      const { error: authError } = await supabase.auth.signInWithOtp({
+        email,
+        options: {
+          emailRedirectTo: callbackUrl.toString(),
+        },
+      });
+
+      if (authError) {
+        setError(authError.message);
+        return;
+      }
+
+      setMessage(t('auth.magicLinkSent'));
+    } catch {
+      setError(t('common.error'));
+    } finally {
+      setMagicLinkLoading(false);
+    }
+  };
+
   return (
     <div className="w-full max-w-sm">
       <h2 className="text-xl font-semibold text-white mb-1">{t('auth.welcomeBack')}</h2>
@@ -124,7 +162,7 @@ function LoginForm() {
 
         <button
           type="submit"
-          disabled={loading || recoveryLoading}
+          disabled={loading || recoveryLoading || magicLinkLoading}
           className="w-full py-2.5 bg-white hover:bg-neutral-200 disabled:bg-neutral-800 disabled:text-neutral-600 text-black text-sm font-medium rounded-xl transition-colors mt-2"
         >
           {loading ? t('auth.signingIn') : t('auth.signIn')}
@@ -132,8 +170,17 @@ function LoginForm() {
 
         <button
           type="button"
+          onClick={handleMagicLink}
+          disabled={loading || recoveryLoading || magicLinkLoading}
+          className="w-full py-2.5 border border-neutral-800 hover:border-neutral-700 disabled:border-neutral-900 disabled:text-neutral-700 text-neutral-200 text-sm font-medium rounded-xl transition-colors"
+        >
+          {magicLinkLoading ? t('auth.sendingMagicLink') : t('auth.emailMagicLink')}
+        </button>
+
+        <button
+          type="button"
           onClick={handlePasswordRecovery}
-          disabled={loading || recoveryLoading}
+          disabled={loading || recoveryLoading || magicLinkLoading}
           className="w-full py-2 text-neutral-400 hover:text-white disabled:text-neutral-700 text-xs font-medium transition-colors"
         >
           {recoveryLoading ? t('auth.sendingRecoveryEmail') : t('auth.forgotPassword')}

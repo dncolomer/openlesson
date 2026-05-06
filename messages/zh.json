@@ -1640,6 +1640,7 @@
     "remixFailed": "改编计划失败",
     "remixing": "改编中...",
     "remixPlan": "改编计划",
+    "exactCopy": "不要改编，直接从精确副本开始",
     "topicPlaceholder": "例如，Python数据科学",
     "modificationsPlaceholder": "例如，让它更适合初学者，专注于实际应用，更短的课程..."
   },

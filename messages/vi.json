@@ -1639,6 +1639,7 @@
     "remixFailed": "Không thể remix kế hoạch",
     "remixing": "Đang remix...",
     "remixPlan": "Remix kế hoạch",
+    "exactCopy": "Không remix, chỉ bắt đầu với một bản sao chính xác",
     "topicPlaceholder": "ví dụ, Python cho Khoa học Dữ liệu",
     "modificationsPlaceholder": "ví dụ, Làm cho nó thân thiện hơn với người mới bắt đầu, tập trung vào ứng dụng thực tế, các phiên ngắn hơn..."
   },

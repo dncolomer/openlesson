@@ -1711,6 +1711,7 @@
     "remixFailed": "Error al remixear el plan",
     "remixing": "Remixeando...",
     "remixPlan": "Remixear plan",
+    "exactCopy": "No remixear, simplemente empezar con una copia exacta",
     "topicPlaceholder": "ej., Python para Ciencia de Datos",
     "modificationsPlaceholder": "ej., Hazlo más amigable para principiantes, enfócate en aplicaciones prácticas, sesiones más cortas..."
   },

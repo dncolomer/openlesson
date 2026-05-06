@@ -1649,6 +1649,7 @@
     "remixFailed": "Nie udało się zremiksować planu",
     "remixing": "Remiksowanie...",
     "remixPlan": "Remiksuj plan",
+    "exactCopy": "Nie remiksuj, po prostu zacznij od dokładnej kopii",
     "topicPlaceholder": "np., Python dla Data Science",
     "modificationsPlaceholder": "np., Sprawdź żeby było bardziej przyjazne dla początkujących, skup się na praktycznych zastosowaniach, krótsze sesje..."
   },

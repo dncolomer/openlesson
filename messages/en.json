@@ -1747,6 +1747,7 @@
     "remixFailed": "Failed to remix plan",
     "remixing": "Remixing...",
     "remixPlan": "Remix Plan",
+    "exactCopy": "Do not remix, simply start with an exact copy",
     "topicPlaceholder": "e.g., Python for Data Science",
     "modificationsPlaceholder": "e.g., Make it more beginner-friendly, focus on practical applications, shorter sessions..."
   },

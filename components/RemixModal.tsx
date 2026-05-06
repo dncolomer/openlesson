@@ -21,6 +21,7 @@ export function RemixModal({ plan, onClose, onComplete }: RemixModalProps) {
   const { t } = useI18n();
   const [title, setTitle] = useState("");
   const [prompt, setPrompt] = useState("");
+  const [exactCopy, setExactCopy] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const supabase = createBrowserClient(
@@ -33,8 +34,8 @@ export function RemixModal({ plan, onClose, onComplete }: RemixModalProps) {
       setError(t('remixModal.titleRequired'));
       return;
     }
-    if (!prompt.trim()) {
-      setError(t('remixModal.descriptionRequired'));
+    if (!exactCopy && !prompt.trim()) {
+      setError(t('remixModal.promptRequired'));
       return;
     }
 
@@ -45,18 +46,18 @@ export function RemixModal({ plan, onClose, onComplete }: RemixModalProps) {
       const res = await fetch(`/api/learning-plans/${plan.id}/remix`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ remixPrompt: prompt, title: title.trim() }),
+        body: JSON.stringify({ remixPrompt: prompt, title: title.trim(), exactCopy }),
       });
       const data = await res.json();
 
       if (data.success) {
         onComplete(data.planId);
       } else {
-        setError(data.error || t('remixModal.failedToRemix'));
+        setError(data.error || t('remixModal.remixFailed'));
       }
     } catch (err) {
       console.error("Error remixing plan:", err);
-      setError(t('remixModal.failedToRemix'));
+      setError(t('remixModal.remixFailed'));
     } finally {
       setLoading(false);
     }
@@ -98,12 +99,22 @@ export function RemixModal({ plan, onClose, onComplete }: RemixModalProps) {
           <label className="block text-sm text-neutral-400 mb-2">
             {t('remixModal.howAdapt')}
           </label>
+          <label className="flex items-start gap-3 mb-3 rounded-xl border border-neutral-800 bg-neutral-800/30 p-3 text-sm text-neutral-300">
+            <input
+              type="checkbox"
+              checked={exactCopy}
+              onChange={(e) => setExactCopy(e.target.checked)}
+              className="mt-0.5 h-4 w-4 rounded border-neutral-600 bg-neutral-900 text-blue-600 focus:ring-blue-600"
+            />
+            <span>{t('remixModal.exactCopy')}</span>
+          </label>
           <textarea
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
             placeholder={t('remixModal.modificationsPlaceholder')}
+            disabled={exactCopy}
             rows={4}
-            className="w-full px-4 py-3 bg-neutral-800/50 border border-neutral-700 rounded-xl text-white text-sm placeholder-neutral-500 focus:outline-none focus:border-neutral-600 resize-none"
+            className="w-full px-4 py-3 bg-neutral-800/50 border border-neutral-700 rounded-xl text-white text-sm placeholder-neutral-500 focus:outline-none focus:border-neutral-600 resize-none disabled:cursor-not-allowed disabled:opacity-50"
           />
         </div>
 

@@ -28,9 +28,9 @@ export async function POST(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { remixPrompt, title } = await req.json();
+    const { remixPrompt, title, exactCopy } = await req.json();
 
-    if (!remixPrompt || typeof remixPrompt !== "string") {
+    if (!exactCopy && (!remixPrompt || typeof remixPrompt !== "string")) {
       return NextResponse.json(
         { error: "Remix prompt is required" },
         { status: 400 }
@@ -70,6 +70,66 @@ export async function POST(
     if (nodesError) {
       console.error("Nodes error:", nodesError);
       return NextResponse.json({ error: "Could not fetch source nodes" }, { status: 500 });
+    }
+
+    if (exactCopy) {
+      const { data: newPlan, error: planError } = await supabase
+        .from("learning_plans")
+        .insert({
+          user_id: user.id,
+          root_topic: title.trim(),
+          title: title.trim(),
+          status: "active",
+          is_public: false,
+          author_id: user.id,
+          original_plan_id: planId,
+        })
+        .select()
+        .single();
+
+      if (planError) {
+        console.error("Plan insert error:", planError);
+        throw new Error(`Could not create new plan: ${planError.message}`);
+      }
+
+      const nodeIdMap = new Map<string, string>();
+      for (const node of sourceNodes || []) {
+        nodeIdMap.set(node.id, crypto.randomUUID());
+      }
+
+      const newNodes = (sourceNodes || []).map((node) => ({
+        plan_id: newPlan.id,
+        title: node.title,
+        description: node.description,
+        is_start: node.is_start || false,
+        next_node_ids: (node.next_node_ids || [])
+          .map((id: string) => nodeIdMap.get(id))
+          .filter(Boolean),
+        status: "available",
+        position_x: node.position_x,
+        position_y: node.position_y,
+      }));
+
+      const { error: insertError } = await supabase
+        .from("plan_nodes")
+        .insert(newNodes);
+
+      if (insertError) {
+        console.error("Nodes insert error:", insertError);
+        await supabase.from("learning_plans").delete().eq("id", newPlan.id);
+        throw new Error(`Could not copy nodes: ${insertError.message}`);
+      }
+
+      await supabase
+        .from("learning_plans")
+        .update({ remix_count: (sourcePlan.remix_count || 0) + 1 })
+        .eq("id", planId);
+
+      return NextResponse.json({
+        success: true,
+        planId: newPlan.id,
+        message: `Plan copied with ${newNodes.length} sessions!`,
+      });
     }
 
     const authorUsername = sourcePlan.profiles?.username;

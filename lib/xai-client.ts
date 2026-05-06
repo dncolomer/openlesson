@@ -18,7 +18,7 @@
 const XAI_CHAT_URL = "https://api.x.ai/v1/chat/completions";
 const XAI_RESPONSES_URL = "https://api.x.ai/v1/responses";
 
-export const DEFAULT_MODEL = "grok-4.20-beta-0309-reasoning";
+export const DEFAULT_MODEL = "grok-4.3";
 
 export interface ModelOption {
   id: string;
@@ -27,10 +27,7 @@ export interface ModelOption {
 }
 
 export const AVAILABLE_MODELS: readonly ModelOption[] = [
-  { id: "grok-4-0709", label: "Grok 4", description: "Most capable xAI model (stable)" },
-  { id: "grok-4-fast-reasoning", label: "Grok 4 Fast", description: "Fast xAI model" },
-  { id: "grok-4.20-beta-0309-reasoning", label: "Grok 4.20 Beta (Reasoning)", description: "Newest flagship with reasoning" },
-  { id: "grok-4.20-beta-0309-non-reasoning", label: "Grok 4.20 Beta (Fast)", description: "Newest flagship, no reasoning" },
+  { id: "grok-4.3", label: "Grok 4.3", description: "Newest xAI flagship model" },
 ] as const;
 
 export type ModelId = (typeof AVAILABLE_MODELS)[number]["id"] | string;

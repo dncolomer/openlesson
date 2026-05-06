@@ -74,9 +74,9 @@ export function PlanChat({ plan, nodes: initialNodes, onRefresh, onNodesUpdate, 
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
   const [model, setModel] = useState<string>(() => {
     if (typeof window !== "undefined") {
-      return localStorage.getItem(MODEL_STORAGE_KEY) || "x-ai/grok-4";
+      return localStorage.getItem(MODEL_STORAGE_KEY) || "x-ai/grok-4.3";
     }
-    return "x-ai/grok-4";
+    return "x-ai/grok-4.3";
   });
   const [highlightedNodes, setHighlightedNodes] = useState<Set<string>>(new Set());
   const [highlightOpacity, setHighlightOpacity] = useState(1);

@@ -7,10 +7,11 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { getSessions, deleteSession, restartSession, getLearningPlans, type Session, type LearningPlan } from "@/lib/storage";
 import { DEFAULT_PROMPTS, PROMPT_META, type PromptKey, type UserPrompts } from "@/lib/prompts";
+import { buildContributionDays, contributionLevel, contributionMonthLabels, dateKey, groupContributionWeeks } from "@/lib/contributions";
 
 import { useI18n } from "@/lib/i18n";
 
-type Tab = "sessions" | "plans" | "usage" | "config";
+type Tab = "overview" | "sessions" | "plans" | "usage" | "config";
 
 interface AvailableModel {
   id: string;
@@ -34,9 +35,9 @@ export default function DashboardPage() {
   const { t } = useI18n();
   const [loading, setLoading] = useState(true);
   const searchParams = useSearchParams();
-  const initialTab = (searchParams.get("tab") as Tab) || "sessions";
+  const initialTab = (searchParams.get("tab") as Tab) || "overview";
   const [activeTab, setActiveTab] = useState<Tab>(
-    ["sessions", "plans", "usage", "config"].includes(initialTab) ? initialTab : "sessions"
+    ["overview", "sessions", "plans", "usage", "config"].includes(initialTab) ? initialTab : "overview"
   );
 
   // User state
@@ -46,7 +47,15 @@ export default function DashboardPage() {
     plan?: string;
     isAdmin?: boolean;
     extraLessons?: number;
+    displayName?: string;
+    bio?: string;
+    profileVisibility?: "public" | "private";
+    publicActivityEnabled?: boolean;
+    publicStatsEnabled?: boolean;
+    publicSessionTitlesEnabled?: boolean;
   } | null>(null);
+  const [profileSaving, setProfileSaving] = useState(false);
+  const [profileSaved, setProfileSaved] = useState(false);
 
   // Usage tab
   const [usageData, setUsageData] = useState<{
@@ -78,13 +87,14 @@ export default function DashboardPage() {
   const [newKeyValue, setNewKeyValue] = useState<string | null>(null);
   const [newKeyName, setNewKeyName] = useState("");
   const [keyCopied, setKeyCopied] = useState(false);
+  const [mcpUrlCopied, setMcpUrlCopied] = useState(false);
 
   // Config tab
   const [availableModels, setAvailableModels] = useState<AvailableModel[]>([]);
-  const [tutorModel, setTutorModel] = useState<string>("grok-4-0709");
-  const [askModel, setAskModel] = useState<string>("grok-4-0709");
-  const [plannerModel, setPlannerModel] = useState<string>("grok-4-0709");
-  const [coderModel, setCoderModel] = useState<string>("grok-4-0709");
+  const [tutorModel, setTutorModel] = useState<string>("grok-4.3");
+  const [askModel, setAskModel] = useState<string>("grok-4.3");
+  const [plannerModel, setPlannerModel] = useState<string>("grok-4.3");
+  const [coderModel, setCoderModel] = useState<string>("grok-4.3");
   const [modelsLoading, setModelsLoading] = useState(true);
   const [modelSaving, setModelSaving] = useState(false);
   const [modelSaved, setModelSaved] = useState(false);
@@ -128,7 +138,7 @@ export default function DashboardPage() {
       // Fetch profile
       const { data: profile } = await supabase
         .from("profiles")
-        .select("username, metadata, plan, is_admin, extra_lessons, subscription_status, current_period_end")
+        .select("username, display_name, bio, profile_visibility, public_activity_enabled, public_stats_enabled, public_session_titles_enabled, metadata, plan, is_admin, extra_lessons, subscription_status, current_period_end")
         .eq("id", authUser.id)
         .single();
 
@@ -139,6 +149,12 @@ export default function DashboardPage() {
           plan: profile.plan || "free",
           isAdmin: profile.is_admin || false,
           extraLessons: profile.extra_lessons || 0,
+          displayName: profile.display_name || "",
+          bio: profile.bio || "",
+          profileVisibility: profile.profile_visibility || "private",
+          publicActivityEnabled: !!profile.public_activity_enabled,
+          publicStatsEnabled: !!profile.public_stats_enabled,
+          publicSessionTitlesEnabled: !!profile.public_session_titles_enabled,
         });
 
         if (profile.metadata?.prompts) {
@@ -404,6 +420,41 @@ export default function DashboardPage() {
     }
   };
 
+  const publicProfileUrl = user?.username && typeof window !== "undefined" ? `${window.location.origin}/u/${user.username}` : "";
+  const grokMcpUrl = newKeyValue && typeof window !== "undefined"
+    ? `${window.location.origin}/api/mcp/${encodeURIComponent(newKeyValue)}`
+    : "";
+
+  const handleSaveProfile = async () => {
+    if (!user) return;
+    setProfileSaving(true);
+    setProfileSaved(false);
+    try {
+      const { error } = await supabase
+        .from("profiles")
+        .update({
+          username: user.username?.trim() || null,
+          display_name: user.displayName?.trim() || null,
+          bio: user.bio?.trim() || null,
+          profile_visibility: user.profileVisibility || "private",
+          public_activity_enabled: !!user.publicActivityEnabled,
+          public_stats_enabled: !!user.publicStatsEnabled,
+          public_session_titles_enabled: !!user.publicSessionTitlesEnabled,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", (await supabase.auth.getUser()).data.user?.id);
+
+      if (error) throw error;
+      setProfileSaved(true);
+      setTimeout(() => setProfileSaved(false), 2000);
+    } catch (err) {
+      console.error("Failed to save profile:", err);
+      alert(err instanceof Error ? err.message : "Failed to save profile");
+    } finally {
+      setProfileSaving(false);
+    }
+  };
+
   const formatDuration = (ms: number) => {
     const mins = Math.floor(ms / 60000);
     const secs = Math.floor((ms % 60000) / 1000);
@@ -417,6 +468,20 @@ export default function DashboardPage() {
       year: "numeric",
     });
   };
+
+  const completedSessions = sessions.filter((s) => s.status === "completed");
+  const totalLearningMinutes = Math.round(sessions.reduce((sum, session) => sum + (session.durationMs || 0), 0) / 60000);
+  const publicPlans = learningPlans.filter((plan) => (plan as any).is_public);
+  const minutesByDate = sessions.reduce((days, session) => {
+    const day = dateKey(new Date(session.startedAt));
+    days.set(day, (days.get(day) || 0) + Math.round((session.durationMs || 0) / 60000));
+    return days;
+  }, new Map<string, number>());
+  const contributionDays = buildContributionDays(
+    Array.from(minutesByDate.entries()).map(([date, minutes]) => ({ date, minutes }))
+  );
+  const contributionWeeks = groupContributionWeeks(contributionDays);
+  const contributionMonths = contributionMonthLabels(contributionWeeks);
 
   // Filter and paginate sessions
   const filteredSessions = sessions.filter((s) => {
@@ -459,8 +524,9 @@ export default function DashboardPage() {
 
       {/* Tabs */}
       <div className="border-b border-neutral-800/60">
-        <div className="max-w-5xl mx-auto flex gap-1 px-4 sm:px-6">
+        <div className="max-w-7xl mx-auto flex gap-1 px-4 sm:px-6 lg:px-8">
           {[
+            { id: "overview", label: "Profile" },
             { id: "sessions", label: t('dashboard.sessions') },
             { id: "plans", label: t('dashboard.plans') },
             { id: "usage", label: t('dashboard.usage') },
@@ -485,7 +551,181 @@ export default function DashboardPage() {
       </div>
 
       {/* Content */}
-      <main className="max-w-5xl mx-auto p-4 sm:px-6 py-8">
+      <main className="max-w-7xl mx-auto p-4 sm:px-6 lg:px-8 py-8">
+        {/* Profile Overview */}
+        {activeTab === "overview" && (
+          <div className="space-y-6">
+            <section className="overflow-hidden rounded-3xl border border-neutral-800 bg-neutral-950">
+              <div className="bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.22),transparent_32%),radial-gradient(circle_at_top_right,rgba(59,130,246,0.2),transparent_30%)] p-6 sm:p-8">
+                <div className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className="flex h-20 w-20 items-center justify-center rounded-3xl bg-gradient-to-br from-emerald-400 via-sky-500 to-violet-500 text-3xl font-bold">
+                      {(user?.username || user?.email || "u").slice(0, 1).toUpperCase()}
+                    </div>
+                    <div>
+                      <h1 className="text-2xl font-semibold tracking-tight">{user?.displayName || user?.username || "Your learning profile"}</h1>
+                      <p className="mt-1 text-sm text-neutral-400">{user?.username ? `@${user.username}` : "Choose a username to publish your profile"}</p>
+                      <span className={`mt-3 inline-flex rounded-full border px-2.5 py-1 text-xs ${user?.profileVisibility === "public" ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-300" : "border-neutral-700 bg-neutral-900 text-neutral-400"}`}>
+                        {user?.profileVisibility === "public" ? "Public profile" : "Private profile"}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {user?.username && user.profileVisibility === "public" && (
+                      <Link href={`/u/${user.username}`} className="rounded-lg border border-neutral-700 px-3 py-2 text-sm text-neutral-200 transition-colors hover:bg-neutral-900">
+                        View public profile
+                      </Link>
+                    )}
+                    {publicProfileUrl && user?.profileVisibility === "public" && (
+                      <button
+                        onClick={() => navigator.clipboard.writeText(publicProfileUrl)}
+                        className="rounded-lg bg-white px-3 py-2 text-sm font-medium text-black transition-colors hover:bg-neutral-200"
+                      >
+                        Copy share link
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+              <div className="grid gap-px bg-neutral-800 sm:grid-cols-4">
+                {[
+                  ["Sessions", sessions.length],
+                  ["Completed", completedSessions.length],
+                  ["Public plans", publicPlans.length],
+                  ["Minutes", totalLearningMinutes],
+                ].map(([label, value]) => (
+                  <div key={label} className="bg-neutral-950 p-5">
+                    <div className="text-2xl font-semibold">{value}</div>
+                    <div className="mt-1 text-xs uppercase tracking-wide text-neutral-500">{label}</div>
+                  </div>
+                ))}
+              </div>
+            </section>
+
+            <section className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
+              <div className="rounded-3xl border border-neutral-800 bg-neutral-950 p-6">
+                <div className="flex items-center justify-between">
+                  <h2 className="font-semibold">Learning Map</h2>
+                  <span className="text-xs text-neutral-500">{totalLearningMinutes} minutes in the last year</span>
+                </div>
+                <div className="mt-5 overflow-x-auto pb-2">
+                  <div className="w-max min-w-full">
+                    <div className="mb-2 ml-9 grid text-[11px] text-neutral-500" style={{ gridTemplateColumns: `repeat(${contributionWeeks.length}, 13px)`, columnGap: "4px" }}>
+                      {contributionMonths.map((month) => <span key={month.index}>{month.label}</span>)}
+                    </div>
+                    <div className="flex gap-2">
+                      <div className="grid grid-rows-7 gap-1 pt-[16px] text-[11px] text-neutral-500">
+                        <span />
+                        <span>Mon</span>
+                        <span />
+                        <span>Wed</span>
+                        <span />
+                        <span>Fri</span>
+                        <span />
+                      </div>
+                      <div className="grid grid-flow-col grid-rows-7 gap-1">
+                        {contributionWeeks.flatMap((week, weekIndex) =>
+                          Array.from({ length: 7 }, (_, dayIndex) => {
+                            const day = week[dayIndex] || null;
+                            const level = contributionLevel(day?.minutes || 0);
+                            return (
+                              <div
+                                key={`${weekIndex}-${dayIndex}`}
+                                title={day ? `${day.minutes} minutes on ${formatDate(day.date)}` : ""}
+                                className={[
+                                  "h-[13px] w-[13px] rounded-[3px] border",
+                                  level === 0 ? "border-neutral-800 bg-neutral-900" : "border-emerald-400/20",
+                                  level === 1 ? "bg-emerald-950" : "",
+                                  level === 2 ? "bg-emerald-800" : "",
+                                  level === 3 ? "bg-emerald-500" : "",
+                                  level === 4 ? "bg-emerald-300" : "",
+                                ].join(" ")}
+                              />
+                            );
+                          })
+                        )}
+                      </div>
+                    </div>
+                    <div className="mt-3 flex items-center justify-end gap-1 text-xs text-neutral-500">
+                      <span>Less</span>
+                      {[0, 1, 2, 3, 4].map((level) => (
+                        <span key={level} className={["h-[13px] w-[13px] rounded-[3px] border", level === 0 ? "border-neutral-800 bg-neutral-900" : "border-emerald-400/20", level === 1 ? "bg-emerald-950" : "", level === 2 ? "bg-emerald-800" : "", level === 3 ? "bg-emerald-500" : "", level === 4 ? "bg-emerald-300" : ""].join(" ")} />
+                      ))}
+                      <span>More</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="rounded-3xl border border-neutral-800 bg-neutral-950 p-6">
+                <h2 className="font-semibold">Recent Activity</h2>
+                <div className="mt-5 space-y-4">
+                  {[...sessions.slice(0, 3), ...learningPlans.slice(0, 3)]
+                    .sort((a: any, b: any) => new Date((b.startedAt || b.created_at) as string).getTime() - new Date((a.startedAt || a.created_at) as string).getTime())
+                    .slice(0, 5)
+                    .map((item: any) => (
+                      <div key={item.id} className="flex gap-3">
+                        <div className="mt-1 h-3 w-3 rounded-full border border-emerald-400 bg-emerald-400/30" />
+                        <div>
+                          <p className="line-clamp-1 text-sm text-neutral-200">{item.problem || item.title || item.root_topic}</p>
+                          <p className="mt-1 text-xs text-neutral-500">{formatDate(item.startedAt || item.created_at)}</p>
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              </div>
+            </section>
+
+            <section className="rounded-3xl border border-neutral-800 bg-neutral-950 p-6">
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <h2 className="font-semibold">Profile Settings</h2>
+                  <p className="mt-1 text-sm text-neutral-500">Control your username, public profile, and what learning activity can be shared.</p>
+                </div>
+                <button
+                  onClick={handleSaveProfile}
+                  disabled={profileSaving}
+                  className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-emerald-500 disabled:opacity-50"
+                >
+                  {profileSaving ? "Saving..." : profileSaved ? "Saved" : "Save"}
+                </button>
+              </div>
+              <div className="mt-5 grid gap-4 sm:grid-cols-2">
+                <label className="space-y-2">
+                  <span className="text-sm text-neutral-300">Username</span>
+                  <input value={user?.username || ""} onChange={(e) => setUser((prev) => prev ? { ...prev, username: e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, "") } : prev)} className="w-full rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-neutral-200 outline-none focus:border-neutral-600" placeholder="username" />
+                </label>
+                <label className="space-y-2">
+                  <span className="text-sm text-neutral-300">Display name</span>
+                  <input value={user?.displayName || ""} onChange={(e) => setUser((prev) => prev ? { ...prev, displayName: e.target.value } : prev)} className="w-full rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-neutral-200 outline-none focus:border-neutral-600" placeholder="Your name" />
+                </label>
+                <label className="space-y-2 sm:col-span-2">
+                  <span className="text-sm text-neutral-300">Bio</span>
+                  <textarea value={user?.bio || ""} onChange={(e) => setUser((prev) => prev ? { ...prev, bio: e.target.value } : prev)} rows={3} className="w-full resize-none rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-neutral-200 outline-none focus:border-neutral-600" placeholder="What are you learning?" />
+                </label>
+              </div>
+              <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                {[
+                  ["Make profile public", "profileVisibility"],
+                  ["Show activity timeline", "publicActivityEnabled"],
+                  ["Show aggregate stats", "publicStatsEnabled"],
+                  ["Show completed session titles", "publicSessionTitlesEnabled"],
+                ].map(([label, key]) => (
+                  <label key={key} className="flex items-center justify-between rounded-xl border border-neutral-800 bg-neutral-900/60 p-4 text-sm text-neutral-300">
+                    <span>{label}</span>
+                    <input
+                      type="checkbox"
+                      checked={key === "profileVisibility" ? user?.profileVisibility === "public" : !!(user as any)?.[key]}
+                      onChange={(e) => setUser((prev) => prev ? { ...prev, [key]: key === "profileVisibility" ? (e.target.checked ? "public" : "private") : e.target.checked } : prev)}
+                      className="h-4 w-4 accent-emerald-500"
+                    />
+                  </label>
+                ))}
+              </div>
+            </section>
+          </div>
+        )}
+
         {/* Sessions Tab */}
         {activeTab === "sessions" && (
           <div className="space-y-4">
@@ -938,6 +1178,29 @@ export default function DashboardPage() {
                   <code className="block text-xs text-neutral-300 bg-neutral-900 p-2 rounded font-mono break-all">
                     {newKeyValue}
                   </code>
+                  {grokMcpUrl && (
+                    <div className="mt-4 pt-4 border-t border-green-500/20">
+                      <div className="flex items-center justify-between mb-2">
+                        <p className="text-sm text-green-400">Grok custom connector URL</p>
+                        <button
+                          onClick={() => {
+                            navigator.clipboard.writeText(grokMcpUrl);
+                            setMcpUrlCopied(true);
+                            setTimeout(() => setMcpUrlCopied(false), 2000);
+                          }}
+                          className="text-xs px-2 py-1 bg-green-600 hover:bg-green-500 rounded transition-colors"
+                        >
+                          {mcpUrlCopied ? t('common.copied') : t('common.copy')}
+                        </button>
+                      </div>
+                      <code className="block text-xs text-neutral-300 bg-neutral-900 p-2 rounded font-mono break-all">
+                        {grokMcpUrl}
+                      </code>
+                      <p className="text-xs text-neutral-500 mt-2">
+                        Paste this into Grok&apos;s Custom Connector Server URL field. It is shown only once because it contains your API key.
+                      </p>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -980,6 +1243,13 @@ export default function DashboardPage() {
                 <p className="text-sm text-neutral-400 mb-3">
                   {t('dashboard.apiKeyDescription')}
                 </p>
+                <div className="mb-4 rounded-lg border border-neutral-800 bg-neutral-950 p-4">
+                  <p className="text-xs font-medium text-neutral-300 mb-2">Grok custom connector</p>
+                  <p className="text-xs text-neutral-500">
+                    Create a Pro API key above, then copy the one-time MCP URL into Grok&apos;s Custom Connector Server URL field.
+                    Existing keys cannot show the connector URL again because OpenLesson stores only the key hash.
+                  </p>
+                </div>
                 <div className="bg-neutral-950 rounded-lg p-4 font-mono text-xs text-neutral-300 overflow-x-auto">
                   <p className="text-neutral-500 mb-2">// {t('dashboard.exampleRequest')}</p>
                   <p>curl -X POST https://openlesson.academy/api/agent/session/analyze \</p>
@@ -1047,7 +1317,7 @@ export default function DashboardPage() {
                     </label>
                     <p className="text-xs text-neutral-500 mb-3">{slot.desc}</p>
                     <div className="w-full bg-neutral-950 border border-neutral-700 rounded-lg px-3 py-2 text-sm text-neutral-300">
-                      Grok 4.20 Beta <span className="text-neutral-500">(grok-4.20-beta-0309-reasoning)</span>
+                      Grok 4.3 <span className="text-neutral-500">(grok-4.3)</span>
                     </div>
                   </div>
                 ))}

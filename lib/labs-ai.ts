@@ -1,5 +1,5 @@
 // ============================================
-// AI PROBE GENERATOR - Generates targeted questions via Grok 4.20
+// AI PROBE GENERATOR - Generates targeted questions via Grok 4.3
 // ============================================
 
 import { callXai, type Message } from "./xai-client";
@@ -41,7 +41,7 @@ export async function generateProbes(topic: string): Promise<Probe[]> {
 
   try {
     const response = await callXai<Probe[]>(messages, {
-      model: "grok-4.20-beta-0309-reasoning",
+      model: "grok-4.3",
       maxTokens: 800,
       temperature: 0.7,
       responseFormat: "json",

@@ -89,7 +89,7 @@ export function ChatPanel({ planId, model, onModelChange, onRefresh, onNodesUpda
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const currentModel = model || "x-ai/grok-4";
+  const currentModel = model || "x-ai/grok-4.3";
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });

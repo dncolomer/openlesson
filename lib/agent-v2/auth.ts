@@ -31,6 +31,18 @@ export async function authenticateRequest(
   }
 
   const apiKey = authHeader.substring(7);
+
+  return authenticateApiKey(apiKey, requiredScope);
+}
+
+/**
+ * Authenticate a raw API key value. This is used by transports like MCP where
+ * the client may only support a connector URL and cannot set Authorization.
+ */
+export async function authenticateApiKey(
+  apiKey: string,
+  requiredScope: ApiKeyScope
+): Promise<{ auth: AuthContext; supabase: SupabaseClient } | NextResponse> {
   const supabase = await getServiceClient();
   const keyHash = await hashApiKey(apiKey);
 

@@ -1557,10 +1557,20 @@ export async function getLearningPlans(): Promise<LearningPlan[]> {
 
   return (data || []).map((p: any) => ({
     id: p.id,
-    title: p.root_topic,
+    title: p.title || p.root_topic,
     root_topic: p.root_topic,
     status: p.status || "active",
     created_at: p.created_at,
+    is_public: p.is_public || false,
+    author_id: p.author_id,
+    remix_count: p.remix_count || 0,
+    original_plan_id: p.original_plan_id,
+    source_type: p.source_type,
+    source_url: p.source_url,
+    source_summary: p.source_summary,
+    notes: p.notes,
+    cover_image_url: p.cover_image_url,
+    is_group: p.is_group || false,
   }));
 }
 

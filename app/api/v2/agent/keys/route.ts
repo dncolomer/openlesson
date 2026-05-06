@@ -86,7 +86,7 @@ export async function POST(req: NextRequest) {
     // ── Check Pro subscription ──────────────────────────────────
     const { data: profile, error: profileError } = await supabase
       .from("profiles")
-      .select("subscription_tier, subscription_status")
+      .select("plan, subscription_status, is_admin")
       .eq("id", user.id)
       .single();
 
@@ -95,10 +95,10 @@ export async function POST(req: NextRequest) {
       return errorResponse(500, "internal_error", "Failed to verify subscription");
     }
 
-    if (
-      profile.subscription_tier !== "pro" ||
-      profile.subscription_status !== "active"
-    ) {
+    const isAdmin = profile.is_admin === true;
+    const isPro = profile.plan === "pro" && profile.subscription_status === "active";
+
+    if (!isAdmin && !isPro) {
       return errorResponse(
         403,
         "subscription_lapsed",

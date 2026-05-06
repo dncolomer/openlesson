@@ -134,7 +134,7 @@ export async function POST(req: NextRequest) {
 
     // Call xAI Responses API
     const result = await callXaiResponses({
-      model: "grok-4-0709",
+      model: "grok-4.3",
       instructions: systemInstructions,
       input: inputMessages,
       temperature: 0.7,

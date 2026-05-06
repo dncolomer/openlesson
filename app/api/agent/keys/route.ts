@@ -60,6 +60,23 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const { data: profile, error: profileError } = await supabase
+      .from("profiles")
+      .select("plan, subscription_status, is_admin")
+      .eq("id", user.id)
+      .single();
+
+    if (profileError || !profile) {
+      return NextResponse.json({ error: "Failed to verify subscription" }, { status: 500 });
+    }
+
+    const isAdmin = profile.is_admin === true;
+    const isPro = profile.plan === "pro" && profile.subscription_status === "active";
+
+    if (!isAdmin && !isPro) {
+      return NextResponse.json({ error: "A Pro subscription is required to create API keys" }, { status: 403 });
+    }
+
     const apiKey = `sk_${crypto.randomBytes(24).toString("hex")}`;
     const keyHash = crypto.createHash("sha256").update(apiKey).digest("hex");
     const keyPrefix = apiKey.substring(0, 12);

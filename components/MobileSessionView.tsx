@@ -20,6 +20,7 @@ import {
   addProbe,
   addProbeToSession,
   startSession,
+  updateSessionStatus,
   pauseSession,
   resumeSession,
   endSession,
@@ -238,6 +239,7 @@ export function MobileSessionView({
   const recorderRef = useRef<AudioRecorder | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const timerBaseRef = useRef<number>(0);
+  const elapsedSecondsRef = useRef(0);
   const chunkIndexRef = useRef(0);
   const wakeLockRef = useRef<WakeLockSentinel | null>(null);
   const whiteboardDataRef = useRef<string | null>(null);
@@ -253,6 +255,15 @@ export function MobileSessionView({
   useEffect(() => { sessionRef.current = session; }, [session]);
   useEffect(() => { sessionPlanRef.current = sessionPlan; }, [sessionPlan]);
   useEffect(() => { autoAdvanceRef.current = autoAdvance; }, [autoAdvance]);
+  useEffect(() => { elapsedSecondsRef.current = elapsedSeconds; }, [elapsedSeconds]);
+
+  useEffect(() => {
+    if (!session || !isRecording || isPaused) return;
+    const interval = window.setInterval(() => {
+      void updateSessionStatus(session.id, "active", elapsedSecondsRef.current * 1000);
+    }, 15000);
+    return () => window.clearInterval(interval);
+  }, [session?.id, isRecording, isPaused]);
 
   // Load session data if not provided
   useEffect(() => {
@@ -325,7 +336,7 @@ export function MobileSessionView({
   useEffect(() => {
     const handler = () => {
       if (sessionRef.current && isRecording && !isPaused) {
-        pauseSession(sessionRef.current.id);
+        pauseSession(sessionRef.current.id, elapsedSecondsRef.current * 1000);
       }
     };
     window.addEventListener("beforeunload", handler);
@@ -1277,7 +1288,11 @@ export function MobileSessionView({
     recorderRef.current?.pause();
     setIsPaused(true);
     timerBaseRef.current = Date.now() - elapsedSeconds * 1000;
-    await pauseSession(session.id);
+    const durationMs = elapsedSeconds * 1000;
+    const pausedSession = { ...session, durationMs, status: "paused" as const };
+    setSession(pausedSession);
+    sessionRef.current = pausedSession;
+    await pauseSession(session.id, durationMs);
   }, [session, elapsedSeconds]);
 
   // Auto-pause after 5 min of silence + no input — cost-saving measure.
@@ -1325,6 +1340,9 @@ export function MobileSessionView({
       recorderRef.current.resume();
       setIsPaused(false);
       await resumeSession(session.id);
+      const activeSession = { ...session, status: "active" as const };
+      setSession(activeSession);
+      sessionRef.current = activeSession;
       return;
     }
 
@@ -1356,6 +1374,9 @@ export function MobileSessionView({
       setIsRecording(true);
       timerBaseRef.current = Date.now() - elapsedSeconds * 1000;
       await resumeSession(session.id);
+      const activeSession = { ...session, status: "active" as const };
+      setSession(activeSession);
+      sessionRef.current = activeSession;
     } catch (err) {
       setMicStatus("denied");
       setError("Could not access microphone. Please grant permission and try again.");
@@ -2509,6 +2530,8 @@ export function MobileSessionView({
           setShowEndConfirm(false);
           if (!isPaused) {
             try { await pauseRecording(); } catch (e) { console.error(e); }
+          } else if (session) {
+            try { await pauseSession(session.id, elapsedSeconds * 1000); } catch (e) { console.error(e); }
           }
           router.push("/dashboard");
         }}

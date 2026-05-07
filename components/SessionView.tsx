@@ -721,6 +721,7 @@ export function SessionView({ sessionId }: { sessionId: string }) {
   const recorderRef = useRef<AudioRecorder | null>(null);
   const sessionRef = useRef<Session | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const elapsedSecondsRef = useRef(0);
   const lastProbeTimeRef = useRef(0);
   const lastStuckCardTimeRef = useRef(0);
   const stuckCardCountRef = useRef(0);
@@ -799,6 +800,15 @@ export function SessionView({ sessionId }: { sessionId: string }) {
   useEffect(() => { museStatusRef.current = museStatus; }, [museStatus]);
   useEffect(() => { isWebcamEnabledRef.current = isWebcamEnabled; }, [isWebcamEnabled]);
   useEffect(() => { sessionPlanRef.current = sessionPlan; }, [sessionPlan]);
+  useEffect(() => { elapsedSecondsRef.current = elapsedSeconds; }, [elapsedSeconds]);
+
+  useEffect(() => {
+    if (!session || !isRecording || isPaused) return;
+    const interval = window.setInterval(() => {
+      void updateSessionStatus(session.id, "active", elapsedSecondsRef.current * 1000);
+    }, 15000);
+    return () => window.clearInterval(interval);
+  }, [session?.id, isRecording, isPaused]);
 
   // Ref for action handlers (populated later, used for pop-out communication)
   const actionHandlersRef = useRef<{
@@ -1033,6 +1043,7 @@ export function SessionView({ sessionId }: { sessionId: string }) {
       if (s) {
         setSession(s);
         sessionRef.current = s;
+        setElapsedSeconds(Math.floor((s.durationMs || 0) / 1000));
         
         // Reset language confirmation for new session
         setLanguageConfirmed(false);
@@ -1953,7 +1964,7 @@ export function SessionView({ sessionId }: { sessionId: string }) {
         updateSessionStatus(session.id, "active").catch(() => {});
       }
 
-      const startTime = Date.now();
+      const startTime = Date.now() - (elapsedSeconds * 1000);
       timerRef.current = setInterval(() => {
         setElapsedSeconds(Math.floor((Date.now() - startTime) / 1000));
       }, 1000);
@@ -2103,7 +2114,11 @@ export function SessionView({ sessionId }: { sessionId: string }) {
     setIsPaused(true);
 
     if (session) {
-      await pauseSession(session.id);
+      const durationMs = elapsedSeconds * 1000;
+      const pausedSession = { ...session, durationMs, status: "paused" as const };
+      setSession(pausedSession);
+      sessionRef.current = pausedSession;
+      await pauseSession(session.id, durationMs);
     }
   };
 
@@ -2138,6 +2153,9 @@ export function SessionView({ sessionId }: { sessionId: string }) {
       setIsPaused(false);
 
       await resumeSession(session.id);
+      const activeSession = { ...session, status: "active" as const };
+      setSession(activeSession);
+      sessionRef.current = activeSession;
 
       const startTime = Date.now() - (elapsedSeconds * 1000);
       timerRef.current = setInterval(() => {
@@ -2251,9 +2269,17 @@ export function SessionView({ sessionId }: { sessionId: string }) {
   };
 
   // Close session - navigate to dashboard without ending
+  const pauseAndGoToDashboard = useCallback(async () => {
+    if (session && isRecording && !isPaused) {
+      await handlePause();
+    } else if (session && isPaused) {
+      await pauseSession(session.id, elapsedSeconds * 1000);
+    }
+    router.push("/dashboard");
+  }, [session, isRecording, isPaused, elapsedSeconds, handlePause, router]);
+
   const handleClose = () => {
-    // Session stays paused, just navigate away
-    router.push("/");
+    void pauseAndGoToDashboard();
   };
 
   /**
@@ -3101,7 +3127,7 @@ export function SessionView({ sessionId }: { sessionId: string }) {
     const handleBeforeUnload = async (e: BeforeUnloadEvent) => {
       if (isRecording && session) {
         e.preventDefault();
-        await pauseSession(session.id);
+        await pauseSession(session.id, elapsedSecondsRef.current * 1000);
       }
     };
 
@@ -3624,7 +3650,7 @@ export function SessionView({ sessionId }: { sessionId: string }) {
               sessionId={session.id}
               planId={session.metadata?.plan_id as string | undefined}
               disabledTools={[]}
-              onBackToDashboard={() => router.push("/dashboard")}
+              onBackToDashboard={pauseAndGoToDashboard}
             />
 
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
@@ -3991,7 +4017,7 @@ export function SessionView({ sessionId }: { sessionId: string }) {
           if (!isPaused) {
             try { await handlePause(); } catch (e) { console.error(e); }
           }
-          router.push("/dashboard");
+          await pauseAndGoToDashboard();
         }}
         variant="destructive"
         title={t('sessionEnd.confirmEndTitle')}

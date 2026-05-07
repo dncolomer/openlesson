@@ -522,16 +522,19 @@ export async function startSession(sessionId: string): Promise<void> {
     .eq("id", sessionId);
 }
 
-export async function updateSessionStatus(sessionId: string, status: SessionStatus): Promise<void> {
+export async function updateSessionStatus(sessionId: string, status: SessionStatus, durationMs?: number): Promise<void> {
   const supabase = createClient();
+  const update: { status: SessionStatus; duration_ms?: number } = { status };
+  if (typeof durationMs === "number") update.duration_ms = durationMs;
+
   await supabase
     .from("sessions")
-    .update({ status })
+    .update(update)
     .eq("id", sessionId);
 }
 
-export async function pauseSession(sessionId: string): Promise<void> {
-  await updateSessionStatus(sessionId, "paused");
+export async function pauseSession(sessionId: string, durationMs?: number): Promise<void> {
+  await updateSessionStatus(sessionId, "paused", durationMs);
 }
 
 export async function resumeSession(sessionId: string): Promise<void> {

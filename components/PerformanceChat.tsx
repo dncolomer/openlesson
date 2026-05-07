@@ -24,6 +24,15 @@ interface PerformanceChatProps {
   isGroupPlan?: boolean;
 }
 
+const starterPrompts = [
+  "Give me a leaderboard so far",
+  "Who is improving the fastest?",
+  "Which nodes are people struggling with?",
+  "What should the group practice next?",
+  "Compare completed vs active sessions",
+  "Summarize the main performance gaps",
+];
+
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function PerformanceChat({ planId, isOwner, currentUserId, isGroupPlan = false }: PerformanceChatProps) {
   const { t } = useI18n();
@@ -77,13 +86,19 @@ export function PerformanceChat({ planId, isOwner, currentUserId, isGroupPlan = 
     e.preventDefault();
     if (!input.trim() || isLoading) return;
 
+    await sendMessage(input.trim());
+  };
+
+  const sendMessage = async (text: string) => {
+    if (!text.trim() || isLoading) return;
+
     // Skip typing animation if not done
     if (!typingDone) skipIntro();
 
     const userMessage: Message = {
       id: Date.now().toString(),
       role: "user",
-      content: input.trim(),
+      content: text.trim(),
       timestamp: new Date(),
     };
 
@@ -178,7 +193,7 @@ export function PerformanceChat({ planId, isOwner, currentUserId, isGroupPlan = 
     <div className="flex-1 flex flex-col h-full bg-[#0a0a0a] rounded-xl overflow-hidden">
       {/* Main content - vertically centered container */}
       <div className="flex-1 min-h-0 flex flex-col items-center justify-center px-4 py-4 overflow-y-auto">
-        <div className="w-full max-w-[560px] flex flex-col items-center">
+        <div className="w-full max-w-[760px] flex flex-col items-center">
           {messages.length === 0 ? (
             /* Welcome state - avatar + typing intro + input card */
             <>
@@ -222,14 +237,10 @@ export function PerformanceChat({ planId, isOwner, currentUserId, isGroupPlan = 
                   {t('performanceChat.exampleQuestions')}
                 </p>
                 <div className="flex flex-wrap justify-center gap-2 mb-3">
-                  {[
-                    t('performanceChat.example1'),
-                    t('performanceChat.example2'),
-                    t('performanceChat.example3'),
-                  ].map((example, i) => (
+                  {starterPrompts.map((example, i) => (
                     <button
                       key={i}
-                      onClick={() => setInput(example)}
+                      onClick={() => void sendMessage(example)}
                       className="text-[12px] px-3 py-1.5 rounded-xl bg-neutral-800 border border-neutral-700 text-neutral-300 hover:bg-neutral-700 hover:border-neutral-600 hover:text-white transition-colors"
                     >
                       {example}
@@ -274,7 +285,7 @@ export function PerformanceChat({ planId, isOwner, currentUserId, isGroupPlan = 
               </div>
 
               {/* Messages container - card style */}
-              <div className="w-full rounded-2xl border border-neutral-800 bg-neutral-950/40 p-3 mb-3 max-h-[400px] overflow-y-auto">
+              <div className="w-full rounded-2xl border border-neutral-800 bg-neutral-950/40 p-3 mb-3 max-h-[520px] overflow-y-auto">
                 <div className="space-y-3">
                   {messages.map((msg) => (
                     <div key={msg.id} className={`flex gap-2.5 ${msg.role === "user" ? "flex-row-reverse" : ""}`}>
@@ -358,6 +369,19 @@ export function PerformanceChat({ planId, isOwner, currentUserId, isGroupPlan = 
 
               {/* Input card */}
               <div className="w-full rounded-2xl border border-neutral-800 bg-neutral-950/40 p-3">
+                <div className="flex flex-wrap gap-2 mb-3">
+                  {starterPrompts.slice(0, 4).map((example, i) => (
+                    <button
+                      key={i}
+                      type="button"
+                      onClick={() => void sendMessage(example)}
+                      disabled={isLoading}
+                      className="text-[11px] px-2.5 py-1 rounded-lg bg-neutral-900 border border-neutral-800 text-neutral-400 hover:bg-neutral-800 hover:text-neutral-200 disabled:opacity-50 transition-colors"
+                    >
+                      {example}
+                    </button>
+                  ))}
+                </div>
                 <form onSubmit={handleSubmit}>
                   <div className="flex items-end gap-2 bg-neutral-900/60 border border-neutral-800 rounded-xl px-3 py-2">
                     <textarea

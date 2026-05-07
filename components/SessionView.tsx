@@ -428,6 +428,7 @@ export function SessionView({ sessionId }: { sessionId: string }) {
   const [grokipediaSuggestions, setGrokipediaSuggestions] = useState<string[]>([]);
   const [grokipediaSuggestionsLoading, setGrokipediaSuggestionsLoading] = useState(false);
   const [grokipediaManualTerm, setGrokipediaManualTerm] = useState("");
+  const [grokPrompt, setGrokPrompt] = useState("");
 
   // Pop-out window state
   const [isPopOutActive, setIsPopOutActive] = useState(false);
@@ -3858,6 +3859,40 @@ export function SessionView({ sessionId }: { sessionId: string }) {
                                   </svg>
                                   <span className="truncate">{session.problem}</span>
                                 </a>
+                              </div>
+
+                              {/* Grok prompt launcher */}
+                              <div className="pt-4 border-t border-neutral-800">
+                                <div className="mb-3">
+                                  <p className="text-xs font-medium uppercase tracking-[0.14em] text-neutral-500">Ask Grok</p>
+                                  <p className="mt-1 text-xs text-neutral-600">Send a custom prompt to Grok in a new tab.</p>
+                                </div>
+                                <form
+                                  onSubmit={(e) => {
+                                    e.preventDefault();
+                                    const prompt = grokPrompt.trim();
+                                    if (!prompt) return;
+                                    window.open(`https://grok.com/?q=${encodeURIComponent(prompt)}`, "_blank", "noopener,noreferrer");
+                                  }}
+                                  className="rounded-2xl border border-neutral-800 bg-neutral-950/70 p-2 shadow-[0_1px_0_rgba(255,255,255,0.04)_inset] focus-within:border-neutral-600 transition-colors"
+                                >
+                                  <div className="flex items-center gap-2">
+                                    <input
+                                      type="text"
+                                      value={grokPrompt}
+                                      onChange={(e) => setGrokPrompt(e.target.value)}
+                                      placeholder="Ask Grok anything about this step..."
+                                      className="min-w-0 flex-1 bg-transparent px-2 py-2 text-sm text-white placeholder-neutral-600 focus:outline-none"
+                                    />
+                                    <button
+                                      type="submit"
+                                      disabled={!grokPrompt.trim()}
+                                      className="shrink-0 rounded-xl border border-blue-400/40 bg-blue-500/10 px-3 py-2 text-xs font-medium text-blue-100 transition-colors hover:border-blue-300/60 hover:bg-blue-500/20 disabled:border-neutral-800 disabled:bg-neutral-900 disabled:text-neutral-600 disabled:cursor-not-allowed"
+                                    >
+                                      Open Grok
+                                    </button>
+                                  </div>
+                                </form>
                               </div>
 
                               {/* Suggested searches section */}

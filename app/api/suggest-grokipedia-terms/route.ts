@@ -29,7 +29,7 @@ export async function POST(request: NextRequest) {
       ? `\nCurrent learning objective: ${currentPlanStep}`
       : '';
 
-    const prompt = `You are helping a student find educational resources on Grokipedia (an educational search engine).
+    const prompt = `You are helping a student use the Grok / Grokipedia tool. Grokipedia is an educational search engine, and the same panel also has a Grok prompt bar for custom questions on grok.com.
 
 Based on the following learning context, generate 5-8 specific search terms that would help the student find relevant educational content.
 

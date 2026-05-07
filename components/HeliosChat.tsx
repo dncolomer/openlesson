@@ -8,6 +8,7 @@ import rehypeKatex from "rehype-katex";
 import "katex/dist/katex.min.css";
 import { useI18n } from "../lib/i18n";
 import { ConfirmDialog } from "./ui/ConfirmDialog";
+import { emitHeliosVoicePlayback } from "@/lib/useHeliosVoicePlayback";
 
 const XAI_LANG_MAP: Record<string, string> = {
   en: "en",
@@ -299,6 +300,7 @@ export function HeliosChat({ problem, messages: externalMessages, onMessagesChan
   const autoVoiceAudioRef = useRef<HTMLAudioElement | null>(null);
   const autoVoiceAbortRef = useRef<AbortController | null>(null);
   const autoVoiceUrlRef = useRef<string | null>(null);
+  const autoVoiceSourceIdRef = useRef(`helios-chat-${Math.random().toString(36).slice(2, 10)}`);
 
   const stopAutoVoice = () => {
     try {
@@ -319,6 +321,7 @@ export function HeliosChat({ problem, messages: externalMessages, onMessagesChan
       URL.revokeObjectURL(autoVoiceUrlRef.current);
       autoVoiceUrlRef.current = null;
     }
+    emitHeliosVoicePlayback(autoVoiceSourceIdRef.current, false);
   };
 
   useEffect(() => {
@@ -357,6 +360,12 @@ export function HeliosChat({ problem, messages: externalMessages, onMessagesChan
         autoVoiceUrlRef.current = url;
         setVoiceReadyMessageIds((current) => new Set(current).add(latestAssistantMessage.id));
         const audio = new Audio(url);
+        const markPlaying = () => emitHeliosVoicePlayback(autoVoiceSourceIdRef.current, true);
+        const markStopped = () => emitHeliosVoicePlayback(autoVoiceSourceIdRef.current, false);
+        audio.addEventListener("playing", markPlaying);
+        audio.addEventListener("ended", markStopped);
+        audio.addEventListener("pause", markStopped);
+        audio.addEventListener("error", markStopped);
         autoVoiceAudioRef.current = audio;
         try {
           await audio.play();

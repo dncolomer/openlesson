@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useI18n, translateWithLocale } from "@/lib/i18n";
+import { emitHeliosVoicePlayback } from "@/lib/useHeliosVoicePlayback";
 
 /**
  * Map the app's 6-locale i18n code to an xAI-supported BCP-47 code for TTS.
@@ -63,6 +64,7 @@ export function ListenButton({
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const audioUrlRef = useRef<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
+  const voiceSourceIdRef = useRef(`listen-${Math.random().toString(36).slice(2, 10)}`);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isFetching, setIsFetching] = useState(false);
 
@@ -82,6 +84,7 @@ export function ListenButton({
       audioRef.current = null;
     }
     setIsSpeaking(false);
+    emitHeliosVoicePlayback(voiceSourceIdRef.current, false);
     setIsFetching(false);
   };
 
@@ -109,10 +112,18 @@ export function ListenButton({
   }, []);
 
   const attach = (audio: HTMLAudioElement) => {
-    audio.addEventListener("playing", () => setIsSpeaking(true));
-    audio.addEventListener("ended", () => setIsSpeaking(false));
-    audio.addEventListener("pause", () => setIsSpeaking(false));
-    audio.addEventListener("error", () => setIsSpeaking(false));
+    const markPlaying = () => {
+      setIsSpeaking(true);
+      emitHeliosVoicePlayback(voiceSourceIdRef.current, true);
+    };
+    const markStopped = () => {
+      setIsSpeaking(false);
+      emitHeliosVoicePlayback(voiceSourceIdRef.current, false);
+    };
+    audio.addEventListener("playing", markPlaying);
+    audio.addEventListener("ended", markStopped);
+    audio.addEventListener("pause", markStopped);
+    audio.addEventListener("error", markStopped);
   };
 
   const handleClick = async () => {

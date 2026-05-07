@@ -40,6 +40,7 @@ import { useSessionHeartbeat, type StorageHeartbeatResult, type AnalysisHeartbea
 import { useInactivityAutoPause } from "@/lib/useInactivityAutoPause";
 import { useVoiceActivity } from "@/lib/useVoiceActivity";
 import { useThinkAloudTranscript, type SpeechTranscriptEntry, type ThinkAloudThought } from "@/lib/useThinkAloudTranscript";
+import { useHeliosVoicePlaybackActive } from "@/lib/useHeliosVoicePlayback";
 import { retryWithResult } from "@/lib/retry";
 import { ConfirmDialog } from "./ui/ConfirmDialog";
 // ModelLoadingModal no longer used -- loading UI is inline in welcome modal
@@ -1330,9 +1331,10 @@ export function MobileSessionView({
     isRecording,
     isPaused,
   });
+  const isHeliosVoicePlaying = useHeliosVoicePlaybackActive();
 
   const thinkAloudTranscript = useThinkAloudTranscript({
-    enabled: isRecording && !isPaused,
+    enabled: isRecording && !isPaused && !isHeliosVoicePlaying,
     tutoringLanguage,
   });
   consumeSpeechTranscriptEntriesRef.current = thinkAloudTranscript.consumePendingTranscriptEntries;

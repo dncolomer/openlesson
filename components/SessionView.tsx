@@ -62,6 +62,7 @@ import { useSessionHeartbeat, type StorageHeartbeatResult, type AnalysisHeartbea
 import { useInactivityAutoPause } from "@/lib/useInactivityAutoPause";
 import { useVoiceActivity } from "@/lib/useVoiceActivity";
 import { useThinkAloudTranscript, type SpeechTranscriptEntry, type ThinkAloudThought } from "@/lib/useThinkAloudTranscript";
+import { useHeliosVoicePlaybackActive } from "@/lib/useHeliosVoicePlayback";
 import { retryWithResult } from "@/lib/retry";
 import { translateWithLocale, useI18n } from "@/lib/i18n";
 import { tutoringLocales, tutoringLanguageNames } from "@/lib/tutoring-languages";
@@ -2246,9 +2247,10 @@ export function SessionView({ sessionId }: { sessionId: string }) {
     isRecording,
     isPaused,
   });
+  const isHeliosVoicePlaying = useHeliosVoicePlaybackActive();
 
   const thinkAloudTranscript = useThinkAloudTranscript({
-    enabled: isRecording && !isPaused,
+    enabled: isRecording && !isPaused && !isHeliosVoicePlaying,
     tutoringLanguage,
   });
   consumeSpeechTranscriptEntriesRef.current = thinkAloudTranscript.consumePendingTranscriptEntries;

@@ -491,6 +491,76 @@ async function fetchGroupPlanPerformanceData(
         seenSessionIds.add(session.id);
       }
     }
+
+    // Sessions created through newer start paths also carry the plan link in
+    // metadata. Use it as a final source so missing join rows do not hide data.
+    const { data: metadataSessions, error: metadataSessionsError } = await supabase
+      .from("sessions")
+      .select(`
+        id,
+        problem,
+        status,
+        duration_ms,
+        created_at,
+        report,
+        user_id,
+        metadata,
+        profiles (
+          id,
+          username,
+          organization_id
+        )
+      `)
+      .filter("metadata->>plan_id", "eq", planId)
+      .order("created_at", { ascending: false });
+
+    if (metadataSessionsError) {
+      console.error("[performance-chat] Group plan metadata-session fallback error:", metadataSessionsError);
+    } else {
+      const seenSessionIds = new Set(rows.map(row => row.session_id));
+      const metadataNodeIds = Array.from(new Set(
+        (metadataSessions || [])
+          .map(session => (session.metadata as Record<string, unknown> | null)?.plan_node_id)
+          .filter(Boolean)
+      )) as string[];
+
+      const { data: metadataNodes } = metadataNodeIds.length > 0
+        ? await supabase
+          .from("plan_nodes")
+          .select("id, title")
+          .in("id", metadataNodeIds)
+        : { data: [] };
+
+      const nodeTitleMap = new Map((metadataNodes || []).map(node => [node.id, node.title]));
+
+      for (const session of metadataSessions || []) {
+        if (seenSessionIds.has(session.id)) continue;
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const profile = session.profiles as any;
+        if (!isOwner && isOrgAdmin && organizationId && profile?.organization_id !== organizationId) {
+          continue;
+        }
+
+        const metadata = session.metadata as Record<string, unknown> | null;
+        const nodeId = typeof metadata?.plan_node_id === "string" ? metadata.plan_node_id : null;
+
+        rows.push({
+          session_id: session.id,
+          user_id: session.user_id,
+          username: profile?.username || "unknown",
+          problem: session.problem,
+          status: session.status,
+          duration_ms: session.duration_ms,
+          report: session.report,
+          created_at: session.created_at,
+          ended_at: null,
+          node_id: nodeId,
+          node_title: nodeId ? nodeTitleMap.get(nodeId) || null : null,
+        });
+        seenSessionIds.add(session.id);
+      }
+    }
   } else {
     // Participant path: only their own plan_node_sessions
     const { data: links, error: linkError } = await supabase

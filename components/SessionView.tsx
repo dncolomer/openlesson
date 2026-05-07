@@ -3926,16 +3926,16 @@ export function SessionView({ sessionId }: { sessionId: string }) {
                                 </div>
                               </section>
 
-                              <section className="rounded-2xl border border-blue-400/25 bg-blue-500/[0.03] p-4 shadow-[0_0_28px_rgba(59,130,246,0.08)]">
+                              <section className="rounded-2xl border border-neutral-800 bg-neutral-950/40 p-4">
                                 <div className="mb-4 flex items-center gap-2">
-                                  <div className="flex h-7 w-7 items-center justify-center rounded-full border border-blue-400/30 bg-blue-500/10 text-blue-200">
+                                  <div className="flex h-7 w-7 items-center justify-center rounded-full border border-neutral-700 bg-neutral-900 text-neutral-300">
                                     <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                                       <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
                                     </svg>
                                   </div>
                                   <div>
-                                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-blue-100">Ask Grok</p>
-                                    <p className="mt-0.5 text-xs text-blue-100/50">Send a custom prompt to Grok in a new tab.</p>
+                                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-neutral-100">Ask Grok</p>
+                                    <p className="mt-0.5 text-xs text-neutral-500">Send a custom prompt to Grok in a new tab.</p>
                                   </div>
                                 </div>
                                 <form
@@ -3945,7 +3945,7 @@ export function SessionView({ sessionId }: { sessionId: string }) {
                                     if (!prompt) return;
                                     window.open(`https://grok.com/?q=${encodeURIComponent(prompt)}`, "_blank", "noopener,noreferrer");
                                   }}
-                                  className="rounded-2xl border border-blue-400/20 bg-neutral-950/80 p-2 shadow-[0_1px_0_rgba(255,255,255,0.04)_inset] focus-within:border-blue-300/50 transition-colors"
+                                  className="rounded-2xl border border-neutral-800 bg-neutral-950/80 p-2 shadow-[0_1px_0_rgba(255,255,255,0.04)_inset] focus-within:border-neutral-600 transition-colors"
                                 >
                                   <div className="flex items-center gap-2">
                                     <input
@@ -3958,7 +3958,7 @@ export function SessionView({ sessionId }: { sessionId: string }) {
                                     <button
                                       type="submit"
                                       disabled={!grokPrompt.trim()}
-                                      className="shrink-0 rounded-xl border border-blue-400/40 bg-blue-500/10 px-3 py-2 text-xs font-medium text-blue-100 transition-colors hover:border-blue-300/60 hover:bg-blue-500/20 disabled:border-neutral-800 disabled:bg-neutral-900 disabled:text-neutral-600 disabled:cursor-not-allowed"
+                                      className="shrink-0 rounded-xl border border-neutral-700 bg-neutral-900 px-3 py-2 text-xs font-medium text-neutral-200 transition-colors hover:border-neutral-600 hover:bg-neutral-800 hover:text-white disabled:border-neutral-800 disabled:bg-neutral-900 disabled:text-neutral-600 disabled:cursor-not-allowed"
                                     >
                                       Open Grok
                                     </button>

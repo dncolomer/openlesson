@@ -259,7 +259,7 @@ async function fetchPerformanceData(
         plan_id,
         title
       ),
-      profiles!inner (
+      profiles (
         id,
         username,
         organization_id
@@ -391,7 +391,7 @@ async function fetchGroupPlanPerformanceData(
           created_at,
           report,
           user_id,
-          profiles!inner (
+          profiles (
             id,
             username,
             organization_id
@@ -450,7 +450,7 @@ async function fetchGroupPlanPerformanceData(
           plan_id,
           title
         ),
-        profiles!inner (
+        profiles (
           id,
           username,
           organization_id

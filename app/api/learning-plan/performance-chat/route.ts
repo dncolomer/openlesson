@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { uploadFileToXAI } from "@/lib/xai-files";
 import { callXaiResponses, ResponsesInputMessage } from "@/lib/xai-client";
 
@@ -88,13 +89,16 @@ export async function POST(req: NextRequest) {
     let usersContext = "";
 
     if (activeFileIds.length === 0) {
+      const dataClient = canSeeAllUsers ? createAdminClient() : supabase;
+
       // Fetch session data based on access level
       const performanceData = await fetchPerformanceData(
-        supabase,
+        dataClient,
         planId,
         plan.root_topic || plan.title || "Learning Plan",
         user.id,
         canSeeAllUsers,
+        isOwner,
         profile?.organization_id,
         isOrgAdmin,
         isGroupPlan
@@ -226,6 +230,7 @@ async function fetchPerformanceData(
   planTitle: string,
   requestingUserId: string,
   canSeeAllUsers: boolean,
+  isOwner: boolean,
   organizationId?: string | null,
   isOrgAdmin?: boolean,
   isGroupPlan?: boolean
@@ -234,7 +239,7 @@ async function fetchPerformanceData(
   // ── Group plans: use plan_node_sessions join table ──
   if (isGroupPlan) {
     return fetchGroupPlanPerformanceData(
-      supabase, planId, planTitle, requestingUserId, canSeeAllUsers
+      supabase, planId, planTitle, requestingUserId, canSeeAllUsers, isOwner, organizationId, isOrgAdmin
     );
   }
 
@@ -267,7 +272,7 @@ async function fetchPerformanceData(
   if (!canSeeAllUsers) {
     // Regular user: only their own sessions
     query = query.eq("user_id", requestingUserId);
-  } else if (isOrgAdmin && organizationId) {
+  } else if (!isOwner && isOrgAdmin && organizationId) {
     // Org admin: only users in their organization
     query = query.eq("profiles.organization_id", organizationId);
   }
@@ -338,11 +343,9 @@ async function fetchPerformanceData(
 }
 
 /**
- * Fetch performance data for group plans using the plan_node_sessions
- * join table.  For the plan owner this calls the SECURITY DEFINER
- * RPC so it can read ALL participants' sessions (bypassing session
- * RLS).  For non-owners it falls back to querying only their own
- * rows.
+ * Fetch performance data for group plans. Plan owners and org admins use the
+ * already-authorized server-side admin client so session RLS does not hide
+ * participant work from the aggregate performance tab.
  */
 async function fetchGroupPlanPerformanceData(
   supabase: Awaited<ReturnType<typeof createClient>>,
@@ -350,25 +353,88 @@ async function fetchGroupPlanPerformanceData(
   planTitle: string,
   requestingUserId: string,
   canSeeAllUsers: boolean,
+  isOwner: boolean,
+  organizationId?: string | null,
+  isOrgAdmin?: boolean,
 ): Promise<PerformanceDataPayload> {
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let rows: any[] = [];
 
   if (canSeeAllUsers) {
-    // Owner path: use SECURITY DEFINER RPC to read all sessions
-    const { data, error } = await supabase.rpc("get_group_plan_sessions", {
-      p_plan_id: planId,
-    });
-    if (error) {
-      console.error("[performance-chat] RPC error:", error);
-    } else {
-      rows = data || [];
+    const { data: links, error: linkError } = await supabase
+      .from("plan_node_sessions")
+      .select(`
+        session_id,
+        user_id,
+        plan_node_id,
+        plan_nodes!inner (
+          id,
+          title
+        )
+      `)
+      .eq("plan_id", planId);
+
+    if (linkError) {
+      console.error("[performance-chat] Group plan link lookup error:", linkError);
+    }
+
+    const linkSessionIds = (links || []).map(link => link.session_id);
+    if (linkSessionIds.length > 0) {
+      const { data: sessions, error: sessionsError } = await supabase
+        .from("sessions")
+        .select(`
+          id,
+          problem,
+          status,
+          duration_ms,
+          created_at,
+          report,
+          user_id,
+          profiles!inner (
+            id,
+            username,
+            organization_id
+          )
+        `)
+        .in("id", linkSessionIds);
+
+      if (sessionsError) {
+        console.error("[performance-chat] Group plan linked sessions lookup error:", sessionsError);
+      } else {
+        const sessionMap = new Map((sessions || []).map(session => [session.id, session]));
+        for (const link of links || []) {
+          const session = sessionMap.get(link.session_id);
+          if (!session) continue;
+
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const profile = session.profiles as any;
+          if (!isOwner && isOrgAdmin && organizationId && profile?.organization_id !== organizationId) {
+            continue;
+          }
+
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const planNode = Array.isArray(link.plan_nodes) ? link.plan_nodes[0] : link.plan_nodes as any;
+
+          rows.push({
+            session_id: session.id,
+            user_id: session.user_id,
+            username: profile?.username || "unknown",
+            problem: session.problem,
+            status: session.status,
+            duration_ms: session.duration_ms,
+            report: session.report,
+            created_at: session.created_at,
+            ended_at: null,
+            node_id: link.plan_node_id,
+            node_title: planNode?.title || null,
+            organization_id: profile?.organization_id || null,
+          });
+        }
+      }
     }
 
     // Older group-plan sessions may only be linked through plan_nodes.session_id.
-    // Include any sessions visible under the caller's RLS so the tab does not
-    // incorrectly report an empty plan before the DB RPC migration is applied.
     const { data: nodeSessions, error: nodeSessionsError } = await supabase
       .from("sessions")
       .select(`
@@ -386,7 +452,8 @@ async function fetchGroupPlanPerformanceData(
         ),
         profiles!inner (
           id,
-          username
+          username,
+          organization_id
         )
       `)
       .eq("plan_nodes.plan_id", planId)
@@ -401,6 +468,10 @@ async function fetchGroupPlanPerformanceData(
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const profile = session.profiles as any;
+        if (!isOwner && isOrgAdmin && organizationId && profile?.organization_id !== organizationId) {
+          continue;
+        }
+
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const planNode = Array.isArray(session.plan_nodes) ? session.plan_nodes[0] : session.plan_nodes as any;
 

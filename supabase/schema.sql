@@ -184,6 +184,9 @@ CREATE POLICY "Users can update own probes"
 --   migrations/033_transcripts_xai.sql          (transcripts → xAI Files)
 --   migrations/034_session_data_xai.sql         (EEG/tool/facial/screens → xAI Files)
 --   migrations/035_session_analysis.sql         (heartbeat analysis → xAI Files)
+--   migrations/036_group_plans.sql              (group plans + plan_node_sessions)
+--   migrations/037_public_profiles.sql          (public profile stats)
+--   migrations/038_fix_group_plan_performance_sessions.sql
 --
 -- Note:
 --   * `001_add_vector_search.sql` is historical — migration 029 drops the

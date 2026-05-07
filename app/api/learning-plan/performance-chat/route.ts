@@ -365,6 +365,61 @@ async function fetchGroupPlanPerformanceData(
     } else {
       rows = data || [];
     }
+
+    // Older group-plan sessions may only be linked through plan_nodes.session_id.
+    // Include any sessions visible under the caller's RLS so the tab does not
+    // incorrectly report an empty plan before the DB RPC migration is applied.
+    const { data: nodeSessions, error: nodeSessionsError } = await supabase
+      .from("sessions")
+      .select(`
+        id,
+        problem,
+        status,
+        duration_ms,
+        created_at,
+        report,
+        user_id,
+        plan_nodes!inner (
+          id,
+          plan_id,
+          title
+        ),
+        profiles!inner (
+          id,
+          username
+        )
+      `)
+      .eq("plan_nodes.plan_id", planId)
+      .order("created_at", { ascending: false });
+
+    if (nodeSessionsError) {
+      console.error("[performance-chat] Group plan node-session fallback error:", nodeSessionsError);
+    } else {
+      const seenSessionIds = new Set(rows.map(row => row.session_id));
+      for (const session of nodeSessions || []) {
+        if (seenSessionIds.has(session.id)) continue;
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const profile = session.profiles as any;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const planNode = Array.isArray(session.plan_nodes) ? session.plan_nodes[0] : session.plan_nodes as any;
+
+        rows.push({
+          session_id: session.id,
+          user_id: session.user_id,
+          username: profile?.username || "unknown",
+          problem: session.problem,
+          status: session.status,
+          duration_ms: session.duration_ms,
+          report: session.report,
+          created_at: session.created_at,
+          ended_at: null,
+          node_id: planNode?.id || null,
+          node_title: planNode?.title || null,
+        });
+        seenSessionIds.add(session.id);
+      }
+    }
   } else {
     // Participant path: only their own plan_node_sessions
     const { data: links, error: linkError } = await supabase

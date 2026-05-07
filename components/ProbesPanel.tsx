@@ -54,7 +54,7 @@ interface ProbesPanelProps {
   isInitializing?: boolean;
   isGeneratingProbe?: boolean;
   sessionPlan?: {
-    steps?: Array<{ id: string; order: number; description: string }>;
+    steps?: Array<{ id: string; order: number; description: string; status?: string }>;
     currentStepIndex?: number;
   } | null;
   isSessionActive?: boolean;
@@ -165,6 +165,7 @@ export function ProbesPanel({
   const currentStepText = currentStep?.description ?? "";
   const currentStepId = currentStep?.id ?? `step-${currentIndex}`;
   const isCurrentPlanStep = currentIndex === (sessionPlan?.currentStepIndex ?? 0);
+  const isCurrentStepCompleted = currentStep?.status === "completed";
   const total = Math.max(planSteps.length, 1);
   const canGoPrev = currentIndex > 0;
   const canGoNext = currentIndex < planSteps.length - 1;
@@ -334,7 +335,7 @@ export function ProbesPanel({
                   cue: they appear red-tinted only while active probes
                   exist, drawing the eye toward the tutor's new guidance. */}
               <div className="shrink-0 flex flex-col items-center">
-                <div className="mb-2 text-[11px] font-medium uppercase tracking-[0.16em] text-red-200/80">
+                <div className="mb-2 text-sm font-semibold uppercase tracking-[0.18em] text-red-100/90">
                   Chapter {currentIndex + 1}
                 </div>
                 <div className="flex items-center gap-3">
@@ -458,122 +459,130 @@ export function ProbesPanel({
                   right after the probe text rather than being anchored to
                   the bottom of the panel with a big empty gap above. */}
               <div className="shrink-0 w-full max-w-[680px] px-2">
-                <div className={`actions-box rounded-2xl border p-3 transition-colors ${stuckCheckText ? "border-red-400/40 bg-red-500/10" : "border-neutral-800 bg-neutral-950/40"}`}>
-                  {stuckCheckText && (
-                    <div className="mb-3 flex items-start justify-between gap-3 rounded-xl border border-red-400/25 bg-red-400/10 px-3 py-2 text-xs text-red-100">
-                      <p className="leading-relaxed">{stuckCheckText}</p>
-                      <button type="button" onClick={onDismissStuckCheck} className="shrink-0 rounded-md px-2 py-1 text-[11px] text-red-100/80 hover:bg-red-300/10 hover:text-red-50">
-                        {t("common.dismiss")}
-                      </button>
-                    </div>
-                  )}
-                  <div className="grid grid-cols-5 gap-2.5 @container">
-                    <button
-                      onClick={() => {
-                        onToolEvent?.("open_resources", {
-                          stepId: currentStep.id,
-                          stepIndex: currentIndex,
-                          stepDescription: currentStepText.slice(0, 120),
-                        });
-                        onOpenResources?.(currentStepText);
-                      }}
-                      disabled={!isSessionActive}
-                      title={t('sessionPlan.resources')}
-                      className={actionButtonClass}
-                    >
-                      <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-                      </svg>
-                      <span className="hidden @[20rem]:inline truncate">{t('sessionPlan.resources')}</span>
-                    </button>
-                    <button
-                      onClick={() => {
-                        onToolEvent?.("open_practice", {
-                          stepId: currentStep.id,
-                          stepIndex: currentIndex,
-                          stepDescription: currentStepText.slice(0, 120),
-                        });
-                        onOpenPractice?.(currentStepText);
-                      }}
-                      disabled={!isSessionActive}
-                      title={t('sessionPlan.practice')}
-                      className={actionButtonClass}
-                    >
-                      <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-                      </svg>
-                      <span className="hidden @[20rem]:inline truncate">{t('sessionPlan.practice')}</span>
-                    </button>
-                    <button
-                      onClick={() => {
-                        onToolEvent?.("ask_assistant", {
-                          stepId: currentStep.id,
-                          stepIndex: currentIndex,
-                          stepDescription: currentStepText.slice(0, 120),
-                        });
-                        onAskAssistant?.(currentStepText);
-                      }}
-                      disabled={!isSessionActive}
-                      title={t('sessionPlan.ask')}
-                      className={actionButtonClass}
-                    >
-                      <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
-                      </svg>
-                      <span className="hidden @[20rem]:inline truncate">{t('sessionPlan.ask')}</span>
-                    </button>
-                    <button
-                      onClick={() => {
-                        onToolEvent?.("open", {
-                          stepId: currentStep.id,
-                          stepIndex: currentIndex,
-                          stepDescription: currentStepText.slice(0, 120),
-                          via: "share_screen_button",
-                        });
-                        onToolSelect?.("data-input");
-                      }}
-                      disabled={!isSessionActive}
-                      title={t('probes.shareScreen')}
-                      className={actionButtonClass}
-                    >
-                      <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                      </svg>
-                      <span className="hidden @[20rem]:inline truncate">{t('probes.shareScreen')}</span>
-                    </button>
-                    <button
-                      onClick={() => {
-                        onToolEvent?.("archive", {
-                          stepId: currentStep.id,
-                          stepIndex: currentIndex,
-                          stepDescription: currentStepText.slice(0, 120),
-                          via: "done_button",
-                        });
-                        onAdvanceStep?.();
-                      }}
-                      disabled={!isSessionActive || !isCurrentPlanStep || !!stuckCheckText}
-                      title={t('session.markAsDone')}
-                      className="py-3 px-3 text-[12px] font-medium rounded-xl bg-neutral-100 text-neutral-900 hover:bg-white disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
-                    >
-                      <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                      </svg>
-                      <span className="hidden @[20rem]:inline truncate">{t('probes.done')}</span>
-                    </button>
+                {isCurrentStepCompleted ? (
+                  <div className="rounded-2xl border border-neutral-800 bg-neutral-950/40 px-5 py-4 text-center text-sm font-medium text-neutral-200">
+                    Chapter Completed - check next chapter
                   </div>
-                </div>
-                <div className="mt-3">
-                  <ThinkAloudTraces
-                    thoughts={thinkAloudThoughts}
-                    interimText={thinkAloudInterimText}
-                    isListening={thinkAloudListening}
-                    isSupported={thinkAloudSupported}
-                    error={thinkAloudError}
-                    onThoughtClick={(thought) => onThinkAloudThoughtClick?.(thought)}
-                    onManualSubmit={onManualChatSubmit}
-                    onClearThoughts={onClearThinkAloudThoughts}
-                  />
-                </div>
+                ) : (
+                  <>
+                    <div className={`actions-box rounded-2xl border p-3 transition-colors ${stuckCheckText ? "border-red-400/40 bg-red-500/10" : "border-neutral-800 bg-neutral-950/40"}`}>
+                      {stuckCheckText && (
+                        <div className="mb-3 flex items-start justify-between gap-3 rounded-xl border border-red-400/25 bg-red-400/10 px-3 py-2 text-xs text-red-100">
+                          <p className="leading-relaxed">{stuckCheckText}</p>
+                          <button type="button" onClick={onDismissStuckCheck} className="shrink-0 rounded-md px-2 py-1 text-[11px] text-red-100/80 hover:bg-red-300/10 hover:text-red-50">
+                            {t("common.dismiss")}
+                          </button>
+                        </div>
+                      )}
+                      <div className="grid grid-cols-5 gap-2.5 @container">
+                        <button
+                          onClick={() => {
+                            onToolEvent?.("open_resources", {
+                              stepId: currentStep.id,
+                              stepIndex: currentIndex,
+                              stepDescription: currentStepText.slice(0, 120),
+                            });
+                            onOpenResources?.(currentStepText);
+                          }}
+                          disabled={!isSessionActive}
+                          title={t('sessionPlan.resources')}
+                          className={actionButtonClass}
+                        >
+                          <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                          </svg>
+                          <span className="hidden @[20rem]:inline truncate">{t('sessionPlan.resources')}</span>
+                        </button>
+                        <button
+                          onClick={() => {
+                            onToolEvent?.("open_practice", {
+                              stepId: currentStep.id,
+                              stepIndex: currentIndex,
+                              stepDescription: currentStepText.slice(0, 120),
+                            });
+                            onOpenPractice?.(currentStepText);
+                          }}
+                          disabled={!isSessionActive}
+                          title={t('sessionPlan.practice')}
+                          className={actionButtonClass}
+                        >
+                          <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                          </svg>
+                          <span className="hidden @[20rem]:inline truncate">{t('sessionPlan.practice')}</span>
+                        </button>
+                        <button
+                          onClick={() => {
+                            onToolEvent?.("ask_assistant", {
+                              stepId: currentStep.id,
+                              stepIndex: currentIndex,
+                              stepDescription: currentStepText.slice(0, 120),
+                            });
+                            onAskAssistant?.(currentStepText);
+                          }}
+                          disabled={!isSessionActive}
+                          title={t('sessionPlan.ask')}
+                          className={actionButtonClass}
+                        >
+                          <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+                          </svg>
+                          <span className="hidden @[20rem]:inline truncate">{t('sessionPlan.ask')}</span>
+                        </button>
+                        <button
+                          onClick={() => {
+                            onToolEvent?.("open", {
+                              stepId: currentStep.id,
+                              stepIndex: currentIndex,
+                              stepDescription: currentStepText.slice(0, 120),
+                              via: "share_screen_button",
+                            });
+                            onToolSelect?.("data-input");
+                          }}
+                          disabled={!isSessionActive}
+                          title={t('probes.shareScreen')}
+                          className={actionButtonClass}
+                        >
+                          <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                          </svg>
+                          <span className="hidden @[20rem]:inline truncate">{t('probes.shareScreen')}</span>
+                        </button>
+                        <button
+                          onClick={() => {
+                            onToolEvent?.("archive", {
+                              stepId: currentStep.id,
+                              stepIndex: currentIndex,
+                              stepDescription: currentStepText.slice(0, 120),
+                              via: "done_button",
+                            });
+                            onAdvanceStep?.();
+                          }}
+                          disabled={!isSessionActive || !isCurrentPlanStep || !!stuckCheckText}
+                          title={t('session.markAsDone')}
+                          className="py-3 px-3 text-[12px] font-medium rounded-xl bg-neutral-100 text-neutral-900 hover:bg-white disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+                        >
+                          <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                          </svg>
+                          <span className="hidden @[20rem]:inline truncate">{t('probes.done')}</span>
+                        </button>
+                      </div>
+                    </div>
+                    <div className="mt-3">
+                      <ThinkAloudTraces
+                        thoughts={thinkAloudThoughts}
+                        interimText={thinkAloudInterimText}
+                        isListening={thinkAloudListening}
+                        isSupported={thinkAloudSupported}
+                        error={thinkAloudError}
+                        onThoughtClick={(thought) => onThinkAloudThoughtClick?.(thought)}
+                        onManualSubmit={onManualChatSubmit}
+                        onClearThoughts={onClearThinkAloudThoughts}
+                      />
+                    </div>
+                  </>
+                )}
               </div>
             </div>
 

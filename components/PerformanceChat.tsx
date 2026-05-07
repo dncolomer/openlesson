@@ -33,6 +33,40 @@ const starterPrompts = [
   "Summarize the main performance gaps",
 ];
 
+function formatPerformanceMarkdown(content: string) {
+  const lines = content.replace(/\r\n/g, "\n").split("\n");
+  const formatted: string[] = [];
+  let inCodeFence = false;
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+
+    if (trimmed.startsWith("```")) {
+      inCodeFence = !inCodeFence;
+      formatted.push(line);
+      continue;
+    }
+
+    if (inCodeFence || !trimmed) {
+      formatted.push(line);
+      continue;
+    }
+
+    const previous = formatted[formatted.length - 1];
+    const previousTrimmed = previous?.trim();
+    const isListLine = /^([-*+] |\d+\.\s)/.test(trimmed);
+    const previousIsListLine = previousTrimmed ? /^([-*+] |\d+\.\s)/.test(previousTrimmed) : false;
+
+    if (previousTrimmed && !isListLine && !previousIsListLine) {
+      formatted.push("");
+    }
+
+    formatted.push(line);
+  }
+
+  return formatted.join("\n");
+}
+
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function PerformanceChat({ planId, isOwner, currentUserId, isGroupPlan = false }: PerformanceChatProps) {
   const { t } = useI18n();
@@ -311,17 +345,17 @@ export function PerformanceChat({ planId, isOwner, currentUserId, isGroupPlan = 
                         }`}
                       >
                         <div
-                          className="prose prose-invert prose-sm max-w-none text-sm leading-relaxed
-                          prose-p:my-1 prose-headings:mt-2 prose-headings:mb-1 prose-headings:text-sm prose-headings:font-medium
-                          prose-ul:my-1 prose-ul:pl-4 prose-ol:my-1 prose-ol:pl-4
-                          prose-li:my-0.5 prose-code:text-cyan-300 prose-code:bg-neutral-700/50 prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:text-xs
+                          className="prose prose-invert prose-sm max-w-none text-sm leading-7
+                          prose-p:my-3 prose-headings:mt-5 prose-headings:mb-2 prose-headings:text-sm prose-headings:font-semibold
+                          prose-ul:my-3 prose-ul:pl-4 prose-ol:my-3 prose-ol:pl-4
+                          prose-li:my-1 prose-li:leading-6 prose-code:text-cyan-300 prose-code:bg-neutral-700/50 prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:text-xs
                           prose-strong:text-neutral-100 prose-a:text-cyan-400"
                         >
                           <ReactMarkdown
                             remarkPlugins={[remarkGfm, remarkMath]}
                             rehypePlugins={[[rehypeKatex, { throwOnError: false, strict: false }]]}
                           >
-                            {msg.content}
+                            {msg.role === "assistant" ? formatPerformanceMarkdown(msg.content) : msg.content}
                           </ReactMarkdown>
                         </div>
 

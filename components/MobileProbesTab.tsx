@@ -136,6 +136,7 @@ export function MobileProbesTab({
   const currentStepText = currentStep?.description ?? "";
   const currentStepId = currentStep?.id ?? `step-${currentIndex}`;
   const isCurrentPlanStep = currentIndex === (sessionPlan?.currentStepIndex ?? 0);
+  const isCurrentStepCompleted = currentStep?.status === "completed";
   const total = Math.max(planSteps.length, 1);
   const canGoPrev = currentIndex > 0;
   const canGoNext = currentIndex < planSteps.length - 1;
@@ -278,7 +279,7 @@ export function MobileProbesTab({
                   cue: they appear red-tinted only while active probes
                   exist, drawing the eye toward the tutor's new guidance. */}
               <div className="shrink-0 flex flex-col items-center">
-                <div className="mb-1.5 text-[10px] font-medium uppercase tracking-[0.14em] text-red-200/80">
+                <div className="mb-1.5 text-xs font-semibold uppercase tracking-[0.16em] text-red-100/90">
                   Chapter {currentIndex + 1}
                 </div>
                 <div className="flex items-center gap-3">
@@ -401,78 +402,86 @@ export function MobileProbesTab({
 
             {/* Action row */}
             <div className="shrink-0 pt-2">
-              <div className={`grid grid-cols-5 gap-1.5 rounded-2xl border p-1.5 transition-colors ${stuckCheckText ? "border-red-400/40 bg-red-500/10" : "border-neutral-800 bg-neutral-950/40"}`}>
-                {stuckCheckText && (
-                  <div className="col-span-5 flex items-start justify-between gap-2 rounded-xl border border-red-400/25 bg-red-400/10 px-3 py-2 text-xs text-red-100">
-                    <p className="leading-relaxed">{stuckCheckText}</p>
-                    <button type="button" onClick={onDismissStuckCheck} className="shrink-0 rounded-md px-2 py-1 text-[11px] text-red-100/80 active:bg-red-300/10">{t("common.dismiss")}</button>
+              {isCurrentStepCompleted ? (
+                <div className="rounded-2xl border border-neutral-800 bg-neutral-950/40 px-4 py-3 text-center text-sm font-medium text-neutral-200">
+                  Chapter Completed - check next chapter
+                </div>
+              ) : (
+                <>
+                  <div className={`grid grid-cols-5 gap-1.5 rounded-2xl border p-1.5 transition-colors ${stuckCheckText ? "border-red-400/40 bg-red-500/10" : "border-neutral-800 bg-neutral-950/40"}`}>
+                    {stuckCheckText && (
+                      <div className="col-span-5 flex items-start justify-between gap-2 rounded-xl border border-red-400/25 bg-red-400/10 px-3 py-2 text-xs text-red-100">
+                        <p className="leading-relaxed">{stuckCheckText}</p>
+                        <button type="button" onClick={onDismissStuckCheck} className="shrink-0 rounded-md px-2 py-1 text-[11px] text-red-100/80 active:bg-red-300/10">{t("common.dismiss")}</button>
+                      </div>
+                    )}
+                    <button
+                      onClick={() => onOpenResources?.(currentStepText)}
+                      disabled={!isSessionActive}
+                      title={t('sessionPlan.resources')}
+                      className={actionButtonClass}
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                      </svg>
+                    </button>
+                    <button
+                      onClick={() => onOpenPractice?.(currentStepText)}
+                      disabled={!isSessionActive}
+                      title={t('sessionPlan.practice')}
+                      className={actionButtonClass}
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                      </svg>
+                    </button>
+                    <button
+                      onClick={() => onAskAssistant?.(currentStepText)}
+                      disabled={!isSessionActive}
+                      title={t('sessionPlan.ask')}
+                      className={actionButtonClass}
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+                      </svg>
+                    </button>
+                    <button
+                      onClick={() => onShareScreen?.()}
+                      disabled={!isSessionActive}
+                      title={t('probes.shareScreen')}
+                      className={actionButtonClass}
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                      </svg>
+                    </button>
+                    <button
+                      onClick={() => onAdvanceStep?.()}
+                      disabled={!isSessionActive || !isCurrentPlanStep || !!stuckCheckText}
+                      title={t('probes.done')}
+                      className="py-2.5 px-2 text-[11px] font-medium rounded-xl bg-neutral-100 text-neutral-900 active:bg-white disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center justify-center"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                      </svg>
+                    </button>
                   </div>
-                )}
-                <button
-                  onClick={() => onOpenResources?.(currentStepText)}
-                  disabled={!isSessionActive}
-                  title={t('sessionPlan.resources')}
-                  className={actionButtonClass}
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-                  </svg>
-                </button>
-                <button
-                  onClick={() => onOpenPractice?.(currentStepText)}
-                  disabled={!isSessionActive}
-                  title={t('sessionPlan.practice')}
-                  className={actionButtonClass}
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-                  </svg>
-                </button>
-                <button
-                  onClick={() => onAskAssistant?.(currentStepText)}
-                  disabled={!isSessionActive}
-                  title={t('sessionPlan.ask')}
-                  className={actionButtonClass}
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
-                  </svg>
-                </button>
-                <button
-                  onClick={() => onShareScreen?.()}
-                  disabled={!isSessionActive}
-                  title={t('probes.shareScreen')}
-                  className={actionButtonClass}
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                  </svg>
-                </button>
-                <button
-                  onClick={() => onAdvanceStep?.()}
-                  disabled={!isSessionActive || !isCurrentPlanStep || !!stuckCheckText}
-                  title={t('probes.done')}
-                  className="py-2.5 px-2 text-[11px] font-medium rounded-xl bg-neutral-100 text-neutral-900 active:bg-white disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center justify-center"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                  </svg>
-                </button>
-              </div>
 
-              <div className="mt-3">
-                <ThinkAloudTraces
-                  thoughts={thinkAloudThoughts}
-                  interimText={thinkAloudInterimText}
-                  isListening={thinkAloudListening}
-                  isSupported={thinkAloudSupported}
-                  error={thinkAloudError}
-                  onThoughtClick={(thought) => onThinkAloudThoughtClick?.(thought)}
-                  onManualSubmit={onManualChatSubmit}
-                  onClearThoughts={onClearThinkAloudThoughts}
-                  compact
-                />
-              </div>
+                  <div className="mt-3">
+                    <ThinkAloudTraces
+                      thoughts={thinkAloudThoughts}
+                      interimText={thinkAloudInterimText}
+                      isListening={thinkAloudListening}
+                      isSupported={thinkAloudSupported}
+                      error={thinkAloudError}
+                      onThoughtClick={(thought) => onThinkAloudThoughtClick?.(thought)}
+                      onManualSubmit={onManualChatSubmit}
+                      onClearThoughts={onClearThinkAloudThoughts}
+                      compact
+                    />
+                  </div>
+                </>
+              )}
 
               {/* Carousel dots — always rendered (placeholders for empty
                   slots) so the row reserves its vertical space and the

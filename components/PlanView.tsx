@@ -49,6 +49,11 @@ interface PlanViewProps {
   initialNodes?: PlanNode[];
 }
 
+function planShareSlug(plan: LearningPlan) {
+  const title = plan.title || plan.root_topic || "plan";
+  return encodeURIComponent(title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") || "plan");
+}
+
 // Default placeholder gradient for plans without cover images
 function CoverPlaceholder({ title }: { title: string }) {
   return (
@@ -103,7 +108,7 @@ export function PlanView({ initialPlan, initialNodes }: PlanViewProps) {
   };
 
   const handleShare = () => {
-    const slug = encodeURIComponent(plan!.root_topic.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, ""));
+    const slug = planShareSlug(plan!);
     const url = `${window.location.origin}/p/${plan!.id}/${slug}`;
     navigator.clipboard.writeText(url);
     setCopied(true);
@@ -413,95 +418,92 @@ export function PlanView({ initialPlan, initialNodes }: PlanViewProps) {
     <div className="h-screen bg-[#0a0a0a] text-white flex flex-col overflow-hidden">
       <Navbar />
 
-      {/* Hero Cover Image Section */}
-      <div className="relative flex-shrink-0 h-36 sm:h-44 group">
-        {/* Cover image or placeholder */}
-        {plan.cover_image_url ? (
-          <img
-            src={plan.cover_image_url}
-            alt=""
-            className="absolute inset-0 w-full h-full object-cover"
-          />
-        ) : (
-          <CoverPlaceholder title={plan.root_topic} />
-        )}
-
-        {/* Gradient overlay for text readability */}
-        <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a] via-[#0a0a0a]/60 to-transparent" />
-
-        {/* Regenerate cover button (owner only) */}
-        {isOwner && (
-          <button
-            onClick={handleRegenerateCover}
-            disabled={generatingCover}
-            className="absolute top-3 right-3 p-2 rounded-lg bg-black/40 backdrop-blur-sm border border-white/10 text-white/60 hover:text-white hover:bg-black/60 transition-all opacity-0 group-hover:opacity-100 disabled:opacity-50"
-            title={plan.cover_image_url ? t('planView.regenerateCoverImage') : t('planView.generateCoverImage')}
-          >
-            {generatingCover ? (
-              <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-              </svg>
+      <div className="flex-1 min-h-0 flex flex-col md:flex-row overflow-hidden">
+        <aside className="group flex-shrink-0 md:w-64 lg:w-72 md:h-full border-b md:border-b-0 md:border-r border-neutral-800/50 bg-[#0b0b0b] overflow-y-auto md:overflow-hidden md:flex md:flex-col">
+          <div className="relative h-32 md:h-[30%] md:min-h-52 md:max-h-80 flex-shrink-0 overflow-hidden">
+            {plan.cover_image_url ? (
+              <img
+                src={plan.cover_image_url}
+                alt=""
+                className="absolute inset-0 w-full h-full object-cover scale-105"
+              />
             ) : (
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
-                <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0z" />
-              </svg>
+              <CoverPlaceholder title={plan.root_topic} />
             )}
-          </button>
-        )}
+            <div className="absolute inset-0 bg-gradient-to-t from-[#0b0b0b] via-[#0b0b0b]/50 to-transparent" />
+            {isOwner && (
+              <button
+                onClick={handleRegenerateCover}
+                disabled={generatingCover}
+                className="absolute top-3 right-3 p-2 rounded-lg bg-black/40 backdrop-blur-sm border border-white/10 text-white/60 hover:text-white hover:bg-black/60 transition-all md:opacity-0 md:group-hover:opacity-100 disabled:opacity-50"
+                title={plan.cover_image_url ? t('planView.regenerateCoverImage') : t('planView.generateCoverImage')}
+              >
+                {generatingCover ? (
+                  <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                  </svg>
+                ) : (
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0z" />
+                  </svg>
+                )}
+              </button>
+            )}
+          </div>
 
-        {/* Title + metadata overlay at bottom of hero */}
-        <div className="absolute bottom-0 left-0 right-0 px-4 pb-3">
-          <div className="flex items-end justify-between gap-4">
-            <div className="flex-1 min-w-0">
+          <div className="p-4 md:p-5 space-y-4 md:flex-1 md:min-h-0 md:overflow-y-auto">
+            <div>
               {isEditingTitle ? (
-                <div className="flex items-center gap-2 mb-1">
+                <div className="space-y-2">
                   <input
                     type="text"
                     value={editTitle}
                     onChange={(e) => setEditTitle(e.target.value)}
-                    className="flex-1 px-3 py-1.5 bg-black/60 backdrop-blur-sm border border-white/20 rounded-lg text-white text-lg font-bold focus:outline-none focus:border-blue-500"
+                    className="w-full px-3 py-2 bg-neutral-900 border border-neutral-700 rounded-lg text-white text-lg font-bold focus:outline-none focus:border-blue-500"
                     autoFocus
                   />
-                  <button
-                    onClick={async () => {
-                      if (!editTitle.trim()) return;
-                      try {
-                        const res = await fetch(`/api/learning-plans/${planId}/visibility`, {
-                          method: "PUT",
-                          headers: { "Content-Type": "application/json" },
-                          body: JSON.stringify({ title: editTitle.trim() }),
-                        });
-                        const data = await res.json();
-                        if (data.success) {
-                          setPlan({ ...plan, root_topic: editTitle.trim(), title: editTitle.trim() });
-                          setIsEditingTitle(false);
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={async () => {
+                        if (!editTitle.trim()) return;
+                        try {
+                          const res = await fetch(`/api/learning-plans/${planId}/visibility`, {
+                            method: "PUT",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ title: editTitle.trim() }),
+                          });
+                          const data = await res.json();
+                          if (data.success) {
+                            setPlan({ ...plan, root_topic: editTitle.trim(), title: editTitle.trim() });
+                            setIsEditingTitle(false);
+                          }
+                        } catch (err) {
+                          console.error("Error updating title:", err);
                         }
-                      } catch (err) {
-                        console.error("Error updating title:", err);
-                      }
-                    }}
-                    className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-sm rounded-lg transition-colors"
-                  >
-                    {t('common.save')}
-                  </button>
-                  <button
-                    onClick={() => { setEditTitle(plan.root_topic); setIsEditingTitle(false); }}
-                    className="px-3 py-1.5 bg-neutral-700 hover:bg-neutral-600 text-white text-sm rounded-lg transition-colors"
-                  >
-                    {t('common.cancel')}
-                  </button>
+                      }}
+                      className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-sm rounded-lg transition-colors"
+                    >
+                      {t('common.save')}
+                    </button>
+                    <button
+                      onClick={() => { setEditTitle(plan.root_topic); setIsEditingTitle(false); }}
+                      className="px-3 py-1.5 bg-neutral-800 hover:bg-neutral-700 text-white text-sm rounded-lg transition-colors"
+                    >
+                      {t('common.cancel')}
+                    </button>
+                  </div>
                 </div>
               ) : (
-                <div className="flex items-center gap-2">
-                  <h1 className="text-xl sm:text-2xl font-bold text-white truncate drop-shadow-lg">
+                <div className="flex items-start gap-2">
+                  <h1 className="text-xl font-bold leading-tight text-white">
                     {plan.title || plan.root_topic}
                   </h1>
                   {isOwner && (
                     <button
                       onClick={() => setIsEditingTitle(true)}
-                      className="text-white/40 hover:text-white transition-colors flex-shrink-0"
+                      className="mt-1 text-white/35 hover:text-white transition-colors flex-shrink-0"
                     >
                       <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
@@ -510,25 +512,71 @@ export function PlanView({ initialPlan, initialNodes }: PlanViewProps) {
                   )}
                 </div>
               )}
-              {/* Subtitle: topic name if title differs */}
               {plan.title && plan.title !== plan.root_topic && (
-                <p className="text-sm text-white/50 truncate mt-0.5">{plan.root_topic}</p>
+                <p className="text-sm text-neutral-500 mt-1">{plan.root_topic}</p>
               )}
             </div>
 
-            {/* Action buttons */}
-            <div className="flex items-center gap-2 flex-shrink-0">
+            <div className="flex flex-wrap items-center gap-2 text-xs">
+              {plan.is_group && (
+                <span className="text-violet-400 bg-violet-500/10 border border-violet-500/20 px-1.5 py-0.5 rounded text-[10px] font-medium uppercase tracking-wider">
+                  {t('planView.group')}
+                </span>
+              )}
+              {plan.is_public && plan.author_username && (
+                <span className="text-neutral-500">{t('planView.by')} <span className="text-neutral-400">@{plan.author_username}</span></span>
+              )}
+              {plan.is_public && (plan.remix_count ?? 0) > 0 && (
+                <span className="text-neutral-500">
+                  {plan.remix_count} {(plan.remix_count || 0) === 1 ? t('planView.fork') : t('planView.forks', { count: plan.remix_count || 0 })}
+                </span>
+              )}
+              {plan.original_plan_id && (
+                <span className="text-violet-400/70 font-medium">{t('planView.remixed')}</span>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              {isEditingDescription ? (
+                <div className="space-y-2">
+                  <textarea
+                    value={editDescription}
+                    onChange={(e) => setEditDescription(e.target.value)}
+                    placeholder={t('planView.addDescription')}
+                    className="w-full min-h-20 px-3 py-2 bg-neutral-900 border border-neutral-700 rounded-lg text-white text-sm focus:outline-none focus:border-blue-500 resize-none"
+                    autoFocus
+                  />
+                  <div className="flex items-center gap-3 text-xs">
+                    <button onClick={saveDescription} disabled={savingDescription} className="text-blue-400 hover:text-blue-300 font-medium">
+                      {savingDescription ? "..." : t('common.save')}
+                    </button>
+                    <button onClick={() => { setEditDescription(plan.description || ""); setIsEditingDescription(false); }} className="text-neutral-500 hover:text-neutral-300">
+                      {t('common.cancel')}
+                    </button>
+                  </div>
+                </div>
+              ) : plan.description ? (
+                <p className="text-sm leading-relaxed text-neutral-500 cursor-pointer hover:text-neutral-400 transition-colors" onClick={() => isOwner && setIsEditingDescription(true)}>
+                  {plan.description}
+                </p>
+              ) : isOwner ? (
+                <button onClick={() => setIsEditingDescription(true)} className="text-neutral-600 hover:text-neutral-400 transition-colors text-sm">
+                  {t('planView.addDescriptionBtn')}
+                </button>
+              ) : null}
+            </div>
+
+            <div className="flex flex-col gap-2">
               {(plan.is_public || plan.is_group) && (
                 <button
                   onClick={handleShare}
-                  className="text-xs px-3 py-1.5 rounded-full bg-white/10 backdrop-blur-sm border border-white/10 text-white/70 hover:text-white hover:bg-white/20 transition-all"
+                  className="w-full text-xs px-3 py-2 rounded-lg bg-white/10 border border-white/10 text-white/70 hover:text-white hover:bg-white/15 transition-all"
                 >
                   {copied ? t('planView.copied') : t('planView.share')}
                 </button>
               )}
               {isOwner ? (
                 <>
-                  {/* Group plan toggle */}
                   <button
                     onClick={async () => {
                       try {
@@ -546,15 +594,14 @@ export function PlanView({ initialPlan, initialNodes }: PlanViewProps) {
                         console.error("Error toggling group mode:", err);
                       }
                     }}
-                    className={`text-xs px-3 py-1.5 rounded-full backdrop-blur-sm border transition-all ${
+                    className={`w-full text-xs px-3 py-2 rounded-lg border transition-all ${
                       plan.is_group
                         ? "bg-violet-500/15 border-violet-500/30 text-violet-400 hover:bg-violet-500/25"
-                        : "bg-white/10 border-white/10 text-white/70 hover:text-white hover:bg-white/20"
+                        : "bg-white/10 border-white/10 text-white/70 hover:text-white hover:bg-white/15"
                     }`}
                   >
                     {plan.is_group ? t('planView.groupPlan') : t('planView.makeGroupPlan')}
                   </button>
-                  {/* Public / Share toggle */}
                   <button
                     onClick={async () => {
                       try {
@@ -572,24 +619,32 @@ export function PlanView({ initialPlan, initialNodes }: PlanViewProps) {
                         console.error("Error toggling visibility:", err);
                       }
                     }}
-                    className={`text-xs px-3 py-1.5 rounded-full backdrop-blur-sm border transition-all ${
+                    className={`w-full text-xs px-3 py-2 rounded-lg border transition-all ${
                       plan.is_public
                         ? "bg-green-500/15 border-green-500/30 text-green-400 hover:bg-green-500/25"
-                        : "bg-white/10 border-white/10 text-white/70 hover:text-white hover:bg-white/20"
+                        : "bg-white/10 border-white/10 text-white/70 hover:text-white hover:bg-white/15"
                     }`}
                   >
                     {plan.is_public ? t('planView.public') : t('planView.makePublic')}
                   </button>
+                  {plan.is_public && !isEditingDescription && (
+                    <button
+                      onClick={() => setShowRemixModal(true)}
+                      className="w-full text-xs px-3 py-2 rounded-lg border border-neutral-800 text-neutral-500 hover:text-neutral-300 hover:bg-neutral-900 transition-colors"
+                    >
+                      {t('planView.forkRemix')}
+                    </button>
+                  )}
                 </>
               ) : currentUserId ? (
                 plan.is_group ? (
-                  <span className="text-xs px-3 py-1.5 rounded-full bg-violet-500/10 border border-violet-500/20 text-violet-400">
+                  <span className="text-center text-xs px-3 py-2 rounded-lg bg-violet-500/10 border border-violet-500/20 text-violet-400">
                     {t('planView.groupParticipant')}
                   </span>
                 ) : (
                   <button
                     onClick={() => setShowRemixModal(true)}
-                    className="text-xs px-3 py-1.5 rounded-full bg-blue-500/15 border border-blue-500/30 text-blue-400 hover:bg-blue-500/25 transition-all"
+                    className="w-full text-xs px-3 py-2 rounded-lg bg-blue-500/15 border border-blue-500/30 text-blue-400 hover:bg-blue-500/25 transition-all"
                   >
                     {t('planView.forkRemix')}
                   </button>
@@ -597,15 +652,15 @@ export function PlanView({ initialPlan, initialNodes }: PlanViewProps) {
               ) : (
                 plan.is_group ? (
                   <Link
-                    href={`/login?redirect=/p/${planId}/${encodeURIComponent((plan.root_topic || "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, ""))}`}
-                    className="text-xs px-3 py-1.5 rounded-full bg-violet-500/15 border border-violet-500/30 text-violet-400 hover:bg-violet-500/25 transition-all"
+                    href={`/login?redirect=/p/${planId}/${planShareSlug(plan)}`}
+                    className="text-center text-xs px-3 py-2 rounded-lg bg-violet-500/15 border border-violet-500/30 text-violet-400 hover:bg-violet-500/25 transition-all"
                   >
                     {t('planView.signInToJoin')}
                   </Link>
                 ) : (
                   <Link
                     href="/register"
-                    className="text-xs px-3 py-1.5 rounded-full bg-blue-500/15 border border-blue-500/30 text-blue-400 hover:bg-blue-500/25 transition-all"
+                    className="text-center text-xs px-3 py-2 rounded-lg bg-blue-500/15 border border-blue-500/30 text-blue-400 hover:bg-blue-500/25 transition-all"
                   >
                     {t('planView.forkRemix')}
                   </Link>
@@ -613,95 +668,31 @@ export function PlanView({ initialPlan, initialNodes }: PlanViewProps) {
               )}
             </div>
           </div>
-        </div>
-      </div>
+        </aside>
 
-      {/* Metadata bar */}
-      <div className="px-4 py-2 flex items-center gap-3 text-xs flex-shrink-0 border-b border-neutral-800/50">
-        <div className="flex items-center gap-2 flex-1 min-w-0">
-          {plan.is_group && (
-            <span className="text-violet-400 bg-violet-500/10 border border-violet-500/20 px-1.5 py-0.5 rounded text-[10px] font-medium uppercase tracking-wider">
-              {t('planView.group')}
-            </span>
-          )}
-          {plan.is_public && plan.author_username && (
-            <span className="text-neutral-500">{t('planView.by')} <span className="text-neutral-400">@{plan.author_username}</span></span>
-          )}
-          {plan.is_public && (plan.remix_count ?? 0) > 0 && (
-            <span className="text-neutral-600">·</span>
-          )}
-          {plan.is_public && (plan.remix_count ?? 0) > 0 && (
-            <span className="text-neutral-500">
-              {plan.remix_count} {(plan.remix_count || 0) === 1 ? t('planView.fork') : t('planView.forks', { count: plan.remix_count || 0 })}
-            </span>
-          )}
-          {plan.original_plan_id && (
-            <>
-              <span className="text-neutral-600">·</span>
-              <span className="text-violet-400/70 font-medium">{t('planView.remixed')}</span>
-            </>
-          )}
-        </div>
-
-        {/* Inline description */}
-        {isEditingDescription ? (
-          <div className="flex items-center gap-2 flex-1">
-            <input
-              value={editDescription}
-              onChange={(e) => setEditDescription(e.target.value)}
-              placeholder={t('planView.addDescription')}
-              className="flex-1 px-2 py-1 bg-neutral-800 border border-neutral-700 rounded text-white text-xs focus:outline-none focus:border-blue-500"
-              autoFocus
-            />
-            <button onClick={saveDescription} disabled={savingDescription} className="text-blue-400 hover:text-blue-300 text-xs font-medium">
-              {savingDescription ? "..." : t('common.save')}
-            </button>
-            <button onClick={() => { setEditDescription(plan.description || ""); setIsEditingDescription(false); }} className="text-neutral-500 hover:text-neutral-300 text-xs">
-              {t('common.cancel')}
-            </button>
+        <section className="flex-1 min-w-0 min-h-0 flex flex-col overflow-hidden">
+          {/* Pill Tab Bar */}
+          <div className="px-3 sm:px-4 pt-2.5 pb-1 flex-shrink-0">
+            <div className="inline-flex items-center gap-1 p-1 rounded-xl bg-neutral-900/80 border border-neutral-800/50 max-w-full overflow-x-auto">
+              {tabConfig.map(({ key, label, icon }) => (
+                <button
+                  key={key}
+                  onClick={() => setActiveTab(key)}
+                  className={`flex items-center gap-1.5 px-3.5 py-1.5 text-sm font-medium rounded-lg transition-all whitespace-nowrap ${
+                    activeTab === key
+                      ? "bg-neutral-700/80 text-white shadow-sm"
+                      : "text-neutral-500 hover:text-neutral-300"
+                  }`}
+                >
+                  {icon}
+                  {label}
+                </button>
+              ))}
+            </div>
           </div>
-        ) : plan.description ? (
-          <p className="text-neutral-500 truncate flex-1 cursor-pointer hover:text-neutral-400 transition-colors" onClick={() => isOwner && setIsEditingDescription(true)}>
-            {plan.description}
-          </p>
-        ) : isOwner ? (
-          <button onClick={() => setIsEditingDescription(true)} className="text-neutral-600 hover:text-neutral-400 transition-colors text-xs">
-            {t('planView.addDescriptionBtn')}
-          </button>
-        ) : null}
 
-        {isOwner && plan.is_public && !isEditingDescription && (
-          <button
-            onClick={() => setShowRemixModal(true)}
-            className="text-xs text-neutral-500 hover:text-neutral-300 transition-colors"
-          >
-            {t('planView.forkRemix')}
-          </button>
-        )}
-      </div>
-
-      {/* Pill Tab Bar */}
-      <div className="px-4 pt-2.5 pb-1 flex-shrink-0">
-        <div className="inline-flex items-center gap-1 p-1 rounded-xl bg-neutral-900/80 border border-neutral-800/50">
-          {tabConfig.map(({ key, label, icon }) => (
-            <button
-              key={key}
-              onClick={() => setActiveTab(key)}
-              className={`flex items-center gap-1.5 px-3.5 py-1.5 text-sm font-medium rounded-lg transition-all ${
-                activeTab === key
-                  ? "bg-neutral-700/80 text-white shadow-sm"
-                  : "text-neutral-500 hover:text-neutral-300"
-              }`}
-            >
-              {icon}
-              {label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Tab Content */}
-      <main className="flex-1 p-3 sm:p-4 pb-3 sm:pb-4 min-h-0 overflow-hidden">
+          {/* Tab Content */}
+          <main className="flex-1 p-3 sm:p-4 pb-3 sm:pb-4 min-h-0 overflow-hidden">
         {activeTab === "graph" && (
           <PlanChat 
             plan={plan} 
@@ -801,7 +792,9 @@ export function PlanView({ initialPlan, initialNodes }: PlanViewProps) {
             isOwner={isOwner}
           />
         )}
-      </main>
+          </main>
+        </section>
+      </div>
 
       {showRemixModal && (
         <RemixModal

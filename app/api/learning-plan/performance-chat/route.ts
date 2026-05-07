@@ -79,8 +79,6 @@ export async function POST(req: NextRequest) {
 
     const isOwner = plan.user_id === user.id;
     const isOrgAdmin = profile?.is_org_admin || profile?.is_admin;
-    const isGroupPlan = plan.is_group === true;
-
     // Determine access level
     // - Plan owners: see all users on their plan
     // - Org admins: see all users in their org
@@ -114,8 +112,7 @@ export async function POST(req: NextRequest) {
         canSeeAllUsers,
         isOwner,
         profile?.organization_id,
-        isOrgAdmin,
-        isGroupPlan
+        isOrgAdmin
       );
 
       if (performanceData.users.length === 0) {
@@ -393,121 +390,18 @@ async function fetchPerformanceData(
   isOwner: boolean,
   organizationId?: string | null,
   isOrgAdmin?: boolean,
-  isGroupPlan?: boolean
 ): Promise<PerformanceDataPayload> {
-
-  // ── Group plans: use plan_node_sessions join table ──
-  if (isGroupPlan) {
-    return fetchGroupPlanPerformanceData(
-      supabase, planId, planTitle, requestingUserId, canSeeAllUsers, isOwner, organizationId, isOrgAdmin
-    );
-  }
-
-  // ── Standard plans: use existing plan_nodes.session_id join ──
-  // Build the query to get sessions linked to this plan via plan_nodes
-  let query = supabase
-    .from("sessions")
-    .select(`
-      id,
-      problem,
-      status,
-      duration_ms,
-      created_at,
-      report,
-      user_id,
-      plan_nodes!inner (
-        plan_id,
-        title
-      ),
-      profiles (
-        id,
-        username,
-        organization_id
-      )
-    `)
-    .eq("plan_nodes.plan_id", planId)
-    .order("created_at", { ascending: false });
-
-  // Apply access control filters
-  if (!canSeeAllUsers) {
-    // Regular user: only their own sessions
-    query = query.eq("user_id", requestingUserId);
-  } else if (!isOwner && isOrgAdmin && organizationId) {
-    // Org admin: only users in their organization
-    query = query.eq("profiles.organization_id", organizationId);
-  }
-  // Plan owner: no additional filter needed (sees all users on their plan)
-
-  const { data: sessions, error } = await query;
-
-  if (error) {
-    console.error("[performance-chat] Error fetching sessions:", error);
-    return {
-      plan_title: planTitle,
-      plan_id: planId,
-      generated_at: new Date().toISOString(),
-      users: [],
-    };
-  }
-
-  // Group sessions by user
-  const userMap = new Map<string, UserPerformanceData>();
-
-  for (const session of sessions || []) {
-    const userId = session.user_id;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const profile = session.profiles as any;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const planNode = Array.isArray(session.plan_nodes) ? session.plan_nodes[0] : session.plan_nodes as any;
-    
-    if (!userMap.has(userId)) {
-      userMap.set(userId, {
-        username: profile?.username || "unknown",
-        user_id: userId,
-        sessions: [],
-        summary: {
-          total_sessions: 0,
-          completed_sessions: 0,
-          total_duration_minutes: 0,
-        },
-      });
-    }
-
-    const userData = userMap.get(userId)!;
-    const durationMinutes = Math.round((session.duration_ms || 0) / 60000);
-    const isCompleted = session.status === "completed" || session.status === "ended_by_tutor";
-
-    userData.sessions.push({
-      id: session.id,
-      node_title: planNode?.title || null,
-      problem: session.problem,
-      status: session.status,
-      duration_minutes: durationMinutes,
-      started_at: session.created_at,
-      report: session.report,
-    });
-
-    userData.summary.total_sessions++;
-    if (isCompleted) {
-      userData.summary.completed_sessions++;
-    }
-    userData.summary.total_duration_minutes += durationMinutes;
-  }
-
-  return {
-    plan_title: planTitle,
-    plan_id: planId,
-    generated_at: new Date().toISOString(),
-    users: Array.from(userMap.values()),
-  };
+  return fetchLinkedPlanPerformanceData(
+    supabase, planId, planTitle, requestingUserId, canSeeAllUsers, isOwner, organizationId, isOrgAdmin
+  );
 }
 
 /**
- * Fetch performance data for group plans. Plan owners and org admins use the
- * already-authorized server-side admin client so session RLS does not hide
- * participant work from the aggregate performance tab.
+ * Fetch performance data from every supported plan-session link path. Plans can
+ * be linked through plan_node_sessions, plan_nodes.session_id, or session
+ * metadata depending on which start flow created the session.
  */
-async function fetchGroupPlanPerformanceData(
+async function fetchLinkedPlanPerformanceData(
   supabase: Awaited<ReturnType<typeof createClient>>,
   planId: string,
   planTitle: string,
@@ -528,7 +422,7 @@ async function fetchGroupPlanPerformanceData(
       .eq("plan_id", planId);
 
     if (linkError) {
-      console.error("[performance-chat] Group plan link lookup error:", linkError);
+      console.error("[performance-chat] Plan link lookup error:", linkError);
     }
 
     const { data: directNodes, error: directNodesError } = await supabase
@@ -537,7 +431,7 @@ async function fetchGroupPlanPerformanceData(
       .eq("plan_id", planId);
 
     if (directNodesError) {
-      console.error("[performance-chat] Group plan node lookup error:", directNodesError);
+      console.error("[performance-chat] Plan node lookup error:", directNodesError);
     }
 
     // Sessions created through newer start paths also carry the plan link in
@@ -549,7 +443,7 @@ async function fetchGroupPlanPerformanceData(
       .order("created_at", { ascending: false });
 
     if (metadataSessionsError) {
-      console.error("[performance-chat] Group plan metadata-session fallback error:", metadataSessionsError);
+      console.error("[performance-chat] Metadata-session fallback error:", metadataSessionsError);
     }
 
     const sessionNodeMap = new Map<string, string | null>();
@@ -562,7 +456,9 @@ async function fetchGroupPlanPerformanceData(
     for (const session of metadataSessions || []) {
       const metadata = session.metadata as Record<string, unknown> | null;
       const nodeId = typeof metadata?.plan_node_id === "string" ? metadata.plan_node_id : null;
-      sessionNodeMap.set(session.id, nodeId);
+      if (nodeId || !sessionNodeMap.has(session.id)) {
+        sessionNodeMap.set(session.id, nodeId);
+      }
     }
 
     const sessionIds = Array.from(sessionNodeMap.keys());
@@ -577,7 +473,7 @@ async function fetchGroupPlanPerformanceData(
       : { data: [], error: null };
 
     if (sessionsError) {
-      console.error("[performance-chat] Group plan sessions lookup error:", sessionsError);
+      console.error("[performance-chat] Plan sessions lookup error:", sessionsError);
     }
 
     const userIds = Array.from(new Set((sessions || []).map(session => session.user_id)));
@@ -620,36 +516,75 @@ async function fetchGroupPlanPerformanceData(
       }];
     });
   } else {
-    // Participant path: only their own plan_node_sessions
+    // Restricted path: only sessions owned by the requester, discovered through
+    // the same link sources used for aggregate plan performance.
     const { data: links, error: linkError } = await supabase
       .from("plan_node_sessions")
       .select("session_id, plan_node_id")
       .eq("plan_id", planId)
       .eq("user_id", requestingUserId);
 
-    if (linkError || !links || links.length === 0) {
-      return {
-        plan_title: planTitle,
-        plan_id: planId,
-        generated_at: new Date().toISOString(),
-        users: [],
-      };
+    if (linkError) {
+      console.error("[performance-chat] Plan link lookup error:", linkError);
     }
 
-    const sessionIds = links.map(l => l.session_id);
-    const nodeIds = links.map(l => l.plan_node_id);
-
-    // Sessions are owned by the user so RLS allows this
-    const { data: sessions } = await supabase
-      .from("sessions")
-      .select("id, problem, status, duration_ms, created_at, report, user_id")
-      .in("id", sessionIds);
-
-    // Nodes are readable because of the group plan RLS policy
-    const { data: nodes } = await supabase
+    const { data: directNodes, error: directNodesError } = await supabase
       .from("plan_nodes")
-      .select("id, title")
-      .in("id", nodeIds);
+      .select("id, title, session_id")
+      .eq("plan_id", planId);
+
+    if (directNodesError) {
+      console.error("[performance-chat] Plan node lookup error:", directNodesError);
+    }
+
+    const { data: metadataSessions, error: metadataSessionsError } = await supabase
+      .from("sessions")
+      .select("id, user_id, metadata")
+      .filter("metadata->>plan_id", "eq", planId)
+      .eq("user_id", requestingUserId)
+      .order("created_at", { ascending: false });
+
+    if (metadataSessionsError) {
+      console.error("[performance-chat] Metadata-session fallback error:", metadataSessionsError);
+    }
+
+    const sessionNodeMap = new Map<string, string | null>();
+    for (const link of links || []) {
+      sessionNodeMap.set(link.session_id, link.plan_node_id);
+    }
+    for (const node of directNodes || []) {
+      if (node.session_id) sessionNodeMap.set(node.session_id, node.id);
+    }
+    for (const session of metadataSessions || []) {
+      const metadata = session.metadata as Record<string, unknown> | null;
+      const nodeId = typeof metadata?.plan_node_id === "string" ? metadata.plan_node_id : null;
+      if (nodeId || !sessionNodeMap.has(session.id)) {
+        sessionNodeMap.set(session.id, nodeId);
+      }
+    }
+
+    const sessionIds = Array.from(sessionNodeMap.keys());
+    const nodeIds = Array.from(new Set(Array.from(sessionNodeMap.values()).filter(Boolean))) as string[];
+
+    const { data: sessions, error: sessionsError } = sessionIds.length > 0
+      ? await supabase
+        .from("sessions")
+        .select("id, problem, status, duration_ms, created_at, report, user_id")
+        .in("id", sessionIds)
+        .eq("user_id", requestingUserId)
+        .order("created_at", { ascending: false })
+      : { data: [], error: null };
+
+    if (sessionsError) {
+      console.error("[performance-chat] Plan sessions lookup error:", sessionsError);
+    }
+
+    const { data: nodes } = nodeIds.length > 0
+      ? await supabase
+        .from("plan_nodes")
+        .select("id, title")
+        .in("id", nodeIds)
+      : { data: [] };
 
     const { data: profile } = await supabase
       .from("profiles")
@@ -658,7 +593,6 @@ async function fetchGroupPlanPerformanceData(
       .single();
 
     const nodeMap = new Map((nodes || []).map(n => [n.id, n.title]));
-    const linkMap = new Map(links.map(l => [l.session_id, l.plan_node_id]));
 
     rows = (sessions || []).map(s => ({
       session_id: s.id,
@@ -670,8 +604,8 @@ async function fetchGroupPlanPerformanceData(
       report: s.report,
       created_at: s.created_at,
       ended_at: null,
-      node_id: linkMap.get(s.id),
-      node_title: nodeMap.get(linkMap.get(s.id) || "") || null,
+      node_id: sessionNodeMap.get(s.id),
+      node_title: nodeMap.get(sessionNodeMap.get(s.id) || "") || null,
     }));
   }
 

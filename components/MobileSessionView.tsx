@@ -25,6 +25,7 @@ import {
   resumeSession,
   endSession,
   saveSession,
+  saveBrowserTranscript,
   saveWithDedupString,
 } from "@/lib/storage";
 import Link from "next/link";
@@ -38,7 +39,7 @@ import { LocalContextBuffer } from "@/lib/local-context";
 import { useSessionHeartbeat, type StorageHeartbeatResult, type AnalysisHeartbeatResult, type StuckHeartbeatResult } from "@/lib/useSessionHeartbeat";
 import { useInactivityAutoPause } from "@/lib/useInactivityAutoPause";
 import { useVoiceActivity } from "@/lib/useVoiceActivity";
-import { useThinkAloudTranscript, type ThinkAloudThought } from "@/lib/useThinkAloudTranscript";
+import { useThinkAloudTranscript, type SpeechTranscriptEntry, type ThinkAloudThought } from "@/lib/useThinkAloudTranscript";
 import { retryWithResult } from "@/lib/retry";
 import { ConfirmDialog } from "./ui/ConfirmDialog";
 // ModelLoadingModal no longer used -- loading UI is inline in welcome modal
@@ -241,6 +242,8 @@ export function MobileSessionView({
   const timerBaseRef = useRef<number>(0);
   const elapsedSecondsRef = useRef(0);
   const chunkIndexRef = useRef(0);
+  const consumeSpeechTranscriptEntriesRef = useRef<() => SpeechTranscriptEntry[]>(() => []);
+  const requeueSpeechTranscriptEntriesRef = useRef<(entries: SpeechTranscriptEntry[]) => void>(() => {});
   const wakeLockRef = useRef<WakeLockSentinel | null>(null);
   const whiteboardDataRef = useRef<string | null>(null);
   const sessionRef = useRef<Session | null>(session);
@@ -390,28 +393,38 @@ export function MobileSessionView({
     const result: StorageHeartbeatResult = {};
 
     try {
+      let transcriptChunkIndex: number | null = null;
+      let transcriptTimestamp = Date.now();
       if (recorderRef.current) {
         const audio = recorderRef.current.getRecentAudio(5000);
         if (audio && audio.size > 100) {
           result.audio = { attempted: true, saved: false };
           const idx = chunkIndexRef.current++;
+          transcriptChunkIndex = idx;
+          transcriptTimestamp = Date.now();
           const saveResult = await retryWithResult(
-            () => saveAudioChunk(currentSession.id, audio, idx, Date.now()),
+            () => saveAudioChunk(currentSession.id, audio, idx, transcriptTimestamp),
             { maxRetries: 2, baseDelayMs: 500 },
           );
           result.audio.saved = saveResult.success && !!saveResult.data;
         }
       }
 
-      // Transcribe any pending audio chunks (decoupled from analysis)
-      try {
-        await fetch("/api/transcribe-chunks", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ sessionId: currentSession.id }),
-        });
-      } catch (err) {
-        console.warn("[Mobile] Background transcription error:", err);
+      const transcriptEntries = consumeSpeechTranscriptEntriesRef.current();
+      if (transcriptEntries.length > 0) {
+        const transcriptText = transcriptEntries.map((entry) => entry.text).join(" ");
+        const idx = transcriptChunkIndex ?? chunkIndexRef.current++;
+        const timestamp = transcriptChunkIndex === null
+          ? Math.min(...transcriptEntries.map((entry) => entry.timestamp))
+          : transcriptTimestamp;
+        const transcriptResult = await retryWithResult(
+          () => saveBrowserTranscript(currentSession.id, transcriptText, idx, timestamp),
+          { maxRetries: 2, baseDelayMs: 500 },
+        );
+        if (!transcriptResult.success) {
+          requeueSpeechTranscriptEntriesRef.current(transcriptEntries);
+          console.warn("[Mobile] Browser transcript upload error:", transcriptResult.error);
+        }
       }
 
       if (whiteboardDataRef.current) {
@@ -522,7 +535,7 @@ export function MobileSessionView({
   }, [tutoringLanguage]);
 
   // Analysis heartbeat - analyze, create probes, handle step transitions (every 10s)
-  // Transcription is now decoupled — it runs on the storage heartbeat cycle.
+  // Browser Web Speech transcript uploads run on the storage heartbeat cycle.
   const runAnalysisHeartbeat = useCallback(async (): Promise<AnalysisHeartbeatResult> => {
     const startMs = Date.now();
 
@@ -1322,6 +1335,8 @@ export function MobileSessionView({
     enabled: isRecording && !isPaused,
     tutoringLanguage,
   });
+  consumeSpeechTranscriptEntriesRef.current = thinkAloudTranscript.consumePendingTranscriptEntries;
+  requeueSpeechTranscriptEntriesRef.current = thinkAloudTranscript.requeueTranscriptEntries;
 
   const handleThinkAloudThoughtClick = useCallback((thought: ThinkAloudThought) => {
     openHeliosChatWithMessage(`I was thinking aloud and want to work through this: "${thought.text}"`);

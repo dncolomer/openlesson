@@ -334,6 +334,9 @@ export function ProbesPanel({
                   cue: they appear red-tinted only while active probes
                   exist, drawing the eye toward the tutor's new guidance. */}
               <div className="shrink-0 flex flex-col items-center">
+                <div className="mb-2 text-[11px] font-medium uppercase tracking-[0.16em] text-red-200/80">
+                  Chapter {currentIndex + 1}
+                </div>
                 <div className="flex items-center gap-3">
                   {/* Left arrow — floats next to avatar */}
                   <button

@@ -8,6 +8,11 @@ export interface ThinkAloudThought {
   timestamp: number;
 }
 
+export interface SpeechTranscriptEntry {
+  text: string;
+  timestamp: number;
+}
+
 type SpeechRecognitionResultLike = {
   readonly isFinal: boolean;
   readonly [index: number]: { readonly transcript: string };
@@ -77,6 +82,7 @@ export function useThinkAloudTranscript({
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const shouldListenRef = useRef(false);
   const finalBufferRef = useRef<string[]>([]);
+  const pendingTranscriptRef = useRef<SpeechTranscriptEntry[]>([]);
   const finalizeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [interimText, setInterimText] = useState("");
@@ -127,6 +133,10 @@ export function useThinkAloudTranscript({
         if (!transcript) continue;
         if (result.isFinal) {
           finalBufferRef.current.push(transcript);
+          pendingTranscriptRef.current.push({
+            text: transcript,
+            timestamp: Date.now(),
+          });
         } else {
           interim = normalizeTranscript(`${interim} ${transcript}`);
         }
@@ -192,6 +202,15 @@ export function useThinkAloudTranscript({
     interimText,
     thoughts,
     clearThoughts: () => setThoughts([]),
+    consumePendingTranscriptEntries: () => {
+      const entries = pendingTranscriptRef.current;
+      pendingTranscriptRef.current = [];
+      return entries;
+    },
+    requeueTranscriptEntries: (entries: SpeechTranscriptEntry[]) => {
+      if (entries.length === 0) return;
+      pendingTranscriptRef.current = [...entries, ...pendingTranscriptRef.current];
+    },
     error,
   };
 }

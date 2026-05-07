@@ -653,7 +653,7 @@ export async function saveAudioChunk(
     throw error;
   }
 
-  // Insert record to session_audio table so transcribe-chunks can find it
+  // Insert record to session_audio so the chunk remains linked to the session.
   const { error: insertError } = await supabase
     .from("session_audio")
     .insert({
@@ -671,6 +671,38 @@ export async function saveAudioChunk(
 
   console.log("[saveAudioChunk] Success:", path);
   return path;
+}
+
+export async function saveBrowserTranscript(
+  sessionId: string,
+  transcript: string,
+  chunkIndex: number,
+  timestamp: number,
+): Promise<string | null> {
+  const text = transcript.replace(/\s+/g, " ").trim();
+  if (!text) return null;
+
+  const res = await fetch("/api/session-transcripts/upload", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      sessionId,
+      transcript: text,
+      chunkIndex,
+      timestampMs: timestamp,
+      metadata: {
+        source: "browser-web-speech",
+      },
+    }),
+  });
+
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body?.error || `Transcript upload failed (${res.status})`);
+  }
+
+  const body = (await res.json()) as { xai_file_id?: string };
+  return body.xai_file_id || null;
 }
 
 export async function getSessionAudio(sessionId: string): Promise<Blob | null> {

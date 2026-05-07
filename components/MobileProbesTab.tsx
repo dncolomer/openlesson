@@ -278,6 +278,9 @@ export function MobileProbesTab({
                   cue: they appear red-tinted only while active probes
                   exist, drawing the eye toward the tutor's new guidance. */}
               <div className="shrink-0 flex flex-col items-center">
+                <div className="mb-1.5 text-[10px] font-medium uppercase tracking-[0.14em] text-red-200/80">
+                  Chapter {currentIndex + 1}
+                </div>
                 <div className="flex items-center gap-3">
                   {/* Left arrow — floats next to avatar */}
                   <button

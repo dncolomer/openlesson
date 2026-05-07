@@ -13,6 +13,7 @@ import {
   saveSessionEEG,
   saveFacialData,
   saveAudioChunk,
+  saveBrowserTranscript,
   pauseSession,
   resumeSession,
   updateSessionStatus,
@@ -60,7 +61,7 @@ import {
 import { useSessionHeartbeat, type StorageHeartbeatResult, type AnalysisHeartbeatResult, type StuckHeartbeatResult } from "@/lib/useSessionHeartbeat";
 import { useInactivityAutoPause } from "@/lib/useInactivityAutoPause";
 import { useVoiceActivity } from "@/lib/useVoiceActivity";
-import { useThinkAloudTranscript, type ThinkAloudThought } from "@/lib/useThinkAloudTranscript";
+import { useThinkAloudTranscript, type SpeechTranscriptEntry, type ThinkAloudThought } from "@/lib/useThinkAloudTranscript";
 import { retryWithResult } from "@/lib/retry";
 import { translateWithLocale, useI18n } from "@/lib/i18n";
 import { tutoringLocales, tutoringLanguageNames } from "@/lib/tutoring-languages";
@@ -728,6 +729,8 @@ export function SessionView({ sessionId }: { sessionId: string }) {
   const isAnalyzingRef = useRef(false);
   const muteTimerRef = useRef<NodeJS.Timeout | null>(null);
   const chunkIndexRef = useRef(0);
+  const consumeSpeechTranscriptEntriesRef = useRef<() => SpeechTranscriptEntry[]>(() => []);
+  const requeueSpeechTranscriptEntriesRef = useRef<(entries: SpeechTranscriptEntry[]) => void>(() => {});
   const eegChunkIndexRef = useRef(0);
   const facialChunkIndexRef = useRef(0);
   const observerModeRef = useRef(observerMode);
@@ -1283,8 +1286,7 @@ export function SessionView({ sessionId }: { sessionId: string }) {
 
   // ---- Analysis Heartbeat (10s) ----
   // Returns structured result for the heartbeat hook to track health.
-  // Transcription is now decoupled — it runs on the storage heartbeat cycle,
-  // so transcripts are already available when analysis fires.
+  // Browser Web Speech transcript uploads run on the storage heartbeat cycle.
   const runAnalysisHeartbeat = useCallback(async (): Promise<AnalysisHeartbeatResult> => {
     const startMs = Date.now();
 
@@ -1619,13 +1621,17 @@ export function SessionView({ sessionId }: { sessionId: string }) {
 
     try {
       // Audio: get recent 5 seconds and save (with retry)
+      let transcriptChunkIndex: number | null = null;
+      let transcriptTimestamp = Date.now();
       if (recorder) {
         const recentAudio = recorder.getRecentAudio(5000);
         if (recentAudio && recentAudio.size > 100) {
           result.audio = { attempted: true, saved: false };
           const idx = chunkIndexRef.current++;
+          transcriptChunkIndex = idx;
+          transcriptTimestamp = Date.now();
           const saveResult = await retryWithResult(
-            () => saveAudioChunk(currentSession.id, recentAudio, idx, Date.now()),
+            () => saveAudioChunk(currentSession.id, recentAudio, idx, transcriptTimestamp),
             { maxRetries: 2, baseDelayMs: 500 },
           );
           if (saveResult.success && saveResult.data === null) {
@@ -1646,16 +1652,24 @@ export function SessionView({ sessionId }: { sessionId: string }) {
         }
       }
 
-      // Transcribe any pending audio chunks (decoupled from analysis — runs on storage cycle)
+      // Upload browser Web Speech transcripts directly to xAI Files. Audio still
+      // stays in Supabase Storage; there is no server-side STT step here.
       if (currentSession && isRecordingRef.current) {
-        try {
-          await fetch("/api/transcribe-chunks", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ sessionId: currentSession.id }),
-          });
-        } catch (err) {
-          console.warn("Background transcription error:", err);
+        const transcriptEntries = consumeSpeechTranscriptEntriesRef.current();
+        if (transcriptEntries.length > 0) {
+          const transcriptText = transcriptEntries.map((entry) => entry.text).join(" ");
+          const idx = transcriptChunkIndex ?? chunkIndexRef.current++;
+          const timestamp = transcriptChunkIndex === null
+            ? Math.min(...transcriptEntries.map((entry) => entry.timestamp))
+            : transcriptTimestamp;
+          const transcriptResult = await retryWithResult(
+            () => saveBrowserTranscript(currentSession.id, transcriptText, idx, timestamp),
+            { maxRetries: 2, baseDelayMs: 500 },
+          );
+          if (!transcriptResult.success) {
+            requeueSpeechTranscriptEntriesRef.current(transcriptEntries);
+            console.warn("Browser transcript upload error:", transcriptResult.error);
+          }
         }
       }
 
@@ -2236,6 +2250,8 @@ export function SessionView({ sessionId }: { sessionId: string }) {
     enabled: isRecording && !isPaused,
     tutoringLanguage,
   });
+  consumeSpeechTranscriptEntriesRef.current = thinkAloudTranscript.consumePendingTranscriptEntries;
+  requeueSpeechTranscriptEntriesRef.current = thinkAloudTranscript.requeueTranscriptEntries;
 
   const handleThinkAloudThoughtClick = useCallback((thought: ThinkAloudThought) => {
     openHeliosChatWithMessage(`I was thinking aloud and want to work through this: "${thought.text}"`);

@@ -19,6 +19,24 @@ function authHeader(): Record<string, string> {
   return { Authorization: `Bearer ${getApiKey()}` };
 }
 
+function ensureTimestampedName(name: string): string {
+  if (/(^|[_-])\d{13}(?=$|[_\-.])/.test(name)) {
+    return name;
+  }
+
+  const slashIndex = name.lastIndexOf("/");
+  const directory = slashIndex >= 0 ? name.slice(0, slashIndex + 1) : "";
+  const baseName = slashIndex >= 0 ? name.slice(slashIndex + 1) : name;
+  const dotIndex = baseName.lastIndexOf(".");
+  const ts = Date.now();
+
+  if (dotIndex <= 0) {
+    return `${directory}${baseName}_${ts}`;
+  }
+
+  return `${directory}${baseName.slice(0, dotIndex)}_${ts}${baseName.slice(dotIndex)}`;
+}
+
 export interface XAIFileMetadata {
   file_id: string;
   name: string;
@@ -46,11 +64,12 @@ export async function uploadFileToXAI(
   mimeType: string,
   base64Data: string
 ): Promise<XAIFileMetadata> {
+  const timestampedName = ensureTimestampedName(name);
   const buffer = Buffer.from(base64Data, "base64");
   const blob = new Blob([buffer as BlobPart], { type: mimeType });
 
   const formData = new FormData();
-  formData.append("file", blob, name);
+  formData.append("file", blob, timestampedName);
 
   const res = await fetch(`${XAI_BASE_URL}/v1/files`, {
     method: "POST",
@@ -70,7 +89,7 @@ export async function uploadFileToXAI(
   // Normalize to our XAIFileMetadata shape (file_id, name, size_bytes, ...)
   return {
     file_id: data.file_id || data.id,
-    name: data.name || data.filename || name,
+    name: data.name || data.filename || timestampedName,
     size_bytes: data.size_bytes || data.bytes || buffer.length,
     content_type: data.content_type || mimeType,
     created_at: data.created_at,

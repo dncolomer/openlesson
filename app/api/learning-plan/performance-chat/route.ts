@@ -84,6 +84,16 @@ export async function POST(req: NextRequest) {
     // - Regular users: see only themselves
     let canSeeAllUsers = isOwner || isOrgAdmin;
 
+    if (message.trim() === "/debug") {
+      if (!canSeeAllUsers) {
+        return NextResponse.json({ error: "Not authorized for performance debug" }, { status: 403 });
+      }
+
+      const debugClient = createAdminClient();
+      const debug = await fetchPerformanceDebug(debugClient, planId, user.id, isOwner, profile?.organization_id, isOrgAdmin);
+      return NextResponse.json({ response: formatPerformanceDebug(debug), debug, fileIds: [] });
+    }
+
     // If this is the first message (no fileIds), we need to fetch and upload data
     let activeFileIds = fileIds;
     let usersContext = "";
@@ -190,6 +200,104 @@ export async function POST(req: NextRequest) {
       { status: 500 }
     );
   }
+}
+
+async function fetchPerformanceDebug(
+  supabase: ReturnType<typeof createAdminClient>,
+  planId: string,
+  requestingUserId: string,
+  isOwner: boolean,
+  organizationId?: string | null,
+  isOrgAdmin?: boolean,
+) {
+  const { data: plan } = await supabase
+    .from("learning_plans")
+    .select("id, user_id, title, root_topic, is_group, is_public")
+    .eq("id", planId)
+    .single();
+
+  const { data: pnsRows, error: pnsError } = await supabase
+    .from("plan_node_sessions")
+    .select("session_id, user_id, plan_node_id")
+    .eq("plan_id", planId);
+
+  const { data: nodeRows, error: nodeError } = await supabase
+    .from("plan_nodes")
+    .select("id, session_id, title")
+    .eq("plan_id", planId);
+
+  const directSessionIds = (nodeRows || [])
+    .map(row => row.session_id)
+    .filter(Boolean) as string[];
+
+  const { data: metadataRows, error: metadataError } = await supabase
+    .from("sessions")
+    .select("id, user_id, status, metadata")
+    .filter("metadata->>plan_id", "eq", planId);
+
+  const allSessionIds = Array.from(new Set([
+    ...(pnsRows || []).map(row => row.session_id),
+    ...directSessionIds,
+    ...(metadataRows || []).map(row => row.id),
+  ]));
+
+  const { data: sessions, error: sessionsError } = allSessionIds.length > 0
+    ? await supabase
+      .from("sessions")
+      .select("id, user_id, status, created_at, metadata")
+      .in("id", allSessionIds)
+    : { data: [], error: null };
+
+  return {
+    plan_id: planId,
+    requester_id: requestingUserId,
+    is_owner: isOwner,
+    is_org_admin: !!isOrgAdmin,
+    organization_id: organizationId || null,
+    plan,
+    counts: {
+      plan_node_sessions: pnsRows?.length || 0,
+      plan_nodes: nodeRows?.length || 0,
+      plan_nodes_with_session_id: directSessionIds.length,
+      metadata_sessions: metadataRows?.length || 0,
+      unique_session_ids: allSessionIds.length,
+      readable_sessions_by_admin_client: sessions?.length || 0,
+    },
+    errors: {
+      plan_node_sessions: pnsError?.message || null,
+      plan_nodes: nodeError?.message || null,
+      metadata_sessions: metadataError?.message || null,
+      sessions: sessionsError?.message || null,
+    },
+    sample_session_ids: allSessionIds.slice(0, 10),
+  };
+}
+
+function formatPerformanceDebug(debug: Awaited<ReturnType<typeof fetchPerformanceDebug>>): string {
+  return `Performance debug for plan \`${debug.plan_id}\`:
+
+- is_owner: ${debug.is_owner}
+- is_org_admin: ${debug.is_org_admin}
+- plan.is_group: ${debug.plan?.is_group ?? "unknown"}
+- plan.owner_matches_requester: ${debug.plan?.user_id === debug.requester_id}
+- plan_node_sessions: ${debug.counts.plan_node_sessions}
+- plan_nodes: ${debug.counts.plan_nodes}
+- plan_nodes_with_session_id: ${debug.counts.plan_nodes_with_session_id}
+- metadata_sessions: ${debug.counts.metadata_sessions}
+- unique_session_ids_found: ${debug.counts.unique_session_ids}
+- readable_sessions_by_admin_client: ${debug.counts.readable_sessions_by_admin_client}
+
+Errors:
+
+\`\`\`json
+${JSON.stringify(debug.errors, null, 2)}
+\`\`\`
+
+Sample session ids:
+
+\`\`\`json
+${JSON.stringify(debug.sample_session_ids, null, 2)}
+\`\`\``;
 }
 
 function buildSystemInstructions(canSeeAllUsers: boolean, usersContext: string, currentUsername?: string): string {

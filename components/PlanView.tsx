@@ -13,6 +13,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { PerformanceChat } from "@/components/PerformanceChat";
 import { PlanFilesTab } from "@/components/PlanFilesTab";
+import { SessionList } from "@/components/SessionList";
 
 export interface PlanNode {
   id: string;
@@ -91,6 +92,7 @@ export function PlanView({ initialPlan, initialNodes }: PlanViewProps) {
   const [isEditingNotes, setIsEditingNotes] = useState(false);
   const [savingNotes, setSavingNotes] = useState(false);
   const [generatingCover, setGeneratingCover] = useState(false);
+  const [mobileColumn, setMobileColumn] = useState<"plan" | "sessions" | "workspace">("plan");
   
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -324,6 +326,7 @@ export function PlanView({ initialPlan, initialNodes }: PlanViewProps) {
     }
   }, [plan?.notes]);
 
+
   const saveNotes = async () => {
     if (!plan) return;
     setSavingNotes(true);
@@ -397,14 +400,14 @@ export function PlanView({ initialPlan, initialNodes }: PlanViewProps) {
         <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6z" />
       </svg>
     )},
-    { key: "notes" as const, label: t('planView.notes'), icon: (
-      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
-      </svg>
-    )},
     { key: "performance" as const, label: t('planView.performance'), icon: (
       <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456z" />
+      </svg>
+    )},
+    { key: "notes" as const, label: t('planView.notes'), icon: (
+      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
       </svg>
     )},
     { key: "files" as const, label: t('planView.files'), icon: (
@@ -419,8 +422,8 @@ export function PlanView({ initialPlan, initialNodes }: PlanViewProps) {
       <Navbar />
 
       <div className="flex-1 min-h-0 flex flex-col md:flex-row overflow-hidden">
-        <aside className="group flex-shrink-0 md:w-64 lg:w-72 md:h-full border-b md:border-b-0 md:border-r border-neutral-800/50 bg-[#0b0b0b] overflow-y-auto md:overflow-hidden md:flex md:flex-col">
-          <div className="relative h-32 md:h-[30%] md:min-h-52 md:max-h-80 flex-shrink-0 overflow-hidden">
+        <aside className={`${mobileColumn === "plan" ? "flex" : "hidden"} group flex-1 min-h-0 flex-col md:flex md:flex-none md:w-[24vw] xl:w-[13vw] md:h-full border-b md:border-b-0 md:border-r border-neutral-800/50 bg-[#0b0b0b] overflow-y-auto md:overflow-hidden`}>
+          <div className="relative h-[38vh] min-h-56 md:h-[30%] md:min-h-52 md:max-h-80 flex-shrink-0 overflow-hidden">
             {plan.cover_image_url ? (
               <img
                 src={plan.cover_image_url}
@@ -670,22 +673,39 @@ export function PlanView({ initialPlan, initialNodes }: PlanViewProps) {
           </div>
         </aside>
 
-        <section className="flex-1 min-w-0 min-h-0 flex flex-col overflow-hidden">
+        <aside className={`${mobileColumn === "sessions" ? "flex" : "hidden"} flex-1 min-h-0 flex-col md:flex md:flex-none md:h-full md:w-[38vw] xl:w-[37vw] border-b md:border-b-0 md:border-r border-neutral-800/50 bg-[#0b0b0b] p-3`}>
+          <div className="h-full rounded-xl border border-neutral-800/60 bg-neutral-900/50 overflow-hidden shadow-lg shadow-black/10">
+            <SessionList
+              nodes={nodes}
+              onSelect={() => {}}
+              onDelete={() => {}}
+              onFork={() => {}}
+              isOwner={isOwner}
+              isGroupPlan={plan.is_group === true}
+              supabase={supabase}
+              planTopic={plan.root_topic}
+              planId={planId}
+            />
+          </div>
+        </aside>
+
+        <section className={`${mobileColumn === "workspace" ? "flex" : "hidden"} flex-1 min-w-0 min-h-0 flex-col overflow-hidden md:flex`}>
           {/* Pill Tab Bar */}
-          <div className="px-3 sm:px-4 pt-2.5 pb-1 flex-shrink-0">
-            <div className="inline-flex items-center gap-1 p-1 rounded-xl bg-neutral-900/80 border border-neutral-800/50 max-w-full overflow-x-auto">
+          <div className="hidden md:block px-3 sm:px-4 pt-2.5 pb-1 flex-shrink-0">
+            <div className="grid grid-cols-4 gap-1 p-1 rounded-xl bg-neutral-900/80 border border-neutral-800/50 max-w-full">
               {tabConfig.map(({ key, label, icon }) => (
                 <button
                   key={key}
                   onClick={() => setActiveTab(key)}
-                  className={`flex items-center gap-1.5 px-3.5 py-1.5 text-sm font-medium rounded-lg transition-all whitespace-nowrap ${
+                  className={`flex items-center justify-center gap-1.5 px-2 sm:px-3.5 py-1.5 text-sm font-medium rounded-lg transition-all min-w-0 ${
                     activeTab === key
                       ? "bg-neutral-700/80 text-white shadow-sm"
                       : "text-neutral-500 hover:text-neutral-300"
                   }`}
+                  title={label}
                 >
                   {icon}
-                  {label}
+                  <span className="hidden min-[430px]:inline truncate">{label}</span>
                 </button>
               ))}
             </div>
@@ -704,6 +724,7 @@ export function PlanView({ initialPlan, initialNodes }: PlanViewProps) {
             isOwner={isOwner}
             currentUserId={currentUserId}
             isGroupPlan={plan.is_group === true}
+            hideSessions
           />
         )}
 
@@ -778,7 +799,7 @@ export function PlanView({ initialPlan, initialNodes }: PlanViewProps) {
         )}
 
         {activeTab === "performance" && (
-          <PerformanceChat 
+          <PerformanceChat
             planId={planId}
             isOwner={isOwner}
             currentUserId={currentUserId}
@@ -793,7 +814,63 @@ export function PlanView({ initialPlan, initialNodes }: PlanViewProps) {
           />
         )}
           </main>
+
+          <div className="md:hidden flex-shrink-0 px-3 pb-2">
+            <div className="grid grid-cols-4 gap-1 p-1 rounded-xl bg-neutral-900/80 border border-neutral-800/50 max-w-full">
+              {tabConfig.map(({ key, label, icon }) => (
+                <button
+                  key={key}
+                  onClick={() => setActiveTab(key)}
+                  className={`flex items-center justify-center gap-1.5 px-2 py-1.5 text-sm font-medium rounded-lg transition-all min-w-0 ${
+                    activeTab === key
+                      ? "bg-neutral-700/80 text-white shadow-sm"
+                      : "text-neutral-500 hover:text-neutral-300"
+                  }`}
+                  title={label}
+                >
+                  {icon}
+                  <span className="hidden min-[430px]:inline truncate">{label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
         </section>
+      </div>
+
+      <div className="md:hidden flex-shrink-0 border-t border-neutral-800/70 bg-[#0b0b0b] px-3 py-2">
+        <div className="grid grid-cols-3 gap-2 rounded-2xl border border-neutral-800 bg-neutral-950/70 p-1">
+          {[
+            { key: "plan" as const, label: "Plan", icon: (
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+              </svg>
+            ) },
+            { key: "sessions" as const, label: "Sessions", icon: (
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 6.75h12M8.25 12h12m-12 5.25h12M3.75 6.75h.008v.008H3.75V6.75zm0 5.25h.008v.008H3.75V12zm0 5.25h.008v.008H3.75v-.008z" />
+              </svg>
+            ) },
+            { key: "workspace" as const, label: "Workspace", icon: (
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" />
+              </svg>
+            ) },
+          ].map(({ key, label, icon }) => (
+            <button
+              key={key}
+              type="button"
+              onClick={() => setMobileColumn(key)}
+              className={`flex items-center justify-center gap-1.5 rounded-xl px-2 py-2 text-xs font-medium transition-colors ${
+                mobileColumn === key
+                  ? "bg-neutral-700/80 text-white"
+                  : "text-neutral-500 hover:text-neutral-300"
+              }`}
+            >
+              {icon}
+              <span>{label}</span>
+            </button>
+          ))}
+        </div>
       </div>
 
       {showRemixModal && (

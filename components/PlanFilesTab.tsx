@@ -154,7 +154,7 @@ export function PlanFilesTab({ planId, isOwner }: PlanFilesTabProps) {
 
   return (
     <div className="h-full overflow-y-auto">
-      <div className="max-w-2xl space-y-4 p-1">
+      <div className="w-full space-y-4 p-1">
 
         {/* Header */}
         <div className="flex items-center justify-between">

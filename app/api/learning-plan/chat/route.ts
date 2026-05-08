@@ -148,7 +148,7 @@ Respond with JSON containing your explanation and the complete updated sessions 
     if (!aiResponse.success || !aiResponse.data) {
       console.error("[Chat] AI response failed:", aiResponse.error);
       console.error("[Chat] Raw content:", aiResponse.rawContent?.substring(0, 1000));
-      return NextResponse.json({ error: "Failed to get AI response" }, { status: 500 });
+      return NextResponse.json({ error: aiResponse.error || "Failed to get AI response" }, { status: 502 });
     }
 
 
@@ -310,9 +310,11 @@ Respond with JSON containing your explanation and the complete updated sessions 
 
   } catch (error) {
     console.error("Chat plan error:", error);
+    const message = error instanceof Error ? error.message : "Internal error";
+    const status = message.includes("XAI_API_KEY") ? 503 : 500;
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Internal error" },
-      { status: 500 }
+      { error: message },
+      { status }
     );
   }
 }

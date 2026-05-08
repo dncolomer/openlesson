@@ -42,9 +42,11 @@ interface PlanChatProps {
   isOwner?: boolean;
   currentUserId?: string | null;
   isGroupPlan?: boolean;
+  hideSessions?: boolean;
 }
 
 const MODEL_STORAGE_KEY = "planner-model";
+const DEFAULT_PLANNER_MODEL = "grok-4.3";
 
 function nodesHaveChanged(oldNodes: PlanNode[], newNodes: PlanNode[]): Set<string> {
   const changedIds = new Set<string>();
@@ -67,16 +69,17 @@ function nodesHaveChanged(oldNodes: PlanNode[], newNodes: PlanNode[]): Set<strin
   return changedIds;
 }
 
-export function PlanChat({ plan, nodes: initialNodes, onRefresh, onNodesUpdate, supabase, planId, isOwner = true, currentUserId, isGroupPlan = false }: PlanChatProps) {
+export function PlanChat({ plan, nodes: initialNodes, onRefresh, onNodesUpdate, supabase, planId, isOwner = true, currentUserId, isGroupPlan = false, hideSessions = false }: PlanChatProps) {
   const router = useRouter();
   const { t } = useI18n();
   const [nodes, setNodes] = useState(initialNodes);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
   const [model, setModel] = useState<string>(() => {
     if (typeof window !== "undefined") {
-      return localStorage.getItem(MODEL_STORAGE_KEY) || "x-ai/grok-4.3";
+      const saved = localStorage.getItem(MODEL_STORAGE_KEY);
+      return saved?.replace(/^x-ai\//, "") || DEFAULT_PLANNER_MODEL;
     }
-    return "x-ai/grok-4.3";
+    return DEFAULT_PLANNER_MODEL;
   });
   const [highlightedNodes, setHighlightedNodes] = useState<Set<string>>(new Set());
   const [highlightOpacity, setHighlightOpacity] = useState(1);
@@ -179,8 +182,9 @@ export function PlanChat({ plan, nodes: initialNodes, onRefresh, onNodesUpdate, 
   }, [sheetOpen, isDesktop]);
 
   const handleModelChange = useCallback((newModel: string) => {
-    setModel(newModel);
-    localStorage.setItem(MODEL_STORAGE_KEY, newModel);
+    const normalizedModel = newModel.replace(/^x-ai\//, "");
+    setModel(normalizedModel);
+    localStorage.setItem(MODEL_STORAGE_KEY, normalizedModel);
   }, []);
 
   const handleDeleteClick = useCallback((nodeId: string) => { setShowDeleteConfirm(nodeId); }, []);
@@ -231,9 +235,9 @@ export function PlanChat({ plan, nodes: initialNodes, onRefresh, onNodesUpdate, 
       {isOwner && (
         <div 
           className="hidden md:flex flex-col h-full min-h-0 flex-none"
-          style={{ width: `${leftWidth}%` }}
+          style={{ width: hideSessions ? "100%" : `${leftWidth}%` }}
         >
-          <div className="flex-1 bg-neutral-900/50 rounded-xl border border-neutral-800/60 overflow-hidden flex flex-col p-4 shadow-lg shadow-black/10">
+          <div className={`flex-1 overflow-hidden flex flex-col ${hideSessions ? "" : "bg-neutral-900/50 rounded-xl border border-neutral-800/60 p-4 shadow-lg shadow-black/10"}`}>
             <ChatPanel
               planId={plan.id}
               model={model}
@@ -249,7 +253,7 @@ export function PlanChat({ plan, nodes: initialNodes, onRefresh, onNodesUpdate, 
       )}
 
       {/* Draggable Divider - Desktop only, owner only */}
-      {isOwner && (
+      {isOwner && !hideSessions && (
         <div 
           className="hidden md:flex items-center justify-center w-1.5 cursor-col-resize group"
           onMouseDown={(e) => { e.preventDefault(); setIsDragging(true); }}
@@ -259,6 +263,7 @@ export function PlanChat({ plan, nodes: initialNodes, onRefresh, onNodesUpdate, 
       )}
 
       {/* Sessions Panel - Desktop (right, wider — full width for group participants) */}
+      {!hideSessions && (
       <div 
         className="hidden md:flex flex-col h-full min-h-0 flex-none"
         style={{ width: isOwner ? `${100 - leftWidth - 0.5}%` : "100%" }}
@@ -279,10 +284,27 @@ export function PlanChat({ plan, nodes: initialNodes, onRefresh, onNodesUpdate, 
           />
         </div>
       </div>
+      )}
 
       {/* ─── MOBILE LAYOUT ─── */}
 
+      {hideSessions && isOwner && (
+        <div className="md:hidden flex-1 min-h-0 overflow-hidden">
+          <ChatPanel
+            planId={plan.id}
+            model={model}
+            onModelChange={handleModelChange}
+            onRefresh={onRefresh}
+            onNodesUpdate={onNodesUpdate}
+            supabase={supabase}
+            isOwner={isOwner}
+            currentUserId={currentUserId}
+          />
+        </div>
+      )}
+
       {/* Sessions Panel - Mobile: always visible, full width */}
+      {!hideSessions && (
       <div className="md:hidden flex-1 min-h-0 overflow-hidden">
         <div className="h-full bg-neutral-900/50 rounded-xl border border-neutral-800/60 overflow-hidden shadow-lg shadow-black/10">
           <SessionList
@@ -300,9 +322,10 @@ export function PlanChat({ plan, nodes: initialNodes, onRefresh, onNodesUpdate, 
           />
         </div>
       </div>
+      )}
 
       {/* FAB - Mobile only: opens bottom sheet */}
-      {isOwner && !sheetOpen && (
+      {isOwner && !hideSessions && !sheetOpen && (
         <button
           onClick={() => setSheetOpen(true)}
           className="md:hidden fixed bottom-5 right-5 z-40 flex items-center gap-2 px-4 py-3 bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium rounded-full shadow-xl shadow-blue-600/30 transition-all active:scale-95"
@@ -315,7 +338,7 @@ export function PlanChat({ plan, nodes: initialNodes, onRefresh, onNodesUpdate, 
       )}
 
       {/* Bottom Sheet - Mobile only */}
-      {sheetOpen && (
+      {!hideSessions && sheetOpen && (
         <>
           {/* Backdrop */}
           <div 

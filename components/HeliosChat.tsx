@@ -488,18 +488,18 @@ export function HeliosChat({ problem, messages: externalMessages, onMessagesChan
           <button
             type="button"
             onClick={() => {
-              setAutoVoiceEnabled((enabled) => {
-                if (enabled) {
-                  stopAutoVoice();
-                } else {
-                  const existingAssistantIds = messages
-                    .filter((message) => message.role === "assistant" && !message.pending)
-                    .map((message) => message.id);
-                  spokenMessageIdsRef.current = new Set(existingAssistantIds);
-                  setVoiceReadyMessageIds(new Set(existingAssistantIds));
-                }
-                return !enabled;
-              });
+              if (autoVoiceEnabled) {
+                stopAutoVoice();
+                setAutoVoiceEnabled(false);
+                return;
+              }
+
+              const existingAssistantIds = messages
+                .filter((message) => message.role === "assistant" && !message.pending)
+                .map((message) => message.id);
+              spokenMessageIdsRef.current = new Set(existingAssistantIds);
+              setVoiceReadyMessageIds(new Set(existingAssistantIds));
+              setAutoVoiceEnabled(true);
             }}
             className={`inline-flex items-center gap-1.5 rounded-full border px-2 py-1 text-[10px] font-medium transition-colors ${
               autoVoiceEnabled

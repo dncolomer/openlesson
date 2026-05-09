@@ -205,6 +205,13 @@ export function MobileSessionView({
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [pendingChatMessage, setPendingChatMessage] = useState<string | PendingChatMessage | null>(null);
   const [activeStuckCheck, setActiveStuckCheck] = useState<string | null>(null);
+
+  useEffect(() => {
+    setChatMessages([]);
+    setPendingChatMessage(null);
+    setActiveStuckCheck(null);
+  }, [sessionId]);
+
   // "Submit to Helios" dirty tracking — true when the user has edited the
   // canvas since the last submit. Initial true so the first submit is
   // allowed (provided there's canvas content). Lives in parent so it

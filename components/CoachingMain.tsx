@@ -134,7 +134,7 @@ export function CoachingMain() {
 
           {/* Cal.com booking - placeholder link */}
           <a
-            href="https://cal.com/uncertainsys/coaching"
+            href="https://cal.com/daniel-colomer-lvwg8w/coaching"
             target="_blank"
             rel="noopener noreferrer"
             className="w-full py-3.5 text-center text-sm font-medium text-black bg-amber-500 hover:bg-amber-400 rounded-xl transition-colors flex items-center justify-center gap-2 mb-3"
@@ -266,7 +266,7 @@ export function CoachingMain() {
       {/* CTA */}
       <div className="text-center">
         <a
-          href="https://cal.com/uncertainsys/coaching"
+          href="https://cal.com/daniel-colomer-lvwg8w/coaching"
           target="_blank"
           rel="noopener noreferrer"
           className="inline-flex items-center gap-2 px-6 py-3 bg-white hover:bg-slate-200 text-black text-sm font-medium rounded-xl transition-colors"

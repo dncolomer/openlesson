@@ -35,13 +35,20 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Not authorized" }, { status: 403 });
     }
 
-    const { data: recentSessions } = await supabase
-      .from("sessions")
-      .select("problem, report, duration_ms, created_at, metadata")
-      .eq("user_id", user.id)
-      .neq("id", sessionId)
-      .order("created_at", { ascending: false })
-      .limit(4);
+    const planId = typeof currentSession.metadata?.plan_id === "string"
+      ? currentSession.metadata.plan_id
+      : null;
+
+    const { data: recentSessions } = planId
+      ? await supabase
+        .from("sessions")
+        .select("problem, report, duration_ms, created_at, metadata")
+        .eq("user_id", user.id)
+        .neq("id", sessionId)
+        .filter("metadata->>plan_id", "eq", planId)
+        .order("created_at", { ascending: false })
+        .limit(4)
+      : { data: [] };
 
     const languageName = tutoringLanguage ? getLanguageName(tutoringLanguage) : undefined;
     const recentContext = (recentSessions || [])

@@ -233,6 +233,10 @@ export function HeliosChat({ problem, messages: externalMessages, onMessagesChan
 
   const [generatedWelcome, setGeneratedWelcome] = useState<string | null>(null);
 
+  useEffect(() => {
+    setGeneratedWelcome(null);
+  }, [sessionId]);
+
   // Use external state if provided, otherwise use internal state
   const [internalMessages, setInternalMessages] = useState<ChatMessage[]>([]);
   const messages = externalMessages ?? internalMessages;

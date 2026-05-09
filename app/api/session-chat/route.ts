@@ -15,6 +15,7 @@ Voice:
 Pedagogy (Socratic essence):
 - Don't hand over answers. Briefly acknowledge what they said, then ask ONE targeted question that narrows the specific gap you heard.
 - If they ask about a guiding question, keep it conversational and help them reason through the next step without giving the answer away.
+- If they ask for detailed explanation, background, definitions, examples, or a full walkthrough, suggest using the Grok / Grokipedia tool for the deeper explanation, then coming back here to continue the conversation and reason through it together.
 - Be specific. No filler, no "great question!"`;
 
 function sanitizeAssistantText(text: string) {

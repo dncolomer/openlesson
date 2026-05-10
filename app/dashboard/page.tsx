@@ -570,7 +570,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Content */}
-      <main className="max-w-7xl mx-auto p-4 sm:px-6 lg:px-8 py-8">
+      <main className="mx-auto w-full max-w-7xl min-w-0 overflow-x-hidden p-4 py-8 sm:px-6 lg:px-8">
         {/* Profile Overview */}
         {activeTab === "overview" && (
           <div className="space-y-6">
@@ -628,13 +628,13 @@ export default function DashboardPage() {
               </div>
             </section>
 
-            <section className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
-              <div className="rounded-md border border-neutral-800 bg-neutral-950 p-6">
-                <div className="flex items-center justify-between">
+            <section className="grid min-w-0 gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
+              <div className="min-w-0 rounded-md border border-neutral-800 bg-neutral-950 p-4 sm:p-6">
+                <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                   <h2 className="font-semibold">Learning Map</h2>
                   <span className="text-xs text-neutral-500">{totalLearningMinutes} minutes in the last year</span>
                 </div>
-                <div ref={learningMapScrollRef} className="mt-5 overflow-x-auto pb-2">
+                <div ref={learningMapScrollRef} className="mt-5 max-w-full overflow-x-auto pb-2">
                   <div className="w-max min-w-full">
                     <div className="mb-2 ml-9 grid text-[11px] text-neutral-500" style={{ gridTemplateColumns: `repeat(${contributionWeeks.length}, 13px)`, columnGap: "4px" }}>
                       {contributionMonths.map((month) => <span key={month.index}>{month.label}</span>)}
@@ -683,17 +683,17 @@ export default function DashboardPage() {
                 </div>
               </div>
 
-              <div className="rounded-md border border-neutral-800 bg-neutral-950 p-6">
+              <div className="min-w-0 rounded-md border border-neutral-800 bg-neutral-950 p-4 sm:p-6">
                 <h2 className="font-semibold">Recent Activity</h2>
                 <div className="mt-5 space-y-4">
                   {[...sessions.slice(0, 3), ...learningPlans.slice(0, 3)]
                     .sort((a: any, b: any) => new Date((b.startedAt || b.created_at) as string).getTime() - new Date((a.startedAt || a.created_at) as string).getTime())
                     .slice(0, 5)
                     .map((item: any) => (
-                      <div key={item.id} className="flex gap-3">
-                        <div className="mt-1 h-3 w-3 rounded-full border border-emerald-400 bg-emerald-400/30" />
-                        <div>
-                          <p className="line-clamp-1 text-sm text-neutral-200">{item.problem || item.title || item.root_topic}</p>
+                      <div key={item.id} className="flex min-w-0 gap-3">
+                        <div className="mt-1 h-3 w-3 shrink-0 rounded-full border border-emerald-400 bg-emerald-400/30" />
+                        <div className="min-w-0">
+                          <p className="line-clamp-2 break-words text-sm text-neutral-200 sm:line-clamp-1">{item.problem || item.title || item.root_topic}</p>
                           <p className="mt-1 text-xs text-neutral-500">{formatDate(item.startedAt || item.created_at)}</p>
                         </div>
                       </div>

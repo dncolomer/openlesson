@@ -102,15 +102,15 @@ export default async function PublicUserProfilePage({ params }: PageProps) {
             </div>
           </aside>
 
-          <div className="space-y-6">
-            <section className="overflow-hidden rounded-3xl border border-neutral-800 bg-neutral-950/70">
+          <div className="min-w-0 space-y-6">
+            <section className="min-w-0 overflow-hidden rounded-3xl border border-neutral-800 bg-neutral-950/70">
               <div className="border-b border-neutral-800 px-6 py-4">
                 <h2 className="font-semibold">Learning Map</h2>
                 <p className="mt-1 text-sm text-neutral-500">{learningMinutes ?? 0} public learning minutes in the last year.</p>
               </div>
-              <div className="p-6">
-                <div className="overflow-x-auto pb-2">
-                  <div className="min-w-[760px]">
+              <div className="min-w-0 p-4 sm:p-6">
+                <div className="max-w-full overflow-x-auto pb-2">
+                  <div className="w-max min-w-full">
                     <div className="mb-2 ml-9 grid text-[11px] text-neutral-500" style={{ gridTemplateColumns: `repeat(${contributionWeeks.length}, 12px)`, columnGap: "3px" }}>
                       {contributionMonths.map((month) => <span key={month.index}>{month.label}</span>)}
                     </div>
@@ -159,15 +159,15 @@ export default async function PublicUserProfilePage({ params }: PageProps) {
               </div>
             </section>
 
-            <section className="grid gap-6 lg:grid-cols-[1fr_1.1fr]">
-              <div className="rounded-3xl border border-neutral-800 bg-neutral-950/70 p-6">
+            <section className="grid min-w-0 gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
+              <div className="min-w-0 rounded-3xl border border-neutral-800 bg-neutral-950/70 p-4 sm:p-6">
                 <h2 className="font-semibold">Activity</h2>
                 <div className="mt-5 space-y-4">
                   {profile.activity.length > 0 ? profile.activity.map((item) => (
-                    <div key={`${item.type}-${item.id}`} className="flex gap-3">
-                      <div className="mt-1 h-3 w-3 rounded-full border border-emerald-400 bg-emerald-400/30" />
-                      <div>
-                        <p className="text-sm text-neutral-200">
+                    <div key={`${item.type}-${item.id}`} className="flex min-w-0 gap-3">
+                      <div className="mt-1 h-3 w-3 shrink-0 rounded-full border border-emerald-400 bg-emerald-400/30" />
+                      <div className="min-w-0">
+                        <p className="break-words text-sm text-neutral-200">
                           {item.type === "plan_published" ? "Published" : "Completed"} <span className="text-white">{item.title}</span>
                         </p>
                         <p className="mt-1 text-xs text-neutral-500">{formatDate(item.occurred_at)}</p>

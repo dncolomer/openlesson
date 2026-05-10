@@ -127,7 +127,7 @@ export function Navbar({ breadcrumbs = [], showNav = true }: NavbarProps) {
         {showNav && (
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="md:hidden p-2 text-slate-400 hover:text-white transition-colors"
+            className="md:hidden p-2 text-neutral-400 hover:text-white transition-colors"
             aria-label="Toggle menu"
           >
             {mobileMenuOpen ? (
@@ -145,18 +145,18 @@ export function Navbar({ breadcrumbs = [], showNav = true }: NavbarProps) {
 
       {/* Mobile Menu Dropdown */}
       {showNav && mobileMenuOpen && (
-        <div className="md:hidden mt-4 pb-4 border-t border-slate-800 pt-4">
+        <div className="md:hidden mt-4 pb-4 border-t border-neutral-800 pt-4">
           <nav className="flex flex-col gap-4">
             {/* Solutions Section - visible only on mobile/tablet where SolutionsBand is hidden */}
             <div className="lg:hidden">
-              <p className="text-xs text-slate-600 uppercase tracking-wide mb-2">{t('nav.solutions')}</p>
+              <p className="text-xs text-neutral-600 uppercase tracking-wide mb-2">{t('nav.solutions')}</p>
               <div className="flex flex-col gap-2 pl-2 mb-4">
                 {solutionLinks.map((link) => (
                   <Link 
                     key={link.href} 
                     href={link.href} 
                     onClick={() => setMobileMenuOpen(false)}
-                    className="text-sm text-slate-400 hover:text-white transition-colors"
+                    className="text-sm text-neutral-400 hover:text-white transition-colors"
                   >
                     {link.label}
                   </Link>
@@ -169,7 +169,7 @@ export function Navbar({ breadcrumbs = [], showNav = true }: NavbarProps) {
                 key={link.href} 
                 href={link.href} 
                 onClick={() => setMobileMenuOpen(false)}
-                className="text-sm text-slate-400 hover:text-white transition-colors"
+                className="text-sm text-neutral-400 hover:text-white transition-colors"
               >
                 {link.label}
               </Link>
@@ -181,7 +181,7 @@ export function Navbar({ breadcrumbs = [], showNav = true }: NavbarProps) {
                   handleSignOut();
                   setMobileMenuOpen(false);
                 }}
-                className="text-sm text-slate-400 hover:text-white transition-colors text-left"
+                className="text-sm text-neutral-400 hover:text-white transition-colors text-left"
               >
                 {t('nav.signOut')}
               </button>
@@ -189,7 +189,7 @@ export function Navbar({ breadcrumbs = [], showNav = true }: NavbarProps) {
               <Link 
                 href="/login" 
                 onClick={() => setMobileMenuOpen(false)}
-                className="text-sm text-slate-400 hover:text-white transition-colors"
+                className="text-sm text-neutral-400 hover:text-white transition-colors"
               >
                 {t('nav.signIn')}
               </Link>

@@ -4,7 +4,6 @@ import { useState, useCallback, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
 import { useI18n } from "../lib/i18n";
-import { PreviewSessionModal } from "@/components/PreviewSessionModal";
 
 interface PlanNode {
   id: string;
@@ -55,7 +54,6 @@ export function SessionItem({
   const [savingPrompt, setSavingPrompt] = useState(false);
   const [promptSaved, setPromptSaved] = useState(false);
   const [showPromptEditor, setShowPromptEditor] = useState(false);
-  const [showPreview, setShowPreview] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
   
   const isCompleted = node.status === "completed";
@@ -303,12 +301,6 @@ export function SessionItem({
           {/* Actions */}
           {!isLocked && (isOwner || isGroupPlan) && (
             <div className="flex gap-2 pt-1">
-              <button
-                onClick={(e) => { e.stopPropagation(); setShowPreview(true); }}
-                className="px-3 py-2 bg-neutral-800/60 hover:bg-neutral-700/60 text-neutral-300 text-sm font-medium rounded-lg transition-colors border border-neutral-700/50"
-              >
-                {t('sessionItem.preview')}
-              </button>
               {isCompleted ? (
                 <button
                   onClick={(e) => { e.stopPropagation(); handleStart(); }}
@@ -339,17 +331,6 @@ export function SessionItem({
           )}
         </div>
       </div>
-
-      {showPreview && (
-        <PreviewSessionModal
-          nodeTitle={node.title}
-          nodeDescription={node.description}
-          planTopic={planTopic || ""}
-          planningPrompt={editedPlanningPrompt || node.planning_prompt}
-          onClose={() => setShowPreview(false)}
-          onStartSession={() => { setShowPreview(false); handleStart(); }}
-        />
-      )}
     </div>
   );
 }

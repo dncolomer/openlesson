@@ -30,7 +30,7 @@ interface ProbesPanelProps {
   onOpenResources?: (text: string) => void;
   onOpenPractice?: (text: string) => void;
   onAskAssistant?: (text: string) => void;
-  onAdvanceStep?: () => Promise<void> | void;
+  onAdvanceStep?: (forceAdvance?: boolean) => Promise<void> | void;
   stuckCheckText?: string | null;
   onDismissStuckCheck?: () => void;
   thinkAloudThoughts?: ThinkAloudThought[];
@@ -125,6 +125,7 @@ export function ProbesPanel({
   const [currentIndex, setCurrentIndex] = useState(0);
   const [resettingProbes, setResettingProbes] = useState(false);
   const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
+  const [advancing, setAdvancing] = useState(false);
 
   // Reset Helios — destructive. Archives every active probe in this
   // session and generates a fresh one for the current plan step. We
@@ -191,6 +192,22 @@ export function ProbesPanel({
 
   // Tutor avatar — stylized monogram placeholder
   const avatarInitial = displayTutorName.charAt(0).toUpperCase();
+
+  const handleDone = async () => {
+    if (!onAdvanceStep || advancing) return;
+    onToolEvent?.("advance", {
+      stepId: currentStep?.id,
+      stepIndex: currentIndex,
+      stepDescription: currentStepText.slice(0, 120),
+      via: "mark_as_done_button",
+    });
+    setAdvancing(true);
+    try {
+      await onAdvanceStep();
+    } finally {
+      setAdvancing(false);
+    }
+  };
 
   // Typewriter for the currently-shown plan step. Reuse the existing probe
   // typed cache prefix to preserve the panel's visual behavior with minimal
@@ -474,7 +491,7 @@ export function ProbesPanel({
                           </button>
                         </div>
                       )}
-                      <div className="grid grid-cols-5 gap-2.5 @container">
+                      <div className="grid grid-cols-4 gap-2.5 @container">
                         <button
                           onClick={() => {
                             onToolEvent?.("open_resources", {
@@ -548,26 +565,30 @@ export function ProbesPanel({
                           </svg>
                           <span className="hidden @[20rem]:inline truncate">{t('probes.shareScreen')}</span>
                         </button>
-                        <button
-                          onClick={() => {
-                            onToolEvent?.("archive", {
-                              stepId: currentStep.id,
-                              stepIndex: currentIndex,
-                              stepDescription: currentStepText.slice(0, 120),
-                              via: "done_button",
-                            });
-                            onAdvanceStep?.();
-                          }}
-                          disabled={!isSessionActive || !isCurrentPlanStep || !!stuckCheckText}
-                          title={t('session.markAsDone')}
-                          className="py-3 px-3 text-[12px] font-medium rounded-xl bg-neutral-100 text-neutral-900 hover:bg-white disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
-                        >
-                          <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                          </svg>
-                          <span className="hidden @[20rem]:inline truncate">{t('probes.done')}</span>
-                        </button>
                       </div>
+                      <button
+                        onClick={handleDone}
+                        disabled={advancing || !isSessionActive || !isCurrentPlanStep || !!stuckCheckText}
+                        title={t('session.markAsDone')}
+                        className="mt-2.5 w-full py-3 px-4 text-[13px] font-medium rounded-xl bg-neutral-100 text-neutral-900 hover:bg-white disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+                      >
+                        {advancing ? (
+                          <>
+                            <svg className="w-4 h-4 shrink-0 animate-spin" fill="none" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                            </svg>
+                            <span>{t('sessionPlan.evaluating')}</span>
+                          </>
+                        ) : (
+                          <>
+                            <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                            </svg>
+                            <span>{t('session.markAsDone')}</span>
+                          </>
+                        )}
+                      </button>
                     </div>
                     <div className="mt-3">
                       <ThinkAloudTraces

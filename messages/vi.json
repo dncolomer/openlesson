@@ -867,7 +867,9 @@
     "continueAnyway": "Tiếp tục Dù sao",
     "completing": "Đang hoàn thành...",
     "checking": "Đang kiểm tra...",
-    "markComplete": "Đánh dấu hoàn thành",
+    "evaluating": "Đang đánh giá...",
+    "evaluatingStep": "Helios đang đánh giá xem bước này đã sẵn sàng để đánh dấu là xong chưa...",
+    "markComplete": "Đánh dấu là xong",
     "feedback": "Phản hồi"
   },
   "probes": {

@@ -868,6 +868,8 @@
     "continueAnyway": "Trotzdem fortfahren",
     "completing": "Abschließen...",
     "checking": "Überprüfen...",
+    "evaluating": "Wird ausgewertet...",
+    "evaluatingStep": "Helios prüft, ob dieser Schritt als erledigt markiert werden kann...",
     "markComplete": "Als erledigt markieren",
     "feedback": "Feedback"
   },

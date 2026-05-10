@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { SessionItem } from "./SessionItem";
 import { createBrowserClient } from "@supabase/ssr";
 import { useI18n } from "@/lib/i18n";
@@ -79,6 +79,11 @@ export function SessionList({ nodes, onSelect, onDelete, onFork, highlightedNode
     const completed = ordered.filter(n => n.status === "completed");
     return { activeSessions: active, completedSessions: completed };
   }, [nodes]);
+
+  useEffect(() => {
+    if (expandedNodeId || activeSessions.length === 0) return;
+    setExpandedNodeId(activeSessions[0].id);
+  }, [activeSessions, expandedNodeId]);
 
   const toggleExpand = (nodeId: string) => {
     setExpandedNodeId(prev => prev === nodeId ? null : nodeId);

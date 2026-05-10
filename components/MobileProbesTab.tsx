@@ -20,7 +20,7 @@ interface MobileProbesTabProps {
   onOpenResources?: (text: string) => void;
   onOpenPractice?: (text: string) => void;
   onAskAssistant?: (text: string) => void;
-  onAdvanceStep?: () => Promise<void> | void;
+  onAdvanceStep?: (forceAdvance?: boolean) => Promise<void> | void;
   stuckCheckText?: string | null;
   onDismissStuckCheck?: () => void;
   onShareScreen?: () => void;
@@ -101,6 +101,7 @@ export function MobileProbesTab({
   const [currentIndex, setCurrentIndex] = useState(0);
   const [resettingProbes, setResettingProbes] = useState(false);
   const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
+  const [advancing, setAdvancing] = useState(false);
 
   // Reset Helios — destructive. We archive every active probe and blow
   // away the guiding-question chain Helios has built up for this
@@ -145,6 +146,16 @@ export function MobileProbesTab({
   const goNext = () => setCurrentIndex(i => Math.min(planSteps.length - 1, i + 1));
 
   const avatarInitial = displayTutorName.charAt(0).toUpperCase();
+
+  const handleDone = async () => {
+    if (!onAdvanceStep || advancing) return;
+    setAdvancing(true);
+    try {
+      await onAdvanceStep();
+    } finally {
+      setAdvancing(false);
+    }
+  };
 
   // Typewriter for the currently-shown probe
   const currentProbeId = currentStepId;
@@ -408,9 +419,9 @@ export function MobileProbesTab({
                 </div>
               ) : (
                 <>
-                  <div className={`grid grid-cols-5 gap-1.5 rounded-2xl border p-1.5 transition-colors ${stuckCheckText ? "border-red-400/40 bg-red-500/10" : "border-neutral-800 bg-neutral-950/40"}`}>
+                  <div className={`grid grid-cols-4 gap-1.5 rounded-2xl border p-1.5 transition-colors ${stuckCheckText ? "border-red-400/40 bg-red-500/10" : "border-neutral-800 bg-neutral-950/40"}`}>
                     {stuckCheckText && (
-                      <div className="col-span-5 flex items-start justify-between gap-2 rounded-xl border border-red-400/25 bg-red-400/10 px-3 py-2 text-xs text-red-100">
+                      <div className="col-span-4 flex items-start justify-between gap-2 rounded-xl border border-red-400/25 bg-red-400/10 px-3 py-2 text-xs text-red-100">
                         <p className="leading-relaxed">{stuckCheckText}</p>
                         <button type="button" onClick={onDismissStuckCheck} className="shrink-0 rounded-md px-2 py-1 text-[11px] text-red-100/80 active:bg-red-300/10">{t("common.dismiss")}</button>
                       </div>
@@ -455,17 +466,30 @@ export function MobileProbesTab({
                         <path strokeLinecap="round" strokeLinejoin="round" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                       </svg>
                     </button>
-                    <button
-                      onClick={() => onAdvanceStep?.()}
-                      disabled={!isSessionActive || !isCurrentPlanStep || !!stuckCheckText}
-                      title={t('probes.done')}
-                      className="py-2.5 px-2 text-[11px] font-medium rounded-xl bg-neutral-100 text-neutral-900 active:bg-white disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center justify-center"
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                      </svg>
-                    </button>
                   </div>
+                  <button
+                    onClick={handleDone}
+                    disabled={advancing || !isSessionActive || !isCurrentPlanStep || !!stuckCheckText}
+                    title={t('session.markAsDone')}
+                    className="mt-2 w-full py-2.5 px-3 text-xs font-medium rounded-xl bg-neutral-100 text-neutral-900 active:bg-white disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-1.5"
+                  >
+                    {advancing ? (
+                      <>
+                        <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                        </svg>
+                        <span>{t('sessionPlan.evaluating')}</span>
+                      </>
+                    ) : (
+                      <>
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                        </svg>
+                        <span>{t('session.markAsDone')}</span>
+                      </>
+                    )}
+                  </button>
 
                   <div className="mt-3">
                     <ThinkAloudTraces

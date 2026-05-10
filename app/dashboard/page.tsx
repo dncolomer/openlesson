@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Navbar } from "@/components/Navbar";
 import Link from "next/link";
@@ -10,6 +10,14 @@ import { DEFAULT_PROMPTS, PROMPT_META, type PromptKey, type UserPrompts } from "
 import { buildContributionDays, contributionLevel, contributionMonthLabels, dateKey, groupContributionWeeks } from "@/lib/contributions";
 
 import { useI18n } from "@/lib/i18n";
+
+const DASHBOARD_BACKGROUND = "/aesthetics/Greco-futurism/HHnTrgVaQAAP-_3.jpeg";
+const PROFILE_BACKGROUND_IMAGES = [
+  "/aesthetics/Greco-futurism/HHnTrgVaQAAP-_3.jpeg",
+  "/aesthetics/Greco-futurism/HHnTrf2acAA1Juo.jpeg",
+  "/aesthetics/Greco-futurism/HHnTrlMaAAAg_4I.jpeg",
+  "/aesthetics/Greco-futurism/HHnTrjJbQAAOz7K.jpeg",
+];
 
 type Tab = "overview" | "sessions" | "plans" | "usage" | "config";
 
@@ -35,10 +43,11 @@ export default function DashboardPage() {
   const { t } = useI18n();
   const [loading, setLoading] = useState(true);
   const searchParams = useSearchParams();
-  const initialTab = (searchParams.get("tab") as Tab) || "overview";
+  const initialTab = (searchParams.get("tab") as Tab) || "plans";
   const [activeTab, setActiveTab] = useState<Tab>(
-    ["overview", "sessions", "plans", "usage", "config"].includes(initialTab) ? initialTab : "overview"
+    ["overview", "plans"].includes(initialTab) ? initialTab : "plans"
   );
+  const learningMapScrollRef = useRef<HTMLDivElement>(null);
 
   // User state
   const [user, setUser] = useState<{
@@ -483,6 +492,13 @@ export default function DashboardPage() {
   const contributionWeeks = groupContributionWeeks(contributionDays);
   const contributionMonths = contributionMonthLabels(contributionWeeks);
 
+  useEffect(() => {
+    if (activeTab !== "overview") return;
+    const scroller = learningMapScrollRef.current;
+    if (!scroller) return;
+    scroller.scrollLeft = scroller.scrollWidth;
+  }, [activeTab, contributionWeeks.length]);
+
   // Filter and paginate sessions
   const filteredSessions = sessions.filter((s) => {
     const matchesSearch = sessionSearch === "" || 
@@ -512,14 +528,20 @@ export default function DashboardPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
+      <div
+        className="min-h-screen bg-[#0a0a0a] bg-cover bg-center flex items-center justify-center"
+        style={{ backgroundImage: `linear-gradient(rgba(10,10,10,0.82), rgba(10,10,10,0.82)), url(${DASHBOARD_BACKGROUND})` }}
+      >
         <div className="text-neutral-400">{t('common.loading')}</div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-white">
+    <div
+      className="min-h-screen bg-[#0a0a0a] bg-cover bg-fixed bg-center text-white"
+      style={{ backgroundImage: `linear-gradient(rgba(10,10,10,0.82), rgba(10,10,10,0.82)), url(${DASHBOARD_BACKGROUND})` }}
+    >
       <Navbar />
 
       {/* Tabs */}
@@ -527,10 +549,7 @@ export default function DashboardPage() {
         <div className="max-w-7xl mx-auto flex gap-1 px-4 sm:px-6 lg:px-8">
           {[
             { id: "overview", label: "Profile" },
-            { id: "sessions", label: t('dashboard.sessions') },
-            { id: "plans", label: t('dashboard.plans') },
-            { id: "usage", label: t('dashboard.usage') },
-            ...(user?.isAdmin ? [{ id: "config", label: t('dashboard.config') }] : []),
+            { id: "plans", label: "Learning Plans" },
           ].map((tab) => (
             <button
               key={tab.id}
@@ -555,11 +574,17 @@ export default function DashboardPage() {
         {/* Profile Overview */}
         {activeTab === "overview" && (
           <div className="space-y-6">
-            <section className="overflow-hidden rounded-3xl border border-neutral-800 bg-neutral-950">
-              <div className="bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.22),transparent_32%),radial-gradient(circle_at_top_right,rgba(59,130,246,0.2),transparent_30%)] p-6 sm:p-8">
+            <section className="overflow-hidden rounded-md border border-neutral-800 bg-neutral-950">
+              <div
+                className="relative overflow-hidden bg-cover bg-center p-6 sm:p-8"
+                style={{ backgroundImage: `url(${PROFILE_BACKGROUND_IMAGES[(user?.username || user?.email || "openlesson").length % PROFILE_BACKGROUND_IMAGES.length]})` }}
+              >
+                <div className="absolute inset-0 bg-black/65 grayscale backdrop-blur-[1px]" />
+                <div className="absolute inset-0 bg-black/35" />
+                <div className="relative z-10">
                 <div className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
                   <div className="flex items-center gap-4">
-                    <div className="flex h-20 w-20 items-center justify-center rounded-3xl bg-gradient-to-br from-emerald-400 via-sky-500 to-violet-500 text-3xl font-bold">
+                    <div className="flex h-20 w-20 items-center justify-center rounded-md bg-gradient-to-br from-emerald-400 via-sky-500 to-violet-500 text-3xl font-bold">
                       {(user?.username || user?.email || "u").slice(0, 1).toUpperCase()}
                     </div>
                     <div>
@@ -586,6 +611,7 @@ export default function DashboardPage() {
                     )}
                   </div>
                 </div>
+                </div>
               </div>
               <div className="grid gap-px bg-neutral-800 sm:grid-cols-4">
                 {[
@@ -603,12 +629,12 @@ export default function DashboardPage() {
             </section>
 
             <section className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
-              <div className="rounded-3xl border border-neutral-800 bg-neutral-950 p-6">
+              <div className="rounded-md border border-neutral-800 bg-neutral-950 p-6">
                 <div className="flex items-center justify-between">
                   <h2 className="font-semibold">Learning Map</h2>
                   <span className="text-xs text-neutral-500">{totalLearningMinutes} minutes in the last year</span>
                 </div>
-                <div className="mt-5 overflow-x-auto pb-2">
+                <div ref={learningMapScrollRef} className="mt-5 overflow-x-auto pb-2">
                   <div className="w-max min-w-full">
                     <div className="mb-2 ml-9 grid text-[11px] text-neutral-500" style={{ gridTemplateColumns: `repeat(${contributionWeeks.length}, 13px)`, columnGap: "4px" }}>
                       {contributionMonths.map((month) => <span key={month.index}>{month.label}</span>)}
@@ -657,7 +683,7 @@ export default function DashboardPage() {
                 </div>
               </div>
 
-              <div className="rounded-3xl border border-neutral-800 bg-neutral-950 p-6">
+              <div className="rounded-md border border-neutral-800 bg-neutral-950 p-6">
                 <h2 className="font-semibold">Recent Activity</h2>
                 <div className="mt-5 space-y-4">
                   {[...sessions.slice(0, 3), ...learningPlans.slice(0, 3)]
@@ -676,7 +702,7 @@ export default function DashboardPage() {
               </div>
             </section>
 
-            <section className="rounded-3xl border border-neutral-800 bg-neutral-950 p-6">
+            <section className="rounded-md border border-neutral-800 bg-neutral-950 p-6">
               <div className="flex items-center justify-between gap-4">
                 <div>
                   <h2 className="font-semibold">Profile Settings</h2>
@@ -896,12 +922,31 @@ export default function DashboardPage() {
 
         {/* Plans Tab */}
         {activeTab === "plans" && (
-          <div className="space-y-4">
+          <div className="space-y-6">
+            <div className="border border-neutral-800 bg-neutral-950/75 px-6 py-7 sm:px-8 sm:py-8 backdrop-blur-sm">
+              <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
+                <div>
+                  <p className="mb-3 font-mono text-[10px] uppercase tracking-[2px] text-neutral-500">
+                    Learning Plans
+                  </p>
+                  <h2 className="max-w-2xl text-3xl font-medium tracking-[-1.2px] text-white sm:text-4xl">
+                    Start with curiosity. Leave with a plan.
+                  </h2>
+                  <p className="mt-3 max-w-xl text-sm leading-relaxed text-neutral-400">
+                    Turn any topic, repo, video, file, or hard question into a guided path toward your next aha moment.
+                  </p>
+                </div>
+                <Link
+                  href="/"
+                  className="inline-flex h-12 items-center justify-center rounded-sm bg-white px-6 text-sm font-medium text-black transition hover:bg-neutral-200"
+                >
+                  Create a New Learning Plan →
+                </Link>
+              </div>
+            </div>
+
             <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold">{t('dashboard.allPlans')}</h2>
-              <Link href="/" className="text-sm text-blue-400 hover:text-blue-300 transition-colors">
-                {t('dashboard.createNewPlan')}
-              </Link>
+              <h3 className="text-lg font-semibold">{t('dashboard.allPlans')}</h3>
             </div>
             <div className="flex-1">
               <input
@@ -921,19 +966,59 @@ export default function DashboardPage() {
                 </Link>
               </div>
             ) : (
-              <div className="space-y-2">
+              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                 {paginatedPlans.map((plan) => (
                   <div
                     key={plan.id}
-                    className="flex items-center justify-between p-4 rounded-lg border border-neutral-800 bg-neutral-900/50 hover:bg-neutral-800/30 transition-colors"
+                    className="group overflow-hidden rounded-md border border-neutral-800 bg-neutral-950/75 transition-colors hover:border-neutral-700 hover:bg-neutral-900/80"
                   >
-                    <Link href={`/plan/${plan.id}`} className="flex-1">
-                      <p className="text-sm font-medium text-neutral-200">{plan.title || plan.root_topic}</p>
-                      <p className="text-xs text-neutral-500 mt-0.5">
-                        {plan.root_topic !== plan.title && plan.title ? `${plan.root_topic} · ` : ""}{t('dashboard.createdOn', { date: formatDate(plan.created_at) })}
-                      </p>
+                    <Link href={`/plan/${plan.id}`} className="block">
+                      <div className="relative h-36 bg-neutral-900">
+                        {plan.cover_image_url ? (
+                          <img src={plan.cover_image_url} alt="" className="h-full w-full object-cover opacity-70 grayscale transition group-hover:opacity-85" />
+                        ) : (
+                          <div className="h-full w-full bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.16),transparent_34%),linear-gradient(135deg,#171717,#050505)]" />
+                        )}
+                        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent" />
+                        <div className="absolute left-4 top-4 flex gap-2">
+                          <span className="border border-white/10 bg-black/50 px-2 py-1 font-mono text-[10px] uppercase tracking-[1.5px] text-neutral-300 backdrop-blur-sm">
+                            {plan.source_type === "youtube" ? "Video" : "Plan"}
+                          </span>
+                          {plan.is_group && (
+                            <span className="border border-white/10 bg-black/50 px-2 py-1 font-mono text-[10px] uppercase tracking-[1.5px] text-neutral-300 backdrop-blur-sm">
+                              Group
+                            </span>
+                          )}
+                        </div>
+                      </div>
                     </Link>
-                    <div className="flex items-center gap-2">
+
+                    <div className="p-4">
+                      <Link href={`/plan/${plan.id}`} className="block">
+                        <h4 className="line-clamp-2 text-base font-medium leading-snug text-neutral-100 transition group-hover:text-white">
+                          {plan.title || plan.root_topic}
+                        </h4>
+                        <p className="mt-2 line-clamp-2 text-sm leading-relaxed text-neutral-500">
+                          {plan.root_topic !== plan.title && plan.title ? plan.root_topic : plan.source_summary || "A guided path toward your next aha moment."}
+                        </p>
+                      </Link>
+
+                      <div className="mt-4 flex flex-wrap items-center gap-2 text-[11px] text-neutral-500">
+                        <span>{formatDate(plan.created_at)}</span>
+                        <span>•</span>
+                        <span className="capitalize">{plan.status}</span>
+                        {(plan.remix_count ?? 0) > 0 && (
+                          <>
+                            <span>•</span>
+                            <span>{plan.remix_count} remixes</span>
+                          </>
+                        )}
+                      </div>
+
+                      <div className="mt-5 flex items-center justify-between gap-3 border-t border-neutral-800 pt-4">
+                        <Link href={`/plan/${plan.id}`} className="text-sm font-medium text-neutral-200 hover:text-white">
+                          Open plan →
+                        </Link>
                       <button
                         onClick={async () => {
                           try {
@@ -963,6 +1048,7 @@ export default function DashboardPage() {
                       >
                         {(plan as any).is_public ? t('dashboard.public') : t('dashboard.private')}
                       </button>
+                      </div>
                     </div>
                   </div>
                 ))}

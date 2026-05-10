@@ -868,7 +868,9 @@
     "continueAnyway": "Continue Anyway",
     "completing": "Completing...",
     "checking": "Checking...",
-    "markComplete": "Mark Complete",
+    "evaluating": "Evaluating...",
+    "evaluatingStep": "Helios is evaluating whether this step is ready to mark done...",
+    "markComplete": "Mark as Done",
     "feedback": "Feedback"
   },
   "probes": {

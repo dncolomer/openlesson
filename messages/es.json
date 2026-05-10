@@ -920,7 +920,9 @@
     "continueAnyway": "Continuar de Todos Modos",
     "completing": "Completando...",
     "checking": "Verificando...",
-    "markComplete": "Marcar Completo",
+    "evaluating": "Evaluando...",
+    "evaluatingStep": "Helios está evaluando si este paso está listo para marcarse como hecho...",
+    "markComplete": "Marcar como hecho",
     "feedback": "Comentarios"
   },
   "probes": {

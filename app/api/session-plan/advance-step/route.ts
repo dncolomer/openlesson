@@ -57,6 +57,7 @@ export async function POST(request: NextRequest) {
     //     LLM errored) — we fell through to a mechanical advance.
     let trigger: "user_click" | "auto_eval_pass" | "auto_eval_skipped" = "user_click";
     let evalGapScore: number | undefined;
+    let evalAdvanceReasoning = "";
 
     // Unless forceAdvance, evaluate whether the student is ready to move on
     if (!forceAdvance) {
@@ -66,6 +67,17 @@ export async function POST(request: NextRequest) {
           getRecentTranscripts(sessionId, 180000),
           getUserPrompts(supabase, user.id),
         ]);
+
+        if (transcripts.length === 0) {
+          return NextResponse.json({
+            plan: currentPlan,
+            allComplete: false,
+            blocked: true,
+            advanceVerdict: "unavailable",
+            advanceReasoning: "I couldn't evaluate this chapter yet because I don't have enough recent session evidence. Keep thinking aloud for a moment, then try marking the chapter done again.",
+            gapScore: 0.6,
+          });
+        }
 
         if (transcripts.length > 0) {
           const fileIds = transcripts
@@ -91,6 +103,7 @@ export async function POST(request: NextRequest) {
               plan: currentPlan,
               allComplete: false,
               blocked: true,
+              advanceVerdict: "not_ready",
               advanceReasoning: evalResult.result.advanceReasoning || "The current step doesn't appear to be fully complete yet.",
               gapScore: evalResult.result.gapScore,
               nextRequest: evalResult.result.nextRequest,
@@ -100,12 +113,28 @@ export async function POST(request: NextRequest) {
           if (evalResult.success && evalResult.result) {
             trigger = "auto_eval_pass";
             evalGapScore = evalResult.result.gapScore;
+            evalAdvanceReasoning = evalResult.result.advanceReasoning || "I see enough evidence to mark this chapter done.";
+          } else {
+            return NextResponse.json({
+              plan: currentPlan,
+              allComplete: false,
+              blocked: true,
+              advanceVerdict: "unavailable",
+              advanceReasoning: "I couldn't complete the readiness check, so I did not mark this chapter done. Try again in a moment.",
+              gapScore: 0.6,
+            });
           }
         }
       } catch (err) {
-        console.warn("[advance-step] Evaluation failed, allowing advance:", err);
-        // Fall through to mechanical advance if evaluation fails.
-        // trigger stays "auto_eval_skipped".
+        console.warn("[advance-step] Evaluation failed, blocking advance:", err);
+        return NextResponse.json({
+          plan: currentPlan,
+          allComplete: false,
+          blocked: true,
+          advanceVerdict: "unavailable",
+          advanceReasoning: "I couldn't complete the readiness check, so I did not mark this chapter done. Try again in a moment.",
+          gapScore: 0.6,
+        });
       }
     }
 
@@ -192,6 +221,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       plan: updatedPlan,
       allComplete,
+      advanceVerdict: forceAdvance ? "forced" : trigger === "auto_eval_pass" ? "agreed" : "advanced",
+      advanceReasoning: evalAdvanceReasoning,
+      gapScore: evalGapScore,
     });
   } catch (error) {
     console.error("Advance step error:", error);

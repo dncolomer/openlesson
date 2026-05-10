@@ -650,6 +650,39 @@ export function SessionView({ sessionId }: { sessionId: string }) {
     ]);
   }, []);
 
+  const addHeliosStepEvaluationCue = useCallback((forceAdvance: boolean) => {
+    ensureVisible("tools");
+    setActiveTool("chat");
+    const cueId = `advance_eval_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+    setChatMessages(prev => [
+      ...prev,
+      {
+        id: cueId,
+        role: "assistant",
+        content: "",
+        pending: true,
+        pendingLabel: forceAdvance
+          ? t('sessionPlan.completing')
+          : t('sessionPlan.evaluatingStep'),
+      },
+    ]);
+    return cueId;
+  }, [ensureVisible, t]);
+
+  const removeHeliosCue = useCallback((cueId: string | null) => {
+    if (!cueId) return;
+    setChatMessages(prev => prev.filter(message => message.id !== cueId));
+  }, []);
+
+  const resolveHeliosCue = useCallback((cueId: string | null, content: string) => {
+    if (!cueId) return;
+    setChatMessages(prev => prev.map(message =>
+      message.id === cueId
+        ? { ...message, content, pending: false, pendingLabel: undefined }
+        : message
+    ));
+  }, []);
+
   const handleStepAskHelios = (stepDescription: string) => {
     // Make sure the tools pane is visible. The `activeTool` effect only
     // reopens the pane when the value actually changes, so if "chat" was
@@ -2427,6 +2460,7 @@ export function SessionView({ sessionId }: { sessionId: string }) {
     const probe = session.probes.find(p => p.id === probeId);
     if (!probe) return;
     
+    const evaluationCueId = addHeliosStepEvaluationCue(false);
     setArchivingProbeId(probeId);
     
     try {
@@ -2446,6 +2480,7 @@ export function SessionView({ sessionId }: { sessionId: string }) {
     } catch (err) {
       console.error("Archive probe error:", err);
     } finally {
+      removeHeliosCue(evaluationCueId);
       // Delay clearing to allow animation to complete
       setTimeout(() => setArchivingProbeId(null), 500);
     }
@@ -2482,6 +2517,9 @@ export function SessionView({ sessionId }: { sessionId: string }) {
 
   const handleAdvanceStep = async (forceAdvance = false) => {
     if (!session) return;
+    const evaluationCueId = addHeliosStepEvaluationCue(forceAdvance);
+    let evaluationCueResolved = false;
+    try {
     const currentSession = sessionRef.current || session;
     const openProbes = currentSession.probes.filter(p => !p.archived);
 
@@ -2591,7 +2629,6 @@ export function SessionView({ sessionId }: { sessionId: string }) {
     }
 
     // --- API mode (unchanged) ---
-    try {
       const res = await fetch("/api/session-plan/advance-step", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -2615,6 +2652,9 @@ export function SessionView({ sessionId }: { sessionId: string }) {
       // Handle blocked response — show reasoning and offer force-advance
       if (data.blocked) {
         const reasoning = data.advanceReasoning || "You may not be ready to move on yet.";
+        const verdict = data.advanceVerdict === "unavailable" ? "I couldn't evaluate this chapter." : "Not yet.";
+        resolveHeliosCue(evaluationCueId, `**Helios verdict: ${verdict}**\n\n${reasoning}\n\nI did not mark this chapter done.`);
+        evaluationCueResolved = true;
         // Create a feedback probe so the user sees WHY they can't advance
         const feedbackProbe = await addProbe(session.id, {
           timestamp: Date.now() - new Date(session.startedAt).getTime(),
@@ -2629,7 +2669,6 @@ export function SessionView({ sessionId }: { sessionId: string }) {
         sessionRef.current = updatedSession;
         setActiveProbe(feedbackProbe);
         setViewingProbeIndex(updatedSession.probes.length - 1);
-        addProbeToHeliosChat(feedbackProbe.text);
         
         // Also create the next request probe if the LLM suggested one
         if (data.nextRequest && openProbes.length < 4) {
@@ -2655,7 +2694,18 @@ export function SessionView({ sessionId }: { sessionId: string }) {
         console.warn('[Advance Step] Received invalid plan, keeping previous state');
         return;
       }
-      
+
+      const successReasoning = typeof data.advanceReasoning === "string" && data.advanceReasoning.trim()
+        ? `\n\n${data.advanceReasoning.trim()}`
+        : "";
+      const successVerdict = data.advanceVerdict === "agreed"
+        ? "Agreed."
+        : data.advanceVerdict === "forced"
+          ? "Marked done by your override."
+          : "Marked done.";
+      resolveHeliosCue(evaluationCueId, `**Helios verdict: ${successVerdict}**\n\nI marked this chapter as done.${successReasoning}`);
+      evaluationCueResolved = true;
+       
       // Update plan state
       setSessionPlan(updatedPlan);
       sessionPlanRef.current = updatedPlan;
@@ -2738,6 +2788,8 @@ export function SessionView({ sessionId }: { sessionId: string }) {
       }
     } catch (err) {
       console.error("Advance step error:", err);
+    } finally {
+      if (!evaluationCueResolved) removeHeliosCue(evaluationCueId);
     }
   };
 
@@ -3994,7 +4046,7 @@ export function SessionView({ sessionId }: { sessionId: string }) {
                         onOpenResources={handleStepResources}
                         onOpenPractice={handleStepPractice}
                         onAskAssistant={handleStepAskHelios}
-                        onAdvanceStep={() => handleAdvanceStep()}
+                        onAdvanceStep={(forceAdvance) => handleAdvanceStep(forceAdvance)}
                         onResetProbes={handleResetProbes}
                         onToolEvent={(action, metadata) =>
                           logTool("probe", action, metadata ?? {})

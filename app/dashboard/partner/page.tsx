@@ -8,6 +8,8 @@ import { PARTNER_TIERS, UNSTAKE_LOCKUP_DAYS, PartnerTier } from "@/lib/partners"
 import { Copy, ExternalLink, DollarSign, Users, Link2, AlertTriangle, Check, X, Wallet, ArrowRight } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 
+const DASHBOARD_BACKGROUND = "/aesthetics/Greco-futurism/HHnTrgVaQAAP-_3.jpeg";
+
 declare global {
   interface Window {
     solana?: {
@@ -195,7 +197,10 @@ export default function PartnerPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
+      <div
+        className="min-h-screen bg-[#0a0a0a] bg-cover bg-center flex items-center justify-center"
+        style={{ backgroundImage: `linear-gradient(rgba(10,10,10,0.82), rgba(10,10,10,0.82)), url(${DASHBOARD_BACKGROUND})` }}
+      >
         <div className="text-neutral-400">{t('common.loading')}</div>
       </div>
     );
@@ -203,7 +208,10 @@ export default function PartnerPage() {
 
   if (!partnerData?.isPartner) {
     return (
-      <div className="min-h-screen bg-[#0a0a0a]">
+      <div
+        className="min-h-screen bg-[#0a0a0a] bg-cover bg-fixed bg-center"
+        style={{ backgroundImage: `linear-gradient(rgba(10,10,10,0.82), rgba(10,10,10,0.82)), url(${DASHBOARD_BACKGROUND})` }}
+      >
         <Navbar />
         <div className="max-w-4xl mx-auto px-6 py-12">
           <h1 className="text-3xl font-bold text-white mb-4">{t('partner.program')}</h1>
@@ -388,7 +396,10 @@ export default function PartnerPage() {
     : 0;
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a]">
+    <div
+      className="min-h-screen bg-[#0a0a0a] bg-cover bg-fixed bg-center"
+      style={{ backgroundImage: `linear-gradient(rgba(10,10,10,0.82), rgba(10,10,10,0.82)), url(${DASHBOARD_BACKGROUND})` }}
+    >
       <Navbar />
       <div className="max-w-4xl mx-auto px-6 py-8">
         <div className="flex items-center justify-between mb-8">

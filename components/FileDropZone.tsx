@@ -144,7 +144,7 @@ export function FileDropZone({ files, onChange, compact = false, className = "" 
             )}
             <span className="flex-1 text-xs text-neutral-300 truncate">{f.name}</span>
             <span className="text-[10px] text-neutral-500 flex-shrink-0">{formatBytes(f.size)}</span>
-            <button onClick={() => removeFile(i)} className="text-neutral-500 hover:text-red-400 transition-colors flex-shrink-0">
+            <button type="button" onClick={() => removeFile(i)} className="text-neutral-500 hover:text-red-400 transition-colors flex-shrink-0">
               <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
               </svg>
@@ -153,6 +153,7 @@ export function FileDropZone({ files, onChange, compact = false, className = "" 
         ))}
         {!atLimit && (
           <button
+            type="button"
             onClick={() => fileInputRef.current?.click()}
             className="flex items-center gap-2 px-3 py-2 w-full text-xs text-neutral-500 hover:text-neutral-300 border border-dashed border-neutral-800 hover:border-neutral-600 rounded-lg transition-colors"
           >
@@ -211,6 +212,7 @@ export function FileDropZone({ files, onChange, compact = false, className = "" 
               <span className="text-xs text-neutral-300 truncate flex-1">{f.name}</span>
               <span className="text-[10px] text-neutral-500 flex-shrink-0">{formatBytes(f.size)}</span>
               <button
+                type="button"
                 onClick={(e) => { e.stopPropagation(); removeFile(i); }}
                 className="text-neutral-500 hover:text-red-400 transition-colors flex-shrink-0 p-0.5"
               >

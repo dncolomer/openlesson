@@ -788,6 +788,38 @@ export function MobileSessionView({
     ]);
   }, []);
 
+  const addHeliosStepEvaluationCue = useCallback((forceAdvance: boolean) => {
+    setActiveTab(1);
+    const cueId = `advance_eval_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+    setChatMessages(prev => [
+      ...prev,
+      {
+        id: cueId,
+        role: "assistant",
+        content: "",
+        pending: true,
+        pendingLabel: forceAdvance
+          ? t('sessionPlan.completing')
+          : t('sessionPlan.evaluatingStep'),
+      },
+    ]);
+    return cueId;
+  }, [t]);
+
+  const removeHeliosCue = useCallback((cueId: string | null) => {
+    if (!cueId) return;
+    setChatMessages(prev => prev.filter(message => message.id !== cueId));
+  }, []);
+
+  const resolveHeliosCue = useCallback((cueId: string | null, content: string) => {
+    if (!cueId) return;
+    setChatMessages(prev => prev.map(message =>
+      message.id === cueId
+        ? { ...message, content, pending: false, pendingLabel: undefined }
+        : message
+    ));
+  }, []);
+
   const fetchAndInjectPrepIntoChat = useCallback(async (
     type: "reading" | "exercise",
     stepDescription: string,
@@ -1409,18 +1441,20 @@ export function MobileSessionView({
 
   // Archive probe
   const handleArchiveProbe = useCallback(async (probeId: string) => {
+    const evaluationCueId = addHeliosStepEvaluationCue(false);
     setArchivingProbeId(probeId);
     try {
       await archiveProbe(probeId);
-      setProbes(prev => prev.map(p => 
+      setProbes(prev => prev.map(p =>
         p.id === probeId ? { ...p, archived: true } : p
       ));
     } catch (err) {
       console.error("Failed to archive probe:", err);
     } finally {
+      removeHeliosCue(evaluationCueId);
       setArchivingProbeId(null);
     }
-  }, []);
+  }, [addHeliosStepEvaluationCue, removeHeliosCue]);
 
   // Toggle probe focus
   const handleToggleFocus = useCallback(async (probeId: string, focused: boolean) => {
@@ -1437,6 +1471,9 @@ export function MobileSessionView({
   // Advance to next step
   const handleAdvanceStep = useCallback(async (forceAdvance = false) => {
     if (!session) return;
+    const evaluationCueId = addHeliosStepEvaluationCue(forceAdvance);
+    let evaluationCueResolved = false;
+    try {
     const currentSession = sessionRef.current || session;
     const openProbes = currentSession.probes.filter((p: Probe) => !p.archived);
 
@@ -1550,7 +1587,6 @@ export function MobileSessionView({
     }
 
     // --- API mode (unchanged) ---
-    try {
       const res = await fetch("/api/session-plan/advance-step", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -1570,6 +1606,9 @@ export function MobileSessionView({
       // Handle blocked response — show reasoning as feedback probe
       if (data.blocked) {
         const reasoning = data.advanceReasoning || "You may not be ready to move on yet.";
+        const verdict = data.advanceVerdict === "unavailable" ? "I couldn't evaluate this chapter." : "Not yet.";
+        resolveHeliosCue(evaluationCueId, `**Helios verdict: ${verdict}**\n\n${reasoning}\n\nI did not mark this chapter done.`);
+        evaluationCueResolved = true;
         const feedbackProbe = await addProbe(session.id, {
           timestamp: Date.now() - new Date(session.startedAt).getTime(),
           gapScore: data.gapScore ?? 0.6,
@@ -1582,12 +1621,22 @@ export function MobileSessionView({
         setSession(updatedSession);
         sessionRef.current = updatedSession;
         setProbes(updatedSession.probes);
-        addProbeToHeliosChat(feedbackProbe.text);
         return;
       }
 
       const { plan: updatedPlan, allComplete } = data;
       if (!isValidPlan(updatedPlan)) return;
+
+      const successReasoning = typeof data.advanceReasoning === "string" && data.advanceReasoning.trim()
+        ? `\n\n${data.advanceReasoning.trim()}`
+        : "";
+      const successVerdict = data.advanceVerdict === "agreed"
+        ? "Agreed."
+        : data.advanceVerdict === "forced"
+          ? "Marked done by your override."
+          : "Marked done.";
+      resolveHeliosCue(evaluationCueId, `**Helios verdict: ${successVerdict}**\n\nI marked this chapter as done.${successReasoning}`);
+      evaluationCueResolved = true;
 
       setSessionPlan(updatedPlan);
       sessionPlanRef.current = updatedPlan;
@@ -1674,8 +1723,10 @@ export function MobileSessionView({
       }
     } catch (err) {
       console.error("[Mobile] Advance step error:", err);
+    } finally {
+      if (!evaluationCueResolved) removeHeliosCue(evaluationCueId);
     }
-  }, [session]);
+  }, [addHeliosStepEvaluationCue, removeHeliosCue, resolveHeliosCue, session]);
 
   // Rollback to a specific step
   const handleRollbackToStep = useCallback(async (stepIndex: number) => {
@@ -2383,7 +2434,7 @@ export function MobileSessionView({
           onOpenPractice={handleStepPractice}
           onAskAssistant={handleStepAskHelios}
           onShareScreen={() => setActiveTab(2)}
-          onAdvanceStep={() => handleAdvanceStep()}
+          onAdvanceStep={(forceAdvance) => handleAdvanceStep(forceAdvance)}
           onResetProbes={handleResetProbes}
           archivingProbeId={archivingProbeId}
           isGeneratingProbe={isGeneratingProbe}

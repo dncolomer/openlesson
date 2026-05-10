@@ -867,7 +867,9 @@
     "continueAnyway": "仍然继续",
     "completing": "完成中...",
     "checking": "检查中...",
-    "markComplete": "标记完成",
+    "evaluating": "正在评估...",
+    "evaluatingStep": "Helios 正在评估此步骤是否可以标记为完成...",
+    "markComplete": "标记为完成",
     "feedback": "反馈"
   },
   "probes": {

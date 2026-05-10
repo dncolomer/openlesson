@@ -50,8 +50,7 @@ export function Navbar({ breadcrumbs = [], showNav = true }: NavbarProps) {
   };
 
   const navLinks = [
-    { href: "/labs", label: t('nav.labs') },
-    { href: "/pricing", label: t('nav.pricing') },
+    { href: "/pricing", label: "Upgrade" },
     { href: "/coaching", label: t('nav.coaching') },
     { href: "/about", label: t('nav.about') },
     { href: "/dashboard", label: t('nav.dashboard') },
@@ -68,26 +67,26 @@ export function Navbar({ breadcrumbs = [], showNav = true }: NavbarProps) {
   ];
 
   return (
-    <header className="border-b border-slate-800/60 px-4 sm:px-6 py-4 backdrop-blur-sm bg-[#0a0a0a]/80 sticky top-0 z-20">
+    <header className="border-b border-neutral-800/60 px-4 sm:px-6 py-4 backdrop-blur-sm bg-[#0a0a0a]/85 sticky top-0 z-20">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Link href="/" className="text-base sm:text-lg font-semibold text-white tracking-tight hover:text-slate-300 transition-colors">
+          <Link href="/" className="text-base sm:text-lg font-semibold text-white tracking-tight hover:text-neutral-300 transition-colors">
             {t('nav.openLesson')}
           </Link>
           
           {breadcrumbs.length > 0 && (
             <>
-              <span className="text-slate-600 hidden sm:inline">/</span>
+              <span className="text-neutral-600 hidden sm:inline">/</span>
               {breadcrumbs.map((item, index) => (
                 <div key={index} className="flex items-center gap-2">
                   {item.href ? (
-                    <Link href={item.href} className="text-slate-400 hover:text-white text-sm transition-colors">
+                    <Link href={item.href} className="text-neutral-400 hover:text-white text-sm transition-colors">
                       {item.label}
                     </Link>
                   ) : (
-                    <span className="text-slate-400 text-sm">{item.label}</span>
+                    <span className="text-neutral-400 text-sm">{item.label}</span>
                   )}
-                  {index < breadcrumbs.length - 1 && <span className="text-slate-600 hidden sm:inline">/</span>}
+                  {index < breadcrumbs.length - 1 && <span className="text-neutral-600 hidden sm:inline">/</span>}
                 </div>
               ))}
             </>
@@ -101,7 +100,7 @@ export function Navbar({ breadcrumbs = [], showNav = true }: NavbarProps) {
               <Link 
                 key={link.href} 
                 href={link.href} 
-                className="text-xs sm:text-sm text-slate-500 hover:text-white transition-colors"
+                className="text-xs sm:text-sm text-neutral-500 hover:text-white transition-colors"
               >
                 {link.label}
               </Link>
@@ -112,12 +111,12 @@ export function Navbar({ breadcrumbs = [], showNav = true }: NavbarProps) {
             {isLoggedIn === true ? (
               <button
                 onClick={handleSignOut}
-                className="text-xs sm:text-sm text-slate-500 hover:text-white transition-colors"
+                className="text-xs sm:text-sm text-neutral-500 hover:text-white transition-colors"
               >
                 {t('nav.signOut')}
               </button>
             ) : isLoggedIn === false && (
-              <Link href="/login" className="px-3 sm:px-3.5 py-1.5 text-xs sm:text-sm bg-slate-800 hover:bg-slate-700 text-white rounded-lg transition-colors">
+              <Link href="/login" className="px-3 sm:px-3.5 py-1.5 text-xs sm:text-sm bg-neutral-800 hover:bg-neutral-700 text-white rounded-sm transition-colors">
                 {t('nav.signIn')}
               </Link>
             )}

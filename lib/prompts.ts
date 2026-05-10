@@ -450,13 +450,14 @@ Based on these observations, decide:
    - Check if any non-focused probes are clearly resolved
    - Only archive if there's clear evidence the student has engaged with and addressed the probe
 
- 5. CAN THE STEP AUTO-ADVANCE? (for automatic mode)
+  5. CAN THE STEP AUTO-ADVANCE? (for automatic mode)
    - Consider: Has the student demonstrated sufficient understanding of the current step's topic?
    - Look for: verbal confirmation, applying concepts, solving related problems, moving to next logical subtopic
-   - Set can_auto_advance to true ONLY if:
-     * Gap score is < 0.5 (student is progressing well)
-     * There are positive signals of progress (not just neutral)
-     * The student is clearly moving toward or past the current step's objective
+    - Set can_auto_advance to true ONLY if:
+      * Gap score is < 0.5 (student is progressing well)
+      * There are positive signals of progress (not just neutral)
+      * The student is clearly moving toward or past the current step's objective
+    - If the student appears ready, do not generate another ordinary probe for the same step. Prefer feedback that tells them they can click "Mark as Done" and move on.
     - Set can_auto_advance to false if:
       * Gap score >= 0.5 (hesitation or gaps present)
       * Confusion signals detected

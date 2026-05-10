@@ -830,12 +830,10 @@ export default function DashboardPage() {
                             className={`inline-flex px-1.5 py-0.5 rounded text-[10px] ${
                               session.status === "completed"
                                 ? "bg-green-900/30 text-green-400"
-                                : session.status === "paused"
-                                ? "bg-yellow-900/30 text-yellow-400"
-                                : "bg-neutral-700 text-neutral-400"
+                                : "bg-yellow-900/30 text-yellow-400"
                             }`}
                           >
-                            {session.status === "active" ? t('dashboard.active') : session.status === "paused" ? t('dashboard.paused') : t('dashboard.completed')}
+                            {session.status === "completed" ? t('dashboard.completed') : t('dashboard.active')}
                           </span>
                           {session.planTitle && (
                             <span className="ml-2 inline-flex px-1.5 py-0.5 rounded text-[10px] bg-purple-900/30 text-purple-400">

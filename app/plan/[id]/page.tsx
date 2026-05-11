@@ -2,6 +2,7 @@ import { Metadata } from "next";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { PlanView } from "@/components/PlanView";
+import { getRandomPlanCoverImage } from "@/lib/plan-image";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -41,9 +42,8 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     ? `A learning plan by @${author} on openLesson`
     : "A learning plan on openLesson";
 
-  const images = plan.cover_image_url
-    ? [{ url: plan.cover_image_url, width: 1200, height: 630, alt: title }]
-    : [{ url: "/og-default.jpg", width: 1024, height: 536, alt: title }];
+  const ogImage = await getRandomPlanCoverImage() || "/og-default.jpg";
+  const images = [{ url: ogImage, width: 1200, height: 630, alt: title }];
 
   return {
     title: `${title} - openLesson`,

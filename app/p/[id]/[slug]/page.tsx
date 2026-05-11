@@ -3,6 +3,7 @@ import { Metadata } from "next";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { PlanView } from "@/components/PlanView";
+import { getRandomPlanCoverImage } from "@/lib/plan-image";
 
 interface PageProps {
   params: Promise<{
@@ -71,8 +72,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const title = plan.title || plan.root_topic;
   const description = plan.description || `A learning plan by @${plan.author_username || "anonymous"} on openLesson`;
 
-  // Use AI-generated cover image for OG if available, otherwise fall back to dynamic OG route
-  const ogImage = plan.cover_image_url || `/p/${id}/${slug}/opengraph-image`;
+  const ogImage = await getRandomPlanCoverImage() || `/p/${id}/${slug}/opengraph-image`;
 
   return {
     title: `${title} - openLesson`,

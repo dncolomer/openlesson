@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { callXaiJSON, callXaiText, userMessage, DEFAULT_MODEL } from "@/lib/xai-client";
 import type { Message, MessageContent } from "@/lib/xai-client";
-import { generateAndStorePlanCover } from "@/lib/plan-image";
 import { uploadFileToXAI, deleteFileFromXAI } from "@/lib/xai-files";
 import { callXaiResponses, type ResponsesInputContent } from "@/lib/xai-client";
 
@@ -384,14 +383,6 @@ Rules:
     if (fileStorageWarnings.length > 0) {
       console.warn(`[generate] File storage warnings:`, fileStorageWarnings);
     }
-
-    // Fire-and-forget: cover image generation
-    generateAndStorePlanCover(
-      supabase as any, // eslint-disable-line @typescript-eslint/no-explicit-any
-      user.id,
-      plan.id,
-      topic
-    ).catch(err => console.error("Async cover generation failed:", err));
 
     return NextResponse.json({
       planId: plan.id,

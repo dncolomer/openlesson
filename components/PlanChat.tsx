@@ -237,7 +237,7 @@ export function PlanChat({ plan, nodes: initialNodes, onRefresh, onNodesUpdate, 
           className="hidden md:flex flex-col h-full min-h-0 flex-none"
           style={{ width: hideSessions ? "100%" : `${leftWidth}%` }}
         >
-          <div className={`flex-1 overflow-hidden flex flex-col ${hideSessions ? "" : "bg-neutral-900/50 rounded-xl border border-neutral-800/60 p-4 shadow-lg shadow-black/10"}`}>
+          <div className={`flex-1 overflow-hidden flex flex-col ${hideSessions ? "" : "bg-neutral-900/50 rounded-md border border-neutral-800/60 p-4 shadow-lg shadow-black/10"}`}>
             <ChatPanel
               planId={plan.id}
               model={model}
@@ -258,7 +258,7 @@ export function PlanChat({ plan, nodes: initialNodes, onRefresh, onNodesUpdate, 
           className="hidden md:flex items-center justify-center w-1.5 cursor-col-resize group"
           onMouseDown={(e) => { e.preventDefault(); setIsDragging(true); }}
         >
-          <div className={`w-0.5 h-full rounded-full transition-colors ${isDragging ? "bg-blue-500" : "bg-neutral-700 group-hover:bg-neutral-500"}`} />
+          <div className={`w-0.5 h-full rounded-full transition-colors ${isDragging ? "bg-neutral-400" : "bg-neutral-700 group-hover:bg-neutral-500"}`} />
         </div>
       )}
 
@@ -268,7 +268,7 @@ export function PlanChat({ plan, nodes: initialNodes, onRefresh, onNodesUpdate, 
         className="hidden md:flex flex-col h-full min-h-0 flex-none"
         style={{ width: isOwner ? `${100 - leftWidth - 0.5}%` : "100%" }}
       >
-        <div className="flex-1 bg-neutral-900/50 rounded-xl border border-neutral-800/60 overflow-hidden shadow-lg shadow-black/10">
+        <div className="flex-1 bg-neutral-900/50 rounded-md border border-neutral-800/60 overflow-hidden shadow-lg shadow-black/10">
           <SessionList
             nodes={nodes}
             onSelect={() => {}}
@@ -306,7 +306,7 @@ export function PlanChat({ plan, nodes: initialNodes, onRefresh, onNodesUpdate, 
       {/* Sessions Panel - Mobile: always visible, full width */}
       {!hideSessions && (
       <div className="md:hidden flex-1 min-h-0 overflow-hidden">
-        <div className="h-full bg-neutral-900/50 rounded-xl border border-neutral-800/60 overflow-hidden shadow-lg shadow-black/10">
+        <div className="h-full bg-neutral-900/50 rounded-md border border-neutral-800/60 overflow-hidden shadow-lg shadow-black/10">
           <SessionList
             nodes={nodes}
             onSelect={() => {}}
@@ -328,7 +328,7 @@ export function PlanChat({ plan, nodes: initialNodes, onRefresh, onNodesUpdate, 
       {isOwner && !hideSessions && !sheetOpen && (
         <button
           onClick={() => setSheetOpen(true)}
-          className="md:hidden fixed bottom-5 right-5 z-40 flex items-center gap-2 px-4 py-3 bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium rounded-full shadow-xl shadow-blue-600/30 transition-all active:scale-95"
+            className="md:hidden fixed bottom-5 right-5 z-40 flex items-center gap-2 px-4 py-3 bg-white hover:bg-neutral-200 text-black text-sm font-medium rounded-md shadow-xl shadow-black/30 transition-all active:scale-95"
         >
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 00-2.455 2.456z" />
@@ -364,7 +364,7 @@ export function PlanChat({ plan, nodes: initialNodes, onRefresh, onNodesUpdate, 
             {/* Sheet header */}
             <div className="flex items-center justify-between px-4 pb-2 flex-shrink-0">
               <div className="flex items-center gap-2">
-                <svg className="w-4 h-4 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <svg className="w-4 h-4 text-neutral-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" />
                 </svg>
                 <span className="text-sm font-semibold text-white">{t('planChat.aiPlanner')}</span>
@@ -381,7 +381,7 @@ export function PlanChat({ plan, nodes: initialNodes, onRefresh, onNodesUpdate, 
 
             {/* Chat content */}
             <div className="flex-1 min-h-0 overflow-hidden px-3 pb-3">
-              <div className="h-full bg-neutral-900/50 rounded-xl border border-neutral-800/60 overflow-hidden flex flex-col p-3">
+              <div className="h-full bg-neutral-900/50 rounded-md border border-neutral-800/60 overflow-hidden flex flex-col p-3">
                 <ChatPanel
                   planId={plan.id}
                   model={model}
@@ -405,7 +405,7 @@ export function PlanChat({ plan, nodes: initialNodes, onRefresh, onNodesUpdate, 
             className="fixed inset-0 z-50 bg-black/60"
             onClick={() => setShowDeleteConfirm(null)}
           />
-          <div className="fixed bottom-0 left-0 right-0 z-50 md:bottom-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:w-full md:max-w-sm bg-neutral-800 border-t md:border border-neutral-700 rounded-t-2xl md:rounded-2xl p-4">
+          <div className="fixed bottom-0 left-0 right-0 z-50 md:bottom-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:w-full md:max-w-sm bg-neutral-800 border-t md:border border-neutral-700 rounded-t-md md:rounded-md p-4">
             <h3 className="text-lg font-semibold text-white mb-2">{t('planChat.deleteSession')}</h3>
             <p className="text-sm text-neutral-400 mb-4">
               {t('planChat.deleteSessionConfirm')}
@@ -413,13 +413,13 @@ export function PlanChat({ plan, nodes: initialNodes, onRefresh, onNodesUpdate, 
             <div className="flex gap-3">
               <button
                 onClick={() => setShowDeleteConfirm(null)}
-                className="flex-1 px-4 py-3 bg-neutral-700 hover:bg-neutral-600 text-white text-sm font-medium rounded-xl transition-colors"
+                className="flex-1 px-4 py-3 bg-neutral-700 hover:bg-neutral-600 text-white text-sm font-medium rounded-md transition-colors"
               >
                 {t('common.cancel')}
               </button>
               <button
                 onClick={() => handleDeleteConfirm(showDeleteConfirm)}
-                className="flex-1 px-4 py-3 bg-red-600 hover:bg-red-500 text-white text-sm font-medium rounded-xl transition-colors"
+                className="flex-1 px-4 py-3 bg-red-600 hover:bg-red-500 text-white text-sm font-medium rounded-md transition-colors"
               >
                 {t('planChat.delete')}
               </button>

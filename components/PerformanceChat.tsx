@@ -206,7 +206,7 @@ export function PerformanceChat({ planId, isOwner, currentUserId, isGroupPlan = 
   // Check if user has access
   if (!currentUserId) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center h-full bg-[#0a0a0a] rounded-xl">
+      <div className="flex-1 flex flex-col items-center justify-center h-full bg-black/35 border border-white/5 rounded-md backdrop-blur-[1px]">
         <div className="text-center">
           <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-gradient-to-br from-violet-500/15 via-neutral-800 to-neutral-900 border border-neutral-800 flex items-center justify-center">
             <span className="text-2xl font-serif text-neutral-400">H</span>
@@ -214,7 +214,7 @@ export function PerformanceChat({ planId, isOwner, currentUserId, isGroupPlan = 
           <p className="text-neutral-500 mb-4">{t('performanceChat.signInRequired')}</p>
           <a
             href="/login"
-            className="inline-flex px-5 py-2.5 bg-violet-600 hover:bg-violet-500 text-white text-sm font-medium rounded-xl transition-colors"
+            className="inline-flex px-5 py-2.5 bg-white hover:bg-neutral-200 text-black text-sm font-medium rounded-md transition-colors"
           >
             {t('common.signIn')}
           </a>
@@ -224,7 +224,7 @@ export function PerformanceChat({ planId, isOwner, currentUserId, isGroupPlan = 
   }
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-[#0a0a0a] rounded-xl overflow-hidden">
+    <div className="flex-1 flex flex-col h-full bg-black/35 border border-white/5 rounded-md overflow-hidden backdrop-blur-[1px]">
       {/* Main content - vertically centered container */}
       <div className="flex-1 min-h-0 flex flex-col items-center justify-center px-4 py-4 overflow-y-auto">
         <div className="w-full max-w-[760px] flex flex-col items-center">
@@ -233,11 +233,11 @@ export function PerformanceChat({ planId, isOwner, currentUserId, isGroupPlan = 
             <>
               {/* Helios-style avatar */}
               <div className="relative mb-4">
-                <div className="w-24 h-24 rounded-full bg-gradient-to-br from-violet-500/15 via-neutral-800 to-neutral-900 border border-violet-500/30 flex items-center justify-center overflow-hidden ring-2 ring-violet-500/20 ring-offset-2 ring-offset-[#0a0a0a]">
+                <div className="w-24 h-24 rounded-full bg-gradient-to-br from-neutral-700/40 via-neutral-800 to-neutral-900 border border-neutral-600/40 flex items-center justify-center overflow-hidden ring-2 ring-neutral-600/25 ring-offset-2 ring-offset-[#0a0a0a]">
                   <span className="text-3xl font-serif text-neutral-200">H</span>
                 </div>
                 {/* Soft glow */}
-                <div className="absolute inset-0 rounded-full pointer-events-none shadow-[0_0_40px_rgba(139,92,246,0.15)]" />
+                <div className="absolute inset-0 rounded-full pointer-events-none shadow-[0_0_40px_rgba(255,255,255,0.08)]" />
               </div>
 
               {/* Typed intro text - click to skip */}
@@ -250,7 +250,7 @@ export function PerformanceChat({ planId, isOwner, currentUserId, isGroupPlan = 
                   {displayedIntro}
                   {!typingDone && (
                     <span
-                      className="inline-block w-[2px] h-[1.1em] align-[-0.15em] ml-0.5 bg-violet-400/80 animate-pulse"
+                      className="inline-block w-[2px] h-[1.1em] align-[-0.15em] ml-0.5 bg-neutral-300/80 animate-pulse"
                       aria-hidden="true"
                     />
                   )}
@@ -266,7 +266,7 @@ export function PerformanceChat({ planId, isOwner, currentUserId, isGroupPlan = 
               />
 
               {/* Chat input card - styled like Helios action container */}
-              <div className="w-full rounded-2xl border border-neutral-800 bg-neutral-950/40 p-3">
+              <div className="w-full rounded-md border border-neutral-800 bg-neutral-950/40 p-3">
                 <p className="mb-2.5 text-center text-[11px] leading-tight text-neutral-500">
                   {t('performanceChat.exampleQuestions')}
                 </p>
@@ -275,7 +275,7 @@ export function PerformanceChat({ planId, isOwner, currentUserId, isGroupPlan = 
                     <button
                       key={i}
                       onClick={() => void sendMessage(example)}
-                      className="text-[12px] px-3 py-1.5 rounded-xl bg-neutral-800 border border-neutral-700 text-neutral-300 hover:bg-neutral-700 hover:border-neutral-600 hover:text-white transition-colors"
+                      className="text-[12px] px-3 py-1.5 rounded-md bg-neutral-800 border border-neutral-700 text-neutral-300 hover:bg-neutral-700 hover:border-neutral-600 hover:text-white transition-colors"
                     >
                       {example}
                     </button>
@@ -284,7 +284,7 @@ export function PerformanceChat({ planId, isOwner, currentUserId, isGroupPlan = 
                 
                 {/* Input */}
                 <form onSubmit={handleSubmit}>
-                  <div className="flex items-end gap-2 bg-neutral-900/60 border border-neutral-800 rounded-xl px-3 py-2">
+                  <div className="flex items-end gap-2 bg-neutral-900/60 border border-neutral-800 rounded-md px-3 py-2">
                     <textarea
                       ref={inputRef}
                       value={input}
@@ -298,7 +298,7 @@ export function PerformanceChat({ planId, isOwner, currentUserId, isGroupPlan = 
                     <button
                       type="submit"
                       disabled={!input.trim() || isLoading}
-                      className="p-1.5 text-violet-400 hover:text-violet-300 disabled:text-neutral-700 rounded-lg transition-colors flex-shrink-0"
+                      className="p-1.5 text-neutral-300 hover:text-white disabled:text-neutral-700 rounded-md transition-colors flex-shrink-0"
                     >
                       <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
@@ -313,24 +313,24 @@ export function PerformanceChat({ planId, isOwner, currentUserId, isGroupPlan = 
             <>
               {/* Small avatar at top */}
               <div className="relative mb-3 flex-shrink-0">
-                <div className="w-14 h-14 rounded-full bg-gradient-to-br from-violet-500/15 via-neutral-800 to-neutral-900 border border-violet-500/30 flex items-center justify-center ring-1 ring-violet-500/20 ring-offset-1 ring-offset-[#0a0a0a]">
+                <div className="w-14 h-14 rounded-full bg-gradient-to-br from-neutral-700/40 via-neutral-800 to-neutral-900 border border-neutral-600/40 flex items-center justify-center ring-1 ring-neutral-600/25 ring-offset-1 ring-offset-[#0a0a0a]">
                   <span className="text-xl font-serif text-neutral-200">H</span>
                 </div>
               </div>
 
               {/* Messages container - card style */}
-              <div className="w-full rounded-2xl border border-neutral-800 bg-neutral-950/40 p-3 mb-3 max-h-[520px] overflow-y-auto">
+              <div className="w-full rounded-md border border-neutral-800 bg-neutral-950/40 p-3 mb-3 max-h-[520px] overflow-y-auto">
                 <div className="space-y-3">
                   {messages.map((msg) => (
                     <div key={msg.id} className={`flex gap-2.5 ${msg.role === "user" ? "flex-row-reverse" : ""}`}>
                       {/* Mini avatar */}
                       {msg.role === "assistant" ? (
-                        <div className="flex-shrink-0 w-6 h-6 rounded-full bg-gradient-to-br from-violet-500/20 via-neutral-800 to-neutral-900 border border-violet-500/30 flex items-center justify-center">
+                        <div className="flex-shrink-0 w-6 h-6 rounded-full bg-gradient-to-br from-neutral-700/40 via-neutral-800 to-neutral-900 border border-neutral-600/40 flex items-center justify-center">
                           <span className="text-[10px] font-serif text-neutral-300">H</span>
                         </div>
                       ) : (
-                        <div className="flex-shrink-0 w-6 h-6 rounded-full bg-blue-600 flex items-center justify-center">
-                          <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <div className="flex-shrink-0 w-6 h-6 rounded-full bg-neutral-200 flex items-center justify-center">
+                          <svg className="w-3 h-3 text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                             <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                           </svg>
                         </div>
@@ -338,9 +338,9 @@ export function PerformanceChat({ planId, isOwner, currentUserId, isGroupPlan = 
 
                       {/* Message bubble */}
                       <div
-                        className={`relative group flex-1 min-w-0 px-3 py-2 rounded-xl ${
+                        className={`relative group flex-1 min-w-0 px-3 py-2 rounded-md ${
                           msg.role === "user"
-                            ? "bg-blue-600 text-white rounded-br-sm"
+                            ? "bg-neutral-100 text-black rounded-br-sm"
                             : "bg-neutral-800/70 border border-neutral-700/50 text-neutral-200 rounded-bl-sm"
                         }`}
                       >
@@ -348,8 +348,8 @@ export function PerformanceChat({ planId, isOwner, currentUserId, isGroupPlan = 
                           className="prose prose-invert prose-sm max-w-none text-sm leading-7
                           prose-p:my-3 prose-headings:mt-5 prose-headings:mb-2 prose-headings:text-sm prose-headings:font-semibold
                           prose-ul:my-3 prose-ul:pl-4 prose-ol:my-3 prose-ol:pl-4
-                          prose-li:my-1 prose-li:leading-6 prose-code:text-cyan-300 prose-code:bg-neutral-700/50 prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:text-xs
-                          prose-strong:text-neutral-100 prose-a:text-cyan-400"
+                          prose-li:my-1 prose-li:leading-6 prose-code:text-neutral-200 prose-code:bg-neutral-700/50 prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:text-xs
+                          prose-strong:text-neutral-100 prose-a:text-neutral-200"
                         >
                           <ReactMarkdown
                             remarkPlugins={[remarkGfm, remarkMath]}
@@ -384,14 +384,14 @@ export function PerformanceChat({ planId, isOwner, currentUserId, isGroupPlan = 
                   {/* Loading indicator */}
                   {isLoading && (
                     <div className="flex gap-2.5">
-                      <div className="flex-shrink-0 w-6 h-6 rounded-full bg-gradient-to-br from-violet-500/20 via-neutral-800 to-neutral-900 border border-violet-500/30 flex items-center justify-center">
+                      <div className="flex-shrink-0 w-6 h-6 rounded-full bg-gradient-to-br from-neutral-700/40 via-neutral-800 to-neutral-900 border border-neutral-600/40 flex items-center justify-center">
                         <span className="text-[10px] font-serif text-neutral-300">H</span>
                       </div>
-                      <div className="bg-neutral-800/70 border border-neutral-700/50 px-3 py-2 rounded-xl rounded-bl-sm">
+                      <div className="bg-neutral-800/70 border border-neutral-700/50 px-3 py-2 rounded-md rounded-bl-sm">
                         <div className="flex gap-1">
-                          <div className="w-1.5 h-1.5 bg-violet-400/60 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
-                          <div className="w-1.5 h-1.5 bg-violet-400/60 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
-                          <div className="w-1.5 h-1.5 bg-violet-400/60 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+                          <div className="w-1.5 h-1.5 bg-neutral-400/70 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
+                          <div className="w-1.5 h-1.5 bg-neutral-400/70 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
+                          <div className="w-1.5 h-1.5 bg-neutral-400/70 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
                         </div>
                       </div>
                     </div>
@@ -402,7 +402,7 @@ export function PerformanceChat({ planId, isOwner, currentUserId, isGroupPlan = 
               </div>
 
               {/* Input card */}
-              <div className="w-full rounded-2xl border border-neutral-800 bg-neutral-950/40 p-3">
+              <div className="w-full rounded-md border border-neutral-800 bg-neutral-950/40 p-3">
                 <div className="flex flex-wrap gap-2 mb-3">
                   {starterPrompts.slice(0, 4).map((example, i) => (
                     <button
@@ -410,14 +410,14 @@ export function PerformanceChat({ planId, isOwner, currentUserId, isGroupPlan = 
                       type="button"
                       onClick={() => void sendMessage(example)}
                       disabled={isLoading}
-                      className="text-[11px] px-2.5 py-1 rounded-lg bg-neutral-900 border border-neutral-800 text-neutral-400 hover:bg-neutral-800 hover:text-neutral-200 disabled:opacity-50 transition-colors"
+                      className="text-[11px] px-2.5 py-1 rounded bg-neutral-900 border border-neutral-800 text-neutral-400 hover:bg-neutral-800 hover:text-neutral-200 disabled:opacity-50 transition-colors"
                     >
                       {example}
                     </button>
                   ))}
                 </div>
                 <form onSubmit={handleSubmit}>
-                  <div className="flex items-end gap-2 bg-neutral-900/60 border border-neutral-800 rounded-xl px-3 py-2">
+                  <div className="flex items-end gap-2 bg-neutral-900/60 border border-neutral-800 rounded-md px-3 py-2">
                     <textarea
                       ref={inputRef}
                       value={input}
@@ -431,7 +431,7 @@ export function PerformanceChat({ planId, isOwner, currentUserId, isGroupPlan = 
                     <button
                       type="submit"
                       disabled={!input.trim() || isLoading}
-                      className="p-1.5 text-violet-400 hover:text-violet-300 disabled:text-neutral-700 rounded-lg transition-colors flex-shrink-0"
+                      className="p-1.5 text-neutral-300 hover:text-white disabled:text-neutral-700 rounded-md transition-colors flex-shrink-0"
                     >
                       <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />

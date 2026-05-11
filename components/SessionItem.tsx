@@ -156,7 +156,7 @@ export function SessionItem({
   const dotColor = isCompleted 
     ? "bg-green-400" 
     : isInProgress 
-      ? "bg-blue-400 animate-pulse" 
+      ? "bg-yellow-400 animate-pulse" 
       : isLocked 
         ? "bg-neutral-600" 
         : "bg-neutral-400";
@@ -165,8 +165,8 @@ export function SessionItem({
     <div 
       id={`session-item-${node.id}`}
       className={`
-        rounded-xl transition-all duration-200 
-        ${highlighted ? "ring-1 ring-cyan-400/50" : ""}
+        rounded-md transition-all duration-200 
+        ${highlighted ? "ring-1 ring-neutral-300/40" : ""}
         ${isExpanded 
           ? "bg-neutral-800/60 shadow-lg shadow-black/20 border border-neutral-700/50" 
           : "hover:bg-neutral-800/30 hover:-translate-y-[1px] hover:shadow-md hover:shadow-black/10 border border-transparent"
@@ -185,7 +185,7 @@ export function SessionItem({
               isCompleted 
                 ? "bg-green-500/15 text-green-400" 
                 : isInProgress 
-                  ? "bg-blue-500/15 text-blue-400" 
+                  ? "bg-yellow-500/15 text-yellow-400" 
                   : "bg-neutral-800 text-neutral-400"
             }`}>
               {isCompleted ? (
@@ -234,7 +234,7 @@ export function SessionItem({
               <button
                 key={n.id}
                 onClick={(e) => { e.stopPropagation(); onNavigateToNode?.(n.id); }}
-                className="text-[10px] px-1.5 py-0.5 rounded bg-neutral-800/60 text-neutral-500 hover:text-blue-400 transition-colors"
+                className="text-[10px] px-1.5 py-0.5 rounded bg-neutral-800/60 text-neutral-500 hover:text-neutral-200 transition-colors"
               >
                 {n.title}
               </button>
@@ -262,7 +262,7 @@ export function SessionItem({
                 <button
                   key={n.id}
                   onClick={(e) => { e.stopPropagation(); onNavigateToNode?.(n.id); }}
-                  className="text-xs px-2 py-0.5 rounded-md bg-neutral-800/60 text-neutral-400 hover:text-blue-400 hover:bg-neutral-700/60 transition-colors"
+                  className="text-xs px-2 py-0.5 rounded bg-neutral-800/60 text-neutral-400 hover:text-neutral-200 hover:bg-neutral-700/60 transition-colors"
                 >
                   {n.title} &rarr;
                 </button>
@@ -290,7 +290,7 @@ export function SessionItem({
                   onChange={(e) => setEditedPlanningPrompt(e.target.value)}
                   onBlur={savePlanningPrompt}
                   placeholder={t('sessionItem.customInstructions')}
-                  className="w-full mt-2 px-3 py-2 bg-neutral-900/60 border border-neutral-700/50 rounded-lg text-sm text-white placeholder:text-neutral-600 focus:outline-none focus:border-neutral-600 resize-none"
+                  className="w-full mt-2 px-3 py-2 bg-neutral-900/60 border border-neutral-700/50 rounded-md text-sm text-white placeholder:text-neutral-600 focus:outline-none focus:border-neutral-600 resize-none"
                   rows={2}
                   onClick={(e) => e.stopPropagation()}
                 />
@@ -305,7 +305,7 @@ export function SessionItem({
                 <button
                   onClick={(e) => { e.stopPropagation(); handleStart(); }}
                   disabled={isStarting}
-                  className="flex-1 px-4 py-2 bg-neutral-700 hover:bg-neutral-600 disabled:bg-neutral-800 text-white text-sm font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
+                  className="flex-1 px-4 py-2 bg-neutral-700 hover:bg-neutral-600 disabled:bg-neutral-800 text-white text-sm font-medium rounded-md transition-colors flex items-center justify-center gap-2"
                 >
                   {isStarting ? t('sessionItem.starting') : (
                     <>
@@ -320,8 +320,8 @@ export function SessionItem({
                 <button
                   onClick={(e) => { e.stopPropagation(); handleStart(); }}
                   disabled={isStarting}
-                  className={`flex-1 px-4 py-2 disabled:bg-neutral-700 text-white text-sm font-medium rounded-lg transition-colors ${
-                    activeSession ? "bg-green-600 hover:bg-green-500" : "bg-blue-600 hover:bg-blue-500"
+                  className={`flex-1 px-4 py-2 disabled:bg-neutral-700 text-white text-sm font-medium rounded-md transition-colors ${
+                    activeSession ? "bg-green-600 hover:bg-green-500" : "bg-white hover:bg-neutral-200 text-black"
                   }`}
                 >
                   {isStarting ? t('sessionItem.starting') : activeSession ? t('sessionItem.resumeLesson') : t('sessionItem.startLesson')}

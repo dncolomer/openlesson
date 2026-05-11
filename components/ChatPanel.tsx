@@ -68,22 +68,22 @@ function OnboardingCard({ onPrompt }: { onPrompt: (prompt: string) => void }) {
   return (
     <>
       <div className="relative mb-4">
-        <div className="w-24 h-24 rounded-full bg-gradient-to-br from-violet-500/15 via-neutral-800 to-neutral-900 border border-violet-500/30 flex items-center justify-center overflow-hidden ring-2 ring-violet-500/20 ring-offset-2 ring-offset-[#0a0a0a]">
+        <div className="w-24 h-24 rounded-full bg-gradient-to-br from-neutral-700/40 via-neutral-800 to-neutral-900 border border-neutral-600/40 flex items-center justify-center overflow-hidden ring-2 ring-neutral-600/25 ring-offset-2 ring-offset-[#0a0a0a]">
           <span className="text-3xl font-serif text-neutral-200">H</span>
         </div>
-        <div className="absolute inset-0 rounded-full pointer-events-none shadow-[0_0_40px_rgba(139,92,246,0.15)]" />
+        <div className="absolute inset-0 rounded-full pointer-events-none shadow-[0_0_40px_rgba(255,255,255,0.08)]" />
       </div>
       <button type="button" onClick={() => { if (!isDone) skip(); }} className="relative max-w-md cursor-text text-center focus:outline-none mb-3">
         <p className="whitespace-pre-line text-base leading-relaxed text-neutral-200">
           {displayed}
           {!isDone && (
-            <span className="inline-block w-[2px] h-[1.1em] align-[-0.15em] ml-0.5 bg-violet-400/80 animate-pulse" aria-hidden="true" />
+            <span className="inline-block w-[2px] h-[1.1em] align-[-0.15em] ml-0.5 bg-neutral-300/80 animate-pulse" aria-hidden="true" />
           )}
         </p>
       </button>
       <ListenButton text={introText} cacheKey="plan-builder-intro" size="md" className="mb-4" />
 
-      <div className="w-full rounded-2xl border border-neutral-800 bg-neutral-950/40 p-3">
+      <div className="w-full rounded-md border border-neutral-800 bg-neutral-950/40 p-3">
         <p className="mb-2.5 text-center text-[11px] leading-tight text-neutral-500">{t('chatPanel.tellMeHow')}</p>
         <div className="flex flex-wrap justify-center gap-2 mb-3">
           {hints.map((h) => (
@@ -91,7 +91,7 @@ function OnboardingCard({ onPrompt }: { onPrompt: (prompt: string) => void }) {
               key={h.label}
               type="button"
               onClick={() => onPrompt(h.example.replace(/^"|"$/g, ""))}
-              className="text-[12px] px-3 py-1.5 rounded-xl bg-neutral-800 border border-neutral-700 text-neutral-300 hover:bg-neutral-700 hover:border-neutral-600 hover:text-white transition-colors"
+              className="text-[12px] px-3 py-1.5 rounded-md bg-neutral-800 border border-neutral-700 text-neutral-300 hover:bg-neutral-700 hover:border-neutral-600 hover:text-white transition-colors"
             >
               {h.label}
             </button>
@@ -105,10 +105,10 @@ function OnboardingCard({ onPrompt }: { onPrompt: (prompt: string) => void }) {
 function HeliosAvatar({ small = false }: { small?: boolean }) {
   return (
     <div className="relative mb-3 flex-shrink-0">
-      <div className={`${small ? "w-14 h-14 ring-1 ring-offset-1" : "w-24 h-24 ring-2 ring-offset-2"} rounded-full bg-gradient-to-br from-violet-500/15 via-neutral-800 to-neutral-900 border border-violet-500/30 flex items-center justify-center overflow-hidden ring-violet-500/20 ring-offset-[#0a0a0a]`}>
+      <div className={`${small ? "w-14 h-14 ring-1 ring-offset-1" : "w-24 h-24 ring-2 ring-offset-2"} rounded-full bg-gradient-to-br from-neutral-700/40 via-neutral-800 to-neutral-900 border border-neutral-600/40 flex items-center justify-center overflow-hidden ring-neutral-600/25 ring-offset-[#0a0a0a]`}>
         <span className={`${small ? "text-xl" : "text-3xl"} font-serif text-neutral-200`}>H</span>
       </div>
-      <div className="absolute inset-0 rounded-full pointer-events-none shadow-[0_0_40px_rgba(139,92,246,0.15)]" />
+      <div className="absolute inset-0 rounded-full pointer-events-none shadow-[0_0_40px_rgba(255,255,255,0.08)]" />
     </div>
   );
 }
@@ -267,7 +267,7 @@ export function ChatPanel({ planId, model, onModelChange, onRefresh, onNodesUpda
   const removeImage = (id: string) => { setUploadedImages((prev) => prev.filter((img) => img.id !== id)); };
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-[#0a0a0a] rounded-xl overflow-hidden">
+    <div className="flex-1 flex flex-col h-full bg-black/35 border border-white/5 rounded-md overflow-hidden backdrop-blur-[1px]">
       <div className="flex-1 min-h-0 flex flex-col items-center justify-center px-4 py-4 overflow-y-auto">
         <div className="w-full max-w-[760px] flex flex-col items-center">
           {messages.length === 0 ? (
@@ -275,22 +275,22 @@ export function ChatPanel({ planId, model, onModelChange, onRefresh, onNodesUpda
           ) : (
             <>
               <HeliosAvatar small />
-              <div className="w-full rounded-2xl border border-neutral-800 bg-neutral-950/40 p-3 mb-3 max-h-[520px] overflow-y-auto">
+              <div className="w-full rounded-md border border-neutral-800 bg-neutral-950/40 p-3 mb-3 max-h-[520px] overflow-y-auto">
                 <div className="space-y-3">
                   {messages.map((msg) => (
                     <div key={msg.id} className={`flex gap-2.5 ${msg.role === "user" ? "flex-row-reverse" : ""}`}>
                       {msg.role === "assistant" ? (
-                        <div className="flex-shrink-0 w-6 h-6 rounded-full bg-gradient-to-br from-violet-500/20 via-neutral-800 to-neutral-900 border border-violet-500/30 flex items-center justify-center">
+                        <div className="flex-shrink-0 w-6 h-6 rounded-full bg-gradient-to-br from-neutral-700/40 via-neutral-800 to-neutral-900 border border-neutral-600/40 flex items-center justify-center">
                           <span className="text-[10px] font-serif text-neutral-300">H</span>
                         </div>
                       ) : (
-                        <div className="flex-shrink-0 w-6 h-6 rounded-full bg-blue-600 flex items-center justify-center">
-                          <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <div className="flex-shrink-0 w-6 h-6 rounded-full bg-neutral-200 flex items-center justify-center">
+                          <svg className="w-3 h-3 text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                             <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                           </svg>
                         </div>
                       )}
-                      <div className={`relative group flex-1 min-w-0 px-3 py-2 rounded-xl ${msg.role === "user" ? "bg-blue-600 text-white rounded-br-sm" : "bg-neutral-800/70 border border-neutral-700/50 text-neutral-200 rounded-bl-sm"}`}>
+                      <div className={`relative group flex-1 min-w-0 px-3 py-2 rounded-md ${msg.role === "user" ? "bg-neutral-100 text-black rounded-br-sm" : "bg-neutral-800/70 border border-neutral-700/50 text-neutral-200 rounded-bl-sm"}`}>
                         {msg.images && msg.images.length > 0 && (
                           <div className="flex gap-1.5 mb-1.5 flex-wrap">
                             {msg.images.map((img) => (
@@ -298,7 +298,7 @@ export function ChatPanel({ planId, model, onModelChange, onRefresh, onNodesUpda
                             ))}
                           </div>
                         )}
-                        <div className="prose prose-invert prose-sm max-w-none text-sm leading-7 prose-p:my-3 prose-headings:mt-5 prose-headings:mb-2 prose-headings:text-sm prose-headings:font-semibold prose-ul:my-3 prose-ul:pl-4 prose-ol:my-3 prose-ol:pl-4 prose-li:my-1 prose-li:leading-6 prose-code:text-cyan-300 prose-code:bg-neutral-700/50 prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:text-xs prose-strong:text-neutral-100 prose-a:text-cyan-400">
+                        <div className="prose prose-invert prose-sm max-w-none text-sm leading-7 prose-p:my-3 prose-headings:mt-5 prose-headings:mb-2 prose-headings:text-sm prose-headings:font-semibold prose-ul:my-3 prose-ul:pl-4 prose-ol:my-3 prose-ol:pl-4 prose-li:my-1 prose-li:leading-6 prose-code:text-neutral-200 prose-code:bg-neutral-700/50 prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:text-xs prose-strong:text-neutral-100 prose-a:text-neutral-200">
                           {msg.content && (
                             <ReactMarkdown remarkPlugins={[remarkGfm, remarkMath]} rehypePlugins={[[rehypeKatex, { throwOnError: false, strict: false }]]}>
                               {msg.content}
@@ -310,14 +310,14 @@ export function ChatPanel({ planId, model, onModelChange, onRefresh, onNodesUpda
                   ))}
                   {isLoading && (
                     <div className="flex gap-2.5">
-                      <div className="flex-shrink-0 w-6 h-6 rounded-full bg-gradient-to-br from-violet-500/20 via-neutral-800 to-neutral-900 border border-violet-500/30 flex items-center justify-center">
+                      <div className="flex-shrink-0 w-6 h-6 rounded-full bg-gradient-to-br from-neutral-700/40 via-neutral-800 to-neutral-900 border border-neutral-600/40 flex items-center justify-center">
                         <span className="text-[10px] font-serif text-neutral-300">H</span>
                       </div>
-                      <div className="bg-neutral-800/70 border border-neutral-700/50 px-3 py-2 rounded-xl rounded-bl-sm">
+                      <div className="bg-neutral-800/70 border border-neutral-700/50 px-3 py-2 rounded-md rounded-bl-sm">
                         <div className="flex gap-1">
-                          <div className="w-1.5 h-1.5 bg-violet-400/60 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
-                          <div className="w-1.5 h-1.5 bg-violet-400/60 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
-                          <div className="w-1.5 h-1.5 bg-violet-400/60 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+                          <div className="w-1.5 h-1.5 bg-neutral-400/70 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
+                          <div className="w-1.5 h-1.5 bg-neutral-400/70 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
+                          <div className="w-1.5 h-1.5 bg-neutral-400/70 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
                         </div>
                       </div>
                     </div>
@@ -329,24 +329,24 @@ export function ChatPanel({ planId, model, onModelChange, onRefresh, onNodesUpda
           )}
 
       {!currentUserId ? (
-        <div className="w-full rounded-2xl border border-neutral-800 bg-neutral-950/40 p-3">
+        <div className="w-full rounded-md border border-neutral-800 bg-neutral-950/40 p-3">
           <p className="text-xs text-neutral-500 text-center mb-2">{t('chatPanel.signUpToCustomize')}</p>
-          <a href="/register" className="block w-full py-2.5 bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium rounded-xl transition-colors text-center">
+          <a href="/register" className="block w-full py-2.5 bg-white hover:bg-neutral-200 text-black text-sm font-medium rounded-md transition-colors text-center">
             {t('chatPanel.signUpCta')}
           </a>
         </div>
       ) : !isOwner ? (
-        <div className="w-full rounded-2xl border border-neutral-800 bg-neutral-950/40 p-3">
+        <div className="w-full rounded-md border border-neutral-800 bg-neutral-950/40 p-3">
           <p className="text-xs text-neutral-500 text-center mb-2">{t('chatPanel.forkToCustomize')}</p>
           <button
             onClick={() => { window.dispatchEvent(new CustomEvent("openRemixModal")); }}
-            className="w-full py-2.5 bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium rounded-xl transition-colors"
+            className="w-full py-2.5 bg-white hover:bg-neutral-200 text-black text-sm font-medium rounded-md transition-colors"
           >
             {t('planView.forkRemix')}
           </button>
         </div>
       ) : (
-        <form onSubmit={handleSubmit} className="w-full rounded-2xl border border-neutral-800 bg-neutral-950/40 p-3">
+        <form onSubmit={handleSubmit} className="w-full rounded-md border border-neutral-800 bg-neutral-950/40 p-3">
           {uploadedImages.length > 0 && (
             <div className="flex gap-1.5 mb-2 flex-wrap">
               {uploadedImages.map((img) => (
@@ -364,7 +364,7 @@ export function ChatPanel({ planId, model, onModelChange, onRefresh, onNodesUpda
             </div>
           )}
           <div
-            className={`flex items-end gap-2 bg-neutral-900/60 border border-neutral-800 rounded-xl px-3 py-2 ${isDragging ? "ring-2 ring-violet-500" : ""}`}
+            className={`flex items-end gap-2 bg-neutral-900/60 border border-neutral-800 rounded-md px-3 py-2 ${isDragging ? "ring-2 ring-neutral-400" : ""}`}
             onDrop={handleDrop}
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
@@ -389,7 +389,7 @@ export function ChatPanel({ planId, model, onModelChange, onRefresh, onNodesUpda
             <button
               type="submit"
               disabled={(!input.trim() && uploadedImages.length === 0) || isLoading}
-              className="p-1.5 text-violet-400 hover:text-violet-300 disabled:text-neutral-700 rounded-lg transition-colors flex-shrink-0"
+              className="p-1.5 text-neutral-300 hover:text-white disabled:text-neutral-700 rounded-md transition-colors flex-shrink-0"
             >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />

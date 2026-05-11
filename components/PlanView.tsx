@@ -4,7 +4,6 @@ import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
 import Link from "next/link";
-import Image from "next/image";
 import { PlanChat } from "@/components/PlanChat";
 import { Navbar } from "@/components/Navbar";
 import { RemixModal } from "@/components/RemixModal";
@@ -14,6 +13,7 @@ import remarkGfm from "remark-gfm";
 import { PerformanceChat } from "@/components/PerformanceChat";
 import { PlanFilesTab } from "@/components/PlanFilesTab";
 import { SessionList } from "@/components/SessionList";
+import { fetchAestheticPackages } from "@/lib/aesthetics";
 
 export interface PlanNode {
   id: string;
@@ -55,17 +55,16 @@ function planShareSlug(plan: LearningPlan) {
   return encodeURIComponent(title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") || "plan");
 }
 
-// Default placeholder gradient for plans without cover images
-function CoverPlaceholder({ title }: { title: string }) {
-  return (
-    <div className="absolute inset-0 bg-gradient-to-br from-violet-950/80 via-slate-900 to-emerald-950/60">
-      <div className="absolute inset-0 opacity-30">
-        <div className="absolute top-[-20%] right-[-10%] w-[60%] h-[60%] rounded-full bg-gradient-radial from-emerald-500/20 to-transparent blur-3xl" />
-        <div className="absolute bottom-[-10%] left-[-5%] w-[40%] h-[40%] rounded-full bg-gradient-radial from-violet-500/20 to-transparent blur-3xl" />
-        <div className="absolute top-[30%] left-[40%] w-[30%] h-[30%] rounded-full bg-gradient-radial from-blue-500/15 to-transparent blur-2xl" />
-      </div>
-    </div>
-  );
+const FALLBACK_AESTHETIC_IMAGES = [
+  "/aesthetics/architecture/HHfAOzYWYAAhCDa.jpeg",
+  "/aesthetics/Greco-futurism/HHnTrjJbQAAOz7K.jpeg",
+  "/aesthetics/galactic-stoneworks/HHjOxLWXMAEFcn0.jpeg",
+  "/aesthetics/lunar/HE2xzURWUAAd6N2.jpeg",
+  "/aesthetics/piotr-binkowski/HGHQJOtWgAAOGtm.jpeg",
+];
+
+function randomAestheticImage(images = FALLBACK_AESTHETIC_IMAGES) {
+  return images[Math.floor(Math.random() * images.length)] || FALLBACK_AESTHETIC_IMAGES[0];
 }
 
 export function PlanView({ initialPlan, initialNodes }: PlanViewProps) {
@@ -91,8 +90,8 @@ export function PlanView({ initialPlan, initialNodes }: PlanViewProps) {
   const [notesContent, setNotesContent] = useState(initialPlan?.notes || "");
   const [isEditingNotes, setIsEditingNotes] = useState(false);
   const [savingNotes, setSavingNotes] = useState(false);
-  const [generatingCover, setGeneratingCover] = useState(false);
   const [mobileColumn, setMobileColumn] = useState<"plan" | "sessions" | "workspace">("plan");
+  const [workspaceImage, setWorkspaceImage] = useState(() => randomAestheticImage());
   
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -117,53 +116,22 @@ export function PlanView({ initialPlan, initialNodes }: PlanViewProps) {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const handleRegenerateCover = useCallback(async () => {
-    if (!plan || generatingCover) return;
-    setGeneratingCover(true);
-    try {
-      const res = await fetch("/api/learning-plan/generate-cover", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ planId: plan.id, description: plan.description || plan.root_topic }),
-      });
-      const data = await res.json();
-      if (data.coverImageUrl) {
-        setPlan({ ...plan, cover_image_url: data.coverImageUrl });
-      }
-    } catch (err) {
-      console.error("Failed to regenerate cover:", err);
-    } finally {
-      setGeneratingCover(false);
-    }
-  }, [plan, generatingCover]);
-
-  // Poll for cover image if plan has none (just created)
   useEffect(() => {
-    if (!plan || plan.cover_image_url || !isOwner) return;
-    
-    let attempts = 0;
-    const maxAttempts = 12; // ~60 seconds
-    const interval = setInterval(async () => {
-      attempts++;
-      if (attempts >= maxAttempts) {
-        clearInterval(interval);
-        return;
-      }
-      try {
-        const { data } = await supabase
-          .from("learning_plans")
-          .select("cover_image_url")
-          .eq("id", plan.id)
-          .single();
-        if (data?.cover_image_url) {
-          setPlan(prev => prev ? { ...prev, cover_image_url: data.cover_image_url } : prev);
-          clearInterval(interval);
-        }
-      } catch {}
-    }, 5000);
+    let cancelled = false;
 
-    return () => clearInterval(interval);
-  }, [plan?.id, plan?.cover_image_url, isOwner]);
+    fetchAestheticPackages()
+      .then((packages) => {
+        if (cancelled) return;
+        const images = packages.flatMap((pkg) => pkg.images);
+        if (images.length === 0) return;
+        setWorkspaceImage(randomAestheticImage(images));
+      })
+      .catch(() => {});
+
+    return () => {
+      cancelled = true;
+    };
+  }, [planId]);
 
   useEffect(() => {
     async function loadPlan() {
@@ -387,7 +355,7 @@ export function PlanView({ initialPlan, initialNodes }: PlanViewProps) {
     return (
       <div className="min-h-screen bg-[#0a0a0a] flex flex-col items-center justify-center gap-4">
         <div className="text-red-400">{error || t('planView.planNotFound')}</div>
-        <Link href="/" className="text-blue-400 hover:underline">
+        <Link href="/" className="text-neutral-300 hover:text-white hover:underline">
           {t('planView.goBackHome')}
         </Link>
       </div>
@@ -423,39 +391,6 @@ export function PlanView({ initialPlan, initialNodes }: PlanViewProps) {
 
       <div className="flex-1 min-h-0 flex flex-col md:flex-row overflow-hidden">
         <aside className={`${mobileColumn === "plan" ? "flex" : "hidden"} group flex-1 min-h-0 flex-col md:flex md:flex-none md:w-[24vw] xl:w-[13vw] md:h-full border-b md:border-b-0 md:border-r border-neutral-800/50 bg-[#0b0b0b] overflow-y-auto md:overflow-hidden`}>
-          <div className="relative h-[38vh] min-h-56 md:h-[30%] md:min-h-52 md:max-h-80 flex-shrink-0 overflow-hidden">
-            {plan.cover_image_url ? (
-              <img
-                src={plan.cover_image_url}
-                alt=""
-                className="absolute inset-0 w-full h-full object-cover scale-105"
-              />
-            ) : (
-              <CoverPlaceholder title={plan.root_topic} />
-            )}
-            <div className="absolute inset-0 bg-gradient-to-t from-[#0b0b0b] via-[#0b0b0b]/50 to-transparent" />
-            {isOwner && (
-              <button
-                onClick={handleRegenerateCover}
-                disabled={generatingCover}
-                className="absolute top-3 right-3 p-2 rounded-lg bg-black/40 backdrop-blur-sm border border-white/10 text-white/60 hover:text-white hover:bg-black/60 transition-all md:opacity-0 md:group-hover:opacity-100 disabled:opacity-50"
-                title={plan.cover_image_url ? t('planView.regenerateCoverImage') : t('planView.generateCoverImage')}
-              >
-                {generatingCover ? (
-                  <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                  </svg>
-                ) : (
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0z" />
-                  </svg>
-                )}
-              </button>
-            )}
-          </div>
-
           <div className="p-4 md:p-5 space-y-4 md:flex-1 md:min-h-0 md:overflow-y-auto">
             <div>
               {isEditingTitle ? (
@@ -464,7 +399,7 @@ export function PlanView({ initialPlan, initialNodes }: PlanViewProps) {
                     type="text"
                     value={editTitle}
                     onChange={(e) => setEditTitle(e.target.value)}
-                    className="w-full px-3 py-2 bg-neutral-900 border border-neutral-700 rounded-lg text-white text-lg font-bold focus:outline-none focus:border-blue-500"
+                    className="w-full px-3 py-2 bg-neutral-900 border border-neutral-700 rounded-md text-white text-lg font-bold focus:outline-none focus:border-neutral-400"
                     autoFocus
                   />
                   <div className="flex items-center gap-2">
@@ -486,13 +421,13 @@ export function PlanView({ initialPlan, initialNodes }: PlanViewProps) {
                           console.error("Error updating title:", err);
                         }
                       }}
-                      className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-sm rounded-lg transition-colors"
+                      className="px-3 py-1.5 bg-white hover:bg-neutral-200 text-black text-sm rounded-md transition-colors"
                     >
                       {t('common.save')}
                     </button>
                     <button
                       onClick={() => { setEditTitle(plan.root_topic); setIsEditingTitle(false); }}
-                      className="px-3 py-1.5 bg-neutral-800 hover:bg-neutral-700 text-white text-sm rounded-lg transition-colors"
+                      className="px-3 py-1.5 bg-neutral-800 hover:bg-neutral-700 text-white text-sm rounded-md transition-colors"
                     >
                       {t('common.cancel')}
                     </button>
@@ -522,7 +457,7 @@ export function PlanView({ initialPlan, initialNodes }: PlanViewProps) {
 
             <div className="flex flex-wrap items-center gap-2 text-xs">
               {plan.is_group && (
-                <span className="text-violet-400 bg-violet-500/10 border border-violet-500/20 px-1.5 py-0.5 rounded text-[10px] font-medium uppercase tracking-wider">
+                <span className="text-neutral-300 bg-white/10 border border-white/15 px-1.5 py-0.5 rounded text-[10px] font-medium uppercase tracking-wider">
                   {t('planView.group')}
                 </span>
               )}
@@ -535,7 +470,7 @@ export function PlanView({ initialPlan, initialNodes }: PlanViewProps) {
                 </span>
               )}
               {plan.original_plan_id && (
-                <span className="text-violet-400/70 font-medium">{t('planView.remixed')}</span>
+                <span className="text-neutral-400 font-medium">{t('planView.remixed')}</span>
               )}
             </div>
 
@@ -546,11 +481,11 @@ export function PlanView({ initialPlan, initialNodes }: PlanViewProps) {
                     value={editDescription}
                     onChange={(e) => setEditDescription(e.target.value)}
                     placeholder={t('planView.addDescription')}
-                    className="w-full min-h-20 px-3 py-2 bg-neutral-900 border border-neutral-700 rounded-lg text-white text-sm focus:outline-none focus:border-blue-500 resize-none"
+                    className="w-full min-h-20 px-3 py-2 bg-neutral-900 border border-neutral-700 rounded-md text-white text-sm focus:outline-none focus:border-neutral-400 resize-none"
                     autoFocus
                   />
                   <div className="flex items-center gap-3 text-xs">
-                    <button onClick={saveDescription} disabled={savingDescription} className="text-blue-400 hover:text-blue-300 font-medium">
+                    <button onClick={saveDescription} disabled={savingDescription} className="text-neutral-200 hover:text-white font-medium">
                       {savingDescription ? "..." : t('common.save')}
                     </button>
                     <button onClick={() => { setEditDescription(plan.description || ""); setIsEditingDescription(false); }} className="text-neutral-500 hover:text-neutral-300">
@@ -573,7 +508,7 @@ export function PlanView({ initialPlan, initialNodes }: PlanViewProps) {
               {(plan.is_public || plan.is_group) && (
                 <button
                   onClick={handleShare}
-                  className="w-full text-xs px-3 py-2 rounded-lg bg-white/10 border border-white/10 text-white/70 hover:text-white hover:bg-white/15 transition-all"
+                  className="w-full text-xs px-3 py-2 rounded-md bg-white/10 border border-white/10 text-white/70 hover:text-white hover:bg-white/15 transition-all"
                 >
                   {copied ? t('planView.copied') : t('planView.share')}
                 </button>
@@ -597,9 +532,9 @@ export function PlanView({ initialPlan, initialNodes }: PlanViewProps) {
                         console.error("Error toggling group mode:", err);
                       }
                     }}
-                    className={`w-full text-xs px-3 py-2 rounded-lg border transition-all ${
+                    className={`w-full text-xs px-3 py-2 rounded-md border transition-all ${
                       plan.is_group
-                        ? "bg-violet-500/15 border-violet-500/30 text-violet-400 hover:bg-violet-500/25"
+                        ? "bg-white/15 border-white/25 text-white hover:bg-white/20"
                         : "bg-white/10 border-white/10 text-white/70 hover:text-white hover:bg-white/15"
                     }`}
                   >
@@ -622,7 +557,7 @@ export function PlanView({ initialPlan, initialNodes }: PlanViewProps) {
                         console.error("Error toggling visibility:", err);
                       }
                     }}
-                    className={`w-full text-xs px-3 py-2 rounded-lg border transition-all ${
+                    className={`w-full text-xs px-3 py-2 rounded-md border transition-all ${
                       plan.is_public
                         ? "bg-green-500/15 border-green-500/30 text-green-400 hover:bg-green-500/25"
                         : "bg-white/10 border-white/10 text-white/70 hover:text-white hover:bg-white/15"
@@ -633,7 +568,7 @@ export function PlanView({ initialPlan, initialNodes }: PlanViewProps) {
                   {plan.is_public && !isEditingDescription && (
                     <button
                       onClick={() => setShowRemixModal(true)}
-                      className="w-full text-xs px-3 py-2 rounded-lg border border-neutral-800 text-neutral-500 hover:text-neutral-300 hover:bg-neutral-900 transition-colors"
+                      className="w-full text-xs px-3 py-2 rounded-md border border-neutral-800 text-neutral-500 hover:text-neutral-300 hover:bg-neutral-900 transition-colors"
                     >
                       {t('planView.forkRemix')}
                     </button>
@@ -641,13 +576,13 @@ export function PlanView({ initialPlan, initialNodes }: PlanViewProps) {
                 </>
               ) : currentUserId ? (
                 plan.is_group ? (
-                  <span className="text-center text-xs px-3 py-2 rounded-lg bg-violet-500/10 border border-violet-500/20 text-violet-400">
+                  <span className="text-center text-xs px-3 py-2 rounded-md bg-white/10 border border-white/15 text-neutral-300">
                     {t('planView.groupParticipant')}
                   </span>
                 ) : (
                   <button
                     onClick={() => setShowRemixModal(true)}
-                    className="w-full text-xs px-3 py-2 rounded-lg bg-blue-500/15 border border-blue-500/30 text-blue-400 hover:bg-blue-500/25 transition-all"
+                    className="w-full text-xs px-3 py-2 rounded-md bg-white/10 border border-white/15 text-neutral-200 hover:bg-white/15 transition-all"
                   >
                     {t('planView.forkRemix')}
                   </button>
@@ -656,14 +591,14 @@ export function PlanView({ initialPlan, initialNodes }: PlanViewProps) {
                 plan.is_group ? (
                   <Link
                     href={`/login?redirect=/p/${planId}/${planShareSlug(plan)}`}
-                    className="text-center text-xs px-3 py-2 rounded-lg bg-violet-500/15 border border-violet-500/30 text-violet-400 hover:bg-violet-500/25 transition-all"
+                    className="text-center text-xs px-3 py-2 rounded-md bg-white/10 border border-white/15 text-neutral-200 hover:bg-white/15 transition-all"
                   >
                     {t('planView.signInToJoin')}
                   </Link>
                 ) : (
                   <Link
                     href="/register"
-                    className="text-center text-xs px-3 py-2 rounded-lg bg-blue-500/15 border border-blue-500/30 text-blue-400 hover:bg-blue-500/25 transition-all"
+                    className="text-center text-xs px-3 py-2 rounded-md bg-white/10 border border-white/15 text-neutral-200 hover:bg-white/15 transition-all"
                   >
                     {t('planView.forkRemix')}
                   </Link>
@@ -673,31 +608,38 @@ export function PlanView({ initialPlan, initialNodes }: PlanViewProps) {
           </div>
         </aside>
 
-        <aside className={`${mobileColumn === "sessions" ? "flex" : "hidden"} flex-1 min-h-0 flex-col md:flex md:flex-none md:h-full md:w-[38vw] xl:w-[37vw] border-b md:border-b-0 md:border-r border-neutral-800/50 bg-[#0b0b0b] p-3`}>
-          <div className="h-full rounded-xl border border-neutral-800/60 bg-neutral-900/50 overflow-hidden shadow-lg shadow-black/10">
-            <SessionList
-              nodes={nodes}
-              onSelect={() => {}}
-              onDelete={() => {}}
-              onFork={() => {}}
-              isOwner={isOwner}
-              isGroupPlan={plan.is_group === true}
-              supabase={supabase}
-              planTopic={plan.root_topic}
-              planId={planId}
-            />
-          </div>
+        <aside className={`${mobileColumn === "sessions" ? "flex" : "hidden"} flex-1 min-h-0 flex-col md:flex md:flex-none md:h-full md:w-[38vw] xl:w-[37vw] border-b md:border-b-0 md:border-r border-neutral-800/50 bg-[#0b0b0b]`}>
+          <SessionList
+            nodes={nodes}
+            onSelect={() => {}}
+            onDelete={() => {}}
+            onFork={() => {}}
+            isOwner={isOwner}
+            isGroupPlan={plan.is_group === true}
+            supabase={supabase}
+            planTopic={plan.root_topic}
+            planId={planId}
+          />
         </aside>
 
-        <section className={`${mobileColumn === "workspace" ? "flex" : "hidden"} flex-1 min-w-0 min-h-0 flex-col overflow-hidden md:flex`}>
+        <section className={`${mobileColumn === "workspace" ? "flex" : "hidden"} relative flex-1 min-w-0 min-h-0 flex-col overflow-hidden bg-[#080808] md:flex`}>
+          {workspaceImage && (
+            <img
+              src={workspaceImage}
+              alt=""
+              className="absolute inset-0 h-full w-full object-cover opacity-45 grayscale"
+            />
+          )}
+          <div className="absolute inset-0 bg-black/35" />
+          <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/20 to-black/70" />
           {/* Pill Tab Bar */}
-          <div className="hidden md:block px-3 sm:px-4 pt-2.5 pb-1 flex-shrink-0">
-            <div className="grid grid-cols-4 gap-1 p-1 rounded-xl bg-neutral-900/80 border border-neutral-800/50 max-w-full">
+          <div className="relative z-10 hidden md:block px-3 sm:px-4 pt-2.5 pb-1 flex-shrink-0">
+            <div className="grid grid-cols-4 gap-1 p-1 rounded-md bg-neutral-900/80 border border-neutral-800/50 max-w-full">
               {tabConfig.map(({ key, label, icon }) => (
                 <button
                   key={key}
                   onClick={() => setActiveTab(key)}
-                  className={`flex items-center justify-center gap-1.5 px-2 sm:px-3.5 py-1.5 text-sm font-medium rounded-lg transition-all min-w-0 ${
+                  className={`flex items-center justify-center gap-1.5 px-2 sm:px-3.5 py-1.5 text-sm font-medium rounded transition-all min-w-0 ${
                     activeTab === key
                       ? "bg-neutral-700/80 text-white shadow-sm"
                       : "text-neutral-500 hover:text-neutral-300"
@@ -712,7 +654,7 @@ export function PlanView({ initialPlan, initialNodes }: PlanViewProps) {
           </div>
 
           {/* Tab Content */}
-          <main className="flex-1 p-3 sm:p-4 pb-3 sm:pb-4 min-h-0 overflow-hidden">
+          <main className="relative z-10 flex-1 p-3 sm:p-4 pb-3 sm:pb-4 min-h-0 overflow-hidden">
         {activeTab === "graph" && (
           <PlanChat 
             plan={plan} 
@@ -738,20 +680,20 @@ export function PlanView({ initialPlan, initialNodes }: PlanViewProps) {
                       value={notesContent}
                       onChange={(e) => setNotesContent(e.target.value)}
                       placeholder={t('planView.notesPlaceholder')}
-                      className="w-full h-[60vh] px-4 py-3 bg-neutral-900/50 border border-neutral-800 rounded-xl text-white text-sm font-mono focus:outline-none focus:border-blue-500/50 resize-none"
+                      className="w-full h-[60vh] px-4 py-3 bg-neutral-900/50 border border-neutral-800 rounded-md text-white text-sm font-mono focus:outline-none focus:border-neutral-400 resize-none"
                       autoFocus
                     />
                     <div className="flex gap-2">
                       <button
                         onClick={saveNotes}
                         disabled={savingNotes}
-                        className="px-4 py-2 bg-blue-600 hover:bg-blue-500 disabled:bg-neutral-700 text-white text-sm rounded-lg transition-colors"
+                        className="px-4 py-2 bg-white hover:bg-neutral-200 disabled:bg-neutral-700 text-black disabled:text-white text-sm rounded-md transition-colors"
                       >
                         {savingNotes ? t('common.saving') : t('common.save')}
                       </button>
                       <button
                         onClick={() => { setNotesContent(plan.notes || ""); setIsEditingNotes(false); }}
-                        className="px-4 py-2 bg-neutral-800 hover:bg-neutral-700 text-white text-sm rounded-lg transition-colors"
+                        className="px-4 py-2 bg-neutral-800 hover:bg-neutral-700 text-white text-sm rounded-md transition-colors"
                       >
                         {t('common.cancel')}
                       </button>
@@ -761,7 +703,7 @@ export function PlanView({ initialPlan, initialNodes }: PlanViewProps) {
                   <div>
                     {notesContent ? (
                       <div 
-                        className="prose prose-invert prose-sm max-w-none cursor-pointer hover:bg-neutral-900/30 rounded-xl p-5 transition-colors border border-transparent hover:border-neutral-800/50"
+                        className="prose prose-invert prose-sm max-w-none cursor-pointer hover:bg-neutral-900/30 rounded-md p-5 transition-colors border border-transparent hover:border-neutral-800/50"
                         onClick={() => setIsEditingNotes(true)}
                       >
                         <ReactMarkdown remarkPlugins={[remarkGfm]}>{notesContent}</ReactMarkdown>
@@ -770,7 +712,7 @@ export function PlanView({ initialPlan, initialNodes }: PlanViewProps) {
                     ) : (
                       <button
                         onClick={() => setIsEditingNotes(true)}
-                        className="w-full py-16 border border-dashed border-neutral-800 rounded-xl text-neutral-600 hover:text-neutral-400 hover:border-neutral-700 transition-all flex flex-col items-center gap-3"
+                        className="w-full py-16 border border-dashed border-neutral-800 rounded-md text-neutral-600 hover:text-neutral-400 hover:border-neutral-700 transition-all flex flex-col items-center gap-3"
                       >
                         <svg className="w-8 h-8 text-neutral-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}>
                           <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
@@ -815,13 +757,13 @@ export function PlanView({ initialPlan, initialNodes }: PlanViewProps) {
         )}
           </main>
 
-          <div className="md:hidden flex-shrink-0 px-3 pb-2">
-            <div className="grid grid-cols-4 gap-1 p-1 rounded-xl bg-neutral-900/80 border border-neutral-800/50 max-w-full">
+          <div className="relative z-10 md:hidden flex-shrink-0 px-3 pb-2">
+            <div className="grid grid-cols-4 gap-1 p-1 rounded-md bg-neutral-900/80 border border-neutral-800/50 max-w-full">
               {tabConfig.map(({ key, label, icon }) => (
                 <button
                   key={key}
                   onClick={() => setActiveTab(key)}
-                  className={`flex items-center justify-center gap-1.5 px-2 py-1.5 text-sm font-medium rounded-lg transition-all min-w-0 ${
+                  className={`flex items-center justify-center gap-1.5 px-2 py-1.5 text-sm font-medium rounded transition-all min-w-0 ${
                     activeTab === key
                       ? "bg-neutral-700/80 text-white shadow-sm"
                       : "text-neutral-500 hover:text-neutral-300"
@@ -838,7 +780,7 @@ export function PlanView({ initialPlan, initialNodes }: PlanViewProps) {
       </div>
 
       <div className="md:hidden flex-shrink-0 border-t border-neutral-800/70 bg-[#0b0b0b] px-3 py-2">
-        <div className="grid grid-cols-3 gap-2 rounded-2xl border border-neutral-800 bg-neutral-950/70 p-1">
+        <div className="grid grid-cols-3 gap-2 rounded-md border border-neutral-800 bg-neutral-950/70 p-1">
           {[
             { key: "plan" as const, label: "Plan", icon: (
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
@@ -860,7 +802,7 @@ export function PlanView({ initialPlan, initialNodes }: PlanViewProps) {
               key={key}
               type="button"
               onClick={() => setMobileColumn(key)}
-              className={`flex items-center justify-center gap-1.5 rounded-xl px-2 py-2 text-xs font-medium transition-colors ${
+              className={`flex items-center justify-center gap-1.5 rounded px-2 py-2 text-xs font-medium transition-colors ${
                 mobileColumn === key
                   ? "bg-neutral-700/80 text-white"
                   : "text-neutral-500 hover:text-neutral-300"

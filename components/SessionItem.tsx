@@ -320,8 +320,10 @@ export function SessionItem({
                 <button
                   onClick={(e) => { e.stopPropagation(); handleStart(); }}
                   disabled={isStarting}
-                  className={`flex-1 px-4 py-2 disabled:bg-neutral-700 text-white text-sm font-medium rounded-md transition-colors ${
-                    activeSession ? "bg-green-600 hover:bg-green-500" : "bg-white hover:bg-neutral-200 text-black"
+                  className={`flex-1 px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+                    activeSession
+                      ? "bg-green-600 hover:bg-green-500 text-white disabled:bg-green-800 disabled:text-green-200"
+                      : "bg-white hover:bg-neutral-200 text-black disabled:bg-neutral-200 disabled:text-neutral-600"
                   }`}
                 >
                   {isStarting ? t('sessionItem.starting') : activeSession ? t('sessionItem.resumeLesson') : t('sessionItem.startLesson')}

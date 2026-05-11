@@ -305,6 +305,7 @@ export function HeliosChat({ problem, messages: externalMessages, onMessagesChan
   const autoVoiceAbortRef = useRef<AbortController | null>(null);
   const autoVoiceUrlRef = useRef<string | null>(null);
   const autoVoiceSourceIdRef = useRef(`helios-chat-${Math.random().toString(36).slice(2, 10)}`);
+  const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
   const stopAutoVoice = () => {
     try {
@@ -389,6 +390,10 @@ export function HeliosChat({ problem, messages: externalMessages, onMessagesChan
     if (message.id === "welcome") return true;
     return spokenMessageIdsRef.current.has(message.id) && voiceReadyMessageIds.has(message.id);
   });
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ block: "end" });
+  }, [visibleMessages.length, isLoading]);
 
   // Core send logic shared by form submit and programmatic pendingMessage
   const sendMessage = async (payload: string | PendingChatMessage) => {
@@ -664,6 +669,7 @@ export function HeliosChat({ problem, messages: externalMessages, onMessagesChan
             </div>
           </div>
         )}
+        <div ref={messagesEndRef} />
       </div>
 
       <ConfirmDialog

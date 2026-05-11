@@ -36,6 +36,7 @@ export function ThinkAloudTraces({
     () => thoughts.filter((thought) => selectedThoughtIds.has(thought.id)),
     [thoughts, selectedThoughtIds],
   );
+  const recentThoughts = useMemo(() => thoughts.slice().reverse(), [thoughts]);
 
   useEffect(() => {
     setSelectedThoughtIds((current) => {
@@ -44,6 +45,25 @@ export function ThinkAloudTraces({
       return next.size === current.size ? current : next;
     });
   }, [thoughts]);
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.metaKey || event.ctrlKey || event.altKey || event.shiftKey) return;
+      if (!["1", "2", "3"].includes(event.key)) return;
+
+      const target = event.target as HTMLElement | null;
+      if (target?.closest("input, textarea, select, [contenteditable='true']")) return;
+
+      const thought = recentThoughts[Number(event.key) - 1];
+      if (!thought) return;
+
+      event.preventDefault();
+      onThoughtClick(thought);
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [onThoughtClick, recentThoughts]);
 
   const toggleThought = (thoughtId: string) => {
     setSelectedThoughtIds((current) => {
@@ -182,8 +202,9 @@ export function ThinkAloudTraces({
                 </button>
               </div>
               <div className="flex flex-col gap-1.5 max-h-36 overflow-y-auto pr-1">
-                {thoughts.slice().reverse().map((thought) => {
+                {recentThoughts.map((thought, index) => {
                   const isSelected = selectedThoughtIds.has(thought.id);
+                  const shortcut = index < 3 ? String(index + 1) : null;
                   return (
                     <button
                       key={thought.id}
@@ -208,7 +229,12 @@ export function ThinkAloudTraces({
                           </svg>
                         )}
                       </span>
-                      <span>{thought.text}</span>
+                      <span className="flex-1">{thought.text}</span>
+                      {shortcut && (
+                        <span className="shrink-0 rounded-md border border-neutral-700 bg-neutral-950/70 px-1.5 py-0.5 text-[10px] leading-none text-neutral-500">
+                          {shortcut}
+                        </span>
+                      )}
                     </button>
                   );
                 })}

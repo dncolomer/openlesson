@@ -189,7 +189,6 @@ export function SessionView({ sessionId }: { sessionId: string }) {
   // Probes
   const [activeProbe, setActiveProbe] = useState<Probe | null>(null);
   const [viewingProbeIndex, setViewingProbeIndex] = useState<number>(-1);
-  const [openingProbeLoading, setOpeningProbeLoading] = useState(false);
 
   // Session ending / saving
   const [isSaving, setIsSaving] = useState(false);
@@ -2341,49 +2340,7 @@ export function SessionView({ sessionId }: { sessionId: string }) {
   };
 
   /**
-   * Fetch the opening probe from the API and persist it. Extracted so that
-   * the in-panel Tutor Welcome flow can defer this network call until the
-   * user clicks Play, rather than firing it inside the settings modal.
-   */
-  const fetchAndSaveOpeningProbe = useCallback(async () => {
-    const s = sessionRef.current;
-    if (!s) return;
-    try {
-      const probeRes = await fetch("/api/opening-probe", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          problem: s.problem,
-          objectives,
-          sessionId: s.id,
-          tutoringLanguage,
-        }),
-      });
-      if (!probeRes.ok) return;
-      const { probe: probeText } = await probeRes.json();
-      if (!probeText?.trim()) return;
-      const savedProbe = await addProbe(s.id, {
-        timestamp: 0,
-        gapScore: 0,
-        signals: ["opening"],
-        text: probeText,
-        requestType: "question",
-      });
-      const base = { ...s, probes: [] };
-      const updated = addProbeToSession(base, savedProbe);
-      setSession(updated);
-      sessionRef.current = updated;
-      setActiveProbe(savedProbe);
-      setViewingProbeIndex(updated.probes.length - 1);
-      addProbeToHeliosChat(savedProbe.text);
-    } catch (err) {
-      console.error("[SessionView] Opening probe fetch failed:", err);
-    }
-  }, [objectives, tutoringLanguage, addProbeToHeliosChat]);
-
-  /**
-   * The user clicked the Play button inside the tutor welcome panel. This
-   * is the moment we actually fetch the opening probe. We also mark the
+   * The user clicked the Play button inside the tutor welcome panel. Mark the
    * welcome as "seen" so a page refresh doesn't re-play the welcome.
    */
   const handleWelcomePlay = useCallback(async () => {
@@ -2412,13 +2369,6 @@ export function SessionView({ sessionId }: { sessionId: string }) {
         await handleResume();
       }
       revealChat();
-      // Only fetch the opening probe on fresh sessions. If the session
-      // already has probes (e.g. Help button re-runs the welcome flow),
-      // we preserve the existing probe history.
-      const hasActive = s.probes.some(p => !p.archived);
-      if (!hasActive) {
-        await fetchAndSaveOpeningProbe();
-      }
     } finally {
       markSessionWelcomeSeen(s.id);
       revealChat();
@@ -2451,7 +2401,7 @@ export function SessionView({ sessionId }: { sessionId: string }) {
     // startRecording / handleResume are defined inline and reference many
     // setters/refs; including them as deps would cause noise.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [fetchAndSaveOpeningProbe, isRecording, isPaused]);
+  }, [isRecording, isPaused]);
 
   // Archive a probe (immediately, without LLM validation)
   const handleArchiveProbe = async (probeId: string) => {
@@ -3294,7 +3244,7 @@ export function SessionView({ sessionId }: { sessionId: string }) {
 
             <div className="px-6 py-5">
             {(() => {
-              const isSessionReady = sessionPlan && !planLoading && !openingProbeLoading && session?.probes && session.probes.length > 0;
+              const isSessionReady = sessionPlan && !planLoading;
 
               // Phase 1: Language selection (before confirmation)
               if (!languageConfirmed) {
@@ -3392,7 +3342,6 @@ export function SessionView({ sessionId }: { sessionId: string }) {
                         setPrepStage("plan");
                         setIsPreparing(true);
                         setPlanLoading(true);
-                        setOpeningProbeLoading(true);
                         setPlanError(null);
                         setModelLoadError(null);
                         setModelLoadProgress(null);
@@ -3478,10 +3427,8 @@ export function SessionView({ sessionId }: { sessionId: string }) {
                             setPlanError("Failed to create session plan. Please try again.");
                           }
                           
-                          // Archive existing probes. Whether we fetch the
-                          // opening probe *now* or defer until the user
-                          // clicks the in-panel Play button depends on
-                          // whether this is a fresh, never-started session.
+                          // Archive existing probes; the chapter question is
+                          // enough to start the discussion.
                           if (session.probes.length > 0) {
                             for (const probe of session.probes) {
                               await archiveProbe(probe.id);
@@ -3495,20 +3442,14 @@ export function SessionView({ sessionId }: { sessionId: string }) {
 
                           // A session is "fresh" if the user has not yet
                           // clicked Play for it. In that case we show the
-                          // typed tutor welcome + Play button and defer the
-                          // opening probe fetch until Play is clicked. We
-                          // just archived any existing probes above, so
-                          // welcome-seen is the single source of truth.
+                          // typed tutor welcome + Play button.
                           const isFreshSession = !isSessionWelcomeSeen(session.id);
                           if (isFreshSession) {
                             setShowWelcomePanel(true);
-                          } else {
-                            await fetchAndSaveOpeningProbe();
                           }
                           
                           // Plan prep done
                           setPlanLoading(false);
-                          setOpeningProbeLoading(false);
                           setLanguageConfirmed(true);
 
                           // Stage 2: Load local model if enabled
@@ -3536,7 +3477,6 @@ export function SessionView({ sessionId }: { sessionId: string }) {
                           setPlanError("Failed to prepare session");
                         } finally {
                           setPlanLoading(false);
-                          setOpeningProbeLoading(false);
                           setIsPreparing(false);
                         }
                       }}
@@ -4052,7 +3992,7 @@ export function SessionView({ sessionId }: { sessionId: string }) {
                           logTool("probe", action, metadata ?? {})
                         }
                         archivingProbeId={archivingProbeId}
-                        isInitializing={planLoading || openingProbeLoading}
+                        isInitializing={planLoading}
                         isGeneratingProbe={isGeneratingProbe}
                         sessionPlan={sessionPlan}
                         isSessionActive={isRecording && !isPaused}

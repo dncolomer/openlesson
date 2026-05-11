@@ -139,7 +139,6 @@ export function MobileSessionView({
   const [autoAdvance, setAutoAdvance] = useState(false);
   const [isPreparing, setIsPreparing] = useState(false);
   const [planLoading, setPlanLoading] = useState(false);
-  const [openingProbeLoading, setOpeningProbeLoading] = useState(false);
   const [planError, setPlanError] = useState<string | null>(null);
   const [aestheticPackages, setAestheticPackages] = useState<AestheticPackage[]>([]);
   const [aestheticsLoading, setAestheticsLoading] = useState(true);
@@ -1085,43 +1084,8 @@ export function MobileSessionView({
   }, [session]);
 
   /**
-   * Fetch the opening probe and persist it. Extracted so the in-panel
-   * Tutor Welcome Play button can defer this network call.
-   */
-  const fetchAndSaveOpeningProbe = useCallback(async () => {
-    const s = sessionRef.current;
-    if (!s) return;
-    try {
-      const probeRes = await fetch("/api/opening-probe", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          problem: s.problem,
-          objectives: s.objectives,
-          sessionId: s.id,
-          tutoringLanguage,
-        }),
-      });
-      if (!probeRes.ok) return;
-      const { probe: probeText } = await probeRes.json();
-      if (!probeText?.trim()) return;
-      const savedProbe = await addProbe(s.id, {
-        timestamp: 0,
-        gapScore: 0,
-        signals: ["opening"],
-        text: probeText,
-        requestType: "question",
-      });
-      setSession(prev => (prev ? { ...prev, probes: [savedProbe] } : null));
-      setProbes([savedProbe]);
-    } catch (err) {
-      console.error("[MobileSessionView] Opening probe fetch failed:", err);
-    }
-  }, [tutoringLanguage]);
-
-  /**
-   * The user clicked Play inside the tutor welcome panel. Fetch the opening
-   * probe and mark welcome seen so a refresh doesn't re-play the intro.
+   * The user clicked Play inside the tutor welcome panel. Mark welcome seen
+   * so a refresh doesn't re-play the intro.
    */
   const handleWelcomePlay = useCallback(async () => {
     const s = sessionRef.current;
@@ -1147,12 +1111,6 @@ export function MobileSessionView({
         await resumeRecording();
       }
       revealChat();
-      // Only fetch the opening probe on fresh sessions. If probes already
-      // exist (e.g. Help re-ran the welcome), preserve the history.
-      const hasActive = (sessionRef.current?.probes ?? []).some(p => !p.archived);
-      if (!hasActive) {
-        await fetchAndSaveOpeningProbe();
-      }
     } finally {
       markSessionWelcomeSeen(s.id);
       revealChat();
@@ -1161,7 +1119,7 @@ export function MobileSessionView({
     // handleStartSession / resumeRecording are stable-ish and including
     // them as deps would cause noise.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [fetchAndSaveOpeningProbe, isRecording, isPaused]);
+  }, [isRecording, isPaused]);
 
   // Prepare session with language selection
   const prepareSession = useCallback(async () => {
@@ -1170,7 +1128,6 @@ export function MobileSessionView({
     setPrepStage("plan");
     setIsPreparing(true);
     setPlanLoading(true);
-    setOpeningProbeLoading(true);
     setPlanError(null);
     setModelLoadError(null);
     setModelLoadProgress(null);
@@ -1244,8 +1201,7 @@ export function MobileSessionView({
         setSessionPlan(newPlan);
       }
       
-      // Archive existing probes. Opening-probe fetch is deferred to the
-      // in-panel Play button on fresh sessions (mirrors desktop behavior).
+      // Archive existing probes; the chapter question is enough to start the discussion.
       if (session.probes.length > 0) {
         for (const probe of session.probes) {
           await archiveProbe(probe.id);
@@ -1257,13 +1213,10 @@ export function MobileSessionView({
       const isFreshSession = !isSessionWelcomeSeen(session.id);
       if (isFreshSession) {
         setShowWelcomePanel(true);
-      } else {
-        await fetchAndSaveOpeningProbe();
       }
 
       // Plan prep done
       setPlanLoading(false);
-      setOpeningProbeLoading(false);
       setLanguageConfirmed(true);
 
       // Stage 2: Load local model if enabled
@@ -1292,7 +1245,6 @@ export function MobileSessionView({
       setPlanError("Failed to prepare session");
     } finally {
       setPlanLoading(false);
-      setOpeningProbeLoading(false);
       setIsPreparing(false);
     }
   }, [session, tutoringLanguage, isPreparing]);
@@ -2175,7 +2127,7 @@ export function MobileSessionView({
 
   // Welcome/Preparation Modal
   if (showWelcomeModal) {
-    const isSessionReady = sessionPlan && !planLoading && !openingProbeLoading && probes.length > 0;
+    const isSessionReady = sessionPlan && !planLoading;
     const isButtonDisabled = planLoading || isPreparing;
     
     return (

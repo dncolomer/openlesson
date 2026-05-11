@@ -183,7 +183,7 @@ function SmartCardShell({
   const meta = CARD_KIND_META[kind];
   return (
     <div
-      className={`w-full rounded-2xl border ${meta.ringClass} bg-neutral-900/60 overflow-hidden shadow-[0_1px_0_rgba(255,255,255,0.03)_inset]`}
+      className={`w-full rounded-md border ${meta.ringClass} bg-neutral-900/60 overflow-hidden shadow-[0_1px_0_rgba(255,255,255,0.03)_inset]`}
     >
       <div
         className={`flex items-center gap-2 px-4 py-2 text-[11px] font-medium uppercase tracking-wider ${meta.headerClass}`}
@@ -505,7 +505,7 @@ export function HeliosChat({ problem, messages: externalMessages, onMessagesChan
               setVoiceReadyMessageIds(new Set(existingAssistantIds));
               setAutoVoiceEnabled(true);
             }}
-            className={`inline-flex items-center gap-1.5 rounded-full border px-2 py-1 text-[10px] font-medium transition-colors ${
+            className={`inline-flex items-center gap-1.5 rounded-md border px-2 py-1 text-[10px] font-medium transition-colors ${
               autoVoiceEnabled
                 ? "border-cyan-400/50 bg-cyan-500/10 text-cyan-200"
                 : "border-neutral-800 bg-neutral-900/80 text-neutral-500 hover:text-neutral-300"
@@ -518,7 +518,7 @@ export function HeliosChat({ problem, messages: externalMessages, onMessagesChan
           </button>
           <button
             onClick={() => setShowClearConfirm(true)}
-            className="p-1.5 text-neutral-500 hover:text-neutral-300 hover:bg-neutral-800 rounded-lg transition-colors"
+            className="p-1.5 text-neutral-500 hover:text-neutral-300 hover:bg-neutral-800 rounded-md transition-colors"
             title={t('heliosChat.clearChat')}
           >
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -562,7 +562,7 @@ export function HeliosChat({ problem, messages: externalMessages, onMessagesChan
                           ? "[&_p]:mb-3 [&_p]:leading-relaxed [&_ol]:mb-3 [&_ol]:pl-5 [&_ol]:space-y-2 [&_ul]:mb-3 [&_ul]:pl-5 [&_ul]:space-y-2 [&_li]:leading-relaxed [&_strong]:text-white"
                           : message.kind === "stuck"
                             ? "[&_p]:mb-3 [&_p]:leading-relaxed [&_ul]:mb-2 [&_ul]:pl-5 [&_ul]:space-y-1.5 [&_li]:leading-relaxed [&_strong]:text-amber-100"
-                          : "[&_a]:no-underline [&_a]:inline-flex [&_a]:items-center [&_a]:gap-1.5 [&_a]:px-3 [&_a]:py-1.5 [&_a]:my-1 [&_a]:rounded-lg [&_a]:bg-neutral-900 [&_a]:text-white [&_a]:border [&_a]:border-neutral-700 hover:[&_a]:bg-neutral-800 hover:[&_a]:border-neutral-600 [&_a]:text-sm [&_a]:font-medium"
+                          : "[&_a]:no-underline [&_a]:inline-flex [&_a]:items-center [&_a]:gap-1.5 [&_a]:px-3 [&_a]:py-1.5 [&_a]:my-1 [&_a]:rounded-md [&_a]:bg-neutral-900 [&_a]:text-white [&_a]:border [&_a]:border-neutral-700 hover:[&_a]:bg-neutral-800 hover:[&_a]:border-neutral-600 [&_a]:text-sm [&_a]:font-medium"
                       }`}
                     >
                       <ReactMarkdown
@@ -579,7 +579,7 @@ export function HeliosChat({ problem, messages: externalMessages, onMessagesChan
                               key={action}
                               type="button"
                               onClick={() => onStuckAction(action)}
-                              className="rounded-full border border-amber-300/25 bg-amber-300/10 px-3 py-1.5 text-xs font-medium text-amber-100 transition-colors hover:border-amber-200/50 hover:bg-amber-300/20"
+                              className="rounded-md border border-amber-300/25 bg-amber-300/10 px-3 py-1.5 text-xs font-medium text-amber-100 transition-colors hover:border-amber-200/50 hover:bg-amber-300/20"
                             >
                               {label}
                             </button>
@@ -602,7 +602,7 @@ export function HeliosChat({ problem, messages: externalMessages, onMessagesChan
                 className="flex items-start gap-2 justify-start"
               >
                 <HeliosAvatar size={28} />
-                <div className="bg-neutral-800 rounded-2xl px-4 py-2.5 flex items-center gap-3">
+                <div className="bg-neutral-800 rounded-md px-4 py-2.5 flex items-center gap-3">
                   <div className="flex gap-1">
                     <div className="w-2 h-2 rounded-full bg-neutral-500 animate-bounce" style={{ animationDelay: "0ms" }} />
                     <div className="w-2 h-2 rounded-full bg-neutral-500 animate-bounce" style={{ animationDelay: "150ms" }} />
@@ -626,9 +626,9 @@ export function HeliosChat({ problem, messages: externalMessages, onMessagesChan
             >
               {message.role === "assistant" && <HeliosAvatar size={28} />}
               <div
-                className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-sm ${
+                className={`max-w-[85%] rounded-md px-4 py-2.5 text-sm ${
                   message.role === "user"
-                    ? "bg-blue-600 text-white"
+                    ? "bg-neutral-100 text-black"
                     : "bg-neutral-800 text-neutral-200"
                 }`}
               >
@@ -644,7 +644,7 @@ export function HeliosChat({ problem, messages: externalMessages, onMessagesChan
                     <img
                       src={message.imageDataUrl}
                       alt="Submitted canvas"
-                      className="mt-3 max-h-64 rounded-lg border border-white/20 object-contain"
+                      className="mt-3 max-h-64 rounded-md border border-white/20 object-contain"
                     />
                   )}
                 </div>
@@ -655,7 +655,7 @@ export function HeliosChat({ problem, messages: externalMessages, onMessagesChan
         {isLoading && (
           <div className="flex items-start gap-2 justify-start">
             <HeliosAvatar size={28} />
-            <div className="bg-neutral-800 rounded-2xl px-4 py-2.5">
+            <div className="bg-neutral-800 rounded-md px-4 py-2.5">
               <div className="flex gap-1">
                 <div className="w-2 h-2 rounded-full bg-neutral-500 animate-bounce" style={{ animationDelay: "0ms" }} />
                 <div className="w-2 h-2 rounded-full bg-neutral-500 animate-bounce" style={{ animationDelay: "150ms" }} />

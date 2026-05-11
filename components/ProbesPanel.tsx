@@ -234,7 +234,7 @@ export function ProbesPanel({
     }
   }, [currentProbeId]);
 
-  const actionButtonClass = `py-3 px-3 text-[12px] font-medium rounded-xl border disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2 ${
+  const actionButtonClass = `py-3 px-3 text-[12px] font-medium rounded-md border disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2 ${
     stuckCheckText
       ? "bg-red-500/10 border-red-400/35 text-red-100 hover:bg-red-500/15 hover:border-red-300/50 hover:text-white"
       : "bg-neutral-800 border-neutral-700 text-neutral-200 hover:bg-neutral-700 hover:border-neutral-600 hover:text-white"
@@ -477,14 +477,14 @@ export function ProbesPanel({
                   the bottom of the panel with a big empty gap above. */}
               <div className="shrink-0 w-full max-w-[680px] px-2">
                 {isCurrentStepCompleted ? (
-                  <div className="rounded-2xl border border-neutral-800 bg-neutral-950/40 px-5 py-4 text-center text-sm font-medium text-neutral-200">
+                  <div className="rounded-md border border-neutral-800 bg-neutral-950/40 px-5 py-4 text-center text-sm font-medium text-neutral-200">
                     Chapter Completed - check next chapter
                   </div>
                 ) : (
                   <>
-                    <div className={`actions-box rounded-2xl border p-3 transition-colors ${stuckCheckText ? "border-red-400/40 bg-red-500/10" : "border-neutral-800 bg-neutral-950/40"}`}>
+                    <div className={`actions-box rounded-md border p-3 transition-colors ${stuckCheckText ? "border-red-400/40 bg-red-500/10" : "border-neutral-800 bg-neutral-950/40"}`}>
                       {stuckCheckText && (
-                        <div className="mb-3 flex items-start justify-between gap-3 rounded-xl border border-red-400/25 bg-red-400/10 px-3 py-2 text-xs text-red-100">
+                        <div className="mb-3 flex items-start justify-between gap-3 rounded-md border border-red-400/25 bg-red-400/10 px-3 py-2 text-xs text-red-100">
                           <p className="leading-relaxed">{stuckCheckText}</p>
                           <button type="button" onClick={onDismissStuckCheck} className="shrink-0 rounded-md px-2 py-1 text-[11px] text-red-100/80 hover:bg-red-300/10 hover:text-red-50">
                             {t("common.dismiss")}
@@ -570,7 +570,7 @@ export function ProbesPanel({
                         onClick={handleDone}
                         disabled={advancing || !isSessionActive || !isCurrentPlanStep || !!stuckCheckText}
                         title={t('session.markAsDone')}
-                        className="mt-2.5 w-full py-3 px-4 text-[13px] font-medium rounded-xl bg-neutral-100 text-neutral-900 hover:bg-white disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+                        className="mt-2.5 w-full py-3 px-4 text-[13px] font-medium rounded-md bg-neutral-100 text-neutral-900 hover:bg-white disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
                       >
                         {advancing ? (
                           <>

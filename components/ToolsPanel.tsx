@@ -121,11 +121,11 @@ export function ToolsPanel({
             key={toolId}
             onClick={() => !isDisabled && onToolChange(toolId)}
             disabled={isDisabled}
-            className={`flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
+            className={`flex items-center gap-2 px-3 py-2.5 rounded-md text-sm font-medium transition-all ${
               isDisabled
                 ? "bg-neutral-800/30 text-neutral-600 border border-neutral-800/30 cursor-not-allowed"
                 : activeTool === toolId
-                ? "bg-blue-500/20 text-blue-400 border border-blue-500/30"
+                ? "bg-neutral-700/70 text-white border border-neutral-600"
                 : "bg-neutral-800/50 text-neutral-400 border border-neutral-700/50 hover:bg-neutral-800 hover:text-neutral-300"
             }`}
           >
@@ -144,9 +144,9 @@ export function ToolsPanel({
           <button
             key={toolId}
             onClick={() => onToolChange(toolId)}
-            className={`flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
+            className={`flex items-center gap-2 px-3 py-2.5 rounded-md text-sm font-medium transition-all ${
               activeTool === toolId
-                ? "bg-purple-500/20 text-purple-400 border border-purple-500/30"
+                ? "bg-neutral-700/70 text-white border border-neutral-600"
                 : "bg-neutral-800/50 text-neutral-400 border border-neutral-700/50 hover:bg-neutral-800 hover:text-neutral-300"
             }`}
           >
@@ -162,7 +162,7 @@ export function ToolsPanel({
           <button
             type="button"
             onClick={onBackToDashboard}
-            className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium transition-all bg-neutral-800/50 text-neutral-400 border border-neutral-700/50 hover:bg-neutral-800 hover:text-neutral-300"
+            className="flex items-center gap-2 px-3 py-2.5 rounded-md text-sm font-medium transition-all bg-neutral-800/50 text-neutral-400 border border-neutral-700/50 hover:bg-neutral-800 hover:text-neutral-300"
             title={t('session.backToDashboard')}
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
@@ -176,7 +176,7 @@ export function ToolsPanel({
         {sessionId && (
           <button
             onClick={() => setShowQRModal(true)}
-            className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium transition-all bg-neutral-800/50 text-neutral-400 border border-neutral-700/50 hover:bg-neutral-800 hover:text-neutral-300"
+            className="flex items-center gap-2 px-3 py-2.5 rounded-md text-sm font-medium transition-all bg-neutral-800/50 text-neutral-400 border border-neutral-700/50 hover:bg-neutral-800 hover:text-neutral-300"
             title={t('session.openOnSmartphone')}
           >
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>

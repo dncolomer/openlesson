@@ -627,7 +627,7 @@ export function PlanView({ initialPlan, initialNodes }: PlanViewProps) {
             <img
               src={workspaceImage}
               alt=""
-              className="absolute inset-0 h-full w-full object-cover opacity-45 grayscale"
+              className="absolute inset-0 h-full w-full object-cover opacity-35 saturate-75"
             />
           )}
           <div className="absolute inset-0 bg-black/35" />

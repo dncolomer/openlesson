@@ -33,7 +33,7 @@ export const metadata: Metadata = {
         url: "/og-default.jpg",
         width: 1024,
         height: 536,
-        alt: "openLesson - AI-powered tutoring for problem solving.",
+        alt: "openLesson - an AI tutor that listens to reasoning and asks better questions.",
       },
     ],
     type: "website",

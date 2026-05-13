@@ -942,7 +942,15 @@ export async function logEEGData(
 
 export async function saveSessionEEG(
   sessionId: string,
-  eegData: { channels: Record<string, number[]>; bandPowers: Record<string, number> | null },
+  eegData: {
+    channels: Record<string, number[]>;
+    bandPowers: Record<string, number> | null;
+    sampleRateHz?: number;
+    startedAtMs?: number;
+    endedAtMs?: number;
+    sampleCounts?: Record<string, number>;
+    deviceStatus?: Record<string, unknown> | null;
+  },
   deviceName?: string,
   chunkIndex?: number,
   timestamp?: number
@@ -953,13 +961,13 @@ export async function saveSessionEEG(
 
   const ts = timestamp || Date.now();
   const idx = chunkIndex ?? 0;
-  const sampleCount = Object.values(eegData.channels)[0]?.length || 0;
+  const sampleCount = Object.values(eegData.channels).reduce((sum, samples) => sum + samples.length, 0);
   const fileName = `${sessionId}_eeg_${idx}_${ts}.json`;
 
   console.log("[saveSessionEEG] Saving:", { sessionId, fileName, deviceName, channels: Object.keys(eegData.channels) });
 
   const { uploadSessionFile } = await import("./session-files-client");
-  await uploadSessionFile({
+  const result = await uploadSessionFile({
     sessionId,
     kind: "eeg",
     fileName,
@@ -971,6 +979,10 @@ export async function saveSessionEEG(
     deviceName: deviceName || null,
     sampleCount,
   });
+
+  if (!result.success) {
+    throw new Error(result.error || "EEG upload failed");
+  }
 
   // Also save summary into session metadata (this stays in our DB)
   if (eegData.bandPowers) {

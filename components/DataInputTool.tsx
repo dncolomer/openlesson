@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { MuseTemporalChart } from "./MuseTemporalChart";
 import { FaceTracker, FacialDataPoint } from "./FaceTracker";
 import { useI18n } from "../lib/i18n";
+import type { DeviceStatus } from "../lib/muse-athena";
 
 interface DataInputToolProps {
   isRecording: boolean;
@@ -11,6 +12,7 @@ interface DataInputToolProps {
   audioStream?: MediaStream | null;
   museStatus: "disconnected" | "connecting" | "connected" | "streaming";
   museError?: string | null;
+  museDeviceStatus?: DeviceStatus | null;
   museChannelData: Map<string, number[]>;
   bandPowers?: { delta: number; theta: number; alpha: number; beta: number; gamma: number } | null;
   onConnectMuse: () => void;
@@ -34,6 +36,7 @@ export function DataInputTool({
   audioStream,
   museStatus,
   museError,
+  museDeviceStatus,
   museChannelData,
   bandPowers,
   onConnectMuse,
@@ -173,6 +176,23 @@ export function DataInputTool({
                   <div className="flex items-center gap-1.5">
                     <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
                     <span className="text-green-400">{t('dataInput.receivingData')}</span>
+                  </div>
+                </div>
+              )}
+
+              {museDeviceStatus && (
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div className="rounded bg-neutral-800/40 p-2">
+                    <span className="text-neutral-500">Battery: </span>
+                    <span className="text-neutral-300">{museDeviceStatus.battery || 0}%</span>
+                  </div>
+                  <div className="rounded bg-neutral-800/40 p-2">
+                    <span className="text-neutral-500">Quality: </span>
+                    <span className={
+                      museDeviceStatus.signalQuality === "good" ? "text-green-400" :
+                      museDeviceStatus.signalQuality === "fair" ? "text-yellow-400" :
+                      "text-red-400"
+                    }>{museDeviceStatus.signalQuality}</span>
                   </div>
                 </div>
               )}

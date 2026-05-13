@@ -222,6 +222,10 @@ export class MuseAthenaClient {
   private onDeviceStatusCallbacks: ((status: DeviceStatus) => void)[] = [];
   private onSignalQualityCallbacks: ((quality: DeviceStatus) => void)[] = [];
   private onStatusCallbacks: ((status: MuseAthenaStatus) => void)[] = [];
+  private onDisconnectedCallbacks: (() => void)[] = [];
+  private boundSensorHandler = this.handleSensorNotification.bind(this);
+  private boundControlHandler = this.handleControlNotification.bind(this);
+  private boundGattDisconnectHandler = this.handleGattDisconnect.bind(this);
 
   get status(): MuseAthenaStatus {
     return this._status;
@@ -298,21 +302,40 @@ export class MuseAthenaClient {
     };
   }
 
+  onDisconnected(cb: () => void): () => void {
+    this.onDisconnectedCallbacks.push(cb);
+    return () => {
+      this.onDisconnectedCallbacks = this.onDisconnectedCallbacks.filter((c) => c !== cb);
+    };
+  }
+
   // ---- Connection ----
 
   async connect(): Promise<void> {
     this.setStatus("connecting");
 
     try {
+      if (!isWebBluetoothSupported()) {
+        throw new Error(
+          "Web Bluetooth is not available. Use Chrome or Edge on desktop over HTTPS or localhost, and make sure browser Bluetooth permissions are enabled."
+        );
+      }
+
       // Step 1: Request device via Web Bluetooth
       this.device = await navigator.bluetooth.requestDevice({
         filters: [{ services: [MUSE_SERVICE] }],
       });
+      this.device.addEventListener(
+        "gattserverdisconnected",
+        this.boundGattDisconnectHandler
+      );
 
       this._deviceName = this.device.name || "Muse Device";
 
-      // Step 2: Connect GATT
-      this.server = await this.device.gatt!.connect();
+      // Step 2: Connect GATT. Some platforms, especially Linux/BlueZ and
+      // recently woken Muse devices, intermittently fail the first attempt.
+      await this.sleep(800);
+      this.server = await this.connectGattWithRetry(this.device, 5);
 
       // Step 3: Get service
       const service = await this.server.getPrimaryService(MUSE_SERVICE);
@@ -334,7 +357,7 @@ export class MuseAthenaClient {
       await this.controlChar.startNotifications();
       this.controlChar.addEventListener(
         "characteristicvaluechanged",
-        this.handleControlNotification.bind(this)
+        this.boundControlHandler
       );
 
       // Step 7: Send initialization commands
@@ -365,7 +388,7 @@ export class MuseAthenaClient {
     await this.sensorChar.startNotifications();
     this.sensorChar.addEventListener(
       "characteristicvaluechanged",
-      this.handleSensorNotification.bind(this)
+      this.boundSensorHandler
     );
 
     // Start streaming -- send dc001 TWICE (critical!)
@@ -389,6 +412,10 @@ export class MuseAthenaClient {
 
     if (this.sensorChar) {
       try {
+        this.sensorChar.removeEventListener(
+          "characteristicvaluechanged",
+          this.boundSensorHandler
+        );
         await this.sensorChar.stopNotifications();
       } catch {}
     }
@@ -397,6 +424,30 @@ export class MuseAthenaClient {
   }
 
   disconnect(): void {
+    if (this.sensorChar) {
+      try {
+        this.sensorChar.removeEventListener(
+          "characteristicvaluechanged",
+          this.boundSensorHandler
+        );
+      } catch {}
+    }
+    if (this.controlChar) {
+      try {
+        this.controlChar.removeEventListener(
+          "characteristicvaluechanged",
+          this.boundControlHandler
+        );
+      } catch {}
+    }
+    if (this.device) {
+      try {
+        this.device.removeEventListener(
+          "gattserverdisconnected",
+          this.boundGattDisconnectHandler
+        );
+      } catch {}
+    }
     if (this.server && this.server.connected) {
       this.server.disconnect();
     }
@@ -405,6 +456,42 @@ export class MuseAthenaClient {
     this.controlChar = null;
     this.sensorChar = null;
     this.setStatus("disconnected");
+  }
+
+  private handleGattDisconnect(): void {
+    this.device = null;
+    this.server = null;
+    this.controlChar = null;
+    this.sensorChar = null;
+    this.setStatus("disconnected");
+    this.onDisconnectedCallbacks.forEach((cb) => cb());
+  }
+
+  private async connectGattWithRetry(
+    device: BluetoothDevice,
+    maxAttempts = 3
+  ): Promise<BluetoothRemoteGATTServer> {
+    if (!device.gatt) {
+      throw new Error("Selected Bluetooth device does not expose a GATT server.");
+    }
+
+    let lastError: unknown;
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        return await device.gatt.connect();
+      } catch (err) {
+        lastError = err;
+        try {
+          if (device.gatt.connected) device.gatt.disconnect();
+        } catch {}
+        if (attempt < maxAttempts) await this.sleep(600 * attempt);
+      }
+    }
+
+    const message = lastError instanceof Error ? lastError.message : String(lastError ?? "unknown error");
+    throw new Error(
+      `Connection failed after ${maxAttempts} attempts. Make sure the Muse is awake, close other Muse/Bluetooth apps, turn the headset off/on, then try again. Browser error: ${message}`
+    );
   }
 
   // ---- Internal handlers ----
@@ -425,6 +512,7 @@ export class MuseAthenaClient {
         const json = JSON.parse(text.substring(jsonStart, jsonEnd + 1));
         if (json.fw) this._deviceInfo.firmware = json.fw;
         if (json.bp) this._deviceInfo.battery = json.bp;
+        this.updateSignalQuality();
       }
     } catch {
       // Not JSON, ignore

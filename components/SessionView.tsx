@@ -46,6 +46,7 @@ import { DataInputTool } from "./DataInputTool";
 import { LogsTool, type LogEntry } from "./LogsTool";
 import { createScreenCapture } from "@/lib/screen-capture";
 import { saveScreenshot, updateSessionPlan } from "@/lib/storage";
+import type { DeviceStatus } from "@/lib/muse-athena";
 import { LocalInferenceManager, type InitProgress, type LocalAnalysisContext } from "@/lib/local-inference";
 import { LocalContextBuffer } from "@/lib/local-context";
 // ModelLoadingModal no longer used -- loading UI is inline in welcome modal
@@ -158,6 +159,9 @@ function NotebookSubmitButton({
 // Configuration
 const STORAGE_INTERVAL_MS = 5000;
 const ANALYSIS_INTERVAL_MS = 10000;
+const EEG_SAMPLE_RATE_HZ = 256;
+const EEG_DISPLAY_MAX_SAMPLES = 512;
+const EEG_PERSIST_MAX_SAMPLES = EEG_SAMPLE_RATE_HZ * 30;
 
 export function SessionView({ sessionId }: { sessionId: string }) {
   const router = useRouter();
@@ -737,6 +741,7 @@ export function SessionView({ sessionId }: { sessionId: string }) {
   // Muse EEG
   const [museStatus, setMuseStatus] = useState<"disconnected" | "connecting" | "connected" | "streaming">("disconnected");
   const [museError, setMuseError] = useState<string | null>(null);
+  const [museDeviceStatus, setMuseDeviceStatus] = useState<DeviceStatus | null>(null);
   const [eegChannelData, setEegChannelData] = useState<Map<string, number[]>>(new Map());
   const [bandPowers, setBandPowers] = useState<{ delta: number; theta: number; alpha: number; beta: number; gamma: number } | null>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -744,6 +749,10 @@ export function SessionView({ sessionId }: { sessionId: string }) {
   const eegIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const bandIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const eegBufferRef = useRef<Map<string, number[]>>(new Map());
+  const eegPendingBufferRef = useRef<Map<string, number[]>>(new Map());
+  const eegPendingStartMsRef = useRef<number | null>(null);
+  const eegLastSampleMsRef = useRef<number | null>(null);
+  const museDeviceStatusRef = useRef<DeviceStatus | null>(null);
 
   // Webcam
   const [isWebcamEnabled, setIsWebcamEnabled] = useState(false);
@@ -841,6 +850,7 @@ export function SessionView({ sessionId }: { sessionId: string }) {
   useEffect(() => { autoAdvanceRef.current = autoAdvance; }, [autoAdvance]);
   useEffect(() => { localInferenceEnabledRef.current = localInferenceEnabled; }, [localInferenceEnabled]);
   useEffect(() => { museStatusRef.current = museStatus; }, [museStatus]);
+  useEffect(() => { museDeviceStatusRef.current = museDeviceStatus; }, [museDeviceStatus]);
   useEffect(() => { isWebcamEnabledRef.current = isWebcamEnabled; }, [isWebcamEnabled]);
   useEffect(() => { sessionPlanRef.current = sessionPlan; }, [sessionPlan]);
   useEffect(() => { elapsedSecondsRef.current = elapsedSeconds; }, [elapsedSeconds]);
@@ -1171,14 +1181,42 @@ export function SessionView({ sessionId }: { sessionId: string }) {
       const { MuseAthenaClient } = await import("@/lib/muse-athena");
       const muse = new MuseAthenaClient();
 
+      muse.onStatusChange((status: "disconnected" | "connecting" | "connected" | "streaming") => {
+        setMuseStatus(status);
+      });
+
+      muse.onDeviceStatus((status: DeviceStatus) => {
+        setMuseDeviceStatus(status);
+      });
+
+      muse.onDisconnected(() => {
+        if (eegIntervalRef.current) { clearInterval(eegIntervalRef.current); eegIntervalRef.current = null; }
+        if (bandIntervalRef.current) { clearInterval(bandIntervalRef.current); bandIntervalRef.current = null; }
+        museClientRef.current = null;
+        setMuseStatus("disconnected");
+        setMuseError("Muse disconnected. Reconnect it from the Muse tab.");
+      });
+
       muse.onEEG((sample: { channels: Record<string, number[]> }) => {
+        const now = Date.now();
+        if (eegPendingStartMsRef.current === null) eegPendingStartMsRef.current = now;
+        eegLastSampleMsRef.current = now;
+
         for (const [channelName, samples] of Object.entries(sample.channels)) {
           const existing = eegBufferRef.current.get(channelName) || [];
           existing.push(...samples);
-          if (existing.length > 512) {
-            eegBufferRef.current.set(channelName, existing.slice(-512));
+          if (existing.length > EEG_DISPLAY_MAX_SAMPLES) {
+            eegBufferRef.current.set(channelName, existing.slice(-EEG_DISPLAY_MAX_SAMPLES));
           } else {
             eegBufferRef.current.set(channelName, existing);
+          }
+
+          const pending = eegPendingBufferRef.current.get(channelName) || [];
+          pending.push(...samples);
+          if (pending.length > EEG_PERSIST_MAX_SAMPLES) {
+            eegPendingBufferRef.current.set(channelName, pending.slice(-EEG_PERSIST_MAX_SAMPLES));
+          } else {
+            eegPendingBufferRef.current.set(channelName, pending);
           }
         }
       });
@@ -1200,6 +1238,9 @@ export function SessionView({ sessionId }: { sessionId: string }) {
         if (!af7 || af7.length < 256 || !af8 || af8.length < 256) return;
         const powers = computeBandPowers(af7.slice(-256), af8.slice(-256));
         setBandPowers(powers);
+        if (localInferenceEnabledRef.current && localContextRef.current) {
+          localContextRef.current.addEEGData(powers);
+        }
       }, 1000);
     } catch (err: unknown) {
       setMuseStatus("disconnected");
@@ -1217,8 +1258,12 @@ export function SessionView({ sessionId }: { sessionId: string }) {
     if (eegIntervalRef.current) { clearInterval(eegIntervalRef.current); eegIntervalRef.current = null; }
     if (bandIntervalRef.current) { clearInterval(bandIntervalRef.current); bandIntervalRef.current = null; }
     eegBufferRef.current.clear();
+    eegPendingBufferRef.current.clear();
+    eegPendingStartMsRef.current = null;
+    eegLastSampleMsRef.current = null;
     setEegChannelData(new Map());
     setBandPowers(null);
+    setMuseDeviceStatus(null);
     setMuseStatus("disconnected");
   };
 
@@ -1729,22 +1774,46 @@ export function SessionView({ sessionId }: { sessionId: string }) {
         }
       }
 
-      // EEG: flush buffer if streaming (with retry)
-      if (currentSession && currentMuseStatus === "streaming" && eegBufferRef.current.size > 0) {
+      // EEG: flush persisted buffer if streaming (with retry)
+      if (currentSession && currentMuseStatus === "streaming" && eegPendingBufferRef.current.size > 0) {
         result.eeg = { attempted: true, saved: false };
-        // Snapshot and CLEAR the buffer before async save to prevent duplicate data
         const channels: Record<string, number[]> = {};
-        for (const [ch, samples] of eegBufferRef.current.entries()) {
+        for (const [ch, samples] of eegPendingBufferRef.current.entries()) {
           channels[ch] = samples.slice();
         }
-        eegBufferRef.current.clear();
+        const startedAtMs = eegPendingStartMsRef.current ?? Date.now();
+        const endedAtMs = eegLastSampleMsRef.current ?? Date.now();
+        const sampleCounts = Object.fromEntries(
+          Object.entries(channels).map(([ch, samples]) => [ch, samples.length])
+        );
 
         const eegIdx = eegChunkIndexRef.current++;
         const saveResult = await retryWithResult(
-          () => saveSessionEEG(currentSession.id, { channels, bandPowers }, museClientRef.current?.deviceName, eegIdx, Date.now()),
+          () => saveSessionEEG(currentSession.id, {
+            channels,
+            bandPowers,
+            sampleRateHz: EEG_SAMPLE_RATE_HZ,
+            startedAtMs,
+            endedAtMs,
+            sampleCounts,
+            deviceStatus: museDeviceStatusRef.current as unknown as Record<string, unknown> | null,
+          }, museClientRef.current?.deviceName, eegIdx, endedAtMs),
           { maxRetries: 2, baseDelayMs: 500 },
         );
         result.eeg.saved = saveResult.success;
+        if (result.eeg.saved) {
+          for (const [ch, savedSamples] of Object.entries(channels)) {
+            const current = eegPendingBufferRef.current.get(ch) || [];
+            const remaining = current.slice(savedSamples.length);
+            if (remaining.length > 0) {
+              eegPendingBufferRef.current.set(ch, remaining);
+            } else {
+              eegPendingBufferRef.current.delete(ch);
+            }
+          }
+          eegPendingStartMsRef.current = eegPendingBufferRef.current.size > 0 ? Date.now() : null;
+          eegLastSampleMsRef.current = eegPendingBufferRef.current.size > 0 ? eegLastSampleMsRef.current : null;
+        }
         if (!result.eeg.saved && saveResult.error) {
           result.eeg.error = String((saveResult.error as Error)?.message ?? saveResult.error);
         }
@@ -2068,12 +2137,23 @@ export function SessionView({ sessionId }: { sessionId: string }) {
     await saveSession(finalSession);
 
     // Save any remaining EEG data before navigating
-    if (museStatus === "streaming" && eegBufferRef.current.size > 0) {
+    if (museStatus === "streaming" && eegPendingBufferRef.current.size > 0) {
       const channels: Record<string, number[]> = {};
-      for (const [ch, samples] of eegBufferRef.current.entries()) {
-        channels[ch] = samples;
+      for (const [ch, samples] of eegPendingBufferRef.current.entries()) {
+        channels[ch] = samples.slice();
       }
-      await saveSessionEEG(finalSession.id, { channels, bandPowers }, museClientRef.current?.deviceName);
+      const sampleCounts = Object.fromEntries(
+        Object.entries(channels).map(([ch, samples]) => [ch, samples.length])
+      );
+      await saveSessionEEG(finalSession.id, {
+        channels,
+        bandPowers,
+        sampleRateHz: EEG_SAMPLE_RATE_HZ,
+        startedAtMs: eegPendingStartMsRef.current ?? Date.now(),
+        endedAtMs: eegLastSampleMsRef.current ?? Date.now(),
+        sampleCounts,
+        deviceStatus: museDeviceStatusRef.current as unknown as Record<string, unknown> | null,
+      }, museClientRef.current?.deviceName, eegChunkIndexRef.current++, eegLastSampleMsRef.current ?? Date.now());
     }
 
     handleDisconnectMuse();
@@ -3668,6 +3748,12 @@ export function SessionView({ sessionId }: { sessionId: string }) {
               planId={session.metadata?.plan_id as string | undefined}
               disabledTools={[]}
               onBackToDashboard={pauseAndGoToDashboard}
+              isRecording={isRecording}
+              isPaused={isPaused}
+              isWebcamEnabled={isWebcamEnabled}
+              museStatus={museStatus}
+              museDeviceStatus={museDeviceStatus}
+              museChannelData={eegChannelData}
             />
 
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
@@ -3761,6 +3847,7 @@ export function SessionView({ sessionId }: { sessionId: string }) {
                         audioStream={stream}
                         museStatus={museStatus}
                         museError={museError}
+                        museDeviceStatus={museDeviceStatus}
                         museChannelData={eegChannelData}
                         bandPowers={bandPowers}
                         onConnectMuse={handleConnectMuse}

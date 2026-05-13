@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/client";
 
 interface Stats {
   totalUsers: number;
+  monthlyActiveUsers: number;
   totalSessions: number;
   completedSessions: number;
   totalPlans: number;
@@ -54,8 +55,13 @@ export default function AdminPage() {
 
   const loadStats = async () => {
     try {
-      const [usersRes, sessionsRes, completedRes, plansRes, orgsRes] = await Promise.all([
+      const monthStart = new Date();
+      monthStart.setDate(1);
+      monthStart.setHours(0, 0, 0, 0);
+
+      const [usersRes, monthlyActiveRes, sessionsRes, completedRes, plansRes, orgsRes] = await Promise.all([
         supabase.from("profiles").select("id", { count: "exact", head: true }),
+        supabase.from("sessions").select("user_id").gte("created_at", monthStart.toISOString()),
         supabase.from("sessions").select("id", { count: "exact", head: true }),
         supabase.from("sessions").select("id", { count: "exact", head: true }).eq("status", "completed"),
         supabase.from("learning_plans").select("id", { count: "exact", head: true }),
@@ -64,6 +70,9 @@ export default function AdminPage() {
 
       setStats({
         totalUsers: usersRes.count || 0,
+        monthlyActiveUsers: new Set(
+          ((monthlyActiveRes.data || []) as Array<{ user_id: string }>).map((row) => row.user_id)
+        ).size,
         totalSessions: sessionsRes.count || 0,
         completedSessions: completedRes.count || 0,
         totalPlans: plansRes.count || 0,
@@ -102,6 +111,10 @@ export default function AdminPage() {
           <div className="bg-neutral-900/50 border border-neutral-800 rounded-lg p-6">
             <div className="text-3xl font-bold text-white">{stats?.totalUsers || 0}</div>
             <div className="text-neutral-400 text-sm mt-1">Total Users</div>
+          </div>
+          <div className="bg-neutral-900/50 border border-neutral-800 rounded-lg p-6">
+            <div className="text-3xl font-bold text-white">{stats?.monthlyActiveUsers || 0}</div>
+            <div className="text-neutral-400 text-sm mt-1">Monthly Active Users</div>
           </div>
           <div className="bg-neutral-900/50 border border-neutral-800 rounded-lg p-6">
             <div className="text-3xl font-bold text-white">{stats?.totalSessions || 0}</div>

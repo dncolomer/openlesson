@@ -3,6 +3,9 @@
 import { useState } from "react";
 import { useI18n } from "@/lib/i18n";
 import { QRCodeModal } from "./QRCodeModal";
+import type { DeviceStatus, MuseAthenaStatus } from "@/lib/muse-athena";
+
+const EEG_CHANNELS = ["TP9", "AF7", "AF8", "TP10", "FPz"] as const;
 
 // Note: "exercise" (Practice) and "reading" (Theory) have been folded
 // into the Helios chat surface — those buttons now inject a rich
@@ -23,6 +26,12 @@ interface ToolsPanelProps {
   planId?: string;
   disabledTools?: Tool[];
   onBackToDashboard?: () => void;
+  isRecording?: boolean;
+  isPaused?: boolean;
+  isWebcamEnabled?: boolean;
+  museStatus?: MuseAthenaStatus;
+  museDeviceStatus?: DeviceStatus | null;
+  museChannelData?: Map<string, number[]>;
 }
 
 function ToolIcon({ id }: { id: Tool }) {
@@ -84,6 +93,8 @@ const bottomTools: Tool[] = ["help", "data-input", "logs"];
 export function ToolsPanel({ 
   activeTool, onToolChange, problem, className = "", errorNotification = false,
   sessionId, planId, disabledTools = [], onBackToDashboard,
+  isRecording = false, isPaused = false, isWebcamEnabled = false,
+  museStatus = "disconnected", museDeviceStatus = null, museChannelData,
 }: ToolsPanelProps) {
   const { t } = useI18n();
   // Practice (exercise) and Theory (reading) used to live here as their
@@ -139,7 +150,15 @@ export function ToolsPanel({
         })}
       </div>
 
-      <div className="flex flex-col gap-1 mt-auto pt-3 border-t border-neutral-800">
+      <SensorStrip
+        audioActive={isRecording && !isPaused}
+        webcamActive={isWebcamEnabled}
+        museStatus={museStatus}
+        museDeviceStatus={museDeviceStatus}
+        museChannelData={museChannelData}
+      />
+
+      <div className="flex flex-col gap-1 pt-3 border-t border-neutral-800">
         {bottomTools.map((toolId) => (
           <button
             key={toolId}
@@ -195,6 +214,111 @@ export function ToolsPanel({
           sessionId={sessionId}
         />
       )}
+    </div>
+  );
+}
+
+function SensorStrip({
+  audioActive,
+  webcamActive,
+  museStatus,
+  museDeviceStatus,
+  museChannelData,
+}: {
+  audioActive: boolean;
+  webcamActive: boolean;
+  museStatus: MuseAthenaStatus;
+  museDeviceStatus: DeviceStatus | null;
+  museChannelData?: Map<string, number[]>;
+}) {
+  return (
+    <div className="mt-auto mb-2 space-y-1.5">
+      <AudioMiniMeter active={audioActive} />
+      <WebcamMiniStatus active={webcamActive} />
+      <EEGMiniStatus
+        museStatus={museStatus}
+        museDeviceStatus={museDeviceStatus}
+        museChannelData={museChannelData}
+      />
+    </div>
+  );
+}
+
+function AudioMiniMeter({ active }: { active: boolean }) {
+  return (
+    <div className="flex items-center gap-2 rounded-md border border-neutral-800 bg-neutral-950/50 px-2 py-1" title={active ? "Audio recording is active" : "Audio recording is off"}>
+      <div className={`w-1.5 h-1.5 rounded-full ${active ? "bg-blue-400 animate-pulse" : "bg-neutral-700"}`} />
+      <span className={`text-[10px] uppercase tracking-wide ${active ? "text-blue-400" : "text-neutral-600"}`}>Audio {active ? "on" : "off"}</span>
+      <div className="ml-auto flex items-end gap-0.5 h-3">
+        {[4, 8, 12, 7].map((height, index) => (
+          <div
+            key={index}
+            className={`w-1 rounded-full ${active ? "bg-blue-400/80" : "bg-neutral-700"}`}
+            style={{ height: active ? height : 3 }}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function WebcamMiniStatus({ active }: { active: boolean }) {
+  return (
+    <div className="flex items-center gap-2 rounded-md border border-neutral-800 bg-neutral-950/50 px-2 py-1" title={active ? "Webcam tracking is active" : "Webcam tracking is off"}>
+      <div className={`w-1.5 h-1.5 rounded-full ${active ? "bg-violet-400 animate-pulse" : "bg-neutral-700"}`} />
+      <span className={`text-[10px] uppercase tracking-wide ${active ? "text-violet-400" : "text-neutral-600"}`}>Webcam {active ? "on" : "off"}</span>
+      <svg className={`ml-auto w-3.5 h-3.5 ${active ? "text-violet-400" : "text-neutral-700"}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+      </svg>
+    </div>
+  );
+}
+
+function EEGMiniStatus({
+  museStatus,
+  museDeviceStatus,
+  museChannelData,
+}: {
+  museStatus: MuseAthenaStatus;
+  museDeviceStatus: DeviceStatus | null;
+  museChannelData?: Map<string, number[]>;
+}) {
+  const isStreaming = museStatus === "streaming";
+  const activeChannels = EEG_CHANNELS.filter((channel) => (museChannelData?.get(channel)?.length ?? 0) > 0).length;
+  const inferredQuality = activeChannels >= 4 ? "good" : activeChannels >= 2 ? "fair" : "poor";
+  const quality = isStreaming ? (museDeviceStatus?.signalQuality || inferredQuality) : "poor";
+  const label = !isStreaming ? "EEG off" : quality === "good" ? "EEG good" : quality === "fair" ? "EEG fair" : "EEG poor";
+  const textColor = quality === "good" ? "text-green-400" : quality === "fair" ? "text-amber-400" : "text-red-400";
+  const dotColor = quality === "good" ? "bg-green-400" : quality === "fair" ? "bg-amber-400" : "bg-red-400";
+
+  return (
+    <div className="rounded-md border border-neutral-800 bg-neutral-950/50 px-2 py-1" title="EEG health: green means most channels are receiving data, yellow means partial signal, red means poor/off.">
+      <div className="flex items-center gap-2">
+        <div className={`w-1.5 h-1.5 rounded-full ${isStreaming ? `${dotColor} animate-pulse` : "bg-neutral-700"}`} />
+        <span className={`text-[10px] uppercase tracking-wide ${isStreaming ? textColor : "text-neutral-600"}`}>{label}</span>
+      </div>
+      <div className="mt-1 flex items-end justify-end gap-1">
+        {EEG_CHANNELS.map((channel) => {
+          const samples = museChannelData?.get(channel)?.length ?? 0;
+          const channelQuality = museDeviceStatus?.electrodeQuality?.[channel];
+          const isActive = samples > 0;
+          const isGood = typeof channelQuality === "number" ? channelQuality > 0.5 : isActive;
+          const isFair = typeof channelQuality === "number" ? channelQuality > 0.2 && channelQuality <= 0.5 : false;
+          const color = !isStreaming || !isActive
+            ? "bg-neutral-700"
+            : isGood
+              ? "bg-green-400"
+              : isFair
+                ? "bg-amber-400"
+                : "bg-red-400";
+          return (
+            <div key={channel} className="flex flex-col items-center gap-0.5" title={`${channel}: ${isActive ? `${samples} recent samples` : "no recent samples"}`}>
+              <div className={`w-1.5 rounded-full ${color}`} style={{ height: isActive ? 10 : 4 }} />
+              <span className="text-[7px] leading-none text-neutral-500">{channel}</span>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }

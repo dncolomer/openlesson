@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { type ThinkAloudThought } from "@/lib/useThinkAloudTranscript";
 import { useI18n } from "@/lib/i18n";
 
@@ -13,6 +13,7 @@ interface ThinkAloudTracesProps {
   onThoughtClick: (thought: ThinkAloudThought) => void;
   onManualSubmit?: (text: string) => void;
   onClearThoughts?: () => void;
+  onThoughtsSent?: (thoughtIds: string[]) => void;
   compact?: boolean;
 }
 
@@ -25,11 +26,13 @@ export function ThinkAloudTraces({
   onThoughtClick,
   onManualSubmit,
   onClearThoughts,
+  onThoughtsSent,
   compact = false,
 }: ThinkAloudTracesProps) {
   const { t } = useI18n();
   const [selectedThoughtIds, setSelectedThoughtIds] = useState<Set<string>>(new Set());
   const [manualText, setManualText] = useState("");
+  const onThoughtsSentRef = useRef(onThoughtsSent);
   const hasUnavailableError = !!error && ["not-allowed", "service-not-allowed", "language-not-supported"].includes(error);
   const showUnavailable = !isSupported || hasUnavailableError;
   const selectedThoughts = useMemo(
@@ -37,6 +40,10 @@ export function ThinkAloudTraces({
     [thoughts, selectedThoughtIds],
   );
   const recentThoughts = useMemo(() => thoughts.slice().reverse(), [thoughts]);
+
+  useEffect(() => {
+    onThoughtsSentRef.current = onThoughtsSent;
+  }, [onThoughtsSent]);
 
   useEffect(() => {
     setSelectedThoughtIds((current) => {
@@ -59,6 +66,7 @@ export function ThinkAloudTraces({
 
       event.preventDefault();
       onThoughtClick(thought);
+      onThoughtsSentRef.current?.([thought.id]);
     };
 
     window.addEventListener("keydown", handleKeyDown);
@@ -84,6 +92,7 @@ export function ThinkAloudTraces({
       text: selectedThoughts.map((thought) => thought.text).join("\n"),
       timestamp: Date.now(),
     });
+    onThoughtsSent?.(selectedThoughts.map((thought) => thought.id));
     setSelectedThoughtIds(new Set());
   };
 
@@ -92,6 +101,17 @@ export function ThinkAloudTraces({
     if (!text || !onManualSubmit) return;
     onManualSubmit(text);
     setManualText("");
+  };
+
+  const sendSingleThought = (thought: ThinkAloudThought) => {
+    onThoughtClick(thought);
+    onThoughtsSentRef.current?.([thought.id]);
+    setSelectedThoughtIds((current) => {
+      if (!current.has(thought.id)) return current;
+      const next = new Set(current);
+      next.delete(thought.id);
+      return next;
+    });
   };
 
   return (
@@ -107,18 +127,6 @@ export function ThinkAloudTraces({
         </div>
         {isSupported && !hasUnavailableError && (
           <div className="shrink-0 flex items-center gap-2">
-            {thoughts.length > 0 && onClearThoughts && (
-              <button
-                type="button"
-                onClick={() => {
-                  setSelectedThoughtIds(new Set());
-                  onClearThoughts();
-                }}
-                className="rounded-full border border-neutral-800 bg-neutral-900/80 px-2 py-1 text-[10px] text-neutral-400 hover:border-neutral-700 hover:text-neutral-200 transition-colors"
-              >
-                {t("probes.removeThoughts")}
-              </button>
-            )}
             <div className={`inline-flex items-center gap-1.5 rounded-full border border-neutral-800 bg-neutral-900/80 px-2 py-1 text-[10px] text-neutral-400 ${isListening ? "listening-live-glow" : ""}`}>
               <span
                 className={`h-1.5 w-1.5 rounded-full ${
@@ -210,6 +218,10 @@ export function ThinkAloudTraces({
                       key={thought.id}
                       type="button"
                       onClick={() => toggleThought(thought.id)}
+                      onDoubleClick={(event) => {
+                        event.preventDefault();
+                        sendSingleThought(thought);
+                      }}
                       className={`flex items-start gap-2 text-left rounded-xl border px-3 py-2 text-xs leading-relaxed transition-all active:scale-[0.99] ${
                         isSelected
                           ? "border-cyan-500/60 bg-cyan-500/15 text-white"

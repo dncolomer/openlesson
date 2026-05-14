@@ -14,7 +14,11 @@ const Excalidraw = dynamic(
 
 interface MobileExcalidrawCanvasProps {
   onCanvasChange?: (dataUrl: string) => void;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  onSceneChange?: (data: { elements: any[]; appState: any; files: any }) => void;
   initialData?: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  initialSceneData?: { elements: any[]; appState: any; files: any } | null;
   onOpenCamera?: () => void;
   pendingImage?: string | null;
   onPendingImageUsed?: () => void;
@@ -29,10 +33,24 @@ interface MobileExcalidrawCanvasProps {
    * based on whether the canvas has changed since the last submission.
    */
   canSubmitToHelios?: boolean;
+  chapterLabel?: string;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type ExcalidrawAPIRef = any;
+
+// Excalidraw appState includes runtime-only values like collaborators (Map),
+// which become invalid after JSON sessionStorage serialization.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function sanitizeSceneData(scene: { elements: any[]; appState: any; files: any } | null | undefined) {
+  if (!scene) return undefined;
+  const { collaborators: _collaborators, ...appState } = scene.appState ?? {};
+  return {
+    elements: scene.elements ?? [],
+    appState,
+    files: scene.files ?? {},
+  };
+}
 
 /**
  * Excalidraw-based whiteboard canvas for mobile MobileSessionView.
@@ -43,12 +61,15 @@ type ExcalidrawAPIRef = any;
  */
 export function MobileExcalidrawCanvas({
   onCanvasChange,
+  onSceneChange,
   initialData,
+  initialSceneData,
   onOpenCamera,
   pendingImage,
   onPendingImageUsed,
   onSubmitToHelios,
   canSubmitToHelios = true,
+  chapterLabel,
 }: MobileExcalidrawCanvasProps) {
   const excalidrawAPIRef = useRef<ExcalidrawAPIRef>(null);
   const [isSubmittingToHelios, setIsSubmittingToHelios] = useState(false);
@@ -57,8 +78,16 @@ export function MobileExcalidrawCanvas({
   // Store the latest scene data for PNG export
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const sceneDataRef = useRef<{ elements: any[]; appState: any; files: any } | null>(null);
+  const initialSceneDataRef = useRef(sanitizeSceneData(initialSceneData));
+  const onSceneChangeRef = useRef(onSceneChange);
   const exportTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const scenePersistTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isExportingRef = useRef(false);
+  const lastPersistedSceneJsonRef = useRef("");
+
+  useEffect(() => {
+    onSceneChangeRef.current = onSceneChange;
+  }, [onSceneChange]);
 
   /**
    * Export current scene to PNG data URL
@@ -148,7 +177,16 @@ export function MobileExcalidrawCanvas({
       files: any
     ) => {
       // Store scene data for potential immediate export
-      sceneDataRef.current = { elements: [...elements], appState, files };
+      const sceneData = sanitizeSceneData({ elements: [...elements], appState, files });
+      sceneDataRef.current = sceneData ?? null;
+      if (scenePersistTimeoutRef.current) clearTimeout(scenePersistTimeoutRef.current);
+      scenePersistTimeoutRef.current = setTimeout(() => {
+        if (!sceneData) return;
+        const json = JSON.stringify(sceneData);
+        if (json === lastPersistedSceneJsonRef.current) return;
+        lastPersistedSceneJsonRef.current = json;
+        onSceneChangeRef.current?.(sceneData);
+      }, 250);
 
       // Trigger debounced PNG export
       debouncedExportPNG();
@@ -291,6 +329,9 @@ export function MobileExcalidrawCanvas({
       if (exportTimeoutRef.current) {
         clearTimeout(exportTimeoutRef.current);
       }
+      if (scenePersistTimeoutRef.current) {
+        clearTimeout(scenePersistTimeoutRef.current);
+      }
     };
   }, []);
 
@@ -309,6 +350,7 @@ export function MobileExcalidrawCanvas({
               excalidrawAPIRef.current = api;
             }}
             onChange={handleChange}
+            initialData={initialSceneDataRef.current}
             theme="dark"
             UIOptions={{
               canvasActions: {
@@ -326,6 +368,11 @@ export function MobileExcalidrawCanvas({
       {/* Bottom Toolbar */}
       <div className="shrink-0 bg-neutral-900 border-t border-neutral-800">
         <div className="flex items-center gap-2 px-2 py-2">
+          {chapterLabel && (
+            <div className="min-w-0 flex-1 px-1 text-[11px] text-neutral-500 truncate">
+              Canvas for {chapterLabel}
+            </div>
+          )}
           {/* Camera */}
           <button
             onClick={() => onOpenCamera?.()}
@@ -344,7 +391,7 @@ export function MobileExcalidrawCanvas({
               onClick={handleSubmitToHelios}
               disabled={isSubmittingToHelios || !canSubmitToHelios}
               aria-label="Submit to Helios"
-              className="flex-1 h-12 rounded-lg bg-white/10 border border-white/30 text-white active:bg-white/20 active:border-white/50 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-sm font-medium transition-colors"
+                className="flex-1 h-12 rounded-lg bg-white/10 border border-white/30 text-white active:bg-white/20 active:border-white/50 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-sm font-medium transition-colors"
             >
               {isSubmittingToHelios ? (
                 <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">

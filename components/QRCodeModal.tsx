@@ -82,23 +82,23 @@ export function QRCodeModal({ isOpen, onClose, sessionId }: QRCodeModalProps) {
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm"
       onClick={handleBackdropClick}
     >
-      <div className="relative w-full max-w-sm mx-4 bg-[#0a0a0a] border border-neutral-800 rounded-2xl shadow-2xl overflow-hidden">
+      <div className="relative w-full max-w-sm mx-4 overflow-hidden rounded-2xl border border-neutral-700/80 bg-neutral-950 shadow-[0_24px_80px_rgba(0,0,0,0.65),0_1px_0_rgba(255,255,255,0.04)_inset]">
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-neutral-800">
+        <div className="flex items-center justify-between border-b border-neutral-800 bg-neutral-900/35 px-5 py-4">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center">
-              <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-neutral-700 bg-neutral-900 text-neutral-200 shadow-[0_1px_0_rgba(255,255,255,0.04)_inset]">
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
               </svg>
             </div>
             <div>
-              <h2 className="text-sm font-semibold text-white">{t('qrCode.openOnSmartphone')}</h2>
+              <h2 className="text-sm font-semibold text-neutral-100">{t('qrCode.openOnSmartphone')}</h2>
               <p className="text-[10px] text-neutral-500">{t('qrCode.scanToContinue')}</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg text-neutral-500 hover:text-neutral-300 hover:bg-neutral-800 transition-colors"
+            className="rounded-lg p-1.5 text-neutral-500 transition-colors hover:bg-neutral-800 hover:text-neutral-200"
           >
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -107,20 +107,20 @@ export function QRCodeModal({ isOpen, onClose, sessionId }: QRCodeModalProps) {
         </div>
 
         {/* QR Code */}
-        <div className="p-6 flex flex-col items-center">
-          <div className="p-4 bg-[#0a0a0a] rounded-xl border border-neutral-800">
+        <div className="flex flex-col items-center p-6">
+          <div className="rounded-xl border border-neutral-700 bg-neutral-950 p-4 shadow-[0_1px_0_rgba(255,255,255,0.04)_inset]">
             {qrDataUrl ? (
               <img src={qrDataUrl} alt="QR Code" className="w-48 h-48" />
             ) : (
               <div className="w-48 h-48 flex items-center justify-center">
-                <div className="w-8 h-8 border-2 border-neutral-700 border-t-cyan-500 rounded-full animate-spin" />
+                <div className="h-8 w-8 animate-spin rounded-full border-2 border-neutral-800 border-t-neutral-300" />
               </div>
             )}
           </div>
 
           {/* Instructions */}
           <div className="mt-4 text-center">
-            <p className="text-xs text-neutral-400 mb-1">
+            <p className="mb-1 text-xs text-neutral-300">
               {t('qrCode.scanWithCamera')}
             </p>
             <p className="text-[10px] text-neutral-600">
@@ -131,10 +131,10 @@ export function QRCodeModal({ isOpen, onClose, sessionId }: QRCodeModalProps) {
 
         {/* URL Section */}
         <div className="px-5 pb-5">
-          <div className="flex items-center gap-2 p-2 bg-neutral-900 border border-neutral-800 rounded-lg">
+          <div className="flex items-center gap-2 rounded-lg border border-neutral-800 bg-neutral-900/70 p-2 shadow-[0_1px_0_rgba(255,255,255,0.03)_inset]">
             <div className="flex-1 min-w-0">
               <p className="text-[10px] text-neutral-500 mb-0.5">{t('qrCode.sessionUrl')}</p>
-              <p className="text-xs text-neutral-300 truncate font-mono">
+              <p className="truncate font-mono text-xs text-neutral-300">
                 {mobileUrl}
               </p>
             </div>
@@ -142,8 +142,8 @@ export function QRCodeModal({ isOpen, onClose, sessionId }: QRCodeModalProps) {
               onClick={handleCopy}
               className={`shrink-0 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
                 copied
-                  ? "bg-green-500/20 text-green-400 border border-green-500/30"
-                  : "bg-neutral-800 text-neutral-400 border border-neutral-700 hover:bg-neutral-700 hover:text-neutral-300"
+                  ? "border border-neutral-500 bg-neutral-700 text-neutral-100"
+                  : "border border-neutral-700 bg-neutral-800 text-neutral-300 hover:bg-neutral-700 hover:text-neutral-100"
               }`}
             >
               {copied ? (
@@ -167,11 +167,11 @@ export function QRCodeModal({ isOpen, onClose, sessionId }: QRCodeModalProps) {
 
         {/* Footer tip */}
         <div className="px-5 pb-4">
-          <div className="flex items-start gap-2 p-3 bg-cyan-500/5 border border-cyan-500/20 rounded-lg">
-            <svg className="w-4 h-4 text-cyan-400 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <div className="flex items-start gap-2 rounded-lg border border-neutral-800 bg-neutral-900/45 p-3">
+            <svg className="mt-0.5 h-4 w-4 shrink-0 text-neutral-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
-            <p className="text-[10px] text-cyan-400/80 leading-relaxed">
+            <p className="text-[10px] leading-relaxed text-neutral-400">
               {t('qrCode.mobileViewTip')}
             </p>
           </div>

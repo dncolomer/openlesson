@@ -15,13 +15,31 @@ const Excalidraw = dynamic(
 
 interface ExcalidrawCanvasProps {
   initialData?: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  initialSceneData?: { elements: any[]; appState: any; files: any } | null;
   onCanvasChange?: (data: string) => void;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  onSceneChange?: (data: { elements: any[]; appState: any; files: any }) => void;
   onSubmitToHelios?: (dataUrl?: string | null) => Promise<void> | void;
   canSubmitToHelios?: boolean;
+  chapterLabel?: string;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type ExcalidrawAPIRef = any;
+
+// Excalidraw's appState contains runtime-only fields like collaborators
+// (a Map) that do not survive JSON storage. Persist only restorable state.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function sanitizeSceneData(scene: { elements: any[]; appState: any; files: any } | null | undefined) {
+  if (!scene) return undefined;
+  const { collaborators: _collaborators, ...appState } = scene.appState ?? {};
+  return {
+    elements: scene.elements ?? [],
+    appState,
+    files: scene.files ?? {},
+  };
+}
 
 /**
  * Excalidraw-based whiteboard canvas for desktop SessionView.
@@ -33,9 +51,12 @@ type ExcalidrawAPIRef = any;
  */
 export function ExcalidrawCanvas({
   initialData,
+  initialSceneData,
   onCanvasChange,
+  onSceneChange,
   onSubmitToHelios,
   canSubmitToHelios = true,
+  chapterLabel,
 }: ExcalidrawCanvasProps) {
   const { t } = useI18n();
   const excalidrawAPIRef = useRef<ExcalidrawAPIRef>(null);
@@ -45,8 +66,16 @@ export function ExcalidrawCanvas({
   // Store the latest scene data for PNG export
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const sceneDataRef = useRef<{ elements: any[]; appState: any; files: any } | null>(null);
+  const initialSceneDataRef = useRef(sanitizeSceneData(initialSceneData));
+  const onSceneChangeRef = useRef(onSceneChange);
   const exportTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const scenePersistTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isExportingRef = useRef(false);
+  const lastPersistedSceneJsonRef = useRef("");
+
+  useEffect(() => {
+    onSceneChangeRef.current = onSceneChange;
+  }, [onSceneChange]);
 
   /**
    * Export current scene to PNG data URL
@@ -136,7 +165,16 @@ export function ExcalidrawCanvas({
       files: any
     ) => {
       // Store scene data for potential immediate export
-      sceneDataRef.current = { elements: [...elements], appState, files };
+      const sceneData = sanitizeSceneData({ elements: [...elements], appState, files });
+      sceneDataRef.current = sceneData ?? null;
+      if (scenePersistTimeoutRef.current) clearTimeout(scenePersistTimeoutRef.current);
+      scenePersistTimeoutRef.current = setTimeout(() => {
+        if (!sceneData) return;
+        const json = JSON.stringify(sceneData);
+        if (json === lastPersistedSceneJsonRef.current) return;
+        lastPersistedSceneJsonRef.current = json;
+        onSceneChangeRef.current?.(sceneData);
+      }, 250);
       
       // Trigger debounced PNG export
       debouncedExportPNG();
@@ -173,6 +211,9 @@ export function ExcalidrawCanvas({
       if (exportTimeoutRef.current) {
         clearTimeout(exportTimeoutRef.current);
       }
+      if (scenePersistTimeoutRef.current) {
+        clearTimeout(scenePersistTimeoutRef.current);
+      }
     };
   }, []);
 
@@ -185,7 +226,9 @@ export function ExcalidrawCanvas({
     <div className="flex flex-col h-full bg-[#0a0a0a] rounded-xl overflow-hidden">
       {/* Toolbar with Submit to Helios button */}
       <div className="flex items-center gap-2 p-2 border-b border-neutral-800 bg-neutral-900/30">
-        <div className="flex-1" />
+        <div className="min-w-0 flex-1 text-[11px] text-neutral-500">
+          {chapterLabel && <span className="truncate">Canvas for {chapterLabel}</span>}
+        </div>
 
         {onSubmitToHelios && (
           <button
@@ -247,6 +290,7 @@ export function ExcalidrawCanvas({
               excalidrawAPIRef.current = api;
             }}
             onChange={handleChange}
+            initialData={initialSceneDataRef.current}
             theme="dark"
             UIOptions={{
               canvasActions: {

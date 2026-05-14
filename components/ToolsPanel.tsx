@@ -292,12 +292,12 @@ function EEGMiniStatus({
   const dotColor = quality === "good" ? "bg-green-400" : quality === "fair" ? "bg-amber-400" : "bg-red-400";
 
   return (
-    <div className="rounded-md border border-neutral-800 bg-neutral-950/50 px-2 py-1" title="EEG health: green means most channels are receiving data, yellow means partial signal, red means poor/off.">
-      <div className="flex items-center gap-2">
+    <div className="flex items-center gap-2 rounded-md border border-neutral-800 bg-neutral-950/50 px-2 py-1" title="EEG health: green means most channels are receiving data, yellow means partial signal, red means poor/off.">
+      <div className="flex items-center gap-2 shrink-0">
         <div className={`w-1.5 h-1.5 rounded-full ${isStreaming ? `${dotColor} animate-pulse` : "bg-neutral-700"}`} />
         <span className={`text-[10px] uppercase tracking-wide ${isStreaming ? textColor : "text-neutral-600"}`}>{label}</span>
       </div>
-      <div className="mt-1 flex items-end justify-end gap-1">
+      <div className="ml-auto flex items-center justify-end gap-1">
         {EEG_CHANNELS.map((channel) => {
           const samples = museChannelData?.get(channel)?.length ?? 0;
           const channelQuality = museDeviceStatus?.electrodeQuality?.[channel];
@@ -312,9 +312,9 @@ function EEGMiniStatus({
                 ? "bg-amber-400"
                 : "bg-red-400";
           return (
-            <div key={channel} className="flex flex-col items-center gap-0.5" title={`${channel}: ${isActive ? `${samples} recent samples` : "no recent samples"}`}>
-              <div className={`w-1.5 rounded-full ${color}`} style={{ height: isActive ? 10 : 4 }} />
-              <span className="text-[7px] leading-none text-neutral-500">{channel}</span>
+            <div key={channel} className="flex items-center gap-0.5" title={`${channel}: ${isActive ? `${samples} recent samples` : "no recent samples"}`}>
+              <div className={`h-1 w-1 rounded-full ${color}`} />
+              <span className="text-[6px] leading-none text-neutral-500">{channel}</span>
             </div>
           );
         })}

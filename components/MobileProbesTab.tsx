@@ -15,6 +15,8 @@ import { type ThinkAloudThought } from "@/lib/useThinkAloudTranscript";
 interface MobileProbesTabProps {
   probes: Probe[];
   sessionPlan?: SessionPlan | null;
+  activeChapterIndex?: number;
+  onActiveChapterIndexChange?: (index: number) => void;
   onArchiveProbe?: (probeId: string) => Promise<void>;
   onToggleFocus?: (probeId: string, focused: boolean) => void;
   onOpenResources?: (text: string) => void;
@@ -54,6 +56,7 @@ interface MobileProbesTabProps {
   onThinkAloudThoughtClick?: (thought: ThinkAloudThought) => void;
   onManualChatSubmit?: (text: string) => void;
   onClearThinkAloudThoughts?: () => void;
+  showThinkAloudTraces?: boolean;
   sessionControls?: React.ReactNode;
   aestheticImages?: string[];
   aestheticName?: string;
@@ -62,6 +65,8 @@ interface MobileProbesTabProps {
 export function MobileProbesTab({
   probes,
   sessionPlan,
+  activeChapterIndex,
+  onActiveChapterIndexChange,
   onArchiveProbe,
   onOpenResources,
   onOpenPractice,
@@ -89,6 +94,7 @@ export function MobileProbesTab({
   onThinkAloudThoughtClick,
   onManualChatSubmit,
   onClearThinkAloudThoughts,
+  showThinkAloudTraces = true,
   sessionControls,
   aestheticImages,
   aestheticName,
@@ -98,7 +104,9 @@ export function MobileProbesTab({
   const activeProbes = useMemo(() => probes.filter(p => !p.archived), [probes]);
   const planSteps = sessionPlan?.steps ?? [];
 
-  const [currentIndex, setCurrentIndex] = useState(0);
+  const [uncontrolledCurrentIndex, setUncontrolledCurrentIndex] = useState(0);
+  const currentIndex = activeChapterIndex ?? uncontrolledCurrentIndex;
+  const setCurrentIndex = onActiveChapterIndexChange ?? setUncontrolledCurrentIndex;
   const [resettingProbes, setResettingProbes] = useState(false);
   const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
   const [advancing, setAdvancing] = useState(false);
@@ -136,14 +144,14 @@ export function MobileProbesTab({
   const currentStep = planSteps[currentIndex];
   const currentStepText = currentStep?.description ?? "";
   const currentStepId = currentStep?.id ?? `step-${currentIndex}`;
-  const isCurrentPlanStep = currentIndex === (sessionPlan?.currentStepIndex ?? 0);
+  const isCurrentPlanStep = true;
   const isCurrentStepCompleted = currentStep?.status === "completed";
   const total = Math.max(planSteps.length, 1);
   const canGoPrev = currentIndex > 0;
   const canGoNext = currentIndex < planSteps.length - 1;
 
-  const goPrev = () => setCurrentIndex(i => Math.max(0, i - 1));
-  const goNext = () => setCurrentIndex(i => Math.min(planSteps.length - 1, i + 1));
+  const goPrev = () => setCurrentIndex(Math.max(0, currentIndex - 1));
+  const goNext = () => setCurrentIndex(Math.min(planSteps.length - 1, currentIndex + 1));
 
   const avatarInitial = displayTutorName.charAt(0).toUpperCase();
 
@@ -269,7 +277,7 @@ export function MobileProbesTab({
                 <span>Reset {displayTutorName}</span>
               </button>
             )}
-            <ThinkAloudTraces
+            {showThinkAloudTraces && <ThinkAloudTraces
               thoughts={thinkAloudThoughts}
               interimText={thinkAloudInterimText}
               isListening={thinkAloudListening}
@@ -279,12 +287,12 @@ export function MobileProbesTab({
               onManualSubmit={onManualChatSubmit}
               onClearThoughts={onClearThinkAloudThoughts}
               compact
-            />
+            />}
           </div>
         ) : (
-          <>
+          <div className="flex-1 min-h-0 flex flex-col justify-center gap-4 overflow-y-auto overscroll-contain pb-2">
             {/* Tutor + message group — compact enough for small screens. */}
-            <div className="flex-1 min-h-0 flex flex-col items-center justify-start gap-3 overflow-y-auto overscroll-contain pb-2">
+            <div className="flex flex-col items-center gap-3">
               {/* Avatar + flanking red nav arrows. The arrows replace the
                   edge-anchored grey chevrons and act as a notification
                   cue: they appear red-tinted only while active probes
@@ -412,7 +420,7 @@ export function MobileProbesTab({
             </div>
 
             {/* Action row */}
-            <div className="shrink-0 pt-2">
+            <div className="shrink-0 pt-1">
               {isCurrentStepCompleted ? (
                 <div className="rounded-md border border-neutral-800 bg-neutral-950/40 px-4 py-3 text-center text-sm font-medium text-neutral-200">
                   Chapter Completed - check next chapter
@@ -469,7 +477,7 @@ export function MobileProbesTab({
                   </div>
                   <button
                     onClick={handleDone}
-                    disabled={advancing || !isSessionActive || !isCurrentPlanStep || !!stuckCheckText}
+                    disabled={advancing || !isSessionActive || isCurrentStepCompleted || !!stuckCheckText}
                     title={t('session.markAsDone')}
                     className="mt-2 w-full py-2.5 px-3 text-xs font-medium rounded-md bg-neutral-100 text-neutral-900 active:bg-white disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-1.5"
                   >
@@ -491,7 +499,7 @@ export function MobileProbesTab({
                     )}
                   </button>
 
-                  <div className="mt-3">
+                  {showThinkAloudTraces && <div className="mt-3">
                     <ThinkAloudTraces
                       thoughts={thinkAloudThoughts}
                       interimText={thinkAloudInterimText}
@@ -503,7 +511,7 @@ export function MobileProbesTab({
                       onClearThoughts={onClearThinkAloudThoughts}
                       compact
                     />
-                  </div>
+                  </div>}
                 </>
               )}
 
@@ -526,7 +534,7 @@ export function MobileProbesTab({
               </div>
 
             </div>
-          </>
+          </div>
         )}
       </div>
       <a

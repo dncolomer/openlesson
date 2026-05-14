@@ -89,6 +89,10 @@ interface HeliosChatProps {
   onMessagesChange?: (messages: ChatMessage[]) => void;
   sessionId?: string;
   tutoringLanguage?: string;
+  activeStepIndex?: number;
+  activeStep?: { id: string; description: string; status?: string; type?: string };
+  totalSteps?: number;
+  sessionPlan?: unknown;
   /** When set, auto-submits it as a user message and clears via the callback */
   pendingMessage?: string | PendingChatMessage | null;
   onPendingMessageHandled?: () => void;
@@ -221,7 +225,7 @@ const STUCK_ACTIONS: Array<{ action: StuckAction; label: string }> = [
   { action: "break", label: "Take a break" },
 ];
 
-export function HeliosChat({ problem, messages: externalMessages, onMessagesChange, sessionId, tutoringLanguage, pendingMessage, onPendingMessageHandled, onStuckAction, stuckActions, isMicOn = false }: HeliosChatProps) {
+export function HeliosChat({ problem, messages: externalMessages, onMessagesChange, sessionId, tutoringLanguage, activeStepIndex = 0, activeStep, totalSteps = 0, sessionPlan, pendingMessage, onPendingMessageHandled, onStuckAction, stuckActions, isMicOn = false }: HeliosChatProps) {
   const { t } = useI18n();
 
   // Get localized welcome message based on tutoring language
@@ -235,7 +239,7 @@ export function HeliosChat({ problem, messages: externalMessages, onMessagesChan
 
   useEffect(() => {
     setGeneratedWelcome(null);
-  }, [sessionId]);
+  }, [sessionId, activeStep?.id]);
 
   // Use external state if provided, otherwise use internal state
   const [internalMessages, setInternalMessages] = useState<ChatMessage[]>([]);
@@ -284,7 +288,7 @@ export function HeliosChat({ problem, messages: externalMessages, onMessagesChan
     return () => {
       cancelled = true;
     };
-  }, [sessionId, problem, tutoringLanguage, generatedWelcome]);
+  }, [sessionId, problem, tutoringLanguage, generatedWelcome, activeStep?.id]);
 
   // Helper to update messages - handles both internal state and external callback
   const updateMessages = (newMessages: ChatMessage[]) => {
@@ -424,6 +428,10 @@ export function HeliosChat({ problem, messages: externalMessages, onMessagesChan
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           problem,
+          activeStepIndex,
+          activeStepId: activeStep?.id,
+          activeStepDescription: activeStep?.description,
+          sessionPlan,
           messages: [...conversationHistory, { role: "user", content: userMsg.content, imageDataUrl: userMsg.imageDataUrl }],
           sessionId,
         }),
@@ -488,12 +496,22 @@ export function HeliosChat({ problem, messages: externalMessages, onMessagesChan
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex items-center justify-between px-4 py-2 border-b border-neutral-800">
-        <div className="flex items-center gap-2">
-          <HeliosAvatar size={22} />
-          <h3 className="text-sm font-medium text-white">{t('heliosChat.assistant')}</h3>
+      <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 sm:gap-3 sm:px-5 border-b border-neutral-800 bg-neutral-950/35">
+        <div className="flex items-center gap-2.5">
+          <HeliosAvatar size={26} />
+          <div className="min-w-0">
+            <h3 className="text-[15px] font-semibold tracking-tight text-white">{t('heliosChat.assistant')}</h3>
+          </div>
         </div>
         <div className="flex items-center gap-2">
+          {activeStep && (
+            <div className="flex min-w-0 max-w-[12rem] items-center gap-2 rounded-lg border border-neutral-700/80 bg-neutral-900/90 px-2.5 py-1.5 text-[10px] text-neutral-400 shadow-[0_1px_0_rgba(255,255,255,0.04)_inset] sm:max-w-[22rem] sm:gap-2.5 sm:px-3 sm:text-[11px]">
+              <span className="shrink-0 font-semibold uppercase tracking-[0.14em] text-red-100">
+                Chapter {activeStepIndex + 1}{totalSteps ? `/${totalSteps}` : ""}
+              </span>
+              <span className="hidden truncate sm:inline">{activeStep.description}</span>
+            </div>
+          )}
           <button
             type="button"
             onClick={() => {

@@ -41,6 +41,7 @@ interface ProbesPanelProps {
   onThinkAloudThoughtClick?: (thought: ThinkAloudThought) => void;
   onManualChatSubmit?: (text: string) => void;
   onClearThinkAloudThoughts?: () => void;
+  showThinkAloudTraces?: boolean;
   sessionControls?: React.ReactNode;
   /**
    * Clears all active probes for the current session and generates a
@@ -57,6 +58,8 @@ interface ProbesPanelProps {
     steps?: Array<{ id: string; order: number; description: string; status?: string }>;
     currentStepIndex?: number;
   } | null;
+  activeChapterIndex?: number;
+  onActiveChapterIndexChange?: (index: number) => void;
   isSessionActive?: boolean;
   tutorName?: string;
   /**
@@ -99,6 +102,7 @@ export function ProbesPanel({
   onThinkAloudThoughtClick,
   onManualChatSubmit,
   onClearThinkAloudThoughts,
+  showThinkAloudTraces = true,
   sessionControls,
   onResetProbes,
   onToolEvent,
@@ -106,6 +110,8 @@ export function ProbesPanel({
   isInitializing = false,
   isGeneratingProbe = false,
   sessionPlan,
+  activeChapterIndex,
+  onActiveChapterIndexChange,
   isSessionActive = false,
   tutorName,
   showWelcome = false,
@@ -122,7 +128,9 @@ export function ProbesPanel({
   const activeProbes = useMemo(() => probes.filter(p => !p.archived), [probes]);
   const planSteps = sessionPlan?.steps ?? [];
 
-  const [currentIndex, setCurrentIndex] = useState(0);
+  const [uncontrolledCurrentIndex, setUncontrolledCurrentIndex] = useState(0);
+  const currentIndex = activeChapterIndex ?? uncontrolledCurrentIndex;
+  const setCurrentIndex = onActiveChapterIndexChange ?? setUncontrolledCurrentIndex;
   const [resettingProbes, setResettingProbes] = useState(false);
   const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
   const [advancing, setAdvancing] = useState(false);
@@ -165,14 +173,14 @@ export function ProbesPanel({
   const currentStep = planSteps[currentIndex];
   const currentStepText = currentStep?.description ?? "";
   const currentStepId = currentStep?.id ?? `step-${currentIndex}`;
-  const isCurrentPlanStep = currentIndex === (sessionPlan?.currentStepIndex ?? 0);
+  const isCurrentPlanStep = true;
   const isCurrentStepCompleted = currentStep?.status === "completed";
   const total = Math.max(planSteps.length, 1);
   const canGoPrev = currentIndex > 0;
   const canGoNext = currentIndex < planSteps.length - 1;
 
   const goPrev = () => {
-    setCurrentIndex((i) => Math.max(0, i - 1));
+    setCurrentIndex(Math.max(0, currentIndex - 1));
     onToolEvent?.("nav_prev", {
       fromIndex: currentIndex,
       total: planSteps.length,
@@ -181,7 +189,7 @@ export function ProbesPanel({
     });
   };
   const goNext = () => {
-    setCurrentIndex((i) => Math.min(planSteps.length - 1, i + 1));
+    setCurrentIndex(Math.min(planSteps.length - 1, currentIndex + 1));
     onToolEvent?.("nav_next", {
       fromIndex: currentIndex,
       total: planSteps.length,
@@ -330,7 +338,7 @@ export function ProbesPanel({
                 <span>Reset {displayTutorName}</span>
               </button>
             )}
-            <div className="w-full max-w-[680px] px-2">
+            {showThinkAloudTraces && <div className="w-full max-w-[680px] px-2">
               <ThinkAloudTraces
                 thoughts={thinkAloudThoughts}
                 interimText={thinkAloudInterimText}
@@ -341,7 +349,7 @@ export function ProbesPanel({
                 onManualSubmit={onManualChatSubmit}
                 onClearThoughts={onClearThinkAloudThoughts}
               />
-            </div>
+            </div>}
           </div>
         ) : (
           <>
@@ -568,7 +576,7 @@ export function ProbesPanel({
                       </div>
                       <button
                         onClick={handleDone}
-                        disabled={advancing || !isSessionActive || !isCurrentPlanStep || !!stuckCheckText}
+                        disabled={advancing || !isSessionActive || isCurrentStepCompleted || !!stuckCheckText}
                         title={t('session.markAsDone')}
                         className="mt-2.5 w-full py-3 px-4 text-[13px] font-medium rounded-md bg-neutral-100 text-neutral-900 hover:bg-white disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
                       >
@@ -590,7 +598,7 @@ export function ProbesPanel({
                         )}
                       </button>
                     </div>
-                    <div className="mt-3">
+                    {showThinkAloudTraces && <div className="mt-3">
                       <ThinkAloudTraces
                         thoughts={thinkAloudThoughts}
                         interimText={thinkAloudInterimText}
@@ -601,7 +609,7 @@ export function ProbesPanel({
                         onManualSubmit={onManualChatSubmit}
                         onClearThoughts={onClearThinkAloudThoughts}
                       />
-                    </div>
+                    </div>}
                   </>
                 )}
               </div>

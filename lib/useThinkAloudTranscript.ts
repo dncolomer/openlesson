@@ -67,6 +67,7 @@ function normalizeTranscript(text: string) {
 }
 
 const MAX_THOUGHTS = 3;
+const THOUGHT_TTL_MS = 5000;
 
 export function useThinkAloudTranscript({
   enabled,
@@ -103,6 +104,17 @@ export function useThinkAloudTranscript({
       },
     ]);
   };
+
+  useEffect(() => {
+    if (thoughts.length === 0) return;
+    const now = Date.now();
+    const nextExpiryMs = Math.min(...thoughts.map((thought) => Math.max(0, THOUGHT_TTL_MS - (now - thought.timestamp))));
+    const timer = window.setTimeout(() => {
+      const cutoff = Date.now() - THOUGHT_TTL_MS;
+      setThoughts((current) => current.filter((thought) => thought.timestamp > cutoff));
+    }, nextExpiryMs + 50);
+    return () => window.clearTimeout(timer);
+  }, [thoughts]);
 
   useEffect(() => {
     shouldListenRef.current = enabled;
@@ -202,6 +214,10 @@ export function useThinkAloudTranscript({
     interimText,
     thoughts,
     clearThoughts: () => setThoughts([]),
+    removeThoughts: (ids: string[]) => {
+      const idSet = new Set(ids);
+      setThoughts((current) => current.filter((thought) => !idSet.has(thought.id)));
+    },
     consumePendingTranscriptEntries: () => {
       const entries = pendingTranscriptRef.current;
       pendingTranscriptRef.current = [];

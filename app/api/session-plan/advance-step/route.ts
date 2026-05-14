@@ -10,7 +10,7 @@ export const maxDuration = 60;
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { sessionId, forceAdvance, previousProbes, focusedProbes, openProbeCount } = body;
+    const { sessionId, forceAdvance, targetStepIndex, previousProbes, focusedProbes, openProbeCount } = body;
 
     if (!sessionId) {
       return NextResponse.json(
@@ -37,13 +37,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { steps, currentStepIndex } = currentPlan;
+    const { steps } = currentPlan;
+    const currentStepIndex = typeof targetStepIndex === "number" ? targetStepIndex : currentPlan.currentStepIndex;
 
     if (!steps || steps.length === 0) {
       return NextResponse.json(
         { error: "Plan has no steps" },
         { status: 400 }
       );
+    }
+
+    if (currentStepIndex < 0 || currentStepIndex >= steps.length) {
+      return NextResponse.json({ error: "targetStepIndex out of bounds" }, { status: 400 });
     }
 
     // Discriminator for the bookkeeping log below so later analytics can
@@ -89,7 +94,7 @@ export async function POST(request: NextRequest) {
             goal: currentPlan.goal,
             strategy: currentPlan.strategy,
             steps: currentPlan.steps,
-            currentStepIndex: currentPlan.currentStepIndex,
+            currentStepIndex,
             previousProbes: previousProbes || [],
             focusedProbes: focusedProbes || [],
             openProbeCount: openProbeCount ?? 0,
@@ -138,7 +143,8 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Mark the current step as completed
+    // Mark the target step as completed. Chapters are independent; completing
+    // one chapter must not mechanically complete or advance through others.
     const updatedSteps: SessionPlanStep[] = steps.map((step, idx) => {
       if (idx === currentStepIndex) {
         return { ...step, status: "completed" as const };
@@ -146,37 +152,8 @@ export async function POST(request: NextRequest) {
       return step;
     });
 
-    // Find the next pending step (first non-completed, non-skipped step after current)
-    let nextIndex = currentStepIndex;
-    let allComplete = true;
-    for (let i = 0; i < updatedSteps.length; i++) {
-      if (updatedSteps[i].status === "pending" || (updatedSteps[i].status === "in_progress" && i !== currentStepIndex)) {
-        allComplete = false;
-        if (i > currentStepIndex) {
-          nextIndex = i;
-          break;
-        }
-      }
-    }
-
-    // If we didn't find a pending step after currentStepIndex,
-    // check if there are any pending steps at all (shouldn't happen normally, but be safe)
-    if (nextIndex === currentStepIndex && !allComplete) {
-      for (let i = 0; i < updatedSteps.length; i++) {
-        if (updatedSteps[i].status === "pending") {
-          nextIndex = i;
-          break;
-        }
-      }
-    }
-
-    // If all steps are now completed, keep the index at the last step
-    if (allComplete) {
-      nextIndex = updatedSteps.length - 1;
-    } else {
-      // Mark the next step as in_progress
-      updatedSteps[nextIndex] = { ...updatedSteps[nextIndex], status: "in_progress" as const };
-    }
+    const allComplete = updatedSteps.every(step => step.status === "completed" || step.status === "skipped");
+    const nextIndex = currentStepIndex;
 
     // Validate and persist
     validatePlanSteps(updatedSteps);

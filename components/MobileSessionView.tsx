@@ -47,6 +47,24 @@ import { ConfirmDialog } from "./ui/ConfirmDialog";
 import type { RequestType } from "@/lib/storage";
 import { fetchAestheticPackages, type AestheticPackage } from "@/lib/aesthetics";
 import { AestheticPicker } from "./AestheticPicker";
+import { ThinkAloudTraces } from "./ThinkAloudTraces";
+
+type ChapterWorkspace = {
+  chatMessages: ChatMessage[];
+  pendingChatMessage: string | PendingChatMessage | null;
+  whiteboardData: string | null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  whiteboardSceneData: { elements: any[]; appState: any; files: any } | null;
+  canvasDirtyForHelios: boolean;
+};
+
+const createChapterWorkspace = (): ChapterWorkspace => ({
+  chatMessages: [],
+  pendingChatMessage: null,
+  whiteboardData: null,
+  whiteboardSceneData: null,
+  canvasDirtyForHelios: true,
+});
 
 // Check if a new probe is a duplicate of any existing probe (normalized comparison)
 function isDuplicateProbe(newText: string, existingProbes: { text: string; archived?: boolean }[]): boolean {
@@ -87,6 +105,7 @@ import { tutoringLocales, tutoringLanguageNames, type TutoringLocale } from "@/l
 const supportedLocales = tutoringLocales;
 type SupportedLocale = TutoringLocale;
 const languageNames = tutoringLanguageNames;
+const STUCK_POLICY_ENABLED = false;
 
 const tabIcons = [
   (
@@ -143,6 +162,52 @@ export function MobileSessionView({
   const [aestheticPackages, setAestheticPackages] = useState<AestheticPackage[]>([]);
   const [aestheticsLoading, setAestheticsLoading] = useState(true);
   const [selectedAestheticId, setSelectedAestheticId] = useState<string | null>(null);
+  const [activeChapterIndex, setActiveChapterIndex] = useState(0);
+  const [chapterWorkspaces, setChapterWorkspaces] = useState<Record<string, ChapterWorkspace>>({});
+  const [chapterWorkspacesLoaded, setChapterWorkspacesLoaded] = useState(false);
+
+  const activeStep = sessionPlan?.steps?.[activeChapterIndex];
+  const activeChapterKey = activeStep?.id ?? `step-${activeChapterIndex}`;
+  const activeWorkspace = chapterWorkspaces[activeChapterKey] ?? createChapterWorkspace();
+  const chatMessages = activeWorkspace.chatMessages;
+  const pendingChatMessage = activeWorkspace.pendingChatMessage;
+  const whiteboardData = activeWorkspace.whiteboardData;
+  const whiteboardSceneData = activeWorkspace.whiteboardSceneData;
+  const canvasDirtyForHelios = activeWorkspace.canvasDirtyForHelios;
+  const activeChapterLabel = activeStep ? `Chapter ${activeChapterIndex + 1}` : "this chapter";
+
+  const updateActiveChapterWorkspace = useCallback((update: Partial<ChapterWorkspace> | ((workspace: ChapterWorkspace) => Partial<ChapterWorkspace>)) => {
+    setChapterWorkspaces(prev => {
+      const current = prev[activeChapterKey] ?? createChapterWorkspace();
+      const patch = typeof update === "function" ? update(current) : update;
+      return { ...prev, [activeChapterKey]: { ...current, ...patch } };
+    });
+  }, [activeChapterKey]);
+
+  const setChatMessages = useCallback((value: ChatMessage[] | ((messages: ChatMessage[]) => ChatMessage[])) => {
+    updateActiveChapterWorkspace(workspace => ({
+      chatMessages: typeof value === "function" ? value(workspace.chatMessages) : value,
+    }));
+  }, [updateActiveChapterWorkspace]);
+
+  const setPendingChatMessage = useCallback((value: string | PendingChatMessage | null) => {
+    updateActiveChapterWorkspace({ pendingChatMessage: value });
+  }, [updateActiveChapterWorkspace]);
+
+  const setWhiteboardData = useCallback((value: string | null) => {
+    updateActiveChapterWorkspace({ whiteboardData: value });
+  }, [updateActiveChapterWorkspace]);
+
+  const setCanvasDirtyForHelios = useCallback((value: boolean) => {
+    updateActiveChapterWorkspace({ canvasDirtyForHelios: value });
+  }, [updateActiveChapterWorkspace]);
+
+  useEffect(() => {
+    if (!sessionPlan?.steps?.length) return;
+    if (activeChapterIndex > sessionPlan.steps.length - 1) {
+      setActiveChapterIndex(sessionPlan.steps.length - 1);
+    }
+  }, [activeChapterIndex, sessionPlan?.steps?.length]);
 
   useEffect(() => {
     let cancelled = false;
@@ -200,22 +265,41 @@ export function MobileSessionView({
   }, [showWelcomePanel]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(!initialSession);
-  const [whiteboardData, setWhiteboardData] = useState<string | null>(null);
-  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
-  const [pendingChatMessage, setPendingChatMessage] = useState<string | PendingChatMessage | null>(null);
   const [activeStuckCheck, setActiveStuckCheck] = useState<string | null>(null);
 
   useEffect(() => {
-    setChatMessages([]);
-    setPendingChatMessage(null);
+    setActiveChapterIndex(0);
+    setChapterWorkspaces({});
+    setChapterWorkspacesLoaded(false);
     setActiveStuckCheck(null);
   }, [sessionId]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const stored = window.sessionStorage.getItem(`openlesson:${sessionId}:mobile-chapter-workspaces`);
+      if (stored) setChapterWorkspaces(JSON.parse(stored));
+    } catch {
+      /* Ignore corrupt local workspace snapshots. */
+    } finally {
+      setChapterWorkspacesLoaded(true);
+    }
+  }, [sessionId]);
+
+  useEffect(() => {
+    if (!chapterWorkspacesLoaded) return;
+    if (typeof window === "undefined") return;
+    try {
+      window.sessionStorage.setItem(`openlesson:${sessionId}:mobile-chapter-workspaces`, JSON.stringify(chapterWorkspaces));
+    } catch {
+      /* Session storage can fail on quota, especially with canvas data. */
+    }
+  }, [chapterWorkspaces, chapterWorkspacesLoaded, sessionId]);
 
   // "Submit to Helios" dirty tracking — true when the user has edited the
   // canvas since the last submit. Initial true so the first submit is
   // allowed (provided there's canvas content). Lives in parent so it
   // survives remounts of the mobile whiteboard tab.
-  const [canvasDirtyForHelios, setCanvasDirtyForHelios] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [showEndConfirm, setShowEndConfirm] = useState(false);
   const [isCelebrating, setIsCelebrating] = useState(false);
@@ -715,6 +799,9 @@ export function MobileSessionView({
 
   const runStuckHeartbeat = useCallback(async (): Promise<StuckHeartbeatResult> => {
     const startMs = Date.now();
+    if (!STUCK_POLICY_ENABLED) {
+      return { success: true, durationMs: Date.now() - startMs, stuck: false };
+    }
     const currentSession = sessionRef.current;
 
     if (!currentSession) return { success: true, durationMs: 0 };
@@ -764,13 +851,62 @@ export function MobileSessionView({
     stuckIntervalMs: 10000,
     onStorageHeartbeat: runStorageHeartbeat,
     onAnalysisHeartbeat: runAnalysisHeartbeat,
-    onStuckHeartbeat: runStuckHeartbeat,
+    onStuckHeartbeat: STUCK_POLICY_ENABLED ? runStuckHeartbeat : undefined,
   });
 
   const openHeliosChatWithMessage = useCallback((message: string | PendingChatMessage) => {
     setActiveTab(1);
     setPendingChatMessage(message);
   }, []);
+
+  const submitHeliosChatMessageNow = useCallback(async (message: string) => {
+    const text = message.trim();
+    if (!text || !session) return;
+    setActiveTab(1);
+
+    const chapterKey = activeChapterKey;
+    const userMsg: ChatMessage = {
+      id: `${Date.now()}-u`,
+      role: "user",
+      content: text,
+    };
+    setChapterWorkspaces(prev => {
+      const current = prev[chapterKey] ?? createChapterWorkspace();
+      return { ...prev, [chapterKey]: { ...current, chatMessages: [...current.chatMessages, userMsg] } };
+    });
+
+    try {
+      const existingMessages = chapterWorkspaces[chapterKey]?.chatMessages ?? [];
+      const response = await fetch("/api/session-chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          problem: session.problem,
+          activeStepIndex: activeChapterIndex,
+          activeStepId: activeStep?.id,
+          activeStepDescription: activeStep?.description,
+          sessionPlan,
+          sessionId: session.id,
+          tutoringLanguage,
+          messages: [...existingMessages, userMsg].map(m => ({ role: m.role, content: m.content, imageDataUrl: m.imageDataUrl })),
+        }),
+      });
+      const data = response.ok ? await response.json() : null;
+      const content = typeof data?.message === "string" && data.message.trim()
+        ? data.message.trim()
+        : t('heliosChat.errorMessage');
+      setChapterWorkspaces(prev => {
+        const current = prev[chapterKey] ?? createChapterWorkspace();
+        return { ...prev, [chapterKey]: { ...current, chatMessages: [...current.chatMessages, { id: `${Date.now()}-a`, role: "assistant", content }] } };
+      });
+    } catch (error) {
+      console.error("[Mobile] Helios direct chat error:", error);
+      setChapterWorkspaces(prev => {
+        const current = prev[chapterKey] ?? createChapterWorkspace();
+        return { ...prev, [chapterKey]: { ...current, chatMessages: [...current.chatMessages, { id: `${Date.now()}-a`, role: "assistant", content: t('heliosChat.errorMessage') }] } };
+      });
+    }
+  }, [activeChapterIndex, activeChapterKey, activeStep, chapterWorkspaces, session, sessionPlan, t, tutoringLanguage]);
 
   const addProbeToHeliosChat = useCallback((text: string) => {
     const content = text.trim();
@@ -1332,8 +1468,8 @@ export function MobileSessionView({
   requeueSpeechTranscriptEntriesRef.current = thinkAloudTranscript.requeueTranscriptEntries;
 
   const handleThinkAloudThoughtClick = useCallback((thought: ThinkAloudThought) => {
-    openHeliosChatWithMessage(`I was thinking aloud and want to work through this: "${thought.text}"`);
-  }, [openHeliosChatWithMessage]);
+    void submitHeliosChatMessageNow(`I was thinking aloud and want to work through this: "${thought.text}"`);
+  }, [submitHeliosChatMessageNow]);
 
   useEffect(() => {
     if (!isPaused) setAutoPausedForInactivity(false);
@@ -1434,15 +1570,13 @@ export function MobileSessionView({
       const currentPlan = sessionPlanRef.current;
       if (!currentPlan?.steps?.length) return;
 
-      const currentIdx = currentPlan.currentStepIndex ?? 0;
-      const isLastStep = currentIdx >= currentPlan.steps.length - 1;
+      const currentIdx = activeChapterIndex;
 
       // Mark current step completed and advance index
       // Mark current step completed, next step in_progress, and advance index
-      const nextIdx = isLastStep ? currentIdx : currentIdx + 1;
+      const nextIdx = currentIdx;
       const updatedSteps = currentPlan.steps.map((s, i) => {
         if (i === currentIdx) return { ...s, status: "completed" as const };
-        if (i === nextIdx && !isLastStep) return { ...s, status: "in_progress" as const };
         return s;
       });
       const updatedPlan = {
@@ -1470,7 +1604,7 @@ export function MobileSessionView({
         setProbes(archivedSession.probes);
       }
 
-      if (isLastStep) {
+      if (updatedSteps.every(s => s.status === "completed" || s.status === "skipped")) {
         setIsCelebrating(true);
         playSessionCompleteSound();
         setTimeout(() => {
@@ -1545,6 +1679,7 @@ export function MobileSessionView({
         body: JSON.stringify({
           sessionId: session.id,
           forceAdvance,
+          targetStepIndex: activeChapterIndex,
           previousProbes: currentSession.probes.map((p: Probe) => p.text),
           focusedProbes: openProbes.filter((p: Probe) => p.focused).map((p: Probe) => ({ id: p.id, text: p.text })),
           openProbeCount: openProbes.length,
@@ -1678,7 +1813,7 @@ export function MobileSessionView({
     } finally {
       if (!evaluationCueResolved) removeHeliosCue(evaluationCueId);
     }
-  }, [addHeliosStepEvaluationCue, removeHeliosCue, resolveHeliosCue, session]);
+  }, [activeChapterIndex, addHeliosStepEvaluationCue, removeHeliosCue, resolveHeliosCue, session]);
 
   // Rollback to a specific step
   const handleRollbackToStep = useCallback(async (stepIndex: number) => {
@@ -2380,6 +2515,8 @@ export function MobileSessionView({
         <MobileProbesTab
           probes={probes}
           sessionPlan={sessionPlan}
+          activeChapterIndex={activeChapterIndex}
+          onActiveChapterIndexChange={setActiveChapterIndex}
           onArchiveProbe={handleArchiveProbe}
           onToggleFocus={handleToggleFocus}
           onOpenResources={handleStepResources}
@@ -2399,7 +2536,7 @@ export function MobileSessionView({
           isSpeaking={isSpeaking}
           aestheticImages={selectedAesthetic?.images}
           aestheticName={selectedAesthetic?.name}
-          stuckCheckText={activeStuckCheck}
+          stuckCheckText={STUCK_POLICY_ENABLED ? activeStuckCheck : null}
           onDismissStuckCheck={() => setActiveStuckCheck(null)}
           sessionControls={(
             <div className="space-y-2">
@@ -2429,8 +2566,9 @@ export function MobileSessionView({
           thinkAloudSupported={thinkAloudTranscript.isSupported}
           thinkAloudError={thinkAloudTranscript.error}
           onThinkAloudThoughtClick={handleThinkAloudThoughtClick}
-          onManualChatSubmit={(text) => openHeliosChatWithMessage(text)}
+          onManualChatSubmit={(text) => void submitHeliosChatMessageNow(text)}
           onClearThinkAloudThoughts={thinkAloudTranscript.clearThoughts}
+          showThinkAloudTraces={false}
         />
       ),
     },
@@ -2438,18 +2576,40 @@ export function MobileSessionView({
       id: "chat",
       label: t('tools.helios'),
       content: (
-        <HeliosChat
-          problem={session.problem}
-          messages={chatMessages}
-          onMessagesChange={setChatMessages}
-          sessionId={session.id}
-          tutoringLanguage={tutoringLanguage}
-          pendingMessage={pendingChatMessage}
-          onPendingMessageHandled={() => setPendingChatMessage(null)}
-          onStuckAction={handleStuckAction}
-          stuckActions={["ask", "theory", "practice", "canvas", "break"]}
-          isMicOn={isRecording && !isPaused}
-        />
+        <div className="flex h-full min-h-0 flex-col gap-2 p-2">
+          <div className="min-h-0 flex-1">
+            <HeliosChat
+              problem={session.problem}
+              messages={chatMessages}
+              onMessagesChange={setChatMessages}
+              sessionId={session.id}
+              tutoringLanguage={tutoringLanguage}
+              pendingMessage={pendingChatMessage}
+              onPendingMessageHandled={() => setPendingChatMessage(null)}
+              onStuckAction={handleStuckAction}
+              stuckActions={["ask", "theory", "practice", "canvas", "break"]}
+              isMicOn={isRecording && !isPaused}
+              activeStepIndex={activeChapterIndex}
+              activeStep={activeStep}
+              totalSteps={sessionPlan?.steps?.length ?? 0}
+              sessionPlan={sessionPlan}
+            />
+          </div>
+          <div className="shrink-0">
+            <ThinkAloudTraces
+              thoughts={thinkAloudTranscript.thoughts}
+              interimText={thinkAloudTranscript.interimText}
+              isListening={thinkAloudTranscript.isListening}
+              isSupported={thinkAloudTranscript.isSupported}
+              error={thinkAloudTranscript.error}
+              onThoughtClick={handleThinkAloudThoughtClick}
+              onManualSubmit={(text) => void submitHeliosChatMessageNow(text)}
+              onClearThoughts={thinkAloudTranscript.clearThoughts}
+              onThoughtsSent={thinkAloudTranscript.removeThoughts}
+              compact
+            />
+          </div>
+        </div>
       ),
     },
     {
@@ -2458,9 +2618,12 @@ export function MobileSessionView({
       content: (
         <div className="h-full relative">
           <MobileExcalidrawCanvas
+            key={activeChapterKey}
             initialData={whiteboardData || undefined}
+            initialSceneData={whiteboardSceneData}
             pendingImage={pendingWhiteboardImage}
             onPendingImageUsed={() => setPendingWhiteboardImage(null)}
+            onSceneChange={(data) => updateActiveChapterWorkspace({ whiteboardSceneData: data })}
             onCanvasChange={(dataUrl: string) => {
               console.log("[Mobile] Canvas changed, size:", dataUrl.length);
               whiteboardDataRef.current = dataUrl;
@@ -2471,6 +2634,7 @@ export function MobileSessionView({
             onOpenCamera={openCamera}
             onSubmitToHelios={handleSubmitToHelios}
             canSubmitToHelios={canvasDirtyForHelios}
+            chapterLabel={activeChapterLabel}
           />
         </div>
       ),
@@ -2690,21 +2854,21 @@ export function MobileSessionView({
         style={{ paddingBottom: "max(8px, env(safe-area-inset-bottom))" }}
       >
         <div className="max-w-md mx-auto">
-          <div className="grid grid-cols-4 gap-1">
+          <div className="grid grid-cols-3 gap-1.5">
             {tabs.map((tab, index) => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(index)}
                 aria-label={tab.label}
                 title={tab.label}
-                className={`flex flex-col items-center justify-center h-12 rounded-xl transition-all active:scale-[0.95] ${
+                className={`flex min-w-0 flex-col items-center justify-center h-12 rounded-xl transition-all active:scale-[0.95] ${
                   activeTab === index
                     ? "text-white bg-neutral-800"
                     : "text-neutral-500 active:bg-neutral-800/60"
                 }`}
               >
                 {tabIcons[index]}
-                <span className="mt-0.5 max-w-full truncate px-1 text-[9px] leading-none">
+                <span className="mt-0.5 max-w-full truncate px-0.5 text-[9px] leading-none">
                   {tab.label}
                 </span>
               </button>

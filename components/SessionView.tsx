@@ -70,6 +70,28 @@ import { tutoringLocales, tutoringLanguageNames } from "@/lib/tutoring-languages
 import { isSessionWelcomeSeen, markSessionWelcomeSeen } from "@/lib/welcomeState";
 import { fetchAestheticPackages, type AestheticPackage } from "@/lib/aesthetics";
 import { AestheticPicker } from "./AestheticPicker";
+import { ThinkAloudTraces } from "./ThinkAloudTraces";
+
+type ChapterWorkspace = {
+  chatMessages: ChatMessage[];
+  pendingChatMessage: string | PendingChatMessage | null;
+  whiteboardData: string | null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  whiteboardSceneData: { elements: any[]; appState: any; files: any } | null;
+  notebookContent: string;
+  canvasDirtyForHelios: boolean;
+  notebookDirtyForHelios: boolean;
+};
+
+const createChapterWorkspace = (): ChapterWorkspace => ({
+  chatMessages: [],
+  pendingChatMessage: null,
+  whiteboardData: null,
+  whiteboardSceneData: null,
+  notebookContent: "",
+  canvasDirtyForHelios: true,
+  notebookDirtyForHelios: true,
+});
 
 
 // Check if a new probe is a duplicate of any existing probe (normalized comparison)
@@ -159,6 +181,7 @@ function NotebookSubmitButton({
 // Configuration
 const STORAGE_INTERVAL_MS = 5000;
 const ANALYSIS_INTERVAL_MS = 10000;
+const STUCK_POLICY_ENABLED = false;
 const EEG_SAMPLE_RATE_HZ = 256;
 const EEG_DISPLAY_MAX_SAMPLES = 512;
 const EEG_PERSIST_MAX_SAMPLES = EEG_SAMPLE_RATE_HZ * 30;
@@ -201,32 +224,42 @@ export function SessionView({ sessionId }: { sessionId: string }) {
   const [showEndDialog, setShowEndDialog] = useState(false);
   const [endReason, setEndReason] = useState("");
 
-  // Whiteboard
-  const [whiteboardData, setWhiteboardData] = useState<string | null>(null);
-
-  // Notebook
-  const [notebookContent, setNotebookContent] = useState("");
-
-  // "Submit to Helios" dirty tracking — becomes true on any edit and is
-  // cleared on a successful submit. Initial value `true` so the first-ever
-  // submit is allowed (provided the tool has non-empty content). The state
-  // lives here rather than inside the tool components so tool-switching
-  // doesn't reset it.
-  const [canvasDirtyForHelios, setCanvasDirtyForHelios] = useState(true);
-  const [notebookDirtyForHelios, setNotebookDirtyForHelios] = useState(true);
-
-
-
-  // Helios Chat
-  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
-  const [pendingChatMessage, setPendingChatMessage] = useState<string | PendingChatMessage | null>(null);
+  // Chapter-scoped workspace. Chat, canvas, notes, and submit-dirty state
+  // switch together when the focused chapter changes. This is intentionally
+  // browser-local; it is not persisted to the backend.
+  const [activeChapterIndex, setActiveChapterIndex] = useState(0);
+  const [chapterWorkspaces, setChapterWorkspaces] = useState<Record<string, ChapterWorkspace>>({});
+  const [chapterWorkspacesLoaded, setChapterWorkspacesLoaded] = useState(false);
   const [activeStuckCheck, setActiveStuckCheck] = useState<string | null>(null);
 
   useEffect(() => {
-    setChatMessages([]);
-    setPendingChatMessage(null);
+    setActiveChapterIndex(0);
+    setChapterWorkspaces({});
+    setChapterWorkspacesLoaded(false);
     setActiveStuckCheck(null);
   }, [sessionId]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const stored = window.sessionStorage.getItem(`openlesson:${sessionId}:chapter-workspaces`);
+      if (stored) setChapterWorkspaces(JSON.parse(stored));
+    } catch {
+      /* Ignore corrupt local workspace snapshots. */
+    } finally {
+      setChapterWorkspacesLoaded(true);
+    }
+  }, [sessionId]);
+
+  useEffect(() => {
+    if (!chapterWorkspacesLoaded) return;
+    if (typeof window === "undefined") return;
+    try {
+      window.sessionStorage.setItem(`openlesson:${sessionId}:chapter-workspaces`, JSON.stringify(chapterWorkspaces));
+    } catch {
+      /* Session storage can fail on quota, especially with canvas data. */
+    }
+  }, [chapterWorkspaces, chapterWorkspacesLoaded, sessionId]);
 
   // New 3-panel layout state
   const [activeTool, setActiveTool] = useState<Tool>("chat");
@@ -412,6 +445,63 @@ export function SessionView({ sessionId }: { sessionId: string }) {
   const [aestheticPackages, setAestheticPackages] = useState<AestheticPackage[]>([]);
   const [aestheticsLoading, setAestheticsLoading] = useState(true);
   const [selectedAestheticId, setSelectedAestheticId] = useState<string | null>(null);
+
+  const activeStep = sessionPlan?.steps?.[activeChapterIndex];
+  const activeChapterKey = activeStep?.id ?? `step-${activeChapterIndex}`;
+  const activeWorkspace = chapterWorkspaces[activeChapterKey] ?? createChapterWorkspace();
+  const chatMessages = activeWorkspace.chatMessages;
+  const pendingChatMessage = activeWorkspace.pendingChatMessage;
+  const whiteboardData = activeWorkspace.whiteboardData;
+  const whiteboardSceneData = activeWorkspace.whiteboardSceneData;
+  const notebookContent = activeWorkspace.notebookContent;
+  const canvasDirtyForHelios = activeWorkspace.canvasDirtyForHelios;
+  const notebookDirtyForHelios = activeWorkspace.notebookDirtyForHelios;
+  const activeChapterLabel = activeStep ? `Chapter ${activeChapterIndex + 1}` : "this chapter";
+
+  const updateChapterWorkspace = useCallback((chapterKey: string, update: Partial<ChapterWorkspace> | ((workspace: ChapterWorkspace) => Partial<ChapterWorkspace>)) => {
+    setChapterWorkspaces(prev => {
+      const current = prev[chapterKey] ?? createChapterWorkspace();
+      const patch = typeof update === "function" ? update(current) : update;
+      return { ...prev, [chapterKey]: { ...current, ...patch } };
+    });
+  }, []);
+
+  const updateActiveChapterWorkspace = useCallback((update: Partial<ChapterWorkspace> | ((workspace: ChapterWorkspace) => Partial<ChapterWorkspace>)) => {
+    updateChapterWorkspace(activeChapterKey, update);
+  }, [activeChapterKey, updateChapterWorkspace]);
+
+  const setChatMessages = useCallback((value: ChatMessage[] | ((messages: ChatMessage[]) => ChatMessage[])) => {
+    updateActiveChapterWorkspace(workspace => ({
+      chatMessages: typeof value === "function" ? value(workspace.chatMessages) : value,
+    }));
+  }, [updateActiveChapterWorkspace]);
+
+  const setPendingChatMessage = useCallback((value: string | PendingChatMessage | null) => {
+    updateActiveChapterWorkspace({ pendingChatMessage: value });
+  }, [updateActiveChapterWorkspace]);
+
+  const setWhiteboardData = useCallback((value: string | null) => {
+    updateActiveChapterWorkspace({ whiteboardData: value });
+  }, [updateActiveChapterWorkspace]);
+
+  const setNotebookContent = useCallback((value: string) => {
+    updateActiveChapterWorkspace({ notebookContent: value });
+  }, [updateActiveChapterWorkspace]);
+
+  const setCanvasDirtyForHelios = useCallback((value: boolean) => {
+    updateActiveChapterWorkspace({ canvasDirtyForHelios: value });
+  }, [updateActiveChapterWorkspace]);
+
+  const setNotebookDirtyForHelios = useCallback((value: boolean) => {
+    updateActiveChapterWorkspace({ notebookDirtyForHelios: value });
+  }, [updateActiveChapterWorkspace]);
+
+  useEffect(() => {
+    if (!sessionPlan?.steps?.length) return;
+    if (activeChapterIndex > sessionPlan.steps.length - 1) {
+      setActiveChapterIndex(sessionPlan.steps.length - 1);
+    }
+  }, [activeChapterIndex, sessionPlan?.steps?.length]);
 
   useEffect(() => {
     let cancelled = false;
@@ -637,6 +727,53 @@ export function SessionView({ sessionId }: { sessionId: string }) {
     setActiveTool("chat");
     setPendingChatMessage(message);
   }, [ensureVisible]);
+
+  const submitHeliosChatMessageNow = useCallback(async (message: string) => {
+    const text = message.trim();
+    if (!text || !session) return;
+    ensureVisible("tools");
+    setActiveTool("chat");
+
+    const chapterKey = activeChapterKey;
+    const userMsg: ChatMessage = {
+      id: `${Date.now()}-u`,
+      role: "user",
+      content: text,
+    };
+    updateChapterWorkspace(chapterKey, workspace => ({
+      chatMessages: [...workspace.chatMessages, userMsg],
+    }));
+
+    try {
+      const existingMessages = chapterWorkspaces[chapterKey]?.chatMessages ?? [];
+      const response = await fetch("/api/session-chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          problem: session.problem,
+          activeStepIndex: activeChapterIndex,
+          activeStepId: activeStep?.id,
+          activeStepDescription: activeStep?.description,
+          sessionPlan,
+          sessionId: session.id,
+          tutoringLanguage,
+          messages: [...existingMessages, userMsg].map(m => ({ role: m.role, content: m.content, imageDataUrl: m.imageDataUrl })),
+        }),
+      });
+      const data = response.ok ? await response.json() : null;
+      const content = typeof data?.message === "string" && data.message.trim()
+        ? data.message.trim()
+        : t('heliosChat.errorMessage');
+      updateChapterWorkspace(chapterKey, workspace => ({
+        chatMessages: [...workspace.chatMessages, { id: `${Date.now()}-a`, role: "assistant", content }],
+      }));
+    } catch (error) {
+      console.error("Helios direct chat error:", error);
+      updateChapterWorkspace(chapterKey, workspace => ({
+        chatMessages: [...workspace.chatMessages, { id: `${Date.now()}-a`, role: "assistant", content: t('heliosChat.errorMessage') }],
+      }));
+    }
+  }, [activeChapterIndex, activeChapterKey, activeStep, chapterWorkspaces, ensureVisible, session, sessionPlan, t, tutoringLanguage, updateChapterWorkspace]);
 
   const addProbeToHeliosChat = useCallback((text: string) => {
     const content = text.trim();
@@ -1640,6 +1777,9 @@ export function SessionView({ sessionId }: { sessionId: string }) {
 
   const runStuckHeartbeat = useCallback(async (): Promise<StuckHeartbeatResult> => {
     const startMs = Date.now();
+    if (!STUCK_POLICY_ENABLED) {
+      return { success: true, durationMs: Date.now() - startMs, stuck: false };
+    }
     const currentSession = sessionRef.current;
 
     if (!currentSession) return { success: true, durationMs: 0 };
@@ -1944,7 +2084,7 @@ export function SessionView({ sessionId }: { sessionId: string }) {
     stuckIntervalMs: ANALYSIS_INTERVAL_MS,
     onStorageHeartbeat: runStorageHeartbeat,
     onAnalysisHeartbeat: runAnalysisHeartbeat,
-    onStuckHeartbeat: runStuckHeartbeat,
+    onStuckHeartbeat: STUCK_POLICY_ENABLED ? runStuckHeartbeat : undefined,
     onLog: addHeartbeatLog,
   });
 
@@ -2375,8 +2515,8 @@ export function SessionView({ sessionId }: { sessionId: string }) {
   requeueSpeechTranscriptEntriesRef.current = thinkAloudTranscript.requeueTranscriptEntries;
 
   const handleThinkAloudThoughtClick = useCallback((thought: ThinkAloudThought) => {
-    openHeliosChatWithMessage(`I was thinking aloud and want to work through this: "${thought.text}"`);
-  }, [openHeliosChatWithMessage]);
+    void submitHeliosChatMessageNow(`I was thinking aloud and want to work through this: "${thought.text}"`);
+  }, [submitHeliosChatMessageNow]);
 
   // Clear the inactivity flag whenever the user manually resumes.
   useEffect(() => {
@@ -2558,14 +2698,12 @@ export function SessionView({ sessionId }: { sessionId: string }) {
       const currentPlan = sessionPlanRef.current;
       if (!currentPlan?.steps?.length) return;
 
-      const currentIdx = currentPlan.currentStepIndex ?? 0;
-      const isLastStep = currentIdx >= currentPlan.steps.length - 1;
+      const currentIdx = activeChapterIndex;
 
-      // Mark current step completed, next step in_progress, and advance index
-      const nextIdx = isLastStep ? currentIdx : currentIdx + 1;
+      // Mark the focused chapter completed without forcing sequential advance.
+      const nextIdx = currentIdx;
       const updatedSteps = currentPlan.steps.map((s, i) => {
         if (i === currentIdx) return { ...s, status: "completed" as const };
-        if (i === nextIdx && !isLastStep) return { ...s, status: "in_progress" as const };
         return s;
       });
       const updatedPlan = {
@@ -2592,7 +2730,7 @@ export function SessionView({ sessionId }: { sessionId: string }) {
         sessionRef.current = archivedSession;
       }
 
-      if (isLastStep) {
+      if (updatedSteps.every(s => s.status === "completed" || s.status === "skipped")) {
         // All steps done
         playSessionCompleteSound();
         setTimeout(() => {
@@ -2600,9 +2738,8 @@ export function SessionView({ sessionId }: { sessionId: string }) {
           if (isRecording && !isPaused) setIsPaused(true);
         }, 1500);
       } else {
-        // Step completed, generate local probe for next step
+        // Chapter completed; keep focus here in the non-sequential flow.
         playStepCompleteSound();
-
         const newStep = updatedPlan.steps[updatedPlan.currentStepIndex];
         if (newStep) {
           let probeText = "";
@@ -2665,6 +2802,7 @@ export function SessionView({ sessionId }: { sessionId: string }) {
         body: JSON.stringify({
           sessionId: session.id,
           forceAdvance,
+          targetStepIndex: activeChapterIndex,
           previousProbes: currentSession.probes.map(p => p.text),
           focusedProbes: openProbes.filter(p => p.focused).map(p => ({ id: p.id, text: p.text })),
           openProbeCount: openProbes.length,
@@ -3780,23 +3918,46 @@ export function SessionView({ sessionId }: { sessionId: string }) {
                   )}
                   <div className="flex-1 min-h-0 overflow-hidden relative">
                     {activeTool === "chat" && (
-                      <HeliosChat 
-                        problem={session.problem}
-                        messages={chatMessages}
-                        onMessagesChange={setChatMessages}
-                        sessionId={session.id}
-                        tutoringLanguage={tutoringLanguage}
-                        pendingMessage={pendingChatMessage}
-                        onPendingMessageHandled={() => setPendingChatMessage(null)}
-                        onStuckAction={handleStuckAction}
-                        stuckActions={["ask", "theory", "practice", "canvas", "notebook", "break"]}
-                        isMicOn={isRecording && !isPaused}
-                      />
+                      <div className="flex h-full min-h-0 flex-col gap-3">
+                        <div className="min-h-0 flex-1">
+                          <HeliosChat 
+                            problem={session.problem}
+                            messages={chatMessages}
+                            onMessagesChange={setChatMessages}
+                            sessionId={session.id}
+                            tutoringLanguage={tutoringLanguage}
+                            pendingMessage={pendingChatMessage}
+                            onPendingMessageHandled={() => setPendingChatMessage(null)}
+                            onStuckAction={handleStuckAction}
+                            stuckActions={["ask", "theory", "practice", "canvas", "notebook", "break"]}
+                            isMicOn={isRecording && !isPaused}
+                            activeStepIndex={activeChapterIndex}
+                            activeStep={activeStep}
+                            totalSteps={sessionPlan?.steps?.length ?? 0}
+                            sessionPlan={sessionPlan}
+                          />
+                        </div>
+                        <div className="shrink-0">
+                          <ThinkAloudTraces
+                            thoughts={thinkAloudTranscript.thoughts}
+                            interimText={thinkAloudTranscript.interimText}
+                            isListening={thinkAloudTranscript.isListening}
+                            isSupported={thinkAloudTranscript.isSupported}
+                            error={thinkAloudTranscript.error}
+                            onThoughtClick={handleThinkAloudThoughtClick}
+                            onManualSubmit={(text) => void submitHeliosChatMessageNow(text)}
+                            onClearThoughts={thinkAloudTranscript.clearThoughts}
+                            onThoughtsSent={thinkAloudTranscript.removeThoughts}
+                          />
+                        </div>
+                      </div>
                     )}
 
                     <div className={activeTool === "canvas" ? "h-full" : "hidden"}>
                       <ExcalidrawCanvas
+                        key={activeChapterKey}
                         initialData={whiteboardData || undefined}
+                        initialSceneData={whiteboardSceneData}
                         onCanvasChange={(data) => {
                           setWhiteboardData(data);
                           // Any canvas change re-arms the submit button.
@@ -3805,12 +3966,26 @@ export function SessionView({ sessionId }: { sessionId: string }) {
                             sessionRef.current = { ...sessionRef.current, metadata: { ...sessionRef.current.metadata, whiteboardData: data } };
                           }
                         }}
+                        onSceneChange={(data) => updateActiveChapterWorkspace({ whiteboardSceneData: data })}
                         onSubmitToHelios={(dataUrl) => handleSubmitToHelios("canvas", dataUrl)}
                         canSubmitToHelios={canvasDirtyForHelios}
+                        chapterLabel={activeChapterLabel}
                       />
                     </div>
                     {activeTool === "notebook" && (
                       <div className="h-full rounded-lg border border-neutral-800 bg-neutral-900/50 flex flex-col">
+                        <div className="shrink-0 px-3 py-2 border-b border-neutral-800 flex items-center justify-between gap-3">
+                          <span className="min-w-0 truncate text-[11px] text-neutral-500">Notes for {activeChapterLabel}</span>
+                          <NotebookSubmitButton
+                            onSubmit={() => handleSubmitToHelios("notebook")}
+                            disabled={notebookContent.trim().length === 0 || !notebookDirtyForHelios}
+                            disabledReason={
+                              notebookContent.trim().length === 0
+                                ? t('whiteboard.nothingToSubmit')
+                                : t('whiteboard.alreadySubmitted')
+                            }
+                          />
+                        </div>
                         <textarea
                           value={notebookContent}
                           onChange={(e) => {
@@ -3823,15 +3998,6 @@ export function SessionView({ sessionId }: { sessionId: string }) {
                         />
                         <div className="shrink-0 px-3 py-2 border-t border-neutral-800 flex items-center justify-between gap-3">
                           <span className="text-[10px] text-neutral-600">{t('session.characters', { count: notebookContent.length })}</span>
-                          <NotebookSubmitButton
-                            onSubmit={() => handleSubmitToHelios("notebook")}
-                            disabled={notebookContent.trim().length === 0 || !notebookDirtyForHelios}
-                            disabledReason={
-                              notebookContent.trim().length === 0
-                                ? t('whiteboard.nothingToSubmit')
-                                : t('whiteboard.alreadySubmitted')
-                            }
-                          />
                         </div>
                       </div>
                     )}
@@ -4082,6 +4248,8 @@ export function SessionView({ sessionId }: { sessionId: string }) {
                         isInitializing={planLoading}
                         isGeneratingProbe={isGeneratingProbe}
                         sessionPlan={sessionPlan}
+                        activeChapterIndex={activeChapterIndex}
+                        onActiveChapterIndexChange={setActiveChapterIndex}
                         isSessionActive={isRecording && !isPaused}
                         showWelcome={showWelcomePanel}
                         onWelcomePlay={handleWelcomePlay}
@@ -4091,7 +4259,7 @@ export function SessionView({ sessionId }: { sessionId: string }) {
                         isSpeaking={isSpeaking}
                         aestheticImages={selectedAesthetic?.images}
                         aestheticName={selectedAesthetic?.name}
-                        stuckCheckText={activeStuckCheck}
+                        stuckCheckText={STUCK_POLICY_ENABLED ? activeStuckCheck : null}
                         onDismissStuckCheck={() => setActiveStuckCheck(null)}
                         sessionControls={(
                           <div className="space-y-2">
@@ -4121,8 +4289,9 @@ export function SessionView({ sessionId }: { sessionId: string }) {
                         thinkAloudSupported={thinkAloudTranscript.isSupported}
                         thinkAloudError={thinkAloudTranscript.error}
                         onThinkAloudThoughtClick={handleThinkAloudThoughtClick}
-                        onManualChatSubmit={(text) => openHeliosChatWithMessage(text)}
+                        onManualChatSubmit={(text) => void submitHeliosChatMessageNow(text)}
                         onClearThinkAloudThoughts={thinkAloudTranscript.clearThoughts}
+                        showThinkAloudTraces={false}
                       />
                     </div>
               }

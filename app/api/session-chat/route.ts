@@ -36,7 +36,7 @@ function imageDataUrlToImageInput(dataUrl: string) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { problem, messages, model, sessionId, tutoringLanguage: bodyLanguage } = body;
+    const { problem, messages, model, sessionId, tutoringLanguage: bodyLanguage, activeStepIndex, activeStepId, activeStepDescription, sessionPlan } = body;
 
     if (!problem) {
       return NextResponse.json({ error: "Missing problem" }, { status: 400 });
@@ -62,9 +62,17 @@ export async function POST(request: NextRequest) {
       : BASE_SYSTEM_PROMPT;
 
     const inputMessages = (messages || []) as Array<{ role: string; content: string; imageDataUrl?: string }>;
+    const planContext = sessionPlan?.steps?.length
+      ? `Full session plan:\n${sessionPlan.steps.map((step: { id?: string; description?: string; status?: string }, index: number) => `${index + 1}. [${step.status || "pending"}] ${step.description || ""}${step.id === activeStepId ? " (focused)" : ""}`).join("\n")}`
+      : "";
+    const activeChapterContext = activeStepDescription
+      ? `The current message is about focused Chapter ${(activeStepIndex ?? 0) + 1}: ${activeStepDescription}. Use this chapter as the local focus, but you may use the whole session plan as context.`
+      : "";
     const conversationMessages = [
       systemMessage(systemPrompt),
       userMessage(`The user is working on: ${problem}`),
+      ...(planContext ? [userMessage(planContext)] : []),
+      ...(activeChapterContext ? [userMessage(activeChapterContext)] : []),
       ...inputMessages.map((m, index) => {
         const isLatestMessage = index === inputMessages.length - 1;
         const image = isLatestMessage && m.role === "user" && m.imageDataUrl

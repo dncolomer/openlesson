@@ -98,11 +98,22 @@ export default function Home() {
       style={bgImage ? { backgroundImage: `url(${bgImage})`, backgroundSize: "cover", backgroundPosition: "center" } : {}}
     >
       <div className="fixed inset-0 z-0 bg-[#0a0a0a]/70" />
-      <div className="absolute top-0 z-10 flex w-full justify-center pt-6">
+      <div className={`fixed inset-0 z-30 flex items-center justify-center transition-opacity duration-700 ${busy ? "opacity-100" : "pointer-events-none opacity-0"}`} aria-live="polite" aria-atomic="true">
+        <div className="font-mono text-sm uppercase tracking-[4px] text-white/90 sm:text-base">
+          <span className="animate-pulse">Generating</span>
+          <span className="ml-2 inline-flex w-8 justify-between align-middle" aria-hidden="true">
+            <span className="animate-bounce">.</span>
+            <span className="animate-bounce" style={{ animationDelay: "120ms" }}>.</span>
+            <span className="animate-bounce" style={{ animationDelay: "240ms" }}>.</span>
+          </span>
+        </div>
+      </div>
+
+      <div className={`absolute top-0 z-10 flex w-full justify-center pt-6 transition-opacity duration-700 ${busy ? "pointer-events-none opacity-0" : "opacity-100"}`}>
         <div className="font-mono text-[10px] tracking-[3px] text-zinc-600">OPENLESSON</div>
       </div>
 
-      <div className="absolute right-6 top-5 z-20">
+      <div className={`absolute right-6 top-5 z-20 transition-opacity duration-700 ${busy ? "pointer-events-none opacity-0" : "opacity-100"}`}>
         {user ? (
           <Link href="/dashboard" className="flex items-center gap-2 rounded-md border border-white/10 bg-zinc-950/70 py-1.5 pl-1.5 pr-4 text-sm text-zinc-300 backdrop-blur-md transition hover:border-white/20 hover:bg-zinc-900/80 hover:text-white">
             <div className="flex size-9 items-center justify-center overflow-hidden rounded-full border border-white/10 bg-zinc-800 text-xs font-medium text-white">
@@ -115,7 +126,7 @@ export default function Home() {
         ) : null}
       </div>
 
-      <section className="relative z-10 flex min-h-screen w-full flex-col items-center justify-center px-6 pt-20">
+      <section className={`relative z-10 flex min-h-screen w-full flex-col items-center justify-center px-6 pt-20 transition-opacity duration-700 ${busy ? "pointer-events-none opacity-0" : "opacity-100"}`}>
         <div className="max-w-5xl pb-12 text-center">
           <div className="mb-6 inline-block rounded-sm border border-zinc-800 bg-zinc-950 px-3 py-1 font-mono text-[10px] tracking-[2px] text-zinc-500">SOCRATIC • THINK ALOUD • ANY TOPIC</div>
           <h1 className="mx-auto mb-7 max-w-4xl text-5xl font-medium leading-[1.05] tracking-[-3.2px] text-white sm:text-6xl lg:text-[64px]">Ready for an Eureka moment?</h1>
@@ -140,7 +151,7 @@ export default function Home() {
         </form>
       </section>
 
-      <div className="relative z-10 w-full"><Footer /></div>
+      <div className={`relative z-10 w-full transition-opacity duration-700 ${busy ? "pointer-events-none opacity-0" : "opacity-100"}`}><Footer /></div>
     </main>
   );
 }

@@ -925,35 +925,59 @@ export function MobileSessionView({
   }, []);
 
   const addHeliosStepEvaluationCue = useCallback((forceAdvance: boolean) => {
+    const targetChapterKey = activeChapterKey;
     setActiveTab(1);
     const cueId = `advance_eval_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
-    setChatMessages(prev => [
-      ...prev,
-      {
-        id: cueId,
-        role: "assistant",
-        content: "",
-        pending: true,
-        pendingLabel: forceAdvance
-          ? t('sessionPlan.completing')
-          : t('sessionPlan.evaluatingStep'),
-      },
-    ]);
-    return cueId;
-  }, [t]);
+    setChapterWorkspaces(prev => {
+      const current = prev[targetChapterKey] ?? createChapterWorkspace();
+      return {
+        ...prev,
+        [targetChapterKey]: {
+          ...current,
+          chatMessages: [
+            ...current.chatMessages,
+            {
+              id: cueId,
+              role: "assistant",
+              content: "",
+              pending: true,
+              pendingLabel: forceAdvance
+                ? t('sessionPlan.completing')
+                : t('sessionPlan.evaluatingStep'),
+            },
+          ],
+        },
+      };
+    });
+    return `${targetChapterKey}::${cueId}`;
+  }, [activeChapterKey, t]);
 
   const removeHeliosCue = useCallback((cueId: string | null) => {
     if (!cueId) return;
-    setChatMessages(prev => prev.filter(message => message.id !== cueId));
+    const [chapterKey, messageId] = cueId.split("::");
+    setChapterWorkspaces(prev => {
+      const current = prev[chapterKey] ?? createChapterWorkspace();
+      return { ...prev, [chapterKey]: { ...current, chatMessages: current.chatMessages.filter(message => message.id !== messageId) } };
+    });
   }, []);
 
   const resolveHeliosCue = useCallback((cueId: string | null, content: string) => {
     if (!cueId) return;
-    setChatMessages(prev => prev.map(message =>
-      message.id === cueId
-        ? { ...message, content, pending: false, pendingLabel: undefined }
-        : message
-    ));
+    const [chapterKey, messageId] = cueId.split("::");
+    setChapterWorkspaces(prev => {
+      const current = prev[chapterKey] ?? createChapterWorkspace();
+      return {
+        ...prev,
+        [chapterKey]: {
+          ...current,
+          chatMessages: current.chatMessages.map(message =>
+            message.id === messageId
+              ? { ...message, content, pending: false, pendingLabel: undefined }
+              : message
+          ),
+        },
+      };
+    });
   }, []);
 
   const fetchAndInjectPrepIntoChat = useCallback(async (
@@ -1133,15 +1157,23 @@ export function MobileSessionView({
    * racing with the periodic tick is safe.
    */
   const handleSubmitToHelios = useCallback(async (canvasDataUrl?: string | null) => {
+    const targetChapterKey = activeChapterKey;
+    const targetWorkspace = chapterWorkspaces[targetChapterKey] ?? activeWorkspace;
+    const targetCanvasData = canvasDataUrl || targetWorkspace.whiteboardData || null;
     if (canvasDataUrl) {
       whiteboardDataRef.current = canvasDataUrl;
-      setWhiteboardData(canvasDataUrl);
+      setChapterWorkspaces(prev => {
+        const current = prev[targetChapterKey] ?? createChapterWorkspace();
+        return { ...prev, [targetChapterKey]: { ...current, whiteboardData: canvasDataUrl } };
+      });
+    } else {
+      whiteboardDataRef.current = targetCanvasData;
     }
     const currentSession = sessionRef.current;
     if (currentSession) {
       // Fire-and-forget — we don't want the log round-trip to block submit.
       logToolUsage(currentSession.id, "canvas", "submit_to_helios", Date.now(), {
-        hasCanvas: !!(canvasDataUrl || whiteboardDataRef.current),
+        hasCanvas: !!targetCanvasData,
       }).catch((err) => console.warn("[Mobile] logToolUsage failed:", err));
     }
 
@@ -1159,12 +1191,22 @@ export function MobileSessionView({
     // Disable the button until the user edits again. Applied even on
     // heartbeat failure: the submission was made, we don't want the user
     // to keep retrying with the exact same content.
-    setCanvasDirtyForHelios(false);
-    openHeliosChatWithMessage({
-      text: "Here is my current canvas. Help me reason through what I have drawn without just giving me the answer.",
-      imageDataUrl: canvasDataUrl || whiteboardDataRef.current || undefined,
+    setActiveTab(1);
+    setChapterWorkspaces(prev => {
+      const current = prev[targetChapterKey] ?? createChapterWorkspace();
+      return {
+        ...prev,
+        [targetChapterKey]: {
+          ...current,
+          canvasDirtyForHelios: false,
+          pendingChatMessage: {
+            text: "Here is my current canvas. Help me reason through what I have drawn without just giving me the answer.",
+            imageDataUrl: targetCanvasData || undefined,
+          },
+        },
+      };
     });
-  }, [runStorageHeartbeat, runAnalysisHeartbeat, openHeliosChatWithMessage]);
+  }, [activeChapterKey, activeWorkspace, chapterWorkspaces, runStorageHeartbeat, runAnalysisHeartbeat]);
 
   // Heartbeat lifecycle - managed by the hook, controlled by recording state
   useEffect(() => {

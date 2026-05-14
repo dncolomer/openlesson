@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useI18n } from "@/lib/i18n";
 import { QRCodeModal } from "./QRCodeModal";
 import type { DeviceStatus, MuseAthenaStatus } from "@/lib/muse-athena";
@@ -233,12 +233,54 @@ function SensorStrip({
 }) {
   return (
     <div className="mt-auto mb-2 space-y-1.5">
+      {webcamActive && <WebcamMiniPreview />}
       <AudioMiniMeter active={audioActive} />
       <WebcamMiniStatus active={webcamActive} />
       <EEGMiniStatus
         museStatus={museStatus}
         museDeviceStatus={museDeviceStatus}
         museChannelData={museChannelData}
+      />
+    </div>
+  );
+}
+
+function WebcamMiniPreview() {
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    navigator.mediaDevices?.getUserMedia({ video: { width: 320, height: 180 }, audio: false })
+      .then((stream) => {
+        if (cancelled) {
+          stream.getTracks().forEach((track) => track.stop());
+          return;
+        }
+        streamRef.current = stream;
+        if (videoRef.current) videoRef.current.srcObject = stream;
+      })
+      .catch((error) => {
+        console.warn("Sidebar webcam preview failed:", error);
+      });
+
+    return () => {
+      cancelled = true;
+      streamRef.current?.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
+      if (videoRef.current) videoRef.current.srcObject = null;
+    };
+  }, []);
+
+  return (
+    <div className="overflow-hidden rounded-md border border-neutral-800 bg-neutral-950/70 shadow-[0_1px_0_rgba(255,255,255,0.03)_inset]" title="Live webcam preview">
+      <video
+        ref={videoRef}
+        autoPlay
+        muted
+        playsInline
+        className="aspect-video w-full object-cover opacity-80 grayscale"
       />
     </div>
   );

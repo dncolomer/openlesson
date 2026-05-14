@@ -620,6 +620,7 @@ export function SessionView({ sessionId }: { sessionId: string }) {
     fallbackTitle: string,
   ) => {
     if (!session?.problem) return;
+    const targetChapterKey = activeChapterKey;
     ensureVisible("tools");
     setActiveTool("chat");
 
@@ -644,9 +645,9 @@ export function SessionView({ sessionId }: { sessionId: string }) {
       pendingLabel,
     };
 
-    // Snapshot the current chatMessages now so we don't fight a
-    // concurrent welcome-init effect inside HeliosChat.
-    setChatMessages([...chatMessages, userMsg, placeholder]);
+    updateChapterWorkspace(targetChapterKey, workspace => ({
+      chatMessages: [...workspace.chatMessages, userMsg, placeholder],
+    }));
 
     try {
       const url =
@@ -664,8 +665,8 @@ export function SessionView({ sessionId }: { sessionId: string }) {
       // each other if the user clicks twice in quick succession. The
       // smart card chrome already renders the title in its header
       // strip, so we don't prepend it to the markdown body.
-      setChatMessages(prev =>
-        prev.map(m =>
+      updateChapterWorkspace(targetChapterKey, workspace => ({
+        chatMessages: workspace.chatMessages.map(m =>
           m.id === placeholderId
             ? {
                 ...m,
@@ -676,14 +677,14 @@ export function SessionView({ sessionId }: { sessionId: string }) {
               }
             : m,
         ),
-      );
+      }));
     } catch (err) {
       console.error("Prep material → chat error:", err);
       // On error, fall back to a regular Helios bubble (drop the
       // card kind) so the apology reads as conversational, not as
       // a failed-but-still-card artifact.
-      setChatMessages(prev =>
-        prev.map(m =>
+      updateChapterWorkspace(targetChapterKey, workspace => ({
+        chatMessages: workspace.chatMessages.map(m =>
           m.id === placeholderId
             ? {
                 ...m,
@@ -698,7 +699,7 @@ export function SessionView({ sessionId }: { sessionId: string }) {
               }
             : m,
         ),
-      );
+      }));
     }
   };
 
@@ -723,10 +724,11 @@ export function SessionView({ sessionId }: { sessionId: string }) {
   };
 
   const openHeliosChatWithMessage = useCallback((message: string | PendingChatMessage) => {
+    const targetChapterKey = activeChapterKey;
     ensureVisible("tools");
     setActiveTool("chat");
-    setPendingChatMessage(message);
-  }, [ensureVisible]);
+    updateChapterWorkspace(targetChapterKey, { pendingChatMessage: message });
+  }, [activeChapterKey, ensureVisible, updateChapterWorkspace]);
 
   const submitHeliosChatMessageNow = useCallback(async (message: string) => {
     const text = message.trim();
@@ -791,37 +793,46 @@ export function SessionView({ sessionId }: { sessionId: string }) {
   }, []);
 
   const addHeliosStepEvaluationCue = useCallback((forceAdvance: boolean) => {
+    const targetChapterKey = activeChapterKey;
     ensureVisible("tools");
     setActiveTool("chat");
     const cueId = `advance_eval_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
-    setChatMessages(prev => [
-      ...prev,
-      {
-        id: cueId,
-        role: "assistant",
-        content: "",
-        pending: true,
-        pendingLabel: forceAdvance
-          ? t('sessionPlan.completing')
-          : t('sessionPlan.evaluatingStep'),
-      },
-    ]);
-    return cueId;
-  }, [ensureVisible, t]);
+    updateChapterWorkspace(targetChapterKey, workspace => ({
+      chatMessages: [
+        ...workspace.chatMessages,
+        {
+          id: cueId,
+          role: "assistant",
+          content: "",
+          pending: true,
+          pendingLabel: forceAdvance
+            ? t('sessionPlan.completing')
+            : t('sessionPlan.evaluatingStep'),
+        },
+      ],
+    }));
+    return `${targetChapterKey}::${cueId}`;
+  }, [activeChapterKey, ensureVisible, t, updateChapterWorkspace]);
 
   const removeHeliosCue = useCallback((cueId: string | null) => {
     if (!cueId) return;
-    setChatMessages(prev => prev.filter(message => message.id !== cueId));
-  }, []);
+    const [chapterKey, messageId] = cueId.split("::");
+    updateChapterWorkspace(chapterKey, workspace => ({
+      chatMessages: workspace.chatMessages.filter(message => message.id !== messageId),
+    }));
+  }, [updateChapterWorkspace]);
 
   const resolveHeliosCue = useCallback((cueId: string | null, content: string) => {
     if (!cueId) return;
-    setChatMessages(prev => prev.map(message =>
-      message.id === cueId
-        ? { ...message, content, pending: false, pendingLabel: undefined }
-        : message
-    ));
-  }, []);
+    const [chapterKey, messageId] = cueId.split("::");
+    updateChapterWorkspace(chapterKey, workspace => ({
+      chatMessages: workspace.chatMessages.map(message =>
+        message.id === messageId
+          ? { ...message, content, pending: false, pendingLabel: undefined }
+          : message
+      ),
+    }));
+  }, [updateChapterWorkspace]);
 
   const handleStepAskHelios = (stepDescription: string) => {
     // Make sure the tools pane is visible. The `activeTool` effect only
@@ -2113,15 +2124,23 @@ export function SessionView({ sessionId }: { sessionId: string }) {
    */
   const handleSubmitToHelios = useCallback(
     async (toolName: "canvas" | "notebook", canvasDataUrl?: string | null) => {
+      const targetChapterKey = activeChapterKey;
+      const targetWorkspace = chapterWorkspaces[targetChapterKey] ?? activeWorkspace;
+      const targetNotebookContent = targetWorkspace.notebookContent;
+      const targetCanvasData = canvasDataUrl || targetWorkspace.whiteboardData || null;
       if (toolName === "canvas" && canvasDataUrl) {
         whiteboardDataRef.current = canvasDataUrl;
-        setWhiteboardData(canvasDataUrl);
+        updateChapterWorkspace(targetChapterKey, { whiteboardData: canvasDataUrl });
+      } else if (toolName === "canvas") {
+        whiteboardDataRef.current = targetCanvasData;
+      } else {
+        notebookContentRef.current = targetNotebookContent;
       }
       const metadata: Record<string, unknown> = {};
       if (toolName === "notebook") {
-        metadata.contentLength = notebookContentRef.current?.length ?? 0;
+        metadata.contentLength = targetNotebookContent.length;
       } else {
-        metadata.hasCanvas = !!(canvasDataUrl || whiteboardDataRef.current);
+        metadata.hasCanvas = !!targetCanvasData;
       }
       // Fire-and-forget the log; we don't want the network round-trip to
       // delay the user-perceived submit.
@@ -2148,21 +2167,29 @@ export function SessionView({ sessionId }: { sessionId: string }) {
       // has done everything they can; re-enabling the button would invite
       // spam retries without new content.
       if (toolName === "canvas") {
-        setCanvasDirtyForHelios(false);
-        const imageDataUrl = canvasDataUrl || whiteboardDataRef.current || undefined;
-        openHeliosChatWithMessage({
-          text: "Here is my current canvas. Help me reason through what I have drawn without just giving me the answer.",
-          imageDataUrl,
+        updateChapterWorkspace(targetChapterKey, { canvasDirtyForHelios: false });
+        const imageDataUrl = targetCanvasData || undefined;
+        ensureVisible("tools");
+        setActiveTool("chat");
+        updateChapterWorkspace(targetChapterKey, {
+          pendingChatMessage: {
+            text: "Here is my current canvas. Help me reason through what I have drawn without just giving me the answer.",
+            imageDataUrl,
+          },
         });
       } else {
-        setNotebookDirtyForHelios(false);
-        const content = notebookContentRef.current?.trim() ?? "";
+        updateChapterWorkspace(targetChapterKey, { notebookDirtyForHelios: false });
+        const content = targetNotebookContent.trim();
         if (content) {
-          openHeliosChatWithMessage(`Here are my notebook notes. Help me reason through them without just giving me the answer:\n\n${content}`);
+          ensureVisible("tools");
+          setActiveTool("chat");
+          updateChapterWorkspace(targetChapterKey, {
+            pendingChatMessage: `Here are my notebook notes. Help me reason through them without just giving me the answer:\n\n${content}`,
+          });
         }
       }
     },
-    [logTool, runStorageHeartbeat, runAnalysisHeartbeat, openHeliosChatWithMessage],
+    [activeChapterKey, activeWorkspace, chapterWorkspaces, ensureVisible, logTool, runStorageHeartbeat, runAnalysisHeartbeat, updateChapterWorkspace],
   );
 
   const checkMicrophone = async () => {

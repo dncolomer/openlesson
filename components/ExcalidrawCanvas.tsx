@@ -60,8 +60,12 @@ export function ExcalidrawCanvas({
 }: ExcalidrawCanvasProps) {
   const { t } = useI18n();
   const excalidrawAPIRef = useRef<ExcalidrawAPIRef>(null);
+  const cameraVideoRef = useRef<HTMLVideoElement | null>(null);
+  const cameraStreamRef = useRef<MediaStream | null>(null);
   const [isSubmittingToHelios, setIsSubmittingToHelios] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
+  const [cameraOpen, setCameraOpen] = useState(false);
+  const [cameraError, setCameraError] = useState<string | null>(null);
   
   // Store the latest scene data for PNG export
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -205,6 +209,117 @@ export function ExcalidrawCanvas({
     }
   }, [onSubmitToHelios, isSubmittingToHelios, canSubmitToHelios, onCanvasChange, exportToPNG]);
 
+  const addImageToCanvas = useCallback(async (dataUrl: string) => {
+    const api = excalidrawAPIRef.current;
+    if (!api) return;
+
+    try {
+      const img = new window.Image();
+      await new Promise<void>((resolve, reject) => {
+        img.onload = () => resolve();
+        img.onerror = reject;
+        img.src = dataUrl;
+      });
+
+      const fileId = `image-${Date.now()}`;
+      const response = await fetch(dataUrl);
+      const blob = await response.blob();
+
+      api.addFiles([
+        {
+          id: fileId,
+          dataURL: dataUrl,
+          mimeType: blob.type || "image/png",
+          created: Date.now(),
+        },
+      ]);
+
+      const appState = api.getAppState();
+      const canvasWidth = appState.width || 800;
+      const canvasHeight = appState.height || 600;
+      const maxW = canvasWidth * 0.8;
+      const maxH = canvasHeight * 0.8;
+      let w = img.naturalWidth;
+      let h = img.naturalHeight;
+
+      if (w > maxW || h > maxH) {
+        const scale = Math.min(maxW / w, maxH / h);
+        w = Math.round(w * scale);
+        h = Math.round(h * scale);
+      }
+
+      const imageElement = {
+        id: `img-${Date.now()}`,
+        type: "image",
+        x: (canvasWidth - w) / 2,
+        y: (canvasHeight - h) / 2,
+        width: w,
+        height: h,
+        angle: 0,
+        strokeColor: "transparent",
+        backgroundColor: "transparent",
+        fillStyle: "solid",
+        strokeWidth: 1,
+        strokeStyle: "solid",
+        roughness: 0,
+        opacity: 100,
+        groupIds: [],
+        frameId: null,
+        roundness: null,
+        seed: Math.floor(Math.random() * 100000),
+        version: 1,
+        versionNonce: Math.floor(Math.random() * 100000),
+        isDeleted: false,
+        boundElements: null,
+        updated: Date.now(),
+        link: null,
+        locked: false,
+        fileId,
+        scale: [1, 1] as [number, number],
+      };
+
+      api.updateScene({ elements: [...api.getSceneElements(), imageElement] });
+    } catch (err) {
+      console.error("[ExcalidrawCanvas] Failed to add camera image:", err);
+    }
+  }, []);
+
+  const stopCamera = useCallback(() => {
+    cameraStreamRef.current?.getTracks().forEach((track) => track.stop());
+    cameraStreamRef.current = null;
+    if (cameraVideoRef.current) cameraVideoRef.current.srcObject = null;
+    setCameraOpen(false);
+  }, []);
+
+  const openCamera = useCallback(async () => {
+    setCameraError(null);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+      cameraStreamRef.current = stream;
+      setCameraOpen(true);
+      window.setTimeout(() => {
+        if (cameraVideoRef.current) cameraVideoRef.current.srcObject = stream;
+      }, 0);
+    } catch (err) {
+      setCameraError("Could not open webcam. Check browser camera permission.");
+      console.error("[ExcalidrawCanvas] Camera open failed:", err);
+    }
+  }, []);
+
+  const captureCameraFrame = useCallback(async () => {
+    const video = cameraVideoRef.current;
+    if (!video || video.videoWidth === 0 || video.videoHeight === 0) return;
+    const canvas = document.createElement("canvas");
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    const dataUrl = canvas.toDataURL("image/png");
+    stopCamera();
+    await addImageToCanvas(dataUrl);
+  }, [addImageToCanvas, stopCamera]);
+
   // Cleanup timeout on unmount
   useEffect(() => {
     return () => {
@@ -214,6 +329,7 @@ export function ExcalidrawCanvas({
       if (scenePersistTimeoutRef.current) {
         clearTimeout(scenePersistTimeoutRef.current);
       }
+      cameraStreamRef.current?.getTracks().forEach((track) => track.stop());
     };
   }, []);
 
@@ -229,6 +345,19 @@ export function ExcalidrawCanvas({
         <div className="min-w-0 flex-1 text-[11px] text-neutral-500">
           {chapterLabel && <span className="truncate">Canvas for {chapterLabel}</span>}
         </div>
+
+        <button
+          type="button"
+          onClick={openCamera}
+          title="Open webcam"
+          className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs text-neutral-300 bg-neutral-900 border border-neutral-700 hover:bg-neutral-800 hover:text-white rounded-lg transition-colors"
+        >
+          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+            <path strokeLinecap="round" strokeLinejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+          </svg>
+          <span>Camera</span>
+        </button>
 
         {onSubmitToHelios && (
           <button
@@ -302,6 +431,26 @@ export function ExcalidrawCanvas({
               },
             }}
           />
+        )}
+        {cameraOpen && (
+          <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/80 p-6">
+            <div className="w-full max-w-xl rounded-xl border border-neutral-700 bg-neutral-950 p-3 shadow-2xl">
+              <video ref={cameraVideoRef} autoPlay muted playsInline className="aspect-video w-full rounded-lg bg-black object-cover" />
+              <div className="mt-3 flex items-center justify-end gap-2">
+                <button type="button" onClick={stopCamera} className="rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-xs text-neutral-300 hover:bg-neutral-800 hover:text-white">
+                  Cancel
+                </button>
+                <button type="button" onClick={captureCameraFrame} className="rounded-lg border border-neutral-200 bg-neutral-100 px-3 py-2 text-xs font-medium text-neutral-950 hover:bg-white">
+                  Capture to Canvas
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+        {cameraError && (
+          <div className="absolute left-3 top-3 z-20 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs text-red-100">
+            {cameraError}
+          </div>
         )}
       </div>
     </div>

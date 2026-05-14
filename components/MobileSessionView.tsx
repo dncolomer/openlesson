@@ -33,7 +33,6 @@ import { useRouter } from "next/navigation";
 import { translateWithLocale, useI18n } from "@/lib/i18n";
 import { createClient } from "@/lib/supabase/client";
 import { isSessionWelcomeSeen, markSessionWelcomeSeen } from "@/lib/welcomeState";
-import { playStepCompleteSound, playSessionCompleteSound } from "@/lib/sounds";
 import { LocalInferenceManager, type InitProgress, type LocalAnalysisContext } from "@/lib/local-inference";
 import { LocalContextBuffer } from "@/lib/local-context";
 import { useSessionHeartbeat, type StorageHeartbeatResult, type AnalysisHeartbeatResult, type StuckHeartbeatResult } from "@/lib/useSessionHeartbeat";
@@ -729,7 +728,6 @@ export function MobileSessionView({
 
         if (isPlanComplete) {
           setIsCelebrating(true);
-          playSessionCompleteSound();
           setTimeout(() => {
             setIsCelebrating(false);
             setShowPlanCompleteModal(true);
@@ -739,7 +737,6 @@ export function MobileSessionView({
           }, 1500);
         } else {
           setIsCelebrating(true);
-          playStepCompleteSound();
           setTimeout(() => setIsCelebrating(false), 1500);
         }
       } else if (planData.probesToArchive && planData.probesToArchive.length > 0) {
@@ -855,9 +852,13 @@ export function MobileSessionView({
   });
 
   const openHeliosChatWithMessage = useCallback((message: string | PendingChatMessage) => {
+    const targetChapterKey = activeChapterKey;
     setActiveTab(1);
-    setPendingChatMessage(message);
-  }, []);
+    setChapterWorkspaces(prev => {
+      const current = prev[targetChapterKey] ?? createChapterWorkspace();
+      return { ...prev, [targetChapterKey]: { ...current, pendingChatMessage: message } };
+    });
+  }, [activeChapterKey]);
 
   const submitHeliosChatMessageNow = useCallback(async (message: string) => {
     const text = message.trim();
@@ -964,6 +965,7 @@ export function MobileSessionView({
   ) => {
     const currentSession = sessionRef.current;
     if (!currentSession?.problem) return;
+    const targetChapterKey = activeChapterKey;
     setActiveTab(1);
 
     const cardKind = type === "exercise" ? "practice" : "theory";
@@ -984,7 +986,16 @@ export function MobileSessionView({
       pendingLabel,
     };
 
-    setChatMessages((prev) => [...prev, userMsg, placeholder]);
+    setChapterWorkspaces(prev => {
+      const current = prev[targetChapterKey] ?? createChapterWorkspace();
+      return {
+        ...prev,
+        [targetChapterKey]: {
+          ...current,
+          chatMessages: [...current.chatMessages, userMsg, placeholder],
+        },
+      };
+    });
 
     try {
       const res = await fetch("/api/prep-material", {
@@ -1005,29 +1016,47 @@ export function MobileSessionView({
         : type === "exercise"
           ? "I couldn't find a practice set for that yet. Ask me what part you'd like to practice."
           : "I couldn't find theory notes for that yet. Ask me which part you want explained.";
-      setChatMessages((prev) => prev.map((msg) =>
-        msg.id === placeholderId
-          ? { ...msg, content, pending: false, pendingLabel: undefined }
-          : msg
-      ));
+      setChapterWorkspaces(prev => {
+        const current = prev[targetChapterKey] ?? createChapterWorkspace();
+        return {
+          ...prev,
+          [targetChapterKey]: {
+            ...current,
+            chatMessages: current.chatMessages.map((msg) =>
+              msg.id === placeholderId
+                ? { ...msg, content, pending: false, pendingLabel: undefined }
+                : msg
+            ),
+          },
+        };
+      });
     } catch (err) {
       console.error("[Mobile] Prep material -> chat error:", err);
-      setChatMessages((prev) => prev.map((msg) =>
-        msg.id === placeholderId
-          ? {
-              ...msg,
-              content: type === "exercise"
-                ? "I couldn't pull together a practice set just now. Try again in a moment, or tell me what specifically you'd like to practice."
-                : "I couldn't pull the theory for this step right now. Try again, or ask me a specific question and I'll explain.",
-              kind: undefined,
-              cardTitle: undefined,
-              pending: false,
-              pendingLabel: undefined,
-            }
-          : msg
-      ));
+      setChapterWorkspaces(prev => {
+        const current = prev[targetChapterKey] ?? createChapterWorkspace();
+        return {
+          ...prev,
+          [targetChapterKey]: {
+            ...current,
+            chatMessages: current.chatMessages.map((msg) =>
+              msg.id === placeholderId
+                ? {
+                    ...msg,
+                    content: type === "exercise"
+                      ? "I couldn't pull together a practice set just now. Try again in a moment, or tell me what specifically you'd like to practice."
+                      : "I couldn't pull the theory for this step right now. Try again, or ask me a specific question and I'll explain.",
+                    kind: undefined,
+                    cardTitle: undefined,
+                    pending: false,
+                    pendingLabel: undefined,
+                  }
+                : msg
+            ),
+          },
+        };
+      });
     }
-  }, [tutoringLanguage]);
+  }, [activeChapterKey, tutoringLanguage]);
 
   const handleStepResources = useCallback((stepDescription: string) => {
     void fetchAndInjectPrepIntoChat(
@@ -1606,7 +1635,6 @@ export function MobileSessionView({
 
       if (updatedSteps.every(s => s.status === "completed" || s.status === "skipped")) {
         setIsCelebrating(true);
-        playSessionCompleteSound();
         setTimeout(() => {
           setIsCelebrating(false);
           setShowPlanCompleteModal(true);
@@ -1614,7 +1642,6 @@ export function MobileSessionView({
         }, 1500);
       } else {
         setIsCelebrating(true);
-        playStepCompleteSound();
         setTimeout(() => setIsCelebrating(false), 1500);
 
         const newStep = updatedPlan.steps[updatedPlan.currentStepIndex];
@@ -1748,7 +1775,6 @@ export function MobileSessionView({
       if (allComplete) {
         // Plan fully complete - celebrate and show modal
         setIsCelebrating(true);
-        playSessionCompleteSound();
         setTimeout(() => {
           setIsCelebrating(false);
           setShowPlanCompleteModal(true);
@@ -1761,7 +1787,6 @@ export function MobileSessionView({
 
       // Regular step advance - celebrate
       setIsCelebrating(true);
-      playStepCompleteSound();
       setTimeout(() => setIsCelebrating(false), 1500);
 
       // Generate a probe for the new step

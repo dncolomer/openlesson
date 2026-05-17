@@ -720,11 +720,17 @@ export async function updateSessionPlanLLM(options: {
     }
   }
 
+  const canAutoAdvance = parsed.can_auto_advance ?? false;
+  const readyToMoveOnRequest: SessionPlanUpdateRequest = {
+    type: "feedback",
+    text: "That is enough to move on. Click Mark as Done when you're ready.",
+  };
+
   const result: SessionPlanUpdateResult = {
     planChanged,
     updatedSteps,
     currentStepIndex: parsed.current_step_index ?? options.currentStepIndex,
-    nextRequest: parsed.next_request === null ? null : {
+    nextRequest: canAutoAdvance ? readyToMoveOnRequest : parsed.next_request === null ? null : {
       type: (parsed.next_request?.type as SessionPlanUpdateRequest["type"]) || "question",
       text: parsed.next_request?.text || "What are you thinking about right now?",
     },
@@ -733,7 +739,7 @@ export async function updateSessionPlanLLM(options: {
     reasoning: parsed.reasoning || "",
     gapScore: Math.max(0, Math.min(1, parsed.gap_score ?? 0.5)),
     signals: parsed.signals || [],
-    canAutoAdvance: parsed.can_auto_advance ?? false,
+    canAutoAdvance,
     advanceReasoning: parsed.advance_reasoning || "",
   };
 

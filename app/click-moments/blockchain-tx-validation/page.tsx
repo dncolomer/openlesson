@@ -146,10 +146,17 @@ export default function BlockchainTxValidationPage() {
             </section>
           </div>
 
-          <footer className="mt-[4%] flex flex-col items-start justify-between gap-4 border-t border-zinc-800 pt-5 sm:flex-row sm:items-end sm:gap-6">
-            <div className="min-w-0">
+          <footer className="mt-8 flex flex-col items-stretch justify-between gap-4 border-t border-zinc-800 pt-5 sm:mt-[4%] sm:flex-row sm:items-end sm:gap-6">
+            <div className="rounded-sm border border-zinc-800 bg-black/25 p-4 text-center sm:border-0 sm:bg-transparent sm:p-0 sm:text-left">
               <p className="text-xl font-semibold tracking-[-0.04em] text-white">openLesson</p>
-              <p className="mt-1 max-w-full break-words font-mono text-[10px] uppercase tracking-[0.16em] text-zinc-500 sm:tracking-[0.24em]">Think aloud / get probed / feel the click</p>
+              <div className="mt-3 flex flex-wrap justify-center gap-2 sm:hidden">
+                {['Think aloud', 'Get probed', 'Feel the click'].map((item) => (
+                  <span key={item} className="rounded-sm border border-zinc-800 bg-zinc-950/70 px-2.5 py-1 font-mono text-[9px] uppercase tracking-[0.16em] text-zinc-500">
+                    {item}
+                  </span>
+                ))}
+              </div>
+              <p className="mt-1 hidden font-mono text-[10px] uppercase tracking-[0.24em] text-zinc-500 sm:block">Think aloud / get probed / feel the click</p>
             </div>
             <p className="hidden max-w-[34ch] text-right text-sm leading-5 text-zinc-500 sm:block">
               Captured from a live blockchain transaction validation session.

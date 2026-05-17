@@ -146,10 +146,10 @@ export default function BlockchainTxValidationPage() {
             </section>
           </div>
 
-          <footer className="mt-[4%] flex items-end justify-between gap-6 border-t border-zinc-800 pt-5">
-            <div>
+          <footer className="mt-[4%] flex flex-col items-start justify-between gap-4 border-t border-zinc-800 pt-5 sm:flex-row sm:items-end sm:gap-6">
+            <div className="min-w-0">
               <p className="text-xl font-semibold tracking-[-0.04em] text-white">openLesson</p>
-              <p className="mt-1 font-mono text-[10px] uppercase tracking-[0.24em] text-zinc-500">Think aloud / get probed / feel the click</p>
+              <p className="mt-1 max-w-full break-words font-mono text-[10px] uppercase tracking-[0.16em] text-zinc-500 sm:tracking-[0.24em]">Think aloud / get probed / feel the click</p>
             </div>
             <p className="hidden max-w-[34ch] text-right text-sm leading-5 text-zinc-500 sm:block">
               Captured from a live blockchain transaction validation session.

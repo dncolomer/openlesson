@@ -20,9 +20,9 @@ export const PLANS: Record<PlanId, PlanDef> = {
     name: "Free",
     price: "$0",
     priceAmount: 0,
-    sessionsPerPeriod: 1,
+    sessionsPerPeriod: 10,
     features: [
-      "1 tutoring session",
+      "10 tutoring sessions",
       "Real-time audio analysis",
       "Session report",
     ],

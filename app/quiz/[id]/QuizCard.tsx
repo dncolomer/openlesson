@@ -41,6 +41,13 @@ const aspectClasses: Record<QuizAspect, string> = {
   "1:1": "aspect-square w-full max-w-[860px]",
 };
 
+const controlWidthClasses: Record<QuizAspect, string> = {
+  "9:16": "w-full max-w-[484px]",
+  "3:2": "w-full max-w-5xl",
+  "16:9": "w-full max-w-6xl",
+  "1:1": "w-full max-w-[860px]",
+};
+
 interface QuizCardProps {
   question: QuizQuestion;
   backgroundImage: string | null;
@@ -73,24 +80,25 @@ export function QuizCard({ question, backgroundImage }: QuizCardProps) {
   }, [activeView, animatedMessage]);
 
   return (
-    <div className={`relative overflow-hidden rounded-[3px] border border-white/10 bg-neutral-950 shadow-2xl shadow-black/70 ${aspectClasses[aspect]}`}>
-      {backgroundImage && (
-        <img
-          src={backgroundImage}
-          alt=""
-          className="absolute inset-0 h-full w-full object-cover"
-        />
-      )}
-      <div className="absolute inset-0 bg-neutral-950/72 backdrop-blur-[3px]" />
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_28%,rgba(239,68,68,0.16),transparent_24%),linear-gradient(to_bottom,rgba(0,0,0,0.28),rgba(0,0,0,0.08)_36%,rgba(0,0,0,0.55))]" />
+    <div className="flex w-full flex-col items-center gap-2">
+      <div className={`relative overflow-hidden rounded-[3px] border border-white/10 bg-neutral-950 shadow-2xl shadow-black/70 ${aspectClasses[aspect]}`}>
+        {backgroundImage && (
+          <img
+            src={backgroundImage}
+            alt=""
+            className="absolute inset-0 h-full w-full object-cover"
+          />
+        )}
+        <div className="absolute inset-0 bg-neutral-950/72 backdrop-blur-[3px]" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_28%,rgba(239,68,68,0.16),transparent_24%),linear-gradient(to_bottom,rgba(0,0,0,0.28),rgba(0,0,0,0.08)_36%,rgba(0,0,0,0.55))]" />
 
-      <div className="relative z-10 flex h-full min-h-0 flex-col px-7 py-7 sm:px-10">
-        <div className="flex min-h-0 flex-1 items-center justify-center overflow-y-auto">
-        {activeView === "helios" && (
-          <div className="flex w-full flex-col items-center justify-center text-center">
-            <p className="mb-5 font-mono text-[12px] font-semibold uppercase tracking-[0.32em] text-rose-50/90">
-              {question.chapter}
-            </p>
+        <div className="relative z-10 flex h-full min-h-0 flex-col px-7 py-7 sm:px-10">
+          <div className="flex min-h-0 flex-1 items-center justify-center overflow-hidden">
+          {activeView === "helios" && (
+            <div className="flex w-full flex-col items-center justify-center text-center">
+              <p className="mb-5 font-mono text-[12px] font-semibold uppercase tracking-[0.32em] text-rose-50/90">
+                {question.chapter}
+              </p>
 
             <div className="mb-4 flex items-center gap-3">
               <Link
@@ -170,10 +178,10 @@ export function QuizCard({ question, backgroundImage }: QuizCardProps) {
               </p>
             </div>
           </div>
-        )}
+          )}
 
-        {activeView === "chat" && (
-          <div className="flex h-full w-full flex-col text-left">
+          {activeView === "chat" && (
+            <div className="flex h-full w-full flex-col text-left">
             <div className="flex items-center gap-3 border-b border-white/10 pb-4">
               <div className="flex size-11 items-center justify-center rounded-full border border-rose-400/60 bg-rose-500/10 font-serif text-lg text-rose-50">
                 H
@@ -184,7 +192,7 @@ export function QuizCard({ question, backgroundImage }: QuizCardProps) {
               </div>
             </div>
 
-            <div className="mt-5 flex flex-1 flex-col gap-4 overflow-y-auto pr-1">
+            <div className="mt-5 flex min-h-0 flex-1 flex-col gap-4 overflow-hidden pr-1">
               <div className="max-w-[86%] rounded-[3px] border border-white/10 bg-neutral-950/65 p-4 text-sm leading-6 text-neutral-200">
                 This quiz is about {question.topic}. I will help you reason toward the answer without turning it into a lecture.
               </div>
@@ -200,22 +208,24 @@ export function QuizCard({ question, backgroundImage }: QuizCardProps) {
               </div>
             </div>
           </div>
-        )}
+          )}
 
-        {activeView === "canvas" && (
-          <div className="flex h-full w-full flex-col text-left">
+          {activeView === "canvas" && (
+            <div className="flex h-full w-full flex-col text-left">
             <div className="border-b border-white/10 pb-4">
               <p className="text-sm font-semibold text-white">Excalidraw Canvas</p>
               <p className="mt-1 text-xs text-neutral-400">Empty workspace for sketching your quiz reasoning.</p>
             </div>
-            <div className="mt-5 min-h-[560px] flex-1 overflow-hidden rounded-[3px] border border-white/10 bg-neutral-950">
+            <div className="mt-5 min-h-0 flex-1 overflow-hidden rounded-[3px] border border-white/10 bg-neutral-950/80">
               <Excalidraw theme="dark" />
             </div>
           </div>
-        )}
+          )}
+          </div>
         </div>
+      </div>
 
-        <div className="mt-5 grid grid-cols-3 gap-2 rounded-[3px] border border-white/10 bg-neutral-950/55 p-1.5 backdrop-blur">
+      <div className={`grid grid-cols-3 gap-2 rounded-[3px] border border-white/10 bg-neutral-950/55 p-1.5 backdrop-blur ${controlWidthClasses[aspect]}`}>
           {quizViews.map((view) => {
             const selectedView = activeView === view.id;
 
@@ -233,7 +243,7 @@ export function QuizCard({ question, backgroundImage }: QuizCardProps) {
           })}
         </div>
 
-        <div className="mt-2 grid grid-cols-4 gap-2 rounded-[3px] border border-white/10 bg-neutral-950/55 p-1.5 backdrop-blur">
+      <div className={`grid grid-cols-4 gap-2 rounded-[3px] border border-white/10 bg-neutral-950/55 p-1.5 backdrop-blur ${controlWidthClasses[aspect]}`}>
           {aspectOptions.map((option) => {
             const selectedAspect = aspect === option.id;
 
@@ -249,7 +259,6 @@ export function QuizCard({ question, backgroundImage }: QuizCardProps) {
               </button>
             );
           })}
-        </div>
       </div>
     </div>
   );

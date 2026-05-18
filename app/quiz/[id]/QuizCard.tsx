@@ -19,6 +19,7 @@ const Excalidraw = dynamic(
 );
 
 type QuizView = "helios" | "chat" | "canvas";
+type QuizAspect = "9:16" | "3:2" | "16:9" | "1:1";
 
 const quizViews: Array<{ id: QuizView; label: string }> = [
   { id: "helios", label: "Helios" },
@@ -26,12 +27,28 @@ const quizViews: Array<{ id: QuizView; label: string }> = [
   { id: "canvas", label: "Excalidraw" },
 ];
 
+const aspectOptions: Array<{ id: QuizAspect; label: string }> = [
+  { id: "9:16", label: "9:16" },
+  { id: "3:2", label: "3:2" },
+  { id: "16:9", label: "16:9" },
+  { id: "1:1", label: "1:1" },
+];
+
+const aspectClasses: Record<QuizAspect, string> = {
+  "9:16": "min-h-[min(92vh,860px)] w-full max-w-[484px] sm:aspect-[9/16] sm:w-auto sm:max-w-none",
+  "3:2": "aspect-[3/2] w-full max-w-5xl",
+  "16:9": "aspect-video w-full max-w-6xl",
+  "1:1": "aspect-square w-full max-w-[860px]",
+};
+
 interface QuizCardProps {
   question: QuizQuestion;
+  backgroundImage: string | null;
 }
 
-export function QuizCard({ question }: QuizCardProps) {
+export function QuizCard({ question, backgroundImage }: QuizCardProps) {
   const [activeView, setActiveView] = useState<QuizView>("helios");
+  const [aspect, setAspect] = useState<QuizAspect>("9:16");
   const [selected, setSelected] = useState<number | null>(null);
   const [typedText, setTypedText] = useState("");
   const answered = selected !== null;
@@ -56,8 +73,19 @@ export function QuizCard({ question }: QuizCardProps) {
   }, [activeView, animatedMessage]);
 
   return (
-    <div className="relative z-10 flex min-h-[min(92vh,860px)] flex-col px-7 py-7 sm:px-10">
-      <div className="flex min-h-0 flex-1 items-center justify-center">
+    <div className={`relative overflow-hidden rounded-[2rem] border border-white/10 bg-neutral-950 shadow-2xl shadow-black/70 ${aspectClasses[aspect]}`}>
+      {backgroundImage && (
+        <img
+          src={backgroundImage}
+          alt=""
+          className="absolute inset-0 h-full w-full object-cover"
+        />
+      )}
+      <div className="absolute inset-0 bg-neutral-950/72 backdrop-blur-[3px]" />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_28%,rgba(239,68,68,0.16),transparent_24%),linear-gradient(to_bottom,rgba(0,0,0,0.28),rgba(0,0,0,0.08)_36%,rgba(0,0,0,0.55))]" />
+
+      <div className="relative z-10 flex h-full min-h-0 flex-col px-7 py-7 sm:px-10">
+        <div className="flex min-h-0 flex-1 items-center justify-center overflow-y-auto">
         {activeView === "helios" && (
           <div className="flex w-full flex-col items-center justify-center text-center">
             <p className="mb-5 font-mono text-[12px] font-semibold uppercase tracking-[0.32em] text-rose-50/90">
@@ -185,24 +213,43 @@ export function QuizCard({ question }: QuizCardProps) {
             </div>
           </div>
         )}
-      </div>
+        </div>
 
-      <div className="mt-5 grid grid-cols-3 gap-2 rounded-2xl border border-white/10 bg-neutral-950/55 p-1.5 backdrop-blur">
-        {quizViews.map((view) => {
-          const selectedView = activeView === view.id;
+        <div className="mt-5 grid grid-cols-3 gap-2 rounded-2xl border border-white/10 bg-neutral-950/55 p-1.5 backdrop-blur">
+          {quizViews.map((view) => {
+            const selectedView = activeView === view.id;
 
-          return (
-            <button
-              key={view.id}
-              type="button"
-              onClick={() => setActiveView(view.id)}
-              className={`rounded-xl px-2 py-2.5 text-xs font-semibold transition ${selectedView ? "bg-white text-neutral-950" : "text-neutral-400 hover:bg-white/10 hover:text-white"}`}
-              aria-pressed={selectedView}
-            >
-              {view.label}
-            </button>
-          );
-        })}
+            return (
+              <button
+                key={view.id}
+                type="button"
+                onClick={() => setActiveView(view.id)}
+                className={`rounded-xl px-2 py-2.5 text-xs font-semibold transition ${selectedView ? "bg-white text-neutral-950" : "text-neutral-400 hover:bg-white/10 hover:text-white"}`}
+                aria-pressed={selectedView}
+              >
+                {view.label}
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="mt-2 grid grid-cols-4 gap-2 rounded-2xl border border-white/10 bg-neutral-950/55 p-1.5 backdrop-blur">
+          {aspectOptions.map((option) => {
+            const selectedAspect = aspect === option.id;
+
+            return (
+              <button
+                key={option.id}
+                type="button"
+                onClick={() => setAspect(option.id)}
+                className={`rounded-xl px-2 py-2.5 font-mono text-[11px] font-semibold transition ${selectedAspect ? "bg-rose-100 text-neutral-950" : "text-neutral-400 hover:bg-white/10 hover:text-white"}`}
+                aria-pressed={selectedAspect}
+              >
+                {option.label}
+              </button>
+            );
+          })}
+        </div>
       </div>
     </div>
   );

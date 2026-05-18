@@ -60,19 +60,7 @@ export default async function QuizPage({ params }: PageProps) {
   return (
     <main className="min-h-screen bg-neutral-950 p-4 text-neutral-100 sm:p-8">
       <section className="mx-auto flex min-h-[calc(100vh-2rem)] items-center justify-center sm:min-h-[calc(100vh-4rem)]">
-        <div className="relative min-h-[min(92vh,860px)] w-full max-w-[484px] overflow-hidden rounded-[2rem] border border-white/10 bg-neutral-950 shadow-2xl shadow-black/70 sm:aspect-[9/16] sm:w-auto sm:max-w-none">
-          {backgroundImage && (
-            <img
-              src={backgroundImage}
-              alt=""
-              className="absolute inset-0 h-full w-full object-cover"
-            />
-          )}
-          <div className="absolute inset-0 bg-neutral-950/72 backdrop-blur-[3px]" />
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_28%,rgba(239,68,68,0.16),transparent_24%),linear-gradient(to_bottom,rgba(0,0,0,0.28),rgba(0,0,0,0.08)_36%,rgba(0,0,0,0.55))]" />
-
-          <QuizCard question={question} />
-        </div>
+        <QuizCard question={question} backgroundImage={backgroundImage} />
       </section>
     </main>
   );

@@ -60,7 +60,7 @@ export function QuizCard({ question, backgroundImage }: QuizCardProps) {
   const [typedText, setTypedText] = useState("");
   const answered = selected !== null;
   const correct = selected === question.answerIndex;
-  const animatedMessage = `Notice what the question is really testing: ${question.explanation} Before choosing, say the idea in your own words, then match it to the option that keeps that meaning intact.`;
+  const animatedMessage = `Helios hint: ${question.explanation} Pick the option that says that idea most directly.`;
 
   useEffect(() => {
     if (activeView !== "chat") {
@@ -182,27 +182,27 @@ export function QuizCard({ question, backgroundImage }: QuizCardProps) {
 
           {activeView === "chat" && (
             <div className="flex h-full w-full flex-col text-left">
-            <div className="flex items-center gap-3 border-b border-white/10 pb-4">
-              <div className="flex size-11 items-center justify-center rounded-full border border-rose-400/60 bg-rose-500/10 font-serif text-lg text-rose-50">
+            <div className="flex items-center gap-3 border-b border-white/10 pb-5">
+              <div className="flex size-12 items-center justify-center rounded-full border border-rose-400/60 bg-rose-500/10 font-serif text-xl text-rose-50 shadow-[0_0_24px_rgba(244,63,94,0.18)]">
                 H
               </div>
               <div>
-                <p className="text-sm font-semibold text-white">Helios Chat</p>
-                <p className="text-xs text-neutral-400">A guided thread for {question.topic}</p>
+                <p className="text-base font-semibold text-white">Helios Chat</p>
+                <p className="text-sm text-neutral-400">Guided help for {question.topic}</p>
               </div>
             </div>
 
-            <div className="mt-5 flex min-h-0 flex-1 flex-col gap-4 overflow-hidden pr-1">
-              <div className="max-w-[86%] rounded-[3px] border border-white/10 bg-neutral-950/65 p-4 text-sm leading-6 text-neutral-200">
-                This quiz is about {question.topic}. I will help you reason toward the answer without turning it into a lecture.
+            <div className="flex min-h-0 flex-1 flex-col justify-end gap-4 overflow-hidden pt-6">
+              <div className="max-w-[88%] rounded-[3px] border border-white/10 bg-neutral-950/75 p-4 text-base leading-7 text-neutral-100 shadow-lg shadow-black/20">
+                This quiz is testing {question.topic}. I will help you find the principle, not guess the option.
               </div>
-              <div className="ml-auto max-w-[86%] rounded-[3px] bg-white px-4 py-3 text-sm leading-6 text-neutral-950">
-                The question asks: "{question.question}" I am not sure which clue matters most.
+              <div className="ml-auto max-w-[82%] rounded-[3px] bg-white px-4 py-3 text-base leading-7 text-neutral-950 shadow-lg shadow-black/20">
+                I get the question, but which clue matters most?
               </div>
-              <div className="max-w-[86%] rounded-[3px] border border-white/10 bg-neutral-950/65 p-4 text-sm leading-6 text-neutral-200">
+              <div className="max-w-[88%] rounded-[3px] border border-white/10 bg-neutral-950/75 p-4 text-base leading-7 text-neutral-100 shadow-lg shadow-black/20">
                 First separate the surface story from the principle. Which option names the principle rather than a distracting detail?
               </div>
-              <div className="max-w-[86%] rounded-[3px] border border-rose-300/30 bg-rose-500/10 p-4 text-sm leading-6 text-rose-50 shadow-[0_0_32px_rgba(244,63,94,0.14)]">
+              <div className="max-w-[88%] rounded-[3px] border border-rose-300/30 bg-rose-500/15 p-4 text-base leading-7 text-rose-50 shadow-[0_0_32px_rgba(244,63,94,0.18)]">
                 {typedText}
                 <span className="ml-0.5 inline-block h-4 w-1 translate-y-0.5 animate-pulse rounded-full bg-rose-200" />
               </div>

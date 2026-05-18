@@ -35,7 +35,7 @@ const aspectOptions: Array<{ id: QuizAspect; label: string }> = [
 ];
 
 const aspectClasses: Record<QuizAspect, string> = {
-  "9:16": "min-h-[min(92vh,860px)] w-full max-w-[484px] sm:aspect-[9/16] sm:w-auto sm:max-w-none",
+  "9:16": "aspect-[9/16] w-full max-w-[484px]",
   "3:2": "aspect-[3/2] w-full max-w-5xl",
   "16:9": "aspect-video w-full max-w-6xl",
   "1:1": "aspect-square w-full max-w-[860px]",
@@ -92,7 +92,7 @@ export function QuizCard({ question, backgroundImage }: QuizCardProps) {
         <div className="absolute inset-0 bg-neutral-950/72 backdrop-blur-[3px]" />
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_28%,rgba(239,68,68,0.16),transparent_24%),linear-gradient(to_bottom,rgba(0,0,0,0.28),rgba(0,0,0,0.08)_36%,rgba(0,0,0,0.55))]" />
 
-        <div className="relative z-10 flex h-full min-h-0 flex-col px-7 py-7 sm:px-10">
+        <div className={`absolute inset-0 z-10 flex min-h-0 flex-col ${activeView === "canvas" ? "p-0" : "px-7 py-7 sm:px-10"}`}>
           <div className="flex min-h-0 flex-1 items-center justify-center overflow-hidden">
           {activeView === "helios" && (
             <div className="flex w-full flex-col items-center justify-center text-center">
@@ -211,15 +211,9 @@ export function QuizCard({ question, backgroundImage }: QuizCardProps) {
           )}
 
           {activeView === "canvas" && (
-            <div className="flex h-full w-full flex-col text-left">
-            <div className="border-b border-white/10 pb-4">
-              <p className="text-sm font-semibold text-white">Excalidraw Canvas</p>
-              <p className="mt-1 text-xs text-neutral-400">Empty workspace for sketching your quiz reasoning.</p>
-            </div>
-            <div className="mt-5 min-h-0 flex-1 overflow-hidden rounded-[3px] border border-white/10 bg-neutral-950/80">
+            <div className="h-full w-full overflow-hidden bg-neutral-950/80">
               <Excalidraw theme="dark" />
             </div>
-          </div>
           )}
           </div>
         </div>

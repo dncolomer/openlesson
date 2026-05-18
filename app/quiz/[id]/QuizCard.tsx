@@ -73,7 +73,7 @@ export function QuizCard({ question, backgroundImage }: QuizCardProps) {
   }, [activeView, animatedMessage]);
 
   return (
-    <div className={`relative overflow-hidden rounded-[2rem] border border-white/10 bg-neutral-950 shadow-2xl shadow-black/70 ${aspectClasses[aspect]}`}>
+    <div className={`relative overflow-hidden rounded-[3px] border border-white/10 bg-neutral-950 shadow-2xl shadow-black/70 ${aspectClasses[aspect]}`}>
       {backgroundImage && (
         <img
           src={backgroundImage}
@@ -145,7 +145,7 @@ export function QuizCard({ question, backgroundImage }: QuizCardProps) {
                     key={option}
                     type="button"
                     onClick={() => setSelected(index)}
-                    className={`rounded-xl border px-4 py-3 text-left text-sm font-medium transition ${stateClass}`}
+                    className={`rounded-[3px] border px-4 py-3 text-left text-sm font-medium transition ${stateClass}`}
                   >
                     <span className="mr-3 font-mono text-[11px] text-neutral-500">{String.fromCharCode(65 + index)}</span>
                     {option}
@@ -154,14 +154,14 @@ export function QuizCard({ question, backgroundImage }: QuizCardProps) {
               })}
             </div>
 
-            <div className={`mt-6 w-full max-w-sm rounded-2xl border p-4 transition ${answered ? "opacity-100" : "pointer-events-none opacity-0"} ${correct ? "border-emerald-300/35 bg-emerald-400/10" : "border-rose-300/35 bg-rose-500/10"}`}>
+            <div className={`mt-6 w-full max-w-sm rounded-[3px] border p-4 transition ${answered ? "opacity-100" : "pointer-events-none opacity-0"} ${correct ? "border-emerald-300/35 bg-emerald-400/10" : "border-rose-300/35 bg-rose-500/10"}`}>
               <p className="text-base font-semibold text-white">
                 {correct ? "Correct. You already had the intuition." : "Close. The useful idea is simpler than it looks."}
               </p>
               <p className="mt-2 text-sm leading-5 text-neutral-300">{question.explanation}</p>
               <Link
                 href="/register?offer=10-free-lessons"
-                className="mt-4 flex h-12 items-center justify-center rounded-md bg-white px-5 text-sm font-semibold text-black transition hover:bg-neutral-200"
+                className="mt-4 flex h-12 items-center justify-center rounded-[3px] bg-white px-5 text-sm font-semibold text-black transition hover:bg-neutral-200"
               >
                 Claim 10 free lessons
               </Link>
@@ -185,16 +185,16 @@ export function QuizCard({ question, backgroundImage }: QuizCardProps) {
             </div>
 
             <div className="mt-5 flex flex-1 flex-col gap-4 overflow-y-auto pr-1">
-              <div className="max-w-[86%] rounded-2xl rounded-tl-sm border border-white/10 bg-neutral-950/65 p-4 text-sm leading-6 text-neutral-200">
+              <div className="max-w-[86%] rounded-[3px] border border-white/10 bg-neutral-950/65 p-4 text-sm leading-6 text-neutral-200">
                 This quiz is about {question.topic}. I will help you reason toward the answer without turning it into a lecture.
               </div>
-              <div className="ml-auto max-w-[86%] rounded-2xl rounded-tr-sm bg-white px-4 py-3 text-sm leading-6 text-neutral-950">
+              <div className="ml-auto max-w-[86%] rounded-[3px] bg-white px-4 py-3 text-sm leading-6 text-neutral-950">
                 The question asks: "{question.question}" I am not sure which clue matters most.
               </div>
-              <div className="max-w-[86%] rounded-2xl rounded-tl-sm border border-white/10 bg-neutral-950/65 p-4 text-sm leading-6 text-neutral-200">
+              <div className="max-w-[86%] rounded-[3px] border border-white/10 bg-neutral-950/65 p-4 text-sm leading-6 text-neutral-200">
                 First separate the surface story from the principle. Which option names the principle rather than a distracting detail?
               </div>
-              <div className="max-w-[86%] rounded-2xl rounded-tl-sm border border-rose-300/30 bg-rose-500/10 p-4 text-sm leading-6 text-rose-50 shadow-[0_0_32px_rgba(244,63,94,0.14)]">
+              <div className="max-w-[86%] rounded-[3px] border border-rose-300/30 bg-rose-500/10 p-4 text-sm leading-6 text-rose-50 shadow-[0_0_32px_rgba(244,63,94,0.14)]">
                 {typedText}
                 <span className="ml-0.5 inline-block h-4 w-1 translate-y-0.5 animate-pulse rounded-full bg-rose-200" />
               </div>
@@ -208,14 +208,14 @@ export function QuizCard({ question, backgroundImage }: QuizCardProps) {
               <p className="text-sm font-semibold text-white">Excalidraw Canvas</p>
               <p className="mt-1 text-xs text-neutral-400">Empty workspace for sketching your quiz reasoning.</p>
             </div>
-            <div className="mt-5 min-h-[560px] flex-1 overflow-hidden rounded-2xl border border-white/10 bg-neutral-950">
+            <div className="mt-5 min-h-[560px] flex-1 overflow-hidden rounded-[3px] border border-white/10 bg-neutral-950">
               <Excalidraw theme="dark" />
             </div>
           </div>
         )}
         </div>
 
-        <div className="mt-5 grid grid-cols-3 gap-2 rounded-2xl border border-white/10 bg-neutral-950/55 p-1.5 backdrop-blur">
+        <div className="mt-5 grid grid-cols-3 gap-2 rounded-[3px] border border-white/10 bg-neutral-950/55 p-1.5 backdrop-blur">
           {quizViews.map((view) => {
             const selectedView = activeView === view.id;
 
@@ -224,7 +224,7 @@ export function QuizCard({ question, backgroundImage }: QuizCardProps) {
                 key={view.id}
                 type="button"
                 onClick={() => setActiveView(view.id)}
-                className={`rounded-xl px-2 py-2.5 text-xs font-semibold transition ${selectedView ? "bg-white text-neutral-950" : "text-neutral-400 hover:bg-white/10 hover:text-white"}`}
+                className={`rounded-[3px] px-2 py-2.5 text-xs font-semibold transition ${selectedView ? "bg-white text-neutral-950" : "text-neutral-400 hover:bg-white/10 hover:text-white"}`}
                 aria-pressed={selectedView}
               >
                 {view.label}
@@ -233,7 +233,7 @@ export function QuizCard({ question, backgroundImage }: QuizCardProps) {
           })}
         </div>
 
-        <div className="mt-2 grid grid-cols-4 gap-2 rounded-2xl border border-white/10 bg-neutral-950/55 p-1.5 backdrop-blur">
+        <div className="mt-2 grid grid-cols-4 gap-2 rounded-[3px] border border-white/10 bg-neutral-950/55 p-1.5 backdrop-blur">
           {aspectOptions.map((option) => {
             const selectedAspect = aspect === option.id;
 
@@ -242,7 +242,7 @@ export function QuizCard({ question, backgroundImage }: QuizCardProps) {
                 key={option.id}
                 type="button"
                 onClick={() => setAspect(option.id)}
-                className={`rounded-xl px-2 py-2.5 font-mono text-[11px] font-semibold transition ${selectedAspect ? "bg-rose-100 text-neutral-950" : "text-neutral-400 hover:bg-white/10 hover:text-white"}`}
+                className={`rounded-[3px] px-2 py-2.5 font-mono text-[11px] font-semibold transition ${selectedAspect ? "bg-rose-100 text-neutral-950" : "text-neutral-400 hover:bg-white/10 hover:text-white"}`}
                 aria-pressed={selectedAspect}
               >
                 {option.label}

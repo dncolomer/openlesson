@@ -96,7 +96,8 @@ export function QuizCard({ question, backgroundImage }: QuizCardProps) {
         <div className={`absolute inset-0 z-10 flex min-h-0 flex-col ${activeView === "canvas" ? "p-0" : "px-7 py-7 sm:px-10"}`}>
           <div className="flex min-h-0 flex-1 items-center justify-center overflow-hidden">
           {activeView === "helios" && (
-            <div className="flex w-full flex-col items-center justify-center text-center">
+            <div className={compactQuiz ? "grid h-full w-full grid-cols-[minmax(0,1fr)_minmax(300px,390px)] items-center gap-10 text-left" : "flex w-full flex-col items-center justify-center text-center"}>
+              <div className={compactQuiz ? "flex min-w-0 flex-col items-start justify-center" : "flex flex-col items-center"}>
               <p className={`${compactQuiz ? "mb-2" : "mb-5"} font-mono text-[12px] font-semibold uppercase tracking-[0.32em] text-rose-50/90`}>
                 {question.chapter}
               </p>
@@ -131,13 +132,15 @@ export function QuizCard({ question, backgroundImage }: QuizCardProps) {
             <div className="mb-3 text-sm font-medium text-neutral-100">Helios Quiz</div>
             <div className={`${compactQuiz ? "mb-4" : "mb-7"} h-1 w-8 rounded-full bg-rose-400`} />
 
-            <div className="relative max-w-[31ch]">
+            <div className={`relative ${compactQuiz ? "max-w-[34ch]" : "max-w-[31ch]"}`}>
               <h1 className="text-balance text-2xl font-normal leading-[1.24] tracking-[-0.05em] text-neutral-100 sm:text-[28px]">
                 {question.question}
               </h1>
             </div>
+              </div>
 
-            <div className={`${compactQuiz ? "mt-4" : "mt-7"} grid w-full max-w-sm gap-3`}>
+              <div className={compactQuiz ? "flex min-w-0 flex-col items-stretch justify-center" : "flex w-full flex-col items-center"}>
+            <div className={`${compactQuiz ? "mt-0" : "mt-7"} grid w-full max-w-sm gap-3`}>
               {question.options.map((option, index) => {
                 const isSelected = selected === index;
                 const isCorrect = question.answerIndex === index;
@@ -180,6 +183,7 @@ export function QuizCard({ question, backgroundImage }: QuizCardProps) {
                 </p>
               </div>
             )}
+              </div>
           </div>
           )}
 

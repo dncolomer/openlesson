@@ -60,6 +60,7 @@ export function QuizCard({ question, backgroundImage }: QuizCardProps) {
   const [typedText, setTypedText] = useState("");
   const answered = selected !== null;
   const correct = selected === question.answerIndex;
+  const compactQuiz = aspect === "3:2" || aspect === "16:9";
   const animatedMessage = `Helios hint: ${question.explanation} Pick the option that says that idea most directly.`;
 
   useEffect(() => {
@@ -96,11 +97,11 @@ export function QuizCard({ question, backgroundImage }: QuizCardProps) {
           <div className="flex min-h-0 flex-1 items-center justify-center overflow-hidden">
           {activeView === "helios" && (
             <div className="flex w-full flex-col items-center justify-center text-center">
-              <p className="mb-5 font-mono text-[12px] font-semibold uppercase tracking-[0.32em] text-rose-50/90">
+              <p className={`${compactQuiz ? "mb-2" : "mb-5"} font-mono text-[12px] font-semibold uppercase tracking-[0.32em] text-rose-50/90`}>
                 {question.chapter}
               </p>
 
-            <div className="mb-4 flex items-center gap-3">
+            <div className={`${compactQuiz ? "mb-2" : "mb-4"} flex items-center gap-3`}>
               <Link
                 href={`/quiz/${question.id === 1 ? 10 : question.id - 1}`}
                 aria-label="Previous question"
@@ -111,7 +112,7 @@ export function QuizCard({ question, backgroundImage }: QuizCardProps) {
                 </svg>
               </Link>
 
-              <div className="relative flex size-28 items-center justify-center rounded-full border border-rose-500/85 bg-neutral-950/20 shadow-[0_0_0_4px_rgba(225,29,72,0.18),0_0_44px_rgba(225,29,72,0.2)] sm:size-32">
+              <div className={`relative flex ${compactQuiz ? "size-20" : "size-28 sm:size-32"} items-center justify-center rounded-full border border-rose-500/85 bg-neutral-950/20 shadow-[0_0_0_4px_rgba(225,29,72,0.18),0_0_44px_rgba(225,29,72,0.2)]`}>
                 <div className="absolute inset-1 rounded-full border border-rose-500/55" />
                 <span className="font-serif text-4xl text-neutral-100">H</span>
               </div>
@@ -128,7 +129,7 @@ export function QuizCard({ question, backgroundImage }: QuizCardProps) {
             </div>
 
             <div className="mb-3 text-sm font-medium text-neutral-100">Helios Quiz</div>
-            <div className="mb-7 h-1 w-8 rounded-full bg-rose-400" />
+            <div className={`${compactQuiz ? "mb-4" : "mb-7"} h-1 w-8 rounded-full bg-rose-400`} />
 
             <div className="relative max-w-[31ch]">
               <h1 className="text-balance text-2xl font-normal leading-[1.24] tracking-[-0.05em] text-neutral-100 sm:text-[28px]">
@@ -136,7 +137,7 @@ export function QuizCard({ question, backgroundImage }: QuizCardProps) {
               </h1>
             </div>
 
-            <div className="mt-7 grid w-full max-w-sm gap-3">
+            <div className={`${compactQuiz ? "mt-4" : "mt-7"} grid w-full max-w-sm gap-3`}>
               {question.options.map((option, index) => {
                 const isSelected = selected === index;
                 const isCorrect = question.answerIndex === index;
@@ -162,21 +163,23 @@ export function QuizCard({ question, backgroundImage }: QuizCardProps) {
               })}
             </div>
 
-            <div className={`mt-6 w-full max-w-sm rounded-[3px] border p-4 transition ${answered ? "opacity-100" : "pointer-events-none opacity-0"} ${correct ? "border-emerald-300/35 bg-emerald-400/10" : "border-rose-300/35 bg-rose-500/10"}`}>
-              <p className="text-base font-semibold text-white">
-                {correct ? "Correct. You already had the intuition." : "Close. The useful idea is simpler than it looks."}
-              </p>
-              <p className="mt-2 text-sm leading-5 text-neutral-300">{question.explanation}</p>
-              <Link
-                href="/register?offer=10-free-lessons"
-                className="mt-4 flex h-12 items-center justify-center rounded-[3px] bg-white px-5 text-sm font-semibold text-black transition hover:bg-neutral-200"
-              >
-                Claim 10 free lessons
-              </Link>
-              <p className="mt-3 font-mono text-[10px] uppercase tracking-[0.2em] text-neutral-500">
-                Social launch offer
-              </p>
-            </div>
+            {answered && (
+              <div className={`mt-6 w-full max-w-sm rounded-[3px] border p-4 transition ${correct ? "border-emerald-300/35 bg-emerald-400/10" : "border-rose-300/35 bg-rose-500/10"}`}>
+                <p className="text-base font-semibold text-white">
+                  {correct ? "Correct. You already had the intuition." : "Close. The useful idea is simpler than it looks."}
+                </p>
+                <p className="mt-2 text-sm leading-5 text-neutral-300">{question.explanation}</p>
+                <Link
+                  href="/register?offer=10-free-lessons"
+                  className="mt-4 flex h-12 items-center justify-center rounded-[3px] bg-white px-5 text-sm font-semibold text-black transition hover:bg-neutral-200"
+                >
+                  Claim 10 free lessons
+                </Link>
+                <p className="mt-3 font-mono text-[10px] uppercase tracking-[0.2em] text-neutral-500">
+                  Social launch offer
+                </p>
+              </div>
+            )}
           </div>
           )}
 

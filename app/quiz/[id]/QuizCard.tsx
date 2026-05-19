@@ -105,6 +105,11 @@ export function QuizCard({ question, backgroundImage }: QuizCardProps) {
   const studentAttempt = studentAttemptFrames[frameIndex](studentOption.option, question.topic);
   const tutorFollowup = tutorFollowupFrames[frameIndex](studentOption.option, comparisonOption.option);
   const animatedMessage = tutorFollowup;
+  const chatMessages = [
+    { id: "opening", role: "assistant", content: tutorOpening, animated: false },
+    { id: "student", role: "student", content: studentAttempt, animated: false },
+    { id: "followup", role: "assistant", content: typedText, animated: true },
+  ];
 
   useEffect(() => {
     if (activeView !== "chat") {
@@ -243,16 +248,19 @@ export function QuizCard({ question, backgroundImage }: QuizCardProps) {
             </div>
 
             <div className="flex min-h-0 flex-1 flex-col justify-end gap-4 overflow-hidden pt-6">
-              <div className="max-w-[88%] rounded-[3px] border border-white/10 bg-neutral-950/75 p-4 text-base leading-7 text-neutral-100 shadow-lg shadow-black/20">
-                {tutorOpening}
-              </div>
-              <div className="ml-auto max-w-[82%] rounded-[3px] bg-white px-4 py-3 text-base leading-7 text-neutral-950 shadow-lg shadow-black/20">
-                {studentAttempt}
-              </div>
-              <div className="max-w-[88%] rounded-[3px] border border-white/10 bg-neutral-950/75 p-4 text-base leading-7 text-neutral-100 shadow-lg shadow-black/20">
-                {typedText}
-                <span className="ml-0.5 inline-block h-4 w-1 translate-y-0.5 animate-pulse rounded-full bg-neutral-200" />
-              </div>
+              {chatMessages.map((message) => (
+                <div
+                  key={message.id}
+                  className={message.role === "student"
+                    ? "ml-auto max-w-[82%] rounded-[3px] bg-white px-4 py-3 text-base leading-7 text-neutral-950 shadow-lg shadow-black/20"
+                    : "max-w-[88%] rounded-[3px] border border-white/10 bg-neutral-950/75 p-4 text-base leading-7 text-neutral-100 shadow-lg shadow-black/20"}
+                >
+                  {message.content}
+                  {message.animated && (
+                    <span className="ml-0.5 inline-block h-4 w-1 translate-y-0.5 animate-pulse rounded-full bg-neutral-200" />
+                  )}
+                </div>
+              ))}
             </div>
           </div>
           )}

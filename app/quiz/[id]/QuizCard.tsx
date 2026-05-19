@@ -51,30 +51,30 @@ const controlWidthClasses: Record<QuizAspect, string> = {
 const QUIZ_QUESTION_COUNT = 100;
 
 const studentAttemptFrames = [
-  (choice: string, topic: string) => `I think it might be "${choice}" because that sounds connected to ${topic}, but I cannot fully justify it yet.`,
-  (choice: string) => `My first instinct is "${choice}". I am picking it because it feels like the most familiar phrase, not because I can prove it.`,
-  (choice: string) => `I am leaning toward "${choice}", but I might be matching keywords instead of answering the question.`,
-  (choice: string, topic: string) => `Maybe it is "${choice}". In ${topic}, that seems relevant, but I am not sure it explains the situation.`,
-  (choice: string) => `I would probably click "${choice}" right now, though I cannot say exactly why the other answers fail.`,
-  (choice: string) => `"${choice}" is tempting. I need help checking whether it actually answers the wording of the prompt.`,
+  (choice: string) => `I think it might be "${choice}", but I am not totally sure what makes it the best answer.`,
+  (choice: string) => `My first guess is "${choice}". I can see why it might fit, but I am not confident yet.`,
+  (choice: string) => `I am leaning toward "${choice}". Something about it sounds right, but I want to check it.`,
+  (choice: string) => `Maybe it is "${choice}". I can explain part of it, but not the whole question.`,
+  (choice: string) => `I would probably click "${choice}" right now, but I am not sure what mistake I might be making.`,
+  (choice: string) => `"${choice}" is the answer I notice first. Can we test whether it really fits?`,
 ];
 
 const tutorOpeningFrames = [
-  (questionText: string) => `Let's use the wording as evidence. The question says: "${questionText}". What has to be explained, not merely named?`,
-  (questionText: string) => `Before choosing, restate this in plain language: "${questionText}". What would a good answer need to account for?`,
-  (questionText: string) => `Slow down on the verb in the prompt: "${questionText}". Is it asking for a cause, a definition, a distinction, or a consequence?`,
-  (questionText: string) => `Read the prompt like a test of reasoning, not memory: "${questionText}". What claim would make the whole sentence make sense?`,
-  (questionText: string) => `Treat the question as a small argument: "${questionText}". Which missing idea would complete that argument?`,
-  (questionText: string) => `Look at the exact situation being described: "${questionText}". Which answer would still fit if the topic label disappeared?`,
+  (questionText: string) => `Let's slow it down: "${questionText}" What is the question asking you to explain?`,
+  (questionText: string) => `Read it once in plain language: "${questionText}" What would have to be true for an answer to work?`,
+  (questionText: string) => `Focus on the situation in the question: "${questionText}" What changes, causes something, or makes the result happen?`,
+  (questionText: string) => `Start with the question itself: "${questionText}" What kind of answer would actually complete that thought?`,
+  (questionText: string) => `Let's not rush the choice. In "${questionText}", what is the key thing you need to explain?`,
+  (questionText: string) => `Before looking at the options too hard, say what this is asking: "${questionText}" What would a good answer need to do?`,
 ];
 
 const tutorFollowupFrames = [
-  (studentChoice: string, otherChoice: string) => `Good hesitation. Compare "${studentChoice}" with "${otherChoice}". Which one explains the prompt itself, and which one is only nearby vocabulary?`,
-  (studentChoice: string, otherChoice: string) => `Test your pick against a rival: if "${otherChoice}" were true, would it explain the prompt better than "${studentChoice}"?`,
-  (studentChoice: string, otherChoice: string) => `Now make the wrong answer work. What would the prompt need to ask for "${studentChoice}" to be right instead of "${otherChoice}"?`,
-  (studentChoice: string, otherChoice: string) => `Ask one concrete question: does "${studentChoice}" describe the mechanism in the prompt, or does "${otherChoice}" do that more directly?`,
-  (studentChoice: string, otherChoice: string) => `Do not eliminate by vibes. Put "${studentChoice}" and "${otherChoice}" into the sentence and see which creates a coherent explanation.`,
-  (studentChoice: string, otherChoice: string) => `Your pick may be plausible. The next move is to say why "${studentChoice}" beats "${otherChoice}" on the exact wording, not on topic familiarity.`,
+  (studentChoice: string, otherChoice: string) => `That's a fair first guess. Now compare it with "${otherChoice}". If you put each one into the question, which answer makes the situation make more sense?`,
+  (studentChoice: string, otherChoice: string) => `Good. Test "${studentChoice}" against "${otherChoice}". Which one would let you explain the answer to someone else in one sentence?`,
+  (studentChoice: string, otherChoice: string) => `Let's check it carefully. What would have to be different in the question for "${studentChoice}" to be right instead of "${otherChoice}"?`,
+  (studentChoice: string, otherChoice: string) => `Try both answers out loud. Does "${studentChoice}" actually explain what happens, or does "${otherChoice}" fit the situation more directly?`,
+  (studentChoice: string, otherChoice: string) => `Nice. Now do a simple swap test: put "${studentChoice}" in the sentence, then put "${otherChoice}" in. Which one sounds like a reason, not just a related phrase?`,
+  (studentChoice: string, otherChoice: string) => `Your guess is possible, so don't throw it away yet. Compare it with "${otherChoice}" and ask which answer would make the question feel resolved.`,
 ];
 
 interface QuizCardProps {
@@ -102,7 +102,7 @@ export function QuizCard({ question, backgroundImage }: QuizCardProps) {
   ) ?? displayOptions[0];
   const frameIndex = (question.id - 1) % studentAttemptFrames.length;
   const tutorOpening = tutorOpeningFrames[frameIndex](question.question);
-  const studentAttempt = studentAttemptFrames[frameIndex](studentOption.option, question.topic);
+  const studentAttempt = studentAttemptFrames[frameIndex](studentOption.option);
   const tutorFollowup = tutorFollowupFrames[frameIndex](studentOption.option, comparisonOption.option);
   const animatedMessage = tutorFollowup;
   const chatMessages = [

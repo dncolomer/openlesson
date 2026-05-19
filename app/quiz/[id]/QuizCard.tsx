@@ -48,6 +48,8 @@ const controlWidthClasses: Record<QuizAspect, string> = {
   "1:1": "w-full max-w-[860px]",
 };
 
+const QUIZ_QUESTION_COUNT = 100;
+
 interface QuizCardProps {
   question: QuizQuestion;
   backgroundImage: string | null;
@@ -61,7 +63,13 @@ export function QuizCard({ question, backgroundImage }: QuizCardProps) {
   const answered = selected !== null;
   const correct = selected === question.answerIndex;
   const compactQuiz = aspect === "3:2" || aspect === "16:9";
-  const animatedMessage = `Helios hint: ${question.explanation} Pick the option that says that idea most directly.`;
+  const animatedMessage = `Now test the options Socratically: which one would still explain the case if you removed the familiar vocabulary and kept only the causal structure? Choose the answer that survives that test.`;
+  const orderedOptions = question.options.map((option, originalIndex) => ({ option, originalIndex }));
+  const optionRotation = question.id % orderedOptions.length;
+  const displayOptions = [
+    ...orderedOptions.slice(optionRotation),
+    ...orderedOptions.slice(0, optionRotation),
+  ];
 
   useEffect(() => {
     if (activeView !== "chat") {
@@ -104,7 +112,7 @@ export function QuizCard({ question, backgroundImage }: QuizCardProps) {
 
             <div className={`${compactQuiz ? "mb-2" : "mb-4"} flex items-center gap-3`}>
               <Link
-                href={`/quiz/${question.id === 1 ? 10 : question.id - 1}`}
+                href={`/quiz/${question.id === 1 ? QUIZ_QUESTION_COUNT : question.id - 1}`}
                 aria-label="Previous question"
                 className="flex size-10 items-center justify-center rounded-full border border-rose-400/70 bg-rose-500/10 text-rose-200 shadow-[0_0_24px_rgba(244,63,94,0.22)]"
               >
@@ -119,7 +127,7 @@ export function QuizCard({ question, backgroundImage }: QuizCardProps) {
               </div>
 
               <Link
-                href={`/quiz/${question.id === 10 ? 1 : question.id + 1}`}
+                href={`/quiz/${question.id === QUIZ_QUESTION_COUNT ? 1 : question.id + 1}`}
                 aria-label="Next question"
                 className="flex size-10 items-center justify-center rounded-full border border-rose-400/70 bg-rose-500/10 text-rose-200 shadow-[0_0_24px_rgba(244,63,94,0.22)]"
               >
@@ -141,9 +149,9 @@ export function QuizCard({ question, backgroundImage }: QuizCardProps) {
 
               <div className="flex w-full min-w-0 flex-col items-center justify-center">
             <div className={`${compactQuiz ? "mt-0 max-w-sm" : "mt-7 max-w-none"} grid w-full gap-3`}>
-              {question.options.map((option, index) => {
-                const isSelected = selected === index;
-                const isCorrect = question.answerIndex === index;
+              {displayOptions.map(({ option, originalIndex }, index) => {
+                const isSelected = selected === originalIndex;
+                const isCorrect = question.answerIndex === originalIndex;
                 const stateClass = !answered
                   ? "border-white/10 bg-neutral-950/55 text-neutral-200 hover:border-white/25 hover:bg-neutral-900/70"
                   : isCorrect
@@ -156,7 +164,7 @@ export function QuizCard({ question, backgroundImage }: QuizCardProps) {
                   <button
                     key={option}
                     type="button"
-                    onClick={() => setSelected(index)}
+                    onClick={() => setSelected(originalIndex)}
                     className={`rounded-[3px] border px-4 py-3 text-left text-sm font-medium transition ${stateClass}`}
                   >
                     <span className="mr-3 font-mono text-[11px] text-neutral-500">{String.fromCharCode(65 + index)}</span>
@@ -169,7 +177,7 @@ export function QuizCard({ question, backgroundImage }: QuizCardProps) {
             {answered && (
               <div className={`mt-6 w-full ${compactQuiz ? "max-w-sm" : "max-w-none"} rounded-[3px] border p-4 transition ${correct ? "border-emerald-300/35 bg-emerald-400/10" : "border-rose-300/35 bg-rose-500/10"}`}>
                 <p className="text-base font-semibold text-white">
-                  {correct ? "Correct. You already had the intuition." : "Close. The useful idea is simpler than it looks."}
+                  {correct ? "Correct. That choice preserves the underlying distinction." : "Not quite. Re-test which option explains the mechanism, not just the topic."}
                 </p>
                 <p className="mt-2 text-sm leading-5 text-neutral-300">{question.explanation}</p>
                 <Link
@@ -195,19 +203,19 @@ export function QuizCard({ question, backgroundImage }: QuizCardProps) {
               </div>
               <div>
                 <p className="text-base font-semibold text-white">Helios Chat</p>
-                <p className="text-sm text-neutral-400">Guided help for {question.topic}</p>
+                <p className="text-sm text-neutral-400">Socratic pressure test for {question.topic}</p>
               </div>
             </div>
 
             <div className="flex min-h-0 flex-1 flex-col justify-end gap-4 overflow-hidden pt-6">
               <div className="max-w-[88%] rounded-[3px] border border-white/10 bg-neutral-950/75 p-4 text-base leading-7 text-neutral-100 shadow-lg shadow-black/20">
-                This quiz is testing {question.topic}. I will help you find the principle, not guess the option.
+                Do not answer yet. What distinction is the question forcing you to make about {question.topic}?
               </div>
               <div className="ml-auto max-w-[82%] rounded-[3px] bg-white px-4 py-3 text-base leading-7 text-neutral-950 shadow-lg shadow-black/20">
-                I get the question, but which clue matters most?
+                I can name the topic, but I am not sure what the question is actually testing.
               </div>
               <div className="max-w-[88%] rounded-[3px] border border-white/10 bg-neutral-950/75 p-4 text-base leading-7 text-neutral-100 shadow-lg shadow-black/20">
-                First separate the surface story from the principle. Which option names the principle rather than a distracting detail?
+                Good. For each option, ask: would this make the prompt's situation intelligible, or is it merely associated with the same topic?
               </div>
               <div className="max-w-[88%] rounded-[3px] border border-rose-300/30 bg-rose-500/15 p-4 text-base leading-7 text-rose-50 shadow-[0_0_32px_rgba(244,63,94,0.18)]">
                 {typedText}

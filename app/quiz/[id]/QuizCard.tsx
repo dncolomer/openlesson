@@ -51,12 +51,12 @@ const controlWidthClasses: Record<QuizAspect, string> = {
 const QUIZ_QUESTION_COUNT = 100;
 
 const studentAttemptFrames = [
-  (choice: string) => `I think it might be "${choice}", but I am not totally sure what makes it the best answer.`,
-  (choice: string) => `My first guess is "${choice}". I can see why it might fit, but I am not confident yet.`,
-  (choice: string) => `I am leaning toward "${choice}". Something about it sounds right, but I want to check it.`,
-  (choice: string) => `Maybe it is "${choice}". I can explain part of it, but not the whole question.`,
-  (choice: string) => `I would probably click "${choice}" right now, but I am not sure what mistake I might be making.`,
-  (choice: string) => `"${choice}" is the answer I notice first. Can we test whether it really fits?`,
+  (choice: string) => `I think it might be "${choice}" because it seems to match one part of the question. But I am not sure whether it explains the whole situation or just repeats a related idea.`,
+  (choice: string) => `My first guess is "${choice}". The wording makes it sound plausible to me, but I cannot yet connect it clearly to every part of the question.`,
+  (choice: string) => `I am leaning toward "${choice}" because it feels like the option the question is pointing at. I want to check whether I am reasoning from the prompt or just recognizing a familiar term.`,
+  (choice: string) => `Maybe it is "${choice}". I can make a partial explanation for it, but there is still a piece of the question that feels unaccounted for.`,
+  (choice: string) => `I would probably click "${choice}" right now. My reason is that it seems to address the main idea, but I am not sure why the other options should be ruled out.`,
+  (choice: string) => `"${choice}" is the answer I notice first. It sounds defensible, but I need to see whether it actually explains the example instead of only sounding close.`,
 ];
 
 const tutorOpeningFrames = [

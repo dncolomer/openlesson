@@ -63,13 +63,13 @@ export function QuizCard({ question, backgroundImage }: QuizCardProps) {
   const answered = selected !== null;
   const correct = selected === question.answerIndex;
   const compactQuiz = aspect === "3:2" || aspect === "16:9";
-  const animatedMessage = `Now test the options Socratically: which one would still explain the case if you removed the familiar vocabulary and kept only the causal structure? Choose the answer that survives that test.`;
   const orderedOptions = question.options.map((option, originalIndex) => ({ option, originalIndex }));
   const optionRotation = question.id % orderedOptions.length;
   const displayOptions = [
     ...orderedOptions.slice(optionRotation),
     ...orderedOptions.slice(0, optionRotation),
   ];
+  const animatedMessage = `Start with option A: "${displayOptions[0].option}". Say: "This would be right if..." Then compare it with option B: "${displayOptions[1].option}". The stronger answer should explain the exact thing happening in the prompt, not just sound related.`;
 
   useEffect(() => {
     if (activeView !== "chat") {
@@ -203,19 +203,19 @@ export function QuizCard({ question, backgroundImage }: QuizCardProps) {
               </div>
               <div>
                 <p className="text-base font-semibold text-white">Helios Chat</p>
-                <p className="text-sm text-neutral-400">Socratic pressure test for {question.topic}</p>
+                <p className="text-sm text-neutral-400">Work through the quiz step by step</p>
               </div>
             </div>
 
             <div className="flex min-h-0 flex-1 flex-col justify-end gap-4 overflow-hidden pt-6">
               <div className="max-w-[88%] rounded-[3px] border border-white/10 bg-neutral-950/75 p-4 text-base leading-7 text-neutral-100 shadow-lg shadow-black/20">
-                Do not answer yet. What distinction is the question forcing you to make about {question.topic}?
+                Let&apos;s slow down on the actual question: &ldquo;{question.question}&rdquo; What is changing, being compared, or being explained here?
               </div>
               <div className="ml-auto max-w-[82%] rounded-[3px] bg-white px-4 py-3 text-base leading-7 text-neutral-950 shadow-lg shadow-black/20">
-                I can name the topic, but I am not sure what the question is actually testing.
+                So I should first restate what the prompt is asking in plain language?
               </div>
               <div className="max-w-[88%] rounded-[3px] border border-white/10 bg-neutral-950/75 p-4 text-base leading-7 text-neutral-100 shadow-lg shadow-black/20">
-                Good. For each option, ask: would this make the prompt's situation intelligible, or is it merely associated with the same topic?
+                Exactly. Then test each answer: would this option explain that exact situation? If it only sounds related to {question.topic}, set it aside.
               </div>
               <div className="max-w-[88%] rounded-[3px] border border-rose-300/30 bg-rose-500/15 p-4 text-base leading-7 text-rose-50 shadow-[0_0_32px_rgba(244,63,94,0.18)]">
                 {typedText}

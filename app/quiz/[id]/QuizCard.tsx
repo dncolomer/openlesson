@@ -77,15 +77,6 @@ const tutorFollowupFrames = [
   (studentChoice: string, otherChoice: string) => `Your pick may be plausible. The next move is to say why "${studentChoice}" beats "${otherChoice}" on the exact wording, not on topic familiarity.`,
 ];
 
-const finalHintFrames = [
-  (studentChoice: string, correctChoice: string) => `Try this: "${studentChoice}" would be right only if the prompt were asking about that specific idea. Now ask whether "${correctChoice}" explains the described situation with fewer extra assumptions.`,
-  (studentChoice: string, correctChoice: string) => `Hold your first guess lightly. Compare the job each answer does: "${studentChoice}" labels something related; "${correctChoice}" may explain the exact relationship the question describes.`,
-  (studentChoice: string, correctChoice: string) => `Make a one-sentence because-test: "The answer is ${correctChoice} because..." If that sentence explains the prompt better than "${studentChoice}", you have your choice.`,
-  (studentChoice: string, correctChoice: string) => `Look for the answer that would let you teach the idea back. If you chose "${studentChoice}", what would still be unexplained? Check whether "${correctChoice}" closes that gap.`,
-  (studentChoice: string, correctChoice: string) => `Use the narrowest reading of the question. Does it ask for the broad topic, or the specific reason? That distinction is where "${correctChoice}" should beat "${studentChoice}".`,
-  (studentChoice: string, correctChoice: string) => `Final check: the best option is the one you can defend from the prompt's details. Compare "${studentChoice}" against "${correctChoice}" and choose the one with the cleaner explanation.`,
-];
-
 interface QuizCardProps {
   question: QuizQuestion;
   backgroundImage: string | null;
@@ -105,16 +96,15 @@ export function QuizCard({ question, backgroundImage }: QuizCardProps) {
     ...orderedOptions.slice(optionRotation),
     ...orderedOptions.slice(0, optionRotation),
   ];
-  const correctOption = displayOptions.find(({ originalIndex }) => originalIndex === question.answerIndex) ?? displayOptions[0];
   const studentOption = displayOptions.find(({ originalIndex }) => originalIndex !== question.answerIndex) ?? displayOptions[1];
   const comparisonOption = displayOptions.find(
     ({ originalIndex, option }) => originalIndex !== studentOption.originalIndex && option !== studentOption.option,
-  ) ?? correctOption;
+  ) ?? displayOptions[0];
   const frameIndex = (question.id - 1) % studentAttemptFrames.length;
   const tutorOpening = tutorOpeningFrames[frameIndex](question.question);
   const studentAttempt = studentAttemptFrames[frameIndex](studentOption.option, question.topic);
   const tutorFollowup = tutorFollowupFrames[frameIndex](studentOption.option, comparisonOption.option);
-  const animatedMessage = finalHintFrames[frameIndex](studentOption.option, correctOption.option);
+  const animatedMessage = tutorFollowup;
 
   useEffect(() => {
     if (activeView !== "chat") {
@@ -128,7 +118,7 @@ export function QuizCard({ question, backgroundImage }: QuizCardProps) {
       index += 1;
       setTypedText(animatedMessage.slice(0, index));
       if (index >= animatedMessage.length) window.clearInterval(interval);
-    }, 24);
+    }, 70);
 
     return () => window.clearInterval(interval);
   }, [activeView, animatedMessage]);
@@ -258,9 +248,6 @@ export function QuizCard({ question, backgroundImage }: QuizCardProps) {
               </div>
               <div className="ml-auto max-w-[82%] rounded-[3px] bg-white px-4 py-3 text-base leading-7 text-neutral-950 shadow-lg shadow-black/20">
                 {studentAttempt}
-              </div>
-              <div className="max-w-[88%] rounded-[3px] border border-white/10 bg-neutral-950/75 p-4 text-base leading-7 text-neutral-100 shadow-lg shadow-black/20">
-                {tutorFollowup}
               </div>
               <div className="max-w-[88%] rounded-[3px] border border-white/10 bg-neutral-950/75 p-4 text-base leading-7 text-neutral-100 shadow-lg shadow-black/20">
                 {typedText}

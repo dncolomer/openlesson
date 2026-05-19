@@ -96,8 +96,8 @@ export function QuizCard({ question, backgroundImage }: QuizCardProps) {
         <div className={`absolute inset-0 z-10 flex min-h-0 flex-col ${activeView === "canvas" ? "p-0" : "px-7 py-7 sm:px-10"}`}>
           <div className="flex min-h-0 flex-1 items-center justify-center overflow-hidden">
           {activeView === "helios" && (
-            <div className={compactQuiz ? "grid h-full w-full grid-cols-[minmax(0,1fr)_minmax(300px,390px)] items-center gap-10 text-left" : "flex w-full flex-col items-center justify-center text-center"}>
-              <div className={compactQuiz ? "flex min-w-0 flex-col items-start justify-center" : "flex flex-col items-center"}>
+            <div className={compactQuiz ? "grid h-full w-full grid-cols-2 items-center gap-8 text-center" : "flex w-full flex-col items-center justify-center text-center"}>
+              <div className="flex min-w-0 flex-col items-center justify-center">
               <p className={`${compactQuiz ? "mb-2" : "mb-5"} font-mono text-[12px] font-semibold uppercase tracking-[0.32em] text-rose-50/90`}>
                 {question.chapter}
               </p>
@@ -139,7 +139,7 @@ export function QuizCard({ question, backgroundImage }: QuizCardProps) {
             </div>
               </div>
 
-              <div className={compactQuiz ? "flex min-w-0 flex-col items-stretch justify-center" : "flex w-full flex-col items-center"}>
+              <div className="flex min-w-0 flex-col items-center justify-center">
             <div className={`${compactQuiz ? "mt-0" : "mt-7"} grid w-full max-w-sm gap-3`}>
               {question.options.map((option, index) => {
                 const isSelected = selected === index;

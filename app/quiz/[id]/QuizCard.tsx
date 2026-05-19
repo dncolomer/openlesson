@@ -51,12 +51,12 @@ const controlWidthClasses: Record<QuizAspect, string> = {
 const QUIZ_QUESTION_COUNT = 100;
 
 const studentAttemptFrames = [
-  (choice: string) => `I think it might be "${choice}" because it seems to match one part of the question. But I am not sure whether it explains the whole situation or just repeats a related idea.`,
-  (choice: string) => `My first guess is "${choice}". The wording makes it sound plausible to me, but I cannot yet connect it clearly to every part of the question.`,
-  (choice: string) => `I am leaning toward "${choice}" because it feels like the option the question is pointing at. I want to check whether I am reasoning from the prompt or just recognizing a familiar term.`,
-  (choice: string) => `Maybe it is "${choice}". I can make a partial explanation for it, but there is still a piece of the question that feels unaccounted for.`,
-  (choice: string) => `I would probably click "${choice}" right now. My reason is that it seems to address the main idea, but I am not sure why the other options should be ruled out.`,
-  (choice: string) => `"${choice}" is the answer I notice first. It sounds defensible, but I need to see whether it actually explains the example instead of only sounding close.`,
+  (choice: string, questionText: string) => `I would choose "${choice}" because the question asks, "${questionText}" and that answer seems to name the factor doing the work. My reasoning is that if this factor changes, the result in the question should follow.`,
+  (choice: string, questionText: string) => `My answer is "${choice}". I am reading "${questionText}" as asking for the main cause, and this option seems like the cause that would drive the change described.`,
+  (choice: string, questionText: string) => `I think "${choice}" fits because the question is not just asking for a definition; it is asking what makes the situation happen. This option seems to provide that missing link.`,
+  (choice: string, questionText: string) => `I would pick "${choice}". In "${questionText}", I am treating the key clue as the thing that changes first, and this answer seems to explain what follows from that change.`,
+  (choice: string, questionText: string) => `I am leaning toward "${choice}" because it sounds like the most direct explanation of the effect in the question. The other answers seem less connected to what the question is trying to explain.`,
+  (choice: string, questionText: string) => `"${choice}" seems right to me because it gives a reason, not just a label. If I had to justify it, I would say the question points to that mechanism as the thing producing the outcome.`,
 ];
 
 const tutorOpeningFrames = [
@@ -102,7 +102,7 @@ export function QuizCard({ question, backgroundImage }: QuizCardProps) {
   ) ?? displayOptions[0];
   const frameIndex = (question.id - 1) % studentAttemptFrames.length;
   const tutorOpening = tutorOpeningFrames[frameIndex](question.question);
-  const studentAttempt = studentAttemptFrames[frameIndex](studentOption.option);
+  const studentAttempt = studentAttemptFrames[frameIndex](studentOption.option, question.question);
   const tutorFollowup = tutorFollowupFrames[frameIndex](studentOption.option, comparisonOption.option);
   const animatedMessage = tutorFollowup;
   const chatMessages = [

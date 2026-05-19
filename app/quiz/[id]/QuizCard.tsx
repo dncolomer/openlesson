@@ -50,6 +50,42 @@ const controlWidthClasses: Record<QuizAspect, string> = {
 
 const QUIZ_QUESTION_COUNT = 100;
 
+const studentAttemptFrames = [
+  (choice: string, topic: string) => `I think it might be "${choice}" because that sounds connected to ${topic}, but I cannot fully justify it yet.`,
+  (choice: string) => `My first instinct is "${choice}". I am picking it because it feels like the most familiar phrase, not because I can prove it.`,
+  (choice: string) => `I am leaning toward "${choice}", but I might be matching keywords instead of answering the question.`,
+  (choice: string, topic: string) => `Maybe it is "${choice}". In ${topic}, that seems relevant, but I am not sure it explains the situation.`,
+  (choice: string) => `I would probably click "${choice}" right now, though I cannot say exactly why the other answers fail.`,
+  (choice: string) => `"${choice}" is tempting. I need help checking whether it actually answers the wording of the prompt.`,
+];
+
+const tutorOpeningFrames = [
+  (questionText: string) => `Let's use the wording as evidence. The question says: "${questionText}". What has to be explained, not merely named?`,
+  (questionText: string) => `Before choosing, restate this in plain language: "${questionText}". What would a good answer need to account for?`,
+  (questionText: string) => `Slow down on the verb in the prompt: "${questionText}". Is it asking for a cause, a definition, a distinction, or a consequence?`,
+  (questionText: string) => `Read the prompt like a test of reasoning, not memory: "${questionText}". What claim would make the whole sentence make sense?`,
+  (questionText: string) => `Treat the question as a small argument: "${questionText}". Which missing idea would complete that argument?`,
+  (questionText: string) => `Look at the exact situation being described: "${questionText}". Which answer would still fit if the topic label disappeared?`,
+];
+
+const tutorFollowupFrames = [
+  (studentChoice: string, otherChoice: string) => `Good hesitation. Compare "${studentChoice}" with "${otherChoice}". Which one explains the prompt itself, and which one is only nearby vocabulary?`,
+  (studentChoice: string, otherChoice: string) => `Test your pick against a rival: if "${otherChoice}" were true, would it explain the prompt better than "${studentChoice}"?`,
+  (studentChoice: string, otherChoice: string) => `Now make the wrong answer work. What would the prompt need to ask for "${studentChoice}" to be right instead of "${otherChoice}"?`,
+  (studentChoice: string, otherChoice: string) => `Ask one concrete question: does "${studentChoice}" describe the mechanism in the prompt, or does "${otherChoice}" do that more directly?`,
+  (studentChoice: string, otherChoice: string) => `Do not eliminate by vibes. Put "${studentChoice}" and "${otherChoice}" into the sentence and see which creates a coherent explanation.`,
+  (studentChoice: string, otherChoice: string) => `Your pick may be plausible. The next move is to say why "${studentChoice}" beats "${otherChoice}" on the exact wording, not on topic familiarity.`,
+];
+
+const finalHintFrames = [
+  (studentChoice: string, correctChoice: string) => `Try this: "${studentChoice}" would be right only if the prompt were asking about that specific idea. Now ask whether "${correctChoice}" explains the described situation with fewer extra assumptions.`,
+  (studentChoice: string, correctChoice: string) => `Hold your first guess lightly. Compare the job each answer does: "${studentChoice}" labels something related; "${correctChoice}" may explain the exact relationship the question describes.`,
+  (studentChoice: string, correctChoice: string) => `Make a one-sentence because-test: "The answer is ${correctChoice} because..." If that sentence explains the prompt better than "${studentChoice}", you have your choice.`,
+  (studentChoice: string, correctChoice: string) => `Look for the answer that would let you teach the idea back. If you chose "${studentChoice}", what would still be unexplained? Check whether "${correctChoice}" closes that gap.`,
+  (studentChoice: string, correctChoice: string) => `Use the narrowest reading of the question. Does it ask for the broad topic, or the specific reason? That distinction is where "${correctChoice}" should beat "${studentChoice}".`,
+  (studentChoice: string, correctChoice: string) => `Final check: the best option is the one you can defend from the prompt's details. Compare "${studentChoice}" against "${correctChoice}" and choose the one with the cleaner explanation.`,
+];
+
 interface QuizCardProps {
   question: QuizQuestion;
   backgroundImage: string | null;
@@ -69,7 +105,16 @@ export function QuizCard({ question, backgroundImage }: QuizCardProps) {
     ...orderedOptions.slice(optionRotation),
     ...orderedOptions.slice(0, optionRotation),
   ];
-  const animatedMessage = `Start with option A: "${displayOptions[0].option}". Say: "This would be right if..." Then compare it with option B: "${displayOptions[1].option}". The stronger answer should explain the exact thing happening in the prompt, not just sound related.`;
+  const correctOption = displayOptions.find(({ originalIndex }) => originalIndex === question.answerIndex) ?? displayOptions[0];
+  const studentOption = displayOptions.find(({ originalIndex }) => originalIndex !== question.answerIndex) ?? displayOptions[1];
+  const comparisonOption = displayOptions.find(
+    ({ originalIndex, option }) => originalIndex !== studentOption.originalIndex && option !== studentOption.option,
+  ) ?? correctOption;
+  const frameIndex = (question.id - 1) % studentAttemptFrames.length;
+  const tutorOpening = tutorOpeningFrames[frameIndex](question.question);
+  const studentAttempt = studentAttemptFrames[frameIndex](studentOption.option, question.topic);
+  const tutorFollowup = tutorFollowupFrames[frameIndex](studentOption.option, comparisonOption.option);
+  const animatedMessage = finalHintFrames[frameIndex](studentOption.option, correctOption.option);
 
   useEffect(() => {
     if (activeView !== "chat") {
@@ -209,13 +254,13 @@ export function QuizCard({ question, backgroundImage }: QuizCardProps) {
 
             <div className="flex min-h-0 flex-1 flex-col justify-end gap-4 overflow-hidden pt-6">
               <div className="max-w-[88%] rounded-[3px] border border-white/10 bg-neutral-950/75 p-4 text-base leading-7 text-neutral-100 shadow-lg shadow-black/20">
-                Let&apos;s slow down on the actual question: &ldquo;{question.question}&rdquo; What is changing, being compared, or being explained here?
+                {tutorOpening}
               </div>
               <div className="ml-auto max-w-[82%] rounded-[3px] bg-white px-4 py-3 text-base leading-7 text-neutral-950 shadow-lg shadow-black/20">
-                So I should first restate what the prompt is asking in plain language?
+                {studentAttempt}
               </div>
               <div className="max-w-[88%] rounded-[3px] border border-white/10 bg-neutral-950/75 p-4 text-base leading-7 text-neutral-100 shadow-lg shadow-black/20">
-                Exactly. Then test each answer: would this option explain that exact situation? If it only sounds related to {question.topic}, set it aside.
+                {tutorFollowup}
               </div>
               <div className="max-w-[88%] rounded-[3px] border border-rose-300/30 bg-rose-500/15 p-4 text-base leading-7 text-rose-50 shadow-[0_0_32px_rgba(244,63,94,0.18)]">
                 {typedText}

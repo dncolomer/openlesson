@@ -97,7 +97,7 @@ export function QuizCard({ question, backgroundImage }: QuizCardProps) {
           <div className="flex min-h-0 flex-1 items-center justify-center overflow-hidden">
           {activeView === "helios" && (
             <div className={compactQuiz ? "grid h-full w-full grid-cols-2 items-center gap-8 text-center" : "flex w-full flex-col items-center justify-center text-center"}>
-              <div className="flex min-w-0 flex-col items-center justify-center">
+              <div className="flex w-full min-w-0 flex-col items-center justify-center">
               <p className={`${compactQuiz ? "mb-2" : "mb-5"} font-mono text-[12px] font-semibold uppercase tracking-[0.32em] text-rose-50/90`}>
                 {question.chapter}
               </p>
@@ -132,15 +132,15 @@ export function QuizCard({ question, backgroundImage }: QuizCardProps) {
             <div className="mb-3 text-sm font-medium text-neutral-100">Helios Quiz</div>
             <div className={`${compactQuiz ? "mb-4" : "mb-7"} h-1 w-8 rounded-full bg-rose-400`} />
 
-            <div className={`relative ${compactQuiz ? "max-w-[34ch]" : "max-w-[39ch]"}`}>
+            <div className={`relative w-full ${compactQuiz ? "max-w-[34ch]" : "max-w-[44ch]"}`}>
               <h1 className="text-balance text-2xl font-normal leading-[1.24] tracking-[-0.05em] text-neutral-100 sm:text-[28px]">
                 {question.question}
               </h1>
             </div>
               </div>
 
-              <div className="flex min-w-0 flex-col items-center justify-center">
-            <div className={`${compactQuiz ? "mt-0 max-w-sm" : "mt-7 max-w-md"} grid w-full gap-3`}>
+              <div className="flex w-full min-w-0 flex-col items-center justify-center">
+            <div className={`${compactQuiz ? "mt-0 max-w-sm" : "mt-7 max-w-none"} grid w-full gap-3`}>
               {question.options.map((option, index) => {
                 const isSelected = selected === index;
                 const isCorrect = question.answerIndex === index;
@@ -167,7 +167,7 @@ export function QuizCard({ question, backgroundImage }: QuizCardProps) {
             </div>
 
             {answered && (
-              <div className={`mt-6 w-full ${compactQuiz ? "max-w-sm" : "max-w-md"} rounded-[3px] border p-4 transition ${correct ? "border-emerald-300/35 bg-emerald-400/10" : "border-rose-300/35 bg-rose-500/10"}`}>
+              <div className={`mt-6 w-full ${compactQuiz ? "max-w-sm" : "max-w-none"} rounded-[3px] border p-4 transition ${correct ? "border-emerald-300/35 bg-emerald-400/10" : "border-rose-300/35 bg-rose-500/10"}`}>
                 <p className="text-base font-semibold text-white">
                   {correct ? "Correct. You already had the intuition." : "Close. The useful idea is simpler than it looks."}
                 </p>

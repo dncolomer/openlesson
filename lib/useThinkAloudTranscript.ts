@@ -55,11 +55,18 @@ const SPEECH_LANGUAGE_BY_TUTOR_LANGUAGE: Record<string, string> = {
 
 function getSpeechRecognitionConstructor(): SpeechRecognitionConstructor | null {
   if (typeof window === "undefined") return null;
+  if (isMobileBrowser()) return null;
   const w = window as typeof window & {
     SpeechRecognition?: SpeechRecognitionConstructor;
     webkitSpeechRecognition?: SpeechRecognitionConstructor;
   };
   return w.SpeechRecognition ?? w.webkitSpeechRecognition ?? null;
+}
+
+function isMobileBrowser(): boolean {
+  if (typeof window === "undefined" || typeof navigator === "undefined") return false;
+  const ua = navigator.userAgent;
+  return /Android|iPhone|iPad|iPod|Mobile/i.test(ua) || window.matchMedia("(pointer: coarse)").matches;
 }
 
 function normalizeTranscript(text: string) {

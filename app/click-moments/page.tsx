@@ -15,6 +15,14 @@ const moments = [
     source: "Live Helios session",
     image: "/aesthetics/Greco-futurism/HHnTrgVaQAAP-_3.jpeg",
   },
+  {
+    href: "/click-moments/software-design-clicks",
+    label: "Click Moment 002",
+    title: "Trading bot design click",
+    description: "A learner realizes a trading-bot boundary condition can become a dynamic property used by downstream decision logic.",
+    source: "Live Helios session",
+    image: "/aesthetics/galactic-stoneworks/HICAGgcaMAAKHXr.jpeg",
+  },
 ];
 
 export default function ClickMomentsPage() {

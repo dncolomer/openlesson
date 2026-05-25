@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { AudioRecorder } from "@/lib/audio";
 import { FacialDataPoint } from "./FaceTracker";
@@ -178,6 +178,122 @@ function NotebookSubmitButton({
   );
 }
 
+function ThoughtHistoryTool({
+  thoughts,
+  onSendThoughts,
+}: {
+  thoughts: ThinkAloudThought[];
+  onSendThoughts: (thoughts: ThinkAloudThought[]) => void;
+}) {
+  const [selectedThoughtIds, setSelectedThoughtIds] = useState<Set<string>>(new Set());
+  const recentThoughts = useMemo(() => thoughts.slice(-THOUGHT_HISTORY_LIMIT).reverse(), [thoughts]);
+  const selectedThoughts = recentThoughts
+    .slice()
+    .reverse()
+    .filter((thought) => selectedThoughtIds.has(thought.id));
+
+  useEffect(() => {
+    setSelectedThoughtIds((current) => {
+      const validIds = new Set(recentThoughts.map((thought) => thought.id));
+      const next = new Set([...current].filter((id) => validIds.has(id)));
+      return next.size === current.size ? current : next;
+    });
+  }, [recentThoughts]);
+
+  const toggleThought = (thoughtId: string) => {
+    setSelectedThoughtIds((current) => {
+      const next = new Set(current);
+      if (next.has(thoughtId)) {
+        next.delete(thoughtId);
+      } else {
+        next.add(thoughtId);
+      }
+      return next;
+    });
+  };
+
+  const sendSelectedThoughts = () => {
+    if (selectedThoughts.length === 0) return;
+    onSendThoughts(selectedThoughts);
+    setSelectedThoughtIds(new Set());
+  };
+
+  return (
+    <div className="h-full overflow-hidden rounded-lg border border-neutral-800 bg-neutral-950/50 flex flex-col">
+      <div className="shrink-0 border-b border-neutral-800 px-4 py-3">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <h3 className="text-sm font-semibold text-white">Thought history</h3>
+            <p className="mt-1 text-xs text-neutral-500">Browse the last 50 captured thought traces and send selected ones to this chapter chat.</p>
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={sendSelectedThoughts}
+          disabled={selectedThoughts.length === 0}
+          className="mt-3 w-full rounded-xl border border-white/30 bg-white/10 px-3 py-2 text-xs font-medium text-white transition-colors hover:border-white/50 hover:bg-white/15 disabled:border-neutral-800 disabled:bg-neutral-900 disabled:text-neutral-500 disabled:opacity-100 disabled:cursor-not-allowed"
+        >
+          {selectedThoughts.length > 0 ? `Send selected (${selectedThoughts.length}) to chapter chat` : "Select traces to send"}
+        </button>
+      </div>
+      <div className="flex-1 min-h-0 overflow-y-auto p-3 space-y-2">
+        {recentThoughts.length === 0 ? (
+          <div className="rounded-xl border border-neutral-800 bg-neutral-900/50 px-3 py-4 text-center text-xs text-neutral-500">
+            No thought traces captured yet.
+          </div>
+        ) : recentThoughts.map((thought, index) => {
+          const isSelected = selectedThoughtIds.has(thought.id);
+          return (
+          <button
+            key={thought.id}
+            type="button"
+            onClick={() => toggleThought(thought.id)}
+            onDoubleClick={(event) => {
+              event.preventDefault();
+              onSendThoughts([thought]);
+              setSelectedThoughtIds((current) => {
+                if (!current.has(thought.id)) return current;
+                const next = new Set(current);
+                next.delete(thought.id);
+                return next;
+              });
+            }}
+            className={`block w-full rounded-xl border p-3 text-left transition-colors ${
+              isSelected
+                ? "border-white/50 bg-white/10"
+                : "border-neutral-800 bg-neutral-900/60 hover:border-neutral-600 hover:bg-neutral-800/70"
+            }`}
+          >
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <span className="inline-flex items-center gap-2 text-[10px] uppercase tracking-[0.14em] text-neutral-500">
+                <span
+                  className={`h-3.5 w-3.5 rounded border flex items-center justify-center ${
+                    isSelected ? "border-white bg-white text-neutral-950" : "border-neutral-700 bg-neutral-950"
+                  }`}
+                  aria-hidden="true"
+                >
+                  {isSelected && (
+                    <svg className="h-2.5 w-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                    </svg>
+                  )}
+                </span>
+                Trace {recentThoughts.length - index}
+              </span>
+              <span
+                className="rounded-md border border-neutral-700 bg-neutral-950 px-2 py-1 text-[10px] font-medium text-neutral-300"
+              >
+                {isSelected ? "Selected" : "Select"}
+              </span>
+            </div>
+            <p className="text-xs leading-relaxed text-neutral-200">{thought.text}</p>
+          </button>
+        );})}
+      </div>
+    </div>
+  );
+}
+
 // Configuration
 const STORAGE_INTERVAL_MS = 5000;
 const ANALYSIS_INTERVAL_MS = 10000;
@@ -185,6 +301,7 @@ const STUCK_POLICY_ENABLED = false;
 const EEG_SAMPLE_RATE_HZ = 256;
 const EEG_DISPLAY_MAX_SAMPLES = 512;
 const EEG_PERSIST_MAX_SAMPLES = EEG_SAMPLE_RATE_HZ * 30;
+const THOUGHT_HISTORY_LIMIT = 50;
 
 export function SessionView({ sessionId }: { sessionId: string }) {
   const router = useRouter();
@@ -219,6 +336,8 @@ export function SessionView({ sessionId }: { sessionId: string }) {
 
   // Session ending / saving
   const [isSaving, setIsSaving] = useState(false);
+  const [thoughtHistory, setThoughtHistory] = useState<ThinkAloudThought[]>([]);
+  const [thoughtHistoryLoaded, setThoughtHistoryLoaded] = useState(false);
 
   // Tutor-end dialog
   const [showEndDialog, setShowEndDialog] = useState(false);
@@ -742,8 +861,13 @@ export function SessionView({ sessionId }: { sessionId: string }) {
       role: "user",
       content: text,
     };
+    const placeholderId = `${Date.now()}-pending`;
     updateChapterWorkspace(chapterKey, workspace => ({
-      chatMessages: [...workspace.chatMessages, userMsg],
+      chatMessages: [
+        ...workspace.chatMessages,
+        userMsg,
+        { id: placeholderId, role: "assistant", content: "", pending: true },
+      ],
     }));
 
     try {
@@ -767,12 +891,20 @@ export function SessionView({ sessionId }: { sessionId: string }) {
         ? data.message.trim()
         : t('heliosChat.errorMessage');
       updateChapterWorkspace(chapterKey, workspace => ({
-        chatMessages: [...workspace.chatMessages, { id: `${Date.now()}-a`, role: "assistant", content }],
+        chatMessages: workspace.chatMessages.map(message =>
+          message.id === placeholderId
+            ? { ...message, content, pending: false, pendingLabel: undefined }
+            : message
+        ),
       }));
     } catch (error) {
       console.error("Helios direct chat error:", error);
       updateChapterWorkspace(chapterKey, workspace => ({
-        chatMessages: [...workspace.chatMessages, { id: `${Date.now()}-a`, role: "assistant", content: t('heliosChat.errorMessage') }],
+        chatMessages: workspace.chatMessages.map(message =>
+          message.id === placeholderId
+            ? { ...message, content: t('heliosChat.errorMessage'), pending: false, pendingLabel: undefined }
+            : message
+        ),
       }));
     }
   }, [activeChapterIndex, activeChapterKey, activeStep, chapterWorkspaces, ensureVisible, session, sessionPlan, t, tutoringLanguage, updateChapterWorkspace]);
@@ -804,6 +936,8 @@ export function SessionView({ sessionId }: { sessionId: string }) {
           id: cueId,
           role: "assistant",
           content: "",
+          kind: "evaluation",
+          cardTitle: forceAdvance ? "Marking done" : "Evaluating your chapter",
           pending: true,
           pendingLabel: forceAdvance
             ? t('sessionPlan.completing')
@@ -2541,8 +2675,56 @@ export function SessionView({ sessionId }: { sessionId: string }) {
   consumeSpeechTranscriptEntriesRef.current = thinkAloudTranscript.consumePendingTranscriptEntries;
   requeueSpeechTranscriptEntriesRef.current = thinkAloudTranscript.requeueTranscriptEntries;
 
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    setThoughtHistoryLoaded(false);
+    try {
+      const stored = window.localStorage.getItem(`openlesson:${sessionId}:thought-history`);
+      const parsed = stored ? JSON.parse(stored) : [];
+      if (Array.isArray(parsed)) {
+        setThoughtHistory(parsed.filter((item): item is ThinkAloudThought => (
+          typeof item?.id === "string" &&
+          typeof item?.text === "string" &&
+          typeof item?.timestamp === "number"
+        )).slice(-THOUGHT_HISTORY_LIMIT));
+      }
+    } catch {
+      setThoughtHistory([]);
+    } finally {
+      setThoughtHistoryLoaded(true);
+    }
+  }, [sessionId]);
+
+  useEffect(() => {
+    if (!thoughtHistoryLoaded) return;
+    if (thinkAloudTranscript.thoughts.length === 0) return;
+    setThoughtHistory((current) => {
+      const byId = new Map(current.map((thought) => [thought.id, thought]));
+      for (const thought of thinkAloudTranscript.thoughts) {
+        byId.set(thought.id, thought);
+      }
+      const next = Array.from(byId.values())
+        .sort((a, b) => a.timestamp - b.timestamp)
+        .slice(-THOUGHT_HISTORY_LIMIT);
+      return next.length === current.length && next.every((thought, index) => thought.id === current[index]?.id)
+        ? current
+        : next;
+    });
+  }, [thinkAloudTranscript.thoughts, thoughtHistoryLoaded]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (!thoughtHistoryLoaded) return;
+    window.localStorage.setItem(`openlesson:${sessionId}:thought-history`, JSON.stringify(thoughtHistory.slice(-THOUGHT_HISTORY_LIMIT)));
+  }, [sessionId, thoughtHistory, thoughtHistoryLoaded]);
+
   const handleThinkAloudThoughtClick = useCallback((thought: ThinkAloudThought) => {
     void submitHeliosChatMessageNow(`I was thinking aloud and want to work through this: "${thought.text}"`);
+  }, [submitHeliosChatMessageNow]);
+
+  const handleThoughtHistorySend = useCallback((thoughts: ThinkAloudThought[]) => {
+    if (thoughts.length === 0) return;
+    void submitHeliosChatMessageNow(`I want to send these thought traces into this chapter chat:\n\n${thoughts.map((thought) => `- ${thought.text}`).join("\n")}`);
   }, [submitHeliosChatMessageNow]);
 
   // Clear the inactivity flag whenever the user manually resumes.
@@ -2882,13 +3064,20 @@ export function SessionView({ sessionId }: { sessionId: string }) {
         return;
       }
       
-      const { plan: updatedPlan, allComplete } = data;
+      const { plan: rawUpdatedPlan, allComplete } = data;
       
       // Validate plan before updating
-      if (!updatedPlan?.steps?.length || !updatedPlan?.goal) {
+      if (!rawUpdatedPlan?.steps?.length || !rawUpdatedPlan?.goal) {
         console.warn('[Advance Step] Received invalid plan, keeping previous state');
         return;
       }
+
+      const updatedPlan = {
+        ...rawUpdatedPlan,
+        steps: rawUpdatedPlan.steps.map((step: { status?: string }, index: number) =>
+          index === activeChapterIndex ? { ...step, status: "completed" as const } : step
+        ),
+      };
 
       const successReasoning = typeof data.advanceReasoning === "string" && data.advanceReasoning.trim()
         ? `\n\n${data.advanceReasoning.trim()}`
@@ -4027,6 +4216,13 @@ export function SessionView({ sessionId }: { sessionId: string }) {
                           <span className="text-[10px] text-neutral-600">{t('session.characters', { count: notebookContent.length })}</span>
                         </div>
                       </div>
+                    )}
+
+                    {activeTool === "thought-history" && (
+                      <ThoughtHistoryTool
+                        thoughts={thoughtHistory}
+                        onSendThoughts={handleThoughtHistorySend}
+                      />
                     )}
 
                     {/* Bottom tools wrapper. Help is a command (restarts

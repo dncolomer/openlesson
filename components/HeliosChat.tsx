@@ -44,7 +44,7 @@ function processLatexContent(content: string): string {
  * Intentionally a string union (not a boolean) so we can add more
  * card kinds later without another flag.
  */
-export type ChatMessageKind = "theory" | "practice" | "stuck";
+export type ChatMessageKind = "theory" | "practice" | "stuck" | "evaluation" | "grok";
 export type StuckAction = "ask" | "theory" | "practice" | "canvas" | "notebook" | "break";
 
 export interface ChatMessage {
@@ -104,7 +104,7 @@ interface HeliosChatProps {
 // Helios first-person welcome — unified across probe panel and chat.
 // The voice matches the BASE_SYSTEM_PROMPT in /api/session-chat.
 const CHAT_WELCOME_MESSAGES: Record<string, string> = {
-  en: "Hey, I'm Helios. I'm here with you for this session, following your thinking and helping you turn the next step into something clearer.\n\nWhere would you like to begin?",
+  en: "Hey, I'm Helios. I'm here with you for this chapter, following your thinking and helping you turn the prompt into something clearer.",
   es: "Hola — soy Helios. Este chat es donde mis preguntas y tus respuestas fluyen juntas.\n\n¿En qué estás trabajando ahora mismo?",
   vi: "Chào — tôi là Helios. Đây là nơi các câu hỏi của tôi và câu trả lời của bạn cùng tiếp diễn.\n\nBạn đang làm gì vậy?",
   zh: "嘿 — 我是 Helios。我的问题和你的回应都会在这个聊天里连续展开。\n\n你现在在研究什么？",
@@ -138,13 +138,15 @@ function HeliosAvatar({ size = 28 }: { size?: number }) {
 // reads as part of the chat surface, just framed.
 const CARD_KIND_META: Record<
   ChatMessageKind,
-  { label: string; icon: React.ReactNode; headerClass: string; ringClass: string }
+  { label: string; icon: React.ReactNode; headerClass: string; ringClass: string; shellClass?: string; bodyClass?: string }
 > = {
   theory: {
     label: "Theory",
     headerClass:
-      "bg-neutral-800/60 text-neutral-200 border-b border-neutral-700",
-    ringClass: "border-neutral-700",
+      "bg-neutral-800/70 text-neutral-200 border-b border-neutral-700",
+    ringClass: "border-neutral-700 shadow-[0_1px_0_rgba(255,255,255,0.04)_inset]",
+    shellClass: "bg-neutral-800",
+    bodyClass: "text-neutral-200",
     icon: (
       <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
@@ -154,8 +156,10 @@ const CARD_KIND_META: Record<
   practice: {
     label: "Practice",
     headerClass:
-      "bg-neutral-800/60 text-neutral-200 border-b border-neutral-700",
-    ringClass: "border-neutral-700",
+      "bg-neutral-800/70 text-neutral-200 border-b border-neutral-700",
+    ringClass: "border-neutral-700 shadow-[0_1px_0_rgba(255,255,255,0.04)_inset]",
+    shellClass: "bg-neutral-800",
+    bodyClass: "text-neutral-200",
     icon: (
       <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
@@ -165,15 +169,76 @@ const CARD_KIND_META: Record<
   stuck: {
     label: "Stuck Check",
     headerClass:
-      "bg-amber-500/15 text-amber-100 border-b border-amber-400/30",
-    ringClass: "border-amber-400/40 shadow-[0_0_28px_rgba(245,158,11,0.12)]",
+      "bg-neutral-800/70 text-neutral-200 border-b border-neutral-700",
+    ringClass: "border-neutral-700 shadow-[0_1px_0_rgba(255,255,255,0.04)_inset]",
+    shellClass: "bg-neutral-800",
+    bodyClass: "text-neutral-200",
     icon: (
       <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m0 3.75h.008v.008H12V16.5zm-8.485 2.25L10.06 4.69a2.25 2.25 0 013.88 0l6.545 11.81A2.25 2.25 0 0118.545 20H5.455a2.25 2.25 0 01-1.94-3.5z" />
       </svg>
     ),
   },
+  evaluation: {
+    label: "Chapter Check",
+    headerClass:
+      "bg-neutral-800/70 text-neutral-200 border-b border-neutral-700",
+    ringClass: "border-neutral-700 shadow-[0_1px_0_rgba(255,255,255,0.04)_inset]",
+    shellClass: "bg-neutral-800",
+    bodyClass: "text-neutral-200",
+    icon: (
+      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+    ),
+  },
+  grok: {
+    label: "Ask Grok",
+    headerClass:
+      "bg-neutral-800/70 text-neutral-200 border-b border-neutral-700",
+    ringClass: "border-neutral-700 shadow-[0_1px_0_rgba(255,255,255,0.04)_inset]",
+    shellClass: "bg-neutral-800",
+    bodyClass: "text-neutral-200",
+    icon: (
+      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+      </svg>
+    ),
+  },
 };
+
+function shouldShowGrokCard(text: string) {
+  const normalized = text.toLowerCase();
+  return /\b(answer|answers|specific answer|exact answer|what is|who is|when is|define|definition|lookup|search)\b/.test(normalized);
+}
+
+function GrokActions({ query }: { query: string }) {
+  const [copied, setCopied] = useState(false);
+  const grokUrl = `https://grok.com/?q=${encodeURIComponent(query)}`;
+  return (
+    <div className="mt-4 flex flex-wrap gap-2">
+      <button
+        type="button"
+        onClick={async () => {
+          await navigator.clipboard?.writeText(query);
+          setCopied(true);
+          window.setTimeout(() => setCopied(false), 1400);
+        }}
+        className="rounded-md border border-violet-300/30 bg-violet-300/10 px-3 py-1.5 text-xs font-medium text-violet-100 transition-colors hover:border-violet-200/60 hover:bg-violet-300/20"
+      >
+        {copied ? "Copied" : "Copy query"}
+      </button>
+      <a
+        href={grokUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="rounded-md border border-neutral-700 bg-neutral-900 px-3 py-1.5 text-xs font-medium text-neutral-100 no-underline transition-colors hover:border-neutral-500 hover:bg-neutral-800"
+      >
+        Open prebuilt query
+      </a>
+    </div>
+  );
+}
 
 function SmartCardShell({
   kind,
@@ -187,7 +252,7 @@ function SmartCardShell({
   const meta = CARD_KIND_META[kind];
   return (
     <div
-      className={`w-full rounded-md border ${meta.ringClass} bg-neutral-900/60 overflow-hidden shadow-[0_1px_0_rgba(255,255,255,0.03)_inset]`}
+      className={`w-full rounded-md border ${meta.ringClass} ${meta.shellClass ?? "bg-neutral-900/60"} overflow-hidden shadow-[0_1px_0_rgba(255,255,255,0.03)_inset]`}
     >
       <div
         className={`flex items-center gap-2 px-4 py-2 text-[11px] font-medium uppercase tracking-wider ${meta.headerClass}`}
@@ -203,7 +268,7 @@ function SmartCardShell({
           </>
         )}
       </div>
-      <div className="px-4 py-3">{children}</div>
+      <div className={`px-4 py-3 ${meta.bodyClass ?? ""}`}>{children}</div>
     </div>
   );
 }
@@ -334,6 +399,15 @@ export function HeliosChat({ problem, messages: externalMessages, onMessagesChan
   };
 
   useEffect(() => {
+    const stored = window.localStorage.getItem("openlesson:helios-auto-voice");
+    if (stored === "1") setAutoVoiceEnabled(true);
+  }, []);
+
+  useEffect(() => {
+    window.localStorage.setItem("openlesson:helios-auto-voice", autoVoiceEnabled ? "1" : "0");
+  }, [autoVoiceEnabled]);
+
+  useEffect(() => {
     return () => stopAutoVoice();
   }, []);
 
@@ -413,6 +487,19 @@ export function HeliosChat({ problem, messages: externalMessages, onMessagesChan
     };
 
     updateMessages([...messages, userMsg]);
+    if (shouldShowGrokCard(userMsg.content)) {
+      updateMessages([
+        ...messages,
+        userMsg,
+        {
+          id: `${Date.now()}-grok`,
+          role: "assistant",
+          kind: "grok",
+          cardTitle: "Use this when you want a direct lookup",
+          content: `Prebuilt Grok query:\n\n> ${userMsg.content}`,
+        },
+      ]);
+    }
     setInput("");
     setIsLoading(true);
 
@@ -569,7 +656,7 @@ export function HeliosChat({ problem, messages: externalMessages, onMessagesChan
                         <div className="w-2 h-2 rounded-full bg-neutral-500 animate-bounce" style={{ animationDelay: "300ms" }} />
                       </div>
                       {message.pendingLabel && (
-                        <span className="text-xs text-neutral-400">
+                          <span className="text-xs text-neutral-500">
                           {message.pendingLabel}
                         </span>
                       )}
@@ -580,11 +667,17 @@ export function HeliosChat({ problem, messages: externalMessages, onMessagesChan
                     // tuned for longer reference content. Practice
                     // (numbered tasks) gets list affordances.
                     <div
-                      className={`prose prose-invert prose-sm max-w-none text-neutral-200 [&_.katex]:text-inherit ${
+                      className={`prose prose-sm max-w-none [&_.katex]:text-inherit ${
+                        "prose-invert text-neutral-200"
+                      } ${
                         message.kind === "practice"
                           ? "[&_p]:mb-3 [&_p]:leading-relaxed [&_ol]:mb-3 [&_ol]:pl-5 [&_ol]:space-y-2 [&_ul]:mb-3 [&_ul]:pl-5 [&_ul]:space-y-2 [&_li]:leading-relaxed [&_strong]:text-white"
                           : message.kind === "stuck"
-                            ? "[&_p]:mb-3 [&_p]:leading-relaxed [&_ul]:mb-2 [&_ul]:pl-5 [&_ul]:space-y-1.5 [&_li]:leading-relaxed [&_strong]:text-amber-100"
+                            ? "[&_p]:mb-3 [&_p]:leading-relaxed [&_ul]:mb-2 [&_ul]:pl-5 [&_ul]:space-y-1.5 [&_li]:leading-relaxed [&_strong]:text-white"
+                            : message.kind === "evaluation"
+                              ? "[&_p]:mb-3 [&_p]:leading-relaxed [&_strong]:text-white"
+                            : message.kind === "grok"
+                              ? "[&_p]:mb-3 [&_p]:leading-relaxed [&_blockquote]:border-neutral-600 [&_blockquote]:text-neutral-300"
                           : "[&_a]:no-underline [&_a]:inline-flex [&_a]:items-center [&_a]:gap-1.5 [&_a]:px-3 [&_a]:py-1.5 [&_a]:my-1 [&_a]:rounded-md [&_a]:bg-neutral-900 [&_a]:text-white [&_a]:border [&_a]:border-neutral-700 hover:[&_a]:bg-neutral-800 hover:[&_a]:border-neutral-600 [&_a]:text-sm [&_a]:font-medium"
                       }`}
                     >
@@ -602,13 +695,14 @@ export function HeliosChat({ problem, messages: externalMessages, onMessagesChan
                               key={action}
                               type="button"
                               onClick={() => onStuckAction(action)}
-                              className="rounded-md border border-amber-300/25 bg-amber-300/10 px-3 py-1.5 text-xs font-medium text-amber-100 transition-colors hover:border-amber-200/50 hover:bg-amber-300/20"
+                              className="rounded-md border border-neutral-600 bg-neutral-900 px-3 py-1.5 text-xs font-medium text-neutral-100 transition-colors hover:border-neutral-500 hover:bg-neutral-700"
                             >
                               {label}
                             </button>
                           ))}
                         </div>
                       )}
+                      {message.kind === "grok" && !isPending && <GrokActions query={message.content.replace(/^Prebuilt Grok query:\s*>?\s*/i, "").trim()} />}
                     </div>
                   )}
                 </SmartCardShell>

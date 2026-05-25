@@ -14,7 +14,7 @@ const EEG_CHANNELS = ["TP9", "AF7", "AF8", "TP10", "FPz"] as const;
 // keeps them around as accepted values *only* if other call sites
 // reference them historically; here we drop them entirely so the
 // compiler will surface anything still trying to set them.
-export type Tool = "chat" | "canvas" | "notebook" | "grokipedia" | "help" | "data-input" | "logs" | "plan-resources";
+export type Tool = "chat" | "canvas" | "notebook" | "thought-history" | "grokipedia" | "help" | "data-input" | "logs" | "plan-resources";
 
 interface ToolsPanelProps {
   activeTool: Tool | null;
@@ -61,6 +61,12 @@ function ToolIcon({ id }: { id: Tool }) {
           <path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
         </svg>
       );
+    case "thought-history":
+      return (
+        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-2.636-6.364M21 3v5h-5" />
+        </svg>
+      );
     case "help":
       return (
         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -101,7 +107,7 @@ export function ToolsPanel({
   // own panels. They've been merged into the Helios chat surface — the
   // action buttons in ProbesPanel / SessionPlanViewer now inject a rich
   // assistant message into chat instead. Keep this list lean.
-  const baseMainTools: Tool[] = ["chat", "canvas", "notebook", "grokipedia"];
+  const baseMainTools: Tool[] = ["chat", "canvas", "notebook", "thought-history", "grokipedia"];
   const mainTools: Tool[] = planId ? [...baseMainTools, "plan-resources"] : baseMainTools;
   const [showQRModal, setShowQRModal] = useState(false);
 
@@ -110,6 +116,7 @@ export function ToolsPanel({
       case "chat": return t('tools.helios');
       case "canvas": return t('tools.canvas');
       case "notebook": return t('tools.notebook');
+      case "thought-history": return "Thoughts";
 
       case "grokipedia": return t('tools.grokipedia');
       case "help": return t('tools.help');

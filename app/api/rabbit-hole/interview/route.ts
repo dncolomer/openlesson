@@ -16,7 +16,7 @@ export async function POST(request: NextRequest) {
   const localDay = localDayKey(timezone);
   const topQuestionId = typeof body.topQuestionId === "string" ? body.topQuestionId : null;
 
-  const { data: existingPlays } = await supabase.from("rabbit_hole_plays").select("id").eq("user_id", user.id).eq("local_day", localDay).not("completed_at", "is", null);
+  const { data: existingPlays } = await supabase.from("rabbit_hole_plays").select("id").eq("user_id", user.id).eq("local_day", localDay).eq("used_bonus_play", false);
   const { data: profile } = await supabase.from("profiles").select("is_admin, rabbit_hole_bonus_plays").eq("id", user.id).single();
   const isAdmin = profile?.is_admin ?? false;
   const mustUseBonus = !isAdmin && (existingPlays?.length ?? 0) > 0;
@@ -35,6 +35,18 @@ export async function POST(request: NextRequest) {
   const scoreIfCorrect = scoreRabbitHole(depth, questionsExplored, true);
   const scoreIfWrong = scoreRabbitHole(depth, questionsExplored, false);
 
+  if (mustUseBonus) {
+    const { data: updatedProfile, error: bonusError } = await supabase
+      .from("profiles")
+      .update({ rabbit_hole_bonus_plays: bonusPlays - 1 })
+      .eq("id", user.id)
+      .eq("rabbit_hole_bonus_plays", bonusPlays)
+      .gt("rabbit_hole_bonus_plays", 0)
+      .select("id")
+      .single();
+    if (bonusError || !updatedProfile) return NextResponse.json({ error: "Out of plays today" }, { status: 402 });
+  }
+
   const { data: play, error } = await supabase.from("rabbit_hole_plays").insert({
     user_id: user.id,
     top_question_id: topQuestionId,
@@ -47,8 +59,10 @@ export async function POST(request: NextRequest) {
     questions_explored: questionsExplored,
   }).select("id").single();
 
-  if (error || !play) return NextResponse.json({ error: "Failed to save play" }, { status: 500 });
-  if (mustUseBonus) await supabase.from("profiles").update({ rabbit_hole_bonus_plays: bonusPlays - 1 }).eq("id", user.id);
+  if (error || !play) {
+    if (mustUseBonus) await supabase.from("profiles").update({ rabbit_hole_bonus_plays: bonusPlays }).eq("id", user.id);
+    return NextResponse.json({ error: "Failed to save play" }, { status: 500 });
+  }
 
   return NextResponse.json({ playId: play.id, interview: result.data, depth, questionsExplored, scoreIfCorrect, scoreIfWrong });
 }

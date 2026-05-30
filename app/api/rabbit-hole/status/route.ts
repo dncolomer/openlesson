@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
 
   const [{ data: profile }, { data: plays }] = await Promise.all([
     supabase.from("profiles").select("is_admin, rabbit_hole_bonus_plays").eq("id", user.id).single(),
-    supabase.from("rabbit_hole_plays").select("id").eq("user_id", user.id).eq("local_day", day).not("completed_at", "is", null),
+    supabase.from("rabbit_hole_plays").select("id").eq("user_id", user.id).eq("local_day", day).eq("used_bonus_play", false),
   ]);
 
   const freePlayUsedToday = (plays?.length ?? 0) > 0;

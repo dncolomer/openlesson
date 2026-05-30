@@ -21,7 +21,13 @@ export type RabbitHolePlayStatus = {
 };
 
 export function getUserTimezone(input?: string | null) {
-  return input || "UTC";
+  const timezone = input || "UTC";
+  try {
+    new Intl.DateTimeFormat("en-US", { timeZone: timezone }).format(new Date());
+    return timezone;
+  } catch {
+    return "UTC";
+  }
 }
 
 export function localDayKey(timezone: string) {

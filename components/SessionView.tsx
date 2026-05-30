@@ -71,6 +71,7 @@ import { isSessionWelcomeSeen, markSessionWelcomeSeen } from "@/lib/welcomeState
 import { fetchAestheticPackages, type AestheticPackage } from "@/lib/aesthetics";
 import { AestheticPicker } from "./AestheticPicker";
 import { ThinkAloudTraces } from "./ThinkAloudTraces";
+import { DantesTool } from "./DantesTool";
 
 type ChapterWorkspace = {
   chatMessages: ChatMessage[];
@@ -4222,6 +4223,13 @@ export function SessionView({ sessionId }: { sessionId: string }) {
                       <ThoughtHistoryTool
                         thoughts={thoughtHistory}
                         onSendThoughts={handleThoughtHistorySend}
+                      />
+                    )}
+
+                    {activeTool === "dantes" && (
+                      <DantesTool
+                        problem={session.problem}
+                        activeStepDescription={activeStep?.description}
                       />
                     )}
 

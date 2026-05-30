@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
 
     const { priceType } = await request.json();
 
-    if (!["regular", "pro", "extra_lesson"].includes(priceType)) {
+    if (!["regular", "pro", "extra_lesson", "rabbit_hole_plays"].includes(priceType)) {
       return NextResponse.json({ error: "Invalid price type" }, { status: 400 });
     }
 
@@ -38,8 +38,11 @@ export async function POST(request: NextRequest) {
     } else if (priceType === "pro") {
       priceId = process.env.STRIPE_PRICE_PRO || "";
       mode = "subscription";
-    } else {
+    } else if (priceType === "extra_lesson") {
       priceId = process.env.STRIPE_PRICE_EXTRA || "";
+      mode = "payment";
+    } else {
+      priceId = process.env.STRIPE_PRICE_RABBIT_HOLE || process.env.STRIPE_PRICE_EXTRA || "";
       mode = "payment";
     }
 
@@ -88,8 +91,8 @@ export async function POST(request: NextRequest) {
       customer: customerId,
       mode,
       line_items: [{ price: priceId, quantity: 1 }],
-      success_url: `${origin}/pricing/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${origin}/pricing`,
+      success_url: priceType === "rabbit_hole_plays" ? `${origin}/rabbit-hole?unlocked=1` : `${origin}/pricing/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: priceType === "rabbit_hole_plays" ? `${origin}/rabbit-hole` : `${origin}/pricing`,
       metadata: {
         supabase_user_id: user.id,
         price_type: priceType,

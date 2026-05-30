@@ -14,7 +14,7 @@ const EEG_CHANNELS = ["TP9", "AF7", "AF8", "TP10", "FPz"] as const;
 // keeps them around as accepted values *only* if other call sites
 // reference them historically; here we drop them entirely so the
 // compiler will surface anything still trying to set them.
-export type Tool = "chat" | "canvas" | "notebook" | "thought-history" | "grokipedia" | "help" | "data-input" | "logs" | "plan-resources";
+export type Tool = "chat" | "canvas" | "notebook" | "thought-history" | "grokipedia" | "dantes" | "help" | "data-input" | "logs" | "plan-resources";
 
 interface ToolsPanelProps {
   activeTool: Tool | null;
@@ -59,6 +59,12 @@ function ToolIcon({ id }: { id: Tool }) {
         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
           <circle cx="12" cy="12" r="10" />
           <path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+        </svg>
+      );
+    case "dantes":
+      return (
+        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.75v10.5m0-10.5C10.6 5.817 8.713 5.25 6.75 5.25S2.9 5.817 1.5 6.75v10.5c1.4-.933 3.287-1.5 5.25-1.5S10.6 16.317 12 17.25m0-10.5c1.4-.933 3.287-1.5 5.25-1.5s3.85.567 5.25 1.5v10.5c-1.4-.933-3.287-1.5-5.25-1.5s-3.85.567-5.25 1.5" />
         </svg>
       );
     case "thought-history":
@@ -107,7 +113,7 @@ export function ToolsPanel({
   // own panels. They've been merged into the Helios chat surface — the
   // action buttons in ProbesPanel / SessionPlanViewer now inject a rich
   // assistant message into chat instead. Keep this list lean.
-  const baseMainTools: Tool[] = ["chat", "canvas", "notebook", "thought-history", "grokipedia"];
+  const baseMainTools: Tool[] = ["chat", "canvas", "notebook", "thought-history", "grokipedia", "dantes"];
   const mainTools: Tool[] = planId ? [...baseMainTools, "plan-resources"] : baseMainTools;
   const [showQRModal, setShowQRModal] = useState(false);
 
@@ -119,6 +125,7 @@ export function ToolsPanel({
       case "thought-history": return "Thoughts";
 
       case "grokipedia": return t('tools.grokipedia');
+      case "dantes": return t('tools.dantes');
       case "help": return t('tools.help');
       case "data-input": return t('tools.dataInput');
       case "logs": return t('tools.logs');

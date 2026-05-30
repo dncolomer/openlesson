@@ -950,6 +950,8 @@
     "notebookDesc": "记录您的想法、笔记和见解的草稿本。",
     "grokipedia": "Grok / Grokipedia",
     "grokipediaSearch": "搜索您主题的背景知识来源。",
+    "dantes": "Dantes.io",
+    "dantesDesc": "浏览与当前主题匹配的精选学习资源。",
     "practice": "练习",
     "practiceDesc": "课前练习任务。首次点击时自动生成。",
     "theory": "理论",

@@ -1014,6 +1014,8 @@
     "notebookDesc": "Scratchpad for writing down your thoughts, notes, and insights.",
     "grokipedia": "Grok / Grokipedia",
     "grokipediaSearch": "Search external knowledge sources for background information on your topic.",
+    "dantes": "Dantes.io",
+    "dantesDesc": "Browse curated learning resources matched to your current topic.",
     "practice": "Practice",
     "practiceDesc": "Pre-session practice task. Auto-generates on first click.",
     "theory": "Theory",

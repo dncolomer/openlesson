@@ -46,7 +46,18 @@ export async function POST(request: NextRequest) {
 
         if (!userId) break;
 
-        if (priceType === "extra_lesson") {
+        if (priceType === "rabbit_hole_plays") {
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("rabbit_hole_bonus_plays")
+            .eq("id", userId)
+            .single();
+
+          await supabase
+            .from("profiles")
+            .update({ rabbit_hole_bonus_plays: (profile?.rabbit_hole_bonus_plays ?? 0) + 3 })
+            .eq("id", userId);
+        } else if (priceType === "extra_lesson") {
           // Increment extra_lessons counter
           const { data: profile } = await supabase
             .from("profiles")

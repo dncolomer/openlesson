@@ -1008,6 +1008,8 @@
     "notebookDesc": "Borrador para escribir tus pensamientos, notas e ideas.",
     "grokipedia": "Grok / Grokipedia",
     "grokipediaSearch": "Buscar fuentes de conocimiento externas para información de fondo.",
+    "dantes": "Dantes.io",
+    "dantesDesc": "Explora recursos de aprendizaje seleccionados que coinciden con tu tema actual.",
     "practice": "Práctica",
     "practiceDesc": "Tarea de práctica pre-sesión. Se autogenera al primer clic.",
     "theory": "Teoría",

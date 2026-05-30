@@ -956,6 +956,8 @@
     "notebookDesc": "Miejsce na Twoje myśli, notatki i spostrzeżenia.",
     "grokipedia": "Grok / Grokipedia",
     "grokipediaSearch": "Szukaj zewnętrznych źródeł wiedzy.",
+    "dantes": "Dantes.io",
+    "dantesDesc": "Przeglądaj wybrane zasoby edukacyjne dopasowane do bieżącego tematu.",
     "practice": "Praktyka",
     "practiceDesc": "Zadanie przed sesją. Generuje się automatycznie po pierwszym kliknięciu.",
     "theory": "Teoria",

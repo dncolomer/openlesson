@@ -804,7 +804,7 @@ export async function saveFacialData(
 
 // ---- Tool Usage Tracking ----
 
-export type ToolName = "chat" | "canvas" | "notebook" | "thought-history" | "grokipedia" | "exercise" | "reading" | "help" | "data-input" | "logs" | "goals" | "probe" | "session_plan";
+export type ToolName = "chat" | "canvas" | "notebook" | "thought-history" | "grokipedia" | "dantes" | "exercise" | "reading" | "help" | "data-input" | "logs" | "goals" | "probe" | "session_plan";
 
 export type ToolAction =
   | "open"

@@ -956,6 +956,8 @@
     "notebookDesc": "Kritzelierfläche für Gedanken, Notizen und Erkenntnisse.",
     "grokipedia": "Grok / Grokipedia",
     "grokipediaSearch": "Externe Wissensquellen für Hintergrundinformationen durchsuchen.",
+    "dantes": "Dantes.io",
+    "dantesDesc": "Durchsuche kuratierte Lernressourcen passend zu deinem aktuellen Thema.",
     "practice": "Übung",
     "practiceDesc": "Vor-Sitzung-Übungsaufgabe. Wird beim ersten Klick automatisch generiert.",
     "theory": "Theorie",

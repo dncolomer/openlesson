@@ -62,6 +62,7 @@ export default function RabbitHolePage() {
   const [loading, startTransition] = useTransition();
   const [message, setMessage] = useState("");
   const [finalizing, setFinalizing] = useState(false);
+  const [interviewDepth, setInterviewDepth] = useState(10);
   const [touchStart, setTouchStart] = useState<{ x: number; y: number } | null>(null);
   const [dragY, setDragY] = useState(0);
   const [dragX, setDragX] = useState(0);
@@ -92,10 +93,10 @@ export default function RabbitHolePage() {
   }, []);
 
   useEffect(() => {
-    if (stage === "dive" && node && node.children.length === 0 && !loading && !finalizing) {
+    if (stage === "dive" && node && !loading && !finalizing && (node.depth >= interviewDepth || node.children.length === 0)) {
       surface();
     }
-  }, [stage, node, loading, finalizing]);
+  }, [stage, node, loading, finalizing, interviewDepth]);
 
   function move(delta: number) {
     if (!questions.length) return;
@@ -114,6 +115,7 @@ export default function RabbitHolePage() {
     setRoot(question);
     setNode(start);
     setPath([{ id: start.id, question: start.question, depth: start.depth }]);
+    setInterviewDepth(6 + Math.floor(Math.random() * 5));
     setFinalizing(false);
     setStage("dive");
   }
@@ -124,6 +126,7 @@ export default function RabbitHolePage() {
   }
 
   function handleTouchEnd(x: number, y: number) {
+    if (finalizing) return;
     if (!touchStart) return;
     const dx = x - touchStart.x;
     const dy = y - touchStart.y;
@@ -288,12 +291,13 @@ export default function RabbitHolePage() {
           <div
             className={`min-h-0 overflow-hidden rounded-xl border border-white/10 bg-zinc-950/60 shadow-2xl backdrop-blur-md lg:min-h-[680px] lg:rounded-md lg:p-6 ${stage === "feed" ? "h-[calc(83svh-44px)] flex-none self-center lg:h-auto lg:flex-1" : "flex-1"}`}
             onTouchStart={(event) => {
+              if (finalizing) return;
               setTouchStart({ x: event.touches[0].clientX, y: event.touches[0].clientY });
               setFeedAnimating(false);
               setDiveAnimating(false);
             }}
             onTouchMove={(event) => {
-              if (!touchStart) return;
+              if (!touchStart || finalizing) return;
               if (stage === "feed") {
                 event.preventDefault();
                 const nextY = event.touches[0].clientY - touchStart.y;
@@ -360,6 +364,17 @@ export default function RabbitHolePage() {
                 <div className="mt-8 grid gap-3 text-sm text-zinc-400 sm:grid-cols-3"><div className="border border-zinc-800 p-4">Depth<br /><span className="text-2xl text-white">{Math.max(...path.map((item) => item.depth))}</span></div><div className="border border-zinc-800 p-4">Questions explored<br /><span className="text-2xl text-white">{path.length}</span></div><div className="border border-zinc-800 p-4">Final answer<br /><span className="text-2xl text-white">{result.correct ? "Correct" : "Missed"}</span></div></div>
                 <div className="mt-8 flex flex-col gap-3 sm:flex-row"><button onClick={() => share("X")} className="rounded-sm border border-zinc-800 px-4 py-3 text-sm text-zinc-300">Share on X</button><button onClick={() => share("Instagram")} className="rounded-sm border border-zinc-800 px-4 py-3 text-sm text-zinc-300">Instagram</button><button onClick={() => share("LinkedIn")} className="rounded-sm border border-zinc-800 px-4 py-3 text-sm text-zinc-300">LinkedIn</button></div>
                 <button onClick={continueFullLesson} className="mt-4 rounded-sm bg-white px-4 py-3 text-sm font-medium text-black transition hover:bg-zinc-200">Continue this in full OpenLesson</button>
+              </div>
+            )}
+            {finalizing && stage === "dive" && (
+              <div className="absolute inset-0 z-40 flex flex-col items-center justify-center bg-black/72 px-6 text-center backdrop-blur-sm">
+                <div className="font-mono text-[10px] uppercase tracking-[3px] text-zinc-500">Grok is listening</div>
+                <div className="mt-4 max-w-sm text-3xl font-medium leading-tight tracking-[-1.4px] text-white">Preparing one final question.</div>
+                <div className="mt-6 flex gap-1.5" aria-hidden="true">
+                  <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-white/45" />
+                  <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-white/45 [animation-delay:120ms]" />
+                  <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-white/45 [animation-delay:240ms]" />
+                </div>
               </div>
             )}
           </div>

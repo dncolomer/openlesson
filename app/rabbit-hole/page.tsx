@@ -46,6 +46,18 @@ function withFallbackChildren(node: RabbitHoleNode): RabbitHoleNode {
   };
 }
 
+function randomCategoryStartIndex(questions: RabbitHoleTopQuestion[]) {
+  const byCategory = new Map<string, number[]>();
+  questions.forEach((question, questionIndex) => {
+    const category = question.discipline ?? "Uncategorized";
+    byCategory.set(category, [...(byCategory.get(category) ?? []), questionIndex]);
+  });
+  const categories = Array.from(byCategory.keys());
+  const category = categories[Math.floor(Math.random() * categories.length)];
+  const indexes = byCategory.get(category) ?? [];
+  return indexes[Math.floor(Math.random() * indexes.length)] ?? 0;
+}
+
 export default function RabbitHolePage() {
   const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
@@ -88,7 +100,11 @@ export default function RabbitHolePage() {
       fetch("/api/rabbit-hole/questions").then((res) => res.json()),
     ]).then(([statusPayload, questionPayload]) => {
       if (!statusPayload.error) setStatus(statusPayload);
-      if (!questionPayload.error) setQuestions(questionPayload.questions ?? []);
+      if (!questionPayload.error) {
+        const loadedQuestions = questionPayload.questions ?? [];
+        setQuestions(loadedQuestions);
+        setIndex(randomCategoryStartIndex(loadedQuestions));
+      }
     });
   }, []);
 

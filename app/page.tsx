@@ -142,11 +142,17 @@ export default function Home() {
           <div className="group mx-auto flex w-full max-w-[940px] flex-col gap-2 rounded-md border border-zinc-800 bg-zinc-950/90 p-2 shadow-inner transition-all hover:border-zinc-700 focus-within:border-zinc-500 sm:flex-row">
             <input value={topic} onChange={(e) => setTopic(e.target.value)} placeholder="Paste a repo, video, theorem, or impossible question..." className="h-16 min-w-0 flex-1 bg-transparent px-7 text-xl outline-none placeholder:text-zinc-500 sm:h-[68px] sm:text-2xl" spellCheck={false} />
             <button type="submit" disabled={!topic.trim() || busy} className="flex h-14 w-full shrink-0 items-center justify-center rounded-sm bg-zinc-800 text-[15px] font-medium text-white transition-all hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-40 sm:h-[68px] sm:w-[172px]">{busy ? "Generating..." : "Generate Plan →"}</button>
-            <Link href="/rabbit-hole" className="flex h-14 w-full shrink-0 items-center justify-center rounded-sm bg-white px-4 text-center text-[15px] font-medium leading-tight text-black transition-all hover:bg-zinc-200 sm:h-[68px] sm:w-[260px]">Try Rabbit Hole to discover what makes you tick</Link>
           </div>
           <div className="mx-auto mt-3 w-full max-w-[940px]">
             <FileDropZone files={files} onChange={setFiles} compact className="rounded-md bg-zinc-950/70 p-2" />
             {error && <p className="mt-3 text-sm text-red-300">{error}</p>}
+          </div>
+          <div className="mx-auto mt-4 w-full max-w-[940px] rounded-md border border-zinc-800 bg-zinc-950/85 p-4 text-left backdrop-blur-md sm:flex sm:items-center sm:justify-between sm:gap-5">
+            <div>
+              <div className="text-base font-medium text-white">Rabbit Hole</div>
+              <p className="mt-1 max-w-xl text-sm leading-relaxed text-zinc-400">Follow one question at a time and notice what keeps pulling you deeper.</p>
+            </div>
+            <Link href="/rabbit-hole" className="mt-4 flex h-11 shrink-0 items-center justify-center rounded-sm bg-white px-5 text-sm font-medium text-black transition hover:bg-zinc-200 sm:mt-0">Try it</Link>
           </div>
 
           <div className="relative z-10 mx-auto mt-9 grid w-full max-w-[1320px] grid-cols-1 gap-x-7 gap-y-7 px-5 md:grid-cols-3">

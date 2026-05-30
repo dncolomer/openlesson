@@ -267,14 +267,18 @@ export default function RabbitHolePage() {
         <header className="pointer-events-none fixed left-5 right-5 top-5 z-20 flex items-center justify-between gap-4 sm:left-8 sm:right-8 lg:static lg:pointer-events-auto">
           <div />
           <div className="pointer-events-auto flex h-8 overflow-hidden rounded-full bg-black text-xs font-semibold leading-none ring-1 ring-white/10">
+            <button onClick={() => router.push("/")} className="flex w-9 items-center justify-center text-white/80 transition hover:bg-zinc-900 hover:text-white" aria-label="Go to landing page"><Home size={15} strokeWidth={1.8} /></button>
             <div className="flex items-center px-4 text-white/80">{status ? `${status.playsAvailable} play${status.playsAvailable === 1 ? "" : "s"}` : "Loading"}</div>
             <button onClick={unlockPlays} className="flex items-center bg-white px-4 text-black transition hover:bg-[#f2ead7] active:scale-[0.98]">+3 for $1.99</button>
           </div>
         </header>
 
-        <section className={`relative grid min-h-0 flex-1 gap-6 lg:grid-cols-[0.7fr_1.3fr] lg:items-center lg:py-16 ${stage === "feed" ? "pt-[17svh] pb-20" : "pt-16 pb-20"}`}>
+        <section className={`relative grid min-h-0 flex-1 gap-6 lg:grid-cols-[0.7fr_1.3fr] lg:items-center lg:py-16 ${stage === "feed" ? "pt-[17svh] pb-6" : "pt-16 pb-6"}`}>
           <aside className="hidden space-y-4 lg:block">
-            <div className="inline-block rounded-sm border border-zinc-800 bg-zinc-950/85 px-3 py-1 font-mono text-[10px] uppercase tracking-[2px] text-zinc-500">Rabbit Hole</div>
+            <div className="flex items-center gap-3">
+              <button onClick={() => router.push("/")} className="flex h-8 w-8 items-center justify-center rounded-sm bg-black text-white/80 ring-1 ring-white/10 transition hover:bg-zinc-900 hover:text-white active:scale-95" aria-label="Go to landing page"><Home size={15} strokeWidth={1.8} /></button>
+              <div className="inline-block rounded-sm border border-zinc-800 bg-zinc-950/85 px-3 py-1 font-mono text-[10px] uppercase tracking-[2px] text-zinc-500">Rabbit Hole</div>
+            </div>
             <h1 className="max-w-xl text-5xl font-medium leading-[1.02] tracking-[-2.7px] text-white sm:text-6xl">Discover what makes you tick.</h1>
             <p className="max-w-lg text-lg leading-relaxed text-zinc-400">One question a day. Follow only the threads that feel alive.</p>
             {outOfPlays && <button onClick={unlockPlays} className="rounded-sm border border-zinc-700 bg-white px-4 py-3 text-sm font-medium text-black transition hover:bg-zinc-200">Out of plays today • Unlock 3 more for $1.99</button>}
@@ -282,7 +286,7 @@ export default function RabbitHolePage() {
           </aside>
 
           <div
-            className={`min-h-0 overflow-hidden rounded-xl border border-white/10 bg-zinc-950/60 shadow-2xl backdrop-blur-md lg:min-h-[680px] lg:rounded-md lg:p-6 ${stage === "feed" ? "h-[62svh] flex-none self-center lg:h-auto lg:flex-1" : "flex-1"}`}
+            className={`min-h-0 overflow-hidden rounded-xl border border-white/10 bg-zinc-950/60 shadow-2xl backdrop-blur-md lg:min-h-[680px] lg:rounded-md lg:p-6 ${stage === "feed" ? "h-[calc(83svh-44px)] flex-none self-center lg:h-auto lg:flex-1" : "flex-1"}`}
             onTouchStart={(event) => {
               setTouchStart({ x: event.touches[0].clientX, y: event.touches[0].clientY });
               setFeedAnimating(false);
@@ -358,16 +362,8 @@ export default function RabbitHolePage() {
                 <button onClick={continueFullLesson} className="mt-4 rounded-sm bg-white px-4 py-3 text-sm font-medium text-black transition hover:bg-zinc-200">Continue this in full OpenLesson</button>
               </div>
             )}
-            <button
-              onClick={() => router.push("/")}
-              className="pointer-events-auto fixed bottom-6 left-1/2 z-30 flex h-12 w-12 -translate-x-1/2 items-center justify-center rounded-full bg-black text-white ring-1 ring-white/15 shadow-2xl transition hover:bg-zinc-900 active:scale-95 lg:hidden"
-              aria-label="Go to landing page"
-            >
-              <Home size={19} strokeWidth={1.9} />
-            </button>
           </div>
         </section>
-        <button onClick={() => router.push("/")} className="pointer-events-auto fixed bottom-6 left-6 z-30 hidden h-11 w-11 items-center justify-center rounded-full bg-black text-white/80 ring-1 ring-white/10 transition hover:bg-zinc-900 hover:text-white active:scale-95 lg:flex" aria-label="Go to landing page"><Home size={18} strokeWidth={1.8} /></button>
       </div>
     </main>
   );

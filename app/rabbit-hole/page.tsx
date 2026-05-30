@@ -292,7 +292,7 @@ export default function RabbitHolePage() {
           </div>
         </header>
 
-        <section className={`relative grid min-h-0 flex-1 gap-6 lg:grid-cols-[0.7fr_1.3fr] lg:items-center lg:py-16 ${stage === "feed" ? "pt-[17svh] pb-6" : "pt-16 pb-6"}`}>
+        <section className={`relative grid min-h-0 flex-1 gap-6 lg:grid-cols-[0.7fr_1.3fr] lg:items-center lg:py-[clamp(1.5rem,6svh,4rem)] ${stage === "feed" ? "pt-[17svh] pb-6" : "pt-16 pb-6"}`}>
           <aside className="hidden space-y-4 lg:block">
             <div className="flex items-center gap-3">
               <button onClick={() => router.push("/")} className="flex h-8 w-8 items-center justify-center rounded-sm bg-black text-white/80 ring-1 ring-white/10 transition hover:bg-zinc-900 hover:text-white active:scale-95" aria-label="Go to landing page"><Home size={15} strokeWidth={1.8} /></button>
@@ -305,7 +305,7 @@ export default function RabbitHolePage() {
           </aside>
 
           <div
-            className={`min-h-0 overflow-hidden rounded-xl border border-white/10 bg-zinc-950/60 shadow-2xl backdrop-blur-md lg:min-h-[680px] lg:rounded-md lg:p-6 ${stage === "feed" ? "h-[calc(83svh-44px)] flex-none self-center lg:h-auto lg:flex-1" : "flex-1"}`}
+            className={`min-h-0 overflow-hidden rounded-xl border border-white/10 bg-zinc-950/60 shadow-2xl backdrop-blur-md lg:min-h-[min(680px,calc(100svh-12rem))] lg:rounded-md lg:p-6 ${stage === "feed" ? "h-[calc(83svh-44px)] flex-none self-center lg:h-auto lg:flex-1" : "flex-1"}`}
             onTouchStart={(event) => {
               if (finalizing) return;
               setTouchStart({ x: event.touches[0].clientX, y: event.touches[0].clientY });
@@ -328,7 +328,7 @@ export default function RabbitHolePage() {
             onTouchEnd={(event) => handleTouchEnd(event.changedTouches[0].clientX, event.changedTouches[0].clientY)}
           >
             {stage === "feed" && current && (
-              <div className="relative h-full min-h-0 lg:min-h-[628px]">
+              <div className="relative h-full min-h-0 lg:min-h-[min(628px,calc(100svh-15rem))]">
                 <div className={`absolute inset-x-0 top-0 h-full will-change-transform ${feedAnimating ? "transition-transform duration-200 ease-out" : ""}`} style={{ transform: `translate3d(0, calc(-100% + ${dragY}px), 0)` }}>
                   {previous && <FeedScreen question={previous} questionIndex={(index - 1 + questions.length) % questions.length} total={questions.length} />}
                 </div>
@@ -338,20 +338,16 @@ export default function RabbitHolePage() {
                 <div className={`absolute inset-x-0 top-0 h-full will-change-transform ${feedAnimating ? "transition-transform duration-200 ease-out" : ""}`} style={{ transform: `translate3d(0, calc(100% + ${dragY}px), 0)` }}>
                   {next && <FeedScreen question={next} questionIndex={(index + 1) % questions.length} total={questions.length} />}
                 </div>
-                <div className="pointer-events-none absolute bottom-8 left-5 flex items-center gap-2 rounded-full bg-black/45 px-3 py-2 text-white/35 ring-1 ring-white/10 lg:hidden" aria-hidden="true">
-                  <ArrowUp size={15} strokeWidth={1.6} />
-                  <ArrowDown size={15} strokeWidth={1.6} />
+                <div className="absolute bottom-8 left-5 z-10 flex items-center overflow-hidden rounded-full bg-black/45 text-white/60 ring-1 ring-white/10 backdrop-blur-sm">
+                  <button type="button" onClick={() => move(-1)} className="flex h-9 w-10 items-center justify-center transition hover:bg-white/10 hover:text-white" aria-label="Previous question"><ArrowUp size={15} strokeWidth={1.6} /></button>
+                  <button type="button" onClick={() => move(1)} className="flex h-9 w-10 items-center justify-center border-l border-white/10 transition hover:bg-white/10 hover:text-white" aria-label="Next question"><ArrowDown size={15} strokeWidth={1.6} /></button>
                 </div>
-                <div className="absolute inset-x-0 bottom-0 hidden items-center gap-3 lg:flex">
-                  <button onClick={() => move(-1)} className="flex-1 rounded-sm border border-zinc-800 px-4 py-3 text-zinc-300 transition hover:border-zinc-600" aria-label="Previous question"><ArrowUp className="mx-auto" size={18} strokeWidth={1.7} /></button>
-                  <button onClick={() => dive(current)} disabled={outOfPlays} className="flex-1 rounded-sm bg-white px-4 py-3 text-black transition hover:bg-zinc-200 disabled:opacity-40" aria-label="Dive in"><MousePointerClick className="mx-auto" size={18} strokeWidth={1.8} /></button>
-                  <button onClick={() => move(1)} className="flex-1 rounded-sm border border-zinc-800 px-4 py-3 text-zinc-300 transition hover:border-zinc-600" aria-label="Next question"><ArrowDown className="mx-auto" size={18} strokeWidth={1.7} /></button>
-                </div>
+                <button type="button" onClick={() => dive(current)} disabled={outOfPlays} className="absolute bottom-8 right-5 z-10 flex items-center gap-2 rounded-full bg-white px-3.5 py-2 text-xs font-semibold text-black shadow-xl transition hover:bg-zinc-200 disabled:opacity-50"><MousePointerClick size={14} strokeWidth={1.8} /><span>Dive in</span></button>
               </div>
             )}
 
             {stage === "dive" && node && (
-              <div className="relative h-full min-h-0 overflow-hidden lg:min-h-[628px]">
+              <div className="relative h-full min-h-0 overflow-hidden lg:min-h-[min(628px,calc(100svh-15rem))]">
                 <div className={`absolute inset-y-0 left-0 w-full will-change-transform ${diveAnimating ? "transition-transform duration-200 ease-out" : ""}`} style={{ transform: `translate3d(calc(-100% + ${dragX}px), 0, 0)` }}>
                   <DiveBranchPreview label="Left" text={node.children[0]?.question ?? ""} />
                 </div>
@@ -366,7 +362,7 @@ export default function RabbitHolePage() {
             )}
 
             {stage === "interview" && interview && (
-              <div className="flex h-full min-h-0 flex-col justify-center px-5 py-6 lg:min-h-[628px] lg:px-0 lg:py-0">
+              <div className="flex h-full min-h-0 flex-col justify-center px-5 py-6 lg:min-h-[min(628px,calc(100svh-15rem))] lg:px-0 lg:py-0">
                 <p className="font-mono text-[10px] uppercase tracking-[3px] text-zinc-500">One final question</p>
                 <h2 className="mt-5 text-[clamp(2.15rem,9vw,4.1rem)] font-medium leading-[1.01] tracking-[-0.07em] text-white lg:text-5xl">{interview.question}</h2>
                 <div className="mt-7 grid gap-2.5 lg:gap-3">{interview.choices.map((choice, choiceIndex) => <button key={choice} onClick={() => answer(choiceIndex)} disabled={loading} className="rounded-md border border-white/10 bg-black/18 p-4 text-left text-base leading-snug text-zinc-300 transition hover:border-zinc-600 hover:text-white disabled:opacity-50 lg:rounded-sm lg:border-zinc-800 lg:text-base">{choice}</button>)}</div>
@@ -374,7 +370,7 @@ export default function RabbitHolePage() {
             )}
 
             {stage === "done" && result && (
-              <div className="flex h-full min-h-[488px] flex-col justify-center lg:min-h-[628px]">
+              <div className="flex h-full min-h-[488px] flex-col justify-center lg:min-h-[min(628px,calc(100svh-15rem))]">
                 <p className="font-mono text-[10px] uppercase tracking-[2px] text-zinc-500">Done for today</p>
                 <h2 className="mt-5 text-5xl font-medium tracking-[-2px] text-white">{result.score} points</h2>
                 <div className="mt-8 grid gap-3 text-sm text-zinc-400 sm:grid-cols-3"><div className="border border-zinc-800 p-4">Depth<br /><span className="text-2xl text-white">{Math.max(...path.map((item) => item.depth))}</span></div><div className="border border-zinc-800 p-4">Questions explored<br /><span className="text-2xl text-white">{path.length}</span></div><div className="border border-zinc-800 p-4">Final answer<br /><span className="text-2xl text-white">{result.correct ? "Correct" : "Missed"}</span></div></div>

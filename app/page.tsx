@@ -15,19 +15,6 @@ const BACKGROUND_IMAGES = [
   "/aesthetics/Greco-futurism/HHnTrjJbQAAOz7K.jpeg",
 ];
 
-const DEEP_TOPIC_SUGGESTIONS = [
-  "Why does entropy always increase?",
-  "What did Socrates actually mean by knowing nothing?",
-  "How did the Roman Republic collapse?",
-  "Why is quantum measurement so weird?",
-  "What makes a mathematical proof feel inevitable?",
-  "How did the printing press change human consciousness?",
-  "What is consciousness, really?",
-  "Why did general relativity change our idea of space and time?",
-  "How did Darwin discover natural selection?",
-  "What does Nietzsche mean by eternal recurrence?",
-];
-
 export default function Home() {
   const [topic, setTopic] = useState("");
   const [bgImage, setBgImage] = useState("");
@@ -147,19 +134,7 @@ export default function Home() {
             <FileDropZone files={files} onChange={setFiles} compact className="rounded-md bg-zinc-950/70 p-2" />
             {error && <p className="mt-3 text-sm text-red-300">{error}</p>}
           </div>
-          <div className="mx-auto mt-4 w-full max-w-[940px] rounded-md border border-zinc-800 bg-zinc-950/85 p-4 text-left backdrop-blur-md sm:flex sm:items-center sm:justify-between sm:gap-5">
-            <div>
-              <div className="text-base font-medium text-white">Rabbit Hole</div>
-              <p className="mt-1 max-w-xl text-sm leading-relaxed text-zinc-400">Follow one question at a time and notice what keeps pulling you deeper.</p>
-            </div>
-            <Link href="/rabbit-hole" className="mt-4 flex h-11 shrink-0 items-center justify-center rounded-sm bg-white px-5 text-sm font-medium text-black transition hover:bg-zinc-200 sm:mt-0">Try it</Link>
-          </div>
-
-          <div className="relative z-10 mx-auto mt-9 grid w-full max-w-[1320px] grid-cols-1 gap-x-7 gap-y-7 px-5 md:grid-cols-3">
-            <button type="button" onClick={() => setTopic("Deeply understand the first principles of nanoGPT's codebase: https://github.com/karpathy/nanogpt")} className="group flex flex-col overflow-hidden rounded-md border border-zinc-800 bg-zinc-950 text-left shadow transition hover:border-zinc-700 active:scale-[0.985]"><div className="flex h-48 items-center justify-center overflow-hidden bg-zinc-900/60"><img src="https://i.ytimg.com/vi/kCc8FmEb1nY/maxresdefault.jpg" alt="nanoGPT" className="h-full w-full object-cover grayscale transition group-hover:scale-105" /></div><div className="p-5"><div className="text-[21px] font-medium leading-tight tracking-tight">Learn a Codebase</div><div className="mt-1.5 text-[14px] text-zinc-400">Deeply understand the first principles of nanoGPT&apos;s codebase.</div><div className="mt-4 font-mono text-[10px] tracking-[1.5px] text-emerald-400/70">GITHUB • KARPATHY</div></div></button>
-            <button type="button" onClick={() => setTopic("Turn this Veritasium video into a Socratic learning plan: https://www.youtube.com/watch?v=AF8d72mA41M")} className="group flex flex-col overflow-hidden rounded-md border border-zinc-800 bg-zinc-950 text-left shadow transition hover:border-zinc-700 active:scale-[0.985]"><div className="flex h-48 items-center justify-center overflow-hidden bg-zinc-900/60"><img src="https://i.ytimg.com/vi/AF8d72mA41M/maxresdefault.jpg" alt="Veritasium Entropy" className="h-full w-full object-cover grayscale transition group-hover:scale-105" /></div><div className="p-5"><div className="text-[21px] font-medium leading-tight tracking-tight">Break Down a Scientific Video</div><div className="mt-1.5 text-[14px] text-zinc-400">Don&apos;t just watch educational videos but actually extract their most important insights.</div><div className="mt-4 font-mono text-[10px] tracking-widest text-emerald-400/70">VERITASIUM • 2024</div></div></button>
-            <button type="button" onClick={() => setTopic(DEEP_TOPIC_SUGGESTIONS[Math.floor(Math.random() * DEEP_TOPIC_SUGGESTIONS.length)])} className="group flex flex-col overflow-hidden rounded-md border border-zinc-800 bg-zinc-950 text-left shadow transition hover:border-zinc-700 active:scale-[0.985]"><div className="flex h-48 items-center justify-center overflow-hidden bg-zinc-900/60"><img src="https://upload.wikimedia.org/wikipedia/commons/a/a5/Mus%C3%A9e_Rodin_1.jpg" alt="Der Denker statue" className="h-full w-full object-cover grayscale transition group-hover:scale-105" /></div><div className="p-5"><div className="text-[21px] font-medium leading-tight tracking-tight">Go Deep Anywhere</div><div className="mt-1 text-sm text-zinc-400">Hard math, philosophy, physics.<br />No gatekeeping prerequisite maze.</div><div className="mt-4 font-mono text-[10px] tracking-widest text-emerald-400/70">AHA • EUREKA</div></div></button>
-          </div>
+          <button type="button" onClick={() => router.push("/rabbit-hole")} className="group relative z-10 mx-auto mt-9 flex w-full max-w-[940px] cursor-pointer flex-col overflow-hidden rounded-md border border-zinc-800 bg-zinc-950 text-left shadow transition hover:border-zinc-700 active:scale-[0.985] md:flex-row"><div className="flex h-56 items-center justify-center overflow-hidden bg-zinc-900/60 md:h-auto md:w-[42%]"><img src="https://upload.wikimedia.org/wikipedia/commons/a/a5/Mus%C3%A9e_Rodin_1.jpg" alt="Der Denker statue" className="h-full w-full object-cover grayscale transition group-hover:scale-105" /></div><div className="flex flex-1 flex-col justify-center p-6 md:p-8"><div className="font-mono text-[10px] tracking-widest text-emerald-400/70">RABBIT HOLE</div><div className="mt-3 text-[28px] font-medium leading-tight tracking-tight text-white">Follow one question deeper.</div><div className="mt-3 max-w-lg text-sm leading-relaxed text-zinc-400">Pick a question, choose the branch that pulls at you, and keep going until the idea finally clicks.</div><div className="mt-6 inline-flex h-11 w-fit items-center justify-center rounded-sm bg-white px-5 text-sm font-medium text-black transition group-hover:bg-zinc-200">Try Rabbit Hole →</div></div></button>
         </form>
       </section>
 

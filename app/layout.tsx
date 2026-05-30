@@ -19,6 +19,12 @@ export const metadata: Metadata = {
     "AI training software",
   ],
   metadataBase: new URL("https://openlesson.academy"),
+  icons: {
+    icon: "/new_logo.jpg",
+    shortcut: "/new_logo.jpg",
+    apple: "/new_logo.jpg",
+  },
+  manifest: "/manifest.webmanifest",
   alternates: {
     canonical: "https://openlesson.academy",
   },

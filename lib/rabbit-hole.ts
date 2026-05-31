@@ -17,6 +17,7 @@ export type RabbitHolePlayStatus = {
   isAdmin: boolean;
   freePlayUsedToday: boolean;
   bonusPlays: number;
+  freePlaysAvailable: number;
   playsAvailable: number;
   points: number;
   globalRank: number | null;

@@ -19,6 +19,7 @@ export async function GET(request: NextRequest) {
   const freePlayUsedToday = (plays?.length ?? 0) > 0;
   const isAdmin = profile?.is_admin ?? false;
   const bonusPlays = profile?.rabbit_hole_bonus_plays ?? 0;
+  const freePlaysAvailable = isAdmin ? 999 : freePlayUsedToday ? 0 : 1;
   const totals = new Map<string, number>();
   for (const play of scoredPlays ?? []) {
     totals.set(play.user_id, (totals.get(play.user_id) ?? 0) + (play.score ?? 0));
@@ -32,7 +33,8 @@ export async function GET(request: NextRequest) {
     isAdmin,
     freePlayUsedToday,
     bonusPlays,
-    playsAvailable: isAdmin ? 999 : (freePlayUsedToday ? 0 : 1) + bonusPlays,
+    freePlaysAvailable,
+    playsAvailable: freePlaysAvailable + bonusPlays,
     points,
     globalRank,
   });

@@ -231,27 +231,39 @@ export default function RabbitHolePage() {
 
   async function share(platform: string) {
     const shareUrl = window.location.origin + "/rabbit-hole";
-    const shareText = `I went ${path.length} questions deep in Rabbit Hole by OpenLesson. ${shareUrl}`;
-    const text = encodeURIComponent(`I went ${path.length} questions deep in Rabbit Hole by OpenLesson.`);
+    const shareText = `I went ${path.length} questions deep in Rabbit Hole by OpenLesson.`;
+    const clipboardText = `${shareText} ${shareUrl}`;
+    const text = encodeURIComponent(shareText);
     const url = encodeURIComponent(shareUrl);
     const targets: Record<string, string> = {
       X: `https://twitter.com/intent/tweet?text=${text}&url=${url}`,
       LinkedIn: `https://www.linkedin.com/sharing/share-offsite/?url=${url}`,
       Instagram: "https://www.instagram.com/",
     };
+    const canNativeShare = typeof navigator.share === "function";
     if (platform !== "X") {
-      try {
-        await navigator.clipboard?.writeText(shareText);
-        setMessage("Post text copied. Paste it into the share window to include your result.");
-      } catch {
-        setMessage("Paste this result into the share window: " + shareText);
+      if (canNativeShare) {
+        try {
+          await navigator.share({ title: "Rabbit Hole by OpenLesson", text: shareText, url: shareUrl });
+        } catch {
+          return;
+        }
+      } else {
+        try {
+          await navigator.clipboard?.writeText(clipboardText);
+          setMessage("Post text copied. Paste it into the share window to include your result.");
+        } catch {
+          setMessage("Paste this result into the share window: " + clipboardText);
+        }
+        window.open(targets[platform], "_blank", "noopener,noreferrer");
       }
+    } else {
+      window.open(targets[platform], "_blank", "noopener,noreferrer");
     }
-    window.open(targets[platform], "_blank", "noopener,noreferrer");
     if (playId) {
       const payload = await fetch("/api/rabbit-hole/share", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ playId }) }).then((res) => res.json());
-      const copyNote = platform === "X" ? "" : " Post text copied.";
-      setMessage(`Shared.${copyNote} Bonus unlocked: ${payload.bonusPlays} extra play${payload.bonusPlays === 1 ? "" : "s"}.`);
+      const shareNote = platform === "X" ? "" : canNativeShare ? " Shared from your device." : " Post text copied.";
+      setMessage(`Shared.${shareNote} Bonus unlocked: ${payload.bonusPlays} extra play${payload.bonusPlays === 1 ? "" : "s"}.`);
     }
   }
 

@@ -933,6 +933,13 @@ export default function DashboardPage() {
                   <p className="mt-3 max-w-xl text-sm leading-relaxed text-neutral-400">
                     Turn any topic, repo, video, file, or hard question into a guided path toward your next aha moment.
                   </p>
+                  <div className="mt-5 max-w-xl rounded-md border border-emerald-400/20 bg-emerald-400/5 p-4 text-sm text-neutral-300">
+                    <div className="font-mono text-[10px] uppercase tracking-[2px] text-emerald-300/80">Rabbit Hole</div>
+                    <div className="mt-2 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                      <p className="leading-relaxed text-neutral-400">Warm up with one question before building a full plan.</p>
+                      <Link href="/rabbit-hole" className="inline-flex h-9 shrink-0 items-center justify-center rounded-sm bg-white px-4 text-xs font-medium text-black transition hover:bg-neutral-200">Try it →</Link>
+                    </div>
+                  </div>
                 </div>
                 <Link
                   href="/"

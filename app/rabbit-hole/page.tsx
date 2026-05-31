@@ -230,17 +230,28 @@ export default function RabbitHolePage() {
   }
 
   async function share(platform: string) {
+    const shareUrl = window.location.origin + "/rabbit-hole";
+    const shareText = `I went ${path.length} questions deep in Rabbit Hole by OpenLesson. ${shareUrl}`;
     const text = encodeURIComponent(`I went ${path.length} questions deep in Rabbit Hole by OpenLesson.`);
-    const url = encodeURIComponent(window.location.origin + "/rabbit-hole");
+    const url = encodeURIComponent(shareUrl);
     const targets: Record<string, string> = {
       X: `https://twitter.com/intent/tweet?text=${text}&url=${url}`,
       LinkedIn: `https://www.linkedin.com/sharing/share-offsite/?url=${url}`,
       Instagram: "https://www.instagram.com/",
     };
+    if (platform !== "X") {
+      try {
+        await navigator.clipboard?.writeText(shareText);
+        setMessage("Post text copied. Paste it into the share window to include your result.");
+      } catch {
+        setMessage("Paste this result into the share window: " + shareText);
+      }
+    }
     window.open(targets[platform], "_blank", "noopener,noreferrer");
     if (playId) {
       const payload = await fetch("/api/rabbit-hole/share", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ playId }) }).then((res) => res.json());
-      setMessage(`Shared. Bonus unlocked: ${payload.bonusPlays} extra play${payload.bonusPlays === 1 ? "" : "s"}.`);
+      const copyNote = platform === "X" ? "" : " Post text copied.";
+      setMessage(`Shared.${copyNote} Bonus unlocked: ${payload.bonusPlays} extra play${payload.bonusPlays === 1 ? "" : "s"}.`);
     }
   }
 
@@ -283,11 +294,13 @@ export default function RabbitHolePage() {
         }
       `}</style>
       <div className="relative z-10 mx-auto flex h-[100svh] w-full max-w-7xl flex-col px-5 py-5 sm:px-8 lg:px-10">
-        <header className="pointer-events-none fixed left-5 right-5 top-5 z-20 flex items-center justify-between gap-4 sm:left-8 sm:right-8 lg:static lg:pointer-events-auto">
+        <header className="pointer-events-none fixed left-5 right-5 top-5 z-20 flex items-center justify-center gap-4 sm:left-8 sm:right-8 lg:static lg:pointer-events-auto lg:justify-between">
           <div />
           <div className="pointer-events-auto flex h-8 overflow-hidden rounded-full bg-black text-xs font-semibold leading-none ring-1 ring-white/10">
             <button onClick={() => router.push("/")} className="flex w-9 items-center justify-center text-white/80 transition hover:bg-zinc-900 hover:text-white" aria-label="Go to landing page"><Home size={15} strokeWidth={1.8} /></button>
             <div className="flex items-center px-4 text-white/80">{status ? `${status.playsAvailable} play${status.playsAvailable === 1 ? "" : "s"}` : "Loading"}</div>
+            {status && <div className="flex items-center border-l border-white/10 px-3 text-white/80 sm:px-4">{status.points} pts</div>}
+            {status && <div className="flex items-center border-l border-white/10 px-3 text-white/80 sm:px-4">{status.globalRank ? `#${status.globalRank}` : "--"}</div>}
             <button onClick={unlockPlays} className="flex items-center bg-white px-4 text-black transition hover:bg-[#f2ead7] active:scale-[0.98]">+3 for $1.99</button>
           </div>
         </header>
@@ -374,14 +387,14 @@ export default function RabbitHolePage() {
                 <p className="font-mono text-[10px] uppercase tracking-[2px] text-zinc-500">Done for today</p>
                 <h2 className="mt-5 text-5xl font-medium tracking-[-2px] text-white">{result.score} points</h2>
                 <div className="mt-8 grid gap-3 text-sm text-zinc-400 sm:grid-cols-3"><div className="border border-zinc-800 p-4">Depth<br /><span className="text-2xl text-white">{Math.max(...path.map((item) => item.depth))}</span></div><div className="border border-zinc-800 p-4">Questions explored<br /><span className="text-2xl text-white">{path.length}</span></div><div className="border border-zinc-800 p-4">Final answer<br /><span className="text-2xl text-white">{result.correct ? "Correct" : "Missed"}</span></div></div>
+                <p className="mt-6 text-sm text-zinc-400">Share your result on social media to unlock an extra play and bonus points.</p>
                 <div className="mt-8 flex flex-col gap-3 sm:flex-row"><button onClick={() => share("X")} className="rounded-sm border border-zinc-800 px-4 py-3 text-sm text-zinc-300">Share on X</button><button onClick={() => share("Instagram")} className="rounded-sm border border-zinc-800 px-4 py-3 text-sm text-zinc-300">Instagram</button><button onClick={() => share("LinkedIn")} className="rounded-sm border border-zinc-800 px-4 py-3 text-sm text-zinc-300">LinkedIn</button></div>
                 <button onClick={continueFullLesson} className="mt-4 rounded-sm bg-white px-4 py-3 text-sm font-medium text-black transition hover:bg-zinc-200">Continue this in full OpenLesson</button>
               </div>
             )}
             {finalizing && stage === "dive" && (
-              <div className="absolute inset-0 z-40 flex flex-col items-center justify-center bg-black/72 px-6 text-center backdrop-blur-sm">
-                <div className="font-mono text-[10px] uppercase tracking-[3px] text-zinc-500">Grok is listening</div>
-                <div className="mt-4 max-w-sm text-3xl font-medium leading-tight tracking-[-1.4px] text-white">Preparing one final question.</div>
+              <div className="absolute inset-0 z-40 flex flex-col items-center justify-center bg-black px-6 text-center">
+                <div className="max-w-sm text-3xl font-medium leading-tight tracking-[-1.4px] text-white">Preparing one final question.</div>
                 <div className="mt-6 flex gap-1.5" aria-hidden="true">
                   <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-white/45" />
                   <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-white/45 [animation-delay:120ms]" />

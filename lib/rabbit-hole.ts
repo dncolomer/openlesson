@@ -18,6 +18,8 @@ export type RabbitHolePlayStatus = {
   freePlayUsedToday: boolean;
   bonusPlays: number;
   playsAvailable: number;
+  points: number;
+  globalRank: number | null;
 };
 
 export function getUserTimezone(input?: string | null) {

@@ -42,11 +42,11 @@ export async function POST(request: NextRequest) {
       priceId = process.env.STRIPE_PRICE_EXTRA || "";
       mode = "payment";
     } else {
-      priceId = process.env.STRIPE_PRICE_RABBIT_HOLE || process.env.STRIPE_PRICE_EXTRA || "";
+      priceId = process.env.STRIPE_PRICE_RABBIT_HOLE || "";
       mode = "payment";
     }
 
-    if (!priceId) {
+    if (!priceId && priceType !== "rabbit_hole_plays") {
       return NextResponse.json(
         { error: `Stripe price not configured for ${priceType}` },
         { status: 500 }
@@ -90,7 +90,16 @@ export async function POST(request: NextRequest) {
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
       mode,
-      line_items: [{ price: priceId, quantity: 1 }],
+      line_items: [priceType === "rabbit_hole_plays" && !priceId
+        ? {
+            price_data: {
+              currency: "usd",
+              unit_amount: 199,
+              product_data: { name: "3 Rabbit Hole plays" },
+            },
+            quantity: 1,
+          }
+        : { price: priceId, quantity: 1 }],
       success_url: priceType === "rabbit_hole_plays" ? `${origin}/rabbit-hole?unlocked=1` : `${origin}/pricing/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: priceType === "rabbit_hole_plays" ? `${origin}/rabbit-hole` : `${origin}/pricing`,
       metadata: {

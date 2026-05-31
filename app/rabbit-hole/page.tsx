@@ -221,6 +221,7 @@ export default function RabbitHolePage() {
   }
 
   async function unlockPlays() {
+    setMessage("Opening checkout...");
     const res = await fetch("/api/stripe/create-checkout", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -228,6 +229,7 @@ export default function RabbitHolePage() {
     });
     const payload = await res.json();
     if (payload.url) window.location.href = payload.url;
+    else setMessage(payload.error || "Could not open checkout.");
   }
 
   async function share(platform: string) {

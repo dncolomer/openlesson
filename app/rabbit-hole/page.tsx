@@ -74,6 +74,7 @@ export default function RabbitHolePage() {
   const [loading, startTransition] = useTransition();
   const [message, setMessage] = useState("");
   const [finalizing, setFinalizing] = useState(false);
+  const [continuing, setContinuing] = useState(false);
   const [interviewDepth, setInterviewDepth] = useState(10);
   const [touchStart, setTouchStart] = useState<{ x: number; y: number } | null>(null);
   const [dragY, setDragY] = useState(0);
@@ -268,10 +269,16 @@ export default function RabbitHolePage() {
   }
 
   async function continueFullLesson() {
-    if (!root) return;
+    if (!root || continuing) return;
+    setContinuing(true);
+    setMessage("Building your full OpenLesson plan...");
     const res = await fetch("/api/rabbit-hole/continue", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ rootQuestion: root.question }) });
     const payload = await res.json();
     if (payload.planId) router.push(`/plan/${payload.planId}`);
+    else {
+      setMessage(payload.error || "Could not create the full lesson yet.");
+      setContinuing(false);
+    }
   }
 
   return (
@@ -402,7 +409,8 @@ export default function RabbitHolePage() {
                 <div className="mt-8 grid gap-3 text-sm text-zinc-400 sm:grid-cols-3"><div className="border border-zinc-800 p-4">Depth<br /><span className="text-2xl text-white">{Math.max(...path.map((item) => item.depth))}</span></div><div className="border border-zinc-800 p-4">Questions explored<br /><span className="text-2xl text-white">{path.length}</span></div><div className="border border-zinc-800 p-4">Final answer<br /><span className="text-2xl text-white">{result.correct ? "Correct" : "Missed"}</span></div></div>
                 <p className="mt-6 text-sm text-zinc-400">Share your result on social media to unlock an <span className="font-semibold underline underline-offset-4 text-zinc-100">extra play and bonus points.</span></p>
                 <div className="mt-8 flex flex-col gap-3 sm:flex-row"><button onClick={() => share("X")} className="inline-flex items-center justify-center gap-2 rounded-sm border border-zinc-800 px-4 py-3 text-sm text-zinc-300"><Twitter size={15} strokeWidth={1.8} />Share on X</button><button onClick={() => share("Instagram")} className="inline-flex items-center justify-center gap-2 rounded-sm border border-zinc-800 px-4 py-3 text-sm text-zinc-300"><Instagram size={15} strokeWidth={1.8} />Instagram</button><button onClick={() => share("LinkedIn")} className="inline-flex items-center justify-center gap-2 rounded-sm border border-zinc-800 px-4 py-3 text-sm text-zinc-300"><Linkedin size={15} strokeWidth={1.8} />LinkedIn</button></div>
-                <button onClick={continueFullLesson} className="mt-4 rounded-sm bg-white px-4 py-3 text-sm font-medium text-black transition hover:bg-zinc-200">Continue this in full OpenLesson</button>
+                {message && <p className="mt-4 text-sm text-zinc-400">{message}</p>}
+                <button onClick={continueFullLesson} disabled={continuing} className="mt-4 rounded-sm bg-white px-4 py-3 text-sm font-medium text-black transition hover:bg-zinc-200 disabled:cursor-wait disabled:opacity-60">{continuing ? "Building full lesson..." : "Continue this in full OpenLesson"}</button>
               </div>
             )}
             {finalizing && stage === "dive" && (

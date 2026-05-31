@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Home, MousePointerClick } from "lucide-react";
+import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Home, Instagram, Linkedin, MousePointerClick, Twitter } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import type { RabbitHoleNode, RabbitHolePlayStatus, RabbitHoleTopQuestion } from "@/lib/rabbit-hole";
 
@@ -388,7 +388,7 @@ export default function RabbitHolePage() {
                 <h2 className="mt-5 text-5xl font-medium tracking-[-2px] text-white">{result.score} points</h2>
                 <div className="mt-8 grid gap-3 text-sm text-zinc-400 sm:grid-cols-3"><div className="border border-zinc-800 p-4">Depth<br /><span className="text-2xl text-white">{Math.max(...path.map((item) => item.depth))}</span></div><div className="border border-zinc-800 p-4">Questions explored<br /><span className="text-2xl text-white">{path.length}</span></div><div className="border border-zinc-800 p-4">Final answer<br /><span className="text-2xl text-white">{result.correct ? "Correct" : "Missed"}</span></div></div>
                 <p className="mt-6 text-sm text-zinc-400">Share your result on social media to unlock an <span className="font-semibold underline underline-offset-4 text-zinc-100">extra play and bonus points.</span></p>
-                <div className="mt-8 flex flex-col gap-3 sm:flex-row"><button onClick={() => share("X")} className="rounded-sm border border-zinc-800 px-4 py-3 text-sm text-zinc-300">Share on X</button><button onClick={() => share("Instagram")} className="rounded-sm border border-zinc-800 px-4 py-3 text-sm text-zinc-300">Instagram</button><button onClick={() => share("LinkedIn")} className="rounded-sm border border-zinc-800 px-4 py-3 text-sm text-zinc-300">LinkedIn</button></div>
+                <div className="mt-8 flex flex-col gap-3 sm:flex-row"><button onClick={() => share("X")} className="inline-flex items-center justify-center gap-2 rounded-sm border border-zinc-800 px-4 py-3 text-sm text-zinc-300"><Twitter size={15} strokeWidth={1.8} />Share on X</button><button onClick={() => share("Instagram")} className="inline-flex items-center justify-center gap-2 rounded-sm border border-zinc-800 px-4 py-3 text-sm text-zinc-300"><Instagram size={15} strokeWidth={1.8} />Instagram</button><button onClick={() => share("LinkedIn")} className="inline-flex items-center justify-center gap-2 rounded-sm border border-zinc-800 px-4 py-3 text-sm text-zinc-300"><Linkedin size={15} strokeWidth={1.8} />LinkedIn</button></div>
                 <button onClick={continueFullLesson} className="mt-4 rounded-sm bg-white px-4 py-3 text-sm font-medium text-black transition hover:bg-zinc-200">Continue this in full OpenLesson</button>
               </div>
             )}

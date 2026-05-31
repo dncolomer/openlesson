@@ -116,7 +116,7 @@ export default function RabbitHolePage() {
   }, [stage, node, loading, finalizing, interviewDepth]);
 
   function move(delta: number) {
-    if (!questions.length) return;
+    if (!questions.length || outOfPlays) return;
     setFeedAnimating(true);
     setDragY(delta > 0 ? -window.innerHeight : window.innerHeight);
     window.setTimeout(() => {

@@ -319,8 +319,7 @@ export default function RabbitHolePage() {
           <div />
           <div className="pointer-events-auto flex h-8 overflow-hidden rounded-full bg-black text-xs font-semibold leading-none ring-1 ring-white/10">
             <button onClick={() => router.push("/")} className="flex w-9 items-center justify-center text-white/80 transition hover:bg-zinc-900 hover:text-white" aria-label="Go to landing page"><Home size={15} strokeWidth={1.8} /></button>
-            <div className="flex items-center px-4 text-white/80">{status ? `${status.freePlaysAvailable} free` : "Loading"}</div>
-            {status && status.bonusPlays > 0 && <div className="flex items-center border-l border-white/10 px-3 text-white/80 sm:px-4">+{status.bonusPlays} bonus</div>}
+            <div className="flex items-center px-4 text-white/80">{status ? `${status.playsAvailable} play${status.playsAvailable === 1 ? "" : "s"}` : "Loading"}</div>
             {status && <div className="flex items-center border-l border-white/10 px-3 text-white/80 sm:px-4">{status.points} pts</div>}
             {status && <div className="flex items-center border-l border-white/10 px-3 text-white/80 sm:px-4">{status.globalRank ? `#${status.globalRank}` : "--"}</div>}
             <button onClick={unlockPlays} className="flex items-center bg-white px-4 text-black transition hover:bg-[#f2ead7] active:scale-[0.98]">+3 for $1.99</button>

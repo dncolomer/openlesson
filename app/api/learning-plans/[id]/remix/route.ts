@@ -98,6 +98,7 @@ export async function POST(
       }
 
       const newNodes = (sourceNodes || []).map((node) => ({
+        id: nodeIdMap.get(node.id),
         plan_id: newPlan.id,
         title: node.title,
         description: node.description,
@@ -106,18 +107,34 @@ export async function POST(
           .map((id: string) => nodeIdMap.get(id))
           .filter(Boolean),
         status: "available",
-        position_x: node.position_x,
-        position_y: node.position_y,
+      }));
+
+      const nodesWithPositions = newNodes.map((node, index) => ({
+        ...node,
+        position_x: sourceNodes?.[index]?.position_x,
+        position_y: sourceNodes?.[index]?.position_y,
       }));
 
       const { error: insertError } = await supabase
         .from("plan_nodes")
-        .insert(newNodes);
+        .insert(nodesWithPositions);
 
       if (insertError) {
-        console.error("Nodes insert error:", insertError);
-        await supabase.from("learning_plans").delete().eq("id", newPlan.id);
-        throw new Error(`Could not copy nodes: ${insertError.message}`);
+        if (insertError.message.includes("schema cache") && insertError.message.includes("position_")) {
+          const { error: retryError } = await supabase
+            .from("plan_nodes")
+            .insert(newNodes);
+
+          if (retryError) {
+            console.error("Nodes insert retry error:", retryError);
+            await supabase.from("learning_plans").delete().eq("id", newPlan.id);
+            throw new Error(`Could not copy nodes: ${retryError.message}`);
+          }
+        } else {
+          console.error("Nodes insert error:", insertError);
+          await supabase.from("learning_plans").delete().eq("id", newPlan.id);
+          throw new Error(`Could not copy nodes: ${insertError.message}`);
+        }
       }
 
       await supabase
@@ -222,6 +239,7 @@ Rules:
 
     // Second pass: create nodes with mapped IDs
     const newNodes = planData.nodes.map((node: NodeData) => ({
+      id: nodeIdMap.get(node.id),
       plan_id: newPlan.id,
       title: node.title,
       description: node.description,

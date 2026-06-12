@@ -52,7 +52,7 @@ interface ChatPanelProps {
 // Compact onboarding card instead of a wall of markdown
 function OnboardingCard({ onPrompt }: { onPrompt: (prompt: string) => void }) {
   const { t } = useI18n();
-  const introText = "Plan Builder\n\nTell me how you want this learning plan to change. I can add sessions, remove sections, reorder chapters, or adjust the focus and difficulty.";
+  const introText = "Workspace Builder\n\nTell me how you want this workspace to change. I can add sessions, remove sections, reorder chapters, or adjust the focus and difficulty.";
   const { displayed, skip, isDone } = useTypewriter(introText, {
     instant: false,
     speedMs: 35,

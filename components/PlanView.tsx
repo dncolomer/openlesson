@@ -152,7 +152,7 @@ export function PlanView({ initialPlan, initialNodes }: PlanViewProps) {
 
       if (!planData.is_public && !planData.is_group) {
         if (!user) {
-          router.push("/login?redirect=/plan/" + planId);
+          router.push("/login?redirect=/workspace/" + planId);
           return;
         }
         if (planData.user_id !== user.id) {
@@ -164,7 +164,7 @@ export function PlanView({ initialPlan, initialNodes }: PlanViewProps) {
 
       // Group plans require authentication
       if (planData.is_group && !planData.is_public && !user) {
-        router.push("/login?redirect=/plan/" + planId);
+        router.push("/login?redirect=/workspace/" + planId);
         return;
       }
 
@@ -505,6 +505,14 @@ export function PlanView({ initialPlan, initialNodes }: PlanViewProps) {
             </div>
 
             <div className="flex flex-col gap-2">
+              {currentUserId && (
+                <Link
+                  href={`/workspace/${planId}/teach-back`}
+                  className="w-full text-center text-xs px-3 py-2 rounded-md bg-white text-black hover:bg-neutral-200 transition-all"
+                >
+                  Start Teach Back
+                </Link>
+              )}
               {(plan.is_public || plan.is_group) && (
                 <button
                   onClick={handleShare}
@@ -782,7 +790,7 @@ export function PlanView({ initialPlan, initialNodes }: PlanViewProps) {
       <div className="md:hidden flex-shrink-0 border-t border-neutral-800/70 bg-[#0b0b0b] px-3 py-2">
         <div className="grid grid-cols-3 gap-2 rounded-md border border-neutral-800 bg-neutral-950/70 p-1">
           {[
-            { key: "plan" as const, label: "Plan", icon: (
+            { key: "plan" as const, label: "Workspace", icon: (
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
               </svg>
@@ -821,7 +829,7 @@ export function PlanView({ initialPlan, initialNodes }: PlanViewProps) {
           onClose={() => setShowRemixModal(false)}
           onComplete={(newPlanId) => {
             setShowRemixModal(false);
-            router.push(`/plan/${newPlanId}`);
+            router.push(`/workspace/${newPlanId}`);
           }}
         />
       )}

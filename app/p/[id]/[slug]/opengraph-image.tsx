@@ -2,7 +2,7 @@ import { ImageResponse } from "next/og";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 
-export const alt = "Learning Plan";
+export const alt = "Workspace";
 export const size = {
   width: 1200,
   height: 630,
@@ -50,7 +50,7 @@ export default async function Image({ params }: ImageProps) {
   const { id, slug } = await params;
 
   const planData = await getPlanData(id);
-  const title = planData?.title || planData?.root_topic || formatTitle(slug) || "Learning Plan";
+  const title = planData?.title || planData?.root_topic || formatTitle(slug) || "Workspace";
   const profiles = planData?.profiles as any;
   const authorUsername = profiles?.username;
   const coverImageUrl = planData?.cover_image_url;

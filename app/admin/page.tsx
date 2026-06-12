@@ -126,7 +126,7 @@ export default function AdminPage() {
           </div>
           <div className="bg-neutral-900/50 border border-neutral-800 rounded-lg p-6">
             <div className="text-3xl font-bold text-white">{stats?.totalPlans || 0}</div>
-            <div className="text-neutral-400 text-sm mt-1">Learning Plans</div>
+            <div className="text-neutral-400 text-sm mt-1">Workspaces</div>
           </div>
           <div className="bg-neutral-900/50 border border-neutral-800 rounded-lg p-6">
             <div className="text-3xl font-bold text-white">{stats?.totalOrganizations || 0}</div>
@@ -169,9 +169,9 @@ export default function AdminPage() {
             href="/admin/plans" 
             className="block bg-neutral-900/50 border border-neutral-800 rounded-lg p-6 hover:border-neutral-700 transition-colors"
           >
-            <h2 className="text-lg font-semibold text-white mb-2">Learning Plans</h2>
+            <h2 className="text-lg font-semibold text-white mb-2">Workspaces</h2>
             <p className="text-neutral-400 text-sm">
-              View all learning plans, filter by status, and see usage
+              View all workspaces, filter by status, and see usage
             </p>
           </Link>
 

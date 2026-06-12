@@ -70,7 +70,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
   const { plan } = result;
   const title = plan.title || plan.root_topic;
-  const description = plan.description || `A learning plan by @${plan.author_username || "anonymous"} on openLesson`;
+  const description = plan.description || `A workspace by @${plan.author_username || "anonymous"} on openLesson`;
 
   const ogImage = await getRandomPlanCoverImage() || `/p/${id}/${slug}/opengraph-image`;
 

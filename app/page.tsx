@@ -56,7 +56,7 @@ export default function Home() {
     try {
       const { data } = await supabase.auth.getUser();
       if (!data.user) {
-        router.push("/login?redirect=plan");
+        router.push("/login?redirect=/");
         return;
       }
 
@@ -76,7 +76,7 @@ export default function Home() {
       }
 
       const payload = await response.json();
-      router.push(`/plan/${payload.planId}`);
+      router.push(`/workspace/${payload.planId}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
     } finally {
@@ -128,7 +128,7 @@ export default function Home() {
         <form onSubmit={handleGenerate} className="relative z-10 mb-20 w-full max-w-[1360px]">
           <div className="group mx-auto flex w-full max-w-[940px] flex-col gap-2 rounded-md border border-zinc-800 bg-zinc-950/90 p-2 shadow-inner transition-all hover:border-zinc-700 focus-within:border-zinc-500 sm:flex-row">
             <input value={topic} onChange={(e) => setTopic(e.target.value)} placeholder="Paste a repo, video, theorem, or impossible question..." className="h-16 min-w-0 flex-1 bg-transparent px-7 text-xl outline-none placeholder:text-zinc-500 sm:h-[68px] sm:text-2xl" spellCheck={false} />
-            <button type="submit" disabled={!topic.trim() || busy} className="flex h-14 w-full shrink-0 items-center justify-center rounded-sm bg-zinc-800 text-[15px] font-medium text-white transition-all hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-40 sm:h-[68px] sm:w-[172px]">{busy ? "Generating..." : "Generate Plan →"}</button>
+            <button type="submit" disabled={!topic.trim() || busy} className="flex h-14 w-full shrink-0 items-center justify-center rounded-sm bg-zinc-800 text-[15px] font-medium text-white transition-all hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-40 sm:h-[68px] sm:w-[172px]">{busy ? "Generating..." : "Generate Workspace →"}</button>
           </div>
           <div className="mx-auto mt-3 w-full max-w-[940px]">
             <FileDropZone files={files} onChange={setFiles} compact className="rounded-md bg-zinc-950/70 p-2" />

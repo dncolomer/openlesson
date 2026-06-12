@@ -37,8 +37,8 @@ interface HumanModeSelectProps {
  * A single topic composer drives two actions:
  *   • "Quick Session" — creates a session immediately (optionally with files
  *     uploaded for context) and jumps into `/session?id=…`.
- *   • "Generate Plan" — builds a multi-node learning plan from the topic +
- *     attachments + chosen duration, then redirects to `/plan/{id}`.
+ *   • "Generate Workspace" — builds a multi-node workspace from the topic +
+ *     attachments + chosen duration, then redirects to `/workspace/{id}`.
  *
  * Time picker + attachments apply to both actions (the "Quick Session"
  * flow only uses the attachments; duration is plan-only but it is left in
@@ -145,7 +145,7 @@ export function HumanModeSelect({ initialTopic = "", compact = false }: HumanMod
       // context (plan_files are tied to a learning_plan). If the user
       // attached files they'll be ignored here — the UI shows a small
       // hint so this isn't silent. Future work: a session_context_files
-      // table or a plan_id fallback. For now, `Generate Plan` is the
+      // table or a plan_id fallback. For now, `Generate Workspace` is the
       // path that honors attachments.
       fetch("/api/check-usage", { method: "POST" }).catch(() => {});
       router.push(`/session?id=${session.id}`);
@@ -192,7 +192,7 @@ export function HumanModeSelect({ initialTopic = "", compact = false }: HumanMod
         throw new Error(err.error || "Failed to generate plan");
       }
       const data = await response.json();
-      router.push(`/plan/${data.planId}`);
+      router.push(`/workspace/${data.planId}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : t("planMode.somethingWrong"));
     } finally {
@@ -333,7 +333,7 @@ export function HumanModeSelect({ initialTopic = "", compact = false }: HumanMod
           {busy === "session" ? t("home.startingSession") : t("home.quickSession")}
         </button>
 
-        {/* Generate Plan — secondary, builds a multi-node plan */}
+        {/* Generate Workspace — secondary, builds a multi-node workspace */}
         <button
           type="button"
           onClick={handleGeneratePlan}

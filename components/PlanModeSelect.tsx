@@ -217,7 +217,7 @@ export function PlanModeSelect({
       const { data: { user } } = await supabase.auth.getUser();
 
       if (!user) {
-        router.push("/login?redirect=plan");
+        router.push("/login?redirect=/");
         return;
       }
 
@@ -241,7 +241,7 @@ export function PlanModeSelect({
       }
 
       const data = await response.json();
-      router.push(`/plan/${data.planId}`);
+      router.push(`/workspace/${data.planId}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : t('planMode.somethingWrong'));
     } finally {

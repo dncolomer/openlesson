@@ -26,7 +26,7 @@ interface CommunityPlansCarouselProps {
 }
 
 /**
- * Hero-banner carousel of **public** learning plans from other users.
+ * Hero-banner carousel of **public** workspaces from other users.
  * Each slide is a cinematic card with a cover image, gentle Ken-Burns
  * zoom, title, author, and a CTA chip. Autoplays every 3s and pauses on
  * hover/focus. Skips gracefully when the API returns zero eligible
@@ -118,7 +118,7 @@ export function CommunityPlansCarousel({ fillHeight = false }: CommunityPlansCar
           return (
             <Link
               key={plan.id}
-              href={`/plan/${plan.id}`}
+              href={`/workspace/${plan.id}`}
               tabIndex={active ? 0 : -1}
               aria-hidden={!active}
               className={`absolute inset-0 block transition-opacity duration-700 ease-out ${

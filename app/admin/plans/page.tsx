@@ -208,7 +208,7 @@ export default function AdminPlansPage() {
         <Link href="/admin" className="text-neutral-400 hover:text-white text-sm">
           ← Back to Admin
         </Link>
-        <h1 className="text-2xl font-bold text-white mt-2">Learning Plans</h1>
+        <h1 className="text-2xl font-bold text-white mt-2">Workspaces</h1>
         <p className="text-neutral-400 text-sm">{totalCount} total plans</p>
       </div>
 

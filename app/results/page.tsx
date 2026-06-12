@@ -242,7 +242,7 @@ function ResultsContent() {
       }
       
       const data = await response.json();
-      router.push(`/plan/${data.planId}`);
+      router.push(`/workspace/${data.planId}`);
     } catch (err) {
       setPlanError(err instanceof Error ? err.message : t("planMode.somethingWrong"));
     } finally {

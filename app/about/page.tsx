@@ -34,7 +34,7 @@ export default function AboutPage() {
           <div className="mt-16 border border-neutral-800 bg-neutral-950/75 p-8 backdrop-blur-sm">
             <h2 className="text-2xl font-medium text-white">Built for the first 30 minutes.</h2>
             <p className="mt-4 max-w-3xl leading-relaxed text-neutral-400">Most tools optimize for curriculum completion. Open Lesson optimizes for the first moment where something clicks, then turns that momentum into a plan you can keep following.</p>
-            <Link href="/" className="mt-8 inline-flex rounded-sm bg-white px-6 py-3 text-sm font-medium text-black transition hover:bg-neutral-200">Start a learning plan →</Link>
+            <Link href="/" className="mt-8 inline-flex rounded-sm bg-white px-6 py-3 text-sm font-medium text-black transition hover:bg-neutral-200">Start a workspace →</Link>
           </div>
         </section>
         <Footer />

@@ -273,10 +273,10 @@ export default function RabbitHolePage() {
   async function continueFullLesson() {
     if (!root || continuing) return;
     setContinuing(true);
-    setMessage("Building your full OpenLesson plan...");
+    setMessage("Building your full OpenLesson workspace...");
     const res = await fetch("/api/rabbit-hole/continue", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ rootQuestion: root.question }) });
     const payload = await res.json();
-    if (payload.planId) router.push(`/plan/${payload.planId}`);
+    if (payload.planId) router.push(`/workspace/${payload.planId}`);
     else {
       setMessage(payload.error || "Could not create the full lesson yet.");
       setContinuing(false);

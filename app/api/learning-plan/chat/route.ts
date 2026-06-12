@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { callXaiJSON, systemMessage, userMessage, buildImageContent, DEFAULT_MODEL, MessageContent } from "@/lib/xai-client";
 
-const SYSTEM_PROMPT = `You are an AI Learning Planner assistant. Your role is to help users understand and customize their learning plans.
+const SYSTEM_PROMPT = `You are an AI Workspace assistant. Your role is to help users understand and customize their workspaces.
 
  Guidelines:
   - Be conversational and helpful
@@ -110,7 +110,7 @@ export async function POST(req: NextRequest) {
 ${nodes.map((n: { id: string; status: string; title: string; description?: string }, i: number) => `${n.id} | order:${i+1} | ${n.status === "completed" ? "✓ DONE" : "active"} | ${n.title}: ${n.description || "No description"}`).join("\n")}`
       : `CURRENT SESSIONS: None yet - this is a new/empty plan. Create sessions based on the user's request.`;
 
-    const prompt = `Current Learning Plan: "${plan.root_topic}"
+    const prompt = `Current Workspace: "${plan.root_topic}"
 
 ${sessionsSection}
 
@@ -156,7 +156,7 @@ Respond with JSON containing your explanation and the complete updated sessions 
     
 
     const response = {
-      explanation: aiResponse.data.explanation || "I've updated your plan.",
+      explanation: aiResponse.data.explanation || "I've updated your workspace.",
       planModified: aiResponse.data.planModified ?? true,
       sessions: aiResponse.data.sessions || [],
       questions: aiResponse.data.questions || []

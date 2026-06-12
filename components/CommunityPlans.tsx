@@ -110,7 +110,7 @@ export function CommunityPlans({ user }: CommunityPlansProps) {
           {plans.map((plan) => (
             <Link
               key={plan.id}
-              href={`/plan/${plan.id}`}
+              href={`/workspace/${plan.id}`}
               className="block bg-neutral-900/50 border border-neutral-800 rounded-xl p-4 hover:border-neutral-700 transition-colors"
             >
               <div className="flex items-center justify-between">

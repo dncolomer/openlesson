@@ -31,7 +31,7 @@ export default function PlansPage() {
       const { data: { user } } = await supabase.auth.getUser();
       
       if (!user) {
-        router.push("/login?redirect=/plans");
+        router.push("/login?redirect=/workspaces");
         return;
       }
 
@@ -51,7 +51,7 @@ export default function PlansPage() {
   }, [supabase, router]);
 
   const handleDelete = async (planId: string) => {
-    if (!confirm("Delete this plan?")) return;
+    if (!confirm("Delete this workspace?")) return;
     
     const { error } = await supabase
       .from("learning_plans")
@@ -96,7 +96,7 @@ export default function PlansPage() {
                 className="p-4 bg-neutral-900/50 border border-neutral-800 rounded-xl hover:border-neutral-700 transition-colors"
               >
                 <div className="flex items-center justify-between">
-                  <Link href={`/plan/${plan.id}`} className="flex-1">
+                  <Link href={`/workspace/${plan.id}`} className="flex-1">
                     <h3 className="font-medium text-white">{plan.root_topic}</h3>
                     <p className="text-sm text-neutral-500 mt-1">
                       {new Date(plan.created_at).toLocaleDateString()}

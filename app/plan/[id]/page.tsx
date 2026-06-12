@@ -32,15 +32,15 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const plan = await getPlanMeta(id);
 
   if (!plan) {
-    return { title: "Plan - openLesson" };
+    return { title: "Workspace - openLesson" };
   }
 
-  const title = plan.title || plan.root_topic || "Learning Plan";
+  const title = plan.title || plan.root_topic || "Workspace";
   const profiles = plan.profiles as any;
   const author = profiles?.username;
   const description = author
-    ? `A learning plan by @${author} on openLesson`
-    : "A learning plan on openLesson";
+    ? `A workspace by @${author} on openLesson`
+    : "A workspace on openLesson";
 
   const ogImage = await getRandomPlanCoverImage() || "/og-default.jpg";
   const images = [{ url: ogImage, width: 1200, height: 630, alt: title }];

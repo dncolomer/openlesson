@@ -59,8 +59,7 @@ export default function NewDesignLanding() {
   const handleGenerate = (e: React.FormEvent) => {
     e.preventDefault();
     if (!topic.trim()) return;
-    // Route to plan creation with topic
-    router.push(`/plan?topic=${encodeURIComponent(topic.trim())}`);
+    router.push(`/?q=${encodeURIComponent(topic.trim())}`);
   };
 
   return (
@@ -141,7 +140,7 @@ export default function NewDesignLanding() {
             disabled={!topic.trim()}
             className="flex h-14 w-full shrink-0 select-none items-center justify-center rounded-sm bg-zinc-800 text-[15px] font-medium tracking-[-0.15px] text-white transition-all hover:bg-zinc-700 active:scale-[0.985] disabled:cursor-not-allowed disabled:opacity-40 sm:h-[68px] sm:w-[172px]"
           >
-            Generate Plan →
+            Generate Workspace →
           </button>
         </div>
 
@@ -166,7 +165,7 @@ export default function NewDesignLanding() {
           {/* Card 2: Veritasium video */}
           <button
             type="button"
-            onClick={() => setTopic("Turn this Veritasium video into a Socratic learning plan: https://www.youtube.com/watch?v=AF8d72mA41M")}
+            onClick={() => setTopic("Turn this Veritasium video into a Socratic workspace: https://www.youtube.com/watch?v=AF8d72mA41M")}
             className="group flex flex-col bg-zinc-950 border border-zinc-800 hover:border-zinc-700 rounded-md overflow-hidden active:scale-[0.985] transition text-left shadow"
           >
             <div className="h-48 bg-zinc-900/60 flex items-center justify-center overflow-hidden">

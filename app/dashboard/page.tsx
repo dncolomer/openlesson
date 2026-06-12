@@ -549,7 +549,7 @@ export default function DashboardPage() {
         <div className="max-w-7xl mx-auto flex gap-1 px-4 sm:px-6 lg:px-8">
           {[
             { id: "overview", label: "Profile" },
-            { id: "plans", label: "Learning Plans" },
+            { id: "plans", label: "Workspaces" },
           ].map((tab) => (
             <button
               key={tab.id}
@@ -617,7 +617,7 @@ export default function DashboardPage() {
                 {[
                   ["Sessions", sessions.length],
                   ["Completed", completedSessions.length],
-                  ["Public plans", publicPlans.length],
+                  ["Public workspaces", publicPlans.length],
                   ["Minutes", totalLearningMinutes],
                 ].map(([label, value]) => (
                   <div key={label} className="bg-neutral-950 p-5">
@@ -925,10 +925,10 @@ export default function DashboardPage() {
               <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
                 <div>
                   <p className="mb-3 font-mono text-[10px] uppercase tracking-[2px] text-neutral-500">
-                    Learning Plans
+                    Workspaces
                   </p>
                   <h2 className="max-w-2xl text-3xl font-medium tracking-[-1.2px] text-white sm:text-4xl">
-                    Start with curiosity. Leave with a plan.
+                    Start with curiosity. Leave with a workspace.
                   </h2>
                   <p className="mt-3 max-w-xl text-sm leading-relaxed text-neutral-400">
                     Turn any topic, repo, video, file, or hard question into a guided path toward your next aha moment.
@@ -936,7 +936,7 @@ export default function DashboardPage() {
                   <div className="mt-5 max-w-xl rounded-md border border-white/10 bg-white/[0.03] p-4 text-sm text-neutral-300">
                     <div className="font-mono text-[10px] uppercase tracking-[2px] text-white/70">Rabbit Hole</div>
                     <div className="mt-2 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                      <p className="leading-relaxed text-neutral-400">Warm up with one question before building a full plan.</p>
+                      <p className="leading-relaxed text-neutral-400">Warm up with one question before building a full workspace.</p>
                       <Link href="/rabbit-hole" className="inline-flex h-9 shrink-0 items-center justify-center rounded-sm bg-white px-4 text-xs font-medium text-black transition hover:bg-neutral-200">Try it →</Link>
                     </div>
                   </div>
@@ -945,7 +945,7 @@ export default function DashboardPage() {
                   href="/"
                   className="inline-flex h-12 items-center justify-center rounded-sm bg-white px-6 text-sm font-medium text-black transition hover:bg-neutral-200"
                 >
-                  Create a New Learning Plan →
+                  Create a New Workspace →
                 </Link>
               </div>
             </div>
@@ -977,7 +977,7 @@ export default function DashboardPage() {
                     key={plan.id}
                     className="group overflow-hidden rounded-md border border-neutral-800 bg-neutral-950/75 transition-colors hover:border-neutral-700 hover:bg-neutral-900/80"
                   >
-                    <Link href={`/plan/${plan.id}`} className="block">
+                    <Link href={`/workspace/${plan.id}`} className="block">
                       <div className="relative h-36 bg-neutral-900">
                         {plan.cover_image_url ? (
                           <img src={plan.cover_image_url} alt="" className="h-full w-full object-cover opacity-70 grayscale transition group-hover:opacity-85" />
@@ -987,7 +987,7 @@ export default function DashboardPage() {
                         <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent" />
                         <div className="absolute left-4 top-4 flex gap-2">
                           <span className="border border-white/10 bg-black/50 px-2 py-1 font-mono text-[10px] uppercase tracking-[1.5px] text-neutral-300 backdrop-blur-sm">
-                            {plan.source_type === "youtube" ? "Video" : "Plan"}
+                            {plan.source_type === "youtube" ? "Video" : "Workspace"}
                           </span>
                           {plan.is_group && (
                             <span className="border border-white/10 bg-black/50 px-2 py-1 font-mono text-[10px] uppercase tracking-[1.5px] text-neutral-300 backdrop-blur-sm">
@@ -999,7 +999,7 @@ export default function DashboardPage() {
                     </Link>
 
                     <div className="p-4">
-                      <Link href={`/plan/${plan.id}`} className="block">
+                      <Link href={`/workspace/${plan.id}`} className="block">
                         <h4 className="line-clamp-2 text-base font-medium leading-snug text-neutral-100 transition group-hover:text-white">
                           {plan.title || plan.root_topic}
                         </h4>
@@ -1021,8 +1021,8 @@ export default function DashboardPage() {
                       </div>
 
                       <div className="mt-5 flex items-center justify-between gap-3 border-t border-neutral-800 pt-4">
-                        <Link href={`/plan/${plan.id}`} className="text-sm font-medium text-neutral-200 hover:text-white">
-                          Open plan →
+                        <Link href={`/workspace/${plan.id}`} className="text-sm font-medium text-neutral-200 hover:text-white">
+                          Open workspace →
                         </Link>
                       <button
                         onClick={async () => {

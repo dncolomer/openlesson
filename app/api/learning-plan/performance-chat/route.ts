@@ -107,7 +107,7 @@ export async function POST(req: NextRequest) {
       const performanceData = await fetchPerformanceData(
         dataClient,
         planId,
-        plan.root_topic || plan.title || "Learning Plan",
+        plan.root_topic || plan.title || "Workspace",
         user.id,
         canSeeAllUsers,
         isOwner,
@@ -117,7 +117,7 @@ export async function POST(req: NextRequest) {
 
       if (performanceData.users.length === 0) {
         return NextResponse.json({
-          response: "No session data found for this plan yet. Once users complete sessions, you'll be able to ask questions about their performance here.",
+          response: "No session data found for this workspace yet. Once users complete sessions, you'll be able to ask questions about their performance here.",
           fileIds: [],
           users: [],
         });

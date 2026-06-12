@@ -67,7 +67,7 @@ export function SolutionsBand() {
   const solutions = [
     { href: "/", label: t('nav.forIndividuals'), shortDesc: t('nav.personalLearningShort'), icon: UserIcon },
     { href: "/enterprise", label: t('nav.forSales'), shortDesc: t('nav.teamTrainingShort'), icon: BriefcaseIcon },
-    { href: "/eval", label: t('nav.forHR'), shortDesc: t('nav.candidateTestingShort'), icon: ClipboardIcon },
+    { href: "/for-hiring-teams", label: t('nav.forHR'), shortDesc: t('nav.candidateTestingShort'), icon: ClipboardIcon },
     { href: "/homeschool", label: t('nav.forFamilies'), shortDesc: t('nav.homeschoolShort'), icon: HomeIcon },
     { href: "/schools", label: t('nav.forSchools'), shortDesc: t('nav.teachersShort'), icon: AcademicCapIcon },
     { href: "/certify", label: t('nav.forCareers'), shortDesc: t('nav.certificationPrepShort'), icon: TrophyIcon },

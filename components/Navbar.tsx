@@ -59,7 +59,7 @@ export function Navbar({ breadcrumbs = [], showNav = true }: NavbarProps) {
   const solutionLinks = [
     { href: "/", label: t('nav.forIndividuals') },
     { href: "/enterprise", label: t('nav.forSales') },
-    { href: "/eval", label: t('nav.forHR') },
+    { href: "/for-hiring-teams", label: t('nav.forHR') },
     { href: "/homeschool", label: t('nav.forFamilies') },
     { href: "/schools", label: t('nav.forSchools') },
     { href: "/certify", label: t('nav.forCareers') },

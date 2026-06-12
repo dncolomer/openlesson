@@ -10,7 +10,7 @@ const productLinks = [
 
 const solutionLinks = [
   { labelKey: "footer.aiSalesTraining", href: "/enterprise" },
-  { labelKey: "footer.aiHiringAssessments", href: "/eval" },
+  { labelKey: "footer.aiHiringAssessments", href: "/for-hiring-teams" },
   { labelKey: "footer.aiClassroomTutor", href: "/schools" },
   { labelKey: "footer.aiHomeschoolTutor", href: "/homeschool" },
   { labelKey: "footer.aiCertificationPrep", href: "/certify" },

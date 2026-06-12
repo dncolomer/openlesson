@@ -70,10 +70,10 @@ export default function ForHiringTeamsPage() {
   }, []);
 
   return (
-    <main className="min-h-screen bg-[#0a0a0a] text-zinc-200 selection:bg-zinc-700">
-      <div className="fixed inset-0 -z-10 bg-[url('/hr.jpg')] bg-cover bg-fixed bg-center" />
-      <div className="fixed inset-0 -z-10 bg-[#0a0a0a]/82" />
-      <div className="fixed inset-0 -z-10 bg-[radial-gradient(circle_at_70%_10%,rgba(13,148,136,0.18),transparent_34%),radial-gradient(circle_at_10%_20%,rgba(46,117,182,0.16),transparent_30%)]" />
+    <main
+      className="min-h-screen bg-[#0a0a0a] bg-cover bg-fixed bg-center text-zinc-200 selection:bg-zinc-700"
+      style={{ backgroundImage: "linear-gradient(rgba(10,10,10,0.75), rgba(10,10,10,0.75)), url('/hr.jpg')" }}
+    >
 
       <header className="sticky top-0 z-40 border-b border-zinc-900 bg-[#0a0a0a]/85 px-5 py-4 backdrop-blur-md">
         <div className="mx-auto flex max-w-6xl items-center justify-between">
@@ -192,10 +192,10 @@ function HeliosHiringMock() {
     <div className="border border-zinc-800/80 bg-zinc-950/75 p-4 shadow-2xl backdrop-blur-sm">
       <div className="flex h-[620px] flex-col overflow-hidden rounded-2xl border border-neutral-800 bg-neutral-950/40 p-4" aria-label="Mock Helios performance chat analyzing product management candidates">
         <div className="relative mb-3 flex-shrink-0 self-center">
-          <div className="flex size-12 items-center justify-center rounded-full border border-violet-500/30 bg-gradient-to-br from-violet-500/15 via-neutral-800 to-neutral-900 ring-1 ring-violet-500/20 ring-offset-1 ring-offset-transparent">
+          <div className="flex size-12 items-center justify-center rounded-full border border-neutral-600/40 bg-gradient-to-br from-neutral-700/40 via-neutral-800 to-neutral-900 ring-1 ring-neutral-600/25 ring-offset-1 ring-offset-transparent">
             <span className="font-serif text-lg text-neutral-200">H</span>
           </div>
-          <div className="absolute inset-0 rounded-full shadow-[0_0_32px_rgba(139,92,246,0.12)]" />
+          <div className="absolute inset-0 rounded-full shadow-[0_0_32px_rgba(255,255,255,0.08)]" />
         </div>
 
         <div ref={messagesRef} className="mb-3 min-h-0 flex-1 overflow-y-auto rounded-2xl border border-neutral-800 bg-neutral-950/50 p-4 overscroll-contain">
@@ -218,7 +218,7 @@ function HeliosHiringMock() {
         <div className="rounded-2xl border border-neutral-800 bg-neutral-950/40 p-2.5">
           <div className="flex items-end gap-2 rounded-xl border border-neutral-800 bg-neutral-900/60 px-3 py-1.5">
             <p className="min-h-6 flex-1 py-1 text-sm text-neutral-500">Ask about reasoning evidence, assumptions, or debrief notes...</p>
-            <div className="rounded-lg p-1.5 text-violet-400" aria-hidden="true">
+            <div className="rounded-lg p-1.5 text-neutral-300" aria-hidden="true">
               <svg className="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
               </svg>
@@ -243,8 +243,8 @@ function TypedAnswer({ chars }: { chars: number }) {
         if (part.kind === "insight") {
           const [label, ...rest] = visibleText.split(": ");
           return (
-            <div key={index} className="mt-3 rounded-lg border border-violet-500/20 bg-violet-950/20 p-3">
-              <p className="text-violet-100"><strong>{label}{rest.length > 0 ? ":" : ""}</strong>{rest.length > 0 ? ` ${rest.join(": ")}` : ""}</p>
+            <div key={index} className="mt-3 rounded-lg border border-neutral-700/50 bg-neutral-900/70 p-3">
+              <p className="text-neutral-200"><strong>{label}{rest.length > 0 ? ":" : ""}</strong>{rest.length > 0 ? ` ${rest.join(": ")}` : ""}</p>
             </div>
           );
         }
@@ -257,16 +257,16 @@ function TypedAnswer({ chars }: { chars: number }) {
 
 function TypingCursor({ show }: { show: boolean }) {
   if (!show) return null;
-  return <span className="ml-0.5 inline-block h-[1em] w-[2px] translate-y-0.5 animate-pulse bg-violet-300" aria-hidden="true" />;
+  return <span className="ml-0.5 inline-block h-[1em] w-[2px] translate-y-0.5 animate-pulse bg-neutral-300/80" aria-hidden="true" />;
 }
 
 function ThinkingBubble() {
   return (
     <ChatBubble role="assistant">
       <div className="flex items-center gap-1 py-1" aria-label="Helios is thinking">
-        <span className="size-1.5 animate-bounce rounded-full bg-violet-400/70" style={{ animationDelay: "0ms" }} />
-        <span className="size-1.5 animate-bounce rounded-full bg-violet-400/70" style={{ animationDelay: "150ms" }} />
-        <span className="size-1.5 animate-bounce rounded-full bg-violet-400/70" style={{ animationDelay: "300ms" }} />
+        <span className="size-1.5 animate-bounce rounded-full bg-neutral-400/70" style={{ animationDelay: "0ms" }} />
+        <span className="size-1.5 animate-bounce rounded-full bg-neutral-400/70" style={{ animationDelay: "150ms" }} />
+        <span className="size-1.5 animate-bounce rounded-full bg-neutral-400/70" style={{ animationDelay: "300ms" }} />
       </div>
     </ChatBubble>
   );
@@ -277,24 +277,24 @@ function ChatBubble({ role, children }: { role: "user" | "assistant"; children: 
 
   return (
     <div className={`flex gap-2 ${isUser ? "flex-row-reverse" : ""}`}>
-      <div className={`flex size-5 flex-shrink-0 items-center justify-center rounded-full ${isUser ? "bg-blue-600" : "border border-violet-500/30 bg-gradient-to-br from-violet-500/20 via-neutral-800 to-neutral-900"}`}>
+      <div className={`flex size-5 flex-shrink-0 items-center justify-center rounded-full ${isUser ? "bg-neutral-200" : "border border-neutral-600/40 bg-gradient-to-br from-neutral-700/40 via-neutral-800 to-neutral-900"}`}>
         {isUser ? (
-          <svg className="size-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <svg className="size-2.5 text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0M12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
           </svg>
         ) : (
           <span className="font-serif text-[9px] text-neutral-300">H</span>
         )}
       </div>
-      <div className={`min-w-0 flex-1 rounded-lg px-3 py-2 text-sm leading-6 ${isUser ? "rounded-br-sm bg-blue-600 text-white" : "rounded-bl-sm border border-neutral-700/50 bg-neutral-800/70 text-neutral-200"}`}>
-        <div className="space-y-3 [&_strong]:text-neutral-100">{children}</div>
+      <div className={`min-w-0 flex-1 rounded-lg px-3 py-2 text-sm leading-6 ${isUser ? "rounded-br-sm bg-neutral-100 text-black" : "rounded-bl-sm border border-neutral-700/50 bg-neutral-800/70 text-neutral-200"}`}>
+        <div className={`space-y-3 ${isUser ? "[&_strong]:text-black" : "[&_strong]:text-neutral-100"}`}>{children}</div>
       </div>
     </div>
   );
 }
 
 function ContentSection({ eyebrow, title, children }: { eyebrow: string; title: string; children: React.ReactNode }) {
-  return <section className="mx-auto max-w-6xl px-6 py-20"><div className="grid gap-10 lg:grid-cols-[0.8fr_1.2fr]"><SectionHeading eyebrow={eyebrow} title={title} /><div className="space-y-6 text-lg leading-relaxed text-zinc-400">{children}</div></div></section>;
+  return <section className="mx-auto max-w-6xl px-6 py-20"><div className="grid gap-10 border border-zinc-800/70 bg-zinc-950/72 p-6 backdrop-blur-sm sm:p-8 lg:grid-cols-[0.8fr_1.2fr]"><SectionHeading eyebrow={eyebrow} title={title} /><div className="space-y-6 text-lg leading-relaxed text-zinc-300">{children}</div></div></section>;
 }
 
 function SectionHeading({ eyebrow, title }: { eyebrow: string; title: string }) {

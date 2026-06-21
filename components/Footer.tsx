@@ -5,19 +5,6 @@ import { useI18n } from "@/lib/i18n";
 
 const productLinks = [
   { labelKey: "footer.pricing", href: "/pricing" },
-  { labelKey: "footer.coaching", href: "/coaching" },
-];
-
-const solutionLinks = [
-  { labelKey: "footer.aiSalesTraining", href: "/enterprise" },
-  { labelKey: "footer.aiHiringAssessments", href: "/eval" },
-  { labelKey: "footer.aiClassroomTutor", href: "/schools" },
-  { labelKey: "footer.aiHomeschoolTutor", href: "/homeschool" },
-  { labelKey: "footer.aiCertificationPrep", href: "/certify" },
-];
-
-const companyLinks = [
-  { labelKey: "footer.about", href: "/about" },
 ];
 
 const legalLinks = [
@@ -34,7 +21,7 @@ export function Footer() {
   return (
     <footer className="mt-auto border-t border-neutral-900 bg-[#050505]">
       <div className="max-w-6xl mx-auto px-6 py-12">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-8 pb-8 border-b border-neutral-900">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-8 pb-8 border-b border-neutral-900">
           <div>
             <h3 className="text-xs font-semibold text-neutral-400 uppercase tracking-wider mb-4">
               {t('footer.product')}
@@ -52,31 +39,9 @@ export function Footer() {
 
           <div>
             <h3 className="text-xs font-semibold text-neutral-400 uppercase tracking-wider mb-4">
-              {t('footer.solutions')}
-            </h3>
-            <ul className="space-y-3">
-              {solutionLinks.map((link) => (
-                <li key={link.href}>
-                  <Link href={link.href} className="text-sm text-neutral-500 hover:text-white transition-colors">
-                    {t(link.labelKey)}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          <div>
-            <h3 className="text-xs font-semibold text-neutral-400 uppercase tracking-wider mb-4">
               {t('footer.company')}
             </h3>
             <ul className="space-y-3">
-              {companyLinks.map((link) => (
-                <li key={link.href}>
-                  <Link href={link.href} className="text-sm text-neutral-500 hover:text-white transition-colors">
-                    {t(link.labelKey)}
-                  </Link>
-                </li>
-              ))}
               <li>
                 <a href="https://github.com/dncolomer/openlesson" target="_blank" rel="noopener noreferrer" className="text-sm text-neutral-500 hover:text-white transition-colors">
                   {t('footer.github')}

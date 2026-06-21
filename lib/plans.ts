@@ -2,7 +2,7 @@
 // PLAN DEFINITIONS & USAGE LIMITS
 // ============================================
 
-export type PlanId = "free" | "regular" | "pro";
+export type PlanId = "free" | "regular" | "pro" | "regular_2026" | "pro_teams";
 
 export interface PlanDef {
   id: PlanId;
@@ -44,6 +44,20 @@ export const PLANS: Record<PlanId, PlanDef> = {
     ],
     stripePriceEnv: "STRIPE_PRICE_REGULAR",
   },
+  regular_2026: {
+    id: "regular_2026",
+    name: "Regular",
+    price: "$29.99",
+    priceAmount: 2999,
+    sessionsPerPeriod: 10,
+    features: [
+      "10 sessions per month",
+      "Additional lessons at $4.99 each",
+      "Think-aloud data uploads",
+      "Session reports & history",
+    ],
+    stripePriceEnv: null,
+  },
   pro: {
     id: "pro",
     name: "Pro",
@@ -61,9 +75,25 @@ export const PLANS: Record<PlanId, PlanDef> = {
     ],
     stripePriceEnv: "STRIPE_PRICE_PRO",
   },
+  pro_teams: {
+    id: "pro_teams",
+    name: "Pro / Teams",
+    price: "$499",
+    priceAmount: 49900,
+    sessionsPerPeriod: 100,
+    features: [
+      "100 lessons per month",
+      "Additional lessons at $2.99 each",
+      "Team readiness workspaces",
+      "Readiness evidence and history",
+      "Priority support",
+    ],
+    stripePriceEnv: null,
+  },
 };
 
-export const EXTRA_LESSON_PRICE = 199; // $1.99 in cents
+export const EXTRA_LESSON_PRICE = 499; // $4.99 in cents
+export const PRO_TEAMS_EXTRA_LESSON_PRICE = 299; // $2.99 in cents
 
 export interface UserProfile {
   plan: PlanId;
@@ -127,18 +157,18 @@ export function canStartSession(
     }
   }
 
-  // Pro = unlimited
+  // Legacy Pro = unlimited. Keep existing subscribers untouched.
   if (plan === "pro" && subscription_status === "active") {
     return { allowed: true, plan, used: sessionCount, limit: null, isAdmin: false };
   }
 
-  // Regular = 5 per period + extras
+  // Legacy Regular = 5 per period + extras. Keep existing subscribers untouched.
   if (plan === "regular" && subscription_status === "active") {
     const effectiveLimit = (planDef.sessionsPerPeriod ?? 0) + extra_lessons;
     if (sessionCount >= effectiveLimit) {
       return {
         allowed: false,
-        reason: `You've used all ${effectiveLimit} sessions this month. Buy extra sessions or upgrade to Pro.`,
+        reason: `You've used all ${effectiveLimit} legacy Regular sessions this month. Buy additional lessons at $4.99 each to continue.`,
         plan,
         used: sessionCount,
         limit: effectiveLimit,
@@ -148,13 +178,29 @@ export function canStartSession(
     return { allowed: true, plan, used: sessionCount, limit: effectiveLimit, isAdmin: false };
   }
 
-  // Free plan = 1 session ever + any purchased extras
+  // Current paid plans use finite monthly session/lesson allowances.
+  if ((plan === "regular_2026" || plan === "pro_teams") && subscription_status === "active") {
+    const effectiveLimit = (planDef.sessionsPerPeriod ?? 0) + extra_lessons;
+    if (sessionCount >= effectiveLimit) {
+      return {
+        allowed: false,
+        reason: `You've used all ${effectiveLimit} sessions this month. Buy additional lessons to continue.`,
+        plan,
+        used: sessionCount,
+        limit: effectiveLimit,
+        isAdmin: false,
+      };
+    }
+    return { allowed: true, plan, used: sessionCount, limit: effectiveLimit, isAdmin: false };
+  }
+
+  // Free plan = starter sessions + any purchased extras.
   const freeBaseLimit = planDef.sessionsPerPeriod ?? 1;
   const freeEffectiveLimit = freeBaseLimit + extra_lessons;
   if (sessionCount >= freeEffectiveLimit) {
     return {
       allowed: false,
-      reason: "You've used your free session. Buy an extra session or upgrade to continue learning.",
+      reason: "You've used your free sessions. Buy an additional lesson or upgrade to continue.",
       plan: "free",
       used: sessionCount,
       limit: freeEffectiveLimit,

@@ -58,6 +58,7 @@ export async function POST(request: NextRequest) {
             .update({ rabbit_hole_bonus_plays: (profile?.rabbit_hole_bonus_plays ?? 0) + 3 })
             .eq("id", userId);
         } else if (priceType === "extra_lesson") {
+          const quantity = Math.max(1, Math.min(500, Number(session.metadata?.quantity) || 1));
           // Increment extra_lessons counter
           const { data: profile } = await supabase
             .from("profiles")
@@ -67,7 +68,7 @@ export async function POST(request: NextRequest) {
 
           await supabase
             .from("profiles")
-            .update({ extra_lessons: (profile?.extra_lessons ?? 0) + 1 })
+            .update({ extra_lessons: (profile?.extra_lessons ?? 0) + quantity })
             .eq("id", userId);
         }
         // Subscription checkout is handled by customer.subscription.updated
@@ -82,7 +83,13 @@ export async function POST(request: NextRequest) {
         if (!userId) break;
 
         const priceType = subscription.metadata?.price_type;
-        const plan = priceType === "pro" ? "pro" : priceType === "regular" ? "regular" : "regular";
+        const plan = priceType === "pro_teams"
+          ? "pro_teams"
+          : priceType === "regular_2026"
+            ? "regular_2026"
+            : priceType === "pro"
+              ? "pro"
+              : "regular";
 
         // In the 2026 Stripe API, current_period_end lives on subscription items
         const periodEnd = subscription.items?.data?.[0]?.current_period_end;

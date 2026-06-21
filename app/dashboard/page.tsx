@@ -1102,19 +1102,19 @@ export default function DashboardPage() {
                 <div className="bg-neutral-900 rounded-xl p-6 border border-neutral-800">
                   <div className="flex items-center justify-between mb-4">
                     <div className="text-sm text-neutral-400">{t('dashboard.currentPlan')}</div>
-                    {usageData.plan === "pro" && (
+                    {(usageData.plan === "pro" || usageData.plan === "pro_teams") && (
                       <span className="px-2 py-1 bg-purple-500/20 text-purple-400 text-xs rounded-full">{t('dashboard.pro')}</span>
                     )}
-                    {usageData.plan === "regular" && (
+                    {(usageData.plan === "regular" || usageData.plan === "regular_2026") && (
                       <span className="px-2 py-1 bg-blue-500/20 text-blue-400 text-xs rounded-full">{t('dashboard.regular')}</span>
                     )}
                     {usageData.plan === "free" && (
                       <span className="px-2 py-1 bg-neutral-700 text-neutral-300 text-xs rounded-full">{t('dashboard.free')}</span>
                     )}
                   </div>
-                  <div className="text-3xl font-bold text-white mb-1 capitalize">{usageData.plan}</div>
+                  <div className="text-3xl font-bold text-white mb-1 capitalize">{usageData.plan === "pro_teams" ? "Pro / Teams" : usageData.plan === "regular_2026" ? "Regular" : usageData.plan}</div>
                   <div className="text-sm text-neutral-500">
-                    {usageData.plan === "pro" ? t('dashboard.pricePro') : usageData.plan === "regular" ? t('dashboard.priceRegular') : t('dashboard.priceFree')}
+                    {usageData.plan === "pro_teams" ? "$499/month" : usageData.plan === "regular_2026" ? "$29.99/month" : usageData.plan === "pro" ? t('dashboard.pricePro') : usageData.plan === "regular" ? t('dashboard.priceRegular') : t('dashboard.priceFree')}
                   </div>
                 </div>
 
@@ -1179,7 +1179,7 @@ export default function DashboardPage() {
                         {t('dashboard.resetsOn', { date: new Date(usageData.periodEnd).toLocaleDateString("en-US", { month: "short", day: "numeric" }) })}
                       </div>
                       <div className="text-sm text-neutral-500">
-                        {usageData.plan === "regular" && t('dashboard.regularResetDesc')}
+                        {(usageData.plan === "regular" || usageData.plan === "regular_2026" || usageData.plan === "pro_teams") && t('dashboard.regularResetDesc')}
                         {usageData.plan === "pro" && t('dashboard.unlimitedContinue')}
                       </div>
                     </>
@@ -1193,7 +1193,7 @@ export default function DashboardPage() {
                       </div>
                     </>
                   )}
-                  {(usageData.plan === "free" || usageData.plan === "regular") && (
+                  {(usageData.plan === "free" || usageData.plan === "regular" || usageData.plan === "regular_2026") && (
                     <Link
                       href="/pricing"
                       className="mt-4 block w-full py-2 text-center border border-emerald-600 text-emerald-400 rounded-lg hover:bg-emerald-600/10 transition-colors text-sm font-medium"

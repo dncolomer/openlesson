@@ -12,15 +12,12 @@ import type { ApiKeyScope } from "@/lib/agent-v2/types";
 
 const VALID_SCOPES: ApiKeyScope[] = [
   "*",
-  "plans:read",
-  "plans:write",
-  "sessions:read",
-  "sessions:write",
-  "analysis:write",
-  "assistant:read",
-  "analytics:read",
-  "proofs:read",
-  "proofs:anchor",
+  "workspaces:read",
+  "workspaces:write",
+  "ghl:read",
+  "ghl:write",
+  "org:read",
+  "org:write",
 ];
 
 const MAX_KEYS_PER_USER = 10;
@@ -86,7 +83,7 @@ export async function POST(req: NextRequest) {
     // ── Check Pro subscription ──────────────────────────────────
     const { data: profile, error: profileError } = await supabase
       .from("profiles")
-      .select("plan, subscription_status, is_admin")
+      .select("plan, subscription_status, is_admin, organization_id, is_org_admin")
       .eq("id", user.id)
       .single();
 
@@ -96,13 +93,13 @@ export async function POST(req: NextRequest) {
     }
 
     const isAdmin = profile.is_admin === true;
-    const isPro = profile.plan === "pro" && profile.subscription_status === "active";
+    const isTeams = profile.plan === "pro_teams" && profile.subscription_status === "active";
 
-    if (!isAdmin && !isPro) {
+    if (!isAdmin && !isTeams) {
       return errorResponse(
         403,
-        "subscription_lapsed",
-        "A Pro subscription is required to create API keys.",
+        "teams_required",
+        "The Agentic API requires the Teams tier.",
         { renew_url: "https://openlesson.academy/pricing" }
       );
     }
@@ -189,6 +186,7 @@ export async function POST(req: NextRequest) {
       .from("agent_api_keys")
       .insert({
         user_id: user.id,
+        organization_id: profile.organization_id || null,
         key_hash: keyHash,
         key_prefix: keyPrefix,
         label: label || null,

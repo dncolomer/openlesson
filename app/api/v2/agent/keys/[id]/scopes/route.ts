@@ -10,15 +10,12 @@ import type { ApiKeyScope } from "@/lib/agent-v2/types";
 
 const VALID_SCOPES: ApiKeyScope[] = [
   "*",
-  "plans:read",
-  "plans:write",
-  "sessions:read",
-  "sessions:write",
-  "analysis:write",
-  "assistant:read",
-  "analytics:read",
-  "proofs:read",
-  "proofs:anchor",
+  "workspaces:read",
+  "workspaces:write",
+  "ghl:read",
+  "ghl:write",
+  "org:read",
+  "org:write",
 ];
 
 export async function PATCH(

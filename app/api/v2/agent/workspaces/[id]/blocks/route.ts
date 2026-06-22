@@ -1,0 +1,36 @@
+import { NextRequest, NextResponse } from "next/server";
+import { authenticateRequest, errorResponse } from "@/lib/agent-v2/auth";
+
+interface RouteProps {
+  params: Promise<{ id: string }>;
+}
+
+export async function GET(req: NextRequest, { params }: RouteProps) {
+  const result = await authenticateRequest(req, "workspaces:read");
+  if (result instanceof NextResponse) return result;
+  const { auth, supabase } = result;
+  const { id } = await params;
+
+  const { data: workspace, error: workspaceError } = await supabase
+    .from("learning_plans")
+    .select("id, user_id, organization_id")
+    .eq("id", id)
+    .single();
+
+  if (workspaceError || !workspace || (workspace.user_id !== auth.user_id && (!auth.organization_id || workspace.organization_id !== auth.organization_id))) {
+    return errorResponse(404, "workspace_not_found", "Workspace not found");
+  }
+
+  const { data: blocks, error } = await supabase
+    .from("plan_nodes")
+    .select("id, title, description, is_start, next_node_ids, status, created_at")
+    .eq("plan_id", id)
+    .order("created_at", { ascending: true });
+
+  if (error) {
+    console.error("[agent/workspace-blocks] Query error:", error);
+    return errorResponse(500, "internal_error", "Failed to list blocks");
+  }
+
+  return NextResponse.json({ blocks: blocks || [] });
+}

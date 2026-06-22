@@ -46,10 +46,9 @@ export async function authenticateApiKey(
   const supabase = await getServiceClient();
   const keyHash = await hashApiKey(apiKey);
 
-  // Look up key
   const { data: keyData, error } = await supabase
     .from("agent_api_keys")
-    .select("id, user_id, scopes, is_active, expires_at, rate_limit")
+    .select("id, user_id, guest_user_id, organization_id, scopes, is_active, expires_at, rate_limit")
     .eq("key_hash", keyHash)
     .single();
 
@@ -67,23 +66,49 @@ export async function authenticateApiKey(
     return errorResponse(401, "key_expired", "API key has expired");
   }
 
-  // Look up profile for Pro/admin check
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("plan, subscription_status, is_admin")
-    .eq("id", keyData.user_id)
-    .single();
+  let organizationId = keyData.organization_id as string | null;
+  let isOrgAdmin = false;
+  let isTeams = false;
 
-  const isAdmin = profile?.is_admin === true;
-  const isPro =
-    profile?.plan === "pro" &&
-    profile?.subscription_status === "active";
+  if (keyData.user_id) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("plan, subscription_status, is_admin, organization_id, is_org_admin")
+      .eq("id", keyData.user_id)
+      .single();
 
-  if (!isAdmin && !isPro) {
+    const isAdmin = profile?.is_admin === true;
+    organizationId = organizationId || profile?.organization_id || null;
+    isOrgAdmin = profile?.is_org_admin === true || isAdmin;
+    isTeams = isAdmin || (profile?.plan === "pro_teams" && profile?.subscription_status === "active");
+  } else if (keyData.guest_user_id) {
+    const { data: guest } = await supabase
+      .from("organization_guest_users")
+      .select("id, organization_id, status")
+      .eq("id", keyData.guest_user_id)
+      .single();
+
+    if (!guest || guest.status !== "active") {
+      return errorResponse(401, "key_revoked", "Guest API key is no longer active");
+    }
+
+    organizationId = organizationId || guest.organization_id;
+    const { data: teamsAdmin } = await supabase
+      .from("profiles")
+      .select("id")
+      .eq("organization_id", organizationId)
+      .eq("is_org_admin", true)
+      .eq("plan", "pro_teams")
+      .eq("subscription_status", "active")
+      .limit(1);
+    isTeams = !!teamsAdmin?.length;
+  }
+
+  if (!isTeams) {
     return errorResponse(
       403,
-      "subscription_lapsed",
-      "A Pro subscription is required to use the Agentic API.",
+      "teams_required",
+      "The Agentic API organization and guest features require the Teams tier.",
       { renew_url: "https://openlesson.academy/pricing" }
     );
   }
@@ -108,6 +133,9 @@ export async function authenticateApiKey(
 
   const auth: AuthContext = {
     user_id: keyData.user_id,
+    guest_user_id: keyData.guest_user_id || null,
+    organization_id: organizationId,
+    is_org_admin: isOrgAdmin,
     key_id: keyData.id,
     scopes,
   };

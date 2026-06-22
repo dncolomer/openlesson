@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { authenticateApiKey, hasScope } from "@/lib/agent-v2/auth";
-import type { ApiKeyScope } from "@/lib/agent-v2/types";
+import type { ApiKeyScope, AuthContext } from "@/lib/agent-v2/types";
 
 export const runtime = "nodejs";
 
@@ -22,16 +22,12 @@ const MCP_PROTOCOL_VERSION = "2025-03-26";
 
 const READ_TOOLS = [
   {
-    name: "list_sessions",
-    description: "List the authenticated OpenLesson user's tutoring sessions.",
+    name: "list_workspaces",
+    description: "List the authenticated OpenLesson user's Performance Workspaces.",
     inputSchema: {
       type: "object",
       properties: {
-        status: {
-          type: "string",
-          description: "Optional session status filter.",
-          enum: ["active", "paused", "completed", "ended_by_tutor"],
-        },
+        status: { type: "string", description: "Optional workspace status filter." },
         limit: {
           type: "number",
           description: "Maximum sessions to return, from 1 to 100. Defaults to 20.",
@@ -46,73 +42,47 @@ const READ_TOOLS = [
     annotations: { readOnlyHint: true },
   },
   {
-    name: "get_session",
-    description: "Read one OpenLesson tutoring session with its session plan and probes.",
+    name: "list_blocks",
+    description: "List available blocks in a Performance Workspace.",
     inputSchema: {
       type: "object",
       properties: {
-        session_id: {
+        workspace_id: {
           type: "string",
-          description: "OpenLesson session UUID.",
+          description: "OpenLesson workspace UUID.",
         },
       },
-      required: ["session_id"],
+      required: ["workspace_id"],
       additionalProperties: false,
     },
     annotations: { readOnlyHint: true },
   },
   {
-    name: "get_session_plan",
-    description: "Read the AI-generated step plan for one OpenLesson session.",
+    name: "list_ghl_links",
+    description: "List existing GHL links and completion status for a workspace.",
     inputSchema: {
       type: "object",
       properties: {
-        session_id: {
+        workspace_id: {
           type: "string",
-          description: "OpenLesson session UUID.",
+          description: "OpenLesson workspace UUID.",
         },
       },
-      required: ["session_id"],
+      required: ["workspace_id"],
       additionalProperties: false,
     },
     annotations: { readOnlyHint: true },
   },
   {
-    name: "list_learning_plans",
-    description: "List the authenticated OpenLesson user's learning plans.",
+    name: "get_ghl_results",
+    description: "Get completed GHL link results for a workspace.",
     inputSchema: {
       type: "object",
       properties: {
-        status: {
-          type: "string",
-          description: "Optional plan status filter.",
-          enum: ["active", "paused", "completed", "archived"],
-        },
-        limit: {
-          type: "number",
-          description: "Maximum plans to return, from 1 to 100. Defaults to 20.",
-        },
-        offset: {
-          type: "number",
-          description: "Pagination offset. Defaults to 0.",
-        },
+        workspace_id: { type: "string", description: "OpenLesson workspace UUID." },
+        ghl_link_id: { type: "string", description: "GHL link UUID." },
       },
-      additionalProperties: false,
-    },
-    annotations: { readOnlyHint: true },
-  },
-  {
-    name: "get_learning_plan",
-    description: "Read one OpenLesson learning plan with its graph nodes.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        plan_id: {
-          type: "string",
-          description: "OpenLesson learning plan UUID.",
-        },
-      },
-      required: ["plan_id"],
+      required: ["workspace_id", "ghl_link_id"],
       additionalProperties: false,
     },
     annotations: { readOnlyHint: true },
@@ -169,24 +139,21 @@ function requireScope(scopes: ApiKeyScope[], scope: ApiKeyScope) {
 async function callTool(
   name: string,
   args: Record<string, unknown>,
-  auth: { user_id: string; scopes: ApiKeyScope[] },
+  auth: AuthContext,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   supabase: any
 ) {
-  if (name === "list_sessions") {
-    requireScope(auth.scopes, "sessions:read");
+  if (name === "list_workspaces") {
+    requireScope(auth.scopes, "workspaces:read");
 
     const limit = boundedInt(args.limit, 20, 1, 100);
     const offset = boundedInt(args.offset, 0, 0, 10_000);
     const status = stringArg(args, "status");
 
     let query = supabase
-      .from("sessions")
-      .select(
-        "id, problem, status, duration_ms, report, report_generated_at, metadata, created_at, ended_at",
-        { count: "exact" }
-      )
-      .eq("user_id", auth.user_id)
+      .from("learning_plans")
+      .select("id, title, root_topic, status, notes, created_at, updated_at", { count: "exact" })
+      .or(auth.user_id ? `user_id.eq.${auth.user_id},organization_id.eq.${auth.organization_id}` : `organization_id.eq.${auth.organization_id}`)
       .order("created_at", { ascending: false })
       .range(offset, offset + limit - 1);
 
@@ -196,7 +163,7 @@ async function callTool(
     if (error) throw new Error(error.message);
 
     return textToolResult({
-      sessions: data || [],
+      workspaces: data || [],
       pagination: {
         total: count ?? 0,
         limit,
@@ -206,117 +173,72 @@ async function callTool(
     });
   }
 
-  if (name === "get_session") {
-    requireScope(auth.scopes, "sessions:read");
+  if (name === "list_blocks") {
+    requireScope(auth.scopes, "workspaces:read");
 
-    const sessionId = stringArg(args, "session_id");
-    if (!sessionId) throw new Error("session_id is required.");
+    const workspaceId = stringArg(args, "workspace_id");
+    if (!workspaceId) throw new Error("workspace_id is required.");
 
-    const { data: session, error: sessionError } = await supabase
-      .from("sessions")
-      .select("id, user_id, problem, status, duration_ms, report, report_generated_at, metadata, created_at, ended_at")
-      .eq("id", sessionId)
-      .eq("user_id", auth.user_id)
-      .single();
-
-    if (sessionError || !session) throw new Error("Session not found.");
-
-    const [{ data: plan }, { data: probes }] = await Promise.all([
-      supabase.from("session_plans").select("*").eq("session_id", sessionId).maybeSingle(),
-      supabase
-        .from("probes")
-        .select("id, timestamp_ms, gap_score, signals, text, expanded_text, request_type, plan_step_id, archived, focused, created_at")
-        .eq("session_id", sessionId)
-        .order("timestamp_ms", { ascending: true }),
-    ]);
-
-    return textToolResult({ session, plan: plan || null, probes: probes || [] });
-  }
-
-  if (name === "get_session_plan") {
-    requireScope(auth.scopes, "sessions:read");
-
-    const sessionId = stringArg(args, "session_id");
-    if (!sessionId) throw new Error("session_id is required.");
-
-    const { data: session, error: sessionError } = await supabase
-      .from("sessions")
-      .select("id")
-      .eq("id", sessionId)
-      .eq("user_id", auth.user_id)
-      .single();
-
-    if (sessionError || !session) throw new Error("Session not found.");
-
-    const { data: plan, error: planError } = await supabase
-      .from("session_plans")
-      .select("*")
-      .eq("session_id", sessionId)
-      .maybeSingle();
-
-    if (planError) throw new Error(planError.message);
-    if (!plan) throw new Error("No plan found for this session.");
-
-    return textToolResult({ plan });
-  }
-
-  if (name === "list_learning_plans") {
-    requireScope(auth.scopes, "plans:read");
-
-    const limit = boundedInt(args.limit, 20, 1, 100);
-    const offset = boundedInt(args.offset, 0, 0, 10_000);
-    const status = stringArg(args, "status");
-
-    let query = supabase
+    const { data: workspace, error: workspaceError } = await supabase
       .from("learning_plans")
-      .select(
-        "id, title, root_topic, status, source_type, source_url, source_summary, notes, cover_image_url, is_public, is_group, created_at, updated_at",
-        { count: "exact" }
-      )
-      .eq("user_id", auth.user_id)
-      .order("created_at", { ascending: false })
-      .range(offset, offset + limit - 1);
-
-    if (status) query = query.eq("status", status);
-
-    const { data, error, count } = await query;
-    if (error) throw new Error(error.message);
-
-    return textToolResult({
-      plans: data || [],
-      pagination: {
-        total: count ?? 0,
-        limit,
-        offset,
-        has_more: offset + limit < (count ?? 0),
-      },
-    });
-  }
-
-  if (name === "get_learning_plan") {
-    requireScope(auth.scopes, "plans:read");
-
-    const planId = stringArg(args, "plan_id");
-    if (!planId) throw new Error("plan_id is required.");
-
-    const { data: plan, error: planError } = await supabase
-      .from("learning_plans")
-      .select("*")
-      .eq("id", planId)
-      .eq("user_id", auth.user_id)
+      .select("id, user_id, organization_id")
+      .eq("id", workspaceId)
       .single();
 
-    if (planError || !plan) throw new Error("Learning plan not found.");
+    if (workspaceError || !workspace || (workspace.user_id !== auth.user_id && (!auth.organization_id || workspace.organization_id !== auth.organization_id))) throw new Error("Workspace not found.");
 
-    const { data: nodes, error: nodesError } = await supabase
+    const { data: blocks, error } = await supabase
       .from("plan_nodes")
-      .select("*")
-      .eq("plan_id", planId)
+      .select("id, title, description, is_start, next_node_ids, status, created_at")
+      .eq("plan_id", workspaceId)
       .order("created_at", { ascending: true });
 
-    if (nodesError) throw new Error(nodesError.message);
+    if (error) throw new Error(error.message);
+    return textToolResult({ blocks: blocks || [] });
+  }
 
-    return textToolResult({ plan, nodes: nodes || [] });
+  if (name === "list_ghl_links") {
+    requireScope(auth.scopes, "ghl:read");
+
+    const workspaceId = stringArg(args, "workspace_id");
+    if (!workspaceId) throw new Error("workspace_id is required.");
+
+    let query = supabase
+      .from("workspace_ghc_sessions")
+      .select("id, plan_id, plan_node_id, status, requested_duration_seconds, duration_seconds, mode, overall_score, created_at, started_at, completed_at")
+      .eq("plan_id", workspaceId)
+      .order("created_at", { ascending: false });
+
+    if (auth.guest_user_id) query = query.eq("guest_user_id", auth.guest_user_id);
+    else if (!auth.is_org_admin) query = query.eq("user_id", auth.user_id);
+
+    const { data: links, error } = await query;
+
+    if (error) throw new Error(error.message);
+    return textToolResult({ ghl_links: links || [] });
+  }
+
+  if (name === "get_ghl_results") {
+    requireScope(auth.scopes, "ghl:read");
+
+    const workspaceId = stringArg(args, "workspace_id");
+    const linkId = stringArg(args, "ghl_link_id");
+    if (!workspaceId) throw new Error("workspace_id is required.");
+    if (!linkId) throw new Error("ghl_link_id is required.");
+
+    let query = supabase
+      .from("workspace_ghc_sessions")
+      .select("id, plan_id, plan_node_id, xai_file_id, status, duration_seconds, requested_duration_seconds, mode, summary, analysis, overall_score, marker_scores, created_at, started_at, completed_at")
+      .eq("id", linkId)
+      .eq("plan_id", workspaceId);
+
+    if (auth.guest_user_id) query = query.eq("guest_user_id", auth.guest_user_id);
+    else if (!auth.is_org_admin) query = query.eq("user_id", auth.user_id);
+
+    const { data: link, error } = await query.single();
+
+    if (error || !link) throw new Error("GHL link not found.");
+    return textToolResult({ ghl_result: { ...link, gap_analysis: link.status === "completed" ? link.analysis?.gap_analysis || null : null } });
   }
 
   throw new Error(`Unknown tool: ${name}`);
@@ -324,7 +246,7 @@ async function callTool(
 
 async function handleJsonRpc(
   message: JsonRpcMessage,
-  auth: { user_id: string; scopes: ApiKeyScope[] },
+  auth: AuthContext,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   supabase: any
 ) {
@@ -341,7 +263,7 @@ async function handleJsonRpc(
         capabilities: { tools: { listChanged: false } },
         serverInfo: { name: "openlesson-grok-mcp", version: "0.1.0" },
         instructions:
-          "OpenLesson read-only connector. Use the tools to read this user's tutoring sessions and learning plans. Do not attempt to modify OpenLesson data.",
+          "OpenLesson read-only connector. Use the tools to read Performance Workspaces, blocks, and GHL link results. Do not attempt to modify OpenLesson data.",
       },
     };
   }
@@ -391,7 +313,7 @@ async function handleJsonRpc(
 }
 
 async function authenticateMcpKey(key: string) {
-  return authenticateApiKey(decodeURIComponent(key), "sessions:read");
+  return authenticateApiKey(decodeURIComponent(key), "workspaces:read");
 }
 
 export async function GET(

@@ -3,6 +3,11 @@ import Stripe from "stripe";
 import { createAdminClient } from "@/lib/supabase/admin";
 export const runtime = "nodejs";
 
+const BASE_INCLUDED_LESSONS: Record<string, number> = {
+  regular_2026: 25,
+  pro_teams: 250,
+};
+
 function getStripe() {
   return new Stripe(process.env.STRIPE_SECRET_KEY!, {
     apiVersion: "2026-01-28.clover",
@@ -58,6 +63,7 @@ export async function POST(request: NextRequest) {
             .update({ rabbit_hole_bonus_plays: (profile?.rabbit_hole_bonus_plays ?? 0) + 3 })
             .eq("id", userId);
         } else if (priceType === "extra_lesson") {
+          const quantity = Math.max(1, Math.min(500, Number(session.metadata?.quantity) || 1));
           // Increment extra_lessons counter
           const { data: profile } = await supabase
             .from("profiles")
@@ -67,7 +73,7 @@ export async function POST(request: NextRequest) {
 
           await supabase
             .from("profiles")
-            .update({ extra_lessons: (profile?.extra_lessons ?? 0) + 1 })
+            .update({ extra_lessons: (profile?.extra_lessons ?? 0) + quantity })
             .eq("id", userId);
         }
         // Subscription checkout is handled by customer.subscription.updated
@@ -82,7 +88,14 @@ export async function POST(request: NextRequest) {
         if (!userId) break;
 
         const priceType = subscription.metadata?.price_type;
-        const plan = priceType === "pro" ? "pro" : priceType === "regular" ? "regular" : "regular";
+        const monthlyVolume = Math.max(1, Number(subscription.metadata?.monthly_volume) || BASE_INCLUDED_LESSONS[priceType || ""] || 0);
+        const plan = priceType === "pro_teams"
+          ? "pro_teams"
+          : priceType === "regular_2026"
+            ? "regular_2026"
+            : priceType === "pro"
+              ? "pro"
+              : "regular";
 
         // In the 2026 Stripe API, current_period_end lives on subscription items
         const periodEnd = subscription.items?.data?.[0]?.current_period_end;
@@ -94,8 +107,7 @@ export async function POST(request: NextRequest) {
             stripe_subscription_id: subscription.id,
             subscription_status: subscription.status === "active" || subscription.status === "trialing" ? "active" : subscription.status,
             ...(periodEnd ? { current_period_end: new Date(periodEnd * 1000).toISOString() } : {}),
-            // Reset extra lessons on new period
-            ...(event.type === "customer.subscription.created" ? { extra_lessons: 0 } : {}),
+            extra_lessons: Math.max(0, monthlyVolume - (BASE_INCLUDED_LESSONS[plan] || 0)),
           })
           .eq("id", userId);
         break;
@@ -139,11 +151,16 @@ export async function POST(request: NextRequest) {
 
         if (profile) {
           // Reset extra lessons at the start of each new billing period
+          const subscription = await getStripe().subscriptions.retrieve(subscriptionId).catch(() => null);
+          const priceType = subscription?.metadata?.price_type;
+          const plan = priceType === "pro_teams" ? "pro_teams" : priceType === "regular_2026" ? "regular_2026" : null;
+          const monthlyVolume = Math.max(0, Number(subscription?.metadata?.monthly_volume) || (plan ? BASE_INCLUDED_LESSONS[plan] : 0));
+
           await supabase
             .from("profiles")
             .update({
               subscription_status: "active",
-              extra_lessons: 0,
+              extra_lessons: plan ? Math.max(0, monthlyVolume - BASE_INCLUDED_LESSONS[plan]) : 0,
             })
             .eq("id", profile.id);
         }

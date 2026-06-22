@@ -507,10 +507,10 @@ export function PlanView({ initialPlan, initialNodes }: PlanViewProps) {
             <div className="flex flex-col gap-2">
               {currentUserId && (
                 <Link
-                  href={`/workspace/${planId}/teach-back`}
+                  href={`/workspace/${planId}/ghl-score`}
                   className="w-full text-center text-xs px-3 py-2 rounded-md bg-white text-black hover:bg-neutral-200 transition-all"
                 >
-                  Start Teach Back
+                  Start GHL Score
                 </Link>
               )}
               {(plan.is_public || plan.is_group) && (

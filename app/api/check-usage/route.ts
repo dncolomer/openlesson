@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { canStartSession, PLANS, type PlanId } from "@/lib/plans";
 
 export const runtime = "nodejs";
@@ -72,7 +73,7 @@ export async function GET() {
     // Load profile - use service role query to bypass RLS
     const { data: profile, error: profileError } = await supabase
       .from("profiles")
-      .select("plan, is_admin, extra_lessons, subscription_status, current_period_end, token_tier, token_validity_expires_at")
+      .select("plan, is_admin, extra_lessons, subscription_status, current_period_end, token_tier, token_validity_expires_at, organization_id")
       .eq("id", user.id)
       .single();
 
@@ -104,13 +105,31 @@ export async function GET() {
       const periodStart = new Date(periodEnd);
       periodStart.setDate(periodStart.getDate() - 30);
 
-      const { count } = await supabase
-        .from("sessions")
-        .select("id", { count: "exact", head: true })
-        .eq("user_id", user.id)
-        .neq("status", "active")
-        .gte("created_at", periodStart.toISOString());
-      sessionCount = count ?? 0;
+      if (profile.plan === "pro_teams" && profile.organization_id) {
+        const admin = createAdminClient();
+        const { data: orgMembers } = await admin
+          .from("profiles")
+          .select("id")
+          .eq("organization_id", profile.organization_id);
+        const memberIds = (orgMembers || []).map((member) => member.id);
+        if (memberIds.length > 0) {
+          const { count } = await admin
+            .from("sessions")
+            .select("id", { count: "exact", head: true })
+            .in("user_id", memberIds)
+            .neq("status", "active")
+            .gte("created_at", periodStart.toISOString());
+          sessionCount = count ?? 0;
+        }
+      } else {
+        const { count } = await supabase
+          .from("sessions")
+          .select("id", { count: "exact", head: true })
+          .eq("user_id", user.id)
+          .neq("status", "active")
+          .gte("created_at", periodStart.toISOString());
+        sessionCount = count ?? 0;
+      }
     }
 
     // Also count localStorage-based sessions if no DB sessions found

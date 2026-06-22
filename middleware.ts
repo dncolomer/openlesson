@@ -47,7 +47,7 @@ export async function middleware(request: NextRequest) {
   );
 
   // Public routes that should skip all auth logic
-  const publicRoutes = ["/pricing"];
+  const publicRoutes = ["/pricing", "/ghl-score/session"];
   const isPublicRoute = publicRoutes.some((route) =>
     pathname.startsWith(route)
   );

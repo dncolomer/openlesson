@@ -2,7 +2,7 @@
 // PLAN DEFINITIONS & USAGE LIMITS
 // ============================================
 
-export type PlanId = "free" | "regular" | "pro";
+export type PlanId = "free" | "regular" | "pro" | "regular_2026" | "pro_teams";
 
 export interface PlanDef {
   id: PlanId;
@@ -20,11 +20,11 @@ export const PLANS: Record<PlanId, PlanDef> = {
     name: "Free",
     price: "$0",
     priceAmount: 0,
-    sessionsPerPeriod: 10,
+    sessionsPerPeriod: 5,
     features: [
-      "10 tutoring sessions",
-      "Real-time audio analysis",
-      "Session report",
+      "5 starter blocks",
+      "One Performance Workspace",
+      "Basic GHL readiness report",
     ],
     stripePriceEnv: null,
   },
@@ -35,14 +35,29 @@ export const PLANS: Record<PlanId, PlanDef> = {
     priceAmount: 499,
     sessionsPerPeriod: 5,
     features: [
-      "5 sessions per month",
-      "Buy extra sessions at $1.99",
+      "5 blocks per month",
+      "Buy extra blocks at $1.99",
       "Think-aloud data uploads",
       "Muse EEG integration",
       "Custom system prompts",
       "Session reports & history",
     ],
     stripePriceEnv: "STRIPE_PRICE_REGULAR",
+  },
+  regular_2026: {
+    id: "regular_2026",
+    name: "Regular",
+    price: "$49",
+    priceAmount: 4900,
+    sessionsPerPeriod: 25,
+    features: [
+      "25 blocks per month",
+      "Volume upgrades before checkout",
+      "Additional blocks at $3.99 each",
+      "Think-aloud data uploads",
+      "Session reports & history",
+    ],
+    stripePriceEnv: null,
   },
   pro: {
     id: "pro",
@@ -51,7 +66,7 @@ export const PLANS: Record<PlanId, PlanDef> = {
     priceAmount: 1499,
     sessionsPerPeriod: null,
     features: [
-      "Unlimited sessions",
+      "Unlimited blocks",
       "Think-aloud data uploads",
       "Custom system prompts",
       "Muse EEG integration",
@@ -61,9 +76,26 @@ export const PLANS: Record<PlanId, PlanDef> = {
     ],
     stripePriceEnv: "STRIPE_PRICE_PRO",
   },
+  pro_teams: {
+    id: "pro_teams",
+    name: "Pro / Teams",
+    price: "$399",
+    priceAmount: 39900,
+    sessionsPerPeriod: 250,
+    features: [
+      "250 blocks per month",
+      "Volume upgrades before checkout",
+      "Additional blocks at $1.99 each",
+      "Team readiness workspaces",
+      "Readiness evidence and history",
+      "Priority support",
+    ],
+    stripePriceEnv: null,
+  },
 };
 
-export const EXTRA_LESSON_PRICE = 199; // $1.99 in cents
+export const EXTRA_LESSON_PRICE = 499; // $4.99 in cents
+export const PRO_TEAMS_EXTRA_LESSON_PRICE = 299; // $2.99 in cents
 
 export interface UserProfile {
   plan: PlanId;
@@ -127,18 +159,18 @@ export function canStartSession(
     }
   }
 
-  // Pro = unlimited
+  // Legacy Pro = unlimited. Keep existing subscribers untouched.
   if (plan === "pro" && subscription_status === "active") {
     return { allowed: true, plan, used: sessionCount, limit: null, isAdmin: false };
   }
 
-  // Regular = 5 per period + extras
+  // Legacy Regular = 5 per period + extras. Keep existing subscribers untouched.
   if (plan === "regular" && subscription_status === "active") {
     const effectiveLimit = (planDef.sessionsPerPeriod ?? 0) + extra_lessons;
     if (sessionCount >= effectiveLimit) {
       return {
         allowed: false,
-        reason: `You've used all ${effectiveLimit} sessions this month. Buy extra sessions or upgrade to Pro.`,
+        reason: `You've used all ${effectiveLimit} legacy Regular blocks this month. Buy additional blocks to continue.`,
         plan,
         used: sessionCount,
         limit: effectiveLimit,
@@ -148,13 +180,29 @@ export function canStartSession(
     return { allowed: true, plan, used: sessionCount, limit: effectiveLimit, isAdmin: false };
   }
 
-  // Free plan = 1 session ever + any purchased extras
+  // Current paid plans use finite monthly block allowances.
+  if ((plan === "regular_2026" || plan === "pro_teams") && subscription_status === "active") {
+    const effectiveLimit = (planDef.sessionsPerPeriod ?? 0) + extra_lessons;
+    if (sessionCount >= effectiveLimit) {
+      return {
+        allowed: false,
+        reason: `You've used all ${effectiveLimit} blocks this month. Buy additional blocks to continue.`,
+        plan,
+        used: sessionCount,
+        limit: effectiveLimit,
+        isAdmin: false,
+      };
+    }
+    return { allowed: true, plan, used: sessionCount, limit: effectiveLimit, isAdmin: false };
+  }
+
+  // Free plan = starter blocks + any purchased extras.
   const freeBaseLimit = planDef.sessionsPerPeriod ?? 1;
   const freeEffectiveLimit = freeBaseLimit + extra_lessons;
   if (sessionCount >= freeEffectiveLimit) {
     return {
       allowed: false,
-      reason: "You've used your free session. Buy an extra session or upgrade to continue learning.",
+      reason: "You've used your free blocks. Buy additional blocks or upgrade to continue.",
       plan: "free",
       used: sessionCount,
       limit: freeEffectiveLimit,

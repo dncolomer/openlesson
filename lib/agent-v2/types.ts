@@ -5,15 +5,12 @@
 // --- API Key Types ---
 
 export type ApiKeyScope =
-  | "plans:read"
-  | "plans:write"
-  | "sessions:read"
-  | "sessions:write"
-  | "analysis:write"
-  | "assistant:read"
-  | "analytics:read"
-  | "proofs:read"
-  | "proofs:anchor"
+  | "workspaces:read"
+  | "workspaces:write"
+  | "ghl:read"
+  | "ghl:write"
+  | "org:read"
+  | "org:write"
   | "*";
 
 export interface AgentApiKey {
@@ -33,7 +30,10 @@ export interface AgentApiKey {
 // --- Auth Context ---
 
 export interface AuthContext {
-  user_id: string;
+  user_id: string | null;
+  guest_user_id: string | null;
+  organization_id: string | null;
+  is_org_admin: boolean;
   key_id: string;
   scopes: ApiKeyScope[];
 }
@@ -105,14 +105,11 @@ export type ErrorCode =
   | "not_found"
   | "validation_error"
   | "rate_limit_exceeded"
-  | "session_not_active"
-  | "session_already_ended"
-  | "plan_not_found"
-  | "node_not_found"
-  | "proof_not_found"
-  | "anchor_failed"
-  | "transcription_failed"
-  | "analysis_failed"
+  | "workspace_not_found"
+  | "block_not_found"
+  | "ghl_link_not_found"
+  | "teams_required"
+  | "guest_not_found"
   | "internal_error";
 
 export interface ApiError {
@@ -165,33 +162,9 @@ export type SessionStatus = "active" | "paused" | "completed" | "ended_by_tutor"
 // --- Scope requirements per endpoint ---
 
 export const ENDPOINT_SCOPES: Record<string, ApiKeyScope> = {
-  "GET /plans": "plans:read",
-  "POST /plans": "plans:write",
-  "GET /plans/:id": "plans:read",
-  "PATCH /plans/:id": "plans:write",
-  "DELETE /plans/:id": "plans:write",
-  "GET /plans/:id/nodes": "plans:read",
-  "POST /plans/:id/adapt": "plans:write",
-  "POST /plans/from-video": "plans:write",
-  "GET /sessions": "sessions:read",
-  "POST /sessions": "sessions:write",
-  "GET /sessions/:id": "sessions:read",
-  "POST /sessions/:id/analyze": "analysis:write",
-  "POST /sessions/:id/pause": "sessions:write",
-  "POST /sessions/:id/resume": "sessions:write",
-  "POST /sessions/:id/restart": "sessions:write",
-  "POST /sessions/:id/end": "sessions:write",
-  "GET /sessions/:id/probes": "sessions:read",
-  "GET /sessions/:id/plan": "sessions:read",
-  "GET /sessions/:id/transcript": "sessions:read",
-  "POST /sessions/:id/ask": "assistant:read",
-  "GET /sessions/:id/assistant/conversations/:convId": "assistant:read",
-  "GET /analytics/plans/:id": "analytics:read",
-  "GET /analytics/sessions/:id": "analytics:read",
-  "GET /analytics/user": "analytics:read",
-  "GET /proofs": "proofs:read",
-  "GET /proofs/:id": "proofs:read",
-  "GET /proofs/:id/verify": "proofs:read",
-  "POST /proofs/:id/anchor": "proofs:anchor",
-  "GET /proofs/session/:id/batch": "proofs:read",
+  "POST /workspaces": "workspaces:write",
+  "GET /workspaces/:id/blocks": "workspaces:read",
+  "POST /workspaces/:id/blocks/:blockId/ghl-links": "ghl:write",
+  "GET /workspaces/:id/ghl-links": "ghl:read",
+  "GET /workspaces/:id/ghl-links/:linkId/results": "ghl:read",
 };

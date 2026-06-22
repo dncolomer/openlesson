@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback, useEffect, useRef } from "react";
+import type React from "react";
 import { useRouter } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
 import { useI18n } from "../lib/i18n";
@@ -130,6 +131,15 @@ export function SessionItem({
       console.error("Failed to start session:", err);
       setIsStarting(false);
     }
+  };
+
+  const handleStartGhl = (event: React.MouseEvent) => {
+    event.stopPropagation();
+    if (!planId) return;
+    const params = new URLSearchParams({ planNodeId: node.id });
+    const contextualSessionId = activeSession?.id || node.session_id;
+    if (contextualSessionId) params.set("sessionId", contextualSessionId);
+    router.push(`/workspace/${planId}/ghl-score?${params.toString()}`);
   };
 
   const savePlanningPrompt = useCallback(async () => {
@@ -329,6 +339,13 @@ export function SessionItem({
                   {isStarting ? t('sessionItem.starting') : activeSession ? t('sessionItem.resumeLesson') : t('sessionItem.startLesson')}
                 </button>
               )}
+              <button
+                onClick={handleStartGhl}
+                className="px-3 py-2 rounded-md border border-neutral-700 bg-neutral-900 text-xs font-medium text-neutral-200 hover:border-neutral-500 hover:bg-neutral-800 transition-colors"
+                title="Start a GHL Score session with this workspace block as context"
+              >
+                GHL
+              </button>
             </div>
           )}
         </div>

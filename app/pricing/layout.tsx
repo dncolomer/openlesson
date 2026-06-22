@@ -1,9 +1,9 @@
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Pricing - AI Tutor Plans | openLesson",
+  title: "Pricing - Performance Readiness Plans | openLesson",
   description:
-    "Start free, upgrade when ready. AI tutoring from $4.99/month. Open source - self-host for free.",
+    "Create Performance Workspaces, measure readiness, and choose the monthly block volume you need.",
   keywords: [
     "AI tutor pricing",
     "learning platform cost",
@@ -12,9 +12,9 @@ export const metadata: Metadata = {
     "open source AI tutor",
   ],
   openGraph: {
-    title: "Pricing - AI Tutor Plans | openLesson",
+    title: "Pricing - Performance Readiness Plans | openLesson",
     description:
-      "Start free, upgrade when ready. AI tutoring from $4.99/month. Open source - self-host for free.",
+      "Create Performance Workspaces, measure readiness, and choose the monthly block volume you need.",
     url: "https://openlesson.academy/pricing",
     siteName: "openLesson",
     type: "website",
@@ -23,7 +23,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Pricing | openLesson",
     description:
-      "Start free, upgrade when ready. AI tutoring from $4.99/month.",
+      "Performance readiness plans for AI-enabled teams.",
     creator: "@uncertainsys",
   },
   alternates: {

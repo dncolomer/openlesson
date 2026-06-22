@@ -1,37 +1,61 @@
-# 🌐 OpenLesson Agentic API v2 Reference Guide
+# OpenLesson Agentic API
 
-This guide details the complete surface area for interacting with the openLesson tutoring platform via its dedicated V2 API endpoints (`/api/v2/agent/*`). This is the master reference for all client-side and plugin integrations.
+The Agentic API exposes only the performance-workspace and GHL-link workflow. It no longer exposes tutoring-session control, analytics, proofs, blockchain anchoring, or tool-usage tracking.
 
-## 🚀 Core Concepts
-*   **Goal:** The system moves beyond simple Q&A to create structured, verifiable learning paths.
-*   **Learning Plans (The "Why"):** Learning is now guided by a formal `Plan` object, which structures topics into sequential nodes.
-*   **Proof of Work:** Every critical action creates a **cryptographic proof** (SHA-256 fingerprint) and these proofs can be batched into Merkle Trees and optionally anchored on Solana for verifiability.
-*   **Multimodal Analysis:** The `analyze` endpoint is the primary point of interaction, accepting audio, text, *and* images simultaneously to assess understanding in real-time.
+Base path: `/api/v2/agent`
 
-## 🗺️ API Endpoints Summary
+Authenticate with `Authorization: Bearer <api_key>`.
 
-### I. Learning Plans (`/plans`)
-| Method | Endpoint | Description | Key Inputs / Outputs |
+## Endpoints
+
+| Method | Path | Scope | Purpose |
 | :--- | :--- | :--- | :--- |
-| `POST` | `/api/v2/agent/plans` | **Create Plan:** Generates a full, directed curriculum from a topic. | Requires `topic`, optional `duration_days`. Returns `plan` object. |
-| `POST` | `/api/v2/agent/plans/from-video` | Creates plan from external video source. | Requires `youtube_url`. |
-| `PATCH` | `/api/v2/agent/plans/{id}/adapt` | **Plan Adaptation:** Modifies the existing curriculum structure using natural language instructions. | Requires `instruction`, `plan_id`. Preserves completed nodes. |
+| `POST` | `/workspaces` | `workspaces:write` | Create a Performance Workspace from an initial prompt and optional files. |
+| `GET` | `/workspaces/{workspace_id}/blocks` | `workspaces:read` | List available blocks in a workspace. |
+| `POST` | `/workspaces/{workspace_id}/blocks/{block_id}/ghl-links` | `ghl:write` | Request a private GHL link for a block. Links open the GHL Score Session UI. |
+| `GET` | `/workspaces/{workspace_id}/ghl-links` | `ghl:read` | List existing GHL links and completion status. |
+| `GET` | `/workspaces/{workspace_id}/ghl-links/{link_id}/results` | `ghl:read` | Read completed GHL link results. Incomplete links return status with `null` result fields. |
+| `POST` | `/org/guests` | `org:write` | Organization admins create guest users by email and issue guest API keys. |
 
-### II. Session Management (`/sessions`)
-| Method | Endpoint | Description | Key Inputs / Outputs |
-| :--- | :--- | :--- | :--- |
-| `POST` | `/api/v2/agent/sessions` | **Start Session:** Begins tutoring. Can be standalone or tied to a specific Plan Node. | Requires `topic`, optionally `plan_id`/`plan_node_id`. |
-| `POST` | `/api/v2/agent/sessions/{id}/analyze` | **Heartbeat Analysis:** Submits current input for assessment (audio, text, images). | Accepts complex JSON array of inputs. Returns critical metrics like `gap_score`. |
-| `GET` | `/api/v2/agent/sessions/{id}` | Retrieves full session context, including plan and active probes. | Used to check state before action. |
-| `POST` | `/api/v2/agent/sessions/{id}/pause` / `/resume` | Allows the user or agent to pause/resume learning with full context retention. | Requires a `reason` or `continuation_context`. |
-| `POST` | `/api/v2/agent/sessions/{id}/end` | Finalizes session, generating summary and final proof package. | Returns detailed report & batch proof. |
+## Create Workspace
 
-### III. Assistant & Analytics
-*   **Helios Chat:** `POST /sessions/{id}/ask` - Use this when the user gets stuck on a specific concept *during* an active session. Forwards the question to Helios (Socratic, concise) with full conversation history.
-*   **Analytics:** `GET /analytics/user` - High-level overview of lifetime progress and achievements across all plans/sessions.
+`POST /api/v2/agent/workspaces`
 
-## 🔑 Best Practices for Agents (Implementation Guide)
-1.  **State Flow is Crucial:** Always follow this pattern: **Plan $\to$ Start $\to$ Analyze ($\dots$ loop) $\to$ End**.
-2.  **Error Handling:** The API returns standardized error JSON (`code`, `message`) upon failure, rather than just HTTP status codes, making programmatic handling robust.
+```json
+{
+  "initial_prompt": "Prepare me to explain vector databases in a technical interview.",
+  "files": [
+    {
+      "name": "notes.md",
+      "mime_type": "text/markdown",
+      "data": "base64-encoded-file"
+    }
+  ]
+}
+```
 
-***This guide is the authoritative source for all v2 integrations.***
+Files are optional. Supported types are PDF, plain text, Markdown, JPEG, PNG, and WebP. A workspace can start with up to 5 files, each up to 10 MB.
+
+## GHL Links
+
+GHL means Genuine Human Learning Score. A GHL link opens a private score session URL such as `/ghl-score/session/{token}`. The URL is a bearer link and authenticates the learner directly into that GHL session without requiring an OpenLesson login or Agentic API key.
+
+Request body:
+
+```json
+{
+  "minutes": 15,
+  "guest_user_id": "optional-guest-id",
+  "guest_email": "optional-guest-email"
+}
+```
+
+Only `15` and `30` minute sessions are supported. Results include marker spider scores and `gap_analysis`.
+
+## Organizations And Guests
+
+Teams-tier users can create an organization through `POST /api/organization` and become its admin. Org admins can create guest users with `POST /api/v2/agent/org/guests` by providing an email. Guests receive individual API keys and can access organization workspaces and GHL links. If a guest later signs up with the same email, their real user inherits the guest's organization membership, GHL sessions, and guest API keys.
+
+## Removed Surface
+
+The Agentic API no longer includes proof anchoring, proof lists, plan adaptation, live tutoring sessions, analysis heartbeats, Helios chat, transcript routes, or analytics routes.

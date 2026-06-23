@@ -429,7 +429,7 @@ export default function OrganizationDetailPage() {
               {members.map((member) => (
                 <tr key={member.id} className="border-b border-neutral-800/50 hover:bg-neutral-800/20">
                   <td className="p-4">
-                    <Link href={`/admin/${member.id}`} className="hover:text-blue-400">
+                    <Link href={`/admin/users/${member.id}`} className="hover:text-blue-400">
                       <div className="text-neutral-200">{member.username || member.email || "Unknown"}</div>
                       <div className="text-xs text-neutral-500">{member.email}</div>
                     </Link>

@@ -4,6 +4,8 @@ import React, { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
+import { AdminTierSelect } from "@/components/AdminTierSelect";
+import { normalizeAdminTier, tierLabel, type AdminTierId } from "@/lib/admin/tiers";
 
 interface Lesson {
   id: string;
@@ -60,6 +62,7 @@ export default function UserDetailPage() {
   const [transcriptFilter, setTranscriptFilter] = useState<"all" | "yes" | "no">("all");
   const [eegFilter, setEegFilter] = useState<"all" | "yes" | "no">("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [tierUpdating, setTierUpdating] = useState(false);
 
   const supabase = createClient();
 
@@ -180,7 +183,7 @@ export default function UserDetailPage() {
 
   return (
     <main className="max-w-6xl mx-auto p-4 sm:px-6 py-8">
-      <Link href="/admin" className="text-sm text-neutral-400 hover:text-white mb-4 inline-block">
+      <Link href="/admin/users" className="text-sm text-neutral-400 hover:text-white mb-4 inline-block">
         ← Back to users
       </Link>
 
@@ -200,7 +203,31 @@ export default function UserDetailPage() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div>
             <div className="text-xs text-neutral-500">Plan</div>
-            <div className="text-neutral-200">{user?.plan}</div>
+            <div className="flex items-center gap-2">
+              <AdminTierSelect
+                value={user ? normalizeAdminTier(user) : "free"}
+                disabled={tierUpdating || !user}
+                onChange={async (tier: AdminTierId) => {
+                  if (!user) return;
+                  setTierUpdating(true);
+                  try {
+                    const res = await fetch("/api/admin/users", {
+                      method: "PUT",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ userId: user.id, plan: tier }),
+                    });
+                    if (res.ok) {
+                      const data = await res.json();
+                      setUser((prev) => (prev ? { ...prev, ...data.user } : prev));
+                    }
+                  } finally {
+                    setTierUpdating(false);
+                  }
+                }}
+                className="px-2 py-1 text-xs rounded border bg-neutral-900 border-neutral-700 text-neutral-200"
+              />
+              <span className="text-xs text-neutral-500">{user ? tierLabel(user.plan) : ""}</span>
+            </div>
           </div>
           <div>
             <div className="text-xs text-neutral-500">Status</div>
@@ -376,7 +403,7 @@ export default function UserDetailPage() {
         </div>
 
         <div className="bg-neutral-900 border border-neutral-800 rounded-lg p-4">
-          <h2 className="text-lg font-medium mb-4">Plans ({plans.length})</h2>
+          <h2 className="text-lg font-medium mb-4">Workspaces ({plans.length})</h2>
           {plans.length === 0 ? (
             <p className="text-neutral-500 text-sm">No plans found</p>
           ) : (

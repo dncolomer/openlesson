@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { buildTierUpdate, isAdminTier } from "@/lib/admin/tiers";
 
 export const runtime = "nodejs";
 
@@ -132,8 +133,13 @@ export async function PUT(request: Request) {
     }
 
     const updateData: Record<string, unknown> = {};
-    
-    if (plan !== undefined) updateData.plan = plan;
+
+    if (plan !== undefined) {
+      if (!isAdminTier(plan)) {
+        return NextResponse.json({ error: "Invalid plan tier" }, { status: 400 });
+      }
+      Object.assign(updateData, buildTierUpdate(plan));
+    }
     if (subscription_status !== undefined) updateData.subscription_status = subscription_status;
     if (extra_lessons !== undefined) updateData.extra_lessons = extra_lessons;
     if (current_period_end !== undefined) updateData.current_period_end = current_period_end;

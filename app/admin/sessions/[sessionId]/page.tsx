@@ -24,10 +24,12 @@ interface SessionDetail {
 interface PlanNode {
   id: string;
   plan_id: string;
-  label: string;
+  title: string;
   plan?: {
     id: string;
     root_topic: string;
+    title: string | null;
+    display_topic: string;
   };
 }
 
@@ -127,7 +129,7 @@ export default function AdminSessionDetailPage() {
           <div className="flex-1 mr-4">
             <h1 className="text-xl font-semibold text-white mb-2">{session?.problem}</h1>
             {session?.owner && (
-              <Link href={`/admin/${session.user_id}`} className="text-sm text-blue-400 hover:text-blue-300">
+              <Link href={`/admin/users/${session.user_id}`} className="text-sm text-blue-400 hover:text-blue-300">
                 {session.owner.email || session.owner.username}
               </Link>
             )}
@@ -164,10 +166,10 @@ export default function AdminSessionDetailPage() {
           <div className="p-3 bg-neutral-800/50 rounded-lg">
             <Link href={`/admin/plans/${planNode.plan_id}`} className="block hover:opacity-80">
               <div className="text-sm text-blue-400 hover:text-blue-300 mb-1">
-                {planNode.plan?.root_topic || "Unknown Plan"}
+                {planNode.plan?.display_topic || planNode.plan?.root_topic || "Unknown Workspace"}
               </div>
               <div className="text-xs text-neutral-500">
-                Node: {planNode.label}
+                Block: {planNode.title}
               </div>
             </Link>
           </div>

@@ -1,39 +1,19 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { requireAdmin } from "@/lib/admin/require-admin";
+import { getProfileEmail } from "@/lib/admin/users";
 
 export const runtime = "nodejs";
 
-function getAdminClient() {
-  return createAdminClient();
-}
-
 export async function GET(
-  request: Request,
+  _request: Request,
   { params }: { params: Promise<{ sessionId: string }> }
 ) {
   try {
     const { sessionId } = await params;
-    const supabase = await createClient();
-    const { data: { user: authUser } } = await supabase.auth.getUser();
-    
-    if (!authUser) {
-      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-    }
+    const auth = await requireAdmin();
+    if ("error" in auth) return auth.error;
+    const { adminClient } = auth;
 
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("is_admin")
-      .eq("id", authUser.id)
-      .single();
-
-    if (!profile?.is_admin) {
-      return NextResponse.json({ error: "Admin access required" }, { status: 403 });
-    }
-
-    const adminClient = getAdminClient();
-
-    // Load session
     const { data: sessionData, error: sessionError } = await adminClient
       .from("sessions")
       .select("id, user_id, problem, status, created_at, duration_ms, plan_node_id")
@@ -44,35 +24,40 @@ export async function GET(
       return NextResponse.json({ error: "Session not found" }, { status: 404 });
     }
 
-    // Load owner profile
-    const { data: ownerData } = await adminClient
-      .from("profiles")
-      .select("id, username, email")
-      .eq("id", sessionData.user_id)
-      .single();
+    const [{ data: ownerData }, email] = await Promise.all([
+      adminClient.from("profiles").select("id, username").eq("id", sessionData.user_id).single(),
+      getProfileEmail(adminClient, sessionData.user_id),
+    ]);
 
-    // Load plan node if exists
     let planNode = null;
     if (sessionData.plan_node_id) {
       const { data: nodeData } = await adminClient
         .from("plan_nodes")
-        .select("id, plan_id, label")
+        .select("id, plan_id, title")
         .eq("id", sessionData.plan_node_id)
         .single();
 
       if (nodeData) {
         const { data: planData } = await adminClient
           .from("learning_plans")
-          .select("id, root_topic")
+          .select("id, title, root_topic")
           .eq("id", nodeData.plan_id)
           .single();
 
-        planNode = { ...nodeData, plan: planData || undefined };
+        planNode = {
+          ...nodeData,
+          plan: planData
+            ? { ...planData, display_topic: planData.title || planData.root_topic }
+            : undefined,
+        };
       }
     }
 
     return NextResponse.json({
-      session: { ...sessionData, owner: ownerData || undefined },
+      session: {
+        ...sessionData,
+        owner: ownerData ? { ...ownerData, email } : undefined,
+      },
       planNode,
     });
   } catch (err) {

@@ -85,67 +85,21 @@ export default function SessionsPage() {
   const loadSessions = async () => {
     try {
       setLoading(true);
-
-      const from = (page - 1) * PAGE_SIZE;
-      const to = from + PAGE_SIZE - 1;
-
-      let query = supabase
-        .from("sessions")
-        .select("id, user_id, problem, status, created_at, duration_ms", { count: "exact" });
-
-      if (statusFilter !== "all") {
-        query = query.eq("status", statusFilter);
-      }
-
-      if (searchQuery.trim()) {
-        query = query.ilike("problem", `%${searchQuery.trim()}%`);
-      }
-
-      const { data: sessionsData, count, error: sessionError } = await query
-        .order(sortField, { ascending: sortDirection === "asc" })
-        .range(from, to);
-
-      if (sessionError) throw sessionError;
-      setTotalCount(count || 0);
-
-      if (!sessionsData || sessionsData.length === 0) {
-        setSessions([]);
-        setLoading(false);
+      const params = new URLSearchParams({
+        page: String(page),
+        status: statusFilter,
+        search: searchQuery.trim(),
+        sort: sortField,
+        direction: sortDirection,
+      });
+      const res = await fetch(`/api/admin/sessions?${params.toString()}`);
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || "Failed to load sessions");
         return;
       }
-
-      const userIds = [...new Set(sessionsData.map((s: { user_id: string }) => s.user_id))];
-
-      // Fetch user profiles
-      const userMap = new Map<string, UserProfile>();
-      const { data: profiles } = await supabase
-        .from("profiles")
-        .select("id, username, email")
-        .in("id", userIds);
-
-      profiles?.forEach((p: { id: string; username: string | null; email: string | null }) => {
-        userMap.set(p.id, p);
-      });
-
-      const sessionsWithData: Session[] = sessionsData.map((s: { id: string; user_id: string; problem: string; status: string; created_at: string; duration_ms: number | null }) => ({
-        id: s.id,
-        user_id: s.user_id,
-        problem: s.problem,
-        status: s.status,
-        created_at: s.created_at,
-        duration_ms: s.duration_ms || 0,
-        user: userMap.get(s.user_id),
-      }));
-
-      if (sortField === "duration_ms") {
-        sessionsWithData.sort((a, b) => 
-          sortDirection === "desc" 
-            ? b.duration_ms - a.duration_ms 
-            : a.duration_ms - b.duration_ms
-        );
-      }
-
-      setSessions(sessionsWithData);
+      setSessions(data.sessions || []);
+      setTotalCount(data.totalCount || 0);
     } catch (err) {
       console.error("Load sessions error:", err instanceof Error ? err.message : err);
       setError("Failed to load sessions");
@@ -179,7 +133,7 @@ export default function SessionsPage() {
     }
   };
 
-  const totalPages = Math.ceil(totalCount / PAGE_SIZE);
+  const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
 
   if (error) {
     return (
@@ -293,7 +247,7 @@ export default function SessionsPage() {
                 sessions.map((session) => (
                   <tr key={session.id} className="border-b border-neutral-800/50 hover:bg-neutral-800/20">
                     <td className="p-4">
-                      <Link href={`/admin/${session.user_id}`} className="block hover:opacity-80">
+                      <Link href={`/admin/users/${session.user_id}`} className="block hover:opacity-80">
                         <div className="text-blue-400 hover:text-blue-300 text-sm">
                           {session.user?.email || session.user_id?.slice(0, 8)}
                         </div>
@@ -305,9 +259,9 @@ export default function SessionsPage() {
                       </Link>
                     </td>
                     <td className="p-4">
-                      <div className="text-neutral-300 text-sm max-w-[200px] truncate" title={session.problem}>
+                      <Link href={`/admin/sessions/${session.id}`} className="text-neutral-300 text-sm max-w-[260px] truncate block hover:text-white" title={session.problem}>
                         {session.problem}
-                      </div>
+                      </Link>
                     </td>
                     <td className="p-4 text-neutral-400 text-sm">
                       {formatDate(session.created_at)}

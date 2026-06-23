@@ -16,11 +16,13 @@ interface LearningPlan {
   id: string;
   user_id: string;
   root_topic: string;
+  display_topic: string;
   status: string;
   is_public: boolean;
   is_agent_session: boolean;
   created_at: string;
   node_count: number;
+  ghl_session_count: number;
   owner?: PlanOwner;
 }
 
@@ -86,77 +88,24 @@ export default function AdminPlansPage() {
   const loadPlans = async () => {
     try {
       setLoading(true);
-
-      const from = (page - 1) * PAGE_SIZE;
-      const to = from + PAGE_SIZE - 1;
-
-      let query = supabase
-        .from("learning_plans")
-        .select("id, user_id, root_topic, status, is_public, is_agent_session, created_at", { count: "exact" });
-
-      if (visibilityFilter === "public") {
-        query = query.eq("is_public", true);
-      } else if (visibilityFilter === "private") {
-        query = query.eq("is_public", false);
-      }
-
-      if (searchQuery.trim()) {
-        query = query.ilike("root_topic", `%${searchQuery.trim()}%`);
-      }
-
-      const { data: plansData, count, error: planError } = await query
-        .order(sortField === "node_count" ? "created_at" : sortField, { ascending: sortDirection === "asc" })
-        .range(from, to);
-
-      if (planError) throw planError;
-
-      setTotalCount(count || 0);
-
-      if (!plansData || plansData.length === 0) {
-        setPlans([]);
+      const params = new URLSearchParams({
+        page: String(page),
+        visibility: visibilityFilter,
+        search: searchQuery.trim(),
+        sort: sortField,
+        direction: sortDirection,
+      });
+      const res = await fetch(`/api/admin/plans?${params.toString()}`);
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || "Failed to load workspaces");
         return;
       }
-
-      // Get node counts per plan
-      const planIds = plansData.map((p: { id: string }) => p.id);
-      const { data: nodesData } = await supabase
-        .from("plan_nodes")
-        .select("plan_id")
-        .in("plan_id", planIds);
-
-      const nodeCountMap = new Map<string, number>();
-      nodesData?.forEach((n: { plan_id: string }) => {
-        nodeCountMap.set(n.plan_id, (nodeCountMap.get(n.plan_id) || 0) + 1);
-      });
-
-      // Get user profiles
-      const userIds = [...new Set(plansData.map((p: { user_id: string }) => p.user_id))];
-      const { data: profiles } = await supabase
-        .from("profiles")
-        .select("id, username, email")
-        .in("id", userIds);
-
-      const userMap = new Map<string, PlanOwner>();
-      profiles?.forEach((p: { id: string; username: string | null; email: string | null }) => {
-        userMap.set(p.id, p);
-      });
-
-      const plansWithData: LearningPlan[] = plansData.map((p: { id: string; user_id: string; root_topic: string; status: string; is_public: boolean; is_agent_session: boolean; created_at: string }) => ({
-        ...p,
-        node_count: nodeCountMap.get(p.id) || 0,
-        owner: userMap.get(p.user_id),
-      }));
-
-      if (sortField === "node_count") {
-        plansWithData.sort((a, b) =>
-          sortDirection === "desc" ? b.node_count - a.node_count : a.node_count - b.node_count
-        );
-      }
-
-      setPlans(plansWithData);
+      setPlans(data.plans || []);
+      setTotalCount(data.totalCount || 0);
     } catch (err) {
       console.error("Load plans error:", err instanceof Error ? err.message : err);
-      setError("Failed to load plans");
+      setError("Failed to load workspaces");
     } finally {
       setLoading(false);
     }
@@ -184,7 +133,7 @@ export default function AdminPlansPage() {
     return sortDirection === "asc" ? " ↑" : " ↓";
   };
 
-  const totalPages = Math.ceil(totalCount / PAGE_SIZE);
+  const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
 
   // KPI calculations
   const kpiPlans = plans;
@@ -232,10 +181,12 @@ export default function AdminPlansPage() {
           </div>
         </div>
         <div className="bg-neutral-900/50 border border-neutral-800 rounded-lg p-4">
-          <div className="text-2xl font-bold text-blue-400">{agentCount}</div>
-          <div className="text-neutral-500 text-xs mt-1">Agent-Created</div>
+          <div className="text-2xl font-bold text-cyan-400">
+            {kpiPlans.reduce((sum, p) => sum + (p.ghl_session_count || 0), 0)}
+          </div>
+          <div className="text-neutral-500 text-xs mt-1">GHL Sessions (this page)</div>
           <div className="flex gap-2 mt-2 text-[11px]">
-            <span className="text-neutral-400">User-created: {kpiPlans.length - agentCount}</span>
+            <span className="text-blue-400">Agent-created: {agentCount}</span>
           </div>
         </div>
       </div>
@@ -290,23 +241,24 @@ export default function AdminPlansPage() {
                 Nodes{getSortIcon("node_count")}
               </th>
               <th className="text-left text-xs text-neutral-400 font-medium px-4 py-3">Visibility</th>
+              <th className="text-left text-xs text-neutral-400 font-medium px-4 py-3">GHL</th>
               <th className="text-left text-xs text-neutral-400 font-medium px-4 py-3">Source</th>
             </tr>
           </thead>
           <tbody>
             {loading && plans.length === 0 ? (
               <tr>
-                <td colSpan={6} className="px-4 py-8 text-center text-neutral-500">Loading...</td>
+                <td colSpan={7} className="px-4 py-8 text-center text-neutral-500">Loading...</td>
               </tr>
             ) : plans.length === 0 ? (
               <tr>
-                <td colSpan={6} className="px-4 py-8 text-center text-neutral-500">No plans found</td>
+                <td colSpan={7} className="px-4 py-8 text-center text-neutral-500">No workspaces found</td>
               </tr>
             ) : (
               plans.map((plan) => (
                 <tr key={plan.id} className="border-b border-neutral-800/50 hover:bg-neutral-800/20">
                   <td className="px-4 py-3">
-                    <Link href={`/admin/${plan.user_id}`} className="block hover:opacity-80">
+                    <Link href={`/admin/users/${plan.user_id}`} className="block hover:opacity-80">
                       <div className="text-blue-400 hover:text-blue-300 text-sm">
                         {plan.owner?.email || plan.user_id.slice(0, 8)}
                       </div>
@@ -319,7 +271,9 @@ export default function AdminPlansPage() {
                   </td>
                   <td className="px-4 py-3">
                     <Link href={`/admin/plans/${plan.id}`} className="text-sm text-neutral-200 hover:text-white">
-                      {plan.root_topic.length > 60 ? plan.root_topic.slice(0, 60) + "..." : plan.root_topic}
+                      {(plan.display_topic || plan.root_topic).length > 60
+                        ? `${(plan.display_topic || plan.root_topic).slice(0, 60)}...`
+                        : (plan.display_topic || plan.root_topic)}
                     </Link>
                   </td>
                   <td className="px-4 py-3 text-sm text-neutral-400">{formatDate(plan.created_at)}</td>
@@ -333,6 +287,7 @@ export default function AdminPlansPage() {
                       {plan.is_public ? "Public" : "Private"}
                     </span>
                   </td>
+                  <td className="px-4 py-3 text-sm text-neutral-300">{plan.ghl_session_count || 0}</td>
                   <td className="px-4 py-3">
                     <span className={`px-2 py-0.5 rounded text-xs ${
                       plan.is_agent_session

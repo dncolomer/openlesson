@@ -12,10 +12,11 @@ interface PlanOwner {
 
 interface PlanNode {
   id: string;
-  label: string;
-  depth: number;
+  title: string;
+  description: string | null;
+  is_start: boolean;
   status: string;
-  session_id: string | null;
+  created_at: string;
 }
 
 interface Session {
@@ -26,14 +27,27 @@ interface Session {
   duration_ms: number;
 }
 
+interface GhlSession {
+  id: string;
+  status: string;
+  overall_score: number | null;
+  created_at: string;
+  completed_at: string | null;
+  requested_duration_seconds: number;
+}
+
 interface PlanDetail {
   id: string;
   user_id: string;
+  title: string | null;
   root_topic: string;
+  display_topic: string;
   status: string;
   is_public: boolean;
   is_agent_session: boolean;
+  organization_id: string | null;
   created_at: string;
+  notes: string | null;
   owner?: PlanOwner;
 }
 
@@ -47,6 +61,7 @@ export default function AdminPlanDetailPage() {
   const [plan, setPlan] = useState<PlanDetail | null>(null);
   const [nodes, setNodes] = useState<PlanNode[]>([]);
   const [sessions, setSessions] = useState<Session[]>([]);
+  const [ghlSessions, setGhlSessions] = useState<GhlSession[]>([]);
 
   useEffect(() => {
     loadPlanDetail();
@@ -62,16 +77,17 @@ export default function AdminPlanDetailPage() {
           router.push("/login");
           return;
         }
-        setError(data.error || "Failed to load plan");
+        setError(data.error || "Failed to load workspace");
         return;
       }
 
       setPlan(data.plan);
       setNodes(data.nodes || []);
       setSessions(data.sessions || []);
+      setGhlSessions(data.ghlSessions || []);
     } catch (err) {
       console.error("Load plan error:", err);
-      setError("Failed to load plan");
+      setError("Failed to load workspace");
     } finally {
       setLoading(false);
     }
@@ -95,11 +111,16 @@ export default function AdminPlanDetailPage() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "active": return "bg-green-900/30 text-green-400";
-      case "completed": return "bg-blue-900/30 text-blue-400";
-      case "paused": return "bg-yellow-900/30 text-yellow-400";
-      case "not_started": return "bg-neutral-700 text-neutral-400";
-      default: return "bg-neutral-700 text-neutral-400";
+      case "active":
+      case "in_progress":
+        return "bg-green-900/30 text-green-400";
+      case "completed":
+        return "bg-blue-900/30 text-blue-400";
+      case "paused":
+      case "pending":
+        return "bg-yellow-900/30 text-yellow-400";
+      default:
+        return "bg-neutral-700 text-neutral-400";
     }
   };
 
@@ -116,28 +137,26 @@ export default function AdminPlanDetailPage() {
       <div className="min-h-screen bg-[#0a0a0a] flex flex-col items-center justify-center gap-4">
         <div className="text-red-400">{error}</div>
         <Link href="/admin/plans" className="text-sm text-neutral-400 hover:text-white">
-          Back to plans
+          Back to workspaces
         </Link>
       </div>
     );
   }
 
-  const completedNodes = nodes.filter(n => n.status === "completed").length;
-  const nodesWithSessions = nodes.filter(n => n.session_id).length;
+  const completedNodes = nodes.filter((n) => n.status === "completed").length;
 
   return (
     <main className="max-w-6xl mx-auto p-4 sm:px-6 py-8">
       <Link href="/admin/plans" className="text-sm text-neutral-400 hover:text-white mb-4 inline-block">
-        &larr; Back to plans
+        &larr; Back to workspaces
       </Link>
 
-      {/* Plan Header */}
       <div className="bg-neutral-900 border border-neutral-800 rounded-lg p-6 mb-6">
         <div className="flex items-start justify-between mb-4">
           <div>
-            <h1 className="text-xl font-semibold text-white">{plan?.root_topic}</h1>
+            <h1 className="text-xl font-semibold text-white">{plan?.display_topic}</h1>
             {plan?.owner && (
-              <Link href={`/admin/${plan.user_id}`} className="text-sm text-blue-400 hover:text-blue-300">
+              <Link href={`/admin/users/${plan.user_id}`} className="text-sm text-blue-400 hover:text-blue-300">
                 {plan.owner.username || plan.owner.email}
               </Link>
             )}
@@ -152,6 +171,10 @@ export default function AdminPlanDetailPage() {
           </div>
         </div>
 
+        {plan?.notes && (
+          <p className="text-sm text-neutral-400 mb-4 line-clamp-4">{plan.notes}</p>
+        )}
+
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div>
             <div className="text-xs text-neutral-500">Created</div>
@@ -164,69 +187,93 @@ export default function AdminPlanDetailPage() {
             </span>
           </div>
           <div>
-            <div className="text-xs text-neutral-500">Total Nodes</div>
-            <div className="text-neutral-200">{nodes.length}</div>
+            <div className="text-xs text-neutral-500">Blocks</div>
+            <div className="text-neutral-200">{completedNodes} / {nodes.length} completed</div>
           </div>
           <div>
-            <div className="text-xs text-neutral-500">Completed</div>
-            <div className="text-neutral-200">{completedNodes} / {nodes.length}</div>
+            <div className="text-xs text-neutral-500">GHL Sessions</div>
+            <div className="text-neutral-200">{ghlSessions.length}</div>
           </div>
         </div>
       </div>
 
       <div className="grid md:grid-cols-2 gap-6">
-        {/* Nodes */}
         <div className="bg-neutral-900 border border-neutral-800 rounded-lg p-4">
-          <h2 className="text-lg font-medium mb-4 text-white">Nodes ({nodes.length})</h2>
+          <h2 className="text-lg font-medium mb-4 text-white">Blocks ({nodes.length})</h2>
           {nodes.length === 0 ? (
-            <p className="text-neutral-500 text-sm">No nodes found</p>
+            <p className="text-neutral-500 text-sm">No blocks found</p>
           ) : (
             <div className="space-y-2 max-h-[500px] overflow-y-auto">
               {nodes.map((node) => (
                 <div key={node.id} className="p-3 bg-neutral-800/50 rounded-lg">
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-2">
-                      <span className="text-neutral-600 text-xs">L{node.depth}</span>
-                      <span className="text-sm text-neutral-200">{node.label}</span>
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <div className="text-sm text-neutral-200">{node.title}</div>
+                      {node.description && (
+                        <div className="text-xs text-neutral-500 mt-1 line-clamp-2">{node.description}</div>
+                      )}
                     </div>
-                    <span className={`px-1.5 py-0.5 text-xs rounded ${getStatusColor(node.status)}`}>
+                    <span className={`px-1.5 py-0.5 text-xs rounded shrink-0 ${getStatusColor(node.status)}`}>
                       {node.status}
                     </span>
                   </div>
-                  {node.session_id && (
-                    <div className="mt-1 text-xs text-neutral-500">
-                      Session: {node.session_id.slice(0, 8)}...
-                    </div>
-                  )}
+                  {node.is_start && <div className="text-[10px] text-cyan-400 mt-1">Start block</div>}
                 </div>
               ))}
             </div>
           )}
         </div>
 
-        {/* Sessions */}
-        <div className="bg-neutral-900 border border-neutral-800 rounded-lg p-4">
-          <h2 className="text-lg font-medium mb-4 text-white">Sessions ({sessions.length})</h2>
-          {sessions.length === 0 ? (
-            <p className="text-neutral-500 text-sm">No sessions yet</p>
-          ) : (
-            <div className="space-y-3 max-h-[500px] overflow-y-auto">
-              {sessions.map((session) => (
-                <div key={session.id} className="p-3 bg-neutral-800/50 rounded-lg">
-                  <div className="flex items-start justify-between mb-1">
-                    <div className="text-sm text-neutral-200 line-clamp-1">{session.problem}</div>
-                    <span className={`ml-2 px-1.5 py-0.5 text-xs rounded ${getStatusColor(session.status)}`}>
-                      {session.status}
-                    </span>
+        <div className="space-y-6">
+          <div className="bg-neutral-900 border border-neutral-800 rounded-lg p-4">
+            <h2 className="text-lg font-medium mb-4 text-white">Tutoring Sessions ({sessions.length})</h2>
+            {sessions.length === 0 ? (
+              <p className="text-neutral-500 text-sm">No linked tutoring sessions</p>
+            ) : (
+              <div className="space-y-3 max-h-[220px] overflow-y-auto">
+                {sessions.map((session) => (
+                  <Link key={session.id} href={`/admin/sessions/${session.id}`} className="block p-3 bg-neutral-800/50 rounded-lg hover:bg-neutral-800/70 transition-colors">
+                    <div className="flex items-start justify-between mb-1">
+                      <div className="text-sm text-neutral-200 line-clamp-1">{session.problem}</div>
+                      <span className={`ml-2 px-1.5 py-0.5 text-xs rounded ${getStatusColor(session.status)}`}>
+                        {session.status}
+                      </span>
+                    </div>
+                    <div className="flex gap-3 text-xs text-neutral-500 items-center">
+                      <span>{formatDate(session.created_at)}</span>
+                      {session.duration_ms > 0 && <span>{formatDuration(session.duration_ms)}</span>}
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="bg-neutral-900 border border-neutral-800 rounded-lg p-4">
+            <h2 className="text-lg font-medium mb-4 text-white">GHL Sessions ({ghlSessions.length})</h2>
+            {ghlSessions.length === 0 ? (
+              <p className="text-neutral-500 text-sm">No GHL sessions yet</p>
+            ) : (
+              <div className="space-y-3 max-h-[220px] overflow-y-auto">
+                {ghlSessions.map((session) => (
+                  <div key={session.id} className="p-3 bg-neutral-800/50 rounded-lg">
+                    <div className="flex items-start justify-between mb-1">
+                      <div className="text-sm text-neutral-200">
+                        {session.requested_duration_seconds / 60} min session
+                      </div>
+                      <span className={`ml-2 px-1.5 py-0.5 text-xs rounded ${getStatusColor(session.status)}`}>
+                        {session.status}
+                      </span>
+                    </div>
+                    <div className="flex gap-3 text-xs text-neutral-500 items-center">
+                      <span>{formatDate(session.created_at)}</span>
+                      {session.overall_score != null && <span>Score: {session.overall_score}</span>}
+                    </div>
                   </div>
-                  <div className="flex gap-3 text-xs text-neutral-500 items-center">
-                    <span>{formatDate(session.created_at)}</span>
-                    {session.duration_ms > 0 && <span>{formatDuration(session.duration_ms)}</span>}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </main>

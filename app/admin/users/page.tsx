@@ -5,6 +5,14 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { useI18n } from "@/lib/i18n";
+import { AdminTierSelect } from "@/components/AdminTierSelect";
+import {
+  ADMIN_TIER_OPTIONS,
+  normalizeAdminTier,
+  tierColor,
+  tierLabel,
+  type AdminTierId,
+} from "@/lib/admin/tiers";
 
 interface User {
   id: string;
@@ -24,7 +32,7 @@ interface User {
   organization: { id: string; name: string; slug: string } | null;
 }
 
-type TierOption = "all" | "free" | "regular" | "pro";
+type TierOption = "all" | AdminTierId;
 type DateFilter = "all" | "7days" | "30days" | "90days" | "year";
 type SortColumn = "username" | "lessons_count" | "plans_count" | "created_at" | "plan" | "subscription_status";
 
@@ -100,41 +108,25 @@ export default function UsersPage() {
     }
   };
 
-  const handleTierChange = async (userId: string, tier: TierOption) => {
-    if (tier === "all") return;
+  const handleTierChange = async (userId: string, tier: AdminTierId) => {
     setUpdatingUserId(userId);
     try {
-      const updates: Record<string, unknown> = { plan: tier };
-      
-      if (tier === "pro") {
-        updates.subscription_status = "active";
-        updates.extra_lessons = 999;
-      } else if (tier === "regular") {
-        updates.subscription_status = "active";
-        updates.extra_lessons = 0;
-      } else {
-        updates.subscription_status = "inactive";
-        updates.extra_lessons = 0;
-      }
-
-      await fetch("/api/admin/users", {
+      const res = await fetch("/api/admin/users", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId, ...updates }),
+        body: JSON.stringify({ userId, plan: tier }),
       });
-      
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        console.error("Tier change error:", data.error || res.statusText);
+        return;
+      }
       await loadUsers();
     } catch (err) {
       console.error("Tier change error:", err);
     } finally {
       setUpdatingUserId(null);
     }
-  };
-
-  const getCurrentTier = (user: User): TierOption => {
-    if (user.subscription_status === "active" && user.plan === "pro") return "pro";
-    if (user.subscription_status === "active" && user.plan === "regular") return "regular";
-    return "free";
   };
 
   const getDateFilterStart = (filter: DateFilter): Date | null => {
@@ -155,7 +147,7 @@ export default function UsersPage() {
       (u.username || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
       (u.email || "").toLowerCase().includes(searchQuery.toLowerCase());
     
-    const matchesTier = tierFilter === "all" || getCurrentTier(u) === tierFilter;
+    const matchesTier = tierFilter === "all" || normalizeAdminTier(u) === tierFilter;
     
     const dateStart = getDateFilterStart(dateFilter);
     const userDate = new Date(u.created_at);
@@ -234,13 +226,7 @@ export default function UsersPage() {
     }
   };
 
-  const getPlanColor = (plan: string) => {
-    switch (plan) {
-      case "pro": return "text-purple-400";
-      case "regular": return "text-blue-400";
-      default: return "text-neutral-400";
-    }
-  };
+
 
   if (error) {
     return (
@@ -266,9 +252,11 @@ export default function UsersPage() {
             <div className="text-2xl font-bold text-white">{kpiUsers.length}</div>
             <div className="text-neutral-500 text-xs mt-1">Total Users</div>
             <div className="flex gap-2 mt-2 text-[11px]">
-              <span className="text-neutral-400">Free: {kpiUsers.filter(u => getCurrentTier(u) === "free").length}</span>
-              <span className="text-blue-400">Regular: {kpiUsers.filter(u => getCurrentTier(u) === "regular").length}</span>
-              <span className="text-purple-400">Pro: {kpiUsers.filter(u => getCurrentTier(u) === "pro").length}</span>
+              {ADMIN_TIER_OPTIONS.map((tier) => (
+                <span key={tier.id} className={tierColor(tier.id)}>
+                  {tier.label}: {kpiUsers.filter((u) => normalizeAdminTier(u) === tier.id).length}
+                </span>
+              ))}
             </div>
           </div>
           <div className="bg-neutral-900/50 border border-neutral-800 rounded-lg p-4">
@@ -305,9 +293,9 @@ export default function UsersPage() {
             className="px-4 py-2 bg-neutral-900 border border-neutral-800 rounded-lg text-white focus:outline-none focus:border-neutral-700"
           >
             <option value="all">All Tiers</option>
-            <option value="pro">Pro</option>
-            <option value="regular">Regular</option>
-            <option value="free">Free</option>
+            {ADMIN_TIER_OPTIONS.map((tier) => (
+              <option key={tier.id} value={tier.id}>{tier.label}</option>
+            ))}
           </select>
           <select
             value={dateFilter}
@@ -378,7 +366,7 @@ export default function UsersPage() {
                 paginatedUsers.map((user) => (
                   <tr key={user.id} className="border-b border-neutral-800/50 hover:bg-neutral-800/20">
                     <td className="p-4">
-                      <Link href={`/admin/${user.id}`} className="hover:text-blue-400">
+                      <Link href={`/admin/users/${user.id}`} className="hover:text-blue-400">
                         <div>
                           <div className="text-neutral-200 font-medium">
                             {user.username || user.email || "No name"}
@@ -402,16 +390,13 @@ export default function UsersPage() {
                       {user.plans_count}
                     </td>
                     <td className="p-4">
-                      <select
-                        value={getCurrentTier(user)}
-                        onChange={(e) => handleTierChange(user.id, e.target.value as TierOption)}
+                      <AdminTierSelect
+                        value={normalizeAdminTier(user)}
                         disabled={updatingUserId === user.id}
-                        className={`px-2 py-1 text-xs rounded border ${getPlanColor(user.plan)} bg-neutral-900 border-neutral-700`}
-                      >
-                        <option value="free">Free</option>
-                        <option value="regular">Regular</option>
-                        <option value="pro">Pro</option>
-                      </select>
+                        onChange={(tier) => handleTierChange(user.id, tier)}
+                        className={`px-2 py-1 text-xs rounded border ${tierColor(user.plan)} bg-neutral-900 border-neutral-700`}
+                      />
+                      <div className="text-[10px] text-neutral-500 mt-1">{tierLabel(user.plan)}</div>
                     </td>
                     <td className="p-4">
                       <span className={`px-2 py-0.5 rounded text-xs ${getStatusColor(user.subscription_status)}`}>

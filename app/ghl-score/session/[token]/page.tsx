@@ -25,5 +25,13 @@ export default async function PrivateGhlScorePage({ params }: PageProps) {
     workspaceTitle: (session as any).learning_plans?.title || "Workspace",
   };
 
-  return <GhcScoreClient privateToken={token} sessionId={session.session_id || undefined} planNodeId={session.plan_node_id || undefined} initialSession={initialSession} />;
+  return (
+    <GhcScoreClient
+      planId={session.plan_id}
+      privateToken={token}
+      sessionId={session.session_id || undefined}
+      planNodeId={session.plan_node_id || undefined}
+      initialSession={initialSession}
+    />
+  );
 }

@@ -65,31 +65,35 @@ export async function GET() {
       return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
     }
 
-    // Check if admin via auth metadata first (bypasses RLS)
-    if (user.user_metadata?.is_admin) {
-      return NextResponse.json({ allowed: true, reason: "Admin" });
-    }
-
-    // Load profile - use service role query to bypass RLS
     const { data: profile, error: profileError } = await supabase
       .from("profiles")
-      .select("plan, is_admin, extra_lessons, subscription_status, current_period_end, token_tier, token_validity_expires_at, organization_id")
+      .select("plan, is_admin, extra_lessons, subscription_status, current_period_end, token_tier, token_validity_expires_at, organization_id, is_org_admin")
       .eq("id", user.id)
       .single();
 
-    // If profile doesn't exist, create one or allow access for testing
     if (profileError || !profile) {
-      console.log("Profile not found, allowing access for user:", user.id);
-      return NextResponse.json({ allowed: true, reason: "No profile - allowing" });
-    }
-
-    // Admin users bypass usage checks
-    if (profile.is_admin) {
-      return NextResponse.json({ allowed: true, reason: "Admin" });
+      return NextResponse.json({
+        allowed: false,
+        reason: "Profile not found. Please complete account setup or contact support.",
+        plan: "free",
+        used: 0,
+        limit: PLANS.free.sessionsPerPeriod,
+        isAdmin: false,
+      });
     }
 
     // Count sessions in the current billing period
     let sessionCount = 0;
+    let personalSessionCount = 0;
+    let organizationSummary: {
+      id: string;
+      name: string;
+      isOrgAdmin: boolean;
+      memberCount: number;
+      guestCount: number;
+      used: number;
+      limit: number | null;
+    } | null = null;
 
     if (profile.plan === "free" || !profile.current_period_end) {
       // Free plan: count ALL completed sessions ever (exclude unstarted "active" ones)
@@ -99,11 +103,20 @@ export async function GET() {
         .eq("user_id", user.id)
         .neq("status", "active");
       sessionCount = count ?? 0;
+      personalSessionCount = sessionCount;
     } else {
       // Paid plan: count completed sessions since current_period_end minus ~30 days
       const periodEnd = new Date(profile.current_period_end);
       const periodStart = new Date(periodEnd);
       periodStart.setDate(periodStart.getDate() - 30);
+
+      const { count: personalCount } = await supabase
+        .from("sessions")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", user.id)
+        .neq("status", "active")
+        .gte("created_at", periodStart.toISOString());
+      personalSessionCount = personalCount ?? 0;
 
       if (profile.plan === "pro_teams" && profile.organization_id) {
         const admin = createAdminClient();
@@ -120,15 +133,34 @@ export async function GET() {
             .neq("status", "active")
             .gte("created_at", periodStart.toISOString());
           sessionCount = count ?? 0;
+        } else {
+          sessionCount = personalSessionCount;
         }
-      } else {
-        const { count } = await supabase
-          .from("sessions")
+
+        const { data: organization } = await admin
+          .from("organizations")
+          .select("id, name")
+          .eq("id", profile.organization_id)
+          .single();
+
+        const { count: guestCount } = await admin
+          .from("organization_guest_users")
           .select("id", { count: "exact", head: true })
-          .eq("user_id", user.id)
-          .neq("status", "active")
-          .gte("created_at", periodStart.toISOString());
-        sessionCount = count ?? 0;
+          .eq("organization_id", profile.organization_id)
+          .eq("status", "active");
+
+        const planLimit = PLANS.pro_teams.sessionsPerPeriod;
+        organizationSummary = {
+          id: profile.organization_id,
+          name: organization?.name || "Organization",
+          isOrgAdmin: profile.is_org_admin === true,
+          memberCount: memberIds.length,
+          guestCount: guestCount ?? 0,
+          used: sessionCount,
+          limit: planLimit,
+        };
+      } else {
+        sessionCount = personalSessionCount;
       }
     }
 
@@ -148,7 +180,23 @@ export async function GET() {
       sessionCount
     );
 
-    return NextResponse.json(result);
+    if (profile.is_admin) {
+      return NextResponse.json({
+        ...result,
+        allowed: true,
+        reason: "Admin",
+        limit: null,
+        isAdmin: true,
+        personalUsed: personalSessionCount,
+        organization: organizationSummary,
+      });
+    }
+
+    return NextResponse.json({
+      ...result,
+      personalUsed: personalSessionCount,
+      organization: organizationSummary,
+    });
   } catch (error) {
     console.error("Check usage error:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });

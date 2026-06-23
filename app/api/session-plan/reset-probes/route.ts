@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
     const sessionData = sessionResult.data;
     if (!sessionData?.problem) {
       return NextResponse.json(
-        { error: "Session has no problem text" },
+        { error: "Block has no problem text" },
         { status: 400 }
       );
     }

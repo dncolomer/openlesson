@@ -38,8 +38,8 @@ export async function POST(req: NextRequest) {
         .eq("private_token_hash", hashPrivateToken(privateToken))
         .single();
 
-      if (error || !session) return NextResponse.json({ error: "GHL Score session not found" }, { status: 404 });
-      if (session.status === "completed") return NextResponse.json({ error: "GHL Score session is already completed" }, { status: 409 });
+      if (error || !session) return NextResponse.json({ error: "GHL Score block not found" }, { status: 404 });
+      if (session.status === "completed") return NextResponse.json({ error: "GHL Score block is already completed" }, { status: 409 });
       existingSession = session;
       planId = session.plan_id;
       userId = session.user_id || (session as any).learning_plans?.user_id;

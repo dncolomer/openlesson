@@ -56,7 +56,7 @@ The response includes a private URL for the GHL Score Session UI. GHL means Genu
 
 ## Organizations And Guests
 
-Users on the Teams tier can create an organization with `POST /api/organization` and become its admin. Organization admins can use `POST /api/v2/agent/org/guests` with an `org:write` API key to create guest users by email. Guest users receive individual API keys scoped to workspace reading and GHL link usage.
+Users on the Teams tier can create an organization with `POST /api/organization` and become its admin. Organization admins can use `POST /api/v2/agent/org/guests` with an `org:write` API key to create guest users by email. Guest users receive individual API keys scoped to workspace creation, workspace reading, and GHL link usage (`workspaces:read`, `workspaces:write`, `ghl:read`, `ghl:write`).
 
 Organization-owned workspaces are visible to all real users and guest users in that organization. When a guest signs up later with the same email, their real user account inherits the guest organization membership, GHL sessions, and guest API keys.
 

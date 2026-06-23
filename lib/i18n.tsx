@@ -119,28 +119,7 @@ function I18nProviderInner({ children }: { children: React.ReactNode }) {
   };
 
   const t = (key: string, params?: Record<string, string | number>): string => {
-    const keys = key.split('.');
-    let value: unknown = messages[locale];
-    
-    for (const k of keys) {
-      if (value && typeof value === 'object' && k in value) {
-        value = (value as Record<string, unknown>)[k];
-      } else {
-        return key;
-      }
-    }
-    
-    if (typeof value !== 'string') {
-      return key;
-    }
-    
-    if (params) {
-      return value.replace(/\{(\w+)\}/g, (_, paramKey) => 
-        String(params[paramKey] ?? `{${paramKey}}`)
-      );
-    }
-    
-    return value;
+    return translateWithLocale(locale, key, params);
   };
 
   return (

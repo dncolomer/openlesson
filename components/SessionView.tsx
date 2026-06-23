@@ -1306,12 +1306,12 @@ export function SessionView({ sessionId }: { sessionId: string }) {
     const originalTitle = document.title;
     
     // Change tab title to warning
-    document.title = "⚠️ Keep Open - Session Active";
+    document.title = "⚠️ Keep Open - Block Active";
 
     // Warn user if they try to close/navigate away
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
       e.preventDefault();
-      e.returnValue = "The monitoring session is running in a separate window. Closing this tab will end your session.";
+      e.returnValue = "The monitoring block is running in a separate window. Closing this tab will end your block.";
       return e.returnValue;
     };
 
@@ -1808,7 +1808,7 @@ export function SessionView({ sessionId }: { sessionId: string }) {
               timestamp: Date.now(),
               level: "info",
               source: "plan",
-              message: `Plan complete (${totalSteps}/${totalSteps} steps) — session paused`,
+              message: `Plan complete (${totalSteps}/${totalSteps} steps) — block paused`,
             });
             setTimeout(() => {
               setShowPlanCompleteModal(true);
@@ -3848,7 +3848,7 @@ export function SessionView({ sessionId }: { sessionId: string }) {
                               newPlan = plan;
                               console.log("[SessionView] Created plan goal:", plan?.goal);
                             } else {
-                              const errorMessage = await readErrorResponse(planRes, "Failed to create session plan");
+                              const errorMessage = await readErrorResponse(planRes, "Failed to create block plan");
                               console.error("[SessionView] Create plan failed:", errorMessage);
                               setPlanError(errorMessage);
                             }
@@ -3859,7 +3859,7 @@ export function SessionView({ sessionId }: { sessionId: string }) {
                             sessionPlanRef.current = newPlan;
                           } else {
                             console.error("[SessionView] No plan could be created or translated!");
-                            setPlanError("Failed to create session plan. Please try again.");
+                            setPlanError("Failed to create block plan. Please try again.");
                           }
                           
                           // Archive existing probes; the chapter question is
@@ -3909,7 +3909,7 @@ export function SessionView({ sessionId }: { sessionId: string }) {
                           setShowWelcomeModal(false);
                         } catch (err) {
                           console.error("Failed to prepare session:", err);
-                          setPlanError("Failed to prepare session");
+                          setPlanError("Failed to prepare block");
                         } finally {
                           setPlanLoading(false);
                           setIsPreparing(false);

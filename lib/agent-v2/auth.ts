@@ -8,6 +8,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { hashApiKey } from "@/lib/x402";
 import type { AuthContext, ApiKeyScope, ApiError } from "./types";
+import { checkRateLimit } from "./rate-limit";
+import { hasScope } from "./scopes";
 
 /**
  * Get a Supabase client with service role (bypasses RLS)
@@ -113,6 +115,15 @@ export async function authenticateApiKey(
     );
   }
 
+  const rateLimit = keyData.rate_limit ?? 120;
+  const rateCheck = checkRateLimit(keyData.id, rateLimit);
+  if (!rateCheck.allowed) {
+    return errorResponse(429, "rate_limit_exceeded", "API rate limit exceeded", {
+      limit: rateCheck.limit,
+      reset_at: Math.floor(rateCheck.resetAt / 1000),
+    });
+  }
+
   // Check scopes
   const scopes: ApiKeyScope[] = keyData.scopes || ["*"];
   if (!hasScope(scopes, requiredScope)) {
@@ -143,13 +154,7 @@ export async function authenticateApiKey(
   return { auth, supabase };
 }
 
-/**
- * Check if scopes include the required scope
- */
-export function hasScope(scopes: ApiKeyScope[], required: ApiKeyScope): boolean {
-  if (scopes.includes("*")) return true;
-  return scopes.includes(required);
-}
+export { hasScope } from "./scopes";
 
 /**
  * Create a standard error response

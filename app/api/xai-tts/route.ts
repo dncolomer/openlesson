@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { requireAuthenticatedUser } from "@/lib/api/require-auth";
 
 export const runtime = "nodejs";
 export const maxDuration = 30;
@@ -16,6 +17,9 @@ const DEFAULT_VOICE = "leo"; // warm, friendly — fits a tutor greeting
  * Response: MP3 audio stream (audio/mpeg).
  */
 export async function POST(request: NextRequest) {
+  const auth = await requireAuthenticatedUser();
+  if (!auth.ok) return auth.response;
+
   const apiKey = process.env.XAI_API_KEY;
   if (!apiKey) {
     return NextResponse.json(

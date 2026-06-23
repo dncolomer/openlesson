@@ -172,7 +172,7 @@ export function LabsMasteryCheck() {
       await museManagerRef.current?.startSession();
       
       setAppState("testing");
-      setDeviceStatus("Session active - think about the probes...");
+      setDeviceStatus("Block active - think about the probes...");
     } catch (err: any) {
       setDeviceStatus(`Error: ${err.message}`);
     } finally {
@@ -188,7 +188,7 @@ export function LabsMasteryCheck() {
     }
     
     setAppState("complete");
-    setDeviceStatus("Session complete!");
+    setDeviceStatus("Block complete!");
   }, []);
   
   const reset = useCallback(() => {
@@ -513,7 +513,7 @@ export function LabsMasteryCheck() {
                 disabled={generatingProbes || !topic.trim()}
                 className="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-medium transition-colors disabled:opacity-50"
               >
-                {generatingProbes ? "Generating Probes..." : "Generate Probes & Start Session"}
+                {generatingProbes ? "Generating Probes..." : "Generate Probes & Start Block"}
               </button>
             </div>
           )}
@@ -546,7 +546,7 @@ export function LabsMasteryCheck() {
               onClick={endSession}
               className="w-full py-3 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-medium transition-colors"
             >
-              End Session & View Report
+              End Block & View Report
             </button>
           )}
           
@@ -555,7 +555,7 @@ export function LabsMasteryCheck() {
               onClick={reset}
               className="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-medium transition-colors"
             >
-              Start New Session
+              Start New Block
             </button>
           )}
           

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
 import { createClient } from "@/lib/supabase/server";
+import { canCreateLegacyAgentApiKeys } from "@/lib/plans";
 
 export async function GET(request: NextRequest) {
   try {
@@ -70,10 +71,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Failed to verify subscription" }, { status: 500 });
     }
 
-    const isAdmin = profile.is_admin === true;
-    const isPro = profile.plan === "pro" && profile.subscription_status === "active";
-
-    if (!isAdmin && !isPro) {
+    if (!canCreateLegacyAgentApiKeys(profile.plan, profile.subscription_status, profile.is_admin === true)) {
       return NextResponse.json({ error: "A Pro subscription is required to create API keys" }, { status: 403 });
     }
 

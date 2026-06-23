@@ -39,7 +39,7 @@ export async function GET(request: NextRequest) {
 
     if (error) {
       console.error("Admin sessions list error:", error);
-      return NextResponse.json({ error: "Failed to load sessions" }, { status: 500 });
+      return NextResponse.json({ error: "Failed to load blocks" }, { status: 500 });
     }
 
     const userIds = [...new Set((sessionsData || []).map((session) => session.user_id))];

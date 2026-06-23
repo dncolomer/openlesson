@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { callXaiText, userMessage, DEFAULT_MODEL } from "@/lib/xai-client";
+import { requireAuthenticatedUser } from "@/lib/api/require-auth";
 
 export async function GET(req: NextRequest) {
   try {
+    const auth = await requireAuthenticatedUser();
+    if (!auth.ok) return auth.response;
     const { searchParams } = new URL(req.url);
     const topic = searchParams.get("topic");
     const type = searchParams.get("type");

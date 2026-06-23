@@ -1,7 +1,7 @@
 import { Metadata, Viewport } from "next";
 
 export const metadata: Metadata = {
-  title: "Mobile Session | openLesson",
+  title: "Mobile Block | openLesson",
   description: "Continue your learning session on mobile",
 };
 

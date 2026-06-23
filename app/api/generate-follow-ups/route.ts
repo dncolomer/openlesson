@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { generateFollowUpSessions } from "@/lib/xai";
 import { getUserPrompts } from "@/lib/user-prompts";
-import { createClient } from "@/lib/supabase/server";
+import { guardSessionRoute } from "@/lib/api/require-auth";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -15,12 +15,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Missing problem" }, { status: 400 });
     }
 
+    const auth = await guardSessionRoute(sessionId);
+    if (!auth.ok) return auth.response;
+    const { supabase } = auth;
+
     const promptOverrides = await getUserPrompts();
 
     // If sessionId provided, fetch file IDs from the database
     let fileIds: string[] | undefined;
     if (sessionId) {
-      const supabase = await createClient();
       
       // Fetch transcript file IDs
       const { data: transcripts } = await supabase

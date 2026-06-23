@@ -1,12 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { generateObjectives } from "@/lib/xai";
 import { getUserPrompts } from "@/lib/user-prompts";
+import { requireAuthenticatedUser } from "@/lib/api/require-auth";
 
 export const runtime = "nodejs";
 export const maxDuration = 15;
 
 export async function POST(request: NextRequest) {
   try {
+    const auth = await requireAuthenticatedUser();
+    if (!auth.ok) return auth.response;
+
     const body = await request.json();
     const { problem } = body;
 

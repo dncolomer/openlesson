@@ -191,7 +191,7 @@ export default function AdminPlanDetailPage() {
             <div className="text-neutral-200">{completedNodes} / {nodes.length} completed</div>
           </div>
           <div>
-            <div className="text-xs text-neutral-500">GHL Sessions</div>
+            <div className="text-xs text-neutral-500">GHL Blocks</div>
             <div className="text-neutral-200">{ghlSessions.length}</div>
           </div>
         </div>
@@ -226,9 +226,9 @@ export default function AdminPlanDetailPage() {
 
         <div className="space-y-6">
           <div className="bg-neutral-900 border border-neutral-800 rounded-lg p-4">
-            <h2 className="text-lg font-medium mb-4 text-white">Tutoring Sessions ({sessions.length})</h2>
+            <h2 className="text-lg font-medium mb-4 text-white">Tutoring Blocks ({sessions.length})</h2>
             {sessions.length === 0 ? (
-              <p className="text-neutral-500 text-sm">No linked tutoring sessions</p>
+              <p className="text-neutral-500 text-sm">No linked tutoring blocks</p>
             ) : (
               <div className="space-y-3 max-h-[220px] overflow-y-auto">
                 {sessions.map((session) => (
@@ -250,9 +250,9 @@ export default function AdminPlanDetailPage() {
           </div>
 
           <div className="bg-neutral-900 border border-neutral-800 rounded-lg p-4">
-            <h2 className="text-lg font-medium mb-4 text-white">GHL Sessions ({ghlSessions.length})</h2>
+            <h2 className="text-lg font-medium mb-4 text-white">GHL Blocks ({ghlSessions.length})</h2>
             {ghlSessions.length === 0 ? (
-              <p className="text-neutral-500 text-sm">No GHL sessions yet</p>
+              <p className="text-neutral-500 text-sm">No GHL blocks yet</p>
             ) : (
               <div className="space-y-3 max-h-[220px] overflow-y-auto">
                 {ghlSessions.map((session) => (

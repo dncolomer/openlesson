@@ -7,6 +7,12 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "node scripts/run-expanded-e2e.mjs",
+    "check:locales": "node scripts/check-locale-parity.mjs",
+    "check": "npm run lint && npm run typecheck && npm run test && npm run check:locales",
     "import:rabbit-hole": "node scripts/import-rabbit-hole-questions.mjs"
   },
   "dependencies": {
@@ -45,6 +51,7 @@
     "@types/react-dom": "^19",
     "@types/web-bluetooth": "^0.0.21",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^3.2.4"
   }
 }

@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { createClient } from "@/lib/supabase/server";
+import {
+  REGULAR_VOLUME_PRICES,
+  TEAM_VOLUME_PRICES,
+  resolveCheckoutVolume,
+  getExtraBlockPriceCents,
+} from "@/lib/plans";
 
 export const runtime = "nodejs";
 
@@ -8,30 +14,6 @@ function getStripe() {
   return new Stripe(process.env.STRIPE_SECRET_KEY!, {
     apiVersion: "2026-01-28.clover",
   });
-}
-
-const REGULAR_VOLUME_PRICES: Record<number, number> = {
-  25: 4900,
-  50: 7900,
-  100: 12900,
-};
-
-const TEAM_VOLUME_PRICES: Record<number, number> = {
-  250: 39900,
-  500: 64900,
-  1000: 99900,
-  2500: 199900,
-};
-
-function resolveVolume(priceType: string, rawVolume: unknown) {
-  const requested = Number(rawVolume);
-  if (priceType === "regular_2026") {
-    return REGULAR_VOLUME_PRICES[requested] ? requested : 25;
-  }
-  if (priceType === "pro_teams") {
-    return TEAM_VOLUME_PRICES[requested] ? requested : 250;
-  }
-  return 1;
 }
 
 export async function POST(request: NextRequest) {
@@ -50,7 +32,7 @@ export async function POST(request: NextRequest) {
     const quantity = priceType === "extra_lesson"
       ? Math.max(1, Math.min(500, Number(rawQuantity) || 1))
       : 1;
-    const monthlyVolume = resolveVolume(priceType, rawMonthlyVolume);
+    const monthlyVolume = resolveCheckoutVolume(priceType, rawMonthlyVolume);
 
     if (!["regular", "pro", "regular_2026", "pro_teams", "extra_lesson", "rabbit_hole_plays"].includes(priceType)) {
       return NextResponse.json({ error: "Invalid price type" }, { status: 400 });
@@ -95,13 +77,18 @@ export async function POST(request: NextRequest) {
         .select("plan")
         .eq("id", user.id)
         .single();
-      const isProTeams = planProfile?.plan === "pro_teams";
+      const unitAmount = getExtraBlockPriceCents(planProfile?.plan);
       mode = "payment";
       lineItem = {
         price_data: {
           currency: "usd",
-          unit_amount: isProTeams ? 199 : 399,
-          product_data: { name: isProTeams ? "Additional openLesson block - Pro / Teams" : "Additional openLesson block" },
+          unit_amount: unitAmount,
+          product_data: {
+            name:
+              planProfile?.plan === "pro_teams" || planProfile?.plan === "pro"
+                ? "Additional openLesson block - Pro / Teams"
+                : "Additional openLesson block",
+          },
         },
         quantity,
       };

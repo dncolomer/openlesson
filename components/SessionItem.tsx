@@ -342,7 +342,7 @@ export function SessionItem({
               <button
                 onClick={handleStartGhl}
                 className="px-3 py-2 rounded-md border border-neutral-700 bg-neutral-900 text-xs font-medium text-neutral-200 hover:border-neutral-500 hover:bg-neutral-800 transition-colors"
-                title="Start a GHL Score session with this workspace block as context"
+                title="Start a GHL Score block with this workspace block as context"
               >
                 GHL
               </button>

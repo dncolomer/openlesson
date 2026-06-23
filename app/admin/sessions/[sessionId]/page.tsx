@@ -57,7 +57,7 @@ export default function AdminSessionDetailPage() {
           router.push("/login");
           return;
         }
-        setError(data.error || "Failed to load session");
+        setError(data.error || "Failed to load block");
         return;
       }
 
@@ -65,7 +65,7 @@ export default function AdminSessionDetailPage() {
       setPlanNode(data.planNode);
     } catch (err) {
       console.error("Load session error:", err);
-      setError("Failed to load session");
+      setError("Failed to load block");
     } finally {
       setLoading(false);
     }
@@ -111,7 +111,7 @@ export default function AdminSessionDetailPage() {
       <div className="min-h-screen bg-[#0a0a0a] flex flex-col items-center justify-center gap-4">
         <div className="text-red-400">{error}</div>
         <Link href="/admin/sessions" className="text-sm text-neutral-400 hover:text-white">
-          Back to sessions
+          Back to blocks
         </Link>
       </div>
     );
@@ -149,7 +149,7 @@ export default function AdminSessionDetailPage() {
             <div className="text-neutral-200">{formatDuration(session?.duration_ms || 0)}</div>
           </div>
           <div>
-            <div className="text-xs text-neutral-500">Session ID</div>
+            <div className="text-xs text-neutral-500">Block ID</div>
             <div className="text-neutral-200 text-xs font-mono">{session?.id.slice(0, 12)}...</div>
           </div>
           <div>

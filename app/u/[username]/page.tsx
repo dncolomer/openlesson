@@ -90,7 +90,7 @@ export default async function PublicUserProfilePage({ params }: PageProps) {
               </div>
               <div className="rounded-2xl border border-neutral-800 bg-black/30 p-3">
                 <div className="text-xl font-semibold">{profile.stats.completed_sessions ?? "--"}</div>
-                <div className="text-[11px] uppercase tracking-wide text-neutral-500">Sessions</div>
+                <div className="text-[11px] uppercase tracking-wide text-neutral-500">Blocks</div>
               </div>
               <div className="rounded-2xl border border-neutral-800 bg-black/30 p-3">
                 <div className="text-xl font-semibold">{learningHours ?? "--"}</div>

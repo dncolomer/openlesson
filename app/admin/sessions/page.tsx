@@ -95,14 +95,14 @@ export default function SessionsPage() {
       const res = await fetch(`/api/admin/sessions?${params.toString()}`);
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error || "Failed to load sessions");
+        setError(data.error || "Failed to load blocks");
         return;
       }
       setSessions(data.sessions || []);
       setTotalCount(data.totalCount || 0);
     } catch (err) {
       console.error("Load sessions error:", err instanceof Error ? err.message : err);
-      setError("Failed to load sessions");
+      setError("Failed to load blocks");
     } finally {
       setLoading(false);
     }
@@ -149,15 +149,15 @@ export default function SessionsPage() {
           <Link href="/admin" className="text-neutral-400 hover:text-white text-sm">
             ← Back to Admin
           </Link>
-          <h1 className="text-2xl font-bold text-white mt-2">Sessions</h1>
-          <p className="text-neutral-400 text-sm">{totalCount} total sessions</p>
+          <h1 className="text-2xl font-bold text-white mt-2">Blocks</h1>
+          <p className="text-neutral-400 text-sm">{totalCount} total blocks</p>
         </div>
 
         {/* KPI Summary */}
         <div className="grid grid-cols-3 gap-4 mb-6">
           <div className="bg-neutral-900/50 border border-neutral-800 rounded-lg p-4">
             <div className="text-2xl font-bold text-white">{totalCount}</div>
-            <div className="text-neutral-500 text-xs mt-1">Total Sessions</div>
+            <div className="text-neutral-500 text-xs mt-1">Total Blocks</div>
           </div>
           <div className="bg-neutral-900/50 border border-neutral-800 rounded-lg p-4">
             <div className="text-2xl font-bold text-white">
@@ -240,7 +240,7 @@ export default function SessionsPage() {
               ) : sessions.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="p-8 text-center text-neutral-400">
-                    No sessions found
+                    No blocks found
                   </td>
                 </tr>
               ) : (

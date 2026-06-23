@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { emitHeliosVoicePlayback } from "@/lib/useHeliosVoicePlayback";
 
@@ -87,31 +88,89 @@ function GhcAvatar({ size = 28 }: { size?: number }) {
 
 function RadarChart({ markers }: { markers: MarkerScore[] }) {
   if (!markers.length) return null;
-  const size = 280;
+  const size = 360;
   const center = size / 2;
-  const radius = 92;
+  const radius = 100;
   const points = markers.map((marker, index) => {
     const angle = -Math.PI / 2 + (index / markers.length) * Math.PI * 2;
-    const value = Math.max(0, Math.min(100, Number(marker.score) || 0)) / 100;
+    const score = Math.max(0, Math.min(100, Number(marker.score) || 0));
+    const value = score / 100;
+    const cos = Math.cos(angle);
+    const sin = Math.sin(angle);
     return {
-      x: center + Math.cos(angle) * radius * value,
-      y: center + Math.sin(angle) * radius * value,
-      labelX: center + Math.cos(angle) * (radius + 34),
-      labelY: center + Math.sin(angle) * (radius + 34),
+      x: center + cos * radius * value,
+      y: center + sin * radius * value,
+      labelX: center + cos * (radius + 42),
+      labelY: center + sin * (radius + 42),
+      scoreX: center + cos * (radius * value + 14),
+      scoreY: center + sin * (radius * value + 14),
+      textAnchor: (Math.abs(cos) < 0.2 ? "middle" : cos > 0 ? "start" : "end") as "middle" | "start" | "end",
+      score,
       marker,
     };
   });
 
   return (
-    <svg viewBox={`0 0 ${size} ${size}`} className="mx-auto mt-6 size-full max-w-sm overflow-visible">
+    <svg viewBox={`0 0 ${size} ${size}`} className="mx-auto size-full max-w-md overflow-visible" role="img" aria-label="GHL marker scores">
       {[0.25, 0.5, 0.75, 1].map((level) => (
-        <polygon key={level} points={markers.map((_, index) => {
-          const angle = -Math.PI / 2 + (index / markers.length) * Math.PI * 2;
-          return `${center + Math.cos(angle) * radius * level},${center + Math.sin(angle) * radius * level}`;
-        }).join(" ")} fill="none" stroke="rgba(255,255,255,0.12)" />
+        <g key={level}>
+          <polygon
+            points={markers.map((_, index) => {
+              const angle = -Math.PI / 2 + (index / markers.length) * Math.PI * 2;
+              return `${center + Math.cos(angle) * radius * level},${center + Math.sin(angle) * radius * level}`;
+            }).join(" ")}
+            fill="none"
+            stroke="rgba(255,255,255,0.12)"
+          />
+          <text
+            x={center + 4}
+            y={center - radius * level + (level === 1 ? -6 : 4)}
+            className="fill-neutral-500 text-[9px] font-mono"
+          >
+            {Math.round(level * 100)}
+          </text>
+        </g>
       ))}
-      <polygon points={points.map((point) => `${point.x},${point.y}`).join(" ")} fill="rgba(255,255,255,0.18)" stroke="white" strokeWidth="2" />
-      {points.map((point) => <circle key={point.marker.id} cx={point.x} cy={point.y} r="3" fill="white" />)}
+      {markers.map((_, index) => {
+        const angle = -Math.PI / 2 + (index / markers.length) * Math.PI * 2;
+        return (
+          <line
+            key={`axis-${index}`}
+            x1={center}
+            y1={center}
+            x2={center + Math.cos(angle) * radius}
+            y2={center + Math.sin(angle) * radius}
+            stroke="rgba(255,255,255,0.08)"
+          />
+        );
+      })}
+      <polygon points={points.map((point) => `${point.x},${point.y}`).join(" ")} fill="rgba(255,255,255,0.16)" stroke="white" strokeWidth="2" />
+      {points.map((point) => (
+        <g key={point.marker.id}>
+          <circle cx={point.x} cy={point.y} r="4" fill="white" />
+          <text
+            x={point.scoreX}
+            y={point.scoreY}
+            textAnchor={point.textAnchor}
+            dominantBaseline="middle"
+            className="fill-white text-[10px] font-mono font-medium"
+          >
+            {point.score}
+          </text>
+          <text
+            x={point.labelX}
+            y={point.labelY}
+            textAnchor={point.textAnchor}
+            dominantBaseline="middle"
+            className="fill-neutral-400 text-[9px]"
+          >
+            {point.marker.label}
+          </text>
+        </g>
+      ))}
+      <text x={center} y={center + 4} textAnchor="middle" className="fill-neutral-600 text-[8px] font-mono">
+        0
+      </text>
     </svg>
   );
 }
@@ -127,9 +186,6 @@ export function GhcScoreClient({ planId, planNodeId, sessionId, privateToken, in
   const [speechError, setSpeechError] = useState<string | null>(null);
   const [isSending, setIsSending] = useState(false);
   const [voiceEnabled, setVoiceEnabled] = useState(false);
-  const [editMode, setEditMode] = useState(false);
-  const [editingThought, setEditingThought] = useState<Thought | null>(null);
-  const [editText, setEditText] = useState("");
   const [selectedActiveThoughtIds, setSelectedActiveThoughtIds] = useState<Set<string>>(new Set());
   const [memoryThoughtIds, setMemoryThoughtIds] = useState<Set<string>>(new Set());
   const [score, setScore] = useState<any>(initialSession?.analysis || null);
@@ -265,7 +321,7 @@ export function GhcScoreClient({ planId, planNodeId, sessionId, privateToken, in
     const handleKeyDown = (event: KeyboardEvent) => {
       if (phase !== "live" || event.altKey) return;
       const target = event.target as HTMLElement | null;
-      if (!editMode && target?.closest("input, textarea, select, [contenteditable='true']")) return;
+      if (target?.closest("input, textarea, select, [contenteditable='true']")) return;
       if (event.key === "Escape") {
         event.preventDefault();
         skipCurrentThought();
@@ -276,7 +332,6 @@ export function GhcScoreClient({ planId, planNodeId, sessionId, privateToken, in
         if (!thought) return;
         event.preventDefault();
         if (event.metaKey || event.ctrlKey) toggleActiveThought(thought.id);
-        else if (editMode) beginEdit(thought);
         else void sendThought(thought.text, [thought.id]);
         return;
       }
@@ -285,10 +340,6 @@ export function GhcScoreClient({ planId, planNodeId, sessionId, privateToken, in
         event.preventDefault();
         void sendThought(selectedActiveThoughts.map((thought) => thought.text).join("\n"), selectedActiveThoughts.map((thought) => thought.id));
       }
-      if (!event.metaKey && !event.ctrlKey && event.key.toLowerCase() === "e") {
-        event.preventDefault();
-        setEditMode((value) => !value);
-      }
       if (!event.metaKey && !event.ctrlKey && event.key.toLowerCase() === "v") {
         event.preventDefault();
         setVoiceEnabled((value) => !value);
@@ -296,12 +347,7 @@ export function GhcScoreClient({ planId, planNodeId, sessionId, privateToken, in
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [phase, latestThoughts, thoughts, editMode, voiceEnabled, selectedActiveThoughts]);
-
-  function beginEdit(thought: Thought) {
-    setEditingThought(thought);
-    setEditText(thought.text);
-  }
+  }, [phase, latestThoughts, thoughts, voiceEnabled, selectedActiveThoughts]);
 
   async function sendThought(text: string, thoughtIds: string[] = []) {
     const clean = normalize(text);
@@ -318,8 +364,6 @@ export function GhcScoreClient({ planId, planNodeId, sessionId, privateToken, in
       thoughtIds.forEach((id) => next.delete(id));
       return next;
     });
-    setEditingThought(null);
-    setEditText("");
 
     try {
       const response = await fetch("/api/workspace-ghl-score/chat", {
@@ -370,6 +414,7 @@ export function GhcScoreClient({ planId, planNodeId, sessionId, privateToken, in
 
   const markers = Array.isArray(score?.markers) ? score.markers : [];
   const gapAnalysis = score?.gap_analysis || (Array.isArray(score?.knowledge_gaps) ? { summary: "Learning gaps identified from the demonstration.", gaps: score.knowledge_gaps, next_practice: score.follow_up_prompts || [] } : null);
+  const workspaceId = planId || initialSession?.plan_id;
 
   function toggleActiveThought(thoughtId: string) {
     setSelectedActiveThoughtIds((current) => {
@@ -400,10 +445,11 @@ export function GhcScoreClient({ planId, planNodeId, sessionId, privateToken, in
             <p className="font-mono text-[10px] uppercase tracking-[2px] text-neutral-600">GHL Score</p>
             <h1 className="mt-1 text-xl font-medium tracking-[-0.5px]">Learning Demonstration</h1>
           </div>
-          <div className="flex items-center gap-2 text-[11px] text-neutral-500">
-            <button onClick={() => setVoiceEnabled((value) => !value)} className={`rounded-md border px-2 py-1 ${voiceEnabled ? "border-white bg-white text-black" : "border-neutral-800 bg-neutral-950"}`}>V voice</button>
-            <button onClick={() => setEditMode((value) => !value)} className={`rounded-md border px-2 py-1 ${editMode ? "border-white bg-white text-black" : "border-neutral-800 bg-neutral-950"}`}>E edit</button>
-          </div>
+          {phase === "live" && (
+            <div className="flex items-center gap-2 text-[11px] text-neutral-500">
+              <button onClick={() => setVoiceEnabled((value) => !value)} className={`rounded-md border px-2 py-1 ${voiceEnabled ? "border-white bg-white text-black" : "border-neutral-800 bg-neutral-950"}`}>V voice</button>
+            </div>
+          )}
         </header>
 
         {phase === "setup" && (
@@ -451,7 +497,7 @@ export function GhcScoreClient({ planId, planNodeId, sessionId, privateToken, in
                         <kbd className="rounded border border-neutral-700 px-2 py-1 text-neutral-300">{index + 1}</kbd>
                       </div>
                     </div>
-                    <button onClick={() => editMode ? beginEdit(thought) : sendThought(thought.text, [thought.id])} className="block w-full text-left">
+                    <button onClick={() => sendThought(thought.text, [thought.id])} className="block w-full text-left">
                       <p className="text-sm leading-relaxed text-neutral-200">{thought.text}</p>
                     </button>
                   </div>
@@ -466,13 +512,6 @@ export function GhcScoreClient({ planId, planNodeId, sessionId, privateToken, in
                 </div>
                 {speechError && <p className="mt-2 text-xs text-red-300">Speech recognition: {speechError}</p>}
               </div>
-              {editingThought && (
-                <div className="border-b border-neutral-900 p-4">
-                  <div className="mb-2 text-[10px] uppercase tracking-[2px] text-neutral-500">Edit Thought</div>
-                  <textarea value={editText} onChange={(event) => setEditText(event.target.value)} className="min-h-24 w-full resize-none rounded-xl border border-neutral-800 bg-black p-3 text-sm text-white outline-none focus:border-white" autoFocus />
-                  <div className="mt-2 flex gap-2"><button onClick={() => sendThought(editText, [editingThought.id])} className="rounded-md bg-white px-3 py-1.5 text-xs text-black">Send edited</button><button onClick={() => setEditingThought(null)} className="rounded-md border border-neutral-800 px-3 py-1.5 text-xs text-neutral-400">Cancel</button></div>
-                </div>
-              )}
               <div className="border-b border-neutral-900 px-4 py-3">
                 <div className="flex items-center gap-2.5">
                   <GhcAvatar size={26} />
@@ -491,7 +530,7 @@ export function GhcScoreClient({ planId, planNodeId, sessionId, privateToken, in
             <aside className="rounded-2xl border border-neutral-900 bg-neutral-950/45 p-4">
               <div className="mb-4"><p className="font-mono text-[10px] uppercase tracking-[2px] text-neutral-600">Thought Memory</p><p className="mt-1 text-xs text-neutral-500">Skipped thoughts stay here. Send one back into the dialogue when it becomes useful.</p></div>
               <div className="max-h-[72vh] space-y-3 overflow-y-auto pr-1">
-                {memoryThoughts.map((thought) => <div key={thought.id} className="rounded-xl border border-neutral-900 bg-black p-3"><div className="mb-2 flex items-center justify-between text-[10px] text-neutral-600"><span>{formatTime(thought.timestamp)}</span><button onClick={() => sendThought(thought.text, [thought.id])} className="rounded border border-neutral-800 px-2 py-1 text-neutral-400 hover:text-white">send</button></div><button onClick={() => editMode ? beginEdit(thought) : sendThought(thought.text, [thought.id])} className="w-full rounded-lg border border-neutral-900 bg-neutral-950 px-3 py-2 text-left text-xs leading-relaxed text-neutral-300 hover:border-neutral-700">{thought.text}</button></div>)}
+                {memoryThoughts.map((thought) => <div key={thought.id} className="rounded-xl border border-neutral-900 bg-black p-3"><div className="mb-2 flex items-center justify-between text-[10px] text-neutral-600"><span>{formatTime(thought.timestamp)}</span><button onClick={() => sendThought(thought.text, [thought.id])} className="rounded border border-neutral-800 px-2 py-1 text-neutral-400 hover:text-white">send</button></div><button onClick={() => sendThought(thought.text, [thought.id])} className="w-full rounded-lg border border-neutral-900 bg-neutral-950 px-3 py-2 text-left text-xs leading-relaxed text-neutral-300 hover:border-neutral-700">{thought.text}</button></div>)}
                 {memoryThoughts.length === 0 && <div className="rounded-xl border border-dashed border-neutral-800 bg-black p-4 text-center text-xs text-neutral-600">Press Esc to move the current thought here.</div>}
               </div>
             </aside>
@@ -499,7 +538,99 @@ export function GhcScoreClient({ planId, planNodeId, sessionId, privateToken, in
         )}
 
         {phase === "scoring" && <section className="flex flex-1 items-center justify-center text-neutral-400">Generating your GHL Score...</section>}
-        {phase === "done" && score && <section className="mx-auto w-full max-w-3xl flex-1 py-10"><p className="font-mono text-xs uppercase tracking-[2px] text-neutral-500">GHL Score Result</p><h1 className="mt-3 text-5xl font-medium tracking-[-2px]">{score.overall_score ?? "--"}<span className="text-2xl text-neutral-500">/100</span></h1><p className="mt-4 text-neutral-300">{score.overall_reflection}</p>{gapAnalysis && <div className="mt-8 rounded-2xl border border-white/15 bg-white/[0.03] p-4"><h2 className="text-sm font-medium text-white">Gap analysis</h2>{gapAnalysis.summary && <p className="mt-2 text-sm leading-relaxed text-neutral-400">{gapAnalysis.summary}</p>}<div className="mt-4 space-y-3">{Array.isArray(gapAnalysis.gaps) && gapAnalysis.gaps.map((gap: any, index: number) => <div key={index} className="rounded-xl border border-neutral-800 bg-black p-3"><div className="flex items-center justify-between gap-3"><h3 className="text-sm font-medium text-neutral-200">{gap.title}</h3><span className="rounded border border-neutral-700 px-2 py-0.5 text-[10px] uppercase tracking-[1.4px] text-neutral-400">{gap.severity}</span></div><p className="mt-2 text-xs leading-relaxed text-neutral-500">{gap.evidence}</p><p className="mt-2 text-xs leading-relaxed text-neutral-300">Repair: {gap.suggested_repair}</p></div>)}</div>{Array.isArray(gapAnalysis.next_practice) && gapAnalysis.next_practice.length > 0 && <div className="mt-4"><h3 className="text-xs font-medium uppercase tracking-[1.5px] text-neutral-500">Next practice</h3><ul className="mt-2 space-y-1 text-sm text-neutral-300">{gapAnalysis.next_practice.map((item: string, index: number) => <li key={index}>{item}</li>)}</ul></div>}</div>}<RadarChart markers={markers} /><div className="mt-8 grid gap-3 sm:grid-cols-2">{markers.map((marker: MarkerScore) => <div key={marker.id} className="rounded-md border border-neutral-800 bg-neutral-950 p-4"><div className="flex items-center justify-between gap-3"><h2 className="text-sm font-medium text-neutral-200">{marker.label}</h2><span className="font-mono text-sm text-white">{marker.score}</span></div><p className="mt-2 text-xs leading-relaxed text-neutral-500">{marker.rationale}</p></div>)}</div></section>}
+        {phase === "done" && score && (
+          <section className="flex-1 py-8">
+            <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
+              <div>
+                <p className="font-mono text-xs uppercase tracking-[2px] text-neutral-500">GHL Score Result</p>
+                <h1 className="mt-2 text-4xl font-medium tracking-[-1.5px] sm:text-5xl">
+                  {score.overall_score ?? "--"}
+                  <span className="text-2xl text-neutral-500">/100</span>
+                </h1>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {workspaceId && (
+                  <Link
+                    href={`/workspace/${workspaceId}`}
+                    className="rounded-md border border-neutral-800 bg-neutral-950 px-4 py-2 text-sm text-neutral-200 transition hover:border-neutral-600 hover:text-white"
+                  >
+                    Back to workspace
+                  </Link>
+                )}
+                {!privateToken && (
+                  <Link
+                    href="/dashboard"
+                    className="rounded-md bg-white px-4 py-2 text-sm font-medium text-black transition hover:bg-neutral-200"
+                  >
+                    Dashboard
+                  </Link>
+                )}
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-neutral-900 bg-neutral-950/45 px-4 py-6 sm:px-8">
+              <p className="text-center font-mono text-[10px] uppercase tracking-[2px] text-neutral-600">Marker profile</p>
+              <RadarChart markers={markers} />
+            </div>
+
+            <div className="mt-6 grid gap-6 lg:grid-cols-2">
+              <div className="space-y-6">
+                {score.overall_reflection && (
+                  <div className="rounded-2xl border border-neutral-900 bg-neutral-950/45 p-5">
+                    <h2 className="text-sm font-medium text-white">Overall reflection</h2>
+                    <p className="mt-3 text-sm leading-relaxed text-neutral-300">{score.overall_reflection}</p>
+                  </div>
+                )}
+                {gapAnalysis && (
+                  <div className="rounded-2xl border border-white/15 bg-white/[0.03] p-5">
+                    <h2 className="text-sm font-medium text-white">Gap analysis</h2>
+                    {gapAnalysis.summary && (
+                      <p className="mt-2 text-sm leading-relaxed text-neutral-400">{gapAnalysis.summary}</p>
+                    )}
+                    <div className="mt-4 space-y-3">
+                      {Array.isArray(gapAnalysis.gaps) &&
+                        gapAnalysis.gaps.map((gap: any, index: number) => (
+                          <div key={index} className="rounded-xl border border-neutral-800 bg-black p-3">
+                            <div className="flex items-center justify-between gap-3">
+                              <h3 className="text-sm font-medium text-neutral-200">{gap.title}</h3>
+                              <span className="rounded border border-neutral-700 px-2 py-0.5 text-[10px] uppercase tracking-[1.4px] text-neutral-400">
+                                {gap.severity}
+                              </span>
+                            </div>
+                            <p className="mt-2 text-xs leading-relaxed text-neutral-500">{gap.evidence}</p>
+                            <p className="mt-2 text-xs leading-relaxed text-neutral-300">Repair: {gap.suggested_repair}</p>
+                          </div>
+                        ))}
+                    </div>
+                    {Array.isArray(gapAnalysis.next_practice) && gapAnalysis.next_practice.length > 0 && (
+                      <div className="mt-4">
+                        <h3 className="text-xs font-medium uppercase tracking-[1.5px] text-neutral-500">Next practice</h3>
+                        <ul className="mt-2 space-y-1 text-sm text-neutral-300">
+                          {gapAnalysis.next_practice.map((item: string, index: number) => (
+                            <li key={index}>{item}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-3">
+                <h2 className="font-mono text-[10px] uppercase tracking-[2px] text-neutral-600">Marker breakdown</h2>
+                {markers.map((marker: MarkerScore) => (
+                  <div key={marker.id} className="rounded-xl border border-neutral-800 bg-neutral-950 p-4">
+                    <div className="flex items-center justify-between gap-3">
+                      <h3 className="text-sm font-medium text-neutral-200">{marker.label}</h3>
+                      <span className="font-mono text-lg text-white">{marker.score}</span>
+                    </div>
+                    <p className="mt-2 text-xs leading-relaxed text-neutral-500">{marker.rationale}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </section>
+        )}
         {phase === "error" && <section className="flex flex-1 flex-col items-center justify-center text-center"><h1 className="text-2xl font-medium">GHL Score failed</h1><p className="mt-3 max-w-md text-sm text-red-300">{error}</p><button onClick={() => setPhase("setup")} className="mt-6 rounded-md bg-white px-4 py-2 text-sm font-medium text-black">Try again</button></section>}
       </div>
     </main>

@@ -23,7 +23,7 @@ export async function GET(
 
     if (sessionError) {
       console.error("Admin session lookup error:", sessionError);
-      return NextResponse.json({ error: "Failed to load session" }, { status: 500 });
+      return NextResponse.json({ error: "Failed to load block" }, { status: 500 });
     }
 
     if (sessionData) {
@@ -48,7 +48,7 @@ export async function GET(
       return NextResponse.json(ghlDetail);
     }
 
-    return NextResponse.json({ error: "Session not found" }, { status: 404 });
+    return NextResponse.json({ error: "Block not found" }, { status: 404 });
   } catch (err) {
     console.error("Admin session detail error:", err);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });

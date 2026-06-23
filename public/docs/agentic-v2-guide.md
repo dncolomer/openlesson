@@ -54,7 +54,7 @@ Only `15` and `30` minute sessions are supported. Results include marker spider 
 
 ## Organizations And Guests
 
-Teams-tier users can create an organization through `POST /api/organization` and become its admin. Org admins can create guest users with `POST /api/v2/agent/org/guests` by providing an email. Guests receive individual API keys and can access organization workspaces and GHL links. If a guest later signs up with the same email, their real user inherits the guest's organization membership, GHL sessions, and guest API keys.
+Teams-tier users can create an organization through `POST /api/organization` and become its admin. Org admins can create guest users with `POST /api/v2/agent/org/guests` by providing an email. Guests receive individual API keys (`workspaces:read`, `workspaces:write`, `ghl:read`, `ghl:write`) and can create Performance Workspaces, access organization workspaces, and use GHL links. If a guest later signs up with the same email, their real user inherits the guest's organization membership, GHL sessions, and guest API keys.
 
 ## Removed Surface
 

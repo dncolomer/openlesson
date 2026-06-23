@@ -10,6 +10,7 @@ import { DEFAULT_PROMPTS, PROMPT_META, type PromptKey, type UserPrompts } from "
 import { buildContributionDays, contributionLevel, contributionMonthLabels, dateKey, groupContributionWeeks } from "@/lib/contributions";
 
 import { useI18n } from "@/lib/i18n";
+import { formatPlanMonthlyPrice, hasAgentApiKeyPlan, type PlanId } from "@/lib/plans";
 
 const DASHBOARD_BACKGROUND = "/aesthetics/Greco-futurism/HHnTrgVaQAAP-_3.jpeg";
 const PROFILE_BACKGROUND_IMAGES = [
@@ -36,6 +37,17 @@ interface AgentApiKey {
   created_at: string;
   last_used_at: string | null;
   usage_count: number;
+  scopes?: string[];
+}
+
+interface OrgUsageSummary {
+  id: string;
+  name: string;
+  isOrgAdmin: boolean;
+  memberCount: number;
+  guestCount: number;
+  used: number;
+  limit: number | null;
 }
 
 export default function DashboardPage() {
@@ -45,7 +57,7 @@ export default function DashboardPage() {
   const searchParams = useSearchParams();
   const initialTab = (searchParams.get("tab") as Tab) || "plans";
   const [activeTab, setActiveTab] = useState<Tab>(
-    ["overview", "plans"].includes(initialTab) ? initialTab : "plans"
+    ["overview", "plans", "usage"].includes(initialTab) ? initialTab : "plans"
   );
   const learningMapScrollRef = useRef<HTMLDivElement>(null);
 
@@ -70,10 +82,13 @@ export default function DashboardPage() {
   const [usageData, setUsageData] = useState<{
     plan: string;
     used: number;
+    personalUsed: number;
     limit: number | null;
     extraLessons: number;
     periodEnd: string | null;
     subscriptionStatus: string;
+    organization: OrgUsageSummary | null;
+    isAdmin: boolean;
   } | null>(null);
   const [loadingUsage, setLoadingUsage] = useState(false);
 
@@ -96,7 +111,6 @@ export default function DashboardPage() {
   const [newKeyValue, setNewKeyValue] = useState<string | null>(null);
   const [newKeyName, setNewKeyName] = useState("");
   const [keyCopied, setKeyCopied] = useState(false);
-  const [mcpUrlCopied, setMcpUrlCopied] = useState(false);
 
   // Config tab
   const [availableModels, setAvailableModels] = useState<AvailableModel[]>([]);
@@ -212,49 +226,38 @@ export default function DashboardPage() {
           }
           const usageResult = await usageRes.json();
           setUsageData({
-            plan: usageResult.plan || "free",
-            used: usageResult.used || 0,
-            limit: usageResult.limit ?? null,
+            plan: usageResult.plan || profile?.plan || "free",
+            used: usageResult.used ?? 0,
+            personalUsed: usageResult.personalUsed ?? usageResult.used ?? 0,
+            limit: usageResult.isAdmin ? null : (usageResult.limit ?? null),
             extraLessons: profile?.extra_lessons ?? 0,
             periodEnd: profile?.current_period_end ?? null,
             subscriptionStatus: profile?.subscription_status ?? "inactive",
+            organization: usageResult.organization ?? null,
+            isAdmin: usageResult.isAdmin === true || profile?.is_admin === true,
           });
         } catch (err) {
           console.error("Failed to load usage data:", err);
         }
 
-      // Load API keys
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data: keys } = await supabase
-        .from("agent_api_keys")
-        .select(`
-          id,
-          key_prefix,
-          label,
-          rate_limit,
-          is_active,
-          created_at,
-          last_used_at
-        `)
-        .eq("user_id", authUser.id)
-        .order("created_at", { ascending: false });
-
-      if (keys) {
-        const keysWithUsage = await Promise.all(
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          keys.map(async (key: any) => {
-            const { count } = await supabase
-              .from("sessions")
-              .select("*", { count: "exact", head: true })
-              .eq("agent_api_key_id", key.id);
-
-            return {
+      // Load Agentic API keys (v2 for Teams, legacy for Pro)
+      const plan = profile?.plan || "free";
+      const useV2Keys = profile?.is_admin || plan === "pro_teams";
+      try {
+        const keysEndpoint = useV2Keys ? "/api/v2/agent/keys" : "/api/agent/keys";
+        const keysRes = await fetch(keysEndpoint);
+        if (keysRes.ok) {
+          const keysPayload = await keysRes.json();
+          const keys = (keysPayload.keys || []).filter((key: AgentApiKey) => key.is_active !== false);
+          setApiKeys(
+            keys.map((key: AgentApiKey) => ({
               ...key,
-              usage_count: count || 0,
-            } as AgentApiKey;
-          })
-        );
-        setApiKeys(keysWithUsage);
+              usage_count: key.usage_count ?? 0,
+            }))
+          );
+        }
+      } catch (err) {
+        console.error("Failed to load API keys:", err);
       }
 
       // Load available models
@@ -380,37 +383,47 @@ export default function DashboardPage() {
     setUserPrompts({});
   };
 
+  const usesAgenticV2Keys = user?.plan === "pro_teams" || user?.isAdmin;
+
   const handleCreateApiKey = async () => {
-    // Check if user is Pro or admin
-    if (user?.plan !== "pro" && !user?.isAdmin) {
+    if (!hasAgentApiKeyPlan(user?.plan) && !user?.isAdmin) {
       alert(t('dashboard.apiKeysProOnly'));
       return;
     }
     if (!newKeyName.trim()) return;
     setCreatingKey(true);
     try {
-      const res = await fetch("/api/agent/keys", {
+      const endpoint = usesAgenticV2Keys ? "/api/v2/agent/keys" : "/api/agent/keys";
+      const res = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ label: newKeyName.trim() }),
       });
       const data = await res.json();
-      if (data.key) {
+      const createdKey = data.key;
+      const rawKey = data.api_key || data.key?.key;
+      if (createdKey) {
         setApiKeys((prev) => [
           {
-            id: data.key.id,
-            key_prefix: data.key.key_prefix,
-            label: data.key.label,
-            rate_limit: data.key.rate_limit,
-            is_active: data.key.is_active,
-            created_at: data.key.created_at,
+            id: createdKey.id,
+            key_prefix: createdKey.key_prefix,
+            label: createdKey.label,
+            rate_limit: createdKey.rate_limit ?? 120,
+            is_active: createdKey.is_active ?? true,
+            created_at: createdKey.created_at,
             last_used_at: null,
             usage_count: 0,
+            scopes: createdKey.scopes,
           },
           ...prev,
         ]);
-        setNewKeyValue(data.key.key);
-        setTimeout(() => setNewKeyValue(null), 30000);
+        if (rawKey) {
+          setNewKeyValue(rawKey);
+          setTimeout(() => setNewKeyValue(null), 30000);
+        }
+        setNewKeyName("");
+      } else if (data.error?.message) {
+        alert(data.error.message);
       }
     } catch (err) {
       console.error("Failed to create key:", err);
@@ -422,7 +435,8 @@ export default function DashboardPage() {
   const handleDeleteApiKey = async (id: string) => {
     if (!confirm(t('dashboard.deleteApiKeyConfirm'))) return;
     try {
-      await fetch(`/api/agent/keys/${id}`, { method: "DELETE" });
+      const endpoint = usesAgenticV2Keys ? `/api/v2/agent/keys/${id}` : `/api/agent/keys/${id}`;
+      await fetch(endpoint, { method: "DELETE" });
       setApiKeys((prev) => prev.filter((k) => k.id !== id));
     } catch (err) {
       console.error("Failed to delete key:", err);
@@ -430,9 +444,32 @@ export default function DashboardPage() {
   };
 
   const publicProfileUrl = user?.username && typeof window !== "undefined" ? `${window.location.origin}/u/${user.username}` : "";
-  const grokMcpUrl = newKeyValue && typeof window !== "undefined"
-    ? `${window.location.origin}/api/mcp/${encodeURIComponent(newKeyValue)}`
-    : "";
+
+  const usageCardClass = "rounded-md border border-neutral-800 bg-neutral-950/75 p-5 sm:p-6";
+  const usageLabelClass = "font-mono text-[10px] uppercase tracking-[2px] text-neutral-500";
+
+  function planDisplayName(plan: string, isAdmin?: boolean) {
+    if (isAdmin) return "Platform admin";
+    if (plan === "pro_teams") return "Pro / Teams";
+    if (plan === "regular_2026") return "Regular";
+    if (plan === "pro") return "Pro";
+    if (plan === "regular") return "Regular";
+    if (plan === "free") return "Free";
+    return plan;
+  }
+
+  function planPriceLabel(plan: string, isAdmin?: boolean) {
+    if (isAdmin) return "Unlimited platform access";
+    if (plan === "pro") return t("dashboard.pricePro");
+    if (plan === "regular") return t("dashboard.priceRegular");
+    if (plan === "free") return t("dashboard.priceFree");
+    return formatPlanMonthlyPrice(plan as PlanId);
+  }
+
+  function usageProgress(used: number, limit: number | null) {
+    if (limit === null || limit <= 0) return 0;
+    return Math.min((used / limit) * 100, 100);
+  }
 
   const handleSaveProfile = async () => {
     if (!user) return;
@@ -550,6 +587,7 @@ export default function DashboardPage() {
           {[
             { id: "overview", label: "Profile" },
             { id: "plans", label: "Workspaces" },
+            { id: "usage", label: "Usage & API" },
           ].map((tab) => (
             <button
               key={tab.id}
@@ -615,7 +653,7 @@ export default function DashboardPage() {
               </div>
               <div className="grid gap-px bg-neutral-800 sm:grid-cols-4">
                 {[
-                  ["Sessions", sessions.length],
+                  ["Blocks", sessions.length],
                   ["Completed", completedSessions.length],
                   ["Public workspaces", publicPlans.length],
                   ["Minutes", totalLearningMinutes],
@@ -735,7 +773,7 @@ export default function DashboardPage() {
                   ["Make profile public", "profileVisibility"],
                   ["Show activity timeline", "publicActivityEnabled"],
                   ["Show aggregate stats", "publicStatsEnabled"],
-                  ["Show completed session titles", "publicSessionTitlesEnabled"],
+                  ["Show completed block titles", "publicSessionTitlesEnabled"],
                 ].map(([label, key]) => (
                   <label key={key} className="flex items-center justify-between rounded-xl border border-neutral-800 bg-neutral-900/60 p-4 text-sm text-neutral-300">
                     <span>{label}</span>
@@ -1086,235 +1124,317 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* Usage Tab */}
+        {/* Usage & API Tab */}
         {activeTab === "usage" && (
-          <div className="space-y-6">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold">{t('dashboard.yourSubscription')}</h2>
-              <Link href="/pricing" className="text-sm text-emerald-400 hover:text-emerald-300">
-                {t('dashboard.viewAllPlans')}
+          <div className="space-y-8">
+            <div className="flex flex-wrap items-center justify-between gap-3 border border-neutral-800 bg-neutral-950/75 px-6 py-5">
+              <div>
+                <p className={usageLabelClass}>Account</p>
+                <h2 className="mt-2 text-2xl font-medium tracking-[-0.5px] text-white">{t("dashboard.yourSubscription")}</h2>
+                <p className="mt-1 text-sm text-neutral-500">Plan limits, organization pool usage, and Agentic API keys.</p>
+              </div>
+              <Link
+                href="/pricing"
+                className="inline-flex h-10 items-center justify-center rounded-sm border border-neutral-700 px-4 text-sm text-neutral-200 transition hover:border-neutral-500 hover:text-white"
+              >
+                View pricing →
               </Link>
             </div>
             {loadingUsage ? (
-              <div className="text-center py-12 text-neutral-400">{t('common.loading')}</div>
+              <div className="text-center py-12 text-neutral-400">{t("common.loading")}</div>
             ) : usageData ? (
-              <div className="grid md:grid-cols-2 gap-6">
-                <div className="bg-neutral-900 rounded-xl p-6 border border-neutral-800">
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="text-sm text-neutral-400">{t('dashboard.currentPlan')}</div>
-                    {(usageData.plan === "pro" || usageData.plan === "pro_teams") && (
-                      <span className="px-2 py-1 bg-purple-500/20 text-purple-400 text-xs rounded-full">{t('dashboard.pro')}</span>
-                    )}
-                    {(usageData.plan === "regular" || usageData.plan === "regular_2026") && (
-                      <span className="px-2 py-1 bg-blue-500/20 text-blue-400 text-xs rounded-full">{t('dashboard.regular')}</span>
-                    )}
-                    {usageData.plan === "free" && (
-                      <span className="px-2 py-1 bg-neutral-700 text-neutral-300 text-xs rounded-full">{t('dashboard.free')}</span>
-                    )}
-                  </div>
-                  <div className="text-3xl font-bold text-white mb-1 capitalize">{usageData.plan === "pro_teams" ? "Pro / Teams" : usageData.plan === "regular_2026" ? "Regular" : usageData.plan}</div>
-                  <div className="text-sm text-neutral-500">
-                    {usageData.plan === "pro_teams" ? "$499/month" : usageData.plan === "regular_2026" ? "$29.99/month" : usageData.plan === "pro" ? t('dashboard.pricePro') : usageData.plan === "regular" ? t('dashboard.priceRegular') : t('dashboard.priceFree')}
-                  </div>
-                </div>
-
-                <div className="bg-neutral-900 rounded-xl p-6 border border-neutral-800">
-                  <div className="text-sm text-neutral-400 mb-4">{t('dashboard.sessionsThisPeriod')}</div>
-                  <div className="flex items-end gap-2 mb-3">
-                    <span className="text-3xl font-bold text-white">{usageData.used}</span>
-                    <span className="text-sm text-neutral-500 mb-1">/ {usageData.limit === null ? t('dashboard.infinity') : usageData.limit}</span>
-                  </div>
-                  {usageData.limit !== null && (
-                    <div className="w-full bg-neutral-800 rounded-full h-2">
-                      <div
-                        className={`h-2 rounded-full ${
-                          usageData.used >= usageData.limit
-                            ? "bg-red-500"
-                            : usageData.used >= usageData.limit * 0.8
-                            ? "bg-yellow-500"
-                            : "bg-emerald-500"
-                        }`}
-                        style={{ width: `${Math.min((usageData.used / usageData.limit) * 100, 100)}%` }}
-                      />
+              <>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className={usageCardClass}>
+                    <div className="flex items-center justify-between gap-3">
+                      <p className={usageLabelClass}>{t("dashboard.currentPlan")}</p>
+                      {usageData.isAdmin ? (
+                        <span className="rounded-full border border-white/15 bg-white/10 px-2.5 py-1 text-[10px] uppercase tracking-[1.4px] text-neutral-200">
+                          Admin
+                        </span>
+                      ) : usageData.plan === "pro_teams" ? (
+                        <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[10px] uppercase tracking-[1.4px] text-neutral-400">
+                          Teams
+                        </span>
+                      ) : usageData.plan === "pro" ? (
+                        <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[10px] uppercase tracking-[1.4px] text-neutral-400">
+                          {t("dashboard.pro")}
+                        </span>
+                      ) : usageData.plan === "regular" || usageData.plan === "regular_2026" ? (
+                        <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[10px] uppercase tracking-[1.4px] text-neutral-400">
+                          {t("dashboard.regular")}
+                        </span>
+                      ) : (
+                        <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[10px] uppercase tracking-[1.4px] text-neutral-400">
+                          {t("dashboard.free")}
+                        </span>
+                      )}
                     </div>
-                  )}
-                  <div className="mt-3 text-xs text-neutral-500">
-                    {usageData.limit === null
-                      ? t('dashboard.unlimitedSessions')
-                      : t('dashboard.sessionsRemaining', { count: usageData.limit - usageData.used })}
+                    <div className="mt-4 text-3xl font-medium tracking-[-1px] text-white">
+                      {planDisplayName(usageData.plan, usageData.isAdmin)}
+                    </div>
+                    <p className="mt-2 text-sm text-neutral-500">{planPriceLabel(usageData.plan, usageData.isAdmin)}</p>
+                    {!usageData.isAdmin && usageData.subscriptionStatus !== "active" && usageData.plan !== "free" && (
+                      <p className="mt-3 text-xs text-neutral-600">{t("dashboard.subscriptionNotActive")}</p>
+                    )}
                   </div>
-                </div>
 
-                <div className="bg-neutral-900 rounded-xl p-6 border border-neutral-800">
-                  <div className="text-sm text-neutral-400 mb-4">{t('dashboard.extraLessons')}</div>
-                  <div className="text-3xl font-bold text-white mb-1">{usageData.extraLessons}</div>
-                  <div className="text-sm text-neutral-500 mb-4">{t('dashboard.purchasedCredits')}</div>
-                  <button
-                    onClick={async () => {
-                      try {
-                        const res = await fetch("/api/stripe/create-checkout", {
-                          method: "POST",
-                          headers: { "Content-Type": "application/json" },
-                          body: JSON.stringify({ priceType: "extra_lesson" }),
-                        });
-                        const data = await res.json();
-                        if (data.url) {
-                          window.location.href = data.url;
-                        }
-                      } catch (err) {
-                        console.error("Failed to create checkout:", err);
-                      }
-                    }}
-                    className="w-full py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-500 transition-colors text-sm font-medium"
-                  >
-                    {t('dashboard.buyExtraLesson')}
-                  </button>
-                </div>
+                  <div className={usageCardClass}>
+                    <p className={usageLabelClass}>
+                      {usageData.organization ? "Your blocks this period" : t("dashboard.sessionsThisPeriod")}
+                    </p>
+                    {(() => {
+                      const displayUsed = usageData.organization ? usageData.personalUsed : usageData.used;
+                      const displayLimit = usageData.isAdmin || usageData.limit === null ? null : usageData.organization ? null : usageData.limit;
+                      return (
+                        <>
+                          <div className="mt-4 flex items-end gap-2">
+                            <span className="text-3xl font-medium tracking-[-1px] text-white">{displayUsed}</span>
+                            <span className="mb-1 text-sm text-neutral-500">
+                              / {displayLimit === null ? t("dashboard.infinity") : displayLimit}
+                            </span>
+                          </div>
+                          {displayLimit !== null && (
+                            <div className="mt-4 h-1.5 w-full rounded-full bg-neutral-800">
+                              <div
+                                className={`h-1.5 rounded-full ${
+                                  displayUsed >= displayLimit
+                                    ? "bg-red-400"
+                                    : displayUsed >= displayLimit * 0.8
+                                    ? "bg-amber-400"
+                                    : "bg-white"
+                                }`}
+                                style={{ width: `${usageProgress(displayUsed, displayLimit)}%` }}
+                              />
+                            </div>
+                          )}
+                          <p className="mt-3 text-xs text-neutral-500">
+                            {usageData.isAdmin
+                              ? "Unlimited blocks — admin access bypasses plan limits."
+                              : usageData.organization
+                              ? "Your personal contribution to the organization pool."
+                              : displayLimit === null
+                              ? t("dashboard.unlimitedSessions")
+                              : t("dashboard.sessionsRemaining", { count: Math.max(displayLimit - displayUsed, 0) })}
+                          </p>
+                        </>
+                      );
+                    })()}
+                  </div>
 
-                <div className="bg-neutral-900 rounded-xl p-6 border border-neutral-800">
-                  <div className="text-sm text-neutral-400 mb-4">{t('dashboard.billingPeriod')}</div>
-                  {usageData.subscriptionStatus === "active" && usageData.periodEnd ? (
-                    <>
-                      <div className="text-lg font-medium text-white mb-1">
-                        {t('dashboard.resetsOn', { date: new Date(usageData.periodEnd).toLocaleDateString("en-US", { month: "short", day: "numeric" }) })}
-                      </div>
-                      <div className="text-sm text-neutral-500">
-                        {(usageData.plan === "regular" || usageData.plan === "regular_2026" || usageData.plan === "pro_teams") && t('dashboard.regularResetDesc')}
-                        {usageData.plan === "pro" && t('dashboard.unlimitedContinue')}
-                      </div>
-                    </>
-                  ) : (
-                    <>
-                      <div className="text-lg font-medium text-white mb-1">
-                        {usageData.plan === "free" ? t('dashboard.noSubscription') : t('dashboard.inactive')}
-                      </div>
-                      <div className="text-sm text-neutral-500">
-                        {usageData.plan === "free" ? t('dashboard.freeSessionAvailable') : t('dashboard.subscriptionNotActive')}
-                      </div>
-                    </>
-                  )}
-                  {(usageData.plan === "free" || usageData.plan === "regular" || usageData.plan === "regular_2026") && (
+                  <div className={usageCardClass}>
+                    <p className={usageLabelClass}>{t("dashboard.extraLessons")}</p>
+                    <div className="mt-4 text-3xl font-medium tracking-[-1px] text-white">{usageData.extraLessons}</div>
+                    <p className="mt-2 text-sm text-neutral-500">
+                      {usageData.isAdmin || usageData.limit === null
+                        ? "Extra blocks are optional when your plan is already unlimited."
+                        : t("dashboard.purchasedCredits")}
+                    </p>
                     <Link
                       href="/pricing"
-                      className="mt-4 block w-full py-2 text-center border border-emerald-600 text-emerald-400 rounded-lg hover:bg-emerald-600/10 transition-colors text-sm font-medium"
+                      className="mt-4 inline-flex text-sm text-neutral-300 underline decoration-neutral-600 underline-offset-4 transition hover:text-white"
                     >
-                      {t('dashboard.upgradeToPro')}
+                      Buy more on pricing →
                     </Link>
-                  )}
+                  </div>
+
+                  <div className={usageCardClass}>
+                    <p className={usageLabelClass}>{t("dashboard.billingPeriod")}</p>
+                    {usageData.isAdmin ? (
+                      <>
+                        <div className="mt-4 text-lg font-medium text-white">No billing limits</div>
+                        <p className="mt-2 text-sm text-neutral-500">Admin accounts are not metered against plan quotas.</p>
+                      </>
+                    ) : usageData.subscriptionStatus === "active" && usageData.periodEnd ? (
+                      <>
+                        <div className="mt-4 text-lg font-medium text-white">
+                          {t("dashboard.resetsOn", {
+                            date: new Date(usageData.periodEnd).toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+                          })}
+                        </div>
+                        <p className="mt-2 text-sm text-neutral-500">
+                          {usageData.plan === "pro"
+                            ? t("dashboard.unlimitedContinue")
+                            : usageData.plan === "pro_teams"
+                            ? "Organization block pool resets each billing period."
+                            : t("dashboard.regularResetDesc")}
+                        </p>
+                      </>
+                    ) : (
+                      <>
+                        <div className="mt-4 text-lg font-medium text-white">
+                          {usageData.plan === "free" ? t("dashboard.noSubscription") : t("dashboard.inactive")}
+                        </div>
+                        <p className="mt-2 text-sm text-neutral-500">
+                          {usageData.plan === "free" ? t("dashboard.freeSessionAvailable") : t("dashboard.subscriptionNotActive")}
+                        </p>
+                      </>
+                    )}
+                    {!usageData.isAdmin && (usageData.plan === "free" || usageData.plan === "regular" || usageData.plan === "regular_2026") && (
+                      <Link
+                        href="/pricing"
+                        className="mt-4 inline-flex text-sm text-neutral-300 underline decoration-neutral-600 underline-offset-4 transition hover:text-white"
+                      >
+                        {t("dashboard.upgradeToPro")} →
+                      </Link>
+                    )}
+                  </div>
                 </div>
-              </div>
+
+                {usageData.organization && (
+                  <div className={`${usageCardClass} border-white/10`}>
+                    <div className="flex flex-wrap items-start justify-between gap-4">
+                      <div>
+                        <p className={usageLabelClass}>Organization pool</p>
+                        <h3 className="mt-2 text-xl font-medium text-white">{usageData.organization.name}</h3>
+                        <p className="mt-2 text-xs text-neutral-500">
+                          {usageData.organization.memberCount} members · {usageData.organization.guestCount} guests
+                          {usageData.organization.isOrgAdmin ? " · Org admin" : " · Member"}
+                        </p>
+                      </div>
+                      {usageData.organization.isOrgAdmin && (
+                        <Link
+                          href="/organization"
+                          className="inline-flex h-10 items-center justify-center rounded-sm border border-neutral-700 px-4 text-sm text-neutral-200 transition hover:border-neutral-500 hover:text-white"
+                        >
+                          Manage organization →
+                        </Link>
+                      )}
+                    </div>
+                    <div className="mt-5 flex items-end gap-2">
+                      <span className="text-3xl font-medium tracking-[-1px] text-white">{usageData.organization.used}</span>
+                      <span className="mb-1 text-sm text-neutral-500">
+                        / {usageData.organization.limit === null ? t("dashboard.infinity") : usageData.organization.limit} blocks this period
+                      </span>
+                    </div>
+                    {usageData.organization.limit !== null && (
+                      <div className="mt-4 h-1.5 w-full rounded-full bg-neutral-800">
+                        <div
+                          className={`h-1.5 rounded-full ${
+                            usageData.organization.used >= usageData.organization.limit
+                              ? "bg-red-400"
+                              : usageData.organization.used >= usageData.organization.limit * 0.8
+                              ? "bg-amber-400"
+                              : "bg-white"
+                          }`}
+                          style={{ width: `${usageProgress(usageData.organization.used, usageData.organization.limit)}%` }}
+                        />
+                      </div>
+                    )}
+                    <p className="mt-3 text-xs text-neutral-500">
+                      Teams plans share one monthly block pool across all organization members.
+                    </p>
+                  </div>
+                )}
+              </>
             ) : (
-              <div className="text-center py-12 text-neutral-400">{t('dashboard.unableToLoadUsage')}</div>
+              <div className="text-center py-12 text-neutral-400">{t("dashboard.unableToLoadUsage")}</div>
             )}
 
-            {/* API Access Section (merged from Agentic Usage) */}
-            <div className="border-t border-neutral-800/60 pt-6">
-              <div className="flex items-center justify-between mb-2">
-                <h2 className="text-lg font-semibold">{t('dashboard.apiAccess')}</h2>
-                <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-400">
-                  {t('dashboard.experimental')}
-                </span>
-              </div>
-              <p className="text-xs text-neutral-500 mb-4">
-                {t('dashboard.apiExperimentalDesc')}
-              </p>
-              {user?.plan !== "pro" && !user?.isAdmin && (
-                <div className="mb-4 p-4 rounded-lg border border-yellow-500/30 bg-yellow-500/5">
-                  <p className="text-sm text-yellow-400">
-                    {t('dashboard.apiKeysAvailableOnPro')}{" "}
-                    <button
-                      onClick={() => window.location.href = "/pricing"}
-                      className="underline hover:text-yellow-300"
+            {/* Agentic API keys */}
+            <div className={`${usageCardClass} space-y-5`}>
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <p className={usageLabelClass}>Integrations</p>
+                  <h2 className="mt-2 text-xl font-medium text-white">Agentic API</h2>
+                </div>
+                <div className="flex items-center gap-3">
+                  {usesAgenticV2Keys && (
+                    <Link
+                      href="/docs/agentic-v2"
+                      className="text-sm text-neutral-400 underline decoration-neutral-600 underline-offset-4 transition hover:text-white"
                     >
-                      {t('dashboard.upgradeToPro')}
-                    </button>{" "}
-                    {t('dashboard.toCreateApiKeys')}
-                  </p>
+                      API docs →
+                    </Link>
+                  )}
+                  <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[10px] uppercase tracking-[1.4px] text-neutral-400">
+                    {usesAgenticV2Keys ? "Teams" : t("dashboard.experimental")}
+                  </span>
+                </div>
+              </div>
+              <p className="text-sm text-neutral-500">
+                {usesAgenticV2Keys
+                  ? "Create Performance Workspaces, issue GHL links, and read results via the Agentic API v2."
+                  : t("dashboard.apiExperimentalDesc")}
+              </p>
+              {!hasAgentApiKeyPlan(user?.plan) && !user?.isAdmin && (
+                <div className="rounded-md border border-neutral-800 bg-black/40 p-4 text-sm text-neutral-400">
+                  {user?.plan === "regular" || user?.plan === "regular_2026"
+                    ? "Agentic API keys require the Teams tier. "
+                    : `${t("dashboard.apiKeysAvailableOnPro")} `}
+                  <Link href="/pricing" className="text-neutral-200 underline decoration-neutral-600 underline-offset-4 hover:text-white">
+                    {t("dashboard.upgradeToPro")}
+                  </Link>{" "}
+                  {t("dashboard.toCreateApiKeys")}
                 </div>
               )}
-              <div className="flex gap-2 mb-4">
+              <div className="flex flex-col gap-2 sm:flex-row">
                 <input
                   type="text"
                   value={newKeyName}
                   onChange={(e) => setNewKeyName(e.target.value)}
-                  placeholder={t('dashboard.enterKeyName')}
-                  className="flex-1 px-3 py-1.5 text-sm bg-neutral-900 border border-neutral-700 rounded-lg focus:outline-none focus:border-blue-600"
+                  placeholder={t("dashboard.enterKeyName")}
+                  className="flex-1 rounded-md border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-neutral-200 outline-none focus:border-neutral-600"
                 />
                 <button
                   onClick={handleCreateApiKey}
                   disabled={creatingKey}
-                  className="px-3 py-1.5 text-sm bg-blue-600 hover:bg-blue-500 disabled:opacity-50 rounded-lg transition-colors"
+                  className="inline-flex h-10 items-center justify-center rounded-sm bg-white px-4 text-sm font-medium text-black transition hover:bg-neutral-200 disabled:opacity-50"
                 >
-                  {creatingKey ? t('dashboard.creating') : t('dashboard.createNewKey')}
+                  {creatingKey ? t("dashboard.creating") : t("dashboard.createNewKey")}
                 </button>
               </div>
 
               {newKeyValue && (
-                <div className="mb-4 p-4 rounded-lg border border-green-500/30 bg-green-500/5">
-                  <div className="flex items-center justify-between mb-2">
-                    <p className="text-sm text-green-400">
-                      {t('dashboard.yourNewApiKey')}
-                    </p>
+                <div className="rounded-md border border-white/15 bg-white/[0.03] p-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-sm text-neutral-300">{t("dashboard.yourNewApiKey")}</p>
                     <button
                       onClick={() => {
                         navigator.clipboard.writeText(newKeyValue);
                         setKeyCopied(true);
                         setTimeout(() => setKeyCopied(false), 2000);
                       }}
-                      className="text-xs px-2 py-1 bg-green-600 hover:bg-green-500 rounded transition-colors"
+                      className="rounded-sm border border-neutral-700 px-3 py-1 text-xs text-neutral-300 transition hover:border-neutral-500 hover:text-white"
                     >
-                      {keyCopied ? t('common.copied') : t('common.copy')}
+                      {keyCopied ? t("common.copied") : t("common.copy")}
                     </button>
                   </div>
-                  <code className="block text-xs text-neutral-300 bg-neutral-900 p-2 rounded font-mono break-all">
+                  <code className="mt-3 block break-all rounded-md border border-neutral-800 bg-black p-3 font-mono text-xs text-neutral-300">
                     {newKeyValue}
                   </code>
-                  {grokMcpUrl && (
-                    <div className="mt-4 pt-4 border-t border-green-500/20">
-                      <div className="flex items-center justify-between mb-2">
-                        <p className="text-sm text-green-400">Grok custom connector URL</p>
-                        <button
-                          onClick={() => {
-                            navigator.clipboard.writeText(grokMcpUrl);
-                            setMcpUrlCopied(true);
-                            setTimeout(() => setMcpUrlCopied(false), 2000);
-                          }}
-                          className="text-xs px-2 py-1 bg-green-600 hover:bg-green-500 rounded transition-colors"
-                        >
-                          {mcpUrlCopied ? t('common.copied') : t('common.copy')}
-                        </button>
-                      </div>
-                      <code className="block text-xs text-neutral-300 bg-neutral-900 p-2 rounded font-mono break-all">
-                        {grokMcpUrl}
-                      </code>
-                      <p className="text-xs text-neutral-500 mt-2">
-                        Paste this into Grok&apos;s Custom Connector Server URL field. It is shown only once because it contains your API key.
-                      </p>
-                    </div>
-                  )}
                 </div>
               )}
 
               {apiKeys.length === 0 ? (
-                <div className="text-center py-8 text-neutral-500 border border-neutral-800 rounded-lg">
-                  <p className="text-sm">{t('dashboard.noApiKeysYet')}</p>
+                <div className="rounded-md border border-dashed border-neutral-800 py-8 text-center text-sm text-neutral-500">
+                  {t("dashboard.noApiKeysYet")}
                 </div>
               ) : (
                 <div className="space-y-2">
                   {apiKeys.map((key) => (
                     <div
                       key={key.id}
-                      className="flex items-center justify-between p-4 rounded-lg border border-neutral-800 bg-neutral-900/50"
+                      className="flex items-center justify-between rounded-md border border-neutral-800 bg-black/40 p-4"
                     >
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium text-neutral-200">
                           {key.label || t('dashboard.unnamedKey')}
                         </p>
                         <p className="text-xs text-neutral-500 mt-0.5 font-mono">
-                          sk_{key.key_prefix}...
+                          {key.key_prefix}...
                         </p>
+                        {key.scopes && key.scopes.length > 0 && (
+                          <p className="text-[10px] text-neutral-600 mt-1 font-mono">
+                            {key.scopes.join(" · ")}
+                          </p>
+                        )}
                         <p className="text-xs text-neutral-600 mt-1">
-                          {key.usage_count} {t('dashboard.requests')} · {t('dashboard.createdOn', { date: formatDate(key.created_at) })}
+                          {key.last_used_at
+                            ? `Last used ${formatDate(key.last_used_at)}`
+                            : "Not used yet"}
+                          {" · "}
+                          {t('dashboard.createdOn', { date: formatDate(key.created_at) })}
                         </p>
                       </div>
                       <button
@@ -1330,28 +1450,7 @@ export default function DashboardPage() {
                 </div>
               )}
 
-              <div className="mt-6 p-4 rounded-lg border border-neutral-800 bg-neutral-900/50">
-                <p className="text-sm text-neutral-400 mb-3">
-                  {t('dashboard.apiKeyDescription')}
-                </p>
-                <div className="mb-4 rounded-lg border border-neutral-800 bg-neutral-950 p-4">
-                  <p className="text-xs font-medium text-neutral-300 mb-2">Grok custom connector</p>
-                  <p className="text-xs text-neutral-500">
-                    Create a Pro API key above, then copy the one-time MCP URL into Grok&apos;s Custom Connector Server URL field.
-                    Existing keys cannot show the connector URL again because OpenLesson stores only the key hash.
-                  </p>
-                </div>
-                <div className="bg-neutral-950 rounded-lg p-4 font-mono text-xs text-neutral-300 overflow-x-auto">
-                  <p className="text-neutral-500 mb-2">// {t('dashboard.exampleRequest')}</p>
-                  <p>curl -X POST https://openlesson.academy/api/agent/session/analyze \</p>
-                  <p className="pl-4">-H &quot;Authorization: Bearer YOUR_API_KEY&quot; \</p>
-                  <p className="pl-4">-H &quot;Content-Type: application/json&quot; \</p>
-                  <p className="pl-4">-d &apos;{`{"problem": "your problem", "audio": "base64..."}`}&apos;</p>
-                </div>
-                <p className="text-xs text-neutral-600 mt-3">
-                  {t('dashboard.rateLimitInfo')}
-                </p>
-              </div>
+              <p className="text-xs text-neutral-600">Rate limit: 120 requests per minute per key.</p>
             </div>
           </div>
         )}

@@ -201,7 +201,7 @@ function ResultsContent() {
       router.push(`/session?id=${newSession.id}`);
     } catch (err) {
       console.error("Failed to start follow-up session:", err);
-      alert("Failed to start session. Please try again.");
+      alert("Failed to start block. Please try again.");
     } finally {
       setStartingSession(null);
     }

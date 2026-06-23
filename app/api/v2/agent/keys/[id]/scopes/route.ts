@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { errorResponse } from "@/lib/agent-v2/auth";
+import { validateAssignableScopes } from "@/lib/agent-v2/scopes";
 import type { ApiKeyScope } from "@/lib/agent-v2/types";
 
 const VALID_SCOPES: ApiKeyScope[] = [
@@ -68,6 +69,17 @@ export async function PATCH(
     }
 
     const validatedScopes = scopes as ApiKeyScope[];
+
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("is_org_admin, is_admin")
+      .eq("id", user.id)
+      .single();
+
+    const scopeCheck = validateAssignableScopes(validatedScopes, profile || {});
+    if (!scopeCheck.ok) {
+      return errorResponse(403, "forbidden", scopeCheck.message);
+    }
 
     // ── Verify key ownership and active status ──────────────────
     const { data: existing, error: lookupError } = await supabase

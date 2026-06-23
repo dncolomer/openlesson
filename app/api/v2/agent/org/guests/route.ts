@@ -2,11 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
 import { authenticateRequest, errorResponse } from "@/lib/agent-v2/auth";
 import { hashApiKey } from "@/lib/x402";
-import type { ApiKeyScope } from "@/lib/agent-v2/types";
+import { GUEST_API_KEY_SCOPES } from "@/lib/agent-v2/scopes";
 
 export const runtime = "nodejs";
-
-const GUEST_SCOPES: ApiKeyScope[] = ["workspaces:read", "ghl:read", "ghl:write"];
 
 function normalizeEmail(value: unknown) {
   return typeof value === "string" ? value.trim().toLowerCase() : "";
@@ -79,7 +77,7 @@ export async function POST(req: NextRequest) {
       key_hash: keyHash,
       key_prefix: keyPrefix,
       label: `Guest ${email}`,
-      scopes: GUEST_SCOPES,
+      scopes: GUEST_API_KEY_SCOPES,
       rate_limit: 120,
       is_active: true,
     })

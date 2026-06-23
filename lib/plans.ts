@@ -40,7 +40,7 @@ export const PLANS: Record<PlanId, PlanDef> = {
       "Think-aloud data uploads",
       "Muse EEG integration",
       "Custom system prompts",
-      "Session reports & history",
+      "Block reports & history",
     ],
     stripePriceEnv: "STRIPE_PRICE_REGULAR",
   },
@@ -55,7 +55,7 @@ export const PLANS: Record<PlanId, PlanDef> = {
       "Volume upgrades before checkout",
       "Additional blocks at $3.99 each",
       "Think-aloud data uploads",
-      "Session reports & history",
+      "Block reports & history",
     ],
     stripePriceEnv: null,
   },
@@ -70,7 +70,7 @@ export const PLANS: Record<PlanId, PlanDef> = {
       "Think-aloud data uploads",
       "Custom system prompts",
       "Muse EEG integration",
-      "Session reports & history",
+      "Block reports & history",
       "Priority support",
       "Agentic Tutoring (API keys)",
     ],
@@ -94,8 +94,74 @@ export const PLANS: Record<PlanId, PlanDef> = {
   },
 };
 
-export const EXTRA_LESSON_PRICE = 499; // $4.99 in cents
-export const PRO_TEAMS_EXTRA_LESSON_PRICE = 299; // $2.99 in cents
+/** 2026 volume-tier monthly prices (cents). Canonical source for Stripe checkout. */
+export const REGULAR_VOLUME_PRICES: Record<number, number> = {
+  25: 4900,
+  50: 7900,
+  100: 12900,
+};
+
+export const TEAM_VOLUME_PRICES: Record<number, number> = {
+  250: 39900,
+  500: 64900,
+  1000: 99900,
+  2500: 199900,
+};
+
+export const DEFAULT_REGULAR_VOLUME = 25;
+export const DEFAULT_TEAM_VOLUME = 250;
+
+/** Additional block purchase price (cents). */
+export const EXTRA_BLOCK_PRICE_CENTS = 399;
+export const PRO_TEAMS_EXTRA_BLOCK_PRICE_CENTS = 199;
+
+/** @deprecated Use EXTRA_BLOCK_PRICE_CENTS */
+export const EXTRA_LESSON_PRICE = EXTRA_BLOCK_PRICE_CENTS;
+/** @deprecated Use PRO_TEAMS_EXTRA_BLOCK_PRICE_CENTS */
+export const PRO_TEAMS_EXTRA_LESSON_PRICE = PRO_TEAMS_EXTRA_BLOCK_PRICE_CENTS;
+
+export function resolveCheckoutVolume(priceType: string, rawVolume: unknown): number {
+  const requested = Number(rawVolume);
+  if (priceType === "regular_2026") {
+    return REGULAR_VOLUME_PRICES[requested] ? requested : DEFAULT_REGULAR_VOLUME;
+  }
+  if (priceType === "pro_teams") {
+    return TEAM_VOLUME_PRICES[requested] ? requested : DEFAULT_TEAM_VOLUME;
+  }
+  return 1;
+}
+
+export function getExtraBlockPriceCents(plan: PlanId | string | null | undefined): number {
+  return plan === "pro_teams" || plan === "pro"
+    ? PRO_TEAMS_EXTRA_BLOCK_PRICE_CENTS
+    : EXTRA_BLOCK_PRICE_CENTS;
+}
+
+export function formatExtraBlockPrice(plan: PlanId | string | null | undefined): string {
+  const cents = getExtraBlockPriceCents(plan);
+  return `$${(cents / 100).toFixed(2)}`;
+}
+
+export function formatPlanMonthlyPrice(
+  plan: PlanId | string,
+  volume?: number
+): string {
+  if (plan === "regular_2026") {
+    const vol = volume ?? DEFAULT_REGULAR_VOLUME;
+    const cents = REGULAR_VOLUME_PRICES[vol] ?? REGULAR_VOLUME_PRICES[DEFAULT_REGULAR_VOLUME];
+    return `$${cents / 100}/month`;
+  }
+  if (plan === "pro_teams") {
+    const vol = volume ?? DEFAULT_TEAM_VOLUME;
+    const cents = TEAM_VOLUME_PRICES[vol] ?? TEAM_VOLUME_PRICES[DEFAULT_TEAM_VOLUME];
+    return `$${cents / 100}/month`;
+  }
+  if (plan === "pro") return "$14.99/month";
+  if (plan === "regular") return "$4.99/month";
+  if (plan === "free") return "$0";
+  const def = PLANS[plan as PlanId];
+  return def ? `${def.price}/month` : String(plan);
+}
 
 export interface UserProfile {
   plan: PlanId;
@@ -107,6 +173,16 @@ export interface UserProfile {
   token_validity_expires_at: string | null;
 }
 
+export interface OrgUsageSummary {
+  id: string;
+  name: string;
+  isOrgAdmin: boolean;
+  memberCount: number;
+  guestCount: number;
+  used: number;
+  limit: number | null;
+}
+
 export interface UsageCheckResult {
   allowed: boolean;
   reason?: string;
@@ -114,6 +190,9 @@ export interface UsageCheckResult {
   used: number;
   limit: number | null; // null = unlimited
   isAdmin: boolean;
+  /** User's own blocks in the current period (org members on Teams). */
+  personalUsed?: number;
+  organization?: OrgUsageSummary | null;
 }
 
 /**
@@ -211,4 +290,19 @@ export function canStartSession(
   }
 
   return { allowed: true, plan: "free", used: sessionCount, limit: freeEffectiveLimit, isAdmin: false };
+}
+
+/** Plans that may create legacy dashboard API keys (v1 /api/agent/keys). */
+export function hasAgentApiKeyPlan(plan: PlanId | string | null | undefined): boolean {
+  return plan === "pro" || plan === "pro_teams";
+}
+
+export function canCreateLegacyAgentApiKeys(
+  plan: PlanId | string | null | undefined,
+  subscriptionStatus: string | null | undefined,
+  isAdmin?: boolean
+): boolean {
+  if (isAdmin) return true;
+  if (!hasAgentApiKeyPlan(plan)) return false;
+  return subscriptionStatus === "active";
 }

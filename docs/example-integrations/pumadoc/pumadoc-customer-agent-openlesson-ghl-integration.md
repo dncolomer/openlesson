@@ -7,6 +7,8 @@ description: PumaDoc Customer Agent integration skill for embedding OpenLesson A
 
 This skill teaches the PumaDoc Customer Agent how to use OpenLesson's Agentic API and GHL Score links inside PumaDoc's chat-based agent UI.
 
+**Canonical API reference:** `/skill.md` (also `https://openlesson.academy/skill.md`) and `/docs/agentic-v2`. When this document and the live API differ, follow `skill.md`.
+
 GHL means **Genuine Human Learning Score**.
 
 The integration goal is to make each Customer Agent step end with a concrete learning-verification checkpoint. The Customer Agent should guide the user in chat, generate or update the relevant PumaDoc customer artifact, create a tailored GHL link, require the user to complete the GHL session, import the result, update PumaDoc Knowledge, and then unlock the next step.
@@ -96,19 +98,23 @@ Authentication:
 
 ```http
 Authorization: Bearer <api_key>
+Content-Type: application/json
 ```
 
-Required scopes:
+**Teams tier required** for all `/api/v2/agent/*` routes.
 
-```text
-workspaces:read
-workspaces:write
-ghl:read
-ghl:write
-org:read
-org:write
-*
-```
+| Key type | Prefix | Typical use in PumaDoc |
+|----------|--------|------------------------|
+| Org member / admin | `sk_` | Provision guests, create workspaces, assign GHL links to guests |
+| Guest learner | `gsk_` | Create workspaces, read blocks, create own GHL links, poll results on org workspaces |
+
+**Default member key scopes:** `workspaces:read`, `workspaces:write`, `ghl:read`, `ghl:write`.
+
+**Guest key scopes (fixed):** `workspaces:read`, `workspaces:write`, `ghl:read`, `ghl:write`.
+
+**Org scopes** `org:read` / `org:write` may only be added to keys owned by an **organization admin**. `POST /api/v2/agent/org/guests` requires an org-admin key with `org:write`.
+
+**Rate limit:** 120 requests/minute per key (429 `rate_limit_exceeded` when exceeded).
 
 Primary endpoints used by PumaDoc:
 
@@ -220,11 +226,11 @@ ghl:write
 
 Use the individual user's own API key for that user's workspace creation, block listing, GHL link creation, GHL status checks, and GHL result reads.
 
-### Individual guest API key
+### Individual guest API key (`gsk_`)
 
-Use the guest user's own API key for that guest's workspace creation, block listing, GHL link creation, GHL status checks, and GHL result reads.
+Use the guest user's own API key for **workspace creation**, **block listing**, **GHL link creation (self)**, **GHL status checks**, and **GHL result reads** on organization workspaces.
 
-Guest API keys returned by `POST /api/v2/agent/org/guests` can create organization-owned workspaces and request GHL links for that guest identity.
+Guests may call `POST /api/v2/agent/workspaces` with their `gsk_` key to create their own Performance Workspace, or use a shared workspace created by an org admin or member key.
 
 ### Hard rule
 
@@ -238,12 +244,12 @@ Correct sequence:
 
 ```text
 1. Identify PumaDoc user email.
-2. If no OpenLesson guest or real user mapping exists, use org admin API key to create guest user.
-3. Store the returned guest API key securely for that PumaDoc user.
-4. Use that user's own API key for workspace creation.
-5. Use that user's own API key for block listing.
-6. Use that user's own API key for GHL link creation.
-7. Use that user's own API key for GHL result polling.
+2. If no OpenLesson guest mapping exists, org admin uses sk_ + org:write to POST /api/v2/agent/org/guests.
+3. Store the returned gsk_ key securely for that PumaDoc user.
+4. Guest uses gsk_ to create their Performance Workspace (or org admin pre-creates a shared workspace once).
+5. Guest uses gsk_ for block listing on the workspace.
+6. Guest uses gsk_ for GHL link creation (or org admin assigns link via guest_email).
+7. Guest or admin uses appropriate key for GHL result polling.
 8. Import GHL result into PumaDoc Knowledge under that same user identity.
 ```
 
@@ -746,14 +752,14 @@ Response:
   },
   "api_key": "gsk_...",
   "key": {
-    "scopes": ["workspaces:read", "ghl:read", "ghl:write"]
+    "scopes": ["workspaces:read", "workspaces:write", "ghl:read", "ghl:write"]
   }
 }
 ```
 
-Store the guest API key securely in PumaDoc.
+Store the guest API key (`gsk_…`) securely in PumaDoc — it is returned once per `POST /org/guests` call.
 
-Guest users can request GHL links via Agentic API using their own guest API keys.
+Guest users can create Performance Workspaces, list blocks, request GHL links for themselves, and poll results on org workspaces using their `gsk_` key.
 
 When a guest later signs up with the same email, OpenLesson converts the guest into a real user and inherits:
 
@@ -1234,11 +1240,11 @@ Simulation updates should be pending approval unless derived from already-approv
 
 ## 32. API Call Examples
 
-### Create Workspace
+### Create Workspace (org admin or member key only — not guest)
 
 ```http
 POST /api/v2/agent/workspaces
-Authorization: Bearer <org_or_user_api_key>
+Authorization: Bearer <sk_org_admin_or_member_key>
 Content-Type: application/json
 ```
 
@@ -1371,7 +1377,7 @@ Next Step Unlocked
 | User scores below threshold | Customer Agent creates repair mission and blocks progression. |
 | GHL finds budget owner gap | PumaDoc updates Knowledge with learning gap and proposes budget-owner repair step. |
 | Guest user receives GHL link | Guest can open private bearer link without login. |
-| Guest uses own API key | Guest can request their own GHL links for org workspaces. |
+| Guest uses own gsk_ key | Guest can create workspaces, list blocks, request their own GHL links, and poll results on org workspaces. |
 | Guest later signs up | Real user inherits guest GHL history and org membership. |
 | GHL score is high but no customer evidence exists | Customer Agent may unlock learning step but must not upgrade customer fact confidence without evidence. |
 | GHL contradicts Approved Knowledge | Flag conflict; do not overwrite Approved Knowledge automatically. |

@@ -93,11 +93,11 @@ export default function AdminPage() {
         </div>
         <div className="bg-neutral-900/50 border border-neutral-800 rounded-lg p-6">
           <div className="text-3xl font-bold text-white">{stats?.totalSessions || 0}</div>
-          <div className="text-neutral-400 text-sm mt-1">Tutoring Sessions</div>
+          <div className="text-neutral-400 text-sm mt-1">Tutoring Blocks</div>
         </div>
         <div className="bg-neutral-900/50 border border-neutral-800 rounded-lg p-6">
           <div className="text-3xl font-bold text-white">{stats?.completedSessions || 0}</div>
-          <div className="text-neutral-400 text-sm mt-1">Completed Sessions</div>
+          <div className="text-neutral-400 text-sm mt-1">Completed Blocks</div>
         </div>
         <div className="bg-neutral-900/50 border border-neutral-800 rounded-lg p-6">
           <div className="text-3xl font-bold text-white">{stats?.totalPlans || 0}</div>
@@ -105,7 +105,7 @@ export default function AdminPage() {
         </div>
         <div className="bg-neutral-900/50 border border-neutral-800 rounded-lg p-6">
           <div className="text-3xl font-bold text-white">{stats?.totalGhlSessions || 0}</div>
-          <div className="text-neutral-400 text-sm mt-1">GHL Sessions</div>
+          <div className="text-neutral-400 text-sm mt-1">GHL Blocks</div>
         </div>
         <div className="bg-neutral-900/50 border border-neutral-800 rounded-lg p-6">
           <div className="text-3xl font-bold text-white">{stats?.totalOrganizations || 0}</div>
@@ -118,9 +118,9 @@ export default function AdminPage() {
           href="/admin/sessions"
           className="block bg-neutral-900/50 border border-neutral-800 rounded-lg p-6 hover:border-neutral-700 transition-colors"
         >
-          <h2 className="text-lg font-semibold text-white mb-2">Sessions</h2>
+          <h2 className="text-lg font-semibold text-white mb-2">Blocks</h2>
           <p className="text-neutral-400 text-sm">
-            View tutoring sessions, filter by status, and inspect linked workspaces
+            View tutoring blocks, filter by status, and inspect linked workspaces
           </p>
         </Link>
 

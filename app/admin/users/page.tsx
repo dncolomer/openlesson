@@ -269,7 +269,7 @@ export default function UsersPage() {
           </div>
           <div className="bg-neutral-900/50 border border-neutral-800 rounded-lg p-4">
             <div className="text-2xl font-bold text-white">{kpiUsers.reduce((sum, u) => sum + (u.lessons_count || 0), 0)}</div>
-            <div className="text-neutral-500 text-xs mt-1">Total Sessions Created</div>
+            <div className="text-neutral-500 text-xs mt-1">Total Blocks Created</div>
             <div className="flex gap-2 mt-2 text-[11px]">
               <span className="text-neutral-400">Plans: {kpiUsers.reduce((sum, u) => sum + (u.plans_count || 0), 0)}</span>
               <span className="text-neutral-400">Admins: {users.filter(u => u.is_admin).length}</span>

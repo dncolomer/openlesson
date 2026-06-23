@@ -184,7 +184,7 @@ export default function AdminPlansPage() {
           <div className="text-2xl font-bold text-cyan-400">
             {kpiPlans.reduce((sum, p) => sum + (p.ghl_session_count || 0), 0)}
           </div>
-          <div className="text-neutral-500 text-xs mt-1">GHL Sessions (this page)</div>
+          <div className="text-neutral-500 text-xs mt-1">GHL Blocks (this page)</div>
           <div className="flex gap-2 mt-2 text-[11px]">
             <span className="text-blue-400">Agent-created: {agentCount}</span>
           </div>

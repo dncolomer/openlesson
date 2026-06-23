@@ -51,7 +51,7 @@ export async function POST(req: NextRequest) {
       .single();
 
     if (sessionError || !session) {
-      return NextResponse.json({ error: "Session not found" }, { status: 404 });
+      return NextResponse.json({ error: "Block not found" }, { status: 404 });
     }
 
     // If this is the first message (no fileIds), we need to fetch and upload data

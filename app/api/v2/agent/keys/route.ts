@@ -8,6 +8,7 @@ import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
 import { createClient } from "@/lib/supabase/server";
 import { errorResponse } from "@/lib/agent-v2/auth";
+import { DEFAULT_API_KEY_SCOPES, validateAssignableScopes } from "@/lib/agent-v2/scopes";
 import type { ApiKeyScope } from "@/lib/agent-v2/types";
 
 const VALID_SCOPES: ApiKeyScope[] = [
@@ -21,7 +22,7 @@ const VALID_SCOPES: ApiKeyScope[] = [
 ];
 
 const MAX_KEYS_PER_USER = 10;
-const DEFAULT_SCOPES: ApiKeyScope[] = ["*"];
+const DEFAULT_SCOPES: ApiKeyScope[] = DEFAULT_API_KEY_SCOPES;
 const DEFAULT_RATE_LIMIT = 120;
 
 // ─── GET: List all API keys for the authenticated user ──────────────
@@ -134,6 +135,11 @@ export async function POST(req: NextRequest) {
           valid_scopes: VALID_SCOPES,
         });
       }
+    }
+
+    const scopeCheck = validateAssignableScopes(scopes, profile);
+    if (!scopeCheck.ok) {
+      return errorResponse(403, "forbidden", scopeCheck.message);
     }
 
     // Validate expires_in_days

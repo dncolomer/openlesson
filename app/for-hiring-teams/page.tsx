@@ -26,14 +26,14 @@ const examples = [
   {
     title: "Example 4 – Strategy / Consulting (Structuring ill-defined problems)",
     traditional: "Beautiful MECE framework on a familiar case type. Clean slides, confident delivery.",
-    openLesson: "Dropped into a genuinely open-ended client problem with noisy data and political stakeholders: The session reveals how they build (or fail to build) a working mental model from scratch, the quality of questions they ask themselves, and whether their structuring is generative or just pattern-matching from training cases. You see intellectual honesty when the AI probes a weak link in their logic.",
+    openLesson: "Dropped into a genuinely open-ended client problem with noisy data and political stakeholders: The block reveals how they build (or fail to build) a working mental model from scratch, the quality of questions they ask themselves, and whether their structuring is generative or just pattern-matching from training cases. You see intellectual honesty when the AI probes a weak link in their logic.",
   },
 ];
 
 const workSteps = [
   ["Define what matters.", "You (with our help) identify the 2–4 reasoning dimensions critical for the role and craft 1–2 challenge prompts that are novel enough to prevent memorized answers. We specialize in making these prompts diagnostic."],
-  ["Candidate completes a 25–40 minute session.", "They receive the prompt and think aloud naturally using voice. The AI listens in real time and engages with targeted Socratic questions — exactly like your best interviewer would — to surface gaps, assumptions, and recovery patterns. No typing walls. No multiple-choice grids."],
-  ["Receive rich, structured output.", "Your team gets a reasoning trace with highlighted key moments, assumption maps, communication clarity markers, and qualitative insights mapped to your dimensions. Not black-box scores — evidence you can review, discuss, and trust. Optionally query the session data conversationally (\"Where did this candidate show strong systems thinking?\")."],
+  ["Candidate completes a 25–40 minute block.", "They receive the prompt and think aloud naturally using voice. The AI listens in real time and engages with targeted Socratic questions — exactly like your best interviewer would — to surface gaps, assumptions, and recovery patterns. No typing walls. No multiple-choice grids."],
+  ["Receive rich, structured output.", "Your team gets a reasoning trace with highlighted key moments, assumption maps, communication clarity markers, and qualitative insights mapped to your dimensions. Not black-box scores — evidence you can review, discuss, and trust. Optionally query the block data conversationally (\"Where did this candidate show strong systems thinking?\")."],
   ["Human judgment + team debrief.", "Use the artifacts alongside your existing process. The goal is not to replace your interviewers but to give them dramatically better raw material for every candidate — consistently."],
 ];
 
@@ -43,7 +43,7 @@ const benefits = [
   "Scalable depth: Every candidate gets high-quality, expert-level probing without burning out your strongest interviewers.",
   "Better candidate experience: People get to demonstrate real thinking instead of performing under artificial constraints. Many candidates actually enjoy the format.",
   "Actionable, reviewable evidence that slots directly into your existing debriefs and scorecards — no need to rip and replace your process.",
-  "Reduced bias risk through structured, recorded, reviewable sessions (strong GDPR / compliance posture for EU teams).",
+  "Reduced bias risk through structured, recorded, reviewable blocks (strong GDPR / compliance posture for EU teams).",
 ];
 
 const HERO_USER_QUESTION = "Which candidate thinks better about the product management prioritization question? I care less about polish and more about who would make the better real-world decision under ambiguity.";

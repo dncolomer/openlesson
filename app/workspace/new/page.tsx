@@ -43,7 +43,7 @@ export default function NewWorkspacePage() {
     try {
       const { data } = await supabase.auth.getUser();
       if (!data.user) {
-        router.push("/login?redirect=plan");
+        router.push("/login?redirect=/workspace/new");
         return;
       }
 
@@ -63,7 +63,7 @@ export default function NewWorkspacePage() {
       }
 
       const payload = await response.json();
-      router.push(`/plan/${payload.planId}`);
+      router.push(`/workspace/${payload.planId}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
     } finally {

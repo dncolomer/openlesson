@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
+
 export const runtime = "nodejs";
 
 function getAdminClient() {
@@ -44,15 +46,24 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const { referralCode, userId } = await request.json();
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
-    if (!referralCode || !userId) {
-      return NextResponse.json({ error: "Referral code and user ID required" }, { status: 400 });
+    if (!user) {
+      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+    }
+
+    const { referralCode } = await request.json();
+    const userId = user.id;
+
+    if (!referralCode) {
+      return NextResponse.json({ error: "Referral code required" }, { status: 400 });
     }
 
     const adminClient = getAdminClient();
 
-    // Find partner by referral code (case-insensitive)
     const { data: partner, error: partnerError } = await adminClient
       .from("partners")
       .select("id, user_id")
@@ -63,12 +74,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Invalid referral code" }, { status: 400 });
     }
 
-    // Can't refer yourself
     if (partner.user_id === userId) {
       return NextResponse.json({ error: "Cannot use your own referral code" }, { status: 400 });
     }
 
-    // Check if already referred
     const { data: existingReferral } = await adminClient
       .from("partner_referrals")
       .select("id")
@@ -80,7 +89,6 @@ export async function POST(request: Request) {
       return NextResponse.json({ message: "Already referred", success: true });
     }
 
-    // Create referral record
     const { error: insertError } = await adminClient
       .from("partner_referrals")
       .insert({
@@ -93,7 +101,6 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Failed to create referral" }, { status: 500 });
     }
 
-    // Add 15 credits to the referred user's profile
     const { error: creditsError } = await adminClient.rpc("add_user_credits", {
       p_user_id: userId,
       p_lessons: 15,
@@ -101,7 +108,6 @@ export async function POST(request: Request) {
 
     if (creditsError) {
       console.error("Error adding credits:", creditsError);
-      // Don't fail the request, just log the error
     }
 
     return NextResponse.json({ success: true, partnerId: partner.id });

@@ -642,11 +642,11 @@ export const PROMPT_META: Record<PromptKey, { label: string; description: string
     description: "Generates probes during the session. Variables: {problem}, {score}, {signals}, {rag_context}, {previous_probes}",
   },
   session_end_check: {
-    label: "Session End Check",
+    label: "Block End Check",
     description: "Decides if the session should end. Variables: {elapsed}, {count}, {recent_scores}, {problem}",
   },
   report_generation: {
-    label: "Session Report",
+    label: "Block Report",
     description: "Generates a concise post-session debrief (150-200 words). Variables: {problem}, {duration}, {count}, {avg_gap}, {probes_summary}, {eeg_context}",
   },
   expand_probe: {
@@ -670,11 +670,11 @@ export const PROMPT_META: Record<PromptKey, { label: string; description: string
     description: "Generates new question from different angle. Variables: {problem}, {previous_probes}",
   },
   session_plan_create: {
-    label: "Session Plan Creation",
+    label: "Block Plan Creation",
     description: "Creates the initial learning plan for a session. Variables: {problem}, {objectives}, {calibration}",
   },
   session_plan_update: {
-    label: "Session Plan Update",
+    label: "Block Plan Update",
     description: "Updates the plan during the session based on observations. Variables: {goal}, {strategy}, {steps}, {current_step}, {gap_score}, {signals}, {transcript}, {traffic_light}, {previous_probes}",
   },
   check_probe_archive: {
@@ -682,7 +682,7 @@ export const PROMPT_META: Record<PromptKey, { label: string; description: string
     description: "Evaluates if a probe can be archived based on student progress. Variables: {probe_text}, {session_goal}, {transcript}, {whiteboard_data}, {activity_data}",
   },
   follow_up_sessions: {
-    label: "Follow-up Sessions",
+    label: "Follow-up Blocks",
     description: "Generates suggested follow-up session topics after session completion. Variables: {problem}, {duration}, {gaps_summary}, {report_summary}",
   },
   stuck_policy_recommendation: {

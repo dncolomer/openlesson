@@ -13,11 +13,13 @@ The Agentic API supports **only** this workflow:
 
 1. Create a Performance Workspace from an `initial_prompt` and optional files.
 2. List blocks in that workspace.
-3. Create a private GHL link for a block (`15` or `30` minutes).
-4. List GHL links and completion status.
-5. Read completed GHL results (marker scores + gap analysis).
+3. Upload performance evidence (tool usage, screenshots, video, EEG) to xAI storage, linked to the workspace and/or a block.
+4. Request learning and gap analysis over workspace evidence (free-form Q&A or structured report).
+5. Create a private GHL link for a block (`15` or `30` minutes).
+6. List GHL links and completion status.
+7. Read completed GHL results (marker scores + gap analysis).
 
-**Out of scope** — do not describe or call removed features: blockchain tracking, proof anchoring, tool-usage tracking, live tutoring session control, analytics, or plan adaptation.
+**Out of scope** — do not describe or call removed features: blockchain tracking, proof anchoring, live tutoring session control, heartbeats, or plan adaptation. Legacy web-session upload routes (`/api/session-files/*`) are separate from this API; agents should use `POST .../evidence` for workspace-linked artifacts.
 
 **Teams tier required.** All `/api/v2/agent/*` routes require an active `pro_teams` subscription (platform admins bypass). Regular-tier keys are rejected with `403 teams_required`.
 
@@ -75,6 +77,8 @@ Content-Type: application/json
 ```
 
 **Read tools:** `list_workspaces`, `list_blocks`, `list_ghl_links`, `get_ghl_results`
+
+Evidence upload and performance analysis are **REST-only** (`POST .../evidence`, `POST .../performance`).
 
 Prefer `Authorization: Bearer` on REST routes when the client supports it. Treat MCP URLs as secrets (they embed the raw key).
 
@@ -135,6 +139,141 @@ Create a Performance Workspace. Guest keys with `workspaces:write` may call this
 List assessable blocks. Organization members and guests may read **organization-owned** workspaces.
 
 **Response `200`:** `{ "blocks": [ ... ] }`
+
+---
+
+### `POST /api/v2/agent/workspaces/{workspace_id}/evidence` — `workspaces:write`
+
+Upload open-format performance evidence to xAI Files and link it to a workspace, optionally scoped to a block or session.
+
+**Request:**
+
+```json
+{
+  "type": "tool",
+  "file_name": "canvas-events.json",
+  "mime_type": "application/json",
+  "data": "<base64>",
+  "block_id": "optional-block-uuid",
+  "session_id": "optional-session-uuid",
+  "timestamp_ms": 1710000000000,
+  "chunk_index": 0,
+  "metadata": { "source": "custom-agent" },
+  "tool_name": "canvas",
+  "tool_action": "draw",
+  "band_powers": { "alpha": 0.2, "beta": 0.4 },
+  "device_name": "Muse",
+  "sample_count": 256
+}
+```
+
+**`type` values:** `tool`, `screen` (alias: `screenshot`), `video`, `eeg`
+
+| Type | Typical MIME types |
+|------|-------------------|
+| `tool` | `application/json`, `text/plain`, `text/markdown` |
+| `screen` | `image/png`, `image/jpeg`, `image/webp` |
+| `video` | `video/mp4`, `video/webm`, `video/quicktime` |
+| `eeg` | `application/json`, `text/plain` |
+
+Max **10 MB** per upload. Guest keys attach evidence to their guest identity; org members attach to the workspace org.
+
+**Response `201`:**
+
+```json
+{
+  "evidence": {
+    "id": "uuid",
+    "workspace_id": "uuid",
+    "block_id": "uuid-or-null",
+    "session_id": "uuid-or-null",
+    "type": "tool",
+    "file_name": "canvas-events.json",
+    "mime_type": "application/json",
+    "xai_file_id": "file_...",
+    "timestamp_ms": 1710000000000,
+    "metadata": {},
+    "created_at": "..."
+  }
+}
+```
+
+---
+
+### `POST /api/v2/agent/workspaces/{workspace_id}/performance` — `workspaces:read`
+
+Analyze learning signals across workspace evidence, GHL results, linked sessions, and uploaded files.
+
+**Report mode** (omit `prompt` or send empty string) — returns structured gaps and suggestions:
+
+```json
+{
+  "block_id": "optional-block-uuid"
+}
+```
+
+**Chat mode** — free-form Q&A over the same evidence bundle:
+
+```json
+{
+  "prompt": "Which blocks show the weakest causal reasoning?",
+  "block_id": "optional-block-uuid",
+  "conversation_history": [
+    { "role": "user", "content": "..." },
+    { "role": "assistant", "content": "..." }
+  ],
+  "file_ids": []
+}
+```
+
+- First call with empty `file_ids` builds a workspace performance context JSON, uploads it to xAI, and attaches up to 19 artifact files (evidence, plan files, GHL artifacts).
+- Pass returned `file_ids` on follow-up calls to reuse the same context without rebuilding.
+
+**Response `200` (report):**
+
+```json
+{
+  "mode": "report",
+  "report": {
+    "summary": "...",
+    "strengths": ["..."],
+    "growth_areas": ["..."],
+    "gap_analysis": {
+      "summary": "...",
+      "gaps": [
+        {
+          "title": "...",
+          "evidence": "...",
+          "severity": "medium",
+          "suggested_repair": "..."
+        }
+      ],
+      "next_practice": ["..."]
+    },
+    "suggestions": ["..."],
+    "confidence": "developing"
+  },
+  "evidence_summary": {
+    "blocks": 5,
+    "ghl_sessions": 2,
+    "evidence_artifacts": 4,
+    "linked_sessions": 1,
+    "plan_files": 0
+  },
+  "file_ids": ["file_..."]
+}
+```
+
+**Response `200` (chat):**
+
+```json
+{
+  "mode": "chat",
+  "response": "Markdown analysis...",
+  "evidence_summary": { },
+  "file_ids": ["file_..."]
+}
+```
 
 ---
 
@@ -304,6 +443,8 @@ Facilitation style: Socratic — one concise question at a time, follow-ups from
 |--------|-------------------------------|---------------------|
 | Create workspace | ✅ `workspaces:write` | ✅ `workspaces:write` |
 | List blocks | ✅ | ✅ (org workspaces) |
+| Upload evidence | ✅ | ✅ (own uploads) |
+| Performance analysis | ✅ | ✅ (own evidence + links) |
 | Create GHL link | ✅; admin can assign to guest | ✅ (self only) |
 | List / read GHL results | ✅ | ✅ (own links) |
 | Create guest + issue `gsk_` | ✅ `org:write` + `is_org_admin` | ❌ |
@@ -317,6 +458,9 @@ Facilitation style: Socratic — one concise question at a time, follow-ups from
 1. Teams user creates org (`POST /api/organization`) and API key (`sk_` with default scopes).
 2. `POST /workspaces` with task-specific `initial_prompt` (+ optional files).
 3. `GET .../blocks` → map blocks to your workflow steps.
-4. `POST .../ghl-links` → send `private_url` to the learner.
-5. Poll `GET .../results` until `status === "completed"`.
-6. For external learners without accounts: `POST /org/guests` → give them `gsk_` + private GHL URL.
+4. `POST .../evidence` as learners produce tool usage, screenshots, video, or EEG (optional `block_id`).
+5. `POST .../performance` for gap reports, or include `prompt` for follow-up questions.
+6. `POST .../ghl-links` → send `private_url` to the learner.
+7. Poll `GET .../results` until `status === "completed"`.
+8. Re-run `POST .../performance` to synthesize GHL results with other evidence.
+9. For external learners without accounts: `POST /org/guests` → give them `gsk_` + private GHL URL.

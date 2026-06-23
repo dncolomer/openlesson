@@ -164,6 +164,8 @@ export type SessionStatus = "active" | "paused" | "completed" | "ended_by_tutor"
 export const ENDPOINT_SCOPES: Record<string, ApiKeyScope> = {
   "POST /workspaces": "workspaces:write",
   "GET /workspaces/:id/blocks": "workspaces:read",
+  "POST /workspaces/:id/evidence": "workspaces:write",
+  "POST /workspaces/:id/performance": "workspaces:read",
   "POST /workspaces/:id/blocks/:blockId/ghl-links": "ghl:write",
   "GET /workspaces/:id/ghl-links": "ghl:read",
   "GET /workspaces/:id/ghl-links/:linkId/results": "ghl:read",

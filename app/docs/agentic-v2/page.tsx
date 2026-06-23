@@ -7,6 +7,8 @@ const DOCS_BACKGROUND = "/aesthetics/Greco-futurism/HHnTrgVaQAAP-_3.jpeg";
 const ENDPOINTS = [
   ["POST", "/api/v2/agent/workspaces", "workspaces:write", "Create a Performance Workspace from an initial prompt and optional files."],
   ["GET", "/api/v2/agent/workspaces/{workspace_id}/blocks", "workspaces:read", "List available blocks in the workspace."],
+  ["POST", "/api/v2/agent/workspaces/{workspace_id}/evidence", "workspaces:write", "Upload tool usage, screenshots, video, or EEG to xAI and link to workspace/block."],
+  ["POST", "/api/v2/agent/workspaces/{workspace_id}/performance", "workspaces:read", "Structured gap report or free-form Q&A over workspace evidence."],
   ["POST", "/api/v2/agent/workspaces/{workspace_id}/blocks/{block_id}/ghl-links", "ghl:write", "Request a private GHL link for a block."],
   ["GET", "/api/v2/agent/workspaces/{workspace_id}/ghl-links", "ghl:read", "List existing GHL links and completion status."],
   ["GET", "/api/v2/agent/workspaces/{workspace_id}/ghl-links/{link_id}/results", "ghl:read", "Read completed GHL link results."],
@@ -33,8 +35,8 @@ export default function AgenticV2DocsPage() {
             Performance Workspace and GHL Link API
           </h1>
           <p className="mt-4 max-w-3xl text-sm leading-relaxed text-neutral-400 sm:text-base">
-            The Agentic API covers the workspace-to-GHL workflow: create Performance Workspaces, list blocks,
-            issue private GHL Score links, and read completion results. Requires an active{" "}
+            The Agentic API covers the workspace-to-readiness workflow: create Performance Workspaces, upload evidence,
+            analyze learning gaps, list blocks, issue private GHL Score links, and read completion results. Requires an active{" "}
             <code className="text-neutral-300">pro_teams</code> subscription.
           </p>
           <div className="mt-6 flex flex-wrap gap-3">
@@ -135,6 +137,31 @@ export default function AgenticV2DocsPage() {
   ]
 }`}</code>
             </pre>
+          </div>
+          <div className={sectionClass}>
+            <h2 className="text-lg font-medium text-white">Upload evidence</h2>
+            <pre className={codeBlockClass}>
+              <code>{`{
+  "type": "tool",
+  "mime_type": "application/json",
+  "data": "base64-encoded-bytes",
+  "block_id": "optional-block-uuid",
+  "tool_name": "canvas",
+  "tool_action": "draw"
+}`}</code>
+            </pre>
+          </div>
+          <div className={sectionClass}>
+            <h2 className="text-lg font-medium text-white">Performance analysis</h2>
+            <pre className={codeBlockClass}>
+              <code>{`{
+  "prompt": "Optional free-form question",
+  "block_id": "optional-block-uuid"
+}`}</code>
+            </pre>
+            <p className="mt-4 text-sm leading-relaxed text-neutral-500">
+              Omit <code className="text-neutral-400">prompt</code> for a structured gap report with strengths, growth areas, and next practice.
+            </p>
           </div>
           <div className={sectionClass}>
             <h2 className="text-lg font-medium text-white">Request GHL link</h2>

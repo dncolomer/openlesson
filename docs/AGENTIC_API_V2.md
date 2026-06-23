@@ -2,7 +2,7 @@
 
 Base path: `/api/v2/agent`
 
-The Agentic API supports only Performance Workspace creation, block discovery, and GHL link/result access.
+The Agentic API supports Performance Workspace creation, evidence upload, learning analysis, block discovery, and GHL link/result access.
 
 ## Authentication
 
@@ -18,10 +18,51 @@ Valid scopes are `workspaces:read`, `workspaces:write`, `ghl:read`, `ghl:write`,
 | :--- | :--- | :--- | :--- |
 | `POST` | `/workspaces` | `workspaces:write` | Create a Performance Workspace with an initial prompt and optional files. |
 | `GET` | `/workspaces/{workspace_id}/blocks` | `workspaces:read` | List available blocks in the workspace. |
+| `POST` | `/workspaces/{workspace_id}/evidence` | `workspaces:write` | Upload tool usage, screenshots, video, or EEG to xAI and link to workspace/block. |
+| `POST` | `/workspaces/{workspace_id}/performance` | `workspaces:read` | Structured gap report or free-form Q&A over workspace evidence. |
 | `POST` | `/workspaces/{workspace_id}/blocks/{block_id}/ghl-links` | `ghl:write` | Request a private GHL link for a block. |
 | `GET` | `/workspaces/{workspace_id}/ghl-links` | `ghl:read` | List existing GHL links and completion status. |
 | `GET` | `/workspaces/{workspace_id}/ghl-links/{link_id}/results` | `ghl:read` | Request completed GHL link results. |
 | `POST` | `/org/guests` | `org:write` | Organization admins create guest users by email and issue guest API keys. |
+
+## Upload Evidence
+
+```json
+{
+  "type": "tool",
+  "file_name": "events.json",
+  "mime_type": "application/json",
+  "data": "base64-encoded-bytes",
+  "block_id": "optional-block-uuid",
+  "session_id": "optional-session-uuid",
+  "metadata": {},
+  "tool_name": "canvas",
+  "tool_action": "draw"
+}
+```
+
+Types: `tool`, `screen` (`screenshot` alias), `video`, `eeg`. Max 10 MB per file.
+
+## Performance Analysis
+
+**Structured report** (no `prompt`):
+
+```json
+{ "block_id": "optional-block-uuid" }
+```
+
+**Free-form Q&A**:
+
+```json
+{
+  "prompt": "Where are the biggest readiness gaps?",
+  "block_id": "optional-block-uuid",
+  "conversation_history": [],
+  "file_ids": []
+}
+```
+
+Report responses include `gap_analysis.gaps[]` with `severity` and `suggested_repair`. Chat responses return markdown in `response`.
 
 ## Create Workspace
 
@@ -94,4 +135,4 @@ Completed results include the spider score markers plus a gap analysis:
 
 ## Removed From Agentic API
 
-The Agentic API does not expose proof tracking, blockchain anchoring, tool-usage tracking, live tutoring sessions, heartbeats, chat, analytics, or plan adaptation.
+The Agentic API does not expose proof tracking, blockchain anchoring, live tutoring sessions, heartbeats, or plan adaptation. Use `POST .../evidence` for workspace-linked artifacts instead of legacy web-session upload routes.

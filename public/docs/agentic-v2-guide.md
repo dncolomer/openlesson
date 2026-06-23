@@ -1,6 +1,6 @@
 # OpenLesson Agentic API
 
-The Agentic API exposes only the performance-workspace and GHL-link workflow. It no longer exposes tutoring-session control, analytics, proofs, blockchain anchoring, or tool-usage tracking.
+The Agentic API exposes the performance-workspace workflow: create workspaces, upload evidence, analyze learning gaps, issue GHL links, and read results.
 
 Base path: `/api/v2/agent`
 
@@ -12,10 +12,47 @@ Authenticate with `Authorization: Bearer <api_key>`.
 | :--- | :--- | :--- | :--- |
 | `POST` | `/workspaces` | `workspaces:write` | Create a Performance Workspace from an initial prompt and optional files. |
 | `GET` | `/workspaces/{workspace_id}/blocks` | `workspaces:read` | List available blocks in a workspace. |
+| `POST` | `/workspaces/{workspace_id}/evidence` | `workspaces:write` | Upload tool usage, screenshots, video, or EEG linked to workspace/block. |
+| `POST` | `/workspaces/{workspace_id}/performance` | `workspaces:read` | Structured gap report or free-form performance Q&A. |
 | `POST` | `/workspaces/{workspace_id}/blocks/{block_id}/ghl-links` | `ghl:write` | Request a private GHL link for a block. Links open the GHL Score Session UI. |
 | `GET` | `/workspaces/{workspace_id}/ghl-links` | `ghl:read` | List existing GHL links and completion status. |
 | `GET` | `/workspaces/{workspace_id}/ghl-links/{link_id}/results` | `ghl:read` | Read completed GHL link results. Incomplete links return status with `null` result fields. |
 | `POST` | `/org/guests` | `org:write` | Organization admins create guest users by email and issue guest API keys. |
+
+## Upload Evidence
+
+`POST /api/v2/agent/workspaces/{workspace_id}/evidence`
+
+```json
+{
+  "type": "screen",
+  "mime_type": "image/png",
+  "data": "base64-encoded-bytes",
+  "block_id": "optional-block-uuid",
+  "metadata": { "step": "discovery-call" }
+}
+```
+
+Supported `type` values: `tool`, `screen` (alias `screenshot`), `video`, `eeg`. Max 10 MB.
+
+## Performance Analysis
+
+`POST /api/v2/agent/workspaces/{workspace_id}/performance`
+
+Report mode (empty body or only `block_id`):
+
+```json
+{ "block_id": "optional-block-uuid" }
+```
+
+Chat mode:
+
+```json
+{
+  "prompt": "Summarize readiness risks across this workspace.",
+  "conversation_history": []
+}
+```
 
 ## Create Workspace
 
@@ -38,24 +75,14 @@ Files are optional. Supported types are PDF, plain text, Markdown, JPEG, PNG, an
 
 ## GHL Links
 
-GHL means Genuine Human Learning Score. A GHL link opens a private score session URL such as `/ghl-score/session/{token}`. The URL is a bearer link and authenticates the learner directly into that GHL session without requiring an OpenLesson login or Agentic API key.
-
-Request body:
+`POST /api/v2/agent/workspaces/{workspace_id}/blocks/{block_id}/ghl-links`
 
 ```json
-{
-  "minutes": 15,
-  "guest_user_id": "optional-guest-id",
-  "guest_email": "optional-guest-email"
-}
+{ "minutes": 15 }
 ```
 
-Only `15` and `30` minute sessions are supported. Results include marker spider scores and `gap_analysis`.
+Returns a `private_url` for `/ghl-score/session/{token}`. Poll `GET .../ghl-links/{link_id}/results` for marker scores and `gap_analysis`.
 
-## Organizations And Guests
+## Guests
 
-Teams-tier users can create an organization through `POST /api/organization` and become its admin. Org admins can create guest users with `POST /api/v2/agent/org/guests` by providing an email. Guests receive individual API keys (`workspaces:read`, `workspaces:write`, `ghl:read`, `ghl:write`) and can create Performance Workspaces, access organization workspaces, and use GHL links. If a guest later signs up with the same email, their real user inherits the guest's organization membership, GHL sessions, and guest API keys.
-
-## Removed Surface
-
-The Agentic API no longer includes proof anchoring, proof lists, plan adaptation, live tutoring sessions, analysis heartbeats, Helios chat, transcript routes, or analytics routes.
+Org admins with `org:write` can call `POST /org/guests` to mint `gsk_` keys. Guests may create workspaces, upload evidence, run performance analysis on their own artifacts, and use GHL links.

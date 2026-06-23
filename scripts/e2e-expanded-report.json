@@ -1,0 +1,184 @@
+{
+  "ran_at": "2026-06-23T01:03:32.573Z",
+  "base_url": "http://127.0.0.1:3000",
+  "total": 29,
+  "passed": 29,
+  "failed": 0,
+  "failures": [],
+  "all": [
+    {
+      "area": "auth",
+      "name": "regular cookie session",
+      "ok": true,
+      "detail": "1 cookies"
+    },
+    {
+      "area": "auth",
+      "name": "teams cookie session",
+      "ok": true,
+      "detail": "1 cookies"
+    },
+    {
+      "area": "regular-web",
+      "name": "GET /api/check-usage (allowed, plan, limit)",
+      "ok": true,
+      "detail": "plan=regular_2026 limit=25 used=0"
+    },
+    {
+      "area": "regular-web",
+      "name": "GET /api/organization (no org)",
+      "ok": true,
+      "detail": "organization=null"
+    },
+    {
+      "area": "regular-web",
+      "name": "POST /api/v2/agent/keys blocked (non-teams)",
+      "ok": true,
+      "detail": "HTTP 403 The Agentic API requires the Teams tier."
+    },
+    {
+      "area": "regular-web",
+      "name": "GET /dashboard (authenticated)",
+      "ok": true,
+      "detail": "HTTP 200"
+    },
+    {
+      "area": "regular-web",
+      "name": "POST /api/learning-plan/generate (workspace create)",
+      "ok": true,
+      "detail": "5abf1079-537d-4a87-b398-8245f14b82a8"
+    },
+    {
+      "area": "regular-web",
+      "name": "GET /workspace/{id} renders",
+      "ok": true,
+      "detail": "HTTP 200 len=46702"
+    },
+    {
+      "area": "regular-web",
+      "name": "workspace has plan blocks in DB",
+      "ok": true,
+      "detail": "4 blocks"
+    },
+    {
+      "area": "regular-web",
+      "name": "GET /workspace/{id}/ghl-score UI",
+      "ok": true,
+      "detail": "HTTP 200"
+    },
+    {
+      "area": "regular-web",
+      "name": "GET /api/workspace-ghl-score?planId=…",
+      "ok": true,
+      "detail": "HTTP 200 sessions=0"
+    },
+    {
+      "area": "teams-web",
+      "name": "GET /api/check-usage (pro_teams, allowed)",
+      "ok": true,
+      "detail": "plan=pro_teams limit=250 used=0"
+    },
+    {
+      "area": "teams-web",
+      "name": "GET /api/organization (E2E org + admin)",
+      "ok": true,
+      "detail": "[E2E] Test Organization"
+    },
+    {
+      "area": "teams-web",
+      "name": "GET /api/organization guests array present",
+      "ok": true,
+      "detail": "guests=10"
+    },
+    {
+      "area": "teams-web",
+      "name": "GET /api/v2/agent/keys (session auth)",
+      "ok": true,
+      "detail": "HTTP 200 keys=5"
+    },
+    {
+      "area": "teams-web",
+      "name": "POST /api/v2/agent/keys (session auth)",
+      "ok": true,
+      "detail": "201 sk_086823e34"
+    },
+    {
+      "area": "teams-web",
+      "name": "GET /organization page",
+      "ok": true,
+      "detail": "HTTP 200"
+    },
+    {
+      "area": "agent-api",
+      "name": "POST /workspaces",
+      "ok": true,
+      "detail": "f3736dbe-1115-457d-a22e-4dff9edde686"
+    },
+    {
+      "area": "agent-api",
+      "name": "GET /blocks",
+      "ok": true,
+      "detail": "5 blocks"
+    },
+    {
+      "area": "mcp",
+      "name": "tools/list",
+      "ok": true,
+      "detail": "4 tools"
+    },
+    {
+      "area": "mcp",
+      "name": "list_workspaces",
+      "ok": true,
+      "detail": "workspaces=5"
+    },
+    {
+      "area": "agent-api",
+      "name": "POST GHL link",
+      "ok": true,
+      "detail": "174d0ead-9daf-4bc9-81db-bb2e811a7b47"
+    },
+    {
+      "area": "ghl-flow",
+      "name": "private session page",
+      "ok": true,
+      "detail": "HTTP 200"
+    },
+    {
+      "area": "ghl-flow",
+      "name": "POST /api/workspace-ghl-score/chat",
+      "ok": true,
+      "detail": "reply len=128"
+    },
+    {
+      "area": "ghl-flow",
+      "name": "POST /api/workspace-ghl-score/complete",
+      "ok": true,
+      "detail": "score=68"
+    },
+    {
+      "area": "ghl-flow",
+      "name": "GET /ghl-links/{id}/results (scores + markers)",
+      "ok": true,
+      "detail": "score=68 markers=6"
+    },
+    {
+      "area": "mcp",
+      "name": "get_ghl_results",
+      "ok": true,
+      "detail": "completed"
+    },
+    {
+      "area": "agent-api",
+      "name": "POST /org/guests",
+      "ok": true,
+      "detail": "e2e-guest-auto+1782176603504@openlesson.academy"
+    },
+    {
+      "area": "agent-api",
+      "name": "guest key can create workspace",
+      "ok": true,
+      "detail": "8ab026dc-6050-4d39-b889-c9a818ef5896"
+    }
+  ]
+}

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { authenticateApiKey, hasScope } from "@/lib/agent-v2/auth";
 import type { ApiKeyScope, AuthContext } from "@/lib/agent-v2/types";
+import { canAccessAgentWorkspace } from "@/lib/agent-v2/workspace-access";
 
 export const runtime = "nodejs";
 
@@ -181,11 +182,11 @@ async function callTool(
 
     const { data: workspace, error: workspaceError } = await supabase
       .from("learning_plans")
-      .select("id, user_id, organization_id")
+      .select("id, user_id, organization_id, guest_user_id")
       .eq("id", workspaceId)
       .single();
 
-    if (workspaceError || !workspace || (workspace.user_id !== auth.user_id && (!auth.organization_id || workspace.organization_id !== auth.organization_id))) throw new Error("Workspace not found.");
+    if (workspaceError || !workspace || !canAccessAgentWorkspace(auth, workspace)) throw new Error("Workspace not found.");
 
     const { data: blocks, error } = await supabase
       .from("plan_nodes")

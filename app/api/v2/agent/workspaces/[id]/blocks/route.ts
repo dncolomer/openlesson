@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { authenticateRequest, errorResponse } from "@/lib/agent-v2/auth";
+import { canAccessAgentWorkspace } from "@/lib/agent-v2/workspace-access";
 
 interface RouteProps {
   params: Promise<{ id: string }>;
@@ -13,11 +14,11 @@ export async function GET(req: NextRequest, { params }: RouteProps) {
 
   const { data: workspace, error: workspaceError } = await supabase
     .from("learning_plans")
-    .select("id, user_id, organization_id")
+    .select("id, user_id, organization_id, guest_user_id")
     .eq("id", id)
     .single();
 
-  if (workspaceError || !workspace || (workspace.user_id !== auth.user_id && (!auth.organization_id || workspace.organization_id !== auth.organization_id))) {
+  if (workspaceError || !workspace || !canAccessAgentWorkspace(auth, workspace)) {
     return errorResponse(404, "workspace_not_found", "Workspace not found");
   }
 

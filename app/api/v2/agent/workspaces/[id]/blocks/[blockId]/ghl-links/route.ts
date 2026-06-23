@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { authenticateRequest, errorResponse } from "@/lib/agent-v2/auth";
+import { canAccessAgentWorkspace } from "@/lib/agent-v2/workspace-access";
 import { createPrivateToken, getGhcScoreBriefForUser, hashPrivateToken } from "@/lib/ghc-score";
 
 export const runtime = "nodejs";
@@ -32,7 +33,7 @@ export async function POST(req: NextRequest, { params }: RouteProps) {
 
   const { data: block, error: blockError } = await supabase
     .from("plan_nodes")
-    .select("id, plan_id, learning_plans!inner(id, user_id, organization_id)")
+    .select("id, plan_id, learning_plans!inner(id, user_id, organization_id, guest_user_id)")
     .eq("id", blockId)
     .eq("plan_id", workspaceId)
     .single();
@@ -42,7 +43,7 @@ export async function POST(req: NextRequest, { params }: RouteProps) {
   }
 
   const workspace = (block as any).learning_plans;
-  if (workspace.user_id !== auth.user_id && (!auth.organization_id || workspace.organization_id !== auth.organization_id)) {
+  if (!canAccessAgentWorkspace(auth, workspace)) {
     return errorResponse(404, "workspace_not_found", "Workspace not found");
   }
 
@@ -62,8 +63,13 @@ export async function POST(req: NextRequest, { params }: RouteProps) {
     guestUserId = guest.id;
   }
 
+  const ownerUserId = auth.user_id || workspace.user_id;
+  if (!ownerUserId) {
+    return errorResponse(500, "internal_error", "Workspace owner is missing");
+  }
+
   try {
-    await getGhcScoreBriefForUser(workspaceId, auth.user_id || workspace.user_id, [blockId], true, null);
+    await getGhcScoreBriefForUser(workspaceId, ownerUserId, [blockId], true, null);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Not authorized";
     return errorResponse(message === "Workspace not found" ? 404 : 403, message === "Workspace not found" ? "workspace_not_found" : "forbidden", message);
@@ -74,7 +80,7 @@ export async function POST(req: NextRequest, { params }: RouteProps) {
     .from("workspace_ghc_sessions")
     .insert({
       plan_id: workspaceId,
-      user_id: auth.user_id,
+      user_id: ownerUserId,
       guest_user_id: guestUserId,
       organization_id: auth.organization_id || workspace.organization_id,
       created_by_api_key_id: auth.key_id,

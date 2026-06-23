@@ -143,7 +143,7 @@ export async function getGhcScoreBriefForUser(planId: string, userId: string, fo
   const { data: planNodeSessions } = nodeIds.length > 0
     ? await supabase
       .from("plan_node_sessions")
-      .select("session_id, plan_node_id, plan_nodes:title")
+      .select("session_id, plan_node_id, plan_nodes(title)")
       .eq("plan_id", planId)
       .eq("user_id", userId)
       .in("plan_node_id", nodeIds)

@@ -470,12 +470,113 @@ async function main() {
             initial_prompt: "[E2E-GUEST] Explain how guest users can create Performance Workspaces.",
           }),
         });
+        const guestWorkspaceId = guestWs.body?.workspace?.id;
         record(
           "agent-api",
           "guest key can create workspace",
-          guestWs.res.status === 201 && !!guestWs.body?.workspace?.id,
-          guestWs.body?.workspace?.id || `HTTP ${guestWs.res.status}`
+          guestWs.res.status === 201 && !!guestWorkspaceId,
+          guestWorkspaceId || `HTTP ${guestWs.res.status}`
         );
+
+        if (guestWorkspaceId) {
+          const guestBlocks = await agentJson(`/api/v2/agent/workspaces/${guestWorkspaceId}/blocks`, guestKey);
+          const guestBlockId = guestBlocks.body?.blocks?.[0]?.id;
+          record(
+            "agent-api",
+            "guest key can list blocks",
+            guestBlocks.res.status === 200 && !!guestBlockId,
+            `${guestBlocks.body?.blocks?.length ?? 0} blocks`
+          );
+
+          if (guestBlockId) {
+            const guestLink = await agentJson(
+              `/api/v2/agent/workspaces/${guestWorkspaceId}/blocks/${guestBlockId}/ghl-links`,
+              guestKey,
+              { method: "POST", body: JSON.stringify({ minutes: 15 }) }
+            );
+            const guestLinkId = guestLink.body?.ghl_link?.id;
+            const guestPrivateUrl = guestLink.body?.ghl_link?.private_url;
+            record(
+              "ghl-flow",
+              "guest key can create GHL link",
+              guestLink.res.status === 201 && !!guestLinkId && !!guestPrivateUrl,
+              guestLinkId || `HTTP ${guestLink.res.status}`
+            );
+
+            if (guestPrivateUrl) {
+              const guestToken = guestPrivateUrl.split("/").pop();
+              const guestPage = await fetch(`${baseUrl}/ghl-score/session/${guestToken}`);
+              record(
+                "ghl-flow",
+                "guest GHL private session page",
+                guestPage.status === 200 && !(await guestPage.text()).includes("could not be found"),
+                `HTTP ${guestPage.status}`
+              );
+
+              const guestChat = await fetch(`${baseUrl}/api/workspace-ghl-score/chat`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  privateToken: guestToken,
+                  thought: "Guests can use private GHL links to demonstrate learning on assigned blocks.",
+                  messages: [],
+                }),
+              });
+              const guestChatBody = await guestChat.json();
+              record(
+                "ghl-flow",
+                "guest GHL chat via private token",
+                guestChat.status === 200 && !!guestChatBody?.message,
+                guestChat.status === 200 ? `reply len=${String(guestChatBody.message).length}` : `${guestChat.status}`
+              );
+
+              const guestComplete = await fetch(`${baseUrl}/api/workspace-ghl-score/complete`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  privateToken: guestToken,
+                  durationSeconds: 90,
+                  transcript: [
+                    {
+                      role: "learner",
+                      text: "Guest users receive API keys and can open private GHL links without logging in.",
+                    },
+                  ],
+                }),
+              });
+              const guestCompleteBody = await guestComplete.json();
+              const guestCompleted =
+                guestComplete.status === 200 &&
+                (guestCompleteBody?.ghlSession?.status === "completed" || !!guestCompleteBody?.ghlSession?.overall_score);
+              record(
+                "ghl-flow",
+                "guest GHL complete via private token",
+                guestCompleted,
+                guestCompleted
+                  ? `score=${guestCompleteBody?.ghlSession?.overall_score}`
+                  : `${guestComplete.status} ${JSON.stringify(guestCompleteBody)?.slice(0, 120)}`
+              );
+
+              if (guestLinkId) {
+                const guestResults = await agentJson(
+                  `/api/v2/agent/workspaces/${guestWorkspaceId}/ghl-links/${guestLinkId}/results`,
+                  guestKey
+                );
+                const ggr = guestResults.body?.ghl_result;
+                record(
+                  "ghl-flow",
+                  "guest key can fetch GHL results",
+                  guestResults.res.status === 200 &&
+                    ggr?.status === "completed" &&
+                    ggr?.overall_score != null &&
+                    Array.isArray(ggr?.marker_scores) &&
+                    ggr.marker_scores.length > 0,
+                  ggr?.status === "completed" ? `score=${ggr.overall_score}` : `${guestResults.res.status}`
+                );
+              }
+            }
+          }
+        }
       }
     }
   }

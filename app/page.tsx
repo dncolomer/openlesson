@@ -18,15 +18,15 @@ const BACKGROUND_IMAGES = [
 const steps = [
   {
     title: "Create a Performance Workspace",
-    body: "Define the skill, decision domain, or scenario that actually matters for your team.",
+    body: "Define the skill, decision domain, or scenario that actually matters to you.",
   },
   {
-    title: "Think aloud with Socratic coaching",
-    body: "Team members work through real problems out loud while the AI probes for depth, adaptability, and reasoning quality.",
+    title: "Practice in our ILE—or integrate via API",
+    body: "Run immersive GHL Score sessions in openLesson's Immersive Learning Environment, or connect the Agentic API to your existing LMS or educational platform to capture real performance evidence.",
   },
   {
     title: "See clear readiness evidence",
-    body: "Get objective insight into individual and team judgment, not just completion rates or polished final answers.",
+    body: "Get objective insight into your judgment, adaptability, and reasoning—not just completion rates or polished final answers.",
   },
   {
     title: "Close gaps with targeted practice",
@@ -41,6 +41,82 @@ const outcomes = [
   "Create auditable evidence of readiness for compliance, promotion, or high-stakes roles.",
   "Reduce the growing risk of AI-masked underperformance.",
 ];
+
+const READINESS_SCENARIOS = [
+  {
+    title: "Client escalation readiness",
+    signals: [
+      { label: "Explains tradeoffs without script", value: "Strong", width: "82%" },
+      { label: "Updates judgment when facts change", value: "Forming", width: "54%", muted: true },
+      { label: "Identifies AI failure modes", value: "Gap", width: "34%", alert: true },
+    ],
+    probe: "If the AI-generated recommendation is confidently wrong, what evidence would make you stop and revise your decision?",
+    metrics: [
+      { value: "14", label: "reasoning traces" },
+      { value: "5", label: "hidden gaps" },
+      { value: "2", label: "critical risks" },
+    ],
+  },
+  {
+    title: "Sales discovery judgment",
+    signals: [
+      { label: "Qualifies pain without leading questions", value: "Strong", width: "76%" },
+      { label: "Challenges AI-drafted talk tracks", value: "Forming", width: "48%", muted: true },
+      { label: "Maps buyer stakes to solution fit", value: "Gap", width: "31%", alert: true },
+    ],
+    probe: "Your prospect agrees with every point in the AI summary. What would you ask next to test whether they actually understand the problem?",
+    metrics: [
+      { value: "11", label: "reasoning traces" },
+      { value: "4", label: "hidden gaps" },
+      { value: "1", label: "critical risks" },
+    ],
+  },
+  {
+    title: "Compliance exception review",
+    signals: [
+      { label: "Cites policy rationale in own words", value: "Strong", width: "88%" },
+      { label: "Weighs exception blast radius", value: "Forming", width: "57%", muted: true },
+      { label: "Flags undocumented AI assumptions", value: "Gap", width: "29%", alert: true },
+    ],
+    probe: "The model says the exception is low risk because similar cases were approved. What would you verify before signing off?",
+    metrics: [
+      { value: "9", label: "reasoning traces" },
+      { value: "3", label: "hidden gaps" },
+      { value: "2", label: "critical risks" },
+    ],
+  },
+  {
+    title: "Incident response triage",
+    signals: [
+      { label: "Narrows root cause without guesswork", value: "Strong", width: "71%" },
+      { label: "Prioritizes customer impact over noise", value: "Forming", width: "52%", muted: true },
+      { label: "Explains rollback tradeoffs", value: "Gap", width: "38%", alert: true },
+    ],
+    probe: "An AI runbook suggests restarting the service immediately. What signals would change your mind about that first step?",
+    metrics: [
+      { value: "16", label: "reasoning traces" },
+      { value: "6", label: "hidden gaps" },
+      { value: "3", label: "critical risks" },
+    ],
+  },
+  {
+    title: "New manager coaching",
+    signals: [
+      { label: "Gives feedback tied to behavior", value: "Strong", width: "79%" },
+      { label: "Adapts tone to individual context", value: "Forming", width: "46%", muted: true },
+      { label: "Detects when AI scripts sound hollow", value: "Gap", width: "33%", alert: true },
+    ],
+    probe: "You used an AI draft for a tough performance conversation. How would you know the employee actually heard the core message?",
+    metrics: [
+      { value: "8", label: "reasoning traces" },
+      { value: "4", label: "hidden gaps" },
+      { value: "1", label: "critical risks" },
+    ],
+  },
+] as const;
+
+const SCENARIO_ROTATE_MS = 4500;
+const SCENARIO_FADE_MS = 400;
 
 export default function B2BLandingPage() {
   const [bgImage, setBgImage] = useState("");
@@ -62,7 +138,7 @@ export default function B2BLandingPage() {
           <Link href="/" className="text-base font-semibold tracking-tight text-white transition hover:text-zinc-300">openLesson</Link>
           <nav className="hidden items-center gap-7 text-sm text-zinc-500 md:flex" aria-label="B2B landing page navigation">
             <a href="#product" className="transition hover:text-white">Product</a>
-            <a href="#teams" className="transition hover:text-white">For Teams</a>
+            <a href="#problem" className="transition hover:text-white">Why it matters</a>
             <a href="#how" className="transition hover:text-white">How it Works</a>
             <Link href="/pricing" className="transition hover:text-white">Pricing</Link>
           </nav>
@@ -76,27 +152,27 @@ export default function B2BLandingPage() {
 
       <section className="relative z-10 mx-auto grid min-h-[calc(100vh-73px)] w-full max-w-6xl items-center gap-12 px-6 py-20 lg:grid-cols-[1.03fr_0.97fr]">
         <div>
-          <div className="mb-6 inline-block rounded-sm border border-zinc-800 bg-zinc-950/80 px-3 py-1 font-mono text-[10px] tracking-[2px] text-zinc-500">READINESS EVIDENCE FOR AI-ENABLED TEAMS</div>
-          <h1 className="max-w-4xl text-5xl font-medium leading-[1.03] tracking-[-2.8px] text-white sm:text-6xl lg:text-[72px]">AI makes your team look ready. Prove they actually are.</h1>
-          <p className="mt-7 max-w-3xl text-xl leading-relaxed tracking-[-0.35px] text-zinc-400">openLesson helps teams build and measure the judgment, adaptability, and skill that AI cannot replace.</p>
+          <div className="mb-6 inline-block rounded-sm border border-zinc-800 bg-zinc-950/80 px-3 py-1 font-mono text-[10px] tracking-[2px] text-zinc-500">READINESS EVIDENCE FOR YOU</div>
+          <h1 className="max-w-4xl text-5xl font-medium leading-[1.03] tracking-[-2.8px] text-white sm:text-6xl lg:text-[72px]">AI makes you look ready. Prove that you actually are.</h1>
+          <p className="mt-7 max-w-3xl text-xl leading-relaxed tracking-[-0.35px] text-zinc-400">openLesson helps you build and measure the judgment, adaptability, and skill that AI cannot replace.</p>
           <div className="mt-7 max-w-3xl space-y-4 text-base leading-relaxed text-zinc-400 sm:text-lg">
-            <p>As AI tools get better, employees can generate strong-looking outputs earlier in the learning curve without proving they understand the task, context, or decision behind the work.</p>
-            <p>This creates a dangerous readiness illusion for managers. Training completion is not performance readiness.</p>
-            <p className="text-zinc-200">openLesson reveals the gaps early, before they impact real work.</p>
+            <p>As AI tools get better, you can generate strong-looking outputs earlier in the learning curve without proving you understand the task, context, or decision behind the work.</p>
+            <p>This creates a dangerous readiness illusion. Training completion is not performance readiness.</p>
+            <p className="text-zinc-200">openLesson reveals your gaps early, before they impact real work.</p>
           </div>
           <div className="mt-9 flex flex-col gap-3 sm:flex-row sm:items-center">
             <PrimaryCta />
             <a href="#how" className="inline-flex min-h-12 items-center justify-center rounded-sm border border-zinc-800 bg-zinc-950/60 px-5 py-3 text-sm font-medium text-zinc-300 transition hover:border-zinc-700 hover:text-white">See how it works</a>
           </div>
-          <p className="mt-6 font-mono text-[11px] uppercase tracking-[1.6px] text-zinc-600">Think-aloud practice • Socratic probes • readiness evidence</p>
+          <p className="mt-6 font-mono text-[11px] uppercase tracking-[1.6px] text-zinc-600">ILE sessions • Agentic API • readiness evidence</p>
         </div>
         <ReadinessVisual />
       </section>
 
-      <ContentSection id="teams" eyebrow="THE PROBLEM" title="The next workplace risk is not AI adoption. It is unverified human readiness.">
-        <p>AI gives employees instant help, but instant help can hide weak understanding. When people rely on AI without building the underlying skill, managers only discover the gap after mistakes happen.</p>
-        <p className="text-white">Your employees have AI. Do they have the judgment to use it well?</p>
-        <p>Polished output is not proof of capability. Stop letting AI-assisted employees wing critical work.</p>
+      <ContentSection id="problem" eyebrow="THE PROBLEM" title="The next workplace risk is not AI adoption. It is unverified human readiness.">
+        <p>AI gives you instant help, but instant help can hide weak understanding. When you rely on AI without building the underlying skill, you only discover the gap after mistakes happen.</p>
+        <p className="text-white">You have AI. Do you have the judgment to use it well?</p>
+        <p>Polished output is not proof of capability. Stop winging critical work with AI you do not truly understand.</p>
       </ContentSection>
 
       <section id="product" className="relative z-10 mx-auto grid max-w-6xl gap-8 px-6 py-20 lg:grid-cols-[0.88fr_1.12fr]">
@@ -108,8 +184,8 @@ export default function B2BLandingPage() {
         </div>
         <div className="border border-zinc-800 bg-zinc-950/70 p-6 text-lg leading-relaxed text-zinc-400 backdrop-blur-sm sm:p-8">
           <p className="text-white">openLesson turns AI-assisted practice into readiness evidence.</p>
-          <p className="mt-5">Instead of another training that checks a box, your team practices real scenarios by thinking aloud. The Socratic AI listens to their reasoning, probes for depth, and surfaces exactly where judgment is strong and where it is still forming.</p>
-          <p className="mt-5 text-zinc-200">Before people use AI in critical work, know what they actually understand.</p>
+          <p className="mt-5">Instead of another training that checks a box, you practice real scenarios and produce evidence openLesson can analyze. Run sessions in our ILE, upload tool traces and screenshots, or pipe activity from your LMS via the Agentic API—then see exactly where your judgment is strong and where it is still forming.</p>
+          <p className="mt-5 text-zinc-200">Before you use AI in critical work, know what you actually understand.</p>
         </div>
       </section>
 
@@ -143,8 +219,8 @@ export default function B2BLandingPage() {
       <section className="relative z-10 mx-auto max-w-6xl px-6 py-24">
         <div className="border border-zinc-800 bg-zinc-950/80 p-8 text-center backdrop-blur-sm sm:p-12">
           <div className="mx-auto mb-6 h-px w-24 bg-gradient-to-r from-transparent via-cyan-300/60 to-transparent" />
-          <h2 className="mx-auto max-w-3xl text-4xl font-medium tracking-[-1.6px] text-white sm:text-5xl">Your team may be AI-enabled. Are they performance-ready?</h2>
-          <p className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-zinc-400">Create a workspace for the real decisions, scenarios, and skills your organization cannot afford to leave unverified.</p>
+          <h2 className="mx-auto max-w-3xl text-4xl font-medium tracking-[-1.6px] text-white sm:text-5xl">You may be AI-enabled. Are you performance-ready?</h2>
+          <p className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-zinc-400">Create a workspace for the real decisions, scenarios, and skills you cannot afford to leave unverified.</p>
           <div className="mt-8 flex justify-center">
             <PrimaryCta />
           </div>
@@ -188,6 +264,28 @@ function ContentSection({ id, eyebrow, title, children }: { id?: string; eyebrow
 }
 
 function ReadinessVisual() {
+  const [scenarioIndex, setScenarioIndex] = useState(0);
+  const [fading, setFading] = useState(false);
+
+  useEffect(() => {
+    let fadeTimeout: ReturnType<typeof setTimeout>;
+
+    const interval = setInterval(() => {
+      setFading(true);
+      fadeTimeout = setTimeout(() => {
+        setScenarioIndex((index) => (index + 1) % READINESS_SCENARIOS.length);
+        setFading(false);
+      }, SCENARIO_FADE_MS);
+    }, SCENARIO_ROTATE_MS);
+
+    return () => {
+      clearInterval(interval);
+      clearTimeout(fadeTimeout);
+    };
+  }, []);
+
+  const scenario = READINESS_SCENARIOS[scenarioIndex];
+
   return (
     <div className="relative border border-zinc-800/80 bg-zinc-950/75 p-4 shadow-2xl backdrop-blur-sm">
       <div className="absolute -right-8 -top-8 h-28 w-28 rounded-full bg-cyan-400/10 blur-3xl" />
@@ -195,26 +293,40 @@ function ReadinessVisual() {
         <div className="flex items-center justify-between border-b border-neutral-800 pb-4">
           <div>
             <div className="font-mono text-[10px] uppercase tracking-[2px] text-zinc-600">Workspace signal</div>
-            <div className="mt-1 text-lg font-medium text-white">Client escalation readiness</div>
+            <div
+              className={`mt-1 text-lg font-medium text-white transition-opacity duration-300 ${fading ? "opacity-0" : "opacity-100"}`}
+              aria-live="polite"
+            >
+              {scenario.title}
+            </div>
           </div>
           <div className="rounded-sm border border-cyan-400/20 bg-cyan-950/30 px-3 py-1 font-mono text-[10px] uppercase tracking-[1.5px] text-cyan-200">Evidence</div>
         </div>
 
-        <div className="mt-5 grid gap-3">
-          <Signal label="Explains tradeoffs without script" value="Strong" width="82%" />
-          <Signal label="Updates judgment when facts change" value="Forming" width="54%" muted />
-          <Signal label="Identifies AI failure modes" value="Gap" width="34%" alert />
+        <div className={`mt-5 grid gap-3 transition-opacity duration-300 ${fading ? "opacity-0" : "opacity-100"}`}>
+          {scenario.signals.map((signal) => (
+            <Signal key={signal.label} {...signal} />
+          ))}
         </div>
 
-        <div className="mt-6 border border-zinc-800 bg-[#090909] p-5">
-          <div className="font-mono text-[10px] uppercase tracking-[2px] text-zinc-600">Socratic probe</div>
-          <p className="mt-3 text-sm leading-relaxed text-zinc-300">If the AI-generated recommendation is confidently wrong, what evidence would make you stop and revise your decision?</p>
+        <div className={`mt-6 border border-zinc-800 bg-[#090909] p-5 transition-opacity duration-300 ${fading ? "opacity-0" : "opacity-100"}`}>
+          <div className="font-mono text-[10px] uppercase tracking-[2px] text-zinc-600">Readiness probe</div>
+          <p className="mt-3 text-sm leading-relaxed text-zinc-300">{scenario.probe}</p>
         </div>
 
-        <div className="mt-4 grid grid-cols-3 gap-3 text-center">
-          <Metric value="14" label="reasoning traces" />
-          <Metric value="5" label="hidden gaps" />
-          <Metric value="2" label="critical risks" />
+        <div className={`mt-4 grid grid-cols-3 gap-3 text-center transition-opacity duration-300 ${fading ? "opacity-0" : "opacity-100"}`}>
+          {scenario.metrics.map((metric) => (
+            <Metric key={metric.label} value={metric.value} label={metric.label} />
+          ))}
+        </div>
+
+        <div className="mt-5 flex justify-center gap-1.5" aria-hidden="true">
+          {READINESS_SCENARIOS.map((item, index) => (
+            <span
+              key={item.title}
+              className={`h-1.5 rounded-full transition-all duration-300 ${index === scenarioIndex ? "w-5 bg-cyan-300/80" : "w-1.5 bg-zinc-700"}`}
+            />
+          ))}
         </div>
       </div>
     </div>

@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import { useEffect, useState, type ReactNode } from "react";
-import { ArrowRight, Check, Menu } from "lucide-react";
+import { ArrowRight, Check } from "lucide-react";
 import { Footer } from "@/components/Footer";
+import { LandingNav } from "@/components/LandingNav";
 
 const CTA = "Create your Performance Workspace";
 const CTA_HREF = "/workspace/new";
@@ -133,22 +134,7 @@ export default function B2BLandingPage() {
       <div className="fixed inset-0 z-0 bg-[radial-gradient(circle_at_72%_8%,rgba(14,116,144,0.22),transparent_31%),radial-gradient(circle_at_12%_18%,rgba(39,39,42,0.62),transparent_32%)]" />
       <div className="fixed inset-0 z-0 bg-[linear-gradient(rgba(255,255,255,0.025)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.025)_1px,transparent_1px)] bg-[size:72px_72px] opacity-40" />
 
-      <header className="sticky top-0 z-40 border-b border-zinc-900 bg-[#0a0a0a]/86 px-5 py-4 backdrop-blur-md">
-        <div className="mx-auto flex max-w-6xl items-center justify-between gap-4">
-          <Link href="/" className="text-base font-semibold tracking-tight text-white transition hover:text-zinc-300">openLesson</Link>
-          <nav className="hidden items-center gap-7 text-sm text-zinc-500 md:flex" aria-label="B2B landing page navigation">
-            <a href="#product" className="transition hover:text-white">Product</a>
-            <a href="#problem" className="transition hover:text-white">Why it matters</a>
-            <a href="#how" className="transition hover:text-white">How it Works</a>
-            <Link href="/pricing" className="transition hover:text-white">Pricing</Link>
-          </nav>
-          <div className="hidden items-center gap-3 md:flex">
-            <Link href="/login" className="px-2 py-2 text-sm text-zinc-500 transition hover:text-white">Login</Link>
-            <PrimaryCta compact />
-          </div>
-          <button className="rounded-sm border border-zinc-800 p-2 text-zinc-400 md:hidden" aria-label="Open navigation"><Menu size={18} /></button>
-        </div>
-      </header>
+      <LandingNav />
 
       <section className="relative z-10 mx-auto grid min-h-[calc(100vh-73px)] w-full max-w-6xl items-center gap-12 px-6 py-20 lg:grid-cols-[1.03fr_0.97fr]">
         <div>

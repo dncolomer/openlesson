@@ -508,9 +508,9 @@ export function PlanView({ initialPlan, initialNodes }: PlanViewProps) {
               {currentUserId && (
                 <Link
                   href={`/workspace/${planId}/ghl-score`}
-                  className="w-full text-center text-xs px-3 py-2 rounded-md bg-white text-black hover:bg-neutral-200 transition-all"
+                  className="w-full text-center text-xs sm:text-sm px-3 py-2 rounded-md bg-white text-black hover:bg-neutral-200 transition-all font-medium"
                 >
-                  Start GHL Score
+                  {t('planView.startEvaluationEnv')}
                 </Link>
               )}
               {(plan.is_public || plan.is_group) && (

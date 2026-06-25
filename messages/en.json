@@ -68,8 +68,14 @@
   "footer": {
     "product": "Product",
     "solutions": "Solutions",
+    "resources": "Resources",
+    "solutions": "Solutions",
     "company": "Company",
     "legal": "Legal",
+    "platform": "Platform",
+    "agenticApi": "Agentic API",
+    "skillFile": "Agent skill file",
+    "seoBlurb": "Performance readiness for AI-enabled work. Workspaces, immersive learning, evaluation, and API integration.",
     "pricing": "Pricing",
     "coaching": "1-on-1 Coaching",
     "aiSalesTraining": "Sales Training",
@@ -1672,9 +1678,10 @@
     "saved": "saved",
     "preview": "Preview",
     "starting": "Starting...",
-    "runAgain": "Run Again",
-    "resumeLesson": "Resume Lesson",
-    "startLesson": "Start Lesson"
+    "runAgain": "Restart Learning Environment",
+    "resumeLesson": "Resume Learning Environment",
+    "startLesson": "Start Learning Environment",
+    "startEvaluationEnv": "Start Evaluation Env."
   },
   "planView": {
     "addDescription": "Add a description for this workspace...",
@@ -1710,7 +1717,8 @@
     "makeGroupPlan": "Make Group Workspace",
     "group": "Group",
     "groupParticipant": "Participant",
-    "signInToJoin": "Sign in to join"
+    "signInToJoin": "Sign in to join",
+    "startEvaluationEnv": "Start Evaluation Env."
   },
   "performanceChat": {
     "signInRequired": "Sign in to view performance insights",

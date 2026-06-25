@@ -1,7 +1,15 @@
 import { MetadataRoute } from "next";
+import { SOLUTION_PAGES } from "@/lib/seo/solution-pages";
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const baseUrl = "https://openlesson.academy";
+
+  const solutionEntries = SOLUTION_PAGES.map((page) => ({
+    url: `${baseUrl}${page.path}`,
+    lastModified: new Date(),
+    changeFrequency: "monthly" as const,
+    priority: 0.88,
+  }));
 
   return [
     {
@@ -16,37 +24,25 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: "weekly",
       priority: 0.9,
     },
-    // Solution pages
     {
-      url: `${baseUrl}/enterprise`,
+      url: `${baseUrl}/platform`,
       lastModified: new Date(),
       changeFrequency: "monthly",
-      priority: 0.8,
+      priority: 0.95,
     },
     {
-      url: `${baseUrl}/eval`,
+      url: `${baseUrl}/solutions`,
       lastModified: new Date(),
       changeFrequency: "monthly",
-      priority: 0.8,
+      priority: 0.9,
     },
     {
-      url: `${baseUrl}/schools`,
+      url: `${baseUrl}/docs/agentic-v2`,
       lastModified: new Date(),
       changeFrequency: "monthly",
-      priority: 0.8,
+      priority: 0.85,
     },
-    {
-      url: `${baseUrl}/homeschool`,
-      lastModified: new Date(),
-      changeFrequency: "monthly",
-      priority: 0.8,
-    },
-    {
-      url: `${baseUrl}/certify`,
-      lastModified: new Date(),
-      changeFrequency: "monthly",
-      priority: 0.8,
-    },
+    ...solutionEntries,
     // Legal pages
     {
       url: `${baseUrl}/privacy`,

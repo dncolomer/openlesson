@@ -2,9 +2,17 @@
 
 import Link from "next/link";
 import { useI18n } from "@/lib/i18n";
+import { SOLUTION_PAGES } from "@/lib/seo/solution-pages";
 
 const productLinks = [
+  { labelKey: "footer.platform", href: "/platform" },
   { labelKey: "footer.pricing", href: "/pricing" },
+  { labelKey: "footer.agenticApi", href: "/docs/agentic-v2" },
+];
+
+const resourceLinks = [
+  { labelKey: "footer.skillFile", href: "/skill.md" },
+  { labelKey: "footer.github", href: "https://github.com/dncolomer/openlesson", external: true },
 ];
 
 const legalLinks = [
@@ -21,7 +29,14 @@ export function Footer() {
   return (
     <footer className="mt-auto border-t border-neutral-900 bg-[#050505]">
       <div className="max-w-6xl mx-auto px-6 py-12">
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-8 pb-8 border-b border-neutral-900">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-8 pb-8 border-b border-neutral-900">
+          <div className="col-span-2 md:col-span-1">
+            <p className="text-sm font-medium text-neutral-300">openLesson</p>
+            <p className="mt-3 text-sm leading-relaxed text-neutral-600">
+              {t('footer.seoBlurb')}
+            </p>
+          </div>
+
           <div>
             <h3 className="text-xs font-semibold text-neutral-400 uppercase tracking-wider mb-4">
               {t('footer.product')}
@@ -37,16 +52,39 @@ export function Footer() {
             </ul>
           </div>
 
-          <div>
+          <div className="col-span-2 md:col-span-1">
             <h3 className="text-xs font-semibold text-neutral-400 uppercase tracking-wider mb-4">
-              {t('footer.company')}
+              {t('footer.solutions')}
             </h3>
             <ul className="space-y-3">
-              <li>
-                <a href="https://github.com/dncolomer/openlesson" target="_blank" rel="noopener noreferrer" className="text-sm text-neutral-500 hover:text-white transition-colors">
-                  {t('footer.github')}
-                </a>
-              </li>
+              {SOLUTION_PAGES.map((solution) => (
+                <li key={solution.slug}>
+                  <Link href={solution.path} className="text-sm text-neutral-500 hover:text-white transition-colors">
+                    {solution.navLabel}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          <div>
+            <h3 className="text-xs font-semibold text-neutral-400 uppercase tracking-wider mb-4">
+              {t('footer.resources')}
+            </h3>
+            <ul className="space-y-3">
+              {resourceLinks.map((link) => (
+                <li key={link.href}>
+                  {link.external ? (
+                    <a href={link.href} target="_blank" rel="noopener noreferrer" className="text-sm text-neutral-500 hover:text-white transition-colors">
+                      {t(link.labelKey)}
+                    </a>
+                  ) : (
+                    <Link href={link.href} className="text-sm text-neutral-500 hover:text-white transition-colors">
+                      {t(link.labelKey)}
+                    </Link>
+                  )}
+                </li>
+              ))}
             </ul>
           </div>
 

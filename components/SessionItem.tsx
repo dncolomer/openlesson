@@ -310,41 +310,30 @@ export function SessionItem({
 
           {/* Actions */}
           {!isLocked && (isOwner || isGroupPlan) && (
-            <div className="flex gap-2 pt-1">
+            <div className="grid grid-cols-2 gap-2 pt-1">
               {isCompleted ? (
                 <button
                   onClick={(e) => { e.stopPropagation(); handleStart(); }}
                   disabled={isStarting}
-                  className="flex-1 px-4 py-2 bg-neutral-700 hover:bg-neutral-600 disabled:bg-neutral-800 text-white text-sm font-medium rounded-md transition-colors flex items-center justify-center gap-2"
+                  className="min-w-0 px-3 py-2 bg-white hover:bg-neutral-200 disabled:bg-neutral-700 disabled:text-neutral-400 text-black text-xs sm:text-sm font-medium rounded-md transition-colors text-center"
                 >
-                  {isStarting ? t('sessionItem.starting') : (
-                    <>
-                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                      </svg>
-                      {t('sessionItem.runAgain')}
-                    </>
-                  )}
+                  {isStarting ? t('sessionItem.starting') : t('sessionItem.runAgain')}
                 </button>
               ) : (
                 <button
                   onClick={(e) => { e.stopPropagation(); handleStart(); }}
                   disabled={isStarting}
-                  className={`flex-1 px-4 py-2 text-sm font-medium rounded-md transition-colors ${
-                    activeSession
-                      ? "bg-green-600 hover:bg-green-500 text-white disabled:bg-green-800 disabled:text-green-200"
-                      : "bg-white hover:bg-neutral-200 text-black disabled:bg-neutral-200 disabled:text-neutral-600"
-                  }`}
+                  className="min-w-0 px-3 py-2 bg-white hover:bg-neutral-200 text-black disabled:bg-neutral-700 disabled:text-neutral-400 text-xs sm:text-sm font-medium rounded-md transition-colors text-center"
                 >
                   {isStarting ? t('sessionItem.starting') : activeSession ? t('sessionItem.resumeLesson') : t('sessionItem.startLesson')}
                 </button>
               )}
               <button
                 onClick={handleStartGhl}
-                className="px-3 py-2 rounded-md border border-neutral-700 bg-neutral-900 text-xs font-medium text-neutral-200 hover:border-neutral-500 hover:bg-neutral-800 transition-colors"
-                title="Start a GHL Score block with this workspace block as context"
+                className="min-w-0 px-3 py-2 rounded-md bg-white hover:bg-neutral-200 text-black text-xs sm:text-sm font-medium transition-colors text-center"
+                title={t('sessionItem.startEvaluationEnv')}
               >
-                GHL
+                {t('sessionItem.startEvaluationEnv')}
               </button>
             </div>
           )}

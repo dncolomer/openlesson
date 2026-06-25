@@ -5,18 +5,21 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: {
-    default: "openLesson - AI Tutor That Listens to You Think",
+    default: "openLesson — Prove Performance Readiness in AI-Enabled Work",
     template: "%s | openLesson",
   },
   description:
-    "AI-powered tutoring that listens to you reason and asks the right questions at the right time. For students, professionals, and teams.",
+    "Measure real skill readiness—not training completion. Performance Workspaces, Immersive Learning Environment sessions, evaluation scoring, and an Agentic API for LMS integration.",
   keywords: [
-    "AI tutor",
-    "AI learning platform",
-    "personalized learning",
-    "AI education",
-    "online tutoring",
-    "AI training software",
+    "performance readiness platform",
+    "AI skill assessment",
+    "learning verification",
+    "workplace learning analytics",
+    "immersive learning environment",
+    "LMS integration API",
+    "skills gap analysis",
+    "AI training evaluation",
+    "educational technology",
   ],
   metadataBase: new URL("https://openlesson.academy"),
   icons: {
@@ -29,9 +32,9 @@ export const metadata: Metadata = {
     canonical: "https://openlesson.academy",
   },
   openGraph: {
-    title: "openLesson - AI Tutor That Listens to You Think",
+    title: "openLesson — Prove Performance Readiness",
     description:
-      "An AI tutor that listens to you reason and asks questions when it spots gaps in your understanding. Free and open source.",
+      "AI makes you look ready. openLesson proves you actually are—with workspaces, ILE practice, evaluation sessions, and an Agentic API.",
     url: "https://openlesson.academy",
     siteName: "openLesson",
     images: [
@@ -39,7 +42,7 @@ export const metadata: Metadata = {
         url: "/og-default.jpg",
         width: 1024,
         height: 536,
-        alt: "openLesson - an AI tutor that listens to reasoning and asks better questions.",
+        alt: "openLesson — performance readiness platform for AI-enabled learning.",
       },
     ],
     type: "website",
@@ -47,9 +50,9 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "openLesson - AI Tutor That Listens to You Think",
+    title: "openLesson — Performance Readiness Platform",
     description:
-      "An AI tutor that listens to you reason and asks questions when it spots gaps in your understanding.",
+      "Measure judgment and adaptability—not just AI-assisted output. Workspaces, ILE, evaluation, and Agentic API.",
     images: ["/og-default.jpg"],
     creator: "@uncertainsys",
   },
@@ -73,7 +76,7 @@ const organizationSchema = {
   name: "openLesson",
   url: "https://openlesson.academy",
   description:
-    "AI-powered tutoring that listens to you reason and asks the right questions at the right time.",
+    "Performance readiness platform: workspaces, immersive learning, evaluation scoring, and Agentic API for LMS integration.",
   founder: {
     "@type": "Person",
     name: "Daniel Colomer",
@@ -97,7 +100,13 @@ const softwareSchema = {
     priceCurrency: "USD",
   },
   description:
-    "AI tutor that listens to you reason out loud and asks questions to deepen your understanding.",
+    "Prove performance readiness with workspaces, ILE sessions, evaluation environments, and an Agentic API.",
+  featureList: [
+    "Performance Workspaces",
+    "Immersive Learning Environment",
+    "Evaluation scoring and gap analysis",
+    "Agentic API for LMS integration",
+  ],
 };
 
 export default function RootLayout({

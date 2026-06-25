@@ -14,6 +14,12 @@ const nextConfig: NextConfig = {
         destination: "/docs/agentic-v2",
         permanent: true,
       },
+      { source: "/enterprise", destination: "/solutions/sales-enablement", permanent: true },
+      { source: "/eval", destination: "/solutions/hiring-assessment", permanent: true },
+      { source: "/for-hiring-teams", destination: "/solutions/hiring-assessment", permanent: true },
+      { source: "/schools", destination: "/solutions/lms-integration", permanent: true },
+      { source: "/homeschool", destination: "/solutions/corporate-learning", permanent: true },
+      { source: "/certify", destination: "/solutions/corporate-learning", permanent: true },
     ];
   },
   images: {

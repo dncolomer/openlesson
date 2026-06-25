@@ -33,8 +33,8 @@ const steps = [
     body: "Socratic follow-ups target gaps in genuine cognition. You are scored on how you explore, revise, and defend thinking under challenge—not on polished output you could paste from an assistant.",
   },
   {
-    title: "Close gaps with readiness evidence",
-    body: "Marker scores and gap analysis turn weak signals into specific practice before they become failed interviews, bad hires, or expensive real-world mistakes.",
+    title: "Close gaps with guided practice",
+    body: "Gap analysis turns weak signals into the next scenario, block, or probe—not a dead-end score. Humans practice until reasoning improves, with evidence showing progress along the way.",
   },
 ];
 
@@ -48,8 +48,8 @@ const cognitionPillars = [
     body: "Learners submit transcribed thought fragments; the system probes with targeted Socratic questions. The signal is live cognition under inquiry—not a script read from a hidden overlay.",
   },
   {
-    title: "Genuine cognition scoring",
-    body: "Evaluation sessions score learning markers from reasoning traces: definitions, causal links, examples, application, and repair when challenged. That is the most reliable evidence of real human thinking in an AI-enabled world.",
+    title: "Measure gaps, then close them",
+    body: "Evaluation scores learning markers from reasoning traces—then routes humans into specific ILE practice and Socratic follow-ups. openLesson is not a pass/fail checker; it is a loop from evidence to remediation.",
   },
 ];
 
@@ -59,6 +59,7 @@ const outcomes = [
   "Build human judgment that complements AI tools instead of depending on them.",
   "Create auditable evidence of readiness for compliance, promotion, or high-stakes roles.",
   "Give hiring and L&D teams a defensible signal when real-time cheating tools break traditional screens.",
+  "Turn gap findings into targeted practice—so humans improve, not just get labeled.",
 ];
 
 const SCENARIO_ROTATE_MS = 4500;
@@ -85,11 +86,11 @@ export default function B2BLandingPage() {
         <div>
           <div className="mb-6 inline-block rounded-sm border border-zinc-800 bg-zinc-950/80 px-3 py-1 font-mono text-[10px] tracking-[2px] text-zinc-500">READINESS EVIDENCE FOR YOU</div>
           <h1 className="max-w-4xl text-5xl font-medium leading-[1.03] tracking-[-2.8px] text-white sm:text-6xl lg:text-[72px]">AI makes humans look ready. Prove they actually are.</h1>
-          <p className="mt-7 max-w-3xl text-xl leading-relaxed tracking-[-0.35px] text-zinc-400">openLesson helps you build and measure the judgment, adaptability, and skill that AI cannot replace.</p>
+          <p className="mt-7 max-w-3xl text-xl leading-relaxed tracking-[-0.35px] text-zinc-400">openLesson measures genuine human readiness—and helps people close the gaps AI hides, not just flag them.</p>
           <div className="mt-7 max-w-3xl space-y-4 text-base leading-relaxed text-zinc-400 sm:text-lg">
-            <p>As AI tools get better, you can generate strong-looking outputs earlier in the learning curve without proving you understand the task, context, or decision behind the work.</p>
+            <p>As AI tools get better, humans can generate strong-looking outputs earlier in the learning curve without proving they understand the task, context, or decision behind the work.</p>
             <p>This creates a dangerous readiness illusion. Training completion is not performance readiness.</p>
-            <p className="text-zinc-200">openLesson reveals your gaps early, before they impact real work.</p>
+            <p className="text-zinc-200">openLesson reveals weak spots early, then guides targeted practice until cognition catches up.</p>
           </div>
           <div className="mt-9 flex flex-col gap-3 sm:flex-row sm:items-center">
             <PrimaryCta location="landing_hero" />
@@ -119,7 +120,7 @@ export default function B2BLandingPage() {
         />
         <p className="mt-6 max-w-3xl text-lg leading-relaxed text-zinc-400">
           openLesson solves the AI cheating problem at the signal layer. Instead of trusting deliverables that assistants can manufacture, we measure{" "}
-          <span className="text-zinc-200">genuine human cognition</span> through the Think-Aloud Protocol and our Selective Thought Interface—the most reliable way to score real reasoning, not performance theater.
+          <span className="text-zinc-200">genuine human cognition</span> through the Think-Aloud Protocol and our Selective Thought Interface—then help humans close the gaps that show up, with guided practice until reasoning holds up under probe.
         </p>
         <div className="mt-10 grid gap-4 md:grid-cols-3">
           {cognitionPillars.map((pillar) => (
@@ -133,20 +134,20 @@ export default function B2BLandingPage() {
 
       <section id="product" className="relative z-10 mx-auto grid max-w-6xl gap-8 px-6 py-20 lg:grid-cols-[0.88fr_1.12fr]">
         <div>
-          <SectionHeading eyebrow="THE SOLUTION" title="Find the skill gaps AI is hiding." />
+          <SectionHeading eyebrow="THE SOLUTION" title="Find the gaps AI hides. Help humans close them." />
           <div className="mt-8">
             <PrimaryCta location="landing_solution" />
           </div>
         </div>
         <div className="border border-zinc-800 bg-zinc-950/70 p-6 text-lg leading-relaxed text-zinc-400 backdrop-blur-sm sm:p-8">
-          <p className="text-white">openLesson turns live thinking into readiness evidence.</p>
-          <p className="mt-5">Instead of another training that checks a box, you practice real scenarios and verbalize reasoning as you go. The ILE captures think-aloud traces; the Selective Thought Interface submits and probes thought fragments; evaluation scores whether cognition holds up when assumptions break.</p>
-          <p className="mt-5 text-zinc-200">Before you trust a hire, a promotion, or your own AI-enabled work—know what thinking is actually there.</p>
+          <p className="text-white">openLesson turns live thinking into a measure-and-improve loop.</p>
+          <p className="mt-5">Practice real scenarios and verbalize reasoning as you go. The ILE captures think-aloud traces; evaluation surfaces specific gaps; targeted blocks and Socratic follow-ups help humans repair weak reasoning—not just document it.</p>
+          <p className="mt-5 text-zinc-200">Verify readiness, then build the judgment to match—before a hire, a promotion, or high-stakes work goes wrong.</p>
         </div>
       </section>
 
       <section id="how" className="relative z-10 mx-auto max-w-6xl px-6 py-20">
-        <SectionHeading eyebrow="HOW IT WORKS" title="From practice to proof" />
+        <SectionHeading eyebrow="HOW IT WORKS" title="From detection to closure" />
         <div className="mt-10 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           {steps.map((step, index) => (
             <div key={step.title} className="border border-zinc-800 bg-zinc-950/70 p-5 transition hover:border-zinc-700">
@@ -176,7 +177,7 @@ export default function B2BLandingPage() {
         <div className="border border-zinc-800 bg-zinc-950/80 p-8 text-center backdrop-blur-sm sm:p-12">
           <div className="mx-auto mb-6 h-px w-24 bg-gradient-to-r from-transparent via-cyan-300/60 to-transparent" />
           <h2 className="mx-auto max-w-3xl text-4xl font-medium tracking-[-1.6px] text-white sm:text-5xl">Don&apos;t fight AI adoption. Verify the humans behind it.</h2>
-          <p className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-zinc-400">You can&apos;t—and shouldn&apos;t—try to roll back AI-enabled work. You should know whether the people using it actually understand the decisions, scenarios, and skills on the line. openLesson measures that readiness before it becomes someone else&apos;s problem.</p>
+          <p className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-zinc-400">You can&apos;t—and shouldn&apos;t—try to roll back AI-enabled work. You should know whether the people using it actually understand the decisions, scenarios, and skills on the line—and help them close the gaps when they don&apos;t. openLesson measures readiness and guides the practice to improve it.</p>
           <div className="mt-8 flex justify-center">
             <PrimaryCta location="landing_closing" />
           </div>

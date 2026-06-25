@@ -5,6 +5,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { ArrowRight, Check } from "lucide-react";
 import { Footer } from "@/components/Footer";
 import { LandingNav } from "@/components/LandingNav";
+import { READINESS_SCENARIOS } from "@/lib/seo/readiness-scenarios";
 
 const CTA = "Create your Performance Workspace";
 const CTA_HREF = "/workspace/new";
@@ -42,79 +43,6 @@ const outcomes = [
   "Create auditable evidence of readiness for compliance, promotion, or high-stakes roles.",
   "Reduce the growing risk of AI-masked underperformance.",
 ];
-
-const READINESS_SCENARIOS = [
-  {
-    title: "Client escalation readiness",
-    signals: [
-      { label: "Explains tradeoffs without script", value: "Strong", width: "82%" },
-      { label: "Updates judgment when facts change", value: "Forming", width: "54%", muted: true },
-      { label: "Identifies AI failure modes", value: "Gap", width: "34%", alert: true },
-    ],
-    probe: "If the AI-generated recommendation is confidently wrong, what evidence would make you stop and revise your decision?",
-    metrics: [
-      { value: "14", label: "reasoning traces" },
-      { value: "5", label: "hidden gaps" },
-      { value: "2", label: "critical risks" },
-    ],
-  },
-  {
-    title: "Sales discovery judgment",
-    signals: [
-      { label: "Qualifies pain without leading questions", value: "Strong", width: "76%" },
-      { label: "Challenges AI-drafted talk tracks", value: "Forming", width: "48%", muted: true },
-      { label: "Maps buyer stakes to solution fit", value: "Gap", width: "31%", alert: true },
-    ],
-    probe: "Your prospect agrees with every point in the AI summary. What would you ask next to test whether they actually understand the problem?",
-    metrics: [
-      { value: "11", label: "reasoning traces" },
-      { value: "4", label: "hidden gaps" },
-      { value: "1", label: "critical risks" },
-    ],
-  },
-  {
-    title: "Compliance exception review",
-    signals: [
-      { label: "Cites policy rationale in own words", value: "Strong", width: "88%" },
-      { label: "Weighs exception blast radius", value: "Forming", width: "57%", muted: true },
-      { label: "Flags undocumented AI assumptions", value: "Gap", width: "29%", alert: true },
-    ],
-    probe: "The model says the exception is low risk because similar cases were approved. What would you verify before signing off?",
-    metrics: [
-      { value: "9", label: "reasoning traces" },
-      { value: "3", label: "hidden gaps" },
-      { value: "2", label: "critical risks" },
-    ],
-  },
-  {
-    title: "Incident response triage",
-    signals: [
-      { label: "Narrows root cause without guesswork", value: "Strong", width: "71%" },
-      { label: "Prioritizes customer impact over noise", value: "Forming", width: "52%", muted: true },
-      { label: "Explains rollback tradeoffs", value: "Gap", width: "38%", alert: true },
-    ],
-    probe: "An AI runbook suggests restarting the service immediately. What signals would change your mind about that first step?",
-    metrics: [
-      { value: "16", label: "reasoning traces" },
-      { value: "6", label: "hidden gaps" },
-      { value: "3", label: "critical risks" },
-    ],
-  },
-  {
-    title: "New manager coaching",
-    signals: [
-      { label: "Gives feedback tied to behavior", value: "Strong", width: "79%" },
-      { label: "Adapts tone to individual context", value: "Forming", width: "46%", muted: true },
-      { label: "Detects when AI scripts sound hollow", value: "Gap", width: "33%", alert: true },
-    ],
-    probe: "You used an AI draft for a tough performance conversation. How would you know the employee actually heard the core message?",
-    metrics: [
-      { value: "8", label: "reasoning traces" },
-      { value: "4", label: "hidden gaps" },
-      { value: "1", label: "critical risks" },
-    ],
-  },
-] as const;
 
 const SCENARIO_ROTATE_MS = 4500;
 const SCENARIO_FADE_MS = 400;
@@ -279,12 +207,13 @@ function ReadinessVisual() {
         <div className="flex items-center justify-between border-b border-neutral-800 pb-4">
           <div>
             <div className="font-mono text-[10px] uppercase tracking-[2px] text-zinc-600">Workspace signal</div>
-            <div
-              className={`mt-1 text-lg font-medium text-white transition-opacity duration-300 ${fading ? "opacity-0" : "opacity-100"}`}
+            <Link
+              href={scenario.solutionHref}
+              className={`mt-1 block text-lg font-medium text-white transition-opacity duration-300 hover:text-zinc-200 ${fading ? "opacity-0" : "opacity-100"}`}
               aria-live="polite"
             >
               {scenario.title}
-            </div>
+            </Link>
           </div>
           <div className="rounded-sm border border-cyan-400/20 bg-cyan-950/30 px-3 py-1 font-mono text-[10px] uppercase tracking-[1.5px] text-cyan-200">Evidence</div>
         </div>
@@ -309,11 +238,19 @@ function ReadinessVisual() {
         <div className="mt-5 flex justify-center gap-1.5" aria-hidden="true">
           {READINESS_SCENARIOS.map((item, index) => (
             <span
-              key={item.title}
+              key={item.id}
               className={`h-1.5 rounded-full transition-all duration-300 ${index === scenarioIndex ? "w-5 bg-cyan-300/80" : "w-1.5 bg-zinc-700"}`}
             />
           ))}
         </div>
+
+        <Link
+          href={scenario.solutionHref}
+          className={`mt-5 flex w-full items-center justify-center gap-2 rounded-sm border border-zinc-700 bg-white px-4 py-2.5 text-sm font-medium text-black transition hover:bg-zinc-200 ${fading ? "opacity-0" : "opacity-100"}`}
+        >
+          Readiness guide
+          <ArrowRight size={14} />
+        </Link>
       </div>
     </div>
   );

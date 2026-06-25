@@ -1,6 +1,10 @@
 import { notFound } from "next/navigation";
 import { SeoSolutionPage } from "@/components/SeoSolutionPage";
 import {
+  getScenariosForVertical,
+  scenarioToRelatedLink,
+} from "@/lib/seo/scenario-pages";
+import {
   getSolutionPage,
   SOLUTION_SLUGS,
   solutionMetadata,
@@ -25,5 +29,16 @@ export default async function SolutionVerticalPage({ params }: PageProps) {
   const { slug } = await params;
   const page = getSolutionPage(slug);
   if (!page) notFound();
-  return <SeoSolutionPage page={page} />;
+  const relatedLinks = getScenariosForVertical(slug).map(scenarioToRelatedLink);
+
+  return (
+    <SeoSolutionPage
+      page={page}
+      breadcrumbs={[
+        { href: "/solutions", label: "Solutions" },
+        { href: page.path, label: page.navLabel },
+      ]}
+      relatedLinks={relatedLinks}
+    />
+  );
 }

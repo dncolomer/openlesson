@@ -1,4 +1,5 @@
 import { MetadataRoute } from "next";
+import { SCENARIO_PAGES } from "@/lib/seo/scenario-pages";
 import { SOLUTION_PAGES } from "@/lib/seo/solution-pages";
 
 export default function sitemap(): MetadataRoute.Sitemap {
@@ -9,6 +10,13 @@ export default function sitemap(): MetadataRoute.Sitemap {
     lastModified: new Date(),
     changeFrequency: "monthly" as const,
     priority: 0.88,
+  }));
+
+  const scenarioEntries = SCENARIO_PAGES.map((page) => ({
+    url: `${baseUrl}${page.path}`,
+    lastModified: new Date(),
+    changeFrequency: "monthly" as const,
+    priority: 0.82,
   }));
 
   return [
@@ -43,6 +51,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.85,
     },
     ...solutionEntries,
+    ...scenarioEntries,
     // Legal pages
     {
       url: `${baseUrl}/privacy`,

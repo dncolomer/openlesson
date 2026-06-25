@@ -6,12 +6,26 @@ import {
   DEFAULT_BACKGROUND,
   type SeoSolutionPageConfig,
 } from "@/lib/seo/solution-pages";
+import type { RelatedLink } from "@/lib/seo/scenario-pages";
+
+export type BreadcrumbItem = {
+  href: string;
+  label: string;
+};
 
 type SeoSolutionPageProps = {
   page: SeoSolutionPageConfig;
+  breadcrumbs?: BreadcrumbItem[];
+  relatedLinks?: RelatedLink[];
+  relatedLinksTitle?: string;
 };
 
-export function SeoSolutionPage({ page }: SeoSolutionPageProps) {
+export function SeoSolutionPage({
+  page,
+  breadcrumbs,
+  relatedLinks,
+  relatedLinksTitle = "Readiness scenarios",
+}: SeoSolutionPageProps) {
   const faqSchema = {
     "@context": "https://schema.org",
     "@type": "FAQPage",
@@ -38,6 +52,19 @@ export function SeoSolutionPage({ page }: SeoSolutionPageProps) {
     },
   };
 
+  const breadcrumbSchema = breadcrumbs?.length
+    ? {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        itemListElement: breadcrumbs.map((crumb, index) => ({
+          "@type": "ListItem",
+          position: index + 1,
+          name: crumb.label,
+          item: `${BASE_URL}${crumb.href}`,
+        })),
+      }
+    : null;
+
   return (
     <div
       className="min-h-screen bg-[#0a0a0a] bg-cover bg-fixed bg-center text-white"
@@ -53,10 +80,35 @@ export function SeoSolutionPage({ page }: SeoSolutionPageProps) {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(webPageSchema) }}
       />
+      {breadcrumbSchema && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
+        />
+      )}
 
       <Navbar />
 
       <main className="mx-auto max-w-3xl px-6 py-12 sm:py-16">
+        {breadcrumbs && breadcrumbs.length > 0 && (
+          <nav aria-label="Breadcrumb" className="mb-6 text-xs text-neutral-500">
+            <ol className="flex flex-wrap items-center gap-2">
+              {breadcrumbs.map((crumb, index) => (
+                <li key={crumb.href} className="flex items-center gap-2">
+                  {index > 0 && <span className="text-neutral-700">/</span>}
+                  {index === breadcrumbs.length - 1 ? (
+                    <span className="text-neutral-400">{crumb.label}</span>
+                  ) : (
+                    <Link href={crumb.href} className="transition hover:text-white">
+                      {crumb.label}
+                    </Link>
+                  )}
+                </li>
+              ))}
+            </ol>
+          </nav>
+        )}
+
         <header className="mb-12">
           <p className="font-mono text-[10px] uppercase tracking-[2px] text-neutral-500">
             {page.eyebrow}
@@ -107,6 +159,25 @@ export function SeoSolutionPage({ page }: SeoSolutionPageProps) {
               ))}
             </section>
           ))}
+
+          {relatedLinks && relatedLinks.length > 0 && (
+            <section className="rounded-md border border-neutral-800 bg-neutral-950/70 p-6 sm:p-8">
+              <h2 className="text-xl font-medium text-white sm:text-2xl">{relatedLinksTitle}</h2>
+              <ul className="mt-4 space-y-3">
+                {relatedLinks.map((link) => (
+                  <li key={link.href}>
+                    <Link
+                      href={link.href}
+                      className="block rounded-sm border border-neutral-800 bg-black/30 px-4 py-3 transition hover:border-neutral-600 hover:bg-black/50"
+                    >
+                      <span className="text-sm font-medium text-neutral-200">{link.label}</span>
+                      <span className="mt-1 block text-xs text-neutral-500">{link.description}</span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
 
           <section id="faq" className="rounded-md border border-neutral-800 bg-neutral-950/70 p-6 sm:p-8">
             <h2 className="text-xl font-medium text-white sm:text-2xl">Frequently asked questions</h2>

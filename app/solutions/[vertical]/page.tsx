@@ -10,24 +10,6 @@ import {
   solutionMetadata,
 } from "@/lib/seo/solution-pages";
 
-const LEAD_CAPTURE_BY_VERTICAL: Record<
-  string,
-  { audience: "enterprise" | "hr"; title: string; subtitle: string }
-> = {
-  "compliance-risk": {
-    audience: "enterprise",
-    title: "Build compliance readiness at scale",
-    subtitle:
-      "Talk to us about evaluation workspaces, audit-ready evidence, and Agentic API integration for regulated teams.",
-  },
-  "hiring-assessment": {
-    audience: "hr",
-    title: "Assess real judgment—not polished answers",
-    subtitle:
-      "Request a demo of performance-based hiring assessments and readiness evidence for high-stakes roles.",
-  },
-};
-
 type PageProps = {
   params: Promise<{ vertical: string }>;
 };
@@ -57,7 +39,6 @@ export default async function SolutionVerticalPage({ params }: PageProps) {
         { href: page.path, label: page.navLabel },
       ]}
       relatedLinks={relatedLinks}
-      leadCapture={LEAD_CAPTURE_BY_VERTICAL[vertical]}
     />
   );
 }

@@ -175,8 +175,8 @@ export default function B2BLandingPage() {
       <section className="relative z-10 mx-auto max-w-6xl px-6 py-24">
         <div className="border border-zinc-800 bg-zinc-950/80 p-8 text-center backdrop-blur-sm sm:p-12">
           <div className="mx-auto mb-6 h-px w-24 bg-gradient-to-r from-transparent via-cyan-300/60 to-transparent" />
-          <h2 className="mx-auto max-w-3xl text-4xl font-medium tracking-[-1.6px] text-white sm:text-5xl">You may be AI-enabled. Are you performance-ready?</h2>
-          <p className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-zinc-400">Create a workspace for the real decisions, scenarios, and skills you cannot afford to leave unverified.</p>
+          <h2 className="mx-auto max-w-3xl text-4xl font-medium tracking-[-1.6px] text-white sm:text-5xl">Don&apos;t fight AI adoption. Verify the humans behind it.</h2>
+          <p className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-zinc-400">You can&apos;t—and shouldn&apos;t—try to roll back AI-enabled work. You should know whether the people using it actually understand the decisions, scenarios, and skills on the line. openLesson measures that readiness before it becomes someone else&apos;s problem.</p>
           <div className="mt-8 flex justify-center">
             <PrimaryCta location="landing_closing" />
           </div>

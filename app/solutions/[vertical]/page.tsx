@@ -11,25 +11,25 @@ import {
 } from "@/lib/seo/solution-pages";
 
 type PageProps = {
-  params: Promise<{ slug: string }>;
+  params: Promise<{ vertical: string }>;
 };
 
 export function generateStaticParams() {
-  return SOLUTION_SLUGS.map((slug) => ({ slug }));
+  return SOLUTION_SLUGS.map((vertical) => ({ vertical }));
 }
 
 export async function generateMetadata({ params }: PageProps) {
-  const { slug } = await params;
-  const page = getSolutionPage(slug);
+  const { vertical } = await params;
+  const page = getSolutionPage(vertical);
   if (!page) return {};
   return solutionMetadata(page);
 }
 
 export default async function SolutionVerticalPage({ params }: PageProps) {
-  const { slug } = await params;
-  const page = getSolutionPage(slug);
+  const { vertical } = await params;
+  const page = getSolutionPage(vertical);
   if (!page) notFound();
-  const relatedLinks = getScenariosForVertical(slug).map(scenarioToRelatedLink);
+  const relatedLinks = getScenariosForVertical(vertical).map(scenarioToRelatedLink);
 
   return (
     <SeoSolutionPage

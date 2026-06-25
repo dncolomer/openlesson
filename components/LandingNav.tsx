@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { ChevronDown, Menu, X } from "lucide-react";
+import { TrackedCtaLink } from "@/components/TrackedCtaLink";
 import { SOLUTION_PAGES } from "@/lib/seo/solution-pages";
 
 const CTA = "Create your Performance Workspace";
@@ -10,14 +11,15 @@ const CTA_HREF = "/workspace/new";
 
 function PrimaryCta({ compact = false }: { compact?: boolean }) {
   return (
-    <Link
+    <TrackedCtaLink
       href={CTA_HREF}
+      label={CTA}
+      location="nav"
+      page="/"
       className={`inline-flex items-center justify-center rounded-sm bg-white font-medium text-black transition hover:bg-zinc-200 ${
         compact ? "px-4 py-2 text-sm" : "min-h-12 px-5 py-3 text-sm"
       }`}
-    >
-      {CTA}
-    </Link>
+    />
   );
 }
 

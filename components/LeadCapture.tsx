@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { trackLeadSubmitted } from "@/lib/analytics";
 import { useI18n } from "@/lib/i18n";
 
 type Audience = "enterprise" | "schools" | "hr";
@@ -10,6 +11,7 @@ interface LeadCaptureProps {
   title?: string;
   subtitle?: string;
   submitText?: string;
+  sourcePage?: string;
 }
 
 const SIZE_OPTIONS = [
@@ -25,6 +27,7 @@ export function LeadCapture({
   title,
   subtitle,
   submitText,
+  sourcePage,
 }: LeadCaptureProps) {
   const { t } = useI18n();
   const [formData, setFormData] = useState({
@@ -125,6 +128,10 @@ export function LeadCapture({
         throw new Error(data.error || "Failed to submit");
       }
 
+      trackLeadSubmitted({
+        audience,
+        page: sourcePage ?? window.location.pathname,
+      });
       setSubmitted(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : t("leadCapture.genericError"));

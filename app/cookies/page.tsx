@@ -37,6 +37,9 @@ export default function CookiesPage() {
               <li>
                 <strong className="text-neutral-300">{t('cookies.paymentCookiesLabel')}:</strong> {t('cookies.paymentCookiesDesc')}
               </li>
+              <li>
+                <strong className="text-neutral-300">{t('cookies.analyticsLabel')}:</strong> {t('cookies.analyticsDesc')}
+              </li>
             </ul>
           </section>
 
@@ -70,7 +73,7 @@ export default function CookiesPage() {
 
             <h3 className="text-sm font-medium text-neutral-300 mb-2">{t('cookies.whatWeDontUseHeading')}</h3>
             <ul className="list-disc pl-5 space-y-1">
-              <li>{t('cookies.noAnalytics')}</li>
+              <li>{t('cookies.noTrackingCookies')}</li>
               <li>{t('cookies.noAdvertising')}</li>
               <li>{t('cookies.noThirdPartyMarketing')}</li>
             </ul>
@@ -82,6 +85,7 @@ export default function CookiesPage() {
             <ul className="list-disc pl-5 space-y-1">
               <li><strong className="text-neutral-300">Supabase:</strong> {t('cookies.supabaseDesc')}</li>
               <li><strong className="text-neutral-300">Stripe:</strong> {t('cookies.stripeDesc')}</li>
+              <li><strong className="text-neutral-300">Vercel:</strong> {t('cookies.vercelAnalyticsDesc')}</li>
             </ul>
           </section>
 

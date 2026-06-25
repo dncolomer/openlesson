@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Analytics } from "@vercel/analytics/next";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import { I18nProvider } from "../lib/i18n";
 import "./globals.css";
 
@@ -135,6 +136,7 @@ export default function RootLayout({
           {children}
         </I18nProvider>
         <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   );

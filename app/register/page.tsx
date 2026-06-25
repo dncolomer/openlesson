@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { Navbar } from "@/components/Navbar";
+import { trackSignupCompleted } from "@/lib/analytics";
 import { useI18n } from "@/lib/i18n";
 
 function RegisterForm() {
@@ -73,6 +74,7 @@ function RegisterForm() {
         }
       }
 
+      trackSignupCompleted({ hasReferral: Boolean(referralCode) });
       router.push("/dashboard");
       router.refresh();
     } catch {

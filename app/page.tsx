@@ -5,6 +5,8 @@ import { useEffect, useState, type ReactNode } from "react";
 import { ArrowRight, Check } from "lucide-react";
 import { Footer } from "@/components/Footer";
 import { LandingNav } from "@/components/LandingNav";
+import { TrackedCtaLink } from "@/components/TrackedCtaLink";
+import { trackCtaClick } from "@/lib/analytics";
 import { READINESS_SCENARIOS } from "@/lib/seo/readiness-scenarios";
 
 const CTA = "Create your Performance Workspace";
@@ -75,8 +77,14 @@ export default function B2BLandingPage() {
             <p className="text-zinc-200">openLesson reveals your gaps early, before they impact real work.</p>
           </div>
           <div className="mt-9 flex flex-col gap-3 sm:flex-row sm:items-center">
-            <PrimaryCta />
-            <a href="#how" className="inline-flex min-h-12 items-center justify-center rounded-sm border border-zinc-800 bg-zinc-950/60 px-5 py-3 text-sm font-medium text-zinc-300 transition hover:border-zinc-700 hover:text-white">See how it works</a>
+            <PrimaryCta location="landing_hero" />
+            <a
+              href="#how"
+              onClick={() => trackCtaClick({ location: "landing_hero", label: "See how it works", href: "#how", page: "/" })}
+              className="inline-flex min-h-12 items-center justify-center rounded-sm border border-zinc-800 bg-zinc-950/60 px-5 py-3 text-sm font-medium text-zinc-300 transition hover:border-zinc-700 hover:text-white"
+            >
+              See how it works
+            </a>
           </div>
           <p className="mt-6 font-mono text-[11px] uppercase tracking-[1.6px] text-zinc-600">ILE sessions • Agentic API • readiness evidence</p>
         </div>
@@ -93,7 +101,7 @@ export default function B2BLandingPage() {
         <div>
           <SectionHeading eyebrow="THE SOLUTION" title="Find the skill gaps AI is hiding." />
           <div className="mt-8">
-            <PrimaryCta />
+            <PrimaryCta location="landing_solution" />
           </div>
         </div>
         <div className="border border-zinc-800 bg-zinc-950/70 p-6 text-lg leading-relaxed text-zinc-400 backdrop-blur-sm sm:p-8">
@@ -136,7 +144,7 @@ export default function B2BLandingPage() {
           <h2 className="mx-auto max-w-3xl text-4xl font-medium tracking-[-1.6px] text-white sm:text-5xl">You may be AI-enabled. Are you performance-ready?</h2>
           <p className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-zinc-400">Create a workspace for the real decisions, scenarios, and skills you cannot afford to leave unverified.</p>
           <div className="mt-8 flex justify-center">
-            <PrimaryCta />
+            <PrimaryCta location="landing_closing" />
           </div>
         </div>
       </section>
@@ -148,12 +156,18 @@ export default function B2BLandingPage() {
   );
 }
 
-function PrimaryCta({ compact = false }: { compact?: boolean }) {
+function PrimaryCta({ compact = false, location = "landing" }: { compact?: boolean; location?: string }) {
   return (
-    <Link href={CTA_HREF} className={`inline-flex items-center justify-center rounded-sm bg-white font-medium text-black transition hover:bg-zinc-200 ${compact ? "px-4 py-2 text-sm" : "min-h-12 px-5 py-3 text-sm"}`}>
+    <TrackedCtaLink
+      href={CTA_HREF}
+      label={CTA}
+      location={location}
+      page="/"
+      className={`inline-flex items-center justify-center rounded-sm bg-white font-medium text-black transition hover:bg-zinc-200 ${compact ? "px-4 py-2 text-sm" : "min-h-12 px-5 py-3 text-sm"}`}
+    >
       {CTA}
       <ArrowRight className="ml-2" size={compact ? 15 : 16} />
-    </Link>
+    </TrackedCtaLink>
   );
 }
 
@@ -209,6 +223,14 @@ function ReadinessVisual() {
             <div className="font-mono text-[10px] uppercase tracking-[2px] text-zinc-600">Workspace signal</div>
             <Link
               href={scenario.solutionHref}
+              onClick={() =>
+                trackCtaClick({
+                  location: "landing_widget_title",
+                  label: scenario.title,
+                  href: scenario.solutionHref,
+                  page: "/",
+                })
+              }
               className={`mt-1 block text-lg font-medium text-white transition-opacity duration-300 hover:text-zinc-200 ${fading ? "opacity-0" : "opacity-100"}`}
               aria-live="polite"
             >
@@ -244,13 +266,16 @@ function ReadinessVisual() {
           ))}
         </div>
 
-        <Link
+        <TrackedCtaLink
           href={scenario.solutionHref}
+          label="Readiness guide"
+          location="landing_widget_cta"
+          page="/"
           className={`mt-5 flex w-full items-center justify-center gap-2 rounded-sm border border-zinc-700 bg-white px-4 py-2.5 text-sm font-medium text-black transition hover:bg-zinc-200 ${fading ? "opacity-0" : "opacity-100"}`}
         >
           Readiness guide
           <ArrowRight size={14} />
-        </Link>
+        </TrackedCtaLink>
       </div>
     </div>
   );

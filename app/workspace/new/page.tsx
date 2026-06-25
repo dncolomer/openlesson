@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
 import { FileDropZone, type AttachedFile } from "@/components/FileDropZone";
 import { Footer } from "@/components/Footer";
+import { trackWorkspaceCreated } from "@/lib/analytics";
 
 const BACKGROUND_IMAGES = [
   "/aesthetics/Greco-futurism/HHnTrgVaQAAP-_3.jpeg",
@@ -63,6 +64,7 @@ export default function NewWorkspacePage() {
       }
 
       const payload = await response.json();
+      trackWorkspaceCreated({ hasFiles: files.length > 0 });
       router.push(`/workspace/${payload.planId}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");

@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { Footer } from "@/components/Footer";
+import { LeadCapture } from "@/components/LeadCapture";
 import { Navbar } from "@/components/Navbar";
+import { TrackedCtaLink } from "@/components/TrackedCtaLink";
 import {
   BASE_URL,
   DEFAULT_BACKGROUND,
@@ -13,11 +15,18 @@ export type BreadcrumbItem = {
   label: string;
 };
 
+type LeadCaptureConfig = {
+  audience: "enterprise" | "schools" | "hr";
+  title?: string;
+  subtitle?: string;
+};
+
 type SeoSolutionPageProps = {
   page: SeoSolutionPageConfig;
   breadcrumbs?: BreadcrumbItem[];
   relatedLinks?: RelatedLink[];
   relatedLinksTitle?: string;
+  leadCapture?: LeadCaptureConfig;
 };
 
 export function SeoSolutionPage({
@@ -25,6 +34,7 @@ export function SeoSolutionPage({
   breadcrumbs,
   relatedLinks,
   relatedLinksTitle = "Readiness scenarios",
+  leadCapture,
 }: SeoSolutionPageProps) {
   const faqSchema = {
     "@context": "https://schema.org",
@@ -118,19 +128,21 @@ export function SeoSolutionPage({
           </h1>
           <p className="mt-6 text-lg leading-relaxed text-neutral-400">{page.intro}</p>
           <div className="mt-8 flex flex-wrap gap-3">
-            <Link
+            <TrackedCtaLink
               href={page.primaryCta.href}
+              label={page.primaryCta.label}
+              location="solution_hero"
+              page={page.path}
               className="inline-flex h-11 items-center justify-center rounded-sm bg-white px-5 text-sm font-medium text-black transition hover:bg-neutral-200"
-            >
-              {page.primaryCta.label}
-            </Link>
+            />
             {page.secondaryCta && (
-              <Link
+              <TrackedCtaLink
                 href={page.secondaryCta.href}
+                label={page.secondaryCta.label}
+                location="solution_hero_secondary"
+                page={page.path}
                 className="inline-flex h-11 items-center justify-center rounded-sm border border-neutral-700 px-5 text-sm text-neutral-200 transition hover:border-neutral-500 hover:text-white"
-              >
-                {page.secondaryCta.label}
-              </Link>
+              />
             )}
           </div>
         </header>
@@ -191,22 +203,35 @@ export function SeoSolutionPage({
             </dl>
           </section>
 
+          {leadCapture && (
+            <section id="contact" className="rounded-md border border-neutral-800 bg-neutral-950/70 p-6 sm:p-8">
+              <LeadCapture
+                audience={leadCapture.audience}
+                title={leadCapture.title}
+                subtitle={leadCapture.subtitle}
+                sourcePage={page.path}
+              />
+            </section>
+          )}
+
           <section className="rounded-md border border-neutral-800 bg-neutral-950/80 p-6 text-center sm:p-8">
             <h2 className="text-xl font-medium text-white">{page.closingTitle}</h2>
             <p className="mx-auto mt-3 max-w-lg text-sm text-neutral-500">{page.closingBody}</p>
             <div className="mt-6 flex flex-wrap justify-center gap-3">
-              <Link
+              <TrackedCtaLink
                 href={page.primaryCta.href}
+                label="Get started"
+                location="solution_closing"
+                page={page.path}
                 className="inline-flex h-10 items-center justify-center rounded-sm bg-white px-4 text-sm font-medium text-black transition hover:bg-neutral-200"
-              >
-                Get started
-              </Link>
-              <Link
+              />
+              <TrackedCtaLink
                 href="/pricing"
+                label="View pricing"
+                location="solution_closing"
+                page={page.path}
                 className="inline-flex h-10 items-center justify-center rounded-sm border border-neutral-700 px-4 text-sm text-neutral-300 transition hover:border-neutral-500 hover:text-white"
-              >
-                View pricing
-              </Link>
+              />
             </div>
           </section>
         </article>

@@ -38,7 +38,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "openLesson — Prove Performance Readiness",
     description:
-      "AI makes you look ready. openLesson scores genuine thinking—with the Think-Aloud Protocol, Selective Thought Interface, and readiness evidence.",
+      "AI makes humans look ready. openLesson proves they actually are—with the Think-Aloud Protocol, Selective Thought Interface, and readiness evidence.",
     url: "https://openlesson.academy",
     siteName: "openLesson",
     images: [

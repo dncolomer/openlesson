@@ -62,7 +62,7 @@ export const PLATFORM_PAGE: SeoSolutionPageConfig = {
   navDescription: "Workspaces, ILE, evaluation, and API overview",
   sections: [
     {
-      title: "The problem: AI makes you look ready before you are",
+      title: "The problem: AI makes humans look ready before they are",
       paragraphs: [
         "Generative AI gives instant answers, drafts, and confident-looking work. Real-time assist tools go further—feeding suggestions during live interviews, exams, and calls via hidden overlays. Outputs look competent; cognition often goes unmeasured.",
         "Training completion and quiz scores were never reliable proxies for judgment. AI-assisted cheating makes the illusion worse. openLesson surfaces readiness evidence early by scoring how people think out loud when probed—not what they can paste from an assistant.",

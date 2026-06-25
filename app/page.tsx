@@ -84,7 +84,7 @@ export default function B2BLandingPage() {
       <section className="relative z-10 mx-auto grid min-h-[calc(100vh-73px)] w-full max-w-6xl items-center gap-12 px-6 py-20 lg:grid-cols-[1.03fr_0.97fr]">
         <div>
           <div className="mb-6 inline-block rounded-sm border border-zinc-800 bg-zinc-950/80 px-3 py-1 font-mono text-[10px] tracking-[2px] text-zinc-500">READINESS EVIDENCE FOR YOU</div>
-          <h1 className="max-w-4xl text-5xl font-medium leading-[1.03] tracking-[-2.8px] text-white sm:text-6xl lg:text-[72px]">AI makes you look ready. Prove that you actually are.</h1>
+          <h1 className="max-w-4xl text-5xl font-medium leading-[1.03] tracking-[-2.8px] text-white sm:text-6xl lg:text-[72px]">AI makes humans look ready. Prove they actually are.</h1>
           <p className="mt-7 max-w-3xl text-xl leading-relaxed tracking-[-0.35px] text-zinc-400">openLesson helps you build and measure the judgment, adaptability, and skill that AI cannot replace.</p>
           <div className="mt-7 max-w-3xl space-y-4 text-base leading-relaxed text-zinc-400 sm:text-lg">
             <p>As AI tools get better, you can generate strong-looking outputs earlier in the learning curve without proving you understand the task, context, or decision behind the work.</p>

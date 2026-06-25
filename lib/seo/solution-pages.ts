@@ -43,13 +43,16 @@ export const PLATFORM_PAGE: SeoSolutionPageConfig = {
   eyebrow: "openLesson Platform",
   h1: "Performance readiness software for AI-enabled learning",
   intro:
-    "openLesson helps you prove real skill—not polished AI output. Build Performance Workspaces, practice in an Immersive Learning Environment, run evaluation sessions, and connect everything to your LMS through the Agentic API.",
-  metaTitle: "Performance Readiness Platform — ILE, Evaluation & Agentic API",
+    "openLesson helps you prove genuine human cognition—not polished AI output or hidden interview assistance. Score real thinking with the Think-Aloud Protocol and Selective Thought Interface inside Performance Workspaces, the ILE, and evaluation sessions.",
+  metaTitle: "Performance Readiness Platform — Think-Aloud Cognition Scoring",
   metaDescription:
-    "openLesson measures real skill readiness—not training completion. Performance Workspaces, Immersive Learning Environment (ILE), evaluation sessions, and Agentic API for LMS integration.",
+    "Score genuine human thinking—not AI-assisted polish. openLesson uses the Think-Aloud Protocol and Selective Thought Interface to verify cognition in workspaces, ILE sessions, and evaluation environments.",
   keywords: [
     "performance readiness platform",
     "AI skill assessment",
+    "think aloud protocol",
+    "AI interview cheating detection",
+    "genuine human cognition",
     "learning verification software",
     "immersive learning environment",
     "LMS integration API",
@@ -61,8 +64,15 @@ export const PLATFORM_PAGE: SeoSolutionPageConfig = {
     {
       title: "The problem: AI makes you look ready before you are",
       paragraphs: [
-        "Generative AI gives instant answers, drafts, and confident-looking work. That speed compresses the learning curve on paper—but it can hide weak understanding until a real client escalation, compliance review, or high-stakes decision exposes the gap.",
-        "Training completion and quiz scores were never reliable proxies for judgment. AI-assisted output makes the illusion worse. openLesson surfaces readiness evidence early: where reasoning is solid, where it is still forming, and what to practice next.",
+        "Generative AI gives instant answers, drafts, and confident-looking work. Real-time assist tools go further—feeding suggestions during live interviews, exams, and calls via hidden overlays. Outputs look competent; cognition often goes unmeasured.",
+        "Training completion and quiz scores were never reliable proxies for judgment. AI-assisted cheating makes the illusion worse. openLesson surfaces readiness evidence early by scoring how people think out loud when probed—not what they can paste from an assistant.",
+      ],
+    },
+    {
+      title: "Think-Aloud Protocol + Selective Thought Interface",
+      paragraphs: [
+        "The Think-Aloud Protocol is a validated cognitive method: learners verbalize reasoning while working. Hesitations, self-corrections, causal chains, and skipped steps become observable—the gaps polished deliverables conceal.",
+        "openLesson's Selective Thought Interface extends that signal. Learners submit transcribed thought fragments; the system responds with Socratic probes that elicit evidence of understanding, transfer, and repair. You measure live cognition under inquiry—the most reliable score of genuine human thinking available in an AI-enabled assessment stack.",
       ],
     },
     {
@@ -75,8 +85,8 @@ export const PLATFORM_PAGE: SeoSolutionPageConfig = {
     {
       title: "Immersive Learning Environment (ILE)",
       paragraphs: [
-        "The ILE is where practice happens. You enter a learning session for a block, think through problems out loud, and build the judgment AI cannot replace.",
-        "Resume where you left off, iterate on weak areas, and accumulate reasoning traces that feed later analysis.",
+        "The ILE is where practice happens. You enter a learning session for a block, follow the Think-Aloud Protocol, and build the judgment AI cannot replace.",
+        "Live speech is transcribed into think-aloud traces. Pauses become selectable thoughts for deeper probing. Reasoning accumulates as evidence—not as a final answer an overlay could supply.",
       ],
     },
     {
@@ -110,7 +120,17 @@ export const PLATFORM_PAGE: SeoSolutionPageConfig = {
     {
       question: "How is openLesson different from a traditional LMS?",
       answer:
-        "Most LMS platforms track seat time, quizzes, and module completion. openLesson measures demonstrated judgment: how you reason under pressure, adapt when facts change, and explain tradeoffs without leaning on AI-generated scripts.",
+        "Most LMS platforms track seat time, quizzes, and module completion. openLesson measures demonstrated judgment via think-aloud reasoning: how you explore, revise, and defend thinking when probed—not scripts from hidden AI assist tools.",
+    },
+    {
+      question: "How does openLesson address AI cheating in interviews and assessments?",
+      answer:
+        "Tools that feed answers during live calls only test whether someone can read a suggestion. openLesson scores genuine cognition through the Think-Aloud Protocol and Selective Thought Interface—speech and thought fragments under Socratic probe. That signal is far harder to fake than polished written output.",
+    },
+    {
+      question: "What is the Selective Thought Interface?",
+      answer:
+        "A structured layer where learners submit transcribed thought fragments and receive targeted Socratic follow-ups. It elicits evidence of definitions, causal reasoning, examples, application, and repair—turning live thinking into scorable readiness markers.",
     },
     {
       question: "What is the Immersive Learning Environment (ILE)?",
@@ -360,28 +380,38 @@ export const SOLUTION_PAGES: SeoSolutionPageConfig[] = [
     slug: "hiring-assessment",
     path: "/solutions/hiring-assessment",
     eyebrow: "Hiring & Assessment",
-    h1: "Skills-based hiring that evaluates reasoning—not interview polish",
+    h1: "Hiring assessment that scores genuine thinking—not AI interview assist",
     intro:
-      "Candidates arrive with AI-polished portfolios and rehearsed frameworks. openLesson reveals how they explore, revise, explain, and recover when assumptions break—giving hiring teams structured evidence of judgment.",
-    metaTitle: "Skills-Based Hiring & Reasoning Assessment",
+      "Real-time AI tools can feed answers during live interviews—making traditional screens untrustworthy. openLesson evaluates genuine human cognition through the Think-Aloud Protocol and Selective Thought Interface: how candidates reason out loud when probed, not what a hidden overlay whispers.",
+    metaTitle: "AI Interview Cheating Detection — Think-Aloud Hiring Assessment",
     metaDescription:
-      "Evaluate how candidates think under ambiguity with Performance Workspaces, ILE sessions, and evaluation scoring—beyond memorized answers and AI-assisted take-home tests.",
+      "Stop hiring on AI-fed interview polish. openLesson scores genuine cognition with the Think-Aloud Protocol and Selective Thought Interface—beyond Cluely-style assist tools and memorized frameworks.",
     keywords: [
       "skills based hiring",
+      "AI interview cheating",
+      "interview assessment software",
+      "think aloud protocol hiring",
       "candidate assessment software",
       "reasoning assessment",
       "hiring readiness evaluation",
-      "AI hiring tools",
+      "genuine human cognition",
       "work sample assessment",
     ],
     navLabel: "Hiring & Assessment",
     navDescription: "Reasoning evidence for better hires",
     sections: [
       {
-        title: "Traditional screens overfit to performance",
+        title: "The Cluely problem: interviews that test assist tools, not people",
         paragraphs: [
-          "Structured interviews, LeetCode, and case interviews reward pattern matching and confident delivery. Generative AI raises the floor on written exercises—making it harder to distinguish genuine understanding from assisted output.",
-          "Hiring teams need signals on adaptability, epistemic humility, and how candidates update beliefs when probed.",
+          "A new class of products markets real-time AI help during live interviews—hidden overlays that suggest answers while the candidate speaks. Traditional screens, LeetCode, and take-homes were already gameable; generative AI and interview-assist tools make confident delivery almost meaningless.",
+          "Hiring teams need a signal adversaries cannot paste in: genuine cognition under probe—how candidates explore, revise, explain, and recover when assumptions break.",
+        ],
+      },
+      {
+        title: "Think-Aloud Protocol: the anti-cheat layer",
+        paragraphs: [
+          "openLesson applies the Think-Aloud Protocol—verbalize reasoning while working—and scores the resulting traces. Hesitations, causal links, self-corrections, and repairs under challenge are evidence of real thinking, not rehearsed performance.",
+          "The Selective Thought Interface submits thought fragments for Socratic follow-up. Candidates must demonstrate understanding in the moment. That is the most reliable way to measure genuine human thinking when AI cheating tools target your pipeline.",
         ],
       },
       {
@@ -408,14 +438,19 @@ export const SOLUTION_PAGES: SeoSolutionPageConfig[] = [
     ],
     faqs: [
       {
+        question: "How is openLesson different from tools like Cluely?",
+        answer:
+          "Cluely-style tools optimize for feeding answers during live conversations. openLesson optimizes for measuring cognition: think-aloud speech and selective thought fragments under Socratic probe. One helps candidates perform; the other reveals whether they actually understand.",
+      },
+      {
         question: "How is this different from HackerRank or Codility?",
         answer:
-          "Those tools optimize for correct outputs on constrained tasks. openLesson focuses on reasoning traces, adaptation under challenge, and gap analysis across learning markers—not binary pass/fail coding tests.",
+          "Those tools optimize for correct outputs on constrained tasks. openLesson focuses on reasoning traces, adaptation under challenge, and gap analysis across learning markers—not binary pass/fail coding tests that AI can solve silently.",
       },
       {
         question: "Can candidates use AI during assessment?",
         answer:
-          "You define the scenario. Evaluation probes whether candidates understand and can defend work—including identifying when AI output is wrong. Many teams use openLesson precisely because AI makes traditional screens less trustworthy.",
+          "You define the scenario. Evaluation probes whether candidates understand and can defend work—including identifying when AI output is wrong. Think-aloud and selective-thought sessions are specifically designed to score cognition that hidden assist tools cannot supply.",
       },
       {
         question: "Is this suitable for high-volume recruiting?",
@@ -425,8 +460,8 @@ export const SOLUTION_PAGES: SeoSolutionPageConfig[] = [
     ],
     primaryCta: { label: "Prototype a hiring workspace", href: "/workspace/new" },
     secondaryCta: { label: "Talk to us", href: "mailto:daniel@uncertain.systems" },
-    closingTitle: "Hire for judgment—not generated polish",
-    closingBody: "See how candidates think when the script runs out.",
+    closingTitle: "Hire for genuine cognition—not assist-tool polish",
+    closingBody: "Score how candidates think out loud when the overlay is gone.",
   },
   {
     slug: "lms-integration",

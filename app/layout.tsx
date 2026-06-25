@@ -10,9 +10,12 @@ export const metadata: Metadata = {
     template: "%s | openLesson",
   },
   description:
-    "Measure real skill readiness—not training completion. Performance Workspaces, Immersive Learning Environment sessions, evaluation scoring, and an Agentic API for LMS integration.",
+    "Score genuine human cognition—not AI-assisted polish. openLesson uses the Think-Aloud Protocol and Selective Thought Interface to verify real thinking in workspaces, ILE sessions, and hiring assessments.",
   keywords: [
     "performance readiness platform",
+    "think aloud protocol",
+    "AI interview cheating detection",
+    "genuine human cognition",
     "AI skill assessment",
     "learning verification",
     "workplace learning analytics",
@@ -35,7 +38,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "openLesson — Prove Performance Readiness",
     description:
-      "AI makes you look ready. openLesson proves you actually are—with workspaces, ILE practice, evaluation sessions, and an Agentic API.",
+      "AI makes you look ready. openLesson scores genuine thinking—with the Think-Aloud Protocol, Selective Thought Interface, and readiness evidence.",
     url: "https://openlesson.academy",
     siteName: "openLesson",
     images: [
@@ -53,7 +56,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "openLesson — Performance Readiness Platform",
     description:
-      "Measure judgment and adaptability—not just AI-assisted output. Workspaces, ILE, evaluation, and Agentic API.",
+      "Measure genuine human cognition—not AI-fed interview polish. Think-Aloud Protocol, Selective Thought Interface, readiness evidence.",
     images: ["/og-default.jpg"],
     creator: "@uncertainsys",
   },
@@ -77,7 +80,7 @@ const organizationSchema = {
   name: "openLesson",
   url: "https://openlesson.academy",
   description:
-    "Performance readiness platform: workspaces, immersive learning, evaluation scoring, and Agentic API for LMS integration.",
+    "Performance readiness platform scoring genuine human cognition via Think-Aloud Protocol and Selective Thought Interface.",
   founder: {
     "@type": "Person",
     name: "Daniel Colomer",
@@ -101,8 +104,10 @@ const softwareSchema = {
     priceCurrency: "USD",
   },
   description:
-    "Prove performance readiness with workspaces, ILE sessions, evaluation environments, and an Agentic API.",
+    "Prove genuine human thinking with Think-Aloud Protocol sessions, Selective Thought Interface probing, and evaluation scoring.",
   featureList: [
+    "Think-Aloud Protocol cognition capture",
+    "Selective Thought Interface",
     "Performance Workspaces",
     "Immersive Learning Environment",
     "Evaluation scoring and gap analysis",

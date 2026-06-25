@@ -25,25 +25,40 @@ const steps = [
     body: "Define the skill, decision domain, or scenario that actually matters to you.",
   },
   {
-    title: "Practice in our ILE—or integrate via API",
-    body: "Run immersive GHL Score sessions in openLesson's Immersive Learning Environment, or connect the Agentic API to your existing LMS or educational platform to capture real performance evidence.",
+    title: "Think aloud in the ILE",
+    body: "Follow the Think-Aloud Protocol: speak your reasoning as you work. Our Selective Thought Interface captures live speech and submitted thought fragments—hesitations, revisions, and causal chains that hidden AI overlays cannot fabricate.",
   },
   {
-    title: "See clear readiness evidence",
-    body: "Get objective insight into your judgment, adaptability, and reasoning—not just completion rates or polished final answers.",
+    title: "Get probed, not fed answers",
+    body: "Socratic follow-ups target gaps in genuine cognition. You are scored on how you explore, revise, and defend thinking under challenge—not on polished output you could paste from an assistant.",
   },
   {
-    title: "Close gaps with targeted practice",
-    body: "Turn weak signals into specific follow-up scenarios before gaps become expensive real-world mistakes.",
+    title: "Close gaps with readiness evidence",
+    body: "Marker scores and gap analysis turn weak signals into specific practice before they become failed interviews, bad hires, or expensive real-world mistakes.",
+  },
+];
+
+const cognitionPillars = [
+  {
+    title: "Think-Aloud Protocol",
+    body: "A decades-validated method from cognitive science: verbalize reasoning while you work. Speech exposes what polished deliverables hide—skipped steps, circular logic, and unexamined assumptions.",
+  },
+  {
+    title: "Selective Thought Interface",
+    body: "Learners submit transcribed thought fragments; the system probes with targeted Socratic questions. The signal is live cognition under inquiry—not a script read from a hidden overlay.",
+  },
+  {
+    title: "Genuine cognition scoring",
+    body: "Evaluation sessions score learning markers from reasoning traces: definitions, causal links, examples, application, and repair when challenged. That is the most reliable evidence of real human thinking in an AI-enabled world.",
   },
 ];
 
 const outcomes = [
   "Detect hidden skill gaps before they show up in client work or critical decisions.",
-  "Move beyond vanity metrics like training completion and seat activity.",
+  "Separate genuine human thinking from AI-fed interview polish and take-home fluff.",
   "Build human judgment that complements AI tools instead of depending on them.",
   "Create auditable evidence of readiness for compliance, promotion, or high-stakes roles.",
-  "Reduce the growing risk of AI-masked underperformance.",
+  "Give hiring and L&D teams a defensible signal when real-time cheating tools break traditional screens.",
 ];
 
 const SCENARIO_ROTATE_MS = 4500;
@@ -86,16 +101,35 @@ export default function B2BLandingPage() {
               See how it works
             </a>
           </div>
-          <p className="mt-6 font-mono text-[11px] uppercase tracking-[1.6px] text-zinc-600">ILE sessions • Agentic API • readiness evidence</p>
+          <p className="mt-6 font-mono text-[11px] uppercase tracking-[1.6px] text-zinc-600">Think-Aloud Protocol • Selective Thought Interface • readiness evidence</p>
         </div>
         <ReadinessVisual />
       </section>
 
       <ContentSection id="problem" eyebrow="THE PROBLEM" title="The next workplace risk is not AI adoption. It is unverified human readiness.">
-        <p>AI gives you instant help, but instant help can hide weak understanding. When you rely on AI without building the underlying skill, you only discover the gap after mistakes happen.</p>
+        <p>AI gives you instant help, but instant help can hide weak understanding. Real-time assist tools can feed answers during interviews, exams, and live calls—creating candidates and employees who look ready while genuine cognition stays untested.</p>
         <p className="text-white">You have AI. Do you have the judgment to use it well?</p>
-        <p>Polished output is not proof of capability. Stop winging critical work with AI you do not truly understand.</p>
+        <p>Polished output is not proof of capability. When screens reward scripts and generated work, the only trustworthy signal left is how someone thinks out loud when probed.</p>
       </ContentSection>
+
+      <section id="cognition" className="relative z-10 mx-auto max-w-6xl px-6 py-20">
+        <SectionHeading
+          eyebrow="GENUINE HUMAN THINKING"
+          title="Hidden AI cannot fake thinking out loud."
+        />
+        <p className="mt-6 max-w-3xl text-lg leading-relaxed text-zinc-400">
+          openLesson solves the AI cheating problem at the signal layer. Instead of trusting deliverables that assistants can manufacture, we measure{" "}
+          <span className="text-zinc-200">genuine human cognition</span> through the Think-Aloud Protocol and our Selective Thought Interface—the most reliable way to score real reasoning, not performance theater.
+        </p>
+        <div className="mt-10 grid gap-4 md:grid-cols-3">
+          {cognitionPillars.map((pillar) => (
+            <div key={pillar.title} className="border border-zinc-800 bg-zinc-950/70 p-5 transition hover:border-zinc-700">
+              <h3 className="text-lg font-medium text-white">{pillar.title}</h3>
+              <p className="mt-3 text-sm leading-relaxed text-zinc-400">{pillar.body}</p>
+            </div>
+          ))}
+        </div>
+      </section>
 
       <section id="product" className="relative z-10 mx-auto grid max-w-6xl gap-8 px-6 py-20 lg:grid-cols-[0.88fr_1.12fr]">
         <div>
@@ -105,9 +139,9 @@ export default function B2BLandingPage() {
           </div>
         </div>
         <div className="border border-zinc-800 bg-zinc-950/70 p-6 text-lg leading-relaxed text-zinc-400 backdrop-blur-sm sm:p-8">
-          <p className="text-white">openLesson turns AI-assisted practice into readiness evidence.</p>
-          <p className="mt-5">Instead of another training that checks a box, you practice real scenarios and produce evidence openLesson can analyze. Run sessions in our ILE, upload tool traces and screenshots, or pipe activity from your LMS via the Agentic API—then see exactly where your judgment is strong and where it is still forming.</p>
-          <p className="mt-5 text-zinc-200">Before you use AI in critical work, know what you actually understand.</p>
+          <p className="text-white">openLesson turns live thinking into readiness evidence.</p>
+          <p className="mt-5">Instead of another training that checks a box, you practice real scenarios and verbalize reasoning as you go. The ILE captures think-aloud traces; the Selective Thought Interface submits and probes thought fragments; evaluation scores whether cognition holds up when assumptions break.</p>
+          <p className="mt-5 text-zinc-200">Before you trust a hire, a promotion, or your own AI-enabled work—know what thinking is actually there.</p>
         </div>
       </section>
 

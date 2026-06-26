@@ -15,17 +15,46 @@ This skill teaches the PumaDoc Customer Agent how to verify customer-development
 
 ## Purpose
 
-After each Customer Agent step, the user should demonstrate understanding — not only produce a PumaDoc artifact. OpenLesson scores **genuine cognition** from evidence of how they worked, then returns a **structured gap report** or answers **follow-up questions** grounded in that evidence.
+PumaDoc verifies that users understand customer-development work — not only that artifacts look finished. OpenLesson scores **genuine cognition** from serialized tool usage and optional media, then returns a **structured gap report** or **follow-up Q&A** grounded in that evidence.
 
 ```text
-PumaDoc work completed → tool usage serialized → evidence uploaded → performance analyzed → Knowledge updated → next step unlocked
+PumaDoc decides when → serialize & upload evidence → (optionally) request performance → update Knowledge / gate progress
 ```
 
-**Minimum viable path:** a single `type: "tool"` upload per step is enough for performance scores to compute. Screenshots, screen recording (with voice), and EEG are **optional enrichments** — not prerequisites.
+**Minimum viable path:** a single `type: "tool"` upload is enough for performance scores to compute. Screenshots, screen recording (with voice), and EEG are **optional enrichments** — not prerequisites.
+
+OpenLesson is **checkpoint-agnostic**. It does not mandate per-step cadence, fixed rubrics, or PumaDoc step boundaries. **PumaDoc alone decides** when to submit evidence and when to call performance — after a simulation, mid-step, at journey end, on mentor request, or never until enough signal accumulates.
 
 ---
 
 ## Design principles
+
+### Checkpoint-agnostic — PumaDoc controls timing
+
+OpenLesson exposes storage and analysis primitives; **PumaDoc owns the checkpoint policy**. Examples of valid PumaDoc strategies (all supported):
+
+| Strategy | When to upload | When to score |
+|----------|----------------|---------------|
+| Per Customer Agent step | After each step completes | Immediately after that upload (`block_id` scoped) |
+| Simulation gate | Only when user runs or finishes a simulation | Right after simulation evidence |
+| Batch / journey | Incremental uploads during work | Once before unlocking a major milestone |
+| Workspace rollup | Ongoing tool traces without `block_id` | End of week with **workspace-global** performance (no `block_id`) |
+| On demand | User asks “how am I doing?” | Chat-mode performance anytime |
+
+There is no required 1:1 mapping between PumaDoc steps and OpenLesson API calls. Upload zero, one, or many evidence rows between performance requests; re-run performance as often as needed.
+
+### Block-scoped vs workspace-global analysis
+
+Both evidence upload and performance accept an optional `block_id`.
+
+| Scope | Evidence `block_id` | Performance body | Analyzes |
+|-------|---------------------|------------------|----------|
+| **Block-level** | Set to block UUID | `{ "block_id": "uuid" }` | Evidence, blocks, and context for **one** assessable block |
+| **Workspace-global** | Omit or mix scoped + unscoped rows | `{}` or omit `block_id` | **All** evidence and blocks in the workspace |
+
+Use **block-level** performance when PumaDoc wants a focused score on the current Customer Agent step (or a mapped block). Use **workspace-global** performance for journey retrospectives, CEO dashboards, or “overall founder readiness” summaries across multiple steps.
+
+`file_ids` from a prior report can be reused in chat mode at either scope; use the same `block_id` (or omit it) as the report you are extending.
 
 ### Open evidence, not a fixed schema
 
@@ -97,9 +126,9 @@ Base path: `/api/v2/agent`
 
 ---
 
-## PumaDoc ↔ OpenLesson mapping
+## PumaDoc ↔ OpenLesson state
 
-Map each Customer Agent step to one **workspace block**. Store in PumaDoc session state:
+Store integration state in PumaDoc session (extend as needed):
 
 ```json
 {
@@ -109,12 +138,18 @@ Map each Customer Agent step to one **workspace block**. Store in PumaDoc sessio
       "customer.icp.define": "block-uuid",
       "customer.segment.prioritize": "block-uuid"
     },
-    "performance_file_ids": []
+    "performance_file_ids_by_scope": {
+      "block:customer.icp.define": ["file_..."],
+      "workspace": ["file_..."]
+    },
+    "last_performance_at": "2026-06-25T12:00:00Z"
   }
 }
 ```
 
-When the user completes a PumaDoc step, upload evidence against that step's `block_id`. OpenLesson aligns block context from the workspace graph; PumaDoc only needs consistent `pumadoc_step_id` in metadata for traceability.
+**`step_blocks` is optional convenience** — a lookup table from PumaDoc step IDs to OpenLesson block UUIDs when you want block-scoped evidence or scores. If PumaDoc prefers workspace-global checkpoints only, skip the map and omit `block_id` on uploads and performance calls.
+
+When using block scope, set `block_id` on evidence and performance; keep `pumadoc_step_id` in `metadata` for traceability. OpenLesson infers learning intent from workspace context — PumaDoc does not register checkpoints with OpenLesson in advance.
 
 ---
 
@@ -159,15 +194,17 @@ POST /api/v2/agent/workspaces
 GET /api/v2/agent/workspaces/{workspace_id}/blocks
 ```
 
-Tell the user in chat which OpenLesson block corresponds to the current step (use block `title`, not UUID).
+Optionally tell the user which OpenLesson block relates to the current PumaDoc step (block `title`, not UUID) when using block-scoped analysis.
 
 ---
 
-### 1. After each Customer Agent step — serialize and upload evidence
+### 1. Serialize and upload evidence (when PumaDoc chooses)
 
-#### Required: tool usage trace (`type: "tool"`)
+Upload whenever PumaDoc defines a checkpoint — not on a fixed OpenLesson schedule. Each upload is independent; batch multiple events into one tool JSON or send incremental traces.
 
-Upload **one tool trace per completed step**. This alone is sufficient before calling performance.
+#### Required signal: tool usage trace (`type: "tool"`)
+
+At least one tool trace must exist **in scope** before a performance call at that scope (block-level: evidence for that `block_id`; workspace-global: any evidence on the workspace). A single tool upload is sufficient.
 
 **Envelope** (API request body):
 
@@ -177,7 +214,7 @@ Upload **one tool trace per completed step**. This alone is sufficient before ca
   "file_name": "pumadoc-step-icp-define.json",
   "mime_type": "application/json",
   "data": "<base64-encoded JSON below>",
-  "block_id": "{block_uuid_for_this_step}",
+  "block_id": "{block_uuid_for_this_step — omit for workspace-level evidence}",
   "metadata": {
     "pumadoc_step_id": "customer.icp.define",
     "pumadoc_artifact_id": "artifact-123",
@@ -295,11 +332,15 @@ Upload only when available. Never delay performance analysis waiting for these.
 
 ---
 
-### 2. Request performance analysis
+### 2. Request performance analysis (when PumaDoc chooses)
+
+Call performance only when PumaDoc wants a score or gap report — not automatically after every upload. You may upload many evidence rows and score once, or score repeatedly as the journey progresses.
 
 #### Report mode — structured gap analysis
 
-Call when the step's tool evidence is uploaded. **Do not send `prompt`.**
+**Do not send `prompt`.**
+
+**Block-level** (focused on one step / block):
 
 ```http
 POST /api/v2/agent/workspaces/{workspace_id}/performance
@@ -307,9 +348,17 @@ POST /api/v2/agent/workspaces/{workspace_id}/performance
 
 ```json
 {
-  "block_id": "{block_uuid_for_this_step}"
+  "block_id": "{block_uuid}"
 }
 ```
+
+**Workspace-global** (full journey synthesis):
+
+```json
+{}
+```
+
+or an empty body. Omit `block_id` to analyze all blocks and all workspace evidence together.
 
 **Response `200`:**
 
@@ -345,18 +394,29 @@ POST /api/v2/agent/workspaces/{workspace_id}/performance
 }
 ```
 
-**Save `file_ids`** in PumaDoc state for follow-up questions on the same step.
+**Save `file_ids`** under the scope you used (`block:…` or `workspace`) for follow-up questions.
 
 If only tool evidence exists, `evidence_artifacts` may be `1` — that is expected and sufficient.
 
 #### Chat mode — follow-up question
 
-Send a non-empty `prompt`. Reuse `file_ids` from the report response to avoid rebuilding context.
+Send a non-empty `prompt`. Reuse `file_ids` from the matching scoped report. Use the same `block_id` as that report, or omit `block_id` for workspace-wide Q&A.
+
+**Block-scoped:**
 
 ```json
 {
   "block_id": "{block_uuid}",
   "prompt": "What is the single biggest gap in how this founder defined their ICP?",
+  "file_ids": ["file_...", "file_..."]
+}
+```
+
+**Workspace-global:**
+
+```json
+{
+  "prompt": "Across this customer-development journey, where is the founder least ready for live validation?",
   "file_ids": ["file_...", "file_..."]
 }
 ```
@@ -373,19 +433,17 @@ Send a non-empty `prompt`. Reuse `file_ids` from the report response to avoid re
 
 ---
 
-### 3. Update PumaDoc Knowledge from results
+### 3. Act on results (PumaDoc policy)
 
-After `mode: "report"`, the Customer Agent should:
+OpenLesson returns analysis; **PumaDoc decides what to do**. After `mode: "report"`, typical Customer Agent actions:
 
 1. Summarize `report.summary` in plain chat language.
 2. Add `report.gap_analysis.gaps` as **repair missions** (title + `suggested_repair`).
 3. Write `report.strengths` into PumaDoc Knowledge as validated signals.
 4. Store `report.gap_analysis.next_practice` as suggested next actions.
-5. **Unlock the next Customer Agent step** only when:
-   - `confidence` is `developing`, `clear`, or `well-connected`, **or**
-   - all `high` severity gaps have an explicit repair mission accepted by the user.
+5. Optionally gate progress — e.g. unlock the next Customer Agent step only when `confidence` is `developing` or better, or when high-severity gaps have an accepted repair mission. **This gating is PumaDoc logic, not an OpenLesson requirement.**
 
-If `confidence` is `emerging` or high-severity gaps remain, stay on the step and propose a rework loop (additional tool trace → re-run performance).
+If `confidence` is `emerging`, PumaDoc may request more work, upload additional tool traces, and re-run performance at block or workspace scope.
 
 ---
 
@@ -423,31 +481,42 @@ Keep messages short. Do not expose raw API JSON to end users.
 | `404 workspace_not_found` | Re-bootstrap workspace; check `workspace_id` in state |
 | `404 block_not_found` | Re-run `GET /blocks` and refresh step mapping |
 | `429 rate_limit_exceeded` | Back off 60s; retry |
-| Empty evidence on report | Upload at least one `type: "tool"` trace for the `block_id` before calling performance |
+| Empty evidence on report | Upload at least one `type: "tool"` trace in scope (matching `block_id` or workspace-wide) before calling performance |
 
 ---
 
 ## Minimal end-to-end examples
 
-### Tool-only (recommended default)
+### Block-level checkpoint (per-step focus)
 
 ```text
-1. POST /org/guests → gsk_ key for founder@startup.example
+1. POST /org/guests → gsk_ key
 2. POST /workspaces → workspace_id + blocks
-3. GET /blocks → map customer.icp.define → block_id
-4. [User completes ICP step in PumaDoc, runs simulation]
-5. POST /workspaces/{id}/evidence → tool trace with events + goals_achieved (block_id set)
-6. POST /workspaces/{id}/performance → { "block_id": "..." }  → report
-7. POST /workspaces/{id}/performance → { "prompt": "...", "block_id": "...", "file_ids": [...] }  (optional Q&A)
-8. Update PumaDoc Knowledge; unlock next step
+3. GET /blocks → optional map customer.icp.define → block_id
+4. [PumaDoc decides: user finished ICP step / ran simulation]
+5. POST /workspaces/{id}/evidence → tool trace (block_id set)
+6. POST /workspaces/{id}/performance → { "block_id": "..." }  → block report
+7. POST /workspaces/{id}/performance → { "prompt": "...", "block_id": "...", "file_ids": [...] }  (optional)
+8. PumaDoc updates Knowledge / gates next step per its own rules
+```
+
+### Workspace-global checkpoint (journey rollup)
+
+```text
+1–3. Bootstrap workspace (same as above)
+4. [PumaDoc uploads tool traces over several days — block_id optional or mixed]
+5. POST /workspaces/{id}/evidence → cumulative journey tool trace (no block_id)
+6. POST /workspaces/{id}/performance → {}  → workspace-wide report
+7. POST /workspaces/{id}/performance → { "prompt": "...", "file_ids": [...] }  (no block_id)
+8. PumaDoc uses summary for dashboard or mentor review
 ```
 
 ### With optional media
 
 ```text
-5a. POST /workspaces/{id}/evidence → tool trace (required)
+5a. POST /workspaces/{id}/evidence → tool trace (required for scoring)
 5b. POST /workspaces/{id}/evidence → screenshot and/or screen recording (optional)
-6. POST /workspaces/{id}/performance → report (same as above)
+6. POST /workspaces/{id}/performance → report at chosen scope
 ```
 
 ---
@@ -462,11 +531,12 @@ Keep messages short. Do not expose raw API JSON to end users.
 
 ## Checklist for implementers
 
-- [ ] Store `workspace_id`, step→`block_id` map, and latest `file_ids` in PumaDoc agent state
-- [ ] Serialize open tool-usage JSON (events + `goals_achieved`) after every Customer Agent step
-- [ ] Upload **at least one** `type: "tool"` evidence row per step before performance
+- [ ] Store `workspace_id`, optional step→`block_id` map, and `file_ids` per scope in PumaDoc agent state
+- [ ] Define PumaDoc checkpoint policy (per-step, simulation-only, batch, global, on-demand)
+- [ ] Serialize open tool-usage JSON (events + `goals_achieved`) when **PumaDoc** chooses — not on a fixed OpenLesson cadence
+- [ ] Upload **at least one** `type: "tool"` row in scope before performance at that scope
+- [ ] Support **block-level** performance (`block_id` set) and **workspace-global** performance (`block_id` omitted)
 - [ ] Treat screenshots, screen recording, and EEG as optional — never block on them
-- [ ] Call performance **without** `prompt` for structured report
-- [ ] Call performance **with** `prompt` + `file_ids` for user questions
-- [ ] Gate next step on `confidence` and gap severity
+- [ ] Call performance **without** `prompt` for structured report; **with** `prompt` + `file_ids` for Q&A
+- [ ] Apply gating / Knowledge updates in PumaDoc — OpenLesson does not enforce step unlock rules
 - [ ] Never log or display raw `gsk_` / `sk_` keys in user chat

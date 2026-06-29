@@ -1,8 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { callXaiJSON, systemMessage, userMessage } from "@/lib/xai-client";
+import { callXaiJSON, callXaiResponsesWithFiles, systemMessage, userMessage } from "@/lib/xai-client";
 import { GHC_SCORE_MARKERS, getGhcScoreBrief, getGhcScoreBriefForUser, GhcScoreAnalysis, GhcScoreMode, hashPrivateToken } from "@/lib/ghc-score";
+import { resolveGhlSessionAccess } from "@/lib/ghl-score-session-auth";
+import {
+  buildTraceScoringContext,
+  buildTraceScoringInstructions,
+  fetchGhlSessionTraces,
+  GHL_SCORE_ANALYSIS_SCHEMA,
+} from "@/lib/ghl-score-traces";
 import { uploadFileToXAI } from "@/lib/xai-files";
 
 export const runtime = "nodejs";
@@ -22,6 +29,7 @@ export async function POST(req: NextRequest) {
     let planNodeId = body.planNodeId ? String(body.planNodeId) : null;
     let focusSessionId = body.sessionId ? String(body.sessionId) : null;
     const xaiConversationId = body.xaiConversationId ? String(body.xaiConversationId) : null;
+    const ghlSessionId = body.ghlSessionId ? String(body.ghlSessionId) : "";
     let existingSession: any = null;
 
     if (transcript.length === 0) return NextResponse.json({ error: "transcript is required" }, { status: 400 });
@@ -55,21 +63,48 @@ export async function POST(req: NextRequest) {
       supabase = await createClient();
       if (planNodeId && !focusNodeIds.includes(planNodeId)) focusNodeIds = [planNodeId, ...focusNodeIds];
       ({ userId, brief } = await getGhcScoreBrief(planId, focusNodeIds, focusSessionId));
+
+      if (ghlSessionId) {
+        const access = await resolveGhlSessionAccess({
+          planId,
+          ghlSessionId,
+          planNodeId,
+          focusSessionId,
+        });
+        if ("error" in access) {
+          return NextResponse.json({ error: access.error }, { status: access.status });
+        }
+        existingSession = access.existingSession;
+        supabase = access.supabase;
+      }
     }
 
     const transcriptText = transcript
       .map((entry: any) => `${entry.role || "unknown"}: ${entry.text || entry.content || ""}`)
       .join("\n");
 
-    const result = await callXaiJSON<GhcScoreAnalysis>([
-      systemMessage("You create GHL Score analyses for OpenLesson. Return only JSON. Scores are provisional learning-demonstration scores from 0 to 100, not clinical, psychometric, or identity claims. The primary goal is to evaluate demonstrated learning for the selected performance block or whole workspace, identify actionable gap analysis, then provide supporting marker scores."),
-      userMessage(`Workspace: ${brief.plan.title}
+    const resolvedGhlSessionId = existingSession?.id || ghlSessionId || null;
+    let traceContext = {
+      system1Count: 0,
+      system2Count: 0,
+      manifestText: "",
+      fileIds: [] as string[],
+    };
+
+    if (resolvedGhlSessionId) {
+      const traces = await fetchGhlSessionTraces(supabase, resolvedGhlSessionId, planId);
+      traceContext = buildTraceScoringContext(traces);
+    }
+
+    const traceInstructions = buildTraceScoringInstructions(traceContext);
+    const scoringPrompt = `Workspace: ${brief.plan.title}
 Topic: ${brief.plan.root_topic}
 Nodes: ${JSON.stringify(brief.nodes)}
 Focused session: ${JSON.stringify(brief.focusSession || null)}
 
-GHL Score transcript:
+GHL Score transcript (System 2 dialogue — thoughts the learner explicitly submitted to the probe):
 ${transcriptText}
+${traceInstructions}
 
 Return JSON with:
 {
@@ -86,12 +121,29 @@ Return JSON with:
   "growth_areas": string[],
   "follow_up_prompts": string[],
   "confidence": "emerging" | "developing" | "clear" | "well-connected"
-}`),
-    ], {
-      maxTokens: 2000,
-      temperature: 0.4,
-      fetchTimeout: 120000,
-    });
+}`;
+
+    const systemPrompt =
+      "You create GHL Score analyses for OpenLesson. Return only JSON. Scores are provisional learning-demonstration scores from 0 to 100, not clinical, psychometric, or identity claims. The primary goal is to evaluate demonstrated learning for the selected performance block or whole workspace, identify actionable gap analysis, then provide supporting marker scores. When thought trace files are attached, treat System 1 traces (spontaneous speech) and System 2 traces (explicit send/skip/select actions) as evidence sources alongside the dialogue transcript.";
+
+    const result =
+      traceContext.fileIds.length > 0
+        ? await callXaiResponsesWithFiles<GhcScoreAnalysis>(
+            scoringPrompt,
+            traceContext.fileIds,
+            {
+              instructions: systemPrompt,
+              maxOutputTokens: 2000,
+              temperature: 0.4,
+              fetchTimeout: 120000,
+              jsonSchema: GHL_SCORE_ANALYSIS_SCHEMA,
+            },
+          )
+        : await callXaiJSON<GhcScoreAnalysis>([systemMessage(systemPrompt), userMessage(scoringPrompt)], {
+            maxTokens: 2000,
+            temperature: 0.4,
+            fetchTimeout: 120000,
+          });
 
     if (!result.success || !result.data) {
       return NextResponse.json({ error: result.error || "Failed to generate GHL Score" }, { status: 500 });
@@ -154,6 +206,12 @@ Return JSON with:
         marker_scores: row.marker_scores,
         analysis: row.analysis,
         transcript,
+        thought_traces: {
+          system1_count: traceContext.system1Count,
+          system2_count: traceContext.system2Count,
+          manifest: traceContext.manifestText,
+          xai_file_ids: traceContext.fileIds,
+        },
       };
       const base64 = Buffer.from(JSON.stringify(artifact, null, 2), "utf8").toString("base64");
       const uploaded = await uploadFileToXAI(`ghl-score-${row.id}.json`, "application/json", base64);

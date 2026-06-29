@@ -41,6 +41,7 @@ import { SessionPlanViewer } from "./SessionPlanViewer";
 import { ResizablePane, type ResizablePaneHandle } from "./ResizablePane";
 import { ExcalidrawCanvas } from "./ExcalidrawCanvas";
 import { ToolsPanel, type Tool } from "./ToolsPanel";
+import { MobileBlockScreen } from "./MobileBlockScreen";
 import { HeliosChat, type ChatMessage, type PendingChatMessage, type StuckAction } from "./HeliosChat";
 import { DataInputTool } from "./DataInputTool";
 import { LogsTool, type LogEntry } from "./LogsTool";
@@ -3614,32 +3615,8 @@ export function SessionView({ sessionId }: { sessionId: string }) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  if (isMobile && sessionId) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-[#0a0a0a] px-6 text-center gap-5">
-        <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-neutral-800 to-neutral-900 border border-neutral-800 flex items-center justify-center">
-          <svg className="w-7 h-7 text-neutral-200" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
-          </svg>
-        </div>
-        <div>
-          <h2 className="text-lg font-semibold text-white mb-1">{t('session.mobileDetected')}</h2>
-          <p className="text-sm text-neutral-400">{t('session.mobileDetectedDesc')}</p>
-        </div>
-        <a
-          href={`/session/mobile/${sessionId}`}
-          className="px-6 py-2.5 bg-neutral-100 hover:bg-white text-neutral-900 text-sm font-medium rounded-xl transition-colors"
-        >
-          {t('session.openMobileView')}
-        </a>
-        <button
-          onClick={() => setIsMobile(false)}
-          className="text-xs text-neutral-600 hover:text-neutral-400 transition-colors"
-        >
-          {t('session.continueDesktopAnyway')}
-        </button>
-      </div>
-    );
+  if (isMobile) {
+    return <MobileBlockScreen />;
   }
 
   if (!session || isSaving) {
@@ -4099,7 +4076,6 @@ export function SessionView({ sessionId }: { sessionId: string }) {
                 setActiveTool(tool);
               }} 
               problem={session.problem} 
-              sessionId={session.id}
               planId={session.metadata?.plan_id as string | undefined}
               disabledTools={[]}
               onBackToDashboard={pauseAndGoToDashboard}

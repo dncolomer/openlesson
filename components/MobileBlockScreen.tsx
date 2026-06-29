@@ -36,17 +36,9 @@ export function MobileBlockScreen() {
       <h1 className="text-2xl font-semibold text-white mb-3">
         {t('mobileBlock.desktopOnly')}
       </h1>
-      <p className="text-neutral-400 max-w-md mb-6">
+      <p className="text-neutral-400 max-w-md mb-8">
         {t('mobileBlock.desktopDescription')}
       </p>
-
-      {/* Coming soon badge */}
-      <div className="inline-flex items-center gap-2 px-4 py-2 bg-neutral-800/50 border border-neutral-700 rounded-full mb-8">
-        <span className="w-2 h-2 bg-cyan-400 rounded-full animate-pulse" />
-        <span className="text-sm text-neutral-400">
-          {t('mobileBlock.comingSoon')}
-        </span>
-      </div>
 
       {/* Browser recommendation */}
       <div className="flex items-center gap-2 text-xs text-neutral-600 mb-8">

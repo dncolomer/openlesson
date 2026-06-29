@@ -2052,8 +2052,8 @@
     "reset": "Reset"
   },
   "mobileBlock": {
-    "desktopOnly": "Desktop Only",
-    "desktopDescription": "The openLesson learning experience is designed for desktop devices with audio input capabilities.",
+    "desktopOnly": "This is a desktop tool",
+    "desktopDescription": "openLesson sessions require a desktop browser with a microphone. Open this session on your computer to continue.",
     "comingSoon": "Mobile version coming soon",
     "chromeRecommended": "Chrome recommended for best experience",
     "returnToDashboard": "Return to Dashboard"

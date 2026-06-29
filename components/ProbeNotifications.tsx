@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState, useMemo } from "react";
 import { type Probe, type SessionPlan, type RequestType, type ToolName } from "@/lib/storage";
 import { SessionPlanViewer } from "./SessionPlanViewer";
-import { QRCodeModal } from "./QRCodeModal";
 import { useI18n } from "@/lib/i18n";
 
 const MAX_OPEN_PROBES = 5;
@@ -125,7 +124,7 @@ export function ProbeNotifications({
   const containerRef = useRef<HTMLDivElement>(null);
   const [viewMode, setViewMode] = useState<"active" | "archived">("active");
   const [searchQuery, setSearchQuery] = useState("");
-  const [showQRModal, setShowQRModal] = useState(false);
+
   const [showSessionMenu, setShowSessionMenu] = useState(false);
   const sessionMenuRef = useRef<HTMLDivElement>(null);
 
@@ -252,17 +251,6 @@ export function ProbeNotifications({
 
           {/* Action buttons */}
           <div className="flex items-center gap-1 shrink-0">
-            {/* Smartphone */}
-            <button
-              onClick={() => setShowQRModal(true)}
-              className="p-1.5 rounded-md text-neutral-500 hover:text-neutral-300 hover:bg-neutral-800 transition-colors"
-              title={t('session.openOnSmartphone')}
-            >
-              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
-              </svg>
-            </button>
-
             {/* Session controls dropdown */}
             {showControls && (
               <div className="relative" ref={sessionMenuRef}>
@@ -693,12 +681,6 @@ export function ProbeNotifications({
           </div>
       </div>
 
-      {/* QR Code Modal for mobile access */}
-      <QRCodeModal
-        isOpen={showQRModal}
-        onClose={() => setShowQRModal(false)}
-        sessionId={sessionId}
-      />
     </div>
   );
 }

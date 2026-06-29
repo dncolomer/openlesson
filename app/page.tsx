@@ -73,7 +73,19 @@ export default function B2BLandingPage() {
           <h1 className="max-w-4xl text-5xl font-medium leading-[1.03] tracking-[-2.8px] text-white sm:text-6xl lg:text-[72px]">AI makes humans look ready. Prove they actually are.</h1>
           <div className="mt-7 max-w-3xl space-y-4 text-base leading-relaxed text-zinc-400 sm:text-lg">
             <p>As AI tools get better, humans can generate strong-looking outputs without proving they understand the task, context, or decision behind the work.</p>
-            <p className="text-zinc-200">openLesson scores genuine human cognition—then closes the gaps AI hides.</p>
+            <div className="border border-cyan-400/20 bg-cyan-950/20 p-5 sm:p-6">
+              <p className="text-lg leading-relaxed text-zinc-300 sm:text-xl">
+                openLesson scores{" "}
+                <span className="font-medium text-cyan-200">genuine human cognition</span>.
+              </p>
+              <p className="mt-4 text-sm leading-relaxed text-zinc-400 sm:text-base">
+                With our{" "}
+                <span className="text-zinc-200">Selective Thought Interface</span> and{" "}
+                <span className="text-zinc-200">Think-Aloud Protocol</span>, we verify knowledge is
+                real—not rehearsed, not pasted from an assistant.{" "}
+                <span className="font-medium text-white">No quiz. No exam.</span>
+              </p>
+            </div>
           </div>
           <div className="mt-9 flex flex-col gap-3 sm:flex-row sm:items-center">
             <PrimaryCta location="landing_hero" />

@@ -7,6 +7,7 @@ import { LandingNav } from "@/components/LandingNav";
 import { ProductStack } from "@/components/ProductStack";
 import { TrackedCtaLink } from "@/components/TrackedCtaLink";
 import { trackCtaClick } from "@/lib/analytics";
+import { SKILL_PROFILES } from "@/lib/seo/skill-profiles";
 
 const CTA = "Create your Performance Workspace";
 const CTA_HREF = "/workspace/new";
@@ -46,24 +47,8 @@ const outcomes = [
   "Turn gap findings into targeted practice—so humans improve, not just get labeled.",
 ];
 
-const SKILL_MARKERS = [
-  { label: "Definitions", score: 82 },
-  { label: "Causal reasoning", score: 54 },
-  { label: "Application", score: 71 },
-  { label: "Exception judgment", score: 38 },
-  { label: "Repair", score: 61 },
-];
-
-const GAP_SUMMARY = [
-  { skill: "Exception judgment", severity: "High", detail: "Cannot weigh blast radius when policy edge cases appear." },
-  { skill: "Causal reasoning", severity: "Medium", detail: "Skips intermediate steps when explaining tradeoffs under probe." },
-];
-
-const ACTION_STEPS = [
-  { step: "Complete Think-Aloud verification", status: "Done" },
-  { step: "Practice exception scenarios in ILE", status: "Open", ileHref: "/ile/blocks/exception-judgment" },
-  { step: "Re-verify with Evidence API", status: "Scheduled" },
-];
+const PROFILE_ROTATE_MS = 5000;
+const PROFILE_FADE_MS = 400;
 
 export default function B2BLandingPage() {
   const [bgImage, setBgImage] = useState("");
@@ -220,8 +205,29 @@ function ContentSection({ id, eyebrow, title, children }: { id?: string; eyebrow
 }
 
 function SkillSnapshotWidget() {
+  const [profileIndex, setProfileIndex] = useState(0);
+  const [fading, setFading] = useState(false);
+
+  useEffect(() => {
+    let fadeTimeout: ReturnType<typeof setTimeout>;
+
+    const interval = setInterval(() => {
+      setFading(true);
+      fadeTimeout = setTimeout(() => {
+        setProfileIndex((index) => (index + 1) % SKILL_PROFILES.length);
+        setFading(false);
+      }, PROFILE_FADE_MS);
+    }, PROFILE_ROTATE_MS);
+
+    return () => {
+      clearInterval(interval);
+      clearTimeout(fadeTimeout);
+    };
+  }, []);
+
+  const profile = SKILL_PROFILES[profileIndex];
   const overallScore = Math.round(
-    SKILL_MARKERS.reduce((sum, marker) => sum + marker.score, 0) / SKILL_MARKERS.length,
+    profile.markers.reduce((sum, marker) => sum + marker.score, 0) / profile.markers.length,
   );
 
   return (
@@ -231,22 +237,36 @@ function SkillSnapshotWidget() {
         <div className="flex items-center justify-between border-b border-neutral-800 pb-4">
           <div>
             <div className="font-mono text-[10px] uppercase tracking-[2px] text-zinc-600">Skill profile</div>
-            <p className="mt-1 text-lg font-medium text-white">Compliance exception review</p>
+            <p
+              className={`mt-1 text-lg font-medium text-white transition-opacity duration-300 ${fading ? "opacity-0" : "opacity-100"}`}
+              aria-live="polite"
+            >
+              {profile.title}
+            </p>
+            <p
+              className={`mt-1 font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-600 transition-opacity duration-300 ${fading ? "opacity-0" : "opacity-100"}`}
+            >
+              {profile.category}
+            </p>
           </div>
           <div className="text-right">
             <div className="font-mono text-[10px] uppercase tracking-[2px] text-zinc-600">Overall</div>
-            <div className="mt-1 text-2xl font-medium text-white">{overallScore}</div>
+            <div
+              className={`mt-1 text-2xl font-medium text-white transition-opacity duration-300 ${fading ? "opacity-0" : "opacity-100"}`}
+            >
+              {overallScore}
+            </div>
           </div>
         </div>
 
-        <div className="mt-4">
-          <SkillSpiderChart markers={SKILL_MARKERS} />
+        <div className={`mt-4 transition-opacity duration-300 ${fading ? "opacity-0" : "opacity-100"}`}>
+          <SkillSpiderChart markers={profile.markers} />
         </div>
 
-        <div className="mt-5 border border-zinc-800 bg-[#090909] p-4">
+        <div className={`mt-5 border border-zinc-800 bg-[#090909] p-4 transition-opacity duration-300 ${fading ? "opacity-0" : "opacity-100"}`}>
           <div className="font-mono text-[10px] uppercase tracking-[2px] text-zinc-600">Gap summary</div>
           <ul className="mt-3 space-y-3">
-            {GAP_SUMMARY.map((gap) => (
+            {profile.gaps.map((gap) => (
               <li key={gap.skill} className="flex items-start justify-between gap-3 text-sm">
                 <div>
                   <span className="text-zinc-200">{gap.skill}</span>
@@ -266,11 +286,11 @@ function SkillSnapshotWidget() {
           </ul>
         </div>
 
-        <div className="mt-4 border border-zinc-800 bg-zinc-950/80 p-4">
+        <div className={`mt-4 border border-zinc-800 bg-zinc-950/80 p-4 transition-opacity duration-300 ${fading ? "opacity-0" : "opacity-100"}`}>
           <div className="font-mono text-[10px] uppercase tracking-[2px] text-zinc-600">Action steps</div>
           <ol className="mt-3 space-y-2.5">
-            {ACTION_STEPS.map((action, index) => (
-              <li key={action.step} className="flex items-start gap-3 text-sm">
+            {profile.actions.map((action, index) => (
+              <li key={`${profile.id}-${action.step}`} className="flex items-start gap-3 text-sm">
                 <span className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-sm bg-zinc-800 font-mono text-[10px] text-zinc-400">
                   {index + 1}
                 </span>
@@ -311,6 +331,15 @@ function SkillSnapshotWidget() {
               </li>
             ))}
           </ol>
+        </div>
+
+        <div className="mt-5 flex justify-center gap-1.5" aria-hidden="true">
+          {SKILL_PROFILES.map((item, index) => (
+            <span
+              key={item.id}
+              className={`h-1.5 rounded-full transition-all duration-300 ${index === profileIndex ? "w-5 bg-cyan-300/80" : "w-1.5 bg-zinc-700"}`}
+            />
+          ))}
         </div>
       </div>
     </div>

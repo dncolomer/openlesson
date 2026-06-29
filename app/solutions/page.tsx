@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Footer } from "@/components/Footer";
 import { Navbar } from "@/components/Navbar";
+import { ProductStack } from "@/components/ProductStack";
 import {
   DEFAULT_BACKGROUND,
   SOLUTION_PAGES,
@@ -13,7 +14,7 @@ const SOLUTIONS_INDEX = {
   eyebrow: "Solutions",
   h1: "Performance readiness for every high-stakes role",
   intro:
-    "openLesson helps professionals and teams prove judgment in AI-enabled work. Explore vertical-specific guides for sales, customer success, compliance, hiring, engineering, corporate L&D, and LMS integration.",
+    "Three products on Performance Workspaces—Evidence API, Think-Aloud Protocol, and the Integrated Learning Environment—applied to the verticals where judgment matters most.",
   metaTitle: "Solutions — Performance Readiness by Vertical",
   metaDescription:
     "SEO guides for sales enablement, customer success, compliance, hiring assessment, engineering on-call, corporate L&D, and LMS integration with openLesson.",
@@ -53,6 +54,17 @@ export default function SolutionsIndexPage() {
           </h1>
           <p className="mt-6 text-lg leading-relaxed text-neutral-400">{SOLUTIONS_INDEX.intro}</p>
         </header>
+
+        <section className="mb-12 rounded-md border border-neutral-800 bg-neutral-950/70 p-5 sm:p-6">
+          <p className="font-mono text-[10px] uppercase tracking-[2px] text-neutral-500">The product stack</p>
+          <p className="mt-3 text-sm leading-relaxed text-neutral-400">
+            Each vertical guide below shows how teams use Performance Workspaces and the three products
+            to verify cognition and improve scores in that domain.
+          </p>
+          <div className="mt-6">
+            <ProductStack variant="compact" />
+          </div>
+        </section>
 
         <div className="grid gap-4">
           {SOLUTION_PAGES.map((solution) => (

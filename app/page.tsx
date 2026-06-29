@@ -1,13 +1,12 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useState, type ReactNode } from "react";
 import { ArrowRight, Check } from "lucide-react";
 import { Footer } from "@/components/Footer";
 import { LandingNav } from "@/components/LandingNav";
+import { ProductStack } from "@/components/ProductStack";
 import { TrackedCtaLink } from "@/components/TrackedCtaLink";
 import { trackCtaClick } from "@/lib/analytics";
-import { READINESS_SCENARIOS } from "@/lib/seo/readiness-scenarios";
 
 const CTA = "Create your Performance Workspace";
 const CTA_HREF = "/workspace/new";
@@ -22,34 +21,19 @@ const BACKGROUND_IMAGES = [
 const steps = [
   {
     title: "Create a Performance Workspace",
-    body: "Define the skill, decision domain, or scenario that actually matters to you.",
+    body: "Define the skill, scenario, or decision domain. Enrich it programmatically with documents, screen shares, video, EEG data, or any human-generated evidence.",
   },
   {
-    title: "Think aloud in the ILE",
-    body: "Follow the Think-Aloud Protocol: speak your reasoning as you work. Our Selective Thought Interface captures live speech and submitted thought fragments—hesitations, revisions, and causal chains that hidden AI overlays cannot fabricate.",
+    title: "Verify with evidence or think-aloud",
+    body: "Choose your verification path: send unstructured artifacts to the Evidence API for continuous scoring, or issue Think-Aloud Protocol URLs for hosted cognitive verification.",
   },
   {
-    title: "Get probed, not fed answers",
-    body: "Socratic follow-ups target gaps in genuine cognition. You are scored on how you explore, revise, and defend thinking under challenge—not on polished output you could paste from an assistant.",
+    title: "Get continuous scores and gap analysis",
+    body: "Both verification products return marker scores, severity-ranked gaps, and auditable rationale—not a single pass/fail snapshot.",
   },
   {
-    title: "Close gaps with guided practice",
-    body: "Gap analysis turns weak signals into the next scenario, block, or probe—not a dead-end score. Humans practice until reasoning improves, with evidence showing progress along the way.",
-  },
-];
-
-const cognitionPillars = [
-  {
-    title: "Think-Aloud Protocol",
-    body: "A decades-validated method from cognitive science: verbalize reasoning while you work. Speech exposes what polished deliverables hide—skipped steps, circular logic, and unexamined assumptions.",
-  },
-  {
-    title: "Selective Thought Interface",
-    body: "Learners submit transcribed thought fragments; the system probes with targeted Socratic questions. The signal is live cognition under inquiry—not a script read from a hidden overlay.",
-  },
-  {
-    title: "Measure gaps, then close them",
-    body: "Evaluation scores learning markers from reasoning traces—then routes humans into specific ILE practice and Socratic follow-ups. openLesson is not a pass/fail checker; it is a loop from evidence to remediation.",
+    title: "Improve in the ILE",
+    body: "Gap findings route humans into the Integrated Learning Environment for targeted practice. Scores improve as cognition catches up—with evidence at every step.",
   },
 ];
 
@@ -62,8 +46,24 @@ const outcomes = [
   "Turn gap findings into targeted practice—so humans improve, not just get labeled.",
 ];
 
-const SCENARIO_ROTATE_MS = 4500;
-const SCENARIO_FADE_MS = 400;
+const SKILL_MARKERS = [
+  { label: "Definitions", score: 82 },
+  { label: "Causal reasoning", score: 54 },
+  { label: "Application", score: 71 },
+  { label: "Exception judgment", score: 38 },
+  { label: "Repair", score: 61 },
+];
+
+const GAP_SUMMARY = [
+  { skill: "Exception judgment", severity: "High", detail: "Cannot weigh blast radius when policy edge cases appear." },
+  { skill: "Causal reasoning", severity: "Medium", detail: "Skips intermediate steps when explaining tradeoffs under probe." },
+];
+
+const ACTION_STEPS = [
+  { step: "Complete Think-Aloud verification", status: "Done" },
+  { step: "Practice exception scenarios in ILE", status: "Open", ileHref: "/ile/blocks/exception-judgment" },
+  { step: "Re-verify with Evidence API", status: "Scheduled" },
+];
 
 export default function B2BLandingPage() {
   const [bgImage, setBgImage] = useState("");
@@ -84,70 +84,63 @@ export default function B2BLandingPage() {
 
       <section className="relative z-10 mx-auto grid min-h-[calc(100vh-73px)] w-full max-w-6xl items-center gap-12 px-6 py-20 lg:grid-cols-[1.03fr_0.97fr]">
         <div>
-          <div className="mb-6 inline-block rounded-sm border border-zinc-800 bg-zinc-950/80 px-3 py-1 font-mono text-[10px] tracking-[2px] text-zinc-500">READINESS EVIDENCE FOR YOU</div>
+          <div className="mb-6 inline-block rounded-sm border border-zinc-800 bg-zinc-950/80 px-3 py-1 font-mono text-[10px] tracking-[2px] text-zinc-500">THREE PRODUCTS • ONE WORKSPACE</div>
           <h1 className="max-w-4xl text-5xl font-medium leading-[1.03] tracking-[-2.8px] text-white sm:text-6xl lg:text-[72px]">AI makes humans look ready. Prove they actually are.</h1>
-          <p className="mt-7 max-w-3xl text-xl leading-relaxed tracking-[-0.35px] text-zinc-400">openLesson measures genuine human readiness—and helps people close the gaps AI hides, not just flag them.</p>
           <div className="mt-7 max-w-3xl space-y-4 text-base leading-relaxed text-zinc-400 sm:text-lg">
-            <p>As AI tools get better, humans can generate strong-looking outputs earlier in the learning curve without proving they understand the task, context, or decision behind the work.</p>
-            <p>This creates a dangerous readiness illusion. Training completion is not performance readiness.</p>
-            <p className="text-zinc-200">openLesson reveals weak spots early, then guides targeted practice until cognition catches up.</p>
+            <p>As AI tools get better, humans can generate strong-looking outputs without proving they understand the task, context, or decision behind the work.</p>
+            <p className="text-zinc-200">openLesson scores genuine human cognition—then closes the gaps AI hides.</p>
           </div>
           <div className="mt-9 flex flex-col gap-3 sm:flex-row sm:items-center">
             <PrimaryCta location="landing_hero" />
             <a
-              href="#how"
-              onClick={() => trackCtaClick({ location: "landing_hero", label: "See how it works", href: "#how", page: "/" })}
+              href="#products"
+              onClick={() => trackCtaClick({ location: "landing_hero", label: "See the products", href: "#products", page: "/" })}
               className="inline-flex min-h-12 items-center justify-center rounded-sm border border-zinc-800 bg-zinc-950/60 px-5 py-3 text-sm font-medium text-zinc-300 transition hover:border-zinc-700 hover:text-white"
             >
-              See how it works
+              See the products
             </a>
           </div>
-          <p className="mt-6 font-mono text-[11px] uppercase tracking-[1.6px] text-zinc-600">Think-Aloud Protocol • Selective Thought Interface • readiness evidence</p>
+          <p className="mt-6 font-mono text-[11px] uppercase tracking-[1.6px] text-zinc-600">Evidence API • Think-Aloud Verification • Integrated Learning Environment</p>
         </div>
-        <ReadinessVisual />
+        <SkillSnapshotWidget />
       </section>
 
-      <ContentSection id="problem" eyebrow="THE PROBLEM" title="The next workplace risk is not AI adoption. It is unverified human readiness.">
+      <ContentSection id="problem" eyebrow="THE PROBLEM" title="The biggest AI risk isn't hallucinations or inaccuracies. It's unverified human readiness.">
         <p>AI gives you instant help, but instant help can hide weak understanding. Real-time assist tools can feed answers during interviews, exams, and live calls—creating candidates and employees who look ready while genuine cognition stays untested.</p>
         <p className="text-white">You have AI. Do you have the judgment to use it well?</p>
         <p>Polished output is not proof of capability. When screens reward scripts and generated work, the only trustworthy signal left is how someone thinks out loud when probed.</p>
       </ContentSection>
 
-      <section id="cognition" className="relative z-10 mx-auto max-w-6xl px-6 py-20">
+      <section id="products" className="relative z-10 mx-auto max-w-6xl px-6 py-20">
         <SectionHeading
-          eyebrow="GENUINE HUMAN THINKING"
-          title="Hidden AI cannot fake thinking out loud."
+          eyebrow="THE PLATFORM"
+          title="Three products. One Performance Workspace."
         />
         <p className="mt-6 max-w-3xl text-lg leading-relaxed text-zinc-400">
-          openLesson solves the AI cheating problem at the signal layer. Instead of trusting deliverables that assistants can manufacture, we measure{" "}
-          <span className="text-zinc-200">genuine human cognition</span> through the Think-Aloud Protocol and our Selective Thought Interface—then help humans close the gaps that show up, with guided practice until reasoning holds up under probe.
+          Everything runs on{" "}
+          <span className="text-zinc-200">Performance Workspaces</span>—environments you create and enrich with any documents or human-generated data. Two Human Knowledge Verification products score cognition; the Integrated Learning Environment helps humans improve.
         </p>
-        <div className="mt-10 grid gap-4 md:grid-cols-3">
-          {cognitionPillars.map((pillar) => (
-            <div key={pillar.title} className="border border-zinc-800 bg-zinc-950/70 p-5 transition hover:border-zinc-700">
-              <h3 className="text-lg font-medium text-white">{pillar.title}</h3>
-              <p className="mt-3 text-sm leading-relaxed text-zinc-400">{pillar.body}</p>
-            </div>
-          ))}
+        <div className="mt-10">
+          <ProductStack />
         </div>
       </section>
 
       <section id="product" className="relative z-10 mx-auto grid max-w-6xl gap-8 px-6 py-20 lg:grid-cols-[0.88fr_1.12fr]">
         <div>
-          <SectionHeading eyebrow="THE SOLUTION" title="Find the gaps AI hides. Help humans close them." />
+          <SectionHeading eyebrow="THE LOOP" title="Verify cognition. Close the gaps." />
           <div className="mt-8">
             <PrimaryCta location="landing_solution" />
           </div>
         </div>
         <div className="border border-zinc-800 bg-zinc-950/70 p-6 text-lg leading-relaxed text-zinc-400 backdrop-blur-sm sm:p-8">
-          <p className="text-white">openLesson turns live thinking into a measure-and-improve loop.</p>
-          <p className="mt-5">Practice real scenarios and verbalize reasoning as you go. The ILE captures think-aloud traces; evaluation surfaces specific gaps; targeted blocks and Socratic follow-ups help humans repair weak reasoning—not just document it.</p>
-          <p className="mt-5 text-zinc-200">Verify readiness, then build the judgment to match—before a hire, a promotion, or high-stakes work goes wrong.</p>
+          <p className="text-white">Headless or hosted—you choose how to verify.</p>
+          <p className="mt-5">Pipe unstructured evidence into the API for continuous scoring, or issue Think-Aloud Protocol URLs when you need live cognition under probe. Both products surface the same gap analysis—then route humans into the ILE to improve.</p>
+          <p className="mt-5 text-zinc-200">Verify readiness, build judgment, and prove improvement—with auditable evidence at every step.</p>
         </div>
       </section>
 
       <section id="how" className="relative z-10 mx-auto max-w-6xl px-6 py-20">
-        <SectionHeading eyebrow="HOW IT WORKS" title="From detection to closure" />
+        <SectionHeading eyebrow="HOW IT WORKS" title="Workspace → Verify → Improve" />
         <div className="mt-10 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           {steps.map((step, index) => (
             <div key={step.title} className="border border-zinc-800 bg-zinc-950/70 p-5 transition hover:border-zinc-700">
@@ -226,28 +219,10 @@ function ContentSection({ id, eyebrow, title, children }: { id?: string; eyebrow
   );
 }
 
-function ReadinessVisual() {
-  const [scenarioIndex, setScenarioIndex] = useState(0);
-  const [fading, setFading] = useState(false);
-
-  useEffect(() => {
-    let fadeTimeout: ReturnType<typeof setTimeout>;
-
-    const interval = setInterval(() => {
-      setFading(true);
-      fadeTimeout = setTimeout(() => {
-        setScenarioIndex((index) => (index + 1) % READINESS_SCENARIOS.length);
-        setFading(false);
-      }, SCENARIO_FADE_MS);
-    }, SCENARIO_ROTATE_MS);
-
-    return () => {
-      clearInterval(interval);
-      clearTimeout(fadeTimeout);
-    };
-  }, []);
-
-  const scenario = READINESS_SCENARIOS[scenarioIndex];
+function SkillSnapshotWidget() {
+  const overallScore = Math.round(
+    SKILL_MARKERS.reduce((sum, marker) => sum + marker.score, 0) / SKILL_MARKERS.length,
+  );
 
   return (
     <div className="relative border border-zinc-800/80 bg-zinc-950/75 p-4 shadow-2xl backdrop-blur-sm">
@@ -255,86 +230,163 @@ function ReadinessVisual() {
       <div className="rounded-2xl border border-neutral-800 bg-neutral-950/50 p-5">
         <div className="flex items-center justify-between border-b border-neutral-800 pb-4">
           <div>
-            <div className="font-mono text-[10px] uppercase tracking-[2px] text-zinc-600">Workspace signal</div>
-            <Link
-              href={scenario.solutionHref}
-              onClick={() =>
-                trackCtaClick({
-                  location: "landing_widget_title",
-                  label: scenario.title,
-                  href: scenario.solutionHref,
-                  page: "/",
-                })
-              }
-              className={`mt-1 block text-lg font-medium text-white transition-opacity duration-300 hover:text-zinc-200 ${fading ? "opacity-0" : "opacity-100"}`}
-              aria-live="polite"
-            >
-              {scenario.title}
-            </Link>
+            <div className="font-mono text-[10px] uppercase tracking-[2px] text-zinc-600">Skill profile</div>
+            <p className="mt-1 text-lg font-medium text-white">Compliance exception review</p>
           </div>
-          <div className="rounded-sm border border-cyan-400/20 bg-cyan-950/30 px-3 py-1 font-mono text-[10px] uppercase tracking-[1.5px] text-cyan-200">Evidence</div>
+          <div className="text-right">
+            <div className="font-mono text-[10px] uppercase tracking-[2px] text-zinc-600">Overall</div>
+            <div className="mt-1 text-2xl font-medium text-white">{overallScore}</div>
+          </div>
         </div>
 
-        <div className={`mt-5 grid gap-3 transition-opacity duration-300 ${fading ? "opacity-0" : "opacity-100"}`}>
-          {scenario.signals.map((signal) => (
-            <Signal key={signal.label} {...signal} />
-          ))}
+        <div className="mt-4">
+          <SkillSpiderChart markers={SKILL_MARKERS} />
         </div>
 
-        <div className={`mt-6 border border-zinc-800 bg-[#090909] p-5 transition-opacity duration-300 ${fading ? "opacity-0" : "opacity-100"}`}>
-          <div className="font-mono text-[10px] uppercase tracking-[2px] text-zinc-600">Readiness probe</div>
-          <p className="mt-3 text-sm leading-relaxed text-zinc-300">{scenario.probe}</p>
+        <div className="mt-5 border border-zinc-800 bg-[#090909] p-4">
+          <div className="font-mono text-[10px] uppercase tracking-[2px] text-zinc-600">Gap summary</div>
+          <ul className="mt-3 space-y-3">
+            {GAP_SUMMARY.map((gap) => (
+              <li key={gap.skill} className="flex items-start justify-between gap-3 text-sm">
+                <div>
+                  <span className="text-zinc-200">{gap.skill}</span>
+                  <p className="mt-1 text-xs leading-relaxed text-zinc-500">{gap.detail}</p>
+                </div>
+                <span
+                  className={`shrink-0 rounded-sm border px-2 py-0.5 font-mono text-[10px] uppercase tracking-[1px] ${
+                    gap.severity === "High"
+                      ? "border-amber-400/30 bg-amber-950/40 text-amber-300"
+                      : "border-zinc-700 bg-zinc-900 text-zinc-400"
+                  }`}
+                >
+                  {gap.severity}
+                </span>
+              </li>
+            ))}
+          </ul>
         </div>
 
-        <div className={`mt-4 grid grid-cols-3 gap-3 text-center transition-opacity duration-300 ${fading ? "opacity-0" : "opacity-100"}`}>
-          {scenario.metrics.map((metric) => (
-            <Metric key={metric.label} value={metric.value} label={metric.label} />
-          ))}
+        <div className="mt-4 border border-zinc-800 bg-zinc-950/80 p-4">
+          <div className="font-mono text-[10px] uppercase tracking-[2px] text-zinc-600">Action steps</div>
+          <ol className="mt-3 space-y-2.5">
+            {ACTION_STEPS.map((action, index) => (
+              <li key={action.step} className="flex items-start gap-3 text-sm">
+                <span className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-sm bg-zinc-800 font-mono text-[10px] text-zinc-400">
+                  {index + 1}
+                </span>
+                <div className="min-w-0 flex-1">
+                  {action.ileHref ? (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        trackCtaClick({
+                          location: "landing_widget_ile",
+                          label: action.step,
+                          href: action.ileHref!,
+                          page: "/",
+                        })
+                      }
+                      className="group text-left"
+                    >
+                      <span className="text-cyan-200 underline decoration-cyan-400/40 underline-offset-2 transition group-hover:text-cyan-100">
+                        {action.step}
+                      </span>
+                      <span className="mt-1 block font-mono text-[10px] text-zinc-600">{action.ileHref}</span>
+                    </button>
+                  ) : (
+                    <span className="text-zinc-300">{action.step}</span>
+                  )}
+                </div>
+                <span
+                  className={`shrink-0 font-mono text-[10px] uppercase tracking-[1px] ${
+                    action.status === "Done"
+                      ? "text-emerald-400/80"
+                      : action.status === "Open"
+                        ? "text-cyan-300"
+                        : "text-zinc-600"
+                  }`}
+                >
+                  {action.status}
+                </span>
+              </li>
+            ))}
+          </ol>
         </div>
-
-        <div className="mt-5 flex justify-center gap-1.5" aria-hidden="true">
-          {READINESS_SCENARIOS.map((item, index) => (
-            <span
-              key={item.id}
-              className={`h-1.5 rounded-full transition-all duration-300 ${index === scenarioIndex ? "w-5 bg-cyan-300/80" : "w-1.5 bg-zinc-700"}`}
-            />
-          ))}
-        </div>
-
-        <TrackedCtaLink
-          href={scenario.solutionHref}
-          label="Readiness guide"
-          location="landing_widget_cta"
-          page="/"
-          className={`mt-5 flex w-full items-center justify-center gap-2 rounded-sm border border-zinc-700 bg-white px-4 py-2.5 text-sm font-medium text-black transition hover:bg-zinc-200 ${fading ? "opacity-0" : "opacity-100"}`}
-        >
-          Readiness guide
-          <ArrowRight size={14} />
-        </TrackedCtaLink>
       </div>
     </div>
   );
 }
 
-function Signal({ label, value, width, muted = false, alert = false }: { label: string; value: string; width: string; muted?: boolean; alert?: boolean }) {
-  return (
-    <div className="rounded-sm border border-zinc-800 bg-zinc-950/80 p-4">
-      <div className="flex items-center justify-between gap-4 text-sm">
-        <span className="text-zinc-300">{label}</span>
-        <span className={alert ? "text-amber-300" : muted ? "text-zinc-500" : "text-cyan-200"}>{value}</span>
-      </div>
-      <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-zinc-900">
-        <div className={`h-full ${alert ? "bg-amber-300/70" : muted ? "bg-zinc-500" : "bg-cyan-300/80"}`} style={{ width }} />
-      </div>
-    </div>
-  );
-}
+function SkillSpiderChart({ markers }: { markers: { label: string; score: number }[] }) {
+  const size = 280;
+  const center = size / 2;
+  const radius = 72;
 
-function Metric({ value, label }: { value: string; label: string }) {
+  const points = markers.map((marker, index) => {
+    const angle = -Math.PI / 2 + (index / markers.length) * Math.PI * 2;
+    const value = Math.max(0, Math.min(100, marker.score)) / 100;
+    const cos = Math.cos(angle);
+    const sin = Math.sin(angle);
+    return {
+      x: center + cos * radius * value,
+      y: center + sin * radius * value,
+      labelX: center + cos * (radius + 28),
+      labelY: center + sin * (radius + 28),
+      textAnchor: (Math.abs(cos) < 0.2 ? "middle" : cos > 0 ? "start" : "end") as "middle" | "start" | "end",
+      score: marker.score,
+      label: marker.label,
+      low: marker.score < 50,
+    };
+  });
+
   return (
-    <div className="border border-zinc-800 bg-zinc-950/70 p-4">
-      <div className="text-2xl font-medium text-white">{value}</div>
-      <div className="mt-1 font-mono text-[9px] uppercase tracking-[1.4px] text-zinc-600">{label}</div>
-    </div>
+    <svg viewBox={`0 0 ${size} ${size}`} className="mx-auto w-full max-w-[280px]" role="img" aria-label="Skill spider chart">
+      {[0.25, 0.5, 0.75, 1].map((level) => (
+        <polygon
+          key={level}
+          points={markers
+            .map((_, index) => {
+              const angle = -Math.PI / 2 + (index / markers.length) * Math.PI * 2;
+              return `${center + Math.cos(angle) * radius * level},${center + Math.sin(angle) * radius * level}`;
+            })
+            .join(" ")}
+          fill="none"
+          stroke="rgba(255,255,255,0.1)"
+        />
+      ))}
+      {markers.map((_, index) => {
+        const angle = -Math.PI / 2 + (index / markers.length) * Math.PI * 2;
+        return (
+          <line
+            key={`axis-${index}`}
+            x1={center}
+            y1={center}
+            x2={center + Math.cos(angle) * radius}
+            y2={center + Math.sin(angle) * radius}
+            stroke="rgba(255,255,255,0.06)"
+          />
+        );
+      })}
+      <polygon
+        points={points.map((point) => `${point.x},${point.y}`).join(" ")}
+        fill="rgba(34,211,238,0.12)"
+        stroke="rgba(34,211,238,0.7)"
+        strokeWidth="1.5"
+      />
+      {points.map((point) => (
+        <g key={point.label}>
+          <circle cx={point.x} cy={point.y} r="3" fill={point.low ? "#fbbf24" : "#67e8f9"} />
+          <text
+            x={point.labelX}
+            y={point.labelY}
+            textAnchor={point.textAnchor}
+            dominantBaseline="middle"
+            className="fill-zinc-500 text-[8px]"
+          >
+            {point.label}
+          </text>
+        </g>
+      ))}
+    </svg>
   );
 }

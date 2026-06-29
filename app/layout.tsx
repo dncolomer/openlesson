@@ -10,7 +10,7 @@ export const metadata: Metadata = {
     template: "%s | openLesson",
   },
   description:
-    "Score genuine human cognition—not AI-assisted polish. openLesson uses the Think-Aloud Protocol and Selective Thought Interface to verify real thinking in workspaces, ILE sessions, and hiring assessments.",
+    "Three products on Performance Workspaces: Evidence API for headless verification, Think-Aloud Protocol for hosted cognitive scoring, and the Integrated Learning Environment to close gaps.",
   keywords: [
     "performance readiness platform",
     "think aloud protocol",
@@ -38,7 +38,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "openLesson — Prove Performance Readiness",
     description:
-      "AI makes humans look ready. openLesson proves they actually are—with the Think-Aloud Protocol, Selective Thought Interface, and readiness evidence.",
+      "Three products on Performance Workspaces: Evidence API, Think-Aloud Protocol, and the Integrated Learning Environment.",
     url: "https://openlesson.academy",
     siteName: "openLesson",
     images: [
@@ -56,7 +56,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "openLesson — Performance Readiness Platform",
     description:
-      "Measure genuine human cognition—not AI-fed interview polish. Think-Aloud Protocol, Selective Thought Interface, readiness evidence.",
+      "Evidence API, Think-Aloud Protocol, and Integrated Learning Environment—built on Performance Workspaces.",
     images: ["/og-default.jpg"],
     creator: "@uncertainsys",
   },
@@ -80,7 +80,7 @@ const organizationSchema = {
   name: "openLesson",
   url: "https://openlesson.academy",
   description:
-    "Performance readiness platform scoring genuine human cognition via Think-Aloud Protocol and Selective Thought Interface.",
+    "Three products on Performance Workspaces: Evidence API, Think-Aloud Protocol, and Integrated Learning Environment.",
   founder: {
     "@type": "Person",
     name: "Daniel Colomer",
@@ -104,14 +104,14 @@ const softwareSchema = {
     priceCurrency: "USD",
   },
   description:
-    "Prove genuine human thinking with Think-Aloud Protocol sessions, Selective Thought Interface probing, and evaluation scoring.",
+    "Human knowledge verification and improvement on Performance Workspaces—via Evidence API, Think-Aloud Protocol, and the Integrated Learning Environment.",
   featureList: [
-    "Think-Aloud Protocol cognition capture",
-    "Selective Thought Interface",
     "Performance Workspaces",
-    "Immersive Learning Environment",
-    "Evaluation scoring and gap analysis",
-    "Agentic API for LMS integration",
+    "Evidence API — headless verification",
+    "Think-Aloud Protocol — hosted verification",
+    "Integrated Learning Environment",
+    "Continuous scoring and gap analysis",
+    "Agentic API v2 for LMS integration",
   ],
 };
 

@@ -41,123 +41,123 @@ export const PLATFORM_PAGE: SeoSolutionPageConfig = {
   slug: "platform",
   path: "/platform",
   eyebrow: "openLesson Platform",
-  h1: "Performance readiness software for AI-enabled learning",
+  h1: "Three products on Performance Workspaces",
   intro:
-    "openLesson helps you prove genuine human cognition—not polished AI output or hidden interview assistance. Score real thinking with the Think-Aloud Protocol and Selective Thought Interface inside Performance Workspaces, the ILE, and evaluation sessions.",
-  metaTitle: "Performance Readiness Platform — Think-Aloud Cognition Scoring",
+    "openLesson is built on Performance Workspaces you create and enrich programmatically—with documents, screen shares, video assets, EEG data, and any human-generated evidence. Three products sit on top: two Human Knowledge Verification offerings (headless Evidence API and hosted Think-Aloud Protocol) and the Integrated Learning Environment for improvement.",
+  metaTitle: "Platform — Performance Workspaces, Verification & ILE",
   metaDescription:
-    "Score genuine human thinking—not AI-assisted polish. openLesson uses the Think-Aloud Protocol and Selective Thought Interface to verify cognition in workspaces, ILE sessions, and evaluation environments.",
+    "Three products on Performance Workspaces: Evidence API for headless verification, Think-Aloud Protocol URLs for hosted cognitive scoring, and the Integrated Learning Environment to close gaps.",
   keywords: [
-    "performance readiness platform",
-    "AI skill assessment",
+    "performance workspace",
+    "human knowledge verification",
+    "evidence API",
     "think aloud protocol",
-    "AI interview cheating detection",
+    "integrated learning environment",
+    "AI skill assessment",
     "genuine human cognition",
-    "learning verification software",
-    "immersive learning environment",
     "LMS integration API",
     "skills gap analysis",
   ],
   navLabel: "Platform",
-  navDescription: "Workspaces, ILE, evaluation, and API overview",
+  navDescription: "Workspaces, verification products, and ILE",
   sections: [
     {
       title: "The problem: AI makes humans look ready before they are",
       paragraphs: [
-        "Generative AI gives instant answers, drafts, and confident-looking work. Real-time assist tools go further—feeding suggestions during live interviews, exams, and calls via hidden overlays. Outputs look competent; cognition often goes unmeasured.",
-        "Training completion and quiz scores were never reliable proxies for judgment. AI-assisted cheating makes the illusion worse. openLesson surfaces readiness evidence early by scoring how people think out loud when probed—not what they can paste from an assistant.",
+        "Generative AI gives instant answers, drafts, and confident-looking work. Real-time assist tools feed suggestions during live interviews, exams, and calls via hidden overlays. Outputs look competent; cognition often goes unmeasured.",
+        "Training completion and quiz scores were never reliable proxies for judgment. openLesson surfaces readiness evidence early—then helps humans close the gaps, not just document them.",
       ],
     },
     {
-      title: "Think-Aloud Protocol + Selective Thought Interface",
+      title: "Performance Workspaces: the foundation",
       paragraphs: [
-        "The Think-Aloud Protocol is a validated cognitive method: learners verbalize reasoning while working. Hesitations, self-corrections, causal chains, and skipped steps become observable—the gaps polished deliverables conceal.",
-        "openLesson's Selective Thought Interface extends that signal. Learners submit transcribed thought fragments; the system responds with Socratic probes that elicit evidence of understanding, transfer, and repair. You measure live cognition under inquiry—the most reliable score of genuine human thinking available in an AI-enabled assessment stack.",
+        "Every openLesson product runs on a Performance Workspace—a structured environment around a real skill, decision domain, or scenario. Workspaces break work into assessable blocks linked in a learning graph.",
+        "Create and enhance workspaces programmatically via the Agentic API v2. Ingest documents, screen recordings, video assets, EEG traces, transcripts, and other unstructured evidence. The workspace accumulates context as new artifacts arrive—fueling continuous scoring across all three products.",
       ],
     },
     {
-      title: "Performance Workspaces: structure what matters",
+      title: "Product 1: Evidence API — headless verification",
       paragraphs: [
-        "Start with a prompt describing the skill or scenario you need to master. openLesson generates a Performance Workspace with assessable blocks linked in a learning graph.",
-        "Each block defines what you should be able to demonstrate. Progress is tracked per block, not as a single course completion bar. That granularity makes gap analysis specific enough to act on.",
+        "The Evidence API is openLesson's headless Human Knowledge Verification product. Send unstructured evidence—documents, call transcripts, screen captures, sensor data—and receive a continuous readiness score with gap analysis. No hosted session required.",
+        "Scores update as evidence accumulates. Integrate into LMS platforms, HRIS workflows, agentic pipelines, or any system that needs verified human performance data without a front-end session.",
       ],
     },
     {
-      title: "Immersive Learning Environment (ILE)",
+      title: "Product 2: Think-Aloud Protocol — hosted verification",
       paragraphs: [
-        "The ILE is where practice happens. You enter a learning session for a block, follow the Think-Aloud Protocol, and build the judgment AI cannot replace.",
-        "Live speech is transcribed into think-aloud traces. Pauses become selectable thoughts for deeper probing. Reasoning accumulates as evidence—not as a final answer an overlay could supply.",
+        "The Think-Aloud Protocol is openLesson's hosted Human Knowledge Verification product. Generate shareable URLs scoped to a block or entire workspace. Humans verbalize reasoning while working—the signal hidden AI overlays cannot fabricate.",
+        "Live speech is transcribed into think-aloud traces. Socratic probes target hesitations, revisions, and causal chains. Results include marker scores, per-marker rationale, and auditable gap reports.",
       ],
     },
     {
-      title: "Evaluation Environment: verify readiness",
+      title: "Product 3: Integrated Learning Environment (ILE)",
       paragraphs: [
-        "When you need proof—not practice—openLesson's Evaluation Environment runs structured sessions that probe understanding, score learning markers, and return gap analysis with suggested repairs.",
-        "Evaluation links can be scoped to a single block or an entire workspace. Results include overall scores, per-marker rationale, and evidence-backed gaps.",
+        "The ILE is where humans improve. Gap findings from either verification product route into guided practice: think-aloud sessions, Socratic follow-ups, and targeted blocks until scores move.",
+        "The ILE is not a pass/fail checker—it is the improvement layer. Humans practice real scenarios, build judgment that complements AI tools, and produce evidence of progress along the way.",
       ],
     },
     {
-      title: "Agentic API: integrate with any LMS or edtech platform",
+      title: "The verify-and-improve loop",
       paragraphs: [
-        "Teams building custom learning products can use the Agentic API v2 to create workspaces programmatically, upload evidence artifacts, request structured performance reports, issue private evaluation links, and poll completion results.",
-        "Connect openLesson's readiness layer to Canvas, Moodle, internal academies, or any system that needs verified human performance data alongside AI tooling.",
+        "Choose headless verification when you have existing artifacts and workflows. Choose Think-Aloud Protocol URLs when you need live cognition under probe. Use the ILE when gaps need to close—not just be labeled.",
+        "All three products share the same workspace context, scoring model, and gap analysis. Verification surfaces weak spots; the ILE repairs them—with auditable evidence at every step.",
       ],
     },
     {
-      title: "Readiness evidence, not vanity metrics",
+      title: "Agentic API v2: programmatic access to everything",
       paragraphs: [
-        "openLesson synthesizes signals from ILE sessions, evaluation results, uploaded artifacts, and linked activity into performance reports: strengths, growth areas, severity-ranked gaps, and recommended practice.",
-        "Whether you are an individual professional, an L&D lead, or a product team embedding learning verification, the goal is the same: know what you actually understand before AI-assisted work goes live.",
+        "The Agentic API v2 is how builders integrate all three products. Create workspaces, upload evidence, request continuous performance reports, issue Think-Aloud Protocol evaluation links, poll session results, and trigger ILE practice blocks.",
+        "Connect openLesson's verification and improvement layer to Canvas, Moodle, internal academies, hiring stacks, or any system that needs genuine human cognition data alongside AI tooling.",
       ],
     },
   ],
   faqs: [
     {
-      question: "What is a Performance Workspace in openLesson?",
+      question: "What is a Performance Workspace?",
       answer:
-        "A Performance Workspace is a structured learning environment built around a real skill, decision domain, or scenario. It breaks work into assessable blocks, captures evidence from practice, and produces readiness reports—not just completion checkmarks.",
+        "A Performance Workspace is the foundation every openLesson product runs on. It structures a skill or scenario into assessable blocks and accumulates evidence—documents, screen shares, video, EEG data, transcripts, and session artifacts—that fuels continuous scoring and gap analysis.",
     },
     {
-      question: "How is openLesson different from a traditional LMS?",
+      question: "What are the three openLesson products?",
       answer:
-        "Most LMS platforms track seat time, quizzes, and module completion. openLesson measures demonstrated judgment via think-aloud reasoning: how you explore, revise, and defend thinking when probed—not scripts from hidden AI assist tools.",
+        "Two Human Knowledge Verification products—Evidence API (headless, evidence-based continuous scoring) and Think-Aloud Protocol (hosted URLs for live cognitive verification)—plus the Integrated Learning Environment (ILE) for guided practice and score improvement.",
     },
     {
-      question: "How does openLesson address AI cheating in interviews and assessments?",
+      question: "When should I use the Evidence API vs. Think-Aloud Protocol?",
       answer:
-        "Tools that feed answers during live calls only test whether someone can read a suggestion. openLesson scores genuine cognition through the Think-Aloud Protocol and Selective Thought Interface—speech and thought fragments under Socratic probe. That signal is far harder to fake than polished written output.",
+        "Use the Evidence API when you already have unstructured artifacts and want continuous scoring without a hosted session—ideal for LMS integrations and agentic workflows. Use Think-Aloud Protocol URLs when you need live cognition under probe, such as hiring assessments or high-stakes readiness checks.",
     },
     {
-      question: "What is the Selective Thought Interface?",
+      question: "What is the Integrated Learning Environment (ILE)?",
       answer:
-        "A structured layer where learners submit transcribed thought fragments and receive targeted Socratic follow-ups. It elicits evidence of definitions, causal reasoning, examples, application, and repair—turning live thinking into scorable readiness markers.",
+        "The ILE is openLesson's learning product. It turns gap findings from verification into targeted practice—think-aloud sessions, Socratic probes, and scenario blocks—so humans improve their scores with evidence at every step.",
     },
     {
-      question: "What is the Immersive Learning Environment (ILE)?",
+      question: "How does openLesson address AI cheating?",
       answer:
-        "The ILE is openLesson's practice layer. You work through real scenarios, articulate reasoning, and build skill that complements AI tools—instead of hiding weak understanding behind polished outputs.",
+        "Polished output is easy to fake with AI assist tools. openLesson scores genuine cognition—either from accumulated evidence artifacts or from live think-aloud reasoning under Socratic probe. That signal is far harder to manufacture than a generated deliverable.",
     },
     {
-      question: "What is the Evaluation Environment?",
+      question: "What evidence can I add to a workspace?",
       answer:
-        "The Evaluation Environment runs structured readiness sessions that probe depth, expose gaps, and return marker scores plus actionable gap analysis.",
+        "Documents, screen recordings, video assets, EEG traces, call transcripts, tool traces, and any human-generated data. Workspaces are enriched programmatically via the Agentic API v2 or through manual upload.",
     },
     {
       question: "Can I integrate openLesson with my existing LMS?",
       answer:
-        "Yes. The Agentic API v2 lets agents and platforms create workspaces, upload evidence, run performance analysis, and issue evaluation links—without replacing your LMS front end.",
+        "Yes. The Agentic API v2 lets agents and platforms create workspaces, pipe evidence, run continuous performance analysis, issue Think-Aloud Protocol links, and trigger ILE practice—without replacing your LMS front end.",
     },
     {
       question: "Who is openLesson for?",
       answer:
-        "Professionals proving readiness before critical decisions, teams validating AI-enabled skill, L&D leaders who need evidence beyond completion rates, and builders embedding learning verification via API.",
+        "Professionals proving readiness, teams validating AI-enabled skill, L&D leaders who need evidence beyond completion rates, and builders embedding human knowledge verification and improvement via API.",
     },
   ],
   primaryCta: { label: "Create a Performance Workspace", href: "/workspace/new" },
   secondaryCta: { label: "Agentic API docs", href: "/docs/agentic-v2" },
-  closingTitle: "Start measuring readiness today",
+  closingTitle: "Start with a workspace. Choose your verification path.",
   closingBody:
-    "Create your first Performance Workspace free, or explore Teams pricing for organizations and API access.",
+    "Create your first Performance Workspace free, then verify with evidence or think-aloud—and improve in the ILE.",
 };
 
 export const SOLUTION_PAGES: SeoSolutionPageConfig[] = [

@@ -3,6 +3,7 @@ import { Footer } from "@/components/Footer";
 import { LeadCapture } from "@/components/LeadCapture";
 import { Navbar } from "@/components/Navbar";
 import { TrackedCtaLink } from "@/components/TrackedCtaLink";
+import { ProductStack } from "@/components/ProductStack";
 import {
   BASE_URL,
   DEFAULT_BACKGROUND,
@@ -127,6 +128,19 @@ export function SeoSolutionPage({
             {page.h1}
           </h1>
           <p className="mt-6 text-lg leading-relaxed text-neutral-400">{page.intro}</p>
+          <div className="mt-10 rounded-md border border-neutral-800 bg-neutral-950/70 p-5 sm:p-6">
+            <p className="font-mono text-[10px] uppercase tracking-[2px] text-neutral-500">
+              Built on Performance Workspaces
+            </p>
+            <p className="mt-3 text-sm leading-relaxed text-neutral-400">
+              Every solution uses the same three-product stack: Evidence API for headless verification,
+              Think-Aloud Protocol URLs for hosted cognitive scoring, and the Integrated Learning
+              Environment to close gaps.
+            </p>
+            <div className="mt-5">
+              <ProductStack variant="compact" showFoundation={false} />
+            </div>
+          </div>
           <div className="mt-8 flex flex-wrap gap-3">
             <TrackedCtaLink
               href={page.primaryCta.href}

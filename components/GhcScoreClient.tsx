@@ -1052,21 +1052,24 @@ export function GhcScoreClient({ planId, planNodeId, sessionId, privateToken, in
 
         {phase === "live" && (
           <section className="grid flex-1 gap-4 py-4 lg:grid-cols-[1fr_22rem]">
-            <div className="flex min-h-[70vh] flex-col rounded-2xl border border-neutral-900 bg-neutral-950/65 backdrop-blur-sm">
-              <div className="border-b border-neutral-900 px-4 py-3">
-                <div className="text-xs text-neutral-500">
-                  {isListening ? "Listening live" : recognitionCtor ? "Waiting for microphone" : "Speech recognition unavailable"}
+            <div className="flex min-h-0 flex-col gap-4">
+              <div className="flex min-h-[48vh] flex-1 flex-col rounded-2xl border border-neutral-900 bg-neutral-950/65 backdrop-blur-sm">
+                <div className="border-b border-neutral-900 px-4 py-3">
+                  <div className="text-xs text-neutral-500">
+                    {isListening ? "Listening live" : recognitionCtor ? "Waiting for microphone" : "Speech recognition unavailable"}
+                  </div>
                 </div>
+                <GhcDialogueSplit
+                  lastUserTurn={lastUserTurn}
+                  lastAssistantTurn={lastAssistantTurn}
+                  promptText={welcomePrompt}
+                  isSending={isSending}
+                  error={error}
+                  userInitial={userInitial}
+                />
               </div>
-              <GhcDialogueSplit
-                lastUserTurn={lastUserTurn}
-                lastAssistantTurn={lastAssistantTurn}
-                promptText={welcomePrompt}
-                isSending={isSending}
-                error={error}
-                userInitial={userInitial}
-              />
-              <div className="border-t border-neutral-900 p-4">
+
+              <div className="rounded-2xl border border-neutral-900 bg-neutral-950/65 p-4 backdrop-blur-sm">
                 <div className="flex items-center gap-3">
                   <div className="flex h-9 min-w-0 flex-1 items-center rounded-md border border-neutral-900 bg-black px-3 text-sm text-neutral-300">
                     {interimText || <span className="text-neutral-700">live transcription appears here...</span>}
@@ -1079,55 +1082,60 @@ export function GhcScoreClient({ planId, planNodeId, sessionId, privateToken, in
                   </GhcButton>
                 </div>
                 {speechError && <p className="mt-2 text-xs text-red-300">Speech recognition: {speechError}</p>}
-              </div>
-              <div className="border-t border-neutral-900 p-4">
-                <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                  <div className="text-[10px] uppercase tracking-[2px] text-neutral-600">Active thoughts</div>
-                  <GhcButton
-                    size="md"
-                    disabled={selectedActiveThoughts.length < 2}
-                    onClick={() =>
-                      sendThought(
-                        selectedActiveThoughts.map((thought) => thought.text).join("\n"),
-                        selectedActiveThoughts.map((thought) => thought.id),
-                      )
-                    }
-                  >
-                    <GhcButtonLabel shortcut="S">send selected ({selectedActiveThoughts.length})</GhcButtonLabel>
-                  </GhcButton>
-                </div>
-                <div className="grid gap-3 md:grid-cols-3">
-                {latestThoughts.map((thought, index) => (
-                  <div
-                    key={thought.id}
-                    className={`group flex min-h-36 flex-col gap-3 rounded-xl border bg-black p-4 text-left transition hover:border-white/50 ${
-                      selectedActiveThoughtIds.has(thought.id) ? "border-white/70" : "border-neutral-800"
-                    }`}
-                  >
-                    <p className="text-[10px] uppercase tracking-[1.8px] text-neutral-500">Thought {index + 1}</p>
-                    <p className="flex-1 text-sm leading-relaxed text-neutral-200">{thought.text}</p>
-                    <div className="flex flex-wrap items-center gap-2 border-t border-neutral-900 pt-3">
-                      <GhcButton
-                        size="sm"
-                        variant={selectedActiveThoughtIds.has(thought.id) ? "toggleOn" : "toggleOff"}
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          toggleActiveThought(thought.id);
-                        }}
-                      >
-                        {selectedActiveThoughtIds.has(thought.id) ? (
-                          "selected"
-                        ) : (
-                          <GhcButtonLabel shortcut={["⇧", String(index + 1)]}>select</GhcButtonLabel>
-                        )}
-                      </GhcButton>
-                      <GhcButton size="sm" onClick={() => sendThought(thought.text, [thought.id])}>
-                        <GhcButtonLabel shortcut={index + 1}>send</GhcButtonLabel>
-                      </GhcButton>
-                    </div>
+
+                <div className="mt-4 border-t border-neutral-900 pt-4">
+                  <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="text-[10px] uppercase tracking-[2px] text-neutral-600">Active thoughts</div>
+                    <GhcButton
+                      size="md"
+                      disabled={selectedActiveThoughts.length < 2}
+                      onClick={() =>
+                        sendThought(
+                          selectedActiveThoughts.map((thought) => thought.text).join("\n"),
+                          selectedActiveThoughts.map((thought) => thought.id),
+                        )
+                      }
+                    >
+                      <GhcButtonLabel shortcut="S">send selected ({selectedActiveThoughts.length})</GhcButtonLabel>
+                    </GhcButton>
                   </div>
-                ))}
-                {latestThoughts.length === 0 && <div className="col-span-full rounded-xl border border-dashed border-neutral-800 bg-black p-6 text-center text-sm text-neutral-600">Speak to create thought traces.</div>}
+                  <div className="grid gap-3 md:grid-cols-3">
+                    {latestThoughts.map((thought, index) => (
+                      <div
+                        key={thought.id}
+                        className={`group flex min-h-36 flex-col gap-3 rounded-xl border bg-black p-4 text-left transition hover:border-white/50 ${
+                          selectedActiveThoughtIds.has(thought.id) ? "border-white/70" : "border-neutral-800"
+                        }`}
+                      >
+                        <p className="text-[10px] uppercase tracking-[1.8px] text-neutral-500">Thought {index + 1}</p>
+                        <p className="flex-1 text-sm leading-relaxed text-neutral-200">{thought.text}</p>
+                        <div className="flex flex-wrap items-center gap-2 border-t border-neutral-900 pt-3">
+                          <GhcButton
+                            size="sm"
+                            variant={selectedActiveThoughtIds.has(thought.id) ? "toggleOn" : "toggleOff"}
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              toggleActiveThought(thought.id);
+                            }}
+                          >
+                            {selectedActiveThoughtIds.has(thought.id) ? (
+                              "selected"
+                            ) : (
+                              <GhcButtonLabel shortcut={["⇧", String(index + 1)]}>select</GhcButtonLabel>
+                            )}
+                          </GhcButton>
+                          <GhcButton size="sm" onClick={() => sendThought(thought.text, [thought.id])}>
+                            <GhcButtonLabel shortcut={index + 1}>send</GhcButtonLabel>
+                          </GhcButton>
+                        </div>
+                      </div>
+                    ))}
+                    {latestThoughts.length === 0 && (
+                      <div className="col-span-full rounded-xl border border-dashed border-neutral-800 bg-black p-6 text-center text-sm text-neutral-600">
+                        Speak to create thought traces.
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>

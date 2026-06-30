@@ -4,6 +4,10 @@ export interface SkillGridNode {
   status: string;
   is_start: boolean;
   next_node_ids: string[];
+  /** Grid column in world coordinates */
+  position_x?: number;
+  /** Grid row in world coordinates */
+  position_y?: number;
 }
 
 export interface GridCell {
@@ -71,19 +75,44 @@ export function getRadialCells(count: number): GridCell[] {
   return cells.slice(0, count).map(({ row, col }) => ({ row, col }));
 }
 
-/** World-space layout: start block at (0, 0), siblings expand outward in rings. */
+function hasGridPosition(node: SkillGridNode) {
+  return node.position_x != null && node.position_y != null;
+}
+
+function cellKey(cell: GridCell) {
+  return `${cell.row}:${cell.col}`;
+}
+
+/** World-space layout: honors saved grid cells, then fills gaps radially from origin. */
 export function buildSkillGridLayout(nodes: SkillGridNode[]) {
   const ordered = getOrderedSkillGridNodes(nodes);
   const placements = new Map<string, GridCell>();
   const occupancy = new Map<string, string>();
 
-  if (ordered.length > 0) {
-    const radialSlots = getRadialCells(ordered.length);
-    ordered.forEach((node, index) => {
-      const cell = radialSlots[index];
-      placements.set(node.id, cell);
-      occupancy.set(`${cell.row}:${cell.col}`, node.id);
-    });
+  for (const node of nodes) {
+    if (!hasGridPosition(node)) continue;
+    const cell = { row: node.position_y!, col: node.position_x! };
+    const key = cellKey(cell);
+    if (occupancy.has(key)) continue;
+    placements.set(node.id, cell);
+    occupancy.set(key, node.id);
+  }
+
+  const unplaced = ordered.filter((node) => !placements.has(node.id));
+  if (unplaced.length > 0) {
+    const radialSlots = getRadialCells(Math.max(unplaced.length + occupancy.size, nodes.length + 4));
+    let slotIndex = 0;
+
+    for (const node of unplaced) {
+      while (slotIndex < radialSlots.length) {
+        const cell = radialSlots[slotIndex++];
+        const key = cellKey(cell);
+        if (occupancy.has(key)) continue;
+        placements.set(node.id, cell);
+        occupancy.set(key, node.id);
+        break;
+      }
+    }
   }
 
   const startNode = ordered.find((node) => node.is_start) ?? ordered[0];

@@ -57,7 +57,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { planId, userPrompt, conversationHistory, model: userModel, locale, images } = await req.json();
+    const { planId, userPrompt, conversationHistory, model: userModel, locale, images, gridRow, gridCol } =
+      await req.json();
     
     if (!planId || !userPrompt) {
       return NextResponse.json({ error: "Plan ID and prompt are required" }, { status: 400 });
@@ -173,6 +174,8 @@ Respond with JSON containing your explanation and the complete updated sessions 
     const idMap = new Map<string, string>();
     // Track all node IDs that exist after processing (including newly created)
     const allNodeIds = new Set<string>(existingIds);
+    const createdNodeIds: string[] = [];
+    const hasGridPlacement = typeof gridRow === "number" && typeof gridCol === "number";
 
     for (let idx = 0; idx < llmSessions.length; idx++) {
       const session = llmSessions[idx];
@@ -215,6 +218,7 @@ Respond with JSON containing your explanation and the complete updated sessions 
           // Also map by index for linking purposes
           idMap.set(`__idx_${idx}`, newNode.id);
           allNodeIds.add(newNode.id);
+          createdNodeIds.push(newNode.id);
         }
       }
     }
@@ -283,6 +287,17 @@ Respond with JSON containing your explanation and the complete updated sessions 
           })
           .eq("id", mappedId);
       }
+    }
+
+    if (hasGridPlacement && createdNodeIds.length > 0) {
+      const gridNodeId = createdNodeIds[createdNodeIds.length - 1];
+      await supabase
+        .from("plan_nodes")
+        .update({
+          position_x: gridCol,
+          position_y: gridRow,
+        })
+        .eq("id", gridNodeId);
     }
 
     const { data: updatedNodes, error: fetchError } = await supabase

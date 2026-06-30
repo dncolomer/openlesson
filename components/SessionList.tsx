@@ -133,6 +133,8 @@ export function SessionList({
             userPrompt: `Add a new learning block for skill grid slot (row ${position.row + 1}, column ${position.col + 1}).${neighborNote} User request: "${prompt}"`,
             model,
             locale,
+            gridRow: position.row,
+            gridCol: position.col,
           }),
         });
 
@@ -142,7 +144,13 @@ export function SessionList({
         }
 
         const data = await response.json();
-        if (data.updatedNodes?.length > 0 && onNodesUpdate) onNodesUpdate(data.updatedNodes);
+        if (data.updatedNodes?.length > 0) {
+          if (onNodesUpdate) onNodesUpdate(data.updatedNodes);
+          const placedNode = data.updatedNodes.find(
+            (node: PlanNode) => node.position_x === position.col && node.position_y === position.row,
+          );
+          if (placedNode) setExpandedNodeId(placedNode.id);
+        }
         if (onRefresh) onRefresh();
         router.refresh();
       } catch (err) {

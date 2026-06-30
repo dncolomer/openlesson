@@ -52,6 +52,9 @@ interface ChatMessage {
 }
 
 const WELCOME_MESSAGE_ID = "welcome";
+const THINK_ALOUD_PROTOCOL_LABEL = "Think Aloud Protocol";
+const THINK_ALOUD_WELCOME_PROMPT =
+  "Think aloud and submit a thought to receive a Socratic probe.";
 
 type DialogueSnapshot = {
   messages: ChatMessage[];
@@ -413,7 +416,7 @@ export function GhcScoreClient({ planId, planNodeId, sessionId, privateToken, in
 
   const welcomePrompt =
     messages.find((message) => message.id === WELCOME_MESSAGE_ID)?.content ||
-    "Start demonstrating what you learned. Submit a thought to receive a Socratic probe.";
+    THINK_ALOUD_WELCOME_PROMPT;
 
   const lastUserTurn = useMemo(() => {
     for (let index = messages.length - 1; index >= 0; index -= 1) {
@@ -727,7 +730,7 @@ export function GhcScoreClient({ planId, planNodeId, sessionId, privateToken, in
       {
         id: WELCOME_MESSAGE_ID,
         role: "assistant",
-        content: "Start demonstrating what you learned. Submit a thought to receive a Socratic probe.",
+        content: THINK_ALOUD_WELCOME_PROMPT,
         at: new Date().toISOString(),
       },
     ]);
@@ -870,42 +873,11 @@ export function GhcScoreClient({ planId, planNodeId, sessionId, privateToken, in
       <div className="fixed inset-0 z-0 bg-[radial-gradient(circle_at_72%_8%,rgba(14,116,144,0.18),transparent_31%),radial-gradient(circle_at_12%_18%,rgba(39,39,42,0.55),transparent_32%)]" />
 
       <div className="relative z-10 mx-auto flex min-h-screen w-full max-w-7xl flex-col px-4 py-5 sm:px-6">
-        <header className="flex items-center justify-between border-b border-neutral-900 pb-4">
-          <div>
-            <p className="font-mono text-[10px] uppercase tracking-[2px] text-neutral-600">GHL Score</p>
-            <h1 className="mt-1 text-xl font-medium tracking-[-0.5px]">Learning Demonstration</h1>
-          </div>
-          {phase === "live" && (
-            <div className="flex items-center gap-3">
-              <div className="text-right">
-                <div className="font-mono text-[10px] uppercase tracking-[2px] text-neutral-600">Time left</div>
-                <div
-                  className={`font-mono text-xl tabular-nums tracking-tight ${
-                    remainingSeconds <= 60 ? "text-amber-300" : "text-white"
-                  }`}
-                >
-                  {formatCountdown(remainingSeconds)}
-                </div>
-              </div>
-              <GhcButton
-                size="md"
-                variant={voiceEnabled ? "toggleOn" : "toggleOff"}
-                onClick={() => setVoiceEnabled((value) => !value)}
-              >
-                <GhcButtonLabel shortcut="V">voice</GhcButtonLabel>
-              </GhcButton>
-              <GhcButton size="md" variant="primary" onClick={endAndScore}>
-                End & Score
-              </GhcButton>
-            </div>
-          )}
-        </header>
-
         {phase === "setup" && (
           <section className="flex flex-1 items-center justify-center py-12">
             <div className="w-full max-w-2xl rounded-2xl border border-neutral-900 bg-neutral-950/70 p-6 backdrop-blur-sm">
               <p className="font-mono text-xs uppercase tracking-[2px] text-neutral-500">{workspaceTitle}</p>
-              <h2 className="mt-3 text-4xl font-medium tracking-[-1.5px]">Demonstrate what you learned.</h2>
+              <h2 className="mt-3 text-4xl font-medium tracking-[-1.5px]">{THINK_ALOUD_PROTOCOL_LABEL}</h2>
               <p className="mt-4 text-sm leading-relaxed text-neutral-400">
                 Browser transcription turns speech into thought traces. Use keyboard shortcuts to stay in flow without reaching for the mouse.
               </p>
@@ -955,7 +927,7 @@ export function GhcScoreClient({ planId, planNodeId, sessionId, privateToken, in
                 </div>
               )}
               <GhcButton size="lg" variant="primary" className="mt-8 w-full" onClick={startSession}>
-                Start GHL Score
+                Start Evaluation Environment
               </GhcButton>
             </div>
           </section>
@@ -964,8 +936,9 @@ export function GhcScoreClient({ planId, planNodeId, sessionId, privateToken, in
         {phase === "live" && (
           <section className="grid flex-1 gap-4 py-4 lg:grid-cols-[1fr_22rem]">
             <div className="flex min-h-0 flex-col gap-4">
-              <div className="flex min-h-[48vh] flex-1 flex-col">
+              <div className="flex min-h-[48vh] flex-1 flex-col overflow-hidden rounded-2xl border border-neutral-900 bg-neutral-950/65 backdrop-blur-sm">
                 <GhcDialogueSplit
+                  layout="ghl"
                   lastUserTurn={lastUserTurn}
                   lastAssistantTurn={lastAssistantTurn}
                   promptText={welcomePrompt}
@@ -975,40 +948,63 @@ export function GhcScoreClient({ planId, planNodeId, sessionId, privateToken, in
                 />
               </div>
 
-              <div className="rounded-2xl border border-neutral-900 bg-neutral-950/65 p-4 backdrop-blur-sm">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-9 min-w-0 flex-1 items-center rounded-md border border-neutral-900 bg-black px-3 text-sm text-neutral-300">
-                    {interimText}
+              <div className="rounded-2xl border border-neutral-900/80 bg-neutral-950/55 p-3 backdrop-blur-md">
+                <div className="mb-3 flex w-full flex-wrap items-center justify-between gap-2 border-b border-neutral-900/80 pb-3">
+                  <div>
+                    <div className="font-mono text-[10px] uppercase tracking-[2px] text-neutral-600">Time left</div>
+                    <div
+                      className={`font-mono text-lg tabular-nums tracking-tight ${
+                        remainingSeconds <= 60 ? "text-amber-300" : "text-white"
+                      }`}
+                    >
+                      {formatCountdown(remainingSeconds)}
+                    </div>
                   </div>
-                  <GhcButton size="md" disabled={!crystallizableText} onClick={crystallizeCurrentTranscription}>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <GhcButton
+                      size="sm"
+                      variant={voiceEnabled ? "toggleOn" : "toggleOff"}
+                      onClick={() => setVoiceEnabled((value) => !value)}
+                    >
+                      <GhcButtonLabel shortcut="V">voice</GhcButtonLabel>
+                    </GhcButton>
+                    <GhcButton size="sm" variant="primary" onClick={endAndScore}>
+                      End & Score
+                    </GhcButton>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <div className="flex h-8 min-w-0 flex-1 items-center rounded-md border border-neutral-900 bg-black/70 px-2.5 text-xs text-neutral-300">
+                    <span className="min-w-0 truncate">{interimText}</span>
+                  </div>
+                  <GhcButton size="sm" disabled={!crystallizableText} onClick={crystallizeCurrentTranscription}>
                     <GhcButtonLabel shortcut="C">crystallize</GhcButtonLabel>
                   </GhcButton>
-                  <GhcButton size="md" disabled={activeThoughts.length === 0} onClick={skipCurrentThought}>
+                  <GhcButton
+                    size="sm"
+                    disabled={selectedActiveThoughts.length < 2}
+                    onClick={() =>
+                      void sendThought(
+                        selectedActiveThoughts.map((thought) => thought.text).join("\n"),
+                        selectedActiveThoughts.map((thought) => thought.id),
+                      )
+                    }
+                  >
+                    <GhcButtonLabel shortcut="S">send ({selectedActiveThoughts.length})</GhcButtonLabel>
+                  </GhcButton>
+                  <GhcButton size="sm" disabled={activeThoughts.length === 0} onClick={skipCurrentThought}>
                     <GhcButtonLabel shortcut="Esc">skip</GhcButtonLabel>
                   </GhcButton>
                 </div>
 
-                <div className="mt-4 border-t border-neutral-900 pt-4">
-                  <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    <div className="text-[10px] uppercase tracking-[2px] text-neutral-600">Active thoughts</div>
-                    <GhcButton
-                      size="md"
-                      disabled={selectedActiveThoughts.length < 2}
-                      onClick={() =>
-                        sendThought(
-                          selectedActiveThoughts.map((thought) => thought.text).join("\n"),
-                          selectedActiveThoughts.map((thought) => thought.id),
-                        )
-                      }
-                    >
-                      <GhcButtonLabel shortcut="S">send selected ({selectedActiveThoughts.length})</GhcButtonLabel>
-                    </GhcButton>
-                  </div>
-                  <div className="grid gap-3 md:grid-cols-3">
+                <div className="mt-3 border-t border-neutral-900/80 pt-3">
+                  <p className="mb-2 text-[10px] uppercase tracking-[2px] text-neutral-600">Active thoughts</p>
+                  <div className="grid gap-2 md:grid-cols-3">
                     {latestThoughts.map((thought, index) => (
                       <div
                         key={thought.id}
-                        className={`group flex h-40 max-h-40 flex-col gap-2 overflow-hidden rounded-xl border bg-black p-4 text-left transition hover:border-white/50 ${
+                        className={`group flex h-32 max-h-32 flex-col gap-1.5 overflow-hidden rounded-xl border bg-black/70 p-3 text-left transition hover:border-white/50 ${
                           selectedActiveThoughtIds.has(thought.id) ? "border-white/70" : "border-neutral-800"
                         }`}
                       >
@@ -1038,7 +1034,7 @@ export function GhcScoreClient({ planId, planNodeId, sessionId, privateToken, in
                       </div>
                     ))}
                     {latestThoughts.length === 0 && (
-                      <div className="col-span-full rounded-xl border border-dashed border-neutral-800 bg-black p-6 text-center text-sm text-neutral-600">
+                      <div className="col-span-full rounded-xl border border-dashed border-neutral-800 bg-black/70 p-4 text-center text-xs text-neutral-600">
                         Speak to create thought traces.
                       </div>
                     )}

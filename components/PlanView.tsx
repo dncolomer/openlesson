@@ -277,10 +277,10 @@ export function PlanView({ initialPlan, initialNodes }: PlanViewProps) {
   }, [planId, supabase, router, refreshKey]);
 
   useEffect(() => {
-    if (plan?.root_topic) {
-      setEditTitle(plan.root_topic);
+    if (plan) {
+      setEditTitle(plan.title || plan.root_topic);
     }
-  }, [plan?.root_topic]);
+  }, [plan?.title, plan?.root_topic]);
 
   useEffect(() => {
     if (plan?.description !== undefined) {
@@ -391,15 +391,15 @@ export function PlanView({ initialPlan, initialNodes }: PlanViewProps) {
 
       <div className="flex-1 min-h-0 flex flex-col md:flex-row overflow-hidden">
         <aside className={`${mobileColumn === "plan" ? "flex" : "hidden"} group flex-1 min-h-0 flex-col md:flex md:flex-none md:w-[24vw] xl:w-[13vw] md:h-full border-b md:border-b-0 md:border-r border-neutral-800/50 bg-[#0b0b0b] overflow-y-auto md:overflow-hidden`}>
-          <div className="p-4 md:p-5 space-y-4 md:flex-1 md:min-h-0 md:overflow-y-auto">
-            <div>
+          <div className="space-y-5 p-4 md:flex-1 md:min-h-0 md:overflow-y-auto md:p-5">
+            <div className="space-y-2">
               {isEditingTitle ? (
                 <div className="space-y-2">
                   <input
                     type="text"
                     value={editTitle}
                     onChange={(e) => setEditTitle(e.target.value)}
-                    className="w-full px-3 py-2 bg-neutral-900 border border-neutral-700 rounded-md text-white text-lg font-bold focus:outline-none focus:border-neutral-400"
+                    className="w-full rounded-md border border-neutral-700 bg-neutral-900 px-3 py-2 text-base font-semibold text-white focus:border-neutral-400 focus:outline-none"
                     autoFocus
                   />
                   <div className="flex items-center gap-2">
@@ -421,196 +421,229 @@ export function PlanView({ initialPlan, initialNodes }: PlanViewProps) {
                           console.error("Error updating title:", err);
                         }
                       }}
-                      className="px-3 py-1.5 bg-white hover:bg-neutral-200 text-black text-sm rounded-md transition-colors"
+                      className="rounded-md bg-white px-3 py-1.5 text-sm text-black transition-colors hover:bg-neutral-200"
                     >
-                      {t('common.save')}
+                      {t("common.save")}
                     </button>
                     <button
-                      onClick={() => { setEditTitle(plan.root_topic); setIsEditingTitle(false); }}
-                      className="px-3 py-1.5 bg-neutral-800 hover:bg-neutral-700 text-white text-sm rounded-md transition-colors"
+                      onClick={() => {
+                        setEditTitle(plan.title || plan.root_topic);
+                        setIsEditingTitle(false);
+                      }}
+                      className="rounded-md bg-neutral-800 px-3 py-1.5 text-sm text-white transition-colors hover:bg-neutral-700"
                     >
-                      {t('common.cancel')}
+                      {t("common.cancel")}
                     </button>
                   </div>
                 </div>
               ) : (
                 <div className="flex items-start gap-2">
-                  <h1 className="text-xl font-bold leading-tight text-white">
-                    {plan.title || plan.root_topic}
-                  </h1>
+                  <h1 className="text-lg font-semibold leading-snug text-white">{plan.title || plan.root_topic}</h1>
                   {isOwner && (
                     <button
                       onClick={() => setIsEditingTitle(true)}
-                      className="mt-1 text-white/35 hover:text-white transition-colors flex-shrink-0"
+                      className="mt-0.5 flex-shrink-0 text-white/35 transition-colors hover:text-white"
                     >
-                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
                       </svg>
                     </button>
                   )}
                 </div>
               )}
-              {plan.title && plan.title !== plan.root_topic && (
-                <p className="text-sm text-neutral-500 mt-1">{plan.root_topic}</p>
-              )}
+
+              <div className="flex flex-wrap items-center gap-1.5 text-xs">
+                {plan.is_group && (
+                  <span className="rounded border border-white/15 bg-white/10 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wider text-neutral-300">
+                    {t("planView.group")}
+                  </span>
+                )}
+                {plan.is_public && plan.author_username && (
+                  <span className="text-neutral-500">
+                    {t("planView.by")} <span className="text-neutral-400">@{plan.author_username}</span>
+                  </span>
+                )}
+                {plan.is_public && (plan.remix_count ?? 0) > 0 && (
+                  <span className="text-neutral-500">
+                    {plan.remix_count}{" "}
+                    {(plan.remix_count || 0) === 1 ? t("planView.fork") : t("planView.forks", { count: plan.remix_count || 0 })}
+                  </span>
+                )}
+                {plan.original_plan_id && <span className="font-medium text-neutral-400">{t("planView.remixed")}</span>}
+              </div>
             </div>
 
-            <div className="flex flex-wrap items-center gap-2 text-xs">
-              {plan.is_group && (
-                <span className="text-neutral-300 bg-white/10 border border-white/15 px-1.5 py-0.5 rounded text-[10px] font-medium uppercase tracking-wider">
-                  {t('planView.group')}
-                </span>
-              )}
-              {plan.is_public && plan.author_username && (
-                <span className="text-neutral-500">{t('planView.by')} <span className="text-neutral-400">@{plan.author_username}</span></span>
-              )}
-              {plan.is_public && (plan.remix_count ?? 0) > 0 && (
-                <span className="text-neutral-500">
-                  {plan.remix_count} {(plan.remix_count || 0) === 1 ? t('planView.fork') : t('planView.forks', { count: plan.remix_count || 0 })}
-                </span>
-              )}
-              {plan.original_plan_id && (
-                <span className="text-neutral-400 font-medium">{t('planView.remixed')}</span>
-              )}
-            </div>
+            {(plan.description || isOwner) && (
+              <div className="space-y-1.5">
+                <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-neutral-600">{t("planView.sectionAbout")}</p>
+                {isEditingDescription ? (
+                  <div className="space-y-2">
+                    <textarea
+                      value={editDescription}
+                      onChange={(e) => setEditDescription(e.target.value)}
+                      placeholder={t("planView.addDescription")}
+                      className="min-h-16 w-full resize-none rounded-md border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-white focus:border-neutral-400 focus:outline-none"
+                      autoFocus
+                    />
+                    <div className="flex items-center gap-3 text-xs">
+                      <button onClick={saveDescription} disabled={savingDescription} className="font-medium text-neutral-200 hover:text-white">
+                        {savingDescription ? "..." : t("common.save")}
+                      </button>
+                      <button
+                        onClick={() => {
+                          setEditDescription(plan.description || "");
+                          setIsEditingDescription(false);
+                        }}
+                        className="text-neutral-500 hover:text-neutral-300"
+                      >
+                        {t("common.cancel")}
+                      </button>
+                    </div>
+                  </div>
+                ) : plan.description ? (
+                  <p
+                    className="line-clamp-3 cursor-pointer text-sm leading-relaxed text-neutral-500 transition-colors hover:text-neutral-400"
+                    onClick={() => isOwner && setIsEditingDescription(true)}
+                  >
+                    {plan.description}
+                  </p>
+                ) : (
+                  <button
+                    onClick={() => setIsEditingDescription(true)}
+                    className="text-sm text-neutral-600 transition-colors hover:text-neutral-400"
+                  >
+                    {t("planView.addDescriptionBtn")}
+                  </button>
+                )}
+              </div>
+            )}
 
-            <div className="space-y-2">
-              {isEditingDescription ? (
-                <div className="space-y-2">
-                  <textarea
-                    value={editDescription}
-                    onChange={(e) => setEditDescription(e.target.value)}
-                    placeholder={t('planView.addDescription')}
-                    className="w-full min-h-20 px-3 py-2 bg-neutral-900 border border-neutral-700 rounded-md text-white text-sm focus:outline-none focus:border-neutral-400 resize-none"
-                    autoFocus
-                  />
-                  <div className="flex items-center gap-3 text-xs">
-                    <button onClick={saveDescription} disabled={savingDescription} className="text-neutral-200 hover:text-white font-medium">
-                      {savingDescription ? "..." : t('common.save')}
+            <div className="space-y-4">
+              {currentUserId && (
+                <div className="space-y-1.5">
+                  <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-neutral-600">{t("planView.sectionLearning")}</p>
+                  <Link
+                    href={`/workspace/${planId}/ghl-score`}
+                    className="block w-full rounded-md bg-white px-3 py-2 text-center text-xs font-medium text-black transition-colors hover:bg-neutral-200"
+                  >
+                    {t("planView.startEvaluationEnv")}
+                  </Link>
+                </div>
+              )}
+
+              {(plan.is_public || plan.is_group) && (
+                <div className="space-y-1.5">
+                  <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-neutral-600">{t("planView.sectionShare")}</p>
+                  <button
+                    onClick={handleShare}
+                    className="w-full rounded-md border border-white/10 bg-white/10 px-3 py-2 text-xs text-white/70 transition-all hover:bg-white/15 hover:text-white"
+                  >
+                    {copied ? t("planView.copied") : t("planView.share")}
+                  </button>
+                </div>
+              )}
+
+              {isOwner && (
+                <div className="space-y-1.5">
+                  <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-neutral-600">{t("planView.sectionAccess")}</p>
+                  <div className="flex flex-col gap-1.5">
+                    <button
+                      onClick={async () => {
+                        try {
+                          const isGroup = plan.is_group ?? false;
+                          const res = await fetch(`/api/learning-plans/${planId}/group`, {
+                            method: "PUT",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ is_group: !isGroup }),
+                          });
+                          const data = await res.json();
+                          if (data.success) setPlan({ ...plan, is_group: !isGroup });
+                        } catch (err) {
+                          console.error("Error toggling group mode:", err);
+                        }
+                      }}
+                      className={`w-full rounded-md border px-3 py-2 text-xs transition-all ${
+                        plan.is_group
+                          ? "border-white/25 bg-white/15 text-white hover:bg-white/20"
+                          : "border-white/10 bg-white/10 text-white/70 hover:bg-white/15 hover:text-white"
+                      }`}
+                    >
+                      {plan.is_group ? t("planView.groupPlan") : t("planView.makeGroupPlan")}
                     </button>
-                    <button onClick={() => { setEditDescription(plan.description || ""); setIsEditingDescription(false); }} className="text-neutral-500 hover:text-neutral-300">
-                      {t('common.cancel')}
+                    <button
+                      onClick={async () => {
+                        try {
+                          const isPublic = plan.is_public ?? false;
+                          const res = await fetch(`/api/learning-plans/${planId}/visibility`, {
+                            method: "PUT",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ is_public: !isPublic }),
+                          });
+                          const data = await res.json();
+                          if (data.success) setPlan({ ...plan, is_public: !isPublic });
+                        } catch (err) {
+                          console.error("Error toggling visibility:", err);
+                        }
+                      }}
+                      className={`w-full rounded-md border px-3 py-2 text-xs transition-all ${
+                        plan.is_public
+                          ? "border-green-500/30 bg-green-500/15 text-green-400 hover:bg-green-500/25"
+                          : "border-white/10 bg-white/10 text-white/70 hover:bg-white/15 hover:text-white"
+                      }`}
+                    >
+                      {plan.is_public ? t("planView.makePrivate") : t("planView.makePublic")}
                     </button>
                   </div>
                 </div>
-              ) : plan.description ? (
-                <p className="text-sm leading-relaxed text-neutral-500 cursor-pointer hover:text-neutral-400 transition-colors" onClick={() => isOwner && setIsEditingDescription(true)}>
-                  {plan.description}
-                </p>
-              ) : isOwner ? (
-                <button onClick={() => setIsEditingDescription(true)} className="text-neutral-600 hover:text-neutral-400 transition-colors text-sm">
-                  {t('planView.addDescriptionBtn')}
-                </button>
-              ) : null}
-            </div>
+              )}
 
-            <div className="flex flex-col gap-2">
-              {currentUserId && (
-                <Link
-                  href={`/workspace/${planId}/ghl-score`}
-                  className="w-full text-center text-xs sm:text-sm px-3 py-2 rounded-md bg-white text-black hover:bg-neutral-200 transition-all font-medium"
-                >
-                  {t('planView.startEvaluationEnv')}
-                </Link>
-              )}
-              {(plan.is_public || plan.is_group) && (
-                <button
-                  onClick={handleShare}
-                  className="w-full text-xs px-3 py-2 rounded-md bg-white/10 border border-white/10 text-white/70 hover:text-white hover:bg-white/15 transition-all"
-                >
-                  {copied ? t('planView.copied') : t('planView.share')}
-                </button>
-              )}
-              {isOwner ? (
-                <>
-                  <button
-                    onClick={async () => {
-                      try {
-                        const isGroup = plan.is_group ?? false;
-                        const res = await fetch(`/api/learning-plans/${planId}/group`, {
-                          method: "PUT",
-                          headers: { "Content-Type": "application/json" },
-                          body: JSON.stringify({ is_group: !isGroup }),
-                        });
-                        const data = await res.json();
-                        if (data.success) {
-                          setPlan({ ...plan, is_group: !isGroup });
-                        }
-                      } catch (err) {
-                        console.error("Error toggling group mode:", err);
-                      }
-                    }}
-                    className={`w-full text-xs px-3 py-2 rounded-md border transition-all ${
-                      plan.is_group
-                        ? "bg-white/15 border-white/25 text-white hover:bg-white/20"
-                        : "bg-white/10 border-white/10 text-white/70 hover:text-white hover:bg-white/15"
-                    }`}
-                  >
-                    {plan.is_group ? t('planView.groupPlan') : t('planView.makeGroupPlan')}
-                  </button>
-                  <button
-                    onClick={async () => {
-                      try {
-                        const isPublic = plan.is_public ?? false;
-                        const res = await fetch(`/api/learning-plans/${planId}/visibility`, {
-                          method: "PUT",
-                          headers: { "Content-Type": "application/json" },
-                          body: JSON.stringify({ is_public: !isPublic }),
-                        });
-                        const data = await res.json();
-                        if (data.success) {
-                          setPlan({ ...plan, is_public: !isPublic });
-                        }
-                      } catch (err) {
-                        console.error("Error toggling visibility:", err);
-                      }
-                    }}
-                    className={`w-full text-xs px-3 py-2 rounded-md border transition-all ${
-                      plan.is_public
-                        ? "bg-green-500/15 border-green-500/30 text-green-400 hover:bg-green-500/25"
-                        : "bg-white/10 border-white/10 text-white/70 hover:text-white hover:bg-white/15"
-                    }`}
-                  >
-                    {plan.is_public ? t('planView.public') : t('planView.makePublic')}
-                  </button>
-                  {plan.is_public && !isEditingDescription && (
+              {(isOwner && plan.is_public) || (currentUserId && !isOwner && !plan.is_group) || (!currentUserId && !plan.is_group) ? (
+                <div className="space-y-1.5">
+                  <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-neutral-600">{t("planView.sectionCommunity")}</p>
+                  {isOwner && plan.is_public ? (
                     <button
                       onClick={() => setShowRemixModal(true)}
-                      className="w-full text-xs px-3 py-2 rounded-md border border-neutral-800 text-neutral-500 hover:text-neutral-300 hover:bg-neutral-900 transition-colors"
+                      className="w-full rounded-md border border-neutral-800 px-3 py-2 text-xs text-neutral-500 transition-colors hover:bg-neutral-900 hover:text-neutral-300"
                     >
-                      {t('planView.forkRemix')}
+                      {t("planView.forkRemix")}
                     </button>
+                  ) : currentUserId ? (
+                    <button
+                      onClick={() => setShowRemixModal(true)}
+                      className="w-full rounded-md border border-white/15 bg-white/10 px-3 py-2 text-xs text-neutral-200 transition-all hover:bg-white/15"
+                    >
+                      {t("planView.forkRemix")}
+                    </button>
+                  ) : (
+                    <Link
+                      href="/register"
+                      className="block w-full rounded-md border border-white/15 bg-white/10 px-3 py-2 text-center text-xs text-neutral-200 transition-all hover:bg-white/15"
+                    >
+                      {t("planView.forkRemix")}
+                    </Link>
                   )}
-                </>
-              ) : currentUserId ? (
-                plan.is_group ? (
-                  <span className="text-center text-xs px-3 py-2 rounded-md bg-white/10 border border-white/15 text-neutral-300">
-                    {t('planView.groupParticipant')}
+                </div>
+              ) : null}
+
+              {currentUserId && !isOwner && plan.is_group && (
+                <div className="space-y-1.5">
+                  <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-neutral-600">{t("planView.sectionAccess")}</p>
+                  <span className="block rounded-md border border-white/15 bg-white/10 px-3 py-2 text-center text-xs text-neutral-300">
+                    {t("planView.groupParticipant")}
                   </span>
-                ) : (
-                  <button
-                    onClick={() => setShowRemixModal(true)}
-                    className="w-full text-xs px-3 py-2 rounded-md bg-white/10 border border-white/15 text-neutral-200 hover:bg-white/15 transition-all"
-                  >
-                    {t('planView.forkRemix')}
-                  </button>
-                )
-              ) : (
-                plan.is_group ? (
+                </div>
+              )}
+
+              {!currentUserId && plan.is_group && (
+                <div className="space-y-1.5">
+                  <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-neutral-600">{t("planView.sectionAccess")}</p>
                   <Link
                     href={`/login?redirect=/p/${planId}/${planShareSlug(plan)}`}
-                    className="text-center text-xs px-3 py-2 rounded-md bg-white/10 border border-white/15 text-neutral-200 hover:bg-white/15 transition-all"
+                    className="block w-full rounded-md border border-white/15 bg-white/10 px-3 py-2 text-center text-xs text-neutral-200 transition-all hover:bg-white/15"
                   >
-                    {t('planView.signInToJoin')}
+                    {t("planView.signInToJoin")}
                   </Link>
-                ) : (
-                  <Link
-                    href="/register"
-                    className="text-center text-xs px-3 py-2 rounded-md bg-white/10 border border-white/15 text-neutral-200 hover:bg-white/15 transition-all"
-                  >
-                    {t('planView.forkRemix')}
-                  </Link>
-                )
+                </div>
               )}
             </div>
           </div>
@@ -627,6 +660,8 @@ export function PlanView({ initialPlan, initialNodes }: PlanViewProps) {
             supabase={supabase}
             planTopic={plan.root_topic}
             planId={planId}
+            onRefresh={refreshNodes}
+            onNodesUpdate={handleNodesUpdate}
           />
         </aside>
 

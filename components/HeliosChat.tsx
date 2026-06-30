@@ -69,13 +69,13 @@ interface HeliosChatProps {
 // Helios first-person welcome — unified across probe panel and chat.
 // The voice matches the BASE_SYSTEM_PROMPT in /api/session-chat.
 const CHAT_WELCOME_MESSAGES: Record<string, string> = {
-  en: "Hey, I'm Helios. I'm here with you for this chapter, following your thinking and helping you turn the prompt into something clearer.",
-  es: "Hola — soy Helios. Este chat es donde mis preguntas y tus respuestas fluyen juntas.\n\n¿En qué estás trabajando ahora mismo?",
-  vi: "Chào — tôi là Helios. Đây là nơi các câu hỏi của tôi và câu trả lời của bạn cùng tiếp diễn.\n\nBạn đang làm gì vậy?",
-  zh: "嘿 — 我是 Helios。我的问题和你的回应都会在这个聊天里连续展开。\n\n你现在在研究什么？",
-  de: "Hey — ich bin Helios. In diesem Chat laufen meine Fragen und deine Antworten zusammen.\n\nWoran arbeitest du gerade?",
-  pl: "Cześć — jestem Helios. Tutaj moje pytania i twoje odpowiedzi płyną razem.\n\nNad czym teraz pracujesz?",
-  ca: "Hola — sóc Helios. En aquest xat les meves preguntes i les teves respostes avancen juntes.\n\nEn què estàs treballant ara mateix?",
+  en: "Hey, I'm Helios. Send me a thought and I'll answer here in plain text — one turn at a time.",
+  es: "Hola, soy Helios. Envíame un pensamiento y responderé aquí en texto claro, un turno a la vez.",
+  vi: "Chào, tôi là Helios. Gửi cho tôi một suy nghĩ và tôi sẽ trả lời ở đây bằng văn bản thuần, từng lượt một.",
+  zh: "嘿，我是 Helios。发送一条想法，我会在这里用纯文本回复，一次一轮。",
+  de: "Hey, ich bin Helios. Schick mir einen Gedanken und ich antworte hier in Klartext — einen Zug nach dem anderen.",
+  pl: "Cześć, jestem Helios. Wyślij mi myśl, a odpowiem tutaj prostym tekstem — po jednej turze.",
+  ca: "Hola, sóc Helios. Envia'm un pensament i respondré aquí en text pla, un torn cada vegada.",
 };
 
 // Small circular avatar with a violet gradient and a serif "H" — matches the

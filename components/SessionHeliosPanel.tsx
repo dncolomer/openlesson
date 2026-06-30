@@ -138,6 +138,7 @@ export function SessionHeliosPanel({
                   isSending={thought.isSending || isAssistantPending}
                   error={thought.sendError}
                   userInitial={userInitial}
+                  emptyUserTurnText={t("session.emptyUserTurn")}
                 />
               </div>
 
@@ -174,7 +175,7 @@ export function SessionHeliosPanel({
                 </div>
 
                 <div className="mt-3 border-t border-neutral-900/80 pt-3">
-                  <p className="mb-2 text-[10px] uppercase tracking-[2px] text-neutral-600">Active thoughts</p>
+                  <p className="mb-2 text-[10px] uppercase tracking-[2px] text-neutral-600">{t("probes.activeThoughts")}</p>
                   <div className="grid gap-2 md:grid-cols-3">
                     {thought.latestThoughts.map((entry, index) => (
                       <div
@@ -210,7 +211,7 @@ export function SessionHeliosPanel({
                     ))}
                     {thought.latestThoughts.length === 0 && (
                       <div className="col-span-full rounded-xl border border-dashed border-neutral-800 bg-black/70 p-4 text-center text-xs text-neutral-600">
-                        Speak to create thought traces.
+                        {t("probes.speakToCreateThoughts")}
                       </div>
                     )}
                   </div>
@@ -221,7 +222,7 @@ export function SessionHeliosPanel({
         </div>
 
         <nav className="flex w-24 shrink-0 flex-col border-l border-neutral-900/80 bg-neutral-950/45 py-3 backdrop-blur-md">
-          <p className="mb-3 px-2 text-center font-mono text-[9px] uppercase tracking-[1.5px] text-neutral-600">Chapters</p>
+          <p className="mb-3 px-2 text-center font-mono text-[9px] uppercase tracking-[1.5px] text-neutral-600">{t("session.chapters")}</p>
           <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto px-2 pb-2">
             {planSteps.map((step, index) => {
               const isActive = index === activeChapterIndex;

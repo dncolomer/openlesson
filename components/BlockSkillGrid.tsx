@@ -1,0 +1,381 @@
+"use client";
+
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  buildSkillGridLayout,
+  getNeighborTitles,
+  getPanToCenterCell,
+  getVisibleGridCells,
+  SKILL_GRID_CELL_SIZE,
+  SKILL_GRID_PITCH,
+  type GridCell,
+  type SkillGridNode,
+} from "@/lib/block-skill-grid";
+
+interface BlockSkillGridProps {
+  nodes: SkillGridNode[];
+  selectedNodeId: string | null;
+  onSelectNode: (nodeId: string) => void;
+  canEdit: boolean;
+  isAdding?: boolean;
+  onAddBlock: (prompt: string, position: { row: number; col: number }) => Promise<void>;
+  labels: {
+    emptyCell: string;
+    addTitle: string;
+    addPlaceholder: string;
+    addSubmit: string;
+    addCancel: string;
+    recenter: string;
+    zoomIn: string;
+    zoomOut: string;
+  };
+}
+
+const MIN_ZOOM = 0.35;
+const MAX_ZOOM = 2.5;
+const PAN_CLICK_THRESHOLD = 6;
+
+function cellStatusClass(status: string, selected: boolean) {
+  const base = selected ? "ring-2 ring-white/50 ring-offset-2 ring-offset-[#0b0b0b] " : "";
+  if (status === "completed") {
+    return `${base}border-emerald-500/50 bg-emerald-950/40 text-emerald-100 shadow-[0_0_12px_rgba(16,185,129,0.15)]`;
+  }
+  if (status === "in_progress") {
+    return `${base}border-amber-400/55 bg-amber-950/35 text-amber-50 shadow-[0_0_12px_rgba(245,158,11,0.14)]`;
+  }
+  if (status === "locked") {
+    return `${base}border-neutral-800 bg-neutral-950/50 text-neutral-500 opacity-70`;
+  }
+  return `${base}border-neutral-700/80 bg-neutral-950/75 text-neutral-100`;
+}
+
+function clampZoom(value: number) {
+  return Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, value));
+}
+
+export function BlockSkillGrid({
+  nodes,
+  selectedNodeId,
+  onSelectNode,
+  canEdit,
+  isAdding = false,
+  onAddBlock,
+  labels,
+}: BlockSkillGridProps) {
+  const viewportRef = useRef<HTMLDivElement>(null);
+  const hasInitialCenterRef = useRef(false);
+  const panMovedRef = useRef(false);
+  const dragRef = useRef<{
+    pointerId: number;
+    startX: number;
+    startY: number;
+    panStartX: number;
+    panStartY: number;
+  } | null>(null);
+
+  const [pendingCell, setPendingCell] = useState<GridCell | null>(null);
+  const [prompt, setPrompt] = useState("");
+  const [viewportSize, setViewportSize] = useState({ width: 0, height: 0 });
+  const [pan, setPan] = useState({ x: 0, y: 0 });
+  const [zoom, setZoom] = useState(1);
+
+  const nodesById = useMemo(() => new Map(nodes.map((node) => [node.id, node])), [nodes]);
+  const { ordered, occupancy, startCell } = useMemo(() => buildSkillGridLayout(nodes), [nodes]);
+
+  const visibleCells = useMemo(
+    () => getVisibleGridCells(viewportSize.width, viewportSize.height, pan.x, pan.y, zoom),
+    [viewportSize.width, viewportSize.height, pan.x, pan.y, zoom],
+  );
+
+  const applyCenterOnStart = useCallback(
+    (nextZoom = zoom) => {
+      const viewport = viewportRef.current;
+      if (!viewport) return;
+      const { width, height } = viewport.getBoundingClientRect();
+      if (width <= 0 || height <= 0) return;
+      setPan(getPanToCenterCell(width, height, startCell, nextZoom));
+    },
+    [startCell, zoom],
+  );
+
+  useEffect(() => {
+    const viewport = viewportRef.current;
+    if (!viewport) return;
+
+    const updateSize = () => {
+      const { width, height } = viewport.getBoundingClientRect();
+      setViewportSize({ width, height });
+    };
+
+    updateSize();
+    const observer = new ResizeObserver(updateSize);
+    observer.observe(viewport);
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    if (viewportSize.width <= 0 || viewportSize.height <= 0 || hasInitialCenterRef.current) return;
+    setPan(getPanToCenterCell(viewportSize.width, viewportSize.height, startCell, zoom));
+    hasInitialCenterRef.current = true;
+  }, [viewportSize.width, viewportSize.height, startCell, zoom]);
+
+  const recenter = useCallback(() => {
+    setZoom(1);
+    applyCenterOnStart(1);
+  }, [applyCenterOnStart]);
+
+  const zoomBy = useCallback(
+    (factor: number, focalX?: number, focalY?: number) => {
+      const viewport = viewportRef.current;
+      if (!viewport) return;
+
+      const rect = viewport.getBoundingClientRect();
+      const anchorX = focalX ?? rect.width / 2;
+      const anchorY = focalY ?? rect.height / 2;
+      const nextZoom = clampZoom(zoom * factor);
+      const ratio = nextZoom / zoom;
+
+      setPan((current) => ({
+        x: anchorX - (anchorX - current.x) * ratio,
+        y: anchorY - (anchorY - current.y) * ratio,
+      }));
+      setZoom(nextZoom);
+    },
+    [zoom],
+  );
+
+  useEffect(() => {
+    const viewport = viewportRef.current;
+    if (!viewport) return;
+
+    const handleWheel = (event: WheelEvent) => {
+      event.preventDefault();
+      const rect = viewport.getBoundingClientRect();
+      const delta = event.deltaY > 0 ? 0.9 : 1.1;
+      zoomBy(delta, event.clientX - rect.left, event.clientY - rect.top);
+    };
+
+    viewport.addEventListener("wheel", handleWheel, { passive: false });
+    return () => viewport.removeEventListener("wheel", handleWheel);
+  }, [zoomBy]);
+
+  const handlePointerDown = useCallback(
+    (event: React.PointerEvent<HTMLDivElement>) => {
+      if (event.button !== 0 || pendingCell) return;
+      if ((event.target as HTMLElement).closest("[data-skill-cell]")) return;
+
+      panMovedRef.current = false;
+      dragRef.current = {
+        pointerId: event.pointerId,
+        startX: event.clientX,
+        startY: event.clientY,
+        panStartX: pan.x,
+        panStartY: pan.y,
+      };
+      event.currentTarget.setPointerCapture(event.pointerId);
+    },
+    [pan.x, pan.y, pendingCell],
+  );
+
+  const handlePointerMove = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
+    const drag = dragRef.current;
+    if (!drag || drag.pointerId !== event.pointerId) return;
+
+    const dx = event.clientX - drag.startX;
+    const dy = event.clientY - drag.startY;
+    if (!panMovedRef.current && Math.abs(dx) <= PAN_CLICK_THRESHOLD && Math.abs(dy) <= PAN_CLICK_THRESHOLD) {
+      return;
+    }
+
+    panMovedRef.current = true;
+    setPan({ x: drag.panStartX + dx, y: drag.panStartY + dy });
+  }, []);
+
+  const endDrag = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
+    if (!dragRef.current || dragRef.current.pointerId !== event.pointerId) return;
+    dragRef.current = null;
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+  }, []);
+
+  const handleCellSelect = useCallback(
+    (nodeId: string) => {
+      onSelectNode(nodeId);
+    },
+    [onSelectNode],
+  );
+
+  const handleEmptyCellClick = useCallback(
+    (cell: GridCell) => {
+      if (!canEdit || isAdding) return;
+      setPendingCell(cell);
+    },
+    [canEdit, isAdding],
+  );
+
+  const submitAdd = async () => {
+    if (!pendingCell || !prompt.trim()) return;
+    await onAddBlock(prompt.trim(), pendingCell);
+    setPrompt("");
+    setPendingCell(null);
+  };
+
+  if (nodes.length === 0 && !canEdit) {
+    return <div className="flex h-full items-center justify-center text-sm text-neutral-600">{labels.emptyCell}</div>;
+  }
+
+  return (
+    <div className="relative flex h-full min-h-0 flex-col overflow-hidden rounded-md border border-neutral-800/60 bg-[radial-gradient(circle_at_50%_0%,rgba(255,255,255,0.04),rgba(8,8,8,0.98))]">
+      <div
+        ref={viewportRef}
+        className="relative min-h-0 flex-1 touch-none overflow-hidden cursor-grab active:cursor-grabbing"
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={endDrag}
+        onPointerCancel={endDrag}
+      >
+        <div
+          className="absolute inset-0 pointer-events-none opacity-40"
+          style={{
+            backgroundImage: "radial-gradient(circle, rgba(255,255,255,0.1) 1px, transparent 1px)",
+            backgroundSize: `${SKILL_GRID_PITCH}px ${SKILL_GRID_PITCH}px`,
+            transform: `translate(${pan.x % SKILL_GRID_PITCH}px, ${pan.y % SKILL_GRID_PITCH}px) scale(${zoom})`,
+            transformOrigin: "0 0",
+          }}
+        />
+
+        <div
+          className="absolute left-0 top-0"
+          style={{
+            transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
+            transformOrigin: "0 0",
+          }}
+        >
+          {visibleCells.map((cell) => {
+            const nodeId = occupancy.get(`${cell.row}:${cell.col}`);
+            const node = nodeId ? nodesById.get(nodeId) : undefined;
+            const orderIndex = node ? ordered.findIndex((entry) => entry.id === node.id) : -1;
+
+            return (
+              <div
+                key={`${cell.row}:${cell.col}`}
+                data-skill-cell
+                className="absolute"
+                style={{
+                  left: cell.col * SKILL_GRID_PITCH,
+                  top: cell.row * SKILL_GRID_PITCH,
+                  width: SKILL_GRID_CELL_SIZE,
+                  height: SKILL_GRID_CELL_SIZE,
+                }}
+              >
+                {node ? (
+                  <button
+                    type="button"
+                    onClick={() => handleCellSelect(node.id)}
+                    className={`relative flex h-full w-full flex-col items-center justify-center rounded-lg border px-2 text-center transition hover:brightness-110 ${cellStatusClass(node.status, selectedNodeId === node.id)}`}
+                    title={node.title}
+                  >
+                    <span className="absolute left-1.5 top-1 font-mono text-[9px] text-neutral-500">
+                      {orderIndex + 1}
+                    </span>
+                    {node.is_start && (
+                      <span className="absolute right-1.5 top-1 text-[8px] uppercase tracking-[0.12em] text-neutral-400">
+                        Start
+                      </span>
+                    )}
+                    <span className="line-clamp-3 text-[11px] font-medium leading-tight">{node.title}</span>
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    disabled={!canEdit || isAdding}
+                    onClick={() => handleEmptyCellClick(cell)}
+                    className={`flex h-full w-full flex-col items-center justify-center rounded-lg border border-dashed text-neutral-600 transition ${
+                      canEdit
+                        ? "border-neutral-700/90 bg-neutral-950/35 hover:border-neutral-500 hover:bg-neutral-900/50 hover:text-neutral-300"
+                        : "border-neutral-800/70 bg-neutral-950/20 opacity-50"
+                    }`}
+                    title={canEdit ? labels.emptyCell : undefined}
+                  >
+                    {canEdit && <span className="text-xl leading-none text-neutral-600">+</span>}
+                  </button>
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        <div className="absolute right-2 top-2 z-10 flex flex-col gap-1" onPointerDown={(e) => e.stopPropagation()}>
+          <button
+            type="button"
+            onClick={() => zoomBy(1.15)}
+            className="flex h-7 w-7 items-center justify-center rounded-md border border-neutral-700/80 bg-neutral-950/85 text-sm text-neutral-300 transition hover:border-neutral-600 hover:text-white"
+            title={labels.zoomIn}
+          >
+            +
+          </button>
+          <button
+            type="button"
+            onClick={() => zoomBy(0.87)}
+            className="flex h-7 w-7 items-center justify-center rounded-md border border-neutral-700/80 bg-neutral-950/85 text-sm text-neutral-300 transition hover:border-neutral-600 hover:text-white"
+            title={labels.zoomOut}
+          >
+            −
+          </button>
+          <button
+            type="button"
+            onClick={recenter}
+            className="flex h-7 w-7 items-center justify-center rounded-md border border-neutral-700/80 bg-neutral-950/85 text-neutral-300 transition hover:border-neutral-500 hover:text-white"
+            title={labels.recenter}
+          >
+            <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v8m-4-4h8M4 12a8 8 0 1016 0 8 8 0 00-16 0z" />
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      {pendingCell && (
+        <div className="absolute inset-0 z-20 flex items-end justify-center bg-black/55 p-3 sm:items-center">
+          <div className="w-full max-w-md rounded-xl border border-neutral-700/80 bg-neutral-950 p-4 shadow-2xl shadow-black/50">
+            <h3 className="text-sm font-medium text-white">{labels.addTitle}</h3>
+            <p className="mt-1 text-[11px] text-neutral-500">
+              Slot {pendingCell.row},{pendingCell.col}
+              {getNeighborTitles(pendingCell.row, pendingCell.col, occupancy, nodesById).length > 0 &&
+                ` · near ${getNeighborTitles(pendingCell.row, pendingCell.col, occupancy, nodesById).join(", ")}`}
+            </p>
+            <textarea
+              value={prompt}
+              onChange={(event) => setPrompt(event.target.value)}
+              placeholder={labels.addPlaceholder}
+              className="mt-3 w-full resize-none rounded-md border border-neutral-700 bg-black/60 px-3 py-2 text-sm text-white placeholder:text-neutral-600 focus:border-neutral-500 focus:outline-none"
+              rows={3}
+              autoFocus
+            />
+            <div className="mt-3 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setPendingCell(null);
+                  setPrompt("");
+                }}
+                className="rounded-md px-3 py-1.5 text-xs text-neutral-400 hover:text-white"
+              >
+                {labels.addCancel}
+              </button>
+              <button
+                type="button"
+                disabled={!prompt.trim() || isAdding}
+                onClick={() => void submitAdd()}
+                className="rounded-md bg-white px-3 py-1.5 text-xs font-medium text-black transition hover:bg-neutral-200 disabled:opacity-40"
+              >
+                {isAdding ? "..." : labels.addSubmit}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

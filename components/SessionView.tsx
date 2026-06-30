@@ -490,7 +490,7 @@ export function SessionView({ sessionId }: { sessionId: string }) {
     return false;
   }, [chatMessages]);
 
-  const chapterDialoguePrompt = activeStep?.description?.trim() || "Work through this chapter by sending thoughts to Helios.";
+  const chapterDialoguePrompt = activeStep?.description?.trim() || t("session.chapterPromptFallback");
 
   useEffect(() => {
     const supabase = createClient();
@@ -3503,7 +3503,7 @@ export function SessionView({ sessionId }: { sessionId: string }) {
               <div className="flex items-center gap-3">
                 <div className="relative shrink-0">
                   <div className="w-11 h-11 rounded-full bg-gradient-to-br from-amber-500/15 via-neutral-800 to-neutral-900 border border-neutral-800 flex items-center justify-center overflow-hidden">
-                    <span className="text-lg font-serif text-neutral-200">T</span>
+                    <span className="text-lg font-serif text-neutral-200">H</span>
                   </div>
                   <div className="absolute inset-0 rounded-full shadow-[0_0_20px_rgba(245,158,11,0.08)] pointer-events-none" />
                 </div>

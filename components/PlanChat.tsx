@@ -187,6 +187,14 @@ export function PlanChat({ plan, nodes: initialNodes, onRefresh, onNodesUpdate, 
     localStorage.setItem(MODEL_STORAGE_KEY, normalizedModel);
   }, []);
 
+  const handleNodesUpdate = useCallback(
+    (newNodes: PlanNode[]) => {
+      setNodes(newNodes);
+      onNodesUpdate?.(newNodes);
+    },
+    [onNodesUpdate],
+  );
+
   const handleDeleteClick = useCallback((nodeId: string) => { setShowDeleteConfirm(nodeId); }, []);
 
   const handleForkClick = useCallback(async (nodeId: string) => {
@@ -243,7 +251,7 @@ export function PlanChat({ plan, nodes: initialNodes, onRefresh, onNodesUpdate, 
               model={model}
               onModelChange={handleModelChange}
               onRefresh={onRefresh}
-              onNodesUpdate={onNodesUpdate}
+              onNodesUpdate={handleNodesUpdate}
               supabase={supabase}
               isOwner={isOwner}
               currentUserId={currentUserId}
@@ -281,6 +289,8 @@ export function PlanChat({ plan, nodes: initialNodes, onRefresh, onNodesUpdate, 
             supabase={supabase}
             planTopic={plan.root_topic}
             planId={planId || plan.id}
+            onRefresh={onRefresh}
+            onNodesUpdate={handleNodesUpdate}
           />
         </div>
       </div>
@@ -295,7 +305,7 @@ export function PlanChat({ plan, nodes: initialNodes, onRefresh, onNodesUpdate, 
             model={model}
             onModelChange={handleModelChange}
             onRefresh={onRefresh}
-            onNodesUpdate={onNodesUpdate}
+            onNodesUpdate={handleNodesUpdate}
             supabase={supabase}
             isOwner={isOwner}
             currentUserId={currentUserId}
@@ -319,6 +329,8 @@ export function PlanChat({ plan, nodes: initialNodes, onRefresh, onNodesUpdate, 
             supabase={supabase}
             planTopic={plan.root_topic}
             planId={planId || plan.id}
+            onRefresh={onRefresh}
+            onNodesUpdate={handleNodesUpdate}
           />
         </div>
       </div>
@@ -387,7 +399,7 @@ export function PlanChat({ plan, nodes: initialNodes, onRefresh, onNodesUpdate, 
                   model={model}
                   onModelChange={handleModelChange}
                   onRefresh={() => { onRefresh?.(); setSheetOpen(false); setSheetHeight(65); }}
-                  onNodesUpdate={(newNodes) => { onNodesUpdate?.(newNodes); }}
+                  onNodesUpdate={handleNodesUpdate}
                   supabase={supabase}
                   isOwner={isOwner}
                   currentUserId={currentUserId}

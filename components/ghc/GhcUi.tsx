@@ -116,16 +116,19 @@ export function LearnerThoughtAvatar({ initial }: { initial: string }) {
   );
 }
 
-const DIALOGUE_TEXT_CLASS =
+const ILE_DIALOGUE_TEXT_CLASS =
   "text-base leading-relaxed md:text-lg md:leading-relaxed [text-shadow:0_1px_16px_rgb(0_0_0/0.92),0_0_2px_rgb(0_0_0/0.85)]";
 
-export function GhcDialogueSplit({
+const GHL_DIALOGUE_TEXT_CLASS = "text-base leading-relaxed md:text-lg md:leading-relaxed";
+
+function GhcDialogueSplitIle({
   lastUserTurn,
   lastAssistantTurn,
   promptText,
   isSending,
   error,
   userInitial,
+  emptyUserTurnText,
 }: {
   lastUserTurn: GhcDialogueMessage | null;
   lastAssistantTurn: GhcDialogueMessage | null;
@@ -133,6 +136,7 @@ export function GhcDialogueSplit({
   isSending: boolean;
   error: string;
   userInitial: string;
+  emptyUserTurnText: string;
 }) {
   const userLines = lastUserTurn ? lastUserTurn.content.split("\n").map((line) => line.trim()).filter(Boolean) : [];
 
@@ -150,9 +154,9 @@ export function GhcDialogueSplit({
               <div className="size-2.5 animate-bounce rounded-full bg-neutral-300" style={{ animationDelay: "300ms" }} />
             </div>
           ) : lastAssistantTurn ? (
-            <p className={`${DIALOGUE_TEXT_CLASS} text-neutral-100`}>{lastAssistantTurn.content}</p>
+            <p className={`${ILE_DIALOGUE_TEXT_CLASS} text-neutral-100`}>{lastAssistantTurn.content}</p>
           ) : (
-            <p className={`${DIALOGUE_TEXT_CLASS} text-neutral-300`}>{promptText}</p>
+            <p className={`${ILE_DIALOGUE_TEXT_CLASS} text-neutral-300`}>{promptText}</p>
           )}
           {error && <p className="mt-3 text-xs text-red-300 [text-shadow:0_1px_8px_rgb(0_0_0/0.9)]">{error}</p>}
         </div>
@@ -164,20 +168,124 @@ export function GhcDialogueSplit({
           {userLines.length > 0 ? (
             <div className="space-y-4">
               {userLines.map((line, index) => (
-                <p key={`${lastUserTurn?.id}-${index}`} className={`${DIALOGUE_TEXT_CLASS} text-neutral-50`}>
+                <p key={`${lastUserTurn?.id}-${index}`} className={`${ILE_DIALOGUE_TEXT_CLASS} text-neutral-50`}>
                   {line}
                 </p>
               ))}
             </div>
           ) : (
-            <p className={`${DIALOGUE_TEXT_CLASS} text-neutral-300`}>
-              Send a thought to surface your latest submission here.
-            </p>
+            <p className={`${ILE_DIALOGUE_TEXT_CLASS} text-neutral-300`}>{emptyUserTurnText}</p>
           )}
         </div>
       </div>
     </div>
   );
+}
+
+function GhcDialogueSplitFramed({
+  lastUserTurn,
+  lastAssistantTurn,
+  promptText,
+  isSending,
+  error,
+  userInitial,
+  emptyUserTurnText,
+}: {
+  lastUserTurn: GhcDialogueMessage | null;
+  lastAssistantTurn: GhcDialogueMessage | null;
+  promptText: string;
+  isSending: boolean;
+  error: string;
+  userInitial: string;
+  emptyUserTurnText: string;
+}) {
+  const userLines = lastUserTurn ? lastUserTurn.content.split("\n").map((line) => line.trim()).filter(Boolean) : [];
+
+  return (
+    <div className="flex min-h-0 flex-1 flex-col divide-y divide-neutral-900 md:flex-row md:divide-x md:divide-y-0">
+      <section className="flex min-h-0 min-w-0 flex-1 flex-col">
+        <p className="shrink-0 px-6 pt-5 text-center font-mono text-[10px] uppercase tracking-[2px] text-neutral-600">
+          Your thought
+        </p>
+        <div className="flex min-h-0 flex-1 items-center justify-center overflow-y-auto px-6 py-6">
+          <div className="my-auto flex w-full max-w-lg flex-col items-center gap-6 text-center">
+            <LearnerThoughtAvatar initial={userInitial} />
+            {userLines.length > 0 ? (
+              <div className="space-y-4">
+                {userLines.map((line, index) => (
+                  <p key={`${lastUserTurn?.id}-${index}`} className={`${GHL_DIALOGUE_TEXT_CLASS} text-neutral-100`}>
+                    {line}
+                  </p>
+                ))}
+              </div>
+            ) : (
+              <p className={`${GHL_DIALOGUE_TEXT_CLASS} text-neutral-500`}>{emptyUserTurnText}</p>
+            )}
+          </div>
+        </div>
+      </section>
+
+      <section className="flex min-h-0 min-w-0 flex-1 flex-col">
+        <p className="shrink-0 px-6 pt-5 text-center font-mono text-[10px] uppercase tracking-[2px] text-neutral-600">
+          Helios
+        </p>
+        <div className="flex min-h-0 flex-1 items-center justify-center overflow-y-auto px-6 py-6">
+          <div className="my-auto flex w-full max-w-lg flex-col items-center gap-6 text-center">
+            <HeliosProbeAvatar />
+            {isSending ? (
+              <div className="flex justify-center gap-1.5 py-1">
+                <div className="size-2.5 animate-bounce rounded-full bg-neutral-500" style={{ animationDelay: "0ms" }} />
+                <div className="size-2.5 animate-bounce rounded-full bg-neutral-500" style={{ animationDelay: "150ms" }} />
+                <div className="size-2.5 animate-bounce rounded-full bg-neutral-500" style={{ animationDelay: "300ms" }} />
+              </div>
+            ) : lastAssistantTurn ? (
+              <p className={`${GHL_DIALOGUE_TEXT_CLASS} text-neutral-200`}>{lastAssistantTurn.content}</p>
+            ) : (
+              <p className={`${GHL_DIALOGUE_TEXT_CLASS} text-neutral-500`}>{promptText}</p>
+            )}
+          </div>
+        </div>
+        {error && <p className="shrink-0 px-6 pb-4 text-center text-xs text-red-300">{error}</p>}
+      </section>
+    </div>
+  );
+}
+
+export function GhcDialogueSplit({
+  lastUserTurn,
+  lastAssistantTurn,
+  promptText,
+  isSending,
+  error,
+  userInitial,
+  emptyUserTurnText = "Send a thought to surface your latest submission here.",
+  layout = "ile",
+}: {
+  lastUserTurn: GhcDialogueMessage | null;
+  lastAssistantTurn: GhcDialogueMessage | null;
+  promptText: string;
+  isSending: boolean;
+  error: string;
+  userInitial: string;
+  emptyUserTurnText?: string;
+  /** GHL score uses the framed two-column layout; ILE keeps the floating split grid. */
+  layout?: "ile" | "ghl";
+}) {
+  const props = {
+    lastUserTurn,
+    lastAssistantTurn,
+    promptText,
+    isSending,
+    error,
+    userInitial,
+    emptyUserTurnText,
+  };
+
+  if (layout === "ghl") {
+    return <GhcDialogueSplitFramed {...props} />;
+  }
+
+  return <GhcDialogueSplitIle {...props} />;
 }
 
 export function GhcBackgroundLayers({

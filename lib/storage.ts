@@ -11,6 +11,7 @@
 // ============================================
 
 import { createClient } from "@/lib/supabase/client";
+import { persistSkillGridPositions, toSkillGridNodes } from "@/lib/skill-grid-positions";
 
 /**
  * Derive file extension from a MIME type string.
@@ -1820,6 +1821,10 @@ export async function forkPlan(
     await supabase.from("learning_plans").delete().eq("id", newPlan.id);
     throw new Error("Could not copy nodes");
   }
+
+  await persistSkillGridPositions(supabase, toSkillGridNodes(newNodes), {
+    onlyWithoutSavedPosition: true,
+  });
 
   await supabase
     .from("learning_plans")

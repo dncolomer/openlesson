@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { authenticateRequest, errorResponse } from "@/lib/agent-v2/auth";
 import { callXaiJSON, DEFAULT_MODEL, userMessage } from "@/lib/xai-client";
 import { uploadFileToXAI } from "@/lib/xai-files";
+import { persistSkillGridPositions, skillGridNodesFromRefs } from "@/lib/skill-grid-positions";
 
 export const runtime = "nodejs";
 
@@ -167,6 +168,11 @@ export async function POST(req: NextRequest) {
     }
   }
 
+  await persistSkillGridPositions(
+    supabase,
+    skillGridNodesFromRefs(generated.data.blocks, blockIdMap),
+  );
+
   const uploadedFiles = [];
   for (const file of files) {
     try {
@@ -191,7 +197,7 @@ export async function POST(req: NextRequest) {
 
   const { data: blocks } = await supabase
     .from("plan_nodes")
-    .select("id, title, description, is_start, next_node_ids, status, created_at")
+    .select("id, title, description, is_start, next_node_ids, status, position_x, position_y, created_at")
     .eq("plan_id", workspace.id)
     .order("created_at", { ascending: true });
 

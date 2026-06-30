@@ -7,6 +7,7 @@ import {
   getX402Description,
 } from "@/lib/x402";
 import { callXaiJSON, userMessage, DEFAULT_MODEL } from "@/lib/xai-client";
+import { persistSkillGridPositions, skillGridNodesFromRefs } from "@/lib/skill-grid-positions";
 
 async function getServiceRoleClient() {
   return createAdminClient();
@@ -211,6 +212,11 @@ Rules:
         .update({ next_node_ids: nextIds })
         .eq("id", currentNodeId);
     }
+
+    await persistSkillGridPositions(
+      supabase,
+      skillGridNodesFromRefs(nodeRefs, nodeIdMap),
+    );
 
     const { data: nodes } = await supabase
       .from("plan_nodes")

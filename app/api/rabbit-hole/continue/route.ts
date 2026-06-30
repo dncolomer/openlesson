@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { callXaiJSON, DEFAULT_MODEL, userMessage } from "@/lib/xai-client";
+import { persistSkillGridPositions, skillGridNodesFromRefs } from "@/lib/skill-grid-positions";
 
 type PlanNode = { id: string; title: string; description: string; is_start: boolean; next?: string[] };
 type PlanData = { title: string; nodes: PlanNode[] };
@@ -58,6 +59,11 @@ Rules:
     const nextIds = (nodeData.next ?? []).map((id) => nodeIdMap.get(id)).filter(Boolean) as string[];
     await supabase.from("plan_nodes").update({ next_node_ids: nextIds }).eq("id", currentNodeId);
   }
+
+  await persistSkillGridPositions(
+    supabase,
+    skillGridNodesFromRefs(result.data.nodes, nodeIdMap),
+  );
 
   return NextResponse.json({ planId: plan.id });
 }

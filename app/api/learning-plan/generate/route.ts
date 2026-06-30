@@ -4,6 +4,7 @@ import { callXaiJSON, callXaiText, userMessage, DEFAULT_MODEL } from "@/lib/xai-
 import type { Message, MessageContent } from "@/lib/xai-client";
 import { uploadFileToXAI, deleteFileFromXAI } from "@/lib/xai-files";
 import { callXaiResponses, type ResponsesInputContent } from "@/lib/xai-client";
+import { persistSkillGridPositions, skillGridNodesFromRefs } from "@/lib/skill-grid-positions";
 
 const ALLOWED_MIME_TYPES = new Set([
   "application/pdf",
@@ -357,6 +358,11 @@ Rules:
 
       await supabase.from("plan_nodes").update({ next_node_ids: nextIds }).eq("id", currentNodeId);
     }
+
+    await persistSkillGridPositions(
+      supabase,
+      skillGridNodesFromRefs(nodeRefs, nodeIdMap),
+    );
 
     // Persist plan_files records (already uploaded to xAI above)
     const fileStorageWarnings: string[] = [];

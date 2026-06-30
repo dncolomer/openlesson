@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { callXaiJSON, userMessage, DEFAULT_MODEL } from "@/lib/xai-client";
+import { toSkillGridNodes, withSkillGridPositions } from "@/lib/skill-grid-positions";
 
 interface NodeData {
   id: string;
@@ -109,11 +110,27 @@ export async function POST(
         status: "available",
       }));
 
-      const nodesWithPositions = newNodes.map((node, index) => ({
-        ...node,
-        position_x: sourceNodes?.[index]?.position_x,
-        position_y: sourceNodes?.[index]?.position_y,
-      }));
+      const nodesWithPositions = withSkillGridPositions(
+        newNodes.map((node, index) => ({
+          ...node,
+          id: node.id as string,
+          position_x: sourceNodes?.[index]?.position_x ?? undefined,
+          position_y: sourceNodes?.[index]?.position_y ?? undefined,
+        })),
+        toSkillGridNodes(
+          newNodes.map((node, index) => ({
+            id: node.id as string,
+            title: node.title,
+            is_start: node.is_start,
+            next_node_ids: (node.next_node_ids || []).filter((nextId: string | undefined): nextId is string =>
+              Boolean(nextId),
+            ),
+            status: node.status,
+            position_x: sourceNodes?.[index]?.position_x ?? undefined,
+            position_y: sourceNodes?.[index]?.position_y ?? undefined,
+          })),
+        ),
+      );
 
       const { error: insertError } = await supabase
         .from("plan_nodes")
@@ -248,9 +265,24 @@ Rules:
       status: "available",
     }));
 
+    const nodesToInsert = withSkillGridPositions(
+      newNodes.map((node) => ({ ...node, id: node.id as string })),
+      toSkillGridNodes(
+        newNodes.map((node) => ({
+          id: node.id as string,
+          title: node.title,
+          is_start: node.is_start,
+          next_node_ids: (node.next_node_ids || []).filter((nextId: string | undefined): nextId is string =>
+            Boolean(nextId),
+          ),
+          status: node.status,
+        })),
+      ),
+    );
+
     const { error: insertError } = await supabase
       .from("plan_nodes")
-      .insert(newNodes);
+      .insert(nodesToInsert);
 
     if (insertError) {
       console.error("Nodes insert error:", insertError);
@@ -267,7 +299,7 @@ Rules:
     return NextResponse.json({
       success: true,
       planId: newPlan.id,
-      message: `Plan remixed with ${newNodes.length} adapted sessions!`,
+      message: `Plan remixed with ${nodesToInsert.length} adapted sessions!`,
     });
   } catch (error) {
     console.error("Error remixing plan:", error);

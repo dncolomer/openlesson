@@ -377,3 +377,24 @@ body {
     transform: scale(1.15) !important;
   }
 }
+
+@keyframes salesSlideEnter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.sales-slide-enter {
+  animation: salesSlideEnter 0.35s ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sales-slide-enter {
+    animation: none;
+  }
+}

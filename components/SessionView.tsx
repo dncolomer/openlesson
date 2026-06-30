@@ -35,14 +35,18 @@ import {
 } from "@/lib/storage";
 import { playArchiveSound, playStepCompleteSound, playSessionCompleteSound } from "@/lib/sounds";
 import { formatTime } from "@/lib/utils";
-import { ProbesPanel } from "./ProbesPanel";
+import { SessionHeliosPanel } from "./SessionHeliosPanel";
+import { createClient } from "@/lib/supabase/client";
+import { useSessionThoughtInterface, type SessionThoughtTracePayload } from "@/lib/useSessionThoughtInterface";
+import { ThoughtMemoryPanel } from "@/components/ghc/ThoughtMemoryPanel";
+import { GrokGrokipediaTool } from "@/components/GrokGrokipediaTool";
 import { SessionControlBar } from "./SessionControlBar";
 import { SessionPlanViewer } from "./SessionPlanViewer";
 import { ResizablePane, type ResizablePaneHandle } from "./ResizablePane";
 import { ExcalidrawCanvas } from "./ExcalidrawCanvas";
 import { ToolsPanel, type Tool } from "./ToolsPanel";
 import { MobileBlockScreen } from "./MobileBlockScreen";
-import { HeliosChat, type ChatMessage, type PendingChatMessage, type StuckAction } from "./HeliosChat";
+import { type ChatMessage, type PendingChatMessage, type StuckAction } from "./HeliosChat";
 import { DataInputTool } from "./DataInputTool";
 import { LogsTool, type LogEntry } from "./LogsTool";
 import { createScreenCapture } from "@/lib/screen-capture";
@@ -63,7 +67,7 @@ import {
 import { useSessionHeartbeat, type StorageHeartbeatResult, type AnalysisHeartbeatResult, type StuckHeartbeatResult } from "@/lib/useSessionHeartbeat";
 import { useInactivityAutoPause } from "@/lib/useInactivityAutoPause";
 import { useVoiceActivity } from "@/lib/useVoiceActivity";
-import { useThinkAloudTranscript, type SpeechTranscriptEntry, type ThinkAloudThought } from "@/lib/useThinkAloudTranscript";
+import { useThinkAloudTranscript, type SpeechTranscriptEntry } from "@/lib/useThinkAloudTranscript";
 import { useHeliosVoicePlaybackActive } from "@/lib/useHeliosVoicePlayback";
 import { retryWithResult } from "@/lib/retry";
 import { translateWithLocale, useI18n } from "@/lib/i18n";
@@ -71,7 +75,7 @@ import { tutoringLocales, tutoringLanguageNames } from "@/lib/tutoring-languages
 import { isSessionWelcomeSeen, markSessionWelcomeSeen } from "@/lib/welcomeState";
 import { fetchAestheticPackages, type AestheticPackage } from "@/lib/aesthetics";
 import { AestheticPicker } from "./AestheticPicker";
-import { ThinkAloudTraces } from "./ThinkAloudTraces";
+
 import { DantesTool } from "./DantesTool";
 
 type ChapterWorkspace = {
@@ -180,122 +184,6 @@ function NotebookSubmitButton({
   );
 }
 
-function ThoughtHistoryTool({
-  thoughts,
-  onSendThoughts,
-}: {
-  thoughts: ThinkAloudThought[];
-  onSendThoughts: (thoughts: ThinkAloudThought[]) => void;
-}) {
-  const [selectedThoughtIds, setSelectedThoughtIds] = useState<Set<string>>(new Set());
-  const recentThoughts = useMemo(() => thoughts.slice(-THOUGHT_HISTORY_LIMIT).reverse(), [thoughts]);
-  const selectedThoughts = recentThoughts
-    .slice()
-    .reverse()
-    .filter((thought) => selectedThoughtIds.has(thought.id));
-
-  useEffect(() => {
-    setSelectedThoughtIds((current) => {
-      const validIds = new Set(recentThoughts.map((thought) => thought.id));
-      const next = new Set([...current].filter((id) => validIds.has(id)));
-      return next.size === current.size ? current : next;
-    });
-  }, [recentThoughts]);
-
-  const toggleThought = (thoughtId: string) => {
-    setSelectedThoughtIds((current) => {
-      const next = new Set(current);
-      if (next.has(thoughtId)) {
-        next.delete(thoughtId);
-      } else {
-        next.add(thoughtId);
-      }
-      return next;
-    });
-  };
-
-  const sendSelectedThoughts = () => {
-    if (selectedThoughts.length === 0) return;
-    onSendThoughts(selectedThoughts);
-    setSelectedThoughtIds(new Set());
-  };
-
-  return (
-    <div className="h-full overflow-hidden rounded-lg border border-neutral-800 bg-neutral-950/50 flex flex-col">
-      <div className="shrink-0 border-b border-neutral-800 px-4 py-3">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <h3 className="text-sm font-semibold text-white">Thought history</h3>
-            <p className="mt-1 text-xs text-neutral-500">Browse the last 50 captured thought traces and send selected ones to this chapter chat.</p>
-          </div>
-        </div>
-        <button
-          type="button"
-          onClick={sendSelectedThoughts}
-          disabled={selectedThoughts.length === 0}
-          className="mt-3 w-full rounded-xl border border-white/30 bg-white/10 px-3 py-2 text-xs font-medium text-white transition-colors hover:border-white/50 hover:bg-white/15 disabled:border-neutral-800 disabled:bg-neutral-900 disabled:text-neutral-500 disabled:opacity-100 disabled:cursor-not-allowed"
-        >
-          {selectedThoughts.length > 0 ? `Send selected (${selectedThoughts.length}) to chapter chat` : "Select traces to send"}
-        </button>
-      </div>
-      <div className="flex-1 min-h-0 overflow-y-auto p-3 space-y-2">
-        {recentThoughts.length === 0 ? (
-          <div className="rounded-xl border border-neutral-800 bg-neutral-900/50 px-3 py-4 text-center text-xs text-neutral-500">
-            No thought traces captured yet.
-          </div>
-        ) : recentThoughts.map((thought, index) => {
-          const isSelected = selectedThoughtIds.has(thought.id);
-          return (
-          <button
-            key={thought.id}
-            type="button"
-            onClick={() => toggleThought(thought.id)}
-            onDoubleClick={(event) => {
-              event.preventDefault();
-              onSendThoughts([thought]);
-              setSelectedThoughtIds((current) => {
-                if (!current.has(thought.id)) return current;
-                const next = new Set(current);
-                next.delete(thought.id);
-                return next;
-              });
-            }}
-            className={`block w-full rounded-xl border p-3 text-left transition-colors ${
-              isSelected
-                ? "border-white/50 bg-white/10"
-                : "border-neutral-800 bg-neutral-900/60 hover:border-neutral-600 hover:bg-neutral-800/70"
-            }`}
-          >
-            <div className="mb-2 flex items-center justify-between gap-2">
-              <span className="inline-flex items-center gap-2 text-[10px] uppercase tracking-[0.14em] text-neutral-500">
-                <span
-                  className={`h-3.5 w-3.5 rounded border flex items-center justify-center ${
-                    isSelected ? "border-white bg-white text-neutral-950" : "border-neutral-700 bg-neutral-950"
-                  }`}
-                  aria-hidden="true"
-                >
-                  {isSelected && (
-                    <svg className="h-2.5 w-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                    </svg>
-                  )}
-                </span>
-                Trace {recentThoughts.length - index}
-              </span>
-              <span
-                className="rounded-md border border-neutral-700 bg-neutral-950 px-2 py-1 text-[10px] font-medium text-neutral-300"
-              >
-                {isSelected ? "Selected" : "Select"}
-              </span>
-            </div>
-            <p className="text-xs leading-relaxed text-neutral-200">{thought.text}</p>
-          </button>
-        );})}
-      </div>
-    </div>
-  );
-}
-
 // Configuration
 const STORAGE_INTERVAL_MS = 5000;
 const ANALYSIS_INTERVAL_MS = 10000;
@@ -303,7 +191,7 @@ const STUCK_POLICY_ENABLED = false;
 const EEG_SAMPLE_RATE_HZ = 256;
 const EEG_DISPLAY_MAX_SAMPLES = 512;
 const EEG_PERSIST_MAX_SAMPLES = EEG_SAMPLE_RATE_HZ * 30;
-const THOUGHT_HISTORY_LIMIT = 50;
+
 
 export function SessionView({ sessionId }: { sessionId: string }) {
   const router = useRouter();
@@ -338,9 +226,6 @@ export function SessionView({ sessionId }: { sessionId: string }) {
 
   // Session ending / saving
   const [isSaving, setIsSaving] = useState(false);
-  const [thoughtHistory, setThoughtHistory] = useState<ThinkAloudThought[]>([]);
-  const [thoughtHistoryLoaded, setThoughtHistoryLoaded] = useState(false);
-
   // Tutor-end dialog
   const [showEndDialog, setShowEndDialog] = useState(false);
   const [endReason, setEndReason] = useState("");
@@ -349,12 +234,14 @@ export function SessionView({ sessionId }: { sessionId: string }) {
   // switch together when the focused chapter changes. This is intentionally
   // browser-local; it is not persisted to the backend.
   const [activeChapterIndex, setActiveChapterIndex] = useState(0);
+  const chapterFocusSinceRef = useRef<Record<number, number>>({ 0: Date.now() });
   const [chapterWorkspaces, setChapterWorkspaces] = useState<Record<string, ChapterWorkspace>>({});
   const [chapterWorkspacesLoaded, setChapterWorkspacesLoaded] = useState(false);
   const [activeStuckCheck, setActiveStuckCheck] = useState<string | null>(null);
 
   useEffect(() => {
     setActiveChapterIndex(0);
+    chapterFocusSinceRef.current = { 0: Date.now() };
     setChapterWorkspaces({});
     setChapterWorkspacesLoaded(false);
     setActiveStuckCheck(null);
@@ -383,7 +270,8 @@ export function SessionView({ sessionId }: { sessionId: string }) {
   }, [chapterWorkspaces, chapterWorkspacesLoaded, sessionId]);
 
   // New 3-panel layout state
-  const [activeTool, setActiveTool] = useState<Tool>("chat");
+  const [activeTool, setActiveTool] = useState<Tool>("notebook");
+  const [userInitial, setUserInitial] = useState("Y");
   const prevToolRef = useRef<Tool | null>(null);
   const resizablePaneRef = useRef<ResizablePaneHandle>(null);
   const resizablePaneRef2 = useRef<ResizablePaneHandle>(null);
@@ -572,6 +460,52 @@ export function SessionView({ sessionId }: { sessionId: string }) {
   const activeWorkspace = chapterWorkspaces[activeChapterKey] ?? createChapterWorkspace();
   const chatMessages = activeWorkspace.chatMessages;
   const pendingChatMessage = activeWorkspace.pendingChatMessage;
+
+  const lastDialogueUserTurn = useMemo(() => {
+    for (let index = chatMessages.length - 1; index >= 0; index -= 1) {
+      const message = chatMessages[index];
+      if (message.role === "user" && message.content.trim()) {
+        return { id: message.id, content: message.content };
+      }
+    }
+    return null;
+  }, [chatMessages]);
+
+  const lastDialogueAssistantTurn = useMemo(() => {
+    for (let index = chatMessages.length - 1; index >= 0; index -= 1) {
+      const message = chatMessages[index];
+      if (message.role === "assistant" && !message.pending && message.content.trim()) {
+        return { id: message.id, content: message.content };
+      }
+    }
+    return null;
+  }, [chatMessages]);
+
+  const isHeliosAssistantPending = useMemo(() => {
+    for (let index = chatMessages.length - 1; index >= 0; index -= 1) {
+      const message = chatMessages[index];
+      if (message.role === "assistant" && message.pending) return true;
+      if (message.role === "assistant" && !message.pending) break;
+    }
+    return false;
+  }, [chatMessages]);
+
+  const chapterDialoguePrompt = activeStep?.description?.trim() || "Work through this chapter by sending thoughts to Helios.";
+
+  useEffect(() => {
+    const supabase = createClient();
+    supabase.auth.getUser().then(({ data }: { data: { user: { email?: string | null; user_metadata?: Record<string, unknown> } | null } }) => {
+      const user = data.user;
+      if (!user) return;
+      const name =
+        (typeof user.user_metadata?.full_name === "string" && user.user_metadata.full_name.trim()) ||
+        (typeof user.user_metadata?.name === "string" && user.user_metadata.name.trim()) ||
+        user.email?.split("@")[0] ||
+        "";
+      const initial = name.charAt(0).toUpperCase();
+      if (initial) setUserInitial(initial);
+    });
+  }, []);
   const whiteboardData = activeWorkspace.whiteboardData;
   const whiteboardSceneData = activeWorkspace.whiteboardSceneData;
   const notebookContent = activeWorkspace.notebookContent;
@@ -645,12 +579,6 @@ export function SessionView({ sessionId }: { sessionId: string }) {
   // Practice/Theory side panels. That content has been merged into
   // the Helios chat surface — see fetchAndInjectPrepIntoChat below.)
 
-  // Grokipedia search suggestions
-  const [grokipediaSuggestions, setGrokipediaSuggestions] = useState<string[]>([]);
-  const [grokipediaSuggestionsLoading, setGrokipediaSuggestionsLoading] = useState(false);
-  const [grokipediaManualTerm, setGrokipediaManualTerm] = useState("");
-  const [grokPrompt, setGrokPrompt] = useState("");
-
   // Pop-out window state
   const [isPopOutActive, setIsPopOutActive] = useState(false);
   const popOutWindowRef = useRef<Window | null>(null);
@@ -681,71 +609,17 @@ export function SessionView({ sessionId }: { sessionId: string }) {
     prevToolRef.current = activeTool;
   }, [activeTool, session?.id, session?.startedAt]);
 
-  // Fetch Grokipedia search suggestions from LLM
-  const fetchGrokipediaSuggestions = async () => {
-    if (!session?.problem) return;
-    
-    setGrokipediaSuggestionsLoading(true);
-    try {
-      const currentStep = sessionPlanRef.current?.steps?.[sessionPlanRef.current.currentStepIndex];
-      const activeProbes = session.probes?.filter(p => !p.archived) || [];
-      
-      const response = await fetch("/api/suggest-grokipedia-terms", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          sessionProblem: session.problem,
-          currentPlanStep: currentStep?.description,
-          activeProbes: activeProbes.map(p => ({ text: p.text })),
-        }),
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        setGrokipediaSuggestions(data.terms || []);
-      }
-    } catch (err) {
-      console.error("Grokipedia suggestions error:", err);
-    } finally {
-      setGrokipediaSuggestionsLoading(false);
-    }
-  };
-
   // Step action handlers — Resources (Theory), Practice, Ask Helios.
-  //
-  // Theory and Practice used to open their own panels driven by
-  // /api/prep-material. They've been folded into the Helios chat
-  // surface so there's a single conversational thread of truth: the
-  // action buttons now post a user-stub message into chat ("Give me
-  // the theory for this step…"), fetch the same prep-material
-  // markdown, and append it as a rich assistant message. Same content,
-  // same Markdown+KaTeX rendering — just inside the chat history so
-  // it stays linked to the rest of the conversation and doesn't get
-  // lost when the user switches tools.
-  //
-  // We inject a placeholder assistant message flagged with
-  // `pending: true` — HeliosChat renders that as the same bouncing-
-  // dots typing indicator used during a normal chat round-trip, so
-  // visually there's no difference between waiting for Helios to
-  // reply and waiting for prep-material. The optional `pendingLabel`
-  // sits next to the dots ("Preparing practice tasks for you…") so
-  // the user knows what's coming. Once the fetch resolves we replace
-  // the placeholder with the rendered markdown, clearing the pending
-  // flags. On error we swap in a short apology — same id, also no
-  // longer pending.
   const fetchAndInjectPrepIntoChat = async (
     type: "reading" | "exercise",
     stepDescription: string,
     userStub: string,
-    pendingLabel: string,
     fallbackTitle: string,
   ) => {
     if (!session?.problem) return;
     const targetChapterKey = activeChapterKey;
     ensureVisible("tools");
-    setActiveTool("chat");
-
-    const cardKind = type === "exercise" ? "practice" : "theory";
+    setActiveTool("notebook");
 
     const userMsg: ChatMessage = {
       id: `${Date.now()}-u`,
@@ -757,13 +631,7 @@ export function SessionView({ sessionId }: { sessionId: string }) {
       id: placeholderId,
       role: "assistant",
       content: "",
-      // Render the placeholder as the same kind of smart card we'll
-      // swap real content into — that way the dots → markdown
-      // transition happens inside the same framed shell with no
-      // layout jump.
-      kind: cardKind,
       pending: true,
-      pendingLabel,
     };
 
     updateChapterWorkspace(targetChapterKey, workspace => ({
@@ -781,29 +649,17 @@ export function SessionView({ sessionId }: { sessionId: string }) {
 
       const title = (data.title ?? fallbackTitle).trim();
       const body = (data.content ?? "").trim();
+      const content = body ? `${title}\n\n${body}` : title;
 
-      // Replace placeholder by id so out-of-order fetches don't clobber
-      // each other if the user clicks twice in quick succession. The
-      // smart card chrome already renders the title in its header
-      // strip, so we don't prepend it to the markdown body.
       updateChapterWorkspace(targetChapterKey, workspace => ({
         chatMessages: workspace.chatMessages.map(m =>
           m.id === placeholderId
-            ? {
-                ...m,
-                content: body,
-                cardTitle: title,
-                pending: false,
-                pendingLabel: undefined,
-              }
+            ? { ...m, content, pending: false }
             : m,
         ),
       }));
     } catch (err) {
       console.error("Prep material → chat error:", err);
-      // On error, fall back to a regular Helios bubble (drop the
-      // card kind) so the apology reads as conversational, not as
-      // a failed-but-still-card artifact.
       updateChapterWorkspace(targetChapterKey, workspace => ({
         chatMessages: workspace.chatMessages.map(m =>
           m.id === placeholderId
@@ -813,10 +669,7 @@ export function SessionView({ sessionId }: { sessionId: string }) {
                   type === "exercise"
                     ? "I couldn't pull together a practice set just now. Try again in a moment, or tell me what specifically you'd like to practice."
                     : "I couldn't pull the theory for this step right now. Try again, or ask me a specific question and I'll explain.",
-                kind: undefined,
-                cardTitle: undefined,
                 pending: false,
-                pendingLabel: undefined,
               }
             : m,
         ),
@@ -829,7 +682,6 @@ export function SessionView({ sessionId }: { sessionId: string }) {
       "reading",
       stepDescription,
       `Give me the theory for this step: "${stepDescription}"`,
-      "Preparing the theory for you…",
       "Theory",
     );
   };
@@ -839,29 +691,25 @@ export function SessionView({ sessionId }: { sessionId: string }) {
       "exercise",
       stepDescription,
       `Give me practice tasks for this step: "${stepDescription}"`,
-      "Preparing practice tasks for you…",
       "Practice",
     );
   };
 
   const openHeliosChatWithMessage = useCallback((message: string | PendingChatMessage) => {
     const targetChapterKey = activeChapterKey;
-    ensureVisible("tools");
-    setActiveTool("chat");
     updateChapterWorkspace(targetChapterKey, { pendingChatMessage: message });
-  }, [activeChapterKey, ensureVisible, updateChapterWorkspace]);
+  }, [activeChapterKey, updateChapterWorkspace]);
 
-  const submitHeliosChatMessageNow = useCallback(async (message: string) => {
+  const submitHeliosChatMessageNow = useCallback(async (message: string, imageDataUrl?: string) => {
     const text = message.trim();
     if (!text || !session) return;
-    ensureVisible("tools");
-    setActiveTool("chat");
 
     const chapterKey = activeChapterKey;
     const userMsg: ChatMessage = {
       id: `${Date.now()}-u`,
       role: "user",
       content: text,
+      imageDataUrl,
     };
     const placeholderId = `${Date.now()}-pending`;
     updateChapterWorkspace(chapterKey, workspace => ({
@@ -895,7 +743,7 @@ export function SessionView({ sessionId }: { sessionId: string }) {
       updateChapterWorkspace(chapterKey, workspace => ({
         chatMessages: workspace.chatMessages.map(message =>
           message.id === placeholderId
-            ? { ...message, content, pending: false, pendingLabel: undefined }
+            ? { ...message, content, pending: false }
             : message
         ),
       }));
@@ -904,12 +752,27 @@ export function SessionView({ sessionId }: { sessionId: string }) {
       updateChapterWorkspace(chapterKey, workspace => ({
         chatMessages: workspace.chatMessages.map(message =>
           message.id === placeholderId
-            ? { ...message, content: t('heliosChat.errorMessage'), pending: false, pendingLabel: undefined }
+            ? { ...message, content: t('heliosChat.errorMessage'), pending: false }
             : message
         ),
       }));
     }
-  }, [activeChapterIndex, activeChapterKey, activeStep, chapterWorkspaces, ensureVisible, session, sessionPlan, t, tutoringLanguage, updateChapterWorkspace]);
+  }, [activeChapterIndex, activeChapterKey, activeStep, chapterWorkspaces, session, sessionPlan, t, tutoringLanguage, updateChapterWorkspace]);
+
+  useEffect(() => {
+    if (!pendingChatMessage) return;
+    const text = typeof pendingChatMessage === "string"
+      ? pendingChatMessage
+      : pendingChatMessage.text;
+    if (!text?.trim()) {
+      setPendingChatMessage(null);
+      return;
+    }
+    const imageDataUrl = typeof pendingChatMessage === "string"
+      ? undefined
+      : pendingChatMessage.imageDataUrl;
+    void submitHeliosChatMessageNow(text, imageDataUrl).finally(() => setPendingChatMessage(null));
+  }, [pendingChatMessage, setPendingChatMessage, submitHeliosChatMessageNow]);
 
   const addProbeToHeliosChat = useCallback((text: string) => {
     const content = text.trim();
@@ -926,10 +789,8 @@ export function SessionView({ sessionId }: { sessionId: string }) {
     ]);
   }, []);
 
-  const addHeliosStepEvaluationCue = useCallback((forceAdvance: boolean) => {
+  const addHeliosStepEvaluationCue = useCallback((_forceAdvance: boolean, _markAsSkipped = false) => {
     const targetChapterKey = activeChapterKey;
-    ensureVisible("tools");
-    setActiveTool("chat");
     const cueId = `advance_eval_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
     updateChapterWorkspace(targetChapterKey, workspace => ({
       chatMessages: [
@@ -938,17 +799,12 @@ export function SessionView({ sessionId }: { sessionId: string }) {
           id: cueId,
           role: "assistant",
           content: "",
-          kind: "evaluation",
-          cardTitle: forceAdvance ? "Marking done" : "Evaluating your chapter",
           pending: true,
-          pendingLabel: forceAdvance
-            ? t('sessionPlan.completing')
-            : t('sessionPlan.evaluatingStep'),
         },
       ],
     }));
     return `${targetChapterKey}::${cueId}`;
-  }, [activeChapterKey, ensureVisible, t, updateChapterWorkspace]);
+  }, [activeChapterKey, updateChapterWorkspace]);
 
   const removeHeliosCue = useCallback((cueId: string | null) => {
     if (!cueId) return;
@@ -961,10 +817,11 @@ export function SessionView({ sessionId }: { sessionId: string }) {
   const resolveHeliosCue = useCallback((cueId: string | null, content: string) => {
     if (!cueId) return;
     const [chapterKey, messageId] = cueId.split("::");
+    const plainContent = content.replace(/\*\*([^*]+)\*\*/g, "$1");
     updateChapterWorkspace(chapterKey, workspace => ({
       chatMessages: workspace.chatMessages.map(message =>
         message.id === messageId
-          ? { ...message, content, pending: false, pendingLabel: undefined }
+          ? { ...message, content: plainContent, pending: false }
           : message
       ),
     }));
@@ -1138,6 +995,20 @@ export function SessionView({ sessionId }: { sessionId: string }) {
   useEffect(() => { isWebcamEnabledRef.current = isWebcamEnabled; }, [isWebcamEnabled]);
   useEffect(() => { sessionPlanRef.current = sessionPlan; }, [sessionPlan]);
   useEffect(() => { elapsedSecondsRef.current = elapsedSeconds; }, [elapsedSeconds]);
+
+  const handleActiveChapterIndexChange = useCallback((index: number) => {
+    const now = Date.now();
+    chapterFocusSinceRef.current[index] = now;
+    setActiveChapterIndex(index);
+    const step = sessionPlanRef.current?.steps?.[index];
+    const currentSessionId = sessionRef.current?.id ?? sessionId;
+    if (!currentSessionId) return;
+    void logToolUsage(currentSessionId, "session_plan", "chapter_focus", now, {
+      stepIndex: index,
+      stepId: step?.id,
+      stepDescription: step?.description?.slice(0, 120),
+    }).catch(err => console.warn("[SessionView] chapter_focus log failed:", err));
+  }, [sessionId]);
 
   useEffect(() => {
     if (!session || !isRecording || isPaused) return;
@@ -2225,6 +2096,51 @@ export function SessionView({ sessionId }: { sessionId: string }) {
     [addHeartbeatLog],
   );
 
+  const logSessionThoughtTrace = useCallback(
+    (payload: SessionThoughtTracePayload) => {
+      const actionMap: Record<string, ToolAction> = {
+        crystallize: "crystallize",
+        pause_finalize: "pause_finalize",
+        send: "thought_send",
+        resend: "thought_resend",
+        skip: "thought_skip",
+        select: "thought_select",
+        deselect: "thought_deselect",
+      };
+      void logTool("thought-trace", actionMap[payload.action] || "thought_send", {
+        trace_type: payload.traceType,
+        action: payload.action,
+        thought_id: payload.thoughtId ?? null,
+        thought_ids: payload.thoughtIds ?? null,
+        chain_id: payload.chainId ?? null,
+        text: payload.text ?? null,
+        combined: payload.combined ?? false,
+        timestamp_ms: payload.timestampMs ?? Date.now(),
+      });
+    },
+    [logTool],
+  );
+
+  const sessionSpeechLang =
+    ({ en: "en-US", es: "es-ES", de: "de-DE", pl: "pl-PL", vi: "vi-VN", zh: "zh-CN" } as Record<string, string>)[
+      tutoringLanguage
+    ] || "en-US";
+
+  const sessionThoughtInterface = useSessionThoughtInterface({
+    enabled: isRecording && !isPaused && !showWelcomePanel,
+    speechLang: sessionSpeechLang,
+    sessionId: session?.id,
+    onLogTrace: logSessionThoughtTrace,
+    onSendToProbe: async (text) => {
+      await submitHeliosChatMessageNow(text);
+    },
+  });
+
+  const sessionThoughtHistory = useMemo(
+    () => sessionThoughtInterface.thoughts.slice().reverse(),
+    [sessionThoughtInterface.thoughts],
+  );
+
   const heartbeat = useSessionHeartbeat({
     storageIntervalMs: STORAGE_INTERVAL_MS,
     analysisIntervalMs: ANALYSIS_INTERVAL_MS,
@@ -2305,27 +2221,21 @@ export function SessionView({ sessionId }: { sessionId: string }) {
       if (toolName === "canvas") {
         updateChapterWorkspace(targetChapterKey, { canvasDirtyForHelios: false });
         const imageDataUrl = targetCanvasData || undefined;
-        ensureVisible("tools");
-        setActiveTool("chat");
-        updateChapterWorkspace(targetChapterKey, {
-          pendingChatMessage: {
-            text: "Here is my current canvas. Help me reason through what I have drawn without just giving me the answer.",
-            imageDataUrl,
-          },
-        });
+        void submitHeliosChatMessageNow(
+          "Here is my current canvas. Help me reason through what I have drawn without just giving me the answer.",
+          imageDataUrl,
+        );
       } else {
         updateChapterWorkspace(targetChapterKey, { notebookDirtyForHelios: false });
         const content = targetNotebookContent.trim();
         if (content) {
-          ensureVisible("tools");
-          setActiveTool("chat");
-          updateChapterWorkspace(targetChapterKey, {
-            pendingChatMessage: `Here are my notebook notes. Help me reason through them without just giving me the answer:\n\n${content}`,
-          });
+          void submitHeliosChatMessageNow(
+            `Here are my notebook notes. Help me reason through them without just giving me the answer:\n\n${content}`,
+          );
         }
       }
     },
-    [activeChapterKey, activeWorkspace, chapterWorkspaces, ensureVisible, logTool, runStorageHeartbeat, runAnalysisHeartbeat, updateChapterWorkspace],
+    [activeChapterKey, activeWorkspace, chapterWorkspaces, logTool, runStorageHeartbeat, runAnalysisHeartbeat, submitHeliosChatMessageNow, updateChapterWorkspace],
   );
 
   const checkMicrophone = async () => {
@@ -2671,63 +2581,11 @@ export function SessionView({ sessionId }: { sessionId: string }) {
   const isHeliosVoicePlaying = useHeliosVoicePlaybackActive();
 
   const thinkAloudTranscript = useThinkAloudTranscript({
-    enabled: isRecording && !isPaused && !isHeliosVoicePlaying,
+    enabled: false,
     tutoringLanguage,
   });
   consumeSpeechTranscriptEntriesRef.current = thinkAloudTranscript.consumePendingTranscriptEntries;
   requeueSpeechTranscriptEntriesRef.current = thinkAloudTranscript.requeueTranscriptEntries;
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    setThoughtHistoryLoaded(false);
-    try {
-      const stored = window.localStorage.getItem(`openlesson:${sessionId}:thought-history`);
-      const parsed = stored ? JSON.parse(stored) : [];
-      if (Array.isArray(parsed)) {
-        setThoughtHistory(parsed.filter((item): item is ThinkAloudThought => (
-          typeof item?.id === "string" &&
-          typeof item?.text === "string" &&
-          typeof item?.timestamp === "number"
-        )).slice(-THOUGHT_HISTORY_LIMIT));
-      }
-    } catch {
-      setThoughtHistory([]);
-    } finally {
-      setThoughtHistoryLoaded(true);
-    }
-  }, [sessionId]);
-
-  useEffect(() => {
-    if (!thoughtHistoryLoaded) return;
-    if (thinkAloudTranscript.thoughts.length === 0) return;
-    setThoughtHistory((current) => {
-      const byId = new Map(current.map((thought) => [thought.id, thought]));
-      for (const thought of thinkAloudTranscript.thoughts) {
-        byId.set(thought.id, thought);
-      }
-      const next = Array.from(byId.values())
-        .sort((a, b) => a.timestamp - b.timestamp)
-        .slice(-THOUGHT_HISTORY_LIMIT);
-      return next.length === current.length && next.every((thought, index) => thought.id === current[index]?.id)
-        ? current
-        : next;
-    });
-  }, [thinkAloudTranscript.thoughts, thoughtHistoryLoaded]);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    if (!thoughtHistoryLoaded) return;
-    window.localStorage.setItem(`openlesson:${sessionId}:thought-history`, JSON.stringify(thoughtHistory.slice(-THOUGHT_HISTORY_LIMIT)));
-  }, [sessionId, thoughtHistory, thoughtHistoryLoaded]);
-
-  const handleThinkAloudThoughtClick = useCallback((thought: ThinkAloudThought) => {
-    void submitHeliosChatMessageNow(`I was thinking aloud and want to work through this: "${thought.text}"`);
-  }, [submitHeliosChatMessageNow]);
-
-  const handleThoughtHistorySend = useCallback((thoughts: ThinkAloudThought[]) => {
-    if (thoughts.length === 0) return;
-    void submitHeliosChatMessageNow(`I want to send these thought traces into this chapter chat:\n\n${thoughts.map((thought) => `- ${thought.text}`).join("\n")}`);
-  }, [submitHeliosChatMessageNow]);
 
   // Clear the inactivity flag whenever the user manually resumes.
   useEffect(() => {
@@ -2778,7 +2636,7 @@ export function SessionView({ sessionId }: { sessionId: string }) {
     const s = sessionRef.current;
     if (!s) return;
     setIsStartingSession(true);
-    setActiveTool("chat");
+    setActiveTool("notebook");
     let didRevealChat = false;
     const revealChat = () => {
       if (didRevealChat) return;
@@ -2841,7 +2699,6 @@ export function SessionView({ sessionId }: { sessionId: string }) {
     const probe = session.probes.find(p => p.id === probeId);
     if (!probe) return;
     
-    const evaluationCueId = addHeliosStepEvaluationCue(false);
     setArchivingProbeId(probeId);
     
     try {
@@ -2861,7 +2718,6 @@ export function SessionView({ sessionId }: { sessionId: string }) {
     } catch (err) {
       console.error("Archive probe error:", err);
     } finally {
-      removeHeliosCue(evaluationCueId);
       // Delay clearing to allow animation to complete
       setTimeout(() => setArchivingProbeId(null), 500);
     }
@@ -2896,9 +2752,9 @@ export function SessionView({ sessionId }: { sessionId: string }) {
     await stopRecording();
   };
 
-  const handleAdvanceStep = async (forceAdvance = false) => {
+  const handleAdvanceStep = async (forceAdvance = false, markAsSkipped = false) => {
     if (!session) return;
-    const evaluationCueId = addHeliosStepEvaluationCue(forceAdvance);
+    const evaluationCueId = addHeliosStepEvaluationCue(forceAdvance, markAsSkipped);
     let evaluationCueResolved = false;
     try {
     const currentSession = sessionRef.current || session;
@@ -2910,11 +2766,12 @@ export function SessionView({ sessionId }: { sessionId: string }) {
       if (!currentPlan?.steps?.length) return;
 
       const currentIdx = activeChapterIndex;
+      const terminalStatus = markAsSkipped ? "skipped" as const : "completed" as const;
 
-      // Mark the focused chapter completed without forcing sequential advance.
+      // Mark the focused chapter done or skipped without forcing sequential advance.
       const nextIdx = currentIdx;
       const updatedSteps = currentPlan.steps.map((s, i) => {
-        if (i === currentIdx) return { ...s, status: "completed" as const };
+        if (i === currentIdx) return { ...s, status: terminalStatus };
         return s;
       });
       const updatedPlan = {
@@ -2948,7 +2805,7 @@ export function SessionView({ sessionId }: { sessionId: string }) {
           setShowPlanCompleteModal(true);
           if (isRecording && !isPaused) setIsPaused(true);
         }, 1500);
-      } else {
+      } else if (!markAsSkipped) {
         // Chapter completed; keep focus here in the non-sequential flow.
         playStepCompleteSound();
         const newStep = updatedPlan.steps[updatedPlan.currentStepIndex];
@@ -3007,13 +2864,16 @@ export function SessionView({ sessionId }: { sessionId: string }) {
     }
 
     // --- API mode (unchanged) ---
+      const evalSinceMs = chapterFocusSinceRef.current[activeChapterIndex] ?? 0;
       const res = await fetch("/api/session-plan/advance-step", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           sessionId: session.id,
           forceAdvance,
+          markAsSkipped,
           targetStepIndex: activeChapterIndex,
+          evalSinceMs,
           previousProbes: currentSession.probes.map(p => p.text),
           focusedProbes: openProbes.filter(p => p.focused).map(p => ({ id: p.id, text: p.text })),
           openProbeCount: openProbes.length,
@@ -3032,7 +2892,7 @@ export function SessionView({ sessionId }: { sessionId: string }) {
       if (data.blocked) {
         const reasoning = data.advanceReasoning || "You may not be ready to move on yet.";
         const verdict = data.advanceVerdict === "unavailable" ? "I couldn't evaluate this chapter." : "Not yet.";
-        resolveHeliosCue(evaluationCueId, `**Helios verdict: ${verdict}**\n\n${reasoning}\n\nI did not mark this chapter done.`);
+        resolveHeliosCue(evaluationCueId, `Helios verdict: ${verdict}\n\n${reasoning}\n\nI did not mark this chapter done.`);
         evaluationCueResolved = true;
         // Create a feedback probe so the user sees WHY they can't advance
         const feedbackProbe = await addProbe(session.id, {
@@ -3074,22 +2934,22 @@ export function SessionView({ sessionId }: { sessionId: string }) {
         return;
       }
 
-      const updatedPlan = {
-        ...rawUpdatedPlan,
-        steps: rawUpdatedPlan.steps.map((step: { status?: string }, index: number) =>
-          index === activeChapterIndex ? { ...step, status: "completed" as const } : step
-        ),
-      };
+      const updatedPlan = rawUpdatedPlan;
 
       const successReasoning = typeof data.advanceReasoning === "string" && data.advanceReasoning.trim()
         ? `\n\n${data.advanceReasoning.trim()}`
         : "";
-      const successVerdict = data.advanceVerdict === "agreed"
-        ? "Agreed."
-        : data.advanceVerdict === "forced"
-          ? "Marked done by your override."
-          : "Marked done.";
-      resolveHeliosCue(evaluationCueId, `**Helios verdict: ${successVerdict}**\n\nI marked this chapter as done.${successReasoning}`);
+      const successVerdict = data.advanceVerdict === "skipped"
+        ? "Skipped."
+        : data.advanceVerdict === "agreed"
+          ? "Agreed."
+          : data.advanceVerdict === "forced"
+            ? "Marked done by your override."
+            : "Marked done.";
+      const successBody = data.advanceVerdict === "skipped"
+        ? "I skipped this chapter. It won't count when evaluating your other chapters."
+        : `I marked this chapter as done.${successReasoning}`;
+      resolveHeliosCue(evaluationCueId, `Helios verdict: ${successVerdict}\n\n${successBody}`);
       evaluationCueResolved = true;
        
       // Update plan state
@@ -3122,7 +2982,7 @@ export function SessionView({ sessionId }: { sessionId: string }) {
             setIsPaused(true);
           }
         }, 1500);
-      } else {
+      } else if (!markAsSkipped) {
         // Regular step completion - generate probe for next step
         playStepCompleteSound();
 
@@ -4110,42 +3970,6 @@ export function SessionView({ sessionId }: { sessionId: string }) {
                     <div className="absolute inset-0 z-10 bg-black/30 cursor-not-allowed" />
                   )}
                   <div className="flex-1 min-h-0 overflow-hidden relative">
-                    {activeTool === "chat" && (
-                      <div className="flex h-full min-h-0 flex-col gap-3">
-                        <div className="min-h-0 flex-1">
-                          <HeliosChat 
-                            problem={session.problem}
-                            messages={chatMessages}
-                            onMessagesChange={setChatMessages}
-                            sessionId={session.id}
-                            tutoringLanguage={tutoringLanguage}
-                            pendingMessage={pendingChatMessage}
-                            onPendingMessageHandled={() => setPendingChatMessage(null)}
-                            onStuckAction={handleStuckAction}
-                            stuckActions={["ask", "theory", "practice", "canvas", "notebook", "break"]}
-                            isMicOn={isRecording && !isPaused}
-                            activeStepIndex={activeChapterIndex}
-                            activeStep={activeStep}
-                            totalSteps={sessionPlan?.steps?.length ?? 0}
-                            sessionPlan={sessionPlan}
-                          />
-                        </div>
-                        <div className="shrink-0">
-                          <ThinkAloudTraces
-                            thoughts={thinkAloudTranscript.thoughts}
-                            interimText={thinkAloudTranscript.interimText}
-                            isListening={thinkAloudTranscript.isListening}
-                            isSupported={thinkAloudTranscript.isSupported}
-                            error={thinkAloudTranscript.error}
-                            onThoughtClick={handleThinkAloudThoughtClick}
-                            onManualSubmit={(text) => void submitHeliosChatMessageNow(text)}
-                            onClearThoughts={thinkAloudTranscript.clearThoughts}
-                            onThoughtsSent={thinkAloudTranscript.removeThoughts}
-                          />
-                        </div>
-                      </div>
-                    )}
-
                     <div className={activeTool === "canvas" ? "h-full" : "hidden"}>
                       <ExcalidrawCanvas
                         key={activeChapterKey}
@@ -4196,9 +4020,15 @@ export function SessionView({ sessionId }: { sessionId: string }) {
                     )}
 
                     {activeTool === "thought-history" && (
-                      <ThoughtHistoryTool
-                        thoughts={thoughtHistory}
-                        onSendThoughts={handleThoughtHistorySend}
+                      <ThoughtMemoryPanel
+                        className="flex h-full min-h-0 flex-col overflow-hidden px-1"
+                        listClassName="min-h-0 flex-1 overflow-y-auto pr-2"
+                        thoughts={sessionThoughtHistory}
+                        sentThoughtIds={sessionThoughtInterface.sentThoughtIds}
+                        skippedThoughtIds={sessionThoughtInterface.memoryThoughtIds}
+                        onSendThought={(text, thoughtIds) => {
+                          void sessionThoughtInterface.sendThought(text, thoughtIds);
+                        }}
                       />
                     )}
 
@@ -4258,177 +4088,11 @@ export function SessionView({ sessionId }: { sessionId: string }) {
                         Helios chat surface, so this block is now
                         Grokipedia-only. */}
                     {activeTool === "grokipedia" && (
-                      <div className="h-full flex flex-col">
-                        {session?.problem && (
-                          <div className="flex-1 min-h-0 p-4 overflow-auto">
-                            <div className="max-w-md mx-auto space-y-6">
-                              {/* Header */}
-                              <div className="text-center">
-                                <h3 className="text-lg font-medium text-white mb-2">{t('session.grokipedia')}</h3>
-                                <p className="text-sm text-neutral-400">{t('session.grokipediaDesc')}</p>
-                              </div>
-
-                              <section className="rounded-2xl border border-neutral-800 bg-neutral-950/60 p-4 shadow-[0_1px_0_rgba(255,255,255,0.04)_inset]">
-                                <div className="mb-4 flex items-center gap-2">
-                                  <div className="flex h-7 w-7 items-center justify-center rounded-full border border-neutral-700 bg-neutral-900 text-neutral-300">
-                                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                      <circle cx="12" cy="12" r="10" />
-                                      <path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
-                                    </svg>
-                                  </div>
-                                  <div>
-                                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-neutral-200">Grokipedia</p>
-                                    <p className="mt-0.5 text-xs text-neutral-500">Search concise reference material.</p>
-                                  </div>
-                                </div>
-
-                                <div className="flex gap-2">
-                                  <input
-                                    type="text"
-                                    value={grokipediaManualTerm}
-                                    onChange={(e) => setGrokipediaManualTerm(e.target.value)}
-                                    onKeyDown={(e) => {
-                                      if (e.key === 'Enter' && grokipediaManualTerm.trim()) {
-                                        window.open(`https://grokipedia.com/search?q=${encodeURIComponent(grokipediaManualTerm.trim())}`, '_blank');
-                                      }
-                                    }}
-                                    placeholder={t('session.grokipediaSearchPlaceholder')}
-                                    className="flex-1 px-4 py-2.5 bg-neutral-900 border border-neutral-700 rounded-xl text-white placeholder-neutral-500 text-sm focus:outline-none focus:border-neutral-500 transition-colors"
-                                  />
-                                  <a
-                                    href={grokipediaManualTerm.trim() ? `https://grokipedia.com/search?q=${encodeURIComponent(grokipediaManualTerm.trim())}` : '#'}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    onClick={(e) => {
-                                      if (!grokipediaManualTerm.trim()) {
-                                        e.preventDefault();
-                                      }
-                                    }}
-                                    className={`px-4 py-2.5 rounded-xl text-sm font-medium transition-colors inline-flex items-center gap-2 ${
-                                      grokipediaManualTerm.trim()
-                                        ? 'bg-neutral-100 hover:bg-white text-neutral-900'
-                                        : 'bg-neutral-800 text-neutral-500 cursor-not-allowed'
-                                    }`}
-                                  >
-                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                      <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                                    </svg>
-                                    {t('session.grokipediaSearch')}
-                                  </a>
-                                </div>
-
-                                <div className="mt-4 border-t border-neutral-800 pt-4">
-                                  <p className="text-xs text-neutral-500 mb-3">{t('session.grokipediaTopicSearch')}</p>
-                                  <a
-                                    href={`https://grokipedia.com/search?q=${encodeURIComponent(session.problem)}`}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="w-full px-4 py-2.5 bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-white text-sm rounded-xl transition-colors inline-flex items-center justify-center gap-2"
-                                  >
-                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                      <circle cx="12" cy="12" r="10" />
-                                      <path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
-                                    </svg>
-                                    <span className="truncate">{session.problem}</span>
-                                  </a>
-                                </div>
-
-                                <div className="mt-4 border-t border-neutral-800 pt-4">
-                                  <div className="flex items-center justify-between mb-3">
-                                    <p className="text-xs text-neutral-500">{t('session.grokipediaSuggestedSearches')}</p>
-                                    <button
-                                      onClick={fetchGrokipediaSuggestions}
-                                      disabled={grokipediaSuggestionsLoading}
-                                      className="text-xs text-neutral-400 hover:text-white transition-colors inline-flex items-center gap-1.5 disabled:opacity-50"
-                                    >
-                                      {grokipediaSuggestionsLoading ? (
-                                        <>
-                                          <div className="w-3 h-3 border border-neutral-600 border-t-neutral-300 rounded-full animate-spin" />
-                                          {t('common.loading')}
-                                        </>
-                                      ) : grokipediaSuggestions.length > 0 ? (
-                                        <>
-                                          <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                            <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                                          </svg>
-                                          {t('session.grokipediaRefresh')}
-                                        </>
-                                      ) : (
-                                        <>
-                                          <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                            <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
-                                          </svg>
-                                          {t('session.grokipediaGenerate')}
-                                        </>
-                                      )}
-                                    </button>
-                                  </div>
-
-                                  {grokipediaSuggestions.length > 0 ? (
-                                    <div className="flex flex-wrap gap-2">
-                                      {grokipediaSuggestions.map((term, idx) => (
-                                        <a
-                                          key={idx}
-                                          href={`https://grokipedia.com/search?q=${encodeURIComponent(term)}`}
-                                          target="_blank"
-                                          rel="noopener noreferrer"
-                                          className="px-3 py-1.5 bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 hover:border-neutral-600 text-neutral-300 hover:text-white text-sm rounded-lg transition-colors"
-                                        >
-                                          {term}
-                                        </a>
-                                      ))}
-                                    </div>
-                                  ) : !grokipediaSuggestionsLoading && (
-                                    <p className="text-xs text-neutral-600 text-center py-4">
-                                      {t('session.grokipediaNoSuggestions')}
-                                    </p>
-                                  )}
-                                </div>
-                              </section>
-
-                              <section className="rounded-2xl border border-neutral-800 bg-neutral-950/40 p-4">
-                                <div className="mb-4 flex items-center gap-2">
-                                  <div className="flex h-7 w-7 items-center justify-center rounded-full border border-neutral-700 bg-neutral-900 text-neutral-300">
-                                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                      <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
-                                    </svg>
-                                  </div>
-                                  <div>
-                                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-neutral-100">Ask Grok</p>
-                                    <p className="mt-0.5 text-xs text-neutral-500">Send a custom prompt to Grok in a new tab.</p>
-                                  </div>
-                                </div>
-                                <form
-                                  onSubmit={(e) => {
-                                    e.preventDefault();
-                                    const prompt = grokPrompt.trim();
-                                    if (!prompt) return;
-                                    window.open(`https://grok.com/?q=${encodeURIComponent(prompt)}`, "_blank", "noopener,noreferrer");
-                                  }}
-                                  className="rounded-2xl border border-neutral-800 bg-neutral-950/80 p-2 shadow-[0_1px_0_rgba(255,255,255,0.04)_inset] focus-within:border-neutral-600 transition-colors"
-                                >
-                                  <div className="flex items-center gap-2">
-                                    <input
-                                      type="text"
-                                      value={grokPrompt}
-                                      onChange={(e) => setGrokPrompt(e.target.value)}
-                                      placeholder="Ask Grok anything about this step..."
-                                      className="min-w-0 flex-1 bg-transparent px-2 py-2 text-sm text-white placeholder-neutral-600 focus:outline-none"
-                                    />
-                                    <button
-                                      type="submit"
-                                      disabled={!grokPrompt.trim()}
-                                      className="shrink-0 rounded-xl border border-neutral-700 bg-neutral-900 px-3 py-2 text-xs font-medium text-neutral-200 transition-colors hover:border-neutral-600 hover:bg-neutral-800 hover:text-white disabled:border-neutral-800 disabled:bg-neutral-900 disabled:text-neutral-600 disabled:cursor-not-allowed"
-                                    >
-                                      Open Grok
-                                    </button>
-                                  </div>
-                                </form>
-                              </section>
-                            </div>
-                          </div>
-                        )}
-                      </div>
+                      <GrokGrokipediaTool
+                        sessionProblem={session?.problem}
+                        activeStepDescription={activeStep?.description}
+                        activeProbes={session?.probes?.filter((probe) => !probe.archived).map((probe) => ({ text: probe.text }))}
+                      />
                     )}
                   </div>
                 </div>
@@ -4438,40 +4102,53 @@ export function SessionView({ sessionId }: { sessionId: string }) {
                       {shouldBlockTools && (
                         <div className="absolute inset-0 z-10 bg-black/30 cursor-not-allowed" />
                       )}
-                      <ProbesPanel
-                        probes={session.probes}
-                        onArchiveProbe={handleArchiveProbe}
-                        onToggleFocus={handleToggleFocus}
-                        onToolSelect={(tool) => setActiveTool(tool as Tool)}
-                        onOpenResources={handleStepResources}
-                        onOpenPractice={handleStepPractice}
-                        onAskAssistant={handleStepAskHelios}
-                        onAdvanceStep={(forceAdvance) => handleAdvanceStep(forceAdvance)}
-                        onResetProbes={handleResetProbes}
-                        onToolEvent={(action, metadata) =>
-                          logTool("probe", action, metadata ?? {})
-                        }
-                        archivingProbeId={archivingProbeId}
-                        isInitializing={planLoading}
-                        isGeneratingProbe={isGeneratingProbe}
+                      <SessionHeliosPanel
                         sessionPlan={sessionPlan}
                         activeChapterIndex={activeChapterIndex}
-                        onActiveChapterIndexChange={setActiveChapterIndex}
+                        onActiveChapterIndexChange={handleActiveChapterIndexChange}
+                        lastUserTurn={lastDialogueUserTurn}
+                        lastAssistantTurn={lastDialogueAssistantTurn}
+                        isAssistantPending={isHeliosAssistantPending}
+                        chapterPrompt={chapterDialoguePrompt}
+                        userInitial={userInitial}
                         isSessionActive={isRecording && !isPaused}
+                        isInitializing={planLoading}
+                        isGeneratingProbe={isGeneratingProbe}
+                        isCurrentStepCompleted={activeStep?.status === "completed" || activeStep?.status === "skipped"}
+                        stuckCheckText={STUCK_POLICY_ENABLED ? activeStuckCheck : null}
                         showWelcome={showWelcomePanel}
                         onWelcomePlay={handleWelcomePlay}
                         isStartingSession={isStartingSession}
                         sessionId={session.id}
                         ttsLanguage={tutoringLanguage}
-                        isSpeaking={isSpeaking}
                         aestheticImages={selectedAesthetic?.images}
                         aestheticName={selectedAesthetic?.name}
-                        stuckCheckText={STUCK_POLICY_ENABLED ? activeStuckCheck : null}
-                        onDismissStuckCheck={() => setActiveStuckCheck(null)}
+                        thought={sessionThoughtInterface}
+                        onChapterDone={() => {
+                          const step = sessionPlanRef.current?.steps?.[activeChapterIndex];
+                          void logTool("session_plan", "advance", {
+                            via: "chapter_nav_done",
+                            stepIndex: activeChapterIndex,
+                            stepId: step?.id,
+                            stepDescription: step?.description?.slice(0, 120),
+                          });
+                          void handleAdvanceStep(false);
+                        }}
+                        onChapterSkip={() => {
+                          const step = sessionPlanRef.current?.steps?.[activeChapterIndex];
+                          void logTool("session_plan", "force_advance", {
+                            via: "chapter_nav_skip",
+                            stepIndex: activeChapterIndex,
+                            stepId: step?.id,
+                            stepDescription: step?.description?.slice(0, 120),
+                            skipEvaluation: true,
+                          });
+                          void handleAdvanceStep(true, true);
+                        }}
                         sessionControls={(
                           <div className="space-y-2">
                             <SessionControlBar
-                              variant="panel"
+                              variant="embedded"
                               isRecording={isRecording}
                               isPaused={isPaused}
                               elapsedSeconds={elapsedSeconds}
@@ -4481,24 +4158,15 @@ export function SessionView({ sessionId }: { sessionId: string }) {
                               onResume={showWelcomePanel ? handleWelcomePlay : handleResume}
                             />
                             {autoPausedForInactivity && isPaused && (
-                              <div className="mx-auto max-w-[680px] px-3 py-1 rounded-md bg-amber-500/10 border border-amber-500/20 text-amber-400 text-[11px] flex items-center gap-1.5">
-                                <svg className="w-3 h-3 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                              <div className="rounded-md border border-amber-500/20 bg-amber-500/10 px-3 py-1 text-[11px] text-amber-400 flex items-center gap-1.5">
+                                <svg className="h-3 w-3 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                                   <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                                 </svg>
-                                <span>{t('session.autoPausedInactivity')}</span>
+                                <span>{t("session.autoPausedInactivity")}</span>
                               </div>
                             )}
                           </div>
                         )}
-                        thinkAloudThoughts={thinkAloudTranscript.thoughts}
-                        thinkAloudInterimText={thinkAloudTranscript.interimText}
-                        thinkAloudListening={thinkAloudTranscript.isListening}
-                        thinkAloudSupported={thinkAloudTranscript.isSupported}
-                        thinkAloudError={thinkAloudTranscript.error}
-                        onThinkAloudThoughtClick={handleThinkAloudThoughtClick}
-                        onManualChatSubmit={(text) => void submitHeliosChatMessageNow(text)}
-                        onClearThinkAloudThoughts={thinkAloudTranscript.clearThoughts}
-                        showThinkAloudTraces={false}
                       />
                     </div>
               }

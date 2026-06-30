@@ -111,7 +111,7 @@ export function ToolsPanel({
   // own panels. They've been merged into the Helios chat surface — the
   // action buttons in ProbesPanel / SessionPlanViewer now inject a rich
   // assistant message into chat instead. Keep this list lean.
-  const baseMainTools: Tool[] = ["chat", "canvas", "notebook", "thought-history", "grokipedia", "dantes"];
+  const baseMainTools: Tool[] = ["canvas", "notebook", "thought-history", "grokipedia", "dantes"];
   const mainTools: Tool[] = planId ? [...baseMainTools, "plan-resources"] : baseMainTools;
   const getToolLabel = (id: Tool): string => {
     switch (id) {

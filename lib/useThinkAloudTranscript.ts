@@ -175,6 +175,7 @@ export function useThinkAloudTranscript({
 
     recognition.onerror = (event) => {
       const nextError = event.error || "speech-recognition-error";
+      if (nextError === "aborted") return;
       setError(nextError);
       if (nextError === "not-allowed" || nextError === "service-not-allowed" || nextError === "language-not-supported") {
         shouldListenRef.current = false;

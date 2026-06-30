@@ -804,7 +804,7 @@ export async function saveFacialData(
 
 // ---- Tool Usage Tracking ----
 
-export type ToolName = "chat" | "canvas" | "notebook" | "thought-history" | "grokipedia" | "dantes" | "exercise" | "reading" | "help" | "data-input" | "logs" | "goals" | "probe" | "session_plan";
+export type ToolName = "chat" | "canvas" | "notebook" | "thought-history" | "grokipedia" | "dantes" | "exercise" | "reading" | "help" | "data-input" | "logs" | "goals" | "probe" | "session_plan" | "thought-trace";
 
 export type ToolAction =
   | "open"
@@ -834,6 +834,7 @@ export type ToolAction =
   | "rollback"
   | "force_advance"
   | "cancel_advance"
+  | "chapter_focus"
   // Readiness-gate outcomes (manual-advance mode). These capture
   // "student thinks they're done vs LLM thinks they're done" disagreements
   // so we can later learn where the student's self-assessment matches
@@ -849,7 +850,15 @@ export type ToolAction =
   // the current notebook/canvas state. Triggers an analysis heartbeat out
   // of band from the 10s timer.
   | "submit_to_helios"
-  | "stuck_card";
+  | "stuck_card"
+  // Selective thought interface (System 1 / System 2 traces)
+  | "crystallize"
+  | "pause_finalize"
+  | "thought_send"
+  | "thought_resend"
+  | "thought_skip"
+  | "thought_select"
+  | "thought_deselect";
 
 export interface LogToolUsageResult {
   /** True only if BOTH the storage upload and the DB insert succeeded. */

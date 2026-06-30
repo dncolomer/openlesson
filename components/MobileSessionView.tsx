@@ -162,6 +162,7 @@ export function MobileSessionView({
   const [aestheticsLoading, setAestheticsLoading] = useState(true);
   const [selectedAestheticId, setSelectedAestheticId] = useState<string | null>(null);
   const [activeChapterIndex, setActiveChapterIndex] = useState(0);
+  const chapterFocusSinceRef = useRef<Record<number, number>>({ 0: Date.now() });
   const [chapterWorkspaces, setChapterWorkspaces] = useState<Record<string, ChapterWorkspace>>({});
   const [chapterWorkspacesLoaded, setChapterWorkspacesLoaded] = useState(false);
 
@@ -268,6 +269,7 @@ export function MobileSessionView({
 
   useEffect(() => {
     setActiveChapterIndex(0);
+    chapterFocusSinceRef.current = { 0: Date.now() };
     setChapterWorkspaces({});
     setChapterWorkspacesLoaded(false);
     setActiveStuckCheck(null);
@@ -347,6 +349,20 @@ export function MobileSessionView({
   // Sync refs
   useEffect(() => { sessionRef.current = session; }, [session]);
   useEffect(() => { sessionPlanRef.current = sessionPlan; }, [sessionPlan]);
+
+  const handleActiveChapterIndexChange = useCallback((index: number) => {
+    const now = Date.now();
+    chapterFocusSinceRef.current[index] = now;
+    setActiveChapterIndex(index);
+    const step = sessionPlanRef.current?.steps?.[index];
+    const currentSessionId = sessionRef.current?.id ?? sessionId;
+    if (!currentSessionId) return;
+    void logToolUsage(currentSessionId, "session_plan", "chapter_focus", now, {
+      stepIndex: index,
+      stepId: step?.id,
+      stepDescription: step?.description?.slice(0, 120),
+    }).catch(err => console.warn("[Mobile] chapter_focus log failed:", err));
+  }, [sessionId]);
   useEffect(() => { autoAdvanceRef.current = autoAdvance; }, [autoAdvance]);
   useEffect(() => { elapsedSecondsRef.current = elapsedSeconds; }, [elapsedSeconds]);
 
@@ -924,7 +940,7 @@ export function MobileSessionView({
     ]);
   }, []);
 
-  const addHeliosStepEvaluationCue = useCallback((forceAdvance: boolean) => {
+  const addHeliosStepEvaluationCue = useCallback((_forceAdvance: boolean, _markAsSkipped = false) => {
     const targetChapterKey = activeChapterKey;
     setActiveTab(1);
     const cueId = `advance_eval_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
@@ -941,16 +957,13 @@ export function MobileSessionView({
               role: "assistant",
               content: "",
               pending: true,
-              pendingLabel: forceAdvance
-                ? t('sessionPlan.completing')
-                : t('sessionPlan.evaluatingStep'),
             },
           ],
         },
       };
     });
     return `${targetChapterKey}::${cueId}`;
-  }, [activeChapterKey, t]);
+  }, [activeChapterKey]);
 
   const removeHeliosCue = useCallback((cueId: string | null) => {
     if (!cueId) return;
@@ -964,6 +977,7 @@ export function MobileSessionView({
   const resolveHeliosCue = useCallback((cueId: string | null, content: string) => {
     if (!cueId) return;
     const [chapterKey, messageId] = cueId.split("::");
+    const plainContent = content.replace(/\*\*([^*]+)\*\*/g, "$1");
     setChapterWorkspaces(prev => {
       const current = prev[chapterKey] ?? createChapterWorkspace();
       return {
@@ -972,7 +986,7 @@ export function MobileSessionView({
           ...current,
           chatMessages: current.chatMessages.map(message =>
             message.id === messageId
-              ? { ...message, content, pending: false, pendingLabel: undefined }
+              ? { ...message, content: plainContent, pending: false }
               : message
           ),
         },
@@ -984,7 +998,6 @@ export function MobileSessionView({
     type: "reading" | "exercise",
     stepDescription: string,
     userStub: string,
-    pendingLabel: string,
     fallbackTitle: string,
   ) => {
     const currentSession = sessionRef.current;
@@ -992,7 +1005,6 @@ export function MobileSessionView({
     const targetChapterKey = activeChapterKey;
     setActiveTab(1);
 
-    const cardKind = type === "exercise" ? "practice" : "theory";
     const now = Date.now();
     const userMsg: ChatMessage = {
       id: `${now}-u`,
@@ -1004,10 +1016,7 @@ export function MobileSessionView({
       id: placeholderId,
       role: "assistant",
       content: "",
-      kind: cardKind,
-      cardTitle: fallbackTitle,
       pending: true,
-      pendingLabel,
     };
 
     setChapterWorkspaces(prev => {
@@ -1035,11 +1044,13 @@ export function MobileSessionView({
       });
       if (!res.ok) throw new Error(`prep-material ${res.status}`);
       const data = await res.json();
-      const content = typeof data.content === "string" && data.content.trim()
+      const body = typeof data.content === "string" && data.content.trim()
         ? data.content
         : type === "exercise"
           ? "I couldn't find a practice set for that yet. Ask me what part you'd like to practice."
           : "I couldn't find theory notes for that yet. Ask me which part you want explained.";
+      const title = typeof data.title === "string" && data.title.trim() ? data.title.trim() : fallbackTitle;
+      const content = body.startsWith(title) ? body : `${title}\n\n${body}`;
       setChapterWorkspaces(prev => {
         const current = prev[targetChapterKey] ?? createChapterWorkspace();
         return {
@@ -1048,7 +1059,7 @@ export function MobileSessionView({
             ...current,
             chatMessages: current.chatMessages.map((msg) =>
               msg.id === placeholderId
-                ? { ...msg, content, pending: false, pendingLabel: undefined }
+                ? { ...msg, content, pending: false }
                 : msg
             ),
           },
@@ -1069,10 +1080,7 @@ export function MobileSessionView({
                     content: type === "exercise"
                       ? "I couldn't pull together a practice set just now. Try again in a moment, or tell me what specifically you'd like to practice."
                       : "I couldn't pull the theory for this step right now. Try again, or ask me a specific question and I'll explain.",
-                    kind: undefined,
-                    cardTitle: undefined,
                     pending: false,
-                    pendingLabel: undefined,
                   }
                 : msg
             ),
@@ -1087,7 +1095,6 @@ export function MobileSessionView({
       "reading",
       stepDescription,
       `Give me the theory for this step: "${stepDescription}"`,
-      "Preparing the theory for you...",
       "Theory",
     );
   }, [fetchAndInjectPrepIntoChat]);
@@ -1097,7 +1104,6 @@ export function MobileSessionView({
       "exercise",
       stepDescription,
       `Give me practice tasks for this step: "${stepDescription}"`,
-      "Preparing practice tasks for you...",
       "Practice",
     );
   }, [fetchAndInjectPrepIntoChat]);
@@ -1600,7 +1606,6 @@ export function MobileSessionView({
 
   // Archive probe
   const handleArchiveProbe = useCallback(async (probeId: string) => {
-    const evaluationCueId = addHeliosStepEvaluationCue(false);
     setArchivingProbeId(probeId);
     try {
       await archiveProbe(probeId);
@@ -1610,10 +1615,9 @@ export function MobileSessionView({
     } catch (err) {
       console.error("Failed to archive probe:", err);
     } finally {
-      removeHeliosCue(evaluationCueId);
       setArchivingProbeId(null);
     }
-  }, [addHeliosStepEvaluationCue, removeHeliosCue]);
+  }, []);
 
   // Toggle probe focus
   const handleToggleFocus = useCallback(async (probeId: string, focused: boolean) => {
@@ -1628,9 +1632,9 @@ export function MobileSessionView({
   }, []);
 
   // Advance to next step
-  const handleAdvanceStep = useCallback(async (forceAdvance = false) => {
+  const handleAdvanceStep = useCallback(async (forceAdvance = false, markAsSkipped = false) => {
     if (!session) return;
-    const evaluationCueId = addHeliosStepEvaluationCue(forceAdvance);
+    const evaluationCueId = addHeliosStepEvaluationCue(forceAdvance, markAsSkipped);
     let evaluationCueResolved = false;
     try {
     const currentSession = sessionRef.current || session;
@@ -1642,12 +1646,11 @@ export function MobileSessionView({
       if (!currentPlan?.steps?.length) return;
 
       const currentIdx = activeChapterIndex;
+      const terminalStatus = markAsSkipped ? "skipped" as const : "completed" as const;
 
-      // Mark current step completed and advance index
-      // Mark current step completed, next step in_progress, and advance index
       const nextIdx = currentIdx;
       const updatedSteps = currentPlan.steps.map((s, i) => {
-        if (i === currentIdx) return { ...s, status: "completed" as const };
+        if (i === currentIdx) return { ...s, status: terminalStatus };
         return s;
       });
       const updatedPlan = {
@@ -1682,7 +1685,7 @@ export function MobileSessionView({
           setShowPlanCompleteModal(true);
           if (isRecording && !isPaused) setIsPaused(true);
         }, 1500);
-      } else {
+      } else if (!markAsSkipped) {
         setIsCelebrating(true);
         setTimeout(() => setIsCelebrating(false), 1500);
 
@@ -1742,13 +1745,16 @@ export function MobileSessionView({
     }
 
     // --- API mode (unchanged) ---
+      const evalSinceMs = chapterFocusSinceRef.current[activeChapterIndex] ?? 0;
       const res = await fetch("/api/session-plan/advance-step", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           sessionId: session.id,
           forceAdvance,
+          markAsSkipped,
           targetStepIndex: activeChapterIndex,
+          evalSinceMs,
           previousProbes: currentSession.probes.map((p: Probe) => p.text),
           focusedProbes: openProbes.filter((p: Probe) => p.focused).map((p: Probe) => ({ id: p.id, text: p.text })),
           openProbeCount: openProbes.length,
@@ -1763,7 +1769,7 @@ export function MobileSessionView({
       if (data.blocked) {
         const reasoning = data.advanceReasoning || "You may not be ready to move on yet.";
         const verdict = data.advanceVerdict === "unavailable" ? "I couldn't evaluate this chapter." : "Not yet.";
-        resolveHeliosCue(evaluationCueId, `**Helios verdict: ${verdict}**\n\n${reasoning}\n\nI did not mark this chapter done.`);
+        resolveHeliosCue(evaluationCueId, `Helios verdict: ${verdict}\n\n${reasoning}\n\nI did not mark this chapter done.`);
         evaluationCueResolved = true;
         const feedbackProbe = await addProbe(session.id, {
           timestamp: Date.now() - new Date(session.startedAt).getTime(),
@@ -1786,12 +1792,17 @@ export function MobileSessionView({
       const successReasoning = typeof data.advanceReasoning === "string" && data.advanceReasoning.trim()
         ? `\n\n${data.advanceReasoning.trim()}`
         : "";
-      const successVerdict = data.advanceVerdict === "agreed"
-        ? "Agreed."
-        : data.advanceVerdict === "forced"
-          ? "Marked done by your override."
-          : "Marked done.";
-      resolveHeliosCue(evaluationCueId, `**Helios verdict: ${successVerdict}**\n\nI marked this chapter as done.${successReasoning}`);
+      const successVerdict = data.advanceVerdict === "skipped"
+        ? "Skipped."
+        : data.advanceVerdict === "agreed"
+          ? "Agreed."
+          : data.advanceVerdict === "forced"
+            ? "Marked done by your override."
+            : "Marked done.";
+      const successBody = data.advanceVerdict === "skipped"
+        ? "I skipped this chapter. It won't count when evaluating your other chapters."
+        : `I marked this chapter as done.${successReasoning}`;
+      resolveHeliosCue(evaluationCueId, `Helios verdict: ${successVerdict}\n\n${successBody}`);
       evaluationCueResolved = true;
 
       setSessionPlan(updatedPlan);
@@ -1826,6 +1837,8 @@ export function MobileSessionView({
         }, 1500);
         return;
       }
+
+      if (markAsSkipped) return;
 
       // Regular step advance - celebrate
       setIsCelebrating(true);
@@ -2583,7 +2596,7 @@ export function MobileSessionView({
           probes={probes}
           sessionPlan={sessionPlan}
           activeChapterIndex={activeChapterIndex}
-          onActiveChapterIndexChange={setActiveChapterIndex}
+          onActiveChapterIndexChange={handleActiveChapterIndexChange}
           onArchiveProbe={handleArchiveProbe}
           onToggleFocus={handleToggleFocus}
           onOpenResources={handleStepResources}
@@ -2653,8 +2666,6 @@ export function MobileSessionView({
               tutoringLanguage={tutoringLanguage}
               pendingMessage={pendingChatMessage}
               onPendingMessageHandled={() => setPendingChatMessage(null)}
-              onStuckAction={handleStuckAction}
-              stuckActions={["ask", "theory", "practice", "canvas", "break"]}
               isMicOn={isRecording && !isPaused}
               activeStepIndex={activeChapterIndex}
               activeStep={activeStep}

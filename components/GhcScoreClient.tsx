@@ -5,6 +5,9 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ButtonHTMLAttri
 import { emitHeliosVoicePlayback } from "@/lib/useHeliosVoicePlayback";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
+import { GhcDialogueSplit } from "@/components/ghc/GhcUi";
+import { ThoughtMemoryPanel } from "@/components/ghc/ThoughtMemoryPanel";
+import { shouldReportSpeechRecognitionError } from "@/lib/useSessionThoughtInterface";
 
 type Phase = "setup" | "live" | "scoring" | "done" | "error";
 
@@ -141,10 +144,6 @@ function normalize(text: string) {
   return text.replace(/\s+/g, " ").trim();
 }
 
-function formatTime(timestamp: number) {
-  return new Intl.DateTimeFormat(undefined, { hour: "2-digit", minute: "2-digit" }).format(new Date(timestamp));
-}
-
 function formatCountdown(totalSeconds: number) {
   const mins = Math.floor(totalSeconds / 60);
   const secs = totalSeconds % 60;
@@ -227,99 +226,6 @@ function GhcButtonLabel({
       {shortcutNode}
       <span>{children}</span>
     </span>
-  );
-}
-
-function HeliosProbeAvatar() {
-  return (
-    <div className="relative shrink-0">
-      <div className="flex h-28 w-28 items-center justify-center overflow-hidden rounded-full border border-neutral-800 bg-gradient-to-br from-amber-500/15 via-neutral-800 to-neutral-900">
-        <span className="font-serif text-3xl text-neutral-200">H</span>
-      </div>
-      <div className="pointer-events-none absolute inset-0 rounded-full shadow-[0_0_30px_rgba(245,158,11,0.08)]" />
-    </div>
-  );
-}
-
-function LearnerThoughtAvatar({ initial }: { initial: string }) {
-  return (
-    <div className="relative shrink-0">
-      <div className="flex h-28 w-28 items-center justify-center overflow-hidden rounded-full border border-cyan-500/25 bg-gradient-to-br from-cyan-500/20 via-neutral-800 to-neutral-900">
-        <span className="font-serif text-3xl text-neutral-100">{initial}</span>
-      </div>
-      <div className="pointer-events-none absolute inset-0 rounded-full shadow-[0_0_30px_rgba(34,211,238,0.12)]" />
-    </div>
-  );
-}
-
-function GhcDialogueSplit({
-  lastUserTurn,
-  lastAssistantTurn,
-  promptText,
-  isSending,
-  error,
-  userInitial,
-}: {
-  lastUserTurn: ChatMessage | null;
-  lastAssistantTurn: ChatMessage | null;
-  promptText: string;
-  isSending: boolean;
-  error: string;
-  userInitial: string;
-}) {
-  const userLines = lastUserTurn ? lastUserTurn.content.split("\n").map((line) => line.trim()).filter(Boolean) : [];
-
-  const dialogueTextClass = "text-base leading-relaxed md:text-lg md:leading-relaxed";
-
-  return (
-    <div className="flex min-h-0 flex-1 divide-x divide-neutral-900">
-      <section className="flex min-h-0 min-w-0 flex-1 flex-col">
-        <p className="shrink-0 px-6 pt-5 text-center font-mono text-[10px] uppercase tracking-[2px] text-neutral-600">
-          Your thought
-        </p>
-        <div className="flex min-h-0 flex-1 items-center justify-center overflow-y-auto px-6 py-6">
-          <div className="my-auto flex w-full max-w-lg flex-col items-center gap-6 text-center">
-            <LearnerThoughtAvatar initial={userInitial} />
-            {userLines.length > 0 ? (
-              <div className="space-y-4">
-                {userLines.map((line, index) => (
-                  <p key={`${lastUserTurn?.id}-${index}`} className={`${dialogueTextClass} text-neutral-100`}>
-                    {line}
-                  </p>
-                ))}
-              </div>
-            ) : (
-              <p className={`${dialogueTextClass} text-neutral-600`}>
-                Send a thought to surface your latest submission here.
-              </p>
-            )}
-          </div>
-        </div>
-      </section>
-
-      <section className="flex min-h-0 min-w-0 flex-1 flex-col">
-        <p className="shrink-0 px-6 pt-5 text-center font-mono text-[10px] uppercase tracking-[2px] text-neutral-600">
-          GHL probe
-        </p>
-        <div className="flex min-h-0 flex-1 items-center justify-center overflow-y-auto px-6 py-6">
-          <div className="my-auto flex w-full max-w-lg flex-col items-center gap-6 text-center">
-            <HeliosProbeAvatar />
-            {isSending ? (
-              <div className="flex justify-center gap-1.5 py-1">
-                <div className="size-2.5 rounded-full bg-neutral-500 animate-bounce" style={{ animationDelay: "0ms" }} />
-                <div className="size-2.5 rounded-full bg-neutral-500 animate-bounce" style={{ animationDelay: "150ms" }} />
-                <div className="size-2.5 rounded-full bg-neutral-500 animate-bounce" style={{ animationDelay: "300ms" }} />
-              </div>
-            ) : lastAssistantTurn ? (
-              <p className={`${dialogueTextClass} text-neutral-200`}>{lastAssistantTurn.content}</p>
-            ) : (
-              <p className={`${dialogueTextClass} text-neutral-500`}>{promptText}</p>
-            )}
-          </div>
-        </div>
-        {error && <p className="shrink-0 px-6 pb-4 text-center text-xs text-red-300">{error}</p>}
-      </section>
-    </div>
   );
 }
 
@@ -690,7 +596,12 @@ export function GhcScoreClient({ planId, planNodeId, sessionId, privateToken, in
         }, 850);
       }
     };
-    recognition.onerror = (event) => setSpeechError(event.error || "speech-recognition-error");
+    recognition.onerror = (event) => {
+      const error = event.error || "speech-recognition-error";
+      if (shouldReportSpeechRecognitionError(error)) {
+        setSpeechError(error);
+      }
+    };
     recognition.onend = () => {
       setIsListening(false);
       if (shouldListenRef.current) {
@@ -1053,12 +964,7 @@ export function GhcScoreClient({ planId, planNodeId, sessionId, privateToken, in
         {phase === "live" && (
           <section className="grid flex-1 gap-4 py-4 lg:grid-cols-[1fr_22rem]">
             <div className="flex min-h-0 flex-col gap-4">
-              <div className="flex min-h-[48vh] flex-1 flex-col rounded-2xl border border-neutral-900 bg-neutral-950/65 backdrop-blur-sm">
-                <div className="border-b border-neutral-900 px-4 py-3">
-                  <div className="text-xs text-neutral-500">
-                    {isListening ? "Listening live" : recognitionCtor ? "Waiting for microphone" : "Speech recognition unavailable"}
-                  </div>
-                </div>
+              <div className="flex min-h-[48vh] flex-1 flex-col">
                 <GhcDialogueSplit
                   lastUserTurn={lastUserTurn}
                   lastAssistantTurn={lastAssistantTurn}
@@ -1072,7 +978,7 @@ export function GhcScoreClient({ planId, planNodeId, sessionId, privateToken, in
               <div className="rounded-2xl border border-neutral-900 bg-neutral-950/65 p-4 backdrop-blur-sm">
                 <div className="flex items-center gap-3">
                   <div className="flex h-9 min-w-0 flex-1 items-center rounded-md border border-neutral-900 bg-black px-3 text-sm text-neutral-300">
-                    {interimText || <span className="text-neutral-700">live transcription appears here...</span>}
+                    {interimText}
                   </div>
                   <GhcButton size="md" disabled={!crystallizableText} onClick={crystallizeCurrentTranscription}>
                     <GhcButtonLabel shortcut="C">crystallize</GhcButtonLabel>
@@ -1081,7 +987,6 @@ export function GhcScoreClient({ planId, planNodeId, sessionId, privateToken, in
                     <GhcButtonLabel shortcut="Esc">skip</GhcButtonLabel>
                   </GhcButton>
                 </div>
-                {speechError && <p className="mt-2 text-xs text-red-300">Speech recognition: {speechError}</p>}
 
                 <div className="mt-4 border-t border-neutral-900 pt-4">
                   <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -1103,13 +1008,15 @@ export function GhcScoreClient({ planId, planNodeId, sessionId, privateToken, in
                     {latestThoughts.map((thought, index) => (
                       <div
                         key={thought.id}
-                        className={`group flex min-h-36 flex-col gap-3 rounded-xl border bg-black p-4 text-left transition hover:border-white/50 ${
+                        className={`group flex h-40 max-h-40 flex-col gap-2 overflow-hidden rounded-xl border bg-black p-4 text-left transition hover:border-white/50 ${
                           selectedActiveThoughtIds.has(thought.id) ? "border-white/70" : "border-neutral-800"
                         }`}
                       >
-                        <p className="text-[10px] uppercase tracking-[1.8px] text-neutral-500">Thought {index + 1}</p>
-                        <p className="flex-1 text-sm leading-relaxed text-neutral-200">{thought.text}</p>
-                        <div className="flex flex-wrap items-center gap-2 border-t border-neutral-900 pt-3">
+                        <p className="shrink-0 text-[10px] uppercase tracking-[1.8px] text-neutral-500">Thought {index + 1}</p>
+                        <p className="min-h-0 flex-1 overflow-hidden text-sm leading-relaxed text-neutral-200 line-clamp-3" title={thought.text}>
+                          {thought.text}
+                        </p>
+                        <div className="flex shrink-0 flex-wrap items-center gap-2 border-t border-neutral-900 pt-2">
                           <GhcButton
                             size="sm"
                             variant={selectedActiveThoughtIds.has(thought.id) ? "toggleOn" : "toggleOff"}
@@ -1139,53 +1046,14 @@ export function GhcScoreClient({ planId, planNodeId, sessionId, privateToken, in
                 </div>
               </div>
             </div>
-            <aside className="rounded-2xl border border-neutral-900 bg-neutral-950/65 p-4 backdrop-blur-sm">
-              <div className="mb-4">
-                <p className="font-mono text-[10px] uppercase tracking-[2px] text-neutral-600">Thought Memory</p>
-                <p className="mt-1 text-xs text-neutral-500">Full history of every thought trace. Send any entry back into the dialogue.</p>
-              </div>
-              <div className="max-h-[72vh] space-y-3 overflow-y-auto pr-1">
-                {thoughtHistory.map((thought) => {
-                  const isSent = sentThoughtIds.has(thought.id);
-                  const isSkipped = memoryThoughtIds.has(thought.id);
-                  const statusLabel = isSent ? "sent" : isSkipped ? "skipped" : "active";
-                  return (
-                    <div key={thought.id} className="rounded-xl border border-neutral-900 bg-black p-3">
-                      <div className="mb-2 flex items-center justify-between gap-2 text-[10px] text-neutral-600">
-                        <span>{formatTime(thought.timestamp)}</span>
-                        <div className="flex items-center gap-2">
-                          <span
-                            className={`rounded border px-2 py-0.5 uppercase tracking-[1px] ${
-                              isSent
-                                ? "border-emerald-900/60 text-emerald-400"
-                                : isSkipped
-                                  ? "border-neutral-800 text-neutral-500"
-                                  : "border-cyan-900/60 text-cyan-300"
-                            }`}
-                          >
-                            {statusLabel}
-                          </span>
-                          <GhcButton size="sm" onClick={() => sendThought(thought.text, [thought.id])}>
-                            {isSent ? "resend" : "send"}
-                          </GhcButton>
-                        </div>
-                      </div>
-                      <button
-                        onClick={() => sendThought(thought.text, [thought.id])}
-                        className="w-full rounded-lg border border-neutral-900 bg-neutral-950 px-3 py-2 text-left text-xs leading-relaxed text-neutral-300 hover:border-neutral-700"
-                      >
-                        {thought.text}
-                      </button>
-                    </div>
-                  );
-                })}
-                {thoughtHistory.length === 0 && (
-                  <div className="rounded-xl border border-dashed border-neutral-800 bg-black p-4 text-center text-xs text-neutral-600">
-                    Speak or press C to crystallize thoughts. Every trace appears here.
-                  </div>
-                )}
-              </div>
-            </aside>
+            <ThoughtMemoryPanel
+              className="min-h-0 w-80 shrink-0 rounded-2xl border border-neutral-900 bg-neutral-950/65 p-4 backdrop-blur-sm"
+              listClassName="max-h-[72vh] overflow-y-auto pr-1"
+              thoughts={thoughtHistory}
+              sentThoughtIds={sentThoughtIds}
+              skippedThoughtIds={memoryThoughtIds}
+              onSendThought={sendThought}
+            />
           </section>
         )}
 

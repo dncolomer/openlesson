@@ -360,6 +360,12 @@ CURRENT PLAN:
 - Steps: {steps}
 - Current Step Index: {current_step} (0-indexed)
 
+SKIPPED CHAPTERS (CRITICAL):
+- Steps with status "skipped" were explicitly waived by the student. They do NOT count as incomplete blockers.
+- Do NOT require evidence, answers, or closure for skipped chapters when evaluating any other chapter.
+- Do NOT use transcript or activity from before the student focused on the current chapter to judge readiness for a different chapter.
+- When deciding can_auto_advance or gap_score for the current step, evaluate ONLY whether the current step's objective is met — never penalize the student for skipped chapters.
+
 RECENT SESSION ACTIVITY:
 {context_description}
 

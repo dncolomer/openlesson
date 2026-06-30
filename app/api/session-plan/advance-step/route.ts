@@ -10,7 +10,16 @@ export const maxDuration = 60;
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { sessionId, forceAdvance, targetStepIndex, previousProbes, focusedProbes, openProbeCount } = body;
+    const {
+      sessionId,
+      forceAdvance,
+      markAsSkipped,
+      targetStepIndex,
+      evalSinceMs,
+      previousProbes,
+      focusedProbes,
+      openProbeCount,
+    } = body;
 
     if (!sessionId) {
       return NextResponse.json(
@@ -64,14 +73,21 @@ export async function POST(request: NextRequest) {
     let evalGapScore: number | undefined;
     let evalAdvanceReasoning = "";
 
-    // Unless forceAdvance, evaluate whether the student is ready to move on
-    if (!forceAdvance) {
+    const skipEvaluation = Boolean(markAsSkipped) || Boolean(forceAdvance);
+
+    // Unless forceAdvance / markAsSkipped, evaluate whether the student is ready to move on
+    if (!skipEvaluation) {
       trigger = "auto_eval_skipped";
       try {
-        const [transcripts, promptOverrides] = await Promise.all([
+        const [allTranscripts, promptOverrides] = await Promise.all([
           getRecentTranscripts(sessionId, 180000),
           getUserPrompts(supabase, user.id),
         ]);
+
+        const focusCutoff = typeof evalSinceMs === "number" && evalSinceMs > 0 ? evalSinceMs : 0;
+        const transcripts = focusCutoff > 0
+          ? allTranscripts.filter(t => t.timestamp >= focusCutoff)
+          : allTranscripts;
 
         if (transcripts.length === 0) {
           return NextResponse.json({
@@ -143,11 +159,12 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Mark the target step as completed. Chapters are independent; completing
-    // one chapter must not mechanically complete or advance through others.
+    // Mark the target step completed or skipped. Chapters are independent;
+    // finishing one chapter must not mechanically complete or advance others.
+    const terminalStatus = markAsSkipped ? "skipped" as const : "completed" as const;
     const updatedSteps: SessionPlanStep[] = steps.map((step, idx) => {
       if (idx === currentStepIndex) {
-        return { ...step, status: "completed" as const };
+        return { ...step, status: terminalStatus };
       }
       return step;
     });
@@ -173,6 +190,7 @@ export async function POST(request: NextRequest) {
         source: "server",
         trigger,
         forceAdvance: Boolean(forceAdvance),
+        markAsSkipped: Boolean(markAsSkipped),
         evalGapScore,
         previousStepIndex: currentStepIndex,
         newStepIndex: nextIndex,
@@ -181,7 +199,7 @@ export async function POST(request: NextRequest) {
             id: steps[currentStepIndex].id,
             description: steps[currentStepIndex].description,
             type: steps[currentStepIndex].type,
-            status: "completed",
+            status: terminalStatus,
             order: steps[currentStepIndex].order,
           } : null,
           nextStep: nextIndex < updatedSteps.length ? {
@@ -198,7 +216,13 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       plan: updatedPlan,
       allComplete,
-      advanceVerdict: forceAdvance ? "forced" : trigger === "auto_eval_pass" ? "agreed" : "advanced",
+      advanceVerdict: markAsSkipped
+        ? "skipped"
+        : forceAdvance
+          ? "forced"
+          : trigger === "auto_eval_pass"
+            ? "agreed"
+            : "advanced",
       advanceReasoning: evalAdvanceReasoning,
       gapScore: evalGapScore,
     });

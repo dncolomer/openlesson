@@ -176,6 +176,8 @@ export function SessionList({
             onSelectNode={setExpandedNodeId}
             canEdit={isOwner}
             isAdding={isAddingBlock}
+            planId={planId}
+            locale={locale}
             onAddBlock={handleAddBlock}
             labels={{
               emptyCell: t("sessionList.gridEmptyCell"),
@@ -183,6 +185,9 @@ export function SessionList({
               addPlaceholder: t("sessionList.gridAddPlaceholder"),
               addSubmit: t("sessionList.gridAddSubmit"),
               addCancel: t("sessionList.gridAddCancel"),
+              suggestTopics: t("sessionList.gridSuggestTopics"),
+              suggesting: t("sessionList.gridSuggesting"),
+              suggestError: t("sessionList.gridSuggestError"),
               recenter: t("sessionList.gridRecenter"),
               zoomIn: t("sessionList.gridZoomIn"),
               zoomOut: t("sessionList.gridZoomOut"),

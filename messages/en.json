@@ -1786,7 +1786,10 @@
     "gridAddTitle": "Add a new block",
     "gridAddPlaceholder": "Describe what you want to learn in this slot…",
     "gridAddSubmit": "Add block",
-    "gridAddCancel": "Cancel"
+    "gridAddCancel": "Cancel",
+    "gridSuggestTopics": "Suggest 3 topics",
+    "gridSuggesting": "Suggesting…",
+    "gridSuggestError": "Couldn't load suggestions"
   },
   "remixModal": {
     "remixTitle": "Remix \"{topic}\"",

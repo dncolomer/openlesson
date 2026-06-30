@@ -1670,7 +1670,10 @@
     "gridAddTitle": "Thêm khối mới",
     "gridAddPlaceholder": "Mô tả nội dung bạn muốn học ở ô này…",
     "gridAddSubmit": "Thêm khối",
-    "gridAddCancel": "Hủy"
+    "gridAddCancel": "Hủy",
+    "gridSuggestTopics": "Gợi ý 3 chủ đề",
+    "gridSuggesting": "Đang gợi ý…",
+    "gridSuggestError": "Không thể tải gợi ý"
   },
   "remixModal": {
     "remixTitle": "Remix \"{topic}\"",

@@ -12,12 +12,17 @@ import {
   type SkillGridNode,
 } from "@/lib/block-skill-grid";
 
+const MODEL_STORAGE_KEY = "planner-model";
+const DEFAULT_PLANNER_MODEL = "grok-4.3";
+
 interface BlockSkillGridProps {
   nodes: SkillGridNode[];
   selectedNodeId: string | null;
   onSelectNode: (nodeId: string) => void;
   canEdit: boolean;
   isAdding?: boolean;
+  planId?: string;
+  locale?: string;
   onAddBlock: (prompt: string, position: { row: number; col: number }) => Promise<void>;
   labels: {
     emptyCell: string;
@@ -25,6 +30,9 @@ interface BlockSkillGridProps {
     addPlaceholder: string;
     addSubmit: string;
     addCancel: string;
+    suggestTopics: string;
+    suggesting: string;
+    suggestError: string;
     recenter: string;
     zoomIn: string;
     zoomOut: string;
@@ -59,6 +67,8 @@ export function BlockSkillGrid({
   onSelectNode,
   canEdit,
   isAdding = false,
+  planId,
+  locale = "en",
   onAddBlock,
   labels,
 }: BlockSkillGridProps) {
@@ -75,6 +85,9 @@ export function BlockSkillGrid({
 
   const [pendingCell, setPendingCell] = useState<GridCell | null>(null);
   const [prompt, setPrompt] = useState("");
+  const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [isSuggesting, setIsSuggesting] = useState(false);
+  const [suggestError, setSuggestError] = useState<string | null>(null);
   const [viewportSize, setViewportSize] = useState({ width: 0, height: 0 });
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
@@ -214,6 +227,55 @@ export function BlockSkillGrid({
     [canEdit, isAdding],
   );
 
+  useEffect(() => {
+    if (pendingCell) return;
+    setSuggestions([]);
+    setSuggestError(null);
+    setIsSuggesting(false);
+  }, [pendingCell]);
+
+  const handleSuggestTopics = useCallback(async () => {
+    if (!planId || !pendingCell || isSuggesting) return;
+
+    const neighbors = getNeighborTitles(pendingCell.row, pendingCell.col, occupancy, nodesById);
+    const savedModel =
+      typeof window !== "undefined"
+        ? window.localStorage.getItem(MODEL_STORAGE_KEY)?.replace(/^x-ai\//, "")
+        : null;
+    const model = savedModel || DEFAULT_PLANNER_MODEL;
+
+    setIsSuggesting(true);
+    setSuggestError(null);
+    try {
+      const response = await fetch("/api/learning-plan/suggest-blocks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          planId,
+          row: pendingCell.row,
+          col: pendingCell.col,
+          neighborTitles: neighbors,
+          model,
+          locale,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || labels.suggestError);
+      }
+
+      const data = (await response.json()) as { suggestions?: string[] };
+      setSuggestions((data.suggestions || []).filter(Boolean).slice(0, 3));
+    } catch (error) {
+      console.error("Failed to suggest block topics:", error);
+      setSuggestions([]);
+      setSuggestError(error instanceof Error ? error.message : labels.suggestError);
+    } finally {
+      setIsSuggesting(false);
+    }
+  }, [isSuggesting, labels.suggestError, locale, nodesById, occupancy, pendingCell, planId]);
+
   const submitAdd = async () => {
     if (!pendingCell || !prompt.trim()) return;
     await onAddBlock(prompt.trim(), pendingCell);
@@ -345,6 +407,31 @@ export function BlockSkillGrid({
               {getNeighborTitles(pendingCell.row, pendingCell.col, occupancy, nodesById).length > 0 &&
                 ` · near ${getNeighborTitles(pendingCell.row, pendingCell.col, occupancy, nodesById).join(", ")}`}
             </p>
+            <div className="mt-3 flex items-center justify-between gap-2">
+              <button
+                type="button"
+                disabled={!planId || isSuggesting || isAdding}
+                onClick={() => void handleSuggestTopics()}
+                className="rounded-md border border-neutral-700 bg-neutral-900/80 px-2.5 py-1.5 text-xs text-neutral-300 transition hover:border-neutral-500 hover:text-white disabled:opacity-40"
+              >
+                {isSuggesting ? labels.suggesting : labels.suggestTopics}
+              </button>
+            </div>
+            {suggestError && <p className="mt-2 text-xs text-red-400/90">{suggestError}</p>}
+            {suggestions.length > 0 && (
+              <div className="mt-2 flex flex-col gap-1.5">
+                {suggestions.map((suggestion) => (
+                  <button
+                    key={suggestion}
+                    type="button"
+                    onClick={() => setPrompt(suggestion)}
+                    className="rounded-md border border-neutral-700/80 bg-neutral-900/60 px-2.5 py-2 text-left text-xs text-neutral-200 transition hover:border-neutral-500 hover:bg-neutral-800 hover:text-white"
+                  >
+                    {suggestion}
+                  </button>
+                ))}
+              </div>
+            )}
             <textarea
               value={prompt}
               onChange={(event) => setPrompt(event.target.value)}
@@ -359,6 +446,8 @@ export function BlockSkillGrid({
                 onClick={() => {
                   setPendingCell(null);
                   setPrompt("");
+                  setSuggestions([]);
+                  setSuggestError(null);
                 }}
                 className="rounded-md px-3 py-1.5 text-xs text-neutral-400 hover:text-white"
               >

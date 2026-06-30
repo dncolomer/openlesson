@@ -1671,7 +1671,10 @@
     "gridAddTitle": "添加新区块",
     "gridAddPlaceholder": "描述你想在这个位置学习的内容…",
     "gridAddSubmit": "添加区块",
-    "gridAddCancel": "取消"
+    "gridAddCancel": "取消",
+    "gridSuggestTopics": "推荐 3 个主题",
+    "gridSuggesting": "正在推荐…",
+    "gridSuggestError": "无法加载推荐"
   },
   "remixModal": {
     "remixTitle": "改编「{topic}」",

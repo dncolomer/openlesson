@@ -1676,7 +1676,10 @@
     "gridAddTitle": "Neuen Block hinzufügen",
     "gridAddPlaceholder": "Beschreibe, was du in diesem Feld lernen möchtest…",
     "gridAddSubmit": "Block hinzufügen",
-    "gridAddCancel": "Abbrechen"
+    "gridAddCancel": "Abbrechen",
+    "gridSuggestTopics": "3 Themen vorschlagen",
+    "gridSuggesting": "Vorschläge werden geladen…",
+    "gridSuggestError": "Vorschläge konnten nicht geladen werden"
   },
   "remixModal": {
     "remixTitle": "\"{topic}\" remixen",

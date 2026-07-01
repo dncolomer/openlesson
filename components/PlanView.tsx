@@ -15,6 +15,9 @@ import { PlanFilesTab } from "@/components/PlanFilesTab";
 import { SessionList } from "@/components/SessionList";
 import { aestheticImageForId, fetchAestheticPackages } from "@/lib/aesthetics";
 import { PublicWorkspaceForkPanel } from "@/components/PublicWorkspaceForkPanel";
+import { WorkspaceBuilderShell } from "@/components/WorkspaceBuilderShell";
+import { WorkspaceIdentityPanel } from "@/components/WorkspaceIdentityPanel";
+import { WorkspaceTabBar } from "@/components/WorkspaceTabBar";
 
 export interface PlanNode {
   id: string;
@@ -396,7 +399,7 @@ export function PlanView({ initialPlan, initialNodes }: PlanViewProps) {
       <Navbar />
 
       <div className="flex-1 min-h-0 flex flex-col md:flex-row overflow-hidden">
-        <aside className={`${mobileColumn === "plan" ? "flex" : "hidden"} group flex-1 min-h-0 flex-col md:flex md:flex-none md:w-[24vw] xl:w-[13vw] md:h-full border-b md:border-b-0 md:border-r border-neutral-800/50 bg-[#0b0b0b] overflow-y-auto md:overflow-hidden`}>
+        <aside className={`${mobileColumn === "plan" ? "flex" : "hidden"} group flex-1 min-h-0 flex-col border-b border-neutral-800/50 bg-[#0b0b0b] overflow-y-auto md:hidden`}>
           <div className="space-y-5 p-4 md:flex-1 md:min-h-0 md:overflow-y-auto md:p-5">
             <div className="space-y-2">
               {isEditingTitle ? (
@@ -655,7 +658,7 @@ export function PlanView({ initialPlan, initialNodes }: PlanViewProps) {
           </div>
         </aside>
 
-        <aside className={`${mobileColumn === "sessions" ? "flex" : "hidden"} flex-1 min-h-0 flex-col md:flex md:flex-none md:h-full md:w-[38vw] xl:w-[37vw] border-b md:border-b-0 md:border-r border-neutral-800/50 bg-[#0b0b0b]`}>
+        <aside className={`${mobileColumn === "sessions" ? "flex" : "hidden"} flex-1 min-h-0 flex-col border-b border-neutral-800/50 bg-[#0b0b0b] md:flex md:h-full md:w-1/2 md:border-b-0 md:border-r`}>
           <SessionList
             nodes={nodes}
             onSelect={() => {}}
@@ -675,7 +678,7 @@ export function PlanView({ initialPlan, initialNodes }: PlanViewProps) {
           />
         </aside>
 
-        <section className={`${mobileColumn === "workspace" ? "flex" : "hidden"} relative flex-1 min-w-0 min-h-0 flex-col overflow-hidden bg-[#080808] md:flex`}>
+        <section className={`${mobileColumn === "workspace" ? "flex" : "hidden"} relative min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-[#080808] md:flex`}>
           {workspaceImage && (
             <img
               src={workspaceImage}
@@ -685,51 +688,82 @@ export function PlanView({ initialPlan, initialNodes }: PlanViewProps) {
           )}
           <div className="absolute inset-0 bg-black/35" />
           <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/20 to-black/70" />
-          {/* Pill Tab Bar */}
-          <div className="relative z-10 hidden md:block px-3 sm:px-4 pt-2.5 pb-1 flex-shrink-0">
-            <div className="grid grid-cols-4 gap-1 p-1 rounded-md bg-neutral-900/80 border border-neutral-800/50 max-w-full">
-              {tabConfig.map(({ key, label, icon }) => (
-                <button
-                  key={key}
-                  onClick={() => setActiveTab(key)}
-                  className={`flex items-center justify-center gap-1.5 px-2 sm:px-3.5 py-1.5 text-sm font-medium rounded transition-all min-w-0 ${
-                    activeTab === key
-                      ? "bg-neutral-700/80 text-white shadow-sm"
-                      : "text-neutral-500 hover:text-neutral-300"
-                  }`}
-                  title={label}
-                >
-                  {icon}
-                  <span className="hidden min-[430px]:inline truncate">{label}</span>
-                </button>
-              ))}
+
+          <div className="relative z-20 hidden shrink-0 px-3 pt-3 pb-1 sm:px-4 md:block">
+            <div className="overflow-hidden rounded-xl border border-neutral-800/70 bg-neutral-950/90 shadow-[0_10px_40px_rgba(0,0,0,0.45)] backdrop-blur-md">
+              <WorkspaceIdentityPanel
+                plan={plan}
+                planId={planId}
+                isOwner={isOwner}
+                currentUserId={currentUserId}
+                copied={copied}
+                onShare={handleShare}
+                onPlanUpdate={setPlan}
+                onShowRemixModal={() => setShowRemixModal(true)}
+                publicLoginHref={publicLoginHref}
+                variant="floating"
+              />
+              <WorkspaceTabBar
+                tabs={tabConfig}
+                activeTab={activeTab}
+                onChange={setActiveTab}
+                variant="integrated"
+              />
             </div>
           </div>
 
           {/* Tab Content */}
           <main className="relative z-10 flex-1 p-3 sm:p-4 pb-3 sm:pb-4 min-h-0 overflow-hidden">
         {activeTab === "graph" && (
-          needsFork ? (
-            <PublicWorkspaceForkPanel
+          <div className="hidden h-full md:block">
+            <WorkspaceBuilderShell
+              needsFork={needsFork}
               authorUsername={plan.author_username}
               isLoggedIn={!!currentUserId}
-              loginHref={publicLoginHref}
+              publicLoginHref={publicLoginHref}
               onFork={() => setShowRemixModal(true)}
-            />
-          ) : (
-            <PlanChat
-              plan={plan}
-              nodes={nodes}
-              supabase={supabase}
-              planId={planId}
-              onRefresh={refreshNodes}
-              onNodesUpdate={handleNodesUpdate}
-              isOwner={isOwner}
-              currentUserId={currentUserId}
-              isGroupPlan={plan.is_group === true}
-              hideSessions
-            />
-          )
+            >
+              <PlanChat
+                plan={plan}
+                nodes={nodes}
+                supabase={supabase}
+                planId={planId}
+                onRefresh={refreshNodes}
+                onNodesUpdate={handleNodesUpdate}
+                isOwner={isOwner}
+                currentUserId={currentUserId}
+                isGroupPlan={plan.is_group === true}
+                hideSessions
+                embedded
+              />
+            </WorkspaceBuilderShell>
+          </div>
+        )}
+
+        {activeTab === "graph" && (
+          <div className="h-full md:hidden">
+            {needsFork ? (
+              <PublicWorkspaceForkPanel
+                authorUsername={plan.author_username}
+                isLoggedIn={!!currentUserId}
+                loginHref={publicLoginHref}
+                onFork={() => setShowRemixModal(true)}
+              />
+            ) : (
+              <PlanChat
+                plan={plan}
+                nodes={nodes}
+                supabase={supabase}
+                planId={planId}
+                onRefresh={refreshNodes}
+                onNodesUpdate={handleNodesUpdate}
+                isOwner={isOwner}
+                currentUserId={currentUserId}
+                isGroupPlan={plan.is_group === true}
+                hideSessions
+              />
+            )}
+          </div>
         )}
 
         {activeTab === "notes" && (
@@ -819,24 +853,13 @@ export function PlanView({ initialPlan, initialNodes }: PlanViewProps) {
         )}
           </main>
 
-          <div className="relative z-10 md:hidden flex-shrink-0 px-3 pb-2">
-            <div className="grid grid-cols-4 gap-1 p-1 rounded-md bg-neutral-900/80 border border-neutral-800/50 max-w-full">
-              {tabConfig.map(({ key, label, icon }) => (
-                <button
-                  key={key}
-                  onClick={() => setActiveTab(key)}
-                  className={`flex items-center justify-center gap-1.5 px-2 py-1.5 text-sm font-medium rounded transition-all min-w-0 ${
-                    activeTab === key
-                      ? "bg-neutral-700/80 text-white shadow-sm"
-                      : "text-neutral-500 hover:text-neutral-300"
-                  }`}
-                  title={label}
-                >
-                  {icon}
-                  <span className="hidden min-[430px]:inline truncate">{label}</span>
-                </button>
-              ))}
-            </div>
+          <div className="relative z-10 flex-shrink-0 px-3 pb-2 md:hidden">
+            <WorkspaceTabBar
+              tabs={tabConfig}
+              activeTab={activeTab}
+              onChange={setActiveTab}
+              variant="mobile"
+            />
           </div>
         </section>
       </div>

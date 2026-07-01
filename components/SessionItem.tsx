@@ -42,6 +42,7 @@ interface SessionItemProps {
   planTopic?: string;
   planId?: string;
   variant?: "compact" | "detail";
+  detailLayout?: "inline" | "drawer";
 }
 
 export function SessionItem({
@@ -64,6 +65,7 @@ export function SessionItem({
   planTopic,
   planId,
   variant = "compact",
+  detailLayout = "inline",
 }: SessionItemProps) {
   const { t } = useI18n();
   const router = useRouter();
@@ -334,6 +336,7 @@ export function SessionItem({
       <div id={`session-item-${node.id}`}>
         <BlockDetailCard
           key={node.id}
+          layout={detailLayout === "drawer" ? "stacked" : "horizontal"}
           title={node.title}
           description={node.description}
           index={index}

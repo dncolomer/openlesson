@@ -9,6 +9,7 @@ import {
   getPanToCenterCell,
   getVisibleGridCells,
   SKILL_GRID_CELL_SIZE,
+  SKILL_GRID_DEFAULT_ZOOM_AT_REFERENCE,
   SKILL_GRID_PITCH,
   type GridCell,
   type SkillGridNode,
@@ -91,7 +92,7 @@ export function BlockSkillGrid({
   const [suggestError, setSuggestError] = useState<string | null>(null);
   const [viewportSize, setViewportSize] = useState({ width: 0, height: 0 });
   const [pan, setPan] = useState({ x: 0, y: 0 });
-  const [zoom, setZoom] = useState(1);
+  const [zoom, setZoom] = useState(SKILL_GRID_DEFAULT_ZOOM_AT_REFERENCE);
 
   const nodesById = useMemo(() => new Map(nodes.map((node) => [node.id, node])), [nodes]);
   const { ordered, occupancy, startCell } = useMemo(() => buildSkillGridLayout(nodes), [nodes]);

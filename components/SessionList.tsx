@@ -4,6 +4,7 @@ import { useEffect, useState, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { SessionItem } from "./SessionItem";
 import { BlockSkillGrid } from "./BlockSkillGrid";
+import { BlockDetailDrawer } from "./BlockDetailDrawer";
 import { getNeighborTitles, buildSkillGridLayout } from "@/lib/block-skill-grid";
 import { createBrowserClient } from "@supabase/ssr";
 import { useI18n } from "@/lib/i18n";
@@ -111,6 +112,7 @@ export function SessionList({
 
   useEffect(() => {
     if (expandedNodeId) return;
+    if (window.matchMedia("(min-width: 768px)").matches) return;
     const ordered = getOrderedSessions(nodes);
     const first = ordered.find((n) => n.status !== "completed") ?? ordered[0];
     if (first) setExpandedNodeId(first.id);
@@ -176,8 +178,45 @@ export function SessionList({
     ? getOrderedSessions(nodes).findIndex((node) => node.id === selectedGridNode.id)
     : -1;
 
+  const [isDesktop, setIsDesktop] = useState(false);
+
+  useEffect(() => {
+    const media = window.matchMedia("(min-width: 768px)");
+    const update = () => setIsDesktop(media.matches);
+    update();
+    media.addEventListener("change", update);
+    return () => media.removeEventListener("change", update);
+  }, []);
+
+  const showBlockDetail = selectedGridNode != null && selectedGridIndex >= 0;
+
+  const renderBlockDetail = (detailLayout: "inline" | "drawer") =>
+    showBlockDetail && selectedGridNode ? (
+      <SessionItem
+        node={selectedGridNode}
+        index={selectedGridIndex}
+        onSelect={() => onSelect(selectedGridNode.id)}
+        onDelete={onDelete}
+        onFork={onFork}
+        highlighted={highlightedNodes?.has(selectedGridNode.id)}
+        highlightOpacity={highlightOpacity}
+        isExpanded
+        isOwner={isOwner}
+        isGroupPlan={isGroupPlan}
+        maskProgress={maskProgress}
+        onRequestFork={onRequestFork}
+        forkLoginHref={forkLoginHref}
+        isLoggedIn={isLoggedIn}
+        supabase={supabase}
+        planTopic={planTopic}
+        planId={planId}
+        variant="detail"
+        detailLayout={detailLayout}
+      />
+    ) : null;
+
   return (
-    <div className="flex h-full flex-col p-2.5">
+    <div className="relative flex h-full flex-col overflow-hidden p-2.5">
       <div className="mb-2 px-0.5">
         <h2 className="text-xs font-medium uppercase tracking-[0.12em] text-neutral-500">{t("sessionList.sessions")}</h2>
         <span className="font-mono text-[11px] tabular-nums text-neutral-600">
@@ -188,7 +227,7 @@ export function SessionList({
       </div>
 
       <div className="flex min-h-0 flex-1 flex-col gap-2.5">
-        <div className="min-h-0 flex-[1.08]">
+        <div className="min-h-0 flex-[1.08] md:flex-1">
           <BlockSkillGrid
             nodes={nodes}
             selectedNodeId={expandedNodeId}
@@ -215,35 +254,26 @@ export function SessionList({
           />
         </div>
 
-        {selectedGridNode && selectedGridIndex >= 0 ? (
-          <div className="shrink-0 pb-0.5">
-            <SessionItem
-              node={selectedGridNode}
-              index={selectedGridIndex}
-              onSelect={() => onSelect(selectedGridNode.id)}
-              onDelete={onDelete}
-              onFork={onFork}
-              highlighted={highlightedNodes?.has(selectedGridNode.id)}
-              highlightOpacity={highlightOpacity}
-              isExpanded
-              isOwner={isOwner}
-              isGroupPlan={isGroupPlan}
-              maskProgress={maskProgress}
-              onRequestFork={onRequestFork}
-              forkLoginHref={forkLoginHref}
-              isLoggedIn={isLoggedIn}
-              supabase={supabase}
-              planTopic={planTopic}
-              planId={planId}
-              variant="detail"
-            />
-          </div>
-        ) : (
+        {!isDesktop && showBlockDetail ? (
+          <div className="shrink-0 pb-0.5">{renderBlockDetail("inline")}</div>
+        ) : !isDesktop ? (
           <div className="flex max-h-[120px] shrink-0 items-center justify-center rounded-lg border border-dashed border-neutral-800/80 bg-neutral-950/40 px-4 text-center text-sm text-neutral-600">
             {t("sessionList.noSessions")}
           </div>
-        )}
+        ) : null}
       </div>
+
+      {isDesktop && showBlockDetail && (
+        <div className="absolute inset-0 z-10 overflow-hidden">
+          <BlockDetailDrawer
+            open
+            onClose={() => setExpandedNodeId(null)}
+            title={selectedGridNode?.title}
+          >
+            {renderBlockDetail("drawer")}
+          </BlockDetailDrawer>
+        </div>
+      )}
     </div>
   );
 }

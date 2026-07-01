@@ -1759,6 +1759,7 @@
     "sectionShare": "Share",
     "sectionAccess": "Access",
     "sectionCommunity": "Community",
+    "workspaceSectionsNav": "Workspace sections",
     "forkToEditTitle": "Fork this workspace to use the builder",
     "forkToEditBody": "This is a public workspace shared by another learner. You can explore the blocks and run evaluation sessions, but editing requires your own copy.",
     "forkToEditBodyWithAuthor": "This workspace was shared by @{author}. You can explore the blocks and run evaluation sessions, but editing requires forking it into your own copy first.",

@@ -1650,6 +1650,7 @@
     "sectionShare": "Udostępnij",
     "sectionAccess": "Dostęp",
     "sectionCommunity": "Społeczność",
+    "workspaceSectionsNav": "Sekcje przestrzeni roboczej",
     "forkToEditTitle": "Zrób fork obszaru roboczego, aby użyć edytora",
     "forkToEditBody": "To publiczny obszar roboczy udostępniony przez innego uczącego się. Możesz przeglądać bloki i uruchamiać sesje ewaluacji, ale edycja wymaga własnej kopii.",
     "forkToEditBodyWithAuthor": "Ten obszar został udostępniony przez @{author}. Możesz przeglądać bloki i uruchamiać ewaluacje, ale aby edytować, najpierw zrób fork do własnej kopii.",

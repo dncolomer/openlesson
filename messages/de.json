@@ -1650,6 +1650,7 @@
     "sectionShare": "Teilen",
     "sectionAccess": "Zugriff",
     "sectionCommunity": "Community",
+    "workspaceSectionsNav": "Arbeitsbereich-Bereiche",
     "forkToEditTitle": "Arbeitsbereich forken, um den Editor zu nutzen",
     "forkToEditBody": "Dies ist ein öffentlicher Arbeitsbereich eines anderen Lernenden. Sie können Blöcke erkunden und Evaluierungssitzungen starten, zum Bearbeiten benötigen Sie jedoch eine eigene Kopie.",
     "forkToEditBodyWithAuthor": "Dieser Arbeitsbereich wurde von @{author} geteilt. Sie können Blöcke erkunden und Evaluierungssitzungen starten, zum Bearbeiten müssen Sie ihn zuerst in Ihre eigene Kopie forken.",

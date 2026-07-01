@@ -1644,6 +1644,7 @@
     "sectionShare": "分享",
     "sectionAccess": "访问",
     "sectionCommunity": "社区",
+    "workspaceSectionsNav": "工作区板块",
     "forkToEditTitle": "复刻工作区以使用构建器",
     "forkToEditBody": "这是其他学习者分享的公开工作区。您可以浏览区块并启动评估会话，但编辑需要自己的副本。",
     "forkToEditBodyWithAuthor": "此工作区由 @{author} 分享。您可以浏览区块并启动评估，但要编辑需先复刻到自己的副本。",

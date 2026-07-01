@@ -1644,6 +1644,7 @@
     "sectionShare": "Chia sẻ",
     "sectionAccess": "Truy cập",
     "sectionCommunity": "Cộng đồng",
+    "workspaceSectionsNav": "Các phần không gian làm việc",
     "forkToEditTitle": "Fork không gian làm việc để dùng trình tạo",
     "forkToEditBody": "Đây là không gian làm việc công khai do người học khác chia sẻ. Bạn có thể khám phá khối và chạy phiên đánh giá, nhưng muốn chỉnh sửa cần bản sao riêng.",
     "forkToEditBodyWithAuthor": "Không gian này được @{author} chia sẻ. Bạn có thể khám phá khối và chạy đánh giá, nhưng muốn chỉnh sửa phải fork vào bản sao riêng trước.",

@@ -43,6 +43,7 @@ interface PlanChatProps {
   currentUserId?: string | null;
   isGroupPlan?: boolean;
   hideSessions?: boolean;
+  embedded?: boolean;
 }
 
 const MODEL_STORAGE_KEY = "planner-model";
@@ -69,7 +70,7 @@ function nodesHaveChanged(oldNodes: PlanNode[], newNodes: PlanNode[]): Set<strin
   return changedIds;
 }
 
-export function PlanChat({ plan, nodes: initialNodes, onRefresh, onNodesUpdate, supabase, planId, isOwner = true, currentUserId, isGroupPlan = false, hideSessions = false }: PlanChatProps) {
+export function PlanChat({ plan, nodes: initialNodes, onRefresh, onNodesUpdate, supabase, planId, isOwner = true, currentUserId, isGroupPlan = false, hideSessions = false, embedded = false }: PlanChatProps) {
   const router = useRouter();
   const { t } = useI18n();
   const [nodes, setNodes] = useState(initialNodes);
@@ -255,6 +256,7 @@ export function PlanChat({ plan, nodes: initialNodes, onRefresh, onNodesUpdate, 
               supabase={supabase}
               isOwner={isOwner}
               currentUserId={currentUserId}
+              embedded={embedded}
             />
           </div>
         </div>

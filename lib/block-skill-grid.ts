@@ -23,7 +23,7 @@ export const SKILL_GRID_MIN_ZOOM = 0.35;
 export const SKILL_GRID_MAX_ZOOM = 2.5;
 /** sqrt(viewport area) calibrated to a ~500×400 panel. */
 export const SKILL_GRID_DEFAULT_ZOOM_REFERENCE_SCALE = 447.2;
-export const SKILL_GRID_DEFAULT_ZOOM_AT_REFERENCE = 1.0;
+export const SKILL_GRID_DEFAULT_ZOOM_AT_REFERENCE = 0.75;
 
 export function clampSkillGridZoom(zoom: number) {
   return Math.min(SKILL_GRID_MAX_ZOOM, Math.max(SKILL_GRID_MIN_ZOOM, zoom));

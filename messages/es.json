@@ -1711,6 +1711,7 @@
     "sectionShare": "Compartir",
     "sectionAccess": "Acceso",
     "sectionCommunity": "Comunidad",
+    "workspaceSectionsNav": "Secciones del espacio de trabajo",
     "forkToEditTitle": "Haz fork del espacio de trabajo para usar el editor",
     "forkToEditBody": "Este es un espacio de trabajo público compartido por otro estudiante. Puedes explorar bloques e iniciar sesiones de evaluación, pero para editar necesitas tu propia copia.",
     "forkToEditBodyWithAuthor": "Este espacio fue compartido por @{author}. Puedes explorar bloques e iniciar evaluaciones, pero para editar debes hacer fork a tu propia copia primero.",

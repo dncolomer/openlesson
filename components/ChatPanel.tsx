@@ -47,6 +47,7 @@ interface ChatPanelProps {
   supabase?: ReturnType<typeof createBrowserClient>;
   isOwner?: boolean;
   currentUserId?: string | null;
+  embedded?: boolean;
 }
 
 // Compact onboarding card instead of a wall of markdown
@@ -113,7 +114,7 @@ function HeliosAvatar({ small = false }: { small?: boolean }) {
   );
 }
 
-export function ChatPanel({ planId, model, onModelChange, onRefresh, onNodesUpdate, supabase, isOwner = true, currentUserId }: ChatPanelProps) {
+export function ChatPanel({ planId, model, onModelChange, onRefresh, onNodesUpdate, supabase, isOwner = true, currentUserId, embedded = false }: ChatPanelProps) {
   const router = useRouter();
   const { t, locale } = useI18n();
   const [messages, setMessages] = useState<Message[]>([]);
@@ -267,7 +268,7 @@ export function ChatPanel({ planId, model, onModelChange, onRefresh, onNodesUpda
   const removeImage = (id: string) => { setUploadedImages((prev) => prev.filter((img) => img.id !== id)); };
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-black/35 border border-white/5 rounded-md overflow-hidden backdrop-blur-[1px]">
+    <div className={`flex h-full flex-1 flex-col overflow-hidden ${embedded ? "bg-black/20" : "rounded-md border border-white/5 bg-black/35 backdrop-blur-[1px]"}`}>
       <div className="flex-1 min-h-0 flex flex-col items-center justify-center px-4 py-4 overflow-y-auto">
         <div className="w-full max-w-[760px] flex flex-col items-center">
           {messages.length === 0 ? (

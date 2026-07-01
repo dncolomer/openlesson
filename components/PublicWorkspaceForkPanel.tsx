@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useI18n } from "@/lib/i18n";
 
 type PublicWorkspaceForkPanelProps = {
+  variant?: "fullscreen" | "inline";
   authorUsername?: string;
   isLoggedIn: boolean;
   loginHref: string;
@@ -11,18 +12,19 @@ type PublicWorkspaceForkPanelProps = {
 };
 
 export function PublicWorkspaceForkPanel({
+  variant = "fullscreen",
   authorUsername,
   isLoggedIn,
   loginHref,
   onFork,
 }: PublicWorkspaceForkPanelProps) {
   const { t } = useI18n();
+  const isInline = variant === "inline";
 
-  return (
-    <div className="flex h-full min-h-0 flex-col items-center justify-center p-6 sm:p-10">
-      <div className="w-full max-w-lg rounded-xl border border-neutral-700/80 bg-neutral-950/85 p-6 shadow-2xl shadow-black/40 backdrop-blur-sm sm:p-8">
-        <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-lg border border-amber-500/30 bg-amber-500/10">
-          <svg className="h-5 w-5 text-amber-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+  const content = (
+    <>
+        <div className={`mb-4 flex items-center justify-center border border-amber-500/30 bg-amber-500/10 ${isInline ? "h-10 w-10 rounded-full" : "h-11 w-11 rounded-lg"}`}>
+          <svg className={`text-amber-300 ${isInline ? "h-4 w-4" : "h-5 w-5"}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
             <path
               strokeLinecap="round"
               strokeLinejoin="round"
@@ -31,14 +33,16 @@ export function PublicWorkspaceForkPanel({
           </svg>
         </div>
 
-        <h2 className="text-xl font-semibold text-white sm:text-2xl">{t("planView.forkToEditTitle")}</h2>
-        <p className="mt-3 text-sm leading-relaxed text-neutral-400 sm:text-base">
+        <h2 className={`font-semibold text-white ${isInline ? "text-lg" : "text-xl sm:text-2xl"}`}>
+          {t("planView.forkToEditTitle")}
+        </h2>
+        <p className={`mt-2.5 leading-relaxed text-neutral-400 ${isInline ? "text-sm" : "mt-3 text-sm sm:text-base"}`}>
           {authorUsername
             ? t("planView.forkToEditBodyWithAuthor", { author: authorUsername })
             : t("planView.forkToEditBody")}
         </p>
 
-        <ul className="mt-5 space-y-2.5 text-sm text-neutral-300">
+        <ul className={`space-y-2 text-neutral-300 ${isInline ? "mt-4 text-xs" : "mt-5 text-sm"}`}>
           <li className="flex gap-2.5">
             <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-neutral-500" />
             <span>{t("planView.forkToEditPointBrowse")}</span>
@@ -53,7 +57,7 @@ export function PublicWorkspaceForkPanel({
           </li>
         </ul>
 
-        <div className="mt-7 flex flex-col gap-2.5 sm:flex-row">
+        <div className={`flex flex-col gap-2.5 ${isInline ? "mt-5" : "mt-7 sm:flex-row"}`}>
           {isLoggedIn ? (
             <button
               type="button"
@@ -71,6 +75,25 @@ export function PublicWorkspaceForkPanel({
             </Link>
           )}
         </div>
+    </>
+  );
+
+  if (isInline) {
+    return (
+      <div className="flex h-full min-h-0 flex-col overflow-y-auto bg-black/20 px-4 py-5 sm:px-5">
+        <div className="mx-auto flex w-full max-w-[760px] flex-col items-center">
+          <div className="w-full rounded-md border border-amber-500/20 bg-amber-500/[0.06] p-4 sm:p-5">
+            {content}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex h-full min-h-0 flex-col items-center justify-center p-6 sm:p-10">
+      <div className="w-full max-w-lg rounded-xl border border-neutral-700/80 bg-neutral-950/85 p-6 shadow-2xl shadow-black/40 backdrop-blur-sm sm:p-8">
+        {content}
       </div>
     </div>
   );

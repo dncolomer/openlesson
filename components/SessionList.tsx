@@ -33,6 +33,8 @@ interface SessionListProps {
   highlightOpacity?: number;
   isOwner?: boolean;
   isGroupPlan?: boolean;
+  /** Hide completion/progress styling for public workspaces before fork */
+  maskProgress?: boolean;
   supabase?: ReturnType<typeof createBrowserClient>;
   planTopic?: string;
   planId?: string;
@@ -83,6 +85,7 @@ export function SessionList({
   highlightOpacity = 1,
   isOwner = true,
   isGroupPlan = false,
+  maskProgress = false,
   supabase,
   planTopic,
   planId,
@@ -172,7 +175,9 @@ export function SessionList({
       <div className="mb-2 px-0.5">
         <h2 className="text-xs font-medium uppercase tracking-[0.12em] text-neutral-500">{t("sessionList.sessions")}</h2>
         <span className="font-mono text-[11px] tabular-nums text-neutral-600">
-          {t("sessionList.progressDone", { completed: completedSessions.length, total: nodes.length })}
+          {maskProgress
+            ? t("sessionList.blockCount", { total: nodes.length })
+            : t("sessionList.progressDone", { completed: completedSessions.length, total: nodes.length })}
         </span>
       </div>
 
@@ -183,6 +188,7 @@ export function SessionList({
             selectedNodeId={expandedNodeId}
             onSelectNode={setExpandedNodeId}
             canEdit={isOwner}
+            showProgress={!maskProgress}
             isAdding={isAddingBlock}
             planId={planId}
             locale={locale}
@@ -216,6 +222,7 @@ export function SessionList({
               isExpanded
               isOwner={isOwner}
               isGroupPlan={isGroupPlan}
+              maskProgress={maskProgress}
               supabase={supabase}
               planTopic={planTopic}
               planId={planId}

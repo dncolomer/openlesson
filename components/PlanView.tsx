@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
 import Link from "next/link";
@@ -14,6 +14,7 @@ import { PerformanceChat } from "@/components/PerformanceChat";
 import { PlanFilesTab } from "@/components/PlanFilesTab";
 import { SessionList } from "@/components/SessionList";
 import { fetchAestheticPackages } from "@/lib/aesthetics";
+import { PublicWorkspaceForkPanel } from "@/components/PublicWorkspaceForkPanel";
 
 export interface PlanNode {
   id: string;
@@ -63,8 +64,14 @@ const FALLBACK_AESTHETIC_IMAGES = [
   "/aesthetics/piotr-binkowski/HGHQJOtWgAAOGtm.jpeg",
 ];
 
-function randomAestheticImage(images = FALLBACK_AESTHETIC_IMAGES) {
-  return images[Math.floor(Math.random() * images.length)] || FALLBACK_AESTHETIC_IMAGES[0];
+/** Stable per-plan pick — avoids hydration mismatch from Math.random() during SSR. */
+function aestheticImageForPlan(planId: string, images = FALLBACK_AESTHETIC_IMAGES) {
+  if (images.length === 0) return FALLBACK_AESTHETIC_IMAGES[0];
+  let hash = 0;
+  for (let i = 0; i < planId.length; i++) {
+    hash = (hash * 31 + planId.charCodeAt(i)) >>> 0;
+  }
+  return images[hash % images.length];
 }
 
 export function PlanView({ initialPlan, initialNodes }: PlanViewProps) {
@@ -91,7 +98,9 @@ export function PlanView({ initialPlan, initialNodes }: PlanViewProps) {
   const [isEditingNotes, setIsEditingNotes] = useState(false);
   const [savingNotes, setSavingNotes] = useState(false);
   const [mobileColumn, setMobileColumn] = useState<"plan" | "sessions" | "workspace">("plan");
-  const [workspaceImage, setWorkspaceImage] = useState(() => randomAestheticImage());
+  const [workspaceImage, setWorkspaceImage] = useState(() => aestheticImageForPlan(planId));
+  const [authChecked, setAuthChecked] = useState(false);
+  const forkModalAutoOpenedRef = useRef(false);
   
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -99,6 +108,10 @@ export function PlanView({ initialPlan, initialNodes }: PlanViewProps) {
   );
 
   const isOwner = currentUserId ? plan?.user_id === currentUserId : false;
+  const needsFork = authChecked && !!plan?.is_public && !plan?.is_group && !isOwner;
+  const publicLoginHref = plan
+    ? `/login?redirect=${encodeURIComponent(`/p/${planId}/${planShareSlug(plan)}`)}`
+    : `/login?redirect=${encodeURIComponent(`/workspace/${planId}`)}`;
 
   const refreshNodes = () => {
     setRefreshKey(k => k + 1);
@@ -124,7 +137,7 @@ export function PlanView({ initialPlan, initialNodes }: PlanViewProps) {
         if (cancelled) return;
         const images = packages.flatMap((pkg) => pkg.images);
         if (images.length === 0) return;
-        setWorkspaceImage(randomAestheticImage(images));
+        setWorkspaceImage(aestheticImageForPlan(planId, images));
       })
       .catch(() => {});
 
@@ -271,10 +284,21 @@ export function PlanView({ initialPlan, initialNodes }: PlanViewProps) {
       }
 
       setLoading(false);
+      setAuthChecked(true);
     }
 
     loadPlan();
   }, [planId, supabase, router, refreshKey]);
+
+  useEffect(() => {
+    if (!needsFork) return;
+    setActiveTab("graph");
+    setMobileColumn("workspace");
+    if (!forkModalAutoOpenedRef.current && currentUserId) {
+      forkModalAutoOpenedRef.current = true;
+      setShowRemixModal(true);
+    }
+  }, [needsFork, currentUserId]);
 
   useEffect(() => {
     if (plan) {
@@ -657,6 +681,7 @@ export function PlanView({ initialPlan, initialNodes }: PlanViewProps) {
             onFork={() => {}}
             isOwner={isOwner}
             isGroupPlan={plan.is_group === true}
+            maskProgress={needsFork}
             supabase={supabase}
             planTopic={plan.root_topic}
             planId={planId}
@@ -699,18 +724,27 @@ export function PlanView({ initialPlan, initialNodes }: PlanViewProps) {
           {/* Tab Content */}
           <main className="relative z-10 flex-1 p-3 sm:p-4 pb-3 sm:pb-4 min-h-0 overflow-hidden">
         {activeTab === "graph" && (
-          <PlanChat 
-            plan={plan} 
-            nodes={nodes} 
-            supabase={supabase}
-            planId={planId}
-            onRefresh={refreshNodes}
-            onNodesUpdate={handleNodesUpdate}
-            isOwner={isOwner}
-            currentUserId={currentUserId}
-            isGroupPlan={plan.is_group === true}
-            hideSessions
-          />
+          needsFork ? (
+            <PublicWorkspaceForkPanel
+              authorUsername={plan.author_username}
+              isLoggedIn={!!currentUserId}
+              loginHref={publicLoginHref}
+              onFork={() => setShowRemixModal(true)}
+            />
+          ) : (
+            <PlanChat
+              plan={plan}
+              nodes={nodes}
+              supabase={supabase}
+              planId={planId}
+              onRefresh={refreshNodes}
+              onNodesUpdate={handleNodesUpdate}
+              isOwner={isOwner}
+              currentUserId={currentUserId}
+              isGroupPlan={plan.is_group === true}
+              hideSessions
+            />
+          )
         )}
 
         {activeTab === "notes" && (

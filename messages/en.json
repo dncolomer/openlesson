@@ -1692,6 +1692,7 @@
     "statusInProgress": "In progress",
     "statusLocked": "Locked",
     "statusReady": "Ready",
+    "statusBrowse": "Browse",
     "startBlock": "Start block",
     "sessionActive": "Session active",
     "noDescription": "No description for this block yet."
@@ -1736,7 +1737,15 @@
     "sectionLearning": "Learning",
     "sectionShare": "Share",
     "sectionAccess": "Access",
-    "sectionCommunity": "Community"
+    "sectionCommunity": "Community",
+    "forkToEditTitle": "Fork this workspace to use the builder",
+    "forkToEditBody": "This is a public workspace shared by another learner. You can explore the blocks and run evaluation sessions, but editing requires your own copy.",
+    "forkToEditBodyWithAuthor": "This workspace was shared by @{author}. You can explore the blocks and run evaluation sessions, but editing requires forking it into your own copy first.",
+    "forkToEditPointBrowse": "Browse blocks and start evaluation sessions on this shared workspace",
+    "forkToEditPointBuilder": "The Workspace Builder is read-only until you fork",
+    "forkToEditPointOwnCopy": "Fork creates a private copy you can edit, remix, and extend",
+    "forkToEditCta": "Fork workspace",
+    "forkToEditSignInCta": "Sign in to fork"
   },
   "performanceChat": {
     "signInRequired": "Sign in to view performance insights",
@@ -1776,6 +1785,7 @@
     "noSessions": "No blocks yet. Use the chat to build your workspace!",
     "completed": "Completed",
     "progressDone": "{completed}/{total} done",
+    "blockCount": "{total} blocks",
     "viewList": "List",
     "viewGrid": "Grid",
     "gridHint": "Drag to pan · scroll to zoom · ⊕ to recenter on start block",

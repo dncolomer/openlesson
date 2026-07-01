@@ -30,6 +30,7 @@ interface SessionItemProps {
   allNodes?: PlanNode[];
   isOwner?: boolean;
   isGroupPlan?: boolean;
+  maskProgress?: boolean;
   supabase?: ReturnType<typeof createBrowserClient>;
   onNavigateToNode?: (nodeId: string) => void;
   planTopic?: string;
@@ -74,6 +75,7 @@ export function SessionItem({
   onToggleExpand,
   isOwner = true,
   isGroupPlan = false,
+  maskProgress = false,
   supabase: propSupabase,
   planTopic,
   planId,
@@ -97,7 +99,9 @@ export function SessionItem({
   const isCompleted = node.status === "completed";
   const isLocked = node.status === "locked";
   const isInProgress = node.status === "in_progress";
-  const status = statusMeta(node.status, t);
+  const status = maskProgress
+    ? { label: t("sessionItem.statusBrowse"), pill: "border-neutral-600/60 bg-neutral-900/60 text-neutral-400" }
+    : statusMeta(node.status, t);
   useEffect(() => {
     setEditedPlanningPrompt(node.planning_prompt || "");
   }, [node.id, node.planning_prompt]);
@@ -318,14 +322,16 @@ export function SessionItem({
           <div className="flex items-start gap-2.5">
             <div
               className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-md border text-xs font-semibold ${
-                isCompleted
-                  ? "border-emerald-500/40 bg-emerald-950/35 text-emerald-200"
-                  : isInProgress
-                    ? "border-amber-400/45 bg-amber-950/30 text-amber-100"
-                    : "border-neutral-700/70 bg-neutral-900/80 text-neutral-300"
+                maskProgress
+                  ? "border-neutral-700/70 bg-neutral-900/80 text-neutral-300"
+                  : isCompleted
+                    ? "border-emerald-500/40 bg-emerald-950/35 text-emerald-200"
+                    : isInProgress
+                      ? "border-amber-400/45 bg-amber-950/30 text-amber-100"
+                      : "border-neutral-700/70 bg-neutral-900/80 text-neutral-300"
               }`}
             >
-              {isCompleted ? (
+              {!maskProgress && isCompleted ? (
                 <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
                 </svg>

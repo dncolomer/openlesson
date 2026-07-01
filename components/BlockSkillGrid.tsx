@@ -20,6 +20,7 @@ interface BlockSkillGridProps {
   selectedNodeId: string | null;
   onSelectNode: (nodeId: string) => void;
   canEdit: boolean;
+  showProgress?: boolean;
   isAdding?: boolean;
   planId?: string;
   locale?: string;
@@ -43,8 +44,11 @@ const MIN_ZOOM = 0.35;
 const MAX_ZOOM = 2.5;
 const PAN_CLICK_THRESHOLD = 6;
 
-function cellStatusClass(status: string, selected: boolean) {
+function cellStatusClass(status: string, selected: boolean, showProgress: boolean) {
   const base = selected ? "ring-2 ring-white/50 ring-offset-2 ring-offset-[#0b0b0b] " : "";
+  if (!showProgress) {
+    return `${base}border-neutral-700/80 bg-neutral-950/75 text-neutral-200`;
+  }
   if (status === "completed") {
     return `${base}border-emerald-500/50 bg-emerald-950/40 text-emerald-100 shadow-[0_0_12px_rgba(16,185,129,0.15)]`;
   }
@@ -66,6 +70,7 @@ export function BlockSkillGrid({
   selectedNodeId,
   onSelectNode,
   canEdit,
+  showProgress = true,
   isAdding = false,
   planId,
   locale = "en",
@@ -335,7 +340,7 @@ export function BlockSkillGrid({
                   <button
                     type="button"
                     onClick={() => handleCellSelect(node.id)}
-                    className={`relative flex h-full w-full flex-col items-center justify-center rounded-lg border px-2 text-center transition hover:brightness-110 ${cellStatusClass(node.status, selectedNodeId === node.id)}`}
+                    className={`relative flex h-full w-full flex-col items-center justify-center rounded-lg border px-2 text-center transition hover:brightness-110 ${cellStatusClass(node.status, selectedNodeId === node.id, showProgress)}`}
                     title={node.title}
                   >
                     <span className="absolute left-1.5 top-1 font-mono text-[9px] text-neutral-500">

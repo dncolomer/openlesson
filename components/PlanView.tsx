@@ -13,7 +13,7 @@ import remarkGfm from "remark-gfm";
 import { PerformanceChat } from "@/components/PerformanceChat";
 import { PlanFilesTab } from "@/components/PlanFilesTab";
 import { SessionList } from "@/components/SessionList";
-import { fetchAestheticPackages } from "@/lib/aesthetics";
+import { aestheticImageForId, fetchAestheticPackages } from "@/lib/aesthetics";
 import { PublicWorkspaceForkPanel } from "@/components/PublicWorkspaceForkPanel";
 
 export interface PlanNode {
@@ -56,24 +56,6 @@ function planShareSlug(plan: LearningPlan) {
   return encodeURIComponent(title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") || "plan");
 }
 
-const FALLBACK_AESTHETIC_IMAGES = [
-  "/aesthetics/architecture/HHfAOzYWYAAhCDa.jpeg",
-  "/aesthetics/Greco-futurism/HHnTrjJbQAAOz7K.jpeg",
-  "/aesthetics/galactic-stoneworks/HHjOxLWXMAEFcn0.jpeg",
-  "/aesthetics/lunar/HE2xzURWUAAd6N2.jpeg",
-  "/aesthetics/piotr-binkowski/HGHQJOtWgAAOGtm.jpeg",
-];
-
-/** Stable per-plan pick — avoids hydration mismatch from Math.random() during SSR. */
-function aestheticImageForPlan(planId: string, images = FALLBACK_AESTHETIC_IMAGES) {
-  if (images.length === 0) return FALLBACK_AESTHETIC_IMAGES[0];
-  let hash = 0;
-  for (let i = 0; i < planId.length; i++) {
-    hash = (hash * 31 + planId.charCodeAt(i)) >>> 0;
-  }
-  return images[hash % images.length];
-}
-
 export function PlanView({ initialPlan, initialNodes }: PlanViewProps) {
   const { t } = useI18n();
   const params = useParams();
@@ -98,7 +80,7 @@ export function PlanView({ initialPlan, initialNodes }: PlanViewProps) {
   const [isEditingNotes, setIsEditingNotes] = useState(false);
   const [savingNotes, setSavingNotes] = useState(false);
   const [mobileColumn, setMobileColumn] = useState<"plan" | "sessions" | "workspace">("plan");
-  const [workspaceImage, setWorkspaceImage] = useState(() => aestheticImageForPlan(planId));
+  const [workspaceImage, setWorkspaceImage] = useState(() => aestheticImageForId(planId));
   const [authChecked, setAuthChecked] = useState(false);
   const forkModalAutoOpenedRef = useRef(false);
   
@@ -137,7 +119,7 @@ export function PlanView({ initialPlan, initialNodes }: PlanViewProps) {
         if (cancelled) return;
         const images = packages.flatMap((pkg) => pkg.images);
         if (images.length === 0) return;
-        setWorkspaceImage(aestheticImageForPlan(planId, images));
+        setWorkspaceImage(aestheticImageForId(planId, images));
       })
       .catch(() => {});
 
@@ -682,6 +664,9 @@ export function PlanView({ initialPlan, initialNodes }: PlanViewProps) {
             isOwner={isOwner}
             isGroupPlan={plan.is_group === true}
             maskProgress={needsFork}
+            onRequestFork={() => setShowRemixModal(true)}
+            forkLoginHref={publicLoginHref}
+            isLoggedIn={!!currentUserId}
             supabase={supabase}
             planTopic={plan.root_topic}
             planId={planId}

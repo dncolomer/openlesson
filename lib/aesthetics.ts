@@ -1,8 +1,26 @@
+export const FALLBACK_AESTHETIC_IMAGES = [
+  "/aesthetics/architecture/HHfAOzYWYAAhCDa.jpeg",
+  "/aesthetics/Greco-futurism/HHnTrjJbQAAOz7K.jpeg",
+  "/aesthetics/galactic-stoneworks/HHjOxLWXMAEFcn0.jpeg",
+  "/aesthetics/lunar/HE2xzURWUAAd6N2.jpeg",
+  "/aesthetics/piotr-binkowski/HGHQJOtWgAAOGtm.jpeg",
+];
+
 export interface AestheticPackage {
   id: string;
   name: string;
   images: string[];
   previewImage: string;
+}
+
+/** Stable per-id pick — same image on server and client (no Math.random). */
+export function aestheticImageForId(id: string, images = FALLBACK_AESTHETIC_IMAGES) {
+  if (images.length === 0) return FALLBACK_AESTHETIC_IMAGES[0];
+  let hash = 0;
+  for (let i = 0; i < id.length; i++) {
+    hash = (hash * 31 + id.charCodeAt(i)) >>> 0;
+  }
+  return images[hash % images.length];
 }
 
 export function formatAestheticName(id: string) {

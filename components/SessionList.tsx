@@ -35,6 +35,9 @@ interface SessionListProps {
   isGroupPlan?: boolean;
   /** Hide completion/progress styling for public workspaces before fork */
   maskProgress?: boolean;
+  onRequestFork?: () => void;
+  forkLoginHref?: string;
+  isLoggedIn?: boolean;
   supabase?: ReturnType<typeof createBrowserClient>;
   planTopic?: string;
   planId?: string;
@@ -86,6 +89,9 @@ export function SessionList({
   isOwner = true,
   isGroupPlan = false,
   maskProgress = false,
+  onRequestFork,
+  forkLoginHref,
+  isLoggedIn = false,
   supabase,
   planTopic,
   planId,
@@ -223,6 +229,9 @@ export function SessionList({
               isOwner={isOwner}
               isGroupPlan={isGroupPlan}
               maskProgress={maskProgress}
+              onRequestFork={onRequestFork}
+              forkLoginHref={forkLoginHref}
+              isLoggedIn={isLoggedIn}
               supabase={supabase}
               planTopic={planTopic}
               planId={planId}

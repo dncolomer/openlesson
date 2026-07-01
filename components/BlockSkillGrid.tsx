@@ -42,6 +42,7 @@ interface BlockSkillGridProps {
 
 const MIN_ZOOM = 0.35;
 const MAX_ZOOM = 2.5;
+const DEFAULT_ZOOM = 1.45;
 const PAN_CLICK_THRESHOLD = 6;
 
 function cellStatusClass(status: string, selected: boolean, showProgress: boolean) {
@@ -95,7 +96,7 @@ export function BlockSkillGrid({
   const [suggestError, setSuggestError] = useState<string | null>(null);
   const [viewportSize, setViewportSize] = useState({ width: 0, height: 0 });
   const [pan, setPan] = useState({ x: 0, y: 0 });
-  const [zoom, setZoom] = useState(1);
+  const [zoom, setZoom] = useState(DEFAULT_ZOOM);
 
   const nodesById = useMemo(() => new Map(nodes.map((node) => [node.id, node])), [nodes]);
   const { ordered, occupancy, startCell } = useMemo(() => buildSkillGridLayout(nodes), [nodes]);
@@ -138,8 +139,8 @@ export function BlockSkillGrid({
   }, [viewportSize.width, viewportSize.height, startCell, zoom]);
 
   const recenter = useCallback(() => {
-    setZoom(1);
-    applyCenterOnStart(1);
+    setZoom(DEFAULT_ZOOM);
+    applyCenterOnStart(DEFAULT_ZOOM);
   }, [applyCenterOnStart]);
 
   const zoomBy = useCallback(

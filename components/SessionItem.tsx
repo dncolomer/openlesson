@@ -5,6 +5,9 @@ import type React from "react";
 import { useRouter } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
 import { useI18n } from "../lib/i18n";
+import { aestheticImageForId, fetchAestheticPackages } from "@/lib/aesthetics";
+import { BlockDetailCard } from "./BlockDetailCard";
+import { PublicWorkspaceForkCallout } from "./PublicWorkspaceForkCallout";
 
 interface PlanNode {
   id: string;
@@ -31,36 +34,14 @@ interface SessionItemProps {
   isOwner?: boolean;
   isGroupPlan?: boolean;
   maskProgress?: boolean;
+  onRequestFork?: () => void;
+  forkLoginHref?: string;
+  isLoggedIn?: boolean;
   supabase?: ReturnType<typeof createBrowserClient>;
   onNavigateToNode?: (nodeId: string) => void;
   planTopic?: string;
   planId?: string;
   variant?: "compact" | "detail";
-}
-
-function statusMeta(status: string, t: (key: string) => string) {
-  if (status === "completed") {
-    return {
-      label: t("sessionItem.statusCompleted"),
-      pill: "border-emerald-500/40 bg-emerald-950/35 text-emerald-200",
-    };
-  }
-  if (status === "in_progress") {
-    return {
-      label: t("sessionItem.statusInProgress"),
-      pill: "border-amber-400/45 bg-amber-950/30 text-amber-100",
-    };
-  }
-  if (status === "locked") {
-    return {
-      label: t("sessionItem.statusLocked"),
-      pill: "border-neutral-700 bg-neutral-900/70 text-neutral-500",
-    };
-  }
-  return {
-    label: t("sessionItem.statusReady"),
-    pill: "border-neutral-600/60 bg-neutral-900/60 text-neutral-300",
-  };
 }
 
 export function SessionItem({
@@ -76,6 +57,9 @@ export function SessionItem({
   isOwner = true,
   isGroupPlan = false,
   maskProgress = false,
+  onRequestFork,
+  forkLoginHref,
+  isLoggedIn = false,
   supabase: propSupabase,
   planTopic,
   planId,
@@ -93,22 +77,26 @@ export function SessionItem({
   const [editedPlanningPrompt, setEditedPlanningPrompt] = useState(node.planning_prompt || "");
   const [savingPrompt, setSavingPrompt] = useState(false);
   const [promptSaved, setPromptSaved] = useState(false);
-  const [showPromptEditor, setShowPromptEditor] = useState(isDetail);
+  const [showPromptEditor, setShowPromptEditor] = useState(false);
   const [activeSession, setActiveSession] = useState<{ id: string; status: string } | null>(null);
+  const [aestheticImages, setAestheticImages] = useState<string[] | null>(null);
 
   const isCompleted = node.status === "completed";
   const isLocked = node.status === "locked";
   const isInProgress = node.status === "in_progress";
-  const status = maskProgress
-    ? { label: t("sessionItem.statusBrowse"), pill: "border-neutral-600/60 bg-neutral-900/60 text-neutral-400" }
-    : statusMeta(node.status, t);
   useEffect(() => {
     setEditedPlanningPrompt(node.planning_prompt || "");
   }, [node.id, node.planning_prompt]);
 
   useEffect(() => {
-    if (isDetail) setShowPromptEditor(true);
-  }, [isDetail, node.id]);
+    if (!isDetail) return;
+    fetchAestheticPackages()
+      .then((packages) => {
+        const images = packages.flatMap((pkg) => pkg.images);
+        if (images.length > 0) setAestheticImages(images);
+      })
+      .catch(() => {});
+  }, [isDetail]);
 
   useEffect(() => {
     if (!node.session_id) return;
@@ -304,71 +292,74 @@ export function SessionItem({
   );
 
   if (isDetail) {
+    const progressRing = maskProgress
+      ? "neutral"
+      : isCompleted
+        ? "completed"
+        : isInProgress
+          ? "in_progress"
+          : "neutral";
+    const thumbnailSrc = aestheticImageForId(node.id, aestheticImages ?? undefined);
+
+    const detailPromptSection = isOwner ? (
+      <div>
+        <button
+          type="button"
+          onClick={() => setShowPromptEditor((open) => !open)}
+          className="flex w-full items-center justify-between gap-2 text-left text-xs font-medium text-neutral-500 transition hover:text-neutral-300"
+        >
+          <span>
+            {showPromptEditor ? "− " : "+ "}
+            {t("sessionItem.customInstructionsLabel")}
+          </span>
+          <span className="text-[11px] font-normal text-neutral-400">
+            {savingPrompt && t("sessionItem.saving")}
+            {!savingPrompt && promptSaved && t("sessionItem.saved")}
+          </span>
+        </button>
+        {showPromptEditor && (
+          <textarea
+            value={editedPlanningPrompt}
+            onChange={(e) => setEditedPlanningPrompt(e.target.value)}
+            onBlur={savePlanningPrompt}
+            placeholder={t("sessionItem.customInstructions")}
+            className="mt-2 w-full resize-none rounded-lg border border-white/15 bg-neutral-900/60 px-2.5 py-2 text-xs leading-relaxed text-white placeholder:text-neutral-600 focus:border-white/30 focus:outline-none"
+            rows={3}
+          />
+        )}
+      </div>
+    ) : null;
+
     return (
-      <div
-        id={`session-item-${node.id}`}
-        className={`relative overflow-hidden rounded-lg border border-neutral-800/80 bg-neutral-950/90 shadow-lg shadow-black/25 ${
-          highlighted ? "ring-1 ring-white/20" : ""
-        }`}
-        style={
-          highlighted
-            ? { boxShadow: `0 8px 28px rgba(0,0,0,0.4), 0 0 14px rgba(255, 255, 255, ${highlightOpacity * 0.08})` }
-            : undefined
-        }
-      >
-        <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/15 to-transparent" />
-
-        <div className="space-y-2.5 p-3">
-          <div className="flex items-start gap-2.5">
-            <div
-              className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-md border text-xs font-semibold ${
-                maskProgress
-                  ? "border-neutral-700/70 bg-neutral-900/80 text-neutral-300"
-                  : isCompleted
-                    ? "border-emerald-500/40 bg-emerald-950/35 text-emerald-200"
-                    : isInProgress
-                      ? "border-amber-400/45 bg-amber-950/30 text-amber-100"
-                      : "border-neutral-700/70 bg-neutral-900/80 text-neutral-300"
-              }`}
-            >
-              {!maskProgress && isCompleted ? (
-                <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-                </svg>
-              ) : (
-                index + 1
-              )}
-            </div>
-
-            <div className="min-w-0 flex-1">
-              <div className="flex flex-wrap items-center gap-1.5">
-                <h3 className="truncate text-sm font-semibold text-white">{node.title}</h3>
-                <span className={`rounded-full border px-2 py-0.5 text-xs font-medium ${status.pill}`}>
-                  {status.label}
-                </span>
-                {node.is_start && (
-                  <span className="rounded-full border border-neutral-600 bg-neutral-900/70 px-2 py-0.5 text-xs font-medium text-neutral-300">
-                    {t("sessionItem.startBlock")}
-                  </span>
-                )}
-                {activeSession && (
-                  <span className="rounded-full border border-white/25 bg-neutral-900/80 px-2 py-0.5 text-xs font-medium text-white">
-                    {t("sessionItem.sessionActive")}
-                  </span>
-                )}
-              </div>
-              {node.description && (
-                <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-neutral-400">{node.description}</p>
-              )}
-
-            </div>
-          </div>
-
-          <div className="flex items-stretch gap-2">
-            {promptSection}
-            {actionButtons}
-          </div>
-        </div>
+      <div id={`session-item-${node.id}`}>
+        <BlockDetailCard
+          key={node.id}
+          title={node.title}
+          description={node.description}
+          index={index}
+          thumbnailSrc={thumbnailSrc}
+          progressRing={progressRing}
+          isStart={node.is_start}
+          evalLabel={t("sessionItem.evalCtaLabel")}
+          isStarting={isStarting}
+          isLocked={isLocked}
+          showActions={!isLocked && (isOwner || isGroupPlan) && !maskProgress}
+          onStartIle={() => void handleStart()}
+          onStartEval={handleStartGhl}
+          forkCallout={
+            maskProgress && onRequestFork && forkLoginHref ? (
+              <PublicWorkspaceForkCallout
+                isLoggedIn={isLoggedIn}
+                loginHref={forkLoginHref}
+                onFork={onRequestFork}
+                variant="dark"
+              />
+            ) : undefined
+          }
+          promptSection={detailPromptSection}
+          highlighted={highlighted}
+          highlightOpacity={highlightOpacity}
+        />
       </div>
     );
   }

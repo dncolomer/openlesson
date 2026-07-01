@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   buildSkillGridLayout,
+  clampSkillGridZoom,
+  getDefaultSkillGridZoom,
   getNeighborTitles,
   getPanToCenterCell,
   getVisibleGridCells,
@@ -40,9 +42,6 @@ interface BlockSkillGridProps {
   };
 }
 
-const MIN_ZOOM = 0.35;
-const MAX_ZOOM = 2.5;
-const DEFAULT_ZOOM = 1.45;
 const PAN_CLICK_THRESHOLD = 6;
 
 function cellStatusClass(status: string, selected: boolean, showProgress: boolean) {
@@ -60,10 +59,6 @@ function cellStatusClass(status: string, selected: boolean, showProgress: boolea
     return `${base}border-neutral-800 bg-neutral-950/50 text-neutral-500 opacity-70`;
   }
   return `${base}border-neutral-700/80 bg-neutral-950/75 text-neutral-100`;
-}
-
-function clampZoom(value: number) {
-  return Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, value));
 }
 
 export function BlockSkillGrid({
@@ -96,7 +91,7 @@ export function BlockSkillGrid({
   const [suggestError, setSuggestError] = useState<string | null>(null);
   const [viewportSize, setViewportSize] = useState({ width: 0, height: 0 });
   const [pan, setPan] = useState({ x: 0, y: 0 });
-  const [zoom, setZoom] = useState(DEFAULT_ZOOM);
+  const [zoom, setZoom] = useState(1);
 
   const nodesById = useMemo(() => new Map(nodes.map((node) => [node.id, node])), [nodes]);
   const { ordered, occupancy, startCell } = useMemo(() => buildSkillGridLayout(nodes), [nodes]);
@@ -134,14 +129,17 @@ export function BlockSkillGrid({
 
   useEffect(() => {
     if (viewportSize.width <= 0 || viewportSize.height <= 0 || hasInitialCenterRef.current) return;
-    setPan(getPanToCenterCell(viewportSize.width, viewportSize.height, startCell, zoom));
+    const initialZoom = getDefaultSkillGridZoom(viewportSize.width, viewportSize.height);
+    setZoom(initialZoom);
+    setPan(getPanToCenterCell(viewportSize.width, viewportSize.height, startCell, initialZoom));
     hasInitialCenterRef.current = true;
-  }, [viewportSize.width, viewportSize.height, startCell, zoom]);
+  }, [viewportSize.width, viewportSize.height, startCell]);
 
   const recenter = useCallback(() => {
-    setZoom(DEFAULT_ZOOM);
-    applyCenterOnStart(DEFAULT_ZOOM);
-  }, [applyCenterOnStart]);
+    const nextZoom = getDefaultSkillGridZoom(viewportSize.width, viewportSize.height);
+    setZoom(nextZoom);
+    applyCenterOnStart(nextZoom);
+  }, [applyCenterOnStart, viewportSize.width, viewportSize.height]);
 
   const zoomBy = useCallback(
     (factor: number, focalX?: number, focalY?: number) => {
@@ -151,7 +149,7 @@ export function BlockSkillGrid({
       const rect = viewport.getBoundingClientRect();
       const anchorX = focalX ?? rect.width / 2;
       const anchorY = focalY ?? rect.height / 2;
-      const nextZoom = clampZoom(zoom * factor);
+      const nextZoom = clampSkillGridZoom(zoom * factor);
       const ratio = nextZoom / zoom;
 
       setPan((current) => ({

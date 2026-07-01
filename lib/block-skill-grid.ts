@@ -19,6 +19,25 @@ export const SKILL_GRID_CELL_SIZE = 92;
 export const SKILL_GRID_GAP = 10;
 export const SKILL_GRID_PITCH = SKILL_GRID_CELL_SIZE + SKILL_GRID_GAP;
 
+export const SKILL_GRID_MIN_ZOOM = 0.35;
+export const SKILL_GRID_MAX_ZOOM = 2.5;
+/** sqrt(viewport area) calibrated to a ~500×400 panel. */
+export const SKILL_GRID_DEFAULT_ZOOM_REFERENCE_SCALE = 447.2;
+export const SKILL_GRID_DEFAULT_ZOOM_AT_REFERENCE = 1.45;
+
+export function clampSkillGridZoom(zoom: number) {
+  return Math.min(SKILL_GRID_MAX_ZOOM, Math.max(SKILL_GRID_MIN_ZOOM, zoom));
+}
+
+/** Default zoom scales with viewport area — larger displays zoom in, smaller zoom out. */
+export function getDefaultSkillGridZoom(viewportWidth: number, viewportHeight: number) {
+  if (viewportWidth <= 0 || viewportHeight <= 0) return SKILL_GRID_DEFAULT_ZOOM_AT_REFERENCE;
+  const displayScale = Math.sqrt(viewportWidth * viewportHeight);
+  const zoom =
+    SKILL_GRID_DEFAULT_ZOOM_AT_REFERENCE * (displayScale / SKILL_GRID_DEFAULT_ZOOM_REFERENCE_SCALE);
+  return clampSkillGridZoom(zoom);
+}
+
 /** @deprecated Use SKILL_GRID_MIN_COLS */
 export const SKILL_GRID_COLS = 5;
 

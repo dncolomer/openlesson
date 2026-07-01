@@ -121,7 +121,7 @@ const ILE_DIALOGUE_TEXT_CLASS =
 
 const GHL_DIALOGUE_TEXT_CLASS = "text-base leading-relaxed md:text-lg md:leading-relaxed";
 
-function GhcDialogueSplitIle({
+function GhcDialogueSplitComic({
   lastUserTurn,
   lastAssistantTurn,
   promptText,
@@ -129,6 +129,7 @@ function GhcDialogueSplitIle({
   error,
   userInitial,
   emptyUserTurnText,
+  variant = "ile",
 }: {
   lastUserTurn: GhcDialogueMessage | null;
   lastAssistantTurn: GhcDialogueMessage | null;
@@ -137,118 +138,82 @@ function GhcDialogueSplitIle({
   error: string;
   userInitial: string;
   emptyUserTurnText: string;
+  variant?: "ile" | "ghl";
 }) {
   const userLines = lastUserTurn ? lastUserTurn.content.split("\n").map((line) => line.trim()).filter(Boolean) : [];
+  const textClass = variant === "ile" ? ILE_DIALOGUE_TEXT_CLASS : GHL_DIALOGUE_TEXT_CLASS;
+  const heliosPromptClass = variant === "ile" ? "text-neutral-300" : "text-neutral-500";
+  const heliosReplyClass = variant === "ile" ? "text-neutral-100" : "text-neutral-200";
+  const userReplyClass = variant === "ile" ? "text-neutral-50" : "text-neutral-100";
+  const userEmptyClass = variant === "ile" ? "text-neutral-400" : "text-neutral-500";
+  const pendingDotClass = variant === "ile" ? "bg-neutral-300" : "bg-neutral-500";
+  const errorClass =
+    variant === "ile"
+      ? "mt-3 text-left text-xs text-red-300 [text-shadow:0_1px_8px_rgb(0_0_0/0.9)]"
+      : "mt-3 text-left text-xs text-red-300";
 
   return (
-    <div className="flex min-h-0 flex-1 items-center justify-center px-4 py-4 sm:px-6 sm:py-6">
-      <div className="grid w-full max-w-5xl grid-cols-1 gap-y-6 sm:grid-cols-2 sm:grid-rows-[auto_minmax(0,1fr)] sm:gap-x-10 sm:gap-y-8">
-        <div className="flex justify-center sm:row-start-1">
-          <HeliosProbeAvatar />
-        </div>
-        <div className="mx-auto w-full max-w-lg text-center sm:row-start-2">
-          {isSending ? (
-            <div className="flex justify-center gap-1.5 py-1">
-              <div className="size-2.5 animate-bounce rounded-full bg-neutral-300" style={{ animationDelay: "0ms" }} />
-              <div className="size-2.5 animate-bounce rounded-full bg-neutral-300" style={{ animationDelay: "150ms" }} />
-              <div className="size-2.5 animate-bounce rounded-full bg-neutral-300" style={{ animationDelay: "300ms" }} />
-            </div>
-          ) : lastAssistantTurn ? (
-            <p className={`${ILE_DIALOGUE_TEXT_CLASS} text-neutral-100`}>{lastAssistantTurn.content}</p>
-          ) : (
-            <p className={`${ILE_DIALOGUE_TEXT_CLASS} text-neutral-300`}>{promptText}</p>
-          )}
-          {error && <p className="mt-3 text-xs text-red-300 [text-shadow:0_1px_8px_rgb(0_0_0/0.9)]">{error}</p>}
-        </div>
-
-        <div className="flex justify-center sm:row-start-1">
-          <LearnerThoughtAvatar initial={userInitial} />
-        </div>
-        <div className="mx-auto w-full max-w-lg text-center sm:row-start-2">
-          {userLines.length > 0 ? (
-            <div className="space-y-4">
-              {userLines.map((line, index) => (
-                <p key={`${lastUserTurn?.id}-${index}`} className={`${ILE_DIALOGUE_TEXT_CLASS} text-neutral-50`}>
-                  {line}
-                </p>
-              ))}
-            </div>
-          ) : (
-            <p className={`${ILE_DIALOGUE_TEXT_CLASS} text-neutral-300`}>{emptyUserTurnText}</p>
-          )}
+    <div className="flex min-h-0 flex-1 flex-col justify-center gap-4 px-4 py-4 sm:gap-5 sm:px-6 sm:py-5">
+      {/* Helios — top-left */}
+      <div className="flex w-full max-w-[min(100%,34rem)] items-start gap-3 sm:gap-4">
+        <HeliosProbeAvatar />
+        <div className="min-w-0 flex-1 pt-1">
+          <div className="rounded-2xl rounded-tl-md border border-neutral-800/70 bg-neutral-950/55 px-4 py-3 backdrop-blur-sm">
+            {isSending ? (
+              <div className="flex gap-1.5 py-1">
+                <div className={`size-2.5 animate-bounce rounded-full ${pendingDotClass}`} style={{ animationDelay: "0ms" }} />
+                <div className={`size-2.5 animate-bounce rounded-full ${pendingDotClass}`} style={{ animationDelay: "150ms" }} />
+                <div className={`size-2.5 animate-bounce rounded-full ${pendingDotClass}`} style={{ animationDelay: "300ms" }} />
+              </div>
+            ) : lastAssistantTurn ? (
+              <p className={`${textClass} text-left ${heliosReplyClass}`}>{lastAssistantTurn.content}</p>
+            ) : (
+              <p className={`${textClass} text-left ${heliosPromptClass}`}>{promptText}</p>
+            )}
+            {error && <p className={errorClass}>{error}</p>}
+          </div>
         </div>
       </div>
-    </div>
-  );
-}
 
-function GhcDialogueSplitFramed({
-  lastUserTurn,
-  lastAssistantTurn,
-  promptText,
-  isSending,
-  error,
-  userInitial,
-  emptyUserTurnText,
-}: {
-  lastUserTurn: GhcDialogueMessage | null;
-  lastAssistantTurn: GhcDialogueMessage | null;
-  promptText: string;
-  isSending: boolean;
-  error: string;
-  userInitial: string;
-  emptyUserTurnText: string;
-}) {
-  const userLines = lastUserTurn ? lastUserTurn.content.split("\n").map((line) => line.trim()).filter(Boolean) : [];
+      <div
+        className="mx-8 h-px shrink-0 bg-gradient-to-r from-transparent via-neutral-700/45 to-transparent sm:mx-12"
+        role="separator"
+        aria-hidden
+      />
 
-  return (
-    <div className="flex min-h-0 flex-1 flex-col divide-y divide-neutral-900 md:flex-row md:divide-x md:divide-y-0">
-      <section className="flex min-h-0 min-w-0 flex-1 flex-col">
-        <p className="shrink-0 px-6 pt-5 text-center font-mono text-[10px] uppercase tracking-[2px] text-neutral-600">
-          Your thought
-        </p>
-        <div className="flex min-h-0 flex-1 items-center justify-center overflow-y-auto px-6 py-6">
-          <div className="my-auto flex w-full max-w-lg flex-col items-center gap-6 text-center">
-            <LearnerThoughtAvatar initial={userInitial} />
+      {/* Learner — bottom-right */}
+      <div className="flex w-full max-w-[min(100%,34rem)] items-end gap-3 self-end sm:gap-4">
+        <div className="min-w-0 flex-1 pb-1">
+          <div className="rounded-2xl rounded-br-md border border-neutral-700/70 bg-black/55 px-4 py-3 backdrop-blur-sm">
             {userLines.length > 0 ? (
-              <div className="space-y-4">
+              <div className="space-y-3">
                 {userLines.map((line, index) => (
-                  <p key={`${lastUserTurn?.id}-${index}`} className={`${GHL_DIALOGUE_TEXT_CLASS} text-neutral-100`}>
+                  <p key={`${lastUserTurn?.id}-${index}`} className={`${textClass} text-right ${userReplyClass}`}>
                     {line}
                   </p>
                 ))}
               </div>
             ) : (
-              <p className={`${GHL_DIALOGUE_TEXT_CLASS} text-neutral-500`}>{emptyUserTurnText}</p>
+              <p className={`${textClass} text-right ${userEmptyClass}`}>{emptyUserTurnText}</p>
             )}
           </div>
         </div>
-      </section>
-
-      <section className="flex min-h-0 min-w-0 flex-1 flex-col">
-        <p className="shrink-0 px-6 pt-5 text-center font-mono text-[10px] uppercase tracking-[2px] text-neutral-600">
-          Helios
-        </p>
-        <div className="flex min-h-0 flex-1 items-center justify-center overflow-y-auto px-6 py-6">
-          <div className="my-auto flex w-full max-w-lg flex-col items-center gap-6 text-center">
-            <HeliosProbeAvatar />
-            {isSending ? (
-              <div className="flex justify-center gap-1.5 py-1">
-                <div className="size-2.5 animate-bounce rounded-full bg-neutral-500" style={{ animationDelay: "0ms" }} />
-                <div className="size-2.5 animate-bounce rounded-full bg-neutral-500" style={{ animationDelay: "150ms" }} />
-                <div className="size-2.5 animate-bounce rounded-full bg-neutral-500" style={{ animationDelay: "300ms" }} />
-              </div>
-            ) : lastAssistantTurn ? (
-              <p className={`${GHL_DIALOGUE_TEXT_CLASS} text-neutral-200`}>{lastAssistantTurn.content}</p>
-            ) : (
-              <p className={`${GHL_DIALOGUE_TEXT_CLASS} text-neutral-500`}>{promptText}</p>
-            )}
-          </div>
-        </div>
-        {error && <p className="shrink-0 px-6 pb-4 text-center text-xs text-red-300">{error}</p>}
-      </section>
+        <LearnerThoughtAvatar initial={userInitial} />
+      </div>
     </div>
   );
+}
+
+function GhcDialogueSplitIle(
+  props: Omit<Parameters<typeof GhcDialogueSplitComic>[0], "variant">,
+) {
+  return <GhcDialogueSplitComic {...props} variant="ile" />;
+}
+
+function GhcDialogueSplitFramed(
+  props: Omit<Parameters<typeof GhcDialogueSplitComic>[0], "variant">,
+) {
+  return <GhcDialogueSplitComic {...props} variant="ghl" />;
 }
 
 export function GhcDialogueSplit({
@@ -268,7 +233,7 @@ export function GhcDialogueSplit({
   error: string;
   userInitial: string;
   emptyUserTurnText?: string;
-  /** GHL score uses the framed two-column layout; ILE keeps the floating split grid. */
+  /** GHL evaluation uses the same comic layout with panel-friendly typography. */
   layout?: "ile" | "ghl";
 }) {
   const props = {

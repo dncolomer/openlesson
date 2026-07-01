@@ -201,11 +201,6 @@ export function MobileProbesTab({
       <div className="relative flex-1 min-w-0 flex flex-col bg-[#0a0a0a] h-full overflow-hidden">
         <TutorBackground isSpeaking={isSpeaking} stepIndex={sessionPlan?.currentStepIndex} images={aestheticImages} />
         <div className="relative z-10 flex-1 min-h-0 flex flex-col">
-          {sessionControls && (
-            <div className="shrink-0 px-3 pt-3">
-              {sessionControls}
-            </div>
-          )}
           <TutorWelcome
             tutorName={displayTutorName}
             onPlay={() => onWelcomePlay?.()}

@@ -1,0 +1,244 @@
+"use client";
+
+import { useCallback, useEffect, useMemo, useState } from "react";
+import type { SessionPlan } from "@/lib/storage";
+import { useI18n } from "@/lib/i18n";
+import { GhcButton } from "@/components/ghc/GhcUi";
+import { BlockSkillGrid } from "@/components/BlockSkillGrid";
+import { buildSkillGridLayout } from "@/lib/block-skill-grid";
+import {
+  ensureChapterGridPositions,
+  sessionStepsToSkillGridNodes,
+} from "@/lib/chapter-skill-grid";
+
+interface ChapterMapPanelProps {
+  plan: SessionPlan | null;
+  loading?: boolean;
+  activeChapterIndex: number;
+  loadingChapterIndex?: number | null;
+  onLoadChapter: (index: number) => void;
+  onChapterDone: () => void;
+  onAddChapter: (description: string, position: { row: number; col: number }) => Promise<void>;
+  onUpdateChapter: (stepId: string, description: string) => Promise<void>;
+  onEnsurePositions?: (plan: SessionPlan) => void;
+  isSessionActive: boolean;
+  isGeneratingProbe?: boolean;
+  isCurrentStepCompleted?: boolean;
+  stuckCheckText?: string | null;
+}
+
+export function ChapterMapPanel({
+  plan,
+  loading = false,
+  activeChapterIndex,
+  loadingChapterIndex = null,
+  onLoadChapter,
+  onChapterDone,
+  onAddChapter,
+  onUpdateChapter,
+  onEnsurePositions,
+  isSessionActive,
+  isGeneratingProbe = false,
+  isCurrentStepCompleted = false,
+  stuckCheckText = null,
+}: ChapterMapPanelProps) {
+  const { t } = useI18n();
+  const [selectedStepId, setSelectedStepId] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editDraft, setEditDraft] = useState("");
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [adding, setAdding] = useState(false);
+
+  const steps = plan?.steps ?? [];
+  const nodes = useMemo(() => sessionStepsToSkillGridNodes(steps), [steps]);
+  const { placements } = useMemo(() => buildSkillGridLayout(nodes), [nodes]);
+
+  const activeStep = steps[activeChapterIndex];
+  const activeCell = activeStep ? placements.get(activeStep.id) ?? null : null;
+
+  const selectedStep = selectedStepId ? steps.find((s) => s.id === selectedStepId) : null;
+  const selectedIndex = selectedStep ? steps.findIndex((s) => s.id === selectedStep.id) : -1;
+
+  useEffect(() => {
+    if (!plan?.steps.length) return;
+    const { plan: positioned, changed } = ensureChapterGridPositions(plan);
+    if (changed) onEnsurePositions?.(positioned);
+  }, [onEnsurePositions, plan]);
+
+  useEffect(() => {
+    if (!activeStep) return;
+    setSelectedStepId(activeStep.id);
+  }, [activeStep?.id]);
+
+  const saveEdit = useCallback(async () => {
+    if (!editingId || savingEdit) return;
+    const trimmed = editDraft.trim();
+    if (!trimmed) return;
+    setSavingEdit(true);
+    try {
+      await onUpdateChapter(editingId, trimmed);
+      setEditingId(null);
+      setEditDraft("");
+    } finally {
+      setSavingEdit(false);
+    }
+  }, [editDraft, editingId, onUpdateChapter, savingEdit]);
+
+  const handleAddAtCell = useCallback(
+    async (description: string, position: { row: number; col: number }) => {
+      setAdding(true);
+      try {
+        await onAddChapter(description, position);
+      } finally {
+        setAdding(false);
+      }
+    },
+    [onAddChapter],
+  );
+
+  const chapterActionsDisabled = !isSessionActive || isGeneratingProbe;
+
+  const gridLabels = useMemo(
+    () => ({
+      emptyCell: t("chapterMap.gridEmptyCell"),
+      addTitle: t("chapterMap.gridAddTitle"),
+      addPlaceholder: t("chapterMap.gridAddPlaceholder"),
+      addSubmit: t("chapterMap.gridAddSubmit"),
+      addCancel: t("chapterMap.gridAddCancel"),
+      suggestTopics: t("chapterMap.gridSuggestTopics"),
+      suggesting: t("chapterMap.gridSuggesting"),
+      suggestError: t("chapterMap.gridSuggestError"),
+      recenter: t("chapterMap.gridRecenter"),
+      zoomIn: t("chapterMap.gridZoomIn"),
+      zoomOut: t("chapterMap.gridZoomOut"),
+    }),
+    [t],
+  );
+
+  if (loading) {
+    return (
+      <div className="flex h-full flex-col items-center justify-center bg-[#0b0b0b] p-6">
+        <div className="mb-4 h-8 w-8 animate-spin rounded-full border-2 border-neutral-800 border-t-amber-500/70" />
+        <p className="text-sm text-neutral-500">{t("chapterMap.preparing")}</p>
+      </div>
+    );
+  }
+
+  if (!plan) {
+    return (
+      <div className="flex h-full items-center justify-center text-sm text-neutral-600">
+        {t("chapterMap.noChapters")}
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative flex h-full min-h-0 flex-col overflow-hidden">
+      <BlockSkillGrid
+        nodes={nodes}
+        selectedNodeId={selectedStepId}
+        focusedNodeId={activeStep?.id ?? null}
+        onSelectNode={setSelectedStepId}
+        canEdit
+        showProgress
+        isAdding={adding}
+        recenterCell={activeCell}
+        followCell={activeCell}
+        onAddBlock={handleAddAtCell}
+        labels={gridLabels}
+      />
+
+      {selectedStep && selectedIndex >= 0 && (
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 bg-gradient-to-t from-[#0b0b0b] via-[#0b0b0b]/95 to-transparent pt-8">
+          <div className="pointer-events-auto mx-3 mb-3 rounded-xl border border-neutral-700/80 bg-neutral-950/95 p-4 shadow-2xl backdrop-blur-md">
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-neutral-400">
+                {t("chapterMap.chapterLabel", { number: selectedIndex + 1 })}
+              </p>
+              <button
+                type="button"
+                onClick={() => setSelectedStepId(null)}
+                className="shrink-0 rounded-md px-2 py-1 text-xs text-neutral-600 hover:bg-neutral-900 hover:text-neutral-400"
+              >
+                ✕
+              </button>
+            </div>
+
+            {editingId === selectedStep.id ? (
+              <div className="space-y-2">
+                <textarea
+                  value={editDraft}
+                  onChange={(e) => setEditDraft(e.target.value)}
+                  rows={3}
+                  className="w-full resize-none rounded-md border border-neutral-700 bg-black/60 px-3 py-2 text-sm text-neutral-200 focus:border-neutral-500 focus:outline-none"
+                />
+                <div className="grid grid-cols-2 gap-2">
+                  <GhcButton
+                    size="sm"
+                    className="w-full"
+                    onClick={() => {
+                      setEditingId(null);
+                      setEditDraft("");
+                    }}
+                  >
+                    {t("chapterMap.cancel")}
+                  </GhcButton>
+                  <GhcButton
+                    size="sm"
+                    variant="primary"
+                    className="w-full"
+                    disabled={!editDraft.trim() || savingEdit}
+                    onClick={() => void saveEdit()}
+                  >
+                    {savingEdit ? "…" : t("chapterMap.save")}
+                  </GhcButton>
+                </div>
+              </div>
+            ) : (
+              <>
+                <p className="line-clamp-3 text-sm leading-relaxed text-neutral-300">{selectedStep.description}</p>
+                <div className="mt-3 grid grid-cols-3 gap-2">
+                  <GhcButton
+                    size="sm"
+                    className="w-full"
+                    disabled={chapterActionsDisabled}
+                    onClick={() => {
+                      setEditingId(selectedStep.id);
+                      setEditDraft(selectedStep.description);
+                    }}
+                  >
+                    {t("chapterMap.edit")}
+                  </GhcButton>
+                  <GhcButton
+                    size="sm"
+                    className="w-full"
+                    disabled={selectedIndex === activeChapterIndex || loadingChapterIndex === selectedIndex}
+                    onClick={() => onLoadChapter(selectedIndex)}
+                  >
+                    {loadingChapterIndex === selectedIndex ? "…" : t("chapterMap.loadChapter")}
+                  </GhcButton>
+                  <GhcButton
+                    size="sm"
+                    variant="primary"
+                    className="w-full"
+                    disabled={
+                      selectedIndex !== activeChapterIndex
+                      || selectedStep.status === "completed"
+                      || selectedStep.status === "skipped"
+                      || chapterActionsDisabled
+                      || isCurrentStepCompleted
+                      || !!stuckCheckText
+                    }
+                    onClick={onChapterDone}
+                  >
+                    {isGeneratingProbe ? "…" : t("chapterMap.markDone")}
+                  </GhcButton>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

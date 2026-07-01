@@ -21,12 +21,18 @@ const DEFAULT_PLANNER_MODEL = "grok-4.3";
 interface BlockSkillGridProps {
   nodes: SkillGridNode[];
   selectedNodeId: string | null;
+  /** Loaded / focused node (e.g. active chapter) — amber ring in chapter mode. */
+  focusedNodeId?: string | null;
   onSelectNode: (nodeId: string) => void;
   canEdit: boolean;
   showProgress?: boolean;
   isAdding?: boolean;
   planId?: string;
   locale?: string;
+  /** Override recenter + initial viewport target (defaults to start block). */
+  recenterCell?: GridCell | null;
+  /** Pan to this cell when it changes (e.g. after loading a chapter). */
+  followCell?: GridCell | null;
   onAddBlock: (prompt: string, position: { row: number; col: number }) => Promise<void>;
   labels: {
     emptyCell: string;
@@ -45,8 +51,12 @@ interface BlockSkillGridProps {
 
 const PAN_CLICK_THRESHOLD = 6;
 
-function cellStatusClass(status: string, selected: boolean, showProgress: boolean) {
-  const base = selected ? "ring-2 ring-white/50 ring-offset-2 ring-offset-[#0b0b0b] " : "";
+function cellStatusClass(status: string, selected: boolean, focused: boolean, showProgress: boolean) {
+  const base = selected
+    ? "ring-2 ring-white/50 ring-offset-2 ring-offset-[#0b0b0b] "
+    : focused
+      ? "ring-2 ring-amber-400/55 ring-offset-2 ring-offset-[#0b0b0b] "
+      : "";
   if (!showProgress) {
     return `${base}border-neutral-700/80 bg-neutral-950/75 text-neutral-200`;
   }
@@ -65,12 +75,15 @@ function cellStatusClass(status: string, selected: boolean, showProgress: boolea
 export function BlockSkillGrid({
   nodes,
   selectedNodeId,
+  focusedNodeId = null,
   onSelectNode,
   canEdit,
   showProgress = true,
   isAdding = false,
   planId,
   locale = "en",
+  recenterCell = null,
+  followCell = null,
   onAddBlock,
   labels,
 }: BlockSkillGridProps) {
@@ -96,6 +109,7 @@ export function BlockSkillGrid({
 
   const nodesById = useMemo(() => new Map(nodes.map((node) => [node.id, node])), [nodes]);
   const { ordered, occupancy, startCell } = useMemo(() => buildSkillGridLayout(nodes), [nodes]);
+  const viewportCenterCell = recenterCell ?? startCell;
 
   const visibleCells = useMemo(
     () => getVisibleGridCells(viewportSize.width, viewportSize.height, pan.x, pan.y, zoom),
@@ -108,9 +122,9 @@ export function BlockSkillGrid({
       if (!viewport) return;
       const { width, height } = viewport.getBoundingClientRect();
       if (width <= 0 || height <= 0) return;
-      setPan(getPanToCenterCell(width, height, startCell, nextZoom));
+      setPan(getPanToCenterCell(width, height, viewportCenterCell, nextZoom));
     },
-    [startCell, zoom],
+    [viewportCenterCell, zoom],
   );
 
   useEffect(() => {
@@ -132,9 +146,20 @@ export function BlockSkillGrid({
     if (viewportSize.width <= 0 || viewportSize.height <= 0 || hasInitialCenterRef.current) return;
     const initialZoom = getDefaultSkillGridZoom(viewportSize.width, viewportSize.height);
     setZoom(initialZoom);
-    setPan(getPanToCenterCell(viewportSize.width, viewportSize.height, startCell, initialZoom));
+    setPan(getPanToCenterCell(viewportSize.width, viewportSize.height, viewportCenterCell, initialZoom));
     hasInitialCenterRef.current = true;
-  }, [viewportSize.width, viewportSize.height, startCell]);
+  }, [viewportSize.width, viewportSize.height, viewportCenterCell]);
+
+  useEffect(() => {
+    if (!followCell || viewportSize.width <= 0 || viewportSize.height <= 0) return;
+    setPan((current) => {
+      const next = getPanToCenterCell(viewportSize.width, viewportSize.height, followCell, zoom);
+      if (current.x === next.x && current.y === next.y) return current;
+      return next;
+    });
+    // Only follow when the target cell moves — not when zoom changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [followCell?.row, followCell?.col, viewportSize.width, viewportSize.height]);
 
   const recenter = useCallback(() => {
     const nextZoom = getDefaultSkillGridZoom(viewportSize.width, viewportSize.height);
@@ -340,7 +365,7 @@ export function BlockSkillGrid({
                   <button
                     type="button"
                     onClick={() => handleCellSelect(node.id)}
-                    className={`relative flex h-full w-full flex-col items-center justify-center rounded-lg border px-2 text-center transition hover:brightness-110 ${cellStatusClass(node.status, selectedNodeId === node.id, showProgress)}`}
+                    className={`relative flex h-full w-full flex-col items-center justify-center rounded-lg border px-2 text-center transition hover:brightness-110 ${cellStatusClass(node.status, selectedNodeId === node.id, focusedNodeId === node.id, showProgress)}`}
                     title={node.title}
                   >
                     <span className="absolute left-1.5 top-1 font-mono text-[9px] text-neutral-500">

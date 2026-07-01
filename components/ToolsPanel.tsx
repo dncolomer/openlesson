@@ -13,7 +13,7 @@ const EEG_CHANNELS = ["TP9", "AF7", "AF8", "TP10", "FPz"] as const;
 // keeps them around as accepted values *only* if other call sites
 // reference them historically; here we drop them entirely so the
 // compiler will surface anything still trying to set them.
-export type Tool = "chat" | "canvas" | "notebook" | "thought-history" | "grokipedia" | "dantes" | "help" | "data-input" | "logs" | "plan-resources";
+export type Tool = "chat" | "chapters" | "canvas" | "notebook" | "thought-history" | "grokipedia" | "dantes" | "help" | "data-input" | "logs" | "plan-resources";
 
 interface ToolsPanelProps {
   activeTool: Tool | null;
@@ -38,6 +38,12 @@ function ToolIcon({ id }: { id: Tool }) {
       return (
         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+        </svg>
+      );
+    case "chapters":
+      return (
+        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l5.447 2.724A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
         </svg>
       );
     case "canvas":
@@ -111,11 +117,12 @@ export function ToolsPanel({
   // own panels. They've been merged into the Helios chat surface — the
   // action buttons in ProbesPanel / SessionPlanViewer now inject a rich
   // assistant message into chat instead. Keep this list lean.
-  const baseMainTools: Tool[] = ["canvas", "notebook", "thought-history", "grokipedia", "dantes"];
+  const baseMainTools: Tool[] = ["chapters", "canvas", "notebook", "thought-history", "grokipedia", "dantes"];
   const mainTools: Tool[] = planId ? [...baseMainTools, "plan-resources"] : baseMainTools;
   const getToolLabel = (id: Tool): string => {
     switch (id) {
       case "chat": return t('tools.helios');
+      case "chapters": return t('tools.chapters');
       case "canvas": return t('tools.canvas');
       case "notebook": return t('tools.notebook');
       case "thought-history": return "Thoughts";

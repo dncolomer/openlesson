@@ -65,6 +65,10 @@ export interface SessionPlanStep {
   status: "pending" | "in_progress" | "completed" | "skipped";
   type: RequestType;
   order: number;
+  /** Grid column in the chapter map (same convention as workspace blocks). */
+  position_x?: number;
+  /** Grid row in the chapter map (same convention as workspace blocks). */
+  position_y?: number;
 }
 
 export interface SessionPlan {
@@ -805,7 +809,7 @@ export async function saveFacialData(
 
 // ---- Tool Usage Tracking ----
 
-export type ToolName = "chat" | "canvas" | "notebook" | "thought-history" | "grokipedia" | "dantes" | "exercise" | "reading" | "help" | "data-input" | "logs" | "goals" | "probe" | "session_plan" | "thought-trace";
+export type ToolName = "chat" | "chapters" | "canvas" | "notebook" | "thought-history" | "grokipedia" | "dantes" | "exercise" | "reading" | "help" | "data-input" | "logs" | "goals" | "probe" | "session_plan" | "thought-trace";
 
 export type ToolAction =
   | "open"
@@ -836,6 +840,11 @@ export type ToolAction =
   | "force_advance"
   | "cancel_advance"
   | "chapter_focus"
+  | "chapter_load"
+  | "chapter_add"
+  | "chapter_edit"
+  | "chapter_position"
+  | "chapter_done"
   // Readiness-gate outcomes (manual-advance mode). These capture
   // "student thinks they're done vs LLM thinks they're done" disagreements
   // so we can later learn where the student's self-assessment matches

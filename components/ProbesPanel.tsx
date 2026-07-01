@@ -257,11 +257,6 @@ export function ProbesPanel({
         {/* Faint frosted-glass background image — one random pick per session. */}
         <TutorBackground isSpeaking={isSpeaking} stepIndex={sessionPlan?.currentStepIndex} images={aestheticImages} />
         <div className="relative z-10 flex-1 min-h-0 flex flex-col overflow-hidden">
-          {sessionControls && (
-            <div className="shrink-0 px-4 pt-4">
-              {sessionControls}
-            </div>
-          )}
           <TutorWelcome
             tutorName={displayTutorName}
             onPlay={() => onWelcomePlay?.()}

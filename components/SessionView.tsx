@@ -26,6 +26,7 @@ import {
   saveWithDedupBlob,
   type Session,
   type SessionPlan,
+  type SessionPlanStep,
   type Probe,
   type ObserverMode,
   type Frequency,
@@ -36,12 +37,13 @@ import {
 import { playArchiveSound, playStepCompleteSound, playSessionCompleteSound } from "@/lib/sounds";
 import { formatTime } from "@/lib/utils";
 import { SessionHeliosPanel } from "./SessionHeliosPanel";
+import { ChapterMapPanel } from "./ChapterMapPanel";
 import { createClient } from "@/lib/supabase/client";
 import { useSessionThoughtInterface, type SessionThoughtTracePayload } from "@/lib/useSessionThoughtInterface";
 import { ThoughtMemoryPanel } from "@/components/ghc/ThoughtMemoryPanel";
 import { GrokGrokipediaTool } from "@/components/GrokGrokipediaTool";
 import { SessionControlBar } from "./SessionControlBar";
-import { SessionPlanViewer } from "./SessionPlanViewer";
+
 import { ResizablePane, type ResizablePaneHandle } from "./ResizablePane";
 import { ExcalidrawCanvas } from "./ExcalidrawCanvas";
 import { ToolsPanel, type Tool } from "./ToolsPanel";
@@ -187,6 +189,7 @@ function NotebookSubmitButton({
 // Configuration
 const STORAGE_INTERVAL_MS = 5000;
 const ANALYSIS_INTERVAL_MS = 10000;
+const CHAPTER_LOAD_DURATION_MS = 900;
 const STUCK_POLICY_ENABLED = false;
 const EEG_SAMPLE_RATE_HZ = 256;
 const EEG_DISPLAY_MAX_SAMPLES = 512;
@@ -234,6 +237,10 @@ export function SessionView({ sessionId }: { sessionId: string }) {
   // switch together when the focused chapter changes. This is intentionally
   // browser-local; it is not persisted to the backend.
   const [activeChapterIndex, setActiveChapterIndex] = useState(0);
+  const activeChapterIndexRef = useRef(0);
+  const planInitializedRef = useRef(false);
+  const [chapterLoading, setChapterLoading] = useState(false);
+  const [chapterLoadingIndex, setChapterLoadingIndex] = useState<number | null>(null);
   const chapterFocusSinceRef = useRef<Record<number, number>>({ 0: Date.now() });
   const [chapterWorkspaces, setChapterWorkspaces] = useState<Record<string, ChapterWorkspace>>({});
   const [chapterWorkspacesLoaded, setChapterWorkspacesLoaded] = useState(false);
@@ -241,6 +248,8 @@ export function SessionView({ sessionId }: { sessionId: string }) {
 
   useEffect(() => {
     setActiveChapterIndex(0);
+    activeChapterIndexRef.current = 0;
+    planInitializedRef.current = false;
     chapterFocusSinceRef.current = { 0: Date.now() };
     setChapterWorkspaces({});
     setChapterWorkspacesLoaded(false);
@@ -270,11 +279,10 @@ export function SessionView({ sessionId }: { sessionId: string }) {
   }, [chapterWorkspaces, chapterWorkspacesLoaded, sessionId]);
 
   // New 3-panel layout state
-  const [activeTool, setActiveTool] = useState<Tool>("notebook");
+  const [activeTool, setActiveTool] = useState<Tool>("chapters");
   const [userInitial, setUserInitial] = useState("Y");
   const prevToolRef = useRef<Tool | null>(null);
   const resizablePaneRef = useRef<ResizablePaneHandle>(null);
-  const resizablePaneRef2 = useRef<ResizablePaneHandle>(null);
   // Source-of-truth for which of the three workspace views are visible.
   // Kept in sync with the ResizablePane collapsed state via the toggle
   // UI in the top bar. At least one must be true at all times. Initialized
@@ -294,13 +302,12 @@ export function SessionView({ sessionId }: { sessionId: string }) {
         return null;
       }
     };
-    const outer = readCollapsed("session-split");
-    const inner = readCollapsed("session-split-right");
+    const split = readCollapsed("session-split-tools-helios");
     return {
-      tools: outer !== "left",
+      tools: split !== "left",
       // Tutor (Helios) pane is always visible — it cannot be hidden.
       tutor: true,
-      plan: outer !== "right" && inner !== "right",
+      plan: split !== "right",
     };
   });
   // Canonical applier: writes both the toggle state AND the underlying
@@ -312,21 +319,13 @@ export function SessionView({ sessionId }: { sessionId: string }) {
     next = { ...next, tutor: true };
     if (!next.tools && !next.tutor && !next.plan) return;
     setPaneVisibility(next);
-    // Outer pane: left = Tools, right = (Tutor + Plan combined)
-    if (!next.tutor && !next.plan) {
-      resizablePaneRef.current?.setLayout({ collapsedSide: "right" });
-    } else if (!next.tools) {
+    // Left = Tools, right = Helios
+    if (!next.tools) {
       resizablePaneRef.current?.setLayout({ collapsedSide: "left" });
+    } else if (!next.tutor) {
+      resizablePaneRef.current?.setLayout({ collapsedSide: "right" });
     } else {
       resizablePaneRef.current?.setLayout({ collapsedSide: null });
-    }
-    // Inner pane: left = Tutor, right = Plan
-    if (!next.tutor && next.plan) {
-      resizablePaneRef2.current?.setLayout({ collapsedSide: "left" });
-    } else if (next.tutor && !next.plan) {
-      resizablePaneRef2.current?.setLayout({ collapsedSide: "right" });
-    } else {
-      resizablePaneRef2.current?.setLayout({ collapsedSide: null });
     }
   }, []);
   // Turn a single view on without touching the other two.
@@ -421,10 +420,8 @@ export function SessionView({ sessionId }: { sessionId: string }) {
     // and so that any competing layout effect (e.g. the auto-expand-left
     // triggered by activeTool changes) lands first and we collapse last.
     const id = window.setTimeout(() => {
-      // Outer split: collapse Tools (left) so right-hand workspace is full width
+      // Collapse Tools so Helios gets full width
       resizablePaneRef.current?.setLayout({ collapsedSide: "left" });
-      // Inner split: collapse Plan (right) so tutor panel gets the full area
-      resizablePaneRef2.current?.setLayout({ collapsedSide: "right" });
       // Keep the visibility toggles in sync with the actual layout.
       setPaneVisibility({ tools: false, tutor: true, plan: false });
     }, 80);
@@ -449,6 +446,17 @@ export function SessionView({ sessionId }: { sessionId: string }) {
   const [planLoading, setPlanLoading] = useState(false);
   const [planError, setPlanError] = useState<string | null>(null);
   const sessionPlanRef = useRef<SessionPlan | null>(null);
+  useEffect(() => {
+    if (!sessionPlan?.steps?.length || planInitializedRef.current) return;
+    planInitializedRef.current = true;
+    const idx = Math.min(
+      Math.max(0, sessionPlan.currentStepIndex ?? 0),
+      sessionPlan.steps.length - 1,
+    );
+    setActiveChapterIndex(idx);
+    activeChapterIndexRef.current = idx;
+    chapterFocusSinceRef.current[idx] = Date.now();
+  }, [sessionPlan]);
   const [languageConfirmed, setLanguageConfirmed] = useState(false);
   const [isPreparing, setIsPreparing] = useState(false);
   const [aestheticPackages, setAestheticPackages] = useState<AestheticPackage[]>([]);
@@ -836,7 +844,10 @@ export function SessionView({ sessionId }: { sessionId: string }) {
   };
 
   const handleStuckAction = useCallback((action: StuckAction) => {
-    const currentStep = sessionPlanRef.current?.steps?.[sessionPlanRef.current.currentStepIndex]?.description || sessionRef.current?.problem || "this step";
+    const currentStep =
+      sessionPlanRef.current?.steps?.[activeChapterIndexRef.current]?.description
+      || sessionRef.current?.problem
+      || "this step";
 
     if (action === "theory") {
       handleStepResources(currentStep);
@@ -994,21 +1005,133 @@ export function SessionView({ sessionId }: { sessionId: string }) {
   useEffect(() => { museDeviceStatusRef.current = museDeviceStatus; }, [museDeviceStatus]);
   useEffect(() => { isWebcamEnabledRef.current = isWebcamEnabled; }, [isWebcamEnabled]);
   useEffect(() => { sessionPlanRef.current = sessionPlan; }, [sessionPlan]);
+  useEffect(() => { activeChapterIndexRef.current = activeChapterIndex; }, [activeChapterIndex]);
   useEffect(() => { elapsedSecondsRef.current = elapsedSeconds; }, [elapsedSeconds]);
 
   const handleActiveChapterIndexChange = useCallback((index: number) => {
     const now = Date.now();
     chapterFocusSinceRef.current[index] = now;
     setActiveChapterIndex(index);
+    activeChapterIndexRef.current = index;
     const step = sessionPlanRef.current?.steps?.[index];
-    const currentSessionId = sessionRef.current?.id ?? sessionId;
-    if (!currentSessionId) return;
-    void logToolUsage(currentSessionId, "session_plan", "chapter_focus", now, {
+    void logToolRef.current?.("session_plan", "chapter_focus", {
       stepIndex: index,
       stepId: step?.id,
       stepDescription: step?.description?.slice(0, 120),
-    }).catch(err => console.warn("[SessionView] chapter_focus log failed:", err));
-  }, [sessionId]);
+    });
+  }, []);
+
+  const persistPlanSteps = useCallback(async (
+    updatedPlan: SessionPlan,
+    options?: { toolAction?: ToolAction; toolData?: Record<string, unknown> },
+  ) => {
+    setSessionPlan(updatedPlan);
+    sessionPlanRef.current = updatedPlan;
+    try {
+      await updateSessionPlan(updatedPlan.id, {
+        steps: updatedPlan.steps,
+        currentStepIndex: updatedPlan.currentStepIndex,
+      });
+    } catch (err) {
+      console.warn("[SessionView] Failed to sync plan:", err);
+    }
+    if (options?.toolAction) {
+      void logToolRef.current?.("session_plan", options.toolAction, options.toolData ?? {});
+    }
+  }, []);
+
+  const handleEnsureChapterPositions = useCallback((plan: SessionPlan) => {
+    void persistPlanSteps(plan, {
+      toolAction: "chapter_position",
+      toolData: {
+        via: "auto_grid_placement",
+        stepCount: plan.steps.length,
+      },
+    });
+  }, [persistPlanSteps]);
+
+  const handleLoadChapter = useCallback((index: number) => {
+    if (chapterLoading) return;
+    if (index === activeChapterIndex) return;
+    const currentPlan = sessionPlanRef.current;
+    const step = currentPlan?.steps?.[index];
+    if (!currentPlan || !step) return;
+
+    setChapterLoading(true);
+    setChapterLoadingIndex(index);
+    const startedAt = Date.now();
+
+    const updatedSteps = currentPlan.steps.map((s, i) => {
+      if (i === index && s.status === "pending") return { ...s, status: "in_progress" as const };
+      return s;
+    });
+    const updatedPlan = { ...currentPlan, steps: updatedSteps, currentStepIndex: index };
+    void persistPlanSteps(updatedPlan);
+    handleActiveChapterIndexChange(index);
+
+    const remaining = Math.max(0, CHAPTER_LOAD_DURATION_MS - (Date.now() - startedAt));
+    window.setTimeout(() => {
+      setChapterLoading(false);
+      setChapterLoadingIndex(null);
+    }, remaining);
+
+    void logToolRef.current?.("session_plan", "chapter_load", {
+      stepIndex: index,
+      stepId: step.id,
+      stepDescription: step.description?.slice(0, 120),
+    });
+  }, [activeChapterIndex, chapterLoading, handleActiveChapterIndexChange, persistPlanSteps]);
+
+  const handleAddChapter = useCallback(async (description: string, position: { row: number; col: number }) => {
+    const currentPlan = sessionPlanRef.current;
+    if (!currentPlan) return;
+    const trimmed = description.trim();
+    if (!trimmed) return;
+    const newStep: SessionPlanStep = {
+      id: crypto.randomUUID(),
+      description: trimmed,
+      status: "pending",
+      type: "task",
+      order: currentPlan.steps.length,
+      position_x: position.col,
+      position_y: position.row,
+    };
+    const updatedPlan = {
+      ...currentPlan,
+      steps: [...currentPlan.steps, newStep],
+    };
+    await persistPlanSteps(updatedPlan, {
+      toolAction: "chapter_add",
+      toolData: {
+        stepId: newStep.id,
+        description: trimmed.slice(0, 120),
+        position_x: position.col,
+        position_y: position.row,
+      },
+    });
+  }, [persistPlanSteps]);
+
+  const handleUpdateChapter = useCallback(async (stepId: string, description: string) => {
+    const currentPlan = sessionPlanRef.current;
+    if (!currentPlan) return;
+    const trimmed = description.trim();
+    if (!trimmed) return;
+    const updatedSteps = currentPlan.steps.map((step) =>
+      step.id === stepId ? { ...step, description: trimmed } : step,
+    );
+    const updatedPlan = { ...currentPlan, steps: updatedSteps };
+    await persistPlanSteps(updatedPlan, {
+      toolAction: "chapter_edit",
+      toolData: {
+        stepId,
+        description: trimmed.slice(0, 120),
+      },
+    });
+  }, [persistPlanSteps]);
+
+  const loadingChapterLabel = chapterLoadingIndex != null
+    ? sessionPlan?.steps?.[chapterLoadingIndex]?.description ?? null
+    : null;
 
   useEffect(() => {
     if (!session || !isRecording || isPaused) return;
@@ -2021,6 +2144,9 @@ export function SessionView({ sessionId }: { sessionId: string }) {
   const recordTransferEventRef = useRef<
     ((channel: "tools", saved: boolean, error?: string) => void) | null
   >(null);
+  const logToolRef = useRef<
+    ((toolName: ToolName, action: ToolAction, metadata?: Record<string, unknown>) => Promise<void>) | null
+  >(null);
 
   /**
    * Log a tool event. Does THREE things:
@@ -2095,6 +2221,10 @@ export function SessionView({ sessionId }: { sessionId: string }) {
     },
     [addHeartbeatLog],
   );
+
+  useEffect(() => {
+    logToolRef.current = logTool;
+  }, [logTool]);
 
   const logSessionThoughtTrace = useCallback(
     (payload: SessionThoughtTracePayload) => {
@@ -2636,15 +2766,14 @@ export function SessionView({ sessionId }: { sessionId: string }) {
     const s = sessionRef.current;
     if (!s) return;
     setIsStartingSession(true);
-    setActiveTool("notebook");
+    setActiveTool("chapters");
     let didRevealChat = false;
     const revealChat = () => {
       if (didRevealChat) return;
       didRevealChat = true;
       setShowWelcomePanel(false);
-      setPaneVisibility({ tools: true, tutor: true, plan: false });
+      setPaneVisibility({ tools: true, tutor: true, plan: true });
       resizablePaneRef.current?.setLayout({ collapsedSide: null });
-      resizablePaneRef2.current?.setLayout({ collapsedSide: "right" });
     };
     try {
       // Bring the session back to an actively-recording state. Three cases:
@@ -2670,19 +2799,14 @@ export function SessionView({ sessionId }: { sessionId: string }) {
         // Give the welcome-panel collapse effect a beat to finish before
         // we overwrite it, otherwise its 80ms timer races us.
         window.setTimeout(() => {
-          resizablePaneRef.current?.setLayout(prev.outer);
-          resizablePaneRef2.current?.setLayout(prev.inner);
-          // Reverse-map the collapsed states back to the 3 visibility
-          // toggles so the UI controls match the restored layout.
-          const outerLeft = prev.outer.collapsedSide === "left";
-          const outerRight = prev.outer.collapsedSide === "right";
+          resizablePaneRef.current?.setLayout(prev.inner);
           const innerLeft = prev.inner.collapsedSide === "left";
           const innerRight = prev.inner.collapsedSide === "right";
           setPaneVisibility({
-            tools: !outerLeft,
+            tools: !innerLeft,
             // Helios (tutor) pane is always visible — it cannot be hidden.
             tutor: true,
-            plan: !outerRight && !innerRight,
+            plan: !innerRight,
           });
         }, 120);
       }
@@ -3917,9 +4041,10 @@ export function SessionView({ sessionId }: { sessionId: string }) {
                         return { collapsedSide: null as null | "left" | "right" };
                       }
                     };
+                    const layout = readLayout("session-split-tools-helios");
                     helpPreviousLayoutRef.current = {
-                      outer: readLayout("session-split"),
-                      inner: readLayout("session-split-right"),
+                      outer: layout,
+                      inner: layout,
                     };
                   }
                   if (isRecording && !isPaused) {
@@ -3956,7 +4081,7 @@ export function SessionView({ sessionId }: { sessionId: string }) {
           </div>
         )}
         <div className="flex-1 flex min-h-0 overflow-hidden">
-          {/* Resizable 3-pane split view */}
+          {/* Tools | Helios */}
           <div className="flex flex-1 min-h-0 min-w-0 overflow-hidden">
             <ResizablePane
               ref={resizablePaneRef}
@@ -3966,10 +4091,37 @@ export function SessionView({ sessionId }: { sessionId: string }) {
               storageKey="session-split-tools-helios"
               left={
                 <div className="flex flex-col min-w-0 p-4 overflow-hidden h-full relative">
-                  {shouldBlockTools && !["data-input", "help", "logs"].includes(activeTool) && (
+                  {shouldBlockTools && !["data-input", "help", "logs", "chapters"].includes(activeTool) && (
                     <div className="absolute inset-0 z-10 bg-black/30 cursor-not-allowed" />
                   )}
                   <div className="flex-1 min-h-0 overflow-hidden relative">
+                    {activeTool === "chapters" && (
+                      <div className="h-full overflow-hidden rounded-lg border border-neutral-800">
+                        <ChapterMapPanel
+                          plan={sessionPlan}
+                          loading={planLoading}
+                          activeChapterIndex={activeChapterIndex}
+                          loadingChapterIndex={chapterLoadingIndex}
+                          onLoadChapter={handleLoadChapter}
+                          onChapterDone={() => {
+                            const step = sessionPlanRef.current?.steps?.[activeChapterIndex];
+                            void logTool("session_plan", "chapter_done", {
+                              stepIndex: activeChapterIndex,
+                              stepId: step?.id,
+                              stepDescription: step?.description?.slice(0, 120),
+                            });
+                            void handleAdvanceStep(false);
+                          }}
+                          onAddChapter={handleAddChapter}
+                          onUpdateChapter={handleUpdateChapter}
+                          onEnsurePositions={handleEnsureChapterPositions}
+                          isSessionActive={isRecording && !isPaused}
+                          isGeneratingProbe={isGeneratingProbe}
+                          isCurrentStepCompleted={activeStep?.status === "completed" || activeStep?.status === "skipped"}
+                          stuckCheckText={STUCK_POLICY_ENABLED ? activeStuckCheck : null}
+                        />
+                      </div>
+                    )}
                     <div className={activeTool === "canvas" ? "h-full" : "hidden"}>
                       <ExcalidrawCanvas
                         key={activeChapterKey}
@@ -4099,13 +4251,7 @@ export function SessionView({ sessionId }: { sessionId: string }) {
               }
               right={
                     <div className="relative h-full">
-                      {shouldBlockTools && (
-                        <div className="absolute inset-0 z-10 bg-black/30 cursor-not-allowed" />
-                      )}
                       <SessionHeliosPanel
-                        sessionPlan={sessionPlan}
-                        activeChapterIndex={activeChapterIndex}
-                        onActiveChapterIndexChange={handleActiveChapterIndexChange}
                         lastUserTurn={lastDialogueUserTurn}
                         lastAssistantTurn={lastDialogueAssistantTurn}
                         isAssistantPending={isHeliosAssistantPending}
@@ -4114,7 +4260,9 @@ export function SessionView({ sessionId }: { sessionId: string }) {
                         isSessionActive={isRecording && !isPaused}
                         isInitializing={planLoading}
                         isGeneratingProbe={isGeneratingProbe}
-                        isCurrentStepCompleted={activeStep?.status === "completed" || activeStep?.status === "skipped"}
+                        isChapterLoading={chapterLoading}
+                        loadingChapterLabel={loadingChapterLabel}
+                        hasPlanSteps={(sessionPlan?.steps?.length ?? 0) > 0}
                         stuckCheckText={STUCK_POLICY_ENABLED ? activeStuckCheck : null}
                         showWelcome={showWelcomePanel}
                         onWelcomePlay={handleWelcomePlay}
@@ -4124,27 +4272,6 @@ export function SessionView({ sessionId }: { sessionId: string }) {
                         aestheticImages={selectedAesthetic?.images}
                         aestheticName={selectedAesthetic?.name}
                         thought={sessionThoughtInterface}
-                        onChapterDone={() => {
-                          const step = sessionPlanRef.current?.steps?.[activeChapterIndex];
-                          void logTool("session_plan", "advance", {
-                            via: "chapter_nav_done",
-                            stepIndex: activeChapterIndex,
-                            stepId: step?.id,
-                            stepDescription: step?.description?.slice(0, 120),
-                          });
-                          void handleAdvanceStep(false);
-                        }}
-                        onChapterSkip={() => {
-                          const step = sessionPlanRef.current?.steps?.[activeChapterIndex];
-                          void logTool("session_plan", "force_advance", {
-                            via: "chapter_nav_skip",
-                            stepIndex: activeChapterIndex,
-                            stepId: step?.id,
-                            stepDescription: step?.description?.slice(0, 120),
-                            skipEvaluation: true,
-                          });
-                          void handleAdvanceStep(true, true);
-                        }}
                         sessionControls={(
                           <div className="space-y-2">
                             <SessionControlBar

@@ -5,7 +5,7 @@ export const metadata: Metadata = {
   description: "Comprehensive specification for the OpenLesson Agentic API v2, enabling external AI agents to act as tutors using OpenLesson's educational intelligence.",
   openGraph: {
     title: "Agentic API v2 Specification",
-    description: "Enable AI agents to create Performance Workspaces, issue GHL Score links, and read learning verification results.",
+    description: "Enable AI agents to create Verification Workspaces, issue GHL Score links, and read learning verification results.",
     url: "https://openlesson.academy/docs/agentic-v2",
     siteName: "OpenLesson",
     type: "website",

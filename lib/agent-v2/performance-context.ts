@@ -211,7 +211,7 @@ export async function buildWorkspacePerformanceContext({
 export function buildPerformanceChatInstructions(blockId?: string | null): string {
   const scope = blockId
     ? "You are analyzing one performance block inside a workspace."
-    : "You are analyzing an entire Performance Workspace.";
+    : "You are analyzing an entire Verification Workspace.";
 
   return `${scope}
 

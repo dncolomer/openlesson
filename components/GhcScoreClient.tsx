@@ -927,7 +927,7 @@ export function GhcScoreClient({ planId, planNodeId, sessionId, privateToken, in
                 </div>
               )}
               <GhcButton size="lg" variant="primary" className="mt-8 w-full" onClick={startSession}>
-                Start Evaluation Environment
+                Start Think Aloud Protocol
               </GhcButton>
             </div>
           </section>

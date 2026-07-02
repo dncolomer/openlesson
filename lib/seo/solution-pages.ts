@@ -41,51 +41,53 @@ export const PLATFORM_PAGE: SeoSolutionPageConfig = {
   slug: "platform",
   path: "/platform",
   eyebrow: "openLesson Platform",
-  h1: "Three products on Performance Workspaces",
+  h1: "Learning verification for humans and agents",
   intro:
-    "openLesson is built on Performance Workspaces you create and enrich programmatically—with documents, screen shares, video assets, EEG data, and any human-generated evidence. Three products sit on top: two Human Knowledge Verification offerings (headless Evidence API and hosted Think-Aloud Protocol) and the Integrated Learning Environment for improvement.",
-  metaTitle: "Platform — Performance Workspaces, Verification & ILE",
+    "openLesson is built on Verification Workspaces you create and enrich programmatically—with documents, tool traces, screen shares, video assets, and any evidence from humans or agents. Four products sit on top: Evidence API for verification, Think Aloud Protocol and the Integrated Learning Environment for human learning, and the upcoming Agentic Learning Environment for skill developers.",
+  metaTitle: "Platform — Learning Verification for Humans & Agents",
   metaDescription:
-    "Three products on Performance Workspaces: Evidence API for headless verification, Think-Aloud Protocol URLs for hosted cognitive scoring, and the Integrated Learning Environment to close gaps.",
+    "Beyond benchmarks for AI and beyond quizzes for humans. Evidence API, Think Aloud Protocol, ILE, and Agentic Learning Environment on Verification Workspaces.",
   keywords: [
-    "performance workspace",
-    "human knowledge verification",
+    "verification workspace",
+    "learning verification",
+    "agentic learning verification",
     "evidence API",
     "think aloud protocol",
     "integrated learning environment",
+    "agentic learning environment",
     "AI skill assessment",
     "genuine human cognition",
     "LMS integration API",
     "skills gap analysis",
   ],
   navLabel: "Platform",
-  navDescription: "Workspaces, verification products, and ILE",
+  navDescription: "Workspaces, verification, learning, and ALE",
   sections: [
     {
-      title: "The problem: AI makes humans look ready before they are",
+      title: "The problem: outputs look ready before learning is verified",
       paragraphs: [
-        "Generative AI gives instant answers, drafts, and confident-looking work. Real-time assist tools feed suggestions during live interviews, exams, and calls via hidden overlays. Outputs look competent; cognition often goes unmeasured.",
-        "Training completion and quiz scores were never reliable proxies for judgment. openLesson surfaces readiness evidence early—then helps humans close the gaps, not just document them.",
+        "Humans finish training without learning how to use tools. Agents pass benchmark suites without reliable production tool use. Real-time assist and copilots make both problems worse—polished outputs with shallow understanding underneath.",
+        "Quizzes and leaderboard accuracy were never reliable proxies for learning. openLesson verifies readiness with evidence—then helps humans close gaps in the ILE, and gives teams deploy gates for agents.",
       ],
     },
     {
-      title: "Performance Workspaces: the foundation",
+      title: "Verification Workspaces: the foundation",
       paragraphs: [
-        "Every openLesson product runs on a Performance Workspace—a structured environment around a real skill, decision domain, or scenario. Workspaces break work into assessable blocks linked in a learning graph.",
-        "Create and enhance workspaces programmatically via the Agentic API v2. Ingest documents, screen recordings, video assets, EEG traces, transcripts, and other unstructured evidence. The workspace accumulates context as new artifacts arrive—fueling continuous scoring across all three products.",
+        "Every openLesson product runs on a Verification Workspace—a structured environment around a real skill, decision domain, or scenario. Workspaces break work into assessable blocks linked in a learning graph.",
+        "Create and enhance workspaces programmatically via the Agentic API v2. Ingest documents, screen recordings, video assets, EEG traces, transcripts, and other unstructured evidence. The workspace accumulates context as new artifacts arrive—fueling continuous scoring across all four products.",
       ],
     },
     {
-      title: "Product 1: Evidence API — headless verification",
+      title: "Product 1: Evidence API — human and agentic verification",
       paragraphs: [
-        "The Evidence API is openLesson's headless Human Knowledge Verification product. Send unstructured evidence—documents, call transcripts, screen captures, sensor data—and receive a continuous readiness score with gap analysis. No hosted session required.",
-        "Scores update as evidence accumulates. Integrate into LMS platforms, HRIS workflows, agentic pipelines, or any system that needs verified human performance data without a front-end session.",
+        "The Evidence API is openLesson's headless learning verification product—for humans and agents. Send unstructured evidence—tool traces, documents, call transcripts, screen captures—and receive continuous readiness scores with gap analysis. No hosted session required.",
+        "For agents: verify skills and tool use before production deployment—beyond benchmark pass rates. For humans: confirm they learned how to use a workflow or tool—not just completed a module. Integrate into LMS, HRIS, CI gates, or any agentic pipeline.",
       ],
     },
     {
-      title: "Product 2: Think-Aloud Protocol — hosted verification",
+      title: "Product 2: Think Aloud Protocol — human verification",
       paragraphs: [
-        "The Think-Aloud Protocol is openLesson's hosted Human Knowledge Verification product. Generate shareable URLs scoped to a block or entire workspace. Humans verbalize reasoning while working—the signal hidden AI overlays cannot fabricate.",
+        "Think Aloud Protocol (TAP) is openLesson's hosted human learning verification product. Generate shareable URLs scoped to a block or entire workspace. Humans verbalize reasoning while working—the signal hidden AI overlays cannot fabricate.",
         "Live speech is transcribed into think-aloud traces. Socratic probes target hesitations, revisions, and causal chains. Results include marker scores, per-marker rationale, and auditable gap reports.",
       ],
     },
@@ -97,40 +99,52 @@ export const PLATFORM_PAGE: SeoSolutionPageConfig = {
       ],
     },
     {
+      title: "Product 4: Agentic Learning Environment (ALE) — coming soon",
+      paragraphs: [
+        "The Agentic Learning Environment (ALE) is where skill developers test and evolve agent skills. Run agents against workspace scenarios, inspect tool-use traces, and iterate on skill definitions until Evidence API scores clear your deploy bar.",
+        "ALE mirrors the ILE's improvement loop for the agentic side: verification surfaces gaps in tool use and reasoning; developers refine skills in a sandbox until readiness evidence supports production.",
+      ],
+    },
+    {
       title: "The verify-and-improve loop",
       paragraphs: [
-        "Choose headless verification when you have existing artifacts and workflows. Choose Think-Aloud Protocol URLs when you need live cognition under probe. Use the ILE when gaps need to close—not just be labeled.",
-        "All three products share the same workspace context, scoring model, and gap analysis. Verification surfaces weak spots; the ILE repairs them—with auditable evidence at every step.",
+        "Choose Evidence API when you have artifacts or tool traces—for humans or agents. Choose Think Aloud Protocol URLs when you need live human cognition under probe. Use the ILE when human gaps need to close. Use ALE—when available—to evolve agent skills against the same workspace context.",
+        "All products share the same workspace, scoring model, and gap analysis. Verification surfaces weak spots; ILE and ALE repair them—with auditable evidence at every step.",
       ],
     },
     {
       title: "Agentic API v2: programmatic access to everything",
       paragraphs: [
-        "The Agentic API v2 is how builders integrate all three products. Create workspaces, upload evidence, request continuous performance reports, issue Think-Aloud Protocol evaluation links, poll session results, and trigger ILE practice blocks.",
-        "Connect openLesson's verification and improvement layer to Canvas, Moodle, internal academies, hiring stacks, or any system that needs genuine human cognition data alongside AI tooling.",
+        "The Agentic API v2 is how builders integrate the product stack. Create workspaces, upload evidence, request continuous performance reports, issue Think Aloud Protocol links, poll session results, and trigger ILE practice blocks.",
+        "Connect openLesson's learning verification layer to Canvas, Moodle, internal academies, hiring stacks, CI pipelines, or any system that needs human and agentic readiness evidence.",
       ],
     },
   ],
   faqs: [
     {
-      question: "What is a Performance Workspace?",
+      question: "What is a Verification Workspace?",
       answer:
-        "A Performance Workspace is the foundation every openLesson product runs on. It structures a skill or scenario into assessable blocks and accumulates evidence—documents, screen shares, video, EEG data, transcripts, and session artifacts—that fuels continuous scoring and gap analysis.",
+        "A Verification Workspace is the foundation every openLesson product runs on. It structures a skill or scenario into assessable blocks and accumulates evidence—documents, screen shares, video, EEG data, transcripts, and session artifacts—that fuels continuous scoring and gap analysis.",
     },
     {
-      question: "What are the three openLesson products?",
+      question: "What are the openLesson products?",
       answer:
-        "Two Human Knowledge Verification products—Evidence API (headless, evidence-based continuous scoring) and Think-Aloud Protocol (hosted URLs for live cognitive verification)—plus the Integrated Learning Environment (ILE) for guided practice and score improvement.",
+        "Evidence API (headless verification for humans and agents), Think Aloud Protocol (hosted URLs for live human cognition), the Integrated Learning Environment (ILE) for human guided practice, and the upcoming Agentic Learning Environment (ALE) where skill developers test and evolve agent skills.",
     },
     {
-      question: "When should I use the Evidence API vs. Think-Aloud Protocol?",
+      question: "When should I use the Evidence API vs. Think Aloud Protocol?",
       answer:
-        "Use the Evidence API when you already have unstructured artifacts and want continuous scoring without a hosted session—ideal for LMS integrations and agentic workflows. Use Think-Aloud Protocol URLs when you need live cognition under probe, such as hiring assessments or high-stakes readiness checks.",
+        "Use the Evidence API when you have artifacts or tool traces and want continuous scoring without a hosted session—ideal for agent deploy gates, LMS integrations, and verifying human tool adoption. Use Think Aloud Protocol URLs when you need live human cognition under probe, such as hiring assessments or high-stakes readiness checks.",
     },
     {
       question: "What is the Integrated Learning Environment (ILE)?",
       answer:
-        "The ILE is openLesson's learning product. It turns gap findings from verification into targeted practice—think-aloud sessions, Socratic probes, and scenario blocks—so humans improve their scores with evidence at every step.",
+        "The ILE is openLesson's human learning product. It turns gap findings from verification into targeted practice—think-aloud sessions, Socratic probes, and scenario blocks—so humans improve their scores with evidence at every step.",
+    },
+    {
+      question: "What is the Agentic Learning Environment (ALE)?",
+      answer:
+        "ALE is an upcoming openLesson product for skill developers. It provides a sandbox to run agents against workspace scenarios, compare skill versions, and iterate on definitions until Evidence API scores support production deployment.",
     },
     {
       question: "How does openLesson address AI cheating?",
@@ -145,19 +159,19 @@ export const PLATFORM_PAGE: SeoSolutionPageConfig = {
     {
       question: "Can I integrate openLesson with my existing LMS?",
       answer:
-        "Yes. The Agentic API v2 lets agents and platforms create workspaces, pipe evidence, run continuous performance analysis, issue Think-Aloud Protocol links, and trigger ILE practice—without replacing your LMS front end.",
+        "Yes. The Agentic API v2 lets agents and platforms create workspaces, pipe evidence, run continuous performance analysis, issue Think Aloud Protocol links, and trigger ILE practice—without replacing your LMS front end.",
     },
     {
       question: "Who is openLesson for?",
       answer:
-        "Professionals proving readiness, teams validating AI-enabled skill, L&D leaders who need evidence beyond completion rates, and builders embedding human knowledge verification and improvement via API.",
+        "Teams gating agent deployments, L&D leaders verifying human tool adoption, hiring orgs scoring live cognition, and builders embedding learning verification for humans and agents via API.",
     },
   ],
-  primaryCta: { label: "Create a Performance Workspace", href: "/workspace/new" },
+  primaryCta: { label: "Create a Verification Workspace", href: "/workspace/new" },
   secondaryCta: { label: "Agentic API docs", href: "/docs/agentic-v2" },
-  closingTitle: "Start with a workspace. Choose your verification path.",
+  closingTitle: "Start with a workspace. Verify humans, agents, or both.",
   closingBody:
-    "Create your first Performance Workspace free, then verify with evidence or think-aloud—and improve in the ILE.",
+    "Create your first Verification Workspace free, then verify with Evidence API, Think Aloud Protocol, or both—and help humans improve in the ILE.",
 };
 
 export const SOLUTION_PAGES: SeoSolutionPageConfig[] = [
@@ -170,7 +184,7 @@ export const SOLUTION_PAGES: SeoSolutionPageConfig[] = [
       "Your reps have AI drafts for talk tracks, ROI decks, and renewal emails. openLesson measures whether they can qualify pain, challenge assumptions, and defend tradeoffs when the buyer pushes back—before revenue is on the line.",
     metaTitle: "AI Sales Training & Readiness Verification",
     metaDescription:
-      "Measure sales discovery judgment and renewal readiness with Performance Workspaces, ILE practice, and evaluation sessions—not completion rates on enablement videos.",
+      "Measure sales discovery judgment and renewal readiness with Verification Workspaces, ILE practice, and Think Aloud Protocol sessions—not completion rates on enablement videos.",
     keywords: [
       "AI sales training",
       "sales enablement software",
@@ -192,14 +206,14 @@ export const SOLUTION_PAGES: SeoSolutionPageConfig[] = [
       {
         title: "Practice real scenarios in the ILE",
         paragraphs: [
-          "Build a Performance Workspace around your ICP, competitive landscape, and renewal motion. Reps practice by explaining decisions out loud in the Immersive Learning Environment: how they qualify pain, when they challenge the buyer's narrative, and how they revise strategy when new facts appear.",
+          "Build a Verification Workspace around your ICP, competitive landscape, and renewal motion. Reps practice by explaining decisions out loud in the Immersive Learning Environment: how they qualify pain, when they challenge the buyer's narrative, and how they revise strategy when new facts appear.",
           "Each block targets a demonstrable skill—multi-threading, objection handling, value framing—not a slide deck to memorize.",
         ],
       },
       {
         title: "Evaluate before live customer exposure",
         paragraphs: [
-          "Run Evaluation Environment sessions scoped to high-risk blocks: enterprise renewal negotiations, technical validation calls, or competitive displacement scenarios. Results include marker scores, gap analysis, and specific practice recommendations.",
+          "Run Think Aloud Protocol sessions scoped to high-risk blocks: enterprise renewal negotiations, technical validation calls, or competitive displacement scenarios. Results include marker scores, gap analysis, and specific practice recommendations.",
           "Use evaluation links for onboarding gates, promotion readiness, or manager checkpoints before assigning strategic accounts.",
         ],
       },
@@ -220,7 +234,7 @@ export const SOLUTION_PAGES: SeoSolutionPageConfig[] = [
       {
         question: "Can we model our own sales methodology?",
         answer:
-          "Yes. Performance Workspaces are prompt-generated around your methodology, product nuance, and objection library—then broken into assessable blocks you can refine over time.",
+          "Yes. Verification Workspaces are prompt-generated around your methodology, product nuance, and objection library—then broken into assessable blocks you can refine over time.",
       },
       {
         question: "Does openLesson replace our CRM or enablement LMS?",
@@ -242,7 +256,7 @@ export const SOLUTION_PAGES: SeoSolutionPageConfig[] = [
       "When accounts heat up, polished AI summaries are not enough. openLesson helps CS leaders verify that managers can explain tradeoffs, update judgment when facts change, and spot AI failure modes before escalations become churn.",
     metaTitle: "Customer Success Training & Escalation Readiness",
     metaDescription:
-      "Verify client escalation readiness with structured practice, evaluation sessions, and gap analysis—beyond AI-generated account plans and QBR decks.",
+      "Verify client escalation readiness with structured practice, Think Aloud Protocol sessions, and gap analysis—beyond AI-generated account plans and QBR decks.",
     keywords: [
       "customer success training",
       "client escalation readiness",
@@ -264,14 +278,14 @@ export const SOLUTION_PAGES: SeoSolutionPageConfig[] = [
       {
         title: "Workspaces modeled on your escalation patterns",
         paragraphs: [
-          "Create Performance Workspaces from real escalation archetypes: executive sponsor loss, security review surprises, adoption stalls, or competitive bake-offs. Blocks map to demonstrable CS skills—stakeholder mapping, risk quantification, mutual success planning.",
+          "Create Verification Workspaces from real escalation archetypes: executive sponsor loss, security review surprises, adoption stalls, or competitive bake-offs. Blocks map to demonstrable CS skills—stakeholder mapping, risk quantification, mutual success planning.",
           "CSMs practice in the ILE by walking through decisions aloud, not by re-reading saved AI summaries.",
         ],
       },
       {
         title: "Evaluation before executive-facing moments",
         paragraphs: [
-          "Issue Evaluation Environment sessions before promoting CSMs to strategic books or after major product launches. Structured probes reveal depth on product value, customer context, and repair strategies when relationships fray.",
+          "Issue Think Aloud Protocol sessions before promoting CSMs to strategic books or after major product launches. Structured probes reveal depth on product value, customer context, and repair strategies when relationships fray.",
           "Private evaluation links work for distributed teams without scheduling manager shadowing for every readiness check.",
         ],
       },
@@ -314,7 +328,7 @@ export const SOLUTION_PAGES: SeoSolutionPageConfig[] = [
       "Policy training that checks a box does not prove judgment on exceptions. openLesson helps risk and compliance teams measure whether staff can cite rationale, weigh blast radius, and flag undocumented AI assumptions—before auditors do.",
     metaTitle: "Compliance Training Verification & Risk Readiness",
     metaDescription:
-      "Go beyond policy completion with evaluation sessions, readiness evidence, and gap analysis for exception review, regulatory judgment, and AI governance.",
+      "Go beyond policy completion with Think Aloud Protocol sessions, readiness evidence, and gap analysis for exception review, regulatory judgment, and AI governance.",
     keywords: [
       "compliance training software",
       "risk readiness assessment",
@@ -336,14 +350,14 @@ export const SOLUTION_PAGES: SeoSolutionPageConfig[] = [
       {
         title: "Scenario-based workspaces for your control framework",
         paragraphs: [
-          "Model Performance Workspaces on real exception types, third-party risk reviews, data handling edge cases, or model governance decisions. Each block requires demonstrable reasoning tied to your policy library.",
+          "Model Verification Workspaces on real exception types, third-party risk reviews, data handling edge cases, or model governance decisions. Each block requires demonstrable reasoning tied to your policy library.",
           "The ILE captures how staff explain decisions in their own words—critical for firms moving from tick-box compliance to operational resilience.",
         ],
       },
       {
         title: "Auditable evaluation evidence",
         paragraphs: [
-          "Evaluation Environment sessions produce structured scores, marker rationales, and gap analysis suitable for audit trails and remediation planning.",
+          "Think Aloud Protocol sessions produce structured scores, marker rationales, and gap analysis suitable for audit trails and remediation planning.",
           "Scope evaluation to high-risk roles or processes: approvers, model risk reviewers, or regional compliance leads.",
         ],
       },
@@ -415,7 +429,7 @@ export const SOLUTION_PAGES: SeoSolutionPageConfig[] = [
         ],
       },
       {
-        title: "Work samples in Performance Workspaces",
+        title: "Work samples in Verification Workspaces",
         paragraphs: [
           "Create role-specific workspaces: product prioritization under conflicting data, novel debugging scenarios, strategy cases with political stakeholders, or customer-facing escalation simulations.",
           "Candidates practice and demonstrate in the ILE. Evaluation sessions probe depth with structured follow-ups—not trick questions.",
@@ -494,14 +508,14 @@ export const SOLUTION_PAGES: SeoSolutionPageConfig[] = [
       {
         title: "Agentic API v2 surface area",
         paragraphs: [
-          "Create Performance Workspaces from prompts, list assessable blocks, upload evidence (tool traces, screenshots, video, EEG), run structured performance reports or chat analysis, issue private evaluation links, and poll completion results.",
+          "Create Verification Workspaces from prompts, list assessable blocks, upload evidence (tool traces, screenshots, video, EEG), run structured performance reports or chat analysis, issue private evaluation links, and poll completion results.",
           "Designed for agents, automation, and product backends—not cookie-based browser sessions.",
         ],
       },
       {
         title: "Guest provisioning for external learners",
         paragraphs: [
-          "Organization admins mint guest API keys for learners without full accounts. Guests create workspaces, run evaluation sessions, and return results to your platform via webhooks or polling patterns you control.",
+          "Organization admins mint guest API keys for learners without full accounts. Guests create workspaces, run Think Aloud Protocol sessions, and return results to your platform via webhooks or polling patterns you control.",
           "Ideal for customer education portals, partner academies, and certification prep products.",
         ],
       },
@@ -525,7 +539,7 @@ export const SOLUTION_PAGES: SeoSolutionPageConfig[] = [
           "Bearer API keys (sk_ for members, gsk_ for guests) with scoped permissions. See the Agentic API reference for full endpoint specs.",
       },
       {
-        question: "Can we white-label evaluation sessions?",
+        question: "Can we white-label Think Aloud Protocol sessions?",
         answer:
           "Evaluation links use bearer URLs on your domain path. Learners complete sessions without OpenLesson accounts when using private links.",
       },
@@ -544,7 +558,7 @@ export const SOLUTION_PAGES: SeoSolutionPageConfig[] = [
       "Runbooks and AI copilots accelerate triage—but outages punish guesswork. openLesson helps engineering leaders verify that on-call engineers can narrow root cause, prioritize customer impact, and explain rollback tradeoffs before production teaches the lesson.",
     metaTitle: "Incident Response Training & On-Call Readiness",
     metaDescription:
-      "Measure incident triage judgment and on-call readiness with ILE practice, evaluation sessions, and gap analysis—not runbook quizzes alone.",
+      "Measure incident triage judgment and on-call readiness with ILE practice, Think Aloud Protocol sessions, and gap analysis—not runbook quizzes alone.",
     keywords: [
       "incident response training",
       "on-call readiness",
@@ -573,7 +587,7 @@ export const SOLUTION_PAGES: SeoSolutionPageConfig[] = [
       {
         title: "Evaluate before expanding on-call scope",
         paragraphs: [
-          "Use Evaluation Environment sessions as a gate before new hires take primary pager, before promoting to incident commander, or after major architecture changes.",
+          "Use Think Aloud Protocol sessions as a gate before new hires take primary pager, before promoting to incident commander, or after major architecture changes.",
           "Gap analysis highlights weak causal links—exactly what postmortems surface too late.",
         ],
       },
@@ -637,7 +651,7 @@ export const SOLUTION_PAGES: SeoSolutionPageConfig[] = [
       {
         title: "Academies built around business scenarios",
         paragraphs: [
-          "Launch Performance Workspaces for role families: frontline managers, solutions consultants, analysts, operators. Blocks align to capabilities in your competency model—not generic course catalogs.",
+          "Launch Verification Workspaces for role families: frontline managers, solutions consultants, analysts, operators. Blocks align to capabilities in your competency model—not generic course catalogs.",
           "Learners practice in the ILE and accumulate evidence as they progress through pathways you define.",
         ],
       },
@@ -676,6 +690,93 @@ export const SOLUTION_PAGES: SeoSolutionPageConfig[] = [
     secondaryCta: { label: "View pricing", href: "/pricing" },
     closingTitle: "Give L&D evidence executives trust",
     closingBody: "Measure readiness on the decisions that affect the P&L—not slide views.",
+  },
+  {
+    slug: "saas-product-learning",
+    path: "/solutions/saas-product-learning",
+    eyebrow: "SaaS Product",
+    h1: "Measure learning-to-conversion—not tutorial completion",
+    intro:
+      "Your users finish onboarding checklists and watch walkthroughs—but still churn before they reach activation, expansion, or paid conversion. openLesson helps SaaS product teams verify that users actually learned how to use your product, then connect that evidence to the conversion outcomes you care about.",
+    metaTitle: "SaaS Learning-to-Conversion Verification",
+    metaDescription:
+      "Verify product learning drives activation and conversion—not tooltip completion. Evidence API, Think Aloud Protocol, and ILE for SaaS onboarding, adoption, and customer education teams.",
+    keywords: [
+      "learning to conversion",
+      "SaaS product onboarding",
+      "product-led growth learning",
+      "user activation verification",
+      "in-app onboarding analytics",
+      "customer education SaaS",
+      "product adoption measurement",
+      "SaaS conversion optimization",
+    ],
+    navLabel: "SaaS Product",
+    navDescription: "Learning-to-conversion for PLG teams",
+    sections: [
+      {
+        title: "Completion is not conversion",
+        paragraphs: [
+          "Product analytics show tours completed, videos watched, and help articles opened. They rarely show whether a user can configure the workflow, recover from errors, or make the decision that leads to upgrade—especially when AI copilots and templates make every screen look successful.",
+          "Learning-to-conversion breaks when you measure clicks instead of capability. Users who never learned the product do not activate, expand, or retain—no matter how polished your onboarding UX.",
+        ],
+      },
+      {
+        title: "Verify learning on the workflows that drive revenue",
+        paragraphs: [
+          "Build Verification Workspaces around your activation path: first project setup, integration connect, team invite, billing upgrade, or the aha moment your growth model depends on. Each block targets a demonstrable skill—not a tooltip sequence.",
+          "Pipe in-app evidence—screen captures, session replays, support transcripts, tool traces—via the Evidence API. Score whether users learned the workflow, not whether they saw the modal.",
+        ],
+      },
+      {
+        title: "High-touch segments: live cognition under probe",
+        paragraphs: [
+          "For enterprise trials, solutions consultants, or strategic accounts, issue Think Aloud Protocol sessions on high-stakes setup flows. Hear users explain configuration tradeoffs, integration choices, and upgrade rationale in their own words—the signal a 100% onboarding checklist cannot provide.",
+          "Gap analysis routes struggling users into the ILE for targeted practice on the exact blocks where scores fall short—before they abandon trial or downgrade.",
+        ],
+      },
+      {
+        title: "Connect verification evidence to conversion KPIs",
+        paragraphs: [
+          "Readiness scores and gap reports become leading indicators for activation rate, trial-to-paid conversion, expansion revenue, and support ticket volume. Product, growth, and customer education teams share one evidence layer instead of arguing over funnel drop-off alone.",
+          "Embed checks via the Agentic API at onboarding gates, certification milestones, or pre-upgrade moments—return structured gap JSON to your product analytics stack, CRM, or customer success platform.",
+        ],
+      },
+      {
+        title: "Customer education and in-product academies",
+        paragraphs: [
+          "SaaS companies ship academies, certification paths, and partner enablement portals that track completion. openLesson adds verification: did the learner actually absorb how to use the feature in production—not just pass a quiz generated from your docs?",
+          "Guest API keys let external users, partners, and trial accounts complete verification flows without full OpenLesson accounts—ideal for embedded education products.",
+        ],
+      },
+    ],
+    faqs: [
+      {
+        question: "How is this different from product analytics or Pendo-style guides?",
+        answer:
+          "Analytics and in-app guides measure exposure and completion. openLesson measures learning verification—whether users can explain decisions, recover from errors, and execute workflows with evidence-backed readiness scores and gap analysis.",
+      },
+      {
+        question: "Can we tie readiness scores to activation and conversion?",
+        answer:
+          "Yes. Export verification results via API and correlate readiness markers with your activation events, trial conversion, expansion milestones, or support escalations. Learning-to-conversion becomes measurable—not inferred from funnel position alone.",
+      },
+      {
+        question: "Do users need to leave our product?",
+        answer:
+          "Evidence API accepts artifacts you already capture—session replays, screenshots, transcripts, tool traces. Think Aloud Protocol links can be issued at high-touch moments. Your product remains the primary experience; openLesson is the verification layer.",
+      },
+      {
+        question: "Who owns this inside a SaaS company?",
+        answer:
+          "Common owners include product growth, onboarding PMs, customer education, solutions engineering, and customer success—for any team accountable for activation, adoption, and conversion beyond vanity onboarding metrics.",
+      },
+    ],
+    primaryCta: { label: "Build an onboarding workspace", href: "/workspace/new" },
+    secondaryCta: { label: "Agentic API docs", href: "/docs/agentic-v2" },
+    closingTitle: "Stop guessing why users do not convert",
+    closingBody:
+      "Verify they learned the product first—then watch activation and conversion move with evidence, not hope.",
   },
 ];
 

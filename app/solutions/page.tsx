@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Footer } from "@/components/Footer";
-import { Navbar } from "@/components/Navbar";
+import { LandingNav } from "@/components/LandingNav";
 import { ProductStack } from "@/components/ProductStack";
 import {
   DEFAULT_BACKGROUND,
@@ -14,7 +14,7 @@ const SOLUTIONS_INDEX = {
   eyebrow: "Solutions",
   h1: "Performance readiness for every high-stakes role",
   intro:
-    "Three products on Performance Workspaces—Evidence API, Think-Aloud Protocol, and the Integrated Learning Environment—applied to the verticals where judgment matters most.",
+    "Learning verification for humans and agents—Evidence API, Think Aloud Protocol, ILE, and the upcoming Agentic Learning Environment—applied to the verticals where judgment and tool use matter most.",
   metaTitle: "Solutions — Performance Readiness by Vertical",
   metaDescription:
     "SEO guides for sales enablement, customer success, compliance, hiring assessment, engineering on-call, corporate L&D, and LMS integration with openLesson.",
@@ -44,7 +44,7 @@ export default function SolutionsIndexPage() {
         backgroundImage: `linear-gradient(rgba(10,10,10,0.9), rgba(10,10,10,0.94)), url(${DEFAULT_BACKGROUND})`,
       }}
     >
-      <Navbar />
+      <LandingNav />
 
       <main className="mx-auto max-w-3xl px-6 py-12 sm:py-16">
         <header className="mb-12">
@@ -58,8 +58,8 @@ export default function SolutionsIndexPage() {
         <section className="mb-12 rounded-md border border-neutral-800 bg-neutral-950/70 p-5 sm:p-6">
           <p className="font-mono text-[10px] uppercase tracking-[2px] text-neutral-500">The product stack</p>
           <p className="mt-3 text-sm leading-relaxed text-neutral-400">
-            Each vertical guide below shows how teams use Performance Workspaces and the three products
-            to verify cognition and improve scores in that domain.
+            Each vertical guide below shows how teams use Verification Workspaces and the four products
+            to verify human and agentic learning—and close gaps where scores fall short.
           </p>
           <div className="mt-6">
             <ProductStack variant="compact" />

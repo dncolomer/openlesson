@@ -467,7 +467,7 @@ async function main() {
         const guestWs = await agentJson("/api/v2/agent/workspaces", guestKey, {
           method: "POST",
           body: JSON.stringify({
-            initial_prompt: "[E2E-GUEST] Explain how guest users can create Performance Workspaces.",
+            initial_prompt: "[E2E-GUEST] Explain how guest users can create Verification Workspaces.",
           }),
         });
         const guestWorkspaceId = guestWs.body?.workspace?.id;

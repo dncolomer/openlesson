@@ -546,17 +546,58 @@ export function PlanView({ initialPlan, initialNodes }: PlanViewProps) {
             )}
 
             <div className="space-y-4">
-              {currentUserId && (
-                <div className="space-y-1.5">
-                  <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-neutral-600">{t("planView.sectionLearning")}</p>
-                  <Link
-                    href={`/workspace/${planId}/ghl-score`}
-                    className="block w-full rounded-md bg-white px-3 py-2 text-center text-xs font-medium text-black transition-colors hover:bg-neutral-200"
+              <div className="space-y-1.5">
+                <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-neutral-600">{t("planView.sectionProducts")}</p>
+                <div className="flex flex-col gap-1.5">
+                  {isOwner ? (
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab("integration")}
+                      className="w-full rounded-md border border-white/10 bg-white/5 px-3 py-2 text-left transition-all hover:bg-white/10"
+                    >
+                      <span className="block text-xs font-medium text-white">{t("planView.productEvidenceApi")}</span>
+                      <span className="mt-0.5 block text-[10px] text-neutral-500">{t("planView.productEvidenceApiHint")}</span>
+                    </button>
+                  ) : (
+                    <Link
+                      href="/docs/agentic-v2"
+                      className="w-full rounded-md border border-white/10 bg-white/5 px-3 py-2 text-left transition-all hover:bg-white/10"
+                    >
+                      <span className="block text-xs font-medium text-white">{t("planView.productEvidenceApi")}</span>
+                      <span className="mt-0.5 block text-[10px] text-neutral-500">{t("planView.productEvidenceApiHint")}</span>
+                    </Link>
+                  )}
+                  {currentUserId && (
+                    <Link
+                      href={`/workspace/${planId}/ghl-score`}
+                      className="w-full rounded-md bg-white px-3 py-2 text-left transition-colors hover:bg-neutral-200"
+                    >
+                      <span className="block text-xs font-medium text-black">{t("planView.productTap")}</span>
+                      <span className="mt-0.5 block text-[10px] text-neutral-600">{t("planView.productTapHint")}</span>
+                    </Link>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab("graph")}
+                    className="w-full rounded-md border border-white/10 bg-white/5 px-3 py-2 text-left transition-all hover:bg-white/10"
                   >
-                    {t("planView.startEvaluationEnv")}
-                  </Link>
+                    <span className="block text-xs font-medium text-white">{t("planView.productIle")}</span>
+                    <span className="mt-0.5 block text-[10px] text-neutral-500">{t("planView.productIleHint")}</span>
+                  </button>
+                  <div
+                    className="w-full rounded-md border border-dashed border-white/10 bg-white/[0.02] px-3 py-2 text-left opacity-80"
+                    aria-disabled="true"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-xs font-medium text-neutral-400">{t("planView.productAle")}</span>
+                      <span className="rounded-sm border border-amber-400/20 bg-amber-950/30 px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-[1px] text-amber-200/90">
+                        {t("planView.productUpcoming")}
+                      </span>
+                    </div>
+                    <span className="mt-0.5 block text-[10px] text-neutral-600">{t("planView.productAleHint")}</span>
+                  </div>
                 </div>
-              )}
+              </div>
 
               {(plan.is_public || plan.is_group) && (
                 <div className="space-y-1.5">

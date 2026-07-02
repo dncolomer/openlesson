@@ -1,7 +1,12 @@
+export type ProductAudience = "human" | "agent" | "both";
+export type ProductStatus = "available" | "upcoming";
+
 export type ProductDefinition = {
   id: string;
   eyebrow: string;
   title: string;
+  audience: ProductAudience;
+  status?: ProductStatus;
   summary: string;
   bullets: string[];
   href?: string;
@@ -10,9 +15,9 @@ export type ProductDefinition = {
 
 export const WORKSPACE_FOUNDATION = {
   eyebrow: "Foundation",
-  title: "Performance Workspaces",
+  title: "Verification Workspaces",
   summary:
-    "Every product runs on Performance Workspaces—structured environments you create and enrich programmatically with documents, screen recordings, video assets, EEG traces, and other human-generated evidence.",
+    "Every product runs on Verification Workspaces—structured environments you create and enrich programmatically with documents, screen recordings, video assets, EEG traces, tool traces, and other evidence from humans or agents.",
   bullets: [
     "Define skills, scenarios, and decision domains as assessable blocks",
     "Ingest unstructured evidence via API or manual upload",
@@ -23,26 +28,28 @@ export const WORKSPACE_FOUNDATION = {
 export const PRODUCTS: ProductDefinition[] = [
   {
     id: "verification-api",
-    eyebrow: "Human Knowledge Verification",
+    eyebrow: "Learning Verification",
     title: "Evidence API",
+    audience: "both",
     summary:
-      "Headless, purely evidence-based verification. Send unstructured artifacts to the API and receive a continuous readiness score with gap analysis—no hosted session required.",
+      "Headless verification for humans and agents. Send unstructured artifacts—tool traces, transcripts, documents, screen captures—and receive continuous readiness scores with gap analysis. Beyond benchmarks for AI; beyond quizzes for people.",
     bullets: [
-      "POST documents, transcripts, screen captures, and sensor data",
-      "Continuous scoring and analysis as evidence accumulates",
-      "Integrate into LMS, HRIS, or any agentic workflow",
+      "Agentic: verify skills and tool use before production deployment",
+      "Human: confirm learners actually absorbed how to use a tool or workflow",
+      "Integrate into LMS, HRIS, CI gates, or any agentic pipeline",
     ],
     href: "/docs/agentic-v2",
     ctaLabel: "API docs",
   },
   {
     id: "think-aloud-verification",
-    eyebrow: "Human Knowledge Verification",
-    title: "Think-Aloud Protocol",
+    eyebrow: "Human Learning Verification",
+    title: "Think Aloud Protocol",
+    audience: "human",
     summary:
-      "Hosted verification for live cognition. Generate shareable URLs so humans verbalize reasoning under probe—the signal hidden AI overlays cannot fabricate.",
+      "Hosted verification for live human cognition. Issue shareable URLs so people verbalize reasoning under probe—the signal hidden AI overlays cannot fabricate.",
     bullets: [
-      "Issue private evaluation links scoped to blocks or workspaces",
+      "Issue private TAP links scoped to blocks or workspaces",
       "Capture speech, hesitations, and causal chains in real time",
       "Score cognitive markers and return auditable gap reports",
     ],
@@ -51,8 +58,9 @@ export const PRODUCTS: ProductDefinition[] = [
   },
   {
     id: "ile",
-    eyebrow: "Learning",
+    eyebrow: "Human Learning",
     title: "Integrated Learning Environment",
+    audience: "human",
     summary:
       "Where humans improve. The ILE turns gap findings into guided practice—think-aloud sessions, Socratic probes, and targeted blocks until scores move.",
     bullets: [
@@ -63,4 +71,24 @@ export const PRODUCTS: ProductDefinition[] = [
     href: "/workspace/new",
     ctaLabel: "Start practicing",
   },
+  {
+    id: "ale",
+    eyebrow: "Agent Learning",
+    title: "Agentic Learning Environment",
+    audience: "agent",
+    status: "upcoming",
+    summary:
+      "Where skill developers test and evolve agent skills. Run agents against workspace scenarios, inspect tool-use traces, and iterate on skill definitions until Evidence API scores clear your deploy bar.",
+    bullets: [
+      "Sandbox agent runs against real workspace blocks and scenarios",
+      "Compare skill versions with shared scoring and gap analysis",
+      "Close the loop from verification gaps to skill refinement",
+    ],
+  },
 ];
+
+export const AUDIENCE_LABELS: Record<ProductAudience, string> = {
+  human: "Humans",
+  agent: "Agents",
+  both: "Humans & Agents",
+};

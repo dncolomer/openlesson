@@ -6,7 +6,7 @@ export interface AgentWorkspaceAccess {
   guest_user_id?: string | null;
 }
 
-/** Whether an API key may read/write a performance workspace (member, org, or guest-owned). */
+/** Whether an API key may read/write a verification workspace (member, org, or guest-owned). */
 export function canAccessAgentWorkspace(auth: AuthContext, workspace: AgentWorkspaceAccess): boolean {
   if (auth.user_id && workspace.user_id === auth.user_id) return true;
   if (auth.guest_user_id && workspace.guest_user_id === auth.guest_user_id) return true;

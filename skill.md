@@ -1,6 +1,6 @@
 # OpenLesson Agentic API v2
 
-Use this skill when an agent needs to create Performance Workspaces, issue private GHL Score links, and read completion results via the OpenLesson Agentic API.
+Use this skill when an agent needs to create Verification Workspaces, issue private GHL Score links, and read completion results via the OpenLesson Agentic API.
 
 **Human-readable spec:** `/docs/agentic-v2`  
 **Base URL:** `https://openlesson.academy` (or your self-hosted origin)
@@ -11,7 +11,7 @@ Use this skill when an agent needs to create Performance Workspaces, issue priva
 
 The Agentic API supports **only** this workflow:
 
-1. Create a Performance Workspace from an `initial_prompt` and optional files.
+1. Create a Verification Workspace from an `initial_prompt` and optional files.
 2. List blocks in that workspace.
 3. *(Optional)* Generate an ideal evidence input JSON schema (`POST .../evidence-schema`) or a custom integration `skill.md` (`POST .../integration-skill`) from workspace context.
 4. Upload performance evidence (tool usage, screenshots, video, EEG) to xAI storage, linked to the workspace and/or a block.
@@ -89,7 +89,7 @@ Prefer `Authorization: Bearer` on REST routes when the client supports it. Treat
 
 ### `POST /api/v2/agent/workspaces` — `workspaces:write`
 
-Create a Performance Workspace. Guest keys with `workspaces:write` may call this; the workspace is owned by the organization and tagged with `guest_user_id`.
+Create a Verification Workspace. Guest keys with `workspaces:write` may call this; the workspace is owned by the organization and tagged with `guest_user_id`.
 
 **Request:**
 
@@ -541,7 +541,7 @@ Facilitation style: Socratic — one concise question at a time, follow-ups from
 | List / read GHL results | ✅ | ✅ (own links) |
 | Create guest + issue `gsk_` | ✅ `org:write` + `is_org_admin` | ❌ |
 
-**Integration pattern:** Org admin provisions guests with `gsk_` keys. Each guest can create their own Performance Workspaces or use org-shared ones; they use their key for workspace creation, block reads, GHL links, and result polling.
+**Integration pattern:** Org admin provisions guests with `gsk_` keys. Each guest can create their own Verification Workspaces or use org-shared ones; they use their key for workspace creation, block reads, GHL links, and result polling.
 
 ---
 

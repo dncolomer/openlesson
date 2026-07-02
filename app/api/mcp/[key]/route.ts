@@ -24,7 +24,7 @@ const MCP_PROTOCOL_VERSION = "2025-03-26";
 const READ_TOOLS = [
   {
     name: "list_workspaces",
-    description: "List the authenticated OpenLesson user's Performance Workspaces.",
+    description: "List the authenticated OpenLesson user's Verification Workspaces.",
     inputSchema: {
       type: "object",
       properties: {
@@ -44,7 +44,7 @@ const READ_TOOLS = [
   },
   {
     name: "list_blocks",
-    description: "List available blocks in a Performance Workspace.",
+    description: "List available blocks in a Verification Workspace.",
     inputSchema: {
       type: "object",
       properties: {
@@ -264,7 +264,7 @@ async function handleJsonRpc(
         capabilities: { tools: { listChanged: false } },
         serverInfo: { name: "openlesson-grok-mcp", version: "0.1.0" },
         instructions:
-          "OpenLesson read-only connector. Use the tools to read Performance Workspaces, blocks, and GHL link results. Do not attempt to modify OpenLesson data.",
+          "OpenLesson read-only connector. Use the tools to read Verification Workspaces, blocks, and GHL link results. Do not attempt to modify OpenLesson data.",
       },
     };
   }

@@ -100,8 +100,8 @@ export function buildEvidenceSchemaInstructions(
   blockId?: string | null
 ): string {
   const scope = blockId
-    ? "Design an optimal evidence input schema for ONE block inside a performance workspace."
-    : "Design an optimal evidence input schema for an entire performance workspace.";
+    ? "Design an optimal evidence input schema for ONE block inside a verification workspace."
+    : "Design an optimal evidence input schema for an entire verification workspace.";
 
   const hints = request.integration_hints;
   const hintsText = hints

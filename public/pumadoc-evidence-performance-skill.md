@@ -169,7 +169,7 @@ POST /api/v2/agent/org/guests
 
 Store `api_key` (`gsk_...`) securely — shown once.
 
-**Create Performance Workspace** from the Customer Agent journey prompt (OpenLesson generates blocks; no per-step goal manifest required):
+**Create Verification Workspace** from the Customer Agent journey prompt (OpenLesson generates blocks; no per-step goal manifest required):
 
 ```http
 POST /api/v2/agent/workspaces

@@ -37,7 +37,7 @@ const ENDPOINT_SPECS: EndpointSpec[] = [
     method: "POST",
     path: "/api/v2/agent/workspaces",
     scope: "workspaces:write",
-    summary: "Create a Performance Workspace from an initial prompt and optional seed files.",
+    summary: "Create a Verification Workspace from an initial prompt and optional seed files.",
     status: "201 Created",
     requestBody: [
       { name: "initial_prompt", type: "string", required: true, description: "Task or learning goal used to generate workspace title and blocks." },
@@ -119,7 +119,7 @@ const ENDPOINT_SPECS: EndpointSpec[] = [
     summary: "List assessable blocks in a workspace.",
     status: "200 OK",
     pathParams: [
-      { name: "workspace_id", type: "uuid", required: true, description: "Performance Workspace ID." },
+      { name: "workspace_id", type: "uuid", required: true, description: "Verification Workspace ID." },
     ],
     responseBody: [
       { name: "blocks", type: "array", description: "All plan_nodes for the workspace, ordered by created_at ascending." },
@@ -155,7 +155,7 @@ const ENDPOINT_SPECS: EndpointSpec[] = [
       "Given workspace context (blocks, plan files on xAI, evidence metadata) plus an evaluation definition, Grok returns a JSON Schema for the ideal tool evidence payload.",
     status: "200 OK",
     pathParams: [
-      { name: "workspace_id", type: "uuid", required: true, description: "Performance Workspace ID." },
+      { name: "workspace_id", type: "uuid", required: true, description: "Verification Workspace ID." },
     ],
     requestBody: [
       {
@@ -270,7 +270,7 @@ const ENDPOINT_SPECS: EndpointSpec[] = [
       "Generate a workspace-specific skill.md integration guide (like /pumadoc-evidence-performance-skill.md) for a custom partner agent.",
     status: "200 OK",
     pathParams: [
-      { name: "workspace_id", type: "uuid", required: true, description: "Performance Workspace ID." },
+      { name: "workspace_id", type: "uuid", required: true, description: "Verification Workspace ID." },
     ],
     requestBody: [
       { name: "integration_name", type: "string", required: true, description: "Partner integration slug or display name (e.g. acme-sales-copilot)." },
@@ -331,7 +331,7 @@ const ENDPOINT_SPECS: EndpointSpec[] = [
     summary: "Upload tool usage, screenshots, video, or EEG to xAI Files and link to workspace/block/session.",
     status: "201 Created",
     pathParams: [
-      { name: "workspace_id", type: "uuid", required: true, description: "Performance Workspace ID." },
+      { name: "workspace_id", type: "uuid", required: true, description: "Verification Workspace ID." },
     ],
     requestBody: [
       { name: "type", type: "string", required: true, description: "tool | screen | screenshot | video | eeg (screenshot aliases to screen)." },
@@ -412,7 +412,7 @@ const ENDPOINT_SPECS: EndpointSpec[] = [
     summary: "Analyze workspace evidence, GHL results, sessions, and plan files. Report mode (no prompt) or chat mode (with prompt).",
     status: "200 OK",
     pathParams: [
-      { name: "workspace_id", type: "uuid", required: true, description: "Performance Workspace ID." },
+      { name: "workspace_id", type: "uuid", required: true, description: "Verification Workspace ID." },
     ],
     requestBody: [
       { name: "prompt", type: "string", description: "If non-empty → chat mode (markdown response). If omitted or empty → report mode (structured JSON)." },
@@ -502,7 +502,7 @@ const ENDPOINT_SPECS: EndpointSpec[] = [
     summary: "Create a private GHL Score link for a block (15 or 30 minutes).",
     status: "201 Created",
     pathParams: [
-      { name: "workspace_id", type: "uuid", required: true, description: "Performance Workspace ID." },
+      { name: "workspace_id", type: "uuid", required: true, description: "Verification Workspace ID." },
       { name: "block_id", type: "uuid", required: true, description: "Target block ID." },
     ],
     requestBody: [
@@ -550,7 +550,7 @@ const ENDPOINT_SPECS: EndpointSpec[] = [
     summary: "List GHL links for a workspace (filtered by caller role).",
     status: "200 OK",
     pathParams: [
-      { name: "workspace_id", type: "uuid", required: true, description: "Performance Workspace ID." },
+      { name: "workspace_id", type: "uuid", required: true, description: "Verification Workspace ID." },
     ],
     responseBody: [
       { name: "ghl_links", type: "array", description: "Sessions ordered by created_at descending." },
@@ -597,7 +597,7 @@ const ENDPOINT_SPECS: EndpointSpec[] = [
     summary: "Poll GHL link completion and read scores, markers, and gap analysis.",
     status: "200 OK",
     pathParams: [
-      { name: "workspace_id", type: "uuid", required: true, description: "Performance Workspace ID." },
+      { name: "workspace_id", type: "uuid", required: true, description: "Verification Workspace ID." },
       { name: "link_id", type: "uuid", required: true, description: "GHL link ID from create or list." },
     ],
     responseBody: [
@@ -946,7 +946,7 @@ export default function AgenticV2DocsPage() {
         <header className={`${sectionClass} mb-8`}>
           <p className={labelClass}>OpenLesson Agentic API v2</p>
           <h1 className="mt-3 max-w-3xl text-3xl font-medium tracking-[-1.2px] text-white sm:text-4xl">
-            Performance Workspace API Reference
+            Verification Workspace API Reference
           </h1>
           <p className="mt-4 max-w-3xl text-sm leading-relaxed text-neutral-400 sm:text-base">
             Full request and response specifications for every Agentic API endpoint: workspaces, evidence schema

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Footer } from "@/components/Footer";
 import { LeadCapture } from "@/components/LeadCapture";
-import { Navbar } from "@/components/Navbar";
+import { LandingNav } from "@/components/LandingNav";
 import { TrackedCtaLink } from "@/components/TrackedCtaLink";
 import { ProductStack } from "@/components/ProductStack";
 import {
@@ -98,7 +98,7 @@ export function SeoSolutionPage({
         />
       )}
 
-      <Navbar />
+      <LandingNav />
 
       <main className="mx-auto max-w-3xl px-6 py-12 sm:py-16">
         {breadcrumbs && breadcrumbs.length > 0 && (
@@ -130,12 +130,12 @@ export function SeoSolutionPage({
           <p className="mt-6 text-lg leading-relaxed text-neutral-400">{page.intro}</p>
           <div className="mt-10 rounded-md border border-neutral-800 bg-neutral-950/70 p-5 sm:p-6">
             <p className="font-mono text-[10px] uppercase tracking-[2px] text-neutral-500">
-              Built on Performance Workspaces
+              Built on Verification Workspaces
             </p>
             <p className="mt-3 text-sm leading-relaxed text-neutral-400">
-              Every solution uses the same three-product stack: Evidence API for headless verification,
-              Think-Aloud Protocol URLs for hosted cognitive scoring, and the Integrated Learning
-              Environment to close gaps.
+              Every solution uses the same product stack: Evidence API for verification, Think Aloud
+              Protocol and the Integrated Learning Environment for human learning, and the upcoming
+              Agentic Learning Environment for skill developers.
             </p>
             <div className="mt-5">
               <ProductStack variant="compact" showFoundation={false} />

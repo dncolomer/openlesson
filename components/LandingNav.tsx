@@ -6,7 +6,7 @@ import { ChevronDown, Menu, X } from "lucide-react";
 import { TrackedCtaLink } from "@/components/TrackedCtaLink";
 import { SOLUTION_PAGES } from "@/lib/seo/solution-pages";
 
-const CTA = "Create your Performance Workspace";
+const CTA = "Create your Verification Workspace";
 const CTA_HREF = "/workspace/new";
 
 function PrimaryCta({ compact = false }: { compact?: boolean }) {
@@ -92,15 +92,15 @@ export function LandingNav() {
             )}
           </div>
 
-          <a href="#products" className="transition hover:text-white">
+          <Link href="/#products" className="transition hover:text-white">
             Products
-          </a>
-          <a href="#problem" className="transition hover:text-white">
+          </Link>
+          <Link href="/#problem" className="transition hover:text-white">
             Why it matters
-          </a>
-          <a href="#how" className="transition hover:text-white">
+          </Link>
+          <Link href="/#how" className="transition hover:text-white">
             How it works
-          </a>
+          </Link>
           <Link href="/pricing" className="transition hover:text-white">
             Pricing
           </Link>
@@ -144,19 +144,19 @@ export function LandingNav() {
               </li>
             ))}
             <li>
-              <a href="#products" className="block rounded-sm px-2 py-2 text-zinc-300" onClick={() => setMobileOpen(false)}>
+              <Link href="/#products" className="block rounded-sm px-2 py-2 text-zinc-300" onClick={() => setMobileOpen(false)}>
                 Products
-              </a>
+              </Link>
             </li>
             <li>
-              <a href="#problem" className="block rounded-sm px-2 py-2 text-zinc-300" onClick={() => setMobileOpen(false)}>
+              <Link href="/#problem" className="block rounded-sm px-2 py-2 text-zinc-300" onClick={() => setMobileOpen(false)}>
                 Why it matters
-              </a>
+              </Link>
             </li>
             <li>
-              <a href="#how" className="block rounded-sm px-2 py-2 text-zinc-300" onClick={() => setMobileOpen(false)}>
+              <Link href="/#how" className="block rounded-sm px-2 py-2 text-zinc-300" onClick={() => setMobileOpen(false)}>
                 How it Works
-              </a>
+              </Link>
             </li>
             <li>
               <Link href="/pricing" className="block rounded-sm px-2 py-2 text-zinc-300" onClick={() => setMobileOpen(false)}>

@@ -21,7 +21,7 @@ const PLATFORM_SLIDES: SalesSlide[] = [
   {
     layout: "statement",
     kicker: "The platform",
-    title: "Everything runs on Performance Workspaces",
+    title: "Everything runs on Verification Workspaces",
     subtitle:
       "A structured environment around a real skill or scenario—broken into assessable blocks on a learning graph. Evidence accumulates as work happens.",
     bullets: [
@@ -94,12 +94,33 @@ const PLATFORM_SLIDES: SalesSlide[] = [
     },
   },
   {
+    layout: "split",
+    kicker: "Product 4",
+    title: "Agentic Learning Environment (ALE) — coming soon",
+    left: {
+      label: "What it does",
+      items: [
+        "Sandbox for skill developers to test and evolve agent skills",
+        "Run agents against workspace scenarios with shared scoring",
+        "Iterate on skill definitions until Evidence API clears deploy bar",
+      ],
+    },
+    right: {
+      label: "Best when",
+      items: [
+        "You build agent skills—not just consume benchmark scores",
+        "Verification gaps should feed back into skill refinement",
+        "Agents and humans share the same workspace context",
+      ],
+    },
+  },
+  {
     layout: "statement",
     kicker: "The loop",
     title: "Verify → improve → re-verify on the same workspace",
     bullets: [
       "Evidence API or Think-Aloud surfaces weak spots with shared scoring",
-      "ILE assigns practice on the exact blocks that failed",
+      "ILE closes human gaps; ALE (upcoming) evolves agent skills",
       "New evidence flows back—readiness becomes measurable over time",
     ],
   },
@@ -192,7 +213,7 @@ export const SOLUTION_SLIDE_DECKS: Record<string, SolutionSlideDeck> = {
         kicker: "Pilot shape",
         title: "Start with your highest-stakes motion",
         bullets: [
-          "Week 1: one Performance Workspace around enterprise renewal or competitive displacement",
+          "Week 1: one Verification Workspace around enterprise renewal or competitive displacement",
           "Week 2: pilot pod runs ILE practice + Think-Aloud evaluation on critical blocks",
           "Week 3: performance report for managers—gaps, repairs, and readiness evidence",
         ],
@@ -607,6 +628,87 @@ export const SOLUTION_SLIDE_DECKS: Record<string, SolutionSlideDeck> = {
     ],
   ),
 
+  "saas-product-learning": deck(
+    "saas-product-learning",
+    "SaaS Product",
+    [
+      {
+        layout: "title",
+        kicker: "openLesson · SaaS Product",
+        title: "Measure learning-to-conversion—not tutorial completion",
+        subtitle: "For product teams whose users finish onboarding but never activate, expand, or convert.",
+      },
+      {
+        layout: "statement",
+        kicker: "The pain",
+        title: "Your funnel shows completion. Your revenue shows something else.",
+        bullets: [
+          "Users click through tours, watch walkthroughs, and check every onboarding box",
+          "Activation and trial-to-paid stall anyway—support tickets reveal they never learned the workflow",
+          "Product analytics answer exposure; nobody verifies capability on the path to conversion",
+        ],
+      },
+      {
+        layout: "bullets",
+        kicker: "What vanity onboarding hides",
+        title: "The learning-to-conversion gap in PLG",
+        bullets: [
+          "Tooltip completion with no ability to configure, integrate, or recover from errors",
+          "Academy certificates and quiz passes that do not predict in-product success",
+          "Enterprise trials where solutions teams cannot tell if the champion actually learned the setup",
+          "Expansion and upgrade moments that fail because users never absorbed the prior feature",
+        ],
+      },
+    ],
+    [
+      {
+        layout: "split",
+        kicker: "Product motion",
+        title: "Model the workflows that drive activation and revenue",
+        left: {
+          label: "Workspace blocks",
+          items: [
+            "First project or workspace setup",
+            "Integration connect and data import",
+            "Team invite and permission model",
+            "Upgrade, expansion, and billing decision points",
+          ],
+        },
+        right: {
+          label: "How teams use the product stack",
+          items: [
+            "Evidence API: score session replays, tool traces, and support transcripts",
+            "Think Aloud Protocol: verify high-touch trial and enterprise setup flows",
+            "ILE: repair adoption gaps before churn—not after the downgrade",
+          ],
+        },
+      },
+      {
+        layout: "bullets",
+        kicker: "Outcome",
+        title: "Learning evidence product and growth teams can act on",
+        bullets: [
+          "Readiness scores as leading indicators for activation and conversion KPIs",
+          "Gap analysis tied to specific product workflows—not generic NPS dips",
+          "Agentic API embeds verification at onboarding gates without leaving your UX",
+        ],
+      },
+    ],
+    [
+      {
+        layout: "close",
+        kicker: "Pilot shape",
+        title: "Start from your highest-drop activation step",
+        bullets: [
+          "Week 1: Verification Workspace around one workflow your funnel loses users on",
+          "Week 2: pipe in-app evidence or run TAP on strategic trial accounts",
+          "Week 3: correlate readiness gaps with activation and support ticket patterns",
+        ],
+        footnote: "Product growth, customer education, solutions, and CS—not a replacement for your analytics stack.",
+      },
+    ],
+  ),
+
   "corporate-learning": deck(
     "corporate-learning",
     "Corporate L&D",
@@ -679,7 +781,7 @@ export const SOLUTION_SLIDE_DECKS: Record<string, SolutionSlideDeck> = {
         kicker: "Pilot shape",
         title: "One role family. One readiness gate.",
         bullets: [
-          "Week 1: Performance Workspace for highest-priority role family or launch scenario",
+          "Week 1: Verification Workspace for highest-priority role family or launch scenario",
           "Week 2: learners practice in ILE; managers receive evaluation gap summaries",
           "Week 3: executive readout—readiness evidence tied to business scenario, not seat time",
         ],

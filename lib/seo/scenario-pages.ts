@@ -38,7 +38,7 @@ export const SCENARIO_PAGES: SeoScenarioPageConfig[] = [
       "When an enterprise account heats up, AI-generated account plans and QBR summaries are not proof your CSM can reason through tradeoffs under pressure. Measure escalation readiness before executives get involved.",
     metaTitle: "Client Escalation Readiness Assessment",
     metaDescription:
-      "Verify customer success escalation judgment with Performance Workspaces, ILE practice, and evaluation sessions—not AI-polished account plans.",
+      "Verify customer success escalation judgment with Verification Workspaces, ILE practice, and Think Aloud Protocol sessions—not AI-polished account plans.",
     keywords: [
       "client escalation training",
       "customer success readiness",
@@ -59,14 +59,14 @@ export const SCENARIO_PAGES: SeoScenarioPageConfig[] = [
       {
         title: "Model your escalation archetypes",
         paragraphs: [
-          "Create a Performance Workspace from real patterns: executive sponsor loss, scope disputes, security surprises, or value realization stalls. Each block defines what the CSM must demonstrate—not generic platform training.",
+          "Create a Verification Workspace from real patterns: executive sponsor loss, scope disputes, security surprises, or value realization stalls. Each block defines what the CSM must demonstrate—not generic platform training.",
           "Practice in the ILE with think-aloud sessions that leave reasoning traces managers can review.",
         ],
       },
       {
         title: "Evaluate before the executive call",
         paragraphs: [
-          "Run Evaluation Environment sessions scoped to the escalation block. Structured probes surface gaps in causal reasoning, stakeholder mapping, and repair planning.",
+          "Run Think Aloud Protocol sessions scoped to the escalation block. Structured probes surface gaps in causal reasoning, stakeholder mapping, and repair planning.",
           "Issue private evaluation links for async readiness checks across distributed CS pods.",
         ],
       },
@@ -263,7 +263,7 @@ export const SCENARIO_PAGES: SeoScenarioPageConfig[] = [
       {
         title: "Workspace blocks for discovery milestones",
         paragraphs: [
-          "Model blocks for pain qualification, stakeholder mapping, technical validation handoffs, and mutual close plans. ILE practice captures reasoning traces; evaluation sessions score depth before managers join live calls.",
+          "Model blocks for pain qualification, stakeholder mapping, technical validation handoffs, and mutual close plans. ILE practice captures reasoning traces; Think Aloud Protocol sessions score depth before managers join live calls.",
         ],
       },
     ],
@@ -345,7 +345,7 @@ export const SCENARIO_PAGES: SeoScenarioPageConfig[] = [
       {
         title: "Practice concession strategy under probes",
         paragraphs: [
-          "ILE and evaluation sessions test when to concede, what to trade, and how to document mutual value—skills AI drafts approximate but do not instill.",
+          "ILE and Think Aloud Protocol sessions test when to concede, what to trade, and how to document mutual value—skills AI drafts approximate but do not instill.",
         ],
       },
     ],

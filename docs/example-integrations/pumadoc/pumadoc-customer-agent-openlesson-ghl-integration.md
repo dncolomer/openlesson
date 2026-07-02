@@ -120,7 +120,7 @@ Primary endpoints used by PumaDoc:
 
 | Action | Endpoint | Scope |
 |---|---|---|
-| Create Performance Workspace | `POST /api/v2/agent/workspaces` | `workspaces:write` |
+| Create Verification Workspace | `POST /api/v2/agent/workspaces` | `workspaces:write` |
 | List workspace blocks | `GET /api/v2/agent/workspaces/{workspace_id}/blocks` | `workspaces:read` |
 | Create GHL link for a block | `POST /api/v2/agent/workspaces/{workspace_id}/blocks/{block_id}/ghl-links` | `ghl:write` |
 | List GHL links | `GET /api/v2/agent/workspaces/{workspace_id}/ghl-links` | `ghl:read` |
@@ -157,7 +157,7 @@ OpenLesson should sit after each step as a required learning checkpoint.
 
 ## 6. Customer Agent Step To GHL Mapping
 
-Each PumaDoc Customer Agent step should map to one OpenLesson Performance Workspace block.
+Each PumaDoc Customer Agent step should map to one OpenLesson Verification Workspace block.
 
 | PumaDoc Step ID | Step Name | GHL Block Learning Goal |
 |---|---|---|
@@ -230,7 +230,7 @@ Use the individual user's own API key for that user's workspace creation, block 
 
 Use the guest user's own API key for **workspace creation**, **block listing**, **GHL link creation (self)**, **GHL status checks**, and **GHL result reads** on organization workspaces.
 
-Guests may call `POST /api/v2/agent/workspaces` with their `gsk_` key to create their own Performance Workspace, or use a shared workspace created by an org admin or member key.
+Guests may call `POST /api/v2/agent/workspaces` with their `gsk_` key to create their own Verification Workspace, or use a shared workspace created by an org admin or member key.
 
 ### Hard rule
 
@@ -246,7 +246,7 @@ Correct sequence:
 1. Identify PumaDoc user email.
 2. If no OpenLesson guest mapping exists, org admin uses sk_ + org:write to POST /api/v2/agent/org/guests.
 3. Store the returned gsk_ key securely for that PumaDoc user.
-4. Guest uses gsk_ to create their Performance Workspace (or org admin pre-creates a shared workspace once).
+4. Guest uses gsk_ to create their Verification Workspace (or org admin pre-creates a shared workspace once).
 5. Guest uses gsk_ for block listing on the workspace.
 6. Guest uses gsk_ for GHL link creation (or org admin assigns link via guest_email).
 7. Guest or admin uses appropriate key for GHL result polling.
@@ -449,7 +449,7 @@ The Customer Agent must follow these rules in chat.
 
 ## 11. Workspace Creation
 
-Create one OpenLesson Performance Workspace per PumaDoc Customer Agent workflow or major Customer Agent task.
+Create one OpenLesson Verification Workspace per PumaDoc Customer Agent workflow or major Customer Agent task.
 
 Recommended workspace naming:
 
@@ -759,7 +759,7 @@ Response:
 
 Store the guest API key (`gsk_…`) securely in PumaDoc — it is returned once per `POST /org/guests` call.
 
-Guest users can create Performance Workspaces, list blocks, request GHL links for themselves, and poll results on org workspaces using their `gsk_` key.
+Guest users can create Verification Workspaces, list blocks, request GHL links for themselves, and poll results on org workspaces using their `gsk_` key.
 
 When a guest later signs up with the same email, OpenLesson converts the guest into a real user and inherits:
 

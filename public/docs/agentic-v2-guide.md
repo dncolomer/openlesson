@@ -10,7 +10,7 @@ Authenticate with `Authorization: Bearer <api_key>`.
 
 | Method | Path | Scope | Purpose |
 | :--- | :--- | :--- | :--- |
-| `POST` | `/workspaces` | `workspaces:write` | Create a Performance Workspace from an initial prompt and optional files. |
+| `POST` | `/workspaces` | `workspaces:write` | Create a Verification Workspace from an initial prompt and optional files. |
 | `GET` | `/workspaces/{workspace_id}/blocks` | `workspaces:read` | List available blocks in a workspace. |
 | `POST` | `/workspaces/{workspace_id}/evidence` | `workspaces:write` | Upload tool usage, screenshots, video, or EEG linked to workspace/block. |
 | `POST` | `/workspaces/{workspace_id}/performance` | `workspaces:read` | Structured gap report or free-form performance Q&A. |

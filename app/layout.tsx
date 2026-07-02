@@ -10,7 +10,7 @@ export const metadata: Metadata = {
     template: "%s | openLesson",
   },
   description:
-    "Three products on Performance Workspaces: Evidence API for headless verification, Think-Aloud Protocol for hosted cognitive scoring, and the Integrated Learning Environment to close gaps.",
+    "Four products on Verification Workspaces: Evidence API, Think Aloud Protocol, ILE, and the upcoming Agentic Learning Environment.",
   keywords: [
     "performance readiness platform",
     "think aloud protocol",
@@ -38,7 +38,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "openLesson — Prove Performance Readiness",
     description:
-      "Three products on Performance Workspaces: Evidence API, Think-Aloud Protocol, and the Integrated Learning Environment.",
+      "Four products on Verification Workspaces: Evidence API, Think Aloud Protocol, ILE, and Agentic Learning Environment.",
     url: "https://openlesson.academy",
     siteName: "openLesson",
     images: [
@@ -56,7 +56,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "openLesson — Performance Readiness Platform",
     description:
-      "Evidence API, Think-Aloud Protocol, and Integrated Learning Environment—built on Performance Workspaces.",
+      "Evidence API, Think Aloud Protocol, ILE, and Agentic Learning Environment—built on Verification Workspaces.",
     images: ["/og-default.jpg"],
     creator: "@uncertainsys",
   },
@@ -80,7 +80,7 @@ const organizationSchema = {
   name: "openLesson",
   url: "https://openlesson.academy",
   description:
-    "Three products on Performance Workspaces: Evidence API, Think-Aloud Protocol, and Integrated Learning Environment.",
+    "Three products on Verification Workspaces: Evidence API, Think-Aloud Protocol, and Integrated Learning Environment.",
   founder: {
     "@type": "Person",
     name: "Daniel Colomer",
@@ -104,12 +104,13 @@ const softwareSchema = {
     priceCurrency: "USD",
   },
   description:
-    "Human knowledge verification and improvement on Performance Workspaces—via Evidence API, Think-Aloud Protocol, and the Integrated Learning Environment.",
+    "Learning verification and improvement on Verification Workspaces—via Evidence API, Think Aloud Protocol, ILE, and Agentic Learning Environment.",
   featureList: [
-    "Performance Workspaces",
+    "Verification Workspaces",
     "Evidence API — headless verification",
-    "Think-Aloud Protocol — hosted verification",
-    "Integrated Learning Environment",
+    "Think Aloud Protocol — human verification",
+    "Integrated Learning Environment — human learning",
+    "Agentic Learning Environment — skill development (upcoming)",
     "Continuous scoring and gap analysis",
     "Agentic API v2 for LMS integration",
   ],

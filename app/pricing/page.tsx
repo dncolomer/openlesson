@@ -35,7 +35,7 @@ const PLANS = [
     price: "$0",
     detail: "forever",
     description: "Start proving what you actually understand before committing to a paid workflow.",
-    features: ["5 starter blocks", "One Performance Workspace", "Basic GHL readiness report", "Start with any topic or scenario"],
+    features: ["5 starter blocks", "One Verification Workspace", "Basic GHL readiness report", "Start with any topic or scenario"],
   },
   {
     id: "regular_2026" as const,
@@ -52,7 +52,7 @@ const PLANS = [
     name: "Pro / Teams",
     detail: "from /mo",
     description: "For teams turning AI-assisted practice into verifiable readiness evidence across critical roles and decisions.",
-    features: ["250+ shared blocks per month", "Performance Workspaces for team scenarios", "Org guests and team API keys", "Additional blocks: $1.99 each", "Priority support"],
+    features: ["250+ shared blocks per month", "Verification Workspaces for team scenarios", "Org guests and team API keys", "Additional blocks: $1.99 each", "Priority support"],
     checkout: "pro_teams" as const,
     volumes: TEAM_VOLUMES,
   },

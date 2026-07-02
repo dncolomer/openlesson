@@ -1354,7 +1354,7 @@ export default function DashboardPage() {
               </div>
               <p className="text-sm text-neutral-500">
                 {usesAgenticV2Keys
-                  ? "Create Performance Workspaces, issue GHL links, and read results via the Agentic API v2."
+                  ? "Create Verification Workspaces, issue GHL links, and read results via the Agentic API v2."
                   : t("dashboard.apiExperimentalDesc")}
               </p>
               {!hasAgentApiKeyPlan(user?.plan) && !user?.isAdmin && (

@@ -14,7 +14,7 @@ import { getAnalyticsAction } from './actions/getAnalytics';
 export const openLessonPlugin: Plugin = {
   name: 'open-lesson',
   description:
-    'openLesson Agentic API — performance workspaces, blocks, and GHL score links',
+    'openLesson Agentic API — verification workspaces, blocks, and GHL score links',
   actions: [
     createPlanAction,
     adaptPlanAction,

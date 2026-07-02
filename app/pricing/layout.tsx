@@ -3,7 +3,7 @@ import { Metadata } from "next";
 export const metadata: Metadata = {
   title: "Pricing - Performance Readiness Plans | openLesson",
   description:
-    "Create Performance Workspaces, measure readiness, and choose the monthly block volume you need.",
+    "Create Verification Workspaces, measure readiness, and choose the monthly block volume you need.",
   keywords: [
     "AI tutor pricing",
     "learning platform cost",
@@ -14,7 +14,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Pricing - Performance Readiness Plans | openLesson",
     description:
-      "Create Performance Workspaces, measure readiness, and choose the monthly block volume you need.",
+      "Create Verification Workspaces, measure readiness, and choose the monthly block volume you need.",
     url: "https://openlesson.academy/pricing",
     siteName: "openLesson",
     type: "website",

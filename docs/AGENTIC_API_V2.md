@@ -2,7 +2,7 @@
 
 Base path: `/api/v2/agent`
 
-The Agentic API supports Performance Workspace creation, evidence upload, learning analysis, block discovery, and GHL link/result access.
+The Agentic API supports Verification Workspace creation, evidence upload, learning analysis, block discovery, and GHL link/result access.
 
 ## Authentication
 
@@ -16,7 +16,7 @@ Valid scopes are `workspaces:read`, `workspaces:write`, `ghl:read`, `ghl:write`,
 
 | Method | Path | Scope | Description |
 | :--- | :--- | :--- | :--- |
-| `POST` | `/workspaces` | `workspaces:write` | Create a Performance Workspace with an initial prompt and optional files. |
+| `POST` | `/workspaces` | `workspaces:write` | Create a Verification Workspace with an initial prompt and optional files. |
 | `GET` | `/workspaces/{workspace_id}/blocks` | `workspaces:read` | List available blocks in the workspace. |
 | `POST` | `/workspaces/{workspace_id}/evidence-schema` | `workspaces:read` | Grok-generated JSON Schema for ideal tool evidence input given workspace context + eval definition. |
 | `POST` | `/workspaces/{workspace_id}/integration-skill` | `workspaces:read` | Grok-generated workspace-specific `skill.md` integration guide for a partner agent. |

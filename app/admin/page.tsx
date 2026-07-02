@@ -150,7 +150,7 @@ export default function AdminPage() {
         >
           <h2 className="text-lg font-semibold text-white mb-2">Workspaces</h2>
           <p className="text-neutral-400 text-sm">
-            View performance workspaces, blocks, and GHL session activity
+            View verification workspaces, blocks, and GHL session activity
           </p>
         </Link>
       </div>

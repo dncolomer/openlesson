@@ -23,7 +23,7 @@ export const PLANS: Record<PlanId, PlanDef> = {
     sessionsPerPeriod: 5,
     features: [
       "5 starter blocks",
-      "One Performance Workspace",
+      "One Verification Workspace",
       "Basic GHL readiness report",
     ],
     stripePriceEnv: null,

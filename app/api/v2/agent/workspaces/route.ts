@@ -98,7 +98,7 @@ export async function POST(req: NextRequest) {
   );
 
   if (!generated.success || !generated.data?.blocks?.length) {
-    return errorResponse(500, "internal_error", "Failed to generate performance workspace");
+    return errorResponse(500, "internal_error", "Failed to generate verification workspace");
   }
 
   let ownerUserId = auth.user_id;
@@ -122,7 +122,7 @@ export async function POST(req: NextRequest) {
       user_id: ownerUserId,
       organization_id: auth.organization_id,
       guest_user_id: auth.guest_user_id,
-      title: generated.data.title || "Performance Workspace",
+      title: generated.data.title || "Verification Workspace",
       root_topic: initialPrompt.slice(0, 160),
       status: "active",
       source_type: "topic",

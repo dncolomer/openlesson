@@ -38,7 +38,7 @@ export const SCENARIO_PAGES: SeoScenarioPageConfig[] = [
       "When an enterprise account heats up, AI-generated account plans and QBR summaries are not proof your CSM can reason through tradeoffs under pressure. Measure escalation readiness before executives get involved.",
     metaTitle: "Client Escalation Readiness Assessment",
     metaDescription:
-      "Verify customer success escalation judgment with Verification Workspaces, ILE practice, and Think Aloud Protocol sessions—not AI-polished account plans.",
+      "Verify customer success escalation judgment with Verification Workspaces, ILE practice, and Think Aloud Protocol sessions, not AI-polished account plans.",
     keywords: [
       "client escalation training",
       "customer success readiness",
@@ -59,7 +59,7 @@ export const SCENARIO_PAGES: SeoScenarioPageConfig[] = [
       {
         title: "Model your escalation archetypes",
         paragraphs: [
-          "Create a Verification Workspace from real patterns: executive sponsor loss, scope disputes, security surprises, or value realization stalls. Each block defines what the CSM must demonstrate—not generic platform training.",
+          "Create a Verification Workspace from real patterns: executive sponsor loss, scope disputes, security surprises, or value realization stalls. Each block defines what the CSM must demonstrate, not generic platform training.",
           "Practice in the ILE with think-aloud sessions that leave reasoning traces managers can review.",
         ],
       },
@@ -92,7 +92,7 @@ export const SCENARIO_PAGES: SeoScenarioPageConfig[] = [
     slug: "executive-sponsor-loss",
     h1: "Executive sponsor loss readiness for strategic accounts",
     intro:
-      "Losing an executive sponsor resets the entire account narrative. Measure whether your CSM can rebuild alignment, quantify risk, and adapt strategy—not just regenerate an AI account plan.",
+      "Losing an executive sponsor resets the entire account narrative. Measure whether your CSM can rebuild alignment, quantify risk, and adapt strategy, not just regenerate an AI account plan.",
     metaTitle: "Executive Sponsor Loss CS Training & Readiness",
     metaDescription:
       "Train and verify CSM readiness when executive sponsors leave: stakeholder remapping, risk framing, and judgment under ambiguity.",
@@ -131,7 +131,7 @@ export const SCENARIO_PAGES: SeoScenarioPageConfig[] = [
       "When usage flatlines, AI can suggest generic re-engagement campaigns. Verify that your CSM understands root causes, customer jobs-to-be-done, and credible recovery paths.",
     metaTitle: "Adoption Stall Recovery Training for CSMs",
     metaDescription:
-      "Measure CSM readiness to diagnose adoption stalls and design credible recovery plans—not generic AI re-engagement templates.",
+      "Measure CSM readiness to diagnose adoption stalls and design credible recovery plans, not generic AI re-engagement templates.",
     keywords: ["adoption stall", "customer success adoption", "CSM training", "product adoption readiness"],
     navLabel: "Adoption stall recovery",
     navDescription: "Diagnose stalls beyond AI templates",
@@ -139,7 +139,7 @@ export const SCENARIO_PAGES: SeoScenarioPageConfig[] = [
       {
         title: "Stalls are a reasoning problem, not a content problem",
         paragraphs: [
-          "Low adoption often reflects misidentified champions, wrong success criteria, or change-management gaps—not missing enablement PDFs. openLesson tests whether CSMs can diagnose before prescribing.",
+          "Low adoption often reflects misidentified champions, wrong success criteria, or change-management gaps, not missing enablement PDFs. openLesson tests whether CSMs can diagnose before prescribing.",
         ],
       },
       {
@@ -202,10 +202,10 @@ export const SCENARIO_PAGES: SeoScenarioPageConfig[] = [
     slug: "churn-risk-quantification",
     h1: "Churn risk quantification readiness for renewals",
     intro:
-      "AI can summarize risk narratively—but can your CSM quantify probability-weighted revenue loss and defend a renewal strategy? Measure that judgment before renewal season.",
+      "AI can summarize risk narratively, but can your CSM quantify probability-weighted revenue loss and defend a renewal strategy? Measure that judgment before renewal season.",
     metaTitle: "Churn Risk Quantification CS Training",
     metaDescription:
-      "Train CSMs to quantify churn risk and defend renewal strategy with evidence—not AI-generated risk summaries alone.",
+      "Train CSMs to quantify churn risk and defend renewal strategy with evidence, not AI-generated risk summaries alone.",
     keywords: ["churn risk training", "renewal readiness", "customer success quantification", "CS renewal coaching"],
     navLabel: "Churn risk quantification",
     navDescription: "Quantify renewal risk with evidence",
@@ -243,7 +243,7 @@ export const SCENARIO_PAGES: SeoScenarioPageConfig[] = [
       "AI talk tracks and call summaries make reps sound prepared. openLesson measures whether they qualify pain without leading questions, challenge AI drafts, and map buyer stakes to solution fit.",
     metaTitle: "Sales Discovery Judgment Assessment",
     metaDescription:
-      "Assess sales discovery readiness: qualifying pain, challenging AI talk tracks, and mapping buyer stakes—beyond polished call prep.",
+      "Assess sales discovery readiness: qualifying pain, challenging AI talk tracks, and mapping buyer stakes, beyond polished call prep.",
     keywords: [
       "sales discovery training",
       "discovery call assessment",
@@ -275,12 +275,12 @@ export const SCENARIO_PAGES: SeoScenarioPageConfig[] = [
       {
         question: "How do managers use evaluation results?",
         answer:
-          "Gap analysis highlights specific repairs—e.g., leading questions, weak stake mapping—and suggested practice scenarios for the next week.",
+          "Gap analysis highlights specific repairs, e.g., leading questions, weak stake mapping, and suggested practice scenarios for the next week.",
       },
     ],
     primaryCta: { label: "Build a discovery workspace", href: "/workspace/new" },
     closingTitle: "Hire and coach for discovery depth",
-    closingBody: "Measure whether reps understand the problem—not just the pitch.",
+    closingBody: "Measure whether reps understand the problem, not just the pitch.",
   }),
   buildScenario({
     verticalSlug: "sales-enablement",
@@ -328,7 +328,7 @@ export const SCENARIO_PAGES: SeoScenarioPageConfig[] = [
     slug: "procurement-pushback-readiness",
     h1: "Procurement pushback readiness for enterprise sales",
     intro:
-      "Procurement teams weaponize AI benchmarking and RFP templates. Measure whether your reps can respond with substance—not defensive scripts generated minutes before the call.",
+      "Procurement teams weaponize AI benchmarking and RFP templates. Measure whether your reps can respond with substance, not defensive scripts generated minutes before the call.",
     metaTitle: "Procurement Pushback Sales Training",
     metaDescription:
       "Assess sales readiness for procurement pushback: benchmarking responses, concession strategy, and value defense without AI scripts.",
@@ -345,7 +345,7 @@ export const SCENARIO_PAGES: SeoScenarioPageConfig[] = [
       {
         title: "Practice concession strategy under probes",
         paragraphs: [
-          "ILE and Think Aloud Protocol sessions test when to concede, what to trade, and how to document mutual value—skills AI drafts approximate but do not instill.",
+          "ILE and Think Aloud Protocol sessions test when to concede, what to trade, and how to document mutual value, skills AI drafts approximate but do not instill.",
         ],
       },
     ],
@@ -364,7 +364,7 @@ export const SCENARIO_PAGES: SeoScenarioPageConfig[] = [
     slug: "competitive-displacement-readiness",
     h1: "Competitive displacement readiness for sales teams",
     intro:
-      "Displacement deals require sharp causal reasoning about why customers should switch now. AI battlecards help—but only if reps understand the underlying tradeoffs they summarize.",
+      "Displacement deals require sharp causal reasoning about why customers should switch now. AI battlecards help, but only if reps understand the underlying tradeoffs they summarize.",
     metaTitle: "Competitive Displacement Sales Readiness",
     metaDescription:
       "Verify sales readiness for competitive displacement: switch justification, risk framing, and AI battlecard scrutiny.",
@@ -388,7 +388,7 @@ export const SCENARIO_PAGES: SeoScenarioPageConfig[] = [
     faqs: [
       {
         question: "How often should battlecard workspaces update?",
-        answer: "Refresh when positioning, pricing, or product parity shifts—blocks are fast to regenerate from updated prompts.",
+        answer: "Refresh when positioning, pricing, or product parity shifts, blocks are fast to regenerate from updated prompts.",
       },
     ],
     primaryCta: { label: "Start a competitive workspace", href: "/workspace/new" },
@@ -474,7 +474,7 @@ export const SCENARIO_PAGES: SeoScenarioPageConfig[] = [
     slug: "incident-response-triage",
     h1: "Incident response triage readiness for on-call engineers",
     intro:
-      "AI runbooks suggest the first move fast—but outages punish guesswork. Verify engineers can narrow root cause, prioritize customer impact, and explain rollback tradeoffs before they take the pager.",
+      "AI runbooks suggest the first move fast, but outages punish guesswork. Verify engineers can narrow root cause, prioritize customer impact, and explain rollback tradeoffs before they take the pager.",
     metaTitle: "Incident Response Triage Readiness Training",
     metaDescription:
       "Assess on-call incident triage judgment: root cause narrowing, customer impact prioritization, and rollback tradeoff reasoning.",
@@ -498,7 +498,7 @@ export const SCENARIO_PAGES: SeoScenarioPageConfig[] = [
     faqs: [
       {
         question: "Does this replace game days?",
-        answer: "It complements them—scaling judgment assessment between full simulations.",
+        answer: "It complements them, scaling judgment assessment between full simulations.",
       },
     ],
     primaryCta: { label: "Build an on-call workspace", href: "/workspace/new" },
@@ -539,7 +539,7 @@ export const SCENARIO_PAGES: SeoScenarioPageConfig[] = [
     ],
     primaryCta: { label: "Create a manager coaching workspace", href: "/workspace/new" },
     closingTitle: "Coach with judgment, not generated empathy",
-    closingBody: "Build people leaders who adapt—not recite.",
+    closingBody: "Build people leaders who adapt, not recite.",
   }),
 ];
 

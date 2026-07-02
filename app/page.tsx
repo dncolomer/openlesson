@@ -25,12 +25,12 @@ const steps = [
     body: "Define the skill, scenario, or decision domain. Enrich it with documents, tool traces, screen shares, video, or any evidence from humans or agents.",
   },
   {
-    title: "Verify learning—not just outputs",
+    title: "Verify learning, not just outputs",
     body: "Evidence API scores humans and agents from artifacts. Think Aloud Protocol captures live human cognition under probe. Both go beyond quizzes and benchmarks.",
   },
   {
     title: "Get continuous scores and gap analysis",
-    body: "Marker scores, severity-ranked gaps, and auditable rationale—not a single pass/fail snapshot or leaderboard accuracy.",
+    body: "Marker scores, severity-ranked gaps, and auditable rationale, not a single pass/fail snapshot or leaderboard accuracy.",
   },
   {
     title: "Humans improve in the ILE",
@@ -39,8 +39,8 @@ const steps = [
 ];
 
 const outcomes = [
-  "Verify agent skills and tool use before production—not just benchmark pass rates.",
-  "Confirm humans learned how to use a tool or workflow—not just clicked through training.",
+  "Verify agent skills and tool use before production, not just benchmark pass rates.",
+  "Confirm humans learned how to use a tool or workflow, not just clicked through training.",
   "Detect hidden gaps before they show up in client work, incidents, or bad deploys.",
   "Separate genuine human thinking from AI-fed interview polish and take-home fluff.",
   "Create auditable readiness evidence for compliance, promotion, or high-stakes roles.",
@@ -69,7 +69,7 @@ export default function B2BLandingPage() {
           <div className="mb-6 inline-block rounded-sm border border-zinc-800 bg-zinc-950/80 px-3 py-1 font-mono text-[10px] tracking-[2px] text-zinc-500">LEARNING VERIFICATION • HUMANS & AGENTS</div>
           <h1 className="max-w-4xl text-5xl font-medium leading-[1.03] tracking-[-2.8px] text-white sm:text-6xl lg:text-[72px]">Beyond benchmarks for AI. Beyond quizzes for humans.</h1>
           <div className="mt-7 max-w-3xl space-y-4 text-base leading-relaxed text-zinc-400 sm:text-lg">
-            <p>openLesson verifies that learning actually happened—for people using tools and for agents deployed to production. Polished outputs and leaderboard scores are not proof.</p>
+            <p>openLesson verifies that learning actually happened for people using tools and for agents deployed to production. Polished outputs and leaderboard scores are not proof.</p>
             <div className="border border-cyan-400/20 bg-cyan-950/20 p-5 sm:p-6">
               <p className="text-lg leading-relaxed text-zinc-300 sm:text-xl">
                 Our focus is{" "}
@@ -101,8 +101,8 @@ export default function B2BLandingPage() {
       </section>
 
       <ContentSection id="problem" eyebrow="THE PROBLEM" title="Completion metrics and benchmark scores hide unverified readiness.">
-        <p>Humans finish courses without learning how to use the tools. Agents pass eval suites without reliable tool use in production. AI assist makes both problems worse—strong-looking outputs with shallow understanding underneath.</p>
-        <p className="text-white">You deployed the copilot. Did anyone—human or agent—actually learn the workflow?</p>
+        <p>Humans finish courses without learning how to use the tools. Agents pass eval suites without reliable tool use in production. AI assist makes both problems worse: strong-looking outputs with shallow understanding underneath.</p>
+        <p className="text-white">You deployed the copilot. Did anyone, human or agent, actually learn the workflow?</p>
         <p>Quizzes reward recall. Benchmarks reward pattern matching. The only trustworthy signals are evidence traces and live reasoning under probe.</p>
       </ContentSection>
 
@@ -132,9 +132,9 @@ export default function B2BLandingPage() {
           </div>
         </div>
         <div className="border border-zinc-800 bg-zinc-950/70 p-6 text-lg leading-relaxed text-zinc-400 backdrop-blur-sm sm:p-8">
-          <p className="text-white">Verify, learn, and evolve—on the same workspace.</p>
+          <p className="text-white">Verify, learn, and evolve on the same workspace.</p>
           <p className="mt-5">Pipe tool traces into Evidence API for human and agentic scoring. Issue Think Aloud Protocol URLs for live human cognition. Route humans into the ILE to improve. Soon, skill developers will use the Agentic Learning Environment to iterate agent skills until verification scores clear the bar.</p>
-          <p className="mt-5 text-zinc-200">Verify learning, build judgment, and prove improvement—with auditable evidence at every step.</p>
+          <p className="mt-5 text-zinc-200">Verify learning, build judgment, and prove improvement with auditable evidence at every step.</p>
         </div>
       </section>
 
@@ -168,8 +168,8 @@ export default function B2BLandingPage() {
       <section className="relative z-10 mx-auto max-w-6xl px-6 py-24">
         <div className="border border-zinc-800 bg-zinc-950/80 p-8 text-center backdrop-blur-sm sm:p-12">
           <div className="mx-auto mb-6 h-px w-24 bg-gradient-to-r from-transparent via-cyan-300/60 to-transparent" />
-          <h2 className="mx-auto max-w-3xl text-4xl font-medium tracking-[-1.6px] text-white sm:text-5xl">Verify humans and agents—not just their outputs.</h2>
-          <p className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-zinc-400">Whether you are gating an agent deployment or confirming a team learned a new tool, openLesson measures learning with evidence—and helps humans close the gaps when they do not.</p>
+          <h2 className="mx-auto max-w-3xl text-4xl font-medium tracking-[-1.6px] text-white sm:text-5xl">Verify humans and agents, not just their outputs.</h2>
+          <p className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-zinc-400">Whether you are gating an agent deployment or confirming a team learned a new tool, openLesson measures learning with evidence, and helps humans close the gaps when they do not.</p>
           <div className="mt-8 flex justify-center">
             <PrimaryCta location="landing_closing" />
           </div>

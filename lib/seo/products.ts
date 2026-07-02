@@ -17,7 +17,7 @@ export const WORKSPACE_FOUNDATION = {
   eyebrow: "Foundation",
   title: "Verification Workspaces",
   summary:
-    "Every product runs on Verification Workspaces—structured environments you create and enrich programmatically with documents, screen recordings, video assets, EEG traces, tool traces, and other evidence from humans or agents.",
+    "Every product runs on Verification Workspaces: structured environments you create and enrich programmatically with documents, screen recordings, video assets, EEG traces, tool traces, and other evidence from humans or agents.",
   bullets: [
     "Define skills, scenarios, and decision domains as assessable blocks",
     "Ingest unstructured evidence via API or manual upload",
@@ -32,7 +32,7 @@ export const PRODUCTS: ProductDefinition[] = [
     title: "Evidence API",
     audience: "both",
     summary:
-      "Headless verification for humans and agents. Send unstructured artifacts—tool traces, transcripts, documents, screen captures—and receive continuous readiness scores with gap analysis. Beyond benchmarks for AI; beyond quizzes for people.",
+      "Headless verification for humans and agents. Send unstructured artifacts, tool traces, transcripts, documents, screen captures, and receive continuous readiness scores with gap analysis. Beyond benchmarks for AI; beyond quizzes for people.",
     bullets: [
       "Agentic: verify skills and tool use before production deployment",
       "Human: confirm learners actually absorbed how to use a tool or workflow",
@@ -47,7 +47,7 @@ export const PRODUCTS: ProductDefinition[] = [
     title: "Think Aloud Protocol",
     audience: "human",
     summary:
-      "Hosted verification for live human cognition. Issue shareable URLs so people verbalize reasoning under probe—the signal hidden AI overlays cannot fabricate.",
+      "Hosted verification for live human cognition. Issue shareable URLs so people verbalize reasoning under probe: the signal hidden AI overlays cannot fabricate.",
     bullets: [
       "Issue private TAP links scoped to blocks or workspaces",
       "Capture speech, hesitations, and causal chains in real time",
@@ -62,7 +62,7 @@ export const PRODUCTS: ProductDefinition[] = [
     title: "Integrated Learning Environment",
     audience: "human",
     summary:
-      "Where humans improve. The ILE turns gap findings into guided practice—think-aloud sessions, Socratic probes, and targeted blocks until scores move.",
+      "Where humans improve. The ILE turns gap findings into guided practice, think-aloud sessions, Socratic probes, and targeted blocks until scores move.",
     bullets: [
       "Practice real scenarios with live reasoning capture",
       "Close specific gaps surfaced by verification products",

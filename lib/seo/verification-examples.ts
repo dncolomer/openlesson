@@ -25,7 +25,7 @@ export const VERIFICATION_EXAMPLES: VerificationExample[] = [
     audience: "agent",
     product: "Evidence API",
     category: "Agentic deployment gate",
-    title: "CRM update agent — pre-production",
+    title: "CRM update agent: pre-production",
     context: "Tool traces from staging runs scored before promote to production.",
     score: 58,
     markers: [
@@ -44,7 +44,7 @@ export const VERIFICATION_EXAMPLES: VerificationExample[] = [
       {
         label: "Policy compliance",
         severity: "Medium",
-        detail: "Writes to restricted fields when account tier is trial—passes happy-path evals only.",
+        detail: "Writes to restricted fields when account tier is trial; passes happy-path evals only.",
       },
     ],
     nextStep: "Block deploy until recovery traces pass Evidence API threshold",
@@ -54,8 +54,8 @@ export const VERIFICATION_EXAMPLES: VerificationExample[] = [
     audience: "human",
     product: "Evidence API",
     category: "Tool adoption verification",
-    title: "RevOps analyst — CRM workflow",
-    context: "Screen captures and call notes scored after enablement—not a multiple-choice quiz.",
+    title: "RevOps analyst: CRM workflow",
+    context: "Screen captures and call notes scored after enablement, not a multiple-choice quiz.",
     score: 64,
     markers: [
       { label: "Record hygiene", score: 71 },
@@ -78,7 +78,7 @@ export const VERIFICATION_EXAMPLES: VerificationExample[] = [
     audience: "human",
     product: "Think Aloud Protocol",
     category: "Live cognition under probe",
-    title: "Platform engineer — incident triage",
+    title: "Platform engineer: incident triage",
     context: "TAP session before pager expansion; verbalized reasoning beats benchmark scores.",
     score: 52,
     markers: [
@@ -107,7 +107,7 @@ export const VERIFICATION_EXAMPLES: VerificationExample[] = [
     audience: "human",
     product: "ILE",
     category: "Gap-driven improvement",
-    title: "CSM — enterprise escalation repair",
+    title: "CSM: enterprise escalation repair",
     context: "TAP surfaced weak stakeholder mapping; ILE closes the gap with Socratic practice.",
     score: 71,
     markers: [
@@ -131,7 +131,7 @@ export const VERIFICATION_EXAMPLES: VerificationExample[] = [
     audience: "agent",
     product: "Evidence API",
     category: "Beyond benchmark scores",
-    title: "Support copilot — policy reasoning",
+    title: "Support copilot: policy reasoning",
     context: "Benchmark accuracy was 94%; evidence traces show systematic refund-policy gaps.",
     score: 47,
     markers: [
@@ -150,7 +150,7 @@ export const VERIFICATION_EXAMPLES: VerificationExample[] = [
       {
         label: "Escalation triggers",
         severity: "High",
-        detail: "Does not escalate regulatory complaints—confident wrong answers pass unit tests.",
+        detail: "Does not escalate regulatory complaints; confident wrong answers pass unit tests.",
       },
     ],
     nextStep: "Hold production cutover; feed failure traces back into training workspace",
@@ -160,7 +160,7 @@ export const VERIFICATION_EXAMPLES: VerificationExample[] = [
     audience: "agent",
     product: "Agentic Learning Environment",
     category: "Skill development sandbox",
-    title: "Support copilot skill — v3 iteration",
+    title: "Support copilot skill: v3 iteration",
     context: "Skill developer runs agent against workspace blocks before publishing skill.md v3.",
     score: 68,
     markers: [
@@ -174,7 +174,7 @@ export const VERIFICATION_EXAMPLES: VerificationExample[] = [
       {
         label: "Policy edges",
         severity: "High",
-        detail: "v3 still mishandles partial refunds in EU locale—v2 passed benchmarks but failed evidence scoring.",
+        detail: "v3 still mishandles partial refunds in EU locale; v2 passed benchmarks but failed evidence scoring.",
       },
     ],
     nextStep: "Iterate skill prompts in ALE; re-run Evidence API gate before publish",
@@ -184,7 +184,7 @@ export const VERIFICATION_EXAMPLES: VerificationExample[] = [
     audience: "human",
     product: "Think Aloud Protocol",
     category: "Anti-cheat verification",
-    title: "AE — competitive displacement call",
+    title: "AE: competitive displacement call",
     context: "Live think-aloud separates genuine discovery from AI-fed talk tracks.",
     score: 59,
     markers: [

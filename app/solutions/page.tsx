@@ -14,8 +14,8 @@ const SOLUTIONS_INDEX = {
   eyebrow: "Solutions",
   h1: "Performance readiness for every high-stakes role",
   intro:
-    "Learning verification for humans and agents—Evidence API, Think Aloud Protocol, ILE, and the upcoming Agentic Learning Environment—applied to the verticals where judgment and tool use matter most.",
-  metaTitle: "Solutions — Performance Readiness by Vertical",
+    "Learning verification for humans and agents: Evidence API, Think Aloud Protocol, ILE, and the upcoming Agentic Learning Environment, applied to the verticals where judgment and tool use matter most.",
+  metaTitle: "Solutions: Performance Readiness by Vertical",
   metaDescription:
     "SEO guides for sales enablement, customer success, compliance, hiring assessment, engineering on-call, corporate L&D, and LMS integration with openLesson.",
   keywords: [
@@ -59,7 +59,7 @@ export default function SolutionsIndexPage() {
           <p className="font-mono text-[10px] uppercase tracking-[2px] text-neutral-500">The product stack</p>
           <p className="mt-3 text-sm leading-relaxed text-neutral-400">
             Each vertical guide below shows how teams use Verification Workspaces and the four products
-            to verify human and agentic learning—and close gaps where scores fall short.
+            to verify human and agentic learning, and close gaps where scores fall short.
           </p>
           <div className="mt-6">
             <ProductStack variant="compact" />

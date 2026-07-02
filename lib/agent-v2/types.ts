@@ -165,6 +165,8 @@ export const ENDPOINT_SCOPES: Record<string, ApiKeyScope> = {
   "POST /workspaces": "workspaces:write",
   "GET /workspaces/:id/blocks": "workspaces:read",
   "POST /workspaces/:id/evidence": "workspaces:write",
+  "POST /workspaces/:id/evidence-schema": "workspaces:read",
+  "POST /workspaces/:id/integration-skill": "workspaces:read",
   "POST /workspaces/:id/performance": "workspaces:read",
   "POST /workspaces/:id/blocks/:blockId/ghl-links": "ghl:write",
   "GET /workspaces/:id/ghl-links": "ghl:read",

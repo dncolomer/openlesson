@@ -18,12 +18,48 @@ Valid scopes are `workspaces:read`, `workspaces:write`, `ghl:read`, `ghl:write`,
 | :--- | :--- | :--- | :--- |
 | `POST` | `/workspaces` | `workspaces:write` | Create a Performance Workspace with an initial prompt and optional files. |
 | `GET` | `/workspaces/{workspace_id}/blocks` | `workspaces:read` | List available blocks in the workspace. |
+| `POST` | `/workspaces/{workspace_id}/evidence-schema` | `workspaces:read` | Grok-generated JSON Schema for ideal tool evidence input given workspace context + eval definition. |
+| `POST` | `/workspaces/{workspace_id}/integration-skill` | `workspaces:read` | Grok-generated workspace-specific `skill.md` integration guide for a partner agent. |
 | `POST` | `/workspaces/{workspace_id}/evidence` | `workspaces:write` | Upload tool usage, screenshots, video, or EEG to xAI and link to workspace/block. |
 | `POST` | `/workspaces/{workspace_id}/performance` | `workspaces:read` | Structured gap report or free-form Q&A over workspace evidence. |
 | `POST` | `/workspaces/{workspace_id}/blocks/{block_id}/ghl-links` | `ghl:write` | Request a private GHL link for a block. |
 | `GET` | `/workspaces/{workspace_id}/ghl-links` | `ghl:read` | List existing GHL links and completion status. |
 | `GET` | `/workspaces/{workspace_id}/ghl-links/{link_id}/results` | `ghl:read` | Request completed GHL link results. |
 | `POST` | `/org/guests` | `org:write` | Organization admins create guest users by email and issue guest API keys. |
+
+## Evidence Input Schema
+
+Use before uploading evidence when you want a concrete JSON contract for what your agent should serialize.
+
+```json
+{
+  "definition": "Evaluate whether the learner can articulate a crisp ICP with segment rationale",
+  "block_id": "optional-block-uuid",
+  "integration_hints": {
+    "tool_name": "pumadoc",
+    "partner_agent": "PumaDoc Customer Agent",
+    "event_verbs": ["run_simulation", "edit_field"],
+    "goals": ["simulation_completed"]
+  }
+}
+```
+
+Response includes `schema` (JSON Schema), `schema_name`, `rationale`, `example_payload`, `recommended_mime_type`, `recommended_evidence_type`, `collection_guidance`, and `file_ids`.
+
+## Integration Skill
+
+Generate a custom `skill.md` (like `/pumadoc-evidence-performance-skill.md`) tailored to a workspace:
+
+```json
+{
+  "integration_name": "acme-sales-copilot",
+  "partner_description": "Guides reps through discovery calls",
+  "base_url": "https://openlesson.academy",
+  "include_sections": ["purpose", "auth", "endpoints", "evidence_payload", "performance", "checklist"]
+}
+```
+
+Response includes `skill_md`, `skill_name`, `suggested_share_path`, and `workspace_summary`.
 
 ## Upload Evidence
 

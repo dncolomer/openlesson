@@ -13,11 +13,12 @@ The Agentic API supports **only** this workflow:
 
 1. Create a Performance Workspace from an `initial_prompt` and optional files.
 2. List blocks in that workspace.
-3. Upload performance evidence (tool usage, screenshots, video, EEG) to xAI storage, linked to the workspace and/or a block.
-4. Request learning and gap analysis over workspace evidence (free-form Q&A or structured report).
-5. Create a private GHL link for a block (`15` or `30` minutes).
-6. List GHL links and completion status.
-7. Read completed GHL results (marker scores + gap analysis).
+3. *(Optional)* Generate an ideal evidence input JSON schema (`POST .../evidence-schema`) or a custom integration `skill.md` (`POST .../integration-skill`) from workspace context.
+4. Upload performance evidence (tool usage, screenshots, video, EEG) to xAI storage, linked to the workspace and/or a block.
+5. Request learning and gap analysis over workspace evidence (free-form Q&A or structured report).
+6. Create a private GHL link for a block (`15` or `30` minutes).
+7. List GHL links and completion status.
+8. Read completed GHL results (marker scores + gap analysis).
 
 **Out of scope** — do not describe or call removed features: blockchain tracking, proof anchoring, live tutoring session control, heartbeats, or plan adaptation. Legacy web-session upload routes (`/api/session-files/*`) are separate from this API; agents should use `POST .../evidence` for workspace-linked artifacts.
 
@@ -78,7 +79,7 @@ Content-Type: application/json
 
 **Read tools:** `list_workspaces`, `list_blocks`, `list_ghl_links`, `get_ghl_results`
 
-Evidence upload and performance analysis are **REST-only** (`POST .../evidence`, `POST .../performance`).
+Evidence planning, upload, and performance analysis are **REST-only** (`POST .../evidence-schema`, `POST .../integration-skill`, `POST .../evidence`, `POST .../performance`).
 
 Prefer `Authorization: Bearer` on REST routes when the client supports it. Treat MCP URLs as secrets (they embed the raw key).
 
@@ -139,6 +140,96 @@ Create a Performance Workspace. Guest keys with `workspaces:write` may call this
 List assessable blocks. Organization members and guests may read **organization-owned** workspaces.
 
 **Response `200`:** `{ "blocks": [ ... ] }`
+
+---
+
+### `POST /api/v2/agent/workspaces/{workspace_id}/evidence-schema` — `workspaces:read`
+
+Given workspace context (blocks, plan files on xAI, existing evidence metadata) plus an evaluation definition from the caller, Grok returns a JSON Schema describing the **ideal tool evidence payload** for optimal gap analysis.
+
+Use this **before** uploading evidence when you want a concrete contract for what to serialize from your agent.
+
+**Request:**
+
+```json
+{
+  "definition": "Evaluate whether the learner can articulate a crisp ICP with segment rationale and validation plan",
+  "block_id": "optional-block-uuid",
+  "integration_hints": {
+    "tool_name": "pumadoc",
+    "partner_agent": "PumaDoc Customer Agent",
+    "event_verbs": ["run_simulation", "edit_field", "publish_artifact"],
+    "goals": ["simulation_completed", "artifact_published"]
+  }
+}
+```
+
+**Response `200`:**
+
+```json
+{
+  "schema": {
+    "type": "object",
+    "properties": {
+      "events": { "type": "array", "items": { "type": "object" } },
+      "goals_achieved": { "type": "array", "items": { "type": "string" } }
+    },
+    "required": ["events"]
+  },
+  "schema_name": "eval_input_icp_clarity",
+  "rationale": "Why these fields capture optimal eval signal for this workspace",
+  "example_payload": { "events": [], "goals_achieved": ["simulation_completed"] },
+  "recommended_mime_type": "application/json",
+  "recommended_evidence_type": "tool",
+  "required_fields": ["events"],
+  "optional_fields": ["learner_reflection"],
+  "collection_guidance": "Upload after each simulation run or when the learner publishes an artifact.",
+  "workspace_id": "uuid",
+  "block_id": null,
+  "definition": "...",
+  "workspace_summary": { "id": "uuid", "title": "...", "root_topic": "..." },
+  "context_counts": { "blocks": 5, "plan_files": 2, "evidence_artifacts": 0 },
+  "file_ids": ["file_..."]
+}
+```
+
+---
+
+### `POST /api/v2/agent/workspaces/{workspace_id}/integration-skill` — `workspaces:read`
+
+Generate a workspace-specific `skill.md` integration guide (like `/pumadoc-evidence-performance-skill.md`) for a custom partner agent. Grok uses workspace blocks, topic, and plan files to tailor endpoints, payload examples, and checklists.
+
+**Request:**
+
+```json
+{
+  "integration_name": "acme-sales-copilot",
+  "partner_description": "Guides reps through discovery calls and objection handling",
+  "block_id": "optional-block-uuid",
+  "base_url": "https://openlesson.academy",
+  "include_sections": ["purpose", "auth", "endpoints", "evidence_payload", "performance", "checklist"]
+}
+```
+
+**Response `200`:**
+
+```json
+{
+  "skill_md": "---\nname: acme-sales-copilot-openlesson-evidence-performance\n...",
+  "skill_name": "acme-sales-copilot-openlesson-evidence-performance",
+  "suggested_share_path": "/acme-sales-copilot-skill.md",
+  "workspace_summary": {
+    "id": "uuid",
+    "title": "Discovery mastery",
+    "root_topic": "B2B sales discovery",
+    "block_count": 5
+  },
+  "context_counts": { "blocks": 5, "plan_files": 1 },
+  "file_ids": ["file_..."]
+}
+```
+
+Host the returned markdown at your suggested path or inject `skill_md` directly into your agent's skill system.
 
 ---
 
@@ -443,6 +534,7 @@ Facilitation style: Socratic — one concise question at a time, follow-ups from
 |--------|-------------------------------|---------------------|
 | Create workspace | ✅ `workspaces:write` | ✅ `workspaces:write` |
 | List blocks | ✅ | ✅ (org workspaces) |
+| Evidence schema / integration skill | ✅ | ✅ |
 | Upload evidence | ✅ | ✅ (own uploads) |
 | Performance analysis | ✅ | ✅ (own evidence + links) |
 | Create GHL link | ✅; admin can assign to guest | ✅ (self only) |
@@ -458,9 +550,10 @@ Facilitation style: Socratic — one concise question at a time, follow-ups from
 1. Teams user creates org (`POST /api/organization`) and API key (`sk_` with default scopes).
 2. `POST /workspaces` with task-specific `initial_prompt` (+ optional files).
 3. `GET .../blocks` → map blocks to your workflow steps.
-4. `POST .../evidence` as learners produce tool usage, screenshots, video, or EEG (optional `block_id`).
-5. `POST .../performance` for gap reports, or include `prompt` for follow-up questions.
-6. `POST .../ghl-links` → send `private_url` to the learner.
-7. Poll `GET .../results` until `status === "completed"`.
-8. Re-run `POST .../performance` to synthesize GHL results with other evidence.
-9. For external learners without accounts: `POST /org/guests` → give them `gsk_` + private GHL URL.
+4. *(Optional)* `POST .../evidence-schema` with your eval definition → get ideal tool JSON schema; `POST .../integration-skill` → get a custom `skill.md` for your agent.
+5. `POST .../evidence` as learners produce tool usage, screenshots, video, or EEG (optional `block_id`).
+6. `POST .../performance` for gap reports, or include `prompt` for follow-up questions.
+7. `POST .../ghl-links` → send `private_url` to the learner.
+8. Poll `GET .../results` until `status === "completed"`.
+9. Re-run `POST .../performance` to synthesize GHL results with other evidence.
+10. For external learners without accounts: `POST /org/guests` → give them `gsk_` + private GHL URL.

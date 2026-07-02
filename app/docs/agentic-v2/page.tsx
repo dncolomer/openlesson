@@ -147,6 +147,183 @@ const ENDPOINT_SPECS: EndpointSpec[] = [
     notes: ["404 workspace_not_found if the key cannot access the workspace."],
   },
   {
+    id: "evidence-schema",
+    method: "POST",
+    path: "/api/v2/agent/workspaces/{workspace_id}/evidence-schema",
+    scope: "workspaces:read",
+    summary:
+      "Given workspace context (blocks, plan files on xAI, evidence metadata) plus an evaluation definition, Grok returns a JSON Schema for the ideal tool evidence payload.",
+    status: "200 OK",
+    pathParams: [
+      { name: "workspace_id", type: "uuid", required: true, description: "Performance Workspace ID." },
+    ],
+    requestBody: [
+      {
+        name: "definition",
+        type: "string",
+        required: true,
+        description: "What to evaluate — rubric text, competency description, or full eval spec from your agent.",
+      },
+      { name: "block_id", type: "uuid", description: "Optional: scope schema design to one block." },
+      {
+        name: "integration_hints",
+        type: "object",
+        description: "Optional hints to tailor the schema: tool_name, partner_agent, event_verbs[], goals[].",
+      },
+      { name: "integration_hints.tool_name", type: "string", description: "Tool identifier (e.g. pumadoc, canvas)." },
+      { name: "integration_hints.partner_agent", type: "string", description: "Partner agent name for context." },
+      { name: "integration_hints.event_verbs", type: "string[]", description: "Actions your agent serializes (e.g. run_simulation, edit_field)." },
+      { name: "integration_hints.goals", type: "string[]", description: "High-level goals to encode (e.g. simulation_completed)." },
+    ],
+    requestExample: `{
+  "definition": "Evaluate whether the learner can articulate a crisp ICP with segment rationale and validation plan",
+  "block_id": "e57844a6-1b69-465c-9120-d0812d6339ae",
+  "integration_hints": {
+    "tool_name": "pumadoc",
+    "partner_agent": "PumaDoc Customer Agent",
+    "event_verbs": ["run_simulation", "edit_field", "publish_artifact"],
+    "goals": ["simulation_completed", "artifact_published"]
+  }
+}`,
+    responseBody: [
+      { name: "schema", type: "object", description: "JSON Schema (draft-07 style) for the ideal tool evidence payload inside the upload data field." },
+      { name: "schema_name", type: "string", description: "Snake_case identifier, typically prefixed eval_input_." },
+      { name: "rationale", type: "string", description: "Why these fields capture optimal eval signal for this workspace." },
+      { name: "example_payload", type: "object", description: "Example JSON matching the schema conceptually." },
+      { name: "recommended_mime_type", type: "string", description: "Usually application/json for tool evidence." },
+      { name: "recommended_evidence_type", type: "string", description: "tool | screen | video | eeg" },
+      { name: "required_fields", type: "string[]", description: "Top-level field names integrators should always include." },
+      { name: "optional_fields", type: "string[]", description: "Enrichment fields (reflections, media refs, etc.)." },
+      { name: "collection_guidance", type: "string", description: "When and how often to upload evidence for this definition." },
+      { name: "workspace_id", type: "uuid", description: "Echo of path workspace_id." },
+      { name: "block_id", type: "uuid | null", description: "Echo of request block_id." },
+      { name: "definition", type: "string", description: "Echo of request definition." },
+      { name: "workspace_summary", type: "object", description: "id, title, root_topic." },
+      { name: "context_counts", type: "object", description: "blocks, ghl_sessions, evidence_artifacts, linked_sessions, plan_files." },
+      { name: "file_ids", type: "string[]", description: "xAI file IDs used for generation (workspace JSON + plan files)." },
+    ],
+    responseExample: `{
+  "schema": {
+    "type": "object",
+    "properties": {
+      "events": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "verb": { "type": "string" },
+            "timestamp_ms": { "type": "integer" },
+            "payload": { "type": "object" }
+          },
+          "required": ["verb", "timestamp_ms"]
+        }
+      },
+      "goals_achieved": { "type": "array", "items": { "type": "string" } },
+      "learner_reflection": { "type": "string" }
+    },
+    "required": ["events"]
+  },
+  "schema_name": "eval_input_icp_clarity",
+  "rationale": "Time-ordered events plus goals_achieved give performance analysis enough signal to assess ICP clarity without a fixed rubric.",
+  "example_payload": {
+    "events": [
+      { "verb": "run_simulation", "timestamp_ms": 1710000000000, "payload": { "simulation_id": "icp-v1" } }
+    ],
+    "goals_achieved": ["simulation_completed"],
+    "learner_reflection": "Segment B has stronger willingness-to-pay signals."
+  },
+  "recommended_mime_type": "application/json",
+  "recommended_evidence_type": "tool",
+  "required_fields": ["events"],
+  "optional_fields": ["goals_achieved", "learner_reflection"],
+  "collection_guidance": "Upload after each simulation run or when the learner publishes an ICP artifact.",
+  "workspace_id": "a3090aa0-3498-4be8-aa87-32a1a6591641",
+  "block_id": "e57844a6-1b69-465c-9120-d0812d6339ae",
+  "definition": "Evaluate whether the learner can articulate a crisp ICP...",
+  "workspace_summary": {
+    "id": "a3090aa0-3498-4be8-aa87-32a1a6591641",
+    "title": "Customer Development Mastery",
+    "root_topic": "Founder ICP validation"
+  },
+  "context_counts": {
+    "blocks": 5,
+    "ghl_sessions": 0,
+    "evidence_artifacts": 0,
+    "linked_sessions": 0,
+    "plan_files": 2
+  },
+  "file_ids": ["file_814439bd-4894-4e11-852d-314e9f777a7f"]
+}`,
+    notes: [
+      "Use before POST .../evidence when you want a concrete JSON contract for what your agent should serialize.",
+      "Builds the same workspace context bundle as performance (JSON summary + up to 19 xAI artifact refs).",
+      "404 block_not_found if block_id is not in this workspace.",
+      "Grok-generated; may take up to ~120s on large workspaces.",
+    ],
+  },
+  {
+    id: "integration-skill",
+    method: "POST",
+    path: "/api/v2/agent/workspaces/{workspace_id}/integration-skill",
+    scope: "workspaces:read",
+    summary:
+      "Generate a workspace-specific skill.md integration guide (like /pumadoc-evidence-performance-skill.md) for a custom partner agent.",
+    status: "200 OK",
+    pathParams: [
+      { name: "workspace_id", type: "uuid", required: true, description: "Performance Workspace ID." },
+    ],
+    requestBody: [
+      { name: "integration_name", type: "string", required: true, description: "Partner integration slug or display name (e.g. acme-sales-copilot)." },
+      { name: "partner_description", type: "string", description: "What the external agent does; Grok uses this to tailor examples." },
+      { name: "block_id", type: "uuid", description: "Optional: focus the skill on one block." },
+      { name: "base_url", type: "string", description: "Origin for example URLs; default https://openlesson.academy." },
+      {
+        name: "include_sections",
+        type: "string[]",
+        description: "Sections to include. Default: purpose, design_principles, auth, endpoints, evidence_payload, performance, checklist.",
+      },
+    ],
+    requestExample: `{
+  "integration_name": "acme-sales-copilot",
+  "partner_description": "Guides reps through discovery calls and objection handling",
+  "base_url": "https://openlesson.academy",
+  "include_sections": ["purpose", "auth", "endpoints", "evidence_payload", "performance", "checklist"]
+}`,
+    responseBody: [
+      { name: "skill_md", type: "string", description: "Full markdown document with YAML frontmatter (name, description)." },
+      { name: "skill_name", type: "string", description: "Derived frontmatter name, e.g. acme-sales-copilot-openlesson-evidence-performance." },
+      { name: "suggested_share_path", type: "string", description: "Suggested public path, e.g. /acme-sales-copilot-skill.md." },
+      { name: "workspace_summary", type: "object", description: "id, title, root_topic, block_count." },
+      { name: "context_counts", type: "object | null", description: "Workspace context counts used during generation." },
+      { name: "file_ids", type: "string[]", description: "xAI file IDs attached during generation." },
+    ],
+    responseExample: `{
+  "skill_md": "---\\nname: acme-sales-copilot-openlesson-evidence-performance\\ndescription: Acme Sales Copilot integration skill for OpenLesson evidence upload and performance analysis.\\n---\\n\\n# Acme Sales Copilot — OpenLesson Evidence & Performance\\n\\n...",
+  "skill_name": "acme-sales-copilot-openlesson-evidence-performance",
+  "suggested_share_path": "/acme-sales-copilot-skill.md",
+  "workspace_summary": {
+    "id": "a3090aa0-3498-4be8-aa87-32a1a6591641",
+    "title": "Discovery Mastery",
+    "root_topic": "B2B sales discovery",
+    "block_count": 5
+  },
+  "context_counts": {
+    "blocks": 5,
+    "ghl_sessions": 0,
+    "evidence_artifacts": 0,
+    "linked_sessions": 0,
+    "plan_files": 1
+  },
+  "file_ids": ["file_814439bd-4894-4e11-852d-314e9f777a7f"]
+}`,
+    notes: [
+      "Host skill_md at suggested_share_path or inject directly into your agent's skill system.",
+      "References canonical /skill.md and /docs/agentic-v2; includes workspace-specific block mapping and payload examples.",
+      "404 block_not_found if block_id is not in this workspace.",
+      "Grok-generated markdown; may take up to ~120s.",
+    ],
+  },
+  {
     id: "upload-evidence",
     method: "POST",
     path: "/api/v2/agent/workspaces/{workspace_id}/evidence",
@@ -772,8 +949,9 @@ export default function AgenticV2DocsPage() {
             Performance Workspace API Reference
           </h1>
           <p className="mt-4 max-w-3xl text-sm leading-relaxed text-neutral-400 sm:text-base">
-            Full request and response specifications for every Agentic API endpoint: workspaces, evidence, performance
-            analysis, GHL links, guest provisioning, and dashboard key management. Bearer endpoints use base path{" "}
+            Full request and response specifications for every Agentic API endpoint: workspaces, evidence schema
+            generation, integration skill generation, evidence upload, performance analysis, GHL links, guest
+            provisioning, and dashboard key management. Bearer endpoints use base path{" "}
             <code className="text-neutral-300">/api/v2/agent</code> and require active{" "}
             <code className="text-neutral-300">pro_teams</code>.
           </p>
@@ -834,7 +1012,7 @@ Content-Type: application/json`}</code>
           <FieldTable
             title="Scope reference"
             fields={[
-              { name: "workspaces:read", type: "scope", description: "List blocks; run performance analysis (report or chat)." },
+              { name: "workspaces:read", type: "scope", description: "List blocks; generate evidence schemas and integration skills; run performance analysis (report or chat)." },
               { name: "workspaces:write", type: "scope", description: "Create workspaces; upload evidence." },
               { name: "ghl:read", type: "scope", description: "List GHL links; poll results." },
               { name: "ghl:write", type: "scope", description: "Create GHL Score links for blocks." },
@@ -908,7 +1086,9 @@ Content-Type: application/json`}</code>
             <Link href="/skill.md" className="text-neutral-200 underline decoration-neutral-600 underline-offset-4 hover:text-white">
               /skill.md
             </Link>{" "}
-            for integration checklists, guest responsibilities, and MCP transport. PumaDoc evidence integration:{" "}
+            for integration checklists, guest responsibilities, and MCP transport. Generate a custom skill per
+            workspace via{" "}
+            <code className="text-neutral-300">POST .../integration-skill</code>, or use the PumaDoc reference:{" "}
             <Link
               href="/pumadoc-evidence-performance-skill.md"
               className="text-neutral-200 underline decoration-neutral-600 underline-offset-4 hover:text-white"

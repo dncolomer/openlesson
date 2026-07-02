@@ -18,6 +18,7 @@ import { PublicWorkspaceForkPanel } from "@/components/PublicWorkspaceForkPanel"
 import { WorkspaceBuilderShell } from "@/components/WorkspaceBuilderShell";
 import { WorkspaceIdentityPanel } from "@/components/WorkspaceIdentityPanel";
 import { WorkspaceTabBar } from "@/components/WorkspaceTabBar";
+import { WorkspaceIntegrationPanel } from "@/components/WorkspaceIntegrationPanel";
 
 export interface PlanNode {
   id: string;
@@ -78,7 +79,7 @@ export function PlanView({ initialPlan, initialNodes }: PlanViewProps) {
   const [isEditingDescription, setIsEditingDescription] = useState(false);
   const [editDescription, setEditDescription] = useState("");
   const [savingDescription, setSavingDescription] = useState(false);
-  const [activeTab, setActiveTab] = useState<"graph" | "notes" | "performance" | "files">("graph");
+  const [activeTab, setActiveTab] = useState<"graph" | "notes" | "performance" | "files" | "integration">("graph");
   const [notesContent, setNotesContent] = useState(initialPlan?.notes || "");
   const [isEditingNotes, setIsEditingNotes] = useState(false);
   const [savingNotes, setSavingNotes] = useState(false);
@@ -303,6 +304,12 @@ export function PlanView({ initialPlan, initialNodes }: PlanViewProps) {
     }
   }, [plan?.notes]);
 
+  useEffect(() => {
+    if (!isOwner && activeTab === "integration") {
+      setActiveTab("graph");
+    }
+  }, [isOwner, activeTab]);
+
 
   const saveNotes = async () => {
     if (!plan) return;
@@ -392,6 +399,17 @@ export function PlanView({ initialPlan, initialNodes }: PlanViewProps) {
         <path strokeLinecap="round" strokeLinejoin="round" d="M18.375 12.739l-7.693 7.693a4.5 4.5 0 01-6.364-6.364l10.94-10.94A3 3 0 1119.5 7.372L8.552 18.32m.009-.01l-.01.01m5.699-9.941l-7.81 7.81a1.5 1.5 0 002.112 2.13" />
       </svg>
     )},
+    ...(isOwner
+      ? [{
+          key: "integration" as const,
+          label: t('planView.integration'),
+          icon: (
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M17.25 6.75L22.5 12l-5.25 5.25m-10.5 0L1.5 12l5.25-5.25M14.25 4.5l-4.5 15" />
+            </svg>
+          ),
+        }]
+      : []),
   ];
 
   return (
@@ -849,6 +867,18 @@ export function PlanView({ initialPlan, initialNodes }: PlanViewProps) {
           <PlanFilesTab
             planId={planId}
             isOwner={isOwner}
+          />
+        )}
+
+        {activeTab === "integration" && (
+          <WorkspaceIntegrationPanel
+            planId={planId}
+            planTitle={plan.title || plan.root_topic}
+            planTopic={plan.root_topic}
+            planDescription={plan.description}
+            planNotes={plan.notes}
+            isOwner={isOwner}
+            currentUserId={currentUserId}
           />
         )}
           </main>

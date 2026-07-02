@@ -3,7 +3,7 @@
 import type { ReactNode } from "react";
 import { useI18n } from "@/lib/i18n";
 
-export type WorkspaceTabKey = "graph" | "notes" | "performance" | "files";
+export type WorkspaceTabKey = "graph" | "notes" | "performance" | "files" | "integration";
 
 export type WorkspaceTabItem = {
   key: WorkspaceTabKey;
@@ -30,7 +30,9 @@ export function WorkspaceTabBar({
   if (variant === "mobile") {
     return (
       <nav
-        className="grid grid-cols-4 gap-0.5 rounded-lg border border-neutral-800/60 bg-neutral-950/80 p-0.5"
+        className={`grid gap-0.5 rounded-lg border border-neutral-800/60 bg-neutral-950/80 p-0.5 ${
+          tabs.length >= 5 ? "grid-cols-5" : "grid-cols-4"
+        }`}
         role="tablist"
         aria-label={navLabel}
       >

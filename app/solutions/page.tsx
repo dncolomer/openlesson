@@ -12,16 +12,17 @@ const SOLUTIONS_INDEX = {
   slug: "solutions",
   path: "/solutions",
   eyebrow: "Solutions",
-  h1: "Performance readiness for every high-stakes role",
+  h1: "Beyond benchmarks for AI. Beyond quizzes for humans.",
   intro:
-    "Learning verification for humans and agents: Evidence API, Think Aloud Protocol, ILE, and the upcoming Agentic Learning Environment, applied to the verticals where judgment and tool use matter most.",
-  metaTitle: "Solutions: Performance Readiness by Vertical",
+    "openLesson verifies that learning actually happened, then ties evidence to learning-to-conversion outcomes. These vertical guides show how teams apply Evidence API, Think Aloud Protocol, ILE, and the Agentic Learning Environment where judgment and tool use matter most.",
+  metaTitle: "Solutions: Learning Verification by Vertical",
   metaDescription:
-    "SEO guides for sales enablement, customer success, compliance, hiring assessment, engineering on-call, corporate L&D, and LMS integration with openLesson.",
+    "Learning verification guides for sales enablement, customer success, compliance, hiring assessment, engineering on-call, corporate L&D, SaaS product, and LMS integration with openLesson.",
   keywords: [
-    "performance readiness solutions",
+    "learning verification solutions",
+    "learning-to-conversion",
     "AI training by industry",
-    "workforce readiness verticals",
+    "workforce learning verification",
     "learning verification use cases",
   ],
   navLabel: "All Solutions",
@@ -50,16 +51,36 @@ export default function SolutionsIndexPage() {
         <header className="mb-12">
           <p className="font-mono text-[10px] uppercase tracking-[2px] text-neutral-500">Solutions</p>
           <h1 className="mt-4 text-3xl font-medium tracking-[-1.2px] text-white sm:text-4xl lg:text-5xl">
-            Performance readiness for every high-stakes role
+            {SOLUTIONS_INDEX.h1}
           </h1>
           <p className="mt-6 text-lg leading-relaxed text-neutral-400">{SOLUTIONS_INDEX.intro}</p>
+          <div className="mt-8 grid gap-4 sm:grid-cols-2">
+            <div className="border border-cyan-400/20 bg-cyan-950/20 p-5">
+              <p className="text-base leading-relaxed text-neutral-300">
+                Our focus is{" "}
+                <span className="font-medium text-cyan-200">learning verification</span>.
+              </p>
+              <p className="mt-3 text-sm leading-relaxed text-neutral-500">
+                Verify humans and agents with evidence. No exam. No benchmark theater.
+              </p>
+            </div>
+            <div className="border border-violet-400/20 bg-violet-950/20 p-5">
+              <p className="text-base leading-relaxed text-neutral-300">
+                Our results are{" "}
+                <span className="font-medium text-violet-200">learning-to-conversion</span>.
+              </p>
+              <p className="mt-3 text-sm leading-relaxed text-neutral-500">
+                Evidence tied to activation, adoption, deploy gates, and production performance.
+              </p>
+            </div>
+          </div>
         </header>
 
         <section className="mb-12 rounded-md border border-neutral-800 bg-neutral-950/70 p-5 sm:p-6">
-          <p className="font-mono text-[10px] uppercase tracking-[2px] text-neutral-500">The product stack</p>
+          <p className="font-mono text-[10px] uppercase tracking-[2px] text-neutral-500">The platform</p>
           <p className="mt-3 text-sm leading-relaxed text-neutral-400">
-            Each vertical guide below shows how teams use Verification Workspaces and the four products
-            to verify human and agentic learning, and close gaps where scores fall short.
+            Four products. One Verification Workspace. Each vertical guide below shows how teams verify
+            learning, close gaps, and tie evidence to outcomes.
           </p>
           <div className="mt-6">
             <ProductStack variant="compact" />

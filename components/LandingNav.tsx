@@ -95,9 +95,6 @@ export function LandingNav() {
           <Link href="/#products" className="transition hover:text-white">
             Products
           </Link>
-          <Link href="/#problem" className="transition hover:text-white">
-            Why it matters
-          </Link>
           <Link href="/#how" className="transition hover:text-white">
             How it works
           </Link>
@@ -146,11 +143,6 @@ export function LandingNav() {
             <li>
               <Link href="/#products" className="block rounded-sm px-2 py-2 text-zinc-300" onClick={() => setMobileOpen(false)}>
                 Products
-              </Link>
-            </li>
-            <li>
-              <Link href="/#problem" className="block rounded-sm px-2 py-2 text-zinc-300" onClick={() => setMobileOpen(false)}>
-                Why it matters
               </Link>
             </li>
             <li>

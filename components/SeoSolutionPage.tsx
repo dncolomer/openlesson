@@ -34,7 +34,7 @@ export function SeoSolutionPage({
   page,
   breadcrumbs,
   relatedLinks,
-  relatedLinksTitle = "Readiness scenarios",
+  relatedLinksTitle = "Verification scenarios",
   leadCapture,
 }: SeoSolutionPageProps) {
   const faqSchema = {
@@ -128,14 +128,41 @@ export function SeoSolutionPage({
             {page.h1}
           </h1>
           <p className="mt-6 text-lg leading-relaxed text-neutral-400">{page.intro}</p>
+          <div className="mt-8 grid gap-4 sm:grid-cols-2">
+            <div className="border border-cyan-400/20 bg-cyan-950/20 p-5">
+              <p className="text-base leading-relaxed text-neutral-300">
+                Our focus is{" "}
+                <span className="font-medium text-cyan-200">learning verification</span>.
+              </p>
+              <p className="mt-3 text-sm leading-relaxed text-neutral-500">
+                <span className="text-neutral-300">Evidence API</span> verifies humans and agents.{" "}
+                <span className="text-neutral-300">Think Aloud Protocol</span> and{" "}
+                <span className="text-neutral-300">ILE</span> serve human learning. openLesson helps
+                skill.md developers test and evolve agent skills in the{" "}
+                <span className="text-neutral-300">Agentic Learning Environment</span>.{" "}
+                <span className="font-medium text-white">No exam. No benchmark theater.</span>
+              </p>
+            </div>
+            <div className="border border-violet-400/20 bg-violet-950/20 p-5">
+              <p className="text-base leading-relaxed text-neutral-300">
+                Our results are{" "}
+                <span className="font-medium text-violet-200">learning-to-conversion</span>.
+              </p>
+              <p className="mt-3 text-sm leading-relaxed text-neutral-500">
+                For humans: did they learn the workflow well enough to activate, adopt, and convert?
+                For agents: did they learn the skills well enough to deploy and perform in production?
+                Verification evidence tied to outcomes, not vanity completion or benchmark scores.
+              </p>
+            </div>
+          </div>
           <div className="mt-10 rounded-md border border-neutral-800 bg-neutral-950/70 p-5 sm:p-6">
             <p className="font-mono text-[10px] uppercase tracking-[2px] text-neutral-500">
-              Built on Verification Workspaces
+              Four products. One Verification Workspace.
             </p>
             <p className="mt-3 text-sm leading-relaxed text-neutral-400">
-              Every solution uses the same product stack: Evidence API for verification, Think Aloud
-              Protocol and the Integrated Learning Environment for human learning, and the upcoming
-              Agentic Learning Environment for skill developers.
+              Everything runs on Verification Workspaces. Evidence API verifies humans and agents from
+              artifacts. Think Aloud Protocol and ILE focus on human learning. Agentic Learning
+              Environment helps skill developers test and evolve agent skills.
             </p>
             <div className="mt-5">
               <ProductStack variant="compact" showFoundation={false} />

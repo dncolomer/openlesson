@@ -41,9 +41,9 @@ export const PLATFORM_PAGE: SeoSolutionPageConfig = {
   slug: "platform",
   path: "/platform",
   eyebrow: "openLesson Platform",
-  h1: "Learning verification for humans and agents",
+  h1: "Beyond benchmarks for AI. Beyond quizzes for humans.",
   intro:
-    "openLesson is built on Verification Workspaces you create and enrich programmatically, with documents, tool traces, screen shares, video assets, and any evidence from humans or agents. Four products sit on top: Evidence API for verification, Think Aloud Protocol and the Integrated Learning Environment for human learning, and the upcoming Agentic Learning Environment for skill developers.",
+    "openLesson verifies that learning actually happened for people using tools and for agents deployed to production. Four products run on Verification Workspaces: Evidence API verifies humans and agents; Think Aloud Protocol and the ILE serve human learning; openLesson helps skill.md developers test and evolve agent skills in the Agentic Learning Environment.",
   metaTitle: "Platform: Learning Verification for Humans & Agents",
   metaDescription:
     "Beyond benchmarks for AI and beyond quizzes for humans. Evidence API, Think Aloud Protocol, ILE, and Agentic Learning Environment on Verification Workspaces.",
@@ -63,13 +63,6 @@ export const PLATFORM_PAGE: SeoSolutionPageConfig = {
   navLabel: "Platform",
   navDescription: "Workspaces, verification, learning, and ALE",
   sections: [
-    {
-      title: "The problem: outputs look ready before learning is verified",
-      paragraphs: [
-        "Humans finish training without learning how to use tools. Agents pass benchmark suites without reliable production tool use. Real-time assist and copilots make both problems worse: polished outputs with shallow understanding underneath.",
-        "Quizzes and leaderboard accuracy were never reliable proxies for learning. openLesson verifies readiness with evidence, then helps humans close gaps in the ILE, and gives teams deploy gates for agents.",
-      ],
-    },
     {
       title: "Verification Workspaces: the foundation",
       paragraphs: [
@@ -99,17 +92,17 @@ export const PLATFORM_PAGE: SeoSolutionPageConfig = {
       ],
     },
     {
-      title: "Product 4: Agentic Learning Environment (ALE): coming soon",
+      title: "Product 4: Agentic Learning Environment (ALE)",
       paragraphs: [
-        "The Agentic Learning Environment (ALE) is where skill developers test and evolve agent skills. Run agents against workspace scenarios, inspect tool-use traces, and iterate on skill definitions until Evidence API scores clear your deploy bar.",
-        "ALE mirrors the ILE's improvement loop for the agentic side: verification surfaces gaps in tool use and reasoning; developers refine skills in a sandbox until readiness evidence supports production.",
+        "The Agentic Learning Environment (ALE) is where skill.md developers test and evolve agent skills. Run agents against workspace scenarios, inspect tool-use traces, and iterate on skill definitions until Evidence API scores clear your deploy bar.",
+        "ALE mirrors the ILE's improvement loop for the agentic side: verification surfaces gaps in tool use and reasoning; developers refine skills in a sandbox until learning evidence supports production deployment.",
       ],
     },
     {
       title: "The verify-and-improve loop",
       paragraphs: [
-        "Choose Evidence API when you have artifacts or tool traces, for humans or agents. Choose Think Aloud Protocol URLs when you need live human cognition under probe. Use the ILE when human gaps need to close. Use ALE, when available, to evolve agent skills against the same workspace context.",
-        "All products share the same workspace, scoring model, and gap analysis. Verification surfaces weak spots; ILE and ALE repair them, with auditable evidence at every step.",
+        "Choose Evidence API when you have artifacts or tool traces, for humans or agents. Choose Think Aloud Protocol URLs when you need live human cognition under probe. Use the ILE when human gaps need to close. Use ALE to evolve agent skills against the same workspace context.",
+        "All products share the same workspace, scoring model, and gap analysis. Verify learning, close gaps, and prove improvement with auditable evidence at every step.",
       ],
     },
     {
@@ -129,7 +122,7 @@ export const PLATFORM_PAGE: SeoSolutionPageConfig = {
     {
       question: "What are the openLesson products?",
       answer:
-        "Evidence API (headless verification for humans and agents), Think Aloud Protocol (hosted URLs for live human cognition), the Integrated Learning Environment (ILE) for human guided practice, and the upcoming Agentic Learning Environment (ALE) where skill developers test and evolve agent skills.",
+        "Evidence API (headless verification for humans and agents), Think Aloud Protocol (hosted URLs for live human cognition), the Integrated Learning Environment (ILE) for human guided practice, and the Agentic Learning Environment (ALE) where skill.md developers test and evolve agent skills.",
     },
     {
       question: "When should I use the Evidence API vs. Think Aloud Protocol?",
@@ -144,7 +137,7 @@ export const PLATFORM_PAGE: SeoSolutionPageConfig = {
     {
       question: "What is the Agentic Learning Environment (ALE)?",
       answer:
-        "ALE is an upcoming openLesson product for skill developers. It provides a sandbox to run agents against workspace scenarios, compare skill versions, and iterate on definitions until Evidence API scores support production deployment.",
+        "ALE is openLesson's product for skill.md developers. It provides a sandbox to run agents against workspace scenarios, compare skill versions, and iterate on definitions until Evidence API scores support production deployment.",
     },
     {
       question: "How does openLesson address AI cheating?",
@@ -169,9 +162,9 @@ export const PLATFORM_PAGE: SeoSolutionPageConfig = {
   ],
   primaryCta: { label: "Create a Verification Workspace", href: "/workspace/new" },
   secondaryCta: { label: "Agentic API docs", href: "/docs/agentic-v2" },
-  closingTitle: "Start with a workspace. Verify humans, agents, or both.",
+  closingTitle: "Verify humans and agents, not just their outputs.",
   closingBody:
-    "Create your first Verification Workspace free, then verify with Evidence API, Think Aloud Protocol, or both, and help humans improve in the ILE.",
+    "Whether you are gating an agent deployment or confirming a team learned a new tool, openLesson measures learning with evidence, and helps humans close the gaps when they do not.",
 };
 
 export const SOLUTION_PAGES: SeoSolutionPageConfig[] = [
@@ -244,8 +237,8 @@ export const SOLUTION_PAGES: SeoSolutionPageConfig[] = [
     ],
     primaryCta: { label: "Build a sales readiness workspace", href: "/workspace/new" },
     secondaryCta: { label: "View pricing", href: "/pricing" },
-    closingTitle: "Prove your reps are ready, not just AI-assisted",
-    closingBody: "Create a workspace for your highest-stakes sales motion and measure judgment before it costs pipeline.",
+    closingTitle: "Verify learning before revenue is on the line",
+    closingBody: "Measure whether reps learned discovery and negotiation judgment, not just AI-assisted polish, before pipeline is at risk.",
   },
   {
     slug: "customer-success",
@@ -481,19 +474,19 @@ export const SOLUTION_PAGES: SeoSolutionPageConfig[] = [
     slug: "lms-integration",
     path: "/solutions/lms-integration",
     eyebrow: "LMS & EdTech Integration",
-    h1: "Embed performance readiness into any LMS or learning platform",
+    h1: "Embed learning verification into any LMS or learning platform",
     intro:
-      "Canvas, Moodle, corporate academies, and custom edtech products track completion. openLesson's Agentic API adds verified readiness, workspaces, evidence upload, evaluation links, and structured gap reports, without replacing your front end.",
+      "Canvas, Moodle, corporate academies, and custom edtech products track completion. openLesson's Agentic API adds learning verification and learning-to-conversion evidence: workspaces, evidence upload, evaluation links, and structured gap reports, without replacing your front end.",
     metaTitle: "LMS Integration API for Learning Verification",
     metaDescription:
-      "Integrate performance readiness into Canvas, Moodle, or custom LMS platforms via the Agentic API, workspaces, evidence, evaluation, and gap analysis.",
+      "Integrate learning verification into Canvas, Moodle, or custom LMS platforms via the Agentic API, workspaces, evidence, evaluation, and gap analysis.",
     keywords: [
       "LMS integration API",
       "edtech API",
       "learning verification API",
       "corporate learning platform",
       "educational technology integration",
-      "performance readiness API",
+      "learning-to-conversion API",
     ],
     navLabel: "LMS Integration",
     navDescription: "Agentic API for edtech builders",
@@ -546,8 +539,8 @@ export const SOLUTION_PAGES: SeoSolutionPageConfig[] = [
     ],
     primaryCta: { label: "Read API docs", href: "/docs/agentic-v2" },
     secondaryCta: { label: "Teams pricing", href: "/pricing" },
-    closingTitle: "Add readiness verification to your product",
-    closingBody: "Ship competency evidence, not just completion badges.",
+    closingTitle: "Stop measuring completion. Start measuring learning.",
+    closingBody: "Ship learning verification evidence your customers can tie to outcomes, not just completion badges.",
   },
   {
     slug: "engineering-oncall",
@@ -624,12 +617,12 @@ export const SOLUTION_PAGES: SeoSolutionPageConfig[] = [
     slug: "corporate-learning",
     path: "/solutions/corporate-learning",
     eyebrow: "Corporate L&D",
-    h1: "Corporate learning that measures readiness, not seat time",
+    h1: "Corporate learning that measures learning, not seat time",
     intro:
-      "L&D teams are asked to prove ROI while AI makes every course easier to finish without learning. openLesson gives corporate academies structured workspaces, practice environments, and evaluation evidence that leaders can trust for role readiness.",
-    metaTitle: "Corporate L&D & Workforce Readiness Platform",
+      "L&D teams are asked to prove ROI while AI makes every course easier to finish without learning. openLesson gives corporate academies structured workspaces, practice environments, and verification evidence tied to learning-to-conversion outcomes leaders can trust.",
+    metaTitle: "Corporate L&D & Learning Verification Platform",
     metaDescription:
-      "Replace vanity completion metrics with performance readiness evidence for corporate learning, workforce development, and AI upskilling programs.",
+      "Replace vanity completion metrics with learning verification evidence for corporate learning, workforce development, and AI upskilling programs.",
     keywords: [
       "corporate learning platform",
       "workforce readiness",
@@ -688,8 +681,8 @@ export const SOLUTION_PAGES: SeoSolutionPageConfig[] = [
     ],
     primaryCta: { label: "Start a corporate workspace", href: "/workspace/new" },
     secondaryCta: { label: "View pricing", href: "/pricing" },
-    closingTitle: "Give L&D evidence executives trust",
-    closingBody: "Measure readiness on the decisions that affect the P&L, not slide views.",
+    closingTitle: "Stop measuring completion. Start measuring learning.",
+    closingBody: "Verify teams learned the workflows that drive activation, adoption, and conversion, not slide views.",
   },
   {
     slug: "saas-product-learning",

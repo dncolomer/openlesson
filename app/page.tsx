@@ -1,12 +1,11 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState } from "react";
 import { ArrowRight, Check } from "lucide-react";
 import { Footer } from "@/components/Footer";
 import { LandingNav } from "@/components/LandingNav";
 import { ProductStack } from "@/components/ProductStack";
 import { TrackedCtaLink } from "@/components/TrackedCtaLink";
-import { VerificationExamplesWidget } from "@/components/VerificationExamplesWidget";
 import { trackCtaClick } from "@/lib/analytics";
 
 const CTA = "Create your Verification Workspace";
@@ -64,25 +63,38 @@ export default function B2BLandingPage() {
 
       <LandingNav />
 
-      <section className="relative z-10 mx-auto grid min-h-[calc(100vh-73px)] w-full max-w-6xl items-center gap-12 px-6 py-20 lg:grid-cols-[1.03fr_0.97fr]">
-        <div>
+      <section className="relative z-10 mx-auto flex min-h-[calc(100vh-73px)] w-full max-w-6xl items-center px-6 py-20">
+        <div className="w-full">
           <div className="mb-6 inline-block rounded-sm border border-zinc-800 bg-zinc-950/80 px-3 py-1 font-mono text-[10px] tracking-[2px] text-zinc-500">LEARNING VERIFICATION • HUMANS & AGENTS</div>
-          <h1 className="max-w-4xl text-5xl font-medium leading-[1.03] tracking-[-2.8px] text-white sm:text-6xl lg:text-[72px]">Beyond benchmarks for AI. Beyond quizzes for humans.</h1>
-          <div className="mt-7 max-w-3xl space-y-4 text-base leading-relaxed text-zinc-400 sm:text-lg">
-            <p>openLesson verifies that learning actually happened for people using tools and for agents deployed to production. Polished outputs and leaderboard scores are not proof.</p>
-            <div className="border border-cyan-400/20 bg-cyan-950/20 p-5 sm:p-6">
-              <p className="text-lg leading-relaxed text-zinc-300 sm:text-xl">
-                Our focus is{" "}
-                <span className="font-medium text-cyan-200">learning verification</span>.
-              </p>
-              <p className="mt-4 text-sm leading-relaxed text-zinc-400 sm:text-base">
-                <span className="text-zinc-200">Evidence API</span> verifies humans and agents.
-                <span className="text-zinc-200"> Think Aloud Protocol</span> and{" "}
-                <span className="text-zinc-200">ILE</span> serve human learning.
-                openLesson helps skill.md developers test and evolve agent skills in the{" "}
-                <span className="text-zinc-200">Agentic Learning Environment</span>.{" "}
-                <span className="font-medium text-white">No exam. No benchmark theater.</span>
-              </p>
+          <h1 className="max-w-5xl text-5xl font-medium leading-[1.03] tracking-[-2.8px] text-white sm:text-6xl lg:text-[72px]">Beyond benchmarks for AI. Beyond quizzes for humans.</h1>
+          <div className="mt-7 max-w-5xl space-y-4 text-base leading-relaxed text-zinc-400 sm:text-lg">
+            <p>openLesson verifies that learning actually happened for people using tools and for agents deployed to production.</p>
+            <div className="grid gap-4 lg:grid-cols-2">
+              <div className="border border-cyan-400/20 bg-cyan-950/20 p-5 sm:p-6">
+                <p className="text-lg leading-relaxed text-zinc-300 sm:text-xl">
+                  Our focus is{" "}
+                  <span className="font-medium text-cyan-200">learning verification</span>.
+                </p>
+                <p className="mt-4 text-sm leading-relaxed text-zinc-400 sm:text-base">
+                  <span className="text-zinc-200">Evidence API</span> verifies humans and agents.
+                  <span className="text-zinc-200"> Think Aloud Protocol</span> and{" "}
+                  <span className="text-zinc-200">ILE</span> serve human learning.
+                  openLesson helps skill.md developers test and evolve agent skills in the{" "}
+                  <span className="text-zinc-200">Agentic Learning Environment</span>.{" "}
+                  <span className="font-medium text-white">No exam. No benchmark theater.</span>
+                </p>
+              </div>
+              <div className="border border-violet-400/20 bg-violet-950/20 p-5 sm:p-6">
+                <p className="text-lg leading-relaxed text-zinc-300 sm:text-xl">
+                  Our results are{" "}
+                  <span className="font-medium text-violet-200">learning-to-conversion</span>.
+                </p>
+                <p className="mt-4 text-sm leading-relaxed text-zinc-400 sm:text-base">
+                  For humans: did they learn the workflow well enough to activate, adopt, and convert?
+                  For agents: did they learn the skills well enough to deploy and perform in production?
+                  Verification evidence tied to outcomes, not vanity completion or benchmark scores.
+                </p>
+              </div>
             </div>
           </div>
           <div className="mt-9 flex flex-col gap-3 sm:flex-row sm:items-center">
@@ -97,14 +109,7 @@ export default function B2BLandingPage() {
           </div>
           <p className="mt-6 font-mono text-[11px] uppercase tracking-[1.6px] text-zinc-600">Evidence API • Think Aloud Protocol • ILE • Agentic Learning Environment</p>
         </div>
-        <VerificationExamplesWidget />
       </section>
-
-      <ContentSection id="problem" eyebrow="THE PROBLEM" title="Completion metrics and benchmark scores hide unverified readiness.">
-        <p>Humans finish courses without learning how to use the tools. Agents pass eval suites without reliable tool use in production. AI assist makes both problems worse: strong-looking outputs with shallow understanding underneath.</p>
-        <p className="text-white">You deployed the copilot. Did anyone, human or agent, actually learn the workflow?</p>
-        <p>Quizzes reward recall. Benchmarks reward pattern matching. The only trustworthy signals are evidence traces and live reasoning under probe.</p>
-      </ContentSection>
 
       <section id="products" className="relative z-10 mx-auto max-w-6xl px-6 py-20">
         <SectionHeading
@@ -204,16 +209,5 @@ function SectionHeading({ eyebrow, title }: { eyebrow: string; title: string }) 
       <div className="mb-4 font-mono text-[10px] uppercase tracking-[2px] text-cyan-300/70">{eyebrow}</div>
       <h2 className="max-w-3xl text-4xl font-medium leading-[1.08] tracking-[-1.8px] text-white sm:text-5xl">{title}</h2>
     </div>
-  );
-}
-
-function ContentSection({ id, eyebrow, title, children }: { id?: string; eyebrow: string; title: string; children: ReactNode }) {
-  return (
-    <section id={id} className="relative z-10 mx-auto max-w-6xl px-6 py-20">
-      <div className="grid gap-8 py-14 lg:grid-cols-[0.9fr_1.1fr]">
-        <SectionHeading eyebrow={eyebrow} title={title} />
-        <div className="border border-zinc-800 bg-zinc-950/70 p-6 text-lg leading-relaxed text-zinc-400 backdrop-blur-sm sm:p-8">{children}</div>
-      </div>
-    </section>
   );
 }

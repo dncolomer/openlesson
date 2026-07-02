@@ -20,10 +20,22 @@ export type SolutionSlideDeck = {
 const PLATFORM_SLIDES: SalesSlide[] = [
   {
     layout: "statement",
-    kicker: "The platform",
-    title: "Everything runs on Verification Workspaces",
+    kicker: "Learning verification",
+    title: "Beyond benchmarks for AI. Beyond quizzes for humans.",
     subtitle:
-      "A structured environment around a real skill or scenario—broken into assessable blocks on a learning graph. Evidence accumulates as work happens.",
+      "openLesson verifies that learning actually happened for people using tools and for agents deployed to production.",
+    bullets: [
+      "Focus: learning verification with Evidence API, TAP, ILE, and ALE",
+      "Results: learning-to-conversion tied to activation, deploy gates, and production performance",
+      "No exam. No benchmark theater.",
+    ],
+  },
+  {
+    layout: "statement",
+    kicker: "The platform",
+    title: "Four products. One Verification Workspace.",
+    subtitle:
+      "A structured environment around a real skill or scenario, broken into assessable blocks on a learning graph. Evidence accumulates as work happens.",
     bullets: [
       "Create and enrich workspaces programmatically via Agentic API v2",
       "Ingest documents, call transcripts, screen shares, video, EEG, tool traces",
@@ -33,20 +45,20 @@ const PLATFORM_SLIDES: SalesSlide[] = [
   {
     layout: "split",
     kicker: "Product 1",
-    title: "Evidence API — headless verification",
+    title: "Evidence API: headless verification",
     left: {
       label: "What it does",
       items: [
         "Send unstructured evidence; receive continuous readiness scores",
         "Gap analysis updates as new artifacts arrive",
-        "No hosted session required—embed in LMS, HRIS, or agent pipelines",
+        "No hosted session required: embed in LMS, HRIS, or agent pipelines",
       ],
     },
     right: {
       label: "Best when",
       items: [
         "You already have call recordings, CRM notes, or work artifacts",
-        "You need ongoing scoring—not a one-time test event",
+        "You need ongoing scoring, not a one-time test event",
         "Your stack owns the learner or employee UX",
       ],
     },
@@ -54,12 +66,12 @@ const PLATFORM_SLIDES: SalesSlide[] = [
   {
     layout: "split",
     kicker: "Product 2",
-    title: "Think-Aloud Protocol — hosted verification",
+    title: "Think Aloud Protocol: hosted verification",
     left: {
       label: "What it does",
       items: [
         "Shareable evaluation URLs scoped to a block or full workspace",
-        "Humans verbalize reasoning while working—live cognition under probe",
+        "Humans verbalize reasoning while working: live cognition under probe",
         "Socratic follow-ups target hesitations, revisions, and causal chains",
       ],
     },
@@ -79,7 +91,7 @@ const PLATFORM_SLIDES: SalesSlide[] = [
     left: {
       label: "What it does",
       items: [
-        "Routes gap findings into guided practice—not another content library",
+        "Routes gap findings into guided practice, not another content library",
         "Think-aloud sessions, Socratic probes, targeted scenario blocks",
         "Humans improve scores with evidence at every step",
       ],
@@ -87,7 +99,7 @@ const PLATFORM_SLIDES: SalesSlide[] = [
     right: {
       label: "Best when",
       items: [
-        "Gaps need to close—not just be labeled in a dashboard",
+        "Gaps need to close, not just be labeled in a dashboard",
         "Managers need a repair path after evaluation, not a failing grade",
         "You are building durable judgment, not checking a box",
       ],
@@ -96,7 +108,7 @@ const PLATFORM_SLIDES: SalesSlide[] = [
   {
     layout: "split",
     kicker: "Product 4",
-    title: "Agentic Learning Environment (ALE) — coming soon",
+    title: "Agentic Learning Environment (ALE)",
     left: {
       label: "What it does",
       items: [
@@ -108,7 +120,7 @@ const PLATFORM_SLIDES: SalesSlide[] = [
     right: {
       label: "Best when",
       items: [
-        "You build agent skills—not just consume benchmark scores",
+        "You build agent skills, not just consume benchmark scores",
         "Verification gaps should feed back into skill refinement",
         "Agents and humans share the same workspace context",
       ],
@@ -117,11 +129,11 @@ const PLATFORM_SLIDES: SalesSlide[] = [
   {
     layout: "statement",
     kicker: "The loop",
-    title: "Verify → improve → re-verify on the same workspace",
+    title: "Verify learning. Close the gaps.",
     bullets: [
-      "Evidence API or Think-Aloud surfaces weak spots with shared scoring",
-      "ILE closes human gaps; ALE (upcoming) evolves agent skills",
-      "New evidence flows back—readiness becomes measurable over time",
+      "Evidence API or Think Aloud Protocol surfaces weak spots with shared scoring",
+      "ILE closes human gaps; ALE helps skill.md developers evolve agent skills",
+      "New evidence flows back: learning becomes measurable over time",
     ],
   },
 ];
@@ -148,7 +160,7 @@ export const SOLUTION_SLIDE_DECKS: Record<string, SolutionSlideDeck> = {
       {
         layout: "title",
         kicker: "openLesson · Sales Enablement",
-        title: "Prove discovery judgment—not script recall",
+        title: "Prove discovery judgment, not script recall",
         subtitle: "For revenue leaders whose reps look ready until procurement reframes the deal.",
       },
       {
@@ -158,7 +170,7 @@ export const SOLUTION_SLIDE_DECKS: Record<string, SolutionSlideDeck> = {
         bullets: [
           "Copilots draft talk tracks, ROI decks, and renewal emails in seconds",
           "LMS completion and role-play polish mask shallow product understanding",
-          "Managers see activity—not whether someone freezes when the buyer pushes back",
+          "Managers see activity, not whether someone freezes when the buyer pushes back",
         ],
       },
       {
@@ -188,7 +200,7 @@ export const SOLUTION_SLIDE_DECKS: Record<string, SolutionSlideDeck> = {
           ],
         },
         right: {
-          label: "How teams use the three products",
+          label: "How teams use the four products",
           items: [
             "Evidence API: score call prep, CRM notes, and demo artifacts continuously",
             "Think-Aloud: gate strategic accounts before live customer exposure",
@@ -199,7 +211,7 @@ export const SOLUTION_SLIDE_DECKS: Record<string, SolutionSlideDeck> = {
       {
         layout: "bullets",
         kicker: "Outcome",
-        title: "Evidence leaders can act on—not another coaching recording",
+        title: "Evidence leaders can act on, not another coaching recording",
         bullets: [
           "Marker scores and severity-ranked gaps per rep and per skill block",
           "Onboarding gates and promotion readiness with structured evaluation links",
@@ -215,7 +227,7 @@ export const SOLUTION_SLIDE_DECKS: Record<string, SolutionSlideDeck> = {
         bullets: [
           "Week 1: one Verification Workspace around enterprise renewal or competitive displacement",
           "Week 2: pilot pod runs ILE practice + Think-Aloud evaluation on critical blocks",
-          "Week 3: performance report for managers—gaps, repairs, and readiness evidence",
+          "Week 3: performance report for managers, gaps, repairs, and readiness evidence",
         ],
         footnote: "Does not replace CRM or enablement LMS. Adds the verification layer you are missing.",
       },
@@ -230,7 +242,7 @@ export const SOLUTION_SLIDE_DECKS: Record<string, SolutionSlideDeck> = {
         layout: "title",
         kicker: "openLesson · Customer Success",
         title: "Client escalation readiness for AI-enabled CS teams",
-        subtitle: "For CS leaders who need to know who can handle executives—not who can read an AI account plan.",
+        subtitle: "For CS leaders who need to know who can handle executives, not who can read an AI account plan.",
       },
       {
         layout: "statement",
@@ -269,18 +281,18 @@ export const SOLUTION_SLIDE_DECKS: Record<string, SolutionSlideDeck> = {
           ],
         },
         right: {
-          label: "How teams use the three products",
+          label: "How teams use the four products",
           items: [
             "Evidence API: ingest account plans, tool traces, and session artifacts",
             "Think-Aloud: evaluate before executive-facing moments or book promotions",
-            "ILE: practice repair strategies—not re-reading saved AI summaries",
+            "ILE: practice repair strategies, not re-reading saved AI summaries",
           ],
         },
       },
       {
         layout: "bullets",
         kicker: "Outcome",
-        title: "A repeatable readiness standard—not a one-off training event",
+        title: "A repeatable readiness standard, not a one-off training event",
         bullets: [
           "Gap-ranked reports attachable to coaching plans and promotion packets",
           "Async evaluation links for distributed teams without manager shadowing",
@@ -298,7 +310,7 @@ export const SOLUTION_SLIDE_DECKS: Record<string, SolutionSlideDeck> = {
           "Week 2: pod leads complete Think-Aloud evaluation on high-risk blocks",
           "Week 3: gap analysis feeds manager 1:1s and book-assignment decisions",
         ],
-        footnote: "Complements Gainsight and CS platforms—verification, not CRM replacement.",
+        footnote: "Complements Gainsight and CS platforms, verification, not CRM replacement.",
       },
     ],
   ),
@@ -310,7 +322,7 @@ export const SOLUTION_SLIDE_DECKS: Record<string, SolutionSlideDeck> = {
       {
         layout: "title",
         kicker: "openLesson · Compliance & Risk",
-        title: "Verify judgment—not policy awareness",
+        title: "Verify judgment, not policy awareness",
         subtitle: "For risk teams who need demonstrated reasoning before exceptions land on an examiner's desk.",
       },
       {
@@ -320,7 +332,7 @@ export const SOLUTION_SLIDE_DECKS: Record<string, SolutionSlideDeck> = {
         bullets: [
           "Staff pass policy quizzes with AI assistance and sound plausible on exceptions",
           "Model-generated rationales miss blast radius and undocumented assumptions",
-          "Auditors care about demonstrated judgment—not click-through rates",
+          "Auditors care about demonstrated judgment, not click-through rates",
         ],
       },
       {
@@ -350,7 +362,7 @@ export const SOLUTION_SLIDE_DECKS: Record<string, SolutionSlideDeck> = {
           ],
         },
         right: {
-          label: "How teams use the three products",
+          label: "How teams use the four products",
           items: [
             "Evidence API: pipe case management artifacts and continuous scoring",
             "Think-Aloud: auditable evaluation for approvers and regional leads",
@@ -361,10 +373,10 @@ export const SOLUTION_SLIDE_DECKS: Record<string, SolutionSlideDeck> = {
       {
         layout: "bullets",
         kicker: "Outcome",
-        title: "Audit-ready evidence—not another LMS certificate",
+        title: "Audit-ready evidence, not another LMS certificate",
         bullets: [
           "Structured scores, marker rationales, and gap analysis for remediation",
-          "Scope evaluation to high-risk roles and processes—not entire workforce blindly",
+          "Scope evaluation to high-risk roles and processes, not entire workforce blindly",
           "Agentic API embeds readiness gates into existing enterprise learning stacks",
         ],
       },
@@ -379,7 +391,7 @@ export const SOLUTION_SLIDE_DECKS: Record<string, SolutionSlideDeck> = {
           "Week 2: targeted cohort runs Think-Aloud evaluation on approval judgment blocks",
           "Week 3: gap reports feed remediation and examiner-ready evidence trails",
         ],
-        footnote: "Complements GRC platforms—human judgment verification, not policy management replacement.",
+        footnote: "Complements GRC platforms, human judgment verification, not policy management replacement.",
       },
     ],
   ),
@@ -391,7 +403,7 @@ export const SOLUTION_SLIDE_DECKS: Record<string, SolutionSlideDeck> = {
       {
         layout: "title",
         kicker: "openLesson · Hiring & Assessment",
-        title: "Hire for genuine cognition—not assist-tool polish",
+        title: "Hire for genuine cognition, not assist-tool polish",
         subtitle: "For talent teams who cannot trust live interviews when real-time AI feeds the answers.",
       },
       {
@@ -420,7 +432,7 @@ export const SOLUTION_SLIDE_DECKS: Record<string, SolutionSlideDeck> = {
       {
         layout: "split",
         kicker: "Hiring motion",
-        title: "Role-specific workspaces—not generic coding tests",
+        title: "Role-specific workspaces, not generic coding tests",
         left: {
           label: "Assessment blocks",
           items: [
@@ -431,11 +443,11 @@ export const SOLUTION_SLIDE_DECKS: Record<string, SolutionSlideDeck> = {
           ],
         },
         right: {
-          label: "How teams use the three products",
+          label: "How teams use the four products",
           items: [
-            "Think-Aloud: primary anti-cheat layer—verbalized reasoning under Socratic probe",
+            "Think-Aloud: primary anti-cheat layer, verbalized reasoning under Socratic probe",
             "Evidence API: async work-sample scoring before panel investment",
-            "ILE: optional practice path for internal mobility—not external candidates",
+            "ILE: optional practice path for internal mobility, not external candidates",
           ],
         },
       },
@@ -444,7 +456,7 @@ export const SOLUTION_SLIDE_DECKS: Record<string, SolutionSlideDeck> = {
         kicker: "Outcome",
         title: "Comparable evidence across candidates",
         bullets: [
-          "Marker scores and gap analysis on the same block—not presentation polish",
+          "Marker scores and gap analysis on the same block, not presentation polish",
           "Private async evaluation links reduce senior interviewer scheduling load",
           "Agentic API embeds assessment blocks into ATS or internal hiring portals",
         ],
@@ -458,7 +470,7 @@ export const SOLUTION_SLIDE_DECKS: Record<string, SolutionSlideDeck> = {
         bullets: [
           "Week 1: workspace for staff-plus, product, or strategy role archetype",
           "Week 2: run async Think-Aloud evaluation on 5–10 candidates or internal calibrations",
-          "Week 3: compare marker scores and gaps—shared rubric for hiring managers",
+          "Week 3: compare marker scores and gaps, shared rubric for hiring managers",
         ],
         footnote: "Measures cognition adversaries cannot paste in. Not another HackerRank clone.",
       },
@@ -472,7 +484,7 @@ export const SOLUTION_SLIDE_DECKS: Record<string, SolutionSlideDeck> = {
       {
         layout: "title",
         kicker: "openLesson · LMS Integration",
-        title: "Ship competency evidence—not completion badges",
+        title: "Stop measuring completion. Start measuring learning.",
         subtitle: "For edtech builders and L&D platforms whose customers ask whether learners can actually perform.",
       },
       {
@@ -481,7 +493,7 @@ export const SOLUTION_SLIDE_DECKS: Record<string, SolutionSlideDeck> = {
         title: "Your dashboards show completion. Buyers ask for outcomes.",
         bullets: [
           "Enrollments, watch time, and quiz passes do not prove performance under constraints",
-          "AI tools sit between the learner and the task—finishing is not learning",
+          "AI tools sit between the learner and the task, finishing is not learning",
           "Platforms that differentiate on outcomes need a readiness layer via API",
         ],
       },
@@ -501,7 +513,7 @@ export const SOLUTION_SLIDE_DECKS: Record<string, SolutionSlideDeck> = {
       {
         layout: "split",
         kicker: "Integration motion",
-        title: "Agentic API v2—built for your backend, not browser sessions",
+        title: "Agentic API v2, built for your backend, not browser sessions",
         left: {
           label: "API surface",
           items: [
@@ -527,7 +539,7 @@ export const SOLUTION_SLIDE_DECKS: Record<string, SolutionSlideDeck> = {
         title: "Keep your UX. Add verification depth.",
         bullets: [
           "Return gap analysis JSON to gradebooks, dashboards, or recommendation engines",
-          "White-label evaluation sessions—learners need not have OpenLesson accounts",
+          "White-label evaluation sessions, learners need not have OpenLesson accounts",
           "Same workspace context across Evidence API, Think-Aloud, and ILE products",
         ],
       },
@@ -540,9 +552,9 @@ export const SOLUTION_SLIDE_DECKS: Record<string, SolutionSlideDeck> = {
         bullets: [
           "Week 1: API key + workspace creation from your staging environment",
           "Week 2: evidence upload + evaluation link at a single module gate",
-          "Week 3: gap JSON returned to your gradebook or coach view—demo to customer",
+          "Week 3: gap JSON returned to your gradebook or coach view, demo to customer",
         ],
-        footnote: "Readiness backend—not an LMS replacement. Your front end stays yours.",
+        footnote: "Readiness backend, not an LMS replacement. Your front end stays yours.",
       },
     ],
   ),
@@ -555,7 +567,7 @@ export const SOLUTION_SLIDE_DECKS: Record<string, SolutionSlideDeck> = {
         layout: "title",
         kicker: "openLesson · Engineering & On-Call",
         title: "Train judgment before the pager fires",
-        subtitle: "For engineering leaders whose runbooks and copilots accelerate triage—but outages punish guesswork.",
+        subtitle: "For engineering leaders whose runbooks and copilots accelerate triage, but outages punish guesswork.",
       },
       {
         layout: "statement",
@@ -563,7 +575,7 @@ export const SOLUTION_SLIDE_DECKS: Record<string, SolutionSlideDeck> = {
         title: "Runbooks do not equal judgment.",
         bullets: [
           "Engineers follow AI remediation steps without understanding blast radius",
-          "Postmortems surface weak causal links—after customers already felt the pain",
+          "Postmortems surface weak causal links, after customers already felt the pain",
           "Traditional training rarely tests reasoning under incomplete telemetry",
         ],
       },
@@ -583,7 +595,7 @@ export const SOLUTION_SLIDE_DECKS: Record<string, SolutionSlideDeck> = {
       {
         layout: "split",
         kicker: "On-call motion",
-        title: "Simulate your failure modes—not generic SRE trivia",
+        title: "Simulate your failure modes, not generic SRE trivia",
         left: {
           label: "Workspace blocks",
           items: [
@@ -594,11 +606,11 @@ export const SOLUTION_SLIDE_DECKS: Record<string, SolutionSlideDeck> = {
           ],
         },
         right: {
-          label: "How teams use the three products",
+          label: "How teams use the four products",
           items: [
             "Evidence API: score postmortem writeups and triage artifacts over time",
             "Think-Aloud: gate pager scope expansion and IC promotion loops",
-            "ILE: narrate triage logic in practice—not memorize playbooks",
+            "ILE: narrate triage logic in practice, not memorize playbooks",
           ],
         },
       },
@@ -609,7 +621,7 @@ export const SOLUTION_SLIDE_DECKS: Record<string, SolutionSlideDeck> = {
         bullets: [
           "Gap analysis highlights weak causal links before the next outage",
           "Performance reports document reasoning quality for staff engineering ladders",
-          "Complements fire drills—without staging full production failures",
+          "Complements fire drills, without staging full production failures",
         ],
       },
     ],
@@ -623,7 +635,7 @@ export const SOLUTION_SLIDE_DECKS: Record<string, SolutionSlideDeck> = {
           "Week 2: on-call rotation subset runs Think-Aloud triage evaluation",
           "Week 3: gap report informs drill planning and pager assignment decisions",
         ],
-        footnote: "Platform, security, database, and support escalation roles—not SRE-only.",
+        footnote: "Platform, security, database, and support escalation roles, not SRE-only.",
       },
     ],
   ),
@@ -635,7 +647,7 @@ export const SOLUTION_SLIDE_DECKS: Record<string, SolutionSlideDeck> = {
       {
         layout: "title",
         kicker: "openLesson · SaaS Product",
-        title: "Measure learning-to-conversion—not tutorial completion",
+        title: "Measure learning-to-conversion, not tutorial completion",
         subtitle: "For product teams whose users finish onboarding but never activate, expand, or convert.",
       },
       {
@@ -644,7 +656,7 @@ export const SOLUTION_SLIDE_DECKS: Record<string, SolutionSlideDeck> = {
         title: "Your funnel shows completion. Your revenue shows something else.",
         bullets: [
           "Users click through tours, watch walkthroughs, and check every onboarding box",
-          "Activation and trial-to-paid stall anyway—support tickets reveal they never learned the workflow",
+          "Activation and trial-to-paid stall anyway, support tickets reveal they never learned the workflow",
           "Product analytics answer exposure; nobody verifies capability on the path to conversion",
         ],
       },
@@ -679,7 +691,7 @@ export const SOLUTION_SLIDE_DECKS: Record<string, SolutionSlideDeck> = {
           items: [
             "Evidence API: score session replays, tool traces, and support transcripts",
             "Think Aloud Protocol: verify high-touch trial and enterprise setup flows",
-            "ILE: repair adoption gaps before churn—not after the downgrade",
+            "ILE: repair adoption gaps before churn, not after the downgrade",
           ],
         },
       },
@@ -689,7 +701,7 @@ export const SOLUTION_SLIDE_DECKS: Record<string, SolutionSlideDeck> = {
         title: "Learning evidence product and growth teams can act on",
         bullets: [
           "Readiness scores as leading indicators for activation and conversion KPIs",
-          "Gap analysis tied to specific product workflows—not generic NPS dips",
+          "Gap analysis tied to specific product workflows, not generic NPS dips",
           "Agentic API embeds verification at onboarding gates without leaving your UX",
         ],
       },
@@ -704,7 +716,7 @@ export const SOLUTION_SLIDE_DECKS: Record<string, SolutionSlideDeck> = {
           "Week 2: pipe in-app evidence or run TAP on strategic trial accounts",
           "Week 3: correlate readiness gaps with activation and support ticket patterns",
         ],
-        footnote: "Product growth, customer education, solutions, and CS—not a replacement for your analytics stack.",
+        footnote: "Product growth, customer education, solutions, and CS, not a replacement for your analytics stack.",
       },
     ],
   ),
@@ -716,7 +728,7 @@ export const SOLUTION_SLIDE_DECKS: Record<string, SolutionSlideDeck> = {
       {
         layout: "title",
         kicker: "openLesson · Corporate L&D",
-        title: "Measure readiness—not seat time",
+        title: "Measure learning, not seat time",
         subtitle: "For L&D leaders asked to prove ROI while AI makes every course easier to finish without learning.",
       },
       {
@@ -725,7 +737,7 @@ export const SOLUTION_SLIDE_DECKS: Record<string, SolutionSlideDeck> = {
         title: "Executives ask if you are ready. LMS reports answer a different question.",
         bullets: [
           "Launch readiness, regulatory change, and AI workflow shifts need judgment evidence",
-          "Completion dashboards show who clicked—not who can decide under pressure",
+          "Completion dashboards show who clicked, not who can decide under pressure",
           "L&D investment needs a line to demonstrable business scenarios",
         ],
       },
@@ -745,7 +757,7 @@ export const SOLUTION_SLIDE_DECKS: Record<string, SolutionSlideDeck> = {
       {
         layout: "split",
         kicker: "L&D motion",
-        title: "Academies built around business scenarios—not content libraries",
+        title: "Academies built around business scenarios, not content libraries",
         left: {
           label: "Workspace pathways",
           items: [
@@ -756,9 +768,9 @@ export const SOLUTION_SLIDE_DECKS: Record<string, SolutionSlideDeck> = {
           ],
         },
         right: {
-          label: "How teams use the three products",
+          label: "How teams use the four products",
           items: [
-            "ILE: practice on scenarios that affect the P&L—not slide views",
+            "ILE: practice on scenarios that affect the P&L, not slide views",
             "Think-Aloud: manager-friendly evaluation summaries for 1:1 coaching",
             "Evidence API + Agentic API: trigger checks from LMS, HRIS, or internal portals",
           ],
@@ -769,7 +781,7 @@ export const SOLUTION_SLIDE_DECKS: Record<string, SolutionSlideDeck> = {
         kicker: "Outcome",
         title: "Evidence executives and managers trust",
         bullets: [
-          "Severity-ranked gaps and specific repair recommendations—not opaque scores",
+          "Severity-ranked gaps and specific repair recommendations, not opaque scores",
           "Async evaluation scales coaching beyond manager shadowing alone",
           "Guest keys support contractors, partners, and acquired teams",
         ],
@@ -783,9 +795,9 @@ export const SOLUTION_SLIDE_DECKS: Record<string, SolutionSlideDeck> = {
         bullets: [
           "Week 1: Verification Workspace for highest-priority role family or launch scenario",
           "Week 2: learners practice in ILE; managers receive evaluation gap summaries",
-          "Week 3: executive readout—readiness evidence tied to business scenario, not seat time",
+          "Week 3: executive readout, readiness evidence tied to business scenario, not seat time",
         ],
-        footnote: "Verification layer on top of your existing LMS—not a rip-and-replace.",
+        footnote: "Verification layer on top of your existing LMS, not a rip-and-replace.",
       },
     ],
   ),

@@ -112,9 +112,9 @@ export default function PricingPage() {
         <Navbar />
         <section className="mx-auto w-full max-w-6xl flex-1 px-6 py-24">
           <div className="max-w-4xl">
-            <div className="mb-6 inline-block rounded-sm border border-neutral-800 bg-neutral-950/80 px-3 py-1 font-mono text-[10px] uppercase tracking-[2px] text-neutral-500">Performance Readiness</div>
-            <h1 className="max-w-3xl text-5xl font-medium leading-[1.05] tracking-[-2.5px] text-white sm:text-6xl">Measure readiness before AI hides the gap.</h1>
-            <p className="mt-7 max-w-2xl text-lg leading-relaxed text-neutral-400">Choose the workspace capacity you need to turn think-aloud practice into evidence of judgment, adaptability, and skill. Training completion is not performance readiness.</p>
+            <div className="mb-6 inline-block rounded-sm border border-neutral-800 bg-neutral-950/80 px-3 py-1 font-mono text-[10px] uppercase tracking-[2px] text-neutral-500">LEARNING VERIFICATION • HUMANS & AGENTS</div>
+            <h1 className="max-w-3xl text-5xl font-medium leading-[1.05] tracking-[-2.5px] text-white sm:text-6xl">Stop measuring completion. Start measuring learning.</h1>
+            <p className="mt-7 max-w-2xl text-lg leading-relaxed text-neutral-400">Choose the workspace capacity you need to verify learning with evidence and close gaps when scores fall short. No exam. No benchmark theater.</p>
           </div>
 
           <div className="mt-16 grid gap-5 lg:grid-cols-3">

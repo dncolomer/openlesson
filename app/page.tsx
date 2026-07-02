@@ -117,7 +117,7 @@ export default function B2BLandingPage() {
           <span className="text-zinc-200">Evidence API</span> verifies humans and agents from artifacts.{" "}
           <span className="text-zinc-200">Think Aloud Protocol</span> and{" "}
           <span className="text-zinc-200">ILE</span> focus on human learning.{" "}
-          <span className="text-zinc-200">Agentic Learning Environment</span>—upcoming—helps skill developers test and evolve agent skills.
+          <span className="text-zinc-200">Agentic Learning Environment</span> helps skill developers test and evolve agent skills.
         </p>
         <div className="mt-10">
           <ProductStack />

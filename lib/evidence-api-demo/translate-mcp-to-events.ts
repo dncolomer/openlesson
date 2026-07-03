@@ -139,7 +139,7 @@ function createEvent(
 ): McpSimulationEvent {
   const baseVerb = slugify(toolName) || "mcp_event";
   const verb = total > 1 ? `${baseVerb}_${index + 1}` : baseVerb;
-  const sourceData = asRecord(record) ?? { value: record };
+  const recordData = asRecord(record) ?? { value: record };
 
   return {
     id: crypto.randomUUID(),
@@ -149,7 +149,7 @@ function createEvent(
     timestamp: inferTimestamp(record),
     mcpTool: toolName,
     outcome: inferOutcome(record),
-    sourceData,
+    sourceData: { ...recordData, mcp_import: true },
     status: "pending",
   };
 }

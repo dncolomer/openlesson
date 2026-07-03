@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useI18n } from "@/lib/i18n";
 import { slugifyIntegrationName } from "@/lib/agent-v2/integration-skill";
+import { readJsonResponse } from "@/lib/read-json-response";
 
 interface WorkspaceIntegrationPanelProps {
   planId: string;
@@ -89,12 +90,19 @@ export function WorkspaceIntegrationPanel({
           },
         }),
       });
-      const data = await res.json();
+      const data = await readJsonResponse<{
+        error?: string;
+        code?: string;
+        skill_md?: string;
+      }>(res);
       if (!res.ok) {
         if (data.code === "teams_required") {
           throw new Error(t("workspaceIntegration.teamsRequired"));
         }
         throw new Error(data.error || t("workspaceIntegration.errorGeneric"));
+      }
+      if (!data.skill_md) {
+        throw new Error(t("workspaceIntegration.errorGeneric"));
       }
       const filename = `${integrationName.trim()}-skill.md`;
       downloadText(filename, data.skill_md, "text/markdown;charset=utf-8");
@@ -122,7 +130,7 @@ export function WorkspaceIntegrationPanel({
           },
         }),
       });
-      const data = await res.json();
+      const data = await readJsonResponse<{ error?: string; code?: string }>(res);
       if (!res.ok) {
         if (data.code === "teams_required") {
           throw new Error(t("workspaceIntegration.teamsRequired"));

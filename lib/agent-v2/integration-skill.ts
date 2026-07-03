@@ -15,6 +15,8 @@ export interface IntegrationSkillRequest {
   base_url?: string;
   include_sections?: string[];
   integration_hints?: EvidenceSchemaIntegrationHints;
+  /** When true, generates evidence spec inline (slower; may timeout). Default false — fetch spec via evidence-schema API separately. */
+  prefetch_evidence_spec?: boolean;
 }
 
 export interface IntegrationSkillResult {
@@ -79,6 +81,8 @@ export function parseIntegrationSkillRequest(body: Record<string, unknown>): Int
     };
   }
 
+  const prefetchEvidenceSpec = body.prefetch_evidence_spec === true;
+
   return {
     integration_name: integrationName.slice(0, 120),
     partner_description: partnerDescription,
@@ -87,6 +91,7 @@ export function parseIntegrationSkillRequest(body: Record<string, unknown>): Int
     base_url: baseUrl,
     include_sections,
     integration_hints,
+    prefetch_evidence_spec: prefetchEvidenceSpec,
   };
 }
 

@@ -70,6 +70,15 @@ describe("parseIntegrationSkillRequest", () => {
     expect(parsed?.eval_definition).toBe("Verify discovery judgment under pushback");
     expect(parsed?.base_url).toBe("https://example.com");
     expect(parsed?.include_sections).toEqual(["auth", "performance"]);
+    expect(parsed?.prefetch_evidence_spec).toBe(false);
+  });
+
+  it("parses prefetch_evidence_spec when true", () => {
+    const parsed = parseIntegrationSkillRequest({
+      integration_name: "Acme",
+      prefetch_evidence_spec: true,
+    });
+    expect(parsed?.prefetch_evidence_spec).toBe(true);
   });
 });
 

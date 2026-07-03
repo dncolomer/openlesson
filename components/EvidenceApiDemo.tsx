@@ -54,6 +54,10 @@ type DemoPhase = "picker" | "intro" | "creating" | "simulating";
 type DemoView = "simulator" | "evidence" | "evaluation" | "score";
 type ScoreCardTab = "overview" | "competency" | "markers" | "strengths" | "gaps" | "history";
 
+const DEMO_TAB_STAGE = "w-full min-h-[44rem]";
+const DEMO_TAB_PANEL =
+  "flex min-h-[44rem] w-full flex-col overflow-hidden rounded-lg border border-zinc-800 bg-zinc-950/70";
+
 type ReportSnapshot = {
   id: string;
   report: PerformanceReport;
@@ -1094,7 +1098,7 @@ export function EvidenceApiDemo() {
           </p>
         ) : null}
 
-        {phase !== "picker" && (!showViewSwitcher || activeView === "simulator") ? (
+        {phase !== "picker" && !showViewSwitcher ? (
           <SimulatorPanel
             demo={activeDemo}
             phase={phase}
@@ -1103,7 +1107,6 @@ export function EvidenceApiDemo() {
             onStart={handleStartDemo}
             onRunAction={handleRunAction}
             onBackToPicker={handleBackToPicker}
-            fullHeight={showViewSwitcher}
             isCustom={isCustomDemoId(demoId)}
             customPrompt={customPrompt}
             onCustomPromptChange={setCustomPrompt}
@@ -1111,49 +1114,70 @@ export function EvidenceApiDemo() {
           />
         ) : null}
 
-        {showViewSwitcher && activeView === "evidence" ? (
-          <EvidenceLayerView
-            planId={planId}
-            workspaceTitle={workspaceTitle}
-            apiPaths={apiPaths}
-            planFiles={planFiles}
-            sessionId={sessionId}
-            apiLog={apiLog}
-            error={error}
-            onReset={handleReset}
-          />
-        ) : null}
+        {showViewSwitcher ? (
+          <div className={DEMO_TAB_STAGE}>
+            {activeView === "simulator" ? (
+              <SimulatorPanel
+                demo={activeDemo}
+                phase={phase}
+                worldState={worldState}
+                runningActionId={runningActionId}
+                onStart={handleStartDemo}
+                onRunAction={handleRunAction}
+                onBackToPicker={handleBackToPicker}
+                fullHeight
+                isCustom={isCustomDemoId(demoId)}
+                customPrompt={customPrompt}
+                onCustomPromptChange={setCustomPrompt}
+                customPromptMinLength={CUSTOM_PROMPT_MIN_LENGTH}
+              />
+            ) : null}
 
-        {showViewSwitcher && activeView === "evaluation" ? (
-          <ContinuousEvaluationView
-            planId={planId}
-            evidenceCount={evidenceCount}
-            isFetchingSchema={isFetchingSchema}
-            isRegeneratingSkill={isRegeneratingSkill}
-            skillRegenHint={skillRegenHint}
-            error={error}
-            skillHistory={skillHistory}
-            schemaHistory={schemaHistory}
-            latestSkillMd={latestSkillMd}
-            latestSkillName={latestSkillName}
-            latestSchema={latestSchema}
-            onFetchEvidenceSchema={handleFetchEvidenceSchema}
-            onRegenerateSkill={handleRegenerateSkill}
-          />
-        ) : null}
+            {activeView === "evidence" ? (
+              <EvidenceLayerView
+                planId={planId}
+                workspaceTitle={workspaceTitle}
+                apiPaths={apiPaths}
+                planFiles={planFiles}
+                sessionId={sessionId}
+                apiLog={apiLog}
+                error={error}
+                onReset={handleReset}
+              />
+            ) : null}
 
-        {showViewSwitcher && activeView === "score" ? (
-          <ScoreView
-            worldState={worldState}
-            evidenceCount={evidenceCount}
-            actionCount={actionCount}
-            distinctEvidenceActions={distinctEvidenceActions}
-            isReporting={isReporting}
-            report={report}
-            performanceResponse={performanceResponseRaw}
-            reportHistory={reportHistory}
-            onRequestPerformance={handleRequestPerformance}
-          />
+            {activeView === "evaluation" ? (
+              <ContinuousEvaluationView
+                planId={planId}
+                evidenceCount={evidenceCount}
+                isFetchingSchema={isFetchingSchema}
+                isRegeneratingSkill={isRegeneratingSkill}
+                skillRegenHint={skillRegenHint}
+                error={error}
+                skillHistory={skillHistory}
+                schemaHistory={schemaHistory}
+                latestSkillMd={latestSkillMd}
+                latestSkillName={latestSkillName}
+                latestSchema={latestSchema}
+                onFetchEvidenceSchema={handleFetchEvidenceSchema}
+                onRegenerateSkill={handleRegenerateSkill}
+              />
+            ) : null}
+
+            {activeView === "score" ? (
+              <ScoreView
+                worldState={worldState}
+                evidenceCount={evidenceCount}
+                actionCount={actionCount}
+                distinctEvidenceActions={distinctEvidenceActions}
+                isReporting={isReporting}
+                report={report}
+                performanceResponse={performanceResponseRaw}
+                reportHistory={reportHistory}
+                onRequestPerformance={handleRequestPerformance}
+              />
+            ) : null}
+          </div>
         ) : null}
       </main>
 
@@ -1573,8 +1597,14 @@ function SimulatorPanel({
   }, [demo.id]);
 
   return (
-    <section className={`flex flex-col overflow-hidden rounded-lg border ${styles.section}`}>
-      <div className={`border-b px-5 py-4 sm:px-6 ${styles.headerBorder}`}>
+    <section
+      className={
+        fullHeight
+          ? DEMO_TAB_PANEL
+          : `flex w-full flex-col overflow-hidden rounded-lg border ${styles.section}`
+      }
+    >
+      <div className={`shrink-0 border-b px-5 py-4 sm:px-6 ${styles.headerBorder}`}>
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <div
@@ -1597,7 +1627,7 @@ function SimulatorPanel({
         </div>
       </div>
 
-      <div className="flex flex-1 flex-col p-5 sm:p-6">
+      <div className={`flex flex-1 flex-col p-5 sm:p-6 ${fullHeight ? "min-h-0" : ""}`}>
         {phase === "intro" || phase === "creating" ? (
           <div className="flex flex-1 flex-col justify-center py-8">
             <Sparkles className={`size-8 ${styles.sparkles}`} />
@@ -1724,7 +1754,9 @@ function SimulatorPanel({
               {demo.categoryMeta[activeCategory].description}
             </p>
 
-            <div className={`pr-1 ${fullHeight ? "min-h-[24rem]" : "max-h-[32rem] overflow-y-auto"}`}>
+            <div
+              className={`pr-1 ${fullHeight ? "min-h-0 flex-1 overflow-y-auto" : "max-h-[32rem] overflow-y-auto"}`}
+            >
               <SimulationCategorySection
                 demo={demo}
                 category={activeCategory}
@@ -1874,8 +1906,8 @@ function EvidenceLayerView({
   onReset: () => void;
 }) {
   return (
-    <section className="flex flex-col rounded-lg border border-zinc-800 bg-zinc-950/70">
-      <div className="border-b border-zinc-800 px-5 py-4 sm:px-6">
+    <section className={DEMO_TAB_PANEL}>
+      <div className="shrink-0 border-b border-zinc-800 px-5 py-4 sm:px-6">
         <div className="flex items-center gap-2">
           <Radio className="size-4 text-zinc-300" />
           <div>
@@ -1885,7 +1917,7 @@ function EvidenceLayerView({
         </div>
       </div>
 
-      <div className="flex flex-1 flex-col gap-6 p-5 sm:p-6 lg:grid lg:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)] lg:items-start lg:gap-8">
+      <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto p-5 sm:p-6 lg:grid lg:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)] lg:items-start lg:gap-8">
         <div className="flex flex-col gap-5">
           {workspaceTitle ? (
             <div className="rounded-md border border-zinc-800 bg-black/30 px-4 py-3">
@@ -2050,8 +2082,8 @@ function ContinuousEvaluationView({
   const hasArtifacts = schemaHistory.length > 0 || skillHistory.length > 0;
 
   return (
-    <section className="flex flex-col rounded-lg border border-zinc-800 bg-zinc-950/70">
-      <div className="border-b border-zinc-800 px-5 py-4 sm:px-6">
+    <section className={DEMO_TAB_PANEL}>
+      <div className="shrink-0 border-b border-zinc-800 px-5 py-4 sm:px-6">
         <div className="flex items-center gap-2">
           <RefreshCw className="size-4 text-zinc-300" />
           <div>
@@ -2063,7 +2095,7 @@ function ContinuousEvaluationView({
         </div>
       </div>
 
-      <div className="flex flex-1 flex-col gap-6 p-5 sm:p-6">
+      <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto p-5 sm:p-6">
         {!canRegenerate ? (
           <p className="rounded-md border border-dashed border-zinc-800 px-4 py-12 text-center text-sm text-zinc-500">
             Run at least one simulation action to unlock spec and skill regeneration.
@@ -2254,8 +2286,8 @@ function ScoreView({
   }, [latestSnapshot?.id]);
 
   return (
-    <section className="flex flex-col rounded-lg border border-zinc-800 bg-zinc-950/70">
-      <div className="border-b border-zinc-800 px-5 py-5 sm:px-6">
+    <section className={DEMO_TAB_PANEL}>
+      <div className="shrink-0 border-b border-zinc-800 px-5 py-5 sm:px-6">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex items-center gap-3">
             <div className="flex size-10 items-center justify-center rounded-md border border-zinc-700 bg-black/40">
@@ -2302,7 +2334,7 @@ function ScoreView({
         )}
       </div>
 
-      <div className="flex flex-1 flex-col gap-6 p-5 sm:p-6">
+      <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto p-5 sm:p-6">
         {report && performanceResponse ? (
           <div className="flex items-center justify-end">
             <div
@@ -2364,7 +2396,7 @@ function ScoreView({
             }
           />
         ) : report ? null : (
-          <div className="flex min-h-[20rem] flex-col items-center justify-center rounded-lg border border-dashed border-zinc-800 px-6 py-16 text-center">
+          <div className="flex flex-1 flex-col items-center justify-center rounded-lg border border-dashed border-zinc-800 px-6 py-16 text-center">
             <Gauge className="size-10 text-zinc-600" />
             <h3 className="mt-4 text-lg font-medium text-zinc-300">No score yet</h3>
             <p className="mt-2 max-w-md text-sm leading-relaxed text-zinc-500">

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { createBrowserClient } from "@supabase/ssr";
 import {
@@ -12,7 +12,6 @@ import {
   Gauge,
   LayoutGrid,
   Loader2,
-  Radio,
   RefreshCw,
   Sparkles,
   Zap,
@@ -51,7 +50,7 @@ import { aestheticImageForId, fetchAestheticPackages } from "@/lib/aesthetics";
 import { readJsonResponse } from "@/lib/read-json-response";
 
 type DemoPhase = "picker" | "intro" | "creating" | "simulating";
-type DemoView = "simulator" | "evidence" | "evaluation" | "score";
+type DemoView = "simulator" | "evaluation" | "score";
 type ScoreCardTab = "overview" | "competency" | "markers" | "strengths" | "gaps" | "history";
 
 const DEMO_TAB_STAGE = "h-[48rem] w-full min-w-0";
@@ -96,28 +95,9 @@ type SchemaSnapshot = {
   timestamp: Date;
 };
 
-type ApiLogEntry = {
-  id: string;
-  method: string;
-  path: string;
-  status: "pending" | "success" | "error";
-  summary: string;
-  detail?: string;
-  timestamp: Date;
-};
-
-type PlanFileSummary = {
-  id: string;
-  file_name: string;
-  file_size: number;
-  mime_type: string;
-  created_at: string;
-};
-
 type WorkspaceResponse = {
   workspace: { id: string; title: string };
   blocks: DemoWorkspaceBlock[];
-  files?: PlanFileSummary[];
   demo: {
     id?: string;
     product: string;
@@ -127,12 +107,6 @@ type WorkspaceResponse = {
     model_doc_preview?: string;
   };
   custom_definition?: EvidenceApiDemoDefinition;
-  api_paths: {
-    evidence_schema: string;
-    evidence_upload: string;
-    integration_skill: string;
-    performance: string;
-  };
 };
 
 type EvidenceResponse = {
@@ -290,13 +264,10 @@ export function EvidenceApiDemo() {
   const [planId, setPlanId] = useState<string | null>(null);
   const [workspaceTitle, setWorkspaceTitle] = useState<string | null>(null);
   const [blocks, setBlocks] = useState<DemoWorkspaceBlock[]>([]);
-  const [apiPaths, setApiPaths] = useState<WorkspaceResponse["api_paths"] | null>(null);
-  const [planFiles, setPlanFiles] = useState<PlanFileSummary[]>([]);
   const [modelDocPreview, setModelDocPreview] = useState<string | null>(null);
   const [sessionId, setSessionId] = useState<string>(() => createSessionId());
   const [worldState, setWorldState] = useState<SimulationWorldState>(createInitialWorldState);
   const [runningActionId, setRunningActionId] = useState<string | null>(null);
-  const [apiLog, setApiLog] = useState<ApiLogEntry[]>([]);
   const [error, setError] = useState("");
   const [report, setReport] = useState<PerformanceReport | null>(null);
   const [performanceResponseRaw, setPerformanceResponseRaw] = useState<PerformanceResponse | null>(null);
@@ -321,20 +292,6 @@ export function EvidenceApiDemo() {
 
   const actionCount = totalActionCount(worldState);
   const distinctEvidenceActions = countDistinctEvidenceActions(activeDemo, worldState);
-
-  const addLog = useCallback(
-    (entry: Omit<ApiLogEntry, "id" | "timestamp">) => {
-      setApiLog((prev) => [
-        {
-          ...entry,
-          id: crypto.randomUUID(),
-          timestamp: new Date(),
-        },
-        ...prev,
-      ].slice(0, 12));
-    },
-    []
-  );
 
   useEffect(() => {
     let cancelled = false;
@@ -484,17 +441,7 @@ export function EvidenceApiDemo() {
     setEvidenceCount(0);
     setLastSkillEvidenceCount(null);
     setSkillRegenHint(false);
-    setApiLog([]);
     setActiveView("simulator");
-
-    addLog({
-      method: "POST",
-      path: "/api/evidence-api-demo/workspace",
-      status: "pending",
-      summary: isCustomDemoId(demoId)
-        ? "Generating custom events and creating workspace…"
-        : `Creating verification workspace for ${activeDemo.productName}…`,
-    });
 
     try {
       const res = await fetchWithTimeout(
@@ -535,8 +482,6 @@ export function EvidenceApiDemo() {
       setPlanId(data.workspace.id);
       setWorkspaceTitle(data.workspace.title);
       setBlocks(data.blocks);
-      setApiPaths(data.api_paths);
-      setPlanFiles(data.files ?? []);
       setModelDocPreview(data.demo.model_doc_preview ?? null);
       const initialWorld = createInitialWorldState();
       persistState({
@@ -550,27 +495,9 @@ export function EvidenceApiDemo() {
         customPrompt: isCustomDemoId(demoId) ? customPrompt.trim() : undefined,
       });
 
-      const fileDetail = data.files?.length
-        ? `${data.blocks.length} blocks · ${data.files.map((f) => f.file_name).join(", ")}`
-        : `${data.blocks.length} assessable blocks generated`;
-
-      addLog({
-        method: "POST",
-        path: "/api/evidence-api-demo/workspace",
-        status: "success",
-        summary: `Workspace created: ${data.workspace.title}`,
-        detail: fileDetail,
-      });
-
       setPhase("simulating");
       setWorldState(initialWorld);
     } catch (err) {
-      addLog({
-        method: "POST",
-        path: "/api/evidence-api-demo/workspace",
-        status: "error",
-        summary: err instanceof Error ? err.message : "Workspace creation failed",
-      });
       setError(err instanceof Error ? err.message : "Failed to start demo");
       setPhase("intro");
     }
@@ -594,17 +521,6 @@ export function EvidenceApiDemo() {
           ? `${action.timeDeltaDays ?? 0} day(s) elapsed before the next product activity.`
           : `User completed "${action.label}" in ${activeDemo.productName}.`,
       outcome: action.outcome,
-    });
-
-    addLog({
-      method: "POST",
-      path: "/api/evidence-api-demo/evidence",
-      status: "pending",
-      summary:
-        action.kind === "time_simulation"
-          ? `Simulating +${action.timeDeltaDays ?? 0} day(s) idle gap`
-          : `Uploading evidence: ${action.label}`,
-      detail: blockId ? `block_id: ${blockId.slice(0, 8)}…` : action.category,
     });
 
     try {
@@ -656,23 +572,7 @@ export function EvidenceApiDemo() {
         setSkillRegenHint(true);
       }
 
-      addLog({
-        method: "POST",
-        path: "/api/evidence-api-demo/evidence",
-        status: "success",
-        summary:
-          action.kind === "time_simulation"
-            ? `Time advanced to day ${nextWorld.simulatedDays}`
-            : `Evidence stored: ${action.label}`,
-        detail: `artifact ${data.evidence.id.slice(0, 8)}…`,
-      });
     } catch (err) {
-      addLog({
-        method: "POST",
-        path: "/api/evidence-api-demo/evidence",
-        status: "error",
-        summary: err instanceof Error ? err.message : "Upload failed",
-      });
       setError(err instanceof Error ? err.message : "Failed to upload evidence");
     } finally {
       setRunningActionId(null);
@@ -684,14 +584,6 @@ export function EvidenceApiDemo() {
 
     setIsFetchingSchema(true);
     setError("");
-
-    addLog({
-      method: "POST",
-      path: "/api/evidence-api-demo/evidence-schema",
-      status: "pending",
-      summary: "Re-fetching evidence spec from workspace context…",
-      detail: `${evidenceCount} artifact(s), day ${worldState.simulatedDays}`,
-    });
 
     try {
       const res = await fetchWithTimeout(
@@ -734,20 +626,7 @@ export function EvidenceApiDemo() {
         },
       ]);
 
-      addLog({
-        method: "POST",
-        path: "/api/evidence-api-demo/evidence-schema",
-        status: "success",
-        summary: `Evidence spec updated: ${data.spec.schema_name}`,
-        detail: `v${data.spec.spec_version || "?"} · ${data.spec.tool_submissions?.length ?? 0} tool spec(s)`,
-      });
     } catch (err) {
-      addLog({
-        method: "POST",
-        path: "/api/evidence-api-demo/evidence-schema",
-        status: "error",
-        summary: err instanceof Error ? err.message : "Schema fetch failed",
-      });
       setError(err instanceof Error ? err.message : "Failed to fetch evidence schema");
     } finally {
       setIsFetchingSchema(false);
@@ -760,14 +639,6 @@ export function EvidenceApiDemo() {
     setIsRegeneratingSkill(true);
     setError("");
     setSkillRegenHint(false);
-
-    addLog({
-      method: "POST",
-      path: "/api/evidence-api-demo/integration-skill",
-      status: "pending",
-      summary: "Regenerating integration skill.md from latest evidence…",
-      detail: `${evidenceCount} artifact(s), ${distinctEvidenceActions} distinct actions`,
-    });
 
     try {
       const res = await fetchWithTimeout(
@@ -835,22 +706,7 @@ export function EvidenceApiDemo() {
         ]);
       }
 
-      addLog({
-        method: "POST",
-        path: "/api/evidence-api-demo/integration-skill",
-        status: "success",
-        summary: `Skill regenerated: ${data.skill_name}`,
-        detail: data.evidence_spec_prefetched
-          ? `Prefetched spec ${data.evidence_spec?.schema_name || ""}`
-          : "Skill only",
-      });
     } catch (err) {
-      addLog({
-        method: "POST",
-        path: "/api/evidence-api-demo/integration-skill",
-        status: "error",
-        summary: err instanceof Error ? err.message : "Skill regeneration failed",
-      });
       setError(err instanceof Error ? err.message : "Failed to regenerate skill");
     } finally {
       setIsRegeneratingSkill(false);
@@ -870,13 +726,6 @@ export function EvidenceApiDemo() {
     const snapshotEvidenceCount = evidenceCount;
     const snapshotActionCount = actionCount;
     const snapshotSimulatedDays = worldState.simulatedDays;
-
-    addLog({
-      method: "POST",
-      path: "/api/evidence-api-demo/performance",
-      status: "pending",
-      summary: `Requesting score (${snapshotEvidenceCount} evidence artifact${snapshotEvidenceCount === 1 ? "" : "s"})…`,
-    });
 
     try {
       const res = await fetchWithTimeout(
@@ -910,20 +759,7 @@ export function EvidenceApiDemo() {
         },
       ]);
 
-      addLog({
-        method: "POST",
-        path: "/api/evidence-api-demo/performance",
-        status: "success",
-        summary: "Score updated",
-        detail: `${confidenceLabel(data.report.confidence)} · ${snapshotActionCount} actions · day ${snapshotSimulatedDays}`,
-      });
     } catch (err) {
-      addLog({
-        method: "POST",
-        path: "/api/evidence-api-demo/performance",
-        status: "error",
-        summary: err instanceof Error ? err.message : "Report failed",
-      });
       setError(err instanceof Error ? err.message : "Failed to generate report");
     } finally {
       setIsReporting(false);
@@ -939,8 +775,6 @@ export function EvidenceApiDemo() {
     setPlanId(null);
     setWorkspaceTitle(null);
     setBlocks([]);
-    setApiPaths(null);
-    setPlanFiles([]);
     setModelDocPreview(null);
     setSessionId(createSessionId());
     setWorldState(createInitialWorldState());
@@ -958,7 +792,6 @@ export function EvidenceApiDemo() {
     setEvidenceCount(0);
     setLastSkillEvidenceCount(null);
     setSkillRegenHint(false);
-    setApiLog([]);
     setError("");
     setActiveView("simulator");
   };
@@ -1085,7 +918,6 @@ export function EvidenceApiDemo() {
           activeView={activeView}
           onChange={setActiveView}
           hasReport={!!report}
-          evidenceCount={evidenceCount}
         />
       ) : null}
 
@@ -1098,7 +930,7 @@ export function EvidenceApiDemo() {
           />
         ) : null}
 
-        {error && activeView !== "evidence" && phase !== "picker" ? (
+        {error && phase !== "picker" ? (
           <p className="mb-4 rounded-md border border-zinc-600 bg-zinc-950 px-4 py-3 text-sm text-zinc-200">
             {error}
           </p>
@@ -1136,19 +968,6 @@ export function EvidenceApiDemo() {
                 customPrompt={customPrompt}
                 onCustomPromptChange={setCustomPrompt}
                 customPromptMinLength={CUSTOM_PROMPT_MIN_LENGTH}
-              />
-            ) : null}
-
-            {activeView === "evidence" ? (
-              <EvidenceLayerView
-                planId={planId}
-                workspaceTitle={workspaceTitle}
-                apiPaths={apiPaths}
-                planFiles={planFiles}
-                sessionId={sessionId}
-                apiLog={apiLog}
-                error={error}
-                onReset={handleReset}
               />
             ) : null}
 
@@ -1351,12 +1170,10 @@ function DemoViewSwitcher({
   activeView,
   onChange,
   hasReport,
-  evidenceCount,
 }: {
   activeView: DemoView;
   onChange: (view: DemoView) => void;
   hasReport: boolean;
-  evidenceCount: number;
 }) {
   const tabs: Array<{
     id: DemoView;
@@ -1370,13 +1187,6 @@ function DemoViewSwitcher({
       label: "Event simulator",
       description: "Product event simulator",
       icon: LayoutGrid,
-    },
-    {
-      id: "evidence",
-      label: "Evidence layer",
-      description: "API log & workspace context",
-      icon: Radio,
-      badge: evidenceCount > 0 ? String(evidenceCount) : undefined,
     },
     {
       id: "evaluation",
@@ -1896,152 +1706,6 @@ function downloadTextFile(filename: string, content: string, mimeType = "text/pl
 
 function downloadJsonFile(filename: string, data: unknown) {
   downloadTextFile(filename, JSON.stringify(data, null, 2), "application/json;charset=utf-8");
-}
-
-function EvidenceLayerView({
-  planId,
-  workspaceTitle,
-  apiPaths,
-  planFiles,
-  sessionId,
-  apiLog,
-  error,
-  onReset,
-}: {
-  planId: string | null;
-  workspaceTitle: string | null;
-  apiPaths: WorkspaceResponse["api_paths"] | null;
-  planFiles: PlanFileSummary[];
-  sessionId: string;
-  apiLog: ApiLogEntry[];
-  error: string;
-  onReset: () => void;
-}) {
-  return (
-    <section className={DEMO_TAB_PANEL}>
-      <div className={DEMO_TAB_HEADER}>
-        <div className="flex items-center gap-2">
-          <Radio className="size-4 text-zinc-300" />
-          <div>
-            <div className="text-sm font-medium text-white">OpenLesson verification layer</div>
-            <div className="text-xs text-zinc-500">Workspace context and live API activity</div>
-          </div>
-        </div>
-      </div>
-
-      <div className={DEMO_TAB_BODY_SCROLL}>
-        <div className="grid w-full min-w-0 gap-6 lg:grid-cols-2 lg:gap-8">
-        <div className="flex min-w-0 flex-col gap-5">
-          {workspaceTitle ? (
-            <div className="rounded-md border border-zinc-800 bg-black/30 px-4 py-3">
-              <div className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-600">
-                Verification workspace
-              </div>
-              <div className="mt-1 text-base text-white">{workspaceTitle}</div>
-              {planId ? (
-                <code className="mt-1 block truncate font-mono text-[11px] text-zinc-500">{planId}</code>
-              ) : null}
-            </div>
-          ) : null}
-
-          <div>
-            <div className="mb-2 font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-600">
-              API activity
-            </div>
-            {apiLog.length === 0 ? (
-              <p className="rounded-md border border-dashed border-zinc-800 px-4 py-10 text-center text-sm text-zinc-500">
-                Run simulation actions to stream evidence uploads here.
-              </p>
-            ) : (
-              <ul className="space-y-2 pr-1">
-                {apiLog.map((entry) => (
-                  <li
-                    key={entry.id}
-                    className="rounded-md border border-zinc-800/80 bg-black/40 px-4 py-3"
-                  >
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="rounded bg-zinc-800 px-1.5 py-0.5 font-mono text-[10px] text-zinc-300">
-                        {entry.method}
-                      </span>
-                      <span className="font-mono text-[10px] text-zinc-500">{entry.path}</span>
-                      <span
-                        className={`ml-auto font-mono text-[10px] uppercase ${
-                          entry.status === "success"
-                            ? "text-white"
-                            : entry.status === "error"
-                              ? "text-zinc-400"
-                              : "text-zinc-500"
-                        }`}
-                      >
-                        {entry.status}
-                      </span>
-                    </div>
-                    <p className="mt-1.5 text-sm text-zinc-300">{entry.summary}</p>
-                    {entry.detail ? (
-                      <p className="mt-1 font-mono text-[10px] text-zinc-500">{entry.detail}</p>
-                    ) : null}
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-
-          {error ? <p className="text-sm text-zinc-300">{error}</p> : null}
-
-          {planId ? (
-            <div className="flex flex-wrap items-center gap-3 border-t border-zinc-800 pt-4">
-              <button
-                type="button"
-                onClick={onReset}
-                className="text-xs text-zinc-500 transition hover:text-zinc-300"
-              >
-                Reset demo session
-              </button>
-              <p className="font-mono text-[10px] text-zinc-600">session: {sessionId.slice(0, 8)}…</p>
-            </div>
-          ) : null}
-        </div>
-
-        <div className="flex min-w-0 flex-col gap-5">
-          {planFiles.length > 0 ? (
-            <div className="rounded-md border border-zinc-800 bg-black/30 p-4">
-              <div className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-600">
-                Workspace files (plan_files)
-              </div>
-              <ul className="mt-3 space-y-2">
-                {planFiles.map((file) => (
-                  <li
-                    key={file.id}
-                    className="flex flex-wrap items-center justify-between gap-2 rounded border border-zinc-800/80 px-3 py-2 text-xs"
-                  >
-                    <span className="font-mono text-zinc-300">{file.file_name}</span>
-                    <span className="font-mono text-[10px] text-zinc-500">
-                      {file.mime_type} · {Math.round(file.file_size / 1024)} KB
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ) : null}
-
-          {apiPaths ? (
-            <div className="rounded-md border border-zinc-800 bg-black/30 p-4">
-              <div className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-600">
-                Production API paths
-              </div>
-              <ul className="mt-2 space-y-1.5 font-mono text-[10px] text-zinc-400">
-                <li>POST …/evidence</li>
-                <li>POST …/performance</li>
-                <li>POST …/evidence-schema</li>
-                <li>POST …/integration-skill</li>
-              </ul>
-            </div>
-          ) : null}
-        </div>
-        </div>
-      </div>
-    </section>
-  );
 }
 
 function DownloadArtifactButton({

@@ -54,9 +54,9 @@ type DemoPhase = "picker" | "intro" | "creating" | "simulating";
 type DemoView = "simulator" | "evidence" | "evaluation" | "score";
 type ScoreCardTab = "overview" | "competency" | "markers" | "strengths" | "gaps" | "history";
 
-const DEMO_TAB_STAGE = "h-[48rem] w-full";
+const DEMO_TAB_STAGE = "h-[48rem] w-full min-w-0";
 const DEMO_TAB_PANEL =
-  "flex h-full w-full flex-col overflow-hidden rounded-lg border border-zinc-800 bg-zinc-950/70";
+  "box-border flex h-full w-full min-w-full max-w-full flex-col overflow-hidden rounded-lg border border-zinc-800 bg-zinc-950/70";
 const DEMO_TAB_HEADER = "shrink-0 border-b border-zinc-800 px-5 py-4 sm:px-6";
 const DEMO_TAB_BODY =
   "flex h-[38rem] w-full flex-col overflow-hidden p-5 sm:p-6";
@@ -1089,7 +1089,7 @@ export function EvidenceApiDemo() {
         />
       ) : null}
 
-      <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:py-8">
+      <main className="mx-auto w-full max-w-7xl min-w-0 px-4 py-6 sm:px-6 lg:py-8">
         {phase === "picker" ? (
           <DemoUseCasePicker
             demos={EVIDENCE_API_DEMOS}
@@ -1929,8 +1929,9 @@ function EvidenceLayerView({
         </div>
       </div>
 
-      <div className={`${DEMO_TAB_BODY_SCROLL} lg:grid lg:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)] lg:items-start lg:gap-8`}>
-        <div className="flex flex-col gap-5">
+      <div className={DEMO_TAB_BODY_SCROLL}>
+        <div className="grid w-full min-w-0 gap-6 lg:grid-cols-2 lg:gap-8">
+        <div className="flex min-w-0 flex-col gap-5">
           {workspaceTitle ? (
             <div className="rounded-md border border-zinc-800 bg-black/30 px-4 py-3">
               <div className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-600">
@@ -2001,7 +2002,7 @@ function EvidenceLayerView({
           ) : null}
         </div>
 
-        <div className="flex flex-col gap-5">
+        <div className="flex min-w-0 flex-col gap-5">
           {planFiles.length > 0 ? (
             <div className="rounded-md border border-zinc-800 bg-black/30 p-4">
               <div className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-600">
@@ -2036,6 +2037,7 @@ function EvidenceLayerView({
               </ul>
             </div>
           ) : null}
+        </div>
         </div>
       </div>
     </section>

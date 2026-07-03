@@ -1,15 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { authenticateRequest, errorResponse } from "@/lib/agent-v2/auth";
-import {
-  buildEvidenceSchemaInstructions,
-  buildEvidenceSchemaPrompt,
-  EVIDENCE_EVAL_SCHEMA_OUTPUT,
-  parseEvidenceSchemaRequest,
-  type EvidenceEvalSchemaResult,
-} from "@/lib/agent-v2/evidence-schema";
-import { buildWorkspacePerformanceContext } from "@/lib/agent-v2/performance-context";
+import { parseEvidenceSchemaRequest } from "@/lib/agent-v2/evidence-schema";
+import { generateWorkspaceEvidenceSpec } from "@/lib/agent-v2/evidence-integration";
 import { canAccessAgentWorkspace } from "@/lib/agent-v2/workspace-access";
-import { callXaiResponsesWithFiles } from "@/lib/xai-client";
 
 export const runtime = "nodejs";
 export const maxDuration = 120;
@@ -57,47 +50,37 @@ export async function POST(req: NextRequest, { params }: RouteProps) {
     if (!block) return errorResponse(404, "block_not_found", "Block not found in this workspace");
   }
 
-  let context;
+  const origin = req.nextUrl.origin;
+  const workspaceTitle = workspace.title || workspace.root_topic || "workspace";
+
   try {
-    context = await buildWorkspacePerformanceContext({
+    const { spec, contextCounts, fileIds } = await generateWorkspaceEvidenceSpec({
       supabase,
       auth,
       workspaceId,
+      workspaceTitle,
+      request,
+      baseUrl: origin,
       blockId,
     });
+
+    return NextResponse.json({
+      ...spec,
+      definition: request.definition,
+      workspace_summary: {
+        id: workspace.id,
+        title: workspace.title,
+        root_topic: workspace.root_topic,
+      },
+      context_counts: contextCounts,
+      file_ids: fileIds,
+    });
   } catch (error) {
-    console.error("[agent/evidence-schema] Context build failed:", error);
-    return errorResponse(500, "internal_error", "Failed to prepare workspace context");
+    console.error("[agent/evidence-schema] Generation failed:", error);
+    return errorResponse(
+      500,
+      "internal_error",
+      error instanceof Error ? error.message : "Failed to generate evidence specification"
+    );
   }
-
-  const workspaceTitle = workspace.title || workspace.root_topic || "workspace";
-  const schemaResult = await callXaiResponsesWithFiles<EvidenceEvalSchemaResult>(
-    buildEvidenceSchemaPrompt(workspaceTitle),
-    context.fileIds,
-    {
-      instructions: buildEvidenceSchemaInstructions(request, blockId),
-      temperature: 0.25,
-      maxOutputTokens: 4096,
-      fetchTimeout: 120000,
-      jsonSchema: EVIDENCE_EVAL_SCHEMA_OUTPUT,
-    }
-  );
-
-  if (!schemaResult.success || !schemaResult.data) {
-    return errorResponse(500, "internal_error", schemaResult.error || "Failed to generate evidence schema");
-  }
-
-  return NextResponse.json({
-    ...schemaResult.data,
-    workspace_id: workspaceId,
-    block_id: blockId,
-    definition: request.definition,
-    workspace_summary: {
-      id: workspace.id,
-      title: workspace.title,
-      root_topic: workspace.root_topic,
-    },
-    context_counts: context.payload.counts,
-    file_ids: context.fileIds,
-  });
 }

@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { authenticateRequest, errorResponse } from "@/lib/agent-v2/auth";
 import {
+  buildEvidenceSchemaRequestFromIntegration,
+  generateWorkspaceEvidenceSpec,
+  resolveEvalDefinition,
+} from "@/lib/agent-v2/evidence-integration";
+import {
   buildIntegrationSkillInstructions,
   buildIntegrationSkillPrompt,
   deriveSkillName,
@@ -12,7 +17,7 @@ import { canAccessAgentWorkspace } from "@/lib/agent-v2/workspace-access";
 import { callXaiResponsesWithFiles } from "@/lib/xai-client";
 
 export const runtime = "nodejs";
-export const maxDuration = 120;
+export const maxDuration = 180;
 
 interface RouteProps {
   params: Promise<{ id: string }>;
@@ -26,7 +31,7 @@ export async function POST(req: NextRequest, { params }: RouteProps) {
 
   const { data: workspace } = await supabase
     .from("learning_plans")
-    .select("id, user_id, organization_id, guest_user_id, title, root_topic, description")
+    .select("id, user_id, organization_id, guest_user_id, title, root_topic, description, notes")
     .eq("id", workspaceId)
     .single();
 
@@ -65,7 +70,18 @@ export async function POST(req: NextRequest, { params }: RouteProps) {
 
   if (blockId) blocksQuery = blocksQuery.eq("id", blockId);
 
-  const [{ data: blocks }, contextResult] = await Promise.all([
+  const origin = req.nextUrl.origin;
+  const workspaceTitle = workspace.title || workspace.root_topic || "workspace";
+  const evalDefinition = resolveEvalDefinition(request.eval_definition, workspace);
+
+  const evidenceSchemaRequest = buildEvidenceSchemaRequestFromIntegration(
+    evalDefinition,
+    request.integration_name,
+    request.partner_description,
+    blockId
+  );
+
+  const [{ data: blocks }, contextResult, evidenceSpecResult] = await Promise.all([
     blocksQuery,
     buildWorkspacePerformanceContext({
       supabase,
@@ -76,17 +92,31 @@ export async function POST(req: NextRequest, { params }: RouteProps) {
       console.error("[agent/integration-skill] Context build failed:", error);
       return null;
     }),
+    evidenceSchemaRequest
+      ? generateWorkspaceEvidenceSpec({
+          supabase,
+          auth,
+          workspaceId,
+          workspaceTitle,
+          request: evidenceSchemaRequest,
+          baseUrl: origin,
+          blockId,
+        }).catch((error) => {
+          console.error("[agent/integration-skill] Evidence spec generation failed:", error);
+          return null;
+        })
+      : Promise.resolve(null),
   ]);
 
   const fileIds = contextResult?.fileIds || [];
-  const workspaceTitle = workspace.title || workspace.root_topic || "workspace";
+  const evidenceSpec = evidenceSpecResult?.spec || null;
 
   const skillResult = await callXaiResponsesWithFiles(
     buildIntegrationSkillPrompt(workspaceTitle, request.integration_name),
     fileIds,
     {
       instructions: buildIntegrationSkillInstructions(
-        request,
+        { ...request, eval_definition: evalDefinition, base_url: request.base_url || origin },
         {
           id: workspace.id,
           title: workspace.title,
@@ -94,7 +124,8 @@ export async function POST(req: NextRequest, { params }: RouteProps) {
           description: workspace.description,
         },
         blocks || [],
-        blockId
+        blockId,
+        evidenceSpec
       ),
       temperature: 0.45,
       maxOutputTokens: 8192,
@@ -106,20 +137,19 @@ export async function POST(req: NextRequest, { params }: RouteProps) {
     return errorResponse(500, "internal_error", skillResult.error || "Failed to generate integration skill");
   }
 
-  const skillName = deriveSkillName(request.integration_name);
-  const suggestedSharePath = deriveSuggestedSharePath(request.integration_name);
-
   return NextResponse.json({
     skill_md: skillResult.text,
-    skill_name: skillName,
-    suggested_share_path: suggestedSharePath,
+    skill_name: deriveSkillName(request.integration_name),
+    suggested_share_path: deriveSuggestedSharePath(request.integration_name),
     workspace_summary: {
       id: workspace.id,
       title: workspace.title || workspace.root_topic || "Untitled",
       root_topic: workspace.root_topic,
       block_count: blocks?.length || 0,
     },
-    context_counts: contextResult?.payload.counts || null,
+    evidence_spec: evidenceSpec,
+    evidence_spec_api_path: evidenceSpec?.evidence_spec_api_path || null,
+    context_counts: contextResult?.payload.counts || evidenceSpecResult?.contextCounts || null,
     file_ids: fileIds,
   });
 }

@@ -1,3 +1,5 @@
+import type { PerformanceContextPayload } from "./performance-context";
+
 export interface EvidenceSchemaIntegrationHints {
   tool_name?: string;
   event_verbs?: string[];
@@ -11,6 +13,30 @@ export interface EvidenceSchemaRequest {
   integration_hints?: EvidenceSchemaIntegrationHints;
 }
 
+export interface ToolSubmissionSpec {
+  tool_name: string;
+  purpose: string;
+  when_to_submit: string;
+  schema: Record<string, unknown>;
+  example_payload: Record<string, unknown>;
+  required_fields?: string[];
+  optional_fields?: string[];
+  block_ids?: string[];
+}
+
+export interface EvidenceTypeContract {
+  type: "tool" | "screen" | "video" | "eeg";
+  mime_types: string[];
+  when_to_use: string;
+}
+
+export interface EvidenceUploadContract {
+  endpoint_pattern: string;
+  encoding: "base64";
+  evidence_types: EvidenceTypeContract[];
+  common_fields: string[];
+}
+
 export interface EvidenceEvalSchemaResult {
   schema: Record<string, unknown>;
   schema_name: string;
@@ -21,6 +47,13 @@ export interface EvidenceEvalSchemaResult {
   required_fields?: string[];
   optional_fields?: string[];
   collection_guidance?: string;
+  tool_submissions?: ToolSubmissionSpec[];
+  evidence_upload_contract?: EvidenceUploadContract;
+  spec_version?: string;
+  evidence_spec_api_path?: string;
+  evidence_upload_api_path?: string;
+  workspace_id?: string;
+  block_id?: string | null;
 }
 
 export const EVIDENCE_EVAL_SCHEMA_OUTPUT = {
@@ -30,7 +63,7 @@ export const EVIDENCE_EVAL_SCHEMA_OUTPUT = {
     properties: {
       schema: {
         type: "object",
-        description: "JSON Schema describing the ideal tool evidence payload for evaluation",
+        description: "JSON Schema for the primary tool evidence payload",
         additionalProperties: true,
       },
       schema_name: { type: "string" },
@@ -53,6 +86,48 @@ export const EVIDENCE_EVAL_SCHEMA_OUTPUT = {
         items: { type: "string" },
       },
       collection_guidance: { type: "string" },
+      tool_submissions: {
+        type: "array",
+        description: "Formal per-tool evidence submission specifications for this workspace",
+        items: {
+          type: "object",
+          properties: {
+            tool_name: { type: "string" },
+            purpose: { type: "string" },
+            when_to_submit: { type: "string" },
+            schema: { type: "object", additionalProperties: true },
+            example_payload: { type: "object", additionalProperties: true },
+            required_fields: { type: "array", items: { type: "string" } },
+            optional_fields: { type: "array", items: { type: "string" } },
+            block_ids: { type: "array", items: { type: "string" } },
+          },
+          required: ["tool_name", "purpose", "when_to_submit", "schema", "example_payload"],
+          additionalProperties: false,
+        },
+      },
+      evidence_upload_contract: {
+        type: "object",
+        properties: {
+          endpoint_pattern: { type: "string" },
+          encoding: { type: "string", enum: ["base64"] },
+          evidence_types: {
+            type: "array",
+            items: {
+              type: "object",
+              properties: {
+                type: { type: "string", enum: ["tool", "screen", "video", "eeg"] },
+                mime_types: { type: "array", items: { type: "string" } },
+                when_to_use: { type: "string" },
+              },
+              required: ["type", "mime_types", "when_to_use"],
+              additionalProperties: false,
+            },
+          },
+          common_fields: { type: "array", items: { type: "string" } },
+        },
+        required: ["endpoint_pattern", "encoding", "evidence_types", "common_fields"],
+        additionalProperties: false,
+      },
     },
     required: [
       "schema",
@@ -61,6 +136,8 @@ export const EVIDENCE_EVAL_SCHEMA_OUTPUT = {
       "example_payload",
       "recommended_mime_type",
       "recommended_evidence_type",
+      "tool_submissions",
+      "evidence_upload_contract",
     ],
     additionalProperties: false,
   },
@@ -95,13 +172,41 @@ export function parseEvidenceSchemaRequest(body: Record<string, unknown>): Evide
   };
 }
 
+function formatWorkspaceContextSummary(payload?: PerformanceContextPayload): string {
+  if (!payload) {
+    return "Workspace context file attached separately (blocks, evidence history, plan files, GHL sessions).";
+  }
+
+  const blockLines = payload.blocks
+    .map((block) => `- ${block.title || "Untitled"} (${block.id}): ${block.description || "no description"}`)
+    .join("\n");
+
+  const evidenceTools = Array.from(
+    new Set(payload.evidence.map((row) => row.tool_name).filter((name): name is string => !!name))
+  );
+
+  return `Workspace context summary (use the attached JSON for full detail):
+- title: ${payload.workspace.title || "n/a"}
+- root_topic: ${payload.workspace.root_topic || "n/a"}
+- description: ${payload.workspace.description || "n/a"}
+- notes: ${payload.workspace.notes || "n/a"}
+- focus_block_id: ${payload.focus_block_id || "full workspace"}
+- blocks (${payload.counts.blocks}):
+${blockLines || "  none"}
+- existing evidence artifacts: ${payload.counts.evidence_artifacts}
+- known tool names in prior uploads: ${evidenceTools.length ? evidenceTools.join(", ") : "none yet"}
+- plan files: ${payload.counts.plan_files}
+- GHL sessions: ${payload.counts.ghl_sessions}`;
+}
+
 export function buildEvidenceSchemaInstructions(
   request: EvidenceSchemaRequest,
-  blockId?: string | null
+  blockId?: string | null,
+  workspacePayload?: PerformanceContextPayload
 ): string {
   const scope = blockId
-    ? "Design an optimal evidence input schema for ONE block inside a verification workspace."
-    : "Design an optimal evidence input schema for an entire verification workspace.";
+    ? "Design a formal evidence specification for ONE block inside this verification workspace."
+    : "Design a formal evidence specification for the entire verification workspace.";
 
   const hints = request.integration_hints;
   const hintsText = hints
@@ -119,7 +224,11 @@ export function buildEvidenceSchemaInstructions(
 
   return `${scope}
 
-You are an OpenLesson evidence architect. Given a workspace context (attached JSON summary and any plan files on xAI) plus an evaluation definition from the API caller, produce a JSON Schema that describes the **ideal tool evidence payload** for optimal learning and gap evaluation via POST .../performance.
+You are an OpenLesson evidence architect. Produce a **formal evidence specification** that tells integrators exactly how to submit tool usage and related artifacts for learning verification via POST .../evidence and evaluation via POST .../performance.
+
+Use the full workspace context: attached JSON summary, block titles/descriptions, existing evidence patterns, plan files, and GHL session signals.
+
+${formatWorkspaceContextSummary(workspacePayload)}
 
 The caller's evaluation definition:
 """
@@ -129,19 +238,23 @@ ${request.definition}
 Integration hints (optional):
 ${hintsText}
 
-Rules:
-1. Default to evidence type "tool" with recommended_mime_type "application/json" unless the definition clearly needs screen, video, or eeg enrichments.
-2. The returned "schema" must be a valid JSON Schema (draft-07 style) for the JSON object that goes inside the evidence upload "data" field (after base64 encoding). Prefer type "object" with explicit properties, required arrays, and enums where helpful.
-3. Optimize for signals that POST .../performance can use: time-ordered events, learner reflections, goals achieved, artifact summaries, decision rationale, outcomes, and block-relevant competencies.
-4. Align field names and semantics with the workspace root topic, block titles, and any uploaded plan files when present.
-5. Include an example_payload that validates against your schema conceptually.
-6. Keep required_fields practical — do not over-constrain integrators; use optional_fields for enrichments.
-7. collection_guidance should explain when and how often to upload evidence for this definition.
-8. schema_name should be snake_case, prefixed with "eval_input_".
+Output rules:
+1. "schema" is the primary/default JSON Schema (draft-07) for the main tool evidence payload placed in the evidence upload "data" field (base64-encoded JSON).
+2. "tool_submissions" must list one or more formal tool submission specs. Include separate entries when the workspace implies multiple tools, workflows, or block-specific payloads. Each entry needs tool_name, purpose, when_to_submit, schema, example_payload, and optional block_ids tying submissions to workspace blocks.
+3. Align every schema with workspace blocks, root topic, notes, and any tool names already present in evidence history.
+4. "evidence_upload_contract" must formally describe POST .../evidence:
+   - endpoint_pattern: "POST /api/v2/agent/workspaces/{workspace_id}/evidence"
+   - encoding: "base64"
+   - evidence_types: tool (application/json, text/plain), screen (image/png, image/jpeg, image/webp), video (video/mp4, video/webm), eeg (application/json) with when_to_use guidance
+   - common_fields: evidence_type, data, mime_type, file_name, plan_node_id, session_id, timestamp_ms, tool_name, tool_action, metadata
+5. Optimize payloads for POST .../performance: time-ordered events, learner reflections, goals achieved, artifact summaries, decision rationale, outcomes, block-relevant competencies.
+6. "collection_guidance" explains cadence, checkpoint timing, and block-scoped vs workspace-global uploads.
+7. schema_name must be snake_case prefixed with "eval_input_".
+8. Keep required_fields practical; use optional_fields for enrichments.
 
 Return only JSON matching the output schema.`;
 }
 
 export function buildEvidenceSchemaPrompt(workspaceTitle: string): string {
-  return `Generate the optimal evidence input JSON Schema for evaluating "${workspaceTitle}" in OpenLesson.`;
+  return `Generate the formal evidence specification for evaluating "${workspaceTitle}" in OpenLesson, using the full workspace context.`;
 }

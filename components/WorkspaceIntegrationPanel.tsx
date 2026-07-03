@@ -82,6 +82,11 @@ export function WorkspaceIntegrationPanel({
           planId,
           integration_name: integrationName.trim(),
           partner_description: planDescription || planNotes || planTopic,
+          eval_definition: evalDefinition.trim(),
+          integration_hints: {
+            tool_name: integrationName.trim(),
+            partner_agent: integrationName.trim(),
+          },
         }),
       });
       const data = await res.json();

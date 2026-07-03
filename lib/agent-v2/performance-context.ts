@@ -28,6 +28,58 @@ export interface PerformanceReport {
   confidence: "emerging" | "developing" | "clear" | "well-connected";
 }
 
+export interface PerformanceContextPayload {
+  workspace: {
+    id: string;
+    title: string | null;
+    root_topic: string | null;
+    description: string | null;
+    notes: string | null;
+  };
+  focus_block_id: string | null;
+  generated_at: string;
+  blocks: Array<{
+    id: string;
+    title: string | null;
+    description: string | null;
+    status: string | null;
+    is_start: boolean | null;
+    session_id: string | null;
+  }>;
+  ghl_sessions: Array<Record<string, unknown>>;
+  evidence: Array<{
+    id: string;
+    type: string;
+    block_id: string | null;
+    session_id: string | null;
+    file_name: string;
+    mime_type: string;
+    xai_file_id: string;
+    timestamp_ms: number;
+    tool_name: string | null;
+    tool_action: string | null;
+    device_name: string | null;
+    sample_count: number | null;
+    metadata: Record<string, unknown>;
+    created_at: string;
+  }>;
+  plan_files: Array<{
+    id: string;
+    file_name: string;
+    mime_type: string;
+    xai_file_id: string;
+    created_at: string;
+  }>;
+  linked_sessions: Array<Record<string, unknown>>;
+  counts: {
+    blocks: number;
+    ghl_sessions: number;
+    evidence_artifacts: number;
+    linked_sessions: number;
+    plan_files: number;
+  };
+}
+
 interface BuildContextOptions {
   supabase: SupabaseClient;
   auth: AuthContext;
@@ -118,7 +170,7 @@ export async function buildWorkspacePerformanceContext({
         .order("created_at", { ascending: false })
     : { data: [] };
 
-  const payload = {
+  const payload: PerformanceContextPayload = {
     workspace: {
       id: workspace.id,
       title: workspace.title,

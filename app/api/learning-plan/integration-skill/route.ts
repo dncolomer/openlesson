@@ -1,5 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
+  buildEvidenceSchemaRequestFromIntegration,
+  generateWorkspaceEvidenceSpec,
+  resolveEvalDefinition,
+} from "@/lib/agent-v2/evidence-integration";
+import {
   buildIntegrationSkillInstructions,
   buildIntegrationSkillPrompt,
   deriveSkillName,
@@ -12,7 +17,7 @@ import { requireWorkspaceOwnerSession } from "@/lib/agent-v2/workspace-session-a
 import { callXaiResponsesWithFiles } from "@/lib/xai-client";
 
 export const runtime = "nodejs";
-export const maxDuration = 120;
+export const maxDuration = 180;
 
 export async function POST(req: NextRequest) {
   let body: Record<string, unknown>;
@@ -43,9 +48,14 @@ export async function POST(req: NextRequest) {
       typeof body.partner_description === "string" && body.partner_description.trim()
         ? body.partner_description.trim()
         : plan.description?.trim() || plan.notes?.trim() || undefined,
+    eval_definition:
+      typeof body.eval_definition === "string" && body.eval_definition.trim()
+        ? body.eval_definition.trim()
+        : undefined,
     block_id: typeof body.block_id === "string" ? body.block_id : undefined,
     base_url: typeof body.base_url === "string" ? body.base_url : origin,
     include_sections: body.include_sections,
+    integration_hints: body.integration_hints,
   });
 
   if (!request) {
@@ -71,7 +81,17 @@ export async function POST(req: NextRequest) {
     .eq("plan_id", planId)
     .order("created_at", { ascending: true });
 
-  const [{ data: blocks }, contextResult] = await Promise.all([
+  const workspaceTitle = plan.title || plan.root_topic || "workspace";
+  const evalDefinition = resolveEvalDefinition(request.eval_definition, plan);
+
+  const evidenceSchemaRequest = buildEvidenceSchemaRequestFromIntegration(
+    evalDefinition,
+    request.integration_name,
+    request.partner_description,
+    blockId
+  );
+
+  const [{ data: blocks }, contextResult, evidenceSpecResult] = await Promise.all([
     blockId ? blocksQuery.eq("id", blockId) : blocksQuery,
     buildWorkspacePerformanceContext({
       supabase,
@@ -82,17 +102,31 @@ export async function POST(req: NextRequest) {
       console.error("[learning-plan/integration-skill] Context build failed:", error);
       return null;
     }),
+    evidenceSchemaRequest
+      ? generateWorkspaceEvidenceSpec({
+          supabase,
+          auth,
+          workspaceId: planId,
+          workspaceTitle,
+          request: evidenceSchemaRequest,
+          baseUrl: origin,
+          blockId,
+        }).catch((error) => {
+          console.error("[learning-plan/integration-skill] Evidence spec generation failed:", error);
+          return null;
+        })
+      : Promise.resolve(null),
   ]);
 
   const fileIds = contextResult?.fileIds || [];
-  const workspaceTitle = plan.title || plan.root_topic || "workspace";
+  const evidenceSpec = evidenceSpecResult?.spec || null;
 
   const skillResult = await callXaiResponsesWithFiles(
     buildIntegrationSkillPrompt(workspaceTitle, request.integration_name),
     fileIds,
     {
       instructions: buildIntegrationSkillInstructions(
-        request,
+        { ...request, eval_definition: evalDefinition, base_url: request.base_url || origin },
         {
           id: plan.id,
           title: plan.title,
@@ -100,7 +134,8 @@ export async function POST(req: NextRequest) {
           description: plan.description,
         },
         blocks || [],
-        blockId
+        blockId,
+        evidenceSpec
       ),
       temperature: 0.45,
       maxOutputTokens: 8192,
@@ -125,7 +160,9 @@ export async function POST(req: NextRequest) {
       root_topic: plan.root_topic,
       block_count: blocks?.length || 0,
     },
-    context_counts: contextResult?.payload.counts || null,
+    evidence_spec: evidenceSpec,
+    evidence_spec_api_path: evidenceSpec?.evidence_spec_api_path || null,
+    context_counts: contextResult?.payload.counts || evidenceSpecResult?.contextCounts || null,
     file_ids: fileIds,
   });
 }

@@ -1,14 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
+import { parseEvidenceSchemaRequest } from "@/lib/agent-v2/evidence-schema";
 import {
-  buildEvidenceSchemaInstructions,
-  buildEvidenceSchemaPrompt,
-  EVIDENCE_EVAL_SCHEMA_OUTPUT,
-  parseEvidenceSchemaRequest,
-  type EvidenceEvalSchemaResult,
-} from "@/lib/agent-v2/evidence-schema";
-import { buildWorkspacePerformanceContext } from "@/lib/agent-v2/performance-context";
+  generateWorkspaceEvidenceSpec,
+  resolveEvalDefinition,
+} from "@/lib/agent-v2/evidence-integration";
 import { requireWorkspaceOwnerSession } from "@/lib/agent-v2/workspace-session-access";
-import { callXaiResponsesWithFiles } from "@/lib/xai-client";
 
 export const runtime = "nodejs";
 export const maxDuration = 120;
@@ -30,10 +26,10 @@ export async function POST(req: NextRequest) {
   if (access instanceof NextResponse) return access;
 
   const { plan, auth, supabase } = access;
-  const definition =
-    typeof body.definition === "string" && body.definition.trim()
-      ? body.definition.trim()
-      : plan.notes?.trim() || plan.description?.trim() || plan.root_topic?.trim() || plan.title?.trim() || "";
+  const definition = resolveEvalDefinition(
+    typeof body.definition === "string" ? body.definition : undefined,
+    plan
+  );
 
   const request = parseEvidenceSchemaRequest({
     definition,
@@ -58,50 +54,36 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  let context;
+  const origin = req.nextUrl.origin;
+  const workspaceTitle = plan.title || plan.root_topic || "workspace";
+
   try {
-    context = await buildWorkspacePerformanceContext({
+    const { spec, contextCounts, fileIds } = await generateWorkspaceEvidenceSpec({
       supabase,
       auth,
       workspaceId: planId,
+      workspaceTitle,
+      request,
+      baseUrl: origin,
       blockId,
     });
+
+    return NextResponse.json({
+      ...spec,
+      definition: request.definition,
+      workspace_summary: {
+        id: plan.id,
+        title: plan.title,
+        root_topic: plan.root_topic,
+      },
+      context_counts: contextCounts,
+      file_ids: fileIds,
+    });
   } catch (error) {
-    console.error("[learning-plan/evidence-schema] Context build failed:", error);
-    return NextResponse.json({ error: "Failed to prepare workspace context" }, { status: 500 });
-  }
-
-  const workspaceTitle = plan.title || plan.root_topic || "workspace";
-  const schemaResult = await callXaiResponsesWithFiles<EvidenceEvalSchemaResult>(
-    buildEvidenceSchemaPrompt(workspaceTitle),
-    context.fileIds,
-    {
-      instructions: buildEvidenceSchemaInstructions(request, blockId),
-      temperature: 0.25,
-      maxOutputTokens: 4096,
-      fetchTimeout: 120000,
-      jsonSchema: EVIDENCE_EVAL_SCHEMA_OUTPUT,
-    }
-  );
-
-  if (!schemaResult.success || !schemaResult.data) {
+    console.error("[learning-plan/evidence-schema] Generation failed:", error);
     return NextResponse.json(
-      { error: schemaResult.error || "Failed to generate evidence schema" },
+      { error: error instanceof Error ? error.message : "Failed to generate evidence specification" },
       { status: 500 }
     );
   }
-
-  return NextResponse.json({
-    ...schemaResult.data,
-    workspace_id: planId,
-    block_id: blockId,
-    definition: request.definition,
-    workspace_summary: {
-      id: plan.id,
-      title: plan.title,
-      root_topic: plan.root_topic,
-    },
-    context_counts: context.payload.counts,
-    file_ids: context.fileIds,
-  });
 }

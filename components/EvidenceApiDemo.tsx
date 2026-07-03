@@ -236,6 +236,17 @@ function severityColor(severity: "low" | "medium" | "high") {
   }
 }
 
+function severityAccentBorder(severity: "low" | "medium" | "high") {
+  switch (severity) {
+    case "high":
+      return "border-l-zinc-400";
+    case "medium":
+      return "border-l-zinc-600";
+    default:
+      return "border-l-zinc-800";
+  }
+}
+
 function confidenceLabel(confidence: PerformanceReport["confidence"]) {
   switch (confidence) {
     case "well-connected":
@@ -2125,11 +2136,11 @@ function ScoreView({
         ) : null}
 
         {report && showRawResponse && performanceResponse ? (
-          <div className="rounded-lg border border-zinc-800 bg-black/30 p-4 sm:p-5">
-            <div className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-600">
+          <div className="space-y-3">
+            <div className="font-mono text-xs uppercase tracking-[1.5px] text-zinc-600">
               POST /api/evidence-api-demo/performance
             </div>
-            <pre className="mt-3 max-h-[32rem] overflow-auto whitespace-pre-wrap rounded-md border border-zinc-800/80 bg-zinc-950/60 p-4 font-mono text-[10px] leading-relaxed text-zinc-400">
+            <pre className="max-h-[40rem] overflow-auto whitespace-pre-wrap font-mono text-xs leading-relaxed text-zinc-400 sm:text-sm">
               {JSON.stringify(performanceResponse, null, 2)}
             </pre>
           </div>
@@ -2226,21 +2237,29 @@ function SpecEvolution({ history }: { history: SchemaSnapshot[] }) {
   );
 }
 
-function ScoreEvolution({ history }: { history: ReportSnapshot[] }) {
+function ScoreEvolution({ history, flat = false }: { history: ReportSnapshot[]; flat?: boolean }) {
   return (
-    <div className="rounded-md border border-zinc-800 bg-black/30 p-3">
-      <div className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-600">
-        Score evolution
-      </div>
-      <ol className="mt-3 space-y-2">
+    <div className={flat ? "space-y-4" : "rounded-md border border-zinc-800 bg-black/30 p-3"}>
+      {!flat ? (
+        <div className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-600">
+          Score evolution
+        </div>
+      ) : null}
+      <ol className={flat ? "space-y-4" : "mt-3 space-y-2"}>
         {history.map((snapshot, index) => (
           <li
             key={snapshot.id}
-            className={`rounded-md border px-3 py-2 text-xs ${
-              index === history.length - 1
-                ? "border-zinc-600 bg-zinc-900 text-zinc-200"
-                : "border-zinc-800/80 text-zinc-400"
-            }`}
+            className={
+              flat
+                ? `border-b border-zinc-800/60 pb-4 text-sm last:border-b-0 ${
+                    index === history.length - 1 ? "text-zinc-200" : "text-zinc-400"
+                  }`
+                : `rounded-md border px-3 py-2 text-xs ${
+                    index === history.length - 1
+                      ? "border-zinc-600 bg-zinc-900 text-zinc-200"
+                      : "border-zinc-800/80 text-zinc-400"
+                  }`
+            }
           >
             <div className="flex flex-wrap items-center justify-between gap-2">
               <span className="font-medium text-zinc-300">
@@ -2263,7 +2282,9 @@ function ScoreEvolution({ history }: { history: ReportSnapshot[] }) {
                 </span>
               </div>
             </div>
-            <p className="mt-1 leading-relaxed opacity-90">{snapshot.report.summary}</p>
+            <p className={`mt-2 leading-relaxed opacity-90 ${flat ? "text-sm" : ""}`}>
+              {snapshot.report.summary}
+            </p>
           </li>
         ))}
       </ol>
@@ -2354,13 +2375,13 @@ function ScoreCardTabBar({
               role="tab"
               aria-selected={isActive}
               onClick={() => onChange(tab)}
-              className={`flex shrink-0 items-center gap-2 border-b-2 px-3 py-2.5 text-left transition ${
+              className={`flex shrink-0 items-center gap-2 border-b-2 px-4 py-3 text-left transition ${
                 isActive
                   ? "border-white text-white"
                   : "border-transparent text-zinc-500 hover:border-zinc-600 hover:text-zinc-300"
               }`}
             >
-              <span className="whitespace-nowrap text-xs font-medium">{tabLabels[tab]}</span>
+              <span className="whitespace-nowrap text-sm font-medium">{tabLabels[tab]}</span>
               {badge ? (
                 <span className="rounded bg-zinc-800 px-1.5 py-0.5 font-mono text-[9px] text-zinc-300">
                   {badge}
@@ -2408,22 +2429,22 @@ function PerformanceReportCard({
 
   if (isSpacious) {
     return (
-      <div className="space-y-5 rounded-lg border border-zinc-800 bg-black/30 p-6 sm:p-8">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <h3 className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-600">{label}</h3>
-          <div className="flex flex-wrap items-center gap-2">
+      <div className="space-y-6">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <h3 className="text-sm text-zinc-400">{label}</h3>
+          <div className="flex flex-wrap items-center gap-3">
             {overallScore != null ? (
-              <span className="rounded-full border border-zinc-600 bg-zinc-950 px-4 py-1 font-mono text-lg text-white">
+              <span className="font-mono text-2xl text-white">
                 L {overallScore}
-                <span className="ml-1 text-[10px] text-zinc-500">/100</span>
+                <span className="ml-1 text-sm text-zinc-500">/100</span>
               </span>
             ) : null}
             {conversionScore != null ? (
-              <span className="rounded-full border border-zinc-700 bg-zinc-950 px-4 py-1 font-mono text-lg text-white">
+              <span className="font-mono text-2xl text-white">
                 C {conversionScore}%
               </span>
             ) : null}
-            <span className="rounded-full border border-zinc-700 bg-zinc-950 px-2.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-zinc-300">
+            <span className="text-xs font-medium uppercase tracking-wide text-zinc-500">
               {confidenceLabel(report.confidence)}
             </span>
           </div>
@@ -2437,110 +2458,101 @@ function PerformanceReportCard({
           reportHistory={reportHistory}
         />
 
-        <div role="tabpanel" className="min-h-[18rem]">
+        <div role="tabpanel" className="min-h-[28rem] py-2">
           {activeTab === "overview" ? (
-            <div className="mx-auto flex max-w-lg flex-col items-center justify-center rounded-xl border border-zinc-800 bg-black/25 px-6 py-8 text-center">
-              <div className="grid w-full max-w-sm grid-cols-2 gap-4">
+            <div className="mx-auto flex max-w-2xl flex-col items-center px-2 py-6 text-center sm:py-10">
+              <div className="grid w-full max-w-md grid-cols-2 gap-8 sm:gap-12">
                 {overallScore != null ? (
                   <div>
-                    <div className="font-mono text-[10px] uppercase tracking-[2px] text-zinc-500">Learning</div>
-                    <div className="mt-3 font-mono text-5xl font-medium tracking-tight text-white sm:text-6xl">
+                    <div className="font-mono text-xs uppercase tracking-[2px] text-zinc-500">Learning</div>
+                    <div className="mt-4 font-mono text-6xl font-medium tracking-tight text-white sm:text-7xl">
                       {overallScore}
                     </div>
-                    <div className="mt-1 font-mono text-sm text-zinc-500">/ 100</div>
+                    <div className="mt-2 font-mono text-base text-zinc-500">/ 100</div>
                   </div>
                 ) : null}
                 {conversionScore != null ? (
                   <div>
-                    <div className="font-mono text-[10px] uppercase tracking-[2px] text-zinc-500">Conversion</div>
-                    <div className="mt-3 font-mono text-5xl font-medium tracking-tight text-white sm:text-6xl">
+                    <div className="font-mono text-xs uppercase tracking-[2px] text-zinc-500">Conversion</div>
+                    <div className="mt-4 font-mono text-6xl font-medium tracking-tight text-white sm:text-7xl">
                       {conversionScore}
                     </div>
-                    <div className="mt-1 font-mono text-sm text-zinc-500">%</div>
+                    <div className="mt-2 font-mono text-base text-zinc-500">%</div>
                   </div>
                 ) : null}
               </div>
               {conversionGoal ? (
-                <p className="mt-4 max-w-sm text-xs leading-relaxed text-zinc-500">{conversionGoal}</p>
+                <p className="mt-8 max-w-xl text-sm leading-relaxed text-zinc-500 sm:text-base">
+                  {conversionGoal}
+                </p>
               ) : null}
-              <span className="mt-5 rounded-full border border-zinc-700 bg-zinc-950 px-3 py-1 text-xs font-medium uppercase tracking-wide text-zinc-300">
-                {confidenceLabel(report.confidence)}
-              </span>
-              <p className="mt-6 max-w-sm text-left text-sm leading-relaxed text-zinc-300">{report.summary}</p>
+              <p className="mt-8 max-w-2xl text-left text-base leading-relaxed text-zinc-300 sm:text-lg">
+                {report.summary}
+              </p>
             </div>
           ) : null}
 
           {activeTab === "competency" && markerScores.length > 0 ? (
-            <div className="mx-auto min-w-0 max-w-xl rounded-xl border border-zinc-800 bg-black/20 px-4 py-6 sm:px-6">
-              <div className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-600">Competency profile</div>
-              <div className="mt-3 flex justify-center overflow-hidden">
-                <MarkerRadarChart
-                  markers={markerScores}
-                  ariaLabel="Performance competency scores"
-                  className="aspect-square h-auto w-full max-w-[17rem]"
-                />
-              </div>
+            <div className="flex min-h-[26rem] w-full items-center justify-center px-2 py-4 sm:min-h-[30rem]">
+              <MarkerRadarChart
+                markers={markerScores}
+                variant="large"
+                ariaLabel="Performance competency scores"
+                className="aspect-square h-auto w-full max-w-[min(100%,36rem)]"
+              />
             </div>
           ) : null}
 
           {activeTab === "markers" && markerScores.length > 0 ? (
-            <div className="rounded-lg border border-zinc-800/80 bg-black/20 p-5">
-              <div className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-600">Marker breakdown</div>
-              <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                {markerScores.map((marker) => (
-                  <div
-                    key={marker.id}
-                    className="rounded-md border border-zinc-800/80 bg-zinc-950/60 px-4 py-3 text-sm"
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="font-medium text-zinc-300">{marker.label}</span>
-                      <span className="font-mono text-base text-white">{marker.score}</span>
-                    </div>
-                    <p className="mt-1.5 leading-relaxed text-zinc-500">{marker.rationale}</p>
+            <div className="grid gap-x-10 gap-y-6 sm:grid-cols-2">
+              {markerScores.map((marker) => (
+                <div key={marker.id} className="border-b border-zinc-800/60 pb-5">
+                  <div className="flex items-baseline justify-between gap-4">
+                    <span className="text-base font-medium text-zinc-200 sm:text-lg">{marker.label}</span>
+                    <span className="font-mono text-2xl text-white">{marker.score}</span>
                   </div>
-                ))}
-              </div>
+                  <p className="mt-3 text-base leading-relaxed text-zinc-400">{marker.rationale}</p>
+                </div>
+              ))}
             </div>
           ) : null}
 
           {activeTab === "strengths" && report.strengths.length > 0 ? (
-            <div className="rounded-lg border border-zinc-800/80 bg-black/20 p-5">
-              <div className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-600">Strengths</div>
-              <ul className="mt-3 space-y-2 text-sm text-zinc-400">
-                {report.strengths.map((item) => (
-                  <li key={item} className="flex gap-2">
-                    <span className="text-zinc-500">+</span>
-                    <span>{item}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
+            <ul className="max-w-3xl space-y-4 text-base leading-relaxed text-zinc-300 sm:text-lg">
+              {report.strengths.map((item) => (
+                <li key={item} className="flex gap-3">
+                  <span className="text-zinc-500">+</span>
+                  <span>{item}</span>
+                </li>
+              ))}
+            </ul>
           ) : null}
 
           {activeTab === "gaps" ? (
-            <div className="space-y-6">
+            <div className="max-w-3xl space-y-10">
               {report.gap_analysis.gaps.length > 0 ? (
-                <div className="rounded-lg border border-zinc-800/80 bg-black/20 p-5">
-                  <div className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-600">Gap analysis</div>
-                  <p className="mt-3 text-sm text-zinc-500">{report.gap_analysis.summary}</p>
-                  <ul className="mt-4 space-y-3">
+                <div>
+                  <p className="text-base leading-relaxed text-zinc-400 sm:text-lg">
+                    {report.gap_analysis.summary}
+                  </p>
+                  <ul className="mt-6 space-y-5">
                     {report.gap_analysis.gaps.map((gap) => (
                       <li
                         key={gap.title}
-                        className={`rounded-md border px-4 py-3 text-sm ${severityColor(gap.severity)}`}
+                        className={`border-l-2 py-1 pl-5 text-base sm:text-lg ${severityAccentBorder(gap.severity)}`}
                       >
-                        <div className="font-medium">{gap.title}</div>
-                        <p className="mt-1.5 opacity-80">{gap.evidence}</p>
-                        <p className="mt-1.5 opacity-70">Repair: {gap.suggested_repair}</p>
+                        <div className="font-medium text-zinc-100">{gap.title}</div>
+                        <p className="mt-2 leading-relaxed opacity-90">{gap.evidence}</p>
+                        <p className="mt-2 text-zinc-400">Repair: {gap.suggested_repair}</p>
                       </li>
                     ))}
                   </ul>
                 </div>
               ) : null}
               {report.gap_analysis.next_practice.length > 0 ? (
-                <div className="rounded-lg border border-zinc-800/80 bg-black/20 p-5">
-                  <div className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-600">Next practice</div>
-                  <ul className="mt-3 space-y-2 text-sm text-zinc-400">
+                <div>
+                  <div className="font-mono text-xs uppercase tracking-[1.5px] text-zinc-600">Next practice</div>
+                  <ul className="mt-4 space-y-3 text-base text-zinc-300 sm:text-lg">
                     {report.gap_analysis.next_practice.map((item) => (
                       <li key={item}>→ {item}</li>
                     ))}
@@ -2551,7 +2563,7 @@ function PerformanceReportCard({
           ) : null}
 
           {activeTab === "history" && reportHistory.length > 0 ? (
-            <ScoreEvolution history={reportHistory} />
+            <ScoreEvolution history={reportHistory} flat />
           ) : null}
         </div>
       </div>

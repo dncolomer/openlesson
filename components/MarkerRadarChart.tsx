@@ -11,6 +11,7 @@ interface MarkerRadarChartProps {
   markers: MarkerRadarScore[];
   className?: string;
   ariaLabel?: string;
+  variant?: "default" | "large";
 }
 
 function truncateLabel(label: string, markerCount: number): string {
@@ -24,13 +25,35 @@ export function MarkerRadarChart({
   markers,
   className = "mx-auto aspect-square h-auto w-full max-w-xs",
   ariaLabel = "Competency marker scores",
+  variant = "default",
 }: MarkerRadarChartProps) {
   if (!markers.length) return null;
 
+  const isLarge = variant === "large";
   const markerCount = markers.length;
-  const radius = markerCount > 7 ? 68 : markerCount > 5 ? 76 : 84;
-  const labelOffset = markerCount > 7 ? 22 : markerCount > 5 ? 28 : 34;
-  const padding = 78;
+  const radius = isLarge
+    ? markerCount > 7
+      ? 92
+      : markerCount > 5
+        ? 104
+        : 116
+    : markerCount > 7
+      ? 68
+      : markerCount > 5
+        ? 76
+        : 84;
+  const labelOffset = isLarge
+    ? markerCount > 7
+      ? 30
+      : markerCount > 5
+        ? 36
+        : 42
+    : markerCount > 7
+      ? 22
+      : markerCount > 5
+        ? 28
+        : 34;
+  const padding = isLarge ? 96 : 78;
   const size = radius * 2 + padding * 2;
   const center = padding + radius;
 
@@ -79,7 +102,7 @@ export function MarkerRadarChart({
           <text
             x={center + 4}
             y={center - radius * level + (level === 1 ? -6 : 4)}
-            className="fill-neutral-500 text-[9px] font-mono"
+            className={`fill-neutral-500 font-mono ${isLarge ? "text-[11px]" : "text-[9px]"}`}
           >
             {Math.round(level * 100)}
           </text>
@@ -112,7 +135,7 @@ export function MarkerRadarChart({
             y={point.scoreY}
             textAnchor={point.textAnchor}
             dominantBaseline="middle"
-            className="fill-white text-[10px] font-mono font-medium"
+            className={`fill-white font-mono font-medium ${isLarge ? "text-xs" : "text-[10px]"}`}
           >
             {point.score}
           </text>
@@ -121,7 +144,7 @@ export function MarkerRadarChart({
             y={point.labelY}
             textAnchor={point.textAnchor}
             dominantBaseline="middle"
-            className="fill-neutral-400 text-[8px] sm:text-[9px]"
+            className={`fill-neutral-400 ${isLarge ? "text-[10px] sm:text-xs" : "text-[8px] sm:text-[9px]"}`}
           >
             {point.displayLabel}
             <title>{point.marker.label}</title>

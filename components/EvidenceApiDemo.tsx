@@ -54,9 +54,15 @@ type DemoPhase = "picker" | "intro" | "creating" | "simulating";
 type DemoView = "simulator" | "evidence" | "evaluation" | "score";
 type ScoreCardTab = "overview" | "competency" | "markers" | "strengths" | "gaps" | "history";
 
-const DEMO_TAB_STAGE = "w-full min-h-[44rem]";
+const DEMO_TAB_STAGE = "relative h-[48rem] w-full";
 const DEMO_TAB_PANEL =
-  "flex min-h-[44rem] w-full flex-col overflow-hidden rounded-lg border border-zinc-800 bg-zinc-950/70";
+  "absolute inset-0 flex w-full flex-col overflow-hidden rounded-lg border border-zinc-800 bg-zinc-950/70";
+const DEMO_TAB_HEADER = "shrink-0 min-h-[10rem] border-b border-zinc-800 px-5 py-4 sm:px-6";
+const DEMO_TAB_BODY =
+  "flex min-h-0 flex-1 w-full flex-col overflow-hidden p-5 sm:p-6";
+const DEMO_TAB_BODY_SCROLL =
+  "flex min-h-0 flex-1 w-full flex-col gap-6 overflow-y-auto p-5 sm:p-6";
+const DEMO_SCORE_TABPANEL = "min-h-0 flex-1 w-full overflow-y-auto py-2";
 
 type ReportSnapshot = {
   id: string;
@@ -1604,8 +1610,14 @@ function SimulatorPanel({
           : `flex w-full flex-col overflow-hidden rounded-lg border ${styles.section}`
       }
     >
-      <div className={`shrink-0 border-b px-5 py-4 sm:px-6 ${styles.headerBorder}`}>
-        <div className="flex items-center justify-between gap-3">
+      <div
+        className={
+          fullHeight
+            ? `${DEMO_TAB_HEADER} flex justify-center ${styles.headerBorder}`
+            : `shrink-0 border-b px-5 py-4 sm:px-6 ${styles.headerBorder}`
+        }
+      >
+        <div className="flex w-full items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <div
               className={`flex size-9 items-center justify-center rounded-md text-sm font-bold ${styles.logo}`}
@@ -1627,7 +1639,7 @@ function SimulatorPanel({
         </div>
       </div>
 
-      <div className={`flex flex-1 flex-col p-5 sm:p-6 ${fullHeight ? "min-h-0" : ""}`}>
+      <div className={fullHeight ? DEMO_TAB_BODY : "flex flex-1 flex-col p-5 sm:p-6"}>
         {phase === "intro" || phase === "creating" ? (
           <div className="flex flex-1 flex-col justify-center py-8">
             <Sparkles className={`size-8 ${styles.sparkles}`} />
@@ -1700,7 +1712,7 @@ function SimulatorPanel({
           </div>
         ) : (
           <>
-            <div className="mb-5 grid grid-cols-3 gap-2 text-center">
+            <div className="mb-5 shrink-0 grid grid-cols-3 gap-2 text-center">
               <div className={`rounded-md border bg-black/25 px-2 py-2 ${styles.statBorder}`}>
                 <div className={`font-mono text-[10px] uppercase tracking-wide ${styles.statLabel}`}>Day</div>
                 <div className="mt-1 font-mono text-lg text-white">{worldState.simulatedDays}</div>
@@ -1715,7 +1727,7 @@ function SimulatorPanel({
               </div>
             </div>
 
-            <div className="mb-4 border-b border-zinc-800">
+            <div className="mb-4 shrink-0 border-b border-zinc-800">
               <div
                 className="-mb-px flex gap-1 overflow-x-auto pb-px [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
                 role="tablist"
@@ -1750,7 +1762,7 @@ function SimulatorPanel({
               </div>
             </div>
 
-            <p className={`mb-4 text-xs leading-relaxed ${styles.bodyText}`}>
+            <p className={`mb-4 shrink-0 text-xs leading-relaxed ${styles.bodyText}`}>
               {demo.categoryMeta[activeCategory].description}
             </p>
 
@@ -1907,8 +1919,8 @@ function EvidenceLayerView({
 }) {
   return (
     <section className={DEMO_TAB_PANEL}>
-      <div className="shrink-0 border-b border-zinc-800 px-5 py-4 sm:px-6">
-        <div className="flex items-center gap-2">
+      <div className={`${DEMO_TAB_HEADER} flex justify-center`}>
+        <div className="flex w-full items-center gap-2">
           <Radio className="size-4 text-zinc-300" />
           <div>
             <div className="text-sm font-medium text-white">OpenLesson verification layer</div>
@@ -1917,7 +1929,7 @@ function EvidenceLayerView({
         </div>
       </div>
 
-      <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto p-5 sm:p-6 lg:grid lg:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)] lg:items-start lg:gap-8">
+      <div className={`${DEMO_TAB_BODY_SCROLL} lg:grid lg:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)] lg:items-start lg:gap-8`}>
         <div className="flex flex-col gap-5">
           {workspaceTitle ? (
             <div className="rounded-md border border-zinc-800 bg-black/30 px-4 py-3">
@@ -1940,7 +1952,7 @@ function EvidenceLayerView({
                 Run simulation actions to stream evidence uploads here.
               </p>
             ) : (
-              <ul className="max-h-[32rem] space-y-2 overflow-y-auto pr-1">
+              <ul className="space-y-2 pr-1">
                 {apiLog.map((entry) => (
                   <li
                     key={entry.id}
@@ -2083,8 +2095,8 @@ function ContinuousEvaluationView({
 
   return (
     <section className={DEMO_TAB_PANEL}>
-      <div className="shrink-0 border-b border-zinc-800 px-5 py-4 sm:px-6">
-        <div className="flex items-center gap-2">
+      <div className={`${DEMO_TAB_HEADER} flex justify-center`}>
+        <div className="flex w-full items-center gap-2">
           <RefreshCw className="size-4 text-zinc-300" />
           <div>
             <div className="text-sm font-medium text-white">Continuous evaluation</div>
@@ -2095,7 +2107,7 @@ function ContinuousEvaluationView({
         </div>
       </div>
 
-      <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto p-5 sm:p-6">
+      <div className={DEMO_TAB_BODY_SCROLL}>
         {!canRegenerate ? (
           <p className="rounded-md border border-dashed border-zinc-800 px-4 py-12 text-center text-sm text-zinc-500">
             Run at least one simulation action to unlock spec and skill regeneration.
@@ -2287,8 +2299,8 @@ function ScoreView({
 
   return (
     <section className={DEMO_TAB_PANEL}>
-      <div className="shrink-0 border-b border-zinc-800 px-5 py-5 sm:px-6">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+      <div className={`${DEMO_TAB_HEADER} flex justify-center`}>
+        <div className="flex w-full flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex items-center gap-3">
             <div className="flex size-10 items-center justify-center rounded-md border border-zinc-700 bg-black/40">
               <BarChart3 className="size-5 text-white" />
@@ -2334,9 +2346,9 @@ function ScoreView({
         )}
       </div>
 
-      <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto p-5 sm:p-6">
+      <div className={DEMO_TAB_BODY}>
         {report && performanceResponse ? (
-          <div className="flex items-center justify-end">
+          <div className="flex shrink-0 items-center justify-end">
             <div
               className="inline-flex rounded-md border border-zinc-800 bg-black/30 p-0.5"
               role="group"
@@ -2371,32 +2383,34 @@ function ScoreView({
         ) : null}
 
         {report && showRawResponse && performanceResponse ? (
-          <div className="space-y-3">
-            <div className="font-mono text-xs uppercase tracking-[1.5px] text-zinc-600">
+          <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden">
+            <div className="shrink-0 font-mono text-xs uppercase tracking-[1.5px] text-zinc-600">
               POST /api/evidence-api-demo/performance
             </div>
-            <pre className="max-h-[40rem] overflow-auto whitespace-pre-wrap font-mono text-xs leading-relaxed text-zinc-400 sm:text-sm">
+            <pre className="min-h-0 flex-1 overflow-auto whitespace-pre-wrap font-mono text-xs leading-relaxed text-zinc-400 sm:text-sm">
               {JSON.stringify(performanceResponse, null, 2)}
             </pre>
           </div>
         ) : null}
 
         {report && !showRawResponse ? (
-          <PerformanceReportCard
-            key={latestSnapshot?.id ?? "report"}
-            report={report}
-            reportHistory={reportHistory}
-            layout="spacious"
-            workspaceConversionGoal={performanceResponse?.workspace_conversion_goal}
-            conversionGoalSource={performanceResponse?.conversion_goal_source}
-            label={
-              latestSnapshot
-                ? `Latest score · day ${latestSnapshot.simulatedDays} · ${latestSnapshot.actionCount} actions`
-                : "Performance report"
-            }
-          />
+          <div className="flex min-h-0 flex-1 flex-col">
+            <PerformanceReportCard
+              key={latestSnapshot?.id ?? "report"}
+              report={report}
+              reportHistory={reportHistory}
+              layout="spacious"
+              workspaceConversionGoal={performanceResponse?.workspace_conversion_goal}
+              conversionGoalSource={performanceResponse?.conversion_goal_source}
+              label={
+                latestSnapshot
+                  ? `Latest score · day ${latestSnapshot.simulatedDays} · ${latestSnapshot.actionCount} actions`
+                  : "Performance report"
+              }
+            />
+          </div>
         ) : report ? null : (
-          <div className="flex flex-1 flex-col items-center justify-center rounded-lg border border-dashed border-zinc-800 px-6 py-16 text-center">
+          <div className="flex min-h-0 flex-1 flex-col items-center justify-center rounded-lg border border-dashed border-zinc-800 px-6 py-16 text-center">
             <Gauge className="size-10 text-zinc-600" />
             <h3 className="mt-4 text-lg font-medium text-zinc-300">No score yet</h3>
             <p className="mt-2 max-w-md text-sm leading-relaxed text-zinc-500">
@@ -2607,8 +2621,8 @@ function PerformanceReportCard({
 
   if (isSpacious) {
     return (
-      <div className="space-y-6">
-        <div className="flex flex-wrap items-center justify-between gap-4">
+      <div className="flex min-h-0 flex-1 flex-col gap-4">
+        <div className="flex shrink-0 flex-wrap items-center justify-between gap-4">
           <h3 className="text-sm text-zinc-400">{label}</h3>
           <div className="flex flex-wrap items-center gap-3">
             {overallScore != null ? (
@@ -2628,18 +2642,20 @@ function PerformanceReportCard({
           </div>
         </div>
 
-        <ScoreCardTabBar
-          tabs={availableTabs}
-          activeTab={activeTab}
-          onChange={setActiveTab}
-          report={report}
-          reportHistory={reportHistory}
-        />
+        <div className="shrink-0">
+          <ScoreCardTabBar
+            tabs={availableTabs}
+            activeTab={activeTab}
+            onChange={setActiveTab}
+            report={report}
+            reportHistory={reportHistory}
+          />
+        </div>
 
-        <div role="tabpanel" className="min-h-[28rem] py-2">
+        <div role="tabpanel" className={DEMO_SCORE_TABPANEL}>
           {activeTab === "overview" ? (
-            <div className="mx-auto flex max-w-2xl flex-col items-center px-2 py-6 text-center sm:py-10">
-              <div className="grid w-full max-w-md grid-cols-2 gap-8 sm:gap-12">
+            <div className="flex w-full flex-col items-center px-2 py-6 text-center sm:py-10">
+              <div className="grid w-full grid-cols-2 gap-8 sm:max-w-md sm:gap-12">
                 {overallScore != null ? (
                   <div>
                     <div className="font-mono text-xs uppercase tracking-[2px] text-zinc-500">Learning</div>
@@ -2660,7 +2676,7 @@ function PerformanceReportCard({
                 ) : null}
               </div>
               {conversionGoal ? (
-                <div className="mt-8 max-w-xl text-left">
+                <div className="mt-8 w-full text-left">
                   <div className="flex flex-wrap items-center justify-center gap-2">
                     <span className="font-mono text-xs uppercase tracking-[1.5px] text-zinc-600">
                       Conversion goal
@@ -2676,14 +2692,14 @@ function PerformanceReportCard({
                   </p>
                 </div>
               ) : null}
-              <p className="mt-8 max-w-2xl text-left text-base leading-relaxed text-zinc-300 sm:text-lg">
+              <p className="mt-8 w-full text-left text-base leading-relaxed text-zinc-300 sm:text-lg">
                 {report.summary}
               </p>
             </div>
           ) : null}
 
           {activeTab === "competency" && markerScores.length > 0 ? (
-            <div className="flex min-h-[26rem] w-full items-center justify-center px-2 py-4 sm:min-h-[30rem]">
+            <div className="flex h-full w-full items-center justify-center px-2 py-4">
               <MarkerRadarChart
                 markers={markerScores}
                 variant="large"
@@ -2708,7 +2724,7 @@ function PerformanceReportCard({
           ) : null}
 
           {activeTab === "strengths" && report.strengths.length > 0 ? (
-            <ul className="max-w-3xl space-y-4 text-base leading-relaxed text-zinc-300 sm:text-lg">
+            <ul className="w-full space-y-4 text-base leading-relaxed text-zinc-300 sm:text-lg">
               {report.strengths.map((item) => (
                 <li key={item} className="flex gap-3">
                   <span className="text-zinc-500">+</span>
@@ -2719,7 +2735,7 @@ function PerformanceReportCard({
           ) : null}
 
           {activeTab === "gaps" ? (
-            <div className="max-w-3xl space-y-10">
+            <div className="w-full space-y-10">
               {report.gap_analysis.gaps.length > 0 ? (
                 <div>
                   <p className="text-base leading-relaxed text-zinc-400 sm:text-lg">

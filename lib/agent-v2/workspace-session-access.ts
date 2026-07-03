@@ -11,6 +11,7 @@ export interface WorkspaceSessionPlan {
   description: string | null;
   notes: string | null;
   user_id: string;
+  organization_id: string | null;
 }
 
 export interface WorkspaceSessionAccess {
@@ -19,6 +20,63 @@ export interface WorkspaceSessionAccess {
   auth: AuthContext;
   supabase: SupabaseClient;
   hasTeams: boolean;
+}
+
+export interface TeamsUserSession {
+  userId: string;
+  auth: AuthContext;
+  supabase: SupabaseClient;
+  hasTeams: boolean;
+  organizationId: string | null;
+}
+
+export async function requireTeamsUserSession(): Promise<TeamsUserSession | NextResponse> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return NextResponse.json({ error: "Not authenticated", code: "auth_required" }, { status: 401 });
+  }
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("plan, subscription_status, is_admin, organization_id, is_org_admin")
+    .eq("id", user.id)
+    .single();
+
+  const hasTeams =
+    profile?.is_admin === true ||
+    (profile?.plan === "pro_teams" && profile?.subscription_status === "active");
+
+  if (!hasTeams) {
+    return NextResponse.json(
+      {
+        error: "The Evidence API demo requires the Teams tier.",
+        code: "teams_required",
+        renew_url: "/pricing",
+      },
+      { status: 403 }
+    );
+  }
+
+  const auth: AuthContext = {
+    user_id: user.id,
+    guest_user_id: null,
+    organization_id: profile?.organization_id || null,
+    is_org_admin: profile?.is_org_admin === true || profile?.is_admin === true,
+    key_id: "ui-session",
+    scopes: ["workspaces:read", "workspaces:write"],
+  };
+
+  return {
+    userId: user.id,
+    auth,
+    supabase: createAdminClient(),
+    hasTeams,
+    organizationId: profile?.organization_id || null,
+  };
 }
 
 export async function requireWorkspaceOwnerSession(
@@ -41,7 +99,7 @@ export async function requireWorkspaceOwnerSession(
       .single(),
     supabase
       .from("learning_plans")
-      .select("id, title, root_topic, description, notes, user_id")
+      .select("id, title, root_topic, description, notes, user_id, organization_id")
       .eq("id", planId)
       .single(),
   ]);

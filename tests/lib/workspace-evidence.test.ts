@@ -26,3 +26,16 @@ describe("workspace evidence helpers", () => {
     expect(defaultEvidenceFileName("screen", "capture-1.png")).toBe("capture-1.png");
   });
 });
+
+describe("demo evidence constraints", () => {
+  const uuidRe =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+  it("treats ui-session as a non-uuid api key id", () => {
+    expect(uuidRe.test("ui-session")).toBe(false);
+  });
+
+  it("accepts real api key uuids", () => {
+    expect(uuidRe.test("a1b2c3d4-5678-41a2-b3c4-1234567890ab")).toBe(true);
+  });
+});

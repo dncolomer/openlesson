@@ -76,5 +76,7 @@ export async function middleware(request: NextRequest) {
 export const config = {
   matcher: [
     "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$|api).*)",
+    // Refresh Supabase session cookies for demo API routes (excluded from the matcher above).
+    "/api/evidence-api-demo/:path*",
   ],
 };

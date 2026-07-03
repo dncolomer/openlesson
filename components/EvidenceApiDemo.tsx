@@ -445,19 +445,13 @@ export function EvidenceApiDemo() {
     setPhase("picker");
   };
 
-  const handleStartDemo = async (startInputMode?: CustomInputMode) => {
-    const inputMode = startInputMode ?? customInputMode;
-
-    if (isCustomDemoId(demoId) && inputMode === "prompt" && customPrompt.trim().length < CUSTOM_PROMPT_MIN_LENGTH) {
+  const handleStartDemo = async () => {
+    if (isCustomDemoId(demoId) && customPrompt.trim().length < CUSTOM_PROMPT_MIN_LENGTH) {
       setError(`Paste a scenario prompt of at least ${CUSTOM_PROMPT_MIN_LENGTH} characters.`);
       return;
     }
-    if (isCustomDemoId(demoId) && inputMode === "import" && importText.trim().length < IMPORT_TEXT_MIN_LENGTH) {
-      setError(`Paste skill or MCP text of at least ${IMPORT_TEXT_MIN_LENGTH} characters.`);
-      return;
-    }
 
-    setCustomInputMode(inputMode);
+    setCustomInputMode("prompt");
     setError("");
     setImportSummary(null);
     setPhase("creating");
@@ -486,12 +480,7 @@ export function EvidenceApiDemo() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             demoId: activeDemo.id,
-            ...(isCustomDemoId(demoId) && inputMode === "import"
-              ? { importText: importText.trim(), importSource }
-              : {}),
-            ...(isCustomDemoId(demoId) && inputMode === "prompt"
-              ? { customPrompt: customPrompt.trim() }
-              : {}),
+            ...(isCustomDemoId(demoId) ? { customPrompt: customPrompt.trim() } : {}),
           }),
         },
         isCustomDemoId(demoId) ? 180000 : 120000
@@ -532,10 +521,8 @@ export function EvidenceApiDemo() {
         workspaceTitle: data.workspace.title,
         blocks: data.blocks,
         customDemo: generatedCustomDemo ?? undefined,
-        customPrompt: isCustomDemoId(demoId) && inputMode === "prompt" ? customPrompt.trim() : undefined,
-        customInputMode: isCustomDemoId(demoId) ? inputMode : undefined,
-        importText: isCustomDemoId(demoId) && inputMode === "import" ? importText.trim() : undefined,
-        importSource: isCustomDemoId(demoId) && inputMode === "import" ? importSource : undefined,
+        customPrompt: isCustomDemoId(demoId) ? customPrompt.trim() : undefined,
+        customInputMode: isCustomDemoId(demoId) ? "prompt" : undefined,
       });
 
       setPhase("simulating");
@@ -1061,13 +1048,6 @@ export function EvidenceApiDemo() {
             customPrompt={customPrompt}
             onCustomPromptChange={setCustomPrompt}
             customPromptMinLength={CUSTOM_PROMPT_MIN_LENGTH}
-            importText={importText}
-            onImportTextChange={setImportText}
-            importSource={importSource}
-            onImportSourceChange={setImportSource}
-            importTextMinLength={IMPORT_TEXT_MIN_LENGTH}
-            importRevision={importRevision}
-            onCustomInputModeChange={setCustomInputMode}
           />
         ) : null}
 
@@ -1481,8 +1461,8 @@ function DemoUseCasePicker({
               <div className="text-base font-medium text-white">Custom simulation</div>
               <div className={`text-xs ${customStyles.subtitle}`}>{CUSTOM_DEMO_PICKER.tagline}</div>
               <p className={`mt-3 max-w-2xl text-sm leading-relaxed ${customStyles.bodyText}`}>
-                {CUSTOM_DEMO_PICKER.description} Use the Skill / MCP import tab in the Event simulator to
-                paste integration docs and generate events from an external system.
+                {CUSTOM_DEMO_PICKER.description} After you start, use the Skill / MCP import tab in the Event
+                simulator to paste integration docs and generate events from an external system.
               </p>
             </div>
           </div>
@@ -1506,9 +1486,7 @@ function countCategoryActivity(
   return { completed, total: actions.length };
 }
 
-function ImportWhatHappens({ phase }: { phase: DemoPhase }) {
-  const isSimulating = phase === "simulating";
-
+function ImportWhatHappens() {
   return (
     <div className="rounded-md border border-zinc-800 bg-black/25 p-4">
       <div className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-600">
@@ -1528,18 +1506,8 @@ function ImportWhatHappens({ phase }: { phase: DemoPhase }) {
           tools are produced as simulatable actions with stable tool_action ids.
         </li>
         <li>
-          {isSimulating ? (
-            <>
-              <span className="text-zinc-200">4. Replace</span> — the Events tab action grid is swapped
-              for the new definition. Simulator day/action counters reset; your workspace and uploaded
-              evidence are kept.
-            </>
-          ) : (
-            <>
-              <span className="text-zinc-200">4. Start</span> — a verification workspace is created and
-              the Events tab opens with the generated action grid ready to upload evidence.
-            </>
-          )}
+          <span className="text-zinc-200">4. Replace</span> — the Events tab action grid is swapped for the
+          new definition. Simulator day/action counters reset; your workspace and uploaded evidence are kept.
         </li>
       </ol>
     </div>
@@ -1600,9 +1568,6 @@ function EventImportPanel({
   isImportingEvents,
   importSummary,
   onImportEvents,
-  onStartFromImport,
-  onBackToPicker,
-  phase,
   styles,
 }: {
   importText: string;
@@ -1612,14 +1577,9 @@ function EventImportPanel({
   importTextMinLength: number;
   isImportingEvents: boolean;
   importSummary: ImportEventsSummary | null;
-  onImportEvents?: () => void;
-  onStartFromImport?: () => void;
-  onBackToPicker?: () => void;
-  phase: DemoPhase;
+  onImportEvents: () => void;
   styles: ReturnType<typeof demoPanelStyles>;
 }) {
-  const isIntro = phase === "intro" || phase === "creating";
-  const isBusy = isImportingEvents || phase === "creating";
   const canSubmit = importText.trim().length >= importTextMinLength;
 
   return (
@@ -1643,7 +1603,7 @@ function EventImportPanel({
               type="button"
               onClick={() => onImportSourceChange(source)}
               aria-pressed={importSource === source}
-              disabled={isBusy}
+              disabled={isImportingEvents}
               className={`rounded px-3 py-1.5 text-xs font-medium uppercase tracking-wide transition ${
                 importSource === source
                   ? "bg-white text-black"
@@ -1656,7 +1616,7 @@ function EventImportPanel({
         </div>
       </div>
 
-      <ImportWhatHappens phase={phase} />
+      <ImportWhatHappens />
 
       <label className="block">
         <span className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-500">
@@ -1665,8 +1625,8 @@ function EventImportPanel({
         <textarea
           value={importText}
           onChange={(event) => onImportTextChange(event.target.value)}
-          disabled={isBusy}
-          rows={isIntro ? 12 : 10}
+          disabled={isImportingEvents}
+          rows={10}
           placeholder={
             importSource === "mcp"
               ? 'Paste MCP server JSON or tool listings, e.g. {"tools":[{"name":"list_workspaces","description":"..."}]}'
@@ -1680,45 +1640,24 @@ function EventImportPanel({
       </label>
 
       <div className="flex flex-wrap items-center gap-3">
-        {isIntro ? (
-          <button
-            type="button"
-            onClick={onStartFromImport}
-            disabled={isBusy || !canSubmit}
-            className={`inline-flex items-center gap-2 rounded-md px-5 py-2.5 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-60 ${styles.button}`}
-          >
-            {phase === "creating" ? (
-              <>
-                <Loader2 className="size-4 animate-spin" />
-                Exploring integration & generating events…
-              </>
-            ) : (
-              <>
-                Explore with Grok & start
-                <ArrowRight className="size-4" />
-              </>
-            )}
-          </button>
-        ) : (
-          <button
-            type="button"
-            onClick={onImportEvents}
-            disabled={isBusy || !canSubmit}
-            className={`inline-flex items-center gap-2 rounded-md px-4 py-2.5 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-60 ${styles.button}`}
-          >
-            {isImportingEvents ? (
-              <>
-                <Loader2 className="size-4 animate-spin" />
-                Exploring & generating events…
-              </>
-            ) : (
-              <>
-                <Sparkles className="size-4" />
-                Explore with Grok & replace events
-              </>
-            )}
-          </button>
-        )}
+        <button
+          type="button"
+          onClick={onImportEvents}
+          disabled={isImportingEvents || !canSubmit}
+          className={`inline-flex items-center gap-2 rounded-md px-4 py-2.5 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-60 ${styles.button}`}
+        >
+          {isImportingEvents ? (
+            <>
+              <Loader2 className="size-4 animate-spin" />
+              Exploring & generating events…
+            </>
+          ) : (
+            <>
+              <Sparkles className="size-4" />
+              Explore with Grok & replace events
+            </>
+          )}
+        </button>
         {importSummary ? (
           <p className="text-xs text-zinc-400">
             Imported {importSummary.evidence_action_count} events for{" "}
@@ -1730,16 +1669,6 @@ function EventImportPanel({
               ? ` · ${importSummary.endpoints_discovered} endpoints`
               : ""}
           </p>
-        ) : null}
-        {isIntro && onBackToPicker ? (
-          <button
-            type="button"
-            onClick={onBackToPicker}
-            disabled={isBusy}
-            className="text-xs text-zinc-500 transition hover:text-zinc-300 disabled:opacity-50"
-          >
-            Choose a different use case
-          </button>
         ) : null}
       </div>
     </div>
@@ -1775,7 +1704,7 @@ function SimulatorPanel({
   phase: DemoPhase;
   worldState: SimulationWorldState;
   runningActionId: string | null;
-  onStart: (startInputMode?: CustomInputMode) => void;
+  onStart: () => void;
   onRunAction: (action: SimulationAction) => void;
   onBackToPicker?: () => void;
   fullHeight?: boolean;
@@ -1800,7 +1729,6 @@ function SimulatorPanel({
   const explored = countDistinctEvidenceActions(demo, worldState);
   const coveragePercent = Math.round((explored / totalActions) * 100);
   const [activeCategory, setActiveCategory] = useState<SimulationCategory>(demo.categoryOrder[0]);
-  const showSubviewTabs = phase === "simulating" || (isCustom && (phase === "intro" || phase === "creating"));
   const [activeSubview, setActiveSubview] = useState<SimulatorSubview>("events");
 
   useEffect(() => {
@@ -1816,11 +1744,6 @@ function SimulatorPanel({
   const handleSubviewChange = (tab: SimulatorSubview) => {
     setActiveSubview(tab);
     onCustomInputModeChange?.(tab === "import" ? "import" : "prompt");
-  };
-
-  const handleStartFromImport = () => {
-    onCustomInputModeChange?.("import");
-    onStart("import");
   };
 
   return (
@@ -1862,101 +1785,76 @@ function SimulatorPanel({
 
       <div className={fullHeight ? DEMO_TAB_BODY : "flex flex-1 flex-col p-5 sm:p-6"}>
         {phase === "intro" || phase === "creating" ? (
-          <div className="flex min-h-0 flex-1 flex-col py-4">
-            {showSubviewTabs ? (
-              <SimulatorSubviewTabs
-                activeSubview={activeSubview}
-                onChange={handleSubviewChange}
-                eventsLabel="Scenario prompt"
-              />
-            ) : null}
-
-            {isCustom && activeSubview === "import" && onImportTextChange && onImportSourceChange ? (
-              <EventImportPanel
-                importText={importText}
-                onImportTextChange={onImportTextChange}
-                importSource={importSource}
-                onImportSourceChange={onImportSourceChange}
-                importTextMinLength={importTextMinLength}
-                isImportingEvents={isImportingEvents}
-                importSummary={importSummary}
-                onStartFromImport={handleStartFromImport}
-                onBackToPicker={onBackToPicker}
-                phase={phase}
-                styles={styles}
-              />
+          <div className="flex min-h-0 flex-1 flex-col justify-center py-4">
+            <Sparkles className={`size-8 ${styles.sparkles}`} />
+            <h2 className="mt-4 text-xl font-medium text-white">
+              {isCustom ? "Custom verification scenario" : demo.scenarioTitle}
+            </h2>
+            {isCustom ? (
+              <>
+                <p className={`mt-2 max-w-2xl text-sm leading-relaxed ${styles.bodyText}`}>
+                  Describe the product workflow, learner role, and competency you want to verify. OpenLesson
+                  generates event actions and a workspace from your prompt. Calendar gap tools (+1 day, +3 days,
+                  +1 week) are always included. After you start, use the Skill / MCP import tab to pull events
+                  from an external integration.
+                </p>
+                <label className="mt-6 block max-w-2xl">
+                  <span className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-500">
+                    Scenario prompt
+                  </span>
+                  <textarea
+                    value={customPrompt}
+                    onChange={(event) => onCustomPromptChange?.(event.target.value)}
+                    disabled={phase === "creating"}
+                    rows={8}
+                    placeholder="Example: Verify that sales engineers can configure Acme CRM trial workspaces — connect email, import contacts, build a pipeline, invite a manager, recover from bad field mapping, and return after a week idle…"
+                    className="mt-2 w-full resize-y rounded-md border border-zinc-700 bg-black/40 px-4 py-3 text-sm leading-relaxed text-zinc-200 placeholder:text-zinc-600 focus:border-zinc-500 focus:outline-none disabled:opacity-60"
+                  />
+                  <span className="mt-2 block font-mono text-[10px] text-zinc-600">
+                    {customPrompt.trim().length}/{customPromptMinLength} characters minimum
+                  </span>
+                </label>
+              </>
             ) : (
-              <div className="flex flex-1 flex-col justify-center py-4">
-                <Sparkles className={`size-8 ${styles.sparkles}`} />
-                <h2 className="mt-4 text-xl font-medium text-white">
-                  {isCustom ? "Custom verification scenario" : demo.scenarioTitle}
-                </h2>
-                {isCustom ? (
+              <p className={`mt-2 max-w-md text-sm leading-relaxed ${styles.bodyText}`}>
+                {demo.scenarioIntro.replace(/\*\*/g, "")} Use calendar gap tools to record idle time between
+                sessions — then regenerate OpenLesson specs as evidence grows. After starting, use the Skill /
+                MCP import tab to pull events from an external integration.
+              </p>
+            )}
+            <div className="mt-8 flex flex-wrap items-center gap-3">
+              <button
+                type="button"
+                onClick={() => onStart()}
+                disabled={
+                  phase === "creating" ||
+                  (isCustom && customPrompt.trim().length < customPromptMinLength)
+                }
+                className={`inline-flex w-fit items-center gap-2 rounded-md px-5 py-2.5 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-60 ${styles.button}`}
+              >
+                {phase === "creating" ? (
                   <>
-                    <p className={`mt-2 max-w-2xl text-sm leading-relaxed ${styles.bodyText}`}>
-                      Describe the product workflow, learner role, and competency you want to verify. OpenLesson
-                      generates event actions and a workspace from your prompt. Calendar gap tools (+1 day, +3
-                      days, +1 week) are always included.
-                    </p>
-                    <label className="mt-6 block max-w-2xl">
-                      <span className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-500">
-                        Scenario prompt
-                      </span>
-                      <textarea
-                        value={customPrompt}
-                        onChange={(event) => onCustomPromptChange?.(event.target.value)}
-                        disabled={phase === "creating"}
-                        rows={8}
-                        placeholder="Example: Verify that sales engineers can configure Acme CRM trial workspaces — connect email, import contacts, build a pipeline, invite a manager, recover from bad field mapping, and return after a week idle…"
-                        className="mt-2 w-full resize-y rounded-md border border-zinc-700 bg-black/40 px-4 py-3 text-sm leading-relaxed text-zinc-200 placeholder:text-zinc-600 focus:border-zinc-500 focus:outline-none disabled:opacity-60"
-                      />
-                      <span className="mt-2 block font-mono text-[10px] text-zinc-600">
-                        {customPrompt.trim().length}/{customPromptMinLength} characters minimum
-                      </span>
-                    </label>
+                    <Loader2 className="size-4 animate-spin" />
+                    {isCustom ? "Generating events & workspace…" : "Creating workspace…"}
                   </>
                 ) : (
-                  <p className={`mt-2 max-w-md text-sm leading-relaxed ${styles.bodyText}`}>
-                    {demo.scenarioIntro.replace(/\*\*/g, "")} Use calendar gap tools to record idle time between
-                    sessions — then regenerate OpenLesson specs as evidence grows. After starting, use the Skill /
-                    MCP import tab to pull events from an external integration.
-                  </p>
+                  <>
+                    {isCustom ? "Generate & start" : "Start demo"}
+                    <ArrowRight className="size-4" />
+                  </>
                 )}
-                <div className="mt-8 flex flex-wrap items-center gap-3">
-                  <button
-                    type="button"
-                    onClick={() => onStart()}
-                    disabled={
-                      phase === "creating" ||
-                      (isCustom && customPrompt.trim().length < customPromptMinLength)
-                    }
-                    className={`inline-flex w-fit items-center gap-2 rounded-md px-5 py-2.5 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-60 ${styles.button}`}
-                  >
-                    {phase === "creating" ? (
-                      <>
-                        <Loader2 className="size-4 animate-spin" />
-                        {isCustom ? "Generating events & workspace…" : "Creating workspace…"}
-                      </>
-                    ) : (
-                      <>
-                        {isCustom ? "Generate & start" : "Start demo"}
-                        <ArrowRight className="size-4" />
-                      </>
-                    )}
-                  </button>
-                  {onBackToPicker ? (
-                    <button
-                      type="button"
-                      onClick={onBackToPicker}
-                      disabled={phase === "creating"}
-                      className="text-xs text-zinc-500 transition hover:text-zinc-300 disabled:opacity-50"
-                    >
-                      Choose a different use case
-                    </button>
-                  ) : null}
-                </div>
-              </div>
-            )}
+              </button>
+              {onBackToPicker ? (
+                <button
+                  type="button"
+                  onClick={onBackToPicker}
+                  disabled={phase === "creating"}
+                  className="text-xs text-zinc-500 transition hover:text-zinc-300 disabled:opacity-50"
+                >
+                  Choose a different use case
+                </button>
+              ) : null}
+            </div>
           </div>
         ) : (
           <>
@@ -1976,7 +1874,6 @@ function SimulatorPanel({
                 isImportingEvents={isImportingEvents}
                 importSummary={importSummary}
                 onImportEvents={onImportEvents}
-                phase={phase}
                 styles={styles}
               />
             ) : (

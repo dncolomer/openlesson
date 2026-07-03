@@ -7,6 +7,7 @@ import {
   ArrowRight,
   BarChart3,
   Clock,
+  Download,
   FileCode2,
   Gauge,
   LayoutGrid,
@@ -50,7 +51,7 @@ import { aestheticImageForId, fetchAestheticPackages } from "@/lib/aesthetics";
 import { readJsonResponse } from "@/lib/read-json-response";
 
 type DemoPhase = "picker" | "intro" | "creating" | "simulating";
-type DemoView = "simulator" | "evidence" | "score";
+type DemoView = "simulator" | "evidence" | "evaluation" | "score";
 type ScoreCardTab = "overview" | "competency" | "markers" | "strengths" | "gaps" | "history";
 
 type ReportSnapshot = {
@@ -65,12 +66,12 @@ type ReportSnapshot = {
 type SkillSnapshot = {
   id: string;
   skill_name: string;
+  skill_md: string;
   spec_version?: string;
   evidenceCount: number;
   actionCount: number;
   simulatedDays: number;
   prefetch: boolean;
-  preview: string;
   timestamp: Date;
 };
 
@@ -78,6 +79,7 @@ type SchemaSnapshot = {
   id: string;
   schema_name: string;
   spec_version?: string;
+  spec: EvidenceEvalSchemaResult;
   evidenceCount: number;
   actionCount: number;
   simulatedDays: number;
@@ -291,7 +293,8 @@ export function EvidenceApiDemo() {
   const [reportHistory, setReportHistory] = useState<ReportSnapshot[]>([]);
   const [skillHistory, setSkillHistory] = useState<SkillSnapshot[]>([]);
   const [schemaHistory, setSchemaHistory] = useState<SchemaSnapshot[]>([]);
-  const [latestSkillPreview, setLatestSkillPreview] = useState<string | null>(null);
+  const [latestSkillMd, setLatestSkillMd] = useState<string | null>(null);
+  const [latestSkillName, setLatestSkillName] = useState<string | null>(null);
   const [latestSchema, setLatestSchema] = useState<EvidenceEvalSchemaResult | null>(null);
   const [isReporting, setIsReporting] = useState(false);
   const [isFetchingSchema, setIsFetchingSchema] = useState(false);
@@ -465,7 +468,8 @@ export function EvidenceApiDemo() {
     setReportHistory([]);
     setSkillHistory([]);
     setSchemaHistory([]);
-    setLatestSkillPreview(null);
+    setLatestSkillMd(null);
+    setLatestSkillName(null);
     setLatestSchema(null);
     setEvidenceCount(0);
     setLastSkillEvidenceCount(null);
@@ -712,6 +716,7 @@ export function EvidenceApiDemo() {
           id: crypto.randomUUID(),
           schema_name: data.spec.schema_name,
           spec_version: data.spec.spec_version,
+          spec: data.spec,
           evidenceCount,
           actionCount,
           simulatedDays: worldState.simulatedDays,
@@ -782,8 +787,8 @@ export function EvidenceApiDemo() {
         throw new Error(data.error || "Skill regeneration failed");
       }
 
-      const preview = data.skill_md.slice(0, 600);
-      setLatestSkillPreview(preview);
+      setLatestSkillMd(data.skill_md);
+      setLatestSkillName(data.skill_name);
       if (data.evidence_spec) {
         setLatestSchema(data.evidence_spec);
       }
@@ -794,12 +799,12 @@ export function EvidenceApiDemo() {
         {
           id: crypto.randomUUID(),
           skill_name: data.skill_name,
+          skill_md: data.skill_md,
           spec_version: data.evidence_spec?.spec_version,
           evidenceCount,
           actionCount,
           simulatedDays: worldState.simulatedDays,
           prefetch: data.evidence_spec_prefetched === true,
-          preview,
           timestamp: new Date(),
         },
       ]);
@@ -811,6 +816,7 @@ export function EvidenceApiDemo() {
             id: crypto.randomUUID(),
             schema_name: data.evidence_spec!.schema_name,
             spec_version: data.evidence_spec!.spec_version,
+            spec: data.evidence_spec!,
             evidenceCount,
             actionCount,
             simulatedDays: worldState.simulatedDays,
@@ -933,7 +939,8 @@ export function EvidenceApiDemo() {
     setReportHistory([]);
     setSkillHistory([]);
     setSchemaHistory([]);
-    setLatestSkillPreview(null);
+    setLatestSkillMd(null);
+    setLatestSkillName(null);
     setLatestSchema(null);
     setIsReporting(false);
     setIsFetchingSchema(false);
@@ -1110,21 +1117,28 @@ export function EvidenceApiDemo() {
             workspaceTitle={workspaceTitle}
             apiPaths={apiPaths}
             planFiles={planFiles}
-            modelDocPreview={modelDocPreview}
             sessionId={sessionId}
+            apiLog={apiLog}
+            error={error}
+            onReset={handleReset}
+          />
+        ) : null}
+
+        {showViewSwitcher && activeView === "evaluation" ? (
+          <ContinuousEvaluationView
+            planId={planId}
             evidenceCount={evidenceCount}
             isFetchingSchema={isFetchingSchema}
             isRegeneratingSkill={isRegeneratingSkill}
             skillRegenHint={skillRegenHint}
-            apiLog={apiLog}
             error={error}
             skillHistory={skillHistory}
             schemaHistory={schemaHistory}
-            latestSkillPreview={latestSkillPreview}
+            latestSkillMd={latestSkillMd}
+            latestSkillName={latestSkillName}
             latestSchema={latestSchema}
             onFetchEvidenceSchema={handleFetchEvidenceSchema}
             onRegenerateSkill={handleRegenerateSkill}
-            onReset={handleReset}
           />
         ) : null}
 
@@ -1330,9 +1344,15 @@ function DemoViewSwitcher({
     {
       id: "evidence",
       label: "Evidence layer",
-      description: "API log & spec regen",
+      description: "API log & workspace context",
       icon: Radio,
       badge: evidenceCount > 0 ? String(evidenceCount) : undefined,
+    },
+    {
+      id: "evaluation",
+      label: "Continuous evaluation",
+      description: "Regenerate & download specs",
+      icon: RefreshCw,
     },
     {
       id: "score",
@@ -1816,49 +1836,43 @@ function SimulationCategorySection({
   );
 }
 
+function sanitizeDownloadPart(value: string) {
+  return value.replace(/[^a-zA-Z0-9._-]+/g, "_").replace(/^_|_$/g, "") || "file";
+}
+
+function downloadTextFile(filename: string, content: string, mimeType = "text/plain;charset=utf-8") {
+  const blob = new Blob([content], { type: mimeType });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
+function downloadJsonFile(filename: string, data: unknown) {
+  downloadTextFile(filename, JSON.stringify(data, null, 2), "application/json;charset=utf-8");
+}
+
 function EvidenceLayerView({
   planId,
   workspaceTitle,
   apiPaths,
   planFiles,
-  modelDocPreview,
   sessionId,
-  evidenceCount,
-  isFetchingSchema,
-  isRegeneratingSkill,
-  skillRegenHint,
   apiLog,
   error,
-  skillHistory,
-  schemaHistory,
-  latestSkillPreview,
-  latestSchema,
-  onFetchEvidenceSchema,
-  onRegenerateSkill,
   onReset,
 }: {
   planId: string | null;
   workspaceTitle: string | null;
   apiPaths: WorkspaceResponse["api_paths"] | null;
   planFiles: PlanFileSummary[];
-  modelDocPreview: string | null;
   sessionId: string;
-  evidenceCount: number;
-  isFetchingSchema: boolean;
-  isRegeneratingSkill: boolean;
-  skillRegenHint: boolean;
   apiLog: ApiLogEntry[];
   error: string;
-  skillHistory: SkillSnapshot[];
-  schemaHistory: SchemaSnapshot[];
-  latestSkillPreview: string | null;
-  latestSchema: EvidenceEvalSchemaResult | null;
-  onFetchEvidenceSchema: () => void;
-  onRegenerateSkill: () => void;
   onReset: () => void;
 }) {
-  const canRegenerate = !!planId && evidenceCount > 0;
-
   return (
     <section className="flex flex-col rounded-lg border border-zinc-800 bg-zinc-950/70">
       <div className="border-b border-zinc-800 px-5 py-4 sm:px-6">
@@ -1866,12 +1880,12 @@ function EvidenceLayerView({
           <Radio className="size-4 text-zinc-300" />
           <div>
             <div className="text-sm font-medium text-white">OpenLesson verification layer</div>
-            <div className="text-xs text-zinc-500">Workspace context, API activity, and continuous evaluation</div>
+            <div className="text-xs text-zinc-500">Workspace context and live API activity</div>
           </div>
         </div>
       </div>
 
-      <div className="flex flex-1 flex-col gap-6 p-5 sm:p-6 lg:grid lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)] lg:items-start lg:gap-8">
+      <div className="flex flex-1 flex-col gap-6 p-5 sm:p-6 lg:grid lg:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)] lg:items-start lg:gap-8">
         <div className="flex flex-col gap-5">
           {workspaceTitle ? (
             <div className="rounded-md border border-zinc-800 bg-black/30 px-4 py-3">
@@ -1949,10 +1963,6 @@ function EvidenceLayerView({
               <div className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-600">
                 Workspace files (plan_files)
               </div>
-              <p className="mt-1 text-[11px] leading-relaxed text-zinc-500">
-                Attached at creation like <span className="font-mono text-zinc-400">POST .../workspaces</span>{" "}
-                with <span className="font-mono text-zinc-400">files[]</span>.
-              </p>
               <ul className="mt-3 space-y-2">
                 {planFiles.map((file) => (
                   <li
@@ -1966,11 +1976,6 @@ function EvidenceLayerView({
                   </li>
                 ))}
               </ul>
-              {modelDocPreview ? (
-                <pre className="mt-3 max-h-40 overflow-y-auto whitespace-pre-wrap rounded border border-zinc-800/80 bg-zinc-950/60 p-3 font-mono text-[10px] leading-relaxed text-zinc-500">
-                  {modelDocPreview}…
-                </pre>
-              ) : null}
             </div>
           ) : null}
 
@@ -1985,101 +1990,235 @@ function EvidenceLayerView({
                 <li>POST …/evidence-schema</li>
                 <li>POST …/integration-skill</li>
               </ul>
-              <p className="mt-2 text-[11px] leading-relaxed text-zinc-500">
-                Session-authenticated proxy routes for this UI. In production, use Bearer API keys
-                against the paths returned when the workspace was created.
-              </p>
             </div>
           ) : null}
-
-          {canRegenerate ? (
-            <div className="space-y-4 rounded-md border border-zinc-800 bg-black/30 p-5">
-              <div className="flex items-center gap-2">
-                <RefreshCw className="size-4 text-zinc-300" />
-                <div>
-                  <div className="text-sm font-medium text-white">Continuous evaluation</div>
-                  <div className="text-xs text-zinc-500">
-                    Specs and skills are living documents — regenerate as evidence grows.
-                  </div>
-                </div>
-              </div>
-
-              {skillRegenHint ? (
-                <p className="rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-xs text-zinc-300">
-                  Evidence crossed a threshold ({evidenceCount} artifacts). Regenerate the integration
-                  skill to showcase how partner agents stay aligned.
-                </p>
-              ) : null}
-
-              <div className="grid gap-2 sm:grid-cols-2">
-                <button
-                  type="button"
-                  onClick={onFetchEvidenceSchema}
-                  disabled={isFetchingSchema || isRegeneratingSkill}
-                  className="inline-flex items-center justify-center gap-2 rounded-md border border-zinc-700 bg-black/30 px-3 py-2.5 text-xs font-medium text-zinc-200 transition hover:border-zinc-500 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  {isFetchingSchema ? (
-                    <Loader2 className="size-3.5 animate-spin" />
-                  ) : (
-                    <FileCode2 className="size-3.5" />
-                  )}
-                  Re-fetch evidence spec
-                </button>
-                <button
-                  type="button"
-                  onClick={onRegenerateSkill}
-                  disabled={isRegeneratingSkill || isFetchingSchema}
-                  className="inline-flex items-center justify-center gap-2 rounded-md bg-white px-3 py-2.5 text-xs font-medium text-black transition hover:bg-zinc-200 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  {isRegeneratingSkill ? (
-                    <Loader2 className="size-3.5 animate-spin" />
-                  ) : (
-                    <RefreshCw className="size-3.5" />
-                  )}
-                  Regenerate skill.md
-                  {skillHistory.length > 0 ? ` (v${skillHistory.length + 1})` : ""}
-                </button>
-              </div>
-
-              {schemaHistory.length > 0 ? <SpecEvolution history={schemaHistory} /> : null}
-              {skillHistory.length > 0 ? <SkillEvolution history={skillHistory} /> : null}
-
-              {latestSchema ? (
-                <div className="rounded-md border border-zinc-800 bg-black/30 p-3">
-                  <div className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-600">
-                    Latest evidence spec
-                  </div>
-                  <div className="mt-2 text-xs text-zinc-300">
-                    <span className="font-mono text-zinc-200">{latestSchema.schema_name}</span>
-                    {latestSchema.spec_version ? (
-                      <span className="ml-2 text-zinc-500">v{latestSchema.spec_version}</span>
-                    ) : null}
-                  </div>
-                  <p className="mt-2 text-[11px] leading-relaxed text-zinc-500">
-                    {latestSchema.continuous_evaluation_summary ||
-                      latestSchema.collection_guidance?.slice(0, 240)}
-                  </p>
-                </div>
-              ) : null}
-
-              {latestSkillPreview ? (
-                <div className="rounded-md border border-zinc-800 bg-black/30 p-3">
-                  <div className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-600">
-                    Latest skill.md preview
-                  </div>
-                  <pre className="mt-2 max-h-48 overflow-y-auto whitespace-pre-wrap font-mono text-[10px] leading-relaxed text-zinc-400">
-                    {latestSkillPreview}
-                    {latestSkillPreview.length >= 600 ? "\n…" : ""}
-                  </pre>
-                </div>
-              ) : null}
-            </div>
-          ) : (
-            <p className="rounded-md border border-dashed border-zinc-800 px-4 py-8 text-center text-sm text-zinc-500">
-              Run at least one simulation action to unlock spec and skill regeneration.
-            </p>
-          )}
         </div>
+      </div>
+    </section>
+  );
+}
+
+function DownloadArtifactButton({
+  label,
+  onClick,
+}: {
+  label: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="inline-flex items-center gap-2 rounded-md border border-zinc-700 bg-black/30 px-3 py-2 text-xs font-medium text-zinc-200 transition hover:border-zinc-500 hover:text-white"
+    >
+      <Download className="size-3.5" />
+      {label}
+    </button>
+  );
+}
+
+function ContinuousEvaluationView({
+  planId,
+  evidenceCount,
+  isFetchingSchema,
+  isRegeneratingSkill,
+  skillRegenHint,
+  error,
+  skillHistory,
+  schemaHistory,
+  latestSkillMd,
+  latestSkillName,
+  latestSchema,
+  onFetchEvidenceSchema,
+  onRegenerateSkill,
+}: {
+  planId: string | null;
+  evidenceCount: number;
+  isFetchingSchema: boolean;
+  isRegeneratingSkill: boolean;
+  skillRegenHint: boolean;
+  error: string;
+  skillHistory: SkillSnapshot[];
+  schemaHistory: SchemaSnapshot[];
+  latestSkillMd: string | null;
+  latestSkillName: string | null;
+  latestSchema: EvidenceEvalSchemaResult | null;
+  onFetchEvidenceSchema: () => void;
+  onRegenerateSkill: () => void;
+}) {
+  const canRegenerate = !!planId && evidenceCount > 0;
+  const hasArtifacts = schemaHistory.length > 0 || skillHistory.length > 0;
+
+  return (
+    <section className="flex flex-col rounded-lg border border-zinc-800 bg-zinc-950/70">
+      <div className="border-b border-zinc-800 px-5 py-4 sm:px-6">
+        <div className="flex items-center gap-2">
+          <RefreshCw className="size-4 text-zinc-300" />
+          <div>
+            <div className="text-sm font-medium text-white">Continuous evaluation</div>
+            <div className="text-xs text-zinc-500">
+              Regenerate living specs and skills as evidence accumulates — download the full files.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="flex flex-1 flex-col gap-6 p-5 sm:p-6">
+        {!canRegenerate ? (
+          <p className="rounded-md border border-dashed border-zinc-800 px-4 py-12 text-center text-sm text-zinc-500">
+            Run at least one simulation action to unlock spec and skill regeneration.
+          </p>
+        ) : (
+          <>
+            {skillRegenHint ? (
+              <p className="rounded-md border border-zinc-700 bg-zinc-950 px-4 py-3 text-sm text-zinc-300">
+                Evidence crossed a threshold ({evidenceCount} artifacts). Regenerate the integration
+                skill to keep partner agents aligned.
+              </p>
+            ) : null}
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              <button
+                type="button"
+                onClick={onFetchEvidenceSchema}
+                disabled={isFetchingSchema || isRegeneratingSkill}
+                className="inline-flex items-center justify-center gap-2 rounded-md border border-zinc-700 bg-black/30 px-4 py-3 text-sm font-medium text-zinc-200 transition hover:border-zinc-500 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {isFetchingSchema ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  <FileCode2 className="size-4" />
+                )}
+                Re-fetch evidence spec
+              </button>
+              <button
+                type="button"
+                onClick={onRegenerateSkill}
+                disabled={isRegeneratingSkill || isFetchingSchema}
+                className="inline-flex items-center justify-center gap-2 rounded-md bg-white px-4 py-3 text-sm font-medium text-black transition hover:bg-zinc-200 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {isRegeneratingSkill ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  <RefreshCw className="size-4" />
+                )}
+                Regenerate skill.md
+                {skillHistory.length > 0 ? ` (v${skillHistory.length + 1})` : ""}
+              </button>
+            </div>
+
+            {error ? <p className="text-sm text-zinc-300">{error}</p> : null}
+
+            {hasArtifacts ? (
+              <div className="space-y-6">
+                {latestSchema || latestSkillMd ? (
+                  <div className="rounded-md border border-zinc-800 bg-black/30 p-4">
+                    <div className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-600">
+                      Latest artifacts
+                    </div>
+                    <div className="mt-4 flex flex-wrap gap-3">
+                      {latestSchema ? (
+                        <DownloadArtifactButton
+                          label={`${latestSchema.schema_name}.json`}
+                          onClick={() =>
+                            downloadJsonFile(
+                              `${sanitizeDownloadPart(latestSchema.schema_name)}.json`,
+                              latestSchema
+                            )
+                          }
+                        />
+                      ) : null}
+                      {latestSkillMd ? (
+                        <DownloadArtifactButton
+                          label={latestSkillName ? `${latestSkillName}.md` : "skill.md"}
+                          onClick={() =>
+                            downloadTextFile(
+                              `${sanitizeDownloadPart(latestSkillName || "skill")}.md`,
+                              latestSkillMd,
+                              "text/markdown;charset=utf-8"
+                            )
+                          }
+                        />
+                      ) : null}
+                    </div>
+                  </div>
+                ) : null}
+
+                {schemaHistory.length > 0 ? (
+                  <div>
+                    <div className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-600">
+                      Evidence spec versions
+                    </div>
+                    <ul className="mt-3 space-y-2">
+                      {schemaHistory.map((snapshot, index) => (
+                        <li
+                          key={snapshot.id}
+                          className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-zinc-800/80 bg-black/25 px-4 py-3"
+                        >
+                          <div className="min-w-0">
+                            <div className="font-mono text-sm text-zinc-200">{snapshot.schema_name}</div>
+                            <div className="mt-1 font-mono text-[10px] text-zinc-500">
+                              v{index + 1}
+                              {snapshot.spec_version ? ` · spec ${snapshot.spec_version}` : ""} · day{" "}
+                              {snapshot.simulatedDays} · {snapshot.evidenceCount} artifacts
+                            </div>
+                          </div>
+                          <DownloadArtifactButton
+                            label="Download JSON"
+                            onClick={() =>
+                              downloadJsonFile(
+                                `${sanitizeDownloadPart(snapshot.schema_name)}-v${index + 1}.json`,
+                                snapshot.spec
+                              )
+                            }
+                          />
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : null}
+
+                {skillHistory.length > 0 ? (
+                  <div>
+                    <div className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-600">
+                      skill.md versions
+                    </div>
+                    <ul className="mt-3 space-y-2">
+                      {skillHistory.map((snapshot, index) => (
+                        <li
+                          key={snapshot.id}
+                          className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-zinc-800/80 bg-black/25 px-4 py-3"
+                        >
+                          <div className="min-w-0">
+                            <div className="text-sm font-medium text-zinc-200">{snapshot.skill_name}</div>
+                            <div className="mt-1 font-mono text-[10px] text-zinc-500">
+                              v{index + 1} · day {snapshot.simulatedDays} · {snapshot.evidenceCount} artifacts
+                              {snapshot.prefetch ? " · prefetched spec" : ""}
+                            </div>
+                          </div>
+                          <DownloadArtifactButton
+                            label="Download .md"
+                            onClick={() =>
+                              downloadTextFile(
+                                `${sanitizeDownloadPart(snapshot.skill_name)}-v${index + 1}.md`,
+                                snapshot.skill_md,
+                                "text/markdown;charset=utf-8"
+                              )
+                            }
+                          />
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : null}
+              </div>
+            ) : (
+              <p className="text-sm text-zinc-500">
+                Regenerate a spec or skill to download the generated artifacts.
+              </p>
+            )}
+          </>
+        )}
       </div>
     </section>
   );
@@ -2236,70 +2375,6 @@ function ScoreView({
         )}
       </div>
     </section>
-  );
-}
-
-function SkillEvolution({ history }: { history: SkillSnapshot[] }) {
-  return (
-    <div className="rounded-md border border-zinc-800 bg-black/30 p-3">
-      <div className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-600">
-        Skill regeneration timeline
-      </div>
-      <ol className="mt-3 space-y-2">
-        {history.map((snapshot, index) => (
-          <li
-            key={snapshot.id}
-            className={`rounded-md border px-3 py-2 text-xs ${
-              index === history.length - 1
-                ? "border-zinc-600 bg-zinc-900 text-zinc-200"
-                : "border-zinc-800/80 text-zinc-400"
-            }`}
-          >
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <span className="font-medium text-zinc-300">
-                v{index + 1} · {snapshot.skill_name}
-              </span>
-              <span className="font-mono text-[10px] text-zinc-500">
-                {snapshot.evidenceCount} artifacts · day {snapshot.simulatedDays}
-              </span>
-            </div>
-            <p className="mt-1 font-mono text-[10px] text-zinc-500">
-              {snapshot.prefetch ? "Prefetched evidence spec" : "Skill only"}
-              {snapshot.spec_version ? ` · spec ${snapshot.spec_version}` : ""}
-            </p>
-          </li>
-        ))}
-      </ol>
-    </div>
-  );
-}
-
-function SpecEvolution({ history }: { history: SchemaSnapshot[] }) {
-  return (
-    <div className="rounded-md border border-zinc-800 bg-black/30 p-3">
-      <div className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-600">
-        Evidence spec evolution
-      </div>
-      <ol className="mt-3 space-y-2">
-        {history.map((snapshot, index) => (
-          <li
-            key={snapshot.id}
-            className={`rounded-md border px-3 py-2 text-xs ${
-              index === history.length - 1
-                ? "border-zinc-600 bg-zinc-900 text-zinc-200"
-                : "border-zinc-800/80 text-zinc-400"
-            }`}
-          >
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <span className="font-mono text-zinc-300">{snapshot.schema_name}</span>
-              <span className="text-[10px] text-zinc-500">
-                fetch {index + 1} · {snapshot.evidenceCount} artifacts
-              </span>
-            </div>
-          </li>
-        ))}
-      </ol>
-    </div>
   );
 }
 

@@ -5,8 +5,10 @@ import {
   EVIDENCE_EVAL_SCHEMA_OUTPUT,
 } from "@/lib/agent-v2/evidence-schema";
 import {
+  buildContinuousEvaluationPolicy,
   buildEvidenceSchemaApiPath,
   buildEvidenceSchemaRequestFromIntegration,
+  buildIntegrationSkillApiPath,
   enrichEvidenceSpecResult,
   formatEvidenceSpecForSkillPrompt,
 } from "@/lib/agent-v2/evidence-integration";
@@ -99,7 +101,7 @@ describe("evidence integration helpers", () => {
     );
   });
 
-  it("enriches evidence spec with API paths", () => {
+  it("enriches evidence spec with API paths and continuous evaluation", () => {
     const enriched = enrichEvidenceSpecResult(
       {
         schema: { type: "object" },
@@ -108,14 +110,35 @@ describe("evidence integration helpers", () => {
         example_payload: { event: "start" },
         recommended_mime_type: "application/json",
         recommended_evidence_type: "tool",
+        continuous_evaluation_summary: "Regenerate as evidence grows.",
       },
       "ws-1",
-      "https://openlesson.academy"
+      "https://openlesson.academy",
+      null,
+      { evidence_artifacts: 12, blocks: 3 }
     );
 
     expect(enriched.evidence_spec_api_path).toContain("/evidence-schema");
     expect(enriched.evidence_upload_api_path).toContain("/evidence");
-    expect(enriched.spec_version).toBe("1.0");
+    expect(enriched.spec_version).toBe("1.1");
+    expect(enriched.continuous_evaluation?.regeneration_required).toBe(true);
+    expect(enriched.continuous_evaluation?.integration_skill.api_path).toContain("/integration-skill");
+    expect(enriched.collection_guidance).toContain("Self-update");
+  });
+
+  it("builds continuous evaluation policy with evidence-aware triggers", () => {
+    const policy = buildContinuousEvaluationPolicy("ws-1", "https://openlesson.academy", {
+      evidence_artifacts: 0,
+    });
+
+    expect(policy.more_evidence_improves).toContain("more");
+    expect(policy.evidence_spec.api_path).toBe(
+      buildEvidenceSchemaApiPath("ws-1", "https://openlesson.academy")
+    );
+    expect(policy.integration_skill.api_path).toBe(
+      buildIntegrationSkillApiPath("ws-1", "https://openlesson.academy")
+    );
+    expect(policy.evidence_spec.when_to_call[0]).toContain("little or no evidence");
   });
 
   it("formats evidence spec for skill prompt", () => {
@@ -171,8 +194,11 @@ describe("buildIntegrationSkillInstructions", () => {
     );
 
     expect(instructions).toContain("/api/v2/agent/workspaces/ws-1/evidence-schema");
+    expect(instructions).toContain("/api/v2/agent/workspaces/ws-1/integration-skill");
     expect(instructions).toContain("Evidence specification");
+    expect(instructions).toContain("Continuous evaluation and regeneration");
     expect(instructions).toContain("do not tell them to invent ad-hoc JSON");
+    expect(instructions).toContain("regenerate");
   });
 });
 
@@ -202,6 +228,7 @@ describe("buildEvidenceSchemaInstructions", () => {
 
     expect(instructions).toContain("tool_submissions");
     expect(instructions).toContain("evidence_upload_contract");
+    expect(instructions).toContain("continuous_evaluation_summary");
     expect(instructions).toContain("Discovery");
   });
 });
@@ -218,5 +245,6 @@ describe("EVIDENCE_EVAL_SCHEMA_OUTPUT", () => {
     expect(EVIDENCE_EVAL_SCHEMA_OUTPUT.schema.required).toContain("schema");
     expect(EVIDENCE_EVAL_SCHEMA_OUTPUT.schema.required).toContain("tool_submissions");
     expect(EVIDENCE_EVAL_SCHEMA_OUTPUT.schema.required).toContain("evidence_upload_contract");
+    expect(EVIDENCE_EVAL_SCHEMA_OUTPUT.schema.required).toContain("continuous_evaluation_summary");
   });
 });

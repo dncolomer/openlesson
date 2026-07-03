@@ -1,5 +1,11 @@
 import type { EvidenceEvalSchemaResult, EvidenceSchemaIntegrationHints } from "./evidence-schema";
-import { buildEvidenceSchemaApiPath, buildEvidenceUploadApiPath, formatEvidenceSpecForSkillPrompt } from "./evidence-integration";
+import {
+  buildEvidenceSchemaApiPath,
+  buildEvidenceUploadApiPath,
+  buildIntegrationSkillApiPath,
+  buildPerformanceApiPath,
+  formatEvidenceSpecForSkillPrompt,
+} from "./evidence-integration";
 
 export interface IntegrationSkillRequest {
   integration_name: string;
@@ -26,6 +32,7 @@ export interface IntegrationSkillResult {
 const DEFAULT_SECTIONS = [
   "purpose",
   "design_principles",
+  "continuous_evaluation",
   "auth",
   "endpoints",
   "evidence_specification",
@@ -121,8 +128,11 @@ export function buildIntegrationSkillInstructions(
   const skillName = deriveSkillName(request.integration_name);
   const sharePath = deriveSuggestedSharePath(request.integration_name);
   const scope = blockId ? "Focus the skill on one workspace block." : "Cover the full workspace.";
-  const evidenceSchemaPath = buildEvidenceSchemaApiPath(workspace.id, request.base_url || "https://openlesson.academy");
-  const evidenceUploadPath = buildEvidenceUploadApiPath(workspace.id, request.base_url || "https://openlesson.academy");
+  const baseUrl = request.base_url || "https://openlesson.academy";
+  const evidenceSchemaPath = buildEvidenceSchemaApiPath(workspace.id, baseUrl);
+  const evidenceUploadPath = buildEvidenceUploadApiPath(workspace.id, baseUrl);
+  const integrationSkillPath = buildIntegrationSkillApiPath(workspace.id, baseUrl);
+  const performancePath = buildPerformanceApiPath(workspace.id, baseUrl);
 
   const blockTable = blocks
     .map((block) => `- ${block.title || "Untitled"} (${block.id})${block.is_start ? " [start]" : ""}`)
@@ -142,7 +152,7 @@ export function buildIntegrationSkillInstructions(
 
 ${scope}
 
-This skill.md must treat the evidence specification as a formal contract. Integrators fetch the live schema dynamically; do not tell them to invent ad-hoc JSON.
+This skill.md must treat the evidence specification as a formal contract and **must be regenerated** as workspace evidence grows. Integrators fetch the live schema dynamically; do not tell them to invent ad-hoc JSON. This document is not static.
 
 YAML frontmatter (required):
 ---
@@ -157,7 +167,7 @@ Workspace:
 - description: ${workspace.description || "n/a"}
 
 Partner description from API caller:
-${request.partner_description || "Not provided — infer reasonable integration goals from the workspace."}
+${request.partner_description || "Not provided: infer reasonable integration goals from the workspace."}
 
 Evaluation definition (shared with evidence spec generation):
 """
@@ -171,24 +181,34 @@ Base URL for examples: ${request.base_url}
 Suggested share path: ${sharePath}
 Evidence spec API (dynamic — MUST document prominently): POST ${evidenceSchemaPath}
 Evidence upload API: POST ${evidenceUploadPath}
+Integration skill regeneration API (self-update — MUST document prominently): POST ${integrationSkillPath}
+Performance API (re-run as evidence grows): POST ${performancePath}
 
 Sections to include: ${sections.join(", ")}
 ${evidenceSpecSection}
 
 Required content:
 1. Purpose — what this partner agent verifies and how evidence + performance fit the workflow.
-2. Design principles — checkpoint-agnostic timing, block-scoped vs workspace-global analysis, tool usage as core signal, always fetch the live evidence spec before uploading.
-3. Authentication table (Bearer sk_ / gsk_, Teams tier, scopes).
-4. Endpoints table covering: POST /workspaces, GET /blocks, POST /evidence-schema, POST /evidence, POST /performance, POST /integration-skill.
-5. **Evidence specification (required section)** — explain that payloads are defined by the formal evidence spec returned from POST ${evidenceSchemaPath}. Include:
-   - When to call the evidence spec endpoint (before first upload, when eval definition or blocks change)
+2. Design principles — checkpoint-agnostic timing, block-scoped vs workspace-global analysis, tool usage as core signal, always fetch the live evidence spec before uploading, **more evidence improves evaluation quality**.
+3. **Continuous evaluation and regeneration (required section)** — this is a must-have operating model, not optional maintenance. Include:
+   - Principle: verification is continuous; the more data and evidence submitted, the better OpenLesson can learn and evaluate
+   - This skill.md is a snapshot; partner agents must **regenerate** it via POST ${integrationSkillPath} as evidence accumulates
+   - Re-fetch the evidence spec via POST ${evidenceSchemaPath} on a recurring basis (e.g. after every 5-10 new uploads, when blocks change, or when scores feel stale)
+   - Re-request performance via POST ${performancePath} after meaningful evidence batches
+   - Explicit warning: treating the initial skill.md or spec as permanent will degrade evaluation quality over time
+   - Recommended loop: upload evidence → re-fetch spec → regenerate skill → request performance → repeat
+   - Reference the \`continuous_evaluation\` object returned by the evidence spec API for machine-readable self-update triggers
+4. Authentication table (Bearer sk_ / gsk_, Teams tier, scopes).
+5. Endpoints table covering: POST /workspaces, GET /blocks, POST /evidence-schema, POST /evidence, POST /performance, POST /integration-skill (note: integration-skill regenerates this document).
+6. **Evidence specification (required section)** — explain that payloads are defined by the formal evidence spec returned from POST ${evidenceSchemaPath}. Include:
+   - When to call the evidence spec endpoint (before first upload, after evidence milestones, when eval definition or blocks change)
    - Example request body with definition, optional block_id, and integration_hints
-   - That the response includes tool_submissions (per-tool JSON Schemas), evidence_upload_contract, schema_name, example_payload, and collection_guidance
+   - That the response includes tool_submissions, evidence_upload_contract, continuous_evaluation, schema_name, example_payload, and collection_guidance
    - Instruction to validate tool payloads against the fetched schema before upload
    - Do NOT embed a static schema as the source of truth; reference the API path above
-6. Workspace-specific block mapping guidance and example tool JSON payloads that match the evidence spec (illustrative only).
-7. Performance report and chat-mode examples scoped to this workspace.
-8. Quick integration checklist: fetch evidence spec → upload evidence per contract → request performance.
+7. Workspace-specific block mapping guidance and example tool JSON payloads that match the evidence spec (illustrative only).
+8. Performance report and chat-mode examples scoped to this workspace.
+9. Quick integration checklist: fetch evidence spec → upload evidence per contract → regenerate skill → request performance → repeat as evidence grows.
 
 Canonical API reference links: ${request.base_url}/skill.md and ${request.base_url}/docs/agentic-v2
 
@@ -196,5 +216,5 @@ Return ONLY the markdown document. No JSON wrapper. No code fences around the en
 }
 
 export function buildIntegrationSkillPrompt(workspaceTitle: string, integrationName: string): string {
-  return `Write a complete skill.md integration guide for "${integrationName}" using OpenLesson workspace "${workspaceTitle}". The guide must reference the dynamic evidence spec API for formal tool payload schemas.`;
+  return `Write a complete skill.md integration guide for "${integrationName}" using OpenLesson workspace "${workspaceTitle}". The guide must reference dynamic self-updating APIs for evidence spec and skill regeneration, and treat continuous evaluation (more evidence = better learning) as a must-have operating model.`;
 }

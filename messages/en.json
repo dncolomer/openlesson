@@ -1839,7 +1839,7 @@
     "integrationNamePlaceholder": "e.g. acme-sales-copilot",
     "evalDefinition": "Evaluation definition",
     "evalDefinitionPlaceholder": "What should evidence capture for optimal gap analysis?",
-    "generateHint": "Skill.md generation also produces an evidence spec from the same eval definition and workspace context. Fetch the live schema via the evidence-schema API path referenced in the skill. Generation may take up to three minutes.",
+    "generateHint": "Skill.md and the evidence spec are living documents: regenerate both as evidence accumulates (more uploads improve evaluation). Generation may take up to three minutes.",
     "downloadSkill": "Generate & download skill.md",
     "downloadSpec": "Generate & download evidence spec (JSON)",
     "generatingSkill": "Generating skill…",

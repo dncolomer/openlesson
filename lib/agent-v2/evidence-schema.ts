@@ -37,6 +37,23 @@ export interface EvidenceUploadContract {
   common_fields: string[];
 }
 
+export interface RegenerationEndpointRef {
+  api_path: string;
+  method: "POST";
+  purpose: string;
+  when_to_call: string[];
+}
+
+export interface ContinuousEvaluationPolicy {
+  principle: string;
+  more_evidence_improves: string;
+  regeneration_required: boolean;
+  evidence_spec: RegenerationEndpointRef;
+  integration_skill: RegenerationEndpointRef;
+  performance: RegenerationEndpointRef;
+  recommended_cadence: string;
+}
+
 export interface EvidenceEvalSchemaResult {
   schema: Record<string, unknown>;
   schema_name: string;
@@ -47,8 +64,10 @@ export interface EvidenceEvalSchemaResult {
   required_fields?: string[];
   optional_fields?: string[];
   collection_guidance?: string;
+  continuous_evaluation_summary?: string;
   tool_submissions?: ToolSubmissionSpec[];
   evidence_upload_contract?: EvidenceUploadContract;
+  continuous_evaluation?: ContinuousEvaluationPolicy;
   spec_version?: string;
   evidence_spec_api_path?: string;
   evidence_upload_api_path?: string;
@@ -86,6 +105,11 @@ export const EVIDENCE_EVAL_SCHEMA_OUTPUT = {
         items: { type: "string" },
       },
       collection_guidance: { type: "string" },
+      continuous_evaluation_summary: {
+        type: "string",
+        description:
+          "Short summary for integrators: more evidence improves evaluation; this spec and the integration skill must be regenerated as evidence accumulates",
+      },
       tool_submissions: {
         type: "array",
         description: "Formal per-tool evidence submission specifications for this workspace",
@@ -138,6 +162,7 @@ export const EVIDENCE_EVAL_SCHEMA_OUTPUT = {
       "recommended_evidence_type",
       "tool_submissions",
       "evidence_upload_contract",
+      "continuous_evaluation_summary",
     ],
     additionalProperties: false,
   },
@@ -248,9 +273,14 @@ Output rules:
    - evidence_types: tool (application/json, text/plain), screen (image/png, image/jpeg, image/webp), video (video/mp4, video/webm), eeg (application/json) with when_to_use guidance
    - common_fields: evidence_type, data, mime_type, file_name, plan_node_id, session_id, timestamp_ms, tool_name, tool_action, metadata
 5. Optimize payloads for POST .../performance: time-ordered events, learner reflections, goals achieved, artifact summaries, decision rationale, outcomes, block-relevant competencies.
-6. "collection_guidance" explains cadence, checkpoint timing, and block-scoped vs workspace-global uploads.
-7. schema_name must be snake_case prefixed with "eval_input_".
-8. Keep required_fields practical; use optional_fields for enrichments.
+6. "collection_guidance" explains cadence, checkpoint timing, block-scoped vs workspace-global uploads, and that **more evidence submitted improves learning verification and gap analysis**. Encourage ongoing uploads, not one-time dumps.
+7. "continuous_evaluation_summary" must state clearly that:
+   - This evidence spec is a snapshot derived from current workspace context and evidence history
+   - Integrators must **re-fetch** POST .../evidence-schema as evidence accumulates (schemas and tool_submissions evolve)
+   - Integrators must **regenerate** POST .../integration-skill so skill.md stays aligned with the latest spec and workspace state
+   - Continuous evaluation is the intended operating model, not a one-time setup
+8. schema_name must be snake_case prefixed with "eval_input_".
+9. Keep required_fields practical; use optional_fields for enrichments.
 
 Return only JSON matching the output schema.`;
 }

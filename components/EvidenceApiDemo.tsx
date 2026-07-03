@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { createBrowserClient } from "@supabase/ssr";
 import {
@@ -46,6 +46,7 @@ import type {
   SimulationCategory,
   SimulationWorldState,
 } from "@/lib/evidence-api-demo/types";
+import { aestheticImageForId, fetchAestheticPackages } from "@/lib/aesthetics";
 import { readJsonResponse } from "@/lib/read-json-response";
 
 type DemoPhase = "picker" | "intro" | "creating" | "simulating";
@@ -299,6 +300,11 @@ export function EvidenceApiDemo() {
   const [lastSkillEvidenceCount, setLastSkillEvidenceCount] = useState<number | null>(null);
   const [skillRegenHint, setSkillRegenHint] = useState(false);
   const [activeView, setActiveView] = useState<DemoView>("simulator");
+  const [backgroundImage, setBackgroundImage] = useState(() =>
+    aestheticImageForId("evidence-api-demo")
+  );
+
+  const backgroundSeed = planId ?? demoId ?? "evidence-api-demo";
 
   const actionCount = totalActionCount(worldState);
   const distinctEvidenceActions = countDistinctEvidenceActions(activeDemo, worldState);
@@ -316,6 +322,24 @@ export function EvidenceApiDemo() {
     },
     []
   );
+
+  useEffect(() => {
+    let cancelled = false;
+    setBackgroundImage(aestheticImageForId(backgroundSeed));
+
+    fetchAestheticPackages()
+      .then((packages) => {
+        if (cancelled) return;
+        const images = packages.flatMap((pkg) => pkg.images);
+        if (images.length === 0) return;
+        setBackgroundImage(aestheticImageForId(backgroundSeed, images));
+      })
+      .catch(() => {});
+
+    return () => {
+      cancelled = true;
+    };
+  }, [backgroundSeed]);
 
   useEffect(() => {
     const supabase = createBrowserClient(
@@ -926,16 +950,19 @@ export function EvidenceApiDemo() {
 
   if (authState === "loading") {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center gap-3 bg-[#0a0a0a] text-zinc-400">
-        <Loader2 className="size-6 animate-spin" />
-        <p className="text-sm text-zinc-500">Checking your account…</p>
-      </div>
+      <DemoFlowShell backgroundImage={backgroundImage}>
+        <div className="flex min-h-[70vh] flex-col items-center justify-center gap-3 text-zinc-400">
+          <Loader2 className="size-6 animate-spin" />
+          <p className="text-sm text-zinc-500">Checking your account…</p>
+        </div>
+      </DemoFlowShell>
     );
   }
 
   if (authState === "guest") {
     return (
       <AuthGate
+        backgroundImage={backgroundImage}
         title="Sign in to run the demo"
         body="The Evidence API demo creates a real verification workspace and uploads live evidence. Sign in with a Teams account to continue."
         primaryHref="/login?redirect=/evidence-api-demo"
@@ -949,6 +976,7 @@ export function EvidenceApiDemo() {
   if (authState === "no-teams") {
     return (
       <AuthGate
+        backgroundImage={backgroundImage}
         title="Teams tier required"
         body="This demo uses the Agentic API to create workspaces, upload evidence, and generate performance reports. Upgrade to Teams to run it."
         primaryHref="/pricing"
@@ -960,7 +988,7 @@ export function EvidenceApiDemo() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-zinc-200">
+    <DemoFlowShell backgroundImage={backgroundImage}>
       <Navbar
         breadcrumbs={[
           { label: "Evidence API Demo", href: "/evidence-api-demo" },
@@ -968,7 +996,7 @@ export function EvidenceApiDemo() {
         showNav={false}
       />
 
-      <header className="border-b border-zinc-800/80 bg-zinc-950/60">
+      <header className="border-b border-zinc-800/80 bg-zinc-950/55 backdrop-blur-md">
         <div className="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-8 sm:px-6 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <div className="font-mono text-[10px] uppercase tracking-[2px] text-zinc-500">
@@ -1116,11 +1144,42 @@ export function EvidenceApiDemo() {
       </main>
 
       <Footer />
+    </DemoFlowShell>
+  );
+}
+
+function DemoAestheticBackground({ image }: { image: string }) {
+  return (
+    <>
+      <div className="fixed inset-0 z-0 bg-[#0a0a0a]" />
+      <div
+        className="fixed inset-0 z-0 bg-cover bg-fixed bg-center"
+        style={{ backgroundImage: `url(${image})` }}
+        aria-hidden
+      />
+      <div className="fixed inset-0 z-0 bg-[#0a0a0a]/84" />
+      <div className="fixed inset-0 z-0 bg-[radial-gradient(circle_at_72%_8%,rgba(24,24,27,0.45),transparent_34%),radial-gradient(circle_at_12%_82%,rgba(9,9,11,0.55),transparent_38%)]" />
+    </>
+  );
+}
+
+function DemoFlowShell({
+  backgroundImage,
+  children,
+}: {
+  backgroundImage: string;
+  children: ReactNode;
+}) {
+  return (
+    <div className="relative min-h-screen overflow-hidden bg-[#0a0a0a] text-zinc-200">
+      <DemoAestheticBackground image={backgroundImage} />
+      <div className="relative z-10 flex min-h-screen flex-col">{children}</div>
     </div>
   );
 }
 
 function AuthGate({
+  backgroundImage,
   title,
   body,
   primaryHref,
@@ -1128,6 +1187,7 @@ function AuthGate({
   secondaryHref,
   secondaryLabel,
 }: {
+  backgroundImage: string;
   title: string;
   body: string;
   primaryHref: string;
@@ -1136,7 +1196,7 @@ function AuthGate({
   secondaryLabel: string;
 }) {
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-zinc-200">
+    <DemoFlowShell backgroundImage={backgroundImage}>
       <Navbar showNav={false} />
       <div className="mx-auto flex max-w-lg flex-col items-center px-6 py-24 text-center">
         <div className="flex size-12 items-center justify-center rounded-sm border border-zinc-700 bg-zinc-950">
@@ -1160,7 +1220,7 @@ function AuthGate({
         </div>
       </div>
       <Footer />
-    </div>
+    </DemoFlowShell>
   );
 }
 
@@ -1284,7 +1344,7 @@ function DemoViewSwitcher({
   ];
 
   return (
-    <div className="sticky top-0 z-20 border-b border-zinc-800/80 bg-[#0a0a0a]/95 backdrop-blur-sm">
+    <div className="sticky top-0 z-20 border-b border-zinc-800/80 bg-zinc-950/55 backdrop-blur-md">
       <div className="mx-auto max-w-7xl px-4 sm:px-6">
         <div
           className="flex gap-1 overflow-x-auto py-3 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"

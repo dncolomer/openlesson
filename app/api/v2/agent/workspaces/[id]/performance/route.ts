@@ -4,50 +4,13 @@ import {
   buildPerformanceChatInstructions,
   buildPerformanceReportInstructions,
   buildWorkspacePerformanceContext,
+  emptyPerformanceReport,
+  PERFORMANCE_REPORT_SCHEMA,
   type PerformanceConversationMessage,
   type PerformanceReport,
 } from "@/lib/agent-v2/performance-context";
 import { canAccessAgentWorkspace } from "@/lib/agent-v2/workspace-access";
 import { callXaiResponses, callXaiResponsesWithFiles, type ResponsesInputMessage } from "@/lib/xai-client";
-
-const PERFORMANCE_REPORT_SCHEMA = {
-  name: "workspace_performance_report",
-  schema: {
-    type: "object",
-    properties: {
-      summary: { type: "string" },
-      strengths: { type: "array", items: { type: "string" } },
-      growth_areas: { type: "array", items: { type: "string" } },
-      gap_analysis: {
-        type: "object",
-        properties: {
-          summary: { type: "string" },
-          gaps: {
-            type: "array",
-            items: {
-              type: "object",
-              properties: {
-                title: { type: "string" },
-                evidence: { type: "string" },
-                severity: { type: "string", enum: ["low", "medium", "high"] },
-                suggested_repair: { type: "string" },
-              },
-              required: ["title", "evidence", "severity", "suggested_repair"],
-              additionalProperties: false,
-            },
-          },
-          next_practice: { type: "array", items: { type: "string" } },
-        },
-        required: ["summary", "gaps", "next_practice"],
-        additionalProperties: false,
-      },
-      suggestions: { type: "array", items: { type: "string" } },
-      confidence: { type: "string", enum: ["emerging", "developing", "clear", "well-connected"] },
-    },
-    required: ["summary", "strengths", "growth_areas", "gap_analysis", "suggestions", "confidence"],
-    additionalProperties: false,
-  },
-};
 
 export const runtime = "nodejs";
 export const maxDuration = 120;
@@ -135,26 +98,7 @@ export async function POST(req: NextRequest, { params }: RouteProps) {
           response: prompt
             ? "No performance evidence is attached to this workspace yet. Upload tool usage, screenshots, video, or EEG via POST /evidence, complete a GHL session, or link session data before asking detailed questions."
             : null,
-          report: prompt
-            ? null
-            : {
-                summary:
-                  "No performance evidence is available yet for this workspace. Collect GHL sessions, workspace evidence uploads, or linked session reports before generating a gap analysis.",
-                strengths: [],
-                growth_areas: ["Collect baseline performance evidence before assessing readiness."],
-                gap_analysis: {
-                  summary: "Insufficient data to identify specific learning gaps.",
-                  gaps: [],
-                  next_practice: [
-                    "Upload tool usage or screenshots for key blocks",
-                    "Run a GHL Score session on the highest-risk block",
-                  ],
-                },
-                suggestions: [
-                  "POST /api/v2/agent/workspaces/{workspace_id}/evidence with type tool, screen, video, or eeg",
-                ],
-                confidence: "emerging",
-              },
+          report: prompt ? null : emptyPerformanceReport(),
           evidence_summary: contextCounts,
           file_ids: [],
         });

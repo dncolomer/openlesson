@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { AuthContext } from "./types";
-import { uploadFileToXAI } from "@/lib/xai-files";
+import { filterResolvableXaiFileIds, isXaiFileId, uploadFileToXAI } from "@/lib/xai-files";
 import { evidenceQueryForAuth } from "./workspace-evidence";
 
 const MAX_ARTIFACT_FILE_REFS = 19;
@@ -10,23 +10,20 @@ export interface PerformanceConversationMessage {
   content: string;
 }
 
-export interface PerformanceReport {
-  summary: string;
-  strengths: string[];
-  growth_areas: string[];
-  gap_analysis: {
-    summary: string;
-    gaps: Array<{
-      title: string;
-      evidence: string;
-      severity: "low" | "medium" | "high";
-      suggested_repair: string;
-    }>;
-    next_practice: string[];
-  };
-  suggestions: string[];
-  confidence: "emerging" | "developing" | "clear" | "well-connected";
-}
+export type {
+  PerformanceGapAnalysis,
+  PerformanceGapItem,
+  PerformanceMarkerScore,
+  PerformanceReport,
+  PerformanceReportContract,
+} from "./performance-report";
+
+export {
+  buildPerformanceReportInstructions,
+  emptyPerformanceReport,
+  EXAMPLE_PERFORMANCE_REPORT,
+  PERFORMANCE_REPORT_SCHEMA,
+} from "./performance-report";
 
 export interface PerformanceContextPayload {
   workspace: {
@@ -245,15 +242,17 @@ export async function buildWorkspacePerformanceContext({
     Buffer.from(dataJson).toString("base64")
   );
 
-  const artifactFileIds = Array.from(
+  const candidateArtifactIds = Array.from(
     new Set(
       [
         ...(evidence || []).map((row) => row.xai_file_id),
         ...(planFiles || []).map((file) => file.xai_file_id),
         ...(ghlSessions || []).map((session) => session.xai_file_id),
-      ].filter((id): id is string => typeof id === "string" && id.length > 0)
+      ].filter(isXaiFileId)
     )
   ).slice(0, MAX_ARTIFACT_FILE_REFS);
+
+  const artifactFileIds = await filterResolvableXaiFileIds(candidateArtifactIds);
 
   const fileIds = [summaryUpload.file_id, ...artifactFileIds];
 
@@ -278,18 +277,3 @@ When answering:
 If evidence is sparse, say what is missing and what to collect next.`;
 }
 
-export function buildPerformanceReportInstructions(blockId?: string | null): string {
-  const scope = blockId ? "a single workspace block" : "the full workspace";
-
-  return `You produce structured learning and gap analysis for ${scope} in OpenLesson.
-
-Use the attached workspace performance JSON and artifact files. Return only JSON matching the schema.
-
-Prioritize:
-- GHL score results and gap_analysis when present
-- Tool usage, screenshots, video, and EEG evidence
-- Session reports and block descriptions
-- Uploaded workspace files
-
-Be honest when evidence is thin. Severity should reflect business risk, not politeness.`;
-}

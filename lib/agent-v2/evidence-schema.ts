@@ -1,4 +1,5 @@
 import type { PerformanceContextPayload } from "./performance-context";
+import type { PerformanceReportContract } from "./performance-report";
 
 export interface EvidenceSchemaIntegrationHints {
   tool_name?: string;
@@ -68,6 +69,7 @@ export interface EvidenceEvalSchemaResult {
   tool_submissions?: ToolSubmissionSpec[];
   evidence_upload_contract?: EvidenceUploadContract;
   continuous_evaluation?: ContinuousEvaluationPolicy;
+  performance_report_contract?: PerformanceReportContract;
   spec_version?: string;
   evidence_spec_api_path?: string;
   evidence_upload_api_path?: string;
@@ -152,6 +154,59 @@ export const EVIDENCE_EVAL_SCHEMA_OUTPUT = {
         required: ["endpoint_pattern", "encoding", "evidence_types", "common_fields"],
         additionalProperties: false,
       },
+      performance_report_contract: {
+        type: "object",
+        description:
+          "Formal contract for POST .../performance report mode: overall_score, marker_scores (spider/radar), and gap_analysis.gaps",
+        properties: {
+          endpoint_pattern: { type: "string" },
+          response_mode: { type: "string", enum: ["report"] },
+          required_fields: { type: "array", items: { type: "string" } },
+          overall_score: {
+            type: "object",
+            properties: {
+              type: { type: "string" },
+              range: { type: "string" },
+              description: { type: "string" },
+            },
+            required: ["type", "range", "description"],
+            additionalProperties: false,
+          },
+          marker_scores: {
+            type: "object",
+            properties: {
+              description: { type: "string" },
+              min_markers: { type: "number" },
+              max_markers: { type: "number" },
+              visualization: { type: "string", enum: ["spider_radar"] },
+              item_fields: { type: "array", items: { type: "string" } },
+            },
+            required: ["description", "min_markers", "max_markers", "visualization", "item_fields"],
+            additionalProperties: false,
+          },
+          gap_analysis: {
+            type: "object",
+            properties: {
+              required: { type: "boolean" },
+              gaps_required: { type: "boolean" },
+              item_fields: { type: "array", items: { type: "string" } },
+            },
+            required: ["required", "gaps_required", "item_fields"],
+            additionalProperties: false,
+          },
+          example_report: { type: "object", additionalProperties: true },
+        },
+        required: [
+          "endpoint_pattern",
+          "response_mode",
+          "required_fields",
+          "overall_score",
+          "marker_scores",
+          "gap_analysis",
+          "example_report",
+        ],
+        additionalProperties: false,
+      },
     },
     required: [
       "schema",
@@ -163,6 +218,7 @@ export const EVIDENCE_EVAL_SCHEMA_OUTPUT = {
       "tool_submissions",
       "evidence_upload_contract",
       "continuous_evaluation_summary",
+      "performance_report_contract",
     ],
     additionalProperties: false,
   },
@@ -272,15 +328,23 @@ Output rules:
    - encoding: "base64"
    - evidence_types: tool (application/json, text/plain), screen (image/png, image/jpeg, image/webp), video (video/mp4, video/webm), eeg (application/json) with when_to_use guidance
    - common_fields: evidence_type, data, mime_type, file_name, plan_node_id, session_id, timestamp_ms, tool_name, tool_action, metadata
-5. Optimize payloads for POST .../performance: time-ordered events, learner reflections, goals achieved, artifact summaries, decision rationale, outcomes, block-relevant competencies.
-6. "collection_guidance" explains cadence, checkpoint timing, block-scoped vs workspace-global uploads, and that **more evidence submitted improves learning verification and gap analysis**. Encourage ongoing uploads, not one-time dumps.
-7. "continuous_evaluation_summary" must state clearly that:
+5. Optimize payloads for POST .../performance: time-ordered events, learner reflections, goals achieved, artifact summaries, decision rationale, outcomes, block-relevant competencies. The performance report always returns overall_score (0-100), marker_scores (spider/radar axes), and gap_analysis.gaps.
+6. "performance_report_contract" must formally describe POST .../performance report mode:
+   - endpoint_pattern: "POST /api/v2/agent/workspaces/{workspace_id}/performance"
+   - response_mode: "report"
+   - required_fields: overall_score, marker_scores, gap_analysis, gap_analysis.gaps, summary, strengths, growth_areas, suggestions, confidence
+   - overall_score: integer 0-100 readiness score
+   - marker_scores: 4-8 competency axes (id, label, score, rationale, optional block_id) for spider/radar visualization — derive labels from workspace blocks and eval definition
+   - gap_analysis: required gaps array with title, evidence, severity, suggested_repair
+   - example_report: realistic example with overall_score, marker_scores, and at least one gap when evidence would support it
+7. "collection_guidance" explains cadence, checkpoint timing, block-scoped vs workspace-global uploads, and that **more evidence submitted improves learning verification and gap analysis**. Encourage ongoing uploads, not one-time dumps.
+8. "continuous_evaluation_summary" must state clearly that:
    - This evidence spec is a snapshot derived from current workspace context and evidence history
    - Integrators must **re-fetch** POST .../evidence-schema as evidence accumulates (schemas and tool_submissions evolve)
    - Integrators must **regenerate** POST .../integration-skill so skill.md stays aligned with the latest spec and workspace state
    - Continuous evaluation is the intended operating model, not a one-time setup
-8. schema_name must be snake_case prefixed with "eval_input_".
-9. Keep required_fields practical; use optional_fields for enrichments.
+9. schema_name must be snake_case prefixed with "eval_input_".
+10. Keep required_fields practical; use optional_fields for enrichments.
 
 Return only JSON matching the output schema.`;
 }

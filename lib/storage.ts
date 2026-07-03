@@ -1580,7 +1580,7 @@ export interface LearningPlan {
   id: string;
   title: string;
   root_topic: string;
-  status: "active" | "completed" | "paused";
+  status: "active" | "completed" | "paused" | "archived";
   created_at: string;
   is_public?: boolean;
   author_id?: string;
@@ -1609,17 +1609,22 @@ export interface PlanNode {
   status: "not_started" | "in_progress" | "completed";
 }
 
-export async function getLearningPlans(): Promise<LearningPlan[]> {
+export async function getLearningPlans(options?: { includeArchived?: boolean }): Promise<LearningPlan[]> {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return [];
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data } = await supabase
+  let query = supabase
     .from("learning_plans")
     .select("*")
-    .eq("user_id", user.id)
-    .order("created_at", { ascending: false });
+    .eq("user_id", user.id);
+
+  if (!options?.includeArchived) {
+    query = query.neq("status", "archived");
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data } = await query.order("created_at", { ascending: false });
 
   return (data || []).map((p: any) => ({
     id: p.id,

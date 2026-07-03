@@ -39,3 +39,17 @@ describe("demo evidence constraints", () => {
     expect(uuidRe.test("a1b2c3d4-5678-41a2-b3c4-1234567890ab")).toBe(true);
   });
 });
+
+describe("xAI file id format", () => {
+  const xaiFileIdRe =
+    /^file_[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+  it("rejects test placeholder file ids", () => {
+    expect(xaiFileIdRe.test("file-test-456")).toBe(false);
+    expect(xaiFileIdRe.test("file-demo-test-001")).toBe(false);
+  });
+
+  it("accepts real xAI file ids", () => {
+    expect(xaiFileIdRe.test("file_814439bd-4894-4e11-852d-314e9f777a7f")).toBe(true);
+  });
+});

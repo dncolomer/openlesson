@@ -129,7 +129,9 @@ describe("evidence integration helpers", () => {
 
     expect(enriched.evidence_spec_api_path).toContain("/evidence-schema");
     expect(enriched.evidence_upload_api_path).toContain("/evidence");
-    expect(enriched.spec_version).toBe("1.1");
+    expect(enriched.spec_version).toBe("1.2");
+    expect(enriched.performance_report_contract?.marker_scores.visualization).toBe("spider_radar");
+    expect(enriched.performance_report_contract?.gap_analysis.gaps_required).toBe(true);
     expect(enriched.continuous_evaluation?.regeneration_required).toBe(true);
     expect(enriched.continuous_evaluation?.integration_skill.api_path).toContain("/integration-skill");
     expect(enriched.collection_guidance).toContain("Self-update");
@@ -172,6 +174,9 @@ describe("evidence integration helpers", () => {
 
     expect(text).toContain("evidence-schema");
     expect(text).toContain("demo");
+    expect(text).toContain("Performance report contract");
+    expect(text).toContain("overall_score");
+    expect(text).toContain("spider_radar");
   });
 
   it("builds evidence schema request from integration fields", () => {
@@ -208,6 +213,9 @@ describe("buildIntegrationSkillInstructions", () => {
     expect(instructions).toContain("Continuous evaluation and regeneration");
     expect(instructions).toContain("do not tell them to invent ad-hoc JSON");
     expect(instructions).toContain("regenerate");
+    expect(instructions).toContain("overall_score");
+    expect(instructions).toContain("marker_scores");
+    expect(instructions).toContain("performance_report_contract");
   });
 });
 
@@ -238,6 +246,8 @@ describe("buildEvidenceSchemaInstructions", () => {
     expect(instructions).toContain("tool_submissions");
     expect(instructions).toContain("evidence_upload_contract");
     expect(instructions).toContain("continuous_evaluation_summary");
+    expect(instructions).toContain("performance_report_contract");
+    expect(instructions).toContain("marker_scores");
     expect(instructions).toContain("Discovery");
   });
 });
@@ -255,5 +265,6 @@ describe("EVIDENCE_EVAL_SCHEMA_OUTPUT", () => {
     expect(EVIDENCE_EVAL_SCHEMA_OUTPUT.schema.required).toContain("tool_submissions");
     expect(EVIDENCE_EVAL_SCHEMA_OUTPUT.schema.required).toContain("evidence_upload_contract");
     expect(EVIDENCE_EVAL_SCHEMA_OUTPUT.schema.required).toContain("continuous_evaluation_summary");
+    expect(EVIDENCE_EVAL_SCHEMA_OUTPUT.schema.required).toContain("performance_report_contract");
   });
 });

@@ -98,7 +98,12 @@ Types: `tool`, `screen` (`screenshot` alias), `video`, `eeg`. Max 10 MB per file
 }
 ```
 
-Report responses include `gap_analysis.gaps[]` with `severity` and `suggested_repair`. Chat responses return markdown in `response`.
+Report responses always include:
+- `overall_score` (0–100 integer readiness score)
+- `marker_scores[]` (spider/radar competency axes: `id`, `label`, `score`, `rationale`)
+- `gap_analysis.gaps[]` with `severity` and `suggested_repair`
+
+Chat responses return markdown in `response`.
 
 ## Create Workspace
 

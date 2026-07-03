@@ -43,11 +43,12 @@ export default function AdminPlansPage() {
   const [page, setPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState("");
   const [visibilityFilter, setVisibilityFilter] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<string>("active");
   const [sortField, setSortField] = useState<SortField>("created_at");
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
   useEffect(() => {
     checkAdminAndLoadPlans();
-  }, [page, visibilityFilter, sortField, sortDirection]);
+  }, [page, visibilityFilter, statusFilter, sortField, sortDirection]);
 
   useEffect(() => {
     const debounce = setTimeout(() => {
@@ -91,6 +92,7 @@ export default function AdminPlansPage() {
       const params = new URLSearchParams({
         page: String(page),
         visibility: visibilityFilter,
+        status: statusFilter,
         search: searchQuery.trim(),
         sort: sortField,
         direction: sortDirection,
@@ -213,6 +215,18 @@ export default function AdminPlansPage() {
           <option value="all">All Visibility</option>
           <option value="public">Public</option>
           <option value="private">Private</option>
+        </select>
+        <select
+          value={statusFilter}
+          onChange={(e) => {
+            setStatusFilter(e.target.value);
+            setPage(1);
+          }}
+          className="px-4 py-2 bg-neutral-900 border border-neutral-800 rounded-lg text-white focus:outline-none focus:border-neutral-700"
+        >
+          <option value="active">Hide archived</option>
+          <option value="archived">Archived only</option>
+          <option value="all">All statuses</option>
         </select>
       </div>
 

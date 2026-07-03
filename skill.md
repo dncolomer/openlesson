@@ -322,10 +322,27 @@ Analyze learning signals across workspace evidence, GHL results, linked sessions
 
 **Response `200` (report):**
 
+Every report includes a numerical `overall_score`, spider/radar `marker_scores`, and `gap_analysis.gaps`.
+
 ```json
 {
   "mode": "report",
   "report": {
+    "overall_score": 72,
+    "marker_scores": [
+      {
+        "id": "workflow_execution",
+        "label": "Workflow Execution",
+        "score": 78,
+        "rationale": "Completed core steps with consistent tool traces."
+      },
+      {
+        "id": "decision_quality",
+        "label": "Decision Quality",
+        "score": 65,
+        "rationale": "Choices were reasonable but lacked quantified tradeoff analysis."
+      }
+    ],
     "summary": "...",
     "strengths": ["..."],
     "growth_areas": ["..."],

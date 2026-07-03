@@ -49,6 +49,26 @@ export interface XAIFileMetadata {
   processing_status?: string;
 }
 
+const XAI_FILE_ID_RE =
+  /^file_[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** True when the value looks like a real xAI Files API id (not a test placeholder). */
+export function isXaiFileId(value: string | null | undefined): value is string {
+  return typeof value === "string" && XAI_FILE_ID_RE.test(value.trim());
+}
+
+/** Keep only ids that still resolve in the xAI Files API. */
+export async function filterResolvableXaiFileIds(fileIds: string[]): Promise<string[]> {
+  const unique = Array.from(new Set(fileIds.filter(isXaiFileId)));
+  if (!unique.length) return [];
+
+  const checks = await Promise.all(
+    unique.map(async (fileId) => ((await getFileMetadata(fileId)) ? fileId : null))
+  );
+
+  return checks.filter((id): id is string => Boolean(id));
+}
+
 /**
  * Upload a file to xAI Files API.
  *

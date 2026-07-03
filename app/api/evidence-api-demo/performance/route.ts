@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import {
   buildPerformanceReportInstructions,
   buildWorkspacePerformanceContext,
+  PERFORMANCE_REPORT_SCHEMA,
   type PerformanceReport,
 } from "@/lib/agent-v2/performance-context";
 import { requireWorkspaceOwnerSession } from "@/lib/agent-v2/workspace-session-access";
@@ -9,45 +10,6 @@ import { callXaiResponsesWithFiles } from "@/lib/xai-client";
 
 export const runtime = "nodejs";
 export const maxDuration = 120;
-
-const PERFORMANCE_REPORT_SCHEMA = {
-  name: "workspace_performance_report",
-  schema: {
-    type: "object",
-    properties: {
-      summary: { type: "string" },
-      strengths: { type: "array", items: { type: "string" } },
-      growth_areas: { type: "array", items: { type: "string" } },
-      gap_analysis: {
-        type: "object",
-        properties: {
-          summary: { type: "string" },
-          gaps: {
-            type: "array",
-            items: {
-              type: "object",
-              properties: {
-                title: { type: "string" },
-                evidence: { type: "string" },
-                severity: { type: "string", enum: ["low", "medium", "high"] },
-                suggested_repair: { type: "string" },
-              },
-              required: ["title", "evidence", "severity", "suggested_repair"],
-              additionalProperties: false,
-            },
-          },
-          next_practice: { type: "array", items: { type: "string" } },
-        },
-        required: ["summary", "gaps", "next_practice"],
-        additionalProperties: false,
-      },
-      suggestions: { type: "array", items: { type: "string" } },
-      confidence: { type: "string", enum: ["emerging", "developing", "clear", "well-connected"] },
-    },
-    required: ["summary", "strengths", "growth_areas", "gap_analysis", "suggestions", "confidence"],
-    additionalProperties: false,
-  },
-};
 
 export async function POST(req: NextRequest) {
   try {

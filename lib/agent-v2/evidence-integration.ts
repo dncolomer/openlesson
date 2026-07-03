@@ -10,9 +10,10 @@ import {
   type EvidenceSchemaRequest,
 } from "./evidence-schema";
 import { buildWorkspacePerformanceContext } from "./performance-context";
+import { buildPerformanceReportContract, type PerformanceReportContract } from "./performance-report";
 import { callXaiResponsesWithFiles } from "@/lib/xai-client";
 
-export const EVIDENCE_SPEC_VERSION = "1.1";
+export const EVIDENCE_SPEC_VERSION = "1.2";
 
 export function buildEvidenceSchemaApiPath(workspaceId: string, baseUrl: string): string {
   const base = baseUrl.replace(/\/$/, "");
@@ -121,6 +122,12 @@ export function enrichEvidenceSpecResult(
   const evidenceSpecPath = buildEvidenceSchemaApiPath(workspaceId, baseUrl);
   const skillPath = buildIntegrationSkillApiPath(workspaceId, baseUrl);
 
+  const performanceContract: PerformanceReportContract =
+    result.performance_report_contract ?? {
+      ...buildPerformanceReportContract(baseUrl),
+      endpoint_pattern: buildPerformanceApiPath(workspaceId, baseUrl),
+    };
+
   return {
     ...result,
     spec_version: EVIDENCE_SPEC_VERSION,
@@ -128,6 +135,7 @@ export function enrichEvidenceSpecResult(
     evidence_upload_api_path: buildEvidenceUploadApiPath(workspaceId, baseUrl),
     workspace_id: workspaceId,
     block_id: blockId ?? null,
+    performance_report_contract: performanceContract,
     continuous_evaluation: buildContinuousEvaluationPolicy(workspaceId, baseUrl, contextCounts),
     collection_guidance: [
       result.collection_guidance,
@@ -172,7 +180,16 @@ ${spec.continuous_evaluation?.more_evidence_improves || ""}
 Regenerate evidence spec: ${spec.continuous_evaluation?.evidence_spec.api_path || spec.evidence_spec_api_path}
 Regenerate integration skill: ${spec.continuous_evaluation?.integration_skill.api_path || "(workspace)/integration-skill"}
 Request refreshed performance: ${spec.continuous_evaluation?.performance.api_path || "(workspace)/performance"}
-Recommended cadence: ${spec.continuous_evaluation?.recommended_cadence || "upload → re-fetch spec → regenerate skill → performance"}`;
+Recommended cadence: ${spec.continuous_evaluation?.recommended_cadence || "upload → re-fetch spec → regenerate skill → performance"}
+
+Performance report contract (MUST appear in skill.md — every report includes scores + gaps):
+Endpoint: ${spec.performance_report_contract?.endpoint_pattern || spec.continuous_evaluation?.performance.api_path || "(workspace)/performance"}
+Required fields: ${(spec.performance_report_contract?.required_fields || ["overall_score", "marker_scores", "gap_analysis.gaps"]).join(", ")}
+overall_score: ${spec.performance_report_contract?.overall_score.range || "0-100"} integer readiness score
+marker_scores: ${spec.performance_report_contract?.marker_scores.visualization || "spider_radar"} chart with ${spec.performance_report_contract?.marker_scores.min_markers || 4}-${spec.performance_report_contract?.marker_scores.max_markers || 8} competency axes (id, label, score, rationale)
+gap_analysis.gaps: required list of gaps (title, evidence, severity, suggested_repair)
+Example report shape:
+${JSON.stringify(spec.performance_report_contract?.example_report || { overall_score: 0, marker_scores: [], gap_analysis: { gaps: [] } }, null, 2)}`;
 }
 
 export interface GenerateEvidenceSpecOptions {

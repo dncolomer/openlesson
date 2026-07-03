@@ -1,7 +1,22 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { callXaiJSON, DEFAULT_MODEL, userMessage } from "@/lib/xai-client";
+import { uploadFileToXAI } from "@/lib/xai-files";
 import { persistSkillGridPositions, skillGridNodesFromRefs } from "@/lib/skill-grid-positions";
 import type { AuthContext } from "./types";
+
+export interface WorkspaceInitialFile {
+  name: string;
+  mime_type: string;
+  data: string;
+}
+
+export interface UploadedPlanFile {
+  id: string;
+  file_name: string;
+  file_size: number;
+  mime_type: string;
+  created_at: string;
+}
 
 interface GeneratedBlock {
   id: string;
@@ -19,12 +34,22 @@ interface GeneratedWorkspace {
 export async function createVerificationWorkspaceFromPrompt(
   supabase: SupabaseClient,
   auth: AuthContext,
-  initialPrompt: string
-): Promise<{ workspace: Record<string, unknown>; blocks: Record<string, unknown>[] }> {
+  initialPrompt: string,
+  options?: { files?: WorkspaceInitialFile[] }
+): Promise<{
+  workspace: Record<string, unknown>;
+  blocks: Record<string, unknown>[];
+  files: UploadedPlanFile[];
+}> {
+  const files = options?.files ?? [];
+  const fileContext = files.length
+    ? `\nInitial files provided:\n${files.map((file) => `- ${file.name} (${file.mime_type})`).join("\n")}`
+    : "";
+
   const generated = await callXaiJSON<GeneratedWorkspace>(
     [
       userMessage(
-        `Create a performance learning workspace from this prompt. Break it into assessable blocks for learning verification and evidence-based gap analysis.\n\nPrompt:\n${initialPrompt}\n\nReturn ONLY JSON:\n{\n  "title": "concise workspace title",\n  "blocks": [\n    { "id": "a", "title": "Block title", "description": "What the learner should demonstrate", "is_start": true, "next": ["b"] }\n  ]\n}\n\nRules:\n- Create 3 to 6 blocks.\n- Blocks are assessable learning/performance units.\n- Use short stable ids only for linking within this response.`
+        `Create a performance learning workspace from this prompt. Break it into assessable blocks for learning verification and evidence-based gap analysis.\n\nPrompt:\n${initialPrompt}${fileContext}\n\nReturn ONLY JSON:\n{\n  "title": "concise workspace title",\n  "blocks": [\n    { "id": "a", "title": "Block title", "description": "What the learner should demonstrate", "is_start": true, "next": ["b"] }\n  ]\n}\n\nRules:\n- Create 3 to 6 blocks.\n- Blocks are assessable learning/performance units.\n- Use short stable ids only for linking within this response.`
       ),
     ],
     { model: DEFAULT_MODEL, maxTokens: 1800, temperature: 0.3 }
@@ -101,11 +126,33 @@ export async function createVerificationWorkspaceFromPrompt(
 
   await persistSkillGridPositions(supabase, skillGridNodesFromRefs(generated.data.blocks, blockIdMap));
 
+  const uploadedFiles: UploadedPlanFile[] = [];
+  for (const file of files) {
+    try {
+      const xaiFile = await uploadFileToXAI(file.name, file.mime_type, file.data);
+      const { data: fileRecord, error: fileError } = await supabase
+        .from("plan_files")
+        .insert({
+          plan_id: workspace.id,
+          user_id: ownerUserId,
+          file_name: file.name,
+          file_size: Buffer.from(file.data, "base64").length,
+          mime_type: file.mime_type,
+          xai_file_id: xaiFile.file_id,
+        })
+        .select("id, file_name, file_size, mime_type, created_at")
+        .single();
+      if (!fileError && fileRecord) uploadedFiles.push(fileRecord);
+    } catch (error) {
+      console.error("[create-verification-workspace] Initial file upload failed:", error);
+    }
+  }
+
   const { data: blocks } = await supabase
     .from("plan_nodes")
     .select("id, title, description, is_start, next_node_ids, status, created_at")
     .eq("plan_id", workspace.id)
     .order("created_at", { ascending: true });
 
-  return { workspace, blocks: blocks || [] };
+  return { workspace, blocks: blocks || [], files: uploadedFiles };
 }

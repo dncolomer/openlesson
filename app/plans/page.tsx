@@ -39,6 +39,7 @@ export default function PlansPage() {
         .from("learning_plans")
         .select("*")
         .eq("user_id", user.id)
+        .neq("status", "archived")
         .order("created_at", { ascending: false });
 
       if (!error) {
@@ -50,16 +51,18 @@ export default function PlansPage() {
     loadPlans();
   }, [supabase, router]);
 
-  const handleDelete = async (planId: string) => {
-    if (!confirm("Delete this workspace?")) return;
-    
-    const { error } = await supabase
-      .from("learning_plans")
-      .delete()
-      .eq("id", planId);
+  const handleArchive = async (planId: string) => {
+    if (!confirm("Archive this workspace? It will be hidden from your list but data is preserved.")) {
+      return;
+    }
 
-    if (!error) {
-      setPlans(plans.filter(p => p.id !== planId));
+    try {
+      const res = await fetch(`/api/learning-plans/${planId}/archive`, { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to archive");
+      setPlans((prev) => prev.filter((plan) => plan.id !== planId));
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Failed to archive workspace");
     }
   };
 
@@ -113,12 +116,11 @@ export default function PlansPage() {
                       {plan.status}
                     </span>
                     <button
-                      onClick={() => handleDelete(plan.id)}
-                      className="p-2 text-neutral-500 hover:text-red-400 transition-colors"
+                      type="button"
+                      onClick={() => handleArchive(plan.id)}
+                      className="rounded border border-neutral-700 px-2 py-1 text-[10px] uppercase tracking-wide text-neutral-400 transition hover:border-amber-500/40 hover:text-amber-200"
                     >
-                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                      </svg>
+                      Archive
                     </button>
                   </div>
                 </div>

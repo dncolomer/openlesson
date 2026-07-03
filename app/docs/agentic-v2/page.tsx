@@ -195,6 +195,12 @@ const ENDPOINT_SPECS: EndpointSpec[] = [
       { name: "required_fields", type: "string[]", description: "Top-level field names integrators should always include." },
       { name: "optional_fields", type: "string[]", description: "Enrichment fields (reflections, media refs, etc.)." },
       { name: "collection_guidance", type: "string", description: "When and how often to upload evidence for this definition." },
+      {
+        name: "performance_report_contract",
+        type: "object",
+        description:
+          "Formal contract for POST .../performance report mode: overall_score, marker_scores (spider_radar), gap_analysis.gaps, and example_report.",
+      },
       { name: "workspace_id", type: "uuid", description: "Echo of path workspace_id." },
       { name: "block_id", type: "uuid | null", description: "Echo of request block_id." },
       { name: "definition", type: "string", description: "Echo of request definition." },
@@ -432,6 +438,12 @@ const ENDPOINT_SPECS: EndpointSpec[] = [
     responseBody: [
       { name: "mode", type: "report | chat", description: "Which response shape is populated." },
       { name: "report", type: "object | null", description: "Present when mode=report." },
+      { name: "report.overall_score", type: "integer", description: "0–100 readiness score synthesized from evidence." },
+      {
+        name: "report.marker_scores",
+        type: "array",
+        description: "Spider/radar competency axes: id, label, score (0–100), rationale, optional block_id.",
+      },
       { name: "report.summary", type: "string", description: "Executive summary." },
       { name: "report.strengths", type: "string[]", description: "Demonstrated strengths." },
       { name: "report.growth_areas", type: "string[]", description: "Areas needing development." },
@@ -447,6 +459,21 @@ const ENDPOINT_SPECS: EndpointSpec[] = [
     responseExample: `{
   "mode": "report",
   "report": {
+    "overall_score": 68,
+    "marker_scores": [
+      {
+        "id": "negotiation_prep",
+        "label": "Negotiation Preparation",
+        "score": 74,
+        "rationale": "Used CRM and ROI table before price discussion."
+      },
+      {
+        "id": "risk_quantification",
+        "label": "Risk Quantification",
+        "score": 52,
+        "rationale": "Churn risk was discussed but never modeled numerically."
+      }
+    ],
     "summary": "Learner prepared for renewal negotiation using simulated tool traces.",
     "strengths": ["Used CRM and ROI table before price discussion"],
     "growth_areas": ["Did not quantify churn risk"],

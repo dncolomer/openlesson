@@ -102,6 +102,8 @@ export default function DashboardPage() {
   // Plans tab
   const [learningPlans, setLearningPlans] = useState<LearningPlan[]>([]);
   const [planSearch, setPlanSearch] = useState("");
+  const [showArchivedPlans, setShowArchivedPlans] = useState(false);
+  const [archivingPlanId, setArchivingPlanId] = useState<string | null>(null);
   const [planPage, setPlanPage] = useState(1);
   const planPageSize = 10;
 
@@ -214,8 +216,8 @@ export default function DashboardPage() {
       const loadedSessions = await getSessions();
       setSessions(loadedSessions);
 
-        // Load learning plans
-        const plans = await getLearningPlans();
+        // Load learning plans (archived hidden by default)
+        const plans = await getLearningPlans({ includeArchived: false });
         setLearningPlans(plans);
 
         // Load usage data
@@ -551,9 +553,53 @@ export default function DashboardPage() {
   );
 
   // Filter and paginate plans
+  const reloadLearningPlans = async (includeArchived = showArchivedPlans) => {
+    const plans = await getLearningPlans({ includeArchived });
+    setLearningPlans(plans);
+  };
+
+  useEffect(() => {
+    if (activeTab !== "plans") return;
+    void reloadLearningPlans(showArchivedPlans);
+  }, [showArchivedPlans, activeTab]);
+
+  const handleArchivePlan = async (planId: string) => {
+    if (!confirm("Archive this workspace? It will be hidden from your dashboard but preserved for audit.")) {
+      return;
+    }
+    setArchivingPlanId(planId);
+    try {
+      const res = await fetch(`/api/learning-plans/${planId}/archive`, { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to archive workspace");
+      setLearningPlans((plans) => plans.filter((plan) => plan.id !== planId));
+    } catch (err) {
+      console.error("Archive workspace error:", err);
+      alert(err instanceof Error ? err.message : "Failed to archive workspace");
+    } finally {
+      setArchivingPlanId(null);
+    }
+  };
+
+  const handleRestorePlan = async (planId: string) => {
+    setArchivingPlanId(planId);
+    try {
+      const res = await fetch(`/api/learning-plans/${planId}/archive`, { method: "DELETE" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to restore workspace");
+      await reloadLearningPlans(showArchivedPlans);
+    } catch (err) {
+      console.error("Restore workspace error:", err);
+      alert(err instanceof Error ? err.message : "Failed to restore workspace");
+    } finally {
+      setArchivingPlanId(null);
+    }
+  };
+
   const filteredPlans = learningPlans.filter((p) => {
     const matchesSearch = planSearch === "" || 
-      p.root_topic.toLowerCase().includes(planSearch.toLowerCase());
+      p.root_topic.toLowerCase().includes(planSearch.toLowerCase()) ||
+      (p.title || "").toLowerCase().includes(planSearch.toLowerCase());
     return matchesSearch;
   });
 
@@ -988,8 +1034,17 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-3">
               <h3 className="text-lg font-semibold">{t('dashboard.allPlans')}</h3>
+              <label className="flex items-center gap-2 text-xs text-neutral-400">
+                <input
+                  type="checkbox"
+                  checked={showArchivedPlans}
+                  onChange={(e) => setShowArchivedPlans(e.target.checked)}
+                  className="rounded border-neutral-700 bg-neutral-900"
+                />
+                Show archived
+              </label>
             </div>
             <div className="flex-1">
               <input
@@ -1049,7 +1104,15 @@ export default function DashboardPage() {
                       <div className="mt-4 flex flex-wrap items-center gap-2 text-[11px] text-neutral-500">
                         <span>{formatDate(plan.created_at)}</span>
                         <span>•</span>
-                        <span className="capitalize">{plan.status}</span>
+                        <span
+                          className={
+                            plan.status === "archived"
+                              ? "rounded border border-amber-500/30 px-1.5 py-0.5 text-amber-200"
+                              : "capitalize"
+                          }
+                        >
+                          {plan.status}
+                        </span>
                         {(plan.remix_count ?? 0) > 0 && (
                           <>
                             <span>•</span>
@@ -1058,10 +1121,30 @@ export default function DashboardPage() {
                         )}
                       </div>
 
-                      <div className="mt-5 flex items-center justify-between gap-3 border-t border-neutral-800 pt-4">
+                      <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-neutral-800 pt-4">
                         <Link href={`/workspace/${plan.id}`} className="text-sm font-medium text-neutral-200 hover:text-white">
                           Open workspace →
                         </Link>
+                        <div className="flex flex-wrap items-center gap-2">
+                      {plan.status === "archived" ? (
+                        <button
+                          type="button"
+                          onClick={() => handleRestorePlan(plan.id)}
+                          disabled={archivingPlanId === plan.id}
+                          className="rounded border border-neutral-700 px-2 py-1 text-xs text-neutral-300 transition hover:border-neutral-500 hover:text-white disabled:opacity-50"
+                        >
+                          {archivingPlanId === plan.id ? "Restoring…" : "Restore"}
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => handleArchivePlan(plan.id)}
+                          disabled={archivingPlanId === plan.id}
+                          className="rounded border border-neutral-700 px-2 py-1 text-xs text-neutral-400 transition hover:border-amber-500/40 hover:text-amber-200 disabled:opacity-50"
+                        >
+                          {archivingPlanId === plan.id ? "Archiving…" : "Archive"}
+                        </button>
+                      )}
                       <button
                         onClick={async () => {
                           try {
@@ -1091,6 +1174,7 @@ export default function DashboardPage() {
                       >
                         {(plan as any).is_public ? t('dashboard.public') : t('dashboard.private')}
                       </button>
+                        </div>
                       </div>
                     </div>
                   </div>

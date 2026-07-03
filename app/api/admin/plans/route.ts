@@ -15,6 +15,7 @@ export async function GET(request: NextRequest) {
     const params = request.nextUrl.searchParams;
     const page = Math.max(1, Number(params.get("page") || "1"));
     const visibility = params.get("visibility") || "all";
+    const statusFilter = params.get("status") || "active";
     const search = (params.get("search") || "").trim();
     const sortField = params.get("sort") || "created_at";
     const sortDirection = params.get("direction") === "asc" ? "asc" : "desc";
@@ -31,6 +32,11 @@ export async function GET(request: NextRequest) {
 
     if (visibility === "public") query = query.eq("is_public", true);
     if (visibility === "private") query = query.eq("is_public", false);
+    if (statusFilter === "active") {
+      query = query.neq("status", "archived");
+    } else if (statusFilter === "archived") {
+      query = query.eq("status", "archived");
+    }
     if (search) {
       query = query.or(`root_topic.ilike.%${search}%,title.ilike.%${search}%`);
     }

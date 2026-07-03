@@ -4,7 +4,9 @@ import { requireTeamsUserSession } from "@/lib/agent-v2/workspace-session-access
 import {
   DEMO_EVAL_DEFINITION,
   DEMO_INTEGRATION_NAME,
+  DEMO_WORKSPACE_MODEL_DOC,
   DEMO_WORKSPACE_PROMPT,
+  getDemoWorkspaceModelFile,
 } from "@/lib/evidence-api-demo/flowstack";
 import {
   buildEvidenceSchemaApiPath,
@@ -22,10 +24,12 @@ export async function POST(req: NextRequest) {
     if (access instanceof NextResponse) return access;
 
     const origin = req.nextUrl.origin;
-    const { workspace, blocks } = await createVerificationWorkspaceFromPrompt(
+    const modelFile = getDemoWorkspaceModelFile();
+    const { workspace, blocks, files } = await createVerificationWorkspaceFromPrompt(
       access.supabase,
       access.auth,
-      DEMO_WORKSPACE_PROMPT
+      DEMO_WORKSPACE_PROMPT,
+      { files: [modelFile] }
     );
 
     const workspaceId = workspace.id as string;
@@ -33,10 +37,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       workspace,
       blocks,
+      files,
       demo: {
         product: "FlowStack",
         integration_name: DEMO_INTEGRATION_NAME,
         eval_definition: DEMO_EVAL_DEFINITION,
+        model_doc_filename: modelFile.name,
+        model_doc_preview: DEMO_WORKSPACE_MODEL_DOC.slice(0, 400),
       },
       api_paths: {
         evidence_schema: buildEvidenceSchemaApiPath(workspaceId, origin),

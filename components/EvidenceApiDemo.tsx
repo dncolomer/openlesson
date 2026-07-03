@@ -1,32 +1,78 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { createBrowserClient } from "@supabase/ssr";
 import {
   ArrowRight,
-  CheckCircle2,
-  Circle,
+  Clock,
+  FileCode2,
   Loader2,
   Radio,
+  RefreshCw,
   Sparkles,
   Zap,
 } from "lucide-react";
 import { Footer } from "@/components/Footer";
 import { Navbar } from "@/components/Navbar";
+import { MarkerRadarChart } from "@/components/MarkerRadarChart";
 import type { PerformanceReport } from "@/lib/agent-v2/performance-context";
+import type { EvidenceEvalSchemaResult } from "@/lib/agent-v2/evidence-schema";
 import {
   DEMO_EVAL_DEFINITION,
   DEMO_PRODUCT_NAME,
-  FLOWSTACK_STEPS,
-  buildToolEvidencePayload,
+  SIMULATION_ACTIONS,
+  SIMULATION_CATEGORY_META,
+  SIMULATION_CATEGORY_ORDER,
+  applySimulationAction,
+  buildSimulationEvidencePayload,
+  countDistinctEvidenceActions,
+  createInitialWorldState,
+  getActionsByCategory,
+  hasCompletedAction,
+  isActionRepeatable,
   matchBlockToStep,
+  shouldSuggestSkillRegeneration,
+  totalActionCount,
   type DemoWorkspaceBlock,
-  type FlowStackStep,
+  type SimulationAction,
+  type SimulationCategory,
+  type SimulationWorldState,
 } from "@/lib/evidence-api-demo/flowstack";
 import { readJsonResponse } from "@/lib/read-json-response";
 
-type DemoPhase = "intro" | "creating" | "onboarding" | "ready" | "reporting" | "report";
+type DemoPhase = "intro" | "creating" | "simulating";
+
+type ReportSnapshot = {
+  id: string;
+  report: PerformanceReport;
+  evidenceCount: number;
+  actionCount: number;
+  simulatedDays: number;
+  timestamp: Date;
+};
+
+type SkillSnapshot = {
+  id: string;
+  skill_name: string;
+  spec_version?: string;
+  evidenceCount: number;
+  actionCount: number;
+  simulatedDays: number;
+  prefetch: boolean;
+  preview: string;
+  timestamp: Date;
+};
+
+type SchemaSnapshot = {
+  id: string;
+  schema_name: string;
+  spec_version?: string;
+  evidenceCount: number;
+  actionCount: number;
+  simulatedDays: number;
+  timestamp: Date;
+};
 
 type ApiLogEntry = {
   id: string;
@@ -38,10 +84,25 @@ type ApiLogEntry = {
   timestamp: Date;
 };
 
+type PlanFileSummary = {
+  id: string;
+  file_name: string;
+  file_size: number;
+  mime_type: string;
+  created_at: string;
+};
+
 type WorkspaceResponse = {
   workspace: { id: string; title: string };
   blocks: DemoWorkspaceBlock[];
-  demo: { product: string; integration_name: string; eval_definition: string };
+  files?: PlanFileSummary[];
+  demo: {
+    product: string;
+    integration_name: string;
+    eval_definition: string;
+    model_doc_filename?: string;
+    model_doc_preview?: string;
+  };
   api_paths: {
     evidence_schema: string;
     evidence_upload: string;
@@ -64,7 +125,7 @@ const STORAGE_KEY = "openlesson-evidence-api-demo";
 type PersistedDemoState = {
   planId: string;
   sessionId: string;
-  completedSteps: string[];
+  worldState: SimulationWorldState;
   workspaceTitle?: string;
   blocks?: DemoWorkspaceBlock[];
 };
@@ -74,12 +135,17 @@ function loadPersistedState(): PersistedDemoState | null {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return null;
-    const parsed = JSON.parse(raw) as PersistedDemoState;
+    const parsed = JSON.parse(raw) as PersistedDemoState & { completedSteps?: string[] };
     if (!parsed.planId || !parsed.sessionId) return null;
+    const legacySteps = Array.isArray(parsed.completedSteps) ? parsed.completedSteps : [];
     return {
       planId: parsed.planId,
       sessionId: parsed.sessionId,
-      completedSteps: Array.isArray(parsed.completedSteps) ? parsed.completedSteps : [],
+      worldState: parsed.worldState ?? {
+        ...createInitialWorldState(),
+        completedActions: legacySteps,
+        actionCounts: Object.fromEntries(legacySteps.map((id: string) => [id, 1])),
+      },
       workspaceTitle: parsed.workspaceTitle,
       blocks: Array.isArray(parsed.blocks) ? parsed.blocks : [],
     };
@@ -161,17 +227,29 @@ export function EvidenceApiDemo() {
   const [workspaceTitle, setWorkspaceTitle] = useState<string | null>(null);
   const [blocks, setBlocks] = useState<DemoWorkspaceBlock[]>([]);
   const [apiPaths, setApiPaths] = useState<WorkspaceResponse["api_paths"] | null>(null);
+  const [planFiles, setPlanFiles] = useState<PlanFileSummary[]>([]);
+  const [modelDocPreview, setModelDocPreview] = useState<string | null>(null);
   const [sessionId, setSessionId] = useState<string>(() => createSessionId());
-  const [completedSteps, setCompletedSteps] = useState<string[]>([]);
-  const [currentStepIndex, setCurrentStepIndex] = useState(0);
-  const [uploadingStep, setUploadingStep] = useState<string | null>(null);
+  const [worldState, setWorldState] = useState<SimulationWorldState>(createInitialWorldState);
+  const [runningActionId, setRunningActionId] = useState<string | null>(null);
   const [apiLog, setApiLog] = useState<ApiLogEntry[]>([]);
   const [error, setError] = useState("");
   const [report, setReport] = useState<PerformanceReport | null>(null);
+  const [reportHistory, setReportHistory] = useState<ReportSnapshot[]>([]);
+  const [skillHistory, setSkillHistory] = useState<SkillSnapshot[]>([]);
+  const [schemaHistory, setSchemaHistory] = useState<SchemaSnapshot[]>([]);
+  const [latestSkillPreview, setLatestSkillPreview] = useState<string | null>(null);
+  const [latestSchema, setLatestSchema] = useState<EvidenceEvalSchemaResult | null>(null);
+  const [isReporting, setIsReporting] = useState(false);
+  const [isFetchingSchema, setIsFetchingSchema] = useState(false);
+  const [isRegeneratingSkill, setIsRegeneratingSkill] = useState(false);
+  const [isArchiving, setIsArchiving] = useState(false);
   const [evidenceCount, setEvidenceCount] = useState(0);
+  const [lastSkillEvidenceCount, setLastSkillEvidenceCount] = useState<number | null>(null);
+  const [skillRegenHint, setSkillRegenHint] = useState(false);
 
-  const currentStep = FLOWSTACK_STEPS[currentStepIndex] ?? null;
-  const allStepsComplete = completedSteps.length >= FLOWSTACK_STEPS.length;
+  const actionCount = totalActionCount(worldState);
+  const distinctEvidenceActions = countDistinctEvidenceActions(worldState);
 
   const addLog = useCallback(
     (entry: Omit<ApiLogEntry, "id" | "timestamp">) => {
@@ -264,18 +342,11 @@ export function EvidenceApiDemo() {
     if (!persisted) return;
     setPlanId(persisted.planId);
     setSessionId(persisted.sessionId);
-    setCompletedSteps(persisted.completedSteps);
+    setWorldState(persisted.worldState);
     setWorkspaceTitle(persisted.workspaceTitle ?? null);
     setBlocks(persisted.blocks ?? []);
-    setEvidenceCount(persisted.completedSteps.length);
-    setCurrentStepIndex(
-      Math.min(persisted.completedSteps.length, FLOWSTACK_STEPS.length - 1)
-    );
-    if (persisted.completedSteps.length >= FLOWSTACK_STEPS.length) {
-      setPhase("ready");
-    } else {
-      setPhase("onboarding");
-    }
+    setEvidenceCount(totalActionCount(persisted.worldState));
+    setPhase("simulating");
   }, [authState]);
 
   const handleStartDemo = async () => {
@@ -284,10 +355,16 @@ export function EvidenceApiDemo() {
     clearPersistedState();
     const newSessionId = createSessionId();
     setSessionId(newSessionId);
-    setCompletedSteps([]);
-    setCurrentStepIndex(0);
+    setWorldState(createInitialWorldState());
     setReport(null);
+    setReportHistory([]);
+    setSkillHistory([]);
+    setSchemaHistory([]);
+    setLatestSkillPreview(null);
+    setLatestSchema(null);
     setEvidenceCount(0);
+    setLastSkillEvidenceCount(null);
+    setSkillRegenHint(false);
     setApiLog([]);
 
     addLog({
@@ -325,23 +402,31 @@ export function EvidenceApiDemo() {
       setWorkspaceTitle(data.workspace.title);
       setBlocks(data.blocks);
       setApiPaths(data.api_paths);
+      setPlanFiles(data.files ?? []);
+      setModelDocPreview(data.demo.model_doc_preview ?? null);
+      const initialWorld = createInitialWorldState();
       persistState({
         planId: data.workspace.id,
         sessionId: newSessionId,
-        completedSteps: [],
+        worldState: initialWorld,
         workspaceTitle: data.workspace.title,
         blocks: data.blocks,
       });
+
+      const fileDetail = data.files?.length
+        ? `${data.blocks.length} blocks · ${data.files.map((f) => f.file_name).join(", ")}`
+        : `${data.blocks.length} assessable blocks generated`;
 
       addLog({
         method: "POST",
         path: "/api/evidence-api-demo/workspace",
         status: "success",
         summary: `Workspace created: ${data.workspace.title}`,
-        detail: `${data.blocks.length} assessable blocks generated`,
+        detail: fileDetail,
       });
 
-      setPhase("onboarding");
+      setPhase("simulating");
+      setWorldState(initialWorld);
     } catch (err) {
       addLog({
         method: "POST",
@@ -354,26 +439,35 @@ export function EvidenceApiDemo() {
     }
   };
 
-  const handleCompleteStep = async (step: FlowStackStep) => {
-    if (!planId || completedSteps.includes(step.id) || uploadingStep) return;
+  const handleRunAction = async (action: SimulationAction) => {
+    if (!planId || runningActionId) return;
+    if (!isActionRepeatable(action) && hasCompletedAction(worldState, action.id)) return;
 
-    setUploadingStep(step.id);
+    setRunningActionId(action.id);
     setError("");
 
-    const blockId = matchBlockToStep(blocks, step);
-    const payload = buildToolEvidencePayload(step, {
+    const nextWorld = applySimulationAction(worldState, action);
+    const blockId = matchBlockToStep(blocks, action);
+    const payload = buildSimulationEvidencePayload(action, {
       sessionId,
       blockId,
-      reflection: `User completed "${step.label}" in the FlowStack trial onboarding flow.`,
-      outcome: "success",
+      worldState,
+      reflection:
+        action.kind === "time_simulation"
+          ? `Operator simulated ${action.timeDeltaDays ?? 0} day(s) of idle time before the next learner activity.`
+          : `User triggered "${action.label}" on the non-linear FlowStack surface.`,
+      outcome: action.outcome,
     });
 
     addLog({
       method: "POST",
       path: "/api/evidence-api-demo/evidence",
       status: "pending",
-      summary: `Uploading tool evidence for "${step.label}"`,
-      detail: blockId ? `block_id: ${blockId.slice(0, 8)}…` : "workspace-global",
+      summary:
+        action.kind === "time_simulation"
+          ? `Simulating +${action.timeDeltaDays ?? 0} day(s) idle gap`
+          : `Uploading evidence: ${action.label}`,
+      detail: blockId ? `block_id: ${blockId.slice(0, 8)}…` : action.category,
     });
 
     try {
@@ -387,9 +481,16 @@ export function EvidenceApiDemo() {
           payload,
           block_id: blockId,
           session_id: sessionId,
-          tool_name: "flowstack",
-          tool_action: step.id,
-          file_name: `${step.id}.json`,
+          tool_name: action.kind === "time_simulation" ? "flowstack_simulator" : "flowstack",
+          tool_action: action.id,
+          file_name: `${action.id}-${(worldState.actionCounts[action.id] ?? 0) + 1}.json`,
+          metadata: {
+            demo: true,
+            source: "evidence-api-demo",
+            category: action.category,
+            dimension: action.dimension,
+            simulated_days: nextWorld.simulatedDays,
+          },
         }),
       });
 
@@ -398,30 +499,31 @@ export function EvidenceApiDemo() {
         throw new Error(data.error || "Evidence upload failed");
       }
 
-      const nextCompleted = [...completedSteps, step.id];
-      setCompletedSteps(nextCompleted);
-      setEvidenceCount((count) => count + 1);
+      const nextEvidenceCount = evidenceCount + 1;
+      setWorldState(nextWorld);
+      setEvidenceCount(nextEvidenceCount);
       persistState({
         planId,
         sessionId,
-        completedSteps: nextCompleted,
+        worldState: nextWorld,
         workspaceTitle: workspaceTitle ?? undefined,
         blocks,
       });
+
+      if (shouldSuggestSkillRegeneration(nextEvidenceCount, lastSkillEvidenceCount)) {
+        setSkillRegenHint(true);
+      }
 
       addLog({
         method: "POST",
         path: "/api/evidence-api-demo/evidence",
         status: "success",
-        summary: `Evidence stored: ${step.label}`,
+        summary:
+          action.kind === "time_simulation"
+            ? `Time advanced to day ${nextWorld.simulatedDays}`
+            : `Evidence stored: ${action.label}`,
         detail: `artifact ${data.evidence.id.slice(0, 8)}…`,
       });
-
-      if (nextCompleted.length >= FLOWSTACK_STEPS.length) {
-        setPhase("ready");
-      } else {
-        setCurrentStepIndex((index) => Math.min(index + 1, FLOWSTACK_STEPS.length - 1));
-      }
     } catch (err) {
       addLog({
         method: "POST",
@@ -431,21 +533,195 @@ export function EvidenceApiDemo() {
       });
       setError(err instanceof Error ? err.message : "Failed to upload evidence");
     } finally {
-      setUploadingStep(null);
+      setRunningActionId(null);
+    }
+  };
+
+  const handleFetchEvidenceSchema = async () => {
+    if (!planId || isFetchingSchema) return;
+
+    setIsFetchingSchema(true);
+    setError("");
+
+    addLog({
+      method: "POST",
+      path: "/api/evidence-api-demo/evidence-schema",
+      status: "pending",
+      summary: "Re-fetching evidence spec from workspace context…",
+      detail: `${evidenceCount} artifact(s), day ${worldState.simulatedDays}`,
+    });
+
+    try {
+      const res = await fetchWithTimeout(
+        "/api/evidence-api-demo/evidence-schema",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ planId, definition: DEMO_EVAL_DEFINITION }),
+        },
+        120000
+      );
+
+      const data = await readJsonResponse<{
+        spec: EvidenceEvalSchemaResult;
+        context_counts?: { evidence_artifacts?: number };
+        error?: string;
+      }>(res);
+
+      if (!res.ok) {
+        throw new Error(data.error || "Evidence schema fetch failed");
+      }
+
+      setLatestSchema(data.spec);
+      setSchemaHistory((prev) => [
+        ...prev,
+        {
+          id: crypto.randomUUID(),
+          schema_name: data.spec.schema_name,
+          spec_version: data.spec.spec_version,
+          evidenceCount,
+          actionCount,
+          simulatedDays: worldState.simulatedDays,
+          timestamp: new Date(),
+        },
+      ]);
+
+      addLog({
+        method: "POST",
+        path: "/api/evidence-api-demo/evidence-schema",
+        status: "success",
+        summary: `Evidence spec updated: ${data.spec.schema_name}`,
+        detail: `v${data.spec.spec_version || "?"} · ${data.spec.tool_submissions?.length ?? 0} tool spec(s)`,
+      });
+    } catch (err) {
+      addLog({
+        method: "POST",
+        path: "/api/evidence-api-demo/evidence-schema",
+        status: "error",
+        summary: err instanceof Error ? err.message : "Schema fetch failed",
+      });
+      setError(err instanceof Error ? err.message : "Failed to fetch evidence schema");
+    } finally {
+      setIsFetchingSchema(false);
+    }
+  };
+
+  const handleRegenerateSkill = async () => {
+    if (!planId || isRegeneratingSkill) return;
+
+    setIsRegeneratingSkill(true);
+    setError("");
+    setSkillRegenHint(false);
+
+    addLog({
+      method: "POST",
+      path: "/api/evidence-api-demo/integration-skill",
+      status: "pending",
+      summary: "Regenerating integration skill.md from latest evidence…",
+      detail: `${evidenceCount} artifact(s), ${distinctEvidenceActions} distinct actions`,
+    });
+
+    try {
+      const res = await fetchWithTimeout(
+        "/api/evidence-api-demo/integration-skill",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ planId, prefetch_evidence_spec: true }),
+        },
+        180000
+      );
+
+      const data = await readJsonResponse<{
+        skill_md: string;
+        skill_name: string;
+        evidence_spec?: EvidenceEvalSchemaResult;
+        evidence_spec_prefetched?: boolean;
+        error?: string;
+      }>(res);
+
+      if (!res.ok) {
+        throw new Error(data.error || "Skill regeneration failed");
+      }
+
+      const preview = data.skill_md.slice(0, 600);
+      setLatestSkillPreview(preview);
+      if (data.evidence_spec) {
+        setLatestSchema(data.evidence_spec);
+      }
+      setLastSkillEvidenceCount(evidenceCount);
+
+      setSkillHistory((prev) => [
+        ...prev,
+        {
+          id: crypto.randomUUID(),
+          skill_name: data.skill_name,
+          spec_version: data.evidence_spec?.spec_version,
+          evidenceCount,
+          actionCount,
+          simulatedDays: worldState.simulatedDays,
+          prefetch: data.evidence_spec_prefetched === true,
+          preview,
+          timestamp: new Date(),
+        },
+      ]);
+
+      if (data.evidence_spec) {
+        setSchemaHistory((prev) => [
+          ...prev,
+          {
+            id: crypto.randomUUID(),
+            schema_name: data.evidence_spec!.schema_name,
+            spec_version: data.evidence_spec!.spec_version,
+            evidenceCount,
+            actionCount,
+            simulatedDays: worldState.simulatedDays,
+            timestamp: new Date(),
+          },
+        ]);
+      }
+
+      addLog({
+        method: "POST",
+        path: "/api/evidence-api-demo/integration-skill",
+        status: "success",
+        summary: `Skill regenerated: ${data.skill_name}`,
+        detail: data.evidence_spec_prefetched
+          ? `Prefetched spec ${data.evidence_spec?.schema_name || ""}`
+          : "Skill only",
+      });
+    } catch (err) {
+      addLog({
+        method: "POST",
+        path: "/api/evidence-api-demo/integration-skill",
+        status: "error",
+        summary: err instanceof Error ? err.message : "Skill regeneration failed",
+      });
+      setError(err instanceof Error ? err.message : "Failed to regenerate skill");
+    } finally {
+      setIsRegeneratingSkill(false);
     }
   };
 
   const handleRequestPerformance = async () => {
-    if (!planId) return;
+    if (!planId || isReporting) return;
+    if (evidenceCount < 1) {
+      setError("Run at least one simulation action to upload evidence before requesting a score.");
+      return;
+    }
 
-    setPhase("reporting");
+    setIsReporting(true);
     setError("");
+
+    const snapshotEvidenceCount = evidenceCount;
+    const snapshotActionCount = actionCount;
+    const snapshotSimulatedDays = worldState.simulatedDays;
 
     addLog({
       method: "POST",
       path: "/api/evidence-api-demo/performance",
       status: "pending",
-      summary: "Requesting gap analysis and readiness report…",
+      summary: `Requesting score (${snapshotEvidenceCount} evidence artifact${snapshotEvidenceCount === 1 ? "" : "s"})…`,
     });
 
     try {
@@ -466,16 +742,25 @@ export function EvidenceApiDemo() {
 
       setReport(data.report);
       setEvidenceCount(data.evidence_summary.evidence_artifacts);
+      setReportHistory((prev) => [
+        ...prev,
+        {
+          id: crypto.randomUUID(),
+          report: data.report,
+          evidenceCount: snapshotEvidenceCount,
+          actionCount: snapshotActionCount,
+          simulatedDays: snapshotSimulatedDays,
+          timestamp: new Date(),
+        },
+      ]);
 
       addLog({
         method: "POST",
         path: "/api/evidence-api-demo/performance",
         status: "success",
-        summary: "Performance report generated",
-        detail: `confidence: ${data.report.confidence}`,
+        summary: "Score updated",
+        detail: `${confidenceLabel(data.report.confidence)} · ${snapshotActionCount} actions · day ${snapshotSimulatedDays}`,
       });
-
-      setPhase("report");
     } catch (err) {
       addLog({
         method: "POST",
@@ -484,7 +769,65 @@ export function EvidenceApiDemo() {
         summary: err instanceof Error ? err.message : "Report failed",
       });
       setError(err instanceof Error ? err.message : "Failed to generate report");
-      setPhase("ready");
+    } finally {
+      setIsReporting(false);
+    }
+  };
+
+  const handleArchiveWorkspace = async () => {
+    if (!planId || isArchiving) return;
+    if (
+      !confirm(
+        "Archive this demo workspace? It will be hidden from your dashboard and admin lists, but evidence and scores are preserved."
+      )
+    ) {
+      return;
+    }
+
+    setIsArchiving(true);
+    setError("");
+
+    addLog({
+      method: "POST",
+      path: "/api/evidence-api-demo/archive",
+      status: "pending",
+      summary: "Archiving demo workspace…",
+    });
+
+    try {
+      const res = await fetchWithTimeout(
+        "/api/evidence-api-demo/archive",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ planId }),
+        },
+        30000
+      );
+      const data = await readJsonResponse<{ success?: boolean; error?: string }>(res);
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to archive workspace");
+      }
+
+      addLog({
+        method: "POST",
+        path: "/api/evidence-api-demo/archive",
+        status: "success",
+        summary: "Demo workspace archived",
+        detail: "Hidden from dashboard; data preserved",
+      });
+
+      handleReset();
+    } catch (err) {
+      addLog({
+        method: "POST",
+        path: "/api/evidence-api-demo/archive",
+        status: "error",
+        summary: err instanceof Error ? err.message : "Archive failed",
+      });
+      setError(err instanceof Error ? err.message : "Failed to archive workspace");
+    } finally {
+      setIsArchiving(false);
     }
   };
 
@@ -495,19 +838,25 @@ export function EvidenceApiDemo() {
     setWorkspaceTitle(null);
     setBlocks([]);
     setApiPaths(null);
+    setPlanFiles([]);
+    setModelDocPreview(null);
     setSessionId(createSessionId());
-    setCompletedSteps([]);
-    setCurrentStepIndex(0);
+    setWorldState(createInitialWorldState());
     setReport(null);
+    setReportHistory([]);
+    setSkillHistory([]);
+    setSchemaHistory([]);
+    setLatestSkillPreview(null);
+    setLatestSchema(null);
+    setIsReporting(false);
+    setIsFetchingSchema(false);
+    setIsRegeneratingSkill(false);
     setEvidenceCount(0);
+    setLastSkillEvidenceCount(null);
+    setSkillRegenHint(false);
     setApiLog([]);
     setError("");
   };
-
-  const progressPercent = useMemo(
-    () => Math.round((completedSteps.length / FLOWSTACK_STEPS.length) * 100),
-    [completedSteps.length]
-  );
 
   if (authState === "loading") {
     return (
@@ -563,9 +912,9 @@ export function EvidenceApiDemo() {
               Evidence API in action
             </h1>
             <p className="mt-3 max-w-2xl text-sm leading-relaxed text-zinc-400 sm:text-base">
-              Walk through a fictional SaaS product ({DEMO_PRODUCT_NAME}) while OpenLesson captures tool
-              evidence and scores learning-to-conversion readiness — the same flow you would wire into
-              your own product via the Agentic API.
+              Simulate a non-linear SaaS trial on {DEMO_PRODUCT_NAME} — branch across integrations,
+              projects, and team actions, compress idle time, then watch OpenLesson regenerate evidence
+              specs and integration skills as the workspace learns.
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -588,16 +937,12 @@ export function EvidenceApiDemo() {
       </header>
 
       <main className="mx-auto grid max-w-7xl gap-6 px-4 py-6 sm:px-6 lg:grid-cols-2 lg:gap-8 lg:py-8">
-        <FlowStackPanel
+        <SimulatorPanel
           phase={phase}
-          currentStep={currentStep}
-          currentStepIndex={currentStepIndex}
-          completedSteps={completedSteps}
-          progressPercent={progressPercent}
-          uploadingStep={uploadingStep}
-          allStepsComplete={allStepsComplete}
+          worldState={worldState}
+          runningActionId={runningActionId}
           onStart={handleStartDemo}
-          onCompleteStep={handleCompleteStep}
+          onRunAction={handleRunAction}
         />
 
         <OpenLessonPanel
@@ -605,13 +950,31 @@ export function EvidenceApiDemo() {
           planId={planId}
           workspaceTitle={workspaceTitle}
           apiPaths={apiPaths}
+          planFiles={planFiles}
+          modelDocPreview={modelDocPreview}
           sessionId={sessionId}
+          worldState={worldState}
           evidenceCount={evidenceCount}
+          actionCount={actionCount}
+          distinctEvidenceActions={distinctEvidenceActions}
+          isReporting={isReporting}
+          isFetchingSchema={isFetchingSchema}
+          isRegeneratingSkill={isRegeneratingSkill}
+          skillRegenHint={skillRegenHint}
           apiLog={apiLog}
           error={error}
           report={report}
+          reportHistory={reportHistory}
+          skillHistory={skillHistory}
+          schemaHistory={schemaHistory}
+          latestSkillPreview={latestSkillPreview}
+          latestSchema={latestSchema}
           evalDefinition={DEMO_EVAL_DEFINITION}
           onRequestPerformance={handleRequestPerformance}
+          onFetchEvidenceSchema={handleFetchEvidenceSchema}
+          onRegenerateSkill={handleRegenerateSkill}
+          onArchiveWorkspace={handleArchiveWorkspace}
+          isArchiving={isArchiving}
           onReset={handleReset}
         />
       </main>
@@ -665,27 +1028,23 @@ function AuthGate({
   );
 }
 
-function FlowStackPanel({
+function SimulatorPanel({
   phase,
-  currentStep,
-  currentStepIndex,
-  completedSteps,
-  progressPercent,
-  uploadingStep,
-  allStepsComplete,
+  worldState,
+  runningActionId,
   onStart,
-  onCompleteStep,
+  onRunAction,
 }: {
   phase: DemoPhase;
-  currentStep: FlowStackStep | null;
-  currentStepIndex: number;
-  completedSteps: string[];
-  progressPercent: number;
-  uploadingStep: string | null;
-  allStepsComplete: boolean;
+  worldState: SimulationWorldState;
+  runningActionId: string | null;
   onStart: () => void;
-  onCompleteStep: (step: FlowStackStep) => void;
+  onRunAction: (action: SimulationAction) => void;
 }) {
+  const totalActions = SIMULATION_ACTIONS.filter((action) => action.kind === "evidence").length;
+  const explored = countDistinctEvidenceActions(worldState);
+  const coveragePercent = Math.round((explored / totalActions) * 100);
+
   return (
     <section className="flex flex-col overflow-hidden rounded-lg border border-indigo-500/20 bg-gradient-to-b from-indigo-950/40 to-[#0f1117]">
       <div className="border-b border-indigo-500/15 px-5 py-4 sm:px-6">
@@ -696,11 +1055,11 @@ function FlowStackPanel({
             </div>
             <div>
               <div className="text-sm font-medium text-white">{DEMO_PRODUCT_NAME}</div>
-              <div className="text-xs text-indigo-200/70">Trial onboarding · simulated product</div>
+              <div className="text-xs text-indigo-200/70">Multidimensional trial simulator</div>
             </div>
           </div>
           <span className="rounded-full border border-indigo-400/25 bg-indigo-950/50 px-2.5 py-1 font-mono text-[10px] uppercase tracking-wide text-indigo-200">
-            Demo app
+            Simulation toolkit
           </span>
         </div>
       </div>
@@ -709,11 +1068,10 @@ function FlowStackPanel({
         {phase === "intro" || phase === "creating" ? (
           <div className="flex flex-1 flex-col justify-center py-8">
             <Sparkles className="size-8 text-indigo-300" />
-            <h2 className="mt-4 text-xl font-medium text-white">Start your 14-day trial</h2>
+            <h2 className="mt-4 text-xl font-medium text-white">Non-linear trial surface</h2>
             <p className="mt-2 max-w-md text-sm leading-relaxed text-indigo-100/70">
-              This is a fictional team collaboration product. Complete the onboarding milestones
-              as a trial user would — connect Slack, create a project, invite a teammate, and reach
-              activation.
+              Branch across onboarding paths, integrations, projects, and team workflows. Use simulation
+              tools to compress days between sessions — then regenerate OpenLesson specs as evidence grows.
             </p>
             <button
               type="button"
@@ -736,80 +1094,116 @@ function FlowStackPanel({
           </div>
         ) : (
           <>
-            <div className="mb-6">
-              <div className="mb-2 flex items-center justify-between text-xs text-indigo-200/60">
-                <span>Onboarding progress</span>
-                <span>{progressPercent}%</span>
+            <div className="mb-5 grid grid-cols-3 gap-2 text-center">
+              <div className="rounded-md border border-indigo-500/20 bg-black/25 px-2 py-2">
+                <div className="font-mono text-[10px] uppercase tracking-wide text-indigo-300/60">Day</div>
+                <div className="mt-1 font-mono text-lg text-white">{worldState.simulatedDays}</div>
               </div>
-              <div className="h-1.5 overflow-hidden rounded-full bg-indigo-950">
-                <div
-                  className="h-full rounded-full bg-indigo-400 transition-all duration-500"
-                  style={{ width: `${progressPercent}%` }}
-                />
+              <div className="rounded-md border border-indigo-500/20 bg-black/25 px-2 py-2">
+                <div className="font-mono text-[10px] uppercase tracking-wide text-indigo-300/60">Actions</div>
+                <div className="mt-1 font-mono text-lg text-white">{totalActionCount(worldState)}</div>
+              </div>
+              <div className="rounded-md border border-indigo-500/20 bg-black/25 px-2 py-2">
+                <div className="font-mono text-[10px] uppercase tracking-wide text-indigo-300/60">Coverage</div>
+                <div className="mt-1 font-mono text-lg text-white">{coveragePercent}%</div>
               </div>
             </div>
 
-            <ol className="space-y-3">
-              {FLOWSTACK_STEPS.map((step, index) => {
-                const done = completedSteps.includes(step.id);
-                const active = !done && index === currentStepIndex && !allStepsComplete;
-                const isUploading = uploadingStep === step.id;
+            <p className="mb-4 text-xs leading-relaxed text-indigo-100/55">
+              Click any action in any order — no fixed path. Repeatable actions and time tools model
+              real-world complexity (idle gaps, mistakes, parallel workstreams).
+            </p>
 
-                return (
-                  <li
-                    key={step.id}
-                    className={`rounded-md border px-4 py-3 transition ${
-                      done
-                        ? "border-emerald-500/25 bg-emerald-950/20"
-                        : active
-                          ? "border-indigo-400/40 bg-indigo-950/40"
-                          : "border-indigo-500/10 bg-black/20 opacity-60"
-                    }`}
-                  >
-                    <div className="flex items-start gap-3">
-                      {done ? (
-                        <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-emerald-400" />
-                      ) : (
-                        <Circle className="mt-0.5 size-4 shrink-0 text-indigo-400/50" />
-                      )}
-                      <div className="min-w-0 flex-1">
-                        <div className="text-sm font-medium text-white">{step.label}</div>
-                        <p className="mt-1 text-xs leading-relaxed text-indigo-100/60">
-                          {step.description}
-                        </p>
-                        {active ? (
-                          <button
-                            type="button"
-                            onClick={() => onCompleteStep(step)}
-                            disabled={!!uploadingStep}
-                            className="mt-3 inline-flex items-center gap-2 rounded-md bg-white px-3.5 py-2 text-xs font-medium text-indigo-950 transition hover:bg-indigo-50 disabled:cursor-not-allowed disabled:opacity-60"
-                          >
-                            {isUploading ? (
-                              <>
-                                <Loader2 className="size-3.5 animate-spin" />
-                                Submitting evidence…
-                              </>
-                            ) : (
-                              step.cta
-                            )}
-                          </button>
-                        ) : null}
-                      </div>
-                    </div>
-                  </li>
-                );
-              })}
-            </ol>
-
-            {allStepsComplete ? (
-              <div className="mt-6 rounded-md border border-emerald-500/25 bg-emerald-950/20 px-4 py-3 text-sm text-emerald-100/90">
-                Activation milestone reached. OpenLesson has tool evidence for every onboarding step.
-              </div>
-            ) : null}
+            <div className="max-h-[32rem] space-y-5 overflow-y-auto pr-1">
+              {SIMULATION_CATEGORY_ORDER.map((category) => (
+                <SimulationCategorySection
+                  key={category}
+                  category={category}
+                  worldState={worldState}
+                  runningActionId={runningActionId}
+                  onRunAction={onRunAction}
+                />
+              ))}
+            </div>
           </>
         )}
       </div>
     </section>
+  );
+}
+
+function SimulationCategorySection({
+  category,
+  worldState,
+  runningActionId,
+  onRunAction,
+}: {
+  category: SimulationCategory;
+  worldState: SimulationWorldState;
+  runningActionId: string | null;
+  onRunAction: (action: SimulationAction) => void;
+}) {
+  const meta = SIMULATION_CATEGORY_META[category];
+  const actions = getActionsByCategory(category);
+  const isTimeTools = category === "simulation_tools";
+
+  return (
+    <div>
+      <div className="mb-2 flex items-center gap-2">
+        {isTimeTools ? <Clock className="size-3.5 text-amber-300/80" /> : null}
+        <div>
+          <div className="text-xs font-medium text-white">{meta.label}</div>
+          <div className="text-[10px] text-indigo-200/50">{meta.description}</div>
+        </div>
+      </div>
+      <div
+        className={`grid gap-2 ${isTimeTools ? "sm:grid-cols-3" : "sm:grid-cols-2"}`}
+      >
+        {actions.map((action) => {
+          const count = worldState.actionCounts[action.id] ?? 0;
+          const done = hasCompletedAction(worldState, action.id);
+          const disabled =
+            !!runningActionId || (!isActionRepeatable(action) && done);
+          const isRunning = runningActionId === action.id;
+
+          return (
+            <button
+              key={action.id}
+              type="button"
+              onClick={() => onRunAction(action)}
+              disabled={disabled}
+              className={`rounded-md border px-3 py-2.5 text-left transition ${
+                isTimeTools
+                  ? "border-amber-500/25 bg-amber-950/15 hover:border-amber-400/40"
+                  : done
+                    ? "border-emerald-500/20 bg-emerald-950/15"
+                    : "border-indigo-500/15 bg-black/20 hover:border-indigo-400/35"
+              } disabled:cursor-not-allowed disabled:opacity-50`}
+            >
+              <div className="flex items-start justify-between gap-2">
+                <span className="text-xs font-medium text-white">{action.label}</span>
+                {count > 0 ? (
+                  <span className="shrink-0 rounded bg-indigo-950/80 px-1.5 py-0.5 font-mono text-[9px] text-indigo-200">
+                    ×{count}
+                  </span>
+                ) : null}
+              </div>
+              <p className="mt-1 text-[10px] leading-relaxed text-indigo-100/55">{action.description}</p>
+              <span className="mt-2 inline-flex items-center gap-1.5 text-[10px] font-medium text-indigo-200">
+                {isRunning ? (
+                  <>
+                    <Loader2 className="size-3 animate-spin" />
+                    Running…
+                  </>
+                ) : (
+                  action.cta
+                )}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
   );
 }
 
@@ -818,28 +1212,67 @@ function OpenLessonPanel({
   planId,
   workspaceTitle,
   apiPaths,
+  planFiles,
+  modelDocPreview,
   sessionId,
+  worldState,
   evidenceCount,
+  actionCount,
+  distinctEvidenceActions,
+  isReporting,
+  isFetchingSchema,
+  isRegeneratingSkill,
+  skillRegenHint,
   apiLog,
   error,
   report,
+  reportHistory,
+  skillHistory,
+  schemaHistory,
+  latestSkillPreview,
+  latestSchema,
   evalDefinition,
   onRequestPerformance,
+  onFetchEvidenceSchema,
+  onRegenerateSkill,
+  onArchiveWorkspace,
+  isArchiving,
   onReset,
 }: {
   phase: DemoPhase;
   planId: string | null;
   workspaceTitle: string | null;
   apiPaths: WorkspaceResponse["api_paths"] | null;
+  planFiles: PlanFileSummary[];
+  modelDocPreview: string | null;
   sessionId: string;
+  worldState: SimulationWorldState;
   evidenceCount: number;
+  actionCount: number;
+  distinctEvidenceActions: number;
+  isReporting: boolean;
+  isFetchingSchema: boolean;
+  isRegeneratingSkill: boolean;
+  skillRegenHint: boolean;
   apiLog: ApiLogEntry[];
   error: string;
   report: PerformanceReport | null;
+  reportHistory: ReportSnapshot[];
+  skillHistory: SkillSnapshot[];
+  schemaHistory: SchemaSnapshot[];
+  latestSkillPreview: string | null;
+  latestSchema: EvidenceEvalSchemaResult | null;
   evalDefinition: string;
   onRequestPerformance: () => void;
+  onFetchEvidenceSchema: () => void;
+  onRegenerateSkill: () => void;
+  onArchiveWorkspace: () => void;
+  isArchiving: boolean;
   onReset: () => void;
 }) {
+  const canOperate = !!planId && phase === "simulating";
+  const canRequestScore = canOperate && evidenceCount > 0;
+  const canRegenerate = canOperate && evidenceCount > 0;
   return (
     <section className="flex flex-col rounded-lg border border-zinc-800 bg-zinc-950/70">
       <div className="border-b border-zinc-800 px-5 py-4 sm:px-6">
@@ -853,19 +1286,22 @@ function OpenLessonPanel({
       </div>
 
       <div className="flex flex-1 flex-col gap-5 p-5 sm:p-6">
-        <div className="grid grid-cols-2 gap-3 text-center sm:grid-cols-3">
+        <div className="grid grid-cols-2 gap-3 text-center sm:grid-cols-4">
           <Stat label="Workspace" value={planId ? "Active" : "—"} />
           <Stat label="Evidence" value={evidenceCount > 0 ? String(evidenceCount) : "—"} />
+          <Stat label="Sim day" value={worldState.simulatedDays > 0 ? String(worldState.simulatedDays) : "—"} />
           <Stat
-            label="Phase"
+            label="Status"
             value={
-              phase === "report" || phase === "reporting"
-                ? "Scoring"
-                : phase === "ready"
-                  ? "Ready"
-                  : phase === "onboarding"
-                    ? "Collecting"
-                    : "Idle"
+              isRegeneratingSkill
+                ? "Skill regen"
+                : isFetchingSchema
+                  ? "Spec fetch"
+                  : isReporting
+                    ? "Scoring"
+                    : phase === "simulating"
+                      ? "Live"
+                      : "Idle"
             }
           />
         </div>
@@ -878,6 +1314,36 @@ function OpenLessonPanel({
             <div className="mt-1 text-sm text-white">{workspaceTitle}</div>
             {planId ? (
               <code className="mt-1 block truncate font-mono text-[11px] text-zinc-500">{planId}</code>
+            ) : null}
+          </div>
+        ) : null}
+
+        {planFiles.length > 0 ? (
+          <div className="rounded-md border border-zinc-800 bg-black/30 p-3">
+            <div className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-600">
+              Workspace files (plan_files)
+            </div>
+            <p className="mt-1 text-[11px] leading-relaxed text-zinc-500">
+              Attached at creation like <span className="font-mono text-zinc-400">POST .../workspaces</span>{" "}
+              with <span className="font-mono text-zinc-400">files[]</span> — included in performance and spec context.
+            </p>
+            <ul className="mt-2 space-y-1.5">
+              {planFiles.map((file) => (
+                <li
+                  key={file.id}
+                  className="flex flex-wrap items-center justify-between gap-2 rounded border border-zinc-800/80 px-2.5 py-1.5 text-xs"
+                >
+                  <span className="font-mono text-zinc-300">{file.file_name}</span>
+                  <span className="font-mono text-[10px] text-zinc-500">
+                    {file.mime_type} · {Math.round(file.file_size / 1024)} KB
+                  </span>
+                </li>
+              ))}
+            </ul>
+            {modelDocPreview ? (
+              <pre className="mt-3 max-h-28 overflow-y-auto whitespace-pre-wrap rounded border border-zinc-800/80 bg-zinc-950/60 p-2 font-mono text-[10px] leading-relaxed text-zinc-500">
+                {modelDocPreview}…
+              </pre>
             ) : null}
           </div>
         ) : null}
@@ -944,43 +1410,154 @@ function OpenLessonPanel({
 
         {error ? <p className="text-sm text-red-400">{error}</p> : null}
 
-        {(phase === "ready" || phase === "reporting" || phase === "report") && planId ? (
+        {canRegenerate ? (
+          <div className="space-y-3 rounded-md border border-violet-500/20 bg-violet-950/10 p-4">
+            <div className="flex items-center gap-2">
+              <RefreshCw className="size-4 text-violet-300" />
+              <div>
+                <div className="text-sm font-medium text-white">Continuous evaluation</div>
+                <div className="text-xs text-zinc-500">
+                  Specs and skills are living documents — regenerate as evidence grows.
+                </div>
+              </div>
+            </div>
+
+            {skillRegenHint ? (
+              <p className="rounded-md border border-violet-400/25 bg-violet-950/30 px-3 py-2 text-xs text-violet-100/90">
+                Evidence crossed a threshold ({evidenceCount} artifacts). Regenerate the integration
+                skill to showcase how partner agents stay aligned.
+              </p>
+            ) : null}
+
+            <div className="grid gap-2 sm:grid-cols-2">
+              <button
+                type="button"
+                onClick={onFetchEvidenceSchema}
+                disabled={isFetchingSchema || isRegeneratingSkill}
+                className="inline-flex items-center justify-center gap-2 rounded-md border border-zinc-700 bg-black/30 px-3 py-2 text-xs font-medium text-zinc-200 transition hover:border-zinc-500 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {isFetchingSchema ? (
+                  <Loader2 className="size-3.5 animate-spin" />
+                ) : (
+                  <FileCode2 className="size-3.5" />
+                )}
+                Re-fetch evidence spec
+              </button>
+              <button
+                type="button"
+                onClick={onRegenerateSkill}
+                disabled={isRegeneratingSkill || isFetchingSchema}
+                className="inline-flex items-center justify-center gap-2 rounded-md bg-violet-500 px-3 py-2 text-xs font-medium text-white transition hover:bg-violet-400 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {isRegeneratingSkill ? (
+                  <Loader2 className="size-3.5 animate-spin" />
+                ) : (
+                  <RefreshCw className="size-3.5" />
+                )}
+                Regenerate skill.md
+                {skillHistory.length > 0 ? ` (v${skillHistory.length + 1})` : ""}
+              </button>
+            </div>
+
+            {schemaHistory.length > 0 ? (
+              <SpecEvolution history={schemaHistory} />
+            ) : null}
+
+            {skillHistory.length > 0 ? (
+              <SkillEvolution history={skillHistory} />
+            ) : null}
+
+            {latestSchema ? (
+              <div className="rounded-md border border-zinc-800 bg-black/30 p-3">
+                <div className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-600">
+                  Latest evidence spec
+                </div>
+                <div className="mt-2 text-xs text-zinc-300">
+                  <span className="font-mono text-violet-200">{latestSchema.schema_name}</span>
+                  {latestSchema.spec_version ? (
+                    <span className="ml-2 text-zinc-500">v{latestSchema.spec_version}</span>
+                  ) : null}
+                </div>
+                <p className="mt-2 text-[11px] leading-relaxed text-zinc-500">
+                  {latestSchema.continuous_evaluation_summary ||
+                    latestSchema.collection_guidance?.slice(0, 180)}
+                </p>
+              </div>
+            ) : null}
+
+            {latestSkillPreview ? (
+              <div className="rounded-md border border-zinc-800 bg-black/30 p-3">
+                <div className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-600">
+                  Latest skill.md preview
+                </div>
+                <pre className="mt-2 max-h-36 overflow-y-auto whitespace-pre-wrap font-mono text-[10px] leading-relaxed text-zinc-400">
+                  {latestSkillPreview}
+                  {latestSkillPreview.length >= 600 ? "\n…" : ""}
+                </pre>
+              </div>
+            ) : null}
+          </div>
+        ) : null}
+
+        {canRequestScore ? (
           <div className="space-y-3 border-t border-zinc-800 pt-4">
             <p className="text-xs leading-relaxed text-zinc-500">
-              Request a performance report to see gap analysis against this eval definition:
-            </p>
-            <p className="rounded-md border border-zinc-800 bg-black/30 p-3 text-[11px] leading-relaxed text-zinc-400">
-              {evalDefinition.slice(0, 280)}
-              {evalDefinition.length > 280 ? "…" : ""}
+              Request a score at any point — branch freely, simulate idle days, then score again.
+              {distinctEvidenceActions} distinct actions · {actionCount} total events · day{" "}
+              {worldState.simulatedDays}.
             </p>
             <button
               type="button"
               onClick={onRequestPerformance}
-              disabled={phase === "reporting"}
+              disabled={isReporting}
               className="inline-flex w-full items-center justify-center gap-2 rounded-md bg-white px-4 py-2.5 text-sm font-medium text-black transition hover:bg-zinc-200 disabled:cursor-not-allowed disabled:bg-zinc-700 disabled:text-zinc-400"
             >
-              {phase === "reporting" ? (
+              {isReporting ? (
                 <>
                   <Loader2 className="size-4 animate-spin" />
-                  Generating report…
+                  Generating score…
                 </>
               ) : (
-                "Request performance report"
+                <>
+                  Request score now
+                  {reportHistory.length > 0 ? ` (check ${reportHistory.length + 1})` : ""}
+                </>
               )}
             </button>
           </div>
         ) : null}
 
-        {report ? <PerformanceReportCard report={report} /> : null}
+        {reportHistory.length > 1 ? <ScoreEvolution history={reportHistory} /> : null}
+
+        {report ? (
+          <PerformanceReportCard
+            report={report}
+            label={
+              reportHistory.length > 0
+                ? `Latest score · day ${reportHistory[reportHistory.length - 1].simulatedDays} · ${reportHistory[reportHistory.length - 1].actionCount} actions`
+                : "Performance report"
+            }
+          />
+        ) : null}
 
         {planId ? (
-          <button
-            type="button"
-            onClick={onReset}
-            className="text-xs text-zinc-500 transition hover:text-zinc-300"
-          >
-            Reset demo session
-          </button>
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              onClick={onArchiveWorkspace}
+              disabled={isArchiving}
+              className="rounded-md border border-amber-500/30 px-3 py-1.5 text-xs text-amber-200 transition hover:border-amber-400/50 hover:bg-amber-950/20 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {isArchiving ? "Archiving…" : "Archive demo workspace"}
+            </button>
+            <button
+              type="button"
+              onClick={onReset}
+              className="text-xs text-zinc-500 transition hover:text-zinc-300"
+            >
+              Reset demo session
+            </button>
+          </div>
         ) : null}
 
         <p className="font-mono text-[10px] text-zinc-600">session: {sessionId.slice(0, 8)}…</p>
@@ -998,15 +1575,149 @@ function Stat({ label, value }: { label: string; value: string }) {
   );
 }
 
-function PerformanceReportCard({ report }: { report: PerformanceReport }) {
+function SkillEvolution({ history }: { history: SkillSnapshot[] }) {
+  return (
+    <div className="rounded-md border border-zinc-800 bg-black/30 p-3">
+      <div className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-600">
+        Skill regeneration timeline
+      </div>
+      <ol className="mt-3 space-y-2">
+        {history.map((snapshot, index) => (
+          <li
+            key={snapshot.id}
+            className={`rounded-md border px-3 py-2 text-xs ${
+              index === history.length - 1
+                ? "border-violet-500/30 bg-violet-950/20 text-zinc-200"
+                : "border-zinc-800/80 text-zinc-400"
+            }`}
+          >
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <span className="font-medium text-zinc-300">
+                v{index + 1} · {snapshot.skill_name}
+              </span>
+              <span className="font-mono text-[10px] text-zinc-500">
+                {snapshot.evidenceCount} artifacts · day {snapshot.simulatedDays}
+              </span>
+            </div>
+            <p className="mt-1 font-mono text-[10px] text-zinc-500">
+              {snapshot.prefetch ? "Prefetched evidence spec" : "Skill only"}
+              {snapshot.spec_version ? ` · spec ${snapshot.spec_version}` : ""}
+            </p>
+          </li>
+        ))}
+      </ol>
+    </div>
+  );
+}
+
+function SpecEvolution({ history }: { history: SchemaSnapshot[] }) {
+  return (
+    <div className="rounded-md border border-zinc-800 bg-black/30 p-3">
+      <div className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-600">
+        Evidence spec evolution
+      </div>
+      <ol className="mt-3 space-y-2">
+        {history.map((snapshot, index) => (
+          <li
+            key={snapshot.id}
+            className={`rounded-md border px-3 py-2 text-xs ${
+              index === history.length - 1
+                ? "border-cyan-500/25 bg-cyan-950/15 text-zinc-200"
+                : "border-zinc-800/80 text-zinc-400"
+            }`}
+          >
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <span className="font-mono text-zinc-300">{snapshot.schema_name}</span>
+              <span className="text-[10px] text-zinc-500">
+                fetch {index + 1} · {snapshot.evidenceCount} artifacts
+              </span>
+            </div>
+          </li>
+        ))}
+      </ol>
+    </div>
+  );
+}
+
+function ScoreEvolution({ history }: { history: ReportSnapshot[] }) {
+  return (
+    <div className="rounded-md border border-zinc-800 bg-black/30 p-3">
+      <div className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-600">
+        Score evolution
+      </div>
+      <ol className="mt-3 space-y-2">
+        {history.map((snapshot, index) => (
+          <li
+            key={snapshot.id}
+            className={`rounded-md border px-3 py-2 text-xs ${
+              index === history.length - 1
+                ? "border-cyan-500/30 bg-cyan-950/20 text-zinc-200"
+                : "border-zinc-800/80 text-zinc-400"
+            }`}
+          >
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <span className="font-medium text-zinc-300">
+                Check {index + 1} · day {snapshot.simulatedDays} · {snapshot.actionCount} action
+                {snapshot.actionCount === 1 ? "" : "s"}
+              </span>
+              <div className="flex flex-wrap items-center gap-2">
+                {typeof snapshot.report.overall_score === "number" ? (
+                  <span className="rounded-full border border-cyan-500/30 px-2 py-0.5 font-mono text-[10px] text-cyan-200">
+                    {Math.round(snapshot.report.overall_score)}/100
+                  </span>
+                ) : null}
+                <span className="rounded-full border border-zinc-700 px-2 py-0.5 font-mono text-[10px] uppercase text-zinc-400">
+                  {confidenceLabel(snapshot.report.confidence)}
+                </span>
+              </div>
+            </div>
+            <p className="mt-1 leading-relaxed opacity-90">{snapshot.report.summary}</p>
+          </li>
+        ))}
+      </ol>
+    </div>
+  );
+}
+
+function PerformanceReportCard({ report, label = "Performance report" }: { report: PerformanceReport; label?: string }) {
+  const overallScore =
+    typeof report.overall_score === "number" ? Math.max(0, Math.min(100, Math.round(report.overall_score))) : null;
+  const markerScores = report.marker_scores ?? [];
+
   return (
     <div className="space-y-4 rounded-md border border-cyan-500/20 bg-cyan-950/10 p-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h3 className="text-sm font-medium text-white">Performance report</h3>
-        <span className="rounded-full border border-cyan-400/25 bg-cyan-950/40 px-2.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-cyan-200">
-          {confidenceLabel(report.confidence)}
-        </span>
+        <h3 className="text-sm font-medium text-white">{label}</h3>
+        <div className="flex flex-wrap items-center gap-2">
+          {overallScore != null ? (
+            <span className="rounded-full border border-cyan-400/30 bg-cyan-950/50 px-3 py-0.5 font-mono text-sm text-cyan-100">
+              {overallScore}
+              <span className="ml-1 text-[10px] text-cyan-300/80">/100</span>
+            </span>
+          ) : null}
+          <span className="rounded-full border border-cyan-400/25 bg-cyan-950/40 px-2.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-cyan-200">
+            {confidenceLabel(report.confidence)}
+          </span>
+        </div>
       </div>
+
+      {markerScores.length > 0 ? (
+        <div className="rounded-md border border-cyan-500/15 bg-black/20 px-3 py-4">
+          <div className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-600">Competency profile</div>
+          <MarkerRadarChart markers={markerScores} ariaLabel="Performance competency scores" />
+          <div className="mt-4 grid gap-2 sm:grid-cols-2">
+            {markerScores.map((marker) => (
+              <div key={marker.id} className="rounded-md border border-zinc-800/80 bg-zinc-950/60 px-3 py-2 text-xs">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="font-medium text-zinc-300">{marker.label}</span>
+                  <span className="font-mono text-sm text-cyan-200">{marker.score}</span>
+                </div>
+                <p className="mt-1 text-zinc-500">{marker.rationale}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : null}
 
       <p className="text-sm leading-relaxed text-zinc-300">{report.summary}</p>
 

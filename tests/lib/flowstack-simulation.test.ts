@@ -27,19 +27,19 @@ describe("flowstack simulation toolkit", () => {
     expect(next.actionCounts.wait_1_day).toBe(1);
   });
 
-  it("builds time simulation evidence payloads", () => {
+  it("builds time-gap evidence payloads", () => {
     const waitWeek = SIMULATION_ACTIONS.find((action) => action.id === "wait_1_week")!;
     const payload = buildSimulationEvidencePayload(waitWeek, {
       sessionId: "session-1",
       worldState: createInitialWorldState(),
     });
 
-    expect(payload.simulation).toMatchObject({
+    expect(payload.time_gap).toMatchObject({
       days_elapsed: 7,
-      total_simulated_days: 7,
+      total_elapsed_days: 7,
     });
     expect(payload.event).toMatchObject({
-      verb: "simulate_time_passage",
+      verb: "time_gap_elapsed",
     });
   });
 
@@ -49,7 +49,8 @@ describe("flowstack simulation toolkit", () => {
     expect(file.mime_type).toBe("text/markdown");
     expect(file.data.length).toBeGreaterThan(100);
     const decoded = Buffer.from(file.data, "base64").toString("utf8");
-    expect(decoded).toContain("FlowStack Trial Verification Model");
+    expect(decoded).toContain("FlowStack Learning Verification Model");
+    expect(decoded).toContain("Trial onboarding & activation");
     expect(decoded).toContain("overall_score");
     expect(decoded).toContain("integration-skill");
   });

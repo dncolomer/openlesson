@@ -235,11 +235,11 @@ describe("buildEvidenceSchemaInstructions", () => {
         focus_block_id: null,
         generated_at: new Date().toISOString(),
         blocks: [{ id: "b1", title: "Discovery", description: "Qualify pain", status: null, is_start: true, session_id: null }],
-        ghl_sessions: [],
+        tap_sessions: [],
         evidence: [],
         plan_files: [],
         linked_sessions: [],
-        counts: { blocks: 1, ghl_sessions: 0, evidence_artifacts: 0, linked_sessions: 0, plan_files: 0 },
+        counts: { blocks: 1, tap_sessions: 0, evidence_artifacts: 0, linked_sessions: 0, plan_files: 0 },
       }
     );
 

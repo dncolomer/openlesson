@@ -89,14 +89,14 @@ export async function POST(req: NextRequest, { params }: RouteProps) {
 
       if (
         context.payload.counts.evidence_artifacts === 0 &&
-        context.payload.counts.ghl_sessions === 0 &&
+        context.payload.counts.tap_sessions === 0 &&
         context.payload.counts.linked_sessions === 0 &&
         context.payload.counts.plan_files === 0
       ) {
         return NextResponse.json({
           mode: prompt ? "chat" : "report",
           response: prompt
-            ? "No performance evidence is attached to this workspace yet. Upload tool usage, screenshots, video, or EEG via POST /evidence, complete a GHL session, or link session data before asking detailed questions."
+            ? "No performance evidence is attached to this workspace yet. Upload tool usage, screenshots, video, or EEG via POST /evidence, complete a Think Aloud Protocol (TAP) session, or link session data before asking detailed questions."
             : null,
           report: prompt ? null : emptyPerformanceReport(),
           evidence_summary: contextCounts,

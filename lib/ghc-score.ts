@@ -44,6 +44,8 @@ export interface GhcScoreMarker {
 
 export interface GhcScoreAnalysis {
   overall_score: number;
+  conversion_score: number;
+  conversion_goal: string;
   markers: GhcScoreMarker[];
   gap_analysis: {
     summary: string;
@@ -230,9 +232,9 @@ export function buildGhcScoreInstructions(brief: GhcScoreBrief, mode: GhcScoreMo
       ? "No related completed session. Evaluate the selected performance block directly."
       : "No focused block. Evaluate learning across the whole workspace.";
 
-  return `You are the GHL Score session facilitator for OpenLesson.
+  return `You are the Think Aloud Protocol (TAP) session facilitator for OpenLesson.
 
-GHL means Genuine Human Learning Score. The learner is demonstrating what they learned about ${assessmentTarget}. Your role is to collect enough evidence to score the demonstration and identify actionable learning gaps. You are ${listenerStyle(mode)}.
+The learner is demonstrating what they learned about ${assessmentTarget}. Your role is to collect enough evidence to score the demonstration and identify actionable learning gaps. Route remediation into Integrated Learning Environment (ILE) practice where appropriate. You are ${listenerStyle(mode)}.
 
 Your job is to run a Socratic learning demonstration. Elicit a clear, natural explanation and expose gaps: missing definitions, weak causal links, misconceptions, shallow examples, unsupported jumps, and fragile transfer across contexts. Do not announce scores during the live session. Ask questions that reveal understanding across these learning markers: ${GHC_SCORE_MARKERS.map((marker) => marker.label).join(", ")}.
 

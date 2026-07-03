@@ -35,7 +35,11 @@ export async function createVerificationWorkspaceFromPrompt(
   supabase: SupabaseClient,
   auth: AuthContext,
   initialPrompt: string,
-  options?: { files?: WorkspaceInitialFile[] }
+  options?: {
+    files?: WorkspaceInitialFile[];
+    description?: string;
+    isAgentSession?: boolean;
+  }
 ): Promise<{
   workspace: Record<string, unknown>;
   blocks: Record<string, unknown>[];
@@ -85,8 +89,8 @@ export async function createVerificationWorkspaceFromPrompt(
       status: "active",
       source_type: "topic",
       notes: initialPrompt,
-      description: "Created via Evidence API demo",
-      is_agent_session: true,
+      description: options?.description || "Verification workspace for learning and performance assessment",
+      is_agent_session: options?.isAgentSession ?? true,
     })
     .select("id, title, root_topic, status, notes, description, created_at, updated_at")
     .single();

@@ -205,7 +205,7 @@ const ENDPOINT_SPECS: EndpointSpec[] = [
       { name: "block_id", type: "uuid | null", description: "Echo of request block_id." },
       { name: "definition", type: "string", description: "Echo of request definition." },
       { name: "workspace_summary", type: "object", description: "id, title, root_topic." },
-      { name: "context_counts", type: "object", description: "blocks, ghl_sessions, evidence_artifacts, linked_sessions, plan_files." },
+      { name: "context_counts", type: "object", description: "blocks, tap_sessions, evidence_artifacts, linked_sessions, plan_files." },
       { name: "file_ids", type: "string[]", description: "xAI file IDs used for generation (workspace JSON + plan files)." },
     ],
     responseExample: `{
@@ -253,7 +253,7 @@ const ENDPOINT_SPECS: EndpointSpec[] = [
   },
   "context_counts": {
     "blocks": 5,
-    "ghl_sessions": 0,
+    "tap_sessions": 0,
     "evidence_artifacts": 0,
     "linked_sessions": 0,
     "plan_files": 2
@@ -315,7 +315,7 @@ const ENDPOINT_SPECS: EndpointSpec[] = [
   },
   "context_counts": {
     "blocks": 5,
-    "ghl_sessions": 0,
+    "tap_sessions": 0,
     "evidence_artifacts": 0,
     "linked_sessions": 0,
     "plan_files": 1
@@ -415,7 +415,7 @@ const ENDPOINT_SPECS: EndpointSpec[] = [
     method: "POST",
     path: "/api/v2/agent/workspaces/{workspace_id}/performance",
     scope: "workspaces:read",
-    summary: "Analyze workspace evidence, GHL results, sessions, and plan files. Report mode (no prompt) or chat mode (with prompt).",
+    summary: "Analyze workspace evidence, TAP (Think Aloud Protocol) results, ILE practice traces, sessions, and plan files. Report mode (no prompt) or chat mode (with prompt).",
     status: "200 OK",
     pathParams: [
       { name: "workspace_id", type: "uuid", required: true, description: "Verification Workspace ID." },
@@ -453,7 +453,7 @@ const ENDPOINT_SPECS: EndpointSpec[] = [
       { name: "report.suggestions", type: "string[]", description: "Additional recommendations." },
       { name: "report.confidence", type: "string", description: "emerging | developing | clear | well-connected" },
       { name: "response", type: "string | null", description: "Markdown answer when mode=chat." },
-      { name: "evidence_summary", type: "object | null", description: "Counts used in context (blocks, ghl_sessions, evidence_artifacts, linked_sessions, plan_files)." },
+      { name: "evidence_summary", type: "object | null", description: "Counts used in context (blocks, tap_sessions, evidence_artifacts, linked_sessions, plan_files)." },
       { name: "file_ids", type: "string[]", description: "xAI file IDs for follow-up calls; pass back as file_ids." },
     ],
     responseExample: `{
@@ -494,7 +494,7 @@ const ENDPOINT_SPECS: EndpointSpec[] = [
   },
   "evidence_summary": {
     "blocks": 1,
-    "ghl_sessions": 0,
+    "tap_sessions": 0,
     "evidence_artifacts": 2,
     "linked_sessions": 0,
     "plan_files": 0
@@ -508,7 +508,7 @@ const ENDPOINT_SPECS: EndpointSpec[] = [
   "response": "The biggest readiness gap is **churn risk quantification** — the learner discussed renewal value but never modeled probability-weighted revenue loss.",
   "evidence_summary": {
     "blocks": 1,
-    "ghl_sessions": 0,
+    "tap_sessions": 0,
     "evidence_artifacts": 2,
     "linked_sessions": 0,
     "plan_files": 0
@@ -526,7 +526,7 @@ const ENDPOINT_SPECS: EndpointSpec[] = [
     method: "POST",
     path: "/api/v2/agent/workspaces/{workspace_id}/blocks/{block_id}/ghl-links",
     scope: "ghl:write",
-    summary: "Create a private GHL Score link for a block (15 or 30 minutes).",
+    summary: "Create a private Think Aloud Protocol (TAP) link for a block (15 or 30 minutes).",
     status: "201 Created",
     pathParams: [
       { name: "workspace_id", type: "uuid", required: true, description: "Verification Workspace ID." },
@@ -542,7 +542,7 @@ const ENDPOINT_SPECS: EndpointSpec[] = [
   "guest_email": "learner@example.com"
 }`,
     responseBody: [
-      { name: "ghl_link.id", type: "uuid", description: "GHL link / session row ID." },
+      { name: "ghl_link.id", type: "uuid", description: "TAP link / session row ID." },
       { name: "ghl_link.plan_id", type: "uuid", description: "Workspace ID." },
       { name: "ghl_link.plan_node_id", type: "uuid", description: "Block ID." },
       { name: "ghl_link.status", type: "string", description: "pending | in_progress | completed" },
@@ -574,7 +574,7 @@ const ENDPOINT_SPECS: EndpointSpec[] = [
     method: "GET",
     path: "/api/v2/agent/workspaces/{workspace_id}/ghl-links",
     scope: "ghl:read",
-    summary: "List GHL links for a workspace (filtered by caller role).",
+    summary: "List TAP links for a workspace (filtered by caller role).",
     status: "200 OK",
     pathParams: [
       { name: "workspace_id", type: "uuid", required: true, description: "Verification Workspace ID." },
@@ -621,11 +621,11 @@ const ENDPOINT_SPECS: EndpointSpec[] = [
     method: "GET",
     path: "/api/v2/agent/workspaces/{workspace_id}/ghl-links/{link_id}/results",
     scope: "ghl:read",
-    summary: "Poll GHL link completion and read scores, markers, and gap analysis.",
+    summary: "Poll TAP link completion and read scores, markers, and gap analysis.",
     status: "200 OK",
     pathParams: [
       { name: "workspace_id", type: "uuid", required: true, description: "Verification Workspace ID." },
-      { name: "link_id", type: "uuid", required: true, description: "GHL link ID from create or list." },
+      { name: "link_id", type: "uuid", required: true, description: "TAP link ID from create or list." },
     ],
     responseBody: [
       { name: "ghl_result.id", type: "uuid", description: "Link ID." },
@@ -977,7 +977,7 @@ export default function AgenticV2DocsPage() {
           </h1>
           <p className="mt-4 max-w-3xl text-sm leading-relaxed text-neutral-400 sm:text-base">
             Full request and response specifications for every Agentic API endpoint: workspaces, evidence schema
-            generation, integration skill generation, evidence upload, performance analysis, GHL links, guest
+            generation, integration skill generation, evidence upload, performance analysis, TAP links, ILE practice, guest
             provisioning, and dashboard key management. Bearer endpoints use base path{" "}
             <code className="text-neutral-300">/api/v2/agent</code> and require active{" "}
             <code className="text-neutral-300">pro_teams</code>.
@@ -1041,8 +1041,8 @@ Content-Type: application/json`}</code>
             fields={[
               { name: "workspaces:read", type: "scope", description: "List blocks; generate evidence schemas and integration skills; run performance analysis (report or chat)." },
               { name: "workspaces:write", type: "scope", description: "Create workspaces; upload evidence." },
-              { name: "ghl:read", type: "scope", description: "List GHL links; poll results." },
-              { name: "ghl:write", type: "scope", description: "Create GHL Score links for blocks." },
+              { name: "ghl:read", type: "scope", description: "List TAP links; poll TAP results." },
+              { name: "ghl:write", type: "scope", description: "Create Think Aloud Protocol (TAP) links for blocks." },
               { name: "org:read", type: "scope", description: "Reserved for org admin keys (future org read endpoints)." },
               { name: "org:write", type: "scope", description: "Create guest users and issue gsk_ keys." },
               { name: "*", type: "scope", description: "All scopes. Org admins only when assigning to sk_ keys." },
@@ -1082,7 +1082,7 @@ Content-Type: application/json`}</code>
         </div>
 
         <section className={`${sectionClass} mt-6`}>
-          <h2 className="text-lg font-medium text-white">GHL session completion (learner-facing)</h2>
+          <h2 className="text-lg font-medium text-white">TAP session completion (learner-facing)</h2>
           <p className="mt-2 text-sm text-neutral-400">
             Learners open <code className="text-neutral-300">private_url</code> without an API key. Completion uses web
             APIs (not Agentic API):

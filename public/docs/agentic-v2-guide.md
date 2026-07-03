@@ -1,6 +1,6 @@
 # OpenLesson Agentic API
 
-The Agentic API exposes the performance-workspace workflow: create workspaces, upload evidence, analyze learning gaps, issue GHL links, and read results.
+The Agentic API exposes the performance-workspace workflow: create workspaces, upload evidence, analyze learning gaps, issue Think Aloud Protocol (TAP) links, and read results.
 
 Base path: `/api/v2/agent`
 
@@ -14,9 +14,9 @@ Authenticate with `Authorization: Bearer <api_key>`.
 | `GET` | `/workspaces/{workspace_id}/blocks` | `workspaces:read` | List available blocks in a workspace. |
 | `POST` | `/workspaces/{workspace_id}/evidence` | `workspaces:write` | Upload tool usage, screenshots, video, or EEG linked to workspace/block. |
 | `POST` | `/workspaces/{workspace_id}/performance` | `workspaces:read` | Structured gap report or free-form performance Q&A. |
-| `POST` | `/workspaces/{workspace_id}/blocks/{block_id}/ghl-links` | `ghl:write` | Request a private GHL link for a block. Links open the GHL Score Session UI. |
-| `GET` | `/workspaces/{workspace_id}/ghl-links` | `ghl:read` | List existing GHL links and completion status. |
-| `GET` | `/workspaces/{workspace_id}/ghl-links/{link_id}/results` | `ghl:read` | Read completed GHL link results. Incomplete links return status with `null` result fields. |
+| `POST` | `/workspaces/{workspace_id}/blocks/{block_id}/ghl-links` | `ghl:write` | Request a private TAP link for a block. Links open the TAP Score Session UI. |
+| `GET` | `/workspaces/{workspace_id}/ghl-links` | `ghl:read` | List existing TAP links and completion status. |
+| `GET` | `/workspaces/{workspace_id}/ghl-links/{link_id}/results` | `ghl:read` | Read completed TAP link results. Incomplete links return status with `null` result fields. |
 | `POST` | `/org/guests` | `org:write` | Organization admins create guest users by email and issue guest API keys. |
 
 ## Upload Evidence
@@ -73,7 +73,7 @@ Chat mode:
 
 Files are optional. Supported types are PDF, plain text, Markdown, JPEG, PNG, and WebP. A workspace can start with up to 5 files, each up to 10 MB.
 
-## GHL Links
+## TAP Links
 
 `POST /api/v2/agent/workspaces/{workspace_id}/blocks/{block_id}/ghl-links`
 
@@ -83,6 +83,8 @@ Files are optional. Supported types are PDF, plain text, Markdown, JPEG, PNG, an
 
 Returns a `private_url` for `/ghl-score/session/{token}`. Poll `GET .../ghl-links/{link_id}/results` for marker scores and `gap_analysis`.
 
+Identified gaps can be routed into Integrated Learning Environment (ILE) practice blocks for remediation.
+
 ## Guests
 
-Org admins with `org:write` can call `POST /org/guests` to mint `gsk_` keys. Guests may create workspaces, upload evidence, run performance analysis on their own artifacts, and use GHL links.
+Org admins with `org:write` can call `POST /org/guests` to mint `gsk_` keys. Guests may create workspaces, upload evidence, run performance analysis on their own artifacts, and use TAP links.

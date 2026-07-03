@@ -1,8 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import {
-  DEMO_EVAL_DEFINITION,
-  DEMO_INTEGRATION_NAME,
-} from "@/lib/evidence-api-demo/flowstack";
+import { getDemoFromBody } from "@/lib/evidence-api-demo/resolve-demo";
 import { generateWorkspaceEvidenceSpec } from "@/lib/agent-v2/evidence-integration";
 import { parseEvidenceSchemaRequest } from "@/lib/agent-v2/evidence-schema";
 import { requireWorkspaceOwnerSession } from "@/lib/agent-v2/workspace-session-access";
@@ -27,18 +24,20 @@ export async function POST(req: NextRequest) {
     const access = await requireWorkspaceOwnerSession(planId);
     if (access instanceof NextResponse) return access;
 
+    const demo = getDemoFromBody(body);
+
     const request =
       parseEvidenceSchemaRequest({
         definition:
           typeof body.definition === "string" && body.definition.trim()
             ? body.definition
-            : DEMO_EVAL_DEFINITION,
+            : demo.evalDefinition,
         block_id: typeof body.block_id === "string" ? body.block_id : null,
         integration_hints: {
-          tool_name: DEMO_INTEGRATION_NAME,
-          partner_agent: DEMO_INTEGRATION_NAME,
-          event_verbs: ["simulate_time_passage", "connect_slack", "invite_editor"],
-          goals: ["trial_activation", "multidimensional_onboarding"],
+          tool_name: demo.integrationName,
+          partner_agent: demo.integrationName,
+          event_verbs: demo.integrationHints.event_verbs,
+          goals: demo.integrationHints.goals,
         },
       }) ?? null;
 

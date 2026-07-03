@@ -1,6 +1,6 @@
 # OpenLesson Agentic API v2
 
-Use this skill when an agent needs to create Verification Workspaces, issue private GHL Score links, and read completion results via the OpenLesson Agentic API.
+Use this skill when an agent needs to create Verification Workspaces, issue private Think Aloud Protocol (TAP) links, and read completion results via the OpenLesson Agentic API.
 
 **Human-readable spec:** `/docs/agentic-v2`  
 **Base URL:** `https://openlesson.academy` (or your self-hosted origin)
@@ -16,9 +16,9 @@ The Agentic API supports **only** this workflow:
 3. *(Optional)* Generate an ideal evidence input JSON schema (`POST .../evidence-schema`) or a custom integration `skill.md` (`POST .../integration-skill`) from workspace context.
 4. Upload performance evidence (tool usage, screenshots, video, EEG) to xAI storage, linked to the workspace and/or a block.
 5. Request learning and gap analysis over workspace evidence (free-form Q&A or structured report).
-6. Create a private GHL link for a block (`15` or `30` minutes).
-7. List GHL links and completion status.
-8. Read completed GHL results (marker scores + gap analysis).
+6. Create a private TAP link for a block (`15` or `30` minutes).
+7. List TAP links and completion status.
+8. Read completed TAP results (marker scores + gap analysis).
 
 **Out of scope** — do not describe or call removed features: blockchain tracking, proof anchoring, live tutoring session control, heartbeats, or plan adaptation. Legacy web-session upload routes (`/api/session-files/*`) are separate from this API; agents should use `POST .../evidence` for workspace-linked artifacts.
 
@@ -77,7 +77,7 @@ Content-Type: application/json
 { "jsonrpc": "2.0", "id": 1, "method": "tools/list" }
 ```
 
-**Read tools:** `list_workspaces`, `list_blocks`, `list_ghl_links`, `get_ghl_results`
+**Read tools:** `list_workspaces`, `list_blocks`, `list_ghl_links` (TAP links), `get_ghl_results` (TAP results)
 
 Evidence planning, upload, and performance analysis are **REST-only** (`POST .../evidence-schema`, `POST .../integration-skill`, `POST .../evidence`, `POST .../performance`).
 
@@ -293,7 +293,7 @@ Max **10 MB** per upload. Guest keys attach evidence to their guest identity; or
 
 ### `POST /api/v2/agent/workspaces/{workspace_id}/performance` — `workspaces:read`
 
-Analyze learning signals across workspace evidence, GHL results, linked sessions, and uploaded files.
+Analyze learning signals across workspace evidence, TAP results, linked sessions, and uploaded files.
 
 **Report mode** (omit `prompt` or send empty string) — returns structured gaps and suggestions:
 
@@ -317,18 +317,20 @@ Analyze learning signals across workspace evidence, GHL results, linked sessions
 }
 ```
 
-- First call with empty `file_ids` builds a workspace performance context JSON, uploads it to xAI, and attaches up to 19 artifact files (evidence, plan files, GHL artifacts).
+- First call with empty `file_ids` builds a workspace performance context JSON, uploads it to xAI, and attaches up to 19 artifact files (evidence, plan files, TAP artifacts).
 - Pass returned `file_ids` on follow-up calls to reuse the same context without rebuilding.
 
 **Response `200` (report):**
 
-Every report includes a numerical `overall_score`, spider/radar `marker_scores`, and `gap_analysis.gaps`.
+Every report includes `overall_score` (learning verification), `conversion_score` (estimated goal conversion %), `conversion_goal`, spider/radar `marker_scores`, and `gap_analysis.gaps`.
 
 ```json
 {
   "mode": "report",
   "report": {
     "overall_score": 72,
+    "conversion_score": 58,
+    "conversion_goal": "Trial-to-paid subscription activation",
     "marker_scores": [
       {
         "id": "workflow_execution",
@@ -363,7 +365,7 @@ Every report includes a numerical `overall_score`, spider/radar `marker_scores`,
   },
   "evidence_summary": {
     "blocks": 5,
-    "ghl_sessions": 2,
+    "tap_sessions": 2,
     "evidence_artifacts": 4,
     "linked_sessions": 1,
     "plan_files": 0
@@ -387,7 +389,7 @@ Every report includes a numerical `overall_score`, spider/radar `marker_scores`,
 
 ### `POST /api/v2/agent/workspaces/{workspace_id}/blocks/{block_id}/ghl-links` — `ghl:write`
 
-Create a private GHL Score link for a block.
+Create a private Think Aloud Protocol (TAP) link for a block.
 
 **Request:**
 
@@ -422,7 +424,7 @@ Create a private GHL Score link for a block.
 
 ### `GET /api/v2/agent/workspaces/{workspace_id}/ghl-links` — `ghl:read`
 
-List GHL links for a workspace. Guests see only their own links; non-admin members see their own; org admins see org workspace links.
+List TAP links for a workspace. Guests see only their own links; non-admin members see their own; org admins see org workspace links.
 
 **Response `200`:** `{ "ghl_links": [ ... ] }`
 
@@ -510,7 +512,7 @@ Create (or look up) a guest by email and mint a **new** guest API key. Caller mu
 
 Store `api_key` securely — shown once. Re-calling for the same email issues another key (previous keys may remain active).
 
-When the guest later signs up with the same email, they inherit org membership, GHL history, and guest keys.
+When the guest later signs up with the same email, they inherit org membership, TAP session history, and guest keys.
 
 ---
 
@@ -533,7 +535,7 @@ Then create a member API key from the dashboard or `POST /api/v2/agent/keys` (se
 
 ---
 
-## GHL session behavior
+## TAP session behavior
 
 - **Private link:** `/ghl-score/session/{token}` — bearer URL; learner needs **no** OpenLesson login or API key.
 - **Workspace UI:** `/workspace/{workspace_id}/ghl-score` (authenticated web)
@@ -554,11 +556,11 @@ Facilitation style: Socratic — one concise question at a time, follow-ups from
 | Evidence schema / integration skill | ✅ | ✅ |
 | Upload evidence | ✅ | ✅ (own uploads) |
 | Performance analysis | ✅ | ✅ (own evidence + links) |
-| Create GHL link | ✅; admin can assign to guest | ✅ (self only) |
-| List / read GHL results | ✅ | ✅ (own links) |
+| Create TAP link | ✅; admin can assign to guest | ✅ (self only) |
+| List / read TAP results | ✅ | ✅ (own links) |
 | Create guest + issue `gsk_` | ✅ `org:write` + `is_org_admin` | ❌ |
 
-**Integration pattern:** Org admin provisions guests with `gsk_` keys. Each guest can create their own Verification Workspaces or use org-shared ones; they use their key for workspace creation, block reads, GHL links, and result polling.
+**Integration pattern:** Org admin provisions guests with `gsk_` keys. Each guest can create their own Verification Workspaces or use org-shared ones; they use their key for workspace creation, block reads, TAP links, and result polling.
 
 ---
 
@@ -570,7 +572,7 @@ Facilitation style: Socratic — one concise question at a time, follow-ups from
 4. *(Optional)* `POST .../evidence-schema` with your eval definition → get ideal tool JSON schema; `POST .../integration-skill` → get a custom `skill.md` for your agent.
 5. `POST .../evidence` as learners produce tool usage, screenshots, video, or EEG (optional `block_id`).
 6. `POST .../performance` for gap reports, or include `prompt` for follow-up questions.
-7. `POST .../ghl-links` → send `private_url` to the learner.
+7. `POST .../ghl-links` (TAP link endpoint) → send `private_url` to the learner.
 8. Poll `GET .../results` until `status === "completed"`.
-9. Re-run `POST .../performance` to synthesize GHL results with other evidence.
-10. For external learners without accounts: `POST /org/guests` → give them `gsk_` + private GHL URL.
+9. Re-run `POST .../performance` to synthesize TAP results with other evidence.
+10. For external learners without accounts: `POST /org/guests` → give them `gsk_` + private TAP URL.

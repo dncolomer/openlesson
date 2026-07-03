@@ -116,6 +116,8 @@ export const GHL_SCORE_ANALYSIS_SCHEMA = {
     additionalProperties: true,
     properties: {
       overall_score: { type: "number" },
+      conversion_score: { type: "number" },
+      conversion_goal: { type: "string" },
       markers: { type: "array" },
       gap_analysis: { type: "object" },
       knowledge_gaps: { type: "array" },
@@ -125,7 +127,14 @@ export const GHL_SCORE_ANALYSIS_SCHEMA = {
       follow_up_prompts: { type: "array" },
       confidence: { type: "string" },
     },
-    required: ["overall_score", "markers", "overall_reflection", "confidence"],
+    required: [
+      "overall_score",
+      "conversion_score",
+      "conversion_goal",
+      "markers",
+      "overall_reflection",
+      "confidence",
+    ],
   },
 };
 
@@ -135,7 +144,7 @@ export function buildTraceScoringInstructions(traceContext: ReturnType<typeof bu
   return `
 
 Thought trace evidence (System 1 and System 2):
-- System 1 traces (${traceContext.system1Count}): spontaneous crystallized speech — everything the learner said aloud, including thoughts they did NOT submit to the GHL dialogue.
+- System 1 traces (${traceContext.system1Count}): spontaneous crystallized speech — everything the learner said aloud, including thoughts they did NOT submit to the TAP dialogue.
 - System 2 traces (${traceContext.system2Count}): deliberate learner decisions — explicit send, skip, select/deselect, or resend actions.
 
 Use the dialogue transcript as the primary Socratic exchange, but treat attached trace files and the manifest below as first-class evidence. Compare System 1 vs System 2: knowledge articulated but not sent may reveal hesitation, incomplete understanding, or metacognitive filtering. Cite both sent and unsent traces in gap_analysis evidence where relevant.

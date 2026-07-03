@@ -2,7 +2,7 @@
 
 Base path: `/api/v2/agent`
 
-The Agentic API supports Verification Workspace creation, evidence upload, learning analysis, block discovery, and GHL link/result access.
+The Agentic API supports Verification Workspace creation, evidence upload, learning analysis, block discovery, Think Aloud Protocol (TAP) link/result access, and ILE (Integrated Learning Environment) practice routing from gap findings.
 
 ## Authentication
 
@@ -22,9 +22,9 @@ Valid scopes are `workspaces:read`, `workspaces:write`, `ghl:read`, `ghl:write`,
 | `POST` | `/workspaces/{workspace_id}/integration-skill` | `workspaces:read` | Grok-generated workspace-specific `skill.md` integration guide for a partner agent. |
 | `POST` | `/workspaces/{workspace_id}/evidence` | `workspaces:write` | Upload tool usage, screenshots, video, or EEG to xAI and link to workspace/block. |
 | `POST` | `/workspaces/{workspace_id}/performance` | `workspaces:read` | Structured gap report or free-form Q&A over workspace evidence. |
-| `POST` | `/workspaces/{workspace_id}/blocks/{block_id}/ghl-links` | `ghl:write` | Request a private GHL link for a block. |
-| `GET` | `/workspaces/{workspace_id}/ghl-links` | `ghl:read` | List existing GHL links and completion status. |
-| `GET` | `/workspaces/{workspace_id}/ghl-links/{link_id}/results` | `ghl:read` | Request completed GHL link results. |
+| `POST` | `/workspaces/{workspace_id}/blocks/{block_id}/ghl-links` | `ghl:write` | Request a private Think Aloud Protocol (TAP) link for a block. |
+| `GET` | `/workspaces/{workspace_id}/ghl-links` | `ghl:read` | List existing TAP links and completion status. |
+| `GET` | `/workspaces/{workspace_id}/ghl-links/{link_id}/results` | `ghl:read` | Request completed TAP session results. |
 | `POST` | `/org/guests` | `org:write` | Organization admins create guest users by email and issue guest API keys. |
 
 ## Evidence Input Schema
@@ -122,7 +122,7 @@ Chat responses return markdown in `response`.
 
 Files are optional. Supported file types are PDF, text, Markdown, JPEG, PNG, and WebP. Limits are 5 files per workspace and 10 MB per file.
 
-## Request GHL Link
+## Request TAP Link
 
 ```json
 {
@@ -134,15 +134,15 @@ Files are optional. Supported file types are PDF, text, Markdown, JPEG, PNG, and
 
 Only `15` and `30` minute sessions are supported. Any other value defaults to `15`.
 
-The response includes a private URL for the GHL Score Session UI. GHL means Genuine Human Learning Score. The private URL is a bearer link: opening `/ghl-score/session/{token}` authenticates that GHL session directly without requiring an OpenLesson login or an Agentic API key.
+The response includes a private URL for the TAP session UI. Think Aloud Protocol (TAP) captures live human cognition. The private URL is a bearer link: opening `/ghl-score/session/{token}` authenticates that TAP session directly without requiring an OpenLesson login or an Agentic API key.
 
 ## Organizations And Guests
 
-Users on the Teams tier can create an organization with `POST /api/organization` and become its admin. Organization admins can use `POST /api/v2/agent/org/guests` with an `org:write` API key to create guest users by email. Guest users receive individual API keys scoped to workspace creation, workspace reading, and GHL link usage (`workspaces:read`, `workspaces:write`, `ghl:read`, `ghl:write`).
+Users on the Teams tier can create an organization with `POST /api/organization` and become its admin. Organization admins can use `POST /api/v2/agent/org/guests` with an `org:write` API key to create guest users by email. Guest users receive individual API keys scoped to workspace creation, workspace reading, and TAP link usage (`ghl:read`, `ghl:write` scopes) (`workspaces:read`, `workspaces:write`, `ghl:read`, `ghl:write`).
 
-Organization-owned workspaces are visible to all real users and guest users in that organization. When a guest signs up later with the same email, their real user account inherits the guest organization membership, GHL sessions, and guest API keys.
+Organization-owned workspaces are visible to all real users and guest users in that organization. When a guest signs up later with the same email, their real user account inherits the guest organization membership, TAP sessions, and guest API keys.
 
-## GHL Results
+## TAP Results
 
 Completed results include the spider score markers plus a gap analysis:
 

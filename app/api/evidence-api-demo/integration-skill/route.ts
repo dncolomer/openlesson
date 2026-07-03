@@ -1,8 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import {
-  DEMO_EVAL_DEFINITION,
-  DEMO_INTEGRATION_NAME,
-} from "@/lib/evidence-api-demo/flowstack";
+import { getDemoFromBody } from "@/lib/evidence-api-demo/resolve-demo";
 import {
   buildEvidenceSchemaRequestFromIntegration,
   generateWorkspaceEvidenceSpec,
@@ -37,6 +34,7 @@ export async function POST(req: NextRequest) {
     const access = await requireWorkspaceOwnerSession(planId);
     if (access instanceof NextResponse) return access;
 
+    const demo = getDemoFromBody(body);
     const origin = req.nextUrl.origin;
     const workspaceTitle = access.plan.title || access.plan.root_topic || "workspace";
     const prefetchEvidenceSpec = body.prefetch_evidence_spec !== false;
@@ -62,9 +60,9 @@ export async function POST(req: NextRequest) {
 
     if (prefetchEvidenceSpec) {
       const evidenceSchemaRequest = buildEvidenceSchemaRequestFromIntegration(
-        DEMO_EVAL_DEFINITION,
-        DEMO_INTEGRATION_NAME,
-        "Non-linear FlowStack trial simulator with time-gap modeling",
+        demo.evalDefinition,
+        demo.integrationName,
+        demo.integrationSkillContext,
         null
       );
 
@@ -89,15 +87,14 @@ export async function POST(req: NextRequest) {
     const fileIds = contextResult?.fileIds || [];
 
     const skillResult = await callXaiResponsesWithFiles(
-      buildIntegrationSkillPrompt(workspaceTitle, DEMO_INTEGRATION_NAME),
+      buildIntegrationSkillPrompt(workspaceTitle, demo.integrationName),
       fileIds,
       {
         instructions: buildIntegrationSkillInstructions(
           {
-            integration_name: DEMO_INTEGRATION_NAME,
-            partner_description:
-              "Simulates non-linear SaaS trial onboarding with branching actions and idle time gaps.",
-            eval_definition: DEMO_EVAL_DEFINITION,
+            integration_name: demo.integrationName,
+            partner_description: demo.partnerDescription,
+            eval_definition: demo.evalDefinition,
             base_url: origin,
             prefetch_evidence_spec: prefetchEvidenceSpec,
           },
@@ -126,8 +123,8 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       skill_md: skillResult.text,
-      skill_name: deriveSkillName(DEMO_INTEGRATION_NAME),
-      suggested_share_path: deriveSuggestedSharePath(DEMO_INTEGRATION_NAME),
+      skill_name: deriveSkillName(demo.integrationName),
+      suggested_share_path: deriveSuggestedSharePath(demo.integrationName),
       workspace_summary: {
         id: planId,
         title: access.plan.title || access.plan.root_topic || "Untitled",

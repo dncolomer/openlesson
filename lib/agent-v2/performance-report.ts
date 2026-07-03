@@ -21,6 +21,10 @@ export interface PerformanceGapAnalysis {
 
 export interface PerformanceReport {
   overall_score: number;
+  /** Estimated likelihood (0–100) of achieving the workspace conversion goal from all evidence. */
+  conversion_score: number;
+  /** What "conversion" means for this workspace — inferred from context when not explicit. */
+  conversion_goal: string;
   marker_scores: PerformanceMarkerScore[];
   summary: string;
   strengths: string[];
@@ -37,6 +41,15 @@ export interface PerformanceReportContract {
   overall_score: {
     type: "integer";
     range: "0-100";
+    description: string;
+  };
+  conversion_score: {
+    type: "integer";
+    range: "0-100";
+    description: string;
+  };
+  conversion_goal: {
+    type: "string";
     description: string;
   };
   marker_scores: {
@@ -86,7 +99,17 @@ export const PERFORMANCE_REPORT_SCHEMA = {
     properties: {
       overall_score: {
         type: "number",
-        description: "0-100 readiness score synthesized from evidence",
+        description: "0-100 learning verification score synthesized from evidence",
+      },
+      conversion_score: {
+        type: "number",
+        description:
+          "0-100 estimated likelihood of achieving the workspace conversion goal based on all evidence",
+      },
+      conversion_goal: {
+        type: "string",
+        description:
+          "What conversion means in this workspace (e.g. trial activation, certification sign-off); infer from context when not explicit",
       },
       marker_scores: {
         type: "array",
@@ -114,6 +137,8 @@ export const PERFORMANCE_REPORT_SCHEMA = {
     },
     required: [
       "overall_score",
+      "conversion_score",
+      "conversion_goal",
       "marker_scores",
       "summary",
       "strengths",
@@ -128,6 +153,8 @@ export const PERFORMANCE_REPORT_SCHEMA = {
 
 export const EXAMPLE_PERFORMANCE_REPORT: PerformanceReport = {
   overall_score: 72,
+  conversion_score: 58,
+  conversion_goal: "Trial-to-paid subscription activation",
   marker_scores: [
     {
       id: "workflow_execution",
@@ -183,6 +210,8 @@ export function buildPerformanceReportContract(baseUrl?: string): PerformanceRep
     response_mode: "report",
     required_fields: [
       "overall_score",
+      "conversion_score",
+      "conversion_goal",
       "marker_scores",
       "summary",
       "strengths",
@@ -196,7 +225,18 @@ export function buildPerformanceReportContract(baseUrl?: string): PerformanceRep
       type: "integer",
       range: "0-100",
       description:
-        "Single readiness score synthesized from workspace evidence, GHL results, and block competencies.",
+        "Learning verification score synthesized from workspace evidence, TAP (Think Aloud Protocol) results, and block competencies.",
+    },
+    conversion_score: {
+      type: "integer",
+      range: "0-100",
+      description:
+        "Estimated likelihood the learner achieves the workspace conversion goal, inferred from all evidence — distinct from learning verification.",
+    },
+    conversion_goal: {
+      type: "string",
+      description:
+        "Plain-language definition of what conversion means for this workspace (infer from title, notes, blocks, and evidence when not explicit).",
     },
     marker_scores: {
       description:
@@ -218,10 +258,12 @@ export function buildPerformanceReportContract(baseUrl?: string): PerformanceRep
 export function emptyPerformanceReport(message?: string): PerformanceReport {
   const summary =
     message ||
-    "No performance evidence is available yet. Collect GHL sessions, workspace evidence uploads, or linked session reports before generating a gap analysis.";
+    "No performance evidence is available yet. Collect TAP (Think Aloud Protocol) sessions, workspace evidence uploads, or linked session reports before generating a gap analysis.";
 
   return {
     overall_score: 0,
+    conversion_score: 0,
+    conversion_goal: "Goal conversion not yet inferable — collect more workspace evidence.",
     marker_scores: [],
     summary,
     strengths: [],
@@ -231,7 +273,7 @@ export function emptyPerformanceReport(message?: string): PerformanceReport {
       gaps: [],
       next_practice: [
         "Upload tool usage or screenshots for key blocks",
-        "Run a GHL Score session on the highest-risk block",
+        "Issue a Think Aloud Protocol (TAP) session on the highest-risk block",
       ],
     },
     suggestions: ["POST /api/v2/agent/workspaces/{workspace_id}/evidence with type tool, screen, video, or eeg"],
@@ -247,17 +289,20 @@ export function buildPerformanceReportInstructions(blockId?: string | null): str
 Use the attached workspace performance JSON and artifact files. Return only JSON matching the schema.
 
 Required scoring outputs:
-1. overall_score — integer 0-100 readiness score synthesized from all evidence (not an average of markers; use judgment).
-2. marker_scores — 4-8 competency axes for spider/radar visualization. Each item needs:
+1. overall_score — integer 0-100 **learning verification** score synthesized from all evidence (not an average of markers; use judgment). Measures demonstrated competency and readiness to perform — not business conversion directly.
+2. conversion_score — integer 0-100 **conversion likelihood** estimating how likely the learner is to achieve the workspace's outcome/conversion goal based on all evidence (tool traces, TAP, artifacts, milestones, drop-offs, re-engagement). This is separate from overall_score: strong learning can coexist with low conversion odds if evidence shows abandonment, missing activation steps, or blockers.
+3. conversion_goal — one concise phrase defining what "conversion" means for this workspace (e.g. "Trial-to-paid activation", "Month-end close certification", "Launch go/no-go approval"). Infer from workspace title, description, notes, blocks, eval definition, and evidence when the goal is not explicit.
+4. marker_scores — 4-8 competency axes for spider/radar visualization. Each item needs:
    - id: snake_case competency key aligned to workspace blocks or eval definition
    - label: human-readable axis name
    - score: 0-100 for that competency
    - rationale: one sentence grounded in specific evidence
    - block_id (optional): tie axis to a workspace block when scoped
-3. gap_analysis.gaps — concrete gaps array (title, evidence, severity low|medium|high, suggested_repair). List every meaningful gap found; use an empty array only when evidence is truly insufficient to name gaps.
+5. gap_analysis.gaps — concrete gaps array (title, evidence, severity low|medium|high, suggested_repair). List every meaningful gap found; use an empty array only when evidence is truly insufficient to name gaps.
 
 Prioritize:
-- GHL score results and gap_analysis when present (align marker_scores with GHL markers when available)
+- TAP (Think Aloud Protocol) results and gap_analysis when present (align marker_scores with TAP markers when available)
+- ILE (Integrated Learning Environment) practice outcomes when present
 - Tool usage, screenshots, video, and EEG evidence
 - Session reports and block descriptions
 - Uploaded workspace files

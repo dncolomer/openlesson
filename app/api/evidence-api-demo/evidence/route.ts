@@ -56,7 +56,7 @@ export async function POST(req: NextRequest) {
         metadata:
           body.metadata && typeof body.metadata === "object" && !Array.isArray(body.metadata)
             ? (body.metadata as Record<string, unknown>)
-            : { demo: true, source: "evidence-api-demo" },
+            : { source: "partner_integration" },
       }
     );
 

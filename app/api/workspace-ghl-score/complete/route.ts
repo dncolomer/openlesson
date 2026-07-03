@@ -99,6 +99,8 @@ export async function POST(req: NextRequest) {
     const traceInstructions = buildTraceScoringInstructions(traceContext);
     const scoringPrompt = `Workspace: ${brief.plan.title}
 Topic: ${brief.plan.root_topic}
+Description: ${brief.plan.description || "n/a"}
+Notes: ${brief.plan.notes || "n/a"}
 Nodes: ${JSON.stringify(brief.nodes)}
 Focused session: ${JSON.stringify(brief.focusSession || null)}
 
@@ -108,7 +110,9 @@ ${traceInstructions}
 
 Return JSON with:
 {
-  "overall_score": number from 0 to 100,
+  "overall_score": number from 0 to 100 (learning verification from the TAP demonstration),
+  "conversion_score": number from 0 to 100 (estimated likelihood of achieving the workspace conversion goal — infer goal from workspace context when not explicit),
+  "conversion_goal": string (what conversion means for this workspace, e.g. "Trial activation", "Certification sign-off"),
   "markers": ${JSON.stringify(GHC_SCORE_MARKERS.map((marker) => ({ ...marker, score: "number from 0 to 100", rationale: "string" })))},
   "gap_analysis": {
     "summary": string,
@@ -124,7 +128,7 @@ Return JSON with:
 }`;
 
     const systemPrompt =
-      "You create GHL Score analyses for OpenLesson. Return only JSON. Scores are provisional learning-demonstration scores from 0 to 100, not clinical, psychometric, or identity claims. The primary goal is to evaluate demonstrated learning for the selected performance block or whole workspace, identify actionable gap analysis, then provide supporting marker scores. When thought trace files are attached, treat System 1 traces (spontaneous speech) and System 2 traces (explicit send/skip/select actions) as evidence sources alongside the dialogue transcript.";
+      "You create Think Aloud Protocol (TAP) score analyses for OpenLesson. Return only JSON. Scores are provisional from 0 to 100, not clinical or identity claims. overall_score measures learning verification from the demonstration; conversion_score estimates likelihood of achieving the workspace conversion goal (infer conversion_goal from workspace title, description, notes, and blocks when not explicit). Identify actionable gap analysis, then provide supporting marker scores. When thought trace files are attached, treat System 1 and System 2 traces as evidence alongside the dialogue transcript.";
 
     const result =
       traceContext.fileIds.length > 0

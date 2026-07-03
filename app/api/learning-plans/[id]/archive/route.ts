@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
-import { setWorkspaceArchived } from "@/lib/workspace-archive";
+import { canUserManageWorkspace, setWorkspaceArchived } from "@/lib/workspace-archive";
 
 export const runtime = "nodejs";
 
@@ -20,7 +21,29 @@ export async function POST(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const workspace = await setWorkspaceArchived(supabase, workspaceId, user.id, true);
+    const { data: plan, error: planError } = await supabase
+      .from("learning_plans")
+      .select("id, user_id")
+      .eq("id", workspaceId)
+      .single();
+
+    if (planError?.code === "PGRST116" || !plan) {
+      return NextResponse.json({ error: "Workspace not found" }, { status: 404 });
+    }
+
+    if (!canUserManageWorkspace(plan, user.id)) {
+      return NextResponse.json(
+        { error: "Only the workspace owner can archive or restore it" },
+        { status: 403 }
+      );
+    }
+
+    const workspace = await setWorkspaceArchived(
+      createAdminClient(),
+      workspaceId,
+      user.id,
+      true
+    );
 
     return NextResponse.json({
       success: true,
@@ -55,7 +78,29 @@ export async function DELETE(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const workspace = await setWorkspaceArchived(supabase, workspaceId, user.id, false);
+    const { data: plan, error: planError } = await supabase
+      .from("learning_plans")
+      .select("id, user_id")
+      .eq("id", workspaceId)
+      .single();
+
+    if (planError?.code === "PGRST116" || !plan) {
+      return NextResponse.json({ error: "Workspace not found" }, { status: 404 });
+    }
+
+    if (!canUserManageWorkspace(plan, user.id)) {
+      return NextResponse.json(
+        { error: "Only the workspace owner can archive or restore it" },
+        { status: 403 }
+      );
+    }
+
+    const workspace = await setWorkspaceArchived(
+      createAdminClient(),
+      workspaceId,
+      user.id,
+      false
+    );
 
     return NextResponse.json({
       success: true,

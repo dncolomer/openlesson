@@ -157,7 +157,7 @@ export const EVIDENCE_EVAL_SCHEMA_OUTPUT = {
       performance_report_contract: {
         type: "object",
         description:
-          "Formal contract for POST .../performance report mode: overall_score, marker_scores (spider/radar), and gap_analysis.gaps",
+          "Formal contract for POST .../performance report mode: overall_score, conversion_score, conversion_goal, marker_scores (spider/radar), and gap_analysis.gaps",
         properties: {
           endpoint_pattern: { type: "string" },
           response_mode: { type: "string", enum: ["report"] },
@@ -255,7 +255,7 @@ export function parseEvidenceSchemaRequest(body: Record<string, unknown>): Evide
 
 function formatWorkspaceContextSummary(payload?: PerformanceContextPayload): string {
   if (!payload) {
-    return "Workspace context file attached separately (blocks, evidence history, plan files, GHL sessions).";
+    return "Workspace context file attached separately (blocks, evidence history, plan files, Think Aloud Protocol (TAP) sessions).";
   }
 
   const blockLines = payload.blocks
@@ -277,7 +277,7 @@ ${blockLines || "  none"}
 - existing evidence artifacts: ${payload.counts.evidence_artifacts}
 - known tool names in prior uploads: ${evidenceTools.length ? evidenceTools.join(", ") : "none yet"}
 - plan files: ${payload.counts.plan_files}
-- GHL sessions: ${payload.counts.ghl_sessions}`;
+- TAP sessions: ${payload.counts.tap_sessions}`;
 }
 
 export function buildEvidenceSchemaInstructions(
@@ -307,7 +307,7 @@ export function buildEvidenceSchemaInstructions(
 
 You are an OpenLesson evidence architect. Produce a **formal evidence specification** that tells integrators exactly how to submit tool usage and related artifacts for learning verification via POST .../evidence and evaluation via POST .../performance.
 
-Use the full workspace context: attached JSON summary, block titles/descriptions, existing evidence patterns, plan files, and GHL session signals.
+Use the full workspace context: attached JSON summary, block titles/descriptions, existing evidence patterns, plan files, and Think Aloud Protocol (TAP) session signals. Route remediation gaps to ILE (Integrated Learning Environment) practice where appropriate.
 
 ${formatWorkspaceContextSummary(workspacePayload)}
 
@@ -328,15 +328,17 @@ Output rules:
    - encoding: "base64"
    - evidence_types: tool (application/json, text/plain), screen (image/png, image/jpeg, image/webp), video (video/mp4, video/webm), eeg (application/json) with when_to_use guidance
    - common_fields: evidence_type, data, mime_type, file_name, plan_node_id, session_id, timestamp_ms, tool_name, tool_action, metadata
-5. Optimize payloads for POST .../performance: time-ordered events, learner reflections, goals achieved, artifact summaries, decision rationale, outcomes, block-relevant competencies. The performance report always returns overall_score (0-100), marker_scores (spider/radar axes), and gap_analysis.gaps.
+5. Optimize payloads for POST .../performance: time-ordered events, learner reflections, goals achieved, artifact summaries, decision rationale, outcomes, block-relevant competencies. The performance report always returns overall_score (0-100 learning verification), conversion_score (0-100 goal conversion likelihood), conversion_goal, marker_scores (spider/radar axes), and gap_analysis.gaps.
 6. "performance_report_contract" must formally describe POST .../performance report mode:
    - endpoint_pattern: "POST /api/v2/agent/workspaces/{workspace_id}/performance"
    - response_mode: "report"
-   - required_fields: overall_score, marker_scores, gap_analysis, gap_analysis.gaps, summary, strengths, growth_areas, suggestions, confidence
-   - overall_score: integer 0-100 readiness score
+   - required_fields: overall_score, conversion_score, conversion_goal, marker_scores, gap_analysis, gap_analysis.gaps, summary, strengths, growth_areas, suggestions, confidence
+   - overall_score: integer 0-100 learning verification score
+   - conversion_score: integer 0-100 estimated conversion likelihood (distinct from learning verification)
+   - conversion_goal: string defining what conversion means for this workspace
    - marker_scores: 4-8 competency axes (id, label, score, rationale, optional block_id) for spider/radar visualization — derive labels from workspace blocks and eval definition
    - gap_analysis: required gaps array with title, evidence, severity, suggested_repair
-   - example_report: realistic example with overall_score, marker_scores, and at least one gap when evidence would support it
+   - example_report: realistic example with overall_score, conversion_score, conversion_goal, marker_scores, and at least one gap when evidence would support it
 7. "collection_guidance" explains cadence, checkpoint timing, block-scoped vs workspace-global uploads, and that **more evidence submitted improves learning verification and gap analysis**. Encourage ongoing uploads, not one-time dumps.
 8. "continuous_evaluation_summary" must state clearly that:
    - This evidence spec is a snapshot derived from current workspace context and evidence history

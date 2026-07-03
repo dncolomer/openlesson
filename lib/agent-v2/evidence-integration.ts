@@ -42,7 +42,7 @@ export function buildContinuousEvaluationPolicy(
     evidence_artifacts?: number;
     blocks?: number;
     plan_files?: number;
-    ghl_sessions?: number;
+    tap_sessions?: number;
   } | null
 ): ContinuousEvaluationPolicy {
   const evidenceCount = contextCounts?.evidence_artifacts ?? 0;
@@ -116,7 +116,7 @@ export function enrichEvidenceSpecResult(
     evidence_artifacts?: number;
     blocks?: number;
     plan_files?: number;
-    ghl_sessions?: number;
+    tap_sessions?: number;
   } | null
 ): EvidenceEvalSchemaResult {
   const evidenceSpecPath = buildEvidenceSchemaApiPath(workspaceId, baseUrl);
@@ -184,12 +184,24 @@ Recommended cadence: ${spec.continuous_evaluation?.recommended_cadence || "uploa
 
 Performance report contract (MUST appear in skill.md — every report includes scores + gaps):
 Endpoint: ${spec.performance_report_contract?.endpoint_pattern || spec.continuous_evaluation?.performance.api_path || "(workspace)/performance"}
-Required fields: ${(spec.performance_report_contract?.required_fields || ["overall_score", "marker_scores", "gap_analysis.gaps"]).join(", ")}
-overall_score: ${spec.performance_report_contract?.overall_score.range || "0-100"} integer readiness score
+Required fields: ${(spec.performance_report_contract?.required_fields || ["overall_score", "conversion_score", "conversion_goal", "marker_scores", "gap_analysis.gaps"]).join(", ")}
+overall_score: ${spec.performance_report_contract?.overall_score.range || "0-100"} integer learning verification score
+conversion_score: ${spec.performance_report_contract?.conversion_score?.range || "0-100"} integer estimated conversion likelihood
+conversion_goal: ${spec.performance_report_contract?.conversion_goal?.description || "workspace-specific outcome goal"}
 marker_scores: ${spec.performance_report_contract?.marker_scores.visualization || "spider_radar"} chart with ${spec.performance_report_contract?.marker_scores.min_markers || 4}-${spec.performance_report_contract?.marker_scores.max_markers || 8} competency axes (id, label, score, rationale)
 gap_analysis.gaps: required list of gaps (title, evidence, severity, suggested_repair)
 Example report shape:
-${JSON.stringify(spec.performance_report_contract?.example_report || { overall_score: 0, marker_scores: [], gap_analysis: { gaps: [] } }, null, 2)}`;
+${JSON.stringify(
+    spec.performance_report_contract?.example_report || {
+      overall_score: 0,
+      conversion_score: 0,
+      conversion_goal: "Workspace goal conversion",
+      marker_scores: [],
+      gap_analysis: { gaps: [] },
+    },
+    null,
+    2
+  )}`;
 }
 
 export interface GenerateEvidenceSpecOptions {

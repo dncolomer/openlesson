@@ -1,12 +1,15 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { createBrowserClient } from "@supabase/ssr";
 import {
   ArrowRight,
+  BarChart3,
   Clock,
   FileCode2,
+  Gauge,
+  LayoutGrid,
   Loader2,
   Radio,
   RefreshCw,
@@ -19,11 +22,13 @@ import { MarkerRadarChart } from "@/components/MarkerRadarChart";
 import type { PerformanceReport } from "@/lib/agent-v2/performance-context";
 import type { EvidenceEvalSchemaResult } from "@/lib/agent-v2/evidence-schema";
 import {
-  DEMO_EVAL_DEFINITION,
-  DEMO_PRODUCT_NAME,
-  SIMULATION_ACTIONS,
-  SIMULATION_CATEGORY_META,
-  SIMULATION_CATEGORY_ORDER,
+  CUSTOM_DEMO_ID,
+  CUSTOM_DEMO_PICKER,
+  isCustomDemoId,
+} from "@/lib/evidence-api-demo/custom-demo";
+import type { EvidenceApiDemoDefinition } from "@/lib/evidence-api-demo/demo-definition";
+import { EVIDENCE_API_DEMOS, resolveDemoId } from "@/lib/evidence-api-demo/demos";
+import {
   applySimulationAction,
   buildSimulationEvidencePayload,
   countDistinctEvidenceActions,
@@ -34,14 +39,18 @@ import {
   matchBlockToStep,
   shouldSuggestSkillRegeneration,
   totalActionCount,
-  type DemoWorkspaceBlock,
-  type SimulationAction,
-  type SimulationCategory,
-  type SimulationWorldState,
-} from "@/lib/evidence-api-demo/flowstack";
+} from "@/lib/evidence-api-demo/simulation";
+import type {
+  DemoWorkspaceBlock,
+  SimulationAction,
+  SimulationCategory,
+  SimulationWorldState,
+} from "@/lib/evidence-api-demo/types";
 import { readJsonResponse } from "@/lib/read-json-response";
 
-type DemoPhase = "intro" | "creating" | "simulating";
+type DemoPhase = "picker" | "intro" | "creating" | "simulating";
+type DemoView = "simulator" | "evidence" | "score";
+type ScoreCardTab = "overview" | "competency" | "markers" | "strengths" | "gaps" | "history";
 
 type ReportSnapshot = {
   id: string;
@@ -97,12 +106,14 @@ type WorkspaceResponse = {
   blocks: DemoWorkspaceBlock[];
   files?: PlanFileSummary[];
   demo: {
+    id?: string;
     product: string;
     integration_name: string;
     eval_definition: string;
     model_doc_filename?: string;
     model_doc_preview?: string;
   };
+  custom_definition?: EvidenceApiDemoDefinition;
   api_paths: {
     evidence_schema: string;
     evidence_upload: string;
@@ -116,8 +127,10 @@ type EvidenceResponse = {
 };
 
 type PerformanceResponse = {
+  mode: "report";
   report: PerformanceReport;
   evidence_summary: { evidence_artifacts: number; blocks: number };
+  file_ids?: string[];
 };
 
 const STORAGE_KEY = "openlesson-evidence-api-demo";
@@ -125,10 +138,23 @@ const STORAGE_KEY = "openlesson-evidence-api-demo";
 type PersistedDemoState = {
   planId: string;
   sessionId: string;
+  demoId: string;
   worldState: SimulationWorldState;
   workspaceTitle?: string;
   blocks?: DemoWorkspaceBlock[];
+  customDemo?: EvidenceApiDemoDefinition;
+  customPrompt?: string;
 };
+
+const CUSTOM_PROMPT_MIN_LENGTH = 40;
+
+function buildDemoApiBody(demo: EvidenceApiDemoDefinition, payload: Record<string, unknown>) {
+  return {
+    ...payload,
+    demoId: demo.id,
+    ...(isCustomDemoId(demo.id) ? { customDefinition: demo } : {}),
+  };
+}
 
 function loadPersistedState(): PersistedDemoState | null {
   if (typeof window === "undefined") return null;
@@ -141,6 +167,7 @@ function loadPersistedState(): PersistedDemoState | null {
     return {
       planId: parsed.planId,
       sessionId: parsed.sessionId,
+      demoId: parsed.demoId ?? "flowstack",
       worldState: parsed.worldState ?? {
         ...createInitialWorldState(),
         completedActions: legacySteps,
@@ -148,6 +175,8 @@ function loadPersistedState(): PersistedDemoState | null {
       },
       workspaceTitle: parsed.workspaceTitle,
       blocks: Array.isArray(parsed.blocks) ? parsed.blocks : [],
+      customDemo: parsed.customDemo,
+      customPrompt: parsed.customPrompt,
     };
   } catch {
     return null;
@@ -199,11 +228,11 @@ function hasTeamsAccess(profile: {
 function severityColor(severity: "low" | "medium" | "high") {
   switch (severity) {
     case "high":
-      return "text-red-300 border-red-400/30 bg-red-950/30";
+      return "border-zinc-500 bg-zinc-900 text-white";
     case "medium":
-      return "text-amber-200 border-amber-400/30 bg-amber-950/30";
+      return "border-zinc-700 bg-zinc-950 text-zinc-200";
     default:
-      return "text-zinc-300 border-zinc-600/40 bg-zinc-900/50";
+      return "border-zinc-800 bg-black/30 text-zinc-300";
   }
 }
 
@@ -222,7 +251,14 @@ function confidenceLabel(confidence: PerformanceReport["confidence"]) {
 
 export function EvidenceApiDemo() {
   const [authState, setAuthState] = useState<"loading" | "guest" | "no-teams" | "ready">("loading");
-  const [phase, setPhase] = useState<DemoPhase>("intro");
+  const [phase, setPhase] = useState<DemoPhase>("picker");
+  const [demoId, setDemoId] = useState<string | null>(null);
+  const [customDemo, setCustomDemo] = useState<EvidenceApiDemoDefinition | null>(null);
+  const [customPrompt, setCustomPrompt] = useState("");
+  const activeDemo = useMemo(() => {
+    if (isCustomDemoId(demoId)) return customDemo ?? CUSTOM_DEMO_PICKER;
+    return resolveDemoId(demoId);
+  }, [demoId, customDemo]);
   const [planId, setPlanId] = useState<string | null>(null);
   const [workspaceTitle, setWorkspaceTitle] = useState<string | null>(null);
   const [blocks, setBlocks] = useState<DemoWorkspaceBlock[]>([]);
@@ -235,6 +271,7 @@ export function EvidenceApiDemo() {
   const [apiLog, setApiLog] = useState<ApiLogEntry[]>([]);
   const [error, setError] = useState("");
   const [report, setReport] = useState<PerformanceReport | null>(null);
+  const [performanceResponseRaw, setPerformanceResponseRaw] = useState<PerformanceResponse | null>(null);
   const [reportHistory, setReportHistory] = useState<ReportSnapshot[]>([]);
   const [skillHistory, setSkillHistory] = useState<SkillSnapshot[]>([]);
   const [schemaHistory, setSchemaHistory] = useState<SchemaSnapshot[]>([]);
@@ -243,13 +280,13 @@ export function EvidenceApiDemo() {
   const [isReporting, setIsReporting] = useState(false);
   const [isFetchingSchema, setIsFetchingSchema] = useState(false);
   const [isRegeneratingSkill, setIsRegeneratingSkill] = useState(false);
-  const [isArchiving, setIsArchiving] = useState(false);
   const [evidenceCount, setEvidenceCount] = useState(0);
   const [lastSkillEvidenceCount, setLastSkillEvidenceCount] = useState<number | null>(null);
   const [skillRegenHint, setSkillRegenHint] = useState(false);
+  const [activeView, setActiveView] = useState<DemoView>("simulator");
 
   const actionCount = totalActionCount(worldState);
-  const distinctEvidenceActions = countDistinctEvidenceActions(worldState);
+  const distinctEvidenceActions = countDistinctEvidenceActions(activeDemo, worldState);
 
   const addLog = useCallback(
     (entry: Omit<ApiLogEntry, "id" | "timestamp">) => {
@@ -342,6 +379,9 @@ export function EvidenceApiDemo() {
     if (!persisted) return;
     setPlanId(persisted.planId);
     setSessionId(persisted.sessionId);
+    setDemoId(persisted.demoId);
+    setCustomDemo(persisted.customDemo ?? null);
+    setCustomPrompt(persisted.customPrompt ?? "");
     setWorldState(persisted.worldState);
     setWorkspaceTitle(persisted.workspaceTitle ?? null);
     setBlocks(persisted.blocks ?? []);
@@ -349,7 +389,32 @@ export function EvidenceApiDemo() {
     setPhase("simulating");
   }, [authState]);
 
+  const handleSelectDemo = (demo: EvidenceApiDemoDefinition) => {
+    setError("");
+    setDemoId(demo.id);
+    setCustomDemo(null);
+    setCustomPrompt("");
+    setPhase("intro");
+  };
+
+  const handleSelectCustomDemo = () => {
+    setError("");
+    setDemoId(CUSTOM_DEMO_ID);
+    setCustomDemo(null);
+    setPhase("intro");
+  };
+
+  const handleBackToPicker = () => {
+    setError("");
+    setPhase("picker");
+  };
+
   const handleStartDemo = async () => {
+    if (isCustomDemoId(demoId) && customPrompt.trim().length < CUSTOM_PROMPT_MIN_LENGTH) {
+      setError(`Paste a scenario prompt of at least ${CUSTOM_PROMPT_MIN_LENGTH} characters.`);
+      return;
+    }
+
     setError("");
     setPhase("creating");
     clearPersistedState();
@@ -357,6 +422,7 @@ export function EvidenceApiDemo() {
     setSessionId(newSessionId);
     setWorldState(createInitialWorldState());
     setReport(null);
+    setPerformanceResponseRaw(null);
     setReportHistory([]);
     setSkillHistory([]);
     setSchemaHistory([]);
@@ -366,19 +432,29 @@ export function EvidenceApiDemo() {
     setLastSkillEvidenceCount(null);
     setSkillRegenHint(false);
     setApiLog([]);
+    setActiveView("simulator");
 
     addLog({
       method: "POST",
       path: "/api/evidence-api-demo/workspace",
       status: "pending",
-      summary: "Creating verification workspace from FlowStack onboarding prompt…",
+      summary: isCustomDemoId(demoId)
+        ? "Generating custom events and creating workspace…"
+        : `Creating verification workspace for ${activeDemo.productName}…`,
     });
 
     try {
       const res = await fetchWithTimeout(
         "/api/evidence-api-demo/workspace",
-        { method: "POST" },
-        120000
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            demoId: activeDemo.id,
+            ...(isCustomDemoId(demoId) ? { customPrompt: customPrompt.trim() } : {}),
+          }),
+        },
+        isCustomDemoId(demoId) ? 180000 : 120000
       );
       const data = await readJsonResponse<
         WorkspaceResponse & { error?: string; code?: string; hint?: string }
@@ -398,6 +474,11 @@ export function EvidenceApiDemo() {
         );
       }
 
+      const generatedCustomDemo = data.custom_definition ?? null;
+      if (generatedCustomDemo) {
+        setCustomDemo(generatedCustomDemo);
+      }
+
       setPlanId(data.workspace.id);
       setWorkspaceTitle(data.workspace.title);
       setBlocks(data.blocks);
@@ -408,9 +489,12 @@ export function EvidenceApiDemo() {
       persistState({
         planId: data.workspace.id,
         sessionId: newSessionId,
+        demoId: activeDemo.id,
         worldState: initialWorld,
         workspaceTitle: data.workspace.title,
         blocks: data.blocks,
+        customDemo: generatedCustomDemo ?? undefined,
+        customPrompt: isCustomDemoId(demoId) ? customPrompt.trim() : undefined,
       });
 
       const fileDetail = data.files?.length
@@ -448,14 +532,14 @@ export function EvidenceApiDemo() {
 
     const nextWorld = applySimulationAction(worldState, action);
     const blockId = matchBlockToStep(blocks, action);
-    const payload = buildSimulationEvidencePayload(action, {
+    const payload = buildSimulationEvidencePayload(activeDemo, action, {
       sessionId,
       blockId,
       worldState,
       reflection:
         action.kind === "time_simulation"
-          ? `Operator simulated ${action.timeDeltaDays ?? 0} day(s) of idle time before the next learner activity.`
-          : `User triggered "${action.label}" on the non-linear FlowStack surface.`,
+          ? `${action.timeDeltaDays ?? 0} day(s) elapsed before the next product activity.`
+          : `User completed "${action.label}" in ${activeDemo.productName}.`,
       outcome: action.outcome,
     });
 
@@ -481,12 +565,14 @@ export function EvidenceApiDemo() {
           payload,
           block_id: blockId,
           session_id: sessionId,
-          tool_name: action.kind === "time_simulation" ? "flowstack_simulator" : "flowstack",
+          tool_name:
+            action.kind === "time_simulation" ? activeDemo.simulatorToolName : activeDemo.toolName,
           tool_action: action.id,
           file_name: `${action.id}-${(worldState.actionCounts[action.id] ?? 0) + 1}.json`,
           metadata: {
-            demo: true,
-            source: "evidence-api-demo",
+            source: "partner_integration",
+            product: activeDemo.productName,
+            integration: activeDemo.integrationName,
             category: action.category,
             dimension: action.dimension,
             simulated_days: nextWorld.simulatedDays,
@@ -505,9 +591,12 @@ export function EvidenceApiDemo() {
       persistState({
         planId,
         sessionId,
+        demoId: activeDemo.id,
         worldState: nextWorld,
         workspaceTitle: workspaceTitle ?? undefined,
         blocks,
+        customDemo: isCustomDemoId(activeDemo.id) ? activeDemo : undefined,
+        customPrompt: isCustomDemoId(activeDemo.id) ? customPrompt.trim() : undefined,
       });
 
       if (shouldSuggestSkillRegeneration(nextEvidenceCount, lastSkillEvidenceCount)) {
@@ -557,7 +646,12 @@ export function EvidenceApiDemo() {
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ planId, definition: DEMO_EVAL_DEFINITION }),
+          body: JSON.stringify(
+            buildDemoApiBody(activeDemo, {
+              planId,
+              definition: activeDemo.evalDefinition,
+            })
+          ),
         },
         120000
       );
@@ -627,7 +721,12 @@ export function EvidenceApiDemo() {
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ planId, prefetch_evidence_spec: true }),
+          body: JSON.stringify(
+            buildDemoApiBody(activeDemo, {
+              planId,
+              prefetch_evidence_spec: true,
+            })
+          ),
         },
         180000
       );
@@ -741,6 +840,8 @@ export function EvidenceApiDemo() {
       }
 
       setReport(data.report);
+      setPerformanceResponseRaw(data);
+      setActiveView("score");
       setEvidenceCount(data.evidence_summary.evidence_artifacts);
       setReportHistory((prev) => [
         ...prev,
@@ -774,66 +875,12 @@ export function EvidenceApiDemo() {
     }
   };
 
-  const handleArchiveWorkspace = async () => {
-    if (!planId || isArchiving) return;
-    if (
-      !confirm(
-        "Archive this demo workspace? It will be hidden from your dashboard and admin lists, but evidence and scores are preserved."
-      )
-    ) {
-      return;
-    }
-
-    setIsArchiving(true);
-    setError("");
-
-    addLog({
-      method: "POST",
-      path: "/api/evidence-api-demo/archive",
-      status: "pending",
-      summary: "Archiving demo workspace…",
-    });
-
-    try {
-      const res = await fetchWithTimeout(
-        "/api/evidence-api-demo/archive",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ planId }),
-        },
-        30000
-      );
-      const data = await readJsonResponse<{ success?: boolean; error?: string }>(res);
-      if (!res.ok) {
-        throw new Error(data.error || "Failed to archive workspace");
-      }
-
-      addLog({
-        method: "POST",
-        path: "/api/evidence-api-demo/archive",
-        status: "success",
-        summary: "Demo workspace archived",
-        detail: "Hidden from dashboard; data preserved",
-      });
-
-      handleReset();
-    } catch (err) {
-      addLog({
-        method: "POST",
-        path: "/api/evidence-api-demo/archive",
-        status: "error",
-        summary: err instanceof Error ? err.message : "Archive failed",
-      });
-      setError(err instanceof Error ? err.message : "Failed to archive workspace");
-    } finally {
-      setIsArchiving(false);
-    }
-  };
-
   const handleReset = () => {
     clearPersistedState();
-    setPhase("intro");
+    setPhase("picker");
+    setDemoId(null);
+    setCustomDemo(null);
+    setCustomPrompt("");
     setPlanId(null);
     setWorkspaceTitle(null);
     setBlocks([]);
@@ -843,6 +890,7 @@ export function EvidenceApiDemo() {
     setSessionId(createSessionId());
     setWorldState(createInitialWorldState());
     setReport(null);
+    setPerformanceResponseRaw(null);
     setReportHistory([]);
     setSkillHistory([]);
     setSchemaHistory([]);
@@ -856,7 +904,10 @@ export function EvidenceApiDemo() {
     setSkillRegenHint(false);
     setApiLog([]);
     setError("");
+    setActiveView("simulator");
   };
+
+  const showViewSwitcher = phase === "simulating";
 
   if (authState === "loading") {
     return (
@@ -905,16 +956,15 @@ export function EvidenceApiDemo() {
       <header className="border-b border-zinc-800/80 bg-zinc-950/60">
         <div className="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-8 sm:px-6 lg:flex-row lg:items-end lg:justify-between">
           <div>
-            <div className="font-mono text-[10px] uppercase tracking-[2px] text-cyan-300/70">
+            <div className="font-mono text-[10px] uppercase tracking-[2px] text-zinc-500">
               Interactive demo
             </div>
             <h1 className="mt-2 text-3xl font-medium tracking-[-1px] text-white sm:text-4xl">
               Evidence API in action
             </h1>
             <p className="mt-3 max-w-2xl text-sm leading-relaxed text-zinc-400 sm:text-base">
-              Simulate a non-linear SaaS trial on {DEMO_PRODUCT_NAME} — branch across integrations,
-              projects, and team actions, compress idle time, then watch OpenLesson regenerate evidence
-              specs and integration skills as the workspace learns.
+              Pick a verification scenario — trial onboarding, month-end close, launch audit, or escalation
+              certification — then watch OpenLesson score competency from live evidence.
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -924,59 +974,130 @@ export function EvidenceApiDemo() {
             >
               API reference
             </Link>
-            {planId ? (
-              <Link
-                href={`/workspace/${planId}`}
+            {phase !== "picker" ? (
+              <button
+                type="button"
+                onClick={handleBackToPicker}
                 className="rounded-md border border-zinc-700 px-3 py-2 text-xs text-zinc-300 transition hover:border-zinc-500 hover:text-white"
               >
-                Open workspace
-              </Link>
+                Demo selection
+              </button>
+            ) : null}
+            {planId ? (
+              <>
+                <Link
+                  href={`/workspace/${planId}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="rounded-md border border-zinc-700 px-3 py-2 text-xs text-zinc-300 transition hover:border-zinc-500 hover:text-white"
+                >
+                  Open workspace
+                </Link>
+                <button
+                  type="button"
+                  onClick={handleReset}
+                  className="rounded-md border border-zinc-700 px-3 py-2 text-xs text-zinc-300 transition hover:border-zinc-500 hover:text-white"
+                >
+                  Reset demo setup
+                </button>
+              </>
             ) : null}
           </div>
         </div>
       </header>
 
-      <main className="mx-auto grid max-w-7xl gap-6 px-4 py-6 sm:px-6 lg:grid-cols-2 lg:gap-8 lg:py-8">
-        <SimulatorPanel
-          phase={phase}
-          worldState={worldState}
-          runningActionId={runningActionId}
-          onStart={handleStartDemo}
-          onRunAction={handleRunAction}
-        />
-
-        <OpenLessonPanel
-          phase={phase}
+      {showViewSwitcher ? (
+        <DemoStatusBar
           planId={planId}
-          workspaceTitle={workspaceTitle}
-          apiPaths={apiPaths}
-          planFiles={planFiles}
-          modelDocPreview={modelDocPreview}
-          sessionId={sessionId}
           worldState={worldState}
           evidenceCount={evidenceCount}
           actionCount={actionCount}
-          distinctEvidenceActions={distinctEvidenceActions}
+          phase={phase}
           isReporting={isReporting}
           isFetchingSchema={isFetchingSchema}
           isRegeneratingSkill={isRegeneratingSkill}
-          skillRegenHint={skillRegenHint}
-          apiLog={apiLog}
-          error={error}
           report={report}
-          reportHistory={reportHistory}
-          skillHistory={skillHistory}
-          schemaHistory={schemaHistory}
-          latestSkillPreview={latestSkillPreview}
-          latestSchema={latestSchema}
-          evalDefinition={DEMO_EVAL_DEFINITION}
-          onRequestPerformance={handleRequestPerformance}
-          onFetchEvidenceSchema={handleFetchEvidenceSchema}
-          onRegenerateSkill={handleRegenerateSkill}
-          onArchiveWorkspace={handleArchiveWorkspace}
-          isArchiving={isArchiving}
-          onReset={handleReset}
         />
+      ) : null}
+
+      {showViewSwitcher ? (
+        <DemoViewSwitcher
+          activeView={activeView}
+          onChange={setActiveView}
+          hasReport={!!report}
+          evidenceCount={evidenceCount}
+        />
+      ) : null}
+
+      <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:py-8">
+        {phase === "picker" ? (
+          <DemoUseCasePicker
+            demos={EVIDENCE_API_DEMOS}
+            onSelect={handleSelectDemo}
+            onSelectCustom={handleSelectCustomDemo}
+          />
+        ) : null}
+
+        {error && activeView !== "evidence" && phase !== "picker" ? (
+          <p className="mb-4 rounded-md border border-zinc-600 bg-zinc-950 px-4 py-3 text-sm text-zinc-200">
+            {error}
+          </p>
+        ) : null}
+
+        {phase !== "picker" && (!showViewSwitcher || activeView === "simulator") ? (
+          <SimulatorPanel
+            demo={activeDemo}
+            phase={phase}
+            worldState={worldState}
+            runningActionId={runningActionId}
+            onStart={handleStartDemo}
+            onRunAction={handleRunAction}
+            onBackToPicker={handleBackToPicker}
+            fullHeight={showViewSwitcher}
+            isCustom={isCustomDemoId(demoId)}
+            customPrompt={customPrompt}
+            onCustomPromptChange={setCustomPrompt}
+            customPromptMinLength={CUSTOM_PROMPT_MIN_LENGTH}
+          />
+        ) : null}
+
+        {showViewSwitcher && activeView === "evidence" ? (
+          <EvidenceLayerView
+            planId={planId}
+            workspaceTitle={workspaceTitle}
+            apiPaths={apiPaths}
+            planFiles={planFiles}
+            modelDocPreview={modelDocPreview}
+            sessionId={sessionId}
+            evidenceCount={evidenceCount}
+            isFetchingSchema={isFetchingSchema}
+            isRegeneratingSkill={isRegeneratingSkill}
+            skillRegenHint={skillRegenHint}
+            apiLog={apiLog}
+            error={error}
+            skillHistory={skillHistory}
+            schemaHistory={schemaHistory}
+            latestSkillPreview={latestSkillPreview}
+            latestSchema={latestSchema}
+            onFetchEvidenceSchema={handleFetchEvidenceSchema}
+            onRegenerateSkill={handleRegenerateSkill}
+            onReset={handleReset}
+          />
+        ) : null}
+
+        {showViewSwitcher && activeView === "score" ? (
+          <ScoreView
+            worldState={worldState}
+            evidenceCount={evidenceCount}
+            actionCount={actionCount}
+            distinctEvidenceActions={distinctEvidenceActions}
+            isReporting={isReporting}
+            report={report}
+            performanceResponse={performanceResponseRaw}
+            reportHistory={reportHistory}
+            onRequestPerformance={handleRequestPerformance}
+          />
+        ) : null}
       </main>
 
       <Footer />
@@ -1003,8 +1124,8 @@ function AuthGate({
     <div className="min-h-screen bg-[#0a0a0a] text-zinc-200">
       <Navbar showNav={false} />
       <div className="mx-auto flex max-w-lg flex-col items-center px-6 py-24 text-center">
-        <div className="flex size-12 items-center justify-center rounded-sm border border-cyan-400/20 bg-cyan-950/30">
-          <Zap className="size-5 text-cyan-200" />
+        <div className="flex size-12 items-center justify-center rounded-sm border border-zinc-700 bg-zinc-950">
+          <Zap className="size-5 text-white" />
         </div>
         <h1 className="mt-6 text-2xl font-medium text-white">{title}</h1>
         <p className="mt-3 text-sm leading-relaxed text-zinc-400">{body}</p>
@@ -1028,38 +1149,355 @@ function AuthGate({
   );
 }
 
+function DemoStatusBar({
+  planId,
+  worldState,
+  evidenceCount,
+  actionCount,
+  phase,
+  isReporting,
+  isFetchingSchema,
+  isRegeneratingSkill,
+  report,
+}: {
+  planId: string | null;
+  worldState: SimulationWorldState;
+  evidenceCount: number;
+  actionCount: number;
+  phase: DemoPhase;
+  isReporting: boolean;
+  isFetchingSchema: boolean;
+  isRegeneratingSkill: boolean;
+  report: PerformanceReport | null;
+}) {
+  const statusLabel = isRegeneratingSkill
+    ? "Regenerating skill"
+    : isFetchingSchema
+      ? "Fetching spec"
+      : isReporting
+        ? "Scoring"
+        : phase === "simulating"
+          ? "Live"
+          : "Idle";
+
+  const overallScore =
+    typeof report?.overall_score === "number"
+      ? Math.round(Math.max(0, Math.min(100, report.overall_score)))
+      : null;
+  const conversionScore =
+    typeof report?.conversion_score === "number"
+      ? Math.round(Math.max(0, Math.min(100, report.conversion_score)))
+      : null;
+
+  return (
+    <div className="border-b border-zinc-800/80 bg-zinc-950/80">
+      <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-x-6 gap-y-2 px-4 py-2.5 sm:px-6">
+        <div className="flex flex-wrap items-center gap-4 text-xs">
+          <span className="font-mono text-zinc-500">
+            Day <span className="text-white">{worldState.simulatedDays}</span>
+          </span>
+          <span className="font-mono text-zinc-500">
+            Actions <span className="text-white">{actionCount}</span>
+          </span>
+          <span className="font-mono text-zinc-500">
+            Evidence <span className="text-white">{evidenceCount}</span>
+          </span>
+          {overallScore != null ? (
+            <span className="font-mono text-zinc-500">
+              Learning <span className="text-white">{overallScore}/100</span>
+            </span>
+          ) : null}
+          {conversionScore != null ? (
+            <span className="font-mono text-zinc-500">
+              Conversion <span className="text-white">{conversionScore}%</span>
+            </span>
+          ) : null}
+        </div>
+        <div className="ml-auto flex flex-wrap items-center gap-3 text-xs">
+          <span className="rounded-full border border-zinc-700 bg-black/40 px-2.5 py-0.5 font-mono text-[10px] uppercase tracking-wide text-zinc-400">
+            {statusLabel}
+          </span>
+          {planId ? (
+            <code className="hidden font-mono text-[10px] text-zinc-600 sm:inline">
+              {planId.slice(0, 8)}…
+            </code>
+          ) : null}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DemoViewSwitcher({
+  activeView,
+  onChange,
+  hasReport,
+  evidenceCount,
+}: {
+  activeView: DemoView;
+  onChange: (view: DemoView) => void;
+  hasReport: boolean;
+  evidenceCount: number;
+}) {
+  const tabs: Array<{
+    id: DemoView;
+    label: string;
+    description: string;
+    icon: typeof LayoutGrid;
+    badge?: string;
+  }> = [
+    {
+      id: "simulator",
+      label: "Event simulator",
+      description: "Product event simulator",
+      icon: LayoutGrid,
+    },
+    {
+      id: "evidence",
+      label: "Evidence layer",
+      description: "API log & spec regen",
+      icon: Radio,
+      badge: evidenceCount > 0 ? String(evidenceCount) : undefined,
+    },
+    {
+      id: "score",
+      label: "Score card",
+      description: "Performance & gaps",
+      icon: Gauge,
+      badge: hasReport ? "New" : undefined,
+    },
+  ];
+
+  return (
+    <div className="sticky top-0 z-20 border-b border-zinc-800/80 bg-[#0a0a0a]/95 backdrop-blur-sm">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6">
+        <div
+          className="flex gap-1 overflow-x-auto py-3 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          role="tablist"
+          aria-label="Demo views"
+        >
+          {tabs.map((tab) => {
+            const Icon = tab.icon;
+            const isActive = activeView === tab.id;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                role="tab"
+                aria-selected={isActive}
+                onClick={() => onChange(tab.id)}
+                className={`flex min-w-[10.5rem] flex-1 items-center gap-3 rounded-lg border px-4 py-3 text-left transition sm:min-w-0 ${
+                  isActive
+                    ? "border-zinc-500 bg-zinc-900"
+                    : "border-zinc-800/80 bg-zinc-950/40 hover:border-zinc-700 hover:bg-zinc-900/50"
+                }`}
+              >
+                <Icon
+                  className={`size-4 shrink-0 ${isActive ? "text-white" : "text-zinc-500"}`}
+                />
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className={`text-sm font-medium ${isActive ? "text-white" : "text-zinc-300"}`}>
+                      {tab.label}
+                    </span>
+                    {tab.badge ? (
+                      <span
+                        className="rounded-full bg-zinc-800 px-1.5 py-0.5 font-mono text-[9px] text-zinc-300"
+                      >
+                        {tab.badge}
+                      </span>
+                    ) : null}
+                  </div>
+                  <div className="truncate text-[10px] text-zinc-500">{tab.description}</div>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function demoPanelStyles(_accent?: EvidenceApiDemoDefinition["accent"]) {
+  return {
+    section: "border-zinc-800 bg-zinc-950/70",
+    headerBorder: "border-zinc-800",
+    badge: "border-zinc-700 bg-black/40 text-zinc-300",
+    logo: "bg-white text-black",
+    subtitle: "text-zinc-500",
+    statBorder: "border-zinc-800",
+    statLabel: "text-zinc-500",
+    bodyText: "text-zinc-400",
+    sparkles: "text-zinc-300",
+    button: "bg-white text-black hover:bg-zinc-200",
+    actionDefault: "border-zinc-800 bg-black/20 hover:border-zinc-600",
+    actionCount: "bg-zinc-800 text-zinc-300",
+    actionText: "text-zinc-500",
+    actionCta: "text-zinc-300",
+  };
+}
+
+function DemoUseCasePicker({
+  demos,
+  onSelect,
+  onSelectCustom,
+}: {
+  demos: EvidenceApiDemoDefinition[];
+  onSelect: (demo: EvidenceApiDemoDefinition) => void;
+  onSelectCustom: () => void;
+}) {
+  const customStyles = demoPanelStyles(CUSTOM_DEMO_PICKER.accent);
+
+  return (
+    <section className="rounded-lg border border-zinc-800 bg-zinc-950/70 p-5 sm:p-8">
+      <div className="max-w-2xl">
+        <div className="font-mono text-[10px] uppercase tracking-[2px] text-zinc-500">
+          Step 1 · Choose a use case
+        </div>
+        <h2 className="mt-2 text-2xl font-medium text-white sm:text-3xl">Which scenario are we verifying?</h2>
+        <p className="mt-3 text-sm leading-relaxed text-zinc-400">
+          Pick a preset verification program or paste your own prompt to generate dynamic event actions — same
+          evidence API flow throughout.
+        </p>
+      </div>
+
+      <div className="mt-8 grid gap-4 sm:grid-cols-2">
+        {demos.map((demo) => {
+          const styles = demoPanelStyles(demo.accent);
+          return (
+            <button
+              key={demo.id}
+              type="button"
+              onClick={() => onSelect(demo)}
+              className={`group rounded-lg border p-5 text-left transition hover:-translate-y-0.5 hover:shadow-lg hover:shadow-black/20 ${styles.section}`}
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <div
+                    className={`flex size-10 items-center justify-center rounded-md text-sm font-bold ${styles.logo}`}
+                  >
+                    {demo.initials}
+                  </div>
+                  <div>
+                    <div className="text-base font-medium text-white">{demo.productName}</div>
+                    <div className={`text-xs ${styles.subtitle}`}>{demo.tagline}</div>
+                  </div>
+                </div>
+                <span
+                  className={`rounded-full border px-2 py-0.5 font-mono text-[9px] uppercase tracking-wide ${styles.badge}`}
+                >
+                  {demo.useCase}
+                </span>
+              </div>
+              <p className={`mt-4 text-sm leading-relaxed ${styles.bodyText}`}>{demo.description}</p>
+              <div className="mt-5 flex items-center gap-2 text-xs font-medium text-white/90">
+                Run this demo
+                <ArrowRight className="size-3.5 transition group-hover:translate-x-0.5" />
+              </div>
+            </button>
+          );
+        })}
+      </div>
+
+      <button
+        type="button"
+        onClick={onSelectCustom}
+        className={`group mt-4 w-full rounded-lg border border-dashed p-5 text-left transition hover:-translate-y-0.5 hover:border-zinc-600 hover:shadow-lg hover:shadow-black/20 ${customStyles.section}`}
+      >
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="flex items-start gap-3">
+            <div
+              className={`flex size-10 shrink-0 items-center justify-center rounded-md text-sm font-bold ${customStyles.logo}`}
+            >
+              {CUSTOM_DEMO_PICKER.initials}
+            </div>
+            <div>
+              <div className="text-base font-medium text-white">Custom simulation</div>
+              <div className={`text-xs ${customStyles.subtitle}`}>{CUSTOM_DEMO_PICKER.tagline}</div>
+              <p className={`mt-3 max-w-2xl text-sm leading-relaxed ${customStyles.bodyText}`}>
+                {CUSTOM_DEMO_PICKER.description}
+              </p>
+            </div>
+          </div>
+          <div className="flex shrink-0 items-center gap-2 text-xs font-medium text-white/90 sm:pt-2">
+            Paste your prompt
+            <ArrowRight className="size-3.5 transition group-hover:translate-x-0.5" />
+          </div>
+        </div>
+      </button>
+    </section>
+  );
+}
+
+function countCategoryActivity(
+  demo: EvidenceApiDemoDefinition,
+  category: SimulationCategory,
+  worldState: SimulationWorldState
+): { completed: number; total: number } {
+  const actions = getActionsByCategory(demo, category);
+  const completed = actions.filter((action) => hasCompletedAction(worldState, action.id)).length;
+  return { completed, total: actions.length };
+}
+
 function SimulatorPanel({
+  demo,
   phase,
   worldState,
   runningActionId,
   onStart,
   onRunAction,
+  onBackToPicker,
+  fullHeight = false,
+  isCustom = false,
+  customPrompt = "",
+  onCustomPromptChange,
+  customPromptMinLength = 40,
 }: {
+  demo: EvidenceApiDemoDefinition;
   phase: DemoPhase;
   worldState: SimulationWorldState;
   runningActionId: string | null;
   onStart: () => void;
   onRunAction: (action: SimulationAction) => void;
+  onBackToPicker?: () => void;
+  fullHeight?: boolean;
+  isCustom?: boolean;
+  customPrompt?: string;
+  onCustomPromptChange?: (value: string) => void;
+  customPromptMinLength?: number;
 }) {
-  const totalActions = SIMULATION_ACTIONS.filter((action) => action.kind === "evidence").length;
-  const explored = countDistinctEvidenceActions(worldState);
+  const styles = demoPanelStyles(demo.accent);
+  const totalActions = demo.actions.filter((action) => action.kind === "evidence").length;
+  const explored = countDistinctEvidenceActions(demo, worldState);
   const coveragePercent = Math.round((explored / totalActions) * 100);
+  const [activeCategory, setActiveCategory] = useState<SimulationCategory>(demo.categoryOrder[0]);
+
+  useEffect(() => {
+    setActiveCategory(demo.categoryOrder[0]);
+  }, [demo.id]);
 
   return (
-    <section className="flex flex-col overflow-hidden rounded-lg border border-indigo-500/20 bg-gradient-to-b from-indigo-950/40 to-[#0f1117]">
-      <div className="border-b border-indigo-500/15 px-5 py-4 sm:px-6">
+    <section className={`flex flex-col overflow-hidden rounded-lg border ${styles.section}`}>
+      <div className={`border-b px-5 py-4 sm:px-6 ${styles.headerBorder}`}>
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <div className="flex size-9 items-center justify-center rounded-md bg-indigo-500 text-sm font-bold text-white">
-              FS
+            <div
+              className={`flex size-9 items-center justify-center rounded-md text-sm font-bold ${styles.logo}`}
+            >
+              {demo.initials}
             </div>
             <div>
-              <div className="text-sm font-medium text-white">{DEMO_PRODUCT_NAME}</div>
-              <div className="text-xs text-indigo-200/70">Multidimensional trial simulator</div>
+              <div className="text-sm font-medium text-white">{demo.productName}</div>
+              <div className={`text-xs ${styles.subtitle}`}>
+                {demo.useCase} · {demo.tagline}
+              </div>
             </div>
           </div>
-          <span className="rounded-full border border-indigo-400/25 bg-indigo-950/50 px-2.5 py-1 font-mono text-[10px] uppercase tracking-wide text-indigo-200">
-            Simulation toolkit
+          <span
+            className={`rounded-full border px-2.5 py-1 font-mono text-[10px] uppercase tracking-wide ${styles.badge}`}
+          >
+            {demo.saasCategory}
           </span>
         </div>
       </div>
@@ -1067,63 +1505,141 @@ function SimulatorPanel({
       <div className="flex flex-1 flex-col p-5 sm:p-6">
         {phase === "intro" || phase === "creating" ? (
           <div className="flex flex-1 flex-col justify-center py-8">
-            <Sparkles className="size-8 text-indigo-300" />
-            <h2 className="mt-4 text-xl font-medium text-white">Non-linear trial surface</h2>
-            <p className="mt-2 max-w-md text-sm leading-relaxed text-indigo-100/70">
-              Branch across onboarding paths, integrations, projects, and team workflows. Use simulation
-              tools to compress days between sessions — then regenerate OpenLesson specs as evidence grows.
-            </p>
+            <Sparkles className={`size-8 ${styles.sparkles}`} />
+            <h2 className="mt-4 text-xl font-medium text-white">
+              {isCustom ? "Custom verification scenario" : demo.scenarioTitle}
+            </h2>
+            {isCustom ? (
+              <>
+                <p className={`mt-2 max-w-2xl text-sm leading-relaxed ${styles.bodyText}`}>
+                  Describe the product workflow, learner role, and competency you want to verify. OpenLesson
+                  generates event actions and a workspace from your prompt. Calendar gap tools (+1 day, +3
+                  days, +1 week) are always included.
+                </p>
+                <label className="mt-6 block max-w-2xl">
+                  <span className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-500">
+                    Scenario prompt
+                  </span>
+                  <textarea
+                    value={customPrompt}
+                    onChange={(event) => onCustomPromptChange?.(event.target.value)}
+                    disabled={phase === "creating"}
+                    rows={8}
+                    placeholder="Example: Verify that sales engineers can configure Acme CRM trial workspaces — connect email, import contacts, build a pipeline, invite a manager, recover from bad field mapping, and return after a week idle…"
+                    className="mt-2 w-full resize-y rounded-md border border-zinc-700 bg-black/40 px-4 py-3 text-sm leading-relaxed text-zinc-200 placeholder:text-zinc-600 focus:border-zinc-500 focus:outline-none disabled:opacity-60"
+                  />
+                  <span className="mt-2 block font-mono text-[10px] text-zinc-600">
+                    {customPrompt.trim().length}/{customPromptMinLength} characters minimum
+                  </span>
+                </label>
+              </>
+            ) : (
+              <p className={`mt-2 max-w-md text-sm leading-relaxed ${styles.bodyText}`}>
+                {demo.scenarioIntro.replace(/\*\*/g, "")} Use calendar gap tools to record idle time between
+                sessions — then regenerate OpenLesson specs as evidence grows.
+              </p>
+            )}
+            <div className="mt-8 flex flex-wrap items-center gap-3">
             <button
               type="button"
               onClick={onStart}
-              disabled={phase === "creating"}
-              className="mt-8 inline-flex w-fit items-center gap-2 rounded-md bg-indigo-500 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-indigo-400 disabled:cursor-not-allowed disabled:opacity-60"
+              disabled={
+                phase === "creating" ||
+                (isCustom && customPrompt.trim().length < customPromptMinLength)
+              }
+              className={`inline-flex w-fit items-center gap-2 rounded-md px-5 py-2.5 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-60 ${styles.button}`}
             >
               {phase === "creating" ? (
                 <>
                   <Loader2 className="size-4 animate-spin" />
-                  Creating workspace…
+                  {isCustom ? "Generating events & workspace…" : "Creating workspace…"}
                 </>
               ) : (
                 <>
-                  Start demo
+                  {isCustom ? "Generate & start" : "Start demo"}
                   <ArrowRight className="size-4" />
                 </>
               )}
             </button>
+            {onBackToPicker ? (
+              <button
+                type="button"
+                onClick={onBackToPicker}
+                disabled={phase === "creating"}
+                className="text-xs text-zinc-500 transition hover:text-zinc-300 disabled:opacity-50"
+              >
+                Choose a different use case
+              </button>
+            ) : null}
+            </div>
           </div>
         ) : (
           <>
             <div className="mb-5 grid grid-cols-3 gap-2 text-center">
-              <div className="rounded-md border border-indigo-500/20 bg-black/25 px-2 py-2">
-                <div className="font-mono text-[10px] uppercase tracking-wide text-indigo-300/60">Day</div>
+              <div className={`rounded-md border bg-black/25 px-2 py-2 ${styles.statBorder}`}>
+                <div className={`font-mono text-[10px] uppercase tracking-wide ${styles.statLabel}`}>Day</div>
                 <div className="mt-1 font-mono text-lg text-white">{worldState.simulatedDays}</div>
               </div>
-              <div className="rounded-md border border-indigo-500/20 bg-black/25 px-2 py-2">
-                <div className="font-mono text-[10px] uppercase tracking-wide text-indigo-300/60">Actions</div>
+              <div className={`rounded-md border bg-black/25 px-2 py-2 ${styles.statBorder}`}>
+                <div className={`font-mono text-[10px] uppercase tracking-wide ${styles.statLabel}`}>Actions</div>
                 <div className="mt-1 font-mono text-lg text-white">{totalActionCount(worldState)}</div>
               </div>
-              <div className="rounded-md border border-indigo-500/20 bg-black/25 px-2 py-2">
-                <div className="font-mono text-[10px] uppercase tracking-wide text-indigo-300/60">Coverage</div>
+              <div className={`rounded-md border bg-black/25 px-2 py-2 ${styles.statBorder}`}>
+                <div className={`font-mono text-[10px] uppercase tracking-wide ${styles.statLabel}`}>Coverage</div>
                 <div className="mt-1 font-mono text-lg text-white">{coveragePercent}%</div>
               </div>
             </div>
 
-            <p className="mb-4 text-xs leading-relaxed text-indigo-100/55">
-              Click any action in any order — no fixed path. Repeatable actions and time tools model
-              real-world complexity (idle gaps, mistakes, parallel workstreams).
+            <div className="mb-4 border-b border-zinc-800">
+              <div
+                className="-mb-px flex gap-1 overflow-x-auto pb-px [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                role="tablist"
+                aria-label="Event categories"
+              >
+                {demo.categoryOrder.map((category) => {
+                  const meta = demo.categoryMeta[category];
+                  const { completed, total } = countCategoryActivity(demo, category, worldState);
+                  const isActive = activeCategory === category;
+                  return (
+                    <button
+                      key={category}
+                      type="button"
+                      role="tab"
+                      aria-selected={isActive}
+                      onClick={() => setActiveCategory(category)}
+                      className={`flex shrink-0 items-center gap-2 border-b-2 px-3 py-2.5 text-left transition ${
+                        isActive
+                          ? "border-white text-white"
+                          : "border-transparent text-zinc-500 hover:border-zinc-600 hover:text-zinc-300"
+                      }`}
+                    >
+                      <span className="whitespace-nowrap text-xs font-medium">{meta.label}</span>
+                      {completed > 0 ? (
+                        <span className="rounded bg-zinc-800 px-1.5 py-0.5 font-mono text-[9px] text-zinc-300">
+                          {completed}/{total}
+                        </span>
+                      ) : null}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <p className={`mb-4 text-xs leading-relaxed ${styles.bodyText}`}>
+              {demo.categoryMeta[activeCategory].description}
             </p>
 
-            <div className="max-h-[32rem] space-y-5 overflow-y-auto pr-1">
-              {SIMULATION_CATEGORY_ORDER.map((category) => (
-                <SimulationCategorySection
-                  key={category}
-                  category={category}
-                  worldState={worldState}
-                  runningActionId={runningActionId}
-                  onRunAction={onRunAction}
-                />
-              ))}
+            <div className={`pr-1 ${fullHeight ? "min-h-[24rem]" : "max-h-[32rem] overflow-y-auto"}`}>
+              <SimulationCategorySection
+                demo={demo}
+                category={activeCategory}
+                worldState={worldState}
+                runningActionId={runningActionId}
+                onRunAction={onRunAction}
+                wideLayout={fullHeight}
+                styles={styles}
+                hideHeader
+              />
             </div>
           </>
         )}
@@ -1133,31 +1649,49 @@ function SimulatorPanel({
 }
 
 function SimulationCategorySection({
+  demo,
   category,
   worldState,
   runningActionId,
   onRunAction,
+  wideLayout = false,
+  styles,
+  hideHeader = false,
 }: {
+  demo: EvidenceApiDemoDefinition;
   category: SimulationCategory;
   worldState: SimulationWorldState;
   runningActionId: string | null;
   onRunAction: (action: SimulationAction) => void;
+  wideLayout?: boolean;
+  styles: ReturnType<typeof demoPanelStyles>;
+  hideHeader?: boolean;
 }) {
-  const meta = SIMULATION_CATEGORY_META[category];
-  const actions = getActionsByCategory(category);
+  const meta = demo.categoryMeta[category];
+  const actions = getActionsByCategory(demo, category);
   const isTimeTools = category === "simulation_tools";
 
   return (
     <div>
-      <div className="mb-2 flex items-center gap-2">
-        {isTimeTools ? <Clock className="size-3.5 text-amber-300/80" /> : null}
-        <div>
-          <div className="text-xs font-medium text-white">{meta.label}</div>
-          <div className="text-[10px] text-indigo-200/50">{meta.description}</div>
+      {!hideHeader ? (
+        <div className="mb-2 flex items-center gap-2">
+          {isTimeTools ? <Clock className="size-3.5 text-zinc-400" /> : null}
+          <div>
+            <div className="text-xs font-medium text-white">{meta.label}</div>
+            <div className={`text-[10px] ${styles.actionText}`}>{meta.description}</div>
+          </div>
         </div>
-      </div>
+      ) : null}
       <div
-        className={`grid gap-2 ${isTimeTools ? "sm:grid-cols-3" : "sm:grid-cols-2"}`}
+        className={`grid gap-2 ${
+          isTimeTools
+            ? wideLayout
+              ? "sm:grid-cols-3 lg:grid-cols-4"
+              : "sm:grid-cols-3"
+            : wideLayout
+              ? "sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+              : "sm:grid-cols-2"
+        }`}
       >
         {actions.map((action) => {
           const count = worldState.actionCounts[action.id] ?? 0;
@@ -1173,23 +1707,23 @@ function SimulationCategorySection({
               onClick={() => onRunAction(action)}
               disabled={disabled}
               className={`rounded-md border px-3 py-2.5 text-left transition ${
-                isTimeTools
-                  ? "border-amber-500/25 bg-amber-950/15 hover:border-amber-400/40"
-                  : done
-                    ? "border-emerald-500/20 bg-emerald-950/15"
-                    : "border-indigo-500/15 bg-black/20 hover:border-indigo-400/35"
+                done
+                  ? "border-zinc-600 bg-zinc-900/80"
+                  : styles.actionDefault
               } disabled:cursor-not-allowed disabled:opacity-50`}
             >
               <div className="flex items-start justify-between gap-2">
                 <span className="text-xs font-medium text-white">{action.label}</span>
                 {count > 0 ? (
-                  <span className="shrink-0 rounded bg-indigo-950/80 px-1.5 py-0.5 font-mono text-[9px] text-indigo-200">
+                  <span
+                    className={`shrink-0 rounded px-1.5 py-0.5 font-mono text-[9px] ${styles.actionCount}`}
+                  >
                     ×{count}
                   </span>
                 ) : null}
               </div>
-              <p className="mt-1 text-[10px] leading-relaxed text-indigo-100/55">{action.description}</p>
-              <span className="mt-2 inline-flex items-center gap-1.5 text-[10px] font-medium text-indigo-200">
+              <p className={`mt-1 text-[10px] leading-relaxed ${styles.actionText}`}>{action.description}</p>
+              <span className={`mt-2 inline-flex items-center gap-1.5 text-[10px] font-medium ${styles.actionCta}`}>
                 {isRunning ? (
                   <>
                     <Loader2 className="size-3 animate-spin" />
@@ -1207,310 +1741,325 @@ function SimulationCategorySection({
   );
 }
 
-function OpenLessonPanel({
-  phase,
+function EvidenceLayerView({
   planId,
   workspaceTitle,
   apiPaths,
   planFiles,
   modelDocPreview,
   sessionId,
-  worldState,
   evidenceCount,
-  actionCount,
-  distinctEvidenceActions,
-  isReporting,
   isFetchingSchema,
   isRegeneratingSkill,
   skillRegenHint,
   apiLog,
   error,
-  report,
-  reportHistory,
   skillHistory,
   schemaHistory,
   latestSkillPreview,
   latestSchema,
-  evalDefinition,
-  onRequestPerformance,
   onFetchEvidenceSchema,
   onRegenerateSkill,
-  onArchiveWorkspace,
-  isArchiving,
   onReset,
 }: {
-  phase: DemoPhase;
   planId: string | null;
   workspaceTitle: string | null;
   apiPaths: WorkspaceResponse["api_paths"] | null;
   planFiles: PlanFileSummary[];
   modelDocPreview: string | null;
   sessionId: string;
-  worldState: SimulationWorldState;
   evidenceCount: number;
-  actionCount: number;
-  distinctEvidenceActions: number;
-  isReporting: boolean;
   isFetchingSchema: boolean;
   isRegeneratingSkill: boolean;
   skillRegenHint: boolean;
   apiLog: ApiLogEntry[];
   error: string;
-  report: PerformanceReport | null;
-  reportHistory: ReportSnapshot[];
   skillHistory: SkillSnapshot[];
   schemaHistory: SchemaSnapshot[];
   latestSkillPreview: string | null;
   latestSchema: EvidenceEvalSchemaResult | null;
-  evalDefinition: string;
-  onRequestPerformance: () => void;
   onFetchEvidenceSchema: () => void;
   onRegenerateSkill: () => void;
-  onArchiveWorkspace: () => void;
-  isArchiving: boolean;
   onReset: () => void;
 }) {
-  const canOperate = !!planId && phase === "simulating";
-  const canRequestScore = canOperate && evidenceCount > 0;
-  const canRegenerate = canOperate && evidenceCount > 0;
+  const canRegenerate = !!planId && evidenceCount > 0;
+
   return (
     <section className="flex flex-col rounded-lg border border-zinc-800 bg-zinc-950/70">
       <div className="border-b border-zinc-800 px-5 py-4 sm:px-6">
         <div className="flex items-center gap-2">
-          <Radio className="size-4 text-cyan-300" />
+          <Radio className="size-4 text-zinc-300" />
           <div>
             <div className="text-sm font-medium text-white">OpenLesson verification layer</div>
-            <div className="text-xs text-zinc-500">Live API activity from this session</div>
+            <div className="text-xs text-zinc-500">Workspace context, API activity, and continuous evaluation</div>
           </div>
         </div>
       </div>
 
-      <div className="flex flex-1 flex-col gap-5 p-5 sm:p-6">
-        <div className="grid grid-cols-2 gap-3 text-center sm:grid-cols-4">
-          <Stat label="Workspace" value={planId ? "Active" : "—"} />
-          <Stat label="Evidence" value={evidenceCount > 0 ? String(evidenceCount) : "—"} />
-          <Stat label="Sim day" value={worldState.simulatedDays > 0 ? String(worldState.simulatedDays) : "—"} />
-          <Stat
-            label="Status"
-            value={
-              isRegeneratingSkill
-                ? "Skill regen"
-                : isFetchingSchema
-                  ? "Spec fetch"
-                  : isReporting
-                    ? "Scoring"
-                    : phase === "simulating"
-                      ? "Live"
-                      : "Idle"
-            }
-          />
+      <div className="flex flex-1 flex-col gap-6 p-5 sm:p-6 lg:grid lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)] lg:items-start lg:gap-8">
+        <div className="flex flex-col gap-5">
+          {workspaceTitle ? (
+            <div className="rounded-md border border-zinc-800 bg-black/30 px-4 py-3">
+              <div className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-600">
+                Verification workspace
+              </div>
+              <div className="mt-1 text-base text-white">{workspaceTitle}</div>
+              {planId ? (
+                <code className="mt-1 block truncate font-mono text-[11px] text-zinc-500">{planId}</code>
+              ) : null}
+            </div>
+          ) : null}
+
+          <div>
+            <div className="mb-2 font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-600">
+              API activity
+            </div>
+            {apiLog.length === 0 ? (
+              <p className="rounded-md border border-dashed border-zinc-800 px-4 py-10 text-center text-sm text-zinc-500">
+                Run simulation actions to stream evidence uploads here.
+              </p>
+            ) : (
+              <ul className="max-h-[32rem] space-y-2 overflow-y-auto pr-1">
+                {apiLog.map((entry) => (
+                  <li
+                    key={entry.id}
+                    className="rounded-md border border-zinc-800/80 bg-black/40 px-4 py-3"
+                  >
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="rounded bg-zinc-800 px-1.5 py-0.5 font-mono text-[10px] text-zinc-300">
+                        {entry.method}
+                      </span>
+                      <span className="font-mono text-[10px] text-zinc-500">{entry.path}</span>
+                      <span
+                        className={`ml-auto font-mono text-[10px] uppercase ${
+                          entry.status === "success"
+                            ? "text-white"
+                            : entry.status === "error"
+                              ? "text-zinc-400"
+                              : "text-zinc-500"
+                        }`}
+                      >
+                        {entry.status}
+                      </span>
+                    </div>
+                    <p className="mt-1.5 text-sm text-zinc-300">{entry.summary}</p>
+                    {entry.detail ? (
+                      <p className="mt-1 font-mono text-[10px] text-zinc-500">{entry.detail}</p>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+
+          {error ? <p className="text-sm text-zinc-300">{error}</p> : null}
+
+          {planId ? (
+            <div className="flex flex-wrap items-center gap-3 border-t border-zinc-800 pt-4">
+              <button
+                type="button"
+                onClick={onReset}
+                className="text-xs text-zinc-500 transition hover:text-zinc-300"
+              >
+                Reset demo session
+              </button>
+              <p className="font-mono text-[10px] text-zinc-600">session: {sessionId.slice(0, 8)}…</p>
+            </div>
+          ) : null}
         </div>
 
-        {workspaceTitle ? (
-          <div className="rounded-md border border-zinc-800 bg-black/30 px-3 py-2.5">
-            <div className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-600">
-              Verification workspace
-            </div>
-            <div className="mt-1 text-sm text-white">{workspaceTitle}</div>
-            {planId ? (
-              <code className="mt-1 block truncate font-mono text-[11px] text-zinc-500">{planId}</code>
-            ) : null}
-          </div>
-        ) : null}
-
-        {planFiles.length > 0 ? (
-          <div className="rounded-md border border-zinc-800 bg-black/30 p-3">
-            <div className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-600">
-              Workspace files (plan_files)
-            </div>
-            <p className="mt-1 text-[11px] leading-relaxed text-zinc-500">
-              Attached at creation like <span className="font-mono text-zinc-400">POST .../workspaces</span>{" "}
-              with <span className="font-mono text-zinc-400">files[]</span> — included in performance and spec context.
-            </p>
-            <ul className="mt-2 space-y-1.5">
-              {planFiles.map((file) => (
-                <li
-                  key={file.id}
-                  className="flex flex-wrap items-center justify-between gap-2 rounded border border-zinc-800/80 px-2.5 py-1.5 text-xs"
-                >
-                  <span className="font-mono text-zinc-300">{file.file_name}</span>
-                  <span className="font-mono text-[10px] text-zinc-500">
-                    {file.mime_type} · {Math.round(file.file_size / 1024)} KB
-                  </span>
-                </li>
-              ))}
-            </ul>
-            {modelDocPreview ? (
-              <pre className="mt-3 max-h-28 overflow-y-auto whitespace-pre-wrap rounded border border-zinc-800/80 bg-zinc-950/60 p-2 font-mono text-[10px] leading-relaxed text-zinc-500">
-                {modelDocPreview}…
-              </pre>
-            ) : null}
-          </div>
-        ) : null}
-
-        {apiPaths ? (
-          <div className="rounded-md border border-zinc-800 bg-black/30 p-3">
-            <div className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-600">
-              Production API paths
-            </div>
-            <ul className="mt-2 space-y-1.5 font-mono text-[10px] text-zinc-400">
-              <li>POST …/evidence</li>
-              <li>POST …/performance</li>
-              <li>POST …/evidence-schema</li>
-              <li>POST …/integration-skill</li>
-            </ul>
-            <p className="mt-2 text-[11px] leading-relaxed text-zinc-500">
-              This demo proxies through session-authenticated routes. In production, use Bearer API keys
-              against the paths returned when the workspace was created.
-            </p>
-          </div>
-        ) : null}
-
-        <div>
-          <div className="mb-2 font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-600">
-            API activity
-          </div>
-          {apiLog.length === 0 ? (
-            <p className="rounded-md border border-dashed border-zinc-800 px-3 py-6 text-center text-xs text-zinc-500">
-              Start the demo to create a workspace and stream evidence uploads here.
-            </p>
-          ) : (
-            <ul className="max-h-52 space-y-2 overflow-y-auto">
-              {apiLog.map((entry) => (
-                <li
-                  key={entry.id}
-                  className="rounded-md border border-zinc-800/80 bg-black/40 px-3 py-2"
-                >
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="rounded bg-zinc-800 px-1.5 py-0.5 font-mono text-[10px] text-zinc-300">
-                      {entry.method}
+        <div className="flex flex-col gap-5">
+          {planFiles.length > 0 ? (
+            <div className="rounded-md border border-zinc-800 bg-black/30 p-4">
+              <div className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-600">
+                Workspace files (plan_files)
+              </div>
+              <p className="mt-1 text-[11px] leading-relaxed text-zinc-500">
+                Attached at creation like <span className="font-mono text-zinc-400">POST .../workspaces</span>{" "}
+                with <span className="font-mono text-zinc-400">files[]</span>.
+              </p>
+              <ul className="mt-3 space-y-2">
+                {planFiles.map((file) => (
+                  <li
+                    key={file.id}
+                    className="flex flex-wrap items-center justify-between gap-2 rounded border border-zinc-800/80 px-3 py-2 text-xs"
+                  >
+                    <span className="font-mono text-zinc-300">{file.file_name}</span>
+                    <span className="font-mono text-[10px] text-zinc-500">
+                      {file.mime_type} · {Math.round(file.file_size / 1024)} KB
                     </span>
-                    <span className="font-mono text-[10px] text-zinc-500">{entry.path}</span>
-                    <span
-                      className={`ml-auto font-mono text-[10px] uppercase ${
-                        entry.status === "success"
-                          ? "text-emerald-400"
-                          : entry.status === "error"
-                            ? "text-red-400"
-                            : "text-amber-300"
-                      }`}
-                    >
-                      {entry.status}
-                    </span>
+                  </li>
+                ))}
+              </ul>
+              {modelDocPreview ? (
+                <pre className="mt-3 max-h-40 overflow-y-auto whitespace-pre-wrap rounded border border-zinc-800/80 bg-zinc-950/60 p-3 font-mono text-[10px] leading-relaxed text-zinc-500">
+                  {modelDocPreview}…
+                </pre>
+              ) : null}
+            </div>
+          ) : null}
+
+          {apiPaths ? (
+            <div className="rounded-md border border-zinc-800 bg-black/30 p-4">
+              <div className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-600">
+                Production API paths
+              </div>
+              <ul className="mt-2 space-y-1.5 font-mono text-[10px] text-zinc-400">
+                <li>POST …/evidence</li>
+                <li>POST …/performance</li>
+                <li>POST …/evidence-schema</li>
+                <li>POST …/integration-skill</li>
+              </ul>
+              <p className="mt-2 text-[11px] leading-relaxed text-zinc-500">
+                Session-authenticated proxy routes for this UI. In production, use Bearer API keys
+                against the paths returned when the workspace was created.
+              </p>
+            </div>
+          ) : null}
+
+          {canRegenerate ? (
+            <div className="space-y-4 rounded-md border border-zinc-800 bg-black/30 p-5">
+              <div className="flex items-center gap-2">
+                <RefreshCw className="size-4 text-zinc-300" />
+                <div>
+                  <div className="text-sm font-medium text-white">Continuous evaluation</div>
+                  <div className="text-xs text-zinc-500">
+                    Specs and skills are living documents — regenerate as evidence grows.
                   </div>
-                  <p className="mt-1 text-xs text-zinc-300">{entry.summary}</p>
-                  {entry.detail ? (
-                    <p className="mt-0.5 font-mono text-[10px] text-zinc-500">{entry.detail}</p>
-                  ) : null}
-                </li>
-              ))}
-            </ul>
+                </div>
+              </div>
+
+              {skillRegenHint ? (
+                <p className="rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-xs text-zinc-300">
+                  Evidence crossed a threshold ({evidenceCount} artifacts). Regenerate the integration
+                  skill to showcase how partner agents stay aligned.
+                </p>
+              ) : null}
+
+              <div className="grid gap-2 sm:grid-cols-2">
+                <button
+                  type="button"
+                  onClick={onFetchEvidenceSchema}
+                  disabled={isFetchingSchema || isRegeneratingSkill}
+                  className="inline-flex items-center justify-center gap-2 rounded-md border border-zinc-700 bg-black/30 px-3 py-2.5 text-xs font-medium text-zinc-200 transition hover:border-zinc-500 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {isFetchingSchema ? (
+                    <Loader2 className="size-3.5 animate-spin" />
+                  ) : (
+                    <FileCode2 className="size-3.5" />
+                  )}
+                  Re-fetch evidence spec
+                </button>
+                <button
+                  type="button"
+                  onClick={onRegenerateSkill}
+                  disabled={isRegeneratingSkill || isFetchingSchema}
+                  className="inline-flex items-center justify-center gap-2 rounded-md bg-white px-3 py-2.5 text-xs font-medium text-black transition hover:bg-zinc-200 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {isRegeneratingSkill ? (
+                    <Loader2 className="size-3.5 animate-spin" />
+                  ) : (
+                    <RefreshCw className="size-3.5" />
+                  )}
+                  Regenerate skill.md
+                  {skillHistory.length > 0 ? ` (v${skillHistory.length + 1})` : ""}
+                </button>
+              </div>
+
+              {schemaHistory.length > 0 ? <SpecEvolution history={schemaHistory} /> : null}
+              {skillHistory.length > 0 ? <SkillEvolution history={skillHistory} /> : null}
+
+              {latestSchema ? (
+                <div className="rounded-md border border-zinc-800 bg-black/30 p-3">
+                  <div className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-600">
+                    Latest evidence spec
+                  </div>
+                  <div className="mt-2 text-xs text-zinc-300">
+                    <span className="font-mono text-zinc-200">{latestSchema.schema_name}</span>
+                    {latestSchema.spec_version ? (
+                      <span className="ml-2 text-zinc-500">v{latestSchema.spec_version}</span>
+                    ) : null}
+                  </div>
+                  <p className="mt-2 text-[11px] leading-relaxed text-zinc-500">
+                    {latestSchema.continuous_evaluation_summary ||
+                      latestSchema.collection_guidance?.slice(0, 240)}
+                  </p>
+                </div>
+              ) : null}
+
+              {latestSkillPreview ? (
+                <div className="rounded-md border border-zinc-800 bg-black/30 p-3">
+                  <div className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-600">
+                    Latest skill.md preview
+                  </div>
+                  <pre className="mt-2 max-h-48 overflow-y-auto whitespace-pre-wrap font-mono text-[10px] leading-relaxed text-zinc-400">
+                    {latestSkillPreview}
+                    {latestSkillPreview.length >= 600 ? "\n…" : ""}
+                  </pre>
+                </div>
+              ) : null}
+            </div>
+          ) : (
+            <p className="rounded-md border border-dashed border-zinc-800 px-4 py-8 text-center text-sm text-zinc-500">
+              Run at least one simulation action to unlock spec and skill regeneration.
+            </p>
           )}
         </div>
+      </div>
+    </section>
+  );
+}
 
-        {error ? <p className="text-sm text-red-400">{error}</p> : null}
+function ScoreView({
+  worldState,
+  evidenceCount,
+  actionCount,
+  distinctEvidenceActions,
+  isReporting,
+  report,
+  performanceResponse,
+  reportHistory,
+  onRequestPerformance,
+}: {
+  worldState: SimulationWorldState;
+  evidenceCount: number;
+  actionCount: number;
+  distinctEvidenceActions: number;
+  isReporting: boolean;
+  report: PerformanceReport | null;
+  performanceResponse: PerformanceResponse | null;
+  reportHistory: ReportSnapshot[];
+  onRequestPerformance: () => void;
+}) {
+  const canRequestScore = evidenceCount > 0;
+  const latestSnapshot = reportHistory[reportHistory.length - 1];
+  const [showRawResponse, setShowRawResponse] = useState(false);
 
-        {canRegenerate ? (
-          <div className="space-y-3 rounded-md border border-violet-500/20 bg-violet-950/10 p-4">
-            <div className="flex items-center gap-2">
-              <RefreshCw className="size-4 text-violet-300" />
-              <div>
-                <div className="text-sm font-medium text-white">Continuous evaluation</div>
-                <div className="text-xs text-zinc-500">
-                  Specs and skills are living documents — regenerate as evidence grows.
-                </div>
+  useEffect(() => {
+    setShowRawResponse(false);
+  }, [latestSnapshot?.id]);
+
+  return (
+    <section className="flex flex-col rounded-lg border border-zinc-800 bg-zinc-950/70">
+      <div className="border-b border-zinc-800 px-5 py-5 sm:px-6">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex items-center gap-3">
+            <div className="flex size-10 items-center justify-center rounded-md border border-zinc-700 bg-black/40">
+              <BarChart3 className="size-5 text-white" />
+            </div>
+            <div>
+              <div className="text-lg font-medium text-white">Performance score card</div>
+              <div className="text-sm text-zinc-500">
+                Request scores at any point — branch freely, simulate idle days, then score again.
               </div>
             </div>
-
-            {skillRegenHint ? (
-              <p className="rounded-md border border-violet-400/25 bg-violet-950/30 px-3 py-2 text-xs text-violet-100/90">
-                Evidence crossed a threshold ({evidenceCount} artifacts). Regenerate the integration
-                skill to showcase how partner agents stay aligned.
-              </p>
-            ) : null}
-
-            <div className="grid gap-2 sm:grid-cols-2">
-              <button
-                type="button"
-                onClick={onFetchEvidenceSchema}
-                disabled={isFetchingSchema || isRegeneratingSkill}
-                className="inline-flex items-center justify-center gap-2 rounded-md border border-zinc-700 bg-black/30 px-3 py-2 text-xs font-medium text-zinc-200 transition hover:border-zinc-500 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {isFetchingSchema ? (
-                  <Loader2 className="size-3.5 animate-spin" />
-                ) : (
-                  <FileCode2 className="size-3.5" />
-                )}
-                Re-fetch evidence spec
-              </button>
-              <button
-                type="button"
-                onClick={onRegenerateSkill}
-                disabled={isRegeneratingSkill || isFetchingSchema}
-                className="inline-flex items-center justify-center gap-2 rounded-md bg-violet-500 px-3 py-2 text-xs font-medium text-white transition hover:bg-violet-400 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {isRegeneratingSkill ? (
-                  <Loader2 className="size-3.5 animate-spin" />
-                ) : (
-                  <RefreshCw className="size-3.5" />
-                )}
-                Regenerate skill.md
-                {skillHistory.length > 0 ? ` (v${skillHistory.length + 1})` : ""}
-              </button>
-            </div>
-
-            {schemaHistory.length > 0 ? (
-              <SpecEvolution history={schemaHistory} />
-            ) : null}
-
-            {skillHistory.length > 0 ? (
-              <SkillEvolution history={skillHistory} />
-            ) : null}
-
-            {latestSchema ? (
-              <div className="rounded-md border border-zinc-800 bg-black/30 p-3">
-                <div className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-600">
-                  Latest evidence spec
-                </div>
-                <div className="mt-2 text-xs text-zinc-300">
-                  <span className="font-mono text-violet-200">{latestSchema.schema_name}</span>
-                  {latestSchema.spec_version ? (
-                    <span className="ml-2 text-zinc-500">v{latestSchema.spec_version}</span>
-                  ) : null}
-                </div>
-                <p className="mt-2 text-[11px] leading-relaxed text-zinc-500">
-                  {latestSchema.continuous_evaluation_summary ||
-                    latestSchema.collection_guidance?.slice(0, 180)}
-                </p>
-              </div>
-            ) : null}
-
-            {latestSkillPreview ? (
-              <div className="rounded-md border border-zinc-800 bg-black/30 p-3">
-                <div className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-600">
-                  Latest skill.md preview
-                </div>
-                <pre className="mt-2 max-h-36 overflow-y-auto whitespace-pre-wrap font-mono text-[10px] leading-relaxed text-zinc-400">
-                  {latestSkillPreview}
-                  {latestSkillPreview.length >= 600 ? "\n…" : ""}
-                </pre>
-              </div>
-            ) : null}
           </div>
-        ) : null}
-
-        {canRequestScore ? (
-          <div className="space-y-3 border-t border-zinc-800 pt-4">
-            <p className="text-xs leading-relaxed text-zinc-500">
-              Request a score at any point — branch freely, simulate idle days, then score again.
-              {distinctEvidenceActions} distinct actions · {actionCount} total events · day{" "}
-              {worldState.simulatedDays}.
-            </p>
+          {canRequestScore ? (
             <button
               type="button"
               onClick={onRequestPerformance}
               disabled={isReporting}
-              className="inline-flex w-full items-center justify-center gap-2 rounded-md bg-white px-4 py-2.5 text-sm font-medium text-black transition hover:bg-zinc-200 disabled:cursor-not-allowed disabled:bg-zinc-700 disabled:text-zinc-400"
+              className="inline-flex shrink-0 items-center justify-center gap-2 rounded-md bg-white px-5 py-3 text-sm font-medium text-black transition hover:bg-zinc-200 disabled:cursor-not-allowed disabled:bg-zinc-700 disabled:text-zinc-400"
             >
               {isReporting ? (
                 <>
@@ -1524,54 +2073,92 @@ function OpenLessonPanel({
                 </>
               )}
             </button>
+          ) : null}
+        </div>
+        {canRequestScore ? (
+          <p className="mt-3 text-xs text-zinc-500">
+            {distinctEvidenceActions} distinct actions · {actionCount} total events · day{" "}
+            {worldState.simulatedDays} · {evidenceCount} evidence artifact
+            {evidenceCount === 1 ? "" : "s"}
+          </p>
+        ) : (
+          <p className="mt-3 text-sm text-zinc-500">
+            Run scenario actions in the Event simulator tab to upload evidence, then request your first score.
+          </p>
+        )}
+      </div>
+
+      <div className="flex flex-1 flex-col gap-6 p-5 sm:p-6">
+        {report && performanceResponse ? (
+          <div className="flex items-center justify-end">
+            <div
+              className="inline-flex rounded-md border border-zinc-800 bg-black/30 p-0.5"
+              role="group"
+              aria-label="Score card display mode"
+            >
+              <button
+                type="button"
+                onClick={() => setShowRawResponse(false)}
+                aria-pressed={!showRawResponse}
+                className={`rounded px-3 py-1.5 text-xs font-medium transition ${
+                  !showRawResponse
+                    ? "bg-white text-black"
+                    : "text-zinc-500 hover:text-zinc-300"
+                }`}
+              >
+                Formatted
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowRawResponse(true)}
+                aria-pressed={showRawResponse}
+                className={`rounded px-3 py-1.5 text-xs font-medium transition ${
+                  showRawResponse
+                    ? "bg-white text-black"
+                    : "text-zinc-500 hover:text-zinc-300"
+                }`}
+              >
+                Raw JSON
+              </button>
+            </div>
           </div>
         ) : null}
 
-        {reportHistory.length > 1 ? <ScoreEvolution history={reportHistory} /> : null}
+        {report && showRawResponse && performanceResponse ? (
+          <div className="rounded-lg border border-zinc-800 bg-black/30 p-4 sm:p-5">
+            <div className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-600">
+              POST /api/evidence-api-demo/performance
+            </div>
+            <pre className="mt-3 max-h-[32rem] overflow-auto whitespace-pre-wrap rounded-md border border-zinc-800/80 bg-zinc-950/60 p-4 font-mono text-[10px] leading-relaxed text-zinc-400">
+              {JSON.stringify(performanceResponse, null, 2)}
+            </pre>
+          </div>
+        ) : null}
 
-        {report ? (
+        {report && !showRawResponse ? (
           <PerformanceReportCard
+            key={latestSnapshot?.id ?? "report"}
             report={report}
+            reportHistory={reportHistory}
+            layout="spacious"
             label={
-              reportHistory.length > 0
-                ? `Latest score · day ${reportHistory[reportHistory.length - 1].simulatedDays} · ${reportHistory[reportHistory.length - 1].actionCount} actions`
+              latestSnapshot
+                ? `Latest score · day ${latestSnapshot.simulatedDays} · ${latestSnapshot.actionCount} actions`
                 : "Performance report"
             }
           />
-        ) : null}
-
-        {planId ? (
-          <div className="flex flex-wrap items-center gap-3">
-            <button
-              type="button"
-              onClick={onArchiveWorkspace}
-              disabled={isArchiving}
-              className="rounded-md border border-amber-500/30 px-3 py-1.5 text-xs text-amber-200 transition hover:border-amber-400/50 hover:bg-amber-950/20 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {isArchiving ? "Archiving…" : "Archive demo workspace"}
-            </button>
-            <button
-              type="button"
-              onClick={onReset}
-              className="text-xs text-zinc-500 transition hover:text-zinc-300"
-            >
-              Reset demo session
-            </button>
+        ) : report ? null : (
+          <div className="flex min-h-[20rem] flex-col items-center justify-center rounded-lg border border-dashed border-zinc-800 px-6 py-16 text-center">
+            <Gauge className="size-10 text-zinc-600" />
+            <h3 className="mt-4 text-lg font-medium text-zinc-300">No score yet</h3>
+            <p className="mt-2 max-w-md text-sm leading-relaxed text-zinc-500">
+              Run scenario events, then request a performance report to see the competency spider chart,
+              marker breakdown, and gap analysis.
+            </p>
           </div>
-        ) : null}
-
-        <p className="font-mono text-[10px] text-zinc-600">session: {sessionId.slice(0, 8)}…</p>
+        )}
       </div>
     </section>
-  );
-}
-
-function Stat({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-md border border-zinc-800 bg-black/30 px-3 py-2.5">
-      <div className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-600">{label}</div>
-      <div className="mt-1 text-sm font-medium text-white">{value}</div>
-    </div>
   );
 }
 
@@ -1587,7 +2174,7 @@ function SkillEvolution({ history }: { history: SkillSnapshot[] }) {
             key={snapshot.id}
             className={`rounded-md border px-3 py-2 text-xs ${
               index === history.length - 1
-                ? "border-violet-500/30 bg-violet-950/20 text-zinc-200"
+                ? "border-zinc-600 bg-zinc-900 text-zinc-200"
                 : "border-zinc-800/80 text-zinc-400"
             }`}
           >
@@ -1622,7 +2209,7 @@ function SpecEvolution({ history }: { history: SchemaSnapshot[] }) {
             key={snapshot.id}
             className={`rounded-md border px-3 py-2 text-xs ${
               index === history.length - 1
-                ? "border-cyan-500/25 bg-cyan-950/15 text-zinc-200"
+                ? "border-zinc-600 bg-zinc-900 text-zinc-200"
                 : "border-zinc-800/80 text-zinc-400"
             }`}
           >
@@ -1651,7 +2238,7 @@ function ScoreEvolution({ history }: { history: ReportSnapshot[] }) {
             key={snapshot.id}
             className={`rounded-md border px-3 py-2 text-xs ${
               index === history.length - 1
-                ? "border-cyan-500/30 bg-cyan-950/20 text-zinc-200"
+                ? "border-zinc-600 bg-zinc-900 text-zinc-200"
                 : "border-zinc-800/80 text-zinc-400"
             }`}
           >
@@ -1662,8 +2249,13 @@ function ScoreEvolution({ history }: { history: ReportSnapshot[] }) {
               </span>
               <div className="flex flex-wrap items-center gap-2">
                 {typeof snapshot.report.overall_score === "number" ? (
-                  <span className="rounded-full border border-cyan-500/30 px-2 py-0.5 font-mono text-[10px] text-cyan-200">
-                    {Math.round(snapshot.report.overall_score)}/100
+                  <span className="rounded-full border border-zinc-600 px-2 py-0.5 font-mono text-[10px] text-white">
+                    L {Math.round(snapshot.report.overall_score)}/100
+                  </span>
+                ) : null}
+                {typeof snapshot.report.conversion_score === "number" ? (
+                  <span className="rounded-full border border-zinc-700 px-2 py-0.5 font-mono text-[10px] text-white">
+                    C {Math.round(snapshot.report.conversion_score)}%
                   </span>
                 ) : null}
                 <span className="rounded-full border border-zinc-700 px-2 py-0.5 font-mono text-[10px] uppercase text-zinc-400">
@@ -1679,40 +2271,336 @@ function ScoreEvolution({ history }: { history: ReportSnapshot[] }) {
   );
 }
 
-function PerformanceReportCard({ report, label = "Performance report" }: { report: PerformanceReport; label?: string }) {
-  const overallScore =
-    typeof report.overall_score === "number" ? Math.max(0, Math.min(100, Math.round(report.overall_score))) : null;
+function clampScore(value: unknown): number | null {
+  if (typeof value !== "number" || Number.isNaN(value)) return null;
+  return Math.max(0, Math.min(100, Math.round(value)));
+}
+
+function getAvailableScoreCardTabs(
+  report: PerformanceReport,
+  reportHistory: ReportSnapshot[] = [],
+): ScoreCardTab[] {
+  const tabs: ScoreCardTab[] = ["overview"];
   const markerScores = report.marker_scores ?? [];
+  if (markerScores.length > 0) {
+    tabs.push("competency", "markers");
+  }
+  if (report.strengths.length > 0) tabs.push("strengths");
+  if (report.gap_analysis.gaps.length > 0 || report.gap_analysis.next_practice.length > 0) {
+    tabs.push("gaps");
+  }
+  if (reportHistory.length > 0) tabs.push("history");
+  return tabs;
+}
+
+function scoreCardTabBadge(
+  tab: ScoreCardTab,
+  report: PerformanceReport,
+  reportHistory: ReportSnapshot[],
+): string | undefined {
+  const markerScores = report.marker_scores ?? [];
+  switch (tab) {
+    case "markers":
+      return markerScores.length > 0 ? String(markerScores.length) : undefined;
+    case "strengths":
+      return report.strengths.length > 0 ? String(report.strengths.length) : undefined;
+    case "gaps": {
+      const count = report.gap_analysis.gaps.length + report.gap_analysis.next_practice.length;
+      return count > 0 ? String(count) : undefined;
+    }
+    case "history":
+      return reportHistory.length > 0 ? String(reportHistory.length) : undefined;
+    default:
+      return undefined;
+  }
+}
+
+function ScoreCardTabBar({
+  tabs,
+  activeTab,
+  onChange,
+  report,
+  reportHistory,
+}: {
+  tabs: ScoreCardTab[];
+  activeTab: ScoreCardTab;
+  onChange: (tab: ScoreCardTab) => void;
+  report: PerformanceReport;
+  reportHistory: ReportSnapshot[];
+}) {
+  const tabLabels: Record<ScoreCardTab, string> = {
+    overview: "Overview",
+    competency: "Competency",
+    markers: "Markers",
+    strengths: "Strengths",
+    gaps: "Gaps",
+    history: "History",
+  };
 
   return (
-    <div className="space-y-4 rounded-md border border-cyan-500/20 bg-cyan-950/10 p-4">
+    <div className="border-b border-zinc-800">
+      <div
+        className="-mb-px flex gap-1 overflow-x-auto pb-px [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        role="tablist"
+        aria-label="Score card sections"
+      >
+        {tabs.map((tab) => {
+          const isActive = activeTab === tab;
+          const badge = scoreCardTabBadge(tab, report, reportHistory);
+          return (
+            <button
+              key={tab}
+              type="button"
+              role="tab"
+              aria-selected={isActive}
+              onClick={() => onChange(tab)}
+              className={`flex shrink-0 items-center gap-2 border-b-2 px-3 py-2.5 text-left transition ${
+                isActive
+                  ? "border-white text-white"
+                  : "border-transparent text-zinc-500 hover:border-zinc-600 hover:text-zinc-300"
+              }`}
+            >
+              <span className="whitespace-nowrap text-xs font-medium">{tabLabels[tab]}</span>
+              {badge ? (
+                <span className="rounded bg-zinc-800 px-1.5 py-0.5 font-mono text-[9px] text-zinc-300">
+                  {badge}
+                </span>
+              ) : null}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function PerformanceReportCard({
+  report,
+  label = "Performance report",
+  layout = "compact",
+  reportHistory = [],
+}: {
+  report: PerformanceReport;
+  label?: string;
+  layout?: "compact" | "spacious";
+  reportHistory?: ReportSnapshot[];
+}) {
+  const overallScore = clampScore(report.overall_score);
+  const conversionScore = clampScore(report.conversion_score);
+  const conversionGoal = report.conversion_goal?.trim() || null;
+  const markerScores = report.marker_scores ?? [];
+  const isSpacious = layout === "spacious";
+  const availableTabs = useMemo(
+    () => getAvailableScoreCardTabs(report, reportHistory),
+    [report, reportHistory],
+  );
+  const [activeTab, setActiveTab] = useState<ScoreCardTab>("overview");
+
+  useEffect(() => {
+    setActiveTab("overview");
+  }, [report, label]);
+
+  useEffect(() => {
+    if (!availableTabs.includes(activeTab)) {
+      setActiveTab(availableTabs[0] ?? "overview");
+    }
+  }, [activeTab, availableTabs]);
+
+  if (isSpacious) {
+    return (
+      <div className="space-y-5 rounded-lg border border-zinc-800 bg-black/30 p-6 sm:p-8">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h3 className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-600">{label}</h3>
+          <div className="flex flex-wrap items-center gap-2">
+            {overallScore != null ? (
+              <span className="rounded-full border border-zinc-600 bg-zinc-950 px-4 py-1 font-mono text-lg text-white">
+                L {overallScore}
+                <span className="ml-1 text-[10px] text-zinc-500">/100</span>
+              </span>
+            ) : null}
+            {conversionScore != null ? (
+              <span className="rounded-full border border-zinc-700 bg-zinc-950 px-4 py-1 font-mono text-lg text-white">
+                C {conversionScore}%
+              </span>
+            ) : null}
+            <span className="rounded-full border border-zinc-700 bg-zinc-950 px-2.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-zinc-300">
+              {confidenceLabel(report.confidence)}
+            </span>
+          </div>
+        </div>
+
+        <ScoreCardTabBar
+          tabs={availableTabs}
+          activeTab={activeTab}
+          onChange={setActiveTab}
+          report={report}
+          reportHistory={reportHistory}
+        />
+
+        <div role="tabpanel" className="min-h-[18rem]">
+          {activeTab === "overview" ? (
+            <div className="mx-auto flex max-w-lg flex-col items-center justify-center rounded-xl border border-zinc-800 bg-black/25 px-6 py-8 text-center">
+              <div className="grid w-full max-w-sm grid-cols-2 gap-4">
+                {overallScore != null ? (
+                  <div>
+                    <div className="font-mono text-[10px] uppercase tracking-[2px] text-zinc-500">Learning</div>
+                    <div className="mt-3 font-mono text-5xl font-medium tracking-tight text-white sm:text-6xl">
+                      {overallScore}
+                    </div>
+                    <div className="mt-1 font-mono text-sm text-zinc-500">/ 100</div>
+                  </div>
+                ) : null}
+                {conversionScore != null ? (
+                  <div>
+                    <div className="font-mono text-[10px] uppercase tracking-[2px] text-zinc-500">Conversion</div>
+                    <div className="mt-3 font-mono text-5xl font-medium tracking-tight text-white sm:text-6xl">
+                      {conversionScore}
+                    </div>
+                    <div className="mt-1 font-mono text-sm text-zinc-500">%</div>
+                  </div>
+                ) : null}
+              </div>
+              {conversionGoal ? (
+                <p className="mt-4 max-w-sm text-xs leading-relaxed text-zinc-500">{conversionGoal}</p>
+              ) : null}
+              <span className="mt-5 rounded-full border border-zinc-700 bg-zinc-950 px-3 py-1 text-xs font-medium uppercase tracking-wide text-zinc-300">
+                {confidenceLabel(report.confidence)}
+              </span>
+              <p className="mt-6 max-w-sm text-left text-sm leading-relaxed text-zinc-300">{report.summary}</p>
+            </div>
+          ) : null}
+
+          {activeTab === "competency" && markerScores.length > 0 ? (
+            <div className="mx-auto min-w-0 max-w-xl rounded-xl border border-zinc-800 bg-black/20 px-4 py-6 sm:px-6">
+              <div className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-600">Competency profile</div>
+              <div className="mt-3 flex justify-center overflow-hidden">
+                <MarkerRadarChart
+                  markers={markerScores}
+                  ariaLabel="Performance competency scores"
+                  className="aspect-square h-auto w-full max-w-[17rem]"
+                />
+              </div>
+            </div>
+          ) : null}
+
+          {activeTab === "markers" && markerScores.length > 0 ? (
+            <div className="rounded-lg border border-zinc-800/80 bg-black/20 p-5">
+              <div className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-600">Marker breakdown</div>
+              <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                {markerScores.map((marker) => (
+                  <div
+                    key={marker.id}
+                    className="rounded-md border border-zinc-800/80 bg-zinc-950/60 px-4 py-3 text-sm"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-medium text-zinc-300">{marker.label}</span>
+                      <span className="font-mono text-base text-white">{marker.score}</span>
+                    </div>
+                    <p className="mt-1.5 leading-relaxed text-zinc-500">{marker.rationale}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : null}
+
+          {activeTab === "strengths" && report.strengths.length > 0 ? (
+            <div className="rounded-lg border border-zinc-800/80 bg-black/20 p-5">
+              <div className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-600">Strengths</div>
+              <ul className="mt-3 space-y-2 text-sm text-zinc-400">
+                {report.strengths.map((item) => (
+                  <li key={item} className="flex gap-2">
+                    <span className="text-zinc-500">+</span>
+                    <span>{item}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+
+          {activeTab === "gaps" ? (
+            <div className="space-y-6">
+              {report.gap_analysis.gaps.length > 0 ? (
+                <div className="rounded-lg border border-zinc-800/80 bg-black/20 p-5">
+                  <div className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-600">Gap analysis</div>
+                  <p className="mt-3 text-sm text-zinc-500">{report.gap_analysis.summary}</p>
+                  <ul className="mt-4 space-y-3">
+                    {report.gap_analysis.gaps.map((gap) => (
+                      <li
+                        key={gap.title}
+                        className={`rounded-md border px-4 py-3 text-sm ${severityColor(gap.severity)}`}
+                      >
+                        <div className="font-medium">{gap.title}</div>
+                        <p className="mt-1.5 opacity-80">{gap.evidence}</p>
+                        <p className="mt-1.5 opacity-70">Repair: {gap.suggested_repair}</p>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
+              {report.gap_analysis.next_practice.length > 0 ? (
+                <div className="rounded-lg border border-zinc-800/80 bg-black/20 p-5">
+                  <div className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-600">Next practice</div>
+                  <ul className="mt-3 space-y-2 text-sm text-zinc-400">
+                    {report.gap_analysis.next_practice.map((item) => (
+                      <li key={item}>→ {item}</li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+
+          {activeTab === "history" && reportHistory.length > 0 ? (
+            <ScoreEvolution history={reportHistory} />
+          ) : null}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4 rounded-lg border border-zinc-800 bg-black/30 p-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h3 className="text-sm font-medium text-white">{label}</h3>
         <div className="flex flex-wrap items-center gap-2">
           {overallScore != null ? (
-            <span className="rounded-full border border-cyan-400/30 bg-cyan-950/50 px-3 py-0.5 font-mono text-sm text-cyan-100">
-              {overallScore}
-              <span className="ml-1 text-[10px] text-cyan-300/80">/100</span>
+            <span className="rounded-full border border-zinc-600 bg-zinc-950 px-3 py-0.5 font-mono text-sm text-white">
+              L {overallScore}
+              <span className="ml-1 text-[10px] text-zinc-500">/100</span>
             </span>
           ) : null}
-          <span className="rounded-full border border-cyan-400/25 bg-cyan-950/40 px-2.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-cyan-200">
+          {conversionScore != null ? (
+            <span className="rounded-full border border-zinc-700 bg-zinc-950 px-3 py-0.5 font-mono text-sm text-white">
+              C {conversionScore}%
+            </span>
+          ) : null}
+          <span className="rounded-full border border-zinc-700 bg-zinc-950 px-2.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-zinc-300">
             {confidenceLabel(report.confidence)}
           </span>
         </div>
       </div>
 
       {markerScores.length > 0 ? (
-        <div className="rounded-md border border-cyan-500/15 bg-black/20 px-3 py-4">
+        <div className="rounded-md border border-zinc-800 bg-black/20 px-3 py-4">
           <div className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-600">Competency profile</div>
-          <MarkerRadarChart markers={markerScores} ariaLabel="Performance competency scores" />
-          <div className="mt-4 grid gap-2 sm:grid-cols-2">
+          <div className="mt-3 flex justify-center overflow-hidden">
+            <MarkerRadarChart
+              markers={markerScores}
+              ariaLabel="Performance competency scores"
+              className="aspect-square h-auto w-full max-w-[15rem]"
+            />
+          </div>
+          <div className="mt-4 grid gap-3 sm:grid-cols-2">
             {markerScores.map((marker) => (
-              <div key={marker.id} className="rounded-md border border-zinc-800/80 bg-zinc-950/60 px-3 py-2 text-xs">
+              <div
+                key={marker.id}
+                className="rounded-md border border-zinc-800/80 bg-zinc-950/60 px-3 py-2 text-xs"
+              >
                 <div className="flex items-center justify-between gap-2">
                   <span className="font-medium text-zinc-300">{marker.label}</span>
-                  <span className="font-mono text-sm text-cyan-200">{marker.score}</span>
+                  <span className="font-mono text-sm text-white">{marker.score}</span>
                 </div>
-                <p className="mt-1 text-zinc-500">{marker.rationale}</p>
+                <p className="mt-1.5 leading-relaxed text-zinc-500">{marker.rationale}</p>
               </div>
             ))}
           </div>
@@ -1721,53 +2609,51 @@ function PerformanceReportCard({ report, label = "Performance report" }: { repor
 
       <p className="text-sm leading-relaxed text-zinc-300">{report.summary}</p>
 
-      {report.strengths.length > 0 ? (
-        <div>
-          <div className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-600">Strengths</div>
-          <ul className="mt-2 space-y-1 text-xs text-zinc-400">
-            {report.strengths.map((item) => (
-              <li key={item} className="flex gap-2">
-                <span className="text-emerald-400">+</span>
-                <span>{item}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      ) : null}
-
-      {report.gap_analysis.gaps.length > 0 ? (
-        <div>
-          <div className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-600">
-            Gap analysis
+      <div className="space-y-4">
+        {report.strengths.length > 0 ? (
+          <div>
+            <div className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-600">Strengths</div>
+            <ul className="mt-2 space-y-1 text-xs text-zinc-400">
+              {report.strengths.map((item) => (
+                <li key={item} className="flex gap-2">
+                  <span className="text-zinc-500">+</span>
+                  <span>{item}</span>
+                </li>
+              ))}
+            </ul>
           </div>
-          <p className="mt-2 text-xs text-zinc-500">{report.gap_analysis.summary}</p>
-          <ul className="mt-3 space-y-2">
-            {report.gap_analysis.gaps.map((gap) => (
-              <li
-                key={gap.title}
-                className={`rounded-md border px-3 py-2 text-xs ${severityColor(gap.severity)}`}
-              >
-                <div className="font-medium">{gap.title}</div>
-                <p className="mt-1 opacity-80">{gap.evidence}</p>
-                <p className="mt-1 opacity-70">Repair: {gap.suggested_repair}</p>
-              </li>
-            ))}
-          </ul>
-        </div>
-      ) : null}
+        ) : null}
 
-      {report.gap_analysis.next_practice.length > 0 ? (
-        <div>
-          <div className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-600">
-            Next practice
+        {report.gap_analysis.gaps.length > 0 ? (
+          <div>
+            <div className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-600">Gap analysis</div>
+            <p className="mt-2 text-xs text-zinc-500">{report.gap_analysis.summary}</p>
+            <ul className="mt-3 space-y-2">
+              {report.gap_analysis.gaps.map((gap) => (
+                <li
+                  key={gap.title}
+                  className={`rounded-md border px-3 py-2 text-xs ${severityColor(gap.severity)}`}
+                >
+                  <div className="font-medium">{gap.title}</div>
+                  <p className="mt-1.5 opacity-80">{gap.evidence}</p>
+                  <p className="mt-1.5 opacity-70">Repair: {gap.suggested_repair}</p>
+                </li>
+              ))}
+            </ul>
           </div>
-          <ul className="mt-2 space-y-1 text-xs text-zinc-400">
-            {report.gap_analysis.next_practice.map((item) => (
-              <li key={item}>→ {item}</li>
-            ))}
-          </ul>
-        </div>
-      ) : null}
+        ) : null}
+
+        {report.gap_analysis.next_practice.length > 0 ? (
+          <div>
+            <div className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-600">Next practice</div>
+            <ul className="mt-2 space-y-1 text-xs text-zinc-400">
+              {report.gap_analysis.next_practice.map((item) => (
+                <li key={item}>→ {item}</li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
+      </div>
     </div>
   );
 }

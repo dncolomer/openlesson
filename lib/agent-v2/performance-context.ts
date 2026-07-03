@@ -43,7 +43,7 @@ export interface PerformanceContextPayload {
     is_start: boolean | null;
     session_id: string | null;
   }>;
-  ghl_sessions: Array<Record<string, unknown>>;
+  tap_sessions: Array<Record<string, unknown>>;
   evidence: Array<{
     id: string;
     type: string;
@@ -70,7 +70,7 @@ export interface PerformanceContextPayload {
   linked_sessions: Array<Record<string, unknown>>;
   counts: {
     blocks: number;
-    ghl_sessions: number;
+    tap_sessions: number;
     evidence_artifacts: number;
     linked_sessions: number;
     plan_files: number;
@@ -185,7 +185,7 @@ export async function buildWorkspacePerformanceContext({
       is_start: block.is_start,
       session_id: block.session_id,
     })),
-    ghl_sessions: (ghlSessions || []).map((session) => ({
+    tap_sessions: (ghlSessions || []).map((session) => ({
       id: session.id,
       block_id: session.plan_node_id,
       status: session.status,
@@ -228,7 +228,7 @@ export async function buildWorkspacePerformanceContext({
     })),
     counts: {
       blocks: blocks?.length || 0,
-      ghl_sessions: ghlSessions?.length || 0,
+      tap_sessions: ghlSessions?.length || 0,
       evidence_artifacts: evidence?.length || 0,
       linked_sessions: sessions?.length || 0,
       plan_files: planFiles?.length || 0,
@@ -266,7 +266,7 @@ export function buildPerformanceChatInstructions(blockId?: string | null): strin
 
   return `${scope}
 
-You are an OpenLesson performance analyst. Use the attached workspace JSON summary plus any artifact files (tool usage logs, screenshots, video, EEG, GHL score results, session reports, and uploaded files).
+You are an OpenLesson performance analyst. Use the attached workspace JSON summary plus any artifact files (tool usage logs, screenshots, video, EEG, Think Aloud Protocol (TAP) results, ILE practice traces, session reports, and uploaded files).
 
 When answering:
 1. Ground claims in specific evidence from the attachments.

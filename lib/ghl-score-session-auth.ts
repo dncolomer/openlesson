@@ -32,8 +32,8 @@ export async function resolveGhlSessionAccess(input: {
       .eq("private_token_hash", hashPrivateToken(privateToken))
       .single();
 
-    if (error || !session) return { error: "GHL Score block not found", status: 404 };
-    if (session.status === "completed") return { error: "GHL Score block is already completed", status: 409 };
+    if (error || !session) return { error: "TAP block not found", status: 404 };
+    if (session.status === "completed") return { error: "TAP block is already completed", status: 409 };
     if (ghlSessionId && session.id !== ghlSessionId) {
       return { error: "ghlSessionId does not match private link session", status: 403 };
     }
@@ -79,11 +79,11 @@ export async function resolveGhlSessionAccess(input: {
       .eq("plan_id", planId)
       .single();
 
-    if (error || !session) return { error: "GHL session not found", status: 404 };
+    if (error || !session) return { error: "TAP session not found", status: 404 };
     if (session.user_id && session.user_id !== user.id) {
       return { error: "Not authorized", status: 403 };
     }
-    if (session.status === "completed") return { error: "GHL session is already completed", status: 409 };
+    if (session.status === "completed") return { error: "TAP session is already completed", status: 409 };
     existingSession = session;
   }
 

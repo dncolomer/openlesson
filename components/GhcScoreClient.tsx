@@ -972,11 +972,26 @@ export function GhcScoreClient({ planId, planNodeId, sessionId, privateToken, in
           <section className="flex-1 py-8">
             <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
               <div>
-                <p className="font-mono text-xs uppercase tracking-[2px] text-neutral-500">GHL Score Result</p>
-                <h1 className="mt-2 text-4xl font-medium tracking-[-1.5px] sm:text-5xl">
-                  {score.overall_score ?? "--"}
-                  <span className="text-2xl text-neutral-500">/100</span>
-                </h1>
+                <p className="font-mono text-xs uppercase tracking-[2px] text-neutral-500">TAP Score Result</p>
+                <div className="mt-2 flex flex-wrap items-end gap-6">
+                  <div>
+                    <div className="font-mono text-[10px] uppercase tracking-[1.5px] text-neutral-600">Learning</div>
+                    <h1 className="text-4xl font-medium tracking-[-1.5px] sm:text-5xl">
+                      {score.overall_score ?? "--"}
+                      <span className="text-2xl text-neutral-500">/100</span>
+                    </h1>
+                  </div>
+                  <div>
+                    <div className="font-mono text-[10px] uppercase tracking-[1.5px] text-neutral-600">Conversion</div>
+                    <h1 className="text-4xl font-medium tracking-[-1.5px] sm:text-5xl">
+                      {score.conversion_score ?? "--"}
+                      <span className="text-2xl text-neutral-500">%</span>
+                    </h1>
+                  </div>
+                </div>
+                {score.conversion_goal ? (
+                  <p className="mt-3 max-w-xl text-sm leading-relaxed text-neutral-500">{score.conversion_goal}</p>
+                ) : null}
               </div>
               <div className="flex flex-wrap gap-2">
                 {workspaceId && (

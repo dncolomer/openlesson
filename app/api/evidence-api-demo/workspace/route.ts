@@ -1,13 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createVerificationWorkspaceFromPrompt } from "@/lib/agent-v2/create-verification-workspace";
 import { requireTeamsUserSession } from "@/lib/agent-v2/workspace-session-access";
-import {
-  DEMO_EVAL_DEFINITION,
-  DEMO_INTEGRATION_NAME,
-  DEMO_WORKSPACE_MODEL_DOC,
-  DEMO_WORKSPACE_PROMPT,
-  getDemoWorkspaceModelFile,
-} from "@/lib/evidence-api-demo/flowstack";
+import { CUSTOM_DEMO_ID } from "@/lib/evidence-api-demo/custom-demo";
+import { getDemoWorkspaceModelFile } from "@/lib/evidence-api-demo/demo-definition";
+import { generateCustomDemoFromPrompt } from "@/lib/evidence-api-demo/generate-custom-simulation";
+import { getDemoFromBody, parseDemoIdFromBody } from "@/lib/evidence-api-demo/resolve-demo";
 import {
   buildEvidenceSchemaApiPath,
   buildEvidenceUploadApiPath,
@@ -23,13 +20,31 @@ export async function POST(req: NextRequest) {
     const access = await requireTeamsUserSession();
     if (access instanceof NextResponse) return access;
 
+    let body: Record<string, unknown> = {};
+    try {
+      body = await req.json();
+    } catch {
+      body = {};
+    }
+
+    const demoId = parseDemoIdFromBody(body);
+    const demo =
+      demoId === CUSTOM_DEMO_ID
+        ? await generateCustomDemoFromPrompt(
+            typeof body.customPrompt === "string" ? body.customPrompt : ""
+          )
+        : getDemoFromBody(body);
     const origin = req.nextUrl.origin;
-    const modelFile = getDemoWorkspaceModelFile();
+    const modelFile = getDemoWorkspaceModelFile(demo);
     const { workspace, blocks, files } = await createVerificationWorkspaceFromPrompt(
       access.supabase,
       access.auth,
-      DEMO_WORKSPACE_PROMPT,
-      { files: [modelFile] }
+      demo.workspacePrompt,
+      {
+        files: [modelFile],
+        description: demo.workspaceDescription,
+        isAgentSession: false,
+      }
     );
 
     const workspaceId = workspace.id as string;
@@ -39,12 +54,14 @@ export async function POST(req: NextRequest) {
       blocks,
       files,
       demo: {
-        product: "FlowStack",
-        integration_name: DEMO_INTEGRATION_NAME,
-        eval_definition: DEMO_EVAL_DEFINITION,
+        id: demo.id,
+        product: demo.productName,
+        integration_name: demo.integrationName,
+        eval_definition: demo.evalDefinition,
         model_doc_filename: modelFile.name,
-        model_doc_preview: DEMO_WORKSPACE_MODEL_DOC.slice(0, 400),
+        model_doc_preview: demo.modelDoc.slice(0, 400),
       },
+      custom_definition: demo.id === CUSTOM_DEMO_ID ? demo : undefined,
       api_paths: {
         evidence_schema: buildEvidenceSchemaApiPath(workspaceId, origin),
         evidence_upload: buildEvidenceUploadApiPath(workspaceId, origin),

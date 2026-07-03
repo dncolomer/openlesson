@@ -11,6 +11,8 @@ import {
   FileCode2,
   Gauge,
   LayoutGrid,
+  Check,
+  ChevronDown,
   Loader2,
   Play,
   Plug,
@@ -51,11 +53,12 @@ import type {
   SimulationCategory,
   SimulationWorldState,
 } from "@/lib/evidence-api-demo/types";
-import type {
-  McpImportLogEntry,
-  McpSimulationEvent,
-  McpToolDescriptor,
-} from "@/lib/evidence-api-demo/mcp-simulation-types";
+import type { McpSimulationEvent, McpToolDescriptor } from "@/lib/evidence-api-demo/mcp-simulation-types";
+import {
+  pickDefaultMcpTool,
+  suggestMcpToolArgs,
+  usesWorkspaceArgs,
+} from "@/lib/evidence-api-demo/mcp-simulation-utils";
 import { aestheticImageForId, fetchAestheticPackages } from "@/lib/aesthetics";
 import { readJsonResponse } from "@/lib/read-json-response";
 
@@ -277,10 +280,10 @@ export function EvidenceApiDemo() {
   const [mcpTools, setMcpTools] = useState<McpToolDescriptor[]>([]);
   const [mcpSelectedTool, setMcpSelectedTool] = useState("");
   const [mcpToolArgs, setMcpToolArgs] = useState("{}");
-  const [mcpImportLog, setMcpImportLog] = useState<McpImportLogEntry[]>([]);
   const [mcpEventLog, setMcpEventLog] = useState<McpSimulationEvent[]>([]);
   const [isMcpConnecting, setIsMcpConnecting] = useState(false);
   const [isMcpPulling, setIsMcpPulling] = useState(false);
+  const [isSimulatingAllMcpEvents, setIsSimulatingAllMcpEvents] = useState(false);
   const [runningMcpEventId, setRunningMcpEventId] = useState<string | null>(null);
   const activeDemo = useMemo(() => {
     if (isCustomDemoId(demoId)) return customDemo ?? CUSTOM_DEMO_PICKER;
@@ -447,9 +450,9 @@ export function EvidenceApiDemo() {
     setMcpTools([]);
     setMcpSelectedTool("");
     setMcpToolArgs("{}");
-    setMcpImportLog([]);
     setMcpEventLog([]);
     setRunningMcpEventId(null);
+    setIsSimulatingAllMcpEvents(false);
   };
 
   const handleBackToPicker = () => {
@@ -833,19 +836,18 @@ export function EvidenceApiDemo() {
       );
       const data = await readJsonResponse<{
         tools?: McpToolDescriptor[];
-        import_log?: McpImportLogEntry[];
         error?: string;
       }>(res);
 
       if (!res.ok) {
-        if (data.import_log?.length) setMcpImportLog(data.import_log);
         throw new Error(data.error || "Failed to connect to MCP server");
       }
 
       const tools = data.tools ?? [];
+      const defaultTool = pickDefaultMcpTool(tools, planId);
       setMcpTools(tools);
-      setMcpSelectedTool(tools[0]?.name ?? "");
-      setMcpImportLog(data.import_log ?? []);
+      setMcpSelectedTool(defaultTool);
+      setMcpToolArgs(JSON.stringify(suggestMcpToolArgs(defaultTool, planId), null, 2));
       setMcpEventLog([]);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to connect to MCP server");
@@ -864,12 +866,14 @@ export function EvidenceApiDemo() {
       return;
     }
 
-    let parsedArgs: Record<string, unknown> = {};
-    try {
-      parsedArgs = JSON.parse(mcpToolArgs.trim() || "{}") as Record<string, unknown>;
-    } catch {
-      setError("Tool arguments must be valid JSON.");
-      return;
+    let parsedArgs: Record<string, unknown> = suggestMcpToolArgs(mcpSelectedTool, planId);
+    if (!usesWorkspaceArgs(mcpSelectedTool) || !planId) {
+      try {
+        parsedArgs = JSON.parse(mcpToolArgs.trim() || "{}") as Record<string, unknown>;
+      } catch {
+        setError("Tool arguments must be valid JSON.");
+        return;
+      }
     }
 
     setIsMcpPulling(true);
@@ -896,19 +900,14 @@ export function EvidenceApiDemo() {
       );
       const data = await readJsonResponse<{
         events?: McpSimulationEvent[];
-        import_log?: McpImportLogEntry[];
         error?: string;
       }>(res);
 
       if (!res.ok) {
-        if (data.import_log?.length) {
-          setMcpImportLog((prev) => [...prev, ...data.import_log!]);
-        }
-        throw new Error(data.error || "Failed to pull MCP data");
+        throw new Error(data.error || "Failed to load MCP events");
       }
 
       setMcpEventLog(data.events ?? []);
-      setMcpImportLog((prev) => [...prev, ...(data.import_log ?? [])]);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to pull MCP data");
     } finally {
@@ -916,16 +915,23 @@ export function EvidenceApiDemo() {
     }
   };
 
-  const handleSimulateMcpEvent = async (event: McpSimulationEvent) => {
-    if (!planId || runningMcpEventId || event.status === "simulated") return;
-
-    setRunningMcpEventId(event.id);
-    setError("");
+  const uploadMcpSimulationEvent = async (
+    event: McpSimulationEvent,
+    currentWorld: SimulationWorldState,
+    currentEvidenceCount: number
+  ): Promise<{
+    nextWorld: SimulationWorldState;
+    evidenceId: string;
+    nextEvidenceCount: number;
+  }> => {
+    if (!planId) {
+      throw new Error("Workspace not ready.");
+    }
 
     const matchedAction = getSimulationAction(activeDemo, event.verb);
     const nextWorld = matchedAction
-      ? applySimulationAction(worldState, matchedAction)
-      : applyMcpSimulationEvent(worldState, event.verb);
+      ? applySimulationAction(currentWorld, matchedAction)
+      : applyMcpSimulationEvent(currentWorld, event.verb);
     const blockId = matchedAction
       ? matchBlockToStep(blocks, matchedAction)
       : blocks[0]?.id ?? null;
@@ -936,42 +942,62 @@ export function EvidenceApiDemo() {
       worldState: nextWorld,
     });
 
+    const res = await fetchWithTimeout("/api/evidence-api-demo/evidence", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        planId,
+        type: "tool",
+        mime_type: "application/json",
+        payload,
+        block_id: blockId,
+        session_id: sessionId,
+        tool_name: event.mcpTool,
+        tool_action: event.verb,
+        file_name: `mcp-${event.verb}-${(currentWorld.actionCounts[event.verb] ?? 0) + 1}.json`,
+        metadata: {
+          source: "mcp_simulation",
+          product: activeDemo.productName,
+          integration: activeDemo.integrationName,
+          mcp_tool: event.mcpTool,
+          simulated_days: nextWorld.simulatedDays,
+        },
+      }),
+    });
+
+    const data = await readJsonResponse<EvidenceResponse & { error?: string }>(res);
+    if (!res.ok) {
+      throw new Error(data.error || "Evidence upload failed");
+    }
+
+    return {
+      nextWorld,
+      evidenceId: data.evidence.id,
+      nextEvidenceCount: currentEvidenceCount + 1,
+    };
+  };
+
+  const handleSimulateMcpEvent = async (event: McpSimulationEvent) => {
+    if (!planId || runningMcpEventId || isSimulatingAllMcpEvents || event.status === "simulated") {
+      return;
+    }
+
+    setRunningMcpEventId(event.id);
+    setError("");
+
     try {
-      const res = await fetchWithTimeout("/api/evidence-api-demo/evidence", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          planId,
-          type: "tool",
-          mime_type: "application/json",
-          payload,
-          block_id: blockId,
-          session_id: sessionId,
-          tool_name: event.mcpTool,
-          tool_action: event.verb,
-          file_name: `mcp-${event.verb}-${(worldState.actionCounts[event.verb] ?? 0) + 1}.json`,
-          metadata: {
-            source: "mcp_simulation",
-            product: activeDemo.productName,
-            integration: activeDemo.integrationName,
-            mcp_tool: event.mcpTool,
-            simulated_days: nextWorld.simulatedDays,
-          },
-        }),
-      });
+      const { nextWorld, evidenceId, nextEvidenceCount } = await uploadMcpSimulationEvent(
+        event,
+        worldState,
+        evidenceCount
+      );
 
-      const data = await readJsonResponse<EvidenceResponse & { error?: string }>(res);
-      if (!res.ok) {
-        throw new Error(data.error || "Evidence upload failed");
-      }
-
-      const nextEvidenceCount = evidenceCount + 1;
       setWorldState(nextWorld);
       setEvidenceCount(nextEvidenceCount);
       setMcpEventLog((prev) =>
         prev.map((entry) =>
           entry.id === event.id
-            ? { ...entry, status: "simulated", evidenceId: data.evidence.id }
+            ? { ...entry, status: "simulated", evidenceId }
             : entry
         )
       );
@@ -996,6 +1022,55 @@ export function EvidenceApiDemo() {
       );
     } finally {
       setRunningMcpEventId(null);
+    }
+  };
+
+  const handleSimulateAllMcpEvents = async () => {
+    const pending = mcpEventLog.filter((event) => event.status === "pending");
+    if (!planId || pending.length === 0 || runningMcpEventId || isSimulatingAllMcpEvents) return;
+
+    setIsSimulatingAllMcpEvents(true);
+    setError("");
+
+    let currentWorld = worldState;
+    let currentEvidenceCount = evidenceCount;
+
+    try {
+      for (const event of pending) {
+        setRunningMcpEventId(event.id);
+        const result = await uploadMcpSimulationEvent(event, currentWorld, currentEvidenceCount);
+        currentWorld = result.nextWorld;
+        currentEvidenceCount = result.nextEvidenceCount;
+        setMcpEventLog((prev) =>
+          prev.map((entry) =>
+            entry.id === event.id
+              ? { ...entry, status: "simulated", evidenceId: result.evidenceId }
+              : entry
+          )
+        );
+        setWorldState(currentWorld);
+        setEvidenceCount(currentEvidenceCount);
+      }
+
+      persistState({
+        planId,
+        sessionId,
+        demoId: activeDemo.id,
+        worldState: currentWorld,
+        workspaceTitle: workspaceTitle ?? undefined,
+        blocks,
+        customDemo: isCustomDemoId(activeDemo.id) ? activeDemo : undefined,
+        customPrompt: isCustomDemoId(activeDemo.id) ? customPrompt.trim() : undefined,
+      });
+
+      if (shouldSuggestSkillRegeneration(currentEvidenceCount, lastSkillEvidenceCount)) {
+        setSkillRegenHint(true);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to simulate MCP events");
+    } finally {
+      setRunningMcpEventId(null);
+      setIsSimulatingAllMcpEvents(false);
     }
   };
 
@@ -1216,15 +1291,16 @@ export function EvidenceApiDemo() {
                 onMcpSelectedToolChange={setMcpSelectedTool}
                 mcpToolArgs={mcpToolArgs}
                 onMcpToolArgsChange={setMcpToolArgs}
-                mcpImportLog={mcpImportLog}
                 mcpEventLog={mcpEventLog}
                 isMcpConnecting={isMcpConnecting}
                 isMcpPulling={isMcpPulling}
+                isSimulatingAllMcpEvents={isSimulatingAllMcpEvents}
                 runningMcpEventId={runningMcpEventId}
                 planId={planId}
                 onMcpConnect={handleMcpConnect}
                 onMcpPull={handleMcpPull}
                 onSimulateMcpEvent={handleSimulateMcpEvent}
+                onSimulateAllMcpEvents={handleSimulateAllMcpEvents}
                 onCustomInputModeChange={setCustomInputMode}
               />
             ) : null}
@@ -1634,140 +1710,105 @@ function countCategoryActivity(
   return { completed, total: actions.length };
 }
 
-function McpSimulationHowItWorks() {
-  return (
-    <div className="rounded-md border border-zinc-800 bg-black/25 p-4">
-      <div className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-600">
-        MCP-based simulation
-      </div>
-      <ol className="mt-3 space-y-2.5 text-sm leading-relaxed text-zinc-400">
-        <li>
-          <span className="text-zinc-200">1. Connect</span> — call a live MCP server (HTTP JSON-RPC), list
-          available tools, and verify you can read data.
-        </li>
-        <li>
-          <span className="text-zinc-200">2. Pull</span> — run a tool (e.g. list workspaces, list blocks) and
-          fetch real records from the external system.
-        </li>
-        <li>
-          <span className="text-zinc-200">3. Translate</span> — each record becomes an event log entry with a
-          verb, label, and MCP source payload.
-        </li>
-        <li>
-          <span className="text-zinc-200">4. Simulate</span> — run entries one-by-one to upload evidence.
-          The Events tab action grid stays unchanged.
-        </li>
-      </ol>
-    </div>
-  );
-}
-
-function McpImportLogPanel({ entries }: { entries: McpImportLogEntry[] }) {
-  if (entries.length === 0) return null;
-
-  return (
-    <div className="rounded-md border border-zinc-800 bg-black/25 p-4">
-      <div className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-600">Import log</div>
-      <div className="mt-3 max-h-48 space-y-2 overflow-y-auto pr-1">
-        {entries.map((entry) => (
-          <div key={entry.id} className="rounded border border-zinc-800/80 bg-black/20 px-3 py-2">
-            <div className="flex items-center gap-2 text-xs">
-              <span
-                className={`font-mono uppercase ${
-                  entry.level === "error"
-                    ? "text-red-400"
-                    : entry.level === "success"
-                      ? "text-emerald-400"
-                      : "text-zinc-500"
-                }`}
-              >
-                {entry.level}
-              </span>
-              <span className="text-zinc-300">{entry.message}</span>
-              <span className="ml-auto font-mono text-[10px] text-zinc-600">
-                {new Date(entry.timestamp).toLocaleTimeString()}
-              </span>
-            </div>
-            {entry.detail ? (
-              <pre className="mt-2 max-h-24 overflow-auto whitespace-pre-wrap font-mono text-[10px] leading-relaxed text-zinc-500">
-                {entry.detail}
-              </pre>
-            ) : null}
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function McpEventLogPanel({
+function McpEventGrid({
   events,
   runningMcpEventId,
+  isSimulatingAll,
   onSimulate,
+  onSimulateAll,
   styles,
 }: {
   events: McpSimulationEvent[];
   runningMcpEventId: string | null;
+  isSimulatingAll: boolean;
   onSimulate: (event: McpSimulationEvent) => void;
+  onSimulateAll: () => void;
   styles: ReturnType<typeof demoPanelStyles>;
 }) {
   if (events.length === 0) return null;
 
+  const pendingCount = events.filter((event) => event.status === "pending").length;
+  const isBusy = runningMcpEventId !== null || isSimulatingAll;
+
   return (
-    <div className="rounded-md border border-zinc-800 bg-black/25 p-4">
-      <div className="flex items-center justify-between gap-3">
-        <div className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-600">
-          Event log ({events.length})
+    <div className="min-h-0 flex-1">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+        <div className="text-xs text-zinc-400">
+          {events.length} imported event{events.length === 1 ? "" : "s"}
+          {pendingCount > 0 ? ` · ${pendingCount} ready to run` : " · all simulated"}
         </div>
-        <span className="text-[10px] text-zinc-500">Simulate entries to upload evidence</span>
+        {pendingCount > 1 ? (
+          <button
+            type="button"
+            onClick={onSimulateAll}
+            disabled={isBusy || pendingCount === 0}
+            className={`inline-flex items-center gap-2 rounded-md px-3 py-2 text-xs font-medium transition disabled:cursor-not-allowed disabled:opacity-50 ${styles.button}`}
+          >
+            {isSimulatingAll ? (
+              <>
+                <Loader2 className="size-3.5 animate-spin" />
+                Running all…
+              </>
+            ) : (
+              <>
+                <Zap className="size-3.5" />
+                Run all ({pendingCount})
+              </>
+            )}
+          </button>
+        ) : null}
       </div>
-      <div className="mt-3 max-h-72 space-y-2 overflow-y-auto pr-1">
+
+      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
         {events.map((event) => {
           const isRunning = runningMcpEventId === event.id;
           const isDone = event.status === "simulated";
           const isFailed = event.status === "failed";
+          const disabled = isBusy || isDone;
+
           return (
-            <div
+            <button
               key={event.id}
-              className="flex items-start gap-3 rounded border border-zinc-800/80 bg-black/20 px-3 py-3"
+              type="button"
+              onClick={() => onSimulate(event)}
+              disabled={disabled}
+              className={`rounded-md border px-3 py-2.5 text-left transition ${
+                isDone
+                  ? "border-zinc-600 bg-zinc-900/80"
+                  : isFailed
+                    ? "border-red-900/60 bg-red-950/20"
+                    : styles.actionDefault
+              } disabled:cursor-not-allowed disabled:opacity-50`}
             >
-              <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="text-sm font-medium text-white">{event.label}</span>
-                  <span className="rounded bg-zinc-800 px-1.5 py-0.5 font-mono text-[9px] text-zinc-400">
-                    {event.verb}
-                  </span>
-                  {isDone ? (
-                    <span className="font-mono text-[9px] uppercase text-emerald-400">simulated</span>
-                  ) : null}
-                  {isFailed ? (
-                    <span className="font-mono text-[9px] uppercase text-red-400">failed</span>
-                  ) : null}
-                </div>
-                <p className="mt-1 text-xs leading-relaxed text-zinc-500">{event.description}</p>
-                <div className="mt-1 font-mono text-[10px] text-zinc-600">
-                  {event.mcpTool} · {new Date(event.timestamp).toLocaleString()}
-                </div>
+              <div className="flex items-start justify-between gap-2">
+                <span className="text-xs font-medium text-white">{event.label}</span>
+                {isDone ? (
+                  <Check className="size-3.5 shrink-0 text-emerald-400" />
+                ) : isRunning ? (
+                  <Loader2 className="size-3.5 shrink-0 animate-spin text-zinc-300" />
+                ) : null}
               </div>
-              <button
-                type="button"
-                onClick={() => onSimulate(event)}
-                disabled={isRunning || isDone || runningMcpEventId !== null}
-                className={`inline-flex shrink-0 items-center gap-1.5 rounded-md px-3 py-2 text-xs font-medium transition disabled:cursor-not-allowed disabled:opacity-50 ${styles.button}`}
-              >
+              <p className={`mt-1 line-clamp-2 text-[10px] leading-relaxed ${styles.actionText}`}>
+                {event.description}
+              </p>
+              <span className={`mt-2 inline-flex items-center gap-1.5 text-[10px] font-medium ${styles.actionCta}`}>
                 {isRunning ? (
                   <>
-                    <Loader2 className="size-3.5 animate-spin" />
-                    Simulating…
+                    <Loader2 className="size-3 animate-spin" />
+                    Running…
                   </>
+                ) : isDone ? (
+                  "Evidence uploaded"
+                ) : isFailed ? (
+                  "Tap to retry"
                 ) : (
                   <>
-                    <Play className="size-3.5" />
-                    Simulate
+                    <Play className="size-3" />
+                    Run event
                   </>
                 )}
-              </button>
-            </div>
+              </span>
+            </button>
           );
         })}
       </div>
@@ -1785,15 +1826,16 @@ function McpSimulationPanel({
   onMcpSelectedToolChange,
   mcpToolArgs,
   onMcpToolArgsChange,
-  mcpImportLog,
   mcpEventLog,
   isMcpConnecting,
   isMcpPulling,
+  isSimulatingAll,
   runningMcpEventId,
   planId,
   onMcpConnect,
   onMcpPull,
   onSimulateMcpEvent,
+  onSimulateAllMcpEvents,
   styles,
 }: {
   mcpServerUrl: string;
@@ -1805,37 +1847,35 @@ function McpSimulationPanel({
   onMcpSelectedToolChange: (value: string) => void;
   mcpToolArgs: string;
   onMcpToolArgsChange: (value: string) => void;
-  mcpImportLog: McpImportLogEntry[];
   mcpEventLog: McpSimulationEvent[];
   isMcpConnecting: boolean;
   isMcpPulling: boolean;
+  isSimulatingAll: boolean;
   runningMcpEventId: string | null;
   planId: string | null;
   onMcpConnect: () => void;
   onMcpPull: () => void;
   onSimulateMcpEvent: (event: McpSimulationEvent) => void;
+  onSimulateAllMcpEvents: () => void;
   styles: ReturnType<typeof demoPanelStyles>;
 }) {
-  const isBusy = isMcpConnecting || isMcpPulling;
-  const workspaceArgsHint =
-    planId && mcpSelectedTool.includes("workspace")
-      ? `{"workspace_id":"${planId}"}`
-      : '{"workspace_id":"<uuid>"}';
+  const isBusy = isMcpConnecting || isMcpPulling || isSimulatingAll;
+  const showCustomArgs = !planId || !usesWorkspaceArgs(mcpSelectedTool);
+  const selectedTool = mcpTools.find((tool) => tool.name === mcpSelectedTool);
+
+  const handleToolChange = (toolName: string) => {
+    onMcpSelectedToolChange(toolName);
+    onMcpToolArgsChange(JSON.stringify(suggestMcpToolArgs(toolName, planId), null, 2));
+  };
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto pr-1">
-      <div>
-        <div className="text-sm font-medium text-white">MCP simulation</div>
-        <p className={`mt-1 max-w-3xl text-sm leading-relaxed ${styles.bodyText}`}>
-          Connect to a live MCP server, pull real data with a tool call, and translate records into an
-          event log you can simulate immediately. This does not replace the Events tab action grid.
-        </p>
-      </div>
+    <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto pr-1">
+      <p className={`text-sm leading-relaxed ${styles.bodyText}`}>
+        Connect to MCP, load real events, then run them like the Events tab — your action grid stays as-is.
+      </p>
 
-      <McpSimulationHowItWorks />
-
-      <div className="grid gap-4 lg:grid-cols-2">
-        <label className="block">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+        <label className="block min-w-0 flex-1">
           <span className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-500">
             MCP server URL
           </span>
@@ -1844,11 +1884,36 @@ function McpSimulationPanel({
             value={mcpServerUrl}
             onChange={(event) => onMcpServerUrlChange(event.target.value)}
             disabled={isBusy}
-            placeholder="https://partner.example.com/mcp or /api/mcp/your-key"
+            placeholder="/api/mcp/your-key"
             className="mt-2 w-full rounded-md border border-zinc-700 bg-black/40 px-4 py-2.5 text-sm text-zinc-200 placeholder:text-zinc-600 focus:border-zinc-500 focus:outline-none disabled:opacity-60"
           />
         </label>
-        <label className="block">
+        <button
+          type="button"
+          onClick={onMcpConnect}
+          disabled={isBusy || !mcpServerUrl.trim()}
+          className={`inline-flex shrink-0 items-center justify-center gap-2 rounded-md px-4 py-2.5 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-60 ${styles.button}`}
+        >
+          {isMcpConnecting ? (
+            <>
+              <Loader2 className="size-4 animate-spin" />
+              Connecting…
+            </>
+          ) : (
+            <>
+              <Plug className="size-4" />
+              Connect
+            </>
+          )}
+        </button>
+      </div>
+
+      <details className="rounded-md border border-zinc-800 bg-black/20 px-4 py-3">
+        <summary className="flex cursor-pointer list-none items-center gap-2 text-xs text-zinc-400 marker:content-none">
+          <ChevronDown className="size-3.5" />
+          Advanced connection options
+        </summary>
+        <label className="mt-3 block">
           <span className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-500">
             Auth header (optional)
           </span>
@@ -1861,96 +1926,87 @@ function McpSimulationPanel({
             className="mt-2 w-full rounded-md border border-zinc-700 bg-black/40 px-4 py-2.5 text-sm text-zinc-200 placeholder:text-zinc-600 focus:border-zinc-500 focus:outline-none disabled:opacity-60"
           />
         </label>
-      </div>
-
-      <div className="flex flex-wrap items-center gap-3">
-        <button
-          type="button"
-          onClick={onMcpConnect}
-          disabled={isBusy || !mcpServerUrl.trim()}
-          className={`inline-flex items-center gap-2 rounded-md px-4 py-2.5 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-60 ${styles.button}`}
-        >
-          {isMcpConnecting ? (
-            <>
-              <Loader2 className="size-4 animate-spin" />
-              Connecting…
-            </>
-          ) : (
-            <>
-              <Plug className="size-4" />
-              Connect & list tools
-            </>
-          )}
-        </button>
-        {mcpTools.length > 0 ? (
-          <span className="text-xs text-zinc-500">{mcpTools.length} tool(s) available</span>
-        ) : null}
-      </div>
+      </details>
 
       {mcpTools.length > 0 ? (
-        <div className="grid gap-4 lg:grid-cols-2">
-          <label className="block">
-            <span className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-500">MCP tool</span>
-            <select
-              value={mcpSelectedTool}
-              onChange={(event) => onMcpSelectedToolChange(event.target.value)}
-              disabled={isBusy}
-              className="mt-2 w-full rounded-md border border-zinc-700 bg-black/40 px-4 py-2.5 text-sm text-zinc-200 focus:border-zinc-500 focus:outline-none disabled:opacity-60"
-            >
-              {mcpTools.map((tool) => (
-                <option key={tool.name} value={tool.name}>
-                  {tool.name}
-                </option>
-              ))}
-            </select>
-            {mcpTools.find((tool) => tool.name === mcpSelectedTool)?.description ? (
-              <span className="mt-2 block text-xs text-zinc-500">
-                {mcpTools.find((tool) => tool.name === mcpSelectedTool)?.description}
-              </span>
-            ) : null}
-          </label>
-          <label className="block">
+        <div className="space-y-3 rounded-md border border-zinc-800 bg-black/20 p-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
             <span className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-500">
-              Tool arguments (JSON)
+              Load events from
             </span>
-            <textarea
-              value={mcpToolArgs}
-              onChange={(event) => onMcpToolArgsChange(event.target.value)}
-              disabled={isBusy}
-              rows={4}
-              placeholder={workspaceArgsHint}
-              className="mt-2 w-full resize-y rounded-md border border-zinc-700 bg-black/40 px-4 py-3 font-mono text-xs leading-relaxed text-zinc-200 placeholder:text-zinc-600 focus:border-zinc-500 focus:outline-none disabled:opacity-60"
-            />
-          </label>
+            {planId && usesWorkspaceArgs(mcpSelectedTool) ? (
+              <span className="text-[10px] text-zinc-500">Using this workspace automatically</span>
+            ) : null}
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            {mcpTools.map((tool) => {
+              const isActive = tool.name === mcpSelectedTool;
+              return (
+                <button
+                  key={tool.name}
+                  type="button"
+                  onClick={() => handleToolChange(tool.name)}
+                  disabled={isBusy}
+                  className={`rounded-full border px-3 py-1.5 text-xs font-medium transition disabled:opacity-50 ${
+                    isActive
+                      ? "border-white bg-white text-black"
+                      : "border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-zinc-200"
+                  }`}
+                >
+                  {tool.name}
+                </button>
+              );
+            })}
+          </div>
+
+          {selectedTool?.description ? (
+            <p className="text-xs leading-relaxed text-zinc-500">{selectedTool.description}</p>
+          ) : null}
+
+          {showCustomArgs ? (
+            <label className="block">
+              <span className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-500">
+                Tool arguments (JSON)
+              </span>
+              <textarea
+                value={mcpToolArgs}
+                onChange={(event) => onMcpToolArgsChange(event.target.value)}
+                disabled={isBusy}
+                rows={3}
+                placeholder='{"workspace_id":"<uuid>"}'
+                className="mt-2 w-full resize-y rounded-md border border-zinc-700 bg-black/40 px-4 py-3 font-mono text-xs leading-relaxed text-zinc-200 placeholder:text-zinc-600 focus:border-zinc-500 focus:outline-none disabled:opacity-60"
+              />
+            </label>
+          ) : null}
+
+          <button
+            type="button"
+            onClick={onMcpPull}
+            disabled={isBusy || !mcpSelectedTool}
+            className={`inline-flex w-fit items-center gap-2 rounded-md px-4 py-2.5 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-60 ${styles.button}`}
+          >
+            {isMcpPulling ? (
+              <>
+                <Loader2 className="size-4 animate-spin" />
+                Loading events…
+              </>
+            ) : (
+              <>
+                <RefreshCw className="size-4" />
+                Load events
+              </>
+            )}
+          </button>
         </div>
       ) : null}
 
-      {mcpTools.length > 0 ? (
-        <button
-          type="button"
-          onClick={onMcpPull}
-          disabled={isBusy || !mcpSelectedTool}
-          className={`inline-flex w-fit items-center gap-2 rounded-md px-4 py-2.5 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-60 ${styles.button}`}
-        >
-          {isMcpPulling ? (
-            <>
-              <Loader2 className="size-4 animate-spin" />
-              Pulling MCP data…
-            </>
-          ) : (
-            <>
-              <RefreshCw className="size-4" />
-              Pull & translate to event log
-            </>
-          )}
-        </button>
-      ) : null}
-
-      <McpImportLogPanel entries={mcpImportLog} />
-      <McpEventLogPanel
+      <McpEventGrid
         events={mcpEventLog}
         runningMcpEventId={runningMcpEventId}
+        isSimulatingAll={isSimulatingAll}
         onSimulate={onSimulateMcpEvent}
+        onSimulateAll={onSimulateAllMcpEvents}
         styles={styles}
       />
     </div>
@@ -2025,15 +2081,16 @@ function SimulatorPanel({
   onMcpSelectedToolChange,
   mcpToolArgs = "{}",
   onMcpToolArgsChange,
-  mcpImportLog = [],
   mcpEventLog = [],
   isMcpConnecting = false,
   isMcpPulling = false,
+  isSimulatingAllMcpEvents = false,
   runningMcpEventId = null,
   planId = null,
   onMcpConnect,
   onMcpPull,
   onSimulateMcpEvent,
+  onSimulateAllMcpEvents,
   onCustomInputModeChange,
 }: {
   demo: EvidenceApiDemoDefinition;
@@ -2058,15 +2115,16 @@ function SimulatorPanel({
   onMcpSelectedToolChange?: (value: string) => void;
   mcpToolArgs?: string;
   onMcpToolArgsChange?: (value: string) => void;
-  mcpImportLog?: McpImportLogEntry[];
   mcpEventLog?: McpSimulationEvent[];
   isMcpConnecting?: boolean;
   isMcpPulling?: boolean;
+  isSimulatingAllMcpEvents?: boolean;
   runningMcpEventId?: string | null;
   planId?: string | null;
   onMcpConnect?: () => void;
   onMcpPull?: () => void;
   onSimulateMcpEvent?: (event: McpSimulationEvent) => void;
+  onSimulateAllMcpEvents?: () => void;
   onCustomInputModeChange?: (mode: CustomInputMode) => void;
 }) {
   const styles = demoPanelStyles(demo.accent);
@@ -2207,6 +2265,7 @@ function SimulatorPanel({
             onMcpConnect &&
             onMcpPull &&
             onSimulateMcpEvent &&
+            onSimulateAllMcpEvents &&
             onMcpServerUrlChange &&
             onMcpAuthHeaderChange &&
             onMcpSelectedToolChange &&
@@ -2221,15 +2280,16 @@ function SimulatorPanel({
                 onMcpSelectedToolChange={onMcpSelectedToolChange}
                 mcpToolArgs={mcpToolArgs}
                 onMcpToolArgsChange={onMcpToolArgsChange}
-                mcpImportLog={mcpImportLog}
                 mcpEventLog={mcpEventLog}
                 isMcpConnecting={isMcpConnecting}
                 isMcpPulling={isMcpPulling}
+                isSimulatingAll={isSimulatingAllMcpEvents}
                 runningMcpEventId={runningMcpEventId}
                 planId={planId}
                 onMcpConnect={onMcpConnect}
                 onMcpPull={onMcpPull}
                 onSimulateMcpEvent={onSimulateMcpEvent}
+                onSimulateAllMcpEvents={onSimulateAllMcpEvents}
                 styles={styles}
               />
             ) : (

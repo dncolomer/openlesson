@@ -9,6 +9,7 @@ import {
   Clock,
   Download,
   FileCode2,
+  FileInput,
   Gauge,
   LayoutGrid,
   Loader2,
@@ -46,10 +47,16 @@ import type {
   SimulationCategory,
   SimulationWorldState,
 } from "@/lib/evidence-api-demo/types";
+import type { ImportEventsSummary } from "@/lib/evidence-api-demo/generate-custom-from-import";
+import {
+  IMPORT_TEXT_MIN_LENGTH,
+  type ImportSource,
+} from "@/lib/evidence-api-demo/parse-import-text";
 import { aestheticImageForId, fetchAestheticPackages } from "@/lib/aesthetics";
 import { readJsonResponse } from "@/lib/read-json-response";
 
 type DemoPhase = "picker" | "intro" | "creating" | "simulating";
+type CustomInputMode = "prompt" | "import";
 type DemoView = "simulator" | "evaluation" | "score";
 type ScoreCardTab = "overview" | "competency" | "markers" | "strengths" | "gaps" | "history";
 
@@ -135,6 +142,9 @@ type PersistedDemoState = {
   blocks?: DemoWorkspaceBlock[];
   customDemo?: EvidenceApiDemoDefinition;
   customPrompt?: string;
+  customInputMode?: CustomInputMode;
+  importText?: string;
+  importSource?: ImportSource;
 };
 
 const CUSTOM_PROMPT_MIN_LENGTH = 40;
@@ -168,6 +178,9 @@ function loadPersistedState(): PersistedDemoState | null {
       blocks: Array.isArray(parsed.blocks) ? parsed.blocks : [],
       customDemo: parsed.customDemo,
       customPrompt: parsed.customPrompt,
+      customInputMode: parsed.customInputMode,
+      importText: parsed.importText,
+      importSource: parsed.importSource,
     };
   } catch {
     return null;
@@ -257,6 +270,11 @@ export function EvidenceApiDemo() {
   const [demoId, setDemoId] = useState<string | null>(null);
   const [customDemo, setCustomDemo] = useState<EvidenceApiDemoDefinition | null>(null);
   const [customPrompt, setCustomPrompt] = useState("");
+  const [customInputMode, setCustomInputMode] = useState<CustomInputMode>("prompt");
+  const [importText, setImportText] = useState("");
+  const [importSource, setImportSource] = useState<ImportSource>("skill");
+  const [isImportingEvents, setIsImportingEvents] = useState(false);
+  const [importSummary, setImportSummary] = useState<ImportEventsSummary | null>(null);
   const activeDemo = useMemo(() => {
     if (isCustomDemoId(demoId)) return customDemo ?? CUSTOM_DEMO_PICKER;
     return resolveDemoId(demoId);
@@ -391,6 +409,9 @@ export function EvidenceApiDemo() {
     setDemoId(persisted.demoId);
     setCustomDemo(persisted.customDemo ?? null);
     setCustomPrompt(persisted.customPrompt ?? "");
+    setCustomInputMode(persisted.customInputMode ?? "prompt");
+    setImportText(persisted.importText ?? "");
+    setImportSource(persisted.importSource ?? "skill");
     setWorldState(persisted.worldState);
     setWorkspaceTitle(persisted.workspaceTitle ?? null);
     setBlocks(persisted.blocks ?? []);
@@ -403,6 +424,9 @@ export function EvidenceApiDemo() {
     setDemoId(demo.id);
     setCustomDemo(null);
     setCustomPrompt("");
+    setCustomInputMode("prompt");
+    setImportText("");
+    setImportSummary(null);
     setPhase("intro");
   };
 
@@ -410,6 +434,18 @@ export function EvidenceApiDemo() {
     setError("");
     setDemoId(CUSTOM_DEMO_ID);
     setCustomDemo(null);
+    setCustomInputMode("prompt");
+    setImportSummary(null);
+    setPhase("intro");
+  };
+
+  const handleSelectImportDemo = () => {
+    setError("");
+    setDemoId(CUSTOM_DEMO_ID);
+    setCustomDemo(null);
+    setCustomInputMode("import");
+    setCustomPrompt("");
+    setImportSummary(null);
     setPhase("intro");
   };
 
@@ -419,12 +455,17 @@ export function EvidenceApiDemo() {
   };
 
   const handleStartDemo = async () => {
-    if (isCustomDemoId(demoId) && customPrompt.trim().length < CUSTOM_PROMPT_MIN_LENGTH) {
+    if (isCustomDemoId(demoId) && customInputMode === "prompt" && customPrompt.trim().length < CUSTOM_PROMPT_MIN_LENGTH) {
       setError(`Paste a scenario prompt of at least ${CUSTOM_PROMPT_MIN_LENGTH} characters.`);
+      return;
+    }
+    if (isCustomDemoId(demoId) && customInputMode === "import" && importText.trim().length < IMPORT_TEXT_MIN_LENGTH) {
+      setError(`Paste skill or MCP text of at least ${IMPORT_TEXT_MIN_LENGTH} characters.`);
       return;
     }
 
     setError("");
+    setImportSummary(null);
     setPhase("creating");
     clearPersistedState();
     const newSessionId = createSessionId();
@@ -451,7 +492,12 @@ export function EvidenceApiDemo() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             demoId: activeDemo.id,
-            ...(isCustomDemoId(demoId) ? { customPrompt: customPrompt.trim() } : {}),
+            ...(isCustomDemoId(demoId) && customInputMode === "import"
+              ? { importText: importText.trim(), importSource }
+              : {}),
+            ...(isCustomDemoId(demoId) && customInputMode === "prompt"
+              ? { customPrompt: customPrompt.trim() }
+              : {}),
           }),
         },
         isCustomDemoId(demoId) ? 180000 : 120000
@@ -492,7 +538,11 @@ export function EvidenceApiDemo() {
         workspaceTitle: data.workspace.title,
         blocks: data.blocks,
         customDemo: generatedCustomDemo ?? undefined,
-        customPrompt: isCustomDemoId(demoId) ? customPrompt.trim() : undefined,
+        customPrompt:
+          isCustomDemoId(demoId) && customInputMode === "prompt" ? customPrompt.trim() : undefined,
+        customInputMode: isCustomDemoId(demoId) ? customInputMode : undefined,
+        importText: isCustomDemoId(demoId) && customInputMode === "import" ? importText.trim() : undefined,
+        importSource: isCustomDemoId(demoId) && customInputMode === "import" ? importSource : undefined,
       });
 
       setPhase("simulating");
@@ -766,12 +816,79 @@ export function EvidenceApiDemo() {
     }
   };
 
+  const handleImportEvents = async () => {
+    if (importText.trim().length < IMPORT_TEXT_MIN_LENGTH) {
+      setError(`Paste skill or MCP text of at least ${IMPORT_TEXT_MIN_LENGTH} characters.`);
+      return;
+    }
+
+    setIsImportingEvents(true);
+    setError("");
+
+    try {
+      const res = await fetchWithTimeout(
+        "/api/evidence-api-demo/import-events",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            importText: importText.trim(),
+            importSource,
+          }),
+        },
+        180000
+      );
+      const data = await readJsonResponse<{
+        custom_definition?: EvidenceApiDemoDefinition;
+        import_summary?: ImportEventsSummary;
+        error?: string;
+        hint?: string;
+      }>(res);
+
+      if (!res.ok) {
+        throw new Error([data.error || "Failed to import events", data.hint].filter(Boolean).join(" "));
+      }
+
+      if (!data.custom_definition) {
+        throw new Error("Import succeeded but no simulation definition was returned.");
+      }
+
+      setDemoId(CUSTOM_DEMO_ID);
+      setCustomDemo(data.custom_definition);
+      setCustomInputMode("import");
+      setWorldState(createInitialWorldState());
+      setImportSummary(data.import_summary ?? null);
+
+      if (planId) {
+        persistState({
+          planId,
+          sessionId,
+          demoId: CUSTOM_DEMO_ID,
+          worldState: createInitialWorldState(),
+          workspaceTitle: workspaceTitle ?? undefined,
+          blocks,
+          customDemo: data.custom_definition,
+          importText: importText.trim(),
+          importSource,
+          customInputMode: "import",
+        });
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to import simulation events");
+    } finally {
+      setIsImportingEvents(false);
+    }
+  };
+
   const handleReset = () => {
     clearPersistedState();
     setPhase("picker");
     setDemoId(null);
     setCustomDemo(null);
     setCustomPrompt("");
+    setCustomInputMode("prompt");
+    setImportText("");
+    setImportSummary(null);
     setPlanId(null);
     setWorkspaceTitle(null);
     setBlocks([]);
@@ -927,6 +1044,7 @@ export function EvidenceApiDemo() {
             demos={EVIDENCE_API_DEMOS}
             onSelect={handleSelectDemo}
             onSelectCustom={handleSelectCustomDemo}
+            onSelectImport={handleSelectImportDemo}
           />
         ) : null}
 
@@ -946,9 +1064,15 @@ export function EvidenceApiDemo() {
             onRunAction={handleRunAction}
             onBackToPicker={handleBackToPicker}
             isCustom={isCustomDemoId(demoId)}
+            customInputMode={customInputMode}
             customPrompt={customPrompt}
             onCustomPromptChange={setCustomPrompt}
             customPromptMinLength={CUSTOM_PROMPT_MIN_LENGTH}
+            importText={importText}
+            onImportTextChange={setImportText}
+            importSource={importSource}
+            onImportSourceChange={setImportSource}
+            importTextMinLength={IMPORT_TEXT_MIN_LENGTH}
           />
         ) : null}
 
@@ -965,9 +1089,19 @@ export function EvidenceApiDemo() {
                 onBackToPicker={handleBackToPicker}
                 fullHeight
                 isCustom={isCustomDemoId(demoId)}
+                customInputMode={customInputMode}
                 customPrompt={customPrompt}
                 onCustomPromptChange={setCustomPrompt}
                 customPromptMinLength={CUSTOM_PROMPT_MIN_LENGTH}
+                importText={importText}
+                onImportTextChange={setImportText}
+                importSource={importSource}
+                onImportSourceChange={setImportSource}
+                importTextMinLength={IMPORT_TEXT_MIN_LENGTH}
+                showEventImport={phase === "simulating"}
+                isImportingEvents={isImportingEvents}
+                importSummary={importSummary}
+                onImportEvents={handleImportEvents}
               />
             ) : null}
 
@@ -1277,10 +1411,12 @@ function DemoUseCasePicker({
   demos,
   onSelect,
   onSelectCustom,
+  onSelectImport,
 }: {
   demos: EvidenceApiDemoDefinition[];
   onSelect: (demo: EvidenceApiDemoDefinition) => void;
   onSelectCustom: () => void;
+  onSelectImport: () => void;
 }) {
   const customStyles = demoPanelStyles(CUSTOM_DEMO_PICKER.accent);
 
@@ -1335,12 +1471,12 @@ function DemoUseCasePicker({
         })}
       </div>
 
-      <button
-        type="button"
-        onClick={onSelectCustom}
-        className={`group mt-4 w-full rounded-lg border border-dashed p-5 text-left transition hover:-translate-y-0.5 hover:border-zinc-600 hover:shadow-lg hover:shadow-black/20 ${customStyles.section}`}
-      >
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+      <div className="mt-4 grid gap-4 lg:grid-cols-2">
+        <button
+          type="button"
+          onClick={onSelectCustom}
+          className={`group w-full rounded-lg border border-dashed p-5 text-left transition hover:-translate-y-0.5 hover:border-zinc-600 hover:shadow-lg hover:shadow-black/20 ${customStyles.section}`}
+        >
           <div className="flex items-start gap-3">
             <div
               className={`flex size-10 shrink-0 items-center justify-center rounded-md text-sm font-bold ${customStyles.logo}`}
@@ -1350,17 +1486,43 @@ function DemoUseCasePicker({
             <div>
               <div className="text-base font-medium text-white">Custom simulation</div>
               <div className={`text-xs ${customStyles.subtitle}`}>{CUSTOM_DEMO_PICKER.tagline}</div>
-              <p className={`mt-3 max-w-2xl text-sm leading-relaxed ${customStyles.bodyText}`}>
-                {CUSTOM_DEMO_PICKER.description}
+              <p className={`mt-3 text-sm leading-relaxed ${customStyles.bodyText}`}>
+                Describe a workflow in plain language — Grok generates event actions and a workspace.
               </p>
+              <div className="mt-4 flex items-center gap-2 text-xs font-medium text-white/90">
+                Paste your prompt
+                <ArrowRight className="size-3.5 transition group-hover:translate-x-0.5" />
+              </div>
             </div>
           </div>
-          <div className="flex shrink-0 items-center gap-2 text-xs font-medium text-white/90 sm:pt-2">
-            Paste your prompt
-            <ArrowRight className="size-3.5 transition group-hover:translate-x-0.5" />
+        </button>
+
+        <button
+          type="button"
+          onClick={onSelectImport}
+          className={`group w-full rounded-lg border border-dashed p-5 text-left transition hover:-translate-y-0.5 hover:border-zinc-600 hover:shadow-lg hover:shadow-black/20 ${customStyles.section}`}
+        >
+          <div className="flex items-start gap-3">
+            <div
+              className={`flex size-10 shrink-0 items-center justify-center rounded-md text-sm font-bold ${customStyles.logo}`}
+            >
+              <FileInput className="size-4" />
+            </div>
+            <div>
+              <div className="text-base font-medium text-white">Import from skill / MCP</div>
+              <div className={`text-xs ${customStyles.subtitle}`}>External system catalog</div>
+              <p className={`mt-3 text-sm leading-relaxed ${customStyles.bodyText}`}>
+                Paste a partner skill.md or MCP tool catalog — Grok explores capabilities and maps them
+                to evidence events you can simulate.
+              </p>
+              <div className="mt-4 flex items-center gap-2 text-xs font-medium text-white/90">
+                Paste integration text
+                <ArrowRight className="size-3.5 transition group-hover:translate-x-0.5" />
+              </div>
+            </div>
           </div>
-        </div>
-      </button>
+        </button>
+      </div>
     </section>
   );
 }
@@ -1375,6 +1537,118 @@ function countCategoryActivity(
   return { completed, total: actions.length };
 }
 
+function EventImportPanel({
+  importText,
+  onImportTextChange,
+  importSource,
+  onImportSourceChange,
+  importTextMinLength,
+  isImportingEvents,
+  importSummary,
+  onImportEvents,
+  styles,
+}: {
+  importText: string;
+  onImportTextChange: (value: string) => void;
+  importSource: ImportSource;
+  onImportSourceChange: (value: ImportSource) => void;
+  importTextMinLength: number;
+  isImportingEvents: boolean;
+  importSummary: ImportEventsSummary | null;
+  onImportEvents: () => void;
+  styles: ReturnType<typeof demoPanelStyles>;
+}) {
+  return (
+    <div className="mb-5 shrink-0 rounded-md border border-zinc-800 bg-black/30 p-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <div className="text-sm font-medium text-white">Import events from external system</div>
+          <p className={`mt-1 max-w-3xl text-xs leading-relaxed ${styles.bodyText}`}>
+            Paste a partner skill.md or MCP tool catalog. Grok explores the integration surface and
+            replaces the event list below with simulatable evidence actions.
+          </p>
+        </div>
+        <div
+          className="inline-flex rounded-md border border-zinc-800 bg-black/30 p-0.5"
+          role="group"
+          aria-label="Import source type"
+        >
+          {(["skill", "mcp"] as const).map((source) => (
+            <button
+              key={source}
+              type="button"
+              onClick={() => onImportSourceChange(source)}
+              aria-pressed={importSource === source}
+              disabled={isImportingEvents}
+              className={`rounded px-3 py-1.5 text-xs font-medium uppercase tracking-wide transition ${
+                importSource === source
+                  ? "bg-white text-black"
+                  : "text-zinc-500 hover:text-zinc-300"
+              }`}
+            >
+              {source}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <label className="mt-4 block">
+        <span className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-500">
+          {importSource === "mcp" ? "MCP tool catalog" : "Integration skill.md"}
+        </span>
+        <textarea
+          value={importText}
+          onChange={(event) => onImportTextChange(event.target.value)}
+          disabled={isImportingEvents}
+          rows={5}
+          placeholder={
+            importSource === "mcp"
+              ? 'Paste MCP server JSON or tool listings, e.g. {"tools":[{"name":"list_workspaces","description":"..."}]}'
+              : "Paste a full skill.md — frontmatter, endpoints, evidence contract, goals, and workflows."
+          }
+          className="mt-2 w-full resize-y rounded-md border border-zinc-700 bg-black/40 px-4 py-3 font-mono text-xs leading-relaxed text-zinc-200 placeholder:text-zinc-600 focus:border-zinc-500 focus:outline-none disabled:opacity-60"
+        />
+        <span className="mt-2 block font-mono text-[10px] text-zinc-600">
+          {importText.trim().length}/{importTextMinLength} characters minimum
+        </span>
+      </label>
+
+      <div className="mt-4 flex flex-wrap items-center gap-3">
+        <button
+          type="button"
+          onClick={onImportEvents}
+          disabled={isImportingEvents || importText.trim().length < importTextMinLength}
+          className={`inline-flex items-center gap-2 rounded-md px-4 py-2.5 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-60 ${styles.button}`}
+        >
+          {isImportingEvents ? (
+            <>
+              <Loader2 className="size-4 animate-spin" />
+              Exploring & generating events…
+            </>
+          ) : (
+            <>
+              <Sparkles className="size-4" />
+              Explore with Grok & replace events
+            </>
+          )}
+        </button>
+        {importSummary ? (
+          <p className="text-xs text-zinc-400">
+            Imported {importSummary.evidence_action_count} events for{" "}
+            <span className="text-zinc-200">{importSummary.product_name}</span>
+            {importSummary.mcp_tools_discovered > 0
+              ? ` · ${importSummary.mcp_tools_discovered} MCP tools`
+              : ""}
+            {importSummary.endpoints_discovered > 0
+              ? ` · ${importSummary.endpoints_discovered} endpoints`
+              : ""}
+          </p>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
 function SimulatorPanel({
   demo,
   phase,
@@ -1385,9 +1659,19 @@ function SimulatorPanel({
   onBackToPicker,
   fullHeight = false,
   isCustom = false,
+  customInputMode = "prompt",
   customPrompt = "",
   onCustomPromptChange,
   customPromptMinLength = 40,
+  importText = "",
+  onImportTextChange,
+  importSource = "skill",
+  onImportSourceChange,
+  importTextMinLength = IMPORT_TEXT_MIN_LENGTH,
+  showEventImport = false,
+  isImportingEvents = false,
+  importSummary = null,
+  onImportEvents,
 }: {
   demo: EvidenceApiDemoDefinition;
   phase: DemoPhase;
@@ -1398,9 +1682,19 @@ function SimulatorPanel({
   onBackToPicker?: () => void;
   fullHeight?: boolean;
   isCustom?: boolean;
+  customInputMode?: CustomInputMode;
   customPrompt?: string;
   onCustomPromptChange?: (value: string) => void;
   customPromptMinLength?: number;
+  importText?: string;
+  onImportTextChange?: (value: string) => void;
+  importSource?: ImportSource;
+  onImportSourceChange?: (value: ImportSource) => void;
+  importTextMinLength?: number;
+  showEventImport?: boolean;
+  isImportingEvents?: boolean;
+  importSummary?: ImportEventsSummary | null;
+  onImportEvents?: () => void;
 }) {
   const styles = demoPanelStyles(demo.accent);
   const totalActions = demo.actions.filter((action) => action.kind === "evidence").length;
@@ -1454,9 +1748,62 @@ function SimulatorPanel({
           <div className="flex flex-1 flex-col justify-center py-8">
             <Sparkles className={`size-8 ${styles.sparkles}`} />
             <h2 className="mt-4 text-xl font-medium text-white">
-              {isCustom ? "Custom verification scenario" : demo.scenarioTitle}
+              {isCustom
+                ? customInputMode === "import"
+                  ? "Import from skill / MCP"
+                  : "Custom verification scenario"
+                : demo.scenarioTitle}
             </h2>
-            {isCustom ? (
+            {isCustom && customInputMode === "import" ? (
+              <>
+                <p className={`mt-2 max-w-2xl text-sm leading-relaxed ${styles.bodyText}`}>
+                  Paste a partner integration skill or MCP tool catalog. Grok reads endpoints, tools, and
+                  evidence contracts, then generates a full event simulator and verification workspace.
+                </p>
+                <div
+                  className="mt-4 inline-flex rounded-md border border-zinc-800 bg-black/30 p-0.5"
+                  role="group"
+                  aria-label="Import source type"
+                >
+                  {(["skill", "mcp"] as const).map((source) => (
+                    <button
+                      key={source}
+                      type="button"
+                      onClick={() => onImportSourceChange?.(source)}
+                      disabled={phase === "creating"}
+                      aria-pressed={importSource === source}
+                      className={`rounded px-3 py-1.5 text-xs font-medium uppercase tracking-wide transition ${
+                        importSource === source
+                          ? "bg-white text-black"
+                          : "text-zinc-500 hover:text-zinc-300"
+                      }`}
+                    >
+                      {source}
+                    </button>
+                  ))}
+                </div>
+                <label className="mt-6 block max-w-3xl">
+                  <span className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-500">
+                    {importSource === "mcp" ? "MCP tool catalog" : "Integration skill.md"}
+                  </span>
+                  <textarea
+                    value={importText}
+                    onChange={(event) => onImportTextChange?.(event.target.value)}
+                    disabled={phase === "creating"}
+                    rows={12}
+                    placeholder={
+                      importSource === "mcp"
+                        ? 'Paste MCP JSON or tool docs — e.g. {"tools":[{"name":"upload_evidence","description":"Upload tool JSON evidence"}]}'
+                        : "Paste the full skill.md from your partner integration — include Purpose, Endpoints, evidence payload examples, and goals."
+                    }
+                    className="mt-2 w-full resize-y rounded-md border border-zinc-700 bg-black/40 px-4 py-3 font-mono text-xs leading-relaxed text-zinc-200 placeholder:text-zinc-600 focus:border-zinc-500 focus:outline-none disabled:opacity-60"
+                  />
+                  <span className="mt-2 block font-mono text-[10px] text-zinc-600">
+                    {importText.trim().length}/{importTextMinLength} characters minimum
+                  </span>
+                </label>
+              </>
+            ) : isCustom ? (
               <>
                 <p className={`mt-2 max-w-2xl text-sm leading-relaxed ${styles.bodyText}`}>
                   Describe the product workflow, learner role, and competency you want to verify. OpenLesson
@@ -1492,18 +1839,31 @@ function SimulatorPanel({
               onClick={onStart}
               disabled={
                 phase === "creating" ||
-                (isCustom && customPrompt.trim().length < customPromptMinLength)
+                (isCustom &&
+                  customInputMode === "prompt" &&
+                  customPrompt.trim().length < customPromptMinLength) ||
+                (isCustom &&
+                  customInputMode === "import" &&
+                  importText.trim().length < importTextMinLength)
               }
               className={`inline-flex w-fit items-center gap-2 rounded-md px-5 py-2.5 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-60 ${styles.button}`}
             >
               {phase === "creating" ? (
                 <>
                   <Loader2 className="size-4 animate-spin" />
-                  {isCustom ? "Generating events & workspace…" : "Creating workspace…"}
+                  {isCustom && customInputMode === "import"
+                    ? "Exploring integration & generating events…"
+                    : isCustom
+                      ? "Generating events & workspace…"
+                      : "Creating workspace…"}
                 </>
               ) : (
                 <>
-                  {isCustom ? "Generate & start" : "Start demo"}
+                  {isCustom && customInputMode === "import"
+                    ? "Explore & start"
+                    : isCustom
+                      ? "Generate & start"
+                      : "Start demo"}
                   <ArrowRight className="size-4" />
                 </>
               )}
@@ -1522,6 +1882,20 @@ function SimulatorPanel({
           </div>
         ) : (
           <>
+            {showEventImport && onImportEvents && onImportTextChange && onImportSourceChange ? (
+              <EventImportPanel
+                importText={importText}
+                onImportTextChange={onImportTextChange}
+                importSource={importSource}
+                onImportSourceChange={onImportSourceChange}
+                importTextMinLength={importTextMinLength}
+                isImportingEvents={isImportingEvents}
+                importSummary={importSummary}
+                onImportEvents={onImportEvents}
+                styles={styles}
+              />
+            ) : null}
+
             <div className="mb-5 shrink-0 grid grid-cols-3 gap-2 text-center">
               <div className={`rounded-md border bg-black/25 px-2 py-2 ${styles.statBorder}`}>
                 <div className={`font-mono text-[10px] uppercase tracking-wide ${styles.statLabel}`}>Day</div>

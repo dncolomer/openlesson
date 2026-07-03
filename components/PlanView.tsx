@@ -47,6 +47,7 @@ export interface LearningPlan {
   source_url?: string;
   source_summary?: string;
   notes?: string;
+  conversion_goal?: string | null;
   cover_image_url?: string;
 }
 

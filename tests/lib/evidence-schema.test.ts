@@ -231,6 +231,7 @@ describe("buildEvidenceSchemaInstructions", () => {
           root_topic: "Discovery",
           description: null,
           notes: null,
+          conversion_goal: null,
         },
         focus_block_id: null,
         generated_at: new Date().toISOString(),

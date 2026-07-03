@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { authenticateRequest, errorResponse } from "@/lib/agent-v2/auth";
+import { finalizePerformanceReport } from "@/lib/agent-v2/conversion-goal";
 import {
   buildPerformanceChatInstructions,
   buildPerformanceReportInstructions,
@@ -41,7 +42,7 @@ export async function POST(req: NextRequest, { params }: RouteProps) {
 
   const { data: workspace } = await supabase
     .from("learning_plans")
-    .select("id, user_id, organization_id, guest_user_id, title, root_topic")
+    .select("id, user_id, organization_id, guest_user_id, title, root_topic, description, notes, conversion_goal")
     .eq("id", workspaceId)
     .single();
 
@@ -75,6 +76,7 @@ export async function POST(req: NextRequest, { params }: RouteProps) {
 
   let activeFileIds = persistedFileIds;
   let contextCounts = null;
+  let performanceContext = null;
 
   if (activeFileIds.length === 0) {
     try {
@@ -86,6 +88,7 @@ export async function POST(req: NextRequest, { params }: RouteProps) {
       });
       activeFileIds = context.fileIds;
       contextCounts = context.payload.counts;
+      performanceContext = context.payload;
 
       if (
         context.payload.counts.evidence_artifacts === 0 &&
@@ -93,12 +96,23 @@ export async function POST(req: NextRequest, { params }: RouteProps) {
         context.payload.counts.linked_sessions === 0 &&
         context.payload.counts.plan_files === 0
       ) {
+        const emptyReport = prompt
+          ? null
+          : finalizePerformanceReport(emptyPerformanceReport(), workspace.conversion_goal, {
+              title: workspace.title,
+              description: workspace.description,
+              notes: workspace.notes,
+              root_topic: workspace.root_topic,
+            });
+
         return NextResponse.json({
           mode: prompt ? "chat" : "report",
           response: prompt
             ? "No performance evidence is attached to this workspace yet. Upload tool usage, screenshots, video, or EEG via POST /evidence, complete a Think Aloud Protocol (TAP) session, or link session data before asking detailed questions."
             : null,
-          report: prompt ? null : emptyPerformanceReport(),
+          report: emptyReport?.report ?? null,
+          workspace_conversion_goal: emptyReport?.workspace_conversion_goal,
+          conversion_goal_source: emptyReport?.conversion_goal_source,
           evidence_summary: contextCounts,
           file_ids: [],
         });
@@ -144,11 +158,14 @@ export async function POST(req: NextRequest, { params }: RouteProps) {
     });
   }
 
+  const storedConversionGoal =
+    performanceContext?.workspace.conversion_goal ?? workspace.conversion_goal;
+
   const reportResult = await callXaiResponsesWithFiles<PerformanceReport>(
     `Generate a learning and gap analysis report for workspace "${workspace.title || workspace.root_topic}".`,
     activeFileIds,
     {
-      instructions: buildPerformanceReportInstructions(blockId),
+      instructions: buildPerformanceReportInstructions(blockId, storedConversionGoal),
       temperature: 0.35,
       maxOutputTokens: 2500,
       fetchTimeout: 120000,
@@ -160,9 +177,18 @@ export async function POST(req: NextRequest, { params }: RouteProps) {
     return errorResponse(500, "internal_error", reportResult.error || "Failed to generate performance report");
   }
 
+  const finalized = finalizePerformanceReport(reportResult.data, storedConversionGoal, {
+    title: workspace.title,
+    description: workspace.description,
+    notes: workspace.notes,
+    root_topic: workspace.root_topic,
+  });
+
   return NextResponse.json({
     mode: "report",
-    report: reportResult.data,
+    workspace_conversion_goal: finalized.workspace_conversion_goal,
+    conversion_goal_source: finalized.conversion_goal_source,
+    report: finalized.report,
     evidence_summary: contextCounts,
     file_ids: activeFileIds,
   });

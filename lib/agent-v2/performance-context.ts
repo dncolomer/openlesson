@@ -32,6 +32,7 @@ export interface PerformanceContextPayload {
     root_topic: string | null;
     description: string | null;
     notes: string | null;
+    conversion_goal: string | null;
   };
   focus_block_id: string | null;
   generated_at: string;
@@ -92,7 +93,7 @@ export async function buildWorkspacePerformanceContext({
 }: BuildContextOptions) {
   const { data: workspace } = await supabase
     .from("learning_plans")
-    .select("id, title, root_topic, description, notes, user_id, organization_id, guest_user_id")
+    .select("id, title, root_topic, description, notes, conversion_goal, user_id, organization_id, guest_user_id")
     .eq("id", workspaceId)
     .single();
 
@@ -174,6 +175,7 @@ export async function buildWorkspacePerformanceContext({
       root_topic: workspace.root_topic,
       description: workspace.description,
       notes: workspace.notes,
+      conversion_goal: workspace.conversion_goal,
     },
     focus_block_id: blockId || null,
     generated_at: new Date().toISOString(),

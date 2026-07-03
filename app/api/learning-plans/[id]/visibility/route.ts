@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { normalizeConversionGoal } from "@/lib/agent-v2/conversion-goal";
 import { createClient } from "@/lib/supabase/server";
-import { updatePlanVisibility } from "@/lib/storage";
 
 export async function PUT(
   req: NextRequest,
@@ -16,9 +16,10 @@ export async function PUT(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { is_public, title, description } = await req.json();
+    const body = await req.json();
+    const { is_public, title, description, conversion_goal } = body;
 
-    const updates: Record<string, any> = {};
+    const updates: Record<string, unknown> = {};
 
     if (typeof is_public === "boolean") {
       updates.is_public = is_public;
@@ -31,6 +32,11 @@ export async function PUT(
 
     if (typeof description === "string") {
       updates.description = description.trim() || null;
+    }
+
+    if ("conversion_goal" in body) {
+      updates.conversion_goal =
+        conversion_goal === null ? null : normalizeConversionGoal(conversion_goal);
     }
 
     if (Object.keys(updates).length === 0) {
@@ -70,7 +76,7 @@ export async function PUT(
     // Verify the update
     const { data: verifyPlan } = await supabase
       .from("learning_plans")
-      .select("is_public, title, description")
+      .select("is_public, title, description, conversion_goal")
       .eq("id", planId)
       .single();
 
@@ -96,6 +102,10 @@ export async function PUT(
 
     if (typeof description === "string") {
       response.description = verifyPlan?.description;
+    }
+
+    if ("conversion_goal" in body) {
+      response.conversion_goal = verifyPlan?.conversion_goal;
     }
 
     return NextResponse.json(response);

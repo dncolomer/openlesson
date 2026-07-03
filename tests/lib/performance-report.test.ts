@@ -27,6 +27,12 @@ describe("buildPerformanceReportInstructions", () => {
     expect(instructions).toContain("gap_analysis.gaps");
     expect(instructions).toContain("spider/radar");
   });
+
+  it("embeds authoritative workspace conversion goal when provided", () => {
+    const instructions = buildPerformanceReportInstructions(null, "Trial-to-paid activation");
+    expect(instructions).toContain("Authoritative workspace conversion goal");
+    expect(instructions).toContain("Trial-to-paid activation");
+  });
 });
 
 describe("buildPerformanceReportContract", () => {

@@ -53,6 +53,9 @@ export function WorkspaceIdentityPanel({
   const [isEditingDescription, setIsEditingDescription] = useState(false);
   const [editDescription, setEditDescription] = useState(plan.description || "");
   const [savingDescription, setSavingDescription] = useState(false);
+  const [isEditingConversionGoal, setIsEditingConversionGoal] = useState(false);
+  const [editConversionGoal, setEditConversionGoal] = useState(plan.conversion_goal || "");
+  const [savingConversionGoal, setSavingConversionGoal] = useState(false);
   const [descriptionExpanded, setDescriptionExpanded] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -63,6 +66,10 @@ export function WorkspaceIdentityPanel({
   useEffect(() => {
     setEditDescription(plan.description || "");
   }, [plan.description]);
+
+  useEffect(() => {
+    setEditConversionGoal(plan.conversion_goal || "");
+  }, [plan.conversion_goal]);
 
   const showShare = plan.is_public || plan.is_group;
   const showFork =
@@ -87,6 +94,26 @@ export function WorkspaceIdentityPanel({
       }
     } catch (err) {
       console.error("Error updating title:", err);
+    }
+  };
+
+  const saveConversionGoal = async () => {
+    setSavingConversionGoal(true);
+    try {
+      const res = await fetch(`/api/learning-plans/${planId}/visibility`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ conversion_goal: editConversionGoal.trim() || null }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        onPlanUpdate({ ...plan, conversion_goal: data.conversion_goal || undefined });
+        setIsEditingConversionGoal(false);
+      }
+    } catch (err) {
+      console.error("Error updating conversion goal:", err);
+    } finally {
+      setSavingConversionGoal(false);
     }
   };
 
@@ -377,6 +404,71 @@ export function WorkspaceIdentityPanel({
                   onClick={() => {
                     setEditDescription(plan.description || "");
                     setIsEditingDescription(false);
+                  }}
+                  className="text-neutral-500 hover:text-neutral-300"
+                >
+                  {t("common.cancel")}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {!isCompact && !isEditingConversionGoal && (plan.conversion_goal || isOwner) && (
+            <div className="flex max-w-3xl items-start gap-2">
+              {plan.conversion_goal ? (
+                <p className="text-xs leading-relaxed text-neutral-500">
+                  <span className="font-mono text-[10px] uppercase tracking-wide text-neutral-600">
+                    Conversion goal
+                  </span>
+                  <span className="mt-1 block text-neutral-400">{plan.conversion_goal}</span>
+                </p>
+              ) : isOwner ? (
+                <button
+                  type="button"
+                  onClick={() => setIsEditingConversionGoal(true)}
+                  className="text-xs text-neutral-600 transition-colors hover:text-neutral-400"
+                >
+                  Set conversion goal
+                </button>
+              ) : null}
+              {isOwner && plan.conversion_goal ? (
+                <button
+                  type="button"
+                  onClick={() => setIsEditingConversionGoal(true)}
+                  className="shrink-0 text-white/35 transition-colors hover:text-white"
+                  title="Edit conversion goal"
+                >
+                  <Pencil className="h-3 w-3" />
+                </button>
+              ) : null}
+            </div>
+          )}
+
+          {!isCompact && isEditingConversionGoal && (
+            <div className="max-w-2xl space-y-1.5">
+              <label className="font-mono text-[10px] uppercase tracking-wide text-neutral-600">
+                Conversion goal
+              </label>
+              <input
+                type="text"
+                value={editConversionGoal}
+                onChange={(e) => setEditConversionGoal(e.target.value)}
+                placeholder="e.g. Trial-to-paid activation"
+                className="w-full rounded-md border border-neutral-700 bg-neutral-900 px-2.5 py-2 text-xs text-white focus:border-neutral-400 focus:outline-none"
+                autoFocus
+              />
+              <div className="flex items-center gap-3 text-xs">
+                <button
+                  onClick={saveConversionGoal}
+                  disabled={savingConversionGoal}
+                  className="font-medium text-neutral-200 hover:text-white"
+                >
+                  {savingConversionGoal ? "..." : t("common.save")}
+                </button>
+                <button
+                  onClick={() => {
+                    setEditConversionGoal(plan.conversion_goal || "");
+                    setIsEditingConversionGoal(false);
                   }}
                   className="text-neutral-500 hover:text-neutral-300"
                 >

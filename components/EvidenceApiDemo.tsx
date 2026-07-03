@@ -126,8 +126,12 @@ type EvidenceResponse = {
   evidence: { id: string; tool_action: string | null; created_at: string };
 };
 
+type ConversionGoalSource = "workspace" | "inferred";
+
 type PerformanceResponse = {
   mode: "report";
+  workspace_conversion_goal: string;
+  conversion_goal_source: ConversionGoalSource;
   report: PerformanceReport;
   evidence_summary: { evidence_artifacts: number; blocks: number };
   file_ids?: string[];
@@ -2152,6 +2156,8 @@ function ScoreView({
             report={report}
             reportHistory={reportHistory}
             layout="spacious"
+            workspaceConversionGoal={performanceResponse?.workspace_conversion_goal}
+            conversionGoalSource={performanceResponse?.conversion_goal_source}
             label={
               latestSnapshot
                 ? `Latest score · day ${latestSnapshot.simulatedDays} · ${latestSnapshot.actionCount} actions`
@@ -2400,15 +2406,20 @@ function PerformanceReportCard({
   label = "Performance report",
   layout = "compact",
   reportHistory = [],
+  workspaceConversionGoal,
+  conversionGoalSource,
 }: {
   report: PerformanceReport;
   label?: string;
   layout?: "compact" | "spacious";
   reportHistory?: ReportSnapshot[];
+  workspaceConversionGoal?: string;
+  conversionGoalSource?: ConversionGoalSource;
 }) {
   const overallScore = clampScore(report.overall_score);
   const conversionScore = clampScore(report.conversion_score);
-  const conversionGoal = report.conversion_goal?.trim() || null;
+  const conversionGoal =
+    workspaceConversionGoal?.trim() || report.conversion_goal?.trim() || null;
   const markerScores = report.marker_scores ?? [];
   const isSpacious = layout === "spacious";
   const availableTabs = useMemo(
@@ -2482,9 +2493,21 @@ function PerformanceReportCard({
                 ) : null}
               </div>
               {conversionGoal ? (
-                <p className="mt-8 max-w-xl text-sm leading-relaxed text-zinc-500 sm:text-base">
-                  {conversionGoal}
-                </p>
+                <div className="mt-8 max-w-xl text-left">
+                  <div className="flex flex-wrap items-center justify-center gap-2">
+                    <span className="font-mono text-xs uppercase tracking-[1.5px] text-zinc-600">
+                      Conversion goal
+                    </span>
+                    {conversionGoalSource ? (
+                      <span className="rounded-full border border-zinc-700 px-2 py-0.5 font-mono text-[10px] uppercase tracking-wide text-zinc-400">
+                        {conversionGoalSource === "workspace" ? "Workspace" : "Inferred"}
+                      </span>
+                    ) : null}
+                  </div>
+                  <p className="mt-3 text-center text-base leading-relaxed text-zinc-300 sm:text-lg">
+                    {conversionGoal}
+                  </p>
+                </div>
               ) : null}
               <p className="mt-8 max-w-2xl text-left text-base leading-relaxed text-zinc-300 sm:text-lg">
                 {report.summary}

@@ -281,17 +281,24 @@ export function emptyPerformanceReport(message?: string): PerformanceReport {
   };
 }
 
-export function buildPerformanceReportInstructions(blockId?: string | null): string {
+export function buildPerformanceReportInstructions(
+  blockId?: string | null,
+  workspaceConversionGoal?: string | null
+): string {
   const scope = blockId ? "a single workspace block" : "the full workspace";
+  const goalLine = workspaceConversionGoal?.trim()
+    ? `\nAuthoritative workspace conversion goal (use exactly for conversion_goal; score conversion_score against this):\n"${workspaceConversionGoal.trim()}"\n`
+    : "";
 
   return `You produce structured learning and gap analysis for ${scope} in OpenLesson.
+${goalLine}
 
 Use the attached workspace performance JSON and artifact files. Return only JSON matching the schema.
 
 Required scoring outputs:
 1. overall_score — integer 0-100 **learning verification** score synthesized from all evidence (not an average of markers; use judgment). Measures demonstrated competency and readiness to perform — not business conversion directly.
 2. conversion_score — integer 0-100 **conversion likelihood** estimating how likely the learner is to achieve the workspace's outcome/conversion goal based on all evidence (tool traces, TAP, artifacts, milestones, drop-offs, re-engagement). This is separate from overall_score: strong learning can coexist with low conversion odds if evidence shows abandonment, missing activation steps, or blockers.
-3. conversion_goal — one concise phrase defining what "conversion" means for this workspace (e.g. "Trial-to-paid activation", "Month-end close certification", "Launch go/no-go approval"). Infer from workspace title, description, notes, blocks, eval definition, and evidence when the goal is not explicit.
+3. conversion_goal — one concise phrase defining what "conversion" means for this workspace. When an authoritative workspace conversion goal is provided above, echo it exactly. Otherwise infer from workspace title, description, notes, blocks, eval definition, and evidence.
 4. marker_scores — 4-8 competency axes for spider/radar visualization. Each item needs:
    - id: snake_case competency key aligned to workspace blocks or eval definition
    - label: human-readable axis name

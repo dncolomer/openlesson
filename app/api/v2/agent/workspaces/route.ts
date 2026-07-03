@@ -2,6 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { authenticateRequest, errorResponse } from "@/lib/agent-v2/auth";
 import { callXaiJSON, DEFAULT_MODEL, userMessage } from "@/lib/xai-client";
 import { uploadFileToXAI } from "@/lib/xai-files";
+import {
+  fallbackConversionGoal,
+  normalizeConversionGoal,
+  WORKSPACE_GENERATION_CONVERSION_GOAL_RULE,
+} from "@/lib/agent-v2/conversion-goal";
 import { persistSkillGridPositions, skillGridNodesFromRefs } from "@/lib/skill-grid-positions";
 
 export const runtime = "nodejs";
@@ -35,6 +40,7 @@ interface GeneratedBlock {
 
 interface GeneratedWorkspace {
   title: string;
+  conversion_goal?: string;
   blocks: GeneratedBlock[];
 }
 
@@ -92,7 +98,7 @@ export async function POST(req: NextRequest) {
     : "";
   const generated = await callXaiJSON<GeneratedWorkspace>(
     [
-      userMessage(`Create a performance learning workspace from this prompt. Break it into available blocks that a learner can complete and later request GHL score links for.\n\nPrompt:\n${initialPrompt}${fileContext}\n\nReturn ONLY JSON:\n{\n  "title": "concise workspace title",\n  "blocks": [\n    { "id": "a", "title": "Block title", "description": "What the learner should demonstrate", "is_start": true, "next": ["b"] }\n  ]\n}\n\nRules:\n- Create 3 to 8 blocks.\n- Blocks are assessable learning/performance units.\n- Use short stable ids only for linking within this response.`),
+      userMessage(`Create a performance learning workspace from this prompt. Break it into available blocks that a learner can complete and later request GHL score links for.\n\nPrompt:\n${initialPrompt}${fileContext}\n\nReturn ONLY JSON:\n{\n  "title": "concise workspace title",\n  "conversion_goal": "concise success/conversion outcome for this workspace",\n  "blocks": [\n    { "id": "a", "title": "Block title", "description": "What the learner should demonstrate", "is_start": true, "next": ["b"] }\n  ]\n}\n\nRules:\n- Create 3 to 8 blocks.\n- Blocks are assessable learning/performance units.\n- Use short stable ids only for linking within this response.${WORKSPACE_GENERATION_CONVERSION_GOAL_RULE}`),
     ],
     { model: DEFAULT_MODEL, maxTokens: 1800, temperature: 0.3 }
   );
@@ -116,20 +122,30 @@ export async function POST(req: NextRequest) {
     return errorResponse(403, "forbidden", "No organization admin is available to own this workspace");
   }
 
+  const workspaceTitle = generated.data.title || "Verification Workspace";
+  const conversionGoal =
+    normalizeConversionGoal(generated.data.conversion_goal) ||
+    fallbackConversionGoal({
+      title: workspaceTitle,
+      notes: initialPrompt,
+      root_topic: initialPrompt.slice(0, 160),
+    });
+
   const { data: workspace, error: workspaceError } = await supabase
     .from("learning_plans")
     .insert({
       user_id: ownerUserId,
       organization_id: auth.organization_id,
       guest_user_id: auth.guest_user_id,
-      title: generated.data.title || "Verification Workspace",
+      title: workspaceTitle,
       root_topic: initialPrompt.slice(0, 160),
       status: "active",
       source_type: "topic",
       notes: initialPrompt,
+      conversion_goal: conversionGoal,
       is_agent_session: true,
     })
-    .select("id, title, root_topic, status, notes, created_at, updated_at")
+    .select("id, title, root_topic, status, notes, conversion_goal, created_at, updated_at")
     .single();
 
   if (workspaceError || !workspace) {

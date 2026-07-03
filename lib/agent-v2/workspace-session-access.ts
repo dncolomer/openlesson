@@ -10,6 +10,7 @@ export interface WorkspaceSessionPlan {
   root_topic: string | null;
   description: string | null;
   notes: string | null;
+  conversion_goal: string | null;
   user_id: string;
   organization_id: string | null;
 }
@@ -99,7 +100,7 @@ export async function requireWorkspaceOwnerSession(
       .single(),
     supabase
       .from("learning_plans")
-      .select("id, title, root_topic, description, notes, user_id, organization_id")
+      .select("id, title, root_topic, description, notes, conversion_goal, user_id, organization_id")
       .eq("id", planId)
       .single(),
   ]);

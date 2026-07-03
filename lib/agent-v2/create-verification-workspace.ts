@@ -2,6 +2,11 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { callXaiJSON, DEFAULT_MODEL, userMessage } from "@/lib/xai-client";
 import { uploadFileToXAI } from "@/lib/xai-files";
 import { persistSkillGridPositions, skillGridNodesFromRefs } from "@/lib/skill-grid-positions";
+import {
+  fallbackConversionGoal,
+  normalizeConversionGoal,
+  WORKSPACE_GENERATION_CONVERSION_GOAL_RULE,
+} from "./conversion-goal";
 import type { AuthContext } from "./types";
 
 export interface WorkspaceInitialFile {
@@ -28,6 +33,7 @@ interface GeneratedBlock {
 
 interface GeneratedWorkspace {
   title: string;
+  conversion_goal?: string;
   blocks: GeneratedBlock[];
 }
 
@@ -53,7 +59,7 @@ export async function createVerificationWorkspaceFromPrompt(
   const generated = await callXaiJSON<GeneratedWorkspace>(
     [
       userMessage(
-        `Create a performance learning workspace from this prompt. Break it into assessable blocks for learning verification and evidence-based gap analysis.\n\nPrompt:\n${initialPrompt}${fileContext}\n\nReturn ONLY JSON:\n{\n  "title": "concise workspace title",\n  "blocks": [\n    { "id": "a", "title": "Block title", "description": "What the learner should demonstrate", "is_start": true, "next": ["b"] }\n  ]\n}\n\nRules:\n- Create 3 to 6 blocks.\n- Blocks are assessable learning/performance units.\n- Use short stable ids only for linking within this response.`
+        `Create a performance learning workspace from this prompt. Break it into assessable blocks for learning verification and evidence-based gap analysis.\n\nPrompt:\n${initialPrompt}${fileContext}\n\nReturn ONLY JSON:\n{\n  "title": "concise workspace title",\n  "conversion_goal": "concise success/conversion outcome for this workspace",\n  "blocks": [\n    { "id": "a", "title": "Block title", "description": "What the learner should demonstrate", "is_start": true, "next": ["b"] }\n  ]\n}\n\nRules:\n- Create 3 to 6 blocks.\n- Blocks are assessable learning/performance units.\n- Use short stable ids only for linking within this response.${WORKSPACE_GENERATION_CONVERSION_GOAL_RULE}`
       ),
     ],
     { model: DEFAULT_MODEL, maxTokens: 1800, temperature: 0.3 }
@@ -78,21 +84,34 @@ export async function createVerificationWorkspaceFromPrompt(
     throw new Error("No user available to own this workspace");
   }
 
+  const workspaceTitle = generated.data.title || "Verification Workspace";
+  const workspaceDescription =
+    options?.description || "Verification workspace for learning and performance assessment";
+  const conversionGoal =
+    normalizeConversionGoal(generated.data.conversion_goal) ||
+    fallbackConversionGoal({
+      title: workspaceTitle,
+      description: workspaceDescription,
+      notes: initialPrompt,
+      root_topic: initialPrompt.slice(0, 160),
+    });
+
   const { data: workspace, error: workspaceError } = await supabase
     .from("learning_plans")
     .insert({
       user_id: ownerUserId,
       organization_id: auth.organization_id,
       guest_user_id: auth.guest_user_id,
-      title: generated.data.title || "Verification Workspace",
+      title: workspaceTitle,
       root_topic: initialPrompt.slice(0, 160),
       status: "active",
       source_type: "topic",
       notes: initialPrompt,
-      description: options?.description || "Verification workspace for learning and performance assessment",
+      description: workspaceDescription,
+      conversion_goal: conversionGoal,
       is_agent_session: options?.isAgentSession ?? true,
     })
-    .select("id, title, root_topic, status, notes, description, created_at, updated_at")
+    .select("id, title, root_topic, status, notes, description, conversion_goal, created_at, updated_at")
     .single();
 
   if (workspaceError || !workspace) {

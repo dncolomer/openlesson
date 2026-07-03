@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { finalizePerformanceReport } from "@/lib/agent-v2/conversion-goal";
 import {
   buildPerformanceReportInstructions,
   buildWorkspacePerformanceContext,
@@ -38,12 +39,13 @@ export async function POST(req: NextRequest) {
     });
 
     const workspaceTitle = access.plan.title || access.plan.root_topic || "workspace";
+    const storedConversionGoal = context.payload.workspace.conversion_goal;
 
     const reportResult = await callXaiResponsesWithFiles<PerformanceReport>(
       `Generate a learning and gap analysis report for workspace "${workspaceTitle}".`,
       context.fileIds,
       {
-        instructions: buildPerformanceReportInstructions(blockId),
+        instructions: buildPerformanceReportInstructions(blockId, storedConversionGoal),
         temperature: 0.35,
         maxOutputTokens: 2500,
         fetchTimeout: 120000,
@@ -58,9 +60,18 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const finalized = finalizePerformanceReport(reportResult.data, storedConversionGoal, {
+      title: context.payload.workspace.title,
+      description: context.payload.workspace.description,
+      notes: context.payload.workspace.notes,
+      root_topic: context.payload.workspace.root_topic,
+    });
+
     return NextResponse.json({
       mode: "report",
-      report: reportResult.data,
+      workspace_conversion_goal: finalized.workspace_conversion_goal,
+      conversion_goal_source: finalized.conversion_goal_source,
+      report: finalized.report,
       evidence_summary: context.payload.counts,
       file_ids: context.fileIds,
     });

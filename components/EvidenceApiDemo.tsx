@@ -54,15 +54,15 @@ type DemoPhase = "picker" | "intro" | "creating" | "simulating";
 type DemoView = "simulator" | "evidence" | "evaluation" | "score";
 type ScoreCardTab = "overview" | "competency" | "markers" | "strengths" | "gaps" | "history";
 
-const DEMO_TAB_STAGE = "relative h-[48rem] w-full";
+const DEMO_TAB_STAGE = "h-[48rem] w-full";
 const DEMO_TAB_PANEL =
-  "absolute inset-0 flex w-full flex-col overflow-hidden rounded-lg border border-zinc-800 bg-zinc-950/70";
-const DEMO_TAB_HEADER = "shrink-0 min-h-[10rem] border-b border-zinc-800 px-5 py-4 sm:px-6";
+  "flex h-full w-full flex-col overflow-hidden rounded-lg border border-zinc-800 bg-zinc-950/70";
+const DEMO_TAB_HEADER = "shrink-0 border-b border-zinc-800 px-5 py-4 sm:px-6";
 const DEMO_TAB_BODY =
-  "flex min-h-0 flex-1 w-full flex-col overflow-hidden p-5 sm:p-6";
+  "flex h-[38rem] w-full flex-col overflow-hidden p-5 sm:p-6";
 const DEMO_TAB_BODY_SCROLL =
-  "flex min-h-0 flex-1 w-full flex-col gap-6 overflow-y-auto p-5 sm:p-6";
-const DEMO_SCORE_TABPANEL = "min-h-0 flex-1 w-full overflow-y-auto py-2";
+  "flex h-[38rem] w-full flex-col gap-6 overflow-y-auto p-5 sm:p-6";
+const DEMO_SCORE_TABPANEL = "h-[28rem] w-full overflow-y-auto py-2";
 
 type ReportSnapshot = {
   id: string;
@@ -1613,11 +1613,11 @@ function SimulatorPanel({
       <div
         className={
           fullHeight
-            ? `${DEMO_TAB_HEADER} flex justify-center ${styles.headerBorder}`
+            ? `${DEMO_TAB_HEADER} ${styles.headerBorder}`
             : `shrink-0 border-b px-5 py-4 sm:px-6 ${styles.headerBorder}`
         }
       >
-        <div className="flex w-full items-center justify-between gap-3">
+        <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <div
               className={`flex size-9 items-center justify-center rounded-md text-sm font-bold ${styles.logo}`}
@@ -1919,8 +1919,8 @@ function EvidenceLayerView({
 }) {
   return (
     <section className={DEMO_TAB_PANEL}>
-      <div className={`${DEMO_TAB_HEADER} flex justify-center`}>
-        <div className="flex w-full items-center gap-2">
+      <div className={DEMO_TAB_HEADER}>
+        <div className="flex items-center gap-2">
           <Radio className="size-4 text-zinc-300" />
           <div>
             <div className="text-sm font-medium text-white">OpenLesson verification layer</div>
@@ -2095,8 +2095,8 @@ function ContinuousEvaluationView({
 
   return (
     <section className={DEMO_TAB_PANEL}>
-      <div className={`${DEMO_TAB_HEADER} flex justify-center`}>
-        <div className="flex w-full items-center gap-2">
+      <div className={DEMO_TAB_HEADER}>
+        <div className="flex items-center gap-2">
           <RefreshCw className="size-4 text-zinc-300" />
           <div>
             <div className="text-sm font-medium text-white">Continuous evaluation</div>
@@ -2299,8 +2299,8 @@ function ScoreView({
 
   return (
     <section className={DEMO_TAB_PANEL}>
-      <div className={`${DEMO_TAB_HEADER} flex justify-center`}>
-        <div className="flex w-full flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+      <div className={DEMO_TAB_HEADER}>
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex items-center gap-3">
             <div className="flex size-10 items-center justify-center rounded-md border border-zinc-700 bg-black/40">
               <BarChart3 className="size-5 text-white" />
@@ -2383,8 +2383,8 @@ function ScoreView({
         ) : null}
 
         {report && showRawResponse && performanceResponse ? (
-          <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden">
-            <div className="shrink-0 font-mono text-xs uppercase tracking-[1.5px] text-zinc-600">
+          <div className="flex h-[34rem] w-full flex-col gap-3 overflow-hidden">
+            <div className="font-mono text-xs uppercase tracking-[1.5px] text-zinc-600">
               POST /api/evidence-api-demo/performance
             </div>
             <pre className="min-h-0 flex-1 overflow-auto whitespace-pre-wrap font-mono text-xs leading-relaxed text-zinc-400 sm:text-sm">
@@ -2394,7 +2394,7 @@ function ScoreView({
         ) : null}
 
         {report && !showRawResponse ? (
-          <div className="flex min-h-0 flex-1 flex-col">
+          <div className="w-full">
             <PerformanceReportCard
               key={latestSnapshot?.id ?? "report"}
               report={report}
@@ -2410,7 +2410,7 @@ function ScoreView({
             />
           </div>
         ) : report ? null : (
-          <div className="flex min-h-0 flex-1 flex-col items-center justify-center rounded-lg border border-dashed border-zinc-800 px-6 py-16 text-center">
+          <div className="flex h-[34rem] w-full flex-col items-center justify-center rounded-lg border border-dashed border-zinc-800 px-6 py-16 text-center">
             <Gauge className="size-10 text-zinc-600" />
             <h3 className="mt-4 text-lg font-medium text-zinc-300">No score yet</h3>
             <p className="mt-2 max-w-md text-sm leading-relaxed text-zinc-500">
@@ -2621,8 +2621,8 @@ function PerformanceReportCard({
 
   if (isSpacious) {
     return (
-      <div className="flex min-h-0 flex-1 flex-col gap-4">
-        <div className="flex shrink-0 flex-wrap items-center justify-between gap-4">
+      <div className="flex w-full flex-col gap-4">
+        <div className="flex flex-wrap items-center justify-between gap-4">
           <h3 className="text-sm text-zinc-400">{label}</h3>
           <div className="flex flex-wrap items-center gap-3">
             {overallScore != null ? (
@@ -2642,15 +2642,13 @@ function PerformanceReportCard({
           </div>
         </div>
 
-        <div className="shrink-0">
-          <ScoreCardTabBar
-            tabs={availableTabs}
-            activeTab={activeTab}
-            onChange={setActiveTab}
-            report={report}
-            reportHistory={reportHistory}
-          />
-        </div>
+        <ScoreCardTabBar
+          tabs={availableTabs}
+          activeTab={activeTab}
+          onChange={setActiveTab}
+          report={report}
+          reportHistory={reportHistory}
+        />
 
         <div role="tabpanel" className={DEMO_SCORE_TABPANEL}>
           {activeTab === "overview" ? (

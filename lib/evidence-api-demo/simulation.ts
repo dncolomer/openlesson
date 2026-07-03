@@ -36,6 +36,26 @@ export function hasCompletedAction(state: SimulationWorldState, actionId: string
   return (state.actionCounts[actionId] ?? 0) > 0 || state.completedActions.includes(actionId);
 }
 
+export function applyMcpSimulationEvent(
+  state: SimulationWorldState,
+  verb: string
+): SimulationWorldState {
+  const now = new Date().toISOString();
+  const nextCounts = { ...state.actionCounts };
+  nextCounts[verb] = (nextCounts[verb] ?? 0) + 1;
+
+  const completedActions = state.completedActions.includes(verb)
+    ? state.completedActions
+    : [...state.completedActions, verb];
+
+  return {
+    ...state,
+    completedActions,
+    actionCounts: nextCounts,
+    lastActionAt: now,
+  };
+}
+
 export function applySimulationAction(
   state: SimulationWorldState,
   action: SimulationAction
@@ -167,6 +187,57 @@ export function buildSimulationEvidencePayload(
     goals: demo.evidenceGoals,
     outcome: meta.outcome || action.outcome || "success",
     block_hint: action.blockHint,
+    world_state: {
+      elapsed_days: meta.worldState.simulatedDays,
+      completed_actions: meta.worldState.completedActions,
+      action_counts: meta.worldState.actionCounts,
+    },
+    ...meta.extra,
+  };
+}
+
+export function buildMcpEventEvidencePayload(
+  demo: EvidenceApiDemoDefinition,
+  event: {
+    verb: string;
+    label: string;
+    description: string;
+    timestamp: string;
+    mcpTool: string;
+    outcome?: "success" | "partial" | "struggle" | "failure";
+    sourceData: Record<string, unknown>;
+  },
+  meta: {
+    sessionId: string;
+    blockId?: string | null;
+    worldState: SimulationWorldState;
+    extra?: Record<string, unknown>;
+  }
+): Record<string, unknown> {
+  const count = meta.worldState.actionCounts[event.verb] ?? 0;
+
+  return {
+    schema_version: demo.schemaVersion,
+    product: demo.productName,
+    integration: demo.integrationName,
+    session_id: meta.sessionId,
+    block_id: meta.blockId || null,
+    event: {
+      verb: event.verb,
+      label: event.label,
+      timestamp: event.timestamp,
+      tool_name: event.mcpTool,
+      tool_action: event.verb,
+      source: "mcp_simulation",
+      occurrence: count + 1,
+    },
+    learner_reflection: event.description,
+    goals: demo.evidenceGoals,
+    outcome: event.outcome || "success",
+    mcp_import: {
+      tool: event.mcpTool,
+      source_record: event.sourceData,
+    },
     world_state: {
       elapsed_days: meta.worldState.simulatedDays,
       completed_actions: meta.worldState.completedActions,

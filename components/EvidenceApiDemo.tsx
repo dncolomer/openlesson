@@ -12,6 +12,8 @@ import {
   Gauge,
   LayoutGrid,
   Loader2,
+  Play,
+  Plug,
   RefreshCw,
   Sparkles,
   Zap,
@@ -29,11 +31,14 @@ import {
 import type { EvidenceApiDemoDefinition } from "@/lib/evidence-api-demo/demo-definition";
 import { EVIDENCE_API_DEMOS, resolveDemoId } from "@/lib/evidence-api-demo/demos";
 import {
+  applyMcpSimulationEvent,
   applySimulationAction,
+  buildMcpEventEvidencePayload,
   buildSimulationEvidencePayload,
   countDistinctEvidenceActions,
   createInitialWorldState,
   getActionsByCategory,
+  getSimulationAction,
   hasCompletedAction,
   isActionRepeatable,
   matchBlockToStep,
@@ -46,17 +51,17 @@ import type {
   SimulationCategory,
   SimulationWorldState,
 } from "@/lib/evidence-api-demo/types";
-import type { ImportEventsSummary } from "@/lib/evidence-api-demo/generate-custom-from-import";
-import {
-  IMPORT_TEXT_MIN_LENGTH,
-  type ImportSource,
-} from "@/lib/evidence-api-demo/parse-import-text";
+import type {
+  McpImportLogEntry,
+  McpSimulationEvent,
+  McpToolDescriptor,
+} from "@/lib/evidence-api-demo/mcp-simulation-types";
 import { aestheticImageForId, fetchAestheticPackages } from "@/lib/aesthetics";
 import { readJsonResponse } from "@/lib/read-json-response";
 
 type DemoPhase = "picker" | "intro" | "creating" | "simulating";
 type CustomInputMode = "prompt" | "import";
-type SimulatorSubview = "events" | "import";
+type SimulatorSubview = "events" | "mcp";
 type DemoView = "simulator" | "evaluation" | "score";
 type ScoreCardTab = "overview" | "competency" | "markers" | "strengths" | "gaps" | "history";
 
@@ -143,8 +148,6 @@ type PersistedDemoState = {
   customDemo?: EvidenceApiDemoDefinition;
   customPrompt?: string;
   customInputMode?: CustomInputMode;
-  importText?: string;
-  importSource?: ImportSource;
 };
 
 const CUSTOM_PROMPT_MIN_LENGTH = 40;
@@ -179,8 +182,6 @@ function loadPersistedState(): PersistedDemoState | null {
       customDemo: parsed.customDemo,
       customPrompt: parsed.customPrompt,
       customInputMode: parsed.customInputMode,
-      importText: parsed.importText,
-      importSource: parsed.importSource,
     };
   } catch {
     return null;
@@ -271,11 +272,16 @@ export function EvidenceApiDemo() {
   const [customDemo, setCustomDemo] = useState<EvidenceApiDemoDefinition | null>(null);
   const [customPrompt, setCustomPrompt] = useState("");
   const [customInputMode, setCustomInputMode] = useState<CustomInputMode>("prompt");
-  const [importText, setImportText] = useState("");
-  const [importSource, setImportSource] = useState<ImportSource>("skill");
-  const [isImportingEvents, setIsImportingEvents] = useState(false);
-  const [importSummary, setImportSummary] = useState<ImportEventsSummary | null>(null);
-  const [importRevision, setImportRevision] = useState(0);
+  const [mcpServerUrl, setMcpServerUrl] = useState("");
+  const [mcpAuthHeader, setMcpAuthHeader] = useState("");
+  const [mcpTools, setMcpTools] = useState<McpToolDescriptor[]>([]);
+  const [mcpSelectedTool, setMcpSelectedTool] = useState("");
+  const [mcpToolArgs, setMcpToolArgs] = useState("{}");
+  const [mcpImportLog, setMcpImportLog] = useState<McpImportLogEntry[]>([]);
+  const [mcpEventLog, setMcpEventLog] = useState<McpSimulationEvent[]>([]);
+  const [isMcpConnecting, setIsMcpConnecting] = useState(false);
+  const [isMcpPulling, setIsMcpPulling] = useState(false);
+  const [runningMcpEventId, setRunningMcpEventId] = useState<string | null>(null);
   const activeDemo = useMemo(() => {
     if (isCustomDemoId(demoId)) return customDemo ?? CUSTOM_DEMO_PICKER;
     return resolveDemoId(demoId);
@@ -411,8 +417,6 @@ export function EvidenceApiDemo() {
     setCustomDemo(persisted.customDemo ?? null);
     setCustomPrompt(persisted.customPrompt ?? "");
     setCustomInputMode(persisted.customInputMode ?? "prompt");
-    setImportText(persisted.importText ?? "");
-    setImportSource(persisted.importSource ?? "skill");
     setWorldState(persisted.worldState);
     setWorkspaceTitle(persisted.workspaceTitle ?? null);
     setBlocks(persisted.blocks ?? []);
@@ -426,8 +430,7 @@ export function EvidenceApiDemo() {
     setCustomDemo(null);
     setCustomPrompt("");
     setCustomInputMode("prompt");
-    setImportText("");
-    setImportSummary(null);
+    resetMcpSimulationState();
     setPhase("intro");
   };
 
@@ -436,8 +439,17 @@ export function EvidenceApiDemo() {
     setDemoId(CUSTOM_DEMO_ID);
     setCustomDemo(null);
     setCustomInputMode("prompt");
-    setImportSummary(null);
+    resetMcpSimulationState();
     setPhase("intro");
+  };
+
+  const resetMcpSimulationState = () => {
+    setMcpTools([]);
+    setMcpSelectedTool("");
+    setMcpToolArgs("{}");
+    setMcpImportLog([]);
+    setMcpEventLog([]);
+    setRunningMcpEventId(null);
   };
 
   const handleBackToPicker = () => {
@@ -453,7 +465,7 @@ export function EvidenceApiDemo() {
 
     setCustomInputMode("prompt");
     setError("");
-    setImportSummary(null);
+    resetMcpSimulationState();
     setPhase("creating");
     clearPersistedState();
     const newSessionId = createSessionId();
@@ -796,68 +808,194 @@ export function EvidenceApiDemo() {
     }
   };
 
-  const handleImportEvents = async () => {
-    if (importText.trim().length < IMPORT_TEXT_MIN_LENGTH) {
-      setError(`Paste skill or MCP text of at least ${IMPORT_TEXT_MIN_LENGTH} characters.`);
+  const handleMcpConnect = async () => {
+    if (!mcpServerUrl.trim()) {
+      setError("Enter an MCP server URL.");
       return;
     }
 
-    setIsImportingEvents(true);
+    setIsMcpConnecting(true);
     setError("");
 
     try {
       const res = await fetchWithTimeout(
-        "/api/evidence-api-demo/import-events",
+        "/api/evidence-api-demo/mcp-simulation",
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            importText: importText.trim(),
-            importSource,
+            step: "connect",
+            serverUrl: mcpServerUrl.trim(),
+            authHeader: mcpAuthHeader.trim() || undefined,
+          }),
+        },
+        120000
+      );
+      const data = await readJsonResponse<{
+        tools?: McpToolDescriptor[];
+        import_log?: McpImportLogEntry[];
+        error?: string;
+      }>(res);
+
+      if (!res.ok) {
+        if (data.import_log?.length) setMcpImportLog(data.import_log);
+        throw new Error(data.error || "Failed to connect to MCP server");
+      }
+
+      const tools = data.tools ?? [];
+      setMcpTools(tools);
+      setMcpSelectedTool(tools[0]?.name ?? "");
+      setMcpImportLog(data.import_log ?? []);
+      setMcpEventLog([]);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to connect to MCP server");
+    } finally {
+      setIsMcpConnecting(false);
+    }
+  };
+
+  const handleMcpPull = async () => {
+    if (!mcpServerUrl.trim()) {
+      setError("Enter an MCP server URL.");
+      return;
+    }
+    if (!mcpSelectedTool) {
+      setError("Select an MCP tool to pull data.");
+      return;
+    }
+
+    let parsedArgs: Record<string, unknown> = {};
+    try {
+      parsedArgs = JSON.parse(mcpToolArgs.trim() || "{}") as Record<string, unknown>;
+    } catch {
+      setError("Tool arguments must be valid JSON.");
+      return;
+    }
+
+    setIsMcpPulling(true);
+    setError("");
+
+    const selectedTool = mcpTools.find((tool) => tool.name === mcpSelectedTool);
+
+    try {
+      const res = await fetchWithTimeout(
+        "/api/evidence-api-demo/mcp-simulation",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            step: "pull",
+            serverUrl: mcpServerUrl.trim(),
+            authHeader: mcpAuthHeader.trim() || undefined,
+            toolName: mcpSelectedTool,
+            toolDescription: selectedTool?.description,
+            toolArgs: parsedArgs,
           }),
         },
         180000
       );
       const data = await readJsonResponse<{
-        custom_definition?: EvidenceApiDemoDefinition;
-        import_summary?: ImportEventsSummary;
+        events?: McpSimulationEvent[];
+        import_log?: McpImportLogEntry[];
         error?: string;
-        hint?: string;
       }>(res);
 
       if (!res.ok) {
-        throw new Error([data.error || "Failed to import events", data.hint].filter(Boolean).join(" "));
+        if (data.import_log?.length) {
+          setMcpImportLog((prev) => [...prev, ...data.import_log!]);
+        }
+        throw new Error(data.error || "Failed to pull MCP data");
       }
 
-      if (!data.custom_definition) {
-        throw new Error("Import succeeded but no simulation definition was returned.");
-      }
+      setMcpEventLog(data.events ?? []);
+      setMcpImportLog((prev) => [...prev, ...(data.import_log ?? [])]);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to pull MCP data");
+    } finally {
+      setIsMcpPulling(false);
+    }
+  };
 
-      setDemoId(CUSTOM_DEMO_ID);
-      setCustomDemo(data.custom_definition);
-      setCustomInputMode("import");
-      setWorldState(createInitialWorldState());
-      setImportSummary(data.import_summary ?? null);
-      setImportRevision((revision) => revision + 1);
+  const handleSimulateMcpEvent = async (event: McpSimulationEvent) => {
+    if (!planId || runningMcpEventId || event.status === "simulated") return;
 
-      if (planId) {
-        persistState({
+    setRunningMcpEventId(event.id);
+    setError("");
+
+    const matchedAction = getSimulationAction(activeDemo, event.verb);
+    const nextWorld = matchedAction
+      ? applySimulationAction(worldState, matchedAction)
+      : applyMcpSimulationEvent(worldState, event.verb);
+    const blockId = matchedAction
+      ? matchBlockToStep(blocks, matchedAction)
+      : blocks[0]?.id ?? null;
+
+    const payload = buildMcpEventEvidencePayload(activeDemo, event, {
+      sessionId,
+      blockId,
+      worldState: nextWorld,
+    });
+
+    try {
+      const res = await fetchWithTimeout("/api/evidence-api-demo/evidence", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
           planId,
-          sessionId,
-          demoId: CUSTOM_DEMO_ID,
-          worldState: createInitialWorldState(),
-          workspaceTitle: workspaceTitle ?? undefined,
-          blocks,
-          customDemo: data.custom_definition,
-          importText: importText.trim(),
-          importSource,
-          customInputMode: "import",
-        });
+          type: "tool",
+          mime_type: "application/json",
+          payload,
+          block_id: blockId,
+          session_id: sessionId,
+          tool_name: event.mcpTool,
+          tool_action: event.verb,
+          file_name: `mcp-${event.verb}-${(worldState.actionCounts[event.verb] ?? 0) + 1}.json`,
+          metadata: {
+            source: "mcp_simulation",
+            product: activeDemo.productName,
+            integration: activeDemo.integrationName,
+            mcp_tool: event.mcpTool,
+            simulated_days: nextWorld.simulatedDays,
+          },
+        }),
+      });
+
+      const data = await readJsonResponse<EvidenceResponse & { error?: string }>(res);
+      if (!res.ok) {
+        throw new Error(data.error || "Evidence upload failed");
+      }
+
+      const nextEvidenceCount = evidenceCount + 1;
+      setWorldState(nextWorld);
+      setEvidenceCount(nextEvidenceCount);
+      setMcpEventLog((prev) =>
+        prev.map((entry) =>
+          entry.id === event.id
+            ? { ...entry, status: "simulated", evidenceId: data.evidence.id }
+            : entry
+        )
+      );
+      persistState({
+        planId,
+        sessionId,
+        demoId: activeDemo.id,
+        worldState: nextWorld,
+        workspaceTitle: workspaceTitle ?? undefined,
+        blocks,
+        customDemo: isCustomDemoId(activeDemo.id) ? activeDemo : undefined,
+        customPrompt: isCustomDemoId(activeDemo.id) ? customPrompt.trim() : undefined,
+      });
+
+      if (shouldSuggestSkillRegeneration(nextEvidenceCount, lastSkillEvidenceCount)) {
+        setSkillRegenHint(true);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to import simulation events");
+      setError(err instanceof Error ? err.message : "Failed to simulate MCP event");
+      setMcpEventLog((prev) =>
+        prev.map((entry) => (entry.id === event.id ? { ...entry, status: "failed" } : entry))
+      );
     } finally {
-      setIsImportingEvents(false);
+      setRunningMcpEventId(null);
     }
   };
 
@@ -868,8 +1006,9 @@ export function EvidenceApiDemo() {
     setCustomDemo(null);
     setCustomPrompt("");
     setCustomInputMode("prompt");
-    setImportText("");
-    setImportSummary(null);
+    setMcpServerUrl("");
+    setMcpAuthHeader("");
+    resetMcpSimulationState();
     setPlanId(null);
     setWorkspaceTitle(null);
     setBlocks([]);
@@ -1068,15 +1207,24 @@ export function EvidenceApiDemo() {
                 customPrompt={customPrompt}
                 onCustomPromptChange={setCustomPrompt}
                 customPromptMinLength={CUSTOM_PROMPT_MIN_LENGTH}
-                importText={importText}
-                onImportTextChange={setImportText}
-                importSource={importSource}
-                onImportSourceChange={setImportSource}
-                importTextMinLength={IMPORT_TEXT_MIN_LENGTH}
-                isImportingEvents={isImportingEvents}
-                importSummary={importSummary}
-                onImportEvents={handleImportEvents}
-                importRevision={importRevision}
+                mcpServerUrl={mcpServerUrl}
+                onMcpServerUrlChange={setMcpServerUrl}
+                mcpAuthHeader={mcpAuthHeader}
+                onMcpAuthHeaderChange={setMcpAuthHeader}
+                mcpTools={mcpTools}
+                mcpSelectedTool={mcpSelectedTool}
+                onMcpSelectedToolChange={setMcpSelectedTool}
+                mcpToolArgs={mcpToolArgs}
+                onMcpToolArgsChange={setMcpToolArgs}
+                mcpImportLog={mcpImportLog}
+                mcpEventLog={mcpEventLog}
+                isMcpConnecting={isMcpConnecting}
+                isMcpPulling={isMcpPulling}
+                runningMcpEventId={runningMcpEventId}
+                planId={planId}
+                onMcpConnect={handleMcpConnect}
+                onMcpPull={handleMcpPull}
+                onSimulateMcpEvent={handleSimulateMcpEvent}
                 onCustomInputModeChange={setCustomInputMode}
               />
             ) : null}
@@ -1461,8 +1609,8 @@ function DemoUseCasePicker({
               <div className="text-base font-medium text-white">Custom simulation</div>
               <div className={`text-xs ${customStyles.subtitle}`}>{CUSTOM_DEMO_PICKER.tagline}</div>
               <p className={`mt-3 max-w-2xl text-sm leading-relaxed ${customStyles.bodyText}`}>
-                {CUSTOM_DEMO_PICKER.description} After you start, use the Skill / MCP import tab in the Event
-                simulator to paste integration docs and generate events from an external system.
+                {CUSTOM_DEMO_PICKER.description} After you start, use the MCP simulation tab to connect to a
+                live MCP server, pull real data, and simulate imported event logs.
               </p>
             </div>
           </div>
@@ -1486,30 +1634,325 @@ function countCategoryActivity(
   return { completed, total: actions.length };
 }
 
-function ImportWhatHappens() {
+function McpSimulationHowItWorks() {
   return (
     <div className="rounded-md border border-zinc-800 bg-black/25 p-4">
       <div className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-600">
-        What happens on import
+        MCP-based simulation
       </div>
       <ol className="mt-3 space-y-2.5 text-sm leading-relaxed text-zinc-400">
         <li>
-          <span className="text-zinc-200">1. Parse</span> — Grok reads your paste: skill frontmatter,
-          API endpoints, evidence goals, and MCP tool names/descriptions.
+          <span className="text-zinc-200">1. Connect</span> — call a live MCP server (HTTP JSON-RPC), list
+          available tools, and verify you can read data.
         </li>
         <li>
-          <span className="text-zinc-200">2. Explore</span> — capabilities are mapped to a non-linear
-          learner journey (setup, integrations, mistakes, recovery, activation).
+          <span className="text-zinc-200">2. Pull</span> — run a tool (e.g. list workspaces, list blocks) and
+          fetch real records from the external system.
         </li>
         <li>
-          <span className="text-zinc-200">3. Generate</span> — 15–30 evidence events plus calendar gap
-          tools are produced as simulatable actions with stable tool_action ids.
+          <span className="text-zinc-200">3. Translate</span> — each record becomes an event log entry with a
+          verb, label, and MCP source payload.
         </li>
         <li>
-          <span className="text-zinc-200">4. Replace</span> — the Events tab action grid is swapped for the
-          new definition. Simulator day/action counters reset; your workspace and uploaded evidence are kept.
+          <span className="text-zinc-200">4. Simulate</span> — run entries one-by-one to upload evidence.
+          The Events tab action grid stays unchanged.
         </li>
       </ol>
+    </div>
+  );
+}
+
+function McpImportLogPanel({ entries }: { entries: McpImportLogEntry[] }) {
+  if (entries.length === 0) return null;
+
+  return (
+    <div className="rounded-md border border-zinc-800 bg-black/25 p-4">
+      <div className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-600">Import log</div>
+      <div className="mt-3 max-h-48 space-y-2 overflow-y-auto pr-1">
+        {entries.map((entry) => (
+          <div key={entry.id} className="rounded border border-zinc-800/80 bg-black/20 px-3 py-2">
+            <div className="flex items-center gap-2 text-xs">
+              <span
+                className={`font-mono uppercase ${
+                  entry.level === "error"
+                    ? "text-red-400"
+                    : entry.level === "success"
+                      ? "text-emerald-400"
+                      : "text-zinc-500"
+                }`}
+              >
+                {entry.level}
+              </span>
+              <span className="text-zinc-300">{entry.message}</span>
+              <span className="ml-auto font-mono text-[10px] text-zinc-600">
+                {new Date(entry.timestamp).toLocaleTimeString()}
+              </span>
+            </div>
+            {entry.detail ? (
+              <pre className="mt-2 max-h-24 overflow-auto whitespace-pre-wrap font-mono text-[10px] leading-relaxed text-zinc-500">
+                {entry.detail}
+              </pre>
+            ) : null}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function McpEventLogPanel({
+  events,
+  runningMcpEventId,
+  onSimulate,
+  styles,
+}: {
+  events: McpSimulationEvent[];
+  runningMcpEventId: string | null;
+  onSimulate: (event: McpSimulationEvent) => void;
+  styles: ReturnType<typeof demoPanelStyles>;
+}) {
+  if (events.length === 0) return null;
+
+  return (
+    <div className="rounded-md border border-zinc-800 bg-black/25 p-4">
+      <div className="flex items-center justify-between gap-3">
+        <div className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-600">
+          Event log ({events.length})
+        </div>
+        <span className="text-[10px] text-zinc-500">Simulate entries to upload evidence</span>
+      </div>
+      <div className="mt-3 max-h-72 space-y-2 overflow-y-auto pr-1">
+        {events.map((event) => {
+          const isRunning = runningMcpEventId === event.id;
+          const isDone = event.status === "simulated";
+          const isFailed = event.status === "failed";
+          return (
+            <div
+              key={event.id}
+              className="flex items-start gap-3 rounded border border-zinc-800/80 bg-black/20 px-3 py-3"
+            >
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-sm font-medium text-white">{event.label}</span>
+                  <span className="rounded bg-zinc-800 px-1.5 py-0.5 font-mono text-[9px] text-zinc-400">
+                    {event.verb}
+                  </span>
+                  {isDone ? (
+                    <span className="font-mono text-[9px] uppercase text-emerald-400">simulated</span>
+                  ) : null}
+                  {isFailed ? (
+                    <span className="font-mono text-[9px] uppercase text-red-400">failed</span>
+                  ) : null}
+                </div>
+                <p className="mt-1 text-xs leading-relaxed text-zinc-500">{event.description}</p>
+                <div className="mt-1 font-mono text-[10px] text-zinc-600">
+                  {event.mcpTool} · {new Date(event.timestamp).toLocaleString()}
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => onSimulate(event)}
+                disabled={isRunning || isDone || runningMcpEventId !== null}
+                className={`inline-flex shrink-0 items-center gap-1.5 rounded-md px-3 py-2 text-xs font-medium transition disabled:cursor-not-allowed disabled:opacity-50 ${styles.button}`}
+              >
+                {isRunning ? (
+                  <>
+                    <Loader2 className="size-3.5 animate-spin" />
+                    Simulating…
+                  </>
+                ) : (
+                  <>
+                    <Play className="size-3.5" />
+                    Simulate
+                  </>
+                )}
+              </button>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function McpSimulationPanel({
+  mcpServerUrl,
+  onMcpServerUrlChange,
+  mcpAuthHeader,
+  onMcpAuthHeaderChange,
+  mcpTools,
+  mcpSelectedTool,
+  onMcpSelectedToolChange,
+  mcpToolArgs,
+  onMcpToolArgsChange,
+  mcpImportLog,
+  mcpEventLog,
+  isMcpConnecting,
+  isMcpPulling,
+  runningMcpEventId,
+  planId,
+  onMcpConnect,
+  onMcpPull,
+  onSimulateMcpEvent,
+  styles,
+}: {
+  mcpServerUrl: string;
+  onMcpServerUrlChange: (value: string) => void;
+  mcpAuthHeader: string;
+  onMcpAuthHeaderChange: (value: string) => void;
+  mcpTools: McpToolDescriptor[];
+  mcpSelectedTool: string;
+  onMcpSelectedToolChange: (value: string) => void;
+  mcpToolArgs: string;
+  onMcpToolArgsChange: (value: string) => void;
+  mcpImportLog: McpImportLogEntry[];
+  mcpEventLog: McpSimulationEvent[];
+  isMcpConnecting: boolean;
+  isMcpPulling: boolean;
+  runningMcpEventId: string | null;
+  planId: string | null;
+  onMcpConnect: () => void;
+  onMcpPull: () => void;
+  onSimulateMcpEvent: (event: McpSimulationEvent) => void;
+  styles: ReturnType<typeof demoPanelStyles>;
+}) {
+  const isBusy = isMcpConnecting || isMcpPulling;
+  const workspaceArgsHint =
+    planId && mcpSelectedTool.includes("workspace")
+      ? `{"workspace_id":"${planId}"}`
+      : '{"workspace_id":"<uuid>"}';
+
+  return (
+    <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto pr-1">
+      <div>
+        <div className="text-sm font-medium text-white">MCP simulation</div>
+        <p className={`mt-1 max-w-3xl text-sm leading-relaxed ${styles.bodyText}`}>
+          Connect to a live MCP server, pull real data with a tool call, and translate records into an
+          event log you can simulate immediately. This does not replace the Events tab action grid.
+        </p>
+      </div>
+
+      <McpSimulationHowItWorks />
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <label className="block">
+          <span className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-500">
+            MCP server URL
+          </span>
+          <input
+            type="url"
+            value={mcpServerUrl}
+            onChange={(event) => onMcpServerUrlChange(event.target.value)}
+            disabled={isBusy}
+            placeholder="https://partner.example.com/mcp or /api/mcp/your-key"
+            className="mt-2 w-full rounded-md border border-zinc-700 bg-black/40 px-4 py-2.5 text-sm text-zinc-200 placeholder:text-zinc-600 focus:border-zinc-500 focus:outline-none disabled:opacity-60"
+          />
+        </label>
+        <label className="block">
+          <span className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-500">
+            Auth header (optional)
+          </span>
+          <input
+            type="text"
+            value={mcpAuthHeader}
+            onChange={(event) => onMcpAuthHeaderChange(event.target.value)}
+            disabled={isBusy}
+            placeholder="Bearer token or API key"
+            className="mt-2 w-full rounded-md border border-zinc-700 bg-black/40 px-4 py-2.5 text-sm text-zinc-200 placeholder:text-zinc-600 focus:border-zinc-500 focus:outline-none disabled:opacity-60"
+          />
+        </label>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-3">
+        <button
+          type="button"
+          onClick={onMcpConnect}
+          disabled={isBusy || !mcpServerUrl.trim()}
+          className={`inline-flex items-center gap-2 rounded-md px-4 py-2.5 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-60 ${styles.button}`}
+        >
+          {isMcpConnecting ? (
+            <>
+              <Loader2 className="size-4 animate-spin" />
+              Connecting…
+            </>
+          ) : (
+            <>
+              <Plug className="size-4" />
+              Connect & list tools
+            </>
+          )}
+        </button>
+        {mcpTools.length > 0 ? (
+          <span className="text-xs text-zinc-500">{mcpTools.length} tool(s) available</span>
+        ) : null}
+      </div>
+
+      {mcpTools.length > 0 ? (
+        <div className="grid gap-4 lg:grid-cols-2">
+          <label className="block">
+            <span className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-500">MCP tool</span>
+            <select
+              value={mcpSelectedTool}
+              onChange={(event) => onMcpSelectedToolChange(event.target.value)}
+              disabled={isBusy}
+              className="mt-2 w-full rounded-md border border-zinc-700 bg-black/40 px-4 py-2.5 text-sm text-zinc-200 focus:border-zinc-500 focus:outline-none disabled:opacity-60"
+            >
+              {mcpTools.map((tool) => (
+                <option key={tool.name} value={tool.name}>
+                  {tool.name}
+                </option>
+              ))}
+            </select>
+            {mcpTools.find((tool) => tool.name === mcpSelectedTool)?.description ? (
+              <span className="mt-2 block text-xs text-zinc-500">
+                {mcpTools.find((tool) => tool.name === mcpSelectedTool)?.description}
+              </span>
+            ) : null}
+          </label>
+          <label className="block">
+            <span className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-500">
+              Tool arguments (JSON)
+            </span>
+            <textarea
+              value={mcpToolArgs}
+              onChange={(event) => onMcpToolArgsChange(event.target.value)}
+              disabled={isBusy}
+              rows={4}
+              placeholder={workspaceArgsHint}
+              className="mt-2 w-full resize-y rounded-md border border-zinc-700 bg-black/40 px-4 py-3 font-mono text-xs leading-relaxed text-zinc-200 placeholder:text-zinc-600 focus:border-zinc-500 focus:outline-none disabled:opacity-60"
+            />
+          </label>
+        </div>
+      ) : null}
+
+      {mcpTools.length > 0 ? (
+        <button
+          type="button"
+          onClick={onMcpPull}
+          disabled={isBusy || !mcpSelectedTool}
+          className={`inline-flex w-fit items-center gap-2 rounded-md px-4 py-2.5 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-60 ${styles.button}`}
+        >
+          {isMcpPulling ? (
+            <>
+              <Loader2 className="size-4 animate-spin" />
+              Pulling MCP data…
+            </>
+          ) : (
+            <>
+              <RefreshCw className="size-4" />
+              Pull & translate to event log
+            </>
+          )}
+        </button>
+      ) : null}
+
+      <McpImportLogPanel entries={mcpImportLog} />
+      <McpEventLogPanel
+        events={mcpEventLog}
+        runningMcpEventId={runningMcpEventId}
+        onSimulate={onSimulateMcpEvent}
+        styles={styles}
+      />
     </div>
   );
 }
@@ -1525,7 +1968,7 @@ function SimulatorSubviewTabs({
 }) {
   const tabs: Array<{ id: SimulatorSubview; label: string }> = [
     { id: "events", label: eventsLabel },
-    { id: "import", label: "Skill / MCP import" },
+    { id: "mcp", label: "MCP simulation" },
   ];
 
   return (
@@ -1559,122 +2002,6 @@ function SimulatorSubviewTabs({
   );
 }
 
-function EventImportPanel({
-  importText,
-  onImportTextChange,
-  importSource,
-  onImportSourceChange,
-  importTextMinLength,
-  isImportingEvents,
-  importSummary,
-  onImportEvents,
-  styles,
-}: {
-  importText: string;
-  onImportTextChange: (value: string) => void;
-  importSource: ImportSource;
-  onImportSourceChange: (value: ImportSource) => void;
-  importTextMinLength: number;
-  isImportingEvents: boolean;
-  importSummary: ImportEventsSummary | null;
-  onImportEvents: () => void;
-  styles: ReturnType<typeof demoPanelStyles>;
-}) {
-  const canSubmit = importText.trim().length >= importTextMinLength;
-
-  return (
-    <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto pr-1">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <div className="text-sm font-medium text-white">Import from external system</div>
-          <p className={`mt-1 max-w-3xl text-sm leading-relaxed ${styles.bodyText}`}>
-            Paste a partner integration skill.md or MCP tool catalog. Grok explores what the integration
-            offers and turns it into evidence events you can run in the Events tab.
-          </p>
-        </div>
-        <div
-          className="inline-flex rounded-md border border-zinc-800 bg-black/30 p-0.5"
-          role="group"
-          aria-label="Import source type"
-        >
-          {(["skill", "mcp"] as const).map((source) => (
-            <button
-              key={source}
-              type="button"
-              onClick={() => onImportSourceChange(source)}
-              aria-pressed={importSource === source}
-              disabled={isImportingEvents}
-              className={`rounded px-3 py-1.5 text-xs font-medium uppercase tracking-wide transition ${
-                importSource === source
-                  ? "bg-white text-black"
-                  : "text-zinc-500 hover:text-zinc-300"
-              }`}
-            >
-              {source}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <ImportWhatHappens />
-
-      <label className="block">
-        <span className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-500">
-          {importSource === "mcp" ? "MCP tool catalog" : "Integration skill.md"}
-        </span>
-        <textarea
-          value={importText}
-          onChange={(event) => onImportTextChange(event.target.value)}
-          disabled={isImportingEvents}
-          rows={10}
-          placeholder={
-            importSource === "mcp"
-              ? 'Paste MCP server JSON or tool listings, e.g. {"tools":[{"name":"list_workspaces","description":"..."}]}'
-              : "Paste a full skill.md — frontmatter, endpoints, evidence contract, goals, and workflows."
-          }
-          className="mt-2 w-full resize-y rounded-md border border-zinc-700 bg-black/40 px-4 py-3 font-mono text-xs leading-relaxed text-zinc-200 placeholder:text-zinc-600 focus:border-zinc-500 focus:outline-none disabled:opacity-60"
-        />
-        <span className="mt-2 block font-mono text-[10px] text-zinc-600">
-          {importText.trim().length}/{importTextMinLength} characters minimum
-        </span>
-      </label>
-
-      <div className="flex flex-wrap items-center gap-3">
-        <button
-          type="button"
-          onClick={onImportEvents}
-          disabled={isImportingEvents || !canSubmit}
-          className={`inline-flex items-center gap-2 rounded-md px-4 py-2.5 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-60 ${styles.button}`}
-        >
-          {isImportingEvents ? (
-            <>
-              <Loader2 className="size-4 animate-spin" />
-              Exploring & generating events…
-            </>
-          ) : (
-            <>
-              <Sparkles className="size-4" />
-              Explore with Grok & replace events
-            </>
-          )}
-        </button>
-        {importSummary ? (
-          <p className="text-xs text-zinc-400">
-            Imported {importSummary.evidence_action_count} events for{" "}
-            <span className="text-zinc-200">{importSummary.product_name}</span>
-            {importSummary.mcp_tools_discovered > 0
-              ? ` · ${importSummary.mcp_tools_discovered} MCP tools`
-              : ""}
-            {importSummary.endpoints_discovered > 0
-              ? ` · ${importSummary.endpoints_discovered} endpoints`
-              : ""}
-          </p>
-        ) : null}
-      </div>
-    </div>
-  );
-}
-
 function SimulatorPanel({
   demo,
   phase,
@@ -1689,15 +2016,24 @@ function SimulatorPanel({
   customPrompt = "",
   onCustomPromptChange,
   customPromptMinLength = 40,
-  importText = "",
-  onImportTextChange,
-  importSource = "skill",
-  onImportSourceChange,
-  importTextMinLength = IMPORT_TEXT_MIN_LENGTH,
-  isImportingEvents = false,
-  importSummary = null,
-  onImportEvents,
-  importRevision = 0,
+  mcpServerUrl = "",
+  onMcpServerUrlChange,
+  mcpAuthHeader = "",
+  onMcpAuthHeaderChange,
+  mcpTools = [],
+  mcpSelectedTool = "",
+  onMcpSelectedToolChange,
+  mcpToolArgs = "{}",
+  onMcpToolArgsChange,
+  mcpImportLog = [],
+  mcpEventLog = [],
+  isMcpConnecting = false,
+  isMcpPulling = false,
+  runningMcpEventId = null,
+  planId = null,
+  onMcpConnect,
+  onMcpPull,
+  onSimulateMcpEvent,
   onCustomInputModeChange,
 }: {
   demo: EvidenceApiDemoDefinition;
@@ -1713,15 +2049,24 @@ function SimulatorPanel({
   customPrompt?: string;
   onCustomPromptChange?: (value: string) => void;
   customPromptMinLength?: number;
-  importText?: string;
-  onImportTextChange?: (value: string) => void;
-  importSource?: ImportSource;
-  onImportSourceChange?: (value: ImportSource) => void;
-  importTextMinLength?: number;
-  isImportingEvents?: boolean;
-  importSummary?: ImportEventsSummary | null;
-  onImportEvents?: () => void;
-  importRevision?: number;
+  mcpServerUrl?: string;
+  onMcpServerUrlChange?: (value: string) => void;
+  mcpAuthHeader?: string;
+  onMcpAuthHeaderChange?: (value: string) => void;
+  mcpTools?: McpToolDescriptor[];
+  mcpSelectedTool?: string;
+  onMcpSelectedToolChange?: (value: string) => void;
+  mcpToolArgs?: string;
+  onMcpToolArgsChange?: (value: string) => void;
+  mcpImportLog?: McpImportLogEntry[];
+  mcpEventLog?: McpSimulationEvent[];
+  isMcpConnecting?: boolean;
+  isMcpPulling?: boolean;
+  runningMcpEventId?: string | null;
+  planId?: string | null;
+  onMcpConnect?: () => void;
+  onMcpPull?: () => void;
+  onSimulateMcpEvent?: (event: McpSimulationEvent) => void;
   onCustomInputModeChange?: (mode: CustomInputMode) => void;
 }) {
   const styles = demoPanelStyles(demo.accent);
@@ -1735,15 +2080,9 @@ function SimulatorPanel({
     setActiveCategory(demo.categoryOrder[0]);
   }, [demo.id]);
 
-  useEffect(() => {
-    if (importRevision > 0) {
-      setActiveSubview("events");
-    }
-  }, [importRevision]);
-
   const handleSubviewChange = (tab: SimulatorSubview) => {
     setActiveSubview(tab);
-    onCustomInputModeChange?.(tab === "import" ? "import" : "prompt");
+    onCustomInputModeChange?.(tab === "mcp" ? "import" : "prompt");
   };
 
   return (
@@ -1795,8 +2134,8 @@ function SimulatorPanel({
                 <p className={`mt-2 max-w-2xl text-sm leading-relaxed ${styles.bodyText}`}>
                   Describe the product workflow, learner role, and competency you want to verify. OpenLesson
                   generates event actions and a workspace from your prompt. Calendar gap tools (+1 day, +3 days,
-                  +1 week) are always included. After you start, use the Skill / MCP import tab to pull events
-                  from an external integration.
+                  +1 week) are always included. After you start, use the MCP simulation tab to pull live data
+                  and simulate imported event logs.
                 </p>
                 <label className="mt-6 block max-w-2xl">
                   <span className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-500">
@@ -1818,8 +2157,8 @@ function SimulatorPanel({
             ) : (
               <p className={`mt-2 max-w-md text-sm leading-relaxed ${styles.bodyText}`}>
                 {demo.scenarioIntro.replace(/\*\*/g, "")} Use calendar gap tools to record idle time between
-                sessions — then regenerate OpenLesson specs as evidence grows. After starting, use the Skill /
-                MCP import tab to pull events from an external integration.
+                sessions — then regenerate OpenLesson specs as evidence grows. After starting, use the MCP
+                simulation tab to pull live data and simulate imported event logs.
               </p>
             )}
             <div className="mt-8 flex flex-wrap items-center gap-3">
@@ -1864,16 +2203,33 @@ function SimulatorPanel({
               eventsLabel="Events"
             />
 
-            {activeSubview === "import" && onImportEvents && onImportTextChange && onImportSourceChange ? (
-              <EventImportPanel
-                importText={importText}
-                onImportTextChange={onImportTextChange}
-                importSource={importSource}
-                onImportSourceChange={onImportSourceChange}
-                importTextMinLength={importTextMinLength}
-                isImportingEvents={isImportingEvents}
-                importSummary={importSummary}
-                onImportEvents={onImportEvents}
+            {activeSubview === "mcp" &&
+            onMcpConnect &&
+            onMcpPull &&
+            onSimulateMcpEvent &&
+            onMcpServerUrlChange &&
+            onMcpAuthHeaderChange &&
+            onMcpSelectedToolChange &&
+            onMcpToolArgsChange ? (
+              <McpSimulationPanel
+                mcpServerUrl={mcpServerUrl}
+                onMcpServerUrlChange={onMcpServerUrlChange}
+                mcpAuthHeader={mcpAuthHeader}
+                onMcpAuthHeaderChange={onMcpAuthHeaderChange}
+                mcpTools={mcpTools}
+                mcpSelectedTool={mcpSelectedTool}
+                onMcpSelectedToolChange={onMcpSelectedToolChange}
+                mcpToolArgs={mcpToolArgs}
+                onMcpToolArgsChange={onMcpToolArgsChange}
+                mcpImportLog={mcpImportLog}
+                mcpEventLog={mcpEventLog}
+                isMcpConnecting={isMcpConnecting}
+                isMcpPulling={isMcpPulling}
+                runningMcpEventId={runningMcpEventId}
+                planId={planId}
+                onMcpConnect={onMcpConnect}
+                onMcpPull={onMcpPull}
+                onSimulateMcpEvent={onSimulateMcpEvent}
                 styles={styles}
               />
             ) : (

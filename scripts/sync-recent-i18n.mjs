@@ -13,24 +13,24 @@ const patches = {
     sessionItem: {
       blockDetailGuideTitle: "Live-Denken, deine Materialien",
       blockDetailGuideIntro:
-        "OpenLesson ist für live Denken und Argumentieren gebaut — nicht um Lehrbücher, Docs oder Kurse zu ersetzen. Helios prüft, was du verstehst, während du arbeitest; den Inhalt bringst du mit.",
+        "OpenLesson ist für live Denken und Argumentieren gebaut, nicht um Lehrbücher, Docs oder Kurse zu ersetzen. Helios prüft, was du verstehst, während du arbeitest; den Inhalt bringst du mit.",
       blockDetailGuideSourcesTitle: "Nutze deine eigenen Quellen",
       blockDetailGuideSourcesBody:
-        "Verwende Grok, Grokipedia, Notizbücher oder beliebige Referenzen neben der Sitzung. Nachschlagen und Üben passieren außerhalb der Probe — die Sitzung erfasst, wie du mit dem Gefundenen argumentierst.",
+        "Verwende Grok, Grokipedia, Notizbücher oder beliebige Referenzen neben der Sitzung. Nachschlagen und Üben passieren außerhalb der Probe, die Sitzung erfasst, wie du mit dem Gefundenen argumentierst.",
       blockDetailGuideMaterialsTitle: "Passe den Arbeitsbereich an",
       blockDetailGuideMaterialsBody:
         "Hänge PDFs, Notizen und Bilder im Tab Dateien an und stimm jeden Block mit den benutzerdefinierten Anweisungen unten ab. Je mehr Kontext du hinzufügst, desto gezielter wird Helios.",
       blockDetailGuideHintsTitle: "OpenLesson optimal nutzen",
       blockDetailGuideHint1:
-        "Tab Dateien — Referenzmaterial hinzufügen, damit Probes zu dem passen, was du wirklich lernst.",
+        "Tab Dateien: Referenzmaterial hinzufügen, damit Probes zu dem passen, was du wirklich lernst.",
       blockDetailGuideHint2:
-        "Benutzerdefinierte Anweisungen — diesen Block auf Job, Prüfung oder Projekt ausrichten.",
+        "Benutzerdefinierte Anweisungen: diesen Block auf Job, Prüfung oder Projekt ausrichten.",
       blockDetailGuideHint3:
-        "ILE — laut denken, Sprache in Gedanken kristallisieren und sie während der Arbeit an Helios senden.",
+        "ILE, laut denken, Sprache in Gedanken kristallisieren und sie während der Arbeit an Helios senden.",
       blockDetailGuideHint4:
-        "Arbeitsbereich-Editor — Blöcke hinzufügen oder umgestalten, wenn du Lücken im Plan entdeckst.",
+        "Arbeitsbereich-Editor: Blöcke hinzufügen oder umgestalten, wenn du Lücken im Plan entdeckst.",
       blockDetailGuideHint5:
-        "TAP — starten, wenn du bereit bist, Können zu demonstrieren, nicht beim ersten Durchlauf.",
+        "TAP, starten, wenn du bereit bist, Können zu demonstrieren, nicht beim ersten Durchlauf.",
     },
     planView: {
       performanceSubTabScore: "Bewertung",
@@ -39,7 +39,7 @@ const patches = {
       performanceSectionsAriaLabel: "Leistungsansichten",
       performanceScoreTitle: "Arbeitsbereich-Bewertung",
       performanceScoreHint:
-        "Erzeuge eine Scorecard aus Sitzungen, TAP-Blöcken und hochgeladener Evidenz — derselbe Vertrag wie der Evidence-API-Performance-Report.",
+        "Erzeuge eine Scorecard aus Sitzungen, TAP-Blöcken und hochgeladener Evidenz, derselbe Vertrag wie der Evidence-API-Performance-Report.",
       performanceScoreGenerate: "Bewertung erzeugen",
       performanceScoreGenerating: "Wird erzeugt…",
       performanceChatTitle: "Leistungs-Chat",
@@ -97,9 +97,9 @@ const patches = {
     },
     tap: {
       welcome: {
-        greeting: "Hallo — ich bin {name}.",
+        greeting: "Hallo, ich bin {name}.",
         panelIntro:
-          "Willkommen zum Think-Aloud-Protokoll. Das ist eine zeitgesteuerte Demonstration: Du erklärst, was du gelernt hast, während ich zuhöre, dann stelle ich sokratische Nachfragen, um Lücken und Stärken sichtbar zu machen.\n\nSo funktioniert es: Sprich dein Denken laut aus und kristallisiere es in Gedankenkarten. Sende einen Gedanken oder kombiniere mehrere — ich antworte unter meinem Avatar mit einer Frage nach der anderen, kein Chat-Thread. Deine Gedankenhistorie behält jede Spur, damit du sie erneut senden oder markieren kannst.\n\nSitzungsdauer und Tastenkürzel stehen rechts. Wenn die Zeit abläuft, erhältst du eine TAP-Bewertung mit Marker-Aufschlüsselung und Lückenanalyse.",
+          "Willkommen zum Think-Aloud-Protokoll. Das ist eine zeitgesteuerte Demonstration: Du erklärst, was du gelernt hast, während ich zuhöre, dann stelle ich sokratische Nachfragen, um Lücken und Stärken sichtbar zu machen.\n\nSo funktioniert es: Sprich dein Denken laut aus und kristallisiere es in Gedankenkarten. Sende einen Gedanken oder kombiniere mehrere, ich antworte unter meinem Avatar mit einer Frage nach der anderen, kein Chat-Thread. Deine Gedankenhistorie behält jede Spur, damit du sie erneut senden oder markieren kannst.\n\nSitzungsdauer und Tastenkürzel stehen rechts. Wenn die Zeit abläuft, erhältst du eine TAP-Bewertung mit Marker-Aufschlüsselung und Lückenanalyse.",
         callToAction:
           "Wenn du bereit bist, drücke Play. Der Timer startet und ich eröffne mit einer konkreten Frage zu dem, was du hier gelernt hast.",
         play: "Play",
@@ -117,24 +117,24 @@ const patches = {
     sessionItem: {
       blockDetailGuideTitle: "Pensamiento en vivo, tus materiales",
       blockDetailGuideIntro:
-        "OpenLesson está pensado para el pensamiento y razonamiento en vivo — no para sustituir tus libros, documentos o cursos. Helios sondea lo que entiendes mientras trabajas; tú aportas el contenido.",
+        "OpenLesson está pensado para el pensamiento y razonamiento en vivo, no para sustituir tus libros, documentos o cursos. Helios sondea lo que entiendes mientras trabajas; tú aportas el contenido.",
       blockDetailGuideSourcesTitle: "Consulta tus propias fuentes",
       blockDetailGuideSourcesBody:
-        "Usa Grok, Grokipedia, cuadernos o cualquier referencia junto a la sesión. La búsqueda y la práctica quedan fuera de la sonda — la sesión captura cómo razonas con lo que encuentras.",
+        "Usa Grok, Grokipedia, cuadernos o cualquier referencia junto a la sesión. La búsqueda y la práctica quedan fuera de la sonda, la sesión captura cómo razonas con lo que encuentras.",
       blockDetailGuideMaterialsTitle: "Adapta el espacio de trabajo",
       blockDetailGuideMaterialsBody:
         "Adjunta PDFs, notas e imágenes en la pestaña Archivos y ajusta cada bloque con instrucciones personalizadas abajo. Cuanto más contexto añadas, más preciso será Helios.",
       blockDetailGuideHintsTitle: "Usa OpenLesson bien",
       blockDetailGuideHint1:
-        "Pestaña Archivos — añade material de referencia para que las sondas coincidan con lo que realmente aprendes.",
+        "Pestaña Archivos: añade material de referencia para que las sondas coincidan con lo que realmente aprendes.",
       blockDetailGuideHint2:
-        "Instrucciones personalizadas — orienta este bloque hacia tu trabajo, examen o proyecto.",
+        "Instrucciones personalizadas: orienta este bloque hacia tu trabajo, examen o proyecto.",
       blockDetailGuideHint3:
-        "ILE — piensa en voz alta, cristaliza el habla en pensamientos y envíalos a Helios mientras trabajas.",
+        "ILE, piensa en voz alta, cristaliza el habla en pensamientos y envíalos a Helios mientras trabajas.",
       blockDetailGuideHint4:
-        "Editor del espacio — añade o remodela bloques cuando descubras huecos en el plan.",
+        "Editor del espacio, añade o remodela bloques cuando descubras huecos en el plan.",
       blockDetailGuideHint5:
-        "TAP — ejecútalo cuando estés listo para demostrar habilidad, no en el primer intento.",
+        "TAP, ejecútalo cuando estés listo para demostrar habilidad, no en el primer intento.",
     },
     planView: {
       performanceSubTabScore: "Puntuación",
@@ -143,7 +143,7 @@ const patches = {
       performanceSectionsAriaLabel: "Vistas de rendimiento",
       performanceScoreTitle: "Puntuación del espacio",
       performanceScoreHint:
-        "Genera una tarjeta de puntuación a partir de sesiones, bloques TAP y evidencia subida — el mismo contrato que el informe de rendimiento de Evidence API.",
+        "Genera una tarjeta de puntuación a partir de sesiones, bloques TAP y evidencia subida, el mismo contrato que el informe de rendimiento de Evidence API.",
       performanceScoreGenerate: "Generar puntuación",
       performanceScoreGenerating: "Generando…",
       performanceChatTitle: "Chat de rendimiento",
@@ -201,9 +201,9 @@ const patches = {
     },
     tap: {
       welcome: {
-        greeting: "Hola — soy {name}.",
+        greeting: "Hola, soy {name}.",
         panelIntro:
-          "Bienvenido al Protocolo Think Aloud. Es una demostración cronometrada: explicas lo que aprendiste mientras escucho, luego hago seguimientos socráticos para revelar lagunas y fortalezas.\n\nCómo funciona: verbaliza tu razonamiento y conviértelo en tarjetas de pensamiento. Envía un pensamiento o combina varios — respondo bajo mi avatar con una pregunta cada vez, sin hilo de chat. Tu Memoria de pensamientos guarda cada rastro para reenviar o marcar.\n\nLa duración y los atajos de teclado están a la derecha. Cuando se acabe el tiempo, recibirás una puntuación TAP con desglose de marcadores y análisis de lagunas.",
+          "Bienvenido al Protocolo Think Aloud. Es una demostración cronometrada: explicas lo que aprendiste mientras escucho, luego hago seguimientos socráticos para revelar lagunas y fortalezas.\n\nCómo funciona: verbaliza tu razonamiento y conviértelo en tarjetas de pensamiento. Envía un pensamiento o combina varios, respondo bajo mi avatar con una pregunta cada vez, sin hilo de chat. Tu Memoria de pensamientos guarda cada rastro para reenviar o marcar.\n\nLa duración y los atajos de teclado están a la derecha. Cuando se acabe el tiempo, recibirás una puntuación TAP con desglose de marcadores y análisis de lagunas.",
         callToAction:
           "Cuando estés listo, pulsa Play. El temporizador empieza y abriré con una pregunta concreta sobre lo que aprendiste aquí.",
         play: "Play",
@@ -221,24 +221,24 @@ const patches = {
     sessionItem: {
       blockDetailGuideTitle: "Myślenie na żywo, twoje materiały",
       blockDetailGuideIntro:
-        "OpenLesson służy myśleniu i rozumowaniu na żywo — nie zastępuje podręczników, dokumentów ani kursów. Helios bada to, co rozumiesz podczas pracy; treść dostarczasz ty.",
+        "OpenLesson służy myśleniu i rozumowaniu na żywo, nie zastępuje podręczników, dokumentów ani kursów. Helios bada to, co rozumiesz podczas pracy; treść dostarczasz ty.",
       blockDetailGuideSourcesTitle: "Korzystaj z własnych źródeł",
       blockDetailGuideSourcesBody:
-        "Używaj Groka, Grokipedii, notatek lub dowolnych materiałów obok sesji. Wyszukiwanie i ćwiczenia są poza sondą — sesja rejestruje, jak rozumujesz z tym, co znajdujesz.",
+        "Używaj Groka, Grokipedii, notatek lub dowolnych materiałów obok sesji. Wyszukiwanie i ćwiczenia są poza sondą, sesja rejestruje, jak rozumujesz z tym, co znajdujesz.",
       blockDetailGuideMaterialsTitle: "Dostosuj przestrzeń roboczą",
       blockDetailGuideMaterialsBody:
         "Dołącz PDF-y, notatki i obrazy w zakładce Pliki oraz dostosuj każdy blok poniższymi instrukcjami. Im więcej kontekstu dodasz, tym celniejszy będzie Helios.",
       blockDetailGuideHintsTitle: "Używaj OpenLesson dobrze",
       blockDetailGuideHint1:
-        "Zakładka Pliki — dodaj materiały referencyjne, by sondy pasowały do tego, czego naprawdę się uczysz.",
+        "Zakładka Pliki: dodaj materiały referencyjne, by sondy pasowały do tego, czego naprawdę się uczysz.",
       blockDetailGuideHint2:
-        "Instrukcje własne — ukierunkuj ten blok na pracę, egzamin lub projekt.",
+        "Instrukcje własne: ukierunkuj ten blok na pracę, egzamin lub projekt.",
       blockDetailGuideHint3:
-        "ILE — myśl na głos, krystalizuj mowę w myśli i wysyłaj je do Heliosa podczas pracy.",
+        "ILE, myśl na głos, krystalizuj mowę w myśli i wysyłaj je do Heliosa podczas pracy.",
       blockDetailGuideHint4:
-        "Edytor przestrzeni — dodawaj lub zmieniaj bloki, gdy odkryjesz luki w planie.",
+        "Edytor przestrzeni, dodawaj lub zmieniaj bloki, gdy odkryjesz luki w planie.",
       blockDetailGuideHint5:
-        "TAP — uruchom, gdy jesteś gotów zademonstrować umiejętność, nie przy pierwszym podejściu.",
+        "TAP, uruchom, gdy jesteś gotów zademonstrować umiejętność, nie przy pierwszym podejściu.",
     },
     planView: {
       performanceSubTabScore: "Wynik",
@@ -247,7 +247,7 @@ const patches = {
       performanceSectionsAriaLabel: "Widoki wydajności",
       performanceScoreTitle: "Wynik przestrzeni",
       performanceScoreHint:
-        "Wygeneruj kartę wyników z sesji, bloków TAP i przesłanych dowodów — ten sam kontrakt co raport wydajności Evidence API.",
+        "Wygeneruj kartę wyników z sesji, bloków TAP i przesłanych dowodów, ten sam kontrakt co raport wydajności Evidence API.",
       performanceScoreGenerate: "Generuj wynik",
       performanceScoreGenerating: "Generowanie…",
       performanceChatTitle: "Czat wydajności",
@@ -305,9 +305,9 @@ const patches = {
     },
     tap: {
       welcome: {
-        greeting: "Cześć — jestem {name}.",
+        greeting: "Cześć, jestem {name}.",
         panelIntro:
-          "Witaj w protokole Think Aloud. To czasowa demonstracja: wyjaśniasz, czego się nauczyłeś, a ja słucham, potem zadaję sokratejskie pytania uzupełniające, by ujawnić luki i mocne strony.\n\nJak to działa: mów swoje rozumowanie na głos i krystalizuj je w karty myśli. Wyślij jedną myśl lub połącz kilka — odpowiadam pod awatarem jednym pytaniem na raz, bez wątku czatu. Pamięć myśli zachowuje każdy ślad do ponownego wysłania lub oznaczenia.\n\nCzas sesji i skróty klawiszowe są po prawej. Gdy czas się skończy, otrzymasz wynik TAP z rozbiciem markerów i analizą luk.",
+          "Witaj w protokole Think Aloud. To czasowa demonstracja: wyjaśniasz, czego się nauczyłeś, a ja słucham, potem zadaję sokratejskie pytania uzupełniające, by ujawnić luki i mocne strony.\n\nJak to działa: mów swoje rozumowanie na głos i krystalizuj je w karty myśli. Wyślij jedną myśl lub połącz kilka, odpowiadam pod awatarem jednym pytaniem na raz, bez wątku czatu. Pamięć myśli zachowuje każdy ślad do ponownego wysłania lub oznaczenia.\n\nCzas sesji i skróty klawiszowe są po prawej. Gdy czas się skończy, otrzymasz wynik TAP z rozbiciem markerów i analizą luk.",
         callToAction:
           "Gdy będziesz gotowy, naciśnij Play. Timer wystartuje, a ja zacznę konkretnym pytaniem o to, czego się tu nauczyłeś.",
         play: "Play",
@@ -325,19 +325,19 @@ const patches = {
     sessionItem: {
       blockDetailGuideTitle: "实时思考，你的资料",
       blockDetailGuideIntro:
-        "OpenLesson 面向实时思考与推理——不是替代你的教材、文档或课程。Helios 在你工作时探测你的理解；内容由你带来。",
+        "OpenLesson 面向实时思考与推理，不是替代你的教材、文档或课程。Helios 在你工作时探测你的理解；内容由你带来。",
       blockDetailGuideSourcesTitle: "查阅你自己的资料",
       blockDetailGuideSourcesBody:
-        "在会话旁使用 Grok、Grokipedia、笔记本或任何参考资料。查找与练习在探测之外——会话记录你如何运用所找到的内容进行推理。",
+        "在会话旁使用 Grok、Grokipedia、笔记本或任何参考资料。查找与练习在探测之外，会话记录你如何运用所找到的内容进行推理。",
       blockDetailGuideMaterialsTitle: "定制工作区",
       blockDetailGuideMaterialsBody:
         "在“文件”标签页附加 PDF、笔记和图片，并在下方用自定义说明调整每个区块。你添加的上下文越多，Helios 就越精准。",
       blockDetailGuideHintsTitle: "更好地使用 OpenLesson",
-      blockDetailGuideHint1: "文件标签页——添加参考资料，使探测与你实际学习的内容一致。",
-      blockDetailGuideHint2: "自定义说明——将此区块导向你的工作、考试或项目。",
-      blockDetailGuideHint3: "ILE——大声思考，将语音凝结为想法，并在工作中发送给 Helios。",
-      blockDetailGuideHint4: "工作区构建器——发现计划中的缺口时添加或重塑区块。",
-      blockDetailGuideHint5: "TAP——在你准备好展示技能时运行，而不是第一次尝试时。",
+      blockDetailGuideHint1: "文件标签页，添加参考资料，使探测与你实际学习的内容一致。",
+      blockDetailGuideHint2: "自定义说明，将此区块导向你的工作、考试或项目。",
+      blockDetailGuideHint3: "ILE，大声思考，将语音凝结为想法，并在工作中发送给 Helios。",
+      blockDetailGuideHint4: "工作区构建器，发现计划中的缺口时添加或重塑区块。",
+      blockDetailGuideHint5: "TAP，在你准备好展示技能时运行，而不是第一次尝试时。",
     },
     planView: {
       performanceSubTabScore: "评分",
@@ -346,7 +346,7 @@ const patches = {
       performanceSectionsAriaLabel: "表现视图",
       performanceScoreTitle: "工作区评分",
       performanceScoreHint:
-        "根据会话、TAP 区块和上传的证据生成评分卡——与 Evidence API 性能报告相同的契约。",
+        "根据会话、TAP 区块和上传的证据生成评分卡，与 Evidence API 性能报告相同的契约。",
       performanceScoreGenerate: "生成评分",
       performanceScoreGenerating: "生成中…",
       performanceChatTitle: "表现聊天",
@@ -401,9 +401,9 @@ const patches = {
     },
     tap: {
       welcome: {
-        greeting: "你好——我是 {name}。",
+        greeting: "你好，我是 {name}。",
         panelIntro:
-          "欢迎使用 Think Aloud 协议。这是一场限时演示：你说明所学内容，我倾听，然后通过苏格拉底式追问揭示差距与优势。\n\n运作方式：大声说出推理并凝结为想法卡片。发送一个想法或组合多个——我在头像下每次只回应一个问题，不是聊天线程。想法记忆保留每条轨迹，便于重发或标记。\n\n会话时长和键盘快捷键在右侧。时间结束后，你将收到包含指标分解与差距分析的 TAP 评分。",
+          "欢迎使用 Think Aloud 协议。这是一场限时演示：你说明所学内容，我倾听，然后通过苏格拉底式追问揭示差距与优势。\n\n运作方式：大声说出推理并凝结为想法卡片。发送一个想法或组合多个，我在头像下每次只回应一个问题，不是聊天线程。想法记忆保留每条轨迹，便于重发或标记。\n\n会话时长和键盘快捷键在右侧。时间结束后，你将收到包含指标分解与差距分析的 TAP 评分。",
         callToAction: "准备好后按 Play。计时开始，我会以关于你在此所学内容的具体问题开场。",
         play: "Play",
         starting: "启动中…",
@@ -420,24 +420,24 @@ const patches = {
     sessionItem: {
       blockDetailGuideTitle: "Tư duy trực tiếp, tài liệu của bạn",
       blockDetailGuideIntro:
-        "OpenLesson được xây dựng cho tư duy và lập luận trực tiếp — không thay thế sách, tài liệu hay khóa học của bạn. Helios thăm dò những gì bạn hiểu khi bạn làm việc; bạn mang nội dung đến.",
+        "OpenLesson được xây dựng cho tư duy và lập luận trực tiếp, không thay thế sách, tài liệu hay khóa học của bạn. Helios thăm dò những gì bạn hiểu khi bạn làm việc; bạn mang nội dung đến.",
       blockDetailGuideSourcesTitle: "Tham khảo nguồn của riêng bạn",
       blockDetailGuideSourcesBody:
-        "Dùng Grok, Grokipedia, sổ ghi chép hoặc tài liệu tham khảo bên cạnh phiên. Tra cứu và luyện tập nằm ngoài thăm dò — phiên ghi lại cách bạn lập luận với những gì tìm được.",
+        "Dùng Grok, Grokipedia, sổ ghi chép hoặc tài liệu tham khảo bên cạnh phiên. Tra cứu và luyện tập nằm ngoài thăm dò, phiên ghi lại cách bạn lập luận với những gì tìm được.",
       blockDetailGuideMaterialsTitle: "Tùy chỉnh không gian làm việc",
       blockDetailGuideMaterialsBody:
         "Đính kèm PDF, ghi chú và hình ảnh trong tab Tệp, và tinh chỉnh từng khối bằng hướng dẫn tùy chỉnh bên dưới. Càng nhiều ngữ cảnh, Helios càng nhắm đúng hơn.",
       blockDetailGuideHintsTitle: "Dùng OpenLesson hiệu quả",
       blockDetailGuideHint1:
-        "Tab Tệp — thêm tài liệu tham khảo để thăm dò khớp với những gì bạn thực sự đang học.",
+        "Tab Tệp: thêm tài liệu tham khảo để thăm dò khớp với những gì bạn thực sự đang học.",
       blockDetailGuideHint2:
-        "Hướng dẫn tùy chỉnh — định hướng khối này theo công việc, kỳ thi hoặc dự án của bạn.",
+        "Hướng dẫn tùy chỉnh: định hướng khối này theo công việc, kỳ thi hoặc dự án của bạn.",
       blockDetailGuideHint3:
-        "ILE — nghĩ thành tiếng, kết tinh lời nói thành ý tưởng và gửi cho Helios khi làm việc.",
+        "ILE, nghĩ thành tiếng, kết tinh lời nói thành ý tưởng và gửi cho Helios khi làm việc.",
       blockDetailGuideHint4:
-        "Trình tạo không gian — thêm hoặc điều chỉnh khối khi phát hiện khoảng trống trong kế hoạch.",
+        "Trình tạo không gian, thêm hoặc điều chỉnh khối khi phát hiện khoảng trống trong kế hoạch.",
       blockDetailGuideHint5:
-        "TAP — chạy khi bạn sẵn sàng chứng minh kỹ năng, không phải lần đầu.",
+        "TAP, chạy khi bạn sẵn sàng chứng minh kỹ năng, không phải lần đầu.",
     },
     planView: {
       performanceSubTabScore: "Điểm",
@@ -446,7 +446,7 @@ const patches = {
       performanceSectionsAriaLabel: "Các chế độ xem hiệu suất",
       performanceScoreTitle: "Điểm không gian làm việc",
       performanceScoreHint:
-        "Tạo thẻ điểm từ phiên, khối TAP và bằng chứng đã tải lên — cùng hợp đồng với báo cáo hiệu suất Evidence API.",
+        "Tạo thẻ điểm từ phiên, khối TAP và bằng chứng đã tải lên, cùng hợp đồng với báo cáo hiệu suất Evidence API.",
       performanceScoreGenerate: "Tạo điểm",
       performanceScoreGenerating: "Đang tạo…",
       performanceChatTitle: "Trò chuyện hiệu suất",
@@ -512,9 +512,9 @@ const patches = {
     },
     tap: {
       welcome: {
-        greeting: "Xin chào — tôi là {name}.",
+        greeting: "Xin chào, tôi là {name}.",
         panelIntro:
-          "Chào mừng đến Giao thức Think Aloud. Đây là buổi trình diễn có giới hạn thời gian: bạn giải thích những gì đã học trong khi tôi lắng nghe, sau đó tôi đặt câu hỏi Socratic để lộ khoảng trống và điểm mạnh.\n\nCách hoạt động: nói suy nghĩ thành tiếng và kết tinh thành thẻ ý tưởng. Gửi một ý tưởng hoặc kết hợp nhiều ý — tôi trả lời dưới avatar với một câu hỏi mỗi lần, không phải luồng chat. Bộ nhớ ý tưởng giữ mọi dấu vết để gửi lại hoặc đánh dấu.\n\nThời lượng phiên và phím tắt ở bên phải. Khi hết giờ, bạn nhận điểm TAP với phân tích marker và khoảng trống.",
+          "Chào mừng đến Giao thức Think Aloud. Đây là buổi trình diễn có giới hạn thời gian: bạn giải thích những gì đã học trong khi tôi lắng nghe, sau đó tôi đặt câu hỏi Socratic để lộ khoảng trống và điểm mạnh.\n\nCách hoạt động: nói suy nghĩ thành tiếng và kết tinh thành thẻ ý tưởng. Gửi một ý tưởng hoặc kết hợp nhiều ý, tôi trả lời dưới avatar với một câu hỏi mỗi lần, không phải luồng chat. Bộ nhớ ý tưởng giữ mọi dấu vết để gửi lại hoặc đánh dấu.\n\nThời lượng phiên và phím tắt ở bên phải. Khi hết giờ, bạn nhận điểm TAP với phân tích marker và khoảng trống.",
         callToAction:
           "Khi sẵn sàng, nhấn Play. Bộ đếm thời gian bắt đầu và tôi sẽ mở bằng câu hỏi cụ thể về những gì bạn học ở đây.",
         play: "Play",

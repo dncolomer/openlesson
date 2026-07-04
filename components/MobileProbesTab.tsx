@@ -494,7 +494,7 @@ export function MobileProbesTab({
                     )}
                   </button>
 
-                  {showThinkAloudTraces && <div className="mt-3">
+                  {showThinkAloudTraces && <div className="mt-3 min-w-0">
                     <ThinkAloudTraces
                       thoughts={thinkAloudThoughts}
                       interimText={thinkAloudInterimText}

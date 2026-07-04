@@ -115,9 +115,11 @@ export function ThinkAloudTraces({
   };
 
   return (
-    <section className={`rounded-2xl border border-neutral-800 bg-neutral-950/50 ${compact ? "p-3" : "p-3.5"}`}>
-      <div className="flex items-center justify-between gap-3 mb-2.5">
-        <div>
+    <section
+      className={`w-full min-w-0 max-w-full overflow-hidden rounded-2xl border border-neutral-800 bg-neutral-950/50 ${compact ? "p-3" : "p-3.5"}`}
+    >
+      <div className="mb-2.5 flex min-w-0 items-center justify-between gap-3">
+        <div className="min-w-0">
           <h3 className="text-[12px] font-medium uppercase tracking-[0.18em] text-neutral-300">
             {t("probes.thinkAloudTraces")}
           </h3>
@@ -145,10 +147,10 @@ export function ThinkAloudTraces({
           {t("probes.liveTranscriptionUnavailable")}
         </p>
       ) : (
-        <div className="space-y-2">
-          <div className="min-h-[42px] rounded-xl border border-neutral-800 bg-black/20 px-3 py-2 text-xs leading-relaxed text-neutral-300">
+        <div className="min-w-0 space-y-2">
+          <div className="max-h-32 min-h-[42px] overflow-x-hidden overflow-y-auto rounded-xl border border-neutral-800 bg-black/20 px-3 py-2 text-xs leading-relaxed text-neutral-300">
             {interimText ? (
-              <span className="text-neutral-200">{interimText}</span>
+              <span className="block break-words text-neutral-200">{interimText}</span>
             ) : (
               <span className="text-neutral-600">{t("probes.speakToSeeTrace")}</span>
             )}
@@ -162,7 +164,7 @@ export function ThinkAloudTraces({
                 </span>
                 <div className="h-px flex-1 bg-neutral-800/70" />
               </div>
-              <div className="flex gap-2 items-stretch">
+              <div className="flex min-w-0 items-stretch gap-2">
                 <textarea
                   value={manualText}
                   onChange={(event) => setManualText(event.target.value)}
@@ -222,7 +224,7 @@ export function ThinkAloudTraces({
                         event.preventDefault();
                         sendSingleThought(thought);
                       }}
-                      className={`flex items-start gap-2 text-left rounded-xl border px-3 py-2 text-xs leading-relaxed transition-all active:scale-[0.99] ${
+                      className={`flex w-full min-w-0 items-start gap-2 text-left rounded-xl border px-3 py-2 text-xs leading-relaxed transition-all active:scale-[0.99] ${
                         isSelected
                           ? "border-cyan-500/60 bg-cyan-500/15 text-white"
                           : "border-neutral-800 bg-neutral-900/60 text-neutral-300 hover:border-cyan-500/50 hover:bg-cyan-500/10 hover:text-white"
@@ -241,7 +243,7 @@ export function ThinkAloudTraces({
                           </svg>
                         )}
                       </span>
-                      <span className="flex-1">{thought.text}</span>
+                      <span className="min-w-0 flex-1 break-words">{thought.text}</span>
                       {shortcut && (
                         <span className="shrink-0 rounded-md border border-neutral-700 bg-neutral-950/70 px-1.5 py-0.5 text-[10px] leading-none text-neutral-500">
                           {shortcut}

@@ -133,15 +133,15 @@ export function SessionHeliosPanel({
               />
             </div>
 
-            <div className="rounded-2xl border border-neutral-900/80 bg-neutral-950/55 p-3 backdrop-blur-md">
+            <div className="min-w-0 overflow-hidden rounded-2xl border border-neutral-900/80 bg-neutral-950/55 p-3 backdrop-blur-md">
               {sessionControls && (
                 <div className="mb-3 flex w-full flex-col items-center gap-2 border-b border-neutral-900/80 pb-3">
                   {sessionControls}
                 </div>
               )}
-              <div className="flex items-center gap-2">
-                <div className="flex h-8 min-w-0 flex-1 items-center rounded-md border border-neutral-900 bg-black/70 px-2.5 text-xs text-neutral-300">
-                  <span className="min-w-0 truncate">
+              <div className="flex min-w-0 items-start gap-2 overflow-hidden">
+                <div className="max-h-24 min-h-8 min-w-0 flex-1 overflow-x-hidden overflow-y-auto rounded-md border border-neutral-900 bg-black/70 px-2.5 py-2 text-xs text-neutral-300">
+                  <span className="block min-w-0 break-words">
                     {thought.interimText}
                   </span>
                 </div>

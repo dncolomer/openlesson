@@ -2673,7 +2673,7 @@ export function MobileSessionView({
               sessionPlan={sessionPlan}
             />
           </div>
-          <div className="shrink-0">
+          <div className="min-w-0 shrink-0">
             <ThinkAloudTraces
               thoughts={thinkAloudTranscript.thoughts}
               interimText={thinkAloudTranscript.interimText}

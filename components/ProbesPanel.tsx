@@ -333,7 +333,7 @@ export function ProbesPanel({
                 <span>Reset {displayTutorName}</span>
               </button>
             )}
-            {showThinkAloudTraces && <div className="w-full max-w-[680px] px-2">
+            {showThinkAloudTraces && <div className="w-full min-w-0 max-w-[680px] px-2">
               <ThinkAloudTraces
                 thoughts={thinkAloudThoughts}
                 interimText={thinkAloudInterimText}
@@ -593,7 +593,7 @@ export function ProbesPanel({
                         )}
                       </button>
                     </div>
-                    {showThinkAloudTraces && <div className="mt-3">
+                    {showThinkAloudTraces && <div className="mt-3 min-w-0">
                       <ThinkAloudTraces
                         thoughts={thinkAloudThoughts}
                         interimText={thinkAloudInterimText}

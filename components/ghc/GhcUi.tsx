@@ -117,9 +117,9 @@ export function LearnerThoughtAvatar({ initial }: { initial: string }) {
 }
 
 const ILE_DIALOGUE_TEXT_CLASS =
-  "text-base leading-relaxed md:text-lg md:leading-relaxed [text-shadow:0_1px_16px_rgb(0_0_0/0.92),0_0_2px_rgb(0_0_0/0.85)]";
+  "break-words text-base leading-relaxed md:text-lg md:leading-relaxed [text-shadow:0_1px_16px_rgb(0_0_0/0.92),0_0_2px_rgb(0_0_0/0.85)]";
 
-const GHL_DIALOGUE_TEXT_CLASS = "text-base leading-relaxed md:text-lg md:leading-relaxed";
+const GHL_DIALOGUE_TEXT_CLASS = "break-words text-base leading-relaxed md:text-lg md:leading-relaxed";
 
 function GhcDialogueSplitComic({
   lastUserTurn,

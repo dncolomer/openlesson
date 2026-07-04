@@ -848,8 +848,8 @@ export function GhcScoreClient({ planId, planNodeId, sessionId, privateToken, in
         )}
 
         {phase === "live" && (
-          <section className="grid flex-1 gap-4 py-4 lg:grid-cols-[1fr_22rem]">
-            <div className="flex min-h-0 flex-col gap-4">
+          <section className="grid min-w-0 flex-1 gap-4 py-4 lg:grid-cols-[minmax(0,1fr)_22rem]">
+            <div className="flex min-h-0 min-w-0 flex-col gap-4">
               <div className="flex min-h-[48vh] flex-1 flex-col overflow-hidden rounded-2xl border border-neutral-900 bg-neutral-950/65 backdrop-blur-sm">
                 <GhcDialogueSplit
                   layout="ghl"
@@ -862,7 +862,7 @@ export function GhcScoreClient({ planId, planNodeId, sessionId, privateToken, in
                 />
               </div>
 
-              <div className="rounded-2xl border border-neutral-900/80 bg-neutral-950/55 p-3 backdrop-blur-md">
+              <div className="min-w-0 overflow-hidden rounded-2xl border border-neutral-900/80 bg-neutral-950/55 p-3 backdrop-blur-md">
                 <div className="mb-3 flex w-full flex-wrap items-center justify-between gap-2 border-b border-neutral-900/80 pb-3">
                   <div>
                     <div className="font-mono text-[10px] uppercase tracking-[2px] text-neutral-600">Time left</div>
@@ -888,9 +888,9 @@ export function GhcScoreClient({ planId, planNodeId, sessionId, privateToken, in
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2">
-                  <div className="flex h-8 min-w-0 flex-1 items-center rounded-md border border-neutral-900 bg-black/70 px-2.5 text-xs text-neutral-300">
-                    <span className="min-w-0 truncate">{interimText}</span>
+                <div className="flex min-w-0 items-start gap-2 overflow-hidden">
+                  <div className="max-h-24 min-h-8 min-w-0 flex-1 overflow-x-hidden overflow-y-auto rounded-md border border-neutral-900 bg-black/70 px-2.5 py-2 text-xs text-neutral-300">
+                    <span className="block min-w-0 break-words">{interimText}</span>
                   </div>
                   <GhcButton size="sm" disabled={!crystallizableText} onClick={crystallizeCurrentTranscription}>
                     <GhcButtonLabel shortcut="C">crystallize</GhcButtonLabel>

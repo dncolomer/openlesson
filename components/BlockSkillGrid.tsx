@@ -4,10 +4,12 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   buildSkillGridLayout,
   clampSkillGridZoom,
+  formatGridCoordinate,
   getDefaultSkillGridZoom,
-  getNeighborTitles,
   getPanToCenterCell,
   getVisibleGridCells,
+  getWeightedNeighborhood,
+  isCellOccupied,
   SKILL_GRID_CELL_SIZE,
   SKILL_GRID_DEFAULT_ZOOM_AT_REFERENCE,
   SKILL_GRID_PITCH,
@@ -28,6 +30,8 @@ interface BlockSkillGridProps {
   showProgress?: boolean;
   isAdding?: boolean;
   planId?: string;
+  sessionId?: string;
+  suggestMode?: "block" | "chapter";
   locale?: string;
   /** Override recenter + initial viewport target (defaults to start block). */
   recenterCell?: GridCell | null;
@@ -81,6 +85,8 @@ export function BlockSkillGrid({
   showProgress = true,
   isAdding = false,
   planId,
+  sessionId,
+  suggestMode = "block",
   locale = "en",
   recenterCell = null,
   followCell = null,
@@ -103,12 +109,15 @@ export function BlockSkillGrid({
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [isSuggesting, setIsSuggesting] = useState(false);
   const [suggestError, setSuggestError] = useState<string | null>(null);
+  const [addError, setAddError] = useState<string | null>(null);
   const [viewportSize, setViewportSize] = useState({ width: 0, height: 0 });
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(SKILL_GRID_DEFAULT_ZOOM_AT_REFERENCE);
 
   const nodesById = useMemo(() => new Map(nodes.map((node) => [node.id, node])), [nodes]);
-  const { ordered, occupancy, startCell } = useMemo(() => buildSkillGridLayout(nodes), [nodes]);
+  const { occupancy, placements, startCell } = useMemo(() => buildSkillGridLayout(nodes), [nodes]);
+  const canSuggest =
+    suggestMode === "chapter" ? Boolean(sessionId) : Boolean(planId);
   const viewportCenterCell = recenterCell ?? startCell;
 
   const visibleCells = useMemo(
@@ -252,9 +261,11 @@ export function BlockSkillGrid({
   const handleEmptyCellClick = useCallback(
     (cell: GridCell) => {
       if (!canEdit || isAdding) return;
+      if (isCellOccupied(occupancy, cell.row, cell.col)) return;
+      setAddError(null);
       setPendingCell(cell);
     },
-    [canEdit, isAdding],
+    [canEdit, isAdding, occupancy],
   );
 
   useEffect(() => {
@@ -264,10 +275,14 @@ export function BlockSkillGrid({
     setIsSuggesting(false);
   }, [pendingCell]);
 
-  const handleSuggestTopics = useCallback(async () => {
-    if (!planId || !pendingCell || isSuggesting) return;
+  const pendingWeightedNeighbors = useMemo(() => {
+    if (!pendingCell) return [];
+    return getWeightedNeighborhood(pendingCell, placements, nodesById);
+  }, [nodesById, pendingCell, placements]);
 
-    const neighbors = getNeighborTitles(pendingCell.row, pendingCell.col, occupancy, nodesById);
+  const handleSuggestTopics = useCallback(async () => {
+    if (!canSuggest || !pendingCell || isSuggesting) return;
+
     const savedModel =
       typeof window !== "undefined"
         ? window.localStorage.getItem(MODEL_STORAGE_KEY)?.replace(/^x-ai\//, "")
@@ -282,9 +297,11 @@ export function BlockSkillGrid({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           planId,
+          sessionId,
+          mode: suggestMode,
           row: pendingCell.row,
           col: pendingCell.col,
-          neighborTitles: neighbors,
+          weightedNeighbors: pendingWeightedNeighbors,
           model,
           locale,
         }),
@@ -304,13 +321,32 @@ export function BlockSkillGrid({
     } finally {
       setIsSuggesting(false);
     }
-  }, [isSuggesting, labels.suggestError, locale, nodesById, occupancy, pendingCell, planId]);
+  }, [
+    canSuggest,
+    isSuggesting,
+    labels.suggestError,
+    locale,
+    pendingCell,
+    pendingWeightedNeighbors,
+    planId,
+    sessionId,
+    suggestMode,
+  ]);
 
   const submitAdd = async () => {
-    if (!pendingCell || !prompt.trim()) return;
-    await onAddBlock(prompt.trim(), pendingCell);
-    setPrompt("");
-    setPendingCell(null);
+    if (!pendingCell || !prompt.trim() || isAdding) return;
+    if (isCellOccupied(occupancy, pendingCell.row, pendingCell.col)) {
+      setAddError("That grid slot is already occupied.");
+      return;
+    }
+    setAddError(null);
+    try {
+      await onAddBlock(prompt.trim(), pendingCell);
+      setPrompt("");
+      setPendingCell(null);
+    } catch (error) {
+      setAddError(error instanceof Error ? error.message : "Failed to add item");
+    }
   };
 
   if (nodes.length === 0 && !canEdit) {
@@ -319,6 +355,9 @@ export function BlockSkillGrid({
 
   return (
     <div className="relative flex h-full min-h-0 flex-col overflow-hidden rounded-md border border-neutral-800/60 bg-[radial-gradient(circle_at_50%_0%,rgba(255,255,255,0.04),rgba(8,8,8,0.98))]">
+      {isAdding && (
+        <div className="pointer-events-none absolute inset-0 z-[15] backdrop-blur-[2px] bg-black/20 transition-all duration-500" />
+      )}
       <div
         ref={viewportRef}
         className="relative min-h-0 flex-1 touch-none overflow-hidden cursor-grab active:cursor-grabbing"
@@ -347,7 +386,7 @@ export function BlockSkillGrid({
           {visibleCells.map((cell) => {
             const nodeId = occupancy.get(`${cell.row}:${cell.col}`);
             const node = nodeId ? nodesById.get(nodeId) : undefined;
-            const orderIndex = node ? ordered.findIndex((entry) => entry.id === node.id) : -1;
+            const nodeCell = node ? placements.get(node.id) : null;
 
             return (
               <div
@@ -368,9 +407,11 @@ export function BlockSkillGrid({
                     className={`relative flex h-full w-full flex-col items-center justify-center rounded-lg border px-2 text-center transition hover:brightness-110 ${cellStatusClass(node.status, selectedNodeId === node.id, focusedNodeId === node.id, showProgress)}`}
                     title={node.title}
                   >
-                    <span className="absolute left-1.5 top-1 font-mono text-[9px] text-neutral-500">
-                      {orderIndex + 1}
-                    </span>
+                    {nodeCell && (
+                      <span className="absolute left-1.5 top-1 font-mono text-[9px] text-neutral-500">
+                        {formatGridCoordinate(nodeCell.row, nodeCell.col)}
+                      </span>
+                    )}
                     {node.is_start && (
                       <span className="absolute right-1.5 top-1 text-[8px] uppercase tracking-[0.12em] text-neutral-400">
                         Start
@@ -433,14 +474,17 @@ export function BlockSkillGrid({
           <div className="w-full max-w-md rounded-xl border border-neutral-700/80 bg-neutral-950 p-4 shadow-2xl shadow-black/50">
             <h3 className="text-sm font-medium text-white">{labels.addTitle}</h3>
             <p className="mt-1 text-[11px] text-neutral-500">
-              Slot {pendingCell.row},{pendingCell.col}
-              {getNeighborTitles(pendingCell.row, pendingCell.col, occupancy, nodesById).length > 0 &&
-                ` · near ${getNeighborTitles(pendingCell.row, pendingCell.col, occupancy, nodesById).join(", ")}`}
+              Slot {formatGridCoordinate(pendingCell.row, pendingCell.col)}
+              {pendingWeightedNeighbors.length > 0 &&
+                ` · influenced by ${pendingWeightedNeighbors
+                  .slice(0, 3)
+                  .map((entry) => entry.title)
+                  .join(", ")}`}
             </p>
             <div className="mt-3 flex items-center justify-between gap-2">
               <button
                 type="button"
-                disabled={!planId || isSuggesting || isAdding}
+                disabled={!canSuggest || isSuggesting || isAdding}
                 onClick={() => void handleSuggestTopics()}
                 className="rounded-md border border-neutral-700 bg-neutral-900/80 px-2.5 py-1.5 text-xs text-neutral-300 transition hover:border-neutral-500 hover:text-white disabled:opacity-40"
               >
@@ -448,6 +492,7 @@ export function BlockSkillGrid({
               </button>
             </div>
             {suggestError && <p className="mt-2 text-xs text-red-400/90">{suggestError}</p>}
+            {addError && <p className="mt-2 text-xs text-red-400/90">{addError}</p>}
             {suggestions.length > 0 && (
               <div className="mt-2 flex flex-col gap-1.5">
                 {suggestions.map((suggestion) => (

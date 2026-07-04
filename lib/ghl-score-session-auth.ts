@@ -35,7 +35,7 @@ export async function resolveGhlSessionAccess(input: {
     if (error || !session) return { error: "TAP block not found", status: 404 };
     if (session.status === "completed") return { error: "TAP block is already completed", status: 409 };
     if (ghlSessionId && session.id !== ghlSessionId) {
-      return { error: "ghlSessionId does not match private link session", status: 403 };
+      return { error: "TAP session ID does not match private link", status: 403 };
     }
 
     return {

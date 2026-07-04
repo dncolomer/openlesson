@@ -12,6 +12,7 @@ import {
   GHC_BACKGROUND_IMAGES,
 } from "@/components/ghc/GhcUi";
 import { TutorWelcome } from "@/components/TutorWelcome";
+import { SlidingTranscript } from "@/components/ghc/SlidingTranscript";
 
 interface SessionHeliosPanelProps {
   lastUserTurn: GhcDialogueMessage | null;
@@ -129,7 +130,7 @@ export function SessionHeliosPanel({
                 isSending={thought.isSending || isAssistantPending}
                 error={thought.sendError}
                 userInitial={userInitial}
-                emptyUserTurnText={t("session.emptyUserTurn")}
+                emptyUserTurnText=""
               />
             </div>
 
@@ -140,10 +141,8 @@ export function SessionHeliosPanel({
                 </div>
               )}
               <div className="flex min-w-0 items-start gap-2 overflow-hidden">
-                <div className="max-h-24 min-h-8 min-w-0 flex-1 overflow-x-hidden overflow-y-auto rounded-md border border-neutral-900 bg-black/70 px-2.5 py-2 text-xs text-neutral-300">
-                  <span className="block min-w-0 break-words">
-                    {thought.interimText}
-                  </span>
+                <div className="flex h-8 min-w-0 flex-1 items-center rounded-md border border-neutral-900 bg-black/70 px-2.5 text-xs text-neutral-300">
+                  <SlidingTranscript text={thought.interimText} className="w-full" />
                 </div>
                 <GhcButton size="sm" disabled={!thought.crystallizableText} onClick={thought.crystallizeCurrentTranscription}>
                   <GhcButtonLabel shortcut="C">crystallize</GhcButtonLabel>

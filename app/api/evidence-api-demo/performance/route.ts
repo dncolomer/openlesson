@@ -6,7 +6,7 @@ import {
   PERFORMANCE_REPORT_SCHEMA,
   type PerformanceReport,
 } from "@/lib/agent-v2/performance-context";
-import { requireWorkspaceOwnerSession } from "@/lib/agent-v2/workspace-session-access";
+import { requireDemoAdminWorkspaceSession } from "@/lib/evidence-api-demo/demo-access";
 import { callXaiResponsesWithFiles } from "@/lib/xai-client";
 
 export const runtime = "nodejs";
@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "planId is required" }, { status: 400 });
     }
 
-    const access = await requireWorkspaceOwnerSession(planId);
+    const access = await requireDemoAdminWorkspaceSession(planId);
     if (access instanceof NextResponse) return access;
 
     const blockId = typeof body.block_id === "string" ? body.block_id : null;

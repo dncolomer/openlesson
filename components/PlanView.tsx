@@ -10,7 +10,7 @@ import { RemixModal } from "@/components/RemixModal";
 import { useI18n } from "../lib/i18n";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { PerformanceChat } from "@/components/PerformanceChat";
+import { WorkspacePerformancePanel } from "@/components/WorkspacePerformancePanel";
 import { PlanFilesTab } from "@/components/PlanFilesTab";
 import { SessionList } from "@/components/SessionList";
 import { aestheticImageForId, fetchAestheticPackages } from "@/lib/aesthetics";
@@ -135,7 +135,13 @@ export function PlanView({ initialPlan, initialNodes }: PlanViewProps) {
 
   useEffect(() => {
     async function loadPlan() {
-      const { data: { user } } = await supabase.auth.getUser();
+      let user: { id: string } | null = null;
+      try {
+        const { data } = await supabase.auth.getUser();
+        user = data.user;
+      } catch (error) {
+        console.warn("Supabase auth session check failed:", error);
+      }
       setCurrentUserId(user?.id || null);
 
       const { data: planData, error: planError } = await supabase
@@ -568,15 +574,7 @@ export function PlanView({ initialPlan, initialNodes }: PlanViewProps) {
                       <span className="mt-0.5 block text-[10px] text-neutral-500">{t("planView.productEvidenceApiHint")}</span>
                     </Link>
                   )}
-                  {currentUserId && (
-                    <Link
-                      href={`/workspace/${planId}/ghl-score`}
-                      className="w-full rounded-md bg-white px-3 py-2 text-left transition-colors hover:bg-neutral-200"
-                    >
-                      <span className="block text-xs font-medium text-black">{t("planView.productTap")}</span>
-                      <span className="mt-0.5 block text-[10px] text-neutral-600">{t("planView.productTapHint")}</span>
-                    </Link>
-                  )}
+
                   <button
                     type="button"
                     onClick={() => setActiveTab("graph")}
@@ -897,12 +895,14 @@ export function PlanView({ initialPlan, initialNodes }: PlanViewProps) {
         )}
 
         {activeTab === "performance" && (
-          <PerformanceChat
-            planId={planId}
-            isOwner={isOwner}
-            currentUserId={currentUserId}
-            isGroupPlan={plan.is_group === true}
-          />
+          <div className="h-full min-h-0">
+            <WorkspacePerformancePanel
+              planId={planId}
+              isOwner={isOwner}
+              currentUserId={currentUserId}
+              isGroupPlan={plan.is_group === true}
+            />
+          </div>
         )}
 
         {activeTab === "files" && (

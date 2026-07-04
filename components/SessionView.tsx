@@ -72,6 +72,7 @@ import { useVoiceActivity } from "@/lib/useVoiceActivity";
 import { useThinkAloudTranscript, type SpeechTranscriptEntry } from "@/lib/useThinkAloudTranscript";
 import { useHeliosVoicePlaybackActive } from "@/lib/useHeliosVoicePlayback";
 import { retryWithResult } from "@/lib/retry";
+import { isChapterSlotAvailable } from "@/lib/chapter-skill-grid";
 import { translateWithLocale, useI18n } from "@/lib/i18n";
 import { tutoringLocales, tutoringLanguageNames } from "@/lib/tutoring-languages";
 import { isSessionWelcomeSeen, markSessionWelcomeSeen } from "@/lib/welcomeState";
@@ -1087,6 +1088,9 @@ export function SessionView({ sessionId }: { sessionId: string }) {
     if (!currentPlan) return;
     const trimmed = description.trim();
     if (!trimmed) return;
+    if (!isChapterSlotAvailable(currentPlan, position.row, position.col)) {
+      throw new Error("That grid slot is already occupied.");
+    }
     const newStep: SessionPlanStep = {
       id: crypto.randomUUID(),
       description: trimmed,
@@ -4099,23 +4103,26 @@ export function SessionView({ sessionId }: { sessionId: string }) {
                       <div className="h-full overflow-hidden rounded-lg border border-neutral-800">
                         <ChapterMapPanel
                           plan={sessionPlan}
+                          sessionId={session.id}
                           loading={planLoading}
                           activeChapterIndex={activeChapterIndex}
                           loadingChapterIndex={chapterLoadingIndex}
                           onLoadChapter={handleLoadChapter}
                           onChapterDone={() => {
                             const step = sessionPlanRef.current?.steps?.[activeChapterIndex];
+                            setActiveStuckCheck(null);
                             void logTool("session_plan", "chapter_done", {
                               stepIndex: activeChapterIndex,
                               stepId: step?.id,
                               stepDescription: step?.description?.slice(0, 120),
+                              via: "chapter_map_mark_done",
                             });
-                            void handleAdvanceStep(false);
+                            void handleAdvanceStep(true);
                           }}
                           onAddChapter={handleAddChapter}
                           onUpdateChapter={handleUpdateChapter}
                           onEnsurePositions={handleEnsureChapterPositions}
-                          isSessionActive={isRecording && !isPaused}
+                          isSessionActive={isRecording}
                           isGeneratingProbe={isGeneratingProbe}
                           isCurrentStepCompleted={activeStep?.status === "completed" || activeStep?.status === "skipped"}
                           stuckCheckText={STUCK_POLICY_ENABLED ? activeStuckCheck : null}
@@ -4178,6 +4185,8 @@ export function SessionView({ sessionId }: { sessionId: string }) {
                         thoughts={sessionThoughtHistory}
                         sentThoughtIds={sessionThoughtInterface.sentThoughtIds}
                         skippedThoughtIds={sessionThoughtInterface.memoryThoughtIds}
+                        planId={session.planId ?? undefined}
+                        sessionId={session.id}
                         onSendThought={(text, thoughtIds) => {
                           void sessionThoughtInterface.sendThought(text, thoughtIds);
                         }}

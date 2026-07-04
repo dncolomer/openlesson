@@ -6,7 +6,7 @@ import { useI18n } from "@/lib/i18n";
 type ProgressRing = "neutral" | "completed" | "in_progress";
 
 type BlockDetailCardProps = {
-  layout?: "horizontal" | "stacked";
+  layout?: "horizontal" | "stacked" | "modal";
   title: string;
   description?: string;
   index: number;
@@ -31,6 +31,57 @@ const RING_CLASS: Record<ProgressRing, string> = {
   in_progress: "ring-amber-400/70",
 };
 
+function BlockDetailGuidePanel() {
+  const { t } = useI18n();
+  const hints = [
+    "sessionItem.blockDetailGuideHint1",
+    "sessionItem.blockDetailGuideHint2",
+    "sessionItem.blockDetailGuideHint3",
+    "sessionItem.blockDetailGuideHint4",
+    "sessionItem.blockDetailGuideHint5",
+  ] as const;
+
+  return (
+    <div className="flex h-full min-h-0 flex-col gap-3 rounded-lg border border-white/10 bg-neutral-900/35 p-3.5">
+      <div>
+        <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-neutral-500">
+          {t("sessionItem.blockDetailGuideTitle")}
+        </p>
+        <p className="mt-2 text-xs leading-relaxed text-neutral-300">{t("sessionItem.blockDetailGuideIntro")}</p>
+      </div>
+
+      <div className="space-y-2.5">
+        <div>
+          <p className="text-xs font-medium text-neutral-200">{t("sessionItem.blockDetailGuideSourcesTitle")}</p>
+          <p className="mt-1 text-[11px] leading-relaxed text-neutral-500">
+            {t("sessionItem.blockDetailGuideSourcesBody")}
+          </p>
+        </div>
+        <div>
+          <p className="text-xs font-medium text-neutral-200">{t("sessionItem.blockDetailGuideMaterialsTitle")}</p>
+          <p className="mt-1 text-[11px] leading-relaxed text-neutral-500">
+            {t("sessionItem.blockDetailGuideMaterialsBody")}
+          </p>
+        </div>
+      </div>
+
+      <div className="min-h-0 flex-1">
+        <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-neutral-600">
+          {t("sessionItem.blockDetailGuideHintsTitle")}
+        </p>
+        <ul className="mt-2 space-y-1.5">
+          {hints.map((key) => (
+            <li key={key} className="flex gap-2 text-[11px] leading-snug text-neutral-400">
+              <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-white/30" aria-hidden />
+              <span>{t(key)}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </div>
+  );
+}
+
 export function BlockDetailCard({
   layout = "horizontal",
   title,
@@ -53,8 +104,9 @@ export function BlockDetailCard({
   const { t } = useI18n();
   const [showHelp, setShowHelp] = useState(false);
   const isStacked = layout === "stacked";
+  const isModal = layout === "modal";
 
-  const cardShellClass = isStacked
+  const cardShellClass = isStacked || isModal
     ? "relative"
     : `relative overflow-hidden rounded-xl border border-white/15 bg-neutral-950/95 shadow-[0_10px_40px_rgba(0,0,0,0.45)] ${
         highlighted ? "ring-1 ring-white/25" : ""
@@ -86,40 +138,40 @@ export function BlockDetailCard({
   ] as const;
 
   const actionButtons = showActions ? (
-    <div className={isStacked ? "space-y-2.5" : ""}>
-      <div className="mb-2.5 flex items-center justify-between gap-2">
-        <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-neutral-500">
+    <div>
+      <div className="mb-2 flex items-center justify-between gap-2">
+        <p className="text-[10px] font-medium uppercase tracking-[0.14em] text-neutral-500">
           {t("sessionItem.chooseMode")}
         </p>
         <button
           type="button"
           onClick={() => setShowHelp(true)}
-          className="flex h-6 w-6 items-center justify-center rounded-full border border-white/20 bg-neutral-900/80 text-xs font-semibold text-neutral-400 transition hover:border-white/35 hover:bg-neutral-800 hover:text-white"
+          className="flex h-5 w-5 items-center justify-center rounded-full border border-white/20 bg-neutral-900/80 text-[10px] font-semibold text-neutral-400 transition hover:border-white/35 hover:bg-neutral-800 hover:text-white"
           aria-label={t("sessionItem.modesHelpTitle")}
         >
           ?
         </button>
       </div>
 
-      <div className={`grid gap-2.5 ${isStacked ? "grid-cols-1" : "grid-cols-1 sm:grid-cols-2"}`}>
+      <div className={`grid gap-2 ${isModal ? "grid-cols-2" : isStacked ? "grid-cols-1" : "grid-cols-1 sm:grid-cols-2"}`}>
         <button
           type="button"
           onClick={onStartIle}
           disabled={isStarting || isLocked}
-          className="group flex flex-col items-start gap-1.5 rounded-xl border-2 border-white bg-white px-4 py-3.5 text-left transition hover:bg-neutral-200 disabled:opacity-40"
+          className="group flex flex-col items-start gap-1 rounded-lg border-2 border-white bg-white px-3 py-2.5 text-left transition hover:bg-neutral-200 disabled:opacity-40"
         >
-          <span className="text-sm font-semibold tracking-tight text-black">{t("sessionItem.ileCtaLabel")}</span>
-          <span className="text-[11px] leading-snug text-neutral-600 group-hover:text-neutral-700">
+          <span className="text-xs font-semibold tracking-tight text-black">{t("sessionItem.ileCtaLabel")}</span>
+          <span className="text-[10px] leading-snug text-neutral-600 group-hover:text-neutral-700">
             {isStarting ? t("sessionItem.starting") : t("sessionItem.ileCtaHint")}
           </span>
         </button>
         <button
           type="button"
           onClick={onStartEval}
-          className="group flex flex-col items-start gap-1.5 rounded-xl border-2 border-white/40 bg-transparent px-4 py-3.5 text-left transition hover:border-white/70 hover:bg-white/5"
+          className="group flex flex-col items-start gap-1 rounded-lg border-2 border-white/40 bg-transparent px-3 py-2.5 text-left transition hover:border-white/70 hover:bg-white/5"
         >
-          <span className="text-sm font-semibold tracking-tight text-white">{evalLabel}</span>
-          <span className="text-[11px] leading-snug text-neutral-500 group-hover:text-neutral-400">
+          <span className="text-xs font-semibold tracking-tight text-white">{evalLabel}</span>
+          <span className="text-[10px] leading-snug text-neutral-500 group-hover:text-neutral-400">
             {t("sessionItem.evalCtaHint")}
           </span>
         </button>
@@ -130,11 +182,11 @@ export function BlockDetailCard({
   if (showHelp) {
     return (
       <div className={cardShellClass} style={cardShellStyle}>
-        {!isStacked && (
+        {!isStacked && !isModal && (
           <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
         )}
 
-        <div className={isStacked ? "space-y-4" : "p-4 sm:p-5"}>
+        <div className={isStacked || isModal ? "space-y-3" : "p-4 sm:p-5"}>
           <div className="flex items-start justify-between gap-3">
             <p className="text-sm font-semibold text-white">{t("sessionItem.modesHelpTitle")}</p>
             <button
@@ -147,18 +199,18 @@ export function BlockDetailCard({
             </button>
           </div>
 
-          <div className="mt-4 space-y-4">
+          <div className="grid gap-3 sm:grid-cols-2">
             {helpSections.map((section) => (
               <div
                 key={section.titleKey}
-                className="rounded-lg border border-white/15 bg-neutral-900/50 p-4"
+                className="rounded-lg border border-white/15 bg-neutral-900/50 p-3"
               >
-                <p className="text-sm font-semibold text-white">{t(section.titleKey)}</p>
-                <p className="mt-2 text-[13px] leading-relaxed text-neutral-300">{t(section.summaryKey)}</p>
-                <ul className="mt-3 space-y-2.5">
+                <p className="text-xs font-semibold text-white">{t(section.titleKey)}</p>
+                <p className="mt-1.5 text-[11px] leading-relaxed text-neutral-300">{t(section.summaryKey)}</p>
+                <ul className="mt-2 space-y-1.5">
                   {section.pointKeys.map((pointKey) => (
-                    <li key={pointKey} className="flex gap-2.5 text-[12px] leading-relaxed text-neutral-400">
-                      <span className="mt-[0.45rem] h-1 w-1 shrink-0 rounded-full bg-white/35" aria-hidden />
+                    <li key={pointKey} className="flex gap-2 text-[10px] leading-relaxed text-neutral-400">
+                      <span className="mt-1 h-1 w-1 shrink-0 rounded-full bg-white/35" aria-hidden />
                       <span>{t(pointKey)}</span>
                     </li>
                   ))}
@@ -166,6 +218,48 @@ export function BlockDetailCard({
               </div>
             ))}
           </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (isModal) {
+    return (
+      <div className={cardShellClass} style={cardShellStyle}>
+        <div className="grid grid-cols-2 gap-3 sm:gap-4">
+          <div className="flex min-w-0 flex-col gap-3">
+            <div className="flex gap-3">
+              <div
+                className={`relative h-16 w-16 shrink-0 overflow-hidden rounded-lg border border-white/10 ring-2 ring-offset-2 ring-offset-[#0b0b0b] ${RING_CLASS[progressRing]}`}
+              >
+                <img src={thumbnailSrc} alt="" className="h-full w-full object-cover" />
+                <span className="absolute bottom-1 left-1.5 font-mono text-[10px] font-semibold text-white drop-shadow">
+                  {index + 1}
+                </span>
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-start justify-between gap-2">
+                  <h3 className="text-base font-semibold leading-snug tracking-tight text-white">{title}</h3>
+                  {isStart ? (
+                    <span className="shrink-0 rounded-full border border-white/20 bg-black/50 px-2 py-0.5 text-[9px] font-medium uppercase tracking-wide text-neutral-200">
+                      {t("sessionItem.startBlock")}
+                    </span>
+                  ) : null}
+                </div>
+                <p className="mt-1 text-xs leading-relaxed text-neutral-400 line-clamp-3">
+                  {description || t("sessionItem.noDescription")}
+                </p>
+              </div>
+            </div>
+
+            {forkCallout ? <div>{forkCallout}</div> : actionButtons}
+
+            {promptSection ? (
+              <div className="rounded-lg border border-white/10 bg-neutral-900/40 p-3">{promptSection}</div>
+            ) : null}
+          </div>
+
+          <BlockDetailGuidePanel />
         </div>
       </div>
     );

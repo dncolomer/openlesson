@@ -13,6 +13,7 @@ import {
 
 interface ChapterMapPanelProps {
   plan: SessionPlan | null;
+  sessionId?: string;
   loading?: boolean;
   activeChapterIndex: number;
   loadingChapterIndex?: number | null;
@@ -29,6 +30,7 @@ interface ChapterMapPanelProps {
 
 export function ChapterMapPanel({
   plan,
+  sessionId,
   loading = false,
   activeChapterIndex,
   loadingChapterIndex = null,
@@ -48,6 +50,9 @@ export function ChapterMapPanel({
   const [editDraft, setEditDraft] = useState("");
   const [savingEdit, setSavingEdit] = useState(false);
   const [adding, setAdding] = useState(false);
+  const [editPrompt, setEditPrompt] = useState("");
+  const [editSuggestions, setEditSuggestions] = useState<string[]>([]);
+  const [suggestingEdit, setSuggestingEdit] = useState(false);
 
   const steps = plan?.steps ?? [];
   const nodes = useMemo(() => sessionStepsToSkillGridNodes(steps), [steps]);
@@ -69,6 +74,30 @@ export function ChapterMapPanel({
     if (!activeStep) return;
     setSelectedStepId(activeStep.id);
   }, [activeStep?.id]);
+
+  const suggestEdit = useCallback(async () => {
+    if (!sessionId || !editingId || suggestingEdit) return;
+    setSuggestingEdit(true);
+    try {
+      const response = await fetch("/api/learning-plan/suggest-chapter-edit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sessionId,
+          stepId: editingId,
+          currentDescription: editDraft,
+          prompt: editPrompt,
+        }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Failed to suggest");
+      setEditSuggestions((data.suggestions || []).slice(0, 3));
+    } catch {
+      setEditSuggestions([]);
+    } finally {
+      setSuggestingEdit(false);
+    }
+  }, [editDraft, editPrompt, editingId, sessionId, suggestingEdit]);
 
   const saveEdit = useCallback(async () => {
     if (!editingId || savingEdit) return;
@@ -96,7 +125,7 @@ export function ChapterMapPanel({
     [onAddChapter],
   );
 
-  const chapterActionsDisabled = !isSessionActive || isGeneratingProbe;
+  const chapterActionsDisabled = isGeneratingProbe;
 
   const gridLabels = useMemo(
     () => ({
@@ -142,6 +171,8 @@ export function ChapterMapPanel({
         canEdit
         showProgress
         isAdding={adding}
+        sessionId={sessionId}
+        suggestMode="chapter"
         recenterCell={activeCell}
         followCell={activeCell}
         onAddBlock={handleAddAtCell}
@@ -153,7 +184,12 @@ export function ChapterMapPanel({
           <div className="pointer-events-auto mx-3 mb-3 rounded-xl border border-neutral-700/80 bg-neutral-950/95 p-4 shadow-2xl backdrop-blur-md">
             <div className="mb-3 flex items-center justify-between gap-3">
               <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-neutral-400">
-                {t("chapterMap.chapterLabel", { number: selectedIndex + 1 })}
+                {(() => {
+                  const cell = placements.get(selectedStep.id);
+                  return cell
+                    ? `Chapter ${cell.row},${cell.col}`
+                    : t("chapterMap.chapterLabel", { number: selectedIndex + 1 });
+                })()}
               </p>
               <button
                 type="button"
@@ -166,6 +202,34 @@ export function ChapterMapPanel({
 
             {editingId === selectedStep.id ? (
               <div className="space-y-2">
+                <input
+                  value={editPrompt}
+                  onChange={(e) => setEditPrompt(e.target.value)}
+                  placeholder={t("chapterMap.editPromptPlaceholder")}
+                  className="w-full rounded-md border border-neutral-700 bg-black/60 px-3 py-2 text-xs text-neutral-200 focus:border-neutral-500 focus:outline-none"
+                />
+                <button
+                  type="button"
+                  disabled={!sessionId || suggestingEdit}
+                  onClick={() => void suggestEdit()}
+                  className="text-[11px] text-neutral-400 underline underline-offset-2 hover:text-neutral-200 disabled:opacity-40"
+                >
+                  {suggestingEdit ? t("chapterMap.gridSuggesting") : t("chapterMap.editSuggest")}
+                </button>
+                {editSuggestions.length > 0 && (
+                  <div className="flex flex-col gap-1">
+                    {editSuggestions.map((suggestion) => (
+                      <button
+                        key={suggestion}
+                        type="button"
+                        onClick={() => setEditDraft(suggestion)}
+                        className="rounded-md border border-neutral-700/80 bg-neutral-900/60 px-2.5 py-2 text-left text-xs text-neutral-200 hover:border-neutral-500"
+                      >
+                        {suggestion}
+                      </button>
+                    ))}
+                  </div>
+                )}
                 <textarea
                   value={editDraft}
                   onChange={(e) => setEditDraft(e.target.value)}
@@ -227,7 +291,6 @@ export function ChapterMapPanel({
                       || selectedStep.status === "skipped"
                       || chapterActionsDisabled
                       || isCurrentStepCompleted
-                      || !!stuckCheckText
                     }
                     onClick={onChapterDone}
                   >

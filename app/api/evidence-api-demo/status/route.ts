@@ -13,18 +13,16 @@ export async function GET() {
     } = await supabase.auth.getUser();
 
     if (userError || !user) {
-      return NextResponse.json({ authenticated: false, hasTeams: false, isAdmin: false });
+      return NextResponse.json({ authenticated: false, isAdmin: false });
     }
 
     let profile: {
-      plan: string | null;
-      subscription_status: string | null;
       is_admin: boolean | null;
     } | null = null;
 
     const { data: sessionProfile, error: profileError } = await supabase
       .from("profiles")
-      .select("plan, subscription_status, is_admin")
+      .select("is_admin")
       .eq("id", user.id)
       .single();
 
@@ -35,7 +33,7 @@ export async function GET() {
         const admin = createAdminClient();
         const { data: adminProfile } = await admin
           .from("profiles")
-          .select("plan, subscription_status, is_admin")
+          .select("is_admin")
           .eq("id", user.id)
           .single();
         profile = adminProfile;
@@ -45,14 +43,10 @@ export async function GET() {
     }
 
     const isAdmin = profile?.is_admin === true;
-    const hasTeams =
-      isAdmin || (profile?.plan === "pro_teams" && profile?.subscription_status === "active");
 
     return NextResponse.json({
       authenticated: true,
-      hasTeams,
       isAdmin,
-      plan: profile?.plan ?? null,
     });
   } catch (error) {
     console.error("[evidence-api-demo/status] Error:", error);

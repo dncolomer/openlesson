@@ -1393,7 +1393,9 @@
     "currentPlan": "当前计划",
     "errorMessage": "抱歉，我遇到错误。请重试。",
     "signUpToCustomize": "注册以自定义此计划",
-    "forkToCustomize": "复制此计划以自定义"
+    "forkToCustomize": "复制此计划以自定义",
+    "welcomeTitle": "工作区构建器",
+    "welcomeDescription": "告诉我你希望这个工作区如何变化。我可以添加区块、删除部分、重新排序章节，或调整重点与难度。"
   },
   "partner": {
     "confirmStake": "确认质押",
@@ -1640,7 +1642,19 @@
     "ileCtaHint": "与 Helios 的实时会话 — 练习与引导",
     "modesHelpClose": "返回区块",
     "evalCtaHint": "Think-aloud 录制 — 衡量你的掌握程度",
-    "evalCtaLabel": "Think Aloud 协议"
+    "evalCtaLabel": "Think Aloud 协议",
+    "blockDetailGuideTitle": "实时思考，你的资料",
+    "blockDetailGuideIntro": "OpenLesson 面向实时思考与推理——不是替代你的教材、文档或课程。Helios 在你工作时探测你的理解；内容由你带来。",
+    "blockDetailGuideSourcesTitle": "查阅你自己的资料",
+    "blockDetailGuideSourcesBody": "在会话旁使用 Grok、Grokipedia、笔记本或任何参考资料。查找与练习在探测之外——会话记录你如何运用所找到的内容进行推理。",
+    "blockDetailGuideMaterialsTitle": "定制工作区",
+    "blockDetailGuideMaterialsBody": "在“文件”标签页附加 PDF、笔记和图片，并在下方用自定义说明调整每个区块。你添加的上下文越多，Helios 就越精准。",
+    "blockDetailGuideHintsTitle": "更好地使用 OpenLesson",
+    "blockDetailGuideHint1": "文件标签页——添加参考资料，使探测与你实际学习的内容一致。",
+    "blockDetailGuideHint2": "自定义说明——将此区块导向你的工作、考试或项目。",
+    "blockDetailGuideHint3": "ILE——大声思考，将语音凝结为想法，并在工作中发送给 Helios。",
+    "blockDetailGuideHint4": "工作区构建器——发现计划中的缺口时添加或重塑区块。",
+    "blockDetailGuideHint5": "TAP——在你准备好展示技能时运行，而不是第一次尝试时。"
   },
   "planView": {
     "addDescription": "添加学习计划描述...",
@@ -1702,7 +1716,18 @@
     "forkToEditPointBuilder": "在您复刻之前，工作区构建器为只读",
     "forkToEditPointOwnCopy": "复刻会创建可编辑、改编和扩展的私有副本",
     "forkToEditCta": "复刻工作区",
-    "forkToEditSignInCta": "登录以复刻"
+    "forkToEditSignInCta": "登录以复刻",
+    "performanceSubTabScore": "评分",
+    "performanceSubTabTap": "TAP",
+    "performanceSubTabChat": "聊天",
+    "performanceScoreTitle": "工作区评分",
+    "performanceScoreHint": "根据会话、TAP 区块和上传的证据生成评分卡——与 Evidence API 性能报告相同的契约。",
+    "performanceScoreGenerate": "生成评分",
+    "performanceScoreGenerating": "生成中…",
+    "performanceChatTitle": "表现聊天",
+    "startTap": "开始 Think Aloud 协议",
+    "signInForTap": "登录以在此工作区开始 TAP 会话。",
+    "performanceSectionsAriaLabel": "表现视图"
   },
   "workspaceIntegration": {
     "title": "Agentic API 集成",
@@ -1738,14 +1763,20 @@
   "performanceChat": {
     "signInRequired": "登录以查看表现洞察",
     "welcomeTitle": "表现洞察",
-    "welcomeDescription": "向我询问关于此计划学习表现的任何问题。我可以分析区块报告、识别模式并提供改进建议。",
+    "welcomeDescription": "向我询问此工作区学习表现的任何问题。我可以分析区块报告、识别模式并提供改进建议。",
     "exampleQuestions": "试试问：",
     "example1": "我的总体表现如何？",
     "example2": "哪些主题需要更多练习？",
     "example3": "显示我的进步趋势",
     "placeholder": "询问关于表现...",
     "errorMessage": "抱歉，无法处理您的请求。请重试。",
-    "noSessions": "此计划还没有区块数据。"
+    "noSessions": "此工作区尚无区块数据。",
+    "starter1": "给我目前的排行榜",
+    "starter2": "谁进步最快？",
+    "starter3": "大家在哪些节点上遇到困难？",
+    "starter4": "小组接下来应该练习什么？",
+    "starter5": "比较已完成与进行中的会话",
+    "starter6": "总结主要的表现差距"
   },
   "sessionPerformanceChat": {
     "greeting": "恭喜你完成了这节区块！",
@@ -2263,5 +2294,50 @@
     "hearAgain": "再听一次",
     "listenToTutor": "听导师讲",
     "stopNarration": "停止"
+  },
+  "tap": {
+    "welcome": {
+      "greeting": "你好——我是 {name}。",
+      "panelIntro": "欢迎使用 Think Aloud 协议。这是一场限时演示：你说明所学内容，我倾听，然后通过苏格拉底式追问揭示差距与优势。\n\n运作方式：大声说出推理并凝结为想法卡片。发送一个想法或组合多个——我在头像下每次只回应一个问题，不是聊天线程。想法记忆保留每条轨迹，便于重发或标记。\n\n会话时长和键盘快捷键在右侧。时间结束后，你将收到包含指标分解与差距分析的 TAP 评分。",
+      "callToAction": "准备好后按 Play。计时开始，我会以关于你在此所学内容的具体问题开场。",
+      "play": "Play",
+      "starting": "启动中…",
+      "skipTyping": "跳过打字"
+    }
+  },
+  "performanceReportCard": {
+    "defaultLabel": "表现报告",
+    "tabOverview": "概览",
+    "tabCompetency": "能力",
+    "tabMarkers": "指标",
+    "tabStrengths": "优势",
+    "tabGaps": "差距",
+    "tabNextSteps": "下一步",
+    "tabHistory": "历史",
+    "sectionsAriaLabel": "评分卡分区",
+    "confidenceWellConnected": "关联充分",
+    "confidenceClear": "信号清晰",
+    "confidenceDeveloping": "发展中",
+    "confidenceEmerging": "初现",
+    "learning": "学习",
+    "conversion": "转化",
+    "conversionGoal": "转化目标",
+    "sourceWorkspace": "工作区",
+    "sourceInferred": "推断",
+    "growthAreas": "成长领域",
+    "suggestions": "建议",
+    "competencyProfile": "能力概况",
+    "competencyAriaLabel": "表现能力评分",
+    "gapsEmpty": "本报告未识别出具体差距。请查看优势与下一步，或收集更多证据。",
+    "repair": "修复",
+    "directionGoals": "方向与中间目标",
+    "directionEmpty": "尚未记录高层方向。收集更多证据后重新生成评分卡。",
+    "granularEvents": "细粒度事件与行动",
+    "eventsEmpty": "尚无细粒度事件。添加证据上传、TAP 会话或检查点以填充可执行的下一步。",
+    "scoreEvolution": "评分演变",
+    "historyCheck": "检查 {check} · 第 {days} 天 · {actionCount} {actionLabel}",
+    "historyActionOne": "项行动",
+    "historyActionMany": "项行动",
+    "historyMetrics": "{gaps} 个差距 · {goals} 个目标 · {events} 个事件"
   }
 }

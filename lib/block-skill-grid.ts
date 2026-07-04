@@ -98,8 +98,71 @@ function hasGridPosition(node: SkillGridNode) {
   return node.position_x != null && node.position_y != null;
 }
 
+export function getCellKey(row: number, col: number) {
+  return `${row}:${col}`;
+}
+
 function cellKey(cell: GridCell) {
-  return `${cell.row}:${cell.col}`;
+  return getCellKey(cell.row, cell.col);
+}
+
+export function formatGridCoordinate(row: number, col: number) {
+  return `${row},${col}`;
+}
+
+export function chebyshevDistance(a: GridCell, b: GridCell) {
+  return Math.max(Math.abs(a.row - b.row), Math.abs(a.col - b.col));
+}
+
+export function isCellOccupied(occupancy: Map<string, string>, row: number, col: number) {
+  return occupancy.has(getCellKey(row, col));
+}
+
+export interface WeightedGridNeighbor {
+  id: string;
+  title: string;
+  distance: number;
+  weight: number;
+  row: number;
+  col: number;
+}
+
+/** Nearby blocks/chapters weighted by inverse distance (Chebyshev). */
+export function getWeightedNeighborhood(
+  target: GridCell,
+  placements: Map<string, GridCell>,
+  nodesById: Map<string, SkillGridNode>,
+  options?: { maxDistance?: number; limit?: number },
+): WeightedGridNeighbor[] {
+  const maxDistance = options?.maxDistance ?? 6;
+  const limit = options?.limit ?? 12;
+  const neighbors: WeightedGridNeighbor[] = [];
+
+  for (const [id, cell] of placements) {
+    const distance = chebyshevDistance(target, cell);
+    if (distance === 0 || distance > maxDistance) continue;
+    const node = nodesById.get(id);
+    if (!node) continue;
+    neighbors.push({
+      id,
+      title: node.title,
+      distance,
+      weight: 1 / (distance + 1),
+      row: cell.row,
+      col: cell.col,
+    });
+  }
+
+  return neighbors
+    .sort((a, b) => a.distance - b.distance || a.title.localeCompare(b.title))
+    .slice(0, limit);
+}
+
+export function formatWeightedNeighborhoodSummary(neighbors: WeightedGridNeighbor[]) {
+  if (neighbors.length === 0) return "none";
+  return neighbors
+    .map((entry) => `"${entry.title}" at (${entry.row},${entry.col}), distance ${entry.distance}, weight ${entry.weight.toFixed(2)}`)
+    .join("\n");
 }
 
 /** World-space layout: honors saved grid cells, then fills gaps radially from origin. */

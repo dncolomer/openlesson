@@ -23,8 +23,8 @@ export function PublicWorkspaceForkPanel({
 
   const content = (
     <>
-        <div className={`mb-4 flex items-center justify-center border border-amber-500/30 bg-amber-500/10 ${isInline ? "h-10 w-10 rounded-full" : "h-11 w-11 rounded-lg"}`}>
-          <svg className={`text-amber-300 ${isInline ? "h-4 w-4" : "h-5 w-5"}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+        <div className={`mb-4 flex items-center justify-center border border-white/25 bg-white/10 ${isInline ? "h-10 w-10 rounded-full" : "h-11 w-11 rounded-lg"}`}>
+          <svg className={`text-white/80 ${isInline ? "h-4 w-4" : "h-5 w-5"}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
             <path
               strokeLinecap="round"
               strokeLinejoin="round"
@@ -82,7 +82,7 @@ export function PublicWorkspaceForkPanel({
     return (
       <div className="flex h-full min-h-0 flex-col overflow-y-auto bg-black/20 px-4 py-5 sm:px-5">
         <div className="mx-auto flex w-full max-w-[760px] flex-col items-center">
-          <div className="w-full rounded-md border border-amber-500/20 bg-amber-500/[0.06] p-4 sm:p-5">
+          <div className="w-full rounded-md border border-white/20 bg-white/[0.04] p-4 sm:p-5">
             {content}
           </div>
         </div>

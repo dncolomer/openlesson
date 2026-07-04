@@ -211,7 +211,7 @@ export function ProbesPanel({
     });
     setAdvancing(true);
     try {
-      await onAdvanceStep();
+      await onAdvanceStep(true);
     } finally {
       setAdvancing(false);
     }
@@ -571,7 +571,7 @@ export function ProbesPanel({
                       </div>
                       <button
                         onClick={handleDone}
-                        disabled={advancing || !isSessionActive || isCurrentStepCompleted || !!stuckCheckText}
+                        disabled={advancing || isCurrentStepCompleted}
                         title={t('session.markAsDone')}
                         className="mt-2.5 w-full py-3 px-4 text-[13px] font-medium rounded-md bg-neutral-100 text-neutral-900 hover:bg-white disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
                       >

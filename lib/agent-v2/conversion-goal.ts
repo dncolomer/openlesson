@@ -1,4 +1,4 @@
-import type { PerformanceReport } from "./performance-report";
+import { normalizePerformanceReport, type PerformanceReport } from "./performance-report";
 
 export const CONVERSION_GOAL_MAX_LENGTH = 240;
 
@@ -40,20 +40,21 @@ export function finalizePerformanceReport(
   workspace_conversion_goal: string;
   conversion_goal_source: ConversionGoalSource;
 } {
+  const normalized = normalizePerformanceReport(report);
   const stored = normalizeConversionGoal(storedWorkspaceGoal);
   if (stored) {
     return {
-      report: { ...report, conversion_goal: stored },
+      report: { ...normalized, conversion_goal: stored },
       workspace_conversion_goal: stored,
       conversion_goal_source: "workspace",
     };
   }
 
   const inferred =
-    normalizeConversionGoal(report.conversion_goal) || fallbackConversionGoal(context);
+    normalizeConversionGoal(normalized.conversion_goal) || fallbackConversionGoal(context);
 
   return {
-    report: { ...report, conversion_goal: inferred },
+    report: { ...normalized, conversion_goal: inferred },
     workspace_conversion_goal: inferred,
     conversion_goal_source: "inferred",
   };

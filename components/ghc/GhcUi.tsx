@@ -193,8 +193,10 @@ function GhcDialogueSplitComic({
                   </p>
                 ))}
               </div>
-            ) : (
+            ) : emptyUserTurnText ? (
               <p className={`${textClass} text-right ${userEmptyClass}`}>{emptyUserTurnText}</p>
+            ) : (
+              <div className="min-h-[1.25rem]" aria-hidden="true" />
             )}
           </div>
         </div>
@@ -223,7 +225,7 @@ export function GhcDialogueSplit({
   isSending,
   error,
   userInitial,
-  emptyUserTurnText = "Send a thought to surface your latest submission here.",
+  emptyUserTurnText = "",
   layout = "ile",
 }: {
   lastUserTurn: GhcDialogueMessage | null;

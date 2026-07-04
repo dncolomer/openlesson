@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createVerificationWorkspaceFromPrompt } from "@/lib/agent-v2/create-verification-workspace";
-import { requireTeamsUserSession } from "@/lib/agent-v2/workspace-session-access";
+import { requireDemoAdminSession } from "@/lib/evidence-api-demo/demo-access";
 import { CUSTOM_DEMO_ID } from "@/lib/evidence-api-demo/custom-demo";
 import { getDemoWorkspaceModelFile } from "@/lib/evidence-api-demo/demo-definition";
 import { generateCustomDemoFromImport } from "@/lib/evidence-api-demo/generate-custom-from-import";
@@ -22,7 +22,7 @@ export const maxDuration = 120;
 
 export async function POST(req: NextRequest) {
   try {
-    const access = await requireTeamsUserSession();
+    const access = await requireDemoAdminSession();
     if (access instanceof NextResponse) return access;
 
     let body: Record<string, unknown> = {};

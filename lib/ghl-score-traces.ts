@@ -81,7 +81,8 @@ export async function fetchGhlSessionTraces(
   return (data || []) as GhlTraceEvidenceRow[];
 }
 
-const MAX_TRACE_FILES_FOR_SCORING = 28;
+// xAI Responses allows at most 20 file attachments per request.
+const MAX_TRACE_FILES_FOR_SCORING = 20;
 
 export function buildTraceScoringContext(traces: GhlTraceEvidenceRow[]) {
   const system1 = traces.filter((row) => row.metadata?.trace_type === "system1");
@@ -96,10 +97,9 @@ export function buildTraceScoringContext(traces: GhlTraceEvidenceRow[]) {
     return `[${at}] ${traceType}/${action}${thoughtId ? ` thought=${thoughtId}` : ""}: ${text}`;
   });
 
-  const fileIds = traces
-    .map((row) => row.xai_file_id)
-    .filter(Boolean)
-    .slice(-MAX_TRACE_FILES_FOR_SCORING);
+  const fileIds = [
+    ...new Set(traces.map((row) => row.xai_file_id).filter(Boolean)),
+  ].slice(-MAX_TRACE_FILES_FOR_SCORING);
 
   return {
     system1Count: system1.length,

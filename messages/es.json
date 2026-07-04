@@ -1460,7 +1460,9 @@
     "currentPlan": "Plan Actual",
     "errorMessage": "Lo siento, encontré un error. Por favor intenta de nuevo.",
     "signUpToCustomize": "Regístrate para personalizar este plan",
-    "forkToCustomize": "Bifurca este plan para personalizarlo"
+    "forkToCustomize": "Bifurca este plan para personalizarlo",
+    "welcomeTitle": "Editor del espacio de trabajo",
+    "welcomeDescription": "Dime cómo quieres que cambie este espacio de trabajo. Puedo añadir bloques, eliminar secciones, reordenar capítulos o ajustar el enfoque y la dificultad."
   },
   "partner": {
     "becomePartner": "Conviértete en Socio",
@@ -1707,7 +1709,19 @@
     "ileCtaHint": "Sesión en vivo con Helios — práctica y orientación",
     "modesHelpClose": "Volver al bloque",
     "evalCtaHint": "Grabación think-aloud — mide lo que sabes",
-    "evalCtaLabel": "Protocolo Think Aloud"
+    "evalCtaLabel": "Protocolo Think Aloud",
+    "blockDetailGuideTitle": "Pensamiento en vivo, tus materiales",
+    "blockDetailGuideIntro": "OpenLesson está pensado para el pensamiento y razonamiento en vivo — no para sustituir tus libros, documentos o cursos. Helios sondea lo que entiendes mientras trabajas; tú aportas el contenido.",
+    "blockDetailGuideSourcesTitle": "Consulta tus propias fuentes",
+    "blockDetailGuideSourcesBody": "Usa Grok, Grokipedia, cuadernos o cualquier referencia junto a la sesión. La búsqueda y la práctica quedan fuera de la sonda — la sesión captura cómo razonas con lo que encuentras.",
+    "blockDetailGuideMaterialsTitle": "Adapta el espacio de trabajo",
+    "blockDetailGuideMaterialsBody": "Adjunta PDFs, notas e imágenes en la pestaña Archivos y ajusta cada bloque con instrucciones personalizadas abajo. Cuanto más contexto añadas, más preciso será Helios.",
+    "blockDetailGuideHintsTitle": "Usa OpenLesson bien",
+    "blockDetailGuideHint1": "Pestaña Archivos — añade material de referencia para que las sondas coincidan con lo que realmente aprendes.",
+    "blockDetailGuideHint2": "Instrucciones personalizadas — orienta este bloque hacia tu trabajo, examen o proyecto.",
+    "blockDetailGuideHint3": "ILE — piensa en voz alta, cristaliza el habla en pensamientos y envíalos a Helios mientras trabajas.",
+    "blockDetailGuideHint4": "Editor del espacio — añade o remodela bloques cuando descubras huecos en el plan.",
+    "blockDetailGuideHint5": "TAP — ejecútalo cuando estés listo para demostrar habilidad, no en el primer intento."
   },
   "planView": {
     "addDescription": "Agregar una descripción para este plan de aprendizaje...",
@@ -1769,7 +1783,18 @@
     "forkToEditPointBuilder": "El editor del espacio de trabajo es de solo lectura hasta que hagas fork",
     "forkToEditPointOwnCopy": "Hacer fork crea una copia privada que puedes editar, remixar y ampliar",
     "forkToEditCta": "Hacer fork del espacio",
-    "forkToEditSignInCta": "Inicia sesión para hacer fork"
+    "forkToEditSignInCta": "Inicia sesión para hacer fork",
+    "performanceSubTabScore": "Puntuación",
+    "performanceSubTabTap": "TAP",
+    "performanceSubTabChat": "Chat",
+    "performanceScoreTitle": "Puntuación del espacio",
+    "performanceScoreHint": "Genera una tarjeta de puntuación a partir de sesiones, bloques TAP y evidencia subida — el mismo contrato que el informe de rendimiento de Evidence API.",
+    "performanceScoreGenerate": "Generar puntuación",
+    "performanceScoreGenerating": "Generando…",
+    "performanceChatTitle": "Chat de rendimiento",
+    "startTap": "Iniciar Protocolo Think Aloud",
+    "signInForTap": "Inicia sesión para comenzar una sesión TAP en este espacio de trabajo.",
+    "performanceSectionsAriaLabel": "Vistas de rendimiento"
   },
   "workspaceIntegration": {
     "title": "Integración con la API Agentic",
@@ -1805,14 +1830,20 @@
   "performanceChat": {
     "signInRequired": "Inicia bloque para ver información de rendimiento",
     "welcomeTitle": "Información de Rendimiento",
-    "welcomeDescription": "Pregúntame cualquier cosa sobre el rendimiento de aprendizaje en este plan. Puedo analizar informes de bloques, identificar patrones y proporcionar sugerencias de mejora.",
+    "welcomeDescription": "Pregúntame cualquier cosa sobre el rendimiento de aprendizaje en este espacio de trabajo. Puedo analizar informes de bloques, identificar patrones y ofrecer sugerencias de mejora.",
     "exampleQuestions": "Intenta preguntar:",
     "example1": "¿Cómo voy en general?",
     "example2": "¿Qué temas necesitan más trabajo?",
     "example3": "Muéstrame mi progreso a lo largo del tiempo",
     "placeholder": "Preguntar sobre rendimiento...",
     "errorMessage": "Lo siento, no pude procesar tu solicitud. Por favor intenta de nuevo.",
-    "noSessions": "Aún no hay datos de bloques para este plan."
+    "noSessions": "Aún no hay datos de bloques para este espacio de trabajo.",
+    "starter1": "Dame una clasificación hasta ahora",
+    "starter2": "¿Quién está mejorando más rápido?",
+    "starter3": "¿En qué nodos tienen dificultades las personas?",
+    "starter4": "¿Qué debería practicar el grupo a continuación?",
+    "starter5": "Compara sesiones completadas vs activas",
+    "starter6": "Resume las principales lagunas de rendimiento"
   },
   "sessionPerformanceChat": {
     "greeting": "¡Felicidades por completar este bloque!",
@@ -2269,5 +2300,50 @@
     "hearAgain": "Escuchar de nuevo",
     "listenToTutor": "Escuchar al tutor",
     "stopNarration": "Detener"
+  },
+  "tap": {
+    "welcome": {
+      "greeting": "Hola — soy {name}.",
+      "panelIntro": "Bienvenido al Protocolo Think Aloud. Es una demostración cronometrada: explicas lo que aprendiste mientras escucho, luego hago seguimientos socráticos para revelar lagunas y fortalezas.\n\nCómo funciona: verbaliza tu razonamiento y conviértelo en tarjetas de pensamiento. Envía un pensamiento o combina varios — respondo bajo mi avatar con una pregunta cada vez, sin hilo de chat. Tu Memoria de pensamientos guarda cada rastro para reenviar o marcar.\n\nLa duración y los atajos de teclado están a la derecha. Cuando se acabe el tiempo, recibirás una puntuación TAP con desglose de marcadores y análisis de lagunas.",
+      "callToAction": "Cuando estés listo, pulsa Play. El temporizador empieza y abriré con una pregunta concreta sobre lo que aprendiste aquí.",
+      "play": "Play",
+      "starting": "Iniciando…",
+      "skipTyping": "Saltar escritura"
+    }
+  },
+  "performanceReportCard": {
+    "defaultLabel": "Informe de rendimiento",
+    "tabOverview": "Resumen",
+    "tabCompetency": "Competencia",
+    "tabMarkers": "Marcadores",
+    "tabStrengths": "Fortalezas",
+    "tabGaps": "Lagunas",
+    "tabNextSteps": "Próximos pasos",
+    "tabHistory": "Historial",
+    "sectionsAriaLabel": "Secciones de la tarjeta de puntuación",
+    "confidenceWellConnected": "Bien conectado",
+    "confidenceClear": "Señal clara",
+    "confidenceDeveloping": "En desarrollo",
+    "confidenceEmerging": "Emergente",
+    "learning": "Aprendizaje",
+    "conversion": "Conversión",
+    "conversionGoal": "Objetivo de conversión",
+    "sourceWorkspace": "Espacio de trabajo",
+    "sourceInferred": "Inferido",
+    "growthAreas": "Áreas de crecimiento",
+    "suggestions": "Sugerencias",
+    "competencyProfile": "Perfil de competencia",
+    "competencyAriaLabel": "Puntuaciones de competencia de rendimiento",
+    "gapsEmpty": "No se identificaron lagunas específicas en este informe. Revisa fortalezas y próximos pasos, o recopila más evidencia.",
+    "repair": "Reparación",
+    "directionGoals": "Dirección y objetivos intermedios",
+    "directionEmpty": "Aún no hay dirección de alto nivel. Regenera la tarjeta de puntuación tras más evidencia.",
+    "granularEvents": "Eventos y acciones granulares",
+    "eventsEmpty": "Aún no hay eventos granulares. Añade cargas de evidencia, sesiones TAP o puntos de control.",
+    "scoreEvolution": "Evolución de la puntuación",
+    "historyCheck": "Revisión {check} · día {days} · {actionCount} {actionLabel}",
+    "historyActionOne": "acción",
+    "historyActionMany": "acciones",
+    "historyMetrics": "{gaps} lagunas · {goals} objetivos · {events} eventos"
   }
 }

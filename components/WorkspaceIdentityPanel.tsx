@@ -10,7 +10,6 @@ import {
   MoreHorizontal,
   Pencil,
   Users,
-  Sparkles,
 } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import type { LearningPlan } from "@/components/PlanView";
@@ -203,16 +202,6 @@ export function WorkspaceIdentityPanel({
 
   const actions = (
     <div className="flex shrink-0 items-center gap-1">
-      {currentUserId && !isCompact && (
-        <Link
-          href={`/workspace/${planId}/ghl-score`}
-          className="hidden items-center gap-1.5 rounded-md bg-white px-2.5 py-1.5 text-[11px] font-medium text-black transition-colors hover:bg-neutral-200 lg:inline-flex"
-        >
-          <Sparkles className="h-3.5 w-3.5" />
-          {t("planView.startEvaluationEnv")}
-        </Link>
-      )}
-
       {showShare && (
         <button
           type="button"
@@ -288,16 +277,6 @@ export function WorkspaceIdentityPanel({
           className="rounded-md border border-white/15 bg-white/10 px-2 py-1 text-[10px] text-neutral-200 transition-all hover:bg-white/15"
         >
           {t("planView.signInToJoin")}
-        </Link>
-      )}
-
-      {currentUserId && (
-        <Link
-          href={`/workspace/${planId}/ghl-score`}
-          className={`${iconButtonClass} ${isCompact ? "" : "lg:hidden"}`}
-          title={t("planView.startEvaluationEnv")}
-        >
-          <Sparkles className="h-3.5 w-3.5" />
         </Link>
       )}
     </div>

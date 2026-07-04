@@ -1,6 +1,17 @@
-import type { SkillGridNode } from "@/lib/block-skill-grid";
+import {
+  buildSkillGridLayout,
+  isCellOccupied,
+  type SkillGridNode,
+} from "@/lib/block-skill-grid";
 import { getSkillGridPositions } from "@/lib/skill-grid-positions";
 import type { SessionPlan, SessionPlanStep } from "@/lib/storage";
+
+export function isChapterSlotAvailable(plan: SessionPlan, row: number, col: number) {
+  const nodes = sessionStepsToSkillGridNodes(plan.steps);
+  const { occupancy } = buildSkillGridLayout(nodes);
+  if (isCellOccupied(occupancy, row, col)) return false;
+  return !plan.steps.some((step) => step.position_x === col && step.position_y === row);
+}
 
 function mapStepStatus(status: SessionPlanStep["status"]): string {
   switch (status) {

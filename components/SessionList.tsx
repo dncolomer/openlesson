@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useState, useMemo, useCallback } from "react";
+import { useEffect, useState, useMemo, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { SessionItem } from "./SessionItem";
 import { BlockSkillGrid } from "./BlockSkillGrid";
 import { BlockDetailDrawer } from "./BlockDetailDrawer";
-import { getNeighborTitles, buildSkillGridLayout } from "@/lib/block-skill-grid";
+import { buildSkillGridLayout, getWeightedNeighborhood } from "@/lib/block-skill-grid";
 import { createBrowserClient } from "@supabase/ssr";
 import { useI18n } from "@/lib/i18n";
 
@@ -102,6 +102,7 @@ export function SessionList({
   const router = useRouter();
   const [expandedNodeId, setExpandedNodeId] = useState<string | null>(null);
   const [isAddingBlock, setIsAddingBlock] = useState(false);
+  const gridBackfillAttemptedRef = useRef<string | null>(null);
   const { t, locale } = useI18n();
 
   const { completedSessions } = useMemo(() => {
@@ -118,15 +119,50 @@ export function SessionList({
     if (first) setExpandedNodeId(first.id);
   }, [expandedNodeId, nodes]);
 
+  useEffect(() => {
+    if (!planId || !isOwner) return;
+    const needsBackfill = nodes.some(
+      (node) => node.position_x == null || node.position_y == null,
+    );
+    if (!needsBackfill) {
+      gridBackfillAttemptedRef.current = null;
+      return;
+    }
+    if (gridBackfillAttemptedRef.current === planId) return;
+    gridBackfillAttemptedRef.current = planId;
+
+    void fetch("/api/learning-plan/ensure-grid-positions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ planId }),
+    })
+      .then(async (response) => {
+        if (!response.ok) {
+          gridBackfillAttemptedRef.current = null;
+          return;
+        }
+        const data = await response.json();
+        if (data.updatedNodes?.length) {
+          onNodesUpdate?.(data.updatedNodes);
+        }
+      })
+      .catch((error) => {
+        gridBackfillAttemptedRef.current = null;
+        console.warn("Failed to backfill block grid positions:", error);
+      });
+  }, [isOwner, nodes, onNodesUpdate, planId]);
+
   const handleAddBlock = useCallback(
     async (prompt: string, position: { row: number; col: number }) => {
       if (!planId || !isOwner) return;
 
       const nodesById = new Map(nodes.map((node) => [node.id, node]));
-      const { occupancy } = buildSkillGridLayout(nodes);
-      const neighbors = getNeighborTitles(position.row, position.col, occupancy, nodesById);
-      const neighborNote =
-        neighbors.length > 0 ? ` Place it near: ${neighbors.join(", ")}.` : "";
+      const { placements } = buildSkillGridLayout(nodes);
+      const weightedNeighbors = getWeightedNeighborhood(
+        { row: position.row, col: position.col },
+        placements,
+        nodesById,
+      );
 
       const savedModel =
         typeof window !== "undefined"
@@ -136,16 +172,17 @@ export function SessionList({
 
       setIsAddingBlock(true);
       try {
-        const response = await fetch("/api/learning-plan/chat", {
+        const response = await fetch("/api/learning-plan/add-block-at-slot", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             planId,
-            userPrompt: `Add a new learning block for skill grid slot (row ${position.row + 1}, column ${position.col + 1}).${neighborNote} User request: "${prompt}"`,
+            row: position.row,
+            col: position.col,
+            prompt,
+            weightedNeighbors,
             model,
             locale,
-            gridRow: position.row,
-            gridCol: position.col,
           }),
         });
 
@@ -157,15 +194,19 @@ export function SessionList({
         const data = await response.json();
         if (data.updatedNodes?.length > 0) {
           if (onNodesUpdate) onNodesUpdate(data.updatedNodes);
-          const placedNode = data.updatedNodes.find(
-            (node: PlanNode) => node.position_x === position.col && node.position_y === position.row,
-          );
+          const placedNode =
+            data.placedNodeId
+              ? data.updatedNodes.find((node: PlanNode) => node.id === data.placedNodeId)
+              : data.updatedNodes.find(
+                  (node: PlanNode) => node.position_x === position.col && node.position_y === position.row,
+                );
           if (placedNode) setExpandedNodeId(placedNode.id);
         }
         if (onRefresh) onRefresh();
         router.refresh();
       } catch (err) {
         console.error("Failed to add block:", err);
+        throw err;
       } finally {
         setIsAddingBlock(false);
       }
@@ -178,19 +219,9 @@ export function SessionList({
     ? getOrderedSessions(nodes).findIndex((node) => node.id === selectedGridNode.id)
     : -1;
 
-  const [isDesktop, setIsDesktop] = useState(false);
-
-  useEffect(() => {
-    const media = window.matchMedia("(min-width: 768px)");
-    const update = () => setIsDesktop(media.matches);
-    update();
-    media.addEventListener("change", update);
-    return () => media.removeEventListener("change", update);
-  }, []);
-
   const showBlockDetail = selectedGridNode != null && selectedGridIndex >= 0;
 
-  const renderBlockDetail = (detailLayout: "inline" | "drawer") =>
+  const renderBlockDetail = () =>
     showBlockDetail && selectedGridNode ? (
       <SessionItem
         node={selectedGridNode}
@@ -211,7 +242,7 @@ export function SessionList({
         planTopic={planTopic}
         planId={planId}
         variant="detail"
-        detailLayout={detailLayout}
+        detailLayout="drawer"
       />
     ) : null;
 
@@ -227,7 +258,7 @@ export function SessionList({
       </div>
 
       <div className="flex min-h-0 flex-1 flex-col gap-2.5">
-        <div className="min-h-0 flex-[1.08] md:flex-1">
+        <div className="min-h-0 flex-1">
           <BlockSkillGrid
             nodes={nodes}
             selectedNodeId={expandedNodeId}
@@ -253,24 +284,16 @@ export function SessionList({
             }}
           />
         </div>
-
-        {!isDesktop && showBlockDetail ? (
-          <div className="shrink-0 pb-0.5">{renderBlockDetail("inline")}</div>
-        ) : !isDesktop ? (
-          <div className="flex max-h-[120px] shrink-0 items-center justify-center rounded-lg border border-dashed border-neutral-800/80 bg-neutral-950/40 px-4 text-center text-sm text-neutral-600">
-            {t("sessionList.noSessions")}
-          </div>
-        ) : null}
       </div>
 
-      {isDesktop && showBlockDetail && (
+      {showBlockDetail && (
         <div className="absolute inset-0 z-10 overflow-hidden">
           <BlockDetailDrawer
             open
             onClose={() => setExpandedNodeId(null)}
             title={selectedGridNode?.title}
           >
-            {renderBlockDetail("drawer")}
+            {renderBlockDetail()}
           </BlockDetailDrawer>
         </div>
       )}

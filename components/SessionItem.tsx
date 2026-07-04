@@ -175,7 +175,7 @@ export function SessionItem({
     const params = new URLSearchParams({ planNodeId: node.id });
     const contextualSessionId = activeSession?.id || node.session_id;
     if (contextualSessionId) params.set("sessionId", contextualSessionId);
-    router.push(`/workspace/${planId}/ghl-score?${params.toString()}`);
+    router.push(`/workspace/${planId}/tap?${params.toString()}`);
   };
 
   const savePlanningPrompt = useCallback(async () => {
@@ -305,30 +305,30 @@ export function SessionItem({
 
     const detailPromptSection = isOwner ? (
       <div>
-        <button
-          type="button"
-          onClick={() => setShowPromptEditor((open) => !open)}
-          className="flex w-full items-center justify-between gap-2 text-left text-xs font-medium text-neutral-500 transition hover:text-neutral-300"
-        >
-          <span>
-            {showPromptEditor ? "− " : "+ "}
+        <div className="mb-1.5 flex items-center justify-between gap-2">
+          <span className="text-[10px] font-medium uppercase tracking-[0.12em] text-neutral-500">
             {t("sessionItem.customInstructionsLabel")}
           </span>
-          <span className="text-[11px] font-normal text-neutral-400">
+          <span className="text-[10px] text-neutral-500">
             {savingPrompt && t("sessionItem.saving")}
-            {!savingPrompt && promptSaved && t("sessionItem.saved")}
+            {!savingPrompt && promptSaved && <span className="text-neutral-300">{t("sessionItem.saved")}</span>}
           </span>
-        </button>
-        {showPromptEditor && (
-          <textarea
-            value={editedPlanningPrompt}
-            onChange={(e) => setEditedPlanningPrompt(e.target.value)}
-            onBlur={savePlanningPrompt}
-            placeholder={t("sessionItem.customInstructions")}
-            className="mt-2 w-full resize-none rounded-lg border border-white/15 bg-neutral-900/60 px-2.5 py-2 text-xs leading-relaxed text-white placeholder:text-neutral-600 focus:border-white/30 focus:outline-none"
-            rows={3}
-          />
-        )}
+        </div>
+        <textarea
+          value={editedPlanningPrompt}
+          onChange={(e) => setEditedPlanningPrompt(e.target.value)}
+          onBlur={savePlanningPrompt}
+          placeholder={t("sessionItem.customInstructions")}
+          className="w-full resize-none rounded-lg border border-white/15 bg-neutral-950/70 px-2.5 py-2 text-xs leading-relaxed text-white placeholder:text-neutral-600 focus:border-white/30 focus:outline-none"
+          rows={4}
+        />
+      </div>
+    ) : node.planning_prompt ? (
+      <div>
+        <p className="mb-1.5 text-[10px] font-medium uppercase tracking-[0.12em] text-neutral-500">
+          {t("sessionItem.customInstructionsLabel")}
+        </p>
+        <p className="text-xs leading-relaxed text-neutral-400">{node.planning_prompt}</p>
       </div>
     ) : null;
 
@@ -336,7 +336,7 @@ export function SessionItem({
       <div id={`session-item-${node.id}`}>
         <BlockDetailCard
           key={node.id}
-          layout={detailLayout === "drawer" ? "stacked" : "horizontal"}
+          layout={detailLayout === "drawer" ? "modal" : "horizontal"}
           title={node.title}
           description={node.description}
           index={index}

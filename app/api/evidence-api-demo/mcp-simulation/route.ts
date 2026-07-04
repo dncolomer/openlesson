@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireTeamsUserSession } from "@/lib/agent-v2/workspace-session-access";
+import { requireDemoAdminSession } from "@/lib/evidence-api-demo/demo-access";
 import {
   connectMcpServer,
   McpHttpClientError,
@@ -25,7 +25,7 @@ function parseToolArgs(value: unknown): Record<string, unknown> {
 
 export async function POST(req: NextRequest) {
   try {
-    const access = await requireTeamsUserSession();
+    const access = await requireDemoAdminSession();
     if (access instanceof NextResponse) return access;
 
     let body: Record<string, unknown> = {};

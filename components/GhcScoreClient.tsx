@@ -8,9 +8,11 @@ import { cn } from "@/lib/utils";
 import { MarkerRadarChart } from "@/components/MarkerRadarChart";
 import { GhcDialogueSplit } from "@/components/ghc/GhcUi";
 import { ThoughtMemoryPanel } from "@/components/ghc/ThoughtMemoryPanel";
+import { SlidingTranscript } from "@/components/ghc/SlidingTranscript";
+import { TutorWelcome } from "@/components/TutorWelcome";
 import { shouldReportSpeechRecognitionError } from "@/lib/useSessionThoughtInterface";
 
-type Phase = "setup" | "live" | "scoring" | "done" | "error";
+type Phase = "briefing" | "live" | "scoring" | "done" | "error";
 
 type SpeechRecognitionResultLike = {
   readonly isFinal: boolean;
@@ -52,10 +54,8 @@ interface ChatMessage {
   at: string;
 }
 
-const WELCOME_MESSAGE_ID = "welcome";
+const OPENING_MESSAGE_ID = "opening";
 const THINK_ALOUD_PROTOCOL_LABEL = "Think Aloud Protocol";
-const THINK_ALOUD_WELCOME_PROMPT =
-  "Think aloud and submit a thought to receive a Socratic probe.";
 
 type DialogueSnapshot = {
   messages: ChatMessage[];
@@ -74,7 +74,7 @@ function getDialogueStorageKey({
 }) {
   return [
     "openlesson",
-    "ghl-dialogue",
+    "tap-dialogue",
     planId || "workspace",
     privateToken || sessionId || planNodeId || "session",
   ].join(":");
@@ -233,10 +233,95 @@ function GhcButtonLabel({
   );
 }
 
+const TAP_SHORTCUT_ROWS: { keys: string[]; label: string; altKeys?: string[][] }[] = [
+  { keys: ["C"], label: "Crystallize the live transcript into a thought" },
+  { keys: ["Esc"], label: "Skip the current thought" },
+  { keys: ["1", "2", "3"], label: "Send thought 1, 2, or 3" },
+  {
+    keys: ["⇧", "1"],
+    altKeys: [["⇧", "2"], ["⇧", "3"]],
+    label: "Select thoughts for a combined send",
+  },
+  { keys: ["S"], label: "Send all selected thoughts" },
+  { keys: ["V"], label: "Toggle Helios voice playback" },
+];
 
+function TapBriefingConfig({
+  workspaceTitle,
+  minutes,
+  onMinutesChange,
+  showDurationPicker,
+  disabled,
+}: {
+  workspaceTitle: string;
+  minutes: number;
+  onMinutesChange: (minutes: number) => void;
+  showDurationPicker: boolean;
+  disabled?: boolean;
+}) {
+  return (
+    <div className="flex min-h-0 flex-1 flex-col justify-center gap-8 overflow-y-auto px-5 py-8 sm:px-8 lg:px-10">
+      <div>
+        <p className="font-mono text-[10px] uppercase tracking-[2px] text-neutral-500">{workspaceTitle}</p>
+        <h2 className="mt-2 text-2xl font-medium tracking-tight text-neutral-100 sm:text-3xl">
+          {THINK_ALOUD_PROTOCOL_LABEL}
+        </h2>
+        <p className="mt-3 max-w-md text-sm leading-relaxed text-neutral-400">
+          Browser transcription turns speech into thought traces. Use keyboard shortcuts to stay in flow without reaching
+          for the mouse.
+        </p>
+      </div>
+
+      {showDurationPicker ? (
+        <div>
+          <p className="font-mono text-[10px] uppercase tracking-[1.5px] text-neutral-600">Session length</p>
+          <div className="mt-2 grid max-w-xs grid-cols-2 gap-2">
+            {DURATIONS.map((duration) => (
+              <GhcButton
+                key={duration}
+                size="lg"
+                variant={minutes === duration ? "toggleOn" : "toggleOff"}
+                className="w-full"
+                disabled={disabled}
+                onClick={() => onMinutesChange(duration)}
+              >
+                {duration} minutes
+              </GhcButton>
+            ))}
+          </div>
+        </div>
+      ) : null}
+
+      <div>
+        <p className="font-mono text-[10px] uppercase tracking-[1.5px] text-neutral-600">Keyboard shortcuts</p>
+        <ul className="mt-3 space-y-2.5 text-sm text-neutral-400">
+          {TAP_SHORTCUT_ROWS.map((row) => (
+            <li key={row.label} className="flex flex-wrap items-center gap-2">
+              <GhcShortcutChord keys={row.keys} />
+              {row.altKeys?.map((altKeys, index) => (
+                <span key={`${row.label}-alt-${index}`} className="inline-flex items-center gap-2">
+                  <span className="text-neutral-600">/</span>
+                  <GhcShortcutChord keys={altKeys} />
+                </span>
+              ))}
+              <span>{row.label}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </div>
+  );
+}
+
+
+
+function getInitialPhase(initialSession?: GhcScoreClientProps["initialSession"]): Phase {
+  if (initialSession?.status === "completed") return "done";
+  return "briefing";
+}
 
 export function GhcScoreClient({ planId, planNodeId, sessionId, privateToken, initialSession }: GhcScoreClientProps) {
-  const [phase, setPhase] = useState<Phase>(initialSession?.status === "completed" ? "done" : "setup");
+  const [phase, setPhase] = useState<Phase>(() => getInitialPhase(initialSession));
   const [minutes, setMinutes] = useState(DURATIONS.includes(Number(initialSession?.requested_duration_seconds || 900) / 60) ? Number(initialSession?.requested_duration_seconds || 900) / 60 : 15);
   const [workspaceTitle] = useState(initialSession?.workspaceTitle || "Workspace");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -252,6 +337,7 @@ export function GhcScoreClient({ planId, planNodeId, sessionId, privateToken, in
   const [sentThoughtIds, setSentThoughtIds] = useState<Set<string>>(new Set());
   const [score, setScore] = useState<any>(initialSession?.analysis || null);
   const [error, setError] = useState("");
+  const [isStartingSession, setIsStartingSession] = useState(false);
   const [startedAt, setStartedAt] = useState<number | null>(null);
   const [remainingSeconds, setRemainingSeconds] = useState(0);
   const [bgImage, setBgImage] = useState("");
@@ -282,7 +368,7 @@ export function GhcScoreClient({ planId, planNodeId, sessionId, privateToken, in
     }) => {
       const activeGhlSessionId = ghlSessionIdRef.current;
       if (!activeGhlSessionId) return;
-      void fetch("/api/workspace-ghl-score/trace", {
+      void fetch("/api/workspace-tap-score/trace", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -320,17 +406,62 @@ export function GhcScoreClient({ planId, planNodeId, sessionId, privateToken, in
 
   useEffect(() => {
     const stored = loadDialogueMessages(dialogueStorageKey);
-    if (stored.length > 0) setMessages(stored);
+    if (stored.length === 0) return;
+    setMessages(stored);
+    setPhase((current) => (current === "briefing" ? "live" : current));
   }, [dialogueStorageKey]);
+
+  useEffect(() => {
+    if (phase !== "live" || messages.length > 0 || !ghlSessionId || isStartingSession) return;
+
+    let cancelled = false;
+    void (async () => {
+      setIsStartingSession(true);
+      setError("");
+      try {
+        const response = await fetch("/api/workspace-tap-score/start", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            planId,
+            planNodeId,
+            sessionId,
+            privateToken,
+            minutes,
+            ghlSessionId: ghlSessionIdRef.current,
+          }),
+        });
+        const payload = await response.json();
+        if (!response.ok) throw new Error(payload.error || "Could not resume TAP session");
+        const openingQuestion = String(payload.openingQuestion || "").trim();
+        if (!openingQuestion) throw new Error("Could not generate opening question");
+        if (cancelled) return;
+        setMessages([
+          {
+            id: OPENING_MESSAGE_ID,
+            role: "assistant",
+            content: openingQuestion,
+            at: new Date().toISOString(),
+          },
+        ]);
+      } catch (err) {
+        if (!cancelled) {
+          setError(err instanceof Error ? err.message : "Could not resume TAP session");
+        }
+      } finally {
+        if (!cancelled) setIsStartingSession(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [phase, messages.length, ghlSessionId, isStartingSession, planId, planNodeId, sessionId, privateToken, minutes]);
 
   useEffect(() => {
     if (messages.length === 0) return;
     saveDialogueMessages(dialogueStorageKey, messages);
   }, [messages, dialogueStorageKey]);
-
-  const welcomePrompt =
-    messages.find((message) => message.id === WELCOME_MESSAGE_ID)?.content ||
-    THINK_ALOUD_WELCOME_PROMPT;
 
   const lastUserTurn = useMemo(() => {
     for (let index = messages.length - 1; index >= 0; index -= 1) {
@@ -342,7 +473,7 @@ export function GhcScoreClient({ planId, planNodeId, sessionId, privateToken, in
   const lastAssistantTurn = useMemo(() => {
     for (let index = messages.length - 1; index >= 0; index -= 1) {
       const message = messages[index];
-      if (message.role === "assistant" && message.id !== WELCOME_MESSAGE_ID) return message;
+      if (message.role === "assistant") return message;
     }
     return null;
   }, [messages]);
@@ -359,7 +490,7 @@ export function GhcScoreClient({ planId, planNodeId, sessionId, privateToken, in
     [thoughts, memoryThoughtIds, sentThoughtIds],
   );
   const latestThoughts = useMemo(() => activeThoughts.slice(-3).reverse(), [activeThoughts]);
-  const sourceIdRef = useRef(`ghl-score-${Math.random().toString(36).slice(2, 10)}`);
+  const sourceIdRef = useRef(`tap-score-${Math.random().toString(36).slice(2, 10)}`);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const audioUrlRef = useRef<string | null>(null);
 
@@ -610,18 +741,18 @@ export function GhcScoreClient({ planId, planNodeId, sessionId, privateToken, in
     });
 
     try {
-      const response = await fetch("/api/workspace-ghl-score/chat", {
+      const response = await fetch("/api/workspace-tap-score/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ planId, planNodeId, sessionId, privateToken, minutes, thought: clean, messages: nextMessages }),
       });
       const payload = await response.json();
-      if (!response.ok) throw new Error(payload.error || "Could not get GHL response");
+      if (!response.ok) throw new Error(payload.error || "Could not get TAP response");
       const assistant: ChatMessage = { id: `a_${Date.now()}`, role: "assistant", content: payload.message, at: new Date().toISOString() };
       setMessages((current) => [...current, assistant]);
       void speak(payload.message);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not get GHL response");
+      setError(err instanceof Error ? err.message : "Could not get TAP response");
     } finally {
       setIsSending(false);
     }
@@ -629,9 +760,8 @@ export function GhcScoreClient({ planId, planNodeId, sessionId, privateToken, in
 
   async function startSession() {
     isEndingRef.current = false;
-    const started = Date.now();
-    setStartedAt(started);
-    setRemainingSeconds(minutes * 60);
+    setIsStartingSession(true);
+    setError("");
     speechResultsLengthRef.current = 0;
     consumedResultsIndexRef.current = 0;
     finalBufferRef.current = [];
@@ -640,17 +770,9 @@ export function GhcScoreClient({ planId, planNodeId, sessionId, privateToken, in
     setSentThoughtIds(new Set());
     setSelectedActiveThoughtIds(new Set());
     clearDialogueMessages(dialogueStorageKey);
-    setMessages([
-      {
-        id: WELCOME_MESSAGE_ID,
-        role: "assistant",
-        content: THINK_ALOUD_WELCOME_PROMPT,
-        at: new Date().toISOString(),
-      },
-    ]);
 
     try {
-      const response = await fetch("/api/workspace-ghl-score/start", {
+      const response = await fetch("/api/workspace-tap-score/start", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -663,17 +785,33 @@ export function GhcScoreClient({ planId, planNodeId, sessionId, privateToken, in
         }),
       });
       const payload = await response.json();
-      if (!response.ok) throw new Error(payload.error || "Could not start GHL session");
+      if (!response.ok) throw new Error(payload.error || "Could not start TAP session");
       if (payload.ghlSessionId) {
         ghlSessionIdRef.current = payload.ghlSessionId;
         setGhlSessionId(payload.ghlSessionId);
       }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not start GHL session");
-      return;
-    }
 
-    setPhase("live");
+      const openingQuestion = String(payload.openingQuestion || "").trim();
+      if (!openingQuestion) throw new Error("Could not generate opening question");
+
+      const started = Date.now();
+      setStartedAt(started);
+      setRemainingSeconds(minutes * 60);
+      setMessages([
+        {
+          id: OPENING_MESSAGE_ID,
+          role: "assistant",
+          content: openingQuestion,
+          at: new Date().toISOString(),
+        },
+      ]);
+      setPhase("live");
+      void speak(openingQuestion);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not start TAP session");
+    } finally {
+      setIsStartingSession(false);
+    }
   }
 
   async function endAndScore() {
@@ -686,7 +824,7 @@ export function GhcScoreClient({ planId, planNodeId, sessionId, privateToken, in
     try {
       const durationSeconds = startedAt ? Math.floor((Date.now() - startedAt) / 1000) : 0;
       const transcript = messages.map((message) => ({ role: message.role, text: message.content, at: message.at }));
-      const response = await fetch("/api/workspace-ghl-score/complete", {
+      const response = await fetch("/api/workspace-tap-score/complete", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -701,11 +839,11 @@ export function GhcScoreClient({ planId, planNodeId, sessionId, privateToken, in
         }),
       });
       const payload = await response.json();
-      if (!response.ok) throw new Error(payload.error || "Could not generate GHL Score");
+      if (!response.ok) throw new Error(payload.error || "Could not generate TAP score");
       setScore(payload.ghlSession?.analysis || null);
       setPhase("done");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not generate GHL Score");
+      setError(err instanceof Error ? err.message : "Could not generate TAP score");
       setPhase("error");
     }
   }
@@ -787,62 +925,30 @@ export function GhcScoreClient({ planId, planNodeId, sessionId, privateToken, in
       <div className="fixed inset-0 z-0 bg-[radial-gradient(circle_at_72%_8%,rgba(14,116,144,0.18),transparent_31%),radial-gradient(circle_at_12%_18%,rgba(39,39,42,0.55),transparent_32%)]" />
 
       <div className="relative z-10 mx-auto flex min-h-screen w-full max-w-7xl flex-col px-4 py-5 sm:px-6">
-        {phase === "setup" && (
-          <section className="flex flex-1 items-center justify-center py-12">
-            <div className="w-full max-w-2xl rounded-2xl border border-neutral-900 bg-neutral-950/70 p-6 backdrop-blur-sm">
-              <p className="font-mono text-xs uppercase tracking-[2px] text-neutral-500">{workspaceTitle}</p>
-              <h2 className="mt-3 text-4xl font-medium tracking-[-1.5px]">{THINK_ALOUD_PROTOCOL_LABEL}</h2>
-              <p className="mt-4 text-sm leading-relaxed text-neutral-400">
-                Browser transcription turns speech into thought traces. Use keyboard shortcuts to stay in flow without reaching for the mouse.
-              </p>
-              <ul className="mt-4 space-y-2 text-sm text-neutral-400">
-                <li className="flex flex-wrap items-center gap-2">
-                  <GhcShortcutChord keys={["C"]} />
-                  <span>Crystallize the live transcript into a thought</span>
-                </li>
-                <li className="flex flex-wrap items-center gap-2">
-                  <GhcShortcutChord keys={["Esc"]} />
-                  <span>Skip the current thought</span>
-                </li>
-                <li className="flex flex-wrap items-center gap-2">
-                  <GhcShortcutChord keys={["1", "2", "3"]} />
-                  <span>Send thought 1, 2, or 3</span>
-                </li>
-                <li className="flex flex-wrap items-center gap-2">
-                  <GhcShortcutChord keys={["⇧", "1"]} />
-                  <span className="text-neutral-500">/</span>
-                  <GhcShortcutChord keys={["⇧", "2"]} />
-                  <span className="text-neutral-500">/</span>
-                  <GhcShortcutChord keys={["⇧", "3"]} />
-                  <span>Select thoughts for a combined send</span>
-                </li>
-                <li className="flex flex-wrap items-center gap-2">
-                  <GhcShortcutChord keys={["S"]} />
-                  <span>Send all selected thoughts</span>
-                </li>
-                <li className="flex flex-wrap items-center gap-2">
-                  <GhcShortcutChord keys={["V"]} />
-                  <span>Toggle probe voice playback</span>
-                </li>
-              </ul>
-              {!privateToken && (
-                <div className="mt-6 grid grid-cols-2 gap-2">
-                  {DURATIONS.map((duration) => (
-                    <GhcButton
-                      key={duration}
-                      size="lg"
-                      variant={minutes === duration ? "toggleOn" : "toggleOff"}
-                      className="w-full"
-                      onClick={() => setMinutes(duration)}
-                    >
-                      {duration} minutes
-                    </GhcButton>
-                  ))}
-                </div>
-              )}
-              <GhcButton size="lg" variant="primary" className="mt-8 w-full" onClick={startSession}>
-                Start Think Aloud Protocol
-              </GhcButton>
+        {phase === "briefing" && (
+          <section className="relative flex min-h-[calc(100vh-2.5rem)] flex-1 overflow-hidden rounded-2xl border border-neutral-900 bg-neutral-950">
+            <div className="grid min-h-0 flex-1 lg:grid-cols-2">
+              <div className="flex min-h-0 min-w-0 flex-col border-b border-neutral-900/80 lg:border-b-0 lg:border-r lg:border-neutral-900/80">
+                <TutorWelcome
+                  tutorName="Helios"
+                  variant="tap"
+                  onPlay={() => void startSession()}
+                  isStarting={isStartingSession}
+                  instant={false}
+                />
+              </div>
+              <TapBriefingConfig
+                workspaceTitle={workspaceTitle}
+                minutes={minutes}
+                onMinutesChange={setMinutes}
+                showDurationPicker={!privateToken}
+                disabled={isStartingSession}
+              />
+              {error ? (
+                <p className="absolute inset-x-0 bottom-0 z-20 px-6 pb-5 text-center text-sm text-red-300 lg:col-span-2">
+                  {error}
+                </p>
+              ) : null}
             </div>
           </section>
         )}
@@ -855,8 +961,8 @@ export function GhcScoreClient({ planId, planNodeId, sessionId, privateToken, in
                   layout="ghl"
                   lastUserTurn={lastUserTurn}
                   lastAssistantTurn={lastAssistantTurn}
-                  promptText={welcomePrompt}
-                  isSending={isSending}
+                  promptText=""
+                  isSending={isSending || (isStartingSession && !lastAssistantTurn)}
                   error={error}
                   userInitial={userInitial}
                 />
@@ -889,8 +995,8 @@ export function GhcScoreClient({ planId, planNodeId, sessionId, privateToken, in
                 </div>
 
                 <div className="flex min-w-0 items-start gap-2 overflow-hidden">
-                  <div className="max-h-24 min-h-8 min-w-0 flex-1 overflow-x-hidden overflow-y-auto rounded-md border border-neutral-900 bg-black/70 px-2.5 py-2 text-xs text-neutral-300">
-                    <span className="block min-w-0 break-words">{interimText}</span>
+                  <div className="flex h-8 min-w-0 flex-1 items-center rounded-md border border-neutral-900 bg-black/70 px-2.5 text-xs text-neutral-300">
+                    <SlidingTranscript text={interimText} className="w-full" />
                   </div>
                   <GhcButton size="sm" disabled={!crystallizableText} onClick={crystallizeCurrentTranscription}>
                     <GhcButtonLabel shortcut="C">crystallize</GhcButtonLabel>
@@ -962,12 +1068,15 @@ export function GhcScoreClient({ planId, planNodeId, sessionId, privateToken, in
               thoughts={thoughtHistory}
               sentThoughtIds={sentThoughtIds}
               skippedThoughtIds={memoryThoughtIds}
+              planId={planId}
+              planNodeId={planNodeId}
+              sessionId={sessionId}
               onSendThought={sendThought}
             />
           </section>
         )}
 
-        {phase === "scoring" && <section className="flex flex-1 items-center justify-center text-neutral-400">Generating your GHL Score...</section>}
+        {phase === "scoring" && <section className="flex flex-1 items-center justify-center text-neutral-400">Generating your TAP score...</section>}
         {phase === "done" && score && (
           <section className="flex-1 py-8">
             <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
@@ -1009,7 +1118,7 @@ export function GhcScoreClient({ planId, planNodeId, sessionId, privateToken, in
 
             <div className="rounded-2xl border border-neutral-900 bg-neutral-950/45 px-4 py-6 sm:px-8">
               <p className="text-center font-mono text-[10px] uppercase tracking-[2px] text-neutral-600">Marker profile</p>
-              <MarkerRadarChart markers={markers} ariaLabel="GHL marker scores" />
+              <MarkerRadarChart markers={markers} ariaLabel="TAP marker scores" />
             </div>
 
             <div className="mt-6 grid gap-6 lg:grid-cols-2">
@@ -1072,9 +1181,9 @@ export function GhcScoreClient({ planId, planNodeId, sessionId, privateToken, in
         )}
         {phase === "error" && (
           <section className="flex flex-1 flex-col items-center justify-center text-center">
-            <h1 className="text-2xl font-medium">GHL Score failed</h1>
+            <h1 className="text-2xl font-medium">TAP scoring failed</h1>
             <p className="mt-3 max-w-md text-sm text-red-300">{error}</p>
-            <GhcButton size="md" variant="primary" className="mt-6" onClick={() => setPhase("setup")}>
+            <GhcButton size="md" variant="primary" className="mt-6" onClick={() => setPhase("briefing")}>
               Try again
             </GhcButton>
           </section>

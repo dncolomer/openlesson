@@ -1393,7 +1393,9 @@
     "currentPlan": "Current Plan",
     "errorMessage": "Sorry, I encountered an error. Please try again.",
     "signUpToCustomize": "Sign up to customize this plan",
-    "forkToCustomize": "Fork this plan to customize it"
+    "forkToCustomize": "Fork this plan to customize it",
+    "welcomeTitle": "Trình tạo không gian làm việc",
+    "welcomeDescription": "Cho tôi biết bạn muốn thay đổi không gian làm việc này như thế nào. Tôi có thể thêm khối, xóa phần, sắp xếp lại chương hoặc điều chỉnh trọng tâm và độ khó."
   },
   "partner": {
     "confirmStake": "Xác nhận Stake",
@@ -1640,7 +1642,19 @@
     "ileCtaHint": "Phiên trực tiếp với Helios — luyện tập & hướng dẫn",
     "modesHelpClose": "Quay lại khối",
     "evalCtaHint": "Ghi think-aloud — đo lường kiến thức của bạn",
-    "evalCtaLabel": "Giao thức Think Aloud"
+    "evalCtaLabel": "Giao thức Think Aloud",
+    "blockDetailGuideTitle": "Tư duy trực tiếp, tài liệu của bạn",
+    "blockDetailGuideIntro": "OpenLesson được xây dựng cho tư duy và lập luận trực tiếp — không thay thế sách, tài liệu hay khóa học của bạn. Helios thăm dò những gì bạn hiểu khi bạn làm việc; bạn mang nội dung đến.",
+    "blockDetailGuideSourcesTitle": "Tham khảo nguồn của riêng bạn",
+    "blockDetailGuideSourcesBody": "Dùng Grok, Grokipedia, sổ ghi chép hoặc tài liệu tham khảo bên cạnh phiên. Tra cứu và luyện tập nằm ngoài thăm dò — phiên ghi lại cách bạn lập luận với những gì tìm được.",
+    "blockDetailGuideMaterialsTitle": "Tùy chỉnh không gian làm việc",
+    "blockDetailGuideMaterialsBody": "Đính kèm PDF, ghi chú và hình ảnh trong tab Tệp, và tinh chỉnh từng khối bằng hướng dẫn tùy chỉnh bên dưới. Càng nhiều ngữ cảnh, Helios càng nhắm đúng hơn.",
+    "blockDetailGuideHintsTitle": "Dùng OpenLesson hiệu quả",
+    "blockDetailGuideHint1": "Tab Tệp — thêm tài liệu tham khảo để thăm dò khớp với những gì bạn thực sự đang học.",
+    "blockDetailGuideHint2": "Hướng dẫn tùy chỉnh — định hướng khối này theo công việc, kỳ thi hoặc dự án của bạn.",
+    "blockDetailGuideHint3": "ILE — nghĩ thành tiếng, kết tinh lời nói thành ý tưởng và gửi cho Helios khi làm việc.",
+    "blockDetailGuideHint4": "Trình tạo không gian — thêm hoặc điều chỉnh khối khi phát hiện khoảng trống trong kế hoạch.",
+    "blockDetailGuideHint5": "TAP — chạy khi bạn sẵn sàng chứng minh kỹ năng, không phải lần đầu."
   },
   "planView": {
     "addDescription": "Thêm mô tả cho kế hoạch học tập này...",
@@ -1702,7 +1716,18 @@
     "forkToEditPointBuilder": "Trình tạo không gian làm việc chỉ đọc cho đến khi bạn fork",
     "forkToEditPointOwnCopy": "Fork tạo bản sao riêng tư để bạn chỉnh sửa, remix và mở rộng",
     "forkToEditCta": "Fork không gian làm việc",
-    "forkToEditSignInCta": "Đăng nhập để fork"
+    "forkToEditSignInCta": "Đăng nhập để fork",
+    "performanceSubTabScore": "Điểm",
+    "performanceSubTabTap": "TAP",
+    "performanceSubTabChat": "Trò chuyện",
+    "performanceScoreTitle": "Điểm không gian làm việc",
+    "performanceScoreHint": "Tạo thẻ điểm từ phiên, khối TAP và bằng chứng đã tải lên — cùng hợp đồng với báo cáo hiệu suất Evidence API.",
+    "performanceScoreGenerate": "Tạo điểm",
+    "performanceScoreGenerating": "Đang tạo…",
+    "performanceChatTitle": "Trò chuyện hiệu suất",
+    "startTap": "Bắt đầu Giao thức Think Aloud",
+    "signInForTap": "Đăng nhập để bắt đầu phiên TAP cho không gian làm việc này.",
+    "performanceSectionsAriaLabel": "Các chế độ xem hiệu suất"
   },
   "workspaceIntegration": {
     "title": "Tích hợp API Agentic",
@@ -1736,16 +1761,22 @@
     "copyPath": "Sao chép đường dẫn"
   },
   "performanceChat": {
-    "signInRequired": "Sign in to view performance insights",
-    "welcomeTitle": "Performance Insights",
-    "welcomeDescription": "Ask me anything about learning performance on this plan. I can analyze block reports, identify patterns, and provide improvement suggestions.",
-    "exampleQuestions": "Try asking:",
-    "example1": "How am I doing overall?",
-    "example2": "What topics need more work?",
-    "example3": "Show me my progress over time",
-    "placeholder": "Ask about performance...",
-    "errorMessage": "Sorry, I couldn't process your request. Please try again.",
-    "noSessions": "No block data found for this plan yet."
+    "signInRequired": "Đăng nhập để xem thông tin hiệu suất",
+    "welcomeTitle": "Thông tin hiệu suất",
+    "welcomeDescription": "Hỏi tôi bất cứ điều gì về hiệu suất học tập trong không gian làm việc này. Tôi có thể phân tích báo cáo khối, nhận diện mẫu và đưa ra gợi ý cải thiện.",
+    "exampleQuestions": "Thử hỏi:",
+    "example1": "Tôi đang làm tổng thể thế nào?",
+    "example2": "Chủ đề nào cần luyện tập thêm?",
+    "example3": "Cho tôi xem tiến bộ theo thời gian",
+    "placeholder": "Hỏi về hiệu suất...",
+    "errorMessage": "Xin lỗi, tôi không thể xử lý yêu cầu của bạn. Vui lòng thử lại.",
+    "noSessions": "Chưa có dữ liệu khối cho không gian làm việc này.",
+    "starter1": "Cho tôi bảng xếp hạng hiện tại",
+    "starter2": "Ai đang cải thiện nhanh nhất?",
+    "starter3": "Mọi người đang gặp khó ở những nút nào?",
+    "starter4": "Nhóm nên luyện tập gì tiếp theo?",
+    "starter5": "So sánh phiên đã hoàn thành và đang hoạt động",
+    "starter6": "Tóm tắt các khoảng trống hiệu suất chính"
   },
   "sessionPerformanceChat": {
     "greeting": "Làm tốt lắm — bạn đã hoàn thành khối này!",
@@ -2263,5 +2294,50 @@
     "hearAgain": "Nghe lại",
     "listenToTutor": "Nghe gia sư",
     "stopNarration": "Dừng"
+  },
+  "tap": {
+    "welcome": {
+      "greeting": "Xin chào — tôi là {name}.",
+      "panelIntro": "Chào mừng đến Giao thức Think Aloud. Đây là buổi trình diễn có giới hạn thời gian: bạn giải thích những gì đã học trong khi tôi lắng nghe, sau đó tôi đặt câu hỏi Socratic để lộ khoảng trống và điểm mạnh.\n\nCách hoạt động: nói suy nghĩ thành tiếng và kết tinh thành thẻ ý tưởng. Gửi một ý tưởng hoặc kết hợp nhiều ý — tôi trả lời dưới avatar với một câu hỏi mỗi lần, không phải luồng chat. Bộ nhớ ý tưởng giữ mọi dấu vết để gửi lại hoặc đánh dấu.\n\nThời lượng phiên và phím tắt ở bên phải. Khi hết giờ, bạn nhận điểm TAP với phân tích marker và khoảng trống.",
+      "callToAction": "Khi sẵn sàng, nhấn Play. Bộ đếm thời gian bắt đầu và tôi sẽ mở bằng câu hỏi cụ thể về những gì bạn học ở đây.",
+      "play": "Play",
+      "starting": "Đang bắt đầu…",
+      "skipTyping": "Bỏ qua gõ chữ"
+    }
+  },
+  "performanceReportCard": {
+    "defaultLabel": "Báo cáo hiệu suất",
+    "tabOverview": "Tổng quan",
+    "tabCompetency": "Năng lực",
+    "tabMarkers": "Chỉ số",
+    "tabStrengths": "Điểm mạnh",
+    "tabGaps": "Khoảng trống",
+    "tabNextSteps": "Bước tiếp theo",
+    "tabHistory": "Lịch sử",
+    "sectionsAriaLabel": "Các phần thẻ điểm",
+    "confidenceWellConnected": "Kết nối tốt",
+    "confidenceClear": "Tín hiệu rõ",
+    "confidenceDeveloping": "Đang phát triển",
+    "confidenceEmerging": "Mới nổi",
+    "learning": "Học tập",
+    "conversion": "Chuyển đổi",
+    "conversionGoal": "Mục tiêu chuyển đổi",
+    "sourceWorkspace": "Không gian làm việc",
+    "sourceInferred": "Suy luận",
+    "growthAreas": "Lĩnh vực phát triển",
+    "suggestions": "Gợi ý",
+    "competencyProfile": "Hồ sơ năng lực",
+    "competencyAriaLabel": "Điểm năng lực hiệu suất",
+    "gapsEmpty": "Không xác định khoảng trống cụ thể trong báo cáo này. Xem điểm mạnh và bước tiếp theo, hoặc thu thập thêm bằng chứng.",
+    "repair": "Khắc phục",
+    "directionGoals": "Hướng đi & mục tiêu trung gian",
+    "directionEmpty": "Chưa ghi nhận hướng đi cấp cao. Tạo lại thẻ điểm sau khi có thêm bằng chứng.",
+    "granularEvents": "Sự kiện & hành động chi tiết",
+    "eventsEmpty": "Chưa có sự kiện chi tiết. Thêm tải bằng chứng, phiên TAP hoặc điểm kiểm tra.",
+    "scoreEvolution": "Tiến trình điểm",
+    "historyCheck": "Kiểm tra {check} · ngày {days} · {actionCount} {actionLabel}",
+    "historyActionOne": "hành động",
+    "historyActionMany": "hành động",
+    "historyMetrics": "{gaps} khoảng trống · {goals} mục tiêu · {events} sự kiện"
   }
 }

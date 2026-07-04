@@ -135,7 +135,7 @@ ${competencyRows}
 ## Evidence contract
 - **Tool events**: JSON payloads via \`POST .../evidence\` (type: tool)
 - **Time gaps**: \`time_gap_elapsed\` events with \`days_elapsed\` when calendar idle time matters
-- **Performance reports**: \`overall_score\`, \`conversion_score\`, \`conversion_goal\`, \`marker_scores\` (spider/radar), \`gap_analysis.gaps[]\`
+- **Performance reports**: \`overall_score\`, \`conversion_score\`, \`conversion_goal\`, \`marker_scores\` (spider/radar), \`gap_analysis.gaps[]\`, \`gap_analysis.next_steps.directions[]\`, \`gap_analysis.next_steps.events[]\`
 - **Continuous evaluation**: re-fetch \`evidence-schema\`, regenerate \`integration-skill\` as artifacts grow
 - **Think Aloud Protocol (TAP)**: issue private TAP links for live human cognition on high-stakes blocks
 - **ILE**: route identified gaps into Integrated Learning Environment practice blocks

@@ -14,6 +14,7 @@ export type {
   PerformanceGapAnalysis,
   PerformanceGapItem,
   PerformanceMarkerScore,
+  PerformanceNextSteps,
   PerformanceReport,
   PerformanceReportContract,
 } from "./performance-report";
@@ -22,6 +23,8 @@ export {
   buildPerformanceReportInstructions,
   emptyPerformanceReport,
   EXAMPLE_PERFORMANCE_REPORT,
+  normalizePerformanceGapAnalysis,
+  normalizePerformanceReport,
   PERFORMANCE_REPORT_SCHEMA,
 } from "./performance-report";
 

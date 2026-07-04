@@ -25,6 +25,7 @@ describe("buildPerformanceReportInstructions", () => {
     expect(instructions).toContain("conversion_goal");
     expect(instructions).toContain("marker_scores");
     expect(instructions).toContain("gap_analysis.gaps");
+    expect(instructions).toContain("gap_analysis.next_steps");
     expect(instructions).toContain("spider/radar");
   });
 
@@ -57,7 +58,8 @@ describe("emptyPerformanceReport", () => {
     expect(report.conversion_goal.length).toBeGreaterThan(0);
     expect(report.marker_scores).toEqual([]);
     expect(report.gap_analysis.gaps).toEqual([]);
-    expect(report.gap_analysis.next_practice.length).toBeGreaterThan(0);
+    expect(report.gap_analysis.next_steps.directions.length).toBeGreaterThan(0);
+    expect(report.gap_analysis.next_steps.events.length).toBeGreaterThan(0);
   });
 });
 
@@ -70,6 +72,10 @@ describe("EXAMPLE_PERFORMANCE_REPORT", () => {
       marker_scores: expect.any(Array),
       gap_analysis: {
         gaps: expect.any(Array),
+        next_steps: {
+          directions: expect.any(Array),
+          events: expect.any(Array),
+        },
       },
     });
   });

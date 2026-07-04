@@ -21,8 +21,13 @@ import {
 } from "lucide-react";
 import { Footer } from "@/components/Footer";
 import { Navbar } from "@/components/Navbar";
-import { MarkerRadarChart } from "@/components/MarkerRadarChart";
-import type { PerformanceReport } from "@/lib/agent-v2/performance-context";
+import {
+  getScoreCardMetrics,
+  PerformanceReportCard,
+  type PerformanceReportSnapshot,
+} from "@/components/PerformanceReportCard";
+import { normalizePerformanceReport, type PerformanceReport } from "@/lib/agent-v2/performance-context";
+import type { ConversionGoalSource } from "@/lib/agent-v2/conversion-goal";
 import type { EvidenceEvalSchemaResult } from "@/lib/agent-v2/evidence-schema";
 import {
   CUSTOM_DEMO_ID,
@@ -65,7 +70,6 @@ type DemoPhase = "picker" | "intro" | "creating" | "simulating";
 type CustomInputMode = "prompt" | "import";
 type SimulatorSubview = "events" | "mcp";
 type DemoView = "simulator" | "evaluation" | "score";
-type ScoreCardTab = "overview" | "competency" | "markers" | "strengths" | "gaps" | "history";
 
 const DEMO_TAB_STAGE = "h-[48rem] w-full min-w-0";
 const DEMO_TAB_PANEL =
@@ -75,17 +79,6 @@ const DEMO_TAB_BODY =
   "flex h-[38rem] w-full flex-col overflow-hidden p-5 sm:p-6";
 const DEMO_TAB_BODY_SCROLL =
   "flex h-[38rem] w-full flex-col gap-6 overflow-y-auto p-5 sm:p-6";
-const DEMO_SCORE_TABPANEL = "h-[28rem] w-full overflow-y-auto py-2";
-
-type ReportSnapshot = {
-  id: string;
-  report: PerformanceReport;
-  evidenceCount: number;
-  actionCount: number;
-  simulatedDays: number;
-  timestamp: Date;
-};
-
 type SkillSnapshot = {
   id: string;
   skill_name: string;
@@ -126,8 +119,6 @@ type WorkspaceResponse = {
 type EvidenceResponse = {
   evidence: { id: string; tool_action: string | null; created_at: string };
 };
-
-type ConversionGoalSource = "workspace" | "inferred";
 
 type PerformanceResponse = {
   mode: "report";
@@ -220,55 +211,12 @@ async function fetchWithTimeout(
   }
 }
 
-function hasTeamsAccess(profile: {
-  is_admin?: boolean | null;
-  plan?: string | null;
-  subscription_status?: string | null;
-} | null): boolean {
-  if (!profile) return false;
-  return (
-    profile.is_admin === true ||
-    (profile.plan === "pro_teams" && profile.subscription_status === "active")
-  );
-}
-
-function severityColor(severity: "low" | "medium" | "high") {
-  switch (severity) {
-    case "high":
-      return "border-zinc-500 bg-zinc-900 text-white";
-    case "medium":
-      return "border-zinc-700 bg-zinc-950 text-zinc-200";
-    default:
-      return "border-zinc-800 bg-black/30 text-zinc-300";
-  }
-}
-
-function severityAccentBorder(severity: "low" | "medium" | "high") {
-  switch (severity) {
-    case "high":
-      return "border-l-zinc-400";
-    case "medium":
-      return "border-l-zinc-600";
-    default:
-      return "border-l-zinc-800";
-  }
-}
-
-function confidenceLabel(confidence: PerformanceReport["confidence"]) {
-  switch (confidence) {
-    case "well-connected":
-      return "Well connected";
-    case "clear":
-      return "Clear signal";
-    case "developing":
-      return "Developing";
-    default:
-      return "Emerging";
-  }
+function hasDemoAccess(profile: { is_admin?: boolean | null } | null): boolean {
+  return profile?.is_admin === true;
 }
 
 export function EvidenceApiDemo() {
-  const [authState, setAuthState] = useState<"loading" | "guest" | "no-teams" | "ready">("loading");
+  const [authState, setAuthState] = useState<"loading" | "guest" | "no-admin" | "ready">("loading");
   const [phase, setPhase] = useState<DemoPhase>("picker");
   const [demoId, setDemoId] = useState<string | null>(null);
   const [customDemo, setCustomDemo] = useState<EvidenceApiDemoDefinition | null>(null);
@@ -298,7 +246,7 @@ export function EvidenceApiDemo() {
   const [error, setError] = useState("");
   const [report, setReport] = useState<PerformanceReport | null>(null);
   const [performanceResponseRaw, setPerformanceResponseRaw] = useState<PerformanceResponse | null>(null);
-  const [reportHistory, setReportHistory] = useState<ReportSnapshot[]>([]);
+  const [reportHistory, setReportHistory] = useState<PerformanceReportSnapshot[]>([]);
   const [skillHistory, setSkillHistory] = useState<SkillSnapshot[]>([]);
   const [schemaHistory, setSchemaHistory] = useState<SchemaSnapshot[]>([]);
   const [latestSkillMd, setLatestSkillMd] = useState<string | null>(null);
@@ -361,13 +309,13 @@ export function EvidenceApiDemo() {
 
         const { data: profile } = await supabase
           .from("profiles")
-          .select("plan, subscription_status, is_admin")
+          .select("is_admin")
           .eq("id", user.id)
           .single();
 
         if (cancelled) return;
 
-        if (hasTeamsAccess(profile)) {
+        if (hasDemoAccess(profile)) {
           setAuthState("ready");
           return;
         }
@@ -377,10 +325,9 @@ export function EvidenceApiDemo() {
           if (res.ok) {
             const data = (await res.json()) as {
               authenticated?: boolean;
-              hasTeams?: boolean;
               isAdmin?: boolean;
             };
-            if (data.authenticated && (data.hasTeams || data.isAdmin)) {
+            if (data.authenticated && data.isAdmin) {
               setAuthState("ready");
               return;
             }
@@ -389,7 +336,7 @@ export function EvidenceApiDemo() {
           // Server status is a fallback only.
         }
 
-        setAuthState("no-teams");
+        setAuthState("no-admin");
       } catch {
         if (!cancelled) setAuthState("guest");
       }
@@ -508,9 +455,9 @@ export function EvidenceApiDemo() {
           setAuthState("guest");
           throw new Error("Session expired. Refresh the page and sign in again.");
         }
-        if (data.code === "teams_required") {
-          setAuthState("no-teams");
-          throw new Error("Teams tier required for this demo.");
+        if (data.code === "admin_required") {
+          setAuthState("no-admin");
+          throw new Error("Admin access required for this demo.");
         }
         throw new Error(
           [data.error || "Failed to create workspace", data.hint].filter(Boolean).join(" ")
@@ -787,15 +734,16 @@ export function EvidenceApiDemo() {
         throw new Error(data.error || "Performance report failed");
       }
 
-      setReport(data.report);
-      setPerformanceResponseRaw(data);
+      const normalizedReport = normalizePerformanceReport(data.report);
+      setReport(normalizedReport);
+      setPerformanceResponseRaw({ ...data, report: normalizedReport });
       setActiveView("score");
       setEvidenceCount(data.evidence_summary.evidence_artifacts);
       setReportHistory((prev) => [
         ...prev,
         {
           id: crypto.randomUUID(),
-          report: data.report,
+          report: normalizedReport,
           evidenceCount: snapshotEvidenceCount,
           actionCount: snapshotActionCount,
           simulatedDays: snapshotSimulatedDays,
@@ -1130,23 +1078,23 @@ export function EvidenceApiDemo() {
       <AuthGate
         backgroundImage={backgroundImage}
         title="Sign in to run the demo"
-        body="The Evidence API demo creates a real verification workspace and uploads live evidence. Sign in with a Teams account to continue."
+        body="The Evidence API demo creates a real verification workspace and uploads live evidence. Admin access is required to continue."
         primaryHref="/login?redirect=/evidence-api-demo"
         primaryLabel="Sign in"
-        secondaryHref="/register"
-        secondaryLabel="Create account"
+        secondaryHref="/dashboard"
+        secondaryLabel="Back to dashboard"
       />
     );
   }
 
-  if (authState === "no-teams") {
+  if (authState === "no-admin") {
     return (
       <AuthGate
         backgroundImage={backgroundImage}
-        title="Teams tier required"
-        body="This demo uses the Agentic API to create workspaces, upload evidence, and generate performance reports. Upgrade to Teams to run it."
-        primaryHref="/pricing"
-        primaryLabel="View pricing"
+        title="Admin access required"
+        body="This internal demo uses the Agentic API to create workspaces, upload evidence, and generate performance reports. Only admin accounts can run it."
+        primaryHref="/dashboard"
+        primaryLabel="Back to dashboard"
         secondaryHref="/docs/agentic-v2"
         secondaryLabel="API docs"
       />
@@ -1173,7 +1121,8 @@ export function EvidenceApiDemo() {
             </h1>
             <p className="mt-3 max-w-2xl text-sm leading-relaxed text-zinc-400 sm:text-base">
               Pick a verification scenario — trial onboarding, month-end close, launch audit, or escalation
-              certification — then watch OpenLesson score competency from live evidence.
+              certification — then watch OpenLesson score competency from live evidence. Every score card separates
+              learning gaps from next steps: intermediate goals plus granular events to run next.
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -1233,7 +1182,7 @@ export function EvidenceApiDemo() {
         <DemoViewSwitcher
           activeView={activeView}
           onChange={setActiveView}
-          hasReport={!!report}
+          report={report}
         />
       ) : null}
 
@@ -1464,6 +1413,7 @@ function DemoStatusBar({
     typeof report?.conversion_score === "number"
       ? Math.round(Math.max(0, Math.min(100, report.conversion_score)))
       : null;
+  const scoreMetrics = getScoreCardMetrics(report);
 
   return (
     <div className="border-b border-zinc-800/80 bg-zinc-950/80">
@@ -1488,6 +1438,19 @@ function DemoStatusBar({
               Conversion <span className="text-white">{conversionScore}%</span>
             </span>
           ) : null}
+          {scoreMetrics ? (
+            <>
+              <span className="font-mono text-zinc-500">
+                Gaps <span className="text-white">{scoreMetrics.gaps}</span>
+              </span>
+              <span className="font-mono text-zinc-500">
+                Next steps{" "}
+                <span className="text-white">
+                  {scoreMetrics.directions} goals · {scoreMetrics.events} events
+                </span>
+              </span>
+            </>
+          ) : null}
         </div>
         <div className="ml-auto flex flex-wrap items-center gap-3 text-xs">
           <span className="rounded-full border border-zinc-700 bg-black/40 px-2.5 py-0.5 font-mono text-[10px] uppercase tracking-wide text-zinc-400">
@@ -1507,12 +1470,13 @@ function DemoStatusBar({
 function DemoViewSwitcher({
   activeView,
   onChange,
-  hasReport,
+  report,
 }: {
   activeView: DemoView;
   onChange: (view: DemoView) => void;
-  hasReport: boolean;
+  report: PerformanceReport | null;
 }) {
+  const scoreMetrics = getScoreCardMetrics(report);
   const tabs: Array<{
     id: DemoView;
     label: string;
@@ -1527,17 +1491,19 @@ function DemoViewSwitcher({
       icon: LayoutGrid,
     },
     {
+      id: "score",
+      label: "Score card",
+      description: "Gaps · goals · granular events",
+      icon: Gauge,
+      badge: scoreMetrics
+        ? `${scoreMetrics.gaps} gaps · ${scoreMetrics.nextSteps} steps`
+        : undefined,
+    },
+    {
       id: "evaluation",
       label: "Continuous evaluation",
       description: "Regenerate & download specs",
       icon: RefreshCw,
-    },
-    {
-      id: "score",
-      label: "Score card",
-      description: "Performance & gaps",
-      icon: Gauge,
-      badge: hasReport ? "New" : undefined,
     },
   ];
 
@@ -1631,7 +1597,7 @@ function DemoUseCasePicker({
         <h2 className="mt-2 text-2xl font-medium text-white sm:text-3xl">Which scenario are we verifying?</h2>
         <p className="mt-3 text-sm leading-relaxed text-zinc-400">
           Pick a preset verification program or paste your own prompt to generate dynamic event actions — same
-          evidence API flow throughout.
+          evidence API flow throughout. Score cards always return separate gap analysis and structured next steps.
         </p>
       </div>
 
@@ -2186,8 +2152,9 @@ function SimulatorPanel({
                 <p className={`mt-2 max-w-2xl text-sm leading-relaxed ${styles.bodyText}`}>
                   Describe the product workflow, learner role, and competency you want to verify. OpenLesson
                   generates event actions and a workspace from your prompt. Calendar gap tools (+1 day, +3 days,
-                  +1 week) are always included. After you start, use the MCP simulation tab to pull live data
-                  and simulate imported event logs.
+                  +1 week) are always included. Score cards return separate gaps and next steps — intermediate
+                  goals plus granular events. After you start, use the MCP simulation tab to pull live data and
+                  simulate imported event logs.
                 </p>
                 <label className="mt-6 block max-w-2xl">
                   <span className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-500">
@@ -2209,8 +2176,9 @@ function SimulatorPanel({
             ) : (
               <p className={`mt-2 max-w-md text-sm leading-relaxed ${styles.bodyText}`}>
                 {demo.scenarioIntro.replace(/\*\*/g, "")} Use calendar gap tools to record idle time between
-                sessions — then regenerate OpenLesson specs as evidence grows. After starting, use the MCP
-                simulation tab to pull live data and simulate imported event logs.
+                sessions — then request score cards with separate gap analysis and next steps (intermediate goals
+                plus granular events). Regenerate OpenLesson specs as evidence grows, and use the MCP simulation
+                tab to pull live data and simulate imported event logs.
               </p>
             )}
             <div className="mt-8 flex flex-wrap items-center gap-3">
@@ -2539,7 +2507,8 @@ function ContinuousEvaluationView({
           <div>
             <div className="text-sm font-medium text-white">Continuous evaluation</div>
             <div className="text-xs text-zinc-500">
-              Regenerate living specs and skills as evidence accumulates — download the full files.
+              Regenerate living specs and skills as evidence accumulates — then re-score to refresh gaps and
+              next steps.
             </div>
           </div>
         </div>
@@ -2724,11 +2693,12 @@ function ScoreView({
   isReporting: boolean;
   report: PerformanceReport | null;
   performanceResponse: PerformanceResponse | null;
-  reportHistory: ReportSnapshot[];
+  reportHistory: PerformanceReportSnapshot[];
   onRequestPerformance: () => void;
 }) {
   const canRequestScore = evidenceCount > 0;
   const latestSnapshot = reportHistory[reportHistory.length - 1];
+  const scoreMetrics = getScoreCardMetrics(report);
   const [showRawResponse, setShowRawResponse] = useState(false);
 
   useEffect(() => {
@@ -2746,7 +2716,8 @@ function ScoreView({
             <div>
               <div className="text-lg font-medium text-white">Performance score card</div>
               <div className="text-sm text-zinc-500">
-                Request scores at any point — branch freely, simulate idle days, then score again.
+                Request scores at any point — each card separates gaps from next steps with intermediate goals
+                and granular events you can act on.
               </div>
             </div>
           </div>
@@ -2784,7 +2755,7 @@ function ScoreView({
         )}
       </div>
 
-      <div className={DEMO_TAB_BODY}>
+      <div className={`${DEMO_TAB_BODY_SCROLL} gap-4`}>
         {report && performanceResponse ? (
           <div className="flex shrink-0 items-center justify-end">
             <div
@@ -2831,8 +2802,37 @@ function ScoreView({
           </div>
         ) : null}
 
+        {report && !showRawResponse && scoreMetrics ? (
+          <div className="grid shrink-0 gap-3 rounded-lg border border-zinc-800 bg-black/25 px-4 py-3 sm:grid-cols-3">
+            <div>
+              <div className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-600">Gaps</div>
+              <p className="mt-1 text-sm text-zinc-300">
+                {scoreMetrics.gaps > 0
+                  ? `${scoreMetrics.gaps} identified deficiencies with evidence and repairs`
+                  : "No specific gaps flagged — review strengths and next steps"}
+              </p>
+            </div>
+            <div>
+              <div className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-600">Direction</div>
+              <p className="mt-1 text-sm text-zinc-300">
+                {scoreMetrics.directions > 0
+                  ? `${scoreMetrics.directions} intermediate goal${scoreMetrics.directions === 1 ? "" : "s"} toward readiness`
+                  : "Add evidence and re-score to surface high-level direction"}
+              </p>
+            </div>
+            <div>
+              <div className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-600">Events</div>
+              <p className="mt-1 text-sm text-zinc-300">
+                {scoreMetrics.events > 0
+                  ? `${scoreMetrics.events} granular action${scoreMetrics.events === 1 ? "" : "s"} to run next`
+                  : "Granular next events appear after more evidence is collected"}
+              </p>
+            </div>
+          </div>
+        ) : null}
+
         {report && !showRawResponse ? (
-          <div className="w-full">
+          <div className="w-full min-h-0 flex-1">
             <PerformanceReportCard
               key={latestSnapshot?.id ?? "report"}
               report={report}
@@ -2852,462 +2852,12 @@ function ScoreView({
             <Gauge className="size-10 text-zinc-600" />
             <h3 className="mt-4 text-lg font-medium text-zinc-300">No score yet</h3>
             <p className="mt-2 max-w-md text-sm leading-relaxed text-zinc-500">
-              Run scenario events, then request a performance report to see the competency spider chart,
-              marker breakdown, and gap analysis.
+              Run scenario events, then request a performance report to see competency markers, a dedicated gaps
+              tab, and a next-steps tab with intermediate goals plus granular events.
             </p>
           </div>
         )}
       </div>
     </section>
-  );
-}
-
-function ScoreEvolution({ history, flat = false }: { history: ReportSnapshot[]; flat?: boolean }) {
-  return (
-    <div className={flat ? "space-y-4" : "rounded-md border border-zinc-800 bg-black/30 p-3"}>
-      {!flat ? (
-        <div className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-600">
-          Score evolution
-        </div>
-      ) : null}
-      <ol className={flat ? "space-y-4" : "mt-3 space-y-2"}>
-        {history.map((snapshot, index) => (
-          <li
-            key={snapshot.id}
-            className={
-              flat
-                ? `border-b border-zinc-800/60 pb-4 text-sm last:border-b-0 ${
-                    index === history.length - 1 ? "text-zinc-200" : "text-zinc-400"
-                  }`
-                : `rounded-md border px-3 py-2 text-xs ${
-                    index === history.length - 1
-                      ? "border-zinc-600 bg-zinc-900 text-zinc-200"
-                      : "border-zinc-800/80 text-zinc-400"
-                  }`
-            }
-          >
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <span className="font-medium text-zinc-300">
-                Check {index + 1} · day {snapshot.simulatedDays} · {snapshot.actionCount} action
-                {snapshot.actionCount === 1 ? "" : "s"}
-              </span>
-              <div className="flex flex-wrap items-center gap-2">
-                {typeof snapshot.report.overall_score === "number" ? (
-                  <span className="rounded-full border border-zinc-600 px-2 py-0.5 font-mono text-[10px] text-white">
-                    L {Math.round(snapshot.report.overall_score)}/100
-                  </span>
-                ) : null}
-                {typeof snapshot.report.conversion_score === "number" ? (
-                  <span className="rounded-full border border-zinc-700 px-2 py-0.5 font-mono text-[10px] text-white">
-                    C {Math.round(snapshot.report.conversion_score)}%
-                  </span>
-                ) : null}
-                <span className="rounded-full border border-zinc-700 px-2 py-0.5 font-mono text-[10px] uppercase text-zinc-400">
-                  {confidenceLabel(snapshot.report.confidence)}
-                </span>
-              </div>
-            </div>
-            <p className={`mt-2 leading-relaxed opacity-90 ${flat ? "text-sm" : ""}`}>
-              {snapshot.report.summary}
-            </p>
-          </li>
-        ))}
-      </ol>
-    </div>
-  );
-}
-
-function clampScore(value: unknown): number | null {
-  if (typeof value !== "number" || Number.isNaN(value)) return null;
-  return Math.max(0, Math.min(100, Math.round(value)));
-}
-
-function getAvailableScoreCardTabs(
-  report: PerformanceReport,
-  reportHistory: ReportSnapshot[] = [],
-): ScoreCardTab[] {
-  const tabs: ScoreCardTab[] = ["overview"];
-  const markerScores = report.marker_scores ?? [];
-  if (markerScores.length > 0) {
-    tabs.push("competency", "markers");
-  }
-  if (report.strengths.length > 0) tabs.push("strengths");
-  if (report.gap_analysis.gaps.length > 0 || report.gap_analysis.next_practice.length > 0) {
-    tabs.push("gaps");
-  }
-  if (reportHistory.length > 0) tabs.push("history");
-  return tabs;
-}
-
-function scoreCardTabBadge(
-  tab: ScoreCardTab,
-  report: PerformanceReport,
-  reportHistory: ReportSnapshot[],
-): string | undefined {
-  const markerScores = report.marker_scores ?? [];
-  switch (tab) {
-    case "markers":
-      return markerScores.length > 0 ? String(markerScores.length) : undefined;
-    case "strengths":
-      return report.strengths.length > 0 ? String(report.strengths.length) : undefined;
-    case "gaps": {
-      const count = report.gap_analysis.gaps.length + report.gap_analysis.next_practice.length;
-      return count > 0 ? String(count) : undefined;
-    }
-    case "history":
-      return reportHistory.length > 0 ? String(reportHistory.length) : undefined;
-    default:
-      return undefined;
-  }
-}
-
-function ScoreCardTabBar({
-  tabs,
-  activeTab,
-  onChange,
-  report,
-  reportHistory,
-}: {
-  tabs: ScoreCardTab[];
-  activeTab: ScoreCardTab;
-  onChange: (tab: ScoreCardTab) => void;
-  report: PerformanceReport;
-  reportHistory: ReportSnapshot[];
-}) {
-  const tabLabels: Record<ScoreCardTab, string> = {
-    overview: "Overview",
-    competency: "Competency",
-    markers: "Markers",
-    strengths: "Strengths",
-    gaps: "Gaps",
-    history: "History",
-  };
-
-  return (
-    <div className="border-b border-zinc-800">
-      <div
-        className="-mb-px flex gap-1 overflow-x-auto pb-px [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-        role="tablist"
-        aria-label="Score card sections"
-      >
-        {tabs.map((tab) => {
-          const isActive = activeTab === tab;
-          const badge = scoreCardTabBadge(tab, report, reportHistory);
-          return (
-            <button
-              key={tab}
-              type="button"
-              role="tab"
-              aria-selected={isActive}
-              onClick={() => onChange(tab)}
-              className={`flex shrink-0 items-center gap-2 border-b-2 px-4 py-3 text-left transition ${
-                isActive
-                  ? "border-white text-white"
-                  : "border-transparent text-zinc-500 hover:border-zinc-600 hover:text-zinc-300"
-              }`}
-            >
-              <span className="whitespace-nowrap text-sm font-medium">{tabLabels[tab]}</span>
-              {badge ? (
-                <span className="rounded bg-zinc-800 px-1.5 py-0.5 font-mono text-[9px] text-zinc-300">
-                  {badge}
-                </span>
-              ) : null}
-            </button>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-function PerformanceReportCard({
-  report,
-  label = "Performance report",
-  layout = "compact",
-  reportHistory = [],
-  workspaceConversionGoal,
-  conversionGoalSource,
-}: {
-  report: PerformanceReport;
-  label?: string;
-  layout?: "compact" | "spacious";
-  reportHistory?: ReportSnapshot[];
-  workspaceConversionGoal?: string;
-  conversionGoalSource?: ConversionGoalSource;
-}) {
-  const overallScore = clampScore(report.overall_score);
-  const conversionScore = clampScore(report.conversion_score);
-  const conversionGoal =
-    workspaceConversionGoal?.trim() || report.conversion_goal?.trim() || null;
-  const markerScores = report.marker_scores ?? [];
-  const isSpacious = layout === "spacious";
-  const availableTabs = useMemo(
-    () => getAvailableScoreCardTabs(report, reportHistory),
-    [report, reportHistory],
-  );
-  const [activeTab, setActiveTab] = useState<ScoreCardTab>("overview");
-
-  useEffect(() => {
-    setActiveTab("overview");
-  }, [report, label]);
-
-  useEffect(() => {
-    if (!availableTabs.includes(activeTab)) {
-      setActiveTab(availableTabs[0] ?? "overview");
-    }
-  }, [activeTab, availableTabs]);
-
-  if (isSpacious) {
-    return (
-      <div className="flex w-full flex-col gap-4">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <h3 className="text-sm text-zinc-400">{label}</h3>
-          <div className="flex flex-wrap items-center gap-3">
-            {overallScore != null ? (
-              <span className="font-mono text-2xl text-white">
-                L {overallScore}
-                <span className="ml-1 text-sm text-zinc-500">/100</span>
-              </span>
-            ) : null}
-            {conversionScore != null ? (
-              <span className="font-mono text-2xl text-white">
-                C {conversionScore}%
-              </span>
-            ) : null}
-            <span className="text-xs font-medium uppercase tracking-wide text-zinc-500">
-              {confidenceLabel(report.confidence)}
-            </span>
-          </div>
-        </div>
-
-        <ScoreCardTabBar
-          tabs={availableTabs}
-          activeTab={activeTab}
-          onChange={setActiveTab}
-          report={report}
-          reportHistory={reportHistory}
-        />
-
-        <div role="tabpanel" className={DEMO_SCORE_TABPANEL}>
-          {activeTab === "overview" ? (
-            <div className="flex w-full flex-col items-center px-2 py-6 text-center sm:py-10">
-              <div className="grid w-full grid-cols-2 gap-8 sm:max-w-md sm:gap-12">
-                {overallScore != null ? (
-                  <div>
-                    <div className="font-mono text-xs uppercase tracking-[2px] text-zinc-500">Learning</div>
-                    <div className="mt-4 font-mono text-6xl font-medium tracking-tight text-white sm:text-7xl">
-                      {overallScore}
-                    </div>
-                    <div className="mt-2 font-mono text-base text-zinc-500">/ 100</div>
-                  </div>
-                ) : null}
-                {conversionScore != null ? (
-                  <div>
-                    <div className="font-mono text-xs uppercase tracking-[2px] text-zinc-500">Conversion</div>
-                    <div className="mt-4 font-mono text-6xl font-medium tracking-tight text-white sm:text-7xl">
-                      {conversionScore}
-                    </div>
-                    <div className="mt-2 font-mono text-base text-zinc-500">%</div>
-                  </div>
-                ) : null}
-              </div>
-              {conversionGoal ? (
-                <div className="mt-8 w-full text-left">
-                  <div className="flex flex-wrap items-center justify-center gap-2">
-                    <span className="font-mono text-xs uppercase tracking-[1.5px] text-zinc-600">
-                      Conversion goal
-                    </span>
-                    {conversionGoalSource ? (
-                      <span className="rounded-full border border-zinc-700 px-2 py-0.5 font-mono text-[10px] uppercase tracking-wide text-zinc-400">
-                        {conversionGoalSource === "workspace" ? "Workspace" : "Inferred"}
-                      </span>
-                    ) : null}
-                  </div>
-                  <p className="mt-3 text-center text-base leading-relaxed text-zinc-300 sm:text-lg">
-                    {conversionGoal}
-                  </p>
-                </div>
-              ) : null}
-              <p className="mt-8 w-full text-left text-base leading-relaxed text-zinc-300 sm:text-lg">
-                {report.summary}
-              </p>
-            </div>
-          ) : null}
-
-          {activeTab === "competency" && markerScores.length > 0 ? (
-            <div className="flex h-full w-full items-center justify-center px-2 py-4">
-              <MarkerRadarChart
-                markers={markerScores}
-                variant="large"
-                ariaLabel="Performance competency scores"
-                className="aspect-square h-auto w-full max-w-[min(100%,36rem)]"
-              />
-            </div>
-          ) : null}
-
-          {activeTab === "markers" && markerScores.length > 0 ? (
-            <div className="grid gap-x-10 gap-y-6 sm:grid-cols-2">
-              {markerScores.map((marker) => (
-                <div key={marker.id} className="border-b border-zinc-800/60 pb-5">
-                  <div className="flex items-baseline justify-between gap-4">
-                    <span className="text-base font-medium text-zinc-200 sm:text-lg">{marker.label}</span>
-                    <span className="font-mono text-2xl text-white">{marker.score}</span>
-                  </div>
-                  <p className="mt-3 text-base leading-relaxed text-zinc-400">{marker.rationale}</p>
-                </div>
-              ))}
-            </div>
-          ) : null}
-
-          {activeTab === "strengths" && report.strengths.length > 0 ? (
-            <ul className="w-full space-y-4 text-base leading-relaxed text-zinc-300 sm:text-lg">
-              {report.strengths.map((item) => (
-                <li key={item} className="flex gap-3">
-                  <span className="text-zinc-500">+</span>
-                  <span>{item}</span>
-                </li>
-              ))}
-            </ul>
-          ) : null}
-
-          {activeTab === "gaps" ? (
-            <div className="w-full space-y-10">
-              {report.gap_analysis.gaps.length > 0 ? (
-                <div>
-                  <p className="text-base leading-relaxed text-zinc-400 sm:text-lg">
-                    {report.gap_analysis.summary}
-                  </p>
-                  <ul className="mt-6 space-y-5">
-                    {report.gap_analysis.gaps.map((gap) => (
-                      <li
-                        key={gap.title}
-                        className={`border-l-2 py-1 pl-5 text-base sm:text-lg ${severityAccentBorder(gap.severity)}`}
-                      >
-                        <div className="font-medium text-zinc-100">{gap.title}</div>
-                        <p className="mt-2 leading-relaxed opacity-90">{gap.evidence}</p>
-                        <p className="mt-2 text-zinc-400">Repair: {gap.suggested_repair}</p>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ) : null}
-              {report.gap_analysis.next_practice.length > 0 ? (
-                <div>
-                  <div className="font-mono text-xs uppercase tracking-[1.5px] text-zinc-600">Next practice</div>
-                  <ul className="mt-4 space-y-3 text-base text-zinc-300 sm:text-lg">
-                    {report.gap_analysis.next_practice.map((item) => (
-                      <li key={item}>→ {item}</li>
-                    ))}
-                  </ul>
-                </div>
-              ) : null}
-            </div>
-          ) : null}
-
-          {activeTab === "history" && reportHistory.length > 0 ? (
-            <ScoreEvolution history={reportHistory} flat />
-          ) : null}
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-4 rounded-lg border border-zinc-800 bg-black/30 p-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h3 className="text-sm font-medium text-white">{label}</h3>
-        <div className="flex flex-wrap items-center gap-2">
-          {overallScore != null ? (
-            <span className="rounded-full border border-zinc-600 bg-zinc-950 px-3 py-0.5 font-mono text-sm text-white">
-              L {overallScore}
-              <span className="ml-1 text-[10px] text-zinc-500">/100</span>
-            </span>
-          ) : null}
-          {conversionScore != null ? (
-            <span className="rounded-full border border-zinc-700 bg-zinc-950 px-3 py-0.5 font-mono text-sm text-white">
-              C {conversionScore}%
-            </span>
-          ) : null}
-          <span className="rounded-full border border-zinc-700 bg-zinc-950 px-2.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-zinc-300">
-            {confidenceLabel(report.confidence)}
-          </span>
-        </div>
-      </div>
-
-      {markerScores.length > 0 ? (
-        <div className="rounded-md border border-zinc-800 bg-black/20 px-3 py-4">
-          <div className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-600">Competency profile</div>
-          <div className="mt-3 flex justify-center overflow-hidden">
-            <MarkerRadarChart
-              markers={markerScores}
-              ariaLabel="Performance competency scores"
-              className="aspect-square h-auto w-full max-w-[15rem]"
-            />
-          </div>
-          <div className="mt-4 grid gap-3 sm:grid-cols-2">
-            {markerScores.map((marker) => (
-              <div
-                key={marker.id}
-                className="rounded-md border border-zinc-800/80 bg-zinc-950/60 px-3 py-2 text-xs"
-              >
-                <div className="flex items-center justify-between gap-2">
-                  <span className="font-medium text-zinc-300">{marker.label}</span>
-                  <span className="font-mono text-sm text-white">{marker.score}</span>
-                </div>
-                <p className="mt-1.5 leading-relaxed text-zinc-500">{marker.rationale}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      ) : null}
-
-      <p className="text-sm leading-relaxed text-zinc-300">{report.summary}</p>
-
-      <div className="space-y-4">
-        {report.strengths.length > 0 ? (
-          <div>
-            <div className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-600">Strengths</div>
-            <ul className="mt-2 space-y-1 text-xs text-zinc-400">
-              {report.strengths.map((item) => (
-                <li key={item} className="flex gap-2">
-                  <span className="text-zinc-500">+</span>
-                  <span>{item}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        ) : null}
-
-        {report.gap_analysis.gaps.length > 0 ? (
-          <div>
-            <div className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-600">Gap analysis</div>
-            <p className="mt-2 text-xs text-zinc-500">{report.gap_analysis.summary}</p>
-            <ul className="mt-3 space-y-2">
-              {report.gap_analysis.gaps.map((gap) => (
-                <li
-                  key={gap.title}
-                  className={`rounded-md border px-3 py-2 text-xs ${severityColor(gap.severity)}`}
-                >
-                  <div className="font-medium">{gap.title}</div>
-                  <p className="mt-1.5 opacity-80">{gap.evidence}</p>
-                  <p className="mt-1.5 opacity-70">Repair: {gap.suggested_repair}</p>
-                </li>
-              ))}
-            </ul>
-          </div>
-        ) : null}
-
-        {report.gap_analysis.next_practice.length > 0 ? (
-          <div>
-            <div className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-600">Next practice</div>
-            <ul className="mt-2 space-y-1 text-xs text-zinc-400">
-              {report.gap_analysis.next_practice.map((item) => (
-                <li key={item}>→ {item}</li>
-              ))}
-            </ul>
-          </div>
-        ) : null}
-      </div>
-    </div>
   );
 }

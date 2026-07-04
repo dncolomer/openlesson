@@ -39,15 +39,17 @@ export async function middleware(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   const pathname = request.nextUrl.pathname;
+  const isEvidenceApiDemoPage = pathname.startsWith("/evidence-api-demo");
+  const isEvidenceApiDemoApi = pathname.startsWith("/api/evidence-api-demo");
 
   // Protected routes - require authentication
-  const protectedRoutes = ["/session", "/dashboard", "/results"];
+  const protectedRoutes = ["/session", "/dashboard", "/results", "/evidence-api-demo"];
   const isProtectedRoute = protectedRoutes.some((route) =>
     pathname.startsWith(route)
   );
 
   // Public routes that should skip all auth logic
-  const publicRoutes = ["/pricing", "/ghl-score/session"];
+  const publicRoutes = ["/pricing", "/tap/session"];
   const isPublicRoute = publicRoutes.some((route) =>
     pathname.startsWith(route)
   );
@@ -64,6 +66,25 @@ export async function middleware(request: NextRequest) {
     const redirectUrl = new URL("/login", request.url);
     redirectUrl.searchParams.set("redirect", pathname);
     return NextResponse.redirect(redirectUrl);
+  }
+
+  if (isEvidenceApiDemoApi && !user) {
+    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+  }
+
+  if ((isEvidenceApiDemoPage || isEvidenceApiDemoApi) && user) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("is_admin")
+      .eq("id", user.id)
+      .single();
+
+    if (!profile?.is_admin) {
+      if (isEvidenceApiDemoApi) {
+        return NextResponse.json({ error: "Admin access required" }, { status: 403 });
+      }
+      return NextResponse.redirect(new URL("/dashboard", request.url));
+    }
   }
 
   if (isAuthRoute && user) {

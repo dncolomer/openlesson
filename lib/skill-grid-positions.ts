@@ -82,6 +82,25 @@ export function withSkillGridPositions<T extends { id: string }>(
   });
 }
 
+/** Backfill missing coordinates in-memory using the same radial rules as the grid UI. */
+export function ensureSkillGridNodePositions(nodes: SkillGridNode[]): {
+  nodes: SkillGridNode[];
+  changed: boolean;
+} {
+  const positions = getSkillGridPositions(nodes);
+  let changed = false;
+
+  const nextNodes = nodes.map((node) => {
+    if (node.position_x != null && node.position_y != null) return node;
+    const position = positions.get(node.id);
+    if (!position) return node;
+    changed = true;
+    return { ...node, ...position };
+  });
+
+  return { nodes: nextNodes, changed };
+}
+
 export async function persistSkillGridPositions(
   supabase: SupabaseClient,
   nodes: SkillGridNode[],

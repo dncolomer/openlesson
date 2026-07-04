@@ -5,9 +5,13 @@ import { useI18n, translateWithLocale } from "@/lib/i18n";
 import { useTypewriter } from "@/lib/useTypewriter";
 import { ListenButton } from "./ListenButton";
 
+type TutorWelcomeVariant = "ile" | "tap";
+
 interface TutorWelcomeProps {
   /** Tutor display name (used for the avatar monogram & greeting). */
   tutorName: string;
+  /** ILE block welcome vs TAP demonstration welcome copy. */
+  variant?: TutorWelcomeVariant;
   /** Fired when the user clicks the Play button. */
   onPlay: () => void;
   /** When true, shows a spinner on the Play button (probe fetch in-flight). */
@@ -39,6 +43,7 @@ interface TutorWelcomeProps {
  */
 export function TutorWelcome({
   tutorName,
+  variant = "ile",
   onPlay,
   isStarting = false,
   instant = false,
@@ -48,6 +53,7 @@ export function TutorWelcome({
 }: TutorWelcomeProps) {
   const { locale: uiLocale } = useI18n();
   const avatarInitial = (tutorName || "Helios").charAt(0).toUpperCase();
+  const keyPrefix = variant === "tap" ? "tap.welcome" : "welcome";
 
   // The welcome surface (typed greeting + button labels) follows the
   // *tutoring* language — the language the tutor will actually speak to
@@ -61,9 +67,15 @@ export function TutorWelcome({
   // Mobile uses a different "panelIntro" line because there is no left/right
   // panel layout — tools and plan live on swipe tabs instead.
   const lines = [
-    tt("welcome.greeting", { name: tutorName }),
-    tt(compactMobile ? "welcome.panelIntroMobile" : "welcome.panelIntro"),
-    tt("welcome.callToAction"),
+    tt(`${keyPrefix}.greeting`, { name: tutorName }),
+    tt(
+      variant === "tap"
+        ? `${keyPrefix}.panelIntro`
+        : compactMobile
+          ? `${keyPrefix}.panelIntroMobile`
+          : `${keyPrefix}.panelIntro`,
+    ),
+    tt(`${keyPrefix}.callToAction`),
   ];
   const fullText = lines.join("\n\n");
 
@@ -75,7 +87,7 @@ export function TutorWelcome({
     onDone: () => setTypingDone(true),
   });
 
-  const playLabel = isStarting ? tt("welcome.starting") : tt("welcome.play");
+  const playLabel = isStarting ? tt(`${keyPrefix}.starting`) : tt(`${keyPrefix}.play`);
 
   return (
     <div className="flex-1 min-h-0 flex flex-col items-center justify-center gap-6 overflow-y-auto px-4 py-6 text-center">
@@ -110,10 +122,10 @@ export function TutorWelcome({
         onClick={() => {
           if (!typingDone) skip();
         }}
-        aria-label={typingDone ? undefined : tt("welcome.skipTyping")}
-        className="relative max-w-[52ch] cursor-text text-left focus:outline-none"
+        aria-label={typingDone ? undefined : tt(`${keyPrefix}.skipTyping`)}
+        className="relative w-full max-w-[78ch] cursor-text text-left focus:outline-none px-2"
       >
-        <p className="relative text-lg leading-relaxed tracking-tight text-neutral-200 whitespace-pre-line">
+        <p className="relative text-lg leading-[1.75] tracking-tight text-neutral-200 whitespace-pre-line md:text-xl">
           {displayed}
           {!typingDone && (
             <span

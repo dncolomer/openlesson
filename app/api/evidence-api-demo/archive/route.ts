@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { setWorkspaceArchived } from "@/lib/workspace-archive";
-import { requireWorkspaceOwnerSession } from "@/lib/agent-v2/workspace-session-access";
+import { requireDemoAdminWorkspaceSession } from "@/lib/evidence-api-demo/demo-access";
 
 export const runtime = "nodejs";
 
@@ -18,7 +18,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "planId is required" }, { status: 400 });
     }
 
-    const access = await requireWorkspaceOwnerSession(planId);
+    const access = await requireDemoAdminWorkspaceSession(planId);
     if (access instanceof NextResponse) return access;
 
     const workspace = await setWorkspaceArchived(access.supabase, planId, access.userId, true);

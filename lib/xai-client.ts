@@ -638,6 +638,16 @@ export async function callXaiResponses<T = unknown>(
   return { success: false, error: lastError || "Request failed after retries" };
 }
 
+/** xAI Responses API hard limit for input_file attachments per request. */
+export const XAI_MAX_FILE_ATTACHMENTS = 20;
+
+/** Deduplicate and keep the most recent file IDs within the xAI attachment cap. */
+export function capXaiFileAttachments(fileIds: string[], max = XAI_MAX_FILE_ATTACHMENTS): string[] {
+  const unique = [...new Set(fileIds.filter(Boolean))];
+  if (unique.length <= max) return unique;
+  return unique.slice(-max);
+}
+
 /**
  * Convenience helper: call Responses API with a prompt + uploaded file IDs.
  * Each file_id is attached as an input_file content part — Grok agentically
@@ -649,7 +659,7 @@ export async function callXaiResponsesWithFiles<T = unknown>(
   options: Omit<CallResponsesOptions, "input"> = {} as Omit<CallResponsesOptions, "input">
 ): Promise<CallResponsesResult<T>> {
   const content: ResponsesInputContent[] = [{ type: "input_text", text: prompt }];
-  for (const fileId of fileIds) {
+  for (const fileId of capXaiFileAttachments(fileIds)) {
     content.push({ type: "input_file", file_id: fileId });
   }
 

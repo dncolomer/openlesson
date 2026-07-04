@@ -1,6 +1,7 @@
 import crypto from "crypto";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { callXai, systemMessage, userMessage } from "@/lib/xai-client";
 
 export type GhcScoreMode = "curious";
 
@@ -270,4 +271,34 @@ User session context:
 ${sessionSummary || "No completed session reports found yet."}
 
 ${focusSessionSummary}`;
+}
+
+export function buildTapOpeningQuestionFallback(brief: GhcScoreBrief) {
+  const focusedBlock = brief.nodes.length === 1 ? brief.nodes[0] : null;
+  if (focusedBlock) {
+    return `Teach me what you learned about "${focusedBlock.title}". What is the core idea, and how would you explain it to someone encountering it for the first time?`;
+  }
+  return `Teach me what you learned in "${brief.plan.title}". What stands out as most important, and why?`;
+}
+
+export async function generateTapOpeningQuestion(brief: GhcScoreBrief, minutes: number) {
+  const context = buildGhcScoreInstructions(brief, "curious", minutes);
+  const focusedBlock = brief.nodes.length === 1 ? brief.nodes[0] : null;
+  const target = focusedBlock?.title || brief.plan.title;
+
+  const response = await callXai(
+    [
+      systemMessage(
+        `${context}\n\nGenerate exactly ONE opening Socratic question to start the Think Aloud demonstration. The question must be specific to the workspace/block context above. Invite the learner to demonstrate what they learned — not a generic icebreaker or meta question about their approach. One sentence only. No preamble, no quotes, just the question.`,
+      ),
+      userMessage(`Generate the opening question for demonstrating learning about: ${target}`),
+    ],
+    { maxTokens: 120, temperature: 0.55, fetchTimeout: 30000 },
+  );
+
+  if (response.success && response.data?.trim()) {
+    return response.data.trim();
+  }
+
+  return buildTapOpeningQuestionFallback(brief);
 }

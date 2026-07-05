@@ -45,22 +45,22 @@ describe("flowstack simulation toolkit", () => {
 
   it("provides a demo workspace model file for plan_files upload", () => {
     const file = getDemoWorkspaceModelFile();
-    expect(file.name).toBe("flowstack-eval-model.md");
+    expect(file.name).toBe("nexusfront-eval-model.md");
     expect(file.mime_type).toBe("text/markdown");
     expect(file.data.length).toBeGreaterThan(100);
     const decoded = Buffer.from(file.data, "base64").toString("utf8");
-    expect(decoded).toContain("FlowStack Learning Verification Model");
-    expect(decoded).toContain("Trial onboarding & activation");
+    expect(decoded).toContain("Haven Rise");
+    expect(decoded).toContain("Resource-gathering city growth certification");
     expect(decoded).toContain("overall_score");
     expect(decoded).toContain("integration-skill");
   });
 
   it("tracks distinct evidence actions for coverage", () => {
     let state = createInitialWorldState();
-    const slack = SIMULATION_ACTIONS.find((action) => action.id === "connect_slack")!;
+    const found = SIMULATION_ACTIONS.find((action) => action.id === "commission_outpost")!;
     const wait = SIMULATION_ACTIONS.find((action) => action.id === "wait_1_day")!;
 
-    state = applySimulationAction(state, slack);
+    state = applySimulationAction(state, found);
     state = applySimulationAction(state, wait);
 
     expect(countDistinctEvidenceActions(state)).toBe(1);

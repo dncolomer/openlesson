@@ -4,7 +4,11 @@ import {
   buildPerformanceReportInstructions,
   emptyPerformanceReport,
   EXAMPLE_PERFORMANCE_REPORT,
+  isPlatformRemediationSuggestion,
+  normalizePerformanceReport,
+  PERFORMANCE_REMEDIATION_GUARDRAILS,
   PERFORMANCE_REPORT_SCHEMA,
+  sanitizeRemediationStrings,
 } from "@/lib/agent-v2/performance-report";
 
 describe("PERFORMANCE_REPORT_SCHEMA", () => {
@@ -27,6 +31,8 @@ describe("buildPerformanceReportInstructions", () => {
     expect(instructions).toContain("gap_analysis.gaps");
     expect(instructions).toContain("gap_analysis.next_steps");
     expect(instructions).toContain("spider/radar");
+    expect(instructions).toContain(PERFORMANCE_REMEDIATION_GUARDRAILS);
+    expect(instructions).toContain("NEVER mention OpenLesson platform mechanics");
   });
 
   it("embeds authoritative workspace conversion goal when provided", () => {
@@ -60,6 +66,46 @@ describe("emptyPerformanceReport", () => {
     expect(report.gap_analysis.gaps).toEqual([]);
     expect(report.gap_analysis.next_steps.directions.length).toBeGreaterThan(0);
     expect(report.gap_analysis.next_steps.events.length).toBeGreaterThan(0);
+    expect(report.summary).not.toMatch(/TAP/i);
+    for (const event of report.gap_analysis.next_steps.events) {
+      expect(isPlatformRemediationSuggestion(event)).toBe(false);
+    }
+  });
+});
+
+describe("remediation guardrails", () => {
+  it("flags platform-specific remediation language", () => {
+    expect(isPlatformRemediationSuggestion("Schedule a TAP review on block 3")).toBe(true);
+    expect(isPlatformRemediationSuggestion("Complete the workspace block")).toBe(true);
+    expect(isPlatformRemediationSuggestion("Route energy grid across sectors")).toBe(false);
+  });
+
+  it("strips platform suggestions during normalization", () => {
+    const normalized = normalizePerformanceReport({
+      ...EXAMPLE_PERFORMANCE_REPORT,
+      suggestions: ["Run a TAP session", "Upload tool traces for onboarding"],
+      gap_analysis: {
+        ...EXAMPLE_PERFORMANCE_REPORT.gap_analysis,
+        next_steps: {
+          directions: ["Finish block onboarding"],
+          events: ["deploy_scout_drone", "Issue a Think Aloud Protocol session"],
+        },
+        gaps: [
+          {
+            title: "Missing scout coverage",
+            evidence: "No scout events in trace.",
+            severity: "medium",
+            suggested_repair: "Complete the scouting block in OpenLesson",
+          },
+        ],
+      },
+    });
+
+    expect(normalized.suggestions).toEqual(["Upload tool traces for onboarding"]);
+    expect(normalized.gap_analysis.next_steps.directions).toEqual([]);
+    expect(normalized.gap_analysis.next_steps.events).toEqual(["deploy_scout_drone"]);
+    expect(normalized.gap_analysis.gaps[0]?.suggested_repair).not.toContain("block");
+    expect(sanitizeRemediationStrings(["connect_slack", "run TAP"])).toEqual(["connect_slack"]);
   });
 });
 

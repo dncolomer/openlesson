@@ -5,8 +5,8 @@ import { countDistinctEvidenceActions, getActionsByCategory } from "@/lib/eviden
 import { createInitialWorldState } from "@/lib/evidence-api-demo/simulation";
 
 describe("evidence API demo registry", () => {
-  it("exposes multiple distinct verification scenarios with the same structure", () => {
-    expect(EVIDENCE_API_DEMOS.length).toBeGreaterThanOrEqual(4);
+  it("exposes interactive verification scenarios with the same structure", () => {
+    expect(EVIDENCE_API_DEMOS.length).toBe(2);
 
     const useCases = new Set<string>();
 
@@ -27,19 +27,20 @@ describe("evidence API demo registry", () => {
       expect(evidenceActions.length).toBeGreaterThan(18);
       expect(timeTools.length).toBe(createTimeToolActions().length);
       expect(demo.categoryOrder).toContain("simulation_tools");
+      expect(demo.simulatorMode).toMatch(/^(game|app)$/);
       useCases.add(demo.useCase);
     }
 
     expect(useCases.size).toBe(EVIDENCE_API_DEMOS.length);
   });
 
-  it("resolves unknown demo ids to FlowStack", () => {
-    expect(resolveDemoId("unknown-demo").id).toBe("flowstack");
-    expect(getDemoById("ledgerline")?.productName).toBe("LedgerLine");
+  it("resolves unknown demo ids to Haven Rise", () => {
+    expect(resolveDemoId("unknown-demo").id).toBe("nexusfront");
+    expect(getDemoById("gridworks")?.productName).toBe("GridWorks");
   });
 
   it("tracks coverage per demo definition", () => {
-    const demo = getDemoById("metricpulse");
+    const demo = getDemoById("gridworks");
     expect(demo).toBeDefined();
 
     const action = getActionsByCategory(demo!, "integrations")[0];

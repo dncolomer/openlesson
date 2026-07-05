@@ -278,7 +278,8 @@ When answering:
 2. Separate demonstrated strengths from emerging gaps.
 3. Be constructive and actionable.
 4. Format responses in markdown.
+5. When recommending next actions, use product- and workflow-specific language only — never suggest Think Aloud Protocol (TAP) sessions, completing workspace blocks, ILE practice, or other OpenLesson platform mechanics.
 
-If evidence is sparse, say what is missing and what to collect next.`;
+If evidence is sparse, say what product/tool evidence is missing and what observable actions to collect next.`;
 }
 

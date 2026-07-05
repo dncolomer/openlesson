@@ -250,6 +250,8 @@ describe("buildEvidenceSchemaInstructions", () => {
     expect(instructions).toContain("performance_report_contract");
     expect(instructions).toContain("marker_scores");
     expect(instructions).toContain("Discovery");
+    expect(instructions).toContain("product-independent");
+    expect(instructions).toContain("never recommend TAP sessions");
   });
 });
 

@@ -215,7 +215,7 @@ Required content:
 8. **Performance (required section)** — document POST ${performancePath} report mode. Every report MUST include:
    - overall_score (0-100 integer readiness score)
    - marker_scores (4-8 competency axes for spider/radar visualization: id, label, score, rationale, optional block_id)
-   - gap_analysis with gaps[] (title, evidence, severity low|medium|high, suggested_repair) and next_steps { directions[], events[] }
+   - gap_analysis with gaps[] (title, evidence, severity low|medium|high, suggested_repair) and next_steps { directions[], events[] } — remediation must be product/workflow-specific; never TAP, block completion, ILE, or OpenLesson platform tasks
    - summary, strengths, growth_areas, suggestions, confidence
    - Reference performance_report_contract from the evidence spec API for the machine-readable contract and example_report
    - Include a full JSON example response with overall_score, marker_scores, and at least one gap

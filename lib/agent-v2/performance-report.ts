@@ -6,6 +6,27 @@ export interface PerformanceMarkerScore {
   block_id?: string | null;
 }
 
+/** Shared guardrails for score-card remediation — import into other agent prompts. */
+export const PERFORMANCE_REMEDIATION_GUARDRAILS = `Remediation output rules (gap_analysis.gaps[].suggested_repair, gap_analysis.next_steps, suggestions, and any growth_areas that recommend action):
+- NEVER mention OpenLesson platform mechanics: Think Aloud Protocol (TAP), TAP sessions or links, ILE, Integrated Learning Environment, workspace blocks, completing or finishing blocks, block completion, or returning to OpenLesson.
+- Write remediation in product- and workflow-specific language — the same vocabulary as real tool events and domain tasks (e.g. "connect Slack", "route_energy_grid", "document tradeoff before config change").
+- gap_analysis.next_steps.events must be granular, observable product/tool actions or event verbs — not platform tasks.
+- gap_analysis.next_steps.directions must be intermediate competency goals in domain language — not "complete block X" or "run a TAP".
+- TAP, ILE, blocks, and session artifacts may inform scoring as INPUT evidence — but must never appear as OUTPUT recommendations.`;
+
+const PLATFORM_REMEDIATION_PATTERN =
+  /\b(tap|think\s+aloud(?:\s+protocol)?|ile|integrated\s+learning\s+environment|openlesson)\b|(?:complete|finish)\s+(?:the\s+)?(?:workspace\s+)?blocks?\b|block\s+completion|issue\s+(?:a\s+)?tap|run\s+(?:a\s+)?tap|schedule\s+(?:a\s+)?tap/i;
+
+export function isPlatformRemediationSuggestion(text: string): boolean {
+  return PLATFORM_REMEDIATION_PATTERN.test(text.trim());
+}
+
+export function sanitizeRemediationStrings(items: string[]): string[] {
+  return items
+    .map((item) => (typeof item === "string" ? item.trim() : ""))
+    .filter((item) => item.length > 0 && !isPlatformRemediationSuggestion(item));
+}
+
 export interface PerformanceGapItem {
   title: string;
   evidence: string;
@@ -97,12 +118,14 @@ export const PERFORMANCE_NEXT_STEPS_SCHEMA = {
     directions: {
       type: "array",
       items: { type: "string" },
-      description: "High-level direction and intermediate goals",
+      description:
+        "High-level domain goals toward readiness/conversion — product/workflow language only; never TAP, blocks, or OpenLesson platform tasks",
     },
     events: {
       type: "array",
       items: { type: "string" },
-      description: "Granular observable actions or events to complete",
+      description:
+        "Granular observable product/tool actions or event verbs — never TAP sessions, block completion, or ILE",
     },
   },
   required: ["directions", "events"],
@@ -115,7 +138,11 @@ export const PERFORMANCE_GAP_ITEM_SCHEMA = {
     title: { type: "string" },
     evidence: { type: "string" },
     severity: { type: "string", enum: ["low", "medium", "high"] },
-    suggested_repair: { type: "string" },
+    suggested_repair: {
+      type: "string",
+      description:
+        "Product- or workflow-specific repair action — never TAP, block completion, ILE, or OpenLesson platform mechanics",
+    },
   },
   required: ["title", "evidence", "severity", "suggested_repair"],
   additionalProperties: false,
@@ -231,7 +258,7 @@ export const EXAMPLE_PERFORMANCE_REPORT: PerformanceReport = {
       events: [
         "Re-run the workflow with explicit before/after metrics",
         "Upload screenshots at each configuration checkpoint",
-        "Schedule a 15-minute TAP review on the highest-risk block",
+        "Document expected impact before the next configuration change",
       ],
     },
   },
@@ -267,7 +294,7 @@ export function buildPerformanceReportContract(baseUrl?: string): PerformanceRep
       type: "integer",
       range: "0-100",
       description:
-        "Learning verification score synthesized from workspace evidence, TAP (Think Aloud Protocol) results, and block competencies.",
+        "Learning verification score synthesized from workspace evidence, session artifacts, and competency signals.",
     },
     conversion_score: {
       type: "integer",
@@ -302,7 +329,7 @@ export function buildPerformanceReportContract(baseUrl?: string): PerformanceRep
 export function emptyPerformanceReport(message?: string): PerformanceReport {
   const summary =
     message ||
-    "No performance evidence is available yet. Collect TAP (Think Aloud Protocol) sessions, workspace evidence uploads, or linked session reports before generating a gap analysis.";
+    "No performance evidence is available yet. Collect product tool events, workspace evidence uploads, or linked session reports before generating a gap analysis.";
 
   return {
     overall_score: 0,
@@ -317,15 +344,17 @@ export function emptyPerformanceReport(message?: string): PerformanceReport {
       gaps: [],
       next_steps: {
         directions: [
-          "Establish baseline performance evidence across priority workspace blocks",
+          "Establish baseline competency evidence across priority workflow milestones",
         ],
         events: [
-          "Upload tool usage or screenshots for key blocks",
-          "Issue a Think Aloud Protocol (TAP) session on the highest-risk block",
+          "Upload tool usage traces for the primary workflow",
+          "Capture screenshots at each major configuration checkpoint",
         ],
       },
     },
-    suggestions: ["POST /api/v2/agent/workspaces/{workspace_id}/evidence with type tool, screen, video, or eeg"],
+    suggestions: [
+      "Upload the next observable product action as a tool evidence event",
+    ],
     confidence: "emerging",
   };
 }
@@ -356,14 +385,16 @@ Required scoring outputs:
    - block_id (optional): tie axis to a workspace block when scoped
 5. gap_analysis.gaps — concrete deficiencies only (title, evidence, severity low|medium|high, suggested_repair). List every meaningful gap found; use an empty array only when evidence is truly insufficient to name gaps. Do not duplicate next steps as gaps.
 6. gap_analysis.next_steps — always include, separate from gaps:
-   - directions: 2-5 high-level outcomes or intermediate goals toward readiness/conversion
-   - events: 3-8 granular, observable actions (specific uploads, sessions, checkpoints, tool events)
+   - directions: 2-5 high-level outcomes or intermediate goals toward readiness/conversion (domain/product language)
+   - events: 3-8 granular, observable product/tool actions or event verbs from the learner's real workflow
+7. suggestions — short product/workflow follow-ups; same remediation rules as gaps and next_steps.
 
-Prioritize:
-- TAP (Think Aloud Protocol) results and gap_analysis when present (align marker_scores with TAP markers when available)
-- ILE (Integrated Learning Environment) practice outcomes when present
+${PERFORMANCE_REMEDIATION_GUARDRAILS}
+
+Evidence inputs to weigh when scoring (not remediation outputs):
 - Tool usage, screenshots, video, and EEG evidence
-- Session reports and block descriptions
+- Session reports and competency descriptions from the eval definition
+- Think Aloud Protocol (TAP) and ILE traces when present — use for scoring only
 - Uploaded workspace files
 
 Be honest when evidence is thin. Severity should reflect business risk, not politeness. Lower overall_score and marker scores when evidence is sparse.`;
@@ -380,13 +411,20 @@ export function normalizePerformanceGapAnalysis(
   gapAnalysis: Partial<PerformanceGapAnalysis> | null | undefined,
 ): PerformanceGapAnalysis {
   const gaps = Array.isArray(gapAnalysis?.gaps)
-    ? gapAnalysis.gaps.filter(
-        (gap): gap is PerformanceGapItem =>
-          Boolean(gap) &&
-          typeof gap.title === "string" &&
-          typeof gap.evidence === "string" &&
-          typeof gap.suggested_repair === "string",
-      )
+    ? gapAnalysis.gaps
+        .filter(
+          (gap): gap is PerformanceGapItem =>
+            Boolean(gap) &&
+            typeof gap.title === "string" &&
+            typeof gap.evidence === "string" &&
+            typeof gap.suggested_repair === "string",
+        )
+        .map((gap) => ({
+          ...gap,
+          suggested_repair: isPlatformRemediationSuggestion(gap.suggested_repair)
+            ? "Repeat the workflow with explicit checkpoints and document decisions in product terms."
+            : gap.suggested_repair,
+        }))
     : [];
 
   const summary =
@@ -400,20 +438,20 @@ export function normalizePerformanceGapAnalysis(
   let next_steps: PerformanceNextSteps;
   if (rawNextSteps && typeof rawNextSteps === "object") {
     next_steps = {
-      directions: normalizeStringList(rawNextSteps.directions),
-      events: normalizeStringList(rawNextSteps.events),
+      directions: sanitizeRemediationStrings(normalizeStringList(rawNextSteps.directions)),
+      events: sanitizeRemediationStrings(normalizeStringList(rawNextSteps.events)),
     };
   } else {
     next_steps = {
       directions: [],
-      events: normalizeStringList(gapAnalysis?.next_practice),
+      events: sanitizeRemediationStrings(normalizeStringList(gapAnalysis?.next_practice)),
     };
   }
 
   const legacyPractice =
     next_steps.directions.length > 0 || next_steps.events.length > 0
       ? [...next_steps.directions, ...next_steps.events]
-      : normalizeStringList(gapAnalysis?.next_practice);
+      : sanitizeRemediationStrings(normalizeStringList(gapAnalysis?.next_practice));
 
   return {
     summary,
@@ -424,8 +462,11 @@ export function normalizePerformanceGapAnalysis(
 }
 
 export function normalizePerformanceReport(report: PerformanceReport): PerformanceReport {
+  const gap_analysis = normalizePerformanceGapAnalysis(report.gap_analysis);
   return {
     ...report,
-    gap_analysis: normalizePerformanceGapAnalysis(report.gap_analysis),
+    growth_areas: sanitizeRemediationStrings(report.growth_areas ?? []),
+    suggestions: sanitizeRemediationStrings(report.suggestions ?? []),
+    gap_analysis,
   };
 }

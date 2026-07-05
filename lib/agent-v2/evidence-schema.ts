@@ -307,7 +307,7 @@ export function buildEvidenceSchemaInstructions(
 
 You are an OpenLesson evidence architect. Produce a **formal evidence specification** that tells integrators exactly how to submit tool usage and related artifacts for learning verification via POST .../evidence and evaluation via POST .../performance.
 
-Use the full workspace context: attached JSON summary, block titles/descriptions, existing evidence patterns, plan files, and Think Aloud Protocol (TAP) session signals. Route remediation gaps to ILE (Integrated Learning Environment) practice where appropriate.
+Use the full workspace context: attached JSON summary, block titles/descriptions, existing evidence patterns, plan files, and Think Aloud Protocol (TAP) session signals when present. TAP and ILE may inform scoring — but performance report remediation (gaps, next_steps, suggestions) must stay product-independent: never recommend TAP sessions, block completion, ILE, or other OpenLesson platform mechanics.
 
 ${formatWorkspaceContextSummary(workspacePayload)}
 
@@ -337,8 +337,9 @@ Output rules:
    - conversion_score: integer 0-100 estimated conversion likelihood (distinct from learning verification)
    - conversion_goal: string defining what conversion means for this workspace
    - marker_scores: 4-8 competency axes (id, label, score, rationale, optional block_id) for spider/radar visualization — derive labels from workspace blocks and eval definition
-   - gap_analysis: required gaps array with title, evidence, severity, suggested_repair
-   - example_report: realistic example with overall_score, conversion_score, conversion_goal, marker_scores, and at least one gap when evidence would support it
+   - gap_analysis: required gaps array with title, evidence, severity, suggested_repair — remediation must use product/workflow language only (never TAP, block completion, or ILE)
+   - gap_analysis.next_steps: directions (domain goals) and events (granular product/tool actions) — same remediation rules
+   - example_report: realistic example with overall_score, conversion_score, conversion_goal, marker_scores, and at least one gap when evidence would support it; example remediation must be OpenLesson-independent
 7. "collection_guidance" explains cadence, checkpoint timing, block-scoped vs workspace-global uploads, and that **more evidence submitted improves learning verification and gap analysis**. Encourage ongoing uploads, not one-time dumps.
 8. "continuous_evaluation_summary" must state clearly that:
    - This evidence spec is a snapshot derived from current workspace context and evidence history

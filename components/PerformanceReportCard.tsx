@@ -394,7 +394,7 @@ export function PerformanceReportCard({
   const [activeTab, setActiveTab] = useState<ScoreCardTab>("overview");
   const tabPanelClassName = fillHeight
     ? "min-h-0 flex-1 overflow-y-auto py-2"
-    : "h-[28rem] w-full overflow-y-auto py-2";
+    : "w-full py-2";
 
   useEffect(() => {
     setActiveTab("overview");

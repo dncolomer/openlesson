@@ -35,7 +35,17 @@ import {
   isCustomDemoId,
 } from "@/lib/evidence-api-demo/custom-demo";
 import type { EvidenceApiDemoDefinition } from "@/lib/evidence-api-demo/demo-definition";
+import { DemoVerificationPills } from "@/components/evidence-demo/DemoVerificationPills";
+import { GridworksApp } from "@/components/evidence-demo/GridworksApp";
+import { NexusFrontGame } from "@/components/evidence-demo/NexusFrontGame";
 import { EVIDENCE_API_DEMOS, resolveDemoId } from "@/lib/evidence-api-demo/demos";
+import { isAppDemo, isGameDemo, isInteractiveDemo } from "@/lib/evidence-api-demo/game-tips";
+import {
+  normalizeDemoSessionUrl,
+  openDemoSessionUrl,
+} from "@/lib/evidence-api-demo/demo-session-url";
+import { selectPracticeBlock, selectTapValidationBlock } from "@/lib/evidence-api-demo/tap-validation";
+import { getDemoVerificationPills } from "@/lib/evidence-api-demo/verification-pills";
 import {
   applyMcpSimulationEvent,
   applySimulationAction,
@@ -71,14 +81,13 @@ type CustomInputMode = "prompt" | "import";
 type SimulatorSubview = "events" | "mcp";
 type DemoView = "simulator" | "evaluation" | "score";
 
-const DEMO_TAB_STAGE = "h-[48rem] w-full min-w-0";
+const DEMO_TAB_STAGE = "w-full min-w-0";
 const DEMO_TAB_PANEL =
-  "box-border flex h-full w-full min-w-full max-w-full flex-col overflow-hidden rounded-lg border border-zinc-800 bg-zinc-950/70";
+  "box-border flex w-full min-w-full max-w-full flex-col rounded-lg border border-zinc-800 bg-zinc-950/70";
 const DEMO_TAB_HEADER = "shrink-0 border-b border-zinc-800 px-5 py-4 sm:px-6";
-const DEMO_TAB_BODY =
-  "flex h-[38rem] w-full flex-col overflow-hidden p-5 sm:p-6";
-const DEMO_TAB_BODY_SCROLL =
-  "flex h-[38rem] w-full flex-col gap-6 overflow-y-auto p-5 sm:p-6";
+const DEMO_TAB_BODY = "flex w-full flex-col p-5 sm:p-6";
+const DEMO_TAB_BODY_INTERACTIVE = "flex w-full flex-col p-0";
+const DEMO_TAB_BODY_CONTENT = "flex w-full flex-col gap-6 p-5 sm:p-6";
 type SkillSnapshot = {
   id: string;
   skill_name: string;
@@ -164,7 +173,7 @@ function loadPersistedState(): PersistedDemoState | null {
     return {
       planId: parsed.planId,
       sessionId: parsed.sessionId,
-      demoId: parsed.demoId ?? "flowstack",
+      demoId: parsed.demoId ?? "nexusfront",
       worldState: parsed.worldState ?? {
         ...createInitialWorldState(),
         completedActions: legacySteps,
@@ -258,6 +267,11 @@ export function EvidenceApiDemo() {
   const [evidenceCount, setEvidenceCount] = useState(0);
   const [lastSkillEvidenceCount, setLastSkillEvidenceCount] = useState<number | null>(null);
   const [skillRegenHint, setSkillRegenHint] = useState(false);
+  const [isResetting, setIsResetting] = useState(false);
+  const [tapLinkUrl, setTapLinkUrl] = useState<string | null>(null);
+  const [isCreatingTapLink, setIsCreatingTapLink] = useState(false);
+  const [ileSessionUrl, setIleSessionUrl] = useState<string | null>(null);
+  const [isCreatingIleSession, setIsCreatingIleSession] = useState(false);
   const [activeView, setActiveView] = useState<DemoView>("simulator");
   const [backgroundImage, setBackgroundImage] = useState(() =>
     aestheticImageForId("evidence-api-demo")
@@ -415,6 +429,10 @@ export function EvidenceApiDemo() {
     setCustomInputMode("prompt");
     setError("");
     resetMcpSimulationState();
+    setTapLinkUrl(null);
+    setIsCreatingTapLink(false);
+    setIleSessionUrl(null);
+    setIsCreatingIleSession(false);
     setPhase("creating");
     clearPersistedState();
     const newSessionId = createSessionId();
@@ -563,6 +581,15 @@ export function EvidenceApiDemo() {
         setSkillRegenHint(true);
       }
 
+      if (
+        isInteractiveDemo(activeDemo) &&
+        action.kind === "evidence" &&
+        nextEvidenceCount >= 3 &&
+        nextEvidenceCount % 3 === 0
+      ) {
+        void handleRequestPerformance({ switchView: false });
+      }
+
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to upload evidence");
     } finally {
@@ -704,7 +731,7 @@ export function EvidenceApiDemo() {
     }
   };
 
-  const handleRequestPerformance = async () => {
+  const handleRequestPerformance = async (options?: { switchView?: boolean }) => {
     if (!planId || isReporting) return;
     if (evidenceCount < 1) {
       setError("Run at least one simulation action to upload evidence before requesting a score.");
@@ -717,6 +744,7 @@ export function EvidenceApiDemo() {
     const snapshotEvidenceCount = evidenceCount;
     const snapshotActionCount = actionCount;
     const snapshotSimulatedDays = worldState.simulatedDays;
+    const switchView = options?.switchView !== false;
 
     try {
       const res = await fetchWithTimeout(
@@ -737,7 +765,9 @@ export function EvidenceApiDemo() {
       const normalizedReport = normalizePerformanceReport(data.report);
       setReport(normalizedReport);
       setPerformanceResponseRaw({ ...data, report: normalizedReport });
-      setActiveView("score");
+      if (switchView) {
+        setActiveView("score");
+      }
       setEvidenceCount(data.evidence_summary.evidence_artifacts);
       setReportHistory((prev) => [
         ...prev,
@@ -1026,7 +1056,7 @@ export function EvidenceApiDemo() {
     }
   };
 
-  const handleReset = () => {
+  const resetLocalDemoState = () => {
     clearPersistedState();
     setPhase("picker");
     setDemoId(null);
@@ -1056,8 +1086,120 @@ export function EvidenceApiDemo() {
     setEvidenceCount(0);
     setLastSkillEvidenceCount(null);
     setSkillRegenHint(false);
-    setError("");
+    setTapLinkUrl(null);
+    setIsCreatingTapLink(false);
+    setIleSessionUrl(null);
+    setIsCreatingIleSession(false);
     setActiveView("simulator");
+  };
+
+  const handleOpenIlePractice = async () => {
+    if (!planId || isCreatingIleSession) return;
+
+    if (ileSessionUrl) {
+      openDemoSessionUrl(ileSessionUrl);
+      return;
+    }
+
+    setIsCreatingIleSession(true);
+    setError("");
+
+    try {
+      const block = selectPracticeBlock(blocks);
+      const res = await fetchWithTimeout("/api/evidence-api-demo/ile-session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          planId,
+          ...(block?.id ? { blockId: block.id } : {}),
+        }),
+      });
+      const data = await readJsonResponse<{ session_url?: string; error?: string }>(res);
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to create ILE practice session");
+      }
+      if (!data.session_url) {
+        throw new Error("ILE session URL missing from response");
+      }
+
+      const sessionUrl = normalizeDemoSessionUrl(data.session_url);
+      setIleSessionUrl(sessionUrl);
+      openDemoSessionUrl(sessionUrl);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to open ILE practice");
+    } finally {
+      setIsCreatingIleSession(false);
+    }
+  };
+
+  const handleOpenTapValidation = async () => {
+    if (!planId || isCreatingTapLink) return;
+
+    if (tapLinkUrl) {
+      openDemoSessionUrl(tapLinkUrl);
+      return;
+    }
+
+    setIsCreatingTapLink(true);
+    setError("");
+
+    try {
+      const block = selectTapValidationBlock(blocks);
+      const res = await fetchWithTimeout("/api/evidence-api-demo/tap-link", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          planId,
+          ...(block?.id ? { blockId: block.id } : {}),
+        }),
+      });
+      const data = await readJsonResponse<{ private_url?: string; error?: string }>(res);
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to create TAP validation link");
+      }
+      if (!data.private_url) {
+        throw new Error("TAP validation link missing from response");
+      }
+
+      const privateUrl = normalizeDemoSessionUrl(data.private_url);
+      setTapLinkUrl(privateUrl);
+      openDemoSessionUrl(privateUrl);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to create TAP validation link");
+    } finally {
+      setIsCreatingTapLink(false);
+    }
+  };
+
+  const handleReset = async () => {
+    const workspaceToArchive = planId;
+    setIsResetting(true);
+
+    if (workspaceToArchive) {
+      try {
+        const res = await fetchWithTimeout("/api/evidence-api-demo/archive", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ planId: workspaceToArchive }),
+        });
+        const data = await readJsonResponse<{ error?: string }>(res);
+        if (!res.ok) {
+          throw new Error(data.error || "Failed to archive workspace");
+        }
+        setError("");
+      } catch (err) {
+        setError(
+          err instanceof Error
+            ? `Workspace could not be archived: ${err.message}`
+            : "Workspace could not be archived."
+        );
+      }
+    } else {
+      setError("");
+    }
+
+    resetLocalDemoState();
+    setIsResetting(false);
   };
 
   const showViewSwitcher = phase === "simulating";
@@ -1079,7 +1221,7 @@ export function EvidenceApiDemo() {
         backgroundImage={backgroundImage}
         title="Sign in to run the demo"
         body="The Evidence API demo creates a real verification workspace and uploads live evidence. Admin access is required to continue."
-        primaryHref="/login?redirect=/evidence-api-demo"
+        primaryHref="/login?redirect=/demo"
         primaryLabel="Sign in"
         secondaryHref="/dashboard"
         secondaryLabel="Back to dashboard"
@@ -1105,7 +1247,7 @@ export function EvidenceApiDemo() {
     <DemoFlowShell backgroundImage={backgroundImage}>
       <Navbar
         breadcrumbs={[
-          { label: "Evidence API Demo", href: "/evidence-api-demo" },
+          { label: "Demo", href: "/demo" },
         ]}
         showNav={false}
       />
@@ -1117,12 +1259,13 @@ export function EvidenceApiDemo() {
               Interactive demo
             </div>
             <h1 className="mt-2 text-3xl font-medium tracking-[-1px] text-white sm:text-4xl">
-              Evidence API in action
+              openLesson in action
             </h1>
             <p className="mt-3 max-w-2xl text-sm leading-relaxed text-zinc-400 sm:text-base">
-              Pick a verification scenario — trial onboarding, month-end close, launch audit, or escalation
-              certification — then watch OpenLesson score competency from live evidence. Every score card separates
-              learning gaps from next steps: intermediate goals plus granular events to run next.
+              Pick a verification scenario — trial onboarding, month-end close, or a resource-gathering city growth
+              game — then watch OpenLesson score competency from live
+              evidence. Every score card separates learning gaps from next steps: intermediate goals plus granular
+              events to run next.
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -1153,9 +1296,11 @@ export function EvidenceApiDemo() {
                 </Link>
                 <button
                   type="button"
-                  onClick={handleReset}
-                  className="rounded-md border border-zinc-700 px-3 py-2 text-xs text-zinc-300 transition hover:border-zinc-500 hover:text-white"
+                  onClick={() => void handleReset()}
+                  disabled={isResetting}
+                  className="inline-flex items-center gap-1.5 rounded-md border border-zinc-700 px-3 py-2 text-xs text-zinc-300 transition hover:border-zinc-500 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
                 >
+                  {isResetting ? <Loader2 className="size-3 animate-spin" /> : null}
                   Reset demo setup
                 </button>
               </>
@@ -1195,7 +1340,7 @@ export function EvidenceApiDemo() {
           />
         ) : null}
 
-        {error && phase !== "picker" ? (
+        {error ? (
           <p className="mb-4 rounded-md border border-zinc-600 bg-zinc-950 px-4 py-3 text-sm text-zinc-200">
             {error}
           </p>
@@ -1215,6 +1360,10 @@ export function EvidenceApiDemo() {
             customPrompt={customPrompt}
             onCustomPromptChange={setCustomPrompt}
             customPromptMinLength={CUSTOM_PROMPT_MIN_LENGTH}
+            evidenceCount={evidenceCount}
+            report={report}
+            isReporting={isReporting}
+            onRequestPerformance={() => void handleRequestPerformance()}
           />
         ) : null}
 
@@ -1255,6 +1404,15 @@ export function EvidenceApiDemo() {
                 onSimulateMcpEvent={handleSimulateMcpEvent}
                 onSimulateAllMcpEvents={handleSimulateAllMcpEvents}
                 onCustomInputModeChange={setCustomInputMode}
+                evidenceCount={evidenceCount}
+                report={report}
+                isReporting={isReporting}
+                workspaceConversionGoal={performanceResponseRaw?.workspace_conversion_goal}
+                conversionGoalSource={performanceResponseRaw?.conversion_goal_source}
+                onRequestPerformance={() => void handleRequestPerformance()}
+                tapLinkUrl={tapLinkUrl}
+                isCreatingTapLink={isCreatingTapLink}
+                onOpenTapValidation={() => void handleOpenTapValidation()}
               />
             ) : null}
 
@@ -1286,7 +1444,14 @@ export function EvidenceApiDemo() {
                 report={report}
                 performanceResponse={performanceResponseRaw}
                 reportHistory={reportHistory}
-                onRequestPerformance={handleRequestPerformance}
+                onRequestPerformance={() => void handleRequestPerformance()}
+                showIntegrationActions={isCustomDemoId(demoId)}
+                ileSessionUrl={ileSessionUrl}
+                isCreatingIleSession={isCreatingIleSession}
+                tapLinkUrl={tapLinkUrl}
+                isCreatingTapLink={isCreatingTapLink}
+                onOpenIlePractice={() => void handleOpenIlePractice()}
+                onOpenTapValidation={() => void handleOpenTapValidation()}
               />
             ) : null}
           </div>
@@ -1321,7 +1486,7 @@ function DemoFlowShell({
   children: ReactNode;
 }) {
   return (
-    <div className="relative min-h-screen overflow-hidden bg-[#0a0a0a] text-zinc-200">
+    <div className="relative min-h-screen bg-[#0a0a0a] text-zinc-200">
       <DemoAestheticBackground image={backgroundImage} />
       <div className="relative z-10 flex min-h-screen flex-col">{children}</div>
     </div>
@@ -1604,6 +1769,7 @@ function DemoUseCasePicker({
       <div className="mt-8 grid gap-4 sm:grid-cols-2">
         {demos.map((demo) => {
           const styles = demoPanelStyles(demo.accent);
+          const verificationPills = getDemoVerificationPills(demo);
           return (
             <button
               key={demo.id}
@@ -1623,11 +1789,7 @@ function DemoUseCasePicker({
                     <div className={`text-xs ${styles.subtitle}`}>{demo.tagline}</div>
                   </div>
                 </div>
-                <span
-                  className={`rounded-full border px-2 py-0.5 font-mono text-[9px] uppercase tracking-wide ${styles.badge}`}
-                >
-                  {demo.useCase}
-                </span>
+                <DemoVerificationPills pills={verificationPills} />
               </div>
               <p className={`mt-4 text-sm leading-relaxed ${styles.bodyText}`}>{demo.description}</p>
               <div className="mt-5 flex items-center gap-2 text-xs font-medium text-white/90">
@@ -1644,7 +1806,7 @@ function DemoUseCasePicker({
         onClick={onSelectCustom}
         className={`group mt-4 w-full rounded-lg border border-dashed p-5 text-left transition hover:-translate-y-0.5 hover:border-zinc-600 hover:shadow-lg hover:shadow-black/20 ${customStyles.section}`}
       >
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex items-start justify-between gap-3">
           <div className="flex items-start gap-3">
             <div
               className={`flex size-10 shrink-0 items-center justify-center rounded-md text-sm font-bold ${customStyles.logo}`}
@@ -1654,16 +1816,17 @@ function DemoUseCasePicker({
             <div>
               <div className="text-base font-medium text-white">Custom simulation</div>
               <div className={`text-xs ${customStyles.subtitle}`}>{CUSTOM_DEMO_PICKER.tagline}</div>
-              <p className={`mt-3 max-w-2xl text-sm leading-relaxed ${customStyles.bodyText}`}>
-                {CUSTOM_DEMO_PICKER.description} After you start, use the MCP simulation tab to connect to a
-                live MCP server, pull real data, and simulate imported event logs.
-              </p>
             </div>
           </div>
-          <div className="flex shrink-0 items-center gap-2 text-xs font-medium text-white/90 sm:pt-2">
-            Paste your prompt
-            <ArrowRight className="size-3.5 transition group-hover:translate-x-0.5" />
-          </div>
+          <DemoVerificationPills pills={getDemoVerificationPills(CUSTOM_DEMO_PICKER)} />
+        </div>
+        <p className={`mt-4 max-w-2xl text-sm leading-relaxed ${customStyles.bodyText}`}>
+          {CUSTOM_DEMO_PICKER.description} After you start, use the MCP simulation tab to connect to a live MCP
+          server, pull real data, and simulate imported event logs.
+        </p>
+        <div className="mt-5 flex items-center gap-2 text-xs font-medium text-white/90">
+          Paste your prompt
+          <ArrowRight className="size-3.5 transition group-hover:translate-x-0.5" />
         </div>
       </button>
     </section>
@@ -1969,14 +2132,16 @@ function SimulatorSubviewTabs({
   activeSubview,
   onChange,
   eventsLabel,
+  showMcp = true,
 }: {
   activeSubview: SimulatorSubview;
   onChange: (tab: SimulatorSubview) => void;
   eventsLabel: string;
+  showMcp?: boolean;
 }) {
   const tabs: Array<{ id: SimulatorSubview; label: string }> = [
     { id: "events", label: eventsLabel },
-    { id: "mcp", label: "MCP simulation" },
+    ...(showMcp ? [{ id: "mcp" as const, label: "MCP simulation" }] : []),
   ];
 
   return (
@@ -2044,6 +2209,15 @@ function SimulatorPanel({
   onSimulateMcpEvent,
   onSimulateAllMcpEvents,
   onCustomInputModeChange,
+  evidenceCount = 0,
+  report = null,
+  isReporting = false,
+  workspaceConversionGoal,
+  conversionGoalSource,
+  onRequestPerformance,
+  tapLinkUrl = null,
+  isCreatingTapLink = false,
+  onOpenTapValidation,
 }: {
   demo: EvidenceApiDemoDefinition;
   phase: DemoPhase;
@@ -2078,8 +2252,21 @@ function SimulatorPanel({
   onSimulateMcpEvent?: (event: McpSimulationEvent) => void;
   onSimulateAllMcpEvents?: () => void;
   onCustomInputModeChange?: (mode: CustomInputMode) => void;
+  evidenceCount?: number;
+  report?: PerformanceReport | null;
+  isReporting?: boolean;
+  workspaceConversionGoal?: string;
+  conversionGoalSource?: ConversionGoalSource;
+  onRequestPerformance?: () => void;
+  tapLinkUrl?: string | null;
+  isCreatingTapLink?: boolean;
+  onOpenTapValidation?: () => void;
 }) {
   const styles = demoPanelStyles(demo.accent);
+  const gameMode = isGameDemo(demo);
+  const appMode = isAppDemo(demo);
+  const interactiveMode = isInteractiveDemo(demo);
+  const verificationPills = getDemoVerificationPills(demo);
   const totalActions = demo.actions.filter((action) => action.kind === "evidence").length;
   const explored = countDistinctEvidenceActions(demo, worldState);
   const coveragePercent = Math.round((explored / totalActions) * 100);
@@ -2100,7 +2287,7 @@ function SimulatorPanel({
       className={
         fullHeight
           ? DEMO_TAB_PANEL
-          : `flex w-full flex-col overflow-hidden rounded-lg border ${styles.section}`
+          : `flex w-full flex-col rounded-lg border ${styles.section}`
       }
     >
       <div
@@ -2124,25 +2311,29 @@ function SimulatorPanel({
               </div>
             </div>
           </div>
-          <span
-            className={`rounded-full border px-2.5 py-1 font-mono text-[10px] uppercase tracking-wide ${styles.badge}`}
-          >
-            {demo.saasCategory}
-          </span>
+          {interactiveMode || isCustom ? (
+            <DemoVerificationPills pills={verificationPills} />
+          ) : (
+            <span
+              className={`rounded-full border px-2.5 py-1 font-mono text-[10px] uppercase tracking-wide ${styles.badge}`}
+            >
+              {demo.saasCategory}
+            </span>
+          )}
         </div>
       </div>
 
       <div
         className={
           fullHeight
-            ? activeSubview === "mcp" && phase === "simulating"
-              ? DEMO_TAB_BODY_SCROLL
+            ? interactiveMode && phase === "simulating"
+              ? DEMO_TAB_BODY_INTERACTIVE
               : DEMO_TAB_BODY
             : "flex flex-1 flex-col p-5 sm:p-6"
         }
       >
         {phase === "intro" || phase === "creating" ? (
-          <div className="flex min-h-0 flex-1 flex-col justify-center py-4">
+          <div className="flex flex-col justify-center py-4">
             <Sparkles className={`size-8 ${styles.sparkles}`} />
             <h2 className="mt-4 text-xl font-medium text-white">
               {isCustom ? "Custom verification scenario" : demo.scenarioTitle}
@@ -2177,8 +2368,7 @@ function SimulatorPanel({
               <p className={`mt-2 max-w-md text-sm leading-relaxed ${styles.bodyText}`}>
                 {demo.scenarioIntro.replace(/\*\*/g, "")} Use calendar gap tools to record idle time between
                 sessions — then request score cards with separate gap analysis and next steps (intermediate goals
-                plus granular events). Regenerate OpenLesson specs as evidence grows, and use the MCP simulation
-                tab to pull live data and simulate imported event logs.
+                plus granular events). Regenerate OpenLesson specs as evidence grows.
               </p>
             )}
             <div className="mt-8 flex flex-wrap items-center gap-3">
@@ -2216,20 +2406,18 @@ function SimulatorPanel({
             </div>
           </div>
         ) : (
-          <div
-            className={
-              activeSubview === "mcp"
-                ? "flex w-full flex-col gap-4"
-                : "flex min-h-0 flex-1 flex-col overflow-hidden"
-            }
-          >
-            <SimulatorSubviewTabs
-              activeSubview={activeSubview}
-              onChange={handleSubviewChange}
-              eventsLabel="Events"
-            />
+          <div className="flex w-full flex-col gap-4">
+            {isCustom ? (
+              <SimulatorSubviewTabs
+                activeSubview={activeSubview}
+                onChange={handleSubviewChange}
+                eventsLabel="Events"
+                showMcp={isCustom}
+              />
+            ) : null}
 
-            {activeSubview === "mcp" &&
+            {isCustom &&
+            activeSubview === "mcp" &&
             onMcpConnect &&
             onMcpPull &&
             onSimulateMcpEvent &&
@@ -2258,8 +2446,36 @@ function SimulatorPanel({
                 onSimulateAllMcpEvents={onSimulateAllMcpEvents}
                 styles={styles}
               />
+            ) : interactiveMode && phase === "simulating" ? (
+              gameMode ? (
+                <NexusFrontGame
+                  demo={demo}
+                  worldState={worldState}
+                  runningActionId={runningActionId}
+                  onRunAction={onRunAction}
+                  report={report}
+                  isReporting={isReporting}
+                  evidenceCount={evidenceCount}
+                  workspaceConversionGoal={workspaceConversionGoal}
+                  conversionGoalSource={conversionGoalSource}
+                />
+              ) : appMode ? (
+                <GridworksApp
+                  demo={demo}
+                  worldState={worldState}
+                  runningActionId={runningActionId}
+                  onRunAction={onRunAction}
+                  report={report}
+                  isReporting={isReporting}
+                  workspaceConversionGoal={workspaceConversionGoal}
+                  conversionGoalSource={conversionGoalSource}
+                  tapLinkUrl={tapLinkUrl}
+                  isCreatingTapLink={isCreatingTapLink}
+                  onOpenTapValidation={onOpenTapValidation}
+                />
+              ) : null
             ) : (
-              <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+              <div className="flex w-full flex-col">
             <div className="mb-5 shrink-0 grid grid-cols-3 gap-2 text-center">
               <div className={`rounded-md border bg-black/25 px-2 py-2 ${styles.statBorder}`}>
                 <div className={`font-mono text-[10px] uppercase tracking-wide ${styles.statLabel}`}>Day</div>
@@ -2314,9 +2530,7 @@ function SimulatorPanel({
               {demo.categoryMeta[activeCategory].description}
             </p>
 
-            <div
-              className={`pr-1 ${fullHeight ? "min-h-0 flex-1 overflow-y-auto" : "max-h-[32rem] overflow-y-auto"}`}
-            >
+            <div className="pr-1">
               <SimulationCategorySection
                 demo={demo}
                 category={activeCategory}
@@ -2514,7 +2728,7 @@ function ContinuousEvaluationView({
         </div>
       </div>
 
-      <div className={DEMO_TAB_BODY_SCROLL}>
+      <div className={DEMO_TAB_BODY_CONTENT}>
         {!canRegenerate ? (
           <p className="rounded-md border border-dashed border-zinc-800 px-4 py-12 text-center text-sm text-zinc-500">
             Run at least one simulation action to unlock spec and skill regeneration.
@@ -2685,6 +2899,13 @@ function ScoreView({
   performanceResponse,
   reportHistory,
   onRequestPerformance,
+  showIntegrationActions = false,
+  ileSessionUrl = null,
+  isCreatingIleSession = false,
+  tapLinkUrl = null,
+  isCreatingTapLink = false,
+  onOpenIlePractice,
+  onOpenTapValidation,
 }: {
   worldState: SimulationWorldState;
   evidenceCount: number;
@@ -2695,6 +2916,13 @@ function ScoreView({
   performanceResponse: PerformanceResponse | null;
   reportHistory: PerformanceReportSnapshot[];
   onRequestPerformance: () => void;
+  showIntegrationActions?: boolean;
+  ileSessionUrl?: string | null;
+  isCreatingIleSession?: boolean;
+  tapLinkUrl?: string | null;
+  isCreatingTapLink?: boolean;
+  onOpenIlePractice?: () => void;
+  onOpenTapValidation?: () => void;
 }) {
   const canRequestScore = evidenceCount > 0;
   const latestSnapshot = reportHistory[reportHistory.length - 1];
@@ -2755,7 +2983,7 @@ function ScoreView({
         )}
       </div>
 
-      <div className={`${DEMO_TAB_BODY_SCROLL} gap-4`}>
+      <div className={`${DEMO_TAB_BODY_CONTENT} gap-4`}>
         {report && performanceResponse ? (
           <div className="flex shrink-0 items-center justify-end">
             <div
@@ -2792,13 +3020,45 @@ function ScoreView({
         ) : null}
 
         {report && showRawResponse && performanceResponse ? (
-          <div className="flex h-[34rem] w-full flex-col gap-3 overflow-hidden">
+          <div className="flex w-full flex-col gap-3">
             <div className="font-mono text-xs uppercase tracking-[1.5px] text-zinc-600">
               POST /api/evidence-api-demo/performance
             </div>
-            <pre className="min-h-0 flex-1 overflow-auto whitespace-pre-wrap font-mono text-xs leading-relaxed text-zinc-400 sm:text-sm">
+            <pre className="whitespace-pre-wrap rounded-lg border border-zinc-800 bg-black/30 p-4 font-mono text-xs leading-relaxed text-zinc-400 sm:text-sm">
               {JSON.stringify(performanceResponse, null, 2)}
             </pre>
+          </div>
+        ) : null}
+
+        {showIntegrationActions ? (
+          <div className="shrink-0 rounded-lg border border-violet-500/20 bg-violet-950/15 px-4 py-4">
+            <div className="font-mono text-[10px] uppercase tracking-[1.5px] text-violet-300">
+              Platform integration
+            </div>
+            <p className="mt-2 text-sm leading-relaxed text-zinc-400">
+              Route gap repairs into guided ILE practice or a hosted TAP validation session — both open in a new
+              tab against this workspace{report ? "" : " after you request a score card"}.
+            </p>
+            <div className="mt-4 flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={onOpenIlePractice}
+                disabled={isCreatingIleSession}
+                className="inline-flex items-center gap-2 rounded-md border border-zinc-700 bg-black/35 px-4 py-2.5 text-sm font-medium text-white transition hover:border-zinc-500 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {isCreatingIleSession ? <Loader2 className="size-4 animate-spin" /> : null}
+                {ileSessionUrl ? "Open ILE practice ↗" : "Start ILE practice ↗"}
+              </button>
+              <button
+                type="button"
+                onClick={onOpenTapValidation}
+                disabled={isCreatingTapLink}
+                className="inline-flex items-center gap-2 rounded-md border border-violet-500/35 bg-violet-950/30 px-4 py-2.5 text-sm font-medium text-violet-100 transition hover:border-violet-400 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {isCreatingTapLink ? <Loader2 className="size-4 animate-spin" /> : null}
+                {tapLinkUrl ? "Open TAP session ↗" : "Start TAP validation ↗"}
+              </button>
+            </div>
           </div>
         ) : null}
 
@@ -2832,7 +3092,7 @@ function ScoreView({
         ) : null}
 
         {report && !showRawResponse ? (
-          <div className="w-full min-h-0 flex-1">
+          <div className="w-full">
             <PerformanceReportCard
               key={latestSnapshot?.id ?? "report"}
               report={report}
@@ -2848,7 +3108,7 @@ function ScoreView({
             />
           </div>
         ) : report ? null : (
-          <div className="flex h-[34rem] w-full flex-col items-center justify-center rounded-lg border border-dashed border-zinc-800 px-6 py-16 text-center">
+          <div className="flex w-full flex-col items-center justify-center rounded-lg border border-dashed border-zinc-800 px-6 py-16 text-center">
             <Gauge className="size-10 text-zinc-600" />
             <h3 className="mt-4 text-lg font-medium text-zinc-300">No score yet</h3>
             <p className="mt-2 max-w-md text-sm leading-relaxed text-zinc-500">

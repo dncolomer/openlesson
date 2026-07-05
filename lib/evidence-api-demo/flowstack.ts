@@ -3,7 +3,7 @@
  * New demos live under ./demos/ — use getDemoById() for multi-demo support.
  */
 import { getDemoWorkspaceModelFile as getModelFile } from "./demo-definition";
-import { flowstackDemo } from "./demos/flowstack";
+import { nexusfrontDemo } from "./demos/nexusfront";
 import {
   applySimulationAction,
   buildSimulationEvidencePayload as buildPayload,
@@ -25,15 +25,17 @@ export type {
   SimulationWorldState,
 } from "./types";
 
-export const DEMO_PRODUCT_NAME = flowstackDemo.productName;
-export const DEMO_INTEGRATION_NAME = flowstackDemo.integrationName;
-export const DEMO_EVAL_DEFINITION = flowstackDemo.evalDefinition;
-export const DEMO_WORKSPACE_MODEL_DOC = flowstackDemo.modelDoc;
-export const DEMO_WORKSPACE_PROMPT = flowstackDemo.workspacePrompt;
+const legacyDemo = nexusfrontDemo;
 
-export const SIMULATION_CATEGORY_META = flowstackDemo.categoryMeta;
-export const SIMULATION_ACTIONS = flowstackDemo.actions;
-export const SIMULATION_CATEGORY_ORDER = flowstackDemo.categoryOrder;
+export const DEMO_PRODUCT_NAME = legacyDemo.productName;
+export const DEMO_INTEGRATION_NAME = legacyDemo.integrationName;
+export const DEMO_EVAL_DEFINITION = legacyDemo.evalDefinition;
+export const DEMO_WORKSPACE_MODEL_DOC = legacyDemo.modelDoc;
+export const DEMO_WORKSPACE_PROMPT = legacyDemo.workspacePrompt;
+
+export const SIMULATION_CATEGORY_META = legacyDemo.categoryMeta;
+export const SIMULATION_ACTIONS = legacyDemo.actions;
+export const SIMULATION_CATEGORY_ORDER = legacyDemo.categoryOrder;
 
 /** @deprecated Use SIMULATION_ACTIONS */
 export const FLOWSTACK_STEPS = SIMULATION_ACTIONS.filter((action) => action.kind === "evidence");
@@ -48,26 +50,26 @@ export {
 };
 
 export function getActionsByCategory(category: import("./types").SimulationCategory) {
-  return getActionsByCategoryForDemo(flowstackDemo, category);
+  return getActionsByCategoryForDemo(legacyDemo, category);
 }
 
 export function getSimulationAction(id: string) {
-  return getSimulationActionForDemo(flowstackDemo, id);
+  return getSimulationActionForDemo(legacyDemo, id);
 }
 
 export function getDemoWorkspaceModelFile() {
-  return getModelFile(flowstackDemo);
+  return getModelFile(legacyDemo);
 }
 
 export function countDistinctEvidenceActions(state: SimulationWorldState) {
-  return countDistinct(flowstackDemo, state);
+  return countDistinct(legacyDemo, state);
 }
 
 export function buildSimulationEvidencePayload(
   action: SimulationAction,
   meta: Parameters<typeof buildPayload>[2]
 ) {
-  return buildPayload(flowstackDemo, action, meta);
+  return buildPayload(legacyDemo, action, meta);
 }
 
 /** @deprecated Use buildSimulationEvidencePayload */
@@ -81,7 +83,7 @@ export function buildToolEvidencePayload(
     extra?: Record<string, unknown>;
   }
 ) {
-  return buildPayload(flowstackDemo, step, {
+  return buildPayload(legacyDemo, step, {
     ...meta,
     worldState: createInitialWorldState(),
   });

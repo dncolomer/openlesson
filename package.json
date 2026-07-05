@@ -42,6 +42,7 @@
     "remark-math": "^6.0.0",
     "stripe": "^20.3.1",
     "tailwind-merge": "^3.4.0",
+    "three": "^0.185.1",
     "zustand": "^5.0.9"
   },
   "devDependencies": {
@@ -50,6 +51,7 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@types/three": "^0.185.0",
     "@types/web-bluetooth": "^0.0.21",
     "tailwindcss": "^4",
     "typescript": "^5",

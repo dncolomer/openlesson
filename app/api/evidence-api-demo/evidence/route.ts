@@ -51,7 +51,7 @@ export async function POST(req: NextRequest) {
         block_id: typeof body.block_id === "string" ? body.block_id : null,
         session_id: typeof body.session_id === "string" ? body.session_id : null,
         file_name: typeof body.file_name === "string" ? body.file_name : undefined,
-        tool_name: typeof body.tool_name === "string" ? body.tool_name : "flowstack",
+        tool_name: typeof body.tool_name === "string" ? body.tool_name : "nexusfront",
         tool_action: typeof body.tool_action === "string" ? body.tool_action : undefined,
         metadata:
           body.metadata && typeof body.metadata === "object" && !Array.isArray(body.metadata)

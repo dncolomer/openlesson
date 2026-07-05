@@ -2,10 +2,10 @@ import type { Metadata } from "next";
 import { EvidenceApiDemo } from "@/components/EvidenceApiDemo";
 
 export const metadata: Metadata = {
-  title: "Evidence API Demo",
+  title: "Demo",
   robots: { index: false, follow: false },
 };
 
-export default function EvidenceApiDemoPage() {
+export default function DemoPage() {
   return <EvidenceApiDemo />;
 }

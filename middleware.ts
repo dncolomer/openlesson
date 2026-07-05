@@ -39,17 +39,23 @@ export async function middleware(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   const pathname = request.nextUrl.pathname;
-  const isEvidenceApiDemoPage = pathname.startsWith("/evidence-api-demo");
+
+  if (pathname === "/evidence-api-demo" || pathname.startsWith("/evidence-api-demo/")) {
+    const redirectUrl = request.nextUrl.clone();
+    redirectUrl.pathname = pathname.replace(/^\/evidence-api-demo/, "/demo");
+    return NextResponse.redirect(redirectUrl);
+  }
+
+  const isDemoPage = pathname === "/demo" || pathname.startsWith("/demo/");
   const isEvidenceApiDemoApi = pathname.startsWith("/api/evidence-api-demo");
 
   // Protected routes - require authentication
-  const protectedRoutes = ["/session", "/dashboard", "/results", "/evidence-api-demo"];
-  const isProtectedRoute = protectedRoutes.some((route) =>
-    pathname.startsWith(route)
-  );
+  const protectedRoutes = ["/session", "/dashboard", "/results"];
+  const isProtectedRoute =
+    protectedRoutes.some((route) => pathname.startsWith(route)) || isDemoPage;
 
   // Public routes that should skip all auth logic
-  const publicRoutes = ["/pricing", "/tap/session"];
+  const publicRoutes = ["/pricing", "/tap/session", "/ghl-score/session"];
   const isPublicRoute = publicRoutes.some((route) =>
     pathname.startsWith(route)
   );
@@ -72,7 +78,7 @@ export async function middleware(request: NextRequest) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
 
-  if ((isEvidenceApiDemoPage || isEvidenceApiDemoApi) && user) {
+  if ((isDemoPage || isEvidenceApiDemoApi) && user) {
     const { data: profile } = await supabase
       .from("profiles")
       .select("is_admin")

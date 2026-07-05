@@ -189,7 +189,8 @@ overall_score: ${spec.performance_report_contract?.overall_score.range || "0-100
 conversion_score: ${spec.performance_report_contract?.conversion_score?.range || "0-100"} integer estimated conversion likelihood
 conversion_goal: ${spec.performance_report_contract?.conversion_goal?.description || "workspace-specific outcome goal"}
 marker_scores: ${spec.performance_report_contract?.marker_scores.visualization || "spider_radar"} chart with ${spec.performance_report_contract?.marker_scores.min_markers || 4}-${spec.performance_report_contract?.marker_scores.max_markers || 8} competency axes (id, label, score, rationale)
-gap_analysis.gaps: required list of gaps (title, evidence, severity, suggested_repair)
+gap_analysis.gaps: required list of gaps (title, evidence, severity, suggested_repair) — product/workflow remediation only; never TAP, block completion, or ILE
+gap_analysis.next_steps: directions (domain goals) and events (granular product/tool actions) — same remediation rules
 Example report shape:
 ${JSON.stringify(
     spec.performance_report_contract?.example_report || {

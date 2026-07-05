@@ -32,6 +32,8 @@ export interface EvidenceApiDemoDefinition {
   categoryMeta: Record<SimulationCategory, { label: string; description: string }>;
   categoryOrder: SimulationCategory[];
   actions: SimulationAction[];
+  /** "game" = Three.js play surface; "app" = in-product UI (no event buttons). */
+  simulatorMode?: "events" | "game" | "app";
 }
 
 export const STANDARD_CATEGORY_ORDER: SimulationCategory[] = [
@@ -136,13 +138,12 @@ ${competencyRows}
 - **Tool events**: JSON payloads via \`POST .../evidence\` (type: tool)
 - **Time gaps**: \`time_gap_elapsed\` events with \`days_elapsed\` when calendar idle time matters
 - **Performance reports**: \`overall_score\`, \`conversion_score\`, \`conversion_goal\`, \`marker_scores\` (spider/radar), \`gap_analysis.gaps[]\`, \`gap_analysis.next_steps.directions[]\`, \`gap_analysis.next_steps.events[]\`
+- **Remediation rule**: gaps, next_steps, and suggestions must stay product-independent — never recommend TAP sessions, block completion, or ILE; use domain/tool event language only
 - **Continuous evaluation**: re-fetch \`evidence-schema\`, regenerate \`integration-skill\` as artifacts grow
-- **Think Aloud Protocol (TAP)**: issue private TAP links for live human cognition on high-stakes blocks
-- **ILE**: route identified gaps into Integrated Learning Environment practice blocks
 
 ## Integration agent
 - **Name**: ${demo.integrationName}
 - **Partner role**: Emits ${demo.productName} product events and uploads evidence to OpenLesson
-- **Operating model**: Upload evidence → re-fetch spec → regenerate skill → request performance → issue TAP or ILE follow-ups → repeat
+- **Operating model**: Upload evidence → re-fetch spec → regenerate skill → request performance → surface product-specific coaching from score cards → repeat
 `;
 }

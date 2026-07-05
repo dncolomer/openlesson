@@ -25,6 +25,8 @@ function PerformanceSubviewTabs({
   onChange: (tab: PerformanceSubview) => void;
   tabs: Array<{ id: PerformanceSubview; label: string }>;
 }) {
+  const { t } = useI18n();
+
   return (
     <div className="shrink-0 border-b border-neutral-800/80 px-4 md:px-6">
       <div

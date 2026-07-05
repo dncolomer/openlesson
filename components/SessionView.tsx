@@ -4185,7 +4185,7 @@ export function SessionView({ sessionId }: { sessionId: string }) {
                         thoughts={sessionThoughtHistory}
                         sentThoughtIds={sessionThoughtInterface.sentThoughtIds}
                         skippedThoughtIds={sessionThoughtInterface.memoryThoughtIds}
-                        planId={session.planId ?? undefined}
+                        planId={session.metadata?.plan_id ?? undefined}
                         sessionId={session.id}
                         onSendThought={(text, thoughtIds) => {
                           void sessionThoughtInterface.sendThought(text, thoughtIds);

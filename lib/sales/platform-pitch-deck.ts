@@ -9,7 +9,7 @@ export const PLATFORM_PITCH_DECK: SolutionSlideDeck = {
       kicker: "openLesson · Learning Verification",
       title: "Beyond benchmarks for AI. Beyond tests for humans.",
       subtitle:
-        "Verify that learning actually happened for people using tools and for agents deployed to production.",
+        "Verify learning through evidence, proof of work, and cognitive analysis for people as well as AI agents performing knowledge work.",
     },
     {
       layout: "statement",

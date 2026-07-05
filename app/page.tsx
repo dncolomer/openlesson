@@ -68,7 +68,7 @@ export default function B2BLandingPage() {
           <div className="mb-6 inline-block rounded-sm border border-zinc-800 bg-zinc-950/80 px-3 py-1 font-mono text-[10px] tracking-[2px] text-zinc-500">LEARNING VERIFICATION • HUMANS & AGENTS</div>
           <h1 className="max-w-5xl text-5xl font-medium leading-[1.03] tracking-[-2.8px] text-white sm:text-6xl lg:text-[72px]">Beyond benchmarks for AI. Beyond tests for humans.</h1>
           <div className="mt-7 max-w-5xl space-y-4 text-base leading-relaxed text-zinc-400 sm:text-lg">
-            <p>openLesson verifies that learning actually happened for people using tools and for agents deployed to production.</p>
+            <p>openLesson verifies learning through evidence, proof of work, and cognitive analysis for people as well as AI agents performing knowledge work.</p>
             <div className="grid gap-4 lg:grid-cols-2">
               <div className="border border-cyan-400/20 bg-cyan-950/20 p-5 sm:p-6">
                 <p className="text-lg leading-relaxed text-zinc-300 sm:text-xl">

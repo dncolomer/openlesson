@@ -14,7 +14,7 @@ const SOLUTIONS_INDEX = {
   eyebrow: "Solutions",
   h1: "Beyond benchmarks for AI. Beyond tests for humans.",
   intro:
-    "openLesson verifies that learning actually happened, then ties evidence to learning-to-conversion outcomes. These vertical guides show how teams apply Evidence API, Think Aloud Protocol, ILE, and the Agentic Learning Environment where judgment and tool use matter most.",
+    "openLesson verifies learning through evidence, proof of work, and cognitive analysis, then ties evidence to learning-to-conversion outcomes. These vertical guides show how teams apply Evidence API, Think Aloud Protocol, ILE, and the Agentic Learning Environment where judgment and tool use matter most.",
   metaTitle: "Solutions: Learning Verification by Vertical",
   metaDescription:
     "Learning verification guides for sales enablement, customer success, compliance, hiring assessment, engineering on-call, corporate L&D, SaaS product, and LMS integration with openLesson.",

@@ -23,7 +23,7 @@ const PLATFORM_SLIDES: SalesSlide[] = [
     kicker: "Learning verification",
     title: "Beyond benchmarks for AI. Beyond tests for humans.",
     subtitle:
-      "openLesson verifies that learning actually happened for people using tools and for agents deployed to production.",
+      "openLesson verifies learning through evidence, proof of work, and cognitive analysis for people as well as AI agents performing knowledge work.",
     bullets: [
       "Focus: learning verification with Evidence API, TAP, ILE, and ALE",
       "Results: learning-to-conversion tied to activation, deploy gates, and production performance",

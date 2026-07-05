@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Navbar } from "@/components/Navbar";
 import Link from "next/link";
@@ -11,6 +11,7 @@ import { buildContributionDays, contributionLevel, contributionMonthLabels, date
 
 import { useI18n } from "@/lib/i18n";
 import { formatPlanMonthlyPrice, hasAgentApiKeyPlan, type PlanId } from "@/lib/plans";
+import { InsightsDashboardTab } from "@/components/InsightsDashboardTab";
 
 const DASHBOARD_BACKGROUND = "/aesthetics/Greco-futurism/HHnTrgVaQAAP-_3.jpeg";
 const PROFILE_BACKGROUND_IMAGES = [
@@ -20,7 +21,7 @@ const PROFILE_BACKGROUND_IMAGES = [
   "/aesthetics/Greco-futurism/HHnTrjJbQAAOz7K.jpeg",
 ];
 
-type Tab = "overview" | "sessions" | "plans" | "usage" | "config";
+type Tab = "overview" | "sessions" | "plans" | "usage" | "insights" | "config";
 
 interface AvailableModel {
   id: string;
@@ -57,7 +58,7 @@ export default function DashboardPage() {
   const searchParams = useSearchParams();
   const initialTab = (searchParams.get("tab") as Tab) || "plans";
   const [activeTab, setActiveTab] = useState<Tab>(
-    ["overview", "plans", "usage"].includes(initialTab) ? initialTab : "plans"
+    ["plans", "usage", "insights"].includes(initialTab) ? initialTab : "plans"
   );
   const learningMapScrollRef = useRef<HTMLDivElement>(null);
 
@@ -609,6 +610,20 @@ export default function DashboardPage() {
     planPage * planPageSize
   );
 
+  const planTitlesById = useMemo(
+    () =>
+      learningPlans.reduce<Record<string, string>>((titles, plan) => {
+        titles[plan.id] = plan.title || plan.root_topic;
+        return titles;
+      }, {}),
+    [learningPlans]
+  );
+
+  const setDashboardTab = (tab: Tab) => {
+    setActiveTab(tab);
+    router.replace(`/dashboard?tab=${tab}`, { scroll: false });
+  };
+
   if (loading) {
     return (
       <div
@@ -631,13 +646,13 @@ export default function DashboardPage() {
       <div className="border-b border-neutral-800/60">
         <div className="max-w-7xl mx-auto flex gap-1 px-4 sm:px-6 lg:px-8">
           {[
-            { id: "overview", label: "Profile" },
             { id: "plans", label: "Workspaces" },
+            { id: "insights", label: "Insights" },
             { id: "usage", label: "Usage & API" },
           ].map((tab) => (
             <button
               key={tab.id}
-              onClick={() => setActiveTab(tab.id as Tab)}
+              onClick={() => setDashboardTab(tab.id as Tab)}
               className={`px-4 py-3 text-sm font-medium transition-colors relative ${
                 activeTab === tab.id
                   ? "text-white"
@@ -1207,6 +1222,8 @@ export default function DashboardPage() {
             )}
           </div>
         )}
+
+        {activeTab === "insights" && <InsightsDashboardTab planTitles={planTitlesById} />}
 
         {/* Usage & API Tab */}
         {activeTab === "usage" && (

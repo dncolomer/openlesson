@@ -14,7 +14,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
     .or(`id.eq.${id},share_token.eq.${id}`)
     .maybeSingle();
 
-  if (error || !insight) {
+  if (error || !insight || insight.archived_at) {
     return NextResponse.json({ error: "Insight not found" }, { status: 404 });
   }
 

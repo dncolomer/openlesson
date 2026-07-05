@@ -21,7 +21,7 @@ const PLATFORM_SLIDES: SalesSlide[] = [
   {
     layout: "statement",
     kicker: "Learning verification",
-    title: "Beyond benchmarks for AI. Beyond quizzes for humans.",
+    title: "Beyond benchmarks for AI. Beyond tests for humans.",
     subtitle:
       "openLesson verifies that learning actually happened for people using tools and for agents deployed to production.",
     bullets: [

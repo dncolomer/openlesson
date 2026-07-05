@@ -12,7 +12,7 @@ const SOLUTIONS_INDEX = {
   slug: "solutions",
   path: "/solutions",
   eyebrow: "Solutions",
-  h1: "Beyond benchmarks for AI. Beyond quizzes for humans.",
+  h1: "Beyond benchmarks for AI. Beyond tests for humans.",
   intro:
     "openLesson verifies that learning actually happened, then ties evidence to learning-to-conversion outcomes. These vertical guides show how teams apply Evidence API, Think Aloud Protocol, ILE, and the Agentic Learning Environment where judgment and tool use matter most.",
   metaTitle: "Solutions: Learning Verification by Vertical",

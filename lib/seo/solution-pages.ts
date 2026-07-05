@@ -41,7 +41,7 @@ export const PLATFORM_PAGE: SeoSolutionPageConfig = {
   slug: "platform",
   path: "/platform",
   eyebrow: "openLesson Platform",
-  h1: "Beyond benchmarks for AI. Beyond quizzes for humans.",
+  h1: "Beyond benchmarks for AI. Beyond tests for humans.",
   intro:
     "openLesson verifies that learning actually happened for people using tools and for agents deployed to production. Four products run on Verification Workspaces: Evidence API verifies humans and agents; Think Aloud Protocol and the ILE serve human learning; openLesson helps skill.md developers test and evolve agent skills in the Agentic Learning Environment.",
   metaTitle: "Platform: Learning Verification for Humans & Agents",

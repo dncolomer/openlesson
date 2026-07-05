@@ -926,9 +926,9 @@ export function GhcScoreClient({ planId, planNodeId, sessionId, privateToken, in
 
       <div className="relative z-10 mx-auto flex min-h-screen w-full max-w-7xl flex-col px-4 py-5 sm:px-6">
         {phase === "briefing" && (
-          <section className="relative flex min-h-[calc(100vh-2.5rem)] flex-1 overflow-hidden rounded-2xl border border-neutral-900 bg-neutral-950">
-            <div className="grid min-h-0 flex-1 lg:grid-cols-2">
-              <div className="flex min-h-0 min-w-0 flex-col border-b border-neutral-900/80 lg:border-b-0 lg:border-r lg:border-neutral-900/80">
+          <section className="relative flex min-h-[calc(100vh-2.5rem)] flex-1 py-4">
+            <div className="grid min-h-0 w-full flex-1 gap-4 lg:grid-cols-2">
+              <div className="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-2xl border border-neutral-900 bg-neutral-950/65 backdrop-blur-sm">
                 <TutorWelcome
                   tutorName="Helios"
                   variant="tap"
@@ -937,13 +937,15 @@ export function GhcScoreClient({ planId, planNodeId, sessionId, privateToken, in
                   instant={false}
                 />
               </div>
-              <TapBriefingConfig
-                workspaceTitle={workspaceTitle}
-                minutes={minutes}
-                onMinutesChange={setMinutes}
-                showDurationPicker={!privateToken}
-                disabled={isStartingSession}
-              />
+              <div className="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-2xl border border-neutral-900/80 bg-neutral-950/55 backdrop-blur-md">
+                <TapBriefingConfig
+                  workspaceTitle={workspaceTitle}
+                  minutes={minutes}
+                  onMinutesChange={setMinutes}
+                  showDurationPicker={!privateToken}
+                  disabled={isStartingSession}
+                />
+              </div>
               {error ? (
                 <p className="absolute inset-x-0 bottom-0 z-20 px-6 pb-5 text-center text-sm text-red-300 lg:col-span-2">
                   {error}

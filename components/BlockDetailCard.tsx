@@ -9,7 +9,6 @@ type BlockDetailCardProps = {
   layout?: "horizontal" | "stacked" | "modal";
   title: string;
   description?: string;
-  index: number;
   thumbnailSrc: string;
   progressRing: ProgressRing;
   isStart?: boolean;
@@ -25,11 +24,76 @@ type BlockDetailCardProps = {
   highlightOpacity?: number;
 };
 
-const RING_CLASS: Record<ProgressRing, string> = {
-  neutral: "ring-white/25",
-  completed: "ring-emerald-400/60",
-  in_progress: "ring-amber-400/70",
+const HERO_RING_CLASS: Record<ProgressRing, string> = {
+  neutral: "ring-white/20",
+  completed: "ring-emerald-400/50",
+  in_progress: "ring-amber-400/55",
 };
+
+function BlockDetailHero({
+  thumbnailSrc,
+  title,
+  description,
+  progressRing,
+  isStart,
+  layout,
+  className = "",
+}: {
+  thumbnailSrc: string;
+  title: string;
+  description?: string;
+  progressRing: ProgressRing;
+  isStart?: boolean;
+  layout: "modal" | "stacked" | "horizontal";
+  className?: string;
+}) {
+  const { t } = useI18n();
+  const sizeClass =
+    layout === "stacked"
+      ? "aspect-[5/3] shrink-0"
+      : layout === "modal"
+        ? "min-h-[8.75rem] flex-1"
+        : "aspect-[2.65/1] min-h-[6.5rem] shrink-0";
+
+  const titleClamp =
+    layout === "stacked" ? "line-clamp-2" : layout === "modal" ? "line-clamp-2" : "line-clamp-1";
+  const descriptionClamp =
+    layout === "stacked" ? "line-clamp-2" : layout === "modal" ? "line-clamp-4" : "line-clamp-2";
+
+  return (
+    <div
+      className={`relative overflow-hidden rounded-xl border border-white/10 ring-1 ring-inset ${HERO_RING_CLASS[progressRing]} ${sizeClass} ${className}`}
+    >
+      <img src={thumbnailSrc} alt="" className="absolute inset-0 h-full w-full object-cover" />
+      <div className="absolute inset-0 bg-gradient-to-t from-black/92 via-black/50 to-black/20" />
+      <div className="absolute inset-0 flex flex-col justify-end overflow-hidden p-3 sm:p-3.5">
+        <div className="flex min-h-0 max-h-full items-end justify-between gap-2 overflow-hidden">
+          <div className="min-h-0 min-w-0 flex-1 overflow-hidden">
+            <h3
+              className={`font-semibold leading-snug tracking-tight text-white drop-shadow-md ${titleClamp} ${
+                layout === "stacked" ? "text-lg" : "text-base"
+              }`}
+            >
+              {title}
+            </h3>
+            <p
+              className={`mt-1 leading-relaxed text-neutral-200/90 drop-shadow-sm ${descriptionClamp} ${
+                layout === "stacked" ? "text-sm" : "text-xs"
+              }`}
+            >
+              {description || t("sessionItem.noDescription")}
+            </p>
+          </div>
+          {isStart ? (
+            <span className="shrink-0 rounded-full border border-white/25 bg-black/45 px-2 py-0.5 text-[9px] font-medium uppercase tracking-wide text-neutral-100 backdrop-blur-sm">
+              {t("sessionItem.startBlock")}
+            </span>
+          ) : null}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function BlockDetailGuidePanel() {
   const { t } = useI18n();
@@ -86,7 +150,6 @@ export function BlockDetailCard({
   layout = "horizontal",
   title,
   description,
-  index,
   thumbnailSrc,
   progressRing,
   isStart,
@@ -136,6 +199,19 @@ export function BlockDetailCard({
       ],
     },
   ] as const;
+
+  const heroLayout = isModal ? "modal" : isStacked ? "stacked" : "horizontal";
+  const blockHero = (
+    <BlockDetailHero
+      thumbnailSrc={thumbnailSrc}
+      title={title}
+      description={description}
+      progressRing={progressRing}
+      isStart={isStart}
+      layout={heroLayout}
+      className={heroLayout === "horizontal" ? "rounded-none border-x-0 border-t-0" : ""}
+    />
+  );
 
   const actionButtons = showActions ? (
     <div>
@@ -224,38 +300,20 @@ export function BlockDetailCard({
   }
 
   if (isModal) {
+    const hasFloatingActions = !forkCallout && actionButtons;
+
     return (
       <div className={cardShellClass} style={cardShellStyle}>
-        <div className="grid grid-cols-2 gap-3 sm:gap-4">
-          <div className="flex min-w-0 flex-col gap-3">
-            <div className="flex gap-3">
-              <div
-                className={`relative h-16 w-16 shrink-0 overflow-hidden rounded-lg border border-white/10 ring-2 ring-offset-2 ring-offset-[#0b0b0b] ${RING_CLASS[progressRing]}`}
-              >
-                <img src={thumbnailSrc} alt="" className="h-full w-full object-cover" />
-                <span className="absolute bottom-1 left-1.5 font-mono text-[10px] font-semibold text-white drop-shadow">
-                  {index + 1}
-                </span>
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="flex items-start justify-between gap-2">
-                  <h3 className="text-base font-semibold leading-snug tracking-tight text-white">{title}</h3>
-                  {isStart ? (
-                    <span className="shrink-0 rounded-full border border-white/20 bg-black/50 px-2 py-0.5 text-[9px] font-medium uppercase tracking-wide text-neutral-200">
-                      {t("sessionItem.startBlock")}
-                    </span>
-                  ) : null}
-                </div>
-                <p className="mt-1 text-xs leading-relaxed text-neutral-400 line-clamp-3">
-                  {description || t("sessionItem.noDescription")}
-                </p>
-              </div>
-            </div>
+        <div className="grid grid-cols-2 items-stretch gap-3 sm:gap-4">
+          <div className="flex min-h-0 min-w-0 flex-col gap-3">
+            <div className="flex min-h-0 flex-1 flex-col">{blockHero}</div>
 
-            {forkCallout ? <div>{forkCallout}</div> : actionButtons}
+            {forkCallout ? <div className="shrink-0">{forkCallout}</div> : null}
 
-            {promptSection ? (
-              <div className="rounded-lg border border-white/10 bg-neutral-900/40 p-3">{promptSection}</div>
+            {hasFloatingActions ? (
+              <div className="shrink-0 rounded-xl border border-white/15 bg-neutral-950/92 p-3 shadow-[0_-10px_36px_rgba(0,0,0,0.5)] backdrop-blur-md">
+                {actionButtons}
+              </div>
             ) : null}
           </div>
 
@@ -269,27 +327,7 @@ export function BlockDetailCard({
     return (
       <div className={cardShellClass} style={cardShellStyle}>
         <div className="space-y-4">
-          <div
-            className={`relative aspect-[5/3] overflow-hidden rounded-xl border border-white/10 ring-2 ring-offset-2 ring-offset-[#0b0b0b] ${RING_CLASS[progressRing]}`}
-          >
-            <img src={thumbnailSrc} alt="" className="h-full w-full object-cover" />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-black/10 to-transparent" />
-            <span className="absolute bottom-2 left-3 font-mono text-xs font-semibold text-white drop-shadow">
-              {index + 1}
-            </span>
-            {isStart && (
-              <span className="absolute right-3 top-3 rounded-full border border-white/20 bg-black/50 px-2.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-neutral-200 backdrop-blur-sm">
-                {t("sessionItem.startBlock")}
-              </span>
-            )}
-          </div>
-
-          <div className="space-y-2">
-            <h3 className="text-lg font-semibold leading-snug tracking-tight text-white">{title}</h3>
-            <p className="text-sm leading-relaxed text-neutral-400">
-              {description || t("sessionItem.noDescription")}
-            </p>
-          </div>
+          {blockHero}
 
           {forkCallout ? <div>{forkCallout}</div> : actionButtons}
 
@@ -301,36 +339,12 @@ export function BlockDetailCard({
 
   return (
     <div className={cardShellClass} style={cardShellStyle}>
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
+      <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
+
+      {blockHero}
 
       <div className="p-3.5 sm:p-4">
-        <div className="flex gap-3.5">
-          <div
-            className={`relative h-[4.5rem] w-[4.5rem] shrink-0 overflow-hidden rounded-lg border border-white/10 ring-2 ring-offset-2 ring-offset-neutral-950 ${RING_CLASS[progressRing]}`}
-          >
-            <img src={thumbnailSrc} alt="" className="h-full w-full object-cover" />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/45 via-transparent to-transparent" />
-            <span className="absolute bottom-1 left-1.5 font-mono text-[10px] font-semibold text-white/90 drop-shadow">
-              {index + 1}
-            </span>
-          </div>
-
-          <div className="min-w-0 flex-1 pt-0.5">
-            <div className="flex items-start justify-between gap-2">
-              <h3 className="text-base font-semibold leading-snug tracking-tight text-white">{title}</h3>
-              {isStart && (
-                <span className="shrink-0 rounded-full border border-white/20 bg-neutral-900/80 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-neutral-300">
-                  {t("sessionItem.startBlock")}
-                </span>
-              )}
-            </div>
-            <p className="mt-1.5 line-clamp-2 text-xs leading-relaxed text-neutral-400">
-              {description || t("sessionItem.noDescription")}
-            </p>
-          </div>
-        </div>
-
-        {forkCallout ? <div className="mt-3.5">{forkCallout}</div> : actionButtons ? <div className="mt-4">{actionButtons}</div> : null}
+        {forkCallout ? <div>{forkCallout}</div> : actionButtons ? <div className="mt-4">{actionButtons}</div> : null}
 
         {promptSection ? <div className="mt-3.5 border-t border-white/10 pt-3">{promptSection}</div> : null}
       </div>

@@ -82,7 +82,6 @@ export function SessionItem({
   const [showPromptEditor, setShowPromptEditor] = useState(false);
   const [activeSession, setActiveSession] = useState<{ id: string; status: string } | null>(null);
   const [aestheticImages, setAestheticImages] = useState<string[] | null>(null);
-
   const isCompleted = node.status === "completed";
   const isLocked = node.status === "locked";
   const isInProgress = node.status === "in_progress";
@@ -302,7 +301,6 @@ export function SessionItem({
           ? "in_progress"
           : "neutral";
     const thumbnailSrc = aestheticImageForId(node.id, aestheticImages ?? undefined);
-
     const detailPromptSection = isOwner ? (
       <div>
         <div className="mb-1.5 flex items-center justify-between gap-2">
@@ -339,7 +337,6 @@ export function SessionItem({
           layout={detailLayout === "drawer" ? "modal" : "horizontal"}
           title={node.title}
           description={node.description}
-          index={index}
           thumbnailSrc={thumbnailSrc}
           progressRing={progressRing}
           isStart={node.is_start}
@@ -359,7 +356,7 @@ export function SessionItem({
               />
             ) : undefined
           }
-          promptSection={detailPromptSection}
+          promptSection={detailLayout === "drawer" ? undefined : detailPromptSection}
           highlighted={highlighted}
           highlightOpacity={highlightOpacity}
         />

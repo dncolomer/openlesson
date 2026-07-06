@@ -5,11 +5,11 @@ import {
 } from "../demo-definition";
 import type { SimulationAction } from "../types";
 
-const USE_CASE = "Engineering sprint triage and delivery certification";
+const USE_CASE = "Engineering sprint adoption and delivery conversion";
 const SCENARIO_INTRO =
-  "Engineering leads certify entirely inside **Orbit** — triage the inbox, create and prioritize issues, assign owners, move statuses through the sprint cycle, scope work to projects, and close deliverables while every in-app action streams Evidence API events in the background.";
+  "Engineering leads learn Orbit by doing real work inside the product — triage the inbox, create and prioritize issues, assign owners, move statuses through the sprint cycle, scope work to projects, and ship deliverables. Every action streams Evidence API events so openLesson can verify learning and coach the next step toward productive adoption.";
 
-const EVAL_DEFINITION = `Verify that engineering operators can certify on Orbit across a non-linear delivery surface:
+const EVAL_DEFINITION = `Verify that engineering operators are learning Orbit and converting to productive sprint delivery across a non-linear workflow:
 - inbox triage posture (guided onboarding vs veteran skip),
 - issue creation, prioritization, and assignment judgment,
 - status workflow (backlog → in progress → done) with correct sequencing,
@@ -19,7 +19,7 @@ const EVAL_DEFINITION = `Verify that engineering operators can certify on Orbit 
 - recovery from mis-prioritized or mis-assigned work,
 - re-engagement after idle gaps between triage sessions.
 
-Evidence should capture non-linear issue workflows, idle calendar gaps, priority mistakes recovered, and outcomes tied to sprint readiness — surfaced in score cards with coaching overlays inside the live app.`;
+Evidence should capture non-linear issue workflows, idle calendar gaps, priority mistakes recovered, and outcomes tied to learning-to-conversion — did they learn the workflow well enough to adopt, activate, and ship? Score cards surface coaching overlays inside the live app to close gaps and move conversion forward.`;
 
 const ORBIT_ACTIONS: SimulationAction[] = [
   {
@@ -271,20 +271,20 @@ export const orbitDemo: EvidenceApiDemoDefinition = {
   productName: "Orbit",
   integrationName: "orbit-delivery-agent",
   useCase: USE_CASE,
-  tagline: "Triage, ship, and certify sprint work with live Evidence API scoring",
+  tagline: "Learn the workflow, ship sprint work, prove adoption with evidence",
   saasCategory: "Issue tracking",
   description:
-    "A self-contained Linear-style issue tracker — triage inbox, prioritize, assign, and ship sprint work while evidence uploads stream automatically to openLesson.",
-  scenarioTitle: "Sprint delivery certification",
+    "A self-contained Linear-style issue tracker — learn by triaging, prioritizing, assigning, and shipping real sprint work while evidence uploads verify learning and drive conversion coaching.",
+  scenarioTitle: "Learn Orbit. Convert to shipping.",
   scenarioIntro: SCENARIO_INTRO,
   workspaceDescription:
-    "Orbit engineering lead certification — verify sprint triage and delivery competency through in-app issue workflows with continuous Evidence API uploads and score-driven coaching overlays.",
+    "Orbit engineering adoption — verify learning and conversion through in-app issue workflows with continuous Evidence API uploads and score-driven coaching that tells users what to do next.",
   initials: "OR",
   accent: "indigo",
   simulatorMode: "external",
   evalDefinition: EVAL_DEFINITION,
   workspacePrompt:
-    "Build a certification workspace for Orbit operators learning inbox triage, issue prioritization, assignment, status workflows, project scoping, and sprint delivery.",
+    "Build a learning verification workspace for Orbit operators adopting inbox triage, issue prioritization, assignment, status workflows, project scoping, and sprint delivery — focused on learning-to-conversion, not exam completion.",
   modelDocFilename: "orbit-eval-model.md",
   modelDoc: buildModelDoc(
     {
@@ -312,10 +312,10 @@ export const orbitDemo: EvidenceApiDemoDefinition = {
   toolName: "orbit",
   simulatorToolName: "orbit_events",
   schemaVersion: "orbit_evidence_v1",
-  evidenceGoals: ["sprint_certification", "delivery_competency", "triage_judgment"],
+  evidenceGoals: ["sprint_adoption", "delivery_conversion", "triage_learning"],
   integrationHints: {
     event_verbs: ["triage_issue", "create_issue", "change_status_done"],
-    goals: ["sprint_certification", "delivery_competency"],
+    goals: ["sprint_adoption", "delivery_conversion"],
   },
   partnerDescription:
     "Orbit partner integration that streams issue-tracker actions as evidence to openLesson.",

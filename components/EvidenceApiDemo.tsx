@@ -1261,10 +1261,9 @@ export function EvidenceApiDemo() {
               openLesson in action
             </h1>
             <p className="mt-3 max-w-2xl text-sm leading-relaxed text-zinc-400 sm:text-base">
-              Pick a verification scenario — trial onboarding, month-end close, or a resource-gathering city growth
-              game — then watch OpenLesson score competency from live
-              evidence. Every score card separates learning gaps from next steps: intermediate goals plus granular
-              events to run next.
+              Pick a learning scenario — adopt Orbit for sprint delivery or paste your own product workflow — then
+              watch openLesson verify learning and conversion from live evidence. Score cards separate gaps from
+              next steps: what to learn next and which product actions move adoption forward.
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -1768,8 +1767,8 @@ function ExternalLaunchPanel({
       </div>
       <h3 className="mt-6 text-2xl font-medium text-white">{demo.productName} is ready</h3>
       <p className={`mt-3 max-w-lg text-sm leading-relaxed ${styles.bodyText}`}>
-        Launch the full-screen product demo in a new browser tab. Work inside Orbit while evidence
-        streams to this workspace. Smart coaching overlays appear inside the app as score cards update.
+        Launch the full-screen product in a new browser tab. Learn by doing inside Orbit while evidence
+        verifies learning and conversion. Smart coaching overlays tell users what to try next as score cards update.
       </p>
       <div className="mt-4 font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-500">
         {evidenceCount} evidence events from hub · live actions stream from Orbit
@@ -1813,10 +1812,11 @@ function DemoUseCasePicker({
         <div className="font-mono text-[10px] uppercase tracking-[2px] text-zinc-500">
           Step 1 · Choose a use case
         </div>
-        <h2 className="mt-2 text-2xl font-medium text-white sm:text-3xl">Which scenario are we verifying?</h2>
+        <h2 className="mt-2 text-2xl font-medium text-white sm:text-3xl">What workflow are we helping someone learn?</h2>
         <p className="mt-3 text-sm leading-relaxed text-zinc-400">
-          Pick a preset verification program or paste your own prompt to generate dynamic event actions — same
-          evidence API flow throughout. Score cards always return separate gap analysis and structured next steps.
+          Pick Orbit to verify learning and conversion inside a real product UI, or paste your own prompt to
+          generate dynamic event actions. Same Evidence API flow throughout — score cards coach gaps and next steps
+          toward adoption, not exam completion.
         </p>
       </div>
 

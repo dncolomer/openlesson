@@ -304,7 +304,7 @@ export function OrbitApp() {
 
         {!appState.ui.tourDismissed ? (
           <div className="flex items-center justify-between gap-3 border-b border-[#5e6ad2]/20 bg-[#5e6ad2]/10 px-4 py-2 text-xs text-[#c4c9ff]">
-            <span>Welcome to Orbit — triage the inbox, prioritize ORB-12, and ship Sprint 12.</span>
+            <span>Welcome to Orbit — learn by doing. Triage the inbox, prioritize ORB-12, and ship Sprint 12.</span>
             <button
               type="button"
               onClick={() => {

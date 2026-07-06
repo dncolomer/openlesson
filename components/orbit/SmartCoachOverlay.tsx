@@ -76,7 +76,7 @@ export function SmartCoachOverlay({
     coaching.events[0] ??
     coaching.gapRepairs[0] ??
     coaching.directions[0] ??
-    "Keep working — coaching appears after your first score card.";
+    "Keep exploring — coaching appears once openLesson has enough evidence to score your learning.";
 
   return (
     <>

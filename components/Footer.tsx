@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { useI18n } from "@/lib/i18n";
-import { SOLUTION_PAGES } from "@/lib/seo/solution-pages";
 
 const productLinks = [
   { labelKey: "footer.platform", href: "/platform" },
@@ -10,8 +9,13 @@ const productLinks = [
   { labelKey: "footer.agenticApi", href: "/docs/agentic-v2" },
 ];
 
-const resourceLinks = [
+const workspaceLinks = [
+  { labelKey: "footer.createWorkspace", href: "/workspace/new" },
+  { labelKey: "footer.demo", href: "/demo" },
   { labelKey: "footer.skillFile", href: "/skill.md" },
+];
+
+const resourceLinks = [
   { labelKey: "footer.github", href: "https://github.com/dncolomer/openlesson", external: true },
 ];
 
@@ -54,13 +58,13 @@ export function Footer() {
 
           <div className="col-span-2 md:col-span-1">
             <h3 className="text-xs font-semibold text-neutral-400 uppercase tracking-wider mb-4">
-              {t('footer.solutions')}
+              {t('footer.workspace')}
             </h3>
             <ul className="space-y-3">
-              {SOLUTION_PAGES.map((solution) => (
-                <li key={solution.slug}>
-                  <Link href={solution.path} className="text-sm text-neutral-500 hover:text-white transition-colors">
-                    {solution.navLabel}
+              {workspaceLinks.map((link) => (
+                <li key={link.href}>
+                  <Link href={link.href} className="text-sm text-neutral-500 hover:text-white transition-colors">
+                    {t(link.labelKey)}
                   </Link>
                 </li>
               ))}

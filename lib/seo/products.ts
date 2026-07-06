@@ -15,13 +15,13 @@ export type ProductDefinition = {
 
 export const WORKSPACE_FOUNDATION = {
   eyebrow: "Foundation",
-  title: "Verification Workspaces",
+  title: "Knowledge Workspace",
   summary:
-    "Every product runs on Verification Workspaces: structured environments you create and enrich programmatically with documents, screen recordings, video assets, EEG traces, tool traces, and other evidence from humans or agents.",
+    "Every tool runs inside a Verification Workspace: a knowledge workspace you create and enrich with documents, screen recordings, tool traces, transcripts, and other evidence as humans and agents perform real work.",
   bullets: [
     "Define skills, scenarios, and decision domains as assessable blocks",
-    "Ingest unstructured evidence via API or manual upload",
-    "Continuously enrich context as new artifacts and signals arrive",
+    "Accumulate proof of work as knowledge work happens",
+    "Fuel verification and augmentation from the same workspace context",
   ],
 };
 
@@ -36,7 +36,7 @@ export const PRODUCTS: ProductDefinition[] = [
     bullets: [
       "Agentic: verify skills and tool use before production deployment",
       "Human: confirm learners actually absorbed how to use a tool or workflow",
-      "Integrate into LMS, HRIS, CI gates, or any agentic pipeline",
+      "Integrate into CI gates, internal portals, or any agentic pipeline",
     ],
     href: "/docs/agentic-v2",
     ctaLabel: "API docs",

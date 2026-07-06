@@ -1,10 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
-import { ChevronDown, Menu, X } from "lucide-react";
+import { useState } from "react";
+import { Menu, X } from "lucide-react";
 import { TrackedCtaLink } from "@/components/TrackedCtaLink";
-import { SOLUTION_PAGES } from "@/lib/seo/solution-pages";
 
 const CTA = "Create your Verification Workspace";
 const CTA_HREF = "/workspace/new";
@@ -25,18 +24,6 @@ function PrimaryCta({ compact = false }: { compact?: boolean }) {
 
 export function LandingNav() {
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [solutionsOpen, setSolutionsOpen] = useState(false);
-  const solutionsRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (solutionsRef.current && !solutionsRef.current.contains(event.target as Node)) {
-        setSolutionsOpen(false);
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
 
   return (
     <header className="sticky top-0 z-40 border-b border-zinc-900 bg-[#0a0a0a]/86 px-5 py-4 backdrop-blur-md">
@@ -49,54 +36,14 @@ export function LandingNav() {
           <Link href="/platform" className="transition hover:text-white">
             Platform
           </Link>
-
-          <div className="relative" ref={solutionsRef}>
-            <button
-              type="button"
-              onClick={() => setSolutionsOpen((open) => !open)}
-              className="inline-flex items-center gap-1 transition hover:text-white"
-              aria-expanded={solutionsOpen}
-              aria-haspopup="true"
-            >
-              Solutions
-              <ChevronDown className={`size-4 transition-transform ${solutionsOpen ? "rotate-180" : ""}`} />
-            </button>
-            {solutionsOpen && (
-              <div className="absolute left-0 top-[calc(100%+0.75rem)] z-50 w-[22rem] rounded-md border border-zinc-800 bg-zinc-950/95 p-2 shadow-2xl backdrop-blur-md">
-                <div className="grid gap-1">
-                  <Link
-                    href="/solutions"
-                    onClick={() => setSolutionsOpen(false)}
-                    className="rounded-sm px-3 py-2.5 transition hover:bg-white/5 border-b border-zinc-800/80 mb-1"
-                  >
-                    <span className="block text-sm font-medium text-zinc-200">All solutions</span>
-                    <span className="mt-0.5 block text-xs leading-relaxed text-zinc-500">
-                      Browse every vertical guide
-                    </span>
-                  </Link>
-                  {SOLUTION_PAGES.map((solution) => (
-                    <Link
-                      key={solution.slug}
-                      href={solution.path}
-                      onClick={() => setSolutionsOpen(false)}
-                      className="rounded-sm px-3 py-2.5 transition hover:bg-white/5"
-                    >
-                      <span className="block text-sm font-medium text-zinc-200">{solution.navLabel}</span>
-                      <span className="mt-0.5 block text-xs leading-relaxed text-zinc-500">
-                        {solution.navDescription}
-                      </span>
-                    </Link>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-
           <Link href="/#products" className="transition hover:text-white">
             Products
           </Link>
           <Link href="/#how" className="transition hover:text-white">
             How it works
+          </Link>
+          <Link href="/demo" className="transition hover:text-white">
+            Demo
           </Link>
           <Link href="/pricing" className="transition hover:text-white">
             Pricing
@@ -128,18 +75,6 @@ export function LandingNav() {
                 Platform
               </Link>
             </li>
-            <li className="px-2 pt-2 pb-1 font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-600">Solutions</li>
-            {SOLUTION_PAGES.map((solution) => (
-              <li key={solution.slug}>
-                <Link
-                  href={solution.path}
-                  className="block rounded-sm px-2 py-2 text-zinc-400"
-                  onClick={() => setMobileOpen(false)}
-                >
-                  {solution.navLabel}
-                </Link>
-              </li>
-            ))}
             <li>
               <Link href="/#products" className="block rounded-sm px-2 py-2 text-zinc-300" onClick={() => setMobileOpen(false)}>
                 Products
@@ -148,6 +83,11 @@ export function LandingNav() {
             <li>
               <Link href="/#how" className="block rounded-sm px-2 py-2 text-zinc-300" onClick={() => setMobileOpen(false)}>
                 How it Works
+              </Link>
+            </li>
+            <li>
+              <Link href="/demo" className="block rounded-sm px-2 py-2 text-zinc-300" onClick={() => setMobileOpen(false)}>
+                Demo
               </Link>
             </li>
             <li>

@@ -1,42 +1,25 @@
 import Link from "next/link";
 import { Footer } from "@/components/Footer";
-import { LeadCapture } from "@/components/LeadCapture";
 import { LandingNav } from "@/components/LandingNav";
 import { TrackedCtaLink } from "@/components/TrackedCtaLink";
 import { ProductStack } from "@/components/ProductStack";
 import {
   BASE_URL,
   DEFAULT_BACKGROUND,
-  type SeoSolutionPageConfig,
-} from "@/lib/seo/solution-pages";
-import type { RelatedLink } from "@/lib/seo/scenario-pages";
+  type SeoPlatformPageConfig,
+} from "@/lib/seo/platform-page";
 
 export type BreadcrumbItem = {
   href: string;
   label: string;
 };
 
-type LeadCaptureConfig = {
-  audience: "enterprise" | "schools" | "hr";
-  title?: string;
-  subtitle?: string;
-};
-
 type SeoSolutionPageProps = {
-  page: SeoSolutionPageConfig;
+  page: SeoPlatformPageConfig;
   breadcrumbs?: BreadcrumbItem[];
-  relatedLinks?: RelatedLink[];
-  relatedLinksTitle?: string;
-  leadCapture?: LeadCaptureConfig;
 };
 
-export function SeoSolutionPage({
-  page,
-  breadcrumbs,
-  relatedLinks,
-  relatedLinksTitle = "Verification scenarios",
-  leadCapture,
-}: SeoSolutionPageProps) {
+export function SeoSolutionPage({ page, breadcrumbs }: SeoSolutionPageProps) {
   const faqSchema = {
     "@context": "https://schema.org",
     "@type": "FAQPage",
@@ -131,38 +114,34 @@ export function SeoSolutionPage({
           <div className="mt-8 grid gap-4 sm:grid-cols-2">
             <div className="border border-cyan-400/20 bg-cyan-950/20 p-5">
               <p className="text-base leading-relaxed text-neutral-300">
-                Our focus is{" "}
-                <span className="font-medium text-cyan-200">learning verification</span>.
+                <span className="font-medium text-cyan-200">Verify</span> learning with software
+                tools.
               </p>
               <p className="mt-3 text-sm leading-relaxed text-neutral-500">
-                <span className="text-neutral-300">Evidence API</span> verifies humans and agents.{" "}
-                <span className="text-neutral-300">Think Aloud Protocol</span> and{" "}
-                <span className="text-neutral-300">ILE</span> serve human learning. openLesson helps
-                skill.md developers test and evolve agent skills in the{" "}
-                <span className="text-neutral-300">Agentic Learning Environment</span>.{" "}
-                <span className="font-medium text-white">No exam. No benchmark theater.</span>
+                <span className="text-neutral-300">Evidence API</span> scores artifacts and tool
+                traces. <span className="text-neutral-300">Think Aloud Protocol</span> captures live
+                human cognition under probe. Both run inside the knowledge workspace.
               </p>
             </div>
             <div className="border border-violet-400/20 bg-violet-950/20 p-5">
               <p className="text-base leading-relaxed text-neutral-300">
-                Our results are{" "}
-                <span className="font-medium text-violet-200">learning-to-conversion</span>.
+                <span className="font-medium text-violet-200">Augment</span> learning where gaps
+                appear.
               </p>
               <p className="mt-3 text-sm leading-relaxed text-neutral-500">
-                For humans: did they learn the workflow well enough to activate, adopt, and convert?
-                For agents: did they learn the skills well enough to deploy and perform in production?
-                Verification evidence tied to outcomes, not vanity completion or benchmark scores.
+                <span className="text-neutral-300">ILE</span> routes humans into targeted practice.{" "}
+                <span className="text-neutral-300">ALE</span> helps skill developers iterate agent
+                skills. Verification findings drive what gets practiced next.
               </p>
             </div>
           </div>
           <div className="mt-10 rounded-md border border-neutral-800 bg-neutral-950/70 p-5 sm:p-6">
             <p className="font-mono text-[10px] uppercase tracking-[2px] text-neutral-500">
-              Four products. One Verification Workspace.
+              Four tools. One knowledge workspace.
             </p>
             <p className="mt-3 text-sm leading-relaxed text-neutral-400">
-              Everything runs on Verification Workspaces. Evidence API verifies humans and agents from
-              artifacts. Think Aloud Protocol and ILE focus on human learning. Agentic Learning
-              Environment helps skill developers test and evolve agent skills.
+              Evidence API and Think Aloud Protocol verify learning. ILE and ALE augment it. All four
+              share the same workspace context, scoring model, and gap analysis.
             </p>
             <div className="mt-5">
               <ProductStack variant="compact" showFoundation={false} />
@@ -172,7 +151,7 @@ export function SeoSolutionPage({
             <TrackedCtaLink
               href={page.primaryCta.href}
               label={page.primaryCta.label}
-              location="solution_hero"
+              location="platform_hero"
               page={page.path}
               className="inline-flex h-11 items-center justify-center rounded-sm bg-white px-5 text-sm font-medium text-black transition hover:bg-neutral-200"
             />
@@ -180,7 +159,7 @@ export function SeoSolutionPage({
               <TrackedCtaLink
                 href={page.secondaryCta.href}
                 label={page.secondaryCta.label}
-                location="solution_hero_secondary"
+                location="platform_hero_secondary"
                 page={page.path}
                 className="inline-flex h-11 items-center justify-center rounded-sm border border-neutral-700 px-5 text-sm text-neutral-200 transition hover:border-neutral-500 hover:text-white"
               />
@@ -213,25 +192,6 @@ export function SeoSolutionPage({
             </section>
           ))}
 
-          {relatedLinks && relatedLinks.length > 0 && (
-            <section className="rounded-md border border-neutral-800 bg-neutral-950/70 p-6 sm:p-8">
-              <h2 className="text-xl font-medium text-white sm:text-2xl">{relatedLinksTitle}</h2>
-              <ul className="mt-4 space-y-3">
-                {relatedLinks.map((link) => (
-                  <li key={link.href}>
-                    <Link
-                      href={link.href}
-                      className="block rounded-sm border border-neutral-800 bg-black/30 px-4 py-3 transition hover:border-neutral-600 hover:bg-black/50"
-                    >
-                      <span className="text-sm font-medium text-neutral-200">{link.label}</span>
-                      <span className="mt-1 block text-xs text-neutral-500">{link.description}</span>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </section>
-          )}
-
           <section id="faq" className="rounded-md border border-neutral-800 bg-neutral-950/70 p-6 sm:p-8">
             <h2 className="text-xl font-medium text-white sm:text-2xl">Frequently asked questions</h2>
             <dl className="mt-6 space-y-6">
@@ -244,17 +204,6 @@ export function SeoSolutionPage({
             </dl>
           </section>
 
-          {leadCapture && (
-            <section id="contact" className="rounded-md border border-neutral-800 bg-neutral-950/70 p-6 sm:p-8">
-              <LeadCapture
-                audience={leadCapture.audience}
-                title={leadCapture.title}
-                subtitle={leadCapture.subtitle}
-                sourcePage={page.path}
-              />
-            </section>
-          )}
-
           <section className="rounded-md border border-neutral-800 bg-neutral-950/80 p-6 text-center sm:p-8">
             <h2 className="text-xl font-medium text-white">{page.closingTitle}</h2>
             <p className="mx-auto mt-3 max-w-lg text-sm text-neutral-500">{page.closingBody}</p>
@@ -262,14 +211,14 @@ export function SeoSolutionPage({
               <TrackedCtaLink
                 href={page.primaryCta.href}
                 label="Get started"
-                location="solution_closing"
+                location="platform_closing"
                 page={page.path}
                 className="inline-flex h-10 items-center justify-center rounded-sm bg-white px-4 text-sm font-medium text-black transition hover:bg-neutral-200"
               />
               <TrackedCtaLink
                 href="/pricing"
                 label="View pricing"
-                location="solution_closing"
+                location="platform_closing"
                 page={page.path}
                 className="inline-flex h-10 items-center justify-center rounded-sm border border-neutral-700 px-4 text-sm text-neutral-300 transition hover:border-neutral-500 hover:text-white"
               />

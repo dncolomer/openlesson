@@ -69,11 +69,11 @@ export default function B2BLandingPage() {
           <h1 className="max-w-5xl text-5xl font-medium leading-[1.03] tracking-[-2.8px] text-white sm:text-6xl lg:text-[72px]">Beyond benchmarks for AI. Beyond tests for humans.</h1>
           <div className="mt-7 max-w-5xl space-y-4 text-base leading-relaxed text-zinc-400 sm:text-lg">
             <p>openLesson verifies learning through evidence, proof of work, and cognitive analysis for people as well as AI agents performing knowledge work.</p>
-            <div className="grid gap-4 lg:grid-cols-2">
-              <div className="border border-cyan-400/20 bg-cyan-950/20 p-5 sm:p-6">
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              <div className="border border-zinc-800 bg-zinc-950/70 p-5 sm:p-6">
                 <p className="text-lg leading-relaxed text-zinc-300 sm:text-xl">
                   Our focus is{" "}
-                  <span className="font-medium text-cyan-200">learning verification</span>.
+                  <span className="font-medium text-white">learning verification</span>.
                 </p>
                 <p className="mt-4 text-sm leading-relaxed text-zinc-400 sm:text-base">
                   <span className="text-zinc-200">Evidence API</span> verifies humans and agents.
@@ -84,15 +84,27 @@ export default function B2BLandingPage() {
                   <span className="font-medium text-white">No exam. No benchmark theater.</span>
                 </p>
               </div>
-              <div className="border border-violet-400/20 bg-violet-950/20 p-5 sm:p-6">
+              <div className="border border-zinc-800 bg-zinc-950/70 p-5 sm:p-6">
                 <p className="text-lg leading-relaxed text-zinc-300 sm:text-xl">
                   Our results are{" "}
-                  <span className="font-medium text-violet-200">learning-to-conversion</span>.
+                  <span className="font-medium text-white">learning-to-conversion</span>.
                 </p>
                 <p className="mt-4 text-sm leading-relaxed text-zinc-400 sm:text-base">
                   For humans: did they learn the workflow well enough to activate, adopt, and convert?
                   For agents: did they learn the skills well enough to deploy and perform in production?
                   Verification evidence tied to outcomes, not vanity completion or benchmark scores.
+                </p>
+              </div>
+              <div className="border border-zinc-800 bg-zinc-950/70 p-5 sm:p-6 md:col-span-2 lg:col-span-1">
+                <p className="text-lg leading-relaxed text-zinc-300 sm:text-xl">
+                  Our method is{" "}
+                  <span className="font-medium text-white">learning augmentation</span>.
+                </p>
+                <p className="mt-4 text-sm leading-relaxed text-zinc-400 sm:text-base">
+                  Verification surfaces gaps.{" "}
+                  <span className="text-zinc-200">ILE</span>, in-product coaching, and targeted practice
+                  augment learning until readiness clears the bar — for humans adopting workflows and agents
+                  evolving skills.
                 </p>
               </div>
             </div>

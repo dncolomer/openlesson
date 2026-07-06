@@ -13,6 +13,7 @@ import {
   Search,
   User,
 } from "lucide-react";
+import type { ConversionGoalSource } from "@/lib/agent-v2/conversion-goal";
 import type { PerformanceReport } from "@/lib/agent-v2/performance-report";
 import { SmartCoachOverlay } from "@/components/orbit/SmartCoachOverlay";
 import {
@@ -28,7 +29,7 @@ import {
 } from "@/lib/evidence-api-demo/orbit-app-model";
 import {
   emitOrbitAction,
-  fetchOrbitScorecard,
+  fetchOrbitPerformance,
   initOrbitBridge,
   loadOrbitBridge,
   parseOrbitLaunchParams,
@@ -69,6 +70,8 @@ export function OrbitApp() {
   const [isEmitting, setIsEmitting] = useState(false);
   const [report, setReport] = useState<PerformanceReport | null>(null);
   const [isReporting, setIsReporting] = useState(false);
+  const [inferredGoal, setInferredGoal] = useState<string | null>(null);
+  const [conversionGoalSource, setConversionGoalSource] = useState<ConversionGoalSource | undefined>();
   const [dismissedCoachStep, setDismissedCoachStep] = useState<string | null>(null);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [newIssueOpen, setNewIssueOpen] = useState(false);
@@ -93,6 +96,8 @@ export function OrbitApp() {
 
     const nextBridge = initOrbitBridge(launch, existingBridge?.blocks ?? []);
     setBridge(nextBridge);
+    setInferredGoal(nextBridge.inferredConversionGoal ?? null);
+    setConversionGoalSource(nextBridge.conversionGoalSource);
     setAppState(loadOrbitAppState());
 
     if (params) {
@@ -118,8 +123,15 @@ export function OrbitApp() {
         setBridge(result.bridge);
         if (result.shouldScore) {
           setIsReporting(true);
-          const nextReport = await fetchOrbitScorecard(result.bridge);
-          setReport(nextReport);
+          const performance = await fetchOrbitPerformance(result.bridge);
+          setReport(performance.report);
+          const goal =
+            performance.workspace_conversion_goal?.trim() ||
+            performance.report?.conversion_goal?.trim() ||
+            null;
+          setInferredGoal(goal);
+          setConversionGoalSource(performance.conversion_goal_source);
+          setBridge(loadOrbitBridge());
         }
       } catch (err) {
         setActionError(err instanceof Error ? err.message : "Evidence upload failed");
@@ -525,6 +537,8 @@ export function OrbitApp() {
         isReporting={isReporting}
         dismissedStep={dismissedCoachStep}
         onDismiss={setDismissedCoachStep}
+        inferredGoal={inferredGoal}
+        conversionGoalSource={conversionGoalSource}
       />
 
       {paletteOpen ? (

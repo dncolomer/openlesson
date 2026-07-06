@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Loader2, Sparkles, Target, X } from "lucide-react";
+import type { ConversionGoalSource } from "@/lib/agent-v2/conversion-goal";
 import type { PerformanceReport } from "@/lib/agent-v2/performance-report";
 import { extractGameCoaching } from "@/lib/evidence-api-demo/game-tips";
 import { matchCoachingHintToAction, type OrbitCoachTarget } from "@/lib/evidence-api-demo/orbit-coach-map";
@@ -11,6 +12,8 @@ type SmartCoachOverlayProps = {
   isReporting: boolean;
   dismissedStep: string | null;
   onDismiss: (stepKey: string) => void;
+  inferredGoal?: string | null;
+  conversionGoalSource?: ConversionGoalSource;
 };
 
 function clampScore(value: unknown): number | null {
@@ -23,6 +26,8 @@ export function SmartCoachOverlay({
   isReporting,
   dismissedStep,
   onDismiss,
+  inferredGoal,
+  conversionGoalSource,
 }: SmartCoachOverlayProps) {
   const coaching = useMemo(() => extractGameCoaching(report), [report]);
   const coachTarget = useMemo(
@@ -40,6 +45,11 @@ export function SmartCoachOverlay({
     : "idle";
 
   const [spotlight, setSpotlight] = useState<DOMRect | null>(null);
+
+  const goalText =
+    inferredGoal?.trim() ||
+    report?.conversion_goal?.trim() ||
+    null;
 
   useEffect(() => {
     if (!coachTarget || dismissedStep === stepKey) {
@@ -68,7 +78,7 @@ export function SmartCoachOverlay({
   }, [coachTarget, dismissedStep, stepKey]);
 
   const overallScore = clampScore(report?.overall_score);
-  const showCard = isReporting || coachTarget || coaching.directions.length > 0;
+  const showCard = isReporting || goalText || coachTarget || coaching.directions.length > 0;
 
   if (!showCard) return null;
 
@@ -112,6 +122,18 @@ export function SmartCoachOverlay({
             </button>
           ) : null}
         </div>
+
+        {goalText ? (
+          <p className="mt-3 rounded-md border border-[#5e6ad2]/25 bg-[#5e6ad2]/10 px-3 py-2 text-sm leading-snug text-[#d6d6e8]">
+            Are you trying to{" "}
+            <span className="font-medium text-white">{goalText}</span>?
+            {conversionGoalSource ? (
+              <span className="mt-1 block font-mono text-[9px] uppercase tracking-wide text-[#6b6b80]">
+                {conversionGoalSource === "workspace" ? "Workspace goal" : "Inferred goal"}
+              </span>
+            ) : null}
+          </p>
+        ) : null}
 
         {overallScore !== null ? (
           <div className="mt-2 font-mono text-[10px] uppercase tracking-wide text-[#6b6b80]">

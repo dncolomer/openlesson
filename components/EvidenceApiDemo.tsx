@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { createBrowserClient } from "@supabase/ssr";
 import {
@@ -38,7 +38,12 @@ import type { EvidenceApiDemoDefinition } from "@/lib/evidence-api-demo/demo-def
 import { DemoVerificationPills } from "@/components/evidence-demo/DemoVerificationPills";
 import { EVIDENCE_API_DEMOS, resolveDemoId } from "@/lib/evidence-api-demo/demos";
 import { isExternalDemo, isInteractiveDemo } from "@/lib/evidence-api-demo/game-tips";
-import { buildOrbitLaunchUrl } from "@/lib/evidence-api-demo/orbit-bridge";
+import {
+  buildOrbitLaunchUrl,
+  initOrbitBridge,
+  ORBIT_BRIDGE_STORAGE_KEY,
+  readOrbitBridgeForPlan,
+} from "@/lib/evidence-api-demo/orbit-bridge";
 import {
   normalizeDemoSessionUrl,
   openDemoSessionUrl,
@@ -369,10 +374,39 @@ export function EvidenceApiDemo() {
     };
   }, []);
 
+  const applyOrbitBridgeSnapshot = useCallback(
+    (bridgePlanId: string) => {
+      const bridge = readOrbitBridgeForPlan(bridgePlanId);
+      if (!bridge) return null;
+
+      setEvidenceCount(bridge.evidenceCount);
+      setWorldState(bridge.worldState);
+
+      if (bridge.inferredConversionGoal) {
+        setPerformanceResponseRaw((prev) =>
+          prev
+            ? {
+                ...prev,
+                workspace_conversion_goal: bridge.inferredConversionGoal!,
+                conversion_goal_source: bridge.conversionGoalSource ?? prev.conversion_goal_source,
+              }
+            : null
+        );
+      }
+
+      return bridge;
+    },
+    []
+  );
+
   useEffect(() => {
     if (authState !== "ready") return;
     const persisted = loadPersistedState();
     if (!persisted) return;
+    const restoredDemo = isCustomDemoId(persisted.demoId)
+      ? persisted.customDemo ?? CUSTOM_DEMO_PICKER
+      : resolveDemoId(persisted.demoId);
+
     setPlanId(persisted.planId);
     setSessionId(persisted.sessionId);
     setDemoId(persisted.demoId);
@@ -382,9 +416,63 @@ export function EvidenceApiDemo() {
     setWorldState(persisted.worldState);
     setWorkspaceTitle(persisted.workspaceTitle ?? null);
     setBlocks(persisted.blocks ?? []);
-    setEvidenceCount(totalActionCount(persisted.worldState));
+
+    if (isExternalDemo(restoredDemo)) {
+      const bridge = applyOrbitBridgeSnapshot(persisted.planId);
+      setEvidenceCount(bridge?.evidenceCount ?? 0);
+    } else {
+      setEvidenceCount(totalActionCount(persisted.worldState));
+    }
+
     setPhase("simulating");
-  }, [authState]);
+  }, [applyOrbitBridgeSnapshot, authState]);
+
+  useEffect(() => {
+    if (!planId || phase !== "simulating" || !isExternalDemo(activeDemo)) return;
+
+    const sync = () => {
+      const bridge = applyOrbitBridgeSnapshot(planId);
+      if (!bridge) return;
+
+      persistState({
+        planId,
+        sessionId,
+        demoId: activeDemo.id,
+        worldState: bridge.worldState,
+        workspaceTitle: workspaceTitle ?? undefined,
+        blocks: bridge.blocks.length > 0 ? bridge.blocks : blocks,
+        customDemo: isCustomDemoId(activeDemo.id) ? activeDemo : undefined,
+        customPrompt: isCustomDemoId(activeDemo.id) ? customPrompt.trim() : undefined,
+        customInputMode: isCustomDemoId(activeDemo.id) ? customInputMode : undefined,
+      });
+
+      if (shouldSuggestSkillRegeneration(bridge.evidenceCount, lastSkillEvidenceCount)) {
+        setSkillRegenHint(true);
+      }
+    };
+
+    sync();
+    const onStorage = (event: StorageEvent) => {
+      if (event.key === ORBIT_BRIDGE_STORAGE_KEY) sync();
+    };
+    window.addEventListener("storage", onStorage);
+    const interval = window.setInterval(sync, 2000);
+    return () => {
+      window.removeEventListener("storage", onStorage);
+      window.clearInterval(interval);
+    };
+  }, [
+    activeDemo,
+    applyOrbitBridgeSnapshot,
+    blocks,
+    customInputMode,
+    customPrompt,
+    lastSkillEvidenceCount,
+    phase,
+    planId,
+    sessionId,
+    workspaceTitle,
+  ]);
 
   const handleSelectDemo = (demo: EvidenceApiDemoDefinition) => {
     setError("");
@@ -491,6 +579,12 @@ export function EvidenceApiDemo() {
       setBlocks(data.blocks);
       setModelDocPreview(data.demo.model_doc_preview ?? null);
       const initialWorld = createInitialWorldState();
+      if (isExternalDemo(activeDemo)) {
+        initOrbitBridge(
+          { planId: data.workspace.id, sessionId: newSessionId, demoId: activeDemo.id },
+          data.blocks
+        );
+      }
       persistState({
         planId: data.workspace.id,
         sessionId: newSessionId,
@@ -653,6 +747,24 @@ export function EvidenceApiDemo() {
   const handleRegenerateSkill = async () => {
     if (!planId || isRegeneratingSkill) return;
 
+    let effectiveEvidenceCount = evidenceCount;
+    let effectiveWorldState = worldState;
+    if (isExternalDemo(activeDemo)) {
+      const bridge = applyOrbitBridgeSnapshot(planId);
+      if (bridge) {
+        effectiveEvidenceCount = bridge.evidenceCount;
+        effectiveWorldState = bridge.worldState;
+      }
+    }
+    if (effectiveEvidenceCount < 1) {
+      setError("Run at least one action in Orbit to upload evidence before regenerating the skill.");
+      return;
+    }
+
+    const snapshotEvidenceCount = effectiveEvidenceCount;
+    const snapshotActionCount = totalActionCount(effectiveWorldState);
+    const snapshotSimulatedDays = effectiveWorldState.simulatedDays;
+
     setIsRegeneratingSkill(true);
     setError("");
     setSkillRegenHint(false);
@@ -690,7 +802,7 @@ export function EvidenceApiDemo() {
       if (data.evidence_spec) {
         setLatestSchema(data.evidence_spec);
       }
-      setLastSkillEvidenceCount(evidenceCount);
+      setLastSkillEvidenceCount(snapshotEvidenceCount);
 
       setSkillHistory((prev) => [
         ...prev,
@@ -699,9 +811,9 @@ export function EvidenceApiDemo() {
           skill_name: data.skill_name,
           skill_md: data.skill_md,
           spec_version: data.evidence_spec?.spec_version,
-          evidenceCount,
-          actionCount,
-          simulatedDays: worldState.simulatedDays,
+          evidenceCount: snapshotEvidenceCount,
+          actionCount: snapshotActionCount,
+          simulatedDays: snapshotSimulatedDays,
           prefetch: data.evidence_spec_prefetched === true,
           timestamp: new Date(),
         },
@@ -715,9 +827,9 @@ export function EvidenceApiDemo() {
             schema_name: data.evidence_spec!.schema_name,
             spec_version: data.evidence_spec!.spec_version,
             spec: data.evidence_spec!,
-            evidenceCount,
-            actionCount,
-            simulatedDays: worldState.simulatedDays,
+            evidenceCount: snapshotEvidenceCount,
+            actionCount: snapshotActionCount,
+            simulatedDays: snapshotSimulatedDays,
             timestamp: new Date(),
           },
         ]);
@@ -732,17 +844,31 @@ export function EvidenceApiDemo() {
 
   const handleRequestPerformance = async (options?: { switchView?: boolean }) => {
     if (!planId || isReporting) return;
-    if (evidenceCount < 1) {
-      setError("Run at least one simulation action to upload evidence before requesting a score.");
+
+    let effectiveEvidenceCount = evidenceCount;
+    let effectiveWorldState = worldState;
+    if (isExternalDemo(activeDemo)) {
+      const bridge = applyOrbitBridgeSnapshot(planId);
+      if (bridge) {
+        effectiveEvidenceCount = bridge.evidenceCount;
+        effectiveWorldState = bridge.worldState;
+      }
+    }
+    if (effectiveEvidenceCount < 1) {
+      setError(
+        isExternalDemo(activeDemo)
+          ? "Run at least one action in Orbit to upload evidence before requesting a score."
+          : "Run at least one simulation action to upload evidence before requesting a score."
+      );
       return;
     }
 
     setIsReporting(true);
     setError("");
 
-    const snapshotEvidenceCount = evidenceCount;
-    const snapshotActionCount = actionCount;
-    const snapshotSimulatedDays = worldState.simulatedDays;
+    const snapshotEvidenceCount = effectiveEvidenceCount;
+    const snapshotActionCount = totalActionCount(effectiveWorldState);
+    const snapshotSimulatedDays = effectiveWorldState.simulatedDays;
     const switchView = options?.switchView !== false;
 
     try {
@@ -1747,12 +1873,16 @@ function ExternalLaunchPanel({
   planId,
   sessionId,
   evidenceCount,
+  inferredGoal,
+  conversionGoalSource,
   styles,
 }: {
   demo: EvidenceApiDemoDefinition;
   planId: string | null;
   sessionId: string | null;
   evidenceCount: number;
+  inferredGoal?: string | null;
+  conversionGoalSource?: ConversionGoalSource;
   styles: ReturnType<typeof demoPanelStyles>;
 }) {
   const canLaunch = Boolean(planId && sessionId);
@@ -1768,10 +1898,23 @@ function ExternalLaunchPanel({
       <h3 className="mt-6 text-2xl font-medium text-white">{demo.productName} is ready</h3>
       <p className={`mt-3 max-w-lg text-sm leading-relaxed ${styles.bodyText}`}>
         Launch the full-screen product in a new browser tab. Learn by doing inside Orbit while evidence
-        verifies learning and conversion. Smart coaching overlays tell users what to try next as score cards update.
+        verifies learning and conversion. Smart coaching overlays ask &ldquo;are you trying to X?&rdquo; and
+        coach the next step as score cards update.
       </p>
+
+      {inferredGoal ? (
+        <p className="mt-4 max-w-lg rounded-md border border-zinc-700 bg-black/30 px-4 py-3 text-sm leading-snug text-zinc-200">
+          Are you trying to <span className="font-medium text-white">{inferredGoal}</span>?
+          {conversionGoalSource ? (
+            <span className="mt-1 block font-mono text-[9px] uppercase tracking-wide text-zinc-500">
+              {conversionGoalSource === "workspace" ? "Workspace goal" : "Inferred goal"}
+            </span>
+          ) : null}
+        </p>
+      ) : null}
+
       <div className="mt-4 font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-500">
-        {evidenceCount} evidence events from hub · live actions stream from Orbit
+        {evidenceCount} evidence event{evidenceCount === 1 ? "" : "s"} · synced live from Orbit
       </div>
       <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
         <button
@@ -2507,6 +2650,8 @@ function SimulatorPanel({
                 planId={planId}
                 sessionId={sessionId}
                 evidenceCount={evidenceCount}
+                inferredGoal={workspaceConversionGoal}
+                conversionGoalSource={conversionGoalSource}
                 styles={styles}
               />
             ) : interactiveMode && phase === "simulating" ? null : (

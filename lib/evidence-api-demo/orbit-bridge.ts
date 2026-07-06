@@ -1,3 +1,4 @@
+import type { ConversionGoalSource } from "@/lib/agent-v2/conversion-goal";
 import type { PerformanceReport } from "@/lib/agent-v2/performance-report";
 import { orbitDemo } from "./demos/orbit";
 import type { DemoWorkspaceBlock } from "./types";
@@ -11,6 +12,7 @@ import type { SimulationAction, SimulationWorldState } from "./types";
 import { getSimulationAction } from "./simulation";
 
 export const ORBIT_BRIDGE_STORAGE_KEY = "orbit-evidence-bridge";
+export const DEMO_STORAGE_KEY = "openlesson-evidence-api-demo";
 
 export type OrbitEvidenceBridge = {
   planId: string;
@@ -19,12 +21,20 @@ export type OrbitEvidenceBridge = {
   blocks: DemoWorkspaceBlock[];
   worldState: SimulationWorldState;
   evidenceCount: number;
+  inferredConversionGoal?: string;
+  conversionGoalSource?: ConversionGoalSource;
 };
 
 export type OrbitLaunchParams = {
   planId: string;
   sessionId: string;
   demoId?: string;
+};
+
+export type OrbitPerformanceResponse = {
+  report: PerformanceReport | null;
+  workspace_conversion_goal: string;
+  conversion_goal_source: ConversionGoalSource;
 };
 
 export function buildOrbitLaunchUrl(params: OrbitLaunchParams, origin = ""): string {
@@ -70,12 +80,51 @@ export function loadOrbitBridge(): OrbitEvidenceBridge | null {
 export function saveOrbitBridge(bridge: OrbitEvidenceBridge): void {
   if (typeof window === "undefined") return;
   localStorage.setItem(ORBIT_BRIDGE_STORAGE_KEY, JSON.stringify(bridge));
+  syncOrbitBridgeToDemoPersistence(bridge);
 }
 
-export function initOrbitBridge(params: OrbitLaunchParams, blocks: DemoWorkspaceBlock[] = []): OrbitEvidenceBridge {
+function syncOrbitBridgeToDemoPersistence(bridge: OrbitEvidenceBridge): void {
+  if (typeof window === "undefined") return;
+  try {
+    const raw = localStorage.getItem(DEMO_STORAGE_KEY);
+    if (!raw) return;
+    const parsed = JSON.parse(raw) as {
+      planId?: string;
+      worldState?: SimulationWorldState;
+      blocks?: DemoWorkspaceBlock[];
+    };
+    if (parsed.planId !== bridge.planId) return;
+    localStorage.setItem(
+      DEMO_STORAGE_KEY,
+      JSON.stringify({
+        ...parsed,
+        worldState: bridge.worldState,
+        blocks: bridge.blocks.length > 0 ? bridge.blocks : parsed.blocks,
+      })
+    );
+  } catch {
+    // ignore sync failures
+  }
+}
+
+export function readOrbitBridgeForPlan(planId: string): OrbitEvidenceBridge | null {
+  const bridge = loadOrbitBridge();
+  if (!bridge || bridge.planId !== planId) return null;
+  return bridge;
+}
+
+export function initOrbitBridge(
+  params: OrbitLaunchParams,
+  blocks: DemoWorkspaceBlock[] = []
+): OrbitEvidenceBridge {
   const existing = loadOrbitBridge();
   if (existing && existing.planId === params.planId) {
-    return existing;
+    const merged: OrbitEvidenceBridge = {
+      ...existing,
+      blocks: blocks.length > 0 ? blocks : existing.blocks,
+    };
+    saveOrbitBridge(merged);
+    return merged;
   }
   const bridge: OrbitEvidenceBridge = {
     planId: params.planId,
@@ -89,8 +138,66 @@ export function initOrbitBridge(params: OrbitLaunchParams, blocks: DemoWorkspace
   return bridge;
 }
 
+export function getOrbitEvidenceCountForPlan(planId: string): number {
+  const bridge = loadOrbitBridge();
+  if (!bridge || bridge.planId !== planId) return 0;
+  return bridge.evidenceCount;
+}
+
 async function readJsonResponse<T>(res: Response): Promise<T> {
   return (await res.json()) as T;
+}
+
+export function applyPerformanceToBridge(
+  bridge: OrbitEvidenceBridge,
+  performance: OrbitPerformanceResponse
+): OrbitEvidenceBridge {
+  const goal =
+    performance.workspace_conversion_goal?.trim() ||
+    performance.report?.conversion_goal?.trim() ||
+    "";
+  const next: OrbitEvidenceBridge = {
+    ...bridge,
+    inferredConversionGoal: goal || bridge.inferredConversionGoal,
+    conversionGoalSource: performance.conversion_goal_source ?? bridge.conversionGoalSource,
+  };
+  saveOrbitBridge(next);
+  return next;
+}
+
+export async function fetchOrbitPerformance(
+  bridge: OrbitEvidenceBridge
+): Promise<OrbitPerformanceResponse> {
+  const res = await fetch("/api/evidence-api-demo/performance", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ planId: bridge.planId }),
+  });
+  const data = await readJsonResponse<{
+    report?: PerformanceReport;
+    workspace_conversion_goal?: string;
+    conversion_goal_source?: ConversionGoalSource;
+    error?: string;
+  }>(res);
+  if (!res.ok) {
+    throw new Error(data.error || "Performance report failed");
+  }
+
+  const performance: OrbitPerformanceResponse = {
+    report: data.report ?? null,
+    workspace_conversion_goal: data.workspace_conversion_goal ?? "",
+    conversion_goal_source: data.conversion_goal_source ?? "inferred",
+  };
+  applyPerformanceToBridge(bridge, performance);
+  return performance;
+}
+
+/** @deprecated Use fetchOrbitPerformance */
+export async function fetchOrbitScorecard(
+  bridge: OrbitEvidenceBridge
+): Promise<PerformanceReport | null> {
+  const result = await fetchOrbitPerformance(bridge);
+  return result.report;
 }
 
 export async function emitOrbitAction(
@@ -155,22 +262,4 @@ export async function emitOrbitAction(
     action.kind === "evidence" && nextEvidenceCount >= 3 && nextEvidenceCount % 3 === 0;
 
   return { bridge: nextBridge, shouldScore };
-}
-
-export async function fetchOrbitScorecard(
-  bridge: OrbitEvidenceBridge
-): Promise<PerformanceReport | null> {
-  const res = await fetch("/api/evidence-api-demo/performance", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ planId: bridge.planId }),
-  });
-  const data = await readJsonResponse<{
-    report?: PerformanceReport;
-    error?: string;
-  }>(res);
-  if (!res.ok) {
-    throw new Error(data.error || "Performance report failed");
-  }
-  return data.report ?? null;
 }

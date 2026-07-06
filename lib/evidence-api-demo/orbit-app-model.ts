@@ -35,6 +35,7 @@ export type OrbitAppState = {
     assigneeFilter: string | null;
     sidebarCollapsed: boolean;
     tourDismissed: boolean;
+    sprintPublished: boolean;
   };
   completedCoachSteps: string[];
 };
@@ -104,6 +105,7 @@ export function createSeedOrbitState(): OrbitAppState {
       assigneeFilter: null,
       sidebarCollapsed: false,
       tourDismissed: false,
+      sprintPublished: false,
     },
     completedCoachSteps: [],
   };
@@ -118,7 +120,13 @@ export function loadOrbitAppState(): OrbitAppState {
     if (parsed.version !== 1 || !Array.isArray(parsed.issues)) {
       return createSeedOrbitState();
     }
-    return parsed;
+    return {
+      ...parsed,
+      ui: {
+        ...parsed.ui,
+        sprintPublished: parsed.ui.sprintPublished ?? false,
+      },
+    };
   } catch {
     return createSeedOrbitState();
   }

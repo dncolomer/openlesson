@@ -40,6 +40,16 @@ describe("buildPerformanceReportInstructions", () => {
     expect(instructions).toContain("Authoritative workspace conversion goal");
     expect(instructions).toContain("Trial-to-paid activation");
   });
+
+  it("appends optional style_prompt voice instructions", () => {
+    const instructions = buildPerformanceReportInstructions(
+      null,
+      null,
+      'Address the user as "you" in second person.'
+    );
+    expect(instructions).toContain("Output style");
+    expect(instructions).toContain('Address the user as "you" in second person.');
+  });
 });
 
 describe("buildPerformanceReportContract", () => {

@@ -42,7 +42,7 @@ const outcomes = [
   "Confirm humans learned how to use a tool or workflow, not just clicked through training.",
   "Detect hidden gaps before they show up in client work, incidents, or bad deploys.",
   "Separate genuine human thinking from AI-fed interview polish and take-home fluff.",
-  "Create auditable readiness evidence for compliance, promotion, or high-stakes roles.",
+  "Generate proof of work from real workflows — auditable readiness for compliance, promotion, or high-stakes roles.",
   "Close gaps with ILE practice so verification leads to improvement, not just labels.",
 ];
 
@@ -68,7 +68,15 @@ export default function B2BLandingPage() {
           <div className="mb-6 inline-block rounded-sm border border-zinc-800 bg-zinc-950/80 px-3 py-1 font-mono text-[10px] tracking-[2px] text-zinc-500">LEARNING VERIFICATION • HUMANS & AGENTS</div>
           <h1 className="max-w-5xl text-5xl font-medium leading-[1.03] tracking-[-2.8px] text-white sm:text-6xl lg:text-[72px]">Beyond benchmarks for AI. Beyond tests for humans.</h1>
           <div className="mt-7 max-w-5xl space-y-4 text-base leading-relaxed text-zinc-400 sm:text-lg">
-            <p>openLesson verifies learning through evidence, proof of work, and cognitive analysis for people as well as AI agents performing knowledge work.</p>
+            <p>
+              openLesson verifies learning by generating proof of work — tool traces, live cognition captures,
+              and scored artifacts — for people as well as AI agents performing knowledge work.
+            </p>
+            <p className="text-zinc-500 sm:text-base">
+              As humans and agents work inside real products, openLesson turns that activity into auditable
+              proof of work: evidence that judgment and skill were demonstrated, not just that a step was
+              completed.
+            </p>
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
               <div className="border border-zinc-800 bg-zinc-950/70 p-5 sm:p-6">
                 <p className="text-lg leading-relaxed text-zinc-300 sm:text-xl">
@@ -76,9 +84,9 @@ export default function B2BLandingPage() {
                   <span className="font-medium text-white">learning verification</span>.
                 </p>
                 <p className="mt-4 text-sm leading-relaxed text-zinc-400 sm:text-base">
-                  <span className="text-zinc-200">Evidence API</span> verifies humans and agents.
-                  <span className="text-zinc-200"> Think Aloud Protocol</span> and{" "}
-                  <span className="text-zinc-200">ILE</span> serve human learning.
+                  <span className="text-zinc-200">Evidence API</span> generates proof of work from product
+                  activity. <span className="text-zinc-200">Think Aloud Protocol</span> and{" "}
+                  <span className="text-zinc-200">ILE</span> capture and strengthen human learning.
                   openLesson helps skill.md developers test and evolve agent skills in the{" "}
                   <span className="text-zinc-200">Agentic Learning Environment</span>.{" "}
                   <span className="font-medium text-white">No exam. No benchmark theater.</span>
@@ -130,11 +138,12 @@ export default function B2BLandingPage() {
         />
         <p className="mt-6 max-w-3xl text-lg leading-relaxed text-zinc-400">
           Everything runs on{" "}
-          <span className="text-zinc-200">Verification Workspaces</span>.{" "}
-          <span className="text-zinc-200">Evidence API</span> verifies humans and agents from artifacts.{" "}
-          <span className="text-zinc-200">Think Aloud Protocol</span> and{" "}
+          <span className="text-zinc-200">Verification Workspaces</span> that accumulate proof of work over
+          time. <span className="text-zinc-200">Evidence API</span> verifies humans and agents from
+          artifacts. <span className="text-zinc-200">Think Aloud Protocol</span> and{" "}
           <span className="text-zinc-200">ILE</span> focus on human learning.{" "}
-          <span className="text-zinc-200">Agentic Learning Environment</span> helps skill developers test and evolve agent skills.
+          <span className="text-zinc-200">Agentic Learning Environment</span> helps skill developers test
+          and evolve agent skills.
         </p>
         <div className="mt-10">
           <ProductStack />
@@ -151,7 +160,10 @@ export default function B2BLandingPage() {
         <div className="border border-zinc-800 bg-zinc-950/70 p-6 text-lg leading-relaxed text-zinc-400 backdrop-blur-sm sm:p-8">
           <p className="text-white">Verify, learn, and evolve on the same workspace.</p>
           <p className="mt-5">Pipe tool traces into Evidence API for human and agentic scoring. Issue Think Aloud Protocol URLs for live human cognition. Route humans into the ILE to improve. Soon, skill developers will use the Agentic Learning Environment to iterate agent skills until verification scores clear the bar.</p>
-          <p className="mt-5 text-zinc-200">Verify learning, build judgment, and prove improvement with auditable evidence at every step.</p>
+          <p className="mt-5 text-zinc-200">
+            Verify learning, build judgment, and generate proof of work — auditable evidence you can tie to
+            deploy gates, promotion, and compliance at every step.
+          </p>
         </div>
       </section>
 

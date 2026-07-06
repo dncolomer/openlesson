@@ -3,6 +3,7 @@ import {
   createTimeToolActions,
   type EvidenceApiDemoDefinition,
 } from "../demo-definition";
+import { buildOrbitUiManifestForWorkspace } from "../orbit-ui-manifest";
 import type { SimulationAction } from "../types";
 
 const USE_CASE = "Engineering sprint adoption and delivery conversion";
@@ -13,13 +14,14 @@ const EVAL_DEFINITION = `Verify that engineering operators are learning Orbit an
 - inbox triage posture (guided onboarding vs veteran skip),
 - issue creation, prioritization, and assignment judgment,
 - status workflow (backlog → in progress → done) with correct sequencing,
-- project and cycle scoping for sprint deliverables,
-- labeling, filtering, and command-palette fluency,
+- project scoping via the issue Project dropdown and sidebar project views,
+- labeling, My issues filtering, and command-palette fluency (Cmd+K),
 - collaboration signals (comments, handoffs),
 - recovery from mis-prioritized or mis-assigned work,
+- Think Aloud Protocol gate before Ship Sprint publication (min score 70),
 - re-engagement after idle gaps between triage sessions.
 
-Evidence should capture non-linear issue workflows, idle calendar gaps, priority mistakes recovered, and outcomes tied to learning-to-conversion — did they learn the workflow well enough to adopt, activate, and ship? Score cards surface coaching overlays inside the live app to close gaps and move conversion forward.`;
+Score-card coaching must reference only in-app Orbit actions from the UI manifest (sidebar Inbox/My issues/Projects, issue panel fields, header New issue and Ship Sprint, Cmd+K palette). Do not suggest actions that are not reachable in the demo UI. When learners are blocked, remediation can route to ILE practice — but gap text should still use product event language.`;
 
 const ORBIT_ACTIONS: SimulationAction[] = [
   {
@@ -232,6 +234,17 @@ const ORBIT_ACTIONS: SimulationAction[] = [
     outcome: "success",
   },
   {
+    id: "publish_sprint",
+    label: "Ship sprint",
+    description: "Publish the sprint deliverable after TAP verification.",
+    category: "projects",
+    blockHint: "Sprint publication",
+    cta: "Ship Sprint",
+    kind: "evidence",
+    dimension: "delivery",
+    outcome: "success",
+  },
+  {
     id: "reopen_issue",
     label: "Reopen issue",
     description: "Recover a closed issue after regression.",
@@ -283,8 +296,9 @@ export const orbitDemo: EvidenceApiDemoDefinition = {
   accent: "indigo",
   simulatorMode: "external",
   evalDefinition: EVAL_DEFINITION,
-  workspacePrompt:
-    "Build a learning verification workspace for Orbit operators adopting inbox triage, issue prioritization, assignment, status workflows, project scoping, and sprint delivery — focused on learning-to-conversion, not exam completion.",
+  workspacePrompt: `Build a learning verification workspace for Orbit operators adopting inbox triage, issue prioritization, assignment, status workflows, project scoping, and sprint delivery — focused on learning-to-conversion, not exam completion.
+
+${buildOrbitUiManifestForWorkspace()}`,
   modelDocFilename: "orbit-eval-model.md",
   modelDoc: buildModelDoc(
     {
@@ -305,16 +319,18 @@ export const orbitDemo: EvidenceApiDemoDefinition = {
 | list_navigation | Filters and view narrowing |
 | command_palette | Cmd+K power-user fluency |
 | collaboration | Comments and handoff context |
-| delivery | Closing resolved deliverables |
+| delivery | Closing resolved deliverables and Ship Sprint (TAP-gated) |
 | recovery | Mis-priority and reopen judgment |
-| time_gap | Idle days between triage sessions |`
+| time_gap | Idle days between triage sessions |
+
+${buildOrbitUiManifestForWorkspace()}`
   ),
   toolName: "orbit",
   simulatorToolName: "orbit_events",
   schemaVersion: "orbit_evidence_v1",
   evidenceGoals: ["sprint_adoption", "delivery_conversion", "triage_learning"],
   integrationHints: {
-    event_verbs: ["triage_issue", "create_issue", "change_status_done"],
+    event_verbs: ["triage_issue", "create_issue", "change_status_done", "publish_sprint"],
     goals: ["sprint_adoption", "delivery_conversion"],
   },
   partnerDescription:

@@ -1,6 +1,14 @@
 import type { ConversionGoalSource } from "@/lib/agent-v2/conversion-goal";
 import type { PerformanceReport } from "@/lib/agent-v2/performance-report";
+import type { OrbitAppState } from "./orbit-app-model";
+import {
+  buildActionReflection,
+  buildOrbitAppSnapshot,
+  formatOrbitSnapshotForPrompt,
+  type OrbitAppSnapshot,
+} from "./orbit-app-context";
 import { orbitDemo } from "./demos/orbit";
+import { ORBIT_PERFORMANCE_STYLE_PROMPT } from "./orbit-performance-style";
 import type { DemoWorkspaceBlock } from "./types";
 import {
   applySimulationAction,
@@ -23,6 +31,13 @@ export type OrbitEvidenceBridge = {
   evidenceCount: number;
   inferredConversionGoal?: string;
   conversionGoalSource?: ConversionGoalSource;
+  ileSessionUrl?: string;
+  tapLinkUrl?: string;
+  tapScore?: number | null;
+  tapCleared?: boolean;
+  sprintPublished?: boolean;
+  lastPerformanceReport?: PerformanceReport | null;
+  lastAppSnapshot?: OrbitAppSnapshot;
 };
 
 export type OrbitLaunchParams = {
@@ -160,18 +175,45 @@ export function applyPerformanceToBridge(
     ...bridge,
     inferredConversionGoal: goal || bridge.inferredConversionGoal,
     conversionGoalSource: performance.conversion_goal_source ?? bridge.conversionGoalSource,
+    lastPerformanceReport: performance.report ?? bridge.lastPerformanceReport ?? null,
   };
   saveOrbitBridge(next);
   return next;
 }
 
+export function orbitUiContextFromSnapshot(
+  snapshot: OrbitAppSnapshot | null | undefined
+): string {
+  return snapshot ? formatOrbitSnapshotForPrompt(snapshot) : "";
+}
+
+export function syncOrbitAppSnapshotToBridge(
+  snapshot: OrbitAppSnapshot
+): OrbitEvidenceBridge | null {
+  const bridge = loadOrbitBridge();
+  if (!bridge) return null;
+  const next: OrbitEvidenceBridge = { ...bridge, lastAppSnapshot: snapshot };
+  saveOrbitBridge(next);
+  return next;
+}
+
 export async function fetchOrbitPerformance(
-  bridge: OrbitEvidenceBridge
+  bridge: OrbitEvidenceBridge,
+  options?: { orbitUiContext?: string; stylePrompt?: string }
 ): Promise<OrbitPerformanceResponse> {
+  const orbitUiContext =
+    options?.orbitUiContext?.trim() ||
+    orbitUiContextFromSnapshot(bridge.lastAppSnapshot);
+  const stylePrompt = options?.stylePrompt?.trim() || ORBIT_PERFORMANCE_STYLE_PROMPT;
+
   const res = await fetch("/api/evidence-api-demo/performance", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ planId: bridge.planId }),
+    body: JSON.stringify({
+      planId: bridge.planId,
+      style_prompt: stylePrompt,
+      ...(orbitUiContext ? { orbit_ui_context: orbitUiContext } : {}),
+    }),
   });
   const data = await readJsonResponse<{
     report?: PerformanceReport;
@@ -203,12 +245,28 @@ export async function fetchOrbitScorecard(
 export async function emitOrbitAction(
   bridge: OrbitEvidenceBridge,
   actionId: string,
-  extra?: { reflection?: string; outcome?: SimulationAction["outcome"]; context?: Record<string, unknown> }
+  extra?: {
+    reflection?: string;
+    outcome?: SimulationAction["outcome"];
+    context?: Record<string, unknown>;
+    appState?: OrbitAppState;
+    tapCleared?: boolean;
+  }
 ): Promise<{ bridge: OrbitEvidenceBridge; shouldScore: boolean }> {
   const action = getSimulationAction(orbitDemo, actionId);
   if (!action) {
     throw new Error(`Unknown Orbit action: ${actionId}`);
   }
+
+  const appSnapshot = extra?.appState
+    ? buildOrbitAppSnapshot(extra.appState, { tapCleared: extra.tapCleared })
+    : bridge.lastAppSnapshot;
+
+  const reflection =
+    extra?.reflection ??
+    (extra?.appState && appSnapshot
+      ? buildActionReflection(actionId, extra.appState, appSnapshot)
+      : `Completed "${action.label}" in Orbit.`);
 
   const nextWorld = applySimulationAction(bridge.worldState, action);
   const blockId = matchBlockToStep(bridge.blocks, action);
@@ -216,9 +274,20 @@ export async function emitOrbitAction(
     sessionId: bridge.sessionId,
     blockId,
     worldState: bridge.worldState,
-    reflection: extra?.reflection ?? `Completed "${action.label}" in Orbit.`,
+    reflection,
     outcome: extra?.outcome ?? action.outcome,
-    extra: extra?.context,
+    extra: {
+      orbit_app_snapshot: appSnapshot,
+      ui_context: appSnapshot
+        ? {
+            view: appSnapshot.view,
+            selected_issue: appSnapshot.selected_issue_identifier,
+            inbox_unread_count: appSnapshot.inbox_unread_count,
+            suggested_next: appSnapshot.suggested_next,
+          }
+        : undefined,
+      ...extra?.context,
+    },
   });
 
   const res = await fetch("/api/evidence-api-demo/evidence", {
@@ -241,6 +310,10 @@ export async function emitOrbitAction(
         category: action.category,
         dimension: action.dimension,
         simulated_days: nextWorld.simulatedDays,
+        orbit_view: appSnapshot?.view,
+        orbit_inbox_unread: appSnapshot?.inbox_unread_count ?? null,
+        orbit_selected_issue: appSnapshot?.selected_issue_identifier ?? null,
+        orbit_suggested_next: appSnapshot?.suggested_next ?? [],
       },
     }),
   });
@@ -255,6 +328,7 @@ export async function emitOrbitAction(
     ...bridge,
     worldState: nextWorld,
     evidenceCount: nextEvidenceCount,
+    lastAppSnapshot: appSnapshot ?? bridge.lastAppSnapshot,
   };
   saveOrbitBridge(nextBridge);
 

@@ -5,16 +5,22 @@ import {
   Check,
   ChevronRight,
   Command,
+  ExternalLink,
   Filter,
   Inbox,
   LayoutGrid,
   Loader2,
+  Lock,
   Plus,
+  Rocket,
   Search,
   User,
 } from "lucide-react";
 import type { ConversionGoalSource } from "@/lib/agent-v2/conversion-goal";
-import type { PerformanceReport } from "@/lib/agent-v2/performance-report";
+import {
+  normalizePerformanceReport,
+  type PerformanceReport,
+} from "@/lib/agent-v2/performance-report";
 import { SmartCoachOverlay } from "@/components/orbit/SmartCoachOverlay";
 import {
   createSeedOrbitState,
@@ -28,13 +34,32 @@ import {
   type OrbitPriority,
 } from "@/lib/evidence-api-demo/orbit-app-model";
 import {
+  createOrbitIleSession,
+  createOrbitTapSession,
+  fetchOrbitTapGateStatus,
+  openOrbitLearningUrl,
+} from "@/lib/evidence-api-demo/orbit-learning-links";
+import {
+  ORBIT_TAP_MIN_SCORE,
+  ORBIT_TAP_VALIDATION_HINT,
+} from "@/lib/evidence-api-demo/orbit-ui-manifest";
+import { buildOrbitAppSnapshot } from "@/lib/evidence-api-demo/orbit-app-context";
+import {
   emitOrbitAction,
   fetchOrbitPerformance,
   initOrbitBridge,
   loadOrbitBridge,
+  orbitUiContextFromSnapshot,
   parseOrbitLaunchParams,
+  saveOrbitBridge,
+  syncOrbitAppSnapshotToBridge,
   type OrbitEvidenceBridge,
 } from "@/lib/evidence-api-demo/orbit-bridge";
+
+type EvidenceActionOptions = {
+  reflection?: string;
+  appState?: OrbitAppState;
+};
 
 const STATUS_OPTIONS: { value: OrbitIssueStatus; label: string }[] = [
   { value: "backlog", label: "Backlog" },
@@ -72,11 +97,19 @@ export function OrbitApp() {
   const [isReporting, setIsReporting] = useState(false);
   const [inferredGoal, setInferredGoal] = useState<string | null>(null);
   const [conversionGoalSource, setConversionGoalSource] = useState<ConversionGoalSource | undefined>();
-  const [dismissedCoachStep, setDismissedCoachStep] = useState<string | null>(null);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [newIssueOpen, setNewIssueOpen] = useState(false);
   const [newIssueTitle, setNewIssueTitle] = useState("");
   const [commentDraft, setCommentDraft] = useState("");
+  const [tapGateOpen, setTapGateOpen] = useState(false);
+  const [tapScore, setTapScore] = useState<number | null>(null);
+  const [tapCleared, setTapCleared] = useState(false);
+  const [tapLinkUrl, setTapLinkUrl] = useState<string | null>(null);
+  const [ileSessionUrl, setIleSessionUrl] = useState<string | null>(null);
+  const [isOpeningTap, setIsOpeningTap] = useState(false);
+  const [isOpeningIle, setIsOpeningIle] = useState(false);
+  const [isCheckingTap, setIsCheckingTap] = useState(false);
+  const [learningError, setLearningError] = useState<string | null>(null);
 
   useEffect(() => {
     const params = parseOrbitLaunchParams(window.location.search);
@@ -98,7 +131,48 @@ export function OrbitApp() {
     setBridge(nextBridge);
     setInferredGoal(nextBridge.inferredConversionGoal ?? null);
     setConversionGoalSource(nextBridge.conversionGoalSource);
-    setAppState(loadOrbitAppState());
+    setTapLinkUrl(nextBridge.tapLinkUrl ?? null);
+    setTapScore(nextBridge.tapScore ?? null);
+    setTapCleared(nextBridge.tapCleared ?? false);
+    setIleSessionUrl(nextBridge.ileSessionUrl ?? null);
+
+    const loadedApp = loadOrbitAppState();
+    setAppState({
+      ...loadedApp,
+      ui: {
+        ...loadedApp.ui,
+        sprintPublished: loadedApp.ui.sprintPublished ?? nextBridge.sprintPublished ?? false,
+      },
+    });
+
+    if (nextBridge.lastPerformanceReport) {
+      setReport(normalizePerformanceReport(nextBridge.lastPerformanceReport));
+    } else if (nextBridge.evidenceCount >= 1) {
+      setIsReporting(true);
+      void fetchOrbitPerformance(nextBridge)
+        .then((performance) => {
+          if (performance.report) {
+            setReport(normalizePerformanceReport(performance.report));
+          }
+          const goal =
+            performance.workspace_conversion_goal?.trim() ||
+            performance.report?.conversion_goal?.trim() ||
+            null;
+          if (goal) setInferredGoal(goal);
+          setConversionGoalSource(performance.conversion_goal_source);
+          setBridge(loadOrbitBridge());
+        })
+        .catch(() => {})
+        .finally(() => setIsReporting(false));
+    }
+
+    if (nextBridge.planId) {
+      void fetchOrbitTapGateStatus(nextBridge.planId, nextBridge.tapLinkUrl).then((status) => {
+        setTapScore(status.score);
+        setTapCleared(status.cleared);
+        if (status.tapLinkUrl) setTapLinkUrl(status.tapLinkUrl);
+      });
+    }
 
     if (params) {
       const url = new URL(window.location.href);
@@ -113,18 +187,31 @@ export function OrbitApp() {
   }, []);
 
   const runEvidenceAction = useCallback(
-    async (actionId: string, reflection?: string) => {
+    async (actionId: string, options?: EvidenceActionOptions) => {
       if (!bridge || isEmitting) return;
+      const stateForEmit = options?.appState ?? appState;
+      if (!stateForEmit) return;
+
       setIsEmitting(true);
       setActionError(null);
-      setDismissedCoachStep(null);
       try {
-        const result = await emitOrbitAction(bridge, actionId, { reflection });
+        const result = await emitOrbitAction(bridge, actionId, {
+          reflection: options?.reflection,
+          appState: stateForEmit,
+          tapCleared,
+        });
         setBridge(result.bridge);
         if (result.shouldScore) {
           setIsReporting(true);
-          const performance = await fetchOrbitPerformance(result.bridge);
-          setReport(performance.report);
+          const uiContext = orbitUiContextFromSnapshot(
+            buildOrbitAppSnapshot(stateForEmit, { tapCleared })
+          );
+          const performance = await fetchOrbitPerformance(result.bridge, {
+            orbitUiContext: uiContext,
+          });
+          setReport(
+            performance.report ? normalizePerformanceReport(performance.report) : null
+          );
           const goal =
             performance.workspace_conversion_goal?.trim() ||
             performance.report?.conversion_goal?.trim() ||
@@ -140,8 +227,19 @@ export function OrbitApp() {
         setIsReporting(false);
       }
     },
-    [bridge, isEmitting]
+    [appState, bridge, isEmitting, tapCleared]
   );
+
+  const appSnapshot = useMemo(
+    () => (appState ? buildOrbitAppSnapshot(appState, { tapCleared }) : null),
+    [appState, tapCleared]
+  );
+
+  useEffect(() => {
+    if (!appSnapshot || !bridge) return;
+    const synced = syncOrbitAppSnapshotToBridge(appSnapshot);
+    if (synced) setBridge(synced);
+  }, [appSnapshot, bridge?.planId]);
 
   const selectedIssue = useMemo(() => {
     if (!appState?.ui.selectedIssueId) return null;
@@ -150,34 +248,135 @@ export function OrbitApp() {
 
   const visibleIssues = appState ? getVisibleIssues(appState) : [];
 
+  const selectedProject = useMemo(() => {
+    if (!appState?.ui.selectedProjectId) return appState?.projects[0] ?? null;
+    return appState.projects.find((project) => project.id === appState.ui.selectedProjectId) ?? null;
+  }, [appState]);
+
+  const persistBridgeExtras = useCallback(
+    (patch: Partial<OrbitEvidenceBridge>) => {
+      if (!bridge) return;
+      const next = { ...bridge, ...patch };
+      saveOrbitBridge(next);
+      setBridge(next);
+    },
+    [bridge]
+  );
+
+  const refreshTapGate = useCallback(async () => {
+    if (!bridge?.planId) return;
+    setIsCheckingTap(true);
+    setLearningError(null);
+    try {
+      const status = await fetchOrbitTapGateStatus(bridge.planId, tapLinkUrl);
+      setTapScore(status.score);
+      setTapCleared(status.cleared);
+      persistBridgeExtras({
+        tapScore: status.score,
+        tapCleared: status.cleared,
+        tapLinkUrl: tapLinkUrl ?? status.tapLinkUrl ?? undefined,
+      });
+    } catch (err) {
+      setLearningError(err instanceof Error ? err.message : "Could not check TAP status");
+    } finally {
+      setIsCheckingTap(false);
+    }
+  }, [bridge?.planId, persistBridgeExtras, tapLinkUrl]);
+
+  const handleOpenIle = useCallback(async () => {
+    if (!bridge?.planId || isOpeningIle) return;
+    setLearningError(null);
+    if (ileSessionUrl) {
+      openOrbitLearningUrl(ileSessionUrl);
+      return;
+    }
+    setIsOpeningIle(true);
+    try {
+      const blockId = bridge.blocks[0]?.id;
+      const url = await createOrbitIleSession(bridge.planId, blockId);
+      setIleSessionUrl(url);
+      persistBridgeExtras({ ileSessionUrl: url });
+      openOrbitLearningUrl(url);
+    } catch (err) {
+      setLearningError(err instanceof Error ? err.message : "Failed to open ILE");
+    } finally {
+      setIsOpeningIle(false);
+    }
+  }, [bridge, ileSessionUrl, isOpeningIle, persistBridgeExtras]);
+
+  const handleOpenTap = useCallback(async () => {
+    if (!bridge?.planId || isOpeningTap) return;
+    setLearningError(null);
+    if (tapLinkUrl) {
+      openOrbitLearningUrl(tapLinkUrl);
+      return;
+    }
+    setIsOpeningTap(true);
+    try {
+      const blockId = bridge.blocks[0]?.id;
+      const url = await createOrbitTapSession(bridge.planId, blockId);
+      setTapLinkUrl(url);
+      persistBridgeExtras({ tapLinkUrl: url });
+      openOrbitLearningUrl(url);
+    } catch (err) {
+      setLearningError(err instanceof Error ? err.message : "Failed to open TAP");
+    } finally {
+      setIsOpeningTap(false);
+    }
+  }, [bridge, isOpeningTap, persistBridgeExtras, tapLinkUrl]);
+
+  const handleShipSprint = () => {
+    if (!appState || appState.ui.sprintPublished) return;
+    if (!tapCleared) {
+      setTapGateOpen(true);
+      return;
+    }
+    const nextState: OrbitAppState = {
+      ...appState,
+      ui: { ...appState.ui, sprintPublished: true },
+    };
+    persistApp(nextState);
+    persistBridgeExtras({ sprintPublished: true });
+    void runEvidenceAction("publish_sprint", {
+      appState: nextState,
+      reflection: "Shipped Sprint 12 after TAP verification.",
+    });
+  };
+
   const updateIssue = (issueId: string, patch: Partial<OrbitIssue>, actionId?: string | null) => {
     if (!appState) return;
-    const nextIssues = appState.issues.map((issue) =>
-      issue.id === issueId ? { ...issue, ...patch } : issue
-    );
-    persistApp({ ...appState, issues: nextIssues });
-    if (actionId) void runEvidenceAction(actionId);
+    const nextState: OrbitAppState = {
+      ...appState,
+      issues: appState.issues.map((issue) =>
+        issue.id === issueId ? { ...issue, ...patch } : issue
+      ),
+    };
+    persistApp(nextState);
+    if (actionId) void runEvidenceAction(actionId, { appState: nextState });
   };
 
   const handleSelectView = (view: OrbitAppState["ui"]["view"]) => {
     if (!appState) return;
-    persistApp({
+    const nextState: OrbitAppState = {
       ...appState,
       ui: { ...appState.ui, view, assigneeFilter: view === "my_issues" ? "You" : null },
-    });
-    if (view === "inbox") void runEvidenceAction("open_inbox");
-    if (view === "my_issues") void runEvidenceAction("filter_by_assignee");
+    };
+    persistApp(nextState);
+    if (view === "inbox") void runEvidenceAction("open_inbox", { appState: nextState });
+    if (view === "my_issues") void runEvidenceAction("filter_by_assignee", { appState: nextState });
   };
 
   const handleTriage = (issue: OrbitIssue) => {
-    updateIssue(issue.id, { unread: false }, "triage_issue");
-    persistApp({
-      ...appState!,
-      ui: { ...appState!.ui, selectedIssueId: issue.id },
-      issues: appState!.issues.map((entry) =>
+    if (!appState) return;
+    const nextState: OrbitAppState = {
+      ...appState,
+      ui: { ...appState.ui, selectedIssueId: issue.id },
+      issues: appState.issues.map((entry) =>
         entry.id === issue.id ? { ...entry, unread: false } : entry
       ),
-    });
+    };
+    persistApp(nextState);
+    void runEvidenceAction("triage_issue", { appState: nextState });
   };
 
   const handleCreateIssue = () => {
@@ -196,14 +395,15 @@ export function OrbitApp() {
       unread: false,
       createdAt: new Date().toISOString(),
     };
-    persistApp({
+    const nextState: OrbitAppState = {
       ...appState,
       issues: [issue, ...appState.issues],
       ui: { ...appState.ui, selectedIssueId: issue.id, view: "project" },
-    });
+    };
+    persistApp(nextState);
     setNewIssueTitle("");
     setNewIssueOpen(false);
-    void runEvidenceAction("create_issue");
+    void runEvidenceAction("create_issue", { appState: nextState });
   };
 
   useEffect(() => {
@@ -270,7 +470,6 @@ export function OrbitApp() {
                   ...appState,
                   ui: { ...appState.ui, view: "project", selectedProjectId: project.id },
                 });
-                void runEvidenceAction("move_to_project");
               }}
             />
           ))}
@@ -284,6 +483,38 @@ export function OrbitApp() {
             {appState.ui.view === "inbox" ? "Inbox" : appState.ui.view === "my_issues" ? "My issues" : "Project"}
           </div>
           <div className="flex items-center gap-2">
+            {appState.ui.view === "project" && selectedProject ? (
+              <button
+                type="button"
+                data-coach="publish"
+                onClick={handleShipSprint}
+                disabled={appState.ui.sprintPublished}
+                className={`inline-flex items-center gap-1 rounded px-3 py-1.5 text-xs font-medium transition ${
+                  appState.ui.sprintPublished
+                    ? "border border-emerald-500/40 bg-emerald-500/10 text-emerald-200"
+                    : tapCleared
+                      ? "bg-emerald-600 text-white hover:bg-emerald-500"
+                      : "border border-amber-500/40 bg-amber-500/10 text-amber-100 hover:border-amber-400/60"
+                }`}
+              >
+                {appState.ui.sprintPublished ? (
+                  <>
+                    <Check className="size-3.5" />
+                    Sprint shipped
+                  </>
+                ) : tapCleared ? (
+                  <>
+                    <Rocket className="size-3.5" />
+                    Ship {selectedProject.name}
+                  </>
+                ) : (
+                  <>
+                    <Lock className="size-3.5" />
+                    Ship {selectedProject.name}
+                  </>
+                )}
+              </button>
+            ) : null}
             <button
               type="button"
               data-coach="command-palette"
@@ -313,6 +544,9 @@ export function OrbitApp() {
         {actionError ? (
           <div className="border-b border-red-500/30 bg-red-500/10 px-4 py-2 text-xs text-red-100">{actionError}</div>
         ) : null}
+        {learningError ? (
+          <div className="border-b border-amber-500/30 bg-amber-500/10 px-4 py-2 text-xs text-amber-100">{learningError}</div>
+        ) : null}
 
         {!appState.ui.tourDismissed ? (
           <div className="flex items-center justify-between gap-3 border-b border-[#5e6ad2]/20 bg-[#5e6ad2]/10 px-4 py-2 text-xs text-[#c4c9ff]">
@@ -320,8 +554,12 @@ export function OrbitApp() {
             <button
               type="button"
               onClick={() => {
-                persistApp({ ...appState, ui: { ...appState.ui, tourDismissed: true } });
-                void runEvidenceAction("skip_product_tour");
+                const nextState: OrbitAppState = {
+                  ...appState,
+                  ui: { ...appState.ui, tourDismissed: true },
+                };
+                persistApp(nextState);
+                void runEvidenceAction("skip_product_tour", { appState: nextState });
               }}
               className="shrink-0 rounded border border-[#5e6ad2]/40 px-2 py-1 transition hover:bg-[#5e6ad2]/20"
             >
@@ -338,24 +576,20 @@ export function OrbitApp() {
                 type="button"
                 data-coach="filter"
                 onClick={() => {
-                  persistApp({
+                  const nextState: OrbitAppState = {
                     ...appState,
                     ui: { ...appState.ui, assigneeFilter: "You", view: "my_issues" },
-                  });
-                  void runEvidenceAction("filter_by_assignee");
+                  };
+                  persistApp(nextState);
+                  void runEvidenceAction("filter_by_assignee", { appState: nextState });
                 }}
                 className="rounded px-2 py-1 transition hover:bg-white/5 hover:text-white"
               >
                 Assignee: You
               </button>
-              <button
-                type="button"
-                data-coach="priority"
-                onClick={() => void runEvidenceAction("set_priority_urgent")}
-                className="rounded px-2 py-1 transition hover:bg-white/5 hover:text-white"
-              >
-                Priority: Urgent
-              </button>
+              <span className="rounded px-2 py-1 text-[#5c5c70]">
+                Select an issue to edit priority, project, and status
+              </span>
             </div>
 
             <ul className="divide-y divide-[#1a1a24]">
@@ -413,8 +647,17 @@ export function OrbitApp() {
                     onChange={(event) => {
                       const next = event.target.value as OrbitIssueStatus;
                       const actionId = statusActionFor(next);
-                      updateIssue(selectedIssue.id, { status: next }, actionId);
-                      if (next === "done") void runEvidenceAction("close_issue");
+                      const nextState: OrbitAppState = {
+                        ...appState,
+                        issues: appState.issues.map((issue) =>
+                          issue.id === selectedIssue.id ? { ...issue, status: next } : issue
+                        ),
+                      };
+                      persistApp(nextState);
+                      if (actionId) void runEvidenceAction(actionId, { appState: nextState });
+                      if (next === "done") {
+                        void runEvidenceAction("close_issue", { appState: nextState });
+                      }
                     }}
                     className="w-full rounded border border-[#2a2a36] bg-[#0d0d0d] px-2 py-1.5 text-sm"
                   >
@@ -440,6 +683,36 @@ export function OrbitApp() {
                     {PRIORITY_OPTIONS.map((option) => (
                       <option key={option.value} value={option.value}>
                         {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </Field>
+
+                <Field label="Project">
+                  <select
+                    data-coach="project"
+                    value={selectedIssue.projectId}
+                    onChange={(event) => {
+                      const projectId = event.target.value;
+                      const nextState: OrbitAppState = {
+                        ...appState,
+                        issues: appState.issues.map((issue) =>
+                          issue.id === selectedIssue.id ? { ...issue, projectId } : issue
+                        ),
+                        ui: {
+                          ...appState.ui,
+                          view: "project",
+                          selectedProjectId: projectId,
+                        },
+                      };
+                      persistApp(nextState);
+                      void runEvidenceAction("move_to_project", { appState: nextState });
+                    }}
+                    className="w-full rounded border border-[#2a2a36] bg-[#0d0d0d] px-2 py-1.5 text-sm"
+                  >
+                    {appState.projects.map((project) => (
+                      <option key={project.id} value={project.id}>
+                        {project.name}
                       </option>
                     ))}
                   </select>
@@ -512,9 +785,9 @@ export function OrbitApp() {
                   <button
                     type="button"
                     onClick={() => {
-                      if (!commentDraft.trim()) return;
+                      if (!commentDraft.trim() || !appState) return;
                       setCommentDraft("");
-                      void runEvidenceAction("add_comment");
+                      void runEvidenceAction("add_comment", { appState });
                     }}
                     className="mt-2 rounded border border-[#2a2a36] px-2 py-1 text-xs transition hover:border-[#5e6ad2]/50"
                   >
@@ -535,11 +808,91 @@ export function OrbitApp() {
       <SmartCoachOverlay
         report={report}
         isReporting={isReporting}
-        dismissedStep={dismissedCoachStep}
-        onDismiss={setDismissedCoachStep}
+        connected={Boolean(bridge)}
+        planId={bridge?.planId ?? null}
+        blockId={bridge?.blocks[0]?.id ?? null}
+        evidenceCount={bridge?.evidenceCount ?? 0}
         inferredGoal={inferredGoal}
         conversionGoalSource={conversionGoalSource}
+        appSnapshot={appSnapshot}
+        ileSessionUrl={ileSessionUrl}
+        isOpeningIle={isOpeningIle}
+        onOpenIle={() => void handleOpenIle()}
       />
+
+      {tapGateOpen ? (
+        <div className="fixed inset-0 z-[75] flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-md rounded-lg border border-[#2a2a36] bg-[#14141a] p-5 shadow-2xl">
+            <div className="flex items-center gap-2 text-sm font-medium text-white">
+              <Lock className="size-4 text-amber-300" />
+              Think Aloud Protocol required
+            </div>
+            <p className="mt-3 text-sm leading-relaxed text-[#9b9bb8]">
+              Ship Sprint is gated until you complete a Think Aloud Protocol session scoring at least{" "}
+              {ORBIT_TAP_MIN_SCORE}/100. This keeps sprint publication tied to demonstrated judgment,
+              not just UI clicks.
+            </p>
+            <p className="mt-3 text-xs leading-relaxed text-[#6b6b80]">{ORBIT_TAP_VALIDATION_HINT}</p>
+            {tapScore !== null ? (
+              <p className="mt-3 font-mono text-xs text-[#9b9bb8]">
+                Latest TAP score: <span className="text-white">{tapScore}</span>/100
+                {tapCleared ? " · cleared" : ` · need ${ORBIT_TAP_MIN_SCORE}+`}
+              </p>
+            ) : null}
+            <div className="mt-5 flex flex-col gap-2 sm:flex-row">
+              {tapCleared ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setTapGateOpen(false);
+                    handleShipSprint();
+                  }}
+                  className="inline-flex flex-1 items-center justify-center gap-2 rounded-md bg-emerald-600 px-3 py-2 text-xs font-medium text-white transition hover:bg-emerald-500"
+                >
+                  <Rocket className="size-3.5" />
+                  Ship sprint now
+                </button>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => void handleOpenTap()}
+                    disabled={isOpeningTap}
+                    className="inline-flex flex-1 items-center justify-center gap-2 rounded-md bg-[#5e6ad2] px-3 py-2 text-xs font-medium text-white transition hover:bg-[#6f7be0] disabled:opacity-50"
+                  >
+                    {isOpeningTap ? <Loader2 className="size-3.5 animate-spin" /> : <ExternalLink className="size-3.5" />}
+                    {tapLinkUrl ? "Open TAP session" : "Start TAP session"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void refreshTapGate()}
+                    disabled={isCheckingTap}
+                    className="inline-flex flex-1 items-center justify-center gap-2 rounded-md border border-[#2a2a36] px-3 py-2 text-xs text-[#c4c9ff] transition hover:border-[#5e6ad2]/50 disabled:opacity-50"
+                  >
+                    {isCheckingTap ? <Loader2 className="size-3.5 animate-spin" /> : null}
+                    Check TAP score
+                  </button>
+                </>
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={() => void handleOpenIle()}
+              disabled={isOpeningIle}
+              className="mt-2 w-full rounded-md border border-[#2a2a36] px-3 py-2 text-xs text-[#9b9bb8] transition hover:border-[#5e6ad2]/50 hover:text-white disabled:opacity-50"
+            >
+              {isOpeningIle ? "Opening ILE…" : "Stuck? Open ILE practice first"}
+            </button>
+            <button
+              type="button"
+              onClick={() => setTapGateOpen(false)}
+              className="mt-4 w-full text-center text-xs text-[#6b6b80] transition hover:text-white"
+            >
+              Continue working in Orbit
+            </button>
+          </div>
+        </div>
+      ) : null}
 
       {paletteOpen ? (
         <div className="fixed inset-0 z-[70] flex items-start justify-center bg-black/60 pt-[15vh]">

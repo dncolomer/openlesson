@@ -21,6 +21,7 @@ export type {
 
 export {
   buildPerformanceReportInstructions,
+  buildPerformanceStyleSection,
   emptyPerformanceReport,
   EXAMPLE_PERFORMANCE_REPORT,
   normalizePerformanceGapAnalysis,
@@ -264,7 +265,10 @@ export async function buildWorkspacePerformanceContext({
   return { payload, fileIds, summaryFileId: summaryUpload.file_id };
 }
 
-export function buildPerformanceChatInstructions(blockId?: string | null): string {
+export function buildPerformanceChatInstructions(
+  blockId?: string | null,
+  stylePrompt?: string | null
+): string {
   const scope = blockId
     ? "You are analyzing one performance block inside a workspace."
     : "You are analyzing an entire Verification Workspace.";
@@ -280,6 +284,6 @@ When answering:
 4. Format responses in markdown.
 5. When recommending next actions, use product- and workflow-specific language only — never suggest Think Aloud Protocol (TAP) sessions, completing workspace blocks, ILE practice, or other OpenLesson platform mechanics.
 
-If evidence is sparse, say what product/tool evidence is missing and what observable actions to collect next.`;
+If evidence is sparse, say what product/tool evidence is missing and what observable actions to collect next.${buildPerformanceStyleSection(stylePrompt)}`;
 }
 

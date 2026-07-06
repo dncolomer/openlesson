@@ -58,6 +58,8 @@ export async function POST(req: NextRequest, { params }: RouteProps) {
   }
 
   const prompt = typeof body.prompt === "string" ? body.prompt.trim() : "";
+  const stylePrompt =
+    typeof body.style_prompt === "string" ? body.style_prompt.trim() : "";
   const blockId = typeof body.block_id === "string" ? body.block_id : null;
   const conversationHistory = parseConversationHistory(body.conversation_history);
   const persistedFileIds = Array.isArray(body.file_ids)
@@ -139,7 +141,7 @@ export async function POST(req: NextRequest, { params }: RouteProps) {
 
     const chatResult = await callXaiResponses({
       model: "grok-4.3",
-      instructions: buildPerformanceChatInstructions(blockId),
+      instructions: buildPerformanceChatInstructions(blockId, stylePrompt),
       input: inputMessages,
       temperature: 0.6,
       maxOutputTokens: 4096,
@@ -165,7 +167,11 @@ export async function POST(req: NextRequest, { params }: RouteProps) {
     `Generate a learning and gap analysis report for workspace "${workspace.title || workspace.root_topic}".`,
     activeFileIds,
     {
-      instructions: buildPerformanceReportInstructions(blockId, storedConversionGoal),
+      instructions: buildPerformanceReportInstructions(
+        blockId,
+        storedConversionGoal,
+        stylePrompt
+      ),
       temperature: 0.35,
       maxOutputTokens: 2500,
       fetchTimeout: 120000,

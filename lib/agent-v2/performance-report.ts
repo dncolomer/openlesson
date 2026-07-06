@@ -359,9 +359,15 @@ export function emptyPerformanceReport(message?: string): PerformanceReport {
   };
 }
 
+export function buildPerformanceStyleSection(stylePrompt?: string | null): string {
+  if (!stylePrompt?.trim()) return "";
+  return `\n\nOutput style (apply to every narrative string in the JSON — summary, strengths, growth_areas, gap titles/evidence/suggested_repair, next_steps, suggestions, marker rationales, and conversion_goal when phrased as coaching):\n${stylePrompt.trim()}`;
+}
+
 export function buildPerformanceReportInstructions(
   blockId?: string | null,
-  workspaceConversionGoal?: string | null
+  workspaceConversionGoal?: string | null,
+  stylePrompt?: string | null
 ): string {
   const scope = blockId ? "a single workspace block" : "the full workspace";
   const goalLine = workspaceConversionGoal?.trim()
@@ -397,7 +403,7 @@ Evidence inputs to weigh when scoring (not remediation outputs):
 - Think Aloud Protocol (TAP) and ILE traces when present — use for scoring only
 - Uploaded workspace files
 
-Be honest when evidence is thin. Severity should reflect business risk, not politeness. Lower overall_score and marker scores when evidence is sparse.`;
+Be honest when evidence is thin. Severity should reflect business risk, not politeness. Lower overall_score and marker scores when evidence is sparse.${buildPerformanceStyleSection(stylePrompt)}`;
 }
 
 function normalizeStringList(value: unknown): string[] {

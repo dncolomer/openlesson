@@ -3,20 +3,20 @@ import {
   extractGameCoaching,
   extractGameTips,
   isAppDemo,
+  isExternalDemo,
   isGameDemo,
   isInteractiveDemo,
 } from "@/lib/evidence-api-demo/game-tips";
-import { gridworksDemo } from "@/lib/evidence-api-demo/demos/gridworks";
-import { nexusfrontDemo } from "@/lib/evidence-api-demo/demos/nexusfront";
+import { orbitDemo } from "@/lib/evidence-api-demo/demos/orbit";
 import type { PerformanceReport } from "@/lib/agent-v2/performance-report";
 
 describe("game demo helpers", () => {
   it("detects interactive simulator modes", () => {
-    expect(isGameDemo(nexusfrontDemo)).toBe(true);
-    expect(isAppDemo(gridworksDemo)).toBe(true);
-    expect(isInteractiveDemo(nexusfrontDemo)).toBe(true);
-    expect(isInteractiveDemo(gridworksDemo)).toBe(true);
-    expect(isGameDemo({ id: "gridworks" })).toBe(false);
+    expect(isExternalDemo(orbitDemo)).toBe(true);
+    expect(isInteractiveDemo(orbitDemo)).toBe(true);
+    expect(isGameDemo(orbitDemo)).toBe(false);
+    expect(isAppDemo(orbitDemo)).toBe(false);
+    expect(isExternalDemo({ id: "orbit" })).toBe(true);
   });
 
   it("extracts full direction and event coaching from gap analysis", () => {
@@ -27,20 +27,20 @@ describe("game demo helpers", () => {
       gap_analysis: {
         gaps: [
           {
-            title: "Trade opened too early",
-            evidence: "Trade route activated before reserves were stable.",
+            title: "Urgent issue unassigned",
+            evidence: "ORB-12 still has no owner.",
             severity: "medium",
-            suggested_repair: "Route energy before opening trade.",
+            suggested_repair: "Assign the regression issue before changing status.",
           },
         ],
         next_steps: {
           directions: [
-            "Complete sector scouting.",
-            "Stabilize supply lines before expanding trade.",
+            "Complete inbox triage.",
+            "Stabilize ownership before moving issues to In Progress.",
           ],
           events: [
-            "Deploy a scout drone to map the northern ridge.",
-            "Open a trade route only after food reserves cover two seasons.",
+            "Assign the regression issue to yourself.",
+            "Move ORB-12 to In Progress only after triage.",
           ],
         },
       },
@@ -48,17 +48,17 @@ describe("game demo helpers", () => {
 
     const coaching = extractGameCoaching(report);
     expect(coaching.directions).toEqual([
-      "Complete sector scouting.",
-      "Stabilize supply lines before expanding trade.",
+      "Complete inbox triage.",
+      "Stabilize ownership before moving issues to In Progress.",
     ]);
     expect(coaching.events).toEqual([
-      "Deploy a scout drone to map the northern ridge.",
-      "Open a trade route only after food reserves cover two seasons.",
+      "Assign the regression issue to yourself.",
+      "Move ORB-12 to In Progress only after triage.",
     ]);
-    expect(coaching.gapRepairs).toEqual(["Route energy before opening trade."]);
+    expect(coaching.gapRepairs).toEqual(["Assign the regression issue before changing status."]);
 
     const tips = extractGameTips(report);
-    expect(tips).toContain("Complete sector scouting.");
-    expect(tips).toContain("Deploy a scout drone to map the northern ridge.");
+    expect(tips).toContain("Complete inbox triage.");
+    expect(tips).toContain("Assign the regression issue to yourself.");
   });
 });

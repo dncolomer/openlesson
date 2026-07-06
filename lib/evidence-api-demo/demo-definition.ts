@@ -32,8 +32,8 @@ export interface EvidenceApiDemoDefinition {
   categoryMeta: Record<SimulationCategory, { label: string; description: string }>;
   categoryOrder: SimulationCategory[];
   actions: SimulationAction[];
-  /** "game" = Three.js play surface; "app" = in-product UI (no event buttons). */
-  simulatorMode?: "events" | "game" | "app";
+  /** "game" = Three.js play surface; "app" = in-product UI; "external" = standalone app at /demo-app. */
+  simulatorMode?: "events" | "game" | "app" | "external";
 }
 
 export const STANDARD_CATEGORY_ORDER: SimulationCategory[] = [

@@ -46,7 +46,11 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(redirectUrl);
   }
 
-  const isDemoPage = pathname === "/demo" || pathname.startsWith("/demo/");
+  const isDemoPage =
+    pathname === "/demo" ||
+    pathname.startsWith("/demo/") ||
+    pathname === "/demo-app" ||
+    pathname.startsWith("/demo-app/");
   const isEvidenceApiDemoApi = pathname.startsWith("/api/evidence-api-demo");
 
   // Protected routes - require authentication

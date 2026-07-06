@@ -36,10 +36,9 @@ import {
 } from "@/lib/evidence-api-demo/custom-demo";
 import type { EvidenceApiDemoDefinition } from "@/lib/evidence-api-demo/demo-definition";
 import { DemoVerificationPills } from "@/components/evidence-demo/DemoVerificationPills";
-import { GridworksApp } from "@/components/evidence-demo/GridworksApp";
-import { NexusFrontGame } from "@/components/evidence-demo/NexusFrontGame";
 import { EVIDENCE_API_DEMOS, resolveDemoId } from "@/lib/evidence-api-demo/demos";
-import { isAppDemo, isGameDemo, isInteractiveDemo } from "@/lib/evidence-api-demo/game-tips";
+import { isExternalDemo, isInteractiveDemo } from "@/lib/evidence-api-demo/game-tips";
+import { buildOrbitLaunchUrl } from "@/lib/evidence-api-demo/orbit-bridge";
 import {
   normalizeDemoSessionUrl,
   openDemoSessionUrl,
@@ -173,7 +172,7 @@ function loadPersistedState(): PersistedDemoState | null {
     return {
       planId: parsed.planId,
       sessionId: parsed.sessionId,
-      demoId: parsed.demoId ?? "nexusfront",
+      demoId: parsed.demoId ?? "orbit",
       worldState: parsed.worldState ?? {
         ...createInitialWorldState(),
         completedActions: legacySteps,
@@ -1364,6 +1363,7 @@ export function EvidenceApiDemo() {
             report={report}
             isReporting={isReporting}
             onRequestPerformance={() => void handleRequestPerformance()}
+            sessionId={sessionId}
           />
         ) : null}
 
@@ -1399,6 +1399,7 @@ export function EvidenceApiDemo() {
                 isSimulatingAllMcpEvents={isSimulatingAllMcpEvents}
                 runningMcpEventId={runningMcpEventId}
                 planId={planId}
+                sessionId={sessionId}
                 onMcpConnect={handleMcpConnect}
                 onMcpPull={handleMcpPull}
                 onSimulateMcpEvent={handleSimulateMcpEvent}
@@ -1742,6 +1743,59 @@ function demoPanelStyles(_accent?: EvidenceApiDemoDefinition["accent"]) {
   };
 }
 
+function ExternalLaunchPanel({
+  demo,
+  planId,
+  sessionId,
+  evidenceCount,
+  styles,
+}: {
+  demo: EvidenceApiDemoDefinition;
+  planId: string | null;
+  sessionId: string | null;
+  evidenceCount: number;
+  styles: ReturnType<typeof demoPanelStyles>;
+}) {
+  const canLaunch = Boolean(planId && sessionId);
+  const launchUrl = canLaunch
+    ? buildOrbitLaunchUrl({ planId: planId!, sessionId: sessionId! })
+    : null;
+
+  return (
+    <div className="flex flex-col items-center justify-center px-6 py-16 text-center">
+      <div className={`flex size-14 items-center justify-center rounded-lg text-lg font-bold ${styles.logo}`}>
+        {demo.initials}
+      </div>
+      <h3 className="mt-6 text-2xl font-medium text-white">{demo.productName} is ready</h3>
+      <p className={`mt-3 max-w-lg text-sm leading-relaxed ${styles.bodyText}`}>
+        Launch the full-screen product demo in a new browser tab. Work inside Orbit while evidence
+        streams to this workspace. Smart coaching overlays appear inside the app as score cards update.
+      </p>
+      <div className="mt-4 font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-500">
+        {evidenceCount} evidence events from hub · live actions stream from Orbit
+      </div>
+      <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+        <button
+          type="button"
+          disabled={!launchUrl}
+          onClick={() => {
+            if (!launchUrl) return;
+            window.open(launchUrl, "_blank", "noopener,noreferrer");
+          }}
+          className={`inline-flex items-center gap-2 rounded-md px-5 py-2.5 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-50 ${styles.button}`}
+        >
+          Launch {demo.productName}
+          <ArrowRight className="size-4" />
+        </button>
+      </div>
+      <p className="mt-6 max-w-md text-xs text-zinc-500">
+        Use the Evaluation and Score tabs here for schema regeneration and full scorecards. Orbit keeps
+        coaching overlays in-product while you work.
+      </p>
+    </div>
+  );
+}
+
 function DemoUseCasePicker({
   demos,
   onSelect,
@@ -1766,7 +1820,7 @@ function DemoUseCasePicker({
         </p>
       </div>
 
-      <div className="mt-8 grid gap-4 sm:grid-cols-2">
+      <div className={`mt-8 grid gap-4 ${demos.length > 1 ? "sm:grid-cols-2" : ""}`}>
         {demos.map((demo) => {
           const styles = demoPanelStyles(demo.accent);
           const verificationPills = getDemoVerificationPills(demo);
@@ -1793,7 +1847,7 @@ function DemoUseCasePicker({
               </div>
               <p className={`mt-4 text-sm leading-relaxed ${styles.bodyText}`}>{demo.description}</p>
               <div className="mt-5 flex items-center gap-2 text-xs font-medium text-white/90">
-                Run this demo
+                {demo.simulatorMode === "external" ? "Launch full-screen app" : "Run this demo"}
                 <ArrowRight className="size-3.5 transition group-hover:translate-x-0.5" />
               </div>
             </button>
@@ -2204,6 +2258,7 @@ function SimulatorPanel({
   isSimulatingAllMcpEvents = false,
   runningMcpEventId = null,
   planId = null,
+  sessionId = null,
   onMcpConnect,
   onMcpPull,
   onSimulateMcpEvent,
@@ -2247,6 +2302,7 @@ function SimulatorPanel({
   isSimulatingAllMcpEvents?: boolean;
   runningMcpEventId?: string | null;
   planId?: string | null;
+  sessionId?: string | null;
   onMcpConnect?: () => void;
   onMcpPull?: (toolName: string) => void;
   onSimulateMcpEvent?: (event: McpSimulationEvent) => void;
@@ -2263,8 +2319,7 @@ function SimulatorPanel({
   onOpenTapValidation?: () => void;
 }) {
   const styles = demoPanelStyles(demo.accent);
-  const gameMode = isGameDemo(demo);
-  const appMode = isAppDemo(demo);
+  const externalMode = isExternalDemo(demo);
   const interactiveMode = isInteractiveDemo(demo);
   const verificationPills = getDemoVerificationPills(demo);
   const totalActions = demo.actions.filter((action) => action.kind === "evidence").length;
@@ -2446,35 +2501,15 @@ function SimulatorPanel({
                 onSimulateAllMcpEvents={onSimulateAllMcpEvents}
                 styles={styles}
               />
-            ) : interactiveMode && phase === "simulating" ? (
-              gameMode ? (
-                <NexusFrontGame
-                  demo={demo}
-                  worldState={worldState}
-                  runningActionId={runningActionId}
-                  onRunAction={onRunAction}
-                  report={report}
-                  isReporting={isReporting}
-                  evidenceCount={evidenceCount}
-                  workspaceConversionGoal={workspaceConversionGoal}
-                  conversionGoalSource={conversionGoalSource}
-                />
-              ) : appMode ? (
-                <GridworksApp
-                  demo={demo}
-                  worldState={worldState}
-                  runningActionId={runningActionId}
-                  onRunAction={onRunAction}
-                  report={report}
-                  isReporting={isReporting}
-                  workspaceConversionGoal={workspaceConversionGoal}
-                  conversionGoalSource={conversionGoalSource}
-                  tapLinkUrl={tapLinkUrl}
-                  isCreatingTapLink={isCreatingTapLink}
-                  onOpenTapValidation={onOpenTapValidation}
-                />
-              ) : null
-            ) : (
+            ) : externalMode && phase === "simulating" ? (
+              <ExternalLaunchPanel
+                demo={demo}
+                planId={planId}
+                sessionId={sessionId}
+                evidenceCount={evidenceCount}
+                styles={styles}
+              />
+            ) : interactiveMode && phase === "simulating" ? null : (
               <div className="flex w-full flex-col">
             <div className="mb-5 shrink-0 grid grid-cols-3 gap-2 text-center">
               <div className={`rounded-md border bg-black/25 px-2 py-2 ${styles.statBorder}`}>

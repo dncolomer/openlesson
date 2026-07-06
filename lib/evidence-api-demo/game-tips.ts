@@ -9,8 +9,12 @@ export function isAppDemo(demo: { id: string; simulatorMode?: string }): boolean
   return demo.simulatorMode === "app" || demo.id === "gridworks";
 }
 
+export function isExternalDemo(demo: { id: string; simulatorMode?: string }): boolean {
+  return demo.simulatorMode === "external" || demo.id === "orbit";
+}
+
 export function isInteractiveDemo(demo: { id: string; simulatorMode?: string }): boolean {
-  return isGameDemo(demo) || isAppDemo(demo);
+  return isGameDemo(demo) || isAppDemo(demo) || isExternalDemo(demo);
 }
 
 export type GameCoaching = {

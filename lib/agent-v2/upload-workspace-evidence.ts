@@ -5,6 +5,7 @@ import {
   MAX_WORKSPACE_EVIDENCE_BYTES,
   normalizeEvidenceType,
 } from "./workspace-evidence";
+import { createdByApiKeyId } from "./auth";
 import type { AuthContext } from "./types";
 import { uploadFileToXAI, deleteFileFromXAI } from "@/lib/xai-files";
 
@@ -145,7 +146,7 @@ export async function uploadWorkspaceEvidence(
       user_id: ownerUserId,
       guest_user_id: isUuid(auth.guest_user_id) ? auth.guest_user_id : null,
       organization_id: organizationId,
-      created_by_api_key_id: isUuid(auth.key_id) ? auth.key_id : null,
+      created_by_api_key_id: createdByApiKeyId(auth),
     })
     .select(
       "id, plan_id, plan_node_id, session_id, evidence_type, file_name, mime_type, file_size, xai_file_id, timestamp_ms, tool_name, tool_action, created_at"

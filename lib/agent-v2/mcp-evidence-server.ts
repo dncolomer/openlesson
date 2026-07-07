@@ -84,7 +84,9 @@ REST mirror: same loop via Bearer auth on /api/v2/agent/workspaces/{id}/...
 
 Resources: resources/read openlesson://integration-scope and openlesson://evidence-loop
 
-Scopes: workspaces:read, workspaces:write, tap:read, tap:write. Teams tier. Auth: Authorization: Bearer <api_key> on POST /api/mcp.`;
+TAP links (create_tap_link): bearer URLs at /ghl-score/session/{token}. Works for workspace owners and guests — open the link yourself or share with a learner. guest_email/guest_user_id are optional (org admins only).
+
+Scopes: workspaces:read, workspaces:write, tap:read, tap:write. Teams tier. Auth: Authorization: Bearer <api_key or OAuth token> on POST /api/mcp.`;
 
 export const MCP_EVIDENCE_TOOLS = [
   {
@@ -327,7 +329,7 @@ function boundedInt(value: unknown, fallback: number, min: number, max: number) 
 
 function requireScope(scopes: ApiKeyScope[], scope: ApiKeyScope) {
   if (!hasScope(scopes, scope)) {
-    throw new Error(`This tool requires the ${scope} scope on your API key.`);
+    throw new Error(`This tool requires the ${scope} scope on your API key or OAuth token.`);
   }
 }
 
@@ -1279,7 +1281,8 @@ export async function callMcpEvidenceTool(
 
     if (error || !link) {
       console.error("[mcp/create_tap_link] Create error:", error);
-      throw new Error("Failed to create TAP link.");
+      const detail = typeof error?.message === "string" ? error.message : null;
+      throw new Error(detail ? `Failed to create TAP link: ${detail}` : "Failed to create TAP link.");
     }
 
     const appBase = process.env.NEXT_PUBLIC_APP_URL || origin;

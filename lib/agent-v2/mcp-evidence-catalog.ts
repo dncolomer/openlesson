@@ -45,6 +45,7 @@ export function buildMcpClientConfig(origin: string, apiKeyPlaceholder = "YOUR_A
     {
       mcpServers: {
         openlesson: {
+          type: "streamable-http",
           url: buildMcpEndpointUrl(origin),
           headers: {
             Authorization: buildMcpAuthHeader(apiKeyPlaceholder),
@@ -79,6 +80,7 @@ export function buildMcpOAuthClientConfig(origin: string): string {
     {
       mcpServers: {
         openlesson: {
+          type: "streamable-http",
           url: buildMcpEndpointUrl(origin),
         },
       },

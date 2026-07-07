@@ -1765,6 +1765,7 @@
     "copied": "已复制！",
     "docsLink": "API 参考",
     "apiKeyLink": "控制台 → 集成（API 密钥）",
+    "skillSectionDescription": "根据本工作区的块、备注和上传内容生成工作区专属 skill.md 与 evidence spec。随 evidence 增长请重新生成。",
     "generateTitle": "生成工作区文件",
     "advancedTitle": "高级 MCP 参考",
     "mcpTitle": "MCP 连接器（Evidence API）",

@@ -1,0 +1,53 @@
+import { describe, expect, it } from "vitest";
+import {
+  handleJsonRpc,
+  mcpEndpointDiscoveryResponse,
+} from "@/lib/agent-v2/mcp-jsonrpc-handler";
+import type { AuthContext } from "@/lib/agent-v2/types";
+
+const auth: AuthContext = {
+  api_key_id: "key-1",
+  user_id: "user-1",
+  guest_user_id: null,
+  organization_id: null,
+  is_org_admin: false,
+  scopes: ["workspaces:read", "workspaces:write", "tap:read", "tap:write"],
+  rate_limit: 120,
+};
+
+describe("mcp-jsonrpc-handler", () => {
+  it("returns initialize result with protocol version", async () => {
+    const response = await handleJsonRpc(
+      { jsonrpc: "2.0", id: 1, method: "initialize", params: {} },
+      auth,
+      {},
+      "https://openlesson.academy"
+    );
+
+    expect(response?.result).toMatchObject({
+      protocolVersion: "2025-03-26",
+      serverInfo: { name: "openlesson-evidence-api" },
+    });
+  });
+
+  it("lists MCP tools", async () => {
+    const response = await handleJsonRpc(
+      { jsonrpc: "2.0", id: 2, method: "tools/list", params: {} },
+      auth,
+      {},
+      "https://openlesson.academy"
+    );
+
+    const tools = (response?.result as { tools?: { name: string }[] })?.tools ?? [];
+    expect(tools.map((tool) => tool.name)).toContain("list_workspaces");
+    expect(tools.map((tool) => tool.name)).toContain("upload_evidence");
+  });
+
+  it("emits absolute endpoint URLs for streamable HTTP discovery", async () => {
+    const response = mcpEndpointDiscoveryResponse("https://openlesson.academy/api/mcp");
+    expect(response.headers.get("Content-Type")).toContain("text/event-stream");
+    const body = await response.text();
+    expect(body).toContain("event: endpoint");
+    expect(body).toContain("data: https://openlesson.academy/api/mcp");
+  });
+});

@@ -23,6 +23,7 @@ describe("mcp-evidence-catalog", () => {
 
   it("emits MCP client config JSON with Bearer auth header", () => {
     const config = JSON.parse(buildMcpClientConfig("http://localhost:3000", "sk_test"));
+    expect(config.mcpServers.openlesson.type).toBe("streamable-http");
     expect(config.mcpServers.openlesson.url).toBe("http://localhost:3000/api/mcp");
     expect(config.mcpServers.openlesson.headers.Authorization).toBe("Bearer sk_test");
   });

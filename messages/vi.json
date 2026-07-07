@@ -1765,6 +1765,7 @@
     "copied": "Đã sao chép!",
     "docsLink": "Tài liệu API",
     "apiKeyLink": "Bảng điều khiển → Tích hợp (khóa API)",
+    "skillSectionDescription": "Tạo skill.md và spec evidence theo workspace từ block, ghi chú và file tải lên. Tạo lại khi evidence tích lũy.",
     "generateTitle": "Tạo file workspace",
     "advancedTitle": "Tham chiếu MCP nâng cao",
     "mcpTitle": "Kết nối MCP (Evidence API)",

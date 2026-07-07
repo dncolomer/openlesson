@@ -1771,6 +1771,7 @@
     "copied": "Skopiowano!",
     "docsLink": "Dokumentacja API",
     "apiKeyLink": "Panel → Integracje (klucze API)",
+    "skillSectionDescription": "Wygeneruj skill.md i spec evidence dla tego workspace na podstawie bloków, notatek i uploadów. Regeneruj wraz z rosnącą evidence.",
     "generateTitle": "Generuj pliki workspace",
     "advancedTitle": "Zaawansowana referencja MCP",
     "mcpTitle": "Konektor MCP (Evidence API)",

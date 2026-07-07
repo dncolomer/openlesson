@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { authenticateApiKey } from "@/lib/agent-v2/auth";
+import { getAppOrigin, getMcpResourceUri } from "@/lib/agent-v2/mcp-oauth/config";
 import {
   mcpEndpointDiscoveryResponse,
   processMcpJsonRpcRequest,
@@ -14,14 +15,16 @@ async function authenticateMcpKey(key: string) {
 }
 
 export async function GET(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ key: string }> }
 ) {
   const { key } = await params;
   const authResult = await authenticateMcpKey(key);
   if (authResult instanceof NextResponse) return authResult;
 
-  return mcpEndpointDiscoveryResponse(`/api/mcp/${encodeURIComponent(key)}`);
+  const legacyPath = `/api/mcp/${encodeURIComponent(key)}`;
+  const resourceUri = `${getAppOrigin(req).replace(/\/$/, "")}${legacyPath}`;
+  return mcpEndpointDiscoveryResponse(resourceUri);
 }
 
 export async function POST(

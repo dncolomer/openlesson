@@ -1893,6 +1893,7 @@
     "copied": "Copied!",
     "docsLink": "API reference",
     "apiKeyLink": "Dashboard → Integrations (API keys)",
+    "skillSectionDescription": "Generate a workspace-specific skill.md and evidence spec from this workspace's blocks, notes, and uploads. Regenerate as evidence grows.",
     "generateTitle": "Generate workspace files",
     "advancedTitle": "Advanced MCP reference",
     "endpointsTitle": "Endpoints for this workspace",

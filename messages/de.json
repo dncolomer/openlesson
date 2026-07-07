@@ -1771,6 +1771,7 @@
     "copied": "Kopiert!",
     "docsLink": "API-Referenz",
     "apiKeyLink": "Dashboard → Integrationen (API-Schlüssel)",
+    "skillSectionDescription": "Erzeuge eine workspace-spezifische skill.md und Evidence-Spec aus Blöcken, Notizen und Uploads dieses Workspace. Bei wachsender Evidence neu generieren.",
     "generateTitle": "Workspace-Dateien erzeugen",
     "advancedTitle": "Erweiterte MCP-Referenz",
     "mcpTitle": "MCP-Connector (Evidence API)",

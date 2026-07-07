@@ -4,6 +4,11 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useI18n } from "@/lib/i18n";
 import { slugifyIntegrationName } from "@/lib/agent-v2/integration-skill";
+import {
+  buildMcpClientConfig,
+  buildMcpEndpointUrl,
+  MCP_EVIDENCE_TOOL_CATALOG,
+} from "@/lib/agent-v2/mcp-evidence-catalog";
 import { readJsonResponse } from "@/lib/read-json-response";
 
 interface WorkspaceIntegrationPanelProps {
@@ -49,6 +54,10 @@ export function WorkspaceIntegrationPanel({
 
   const basePath = "/api/v2/agent";
   const workspacePath = `${basePath}/workspaces/${planId}`;
+  const mcpEndpointTemplate =
+    typeof window !== "undefined"
+      ? buildMcpEndpointUrl(window.location.origin)
+      : buildMcpEndpointUrl("https://openlesson.academy");
 
   const endpoints = useMemo(
     () => [
@@ -238,6 +247,83 @@ export function WorkspaceIntegrationPanel({
 {`Authorization: Bearer <api_key>
 Content-Type: application/json`}
           </pre>
+        </div>
+
+        <div className="rounded-lg border border-neutral-800/80 bg-neutral-950/70 p-4">
+          <h3 className="text-sm font-medium text-white">{t("workspaceIntegration.mcpTitle")}</h3>
+          <p className="mt-1 text-xs leading-relaxed text-neutral-500">
+            {t("workspaceIntegration.mcpDescription")}
+          </p>
+          <p className="mt-3 text-[10px] font-medium uppercase tracking-[0.12em] text-neutral-600">
+            {t("workspaceIntegration.mcpEndpoint")}
+          </p>
+          <code className="mt-2 block overflow-x-auto rounded border border-neutral-800 bg-black/50 px-2 py-2 font-mono text-[11px] text-neutral-300">
+            POST {mcpEndpointTemplate}
+          </code>
+          <p className="mt-2 text-xs text-neutral-500">{t("workspaceIntegration.mcpEndpointHint")}</p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => copyText(mcpEndpointTemplate, "mcp-endpoint")}
+              className="rounded-md border border-neutral-700 px-2.5 py-1 text-xs text-neutral-300 transition-colors hover:border-neutral-500 hover:text-white"
+            >
+              {copiedField === "mcp-endpoint"
+                ? t("workspaceIntegration.copied")
+                : t("workspaceIntegration.mcpCopyEndpoint")}
+            </button>
+            <button
+              type="button"
+              onClick={() =>
+                copyText(
+                  typeof window !== "undefined"
+                    ? buildMcpClientConfig(window.location.origin)
+                    : buildMcpClientConfig("https://openlesson.academy"),
+                  "mcp-config"
+                )
+              }
+              className="rounded-md border border-neutral-700 px-2.5 py-1 text-xs text-neutral-300 transition-colors hover:border-neutral-500 hover:text-white"
+            >
+              {copiedField === "mcp-config"
+                ? t("workspaceIntegration.copied")
+                : t("workspaceIntegration.mcpCopyConfig")}
+            </button>
+          </div>
+
+          <div className="mt-4">
+            <p className="text-xs font-medium text-neutral-300">{t("workspaceIntegration.mcpWorkflowTitle")}</p>
+            <pre className="mt-2 whitespace-pre-wrap rounded-md border border-neutral-800 bg-black/40 p-3 font-mono text-[11px] leading-relaxed text-neutral-400">
+              {t("workspaceIntegration.mcpWorkflowSteps").replace("{planId}", planId)}
+            </pre>
+            <p className="mt-2 text-xs text-neutral-500">{t("workspaceIntegration.mcpWorkspaceHint").replace("{planId}", planId)}</p>
+          </div>
+
+          <div className="mt-4">
+            <p className="text-xs font-medium text-neutral-300">{t("workspaceIntegration.mcpToolsTitle")}</p>
+            <ul className="mt-2 space-y-1.5">
+              {MCP_EVIDENCE_TOOL_CATALOG.map((tool) => (
+                <li
+                  key={tool.name}
+                  className="rounded-md border border-neutral-800/70 bg-black/30 px-3 py-2 text-xs text-neutral-400"
+                >
+                  <span className="font-mono text-neutral-200">{tool.name}</span>
+                  <span className="ml-2 rounded bg-neutral-800 px-1 py-0.5 font-mono text-[10px] text-neutral-500">
+                    {tool.scope}
+                  </span>
+                  <p className="mt-1 text-neutral-500">{tool.summary}</p>
+                </li>
+              ))}
+            </ul>
+            <p className="mt-3 text-xs text-neutral-500">{t("workspaceIntegration.mcpScopeNote")}</p>
+          </div>
+
+          <div className="mt-4">
+            <p className="text-xs font-medium text-neutral-300">{t("workspaceIntegration.mcpResourcesTitle")}</p>
+            <p className="mt-1 text-xs text-neutral-500">{t("workspaceIntegration.mcpResourcesHint")}</p>
+            <ul className="mt-2 space-y-1 font-mono text-[11px] text-neutral-400">
+              <li>openlesson://integration-scope</li>
+              <li>openlesson://evidence-loop</li>
+            </ul>
+          </div>
         </div>
 
         <div className="rounded-lg border border-neutral-800/80 bg-neutral-950/70 p-4 space-y-4">

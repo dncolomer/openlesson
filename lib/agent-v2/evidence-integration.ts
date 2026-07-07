@@ -10,6 +10,13 @@ import {
   type EvidenceSchemaRequest,
 } from "./evidence-schema";
 import { buildWorkspacePerformanceContext } from "./performance-context";
+import {
+  buildContinuousEvaluationMcpPolicy,
+  buildIntegrationSurfaces,
+  buildOpenLessonScopeForWorkspace,
+  formatDualSurfaceGuidance,
+  recommendIntegrationActions,
+} from "./integration-discovery";
 import { buildPerformanceReportContract, type PerformanceReportContract } from "./performance-report";
 import { callXaiResponsesWithFiles } from "@/lib/xai-client";
 
@@ -117,7 +124,11 @@ export function enrichEvidenceSpecResult(
     blocks?: number;
     plan_files?: number;
     tap_sessions?: number;
-  } | null
+  } | null,
+  workspaceMeta?: {
+    title?: string;
+    conversion_goal?: string | null;
+  }
 ): EvidenceEvalSchemaResult {
   const evidenceSpecPath = buildEvidenceSchemaApiPath(workspaceId, baseUrl);
   const skillPath = buildIntegrationSkillApiPath(workspaceId, baseUrl);
@@ -128,6 +139,11 @@ export function enrichEvidenceSpecResult(
       endpoint_pattern: buildPerformanceApiPath(workspaceId, baseUrl),
     };
 
+  const continuousEvaluation = buildContinuousEvaluationPolicy(workspaceId, baseUrl, contextCounts);
+  const continuousEvaluationMcp = buildContinuousEvaluationMcpPolicy(workspaceId, baseUrl, contextCounts);
+  const evidenceCount = contextCounts?.evidence_artifacts ?? 0;
+  const blockCount = contextCounts?.blocks ?? 0;
+
   return {
     ...result,
     spec_version: EVIDENCE_SPEC_VERSION,
@@ -136,11 +152,26 @@ export function enrichEvidenceSpecResult(
     workspace_id: workspaceId,
     block_id: blockId ?? null,
     performance_report_contract: performanceContract,
-    continuous_evaluation: buildContinuousEvaluationPolicy(workspaceId, baseUrl, contextCounts),
+    continuous_evaluation: continuousEvaluation,
+    continuous_evaluation_mcp: continuousEvaluationMcp,
+    openlesson_scope: buildOpenLessonScopeForWorkspace({
+      workspaceTitle: workspaceMeta?.title || result.schema_name,
+      conversionGoal: workspaceMeta?.conversion_goal,
+      blockCount,
+      evidenceCount,
+    }),
+    integration_surfaces: buildIntegrationSurfaces(baseUrl),
+    recommended_next_actions: recommendIntegrationActions({
+      evidence_artifacts: evidenceCount,
+      blocks: blockCount,
+      tap_sessions: contextCounts?.tap_sessions ?? 0,
+      has_conversion_goal: Boolean(workspaceMeta?.conversion_goal?.trim()),
+    }),
     collection_guidance: [
       result.collection_guidance,
       result.continuous_evaluation_summary,
-      `Self-update: re-fetch this spec at ${evidenceSpecPath} and regenerate skill.md at ${skillPath} as evidence accumulates.`,
+      formatDualSurfaceGuidance(continuousEvaluation, continuousEvaluationMcp),
+      `Self-update: re-fetch REST ${evidenceSpecPath} or MCP generate_evidence_schema; regenerate skill at ${skillPath} or MCP generate_integration_skill.`,
     ]
       .filter(Boolean)
       .join(" "),
@@ -174,13 +205,25 @@ Dynamic evidence spec API (MUST appear in skill.md):
 POST ${spec.evidence_spec_api_path || "(workspace)/evidence-schema"}
 Request body: { "definition": "<eval definition>", "block_id": "<optional>", "integration_hints": { "tool_name": "...", "partner_agent": "..." } }
 
-Continuous evaluation (MUST appear in skill.md):
+Continuous evaluation — REST (MUST appear in skill.md):
 ${spec.continuous_evaluation?.principle || "Verification is continuous; regenerate spec and skill as evidence grows."}
 ${spec.continuous_evaluation?.more_evidence_improves || ""}
 Regenerate evidence spec: ${spec.continuous_evaluation?.evidence_spec.api_path || spec.evidence_spec_api_path}
 Regenerate integration skill: ${spec.continuous_evaluation?.integration_skill.api_path || "(workspace)/integration-skill"}
+Upload evidence: ${spec.continuous_evaluation?.evidence_spec.api_path ? spec.evidence_upload_api_path : "(workspace)/evidence"}
 Request refreshed performance: ${spec.continuous_evaluation?.performance.api_path || "(workspace)/performance"}
-Recommended cadence: ${spec.continuous_evaluation?.recommended_cadence || "upload → re-fetch spec → regenerate skill → performance"}
+REST cadence: ${spec.continuous_evaluation?.recommended_cadence || "upload → re-fetch spec → regenerate skill → performance"}
+
+Continuous evaluation — MCP (same loop, tool names):
+${spec.continuous_evaluation_mcp?.principle || spec.continuous_evaluation?.principle || ""}
+MCP endpoint: ${spec.continuous_evaluation_mcp?.mcp_endpoint_pattern || "POST /api/mcp/{api_key}"}
+generate_evidence_schema ↔ ${spec.continuous_evaluation?.evidence_spec.api_path || "REST evidence-schema"}
+upload_evidence ↔ ${spec.evidence_upload_api_path || "REST evidence"}
+analyze_performance ↔ ${spec.continuous_evaluation?.performance.api_path || "REST performance"}
+get_learning_progress — one-call progress snapshot + recommended_next_actions
+MCP cadence: ${spec.continuous_evaluation_mcp?.recommended_cadence || "schema → upload → performance → repeat"}
+
+Integration surfaces: REST Bearer auth + MCP JSON-RPC (full parity — document both, prefer live API paths over static copies).
 
 Performance report contract (MUST appear in skill.md — every report includes scores + gaps):
 Endpoint: ${spec.performance_report_contract?.endpoint_pattern || spec.continuous_evaluation?.performance.api_path || "(workspace)/performance"}
@@ -248,7 +291,11 @@ export async function generateWorkspaceEvidenceSpec(
     workspaceId,
     baseUrl,
     blockId,
-    context.payload.counts
+    context.payload.counts,
+    {
+      title: workspaceTitle,
+      conversion_goal: context.payload.workspace.conversion_goal,
+    }
   );
 
   return {

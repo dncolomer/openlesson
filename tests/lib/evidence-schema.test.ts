@@ -134,7 +134,13 @@ describe("evidence integration helpers", () => {
     expect(enriched.performance_report_contract?.gap_analysis.gaps_required).toBe(true);
     expect(enriched.continuous_evaluation?.regeneration_required).toBe(true);
     expect(enriched.continuous_evaluation?.integration_skill.api_path).toContain("/integration-skill");
+    expect(enriched.continuous_evaluation_mcp?.evidence_spec.mcp_tool).toBe("generate_evidence_schema");
+    expect(enriched.continuous_evaluation_mcp?.performance.rest_equivalent).toContain("/performance");
+    expect(enriched.integration_surfaces?.length).toBe(2);
+    expect(enriched.openlesson_scope).toBeTruthy();
+    expect(enriched.recommended_next_actions?.length).toBeGreaterThan(0);
     expect(enriched.collection_guidance).toContain("Self-update");
+    expect(enriched.collection_guidance).toContain("MCP");
   });
 
   it("builds continuous evaluation policy with evidence-aware triggers", () => {

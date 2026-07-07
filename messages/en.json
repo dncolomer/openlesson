@@ -1868,7 +1868,20 @@
     "ownerOnly": "Only the workspace owner can configure Agentic API integration.",
     "teamsRequired": "Teams tier required for Agentic API features. Upgrade at openlesson.academy/pricing.",
     "errorGeneric": "Generation failed. Please try again.",
-    "copyPath": "Copy path"
+    "copyPath": "Copy path",
+    "mcpTitle": "MCP connector (Evidence API)",
+    "mcpDescription": "Third-party agents (Cursor, Claude Desktop, Grok, custom MCP clients) can call the same Evidence API capabilities via JSON-RPC. Embed your Teams API key in the MCP URL — treat it like a password.",
+    "mcpEndpoint": "MCP endpoint",
+    "mcpEndpointHint": "Replace YOUR_API_KEY with a URL-encoded Teams API key from Usage → API Access.",
+    "mcpCopyEndpoint": "Copy MCP URL template",
+    "mcpCopyConfig": "Copy client config",
+    "mcpToolsTitle": "MCP tools (parity with REST)",
+    "mcpWorkflowTitle": "Recommended agent workflow",
+    "mcpWorkflowSteps": "0. get_learning_progress — orient on conversion_goal and recommended_next_actions\n1. generate_evidence_schema — read continuous_evaluation (REST) + continuous_evaluation_mcp (tools)\n2. upload_evidence after product actions (repeat)\n3. analyze_performance for scorecard / coaching\n4. Regenerate schema and skill as evidence grows — REST and MCP stay in sync",
+    "mcpScopeNote": "Scopes: workspaces:read, workspaces:write, ghl:read, ghl:write on your API key.",
+    "mcpResourcesTitle": "MCP resources",
+    "mcpResourcesHint": "Agents can resources/read openlesson://integration-scope and openlesson://evidence-loop for openLesson goals and the dual REST+MCP evidence loop.",
+    "mcpWorkspaceHint": "Pass workspace_id {planId} on every workspace-scoped tool."
   },
   "performanceChat": {
     "signInRequired": "Sign in to view performance insights",

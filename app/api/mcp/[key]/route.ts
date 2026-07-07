@@ -1,9 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
-import { authenticateApiKey, hasScope } from "@/lib/agent-v2/auth";
-import type { ApiKeyScope, AuthContext } from "@/lib/agent-v2/types";
-import { canAccessAgentWorkspace } from "@/lib/agent-v2/workspace-access";
+import { authenticateApiKey } from "@/lib/agent-v2/auth";
+import type { AuthContext } from "@/lib/agent-v2/types";
+import {
+  buildMcpResourceContent,
+  MCP_RESOURCE_CATALOG,
+} from "@/lib/agent-v2/integration-discovery";
+import {
+  callMcpEvidenceTool,
+  MCP_EVIDENCE_PROTOCOL_VERSION,
+  MCP_EVIDENCE_SERVER_INSTRUCTIONS,
+  MCP_EVIDENCE_SERVER_NAME,
+  MCP_EVIDENCE_SERVER_VERSION,
+  MCP_EVIDENCE_TOOLS,
+} from "@/lib/agent-v2/mcp-evidence-server";
 
 export const runtime = "nodejs";
+export const maxDuration = 180;
 
 type JsonRpcId = string | number | null;
 
@@ -19,237 +31,23 @@ interface ToolCallParams {
   arguments?: Record<string, unknown>;
 }
 
-const MCP_PROTOCOL_VERSION = "2025-03-26";
-
-const READ_TOOLS = [
-  {
-    name: "list_workspaces",
-    description: "List the authenticated OpenLesson user's Verification Workspaces.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        status: { type: "string", description: "Optional workspace status filter." },
-        limit: {
-          type: "number",
-          description: "Maximum sessions to return, from 1 to 100. Defaults to 20.",
-        },
-        offset: {
-          type: "number",
-          description: "Pagination offset. Defaults to 0.",
-        },
-      },
-      additionalProperties: false,
-    },
-    annotations: { readOnlyHint: true },
-  },
-  {
-    name: "list_blocks",
-    description: "List available blocks in a Verification Workspace.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        workspace_id: {
-          type: "string",
-          description: "OpenLesson workspace UUID.",
-        },
-      },
-      required: ["workspace_id"],
-      additionalProperties: false,
-    },
-    annotations: { readOnlyHint: true },
-  },
-  {
-    name: "list_ghl_links",
-    description: "List existing GHL links and completion status for a workspace.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        workspace_id: {
-          type: "string",
-          description: "OpenLesson workspace UUID.",
-        },
-      },
-      required: ["workspace_id"],
-      additionalProperties: false,
-    },
-    annotations: { readOnlyHint: true },
-  },
-  {
-    name: "get_ghl_results",
-    description: "Get completed GHL link results for a workspace.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        workspace_id: { type: "string", description: "OpenLesson workspace UUID." },
-        ghl_link_id: { type: "string", description: "GHL link UUID." },
-      },
-      required: ["workspace_id", "ghl_link_id"],
-      additionalProperties: false,
-    },
-    annotations: { readOnlyHint: true },
-  },
-];
-
-function jsonRpcResult(id: JsonRpcId, result: unknown) {
-  return NextResponse.json({ jsonrpc: "2.0", id, result });
-}
-
-function jsonRpcError(id: JsonRpcId, code: number, message: string, data?: unknown) {
+function jsonRpcError(id: JsonRpcId, code: number, message: string) {
   return NextResponse.json(
     {
       jsonrpc: "2.0",
       id,
-      error: {
-        code,
-        message,
-        ...(data === undefined ? {} : { data }),
-      },
+      error: { code, message },
     },
     { status: code === -32603 ? 500 : 200 }
   );
-}
-
-function textToolResult(value: unknown) {
-  return {
-    content: [
-      {
-        type: "text",
-        text: JSON.stringify(value, null, 2),
-      },
-    ],
-  };
-}
-
-function stringArg(args: Record<string, unknown>, name: string) {
-  const value = args[name];
-  return typeof value === "string" && value.trim() ? value.trim() : null;
-}
-
-function boundedInt(value: unknown, fallback: number, min: number, max: number) {
-  const parsed = typeof value === "number" ? value : Number(value);
-  if (!Number.isFinite(parsed)) return fallback;
-  return Math.min(Math.max(Math.trunc(parsed), min), max);
-}
-
-function requireScope(scopes: ApiKeyScope[], scope: ApiKeyScope) {
-  if (!hasScope(scopes, scope)) {
-    throw new Error(`This MCP connector key requires the ${scope} scope.`);
-  }
-}
-
-async function callTool(
-  name: string,
-  args: Record<string, unknown>,
-  auth: AuthContext,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  supabase: any
-) {
-  if (name === "list_workspaces") {
-    requireScope(auth.scopes, "workspaces:read");
-
-    const limit = boundedInt(args.limit, 20, 1, 100);
-    const offset = boundedInt(args.offset, 0, 0, 10_000);
-    const status = stringArg(args, "status");
-
-    let query = supabase
-      .from("learning_plans")
-      .select("id, title, root_topic, status, notes, created_at, updated_at", { count: "exact" })
-      .or(auth.user_id ? `user_id.eq.${auth.user_id},organization_id.eq.${auth.organization_id}` : `organization_id.eq.${auth.organization_id}`)
-      .order("created_at", { ascending: false })
-      .range(offset, offset + limit - 1);
-
-    if (status) query = query.eq("status", status);
-
-    const { data, error, count } = await query;
-    if (error) throw new Error(error.message);
-
-    return textToolResult({
-      workspaces: data || [],
-      pagination: {
-        total: count ?? 0,
-        limit,
-        offset,
-        has_more: offset + limit < (count ?? 0),
-      },
-    });
-  }
-
-  if (name === "list_blocks") {
-    requireScope(auth.scopes, "workspaces:read");
-
-    const workspaceId = stringArg(args, "workspace_id");
-    if (!workspaceId) throw new Error("workspace_id is required.");
-
-    const { data: workspace, error: workspaceError } = await supabase
-      .from("learning_plans")
-      .select("id, user_id, organization_id, guest_user_id")
-      .eq("id", workspaceId)
-      .single();
-
-    if (workspaceError || !workspace || !canAccessAgentWorkspace(auth, workspace)) throw new Error("Workspace not found.");
-
-    const { data: blocks, error } = await supabase
-      .from("plan_nodes")
-      .select("id, title, description, is_start, next_node_ids, status, created_at")
-      .eq("plan_id", workspaceId)
-      .order("created_at", { ascending: true });
-
-    if (error) throw new Error(error.message);
-    return textToolResult({ blocks: blocks || [] });
-  }
-
-  if (name === "list_ghl_links") {
-    requireScope(auth.scopes, "ghl:read");
-
-    const workspaceId = stringArg(args, "workspace_id");
-    if (!workspaceId) throw new Error("workspace_id is required.");
-
-    let query = supabase
-      .from("workspace_ghc_sessions")
-      .select("id, plan_id, plan_node_id, status, requested_duration_seconds, duration_seconds, mode, overall_score, created_at, started_at, completed_at")
-      .eq("plan_id", workspaceId)
-      .order("created_at", { ascending: false });
-
-    if (auth.guest_user_id) query = query.eq("guest_user_id", auth.guest_user_id);
-    else if (!auth.is_org_admin) query = query.eq("user_id", auth.user_id);
-
-    const { data: links, error } = await query;
-
-    if (error) throw new Error(error.message);
-    return textToolResult({ ghl_links: links || [] });
-  }
-
-  if (name === "get_ghl_results") {
-    requireScope(auth.scopes, "ghl:read");
-
-    const workspaceId = stringArg(args, "workspace_id");
-    const linkId = stringArg(args, "ghl_link_id");
-    if (!workspaceId) throw new Error("workspace_id is required.");
-    if (!linkId) throw new Error("ghl_link_id is required.");
-
-    let query = supabase
-      .from("workspace_ghc_sessions")
-      .select("id, plan_id, plan_node_id, xai_file_id, status, duration_seconds, requested_duration_seconds, mode, summary, analysis, overall_score, marker_scores, created_at, started_at, completed_at")
-      .eq("id", linkId)
-      .eq("plan_id", workspaceId);
-
-    if (auth.guest_user_id) query = query.eq("guest_user_id", auth.guest_user_id);
-    else if (!auth.is_org_admin) query = query.eq("user_id", auth.user_id);
-
-    const { data: link, error } = await query.single();
-
-    if (error || !link) throw new Error("GHL link not found.");
-    return textToolResult({ ghl_result: { ...link, gap_analysis: link.status === "completed" ? link.analysis?.gap_analysis || null : null } });
-  }
-
-  throw new Error(`Unknown tool: ${name}`);
 }
 
 async function handleJsonRpc(
   message: JsonRpcMessage,
   auth: AuthContext,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  supabase: any
+  supabase: any,
+  origin: string
 ) {
   const id = message.id ?? null;
 
@@ -260,11 +58,13 @@ async function handleJsonRpc(
       jsonrpc: "2.0",
       id,
       result: {
-        protocolVersion: MCP_PROTOCOL_VERSION,
-        capabilities: { tools: { listChanged: false } },
-        serverInfo: { name: "openlesson-grok-mcp", version: "0.1.0" },
-        instructions:
-          "OpenLesson read-only connector. Use the tools to read Verification Workspaces, blocks, and GHL link results. Do not attempt to modify OpenLesson data.",
+        protocolVersion: MCP_EVIDENCE_PROTOCOL_VERSION,
+        capabilities: {
+          tools: { listChanged: false },
+          resources: { subscribe: false, listChanged: false },
+        },
+        serverInfo: { name: MCP_EVIDENCE_SERVER_NAME, version: MCP_EVIDENCE_SERVER_VERSION },
+        instructions: MCP_EVIDENCE_SERVER_INSTRUCTIONS,
       },
     };
   }
@@ -278,7 +78,51 @@ async function handleJsonRpc(
   }
 
   if (message.method === "tools/list") {
-    return { jsonrpc: "2.0", id, result: { tools: READ_TOOLS } };
+    return { jsonrpc: "2.0", id, result: { tools: MCP_EVIDENCE_TOOLS } };
+  }
+
+  if (message.method === "resources/list") {
+    return {
+      jsonrpc: "2.0",
+      id,
+      result: {
+        resources: MCP_RESOURCE_CATALOG.map((resource) => ({
+          uri: resource.uri,
+          name: resource.name,
+          description: resource.description,
+          mimeType: resource.mimeType,
+        })),
+      },
+    };
+  }
+
+  if (message.method === "resources/read") {
+    const params = (message.params || {}) as { uri?: string };
+    const uri = typeof params.uri === "string" ? params.uri.trim() : "";
+    if (!uri) {
+      return {
+        jsonrpc: "2.0",
+        id,
+        error: { code: -32602, message: "resources/read requires uri." },
+      };
+    }
+
+    const content = buildMcpResourceContent(uri, origin);
+    if (!content) {
+      return {
+        jsonrpc: "2.0",
+        id,
+        error: { code: -32002, message: `Unknown resource: ${uri}` },
+      };
+    }
+
+    return {
+      jsonrpc: "2.0",
+      id,
+      result: {
+        contents: [{ uri, mimeType: "text/markdown", text: content }],
+      },
+    };
   }
 
   if (message.method === "tools/call") {
@@ -292,7 +136,11 @@ async function handleJsonRpc(
     }
 
     try {
-      const result = await callTool(params.name, params.arguments || {}, auth, supabase);
+      const result = await callMcpEvidenceTool(params.name, params.arguments || {}, {
+        auth,
+        supabase,
+        origin,
+      });
       return { jsonrpc: "2.0", id, result };
     } catch (error) {
       return {
@@ -351,6 +199,7 @@ export async function POST(
   if (authResult instanceof NextResponse) return authResult;
 
   const { auth, supabase } = authResult;
+  const origin = req.nextUrl.origin;
 
   let body: JsonRpcMessage | JsonRpcMessage[];
   try {
@@ -372,7 +221,7 @@ export async function POST(
       continue;
     }
 
-    const response = await handleJsonRpc(message, auth, supabase);
+    const response = await handleJsonRpc(message, auth, supabase, origin);
     if (response) responses.push(response);
   }
 

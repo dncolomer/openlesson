@@ -1,3 +1,8 @@
+import type {
+  ContinuousEvaluationMcpPolicy,
+  IntegrationSurfaceRef,
+  RecommendedIntegrationAction,
+} from "./integration-discovery";
 import type { PerformanceContextPayload } from "./performance-context";
 import type { PerformanceReportContract } from "./performance-report";
 
@@ -69,6 +74,10 @@ export interface EvidenceEvalSchemaResult {
   tool_submissions?: ToolSubmissionSpec[];
   evidence_upload_contract?: EvidenceUploadContract;
   continuous_evaluation?: ContinuousEvaluationPolicy;
+  continuous_evaluation_mcp?: ContinuousEvaluationMcpPolicy;
+  openlesson_scope?: Record<string, unknown>;
+  integration_surfaces?: IntegrationSurfaceRef[];
+  recommended_next_actions?: RecommendedIntegrationAction[];
   performance_report_contract?: PerformanceReportContract;
   spec_version?: string;
   evidence_spec_api_path?: string;
@@ -305,7 +314,11 @@ export function buildEvidenceSchemaInstructions(
 
   return `${scope}
 
-You are an OpenLesson evidence architect. Produce a **formal evidence specification** that tells integrators exactly how to submit tool usage and related artifacts for learning verification via POST .../evidence and evaluation via POST .../performance.
+You are an OpenLesson evidence architect. Produce a **formal evidence specification** that tells integrators exactly how to submit tool usage and related artifacts for learning verification.
+
+openLesson scope: verify learning (overall_score, marker_scores), measure conversion toward a workspace conversion_goal (conversion_score), and collect proof-of-work via evidence uploads. Verification is **continuous** — specs and skills regenerate as evidence grows.
+
+Integrators may use **REST** (Bearer API key: POST .../evidence, POST .../performance) or **MCP** (JSON-RPC tools upload_evidence, analyze_performance, generate_evidence_schema) with identical semantics. Document REST paths in contracts; the platform also attaches continuous_evaluation_mcp with tool names after generation — your continuous_evaluation_summary must mention both surfaces.
 
 Use the full workspace context: attached JSON summary, block titles/descriptions, existing evidence patterns, plan files, and Think Aloud Protocol (TAP) session signals when present. TAP and ILE may inform scoring — but performance report remediation (gaps, next_steps, suggestions) must stay product-independent: never recommend TAP sessions, block completion, ILE, or other OpenLesson platform mechanics.
 
@@ -343,8 +356,10 @@ Output rules:
 7. "collection_guidance" explains cadence, checkpoint timing, block-scoped vs workspace-global uploads, and that **more evidence submitted improves learning verification and gap analysis**. Encourage ongoing uploads, not one-time dumps.
 8. "continuous_evaluation_summary" must state clearly that:
    - This evidence spec is a snapshot derived from current workspace context and evidence history
-   - Integrators must **re-fetch** POST .../evidence-schema as evidence accumulates (schemas and tool_submissions evolve)
-   - Integrators must **regenerate** POST .../integration-skill so skill.md stays aligned with the latest spec and workspace state
+   - Integrators must **re-fetch** POST .../evidence-schema (REST) or call generate_evidence_schema (MCP) as evidence accumulates
+   - Integrators must **regenerate** POST .../integration-skill (REST) or generate_integration_skill (MCP) so skill.md stays aligned
+   - Progress tracking uses analyze_performance / POST .../performance for marker_scores, gaps, and conversion_score vs conversion_goal
+   - get_learning_progress (MCP) orients agents mid-session; REST equivalents remain authoritative in API paths
    - Continuous evaluation is the intended operating model, not a one-time setup
 9. schema_name must be snake_case prefixed with "eval_input_".
 10. Keep required_fields practical; use optional_fields for enrichments.

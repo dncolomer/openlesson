@@ -1,0 +1,52 @@
+/** Client-safe catalog for workspace integration UI (no server imports). */
+
+export const MCP_EVIDENCE_TOOL_CATALOG = [
+  { name: "list_workspaces", scope: "workspaces:read", summary: "List accessible Verification Workspaces." },
+  {
+    name: "get_learning_progress",
+    scope: "workspaces:read",
+    summary: "Progress snapshot: goal, blocks, counts, recommended_next_actions (REST + MCP).",
+  },
+  { name: "get_workspace", scope: "workspaces:read", summary: "Read workspace metadata and conversion_goal." },
+  { name: "create_workspace", scope: "workspaces:write", summary: "Create a workspace from initial_prompt." },
+  { name: "list_blocks", scope: "workspaces:read", summary: "List assessable blocks." },
+  {
+    name: "generate_evidence_schema",
+    scope: "workspaces:read",
+    summary: "Generate formal evidence spec (tool JSON schemas + upload contract).",
+  },
+  {
+    name: "generate_integration_skill",
+    scope: "workspaces:read",
+    summary: "Generate partner skill.md with dynamic API references.",
+  },
+  { name: "upload_evidence", scope: "workspaces:write", summary: "Upload tool/screen/video/EEG evidence." },
+  {
+    name: "analyze_performance",
+    scope: "workspaces:read",
+    summary: "Scorecard report (no prompt) or chat Q&A (with prompt).",
+  },
+  { name: "list_ghl_links", scope: "ghl:read", summary: "List TAP session links and status." },
+  { name: "get_ghl_results", scope: "ghl:read", summary: "Read completed TAP results." },
+  { name: "create_ghl_link", scope: "ghl:write", summary: "Create a private TAP link for a block." },
+] as const;
+
+export function buildMcpEndpointUrl(origin: string, apiKeyPlaceholder = "YOUR_API_KEY"): string {
+  const base = origin.replace(/\/$/, "");
+  return `${base}/api/mcp/${encodeURIComponent(apiKeyPlaceholder)}`;
+}
+
+export function buildMcpClientConfig(origin: string, apiKeyPlaceholder = "YOUR_API_KEY"): string {
+  return JSON.stringify(
+    {
+      mcpServers: {
+        openlesson: {
+          url: buildMcpEndpointUrl(origin, apiKeyPlaceholder),
+          transport: "http",
+        },
+      },
+    },
+    null,
+    2
+  );
+}

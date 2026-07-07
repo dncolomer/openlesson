@@ -64,9 +64,9 @@ Common codes: `unauthorized`, `forbidden`, `teams_required`, `validation_error`,
 
 ---
 
-## MCP (optional transport)
+## MCP (full Evidence API transport)
 
-Grok and other MCP clients can call tools via JSON-RPC:
+MCP clients (Cursor, Claude Desktop, Grok, custom agents) can call **the same capabilities as REST** via JSON-RPC:
 
 ```http
 POST /api/mcp/{url_encoded_api_key}
@@ -77,11 +77,45 @@ Content-Type: application/json
 { "jsonrpc": "2.0", "id": 1, "method": "tools/list" }
 ```
 
-**Read tools:** `list_workspaces`, `list_blocks`, `list_ghl_links` (TAP links), `get_ghl_results` (TAP results)
+**Client config example:**
 
-Evidence planning, upload, and performance analysis are **REST-only** (`POST .../evidence-schema`, `POST .../integration-skill`, `POST .../evidence`, `POST .../performance`).
+```json
+{
+  "mcpServers": {
+    "openlesson": {
+      "url": "https://openlesson.academy/api/mcp/YOUR_URL_ENCODED_API_KEY",
+      "transport": "http"
+    }
+  }
+}
+```
 
-Prefer `Authorization: Bearer` on REST routes when the client supports it. Treat MCP URLs as secrets (they embed the raw key).
+**Tools (parity with Agentic API v2):**
+
+| Tool | Scope | REST equivalent |
+|------|-------|-----------------|
+| `list_workspaces` | `workspaces:read` | — |
+| `get_learning_progress` | `workspaces:read` | Progress snapshot + `recommended_next_actions` |
+| `get_workspace` | `workspaces:read` | `GET .../workspaces/{id}` |
+| `create_workspace` | `workspaces:write` | `POST .../workspaces` |
+| `list_blocks` | `workspaces:read` | `GET .../workspaces/{id}/blocks` |
+| `generate_evidence_schema` | `workspaces:read` | `POST .../evidence-schema` |
+| `generate_integration_skill` | `workspaces:read` | `POST .../integration-skill` |
+| `upload_evidence` | `workspaces:write` | `POST .../evidence` |
+| `analyze_performance` | `workspaces:read` | `POST .../performance` |
+| `list_ghl_links` | `ghl:read` | `GET .../ghl-links` |
+| `get_ghl_results` | `ghl:read` | `GET .../ghl-links/{id}/results` |
+| `create_ghl_link` | `ghl:write` | `POST .../blocks/{blockId}/ghl-links` |
+
+**Recommended MCP loop:** `get_learning_progress` → `generate_evidence_schema` → `upload_evidence` (repeat) → `analyze_performance` → regenerate schema/skill as evidence grows.
+
+**Schema responses include dual discoverability:** every `generate_evidence_schema` / `POST .../evidence-schema` returns `continuous_evaluation` (REST paths), `continuous_evaluation_mcp` (tool names), `integration_surfaces`, `openlesson_scope`, and `recommended_next_actions`.
+
+**MCP resources:** `resources/read` → `openlesson://integration-scope`, `openlesson://evidence-loop`.
+
+`analyze_performance`: omit `prompt` for structured scorecard JSON; include `prompt` for chat Q&A. Optional `style_prompt` controls voice/tone.
+
+Prefer `Authorization: Bearer` on REST routes when the client supports either transport. **Treat MCP URLs as secrets** — they embed the raw API key.
 
 ---
 

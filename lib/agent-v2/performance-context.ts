@@ -19,7 +19,7 @@ export type {
   PerformanceReportContract,
 } from "./performance-report";
 
-export {
+import {
   buildPerformanceReportInstructions,
   buildPerformanceStyleSection,
   emptyPerformanceReport,
@@ -28,6 +28,16 @@ export {
   normalizePerformanceReport,
   PERFORMANCE_REPORT_SCHEMA,
 } from "./performance-report";
+
+export {
+  buildPerformanceReportInstructions,
+  buildPerformanceStyleSection,
+  emptyPerformanceReport,
+  EXAMPLE_PERFORMANCE_REPORT,
+  normalizePerformanceGapAnalysis,
+  normalizePerformanceReport,
+  PERFORMANCE_REPORT_SCHEMA,
+};
 
 export interface PerformanceContextPayload {
   workspace: {

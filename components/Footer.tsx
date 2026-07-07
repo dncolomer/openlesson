@@ -11,7 +11,6 @@ const productLinks = [
 
 const workspaceLinks = [
   { labelKey: "footer.createWorkspace", href: "/workspace/new" },
-  { labelKey: "footer.demo", href: "/demo" },
   { labelKey: "footer.skillFile", href: "/skill.md" },
 ];
 

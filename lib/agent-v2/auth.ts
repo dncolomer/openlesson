@@ -157,6 +157,11 @@ export async function authenticateApiKey(
 
 export { hasScope } from "./scopes";
 
+/** FK to agent_api_keys — only set for Bearer API key auth, not MCP OAuth tokens. */
+export function createdByApiKeyId(auth: AuthContext): string | null {
+  return auth.auth_method === "api_key" ? auth.key_id : null;
+}
+
 /**
  * Create a standard error response
  */

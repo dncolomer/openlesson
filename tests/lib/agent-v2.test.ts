@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { createdByApiKeyId } from "@/lib/agent-v2/auth";
 import { checkRateLimit, resetRateLimitsForTests } from "@/lib/agent-v2/rate-limit";
 import {
   canAssignApiKeyScopes,
@@ -8,6 +9,36 @@ import {
   requiresOrgAdminScope,
   validateAssignableScopes,
 } from "@/lib/agent-v2/scopes";
+
+describe("createdByApiKeyId", () => {
+  it("returns key id for API key auth", () => {
+    expect(
+      createdByApiKeyId({
+        key_id: "key-uuid",
+        user_id: "user-1",
+        guest_user_id: null,
+        organization_id: null,
+        is_org_admin: false,
+        scopes: ["tap:write"],
+        auth_method: "api_key",
+      })
+    ).toBe("key-uuid");
+  });
+
+  it("returns null for MCP OAuth tokens", () => {
+    expect(
+      createdByApiKeyId({
+        key_id: "oauth-token-uuid",
+        user_id: "user-1",
+        guest_user_id: null,
+        organization_id: null,
+        is_org_admin: false,
+        scopes: ["tap:write"],
+        auth_method: "oauth",
+      })
+    ).toBeNull();
+  });
+});
 
 describe("hasScope", () => {
   it("allows wildcard", () => {

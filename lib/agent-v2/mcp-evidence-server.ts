@@ -28,7 +28,7 @@ import {
   type PerformanceReport,
 } from "./performance-context";
 import type { ApiKeyScope, AuthContext } from "./types";
-import { hasScope } from "./auth";
+import { createdByApiKeyId, hasScope } from "./auth";
 import { canAccessAgentWorkspace } from "./workspace-access";
 import {
   defaultEvidenceFileName,
@@ -36,7 +36,12 @@ import {
   MAX_WORKSPACE_EVIDENCE_BYTES,
   normalizeEvidenceType,
 } from "./workspace-evidence";
-import { createPrivateToken, getGhcScoreBriefForUser, hashPrivateToken } from "@/lib/ghc-score";
+import {
+  buildGhlScoreSessionUrl,
+  createPrivateToken,
+  getGhcScoreBriefForUser,
+  hashPrivateToken,
+} from "@/lib/ghc-score";
 import { persistSkillGridPositions, skillGridNodesFromRefs } from "@/lib/skill-grid-positions";
 import { callXaiJSON, callXaiResponses, callXaiResponsesWithFiles, DEFAULT_MODEL, userMessage, type ResponsesInputMessage } from "@/lib/xai-client";
 import { deleteFileFromXAI, uploadFileToXAI } from "@/lib/xai-files";
@@ -276,12 +281,16 @@ export const MCP_EVIDENCE_TOOLS = [
   },
   {
     name: "create_tap_link",
-    description: "Create a private Think Aloud Protocol (TAP) link for a workspace block (15 or 30 minutes).",
+    description:
+      "Create a private Think Aloud Protocol (TAP) link for a workspace block (15 or 30 minutes). Call list_blocks first; block_id must be the plan_nodes UUID id field.",
     inputSchema: {
       type: "object",
       properties: {
         workspace_id: { type: "string" },
-        block_id: { type: "string" },
+        block_id: {
+          type: "string",
+          description: "plan_nodes.id UUID from list_blocks (not title, slug, or index).",
+        },
         minutes: { type: "number", description: "15 or 30. Default 15." },
         guest_email: { type: "string" },
         guest_user_id: { type: "string" },
@@ -966,7 +975,7 @@ export async function callMcpEvidenceTool(
         user_id: ownerUserId,
         guest_user_id: auth.guest_user_id,
         organization_id: auth.organization_id || workspace.organization_id,
-        created_by_api_key_id: auth.key_id,
+        created_by_api_key_id: createdByApiKeyId(auth),
       })
       .select(
         "id, plan_id, plan_node_id, session_id, evidence_type, file_name, mime_type, file_size, xai_file_id, timestamp_ms, metadata, tool_name, tool_action, created_at"
@@ -1240,7 +1249,13 @@ export async function callMcpEvidenceTool(
     const ownerUserId = auth.user_id || (workspace.user_id as string);
     if (!ownerUserId) throw new Error("Workspace owner is missing.");
 
-    await getGhcScoreBriefForUser(workspaceId, ownerUserId, [blockId], true, null);
+    try {
+      await getGhcScoreBriefForUser(workspaceId, ownerUserId, [blockId], true, null);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Not authorized";
+      if (message === "Workspace not found") throw new Error("Workspace not found.");
+      throw new Error(message);
+    }
 
     const privateToken = createPrivateToken();
     const { data: link, error } = await supabase
@@ -1250,7 +1265,7 @@ export async function callMcpEvidenceTool(
         user_id: ownerUserId,
         guest_user_id: guestUserId,
         organization_id: auth.organization_id || (workspace.organization_id as string),
-        created_by_api_key_id: auth.key_id,
+        created_by_api_key_id: createdByApiKeyId(auth),
         private_token_hash: hashPrivateToken(privateToken),
         requested_duration_seconds: Math.round(minutes * 60),
         plan_node_id: blockId,
@@ -1262,12 +1277,16 @@ export async function callMcpEvidenceTool(
       .select("id, plan_id, plan_node_id, status, requested_duration_seconds, focus_node_ids, created_at")
       .single();
 
-    if (error || !link) throw new Error("Failed to create TAP link.");
+    if (error || !link) {
+      console.error("[mcp/create_tap_link] Create error:", error);
+      throw new Error("Failed to create TAP link.");
+    }
 
     const appBase = process.env.NEXT_PUBLIC_APP_URL || origin;
+    const privateUrl = buildGhlScoreSessionUrl(appBase, privateToken);
     return textToolResult({
-      tap_link: link,
-      private_url: `${appBase.replace(/\/$/, "")}/ghc/${link.id}?token=${privateToken}`,
+      tap_link: { ...link, private_url: privateUrl },
+      private_url: privateUrl,
     });
   }
 

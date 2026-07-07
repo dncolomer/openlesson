@@ -1,7 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { authenticateRequest, errorResponse } from "@/lib/agent-v2/auth";
+import { authenticateRequest, createdByApiKeyId, errorResponse } from "@/lib/agent-v2/auth";
 import { canAccessAgentWorkspace } from "@/lib/agent-v2/workspace-access";
-import { createPrivateToken, getGhcScoreBriefForUser, hashPrivateToken } from "@/lib/ghc-score";
+import {
+  buildGhlScoreSessionUrl,
+  createPrivateToken,
+  getGhcScoreBriefForUser,
+  hashPrivateToken,
+} from "@/lib/ghc-score";
 
 export const runtime = "nodejs";
 
@@ -83,7 +88,7 @@ export async function POST(req: NextRequest, { params }: RouteProps) {
       user_id: ownerUserId,
       guest_user_id: guestUserId,
       organization_id: auth.organization_id || workspace.organization_id,
-      created_by_api_key_id: auth.key_id,
+      created_by_api_key_id: createdByApiKeyId(auth),
       private_token_hash: hashPrivateToken(privateToken),
       requested_duration_seconds: Math.round(minutes * 60),
       plan_node_id: blockId,
@@ -104,7 +109,7 @@ export async function POST(req: NextRequest, { params }: RouteProps) {
     {
       tap_link: {
         ...link,
-        private_url: `${baseUrl(req)}/ghl-score/session/${privateToken}`,
+        private_url: buildGhlScoreSessionUrl(baseUrl(req), privateToken),
       },
     },
     { status: 201 }

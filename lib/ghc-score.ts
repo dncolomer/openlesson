@@ -84,6 +84,10 @@ export function createPrivateToken() {
   return crypto.randomBytes(32).toString("base64url");
 }
 
+export function buildGhlScoreSessionUrl(baseUrl: string, privateToken: string) {
+  return `${baseUrl.replace(/\/$/, "")}/ghl-score/session/${privateToken}`;
+}
+
 export function hashPrivateToken(token: string) {
   return crypto.createHash("sha256").update(token).digest("hex");
 }

@@ -87,7 +87,7 @@ export async function POST(req: NextRequest) {
     const privateUrl = buildDemoTapSessionUrl(req.nextUrl.origin, privateToken);
 
     return NextResponse.json({
-      ghl_link: {
+      tap_link: {
         ...link,
         private_url: privateUrl,
         block_title: block.title,

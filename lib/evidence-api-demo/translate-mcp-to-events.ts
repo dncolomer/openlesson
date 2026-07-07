@@ -3,6 +3,7 @@ import type { McpSimulationEvent } from "./mcp-simulation-types";
 const RECORD_ARRAY_KEYS = [
   "workspaces",
   "blocks",
+  "tap_links",
   "ghl_links",
   "events",
   "activities",

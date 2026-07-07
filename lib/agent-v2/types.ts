@@ -7,6 +7,8 @@
 export type ApiKeyScope =
   | "workspaces:read"
   | "workspaces:write"
+  | "tap:read"
+  | "tap:write"
   | "ghl:read"
   | "ghl:write"
   | "org:read"
@@ -107,6 +109,7 @@ export type ErrorCode =
   | "rate_limit_exceeded"
   | "workspace_not_found"
   | "block_not_found"
+  | "tap_link_not_found"
   | "ghl_link_not_found"
   | "teams_required"
   | "guest_not_found"
@@ -168,7 +171,10 @@ export const ENDPOINT_SCOPES: Record<string, ApiKeyScope> = {
   "POST /workspaces/:id/evidence-schema": "workspaces:read",
   "POST /workspaces/:id/integration-skill": "workspaces:read",
   "POST /workspaces/:id/performance": "workspaces:read",
-  "POST /workspaces/:id/blocks/:blockId/ghl-links": "ghl:write",
-  "GET /workspaces/:id/ghl-links": "ghl:read",
-  "GET /workspaces/:id/ghl-links/:linkId/results": "ghl:read",
+  "POST /workspaces/:id/blocks/:blockId/tap-links": "tap:write",
+  "GET /workspaces/:id/tap-links": "tap:read",
+  "GET /workspaces/:id/tap-links/:linkId/results": "tap:read",
+  "POST /workspaces/:id/blocks/:blockId/ghl-links": "tap:write",
+  "GET /workspaces/:id/ghl-links": "tap:read",
+  "GET /workspaces/:id/ghl-links/:linkId/results": "tap:read",
 };

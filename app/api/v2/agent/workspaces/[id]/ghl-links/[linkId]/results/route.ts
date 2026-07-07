@@ -6,7 +6,7 @@ interface RouteProps {
 }
 
 export async function GET(req: NextRequest, { params }: RouteProps) {
-  const result = await authenticateRequest(req, "ghl:read");
+  const result = await authenticateRequest(req, "tap:read");
   if (result instanceof NextResponse) return result;
   const { auth, supabase } = result;
   const { id, linkId } = await params;
@@ -23,11 +23,11 @@ export async function GET(req: NextRequest, { params }: RouteProps) {
   const { data: link, error } = await query.single();
 
   if (error || !link) {
-    return errorResponse(404, "ghl_link_not_found", "GHL link not found");
+    return errorResponse(404, "tap_link_not_found", "TAP link not found");
   }
 
   return NextResponse.json({
-    ghl_result: {
+    tap_result: {
       id: link.id,
       workspace_id: link.plan_id,
       block_id: link.plan_node_id,

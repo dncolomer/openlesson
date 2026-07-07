@@ -605,7 +605,7 @@
     "mcpCopyConfig": "Copy client config",
     "mcpNewKeyConfig": "Ready-made MCP client config — copy before you close this panel:",
     "mcpToolsTitle": "MCP tools (parity with REST)",
-    "mcpScopeNote": "Scopes: workspaces:read, workspaces:write, ghl:read, ghl:write on your API key.",
+    "mcpScopeNote": "Scopes: workspaces:read, workspaces:write, tap:read, tap:write on your API key.",
     "mcpWorkflowTitle": "Recommended agent workflow",
     "mcpWorkflowSteps": "1. get_learning_progress(workspace_id) — orient on conversion_goal\n2. generate_evidence_schema — read continuous_evaluation (REST) + continuous_evaluation_mcp (tools)\n3. upload_evidence after product actions (repeat)\n4. analyze_performance for scorecard or chat\n5. Re-fetch schema as evidence grows",
     "mcpDualNote": "Schema responses include both REST paths and MCP tool names. Use either transport — they stay in sync.",
@@ -1898,7 +1898,7 @@
     "mcpToolsTitle": "MCP tools (parity with REST)",
     "mcpWorkflowTitle": "Recommended agent workflow",
     "mcpWorkflowSteps": "0. get_learning_progress — orient on conversion_goal and recommended_next_actions\n1. generate_evidence_schema — read continuous_evaluation (REST) + continuous_evaluation_mcp (tools)\n2. upload_evidence after product actions (repeat)\n3. analyze_performance for scorecard / coaching\n4. Regenerate schema and skill as evidence grows — REST and MCP stay in sync",
-    "mcpScopeNote": "Scopes: workspaces:read, workspaces:write, ghl:read, ghl:write on your API key.",
+    "mcpScopeNote": "Scopes: workspaces:read, workspaces:write, tap:read, tap:write on your API key.",
     "mcpResourcesTitle": "MCP resources",
     "mcpResourcesHint": "Agents can resources/read openlesson://integration-scope and openlesson://evidence-loop for openLesson goals and the dual REST+MCP evidence loop.",
     "mcpWorkspaceHint": "Pass workspace_id {planId} on every workspace-scoped tool."

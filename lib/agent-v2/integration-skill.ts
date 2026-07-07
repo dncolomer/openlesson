@@ -206,7 +206,7 @@ Required content:
 4. Authentication table (Bearer sk_ / gsk_, Teams tier, scopes).
 5. Endpoints table covering REST and MCP with **dual documentation** (never hide REST behind MCP):
    - REST: POST /workspaces, GET /blocks, POST /evidence-schema, POST /evidence, POST /performance, POST /integration-skill
-   - MCP (JSON-RPC at POST /api/mcp with Bearer auth): list_workspaces, get_workspace, get_learning_progress, list_blocks, generate_evidence_schema, upload_evidence, analyze_performance, generate_integration_skill, create_ghl_link, list_ghl_links, get_ghl_results
+   - MCP (JSON-RPC at POST /api/mcp with Bearer auth): list_workspaces, get_workspace, get_learning_progress, list_blocks, generate_evidence_schema, upload_evidence, analyze_performance, generate_integration_skill, create_tap_link, list_tap_links, get_tap_results
    - State that MCP tools have full parity with REST; evidence spec responses include both continuous_evaluation (REST paths) and continuous_evaluation_mcp (tool names)
    - Recommend get_learning_progress / generate_evidence_schema first for progress orientation
 6. **Evidence specification (required section)** — explain that payloads are defined by the formal evidence spec returned from POST ${evidenceSchemaPath}. Include:

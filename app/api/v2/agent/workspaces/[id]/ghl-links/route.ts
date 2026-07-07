@@ -7,7 +7,7 @@ interface RouteProps {
 }
 
 export async function GET(req: NextRequest, { params }: RouteProps) {
-  const result = await authenticateRequest(req, "ghl:read");
+  const result = await authenticateRequest(req, "tap:read");
   if (result instanceof NextResponse) return result;
   const { auth, supabase } = result;
   const { id } = await params;
@@ -35,8 +35,8 @@ export async function GET(req: NextRequest, { params }: RouteProps) {
 
   if (error) {
     console.error("[agent/ghl-links:list] Query error:", error);
-    return errorResponse(500, "internal_error", "Failed to list GHL links");
+    return errorResponse(500, "internal_error", "Failed to list TAP links");
   }
 
-  return NextResponse.json({ ghl_links: links || [] });
+  return NextResponse.json({ tap_links: links || [] });
 }

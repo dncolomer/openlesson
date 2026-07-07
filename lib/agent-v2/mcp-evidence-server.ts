@@ -79,7 +79,7 @@ REST mirror: same loop via Bearer auth on /api/v2/agent/workspaces/{id}/...
 
 Resources: resources/read openlesson://integration-scope and openlesson://evidence-loop
 
-Scopes: workspaces:read, workspaces:write, ghl:read, ghl:write. Teams tier. Auth: Authorization: Bearer <api_key> on POST /api/mcp.`;
+Scopes: workspaces:read, workspaces:write, tap:read, tap:write. Teams tier. Auth: Authorization: Bearer <api_key> on POST /api/mcp.`;
 
 export const MCP_EVIDENCE_TOOLS = [
   {
@@ -250,7 +250,7 @@ export const MCP_EVIDENCE_TOOLS = [
     },
   },
   {
-    name: "list_ghl_links",
+    name: "list_tap_links",
     description: "List Think Aloud Protocol (TAP) links and completion status for a workspace.",
     inputSchema: {
       type: "object",
@@ -261,22 +261,22 @@ export const MCP_EVIDENCE_TOOLS = [
     annotations: { readOnlyHint: true },
   },
   {
-    name: "get_ghl_results",
+    name: "get_tap_results",
     description: "Get completed TAP link results (scores + gap analysis).",
     inputSchema: {
       type: "object",
       properties: {
         workspace_id: { type: "string" },
-        ghl_link_id: { type: "string" },
+        tap_link_id: { type: "string" },
       },
-      required: ["workspace_id", "ghl_link_id"],
+      required: ["workspace_id", "tap_link_id"],
       additionalProperties: false,
     },
     annotations: { readOnlyHint: true },
   },
   {
-    name: "create_ghl_link",
-    description: "Create a private Think Aloud Protocol link for a workspace block (15 or 30 minutes).",
+    name: "create_tap_link",
+    description: "Create a private Think Aloud Protocol (TAP) link for a workspace block (15 or 30 minutes).",
     inputSchema: {
       type: "object",
       properties: {
@@ -473,12 +473,23 @@ function parseInitialFiles(value: unknown): InitialFile[] {
   });
 }
 
+const LEGACY_MCP_TOOL_ALIASES: Record<string, string> = {
+  list_ghl_links: "list_tap_links",
+  get_ghl_results: "get_tap_results",
+  create_ghl_link: "create_tap_link",
+};
+
+function tapLinkIdArg(args: Record<string, unknown>) {
+  return stringArg(args, "tap_link_id") || stringArg(args, "ghl_link_id");
+}
+
 export async function callMcpEvidenceTool(
   name: string,
   args: Record<string, unknown>,
   ctx: McpEvidenceToolContext
 ) {
   const { auth, supabase, origin } = ctx;
+  name = LEGACY_MCP_TOOL_ALIASES[name] ?? name;
 
   if (name === "list_workspaces") {
     requireScope(auth.scopes, "workspaces:read");
@@ -1130,8 +1141,8 @@ export async function callMcpEvidenceTool(
     );
   }
 
-  if (name === "list_ghl_links") {
-    requireScope(auth.scopes, "ghl:read");
+  if (name === "list_tap_links") {
+    requireScope(auth.scopes, "tap:read");
     const workspaceId = stringArg(args, "workspace_id");
     if (!workspaceId) throw new Error("workspace_id is required.");
 
@@ -1148,15 +1159,15 @@ export async function callMcpEvidenceTool(
 
     const { data: links, error } = await query;
     if (error) throw new Error(error.message);
-    return textToolResult({ ghl_links: links || [] });
+    return textToolResult({ tap_links: links || [] });
   }
 
-  if (name === "get_ghl_results") {
-    requireScope(auth.scopes, "ghl:read");
+  if (name === "get_tap_results") {
+    requireScope(auth.scopes, "tap:read");
     const workspaceId = stringArg(args, "workspace_id");
-    const linkId = stringArg(args, "ghl_link_id");
+    const linkId = tapLinkIdArg(args);
     if (!workspaceId) throw new Error("workspace_id is required.");
-    if (!linkId) throw new Error("ghl_link_id is required.");
+    if (!linkId) throw new Error("tap_link_id is required.");
 
     let query = supabase
       .from("workspace_ghc_sessions")
@@ -1170,18 +1181,18 @@ export async function callMcpEvidenceTool(
     else if (!auth.is_org_admin) query = query.eq("user_id", auth.user_id);
 
     const { data: link, error } = await query.single();
-    if (error || !link) throw new Error("GHL link not found.");
+    if (error || !link) throw new Error("TAP link not found.");
 
     return textToolResult({
-      ghl_result: {
+      tap_result: {
         ...link,
         gap_analysis: link.status === "completed" ? link.analysis?.gap_analysis || null : null,
       },
     });
   }
 
-  if (name === "create_ghl_link") {
-    requireScope(auth.scopes, "ghl:write");
+  if (name === "create_tap_link") {
+    requireScope(auth.scopes, "tap:write");
     const workspaceId = stringArg(args, "workspace_id");
     const blockId = stringArg(args, "block_id");
     if (!workspaceId) throw new Error("workspace_id is required.");
@@ -1213,7 +1224,7 @@ export async function callMcpEvidenceTool(
     let guestUserId = auth.guest_user_id;
     if (!guestUserId && (requestedGuestId || guestEmail)) {
       if (!auth.is_org_admin || !auth.organization_id) {
-        throw new Error("Only organization admins can assign GHL links to guests.");
+        throw new Error("Only organization admins can assign TAP links to guests.");
       }
       let guestQuery = supabase
         .from("organization_guest_users")
@@ -1251,11 +1262,11 @@ export async function callMcpEvidenceTool(
       .select("id, plan_id, plan_node_id, status, requested_duration_seconds, focus_node_ids, created_at")
       .single();
 
-    if (error || !link) throw new Error("Failed to create GHL link.");
+    if (error || !link) throw new Error("Failed to create TAP link.");
 
     const appBase = process.env.NEXT_PUBLIC_APP_URL || origin;
     return textToolResult({
-      ghl_link: link,
+      tap_link: link,
       private_url: `${appBase.replace(/\/$/, "")}/ghc/${link.id}?token=${privateToken}`,
     });
   }

@@ -14,7 +14,7 @@ function baseUrl(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest, { params }: RouteProps) {
-  const result = await authenticateRequest(req, "ghl:write");
+  const result = await authenticateRequest(req, "tap:write");
   if (result instanceof NextResponse) return result;
   const { auth, supabase } = result;
   const { id: workspaceId, blockId } = await params;
@@ -50,7 +50,7 @@ export async function POST(req: NextRequest, { params }: RouteProps) {
   let guestUserId = auth.guest_user_id;
   if (!guestUserId && (requestedGuestId || guestEmail)) {
     if (!auth.is_org_admin || !auth.organization_id) {
-      return errorResponse(403, "forbidden", "Only organization admins can assign GHL links to guests");
+      return errorResponse(403, "forbidden", "Only organization admins can assign TAP links to guests");
     }
     let guestQuery = supabase
       .from("organization_guest_users")
@@ -97,12 +97,12 @@ export async function POST(req: NextRequest, { params }: RouteProps) {
 
   if (error || !link) {
     console.error("[agent/ghl-links] Create error:", error);
-    return errorResponse(500, "internal_error", "Failed to create GHL link");
+    return errorResponse(500, "internal_error", "Failed to create TAP link");
   }
 
   return NextResponse.json(
     {
-      ghl_link: {
+      tap_link: {
         ...link,
         private_url: `${baseUrl(req)}/ghl-score/session/${privateToken}`,
       },

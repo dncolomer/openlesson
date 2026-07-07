@@ -44,7 +44,7 @@ Verify trial workspace setup.`;
     const text = JSON.stringify({
       tools: [
         { name: "list_blocks", description: "List workspace blocks" },
-        { name: "get_ghl_results", description: "Fetch competency results" },
+        { name: "get_tap_results", description: "Fetch competency results" },
       ],
     });
     const hints = parseImportText(text, "mcp");

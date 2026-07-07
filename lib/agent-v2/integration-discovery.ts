@@ -244,8 +244,8 @@ export function recommendIntegrationActions(options: {
   if (tap_sessions === 0 && evidence_artifacts >= 5 && blocks > 0) {
     actions.push({
       priority: 7,
-      mcp_tool: "create_ghl_link",
-      rest_equivalent: "POST .../blocks/{blockId}/ghl-links",
+      mcp_tool: "create_tap_link",
+      rest_equivalent: "POST .../blocks/{blockId}/tap-links",
       reason: "Optional Think Aloud Protocol session adds verbal reasoning signal to progress scoring.",
     });
   }

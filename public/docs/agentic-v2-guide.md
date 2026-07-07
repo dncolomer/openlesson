@@ -14,9 +14,9 @@ Authenticate with `Authorization: Bearer <api_key>`.
 | `GET` | `/workspaces/{workspace_id}/blocks` | `workspaces:read` | List available blocks in a workspace. |
 | `POST` | `/workspaces/{workspace_id}/evidence` | `workspaces:write` | Upload tool usage, screenshots, video, or EEG linked to workspace/block. |
 | `POST` | `/workspaces/{workspace_id}/performance` | `workspaces:read` | Structured gap report or free-form performance Q&A. |
-| `POST` | `/workspaces/{workspace_id}/blocks/{block_id}/ghl-links` | `ghl:write` | Request a private TAP link for a block. Links open the TAP Score Session UI. |
-| `GET` | `/workspaces/{workspace_id}/ghl-links` | `ghl:read` | List existing TAP links and completion status. |
-| `GET` | `/workspaces/{workspace_id}/ghl-links/{link_id}/results` | `ghl:read` | Read completed TAP link results. Incomplete links return status with `null` result fields. |
+| `POST` | `/workspaces/{workspace_id}/blocks/{block_id}/tap-links` | `tap:write` | Request a private TAP link for a block. Links open the TAP Score Session UI. |
+| `GET` | `/workspaces/{workspace_id}/tap-links` | `tap:read` | List existing TAP links and completion status. |
+| `GET` | `/workspaces/{workspace_id}/tap-links/{link_id}/results` | `tap:read` | Read completed TAP link results. Incomplete links return status with `null` result fields. |
 | `POST` | `/org/guests` | `org:write` | Organization admins create guest users by email and issue guest API keys. |
 
 ## Upload Evidence

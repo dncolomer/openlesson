@@ -26,9 +26,9 @@ export const MCP_EVIDENCE_TOOL_CATALOG = [
     scope: "workspaces:read",
     summary: "Scorecard report (no prompt) or chat Q&A (with prompt).",
   },
-  { name: "list_ghl_links", scope: "ghl:read", summary: "List TAP session links and status." },
-  { name: "get_ghl_results", scope: "ghl:read", summary: "Read completed TAP results." },
-  { name: "create_ghl_link", scope: "ghl:write", summary: "Create a private TAP link for a block." },
+  { name: "list_tap_links", scope: "tap:read", summary: "List TAP session links and status." },
+  { name: "get_tap_results", scope: "tap:read", summary: "Read completed TAP results." },
+  { name: "create_tap_link", scope: "tap:write", summary: "Create a private TAP link for a block." },
 ] as const;
 
 export function buildMcpEndpointUrl(origin: string): string {

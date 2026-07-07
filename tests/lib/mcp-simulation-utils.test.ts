@@ -11,7 +11,7 @@ describe("mcp-simulation-utils", () => {
       [
         { name: "list_workspaces" },
         { name: "list_blocks" },
-        { name: "get_ghl_results" },
+        { name: "get_tap_results" },
       ],
       "plan-123"
     );

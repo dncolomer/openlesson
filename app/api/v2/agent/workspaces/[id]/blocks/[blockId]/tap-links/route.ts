@@ -1,0 +1,1 @@
+export { POST } from "../ghl-links/route";

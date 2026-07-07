@@ -5,7 +5,7 @@ export function pickDefaultMcpTool(
   planId: string | null
 ): string {
   if (planId) {
-    const preferred = ["list_blocks", "list_ghl_links", "list_workspaces"];
+    const preferred = ["list_blocks", "list_tap_links", "list_workspaces"];
     for (const name of preferred) {
       if (tools.some((tool) => tool.name === name)) return name;
     }
@@ -22,6 +22,7 @@ export function suggestMcpToolArgs(toolName: string, planId: string | null): Rec
 
   if (
     toolName === "list_blocks" ||
+    toolName === "list_tap_links" ||
     toolName === "list_ghl_links" ||
     toolName === "list_workspaces" ||
     toolName.includes("workspace")
@@ -35,6 +36,7 @@ export function suggestMcpToolArgs(toolName: string, planId: string | null): Rec
 export function usesWorkspaceArgs(toolName: string): boolean {
   return (
     toolName === "list_blocks" ||
+    toolName === "list_tap_links" ||
     toolName === "list_ghl_links" ||
     toolName.includes("workspace")
   );

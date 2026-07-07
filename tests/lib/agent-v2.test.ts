@@ -15,8 +15,10 @@ describe("hasScope", () => {
   });
 
   it("requires exact scope", () => {
-    expect(hasScope(["workspaces:read"], "ghl:write")).toBe(false);
-    expect(hasScope(["ghl:write"], "ghl:write")).toBe(true);
+    expect(hasScope(["workspaces:read"], "tap:write")).toBe(false);
+    expect(hasScope(["tap:write"], "tap:write")).toBe(true);
+    expect(hasScope(["ghl:read"], "tap:read")).toBe(true);
+    expect(hasScope(["tap:read"], "ghl:read")).toBe(true);
   });
 });
 

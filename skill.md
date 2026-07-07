@@ -40,11 +40,11 @@ Content-Type: application/json
 | Organization member (Teams admin) | `sk_` | Dashboard **Usage → API Access**, or `POST /api/v2/agent/keys` (browser session) |
 | Organization guest | `gsk_` | `POST /api/v2/agent/org/guests` (org-admin key with `org:write`) |
 
-**Default scopes** for new member keys: `workspaces:read`, `workspaces:write`, `ghl:read`, `ghl:write`.
+**Default scopes** for new member keys: `workspaces:read`, `workspaces:write`, `tap:read`, `tap:write`.
 
 **Organization scopes** `org:read` and `org:write` may only be assigned to keys owned by an **organization admin** (`is_org_admin`). Non-admin Teams users cannot add `org:*` scopes to their keys.
 
-**Guest keys** are always issued with: `workspaces:read`, `workspaces:write`, `ghl:read`, `ghl:write` — no `org:*`.
+**Guest keys** are always issued with: `workspaces:read`, `workspaces:write`, `tap:read`, `tap:write` — no `org:*`.
 
 **Rate limit:** 120 requests per minute per key (best-effort per server instance). Exceeded → `429` with `error.code = "rate_limit_exceeded"`.
 
@@ -60,7 +60,7 @@ Content-Type: application/json
 }
 ```
 
-Common codes: `unauthorized`, `forbidden`, `teams_required`, `validation_error`, `workspace_not_found`, `block_not_found`, `ghl_link_not_found`, `rate_limit_exceeded`.
+Common codes: `unauthorized`, `forbidden`, `teams_required`, `validation_error`, `workspace_not_found`, `block_not_found`, `tap_link_not_found`, `rate_limit_exceeded`.
 
 ---
 
@@ -77,7 +77,7 @@ Content-Type: application/json
 { "jsonrpc": "2.0", "id": 1, "method": "tools/list" }
 ```
 
-**Read tools:** `list_workspaces`, `list_blocks`, `list_ghl_links` (TAP links), `get_ghl_results` (TAP results)
+**Read tools:** `list_workspaces`, `list_blocks`, `list_tap_links`, `get_tap_results`
 
 Evidence planning, upload, and performance analysis are **REST-only** (`POST .../evidence-schema`, `POST .../integration-skill`, `POST .../evidence`, `POST .../performance`).
 
@@ -387,7 +387,7 @@ Every report includes `overall_score` (learning verification), `conversion_score
 
 ---
 
-### `POST /api/v2/agent/workspaces/{workspace_id}/blocks/{block_id}/ghl-links` — `ghl:write`
+### `POST /api/v2/agent/workspaces/{workspace_id}/blocks/{block_id}/tap-links` — `tap:write`
 
 Create a private Think Aloud Protocol (TAP) link for a block.
 
@@ -409,7 +409,7 @@ Create a private Think Aloud Protocol (TAP) link for a block.
 
 ```json
 {
-  "ghl_link": {
+  "tap_link": {
     "id": "uuid",
     "plan_id": "workspace_id",
     "plan_node_id": "block_id",
@@ -422,15 +422,15 @@ Create a private Think Aloud Protocol (TAP) link for a block.
 
 ---
 
-### `GET /api/v2/agent/workspaces/{workspace_id}/ghl-links` — `ghl:read`
+### `GET /api/v2/agent/workspaces/{workspace_id}/tap-links` — `tap:read`
 
 List TAP links for a workspace. Guests see only their own links; non-admin members see their own; org admins see org workspace links.
 
-**Response `200`:** `{ "ghl_links": [ ... ] }`
+**Response `200`:** `{ "tap_links": [ ... ] }`
 
 ---
 
-### `GET /api/v2/agent/workspaces/{workspace_id}/ghl-links/{link_id}/results` — `ghl:read`
+### `GET /api/v2/agent/workspaces/{workspace_id}/tap-links/{link_id}/results` — `tap:read`
 
 Poll for completion and scores.
 
@@ -438,7 +438,7 @@ Poll for completion and scores.
 
 ```json
 {
-  "ghl_result": {
+  "tap_result": {
     "id": "uuid",
     "status": "pending",
     "completed": false
@@ -450,7 +450,7 @@ Poll for completion and scores.
 
 ```json
 {
-  "ghl_result": {
+  "tap_result": {
     "id": "uuid",
     "workspace_id": "uuid",
     "block_id": "uuid",
@@ -504,7 +504,7 @@ Create (or look up) a guest by email and mint a **new** guest API key. Caller mu
   "key": {
     "id": "uuid",
     "key_prefix": "gsk_...",
-    "scopes": ["workspaces:read", "ghl:read", "ghl:write"],
+    "scopes": ["workspaces:read", "tap:read", "tap:write"],
     "rate_limit": 120
   }
 }
@@ -572,7 +572,7 @@ Facilitation style: Socratic — one concise question at a time, follow-ups from
 4. *(Optional)* `POST .../evidence-schema` with your eval definition → get ideal tool JSON schema; `POST .../integration-skill` → get a custom `skill.md` for your agent.
 5. `POST .../evidence` as learners produce tool usage, screenshots, video, or EEG (optional `block_id`).
 6. `POST .../performance` for gap reports, or include `prompt` for follow-up questions.
-7. `POST .../ghl-links` (TAP link endpoint) → send `private_url` to the learner.
+7. `POST .../tap-links` → send `private_url` to the learner.
 8. Poll `GET .../results` until `status === "completed"`.
 9. Re-run `POST .../performance` to synthesize TAP results with other evidence.
 10. For external learners without accounts: `POST /org/guests` → give them `gsk_` + private TAP URL.

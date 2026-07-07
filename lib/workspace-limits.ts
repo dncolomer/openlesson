@@ -1,23 +1,8 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { canCreateWorkspace, type UserProfile, type WorkspaceCheckResult } from "@/lib/plans";
+import { countActiveWorkspaces } from "@/lib/usage-metrics";
 
-export async function countActiveWorkspaces(
-  supabase: SupabaseClient,
-  userId: string
-): Promise<number> {
-  const { count, error } = await supabase
-    .from("learning_plans")
-    .select("id", { count: "exact", head: true })
-    .eq("user_id", userId)
-    .neq("status", "archived");
-
-  if (error) {
-    console.error("[workspace-limits] count failed:", error);
-    return 0;
-  }
-
-  return count ?? 0;
-}
+export { countActiveWorkspaces };
 
 export async function checkWorkspaceCreation(
   supabase: SupabaseClient,

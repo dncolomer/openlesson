@@ -2,7 +2,12 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { canCreateWorkspace, canStartSession, PLANS, type PlanId } from "@/lib/plans";
-import { countActiveWorkspaces } from "@/lib/workspace-limits";
+import {
+  billingPeriodStart,
+  countActiveWorkspaces,
+  countUsedBlocks,
+  loadUsageProfile,
+} from "@/lib/usage-metrics";
 
 export const runtime = "nodejs";
 
@@ -15,33 +20,19 @@ export async function POST() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ ok: false }, { status: 401 });
 
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("plan, is_admin, extra_lessons")
-      .eq("id", user.id)
-      .single();
-
+    const { profile } = await loadUsageProfile(supabase, user.id);
     if (!profile || profile.is_admin) return NextResponse.json({ ok: true });
 
     const plan = (profile.plan || "free") as PlanId;
     const baseLimit = PLANS[plan]?.sessionsPerPeriod ?? 1;
     const extraLessons = profile.extra_lessons ?? 0;
 
-    // Count completed sessions (exclude unstarted "active" ones)
-    let sessionCount = 0;
-    if (plan === "free") {
-      const { count } = await supabase
-        .from("sessions")
-        .select("id", { count: "exact", head: true })
-        .eq("user_id", user.id)
-        .neq("status", "active");
-      sessionCount = count ?? 0;
-    } else {
-      // For paid plans, we don't decrement extras here (handled by billing cycle reset)
+    if (plan !== "free") {
       return NextResponse.json({ ok: true });
     }
 
-    // If user has used more than the base limit, consume an extra lesson
+    const sessionCount = await countUsedBlocks(supabase, user.id);
+
     if (sessionCount > baseLimit && extraLessons > 0) {
       await supabase
         .from("profiles")
@@ -66,11 +57,7 @@ export async function GET() {
       return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
     }
 
-    const { data: profile, error: profileError } = await supabase
-      .from("profiles")
-      .select("plan, is_admin, extra_lessons, extra_workspaces, subscription_status, current_period_end, token_tier, token_validity_expires_at, organization_id, is_org_admin")
-      .eq("id", user.id)
-      .single();
+    const { profile, error: profileError } = await loadUsageProfile(supabase, user.id);
 
     if (profileError || !profile) {
       return NextResponse.json({
@@ -80,12 +67,19 @@ export async function GET() {
         used: 0,
         limit: PLANS.free.sessionsPerPeriod,
         isAdmin: false,
+        workspacesUsed: 0,
+        workspacesLimit: PLANS.free.workspacesPerPeriod,
       });
     }
 
-    // Count sessions in the current billing period
-    let sessionCount = 0;
-    let personalSessionCount = 0;
+    const periodStart =
+      profile.plan === "free" || !profile.current_period_end
+        ? null
+        : billingPeriodStart(profile.current_period_end);
+
+    let sessionCount = await countUsedBlocks(supabase, user.id, periodStart);
+    let personalSessionCount = sessionCount;
+
     let organizationSummary: {
       id: string;
       name: string;
@@ -96,77 +90,47 @@ export async function GET() {
       limit: number | null;
     } | null = null;
 
-    if (profile.plan === "free" || !profile.current_period_end) {
-      // Free plan: count ALL completed sessions ever (exclude unstarted "active" ones)
-      const { count } = await supabase
-        .from("sessions")
-        .select("id", { count: "exact", head: true })
-        .eq("user_id", user.id)
-        .neq("status", "active");
-      sessionCount = count ?? 0;
-      personalSessionCount = sessionCount;
-    } else {
-      // Paid plan: count completed sessions since current_period_end minus ~30 days
-      const periodEnd = new Date(profile.current_period_end);
-      const periodStart = new Date(periodEnd);
-      periodStart.setDate(periodStart.getDate() - 30);
+    if (profile.plan === "pro_teams" && profile.organization_id && periodStart) {
+      const admin = createAdminClient();
+      const { data: orgMembers } = await admin
+        .from("profiles")
+        .select("id")
+        .eq("organization_id", profile.organization_id);
+      const memberIds = (orgMembers || []).map((member) => member.id);
 
-      const { count: personalCount } = await supabase
-        .from("sessions")
-        .select("id", { count: "exact", head: true })
-        .eq("user_id", user.id)
-        .neq("status", "active")
-        .gte("created_at", periodStart.toISOString());
-      personalSessionCount = personalCount ?? 0;
-
-      if (profile.plan === "pro_teams" && profile.organization_id) {
-        const admin = createAdminClient();
-        const { data: orgMembers } = await admin
-          .from("profiles")
-          .select("id")
-          .eq("organization_id", profile.organization_id);
-        const memberIds = (orgMembers || []).map((member) => member.id);
-        if (memberIds.length > 0) {
-          const { count } = await admin
-            .from("sessions")
-            .select("id", { count: "exact", head: true })
-            .in("user_id", memberIds)
-            .neq("status", "active")
-            .gte("created_at", periodStart.toISOString());
-          sessionCount = count ?? 0;
-        } else {
-          sessionCount = personalSessionCount;
-        }
-
-        const { data: organization } = await admin
-          .from("organizations")
-          .select("id, name")
-          .eq("id", profile.organization_id)
-          .single();
-
-        const { count: guestCount } = await admin
-          .from("organization_guest_users")
+      if (memberIds.length > 0) {
+        const { count } = await admin
+          .from("sessions")
           .select("id", { count: "exact", head: true })
-          .eq("organization_id", profile.organization_id)
-          .eq("status", "active");
-
-        const planLimit = PLANS.pro_teams.sessionsPerPeriod;
-        organizationSummary = {
-          id: profile.organization_id,
-          name: organization?.name || "Organization",
-          isOrgAdmin: profile.is_org_admin === true,
-          memberCount: memberIds.length,
-          guestCount: guestCount ?? 0,
-          used: sessionCount,
-          limit: planLimit,
-        };
-      } else {
-        sessionCount = personalSessionCount;
+          .in("user_id", memberIds)
+          .gte("created_at", periodStart.toISOString());
+        sessionCount = count ?? personalSessionCount;
       }
-    }
 
-    // Also count localStorage-based sessions if no DB sessions found
-    // (handled client-side — the server only knows about DB sessions)
+      const { data: organization } = await admin
+        .from("organizations")
+        .select("id, name")
+        .eq("id", profile.organization_id)
+        .single();
+
+      const { count: guestCount } = await admin
+        .from("organization_guest_users")
+        .select("id", { count: "exact", head: true })
+        .eq("organization_id", profile.organization_id)
+        .eq("status", "active");
+
+      const planLimit = PLANS.pro_teams.sessionsPerPeriod;
+      const effectiveOrgLimit = (planLimit ?? 0) + (profile.extra_lessons ?? 0);
+      organizationSummary = {
+        id: profile.organization_id,
+        name: organization?.name || "Organization",
+        isOrgAdmin: profile.is_org_admin === true,
+        memberCount: memberIds.length,
+        guestCount: guestCount ?? 0,
+        used: sessionCount,
+        limit: effectiveOrgLimit,
+      };
+    }
 
     const userProfile = {
       plan: (profile.plan || "free") as PlanId,

@@ -69,7 +69,8 @@ Common codes: `unauthorized`, `forbidden`, `teams_required`, `validation_error`,
 MCP clients (Cursor, Claude Desktop, Grok, custom agents) can call **the same capabilities as REST** via JSON-RPC:
 
 ```http
-POST /api/mcp/{url_encoded_api_key}
+POST /api/mcp
+Authorization: Bearer <api_key>
 Content-Type: application/json
 ```
 
@@ -83,8 +84,10 @@ Content-Type: application/json
 {
   "mcpServers": {
     "openlesson": {
-      "url": "https://openlesson.academy/api/mcp/YOUR_URL_ENCODED_API_KEY",
-      "transport": "http"
+      "url": "https://openlesson.academy/api/mcp",
+      "headers": {
+        "Authorization": "Bearer YOUR_API_KEY"
+      }
     }
   }
 }
@@ -115,7 +118,7 @@ Content-Type: application/json
 
 `analyze_performance`: omit `prompt` for structured scorecard JSON; include `prompt` for chat Q&A. Optional `style_prompt` controls voice/tone.
 
-Prefer `Authorization: Bearer` on REST routes when the client supports either transport. **Treat MCP URLs as secrets** — they embed the raw API key.
+REST and MCP both use `Authorization: Bearer <api_key>` with Teams API keys from the dashboard. Treat API keys as secrets.
 
 ---
 

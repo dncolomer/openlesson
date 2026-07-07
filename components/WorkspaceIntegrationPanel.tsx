@@ -260,6 +260,10 @@ Content-Type: application/json`}
           <code className="mt-2 block overflow-x-auto rounded border border-neutral-800 bg-black/50 px-2 py-2 font-mono text-[11px] text-neutral-300">
             POST {mcpEndpointTemplate}
           </code>
+          <pre className="mt-3 overflow-x-auto rounded-md border border-neutral-800 bg-black/50 p-3 font-mono text-[11px] text-neutral-400">
+{`Authorization: Bearer <api_key>
+Content-Type: application/json`}
+          </pre>
           <p className="mt-2 text-xs text-neutral-500">{t("workspaceIntegration.mcpEndpointHint")}</p>
           <div className="mt-3 flex flex-wrap gap-2">
             <button

@@ -38,8 +38,8 @@ export async function authenticateRequest(
 }
 
 /**
- * Authenticate a raw API key value. This is used by transports like MCP where
- * the client may only support a connector URL and cannot set Authorization.
+ * Authenticate a raw API key value. Used by legacy MCP path transport (/api/mcp/{key}).
+ * Prefer Bearer auth on POST /api/mcp for new integrations.
  */
 export async function authenticateApiKey(
   apiKey: string,

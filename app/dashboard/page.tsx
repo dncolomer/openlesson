@@ -397,11 +397,13 @@ export default function DashboardPage() {
   const mcpOrigin =
     typeof window !== "undefined" ? window.location.origin : "https://openlesson.academy";
 
-  const mcpEndpointUrl = useMemo(() => {
+  const mcpEndpointUrl = useMemo(() => buildMcpEndpointUrl(mcpOrigin), [mcpOrigin]);
+
+  const mcpClientConfig = useMemo(() => {
     if (newKeyValue) {
-      return buildMcpEndpointUrl(mcpOrigin, newKeyValue);
+      return buildMcpClientConfig(mcpOrigin, newKeyValue);
     }
-    return buildMcpEndpointUrl(mcpOrigin);
+    return buildMcpClientConfig(mcpOrigin);
   }, [mcpOrigin, newKeyValue]);
 
   const copyMcpText = async (value: string, field: string) => {
@@ -1532,18 +1534,18 @@ export default function DashboardPage() {
                   </code>
                   {usesAgenticV2Keys ? (
                     <div className="mt-4 border-t border-neutral-800 pt-4">
-                      <p className="text-xs text-neutral-400">{t("dashboard.mcpNewKeyUrl")}</p>
-                      <code className="mt-2 block break-all rounded-md border border-neutral-800 bg-black p-3 font-mono text-[11px] text-neutral-300">
-                        POST {mcpEndpointUrl}
-                      </code>
+                      <p className="text-xs text-neutral-400">{t("dashboard.mcpNewKeyConfig")}</p>
+                      <pre className="mt-2 overflow-x-auto rounded-md border border-neutral-800 bg-black p-3 font-mono text-[11px] text-neutral-300">
+                        {mcpClientConfig}
+                      </pre>
                       <button
                         type="button"
-                        onClick={() => void copyMcpText(mcpEndpointUrl, "mcp-new-key")}
+                        onClick={() => void copyMcpText(mcpClientConfig, "mcp-new-key")}
                         className="mt-2 rounded-sm border border-neutral-700 px-3 py-1 text-xs text-neutral-300 transition hover:border-neutral-500 hover:text-white"
                       >
                         {mcpCopiedField === "mcp-new-key"
                           ? t("common.copied")
-                          : t("dashboard.mcpCopyEndpoint")}
+                          : t("dashboard.mcpCopyConfig")}
                       </button>
                     </div>
                   ) : null}
@@ -1637,14 +1639,16 @@ Base path: /api/v2/agent/...`}
                   <h3 className="text-sm font-medium text-white">{t("dashboard.mcpEndpointTitle")}</h3>
                   <p className="mt-1 text-xs text-neutral-500">{t("dashboard.mcpEndpointHint")}</p>
                   <code className="mt-3 block overflow-x-auto rounded border border-neutral-800 bg-black/50 px-2 py-2 font-mono text-[11px] text-neutral-300">
-                    POST {buildMcpEndpointUrl(mcpOrigin)}
+                    POST {mcpEndpointUrl}
                   </code>
+                  <pre className="mt-3 overflow-x-auto rounded-md border border-neutral-800 bg-black/50 p-3 font-mono text-[11px] text-neutral-400">
+{`Authorization: Bearer <api_key>
+Content-Type: application/json`}
+                  </pre>
                   <div className="mt-3 flex flex-wrap gap-2">
                     <button
                       type="button"
-                      onClick={() =>
-                        void copyMcpText(buildMcpEndpointUrl(mcpOrigin), "mcp-endpoint")
-                      }
+                      onClick={() => void copyMcpText(mcpEndpointUrl, "mcp-endpoint")}
                       className="rounded-md border border-neutral-700 px-2.5 py-1 text-xs text-neutral-300 transition-colors hover:border-neutral-500 hover:text-white"
                     >
                       {mcpCopiedField === "mcp-endpoint"

@@ -12,7 +12,8 @@ describe("integration-discovery", () => {
     expect(surfaces).toHaveLength(2);
     expect(surfaces.map((s) => s.transport)).toEqual(["rest", "mcp"]);
     expect(surfaces[0]?.entrypoint).toContain("/api/v2/agent");
-    expect(surfaces[1]?.entrypoint).toContain("/api/mcp/");
+    expect(surfaces[1]?.entrypoint).toContain("/api/mcp");
+    expect(surfaces[1]?.auth).toContain("Bearer");
   });
 
   it("maps MCP tools to REST equivalents in continuous_evaluation_mcp", () => {

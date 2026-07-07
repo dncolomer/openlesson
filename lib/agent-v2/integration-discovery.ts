@@ -62,7 +62,7 @@ export type RecommendedIntegrationAction = {
 
 export function buildMcpEndpointPattern(baseUrl: string): string {
   const base = baseUrl.replace(/\/$/, "");
-  return `POST ${base}/api/mcp/{url_encoded_api_key}`;
+  return `POST ${base}/api/mcp`;
 }
 
 export function buildIntegrationSurfaces(baseUrl: string): IntegrationSurfaceRef[] {
@@ -78,7 +78,7 @@ export function buildIntegrationSurfaces(baseUrl: string): IntegrationSurfaceRef
     {
       transport: "mcp",
       label: "Evidence API MCP (JSON-RPC)",
-      auth: "API key embedded in URL path (treat as secret)",
+      auth: "Authorization: Bearer <api_key>",
       entrypoint: buildMcpEndpointPattern(baseUrl),
       when_to_use:
         "Cursor, Claude Desktop, Grok, and other MCP clients — full parity with REST for evidence loop and progress tracking.",
@@ -325,7 +325,7 @@ ${OPENLESSON_SCOPE.integrator_model}
 
 ## Surfaces (use either)
 - **REST:** \`${base}/api/v2/agent/workspaces/{workspace_id}\` with Bearer API key
-- **MCP:** \`${buildMcpEndpointPattern(baseUrl)}\` with JSON-RPC tools/list
+- **MCP:** \`${buildMcpEndpointPattern(baseUrl)}\` with Bearer API key and JSON-RPC tools/list
 
 Docs: ${base}${OPENLESSON_SCOPE.docs.api_reference} · ${base}${OPENLESSON_SCOPE.docs.human_guide}
 `;

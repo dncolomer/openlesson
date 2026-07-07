@@ -31,9 +31,13 @@ export const MCP_EVIDENCE_TOOL_CATALOG = [
   { name: "create_ghl_link", scope: "ghl:write", summary: "Create a private TAP link for a block." },
 ] as const;
 
-export function buildMcpEndpointUrl(origin: string, apiKeyPlaceholder = "YOUR_API_KEY"): string {
+export function buildMcpEndpointUrl(origin: string): string {
   const base = origin.replace(/\/$/, "");
-  return `${base}/api/mcp/${encodeURIComponent(apiKeyPlaceholder)}`;
+  return `${base}/api/mcp`;
+}
+
+export function buildMcpAuthHeader(apiKeyPlaceholder = "YOUR_API_KEY"): string {
+  return `Bearer ${apiKeyPlaceholder}`;
 }
 
 export function buildMcpClientConfig(origin: string, apiKeyPlaceholder = "YOUR_API_KEY"): string {
@@ -41,8 +45,10 @@ export function buildMcpClientConfig(origin: string, apiKeyPlaceholder = "YOUR_A
     {
       mcpServers: {
         openlesson: {
-          url: buildMcpEndpointUrl(origin, apiKeyPlaceholder),
-          transport: "http",
+          url: buildMcpEndpointUrl(origin),
+          headers: {
+            Authorization: buildMcpAuthHeader(apiKeyPlaceholder),
+          },
         },
       },
     },

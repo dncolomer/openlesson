@@ -79,7 +79,7 @@ REST mirror: same loop via Bearer auth on /api/v2/agent/workspaces/{id}/...
 
 Resources: resources/read openlesson://integration-scope and openlesson://evidence-loop
 
-Scopes: workspaces:read, workspaces:write, ghl:read, ghl:write. Teams tier. MCP URL embeds API key — keep secret.`;
+Scopes: workspaces:read, workspaces:write, ghl:read, ghl:write. Teams tier. Auth: Authorization: Bearer <api_key> on POST /api/mcp.`;
 
 export const MCP_EVIDENCE_TOOLS = [
   {

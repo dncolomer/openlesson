@@ -216,7 +216,7 @@ REST cadence: ${spec.continuous_evaluation?.recommended_cadence || "upload → r
 
 Continuous evaluation — MCP (same loop, tool names):
 ${spec.continuous_evaluation_mcp?.principle || spec.continuous_evaluation?.principle || ""}
-MCP endpoint: ${spec.continuous_evaluation_mcp?.mcp_endpoint_pattern || "POST /api/mcp/{api_key}"}
+MCP endpoint: ${spec.continuous_evaluation_mcp?.mcp_endpoint_pattern || "POST /api/mcp"} (Authorization: Bearer <api_key>)
 generate_evidence_schema ↔ ${spec.continuous_evaluation?.evidence_spec.api_path || "REST evidence-schema"}
 upload_evidence ↔ ${spec.evidence_upload_api_path || "REST evidence"}
 analyze_performance ↔ ${spec.continuous_evaluation?.performance.api_path || "REST performance"}

@@ -69,7 +69,7 @@ Common codes: `unauthorized`, `forbidden`, `teams_required`, `validation_error`,
 Grok and other MCP clients can call tools via JSON-RPC:
 
 ```http
-POST /api/mcp/{url_encoded_api_key}
+POST /api/mcp (Authorization: Bearer <api_key>)
 Content-Type: application/json
 ```
 
@@ -81,7 +81,7 @@ Content-Type: application/json
 
 Evidence planning, upload, and performance analysis are **REST-only** (`POST .../evidence-schema`, `POST .../integration-skill`, `POST .../evidence`, `POST .../performance`).
 
-Prefer `Authorization: Bearer` on REST routes when the client supports it. Treat MCP URLs as secrets (they embed the raw key).
+REST and MCP both use `Authorization: Bearer <api_key>` with Teams API keys from the dashboard. Treat API keys as secrets.
 
 ---
 

@@ -6,9 +6,9 @@ import {
 } from "@/lib/agent-v2/mcp-evidence-catalog";
 
 describe("mcp-evidence-catalog", () => {
-  it("builds MCP endpoint URL with encoded key placeholder", () => {
-    expect(buildMcpEndpointUrl("https://openlesson.academy", "sk_test/key")).toBe(
-      "https://openlesson.academy/api/mcp/sk_test%2Fkey"
+  it("builds MCP endpoint URL without embedding the API key", () => {
+    expect(buildMcpEndpointUrl("https://openlesson.academy")).toBe(
+      "https://openlesson.academy/api/mcp"
     );
   });
 
@@ -21,8 +21,9 @@ describe("mcp-evidence-catalog", () => {
     expect(names.length).toBeGreaterThanOrEqual(11);
   });
 
-  it("emits MCP client config JSON", () => {
-    const config = JSON.parse(buildMcpClientConfig("http://localhost:3000"));
-    expect(config.mcpServers.openlesson.url).toContain("/api/mcp/");
+  it("emits MCP client config JSON with Bearer auth header", () => {
+    const config = JSON.parse(buildMcpClientConfig("http://localhost:3000", "sk_test"));
+    expect(config.mcpServers.openlesson.url).toBe("http://localhost:3000/api/mcp");
+    expect(config.mcpServers.openlesson.headers.Authorization).toBe("Bearer sk_test");
   });
 });

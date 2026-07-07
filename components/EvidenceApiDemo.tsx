@@ -2179,7 +2179,7 @@ function McpSimulationPanel({
             value={mcpServerUrl}
             onChange={(event) => onMcpServerUrlChange(event.target.value)}
             disabled={isBusy}
-            placeholder="/api/mcp/your-key"
+            placeholder="/api/mcp"
             aria-label="MCP server URL"
             className="min-w-0 flex-1 rounded-md border border-zinc-700 bg-black/40 px-4 py-2.5 text-sm text-zinc-200 placeholder:text-zinc-600 focus:border-zinc-500 focus:outline-none disabled:opacity-60"
           />

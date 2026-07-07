@@ -96,10 +96,12 @@ async function agentJson(path, apiKey, init = {}) {
 }
 
 async function mcpCall(apiKey, method, params = {}, id = 1) {
-  const encoded = encodeURIComponent(apiKey);
-  const res = await fetch(`${baseUrl}/api/mcp/${encoded}`, {
+  const res = await fetch(`${baseUrl}/api/mcp`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${apiKey}`,
+    },
     body: JSON.stringify({ jsonrpc: "2.0", id, method, params }),
   });
   const body = await res.json();

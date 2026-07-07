@@ -87,6 +87,8 @@ export default function DashboardPage() {
     used: number;
     personalUsed: number;
     limit: number | null;
+    workspacesUsed: number;
+    workspacesLimit: number | null;
     extraLessons: number;
     periodEnd: string | null;
     subscriptionStatus: string;
@@ -236,6 +238,8 @@ export default function DashboardPage() {
             used: usageResult.used ?? 0,
             personalUsed: usageResult.personalUsed ?? usageResult.used ?? 0,
             limit: usageResult.isAdmin ? null : (usageResult.limit ?? null),
+            workspacesUsed: usageResult.workspacesUsed ?? 0,
+            workspacesLimit: usageResult.isAdmin ? null : (usageResult.workspacesLimit ?? null),
             extraLessons: profile?.extra_lessons ?? 0,
             periodEnd: profile?.current_period_end ?? null,
             subscriptionStatus: profile?.subscription_status ?? "inactive",
@@ -1345,6 +1349,35 @@ export default function DashboardPage() {
                         </>
                       );
                     })()}
+                  </div>
+
+                  <div className={usageCardClass}>
+                    <p className={usageLabelClass}>Verification Workspaces</p>
+                    <div className="mt-4 flex items-end gap-2">
+                      <span className="text-3xl font-medium tracking-[-1px] text-white">{usageData.workspacesUsed}</span>
+                      <span className="mb-1 text-sm text-neutral-500">
+                        / {usageData.workspacesLimit === null ? t("dashboard.infinity") : usageData.workspacesLimit}
+                      </span>
+                    </div>
+                    {usageData.workspacesLimit !== null && (
+                      <div className="mt-4 h-1.5 w-full rounded-full bg-neutral-800">
+                        <div
+                          className={`h-1.5 rounded-full ${
+                            usageData.workspacesUsed >= usageData.workspacesLimit
+                              ? "bg-red-400"
+                              : usageData.workspacesUsed >= usageData.workspacesLimit * 0.8
+                              ? "bg-amber-400"
+                              : "bg-white"
+                          }`}
+                          style={{ width: `${usageProgress(usageData.workspacesUsed, usageData.workspacesLimit)}%` }}
+                        />
+                      </div>
+                    )}
+                    <p className="mt-3 text-xs text-neutral-500">
+                      {usageData.workspacesLimit === null
+                        ? "Unlimited active workspaces on your plan."
+                        : "Archive a workspace to free a slot, or upgrade capacity on pricing."}
+                    </p>
                   </div>
 
                   <div className={usageCardClass}>

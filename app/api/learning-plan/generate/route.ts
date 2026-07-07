@@ -5,6 +5,8 @@ import type { Message, MessageContent } from "@/lib/xai-client";
 import { uploadFileToXAI, deleteFileFromXAI } from "@/lib/xai-files";
 import { callXaiResponses, type ResponsesInputContent } from "@/lib/xai-client";
 import { persistSkillGridPositions, skillGridNodesFromRefs } from "@/lib/skill-grid-positions";
+import { type PlanId } from "@/lib/plans";
+import { checkWorkspaceCreation, workspaceLimitErrorResponse } from "@/lib/workspace-limits";
 
 const ALLOWED_MIME_TYPES = new Set([
   "application/pdf",
@@ -97,6 +99,27 @@ export async function POST(req: NextRequest) {
 
     if (!topic || typeof topic !== "string") {
       return NextResponse.json({ error: "Topic is required" }, { status: 400 });
+    }
+
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("plan, is_admin, extra_lessons, extra_workspaces, subscription_status, current_period_end, token_tier, token_validity_expires_at")
+      .eq("id", user.id)
+      .single();
+
+    const workspaceCheck = await checkWorkspaceCreation(supabase, user.id, {
+      plan: (profile?.plan || "free") as PlanId,
+      is_admin: profile?.is_admin ?? false,
+      extra_lessons: profile?.extra_lessons ?? 0,
+      extra_workspaces: profile?.extra_workspaces ?? 0,
+      subscription_status: profile?.subscription_status ?? "inactive",
+      current_period_end: profile?.current_period_end ?? null,
+      token_tier: profile?.token_tier ?? null,
+      token_validity_expires_at: profile?.token_validity_expires_at ?? null,
+    });
+
+    if (!workspaceCheck.allowed) {
+      return NextResponse.json(workspaceLimitErrorResponse(workspaceCheck), { status: 403 });
     }
 
     const hasImage = image && typeof image.data === "string" && typeof image.mimeType === "string";

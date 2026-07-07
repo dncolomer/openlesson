@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { canStartSession, PLANS, type PlanId } from "@/lib/plans";
+import { canCreateWorkspace, canStartSession, PLANS, type PlanId } from "@/lib/plans";
+import { countActiveWorkspaces } from "@/lib/workspace-limits";
 
 export const runtime = "nodejs";
 
@@ -67,7 +68,7 @@ export async function GET() {
 
     const { data: profile, error: profileError } = await supabase
       .from("profiles")
-      .select("plan, is_admin, extra_lessons, subscription_status, current_period_end, token_tier, token_validity_expires_at, organization_id, is_org_admin")
+      .select("plan, is_admin, extra_lessons, extra_workspaces, subscription_status, current_period_end, token_tier, token_validity_expires_at, organization_id, is_org_admin")
       .eq("id", user.id)
       .single();
 
@@ -167,18 +168,20 @@ export async function GET() {
     // Also count localStorage-based sessions if no DB sessions found
     // (handled client-side — the server only knows about DB sessions)
 
-    const result = canStartSession(
-      {
-        plan: (profile.plan || "free") as PlanId,
-        is_admin: profile.is_admin ?? false,
-        extra_lessons: profile.extra_lessons ?? 0,
-        subscription_status: profile.subscription_status ?? "inactive",
-        current_period_end: profile.current_period_end,
-        token_tier: profile.token_tier,
-        token_validity_expires_at: profile.token_validity_expires_at,
-      },
-      sessionCount
-    );
+    const userProfile = {
+      plan: (profile.plan || "free") as PlanId,
+      is_admin: profile.is_admin ?? false,
+      extra_lessons: profile.extra_lessons ?? 0,
+      extra_workspaces: profile.extra_workspaces ?? 0,
+      subscription_status: profile.subscription_status ?? "inactive",
+      current_period_end: profile.current_period_end,
+      token_tier: profile.token_tier,
+      token_validity_expires_at: profile.token_validity_expires_at,
+    };
+
+    const result = canStartSession(userProfile, sessionCount);
+    const workspaceCount = await countActiveWorkspaces(supabase, user.id);
+    const workspaceResult = canCreateWorkspace(userProfile, workspaceCount);
 
     if (profile.is_admin) {
       return NextResponse.json({
@@ -189,6 +192,9 @@ export async function GET() {
         isAdmin: true,
         personalUsed: personalSessionCount,
         organization: organizationSummary,
+        workspacesUsed: workspaceCount,
+        workspacesLimit: null,
+        canCreateWorkspace: true,
       });
     }
 
@@ -196,6 +202,9 @@ export async function GET() {
       ...result,
       personalUsed: personalSessionCount,
       organization: organizationSummary,
+      workspacesUsed: workspaceCount,
+      workspacesLimit: workspaceResult.limit,
+      canCreateWorkspace: workspaceResult.allowed,
     });
   } catch (error) {
     console.error("Check usage error:", error);

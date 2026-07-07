@@ -5,7 +5,13 @@ import Link from "next/link";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { createClient } from "@/lib/supabase/client";
-import { type PlanId } from "@/lib/plans";
+import {
+  REGULAR_VOLUME_TIERS,
+  TEAM_VOLUME_TIERS,
+  DEFAULT_REGULAR_VOLUME,
+  DEFAULT_TEAM_VOLUME,
+  type PlanId,
+} from "@/lib/plans";
 
 interface UserState {
   authenticated: boolean;
@@ -15,18 +21,32 @@ interface UserState {
 
 const BACKGROUND = "/aesthetics/Greco-futurism/HHnTrjJbQAAOz7K.jpeg";
 
-const REGULAR_VOLUMES = [
-  { blocks: 25, price: 49, note: "Solo operator" },
-  { blocks: 50, price: 79, note: "Heavy practice" },
-  { blocks: 100, price: 129, note: "Small cohort" },
-];
+const REGULAR_VOLUME_NOTES: Record<number, string> = {
+  25: "Solo operator",
+  50: "Heavy practice",
+  100: "Small cohort",
+};
 
-const TEAM_VOLUMES = [
-  { blocks: 250, price: 399, note: "Pilot team" },
-  { blocks: 500, price: 649, note: "Department" },
-  { blocks: 1000, price: 999, note: "Scaled rollout" },
-  { blocks: 2500, price: 1999, note: "Enterprise" },
-];
+const TEAM_VOLUME_NOTES: Record<number, string> = {
+  250: "Pilot team",
+  500: "Department",
+  1000: "Scaled rollout",
+  2500: "Enterprise",
+};
+
+const REGULAR_VOLUMES = REGULAR_VOLUME_TIERS.map((tier) => ({
+  blocks: tier.blocks,
+  workspaces: tier.workspaces,
+  price: tier.priceCents / 100,
+  note: REGULAR_VOLUME_NOTES[tier.blocks] || "",
+}));
+
+const TEAM_VOLUMES = TEAM_VOLUME_TIERS.map((tier) => ({
+  blocks: tier.blocks,
+  workspaces: tier.workspaces,
+  price: tier.priceCents / 100,
+  note: TEAM_VOLUME_NOTES[tier.blocks] || "",
+}));
 
 const PLANS = [
   {
@@ -42,7 +62,7 @@ const PLANS = [
     name: "Regular",
     detail: "from /mo",
     description: "For individuals and operators who need recurring evidence of real capability, not polished AI-assisted output.",
-    features: ["25+ blocks per month", "File uploads for workplace context", "Readiness history and reports", "Additional blocks: $3.99 each"],
+    features: ["25+ blocks per month", "1+ Verification Workspaces", "File uploads for workplace context", "Readiness history and reports", "Additional blocks: $3.99 each"],
     checkout: "regular_2026" as const,
     volumes: REGULAR_VOLUMES,
     featured: true,
@@ -52,7 +72,7 @@ const PLANS = [
     name: "Pro / Teams",
     detail: "from /mo",
     description: "For teams turning AI-assisted practice into verifiable readiness evidence across critical roles and decisions.",
-    features: ["250+ shared blocks per month", "Verification Workspaces for team scenarios", "Org guests and team API keys", "Additional blocks: $1.99 each", "Priority support"],
+    features: ["250+ shared blocks per month", "5+ Verification Workspaces", "Org guests and team API keys", "Additional blocks: $1.99 each", "Priority support"],
     checkout: "pro_teams" as const,
     volumes: TEAM_VOLUMES,
   },
@@ -62,7 +82,10 @@ export default function PricingPage() {
   const [user, setUser] = useState<UserState | null>(null);
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
   const [extraLessonQuantity, setExtraLessonQuantity] = useState(5);
-  const [selectedVolumes, setSelectedVolumes] = useState<Record<string, number>>({ regular_2026: 25, pro_teams: 250 });
+  const [selectedVolumes, setSelectedVolumes] = useState<Record<string, number>>({
+    regular_2026: DEFAULT_REGULAR_VOLUME,
+    pro_teams: DEFAULT_TEAM_VOLUME,
+  });
 
   useEffect(() => {
     const load = async () => {
@@ -137,7 +160,7 @@ export default function PricingPage() {
                   </div>
                   {volumeOptions.length > 0 && (
                     <div className="mt-5 grid gap-2">
-                      <div className="font-mono text-[10px] uppercase tracking-[1.5px] text-neutral-500">Monthly volume</div>
+                      <div className="font-mono text-[10px] uppercase tracking-[1.5px] text-neutral-500">Monthly capacity</div>
                       <div className="grid gap-2">
                         {volumeOptions.map((option) => {
                           const selected = selectedVolumes[plan.id] === option.blocks;
@@ -149,7 +172,9 @@ export default function PricingPage() {
                               className={`flex items-center justify-between rounded-sm border px-3 py-2 text-left transition ${selected ? "border-white bg-white text-black" : "border-neutral-800 bg-black/40 text-neutral-300 hover:border-neutral-600"}`}
                             >
                               <span>
-                                <span className="block text-sm font-medium">{option.blocks.toLocaleString()} blocks/mo</span>
+                                <span className="block text-sm font-medium">
+                                  {option.blocks.toLocaleString()} blocks/mo · {option.workspaces} workspace{option.workspaces === 1 ? "" : "s"}
+                                </span>
                                 <span className={`block text-[11px] ${selected ? "text-black/60" : "text-neutral-500"}`}>{option.note}</span>
                               </span>
                               <span className="text-sm font-medium">${option.price}</span>
@@ -166,7 +191,11 @@ export default function PricingPage() {
                     <div className="mt-8 rounded-sm border border-neutral-800 px-4 py-3 text-center text-sm text-neutral-500">Current plan</div>
                   ) : plan.checkout ? (
                     <button onClick={() => handleCheckout(plan.checkout)} disabled={loadingPlan === plan.checkout} className="mt-8 w-full rounded-sm bg-white px-4 py-3 text-sm font-medium text-black transition hover:bg-neutral-200 disabled:opacity-50">
-                      {loadingPlan === plan.checkout ? "Loading..." : plan.id === "pro_teams" ? `Start Teams (${selectedVolumes.pro_teams}/mo) →` : `Start Regular (${selectedVolumes.regular_2026}/mo) →`}
+                      {loadingPlan === plan.checkout
+                        ? "Loading..."
+                        : plan.id === "pro_teams"
+                          ? `Start Teams (${selectedVolume?.blocks ?? selectedVolumes.pro_teams} blocks · ${selectedVolume?.workspaces ?? 1} ws) →`
+                          : `Start Regular (${selectedVolume?.blocks ?? selectedVolumes.regular_2026} blocks · ${selectedVolume?.workspaces ?? 1} ws) →`}
                     </button>
                   ) : !user?.authenticated ? (
                     <Link href="/register" className="mt-8 block rounded-sm bg-neutral-800 px-4 py-3 text-center text-sm font-medium text-white transition hover:bg-neutral-700">Get started →</Link>

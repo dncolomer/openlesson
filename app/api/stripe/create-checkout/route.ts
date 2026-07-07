@@ -5,6 +5,7 @@ import {
   REGULAR_VOLUME_PRICES,
   TEAM_VOLUME_PRICES,
   resolveCheckoutVolume,
+  resolveCheckoutWorkspaceVolume,
   getExtraBlockPriceCents,
 } from "@/lib/plans";
 
@@ -33,6 +34,7 @@ export async function POST(request: NextRequest) {
       ? Math.max(1, Math.min(500, Number(rawQuantity) || 1))
       : 1;
     const monthlyVolume = resolveCheckoutVolume(priceType, rawMonthlyVolume);
+    const monthlyWorkspaceVolume = resolveCheckoutWorkspaceVolume(priceType, monthlyVolume);
 
     if (!["regular", "pro", "regular_2026", "pro_teams", "extra_lesson", "rabbit_hole_plays"].includes(priceType)) {
       return NextResponse.json({ error: "Invalid price type" }, { status: 400 });
@@ -56,7 +58,9 @@ export async function POST(request: NextRequest) {
           currency: "usd",
           unit_amount: REGULAR_VOLUME_PRICES[monthlyVolume],
           recurring: { interval: "month" },
-          product_data: { name: `openLesson Regular - ${monthlyVolume} blocks/mo` },
+          product_data: {
+            name: `openLesson Regular - ${monthlyVolume} blocks/mo · ${monthlyWorkspaceVolume} workspace${monthlyWorkspaceVolume === 1 ? "" : "s"}`,
+          },
         },
         quantity: 1,
       };
@@ -67,7 +71,9 @@ export async function POST(request: NextRequest) {
           currency: "usd",
           unit_amount: TEAM_VOLUME_PRICES[monthlyVolume],
           recurring: { interval: "month" },
-          product_data: { name: `openLesson Pro / Teams - ${monthlyVolume} blocks/mo` },
+          product_data: {
+            name: `openLesson Pro / Teams - ${monthlyVolume} blocks/mo · ${monthlyWorkspaceVolume} workspaces`,
+          },
         },
         quantity: 1,
       };
@@ -158,9 +164,19 @@ export async function POST(request: NextRequest) {
         price_type: priceType,
         quantity: String(quantity),
         monthly_volume: String(monthlyVolume),
+        monthly_workspace_volume: String(monthlyWorkspaceVolume),
       },
       ...(mode === "subscription"
-        ? { subscription_data: { metadata: { supabase_user_id: user.id, price_type: priceType, monthly_volume: String(monthlyVolume) } } }
+        ? {
+            subscription_data: {
+              metadata: {
+                supabase_user_id: user.id,
+                price_type: priceType,
+                monthly_volume: String(monthlyVolume),
+                monthly_workspace_volume: String(monthlyWorkspaceVolume),
+              },
+            },
+          }
         : { payment_intent_data: { metadata: { supabase_user_id: user.id, price_type: priceType } } }),
     });
 

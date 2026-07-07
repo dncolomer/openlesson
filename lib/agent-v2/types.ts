@@ -110,6 +110,7 @@ export type ErrorCode =
   | "validation_error"
   | "rate_limit_exceeded"
   | "workspace_not_found"
+  | "workspace_limit_reached"
   | "block_not_found"
   | "tap_link_not_found"
   | "ghl_link_not_found"

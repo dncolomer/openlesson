@@ -1,13 +1,18 @@
 import { describe, expect, it } from "vitest";
 import {
+  canCreateWorkspace,
   canStartSession,
   formatExtraBlockPrice,
   formatPlanMonthlyPrice,
   getExtraBlockPriceCents,
+  getWorkspaceLimit,
   hasAgentApiKeyPlan,
   resolveCheckoutVolume,
+  resolveCheckoutWorkspaceVolume,
   REGULAR_VOLUME_PRICES,
+  REGULAR_VOLUME_WORKSPACES,
   TEAM_VOLUME_PRICES,
+  TEAM_VOLUME_WORKSPACES,
 } from "@/lib/plans";
 
 describe("plans pricing", () => {
@@ -16,6 +21,13 @@ describe("plans pricing", () => {
     expect(resolveCheckoutVolume("regular_2026", 999)).toBe(25);
     expect(resolveCheckoutVolume("pro_teams", 500)).toBe(500);
     expect(resolveCheckoutVolume("pro_teams", 1)).toBe(250);
+  });
+
+  it("resolves checkout workspace volumes from block tier", () => {
+    expect(resolveCheckoutWorkspaceVolume("regular_2026", 25)).toBe(1);
+    expect(resolveCheckoutWorkspaceVolume("regular_2026", 50)).toBe(3);
+    expect(resolveCheckoutWorkspaceVolume("pro_teams", 250)).toBe(5);
+    expect(resolveCheckoutWorkspaceVolume("pro_teams", 1000)).toBe(25);
   });
 
   it("formats 2026 monthly prices", () => {
@@ -34,6 +46,46 @@ describe("plans pricing", () => {
   it("keeps stripe volume tables aligned", () => {
     expect(REGULAR_VOLUME_PRICES[25]).toBe(4900);
     expect(TEAM_VOLUME_PRICES[250]).toBe(39900);
+    expect(REGULAR_VOLUME_WORKSPACES[100]).toBe(5);
+    expect(TEAM_VOLUME_WORKSPACES[500]).toBe(10);
+  });
+});
+
+describe("plans workspace limits", () => {
+  const baseProfile = {
+    is_admin: false,
+    extra_lessons: 0,
+    extra_workspaces: 0,
+    subscription_status: "active",
+    current_period_end: "2026-12-31",
+    token_tier: null,
+    token_validity_expires_at: null,
+  };
+
+  it("computes workspace limits from plan base plus extras", () => {
+    expect(
+      getWorkspaceLimit({
+        ...baseProfile,
+        plan: "regular_2026",
+        extra_workspaces: 2,
+      })
+    ).toBe(3);
+    expect(
+      getWorkspaceLimit({
+        ...baseProfile,
+        plan: "pro_teams",
+        extra_workspaces: 20,
+      })
+    ).toBe(25);
+  });
+
+  it("blocks workspace creation at limit", () => {
+    const result = canCreateWorkspace(
+      { ...baseProfile, plan: "free", extra_workspaces: 0 },
+      1
+    );
+    expect(result.allowed).toBe(false);
+    expect(result.limit).toBe(1);
   });
 });
 

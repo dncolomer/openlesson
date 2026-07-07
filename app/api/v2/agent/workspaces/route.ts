@@ -8,6 +8,8 @@ import {
   WORKSPACE_GENERATION_CONVERSION_GOAL_RULE,
 } from "@/lib/agent-v2/conversion-goal";
 import { persistSkillGridPositions, skillGridNodesFromRefs } from "@/lib/skill-grid-positions";
+import { type PlanId } from "@/lib/plans";
+import { checkWorkspaceCreation, workspaceLimitErrorResponse } from "@/lib/workspace-limits";
 
 export const runtime = "nodejs";
 
@@ -77,6 +79,30 @@ export async function POST(req: NextRequest) {
   const initialPrompt = typeof body.initial_prompt === "string" ? body.initial_prompt.trim() : "";
   if (!initialPrompt) {
     return errorResponse(400, "validation_error", "initial_prompt is required");
+  }
+
+  if (auth.user_id) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("plan, is_admin, extra_lessons, extra_workspaces, subscription_status, current_period_end, token_tier, token_validity_expires_at")
+      .eq("id", auth.user_id)
+      .single();
+
+    const workspaceCheck = await checkWorkspaceCreation(supabase, auth.user_id, {
+      plan: (profile?.plan || "free") as PlanId,
+      is_admin: profile?.is_admin ?? false,
+      extra_lessons: profile?.extra_lessons ?? 0,
+      extra_workspaces: profile?.extra_workspaces ?? 0,
+      subscription_status: profile?.subscription_status ?? "inactive",
+      current_period_end: profile?.current_period_end ?? null,
+      token_tier: profile?.token_tier ?? null,
+      token_validity_expires_at: profile?.token_validity_expires_at ?? null,
+    });
+
+    if (!workspaceCheck.allowed) {
+      const payload = workspaceLimitErrorResponse(workspaceCheck);
+      return errorResponse(403, "workspace_limit_reached", payload.error, payload);
+    }
   }
 
   const files = parseFiles(body.files);

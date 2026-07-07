@@ -1,12 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { createAdminClient } from "@/lib/supabase/admin";
-export const runtime = "nodejs";
+import { BASE_INCLUDED_LESSONS, BASE_INCLUDED_WORKSPACES } from "@/lib/plans";
 
-const BASE_INCLUDED_LESSONS: Record<string, number> = {
-  regular_2026: 25,
-  pro_teams: 250,
-};
+export const runtime = "nodejs";
 
 function getStripe() {
   return new Stripe(process.env.STRIPE_SECRET_KEY!, {
@@ -89,6 +86,10 @@ export async function POST(request: NextRequest) {
 
         const priceType = subscription.metadata?.price_type;
         const monthlyVolume = Math.max(1, Number(subscription.metadata?.monthly_volume) || BASE_INCLUDED_LESSONS[priceType || ""] || 0);
+        const monthlyWorkspaceVolume = Math.max(
+          1,
+          Number(subscription.metadata?.monthly_workspace_volume) || BASE_INCLUDED_WORKSPACES[priceType || ""] || 0
+        );
         const plan = priceType === "pro_teams"
           ? "pro_teams"
           : priceType === "regular_2026"
@@ -108,6 +109,7 @@ export async function POST(request: NextRequest) {
             subscription_status: subscription.status === "active" || subscription.status === "trialing" ? "active" : subscription.status,
             ...(periodEnd ? { current_period_end: new Date(periodEnd * 1000).toISOString() } : {}),
             extra_lessons: Math.max(0, monthlyVolume - (BASE_INCLUDED_LESSONS[plan] || 0)),
+            extra_workspaces: Math.max(0, monthlyWorkspaceVolume - (BASE_INCLUDED_WORKSPACES[plan] || 0)),
           })
           .eq("id", userId);
         break;
@@ -127,6 +129,7 @@ export async function POST(request: NextRequest) {
             stripe_subscription_id: null,
             current_period_end: null,
             extra_lessons: 0,
+            extra_workspaces: 0,
           })
           .eq("id", userId);
         break;
@@ -155,12 +158,17 @@ export async function POST(request: NextRequest) {
           const priceType = subscription?.metadata?.price_type;
           const plan = priceType === "pro_teams" ? "pro_teams" : priceType === "regular_2026" ? "regular_2026" : null;
           const monthlyVolume = Math.max(0, Number(subscription?.metadata?.monthly_volume) || (plan ? BASE_INCLUDED_LESSONS[plan] : 0));
+          const monthlyWorkspaceVolume = Math.max(
+            0,
+            Number(subscription?.metadata?.monthly_workspace_volume) || (plan ? BASE_INCLUDED_WORKSPACES[plan] : 0)
+          );
 
           await supabase
             .from("profiles")
             .update({
               subscription_status: "active",
               extra_lessons: plan ? Math.max(0, monthlyVolume - BASE_INCLUDED_LESSONS[plan]) : 0,
+              extra_workspaces: plan ? Math.max(0, monthlyWorkspaceVolume - BASE_INCLUDED_WORKSPACES[plan]) : 0,
             })
             .eq("id", profile.id);
         }

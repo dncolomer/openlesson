@@ -68,3 +68,22 @@ export function buildMcpOAuthDiscovery(origin: string) {
     registration_endpoint: `${base}/api/oauth/register`,
   };
 }
+
+export function buildSkillFileUrl(origin: string): string {
+  const base = origin.replace(/\/$/, "");
+  return `${base}/skill.md`;
+}
+
+export function buildMcpOAuthClientConfig(origin: string): string {
+  return JSON.stringify(
+    {
+      mcpServers: {
+        openlesson: {
+          url: buildMcpEndpointUrl(origin),
+        },
+      },
+    },
+    null,
+    2
+  );
+}

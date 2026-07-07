@@ -12,11 +12,8 @@ import { buildContributionDays, contributionLevel, contributionMonthLabels, date
 import { useI18n } from "@/lib/i18n";
 import { formatPlanMonthlyPrice, hasAgentApiKeyPlan, type PlanId } from "@/lib/plans";
 import { InsightsDashboardTab } from "@/components/InsightsDashboardTab";
-import {
-  buildMcpClientConfig,
-  buildMcpEndpointUrl,
-  MCP_EVIDENCE_TOOL_CATALOG,
-} from "@/lib/agent-v2/mcp-evidence-catalog";
+import { buildMcpClientConfig } from "@/lib/agent-v2/mcp-evidence-catalog";
+import { IntegrationQuickAccess } from "@/components/IntegrationQuickAccess";
 
 const DASHBOARD_BACKGROUND = "/aesthetics/Greco-futurism/HHnTrgVaQAAP-_3.jpeg";
 const PROFILE_BACKGROUND_IMAGES = [
@@ -26,7 +23,7 @@ const PROFILE_BACKGROUND_IMAGES = [
   "/aesthetics/Greco-futurism/HHnTrjJbQAAOz7K.jpeg",
 ];
 
-type Tab = "overview" | "sessions" | "plans" | "usage" | "insights" | "config";
+type Tab = "overview" | "sessions" | "plans" | "usage" | "integrations" | "insights" | "config";
 
 interface AvailableModel {
   id: string;
@@ -63,7 +60,7 @@ export default function DashboardPage() {
   const searchParams = useSearchParams();
   const initialTab = (searchParams.get("tab") as Tab) || "plans";
   const [activeTab, setActiveTab] = useState<Tab>(
-    ["plans", "usage", "insights"].includes(initialTab) ? initialTab : "plans"
+    ["plans", "usage", "integrations", "insights"].includes(initialTab) ? initialTab : "plans"
   );
   const learningMapScrollRef = useRef<HTMLDivElement>(null);
 
@@ -397,8 +394,6 @@ export default function DashboardPage() {
   const mcpOrigin =
     typeof window !== "undefined" ? window.location.origin : "https://openlesson.academy";
 
-  const mcpEndpointUrl = useMemo(() => buildMcpEndpointUrl(mcpOrigin), [mcpOrigin]);
-
   const mcpClientConfig = useMemo(() => {
     if (newKeyValue) {
       return buildMcpClientConfig(mcpOrigin, newKeyValue);
@@ -676,7 +671,8 @@ export default function DashboardPage() {
           {[
             { id: "plans", label: "Workspaces" },
             { id: "insights", label: "Insights" },
-            { id: "usage", label: t("dashboard.usageApiMcpTab") },
+            { id: "usage", label: t("dashboard.usageTab") },
+            { id: "integrations", label: t("dashboard.integrationsTab") },
           ].map((tab) => (
             <button
               key={tab.id}
@@ -1253,14 +1249,14 @@ export default function DashboardPage() {
 
         {activeTab === "insights" && <InsightsDashboardTab planTitles={planTitlesById} />}
 
-        {/* Usage & API Tab */}
+        {/* Usage Tab */}
         {activeTab === "usage" && (
           <div className="space-y-8">
             <div className="flex flex-wrap items-center justify-between gap-3 border border-neutral-800 bg-neutral-950/75 px-6 py-5">
               <div>
                 <p className={usageLabelClass}>Account</p>
                 <h2 className="mt-2 text-2xl font-medium tracking-[-0.5px] text-white">{t("dashboard.yourSubscription")}</h2>
-                <p className="mt-1 text-sm text-neutral-500">{t("dashboard.usageApiMcpSubtitle")}</p>
+                <p className="mt-1 text-sm text-neutral-500">{t("dashboard.usageSubtitle")}</p>
               </div>
               <Link
                 href="/pricing"
@@ -1459,12 +1455,42 @@ export default function DashboardPage() {
             ) : (
               <div className="text-center py-12 text-neutral-400">{t("dashboard.unableToLoadUsage")}</div>
             )}
+          </div>
+        )}
+
+        {/* Integrations Tab */}
+        {activeTab === "integrations" && (
+          <div className="space-y-8">
+            <div className="flex flex-wrap items-center justify-between gap-3 border border-neutral-800 bg-neutral-950/75 px-6 py-5">
+              <div>
+                <p className={usageLabelClass}>Integrations</p>
+                <h2 className="mt-2 text-2xl font-medium tracking-[-0.5px] text-white">{t("dashboard.integrationsTab")}</h2>
+                <p className="mt-1 text-sm text-neutral-500">{t("dashboard.integrationsSubtitle")}</p>
+              </div>
+              {usesAgenticV2Keys && (
+                <Link
+                  href="/docs/agentic-v2"
+                  className="inline-flex h-10 items-center justify-center rounded-sm border border-neutral-700 px-4 text-sm text-neutral-200 transition hover:border-neutral-500 hover:text-white"
+                >
+                  {t("dashboard.mcpDocsLink")} →
+                </Link>
+              )}
+            </div>
+
+            <div className={usageCardClass}>
+              <IntegrationQuickAccess
+                origin={mcpOrigin}
+                apiKeyPlaceholder={newKeyValue || "YOUR_API_KEY"}
+                showWorkspaceLevelNote
+                idPrefix="dashboard"
+              />
+            </div>
 
             {/* Agentic API keys */}
             <div className={`${usageCardClass} space-y-5`}>
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
-                  <p className={usageLabelClass}>Integrations</p>
+                  <p className={usageLabelClass}>API keys</p>
                   <h2 className="mt-2 text-xl font-medium text-white">Agentic API</h2>
                 </div>
                 <div className="flex items-center gap-3">
@@ -1596,115 +1622,8 @@ export default function DashboardPage() {
                 </div>
               )}
 
-              <p className="text-xs text-neutral-600">Rate limit: 120 requests per minute per key.</p>
+              <p className="text-xs text-neutral-600">{t("dashboard.apiKeyRateLimit")}</p>
             </div>
-
-            {usesAgenticV2Keys && (
-              <div className={`${usageCardClass} space-y-5`}>
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div>
-                    <p className={usageLabelClass}>Integrations</p>
-                    <h2 className="mt-2 text-xl font-medium text-white">{t("dashboard.mcpTitle")}</h2>
-                  </div>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <Link
-                      href="/docs/agentic-v2"
-                      className="rounded-md border border-neutral-700 px-3 py-1.5 text-xs text-neutral-200 transition-colors hover:border-neutral-500 hover:text-white"
-                    >
-                      {t("dashboard.mcpDocsLink")} →
-                    </Link>
-                    <Link
-                      href="/skill.md"
-                      className="rounded-md border border-neutral-700 px-3 py-1.5 text-xs text-neutral-200 transition-colors hover:border-neutral-500 hover:text-white"
-                    >
-                      {t("dashboard.mcpSkillLink")} →
-                    </Link>
-                  </div>
-                </div>
-                <p className="text-sm text-neutral-500">{t("dashboard.mcpDescription")}</p>
-                <p className="text-xs text-neutral-500">{t("dashboard.mcpDualNote")}</p>
-
-                <div className="rounded-lg border border-neutral-800/80 bg-neutral-950/70 p-4">
-                  <h3 className="text-sm font-medium text-white">{t("dashboard.mcpRestTitle")}</h3>
-                  <p className="mt-1 text-xs text-neutral-500">{t("dashboard.mcpRestHint")}</p>
-                  <pre className="mt-3 overflow-x-auto rounded-md border border-neutral-800 bg-black/50 p-3 font-mono text-[11px] text-neutral-400">
-{`Authorization: Bearer <api_key>
-Content-Type: application/json
-
-Base path: /api/v2/agent/...`}
-                  </pre>
-                </div>
-
-                <div className="rounded-lg border border-neutral-800/80 bg-neutral-950/70 p-4">
-                  <h3 className="text-sm font-medium text-white">{t("dashboard.mcpEndpointTitle")}</h3>
-                  <p className="mt-1 text-xs text-neutral-500">{t("dashboard.mcpEndpointHint")}</p>
-                  <code className="mt-3 block overflow-x-auto rounded border border-neutral-800 bg-black/50 px-2 py-2 font-mono text-[11px] text-neutral-300">
-                    POST {mcpEndpointUrl}
-                  </code>
-                  <pre className="mt-3 overflow-x-auto rounded-md border border-neutral-800 bg-black/50 p-3 font-mono text-[11px] text-neutral-400">
-{`Authorization: Bearer <api_key>
-Content-Type: application/json`}
-                  </pre>
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    <button
-                      type="button"
-                      onClick={() => void copyMcpText(mcpEndpointUrl, "mcp-endpoint")}
-                      className="rounded-md border border-neutral-700 px-2.5 py-1 text-xs text-neutral-300 transition-colors hover:border-neutral-500 hover:text-white"
-                    >
-                      {mcpCopiedField === "mcp-endpoint"
-                        ? t("common.copied")
-                        : t("dashboard.mcpCopyEndpoint")}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        void copyMcpText(buildMcpClientConfig(mcpOrigin), "mcp-config")
-                      }
-                      className="rounded-md border border-neutral-700 px-2.5 py-1 text-xs text-neutral-300 transition-colors hover:border-neutral-500 hover:text-white"
-                    >
-                      {mcpCopiedField === "mcp-config"
-                        ? t("common.copied")
-                        : t("dashboard.mcpCopyConfig")}
-                    </button>
-                  </div>
-
-                  <div className="mt-4">
-                    <p className="text-xs font-medium text-neutral-300">{t("dashboard.mcpWorkflowTitle")}</p>
-                    <pre className="mt-2 whitespace-pre-wrap rounded-md border border-neutral-800 bg-black/40 p-3 font-mono text-[11px] leading-relaxed text-neutral-400">
-                      {t("dashboard.mcpWorkflowSteps")}
-                    </pre>
-                  </div>
-
-                  <div className="mt-4">
-                    <p className="text-xs font-medium text-neutral-300">{t("dashboard.mcpToolsTitle")}</p>
-                    <ul className="mt-2 space-y-1.5">
-                      {MCP_EVIDENCE_TOOL_CATALOG.map((tool) => (
-                        <li
-                          key={tool.name}
-                          className="rounded-md border border-neutral-800/70 bg-black/30 px-3 py-2 text-xs text-neutral-400"
-                        >
-                          <span className="font-mono text-neutral-200">{tool.name}</span>
-                          <span className="ml-2 rounded bg-neutral-800 px-1 py-0.5 font-mono text-[10px] text-neutral-500">
-                            {tool.scope}
-                          </span>
-                          <p className="mt-1 text-neutral-500">{tool.summary}</p>
-                        </li>
-                      ))}
-                    </ul>
-                    <p className="mt-3 text-xs text-neutral-500">{t("dashboard.mcpScopeNote")}</p>
-                  </div>
-
-                  <div className="mt-4">
-                    <p className="text-xs font-medium text-neutral-300">{t("dashboard.mcpResourcesTitle")}</p>
-                    <p className="mt-1 text-xs text-neutral-500">{t("dashboard.mcpResourcesHint")}</p>
-                    <ul className="mt-2 space-y-1 font-mono text-[11px] text-neutral-400">
-                      <li>openlesson://integration-scope</li>
-                      <li>openlesson://evidence-loop</li>
-                    </ul>
-                  </div>
-                </div>
-              </div>
-            )}
           </div>
         )}
 

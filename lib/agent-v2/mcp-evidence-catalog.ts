@@ -56,3 +56,15 @@ export function buildMcpClientConfig(origin: string, apiKeyPlaceholder = "YOUR_A
     2
   );
 }
+
+export function buildMcpOAuthDiscovery(origin: string) {
+  const base = origin.replace(/\/$/, "");
+  return {
+    resource: `${base}/api/mcp`,
+    protected_resource_metadata: `${base}/.well-known/oauth-protected-resource/api/mcp`,
+    authorization_server_metadata: `${base}/.well-known/oauth-authorization-server`,
+    authorization_endpoint: `${base}/api/oauth/authorize`,
+    token_endpoint: `${base}/api/oauth/token`,
+    registration_endpoint: `${base}/api/oauth/register`,
+  };
+}

@@ -149,6 +149,7 @@ export async function authenticateApiKey(
     is_org_admin: isOrgAdmin,
     key_id: keyData.id,
     scopes,
+    auth_method: "api_key",
   };
 
   return { auth, supabase };

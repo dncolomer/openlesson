@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { authenticateRequest } from "@/lib/agent-v2/auth";
+import { authenticateMcpRequest } from "@/lib/agent-v2/mcp-oauth/authenticate-mcp-request";
 import {
   mcpEndpointDiscoveryResponse,
   processMcpJsonRpcRequest,
@@ -9,14 +9,14 @@ export const runtime = "nodejs";
 export const maxDuration = 180;
 
 export async function GET(req: NextRequest) {
-  const authResult = await authenticateRequest(req, "workspaces:read");
+  const authResult = await authenticateMcpRequest(req, "workspaces:read");
   if (authResult instanceof NextResponse) return authResult;
 
   return mcpEndpointDiscoveryResponse("/api/mcp");
 }
 
 export async function POST(req: NextRequest) {
-  const authResult = await authenticateRequest(req, "workspaces:read");
+  const authResult = await authenticateMcpRequest(req, "workspaces:read");
   if (authResult instanceof NextResponse) return authResult;
 
   const { auth, supabase } = authResult;

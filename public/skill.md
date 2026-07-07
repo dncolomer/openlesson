@@ -118,7 +118,17 @@ Content-Type: application/json
 
 `analyze_performance`: omit `prompt` for structured scorecard JSON; include `prompt` for chat Q&A. Optional `style_prompt` controls voice/tone.
 
-REST and MCP both use `Authorization: Bearer <api_key>` with Teams API keys from the dashboard. Treat API keys as secrets.
+**Authentication:** Teams API keys (`Authorization: Bearer <api_key>`) still work. OAuth 2.1 is also supported for MCP clients that require it (e.g. Grok):
+
+- Protected resource metadata: `GET /.well-known/oauth-protected-resource/api/mcp`
+- Authorization server metadata: `GET /.well-known/oauth-authorization-server`
+- Dynamic client registration: `POST /api/oauth/register`
+- Authorization: `GET /api/oauth/authorize` (PKCE + `resource=https://openlesson.academy/api/mcp`)
+- Token exchange: `POST /api/oauth/token`
+
+Unauthenticated MCP requests return `401` with a `WWW-Authenticate` header pointing at the protected-resource metadata document.
+
+Treat API keys and OAuth tokens as secrets.
 
 ---
 

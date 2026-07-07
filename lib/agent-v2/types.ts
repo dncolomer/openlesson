@@ -38,6 +38,8 @@ export interface AuthContext {
   is_org_admin: boolean;
   key_id: string;
   scopes: ApiKeyScope[];
+  auth_method?: "api_key" | "oauth";
+  oauth_client_id?: string;
 }
 
 // --- Proof Types ---

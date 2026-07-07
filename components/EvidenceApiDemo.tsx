@@ -1372,7 +1372,7 @@ export function EvidenceApiDemo() {
     <DemoFlowShell backgroundImage={backgroundImage}>
       <Navbar
         breadcrumbs={[
-          { label: "Demo", href: "/demo" },
+          { label: "Demo" },
         ]}
         showNav={false}
       />

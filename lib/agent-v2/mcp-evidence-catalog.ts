@@ -1,6 +1,12 @@
 /** Client-safe catalog for workspace integration UI (no server imports). */
 
 export const MCP_EVIDENCE_TOOL_CATALOG = [
+  {
+    name: "pumadoc_customer_agent_toolkit",
+    scope: "workspaces:read",
+    summary:
+      "PumaDoc Customer Agent Toolkit — proactive openLesson MCP playbook for Customer Problem Definition.",
+  },
   { name: "list_workspaces", scope: "workspaces:read", summary: "List accessible Verification Workspaces." },
   {
     name: "get_learning_progress",

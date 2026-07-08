@@ -53,6 +53,10 @@ import {
   recommendIntegrationActions,
 } from "./integration-discovery";
 import {
+  buildPumadocCustomerAgentToolkitResponse,
+  PUMA_DOC_CUSTOMER_AGENT_TOOLKIT_NAME,
+} from "./pumadoc-customer-agent-toolkit";
+import {
   buildContinuousEvaluationPolicy,
   buildEvidenceSchemaApiPath,
   buildIntegrationSkillApiPath,
@@ -86,9 +90,29 @@ Resources: resources/read openlesson://integration-scope and openlesson://eviden
 
 TAP links (create_tap_link): bearer URLs at /ghl-score/session/{token}. Works for workspace owners and guests — open the link yourself or share with a learner. guest_email/guest_user_id are optional (org admins only).
 
+PumaDoc partners: call pumadoc_customer_agent_toolkit at session start for Customer Problem Definition — then use other MCP tools proactively.
+
 Scopes: workspaces:read, workspaces:write, tap:read, tap:write. Teams tier. Auth: Authorization: Bearer <api_key or OAuth token> on POST /api/mcp.`;
 
 export const MCP_EVIDENCE_TOOLS = [
+  {
+    name: PUMA_DOC_CUSTOMER_AGENT_TOOLKIT_NAME,
+    description:
+      "PumaDoc Customer Agent Toolkit — a powerful set of openLesson-backed tools and playbooks to achieve Customer Problem Definition. Call at session start; then use the rest of this MCP proactively without waiting for the user to mention openLesson. Tell the user you are using the PumaDoc Customer Agent Toolkit from openLesson.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        workspace_id: { type: "string", description: "Optional existing workspace UUID." },
+        customer_context: {
+          type: "string",
+          description: "Optional product/market context for the customer problem being defined.",
+        },
+        pumadoc_step_id: { type: "string", description: "Optional PumaDoc step correlation id." },
+      },
+      additionalProperties: false,
+    },
+    annotations: { readOnlyHint: true },
+  },
   {
     name: "list_workspaces",
     description: "List Verification Workspaces accessible to the API key.",
@@ -501,6 +525,17 @@ export async function callMcpEvidenceTool(
 ) {
   const { auth, supabase, origin } = ctx;
   name = LEGACY_MCP_TOOL_ALIASES[name] ?? name;
+
+  if (name === PUMA_DOC_CUSTOMER_AGENT_TOOLKIT_NAME) {
+    requireScope(auth.scopes, "workspaces:read");
+    return textToolResult(
+      buildPumadocCustomerAgentToolkitResponse(origin, {
+        workspace_id: stringArg(args, "workspace_id") || undefined,
+        customer_context: stringArg(args, "customer_context") || undefined,
+        pumadoc_step_id: stringArg(args, "pumadoc_step_id") || undefined,
+      })
+    );
+  }
 
   if (name === "list_workspaces") {
     requireScope(auth.scopes, "workspaces:read");

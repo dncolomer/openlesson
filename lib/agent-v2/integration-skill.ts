@@ -35,6 +35,7 @@ const DEFAULT_SECTIONS = [
   "purpose",
   "design_principles",
   "continuous_evaluation",
+  "predictive_interruptions",
   "auth",
   "endpoints",
   "evidence_specification",
@@ -203,20 +204,27 @@ Required content:
    - Explicit warning: treating the initial skill.md or spec as permanent will degrade evaluation quality over time
    - Recommended loop: upload evidence → re-fetch spec → regenerate skill → request performance → repeat
    - Reference the \`continuous_evaluation\` object returned by the evidence spec API for machine-readable self-update triggers
-4. Authentication table (Bearer sk_ / gsk_, Teams tier, scopes).
-5. Endpoints table covering REST and MCP with **dual documentation** (never hide REST behind MCP):
+4. **Predictive interruptions (required section)** — Trace Interruption Model (TIM) on every Evidence API response:
+   - Every REST and MCP success response includes top-level \`interruption\` (object or null).
+   - When non-null: schedule \`intervention\` after \`delay_ms\` unless a later Evidence API response supersedes it.
+   - When null: no interruption predicted — do not schedule from that response.
+   - Document consumer obligations: read interruption every call, supersede pending timers, never stack duplicate timers.
+   - Reference \`interruption_contract\` from the evidence spec API for machine-readable TIM contract and intervention types.
+   - Include JSON examples for active interruption and null (empty).
+5. Authentication table (Bearer sk_ / gsk_, Teams tier, scopes).
+6. Endpoints table covering REST and MCP with **dual documentation** (never hide REST behind MCP):
    - REST: POST /workspaces, GET /blocks, POST /evidence-schema, POST /evidence, POST /performance, POST /integration-skill
    - MCP (JSON-RPC at POST /api/mcp with Bearer auth): list_workspaces, get_workspace, get_learning_progress, list_blocks, generate_evidence_schema, upload_evidence, analyze_performance, generate_integration_skill, create_tap_link, list_tap_links, get_tap_results
    - State that MCP tools have full parity with REST; evidence spec responses include both continuous_evaluation (REST paths) and continuous_evaluation_mcp (tool names)
    - Recommend get_learning_progress / generate_evidence_schema first for progress orientation
-6. **Evidence specification (required section)** — explain that payloads are defined by the formal evidence spec returned from POST ${evidenceSchemaPath}. Include:
+7. **Evidence specification (required section)** — explain that payloads are defined by the formal evidence spec returned from POST ${evidenceSchemaPath}. Include:
    - When to call the evidence spec endpoint (before first upload, after evidence milestones, when eval definition or blocks change)
    - Example request body with definition, optional block_id, and integration_hints
-   - That the response includes tool_submissions, evidence_upload_contract, performance_report_contract, continuous_evaluation, schema_name, example_payload, and collection_guidance
+   - That the response includes tool_submissions, evidence_upload_contract, performance_report_contract, interruption_contract, continuous_evaluation, schema_name, example_payload, collection_guidance, and top-level interruption
    - Instruction to validate tool payloads against the fetched schema before upload
    - Do NOT embed a static schema as the source of truth; reference the API path above
-7. Workspace-specific block mapping guidance and example tool JSON payloads that match the evidence spec (illustrative only).
-8. **Performance (required section)** — document POST ${performancePath} report mode. Every report MUST include:
+8. Workspace-specific block mapping guidance and example tool JSON payloads that match the evidence spec (illustrative only).
+9. **Performance (required section)** — document POST ${performancePath} report mode. Every report MUST include:
    - overall_score (0-100 integer readiness score)
    - marker_scores (4-8 competency axes for spider/radar visualization: id, label, score, rationale, optional block_id)
    - gap_analysis with gaps[] (title, evidence, severity low|medium|high, suggested_repair) and next_steps { directions[], events[] } — remediation must be product/workflow-specific; never TAP, block completion, ILE, or OpenLesson platform tasks
@@ -224,7 +232,7 @@ Required content:
    - Reference performance_report_contract from the evidence spec API for the machine-readable contract and example_report
    - Include a full JSON example response with overall_score, marker_scores, and at least one gap
    - Chat mode example with prompt + conversation_history
-9. Quick integration checklist: fetch evidence spec → upload evidence per contract → regenerate skill → request performance → repeat as evidence grows.
+10. Quick integration checklist: fetch evidence spec → honor interruption scheduling → upload evidence per contract → regenerate skill → request performance → repeat as evidence grows.
 
 Canonical API reference links: ${request.base_url}/skill.md and ${request.base_url}/docs/agentic-v2
 

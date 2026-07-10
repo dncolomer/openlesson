@@ -18,9 +18,16 @@ import {
   recommendIntegrationActions,
 } from "./integration-discovery";
 import { buildPerformanceReportContract, type PerformanceReportContract } from "./performance-report";
+import {
+  buildInterruptionContract,
+  formatInterruptionContractForSkillPrompt,
+  normalizePredictedInterruption,
+  predictInterruption,
+  type EvidenceApiInterruption,
+} from "./predictive-interruption";
 import { callXaiResponsesWithFiles } from "@/lib/xai-client";
 
-export const EVIDENCE_SPEC_VERSION = "1.2";
+export const EVIDENCE_SPEC_VERSION = "1.3";
 
 export function buildEvidenceSchemaApiPath(workspaceId: string, baseUrl: string): string {
   const base = baseUrl.replace(/\/$/, "");
@@ -143,10 +150,17 @@ export function enrichEvidenceSpecResult(
   const continuousEvaluationMcp = buildContinuousEvaluationMcpPolicy(workspaceId, baseUrl, contextCounts);
   const evidenceCount = contextCounts?.evidence_artifacts ?? 0;
   const blockCount = contextCounts?.blocks ?? 0;
+  const llmInterruption = normalizePredictedInterruption(
+    result.predicted_interruption,
+    "generate_evidence_schema",
+    workspaceId
+  );
 
   return {
     ...result,
     spec_version: EVIDENCE_SPEC_VERSION,
+    interruption_contract: buildInterruptionContract(),
+    predicted_interruption: llmInterruption,
     evidence_spec_api_path: evidenceSpecPath,
     evidence_upload_api_path: buildEvidenceUploadApiPath(workspaceId, baseUrl),
     workspace_id: workspaceId,
@@ -245,7 +259,24 @@ ${JSON.stringify(
     },
     null,
     2
-  )}`;
+  )}
+
+${formatInterruptionContractForSkillPrompt()}`;
+}
+
+export function resolveEvidenceSchemaInterruption(
+  spec: EvidenceEvalSchemaResult,
+  workspaceId: string,
+  blockId?: string | null,
+  evidenceArtifacts?: number
+): EvidenceApiInterruption {
+  return predictInterruption({
+    endpoint: "generate_evidence_schema",
+    workspace_id: workspaceId,
+    block_id: blockId,
+    evidence_artifacts: evidenceArtifacts,
+    llm_interruption: spec.predicted_interruption ?? null,
+  });
 }
 
 export interface GenerateEvidenceSpecOptions {

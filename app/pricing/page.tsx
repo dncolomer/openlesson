@@ -257,7 +257,9 @@ export default function PricingPage() {
                     {plan.featured && <span className="border border-neutral-700 px-2 py-1 font-mono text-[10px] uppercase tracking-[1.5px] text-neutral-400">Popular</span>}
                   </div>
                   <div className="mt-8 flex items-baseline gap-2">
-                    <span className="text-4xl font-medium text-white">{selectedVolume ? `$${selectedVolume.price}` : plan.price}</span>
+                    <span className="text-4xl font-medium text-white">
+                      {formatTierPrice((selectedVolume ?? volumeOptions[0])?.price ?? 0)}
+                    </span>
                     <span className="text-sm text-neutral-500">{plan.detail}</span>
                   </div>
                   {volumeOptions.length > 0 && (

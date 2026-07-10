@@ -104,6 +104,9 @@ export async function uploadWorkspaceEvidence(
   }
 
   const ownerUserId = auth.user_id || workspace.user_id;
+  if (!ownerUserId) {
+    throw new Error("Workspace owner is missing.");
+  }
   await assertCanSubmitEvidence(supabase, ownerUserId);
 
   if (input.block_id) {

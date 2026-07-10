@@ -7,6 +7,7 @@ import {
   getGhcScoreBriefForUser,
   hashPrivateToken,
 } from "@/lib/ghc-score";
+import { withEvidenceApiResponse } from "@/lib/agent-v2/predictive-interruption";
 
 export const runtime = "nodejs";
 
@@ -106,12 +107,20 @@ export async function POST(req: NextRequest, { params }: RouteProps) {
   }
 
   return NextResponse.json(
-    {
-      tap_link: {
-        ...link,
-        private_url: buildGhlScoreSessionUrl(baseUrl(req), privateToken),
+    withEvidenceApiResponse(
+      {
+        tap_link: {
+          ...link,
+          private_url: buildGhlScoreSessionUrl(baseUrl(req), privateToken),
+        },
       },
-    },
+      {
+        endpoint: "create_tap_link",
+        workspace_id: workspaceId,
+        block_id: blockId,
+        tap_minutes: minutes,
+      }
+    ),
     { status: 201 }
   );
 }

@@ -62,11 +62,16 @@ import {
   buildEvidenceSchemaApiPath,
   buildIntegrationSkillApiPath,
   buildPerformanceApiPath,
+  resolveEvidenceSchemaInterruption,
 } from "./evidence-integration";
+import {
+  type InterruptionContext,
+  withEvidenceApiResponse,
+} from "./predictive-interruption";
 
 export const MCP_EVIDENCE_PROTOCOL_VERSION = "2025-03-26";
 export const MCP_EVIDENCE_SERVER_NAME = "openlesson-evidence-api";
-export const MCP_EVIDENCE_SERVER_VERSION = "1.1.0";
+export const MCP_EVIDENCE_SERVER_VERSION = "1.3.0";
 
 export const MCP_EVIDENCE_SERVER_INSTRUCTIONS = `openLesson Evidence API MCP — full parity with Evidence API REST.
 
@@ -77,6 +82,9 @@ Pillars: ${OPENLESSON_SCOPE.pillars.join(" | ")}
 ## Workspace & progress model
 ${OPENLESSON_SCOPE.workspace_model}
 Progress signals: evidence_artifact counts, analyze_performance → overall_score, conversion_score vs conversion_goal, marker_scores, gap_analysis.
+
+## Predictive interruptions (TIM)
+Every tool result includes top-level \`interruption\` (object or null). When non-null, schedule intervention after delay_ms unless a later Evidence API call supersedes it. Read interruption_contract from generate_evidence_schema. Resource: openlesson://predictive-interruptions
 
 ## Start here
 1. get_learning_progress(workspace_id) — orientation + recommended_next_actions (REST equivalents included)
@@ -341,6 +349,16 @@ function textToolResult(value: unknown) {
   };
 }
 
+function evidenceToolResult(
+  value: Record<string, unknown>,
+  interruptionContext?: InterruptionContext
+) {
+  const payload = interruptionContext
+    ? withEvidenceApiResponse(value, interruptionContext)
+    : { ...value, interruption: null };
+  return textToolResult(payload);
+}
+
 function stringArg(args: Record<string, unknown>, name: string) {
   const value = args[name];
   return typeof value === "string" && value.trim() ? value.trim() : null;
@@ -529,12 +547,12 @@ export async function callMcpEvidenceTool(
 
   if (name === PUMA_DOC_CUSTOMER_AGENT_TOOLKIT_NAME) {
     requireScope(auth.scopes, "workspaces:read");
-    return textToolResult(
+    return evidenceToolResult(
       buildPumadocCustomerAgentToolkitResponse(origin, {
         workspace_id: stringArg(args, "workspace_id") || undefined,
         customer_context: stringArg(args, "customer_context") || undefined,
         pumadoc_step_id: stringArg(args, "pumadoc_step_id") || undefined,
-      })
+      }) as Record<string, unknown>
     );
   }
 
@@ -560,15 +578,18 @@ export async function callMcpEvidenceTool(
     const { data, error, count } = await query;
     if (error) throw new Error(error.message);
 
-    return textToolResult({
-      workspaces: data || [],
-      pagination: {
-        total: count ?? 0,
-        limit,
-        offset,
-        has_more: offset + limit < (count ?? 0),
+    return evidenceToolResult(
+      {
+        workspaces: data || [],
+        pagination: {
+          total: count ?? 0,
+          limit,
+          offset,
+          has_more: offset + limit < (count ?? 0),
+        },
       },
-    });
+      { endpoint: "list_workspaces" }
+    );
   }
 
   if (name === "get_workspace") {
@@ -576,7 +597,10 @@ export async function callMcpEvidenceTool(
     const workspaceId = stringArg(args, "workspace_id");
     if (!workspaceId) throw new Error("workspace_id is required.");
     const workspace = await loadWorkspace(supabase, auth, workspaceId);
-    return textToolResult({ workspace });
+    return evidenceToolResult(
+      { workspace },
+      { endpoint: "get_workspace", workspace_id: workspaceId }
+    );
   }
 
   if (name === "get_learning_progress") {
@@ -602,7 +626,7 @@ export async function callMcpEvidenceTool(
     const counts = context.payload.counts;
     const workspaceTitle = workspace.title || workspace.root_topic || "workspace";
 
-    return textToolResult(
+    return evidenceToolResult(
       withProgressGuidance(
         {
           workspace: {
@@ -636,7 +660,12 @@ export async function callMcpEvidenceTool(
           conversionGoal: workspace.conversion_goal,
           workspaceTitle,
         }
-      )
+      ),
+      {
+        endpoint: "get_learning_progress",
+        workspace_id: workspaceId,
+        evidence_artifacts: counts.evidence_artifacts,
+      }
     );
   }
 
@@ -785,7 +814,10 @@ export async function callMcpEvidenceTool(
       .eq("plan_id", workspace.id)
       .order("created_at", { ascending: true });
 
-    return textToolResult({ workspace, blocks: blocks || [], files: uploadedFiles });
+    return evidenceToolResult(
+      { workspace, blocks: blocks || [], files: uploadedFiles },
+      { endpoint: "create_workspace", workspace_id: workspace.id }
+    );
   }
 
   if (name === "list_blocks") {
@@ -801,7 +833,10 @@ export async function callMcpEvidenceTool(
       .order("created_at", { ascending: true });
 
     if (error) throw new Error(error.message);
-    return textToolResult({ blocks: blocks || [] });
+    return evidenceToolResult(
+      { blocks: blocks || [] },
+      { endpoint: "list_blocks", workspace_id: workspaceId }
+    );
   }
 
   if (name === "generate_evidence_schema") {
@@ -831,17 +866,33 @@ export async function callMcpEvidenceTool(
       blockId,
     });
 
-    return textToolResult({
-      ...spec,
-      definition: request.definition,
-      workspace_summary: {
-        id: workspace.id,
-        title: workspace.title,
-        root_topic: workspace.root_topic,
+    const llmInterruption = resolveEvidenceSchemaInterruption(
+      spec,
+      workspaceId,
+      blockId,
+      contextCounts?.evidence_artifacts
+    );
+
+    return evidenceToolResult(
+      {
+        ...spec,
+        definition: request.definition,
+        workspace_summary: {
+          id: workspace.id,
+          title: workspace.title,
+          root_topic: workspace.root_topic,
+        },
+        context_counts: contextCounts,
+        file_ids: fileIds,
       },
-      context_counts: contextCounts,
-      file_ids: fileIds,
-    });
+      {
+        endpoint: "generate_evidence_schema",
+        workspace_id: workspaceId,
+        block_id: blockId,
+        evidence_artifacts: contextCounts?.evidence_artifacts,
+        llm_interruption: llmInterruption,
+      }
+    );
   }
 
   if (name === "generate_integration_skill") {
@@ -932,21 +983,29 @@ export async function callMcpEvidenceTool(
       throw new Error(skillResult.error || "Failed to generate integration skill.");
     }
 
-    return textToolResult({
-      skill_md: skillResult.text,
-      skill_name: deriveSkillName(request.integration_name),
-      suggested_share_path: deriveSuggestedSharePath(request.integration_name),
-      workspace_summary: {
-        id: workspace.id,
-        title: workspace.title || workspace.root_topic || "Untitled",
-        root_topic: workspace.root_topic,
-        block_count: blocks?.length || 0,
+    return evidenceToolResult(
+      {
+        skill_md: skillResult.text,
+        skill_name: deriveSkillName(request.integration_name),
+        suggested_share_path: deriveSuggestedSharePath(request.integration_name),
+        workspace_summary: {
+          id: workspace.id,
+          title: workspace.title || workspace.root_topic || "Untitled",
+          root_topic: workspace.root_topic,
+          block_count: blocks?.length || 0,
+        },
+        evidence_spec: evidenceSpec,
+        evidence_spec_prefetched: !!evidenceSpec,
+        context_counts: contextResult?.payload.counts || null,
+        file_ids: fileIds,
       },
-      evidence_spec: evidenceSpec,
-      evidence_spec_prefetched: !!evidenceSpec,
-      context_counts: contextResult?.payload.counts || null,
-      file_ids: fileIds,
-    });
+      {
+        endpoint: "generate_integration_skill",
+        workspace_id: workspaceId,
+        block_id: blockId,
+        evidence_artifacts: contextResult?.payload.counts.evidence_artifacts,
+      }
+    );
   }
 
   if (name === "upload_evidence") {
@@ -983,6 +1042,9 @@ export async function callMcpEvidenceTool(
     }
 
     const ownerUserId = auth.user_id || workspace.user_id;
+    if (!ownerUserId) {
+      throw new Error("Workspace owner is missing.");
+    }
     await assertCanSubmitEvidence(supabase, ownerUserId);
 
     const fileName = defaultEvidenceFileName(
@@ -1027,14 +1089,28 @@ export async function callMcpEvidenceTool(
       throw new Error("Failed to store workspace evidence.");
     }
 
-    return textToolResult({
-      evidence: {
-        ...row,
-        workspace_id: row.plan_id,
-        block_id: row.plan_node_id,
-        type: row.evidence_type,
+    const { count: evidenceCount } = await supabase
+      .from("workspace_evidence")
+      .select("id", { count: "exact", head: true })
+      .eq("plan_id", workspaceId);
+
+    return evidenceToolResult(
+      {
+        evidence: {
+          ...row,
+          workspace_id: row.plan_id,
+          block_id: row.plan_node_id,
+          type: row.evidence_type,
+        },
       },
-    });
+      {
+        endpoint: "upload_evidence",
+        workspace_id: workspaceId,
+        block_id: blockId,
+        evidence_artifacts: evidenceCount ?? 1,
+        tool_name: row.tool_name,
+      }
+    );
   }
 
   if (name === "analyze_performance") {
@@ -1074,7 +1150,7 @@ export async function callMcpEvidenceTool(
             root_topic: workspace.root_topic,
           });
 
-      return textToolResult(
+      return evidenceToolResult(
         withProgressGuidance(
           {
             mode: prompt ? "chat" : "report",
@@ -1094,7 +1170,15 @@ export async function callMcpEvidenceTool(
             conversionGoal: workspace.conversion_goal,
             workspaceTitle: workspace.title || workspace.root_topic || "workspace",
           }
-        )
+        ),
+        {
+          endpoint: "analyze_performance",
+          workspace_id: workspaceId,
+          block_id: blockId,
+          mode: prompt ? "chat" : "report",
+          report: emptyReport?.report ?? null,
+          evidence_artifacts: contextCounts.evidence_artifacts,
+        }
       );
     }
 
@@ -1124,7 +1208,7 @@ export async function callMcpEvidenceTool(
         throw new Error(chatResult.error || "Failed to generate performance chat response.");
       }
 
-      return textToolResult(
+      return evidenceToolResult(
         withProgressGuidance(
           {
             mode: "chat",
@@ -1139,7 +1223,14 @@ export async function callMcpEvidenceTool(
             conversionGoal: workspace.conversion_goal,
             workspaceTitle: workspace.title || workspace.root_topic || "workspace",
           }
-        )
+        ),
+        {
+          endpoint: "analyze_performance",
+          workspace_id: workspaceId,
+          block_id: blockId,
+          mode: "chat",
+          evidence_artifacts: contextCounts.evidence_artifacts,
+        }
       );
     }
 
@@ -1169,7 +1260,7 @@ export async function callMcpEvidenceTool(
       root_topic: workspace.root_topic,
     });
 
-    return textToolResult(
+    return evidenceToolResult(
       withProgressGuidance(
         {
           mode: "report",
@@ -1186,7 +1277,15 @@ export async function callMcpEvidenceTool(
           conversionGoal: workspace.conversion_goal,
           workspaceTitle: workspace.title || workspace.root_topic || "workspace",
         }
-      )
+      ),
+      {
+        endpoint: "analyze_performance",
+        workspace_id: workspaceId,
+        block_id: blockId,
+        mode: "report",
+        report: finalized.report,
+        evidence_artifacts: contextCounts.evidence_artifacts,
+      }
     );
   }
 
@@ -1208,7 +1307,10 @@ export async function callMcpEvidenceTool(
 
     const { data: links, error } = await query;
     if (error) throw new Error(error.message);
-    return textToolResult({ tap_links: links || [] });
+    return evidenceToolResult(
+      { tap_links: links || [] },
+      { endpoint: "list_tap_links", workspace_id: workspaceId }
+    );
   }
 
   if (name === "get_tap_results") {
@@ -1232,12 +1334,15 @@ export async function callMcpEvidenceTool(
     const { data: link, error } = await query.single();
     if (error || !link) throw new Error("TAP link not found.");
 
-    return textToolResult({
-      tap_result: {
-        ...link,
-        gap_analysis: link.status === "completed" ? link.analysis?.gap_analysis || null : null,
+    return evidenceToolResult(
+      {
+        tap_result: {
+          ...link,
+          gap_analysis: link.status === "completed" ? link.analysis?.gap_analysis || null : null,
+        },
       },
-    });
+      { endpoint: "get_tap_results", workspace_id: workspaceId }
+    );
   }
 
   if (name === "create_tap_link") {
@@ -1325,10 +1430,18 @@ export async function callMcpEvidenceTool(
 
     const appBase = process.env.NEXT_PUBLIC_APP_URL || origin;
     const privateUrl = buildGhlScoreSessionUrl(appBase, privateToken);
-    return textToolResult({
-      tap_link: { ...link, private_url: privateUrl },
-      private_url: privateUrl,
-    });
+    return evidenceToolResult(
+      {
+        tap_link: { ...link, private_url: privateUrl },
+        private_url: privateUrl,
+      },
+      {
+        endpoint: "create_tap_link",
+        workspace_id: workspaceId,
+        block_id: blockId,
+        tap_minutes: minutes,
+      }
+    );
   }
 
   throw new Error(`Unknown tool: ${name}`);

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { authenticateRequest, errorResponse } from "@/lib/agent-v2/auth";
 import { canAccessAgentWorkspace } from "@/lib/agent-v2/workspace-access";
+import { withEvidenceApiResponse } from "@/lib/agent-v2/predictive-interruption";
 
 interface RouteProps {
   params: Promise<{ id: string }>;
@@ -33,5 +34,10 @@ export async function GET(req: NextRequest, { params }: RouteProps) {
     return errorResponse(500, "internal_error", "Failed to list blocks");
   }
 
-  return NextResponse.json({ blocks: blocks || [] });
+  return NextResponse.json(
+    withEvidenceApiResponse(
+      { blocks: blocks || [] },
+      { endpoint: "list_blocks", workspace_id: id }
+    )
+  );
 }

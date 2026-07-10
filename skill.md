@@ -64,6 +64,48 @@ Common codes: `unauthorized`, `forbidden`, `teams_required`, `validation_error`,
 
 ---
 
+## Predictive interruptions (TIM)
+
+Every Evidence API **success** response includes top-level `interruption` — object or `null`.
+
+| Value | Meaning |
+|-------|---------|
+| `null` | No intervention predicted |
+| object | Schedule `intervention` after `delay_ms` unless superseded by a later API response |
+
+```json
+{
+  "interruption": {
+    "interruption_id": "int_upload_evidence_ws1_a1b2c3d4",
+    "delay_ms": 75000,
+    "intervention": {
+      "type": "reflection_prompt",
+      "message": "Briefly note why you chose that action before continuing.",
+      "rationale": "Tool trace benefits from explicit rationale.",
+      "consumer_action": "present_reflection_prompt",
+      "block_id": null
+    },
+    "confidence": "medium",
+    "predicted_at": "2026-07-10T12:00:00.000Z"
+  }
+}
+```
+
+**Consumer integration pattern:**
+
+1. On each response, read `interruption`.
+2. If non-null, start a timer for `delay_ms` and prepare `intervention.message` / `consumer_action`.
+3. If another Evidence API response arrives first, cancel the pending timer and apply the new `interruption` (or do nothing if null).
+4. Never stack timers — always supersede.
+
+Intervention types: `reflection_prompt`, `checkpoint_probe`, `coaching_nudge`, `evidence_reminder`, `performance_review`.
+
+Evidence spec responses (`POST .../evidence-schema`, MCP `generate_evidence_schema`) also return `interruption_contract` and may include workspace-specific `predicted_interruption` from Grok (spec version **1.3**).
+
+MCP resource: `resources/read openlesson://predictive-interruptions`
+
+---
+
 ## MCP (optional transport)
 
 Grok and other MCP clients can call tools via JSON-RPC:
@@ -77,11 +119,13 @@ Content-Type: application/json
 { "jsonrpc": "2.0", "id": 1, "method": "tools/list" }
 ```
 
-**Read tools:** `list_workspaces`, `list_blocks`, `list_tap_links`, `get_tap_results`
+**Tools (full REST parity):** `list_workspaces`, `get_workspace`, `get_learning_progress`, `create_workspace`, `list_blocks`, `generate_evidence_schema`, `generate_integration_skill`, `upload_evidence`, `analyze_performance`, `list_tap_links`, `get_tap_results`, `create_tap_link`
 
-Evidence planning, upload, and performance analysis are **REST-only** (`POST .../evidence-schema`, `POST .../integration-skill`, `POST .../evidence`, `POST .../performance`).
+Every MCP tool result includes `interruption` (TIM) with the same semantics as REST.
 
 REST and MCP both use `Authorization: Bearer <api_key>` with Teams API keys from the dashboard. Treat API keys as secrets.
+
+MCP resources: `openlesson://integration-scope`, `openlesson://evidence-loop`, `openlesson://predictive-interruptions`
 
 ---
 
@@ -189,7 +233,19 @@ Use this **before** uploading evidence when you want a concrete contract for wha
   "definition": "...",
   "workspace_summary": { "id": "uuid", "title": "...", "root_topic": "..." },
   "context_counts": { "blocks": 5, "plan_files": 2, "evidence_artifacts": 0 },
-  "file_ids": ["file_..."]
+  "interruption_contract": { "description": "TIM contract...", "supersession_rule": "..." },
+  "file_ids": ["file_..."],
+  "interruption": {
+    "interruption_id": "int_generate_evidence_schema_ws1_x1y2z3",
+    "delay_ms": 30000,
+    "intervention": {
+      "type": "evidence_reminder",
+      "message": "Upload your first evidence artifact using the tool_submissions contract.",
+      "consumer_action": "call_upload_evidence"
+    },
+    "confidence": "high",
+    "predicted_at": "2026-07-10T12:00:00.000Z"
+  }
 }
 ```
 

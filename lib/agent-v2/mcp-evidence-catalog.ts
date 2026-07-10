@@ -19,7 +19,7 @@ export const MCP_EVIDENCE_TOOL_CATALOG = [
   {
     name: "generate_evidence_schema",
     scope: "workspaces:read",
-    summary: "Generate formal evidence spec (tool JSON schemas + upload contract).",
+    summary: "Generate formal evidence spec (tool JSON schemas, interruption_contract, TIM interruption).",
   },
   {
     name: "generate_integration_skill",
@@ -30,7 +30,7 @@ export const MCP_EVIDENCE_TOOL_CATALOG = [
   {
     name: "analyze_performance",
     scope: "workspaces:read",
-    summary: "Scorecard report (no prompt) or chat Q&A (with prompt).",
+    summary: "Scorecard report (no prompt) or chat Q&A (with prompt). Returns TIM interruption.",
   },
   { name: "list_tap_links", scope: "tap:read", summary: "List TAP session links and status." },
   { name: "get_tap_results", scope: "tap:read", summary: "Read completed TAP results." },

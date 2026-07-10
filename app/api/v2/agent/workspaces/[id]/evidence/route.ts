@@ -9,6 +9,7 @@ import {
 } from "@/lib/agent-v2/workspace-evidence";
 import { uploadFileToXAI, deleteFileFromXAI } from "@/lib/xai-files";
 import { checkEvidenceSubmissionAllowance } from "@/lib/usage-enforcement";
+import { withEvidenceApiResponse } from "@/lib/agent-v2/predictive-interruption";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -34,6 +35,9 @@ export async function POST(req: NextRequest, { params }: RouteProps) {
   }
 
   const ownerUserId = auth.user_id || workspace.user_id;
+  if (!ownerUserId) {
+    return errorResponse(500, "internal_error", "Workspace owner is missing");
+  }
   const evidenceAllowance = await checkEvidenceSubmissionAllowance(supabase, ownerUserId);
   if (!evidenceAllowance.allowed) {
     return errorResponse(402, "usage_limit_reached", evidenceAllowance.reason || "Evidence API monthly limit reached");
@@ -138,15 +142,29 @@ export async function POST(req: NextRequest, { params }: RouteProps) {
     return errorResponse(500, "internal_error", "Failed to store workspace evidence");
   }
 
+  const { count: evidenceCount } = await supabase
+    .from("workspace_evidence")
+    .select("id", { count: "exact", head: true })
+    .eq("plan_id", workspaceId);
+
   return NextResponse.json(
-    {
-      evidence: {
-        ...row,
-        workspace_id: row.plan_id,
-        block_id: row.plan_node_id,
-        type: row.evidence_type,
+    withEvidenceApiResponse(
+      {
+        evidence: {
+          ...row,
+          workspace_id: row.plan_id,
+          block_id: row.plan_node_id,
+          type: row.evidence_type,
+        },
       },
-    },
+      {
+        endpoint: "upload_evidence",
+        workspace_id: workspaceId,
+        block_id: blockId,
+        evidence_artifacts: evidenceCount ?? 1,
+        tool_name: row.tool_name,
+      }
+    ),
     { status: 201 }
   );
 }

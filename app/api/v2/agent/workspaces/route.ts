@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { authenticateRequest, errorResponse } from "@/lib/agent-v2/auth";
 import { callXaiJSON, DEFAULT_MODEL, userMessage } from "@/lib/xai-client";
 import { uploadFileToXAI } from "@/lib/xai-files";
+import { withEvidenceApiResponse } from "@/lib/agent-v2/predictive-interruption";
 import {
   fallbackConversionGoal,
   normalizeConversionGoal,
@@ -244,11 +245,14 @@ export async function POST(req: NextRequest) {
     .order("created_at", { ascending: true });
 
   return NextResponse.json(
-    {
-      workspace,
-      blocks: blocks || [],
-      files: uploadedFiles,
-    },
+    withEvidenceApiResponse(
+      {
+        workspace,
+        blocks: blocks || [],
+        files: uploadedFiles,
+      },
+      { endpoint: "create_workspace", workspace_id: workspace.id }
+    ),
     { status: 201 }
   );
 }

@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { authenticateRequest, errorResponse } from "@/lib/agent-v2/auth";
 import { parseEvidenceSchemaRequest } from "@/lib/agent-v2/evidence-schema";
-import { generateWorkspaceEvidenceSpec } from "@/lib/agent-v2/evidence-integration";
+import {
+  generateWorkspaceEvidenceSpec,
+  resolveEvidenceSchemaInterruption,
+} from "@/lib/agent-v2/evidence-integration";
+import { withEvidenceApiResponse } from "@/lib/agent-v2/predictive-interruption";
 import { canAccessAgentWorkspace } from "@/lib/agent-v2/workspace-access";
 
 export const runtime = "nodejs";
@@ -64,17 +68,35 @@ export async function POST(req: NextRequest, { params }: RouteProps) {
       blockId,
     });
 
-    return NextResponse.json({
-      ...spec,
-      definition: request.definition,
-      workspace_summary: {
-        id: workspace.id,
-        title: workspace.title,
-        root_topic: workspace.root_topic,
-      },
-      context_counts: contextCounts,
-      file_ids: fileIds,
-    });
+    const llmInterruption = resolveEvidenceSchemaInterruption(
+      spec,
+      workspaceId,
+      blockId,
+      contextCounts?.evidence_artifacts
+    );
+
+    return NextResponse.json(
+      withEvidenceApiResponse(
+        {
+          ...spec,
+          definition: request.definition,
+          workspace_summary: {
+            id: workspace.id,
+            title: workspace.title,
+            root_topic: workspace.root_topic,
+          },
+          context_counts: contextCounts,
+          file_ids: fileIds,
+        },
+        {
+          endpoint: "generate_evidence_schema",
+          workspace_id: workspaceId,
+          block_id: blockId,
+          evidence_artifacts: contextCounts?.evidence_artifacts,
+          llm_interruption: llmInterruption,
+        }
+      )
+    );
   } catch (error) {
     console.error("[agent/evidence-schema] Generation failed:", error);
     return errorResponse(

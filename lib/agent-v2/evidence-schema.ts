@@ -5,6 +5,7 @@ import type {
 } from "./integration-discovery";
 import type { PerformanceContextPayload } from "./performance-context";
 import type { PerformanceReportContract } from "./performance-report";
+import type { EvidenceApiInterruption, InterruptionContract } from "./predictive-interruption";
 
 export interface EvidenceSchemaIntegrationHints {
   tool_name?: string;
@@ -79,6 +80,10 @@ export interface EvidenceEvalSchemaResult {
   integration_surfaces?: IntegrationSurfaceRef[];
   recommended_next_actions?: RecommendedIntegrationAction[];
   performance_report_contract?: PerformanceReportContract;
+  /** Trace Interruption Model contract — every Evidence API response also carries top-level interruption. */
+  interruption_contract?: InterruptionContract;
+  /** LLM-predicted interruption for this workspace context (mapped to response interruption). */
+  predicted_interruption?: EvidenceApiInterruption;
   spec_version?: string;
   evidence_spec_api_path?: string;
   evidence_upload_api_path?: string;
@@ -214,6 +219,41 @@ export const EVIDENCE_EVAL_SCHEMA_OUTPUT = {
           "gap_analysis",
           "example_report",
         ],
+        additionalProperties: false,
+      },
+      predicted_interruption: {
+        type: ["object", "null"],
+        description:
+          "Optional TIM prediction: when non-null, suggests an intervention the consumer should trigger after delay_ms unless superseded by a later Evidence API response. Use null when no interruption is warranted.",
+        properties: {
+          delay_ms: {
+            type: "number",
+            description: "Milliseconds before consumer triggers intervention (15000-600000).",
+          },
+          confidence: { type: "string", enum: ["low", "medium", "high"] },
+          intervention: {
+            type: "object",
+            properties: {
+              type: {
+                type: "string",
+                enum: [
+                  "reflection_prompt",
+                  "checkpoint_probe",
+                  "coaching_nudge",
+                  "evidence_reminder",
+                  "performance_review",
+                ],
+              },
+              message: { type: "string" },
+              rationale: { type: "string" },
+              consumer_action: { type: "string" },
+              block_id: { type: ["string", "null"] },
+            },
+            required: ["type", "message"],
+            additionalProperties: false,
+          },
+        },
+        required: ["delay_ms", "intervention", "confidence"],
         additionalProperties: false,
       },
     },
@@ -363,6 +403,12 @@ Output rules:
    - Continuous evaluation is the intended operating model, not a one-time setup
 9. schema_name must be snake_case prefixed with "eval_input_".
 10. Keep required_fields practical; use optional_fields for enrichments.
+11. "predicted_interruption" — Trace Interruption Model (TIM) prediction for the consumer system:
+   - Return null when no intervention is predicted (user is on track, or context is too thin).
+   - When non-null, set delay_ms (15000-600000) and intervention { type, message, optional rationale, consumer_action, block_id }.
+   - Types: reflection_prompt (articulate reasoning), checkpoint_probe (verify understanding), coaching_nudge (gap-driven nudge), evidence_reminder (upload proof-of-work), performance_review (request scorecard).
+   - Ground predictions in workspace blocks, eval definition, evidence history, and collection_guidance — not generic coaching.
+   - The consumer schedules the intervention after delay_ms unless any later Evidence API response supersedes it.
 
 Return only JSON matching the output schema.`;
 }

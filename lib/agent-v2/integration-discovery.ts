@@ -1,4 +1,5 @@
 import type { ContinuousEvaluationPolicy } from "./evidence-schema";
+import { formatInterruptionContractForSkillPrompt } from "./predictive-interruption";
 import {
   buildEvidenceSchemaApiPath,
   buildEvidenceUploadApiPath,
@@ -14,6 +15,7 @@ export const OPENLESSON_SCOPE = {
     "Learning verification — overall_score and marker_scores from tool traces, artifacts, and sessions",
     "Learning-to-conversion — conversion_score and conversion_goal tie competency to business outcomes",
     "Proof of work — upload_evidence / POST .../evidence streams observable actions as durable artifacts",
+    "Predictive interruptions (TIM) — every response includes interruption (object or null) with delay_ms and intervention hints",
   ],
   workspace_model:
     "A Verification Workspace has blocks (assessable units), a conversion_goal (what success means), and accumulates evidence. Progress is continuous: upload → re-fetch spec → score → coach → repeat.",
@@ -304,6 +306,12 @@ export const MCP_RESOURCE_CATALOG = [
     description: "Continuous evaluation loop, REST + MCP tool mapping, when to score.",
     mimeType: "text/markdown",
   },
+  {
+    uri: "openlesson://predictive-interruptions",
+    name: "Predictive interruptions (TIM)",
+    description: "Trace Interruption Model contract: interruption field, delay_ms, supersession, consumer obligations.",
+    mimeType: "text/markdown",
+  },
 ] as const;
 
 export function buildMcpResourceContent(uri: string, baseUrl: string): string | null {
@@ -354,6 +362,20 @@ Progress is **continuous**, not one-time setup.
 Call **get_learning_progress** with \`workspace_id\` for a one-shot snapshot and recommended_next_actions.
 
 Every **generate_evidence_schema** response includes \`continuous_evaluation\` (REST) and \`continuous_evaluation_mcp\` (tools) — do not treat either as optional.
+
+Every Evidence API success response also includes \`interruption\` (TIM) — object or null.
+`;
+  }
+
+  if (uri === "openlesson://predictive-interruptions") {
+    return `# Predictive interruptions (Trace Interruption Model)
+
+${formatInterruptionContractForSkillPrompt()}
+
+## REST + MCP parity
+- REST success bodies and MCP tool results both include top-level \`interruption\`.
+- \`interruption_contract\` on evidence spec responses documents the full TIM contract.
+- Supersession: any later Evidence API response replaces the previous pending interruption timer.
 `;
   }
 

@@ -12,6 +12,7 @@ import {
 } from "@/lib/agent-v2/performance-context";
 import { canAccessAgentWorkspace } from "@/lib/agent-v2/workspace-access";
 import { callXaiResponses, callXaiResponsesWithFiles, type ResponsesInputMessage } from "@/lib/xai-client";
+import { withEvidenceApiResponse } from "@/lib/agent-v2/predictive-interruption";
 
 export const runtime = "nodejs";
 export const maxDuration = 120;
@@ -107,17 +108,29 @@ export async function POST(req: NextRequest, { params }: RouteProps) {
               root_topic: workspace.root_topic,
             });
 
-        return NextResponse.json({
-          mode: prompt ? "chat" : "report",
-          response: prompt
-            ? "No performance evidence is attached to this workspace yet. Upload tool usage, screenshots, video, or EEG via POST /evidence, complete a Think Aloud Protocol (TAP) session, or link session data before asking detailed questions."
-            : null,
-          report: emptyReport?.report ?? null,
-          workspace_conversion_goal: emptyReport?.workspace_conversion_goal,
-          conversion_goal_source: emptyReport?.conversion_goal_source,
-          evidence_summary: contextCounts,
-          file_ids: [],
-        });
+        return NextResponse.json(
+          withEvidenceApiResponse(
+            {
+              mode: prompt ? "chat" : "report",
+              response: prompt
+                ? "No performance evidence is attached to this workspace yet. Upload tool usage, screenshots, video, or EEG via POST /evidence, complete a Think Aloud Protocol (TAP) session, or link session data before asking detailed questions."
+                : null,
+              report: emptyReport?.report ?? null,
+              workspace_conversion_goal: emptyReport?.workspace_conversion_goal,
+              conversion_goal_source: emptyReport?.conversion_goal_source,
+              evidence_summary: contextCounts,
+              file_ids: [],
+            },
+            {
+              endpoint: "analyze_performance",
+              workspace_id: workspaceId,
+              block_id: blockId,
+              mode: prompt ? "chat" : "report",
+              report: emptyReport?.report ?? null,
+              evidence_artifacts: contextCounts?.evidence_artifacts,
+            }
+          )
+        );
       }
     } catch (error) {
       console.error("[agent/performance] Context build failed:", error);
@@ -152,12 +165,23 @@ export async function POST(req: NextRequest, { params }: RouteProps) {
       return errorResponse(500, "internal_error", chatResult.error || "Failed to generate performance response");
     }
 
-    return NextResponse.json({
-      mode: "chat",
-      response: chatResult.text,
-      evidence_summary: contextCounts,
-      file_ids: activeFileIds,
-    });
+    return NextResponse.json(
+      withEvidenceApiResponse(
+        {
+          mode: "chat",
+          response: chatResult.text,
+          evidence_summary: contextCounts,
+          file_ids: activeFileIds,
+        },
+        {
+          endpoint: "analyze_performance",
+          workspace_id: workspaceId,
+          block_id: blockId,
+          mode: "chat",
+          evidence_artifacts: contextCounts?.evidence_artifacts,
+        }
+      )
+    );
   }
 
   const storedConversionGoal =
@@ -190,12 +214,24 @@ export async function POST(req: NextRequest, { params }: RouteProps) {
     root_topic: workspace.root_topic,
   });
 
-  return NextResponse.json({
-    mode: "report",
-    workspace_conversion_goal: finalized.workspace_conversion_goal,
-    conversion_goal_source: finalized.conversion_goal_source,
-    report: finalized.report,
-    evidence_summary: contextCounts,
-    file_ids: activeFileIds,
-  });
+  return NextResponse.json(
+    withEvidenceApiResponse(
+      {
+        mode: "report",
+        workspace_conversion_goal: finalized.workspace_conversion_goal,
+        conversion_goal_source: finalized.conversion_goal_source,
+        report: finalized.report,
+        evidence_summary: contextCounts,
+        file_ids: activeFileIds,
+      },
+      {
+        endpoint: "analyze_performance",
+        workspace_id: workspaceId,
+        block_id: blockId,
+        mode: "report",
+        report: finalized.report,
+        evidence_artifacts: contextCounts?.evidence_artifacts,
+      }
+    )
+  );
 }

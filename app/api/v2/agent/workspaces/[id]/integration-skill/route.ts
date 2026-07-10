@@ -14,6 +14,7 @@ import {
 } from "@/lib/agent-v2/integration-skill";
 import { buildWorkspacePerformanceContext } from "@/lib/agent-v2/performance-context";
 import { canAccessAgentWorkspace } from "@/lib/agent-v2/workspace-access";
+import { withEvidenceApiResponse } from "@/lib/agent-v2/predictive-interruption";
 import { callXaiResponsesWithFiles } from "@/lib/xai-client";
 
 export const runtime = "nodejs";
@@ -146,22 +147,34 @@ export async function POST(req: NextRequest, { params }: RouteProps) {
       return errorResponse(500, "internal_error", skillResult.error || "Failed to generate integration skill");
     }
 
-    return NextResponse.json({
-      skill_md: skillResult.text,
-      skill_name: deriveSkillName(request.integration_name),
-      suggested_share_path: deriveSuggestedSharePath(request.integration_name),
-      workspace_summary: {
-        id: workspace.id,
-        title: workspace.title || workspace.root_topic || "Untitled",
-        root_topic: workspace.root_topic,
-        block_count: blocks?.length || 0,
-      },
-      evidence_spec: evidenceSpec,
-      evidence_spec_prefetched: !!evidenceSpec,
-      evidence_spec_api_path: evidenceSpec?.evidence_spec_api_path || null,
-      context_counts: contextResult?.payload.counts || evidenceSpecContextCounts || null,
-      file_ids: fileIds,
-    });
+    const contextCounts = contextResult?.payload.counts || evidenceSpecContextCounts || null;
+
+    return NextResponse.json(
+      withEvidenceApiResponse(
+        {
+          skill_md: skillResult.text,
+          skill_name: deriveSkillName(request.integration_name),
+          suggested_share_path: deriveSuggestedSharePath(request.integration_name),
+          workspace_summary: {
+            id: workspace.id,
+            title: workspace.title || workspace.root_topic || "Untitled",
+            root_topic: workspace.root_topic,
+            block_count: blocks?.length || 0,
+          },
+          evidence_spec: evidenceSpec,
+          evidence_spec_prefetched: !!evidenceSpec,
+          evidence_spec_api_path: evidenceSpec?.evidence_spec_api_path || null,
+          context_counts: contextCounts,
+          file_ids: fileIds,
+        },
+        {
+          endpoint: "generate_integration_skill",
+          workspace_id: workspaceId,
+          block_id: blockId,
+          evidence_artifacts: contextCounts?.evidence_artifacts,
+        }
+      )
+    );
   } catch (error) {
     console.error("[agent/integration-skill] Unhandled error:", error);
     return errorResponse(

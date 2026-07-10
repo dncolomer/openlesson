@@ -8,6 +8,7 @@ import {
   evidenceLimitForSessionAllowance,
   getSessionAllowance,
   PLANS,
+  type OrgUsageSummary,
   type PlanId,
 } from "@/lib/plans";
 import {
@@ -93,15 +94,7 @@ export async function GET() {
     let personalEvidenceCount = await countEvidenceSubmissions(supabase, user.id, periodStart);
     let evidenceCount = personalEvidenceCount;
 
-    let organizationSummary: {
-      id: string;
-      name: string;
-      isOrgAdmin: boolean;
-      memberCount: number;
-      guestCount: number;
-      used: number;
-      limit: number | null;
-    } | null = null;
+    let organizationSummary: OrgUsageSummary | null = null;
 
     if (profile.plan === "pro_teams" && profile.organization_id && periodStart) {
       const admin = createAdminClient();

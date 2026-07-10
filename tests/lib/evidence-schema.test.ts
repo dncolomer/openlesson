@@ -129,7 +129,8 @@ describe("evidence integration helpers", () => {
 
     expect(enriched.evidence_spec_api_path).toContain("/evidence-schema");
     expect(enriched.evidence_upload_api_path).toContain("/evidence");
-    expect(enriched.spec_version).toBe("1.2");
+    expect(enriched.spec_version).toBe("1.3");
+    expect(enriched.interruption_contract).toBeTruthy();
     expect(enriched.performance_report_contract?.marker_scores.visualization).toBe("spider_radar");
     expect(enriched.performance_report_contract?.gap_analysis.gaps_required).toBe(true);
     expect(enriched.continuous_evaluation?.regeneration_required).toBe(true);
@@ -217,11 +218,14 @@ describe("buildIntegrationSkillInstructions", () => {
     expect(instructions).toContain("/api/v2/agent/workspaces/ws-1/integration-skill");
     expect(instructions).toContain("Evidence specification");
     expect(instructions).toContain("Continuous evaluation and regeneration");
+    expect(instructions).toContain("Predictive interruptions");
     expect(instructions).toContain("do not tell them to invent ad-hoc JSON");
     expect(instructions).toContain("regenerate");
     expect(instructions).toContain("overall_score");
     expect(instructions).toContain("marker_scores");
     expect(instructions).toContain("performance_report_contract");
+    expect(instructions).toContain("Predictive interruptions");
+    expect(instructions).toContain("interruption_contract");
   });
 });
 
@@ -254,6 +258,7 @@ describe("buildEvidenceSchemaInstructions", () => {
     expect(instructions).toContain("evidence_upload_contract");
     expect(instructions).toContain("continuous_evaluation_summary");
     expect(instructions).toContain("performance_report_contract");
+    expect(instructions).toContain("predicted_interruption");
     expect(instructions).toContain("marker_scores");
     expect(instructions).toContain("Discovery");
     expect(instructions).toContain("product-independent");

@@ -27,6 +27,44 @@ Valid scopes are `workspaces:read`, `workspaces:write`, `ghl:read`, `ghl:write`,
 | `GET` | `/workspaces/{workspace_id}/ghl-links/{link_id}/results` | `ghl:read` | Request completed TAP session results. |
 | `POST` | `/org/guests` | `org:write` | Organization admins create guest users by email and issue guest API keys. |
 
+## Predictive Interruptions (TIM)
+
+Every Evidence API success response (REST and MCP) includes a top-level `interruption` field powered by the **Trace Interruption Model (TIM)**.
+
+- **`interruption: null`** — no intervention predicted for this moment.
+- **`interruption: { ... }`** — consumer systems should schedule `intervention` after `delay_ms` unless a later Evidence API response supersedes it.
+
+```json
+{
+  "interruption": {
+    "interruption_id": "int_upload_evidence_ws1_a1b2c3d4",
+    "delay_ms": 75000,
+    "intervention": {
+      "type": "reflection_prompt",
+      "message": "Briefly note why you chose that action before continuing the workflow.",
+      "rationale": "Tool trace benefits from explicit rationale.",
+      "consumer_action": "present_reflection_prompt",
+      "block_id": "optional-block-uuid"
+    },
+    "confidence": "medium",
+    "predicted_at": "2026-07-10T12:00:00.000Z"
+  }
+}
+```
+
+**Consumer obligations:**
+
+1. Read `interruption` on every response.
+2. When non-null, schedule the intervention after `delay_ms`.
+3. When a new response arrives before the timer fires, cancel the pending timer and apply the newest `interruption` (or clear if null).
+4. Never stack duplicate timers for the same workspace session.
+
+`POST .../evidence-schema` responses also include `interruption_contract` (machine-readable TIM spec) and may include LLM-authored `predicted_interruption` in the generated spec. Evidence spec version is **1.3**.
+
+Intervention types: `reflection_prompt`, `checkpoint_probe`, `coaching_nudge`, `evidence_reminder`, `performance_review`.
+
+MCP resource: `openlesson://predictive-interruptions`
+
 ## Evidence Input Schema
 
 Use before uploading evidence when you want a concrete JSON contract for what your agent should serialize.

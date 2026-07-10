@@ -42,7 +42,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     ? `A workspace by @${author} on openLesson`
     : "A workspace on openLesson";
 
-  const ogImage = await getRandomPlanCoverImage() || "/og-default.jpg";
+  const ogImage = await getRandomPlanCoverImage() || "/opengraph-image";
   const images = [{ url: ogImage, width: 1200, height: 630, alt: title }];
 
   return {

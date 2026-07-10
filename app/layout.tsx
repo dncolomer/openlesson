@@ -6,18 +6,18 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: {
-    default: "openLesson — Learning Verification for Humans & Agents",
+    default: "openLesson — Learning Efficiency for Humans & Agents",
     template: "%s | openLesson",
   },
   description:
-    "Beyond benchmarks for AI and beyond quizzes for humans. Evidence API, Think Aloud Protocol, ILE, and Agentic Learning Environment on Verification Workspaces.",
+    "Optimize learning efficiency for humans and agentic systems. Evidence API, Think Aloud Protocol, ILE, and Agentic Learning Environment on Verification Workspaces.",
   keywords: [
-    "learning verification platform",
+    "learning efficiency platform",
     "think aloud protocol",
     "AI interview cheating detection",
     "genuine human cognition",
     "AI skill assessment",
-    "learning verification",
+    "learning efficiency",
     "workplace learning analytics",
     "immersive learning environment",
     "LMS integration API",
@@ -36,28 +36,19 @@ export const metadata: Metadata = {
     canonical: "https://openlesson.academy",
   },
   openGraph: {
-    title: "openLesson — Learning Verification for Humans & Agents",
+    title: "openLesson — Learning Efficiency for Humans & Agents",
     description:
-      "Beyond benchmarks for AI and beyond quizzes for humans. Four products on Verification Workspaces.",
+      "Measure what learners actually absorb — not just completion. Four products on Verification Workspaces.",
     url: "https://openlesson.academy",
     siteName: "openLesson",
-    images: [
-      {
-        url: "/og-default.jpg",
-        width: 1024,
-        height: 536,
-        alt: "openLesson — learning verification platform for humans and agents.",
-      },
-    ],
     type: "website",
     locale: "en_US",
   },
   twitter: {
     card: "summary_large_image",
-    title: "openLesson — Learning Verification Platform",
+    title: "openLesson — Learning Efficiency Platform",
     description:
-      "Evidence API, Think Aloud Protocol, ILE, and Agentic Learning Environment, built on Verification Workspaces.",
-    images: ["/og-default.jpg"],
+      "Optimize learning efficiency with Evidence API, Think Aloud Protocol, ILE, and Agentic Learning Environment.",
     creator: "@uncertainsys",
   },
   robots: {
@@ -80,7 +71,7 @@ const organizationSchema = {
   name: "openLesson",
   url: "https://openlesson.academy",
   description:
-    "Four products on Verification Workspaces: Evidence API, Think Aloud Protocol, ILE, and Agentic Learning Environment.",
+    "Learning efficiency platform on Verification Workspaces: Evidence API, Think Aloud Protocol, ILE, and Agentic Learning Environment.",
   founder: {
     "@type": "Person",
     name: "Daniel Colomer",
@@ -104,11 +95,11 @@ const softwareSchema = {
     priceCurrency: "USD",
   },
   description:
-    "Learning verification and improvement on Verification Workspaces—via Evidence API, Think Aloud Protocol, ILE, and Agentic Learning Environment.",
+    "Learning efficiency measurement and improvement on Verification Workspaces—via Evidence API, Think Aloud Protocol, ILE, and Agentic Learning Environment.",
   featureList: [
     "Verification Workspaces",
-    "Evidence API — headless verification",
-    "Think Aloud Protocol — human verification",
+    "Evidence API — headless efficiency scoring",
+    "Think Aloud Protocol — live human cognition",
     "Integrated Learning Environment — human learning",
     "Agentic Learning Environment — skill development for skill.md developers",
     "Continuous scoring and gap analysis",

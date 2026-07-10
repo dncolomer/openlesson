@@ -42,12 +42,12 @@ export const PLATFORM_PAGE: SeoPlatformPageConfig = {
   h1: "Verify and augment learning where knowledge work happens.",
   intro:
     "openLesson is a knowledge workspace with software tools that verify learning through evidence, proof of work, and cognitive analysis — then augment it with targeted practice. Humans and AI agents perform real work inside the workspace; openLesson scores whether they actually learned, and routes gaps into improvement loops.",
-  metaTitle: "Knowledge Workspace: Verify & Augment Learning",
+  metaTitle: "Knowledge Workspace: Learning Efficiency for Humans & Agents",
   metaDescription:
-    "A knowledge workspace with software tools that verify learning from evidence and augment it with practice. Evidence API, Think Aloud Protocol, ILE, and ALE for humans and agents.",
+    "A knowledge workspace that measures learning efficiency from evidence and augments gaps with practice. Evidence API, Think Aloud Protocol, ILE, and ALE for humans and agents.",
   keywords: [
     "knowledge workspace",
-    "learning verification",
+    "learning efficiency",
     "augmented learning",
     "evidence API",
     "think aloud protocol",
@@ -68,7 +68,7 @@ export const PLATFORM_PAGE: SeoPlatformPageConfig = {
     {
       title: "Verify: Evidence API",
       paragraphs: [
-        "The Evidence API is headless learning verification for humans and agents. Send unstructured artifacts and tool traces; receive continuous readiness scores with severity-ranked gap analysis. No hosted session required.",
+        "The Evidence API is headless learning efficiency scoring for humans and agents. Send unstructured artifacts and tool traces; receive continuous readiness scores with severity-ranked gap analysis. No hosted session required.",
         "Use it when work already produces evidence: agent tool traces, call transcripts, screen captures, documents. Verify skills and judgment before deploy gates or high-stakes handoffs — beyond benchmark pass rates and quiz completion.",
       ],
     },

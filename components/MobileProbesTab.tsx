@@ -5,7 +5,7 @@ import { type Probe, type SessionPlan } from "@/lib/storage";
 import { useI18n } from "@/lib/i18n";
 import { useTypewriter } from "@/lib/useTypewriter";
 import { isProbeTyped, markProbeTyped } from "@/lib/welcomeState";
-import { TutorWelcome } from "./TutorWelcome";
+import { SessionOnboardingGuide } from "./SessionOnboardingGuide";
 import { TutorBackground } from "./TutorBackground";
 import { ListenButton } from "./ListenButton";
 import { ConfirmDialog } from "./ui/ConfirmDialog";
@@ -35,10 +35,11 @@ interface MobileProbesTabProps {
   archivingProbeId?: string | null;
   isGeneratingProbe?: boolean;
   tutorName?: string;
-  /** Show the fresh-session typed welcome + Play button. */
+  /** Show the fresh-session onboarding guide + Start button. */
   showWelcome?: boolean;
   onWelcomePlay?: () => void;
   isStartingSession?: boolean;
+  welcomeResetKey?: number;
   /** Session id — used to gate the one-time TTS narration of the welcome. */
   sessionId?: string;
   /** BCP-47 language override for TTS. */
@@ -82,6 +83,7 @@ export function MobileProbesTab({
   showWelcome = false,
   onWelcomePlay,
   isStartingSession = false,
+  welcomeResetKey = 0,
   sessionId,
   ttsLanguage,
   isSessionActive = false,
@@ -201,13 +203,14 @@ export function MobileProbesTab({
       <div className="relative flex-1 min-w-0 flex flex-col bg-[#0a0a0a] h-full overflow-hidden">
         <TutorBackground isSpeaking={isSpeaking} stepIndex={sessionPlan?.currentStepIndex} images={aestheticImages} />
         <div className="relative z-10 flex-1 min-h-0 flex flex-col">
-          <TutorWelcome
-            tutorName={displayTutorName}
-            onPlay={() => onWelcomePlay?.()}
+          <SessionOnboardingGuide
+            key={welcomeResetKey}
+            variant="ile"
+            presentation="floating"
+            language={ttsLanguage}
+            showStartAction
+            onStart={() => onWelcomePlay?.()}
             isStarting={isStartingSession}
-            sessionId={sessionId}
-            ttsLanguage={ttsLanguage}
-            compactMobile
           />
         </div>
         {aestheticName && (

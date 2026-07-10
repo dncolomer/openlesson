@@ -5,7 +5,7 @@ import { type Probe, type ToolName, type ToolAction } from "@/lib/storage";
 import { useI18n } from "@/lib/i18n";
 import { useTypewriter } from "@/lib/useTypewriter";
 import { isProbeTyped, markProbeTyped } from "@/lib/welcomeState";
-import { TutorWelcome } from "./TutorWelcome";
+import { SessionOnboardingGuide } from "./SessionOnboardingGuide";
 import { TutorBackground } from "./TutorBackground";
 import { ListenButton } from "./ListenButton";
 import { ConfirmDialog } from "./ui/ConfirmDialog";
@@ -63,16 +63,15 @@ interface ProbesPanelProps {
   isSessionActive?: boolean;
   tutorName?: string;
   /**
-   * Fresh-session onboarding. When true the panel shows the typed welcome
-   * text + Play button instead of the normal empty state. Parent is
-   * responsible for tracking welcome-seen state and passing `false` after
-   * the user clicks play (or on a refresh after play).
+   * Fresh-session onboarding. When true the panel shows the 3-step guide
+   * instead of the normal empty state. Parent tracks welcome-seen state.
    */
   showWelcome?: boolean;
-  /** Fired when the user clicks the welcome Play button. */
+  /** Fired when the user clicks Start block on the final guide step. */
   onWelcomePlay?: () => void;
-  /** Parent is currently fetching the opening probe (shows spinner on Play). */
+  /** Parent is currently fetching the opening probe (shows spinner on Start). */
   isStartingSession?: boolean;
+  welcomeResetKey?: number;
   /** Session id — used to gate the one-time TTS narration of the welcome. */
   sessionId?: string;
   /** BCP-47 language override for TTS. */
@@ -117,6 +116,7 @@ export function ProbesPanel({
   showWelcome = false,
   onWelcomePlay,
   isStartingSession = false,
+  welcomeResetKey = 0,
   sessionId,
   ttsLanguage,
   isSpeaking = false,
@@ -257,12 +257,14 @@ export function ProbesPanel({
         {/* Faint frosted-glass background image — one random pick per session. */}
         <TutorBackground isSpeaking={isSpeaking} stepIndex={sessionPlan?.currentStepIndex} images={aestheticImages} />
         <div className="relative z-10 flex-1 min-h-0 flex flex-col overflow-hidden">
-          <TutorWelcome
-            tutorName={displayTutorName}
-            onPlay={() => onWelcomePlay?.()}
+          <SessionOnboardingGuide
+            key={welcomeResetKey}
+            variant="ile"
+            presentation="floating"
+            language={ttsLanguage}
+            showStartAction
+            onStart={() => onWelcomePlay?.()}
             isStarting={isStartingSession}
-            sessionId={sessionId}
-            ttsLanguage={ttsLanguage}
           />
         </div>
         {aestheticName && (

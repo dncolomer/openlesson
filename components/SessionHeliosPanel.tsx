@@ -11,7 +11,8 @@ import {
   type GhcDialogueMessage,
   GHC_BACKGROUND_IMAGES,
 } from "@/components/ghc/GhcUi";
-import { TutorWelcome } from "@/components/TutorWelcome";
+import { SessionOnboardingGuide } from "@/components/SessionOnboardingGuide";
+import { ActiveThoughtSlots } from "@/components/ghc/ActiveThoughtSlots";
 import { SlidingTranscript } from "@/components/ghc/SlidingTranscript";
 
 interface SessionHeliosPanelProps {
@@ -29,6 +30,8 @@ interface SessionHeliosPanelProps {
   showWelcome?: boolean;
   onWelcomePlay?: () => void;
   isStartingSession?: boolean;
+  /** Bumped when Help re-opens the guide so slides reset to step 1. */
+  welcomeResetKey?: number;
   sessionId: string;
   ttsLanguage?: string;
   tutorName?: string;
@@ -54,6 +57,7 @@ export function SessionHeliosPanel({
   showWelcome = false,
   onWelcomePlay,
   isStartingSession = false,
+  welcomeResetKey = 0,
   sessionId,
   ttsLanguage,
   tutorName = "Helios",
@@ -77,12 +81,14 @@ export function SessionHeliosPanel({
       <div className="relative h-full overflow-hidden bg-[#0a0a0a]">
         <GhcBackgroundLayers bgImage={bgImage} dimStrength="medium" />
         <div className="relative z-10 flex h-full min-h-0 flex-col overflow-hidden">
-          <TutorWelcome
-            tutorName={tutorName}
-            onPlay={() => onWelcomePlay?.()}
+          <SessionOnboardingGuide
+            key={welcomeResetKey}
+            variant="ile"
+            presentation="floating"
+            language={ttsLanguage}
+            showStartAction
+            onStart={() => onWelcomePlay?.()}
             isStarting={isStartingSession}
-            sessionId={sessionId}
-            ttsLanguage={ttsLanguage}
           />
         </div>
         {aestheticName && <div className="absolute bottom-2 left-3 z-10 text-[10px] text-neutral-700">{aestheticName}</div>}
@@ -166,45 +172,12 @@ export function SessionHeliosPanel({
 
               <div className="mt-3 border-t border-neutral-900/80 pt-3">
                 <p className="mb-2 text-[10px] uppercase tracking-[2px] text-neutral-600">{t("probes.activeThoughts")}</p>
-                <div className="grid gap-2 md:grid-cols-3">
-                  {thought.latestThoughts.map((entry, index) => (
-                    <div
-                      key={entry.id}
-                      className={`group flex h-32 max-h-32 flex-col gap-1.5 overflow-hidden rounded-xl border bg-black/70 p-3 text-left transition hover:border-white/50 ${
-                        thought.selectedActiveThoughtIds.has(entry.id) ? "border-white/70" : "border-neutral-800"
-                      }`}
-                    >
-                      <p className="shrink-0 text-[10px] uppercase tracking-[1.8px] text-neutral-500">Thought {index + 1}</p>
-                      <p className="min-h-0 flex-1 overflow-hidden text-sm leading-relaxed text-neutral-200 line-clamp-3" title={entry.text}>
-                        {entry.text}
-                      </p>
-                      <div className="flex shrink-0 flex-wrap items-center gap-2 border-t border-neutral-900 pt-2">
-                        <GhcButton
-                          size="sm"
-                          variant={thought.selectedActiveThoughtIds.has(entry.id) ? "toggleOn" : "toggleOff"}
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            thought.toggleActiveThought(entry.id);
-                          }}
-                        >
-                          {thought.selectedActiveThoughtIds.has(entry.id) ? (
-                            "selected"
-                          ) : (
-                            <GhcButtonLabel shortcut={["⇧", String(index + 1)]}>select</GhcButtonLabel>
-                          )}
-                        </GhcButton>
-                        <GhcButton size="sm" onClick={() => void thought.sendThought(entry.text, [entry.id])}>
-                          <GhcButtonLabel shortcut={index + 1}>send</GhcButtonLabel>
-                        </GhcButton>
-                      </div>
-                    </div>
-                  ))}
-                  {thought.latestThoughts.length === 0 && (
-                    <div className="col-span-full rounded-xl border border-dashed border-neutral-800 bg-black/70 p-4 text-center text-xs text-neutral-600">
-                      {t("probes.speakToCreateThoughts")}
-                    </div>
-                  )}
-                </div>
+                <ActiveThoughtSlots
+                  thoughts={thought.latestThoughts}
+                  selectedThoughtIds={thought.selectedActiveThoughtIds}
+                  onToggleSelect={thought.toggleActiveThought}
+                  onSendThought={(text, thoughtId) => void thought.sendThought(text, [thoughtId])}
+                />
               </div>
             </div>
           </>

@@ -79,6 +79,7 @@ import { isSessionWelcomeSeen, markSessionWelcomeSeen } from "@/lib/welcomeState
 import { fetchAestheticPackages, type AestheticPackage } from "@/lib/aesthetics";
 import { AestheticPicker } from "./AestheticPicker";
 
+
 import { DantesTool } from "./DantesTool";
 
 type ChapterWorkspace = {
@@ -286,30 +287,12 @@ export function SessionView({ sessionId }: { sessionId: string }) {
   const resizablePaneRef = useRef<ResizablePaneHandle>(null);
   // Source-of-truth for which of the three workspace views are visible.
   // Kept in sync with the ResizablePane collapsed state via the toggle
-  // UI in the top bar. At least one must be true at all times. Initialized
-  // from the persisted pane layout so refreshes preserve user choice.
+  // UI in the top bar. At least one must be true at all times.
   type PaneVis = { tools: boolean; tutor: boolean; plan: boolean };
-  const [paneVisibility, setPaneVisibility] = useState<PaneVis>(() => {
-    if (typeof window === "undefined") return { tools: true, tutor: true, plan: true };
-    const readCollapsed = (key: string): null | "left" | "right" => {
-      try {
-        const raw = window.localStorage.getItem(key);
-        if (!raw) return null;
-        const parsed = JSON.parse(raw);
-        return parsed.collapsedSide === "left" || parsed.collapsedSide === "right"
-          ? parsed.collapsedSide
-          : null;
-      } catch {
-        return null;
-      }
-    };
-    const split = readCollapsed("session-split-tools-helios");
-    return {
-      tools: split !== "left",
-      // Tutor (Helios) pane is always visible — it cannot be hidden.
-      tutor: true,
-      plan: split !== "right",
-    };
+  const [paneVisibility, setPaneVisibility] = useState<PaneVis>({
+    tools: true,
+    tutor: true,
+    plan: true,
   });
   // Canonical applier: writes both the toggle state AND the underlying
   // ResizablePane collapsed states, so the UI and the actual layout are
@@ -335,17 +318,12 @@ export function SessionView({ sessionId }: { sessionId: string }) {
     applyPaneVisibility({ ...paneVisibility, [view]: true });
   }, [paneVisibility, applyPaneVisibility]);
 
-  // Helios (tutor) pane is always visible — on mount, if a persisted layout
-  // from before this invariant existed has the tutor pane collapsed, force
-  // it open so the underlying ResizablePane state matches paneVisibility.
-  useEffect(() => {
-    const id = window.setTimeout(() => {
-      applyPaneVisibility({ ...paneVisibility, tutor: true });
-    }, 0);
-    return () => window.clearTimeout(id);
-    // Run once on mount.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  const applyIleChapterGridStartup = useCallback(() => {
+    prevToolRef.current = null;
+    setActiveTool("chapters");
+    applyPaneVisibility({ tools: true, tutor: true, plan: true });
+  }, [applyPaneVisibility]);
+
   const [objectives, setObjectives] = useState<string[]>([]);
   const [objectiveStatuses, setObjectiveStatuses] = useState<("red" | "yellow" | "green" | "blue")[]>([]);
 
@@ -392,10 +370,9 @@ export function SessionView({ sessionId }: { sessionId: string }) {
     return localStorage.getItem("tutorial-banner-dismissed") !== "true";
   });
 
-  // In-panel tutor welcome (typed intro + Play button). Shown the first time
+  // In-panel onboarding guide (3 slides + Start block). Shown the first time
   // a user lands on a fresh session (no existing probes AND welcome not yet
-  // acknowledged). Clicking Play inside the panel is what fetches the opening
-  // probe — we defer that network call out of the settings modal.
+  // acknowledged). Clicking Start inside the panel fetches the opening probe.
   const [showWelcomePanel, setShowWelcomePanel] = useState(false);
   const [isStartingSession, setIsStartingSession] = useState(false);
   // Bumped every time we open the welcome panel so the collapse effect
@@ -409,28 +386,30 @@ export function SessionView({ sessionId }: { sessionId: string }) {
     inner: { leftWidth?: number; collapsedSide: null | "left" | "right" };
   } | null>(null);
 
-  // When the in-panel welcome opens, collapse everything except the tutor
-  // panel so the user's attention is on the greeting. We restore nothing on
-  // exit — the user's last-used / persisted layout stays as configured by
-  // the time they click Play (they can re-open tools manually or via the
-  // existing layout preset buttons).
+  // ILE always opens with the chapter grid tool selected and the tools pane expanded.
+  useEffect(() => {
+    if (!session?.id || showWelcomeModal) return;
+    const id = window.setTimeout(() => {
+      applyIleChapterGridStartup();
+    }, 100);
+    return () => window.clearTimeout(id);
+  }, [session?.id, showWelcomeModal, applyIleChapterGridStartup]);
+
+  // Help re-opens the onboarding guide and collapses to tutor-only. Fresh-session
+  // welcome keeps the chapter grid visible so ILE starts on the grid tool.
   useEffect(() => {
     if (!showWelcomePanel) return;
-    if (showWelcomeModal) return; // wait until the settings modal is gone
-    // Defer one frame so the ResizablePane refs are definitely attached,
-    // and so that any competing layout effect (e.g. the auto-expand-left
-    // triggered by activeTool changes) lands first and we collapse last.
+    if (showWelcomeModal) return;
+    if (!helpPreviousLayoutRef.current) return;
     const id = window.setTimeout(() => {
-      // Collapse Tools so Helios gets full width
       resizablePaneRef.current?.setLayout({ collapsedSide: "left" });
-      // Keep the visibility toggles in sync with the actual layout.
       setPaneVisibility({ tools: false, tutor: true, plan: false });
     }, 80);
     return () => window.clearTimeout(id);
   }, [showWelcomePanel, showWelcomeModal, welcomeOpenNonce]);
 
   // Block ILE tools when not actively monitoring. Also allow interaction
-  // during the in-panel tutor welcome — the user needs to click Play and
+  // during the in-panel onboarding guide — the user needs to click Start and
   // optionally Open Session Plan from the welcome surface before recording
   // has actually started.
   const shouldBlockTools =
@@ -2770,14 +2749,12 @@ export function SessionView({ sessionId }: { sessionId: string }) {
     const s = sessionRef.current;
     if (!s) return;
     setIsStartingSession(true);
-    setActiveTool("chapters");
     let didRevealChat = false;
     const revealChat = () => {
       if (didRevealChat) return;
       didRevealChat = true;
       setShowWelcomePanel(false);
-      setPaneVisibility({ tools: true, tutor: true, plan: true });
-      resizablePaneRef.current?.setLayout({ collapsedSide: null });
+      applyIleChapterGridStartup();
     };
     try {
       // Bring the session back to an actively-recording state. Three cases:
@@ -3625,19 +3602,18 @@ export function SessionView({ sessionId }: { sessionId: string }) {
       {showWelcomeModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/70 backdrop-blur-md" />
-          <div className="relative z-10 w-full max-w-md bg-neutral-900 border border-neutral-800 rounded-2xl shadow-2xl overflow-hidden">
-            {/* Header with tutor-style avatar */}
-            <div className="px-6 pt-6 pb-5 border-b border-neutral-800/70">
+          <div className="relative z-10 w-full max-w-md overflow-hidden rounded-2xl border border-neutral-800 bg-neutral-900 shadow-2xl">
+            <div className="border-b border-neutral-800/70 px-6 pt-6 pb-5">
               <div className="flex items-center gap-3">
                 <div className="relative shrink-0">
-                  <div className="w-11 h-11 rounded-full bg-gradient-to-br from-amber-500/15 via-neutral-800 to-neutral-900 border border-neutral-800 flex items-center justify-center overflow-hidden">
-                    <span className="text-lg font-serif text-neutral-200">H</span>
+                  <div className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-full border border-neutral-800 bg-gradient-to-br from-amber-500/15 via-neutral-800 to-neutral-900">
+                    <span className="font-serif text-lg text-neutral-200">H</span>
                   </div>
-                  <div className="absolute inset-0 rounded-full shadow-[0_0_20px_rgba(245,158,11,0.08)] pointer-events-none" />
+                  <div className="pointer-events-none absolute inset-0 rounded-full shadow-[0_0_20px_rgba(245,158,11,0.08)]" />
                 </div>
-                <div className="flex flex-col min-w-0">
-                  <h2 className="text-base font-semibold text-white leading-tight">{t('session.welcomeTitle')}</h2>
-                  <p className="text-[12px] text-neutral-500 leading-tight mt-0.5">{t('session.welcomeMessage')}</p>
+                <div className="flex min-w-0 flex-col">
+                  <h2 className="text-base font-semibold leading-tight text-white">{t('session.welcomeTitle')}</h2>
+                  <p className="mt-0.5 text-[12px] leading-tight text-neutral-500">{t('session.welcomeMessage')}</p>
                 </div>
               </div>
             </div>
@@ -4017,11 +3993,11 @@ export function SessionView({ sessionId }: { sessionId: string }) {
       )}
 
       <ToolsPanel 
-              activeTool={showWelcomePanel ? null : activeTool} 
+              activeTool={activeTool}
               onToolChange={(tool) => {
                 // "help" is a command, not a view: it pauses the session
-                // and re-runs the tutor welcome (typed greeting + Play
-                // button) with the layout collapsed to only-tutor-open.
+                // and re-opens the 3-step onboarding guide in the Helios
+                // panel with the layout collapsed to only-tutor-open.
                 // Probes and session data are preserved — clicking Start
                 // session from the welcome resumes recording.
                 if (tool === "help") {
@@ -4276,6 +4252,7 @@ export function SessionView({ sessionId }: { sessionId: string }) {
                         showWelcome={showWelcomePanel}
                         onWelcomePlay={handleWelcomePlay}
                         isStartingSession={isStartingSession}
+                        welcomeResetKey={welcomeOpenNonce}
                         sessionId={session.id}
                         ttsLanguage={tutoringLanguage}
                         aestheticImages={selectedAesthetic?.images}

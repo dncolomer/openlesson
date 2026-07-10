@@ -46,6 +46,7 @@ import { ConfirmDialog } from "./ui/ConfirmDialog";
 import type { RequestType } from "@/lib/storage";
 import { fetchAestheticPackages, type AestheticPackage } from "@/lib/aesthetics";
 import { AestheticPicker } from "./AestheticPicker";
+
 import { ThinkAloudTraces } from "./ThinkAloudTraces";
 
 type ChapterWorkspace = {
@@ -2356,14 +2357,14 @@ export function MobileSessionView({
               <div className="absolute inset-0 rounded-full shadow-[0_0_25px_rgba(245,158,11,0.08)] pointer-events-none" />
             </div>
           </div>
-          
+
           <h1 className="text-xl font-semibold text-white text-center mb-2">
             {t('session.welcomeTitle')}
           </h1>
           <p className="text-neutral-400 text-sm text-center mb-6">
             {t('session.welcomeMessage')}
           </p>
-          
+
           {/* Step indicators (neutral) */}
           <div className="flex items-center justify-center gap-2 mb-6">
             <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-mono tabular-nums transition-colors ${

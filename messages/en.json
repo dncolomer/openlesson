@@ -2430,6 +2430,62 @@
     "noPlansYet": "No workspaces yet.",
     "createFirstPlan": "Create your first workspace"
   },
+  "onboardingGuide": {
+    "ile": {
+      "kicker": "What to expect",
+      "title": "Your learning workspace",
+      "progressLabel": "Onboarding steps",
+      "goToStep": "Go to step {step}",
+      "imagePlaceholder": "Illustration coming soon",
+      "back": "Back",
+      "next": "Next",
+      "step1": {
+        "title": "Tools & Chapters",
+        "imageAlt": "Tools panel and chapter blocks",
+        "body": "Your block is organized as Chapters on a spatial grid — pan, zoom, and place steps where they belong. Open any chapter to work through it with Helios.\n\nThe Tools strip gives you Notebook, Canvas, Thought Memory, Grokipedia, and more. Chapters are living documents: you can edit and expand them freely during the session, even while paused."
+      },
+      "step2": {
+        "title": "Think aloud, then send",
+        "imageAlt": "Selective thought interface",
+        "body": "Speak your reasoning out loud while you work. Press C to crystallize live speech into thought cards.\n\nSelect one thought or combine several, then send them to Helios. Skipped thoughts move to Thought Memory — revisit any trace, resend it, or bookmark insights you want to keep."
+      },
+      "step3": {
+        "title": "Depth over speed",
+        "body": "When you're ready, press Start block. Recording begins and Helios will listen to whatever you send. Take your time — messy thinking is how real learning surfaces.",
+        "quoteText": "Learning is not attained by chance; it must be sought with ardor and attended to with diligence.",
+        "quoteAuthor": "Abigail Adams",
+        "start": "Start block",
+        "starting": "Starting…"
+      }
+    },
+    "tap": {
+      "kicker": "Before you begin",
+      "title": "Think Aloud Protocol",
+      "progressLabel": "Briefing steps",
+      "goToStep": "Go to step {step}",
+      "imagePlaceholder": "Illustration coming soon",
+      "back": "Back",
+      "next": "Next",
+      "step1": {
+        "title": "Timed demonstration",
+        "imageAlt": "Think Aloud Protocol overview",
+        "body": "TAP is a timed demonstration: explain what you learned while Helios listens, then answer Socratic follow-ups to surface gaps and strengths.\n\nSession length and keyboard shortcuts are on the right. When time runs out, you receive a TAP score with marker breakdown and gap analysis."
+      },
+      "step2": {
+        "title": "Selective thoughts",
+        "imageAlt": "Selective thought interface",
+        "body": "Browser transcription turns speech into thought traces. Press C to crystallize, then select which thoughts to send — one card or a combined send.\n\nHelios responds under the avatar with one question at a time, not a chat thread. Thought Memory keeps every trace so you can resend or bookmark insights."
+      },
+      "step3": {
+        "title": "Show what you know",
+        "body": "Press Play when you're ready. The timer starts and Helios opens with a specific question about what you learned here.",
+        "quoteText": "The expert in anything was once a beginner who refused to give up.",
+        "quoteAuthor": "",
+        "start": "Play",
+        "starting": "Starting…"
+      }
+    }
+  },
   "tap": {
     "welcome": {
       "greeting": "Hi, I'm {name}.",

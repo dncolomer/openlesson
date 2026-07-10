@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
+import { tierColor, tierLabel } from "@/lib/admin/tiers";
 
 interface Organization {
   id: string;
@@ -274,14 +275,6 @@ export default function OrganizationDetailPage() {
     });
   };
 
-  const getPlanColor = (plan: string) => {
-    switch (plan) {
-      case "pro": return "text-purple-400";
-      case "regular": return "text-blue-400";
-      default: return "text-neutral-400";
-    }
-  };
-
   if (loading) {
     return (
       <div className="max-w-5xl mx-auto p-6">
@@ -435,7 +428,9 @@ export default function OrganizationDetailPage() {
                     </Link>
                   </td>
                   <td className="p-4">
-                    <span className={getPlanColor(member.plan)}>{member.plan}</span>
+                    <span className={tierColor(member.plan)} title={tierLabel(member.plan)}>
+                      {tierLabel(member.plan)}
+                    </span>
                   </td>
                   <td className="p-4">
                     {member.is_org_admin ? (

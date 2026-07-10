@@ -1,11 +1,20 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { useRouter, useParams } from "next/navigation";
+import { useParams } from "next/navigation";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/client";
 import { AdminTierSelect } from "@/components/AdminTierSelect";
-import { normalizeAdminTier, tierLabel, type AdminTierId } from "@/lib/admin/tiers";
+import { AdminError, AdminLoading } from "@/components/admin/AdminStatus";
+import { useAdminGuard } from "@/components/admin/useAdminGuard";
+import {
+  ADMIN_TIER_OPTIONS,
+  adminTierSelectValue,
+  describePlanLimits,
+  isGrandfatheredPlan,
+  tierChangeWarning,
+  tierLabel,
+  type AdminTierId,
+} from "@/lib/admin/tiers";
 
 interface Lesson {
   id: string;
@@ -35,6 +44,7 @@ interface UserDetail {
   plan: string;
   is_admin: boolean;
   extra_lessons: number;
+  extra_workspaces: number;
   subscription_status: string;
   current_period_end: string | null;
   token_tier: string | null;
@@ -46,9 +56,9 @@ interface UserDetail {
 }
 
 export default function UserDetailPage() {
-  const router = useRouter();
   const params = useParams();
   const userId = params.userId as string;
+  const { loading: authLoading, error: authError, isAdmin } = useAdminGuard();
   
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -64,40 +74,10 @@ export default function UserDetailPage() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [tierUpdating, setTierUpdating] = useState(false);
 
-  const supabase = createClient();
-
   useEffect(() => {
-    checkAdminAndLoadUser();
-  }, [userId]);
-
-  const checkAdminAndLoadUser = async () => {
-    try {
-      const { data: { user: authUser } } = await supabase.auth.getUser();
-
-      if (!authUser) {
-        router.push("/login");
-        return;
-      }
-
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("is_admin")
-        .eq("id", authUser.id)
-        .single();
-
-      if (!profile?.is_admin) {
-        setError("Admin access required");
-        setLoading(false);
-        return;
-      }
-
-      loadUserDetail();
-    } catch (err) {
-      console.error("Admin check error:", err);
-      setError("Failed to verify admin status");
-      setLoading(false);
-    }
-  };
+    if (!isAdmin) return;
+    loadUserDetail();
+  }, [userId, isAdmin]);
 
   const loadUserDetail = async () => {
     try {
@@ -162,28 +142,33 @@ export default function UserDetailPage() {
   const planTotalPages = Math.ceil(plans.length / PLAN_PAGE_SIZE);
   const paginatedPlans = plans.slice((planPage - 1) * PLAN_PAGE_SIZE, planPage * PLAN_PAGE_SIZE);
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
-        <div className="text-neutral-400">Loading...</div>
-      </div>
-    );
-  }
+  const applyTierChange = async (tier: AdminTierId) => {
+    if (!user) return;
+    const warning = tierChangeWarning(user, tier);
+    if (warning && !window.confirm(warning)) return;
 
-  if (error) {
-    return (
-      <div className="min-h-screen bg-[#0a0a0a] flex flex-col items-center justify-center gap-4">
-        <div className="text-red-400">{error}</div>
-        <Link href="/admin" className="text-sm text-neutral-400 hover:text-white">
-          Back to admin
-        </Link>
-      </div>
-    );
-  }
+    setTierUpdating(true);
+    try {
+      const res = await fetch("/api/admin/users", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: user.id, plan: tier }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setUser((prev) => (prev ? { ...prev, ...data.user } : prev));
+      }
+    } finally {
+      setTierUpdating(false);
+    }
+  };
+
+  if (authLoading || loading) return <AdminLoading />;
+  if (authError || error || !isAdmin) return <AdminError message={authError || error || "Admin access required"} />;
 
   return (
-    <main className="max-w-6xl mx-auto p-4 sm:px-6 py-8">
-      <Link href="/admin/users" className="text-sm text-neutral-400 hover:text-white mb-4 inline-block">
+    <main>
+      <Link href="/admin/users" className="mb-4 inline-block text-sm text-neutral-400 hover:text-white">
         ← Back to users
       </Link>
 
@@ -203,30 +188,41 @@ export default function UserDetailPage() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div>
             <div className="text-xs text-neutral-500">Plan</div>
-            <div className="flex items-center gap-2">
+            <div className="space-y-2">
               <AdminTierSelect
-                value={user ? normalizeAdminTier(user) : "free"}
+                value={user ? adminTierSelectValue(user) : "free"}
+                lockedLabel={user && isGrandfatheredPlan(user) ? tierLabel(user.plan) : undefined}
                 disabled={tierUpdating || !user}
-                onChange={async (tier: AdminTierId) => {
-                  if (!user) return;
-                  setTierUpdating(true);
-                  try {
-                    const res = await fetch("/api/admin/users", {
-                      method: "PUT",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({ userId: user.id, plan: tier }),
-                    });
-                    if (res.ok) {
-                      const data = await res.json();
-                      setUser((prev) => (prev ? { ...prev, ...data.user } : prev));
-                    }
-                  } finally {
-                    setTierUpdating(false);
-                  }
-                }}
-                className="px-2 py-1 text-xs rounded border bg-neutral-900 border-neutral-700 text-neutral-200"
+                onChange={applyTierChange}
+                className="rounded border border-neutral-700 bg-neutral-900 px-2 py-1 text-xs text-neutral-200"
               />
-              <span className="text-xs text-neutral-500">{user ? tierLabel(user.plan) : ""}</span>
+              {user && (
+                <p className="text-[11px] text-neutral-500">
+                  {describePlanLimits(user.plan, user.extra_lessons, user.extra_workspaces ?? 0)}
+                </p>
+              )}
+              {user && isGrandfatheredPlan(user) && (
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] text-amber-300">Migrate to</span>
+                  <select
+                    disabled={tierUpdating}
+                    defaultValue=""
+                    onChange={(e) => {
+                      const tier = e.target.value as AdminTierId;
+                      if (tier) void applyTierChange(tier);
+                      e.target.value = "";
+                    }}
+                    className="rounded border border-neutral-700 bg-neutral-900 px-2 py-1 text-xs text-neutral-200"
+                  >
+                    <option value="">Select tier…</option>
+                    {ADMIN_TIER_OPTIONS.filter((t) => t.id !== "free").map((tier) => (
+                      <option key={tier.id} value={tier.id}>
+                        {tier.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
             </div>
           </div>
           <div>
@@ -236,7 +232,11 @@ export default function UserDetailPage() {
             </span>
           </div>
           <div>
-            <div className="text-xs text-neutral-500">Extra Lessons</div>
+            <div className="text-xs text-neutral-500">Extra workspaces</div>
+            <div className="text-neutral-200">{user?.extra_workspaces ?? 0}</div>
+          </div>
+          <div>
+            <div className="text-xs text-neutral-500">Extra sessions</div>
             <div className="flex items-center gap-2">
               <span className="text-neutral-200">{user?.extra_lessons ?? 0}</span>
               {[1, 10, 100].map((amount) => (

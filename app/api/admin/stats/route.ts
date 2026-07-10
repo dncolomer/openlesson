@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin/require-admin";
+import { planFilterBucket } from "@/lib/admin/tiers";
 
 export const runtime = "nodejs";
 
@@ -13,14 +14,16 @@ export async function GET() {
     monthStart.setDate(1);
     monthStart.setHours(0, 0, 0, 0);
 
-    const [usersRes, sessionsRes, completedRes, plansRes, orgsRes, ghlRes, monthlySessionsRes] =
+    const [usersRes, profilesRes, sessionsRes, completedRes, plansRes, orgsRes, tapRes, evidenceRes, monthlySessionsRes] =
       await Promise.all([
         adminClient.from("profiles").select("id", { count: "exact", head: true }),
+        adminClient.from("profiles").select("plan, subscription_status"),
         adminClient.from("sessions").select("id", { count: "exact", head: true }),
         adminClient.from("sessions").select("id", { count: "exact", head: true }).eq("status", "completed"),
         adminClient.from("learning_plans").select("id", { count: "exact", head: true }),
         adminClient.from("organizations").select("id", { count: "exact", head: true }),
         adminClient.from("workspace_ghc_sessions").select("id", { count: "exact", head: true }),
+        adminClient.from("workspace_evidence").select("id", { count: "exact", head: true }),
         adminClient
           .from("sessions")
           .select("user_id")
@@ -31,14 +34,42 @@ export async function GET() {
       (monthlySessionsRes.data || []).map((row: { user_id: string }) => row.user_id)
     ).size;
 
+    const tierBreakdown = {
+      free: 0,
+      regular_2026: 0,
+      pro_teams: 0,
+      legacy: 0,
+      inactive: 0,
+    };
+
+    let activeSubscriptions = 0;
+
+    for (const profile of profilesRes.data || []) {
+      const bucket = planFilterBucket(profile);
+      if (bucket !== "all") tierBreakdown[bucket] += 1;
+      if (profile.subscription_status === "active") activeSubscriptions += 1;
+    }
+
+    const totalIleSessions = sessionsRes.count || 0;
+    const totalTapSessions = tapRes.count || 0;
+
     return NextResponse.json({
       totalUsers: usersRes.count || 0,
       monthlyActiveUsers,
-      totalSessions: sessionsRes.count || 0,
+      totalIleSessions,
+      totalTapSessions,
+      combinedSessions: totalIleSessions + totalTapSessions,
+      completedIleSessions: completedRes.count || 0,
+      totalWorkspaces: plansRes.count || 0,
+      totalOrganizations: orgsRes.count || 0,
+      totalEvidence: evidenceRes.count || 0,
+      activeSubscriptions,
+      tierBreakdown,
+      // Back-compat for older clients
+      totalSessions: totalIleSessions,
       completedSessions: completedRes.count || 0,
       totalPlans: plansRes.count || 0,
-      totalOrganizations: orgsRes.count || 0,
-      totalGhlSessions: ghlRes.count || 0,
+      totalGhlSessions: totalTapSessions,
     });
   } catch (error) {
     console.error("Admin stats error:", error);

@@ -39,6 +39,7 @@ export async function GET() {
         plan,
         is_admin,
         extra_lessons,
+        extra_workspaces,
         subscription_status,
         current_period_end,
         token_tier,
@@ -126,7 +127,17 @@ export async function PUT(request: Request) {
       return NextResponse.json({ error: "Admin access required" }, { status: 403 });
     }
 
-    const { userId, plan, subscription_status, extra_lessons, current_period_end, is_admin, organization_id, is_org_admin } = await request.json();
+    const {
+      userId,
+      plan,
+      subscription_status,
+      extra_lessons,
+      extra_workspaces,
+      current_period_end,
+      is_admin,
+      organization_id,
+      is_org_admin,
+    } = await request.json();
 
     if (!userId) {
       return NextResponse.json({ error: "User ID required" }, { status: 400 });
@@ -142,6 +153,7 @@ export async function PUT(request: Request) {
     }
     if (subscription_status !== undefined) updateData.subscription_status = subscription_status;
     if (extra_lessons !== undefined) updateData.extra_lessons = extra_lessons;
+    if (extra_workspaces !== undefined) updateData.extra_workspaces = extra_workspaces;
     if (current_period_end !== undefined) updateData.current_period_end = current_period_end;
     if (is_admin !== undefined) updateData.is_admin = is_admin;
     if (organization_id !== undefined) updateData.organization_id = organization_id;

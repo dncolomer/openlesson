@@ -1,17 +1,21 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/client";
 import { useI18n } from "@/lib/i18n";
 import { AdminTierSelect } from "@/components/AdminTierSelect";
+import { AdminError, AdminLoading } from "@/components/admin/AdminStatus";
+import { useAdminGuard } from "@/components/admin/useAdminGuard";
 import {
   ADMIN_TIER_OPTIONS,
-  normalizeAdminTier,
+  adminTierSelectValue,
+  isGrandfatheredPlan,
+  planFilterBucket,
+  tierChangeWarning,
   tierColor,
   tierLabel,
   type AdminTierId,
+  type PlanFilterBucket,
 } from "@/lib/admin/tiers";
 
 interface User {
@@ -32,7 +36,7 @@ interface User {
   organization: { id: string; name: string; slug: string } | null;
 }
 
-type TierOption = "all" | AdminTierId;
+type TierOption = PlanFilterBucket;
 type DateFilter = "all" | "7days" | "30days" | "90days" | "year";
 type SortColumn = "username" | "lessons_count" | "plans_count" | "created_at" | "plan" | "subscription_status";
 
@@ -40,8 +44,7 @@ const PAGE_SIZE = 25;
 
 export default function UsersPage() {
   const { t } = useI18n();
-  const router = useRouter();
-  const supabase = createClient();
+  const { loading: authLoading, error: authError, isAdmin } = useAdminGuard();
   const [loading, setLoading] = useState(true);
   const [users, setUsers] = useState<User[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -55,40 +58,13 @@ export default function UsersPage() {
 
 
   useEffect(() => {
-    checkAdminAndLoadUsers();
-  }, []);
+    if (!isAdmin) return;
+    loadUsers();
+  }, [isAdmin]);
 
   useEffect(() => {
     setPage(1);
   }, [searchQuery, tierFilter, dateFilter]);
-
-  const checkAdminAndLoadUsers = async () => {
-    try {
-      const { data: { user: authUser } } = await supabase.auth.getUser();
-      if (!authUser) {
-        router.push("/login");
-        return;
-      }
-
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("is_admin")
-        .eq("id", authUser.id)
-        .single();
-
-      if (!profile?.is_admin) {
-        setError("Admin access required");
-        setLoading(false);
-        return;
-      }
-
-      loadUsers();
-    } catch (err) {
-      console.error("Admin check error:", err);
-      setError("Failed to verify admin status");
-      setLoading(false);
-    }
-  };
 
   const loadUsers = async () => {
     try {
@@ -108,13 +84,16 @@ export default function UsersPage() {
     }
   };
 
-  const handleTierChange = async (userId: string, tier: AdminTierId) => {
-    setUpdatingUserId(userId);
+  const handleTierChange = async (user: User, tier: AdminTierId) => {
+    const warning = tierChangeWarning(user, tier);
+    if (warning && !window.confirm(warning)) return;
+
+    setUpdatingUserId(user.id);
     try {
       const res = await fetch("/api/admin/users", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId, plan: tier }),
+        body: JSON.stringify({ userId: user.id, plan: tier }),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
@@ -147,7 +126,7 @@ export default function UsersPage() {
       (u.username || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
       (u.email || "").toLowerCase().includes(searchQuery.toLowerCase());
     
-    const matchesTier = tierFilter === "all" || normalizeAdminTier(u) === tierFilter;
+    const matchesTier = tierFilter === "all" || planFilterBucket(u) === tierFilter;
     
     const dateStart = getDateFilterStart(dateFilter);
     const userDate = new Date(u.created_at);
@@ -228,22 +207,14 @@ export default function UsersPage() {
 
 
 
-  if (error) {
-    return (
-      <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
-        <div className="text-red-400">{error}</div>
-      </div>
-    );
-  }
+  if (authLoading) return <AdminLoading />;
+  if (authError || error || !isAdmin) return <AdminError message={authError || error || "Admin access required"} />;
 
   return (
-    <div className="max-w-7xl mx-auto p-6">
+    <div>
         <div className="mb-6">
-          <Link href="/admin" className="text-neutral-400 hover:text-white text-sm">
-            ← Back to Admin
-          </Link>
-          <h1 className="text-2xl font-bold text-white mt-2">Users</h1>
-          <p className="text-neutral-400 text-sm">{filteredUsers.length} users</p>
+          <h2 className="text-xl font-semibold text-white">Users</h2>
+          <p className="text-sm text-neutral-400">{filteredUsers.length} users · legacy plans are grandfathered until migrated</p>
         </div>
 
         {/* KPI Summary */}
@@ -254,9 +225,12 @@ export default function UsersPage() {
             <div className="flex gap-2 mt-2 text-[11px]">
               {ADMIN_TIER_OPTIONS.map((tier) => (
                 <span key={tier.id} className={tierColor(tier.id)}>
-                  {tier.label}: {kpiUsers.filter((u) => normalizeAdminTier(u) === tier.id).length}
+                  {tier.label}: {kpiUsers.filter((u) => planFilterBucket(u) === tier.id).length}
                 </span>
               ))}
+              <span className="text-amber-300">
+                Legacy: {kpiUsers.filter((u) => planFilterBucket(u) === "legacy").length}
+              </span>
             </div>
           </div>
           <div className="bg-neutral-900/50 border border-neutral-800 rounded-lg p-4">
@@ -292,10 +266,12 @@ export default function UsersPage() {
             onChange={(e) => setTierFilter(e.target.value as TierOption)}
             className="px-4 py-2 bg-neutral-900 border border-neutral-800 rounded-lg text-white focus:outline-none focus:border-neutral-700"
           >
-            <option value="all">All Tiers</option>
+            <option value="all">All tiers</option>
             {ADMIN_TIER_OPTIONS.map((tier) => (
               <option key={tier.id} value={tier.id}>{tier.label}</option>
             ))}
+            <option value="legacy">Legacy (regular / pro)</option>
+            <option value="inactive">Inactive</option>
           </select>
           <select
             value={dateFilter}
@@ -346,7 +322,7 @@ export default function UsersPage() {
                   Status{getSortIcon("subscription_status")}
                 </th>
                 <th className="text-left p-4 text-neutral-400 text-sm font-medium">Organization</th>
-                <th className="text-right p-4 text-neutral-400 text-sm font-medium">Actions</th>
+                <th className="text-right p-4 text-neutral-400 text-sm font-medium">Extra sessions</th>
               </tr>
             </thead>
             <tbody>
@@ -391,12 +367,15 @@ export default function UsersPage() {
                     </td>
                     <td className="p-4">
                       <AdminTierSelect
-                        value={normalizeAdminTier(user)}
+                        value={adminTierSelectValue(user)}
+                        lockedLabel={isGrandfatheredPlan(user) ? tierLabel(user.plan) : undefined}
                         disabled={updatingUserId === user.id}
-                        onChange={(tier) => handleTierChange(user.id, tier)}
-                        className={`px-2 py-1 text-xs rounded border ${tierColor(user.plan)} bg-neutral-900 border-neutral-700`}
+                        onChange={(tier) => handleTierChange(user, tier)}
+                        className={`rounded border px-2 py-1 text-xs ${tierColor(user.plan)} bg-neutral-900 border-neutral-700`}
                       />
-                      <div className="text-[10px] text-neutral-500 mt-1">{tierLabel(user.plan)}</div>
+                      {!isGrandfatheredPlan(user) && (
+                        <div className="mt-1 text-[10px] text-neutral-500">{tierLabel(user.plan)}</div>
+                      )}
                     </td>
                     <td className="p-4">
                       <span className={`px-2 py-0.5 rounded text-xs ${getStatusColor(user.subscription_status)}`}>

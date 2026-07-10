@@ -1,159 +1,136 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/client";
+import { AdminError, AdminLoading } from "@/components/admin/AdminStatus";
+import { useAdminGuard } from "@/components/admin/useAdminGuard";
 
 interface Stats {
   totalUsers: number;
   monthlyActiveUsers: number;
-  totalSessions: number;
-  completedSessions: number;
-  totalPlans: number;
+  totalIleSessions: number;
+  totalTapSessions: number;
+  combinedSessions: number;
+  completedIleSessions: number;
+  totalWorkspaces: number;
   totalOrganizations: number;
-  totalGhlSessions: number;
+  totalEvidence: number;
+  activeSubscriptions: number;
+  tierBreakdown: {
+    free: number;
+    regular_2026: number;
+    pro_teams: number;
+    legacy: number;
+    inactive: number;
+  };
 }
 
+const NAV_CARDS = [
+  {
+    href: "/admin/users",
+    title: "Users",
+    description: "Plans, usage extras, grandfathered legacy tiers, and org membership.",
+  },
+  {
+    href: "/admin/organizations",
+    title: "Organizations",
+    description: "Teams orgs, members, invite links, and guest access.",
+  },
+  {
+    href: "/admin/plans",
+    title: "Workspaces",
+    description: "Verification workspaces, blocks, and TAP activity.",
+  },
+  {
+    href: "/admin/sessions",
+    title: "Sessions",
+    description: "ILE tutoring sessions across the platform.",
+  },
+  {
+    href: "/admin/leads",
+    title: "Leads",
+    description: "Enterprise and solutions-page inbound leads.",
+  },
+  {
+    href: "/admin/partners",
+    title: "Partners",
+    description: "Partner program stakes, referrals, and payouts.",
+  },
+] as const;
+
 export default function AdminPage() {
-  const router = useRouter();
-  const supabase = createClient();
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { loading, error, isAdmin } = useAdminGuard();
   const [stats, setStats] = useState<Stats | null>(null);
+  const [statsError, setStatsError] = useState<string | null>(null);
 
   useEffect(() => {
-    checkAdminAndLoadStats();
-  }, []);
-
-  const checkAdminAndLoadStats = async () => {
-    try {
-      const { data: { user: authUser } } = await supabase.auth.getUser();
-      if (!authUser) {
-        router.push("/login");
-        return;
-      }
-
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("is_admin")
-        .eq("id", authUser.id)
-        .single();
-
-      if (!profile?.is_admin) {
-        setError("Admin access required");
-        setLoading(false);
-        return;
-      }
-
-      const res = await fetch("/api/admin/stats");
-      const data = await res.json();
-      if (!res.ok) {
-        setError(data.error || "Failed to load stats");
-      } else {
+    if (!isAdmin) return;
+    fetch("/api/admin/stats")
+      .then(async (res) => {
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Failed to load stats");
         setStats(data);
-      }
-    } catch (err) {
-      console.error("Admin check error:", err);
-      setError("Failed to verify admin status");
-    } finally {
-      setLoading(false);
-    }
-  };
+      })
+      .catch((err) => setStatsError(err instanceof Error ? err.message : "Failed to load stats"));
+  }, [isAdmin]);
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
-        <div className="text-neutral-400">Loading...</div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
-        <div className="text-red-400">{error}</div>
-      </div>
-    );
-  }
+  if (loading) return <AdminLoading />;
+  if (error || !isAdmin) return <AdminError message={error || "Admin access required"} />;
 
   return (
-    <div className="max-w-5xl mx-auto p-6">
-      <h1 className="text-2xl font-bold text-white mb-2">Admin Dashboard</h1>
-      <p className="text-neutral-400 mb-8">Overview and quick navigation</p>
+    <div>
+      <p className="mb-6 text-sm text-neutral-400">
+        Platform overview. Legacy <code className="text-neutral-300">regular</code> and{" "}
+        <code className="text-neutral-300">pro</code> subscribers keep grandfathered limits until migrated.
+      </p>
 
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-8">
-        <div className="bg-neutral-900/50 border border-neutral-800 rounded-lg p-6">
-          <div className="text-3xl font-bold text-white">{stats?.totalUsers || 0}</div>
-          <div className="text-neutral-400 text-sm mt-1">Total Users</div>
-        </div>
-        <div className="bg-neutral-900/50 border border-neutral-800 rounded-lg p-6">
-          <div className="text-3xl font-bold text-white">{stats?.monthlyActiveUsers || 0}</div>
-          <div className="text-neutral-400 text-sm mt-1">Monthly Active Users</div>
-        </div>
-        <div className="bg-neutral-900/50 border border-neutral-800 rounded-lg p-6">
-          <div className="text-3xl font-bold text-white">{stats?.totalSessions || 0}</div>
-          <div className="text-neutral-400 text-sm mt-1">Tutoring Blocks</div>
-        </div>
-        <div className="bg-neutral-900/50 border border-neutral-800 rounded-lg p-6">
-          <div className="text-3xl font-bold text-white">{stats?.completedSessions || 0}</div>
-          <div className="text-neutral-400 text-sm mt-1">Completed Blocks</div>
-        </div>
-        <div className="bg-neutral-900/50 border border-neutral-800 rounded-lg p-6">
-          <div className="text-3xl font-bold text-white">{stats?.totalPlans || 0}</div>
-          <div className="text-neutral-400 text-sm mt-1">Workspaces</div>
-        </div>
-        <div className="bg-neutral-900/50 border border-neutral-800 rounded-lg p-6">
-          <div className="text-3xl font-bold text-white">{stats?.totalGhlSessions || 0}</div>
-          <div className="text-neutral-400 text-sm mt-1">GHL Blocks</div>
-        </div>
-        <div className="bg-neutral-900/50 border border-neutral-800 rounded-lg p-6">
-          <div className="text-3xl font-bold text-white">{stats?.totalOrganizations || 0}</div>
-          <div className="text-neutral-400 text-sm mt-1">Organizations</div>
-        </div>
+      {statsError && <p className="mb-4 text-sm text-red-400">{statsError}</p>}
+
+      <div className="mb-8 grid grid-cols-2 gap-4 md:grid-cols-4">
+        <StatCard label="Users" value={stats?.totalUsers ?? 0} />
+        <StatCard label="MAU (ILE)" value={stats?.monthlyActiveUsers ?? 0} />
+        <StatCard label="Active subs" value={stats?.activeSubscriptions ?? 0} />
+        <StatCard label="Organizations" value={stats?.totalOrganizations ?? 0} />
+        <StatCard label="ILE sessions" value={stats?.totalIleSessions ?? 0} />
+        <StatCard label="TAP sessions" value={stats?.totalTapSessions ?? 0} />
+        <StatCard label="Workspaces" value={stats?.totalWorkspaces ?? 0} />
+        <StatCard label="Evidence uploads" value={stats?.totalEvidence ?? 0} />
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Link
-          href="/admin/sessions"
-          className="block bg-neutral-900/50 border border-neutral-800 rounded-lg p-6 hover:border-neutral-700 transition-colors"
-        >
-          <h2 className="text-lg font-semibold text-white mb-2">Blocks</h2>
-          <p className="text-neutral-400 text-sm">
-            View tutoring blocks, filter by status, and inspect linked workspaces
-          </p>
-        </Link>
+      {stats?.tierBreakdown && (
+        <div className="mb-8 rounded-lg border border-neutral-800 bg-neutral-900/50 p-4">
+          <h2 className="mb-3 text-sm font-medium text-white">Plan breakdown</h2>
+          <div className="flex flex-wrap gap-4 text-sm text-neutral-400">
+            <span>Free: {stats.tierBreakdown.free}</span>
+            <span className="text-blue-400">Individual: {stats.tierBreakdown.regular_2026}</span>
+            <span className="text-purple-400">Teams: {stats.tierBreakdown.pro_teams}</span>
+            <span className="text-amber-300">Legacy: {stats.tierBreakdown.legacy}</span>
+            <span>Inactive: {stats.tierBreakdown.inactive}</span>
+          </div>
+        </div>
+      )}
 
-        <Link
-          href="/admin/users"
-          className="block bg-neutral-900/50 border border-neutral-800 rounded-lg p-6 hover:border-neutral-700 transition-colors"
-        >
-          <h2 className="text-lg font-semibold text-white mb-2">Users</h2>
-          <p className="text-neutral-400 text-sm">
-            Manage users and assign Free, Individual, or Pro / Teams tiers
-          </p>
-        </Link>
-
-        <Link
-          href="/admin/organizations"
-          className="block bg-neutral-900/50 border border-neutral-800 rounded-lg p-6 hover:border-neutral-700 transition-colors"
-        >
-          <h2 className="text-lg font-semibold text-white mb-2">Organizations</h2>
-          <p className="text-neutral-400 text-sm">
-            Manage organizations, members, and invite links
-          </p>
-        </Link>
-
-        <Link
-          href="/admin/plans"
-          className="block bg-neutral-900/50 border border-neutral-800 rounded-lg p-6 hover:border-neutral-700 transition-colors"
-        >
-          <h2 className="text-lg font-semibold text-white mb-2">Workspaces</h2>
-          <p className="text-neutral-400 text-sm">
-            View verification workspaces, blocks, and GHL session activity
-          </p>
-        </Link>
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        {NAV_CARDS.map((card) => (
+          <Link
+            key={card.href}
+            href={card.href}
+            className="block rounded-lg border border-neutral-800 bg-neutral-900/50 p-6 transition-colors hover:border-neutral-700"
+          >
+            <h2 className="mb-2 text-lg font-semibold text-white">{card.title}</h2>
+            <p className="text-sm text-neutral-400">{card.description}</p>
+          </Link>
+        ))}
       </div>
+    </div>
+  );
+}
+
+function StatCard({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="rounded-lg border border-neutral-800 bg-neutral-900/50 p-4">
+      <div className="text-2xl font-bold text-white">{value}</div>
+      <div className="mt-1 text-xs text-neutral-500">{label}</div>
     </div>
   );
 }

@@ -121,6 +121,8 @@ Content-Type: application/json
 
 **Tools (full REST parity):** `list_workspaces`, `get_workspace`, `get_learning_progress`, `create_workspace`, `list_blocks`, `generate_evidence_schema`, `generate_integration_skill`, `upload_evidence`, `analyze_performance`, `list_tap_links`, `get_tap_results`, `create_tap_link`
 
+**Partner agents:** call `get_learning_progress` to orient, then `generate_integration_skill` for a workspace-specific `skill.md` — use that skill's checkpoint policy with `upload_evidence` and `analyze_performance`. PumaDoc examples: `/customer-agent-openlesson-skill.md`, `/pumaclaw-mentor-openlesson-skill.md`.
+
 Every MCP tool result includes `interruption` (TIM) with the same semantics as REST.
 
 REST and MCP both use `Authorization: Bearer <api_key>` with Teams API keys from the dashboard. Treat API keys as secrets.

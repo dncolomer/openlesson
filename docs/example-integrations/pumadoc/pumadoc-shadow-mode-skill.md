@@ -1,9 +1,11 @@
 ---
 name: pumadoc-customer-agent-openlesson-shadow-mode
-description: PumaDoc Customer Agent shadow-mode integration — evidence-based cognition validation via OpenLesson with zero learner-facing scores, gap reports, or verification messaging. Results are internal-only.
+description: "[Superseded] Use customer-agent-openlesson-skill.md"
 ---
 
 # PumaDoc Customer Agent — OpenLesson Shadow Mode
+
+> **Superseded** by `customer-agent-openlesson-skill.md`.
 
 This skill teaches the PumaDoc Customer Agent how to run **shadow-mode validation**: serialize learner activity, upload evidence through OpenLesson's Agentic API, and request performance analysis — **without ever surfacing results to the end user**.
 

@@ -1,9 +1,11 @@
 ---
 name: pumadoc-customer-agent-openlesson-evidence-performance
-description: PumaDoc Customer Agent integration skill for OpenLesson workspace creation, open-format tool-usage evidence upload, optional media enrichments, and performance gap analysis via the Evidence API.
+description: "[Superseded] Use /customer-agent-openlesson-skill.md — background verification with validation-step learning next actions."
 ---
 
 # PumaDoc Customer Agent — OpenLesson Evidence & Performance
+
+> **Superseded** by [`/customer-agent-openlesson-skill.md`](/customer-agent-openlesson-skill.md) (concise Customer Agent flow) and [`/pumaclaw-mentor-openlesson-skill.md`](/pumaclaw-mentor-openlesson-skill.md) (PumaClaw Mentor mode). This document remains as a detailed REST reference.
 
 This skill teaches the PumaDoc Customer Agent how to verify customer-development learning by **serializing what the user did**, **uploading evidence** through OpenLesson's Evidence API, and **requesting performance analysis** that returns structured gap reports or follow-up Q&A.
 

@@ -18,8 +18,8 @@ describe("mcp-evidence-catalog", () => {
     expect(names).toContain("analyze_performance");
     expect(names).toContain("generate_evidence_schema");
     expect(names).toContain("get_learning_progress");
-    expect(names).toContain("pumadoc_customer_agent_toolkit");
-    expect(names.length).toBeGreaterThanOrEqual(12);
+    expect(names).not.toContain("pumadoc_customer_agent_toolkit");
+    expect(names.length).toBe(12);
   });
 
   it("emits MCP client config JSON with Bearer auth header", () => {

@@ -1121,12 +1121,19 @@ Content-Type: application/json`}</code>
             </Link>{" "}
             for integration checklists, guest responsibilities, and MCP transport. Generate a custom skill per
             workspace via{" "}
-            <code className="text-neutral-300">POST .../integration-skill</code>, or use the PumaDoc reference:{" "}
+            <code className="text-neutral-300">POST .../integration-skill</code>, or use the PumaDoc examples:{" "}
             <Link
-              href="/pumadoc-evidence-performance-skill.md"
+              href="/customer-agent-openlesson-skill.md"
               className="text-neutral-200 underline decoration-neutral-600 underline-offset-4 hover:text-white"
             >
-              /pumadoc-evidence-performance-skill.md
+              Customer Agent
+            </Link>
+            ,{" "}
+            <Link
+              href="/pumaclaw-mentor-openlesson-skill.md"
+              className="text-neutral-200 underline decoration-neutral-600 underline-offset-4 hover:text-white"
+            >
+              PumaClaw Mentor
             </Link>
             .
           </p>

@@ -522,10 +522,10 @@ const ENDPOINT_SPECS: EndpointSpec[] = [
     ],
   },
   {
-    id: "create-ghl-link",
+    id: "create-tap-link",
     method: "POST",
-    path: "/api/v2/agent/workspaces/{workspace_id}/blocks/{block_id}/ghl-links",
-    scope: "ghl:write",
+    path: "/api/v2/agent/workspaces/{workspace_id}/blocks/{block_id}/tap-links",
+    scope: "tap:write",
     summary: "Create a private Think Aloud Protocol (TAP) link for a block (15 or 30 minutes).",
     status: "201 Created",
     pathParams: [
@@ -542,17 +542,18 @@ const ENDPOINT_SPECS: EndpointSpec[] = [
   "guest_email": "learner@example.com"
 }`,
     responseBody: [
-      { name: "ghl_link.id", type: "uuid", description: "TAP link / session row ID." },
-      { name: "ghl_link.plan_id", type: "uuid", description: "Workspace ID." },
-      { name: "ghl_link.plan_node_id", type: "uuid", description: "Block ID." },
-      { name: "ghl_link.status", type: "string", description: "pending | in_progress | completed" },
-      { name: "ghl_link.requested_duration_seconds", type: "integer", description: "900 (15 min) or 1800 (30 min)." },
-      { name: "ghl_link.focus_node_ids", type: "uuid[]", description: "Focused block IDs (usually the target block)." },
-      { name: "ghl_link.created_at", type: "ISO-8601", description: "Link creation time." },
-      { name: "ghl_link.private_url", type: "string", description: "Bearer URL: /ghl-score/session/{token}. No login required." },
+      { name: "tap_link.id", type: "uuid", description: "TAP link / session row ID." },
+      { name: "tap_link.plan_id", type: "uuid", description: "Workspace ID." },
+      { name: "tap_link.plan_node_id", type: "uuid", description: "Block ID." },
+      { name: "tap_link.status", type: "string", description: "pending | in_progress | completed" },
+      { name: "tap_link.requested_duration_seconds", type: "integer", description: "900 (15 min) or 1800 (30 min)." },
+      { name: "tap_link.focus_node_ids", type: "uuid[]", description: "Focused block IDs (usually the target block)." },
+      { name: "tap_link.created_at", type: "ISO-8601", description: "Link creation time." },
+      { name: "tap_link.private_url", type: "string", description: "Bearer URL: /ghl-score/session/{token}. No login required." },
+      { name: "interruption", type: "object | null", description: "TIM predictive interruption (see Predictive interruptions)." },
     ],
     responseExample: `{
-  "ghl_link": {
+  "tap_link": {
     "id": "ae0cc774-1832-4bb5-bc7d-bf119ddf759f",
     "plan_id": "75b3b4ef-4e47-4f39-bb09-f61406603d75",
     "plan_node_id": "88a43ad8-62f8-4252-a847-2cbc0b754a57",
@@ -564,37 +565,39 @@ const ENDPOINT_SPECS: EndpointSpec[] = [
   }
 }`,
     notes: [
+      "Legacy alias: POST .../blocks/{block_id}/ghl-links (same behavior).",
       "Guest keys auto-attach the link to their guest identity.",
       "Org admins may set guest_user_id or guest_email to assign the link (404 guest_not_found if missing).",
       "Learner completes session at private_url without an API key.",
     ],
   },
   {
-    id: "list-ghl-links",
+    id: "list-tap-links",
     method: "GET",
-    path: "/api/v2/agent/workspaces/{workspace_id}/ghl-links",
-    scope: "ghl:read",
+    path: "/api/v2/agent/workspaces/{workspace_id}/tap-links",
+    scope: "tap:read",
     summary: "List TAP links for a workspace (filtered by caller role).",
     status: "200 OK",
     pathParams: [
       { name: "workspace_id", type: "uuid", required: true, description: "Verification Workspace ID." },
     ],
     responseBody: [
-      { name: "ghl_links", type: "array", description: "Sessions ordered by created_at descending." },
-      { name: "ghl_links[].id", type: "uuid", description: "Link ID." },
-      { name: "ghl_links[].plan_id", type: "uuid", description: "Workspace ID." },
-      { name: "ghl_links[].plan_node_id", type: "uuid", description: "Block ID." },
-      { name: "ghl_links[].status", type: "string", description: "pending | in_progress | completed" },
-      { name: "ghl_links[].requested_duration_seconds", type: "integer", description: "Requested duration." },
-      { name: "ghl_links[].duration_seconds", type: "integer", description: "Actual duration (0 until completed)." },
-      { name: "ghl_links[].focus_node_ids", type: "uuid[]", description: "Focused blocks." },
-      { name: "ghl_links[].overall_score", type: "integer | null", description: "Score when completed." },
-      { name: "ghl_links[].created_at", type: "ISO-8601", description: "Created at." },
-      { name: "ghl_links[].started_at", type: "ISO-8601 | null", description: "Started at." },
-      { name: "ghl_links[].completed_at", type: "ISO-8601 | null", description: "Completed at." },
+      { name: "tap_links", type: "array", description: "Sessions ordered by created_at descending." },
+      { name: "tap_links[].id", type: "uuid", description: "Link ID." },
+      { name: "tap_links[].plan_id", type: "uuid", description: "Workspace ID." },
+      { name: "tap_links[].plan_node_id", type: "uuid", description: "Block ID." },
+      { name: "tap_links[].status", type: "string", description: "pending | in_progress | completed" },
+      { name: "tap_links[].requested_duration_seconds", type: "integer", description: "Requested duration." },
+      { name: "tap_links[].duration_seconds", type: "integer", description: "Actual duration (0 until completed)." },
+      { name: "tap_links[].focus_node_ids", type: "uuid[]", description: "Focused blocks." },
+      { name: "tap_links[].overall_score", type: "integer | null", description: "Score when completed." },
+      { name: "tap_links[].created_at", type: "ISO-8601", description: "Created at." },
+      { name: "tap_links[].started_at", type: "ISO-8601 | null", description: "Started at." },
+      { name: "tap_links[].completed_at", type: "ISO-8601 | null", description: "Completed at." },
+      { name: "interruption", type: "object | null", description: "TIM predictive interruption." },
     ],
     responseExample: `{
-  "ghl_links": [
+  "tap_links": [
     {
       "id": "ae0cc774-1832-4bb5-bc7d-bf119ddf759f",
       "plan_id": "75b3b4ef-4e47-4f39-bb09-f61406603d75",
@@ -614,13 +617,14 @@ const ENDPOINT_SPECS: EndpointSpec[] = [
       "Guests see only their own links.",
       "Non-admin members see only links they created.",
       "Org admins see all links on org workspaces.",
+      "Legacy alias: GET .../ghl-links (same behavior).",
     ],
   },
   {
-    id: "ghl-results",
+    id: "tap-results",
     method: "GET",
-    path: "/api/v2/agent/workspaces/{workspace_id}/ghl-links/{link_id}/results",
-    scope: "ghl:read",
+    path: "/api/v2/agent/workspaces/{workspace_id}/tap-links/{link_id}/results",
+    scope: "tap:read",
     summary: "Poll TAP link completion and read scores, markers, and gap analysis.",
     status: "200 OK",
     pathParams: [
@@ -628,26 +632,27 @@ const ENDPOINT_SPECS: EndpointSpec[] = [
       { name: "link_id", type: "uuid", required: true, description: "TAP link ID from create or list." },
     ],
     responseBody: [
-      { name: "ghl_result.id", type: "uuid", description: "Link ID." },
-      { name: "ghl_result.workspace_id", type: "uuid", description: "Workspace ID." },
-      { name: "ghl_result.block_id", type: "uuid", description: "Block ID." },
-      { name: "ghl_result.xai_file_id", type: "string | null", description: "xAI artifact file when completed." },
-      { name: "ghl_result.status", type: "string", description: "pending | in_progress | completed" },
-      { name: "ghl_result.completed", type: "boolean", description: "True when status=completed." },
-      { name: "ghl_result.duration_seconds", type: "integer", description: "Actual session duration." },
-      { name: "ghl_result.requested_duration_seconds", type: "integer", description: "Requested duration." },
-      { name: "ghl_result.focus_block_ids", type: "uuid[]", description: "Focused blocks." },
-      { name: "ghl_result.summary", type: "string | null", description: "Overall reflection when completed." },
-      { name: "ghl_result.overall_score", type: "integer | null", description: "0–100 when completed." },
-      { name: "ghl_result.marker_scores", type: "array | null", description: "id, label, score, rationale per marker when completed." },
-      { name: "ghl_result.gap_analysis", type: "object | null", description: "summary, gaps[], next_practice[] when completed." },
-      { name: "ghl_result.analysis", type: "object | null", description: "Full analysis JSON when completed." },
-      { name: "ghl_result.created_at", type: "ISO-8601", description: "Created at." },
-      { name: "ghl_result.started_at", type: "ISO-8601 | null", description: "Started at." },
-      { name: "ghl_result.completed_at", type: "ISO-8601 | null", description: "Completed at." },
+      { name: "tap_result.id", type: "uuid", description: "Link ID." },
+      { name: "tap_result.workspace_id", type: "uuid", description: "Workspace ID." },
+      { name: "tap_result.block_id", type: "uuid", description: "Block ID." },
+      { name: "tap_result.xai_file_id", type: "string | null", description: "xAI artifact file when completed." },
+      { name: "tap_result.status", type: "string", description: "pending | in_progress | completed" },
+      { name: "tap_result.completed", type: "boolean", description: "True when status=completed." },
+      { name: "tap_result.duration_seconds", type: "integer", description: "Actual session duration." },
+      { name: "tap_result.requested_duration_seconds", type: "integer", description: "Requested duration." },
+      { name: "tap_result.focus_block_ids", type: "uuid[]", description: "Focused blocks." },
+      { name: "tap_result.summary", type: "string | null", description: "Overall reflection when completed." },
+      { name: "tap_result.overall_score", type: "integer | null", description: "0–100 when completed." },
+      { name: "tap_result.marker_scores", type: "array | null", description: "id, label, score, rationale per marker when completed." },
+      { name: "tap_result.gap_analysis", type: "object | null", description: "summary, gaps[], next_practice[] when completed." },
+      { name: "tap_result.analysis", type: "object | null", description: "Full analysis JSON when completed." },
+      { name: "tap_result.created_at", type: "ISO-8601", description: "Created at." },
+      { name: "tap_result.started_at", type: "ISO-8601 | null", description: "Started at." },
+      { name: "tap_result.completed_at", type: "ISO-8601 | null", description: "Completed at." },
+      { name: "interruption", type: "object | null", description: "TIM predictive interruption." },
     ],
     responseExample: `{
-  "ghl_result": {
+  "tap_result": {
     "id": "ae0cc774-1832-4bb5-bc7d-bf119ddf759f",
     "workspace_id": "75b3b4ef-4e47-4f39-bb09-f61406603d75",
     "block_id": "88a43ad8-62f8-4252-a847-2cbc0b754a57",
@@ -687,7 +692,8 @@ const ENDPOINT_SPECS: EndpointSpec[] = [
 }`,
     notes: [
       "Pending/in_progress: summary, overall_score, marker_scores, gap_analysis, and analysis are null.",
-      "404 ghl_link_not_found if link does not exist or caller cannot access it.",
+      "Legacy alias: GET .../ghl-links/{link_id}/results (same behavior).",
+      "404 tap_link_not_found if link does not exist or caller cannot access it.",
     ],
   },
   {
@@ -712,7 +718,7 @@ const ENDPOINT_SPECS: EndpointSpec[] = [
       { name: "api_key", type: "string", description: "Raw gsk_ key — shown once; store securely." },
       { name: "key.id", type: "uuid", description: "agent_api_keys.id" },
       { name: "key.key_prefix", type: "string", description: "First 13 chars of key for identification." },
-      { name: "key.scopes", type: "string[]", description: "workspaces:read, workspaces:write, ghl:read, ghl:write" },
+      { name: "key.scopes", type: "string[]", description: "workspaces:read, workspaces:write, tap:read, tap:write" },
       { name: "key.rate_limit", type: "integer", description: "Requests per minute (default 120)." },
       { name: "key.created_at", type: "ISO-8601", description: "Key creation time." },
     ],
@@ -730,7 +736,7 @@ const ENDPOINT_SPECS: EndpointSpec[] = [
   "key": {
     "id": "a1b2c3d4-5678-90ab-cdef-1234567890ab",
     "key_prefix": "gsk_a1b2c3d4",
-    "scopes": ["workspaces:read", "workspaces:write", "ghl:read", "ghl:write"],
+    "scopes": ["workspaces:read", "workspaces:write", "tap:read", "tap:write"],
     "rate_limit": 120,
     "created_at": "2026-06-23T13:00:01+00:00"
   }
@@ -766,7 +772,7 @@ const ENDPOINT_SPECS: EndpointSpec[] = [
       "id": "a1b2c3d4-5678-90ab-cdef-1234567890ab",
       "label": "Production agent",
       "key_prefix": "sk_a1b2c3d4e5",
-      "scopes": ["workspaces:read", "workspaces:write", "ghl:read", "ghl:write"],
+      "scopes": ["workspaces:read", "workspaces:write", "tap:read", "tap:write"],
       "rate_limit": 120,
       "is_active": true,
       "created_at": "2026-06-23T12:00:00+00:00",
@@ -789,13 +795,13 @@ const ENDPOINT_SPECS: EndpointSpec[] = [
       {
         name: "scopes",
         type: "string[]",
-        description: "Optional. Default: workspaces:read, workspaces:write, ghl:read, ghl:write. org:read/org:write require org admin.",
+        description: "Optional. Default: workspaces:read, workspaces:write, tap:read, tap:write. org:read/org:write require org admin.",
       },
       { name: "expires_in_days", type: "integer", description: "Optional expiry: 1–365 days." },
     ],
     requestExample: `{
   "label": "CI pipeline",
-  "scopes": ["workspaces:read", "workspaces:write", "ghl:read", "ghl:write", "org:write"],
+  "scopes": ["workspaces:read", "workspaces:write", "tap:read", "tap:write", "org:write"],
   "expires_in_days": 90
 }`,
     responseBody: [
@@ -813,7 +819,7 @@ const ENDPOINT_SPECS: EndpointSpec[] = [
     "id": "a1b2c3d4-5678-90ab-cdef-1234567890ab",
     "label": "CI pipeline",
     "key_prefix": "sk_a1b2c3d4e5",
-    "scopes": ["workspaces:read", "workspaces:write", "ghl:read", "ghl:write", "org:write"],
+    "scopes": ["workspaces:read", "workspaces:write", "tap:read", "tap:write", "org:write"],
     "rate_limit": 120,
     "created_at": "2026-06-23T12:00:00+00:00",
     "expires_at": "2026-09-21T12:00:00+00:00"
@@ -822,7 +828,7 @@ const ENDPOINT_SPECS: EndpointSpec[] = [
 }`,
     notes: [
       "Requires Teams tier (403 teams_required).",
-      "Valid scopes: *, workspaces:read, workspaces:write, ghl:read, ghl:write, org:read, org:write.",
+      "Valid scopes: *, workspaces:read, workspaces:write, tap:read, tap:write, org:read, org:write. Legacy aliases ghl:read and ghl:write are accepted.",
       "403 if more than 10 active keys or if non-admin requests org scopes.",
     ],
   },
@@ -860,7 +866,7 @@ const ENDPOINT_SPECS: EndpointSpec[] = [
       { name: "scopes", type: "string[]", required: true, description: "Non-empty array of valid scope strings." },
     ],
     requestExample: `{
-  "scopes": ["workspaces:read", "ghl:read"]
+  "scopes": ["workspaces:read", "tap:read"]
 }`,
     responseBody: [
       { name: "key.id", type: "uuid", description: "Updated key ID." },
@@ -870,7 +876,7 @@ const ENDPOINT_SPECS: EndpointSpec[] = [
     responseExample: `{
   "key": {
     "id": "a1b2c3d4-5678-90ab-cdef-1234567890ab",
-    "scopes": ["workspaces:read", "ghl:read"],
+    "scopes": ["workspaces:read", "tap:read"],
     "updated_at": "2026-06-23T13:10:00+00:00"
   }
 }`,
@@ -1024,7 +1030,7 @@ Content-Type: application/json`}</code>
             </pre>
             <p className="mt-2 text-sm text-neutral-500">
               Common codes: unauthorized, key_revoked, key_expired, forbidden, teams_required, validation_error,
-              workspace_not_found, block_not_found, ghl_link_not_found, guest_not_found, not_found, rate_limit_exceeded
+              workspace_not_found, block_not_found, tap_link_not_found, guest_not_found, not_found, rate_limit_exceeded
               (429).
             </p>
           </div>
@@ -1041,16 +1047,16 @@ Content-Type: application/json`}</code>
             fields={[
               { name: "workspaces:read", type: "scope", description: "List blocks; generate evidence schemas and integration skills; run performance analysis (report or chat)." },
               { name: "workspaces:write", type: "scope", description: "Create workspaces; upload evidence." },
-              { name: "ghl:read", type: "scope", description: "List TAP links; poll TAP results." },
-              { name: "ghl:write", type: "scope", description: "Create Think Aloud Protocol (TAP) links for blocks." },
+              { name: "tap:read", type: "scope", description: "List TAP links; poll TAP results." },
+              { name: "tap:write", type: "scope", description: "Create Think Aloud Protocol (TAP) links for blocks." },
               { name: "org:read", type: "scope", description: "Reserved for org admin keys (future org read endpoints)." },
               { name: "org:write", type: "scope", description: "Create guest users and issue gsk_ keys." },
               { name: "*", type: "scope", description: "All scopes. Org admins only when assigning to sk_ keys." },
             ]}
           />
           <p className="mt-3 text-sm text-neutral-500">
-            Default sk_ key scopes: workspaces:read, workspaces:write, ghl:read, ghl:write. Guest gsk_ keys receive the
-            same four scopes automatically.
+            Default sk_ key scopes: workspaces:read, workspaces:write, tap:read, tap:write. Guest gsk_ keys receive the
+            same four scopes automatically. Legacy scopes ghl:read and ghl:write remain accepted as aliases.
           </p>
         </section>
 

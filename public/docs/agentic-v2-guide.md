@@ -75,13 +75,13 @@ Files are optional. Supported types are PDF, plain text, Markdown, JPEG, PNG, an
 
 ## TAP Links
 
-`POST /api/v2/agent/workspaces/{workspace_id}/blocks/{block_id}/ghl-links`
+`POST /api/v2/agent/workspaces/{workspace_id}/blocks/{block_id}/tap-links`
 
 ```json
 { "minutes": 15 }
 ```
 
-Returns a `private_url` for `/ghl-score/session/{token}`. Poll `GET .../ghl-links/{link_id}/results` for marker scores and `gap_analysis`.
+Returns a `private_url` for `/ghl-score/session/{token}`. Poll `GET .../tap-links/{link_id}/results` for marker scores and `gap_analysis`.
 
 Identified gaps can be routed into Integrated Learning Environment (ILE) practice blocks for remediation.
 

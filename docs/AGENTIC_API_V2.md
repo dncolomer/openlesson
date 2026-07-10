@@ -10,7 +10,7 @@ The Evidence API supports Verification Workspace creation, evidence upload, lear
 Authorization: Bearer <api_key>
 ```
 
-Valid scopes are `workspaces:read`, `workspaces:write`, `ghl:read`, `ghl:write`, `org:read`, `org:write`, and `*`.
+Valid scopes are `workspaces:read`, `workspaces:write`, `tap:read`, `tap:write`, `org:read`, `org:write`, and `*`. Legacy aliases `ghl:read` and `ghl:write` are accepted for TAP endpoints.
 
 ## Endpoints
 
@@ -22,9 +22,9 @@ Valid scopes are `workspaces:read`, `workspaces:write`, `ghl:read`, `ghl:write`,
 | `POST` | `/workspaces/{workspace_id}/integration-skill` | `workspaces:read` | Grok-generated workspace-specific `skill.md` integration guide for a partner agent. |
 | `POST` | `/workspaces/{workspace_id}/evidence` | `workspaces:write` | Upload tool usage, screenshots, video, or EEG to xAI and link to workspace/block. |
 | `POST` | `/workspaces/{workspace_id}/performance` | `workspaces:read` | Structured gap report or free-form Q&A over workspace evidence. |
-| `POST` | `/workspaces/{workspace_id}/blocks/{block_id}/ghl-links` | `ghl:write` | Request a private Think Aloud Protocol (TAP) link for a block. |
-| `GET` | `/workspaces/{workspace_id}/ghl-links` | `ghl:read` | List existing TAP links and completion status. |
-| `GET` | `/workspaces/{workspace_id}/ghl-links/{link_id}/results` | `ghl:read` | Request completed TAP session results. |
+| `POST` | `/workspaces/{workspace_id}/blocks/{block_id}/tap-links` | `tap:write` | Request a private Think Aloud Protocol (TAP) link for a block. |
+| `GET` | `/workspaces/{workspace_id}/tap-links` | `tap:read` | List existing TAP links and completion status. |
+| `GET` | `/workspaces/{workspace_id}/tap-links/{link_id}/results` | `tap:read` | Request completed TAP session results. |
 | `POST` | `/org/guests` | `org:write` | Organization admins create guest users by email and issue guest API keys. |
 
 ## Predictive Interruptions (TIM)
@@ -176,7 +176,7 @@ The response includes a private URL for the TAP session UI. Think Aloud Protocol
 
 ## Organizations And Guests
 
-Users on the Teams tier can create an organization with `POST /api/organization` and become its admin. Organization admins can use `POST /api/v2/agent/org/guests` with an `org:write` API key to create guest users by email. Guest users receive individual API keys scoped to workspace creation, workspace reading, and TAP link usage (`ghl:read`, `ghl:write` scopes) (`workspaces:read`, `workspaces:write`, `ghl:read`, `ghl:write`).
+Users on the Teams tier can create an organization with `POST /api/organization` and become its admin. Organization admins can use `POST /api/v2/agent/org/guests` with an `org:write` API key to create guest users by email. Guest users receive individual API keys scoped to workspace creation, workspace reading, and TAP link usage (`workspaces:read`, `workspaces:write`, `tap:read`, `tap:write`).
 
 Organization-owned workspaces are visible to all real users and guest users in that organization. When a guest signs up later with the same email, their real user account inherits the guest organization membership, TAP sessions, and guest API keys.
 
@@ -186,7 +186,7 @@ Completed results include the spider score markers plus a gap analysis:
 
 ```json
 {
-  "ghl_result": {
+  "tap_result": {
     "status": "completed",
     "completed": true,
     "overall_score": 82,

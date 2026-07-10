@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { buildTierUpdate, isAdminTier } from "@/lib/admin/tiers";
+import { listAdminProfiles, listAllAuthUsers } from "@/lib/admin/users";
 
 export const runtime = "nodejs";
 
@@ -30,32 +31,14 @@ export async function GET() {
 
     const adminClient = getAdminClient();
 
-    const { data: users, error } = await adminClient
-      .from("profiles")
-      .select(`
-        id,
-        username,
-        created_at,
-        plan,
-        is_admin,
-        extra_lessons,
-        extra_workspaces,
-        subscription_status,
-        current_period_end,
-        token_tier,
-        token_validity_expires_at,
-        metadata,
-        organization_id,
-        is_org_admin
-      `)
-      .order("created_at", { ascending: false });
+    const { profiles: users, error } = await listAdminProfiles(adminClient);
 
     if (error) {
       console.error("Error fetching users:", error);
       return NextResponse.json({ error: "Failed to fetch users" }, { status: 500 });
     }
 
-    const userIds = (users || []).map(u => u.id);
+    const userIds = users.map((u) => u.id);
     
     // Get organization IDs that users belong to
     const orgIds = [...new Set((users || []).map(u => u.organization_id).filter(Boolean))];
@@ -86,10 +69,11 @@ export async function GET() {
       orgsById[o.id] = o;
     });
 
-    const { data: authUsers } = await adminClient.auth.admin.listUsers();
-    
-    const enrichedUsers = (users || []).map(u => {
-      const authUser = authUsers.users.find(a => a.id === u.id);
+    const authUsers = await listAllAuthUsers(adminClient);
+    const authById = new Map(authUsers.map((a) => [a.id, a]));
+
+    const enrichedUsers = users.map((u) => {
+      const authUser = authById.get(u.id);
       const org = u.organization_id ? orgsById[u.organization_id] : null;
       return {
         ...u,

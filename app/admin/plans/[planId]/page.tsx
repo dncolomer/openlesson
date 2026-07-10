@@ -27,7 +27,7 @@ interface Session {
   duration_ms: number;
 }
 
-interface GhlSession {
+interface TapSession {
   id: string;
   status: string;
   overall_score: number | null;
@@ -61,7 +61,7 @@ export default function AdminPlanDetailPage() {
   const [plan, setPlan] = useState<PlanDetail | null>(null);
   const [nodes, setNodes] = useState<PlanNode[]>([]);
   const [sessions, setSessions] = useState<Session[]>([]);
-  const [ghlSessions, setGhlSessions] = useState<GhlSession[]>([]);
+  const [tapSessions, setTapSessions] = useState<TapSession[]>([]);
 
   useEffect(() => {
     loadPlanDetail();
@@ -84,7 +84,7 @@ export default function AdminPlanDetailPage() {
       setPlan(data.plan);
       setNodes(data.nodes || []);
       setSessions(data.sessions || []);
-      setGhlSessions(data.ghlSessions || []);
+      setTapSessions(data.tapSessions || []);
     } catch (err) {
       console.error("Load plan error:", err);
       setError("Failed to load workspace");
@@ -191,8 +191,8 @@ export default function AdminPlanDetailPage() {
             <div className="text-neutral-200">{completedNodes} / {nodes.length} completed</div>
           </div>
           <div>
-            <div className="text-xs text-neutral-500">GHL Blocks</div>
-            <div className="text-neutral-200">{ghlSessions.length}</div>
+            <div className="text-xs text-neutral-500">TAP sessions</div>
+            <div className="text-neutral-200">{tapSessions.length}</div>
           </div>
         </div>
       </div>
@@ -250,12 +250,12 @@ export default function AdminPlanDetailPage() {
           </div>
 
           <div className="bg-neutral-900 border border-neutral-800 rounded-lg p-4">
-            <h2 className="text-lg font-medium mb-4 text-white">GHL Blocks ({ghlSessions.length})</h2>
-            {ghlSessions.length === 0 ? (
-              <p className="text-neutral-500 text-sm">No GHL blocks yet</p>
+            <h2 className="text-lg font-medium mb-4 text-white">TAP sessions ({tapSessions.length})</h2>
+            {tapSessions.length === 0 ? (
+              <p className="text-neutral-500 text-sm">No TAP sessions yet</p>
             ) : (
               <div className="space-y-3 max-h-[220px] overflow-y-auto">
-                {ghlSessions.map((session) => (
+                {tapSessions.map((session) => (
                   <div key={session.id} className="p-3 bg-neutral-800/50 rounded-lg">
                     <div className="flex items-start justify-between mb-1">
                       <div className="text-sm text-neutral-200">

@@ -55,17 +55,17 @@ export async function GET(request: NextRequest) {
     const userIds = [...new Set((plansData || []).map((plan) => plan.user_id))];
 
     const nodeCountMap = new Map<string, number>();
-    const ghlCountMap = new Map<string, number>();
+    const tapCountMap = new Map<string, number>();
     const profileMap = new Map<string, { id: string; username: string | null; email: string | null }>();
 
     if (planIds.length > 0) {
-      const [{ data: nodes }, { data: ghlSessions }] = await Promise.all([
+      const [{ data: nodes }, { data: tapSessions }] = await Promise.all([
         adminClient.from("plan_nodes").select("plan_id").in("plan_id", planIds),
         adminClient.from("workspace_ghc_sessions").select("plan_id").in("plan_id", planIds),
       ]);
       nodes?.forEach((node) => nodeCountMap.set(node.plan_id, (nodeCountMap.get(node.plan_id) || 0) + 1));
-      ghlSessions?.forEach((session) =>
-        ghlCountMap.set(session.plan_id, (ghlCountMap.get(session.plan_id) || 0) + 1)
+      tapSessions?.forEach((session) =>
+        tapCountMap.set(session.plan_id, (tapCountMap.get(session.plan_id) || 0) + 1)
       );
     }
 
@@ -84,7 +84,7 @@ export async function GET(request: NextRequest) {
         ...plan,
         display_topic: plan.title || plan.root_topic,
         node_count: nodeCountMap.get(plan.id) || 0,
-        ghl_session_count: ghlCountMap.get(plan.id) || 0,
+        tap_session_count: tapCountMap.get(plan.id) || 0,
         owner: {
           id: plan.user_id,
           username: profile?.username || null,

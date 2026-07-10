@@ -51,7 +51,7 @@ async function loadPlanNodeContext(
   };
 }
 
-export async function getGhlSessionDetail(adminClient: SupabaseClient, sessionId: string) {
+export async function getTapSessionDetail(adminClient: SupabaseClient, sessionId: string) {
   const { data, error } = await adminClient
     .from("workspace_ghc_sessions")
     .select(
@@ -96,7 +96,7 @@ export async function getGhlSessionDetail(adminClient: SupabaseClient, sessionId
   }
 
   return {
-    kind: "ghl" as const,
+    kind: "tap" as const,
     session: data,
     plan,
     planNode,

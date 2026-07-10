@@ -22,7 +22,7 @@ interface LearningPlan {
   is_agent_session: boolean;
   created_at: string;
   node_count: number;
-  ghl_session_count: number;
+  tap_session_count: number;
   owner?: PlanOwner;
 }
 
@@ -184,9 +184,9 @@ export default function AdminPlansPage() {
         </div>
         <div className="bg-neutral-900/50 border border-neutral-800 rounded-lg p-4">
           <div className="text-2xl font-bold text-cyan-400">
-            {kpiPlans.reduce((sum, p) => sum + (p.ghl_session_count || 0), 0)}
+            {kpiPlans.reduce((sum, p) => sum + (p.tap_session_count || 0), 0)}
           </div>
-          <div className="text-neutral-500 text-xs mt-1">GHL Blocks (this page)</div>
+          <div className="text-neutral-500 text-xs mt-1">TAP sessions (this page)</div>
           <div className="flex gap-2 mt-2 text-[11px]">
             <span className="text-blue-400">Agent-created: {agentCount}</span>
           </div>
@@ -255,7 +255,7 @@ export default function AdminPlansPage() {
                 Nodes{getSortIcon("node_count")}
               </th>
               <th className="text-left text-xs text-neutral-400 font-medium px-4 py-3">Visibility</th>
-              <th className="text-left text-xs text-neutral-400 font-medium px-4 py-3">GHL</th>
+              <th className="text-left text-xs text-neutral-400 font-medium px-4 py-3">TAP</th>
               <th className="text-left text-xs text-neutral-400 font-medium px-4 py-3">Source</th>
             </tr>
           </thead>
@@ -301,7 +301,7 @@ export default function AdminPlansPage() {
                       {plan.is_public ? "Public" : "Private"}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-sm text-neutral-300">{plan.ghl_session_count || 0}</td>
+                  <td className="px-4 py-3 text-sm text-neutral-300">{plan.tap_session_count || 0}</td>
                   <td className="px-4 py-3">
                     <span className={`px-2 py-0.5 rounded text-xs ${
                       plan.is_agent_session

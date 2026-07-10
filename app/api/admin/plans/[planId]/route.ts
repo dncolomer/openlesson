@@ -26,7 +26,7 @@ export async function GET(
       return NextResponse.json({ error: "Workspace not found" }, { status: 404 });
     }
 
-    const [{ data: ownerData }, email, { data: nodesData }, { data: ghlSessions }] = await Promise.all([
+    const [{ data: ownerData }, email, { data: nodesData }, { data: tapSessions }] = await Promise.all([
       adminClient.from("profiles").select("id, username").eq("id", planData.user_id).single(),
       getProfileEmail(adminClient, planData.user_id),
       adminClient
@@ -78,7 +78,7 @@ export async function GET(
       },
       nodes: nodesData || [],
       sessions: sessionsData,
-      ghlSessions: ghlSessions || [],
+      tapSessions: tapSessions || [],
     });
   } catch (err) {
     console.error("Admin plan detail error:", err);

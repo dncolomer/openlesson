@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin/require-admin";
 import { getProfileEmail } from "@/lib/admin/users";
-import { findPlanNodeForSession, getGhlSessionDetail } from "@/lib/admin/sessions";
+import { findPlanNodeForSession, getTapSessionDetail } from "@/lib/admin/sessions";
 
 export const runtime = "nodejs";
 
@@ -43,9 +43,9 @@ export async function GET(
       });
     }
 
-    const ghlDetail = await getGhlSessionDetail(adminClient, sessionId);
-    if (ghlDetail) {
-      return NextResponse.json(ghlDetail);
+    const tapDetail = await getTapSessionDetail(adminClient, sessionId);
+    if (tapDetail) {
+      return NextResponse.json(tapDetail);
     }
 
     return NextResponse.json({ error: "Block not found" }, { status: 404 });

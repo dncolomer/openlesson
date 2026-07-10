@@ -54,7 +54,7 @@ interface PlanNodeContext {
 type SessionPayload =
   | { kind: "tutoring"; session: IleSessionDetail; planNode: PlanNodeContext | null }
   | {
-      kind: "ghl";
+      kind: "tap";
       session: TapSessionDetail;
       plan: PlanContext | null;
       planNode: { id: string; plan_id: string; title: string } | null;
@@ -142,7 +142,7 @@ export default function AdminSessionDetailPage() {
 
   if (!payload) return <AdminError message="Session not found" />;
 
-  if (payload.kind === "ghl") {
+  if (payload.kind === "tap") {
     const { session, plan, planNode, owner } = payload;
     return (
       <main>

@@ -5,7 +5,7 @@ import { useState } from "react";
 import { Menu, X } from "lucide-react";
 import { TrackedCtaLink } from "@/components/TrackedCtaLink";
 
-const CTA = "Create your Verification Workspace";
+const CTA = "Create your Workspace";
 const CTA_HREF = "/workspace/new";
 
 function PrimaryCta({ compact = false }: { compact?: boolean }) {

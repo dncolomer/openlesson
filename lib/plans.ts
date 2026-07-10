@@ -9,17 +9,26 @@ export interface PlanDef {
   name: string;
   price: string;
   priceAmount: number; // cents
-  sessionsPerPeriod: number | null; // null = unlimited
+  /** Combined TAP + ILE sessions per billing period. null = unlimited. */
+  sessionsPerPeriod: number | null;
   workspacesPerPeriod: number | null; // null = unlimited
   features: string[];
   stripePriceEnv: string | null; // env var name for Stripe Price ID
 }
 
 export interface VolumeTier {
+  /** Combined TAP / ILE sessions per month (stored as monthly_volume in Stripe). */
   blocks: number;
   workspaces: number;
   priceCents: number;
 }
+
+/** Evidence API submissions allowed per month = session allowance × this ratio. */
+export const EVIDENCE_SUBMISSIONS_PER_SESSION = 4;
+export const FREE_EVIDENCE_SUBMISSIONS_PER_SESSION = 5;
+
+export const SESSION_ALLOWANCE_LABEL = "TAP / ILE sessions";
+export const EVIDENCE_ALLOWANCE_LABEL = "Evidence API submissions";
 
 export const PLANS: Record<PlanId, PlanDef> = {
   free: {
@@ -30,43 +39,44 @@ export const PLANS: Record<PlanId, PlanDef> = {
     sessionsPerPeriod: 5,
     workspacesPerPeriod: 1,
     features: [
-      "5 starter blocks",
-      "One Verification Workspace",
-      "Basic GHL readiness report",
+      "5 TAP / ILE sessions",
+      "25 Evidence API submissions/mo",
+      "One Workspace",
+      "Basic readiness report",
     ],
     stripePriceEnv: null,
   },
   regular: {
     id: "regular",
-    name: "Regular",
+    name: "Individual (legacy)",
     price: "$4.99",
     priceAmount: 499,
     sessionsPerPeriod: 5,
     workspacesPerPeriod: 1,
     features: [
-      "5 blocks per month",
-      "Buy extra blocks at $1.99",
+      "5 TAP / ILE sessions per month",
+      "25 Evidence API submissions/mo",
+      "Buy extra sessions at $1.99",
       "Think-aloud data uploads",
       "Muse EEG integration",
-      "Custom system prompts",
-      "Block reports & history",
+      "Session reports & history",
     ],
     stripePriceEnv: "STRIPE_PRICE_REGULAR",
   },
   regular_2026: {
     id: "regular_2026",
-    name: "Regular",
-    price: "$49",
-    priceAmount: 4900,
+    name: "Individual",
+    price: "$19.99",
+    priceAmount: 1999,
     sessionsPerPeriod: 25,
     workspacesPerPeriod: 1,
     features: [
-      "25+ blocks per month",
-      "1+ Verification Workspaces",
+      "25+ TAP / ILE sessions per month",
+      "100+ Evidence API submissions/mo",
+      "1+ Workspaces",
       "Volume upgrades before checkout",
-      "Additional blocks at $3.99 each",
-      "Think-aloud data uploads",
-      "Block reports & history",
+      "Additional sessions at $3.99 each",
+      "Session reports & history",
     ],
     stripePriceEnv: null,
   },
@@ -78,12 +88,13 @@ export const PLANS: Record<PlanId, PlanDef> = {
     sessionsPerPeriod: null,
     workspacesPerPeriod: null,
     features: [
-      "Unlimited blocks",
-      "Unlimited Verification Workspaces",
+      "Unlimited TAP / ILE sessions",
+      "Unlimited Evidence API submissions",
+      "Unlimited Workspaces",
       "Think-aloud data uploads",
       "Custom system prompts",
       "Muse EEG integration",
-      "Block reports & history",
+      "Session reports & history",
       "Priority support",
       "Agentic Tutoring (API keys)",
     ],
@@ -97,10 +108,11 @@ export const PLANS: Record<PlanId, PlanDef> = {
     sessionsPerPeriod: 250,
     workspacesPerPeriod: 5,
     features: [
-      "250+ blocks per month",
-      "5+ Verification Workspaces",
+      "250+ TAP / ILE sessions per month",
+      "1,000+ Evidence API submissions/mo",
+      "5+ Workspaces",
       "Volume upgrades before checkout",
-      "Additional blocks at $1.99 each",
+      "Additional sessions at $1.99 each",
       "Team readiness workspaces",
       "Readiness evidence and history",
       "Priority support",
@@ -111,7 +123,7 @@ export const PLANS: Record<PlanId, PlanDef> = {
 
 /** 2026 volume tiers (blocks + workspaces + price). Canonical source for Stripe checkout. */
 export const REGULAR_VOLUME_TIERS: readonly VolumeTier[] = [
-  { blocks: 25, workspaces: 1, priceCents: 4900 },
+  { blocks: 25, workspaces: 1, priceCents: 1999 },
   { blocks: 50, workspaces: 3, priceCents: 7900 },
   { blocks: 100, workspaces: 5, priceCents: 12900 },
 ];
@@ -156,7 +168,7 @@ export const BASE_INCLUDED_WORKSPACES: Record<string, number> = {
   pro_teams: 5,
 };
 
-/** Additional block purchase price (cents). */
+/** Additional TAP / ILE session purchase price (cents). */
 export const EXTRA_BLOCK_PRICE_CENTS = 399;
 export const PRO_TEAMS_EXTRA_BLOCK_PRICE_CENTS = 199;
 
@@ -164,6 +176,28 @@ export const PRO_TEAMS_EXTRA_BLOCK_PRICE_CENTS = 199;
 export const EXTRA_LESSON_PRICE = EXTRA_BLOCK_PRICE_CENTS;
 /** @deprecated Use PRO_TEAMS_EXTRA_BLOCK_PRICE_CENTS */
 export const PRO_TEAMS_EXTRA_LESSON_PRICE = PRO_TEAMS_EXTRA_BLOCK_PRICE_CENTS;
+
+export function evidenceLimitForSessionAllowance(
+  plan: PlanId | string,
+  sessionLimit: number | null
+): number | null {
+  if (sessionLimit === null) return null;
+  const ratio = plan === "free" ? FREE_EVIDENCE_SUBMISSIONS_PER_SESSION : EVIDENCE_SUBMISSIONS_PER_SESSION;
+  return sessionLimit * ratio;
+}
+
+export function formatSessionAllowance(count: number): string {
+  return `${count.toLocaleString()} TAP / ILE session${count === 1 ? "" : "s"}`;
+}
+
+export function formatEvidenceAllowance(count: number): string {
+  return `${count.toLocaleString()} Evidence API submission${count === 1 ? "" : "s"}/mo`;
+}
+
+export function formatVolumeTierLabel(tier: VolumeTier): string {
+  const evidence = tier.blocks * EVIDENCE_SUBMISSIONS_PER_SESSION;
+  return `${formatSessionAllowance(tier.blocks)}/mo · ${formatEvidenceAllowance(evidence)} · ${tier.workspaces} workspace${tier.workspaces === 1 ? "" : "s"}`;
+}
 
 function findVolumeTier(priceType: string, blocks: number): VolumeTier | null {
   const tiers = priceType === "pro_teams" ? TEAM_VOLUME_TIERS : priceType === "regular_2026" ? REGULAR_VOLUME_TIERS : [];
@@ -247,6 +281,8 @@ export interface OrgUsageSummary {
   guestCount: number;
   used: number;
   limit: number | null;
+  evidenceUsed?: number;
+  evidenceLimit?: number | null;
 }
 
 export interface UsageCheckResult {
@@ -256,9 +292,18 @@ export interface UsageCheckResult {
   used: number;
   limit: number | null; // null = unlimited
   isAdmin: boolean;
-  /** User's own blocks in the current period (org members on Teams). */
+  /** User's own TAP / ILE sessions in the current period (org members on Teams). */
   personalUsed?: number;
   organization?: OrgUsageSummary | null;
+}
+
+export interface EvidenceCheckResult {
+  allowed: boolean;
+  reason?: string;
+  plan: PlanId;
+  used: number;
+  limit: number | null;
+  isAdmin: boolean;
 }
 
 export interface WorkspaceCheckResult {
@@ -340,7 +385,7 @@ export function canStartSession(
     if (sessionCount >= effectiveLimit) {
       return {
         allowed: false,
-        reason: `You've used all ${effectiveLimit} legacy Regular blocks this month. Buy additional blocks to continue.`,
+        reason: `You've used all ${effectiveLimit} TAP / ILE sessions this month. Buy additional sessions to continue.`,
         plan,
         used: sessionCount,
         limit: effectiveLimit,
@@ -356,7 +401,7 @@ export function canStartSession(
     if (sessionCount >= effectiveLimit) {
       return {
         allowed: false,
-        reason: `You've used all ${effectiveLimit} blocks this month. Buy additional blocks to continue.`,
+        reason: `You've used all ${effectiveLimit} TAP / ILE sessions this month. Buy additional sessions to continue.`,
         plan,
         used: sessionCount,
         limit: effectiveLimit,
@@ -372,7 +417,7 @@ export function canStartSession(
   if (sessionCount >= freeEffectiveLimit) {
     return {
       allowed: false,
-      reason: "You've used your free blocks. Buy additional blocks or upgrade to continue.",
+      reason: "You've used your free TAP / ILE sessions. Buy additional sessions or upgrade to continue.",
       plan: "free",
       used: sessionCount,
       limit: freeEffectiveLimit,
@@ -384,7 +429,51 @@ export function canStartSession(
 }
 
 /**
- * Check whether a user can create another Verification Workspace.
+ * Resolve the effective TAP / ILE session allowance for a profile (same math as canStartSession).
+ */
+export function getSessionAllowance(
+  profile: UserProfile,
+  sessionCount: number
+): Pick<UsageCheckResult, "plan" | "limit" | "isAdmin"> {
+  const check = canStartSession(profile, sessionCount);
+  return { plan: check.plan, limit: check.limit, isAdmin: check.isAdmin };
+}
+
+/**
+ * Check whether a user can submit another Evidence API artifact this billing period.
+ */
+export function canSubmitEvidence(
+  profile: UserProfile,
+  evidenceCount: number,
+  sessionAllowance: number | null
+): EvidenceCheckResult {
+  const { plan, is_admin } = profile;
+
+  if (is_admin) {
+    return { allowed: true, plan, used: evidenceCount, limit: null, isAdmin: true };
+  }
+
+  const evidenceLimit = evidenceLimitForSessionAllowance(plan, sessionAllowance);
+  if (evidenceLimit === null) {
+    return { allowed: true, plan, used: evidenceCount, limit: null, isAdmin: false };
+  }
+
+  if (evidenceCount >= evidenceLimit) {
+    return {
+      allowed: false,
+      reason: `You've used all ${evidenceLimit} Evidence API submissions this month. Upgrade your plan or wait for the next billing period.`,
+      plan,
+      used: evidenceCount,
+      limit: evidenceLimit,
+      isAdmin: false,
+    };
+  }
+
+  return { allowed: true, plan, used: evidenceCount, limit: evidenceLimit, isAdmin: false };
+}
+
+/**
+ * Check whether a user can create another Workspace.
  * `workspaceCount` = active (non-archived) workspaces owned by the user.
  */
 export function canCreateWorkspace(
@@ -408,7 +497,7 @@ export function canCreateWorkspace(
       reason:
         plan === "free"
           ? "You've reached your free workspace limit. Upgrade or archive a workspace to create another."
-          : `You've reached your plan limit of ${limit} Verification Workspaces. Upgrade your volume tier at /pricing or archive a workspace.`,
+          : `You've reached your plan limit of ${limit} Workspaces. Upgrade your volume tier at /pricing or archive a workspace.`,
       plan,
       used: workspaceCount,
       limit,

@@ -45,6 +45,7 @@ import {
 import { persistSkillGridPositions, skillGridNodesFromRefs } from "@/lib/skill-grid-positions";
 import { callXaiJSON, callXaiResponses, callXaiResponsesWithFiles, DEFAULT_MODEL, userMessage, type ResponsesInputMessage } from "@/lib/xai-client";
 import { deleteFileFromXAI, uploadFileToXAI } from "@/lib/xai-files";
+import { assertCanSubmitEvidence } from "@/lib/usage-enforcement";
 import {
   buildContinuousEvaluationMcpPolicy,
   buildIntegrationSurfaces,
@@ -981,13 +982,15 @@ export async function callMcpEvidenceTool(
       if (!session) throw new Error("session_id not found.");
     }
 
+    const ownerUserId = auth.user_id || workspace.user_id;
+    await assertCanSubmitEvidence(supabase, ownerUserId);
+
     const fileName = defaultEvidenceFileName(
       evidenceType,
       typeof args.file_name === "string" ? args.file_name : undefined
     );
 
     const uploaded = await uploadFileToXAI(fileName, mimeType, base64);
-    const ownerUserId = auth.user_id || workspace.user_id;
     const metadata =
       args.metadata && typeof args.metadata === "object" && !Array.isArray(args.metadata)
         ? (args.metadata as Record<string, unknown>)

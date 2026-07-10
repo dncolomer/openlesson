@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
           unit_amount: REGULAR_VOLUME_PRICES[monthlyVolume],
           recurring: { interval: "month" },
           product_data: {
-            name: `openLesson Regular - ${monthlyVolume} blocks/mo · ${monthlyWorkspaceVolume} workspace${monthlyWorkspaceVolume === 1 ? "" : "s"}`,
+            name: `openLesson Individual - ${monthlyVolume} TAP/ILE sessions/mo · ${monthlyVolume * 4} evidence/mo · ${monthlyWorkspaceVolume} workspace${monthlyWorkspaceVolume === 1 ? "" : "s"}`,
           },
         },
         quantity: 1,
@@ -72,7 +72,7 @@ export async function POST(request: NextRequest) {
           unit_amount: TEAM_VOLUME_PRICES[monthlyVolume],
           recurring: { interval: "month" },
           product_data: {
-            name: `openLesson Pro / Teams - ${monthlyVolume} blocks/mo · ${monthlyWorkspaceVolume} workspaces`,
+            name: `openLesson Pro / Teams - ${monthlyVolume} TAP/ILE sessions/mo · ${monthlyVolume * 4} evidence/mo · ${monthlyWorkspaceVolume} workspaces`,
           },
         },
         quantity: 1,
@@ -92,8 +92,8 @@ export async function POST(request: NextRequest) {
           product_data: {
             name:
               planProfile?.plan === "pro_teams" || planProfile?.plan === "pro"
-                ? "Additional openLesson block - Pro / Teams"
-                : "Additional openLesson block",
+                ? "Additional TAP / ILE session - Pro / Teams"
+                : "Additional TAP / ILE session",
           },
         },
         quantity,

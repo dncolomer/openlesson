@@ -22,7 +22,7 @@ The Agentic API supports **only** this workflow:
 
 **Out of scope** — do not describe or call removed features: blockchain tracking, proof anchoring, live tutoring session control, heartbeats, or plan adaptation. Legacy web-session upload routes (`/api/session-files/*`) are separate from this API; agents should use `POST .../evidence` for workspace-linked artifacts.
 
-**Teams tier required.** All `/api/v2/agent/*` routes require an active `pro_teams` subscription (platform admins bypass). Regular-tier keys are rejected with `403 teams_required`.
+**Teams tier required.** All `/api/v2/agent/*` routes require an active `pro_teams` subscription (platform admins bypass). Individual-tier keys are rejected with `403 teams_required`.
 
 ---
 

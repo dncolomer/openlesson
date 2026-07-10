@@ -68,17 +68,14 @@ export async function loadUsageProfile(
   };
 }
 
-/**
- * Count learning blocks (sessions) attributed to the user.
- * Includes in-progress sessions — new sessions start as status "active".
- */
-export async function countUsedBlocks(
+async function countTableRows(
   supabase: SupabaseClient,
+  table: "sessions" | "workspace_ghc_sessions" | "workspace_evidence",
   userId: string,
   periodStart?: Date | null
 ): Promise<number> {
   let query = supabase
-    .from("sessions")
+    .from(table)
     .select("id", { count: "exact", head: true })
     .eq("user_id", userId);
 
@@ -88,7 +85,84 @@ export async function countUsedBlocks(
 
   const { count, error } = await query;
   if (error) {
-    console.error("[usage-metrics] block count failed:", error);
+    console.error(`[usage-metrics] ${table} count failed:`, error);
+    return 0;
+  }
+
+  return count ?? 0;
+}
+
+/**
+ * Count combined TAP + ILE sessions attributed to the user.
+ * ILE = `sessions`; TAP = `workspace_ghc_sessions`.
+ */
+export async function countTapIleSessions(
+  supabase: SupabaseClient,
+  userId: string,
+  periodStart?: Date | null
+): Promise<number> {
+  const [ileCount, tapCount] = await Promise.all([
+    countTableRows(supabase, "sessions", userId, periodStart),
+    countTableRows(supabase, "workspace_ghc_sessions", userId, periodStart),
+  ]);
+  return ileCount + tapCount;
+}
+
+/** @deprecated Use countTapIleSessions */
+export async function countUsedBlocks(
+  supabase: SupabaseClient,
+  userId: string,
+  periodStart?: Date | null
+): Promise<number> {
+  return countTapIleSessions(supabase, userId, periodStart);
+}
+
+export async function countEvidenceSubmissions(
+  supabase: SupabaseClient,
+  userId: string,
+  periodStart?: Date | null
+): Promise<number> {
+  return countTableRows(supabase, "workspace_evidence", userId, periodStart);
+}
+
+export async function countOrgTapIleSessions(
+  supabase: SupabaseClient,
+  memberIds: string[],
+  periodStart: Date
+): Promise<number> {
+  if (memberIds.length === 0) return 0;
+
+  const [ileCount, tapCount] = await Promise.all([
+    supabase
+      .from("sessions")
+      .select("id", { count: "exact", head: true })
+      .in("user_id", memberIds)
+      .gte("created_at", periodStart.toISOString()),
+    supabase
+      .from("workspace_ghc_sessions")
+      .select("id", { count: "exact", head: true })
+      .in("user_id", memberIds)
+      .gte("created_at", periodStart.toISOString()),
+  ]);
+
+  return (ileCount.count ?? 0) + (tapCount.count ?? 0);
+}
+
+export async function countOrgEvidenceSubmissions(
+  supabase: SupabaseClient,
+  memberIds: string[],
+  periodStart: Date
+): Promise<number> {
+  if (memberIds.length === 0) return 0;
+
+  const { count, error } = await supabase
+    .from("workspace_evidence")
+    .select("id", { count: "exact", head: true })
+    .in("user_id", memberIds)
+    .gte("created_at", periodStart.toISOString());
+
+  if (error) {
+    console.error("[usage-metrics] org evidence count failed:", error);
     return 0;
   }
 

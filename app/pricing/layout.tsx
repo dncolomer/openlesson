@@ -1,9 +1,9 @@
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Pricing - Learning Verification Plans | openLesson",
+  title: "Pricing - Learning Efficiency Plans | openLesson",
   description:
-    "Create Verification Workspaces, verify learning with evidence, and choose the monthly block volume you need.",
+    "Create Workspaces and choose monthly TAP / ILE session volume plus Evidence API submission caps.",
   keywords: [
     "AI tutor pricing",
     "learning platform cost",
@@ -12,9 +12,9 @@ export const metadata: Metadata = {
     "open source AI tutor",
   ],
   openGraph: {
-    title: "Pricing - Learning Verification Plans | openLesson",
+    title: "Pricing - Learning Efficiency Plans | openLesson",
     description:
-      "Create Verification Workspaces, measure readiness, and choose the monthly block volume you need.",
+      "Create Workspaces, measure learning efficiency, and choose monthly TAP / ILE session volume.",
     url: "https://openlesson.academy/pricing",
     siteName: "openLesson",
     type: "website",
@@ -23,7 +23,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Pricing | openLesson",
     description:
-      "Learning verification plans for humans and agents.",
+      "Learning efficiency plans for humans and agents.",
     creator: "@uncertainsys",
   },
   alternates: {

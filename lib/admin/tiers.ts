@@ -4,7 +4,7 @@ import { PLANS } from "@/lib/plans";
 /** Admin-manageable subscription tiers (current product). */
 export const ADMIN_TIER_OPTIONS = [
   { id: "free" as const, label: "Free", description: PLANS.free.features[0] },
-  { id: "regular_2026" as const, label: "Regular", description: "25 blocks / month" },
+  { id: "regular_2026" as const, label: "Individual", description: "25 blocks / month" },
   { id: "pro_teams" as const, label: "Pro / Teams", description: "250 blocks / month + org features" },
 ] as const;
 
@@ -24,10 +24,10 @@ export function normalizeAdminTier(user: {
 }
 
 export function tierLabel(plan: string): string {
-  if (plan === "regular_2026") return "Regular";
+  if (plan === "regular_2026") return "Individual";
   if (plan === "pro_teams") return "Pro / Teams";
   if (plan === "free") return "Free";
-  if (plan === "regular") return "Regular (legacy)";
+  if (plan === "regular") return "Individual (legacy)";
   if (plan === "pro") return "Pro (legacy)";
   return plan;
 }

@@ -1,11 +1,22 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { canCreateWorkspace, canStartSession, PLANS, type PlanId } from "@/lib/plans";
+import {
+  canCreateWorkspace,
+  canStartSession,
+  canSubmitEvidence,
+  evidenceLimitForSessionAllowance,
+  getSessionAllowance,
+  PLANS,
+  type PlanId,
+} from "@/lib/plans";
 import {
   billingPeriodStart,
   countActiveWorkspaces,
-  countUsedBlocks,
+  countEvidenceSubmissions,
+  countOrgEvidenceSubmissions,
+  countOrgTapIleSessions,
+  countTapIleSessions,
   loadUsageProfile,
 } from "@/lib/usage-metrics";
 
@@ -31,7 +42,7 @@ export async function POST() {
       return NextResponse.json({ ok: true });
     }
 
-    const sessionCount = await countUsedBlocks(supabase, user.id);
+    const sessionCount = await countTapIleSessions(supabase, user.id);
 
     if (sessionCount > baseLimit && extraLessons > 0) {
       await supabase
@@ -77,8 +88,10 @@ export async function GET() {
         ? null
         : billingPeriodStart(profile.current_period_end);
 
-    let sessionCount = await countUsedBlocks(supabase, user.id, periodStart);
+    let sessionCount = await countTapIleSessions(supabase, user.id, periodStart);
     let personalSessionCount = sessionCount;
+    let personalEvidenceCount = await countEvidenceSubmissions(supabase, user.id, periodStart);
+    let evidenceCount = personalEvidenceCount;
 
     let organizationSummary: {
       id: string;
@@ -99,12 +112,8 @@ export async function GET() {
       const memberIds = (orgMembers || []).map((member) => member.id);
 
       if (memberIds.length > 0) {
-        const { count } = await admin
-          .from("sessions")
-          .select("id", { count: "exact", head: true })
-          .in("user_id", memberIds)
-          .gte("created_at", periodStart.toISOString());
-        sessionCount = count ?? personalSessionCount;
+        sessionCount = await countOrgTapIleSessions(admin, memberIds, periodStart);
+        evidenceCount = await countOrgEvidenceSubmissions(admin, memberIds, periodStart);
       }
 
       const { data: organization } = await admin
@@ -129,6 +138,8 @@ export async function GET() {
         guestCount: guestCount ?? 0,
         used: sessionCount,
         limit: effectiveOrgLimit,
+        evidenceUsed: evidenceCount,
+        evidenceLimit: evidenceLimitForSessionAllowance("pro_teams", effectiveOrgLimit),
       };
     }
 
@@ -144,12 +155,23 @@ export async function GET() {
     };
 
     const result = canStartSession(userProfile, sessionCount);
+    const { limit: sessionAllowance } = getSessionAllowance(userProfile, sessionCount);
+    const evidenceResult = canSubmitEvidence(userProfile, evidenceCount, sessionAllowance);
     const workspaceCount = await countActiveWorkspaces(supabase, user.id);
     const workspaceResult = canCreateWorkspace(userProfile, workspaceCount);
+
+    const evidencePayload = {
+      evidenceUsed: evidenceCount,
+      evidencePersonalUsed: personalEvidenceCount,
+      evidenceLimit: evidenceResult.limit,
+      canSubmitEvidence: evidenceResult.allowed,
+      evidenceReason: evidenceResult.reason,
+    };
 
     if (profile.is_admin) {
       return NextResponse.json({
         ...result,
+        ...evidencePayload,
         allowed: true,
         reason: "Admin",
         limit: null,
@@ -159,11 +181,14 @@ export async function GET() {
         workspacesUsed: workspaceCount,
         workspacesLimit: null,
         canCreateWorkspace: true,
+        canSubmitEvidence: true,
+        evidenceLimit: null,
       });
     }
 
     return NextResponse.json({
       ...result,
+      ...evidencePayload,
       personalUsed: personalSessionCount,
       organization: organizationSummary,
       workspacesUsed: workspaceCount,

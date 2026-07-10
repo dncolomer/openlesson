@@ -8,6 +8,7 @@ import {
   normalizeEvidenceType,
 } from "@/lib/agent-v2/workspace-evidence";
 import { uploadFileToXAI, deleteFileFromXAI } from "@/lib/xai-files";
+import { checkEvidenceSubmissionAllowance } from "@/lib/usage-enforcement";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -30,6 +31,12 @@ export async function POST(req: NextRequest, { params }: RouteProps) {
 
   if (!workspace || !canAccessAgentWorkspace(auth, workspace)) {
     return errorResponse(404, "workspace_not_found", "Workspace not found");
+  }
+
+  const ownerUserId = auth.user_id || workspace.user_id;
+  const evidenceAllowance = await checkEvidenceSubmissionAllowance(supabase, ownerUserId);
+  if (!evidenceAllowance.allowed) {
+    return errorResponse(402, "usage_limit_reached", evidenceAllowance.reason || "Evidence API monthly limit reached");
   }
 
   let body: Record<string, unknown>;
@@ -89,7 +96,6 @@ export async function POST(req: NextRequest, { params }: RouteProps) {
     return errorResponse(502, "internal_error", error instanceof Error ? error.message : "xAI upload failed");
   }
 
-  const ownerUserId = auth.user_id || workspace.user_id;
   const metadata = body.metadata && typeof body.metadata === "object" && !Array.isArray(body.metadata)
     ? (body.metadata as Record<string, unknown>)
     : {};

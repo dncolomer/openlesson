@@ -87,6 +87,9 @@ export default function DashboardPage() {
     used: number;
     personalUsed: number;
     limit: number | null;
+    evidenceUsed: number;
+    evidencePersonalUsed: number;
+    evidenceLimit: number | null;
     workspacesUsed: number;
     workspacesLimit: number | null;
     extraLessons: number;
@@ -238,6 +241,9 @@ export default function DashboardPage() {
             used: usageResult.used ?? 0,
             personalUsed: usageResult.personalUsed ?? usageResult.used ?? 0,
             limit: usageResult.isAdmin ? null : (usageResult.limit ?? null),
+            evidenceUsed: usageResult.evidenceUsed ?? 0,
+            evidencePersonalUsed: usageResult.evidencePersonalUsed ?? usageResult.evidenceUsed ?? 0,
+            evidenceLimit: usageResult.isAdmin ? null : (usageResult.evidenceLimit ?? null),
             workspacesUsed: usageResult.workspacesUsed ?? 0,
             workspacesLimit: usageResult.isAdmin ? null : (usageResult.workspacesLimit ?? null),
             extraLessons: profile?.extra_lessons ?? 0,
@@ -481,9 +487,9 @@ export default function DashboardPage() {
   function planDisplayName(plan: string, isAdmin?: boolean) {
     if (isAdmin) return "Platform admin";
     if (plan === "pro_teams") return "Pro / Teams";
-    if (plan === "regular_2026") return "Regular";
+    if (plan === "regular_2026") return "Individual";
     if (plan === "pro") return "Pro";
-    if (plan === "regular") return "Regular";
+    if (plan === "regular") return "Individual (legacy)";
     if (plan === "free") return "Free";
     return plan;
   }
@@ -742,7 +748,7 @@ export default function DashboardPage() {
               </div>
               <div className="grid gap-px bg-neutral-800 sm:grid-cols-4">
                 {[
-                  ["Blocks", sessions.length],
+                  ["TAP / ILE sessions", sessions.length],
                   ["Completed", completedSessions.length],
                   ["Public workspaces", publicPlans.length],
                   ["Minutes", totalLearningMinutes],
@@ -1060,13 +1066,6 @@ export default function DashboardPage() {
                   <p className="mt-3 max-w-xl text-sm leading-relaxed text-neutral-400">
                     Turn any topic, repo, video, file, or hard question into a guided path toward your next aha moment.
                   </p>
-                  <div className="mt-5 max-w-xl rounded-md border border-white/10 bg-white/[0.03] p-4 text-sm text-neutral-300">
-                    <div className="font-mono text-[10px] uppercase tracking-[2px] text-white/70">Rabbit Hole</div>
-                    <div className="mt-2 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                      <p className="leading-relaxed text-neutral-400">Warm up with one question before building a full workspace.</p>
-                      <Link href="/rabbit-hole" className="inline-flex h-9 shrink-0 items-center justify-center rounded-sm bg-white px-4 text-xs font-medium text-black transition hover:bg-neutral-200">Try it →</Link>
-                    </div>
-                  </div>
                 </div>
                 <Link
                   href="/"
@@ -1310,7 +1309,7 @@ export default function DashboardPage() {
 
                   <div className={usageCardClass}>
                     <p className={usageLabelClass}>
-                      {usageData.organization ? "Your blocks this period" : t("dashboard.sessionsThisPeriod")}
+                      {usageData.organization ? "Your TAP / ILE sessions this period" : t("dashboard.sessionsThisPeriod")}
                     </p>
                     {(() => {
                       const displayUsed = usageData.organization ? usageData.personalUsed : usageData.used;
@@ -1339,9 +1338,9 @@ export default function DashboardPage() {
                           )}
                           <p className="mt-3 text-xs text-neutral-500">
                             {usageData.isAdmin
-                              ? "Unlimited blocks — admin access bypasses plan limits."
+                              ? "Unlimited TAP / ILE sessions — admin access bypasses plan limits."
                               : usageData.organization
-                              ? "Your personal contribution to the organization pool."
+                              ? "Your personal contribution to the organization session pool."
                               : displayLimit === null
                               ? t("dashboard.unlimitedSessions")
                               : t("dashboard.sessionsRemaining", { count: Math.max(displayLimit - displayUsed, 0) })}
@@ -1352,7 +1351,48 @@ export default function DashboardPage() {
                   </div>
 
                   <div className={usageCardClass}>
-                    <p className={usageLabelClass}>Verification Workspaces</p>
+                    <p className={usageLabelClass}>Evidence API submissions</p>
+                    {(() => {
+                      const displayUsed = usageData.organization ? usageData.evidencePersonalUsed : usageData.evidenceUsed;
+                      const displayLimit = usageData.isAdmin || usageData.evidenceLimit === null ? null : usageData.evidenceLimit;
+                      return (
+                        <>
+                          <div className="mt-4 flex items-end gap-2">
+                            <span className="text-3xl font-medium tracking-[-1px] text-white">{displayUsed}</span>
+                            <span className="mb-1 text-sm text-neutral-500">
+                              / {displayLimit === null ? t("dashboard.infinity") : displayLimit}
+                            </span>
+                          </div>
+                          {displayLimit !== null && (
+                            <div className="mt-4 h-1.5 w-full rounded-full bg-neutral-800">
+                              <div
+                                className={`h-1.5 rounded-full ${
+                                  displayUsed >= displayLimit
+                                    ? "bg-red-400"
+                                    : displayUsed >= displayLimit * 0.8
+                                    ? "bg-amber-400"
+                                    : "bg-white"
+                                }`}
+                                style={{ width: `${usageProgress(displayUsed, displayLimit)}%` }}
+                              />
+                            </div>
+                          )}
+                          <p className="mt-3 text-xs text-neutral-500">
+                            {usageData.isAdmin
+                              ? "Unlimited Evidence API submissions on admin accounts."
+                              : usageData.organization
+                              ? "Your personal evidence uploads this period."
+                              : displayLimit === null
+                              ? "Unlimited Evidence API submissions on your plan."
+                              : `${Math.max(displayLimit - displayUsed, 0)} evidence submissions remaining this period.`}
+                          </p>
+                        </>
+                      );
+                    })()}
+                  </div>
+
+                  <div className={usageCardClass}>
+                    <p className={usageLabelClass}>Workspaces</p>
                     <div className="mt-4 flex items-end gap-2">
                       <span className="text-3xl font-medium tracking-[-1px] text-white">{usageData.workspacesUsed}</span>
                       <span className="mb-1 text-sm text-neutral-500">
@@ -1385,7 +1425,7 @@ export default function DashboardPage() {
                     <div className="mt-4 text-3xl font-medium tracking-[-1px] text-white">{usageData.extraLessons}</div>
                     <p className="mt-2 text-sm text-neutral-500">
                       {usageData.isAdmin || usageData.limit === null
-                        ? "Extra blocks are optional when your plan is already unlimited."
+                        ? "Extra sessions are optional when your plan is already unlimited."
                         : t("dashboard.purchasedCredits")}
                     </p>
                     <Link
@@ -1414,7 +1454,7 @@ export default function DashboardPage() {
                           {usageData.plan === "pro"
                             ? t("dashboard.unlimitedContinue")
                             : usageData.plan === "pro_teams"
-                            ? "Organization block pool resets each billing period."
+                            ? "Organization TAP / ILE session pool resets each billing period."
                             : t("dashboard.regularResetDesc")}
                         </p>
                       </>
@@ -1462,7 +1502,7 @@ export default function DashboardPage() {
                     <div className="mt-5 flex items-end gap-2">
                       <span className="text-3xl font-medium tracking-[-1px] text-white">{usageData.organization.used}</span>
                       <span className="mb-1 text-sm text-neutral-500">
-                        / {usageData.organization.limit === null ? t("dashboard.infinity") : usageData.organization.limit} blocks this period
+                        / {usageData.organization.limit === null ? t("dashboard.infinity") : usageData.organization.limit} TAP / ILE sessions this period
                       </span>
                     </div>
                     {usageData.organization.limit !== null && (
@@ -1480,7 +1520,7 @@ export default function DashboardPage() {
                       </div>
                     )}
                     <p className="mt-3 text-xs text-neutral-500">
-                      Teams plans share one monthly block pool across all organization members.
+                      Teams plans share one monthly TAP / ILE session pool and Evidence API cap across all organization members.
                     </p>
                   </div>
                 )}

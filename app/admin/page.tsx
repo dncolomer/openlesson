@@ -130,7 +130,7 @@ export default function AdminPage() {
         >
           <h2 className="text-lg font-semibold text-white mb-2">Users</h2>
           <p className="text-neutral-400 text-sm">
-            Manage users and assign Free, Regular, or Pro / Teams tiers
+            Manage users and assign Free, Individual, or Pro / Teams tiers
           </p>
         </Link>
 

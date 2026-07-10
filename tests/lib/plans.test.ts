@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   canCreateWorkspace,
   canStartSession,
+  canSubmitEvidence,
+  evidenceLimitForSessionAllowance,
   formatExtraBlockPrice,
   formatPlanMonthlyPrice,
   getExtraBlockPriceCents,
@@ -31,7 +33,7 @@ describe("plans pricing", () => {
   });
 
   it("formats 2026 monthly prices", () => {
-    expect(formatPlanMonthlyPrice("regular_2026")).toBe("$49/month");
+    expect(formatPlanMonthlyPrice("regular_2026")).toBe("$19.99/month");
     expect(formatPlanMonthlyPrice("regular_2026", 100)).toBe("$129/month");
     expect(formatPlanMonthlyPrice("pro_teams")).toBe("$399/month");
     expect(formatPlanMonthlyPrice("pro_teams", 1000)).toBe("$999/month");
@@ -44,7 +46,7 @@ describe("plans pricing", () => {
   });
 
   it("keeps stripe volume tables aligned", () => {
-    expect(REGULAR_VOLUME_PRICES[25]).toBe(4900);
+    expect(REGULAR_VOLUME_PRICES[25]).toBe(1999);
     expect(TEAM_VOLUME_PRICES[250]).toBe(39900);
     expect(REGULAR_VOLUME_WORKSPACES[100]).toBe(5);
     expect(TEAM_VOLUME_WORKSPACES[500]).toBe(10);
@@ -105,6 +107,34 @@ describe("plans usage", () => {
     );
     expect(result.allowed).toBe(true);
     expect(result.limit).toBe(25);
+  });
+});
+
+describe("plans evidence limits", () => {
+  const baseProfile = {
+    is_admin: false,
+    extra_lessons: 0,
+    extra_workspaces: 0,
+    subscription_status: "active",
+    current_period_end: "2026-12-31",
+    token_tier: null,
+    token_validity_expires_at: null,
+  };
+
+  it("derives evidence caps from session allowance", () => {
+    expect(evidenceLimitForSessionAllowance("free", 5)).toBe(25);
+    expect(evidenceLimitForSessionAllowance("regular_2026", 25)).toBe(100);
+    expect(evidenceLimitForSessionAllowance("pro", null)).toBeNull();
+  });
+
+  it("blocks evidence submissions at monthly cap", () => {
+    const result = canSubmitEvidence(
+      { ...baseProfile, plan: "regular_2026" },
+      100,
+      25
+    );
+    expect(result.allowed).toBe(false);
+    expect(result.limit).toBe(100);
   });
 });
 

@@ -8,6 +8,7 @@ import {
 import { createdByApiKeyId } from "./auth";
 import type { AuthContext } from "./types";
 import { uploadFileToXAI, deleteFileFromXAI } from "@/lib/xai-files";
+import { assertCanSubmitEvidence } from "@/lib/usage-enforcement";
 
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -102,6 +103,9 @@ export async function uploadWorkspaceEvidence(
     throw new Error("Evidence file exceeds 10 MB limit");
   }
 
+  const ownerUserId = auth.user_id || workspace.user_id;
+  await assertCanSubmitEvidence(supabase, ownerUserId);
+
   if (input.block_id) {
     const { data: block } = await supabase
       .from("plan_nodes")
@@ -116,7 +120,6 @@ export async function uploadWorkspaceEvidence(
   const uploaded = await uploadFileToXAI(fileName, mimeType, base64);
   const xaiFileId = uploaded.file_id;
 
-  const ownerUserId = auth.user_id || workspace.user_id;
   const { session_id: resolvedSessionId, metadata } = await resolveEvidenceSession(
     supabase,
     input.session_id,

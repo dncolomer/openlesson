@@ -1,15 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createVerificationWorkspaceFromPrompt } from "@/lib/agent-v2/create-verification-workspace";
 import { requireDemoAdminSession } from "@/lib/evidence-api-demo/demo-access";
-import { CUSTOM_DEMO_ID } from "@/lib/evidence-api-demo/custom-demo";
 import { getDemoWorkspaceModelFile } from "@/lib/evidence-api-demo/demo-definition";
-import { generateCustomDemoFromImport } from "@/lib/evidence-api-demo/generate-custom-from-import";
-import { generateCustomDemoFromPrompt } from "@/lib/evidence-api-demo/generate-custom-simulation";
-import {
-  detectImportSource,
-  type ImportSource,
-} from "@/lib/evidence-api-demo/parse-import-text";
-import { getDemoFromBody, parseDemoIdFromBody } from "@/lib/evidence-api-demo/resolve-demo";
+import { getDemoFromBody } from "@/lib/evidence-api-demo/resolve-demo";
 import {
   buildEvidenceSchemaApiPath,
   buildEvidenceUploadApiPath,
@@ -32,24 +25,7 @@ export async function POST(req: NextRequest) {
       body = {};
     }
 
-    const demoId = parseDemoIdFromBody(body);
-    const importText =
-      typeof body.importText === "string" ? body.importText.trim() : "";
-    const importSource: ImportSource =
-      body.importSource === "mcp"
-        ? "mcp"
-        : body.importSource === "skill"
-          ? "skill"
-          : detectImportSource(importText);
-
-    const demo =
-      demoId === CUSTOM_DEMO_ID && importText
-        ? (await generateCustomDemoFromImport(importText, importSource)).demo
-        : demoId === CUSTOM_DEMO_ID
-          ? await generateCustomDemoFromPrompt(
-              typeof body.customPrompt === "string" ? body.customPrompt : ""
-            )
-          : getDemoFromBody(body);
+    const demo = getDemoFromBody(body);
     const origin = req.nextUrl.origin;
     const modelFile = getDemoWorkspaceModelFile(demo);
     const { workspace, blocks, files } = await createVerificationWorkspaceFromPrompt(
@@ -77,7 +53,6 @@ export async function POST(req: NextRequest) {
         model_doc_filename: modelFile.name,
         model_doc_preview: demo.modelDoc.slice(0, 400),
       },
-      custom_definition: demo.id === CUSTOM_DEMO_ID ? demo : undefined,
       api_paths: {
         evidence_schema: buildEvidenceSchemaApiPath(workspaceId, origin),
         evidence_upload: buildEvidenceUploadApiPath(workspaceId, origin),

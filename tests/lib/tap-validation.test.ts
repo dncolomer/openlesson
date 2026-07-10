@@ -1,19 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { orbitDemo } from "@/lib/evidence-api-demo/demos/orbit";
 import { selectPracticeBlock, selectTapValidationBlock } from "@/lib/evidence-api-demo/tap-validation";
-import { CUSTOM_DEMO_PICKER } from "@/lib/evidence-api-demo/custom-demo";
-import {
-  ALL_DEMO_VERIFICATION_PILLS,
-  getDemoVerificationPills,
-} from "@/lib/evidence-api-demo/verification-pills";
+import { getDemoVerificationPills } from "@/lib/evidence-api-demo/verification-pills";
 
 describe("demo verification pills", () => {
   it("marks Orbit as Evidence API plus TAP", () => {
     expect(getDemoVerificationPills(orbitDemo)).toEqual(["Evidence API", "TAP"]);
-  });
-
-  it("marks custom simulation with all product pills", () => {
-    expect(getDemoVerificationPills(CUSTOM_DEMO_PICKER)).toEqual(ALL_DEMO_VERIFICATION_PILLS);
   });
 });
 

@@ -1,6 +1,6 @@
-# OpenLesson Agentic API
+# OpenLesson Evidence API
 
-The Agentic API exposes the performance-workspace workflow: create workspaces, upload evidence, analyze learning gaps, issue Think Aloud Protocol (TAP) links, and read results.
+The Evidence API exposes the performance-workspace workflow: create workspaces, upload evidence, analyze learning gaps, issue Think Aloud Protocol (TAP) links, and read results.
 
 Base path: `/api/v2/agent`
 

@@ -971,12 +971,12 @@ export default function AgenticV2DocsPage() {
       <Navbar />
       <main className="mx-auto max-w-5xl px-4 py-10 sm:px-6 sm:py-14">
         <header className={`${sectionClass} mb-8`}>
-          <p className={labelClass}>OpenLesson Agentic API v2</p>
+          <p className={labelClass}>OpenLesson Evidence API</p>
           <h1 className="mt-3 max-w-3xl text-3xl font-medium tracking-[-1.2px] text-white sm:text-4xl">
             Verification Workspace API Reference
           </h1>
           <p className="mt-4 max-w-3xl text-sm leading-relaxed text-neutral-400 sm:text-base">
-            Full request and response specifications for every Agentic API endpoint: workspaces, evidence schema
+            Full request and response specifications for every Evidence API endpoint: workspaces, evidence schema
             generation, integration skill generation, evidence upload, performance analysis, TAP links, ILE practice, guest
             provisioning, and dashboard key management. Bearer endpoints use base path{" "}
             <code className="text-neutral-300">/api/v2/agent</code> and require active{" "}
@@ -1085,7 +1085,7 @@ Content-Type: application/json`}</code>
           <h2 className="text-lg font-medium text-white">TAP session completion (learner-facing)</h2>
           <p className="mt-2 text-sm text-neutral-400">
             Learners open <code className="text-neutral-300">private_url</code> without an API key. Completion uses web
-            APIs (not Agentic API):
+            APIs (not Evidence API):
           </p>
           <FieldTable
             title="POST /api/workspace-ghl-score/chat"

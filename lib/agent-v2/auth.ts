@@ -110,7 +110,7 @@ export async function authenticateApiKey(
     return errorResponse(
       403,
       "teams_required",
-      "The Agentic API organization and guest features require the Teams tier.",
+      "Evidence API organization and guest features require the Teams tier.",
       { renew_url: "https://openlesson.academy/pricing" }
     );
   }

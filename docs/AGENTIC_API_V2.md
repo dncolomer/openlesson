@@ -1,8 +1,8 @@
-# OpenLesson Agentic API
+# OpenLesson Evidence API
 
 Base path: `/api/v2/agent`
 
-The Agentic API supports Verification Workspace creation, evidence upload, learning analysis, block discovery, Think Aloud Protocol (TAP) link/result access, and ILE (Integrated Learning Environment) practice routing from gap findings.
+The Evidence API supports Verification Workspace creation, evidence upload, learning analysis, block discovery, Think Aloud Protocol (TAP) link/result access, and ILE (Integrated Learning Environment) practice routing from gap findings.
 
 ## Authentication
 
@@ -134,7 +134,7 @@ Files are optional. Supported file types are PDF, text, Markdown, JPEG, PNG, and
 
 Only `15` and `30` minute sessions are supported. Any other value defaults to `15`.
 
-The response includes a private URL for the TAP session UI. Think Aloud Protocol (TAP) captures live human cognition. The private URL is a bearer link: opening `/ghl-score/session/{token}` authenticates that TAP session directly without requiring an OpenLesson login or an Agentic API key.
+The response includes a private URL for the TAP session UI. Think Aloud Protocol (TAP) captures live human cognition. The private URL is a bearer link: opening `/ghl-score/session/{token}` authenticates that TAP session directly without requiring an OpenLesson login or an Evidence API key.
 
 ## Organizations And Guests
 
@@ -174,6 +174,6 @@ Completed results include the spider score markers plus a gap analysis:
 }
 ```
 
-## Removed From Agentic API
+## Removed From Evidence API
 
-The Agentic API does not expose proof tracking, blockchain anchoring, live tutoring sessions, heartbeats, or plan adaptation. Use `POST .../evidence` for workspace-linked artifacts instead of legacy web-session upload routes.
+The Evidence API does not expose proof tracking, blockchain anchoring, live tutoring sessions, heartbeats, or plan adaptation. Use `POST .../evidence` for workspace-linked artifacts instead of legacy web-session upload routes.

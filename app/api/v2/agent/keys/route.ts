@@ -102,7 +102,7 @@ export async function POST(req: NextRequest) {
       return errorResponse(
         403,
         "teams_required",
-        "The Agentic API requires the Teams tier.",
+        "The Evidence API requires the Teams tier.",
         { renew_url: "https://openlesson.academy/pricing" }
       );
     }

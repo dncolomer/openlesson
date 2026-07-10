@@ -256,7 +256,7 @@ export default function DashboardPage() {
           console.error("Failed to load usage data:", err);
         }
 
-      // Load Agentic API keys (v2 for Teams, legacy for Pro)
+      // Load Evidence API keys (v2 for Teams, legacy for Pro)
       const plan = profile?.plan || "free";
       const useV2Keys = profile?.is_admin || plan === "pro_teams";
       try {
@@ -1421,22 +1421,6 @@ export default function DashboardPage() {
                   </div>
 
                   <div className={usageCardClass}>
-                    <p className={usageLabelClass}>{t("dashboard.extraLessons")}</p>
-                    <div className="mt-4 text-3xl font-medium tracking-[-1px] text-white">{usageData.extraLessons}</div>
-                    <p className="mt-2 text-sm text-neutral-500">
-                      {usageData.isAdmin || usageData.limit === null
-                        ? "Extra sessions are optional when your plan is already unlimited."
-                        : t("dashboard.purchasedCredits")}
-                    </p>
-                    <Link
-                      href="/pricing"
-                      className="mt-4 inline-flex text-sm text-neutral-300 underline decoration-neutral-600 underline-offset-4 transition hover:text-white"
-                    >
-                      Buy more on pricing →
-                    </Link>
-                  </div>
-
-                  <div className={usageCardClass}>
                     <p className={usageLabelClass}>{t("dashboard.billingPeriod")}</p>
                     {usageData.isAdmin ? (
                       <>
@@ -1559,12 +1543,12 @@ export default function DashboardPage() {
               />
             </div>
 
-            {/* Agentic API keys */}
+            {/* Evidence API keys */}
             <div className={`${usageCardClass} space-y-5`}>
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
                   <p className={usageLabelClass}>API keys</p>
-                  <h2 className="mt-2 text-xl font-medium text-white">Agentic API</h2>
+                  <h2 className="mt-2 text-xl font-medium text-white">{t("dashboard.evidenceApi")}</h2>
                 </div>
                 <div className="flex items-center gap-3">
                   {usesAgenticV2Keys && (
@@ -1582,13 +1566,13 @@ export default function DashboardPage() {
               </div>
               <p className="text-sm text-neutral-500">
                 {usesAgenticV2Keys
-                  ? "Create Verification Workspaces, issue GHL links, and read results via the Agentic API v2."
+                  ? t("dashboard.evidenceApiDesc")
                   : t("dashboard.apiExperimentalDesc")}
               </p>
               {!hasAgentApiKeyPlan(user?.plan) && !user?.isAdmin && (
                 <div className="rounded-md border border-neutral-800 bg-black/40 p-4 text-sm text-neutral-400">
                   {user?.plan === "regular" || user?.plan === "regular_2026"
-                    ? "Agentic API keys require the Teams tier. "
+                    ? t("dashboard.evidenceApiTeamsRequired")
                     : `${t("dashboard.apiKeysAvailableOnPro")} `}
                   <Link href="/pricing" className="text-neutral-200 underline decoration-neutral-600 underline-offset-4 hover:text-white">
                     {t("dashboard.upgradeToPro")}

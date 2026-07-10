@@ -5,7 +5,7 @@ description: PumaDoc Customer Agent shadow-mode integration — evidence-based c
 
 # PumaDoc Customer Agent — OpenLesson Shadow Mode
 
-This skill teaches the PumaDoc Customer Agent how to run **shadow-mode validation**: serialize learner activity, upload evidence through OpenLesson's Agentic API, and request performance analysis — **without ever surfacing results to the end user**.
+This skill teaches the PumaDoc Customer Agent how to run **shadow-mode validation**: serialize learner activity, upload evidence through OpenLesson's Evidence API, and request performance analysis — **without ever surfacing results to the end user**.
 
 Shadow mode is for **internal validation only** — compliance audit trails, hiring QA, mentor dashboards, program ops, fraud detection, and cohort analytics. The learner experiences a normal PumaDoc journey. OpenLesson runs in the background.
 
@@ -420,7 +420,7 @@ Never surface API errors as validation feedback to the learner.
 ## What this skill does not cover
 
 - Learner-facing gap coaching → use `/pumadoc-evidence-performance-skill.md`
-- Live tutoring session control, proofs, blockchain → not in Agentic API v2
+- Live tutoring session control, proofs, blockchain → not in Evidence API v2
 - Browser cookie auth → API keys only
 - Disclosing shadow mode existence to learners → out of scope; legal/privacy review is PumaDoc's responsibility
 

@@ -101,9 +101,9 @@ export const PLATFORM_PAGE: SeoPlatformPageConfig = {
       ],
     },
     {
-      title: "Agentic API v2: programmatic workspace access",
+      title: "Evidence API: programmatic workspace access",
       paragraphs: [
-        "The Agentic API v2 is how builders wire the knowledge workspace into their stack. Create workspaces, upload evidence, request performance reports, issue Think Aloud Protocol links, poll session results, and trigger ILE practice blocks.",
+        "The Evidence API is how builders wire the knowledge workspace into their stack. Create workspaces, upload evidence, request performance reports, issue Think Aloud Protocol links, poll session results, and trigger ILE practice blocks.",
         "Embed verification and augmentation into CI pipelines, internal portals, agent orchestration, or any system where humans and agents perform knowledge work.",
       ],
     },
@@ -132,7 +132,7 @@ export const PLATFORM_PAGE: SeoPlatformPageConfig = {
     {
       question: "What evidence can a workspace accumulate?",
       answer:
-        "Documents, screen recordings, video, EEG traces, call transcripts, tool traces, think-aloud transcripts, and any artifact produced during knowledge work. Enrich programmatically via Agentic API v2 or manual upload.",
+        "Documents, screen recordings, video, EEG traces, call transcripts, tool traces, think-aloud transcripts, and any artifact produced during knowledge work. Enrich programmatically via the Evidence API or manual upload.",
     },
     {
       question: "Who is openLesson for?",
@@ -141,7 +141,7 @@ export const PLATFORM_PAGE: SeoPlatformPageConfig = {
     },
   ],
   primaryCta: { label: "Create a Verification Workspace", href: "/workspace/new" },
-  secondaryCta: { label: "Agentic API docs", href: "/docs/agentic-v2" },
+  secondaryCta: { label: "Evidence API docs", href: "/docs/agentic-v2" },
   closingTitle: "Verify learning. Augment where it breaks.",
   closingBody:
     "Stop trusting outputs and completion rates. Use software tools in a knowledge workspace to verify learning with evidence, and augment it until scores move.",

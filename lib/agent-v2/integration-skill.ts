@@ -153,7 +153,7 @@ export function buildIntegrationSkillInstructions(
     ? `\n\nWorkspace evidence specification (use as reference; skill.md must still point to the dynamic API):\n${formatEvidenceSpecForSkillPrompt(evidenceSpec)}`
     : "";
 
-  return `Generate a custom integration skill.md document for "${request.integration_name}" integrating with OpenLesson Agentic API v2.
+  return `Generate a custom integration skill.md document for "${request.integration_name}" integrating with OpenLesson Evidence API.
 
 ${scope}
 

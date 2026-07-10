@@ -68,7 +68,7 @@ export const MCP_EVIDENCE_PROTOCOL_VERSION = "2025-03-26";
 export const MCP_EVIDENCE_SERVER_NAME = "openlesson-evidence-api";
 export const MCP_EVIDENCE_SERVER_VERSION = "1.1.0";
 
-export const MCP_EVIDENCE_SERVER_INSTRUCTIONS = `openLesson Evidence API MCP — full parity with Agentic API v2 REST.
+export const MCP_EVIDENCE_SERVER_INSTRUCTIONS = `openLesson Evidence API MCP — full parity with Evidence API REST.
 
 ## What openLesson is
 ${OPENLESSON_SCOPE.mission}

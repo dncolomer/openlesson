@@ -70,7 +70,7 @@ export function buildIntegrationSurfaces(baseUrl: string): IntegrationSurfaceRef
   return [
     {
       transport: "rest",
-      label: "Agentic API v2 (REST)",
+      label: "Evidence API (REST)",
       auth: "Authorization: Bearer <api_key>",
       entrypoint: `${base}/api/v2/agent/workspaces/{workspace_id}`,
       when_to_use: "Production integrations, server-side agents, and clients with standard HTTP + Bearer auth.",

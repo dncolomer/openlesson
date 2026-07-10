@@ -14,7 +14,7 @@ import { getAnalyticsAction } from './actions/getAnalytics';
 export const openLessonPlugin: Plugin = {
   name: 'open-lesson',
   description:
-    'openLesson Agentic API — verification workspaces, blocks, and Think Aloud Protocol (TAP) links',
+    'openLesson Evidence API — verification workspaces, blocks, and Think Aloud Protocol (TAP) links',
   actions: [
     createPlanAction,
     adaptPlanAction,

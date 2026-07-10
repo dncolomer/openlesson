@@ -1,11 +1,11 @@
 ---
 name: pumadoc-customer-agent-openlesson-evidence-performance
-description: PumaDoc Customer Agent integration skill for OpenLesson workspace creation, open-format tool-usage evidence upload, optional media enrichments, and performance gap analysis via the Agentic API.
+description: PumaDoc Customer Agent integration skill for OpenLesson workspace creation, open-format tool-usage evidence upload, optional media enrichments, and performance gap analysis via the Evidence API.
 ---
 
 # PumaDoc Customer Agent — OpenLesson Evidence & Performance
 
-This skill teaches the PumaDoc Customer Agent how to verify customer-development learning by **serializing what the user did**, **uploading evidence** through OpenLesson's Agentic API, and **requesting performance analysis** that returns structured gap reports or follow-up Q&A.
+This skill teaches the PumaDoc Customer Agent how to verify customer-development learning by **serializing what the user did**, **uploading evidence** through OpenLesson's Evidence API, and **requesting performance analysis** that returns structured gap reports or follow-up Q&A.
 
 **Canonical API reference:** `/skill.md` (`https://openlesson.academy/skill.md`) and `/docs/agentic-v2`. When this document and the live API differ, follow `skill.md`.
 
@@ -523,7 +523,7 @@ Keep messages short. Do not expose raw API JSON to end users.
 
 ## What this skill does not cover
 
-- Live tutoring session control, proofs, blockchain → not in Agentic API v2
+- Live tutoring session control, proofs, blockchain → not in Evidence API v2
 - Browser cookie auth → use API keys only
 - Separate voice evidence type → use tool JSON reflections and/or `video` with audio
 

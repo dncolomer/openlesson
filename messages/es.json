@@ -1860,8 +1860,8 @@
     "generatingSkill": "Generando skill…",
     "generatingSpec": "Generando spec…",
     "signInRequired": "Inicia sesión como propietario del workspace para configurar la integración API.",
-    "ownerOnly": "Solo el propietario del workspace puede configurar la integración Agentic API.",
-    "teamsRequired": "Se requiere plan Teams para funciones Agentic API. Mejora en openlesson.academy/pricing.",
+    "ownerOnly": "Solo el propietario del workspace puede configurar la integración Evidence API.",
+    "teamsRequired": "Se requiere plan Teams para funciones Evidence API. Mejora en openlesson.academy/pricing.",
     "errorGeneric": "La generación falló. Inténtalo de nuevo.",
     "copyPath": "Copiar ruta"
   },

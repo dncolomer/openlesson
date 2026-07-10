@@ -173,16 +173,16 @@ export function SeoSolutionPage({ page, breadcrumbs }: SeoSolutionPageProps) {
               <h2 className="text-xl font-medium text-white sm:text-2xl">{section.title}</h2>
               {section.paragraphs.map((paragraph) => (
                 <p key={paragraph.slice(0, 48)} className="mt-4">
-                  {paragraph.includes("Agentic API v2") ? (
+                  {paragraph.includes("Evidence API") ? (
                     <>
-                      {paragraph.split("Agentic API v2")[0]}
+                      {paragraph.split("Evidence API")[0]}
                       <Link
                         href="/docs/agentic-v2"
                         className="text-neutral-200 underline decoration-neutral-600 underline-offset-4 hover:text-white"
                       >
-                        Agentic API v2
+                        Evidence API
                       </Link>
-                      {paragraph.split("Agentic API v2")[1]}
+                      {paragraph.split("Evidence API")[1]}
                     </>
                   ) : (
                     paragraph

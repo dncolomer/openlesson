@@ -1,6 +1,6 @@
-# OpenLesson Agentic API v2
+# OpenLesson Evidence API
 
-Use this skill when an agent needs to create Verification Workspaces, issue private Think Aloud Protocol (TAP) links, and read completion results via the OpenLesson Agentic API.
+Use this skill when an agent needs to create Verification Workspaces, issue private Think Aloud Protocol (TAP) links, and read completion results via the OpenLesson Evidence API.
 
 **Human-readable spec:** `/docs/agentic-v2`  
 **Base URL:** `https://openlesson.academy` (or your self-hosted origin)
@@ -9,7 +9,7 @@ Use this skill when an agent needs to create Verification Workspaces, issue priv
 
 ## Scope
 
-The Agentic API supports **only** this workflow:
+The Evidence API supports **only** this workflow:
 
 1. Create a Verification Workspace from an `initial_prompt` and optional files.
 2. List blocks in that workspace.

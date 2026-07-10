@@ -1359,7 +1359,7 @@ export function EvidenceApiDemo() {
       <AuthGate
         backgroundImage={backgroundImage}
         title="Admin access required"
-        body="This internal demo uses the Agentic API to create workspaces, upload evidence, and generate performance reports. Only admin accounts can run it."
+        body="This internal demo uses the Evidence API to create workspaces, upload evidence, and generate performance reports. Only admin accounts can run it."
         primaryHref="/dashboard"
         primaryLabel="Back to dashboard"
         secondaryHref="/docs/agentic-v2"

@@ -112,7 +112,7 @@ const softwareSchema = {
     "Integrated Learning Environment — human learning",
     "Agentic Learning Environment — skill development for skill.md developers",
     "Continuous scoring and gap analysis",
-    "Agentic API v2 for LMS integration",
+    "Evidence API for LMS integration",
   ],
 };
 

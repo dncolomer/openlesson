@@ -60,7 +60,7 @@ export default function OAuthConsentPage() {
           <p className="font-mono text-[10px] uppercase tracking-[2px] text-neutral-500">MCP OAuth</p>
           <h1 className="mt-3 text-2xl font-medium text-white">Authorize MCP access</h1>
           <p className="mt-3 text-sm leading-relaxed text-neutral-400">
-            An MCP client is requesting access to your openLesson Agentic API through OAuth.
+            An MCP client is requesting access to your openLesson Evidence API through OAuth.
           </p>
 
           {error && (

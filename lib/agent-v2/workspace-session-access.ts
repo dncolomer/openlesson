@@ -123,7 +123,7 @@ export async function requireWorkspaceOwnerSession(
   if (!hasTeams) {
     return NextResponse.json(
       {
-        error: "The Agentic API requires the Teams tier.",
+        error: "The Evidence API requires the Teams tier.",
         code: "teams_required",
         renew_url: "/pricing",
       },

@@ -120,6 +120,25 @@ export default function B2BLandingPage() {
         </div>
       </section>
 
+      <section id="approach" className="relative z-10 mx-auto max-w-6xl px-6 pb-4 sm:pb-6">
+        <SectionHeading
+          eyebrow="THE APPROACH"
+          title="A learning world model — not linear analytics."
+        />
+        <div className="mt-6 border border-zinc-800 bg-zinc-950/70 p-6 text-lg leading-relaxed text-zinc-400 backdrop-blur-sm sm:p-8">
+          <p>
+            openLesson optimizes learning efficiency for humans and agents by progressively building a
+            learning world model, adapting interfaces in real time, and using an interruption prediction
+            model that breaks the linearity problem of classic analytics.
+          </p>
+          <p className="mt-5 text-zinc-300">
+            Integrated directly into your existing workflows and tools, it turns everyday product activity
+            into precise efficiency signals — measuring true learning-to-outcome conversion and
+            dramatically increasing the ROI of every user learning intervention.
+          </p>
+        </div>
+      </section>
+
       <section id="products" className="relative z-10 mx-auto max-w-6xl px-6 py-10 sm:py-12">
         <SectionHeading
           eyebrow="THE PLATFORM"

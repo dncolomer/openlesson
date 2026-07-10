@@ -395,19 +395,6 @@ export function SessionView({ sessionId }: { sessionId: string }) {
     return () => window.clearTimeout(id);
   }, [session?.id, showWelcomeModal, applyIleChapterGridStartup]);
 
-  // Help re-opens the onboarding guide and collapses to tutor-only. Fresh-session
-  // welcome keeps the chapter grid visible so ILE starts on the grid tool.
-  useEffect(() => {
-    if (!showWelcomePanel) return;
-    if (showWelcomeModal) return;
-    if (!helpPreviousLayoutRef.current) return;
-    const id = window.setTimeout(() => {
-      resizablePaneRef.current?.setLayout({ collapsedSide: "left" });
-      setPaneVisibility({ tools: false, tutor: true, plan: false });
-    }, 80);
-    return () => window.clearTimeout(id);
-  }, [showWelcomePanel, showWelcomeModal, welcomeOpenNonce]);
-
   // Block ILE tools when not actively monitoring. Also allow interaction
   // during the in-panel onboarding guide — the user needs to click Start and
   // optionally Open Session Plan from the welcome surface before recording
@@ -3995,11 +3982,10 @@ export function SessionView({ sessionId }: { sessionId: string }) {
       <ToolsPanel 
               activeTool={activeTool}
               onToolChange={(tool) => {
-                // "help" is a command, not a view: it pauses the session
-                // and re-opens the 3-step onboarding guide in the Helios
-                // panel with the layout collapsed to only-tutor-open.
-                // Probes and session data are preserved — clicking Start
-                // session from the welcome resumes recording.
+                // "help" is a command, not a view: it pauses the session,
+                // opens the chapter grid, and re-opens the 3-step onboarding
+                // guide in the Helios panel. Probes and session data are
+                // preserved — clicking Start from the welcome resumes recording.
                 if (tool === "help") {
                   // Snapshot the current pane layout from localStorage
                   // so we can restore it when the user clicks Play. We
@@ -4032,9 +4018,8 @@ export function SessionView({ sessionId }: { sessionId: string }) {
                       console.error("[SessionView] Help pause failed:", err),
                     );
                   }
+                  applyIleChapterGridStartup();
                   setShowWelcomePanel(true);
-                  // Force the collapse effect to re-fire even if the
-                  // welcome panel was already open.
                   setWelcomeOpenNonce(n => n + 1);
                   return;
                 }

@@ -211,7 +211,7 @@ export function SessionOnboardingGuide({
     <div
       className={`flex min-h-0 flex-col ${
         isFloating
-          ? "max-h-[min(100%,38rem)] w-full max-w-md overflow-hidden rounded-2xl border border-white/10 bg-black/55 shadow-[0_24px_80px_rgba(0,0,0,0.45)] backdrop-blur-xl"
+          ? "max-h-[min(100%,46rem)] min-h-[34rem] w-full max-w-lg overflow-hidden rounded-2xl border border-white/10 bg-black/55 shadow-[0_24px_80px_rgba(0,0,0,0.45)] backdrop-blur-xl"
           : `flex-1 ${className}`
       }`}
     >
@@ -252,7 +252,7 @@ export function SessionOnboardingGuide({
           {steps.map((slide, index) => (
             <div
               key={index}
-              className="flex h-full w-full shrink-0 flex-col overflow-y-auto px-5 py-5 sm:px-6"
+              className="flex h-full w-full shrink-0 flex-col overflow-y-auto px-5 py-5 pb-6 sm:px-6 sm:pb-7"
             >
               {slide.kind === "visual" ? (
                 <div className="mb-4 aspect-[16/10] overflow-hidden rounded-xl border border-neutral-800 bg-neutral-950">

@@ -14,6 +14,8 @@ import { SessionOnboardingGuide } from "@/components/SessionOnboardingGuide";
 import {
   disposeSpeechRecognition,
   formatSpeechTranscriptDisplay,
+  isFatalSpeechRecognitionError,
+  requestMicrophoneForSpeech,
   shouldReportSpeechRecognitionError,
   tryStartSpeechRecognition,
   useClientSpeechRecognitionConstructor,
@@ -512,6 +514,9 @@ export function TapScoreClient({ workspaceId, blockId, sessionId, privateToken, 
     };
     recognition.onerror = (event) => {
       const error = event.error || "speech-recognition-error";
+      if (isFatalSpeechRecognitionError(error)) {
+        shouldListenRef.current = false;
+      }
       if (shouldReportSpeechRecognitionError(error)) {
         setSpeechError(error);
       }
@@ -629,10 +634,23 @@ export function TapScoreClient({ workspaceId, blockId, sessionId, privateToken, 
     }
   }
 
+  async function retryMicrophone() {
+    const granted = await requestMicrophoneForSpeech();
+    if (!granted) {
+      setSpeechError("not-allowed");
+      return;
+    }
+    setSpeechError(null);
+    if (phase !== "live") return;
+    shouldListenRef.current = true;
+    restartSpeechRecognitionSession();
+  }
+
   async function startSession() {
     isEndingRef.current = false;
     setIsStartingSession(true);
     setError("");
+    setSpeechError(null);
     speechResultsLengthRef.current = 0;
     consumedResultsIndexRef.current = 0;
     finalBufferRef.current = [];
@@ -640,6 +658,7 @@ export function TapScoreClient({ workspaceId, blockId, sessionId, privateToken, 
     setMemoryThoughtIds(new Set());
     setSentThoughtIds(new Set());
     clearDialogueMessages(dialogueStorageKey);
+    const micPrime = requestMicrophoneForSpeech();
 
     try {
       const response = await fetch("/api/workspace-tap-score/start", {
@@ -675,6 +694,10 @@ export function TapScoreClient({ workspaceId, blockId, sessionId, privateToken, 
           at: new Date().toISOString(),
         },
       ]);
+      const micGranted = await micPrime;
+      if (!micGranted) {
+        setSpeechError("not-allowed");
+      }
       setPhase("live");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not start TAP session");
@@ -863,6 +886,11 @@ export function TapScoreClient({ workspaceId, blockId, sessionId, privateToken, 
                       className={`w-full ${speechError ? "text-amber-300/90" : ""}`}
                     />
                   </div>
+                  {speechError === "not-allowed" ? (
+                    <ThoughtButton size="sm" variant="primary" onClick={() => void retryMicrophone()}>
+                      Retry
+                    </ThoughtButton>
+                  ) : null}
                   <div className="flex shrink-0 items-center gap-0.5">
                     <ThoughtCompactAction
                       shortcut="C"

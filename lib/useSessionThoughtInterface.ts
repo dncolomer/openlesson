@@ -56,6 +56,26 @@ export function shouldReportSpeechRecognitionError(error?: string) {
   return !!error && !BENIGN_SPEECH_RECOGNITION_ERRORS.has(error);
 }
 
+export function isFatalSpeechRecognitionError(error?: string) {
+  return error === "not-allowed" || error === "service-not-allowed" || error === "language-not-supported";
+}
+
+/** Prime browser mic permission during a user gesture before SpeechRecognition starts. */
+export async function requestMicrophoneForSpeech(): Promise<boolean> {
+  if (typeof navigator === "undefined" || !navigator.mediaDevices?.getUserMedia) {
+    return false;
+  }
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      audio: { echoCancellation: true, noiseSuppression: true },
+    });
+    stream.getTracks().forEach((track) => track.stop());
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export function formatSpeechTranscriptDisplay({
   text,
   speechError,
@@ -72,6 +92,9 @@ export function formatSpeechTranscriptDisplay({
   if (text) return text;
   if (speechApiReady && !recognitionAvailable) {
     return "Speech recognition is not supported in this browser.";
+  }
+  if (speechError === "not-allowed") {
+    return "Microphone blocked — allow access for this site, then click Retry.";
   }
   if (speechError && speechError !== "unsupported") {
     return `Microphone error: ${speechError}`;
@@ -122,26 +145,27 @@ export function tryStartSpeechRecognition(
   onError: (error: string | null) => void,
   delayMs = 0,
 ) {
-  window.setTimeout(() => {
+  const run = () => {
     if (recognitionRef.current !== recognition || !shouldListenRef.current) return;
-
-    const attempt = (retriesLeft: number) => {
-      try {
-        recognition.start();
-        onListening(true);
-        onError(null);
-      } catch (err) {
-        if (retriesLeft > 0) {
-          window.setTimeout(() => attempt(retriesLeft - 1), 120);
-          return;
-        }
-        onError(String(err));
-        onListening(false);
+    try {
+      recognition.start();
+      onListening(true);
+      onError(null);
+    } catch (err) {
+      const message = String(err);
+      onError(message);
+      onListening(false);
+      if (isFatalSpeechRecognitionError(message)) {
+        shouldListenRef.current = false;
       }
-    };
+    }
+  };
 
-    attempt(1);
-  }, delayMs);
+  if (delayMs > 0) {
+    window.setTimeout(run, delayMs);
+  } else {
+    run();
+  }
 }
 
 export interface SessionThoughtTracePayload {
@@ -351,6 +375,9 @@ export function useSessionThoughtInterface({
     };
     recognition.onerror = (event) => {
       const error = event.error || "speech-recognition-error";
+      if (isFatalSpeechRecognitionError(error)) {
+        shouldListenRef.current = false;
+      }
       if (shouldReportSpeechRecognitionError(error)) {
         setSpeechError(error);
       }
@@ -455,6 +482,18 @@ export function useSessionThoughtInterface({
     restartSpeechRecognitionSession();
   }, [restartSpeechRecognitionSession]);
 
+  const retryMicrophone = useCallback(async () => {
+    const granted = await requestMicrophoneForSpeech();
+    if (!granted) {
+      setSpeechError("not-allowed");
+      return;
+    }
+    setSpeechError(null);
+    if (!enabled) return;
+    shouldListenRef.current = true;
+    restartSpeechRecognitionSession();
+  }, [enabled, restartSpeechRecognitionSession]);
+
   const clearActiveThoughts = useCallback(() => {
     setEditingTranscription(null);
     if (activeThoughts.length > 0) {
@@ -547,6 +586,7 @@ export function useSessionThoughtInterface({
     submitEditedTranscription,
     clearActiveThoughts,
     clearTranscription,
+    retryMicrophone,
     editingTranscription,
   };
 }

@@ -157,6 +157,15 @@ export function SessionHeliosPanel({
                     className={`w-full ${thought.speechError ? "text-amber-300/90" : ""}`}
                   />
                 </div>
+                {thought.speechError === "not-allowed" ? (
+                  <button
+                    type="button"
+                    onClick={() => void thought.retryMicrophone()}
+                    className="shrink-0 rounded-md border border-amber-500/40 bg-amber-500/10 px-2 py-1 text-[10px] font-medium text-amber-200 transition hover:border-amber-400/60 hover:bg-amber-500/20"
+                  >
+                    Retry
+                  </button>
+                ) : null}
                 <div className="flex shrink-0 items-center gap-0.5">
                   <ThoughtCompactAction
                     shortcut="C"

@@ -13,6 +13,7 @@ import {
 } from "@/components/thought-ui/ThoughtUi";
 import { SessionOnboardingGuide } from "@/components/SessionOnboardingGuide";
 import { ActiveThoughtSlots } from "@/components/thought-ui/ActiveThoughtSlots";
+import { ThoughtEditPanel } from "@/components/thought-ui/ThoughtEditPanel";
 import { SlidingTranscript } from "@/components/thought-ui/SlidingTranscript";
 
 interface SessionHeliosPanelProps {
@@ -163,18 +164,28 @@ export function SessionHeliosPanel({
                 >
                   <ThoughtButtonLabel shortcut="S">send ({thought.selectedActiveThoughts.length})</ThoughtButtonLabel>
                 </ThoughtButton>
-                <ThoughtButton size="sm" disabled={thought.activeThoughts.length === 0} onClick={thought.skipCurrentThought}>
-                  <ThoughtButtonLabel shortcut="Esc">skip</ThoughtButtonLabel>
+                <ThoughtButton size="sm" disabled={thought.activeThoughts.length === 0} onClick={thought.clearActiveThoughts}>
+                  <ThoughtButtonLabel shortcut="Esc">clear</ThoughtButtonLabel>
                 </ThoughtButton>
               </div>
 
               <div className="mt-3 border-t border-neutral-900/80 pt-3">
                 <p className="mb-2 text-[10px] uppercase tracking-[2px] text-neutral-600">{t("probes.activeThoughts")}</p>
+                {thought.editingThought ? (
+                  <ThoughtEditPanel
+                    draft={thought.editingThought.draft}
+                    onDraftChange={thought.updateEditDraft}
+                    onCancel={thought.cancelEditThought}
+                    onSend={() => void thought.submitEditedThought()}
+                    isSending={thought.isSending}
+                  />
+                ) : null}
                 <ActiveThoughtSlots
                   thoughts={thought.latestThoughts}
                   selectedThoughtIds={thought.selectedActiveThoughtIds}
+                  editingThoughtId={thought.editingThought?.id ?? null}
                   onToggleSelect={thought.toggleActiveThought}
-                  onSendThought={(text, thoughtId) => void thought.sendThought(text, [thoughtId])}
+                  onEditThought={thought.beginEditThought}
                 />
               </div>
             </div>

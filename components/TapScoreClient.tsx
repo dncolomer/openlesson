@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import { getIlePostSessionPath } from "@/lib/storage";
 import { DialogueSplit } from "@/components/thought-ui/ThoughtUi";
 import { ActiveThoughtSlots } from "@/components/thought-ui/ActiveThoughtSlots";
+import { ThoughtEditPanel } from "@/components/thought-ui/ThoughtEditPanel";
 import { ThoughtMemoryPanel } from "@/components/thought-ui/ThoughtMemoryPanel";
 import { SlidingTranscript } from "@/components/thought-ui/SlidingTranscript";
 import { SessionOnboardingGuide } from "@/components/SessionOnboardingGuide";
@@ -229,8 +230,8 @@ function ThoughtButtonLabel({
 
 const TAP_SHORTCUT_ROWS: { keys: string[]; label: string; altKeys?: string[][] }[] = [
   { keys: ["C"], label: "Crystallize the live transcript into a thought" },
-  { keys: ["Esc"], label: "Skip the current thought" },
-  { keys: ["1", "2", "3"], label: "Send thought 1, 2, or 3" },
+  { keys: ["Esc"], label: "Clear all active thoughts" },
+  { keys: ["1", "2", "3"], label: "Edit thought 1, 2, or 3" },
   {
     keys: ["⇧", "1"],
     altKeys: [["⇧", "2"], ["⇧", "3"]],
@@ -325,6 +326,7 @@ export function TapScoreClient({ workspaceId, blockId, sessionId, privateToken, 
   const [selectedActiveThoughtIds, setSelectedActiveThoughtIds] = useState<Set<string>>(new Set());
   const [memoryThoughtIds, setMemoryThoughtIds] = useState<Set<string>>(new Set());
   const [sentThoughtIds, setSentThoughtIds] = useState<Set<string>>(new Set());
+  const [editingThought, setEditingThought] = useState<{ id: string; draft: string } | null>(null);
 
   const [error, setError] = useState("");
   const [isStartingSession, setIsStartingSession] = useState(false);
@@ -632,14 +634,6 @@ export function TapScoreClient({ workspaceId, blockId, sessionId, privateToken, 
       }
       setInterimText(interim);
       setCrystallizableText(normalize(`${finalBufferRef.current.join(" ")} ${interim}`.trim()));
-      if (finalBufferRef.current.length > 0) {
-        if (finalizeTimerRef.current) clearTimeout(finalizeTimerRef.current);
-        finalizeTimerRef.current = setTimeout(() => {
-          finalizeTimerRef.current = null;
-          setInterimText("");
-          flushFinalBuffer();
-        }, 850);
-      }
     };
     recognition.onerror = (event) => {
       const error = event.error || "speech-recognition-error";
@@ -678,7 +672,11 @@ export function TapScoreClient({ workspaceId, blockId, sessionId, privateToken, 
       if (target?.closest("input, textarea, select, [contenteditable='true']")) return;
       if (event.key === "Escape") {
         event.preventDefault();
-        skipCurrentThought();
+        if (editingThought) {
+          setEditingThought(null);
+          return;
+        }
+        clearActiveThoughts();
         return;
       }
       if (!event.metaKey && !event.ctrlKey && !event.shiftKey && event.key.toLowerCase() === "c") {
@@ -691,7 +689,7 @@ export function TapScoreClient({ workspaceId, blockId, sessionId, privateToken, 
         if (!thought) return;
         event.preventDefault();
         if (event.shiftKey) toggleActiveThought(thought.id);
-        else void sendThought(thought.text, [thought.id]);
+        else beginEditThought(thought.id);
         return;
       }
       if (!event.metaKey && !event.ctrlKey && !event.shiftKey && event.key.toLowerCase() === "s") {
@@ -706,7 +704,7 @@ export function TapScoreClient({ workspaceId, blockId, sessionId, privateToken, 
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [phase, latestThoughts, thoughts, voiceEnabled, selectedActiveThoughts, crystallizeCurrentTranscription]);
+  }, [phase, latestThoughts, thoughts, voiceEnabled, selectedActiveThoughts, crystallizeCurrentTranscription, editingThought]);
 
   async function sendThought(text: string, thoughtIds: string[] = []) {
     const clean = normalize(text);
@@ -890,24 +888,27 @@ export function TapScoreClient({ workspaceId, blockId, sessionId, privateToken, 
     });
   }
 
-  function skipCurrentThought() {
-    flushFinalBuffer();
-    const currentThought = activeThoughts[activeThoughts.length - 1];
-    if (!currentThought) return;
-    logTapTrace({
-      traceType: "system2",
-      action: "skip",
-      thoughtId: currentThought.id,
-      chainId: currentThought.chainId,
-      text: currentThought.text,
-      timestampMs: currentThought.timestamp,
+  function beginEditThought(thoughtId: string) {
+    const thought = thoughts.find((entry) => entry.id === thoughtId);
+    if (!thought || sentThoughtIds.has(thoughtId) || memoryThoughtIds.has(thoughtId)) return;
+    setEditingThought({ id: thought.id, draft: thought.text });
+  }
+
+  function clearActiveThoughts() {
+    if (activeThoughts.length === 0) return;
+    setEditingThought(null);
+    activeThoughts.forEach((thought) => {
+      logTapTrace({
+        traceType: "system2",
+        action: "skip",
+        thoughtId: thought.id,
+        chainId: thought.chainId,
+        text: thought.text,
+        timestampMs: thought.timestamp,
+      });
     });
-    setMemoryThoughtIds((current) => new Set(current).add(currentThought.id));
-    setSelectedActiveThoughtIds((current) => {
-      const next = new Set(current);
-      next.delete(currentThought.id);
-      return next;
-    });
+    setMemoryThoughtIds((current) => new Set([...current, ...activeThoughts.map((thought) => thought.id)]));
+    setSelectedActiveThoughtIds(new Set());
   }
 
   return (
@@ -1012,18 +1013,34 @@ export function TapScoreClient({ workspaceId, blockId, sessionId, privateToken, 
                   >
                     <ThoughtButtonLabel shortcut="S">send ({selectedActiveThoughts.length})</ThoughtButtonLabel>
                   </ThoughtButton>
-                  <ThoughtButton size="sm" disabled={activeThoughts.length === 0} onClick={skipCurrentThought}>
-                    <ThoughtButtonLabel shortcut="Esc">skip</ThoughtButtonLabel>
+                  <ThoughtButton size="sm" disabled={activeThoughts.length === 0} onClick={clearActiveThoughts}>
+                    <ThoughtButtonLabel shortcut="Esc">clear</ThoughtButtonLabel>
                   </ThoughtButton>
                 </div>
 
                 <div className="mt-3 border-t border-neutral-900/80 pt-3">
                   <p className="mb-2 text-[10px] uppercase tracking-[2px] text-neutral-600">Active thoughts</p>
+                  {editingThought ? (
+                    <ThoughtEditPanel
+                      draft={editingThought.draft}
+                      onDraftChange={(draft) => setEditingThought((current) => (current ? { ...current, draft } : null))}
+                      onCancel={() => setEditingThought(null)}
+                      onSend={() => {
+                        const draft = normalize(editingThought.draft);
+                        if (!draft) return;
+                        const thoughtId = editingThought.id;
+                        setEditingThought(null);
+                        void sendThought(draft, [thoughtId]);
+                      }}
+                      isSending={isSending}
+                    />
+                  ) : null}
                   <ActiveThoughtSlots
                     thoughts={latestThoughts}
                     selectedThoughtIds={selectedActiveThoughtIds}
+                    editingThoughtId={editingThought?.id ?? null}
                     onToggleSelect={toggleActiveThought}
-                    onSendThought={(text, thoughtId) => void sendThought(text, [thoughtId])}
+                    onEditThought={beginEditThought}
                   />
                 </div>
               </div>

@@ -145,7 +145,7 @@ export function ThoughtButtonLabel({
 
 function dialogueAvatarClasses(isActiveTurn: boolean) {
   return cn(
-    "flex h-28 w-28 items-center justify-center overflow-hidden rounded-full border bg-gradient-to-br via-neutral-800 to-neutral-900 ring-2 ring-offset-2 ring-offset-[#0a0a0a]",
+    "grid h-28 w-28 shrink-0 place-items-center overflow-hidden rounded-full border bg-gradient-to-br via-neutral-800 to-neutral-900 ring-2 ring-offset-2 ring-offset-[#0a0a0a]",
     isActiveTurn
       ? "animate-dialogue-turn-pulse border-red-500/70 from-amber-500/15 ring-red-500/40"
       : "border-white/70 from-white/10 ring-white/40",
@@ -170,9 +170,9 @@ function dialogueBubbleClasses(isActiveTurn: boolean, cornerClass: string) {
 
 export function HeliosProbeAvatar({ isActiveTurn = false }: { isActiveTurn?: boolean }) {
   return (
-    <div className="relative shrink-0">
+    <div className="relative h-28 w-28 shrink-0">
       <div className={dialogueAvatarClasses(isActiveTurn)}>
-        <span className="font-serif text-3xl text-neutral-200">H</span>
+        <span className="font-serif text-3xl leading-none text-neutral-200">H</span>
       </div>
       <div className={dialogueAvatarGlowClass(isActiveTurn)} />
     </div>
@@ -187,9 +187,9 @@ export function LearnerThoughtAvatar({
   isActiveTurn?: boolean;
 }) {
   return (
-    <div className="relative shrink-0">
+    <div className="relative h-28 w-28 shrink-0">
       <div className={dialogueAvatarClasses(isActiveTurn)}>
-        <span className="font-serif text-3xl text-neutral-100">{initial}</span>
+        <span className="font-serif text-3xl leading-none text-neutral-100">{initial}</span>
       </div>
       <div className={dialogueAvatarGlowClass(isActiveTurn)} />
     </div>
@@ -237,29 +237,26 @@ function DialogueSplitComic({
       : "mt-3 text-left text-xs text-red-300";
 
   return (
-    <div
-      className={cn(
-        "flex min-h-0 flex-1 flex-col gap-4 px-4 py-4 sm:gap-5 sm:px-6 sm:py-5",
-        variant === "tap" ? "justify-start" : "justify-center",
-      )}
-    >
-      {/* Helios — top-left */}
-      <div className="flex w-full max-w-[min(100%,34rem)] items-center gap-3 sm:gap-4">
-        <HeliosProbeAvatar isActiveTurn={isHeliosTurn} />
-        <div className="min-w-0 flex-1">
-          <div className={dialogueBubbleClasses(isHeliosTurn, "rounded-tl-md")}>
-            {isSending ? (
-              <div className="flex gap-1.5 py-1">
-                <div className={`size-2.5 animate-bounce rounded-full ${pendingDotClass}`} style={{ animationDelay: "0ms" }} />
-                <div className={`size-2.5 animate-bounce rounded-full ${pendingDotClass}`} style={{ animationDelay: "150ms" }} />
-                <div className={`size-2.5 animate-bounce rounded-full ${pendingDotClass}`} style={{ animationDelay: "300ms" }} />
-              </div>
-            ) : lastAssistantTurn ? (
-              <p className={`${textClass} text-left ${heliosReplyClass}`}>{lastAssistantTurn.content}</p>
-            ) : (
-              <p className={`${textClass} text-left ${heliosPromptClass}`}>{promptText}</p>
-            )}
-            {error && <p className={errorClass}>{error}</p>}
+    <div className="flex min-h-full min-h-0 flex-1 flex-col px-4 py-4 sm:px-6 sm:py-5">
+      {/* Helios — centered vertically in the top half */}
+      <div className="flex min-h-0 flex-1 items-center">
+        <div className="flex w-full max-w-[min(100%,34rem)] items-center gap-3 sm:gap-4">
+          <HeliosProbeAvatar isActiveTurn={isHeliosTurn} />
+          <div className="min-w-0 flex-1">
+            <div className={dialogueBubbleClasses(isHeliosTurn, "rounded-tl-md")}>
+              {isSending ? (
+                <div className="flex gap-1.5 py-1">
+                  <div className={`size-2.5 animate-bounce rounded-full ${pendingDotClass}`} style={{ animationDelay: "0ms" }} />
+                  <div className={`size-2.5 animate-bounce rounded-full ${pendingDotClass}`} style={{ animationDelay: "150ms" }} />
+                  <div className={`size-2.5 animate-bounce rounded-full ${pendingDotClass}`} style={{ animationDelay: "300ms" }} />
+                </div>
+              ) : lastAssistantTurn ? (
+                <p className={`${textClass} text-left ${heliosReplyClass}`}>{lastAssistantTurn.content}</p>
+              ) : (
+                <p className={`${textClass} text-left ${heliosPromptClass}`}>{promptText}</p>
+              )}
+              {error && <p className={errorClass}>{error}</p>}
+            </div>
           </div>
         </div>
       </div>
@@ -270,31 +267,33 @@ function DialogueSplitComic({
         aria-hidden
       />
 
-      {/* Learner — bottom-right */}
-      <div
-        className={cn(
-          "flex w-full max-w-[min(100%,34rem)] items-center gap-3 self-end sm:gap-4",
-          !hasUserBubble && "justify-end",
-        )}
-      >
-        {hasUserBubble ? (
-          <div className="min-w-0 flex-1">
-            <div className={dialogueBubbleClasses(isLearnerTurn, "rounded-br-md bg-black/55")}>
-              {userLines.length > 0 ? (
-                <div className="space-y-3">
-                  {userLines.map((line, index) => (
-                    <p key={`${lastUserTurn?.id}-${index}`} className={`${textClass} text-right ${userReplyClass}`}>
-                      {line}
-                    </p>
-                  ))}
-                </div>
-              ) : (
-                <p className={`${textClass} text-right ${userEmptyClass}`}>{emptyUserTurnText}</p>
-              )}
+      {/* Learner — centered vertically in the bottom half */}
+      <div className="flex min-h-0 flex-1 items-center justify-end">
+        <div
+          className={cn(
+            "flex w-full max-w-[min(100%,34rem)] items-center gap-3 sm:gap-4",
+            !hasUserBubble && "justify-end",
+          )}
+        >
+          {hasUserBubble ? (
+            <div className="min-w-0 flex-1">
+              <div className={dialogueBubbleClasses(isLearnerTurn, "rounded-br-md bg-black/55")}>
+                {userLines.length > 0 ? (
+                  <div className="space-y-3">
+                    {userLines.map((line, index) => (
+                      <p key={`${lastUserTurn?.id}-${index}`} className={`${textClass} text-right ${userReplyClass}`}>
+                        {line}
+                      </p>
+                    ))}
+                  </div>
+                ) : (
+                  <p className={`${textClass} text-right ${userEmptyClass}`}>{emptyUserTurnText}</p>
+                )}
+              </div>
             </div>
-          </div>
-        ) : null}
-        <LearnerThoughtAvatar initial={userInitial} isActiveTurn={isLearnerTurn} />
+          ) : null}
+          <LearnerThoughtAvatar initial={userInitial} isActiveTurn={isLearnerTurn} />
+        </div>
       </div>
     </div>
   );

@@ -237,11 +237,16 @@ function DialogueSplitComic({
       : "mt-3 text-left text-xs text-red-300";
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col justify-center gap-4 px-4 py-4 sm:gap-5 sm:px-6 sm:py-5">
+    <div
+      className={cn(
+        "flex min-h-0 flex-1 flex-col gap-4 px-4 py-4 sm:gap-5 sm:px-6 sm:py-5",
+        variant === "tap" ? "justify-start" : "justify-center",
+      )}
+    >
       {/* Helios — top-left */}
-      <div className="flex w-full max-w-[min(100%,34rem)] items-start gap-3 sm:gap-4">
+      <div className="flex w-full max-w-[min(100%,34rem)] items-center gap-3 sm:gap-4">
         <HeliosProbeAvatar isActiveTurn={isHeliosTurn} />
-        <div className="min-w-0 flex-1 pt-1">
+        <div className="min-w-0 flex-1">
           <div className={dialogueBubbleClasses(isHeliosTurn, "rounded-tl-md")}>
             {isSending ? (
               <div className="flex gap-1.5 py-1">
@@ -268,12 +273,12 @@ function DialogueSplitComic({
       {/* Learner — bottom-right */}
       <div
         className={cn(
-          "flex w-full max-w-[min(100%,34rem)] items-end gap-3 self-end sm:gap-4",
+          "flex w-full max-w-[min(100%,34rem)] items-center gap-3 self-end sm:gap-4",
           !hasUserBubble && "justify-end",
         )}
       >
         {hasUserBubble ? (
-          <div className="min-w-0 flex-1 pb-1">
+          <div className="min-w-0 flex-1">
             <div className={dialogueBubbleClasses(isLearnerTurn, "rounded-br-md bg-black/55")}>
               {userLines.length > 0 ? (
                 <div className="space-y-3">

@@ -13,7 +13,7 @@ export default async function PrivateGhlScorePage({ params }: PageProps) {
   const tokenHash = hashPrivateToken(token);
 
   const { data: session } = await supabase
-    .from("workspace_ghc_sessions")
+    .from("workspace_tap_sessions")
     .select("id, workspace_id, block_id, session_id, status, requested_duration_seconds, mode, voice_id, analysis, overall_score, marker_scores, workspaces(title)")
     .eq("private_token_hash", tokenHash)
     .single();

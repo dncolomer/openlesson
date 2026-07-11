@@ -24,7 +24,7 @@ export async function GET(req: NextRequest, { params }: RouteProps) {
   }
 
   let query = supabase
-    .from("workspace_ghc_sessions")
+    .from("workspace_tap_sessions")
     .select("id, workspace_id, block_id, status, requested_duration_seconds, duration_seconds, focus_block_ids, overall_score, created_at, started_at, completed_at")
     .eq("workspace_id", id)
     .order("created_at", { ascending: false });

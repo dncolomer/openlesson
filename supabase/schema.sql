@@ -2,18 +2,19 @@
 -- OPENLESSON — Database Schema (authoritative entry point)
 -- ============================================
 --
--- This file is NOT a source of truth. The database is defined by the
--- migrations in `supabase/migrations/001…035_*.sql`, applied in order.
+-- This file is NOT a source of truth. The database is defined by timestamped
+-- migrations in `supabase/migrations/`, applied in filename order.
 --
--- To set up a fresh project:
+-- Current chain:
+--   20260711120000_baseline.sql  — squashed production public schema
+--   20260711120001_rename_ghc_sessions_to_tap.sql
 --
---   1. Enable the `uuid-ossp` extension on your Supabase project
---      (SQL editor: `CREATE EXTENSION IF NOT EXISTS "uuid-ossp";`).
---   2. Apply `001_bootstrap.sql` below to create the core tables
---      (profiles, sessions, probes).
---   3. Apply every file in `supabase/migrations/` in filename order.
---      The Supabase CLI will do this automatically with
---      `supabase db push` if you're using `supabase link`.
+-- Historical migrations live in `supabase/migrations/_archive/pre-baseline/`.
+--
+-- To set up a fresh database (staging branch or new project):
+--
+--   npm run db:migrate:staging   # or db:migrate for production
+--   npm run db:check-drift:staging
 --   4. Storage buckets must be created via the dashboard:
 --        - `session-audio`  (private) — audio chunks: {user_id}/{session_id}.webm
 --        - `plan-covers`    (private) — AI-generated plan cover images

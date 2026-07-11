@@ -53,7 +53,7 @@ async function loadBlockContext(
 
 export async function getTapSessionDetail(adminClient: SupabaseClient, sessionId: string) {
   const { data, error } = await adminClient
-    .from("workspace_ghc_sessions")
+    .from("workspace_tap_sessions")
     .select(
       "id, workspace_id, block_id, user_id, guest_user_id, organization_id, status, created_at, completed_at, requested_duration_seconds, duration_seconds, overall_score, marker_scores, analysis, summary, mode"
     )

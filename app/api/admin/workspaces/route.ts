@@ -61,7 +61,7 @@ export async function GET(request: NextRequest) {
     if (workspaceIds.length > 0) {
       const [{ data: nodes }, { data: tapSessions }] = await Promise.all([
         adminClient.from("blocks").select("workspace_id").in("workspace_id", workspaceIds),
-        adminClient.from("workspace_ghc_sessions").select("workspace_id").in("workspace_id", workspaceIds),
+        adminClient.from("workspace_tap_sessions").select("workspace_id").in("workspace_id", workspaceIds),
       ]);
       nodes?.forEach((node) => nodeCountMap.set(node.workspace_id, (nodeCountMap.get(node.workspace_id) || 0) + 1));
       tapSessions?.forEach((session) =>

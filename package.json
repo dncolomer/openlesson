@@ -15,7 +15,12 @@
     "check": "npm run lint && npm run typecheck && npm run test && npm run check:locales",
     "import:rabbit-hole": "node scripts/import-rabbit-hole-questions.mjs",
     "generate:prompt-inventory": "node scripts/discover-llm-prompts.mjs && node scripts/generate-prompt-inventory.mjs",
-    "generate:prompt-report": "node scripts/discover-llm-prompts.mjs && node scripts/generate-prompt-report.mjs"
+    "generate:prompt-report": "node scripts/discover-llm-prompts.mjs && node scripts/generate-prompt-report.mjs",
+    "db:build-baseline": "node scripts/build-baseline-migration.mjs",
+    "db:migrate": "node scripts/apply-migrations.mjs",
+    "db:migrate:staging": "node scripts/apply-migrations.mjs --staging",
+    "db:check-drift": "node scripts/check-migration-drift.mjs",
+    "db:check-drift:staging": "node scripts/check-migration-drift.mjs --staging"
   },
   "dependencies": {
     "@coral-xyz/anchor": "^0.30.1",

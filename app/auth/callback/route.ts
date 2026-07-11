@@ -37,7 +37,7 @@ export async function GET(request: Request) {
             .eq("id", user.id);
 
           await admin
-            .from("workspace_ghc_sessions")
+            .from("workspace_tap_sessions")
             .update({ user_id: user.id })
             .eq("guest_user_id", guest.id)
             .is("user_id", null);

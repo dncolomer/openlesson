@@ -148,7 +148,7 @@ export async function buildWorkspacePerformanceContext({
   }
 
   let ghlQuery = supabase
-    .from("workspace_ghc_sessions")
+    .from("workspace_tap_sessions")
     .select(
       "id, block_id, status, overall_score, summary, marker_scores, analysis, duration_seconds, completed_at, created_at, xai_file_id"
     )

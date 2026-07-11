@@ -13,7 +13,7 @@ export async function GET(req: NextRequest, { params }: RouteProps) {
   const { id, linkId } = await params;
 
   let query = supabase
-    .from("workspace_ghc_sessions")
+    .from("workspace_tap_sessions")
     .select("id, workspace_id, block_id, xai_file_id, status, duration_seconds, requested_duration_seconds, focus_block_ids, summary, analysis, overall_score, marker_scores, created_at, started_at, completed_at")
     .eq("id", linkId)
     .eq("workspace_id", id);

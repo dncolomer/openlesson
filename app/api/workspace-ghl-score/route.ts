@@ -10,7 +10,7 @@ export async function GET(req: NextRequest) {
   if (!workspaceId) return NextResponse.json({ error: "workspaceId is required" }, { status: 400 });
 
   const { data, error } = await supabase
-    .from("workspace_ghc_sessions")
+    .from("workspace_tap_sessions")
     .select("id, block_id, session_id, xai_file_id, duration_seconds, requested_duration_seconds, status, summary, analysis, overall_score, marker_scores, created_at, completed_at")
     .eq("workspace_id", workspaceId)
     .eq("user_id", user.id)

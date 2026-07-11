@@ -35,7 +35,7 @@ export async function GET(
         .eq("workspace_id", workspaceId)
         .order("created_at", { ascending: true }),
       adminClient
-        .from("workspace_ghc_sessions")
+        .from("workspace_tap_sessions")
         .select("id, status, overall_score, created_at, completed_at, requested_duration_seconds")
         .eq("workspace_id", workspaceId)
         .order("created_at", { ascending: false }),

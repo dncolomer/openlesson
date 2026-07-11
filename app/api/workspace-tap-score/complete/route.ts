@@ -41,7 +41,7 @@ export async function POST(req: NextRequest) {
     if (privateToken) {
       supabase = createAdminClient();
       const { data: session, error } = await supabase
-        .from("workspace_ghc_sessions")
+        .from("workspace_tap_sessions")
         .select("id, workspace_id, user_id, guest_user_id, organization_id, requested_duration_seconds, mode, voice_id, focus_block_ids, status, block_id, session_id, workspaces!inner(user_id)")
         .eq("private_token_hash", hashPrivateToken(privateToken))
         .single();
@@ -184,8 +184,8 @@ Return JSON with:
     };
 
     const query = existingSession
-      ? supabase.from("workspace_ghc_sessions").update(payload).eq("id", existingSession.id)
-      : supabase.from("workspace_ghc_sessions").insert(payload);
+      ? supabase.from("workspace_tap_sessions").update(payload).eq("id", existingSession.id)
+      : supabase.from("workspace_tap_sessions").insert(payload);
 
     const { data: row, error: writeError } = await query
       .select("id, workspace_id, session_id, block_id, analysis, summary, overall_score, marker_scores, status, created_at, completed_at")
@@ -220,7 +220,7 @@ Return JSON with:
       const base64 = Buffer.from(JSON.stringify(artifact, null, 2), "utf8").toString("base64");
       const uploaded = await uploadFileToXAI(`ghl-score-${row.id}.json`, "application/json", base64);
       xaiFileId = uploaded.file_id;
-      await supabase.from("workspace_ghc_sessions").update({ xai_file_id: xaiFileId }).eq("id", row.id);
+      await supabase.from("workspace_tap_sessions").update({ xai_file_id: xaiFileId }).eq("id", row.id);
     } catch (uploadError) {
       console.warn("[workspace-tap-score/complete] xAI artifact upload failed:", uploadError);
     }

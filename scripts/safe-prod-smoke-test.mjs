@@ -74,7 +74,7 @@ async function checkSchema() {
   });
 
   const tables = [
-    "workspace_ghc_sessions",
+    "workspace_tap_sessions",
     "organization_guest_users",
     "workspaces",
     "agent_api_keys",
@@ -102,16 +102,16 @@ async function checkSchema() {
   }
 
   const { data: ghcSample, error: ghcError } = await supabase
-    .from("workspace_ghc_sessions")
+    .from("workspace_tap_sessions")
     .select("id, organization_id, guest_user_id, private_token_hash")
     .limit(1);
 
   if (ghcError) {
-    fail("db: workspace_ghc_sessions columns", ghcError.message);
+    fail("db: workspace_tap_sessions columns", ghcError.message);
   } else if (ghcSample?.[0] && !("guest_user_id" in ghcSample[0])) {
-    fail("db: workspace_ghc_sessions columns", "guest/org columns missing — run migration 045");
+    fail("db: workspace_tap_sessions columns", "guest/org columns missing — run migration 045");
   } else {
-    pass("db: workspace_ghc_sessions columns", "present");
+    pass("db: workspace_tap_sessions columns", "present");
   }
 }
 

@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
     if (privateToken) {
       const supabase = createAdminClient();
       const { data: session, error } = await supabase
-        .from("workspace_ghc_sessions")
+        .from("workspace_tap_sessions")
         .select("id, workspace_id, user_id, guest_user_id, organization_id, requested_duration_seconds, mode, focus_block_ids, status, session_id, workspaces!inner(user_id)")
         .eq("private_token_hash", hashPrivateToken(privateToken))
         .single();
@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
       if (session.status === "completed") return NextResponse.json({ error: "TAP block is already completed" }, { status: 409 });
 
       await supabase
-        .from("workspace_ghc_sessions")
+        .from("workspace_tap_sessions")
         .update({ status: "in_progress", started_at: new Date().toISOString() })
         .eq("id", session.id);
 

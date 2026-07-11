@@ -58,7 +58,7 @@ export async function POST(req: NextRequest) {
 
     const privateToken = createPrivateToken();
     const { data: link, error } = await access.supabase
-      .from("workspace_ghc_sessions")
+      .from("workspace_tap_sessions")
       .insert({
         workspace_id: workspaceId,
         user_id: access.userId,

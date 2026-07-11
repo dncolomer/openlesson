@@ -70,7 +70,7 @@ export async function loadUsageProfile(
 
 async function countTableRows(
   supabase: SupabaseClient,
-  table: "sessions" | "workspace_ghc_sessions" | "workspace_proof_of_work",
+  table: "sessions" | "workspace_tap_sessions" | "workspace_proof_of_work",
   userId: string,
   periodStart?: Date | null
 ): Promise<number> {
@@ -94,7 +94,7 @@ async function countTableRows(
 
 /**
  * Count combined TAP + ILE sessions attributed to the user.
- * ILE = `sessions`; TAP = `workspace_ghc_sessions`.
+ * ILE = `sessions`; TAP = `workspace_tap_sessions`.
  */
 export async function countTapIleSessions(
   supabase: SupabaseClient,
@@ -103,7 +103,7 @@ export async function countTapIleSessions(
 ): Promise<number> {
   const [ileCount, tapCount] = await Promise.all([
     countTableRows(supabase, "sessions", userId, periodStart),
-    countTableRows(supabase, "workspace_ghc_sessions", userId, periodStart),
+    countTableRows(supabase, "workspace_tap_sessions", userId, periodStart),
   ]);
   return ileCount + tapCount;
 }
@@ -139,7 +139,7 @@ export async function countOrgTapIleSessions(
       .in("user_id", memberIds)
       .gte("created_at", periodStart.toISOString()),
     supabase
-      .from("workspace_ghc_sessions")
+      .from("workspace_tap_sessions")
       .select("id", { count: "exact", head: true })
       .in("user_id", memberIds)
       .gte("created_at", periodStart.toISOString()),

@@ -83,7 +83,7 @@ export async function POST(req: NextRequest, { params }: RouteProps) {
 
   const privateToken = createPrivateToken();
   const { data: link, error } = await supabase
-    .from("workspace_ghc_sessions")
+    .from("workspace_tap_sessions")
     .insert({
       workspace_id: workspaceId,
       user_id: ownerUserId,

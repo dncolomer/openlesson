@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
 
     if (access.existingSession?.id) {
       await access.supabase
-        .from("workspace_ghc_sessions")
+        .from("workspace_tap_sessions")
         .update({
           status: "in_progress",
           started_at: new Date().toISOString(),
@@ -52,7 +52,7 @@ export async function POST(req: NextRequest) {
     }
 
     const { data: row, error } = await access.supabase
-      .from("workspace_ghc_sessions")
+      .from("workspace_tap_sessions")
       .insert({
         workspace_id: access.workspaceId,
         user_id: access.userId,

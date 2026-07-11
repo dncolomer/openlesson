@@ -27,7 +27,7 @@ export async function resolveGhlSessionAccess(input: {
   if (privateToken) {
     const supabase = createAdminClient();
     const { data: session, error } = await supabase
-      .from("workspace_ghc_sessions")
+      .from("workspace_tap_sessions")
       .select("id, workspace_id, user_id, guest_user_id, organization_id, block_id, session_id, status, workspaces!inner(user_id)")
       .eq("private_token_hash", hashPrivateToken(privateToken))
       .single();
@@ -73,7 +73,7 @@ export async function resolveGhlSessionAccess(input: {
 
   if (ghlSessionId) {
     const { data: session, error } = await supabase
-      .from("workspace_ghc_sessions")
+      .from("workspace_tap_sessions")
       .select("id, workspace_id, user_id, guest_user_id, organization_id, block_id, session_id, status")
       .eq("id", ghlSessionId)
       .eq("workspace_id", workspaceId)

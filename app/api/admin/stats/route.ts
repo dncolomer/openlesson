@@ -22,7 +22,7 @@ export async function GET() {
         adminClient.from("sessions").select("id", { count: "exact", head: true }).eq("status", "completed"),
         adminClient.from("workspaces").select("id", { count: "exact", head: true }),
         adminClient.from("organizations").select("id", { count: "exact", head: true }),
-        adminClient.from("workspace_ghc_sessions").select("id", { count: "exact", head: true }),
+        adminClient.from("workspace_tap_sessions").select("id", { count: "exact", head: true }),
         adminClient.from("workspace_proof_of_work").select("id", { count: "exact", head: true }),
         adminClient
           .from("sessions")

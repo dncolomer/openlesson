@@ -1262,7 +1262,7 @@ export async function callMcpProofOfWorkTool(
     if (!workspaceId) throw new Error("workspace_id is required.");
 
     let query = supabase
-      .from("workspace_ghc_sessions")
+      .from("workspace_tap_sessions")
       .select(
         "id, workspace_id, block_id, status, requested_duration_seconds, duration_seconds, mode, overall_score, created_at, started_at, completed_at"
       )
@@ -1288,7 +1288,7 @@ export async function callMcpProofOfWorkTool(
     if (!linkId) throw new Error("tap_link_id is required.");
 
     let query = supabase
-      .from("workspace_ghc_sessions")
+      .from("workspace_tap_sessions")
       .select(
         "id, workspace_id, block_id, xai_file_id, status, duration_seconds, requested_duration_seconds, mode, summary, analysis, overall_score, marker_scores, created_at, started_at, completed_at"
       )
@@ -1371,7 +1371,7 @@ export async function callMcpProofOfWorkTool(
 
     const privateToken = createPrivateToken();
     const { data: link, error } = await supabase
-      .from("workspace_ghc_sessions")
+      .from("workspace_tap_sessions")
       .insert({
         workspace_id: workspaceId,
         user_id: ownerUserId,

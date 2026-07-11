@@ -12,13 +12,12 @@ import { ThoughtMemoryPanel } from "@/components/thought-ui/ThoughtMemoryPanel";
 import { SlidingTranscript } from "@/components/thought-ui/SlidingTranscript";
 import { SessionOnboardingGuide } from "@/components/SessionOnboardingGuide";
 import {
-  disposeSpeechRecognition,
   formatSpeechTranscriptDisplay,
-  isFatalSpeechRecognitionError,
-  requestMicrophoneForSpeech,
-  shouldReportSpeechRecognitionError,
-  tryStartSpeechRecognition,
-  useClientSpeechRecognitionConstructor,
+  restartLiveSpeechRecognition,
+  startLiveSpeechRecognition,
+  stopLiveSpeechRecognition,
+  useSpeechSupported,
+  type LiveSpeechRecognitionBindings,
   type SpeechRecognitionEventLike,
   type SpeechRecognitionLike,
 } from "@/lib/useSessionThoughtInterface";
@@ -274,8 +273,6 @@ export function TapScoreClient({ workspaceId, blockId, sessionId, privateToken, 
   const [memoryThoughtIds, setMemoryThoughtIds] = useState<Set<string>>(new Set());
   const [sentThoughtIds, setSentThoughtIds] = useState<Set<string>>(new Set());
   const [editingTranscription, setEditingTranscription] = useState<{ draft: string; originalText: string } | null>(null);
-  const [speechSessionEpoch, setSpeechSessionEpoch] = useState(0);
-
   const [error, setError] = useState("");
   const [isStartingSession, setIsStartingSession] = useState(false);
   const [startedAt, setStartedAt] = useState<number | null>(null);
@@ -362,7 +359,7 @@ export function TapScoreClient({ workspaceId, blockId, sessionId, privateToken, 
     return null;
   }, [messages]);
 
-  const { recognitionCtor, speechApiReady } = useClientSpeechRecognitionConstructor();
+  const speechSupported = useSpeechSupported();
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const shouldListenRef = useRef(false);
   const finalBufferRef = useRef<string[]>([]);
@@ -459,12 +456,36 @@ export function TapScoreClient({ workspaceId, blockId, sessionId, privateToken, 
     setCrystallizableText("");
   }
 
+  const speechBindings = useMemo<LiveSpeechRecognitionBindings>(
+    () => ({
+      recognitionRef,
+      shouldListenRef,
+      onResult: (event: SpeechRecognitionEventLike) => {
+        speechResultsLengthRef.current = event.results.length;
+        const finals: string[] = [];
+        let interim = "";
+        for (let i = 0; i < event.results.length; i += 1) {
+          const result = event.results[i];
+          const transcript = normalize(result[0]?.transcript || "");
+          if (!transcript) continue;
+          if (result.isFinal) finals.push(transcript);
+          else if (i >= event.resultIndex) interim = normalize(`${interim} ${transcript}`);
+        }
+        finalBufferRef.current = finals;
+        setInterimText(interim);
+        setCrystallizableText(normalize(`${finals.join(" ")} ${interim}`.trim()));
+      },
+      onListeningChange: setIsListening,
+      onError: setSpeechError,
+    }),
+    [],
+  );
+
   const restartSpeechRecognitionSession = useCallback(() => {
     consumedResultsIndexRef.current = 0;
     speechResultsLengthRef.current = 0;
-    if (!shouldListenRef.current) return;
-    setSpeechSessionEpoch((epoch) => epoch + 1);
-  }, []);
+    restartLiveSpeechRecognition(speechBindings);
+  }, [speechBindings]);
 
   function clearTranscriptionBuffers() {
     clearTranscriptionDisplay();
@@ -485,73 +506,16 @@ export function TapScoreClient({ workspaceId, blockId, sessionId, privateToken, 
   }, [crystallizableText, restartSpeechRecognitionSession]);
 
   useEffect(() => {
-    if (!speechApiReady || phase !== "live" || !recognitionCtor) {
-      if (speechApiReady && phase === "live" && !recognitionCtor) {
-        setSpeechError("unsupported");
+    if (phase !== "live") {
+      if (phase === "briefing" || phase === "saving" || phase === "error") {
+        stopLiveSpeechRecognition(speechBindings);
       }
       return;
     }
-
-    shouldListenRef.current = true;
-    const recognition = new recognitionCtor();
-    recognition.continuous = true;
-    recognition.interimResults = true;
-    recognition.lang = "en-US";
-    recognition.onresult = (event) => {
-      speechResultsLengthRef.current = event.results.length;
-      const finals: string[] = [];
-      let interim = "";
-      for (let i = 0; i < event.results.length; i += 1) {
-        const result = event.results[i];
-        const transcript = normalize(result[0]?.transcript || "");
-        if (!transcript) continue;
-        if (result.isFinal) finals.push(transcript);
-        else if (i >= event.resultIndex) interim = normalize(`${interim} ${transcript}`);
-      }
-      finalBufferRef.current = finals;
-      setInterimText(interim);
-      setCrystallizableText(normalize(`${finals.join(" ")} ${interim}`.trim()));
-    };
-    recognition.onerror = (event) => {
-      const error = event.error || "speech-recognition-error";
-      if (isFatalSpeechRecognitionError(error)) {
-        shouldListenRef.current = false;
-      }
-      if (shouldReportSpeechRecognitionError(error)) {
-        setSpeechError(error);
-      }
-    };
-    recognition.onend = () => {
-      if (recognitionRef.current !== recognition) return;
-      setIsListening(false);
-      if (shouldListenRef.current) {
-        tryStartSpeechRecognition(
-          recognition,
-          recognitionRef,
-          shouldListenRef,
-          setIsListening,
-          setSpeechError,
-          50,
-        );
-      }
-    };
-    recognitionRef.current = recognition;
-    setSpeechError(null);
-    tryStartSpeechRecognition(
-      recognition,
-      recognitionRef,
-      shouldListenRef,
-      setIsListening,
-      setSpeechError,
-      speechSessionEpoch > 0 ? 80 : 0,
-    );
-
-    return () => {
-      shouldListenRef.current = false;
-      disposeSpeechRecognition(recognition, recognitionRef);
-      setIsListening(false);
-    };
-  }, [phase, recognitionCtor, speechApiReady, speechSessionEpoch]);
+    if (!recognitionRef.current) {
+      startLiveSpeechRecognition(speechBindings, "en-US");
+    }
+  }, [phase, speechBindings]);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -634,16 +598,10 @@ export function TapScoreClient({ workspaceId, blockId, sessionId, privateToken, 
     }
   }
 
-  async function retryMicrophone() {
-    const granted = await requestMicrophoneForSpeech();
-    if (!granted) {
-      setSpeechError("not-allowed");
-      return;
-    }
-    setSpeechError(null);
+  function retryMicrophone() {
     if (phase !== "live") return;
-    shouldListenRef.current = true;
-    restartSpeechRecognitionSession();
+    setSpeechError(null);
+    startLiveSpeechRecognition(speechBindings, "en-US");
   }
 
   async function startSession() {
@@ -658,7 +616,7 @@ export function TapScoreClient({ workspaceId, blockId, sessionId, privateToken, 
     setMemoryThoughtIds(new Set());
     setSentThoughtIds(new Set());
     clearDialogueMessages(dialogueStorageKey);
-    const micPrime = requestMicrophoneForSpeech();
+    startLiveSpeechRecognition(speechBindings, "en-US");
 
     try {
       const response = await fetch("/api/workspace-tap-score/start", {
@@ -694,12 +652,9 @@ export function TapScoreClient({ workspaceId, blockId, sessionId, privateToken, 
           at: new Date().toISOString(),
         },
       ]);
-      const micGranted = await micPrime;
-      if (!micGranted) {
-        setSpeechError("not-allowed");
-      }
       setPhase("live");
     } catch (err) {
+      stopLiveSpeechRecognition(speechBindings);
       setError(err instanceof Error ? err.message : "Could not start TAP session");
     } finally {
       setIsStartingSession(false);
@@ -711,8 +666,7 @@ export function TapScoreClient({ workspaceId, blockId, sessionId, privateToken, 
     isEndingRef.current = true;
     flushFinalBuffer();
     setPhase("saving");
-    shouldListenRef.current = false;
-    recognitionRef.current?.abort();
+    stopLiveSpeechRecognition(speechBindings);
     try {
       const durationSeconds = startedAt ? Math.floor((Date.now() - startedAt) / 1000) : 0;
       const transcript = messages.map((message) => ({ role: message.role, text: message.content, at: message.at }));
@@ -879,8 +833,7 @@ export function TapScoreClient({ workspaceId, blockId, sessionId, privateToken, 
                       text={formatSpeechTranscriptDisplay({
                         text: crystallizableText,
                         speechError,
-                        speechApiReady,
-                        recognitionAvailable: !!recognitionCtor,
+                        speechSupported,
                         isListening,
                       })}
                       className={`w-full ${speechError ? "text-amber-300/90" : ""}`}

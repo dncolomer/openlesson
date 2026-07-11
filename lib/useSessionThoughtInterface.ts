@@ -37,7 +37,7 @@ export type SpeechRecognitionConstructor = new () => SpeechRecognitionLike;
 
 const CHAIN_GAP_MS = 2600;
 
-function getSpeechRecognitionConstructor(): SpeechRecognitionConstructor | null {
+export function getSpeechRecognitionConstructor(): SpeechRecognitionConstructor | null {
   if (typeof window === "undefined") return null;
   const w = window as typeof window & {
     SpeechRecognition?: SpeechRecognitionConstructor;
@@ -60,37 +60,19 @@ export function isFatalSpeechRecognitionError(error?: string) {
   return error === "not-allowed" || error === "service-not-allowed" || error === "language-not-supported";
 }
 
-/** Prime browser mic permission during a user gesture before SpeechRecognition starts. */
-export async function requestMicrophoneForSpeech(): Promise<boolean> {
-  if (typeof navigator === "undefined" || !navigator.mediaDevices?.getUserMedia) {
-    return false;
-  }
-  try {
-    const stream = await navigator.mediaDevices.getUserMedia({
-      audio: { echoCancellation: true, noiseSuppression: true },
-    });
-    stream.getTracks().forEach((track) => track.stop());
-    return true;
-  } catch {
-    return false;
-  }
-}
-
 export function formatSpeechTranscriptDisplay({
   text,
   speechError,
-  speechApiReady,
-  recognitionAvailable,
+  speechSupported,
   isListening,
 }: {
   text: string;
   speechError: string | null;
-  speechApiReady: boolean;
-  recognitionAvailable: boolean;
+  speechSupported: boolean | null;
   isListening: boolean;
 }) {
   if (text) return text;
-  if (speechApiReady && !recognitionAvailable) {
+  if (speechSupported === false) {
     return "Speech recognition is not supported in this browser.";
   }
   if (speechError === "not-allowed") {
@@ -99,27 +81,132 @@ export function formatSpeechTranscriptDisplay({
   if (speechError && speechError !== "unsupported") {
     return `Microphone error: ${speechError}`;
   }
-  if (!speechApiReady || !recognitionAvailable) return "Starting microphone…";
-  if (!isListening) return "Waiting for microphone…";
+  if (speechSupported === null) return "Starting microphone…";
+  if (!isListening) return "Listening…";
   return "";
 }
 
-/** Resolve SpeechRecognition on the client — useMemo(…) caches null from SSR and never recovers. */
-export function useClientSpeechRecognitionConstructor() {
-  const recognitionCtorRef = useRef<SpeechRecognitionConstructor | null>(null);
-  const [speechApiReady, setSpeechApiReady] = useState(false);
-
+export function useSpeechSupported() {
+  const [speechSupported, setSpeechSupported] = useState<boolean | null>(null);
   useEffect(() => {
-    recognitionCtorRef.current = getSpeechRecognitionConstructor();
-    setSpeechApiReady(true);
+    setSpeechSupported(!!getSpeechRecognitionConstructor());
   }, []);
+  return speechSupported;
+}
 
-  // Keep the ctor in a ref — React 19 treats functions passed to setState as updaters
-  // and would invoke SpeechRecognition() without `new`.
-  return {
-    recognitionCtor: speechApiReady ? recognitionCtorRef.current : null,
-    speechApiReady,
+export type LiveSpeechRecognitionBindings = {
+  recognitionRef: MutableRefObject<SpeechRecognitionLike | null>;
+  shouldListenRef: MutableRefObject<boolean>;
+  onResult: (event: SpeechRecognitionEventLike) => void;
+  onListeningChange: (listening: boolean) => void;
+  onError: (error: string | null) => void;
+};
+
+function attachLiveSpeechRecognitionHandlers(
+  recognition: SpeechRecognitionLike,
+  bindings: LiveSpeechRecognitionBindings,
+) {
+  recognition.onresult = bindings.onResult;
+  recognition.onerror = (event) => {
+    const error = event.error || "speech-recognition-error";
+    if (isFatalSpeechRecognitionError(error)) {
+      bindings.shouldListenRef.current = false;
+    }
+    if (shouldReportSpeechRecognitionError(error)) {
+      bindings.onError(error);
+    }
   };
+  recognition.onend = () => {
+    if (bindings.recognitionRef.current !== recognition) return;
+    bindings.onListeningChange(false);
+    if (!bindings.shouldListenRef.current) return;
+    try {
+      recognition.start();
+      bindings.onListeningChange(true);
+      bindings.onError(null);
+    } catch (err) {
+      const message = String(err);
+      bindings.onError(message);
+      if (isFatalSpeechRecognitionError(message)) {
+        bindings.shouldListenRef.current = false;
+      }
+    }
+  };
+}
+
+/** Start or resume a single continuous SpeechRecognition session. Call from a user gesture when possible. */
+export function startLiveSpeechRecognition(
+  bindings: LiveSpeechRecognitionBindings,
+  lang: string,
+): SpeechRecognitionLike | null {
+  const ctor = getSpeechRecognitionConstructor();
+  if (!ctor) {
+    bindings.onError("unsupported");
+    return null;
+  }
+
+  bindings.shouldListenRef.current = true;
+
+  const existing = bindings.recognitionRef.current;
+  if (existing) {
+    attachLiveSpeechRecognitionHandlers(existing, bindings);
+    try {
+      existing.start();
+      bindings.onListeningChange(true);
+      bindings.onError(null);
+      return existing;
+    } catch (err) {
+      const message = String(err);
+      if (/already\s+started/i.test(message)) {
+        bindings.onListeningChange(true);
+        bindings.onError(null);
+        return existing;
+      }
+      if (!isFatalSpeechRecognitionError(message)) {
+        bindings.onError(message);
+        bindings.onListeningChange(false);
+        return existing;
+      }
+      disposeSpeechRecognition(existing, bindings.recognitionRef);
+    }
+  }
+
+  const recognition = new ctor();
+  recognition.continuous = true;
+  recognition.interimResults = true;
+  recognition.lang = lang;
+  attachLiveSpeechRecognitionHandlers(recognition, bindings);
+  bindings.recognitionRef.current = recognition;
+
+  try {
+    recognition.start();
+    bindings.onListeningChange(true);
+    bindings.onError(null);
+  } catch (err) {
+    bindings.onError(String(err));
+    bindings.onListeningChange(false);
+    if (isFatalSpeechRecognitionError(String(err))) {
+      bindings.shouldListenRef.current = false;
+    }
+  }
+
+  return recognition;
+}
+
+export function restartLiveSpeechRecognition(bindings: LiveSpeechRecognitionBindings) {
+  const recognition = bindings.recognitionRef.current;
+  if (!recognition || !bindings.shouldListenRef.current) return;
+  try {
+    recognition.abort();
+  } catch {}
+}
+
+export function stopLiveSpeechRecognition(bindings: LiveSpeechRecognitionBindings) {
+  bindings.shouldListenRef.current = false;
+  if (bindings.recognitionRef.current) {
+    disposeSpeechRecognition(bindings.recognitionRef.current, bindings.recognitionRef);
+  }
+  bindings.onListeningChange(false);
 }
 
 export function disposeSpeechRecognition(
@@ -134,37 +221,6 @@ export function disposeSpeechRecognition(
   } catch {}
   if (recognitionRef.current === recognition) {
     recognitionRef.current = null;
-  }
-}
-
-export function tryStartSpeechRecognition(
-  recognition: SpeechRecognitionLike,
-  recognitionRef: MutableRefObject<SpeechRecognitionLike | null>,
-  shouldListenRef: MutableRefObject<boolean>,
-  onListening: (listening: boolean) => void,
-  onError: (error: string | null) => void,
-  delayMs = 0,
-) {
-  const run = () => {
-    if (recognitionRef.current !== recognition || !shouldListenRef.current) return;
-    try {
-      recognition.start();
-      onListening(true);
-      onError(null);
-    } catch (err) {
-      const message = String(err);
-      onError(message);
-      onListening(false);
-      if (isFatalSpeechRecognitionError(message)) {
-        shouldListenRef.current = false;
-      }
-    }
-  };
-
-  if (delayMs > 0) {
-    window.setTimeout(run, delayMs);
-  } else {
-    run();
   }
 }
 
@@ -226,9 +282,7 @@ export function useSessionThoughtInterface({
   const [memoryThoughtIds, setMemoryThoughtIds] = useState<Set<string>>(new Set());
   const [sentThoughtIds, setSentThoughtIds] = useState<Set<string>>(new Set());
   const [editingTranscription, setEditingTranscription] = useState<{ draft: string; originalText: string } | null>(null);
-  const [speechSessionEpoch, setSpeechSessionEpoch] = useState(0);
-
-  const { recognitionCtor, speechApiReady } = useClientSpeechRecognitionConstructor();
+  const speechSupported = useSpeechSupported();
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const shouldListenRef = useRef(false);
   const finalBufferRef = useRef<string[]>([]);
@@ -303,12 +357,36 @@ export function useSessionThoughtInterface({
     setCrystallizableText("");
   }
 
+  const speechBindings = useMemo<LiveSpeechRecognitionBindings>(
+    () => ({
+      recognitionRef,
+      shouldListenRef,
+      onResult: (event) => {
+        speechResultsLengthRef.current = event.results.length;
+        const finals: string[] = [];
+        let interim = "";
+        for (let i = 0; i < event.results.length; i += 1) {
+          const result = event.results[i];
+          const transcript = normalize(result[0]?.transcript || "");
+          if (!transcript) continue;
+          if (result.isFinal) finals.push(transcript);
+          else if (i >= event.resultIndex) interim = normalize(`${interim} ${transcript}`);
+        }
+        finalBufferRef.current = finals;
+        setInterimText(interim);
+        setCrystallizableText(normalize(`${finals.join(" ")} ${interim}`.trim()));
+      },
+      onListeningChange: setIsListening,
+      onError: setSpeechError,
+    }),
+    [],
+  );
+
   const restartSpeechRecognitionSession = useCallback(() => {
     consumedResultsIndexRef.current = 0;
     speechResultsLengthRef.current = 0;
-    if (!shouldListenRef.current) return;
-    setSpeechSessionEpoch((epoch) => epoch + 1);
-  }, []);
+    restartLiveSpeechRecognition(speechBindings);
+  }, [speechBindings]);
 
   function clearTranscriptionBuffers() {
     clearTranscriptionDisplay();
@@ -346,73 +424,15 @@ export function useSessionThoughtInterface({
   }, [crystallizableText, restartSpeechRecognitionSession]);
 
   useEffect(() => {
-    if (!speechApiReady || !enabled || !recognitionCtor) {
-      if (speechApiReady && enabled && !recognitionCtor) {
-        setSpeechError("unsupported");
-      }
+    if (!enabled) {
+      stopLiveSpeechRecognition(speechBindings);
       return;
     }
-
-    shouldListenRef.current = true;
-    const recognition = new recognitionCtor();
-    recognition.continuous = true;
-    recognition.interimResults = true;
-    recognition.lang = speechLang;
-    recognition.onresult = (event) => {
-      speechResultsLengthRef.current = event.results.length;
-      const finals: string[] = [];
-      let interim = "";
-      for (let i = 0; i < event.results.length; i += 1) {
-        const result = event.results[i];
-        const transcript = normalize(result[0]?.transcript || "");
-        if (!transcript) continue;
-        if (result.isFinal) finals.push(transcript);
-        else if (i >= event.resultIndex) interim = normalize(`${interim} ${transcript}`);
-      }
-      finalBufferRef.current = finals;
-      setInterimText(interim);
-      setCrystallizableText(normalize(`${finals.join(" ")} ${interim}`.trim()));
-    };
-    recognition.onerror = (event) => {
-      const error = event.error || "speech-recognition-error";
-      if (isFatalSpeechRecognitionError(error)) {
-        shouldListenRef.current = false;
-      }
-      if (shouldReportSpeechRecognitionError(error)) {
-        setSpeechError(error);
-      }
-    };
-    recognition.onend = () => {
-      if (recognitionRef.current !== recognition) return;
-      setIsListening(false);
-      if (shouldListenRef.current) {
-        tryStartSpeechRecognition(
-          recognition,
-          recognitionRef,
-          shouldListenRef,
-          setIsListening,
-          setSpeechError,
-          50,
-        );
-      }
-    };
-    recognitionRef.current = recognition;
-    setSpeechError(null);
-    tryStartSpeechRecognition(
-      recognition,
-      recognitionRef,
-      shouldListenRef,
-      setIsListening,
-      setSpeechError,
-      speechSessionEpoch > 0 ? 80 : 0,
-    );
-
+    startLiveSpeechRecognition(speechBindings, speechLang);
     return () => {
-      shouldListenRef.current = false;
-      disposeSpeechRecognition(recognition, recognitionRef);
-      setIsListening(false);
+      stopLiveSpeechRecognition(speechBindings);
     };
-  }, [enabled, recognitionCtor, speechApiReady, speechLang, speechSessionEpoch]);
+  }, [enabled, speechLang, speechBindings]);
 
   const sendThought = useCallback(
     async (text: string, thoughtIds: string[] = []) => {
@@ -482,17 +502,11 @@ export function useSessionThoughtInterface({
     restartSpeechRecognitionSession();
   }, [restartSpeechRecognitionSession]);
 
-  const retryMicrophone = useCallback(async () => {
-    const granted = await requestMicrophoneForSpeech();
-    if (!granted) {
-      setSpeechError("not-allowed");
-      return;
-    }
-    setSpeechError(null);
+  const retryMicrophone = useCallback(() => {
     if (!enabled) return;
-    shouldListenRef.current = true;
-    restartSpeechRecognitionSession();
-  }, [enabled, restartSpeechRecognitionSession]);
+    setSpeechError(null);
+    startLiveSpeechRecognition(speechBindings, speechLang);
+  }, [enabled, speechBindings, speechLang]);
 
   const clearActiveThoughts = useCallback(() => {
     setEditingTranscription(null);
@@ -576,8 +590,7 @@ export function useSessionThoughtInterface({
     latestThoughts,
     sentThoughtIds,
     memoryThoughtIds,
-    recognitionCtor,
-    speechApiReady,
+    speechSupported,
     crystallizeCurrentTranscription,
     sendThought,
     beginEditTranscription,

@@ -150,8 +150,7 @@ export function SessionHeliosPanel({
                     text={formatSpeechTranscriptDisplay({
                       text: thought.crystallizableText,
                       speechError: thought.speechError,
-                      speechApiReady: thought.speechApiReady,
-                      recognitionAvailable: !!thought.recognitionCtor,
+                      speechSupported: thought.speechSupported,
                       isListening: thought.isListening,
                     })}
                     className={`w-full ${thought.speechError ? "text-amber-300/90" : ""}`}

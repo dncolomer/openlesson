@@ -2,7 +2,7 @@ export const ILE_TRACE_TOOL_NAME = "ile-thought-trace";
 
 export type IleTraceType = "system1" | "system2";
 export type IleSystem1Action = "crystallize" | "pause_finalize";
-export type IleSystem2Action = "send" | "skip" | "select" | "deselect" | "resend";
+export type IleSystem2Action = "send" | "skip" | "select" | "deselect" | "resend" | "edit";
 
 export interface IleThoughtTracePayload {
   type: "openlesson_ile_thought_trace";
@@ -15,6 +15,7 @@ export interface IleThoughtTracePayload {
   thought_ids?: string[];
   chain_id?: string;
   text?: string;
+  original_text?: string;
   combined?: boolean;
   timestamp_ms: number;
   at: string;
@@ -30,6 +31,7 @@ export function buildIleThoughtTracePayload(input: {
   thoughtIds?: string[];
   chainId?: string;
   text?: string;
+  originalText?: string;
   combined?: boolean;
   timestampMs?: number;
 }): IleThoughtTracePayload {
@@ -45,6 +47,7 @@ export function buildIleThoughtTracePayload(input: {
     thought_ids: input.thoughtIds,
     chain_id: input.chainId,
     text: input.text,
+    original_text: input.originalText,
     combined: input.combined,
     timestamp_ms: timestampMs,
     at: new Date(timestampMs).toISOString(),

@@ -875,6 +875,7 @@ export type ToolAction =
   | "pause_finalize"
   | "thought_send"
   | "thought_resend"
+  | "thought_edit"
   | "thought_skip"
   | "thought_select"
   | "thought_deselect";

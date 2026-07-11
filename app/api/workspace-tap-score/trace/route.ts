@@ -13,7 +13,7 @@ export const runtime = "nodejs";
 export const maxDuration = 30;
 
 const SYSTEM1_ACTIONS = new Set<TapSystem1Action>(["crystallize", "pause_finalize"]);
-const SYSTEM2_ACTIONS = new Set<TapSystem2Action>(["send", "skip", "select", "deselect", "resend"]);
+const SYSTEM2_ACTIONS = new Set<TapSystem2Action>(["send", "skip", "select", "deselect", "resend", "edit"]);
 
 export async function POST(req: NextRequest) {
   try {
@@ -29,6 +29,7 @@ export async function POST(req: NextRequest) {
     const thoughtIds = Array.isArray(body.thoughtIds) ? body.thoughtIds.map(String).filter(Boolean) : undefined;
     const chainId = body.chainId ? String(body.chainId) : undefined;
     const text = body.text ? String(body.text).trim() : undefined;
+    const originalText = body.originalText ? String(body.originalText).trim() : undefined;
     const combined = Boolean(body.combined);
     const timestampMs = typeof body.timestampMs === "number" ? body.timestampMs : Date.now();
 
@@ -67,6 +68,7 @@ export async function POST(req: NextRequest) {
       thoughtIds,
       chainId,
       text,
+      originalText,
       combined,
       timestampMs,
     });
@@ -83,6 +85,7 @@ export async function POST(req: NextRequest) {
       thought_ids: thoughtIds || null,
       chain_id: chainId || null,
       text: text || null,
+      original_text: originalText || null,
       combined,
     };
 

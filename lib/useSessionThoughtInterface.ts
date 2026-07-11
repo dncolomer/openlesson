@@ -11,7 +11,7 @@ export interface SessionThought {
 
 export type SessionTraceType = "system1" | "system2";
 export type SessionSystem1Action = "crystallize" | "pause_finalize";
-export type SessionSystem2Action = "send" | "skip" | "select" | "deselect" | "resend";
+export type SessionSystem2Action = "send" | "skip" | "select" | "deselect" | "resend" | "edit";
 
 type SpeechRecognitionResultLike = {
   readonly isFinal: boolean;
@@ -62,6 +62,7 @@ export interface SessionThoughtTracePayload {
   thoughtIds?: string[];
   chainId?: string;
   text?: string;
+  originalText?: string;
   combined?: boolean;
   timestampMs?: number;
 }
@@ -112,7 +113,7 @@ export function useSessionThoughtInterface({
   const [selectedActiveThoughtIds, setSelectedActiveThoughtIds] = useState<Set<string>>(new Set());
   const [memoryThoughtIds, setMemoryThoughtIds] = useState<Set<string>>(new Set());
   const [sentThoughtIds, setSentThoughtIds] = useState<Set<string>>(new Set());
-  const [editingThought, setEditingThought] = useState<{ id: string; draft: string } | null>(null);
+  const [editingThought, setEditingThought] = useState<{ id: string; draft: string; originalText: string } | null>(null);
 
   const recognitionCtor = useMemo(getSpeechRecognitionConstructor, []);
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
@@ -344,7 +345,7 @@ export function useSessionThoughtInterface({
     (thoughtId: string) => {
       const thought = thoughts.find((entry) => entry.id === thoughtId);
       if (!thought || sentThoughtIds.has(thoughtId) || memoryThoughtIds.has(thoughtId)) return;
-      setEditingThought({ id: thought.id, draft: thought.text });
+      setEditingThought({ id: thought.id, draft: thought.text, originalText: thought.text });
     },
     [memoryThoughtIds, sentThoughtIds, thoughts],
   );
@@ -361,10 +362,20 @@ export function useSessionThoughtInterface({
     if (!editingThought) return;
     const draft = normalize(editingThought.draft);
     if (!draft) return;
+    const thought = thoughts.find((entry) => entry.id === editingThought.id);
     const thoughtId = editingThought.id;
+    onLogTrace({
+      traceType: "system2",
+      action: "edit",
+      thoughtId,
+      chainId: thought?.chainId,
+      originalText: editingThought.originalText,
+      text: draft,
+      timestampMs: thought?.timestamp,
+    });
     setEditingThought(null);
     await sendThought(draft, [thoughtId]);
-  }, [editingThought, sendThought]);
+  }, [editingThought, onLogTrace, sendThought, thoughts]);
 
   const clearActiveThoughts = useCallback(() => {
     if (activeThoughts.length === 0) return;

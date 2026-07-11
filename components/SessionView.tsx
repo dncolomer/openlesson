@@ -1424,6 +1424,7 @@ export function SessionView({ sessionId }: { sessionId: string }) {
         thoughtIds: payload.thoughtIds,
         chainId: payload.chainId,
         text: payload.text,
+        originalText: payload.originalText,
         combined: payload.combined,
         timestampMs: payload.timestampMs,
       });
@@ -1446,6 +1447,7 @@ export function SessionView({ sessionId }: { sessionId: string }) {
           thought_ids: payload.thoughtIds ?? null,
           chain_id: payload.chainId ?? null,
           text: payload.text ?? null,
+          original_text: payload.originalText ?? null,
           combined: payload.combined ?? false,
         },
       });

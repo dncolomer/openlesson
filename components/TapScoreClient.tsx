@@ -47,7 +47,7 @@ interface Thought {
 
 type TapTraceType = "system1" | "system2";
 type TapSystem1Action = "crystallize" | "pause_finalize";
-type TapSystem2Action = "send" | "skip" | "select" | "deselect" | "resend";
+type TapSystem2Action = "send" | "skip" | "select" | "deselect" | "resend" | "edit";
 
 interface ChatMessage {
   id: string;
@@ -326,7 +326,7 @@ export function TapScoreClient({ workspaceId, blockId, sessionId, privateToken, 
   const [selectedActiveThoughtIds, setSelectedActiveThoughtIds] = useState<Set<string>>(new Set());
   const [memoryThoughtIds, setMemoryThoughtIds] = useState<Set<string>>(new Set());
   const [sentThoughtIds, setSentThoughtIds] = useState<Set<string>>(new Set());
-  const [editingThought, setEditingThought] = useState<{ id: string; draft: string } | null>(null);
+  const [editingThought, setEditingThought] = useState<{ id: string; draft: string; originalText: string } | null>(null);
 
   const [error, setError] = useState("");
   const [isStartingSession, setIsStartingSession] = useState(false);
@@ -362,6 +362,7 @@ export function TapScoreClient({ workspaceId, blockId, sessionId, privateToken, 
       thoughtIds?: string[];
       chainId?: string;
       text?: string;
+      originalText?: string;
       combined?: boolean;
       timestampMs?: number;
     }) => {
@@ -891,7 +892,7 @@ export function TapScoreClient({ workspaceId, blockId, sessionId, privateToken, 
   function beginEditThought(thoughtId: string) {
     const thought = thoughts.find((entry) => entry.id === thoughtId);
     if (!thought || sentThoughtIds.has(thoughtId) || memoryThoughtIds.has(thoughtId)) return;
-    setEditingThought({ id: thought.id, draft: thought.text });
+    setEditingThought({ id: thought.id, draft: thought.text, originalText: thought.text });
   }
 
   function clearActiveThoughts() {
@@ -1028,7 +1029,17 @@ export function TapScoreClient({ workspaceId, blockId, sessionId, privateToken, 
                       onSend={() => {
                         const draft = normalize(editingThought.draft);
                         if (!draft) return;
+                        const thought = thoughts.find((entry) => entry.id === editingThought.id);
                         const thoughtId = editingThought.id;
+                        logTapTrace({
+                          traceType: "system2",
+                          action: "edit",
+                          thoughtId,
+                          chainId: thought?.chainId,
+                          originalText: editingThought.originalText,
+                          text: draft,
+                          timestampMs: thought?.timestamp,
+                        });
                         setEditingThought(null);
                         void sendThought(draft, [thoughtId]);
                       }}

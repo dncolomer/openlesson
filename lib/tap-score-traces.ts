@@ -45,7 +45,7 @@ export function buildTapTranscriptPayload(input: {
 export type TapTraceType = "system1" | "system2";
 
 export type TapSystem1Action = "crystallize" | "pause_finalize";
-export type TapSystem2Action = "send" | "skip" | "select" | "deselect" | "resend";
+export type TapSystem2Action = "send" | "skip" | "select" | "deselect" | "resend" | "edit";
 
 export interface TapThoughtTracePayload {
   type: "openlesson_tap_thought_trace";
@@ -59,6 +59,7 @@ export interface TapThoughtTracePayload {
   thought_ids?: string[];
   chain_id?: string;
   text?: string;
+  original_text?: string;
   combined?: boolean;
   timestamp_ms: number;
   at: string;
@@ -82,6 +83,7 @@ export function buildTapThoughtTracePayload(input: {
   thoughtIds?: string[];
   chainId?: string;
   text?: string;
+  originalText?: string;
   combined?: boolean;
   timestampMs?: number;
 }): TapThoughtTracePayload {
@@ -98,6 +100,7 @@ export function buildTapThoughtTracePayload(input: {
     thought_ids: input.thoughtIds,
     chain_id: input.chainId,
     text: input.text,
+    original_text: input.originalText,
     combined: input.combined,
     timestamp_ms: timestampMs,
     at: new Date(timestampMs).toISOString(),
@@ -137,8 +140,11 @@ export function buildTraceScoringContext(traces: TapTraceEvidenceRow[]) {
     const action = String(row.metadata?.action || row.tool_action || "unknown");
     const thoughtId = String(row.metadata?.thought_id || "");
     const text = String(row.metadata?.text || "").trim();
+    const originalText = String(row.metadata?.original_text || "").trim();
     const at = new Date(Number(row.timestamp_ms || 0)).toISOString();
-    return `[${at}] ${traceType}/${action}${thoughtId ? ` thought=${thoughtId}` : ""}: ${text}`;
+    const editSuffix =
+      action === "edit" && originalText && originalText !== text ? ` (original: ${originalText})` : "";
+    return `[${at}] ${traceType}/${action}${thoughtId ? ` thought=${thoughtId}` : ""}: ${text}${editSuffix}`;
   });
 
   const fileIds = [
@@ -189,7 +195,7 @@ export function buildTraceScoringInstructions(traceContext: ReturnType<typeof bu
 
 Thought trace proof of work (System 1 and System 2):
 - System 1 traces (${traceContext.system1Count}): spontaneous crystallized speech — everything the learner said aloud, including thoughts they did NOT submit to the TAP dialogue.
-- System 2 traces (${traceContext.system2Count}): deliberate learner decisions — explicit send, skip, select/deselect, or resend actions.
+- System 2 traces (${traceContext.system2Count}): deliberate learner decisions — explicit send, edit, skip, select/deselect, or resend actions.
 
 Use the dialogue transcript as the primary Socratic exchange, but treat attached trace files and the manifest below as first-class proof of work. Compare System 1 vs System 2: knowledge articulated but not sent may reveal hesitation, incomplete understanding, or metacognitive filtering. Cite both sent and unsent traces in gap_analysis proof_of_work where relevant.
 

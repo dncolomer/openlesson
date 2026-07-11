@@ -3,7 +3,13 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { archiveInsight, formatInsightDate, insightShareUrl, type InsightSummary } from "@/lib/insights";
+import {
+  archiveInsight,
+  formatInsightDate,
+  insightPublicPath,
+  insightShareUrl,
+  type InsightSummary,
+} from "@/lib/insights";
 
 type InsightRecord = InsightSummary & {
   source_thoughts?: Array<{ id?: string; text: string }>;
@@ -13,6 +19,7 @@ export function InsightDetailClient({ insightId }: { insightId: string }) {
   const router = useRouter();
   const [insight, setInsight] = useState<InsightRecord | null>(null);
   const [isOwner, setIsOwner] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [archiving, setArchiving] = useState(false);
@@ -24,6 +31,7 @@ export function InsightDetailClient({ insightId }: { insightId: string }) {
         if (!res.ok) throw new Error(data.error || "Failed to load insight");
         setInsight(data.insight);
         setIsOwner(Boolean(data.isOwner));
+        setIsAuthenticated(Boolean(data.isAuthenticated));
       })
       .catch((err) => setError(err instanceof Error ? err.message : "Failed to load insight"));
   }, [insightId]);
@@ -107,12 +115,19 @@ export function InsightDetailClient({ insightId }: { insightId: string }) {
                 {archiving ? "Archiving…" : "Archive"}
               </button>
             ) : null}
-            {insight.workspace_id ? (
+            {isAuthenticated === false ? (
+              <Link
+                href={`/register?redirect=${encodeURIComponent(insightPublicPath(insight))}`}
+                className="rounded-md border border-white/15 bg-white px-3 py-1.5 text-xs font-medium text-black transition hover:bg-zinc-200"
+              >
+                Sign up
+              </Link>
+            ) : isAuthenticated === true && insight.workspace_id ? (
               <Link
                 href={`/workspace/${insight.workspace_id}`}
                 className="rounded-md border border-neutral-700 bg-black/40 px-3 py-1.5 text-xs text-neutral-300 transition hover:border-neutral-500 hover:text-white"
               >
-                Back to workspace
+                Workspace
               </Link>
             ) : null}
           </div>

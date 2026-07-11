@@ -23,5 +23,5 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
     return NextResponse.json({ error: "Insight not found" }, { status: 404 });
   }
 
-  return NextResponse.json({ insight, isOwner });
+  return NextResponse.json({ insight, isOwner, isAuthenticated: !!user });
 }

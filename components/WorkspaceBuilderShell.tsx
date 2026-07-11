@@ -5,7 +5,6 @@ import { PublicWorkspaceForkPanel } from "@/components/PublicWorkspaceForkPanel"
 
 interface WorkspaceBuilderShellProps {
   needsFork: boolean;
-  authorUsername?: string;
   isLoggedIn: boolean;
   publicLoginHref: string;
   onFork: () => void;
@@ -14,7 +13,6 @@ interface WorkspaceBuilderShellProps {
 
 export function WorkspaceBuilderShell({
   needsFork,
-  authorUsername,
   isLoggedIn,
   publicLoginHref,
   onFork,
@@ -26,7 +24,6 @@ export function WorkspaceBuilderShell({
         {needsFork ? (
           <PublicWorkspaceForkPanel
             variant="inline"
-            authorUsername={authorUsername}
             isLoggedIn={isLoggedIn}
             loginHref={publicLoginHref}
             onFork={onFork}

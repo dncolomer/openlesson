@@ -1,14 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Navbar } from "@/components/Navbar";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { getSessions, deleteSession, restartSession, getWorkspaces, type Session, type Workspace } from "@/lib/storage";
 import { DEFAULT_PROMPTS, PROMPT_META, type PromptKey, type UserPrompts } from "@/lib/prompts";
-import { buildContributionDays, contributionLevel, contributionMonthLabels, dateKey, groupContributionWeeks } from "@/lib/contributions";
-
 import { useI18n } from "@/lib/i18n";
 import { formatPlanMonthlyPrice, hasAgentApiKeyPlan, type PlanId } from "@/lib/plans";
 import { InsightsDashboardTab } from "@/components/InsightsDashboardTab";
@@ -16,14 +14,8 @@ import { buildMcpClientConfig } from "@/lib/agent-v2/mcp-proof-of-work-catalog";
 import { IntegrationQuickAccess } from "@/components/IntegrationQuickAccess";
 
 const DASHBOARD_BACKGROUND = "/aesthetics/Greco-futurism/HHnTrgVaQAAP-_3.jpeg";
-const PROFILE_BACKGROUND_IMAGES = [
-  "/aesthetics/Greco-futurism/HHnTrgVaQAAP-_3.jpeg",
-  "/aesthetics/Greco-futurism/HHnTrf2acAA1Juo.jpeg",
-  "/aesthetics/Greco-futurism/HHnTrlMaAAAg_4I.jpeg",
-  "/aesthetics/Greco-futurism/HHnTrjJbQAAOz7K.jpeg",
-];
 
-type Tab = "overview" | "sessions" | "plans" | "usage" | "integrations" | "insights" | "config";
+type Tab = "sessions" | "plans" | "usage" | "integrations" | "insights" | "config";
 
 interface AvailableModel {
   id: string;
@@ -62,24 +54,13 @@ export default function DashboardPage() {
   const [activeTab, setActiveTab] = useState<Tab>(
     ["plans", "usage", "integrations", "insights"].includes(initialTab) ? initialTab : "plans"
   );
-  const learningMapScrollRef = useRef<HTMLDivElement>(null);
-
   // User state
   const [user, setUser] = useState<{
     email?: string;
-    username?: string;
     plan?: string;
     isAdmin?: boolean;
     extraLessons?: number;
-    displayName?: string;
-    bio?: string;
-    profileVisibility?: "public" | "private";
-    publicActivityEnabled?: boolean;
-    publicStatsEnabled?: boolean;
-    publicSessionTitlesEnabled?: boolean;
   } | null>(null);
-  const [profileSaving, setProfileSaving] = useState(false);
-  const [profileSaved, setProfileSaved] = useState(false);
 
   // Usage tab
   const [usageData, setUsageData] = useState<{
@@ -172,23 +153,16 @@ export default function DashboardPage() {
       // Fetch profile
       const { data: profile } = await supabase
         .from("profiles")
-        .select("username, display_name, bio, profile_visibility, public_activity_enabled, public_stats_enabled, public_session_titles_enabled, metadata, plan, is_admin, extra_lessons, subscription_status, current_period_end")
+        .select("metadata, plan, is_admin, extra_lessons, subscription_status, current_period_end")
         .eq("id", authUser.id)
         .single();
 
       if (profile) {
         setUser({
           email: authUser.email,
-          username: profile.username || undefined,
           plan: profile.plan || "free",
           isAdmin: profile.is_admin || false,
           extraLessons: profile.extra_lessons || 0,
-          displayName: profile.display_name || "",
-          bio: profile.bio || "",
-          profileVisibility: profile.profile_visibility || "private",
-          publicActivityEnabled: !!profile.public_activity_enabled,
-          publicStatsEnabled: !!profile.public_stats_enabled,
-          publicSessionTitlesEnabled: !!profile.public_session_titles_enabled,
         });
 
         if (profile.metadata?.prompts) {
@@ -256,12 +230,9 @@ export default function DashboardPage() {
           console.error("Failed to load usage data:", err);
         }
 
-      // Load Proof-of-Work API keys (v2 for Teams, legacy for Pro)
-      const plan = profile?.plan || "free";
-      const useV2Keys = profile?.is_admin || plan === "pro_teams";
+      // Load Proof-of-Work API keys (v2 Teams tier)
       try {
-        const keysEndpoint = useV2Keys ? "/api/v2/agent/keys" : "/api/agent/keys";
-        const keysRes = await fetch(keysEndpoint);
+        const keysRes = await fetch("/api/v2/agent/keys");
         if (keysRes.ok) {
           const keysPayload = await keysRes.json();
           const keys = (keysPayload.keys || []).filter((key: AgentApiKey) => key.is_active !== false);
@@ -429,8 +400,7 @@ export default function DashboardPage() {
     if (!newKeyName.trim()) return;
     setCreatingKey(true);
     try {
-      const endpoint = usesAgenticV2Keys ? "/api/v2/agent/keys" : "/api/agent/keys";
-      const res = await fetch(endpoint, {
+      const res = await fetch("/api/v2/agent/keys", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ label: newKeyName.trim() }),
@@ -471,15 +441,12 @@ export default function DashboardPage() {
   const handleDeleteApiKey = async (id: string) => {
     if (!confirm(t('dashboard.deleteApiKeyConfirm'))) return;
     try {
-      const endpoint = usesAgenticV2Keys ? `/api/v2/agent/keys/${id}` : `/api/agent/keys/${id}`;
-      await fetch(endpoint, { method: "DELETE" });
+      await fetch(`/api/v2/agent/keys/${id}`, { method: "DELETE" });
       setApiKeys((prev) => prev.filter((k) => k.id !== id));
     } catch (err) {
       console.error("Failed to delete key:", err);
     }
   };
-
-  const publicProfileUrl = user?.username && typeof window !== "undefined" ? `${window.location.origin}/u/${user.username}` : "";
 
   const usageCardClass = "rounded-md border border-neutral-800 bg-neutral-950/75 p-5 sm:p-6";
   const usageLabelClass = "font-mono text-[10px] uppercase tracking-[2px] text-neutral-500";
@@ -507,36 +474,6 @@ export default function DashboardPage() {
     return Math.min((used / limit) * 100, 100);
   }
 
-  const handleSaveProfile = async () => {
-    if (!user) return;
-    setProfileSaving(true);
-    setProfileSaved(false);
-    try {
-      const { error } = await supabase
-        .from("profiles")
-        .update({
-          username: user.username?.trim() || null,
-          display_name: user.displayName?.trim() || null,
-          bio: user.bio?.trim() || null,
-          profile_visibility: user.profileVisibility || "private",
-          public_activity_enabled: !!user.publicActivityEnabled,
-          public_stats_enabled: !!user.publicStatsEnabled,
-          public_session_titles_enabled: !!user.publicSessionTitlesEnabled,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", (await supabase.auth.getUser()).data.user?.id);
-
-      if (error) throw error;
-      setProfileSaved(true);
-      setTimeout(() => setProfileSaved(false), 2000);
-    } catch (err) {
-      console.error("Failed to save profile:", err);
-      alert(err instanceof Error ? err.message : "Failed to save profile");
-    } finally {
-      setProfileSaving(false);
-    }
-  };
-
   const formatDuration = (ms: number) => {
     const mins = Math.floor(ms / 60000);
     const secs = Math.floor((ms % 60000) / 1000);
@@ -550,27 +487,6 @@ export default function DashboardPage() {
       year: "numeric",
     });
   };
-
-  const completedSessions = sessions.filter((s) => s.status === "completed");
-  const totalLearningMinutes = Math.round(sessions.reduce((sum, session) => sum + (session.durationMs || 0), 0) / 60000);
-  const publicWorkspaces = workspaces.filter((plan) => (plan as any).is_public);
-  const minutesByDate = sessions.reduce((days, session) => {
-    const day = dateKey(new Date(session.startedAt));
-    days.set(day, (days.get(day) || 0) + Math.round((session.durationMs || 0) / 60000));
-    return days;
-  }, new Map<string, number>());
-  const contributionDays = buildContributionDays(
-    Array.from(minutesByDate.entries()).map(([date, minutes]) => ({ date, minutes }))
-  );
-  const contributionWeeks = groupContributionWeeks(contributionDays);
-  const contributionMonths = contributionMonthLabels(contributionWeeks);
-
-  useEffect(() => {
-    if (activeTab !== "overview") return;
-    const scroller = learningMapScrollRef.current;
-    if (!scroller) return;
-    scroller.scrollLeft = scroller.scrollWidth;
-  }, [activeTab, contributionWeeks.length]);
 
   // Filter and paginate sessions
   const filteredSessions = sessions.filter((s) => {
@@ -704,187 +620,6 @@ export default function DashboardPage() {
 
       {/* Content */}
       <main className="mx-auto w-full max-w-7xl min-w-0 overflow-x-hidden p-4 py-8 sm:px-6 lg:px-8">
-        {/* Profile Overview */}
-        {activeTab === "overview" && (
-          <div className="space-y-6">
-            <section className="overflow-hidden rounded-md border border-neutral-800 bg-neutral-950">
-              <div
-                className="relative overflow-hidden bg-cover bg-center p-6 sm:p-8"
-                style={{ backgroundImage: `url(${PROFILE_BACKGROUND_IMAGES[(user?.username || user?.email || "openlesson").length % PROFILE_BACKGROUND_IMAGES.length]})` }}
-              >
-                <div className="absolute inset-0 bg-black/65 grayscale backdrop-blur-[1px]" />
-                <div className="absolute inset-0 bg-black/35" />
-                <div className="relative z-10">
-                <div className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
-                  <div className="flex items-center gap-4">
-                    <div className="flex h-20 w-20 items-center justify-center rounded-md bg-gradient-to-br from-emerald-400 via-sky-500 to-violet-500 text-3xl font-bold">
-                      {(user?.username || user?.email || "u").slice(0, 1).toUpperCase()}
-                    </div>
-                    <div>
-                      <h1 className="text-2xl font-semibold tracking-tight">{user?.displayName || user?.username || "Your learning profile"}</h1>
-                      <p className="mt-1 text-sm text-neutral-400">{user?.username ? `@${user.username}` : "Choose a username to publish your profile"}</p>
-                      <span className={`mt-3 inline-flex rounded-full border px-2.5 py-1 text-xs ${user?.profileVisibility === "public" ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-300" : "border-neutral-700 bg-neutral-900 text-neutral-400"}`}>
-                        {user?.profileVisibility === "public" ? "Public profile" : "Private profile"}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {user?.username && user.profileVisibility === "public" && (
-                      <Link href={`/u/${user.username}`} className="rounded-lg border border-neutral-700 px-3 py-2 text-sm text-neutral-200 transition-colors hover:bg-neutral-900">
-                        View public profile
-                      </Link>
-                    )}
-                    {publicProfileUrl && user?.profileVisibility === "public" && (
-                      <button
-                        onClick={() => navigator.clipboard.writeText(publicProfileUrl)}
-                        className="rounded-lg bg-white px-3 py-2 text-sm font-medium text-black transition-colors hover:bg-neutral-200"
-                      >
-                        Copy share link
-                      </button>
-                    )}
-                  </div>
-                </div>
-                </div>
-              </div>
-              <div className="grid gap-px bg-neutral-800 sm:grid-cols-4">
-                {[
-                  ["TAP / ILE sessions", sessions.length],
-                  ["Completed", completedSessions.length],
-                  ["Public workspaces", publicWorkspaces.length],
-                  ["Minutes", totalLearningMinutes],
-                ].map(([label, value]) => (
-                  <div key={label} className="bg-neutral-950 p-5">
-                    <div className="text-2xl font-semibold">{value}</div>
-                    <div className="mt-1 text-xs uppercase tracking-wide text-neutral-500">{label}</div>
-                  </div>
-                ))}
-              </div>
-            </section>
-
-            <section className="grid min-w-0 gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
-              <div className="min-w-0 rounded-md border border-neutral-800 bg-neutral-950 p-4 sm:p-6">
-                <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                  <h2 className="font-semibold">Learning Map</h2>
-                  <span className="text-xs text-neutral-500">{totalLearningMinutes} minutes in the last year</span>
-                </div>
-                <div ref={learningMapScrollRef} className="mt-5 max-w-full overflow-x-auto pb-2">
-                  <div className="w-max min-w-full">
-                    <div className="mb-2 ml-9 grid text-[11px] text-neutral-500" style={{ gridTemplateColumns: `repeat(${contributionWeeks.length}, 13px)`, columnGap: "4px" }}>
-                      {contributionMonths.map((month) => <span key={month.index}>{month.label}</span>)}
-                    </div>
-                    <div className="flex gap-2">
-                      <div className="grid grid-rows-7 gap-1 pt-[16px] text-[11px] text-neutral-500">
-                        <span />
-                        <span>Mon</span>
-                        <span />
-                        <span>Wed</span>
-                        <span />
-                        <span>Fri</span>
-                        <span />
-                      </div>
-                      <div className="grid grid-flow-col grid-rows-7 gap-1">
-                        {contributionWeeks.flatMap((week, weekIndex) =>
-                          Array.from({ length: 7 }, (_, dayIndex) => {
-                            const day = week[dayIndex] || null;
-                            const level = contributionLevel(day?.minutes || 0);
-                            return (
-                              <div
-                                key={`${weekIndex}-${dayIndex}`}
-                                title={day ? `${day.minutes} minutes on ${formatDate(day.date)}` : ""}
-                                className={[
-                                  "h-[13px] w-[13px] rounded-[3px] border",
-                                  level === 0 ? "border-neutral-800 bg-neutral-900" : "border-emerald-400/20",
-                                  level === 1 ? "bg-emerald-950" : "",
-                                  level === 2 ? "bg-emerald-800" : "",
-                                  level === 3 ? "bg-emerald-500" : "",
-                                  level === 4 ? "bg-emerald-300" : "",
-                                ].join(" ")}
-                              />
-                            );
-                          })
-                        )}
-                      </div>
-                    </div>
-                    <div className="mt-3 flex items-center justify-end gap-1 text-xs text-neutral-500">
-                      <span>Less</span>
-                      {[0, 1, 2, 3, 4].map((level) => (
-                        <span key={level} className={["h-[13px] w-[13px] rounded-[3px] border", level === 0 ? "border-neutral-800 bg-neutral-900" : "border-emerald-400/20", level === 1 ? "bg-emerald-950" : "", level === 2 ? "bg-emerald-800" : "", level === 3 ? "bg-emerald-500" : "", level === 4 ? "bg-emerald-300" : ""].join(" ")} />
-                      ))}
-                      <span>More</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="min-w-0 rounded-md border border-neutral-800 bg-neutral-950 p-4 sm:p-6">
-                <h2 className="font-semibold">Recent Activity</h2>
-                <div className="mt-5 space-y-4">
-                  {[...sessions.slice(0, 3), ...workspaces.slice(0, 3)]
-                    .sort((a: any, b: any) => new Date((b.startedAt || b.created_at) as string).getTime() - new Date((a.startedAt || a.created_at) as string).getTime())
-                    .slice(0, 5)
-                    .map((item: any) => (
-                      <div key={item.id} className="flex min-w-0 gap-3">
-                        <div className="mt-1 h-3 w-3 shrink-0 rounded-full border border-emerald-400 bg-emerald-400/30" />
-                        <div className="min-w-0">
-                          <p className="line-clamp-2 break-words text-sm text-neutral-200 sm:line-clamp-1">{item.problem || item.title || item.root_topic}</p>
-                          <p className="mt-1 text-xs text-neutral-500">{formatDate(item.startedAt || item.created_at)}</p>
-                        </div>
-                      </div>
-                    ))}
-                </div>
-              </div>
-            </section>
-
-            <section className="rounded-md border border-neutral-800 bg-neutral-950 p-6">
-              <div className="flex items-center justify-between gap-4">
-                <div>
-                  <h2 className="font-semibold">Profile Settings</h2>
-                  <p className="mt-1 text-sm text-neutral-500">Control your username, public profile, and what learning activity can be shared.</p>
-                </div>
-                <button
-                  onClick={handleSaveProfile}
-                  disabled={profileSaving}
-                  className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-emerald-500 disabled:opacity-50"
-                >
-                  {profileSaving ? "Saving..." : profileSaved ? "Saved" : "Save"}
-                </button>
-              </div>
-              <div className="mt-5 grid gap-4 sm:grid-cols-2">
-                <label className="space-y-2">
-                  <span className="text-sm text-neutral-300">Username</span>
-                  <input value={user?.username || ""} onChange={(e) => setUser((prev) => prev ? { ...prev, username: e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, "") } : prev)} className="w-full rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-neutral-200 outline-none focus:border-neutral-600" placeholder="username" />
-                </label>
-                <label className="space-y-2">
-                  <span className="text-sm text-neutral-300">Display name</span>
-                  <input value={user?.displayName || ""} onChange={(e) => setUser((prev) => prev ? { ...prev, displayName: e.target.value } : prev)} className="w-full rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-neutral-200 outline-none focus:border-neutral-600" placeholder="Your name" />
-                </label>
-                <label className="space-y-2 sm:col-span-2">
-                  <span className="text-sm text-neutral-300">Bio</span>
-                  <textarea value={user?.bio || ""} onChange={(e) => setUser((prev) => prev ? { ...prev, bio: e.target.value } : prev)} rows={3} className="w-full resize-none rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-neutral-200 outline-none focus:border-neutral-600" placeholder="What are you learning?" />
-                </label>
-              </div>
-              <div className="mt-5 grid gap-3 sm:grid-cols-2">
-                {[
-                  ["Make profile public", "profileVisibility"],
-                  ["Show activity timeline", "publicActivityEnabled"],
-                  ["Show aggregate stats", "publicStatsEnabled"],
-                  ["Show completed block titles", "publicSessionTitlesEnabled"],
-                ].map(([label, key]) => (
-                  <label key={key} className="flex items-center justify-between rounded-xl border border-neutral-800 bg-neutral-900/60 p-4 text-sm text-neutral-300">
-                    <span>{label}</span>
-                    <input
-                      type="checkbox"
-                      checked={key === "profileVisibility" ? user?.profileVisibility === "public" : !!(user as any)?.[key]}
-                      onChange={(e) => setUser((prev) => prev ? { ...prev, [key]: key === "profileVisibility" ? (e.target.checked ? "public" : "private") : e.target.checked } : prev)}
-                      className="h-4 w-4 accent-emerald-500"
-                    />
-                  </label>
-                ))}
-              </div>
-            </section>
-          </div>
-        )}
-
         {/* Sessions Tab */}
         {activeTab === "sessions" && (
           <div className="space-y-4">

@@ -444,7 +444,7 @@ export function WorkspaceChat({ plan, nodes: initialNodes, onRefresh, onNodesUpd
 
       {showRemixModal && (
         <RemixModal
-          plan={{ id: plan.id, root_topic: plan.root_topic, author_username: "", remix_count: 0 }}
+          plan={{ id: plan.id, root_topic: plan.root_topic, remix_count: 0 }}
           onClose={() => setShowRemixModal(false)}
           onComplete={(newPlanId) => { setShowRemixModal(false); router.push(`/workspace/${newPlanId}`); }}
         />

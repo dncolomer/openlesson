@@ -7,7 +7,6 @@ import { useI18n } from "../lib/i18n";
 interface CommunityPlan {
   id: string;
   root_topic: string;
-  author_username: string;
   remix_count: number;
 }
 
@@ -77,10 +76,6 @@ export function RemixModal({ plan, onClose, onComplete }: RemixModalProps) {
             </svg>
           </button>
         </div>
-
-        <p className="text-sm text-neutral-400 mb-4">
-          {t('remixModal.originallyBy')} <span className="text-white">@{plan.author_username}</span>
-        </p>
 
         <div className="mb-4">
           <label className="block text-sm text-neutral-400 mb-2">

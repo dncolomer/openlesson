@@ -5,7 +5,6 @@ import { useI18n } from "@/lib/i18n";
 
 type PublicWorkspaceForkPanelProps = {
   variant?: "fullscreen" | "inline";
-  authorUsername?: string;
   isLoggedIn: boolean;
   loginHref: string;
   onFork: () => void;
@@ -13,7 +12,6 @@ type PublicWorkspaceForkPanelProps = {
 
 export function PublicWorkspaceForkPanel({
   variant = "fullscreen",
-  authorUsername,
   isLoggedIn,
   loginHref,
   onFork,
@@ -37,9 +35,7 @@ export function PublicWorkspaceForkPanel({
           {t("planView.forkToEditTitle")}
         </h2>
         <p className={`mt-2.5 leading-relaxed text-neutral-400 ${isInline ? "text-sm" : "mt-3 text-sm sm:text-base"}`}>
-          {authorUsername
-            ? t("planView.forkToEditBodyWithAuthor", { author: authorUsername })
-            : t("planView.forkToEditBody")}
+          {t("planView.forkToEditBody")}
         </p>
 
         <ul className={`space-y-2 text-neutral-300 ${isInline ? "mt-4 text-xs" : "mt-5 text-sm"}`}>

@@ -183,11 +183,6 @@ export function WorkspaceIdentityPanel({
           {t("planView.public")}
         </span>
       )}
-      {plan.is_public && plan.author_username && (
-        <span className="text-[10px] text-neutral-500">
-          {t("planView.by")} <span className="text-neutral-400">@{plan.author_username}</span>
-        </span>
-      )}
       {plan.is_public && (plan.remix_count ?? 0) > 0 && (
         <span className="text-[10px] text-neutral-500">
           {plan.remix_count}{" "}

@@ -9,7 +9,6 @@ interface CommunityPlan {
   root_topic: string;
   title?: string | null;
   cover_image_url?: string | null;
-  author_username: string;
   remix_count: number;
   created_at: string;
 }
@@ -143,9 +142,6 @@ export function CommunityPlansCarousel({ fillHeight = false }: CommunityPlansCar
 
               {/* Content */}
               <div className="relative z-10 h-full flex flex-col justify-end p-6 sm:p-10">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-white/70 mb-2">
-                  @{plan.author_username}
-                </p>
                 <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white tracking-tight drop-shadow-lg max-w-[28ch] line-clamp-2">
                   {plan.title || plan.root_topic}
                 </h2>

@@ -20,7 +20,7 @@ async function getWorkspaceMeta(workspaceId: string) {
 
   const { data } = await supabase
     .from("workspaces")
-    .select("title, root_topic, cover_image_url, profiles:author_id(username)")
+    .select("title, root_topic, cover_image_url, description")
     .eq("id", workspaceId)
     .single();
 
@@ -36,11 +36,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   }
 
   const title = plan.title || plan.root_topic || "Workspace";
-  const profiles = plan.profiles as { username?: string } | null;
-  const author = profiles?.username;
-  const description = author
-    ? `A workspace by @${author} on openLesson`
-    : "A workspace on openLesson";
+  const description = plan.description || "A workspace on openLesson";
 
   const ogImage = await getRandomWorkspaceCoverImage() || "/opengraph-image";
   const images = [{ url: ogImage, width: 1200, height: 630, alt: title }];

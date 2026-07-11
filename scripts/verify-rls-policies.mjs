@@ -72,21 +72,21 @@ async function verifySqlRls(target) {
       fail(`${target}: profiles own read`, `rows=${ownProfile.length}`);
     }
 
-    const usernameLookup = await asRole(client, regularUserId, async () => {
+    const otherProfile = await asRole(client, regularUserId, async () => {
       const r = await client.query(
-        "SELECT username FROM profiles WHERE id = $1",
+        "SELECT count(*)::int AS n FROM profiles WHERE id = $1",
         [ADMIN_ID]
       );
-      return r.rows;
+      return r.rows[0].n;
     });
-    if (usernameLookup.length === 1 && usernameLookup[0].username) {
-      pass(`${target}: profiles username lookup`, usernameLookup[0].username);
+    if (otherProfile === 0) {
+      pass(`${target}: profiles other user hidden`);
     } else {
-      fail(`${target}: profiles username lookup`, `rows=${usernameLookup.length}`);
+      fail(`${target}: profiles other user hidden`, `count=${otherProfile}`);
     }
   } else {
     pass(`${target}: profiles own read`, "skipped (regular user not in DB)");
-    pass(`${target}: profiles username lookup`, "skipped (regular user not in DB)");
+    pass(`${target}: profiles other user hidden`, "skipped (regular user not in DB)");
   }
 
   // admin can view all profiles (no recursion via is_admin_user)
@@ -99,15 +99,6 @@ async function verifySqlRls(target) {
   } else {
     fail(`${target}: profiles admin read all`, "0 rows");
   }
-
-  // public profiles readable when visibility public
-  const publicProfiles = await asRole(client, regularExists ? regularUserId : ADMIN_ID, async () => {
-    const r = await client.query(
-      "SELECT count(*)::int AS n FROM profiles WHERE profile_visibility = 'public'"
-    );
-    return r.rows[0].n;
-  });
-  pass(`${target}: profiles public visibility`, `${publicProfiles} public rows visible`);
 
   // session_transcript: insert own, cannot read others
   const testSessionId = "00000000-0000-4000-8000-00000000e2e1";
@@ -206,16 +197,12 @@ async function verifyAnonApi() {
 
   const { data: profiles, error: profileErr } = await supabase
     .from("profiles")
-    .select("id, profile_visibility")
+    .select("id")
     .limit(5);
-  if (profileErr) {
-    pass("anon: profiles blocked or public only", profileErr.message);
-  } else if (!profiles?.length) {
-    pass("anon: profiles blocked or public only", "0 rows");
-  } else if (profiles.every((p) => p.profile_visibility === "public")) {
-    pass("anon: profiles public only", `${profiles.length} public row(s)`);
+  if (profileErr || !profiles?.length) {
+    pass("anon: profiles blocked", profileErr?.message || "0 rows");
   } else {
-    fail("anon: profiles public only", "private rows returned to anon");
+    fail("anon: profiles blocked", `${profiles.length} rows returned`);
   }
 
   const { data: transcripts, error: txErr } = await supabase
@@ -275,24 +262,13 @@ async function verifyAuthenticatedApi() {
 
   const { data: otherProfile, error: otherErr } = await supabase
     .from("profiles")
-    .select("username")
+    .select("id")
     .eq("id", ADMIN_ID)
     .maybeSingle();
-  if (otherErr || !otherProfile?.username) {
-    fail("auth: username lookup for other user", otherErr?.message || "no username");
+  if (otherErr || !otherProfile) {
+    pass("auth: other profile hidden");
   } else {
-    pass("auth: username lookup for other user", otherProfile.username);
-  }
-
-  const { data: usernames, error: userErr } = await supabase
-    .from("profiles")
-    .select("username")
-    .not("username", "is", null)
-    .limit(3);
-  if (userErr || !usernames?.length) {
-    fail("auth: username lookup", userErr?.message || "0 rows");
-  } else {
-    pass("auth: username lookup", `${usernames.length} rows`);
+    fail("auth: other profile hidden", "admin profile visible to e2e user");
   }
 
   const { data: ownSessions, error: sessErr } = await supabase

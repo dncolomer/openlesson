@@ -38,7 +38,7 @@ async function getPlanData(workspaceId: string) {
 
   const { data } = await supabase
     .from("workspaces")
-    .select("title, root_topic, cover_image_url, profiles:author_id(username)")
+    .select("title, root_topic, cover_image_url")
     .eq("id", workspaceId)
     .eq("is_public", true)
     .single();
@@ -51,8 +51,6 @@ export default async function Image({ params }: ImageProps) {
 
   const planData = await getPlanData(id);
   const title = planData?.title || planData?.root_topic || formatTitle(slug) || "Workspace";
-  const profiles = planData?.profiles as any;
-  const authorUsername = profiles?.username;
   const coverImageUrl = planData?.cover_image_url;
 
   // If we have a cover image, render it as background with overlay
@@ -146,18 +144,6 @@ export default async function Image({ params }: ImageProps) {
               {title}
             </div>
 
-            {authorUsername && (
-              <div
-                style={{
-                  fontSize: "20px",
-                  color: "rgba(255,255,255,0.6)",
-                  fontWeight: 500,
-                  marginTop: "16px",
-                }}
-              >
-                by @{authorUsername}
-              </div>
-            )}
           </div>
 
           {/* Bottom bar */}

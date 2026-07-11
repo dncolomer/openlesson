@@ -9,7 +9,6 @@ import { useI18n } from "../lib/i18n";
 interface CommunityPlan {
   id: string;
   root_topic: string;
-  author_username: string;
   remix_count: number;
 }
 
@@ -121,9 +120,7 @@ export function CommunityPlans({ user }: CommunityPlansProps) {
                   {plan.remix_count === 0 ? t('communityPlans.zeroForks') : plan.remix_count === 1 ? t('communityPlans.oneFork') : `${plan.remix_count} ${t('communityPlans.forks')}`}
                 </span>
               </div>
-              <p className="text-xs text-neutral-500 mt-1">
-                by @{plan.author_username || t('communityPlans.anonymous')}
-              </p>
+
             </Link>
           ))}
         </div>

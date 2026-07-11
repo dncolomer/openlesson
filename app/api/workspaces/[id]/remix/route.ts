@@ -47,7 +47,7 @@ export async function POST(
 
     const { data: sourcePlan, error: planQueryError } = await supabase
       .from("workspaces")
-      .select("*, profiles:author_id(username)")
+      .select("*")
       .eq("id", workspaceId)
       .single();
 
@@ -166,8 +166,6 @@ export async function POST(
       });
     }
 
-    const authorUsername = sourcePlan.profiles?.username;
-
     const originalTopics = (sourceNodes || [])
       .map((n: { title: string; description?: string }) => `${n.title}: ${n.description}`)
       .join("; ");
@@ -175,11 +173,6 @@ export async function POST(
     const prompt = `Create a new learning plan for a new learner based on an existing one.
 
 ORIGINAL PLAN TOPIC: "${sourcePlan.root_topic}"
-${
-  authorUsername
-    ? `Originally created by: @${authorUsername}`
-    : ""
-}
 
 ORIGINAL LEARNING SESSIONS (for context only - do not use these IDs):
 ${originalTopics}

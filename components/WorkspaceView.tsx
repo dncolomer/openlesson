@@ -40,7 +40,7 @@ export interface Workspace {
   description?: string;
   is_public?: boolean;
   is_group?: boolean;
-  author_username?: string;
+
   original_workspace_id?: string;
   remix_count?: number;
   source_type?: "topic" | "youtube";
@@ -146,7 +146,7 @@ export function WorkspaceView({ initialPlan, initialNodes }: WorkspaceViewProps)
 
       const { data: planData, error: planError } = await supabase
         .from("workspaces")
-        .select("*, profiles:author_id(username)")
+        .select("*")
         .eq("id", workspaceId)
         .single();
 
@@ -172,10 +172,6 @@ export function WorkspaceView({ initialPlan, initialNodes }: WorkspaceViewProps)
       if (planData.is_group && !planData.is_public && !user) {
         router.push("/login?redirect=/workspace/" + workspaceId);
         return;
-      }
-
-      if (planData.profiles) {
-        planData.author_username = planData.profiles.username;
       }
 
       setPlan(planData);
@@ -492,11 +488,6 @@ export function WorkspaceView({ initialPlan, initialNodes }: WorkspaceViewProps)
                     {t("planView.group")}
                   </span>
                 )}
-                {plan.is_public && plan.author_username && (
-                  <span className="text-neutral-500">
-                    {t("planView.by")} <span className="text-neutral-400">@{plan.author_username}</span>
-                  </span>
-                )}
                 {plan.is_public && (plan.remix_count ?? 0) > 0 && (
                   <span className="text-neutral-500">
                     {plan.remix_count}{" "}
@@ -776,7 +767,6 @@ export function WorkspaceView({ initialPlan, initialNodes }: WorkspaceViewProps)
           <div className="hidden h-full md:block">
             <WorkspaceBuilderShell
               needsFork={needsFork}
-              authorUsername={plan.author_username}
               isLoggedIn={!!currentUserId}
               publicLoginHref={publicLoginHref}
               onFork={() => setShowRemixModal(true)}
@@ -802,7 +792,6 @@ export function WorkspaceView({ initialPlan, initialNodes }: WorkspaceViewProps)
           <div className="h-full md:hidden">
             {needsFork ? (
               <PublicWorkspaceForkPanel
-                authorUsername={plan.author_username}
                 isLoggedIn={!!currentUserId}
                 loginHref={publicLoginHref}
                 onFork={() => setShowRemixModal(true)}
@@ -974,7 +963,7 @@ export function WorkspaceView({ initialPlan, initialNodes }: WorkspaceViewProps)
 
       {showRemixModal && (
         <RemixModal
-          plan={{ id: plan.id, root_topic: plan.root_topic, author_username: plan.author_username || "anonymous", remix_count: plan.remix_count || 0 }}
+          plan={{ id: plan.id, root_topic: plan.root_topic, remix_count: plan.remix_count || 0 }}
           onClose={() => setShowRemixModal(false)}
           onComplete={(newPlanId) => {
             setShowRemixModal(false);

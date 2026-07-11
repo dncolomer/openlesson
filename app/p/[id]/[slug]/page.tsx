@@ -36,17 +36,13 @@ async function getPlan(workspaceId: string) {
 
   const { data: plan, error } = await supabase
     .from("workspaces")
-    .select("*, profiles:author_id(username)")
+    .select("*")
     .eq("id", workspaceId)
     .or("is_public.eq.true,is_group.eq.true")
     .single();
 
   if (error || !plan) {
     return null;
-  }
-
-  if (plan.profiles) {
-    plan.author_username = plan.profiles.username;
   }
 
   const { data: nodes } = await supabase
@@ -70,7 +66,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
   const { plan } = result;
   const title = plan.title || plan.root_topic;
-  const description = plan.description || `A workspace by @${plan.author_username || "anonymous"} on openLesson`;
+  const description = plan.description || `A workspace on openLesson`;
 
   const ogImage = await getRandomWorkspaceCoverImage() || `/p/${id}/${slug}/opengraph-image`;
 

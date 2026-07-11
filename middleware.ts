@@ -19,7 +19,6 @@ const SUBSCRIPTION_EXEMPT_PREFIXES = [
   "/p/",
   "/quiz/",
   "/oauth/",
-  "/u/",
   "/docs/",
   "/platform",
   "/pitch",

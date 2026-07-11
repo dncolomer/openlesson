@@ -36,32 +36,16 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    // Get usernames
-    const userIds = [...new Set((plans || []).map((p: any) => p.user_id).filter(Boolean))];
-    let usernameMap = new Map<string, string>();
-
-    if (userIds.length > 0) {
-      const { data: profiles } = await supabase
-        .from("profiles")
-        .select("id, username")
-        .in("id", userIds);
-
-      if (profiles) {
-        usernameMap = new Map(profiles.map((p: any) => [p.id, p.username]));
-      }
-    }
-
-    const plansWithUsernames = (plans || []).map((p: any) => ({
+    const communityPlans = (plans || []).map((p: any) => ({
       id: p.id,
       root_topic: p.root_topic,
       title: p.title,
       cover_image_url: p.cover_image_url,
       created_at: p.created_at,
-      author_username: usernameMap.get(p.user_id) || "anonymous",
       remix_count: p.remix_count || 0,
     }));
 
-    return NextResponse.json({ plans: plansWithUsernames, total: total || 0 });
+    return NextResponse.json({ plans: communityPlans, total: total || 0 });
   } catch (error) {
     console.error("Error fetching community plans:", error);
     return NextResponse.json(

@@ -9,7 +9,6 @@ import { trackSignupCompleted } from "@/lib/analytics";
 import { useI18n } from "@/lib/i18n";
 
 function RegisterForm() {
-  const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -45,9 +44,7 @@ function RegisterForm() {
       const { error: authError } = await supabase.auth.signUp({
         email,
         password,
-        options: {
-          data: { username },
-        },
+
       });
 
       if (authError) {
@@ -108,21 +105,6 @@ function RegisterForm() {
           ) : null}
 
           <form onSubmit={handleRegister} className="space-y-3.5">
-            <div>
-              <label htmlFor="username" className="block text-[11px] text-neutral-500 uppercase tracking-wider mb-1.5">
-                {t('auth.username')}
-              </label>
-              <input
-                id="username"
-                type="text"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                placeholder={t('register.usernamePlaceholder')}
-                className="w-full px-3.5 py-2.5 bg-neutral-900/80 border border-neutral-800 rounded-xl text-white text-sm placeholder-neutral-700 focus:outline-none focus:border-neutral-600 transition-colors"
-                required
-              />
-            </div>
-
             <div>
               <label htmlFor="email" className="block text-[11px] text-neutral-500 uppercase tracking-wider mb-1.5">
                 {t('auth.email')}

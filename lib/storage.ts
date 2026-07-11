@@ -1584,7 +1584,7 @@ export interface Workspace {
   created_at: string;
   is_public?: boolean;
   author_id?: string;
-  author_username?: string;
+
   remix_count?: number;
   original_workspace_id?: string;
   // YouTube/source fields
@@ -1720,7 +1720,6 @@ export async function getWorkspaceById(workspaceId: string): Promise<Workspace |
       source_url,
       source_summary,
       notes,
-      profiles:author_id (username)
     `)
     .eq("id", workspaceId)
     .single();
@@ -1735,7 +1734,6 @@ export async function getWorkspaceById(workspaceId: string): Promise<Workspace |
     created_at: data.created_at,
     is_public: data.is_public,
     author_id: data.author_id,
-    author_username: data.profiles?.username || "anonymous",
     remix_count: data.remix_count || 0,
     original_workspace_id: data.original_workspace_id,
     source_type: data.source_type || "topic",
@@ -1757,95 +1755,6 @@ export async function updatePlanNotes(workspaceId: string, notes: string): Promi
     .eq("user_id", user.id);
 
   if (error) throw new Error("Failed to update plan notes: " + error.message);
-}
-
-export async function getUserById(userId: string): Promise<{ username: string } | null> {
-  const supabase = createClient();
-
-  const { data } = await supabase
-    .from("profiles")
-    .select("username")
-    .eq("id", userId)
-    .single();
-
-  return data;
-}
-
-export async function forkPlan(
-  sourcePlanId: string,
-  userId: string
-): Promise<{ workspaceId: string; nodesCount: number }> {
-  const supabase = createClient();
-
-  const { data: sourcePlan, error: planError } = await supabase
-    .from("workspaces")
-    .select("*")
-    .eq("id", sourcePlanId)
-    .single();
-
-  if (planError || !sourcePlan) {
-    throw new Error("Source plan not found");
-  }
-
-  const { data: sourceNodes, error: nodesError } = await supabase
-    .from("blocks")
-    .select("*")
-    .eq("workspace_id", sourcePlanId);
-
-  if (nodesError) {
-    throw new Error("Could not fetch source nodes");
-  }
-
-  const { data: newPlan, error: createError } = await supabase
-    .from("workspaces")
-    .insert({
-      user_id: userId,
-      root_topic: sourcePlan.root_topic,
-      status: "active",
-      is_public: false,
-      author_id: userId,
-      original_workspace_id: sourcePlanId,
-    })
-    .select()
-    .single();
-
-  if (createError) {
-    throw new Error("Could not create new plan");
-  }
-
-  const blockIdMap = new Map<string, string>();
-  const newNodes = sourceNodes.map((node: any) => {
-    const newId = crypto.randomUUID();
-    blockIdMap.set(node.id, newId);
-    return {
-      workspace_id: newPlan.id,
-      title: node.title,
-      description: node.description,
-      is_start: node.is_start,
-      next_block_ids: (node.next_block_ids || []).map((id: string) => blockIdMap.get(id) || id),
-      status: "not_started",
-      position_x: node.position_x,
-      position_y: node.position_y,
-    };
-  });
-
-  const { error: insertError } = await supabase.from("blocks").insert(newNodes);
-
-  if (insertError) {
-    await supabase.from("workspaces").delete().eq("id", newPlan.id);
-    throw new Error("Could not copy nodes");
-  }
-
-  await persistSkillGridPositions(supabase, toSkillGridNodes(newNodes), {
-    onlyWithoutSavedPosition: true,
-  });
-
-  await supabase
-    .from("workspaces")
-    .update({ remix_count: (sourcePlan.remix_count || 0) + 1 })
-    .eq("id", sourcePlanId);
-
-  return { workspaceId: newPlan.id, nodesCount: newNodes.length };
 }
 
 export async function updatePlanVisibility(

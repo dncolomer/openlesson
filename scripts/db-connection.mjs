@@ -31,6 +31,26 @@ export function parseDbPassword(url) {
   return decodeURIComponent(m[2]);
 }
 
+/** Convert dashboard db.*.supabase.co URLs to session pooler (db host often IPv6-only). */
+export function normalizeSupabaseDbUrl(dbUrl, projectRef) {
+  if (!dbUrl || !projectRef) return dbUrl;
+  try {
+    const parsed = new URL(dbUrl.replace("postgresql://", "http://"));
+    if (parsed.hostname === `db.${projectRef}.supabase.co`) {
+      const port = parsed.port || "5432";
+      const password = parseDbPassword(dbUrl);
+      const encodedPassword = password
+        .replace(/%/g, "%25")
+        .replace(/!/g, "%21")
+        .replace(/@/g, "%40")
+        .replace(/#/g, "%23");
+      const poolerHost = "aws-1-eu-west-2.pooler.supabase.com";
+      return `postgresql://postgres.${projectRef}:${encodedPassword}@${poolerHost}:${port}/postgres`;
+    }
+  } catch {}
+  return dbUrl;
+}
+
 function buildConnectionCandidates(ref, password) {
   const encoded = encodeURIComponent(password);
   const regions = [
@@ -63,6 +83,7 @@ export async function connectSupabasePostgres({ projectRef, password, dbUrl }) {
   }
   candidates.push(...buildConnectionCandidates(projectRef, password));
 
+  let lastError = null;
   for (const candidate of candidates) {
     const client = new Client({
       connectionString: candidate.url,
@@ -73,14 +94,21 @@ export async function connectSupabasePostgres({ projectRef, password, dbUrl }) {
       await client.connect();
       await client.query("SELECT 1");
       return { client, via: candidate.name };
-    } catch {
+    } catch (error) {
+      lastError = error;
       try {
         await client.end();
       } catch {}
+      if (candidate.name === "explicit-db-url") {
+        break;
+      }
     }
   }
 
-  throw new Error(`Could not connect to Supabase Postgres for project ${projectRef}`);
+  const detail = lastError?.message || "unknown error";
+  throw new Error(
+    `Could not connect to Supabase Postgres for project ${projectRef}: ${detail}`
+  );
 }
 
 export async function connectTarget(target = "prod") {
@@ -116,6 +144,7 @@ export async function connectTarget(target = "prod") {
   }
 
   const ref = projectRefFromUrl(supabaseUrl);
+  dbUrl = normalizeSupabaseDbUrl(dbUrl, ref);
   const password = parseDbPassword(dbUrl);
   return connectSupabasePostgres({ projectRef: ref, password, dbUrl });
 }

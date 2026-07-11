@@ -59,10 +59,6 @@ interface ChatMessage {
 const OPENING_MESSAGE_ID = "opening";
 const THINK_ALOUD_PROTOCOL_LABEL = "Think Aloud Protocol";
 
-type DialogueSnapshot = {
-  messages: ChatMessage[];
-};
-
 function getDialogueStorageKey({
   workspaceId,
   sessionId,
@@ -80,29 +76,6 @@ function getDialogueStorageKey({
     workspaceId || "workspace",
     privateToken || sessionId || blockId || "session",
   ].join(":");
-}
-
-function loadDialogueMessages(storageKey: string): ChatMessage[] {
-  if (typeof window === "undefined") return [];
-  try {
-    const raw = window.localStorage.getItem(storageKey);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw) as DialogueSnapshot | ChatMessage[];
-    if (Array.isArray(parsed)) return parsed;
-    return Array.isArray(parsed.messages) ? parsed.messages : [];
-  } catch {
-    return [];
-  }
-}
-
-function saveDialogueMessages(storageKey: string, messages: ChatMessage[]) {
-  if (typeof window === "undefined") return;
-  try {
-    const snapshot: DialogueSnapshot = { messages };
-    window.localStorage.setItem(storageKey, JSON.stringify(snapshot));
-  } catch {
-    // ignore quota / privacy errors
-  }
 }
 
 function clearDialogueMessages(storageKey: string) {
@@ -338,11 +311,6 @@ export function TapScoreClient({ workspaceId, blockId, sessionId, privateToken, 
   const tapSessionIdRef = useRef<string | null>(initialSession?.id ?? null);
   const resolvedWorkspaceId = workspaceId || initialSession?.workspace_id;
 
-  useEffect(() => {
-    if (initialSession?.status === "completed" && resolvedWorkspaceId) {
-      router.replace(getIlePostSessionPath({ metadata: { workspace_id: resolvedWorkspaceId } }));
-    }
-  }, [initialSession?.status, resolvedWorkspaceId, router]);
   const isEndingRef = useRef(false);
   const endAndScoreRef = useRef<() => void>(() => {});
 
@@ -404,65 +372,6 @@ export function TapScoreClient({ workspaceId, blockId, sessionId, privateToken, 
     [workspaceId, sessionId, blockId, privateToken],
   );
 
-  useEffect(() => {
-    const stored = loadDialogueMessages(dialogueStorageKey);
-    if (stored.length === 0) return;
-    setMessages(stored);
-    setPhase((current) => (current === "briefing" ? "live" : current));
-  }, [dialogueStorageKey]);
-
-  useEffect(() => {
-    if (phase !== "live" || messages.length > 0 || !tapSessionId || isStartingSession) return;
-
-    let cancelled = false;
-    void (async () => {
-      setIsStartingSession(true);
-      setError("");
-      try {
-        const response = await fetch("/api/workspace-tap-score/start", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            workspaceId,
-            blockId,
-            sessionId,
-            privateToken,
-            minutes,
-            tapSessionId: tapSessionIdRef.current,
-          }),
-        });
-        const payload = await response.json();
-        if (!response.ok) throw new Error(payload.error || "Could not resume TAP session");
-        const openingQuestion = String(payload.openingQuestion || "").trim();
-        if (!openingQuestion) throw new Error("Could not generate opening question");
-        if (cancelled) return;
-        setMessages([
-          {
-            id: OPENING_MESSAGE_ID,
-            role: "assistant",
-            content: openingQuestion,
-            at: new Date().toISOString(),
-          },
-        ]);
-      } catch (err) {
-        if (!cancelled) {
-          setError(err instanceof Error ? err.message : "Could not resume TAP session");
-        }
-      } finally {
-        if (!cancelled) setIsStartingSession(false);
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [phase, messages.length, tapSessionId, isStartingSession, workspaceId, blockId, sessionId, privateToken, minutes]);
-
-  useEffect(() => {
-    if (messages.length === 0) return;
-    saveDialogueMessages(dialogueStorageKey, messages);
-  }, [messages, dialogueStorageKey]);
-
   const lastUserTurn = useMemo(() => {
     for (let index = messages.length - 1; index >= 0; index -= 1) {
       if (messages[index].role === "user") return messages[index];
@@ -485,6 +394,28 @@ export function TapScoreClient({ workspaceId, blockId, sessionId, privateToken, 
   const finalizeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const speechResultsLengthRef = useRef(0);
   const consumedResultsIndexRef = useRef(0);
+
+  useEffect(() => {
+    clearDialogueMessages(dialogueStorageKey);
+    isEndingRef.current = false;
+    setPhase("briefing");
+    setMessages([]);
+    setThoughts([]);
+    setInterimText("");
+    setCrystallizableText("");
+    setMemoryThoughtIds(new Set());
+    setSentThoughtIds(new Set());
+    setSelectedActiveThoughtIds(new Set());
+    setEditingThought(null);
+    setStartedAt(null);
+    setRemainingSeconds(0);
+    setError("");
+    setIsStartingSession(false);
+    speechResultsLengthRef.current = 0;
+    consumedResultsIndexRef.current = 0;
+    finalBufferRef.current = [];
+  }, [dialogueStorageKey]);
+
   const activeThoughts = useMemo(
     () => thoughts.filter((thought) => !memoryThoughtIds.has(thought.id) && !sentThoughtIds.has(thought.id)),
     [thoughts, memoryThoughtIds, sentThoughtIds],

@@ -31,8 +31,6 @@ export async function POST(req: NextRequest) {
         .single();
 
       if (error || !session) return NextResponse.json({ error: "TAP block not found" }, { status: 404 });
-      if (session.status === "completed") return NextResponse.json({ error: "TAP block is already completed" }, { status: 409 });
-
       await supabase
         .from("workspace_tap_sessions")
         .update({ status: "in_progress", started_at: new Date().toISOString() })

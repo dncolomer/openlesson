@@ -39,6 +39,14 @@ export async function POST(req: NextRequest) {
         .update({
           status: "in_progress",
           started_at: new Date().toISOString(),
+          completed_at: null,
+          duration_seconds: 0,
+          requested_duration_seconds: minutes * 60,
+          transcript: [],
+          summary: null,
+          analysis: {},
+          overall_score: null,
+          marker_scores: [],
           block_id: blockId || access.blockId,
           session_id: focusSessionId || access.focusSessionId,
         })

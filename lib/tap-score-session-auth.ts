@@ -33,7 +33,6 @@ export async function resolveTapSessionAccess(input: {
       .single();
 
     if (error || !session) return { error: "TAP block not found", status: 404 };
-    if (session.status === "completed") return { error: "TAP block is already completed", status: 409 };
     if (tapSessionId && session.id !== tapSessionId) {
       return { error: "TAP session ID does not match private link", status: 403 };
     }
@@ -83,7 +82,6 @@ export async function resolveTapSessionAccess(input: {
     if (session.user_id && session.user_id !== user.id) {
       return { error: "Not authorized", status: 403 };
     }
-    if (session.status === "completed") return { error: "TAP session is already completed", status: 409 };
     existingSession = session;
   }
 

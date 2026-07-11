@@ -10,11 +10,11 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const privateToken = body.privateToken ? String(body.privateToken) : "";
-    let planId = String(body.planId || "");
+    let workspaceId = String(body.workspaceId || "");
     let mode = "curious" as GhcScoreMode;
     let minutes = Number(body.minutes || 15);
     let focusNodeIds = Array.isArray(body.focusNodeIds) ? body.focusNodeIds.filter(Boolean) : [];
-    const planNodeId = body.planNodeId ? String(body.planNodeId) : null;
+    const blockId = body.blockId ? String(body.blockId) : null;
     let focusSessionId = body.sessionId ? String(body.sessionId) : null;
     const messages = Array.isArray(body.messages) ? body.messages : [];
     const latestThought = String(body.thought || "").trim();
@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
       const supabase = createAdminClient();
       const { data: session, error } = await supabase
         .from("workspace_ghc_sessions")
-        .select("id, plan_id, user_id, guest_user_id, organization_id, requested_duration_seconds, mode, focus_node_ids, status, session_id, learning_plans!inner(user_id)")
+        .select("id, workspace_id, user_id, guest_user_id, organization_id, requested_duration_seconds, mode, focus_block_ids, status, session_id, workspaces!inner(user_id)")
         .eq("private_token_hash", hashPrivateToken(privateToken))
         .single();
 
@@ -38,20 +38,20 @@ export async function POST(req: NextRequest) {
         .update({ status: "in_progress", started_at: new Date().toISOString() })
         .eq("id", session.id);
 
-      planId = session.plan_id;
-      userId = session.user_id || (session as any).learning_plans?.user_id || null;
+      workspaceId = session.workspace_id;
+      userId = session.user_id || (session as any).workspaces?.user_id || null;
       mode = "curious";
       minutes = Math.max(1, Math.round((session.requested_duration_seconds || 900) / 60));
-      focusNodeIds = session.focus_node_ids || [];
+      focusNodeIds = session.focus_block_ids || [];
       focusSessionId = session.session_id || null;
     }
 
-    if (!planId) return NextResponse.json({ error: "planId is required" }, { status: 400 });
-    if (planNodeId && !focusNodeIds.includes(planNodeId)) focusNodeIds = [planNodeId, ...focusNodeIds];
+    if (!workspaceId) return NextResponse.json({ error: "workspaceId is required" }, { status: 400 });
+    if (blockId && !focusNodeIds.includes(blockId)) focusNodeIds = [blockId, ...focusNodeIds];
 
     const { brief } = userId
-      ? await getGhcScoreBriefForUser(planId, userId, focusNodeIds, true, focusSessionId)
-      : await getGhcScoreBrief(planId, focusNodeIds, focusSessionId);
+      ? await getGhcScoreBriefForUser(workspaceId, userId, focusNodeIds, true, focusSessionId)
+      : await getGhcScoreBrief(workspaceId, focusNodeIds, focusSessionId);
 
     const context = buildGhcScoreInstructions(brief, mode, minutes);
     const history = messages

@@ -12,7 +12,7 @@ import {
 } from "@/lib/agent-v2/performance-context";
 import { canAccessAgentWorkspace } from "@/lib/agent-v2/workspace-access";
 import { callXaiResponses, callXaiResponsesWithFiles, type ResponsesInputMessage } from "@/lib/xai-client";
-import { withEvidenceApiResponse } from "@/lib/agent-v2/predictive-interruption";
+import { withProofOfWorkApiResponse } from "@/lib/agent-v2/predictive-interruption";
 
 export const runtime = "nodejs";
 export const maxDuration = 120;
@@ -42,7 +42,7 @@ export async function POST(req: NextRequest, { params }: RouteProps) {
   const { id: workspaceId } = await params;
 
   const { data: workspace } = await supabase
-    .from("learning_plans")
+    .from("workspaces")
     .select("id, user_id, organization_id, guest_user_id, title, root_topic, description, notes, conversion_goal")
     .eq("id", workspaceId)
     .single();
@@ -69,10 +69,10 @@ export async function POST(req: NextRequest, { params }: RouteProps) {
 
   if (blockId) {
     const { data: block } = await supabase
-      .from("plan_nodes")
+      .from("blocks")
       .select("id")
       .eq("id", blockId)
-      .eq("plan_id", workspaceId)
+      .eq("workspace_id", workspaceId)
       .single();
     if (!block) return errorResponse(404, "block_not_found", "Block not found in this workspace");
   }
@@ -94,10 +94,10 @@ export async function POST(req: NextRequest, { params }: RouteProps) {
       performanceContext = context.payload;
 
       if (
-        context.payload.counts.evidence_artifacts === 0 &&
+        context.payload.counts.proof_of_work_artifacts === 0 &&
         context.payload.counts.tap_sessions === 0 &&
         context.payload.counts.linked_sessions === 0 &&
-        context.payload.counts.plan_files === 0
+        context.payload.counts.workspace_files === 0
       ) {
         const emptyReport = prompt
           ? null
@@ -109,16 +109,16 @@ export async function POST(req: NextRequest, { params }: RouteProps) {
             });
 
         return NextResponse.json(
-          withEvidenceApiResponse(
+          withProofOfWorkApiResponse(
             {
               mode: prompt ? "chat" : "report",
               response: prompt
-                ? "No performance evidence is attached to this workspace yet. Upload tool usage, screenshots, video, or EEG via POST /evidence, complete a Think Aloud Protocol (TAP) session, or link session data before asking detailed questions."
+                ? "No performance proof of work is attached to this workspace yet. Upload tool usage, screenshots, video, or EEG via POST /proof-of-work, complete a Think Aloud Protocol (TAP) session, or link session data before asking detailed questions."
                 : null,
               report: emptyReport?.report ?? null,
               workspace_conversion_goal: emptyReport?.workspace_conversion_goal,
               conversion_goal_source: emptyReport?.conversion_goal_source,
-              evidence_summary: contextCounts,
+              proof_of_work_summary: contextCounts,
               file_ids: [],
             },
             {
@@ -127,7 +127,7 @@ export async function POST(req: NextRequest, { params }: RouteProps) {
               block_id: blockId,
               mode: prompt ? "chat" : "report",
               report: emptyReport?.report ?? null,
-              evidence_artifacts: contextCounts?.evidence_artifacts,
+              proof_of_work_artifacts: contextCounts?.proof_of_work_artifacts,
             }
           )
         );
@@ -166,11 +166,11 @@ export async function POST(req: NextRequest, { params }: RouteProps) {
     }
 
     return NextResponse.json(
-      withEvidenceApiResponse(
+      withProofOfWorkApiResponse(
         {
           mode: "chat",
           response: chatResult.text,
-          evidence_summary: contextCounts,
+          proof_of_work_summary: contextCounts,
           file_ids: activeFileIds,
         },
         {
@@ -178,7 +178,7 @@ export async function POST(req: NextRequest, { params }: RouteProps) {
           workspace_id: workspaceId,
           block_id: blockId,
           mode: "chat",
-          evidence_artifacts: contextCounts?.evidence_artifacts,
+          proof_of_work_artifacts: contextCounts?.proof_of_work_artifacts,
         }
       )
     );
@@ -215,13 +215,13 @@ export async function POST(req: NextRequest, { params }: RouteProps) {
   });
 
   return NextResponse.json(
-    withEvidenceApiResponse(
+    withProofOfWorkApiResponse(
       {
         mode: "report",
         workspace_conversion_goal: finalized.workspace_conversion_goal,
         conversion_goal_source: finalized.conversion_goal_source,
         report: finalized.report,
-        evidence_summary: contextCounts,
+        proof_of_work_summary: contextCounts,
         file_ids: activeFileIds,
       },
       {
@@ -230,7 +230,7 @@ export async function POST(req: NextRequest, { params }: RouteProps) {
         block_id: blockId,
         mode: "report",
         report: finalized.report,
-        evidence_artifacts: contextCounts?.evidence_artifacts,
+        proof_of_work_artifacts: contextCounts?.proof_of_work_artifacts,
       }
     )
   );

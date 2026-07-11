@@ -4,11 +4,11 @@ import { getGhcScoreBrief, hashPrivateToken } from "@/lib/ghc-score";
 
 export interface ResolvedGhlSessionContext {
   supabase: ReturnType<typeof createAdminClient>;
-  planId: string;
+  workspaceId: string;
   userId: string | null;
   guestUserId: string | null;
   organizationId: string | null;
-  planNodeId: string | null;
+  blockId: string | null;
   focusSessionId: string | null;
   ghlSessionId: string;
   existingSession: Record<string, unknown> | null;
@@ -16,9 +16,9 @@ export interface ResolvedGhlSessionContext {
 
 export async function resolveGhlSessionAccess(input: {
   privateToken?: string;
-  planId?: string;
+  workspaceId?: string;
   ghlSessionId?: string;
-  planNodeId?: string | null;
+  blockId?: string | null;
   focusSessionId?: string | null;
 }): Promise<ResolvedGhlSessionContext | { error: string; status: number }> {
   const privateToken = input.privateToken?.trim() || "";
@@ -28,7 +28,7 @@ export async function resolveGhlSessionAccess(input: {
     const supabase = createAdminClient();
     const { data: session, error } = await supabase
       .from("workspace_ghc_sessions")
-      .select("id, plan_id, user_id, guest_user_id, organization_id, plan_node_id, session_id, status, learning_plans!inner(user_id)")
+      .select("id, workspace_id, user_id, guest_user_id, organization_id, block_id, session_id, status, workspaces!inner(user_id)")
       .eq("private_token_hash", hashPrivateToken(privateToken))
       .single();
 
@@ -40,19 +40,19 @@ export async function resolveGhlSessionAccess(input: {
 
     return {
       supabase,
-      planId: session.plan_id,
-      userId: session.user_id || (session as { learning_plans?: { user_id?: string } }).learning_plans?.user_id || null,
+      workspaceId: session.workspace_id,
+      userId: session.user_id || (session as { workspaces?: { user_id?: string } }).workspaces?.user_id || null,
       guestUserId: session.guest_user_id || null,
       organizationId: session.organization_id || null,
-      planNodeId: session.plan_node_id || null,
+      blockId: session.block_id || null,
       focusSessionId: session.session_id || null,
       ghlSessionId: session.id,
       existingSession: session,
     };
   }
 
-  const planId = input.planId?.trim() || "";
-  if (!planId) return { error: "planId is required", status: 400 };
+  const workspaceId = input.workspaceId?.trim() || "";
+  if (!workspaceId) return { error: "workspaceId is required", status: 400 };
 
   const authSupabase = await createClient();
   const {
@@ -61,7 +61,7 @@ export async function resolveGhlSessionAccess(input: {
   if (!user) return { error: "Not authenticated", status: 401 };
 
   try {
-    await getGhcScoreBrief(planId, input.planNodeId ? [input.planNodeId] : [], input.focusSessionId || null);
+    await getGhcScoreBrief(workspaceId, input.blockId ? [input.blockId] : [], input.focusSessionId || null);
   } catch (err) {
     const message = err instanceof Error ? err.message : "Not authorized";
     const status = message === "Not authenticated" ? 401 : message === "Not authorized" ? 403 : 404;
@@ -74,9 +74,9 @@ export async function resolveGhlSessionAccess(input: {
   if (ghlSessionId) {
     const { data: session, error } = await supabase
       .from("workspace_ghc_sessions")
-      .select("id, plan_id, user_id, guest_user_id, organization_id, plan_node_id, session_id, status")
+      .select("id, workspace_id, user_id, guest_user_id, organization_id, block_id, session_id, status")
       .eq("id", ghlSessionId)
-      .eq("plan_id", planId)
+      .eq("workspace_id", workspaceId)
       .single();
 
     if (error || !session) return { error: "TAP session not found", status: 404 };
@@ -89,11 +89,11 @@ export async function resolveGhlSessionAccess(input: {
 
   return {
     supabase,
-    planId,
+    workspaceId,
     userId: user.id,
     guestUserId: null,
     organizationId: null,
-    planNodeId: input.planNodeId || existingSession?.plan_node_id?.toString() || null,
+    blockId: input.blockId || existingSession?.block_id?.toString() || null,
     focusSessionId: input.focusSessionId || existingSession?.session_id?.toString() || null,
     ghlSessionId: ghlSessionId || "",
     existingSession,

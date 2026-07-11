@@ -12,29 +12,29 @@ import {
   Users,
 } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
-import type { LearningPlan } from "@/components/PlanView";
+import type { Workspace } from "@/components/WorkspaceView";
 
 interface WorkspaceIdentityPanelProps {
-  plan: LearningPlan;
-  planId: string;
+  plan: Workspace;
+  workspaceId: string;
   isOwner: boolean;
   currentUserId: string | null;
   copied: boolean;
   onShare: () => void;
-  onPlanUpdate: (plan: LearningPlan) => void;
+  onPlanUpdate: (plan: Workspace) => void;
   onShowRemixModal: () => void;
   publicLoginHref: string;
   variant?: "embedded" | "compact" | "floating";
 }
 
-function planShareSlug(plan: LearningPlan) {
+function planShareSlug(plan: Workspace) {
   const title = plan.title || plan.root_topic || "plan";
   return encodeURIComponent(title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") || "plan");
 }
 
 export function WorkspaceIdentityPanel({
   plan,
-  planId,
+  workspaceId,
   isOwner,
   currentUserId,
   copied,
@@ -81,7 +81,7 @@ export function WorkspaceIdentityPanel({
   const saveTitle = async () => {
     if (!editTitle.trim()) return;
     try {
-      const res = await fetch(`/api/learning-plans/${planId}/visibility`, {
+      const res = await fetch(`/api/workspaces/${workspaceId}/visibility`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ title: editTitle.trim() }),
@@ -99,7 +99,7 @@ export function WorkspaceIdentityPanel({
   const saveConversionGoal = async () => {
     setSavingConversionGoal(true);
     try {
-      const res = await fetch(`/api/learning-plans/${planId}/visibility`, {
+      const res = await fetch(`/api/workspaces/${workspaceId}/visibility`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ conversion_goal: editConversionGoal.trim() || null }),
@@ -119,7 +119,7 @@ export function WorkspaceIdentityPanel({
   const saveDescription = async () => {
     setSavingDescription(true);
     try {
-      const res = await fetch(`/api/learning-plans/${planId}/visibility`, {
+      const res = await fetch(`/api/workspaces/${workspaceId}/visibility`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ description: editDescription }),
@@ -139,7 +139,7 @@ export function WorkspaceIdentityPanel({
   const toggleGroup = async () => {
     try {
       const isGroup = plan.is_group ?? false;
-      const res = await fetch(`/api/learning-plans/${planId}/group`, {
+      const res = await fetch(`/api/workspaces/${workspaceId}/group`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ is_group: !isGroup }),
@@ -155,7 +155,7 @@ export function WorkspaceIdentityPanel({
   const togglePublic = async () => {
     try {
       const isPublic = plan.is_public ?? false;
-      const res = await fetch(`/api/learning-plans/${planId}/visibility`, {
+      const res = await fetch(`/api/workspaces/${workspaceId}/visibility`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ is_public: !isPublic }),
@@ -194,7 +194,7 @@ export function WorkspaceIdentityPanel({
           {(plan.remix_count || 0) === 1 ? t("planView.fork") : t("planView.forks", { count: plan.remix_count || 0 })}
         </span>
       )}
-      {plan.original_plan_id && (
+      {plan.original_workspace_id && (
         <span className="text-[10px] font-medium text-neutral-400">{t("planView.remixed")}</span>
       )}
     </>
@@ -273,7 +273,7 @@ export function WorkspaceIdentityPanel({
 
       {showSignInToJoin && (
         <Link
-          href={`/login?redirect=/p/${planId}/${planShareSlug(plan)}`}
+          href={`/login?redirect=/p/${workspaceId}/${planShareSlug(plan)}`}
           className="rounded-md border border-white/15 bg-white/10 px-2 py-1 text-[10px] text-neutral-200 transition-all hover:bg-white/15"
         >
           {t("planView.signInToJoin")}

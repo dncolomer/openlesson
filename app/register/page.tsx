@@ -75,7 +75,7 @@ function RegisterForm() {
       }
 
       trackSignupCompleted({ hasReferral: Boolean(referralCode) });
-      router.push("/dashboard");
+      router.push("/pricing?required=1");
       router.refresh();
     } catch {
       setError(t('common.error'));

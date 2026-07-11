@@ -46,7 +46,7 @@ export const SKILL_PROFILES: SkillProfile[] = [
     actions: [
       { step: "Think-Aloud problem-set review", status: "Done" },
       { step: "Practice error-correction proofs in ILE", status: "Open", ileHref: "/ile/blocks/quantum-error-correction" },
-      { step: "Submit lab notebook to Evidence API", status: "Scheduled" },
+      { step: "Submit lab notebook to Proof-of-Work API", status: "Scheduled" },
     ],
   },
   {
@@ -73,7 +73,7 @@ export const SKILL_PROFILES: SkillProfile[] = [
       },
     ],
     actions: [
-      { step: "Evidence API scoring of project artifacts", status: "Done" },
+      { step: "Proof-of-Work API scoring of project artifacts", status: "Done" },
       { step: "Build eval harness exercise in ILE", status: "Open", ileHref: "/ile/blocks/eval-design" },
       { step: "Think-Aloud architecture defense", status: "Scheduled" },
     ],
@@ -104,7 +104,7 @@ export const SKILL_PROFILES: SkillProfile[] = [
     actions: [
       { step: "Think-Aloud derivation walkthrough", status: "Done" },
       { step: "Practice generalization proofs in ILE", status: "Open", ileHref: "/ile/blocks/ml-generalization" },
-      { step: "Submit problem set to Evidence API", status: "Scheduled" },
+      { step: "Submit problem set to Proof-of-Work API", status: "Scheduled" },
     ],
   },
   {
@@ -133,7 +133,7 @@ export const SKILL_PROFILES: SkillProfile[] = [
     actions: [
       { step: "Think-Aloud proof review", status: "Done" },
       { step: "Visualize transformations in ILE", status: "Open", ileHref: "/ile/blocks/eigen-decomposition" },
-      { step: "Upload worked examples to Evidence API", status: "Scheduled" },
+      { step: "Upload worked examples to Proof-of-Work API", status: "Scheduled" },
     ],
   },
   {
@@ -162,7 +162,7 @@ export const SKILL_PROFILES: SkillProfile[] = [
     actions: [
       { step: "Think-Aloud mechanism explanation", status: "Done" },
       { step: "Practice curved-arrow drills in ILE", status: "Open", ileHref: "/ile/blocks/mechanism-steps" },
-      { step: "Submit lab report to Evidence API", status: "Scheduled" },
+      { step: "Submit lab report to Proof-of-Work API", status: "Scheduled" },
     ],
   },
   {
@@ -191,7 +191,7 @@ export const SKILL_PROFILES: SkillProfile[] = [
     actions: [
       { step: "Think-Aloud interpretation review", status: "Done" },
       { step: "Practice causal diagrams in ILE", status: "Open", ileHref: "/ile/blocks/causal-inference" },
-      { step: "Submit analysis notebook to Evidence API", status: "Scheduled" },
+      { step: "Submit analysis notebook to Proof-of-Work API", status: "Scheduled" },
     ],
   },
   {
@@ -220,7 +220,7 @@ export const SKILL_PROFILES: SkillProfile[] = [
     actions: [
       { step: "Think-Aloud pathway walkthrough", status: "Done" },
       { step: "Simulate knockout experiments in ILE", status: "Open", ileHref: "/ile/blocks/gene-regulation" },
-      { step: "Upload protocol notes to Evidence API", status: "Scheduled" },
+      { step: "Upload protocol notes to Proof-of-Work API", status: "Scheduled" },
     ],
   },
   {
@@ -249,7 +249,7 @@ export const SKILL_PROFILES: SkillProfile[] = [
     actions: [
       { step: "Think-Aloud solution defense", status: "Done" },
       { step: "Practice invariant proofs in ILE", status: "Open", ileHref: "/ile/blocks/correctness-proofs" },
-      { step: "Submit code artifacts to Evidence API", status: "Scheduled" },
+      { step: "Submit code artifacts to Proof-of-Work API", status: "Scheduled" },
     ],
   },
 ];

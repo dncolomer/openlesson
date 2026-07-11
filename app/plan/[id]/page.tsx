@@ -1,14 +1,14 @@
 import { Metadata } from "next";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
-import { PlanView } from "@/components/PlanView";
-import { getRandomPlanCoverImage } from "@/lib/plan-image";
+import { WorkspaceView } from "@/components/WorkspaceView";
+import { getRandomWorkspaceCoverImage } from "@/lib/workspace-image";
 
 interface PageProps {
   params: Promise<{ id: string }>;
 }
 
-async function getPlanMeta(planId: string) {
+async function getWorkspaceMeta(workspaceId: string) {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   if (!supabaseUrl || !supabaseAnonKey) return null;
@@ -19,9 +19,9 @@ async function getPlanMeta(planId: string) {
   });
 
   const { data } = await supabase
-    .from("learning_plans")
+    .from("workspaces")
     .select("title, root_topic, cover_image_url, profiles:author_id(username)")
-    .eq("id", planId)
+    .eq("id", workspaceId)
     .single();
 
   return data;
@@ -29,7 +29,7 @@ async function getPlanMeta(planId: string) {
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { id } = await params;
-  const plan = await getPlanMeta(id);
+  const plan = await getWorkspaceMeta(id);
 
   if (!plan) {
     return { title: "Workspace - openLesson" };
@@ -42,7 +42,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     ? `A workspace by @${author} on openLesson`
     : "A workspace on openLesson";
 
-  const ogImage = await getRandomPlanCoverImage() || "/opengraph-image";
+  const ogImage = await getRandomWorkspaceCoverImage() || "/opengraph-image";
   const images = [{ url: ogImage, width: 1200, height: 630, alt: title }];
 
   return {
@@ -64,5 +64,5 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 }
 
 export default function PlanPage() {
-  return <PlanView />;
+  return <WorkspaceView />;
 }

@@ -142,10 +142,10 @@ export function HumanModeSelect({ initialTopic = "", compact = false }: HumanMod
 
       const session = await createSession(topic.trim());
       // NOTE: Quick Session doesn't currently support attaching files as
-      // context (plan_files are tied to a learning_plan). If the user
+      // context (workspace_files are tied to a learning_plan). If the user
       // attached files they'll be ignored here — the UI shows a small
       // hint so this isn't silent. Future work: a session_context_files
-      // table or a plan_id fallback. For now, `Generate Workspace` is the
+      // table or a workspace_id fallback. For now, `Generate Workspace` is the
       // path that honors attachments.
       fetch("/api/check-usage", { method: "POST" }).catch(() => {});
       router.push(`/session?id=${session.id}`);
@@ -181,7 +181,7 @@ export function HumanModeSelect({ initialTopic = "", compact = false }: HumanMod
           : {}),
       };
 
-      const response = await fetch("/api/learning-plan/generate", {
+      const response = await fetch("/api/workspace/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
@@ -192,7 +192,7 @@ export function HumanModeSelect({ initialTopic = "", compact = false }: HumanMod
         throw new Error(err.error || "Failed to generate plan");
       }
       const data = await response.json();
-      router.push(`/workspace/${data.planId}`);
+      router.push(`/workspace/${data.workspaceId}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : t("planMode.somethingWrong"));
     } finally {
@@ -263,10 +263,10 @@ export function HumanModeSelect({ initialTopic = "", compact = false }: HumanMod
           {attachedFiles.length > 0
             ? `${attachedFiles.length} ${
                 attachedFiles.length === 1
-                  ? t("planFiles.fileAttached")
-                  : t("planFiles.filesAttached")
+                  ? t("workspaceFiles.fileAttached")
+                  : t("workspaceFiles.filesAttached")
               }`
-            : t("planFiles.attachFiles")}
+            : t("workspaceFiles.attachFiles")}
         </button>
 
         {/* Plan length dropdown — compact select with custom chevron. */}

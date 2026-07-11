@@ -103,7 +103,7 @@ describe("remediation guardrails", () => {
         gaps: [
           {
             title: "Missing scout coverage",
-            evidence: "No scout events in trace.",
+            proof_of_work: "No scout events in trace.",
             severity: "medium",
             suggested_repair: "Complete the scouting block in OpenLesson",
           },

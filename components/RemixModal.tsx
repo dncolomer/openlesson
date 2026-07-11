@@ -14,7 +14,7 @@ interface CommunityPlan {
 interface RemixModalProps {
   plan: CommunityPlan;
   onClose: () => void;
-  onComplete: (planId: string) => void;
+  onComplete: (workspaceId: string) => void;
 }
 
 export function RemixModal({ plan, onClose, onComplete }: RemixModalProps) {
@@ -43,7 +43,7 @@ export function RemixModal({ plan, onClose, onComplete }: RemixModalProps) {
     setError("");
 
     try {
-      const res = await fetch(`/api/learning-plans/${plan.id}/remix`, {
+      const res = await fetch(`/api/workspaces/${plan.id}/remix`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ remixPrompt: prompt, title: title.trim(), exactCopy }),
@@ -51,7 +51,7 @@ export function RemixModal({ plan, onClose, onComplete }: RemixModalProps) {
       const data = await res.json();
 
       if (data.success) {
-        onComplete(data.planId);
+        onComplete(data.workspaceId);
       } else {
         setError(data.error || t('remixModal.remixFailed'));
       }

@@ -2,8 +2,8 @@ export type InsightSummary = {
   id: string;
   title: string;
   summary: string;
-  plan_id?: string | null;
-  plan_node_id?: string | null;
+  workspace_id?: string | null;
+  block_id?: string | null;
   session_id?: string | null;
   aesthetic_image?: string | null;
   share_token?: string | null;

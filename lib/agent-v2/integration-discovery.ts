@@ -1,26 +1,26 @@
-import type { ContinuousEvaluationPolicy } from "./evidence-schema";
+import type { ContinuousEvaluationPolicy } from "./proof-of-work-schema";
 import { formatInterruptionContractForSkillPrompt } from "./predictive-interruption";
 import {
-  buildEvidenceSchemaApiPath,
-  buildEvidenceUploadApiPath,
+  buildProofOfWorkSchemaApiPath,
+  buildProofOfWorkUploadApiPath,
   buildIntegrationSkillApiPath,
   buildPerformanceApiPath,
-} from "./evidence-integration";
+} from "./proof-of-work-integration";
 
 export const OPENLESSON_SCOPE = {
   product: "openLesson",
   mission:
-    "Verify learning and measure readiness-to-perform using real product evidence — not quizzes in isolation.",
+    "Verify learning and measure readiness-to-perform using real product proof of work — not quizzes in isolation.",
   pillars: [
     "Learning verification — overall_score and marker_scores from tool traces, artifacts, and sessions",
     "Learning-to-conversion — conversion_score and conversion_goal tie competency to business outcomes",
-    "Proof of work — upload_evidence / POST .../evidence streams observable actions as durable artifacts",
+    "Proof of work — upload_proof_of_work / POST .../proof-of-work streams observable actions as durable artifacts",
     "Predictive interruptions (TIM) — every response includes interruption (object or null) with delay_ms and intervention hints",
   ],
   workspace_model:
-    "A Verification Workspace has blocks (assessable units), a conversion_goal (what success means), and accumulates evidence. Progress is continuous: upload → re-fetch spec → score → coach → repeat.",
+    "A Verification Workspace has blocks (assessable units), a conversion_goal (what success means), and accumulates proof of work. Progress is continuous: upload → re-fetch spec → score → coach → repeat.",
   integrator_model:
-    "Partner agents instrument their product, upload evidence after meaningful actions, and call performance analysis for gap reports and next-step coaching. Both REST (Bearer API key) and MCP (JSON-RPC with key in URL) expose the same capabilities.",
+    "Partner agents instrument their product, upload proof of work after meaningful actions, and call performance analysis for gap reports and next-step coaching. Both REST (Bearer API key) and MCP (JSON-RPC with key in URL) expose the same capabilities.",
   docs: {
     api_reference: "/skill.md",
     human_guide: "/docs/agentic-v2",
@@ -47,9 +47,9 @@ export type ContinuousEvaluationMcpPolicy = {
   more_evidence_improves: string;
   regeneration_required: boolean;
   mcp_endpoint_pattern: string;
-  evidence_spec: McpEvaluationRef;
+  proof_of_work_spec: McpEvaluationRef;
   integration_skill: McpEvaluationRef;
-  upload_evidence: McpEvaluationRef;
+  upload_proof_of_work: McpEvaluationRef;
   performance: McpEvaluationRef;
   progress_snapshot: McpEvaluationRef;
   recommended_cadence: string;
@@ -72,18 +72,18 @@ export function buildIntegrationSurfaces(baseUrl: string): IntegrationSurfaceRef
   return [
     {
       transport: "rest",
-      label: "Evidence API (REST)",
+      label: "Proof-of-Work API (REST)",
       auth: "Authorization: Bearer <api_key>",
       entrypoint: `${base}/api/v2/agent/workspaces/{workspace_id}`,
       when_to_use: "Production integrations, server-side agents, and clients with standard HTTP + Bearer auth.",
     },
     {
       transport: "mcp",
-      label: "Evidence API MCP (JSON-RPC)",
+      label: "Proof-of-Work API MCP (JSON-RPC)",
       auth: "Authorization: Bearer <api_key>",
       entrypoint: buildMcpEndpointPattern(baseUrl),
       when_to_use:
-        "Cursor, Claude Desktop, Grok, and other MCP clients — full parity with REST for evidence loop and progress tracking.",
+        "Cursor, Claude Desktop, Grok, and other MCP clients — full parity with REST for proof-of-work loop and progress tracking.",
     },
   ];
 }
@@ -92,48 +92,48 @@ export function buildContinuousEvaluationMcpPolicy(
   workspaceId: string,
   baseUrl: string,
   contextCounts?: {
-    evidence_artifacts?: number;
+    proof_of_work_artifacts?: number;
     blocks?: number;
-    plan_files?: number;
+    workspace_files?: number;
     tap_sessions?: number;
   } | null
 ): ContinuousEvaluationMcpPolicy {
-  const evidenceCount = contextCounts?.evidence_artifacts ?? 0;
-  const evidenceSpecRest = buildEvidenceSchemaApiPath(workspaceId, baseUrl);
+  const proofOfWorkCount = contextCounts?.proof_of_work_artifacts ?? 0;
+  const proofOfWorkSpecRest = buildProofOfWorkSchemaApiPath(workspaceId, baseUrl);
   const skillRest = buildIntegrationSkillApiPath(workspaceId, baseUrl);
-  const uploadRest = buildEvidenceUploadApiPath(workspaceId, baseUrl);
+  const uploadRest = buildProofOfWorkUploadApiPath(workspaceId, baseUrl);
   const performanceRest = buildPerformanceApiPath(workspaceId, baseUrl);
 
   const evidenceTriggers = [
-    "Before the first evidence upload for a new workflow or block",
-    "After every 5-10 new evidence artifacts accumulate in the workspace",
+    "Before the first proof-of-work upload for a new workflow or block",
+    "After every 5-10 new proof-of-work artifacts accumulate in the workspace",
     "When block definitions, eval definition, or integration tooling changes",
     "When performance reports feel stale or gaps no longer match observed behavior",
   ];
 
-  if (evidenceCount === 0) {
+  if (proofOfWorkCount === 0) {
     evidenceTriggers.unshift(
-      "Immediately: call generate_evidence_schema (MCP) or POST .../evidence-schema (REST) before first upload"
+      "Immediately: call generate_proof_of_work_schema (MCP) or POST .../proof-of-work-schema (REST) before first upload"
     );
-  } else if (evidenceCount < 10) {
+  } else if (proofOfWorkCount < 10) {
     evidenceTriggers.unshift(
-      `Now: workspace has ${evidenceCount} artifact(s) — re-fetch schema so tool_submissions reflect learned patterns`
+      `Now: workspace has ${proofOfWorkCount} artifact(s) — re-fetch schema so tool_submissions reflect learned patterns`
     );
   } else {
     evidenceTriggers.unshift(
-      `Re-fetch recommended: ${evidenceCount} artifacts — spec should encode observed workflows`
+      `Re-fetch recommended: ${proofOfWorkCount} artifacts — spec should encode observed workflows`
     );
   }
 
   return {
     principle: OPENLESSON_SCOPE.workspace_model,
     more_evidence_improves:
-      "More upload_evidence / POST .../evidence calls improve marker_scores, gap_analysis, and conversion_score accuracy.",
+      "More upload_proof_of_work / POST .../proof-of-work calls improve marker_scores, gap_analysis, and conversion_score accuracy.",
     regeneration_required: true,
     mcp_endpoint_pattern: buildMcpEndpointPattern(baseUrl),
-    evidence_spec: {
-      mcp_tool: "generate_evidence_schema",
-      rest_equivalent: evidenceSpecRest,
+    proof_of_work_spec: {
+      mcp_tool: "generate_proof_of_work_schema",
+      rest_equivalent: proofOfWorkSpecRest,
       purpose: "Fetch formal tool_submissions, upload contract, and performance_report_contract",
       when_to_call: evidenceTriggers,
     },
@@ -142,15 +142,15 @@ export function buildContinuousEvaluationMcpPolicy(
       rest_equivalent: skillRest,
       purpose: "Regenerate partner skill.md aligned with latest spec and workspace context",
       when_to_call: [
-        "After regenerating or materially updating the evidence spec",
+        "After regenerating or materially updating the proof of work spec",
         "When onboarding a new partner agent version",
         "On a recurring cadence during active evaluation — never treat initial skill as permanent",
       ],
     },
-    upload_evidence: {
-      mcp_tool: "upload_evidence",
+    upload_proof_of_work: {
+      mcp_tool: "upload_proof_of_work",
       rest_equivalent: uploadRest,
-      purpose: "Stream product/tool actions as learning evidence after meaningful user steps",
+      purpose: "Stream product/tool actions as learning proof of work after meaningful user steps",
       when_to_call: [
         "After each observable workflow action defined in tool_submissions",
         "Include block_id when the action maps to a workspace block",
@@ -162,7 +162,7 @@ export function buildContinuousEvaluationMcpPolicy(
       rest_equivalent: performanceRest,
       purpose: "Read learning progress: overall_score, marker_scores, gaps, next_steps; or chat with prompt",
       when_to_call: [
-        "After each meaningful evidence batch (e.g. every 3-10 uploads)",
+        "After each meaningful proof-of-work batch (e.g. every 3-10 uploads)",
         "Before coaching the user on what to do next",
         "Omit prompt for structured scorecard; include prompt for Q&A",
       ],
@@ -171,26 +171,26 @@ export function buildContinuousEvaluationMcpPolicy(
       mcp_tool: "get_learning_progress",
       rest_equivalent: `GET ${baseUrl.replace(/\/$/, "")}/api/v2/agent/workspaces/${workspaceId} + performance summary`,
       purpose:
-        "One-call orientation: conversion_goal, block map, evidence counts, recommended next MCP tool and REST equivalent",
+        "One-call orientation: conversion_goal, block map, proof-of-work counts, recommended next MCP tool and REST equivalent",
       when_to_call: [
         "When connecting MCP mid-session and need workspace progress context",
-        "Before choosing between upload_evidence vs analyze_performance",
+        "Before choosing between upload_proof_of_work vs analyze_performance",
         "After long idle gaps to re-orient the agent",
       ],
     },
-    recommended_cadence: `MCP loop: generate_evidence_schema → upload_evidence (repeat) → analyze_performance → regenerate schema/skill. REST mirror: ${uploadRest} → ${evidenceSpecRest} → ${performanceRest}.`,
+    recommended_cadence: `MCP loop: generate_proof_of_work_schema → upload_proof_of_work (repeat) → analyze_performance → regenerate schema/skill. REST mirror: ${uploadRest} → ${proofOfWorkSpecRest} → ${performanceRest}.`,
   };
 }
 
 export function recommendIntegrationActions(options: {
-  evidence_artifacts: number;
+  proof_of_work_artifacts: number;
   blocks: number;
   tap_sessions: number;
   has_conversion_goal: boolean;
   last_report_overall_score?: number | null;
 }): RecommendedIntegrationAction[] {
   const actions: RecommendedIntegrationAction[] = [];
-  const { evidence_artifacts, blocks, tap_sessions, has_conversion_goal } = options;
+  const { proof_of_work_artifacts, blocks, tap_sessions, has_conversion_goal } = options;
 
   if (!has_conversion_goal) {
     actions.push({
@@ -201,31 +201,31 @@ export function recommendIntegrationActions(options: {
     });
   }
 
-  if (blocks > 0 && evidence_artifacts === 0) {
+  if (blocks > 0 && proof_of_work_artifacts === 0) {
     actions.push({
       priority: 2,
-      mcp_tool: "generate_evidence_schema",
-      rest_equivalent: "POST .../evidence-schema",
-      reason: "No evidence yet — fetch tool_submissions contract before first upload.",
+      mcp_tool: "generate_proof_of_work_schema",
+      rest_equivalent: "POST .../proof-of-work-schema",
+      reason: "No proof of work yet — fetch tool_submissions contract before first upload.",
     });
     actions.push({
       priority: 3,
       mcp_tool: "list_blocks",
       rest_equivalent: "GET .../blocks",
-      reason: "Map assessable blocks to upcoming upload_evidence block_id fields.",
+      reason: "Map assessable blocks to upcoming upload_proof_of_work block_id fields.",
     });
   }
 
-  if (evidence_artifacts > 0 && evidence_artifacts % 5 === 0) {
+  if (proof_of_work_artifacts > 0 && proof_of_work_artifacts % 5 === 0) {
     actions.push({
       priority: 4,
-      mcp_tool: "generate_evidence_schema",
-      rest_equivalent: "POST .../evidence-schema",
-      reason: `${evidence_artifacts} artifacts — re-fetch spec so evaluation stays aligned with observed behavior.`,
+      mcp_tool: "generate_proof_of_work_schema",
+      rest_equivalent: "POST .../proof-of-work-schema",
+      reason: `${proof_of_work_artifacts} artifacts — re-fetch spec so evaluation stays aligned with observed behavior.`,
     });
   }
 
-  if (evidence_artifacts >= 1 && (evidence_artifacts < 3 || evidence_artifacts % 3 === 0)) {
+  if (proof_of_work_artifacts >= 1 && (proof_of_work_artifacts < 3 || proof_of_work_artifacts % 3 === 0)) {
     actions.push({
       priority: 5,
       mcp_tool: "analyze_performance",
@@ -234,16 +234,16 @@ export function recommendIntegrationActions(options: {
     });
   }
 
-  if (evidence_artifacts > 0) {
+  if (proof_of_work_artifacts > 0) {
     actions.push({
       priority: 6,
-      mcp_tool: "upload_evidence",
-      rest_equivalent: "POST .../evidence",
-      reason: "Continue streaming product actions — more evidence improves learning verification.",
+      mcp_tool: "upload_proof_of_work",
+      rest_equivalent: "POST .../proof-of-work",
+      reason: "Continue streaming product actions — more proof of work improves learning verification.",
     });
   }
 
-  if (tap_sessions === 0 && evidence_artifacts >= 5 && blocks > 0) {
+  if (tap_sessions === 0 && proof_of_work_artifacts >= 5 && blocks > 0) {
     actions.push({
       priority: 7,
       mcp_tool: "create_tap_link",
@@ -266,17 +266,17 @@ export function buildOpenLessonScopeForWorkspace(options: {
   workspaceTitle: string;
   conversionGoal?: string | null;
   blockCount: number;
-  evidenceCount: number;
+  proofOfWorkCount: number;
 }): Record<string, unknown> {
   return {
     ...OPENLESSON_SCOPE,
     workspace_context: {
       title: options.workspaceTitle,
-      conversion_goal: options.conversionGoal?.trim() || "Infer from workspace title, notes, and evidence.",
+      conversion_goal: options.conversionGoal?.trim() || "Infer from workspace title, notes, and proof of work.",
       block_count: options.blockCount,
-      evidence_artifact_count: options.evidenceCount,
+      proof_of_work_artifact_count: options.proofOfWorkCount,
       progress_interpretation:
-        "Learning progress = evidence volume + quality of marker_scores/gaps from analyze_performance, measured against conversion_goal.",
+        "Learning progress = proof-of-work volume + quality of marker_scores/gaps from analyze_performance, measured against conversion_goal.",
     },
   };
 }
@@ -301,8 +301,8 @@ export const MCP_RESOURCE_CATALOG = [
     mimeType: "text/markdown",
   },
   {
-    uri: "openlesson://evidence-loop",
-    name: "Evidence loop and progress tracking",
+    uri: "openlesson://proof-of-work-loop",
+    name: "Proof-of-work loop and progress tracking",
     description: "Continuous evaluation loop, REST + MCP tool mapping, when to score.",
     mimeType: "text/markdown",
   },
@@ -339,20 +339,20 @@ Docs: ${base}${OPENLESSON_SCOPE.docs.api_reference} · ${base}${OPENLESSON_SCOPE
 `;
   }
 
-  if (uri === "openlesson://evidence-loop") {
-    return `# Evidence loop and learning progress
+  if (uri === "openlesson://proof-of-work-loop") {
+    return `# Proof-of-work loop and learning progress
 
 Progress is **continuous**, not one-time setup.
 
 ## Recommended loop
-1. **generate_evidence_schema** / POST .../evidence-schema — get tool_submissions + contracts
+1. **generate_proof_of_work_schema** / POST .../proof-of-work-schema — get tool_submissions + contracts
 2. **list_blocks** / GET .../blocks — map competencies to block_id
-3. **upload_evidence** / POST .../evidence — after each meaningful product action (repeat)
+3. **upload_proof_of_work** / POST .../proof-of-work — after each meaningful product action (repeat)
 4. **analyze_performance** / POST .../performance — scorecard (no prompt) or chat (with prompt)
-5. Re-fetch schema + regenerate skill as evidence grows
+5. Re-fetch schema + regenerate skill as proof of work grows
 
 ## Progress signals
-- \`evidence_summary.evidence_artifacts\` — how much signal exists
+- \`proof_of_work_summary.proof_of_work_artifacts\` — how much signal exists
 - \`report.overall_score\` — learning verification (0-100)
 - \`report.conversion_score\` — likelihood of achieving conversion_goal
 - \`report.marker_scores\` — per-competency radar axes
@@ -361,9 +361,9 @@ Progress is **continuous**, not one-time setup.
 ## Quick orientation
 Call **get_learning_progress** with \`workspace_id\` for a one-shot snapshot and recommended_next_actions.
 
-Every **generate_evidence_schema** response includes \`continuous_evaluation\` (REST) and \`continuous_evaluation_mcp\` (tools) — do not treat either as optional.
+Every **generate_proof_of_work_schema** response includes \`continuous_evaluation\` (REST) and \`continuous_evaluation_mcp\` (tools) — do not treat either as optional.
 
-Every Evidence API success response also includes \`interruption\` (TIM) — object or null.
+Every Proof-of-Work API success response also includes \`interruption\` (TIM) — object or null.
 `;
   }
 
@@ -374,8 +374,8 @@ ${formatInterruptionContractForSkillPrompt()}
 
 ## REST + MCP parity
 - REST success bodies and MCP tool results both include top-level \`interruption\`.
-- \`interruption_contract\` on evidence spec responses documents the full TIM contract.
-- Supersession: any later Evidence API response replaces the previous pending interruption timer.
+- \`interruption_contract\` on proof-of-work spec responses documents the full TIM contract.
+- Supersession: any later Proof-of-Work API response replaces the previous pending interruption timer.
 `;
   }
 

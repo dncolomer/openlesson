@@ -5,14 +5,14 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Navbar } from "@/components/Navbar";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
-import { getSessions, deleteSession, restartSession, getLearningPlans, type Session, type LearningPlan } from "@/lib/storage";
+import { getSessions, deleteSession, restartSession, getWorkspaces, type Session, type Workspace } from "@/lib/storage";
 import { DEFAULT_PROMPTS, PROMPT_META, type PromptKey, type UserPrompts } from "@/lib/prompts";
 import { buildContributionDays, contributionLevel, contributionMonthLabels, dateKey, groupContributionWeeks } from "@/lib/contributions";
 
 import { useI18n } from "@/lib/i18n";
 import { formatPlanMonthlyPrice, hasAgentApiKeyPlan, type PlanId } from "@/lib/plans";
 import { InsightsDashboardTab } from "@/components/InsightsDashboardTab";
-import { buildMcpClientConfig } from "@/lib/agent-v2/mcp-evidence-catalog";
+import { buildMcpClientConfig } from "@/lib/agent-v2/mcp-proof-of-work-catalog";
 import { IntegrationQuickAccess } from "@/components/IntegrationQuickAccess";
 
 const DASHBOARD_BACKGROUND = "/aesthetics/Greco-futurism/HHnTrgVaQAAP-_3.jpeg";
@@ -87,9 +87,9 @@ export default function DashboardPage() {
     used: number;
     personalUsed: number;
     limit: number | null;
-    evidenceUsed: number;
-    evidencePersonalUsed: number;
-    evidenceLimit: number | null;
+    proofOfWorkUsed: number;
+    proofOfWorkPersonalUsed: number;
+    proofOfWorkLimit: number | null;
     workspacesUsed: number;
     workspacesLimit: number | null;
     extraLessons: number;
@@ -108,12 +108,12 @@ export default function DashboardPage() {
   const sessionPageSize = 10;
 
   // Plans tab
-  const [learningPlans, setLearningPlans] = useState<LearningPlan[]>([]);
-  const [planSearch, setPlanSearch] = useState("");
-  const [showArchivedPlans, setShowArchivedPlans] = useState(false);
-  const [archivingPlanId, setArchivingPlanId] = useState<string | null>(null);
-  const [planPage, setPlanPage] = useState(1);
-  const planPageSize = 10;
+  const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
+  const [workspaceSearch, setPlanSearch] = useState("");
+  const [showArchivedWorkspaces, setShowArchivedPlans] = useState(false);
+  const [archivingWorkspaceId, setArchivingPlanId] = useState<string | null>(null);
+  const [workspacePage, setPlanPage] = useState(1);
+  const workspacePageSize = 10;
 
   // Agentic tab
   const [apiKeys, setApiKeys] = useState<AgentApiKey[]>([]);
@@ -156,7 +156,7 @@ export default function DashboardPage() {
 
   useEffect(() => {
     setPlanPage(1);
-  }, [planSearch]);
+  }, [workspaceSearch]);
 
   const loadData = async () => {
     try {
@@ -226,8 +226,8 @@ export default function DashboardPage() {
       setSessions(loadedSessions);
 
         // Load learning plans (archived hidden by default)
-        const plans = await getLearningPlans({ includeArchived: false });
-        setLearningPlans(plans);
+        const plans = await getWorkspaces({ includeArchived: false });
+        setWorkspaces(plans);
 
         // Load usage data
         try {
@@ -241,9 +241,9 @@ export default function DashboardPage() {
             used: usageResult.used ?? 0,
             personalUsed: usageResult.personalUsed ?? usageResult.used ?? 0,
             limit: usageResult.isAdmin ? null : (usageResult.limit ?? null),
-            evidenceUsed: usageResult.evidenceUsed ?? 0,
-            evidencePersonalUsed: usageResult.evidencePersonalUsed ?? usageResult.evidenceUsed ?? 0,
-            evidenceLimit: usageResult.isAdmin ? null : (usageResult.evidenceLimit ?? null),
+            proofOfWorkUsed: usageResult.proofOfWorkUsed ?? 0,
+            proofOfWorkPersonalUsed: usageResult.proofOfWorkPersonalUsed ?? usageResult.proofOfWorkUsed ?? 0,
+            proofOfWorkLimit: usageResult.isAdmin ? null : (usageResult.proofOfWorkLimit ?? null),
             workspacesUsed: usageResult.workspacesUsed ?? 0,
             workspacesLimit: usageResult.isAdmin ? null : (usageResult.workspacesLimit ?? null),
             extraLessons: profile?.extra_lessons ?? 0,
@@ -256,7 +256,7 @@ export default function DashboardPage() {
           console.error("Failed to load usage data:", err);
         }
 
-      // Load Evidence API keys (v2 for Teams, legacy for Pro)
+      // Load Proof-of-Work API keys (v2 for Teams, legacy for Pro)
       const plan = profile?.plan || "free";
       const useV2Keys = profile?.is_admin || plan === "pro_teams";
       try {
@@ -553,7 +553,7 @@ export default function DashboardPage() {
 
   const completedSessions = sessions.filter((s) => s.status === "completed");
   const totalLearningMinutes = Math.round(sessions.reduce((sum, session) => sum + (session.durationMs || 0), 0) / 60000);
-  const publicPlans = learningPlans.filter((plan) => (plan as any).is_public);
+  const publicWorkspaces = workspaces.filter((plan) => (plan as any).is_public);
   const minutesByDate = sessions.reduce((days, session) => {
     const day = dateKey(new Date(session.startedAt));
     days.set(day, (days.get(day) || 0) + Math.round((session.durationMs || 0) / 60000));
@@ -587,26 +587,26 @@ export default function DashboardPage() {
   );
 
   // Filter and paginate plans
-  const reloadLearningPlans = async (includeArchived = showArchivedPlans) => {
-    const plans = await getLearningPlans({ includeArchived });
-    setLearningPlans(plans);
+  const reloadWorkspaces = async (includeArchived = showArchivedWorkspaces) => {
+    const plans = await getWorkspaces({ includeArchived });
+    setWorkspaces(plans);
   };
 
   useEffect(() => {
     if (activeTab !== "plans") return;
-    void reloadLearningPlans(showArchivedPlans);
-  }, [showArchivedPlans, activeTab]);
+    void reloadWorkspaces(showArchivedWorkspaces);
+  }, [showArchivedWorkspaces, activeTab]);
 
-  const handleArchivePlan = async (planId: string) => {
+  const handleArchivePlan = async (workspaceId: string) => {
     if (!confirm("Archive this workspace? It will be hidden from your dashboard but preserved for audit.")) {
       return;
     }
-    setArchivingPlanId(planId);
+    setArchivingPlanId(workspaceId);
     try {
-      const res = await fetch(`/api/learning-plans/${planId}/archive`, { method: "POST" });
+      const res = await fetch(`/api/workspaces/${workspaceId}/archive`, { method: "POST" });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to archive workspace");
-      setLearningPlans((plans) => plans.filter((plan) => plan.id !== planId));
+      setWorkspaces((plans) => plans.filter((plan) => plan.id !== workspaceId));
     } catch (err) {
       console.error("Archive workspace error:", err);
       alert(err instanceof Error ? err.message : "Failed to archive workspace");
@@ -615,13 +615,13 @@ export default function DashboardPage() {
     }
   };
 
-  const handleRestorePlan = async (planId: string) => {
-    setArchivingPlanId(planId);
+  const handleRestorePlan = async (workspaceId: string) => {
+    setArchivingPlanId(workspaceId);
     try {
-      const res = await fetch(`/api/learning-plans/${planId}/archive`, { method: "DELETE" });
+      const res = await fetch(`/api/workspaces/${workspaceId}/archive`, { method: "DELETE" });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to restore workspace");
-      await reloadLearningPlans(showArchivedPlans);
+      await reloadWorkspaces(showArchivedWorkspaces);
     } catch (err) {
       console.error("Restore workspace error:", err);
       alert(err instanceof Error ? err.message : "Failed to restore workspace");
@@ -630,26 +630,26 @@ export default function DashboardPage() {
     }
   };
 
-  const filteredPlans = learningPlans.filter((p) => {
-    const matchesSearch = planSearch === "" || 
-      p.root_topic.toLowerCase().includes(planSearch.toLowerCase()) ||
-      (p.title || "").toLowerCase().includes(planSearch.toLowerCase());
+  const filteredWorkspaces = workspaces.filter((p) => {
+    const matchesSearch = workspaceSearch === "" || 
+      p.root_topic.toLowerCase().includes(workspaceSearch.toLowerCase()) ||
+      (p.title || "").toLowerCase().includes(workspaceSearch.toLowerCase());
     return matchesSearch;
   });
 
-  const totalPlanPages = Math.ceil(filteredPlans.length / planPageSize);
-  const paginatedPlans = filteredPlans.slice(
-    (planPage - 1) * planPageSize,
-    planPage * planPageSize
+  const totalPlanPages = Math.ceil(filteredWorkspaces.length / workspacePageSize);
+  const paginatedPlans = filteredWorkspaces.slice(
+    (workspacePage - 1) * workspacePageSize,
+    workspacePage * workspacePageSize
   );
 
-  const planTitlesById = useMemo(
+  const workspaceTitlesById = useMemo(
     () =>
-      learningPlans.reduce<Record<string, string>>((titles, plan) => {
+      workspaces.reduce<Record<string, string>>((titles, plan) => {
         titles[plan.id] = plan.title || plan.root_topic;
         return titles;
       }, {}),
-    [learningPlans]
+    [workspaces]
   );
 
   const setDashboardTab = (tab: Tab) => {
@@ -750,7 +750,7 @@ export default function DashboardPage() {
                 {[
                   ["TAP / ILE sessions", sessions.length],
                   ["Completed", completedSessions.length],
-                  ["Public workspaces", publicPlans.length],
+                  ["Public workspaces", publicWorkspaces.length],
                   ["Minutes", totalLearningMinutes],
                 ].map(([label, value]) => (
                   <div key={label} className="bg-neutral-950 p-5">
@@ -819,7 +819,7 @@ export default function DashboardPage() {
               <div className="min-w-0 rounded-md border border-neutral-800 bg-neutral-950 p-4 sm:p-6">
                 <h2 className="font-semibold">Recent Activity</h2>
                 <div className="mt-5 space-y-4">
-                  {[...sessions.slice(0, 3), ...learningPlans.slice(0, 3)]
+                  {[...sessions.slice(0, 3), ...workspaces.slice(0, 3)]
                     .sort((a: any, b: any) => new Date((b.startedAt || b.created_at) as string).getTime() - new Date((a.startedAt || a.created_at) as string).getTime())
                     .slice(0, 5)
                     .map((item: any) => (
@@ -968,9 +968,9 @@ export default function DashboardPage() {
                           >
                             {session.status === "completed" ? t('dashboard.completed') : t('dashboard.active')}
                           </span>
-                          {session.planTitle && (
+                          {session.workspaceTitle && (
                             <span className="ml-2 inline-flex px-1.5 py-0.5 rounded text-[10px] bg-purple-900/30 text-purple-400">
-                              {session.planTitle}
+                              {session.workspaceTitle}
                             </span>
                           )}
                         </p>
@@ -1077,11 +1077,11 @@ export default function DashboardPage() {
             </div>
 
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <h3 className="text-lg font-semibold">{t('dashboard.allPlans')}</h3>
+              <h3 className="text-lg font-semibold">{t('dashboard.allWorkspaces')}</h3>
               <label className="flex items-center gap-2 text-xs text-neutral-400">
                 <input
                   type="checkbox"
-                  checked={showArchivedPlans}
+                  checked={showArchivedWorkspaces}
                   onChange={(e) => setShowArchivedPlans(e.target.checked)}
                   className="rounded border-neutral-700 bg-neutral-900"
                 />
@@ -1091,16 +1091,16 @@ export default function DashboardPage() {
             <div className="flex-1">
               <input
                 type="text"
-                placeholder={t('dashboard.searchPlans')}
-                value={planSearch}
+                placeholder={t('dashboard.searchWorkspaces')}
+                value={workspaceSearch}
                 onChange={(e) => setPlanSearch(e.target.value)}
                 className="w-full bg-neutral-900 border border-neutral-800 rounded-lg px-3 py-2 text-sm text-neutral-200 placeholder:text-neutral-600 focus:outline-none focus:border-neutral-600"
               />
             </div>
 
-            {filteredPlans.length === 0 ? (
+            {filteredWorkspaces.length === 0 ? (
               <div className="text-center py-8 text-neutral-500 border border-neutral-800 rounded-lg">
-                <p className="text-sm">{t('dashboard.noMatchingPlans')}</p>
+                <p className="text-sm">{t('dashboard.noMatchingWorkspaces')}</p>
                 <Link href="/" className="text-blue-400 hover:underline mt-2 inline-block text-sm">
                   {t('dashboard.createYourFirstPlan')}
                 </Link>
@@ -1172,33 +1172,33 @@ export default function DashboardPage() {
                         <button
                           type="button"
                           onClick={() => handleRestorePlan(plan.id)}
-                          disabled={archivingPlanId === plan.id}
+                          disabled={archivingWorkspaceId === plan.id}
                           className="rounded border border-neutral-700 px-2 py-1 text-xs text-neutral-300 transition hover:border-neutral-500 hover:text-white disabled:opacity-50"
                         >
-                          {archivingPlanId === plan.id ? "Restoring…" : "Restore"}
+                          {archivingWorkspaceId === plan.id ? "Restoring…" : "Restore"}
                         </button>
                       ) : (
                         <button
                           type="button"
                           onClick={() => handleArchivePlan(plan.id)}
-                          disabled={archivingPlanId === plan.id}
+                          disabled={archivingWorkspaceId === plan.id}
                           className="rounded border border-neutral-700 px-2 py-1 text-xs text-neutral-400 transition hover:border-amber-500/40 hover:text-amber-200 disabled:opacity-50"
                         >
-                          {archivingPlanId === plan.id ? "Archiving…" : "Archive"}
+                          {archivingWorkspaceId === plan.id ? "Archiving…" : "Archive"}
                         </button>
                       )}
                       <button
                         onClick={async () => {
                           try {
                             const isPublic = (plan as any).is_public ?? false;
-                            const res = await fetch(`/api/learning-plans/${plan.id}/visibility`, {
+                            const res = await fetch(`/api/workspaces/${plan.id}/visibility`, {
                               method: "PUT",
                               headers: { "Content-Type": "application/json" },
                               body: JSON.stringify({ is_public: !isPublic }),
                             });
                             const data = await res.json();
                             if (data.success) {
-                              setLearningPlans((plans) =>
+                              setWorkspaces((plans) =>
                                 plans.map((p) =>
                                   p.id === plan.id ? { ...p, is_public: !isPublic } : p
                                 )
@@ -1227,19 +1227,19 @@ export default function DashboardPage() {
             {totalPlanPages > 1 && (
               <div className="flex items-center justify-between pt-4 border-t border-neutral-800/60">
                 <p className="text-xs text-neutral-500">
-                  {t('dashboard.showingResults', { start: String((planPage - 1) * planPageSize + 1), end: String(Math.min(planPage * planPageSize, filteredPlans.length)), total: String(filteredPlans.length) })}
+                  {t('dashboard.showingResults', { start: String((workspacePage - 1) * workspacePageSize + 1), end: String(Math.min(workspacePage * workspacePageSize, filteredWorkspaces.length)), total: String(filteredWorkspaces.length) })}
                 </p>
                 <div className="flex gap-2">
                   <button
                     onClick={() => setPlanPage((p) => Math.max(1, p - 1))}
-                    disabled={planPage === 1}
+                    disabled={workspacePage === 1}
                     className="px-3 py-1 text-xs text-neutral-400 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed border border-neutral-700 rounded transition-colors"
                   >
                     {t('dashboard.previous')}
                   </button>
                   <button
                     onClick={() => setPlanPage((p) => Math.min(totalPlanPages, p + 1))}
-                    disabled={planPage === totalPlanPages}
+                    disabled={workspacePage === totalPlanPages}
                     className="px-3 py-1 text-xs text-neutral-400 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed border border-neutral-700 rounded transition-colors"
                   >
                     {t('dashboard.next')}
@@ -1250,7 +1250,7 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {activeTab === "insights" && <InsightsDashboardTab planTitles={planTitlesById} />}
+        {activeTab === "insights" && <InsightsDashboardTab workspaceTitles={workspaceTitlesById} />}
 
         {/* Usage Tab */}
         {activeTab === "usage" && (
@@ -1351,10 +1351,10 @@ export default function DashboardPage() {
                   </div>
 
                   <div className={usageCardClass}>
-                    <p className={usageLabelClass}>Evidence API submissions</p>
+                    <p className={usageLabelClass}>Proof-of-Work API submissions</p>
                     {(() => {
-                      const displayUsed = usageData.organization ? usageData.evidencePersonalUsed : usageData.evidenceUsed;
-                      const displayLimit = usageData.isAdmin || usageData.evidenceLimit === null ? null : usageData.evidenceLimit;
+                      const displayUsed = usageData.organization ? usageData.proofOfWorkPersonalUsed : usageData.proofOfWorkUsed;
+                      const displayLimit = usageData.isAdmin || usageData.proofOfWorkLimit === null ? null : usageData.proofOfWorkLimit;
                       return (
                         <>
                           <div className="mt-4 flex items-end gap-2">
@@ -1379,11 +1379,11 @@ export default function DashboardPage() {
                           )}
                           <p className="mt-3 text-xs text-neutral-500">
                             {usageData.isAdmin
-                              ? "Unlimited Evidence API submissions on admin accounts."
+                              ? "Unlimited Proof-of-Work API submissions on admin accounts."
                               : usageData.organization
-                              ? "Your personal evidence uploads this period."
+                              ? "Your personal proof-of-work uploads this period."
                               : displayLimit === null
-                              ? "Unlimited Evidence API submissions on your plan."
+                              ? "Unlimited Proof-of-Work API submissions on your plan."
                               : `${Math.max(displayLimit - displayUsed, 0)} evidence submissions remaining this period.`}
                           </p>
                         </>
@@ -1504,7 +1504,7 @@ export default function DashboardPage() {
                       </div>
                     )}
                     <p className="mt-3 text-xs text-neutral-500">
-                      Teams plans share one monthly TAP / ILE session pool and Evidence API cap across all organization members.
+                      Teams plans share one monthly TAP / ILE session pool and Proof-of-Work API cap across all organization members.
                     </p>
                   </div>
                 )}
@@ -1543,12 +1543,12 @@ export default function DashboardPage() {
               />
             </div>
 
-            {/* Evidence API keys */}
+            {/* Proof-of-Work API keys */}
             <div className={`${usageCardClass} space-y-5`}>
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
                   <p className={usageLabelClass}>API keys</p>
-                  <h2 className="mt-2 text-xl font-medium text-white">{t("dashboard.evidenceApi")}</h2>
+                  <h2 className="mt-2 text-xl font-medium text-white">{t("dashboard.proofOfWorkApi")}</h2>
                 </div>
                 <div className="flex items-center gap-3">
                   {usesAgenticV2Keys && (
@@ -1566,13 +1566,13 @@ export default function DashboardPage() {
               </div>
               <p className="text-sm text-neutral-500">
                 {usesAgenticV2Keys
-                  ? t("dashboard.evidenceApiDesc")
+                  ? t("dashboard.proofOfWorkApiDesc")
                   : t("dashboard.apiExperimentalDesc")}
               </p>
               {!hasAgentApiKeyPlan(user?.plan) && !user?.isAdmin && (
                 <div className="rounded-md border border-neutral-800 bg-black/40 p-4 text-sm text-neutral-400">
                   {user?.plan === "regular" || user?.plan === "regular_2026"
-                    ? t("dashboard.evidenceApiTeamsRequired")
+                    ? t("dashboard.proofOfWorkApiTeamsRequired")
                     : `${t("dashboard.apiKeysAvailableOnPro")} `}
                   <Link href="/pricing" className="text-neutral-200 underline decoration-neutral-600 underline-offset-4 hover:text-white">
                     {t("dashboard.upgradeToPro")}

@@ -48,7 +48,7 @@ export async function GET() {
         ? adminClient.from("sessions").select("user_id").in("user_id", userIds)
         : { data: [] as { user_id: string }[] | null, error: null },
       userIds.length > 0 
-        ? adminClient.from("learning_plans").select("user_id").in("user_id", userIds)
+        ? adminClient.from("workspaces").select("user_id").in("user_id", userIds)
         : { data: [] as { user_id: string }[] | null, error: null },
       orgIds.length > 0
         ? adminClient.from("organizations").select("id, name, slug").in("id", orgIds)

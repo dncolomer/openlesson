@@ -21,15 +21,15 @@ const BACKGROUND_IMAGES = [
 const steps = [
   {
     title: "Create a Workspace",
-    body: "Define the skill, scenario, or conversion goal. Enrich it with documents, tool traces, screen shares, video, or any evidence from humans or agents.",
+    body: "Define the skill, scenario, or conversion goal. Enrich it with documents, tool traces, screen shares, video, or any proof of work from humans or agents.",
   },
   {
     title: "Integrate to your product or workflow",
-    body: "Augment the UIs, internal tools, and agent dev processes you already run. Wire in Evidence API, Think Aloud links, and practice flows where work happens, not in a separate training layer.",
+    body: "Augment the UIs, internal tools, and agent dev processes you already run. Wire in Proof-of-Work API, Think Aloud links, and practice flows where work happens, not in a separate training layer.",
   },
   {
     title: "Measure learning efficiency",
-    body: "Evidence API and Think Aloud Protocol score humans and agents on conversion readiness and gap density, not vanity completion or benchmark pass rates.",
+    body: "Proof-of-Work API and Think Aloud Protocol score humans and agents on conversion readiness and gap density, not vanity completion or benchmark pass rates.",
   },
   {
     title: "Close gaps, raise ROI",
@@ -116,7 +116,7 @@ export default function B2BLandingPage() {
               See the products
             </a>
           </div>
-          <p className="mt-6 font-mono text-[11px] uppercase tracking-[1.6px] text-zinc-600">Trace Interruption Model • Evidence API • Think Aloud Protocol • ILE • Agentic Learning Environment</p>
+          <p className="mt-6 font-mono text-[11px] uppercase tracking-[1.6px] text-zinc-600">Trace Interruption Model • Proof-of-Work API • Think Aloud Protocol • ILE • Agentic Learning Environment</p>
         </div>
       </section>
 
@@ -148,7 +148,7 @@ export default function B2BLandingPage() {
           Start with a <span className="text-zinc-200">Workspace</span>, powered by the{" "}
           <span className="text-zinc-200">Trace Interruption Model</span> across every product.
           Workspaces accumulate learning signals over time.{" "}
-          <span className="text-zinc-200">Evidence API</span> scores humans and agents from artifacts.{" "}
+          <span className="text-zinc-200">Proof-of-Work API</span> scores humans and agents from artifacts.{" "}
           <span className="text-zinc-200">Think Aloud Protocol</span> and{" "}
           <span className="text-zinc-200">ILE</span> optimize human learning-to-conversion.{" "}
           <span className="text-zinc-200">Agentic Learning Environment</span> evolves agent skill.md files
@@ -168,7 +168,7 @@ export default function B2BLandingPage() {
         </div>
         <div className="border border-zinc-800 bg-zinc-950/70 p-6 text-lg leading-relaxed text-zinc-400 backdrop-blur-sm sm:p-8">
           <p className="text-white">Interrupt, score, and improve on the same workspace.</p>
-          <p className="mt-5">TIM applies across every product, breaking turn-based interactions and probing a closer reasoning layer. Pipe tool traces into Evidence API for human and agentic efficiency scoring. Issue Think Aloud Protocol URLs for live human cognition. Route humans into the ILE to improve. Soon, ALE will evolve agent skill.md files as agents learn from real runs until learning efficiency clears the bar.</p>
+          <p className="mt-5">TIM applies across every product, breaking turn-based interactions and probing a closer reasoning layer. Pipe tool traces into Proof-of-Work API for human and agentic efficiency scoring. Issue Think Aloud Protocol URLs for live human cognition. Route humans into the ILE to improve. Soon, ALE will evolve agent skill.md files as agents learn from real runs until learning efficiency clears the bar.</p>
           <p className="mt-5 text-zinc-200">
             Optimize learning efficiency, build judgment, and tie every signal to learning-to-conversion:
             deploy gates, adoption metrics, promotion, and compliance at every step.

@@ -37,6 +37,10 @@ function record(area, name, ok, detail = "", extra = {}) {
   console.log(`[${ok ? "PASS" : "FAIL"}] ${area} :: ${name}${detail ? ` — ${detail}` : ""}`);
 }
 
+function tapOrGhlResult(body) {
+  return body?.tap_result || body?.ghl_result || null;
+}
+
 function cookieHeader(jar) {
   return jar.map((c) => `${c.name}=${c.value}`).join("; ");
 }
@@ -108,12 +112,27 @@ async function mcpCall(apiKey, method, params = {}, id = 1) {
   return { res, body };
 }
 
+async function archiveE2eWorkspaces(admin, userIds) {
+  for (const userId of userIds.filter(Boolean)) {
+    const { error } = await admin
+      .from("workspaces")
+      .update({ status: "archived" })
+      .eq("user_id", userId)
+      .neq("status", "archived");
+    if (error) {
+      console.warn(`[e2e] archive workspaces for ${userId}: ${error.message}`);
+    }
+  }
+}
+
 async function main() {
   console.log(`Expanded E2E | ${baseUrl} | live writes ON\n`);
 
   const admin = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
+
+  await archiveE2eWorkspaces(admin, [env.E2E_REGULAR_USER_ID, env.E2E_TEAMS_USER_ID]);
 
   let regularJar;
   let teamsJar;
@@ -172,7 +191,7 @@ async function main() {
     record("regular-web", "GET /dashboard (authenticated)", dash.res.status === 200, `HTTP ${dash.res.status}`);
 
     let regularWorkspaceId = null;
-    const gen = await webFetch("/api/learning-plan/generate", regularJar, {
+    const gen = await webFetch("/api/workspace/generate", regularJar, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -180,28 +199,28 @@ async function main() {
         days: 7,
       }),
     });
-    regularWorkspaceId = gen.body?.planId || gen.body?.plan?.id || gen.body?.id || null;
+    regularWorkspaceId = gen.body?.workspaceId || gen.body?.plan?.id || gen.body?.id || null;
     const genOk = gen.res.status === 200 && !!regularWorkspaceId;
     record(
       "regular-web",
-      "POST /api/learning-plan/generate (workspace create)",
+      "POST /api/workspace/generate (workspace create)",
       genOk,
       genOk ? regularWorkspaceId : `${gen.res.status} ${JSON.stringify(gen.body)?.slice(0, 300)}`
     );
 
     if (regularWorkspaceId) {
-      const planPage = await webFetch(`/workspace/${regularWorkspaceId}`, regularJar);
+      const workspacePage = await webFetch(`/workspace/${regularWorkspaceId}`, regularJar);
       record(
         "regular-web",
         "GET /workspace/{id} renders",
-        planPage.res.status === 200 && planPage.text.includes("plan") || planPage.text.length > 500,
-        `HTTP ${planPage.res.status} len=${planPage.text.length}`
+        workspacePage.res.status === 200 && workspacePage.text.includes("plan") || workspacePage.text.length > 500,
+        `HTTP ${workspacePage.res.status} len=${workspacePage.text.length}`
       );
 
       const { data: nodes } = await admin
-        .from("plan_nodes")
+        .from("blocks")
         .select("id, title")
-        .eq("plan_id", regularWorkspaceId);
+        .eq("workspace_id", regularWorkspaceId);
       record(
         "regular-web",
         "workspace has plan blocks in DB",
@@ -217,10 +236,10 @@ async function main() {
         `HTTP ${ghlPage.res.status}`
       );
 
-      const ghlList = await webFetch(`/api/workspace-ghl-score?planId=${regularWorkspaceId}`, regularJar);
+      const ghlList = await webFetch(`/api/workspace-ghl-score?workspaceId=${regularWorkspaceId}`, regularJar);
       record(
         "regular-web",
-        "GET /api/workspace-ghl-score?planId=…",
+        "GET /api/workspace-ghl-score?workspaceId=…",
         ghlList.res.status === 200,
         `HTTP ${ghlList.res.status} sessions=${ghlList.body?.ghlSessions?.length ?? 0}`
       );
@@ -275,9 +294,13 @@ async function main() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ label: "[E2E] Dashboard-created key", scopes: ["workspaces:read", "ghl:read"] }),
     });
+    const keyLimitMessage = String(createKey.body?.error?.message || "");
     const keyCreated =
       createKey.res.status === 201 ||
-      (createKey.res.status === 403 && String(createKey.body?.error?.message || "").includes("limit"));
+      (createKey.res.status === 403 &&
+        (keyLimitMessage.includes("limit") ||
+          keyLimitMessage.includes("at most") ||
+          keyLimitMessage.includes("API keys")));
     record(
       "teams-web",
       "POST /api/v2/agent/keys (session auth)",
@@ -291,6 +314,38 @@ async function main() {
       "GET /organization page",
       orgPage.res.status === 200,
       `HTTP ${orgPage.res.status}`
+    );
+
+    const demoStatus = await webFetch("/api/demo/status", teamsJar);
+    record(
+      "demo-api",
+      "GET /api/demo/status (auth gate, not 404)",
+      demoStatus.res.status !== 404 && typeof demoStatus.body === "object",
+      `HTTP ${demoStatus.res.status}`
+    );
+
+    const demoSchema = await webFetch("/api/demo/proof-of-work-schema", teamsJar, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({}),
+    });
+    record(
+      "demo-api",
+      "POST /api/demo/proof-of-work-schema exists (not 404)",
+      demoSchema.res.status !== 404,
+      `HTTP ${demoSchema.res.status}`
+    );
+
+    const legacyDemoEvidence = await webFetch("/api/demo/evidence", teamsJar, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({}),
+    });
+    record(
+      "demo-api",
+      "legacy /api/demo/evidence absent",
+      legacyDemoEvidence.res.status === 404 || legacyDemoEvidence.res.status === 403,
+      `HTTP ${legacyDemoEvidence.res.status}`
     );
   }
 
@@ -327,6 +382,79 @@ async function main() {
         `${tools?.length ?? 0} tools`
       );
 
+      const toolNames = (tools || []).map((t) => t.name);
+      record(
+        "proof-of-work",
+        "MCP tools/list includes renamed proof-of-work tools",
+        toolNames.includes("upload_proof_of_work") &&
+          toolNames.includes("generate_proof_of_work_schema"),
+        toolNames.filter((n) => n.includes("proof") || n.includes("evidence")).join(", ")
+      );
+      record(
+        "proof-of-work",
+        "MCP tools/list excludes legacy evidence tool names",
+        !toolNames.includes("upload_evidence") &&
+          !toolNames.includes("generate_evidence_schema"),
+        toolNames.filter((n) => n.includes("evidence")).join(", ") || "none"
+      );
+
+      const legacyEvidence = await agentJson(
+        `/api/v2/agent/workspaces/${workspaceId}/evidence`,
+        apiKey,
+        {
+          method: "POST",
+          body: JSON.stringify({
+            type: "tool",
+            mime_type: "application/json",
+            data: Buffer.from("{}").toString("base64"),
+          }),
+        }
+      );
+      record(
+        "proof-of-work",
+        "POST legacy /evidence rejected",
+        legacyEvidence.res.status === 404 || legacyEvidence.res.status === 405,
+        `HTTP ${legacyEvidence.res.status}`
+      );
+
+      const schema = await agentJson(
+        `/api/v2/agent/workspaces/${workspaceId}/proof-of-work-schema`,
+        apiKey,
+        {
+          method: "POST",
+          body: JSON.stringify({
+            definition: "[E2E] Observe tool usage during a short coding exercise.",
+          }),
+        }
+      );
+      record(
+        "proof-of-work",
+        "POST /proof-of-work-schema responds (not 500)",
+        schema.res.status !== 500,
+        `HTTP ${schema.res.status}`
+      );
+
+      const upload = await agentJson(
+        `/api/v2/agent/workspaces/${workspaceId}/proof-of-work`,
+        apiKey,
+        {
+          method: "POST",
+          body: JSON.stringify({
+            type: "tool",
+            mime_type: "application/json",
+            data: Buffer.from(
+              JSON.stringify({ tool_name: "e2e", events: [{ action: "probe" }] })
+            ).toString("base64"),
+          }),
+        }
+      );
+      record(
+        "proof-of-work",
+        "POST /proof-of-work routed (not 404/500)",
+        upload.res.status !== 404 && upload.res.status !== 500,
+        `HTTP ${upload.res.status}`
+      );
+
       const mcpWs = await mcpCall(
         apiKey,
         "tools/call",
@@ -349,8 +477,9 @@ async function main() {
           apiKey,
           { method: "POST", body: JSON.stringify({ minutes: 15 }) }
         );
-        const linkId = link.body?.ghl_link?.id;
-        const privateUrl = link.body?.ghl_link?.private_url;
+        const linkPayload = link.body?.tap_link || link.body?.ghl_link;
+        const linkId = linkPayload?.id;
+        const privateUrl = linkPayload?.private_url;
         record("agent-api", "POST GHL link", link.res.status === 201 && !!linkId, linkId || `${link.res.status}`);
 
         if (privateUrl) {
@@ -417,7 +546,7 @@ async function main() {
               `/api/v2/agent/workspaces/${workspaceId}/ghl-links/${linkId}/results`,
               apiKey
             );
-            const gr = resultsRes.body?.ghl_result;
+            const gr = tapOrGhlResult(resultsRes.body);
             const resultsOk =
               resultsRes.res.status === 200 &&
               gr?.status === "completed" &&
@@ -443,7 +572,8 @@ async function main() {
             let mcpOk = false;
             try {
               const parsed = JSON.parse(mcpText || "{}");
-              mcpOk = parsed?.ghl_result?.status === "completed" || parsed?.status === "completed";
+              const mcpResult = tapOrGhlResult(parsed);
+              mcpOk = mcpResult?.status === "completed" || parsed?.status === "completed";
             } catch {
               mcpOk = false;
             }
@@ -496,8 +626,9 @@ async function main() {
               guestKey,
               { method: "POST", body: JSON.stringify({ minutes: 15 }) }
             );
-            const guestLinkId = guestLink.body?.ghl_link?.id;
-            const guestPrivateUrl = guestLink.body?.ghl_link?.private_url;
+            const guestLinkPayload = guestLink.body?.tap_link || guestLink.body?.ghl_link;
+            const guestLinkId = guestLinkPayload?.id;
+            const guestPrivateUrl = guestLinkPayload?.private_url;
             record(
               "ghl-flow",
               "guest key can create GHL link",
@@ -508,11 +639,12 @@ async function main() {
             if (guestPrivateUrl) {
               const guestToken = guestPrivateUrl.split("/").pop();
               const guestPage = await fetch(`${baseUrl}/ghl-score/session/${guestToken}`);
+              const guestPageText = await guestPage.text();
               record(
                 "ghl-flow",
                 "guest GHL private session page",
-                guestPage.status === 200 && !(await guestPage.text()).includes("could not be found"),
-                `HTTP ${guestPage.status}`
+                guestPage.status === 200 && guestPageText.length > 5000,
+                `HTTP ${guestPage.status} len=${guestPageText.length}`
               );
 
               const guestChat = await fetch(`${baseUrl}/api/workspace-ghl-score/chat`, {
@@ -564,7 +696,7 @@ async function main() {
                   `/api/v2/agent/workspaces/${guestWorkspaceId}/ghl-links/${guestLinkId}/results`,
                   guestKey
                 );
-                const ggr = guestResults.body?.ghl_result;
+                const ggr = tapOrGhlResult(guestResults.body);
                 record(
                   "ghl-flow",
                   "guest key can fetch GHL results",

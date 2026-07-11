@@ -63,21 +63,21 @@ type DialogueSnapshot = {
 };
 
 function getDialogueStorageKey({
-  planId,
+  workspaceId,
   sessionId,
-  planNodeId,
+  blockId,
   privateToken,
 }: {
-  planId?: string;
+  workspaceId?: string;
   sessionId?: string;
-  planNodeId?: string;
+  blockId?: string;
   privateToken?: string;
 }) {
   return [
     "openlesson",
     "tap-dialogue",
-    planId || "workspace",
-    privateToken || sessionId || planNodeId || "session",
+    workspaceId || "workspace",
+    privateToken || sessionId || blockId || "session",
   ].join(":");
 }
 
@@ -121,8 +121,8 @@ interface MarkerScore {
 }
 
 interface GhcScoreClientProps {
-  planId?: string;
-  planNodeId?: string;
+  workspaceId?: string;
+  blockId?: string;
   sessionId?: string;
   privateToken?: string;
   initialSession?: any;
@@ -321,7 +321,7 @@ function getInitialPhase(initialSession?: GhcScoreClientProps["initialSession"])
   return "briefing";
 }
 
-export function GhcScoreClient({ planId, planNodeId, sessionId, privateToken, initialSession }: GhcScoreClientProps) {
+export function GhcScoreClient({ workspaceId, blockId, sessionId, privateToken, initialSession }: GhcScoreClientProps) {
   const [phase, setPhase] = useState<Phase>(() => getInitialPhase(initialSession));
   const [minutes, setMinutes] = useState(DURATIONS.includes(Number(initialSession?.requested_duration_seconds || 900) / 60) ? Number(initialSession?.requested_duration_seconds || 900) / 60 : 15);
   const [workspaceTitle] = useState(initialSession?.workspaceTitle || "Workspace");
@@ -373,8 +373,8 @@ export function GhcScoreClient({ planId, planNodeId, sessionId, privateToken, in
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          planId,
-          planNodeId,
+          workspaceId,
+          blockId,
           sessionId,
           privateToken,
           ghlSessionId: activeGhlSessionId,
@@ -382,7 +382,7 @@ export function GhcScoreClient({ planId, planNodeId, sessionId, privateToken, in
         }),
       }).catch(() => {});
     },
-    [planId, planNodeId, sessionId, privateToken],
+    [workspaceId, blockId, sessionId, privateToken],
   );
 
   useEffect(() => {
@@ -401,8 +401,8 @@ export function GhcScoreClient({ planId, planNodeId, sessionId, privateToken, in
   }, []);
 
   const dialogueStorageKey = useMemo(
-    () => getDialogueStorageKey({ planId, sessionId, planNodeId, privateToken }),
-    [planId, sessionId, planNodeId, privateToken],
+    () => getDialogueStorageKey({ workspaceId, sessionId, blockId, privateToken }),
+    [workspaceId, sessionId, blockId, privateToken],
   );
 
   useEffect(() => {
@@ -424,8 +424,8 @@ export function GhcScoreClient({ planId, planNodeId, sessionId, privateToken, in
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            planId,
-            planNodeId,
+            workspaceId,
+            blockId,
             sessionId,
             privateToken,
             minutes,
@@ -457,7 +457,7 @@ export function GhcScoreClient({ planId, planNodeId, sessionId, privateToken, in
     return () => {
       cancelled = true;
     };
-  }, [phase, messages.length, ghlSessionId, isStartingSession, planId, planNodeId, sessionId, privateToken, minutes]);
+  }, [phase, messages.length, ghlSessionId, isStartingSession, workspaceId, blockId, sessionId, privateToken, minutes]);
 
   useEffect(() => {
     if (messages.length === 0) return;
@@ -745,7 +745,7 @@ export function GhcScoreClient({ planId, planNodeId, sessionId, privateToken, in
       const response = await fetch("/api/workspace-tap-score/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ planId, planNodeId, sessionId, privateToken, minutes, thought: clean, messages: nextMessages }),
+        body: JSON.stringify({ workspaceId, blockId, sessionId, privateToken, minutes, thought: clean, messages: nextMessages }),
       });
       const payload = await response.json();
       if (!response.ok) throw new Error(payload.error || "Could not get TAP response");
@@ -777,8 +777,8 @@ export function GhcScoreClient({ planId, planNodeId, sessionId, privateToken, in
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          planId,
-          planNodeId,
+          workspaceId,
+          blockId,
           sessionId,
           privateToken,
           minutes,
@@ -829,8 +829,8 @@ export function GhcScoreClient({ planId, planNodeId, sessionId, privateToken, in
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          planId,
-          planNodeId,
+          workspaceId,
+          blockId,
           sessionId,
           privateToken,
           ghlSessionId: ghlSessionIdRef.current,
@@ -870,7 +870,7 @@ export function GhcScoreClient({ planId, planNodeId, sessionId, privateToken, in
 
   const markers = Array.isArray(score?.markers) ? score.markers : [];
   const gapAnalysis = score?.gap_analysis || (Array.isArray(score?.knowledge_gaps) ? { summary: "Learning gaps identified from the demonstration.", gaps: score.knowledge_gaps, next_practice: score.follow_up_prompts || [] } : null);
-  const workspaceId = planId || initialSession?.plan_id;
+  const resolvedWorkspaceId = workspaceId || initialSession?.workspace_id;
 
   function toggleActiveThought(thoughtId: string) {
     const thought = thoughts.find((entry) => entry.id === thoughtId);
@@ -1037,8 +1037,8 @@ export function GhcScoreClient({ planId, planNodeId, sessionId, privateToken, in
               thoughts={thoughtHistory}
               sentThoughtIds={sentThoughtIds}
               skippedThoughtIds={memoryThoughtIds}
-              planId={planId}
-              planNodeId={planNodeId}
+              workspaceId={workspaceId}
+              blockId={blockId}
               sessionId={sessionId}
               onSendThought={sendThought}
             />
@@ -1072,8 +1072,8 @@ export function GhcScoreClient({ planId, planNodeId, sessionId, privateToken, in
                 ) : null}
               </div>
               <div className="flex flex-wrap gap-2">
-                {workspaceId && (
-                  <Link href={`/workspace/${workspaceId}`} className={ghcButtonClasses({ size: "md", variant: "ghost" })}>
+                {resolvedWorkspaceId && (
+                  <Link href={`/workspace/${resolvedWorkspaceId}`} className={ghcButtonClasses({ size: "md", variant: "ghost" })}>
                     Back to workspace
                   </Link>
                 )}
@@ -1114,7 +1114,7 @@ export function GhcScoreClient({ planId, planNodeId, sessionId, privateToken, in
                                 {gap.severity}
                               </span>
                             </div>
-                            <p className="mt-2 text-xs leading-relaxed text-neutral-500">{gap.evidence}</p>
+                            <p className="mt-2 text-xs leading-relaxed text-neutral-500">{gap.proof_of_work}</p>
                             <p className="mt-2 text-xs leading-relaxed text-neutral-300">Repair: {gap.suggested_repair}</p>
                           </div>
                         ))}

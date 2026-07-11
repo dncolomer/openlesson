@@ -54,7 +54,7 @@ export async function requireTeamsUserSession(): Promise<TeamsUserSession | Next
   if (!hasTeams) {
     return NextResponse.json(
       {
-        error: "The Evidence API demo requires the Teams tier.",
+        error: "The Proof-of-Work API demo requires the Teams tier.",
         code: "teams_required",
         renew_url: "/pricing",
       },
@@ -81,7 +81,7 @@ export async function requireTeamsUserSession(): Promise<TeamsUserSession | Next
 }
 
 export async function requireWorkspaceOwnerSession(
-  planId: string
+  workspaceId: string
 ): Promise<WorkspaceSessionAccess | NextResponse> {
   const supabase = await createClient();
   const {
@@ -99,9 +99,9 @@ export async function requireWorkspaceOwnerSession(
       .eq("id", user.id)
       .single(),
     supabase
-      .from("learning_plans")
+      .from("workspaces")
       .select("id, title, root_topic, description, notes, conversion_goal, user_id, organization_id")
-      .eq("id", planId)
+      .eq("id", workspaceId)
       .single(),
   ]);
 
@@ -123,7 +123,7 @@ export async function requireWorkspaceOwnerSession(
   if (!hasTeams) {
     return NextResponse.json(
       {
-        error: "The Evidence API requires the Teams tier.",
+        error: "The Proof-of-Work API requires the Teams tier.",
         code: "teams_required",
         renew_url: "/pricing",
       },

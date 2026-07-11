@@ -14,7 +14,7 @@ export default async function PrivateGhlScorePage({ params }: PageProps) {
 
   const { data: session } = await supabase
     .from("workspace_ghc_sessions")
-    .select("id, plan_id, plan_node_id, session_id, status, requested_duration_seconds, mode, voice_id, analysis, overall_score, marker_scores, learning_plans(title)")
+    .select("id, workspace_id, block_id, session_id, status, requested_duration_seconds, mode, voice_id, analysis, overall_score, marker_scores, workspaces(title)")
     .eq("private_token_hash", tokenHash)
     .single();
 
@@ -22,15 +22,15 @@ export default async function PrivateGhlScorePage({ params }: PageProps) {
 
   const initialSession = {
     ...session,
-    workspaceTitle: (session as any).learning_plans?.title || "Workspace",
+    workspaceTitle: (session as any).workspaces?.title || "Workspace",
   };
 
   return (
     <GhcScoreClient
-      planId={session.plan_id}
+      workspaceId={session.workspace_id}
       privateToken={token}
       sessionId={session.session_id || undefined}
-      planNodeId={session.plan_node_id || undefined}
+      blockId={session.block_id || undefined}
       initialSession={initialSession}
     />
   );

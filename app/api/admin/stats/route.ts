@@ -20,10 +20,10 @@ export async function GET() {
         adminClient.from("profiles").select("plan, subscription_status"),
         adminClient.from("sessions").select("id", { count: "exact", head: true }),
         adminClient.from("sessions").select("id", { count: "exact", head: true }).eq("status", "completed"),
-        adminClient.from("learning_plans").select("id", { count: "exact", head: true }),
+        adminClient.from("workspaces").select("id", { count: "exact", head: true }),
         adminClient.from("organizations").select("id", { count: "exact", head: true }),
         adminClient.from("workspace_ghc_sessions").select("id", { count: "exact", head: true }),
-        adminClient.from("workspace_evidence").select("id", { count: "exact", head: true }),
+        adminClient.from("workspace_proof_of_work").select("id", { count: "exact", head: true }),
         adminClient
           .from("sessions")
           .select("user_id")

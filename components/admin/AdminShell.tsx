@@ -7,10 +7,11 @@ const NAV_ITEMS: Array<{ href: string; label: string; exact?: boolean }> = [
   { href: "/admin", label: "Dashboard", exact: true },
   { href: "/admin/users", label: "Users" },
   { href: "/admin/organizations", label: "Organizations" },
-  { href: "/admin/plans", label: "Workspaces" },
+  { href: "/admin/workspaces", label: "Workspaces" },
   { href: "/admin/sessions", label: "Sessions" },
   { href: "/admin/leads", label: "Leads" },
   { href: "/admin/partners", label: "Partners" },
+  { href: "/admin/prompts", label: "Prompts" },
 ];
 
 export function AdminShell({ children }: { children: React.ReactNode }) {

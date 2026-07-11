@@ -70,7 +70,7 @@ export async function loadUsageProfile(
 
 async function countTableRows(
   supabase: SupabaseClient,
-  table: "sessions" | "workspace_ghc_sessions" | "workspace_evidence",
+  table: "sessions" | "workspace_ghc_sessions" | "workspace_proof_of_work",
   userId: string,
   periodStart?: Date | null
 ): Promise<number> {
@@ -117,12 +117,12 @@ export async function countUsedBlocks(
   return countTapIleSessions(supabase, userId, periodStart);
 }
 
-export async function countEvidenceSubmissions(
+export async function countProofOfWorkSubmissions(
   supabase: SupabaseClient,
   userId: string,
   periodStart?: Date | null
 ): Promise<number> {
-  return countTableRows(supabase, "workspace_evidence", userId, periodStart);
+  return countTableRows(supabase, "workspace_proof_of_work", userId, periodStart);
 }
 
 export async function countOrgTapIleSessions(
@@ -148,7 +148,7 @@ export async function countOrgTapIleSessions(
   return (ileCount.count ?? 0) + (tapCount.count ?? 0);
 }
 
-export async function countOrgEvidenceSubmissions(
+export async function countOrgProofOfWorkSubmissions(
   supabase: SupabaseClient,
   memberIds: string[],
   periodStart: Date
@@ -156,13 +156,13 @@ export async function countOrgEvidenceSubmissions(
   if (memberIds.length === 0) return 0;
 
   const { count, error } = await supabase
-    .from("workspace_evidence")
+    .from("workspace_proof_of_work")
     .select("id", { count: "exact", head: true })
     .in("user_id", memberIds)
     .gte("created_at", periodStart.toISOString());
 
   if (error) {
-    console.error("[usage-metrics] org evidence count failed:", error);
+    console.error("[usage-metrics] org proof-of-work count failed:", error);
     return 0;
   }
 
@@ -174,7 +174,7 @@ export async function countActiveWorkspaces(
   userId: string
 ): Promise<number> {
   const { count, error } = await supabase
-    .from("learning_plans")
+    .from("workspaces")
     .select("id", { count: "exact", head: true })
     .eq("user_id", userId)
     .neq("status", "archived");

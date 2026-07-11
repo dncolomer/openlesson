@@ -1,16 +1,18 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { createClient } from "@/lib/supabase/client";
 import {
-  EVIDENCE_SUBMISSIONS_PER_SESSION,
+  PROOF_OF_WORK_SUBMISSIONS_PER_SESSION,
   REGULAR_VOLUME_TIERS,
   TEAM_VOLUME_TIERS,
   DEFAULT_REGULAR_VOLUME,
   DEFAULT_TEAM_VOLUME,
+  hasProductAccess,
   type PlanId,
 } from "@/lib/plans";
 
@@ -37,7 +39,7 @@ const TEAM_VOLUME_NOTES: Record<number, string> = {
 
 const REGULAR_VOLUMES = REGULAR_VOLUME_TIERS.map((tier) => ({
   sessions: tier.blocks,
-  evidence: tier.blocks * EVIDENCE_SUBMISSIONS_PER_SESSION,
+  proof_of_work: tier.blocks * PROOF_OF_WORK_SUBMISSIONS_PER_SESSION,
   workspaces: tier.workspaces,
   price: tier.priceCents / 100,
   note: REGULAR_VOLUME_NOTES[tier.blocks] || "",
@@ -45,7 +47,7 @@ const REGULAR_VOLUMES = REGULAR_VOLUME_TIERS.map((tier) => ({
 
 const TEAM_VOLUMES = TEAM_VOLUME_TIERS.map((tier) => ({
   sessions: tier.blocks,
-  evidence: tier.blocks * EVIDENCE_SUBMISSIONS_PER_SESSION,
+  proof_of_work: tier.blocks * PROOF_OF_WORK_SUBMISSIONS_PER_SESSION,
   workspaces: tier.workspaces,
   price: tier.priceCents / 100,
   note: TEAM_VOLUME_NOTES[tier.blocks] || "",
@@ -56,10 +58,10 @@ const PLANS = [
     id: "regular_2026" as const,
     name: "Individual",
     detail: "from /mo",
-    description: "For individuals optimizing learning-to-conversion. Recurring TAP / ILE practice with capped Evidence API throughput.",
+    description: "For individuals optimizing learning-to-conversion. Recurring TAP / ILE practice with capped Proof-of-Work API throughput.",
     features: [
       "25+ TAP / ILE sessions per month",
-      "100+ Evidence API submissions/mo",
+      "100+ Proof-of-Work API submissions/mo",
       "1+ Workspaces",
       "Readiness history and reports",
     ],
@@ -71,10 +73,10 @@ const PLANS = [
     id: "pro_teams" as const,
     name: "Pro / Teams",
     detail: "from /mo",
-    description: "For teams raising the ROI of learning across humans and agents — shared session pool plus Evidence API capacity.",
+    description: "For teams raising the ROI of learning across humans and agents — shared session pool plus Proof-of-Work API capacity.",
     features: [
       "250+ shared TAP / ILE sessions per month",
-      "1,000+ Evidence API submissions/mo",
+      "1,000+ Proof-of-Work API submissions/mo",
       "5+ Workspaces",
       "Org guests and team API keys",
       "Priority support",
@@ -93,7 +95,7 @@ type VolumeCapacityCardProps = {
   note: string;
   price: number;
   sessions: number;
-  evidence: number;
+  proof_of_work: number;
   workspaces: number;
   onSelect: () => void;
 };
@@ -103,7 +105,7 @@ function VolumeCapacityCard({
   note,
   price,
   sessions,
-  evidence,
+  proof_of_work,
   workspaces,
   onSelect,
 }: VolumeCapacityCardProps) {
@@ -142,8 +144,8 @@ function VolumeCapacityCard({
           selected={selected}
         />
         <CapacityRow
-          label="Evidence API submissions"
-          value={evidence.toLocaleString()}
+          label="Proof-of-Work API submissions"
+          value={proof_of_work.toLocaleString()}
           suffix="/ mo"
           selected={selected}
         />
@@ -179,8 +181,10 @@ function CapacityRow({
   );
 }
 
-export default function PricingPage() {
+function PricingPageContent() {
+  const searchParams = useSearchParams();
   const [user, setUser] = useState<UserState | null>(null);
+  const [needsPlan, setNeedsPlan] = useState(false);
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
   const [selectedVolumes, setSelectedVolumes] = useState<Record<string, number>>({
     regular_2026: DEFAULT_REGULAR_VOLUME,
@@ -194,20 +198,47 @@ export default function PricingPage() {
         const { data: { user: authUser } } = await supabase.auth.getUser();
         if (!authUser) {
           setUser({ authenticated: false, plan: "free", isAdmin: false });
+          setNeedsPlan(searchParams.get("required") === "1");
           return;
         }
-        const { data: profile } = await supabase.from("profiles").select("plan, is_admin").eq("id", authUser.id).single();
-        setUser({ authenticated: true, plan: (profile?.plan || "free") as PlanId, isAdmin: profile?.is_admin ?? false });
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select(
+            "plan, is_admin, subscription_status, organization_id, token_tier, token_validity_expires_at"
+          )
+          .eq("id", authUser.id)
+          .single();
+        setUser({
+          authenticated: true,
+          plan: (profile?.plan || "free") as PlanId,
+          isAdmin: profile?.is_admin ?? false,
+        });
+        setNeedsPlan(
+          searchParams.get("required") === "1" ||
+            !hasProductAccess(
+              profile
+                ? {
+                    plan: (profile.plan || "free") as PlanId,
+                    subscription_status: profile.subscription_status ?? "inactive",
+                    is_admin: profile.is_admin ?? false,
+                    organization_id: profile.organization_id,
+                    token_tier: profile.token_tier,
+                    token_validity_expires_at: profile.token_validity_expires_at,
+                  }
+                : null
+            )
+        );
       } catch {
         setUser({ authenticated: false, plan: "free", isAdmin: false });
+        setNeedsPlan(searchParams.get("required") === "1");
       }
     };
     load();
-  }, []);
+  }, [searchParams]);
 
   const handleCheckout = async (priceType: "regular_2026" | "pro_teams") => {
     if (!user?.authenticated) {
-      window.location.href = "/login?redirect=/pricing";
+      window.location.href = `/login?redirect=${encodeURIComponent("/pricing?required=1")}`;
       return;
     }
     setLoadingPlan(priceType);
@@ -238,8 +269,13 @@ export default function PricingPage() {
             <div className="mb-6 inline-block rounded-sm border border-neutral-800 bg-neutral-950/80 px-3 py-1 font-mono text-[10px] uppercase tracking-[2px] text-neutral-500">LEARNING EFFICIENCY • HUMANS & AGENTS</div>
             <h1 className="max-w-3xl text-5xl font-medium leading-[1.05] tracking-[-2.5px] text-white sm:text-6xl">Price learning efficiency, not completion.</h1>
             <p className="mt-7 max-w-2xl text-lg leading-relaxed text-neutral-400">
-              Plans meter combined TAP / ILE sessions and monthly Evidence API submissions — so you pay for learning throughput and conversion signal, not vanity block counts.
+              Plans meter combined TAP / ILE sessions and monthly Proof-of-Work API submissions — so you pay for learning throughput and conversion signal, not vanity block counts.
             </p>
+            {needsPlan && (
+              <div className="mt-8 max-w-2xl rounded-sm border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
+                Choose Individual or Pro / Teams to continue. A paid plan is required to use openLesson — there is no free tier.
+              </div>
+            )}
           </div>
 
           <div className="mt-16 grid gap-5 lg:grid-cols-2">
@@ -275,7 +311,7 @@ export default function PricingPage() {
                               note={option.note}
                               price={option.price}
                               sessions={option.sessions}
-                              evidence={option.evidence}
+                              proof_of_work={option.proof_of_work}
                               workspaces={option.workspaces}
                               onSelect={() =>
                                 setSelectedVolumes((current) => ({ ...current, [plan.id]: option.sessions }))
@@ -311,5 +347,13 @@ export default function PricingPage() {
         <Footer />
       </div>
     </main>
+  );
+}
+
+export default function PricingPage() {
+  return (
+    <Suspense fallback={null}>
+      <PricingPageContent />
+    </Suspense>
   );
 }

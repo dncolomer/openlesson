@@ -158,7 +158,7 @@ CREATE POLICY "Users can update own probes"
 --   migrations/007_session_status.sql
 --   migrations/008_token_validation.sql
 --   migrations/009_add_node_positions.sql
---   migrations/010_public_learning_plans.sql
+--   migrations/010_public_workspaces.sql (historical 010; renamed in 054)
 --   migrations/011_public_profiles_read.sql
 --   migrations/012_partner_program.sql
 --   migrations/013_add_credits.sql
@@ -184,7 +184,7 @@ CREATE POLICY "Users can update own probes"
 --   migrations/033_transcripts_xai.sql          (transcripts → xAI Files)
 --   migrations/034_session_data_xai.sql         (EEG/tool/facial/screens → xAI Files)
 --   migrations/035_session_analysis.sql         (heartbeat analysis → xAI Files)
---   migrations/036_group_plans.sql              (group plans + plan_node_sessions)
+--   migrations/036_group_plans.sql              (group workspaces + block_sessions; see 054)
 --   migrations/037_public_profiles.sql          (public profile stats)
 --   migrations/038_fix_group_plan_performance_sessions.sql
 --

@@ -6,19 +6,19 @@ export interface SkillGridPosition {
   position_y: number;
 }
 
-interface PlanNodeRef {
+interface BlockRef {
   id: string;
   title: string;
   is_start?: boolean;
   next?: string[];
 }
 
-interface DbPlanNode {
+interface DbBlock {
   id: string;
   title: string;
   status?: string;
   is_start?: boolean;
-  next_node_ids?: string[];
+  next_block_ids?: string[];
   position_x?: number | null;
   position_y?: number | null;
 }
@@ -35,20 +35,20 @@ export function getSkillGridPositions(nodes: SkillGridNode[]): Map<string, Skill
   return result;
 }
 
-export function toSkillGridNodes(nodes: DbPlanNode[]): SkillGridNode[] {
+export function toSkillGridNodes(nodes: DbBlock[]): SkillGridNode[] {
   return nodes.map((node) => ({
     id: node.id,
     title: node.title,
     status: node.status || "available",
     is_start: node.is_start || false,
-    next_node_ids: node.next_node_ids || [],
+    next_block_ids: node.next_block_ids || [],
     position_x: node.position_x ?? undefined,
     position_y: node.position_y ?? undefined,
   }));
 }
 
 export function skillGridNodesFromRefs(
-  refs: PlanNodeRef[],
+  refs: BlockRef[],
   idMap: Map<string, string>,
   status = "available",
 ): SkillGridNode[] {
@@ -62,7 +62,7 @@ export function skillGridNodesFromRefs(
         title: ref.title,
         status,
         is_start: ref.is_start || false,
-        next_node_ids: (ref.next || [])
+        next_block_ids: (ref.next || [])
           .map((nextId) => idMap.get(nextId))
           .filter((id): id is string => Boolean(id)),
       },
@@ -120,6 +120,6 @@ export async function persistSkillGridPositions(
       if (node?.position_x != null && node.position_y != null) continue;
     }
 
-    await supabase.from("plan_nodes").update(position).eq("id", id);
+    await supabase.from("blocks").update(position).eq("id", id);
   }
 }

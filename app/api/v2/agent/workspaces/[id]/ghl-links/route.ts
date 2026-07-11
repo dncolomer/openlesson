@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { authenticateRequest, errorResponse } from "@/lib/agent-v2/auth";
 import { canAccessAgentWorkspace } from "@/lib/agent-v2/workspace-access";
-import { withEvidenceApiResponse } from "@/lib/agent-v2/predictive-interruption";
+import { withProofOfWorkApiResponse } from "@/lib/agent-v2/predictive-interruption";
 
 interface RouteProps {
   params: Promise<{ id: string }>;
@@ -14,7 +14,7 @@ export async function GET(req: NextRequest, { params }: RouteProps) {
   const { id } = await params;
 
   const { data: workspace } = await supabase
-    .from("learning_plans")
+    .from("workspaces")
     .select("id, user_id, organization_id, guest_user_id")
     .eq("id", id)
     .single();
@@ -25,8 +25,8 @@ export async function GET(req: NextRequest, { params }: RouteProps) {
 
   let query = supabase
     .from("workspace_ghc_sessions")
-    .select("id, plan_id, plan_node_id, status, requested_duration_seconds, duration_seconds, focus_node_ids, overall_score, created_at, started_at, completed_at")
-    .eq("plan_id", id)
+    .select("id, workspace_id, block_id, status, requested_duration_seconds, duration_seconds, focus_block_ids, overall_score, created_at, started_at, completed_at")
+    .eq("workspace_id", id)
     .order("created_at", { ascending: false });
 
   if (auth.guest_user_id) query = query.eq("guest_user_id", auth.guest_user_id);
@@ -40,7 +40,7 @@ export async function GET(req: NextRequest, { params }: RouteProps) {
   }
 
   return NextResponse.json(
-    withEvidenceApiResponse(
+    withProofOfWorkApiResponse(
       { tap_links: links || [] },
       { endpoint: "list_tap_links", workspace_id: id }
     )

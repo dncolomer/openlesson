@@ -5,7 +5,7 @@ export type InterruptionInterventionType =
   | "reflection_prompt"
   | "checkpoint_probe"
   | "coaching_nudge"
-  | "evidence_reminder"
+  | "proof_of_work_reminder"
   | "performance_review";
 
 export interface InterruptionIntervention {
@@ -31,7 +31,7 @@ export interface PredictiveInterruption {
 }
 
 /** null = no interruption predicted (empty interruption). */
-export type EvidenceApiInterruption = PredictiveInterruption | null;
+export type ProofOfWorkApiInterruption = PredictiveInterruption | null;
 
 export interface InterruptionContract {
   description: string;
@@ -50,14 +50,14 @@ export interface InterruptionContract {
   example_empty: null;
 }
 
-export type EvidenceApiEndpoint =
+export type ProofOfWorkApiEndpoint =
   | "create_workspace"
   | "list_workspaces"
   | "get_workspace"
   | "list_blocks"
-  | "generate_evidence_schema"
+  | "generate_proof_of_work_schema"
   | "generate_integration_skill"
-  | "upload_evidence"
+  | "upload_proof_of_work"
   | "analyze_performance"
   | "get_learning_progress"
   | "list_tap_links"
@@ -66,14 +66,14 @@ export type EvidenceApiEndpoint =
   | "get_workspace_detail";
 
 export interface InterruptionContext {
-  endpoint: EvidenceApiEndpoint;
+  endpoint: ProofOfWorkApiEndpoint;
   workspace_id?: string;
-  evidence_artifacts?: number;
+  proof_of_work_artifacts?: number;
   block_id?: string | null;
   mode?: "report" | "chat";
   report?: PerformanceReport | null;
-  /** Workspace- or LLM-authored interruption candidate from evidence spec generation. */
-  llm_interruption?: EvidenceApiInterruption;
+  /** Workspace- or LLM-authored interruption candidate from proof of work spec generation. */
+  llm_interruption?: ProofOfWorkApiInterruption;
   tool_name?: string | null;
   tap_minutes?: number;
 }
@@ -94,30 +94,30 @@ const DEFAULT_EXAMPLE: PredictiveInterruption = {
 export function buildInterruptionContract(): InterruptionContract {
   return {
     description:
-      "Every Evidence API success response includes an interruption field powered by the Trace Interruption Model (TIM). When non-null, schedule the intervention after delay_ms unless a later Evidence API response supersedes it.",
+      "Every Proof-of-Work API success response includes an interruption field powered by the Trace Interruption Model (TIM). When non-null, schedule the intervention after delay_ms unless a later Proof-of-Work API response supersedes it.",
     empty_value: null,
     consumer_obligations: [
-      "Read interruption on every Evidence API response (REST and MCP).",
+      "Read interruption on every Proof-of-Work API response (REST and MCP).",
       "When interruption is null, do not schedule a new TIM intervention from this response.",
       "When interruption is non-null, schedule consumer_action after delay_ms.",
-      "If another Evidence API call returns before the timer fires, cancel the pending timer and apply the newest interruption (or clear if null).",
+      "If another Proof-of-Work API call returns before the timer fires, cancel the pending timer and apply the newest interruption (or clear if null).",
       "Never stack duplicate timers for the same workspace session — always supersede.",
     ],
     fields: {
       interruption_id: "Stable id for deduplication and supersession tracking.",
       delay_ms: "Non-negative milliseconds before the consumer should trigger the intervention.",
       intervention:
-        "type (reflection_prompt | checkpoint_probe | coaching_nudge | evidence_reminder | performance_review), message, optional rationale, consumer_action, optional block_id.",
+        "type (reflection_prompt | checkpoint_probe | coaching_nudge | proof_of_work_reminder | performance_review), message, optional rationale, consumer_action, optional block_id.",
       confidence: "low | medium | high — how strongly TIM predicts this intervention.",
       predicted_at: "ISO-8601 timestamp when the prediction was issued.",
     },
     supersession_rule:
-      "Any subsequent Evidence API response replaces the previous pending interruption. A new non-null interruption cancels the prior timer; null means no new intervention is predicted from that response.",
+      "Any subsequent Proof-of-Work API response replaces the previous pending interruption. A new non-null interruption cancels the prior timer; null means no new intervention is predicted from that response.",
     intervention_types: [
       "reflection_prompt",
       "checkpoint_probe",
       "coaching_nudge",
-      "evidence_reminder",
+      "proof_of_work_reminder",
       "performance_review",
     ],
     example_active: DEFAULT_EXAMPLE,
@@ -125,7 +125,7 @@ export function buildInterruptionContract(): InterruptionContract {
   };
 }
 
-function createInterruptionId(endpoint: EvidenceApiEndpoint, workspaceId?: string): string {
+function createInterruptionId(endpoint: ProofOfWorkApiEndpoint, workspaceId?: string): string {
   const suffix = Math.random().toString(36).slice(2, 10);
   const scope = workspaceId ? workspaceId.slice(0, 8) : "global";
   return `int_${endpoint}_${scope}_${suffix}`;
@@ -138,9 +138,9 @@ function clampDelayMs(value: number, min: number, max: number): number {
 
 export function normalizePredictedInterruption(
   raw: unknown,
-  fallbackEndpoint: EvidenceApiEndpoint,
+  fallbackEndpoint: ProofOfWorkApiEndpoint,
   workspaceId?: string
-): EvidenceApiInterruption {
+): ProofOfWorkApiInterruption {
   if (raw === null || raw === undefined) return null;
   if (typeof raw !== "object" || Array.isArray(raw)) return null;
 
@@ -159,7 +159,7 @@ export function normalizePredictedInterruption(
     "reflection_prompt",
     "checkpoint_probe",
     "coaching_nudge",
-    "evidence_reminder",
+    "proof_of_work_reminder",
     "performance_review",
   ];
   const interventionType = allowedTypes.includes(type as InterruptionInterventionType)
@@ -202,7 +202,7 @@ export function normalizePredictedInterruption(
 function interruptionFromPerformanceReport(
   report: PerformanceReport | null | undefined,
   context: InterruptionContext
-): EvidenceApiInterruption {
+): ProofOfWorkApiInterruption {
   if (!report) return null;
 
   const topGap = report.gap_analysis?.gaps?.find((gap) => gap.severity === "high") ||
@@ -216,7 +216,7 @@ function interruptionFromPerformanceReport(
       intervention: {
         type: "coaching_nudge",
         message: topGap.suggested_repair || `Address: ${topGap.title}`,
-        rationale: topGap.evidence || report.gap_analysis.summary,
+        rationale: topGap.proof_of_work || report.gap_analysis.summary,
         consumer_action: "surface_coaching_nudge",
         block_id: context.block_id ?? null,
       },
@@ -244,12 +244,12 @@ function interruptionFromPerformanceReport(
   return null;
 }
 
-export function predictInterruption(context: InterruptionContext): EvidenceApiInterruption {
+export function predictInterruption(context: InterruptionContext): ProofOfWorkApiInterruption {
   if (context.llm_interruption) {
     return context.llm_interruption;
   }
 
-  const evidenceCount = context.evidence_artifacts ?? 0;
+  const proofOfWorkCount = context.proof_of_work_artifacts ?? 0;
 
   switch (context.endpoint) {
     case "create_workspace":
@@ -257,39 +257,39 @@ export function predictInterruption(context: InterruptionContext): EvidenceApiIn
         interruption_id: createInterruptionId("create_workspace", context.workspace_id),
         delay_ms: 60_000,
         intervention: {
-          type: "evidence_reminder",
-          message: "Generate an evidence schema and upload your first tool trace for this workspace.",
-          rationale: "New workspaces need initial evidence before learning verification can begin.",
-          consumer_action: "call_generate_evidence_schema",
+          type: "proof_of_work_reminder",
+          message: "Generate an proof-of-work schema and upload your first tool trace for this workspace.",
+          rationale: "New workspaces need initial proof of work before learning verification can begin.",
+          consumer_action: "call_generate_proof_of_work_schema",
         },
         confidence: "high",
         predicted_at: new Date().toISOString(),
       };
 
-    case "generate_evidence_schema":
-      if (evidenceCount === 0) {
+    case "generate_proof_of_work_schema":
+      if (proofOfWorkCount === 0) {
         return {
-          interruption_id: createInterruptionId("generate_evidence_schema", context.workspace_id),
+          interruption_id: createInterruptionId("generate_proof_of_work_schema", context.workspace_id),
           delay_ms: 30_000,
           intervention: {
-            type: "evidence_reminder",
-            message: "Upload your first evidence artifact using the tool_submissions contract.",
-            rationale: "Evidence spec is ready; verification improves once tool traces arrive.",
-            consumer_action: "call_upload_evidence",
+            type: "proof_of_work_reminder",
+            message: "Upload your first proof-of-work artifact using the tool_submissions contract.",
+            rationale: "Proof-of-work spec is ready; verification improves once tool traces arrive.",
+            consumer_action: "call_upload_proof_of_work",
             block_id: context.block_id ?? null,
           },
           confidence: "high",
           predicted_at: new Date().toISOString(),
         };
       }
-      if (evidenceCount > 0 && evidenceCount % 5 === 0) {
+      if (proofOfWorkCount > 0 && proofOfWorkCount % 5 === 0) {
         return {
-          interruption_id: createInterruptionId("generate_evidence_schema", context.workspace_id),
+          interruption_id: createInterruptionId("generate_proof_of_work_schema", context.workspace_id),
           delay_ms: 90_000,
           intervention: {
             type: "performance_review",
-            message: "Request a refreshed performance scorecard after this evidence milestone.",
-            rationale: `${evidenceCount} artifacts accumulated — scores may have shifted.`,
+            message: "Request a refreshed performance scorecard after this proof-of-work milestone.",
+            rationale: `${proofOfWorkCount} artifacts accumulated — scores may have shifted.`,
             consumer_action: "call_analyze_performance",
             block_id: context.block_id ?? null,
           },
@@ -304,25 +304,25 @@ export function predictInterruption(context: InterruptionContext): EvidenceApiIn
         interruption_id: createInterruptionId("generate_integration_skill", context.workspace_id),
         delay_ms: 45_000,
         intervention: {
-          type: "evidence_reminder",
-          message: "Begin uploading evidence per the integration skill and live evidence spec.",
+          type: "proof_of_work_reminder",
+          message: "Begin uploading proof of work per the integration skill and live proof-of-work spec.",
           rationale: "Integration skill is a snapshot — proof-of-work uploads activate continuous evaluation.",
-          consumer_action: "call_upload_evidence",
+          consumer_action: "call_upload_proof_of_work",
           block_id: context.block_id ?? null,
         },
         confidence: "medium",
         predicted_at: new Date().toISOString(),
       };
 
-    case "upload_evidence":
-      if (evidenceCount > 0 && evidenceCount % 5 === 0) {
+    case "upload_proof_of_work":
+      if (proofOfWorkCount > 0 && proofOfWorkCount % 5 === 0) {
         return {
-          interruption_id: createInterruptionId("upload_evidence", context.workspace_id),
+          interruption_id: createInterruptionId("upload_proof_of_work", context.workspace_id),
           delay_ms: 60_000,
           intervention: {
             type: "performance_review",
             message: "Run a performance report to see updated marker scores and gaps.",
-            rationale: `Reached ${evidenceCount} evidence artifacts — good checkpoint for scoring.`,
+            rationale: `Reached ${proofOfWorkCount} proof-of-work artifacts — good checkpoint for scoring.`,
             consumer_action: "call_analyze_performance",
             block_id: context.block_id ?? null,
           },
@@ -332,7 +332,7 @@ export function predictInterruption(context: InterruptionContext): EvidenceApiIn
       }
       if (context.tool_name) {
         return {
-          interruption_id: createInterruptionId("upload_evidence", context.workspace_id),
+          interruption_id: createInterruptionId("upload_proof_of_work", context.workspace_id),
           delay_ms: 75_000,
           intervention: {
             type: "reflection_prompt",
@@ -366,28 +366,28 @@ export function predictInterruption(context: InterruptionContext): EvidenceApiIn
       return interruptionFromPerformanceReport(context.report, context);
 
     case "get_learning_progress":
-      if (evidenceCount === 0) {
+      if (proofOfWorkCount === 0) {
         return {
           interruption_id: createInterruptionId("get_learning_progress", context.workspace_id),
           delay_ms: 20_000,
           intervention: {
-            type: "evidence_reminder",
-            message: "Call generate_evidence_schema, then upload your first tool evidence.",
+            type: "proof_of_work_reminder",
+            message: "Call generate_proof_of_work_schema, then upload your first tool proof of work.",
             rationale: "No artifacts yet — progress tracking needs proof-of-work uploads.",
-            consumer_action: "call_generate_evidence_schema",
+            consumer_action: "call_generate_proof_of_work_schema",
           },
           confidence: "high",
           predicted_at: new Date().toISOString(),
         };
       }
-      if (evidenceCount >= 3) {
+      if (proofOfWorkCount >= 3) {
         return {
           interruption_id: createInterruptionId("get_learning_progress", context.workspace_id),
           delay_ms: 90_000,
           intervention: {
             type: "performance_review",
             message: "Request analyze_performance for an updated readiness scorecard.",
-            rationale: `${evidenceCount} artifacts provide enough signal for meaningful scoring.`,
+            rationale: `${proofOfWorkCount} artifacts provide enough signal for meaningful scoring.`,
             consumer_action: "call_analyze_performance",
           },
           confidence: "medium",
@@ -422,10 +422,10 @@ export function predictInterruption(context: InterruptionContext): EvidenceApiIn
   }
 }
 
-export function withEvidenceApiResponse<T extends Record<string, unknown>>(
+export function withProofOfWorkApiResponse<T extends Record<string, unknown>>(
   payload: T,
   context: InterruptionContext
-): T & { interruption: EvidenceApiInterruption } {
+): T & { interruption: ProofOfWorkApiInterruption } {
   return {
     ...payload,
     interruption: predictInterruption(context),

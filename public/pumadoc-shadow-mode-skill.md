@@ -7,7 +7,7 @@ description: "[Superseded] Use /customer-agent-openlesson-skill.md — mid-journ
 
 > **Superseded** by [`/customer-agent-openlesson-skill.md`](/customer-agent-openlesson-skill.md), which runs verification in the background until the validation step.
 
-This skill teaches the PumaDoc Customer Agent how to run **shadow-mode validation**: serialize learner activity, upload evidence through OpenLesson's Evidence API, and request performance analysis — **without ever surfacing results to the end user**.
+This skill teaches the PumaDoc Customer Agent how to run **shadow-mode validation**: serialize learner activity, upload proof of work through OpenLesson's Proof-of-Work API, and request performance analysis — **without ever surfacing results to the end user**.
 
 Shadow mode is for **internal validation only** — compliance audit trails, hiring QA, mentor dashboards, program ops, fraud detection, and cohort analytics. The learner experiences a normal PumaDoc journey. OpenLesson runs in the background.
 
@@ -15,7 +15,7 @@ Shadow mode is for **internal validation only** — compliance audit trails, hir
 
 **Share URL for this integration:** `/pumadoc-shadow-mode-skill.md`
 
-**Related (learner-visible mode):** `/pumadoc-evidence-performance-skill.md` — use that skill when PumaDoc should show gap reports, strengths, and repair missions in chat.
+**Related (learner-visible mode):** `/pumadoc-proof-of-work-performance-skill.md` — use that skill when PumaDoc should show gap reports, strengths, and repair missions in chat.
 
 ---
 
@@ -27,9 +27,9 @@ Learner works in PumaDoc → silent serialize & upload → internal performance 
                          NEVER shown in learner chat or UI
 ```
 
-| Aspect | Shadow mode (this skill) | Visible mode (evidence-performance skill) |
+| Aspect | Shadow mode (this skill) | Visible mode (proof-of-work-performance skill) |
 |--------|--------------------------|---------------------------------------------|
-| Evidence upload | Yes — same API | Yes |
+| Proof-of-work upload | Yes — same API | Yes |
 | Performance analysis | Yes — same API | Yes |
 | Gap reports to learner | **Never** | Yes — summarized in chat |
 | Strengths / growth areas in chat | **Never** | Yes |
@@ -51,11 +51,11 @@ These are non-negotiable when this skill is active:
 1. **Do not** paste, paraphrase, or summarize OpenLesson `report` fields (`summary`, `strengths`, `growth_areas`, `gap_analysis`, `suggestions`, `confidence`) in learner-facing chat.
 2. **Do not** tell the learner that cognition is being scored, verified, audited, or analyzed by OpenLesson — including euphemisms like "learning snapshot," "readiness check," or "gap review."
 3. **Do not** show performance Q&A (`mode: "chat"`) responses to the learner. Chat mode is for **internal reviewers** only (ops console, mentor tools, webhook handlers).
-4. **Do not** change learner UX copy to reference OpenLesson, evidence uploads, or validation outcomes — even on failure (rate limits, Teams required). Fail silently or log internally; keep the learner journey uninterrupted unless PumaDoc has a separate non-validation reason to pause.
+4. **Do not** change learner UX copy to reference OpenLesson, proof-of-work uploads, or validation outcomes — even on failure (rate limits, Teams required). Fail silently or log internally; keep the learner journey uninterrupted unless PumaDoc has a separate non-validation reason to pause.
 5. **Do not** store gap titles or `suggested_repair` text in learner-visible PumaDoc Knowledge fields. Route to internal stores only (see [Internal routing](#internal-routing-of-results)).
 6. **May** use internal scores to gate progress (e.g. hold a certification badge) **without** explaining that a score caused the gate. If the learner asks why they are blocked, answer with product policy — not OpenLesson analysis.
 
-If PumaDoc needs to coach the learner on gaps, **switch to the visible evidence-performance skill** for that session or step — do not blend shadow and visible messaging in the same thread.
+If PumaDoc needs to coach the learner on gaps, **switch to the visible proof-of-work-performance skill** for that session or step — do not blend shadow and visible messaging in the same thread.
 
 ---
 
@@ -75,9 +75,9 @@ If PumaDoc needs to coach the learner on gaps, **switch to the visible evidence-
 
 ## Design principles
 
-### Silent evidence, same primitives
+### Silent proof of work, same primitives
 
-Shadow mode uses the **same** Evidence and Performance endpoints as visible mode. Serialize an honest tool trace; OpenLesson infers intent from workspace context, block titles, and payload content. Tag rows for downstream filtering:
+Shadow mode uses the **same** Proof-of-Work and Performance endpoints as visible mode. Serialize an honest tool trace; OpenLesson infers intent from workspace context, block titles, and payload content. Tag rows for downstream filtering:
 
 ```json
 "metadata": {
@@ -98,7 +98,7 @@ Shadow mode uses the **same** Evidence and Performance endpoints as visible mode
 | Auditor trigger | On demand from ops API | Same request — never learner-initiated |
 | Hiring screen | Full journey | Once before interview loop |
 
-There is no required mapping between PumaDoc steps and OpenLesson calls. Upload zero, one, or many evidence rows between performance requests.
+There is no required mapping between PumaDoc steps and OpenLesson calls. Upload zero, one, or many proof-of-work rows between performance requests.
 
 ### Block-scoped vs workspace-global analysis
 
@@ -126,7 +126,7 @@ Base path: `/api/v2/agent`
 
 | Key | Prefix | Shadow mode use |
 |-----|--------|-----------------|
-| Org admin / member | `sk_` | Provision guests, create workspaces, upload evidence, run analysis, consume internal reports |
+| Org admin / member | `sk_` | Provision guests, create workspaces, upload proof of work, run analysis, consume internal reports |
 | Guest learner | `gsk_` | **Avoid for shadow mode** — prefer org `sk_` so learners never hold keys tied to visible analysis flows |
 
 **Teams tier required.** Rate limit: 120 req/min per key.
@@ -144,7 +144,7 @@ Base path: `/api/v2/agent`
 | Create guest (optional) | `POST` | `/org/guests` | `org:write` |
 | Create workspace | `POST` | `/workspaces` | `workspaces:write` |
 | List blocks | `GET` | `/workspaces/{workspace_id}/blocks` | `workspaces:read` |
-| Upload evidence | `POST` | `/workspaces/{workspace_id}/evidence` | `workspaces:write` |
+| Upload proof of work | `POST` | `/workspaces/{workspace_id}/proof-of-work` | `workspaces:write` |
 | Performance report | `POST` | `/workspaces/{workspace_id}/performance` | `workspaces:read` |
 | Performance Q&A (internal) | `POST` | `/workspaces/{workspace_id}/performance` | `workspaces:read` |
 
@@ -210,7 +210,7 @@ Do **not** tell the learner which OpenLesson block relates to their current step
 
 ---
 
-### 1. Silent evidence upload (when PumaDoc chooses)
+### 1. Silent proof-of-work upload (when PumaDoc chooses)
 
 Upload on PumaDoc's checkpoint policy. No learner notification.
 
@@ -278,7 +278,7 @@ Workspace-global:
 {}
 ```
 
-**Response handling:** persist full `report`, `evidence_summary`, and `file_ids` to internal storage. **Do not** forward any field to learner channels.
+**Response handling:** persist full `report`, `proof_of_work_summary`, and `file_ids` to internal storage. **Do not** forward any field to learner channels.
 
 ```json
 {
@@ -336,7 +336,7 @@ After `mode: "report"`, route outputs to internal consumers only:
 Shadow mode means **no validation UX**. PumaDoc chat for the same journey should read like a normal coaching product:
 
 - Continue step guidance, simulations, and artifact help as usual.
-- If uploads fail, retry in background; do not mention OpenLesson or evidence.
+- If uploads fail, retry in background; do not mention OpenLesson or proof of work.
 - If internal gating blocks progress, use neutral copy: *"This module isn't available yet"* or cohort policy language — **not** gap analysis.
 
 **Forbidden templates (do not use in shadow mode):**
@@ -365,7 +365,7 @@ Shadow mode means **no validation UX**. PumaDoc chat for the same journey should
 | `404 workspace_not_found` | Re-bootstrap shadow workspace server-side |
 | `404 block_not_found` | Refresh block map internally |
 | `429 rate_limit_exceeded` | Back off 60s; retry — no learner message |
-| Empty evidence on report | Queue retry after next silent upload |
+| Empty proof of work on report | Queue retry after next silent upload |
 
 Never surface API errors as validation feedback to the learner.
 
@@ -379,7 +379,7 @@ Never surface API errors as validation feedback to the learner.
 1. POST /workspaces → shadow workspace (org sk_ key)
 2. GET /blocks → internal step map
 3. [Learner completes PumaDoc journey — no validation messaging]
-4. POST /evidence → tool traces (metadata.shadow_mode: true) as they work
+4. POST /proof-of-work → tool traces (metadata.shadow_mode: true) as they work
 5. POST /performance → {} → internal admit/deny signal
 6. Webhook → ATS with confidence + top gaps (staff view)
 7. Learner sees standard PumaDoc completion — not OpenLesson report
@@ -389,7 +389,7 @@ Never surface API errors as validation feedback to the learner.
 
 ```text
 1. Learner runs simulation in PumaDoc (normal UX)
-2. POST /evidence → simulation_completed tool trace (block_id set)
+2. POST /proof-of-work → simulation_completed tool trace (block_id set)
 3. POST /performance → { "block_id": "..." } → internal flag if shallow
 4. If flagged: route to human review — do not tell learner simulation "failed validation"
 ```
@@ -408,7 +408,7 @@ Never surface API errors as validation feedback to the learner.
 
 | Check | Shadow mode | Visible mode |
 |-------|-------------|--------------|
-| Upload tool evidence | ✓ | ✓ |
+| Upload tool proof of work | ✓ | ✓ |
 | Call performance report | ✓ | ✓ |
 | Show report in learner chat | ✗ | ✓ |
 | Mention OpenLesson to learner | ✗ | ✓ (optional) |
@@ -421,8 +421,8 @@ Never surface API errors as validation feedback to the learner.
 
 ## What this skill does not cover
 
-- Learner-facing gap coaching → use `/pumadoc-evidence-performance-skill.md`
-- Live tutoring session control, proofs, blockchain → not in Evidence API v2
+- Learner-facing gap coaching → use `/pumadoc-proof-of-work-performance-skill.md`
+- Live tutoring session control, proofs, blockchain → not in Proof-of-Work API v2
 - Browser cookie auth → API keys only
 - Disclosing shadow mode existence to learners → out of scope; legal/privacy review is PumaDoc's responsibility
 
@@ -431,7 +431,7 @@ Never surface API errors as validation feedback to the learner.
 ## Checklist for implementers
 
 - [ ] Enable shadow mode only via server-side config — not a learner-visible toggle
-- [ ] Set `metadata.shadow_mode: true` on every evidence row and in server state
+- [ ] Set `metadata.shadow_mode: true` on every proof-of-work row and in server state
 - [ ] Use org `sk_` (or equivalent service credential) for uploads and performance
 - [ ] Define internal checkpoint policy (continuous, simulation, milestone, auditor, hiring)
 - [ ] Serialize open tool-usage JSON when **PumaDoc** chooses — no learner prompts about snapshots
@@ -441,4 +441,4 @@ Never surface API errors as validation feedback to the learner.
 - [ ] Fail uploads and API errors silently from the learner's perspective
 - [ ] Document silent gating thresholds in ops runbooks — not in product copy
 - [ ] Never log or display raw `sk_` / `gsk_` keys in any channel
-- [ ] When coaching on gaps is required, switch to the visible evidence-performance skill
+- [ ] When coaching on gaps is required, switch to the visible proof-of-work-performance skill

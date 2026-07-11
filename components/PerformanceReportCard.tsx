@@ -19,7 +19,7 @@ export type ScoreCardTab =
 export type PerformanceReportSnapshot = {
   id: string;
   report: PerformanceReport;
-  evidenceCount: number;
+  proofOfWorkCount: number;
   actionCount: number;
   simulatedDays: number;
   timestamp: Date;
@@ -123,7 +123,7 @@ function GapsPanel({
           >
             <div className={titleClass}>{gap.title}</div>
             <p className={`mt-2 leading-relaxed ${spacious ? "opacity-90" : "opacity-80"}`}>
-              {gap.evidence}
+              {gap.proof_of_work}
             </p>
             <p className={`mt-2 ${spacious ? "text-zinc-400" : "opacity-70"}`}>
               {t("performanceReportCard.repair")}: {gap.suggested_repair}

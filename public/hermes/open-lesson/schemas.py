@@ -46,7 +46,7 @@ ADAPT_PLAN = {
     "parameters": {
         "type": "object",
         "properties": {
-            "plan_id": {
+            "workspace_id": {
                 "type": "string",
                 "description": "UUID of the plan to adapt.",
             },
@@ -59,7 +59,7 @@ ADAPT_PLAN = {
                 "description": "Whether to keep completed nodes unchanged. Defaults to true.",
             },
         },
-        "required": ["plan_id", "instruction"],
+        "required": ["workspace_id", "instruction"],
     },
 }
 
@@ -103,11 +103,11 @@ START_SESSION = {
                 "type": "string",
                 "description": "The topic for this tutoring session.",
             },
-            "plan_id": {
+            "workspace_id": {
                 "type": "string",
                 "description": "UUID of the learning plan this session belongs to (optional, for plan-linked sessions).",
             },
-            "plan_node_id": {
+            "block_id": {
                 "type": "string",
                 "description": "UUID of the specific plan node this session covers (optional, for plan-linked sessions).",
             },

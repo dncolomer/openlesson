@@ -3,7 +3,7 @@ import {
   pickDefaultMcpTool,
   suggestMcpToolArgs,
   usesWorkspaceArgs,
-} from "@/lib/evidence-api-demo/mcp-simulation-utils";
+} from "@/lib/openlesson-demo/mcp-simulation-utils";
 
 describe("mcp-simulation-utils", () => {
   it("prefers list_blocks when a workspace id is available", () => {

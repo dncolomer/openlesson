@@ -21,7 +21,7 @@ interface ToolsPanelProps {
   problem: string;
   className?: string;
   errorNotification?: boolean;
-  planId?: string;
+  workspaceId?: string;
   disabledTools?: Tool[];
   onBackToDashboard?: () => void;
   isRecording?: boolean;
@@ -108,7 +108,7 @@ const bottomTools: Tool[] = ["help", "data-input", "logs"];
 
 export function ToolsPanel({ 
   activeTool, onToolChange, problem, className = "", errorNotification = false,
-  planId, disabledTools = [], onBackToDashboard,
+  workspaceId, disabledTools = [], onBackToDashboard,
   isRecording = false, isPaused = false, isWebcamEnabled = false,
   museStatus = "disconnected", museDeviceStatus = null, museChannelData,
 }: ToolsPanelProps) {
@@ -118,7 +118,7 @@ export function ToolsPanel({
   // action buttons in ProbesPanel / SessionPlanViewer now inject a rich
   // assistant message into chat instead. Keep this list lean.
   const baseMainTools: Tool[] = ["chapters", "canvas", "notebook", "thought-history", "grokipedia", "dantes"];
-  const mainTools: Tool[] = planId ? [...baseMainTools, "plan-resources"] : baseMainTools;
+  const mainTools: Tool[] = workspaceId ? [...baseMainTools, "plan-resources"] : baseMainTools;
   const getToolLabel = (id: Tool): string => {
     switch (id) {
       case "chat": return t('tools.helios');

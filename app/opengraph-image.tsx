@@ -63,7 +63,7 @@ export default function Image() {
             maxWidth: 900,
           }}
         >
-          Measure what learners actually absorb — not just completion. Evidence API, Think Aloud
+          Measure what learners actually absorb — not just completion. Proof-of-Work API, Think Aloud
           Protocol, ILE, and ALE on Verification Workspaces.
         </div>
         <div

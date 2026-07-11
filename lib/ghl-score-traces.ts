@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { queryWorkspaceProofOfWorkRows } from "@/lib/agent-v2/workspace-proof-of-work";
 
 export const GHL_TRACE_TOOL_NAME = "ghl-thought-trace";
 
@@ -12,8 +13,8 @@ export interface GhlThoughtTracePayload {
   trace_type: GhlTraceType;
   action: GhlSystem1Action | GhlSystem2Action;
   ghl_session_id: string;
-  plan_id: string;
-  plan_node_id?: string | null;
+  workspace_id: string;
+  block_id?: string | null;
   focus_session_id?: string | null;
   thought_id?: string;
   thought_ids?: string[];
@@ -35,8 +36,8 @@ export function buildGhlThoughtTracePayload(input: {
   traceType: GhlTraceType;
   action: GhlSystem1Action | GhlSystem2Action;
   ghlSessionId: string;
-  planId: string;
-  planNodeId?: string | null;
+  workspaceId: string;
+  blockId?: string | null;
   focusSessionId?: string | null;
   thoughtId?: string;
   thoughtIds?: string[];
@@ -51,8 +52,8 @@ export function buildGhlThoughtTracePayload(input: {
     trace_type: input.traceType,
     action: input.action,
     ghl_session_id: input.ghlSessionId,
-    plan_id: input.planId,
-    plan_node_id: input.planNodeId ?? null,
+    workspace_id: input.workspaceId,
+    block_id: input.blockId ?? null,
     focus_session_id: input.focusSessionId ?? null,
     thought_id: input.thoughtId,
     thought_ids: input.thoughtIds,
@@ -67,18 +68,22 @@ export function buildGhlThoughtTracePayload(input: {
 export async function fetchGhlSessionTraces(
   supabase: SupabaseClient,
   ghlSessionId: string,
-  planId: string,
+  workspaceId: string,
 ): Promise<GhlTraceEvidenceRow[]> {
-  const { data, error } = await supabase
-    .from("workspace_evidence")
-    .select("xai_file_id, metadata, timestamp_ms, tool_action")
-    .eq("plan_id", planId)
-    .eq("tool_name", GHL_TRACE_TOOL_NAME)
-    .contains("metadata", { ghl_session_id: ghlSessionId })
-    .order("timestamp_ms", { ascending: true });
+  const { data, error } = await queryWorkspaceProofOfWorkRows<GhlTraceEvidenceRow>(
+    supabase,
+    (table) =>
+      supabase
+        .from(table)
+        .select("xai_file_id, metadata, timestamp_ms, tool_action")
+        .eq("workspace_id", workspaceId)
+        .eq("tool_name", GHL_TRACE_TOOL_NAME)
+        .contains("metadata", { ghl_session_id: ghlSessionId })
+        .order("timestamp_ms", { ascending: true })
+  );
 
   if (error) throw new Error(error.message);
-  return (data || []) as GhlTraceEvidenceRow[];
+  return data;
 }
 
 // xAI Responses allows at most 20 file attachments per request.
@@ -143,11 +148,11 @@ export function buildTraceScoringInstructions(traceContext: ReturnType<typeof bu
 
   return `
 
-Thought trace evidence (System 1 and System 2):
+Thought trace proof of work (System 1 and System 2):
 - System 1 traces (${traceContext.system1Count}): spontaneous crystallized speech — everything the learner said aloud, including thoughts they did NOT submit to the TAP dialogue.
 - System 2 traces (${traceContext.system2Count}): deliberate learner decisions — explicit send, skip, select/deselect, or resend actions.
 
-Use the dialogue transcript as the primary Socratic exchange, but treat attached trace files and the manifest below as first-class evidence. Compare System 1 vs System 2: knowledge articulated but not sent may reveal hesitation, incomplete understanding, or metacognitive filtering. Cite both sent and unsent traces in gap_analysis evidence where relevant.
+Use the dialogue transcript as the primary Socratic exchange, but treat attached trace files and the manifest below as first-class proof of work. Compare System 1 vs System 2: knowledge articulated but not sent may reveal hesitation, incomplete understanding, or metacognitive filtering. Cite both sent and unsent traces in gap_analysis proof_of_work where relevant.
 
 Trace manifest:
 ${traceContext.manifestText || "No trace manifest available."}`;

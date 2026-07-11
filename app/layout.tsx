@@ -10,7 +10,7 @@ export const metadata: Metadata = {
     template: "%s | openLesson",
   },
   description:
-    "Optimize learning efficiency for humans and agentic systems. Evidence API, Think Aloud Protocol, ILE, and Agentic Learning Environment on Verification Workspaces.",
+    "Optimize learning efficiency for humans and agentic systems. Proof-of-Work API, Think Aloud Protocol, ILE, and Agentic Learning Environment on Verification Workspaces.",
   keywords: [
     "learning efficiency platform",
     "think aloud protocol",
@@ -48,7 +48,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "openLesson — Learning Efficiency Platform",
     description:
-      "Optimize learning efficiency with Evidence API, Think Aloud Protocol, ILE, and Agentic Learning Environment.",
+      "Optimize learning efficiency with Proof-of-Work API, Think Aloud Protocol, ILE, and Agentic Learning Environment.",
     creator: "@uncertainsys",
   },
   robots: {
@@ -71,7 +71,7 @@ const organizationSchema = {
   name: "openLesson",
   url: "https://openlesson.academy",
   description:
-    "Learning efficiency platform on Verification Workspaces: Evidence API, Think Aloud Protocol, ILE, and Agentic Learning Environment.",
+    "Learning efficiency platform on Verification Workspaces: Proof-of-Work API, Think Aloud Protocol, ILE, and Agentic Learning Environment.",
   founder: {
     "@type": "Person",
     name: "Daniel Colomer",
@@ -95,15 +95,15 @@ const softwareSchema = {
     priceCurrency: "USD",
   },
   description:
-    "Learning efficiency measurement and improvement on Verification Workspaces—via Evidence API, Think Aloud Protocol, ILE, and Agentic Learning Environment.",
+    "Learning efficiency measurement and improvement on Verification Workspaces—via Proof-of-Work API, Think Aloud Protocol, ILE, and Agentic Learning Environment.",
   featureList: [
     "Verification Workspaces",
-    "Evidence API — headless efficiency scoring",
+    "Proof-of-Work API — headless efficiency scoring",
     "Think Aloud Protocol — live human cognition",
     "Integrated Learning Environment — human learning",
     "Agentic Learning Environment — skill development for skill.md developers",
     "Continuous scoring and gap analysis",
-    "Evidence API for LMS integration",
+    "Proof-of-Work API for LMS integration",
   ],
 };
 

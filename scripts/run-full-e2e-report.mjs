@@ -69,8 +69,8 @@ async function main() {
 
   // --- Schema ---
   for (const column of ["organization_id", "guest_user_id"]) {
-    const { error } = await admin.from("learning_plans").select(`id, ${column}`).limit(1);
-    record("schema", `learning_plans.${column}`, !error, error?.message || "present");
+    const { error } = await admin.from("workspaces").select(`id, ${column}`).limit(1);
+    record("schema", `workspaces.${column}`, !error, error?.message || "present");
   }
 
   // --- Auth credentials ---

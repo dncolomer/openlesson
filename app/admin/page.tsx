@@ -37,7 +37,7 @@ const NAV_CARDS = [
     description: "Teams orgs, members, invite links, and guest access.",
   },
   {
-    href: "/admin/plans",
+    href: "/admin/workspaces",
     title: "Workspaces",
     description: "Verification workspaces, blocks, and TAP activity.",
   },
@@ -55,6 +55,11 @@ const NAV_CARDS = [
     href: "/admin/partners",
     title: "Partners",
     description: "Partner program stakes, referrals, and payouts.",
+  },
+  {
+    href: "/admin/prompts",
+    title: "Prompts",
+    description: "Read-only inventory of every LLM prompt — registry, routes, and builders.",
   },
 ] as const;
 
@@ -94,7 +99,7 @@ export default function AdminPage() {
         <StatCard label="ILE sessions" value={stats?.totalIleSessions ?? 0} />
         <StatCard label="TAP sessions" value={stats?.totalTapSessions ?? 0} />
         <StatCard label="Workspaces" value={stats?.totalWorkspaces ?? 0} />
-        <StatCard label="Evidence uploads" value={stats?.totalEvidence ?? 0} />
+        <StatCard label="Proof-of-work uploads" value={stats?.totalEvidence ?? 0} />
       </div>
 
       {stats?.tierBreakdown && (

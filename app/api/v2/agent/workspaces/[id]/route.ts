@@ -16,7 +16,7 @@ export async function GET(req: NextRequest, { params }: RouteProps) {
   const { id: workspaceId } = await params;
 
   const { data: workspace } = await supabase
-    .from("learning_plans")
+    .from("workspaces")
     .select("id, title, root_topic, description, notes, conversion_goal, status, created_at, updated_at, user_id, organization_id, guest_user_id")
     .eq("id", workspaceId)
     .single();
@@ -47,7 +47,7 @@ export async function PATCH(req: NextRequest, { params }: RouteProps) {
   const { id: workspaceId } = await params;
 
   const { data: workspace } = await supabase
-    .from("learning_plans")
+    .from("workspaces")
     .select("id, user_id, organization_id, guest_user_id, conversion_goal")
     .eq("id", workspaceId)
     .single();
@@ -75,7 +75,7 @@ export async function PATCH(req: NextRequest, { params }: RouteProps) {
   }
 
   const { data: updated, error } = await supabase
-    .from("learning_plans")
+    .from("workspaces")
     .update({ conversion_goal: conversionGoal })
     .eq("id", workspaceId)
     .select("id, conversion_goal, updated_at")

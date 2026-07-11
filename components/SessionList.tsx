@@ -12,12 +12,12 @@ import { useI18n } from "@/lib/i18n";
 const MODEL_STORAGE_KEY = "planner-model";
 const DEFAULT_PLANNER_MODEL = "grok-4.3";
 
-interface PlanNode {
+interface Block {
   id: string;
   title: string;
   description: string;
   is_start: boolean;
-  next_node_ids: string[];
+  next_block_ids: string[];
   status: string;
   position_x?: number;
   position_y?: number;
@@ -26,10 +26,10 @@ interface PlanNode {
 }
 
 interface SessionListProps {
-  nodes: PlanNode[];
-  onSelect: (nodeId: string) => void;
-  onDelete: (nodeId: string) => void;
-  onFork: (nodeId: string) => void;
+  nodes: Block[];
+  onSelect: (blockId: string) => void;
+  onDelete: (blockId: string) => void;
+  onFork: (blockId: string) => void;
   highlightedNodes?: Set<string>;
   highlightOpacity?: number;
   isOwner?: boolean;
@@ -41,16 +41,16 @@ interface SessionListProps {
   isLoggedIn?: boolean;
   supabase?: ReturnType<typeof createBrowserClient>;
   planTopic?: string;
-  planId?: string;
+  workspaceId?: string;
   onRefresh?: () => void;
-  onNodesUpdate?: (nodes: PlanNode[]) => void;
+  onNodesUpdate?: (nodes: Block[]) => void;
 }
 
-function getOrderedSessions(nodes: PlanNode[]): PlanNode[] {
+function getOrderedSessions(nodes: Block[]): Block[] {
   if (nodes.length === 0) return [];
 
   const visited = new Set<string>();
-  const ordered: PlanNode[] = [];
+  const ordered: Block[] = [];
 
   const startNodes = nodes.filter((n) => n.is_start);
   const queue = [...startNodes];
@@ -62,7 +62,7 @@ function getOrderedSessions(nodes: PlanNode[]): PlanNode[] {
     visited.add(node.id);
     ordered.push(node);
 
-    const children = nodes.filter((n) => node.next_node_ids?.includes(n.id));
+    const children = nodes.filter((n) => node.next_block_ids?.includes(n.id));
 
     for (const child of children) {
       if (!visited.has(child.id)) {
@@ -95,7 +95,7 @@ export function SessionList({
   isLoggedIn = false,
   supabase,
   planTopic,
-  planId,
+  workspaceId,
   onRefresh,
   onNodesUpdate,
 }: SessionListProps) {
@@ -120,7 +120,7 @@ export function SessionList({
   }, [expandedNodeId, nodes]);
 
   useEffect(() => {
-    if (!planId || !isOwner) return;
+    if (!workspaceId || !isOwner) return;
     const needsBackfill = nodes.some(
       (node) => node.position_x == null || node.position_y == null,
     );
@@ -128,13 +128,13 @@ export function SessionList({
       gridBackfillAttemptedRef.current = null;
       return;
     }
-    if (gridBackfillAttemptedRef.current === planId) return;
-    gridBackfillAttemptedRef.current = planId;
+    if (gridBackfillAttemptedRef.current === workspaceId) return;
+    gridBackfillAttemptedRef.current = workspaceId;
 
-    void fetch("/api/learning-plan/ensure-grid-positions", {
+    void fetch("/api/workspace/ensure-grid-positions", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ planId }),
+      body: JSON.stringify({ workspaceId }),
     })
       .then(async (response) => {
         if (!response.ok) {
@@ -150,11 +150,11 @@ export function SessionList({
         gridBackfillAttemptedRef.current = null;
         console.warn("Failed to backfill block grid positions:", error);
       });
-  }, [isOwner, nodes, onNodesUpdate, planId]);
+  }, [isOwner, nodes, onNodesUpdate, workspaceId]);
 
   const handleAddBlock = useCallback(
     async (prompt: string, position: { row: number; col: number }) => {
-      if (!planId || !isOwner) return;
+      if (!workspaceId || !isOwner) return;
 
       const nodesById = new Map(nodes.map((node) => [node.id, node]));
       const { placements } = buildSkillGridLayout(nodes);
@@ -172,11 +172,11 @@ export function SessionList({
 
       setIsAddingBlock(true);
       try {
-        const response = await fetch("/api/learning-plan/add-block-at-slot", {
+        const response = await fetch("/api/workspace/add-block-at-slot", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            planId,
+            workspaceId,
             row: position.row,
             col: position.col,
             prompt,
@@ -196,9 +196,9 @@ export function SessionList({
           if (onNodesUpdate) onNodesUpdate(data.updatedNodes);
           const placedNode =
             data.placedNodeId
-              ? data.updatedNodes.find((node: PlanNode) => node.id === data.placedNodeId)
+              ? data.updatedNodes.find((node: Block) => node.id === data.placedNodeId)
               : data.updatedNodes.find(
-                  (node: PlanNode) => node.position_x === position.col && node.position_y === position.row,
+                  (node: Block) => node.position_x === position.col && node.position_y === position.row,
                 );
           if (placedNode) setExpandedNodeId(placedNode.id);
         }
@@ -211,7 +211,7 @@ export function SessionList({
         setIsAddingBlock(false);
       }
     },
-    [isOwner, locale, nodes, onNodesUpdate, onRefresh, planId, router],
+    [isOwner, locale, nodes, onNodesUpdate, onRefresh, workspaceId, router],
   );
 
   const selectedGridNode = nodes.find((node) => node.id === expandedNodeId) ?? null;
@@ -240,7 +240,7 @@ export function SessionList({
         isLoggedIn={isLoggedIn}
         supabase={supabase}
         planTopic={planTopic}
-        planId={planId}
+        workspaceId={workspaceId}
         variant="detail"
         detailLayout="drawer"
       />
@@ -266,7 +266,7 @@ export function SessionList({
             canEdit={isOwner}
             showProgress={!maskProgress}
             isAdding={isAddingBlock}
-            planId={planId}
+            workspaceId={workspaceId}
             locale={locale}
             onAddBlock={handleAddBlock}
             labels={{

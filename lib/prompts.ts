@@ -362,7 +362,7 @@ CURRENT PLAN:
 
 SKIPPED CHAPTERS (CRITICAL):
 - Steps with status "skipped" were explicitly waived by the student. They do NOT count as incomplete blockers.
-- Do NOT require evidence, answers, or closure for skipped chapters when evaluating any other chapter.
+- Do NOT require proof of work, answers, or closure for skipped chapters when evaluating any other chapter.
 - Do NOT use transcript or activity from before the student focused on the current chapter to judge readiness for a different chapter.
 - When deciding can_auto_advance or gap_score for the current step, evaluate ONLY whether the current step's objective is met — never penalize the student for skipped chapters.
 
@@ -465,9 +465,9 @@ Based on these observations, decide:
    - The question should push them to the next concrete insight within the current step
 
  4. Should any probes be auto-archived?
-   - Check if focused probes have been addressed (evidence in transcript, whiteboard, or actions)
+   - Check if focused probes have been addressed (proof of work in transcript, whiteboard, or actions)
    - Check if any non-focused probes are clearly resolved
-   - Only archive if there's clear evidence the student has engaged with and addressed the probe
+   - Only archive if there's clear proof of work the student has engaged with and addressed the probe
 
    5. CAN THE STEP AUTO-ADVANCE? (for automatic mode)
     - Consider: Has the student demonstrated good-enough understanding of the current step's topic?
@@ -482,7 +482,7 @@ Based on these observations, decide:
        * Student seems stuck, contradictory, or is going in circles
        * The student has not addressed the central objective of the current step
      - IMPORTANT: When can_auto_advance is false, the advance_reasoning MUST be specific and actionable. 
-       Do NOT say vague things like "insufficient evidence". Instead explain exactly what the student 
+       Do NOT say vague things like "insufficient proof of work". Instead explain exactly what the student 
        still needs to demonstrate, e.g. "You haven't yet explained why X leads to Y" or 
        "Try working through a concrete example of Z before moving on".
 
@@ -510,7 +510,7 @@ If no probes should be archived, probes_to_archive should be an empty array.
 Set can_generate_probe to false if at probe cap (5) and cannot archive any.
 The next_request should be ready to display directly to the student - make it specific, concrete, and directly about the current step's topic. If the student is good enough to move on, next_request must be feedback/checkpoint inviting them to click "Mark as Done", not another question.
 suggested_tools is optional - only include it for "task" or "suggestion" types where specific tools would help. Use tool IDs from the list above (chat, canvas, notebook, grokipedia).
-can_auto_advance: Set to true when the student has demonstrated good-enough progress on the current step (usually gap < 0.65, no clear confusion, evidence of understanding). Do not hold the chapter open for perfection.
+can_auto_advance: Set to true when the student has demonstrated good-enough progress on the current step (usually gap < 0.65, no clear confusion, proof of understanding). Do not hold the chapter open for perfection.
 advance_reasoning: A brief (1-2 sentence) human-readable explanation of why the step can or cannot advance, displayed in the manual mode override dialog.`,
 
   // ============================================
@@ -530,12 +530,12 @@ SESSION CONTEXT:
 
 A probe should be ARCHIVED if:
 1. The student has verbally addressed the question (even partially) showing they've engaged with the underlying concept
-2. Evidence in whiteboard/code shows they've worked through the issue the probe was targeting
+2. Proof of work in whiteboard/code shows they've worked through the issue the probe was targeting
 3. The student has moved past this concept to more advanced thinking
 4. The probe is no longer relevant to their current line of inquiry
 
 A probe should NOT be archived if:
-1. There's no evidence the student has engaged with it
+1. There's no proof of work the student has engaged with it
 2. The underlying gap the probe was targeting is still present
 3. The student explicitly expressed confusion about this topic recently
 4. Archiving it would leave a critical gap unaddressed
@@ -585,7 +585,7 @@ RECENT TRANSCRIPT:
 {transcript}
 
 ATTACHED SESSION FILES:
-Recent transcripts, tool events, and screenshots may be attached as xAI input_file documents. Use xAI's attachment search to inspect them when deciding whether the learner is stuck. The activity summary is only an index; prefer evidence from the attached files when available.
+Recent transcripts, tool events, and screenshots may be attached as xAI input_file documents. Use xAI's attachment search to inspect them when deciding whether the learner is stuck. The activity summary is only an index; prefer proof of work from the attached files when available.
 
 CHAT CONTEXT:
 - Time since last stuck card: {seconds_since_last_stuck_card}s

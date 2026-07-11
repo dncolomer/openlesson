@@ -1,7 +1,7 @@
 {
   "name": "@openlesson/plugin-elizaos",
   "version": "2.0.0",
-  "description": "openLesson v2 tutoring platform integration for ElizaOS — learning plans, multimodal sessions, teaching assistant, cryptographic proofs",
+  "description": "openLesson v2 tutoring platform integration for ElizaOS — workspaces, blocks, multimodal sessions, teaching assistant, cryptographic proofs",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "type": "module",

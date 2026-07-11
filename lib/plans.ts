@@ -23,12 +23,12 @@ export interface VolumeTier {
   priceCents: number;
 }
 
-/** Evidence API submissions allowed per month = session allowance × this ratio. */
-export const EVIDENCE_SUBMISSIONS_PER_SESSION = 4;
-export const FREE_EVIDENCE_SUBMISSIONS_PER_SESSION = 5;
+/** Proof-of-Work API submissions allowed per month = session allowance × this ratio. */
+export const PROOF_OF_WORK_SUBMISSIONS_PER_SESSION = 4;
+export const FREE_PROOF_OF_WORK_SUBMISSIONS_PER_SESSION = 5;
 
 export const SESSION_ALLOWANCE_LABEL = "TAP / ILE sessions";
-export const EVIDENCE_ALLOWANCE_LABEL = "Evidence API submissions";
+export const PROOF_OF_WORK_ALLOWANCE_LABEL = "Proof-of-Work API submissions";
 
 export const PLANS: Record<PlanId, PlanDef> = {
   free: {
@@ -40,7 +40,7 @@ export const PLANS: Record<PlanId, PlanDef> = {
     workspacesPerPeriod: 1,
     features: [
       "5 TAP / ILE sessions",
-      "25 Evidence API submissions/mo",
+      "25 Proof-of-Work API submissions/mo",
       "One Workspace",
       "Basic readiness report",
     ],
@@ -55,7 +55,7 @@ export const PLANS: Record<PlanId, PlanDef> = {
     workspacesPerPeriod: 1,
     features: [
       "5 TAP / ILE sessions per month",
-      "25 Evidence API submissions/mo",
+      "25 Proof-of-Work API submissions/mo",
       "Buy extra sessions at $1.99",
       "Think-aloud data uploads",
       "Muse EEG integration",
@@ -72,7 +72,7 @@ export const PLANS: Record<PlanId, PlanDef> = {
     workspacesPerPeriod: 1,
     features: [
       "25+ TAP / ILE sessions per month",
-      "100+ Evidence API submissions/mo",
+      "100+ Proof-of-Work API submissions/mo",
       "1+ Workspaces",
       "Volume upgrades before checkout",
       "Additional sessions at $3.99 each",
@@ -89,7 +89,7 @@ export const PLANS: Record<PlanId, PlanDef> = {
     workspacesPerPeriod: null,
     features: [
       "Unlimited TAP / ILE sessions",
-      "Unlimited Evidence API submissions",
+      "Unlimited Proof-of-Work API submissions",
       "Unlimited Workspaces",
       "Think-aloud data uploads",
       "Custom system prompts",
@@ -109,12 +109,12 @@ export const PLANS: Record<PlanId, PlanDef> = {
     workspacesPerPeriod: 5,
     features: [
       "250+ TAP / ILE sessions per month",
-      "1,000+ Evidence API submissions/mo",
+      "1,000+ Proof-of-Work API submissions/mo",
       "5+ Workspaces",
       "Volume upgrades before checkout",
       "Additional sessions at $1.99 each",
       "Team readiness workspaces",
-      "Readiness evidence and history",
+      "Readiness proof of work and history",
       "Priority support",
     ],
     stripePriceEnv: null,
@@ -177,12 +177,12 @@ export const EXTRA_LESSON_PRICE = EXTRA_BLOCK_PRICE_CENTS;
 /** @deprecated Use PRO_TEAMS_EXTRA_BLOCK_PRICE_CENTS */
 export const PRO_TEAMS_EXTRA_LESSON_PRICE = PRO_TEAMS_EXTRA_BLOCK_PRICE_CENTS;
 
-export function evidenceLimitForSessionAllowance(
+export function proofOfWorkLimitForSessionAllowance(
   plan: PlanId | string,
   sessionLimit: number | null
 ): number | null {
   if (sessionLimit === null) return null;
-  const ratio = plan === "free" ? FREE_EVIDENCE_SUBMISSIONS_PER_SESSION : EVIDENCE_SUBMISSIONS_PER_SESSION;
+  const ratio = plan === "free" ? FREE_PROOF_OF_WORK_SUBMISSIONS_PER_SESSION : PROOF_OF_WORK_SUBMISSIONS_PER_SESSION;
   return sessionLimit * ratio;
 }
 
@@ -190,13 +190,13 @@ export function formatSessionAllowance(count: number): string {
   return `${count.toLocaleString()} TAP / ILE session${count === 1 ? "" : "s"}`;
 }
 
-export function formatEvidenceAllowance(count: number): string {
-  return `${count.toLocaleString()} Evidence API submission${count === 1 ? "" : "s"}/mo`;
+export function formatProofOfWorkAllowance(count: number): string {
+  return `${count.toLocaleString()} Proof-of-Work API submission${count === 1 ? "" : "s"}/mo`;
 }
 
 export function formatVolumeTierLabel(tier: VolumeTier): string {
-  const evidence = tier.blocks * EVIDENCE_SUBMISSIONS_PER_SESSION;
-  return `${formatSessionAllowance(tier.blocks)}/mo · ${formatEvidenceAllowance(evidence)} · ${tier.workspaces} workspace${tier.workspaces === 1 ? "" : "s"}`;
+  const proofOfWorkSubmissions = tier.blocks * PROOF_OF_WORK_SUBMISSIONS_PER_SESSION;
+  return `${formatSessionAllowance(tier.blocks)}/mo · ${formatProofOfWorkAllowance(proofOfWorkSubmissions)} · ${tier.workspaces} workspace${tier.workspaces === 1 ? "" : "s"}`;
 }
 
 function findVolumeTier(priceType: string, blocks: number): VolumeTier | null {
@@ -273,6 +273,32 @@ export interface UserProfile {
   token_validity_expires_at: string | null;
 }
 
+export type ProductAccessProfile = Pick<
+  UserProfile,
+  "plan" | "subscription_status" | "is_admin" | "token_tier" | "token_validity_expires_at"
+> & {
+  organization_id?: string | null;
+};
+
+const PAID_PRODUCT_PLANS = new Set<PlanId>(["regular_2026", "pro_teams", "regular", "pro"]);
+
+/** True when the user may use the product (paid plan, org member, token tier, or admin). */
+export function hasProductAccess(profile: ProductAccessProfile | null | undefined): boolean {
+  if (!profile) return false;
+  if (profile.is_admin) return true;
+  if (profile.organization_id) return true;
+
+  const isTokenValid =
+    profile.token_tier &&
+    (profile.token_validity_expires_at === null ||
+      new Date(profile.token_validity_expires_at) > new Date());
+  if (isTokenValid) return true;
+
+  if (profile.subscription_status !== "active") return false;
+
+  return PAID_PRODUCT_PLANS.has(profile.plan);
+}
+
 export interface OrgUsageSummary {
   id: string;
   name: string;
@@ -281,8 +307,8 @@ export interface OrgUsageSummary {
   guestCount: number;
   used: number;
   limit: number | null;
-  evidenceUsed?: number;
-  evidenceLimit?: number | null;
+  proofOfWorkUsed?: number;
+  proofOfWorkLimit?: number | null;
 }
 
 export interface UsageCheckResult {
@@ -297,7 +323,7 @@ export interface UsageCheckResult {
   organization?: OrgUsageSummary | null;
 }
 
-export interface EvidenceCheckResult {
+export interface ProofOfWorkCheckResult {
   allowed: boolean;
   reason?: string;
   plan: PlanId;
@@ -440,36 +466,36 @@ export function getSessionAllowance(
 }
 
 /**
- * Check whether a user can submit another Evidence API artifact this billing period.
+ * Check whether a user can submit another Proof-of-Work API artifact this billing period.
  */
-export function canSubmitEvidence(
+export function canSubmitProofOfWork(
   profile: UserProfile,
-  evidenceCount: number,
+  proofOfWorkCount: number,
   sessionAllowance: number | null
-): EvidenceCheckResult {
+): ProofOfWorkCheckResult {
   const { plan, is_admin } = profile;
 
   if (is_admin) {
-    return { allowed: true, plan, used: evidenceCount, limit: null, isAdmin: true };
+    return { allowed: true, plan, used: proofOfWorkCount, limit: null, isAdmin: true };
   }
 
-  const evidenceLimit = evidenceLimitForSessionAllowance(plan, sessionAllowance);
-  if (evidenceLimit === null) {
-    return { allowed: true, plan, used: evidenceCount, limit: null, isAdmin: false };
+  const proofOfWorkLimit = proofOfWorkLimitForSessionAllowance(plan, sessionAllowance);
+  if (proofOfWorkLimit === null) {
+    return { allowed: true, plan, used: proofOfWorkCount, limit: null, isAdmin: false };
   }
 
-  if (evidenceCount >= evidenceLimit) {
+  if (proofOfWorkCount >= proofOfWorkLimit) {
     return {
       allowed: false,
-      reason: `You've used all ${evidenceLimit} Evidence API submissions this month. Upgrade your plan or wait for the next billing period.`,
+      reason: `You've used all ${proofOfWorkLimit} Proof-of-Work API submissions this month. Upgrade your plan or wait for the next billing period.`,
       plan,
-      used: evidenceCount,
-      limit: evidenceLimit,
+      used: proofOfWorkCount,
+      limit: proofOfWorkLimit,
       isAdmin: false,
     };
   }
 
-  return { allowed: true, plan, used: evidenceCount, limit: evidenceLimit, isAdmin: false };
+  return { allowed: true, plan, used: proofOfWorkCount, limit: proofOfWorkLimit, isAdmin: false };
 }
 
 /**

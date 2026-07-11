@@ -39,7 +39,7 @@ const patches = {
       performanceSectionsAriaLabel: "Leistungsansichten",
       performanceScoreTitle: "Arbeitsbereich-Bewertung",
       performanceScoreHint:
-        "Erzeuge eine Scorecard aus Sitzungen, TAP-Blöcken und hochgeladener Evidenz, derselbe Vertrag wie der Evidence-API-Performance-Report.",
+        "Erzeuge eine Scorecard aus Sitzungen, TAP-Blöcken und hochgeladener Evidenz, derselbe Vertrag wie der Proof-of-Work-API-Performance-Report.",
       performanceScoreGenerate: "Bewertung erzeugen",
       performanceScoreGenerating: "Wird erzeugt…",
       performanceChatTitle: "Leistungs-Chat",
@@ -143,7 +143,7 @@ const patches = {
       performanceSectionsAriaLabel: "Vistas de rendimiento",
       performanceScoreTitle: "Puntuación del espacio",
       performanceScoreHint:
-        "Genera una tarjeta de puntuación a partir de sesiones, bloques TAP y evidencia subida, el mismo contrato que el informe de rendimiento de Evidence API.",
+        "Genera una tarjeta de puntuación a partir de sesiones, bloques TAP y evidencia subida, el mismo contrato que el informe de rendimiento de Proof-of-Work API.",
       performanceScoreGenerate: "Generar puntuación",
       performanceScoreGenerating: "Generando…",
       performanceChatTitle: "Chat de rendimiento",
@@ -247,7 +247,7 @@ const patches = {
       performanceSectionsAriaLabel: "Widoki wydajności",
       performanceScoreTitle: "Wynik przestrzeni",
       performanceScoreHint:
-        "Wygeneruj kartę wyników z sesji, bloków TAP i przesłanych dowodów, ten sam kontrakt co raport wydajności Evidence API.",
+        "Wygeneruj kartę wyników z sesji, bloków TAP i przesłanych dowodów, ten sam kontrakt co raport wydajności Proof-of-Work API.",
       performanceScoreGenerate: "Generuj wynik",
       performanceScoreGenerating: "Generowanie…",
       performanceChatTitle: "Czat wydajności",
@@ -346,7 +346,7 @@ const patches = {
       performanceSectionsAriaLabel: "表现视图",
       performanceScoreTitle: "工作区评分",
       performanceScoreHint:
-        "根据会话、TAP 区块和上传的证据生成评分卡，与 Evidence API 性能报告相同的契约。",
+        "根据会话、TAP 区块和上传的证据生成评分卡，与 Proof-of-Work API 性能报告相同的契约。",
       performanceScoreGenerate: "生成评分",
       performanceScoreGenerating: "生成中…",
       performanceChatTitle: "表现聊天",
@@ -446,7 +446,7 @@ const patches = {
       performanceSectionsAriaLabel: "Các chế độ xem hiệu suất",
       performanceScoreTitle: "Điểm không gian làm việc",
       performanceScoreHint:
-        "Tạo thẻ điểm từ phiên, khối TAP và bằng chứng đã tải lên, cùng hợp đồng với báo cáo hiệu suất Evidence API.",
+        "Tạo thẻ điểm từ phiên, khối TAP và bằng chứng đã tải lên, cùng hợp đồng với báo cáo hiệu suất Proof-of-Work API.",
       performanceScoreGenerate: "Tạo điểm",
       performanceScoreGenerating: "Đang tạo…",
       performanceChatTitle: "Trò chuyện hiệu suất",

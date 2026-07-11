@@ -67,7 +67,7 @@ export default function UserDetailPage() {
   const [plans, setPlans] = useState<Plan[]>([]);
   
   const [lessonPage, setLessonPage] = useState(1);
-  const [planPage, setPlanPage] = useState(1);
+  const [workspacePage, setPlanPage] = useState(1);
   const [audioFilter, setAudioFilter] = useState<"all" | "yes" | "no">("all");
   const [transcriptFilter, setTranscriptFilter] = useState<"all" | "yes" | "no">("all");
   const [eegFilter, setEegFilter] = useState<"all" | "yes" | "no">("all");
@@ -140,7 +140,7 @@ export default function UserDetailPage() {
 
   const PLAN_PAGE_SIZE = 10;
   const planTotalPages = Math.ceil(plans.length / PLAN_PAGE_SIZE);
-  const paginatedPlans = plans.slice((planPage - 1) * PLAN_PAGE_SIZE, planPage * PLAN_PAGE_SIZE);
+  const paginatedPlans = plans.slice((workspacePage - 1) * PLAN_PAGE_SIZE, workspacePage * PLAN_PAGE_SIZE);
 
   const applyTierChange = async (tier: AdminTierId) => {
     if (!user) return;
@@ -410,7 +410,7 @@ export default function UserDetailPage() {
             <React.Fragment>
               <div className="space-y-3">
                 {paginatedPlans.map((plan) => (
-                <Link key={plan.id} href={`/admin/plans/${plan.id}`} className="block p-3 bg-neutral-800/50 rounded-lg hover:bg-neutral-800/70 transition-colors">
+                <Link key={plan.id} href={`/admin/workspaces/${plan.id}`} className="block p-3 bg-neutral-800/50 rounded-lg hover:bg-neutral-800/70 transition-colors">
                   <div className="flex items-start justify-between mb-1">
                     <div className="text-sm text-neutral-200 line-clamp-1">{plan.root_topic}</div>
                     <span className={`ml-2 px-1.5 py-0.5 text-xs rounded ${getStatusColor(plan.status)}`}>
@@ -428,22 +428,22 @@ export default function UserDetailPage() {
               {planTotalPages > 1 && (
                 <div className="flex items-center justify-between mt-4 pt-4 border-t border-neutral-800">
                   <div className="text-xs text-neutral-500">
-                    {(planPage - 1) * PLAN_PAGE_SIZE + 1}-{Math.min(planPage * PLAN_PAGE_SIZE, plans.length)} of {plans.length}
+                    {(workspacePage - 1) * PLAN_PAGE_SIZE + 1}-{Math.min(workspacePage * PLAN_PAGE_SIZE, plans.length)} of {plans.length}
                   </div>
                   <div className="flex gap-2">
                     <button
                       onClick={() => setPlanPage(p => Math.max(1, p - 1))}
-                      disabled={planPage === 1}
+                      disabled={workspacePage === 1}
                       className="px-2 py-1 text-xs text-neutral-400 hover:text-white disabled:opacity-50"
                     >
                       ← Prev
                     </button>
                     <span className="px-2 py-1 text-xs text-neutral-500">
-                      {planPage} / {planTotalPages}
+                      {workspacePage} / {planTotalPages}
                     </span>
                     <button
                       onClick={() => setPlanPage(p => Math.min(planTotalPages, p + 1))}
-                      disabled={planPage === planTotalPages}
+                      disabled={workspacePage === planTotalPages}
                       className="px-2 py-1 text-xs text-neutral-400 hover:text-white disabled:opacity-50"
                     >
                       Next →

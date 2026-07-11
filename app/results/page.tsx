@@ -230,7 +230,7 @@ function ResultsContent() {
         }));
       }
 
-      const response = await fetch("/api/learning-plan/generate", {
+      const response = await fetch("/api/workspace/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
@@ -242,7 +242,7 @@ function ResultsContent() {
       }
       
       const data = await response.json();
-      router.push(`/workspace/${data.planId}`);
+      router.push(`/workspace/${data.workspaceId}`);
     } catch (err) {
       setPlanError(err instanceof Error ? err.message : t("planMode.somethingWrong"));
     } finally {
@@ -382,8 +382,8 @@ function ResultsContent() {
 
             {/* Generate Learning Plan Section */}
             <div className="rounded-xl border border-neutral-800 bg-neutral-900/50 p-4">
-              <h3 className="text-sm font-medium text-neutral-300 mb-1">{t('results.createLearningPlan')}</h3>
-              <p className="text-[11px] text-neutral-500 mb-3">{t('results.createLearningPlanDesc')}</p>
+              <h3 className="text-sm font-medium text-neutral-300 mb-1">{t('results.createWorkspace')}</h3>
+              <p className="text-[11px] text-neutral-500 mb-3">{t('results.createWorkspaceDesc')}</p>
               
               {/* AI Suggested Topic */}
               {(suggestingTopic || suggestedPlanTopic) && (
@@ -444,8 +444,8 @@ function ResultsContent() {
                       <path strokeLinecap="round" strokeLinejoin="round" d="M18.375 12.739l-7.693 7.693a4.5 4.5 0 01-6.364-6.364l10.94-10.94A3 3 0 1119.5 7.372L8.552 18.32m.009-.01l-.01.01m5.699-9.941l-7.81 7.81a1.5 1.5 0 002.112 2.13" />
                     </svg>
                     {attachedFiles.length > 0
-                      ? `${attachedFiles.length} ${attachedFiles.length === 1 ? t("planFiles.fileAttached") : t("planFiles.filesAttached")}`
-                      : t("planFiles.attachFiles")}
+                      ? `${attachedFiles.length} ${attachedFiles.length === 1 ? t("workspaceFiles.fileAttached") : t("workspaceFiles.filesAttached")}`
+                      : t("workspaceFiles.attachFiles")}
                   </button>
 
                   <div className="flex items-center gap-1.5">

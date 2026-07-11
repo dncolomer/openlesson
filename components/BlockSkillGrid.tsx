@@ -25,11 +25,11 @@ interface BlockSkillGridProps {
   selectedNodeId: string | null;
   /** Loaded / focused node (e.g. active chapter) — amber ring in chapter mode. */
   focusedNodeId?: string | null;
-  onSelectNode: (nodeId: string) => void;
+  onSelectNode: (blockId: string) => void;
   canEdit: boolean;
   showProgress?: boolean;
   isAdding?: boolean;
-  planId?: string;
+  workspaceId?: string;
   sessionId?: string;
   suggestMode?: "block" | "chapter";
   locale?: string;
@@ -84,7 +84,7 @@ export function BlockSkillGrid({
   canEdit,
   showProgress = true,
   isAdding = false,
-  planId,
+  workspaceId,
   sessionId,
   suggestMode = "block",
   locale = "en",
@@ -117,7 +117,7 @@ export function BlockSkillGrid({
   const nodesById = useMemo(() => new Map(nodes.map((node) => [node.id, node])), [nodes]);
   const { occupancy, placements, startCell } = useMemo(() => buildSkillGridLayout(nodes), [nodes]);
   const canSuggest =
-    suggestMode === "chapter" ? Boolean(sessionId) : Boolean(planId);
+    suggestMode === "chapter" ? Boolean(sessionId) : Boolean(workspaceId);
   const viewportCenterCell = recenterCell ?? startCell;
 
   const visibleCells = useMemo(
@@ -252,8 +252,8 @@ export function BlockSkillGrid({
   }, []);
 
   const handleCellSelect = useCallback(
-    (nodeId: string) => {
-      onSelectNode(nodeId);
+    (blockId: string) => {
+      onSelectNode(blockId);
     },
     [onSelectNode],
   );
@@ -292,11 +292,11 @@ export function BlockSkillGrid({
     setIsSuggesting(true);
     setSuggestError(null);
     try {
-      const response = await fetch("/api/learning-plan/suggest-blocks", {
+      const response = await fetch("/api/workspace/suggest-blocks", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          planId,
+          workspaceId,
           sessionId,
           mode: suggestMode,
           row: pendingCell.row,
@@ -328,7 +328,7 @@ export function BlockSkillGrid({
     locale,
     pendingCell,
     pendingWeightedNeighbors,
-    planId,
+    workspaceId,
     sessionId,
     suggestMode,
   ]);
@@ -384,8 +384,8 @@ export function BlockSkillGrid({
           }}
         >
           {visibleCells.map((cell) => {
-            const nodeId = occupancy.get(`${cell.row}:${cell.col}`);
-            const node = nodeId ? nodesById.get(nodeId) : undefined;
+            const blockId = occupancy.get(`${cell.row}:${cell.col}`);
+            const node = blockId ? nodesById.get(blockId) : undefined;
             const nodeCell = node ? placements.get(node.id) : null;
 
             return (

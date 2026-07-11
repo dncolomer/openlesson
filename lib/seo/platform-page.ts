@@ -41,15 +41,15 @@ export const PLATFORM_PAGE: SeoPlatformPageConfig = {
   eyebrow: "Knowledge Workspace",
   h1: "Verify and augment learning where knowledge work happens.",
   intro:
-    "openLesson is a knowledge workspace with software tools that verify learning through evidence, proof of work, and cognitive analysis — then augment it with targeted practice. Humans and AI agents perform real work inside the workspace; openLesson scores whether they actually learned, and routes gaps into improvement loops.",
+    "openLesson is a knowledge workspace with software tools that verify learning through proof of work, proof of work, and cognitive analysis — then augment it with targeted practice. Humans and AI agents perform real work inside the workspace; openLesson scores whether they actually learned, and routes gaps into improvement loops.",
   metaTitle: "Knowledge Workspace: Learning Efficiency for Humans & Agents",
   metaDescription:
-    "A knowledge workspace that measures learning efficiency from evidence and augments gaps with practice. Evidence API, Think Aloud Protocol, ILE, and ALE for humans and agents.",
+    "A knowledge workspace that measures learning efficiency from proof of work and augments gaps with practice. Proof-of-Work API, Think Aloud Protocol, ILE, and ALE for humans and agents.",
   keywords: [
     "knowledge workspace",
     "learning efficiency",
     "augmented learning",
-    "evidence API",
+    "Proof-of-Work API",
     "think aloud protocol",
     "integrated learning environment",
     "agentic learning environment",
@@ -62,14 +62,14 @@ export const PLATFORM_PAGE: SeoPlatformPageConfig = {
       title: "The knowledge workspace",
       paragraphs: [
         "A Verification Workspace is where knowledge work lives: skills, scenarios, and decision domains broken into assessable blocks on a learning graph. Documents, screen shares, tool traces, transcripts, and session artifacts accumulate as work happens.",
-        "Software tools run on top of that context — not beside it. Verification scores learning from evidence; augmentation routes gaps into practice. One workspace, continuous signal, auditable improvement.",
+        "Software tools run on top of that context — not beside it. Verification scores learning from proof of work; augmentation routes gaps into practice. One workspace, continuous signal, auditable improvement.",
       ],
     },
     {
-      title: "Verify: Evidence API",
+      title: "Verify: Proof-of-Work API",
       paragraphs: [
-        "The Evidence API is headless learning efficiency scoring for humans and agents. Send unstructured artifacts and tool traces; receive continuous readiness scores with severity-ranked gap analysis. No hosted session required.",
-        "Use it when work already produces evidence: agent tool traces, call transcripts, screen captures, documents. Verify skills and judgment before deploy gates or high-stakes handoffs — beyond benchmark pass rates and quiz completion.",
+        "The Proof-of-Work API is headless learning efficiency scoring for humans and agents. Send unstructured artifacts and tool traces; receive continuous readiness scores with severity-ranked gap analysis. No hosted session required.",
+        "Use it when work already produces proof_of_work: agent tool traces, call transcripts, screen captures, documents. Verify skills and judgment before deploy gates or high-stakes handoffs — beyond benchmark pass rates and quiz completion.",
       ],
     },
     {
@@ -83,27 +83,27 @@ export const PLATFORM_PAGE: SeoPlatformPageConfig = {
       title: "Augment: Integrated Learning Environment",
       paragraphs: [
         "The ILE is where humans improve after verification surfaces gaps. Guided practice, think-aloud sessions, Socratic follow-ups, and targeted blocks until scores move — all inside the same workspace context.",
-        "Augmentation is not a separate LMS. It is the improvement layer wired to verification findings, so practice targets what actually broke, with evidence of progress along the way.",
+        "Augmentation is not a separate LMS. It is the improvement layer wired to verification findings, so practice targets what actually broke, with proof of work of progress along the way.",
       ],
     },
     {
       title: "Augment: Agentic Learning Environment",
       paragraphs: [
-        "The Agentic Learning Environment (ALE) is where skill.md developers test and evolve agent skills against workspace scenarios. Run agents, inspect tool-use traces, and iterate on skill definitions until Evidence API scores clear your deploy bar.",
-        "ALE mirrors the ILE loop for the agentic side: verification surfaces gaps in tool use and reasoning; developers refine skills in a sandbox until learning evidence supports production deployment.",
+        "The Agentic Learning Environment (ALE) is where skill.md developers test and evolve agent skills against workspace scenarios. Run agents, inspect tool-use traces, and iterate on skill definitions until Proof-of-Work API scores clear your deploy bar.",
+        "ALE mirrors the ILE loop for the agentic side: verification surfaces gaps in tool use and reasoning; developers refine skills in a sandbox until learning proof of work supports production deployment.",
       ],
     },
     {
       title: "The verify-and-augment loop",
       paragraphs: [
-        "Pipe artifacts into Evidence API for continuous scoring. Issue Think Aloud Protocol links when you need live human cognition under probe. Route human gaps into the ILE. Evolve agent skills in ALE against the same workspace.",
-        "All tools share one knowledge graph, one scoring model, and one gap analysis. Verify learning, augment where it falls short, and prove improvement with auditable evidence at every step.",
+        "Pipe artifacts into Proof-of-Work API for continuous scoring. Issue Think Aloud Protocol links when you need live human cognition under probe. Route human gaps into the ILE. Evolve agent skills in ALE against the same workspace.",
+        "All tools share one knowledge graph, one scoring model, and one gap analysis. Verify learning, augment where it falls short, and prove improvement with auditable proof of work at every step.",
       ],
     },
     {
-      title: "Evidence API: programmatic workspace access",
+      title: "Proof-of-Work API: programmatic workspace access",
       paragraphs: [
-        "The Evidence API is how builders wire the knowledge workspace into their stack. Create workspaces, upload evidence, request performance reports, issue Think Aloud Protocol links, poll session results, and trigger ILE practice blocks.",
+        "The Proof-of-Work API is how builders wire the knowledge workspace into their stack. Create workspaces, upload proof of work, request performance reports, issue Think Aloud Protocol links, poll session results, and trigger ILE practice blocks.",
         "Embed verification and augmentation into CI pipelines, internal portals, agent orchestration, or any system where humans and agents perform knowledge work.",
       ],
     },
@@ -112,39 +112,39 @@ export const PLATFORM_PAGE: SeoPlatformPageConfig = {
     {
       question: "What is a knowledge workspace?",
       answer:
-        "A Verification Workspace structures real knowledge work into assessable blocks and accumulates evidence as humans and agents perform tasks. Software tools verify learning from that evidence and augment it with targeted practice — all in one place.",
+        "A Verification Workspace structures real knowledge work into assessable blocks and accumulates proof of work as humans and agents perform tasks. Software tools verify learning from that proof of work and augment it with targeted practice — all in one place.",
     },
     {
       question: "What software tools run in the workspace?",
       answer:
-        "Evidence API (headless verification from artifacts), Think Aloud Protocol (live human cognition under probe), the Integrated Learning Environment (human practice and improvement), and the Agentic Learning Environment (agent skill iteration for skill.md developers).",
+        "Proof-of-Work API (headless verification from artifacts), Think Aloud Protocol (live human cognition under probe), the Integrated Learning Environment (human practice and improvement), and the Agentic Learning Environment (agent skill iteration for skill.md developers).",
     },
     {
-      question: "When should I use Evidence API vs. Think Aloud Protocol?",
+      question: "When should I use Proof-of-Work API vs. Think Aloud Protocol?",
       answer:
-        "Use Evidence API when you have artifacts or tool traces and want continuous scoring without a hosted session. Use Think Aloud Protocol when you need live human reasoning under Socratic probe — the signal hidden behind AI-assisted deliverables.",
+        "Use Proof-of-Work API when you have artifacts or tool traces and want continuous scoring without a hosted session. Use Think Aloud Protocol when you need live human reasoning under Socratic probe — the signal hidden behind AI-assisted deliverables.",
     },
     {
       question: "How does augmentation connect to verification?",
       answer:
-        "Gap findings from Evidence API or Think Aloud Protocol route directly into ILE practice blocks or ALE skill iterations. Augmentation targets specific failures verification surfaced — not generic content libraries.",
+        "Gap findings from Proof-of-Work API or Think Aloud Protocol route directly into ILE practice blocks or ALE skill iterations. Augmentation targets specific failures verification surfaced — not generic content libraries.",
     },
     {
-      question: "What evidence can a workspace accumulate?",
+      question: "What proof of work can a workspace accumulate?",
       answer:
-        "Documents, screen recordings, video, EEG traces, call transcripts, tool traces, think-aloud transcripts, and any artifact produced during knowledge work. Enrich programmatically via the Evidence API or manual upload.",
+        "Documents, screen recordings, video, EEG traces, call transcripts, tool traces, think-aloud transcripts, and any artifact produced during knowledge work. Enrich programmatically via the Proof-of-Work API or manual upload.",
     },
     {
       question: "Who is openLesson for?",
       answer:
-        "Teams where humans and AI agents perform knowledge work and need to verify learning with evidence — then augment it when gaps appear. Builders embedding verification and practice tools via API.",
+        "Teams where humans and AI agents perform knowledge work and need to verify learning with proof of work — then augment it when gaps appear. Builders embedding verification and practice tools via API.",
     },
   ],
   primaryCta: { label: "Create a Verification Workspace", href: "/workspace/new" },
-  secondaryCta: { label: "Evidence API docs", href: "/docs/agentic-v2" },
+  secondaryCta: { label: "Proof-of-Work API docs", href: "/docs/agentic-v2" },
   closingTitle: "Verify learning. Augment where it breaks.",
   closingBody:
-    "Stop trusting outputs and completion rates. Use software tools in a knowledge workspace to verify learning with evidence, and augment it until scores move.",
+    "Stop trusting outputs and completion rates. Use software tools in a knowledge workspace to verify learning with proof of work, and augment it until scores move.",
 };
 
 export function platformMetadata(page: SeoPlatformPageConfig): Metadata {

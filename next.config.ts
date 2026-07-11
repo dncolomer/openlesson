@@ -22,6 +22,11 @@ const nextConfig: NextConfig = {
       { source: "/certify", destination: "/platform", permanent: true },
       { source: "/solutions", destination: "/platform", permanent: true },
       { source: "/solutions/:path*", destination: "/platform", permanent: true },
+      { source: "/prompts", destination: "/admin/prompts", permanent: false },
+      { source: "/plan/:id", destination: "/workspace/:id", permanent: true },
+      { source: "/plans", destination: "/workspaces", permanent: true },
+      { source: "/admin/plans", destination: "/admin/workspaces", permanent: true },
+      { source: "/admin/plans/:id", destination: "/admin/workspaces/:id", permanent: true },
     ];
   },
   images: {

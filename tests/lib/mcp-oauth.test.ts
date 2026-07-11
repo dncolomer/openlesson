@@ -3,7 +3,7 @@ import {
   buildAuthorizationServerMetadata,
   buildProtectedResourceMetadata,
 } from "@/lib/agent-v2/mcp-oauth/metadata";
-import { buildMcpOAuthDiscovery } from "@/lib/agent-v2/mcp-evidence-catalog";
+import { buildMcpOAuthDiscovery } from "@/lib/agent-v2/mcp-proof-of-work-catalog";
 import { verifyPkceChallenge } from "@/lib/agent-v2/mcp-oauth/crypto";
 import { parseRequestedScopes } from "@/lib/agent-v2/mcp-oauth/config";
 import crypto from "crypto";

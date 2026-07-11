@@ -2,13 +2,14 @@ import { describe, expect, it } from "vitest";
 import {
   canCreateWorkspace,
   canStartSession,
-  canSubmitEvidence,
-  evidenceLimitForSessionAllowance,
+  canSubmitProofOfWork,
+  proofOfWorkLimitForSessionAllowance,
   formatExtraBlockPrice,
   formatPlanMonthlyPrice,
   getExtraBlockPriceCents,
   getWorkspaceLimit,
   hasAgentApiKeyPlan,
+  hasProductAccess,
   resolveCheckoutVolume,
   resolveCheckoutWorkspaceVolume,
   REGULAR_VOLUME_PRICES,
@@ -122,19 +123,82 @@ describe("plans evidence limits", () => {
   };
 
   it("derives evidence caps from session allowance", () => {
-    expect(evidenceLimitForSessionAllowance("free", 5)).toBe(25);
-    expect(evidenceLimitForSessionAllowance("regular_2026", 25)).toBe(100);
-    expect(evidenceLimitForSessionAllowance("pro", null)).toBeNull();
+    expect(proofOfWorkLimitForSessionAllowance("free", 5)).toBe(25);
+    expect(proofOfWorkLimitForSessionAllowance("regular_2026", 25)).toBe(100);
+    expect(proofOfWorkLimitForSessionAllowance("pro", null)).toBeNull();
   });
 
   it("blocks evidence submissions at monthly cap", () => {
-    const result = canSubmitEvidence(
+    const result = canSubmitProofOfWork(
       { ...baseProfile, plan: "regular_2026" },
       100,
       25
     );
     expect(result.allowed).toBe(false);
     expect(result.limit).toBe(100);
+  });
+});
+
+describe("product access", () => {
+  it("requires an active paid plan for new users", () => {
+    expect(
+      hasProductAccess({
+        plan: "free",
+        subscription_status: "inactive",
+        is_admin: false,
+        token_tier: null,
+        token_validity_expires_at: null,
+      })
+    ).toBe(false);
+    expect(
+      hasProductAccess({
+        plan: "regular_2026",
+        subscription_status: "active",
+        is_admin: false,
+        token_tier: null,
+        token_validity_expires_at: null,
+      })
+    ).toBe(true);
+    expect(
+      hasProductAccess({
+        plan: "pro_teams",
+        subscription_status: "active",
+        is_admin: false,
+        token_tier: null,
+        token_validity_expires_at: null,
+      })
+    ).toBe(true);
+  });
+
+  it("allows admins, org members, and valid token tiers", () => {
+    expect(
+      hasProductAccess({
+        plan: "free",
+        subscription_status: "inactive",
+        is_admin: true,
+        token_tier: null,
+        token_validity_expires_at: null,
+      })
+    ).toBe(true);
+    expect(
+      hasProductAccess({
+        plan: "free",
+        subscription_status: "inactive",
+        is_admin: false,
+        organization_id: "org-1",
+        token_tier: null,
+        token_validity_expires_at: null,
+      })
+    ).toBe(true);
+    expect(
+      hasProductAccess({
+        plan: "free",
+        subscription_status: "inactive",
+        is_admin: false,
+        token_tier: "pro",
+        token_validity_expires_at: "2099-01-01T00:00:00.000Z",
+      })
+    ).toBe(true);
   });
 });
 

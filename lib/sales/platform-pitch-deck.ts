@@ -9,7 +9,7 @@ export const PLATFORM_PITCH_DECK: SolutionSlideDeck = {
       kicker: "openLesson · Learning Verification",
       title: "Beyond benchmarks for AI. Beyond tests for humans.",
       subtitle:
-        "Verify learning through evidence, proof of work, and cognitive analysis for people as well as AI agents performing knowledge work.",
+        "Verify learning through proof of work, and cognitive analysis for people as well as AI agents performing knowledge work.",
     },
     {
       layout: "statement",
@@ -42,7 +42,7 @@ export const PLATFORM_PITCH_DECK: SolutionSlideDeck = {
       left: {
         label: "Our focus: learning verification",
         items: [
-          "Evidence API verifies humans and agents from artifacts and tool traces",
+          "Proof-of-Work API verifies humans and agents from artifacts and tool traces",
           "Think Aloud Protocol captures live human cognition under probe",
           "ILE serves human learning; ALE helps skill.md developers evolve agent skills",
           "No exam. No benchmark theater.",
@@ -53,7 +53,7 @@ export const PLATFORM_PITCH_DECK: SolutionSlideDeck = {
         items: [
           "Humans: did they learn enough to activate, adopt, and convert?",
           "Agents: did they learn enough to deploy and perform in production?",
-          "Evidence tied to outcomes, not vanity completion or benchmark scores",
+          "Proof of work tied to outcomes, not vanity completion or benchmark scores",
           "Verify learning, then close the gaps when scores fall short",
         ],
       },
@@ -63,17 +63,17 @@ export const PLATFORM_PITCH_DECK: SolutionSlideDeck = {
       kicker: "The platform",
       title: "Four products. One Verification Workspace.",
       subtitle:
-        "Everything runs on Verification Workspaces: structured environments you create and enrich with documents, tool traces, screen shares, video, and any evidence from humans or agents.",
+        "Everything runs on Verification Workspaces: structured environments you create and enrich with documents, tool traces, screen shares, video, and any proof of work from humans or agents.",
       bullets: [
         "Define skills, scenarios, and decision domains as assessable blocks",
-        "Ingest evidence via API or upload; context enriches continuously",
+        "Ingest proof of work via API or upload; context enriches continuously",
         "One workspace powers verification, scoring, gap analysis, and improvement",
       ],
     },
     {
       layout: "split",
       kicker: "Product 1",
-      title: "Evidence API",
+      title: "Proof-of-Work API",
       left: {
         label: "What it does",
         items: [
@@ -107,7 +107,7 @@ export const PLATFORM_PITCH_DECK: SolutionSlideDeck = {
         label: "Best when",
         items: [
           "AI assist makes polished output untrustworthy",
-          "You need evidence before a hire, promotion, or live customer moment",
+          "You need proof of work before a hire, promotion, or live customer moment",
           "You want auditable marker scores and gap reports, not a single pass/fail",
         ],
       },
@@ -121,7 +121,7 @@ export const PLATFORM_PITCH_DECK: SolutionSlideDeck = {
         items: [
           "Where humans improve after verification surfaces gaps",
           "Guided practice: think-aloud sessions, Socratic probes, scenario blocks",
-          "Track score movement with evidence at every step",
+          "Track score movement with proof of work at every step",
         ],
       },
       right: {
@@ -142,7 +142,7 @@ export const PLATFORM_PITCH_DECK: SolutionSlideDeck = {
         items: [
           "Where skill.md developers test and evolve agent skills",
           "Run agents against workspace scenarios with shared scoring",
-          "Iterate on skill definitions until Evidence API clears the deploy bar",
+          "Iterate on skill definitions until Proof-of-Work API clears the deploy bar",
         ],
       },
       right: {
@@ -159,10 +159,10 @@ export const PLATFORM_PITCH_DECK: SolutionSlideDeck = {
       kicker: "The loop",
       title: "Verify learning. Close the gaps.",
       bullets: [
-        "Pipe tool traces into Evidence API for human and agentic scoring",
+        "Pipe tool traces into Proof-of-Work API for human and agentic scoring",
         "Issue Think Aloud Protocol URLs for live human cognition under probe",
         "Route humans into the ILE to improve; use ALE to iterate agent skills",
-        "New evidence flows back: learning becomes measurable over time",
+        "New proof of work flows back: learning becomes measurable over time",
       ],
     },
     {
@@ -171,9 +171,9 @@ export const PLATFORM_PITCH_DECK: SolutionSlideDeck = {
       title: "Workspace → Verify → Improve",
       bullets: [
         "Create a Verification Workspace around the skill, scenario, or decision domain",
-        "Verify learning with Evidence API and/or Think Aloud Protocol",
+        "Verify learning with Proof-of-Work API and/or Think Aloud Protocol",
         "Get continuous marker scores, severity-ranked gaps, and auditable rationale",
-        "Close gaps in the ILE (humans) or ALE (agents) with evidence at every step",
+        "Close gaps in the ILE (humans) or ALE (agents) with proof of work at every step",
       ],
     },
     {
@@ -185,7 +185,7 @@ export const PLATFORM_PITCH_DECK: SolutionSlideDeck = {
         "Confirm humans learned how to use a workflow, not just clicked through training",
         "Detect hidden gaps before they show up in client work, incidents, or bad deploys",
         "Separate genuine human thinking from AI-fed interview polish and take-home fluff",
-        "Create auditable evidence for compliance, promotion, deploy gates, and high-stakes roles",
+        "Create auditable proof of work for compliance, promotion, deploy gates, and high-stakes roles",
         "Close gaps with ILE practice so verification leads to improvement, not just labels",
       ],
     },
@@ -195,11 +195,11 @@ export const PLATFORM_PITCH_DECK: SolutionSlideDeck = {
       title: "Verify humans and agents, not just their outputs.",
       bullets: [
         "Create your first Verification Workspace free",
-        "Start with Evidence API, Think Aloud Protocol, or both on one scenario",
+        "Start with Proof-of-Work API, Think Aloud Protocol, or both on one scenario",
         "Pilot one high-stakes motion: onboarding, deploy gate, hiring, or escalation",
       ],
       footnote:
-        "openlesson.academy · Evidence API · Think Aloud Protocol · ILE · Agentic Learning Environment",
+        "openlesson.academy · Proof-of-Work API · Think Aloud Protocol · ILE · Agentic Learning Environment",
     },
   ],
 };

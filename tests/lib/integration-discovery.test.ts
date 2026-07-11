@@ -18,27 +18,27 @@ describe("integration-discovery", () => {
 
   it("maps MCP tools to REST equivalents in continuous_evaluation_mcp", () => {
     const policy = buildContinuousEvaluationMcpPolicy("ws-1", "https://openlesson.academy", {
-      evidence_artifacts: 0,
+      proof_of_work_artifacts: 0,
       blocks: 3,
     });
-    expect(policy.evidence_spec.mcp_tool).toBe("generate_evidence_schema");
-    expect(policy.evidence_spec.rest_equivalent).toContain("/evidence-schema");
-    expect(policy.upload_evidence?.mcp_tool).toBe("upload_evidence");
+    expect(policy.proof_of_work_spec.mcp_tool).toBe("generate_proof_of_work_schema");
+    expect(policy.proof_of_work_spec.rest_equivalent).toContain("/proof-of-work-schema");
+    expect(policy.upload_proof_of_work?.mcp_tool).toBe("upload_proof_of_work");
     expect(policy.performance.mcp_tool).toBe("analyze_performance");
     expect(policy.progress_snapshot.mcp_tool).toBe("get_learning_progress");
   });
 
-  it("recommends schema before first upload and performance after evidence exists", () => {
+  it("recommends schema before first upload and performance after proof of work exists", () => {
     const cold = recommendIntegrationActions({
-      evidence_artifacts: 0,
+      proof_of_work_artifacts: 0,
       blocks: 2,
       tap_sessions: 0,
       has_conversion_goal: true,
     });
-    expect(cold.some((a) => a.mcp_tool === "generate_evidence_schema")).toBe(true);
+    expect(cold.some((a) => a.mcp_tool === "generate_proof_of_work_schema")).toBe(true);
 
     const warm = recommendIntegrationActions({
-      evidence_artifacts: 6,
+      proof_of_work_artifacts: 6,
       blocks: 2,
       tap_sessions: 0,
       has_conversion_goal: true,
@@ -47,12 +47,12 @@ describe("integration-discovery", () => {
     expect(warm.some((a) => a.rest_equivalent.includes("performance"))).toBe(true);
   });
 
-  it("serves MCP resource markdown for scope and evidence loop", () => {
+  it("serves MCP resource markdown for scope and proof-of-work loop", () => {
     const scope = buildMcpResourceContent("openlesson://integration-scope", "https://openlesson.academy");
     expect(scope).toContain("OpenLesson");
     expect(scope).toContain("REST");
 
-    const loop = buildMcpResourceContent("openlesson://evidence-loop", "https://openlesson.academy");
+    const loop = buildMcpResourceContent("openlesson://proof-of-work-loop", "https://openlesson.academy");
     expect(loop).toContain("get_learning_progress");
     expect(loop).toContain("continuous_evaluation_mcp");
   });

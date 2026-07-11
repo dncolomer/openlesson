@@ -19,8 +19,8 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const privateToken = body.privateToken ? String(body.privateToken) : "";
-    const planId = body.planId ? String(body.planId) : "";
-    const planNodeId = body.planNodeId ? String(body.planNodeId) : null;
+    const workspaceId = body.workspaceId ? String(body.workspaceId) : "";
+    const blockId = body.blockId ? String(body.blockId) : null;
     const focusSessionId = body.sessionId ? String(body.sessionId) : null;
     const ghlSessionId = String(body.ghlSessionId || "");
     const traceType = String(body.traceType || "") as GhlTraceType;
@@ -47,9 +47,9 @@ export async function POST(req: NextRequest) {
 
     const access = await resolveGhlSessionAccess({
       privateToken,
-      planId,
+      workspaceId,
       ghlSessionId,
-      planNodeId,
+      blockId,
       focusSessionId,
     });
     if ("error" in access) {
@@ -60,8 +60,8 @@ export async function POST(req: NextRequest) {
       traceType,
       action: action as GhlSystem1Action | GhlSystem2Action,
       ghlSessionId: access.ghlSessionId,
-      planId: access.planId,
-      planNodeId: planNodeId || access.planNodeId,
+      workspaceId: access.workspaceId,
+      blockId: blockId || access.blockId,
       focusSessionId: focusSessionId || access.focusSessionId,
       thoughtId,
       thoughtIds,
@@ -87,12 +87,12 @@ export async function POST(req: NextRequest) {
     };
 
     const { data: row, error } = await access.supabase
-      .from("workspace_evidence")
+      .from("workspace_proof_of_work")
       .insert({
-        plan_id: access.planId,
-        plan_node_id: planNodeId || access.planNodeId,
+        workspace_id: access.workspaceId,
+        block_id: blockId || access.blockId,
         session_id: focusSessionId || access.focusSessionId,
-        evidence_type: "tool",
+        proof_of_work_type: "tool",
         file_name: fileName,
         mime_type: "application/json",
         file_size: Buffer.byteLength(JSON.stringify(payload), "utf8"),

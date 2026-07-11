@@ -15,7 +15,7 @@ export async function GET() {
 
   const paymentRequirements = {
     plan: {
-      endpoint: "/api/agent/plan",
+      endpoint: "/api/agent/workspace",
       price: 50,
       currency: "usd",
       description: "Generate a learning plan",

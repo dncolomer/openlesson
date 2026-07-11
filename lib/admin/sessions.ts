@@ -1,46 +1,46 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-export async function findPlanNodeForSession(
+export async function findBlockForSession(
   adminClient: SupabaseClient,
   sessionId: string
 ) {
   const { data: directNode } = await adminClient
-    .from("plan_nodes")
-    .select("id, plan_id, title")
+    .from("blocks")
+    .select("id, workspace_id, title")
     .eq("session_id", sessionId)
     .maybeSingle();
 
   if (directNode) {
-    return loadPlanNodeContext(adminClient, directNode);
+    return loadBlockContext(adminClient, directNode);
   }
 
   const { data: link } = await adminClient
-    .from("plan_node_sessions")
-    .select("plan_node_id")
+    .from("block_sessions")
+    .select("block_id")
     .eq("session_id", sessionId)
     .limit(1)
     .maybeSingle();
 
-  if (!link?.plan_node_id) return null;
+  if (!link?.block_id) return null;
 
   const { data: linkedNode } = await adminClient
-    .from("plan_nodes")
-    .select("id, plan_id, title")
-    .eq("id", link.plan_node_id)
+    .from("blocks")
+    .select("id, workspace_id, title")
+    .eq("id", link.block_id)
     .maybeSingle();
 
   if (!linkedNode) return null;
-  return loadPlanNodeContext(adminClient, linkedNode);
+  return loadBlockContext(adminClient, linkedNode);
 }
 
-async function loadPlanNodeContext(
+async function loadBlockContext(
   adminClient: SupabaseClient,
-  nodeData: { id: string; plan_id: string; title: string }
+  nodeData: { id: string; workspace_id: string; title: string }
 ) {
   const { data: planData } = await adminClient
-    .from("learning_plans")
+    .from("workspaces")
     .select("id, title, root_topic")
-    .eq("id", nodeData.plan_id)
+    .eq("id", nodeData.workspace_id)
     .single();
 
   return {
@@ -55,7 +55,7 @@ export async function getTapSessionDetail(adminClient: SupabaseClient, sessionId
   const { data, error } = await adminClient
     .from("workspace_ghc_sessions")
     .select(
-      "id, plan_id, plan_node_id, user_id, guest_user_id, organization_id, status, created_at, completed_at, requested_duration_seconds, duration_seconds, overall_score, marker_scores, analysis, summary, mode"
+      "id, workspace_id, block_id, user_id, guest_user_id, organization_id, status, created_at, completed_at, requested_duration_seconds, duration_seconds, overall_score, marker_scores, analysis, summary, mode"
     )
     .eq("id", sessionId)
     .maybeSingle();
@@ -63,26 +63,26 @@ export async function getTapSessionDetail(adminClient: SupabaseClient, sessionId
   if (error || !data) return null;
 
   let plan = null;
-  if (data.plan_id) {
+  if (data.workspace_id) {
     const { data: planData } = await adminClient
-      .from("learning_plans")
+      .from("workspaces")
       .select("id, title, root_topic")
-      .eq("id", data.plan_id)
+      .eq("id", data.workspace_id)
       .single();
     if (planData) {
       plan = { ...planData, display_topic: planData.title || planData.root_topic };
     }
   }
 
-  let planNode = null;
-  if (data.plan_node_id) {
+  let block = null;
+  if (data.block_id) {
     const { data: nodeData } = await adminClient
-      .from("plan_nodes")
-      .select("id, plan_id, title")
-      .eq("id", data.plan_node_id)
+      .from("blocks")
+      .select("id, workspace_id, title")
+      .eq("id", data.block_id)
       .maybeSingle();
     if (nodeData) {
-      planNode = nodeData;
+      block = nodeData;
     }
   }
 
@@ -99,7 +99,7 @@ export async function getTapSessionDetail(adminClient: SupabaseClient, sessionId
     kind: "tap" as const,
     session: data,
     plan,
-    planNode,
+    block,
     owner,
   };
 }

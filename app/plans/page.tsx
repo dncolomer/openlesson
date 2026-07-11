@@ -7,7 +7,7 @@ import { Navbar } from "@/components/Navbar";
 import Link from "next/link";
 import { useI18n } from "@/lib/i18n";
 
-interface LearningPlan {
+interface Workspace {
   id: string;
   title: string;
   root_topic: string;
@@ -18,7 +18,7 @@ interface LearningPlan {
 export default function PlansPage() {
   const router = useRouter();
   const { t } = useI18n();
-  const [plans, setPlans] = useState<LearningPlan[]>([]);
+  const [plans, setPlans] = useState<Workspace[]>([]);
   const [loading, setLoading] = useState(true);
   
   const supabase = createBrowserClient(
@@ -36,7 +36,7 @@ export default function PlansPage() {
       }
 
       const { data, error } = await supabase
-        .from("learning_plans")
+        .from("workspaces")
         .select("*")
         .eq("user_id", user.id)
         .neq("status", "archived")
@@ -51,16 +51,16 @@ export default function PlansPage() {
     loadPlans();
   }, [supabase, router]);
 
-  const handleArchive = async (planId: string) => {
+  const handleArchive = async (workspaceId: string) => {
     if (!confirm("Archive this workspace? It will be hidden from your list but data is preserved.")) {
       return;
     }
 
     try {
-      const res = await fetch(`/api/learning-plans/${planId}/archive`, { method: "POST" });
+      const res = await fetch(`/api/workspaces/${workspaceId}/archive`, { method: "POST" });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to archive");
-      setPlans((prev) => prev.filter((plan) => plan.id !== planId));
+      setPlans((prev) => prev.filter((plan) => plan.id !== workspaceId));
     } catch (err) {
       alert(err instanceof Error ? err.message : "Failed to archive workspace");
     }

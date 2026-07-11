@@ -4,8 +4,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import {
   canCreateWorkspace,
   canStartSession,
-  canSubmitEvidence,
-  evidenceLimitForSessionAllowance,
+  canSubmitProofOfWork,
+  proofOfWorkLimitForSessionAllowance,
   getSessionAllowance,
   PLANS,
   type OrgUsageSummary,
@@ -14,8 +14,8 @@ import {
 import {
   billingPeriodStart,
   countActiveWorkspaces,
-  countEvidenceSubmissions,
-  countOrgEvidenceSubmissions,
+  countProofOfWorkSubmissions,
+  countOrgProofOfWorkSubmissions,
   countOrgTapIleSessions,
   countTapIleSessions,
   loadUsageProfile,
@@ -91,8 +91,8 @@ export async function GET() {
 
     let sessionCount = await countTapIleSessions(supabase, user.id, periodStart);
     let personalSessionCount = sessionCount;
-    let personalEvidenceCount = await countEvidenceSubmissions(supabase, user.id, periodStart);
-    let evidenceCount = personalEvidenceCount;
+    let personalProofOfWorkCount = await countProofOfWorkSubmissions(supabase, user.id, periodStart);
+    let proofOfWorkCount = personalProofOfWorkCount;
 
     let organizationSummary: OrgUsageSummary | null = null;
 
@@ -106,7 +106,7 @@ export async function GET() {
 
       if (memberIds.length > 0) {
         sessionCount = await countOrgTapIleSessions(admin, memberIds, periodStart);
-        evidenceCount = await countOrgEvidenceSubmissions(admin, memberIds, periodStart);
+        proofOfWorkCount = await countOrgProofOfWorkSubmissions(admin, memberIds, periodStart);
       }
 
       const { data: organization } = await admin
@@ -131,8 +131,8 @@ export async function GET() {
         guestCount: guestCount ?? 0,
         used: sessionCount,
         limit: effectiveOrgLimit,
-        evidenceUsed: evidenceCount,
-        evidenceLimit: evidenceLimitForSessionAllowance("pro_teams", effectiveOrgLimit),
+        proofOfWorkUsed: proofOfWorkCount,
+        proofOfWorkLimit: proofOfWorkLimitForSessionAllowance("pro_teams", effectiveOrgLimit),
       };
     }
 
@@ -149,22 +149,22 @@ export async function GET() {
 
     const result = canStartSession(userProfile, sessionCount);
     const { limit: sessionAllowance } = getSessionAllowance(userProfile, sessionCount);
-    const evidenceResult = canSubmitEvidence(userProfile, evidenceCount, sessionAllowance);
+    const evidenceResult = canSubmitProofOfWork(userProfile, proofOfWorkCount, sessionAllowance);
     const workspaceCount = await countActiveWorkspaces(supabase, user.id);
     const workspaceResult = canCreateWorkspace(userProfile, workspaceCount);
 
-    const evidencePayload = {
-      evidenceUsed: evidenceCount,
-      evidencePersonalUsed: personalEvidenceCount,
-      evidenceLimit: evidenceResult.limit,
-      canSubmitEvidence: evidenceResult.allowed,
+    const proofOfWorkPayload = {
+      proofOfWorkUsed: proofOfWorkCount,
+      proofOfWorkPersonalUsed: personalProofOfWorkCount,
+      proofOfWorkLimit: evidenceResult.limit,
+      canSubmitProofOfWork: evidenceResult.allowed,
       evidenceReason: evidenceResult.reason,
     };
 
     if (profile.is_admin) {
       return NextResponse.json({
         ...result,
-        ...evidencePayload,
+        ...proofOfWorkPayload,
         allowed: true,
         reason: "Admin",
         limit: null,
@@ -174,14 +174,14 @@ export async function GET() {
         workspacesUsed: workspaceCount,
         workspacesLimit: null,
         canCreateWorkspace: true,
-        canSubmitEvidence: true,
-        evidenceLimit: null,
+        canSubmitProofOfWork: true,
+        proofOfWorkLimit: null,
       });
     }
 
     return NextResponse.json({
       ...result,
-      ...evidencePayload,
+      ...proofOfWorkPayload,
       personalUsed: personalSessionCount,
       organization: organizationSummary,
       workspacesUsed: workspaceCount,

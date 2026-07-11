@@ -34,7 +34,7 @@ export function sessionStepsToSkillGridNodes(steps: SessionPlanStep[]): SkillGri
     title: step.description,
     status: mapStepStatus(step.status),
     is_start: index === 0,
-    next_node_ids: index < sorted.length - 1 ? [sorted[index + 1].id] : [],
+    next_block_ids: index < sorted.length - 1 ? [sorted[index + 1].id] : [],
     position_x: step.position_x,
     position_y: step.position_y,
   }));

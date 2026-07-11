@@ -59,7 +59,7 @@ export async function createVerificationWorkspaceFromPrompt(
   const generated = await callXaiJSON<GeneratedWorkspace>(
     [
       userMessage(
-        `Create a performance learning workspace from this prompt. Break it into assessable blocks for learning verification and evidence-based gap analysis.\n\nPrompt:\n${initialPrompt}${fileContext}\n\nReturn ONLY JSON:\n{\n  "title": "concise workspace title",\n  "conversion_goal": "concise success/conversion outcome for this workspace",\n  "blocks": [\n    { "id": "a", "title": "Block title", "description": "What the learner should demonstrate", "is_start": true, "next": ["b"] }\n  ]\n}\n\nRules:\n- Create 3 to 6 blocks.\n- Blocks are assessable learning/performance units.\n- Use short stable ids only for linking within this response.${WORKSPACE_GENERATION_CONVERSION_GOAL_RULE}`
+        `Create a performance learning workspace from this prompt. Break it into assessable blocks for learning verification and proof-of-work-based gap analysis.\n\nPrompt:\n${initialPrompt}${fileContext}\n\nReturn ONLY JSON:\n{\n  "title": "concise workspace title",\n  "conversion_goal": "concise success/conversion outcome for this workspace",\n  "blocks": [\n    { "id": "a", "title": "Block title", "description": "What the learner should demonstrate", "is_start": true, "next": ["b"] }\n  ]\n}\n\nRules:\n- Create 3 to 6 blocks.\n- Blocks are assessable learning/performance units.\n- Use short stable ids only for linking within this response.${WORKSPACE_GENERATION_CONVERSION_GOAL_RULE}`
       ),
     ],
     { model: DEFAULT_MODEL, maxTokens: 1800, temperature: 0.3 }
@@ -97,7 +97,7 @@ export async function createVerificationWorkspaceFromPrompt(
     });
 
   const { data: workspace, error: workspaceError } = await supabase
-    .from("learning_plans")
+    .from("workspaces")
     .insert({
       user_id: ownerUserId,
       organization_id: auth.organization_id,
@@ -109,7 +109,7 @@ export async function createVerificationWorkspaceFromPrompt(
       notes: initialPrompt,
       description: workspaceDescription,
       conversion_goal: conversionGoal,
-      is_agent_session: options?.isAgentSession ?? true,
+      is_agent_workspace: options?.isAgentSession ?? true,
     })
     .select("id, title, root_topic, status, notes, description, conversion_goal, created_at, updated_at")
     .single();
@@ -122,13 +122,13 @@ export async function createVerificationWorkspaceFromPrompt(
   const blockIdMap = new Map<string, string>();
   for (const block of generated.data.blocks) {
     const { data: insertedBlock, error: blockError } = await supabase
-      .from("plan_nodes")
+      .from("blocks")
       .insert({
-        plan_id: workspace.id,
+        workspace_id: workspace.id,
         title: block.title,
         description: block.description || "",
         is_start: block.is_start === true,
-        next_node_ids: [],
+        next_block_ids: [],
         status: "available",
       })
       .select("id, title, description, is_start")
@@ -143,7 +143,7 @@ export async function createVerificationWorkspaceFromPrompt(
     if (!dbId || !Array.isArray(block.next)) continue;
     const nextIds = block.next.map((id) => blockIdMap.get(id)).filter((id): id is string => Boolean(id));
     if (nextIds.length) {
-      await supabase.from("plan_nodes").update({ next_node_ids: nextIds }).eq("id", dbId);
+      await supabase.from("blocks").update({ next_block_ids: nextIds }).eq("id", dbId);
     }
   }
 
@@ -154,9 +154,9 @@ export async function createVerificationWorkspaceFromPrompt(
     try {
       const xaiFile = await uploadFileToXAI(file.name, file.mime_type, file.data);
       const { data: fileRecord, error: fileError } = await supabase
-        .from("plan_files")
+        .from("workspace_files")
         .insert({
-          plan_id: workspace.id,
+          workspace_id: workspace.id,
           user_id: ownerUserId,
           file_name: file.name,
           file_size: Buffer.from(file.data, "base64").length,
@@ -172,9 +172,9 @@ export async function createVerificationWorkspaceFromPrompt(
   }
 
   const { data: blocks } = await supabase
-    .from("plan_nodes")
-    .select("id, title, description, is_start, next_node_ids, status, created_at")
-    .eq("plan_id", workspace.id)
+    .from("blocks")
+    .select("id, title, description, is_start, next_block_ids, status, created_at")
+    .eq("workspace_id", workspace.id)
     .order("created_at", { ascending: true });
 
   return { workspace, blocks: blocks || [], files: uploadedFiles };

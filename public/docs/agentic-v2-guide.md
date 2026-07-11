@@ -1,6 +1,6 @@
-# OpenLesson Evidence API
+# OpenLesson Proof-of-Work API
 
-The Evidence API exposes the performance-workspace workflow: create workspaces, upload evidence, analyze learning gaps, issue Think Aloud Protocol (TAP) links, and read results.
+The Proof-of-Work API exposes the performance-workspace workflow: create workspaces, upload proof of work, analyze learning gaps, issue Think Aloud Protocol (TAP) links, and read results.
 
 Base path: `/api/v2/agent`
 
@@ -12,16 +12,16 @@ Authenticate with `Authorization: Bearer <api_key>`.
 | :--- | :--- | :--- | :--- |
 | `POST` | `/workspaces` | `workspaces:write` | Create a Verification Workspace from an initial prompt and optional files. |
 | `GET` | `/workspaces/{workspace_id}/blocks` | `workspaces:read` | List available blocks in a workspace. |
-| `POST` | `/workspaces/{workspace_id}/evidence` | `workspaces:write` | Upload tool usage, screenshots, video, or EEG linked to workspace/block. |
+| `POST` | `/workspaces/{workspace_id}/proof-of-work` | `workspaces:write` | Upload tool usage, screenshots, video, or EEG linked to workspace/block. |
 | `POST` | `/workspaces/{workspace_id}/performance` | `workspaces:read` | Structured gap report or free-form performance Q&A. |
 | `POST` | `/workspaces/{workspace_id}/blocks/{block_id}/tap-links` | `tap:write` | Request a private TAP link for a block. Links open the TAP Score Session UI. |
 | `GET` | `/workspaces/{workspace_id}/tap-links` | `tap:read` | List existing TAP links and completion status. |
 | `GET` | `/workspaces/{workspace_id}/tap-links/{link_id}/results` | `tap:read` | Read completed TAP link results. Incomplete links return status with `null` result fields. |
 | `POST` | `/org/guests` | `org:write` | Organization admins create guest users by email and issue guest API keys. |
 
-## Upload Evidence
+## Upload Proof of Work
 
-`POST /api/v2/agent/workspaces/{workspace_id}/evidence`
+`POST /api/v2/agent/workspaces/{workspace_id}/proof-of-work`
 
 ```json
 {
@@ -87,4 +87,4 @@ Identified gaps can be routed into Integrated Learning Environment (ILE) practic
 
 ## Guests
 
-Org admins with `org:write` can call `POST /org/guests` to mint `gsk_` keys. Guests may create workspaces, upload evidence, run performance analysis on their own artifacts, and use TAP links.
+Org admins with `org:write` can call `POST /org/guests` to mint `gsk_` keys. Guests may create workspaces, upload proof of work, run performance analysis on their own artifacts, and use TAP links.

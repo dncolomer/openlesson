@@ -57,7 +57,7 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { plan_node_id, problem } = body;
+    const { block_id, problem } = body;
 
     if (!problem || typeof problem !== "string") {
       return NextResponse.json(
@@ -77,19 +77,19 @@ export async function POST(req: NextRequest) {
     //   }
     // }
 
-    let nodeTitle = problem;
-    let planId: string | null = null;
+    let blockTitle = problem;
+    let workspaceId: string | null = null;
 
-    if (plan_node_id) {
+    if (block_id) {
       const { data: node } = await supabase
-        .from("plan_nodes")
-        .select("id, title, plan_id, status")
-        .eq("id", plan_node_id)
+        .from("blocks")
+        .select("id, title, workspace_id, status")
+        .eq("id", block_id)
         .single();
 
       if (node) {
-        nodeTitle = node.title;
-        planId = node.plan_id;
+        blockTitle = node.title;
+        workspaceId = node.workspace_id;
       }
     }
 
@@ -99,11 +99,11 @@ export async function POST(req: NextRequest) {
         user_id: auth.user_id,
         problem,
         status: "active",
-        is_agent_session: true,
+        is_agent_workspace: true,
         metadata: {
-          plan_node_id: plan_node_id || null,
-          plan_id: planId,
-          node_title: nodeTitle,
+          block_id: block_id || null,
+          workspace_id: workspaceId,
+          block_title: blockTitle,
         },
       })
       .select()
@@ -120,8 +120,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       sessionId: session.id,
       problem,
-      nodeTitle,
-      planId,
+      blockTitle,
+      workspaceId,
       status: "active",
       price,
       currency: "usd",
@@ -149,7 +149,7 @@ export async function GET(req: NextRequest) {
     price,
     currency: "usd",
     required_params: ["problem"],
-    optional_params: ["plan_node_id", "x402_payment_id"],
+    optional_params: ["block_id", "x402_payment_id"],
     audio_required: false,
     usage: "Start a new tutoring session. Returns sessionId for audio submission.",
   });

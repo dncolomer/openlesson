@@ -86,9 +86,9 @@ async function checkProfiles(admin) {
 async function checkSchema(admin) {
   section("Schema preflight");
   for (const column of ["organization_id", "guest_user_id"]) {
-    const { error } = await admin.from("learning_plans").select(`id, ${column}`).limit(1);
-    if (error) fail(`learning_plans.${column}`, error.message);
-    else pass(`learning_plans.${column}`, "present");
+    const { error } = await admin.from("workspaces").select(`id, ${column}`).limit(1);
+    if (error) fail(`workspaces.${column}`, error.message);
+    else pass(`workspaces.${column}`, "present");
   }
 }
 

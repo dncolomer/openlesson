@@ -3,13 +3,13 @@ import {
   SIMULATION_ACTIONS,
   SIMULATION_CATEGORY_ORDER,
   applySimulationAction,
-  buildSimulationEvidencePayload,
-  countDistinctEvidenceActions,
+  buildSimulationProofOfWorkPayload,
+  countDistinctProofOfWorkActions,
   createInitialWorldState,
   getActionsByCategory,
   getDemoWorkspaceModelFile,
   shouldSuggestSkillRegeneration,
-} from "@/lib/evidence-api-demo/flowstack";
+} from "@/lib/openlesson-demo/flowstack";
 
 describe("flowstack simulation toolkit", () => {
   it("exposes non-linear categories including simulation tools", () => {
@@ -27,9 +27,9 @@ describe("flowstack simulation toolkit", () => {
     expect(next.actionCounts.wait_1_day).toBe(1);
   });
 
-  it("builds time-gap evidence payloads", () => {
+  it("builds time-gap proof-of-work payloads", () => {
     const waitWeek = SIMULATION_ACTIONS.find((action) => action.id === "wait_1_week")!;
-    const payload = buildSimulationEvidencePayload(waitWeek, {
+    const payload = buildSimulationProofOfWorkPayload(waitWeek, {
       sessionId: "session-1",
       worldState: createInitialWorldState(),
     });
@@ -43,7 +43,7 @@ describe("flowstack simulation toolkit", () => {
     });
   });
 
-  it("provides a demo workspace model file for plan_files upload", () => {
+  it("provides a demo workspace model file for workspace_files upload", () => {
     const file = getDemoWorkspaceModelFile();
     expect(file.name).toBe("nexusfront-eval-model.md");
     expect(file.mime_type).toBe("text/markdown");
@@ -63,7 +63,7 @@ describe("flowstack simulation toolkit", () => {
     state = applySimulationAction(state, found);
     state = applySimulationAction(state, wait);
 
-    expect(countDistinctEvidenceActions(state)).toBe(1);
+    expect(countDistinctProofOfWorkActions(state)).toBe(1);
     expect(shouldSuggestSkillRegeneration(3, null)).toBe(true);
     expect(shouldSuggestSkillRegeneration(4, 3)).toBe(false);
     expect(shouldSuggestSkillRegeneration(5, 3)).toBe(true);

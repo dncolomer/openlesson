@@ -276,7 +276,7 @@ export default function RabbitHolePage() {
     setMessage("Building your full OpenLesson workspace...");
     const res = await fetch("/api/rabbit-hole/continue", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ rootQuestion: root.question }) });
     const payload = await res.json();
-    if (payload.planId) router.push(`/workspace/${payload.planId}`);
+    if (payload.workspaceId) router.push(`/workspace/${payload.workspaceId}`);
     else {
       setMessage(payload.error || "Could not create the full lesson yet.");
       setContinuing(false);

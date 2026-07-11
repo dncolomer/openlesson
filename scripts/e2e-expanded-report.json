@@ -1,8 +1,8 @@
 {
-  "ran_at": "2026-06-23T01:03:32.573Z",
+  "ran_at": "2026-07-11T00:12:21.113Z",
   "base_url": "http://127.0.0.1:3000",
-  "total": 29,
-  "passed": 29,
+  "total": 43,
+  "passed": 43,
   "failed": 0,
   "failures": [],
   "all": [
@@ -34,7 +34,7 @@
       "area": "regular-web",
       "name": "POST /api/v2/agent/keys blocked (non-teams)",
       "ok": true,
-      "detail": "HTTP 403 The Agentic API requires the Teams tier."
+      "detail": "HTTP 403 The Proof-of-Work API requires the Teams tier."
     },
     {
       "area": "regular-web",
@@ -44,15 +44,15 @@
     },
     {
       "area": "regular-web",
-      "name": "POST /api/learning-plan/generate (workspace create)",
+      "name": "POST /api/workspace/generate (workspace create)",
       "ok": true,
-      "detail": "5abf1079-537d-4a87-b398-8245f14b82a8"
+      "detail": "8b553790-fcd3-4abb-aa63-778675aabe8b"
     },
     {
       "area": "regular-web",
       "name": "GET /workspace/{id} renders",
       "ok": true,
-      "detail": "HTTP 200 len=46702"
+      "detail": "HTTP 200 len=17830"
     },
     {
       "area": "regular-web",
@@ -68,7 +68,7 @@
     },
     {
       "area": "regular-web",
-      "name": "GET /api/workspace-ghl-score?planId=…",
+      "name": "GET /api/workspace-ghl-score?workspaceId=…",
       "ok": true,
       "detail": "HTTP 200 sessions=0"
     },
@@ -76,7 +76,7 @@
       "area": "teams-web",
       "name": "GET /api/check-usage (pro_teams, allowed)",
       "ok": true,
-      "detail": "plan=pro_teams limit=250 used=0"
+      "detail": "plan=pro_teams limit=250 used=14"
     },
     {
       "area": "teams-web",
@@ -88,19 +88,19 @@
       "area": "teams-web",
       "name": "GET /api/organization guests array present",
       "ok": true,
-      "detail": "guests=10"
+      "detail": "guests=19"
     },
     {
       "area": "teams-web",
       "name": "GET /api/v2/agent/keys (session auth)",
       "ok": true,
-      "detail": "HTTP 200 keys=5"
+      "detail": "HTTP 200 keys=10"
     },
     {
       "area": "teams-web",
       "name": "POST /api/v2/agent/keys (session auth)",
       "ok": true,
-      "detail": "201 sk_086823e34"
+      "detail": "403 You may have at most 10 active API keys. Revoke an existing key first."
     },
     {
       "area": "teams-web",
@@ -109,10 +109,28 @@
       "detail": "HTTP 200"
     },
     {
+      "area": "demo-api",
+      "name": "GET /api/demo/status (auth gate, not 404)",
+      "ok": true,
+      "detail": "HTTP 403"
+    },
+    {
+      "area": "demo-api",
+      "name": "POST /api/demo/proof-of-work-schema exists (not 404)",
+      "ok": true,
+      "detail": "HTTP 403"
+    },
+    {
+      "area": "demo-api",
+      "name": "legacy /api/demo/evidence absent",
+      "ok": true,
+      "detail": "HTTP 403"
+    },
+    {
       "area": "agent-api",
       "name": "POST /workspaces",
       "ok": true,
-      "detail": "f3736dbe-1115-457d-a22e-4dff9edde686"
+      "detail": "aba270ea-3079-4fc0-8394-a2bd4667cd4f"
     },
     {
       "area": "agent-api",
@@ -124,7 +142,37 @@
       "area": "mcp",
       "name": "tools/list",
       "ok": true,
-      "detail": "4 tools"
+      "detail": "12 tools"
+    },
+    {
+      "area": "proof-of-work",
+      "name": "MCP tools/list includes renamed proof-of-work tools",
+      "ok": true,
+      "detail": "generate_proof_of_work_schema, upload_proof_of_work"
+    },
+    {
+      "area": "proof-of-work",
+      "name": "MCP tools/list excludes legacy evidence tool names",
+      "ok": true,
+      "detail": "none"
+    },
+    {
+      "area": "proof-of-work",
+      "name": "POST legacy /evidence rejected",
+      "ok": true,
+      "detail": "HTTP 404"
+    },
+    {
+      "area": "proof-of-work",
+      "name": "POST /proof-of-work-schema responds (not 500)",
+      "ok": true,
+      "detail": "HTTP 200"
+    },
+    {
+      "area": "proof-of-work",
+      "name": "POST /proof-of-work routed (not 404/500)",
+      "ok": true,
+      "detail": "HTTP 201"
     },
     {
       "area": "mcp",
@@ -136,7 +184,7 @@
       "area": "agent-api",
       "name": "POST GHL link",
       "ok": true,
-      "detail": "174d0ead-9daf-4bc9-81db-bb2e811a7b47"
+      "detail": "66206cf7-4a32-4c67-96cb-154e7e66a8ed"
     },
     {
       "area": "ghl-flow",
@@ -148,19 +196,19 @@
       "area": "ghl-flow",
       "name": "POST /api/workspace-ghl-score/chat",
       "ok": true,
-      "detail": "reply len=128"
+      "detail": "reply len=196"
     },
     {
       "area": "ghl-flow",
       "name": "POST /api/workspace-ghl-score/complete",
       "ok": true,
-      "detail": "score=68"
+      "detail": "score=62"
     },
     {
       "area": "ghl-flow",
       "name": "GET /ghl-links/{id}/results (scores + markers)",
       "ok": true,
-      "detail": "score=68 markers=6"
+      "detail": "score=62 markers=6"
     },
     {
       "area": "mcp",
@@ -172,13 +220,49 @@
       "area": "agent-api",
       "name": "POST /org/guests",
       "ok": true,
-      "detail": "e2e-guest-auto+1782176603504@openlesson.academy"
+      "detail": "e2e-guest-auto+1783728718161@openlesson.academy"
     },
     {
       "area": "agent-api",
       "name": "guest key can create workspace",
       "ok": true,
-      "detail": "8ab026dc-6050-4d39-b889-c9a818ef5896"
+      "detail": "bbf715f7-993f-4bcf-8fba-e019d2c46c45"
+    },
+    {
+      "area": "agent-api",
+      "name": "guest key can list blocks",
+      "ok": true,
+      "detail": "5 blocks"
+    },
+    {
+      "area": "ghl-flow",
+      "name": "guest key can create GHL link",
+      "ok": true,
+      "detail": "443e0bf5-c8a5-4bd7-98ef-6d1a0975617e"
+    },
+    {
+      "area": "ghl-flow",
+      "name": "guest GHL private session page",
+      "ok": true,
+      "detail": "HTTP 200 len=30945"
+    },
+    {
+      "area": "ghl-flow",
+      "name": "guest GHL chat via private token",
+      "ok": true,
+      "detail": "reply len=229"
+    },
+    {
+      "area": "ghl-flow",
+      "name": "guest GHL complete via private token",
+      "ok": true,
+      "detail": "score=15"
+    },
+    {
+      "area": "ghl-flow",
+      "name": "guest key can fetch GHL results",
+      "ok": true,
+      "detail": "score=15"
     }
   ]
 }

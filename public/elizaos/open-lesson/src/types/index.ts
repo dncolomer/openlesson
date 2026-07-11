@@ -1,33 +1,33 @@
 // ── Plan types ──────────────────────────────────────────────────────────────
 
-export interface PlanNode {
+export interface Block {
   id: string;
   title: string;
   description: string;
   is_start: boolean;
-  next_node_ids: string[];
+  next_block_ids: string[];
   status: string;
 }
 
 export interface CreatePlanResponse {
-  plan_id: string;
+  workspace_id: string;
   topic: string;
   duration_days: number;
-  nodes: PlanNode[];
+  nodes: Block[];
 }
 
 export interface AdaptPlanResponse {
-  plan_id: string;
+  workspace_id: string;
   instruction: string;
-  nodes: PlanNode[];
+  nodes: Block[];
 }
 
 export interface CreatePlanFromVideoResponse {
-  plan_id: string;
+  workspace_id: string;
   youtube_url: string;
   topic: string;
   duration_days: number;
-  nodes: PlanNode[];
+  nodes: Block[];
 }
 
 // ── Session types ───────────────────────────────────────────────────────────
@@ -35,8 +35,8 @@ export interface CreatePlanFromVideoResponse {
 export interface StartSessionResponse {
   session_id: string;
   topic: string;
-  plan_id?: string;
-  plan_node_id?: string;
+  workspace_id?: string;
+  block_id?: string;
   status: string;
 }
 

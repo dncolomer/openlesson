@@ -48,7 +48,7 @@ export default function NewWorkspacePage() {
         return;
       }
 
-      const response = await fetch("/api/learning-plan/generate", {
+      const response = await fetch("/api/workspace/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -65,7 +65,7 @@ export default function NewWorkspacePage() {
 
       const payload = await response.json();
       trackWorkspaceCreated({ hasFiles: files.length > 0 });
-      router.push(`/workspace/${payload.planId}`);
+      router.push(`/workspace/${payload.workspaceId}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
     } finally {

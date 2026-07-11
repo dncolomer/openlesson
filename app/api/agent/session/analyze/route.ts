@@ -85,7 +85,7 @@ export async function POST(req: NextRequest) {
 
     const { data: session, error: sessionError } = await supabase
       .from("sessions")
-      .select("id, user_id, problem, is_agent_session, status, metadata")
+      .select("id, user_id, problem, is_agent_workspace, status, metadata")
       .eq("id", session_id)
       .single();
 
@@ -103,7 +103,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    if (!session.is_agent_session) {
+    if (!session.is_agent_workspace) {
       return NextResponse.json(
         { error: "This endpoint is for agent sessions only" },
         { status: 403 }

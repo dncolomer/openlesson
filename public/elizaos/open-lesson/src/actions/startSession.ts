@@ -17,7 +17,7 @@ export const startSessionAction: Action = {
     "OPEN_SESSION",
   ],
   description:
-    "Start a new tutoring session. Requires a topic; optionally linked to a plan via plan_id/plan_node_id. Sessions can be standalone.",
+    "Start a new tutoring session. Requires a topic; optionally linked to a plan via workspace_id/block_id. Sessions can be standalone.",
 
   validate: async (runtime: IAgentRuntime, _message: Memory) => {
     return !!runtime.getSetting("OPENLESSON_API_KEY");
@@ -47,22 +47,22 @@ export const startSessionAction: Action = {
     }
 
     // Optional plan linkage from state or message
-    const planIdMatch = text.match(/plan[_\s]?(?:id)?[:\s]*([a-zA-Z0-9_-]+)/i);
-    const planId =
-      planIdMatch?.[1] ??
-      (state as Record<string, unknown>)?.plan_id as string | undefined;
+    const workspaceIdMatch = text.match(/plan[_\s]?(?:id)?[:\s]*([a-zA-Z0-9_-]+)/i);
+    const workspaceId =
+      workspaceIdMatch?.[1] ??
+      (state as Record<string, unknown>)?.workspace_id as string | undefined;
 
-    const nodeIdMatch = text.match(
+    const blockIdMatch = text.match(
       /node[_\s]?(?:id)?[:\s]*([a-zA-Z0-9_-]+)/i
     );
-    const planNodeId =
-      nodeIdMatch?.[1] ??
-      (state as Record<string, unknown>)?.plan_node_id as string | undefined;
+    const blockId =
+      blockIdMatch?.[1] ??
+      (state as Record<string, unknown>)?.block_id as string | undefined;
 
     try {
       const body: Record<string, unknown> = { topic };
-      if (planId) body.plan_id = planId;
-      if (planNodeId) body.plan_node_id = planNodeId;
+      if (workspaceId) body.workspace_id = workspaceId;
+      if (blockId) body.block_id = blockId;
 
       const data = await apiRequest<StartSessionResponse>(
         runtime,

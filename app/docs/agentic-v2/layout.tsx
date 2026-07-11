@@ -1,10 +1,10 @@
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Evidence API Specification - OpenLesson",
-  description: "Comprehensive specification for the OpenLesson Evidence API, enabling external AI agents to measure learning efficiency from workspaces, evidence, and TAP sessions.",
+  title: "Proof-of-Work API Specification - OpenLesson",
+  description: "Comprehensive specification for the OpenLesson Proof-of-Work API, enabling external AI agents to measure learning efficiency from workspaces, evidence, and TAP sessions.",
   openGraph: {
-    title: "Evidence API Specification",
+    title: "Proof-of-Work API Specification",
     description: "Enable AI agents to create Verification Workspaces, issue Think Aloud Protocol (TAP) links, route ILE practice, and read learning efficiency results.",
     url: "https://openlesson.academy/docs/agentic-v2",
     siteName: "OpenLesson",

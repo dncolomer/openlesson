@@ -49,7 +49,7 @@ async function applyArchiveUpdate(
   const archivedAt = archived ? new Date().toISOString() : null;
 
   const withTimestamp = await supabase
-    .from("learning_plans")
+    .from("workspaces")
     .update({
       status: nextStatus,
       archived_at: archivedAt,
@@ -68,7 +68,7 @@ async function applyArchiveUpdate(
 
   if (isMissingArchivedAtColumn(withTimestamp.error)) {
     const statusOnly = await supabase
-      .from("learning_plans")
+      .from("workspaces")
       .update({ status: nextStatus })
       .eq("id", workspaceId)
       .eq("user_id", userId)
@@ -95,7 +95,7 @@ export async function setWorkspaceArchived(
   archived: boolean
 ): Promise<WorkspaceArchiveRow> {
   const { data: workspace, error: fetchError } = await supabase
-    .from("learning_plans")
+    .from("workspaces")
     .select("id, user_id, status, title, root_topic")
     .eq("id", workspaceId)
     .single();

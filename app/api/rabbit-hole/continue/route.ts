@@ -3,8 +3,8 @@ import { createClient } from "@/lib/supabase/server";
 import { callXaiJSON, DEFAULT_MODEL, userMessage } from "@/lib/xai-client";
 import { persistSkillGridPositions, skillGridNodesFromRefs } from "@/lib/skill-grid-positions";
 
-type PlanNode = { id: string; title: string; description: string; is_start: boolean; next?: string[] };
-type PlanData = { title: string; nodes: PlanNode[] };
+type Block = { id: string; title: string; description: string; is_start: boolean; next?: string[] };
+type PlanData = { title: string; nodes: Block[] };
 
 export async function POST(request: NextRequest) {
   const supabase = await createClient();
@@ -32,7 +32,7 @@ Rules:
 
   if (!result.success || !result.data?.nodes?.length) return NextResponse.json({ error: "Failed to create lesson" }, { status: 500 });
 
-  const { data: plan, error } = await supabase.from("learning_plans").insert({
+  const { data: plan, error } = await supabase.from("workspaces").insert({
     user_id: user.id,
     title: result.data.title || rootQuestion.slice(0, 80),
     root_topic: rootQuestion,
@@ -40,30 +40,30 @@ Rules:
   }).select("id").single();
   if (error || !plan) return NextResponse.json({ error: "Failed to create lesson" }, { status: 500 });
 
-  const nodeIdMap = new Map<string, string>();
+  const blockIdMap = new Map<string, string>();
   for (const nodeData of result.data.nodes) {
-    const { data: node } = await supabase.from("plan_nodes").insert({
-      plan_id: plan.id,
+    const { data: node } = await supabase.from("blocks").insert({
+      workspace_id: plan.id,
       title: nodeData.title,
       description: nodeData.description || "",
       is_start: nodeData.is_start,
-      next_node_ids: [],
+      next_block_ids: [],
       status: "available",
     }).select("id").single();
-    if (node) nodeIdMap.set(nodeData.id, node.id);
+    if (node) blockIdMap.set(nodeData.id, node.id);
   }
 
   for (const nodeData of result.data.nodes) {
-    const currentNodeId = nodeIdMap.get(nodeData.id);
+    const currentNodeId = blockIdMap.get(nodeData.id);
     if (!currentNodeId) continue;
-    const nextIds = (nodeData.next ?? []).map((id) => nodeIdMap.get(id)).filter(Boolean) as string[];
-    await supabase.from("plan_nodes").update({ next_node_ids: nextIds }).eq("id", currentNodeId);
+    const nextIds = (nodeData.next ?? []).map((id) => blockIdMap.get(id)).filter(Boolean) as string[];
+    await supabase.from("blocks").update({ next_block_ids: nextIds }).eq("id", currentNodeId);
   }
 
   await persistSkillGridPositions(
     supabase,
-    skillGridNodesFromRefs(result.data.nodes, nodeIdMap),
+    skillGridNodesFromRefs(result.data.nodes, blockIdMap),
   );
 
-  return NextResponse.json({ planId: plan.id });
+  return NextResponse.json({ workspaceId: plan.id });
 }

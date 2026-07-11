@@ -119,7 +119,7 @@ export interface Session {
   report?: string;
   reportGeneratedAt?: string;
   transcript?: string;
-  planTitle?: string;
+  workspaceTitle?: string;
   planningPrompt?: string; // Custom instructions for plan generation
   metadata: {
     observerMode?: ObserverMode;
@@ -129,7 +129,7 @@ export interface Session {
     notebookData?: string | null;
     tutoringLanguage?: string;
     autoAdvance?: boolean;
-    plan_id?: string;
+    workspace_id?: string;
   };
 }
 
@@ -152,7 +152,7 @@ function mapDbSession(s: any, probes: Probe[] = []): Session {
     report: s.report ?? undefined,
     reportGeneratedAt: s.report_generated_at ?? undefined,
     transcript: s.transcript ?? undefined,
-    planTitle: metadata.title ?? undefined,
+    workspaceTitle: metadata.title ?? undefined,
     planningPrompt: s.planning_prompt ?? undefined,
     metadata: metadata,
   };
@@ -178,7 +178,7 @@ function mapDbProbe(p: any): Probe {
 
 // ---- Session CRUD ----
 
-export async function createSession(problem: string, title?: string, planningPrompt?: string, tutoringLanguage?: string, planId?: string): Promise<Session> {
+export async function createSession(problem: string, title?: string, planningPrompt?: string, tutoringLanguage?: string, workspaceId?: string): Promise<Session> {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("Not authenticated");
@@ -186,7 +186,7 @@ export async function createSession(problem: string, title?: string, planningPro
   const metadata: Record<string, unknown> = {};
   if (title) metadata.title = title;
   if (tutoringLanguage) metadata.tutoringLanguage = tutoringLanguage;
-  if (planId) metadata.plan_id = planId;
+  if (workspaceId) metadata.workspace_id = workspaceId;
 
   const { data, error } = await supabase
     .from("sessions")
@@ -464,7 +464,7 @@ export async function resetSessionProbes(sessionId: string): Promise<void> {
 /**
  * Destructively restart a session: wipes probes, transcripts, plans,
  * EEG recordings, audio, and resets the session row to `active` while
- * preserving the original `problem`, `metadata.planTitle`, and ownership.
+ * preserving the original `problem`, `metadata.workspaceTitle`, and ownership.
  *
  * This is irreversible — the report, transcript, probes, and recordings
  * are permanently deleted. Callers should confirm with the user first.
@@ -1576,7 +1576,7 @@ function calculateAvgGap(sessions: { probes: { gap_score: number }[] }[]): numbe
 
 // ---- Learning Plans ----
 
-export interface LearningPlan {
+export interface Workspace {
   id: string;
   title: string;
   root_topic: string;
@@ -1586,7 +1586,7 @@ export interface LearningPlan {
   author_id?: string;
   author_username?: string;
   remix_count?: number;
-  original_plan_id?: string;
+  original_workspace_id?: string;
   // YouTube/source fields
   source_type?: "topic" | "youtube";
   source_url?: string;
@@ -1599,23 +1599,23 @@ export interface LearningPlan {
   is_group?: boolean;
 }
 
-export interface PlanNode {
+export interface Block {
   id: string;
-  plan_id: string;
+  workspace_id: string;
   title: string;
   description: string;
   is_start: boolean;
-  next_node_ids: string[];
+  next_block_ids: string[];
   status: "not_started" | "in_progress" | "completed";
 }
 
-export async function getLearningPlans(options?: { includeArchived?: boolean }): Promise<LearningPlan[]> {
+export async function getWorkspaces(options?: { includeArchived?: boolean }): Promise<Workspace[]> {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return [];
 
   let query = supabase
-    .from("learning_plans")
+    .from("workspaces")
     .select("*")
     .eq("user_id", user.id);
 
@@ -1635,7 +1635,7 @@ export async function getLearningPlans(options?: { includeArchived?: boolean }):
     is_public: p.is_public || false,
     author_id: p.author_id,
     remix_count: p.remix_count || 0,
-    original_plan_id: p.original_plan_id,
+    original_workspace_id: p.original_workspace_id,
     source_type: p.source_type,
     source_url: p.source_url,
     source_summary: p.source_summary,
@@ -1645,67 +1645,67 @@ export async function getLearningPlans(options?: { includeArchived?: boolean }):
   }));
 }
 
-export async function getPlanNodes(planId: string): Promise<PlanNode[]> {
+export async function getBlocks(workspaceId: string): Promise<Block[]> {
   const supabase = createClient();
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data } = await supabase
-    .from("plan_nodes")
+    .from("blocks")
     .select("*")
-    .eq("plan_id", planId);
+    .eq("workspace_id", workspaceId);
 
   return (data || []).map((n: any) => ({
     id: n.id,
-    plan_id: n.plan_id,
+    workspace_id: n.workspace_id,
     title: n.title,
     description: n.description || "",
     is_start: n.is_start || false,
-    next_node_ids: n.next_node_ids || [],
+    next_block_ids: n.next_block_ids || [],
     status: n.status || "not_started",
   }));
 }
 
-export async function getIncompleteNodes(): Promise<(PlanNode & { planTitle: string })[]> {
+export async function getIncompleteNodes(): Promise<(Block & { workspaceTitle: string })[]> {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return [];
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: plans } = await supabase
-    .from("learning_plans")
+    .from("workspaces")
     .select("id, root_topic")
     .eq("user_id", user.id)
     .eq("status", "active");
 
   if (!plans || plans.length === 0) return [];
 
-  const planIds = plans.map((p: any) => p.id);
-  const planTitles = new Map(plans.map((p: any) => [p.id, p.root_topic]));
+  const workspaceIds = plans.map((p: any) => p.id);
+  const workspaceTitles = new Map(plans.map((p: any) => [p.id, p.root_topic]));
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: nodes } = await supabase
-    .from("plan_nodes")
+    .from("blocks")
     .select("*")
-    .in("plan_id", planIds)
+    .in("workspace_id", workspaceIds)
     .in("status", ["not_started", "in_progress"]);
 
   return (nodes || []).map((n: any) => ({
     id: n.id,
-    plan_id: n.plan_id,
+    workspace_id: n.workspace_id,
     title: n.title,
     description: n.description || "",
     is_start: n.is_start || false,
-    next_node_ids: n.next_node_ids || [],
+    next_block_ids: n.next_block_ids || [],
     status: n.status || "not_started",
-    planTitle: planTitles.get(n.plan_id) || "",
+    workspaceTitle: workspaceTitles.get(n.workspace_id) || "",
   }));
 }
 
-export async function getPlanById(planId: string): Promise<LearningPlan | null> {
+export async function getWorkspaceById(workspaceId: string): Promise<Workspace | null> {
   const supabase = createClient();
 
   const { data } = await supabase
-    .from("learning_plans")
+    .from("workspaces")
     .select(`
       id,
       root_topic,
@@ -1715,14 +1715,14 @@ export async function getPlanById(planId: string): Promise<LearningPlan | null> 
       author_id,
       user_id,
       remix_count,
-      original_plan_id,
+      original_workspace_id,
       source_type,
       source_url,
       source_summary,
       notes,
       profiles:author_id (username)
     `)
-    .eq("id", planId)
+    .eq("id", workspaceId)
     .single();
 
   if (!data) return null;
@@ -1737,7 +1737,7 @@ export async function getPlanById(planId: string): Promise<LearningPlan | null> 
     author_id: data.author_id,
     author_username: data.profiles?.username || "anonymous",
     remix_count: data.remix_count || 0,
-    original_plan_id: data.original_plan_id,
+    original_workspace_id: data.original_workspace_id,
     source_type: data.source_type || "topic",
     source_url: data.source_url,
     source_summary: data.source_summary,
@@ -1745,15 +1745,15 @@ export async function getPlanById(planId: string): Promise<LearningPlan | null> 
   };
 }
 
-export async function updatePlanNotes(planId: string, notes: string): Promise<void> {
+export async function updatePlanNotes(workspaceId: string, notes: string): Promise<void> {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("Not authenticated");
 
   const { error } = await supabase
-    .from("learning_plans")
+    .from("workspaces")
     .update({ notes })
-    .eq("id", planId)
+    .eq("id", workspaceId)
     .eq("user_id", user.id);
 
   if (error) throw new Error("Failed to update plan notes: " + error.message);
@@ -1774,11 +1774,11 @@ export async function getUserById(userId: string): Promise<{ username: string } 
 export async function forkPlan(
   sourcePlanId: string,
   userId: string
-): Promise<{ planId: string; nodesCount: number }> {
+): Promise<{ workspaceId: string; nodesCount: number }> {
   const supabase = createClient();
 
   const { data: sourcePlan, error: planError } = await supabase
-    .from("learning_plans")
+    .from("workspaces")
     .select("*")
     .eq("id", sourcePlanId)
     .single();
@@ -1788,23 +1788,23 @@ export async function forkPlan(
   }
 
   const { data: sourceNodes, error: nodesError } = await supabase
-    .from("plan_nodes")
+    .from("blocks")
     .select("*")
-    .eq("plan_id", sourcePlanId);
+    .eq("workspace_id", sourcePlanId);
 
   if (nodesError) {
     throw new Error("Could not fetch source nodes");
   }
 
   const { data: newPlan, error: createError } = await supabase
-    .from("learning_plans")
+    .from("workspaces")
     .insert({
       user_id: userId,
       root_topic: sourcePlan.root_topic,
       status: "active",
       is_public: false,
       author_id: userId,
-      original_plan_id: sourcePlanId,
+      original_workspace_id: sourcePlanId,
     })
     .select()
     .single();
@@ -1813,26 +1813,26 @@ export async function forkPlan(
     throw new Error("Could not create new plan");
   }
 
-  const nodeIdMap = new Map<string, string>();
+  const blockIdMap = new Map<string, string>();
   const newNodes = sourceNodes.map((node: any) => {
     const newId = crypto.randomUUID();
-    nodeIdMap.set(node.id, newId);
+    blockIdMap.set(node.id, newId);
     return {
-      plan_id: newPlan.id,
+      workspace_id: newPlan.id,
       title: node.title,
       description: node.description,
       is_start: node.is_start,
-      next_node_ids: (node.next_node_ids || []).map((id: string) => nodeIdMap.get(id) || id),
+      next_block_ids: (node.next_block_ids || []).map((id: string) => blockIdMap.get(id) || id),
       status: "not_started",
       position_x: node.position_x,
       position_y: node.position_y,
     };
   });
 
-  const { error: insertError } = await supabase.from("plan_nodes").insert(newNodes);
+  const { error: insertError } = await supabase.from("blocks").insert(newNodes);
 
   if (insertError) {
-    await supabase.from("learning_plans").delete().eq("id", newPlan.id);
+    await supabase.from("workspaces").delete().eq("id", newPlan.id);
     throw new Error("Could not copy nodes");
   }
 
@@ -1841,24 +1841,24 @@ export async function forkPlan(
   });
 
   await supabase
-    .from("learning_plans")
+    .from("workspaces")
     .update({ remix_count: (sourcePlan.remix_count || 0) + 1 })
     .eq("id", sourcePlanId);
 
-  return { planId: newPlan.id, nodesCount: newNodes.length };
+  return { workspaceId: newPlan.id, nodesCount: newNodes.length };
 }
 
 export async function updatePlanVisibility(
-  planId: string,
+  workspaceId: string,
   userId: string,
   isPublic: boolean
 ): Promise<void> {
   const supabase = createClient();
 
   const { error } = await supabase
-    .from("learning_plans")
+    .from("workspaces")
     .update({ is_public: isPublic, author_id: userId })
-    .eq("id", planId)
+    .eq("id", workspaceId)
     .eq("user_id", userId);
 
   if (error) {
@@ -1933,7 +1933,7 @@ export async function getSessionPlan(
 }
 
 export async function updateSessionPlan(
-  planId: string,
+  workspaceId: string,
   updates: {
     goal?: string;
     strategy?: string;
@@ -1962,7 +1962,7 @@ export async function updateSessionPlan(
   const { data, error } = await supabase
     .from("session_plans")
     .update(updateData)
-    .eq("id", planId)
+    .eq("id", workspaceId)
     .select()
     .single();
 

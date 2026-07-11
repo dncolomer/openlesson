@@ -1,6 +1,6 @@
-# OpenLesson Evidence API
+# OpenLesson Proof-of-Work API
 
-Use this skill when an agent needs to create Verification Workspaces, issue private Think Aloud Protocol (TAP) links, and read completion results via the OpenLesson Evidence API.
+Use this skill when an agent needs to create Verification Workspaces, issue private Think Aloud Protocol (TAP) links, and read completion results via the OpenLesson Proof-of-Work API.
 
 **Human-readable spec:** `/docs/agentic-v2`  
 **Base URL:** `https://openlesson.academy` (or your self-hosted origin)
@@ -9,18 +9,18 @@ Use this skill when an agent needs to create Verification Workspaces, issue priv
 
 ## Scope
 
-The Evidence API supports **only** this workflow:
+The Proof-of-Work API supports **only** this workflow:
 
 1. Create a Verification Workspace from an `initial_prompt` and optional files.
 2. List blocks in that workspace.
-3. *(Optional)* Generate an ideal evidence input JSON schema (`POST .../evidence-schema`) or a custom integration `skill.md` (`POST .../integration-skill`) from workspace context.
-4. Upload performance evidence (tool usage, screenshots, video, EEG) to xAI storage, linked to the workspace and/or a block.
-5. Request learning and gap analysis over workspace evidence (free-form Q&A or structured report).
+3. *(Optional)* Generate an ideal proof-of-work input JSON schema (`POST .../proof-of-work-schema`) or a custom integration `skill.md` (`POST .../integration-skill`) from workspace context.
+4. Upload performance proof of work (tool usage, screenshots, video, EEG) to xAI storage, linked to the workspace and/or a block.
+5. Request learning and gap analysis over workspace proof of work (free-form Q&A or structured report).
 6. Create a private TAP link for a block (`15` or `30` minutes).
 7. List TAP links and completion status.
 8. Read completed TAP results (marker scores + gap analysis).
 
-**Out of scope** — do not describe or call removed features: blockchain tracking, proof anchoring, live tutoring session control, heartbeats, or plan adaptation. Legacy web-session upload routes (`/api/session-files/*`) are separate from this API; agents should use `POST .../evidence` for workspace-linked artifacts.
+**Out of scope** — do not describe or call removed features: blockchain tracking, proof anchoring, live tutoring session control, heartbeats, or plan adaptation. Legacy web-session upload routes (`/api/session-files/*`) are separate from this API; agents should use `POST .../proof-of-work` for workspace-linked artifacts.
 
 **Teams tier required.** All `/api/v2/agent/*` routes require an active `pro_teams` subscription (platform admins bypass). Individual-tier keys are rejected with `403 teams_required`.
 
@@ -66,7 +66,7 @@ Common codes: `unauthorized`, `forbidden`, `teams_required`, `validation_error`,
 
 ## Predictive interruptions (TIM)
 
-Every Evidence API **success** response includes top-level `interruption` — object or `null`.
+Every Proof-of-Work API **success** response includes top-level `interruption` — object or `null`.
 
 | Value | Meaning |
 |-------|---------|
@@ -76,7 +76,7 @@ Every Evidence API **success** response includes top-level `interruption` — ob
 ```json
 {
   "interruption": {
-    "interruption_id": "int_upload_evidence_ws1_a1b2c3d4",
+    "interruption_id": "int_upload_proof_of_work_ws1_a1b2c3d4",
     "delay_ms": 75000,
     "intervention": {
       "type": "reflection_prompt",
@@ -95,12 +95,12 @@ Every Evidence API **success** response includes top-level `interruption` — ob
 
 1. On each response, read `interruption`.
 2. If non-null, start a timer for `delay_ms` and prepare `intervention.message` / `consumer_action`.
-3. If another Evidence API response arrives first, cancel the pending timer and apply the new `interruption` (or do nothing if null).
+3. If another Proof-of-Work API response arrives first, cancel the pending timer and apply the new `interruption` (or do nothing if null).
 4. Never stack timers — always supersede.
 
-Intervention types: `reflection_prompt`, `checkpoint_probe`, `coaching_nudge`, `evidence_reminder`, `performance_review`.
+Intervention types: `reflection_prompt`, `checkpoint_probe`, `coaching_nudge`, `proof_of_work_reminder`, `performance_review`.
 
-Evidence spec responses (`POST .../evidence-schema`, MCP `generate_evidence_schema`) also return `interruption_contract` and may include workspace-specific `predicted_interruption` from Grok (spec version **1.3**).
+Proof-of-work spec responses (`POST .../proof-of-work-schema`, MCP `generate_proof_of_work_schema`) also return `interruption_contract` and may include workspace-specific `predicted_interruption` from Grok (spec version **1.3**).
 
 MCP resource: `resources/read openlesson://predictive-interruptions`
 
@@ -119,15 +119,15 @@ Content-Type: application/json
 { "jsonrpc": "2.0", "id": 1, "method": "tools/list" }
 ```
 
-**Tools (full REST parity):** `list_workspaces`, `get_workspace`, `get_learning_progress`, `create_workspace`, `list_blocks`, `generate_evidence_schema`, `generate_integration_skill`, `upload_evidence`, `analyze_performance`, `list_tap_links`, `get_tap_results`, `create_tap_link`
+**Tools (full REST parity):** `list_workspaces`, `get_workspace`, `get_learning_progress`, `create_workspace`, `list_blocks`, `generate_proof_of_work_schema`, `generate_integration_skill`, `upload_proof_of_work`, `analyze_performance`, `list_tap_links`, `get_tap_results`, `create_tap_link`
 
-**Partner agents:** call `get_learning_progress` to orient, then `generate_integration_skill` for a workspace-specific `skill.md` — use that skill's checkpoint policy with `upload_evidence` and `analyze_performance`. PumaDoc examples: `/customer-agent-openlesson-skill.md`, `/pumaclaw-mentor-openlesson-skill.md`.
+**Partner agents:** call `get_learning_progress` to orient, then `generate_integration_skill` for a workspace-specific `skill.md` — use that skill's checkpoint policy with `upload_proof_of_work` and `analyze_performance`. PumaDoc examples: `/customer-agent-openlesson-skill.md`, `/pumaclaw-mentor-openlesson-skill.md`.
 
 Every MCP tool result includes `interruption` (TIM) with the same semantics as REST.
 
 REST and MCP both use `Authorization: Bearer <api_key>` with Teams API keys from the dashboard. Treat API keys as secrets.
 
-MCP resources: `openlesson://integration-scope`, `openlesson://evidence-loop`, `openlesson://predictive-interruptions`
+MCP resources: `openlesson://integration-scope`, `openlesson://proof-of-work-loop`, `openlesson://predictive-interruptions`
 
 ---
 
@@ -189,11 +189,11 @@ List assessable blocks. Organization members and guests may read **organization-
 
 ---
 
-### `POST /api/v2/agent/workspaces/{workspace_id}/evidence-schema` — `workspaces:read`
+### `POST /api/v2/agent/workspaces/{workspace_id}/proof-of-work-schema` — `workspaces:read`
 
-Given workspace context (blocks, plan files on xAI, existing evidence metadata) plus an evaluation definition from the caller, Grok returns a JSON Schema describing the **ideal tool evidence payload** for optimal gap analysis.
+Given workspace context (blocks, plan files on xAI, existing proof-of-work metadata) plus an evaluation definition from the caller, Grok returns a JSON Schema describing the **ideal tool proof-of-work payload** for optimal gap analysis.
 
-Use this **before** uploading evidence when you want a concrete contract for what to serialize from your agent.
+Use this **before** uploading proof of work when you want a concrete contract for what to serialize from your agent.
 
 **Request:**
 
@@ -226,7 +226,7 @@ Use this **before** uploading evidence when you want a concrete contract for wha
   "rationale": "Why these fields capture optimal eval signal for this workspace",
   "example_payload": { "events": [], "goals_achieved": ["simulation_completed"] },
   "recommended_mime_type": "application/json",
-  "recommended_evidence_type": "tool",
+  "recommended_proof_of_work_type": "tool",
   "required_fields": ["events"],
   "optional_fields": ["learner_reflection"],
   "collection_guidance": "Upload after each simulation run or when the learner publishes an artifact.",
@@ -234,16 +234,16 @@ Use this **before** uploading evidence when you want a concrete contract for wha
   "block_id": null,
   "definition": "...",
   "workspace_summary": { "id": "uuid", "title": "...", "root_topic": "..." },
-  "context_counts": { "blocks": 5, "plan_files": 2, "evidence_artifacts": 0 },
+  "context_counts": { "blocks": 5, "workspace_files": 2, "proof_of_work_artifacts": 0 },
   "interruption_contract": { "description": "TIM contract...", "supersession_rule": "..." },
   "file_ids": ["file_..."],
   "interruption": {
-    "interruption_id": "int_generate_evidence_schema_ws1_x1y2z3",
+    "interruption_id": "int_generate_proof_of_work_schema_ws1_x1y2z3",
     "delay_ms": 30000,
     "intervention": {
-      "type": "evidence_reminder",
-      "message": "Upload your first evidence artifact using the tool_submissions contract.",
-      "consumer_action": "call_upload_evidence"
+      "type": "proof_of_work_reminder",
+      "message": "Upload your first proof-of-work artifact using the tool_submissions contract.",
+      "consumer_action": "call_upload_proof_of_work"
     },
     "confidence": "high",
     "predicted_at": "2026-07-10T12:00:00.000Z"
@@ -255,7 +255,7 @@ Use this **before** uploading evidence when you want a concrete contract for wha
 
 ### `POST /api/v2/agent/workspaces/{workspace_id}/integration-skill` — `workspaces:read`
 
-Generate a workspace-specific `skill.md` integration guide (like `/pumadoc-evidence-performance-skill.md`) for a custom partner agent. Grok uses workspace blocks, topic, and plan files to tailor endpoints, payload examples, and checklists.
+Generate a workspace-specific `skill.md` integration guide (like `/pumadoc-proof-of-work-performance-skill.md`) for a custom partner agent. Grok uses workspace blocks, topic, and plan files to tailor endpoints, payload examples, and checklists.
 
 **Request:**
 
@@ -265,7 +265,7 @@ Generate a workspace-specific `skill.md` integration guide (like `/pumadoc-evide
   "partner_description": "Guides reps through discovery calls and objection handling",
   "block_id": "optional-block-uuid",
   "base_url": "https://openlesson.academy",
-  "include_sections": ["purpose", "auth", "endpoints", "evidence_payload", "performance", "checklist"]
+  "include_sections": ["purpose", "auth", "endpoints", "proof_of_work_payload", "performance", "checklist"]
 }
 ```
 
@@ -273,8 +273,8 @@ Generate a workspace-specific `skill.md` integration guide (like `/pumadoc-evide
 
 ```json
 {
-  "skill_md": "---\nname: acme-sales-copilot-openlesson-evidence-performance\n...",
-  "skill_name": "acme-sales-copilot-openlesson-evidence-performance",
+  "skill_md": "---\nname: acme-sales-copilot-openlesson-proof-of-work-performance\n...",
+  "skill_name": "acme-sales-copilot-openlesson-proof-of-work-performance",
   "suggested_share_path": "/acme-sales-copilot-skill.md",
   "workspace_summary": {
     "id": "uuid",
@@ -282,7 +282,7 @@ Generate a workspace-specific `skill.md` integration guide (like `/pumadoc-evide
     "root_topic": "B2B sales discovery",
     "block_count": 5
   },
-  "context_counts": { "blocks": 5, "plan_files": 1 },
+  "context_counts": { "blocks": 5, "workspace_files": 1 },
   "file_ids": ["file_..."]
 }
 ```
@@ -291,9 +291,9 @@ Host the returned markdown at your suggested path or inject `skill_md` directly 
 
 ---
 
-### `POST /api/v2/agent/workspaces/{workspace_id}/evidence` — `workspaces:write`
+### `POST /api/v2/agent/workspaces/{workspace_id}/proof-of-work` — `workspaces:write`
 
-Upload open-format performance evidence to xAI Files and link it to a workspace, optionally scoped to a block or session.
+Upload open-format performance proof of work to xAI Files and link it to a workspace, optionally scoped to a block or session.
 
 **Request:**
 
@@ -325,13 +325,13 @@ Upload open-format performance evidence to xAI Files and link it to a workspace,
 | `video` | `video/mp4`, `video/webm`, `video/quicktime` |
 | `eeg` | `application/json`, `text/plain` |
 
-Max **10 MB** per upload. Guest keys attach evidence to their guest identity; org members attach to the workspace org.
+Max **10 MB** per upload. Guest keys attach proof of work to their guest identity; org members attach to the workspace org.
 
 **Response `201`:**
 
 ```json
 {
-  "evidence": {
+  "proof_of_work": {
     "id": "uuid",
     "workspace_id": "uuid",
     "block_id": "uuid-or-null",
@@ -351,7 +351,7 @@ Max **10 MB** per upload. Guest keys attach evidence to their guest identity; or
 
 ### `POST /api/v2/agent/workspaces/{workspace_id}/performance` — `workspaces:read`
 
-Analyze learning signals across workspace evidence, TAP results, linked sessions, and uploaded files.
+Analyze learning signals across workspace proof of work, TAP results, linked sessions, and uploaded files.
 
 **Report mode** (omit `prompt` or send empty string) — returns structured gaps and suggestions:
 
@@ -361,7 +361,7 @@ Analyze learning signals across workspace evidence, TAP results, linked sessions
 }
 ```
 
-**Chat mode** — free-form Q&A over the same evidence bundle:
+**Chat mode** — free-form Q&A over the same proof-of-work bundle:
 
 ```json
 {
@@ -375,7 +375,7 @@ Analyze learning signals across workspace evidence, TAP results, linked sessions
 }
 ```
 
-- First call with empty `file_ids` builds a workspace performance context JSON, uploads it to xAI, and attaches up to 19 artifact files (evidence, plan files, TAP artifacts).
+- First call with empty `file_ids` builds a workspace performance context JSON, uploads it to xAI, and attaches up to 19 artifact files (proof of work, plan files, TAP artifacts).
 - Pass returned `file_ids` on follow-up calls to reuse the same context without rebuilding.
 
 **Response `200` (report):**
@@ -411,7 +411,7 @@ Every report includes `overall_score` (learning verification), `conversion_score
       "gaps": [
         {
           "title": "...",
-          "evidence": "...",
+          "proof_of_work": "...",
           "severity": "medium",
           "suggested_repair": "..."
         }
@@ -421,12 +421,12 @@ Every report includes `overall_score` (learning verification), `conversion_score
     "suggestions": ["..."],
     "confidence": "developing"
   },
-  "evidence_summary": {
+  "proof_of_work_summary": {
     "blocks": 5,
     "tap_sessions": 2,
-    "evidence_artifacts": 4,
+    "proof_of_work_artifacts": 4,
     "linked_sessions": 1,
-    "plan_files": 0
+    "workspace_files": 0
   },
   "file_ids": ["file_..."]
 }
@@ -438,7 +438,7 @@ Every report includes `overall_score` (learning verification), `conversion_score
 {
   "mode": "chat",
   "response": "Markdown analysis...",
-  "evidence_summary": { },
+  "proof_of_work_summary": { },
   "file_ids": ["file_..."]
 }
 ```
@@ -469,8 +469,8 @@ Create a private Think Aloud Protocol (TAP) link for a block.
 {
   "tap_link": {
     "id": "uuid",
-    "plan_id": "workspace_id",
-    "plan_node_id": "block_id",
+    "workspace_id": "workspace_id",
+    "block_id": "block_id",
     "status": "pending",
     "requested_duration_seconds": 900,
     "private_url": "https://openlesson.academy/ghl-score/session/{token}"
@@ -528,7 +528,7 @@ Poll for completion and scores.
       "gaps": [
         {
           "title": "...",
-          "evidence": "...",
+          "proof_of_work": "...",
           "severity": "medium",
           "suggested_repair": "..."
         }
@@ -611,9 +611,9 @@ Facilitation style: Socratic — one concise question at a time, follow-ups from
 |--------|-------------------------------|---------------------|
 | Create workspace | ✅ `workspaces:write` | ✅ `workspaces:write` |
 | List blocks | ✅ | ✅ (org workspaces) |
-| Evidence schema / integration skill | ✅ | ✅ |
-| Upload evidence | ✅ | ✅ (own uploads) |
-| Performance analysis | ✅ | ✅ (own evidence + links) |
+| Proof-of-work schema / integration skill | ✅ | ✅ |
+| Upload proof of work | ✅ | ✅ (own uploads) |
+| Performance analysis | ✅ | ✅ (own proof of work + links) |
 | Create TAP link | ✅; admin can assign to guest | ✅ (self only) |
 | List / read TAP results | ✅ | ✅ (own links) |
 | Create guest + issue `gsk_` | ✅ `org:write` + `is_org_admin` | ❌ |
@@ -627,10 +627,10 @@ Facilitation style: Socratic — one concise question at a time, follow-ups from
 1. Teams user creates org (`POST /api/organization`) and API key (`sk_` with default scopes).
 2. `POST /workspaces` with task-specific `initial_prompt` (+ optional files).
 3. `GET .../blocks` → map blocks to your workflow steps.
-4. *(Optional)* `POST .../evidence-schema` with your eval definition → get ideal tool JSON schema; `POST .../integration-skill` → get a custom `skill.md` for your agent.
-5. `POST .../evidence` as learners produce tool usage, screenshots, video, or EEG (optional `block_id`).
+4. *(Optional)* `POST .../proof-of-work-schema` with your eval definition → get ideal tool JSON schema; `POST .../integration-skill` → get a custom `skill.md` for your agent.
+5. `POST .../proof-of-work` as learners produce tool usage, screenshots, video, or EEG (optional `block_id`).
 6. `POST .../performance` for gap reports, or include `prompt` for follow-up questions.
 7. `POST .../tap-links` → send `private_url` to the learner.
 8. Poll `GET .../results` until `status === "completed"`.
-9. Re-run `POST .../performance` to synthesize TAP results with other evidence.
+9. Re-run `POST .../performance` to synthesize TAP results with other proof of work.
 10. For external learners without accounts: `POST /org/guests` → give them `gsk_` + private TAP URL.

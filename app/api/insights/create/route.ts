@@ -21,7 +21,7 @@ export async function POST(req: NextRequest) {
     } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    const { thoughtIds, thoughts, planId, planNodeId, sessionId } = await req.json();
+    const { thoughtIds, thoughts, workspaceId, blockId, sessionId } = await req.json();
     const sourceThoughts = Array.isArray(thoughts)
       ? thoughts.filter((t: { text?: string }) => t?.text?.trim())
       : [];
@@ -53,8 +53,8 @@ export async function POST(req: NextRequest) {
       .from("insights")
       .insert({
         user_id: user.id,
-        plan_id: planId || null,
-        plan_node_id: planNodeId || null,
+        workspace_id: workspaceId || null,
+        block_id: blockId || null,
         session_id: sessionId || null,
         title: ai.data.title.trim(),
         summary: ai.data.summary.trim(),

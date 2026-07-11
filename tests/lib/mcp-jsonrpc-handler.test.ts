@@ -6,13 +6,12 @@ import {
 import type { AuthContext } from "@/lib/agent-v2/types";
 
 const auth: AuthContext = {
-  api_key_id: "key-1",
+  key_id: "key-1",
   user_id: "user-1",
   guest_user_id: null,
   organization_id: null,
   is_org_admin: false,
   scopes: ["workspaces:read", "workspaces:write", "tap:read", "tap:write"],
-  rate_limit: 120,
 };
 
 describe("mcp-jsonrpc-handler", () => {
@@ -26,7 +25,7 @@ describe("mcp-jsonrpc-handler", () => {
 
     expect(response?.result).toMatchObject({
       protocolVersion: "2025-03-26",
-      serverInfo: { name: "openlesson-evidence-api" },
+      serverInfo: { name: "openlesson-proof-of-work-api" },
     });
   });
 
@@ -40,7 +39,7 @@ describe("mcp-jsonrpc-handler", () => {
 
     const tools = (response?.result as { tools?: { name: string }[] })?.tools ?? [];
     expect(tools.map((tool) => tool.name)).toContain("list_workspaces");
-    expect(tools.map((tool) => tool.name)).toContain("upload_evidence");
+    expect(tools.map((tool) => tool.name)).toContain("upload_proof_of_work");
   });
 
   it("emits absolute endpoint URLs for streamable HTTP discovery", async () => {

@@ -26,22 +26,22 @@ interface UploadedImage {
   preview: string;
 }
 
-interface PlanNode {
+interface Block {
   id: string;
   title: string;
   description: string;
   is_start: boolean;
-  next_node_ids: string[];
+  next_block_ids: string[];
   status: string;
   planning_prompt?: string;
 }
 
 interface ChatPanelProps {
-  planId: string;
+  workspaceId: string;
   model?: string;
   onModelChange?: (model: string) => void;
   onRefresh?: () => void;
-  onNodesUpdate?: (nodes: PlanNode[]) => void;
+  onNodesUpdate?: (nodes: Block[]) => void;
   supabase?: ReturnType<typeof createBrowserClient>;
   isOwner?: boolean;
   currentUserId?: string | null;
@@ -49,7 +49,7 @@ interface ChatPanelProps {
 }
 
 export function ChatPanel({
-  planId,
+  workspaceId,
   model,
   onModelChange,
   onRefresh,
@@ -73,7 +73,7 @@ export function ChatPanel({
   const currentModel = (model || "grok-4.3").replace(/^x-ai\//, "");
 
   const hints = [
-    { label: t("learningPlanChat.addSessions"), example: t("chatPanel.exampleAdd") },
+    { label: t("workspaceChat.addSessions"), example: t("chatPanel.exampleAdd") },
     { label: t("chatPanel.removeSessions"), example: t("chatPanel.exampleRemove") },
     { label: t("chatPanel.reorder"), example: t("chatPanel.exampleReorder") },
     { label: t("chatPanel.modify"), example: t("chatPanel.exampleModify") },
@@ -116,11 +116,11 @@ export function ChatPanel({
     try {
       const conversationHistory = messages.map((m) => ({ role: m.role, content: m.content }));
 
-      const response = await fetch("/api/learning-plan/chat", {
+      const response = await fetch("/api/workspace/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          planId,
+          workspaceId,
           userPrompt: userMessage.content,
           conversationHistory,
           model: currentModel,

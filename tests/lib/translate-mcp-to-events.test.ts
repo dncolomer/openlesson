@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   parseMcpToolResultPayload,
   translateMcpResultToEvents,
-} from "@/lib/evidence-api-demo/translate-mcp-to-events";
+} from "@/lib/openlesson-demo/translate-mcp-to-events";
 
 describe("translate-mcp-to-events", () => {
   it("parses MCP text tool content into JSON payloads", () => {
@@ -51,6 +51,6 @@ describe("translate-mcp-to-events", () => {
     const events = translateMcpResultToEvents("ping", "Health check", { ok: true });
     expect(events).toHaveLength(1);
     expect(events[0].verb).toBe("ping");
-    expect(events[0].sourceData).toEqual({ ok: true });
+    expect(events[0].sourceData).toEqual({ ok: true, mcp_import: true });
   });
 });

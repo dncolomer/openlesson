@@ -4,13 +4,13 @@ import {
   MCP_RESOURCE_CATALOG,
 } from "@/lib/agent-v2/integration-discovery";
 import {
-  callMcpEvidenceTool,
-  MCP_EVIDENCE_PROTOCOL_VERSION,
-  MCP_EVIDENCE_SERVER_INSTRUCTIONS,
-  MCP_EVIDENCE_SERVER_NAME,
-  MCP_EVIDENCE_SERVER_VERSION,
+  callMcpProofOfWorkTool,
+  MCP_PROOF_OF_WORK_PROTOCOL_VERSION,
+  MCP_PROOF_OF_WORK_SERVER_INSTRUCTIONS,
+  MCP_PROOF_OF_WORK_SERVER_NAME,
+  MCP_PROOF_OF_WORK_SERVER_VERSION,
   MCP_EVIDENCE_TOOLS,
-} from "@/lib/agent-v2/mcp-evidence-server";
+} from "@/lib/agent-v2/mcp-proof-of-work-server";
 import type { AuthContext } from "@/lib/agent-v2/types";
 
 export type JsonRpcId = string | number | null;
@@ -54,13 +54,13 @@ export async function handleJsonRpc(
       jsonrpc: "2.0",
       id,
       result: {
-        protocolVersion: MCP_EVIDENCE_PROTOCOL_VERSION,
+        protocolVersion: MCP_PROOF_OF_WORK_PROTOCOL_VERSION,
         capabilities: {
           tools: { listChanged: false },
           resources: { subscribe: false, listChanged: false },
         },
-        serverInfo: { name: MCP_EVIDENCE_SERVER_NAME, version: MCP_EVIDENCE_SERVER_VERSION },
-        instructions: MCP_EVIDENCE_SERVER_INSTRUCTIONS,
+        serverInfo: { name: MCP_PROOF_OF_WORK_SERVER_NAME, version: MCP_PROOF_OF_WORK_SERVER_VERSION },
+        instructions: MCP_PROOF_OF_WORK_SERVER_INSTRUCTIONS,
       },
     };
   }
@@ -132,7 +132,7 @@ export async function handleJsonRpc(
     }
 
     try {
-      const result = await callMcpEvidenceTool(params.name, params.arguments || {}, {
+      const result = await callMcpProofOfWorkTool(params.name, params.arguments || {}, {
         auth,
         supabase,
         origin,

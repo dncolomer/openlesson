@@ -1152,7 +1152,7 @@ After GHL completion, emit a PumaDoc learning event.
 
 ## 28. Customer Artifact Update Rules
 
-Use GHL output to update the artifact only as learning evidence unless the user explicitly approves a substantive artifact change.
+Use GHL output to update the artifact only as learning proof of work unless the user explicitly approves a substantive artifact change.
 
 Allowed automatic updates:
 
@@ -1213,7 +1213,7 @@ Use GHL results to affect 5FIT only when learning is tied to customer evidence.
 
 | GHL Result | 5FIT Impact |
 |---|---|
-| Strong ICP explanation with evidence | Pain-Customer-Market Fit confidence may increase. |
+| Strong ICP explanation with proof of work | Pain-Customer-Market Fit confidence may increase. |
 | Weak segment reasoning | Pain-Customer-Market Fit risk remains. |
 | Clear acquisition path reasoning | Product-Channel Fit confidence may increase. |
 | Weak budget owner understanding | Channel-Business Fit risk increases. |
@@ -1379,7 +1379,7 @@ Next Step Unlocked
 | Guest user receives GHL link | Guest can open private bearer link without login. |
 | Guest uses own gsk_ key | Guest can create workspaces, list blocks, request their own GHL links, and poll results on org workspaces. |
 | Guest later signs up | Real user inherits guest GHL history and org membership. |
-| GHL score is high but no customer evidence exists | Customer Agent may unlock learning step but must not upgrade customer fact confidence without evidence. |
+| GHL score is high but no customer proof of work exists | Customer Agent may unlock learning step but must not upgrade customer fact confidence without evidence. |
 | GHL contradicts Approved Knowledge | Flag conflict; do not overwrite Approved Knowledge automatically. |
 | CEO dashboard reviews user learning | Shows GHL completion, score, gaps, repair missions, and unlock status. |
 

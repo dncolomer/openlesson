@@ -68,14 +68,14 @@ export async function getPublicProfile(username: string): Promise<PublicProfileD
   if (error || !profile?.username) return null;
 
   const { data: plans } = await supabase
-    .from("learning_plans")
+    .from("workspaces")
     .select("id, title, root_topic, description, cover_image_url, created_at, remix_count")
     .eq("author_id", profile.id)
     .eq("is_public", true)
     .order("created_at", { ascending: false })
     .limit(12);
 
-  const publicPlans = (plans || []).map((plan) => ({
+  const publicWorkspaces = (plans || []).map((plan) => ({
     id: plan.id,
     title: plan.title || plan.root_topic,
     root_topic: plan.root_topic,
@@ -107,12 +107,12 @@ export async function getPublicProfile(username: string): Promise<PublicProfileD
     : [];
 
   const topicCounts = new Map<string, number>();
-  for (const plan of publicPlans) {
+  for (const plan of publicWorkspaces) {
     const topic = plan.root_topic || plan.title;
     if (topic) topicCounts.set(topic, (topicCounts.get(topic) || 0) + 1);
   }
 
-  const planActivity: PublicProfileActivity[] = publicPlans.slice(0, 8).map((plan) => ({
+  const planActivity: PublicProfileActivity[] = publicWorkspaces.slice(0, 8).map((plan) => ({
     id: plan.id,
     type: "plan_published",
     title: plan.title,
@@ -134,7 +134,7 @@ export async function getPublicProfile(username: string): Promise<PublicProfileD
     public_stats_enabled: profile.public_stats_enabled,
     public_session_titles_enabled: profile.public_session_titles_enabled,
     stats: {
-      public_plans: publicPlans.length,
+      public_plans: publicWorkspaces.length,
       completed_sessions: completedSessions,
       learning_minutes: learningMinutes,
     },
@@ -143,7 +143,7 @@ export async function getPublicProfile(username: string): Promise<PublicProfileD
       .map(([name, count]) => ({ name, count }))
       .sort((a, b) => b.count - a.count)
       .slice(0, 8),
-    plans: publicPlans,
+    plans: publicWorkspaces,
     activity,
   };
 }

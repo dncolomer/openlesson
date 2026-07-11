@@ -35,17 +35,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Not authorized" }, { status: 403 });
     }
 
-    const planId = typeof currentSession.metadata?.plan_id === "string"
-      ? currentSession.metadata.plan_id
+    const workspaceId = typeof currentSession.metadata?.workspace_id === "string"
+      ? currentSession.metadata.workspace_id
       : null;
 
-    const { data: recentSessions } = planId
+    const { data: recentSessions } = workspaceId
       ? await supabase
         .from("sessions")
         .select("problem, report, duration_ms, created_at, metadata")
         .eq("user_id", user.id)
         .neq("id", sessionId)
-        .filter("metadata->>plan_id", "eq", planId)
+        .filter("metadata->>workspace_id", "eq", workspaceId)
         .order("created_at", { ascending: false })
         .limit(4)
       : { data: [] };

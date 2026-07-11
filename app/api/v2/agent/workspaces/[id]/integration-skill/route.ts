@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { authenticateRequest, errorResponse } from "@/lib/agent-v2/auth";
 import {
-  buildEvidenceSchemaRequestFromIntegration,
-  generateWorkspaceEvidenceSpec,
+  buildProofOfWorkSchemaRequestFromIntegration,
+  generateWorkspaceProofOfWorkSpec,
   resolveEvalDefinition,
-} from "@/lib/agent-v2/evidence-integration";
+} from "@/lib/agent-v2/proof-of-work-integration";
 import {
   buildIntegrationSkillInstructions,
   buildIntegrationSkillPrompt,
@@ -14,7 +14,7 @@ import {
 } from "@/lib/agent-v2/integration-skill";
 import { buildWorkspacePerformanceContext } from "@/lib/agent-v2/performance-context";
 import { canAccessAgentWorkspace } from "@/lib/agent-v2/workspace-access";
-import { withEvidenceApiResponse } from "@/lib/agent-v2/predictive-interruption";
+import { withProofOfWorkApiResponse } from "@/lib/agent-v2/predictive-interruption";
 import { callXaiResponsesWithFiles } from "@/lib/xai-client";
 
 export const runtime = "nodejs";
@@ -32,7 +32,7 @@ export async function POST(req: NextRequest, { params }: RouteProps) {
     const { id: workspaceId } = await params;
 
     const { data: workspace } = await supabase
-      .from("learning_plans")
+      .from("workspaces")
       .select("id, user_id, organization_id, guest_user_id, title, root_topic, description, notes")
       .eq("id", workspaceId)
       .single();
@@ -56,18 +56,18 @@ export async function POST(req: NextRequest, { params }: RouteProps) {
     const blockId = request.block_id ?? null;
     if (blockId) {
       const { data: block } = await supabase
-        .from("plan_nodes")
+        .from("blocks")
         .select("id")
         .eq("id", blockId)
-        .eq("plan_id", workspaceId)
+        .eq("workspace_id", workspaceId)
         .single();
       if (!block) return errorResponse(404, "block_not_found", "Block not found in this workspace");
     }
 
     let blocksQuery = supabase
-      .from("plan_nodes")
+      .from("blocks")
       .select("id, title, description, is_start")
-      .eq("plan_id", workspaceId)
+      .eq("workspace_id", workspaceId)
       .order("created_at", { ascending: true });
 
     if (blockId) blocksQuery = blocksQuery.eq("id", blockId);
@@ -89,32 +89,32 @@ export async function POST(req: NextRequest, { params }: RouteProps) {
       }),
     ]);
 
-    let evidenceSpec = null;
-    let evidenceSpecContextCounts = null;
+    let proofOfWorkSpec = null;
+    let proofOfWorkSpecContextCounts = null;
 
-    if (request.prefetch_evidence_spec) {
-      const evidenceSchemaRequest = buildEvidenceSchemaRequestFromIntegration(
+    if (request.prefetch_proof_of_work_spec) {
+      const proofOfWorkSchemaRequest = buildProofOfWorkSchemaRequestFromIntegration(
         evalDefinition,
         request.integration_name,
         request.partner_description,
         blockId
       );
 
-      if (evidenceSchemaRequest) {
+      if (proofOfWorkSchemaRequest) {
         try {
-          const evidenceSpecResult = await generateWorkspaceEvidenceSpec({
+          const proofOfWorkSpecResult = await generateWorkspaceProofOfWorkSpec({
             supabase,
             auth,
             workspaceId,
             workspaceTitle,
-            request: evidenceSchemaRequest,
+            request: proofOfWorkSchemaRequest,
             baseUrl: origin,
             blockId,
           });
-          evidenceSpec = evidenceSpecResult.spec;
-          evidenceSpecContextCounts = evidenceSpecResult.contextCounts;
+          proofOfWorkSpec = proofOfWorkSpecResult.spec;
+          proofOfWorkSpecContextCounts = proofOfWorkSpecResult.contextCounts;
         } catch (error) {
-          console.error("[agent/integration-skill] Evidence spec prefetch failed:", error);
+          console.error("[agent/integration-skill] Proof-of-work spec prefetch failed:", error);
         }
       }
     }
@@ -135,7 +135,7 @@ export async function POST(req: NextRequest, { params }: RouteProps) {
           },
           blocks || [],
           blockId,
-          evidenceSpec
+          proofOfWorkSpec
         ),
         temperature: 0.45,
         maxOutputTokens: 8192,
@@ -147,10 +147,10 @@ export async function POST(req: NextRequest, { params }: RouteProps) {
       return errorResponse(500, "internal_error", skillResult.error || "Failed to generate integration skill");
     }
 
-    const contextCounts = contextResult?.payload.counts || evidenceSpecContextCounts || null;
+    const contextCounts = contextResult?.payload.counts || proofOfWorkSpecContextCounts || null;
 
     return NextResponse.json(
-      withEvidenceApiResponse(
+      withProofOfWorkApiResponse(
         {
           skill_md: skillResult.text,
           skill_name: deriveSkillName(request.integration_name),
@@ -161,9 +161,9 @@ export async function POST(req: NextRequest, { params }: RouteProps) {
             root_topic: workspace.root_topic,
             block_count: blocks?.length || 0,
           },
-          evidence_spec: evidenceSpec,
-          evidence_spec_prefetched: !!evidenceSpec,
-          evidence_spec_api_path: evidenceSpec?.evidence_spec_api_path || null,
+          proof_of_work_spec: proofOfWorkSpec,
+          proof_of_work_spec_prefetched: !!proofOfWorkSpec,
+          proof_of_work_spec_api_path: proofOfWorkSpec?.proof_of_work_spec_api_path || null,
           context_counts: contextCounts,
           file_ids: fileIds,
         },
@@ -171,7 +171,7 @@ export async function POST(req: NextRequest, { params }: RouteProps) {
           endpoint: "generate_integration_skill",
           workspace_id: workspaceId,
           block_id: blockId,
-          evidence_artifacts: contextCounts?.evidence_artifacts,
+          proof_of_work_artifacts: contextCounts?.proof_of_work_artifacts,
         }
       )
     );

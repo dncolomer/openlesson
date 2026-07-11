@@ -61,7 +61,7 @@ const ENDPOINT_SPECS: EndpointSpec[] = [
   ]
 }`,
     responseBody: [
-      { name: "workspace.id", type: "uuid", description: "Workspace ID (learning_plans.id)." },
+      { name: "workspace.id", type: "uuid", description: "Workspace ID (workspaces.id)." },
       { name: "workspace.title", type: "string", description: "Generated workspace title." },
       { name: "workspace.root_topic", type: "string", description: "Truncated prompt summary." },
       { name: "workspace.status", type: "string", description: "active" },
@@ -69,15 +69,15 @@ const ENDPOINT_SPECS: EndpointSpec[] = [
       { name: "workspace.created_at", type: "ISO-8601", description: "Creation timestamp." },
       { name: "workspace.updated_at", type: "ISO-8601", description: "Last update timestamp." },
       { name: "blocks", type: "array", description: "Generated assessable blocks (3–8)." },
-      { name: "blocks[].id", type: "uuid", description: "Block ID (plan_nodes.id)." },
+      { name: "blocks[].id", type: "uuid", description: "Block ID (blocks.id)." },
       { name: "blocks[].title", type: "string", description: "Block title." },
       { name: "blocks[].description", type: "string", description: "What the learner should demonstrate." },
       { name: "blocks[].is_start", type: "boolean", description: "True for the entry block." },
-      { name: "blocks[].next_node_ids", type: "uuid[]", description: "Linked next blocks in the graph." },
+      { name: "blocks[].next_block_ids", type: "uuid[]", description: "Linked next blocks in the graph." },
       { name: "blocks[].status", type: "string", description: "available" },
       { name: "blocks[].created_at", type: "ISO-8601", description: "Block creation timestamp." },
-      { name: "files", type: "array", description: "Uploaded plan_files records (empty if none)." },
-      { name: "files[].id", type: "uuid", description: "plan_files.id" },
+      { name: "files", type: "array", description: "Uploaded workspace_files records (empty if none)." },
+      { name: "files[].id", type: "uuid", description: "workspace_files.id" },
       { name: "files[].file_name", type: "string", description: "Original filename." },
       { name: "files[].file_size", type: "integer", description: "Bytes." },
       { name: "files[].mime_type", type: "string", description: "MIME type." },
@@ -99,7 +99,7 @@ const ENDPOINT_SPECS: EndpointSpec[] = [
       "title": "Context & Procurement Tactics",
       "description": "Demonstrate knowledge of renewal cycles and procurement pushback.",
       "is_start": true,
-      "next_node_ids": ["b454f31a-3045-4c23-a60e-820b43d0e9ce"],
+      "next_block_ids": ["b454f31a-3045-4c23-a60e-820b43d0e9ce"],
       "status": "available",
       "created_at": "2026-06-23T13:01:32.691293+00:00"
     }
@@ -122,12 +122,12 @@ const ENDPOINT_SPECS: EndpointSpec[] = [
       { name: "workspace_id", type: "uuid", required: true, description: "Verification Workspace ID." },
     ],
     responseBody: [
-      { name: "blocks", type: "array", description: "All plan_nodes for the workspace, ordered by created_at ascending." },
+      { name: "blocks", type: "array", description: "All blocks for the workspace, ordered by created_at ascending." },
       { name: "blocks[].id", type: "uuid", description: "Block ID." },
       { name: "blocks[].title", type: "string", description: "Block title." },
       { name: "blocks[].description", type: "string", description: "Demonstration objective." },
       { name: "blocks[].is_start", type: "boolean", description: "Entry block flag." },
-      { name: "blocks[].next_node_ids", type: "uuid[]", description: "Next block IDs." },
+      { name: "blocks[].next_block_ids", type: "uuid[]", description: "Next block IDs." },
       { name: "blocks[].status", type: "string", description: "available | in_progress | completed" },
       { name: "blocks[].created_at", type: "ISO-8601", description: "Creation timestamp." },
     ],
@@ -138,7 +138,7 @@ const ENDPOINT_SPECS: EndpointSpec[] = [
       "title": "Context & Procurement Tactics",
       "description": "Demonstrate knowledge of renewal cycles.",
       "is_start": true,
-      "next_node_ids": ["b454f31a-3045-4c23-a60e-820b43d0e9ce"],
+      "next_block_ids": ["b454f31a-3045-4c23-a60e-820b43d0e9ce"],
       "status": "available",
       "created_at": "2026-06-23T13:01:32.691293+00:00"
     }
@@ -147,12 +147,12 @@ const ENDPOINT_SPECS: EndpointSpec[] = [
     notes: ["404 workspace_not_found if the key cannot access the workspace."],
   },
   {
-    id: "evidence-schema",
+    id: "proof-of-work-schema",
     method: "POST",
-    path: "/api/v2/agent/workspaces/{workspace_id}/evidence-schema",
+    path: "/api/v2/agent/workspaces/{workspace_id}/proof-of-work-schema",
     scope: "workspaces:read",
     summary:
-      "Given workspace context (blocks, plan files on xAI, evidence metadata) plus an evaluation definition, Grok returns a JSON Schema for the ideal tool evidence payload.",
+      "Given workspace context (blocks, plan files on xAI, proof-of-work metadata) plus an evaluation definition, Grok returns a JSON Schema for the ideal tool proof-of-work payload.",
     status: "200 OK",
     pathParams: [
       { name: "workspace_id", type: "uuid", required: true, description: "Verification Workspace ID." },
@@ -186,15 +186,15 @@ const ENDPOINT_SPECS: EndpointSpec[] = [
   }
 }`,
     responseBody: [
-      { name: "schema", type: "object", description: "JSON Schema (draft-07 style) for the ideal tool evidence payload inside the upload data field." },
+      { name: "schema", type: "object", description: "JSON Schema (draft-07 style) for the ideal tool proof-of-work payload inside the upload data field." },
       { name: "schema_name", type: "string", description: "Snake_case identifier, typically prefixed eval_input_." },
       { name: "rationale", type: "string", description: "Why these fields capture optimal eval signal for this workspace." },
       { name: "example_payload", type: "object", description: "Example JSON matching the schema conceptually." },
-      { name: "recommended_mime_type", type: "string", description: "Usually application/json for tool evidence." },
-      { name: "recommended_evidence_type", type: "string", description: "tool | screen | video | eeg" },
+      { name: "recommended_mime_type", type: "string", description: "Usually application/json for tool proof of work." },
+      { name: "recommended_proof_of_work_type", type: "string", description: "tool | screen | video | eeg" },
       { name: "required_fields", type: "string[]", description: "Top-level field names integrators should always include." },
       { name: "optional_fields", type: "string[]", description: "Enrichment fields (reflections, media refs, etc.)." },
-      { name: "collection_guidance", type: "string", description: "When and how often to upload evidence for this definition." },
+      { name: "collection_guidance", type: "string", description: "When and how often to upload proof of work for this definition." },
       {
         name: "performance_report_contract",
         type: "object",
@@ -205,7 +205,7 @@ const ENDPOINT_SPECS: EndpointSpec[] = [
       { name: "block_id", type: "uuid | null", description: "Echo of request block_id." },
       { name: "definition", type: "string", description: "Echo of request definition." },
       { name: "workspace_summary", type: "object", description: "id, title, root_topic." },
-      { name: "context_counts", type: "object", description: "blocks, tap_sessions, evidence_artifacts, linked_sessions, plan_files." },
+      { name: "context_counts", type: "object", description: "blocks, tap_sessions, proof_of_work_artifacts, linked_sessions, workspace_files." },
       { name: "file_ids", type: "string[]", description: "xAI file IDs used for generation (workspace JSON + plan files)." },
     ],
     responseExample: `{
@@ -239,7 +239,7 @@ const ENDPOINT_SPECS: EndpointSpec[] = [
     "learner_reflection": "Segment B has stronger willingness-to-pay signals."
   },
   "recommended_mime_type": "application/json",
-  "recommended_evidence_type": "tool",
+  "recommended_proof_of_work_type": "tool",
   "required_fields": ["events"],
   "optional_fields": ["goals_achieved", "learner_reflection"],
   "collection_guidance": "Upload after each simulation run or when the learner publishes an ICP artifact.",
@@ -254,14 +254,14 @@ const ENDPOINT_SPECS: EndpointSpec[] = [
   "context_counts": {
     "blocks": 5,
     "tap_sessions": 0,
-    "evidence_artifacts": 0,
+    "proof_of_work_artifacts": 0,
     "linked_sessions": 0,
-    "plan_files": 2
+    "workspace_files": 2
   },
   "file_ids": ["file_814439bd-4894-4e11-852d-314e9f777a7f"]
 }`,
     notes: [
-      "Use before POST .../evidence when you want a concrete JSON contract for what your agent should serialize.",
+      "Use before POST .../proof-of-work when you want a concrete JSON contract for what your agent should serialize.",
       "Builds the same workspace context bundle as performance (JSON summary + up to 19 xAI artifact refs).",
       "404 block_not_found if block_id is not in this workspace.",
       "Grok-generated; may take up to ~120s on large workspaces.",
@@ -273,7 +273,7 @@ const ENDPOINT_SPECS: EndpointSpec[] = [
     path: "/api/v2/agent/workspaces/{workspace_id}/integration-skill",
     scope: "workspaces:read",
     summary:
-      "Generate a workspace-specific skill.md integration guide (like /pumadoc-evidence-performance-skill.md) for a custom partner agent.",
+      "Generate a workspace-specific skill.md integration guide (like /pumadoc-proof-of-work-performance-skill.md) for a custom partner agent.",
     status: "200 OK",
     pathParams: [
       { name: "workspace_id", type: "uuid", required: true, description: "Verification Workspace ID." },
@@ -286,26 +286,26 @@ const ENDPOINT_SPECS: EndpointSpec[] = [
       {
         name: "include_sections",
         type: "string[]",
-        description: "Sections to include. Default: purpose, design_principles, auth, endpoints, evidence_payload, performance, checklist.",
+        description: "Sections to include. Default: purpose, design_principles, auth, endpoints, proof_of_work_payload, performance, checklist.",
       },
     ],
     requestExample: `{
   "integration_name": "acme-sales-copilot",
   "partner_description": "Guides reps through discovery calls and objection handling",
   "base_url": "https://openlesson.academy",
-  "include_sections": ["purpose", "auth", "endpoints", "evidence_payload", "performance", "checklist"]
+  "include_sections": ["purpose", "auth", "endpoints", "proof_of_work_payload", "performance", "checklist"]
 }`,
     responseBody: [
       { name: "skill_md", type: "string", description: "Full markdown document with YAML frontmatter (name, description)." },
-      { name: "skill_name", type: "string", description: "Derived frontmatter name, e.g. acme-sales-copilot-openlesson-evidence-performance." },
+      { name: "skill_name", type: "string", description: "Derived frontmatter name, e.g. acme-sales-copilot-openlesson-proof-of-work-performance." },
       { name: "suggested_share_path", type: "string", description: "Suggested public path, e.g. /acme-sales-copilot-skill.md." },
       { name: "workspace_summary", type: "object", description: "id, title, root_topic, block_count." },
       { name: "context_counts", type: "object | null", description: "Workspace context counts used during generation." },
       { name: "file_ids", type: "string[]", description: "xAI file IDs attached during generation." },
     ],
     responseExample: `{
-  "skill_md": "---\\nname: acme-sales-copilot-openlesson-evidence-performance\\ndescription: Acme Sales Copilot integration skill for OpenLesson evidence upload and performance analysis.\\n---\\n\\n# Acme Sales Copilot — OpenLesson Evidence & Performance\\n\\n...",
-  "skill_name": "acme-sales-copilot-openlesson-evidence-performance",
+  "skill_md": "---\\nname: acme-sales-copilot-openlesson-proof-of-work-performance\\ndescription: Acme Sales Copilot integration skill for OpenLesson proof-of-work upload and performance analysis.\\n---\\n\\n# Acme Sales Copilot — OpenLesson Proof-of-Work & Performance\\n\\n...",
+  "skill_name": "acme-sales-copilot-openlesson-proof-of-work-performance",
   "suggested_share_path": "/acme-sales-copilot-skill.md",
   "workspace_summary": {
     "id": "a3090aa0-3498-4be8-aa87-32a1a6591641",
@@ -316,9 +316,9 @@ const ENDPOINT_SPECS: EndpointSpec[] = [
   "context_counts": {
     "blocks": 5,
     "tap_sessions": 0,
-    "evidence_artifacts": 0,
+    "proof_of_work_artifacts": 0,
     "linked_sessions": 0,
-    "plan_files": 1
+    "workspace_files": 1
   },
   "file_ids": ["file_814439bd-4894-4e11-852d-314e9f777a7f"]
 }`,
@@ -330,9 +330,9 @@ const ENDPOINT_SPECS: EndpointSpec[] = [
     ],
   },
   {
-    id: "upload-evidence",
+    id: "upload-proof-of-work",
     method: "POST",
-    path: "/api/v2/agent/workspaces/{workspace_id}/evidence",
+    path: "/api/v2/agent/workspaces/{workspace_id}/proof-of-work",
     scope: "workspaces:write",
     summary: "Upload tool usage, screenshots, video, or EEG to xAI Files and link to workspace/block/session.",
     status: "201 Created",
@@ -344,11 +344,11 @@ const ENDPOINT_SPECS: EndpointSpec[] = [
       { name: "mime_type", type: "string", required: true, description: "Must match type (see MIME table below)." },
       { name: "data", type: "string (base64)", required: true, description: "Artifact bytes, max 10 MB." },
       { name: "file_name", type: "string", description: "Optional filename; default derived from type." },
-      { name: "block_id", type: "uuid", description: "Optional block to scope evidence." },
+      { name: "block_id", type: "uuid", description: "Optional block to scope proof of work." },
       { name: "session_id", type: "uuid", description: "Optional linked session ID." },
       { name: "timestamp_ms", type: "integer", description: "Client timestamp; defaults to server time." },
       { name: "chunk_index", type: "integer", description: "Chunk sequence for streaming artifacts; default 0." },
-      { name: "metadata", type: "object", description: "Arbitrary JSON metadata stored on the evidence row." },
+      { name: "metadata", type: "object", description: "Arbitrary JSON metadata stored on the proof of work row." },
       { name: "tool_name", type: "string", description: "For type=tool: tool identifier (e.g. canvas, pumadoc)." },
       { name: "tool_action", type: "string", description: "For type=tool: action name (e.g. draw, step_completed)." },
       { name: "band_powers", type: "object", description: "For type=eeg: band power map (numeric values)." },
@@ -366,26 +366,26 @@ const ENDPOINT_SPECS: EndpointSpec[] = [
   "tool_action": "session_trace"
 }`,
     responseBody: [
-      { name: "evidence.id", type: "uuid", description: "workspace_evidence.id" },
-      { name: "evidence.workspace_id", type: "uuid", description: "Same as plan_id." },
-      { name: "evidence.block_id", type: "uuid | null", description: "plan_node_id if scoped." },
-      { name: "evidence.session_id", type: "uuid | null", description: "Optional session link." },
-      { name: "evidence.type", type: "string", description: "tool | screen | video | eeg" },
-      { name: "evidence.file_name", type: "string", description: "Stored filename." },
-      { name: "evidence.mime_type", type: "string", description: "MIME type." },
-      { name: "evidence.file_size", type: "integer", description: "Decoded byte length." },
-      { name: "evidence.xai_file_id", type: "string", description: "xAI Files API file_id." },
-      { name: "evidence.timestamp_ms", type: "integer", description: "Client or server timestamp." },
-      { name: "evidence.chunk_index", type: "integer", description: "Chunk index." },
-      { name: "evidence.metadata", type: "object", description: "Stored metadata JSON." },
-      { name: "evidence.tool_name", type: "string | null", description: "Tool name when type=tool." },
-      { name: "evidence.tool_action", type: "string | null", description: "Tool action when type=tool." },
-      { name: "evidence.device_name", type: "string | null", description: "EEG device when type=eeg." },
-      { name: "evidence.sample_count", type: "integer | null", description: "EEG samples when type=eeg." },
-      { name: "evidence.created_at", type: "ISO-8601", description: "Upload timestamp." },
+      { name: "proof_of_work.id", type: "uuid", description: "workspace_proof_of_work.id" },
+      { name: "proof_of_work.workspace_id", type: "uuid", description: "Same as workspace_id." },
+      { name: "proof_of_work.block_id", type: "uuid | null", description: "block_id if scoped." },
+      { name: "proof_of_work.session_id", type: "uuid | null", description: "Optional session link." },
+      { name: "proof_of_work.type", type: "string", description: "tool | screen | video | eeg" },
+      { name: "proof_of_work.file_name", type: "string", description: "Stored filename." },
+      { name: "proof_of_work.mime_type", type: "string", description: "MIME type." },
+      { name: "proof_of_work.file_size", type: "integer", description: "Decoded byte length." },
+      { name: "proof_of_work.xai_file_id", type: "string", description: "xAI Files API file_id." },
+      { name: "proof_of_work.timestamp_ms", type: "integer", description: "Client or server timestamp." },
+      { name: "proof_of_work.chunk_index", type: "integer", description: "Chunk index." },
+      { name: "proof_of_work.metadata", type: "object", description: "Stored metadata JSON." },
+      { name: "proof_of_work.tool_name", type: "string | null", description: "Tool name when type=tool." },
+      { name: "proof_of_work.tool_action", type: "string | null", description: "Tool action when type=tool." },
+      { name: "proof_of_work.device_name", type: "string | null", description: "EEG device when type=eeg." },
+      { name: "proof_of_work.sample_count", type: "integer | null", description: "EEG samples when type=eeg." },
+      { name: "proof_of_work.created_at", type: "ISO-8601", description: "Upload timestamp." },
     ],
     responseExample: `{
-  "evidence": {
+  "proof_of_work": {
     "id": "3d2a15c4-3e21-4e11-bf9c-c007ef0c82b4",
     "workspace_id": "a3090aa0-3498-4be8-aa87-32a1a6591641",
     "block_id": "e57844a6-1b69-465c-9120-d0812d6339ae",
@@ -415,7 +415,7 @@ const ENDPOINT_SPECS: EndpointSpec[] = [
     method: "POST",
     path: "/api/v2/agent/workspaces/{workspace_id}/performance",
     scope: "workspaces:read",
-    summary: "Analyze workspace evidence, TAP (Think Aloud Protocol) results, ILE practice traces, sessions, and plan files. Report mode (no prompt) or chat mode (with prompt).",
+    summary: "Analyze workspace proof of work, TAP (Think Aloud Protocol) results, ILE practice traces, sessions, and plan files. Report mode (no prompt) or chat mode (with prompt).",
     status: "200 OK",
     pathParams: [
       { name: "workspace_id", type: "uuid", required: true, description: "Verification Workspace ID." },
@@ -438,7 +438,7 @@ const ENDPOINT_SPECS: EndpointSpec[] = [
     responseBody: [
       { name: "mode", type: "report | chat", description: "Which response shape is populated." },
       { name: "report", type: "object | null", description: "Present when mode=report." },
-      { name: "report.overall_score", type: "integer", description: "0–100 readiness score synthesized from evidence." },
+      { name: "report.overall_score", type: "integer", description: "0–100 readiness score synthesized from proof of work." },
       {
         name: "report.marker_scores",
         type: "array",
@@ -448,12 +448,12 @@ const ENDPOINT_SPECS: EndpointSpec[] = [
       { name: "report.strengths", type: "string[]", description: "Demonstrated strengths." },
       { name: "report.growth_areas", type: "string[]", description: "Areas needing development." },
       { name: "report.gap_analysis.summary", type: "string", description: "Gap analysis overview." },
-      { name: "report.gap_analysis.gaps", type: "array", description: "title, evidence, severity (low|medium|high), suggested_repair." },
+      { name: "report.gap_analysis.gaps", type: "array", description: "title, proof_of_work, severity (low|medium|high), suggested_repair." },
       { name: "report.gap_analysis.next_practice", type: "string[]", description: "Recommended practice actions." },
       { name: "report.suggestions", type: "string[]", description: "Additional recommendations." },
       { name: "report.confidence", type: "string", description: "emerging | developing | clear | well-connected" },
       { name: "response", type: "string | null", description: "Markdown answer when mode=chat." },
-      { name: "evidence_summary", type: "object | null", description: "Counts used in context (blocks, tap_sessions, evidence_artifacts, linked_sessions, plan_files)." },
+      { name: "proof_of_work_summary", type: "object | null", description: "Counts used in context (blocks, tap_sessions, proof_of_work_artifacts, linked_sessions, workspace_files)." },
       { name: "file_ids", type: "string[]", description: "xAI file IDs for follow-up calls; pass back as file_ids." },
     ],
     responseExample: `{
@@ -482,7 +482,7 @@ const ENDPOINT_SPECS: EndpointSpec[] = [
       "gaps": [
         {
           "title": "Missing churn risk quantification",
-          "evidence": "Reflection states churn risk was not modeled.",
+          "proof_of_work": "Reflection states churn risk was not modeled.",
           "severity": "medium",
           "suggested_repair": "Add probability-weighted revenue loss to ROI table."
         }
@@ -492,12 +492,12 @@ const ENDPOINT_SPECS: EndpointSpec[] = [
     "suggestions": ["Practice live role-play with procurement pushback"],
     "confidence": "emerging"
   },
-  "evidence_summary": {
+  "proof_of_work_summary": {
     "blocks": 1,
     "tap_sessions": 0,
-    "evidence_artifacts": 2,
+    "proof_of_work_artifacts": 2,
     "linked_sessions": 0,
-    "plan_files": 0
+    "workspace_files": 0
   },
   "file_ids": ["file_814439bd-4894-4e11-852d-314e9f777a7f"]
 }
@@ -506,18 +506,18 @@ const ENDPOINT_SPECS: EndpointSpec[] = [
 {
   "mode": "chat",
   "response": "The biggest readiness gap is **churn risk quantification** — the learner discussed renewal value but never modeled probability-weighted revenue loss.",
-  "evidence_summary": {
+  "proof_of_work_summary": {
     "blocks": 1,
     "tap_sessions": 0,
-    "evidence_artifacts": 2,
+    "proof_of_work_artifacts": 2,
     "linked_sessions": 0,
-    "plan_files": 0
+    "workspace_files": 0
   },
   "file_ids": ["file_814439bd-4894-4e11-852d-314e9f777a7f"]
 }`,
     notes: [
       "First call with empty file_ids uploads a workspace performance JSON summary + up to 19 artifact files to xAI.",
-      "If no evidence exists, both modes still return 200 with an empty-data template (report object or chat message).",
+      "If no proof of work exists, both modes still return 200 with an empty-data template (report object or chat message).",
       "Chat mode: pass returned file_ids on follow-up calls to avoid re-uploading the context bundle.",
     ],
   },
@@ -543,11 +543,11 @@ const ENDPOINT_SPECS: EndpointSpec[] = [
 }`,
     responseBody: [
       { name: "tap_link.id", type: "uuid", description: "TAP link / session row ID." },
-      { name: "tap_link.plan_id", type: "uuid", description: "Workspace ID." },
-      { name: "tap_link.plan_node_id", type: "uuid", description: "Block ID." },
+      { name: "tap_link.workspace_id", type: "uuid", description: "Workspace ID." },
+      { name: "tap_link.block_id", type: "uuid", description: "Block ID." },
       { name: "tap_link.status", type: "string", description: "pending | in_progress | completed" },
       { name: "tap_link.requested_duration_seconds", type: "integer", description: "900 (15 min) or 1800 (30 min)." },
-      { name: "tap_link.focus_node_ids", type: "uuid[]", description: "Focused block IDs (usually the target block)." },
+      { name: "tap_link.focus_block_ids", type: "uuid[]", description: "Focused block IDs (usually the target block)." },
       { name: "tap_link.created_at", type: "ISO-8601", description: "Link creation time." },
       { name: "tap_link.private_url", type: "string", description: "Bearer URL: /ghl-score/session/{token}. No login required." },
       { name: "interruption", type: "object | null", description: "TIM predictive interruption (see Predictive interruptions)." },
@@ -555,11 +555,11 @@ const ENDPOINT_SPECS: EndpointSpec[] = [
     responseExample: `{
   "tap_link": {
     "id": "ae0cc774-1832-4bb5-bc7d-bf119ddf759f",
-    "plan_id": "75b3b4ef-4e47-4f39-bb09-f61406603d75",
-    "plan_node_id": "88a43ad8-62f8-4252-a847-2cbc0b754a57",
+    "workspace_id": "75b3b4ef-4e47-4f39-bb09-f61406603d75",
+    "block_id": "88a43ad8-62f8-4252-a847-2cbc0b754a57",
     "status": "pending",
     "requested_duration_seconds": 900,
-    "focus_node_ids": ["88a43ad8-62f8-4252-a847-2cbc0b754a57"],
+    "focus_block_ids": ["88a43ad8-62f8-4252-a847-2cbc0b754a57"],
     "created_at": "2026-06-23T01:29:03.861663+00:00",
     "private_url": "https://openlesson.academy/ghl-score/session/E8-ouJ9lErgDEmteyKc4tJ39meJ91vzZFNUiuRauHvw"
   }
@@ -584,12 +584,12 @@ const ENDPOINT_SPECS: EndpointSpec[] = [
     responseBody: [
       { name: "tap_links", type: "array", description: "Sessions ordered by created_at descending." },
       { name: "tap_links[].id", type: "uuid", description: "Link ID." },
-      { name: "tap_links[].plan_id", type: "uuid", description: "Workspace ID." },
-      { name: "tap_links[].plan_node_id", type: "uuid", description: "Block ID." },
+      { name: "tap_links[].workspace_id", type: "uuid", description: "Workspace ID." },
+      { name: "tap_links[].block_id", type: "uuid", description: "Block ID." },
       { name: "tap_links[].status", type: "string", description: "pending | in_progress | completed" },
       { name: "tap_links[].requested_duration_seconds", type: "integer", description: "Requested duration." },
       { name: "tap_links[].duration_seconds", type: "integer", description: "Actual duration (0 until completed)." },
-      { name: "tap_links[].focus_node_ids", type: "uuid[]", description: "Focused blocks." },
+      { name: "tap_links[].focus_block_ids", type: "uuid[]", description: "Focused blocks." },
       { name: "tap_links[].overall_score", type: "integer | null", description: "Score when completed." },
       { name: "tap_links[].created_at", type: "ISO-8601", description: "Created at." },
       { name: "tap_links[].started_at", type: "ISO-8601 | null", description: "Started at." },
@@ -600,12 +600,12 @@ const ENDPOINT_SPECS: EndpointSpec[] = [
   "tap_links": [
     {
       "id": "ae0cc774-1832-4bb5-bc7d-bf119ddf759f",
-      "plan_id": "75b3b4ef-4e47-4f39-bb09-f61406603d75",
-      "plan_node_id": "88a43ad8-62f8-4252-a847-2cbc0b754a57",
+      "workspace_id": "75b3b4ef-4e47-4f39-bb09-f61406603d75",
+      "block_id": "88a43ad8-62f8-4252-a847-2cbc0b754a57",
       "status": "completed",
       "requested_duration_seconds": 900,
       "duration_seconds": 120,
-      "focus_node_ids": ["88a43ad8-62f8-4252-a847-2cbc0b754a57"],
+      "focus_block_ids": ["88a43ad8-62f8-4252-a847-2cbc0b754a57"],
       "overall_score": 72,
       "created_at": "2026-06-23T01:29:03.861663+00:00",
       "started_at": "2026-06-23T01:30:00+00:00",
@@ -677,7 +677,7 @@ const ENDPOINT_SPECS: EndpointSpec[] = [
       "gaps": [
         {
           "title": "Weak causal link retrieval→accuracy",
-          "evidence": "Could not explain how bad retrieval causes hallucinations.",
+          "proof_of_work": "Could not explain how bad retrieval causes hallucinations.",
           "severity": "medium",
           "suggested_repair": "Practice explaining failure modes with a concrete bad-retrieval example."
         }
@@ -977,13 +977,13 @@ export default function AgenticV2DocsPage() {
       <Navbar />
       <main className="mx-auto max-w-5xl px-4 py-10 sm:px-6 sm:py-14">
         <header className={`${sectionClass} mb-8`}>
-          <p className={labelClass}>OpenLesson Evidence API</p>
+          <p className={labelClass}>OpenLesson Proof-of-Work API</p>
           <h1 className="mt-3 max-w-3xl text-3xl font-medium tracking-[-1.2px] text-white sm:text-4xl">
             Verification Workspace API Reference
           </h1>
           <p className="mt-4 max-w-3xl text-sm leading-relaxed text-neutral-400 sm:text-base">
-            Full request and response specifications for every Evidence API endpoint: workspaces, evidence schema
-            generation, integration skill generation, evidence upload, performance analysis, TAP links, ILE practice, guest
+            Full request and response specifications for every Proof-of-Work API endpoint: workspaces, proof-of-work schema
+            generation, integration skill generation, proof-of-work upload, performance analysis, TAP links, ILE practice, guest
             provisioning, and dashboard key management. Bearer endpoints use base path{" "}
             <code className="text-neutral-300">/api/v2/agent</code> and require active{" "}
             <code className="text-neutral-300">pro_teams</code>.
@@ -1045,8 +1045,8 @@ Content-Type: application/json`}</code>
           <FieldTable
             title="Scope reference"
             fields={[
-              { name: "workspaces:read", type: "scope", description: "List blocks; generate evidence schemas and integration skills; run performance analysis (report or chat)." },
-              { name: "workspaces:write", type: "scope", description: "Create workspaces; upload evidence." },
+              { name: "workspaces:read", type: "scope", description: "List blocks; generate proof-of-work schemas and integration skills; run performance analysis (report or chat)." },
+              { name: "workspaces:write", type: "scope", description: "Create workspaces; upload proof of work." },
               { name: "tap:read", type: "scope", description: "List TAP links; poll TAP results." },
               { name: "tap:write", type: "scope", description: "Create Think Aloud Protocol (TAP) links for blocks." },
               { name: "org:read", type: "scope", description: "Reserved for org admin keys (future org read endpoints)." },
@@ -1091,7 +1091,7 @@ Content-Type: application/json`}</code>
           <h2 className="text-lg font-medium text-white">TAP session completion (learner-facing)</h2>
           <p className="mt-2 text-sm text-neutral-400">
             Learners open <code className="text-neutral-300">private_url</code> without an API key. Completion uses web
-            APIs (not Evidence API):
+            APIs (not Proof-of-Work API):
           </p>
           <FieldTable
             title="POST /api/workspace-ghl-score/chat"

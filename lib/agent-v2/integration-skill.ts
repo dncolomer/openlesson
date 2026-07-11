@@ -1,11 +1,11 @@
-import type { EvidenceEvalSchemaResult, EvidenceSchemaIntegrationHints } from "./evidence-schema";
+import type { ProofOfWorkEvalSchemaResult, ProofOfWorkSchemaIntegrationHints } from "./proof-of-work-schema";
 import {
-  buildEvidenceSchemaApiPath,
-  buildEvidenceUploadApiPath,
+  buildProofOfWorkSchemaApiPath,
+  buildProofOfWorkUploadApiPath,
   buildIntegrationSkillApiPath,
   buildPerformanceApiPath,
-  formatEvidenceSpecForSkillPrompt,
-} from "./evidence-integration";
+  formatProofOfWorkSpecForSkillPrompt,
+} from "./proof-of-work-integration";
 
 export interface IntegrationSkillRequest {
   integration_name: string;
@@ -14,9 +14,9 @@ export interface IntegrationSkillRequest {
   block_id?: string | null;
   base_url?: string;
   include_sections?: string[];
-  integration_hints?: EvidenceSchemaIntegrationHints;
-  /** When true, generates evidence spec inline (slower; may timeout). Default false — fetch spec via evidence-schema API separately. */
-  prefetch_evidence_spec?: boolean;
+  integration_hints?: ProofOfWorkSchemaIntegrationHints;
+  /** When true, generates proof-of-work spec inline (slower; may timeout). Default false — fetch spec via proof-of-work-schema API separately. */
+  prefetch_proof_of_work_spec?: boolean;
 }
 
 export interface IntegrationSkillResult {
@@ -38,8 +38,8 @@ const DEFAULT_SECTIONS = [
   "predictive_interruptions",
   "auth",
   "endpoints",
-  "evidence_specification",
-  "evidence_payload",
+  "proof_of_work_specification",
+  "proof_of_work_payload",
   "performance",
   "checklist",
 ] as const;
@@ -66,7 +66,7 @@ export function parseIntegrationSkillRequest(body: Record<string, unknown>): Int
       .filter(Boolean);
   }
 
-  let integration_hints: EvidenceSchemaIntegrationHints | undefined;
+  let integration_hints: ProofOfWorkSchemaIntegrationHints | undefined;
   const hintsRaw = body.integration_hints;
   if (hintsRaw && typeof hintsRaw === "object" && !Array.isArray(hintsRaw)) {
     const hints = hintsRaw as Record<string, unknown>;
@@ -82,7 +82,7 @@ export function parseIntegrationSkillRequest(body: Record<string, unknown>): Int
     };
   }
 
-  const prefetchEvidenceSpec = body.prefetch_evidence_spec === true;
+  const prefetchEvidenceSpec = body.prefetch_proof_of_work_spec === true;
 
   return {
     integration_name: integrationName.slice(0, 120),
@@ -92,7 +92,7 @@ export function parseIntegrationSkillRequest(body: Record<string, unknown>): Int
     base_url: baseUrl,
     include_sections,
     integration_hints,
-    prefetch_evidence_spec: prefetchEvidenceSpec,
+    prefetch_proof_of_work_spec: prefetchEvidenceSpec,
   };
 }
 
@@ -106,7 +106,7 @@ export function slugifyIntegrationName(name: string): string {
 
 export function deriveSkillName(integrationName: string): string {
   const slug = slugifyIntegrationName(integrationName);
-  return `${slug}-openlesson-evidence-performance`;
+  return `${slug}-openlesson-proof-of-work-performance`;
 }
 
 export function deriveSuggestedSharePath(integrationName: string): string {
@@ -128,15 +128,15 @@ export function buildIntegrationSkillInstructions(
   workspace: { id: string; title: string | null; root_topic: string | null; description?: string | null },
   blocks: Array<{ id: string; title: string | null; description: string | null; is_start?: boolean | null }>,
   blockId?: string | null,
-  evidenceSpec?: EvidenceEvalSchemaResult | null
+  proofOfWorkSpec?: ProofOfWorkEvalSchemaResult | null
 ): string {
   const sections = request.include_sections?.length ? request.include_sections : [...DEFAULT_SECTIONS];
   const skillName = deriveSkillName(request.integration_name);
   const sharePath = deriveSuggestedSharePath(request.integration_name);
   const scope = blockId ? "Focus the skill on one workspace block." : "Cover the full workspace.";
   const baseUrl = request.base_url || "https://openlesson.academy";
-  const evidenceSchemaPath = buildEvidenceSchemaApiPath(workspace.id, baseUrl);
-  const evidenceUploadPath = buildEvidenceUploadApiPath(workspace.id, baseUrl);
+  const proofOfWorkSchemaPath = buildProofOfWorkSchemaApiPath(workspace.id, baseUrl);
+  const evidenceUploadPath = buildProofOfWorkUploadApiPath(workspace.id, baseUrl);
   const integrationSkillPath = buildIntegrationSkillApiPath(workspace.id, baseUrl);
   const performancePath = buildPerformanceApiPath(workspace.id, baseUrl);
 
@@ -148,22 +148,22 @@ export function buildIntegrationSkillInstructions(
     request.eval_definition?.trim() ||
     request.partner_description?.trim() ||
     workspace.description?.trim() ||
-    "Verify learning for this workspace with evidence-backed gap analysis.";
+    "Verify learning for this workspace with proof-of-work-backed gap analysis.";
 
-  const evidenceSpecSection = evidenceSpec
-    ? `\n\nWorkspace evidence specification (use as reference; skill.md must still point to the dynamic API):\n${formatEvidenceSpecForSkillPrompt(evidenceSpec)}`
+  const proofOfWorkSpecSection = proofOfWorkSpec
+    ? `\n\nWorkspace proof-of-work specification (use as reference; skill.md must still point to the dynamic API):\n${formatProofOfWorkSpecForSkillPrompt(proofOfWorkSpec)}`
     : "";
 
-  return `Generate a custom integration skill.md document for "${request.integration_name}" integrating with OpenLesson Evidence API.
+  return `Generate a custom integration skill.md document for "${request.integration_name}" integrating with OpenLesson Proof-of-Work API.
 
 ${scope}
 
-This skill.md must treat the evidence specification as a formal contract and **must be regenerated** as workspace evidence grows. Integrators fetch the live schema dynamically; do not tell them to invent ad-hoc JSON. This document is not static.
+This skill.md must treat the proof of work specification as a formal contract and **must be regenerated** as workspace proof of work grows. Integrators fetch the live schema dynamically; do not tell them to invent ad-hoc JSON. This document is not static.
 
 YAML frontmatter (required):
 ---
 name: ${skillName}
-description: ${request.integration_name} integration skill for OpenLesson workspace evidence upload and performance analysis.
+description: ${request.integration_name} integration skill for OpenLesson workspace proof of work upload and performance analysis.
 ---
 
 Workspace:
@@ -175,7 +175,7 @@ Workspace:
 Partner description from API caller:
 ${request.partner_description || "Not provided: infer reasonable integration goals from the workspace."}
 
-Evaluation definition (shared with evidence spec generation):
+Evaluation definition (shared with proof of work spec generation):
 """
 ${evalDefinition}
 """
@@ -185,54 +185,54 @@ ${blockTable || "No blocks yet."}
 
 Base URL for examples: ${request.base_url}
 Suggested share path: ${sharePath}
-Evidence spec API (dynamic — MUST document prominently): POST ${evidenceSchemaPath}
-Evidence upload API: POST ${evidenceUploadPath}
+Proof-of-work spec API (dynamic — MUST document prominently): POST ${proofOfWorkSchemaPath}
+Proof-of-work upload API: POST ${evidenceUploadPath}
 Integration skill regeneration API (self-update — MUST document prominently): POST ${integrationSkillPath}
-Performance API (re-run as evidence grows): POST ${performancePath}
+Performance API (re-run as proof of work grows): POST ${performancePath}
 
 Sections to include: ${sections.join(", ")}
-${evidenceSpecSection}
+${proofOfWorkSpecSection}
 
 Required content:
-1. Purpose — what this partner agent verifies and how evidence + performance fit the workflow.
-2. Design principles — checkpoint-agnostic timing, block-scoped vs workspace-global analysis, tool usage as core signal, always fetch the live evidence spec before uploading, **more evidence improves evaluation quality**.
+1. Purpose — what this partner agent verifies and how proof of work + performance fit the workflow.
+2. Design principles — checkpoint-agnostic timing, block-scoped vs workspace-global analysis, tool usage as core signal, always fetch the live proof-of-work spec before uploading, **more proof of work improves evaluation quality**.
 3. **Continuous evaluation and regeneration (required section)** — this is a must-have operating model, not optional maintenance. Include:
-   - Principle: verification is continuous; the more data and evidence submitted, the better OpenLesson can learn and evaluate
-   - This skill.md is a snapshot; partner agents must **regenerate** it via POST ${integrationSkillPath} as evidence accumulates
-   - Re-fetch the evidence spec via POST ${evidenceSchemaPath} on a recurring basis (e.g. after every 5-10 new uploads, when blocks change, or when scores feel stale)
-   - Re-request performance via POST ${performancePath} after meaningful evidence batches
+   - Principle: verification is continuous; the more data and proof of work submitted, the better OpenLesson can learn and evaluate
+   - This skill.md is a snapshot; partner agents must **regenerate** it via POST ${integrationSkillPath} as proof of work accumulates
+   - Re-fetch the proof of work spec via POST ${proofOfWorkSchemaPath} on a recurring basis (e.g. after every 5-10 new uploads, when blocks change, or when scores feel stale)
+   - Re-request performance via POST ${performancePath} after meaningful proof-of-work batches
    - Explicit warning: treating the initial skill.md or spec as permanent will degrade evaluation quality over time
-   - Recommended loop: upload evidence → re-fetch spec → regenerate skill → request performance → repeat
-   - Reference the \`continuous_evaluation\` object returned by the evidence spec API for machine-readable self-update triggers
-4. **Predictive interruptions (required section)** — Trace Interruption Model (TIM) on every Evidence API response:
+   - Recommended loop: upload proof of work → re-fetch spec → regenerate skill → request performance → repeat
+   - Reference the \`continuous_evaluation\` object returned by the proof of work spec API for machine-readable self-update triggers
+4. **Predictive interruptions (required section)** — Trace Interruption Model (TIM) on every Proof-of-Work API response:
    - Every REST and MCP success response includes top-level \`interruption\` (object or null).
-   - When non-null: schedule \`intervention\` after \`delay_ms\` unless a later Evidence API response supersedes it.
+   - When non-null: schedule \`intervention\` after \`delay_ms\` unless a later Proof-of-Work API response supersedes it.
    - When null: no interruption predicted — do not schedule from that response.
    - Document consumer obligations: read interruption every call, supersede pending timers, never stack duplicate timers.
-   - Reference \`interruption_contract\` from the evidence spec API for machine-readable TIM contract and intervention types.
+   - Reference \`interruption_contract\` from the proof of work spec API for machine-readable TIM contract and intervention types.
    - Include JSON examples for active interruption and null (empty).
 5. Authentication table (Bearer sk_ / gsk_, Teams tier, scopes).
 6. Endpoints table covering REST and MCP with **dual documentation** (never hide REST behind MCP):
-   - REST: POST /workspaces, GET /blocks, POST /evidence-schema, POST /evidence, POST /performance, POST /integration-skill
-   - MCP (JSON-RPC at POST /api/mcp with Bearer auth): list_workspaces, get_workspace, get_learning_progress, list_blocks, generate_evidence_schema, upload_evidence, analyze_performance, generate_integration_skill, create_tap_link, list_tap_links, get_tap_results
-   - State that MCP tools have full parity with REST; evidence spec responses include both continuous_evaluation (REST paths) and continuous_evaluation_mcp (tool names)
-   - Recommend get_learning_progress / generate_evidence_schema first for progress orientation
-7. **Evidence specification (required section)** — explain that payloads are defined by the formal evidence spec returned from POST ${evidenceSchemaPath}. Include:
-   - When to call the evidence spec endpoint (before first upload, after evidence milestones, when eval definition or blocks change)
+   - REST: POST /workspaces, GET /blocks, POST /proof-of-work-schema, POST /proof-of-work, POST /performance, POST /integration-skill
+   - MCP (JSON-RPC at POST /api/mcp with Bearer auth): list_workspaces, get_workspace, get_learning_progress, list_blocks, generate_proof_of_work_schema, upload_proof_of_work, analyze_performance, generate_integration_skill, create_tap_link, list_tap_links, get_tap_results
+   - State that MCP tools have full parity with REST; proof-of-work spec responses include both continuous_evaluation (REST paths) and continuous_evaluation_mcp (tool names)
+   - Recommend get_learning_progress / generate_proof_of_work_schema first for progress orientation
+7. **Proof-of-work specification (required section)** — explain that payloads are defined by the formal proof-of-work spec returned from POST ${proofOfWorkSchemaPath}. Include:
+   - When to call the proof of work spec endpoint (before first upload, after proof-of-work milestones, when eval definition or blocks change)
    - Example request body with definition, optional block_id, and integration_hints
-   - That the response includes tool_submissions, evidence_upload_contract, performance_report_contract, interruption_contract, continuous_evaluation, schema_name, example_payload, collection_guidance, and top-level interruption
+   - That the response includes tool_submissions, proof_of_work_upload_contract, performance_report_contract, interruption_contract, continuous_evaluation, schema_name, example_payload, collection_guidance, and top-level interruption
    - Instruction to validate tool payloads against the fetched schema before upload
    - Do NOT embed a static schema as the source of truth; reference the API path above
-8. Workspace-specific block mapping guidance and example tool JSON payloads that match the evidence spec (illustrative only).
+8. Workspace-specific block mapping guidance and example tool JSON payloads that match the proof of work spec (illustrative only).
 9. **Performance (required section)** — document POST ${performancePath} report mode. Every report MUST include:
    - overall_score (0-100 integer readiness score)
    - marker_scores (4-8 competency axes for spider/radar visualization: id, label, score, rationale, optional block_id)
-   - gap_analysis with gaps[] (title, evidence, severity low|medium|high, suggested_repair) and next_steps { directions[], events[] } — remediation must be product/workflow-specific; never TAP, block completion, ILE, or OpenLesson platform tasks
+   - gap_analysis with gaps[] (title, proof_of_work, severity low|medium|high, suggested_repair) and next_steps { directions[], events[] } — remediation must be product/workflow-specific; never TAP, block completion, ILE, or OpenLesson platform tasks
    - summary, strengths, growth_areas, suggestions, confidence
-   - Reference performance_report_contract from the evidence spec API for the machine-readable contract and example_report
+   - Reference performance_report_contract from the proof of work spec API for the machine-readable contract and example_report
    - Include a full JSON example response with overall_score, marker_scores, and at least one gap
    - Chat mode example with prompt + conversation_history
-10. Quick integration checklist: fetch evidence spec → honor interruption scheduling → upload evidence per contract → regenerate skill → request performance → repeat as evidence grows.
+10. Quick integration checklist: fetch proof-of-work spec → honor interruption scheduling → upload proof of work per contract → regenerate skill → request performance → repeat as proof of work grows.
 
 Canonical API reference links: ${request.base_url}/skill.md and ${request.base_url}/docs/agentic-v2
 
@@ -240,5 +240,5 @@ Return ONLY the markdown document. No JSON wrapper. No code fences around the en
 }
 
 export function buildIntegrationSkillPrompt(workspaceTitle: string, integrationName: string): string {
-  return `Write a complete skill.md integration guide for "${integrationName}" using OpenLesson workspace "${workspaceTitle}". The guide must reference dynamic self-updating APIs for evidence spec and skill regeneration, and treat continuous evaluation (more evidence = better learning) as a must-have operating model.`;
+  return `Write a complete skill.md integration guide for "${integrationName}" using OpenLesson workspace "${workspaceTitle}". The guide must reference dynamic self-updating APIs for proof-of-work spec and skill regeneration, and treat continuous evaluation (more proof of work = better learning) as a must-have operating model.`;
 }

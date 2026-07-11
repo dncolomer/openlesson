@@ -59,7 +59,7 @@ import { LocalContextBuffer } from "@/lib/local-context";
 // ModelLoadingModal no longer used -- loading UI is inline in welcome modal
 
 import { PopOutBanner } from "./PopOutBanner";
-import { PlanResourcesPanel } from "./PlanResourcesPanel";
+import { WorkspaceResourcesPanel } from "./WorkspaceResourcesPanel";
 import { ConfirmDialog } from "./ui/ConfirmDialog";
 import { 
   useSessionSync, 
@@ -4026,7 +4026,7 @@ export function SessionView({ sessionId }: { sessionId: string }) {
                 setActiveTool(tool);
               }} 
               problem={session.problem} 
-              planId={session.metadata?.plan_id as string | undefined}
+              workspaceId={session.metadata?.workspace_id as string | undefined}
               disabledTools={[]}
               onBackToDashboard={pauseAndGoToDashboard}
               isRecording={isRecording}
@@ -4146,7 +4146,7 @@ export function SessionView({ sessionId }: { sessionId: string }) {
                         thoughts={sessionThoughtHistory}
                         sentThoughtIds={sessionThoughtInterface.sentThoughtIds}
                         skippedThoughtIds={sessionThoughtInterface.memoryThoughtIds}
-                        planId={session.metadata?.plan_id ?? undefined}
+                        workspaceId={session.metadata?.workspace_id ?? undefined}
                         sessionId={session.id}
                         onSendThought={(text, thoughtIds) => {
                           void sessionThoughtInterface.sendThought(text, thoughtIds);
@@ -4199,9 +4199,9 @@ export function SessionView({ sessionId }: { sessionId: string }) {
                       />
                     )}
                     </div>
-                    {activeTool === "plan-resources" && session?.metadata?.plan_id && !isMobile && (
+                    {activeTool === "plan-resources" && session?.metadata?.workspace_id && !isMobile && (
                       <div className="h-full overflow-hidden">
-                        <PlanResourcesPanel planId={session.metadata.plan_id as string} />
+                        <WorkspaceResourcesPanel workspaceId={session.metadata.workspace_id as string} />
                       </div>
                     )}
                     {/* Grokipedia search shortcut. Practice/Theory used to

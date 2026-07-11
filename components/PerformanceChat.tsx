@@ -16,7 +16,7 @@ interface Message {
 }
 
 interface PerformanceChatProps {
-  planId: string;
+  workspaceId: string;
   isOwner: boolean;
   currentUserId: string | null;
   isGroupPlan?: boolean;
@@ -68,7 +68,7 @@ function formatPerformanceMarkdown(content: string) {
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function PerformanceChat({
-  planId,
+  workspaceId,
   isOwner,
   currentUserId,
   isGroupPlan = false,
@@ -129,11 +129,11 @@ export function PerformanceChat({
         content: m.content,
       }));
 
-      const response = await fetch("/api/learning-plan/performance-chat", {
+      const response = await fetch("/api/workspace/performance-chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          planId,
+          workspaceId,
           message: userMessage.content,
           conversationHistory,
           fileIds,

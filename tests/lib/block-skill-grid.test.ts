@@ -20,7 +20,7 @@ function makeNode(
     title,
     status: "available",
     is_start: id === "a",
-    next_node_ids: [],
+    next_block_ids: [],
     position_x: position?.col,
     position_y: position?.row,
   };

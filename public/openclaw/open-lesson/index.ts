@@ -7,27 +7,27 @@ interface AgentToolContext {
   senderId?: string;
 }
 
-interface LearningPlanNode {
+interface WorkspaceNode {
   id: string;
   title: string;
   description: string;
   is_start: boolean;
-  next_node_ids: string[];
+  next_block_ids: string[];
   status: string;
 }
 
-interface LearningPlanResponse {
-  planId: string;
+interface WorkspaceResponse {
+  workspaceId: string;
   topic: string;
   days: number;
-  nodes: LearningPlanNode[];
+  nodes: WorkspaceNode[];
 }
 
 interface SessionStartResponse {
   sessionId: string;
   problem: string;
-  nodeTitle?: string;
-  planId?: string;
+  blockTitle?: string;
+  workspaceId?: string;
   status: string;
   instructions?: {
     audioFormat: string;
@@ -151,14 +151,14 @@ export default function (api: {
       const response = await makeRequest(
         api,
         config,
-        "/api/agent/plan",
+        "/api/agent/workspace",
         "POST",
         params
-      ) as LearningPlanResponse;
+      ) as WorkspaceResponse;
 
       const startNode = response.nodes.find((n) => n.is_start);
       return {
-        plan_id: response.planId,
+        workspace_id: response.workspaceId,
         topic: response.topic,
         days: response.days,
         nodes: response.nodes.map((n) => ({
@@ -166,10 +166,10 @@ export default function (api: {
           title: n.title,
           description: n.description,
           is_start: n.is_start,
-          next_node_ids: n.next_node_ids,
+          next_block_ids: n.next_block_ids,
           status: n.status,
         })),
-        first_session_node_id: startNode?.id,
+        first_session_block_id: startNode?.id,
       };
     }
   );
@@ -188,7 +188,7 @@ export default function (api: {
             description:
               "The problem or topic to explore in this session (e.g., 'Explain how gradient descent works')",
           },
-          plan_node_id: {
+          block_id: {
             type: "string",
             description:
               "Optional plan node ID to link this session to a learning plan",
@@ -216,8 +216,8 @@ export default function (api: {
       return {
         session_id: response.sessionId,
         problem: response.problem,
-        node_title: response.nodeTitle,
-        plan_id: response.planId,
+        block_title: response.blockTitle,
+        workspace_id: response.workspaceId,
         status: response.status,
         audio_format: response.instructions?.audioFormat || "webm",
         max_chunk_duration_ms: response.instructions?.maxChunkDuration || 60000,

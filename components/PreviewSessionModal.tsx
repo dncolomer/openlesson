@@ -19,7 +19,7 @@ interface PreviewData {
 }
 
 interface PreviewSessionModalProps {
-  nodeTitle: string;
+  blockTitle: string;
   nodeDescription: string;
   planTopic: string;
   planningPrompt?: string;
@@ -90,7 +90,7 @@ function StepCard({ step, index }: { step: SessionStep; index: number }) {
 }
 
 export function PreviewSessionModal({
-  nodeTitle,
+  blockTitle,
   nodeDescription,
   planTopic,
   planningPrompt,
@@ -105,10 +105,10 @@ export function PreviewSessionModal({
   useEffect(() => {
     async function generate() {
       try {
-        const res = await fetch("/api/learning-plan/preview-session", {
+        const res = await fetch("/api/workspace/preview-session", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ nodeTitle, nodeDescription, planTopic, planningPrompt }),
+          body: JSON.stringify({ blockTitle, nodeDescription, planTopic, planningPrompt }),
         });
         if (!res.ok) {
           const data = await res.json();
@@ -123,7 +123,7 @@ export function PreviewSessionModal({
       }
     }
     generate();
-  }, [nodeTitle, nodeDescription, planTopic, planningPrompt]);
+  }, [blockTitle, nodeDescription, planTopic, planningPrompt]);
 
   // Close on escape
   useEffect(() => {
@@ -146,7 +146,7 @@ export function PreviewSessionModal({
         {/* Header */}
         <div className="flex items-start justify-between px-5 pt-3 sm:pt-5 pb-3 border-b border-neutral-800/50">
           <div className="flex-1 min-w-0 pr-3">
-            <h3 className="text-base font-semibold text-white truncate">{nodeTitle}</h3>
+            <h3 className="text-base font-semibold text-white truncate">{blockTitle}</h3>
             {nodeDescription && (
               <p className="text-xs text-neutral-500 mt-0.5 line-clamp-2">{nodeDescription}</p>
             )}

@@ -5,7 +5,7 @@ export async function readJsonResponse<T extends Record<string, unknown> = Recor
   if (!text.trim()) {
     if (res.status === 504 || res.status === 502 || res.status === 408) {
       throw new Error(
-        "Request timed out. Skill generation can take up to two minutes. Try again, or generate the evidence spec separately first."
+        "Request timed out. Skill generation can take up to two minutes. Try again, or generate the proof of work spec separately first."
       );
     }
     throw new Error(`Empty response from server (${res.status})`);

@@ -9,7 +9,7 @@ import {
   buildMcpOAuthClientConfig,
   buildMcpOAuthDiscovery,
   buildSkillFileUrl,
-} from "@/lib/agent-v2/mcp-evidence-catalog";
+} from "@/lib/agent-v2/mcp-proof-of-work-catalog";
 
 type IntegrationSection = "skill" | "bearer" | "oauth";
 

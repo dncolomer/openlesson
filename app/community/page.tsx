@@ -1,6 +1,6 @@
 "use client";
 
-import { CommunityPlans } from "@/components/CommunityPlans";
+import { CommunityPlans } from "@/components/CommunityWorkspaces";
 import { Footer } from "@/components/Footer";
 import { Navbar } from "@/components/Navbar";
 import { useI18n } from "@/lib/i18n";

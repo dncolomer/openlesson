@@ -23,8 +23,8 @@ interface IleSessionDetail {
 
 interface TapSessionDetail {
   id: string;
-  plan_id: string | null;
-  plan_node_id: string | null;
+  workspace_id: string | null;
+  block_id: string | null;
   user_id: string | null;
   status: string;
   created_at: string;
@@ -44,20 +44,20 @@ interface PlanContext {
   display_topic?: string;
 }
 
-interface PlanNodeContext {
+interface BlockContext {
   id: string;
-  plan_id: string;
+  workspace_id: string;
   title: string;
   plan?: PlanContext;
 }
 
 type SessionPayload =
-  | { kind: "tutoring"; session: IleSessionDetail; planNode: PlanNodeContext | null }
+  | { kind: "tutoring"; session: IleSessionDetail; block: BlockContext | null }
   | {
       kind: "tap";
       session: TapSessionDetail;
       plan: PlanContext | null;
-      planNode: { id: string; plan_id: string; title: string } | null;
+      block: { id: string; workspace_id: string; title: string } | null;
       owner: SessionOwner | null;
     };
 
@@ -143,7 +143,7 @@ export default function AdminSessionDetailPage() {
   if (!payload) return <AdminError message="Session not found" />;
 
   if (payload.kind === "tap") {
-    const { session, plan, planNode, owner } = payload;
+    const { session, plan, block, owner } = payload;
     return (
       <main>
         <Link href="/admin/sessions" className="mb-4 inline-block text-sm text-neutral-400 hover:text-white">
@@ -155,7 +155,7 @@ export default function AdminSessionDetailPage() {
             <div>
               <p className="mb-1 font-mono text-[10px] uppercase tracking-[1.5px] text-neutral-500">TAP session</p>
               <h1 className="text-xl font-semibold text-white">
-                {planNode?.title || plan?.display_topic || "Think Aloud Protocol"}
+                {block?.title || plan?.display_topic || "Think Aloud Protocol"}
               </h1>
               {owner && (
                 <Link href={`/admin/users/${session.user_id}`} className="text-sm text-blue-400 hover:text-blue-300">
@@ -182,13 +182,13 @@ export default function AdminSessionDetailPage() {
           )}
         </div>
 
-        {(plan || planNode) && (
+        {(plan || block) && (
           <div className="rounded-lg border border-neutral-800 bg-neutral-900 p-6">
             <h2 className="mb-4 text-lg font-medium text-white">Linked workspace</h2>
             {plan && (
-              <Link href={`/admin/plans/${plan.id}`} className="block rounded-lg bg-neutral-800/50 p-3 hover:bg-neutral-800/70">
+              <Link href={`/admin/workspaces/${plan.id}`} className="block rounded-lg bg-neutral-800/50 p-3 hover:bg-neutral-800/70">
                 <div className="text-sm text-blue-400">{plan.display_topic || plan.root_topic}</div>
-                {planNode && <div className="mt-1 text-xs text-neutral-500">Block: {planNode.title}</div>}
+                {block && <div className="mt-1 text-xs text-neutral-500">Block: {block.title}</div>}
               </Link>
             )}
           </div>
@@ -197,7 +197,7 @@ export default function AdminSessionDetailPage() {
     );
   }
 
-  const { session, planNode } = payload;
+  const { session, block } = payload;
 
   return (
     <main>
@@ -227,14 +227,14 @@ export default function AdminSessionDetailPage() {
         </div>
       </div>
 
-      {planNode && (
+      {block && (
         <div className="rounded-lg border border-neutral-800 bg-neutral-900 p-6">
           <h2 className="mb-4 text-lg font-medium text-white">Linked workspace</h2>
-          <Link href={`/admin/plans/${planNode.plan_id}`} className="block rounded-lg bg-neutral-800/50 p-3 hover:bg-neutral-800/70">
+          <Link href={`/admin/workspaces/${block.workspace_id}`} className="block rounded-lg bg-neutral-800/50 p-3 hover:bg-neutral-800/70">
             <div className="mb-1 text-sm text-blue-400">
-              {planNode.plan?.display_topic || planNode.plan?.root_topic || "Unknown workspace"}
+              {block.plan?.display_topic || block.plan?.root_topic || "Unknown workspace"}
             </div>
-            <div className="text-xs text-neutral-500">Block: {planNode.title}</div>
+            <div className="text-xs text-neutral-500">Block: {block.title}</div>
           </Link>
         </div>
       )}

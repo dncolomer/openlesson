@@ -22,7 +22,7 @@ export const TIM_FOUNDATION = {
   summary:
     "The shared brain behind every product. It watches how people and agents think during real work, then steps in with a targeted question instead of waiting for the next chat reply.",
   bullets: [
-    "Same model across Evidence API, TAP, ILE, and ALE",
+    "Same model across Proof-of-Work API, TAP, ILE, and ALE",
     "Grounded in your workflow, skills, and conversion goals",
   ],
 };
@@ -33,7 +33,7 @@ export const WORKSPACE_FOUNDATION = {
   summary:
     "The container for a learning goal. Set the skill or scenario, add context (docs, recordings, tool traces), and run every product against the same live picture of the work.",
   bullets: [
-    "One place for goals, evidence, and scores",
+    "One place for goals, proof of work, and scores",
     "Humans and agents work inside the same workspace",
   ],
 };
@@ -42,12 +42,12 @@ export const PRODUCTS: ProductDefinition[] = [
   {
     id: "verification-api",
     eyebrow: "API",
-    title: "Evidence API",
+    title: "Proof-of-Work API",
     forHuman: {
       summary:
         "Send recordings, write-ups, or session artifacts from human workflows. Get readiness scores and a clear gap list before promotion or sign-off.",
       bullets: [
-        "Scores live cognition and written evidence",
+        "Scores live cognition and written proof of work",
         "Fits onboarding, certification, and QA gates",
       ],
       href: "/docs/agentic-v2",
@@ -101,9 +101,9 @@ export const PRODUCTS: ProductDefinition[] = [
     status: "upcoming",
     forAgent: {
       summary:
-        "Agents are not born with skills. ALE evolves skill.md files as agents learn from real workspace runs, closing gaps until Evidence API scores say the skill is ready to deploy.",
+        "Agents are not born with skills. ALE evolves skill.md files as agents learn from real workspace runs, closing gaps until Proof-of-Work API scores say the skill is ready to deploy.",
       bullets: [
-        "Skill file evolution driven by evidence, not one-shot prompt edits",
+        "Skill file evolution driven by proof of work, not one-shot prompt edits",
         "Sandbox practice on real scenarios until the agent earns the skill",
       ],
     },

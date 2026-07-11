@@ -374,8 +374,8 @@ export const SCHEMAS = {
     },
   },
 
-  learningPlanNodes: {
-    name: "learning_plan_nodes",
+  workspaceBlocks: {
+    name: "learning_blocks",
     strict: true,
     schema: {
       type: "object" as const,

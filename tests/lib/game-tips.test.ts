@@ -6,8 +6,8 @@ import {
   isExternalDemo,
   isGameDemo,
   isInteractiveDemo,
-} from "@/lib/evidence-api-demo/game-tips";
-import { orbitDemo } from "@/lib/evidence-api-demo/demos/orbit";
+} from "@/lib/openlesson-demo/game-tips";
+import { orbitDemo } from "@/lib/openlesson-demo/demos/orbit";
 import type { PerformanceReport } from "@/lib/agent-v2/performance-report";
 
 describe("game demo helpers", () => {
@@ -28,7 +28,7 @@ describe("game demo helpers", () => {
         gaps: [
           {
             title: "Urgent issue unassigned",
-            evidence: "ORB-12 still has no owner.",
+            proof_of_work: "ORB-12 still has no owner.",
             severity: "medium",
             suggested_repair: "Assign the regression issue before changing status.",
           },
@@ -44,7 +44,7 @@ describe("game demo helpers", () => {
           ],
         },
       },
-    } as PerformanceReport;
+    } as unknown as PerformanceReport;
 
     const coaching = extractGameCoaching(report);
     expect(coaching.directions).toEqual([

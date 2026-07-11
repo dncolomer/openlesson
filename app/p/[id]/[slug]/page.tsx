@@ -2,8 +2,8 @@ import { notFound } from "next/navigation";
 import { Metadata } from "next";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
-import { PlanView } from "@/components/PlanView";
-import { getRandomPlanCoverImage } from "@/lib/plan-image";
+import { WorkspaceView } from "@/components/WorkspaceView";
+import { getRandomWorkspaceCoverImage } from "@/lib/workspace-image";
 
 interface PageProps {
   params: Promise<{
@@ -12,7 +12,7 @@ interface PageProps {
   }>;
 }
 
-async function getPlan(planId: string) {
+async function getPlan(workspaceId: string) {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
@@ -35,9 +35,9 @@ async function getPlan(planId: string) {
   );
 
   const { data: plan, error } = await supabase
-    .from("learning_plans")
+    .from("workspaces")
     .select("*, profiles:author_id(username)")
-    .eq("id", planId)
+    .eq("id", workspaceId)
     .or("is_public.eq.true,is_group.eq.true")
     .single();
 
@@ -50,9 +50,9 @@ async function getPlan(planId: string) {
   }
 
   const { data: nodes } = await supabase
-    .from("plan_nodes")
+    .from("blocks")
     .select("*")
-    .eq("plan_id", planId);
+    .eq("workspace_id", workspaceId);
 
   return { plan, nodes: nodes || [] };
 }
@@ -72,7 +72,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const title = plan.title || plan.root_topic;
   const description = plan.description || `A workspace by @${plan.author_username || "anonymous"} on openLesson`;
 
-  const ogImage = await getRandomPlanCoverImage() || `/p/${id}/${slug}/opengraph-image`;
+  const ogImage = await getRandomWorkspaceCoverImage() || `/p/${id}/${slug}/opengraph-image`;
 
   return {
     title: `${title} - openLesson`,
@@ -108,5 +108,5 @@ export default async function PublicPlanPage({ params }: PageProps) {
     notFound();
   }
 
-  return <PlanView initialPlan={result.plan} initialNodes={result.nodes} />;
+  return <WorkspaceView initialPlan={result.plan} initialNodes={result.nodes} />;
 }

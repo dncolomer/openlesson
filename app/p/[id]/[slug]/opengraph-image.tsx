@@ -26,7 +26,7 @@ function formatTitle(slug: string): string {
     .join(" ");
 }
 
-async function getPlanData(planId: string) {
+async function getPlanData(workspaceId: string) {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   if (!supabaseUrl || !supabaseAnonKey) return null;
@@ -37,9 +37,9 @@ async function getPlanData(planId: string) {
   });
 
   const { data } = await supabase
-    .from("learning_plans")
+    .from("workspaces")
     .select("title, root_topic, cover_image_url, profiles:author_id(username)")
-    .eq("id", planId)
+    .eq("id", workspaceId)
     .eq("is_public", true)
     .single();
 

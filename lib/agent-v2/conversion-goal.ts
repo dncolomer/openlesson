@@ -28,7 +28,7 @@ export function fallbackConversionGoal(context: ConversionGoalContext): string {
   const title = normalizeConversionGoal(context.title || context.root_topic);
   if (title) return `Demonstrate readiness: ${title}`;
 
-  return "Achieve the workspace outcome defined by evidence and block completion";
+  return "Achieve the workspace outcome defined by proof of work and block completion";
 }
 
 export function finalizePerformanceReport(

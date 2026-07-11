@@ -9,19 +9,19 @@ import { aestheticImageForId, fetchAestheticPackages } from "@/lib/aesthetics";
 import { BlockDetailCard } from "./BlockDetailCard";
 import { PublicWorkspaceForkCallout } from "./PublicWorkspaceForkCallout";
 
-interface PlanNode {
+interface Block {
   id: string;
   title: string;
   description: string;
   is_start: boolean;
-  next_node_ids: string[];
+  next_block_ids: string[];
   status: string;
   planning_prompt?: string;
   session_id?: string;
 }
 
 interface SessionItemProps {
-  node: PlanNode;
+  node: Block;
   index: number;
   onSelect: () => void;
   onDelete: (id: string) => void;
@@ -30,7 +30,7 @@ interface SessionItemProps {
   highlightOpacity?: number;
   isExpanded?: boolean;
   onToggleExpand?: () => void;
-  allNodes?: PlanNode[];
+  allNodes?: Block[];
   isOwner?: boolean;
   isGroupPlan?: boolean;
   maskProgress?: boolean;
@@ -38,9 +38,9 @@ interface SessionItemProps {
   forkLoginHref?: string;
   isLoggedIn?: boolean;
   supabase?: ReturnType<typeof createBrowserClient>;
-  onNavigateToNode?: (nodeId: string) => void;
+  onNavigateToNode?: (blockId: string) => void;
   planTopic?: string;
-  planId?: string;
+  workspaceId?: string;
   variant?: "compact" | "detail";
   detailLayout?: "inline" | "drawer";
 }
@@ -63,7 +63,7 @@ export function SessionItem({
   isLoggedIn = false,
   supabase: propSupabase,
   planTopic,
-  planId,
+  workspaceId,
   variant = "compact",
   detailLayout = "inline",
 }: SessionItemProps) {
@@ -123,13 +123,13 @@ export function SessionItem({
     setIsStarting(true);
     try {
       if (isGroupPlan && !isOwner) {
-        const res = await fetch("/api/group-plan/start-session", {
+        const res = await fetch("/api/group-workspace/start-session", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            planId,
-            nodeId: node.id,
-            nodeTitle: node.title,
+            workspaceId,
+            blockId: node.id,
+            blockTitle: node.title,
             planningPrompt: editedPlanningPrompt || undefined,
           }),
         });
@@ -138,25 +138,25 @@ export function SessionItem({
         router.push(`/session?id=${data.session.id}`);
       } else {
         if (editedPlanningPrompt !== (node.planning_prompt || "")) {
-          await supabase.from("plan_nodes").update({ planning_prompt: editedPlanningPrompt || null }).eq("id", node.id);
+          await supabase.from("blocks").update({ planning_prompt: editedPlanningPrompt || null }).eq("id", node.id);
         }
-        await supabase.from("plan_nodes").update({ status: "in_progress" }).eq("id", node.id);
+        await supabase.from("blocks").update({ status: "in_progress" }).eq("id", node.id);
         const { createSession } = await import("@/lib/storage");
         const session = await createSession(
           node.title,
           undefined,
           editedPlanningPrompt || undefined,
           undefined,
-          planId || undefined,
+          workspaceId || undefined,
         );
-        await supabase.from("plan_nodes").update({ session_id: session.id }).eq("id", node.id);
+        await supabase.from("blocks").update({ session_id: session.id }).eq("id", node.id);
 
-        if (planId) {
-          await supabase.from("plan_node_sessions").insert({
-            plan_node_id: node.id,
+        if (workspaceId) {
+          await supabase.from("block_sessions").insert({
+            block_id: node.id,
             session_id: session.id,
             user_id: (await supabase.auth.getUser()).data.user?.id,
-            plan_id: planId,
+            workspace_id: workspaceId,
           });
         }
 
@@ -170,11 +170,11 @@ export function SessionItem({
 
   const handleStartGhl = (event: React.MouseEvent) => {
     event.stopPropagation();
-    if (!planId) return;
-    const params = new URLSearchParams({ planNodeId: node.id });
+    if (!workspaceId) return;
+    const params = new URLSearchParams({ blockId: node.id });
     const contextualSessionId = activeSession?.id || node.session_id;
     if (contextualSessionId) params.set("sessionId", contextualSessionId);
-    router.push(`/workspace/${planId}/tap?${params.toString()}`);
+    router.push(`/workspace/${workspaceId}/tap?${params.toString()}`);
   };
 
   const savePlanningPrompt = useCallback(async () => {
@@ -182,7 +182,7 @@ export function SessionItem({
     setSavingPrompt(true);
     setPromptSaved(false);
     try {
-      await supabase.from("plan_nodes").update({ planning_prompt: editedPlanningPrompt || null }).eq("id", node.id);
+      await supabase.from("blocks").update({ planning_prompt: editedPlanningPrompt || null }).eq("id", node.id);
       setPromptSaved(true);
       setTimeout(() => setPromptSaved(false), 2000);
     } catch (err) {

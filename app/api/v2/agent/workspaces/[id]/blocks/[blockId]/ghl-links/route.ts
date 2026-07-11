@@ -7,7 +7,7 @@ import {
   getGhcScoreBriefForUser,
   hashPrivateToken,
 } from "@/lib/ghc-score";
-import { withEvidenceApiResponse } from "@/lib/agent-v2/predictive-interruption";
+import { withProofOfWorkApiResponse } from "@/lib/agent-v2/predictive-interruption";
 
 export const runtime = "nodejs";
 
@@ -38,17 +38,17 @@ export async function POST(req: NextRequest, { params }: RouteProps) {
   const requestedGuestId = typeof body.guest_user_id === "string" ? body.guest_user_id : null;
 
   const { data: block, error: blockError } = await supabase
-    .from("plan_nodes")
-    .select("id, plan_id, learning_plans!inner(id, user_id, organization_id, guest_user_id)")
+    .from("blocks")
+    .select("id, workspace_id, workspaces!inner(id, user_id, organization_id, guest_user_id)")
     .eq("id", blockId)
-    .eq("plan_id", workspaceId)
+    .eq("workspace_id", workspaceId)
     .single();
 
   if (blockError || !block) {
     return errorResponse(404, "block_not_found", "Block not found");
   }
 
-  const workspace = (block as any).learning_plans;
+  const workspace = (block as any).workspaces;
   if (!canAccessAgentWorkspace(auth, workspace)) {
     return errorResponse(404, "workspace_not_found", "Workspace not found");
   }
@@ -85,20 +85,20 @@ export async function POST(req: NextRequest, { params }: RouteProps) {
   const { data: link, error } = await supabase
     .from("workspace_ghc_sessions")
     .insert({
-      plan_id: workspaceId,
+      workspace_id: workspaceId,
       user_id: ownerUserId,
       guest_user_id: guestUserId,
       organization_id: auth.organization_id || workspace.organization_id,
       created_by_api_key_id: createdByApiKeyId(auth),
       private_token_hash: hashPrivateToken(privateToken),
       requested_duration_seconds: Math.round(minutes * 60),
-      plan_node_id: blockId,
+      block_id: blockId,
       mode: "curious",
-      focus_node_ids: [blockId],
+      focus_block_ids: [blockId],
       voice_id: "ara",
       status: "pending",
     })
-    .select("id, plan_id, plan_node_id, status, requested_duration_seconds, focus_node_ids, created_at")
+    .select("id, workspace_id, block_id, status, requested_duration_seconds, focus_block_ids, created_at")
     .single();
 
   if (error || !link) {
@@ -107,7 +107,7 @@ export async function POST(req: NextRequest, { params }: RouteProps) {
   }
 
   return NextResponse.json(
-    withEvidenceApiResponse(
+    withProofOfWorkApiResponse(
       {
         tap_link: {
           ...link,

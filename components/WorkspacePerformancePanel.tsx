@@ -10,7 +10,7 @@ import { PerformanceReportCard } from "@/components/PerformanceReportCard";
 type PerformanceSubview = "score" | "tap" | "chat";
 
 interface WorkspacePerformancePanelProps {
-  planId: string;
+  workspaceId: string;
   isOwner: boolean;
   currentUserId: string | null;
   isGroupPlan?: boolean;
@@ -59,7 +59,7 @@ function PerformanceSubviewTabs({
 }
 
 export function WorkspacePerformancePanel({
-  planId,
+  workspaceId,
   isOwner,
   currentUserId,
   isGroupPlan = false,
@@ -81,10 +81,10 @@ export function WorkspacePerformancePanel({
     setLoadingReport(true);
     setReportError(null);
     try {
-      const response = await fetch("/api/learning-plan/performance-report", {
+      const response = await fetch("/api/workspace/performance-report", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ planId }),
+        body: JSON.stringify({ workspaceId }),
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Failed to generate score");
@@ -94,7 +94,7 @@ export function WorkspacePerformancePanel({
     } finally {
       setLoadingReport(false);
     }
-  }, [currentUserId, planId]);
+  }, [currentUserId, workspaceId]);
 
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden">
@@ -142,7 +142,7 @@ export function WorkspacePerformancePanel({
             <p className="mt-1 max-w-2xl text-xs leading-relaxed text-neutral-500">{t("planView.productTapHint")}</p>
             {currentUserId ? (
               <Link
-                href={`/workspace/${planId}/tap`}
+                href={`/workspace/${workspaceId}/tap`}
                 className="mt-6 inline-flex w-fit rounded-md bg-white px-4 py-2.5 text-xs font-medium text-black transition hover:bg-neutral-200"
               >
                 {t("planView.startTap")}
@@ -157,7 +157,7 @@ export function WorkspacePerformancePanel({
           <section className="flex min-h-0 flex-1 flex-col">
             <div className="min-h-0 flex-1">
               <PerformanceChat
-                planId={planId}
+                workspaceId={workspaceId}
                 isOwner={isOwner}
                 currentUserId={currentUserId}
                 isGroupPlan={isGroupPlan}

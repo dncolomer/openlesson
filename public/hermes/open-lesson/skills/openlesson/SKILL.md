@@ -81,7 +81,7 @@ Creates a directed graph of learning sessions for a given topic.
         "title": "Introduction to ML",
         "description": "Basic concepts and overview",
         "is_start": true,
-        "next_node_ids": ["uuid2"],
+        "next_block_ids": ["uuid2"],
         "status": "available"
       }
     ]
@@ -133,8 +133,8 @@ Start a tutoring session. Sessions can be standalone or linked to a plan node.
 ```json
 {
   "topic": "Gradient Descent",
-  "plan_id": "uuid",
-  "plan_node_id": "uuid",
+  "workspace_id": "uuid",
+  "block_id": "uuid",
   "tutoring_language": "en"
 }
 ```
@@ -249,20 +249,20 @@ H = {"Authorization": f"Bearer {API_KEY}", "Content-Type": "application/json"}
 plan = requests.post(f"{BASE}/api/v2/agent/plans",
     json={"topic": "Quantum Computing", "duration_days": 14}, headers=H).json()
 
-plan_id = plan["plan"]["id"]
+workspace_id = plan["plan"]["id"]
 nodes = plan["plan"]["nodes"]
 start_node = next(n for n in nodes if n["is_start"])
 
 # Step 2: Adapt the plan if needed
-requests.post(f"{BASE}/api/v2/agent/plans/{plan_id}/adapt",
+requests.post(f"{BASE}/api/v2/agent/plans/{workspace_id}/adapt",
     json={"instruction": "Skip intro material, I know the basics"}, headers=H)
 
 # Step 3: Start a session (can be standalone or linked)
 session = requests.post(f"{BASE}/api/v2/agent/sessions",
     json={
         "topic": start_node["title"],
-        "plan_id": plan_id,
-        "plan_node_id": start_node["id"]
+        "workspace_id": workspace_id,
+        "block_id": start_node["id"]
     }, headers=H).json()
 
 session_id = session["session"]["id"]

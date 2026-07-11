@@ -9,28 +9,28 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const privateToken = body.privateToken ? String(body.privateToken) : "";
-    const planId = body.planId ? String(body.planId) : "";
-    const planNodeId = body.planNodeId ? String(body.planNodeId) : null;
+    const workspaceId = body.workspaceId ? String(body.workspaceId) : "";
+    const blockId = body.blockId ? String(body.blockId) : null;
     const focusSessionId = body.sessionId ? String(body.sessionId) : null;
     const minutes = Math.max(1, Number(body.minutes || 15));
     const ghlSessionId = body.ghlSessionId ? String(body.ghlSessionId) : "";
 
     const access = await resolveGhlSessionAccess({
       privateToken,
-      planId,
+      workspaceId,
       ghlSessionId,
-      planNodeId,
+      blockId,
       focusSessionId,
     });
     if ("error" in access) {
       return NextResponse.json({ error: access.error }, { status: access.status });
     }
 
-    const focusNodeIds = planNodeId ? [planNodeId] : access.planNodeId ? [access.planNodeId] : [];
+    const focusNodeIds = blockId ? [blockId] : access.blockId ? [access.blockId] : [];
     const resolvedFocusSessionId = focusSessionId || access.focusSessionId;
     const { brief } = access.userId
-      ? await getGhcScoreBriefForUser(access.planId, access.userId, focusNodeIds, true, resolvedFocusSessionId)
-      : await getGhcScoreBrief(access.planId, focusNodeIds, resolvedFocusSessionId);
+      ? await getGhcScoreBriefForUser(access.workspaceId, access.userId, focusNodeIds, true, resolvedFocusSessionId)
+      : await getGhcScoreBrief(access.workspaceId, focusNodeIds, resolvedFocusSessionId);
     const openingQuestion = await generateTapOpeningQuestion(brief, minutes);
 
     if (access.existingSession?.id) {
@@ -39,7 +39,7 @@ export async function POST(req: NextRequest) {
         .update({
           status: "in_progress",
           started_at: new Date().toISOString(),
-          plan_node_id: planNodeId || access.planNodeId,
+          block_id: blockId || access.blockId,
           session_id: focusSessionId || access.focusSessionId,
         })
         .eq("id", access.existingSession.id);
@@ -54,9 +54,9 @@ export async function POST(req: NextRequest) {
     const { data: row, error } = await access.supabase
       .from("workspace_ghc_sessions")
       .insert({
-        plan_id: access.planId,
+        workspace_id: access.workspaceId,
         user_id: access.userId,
-        plan_node_id: planNodeId,
+        block_id: blockId,
         session_id: focusSessionId,
         requested_duration_seconds: minutes * 60,
         status: "in_progress",

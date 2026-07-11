@@ -17,7 +17,7 @@ const TABLES = [
   "session_facial",
   "session_screenshots",
   "session_analysis",
-  "plan_files",
+  "workspace_files",
 ] as const;
 
 export async function GET(req: NextRequest) {

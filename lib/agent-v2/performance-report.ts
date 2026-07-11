@@ -12,7 +12,7 @@ export const PERFORMANCE_REMEDIATION_GUARDRAILS = `Remediation output rules (gap
 - Write remediation in product- and workflow-specific language — the same vocabulary as real tool events and domain tasks (e.g. "connect Slack", "route_energy_grid", "document tradeoff before config change").
 - gap_analysis.next_steps.events must be granular, observable product/tool actions or event verbs — not platform tasks.
 - gap_analysis.next_steps.directions must be intermediate competency goals in domain language — not "complete block X" or "run a TAP".
-- TAP, ILE, blocks, and session artifacts may inform scoring as INPUT evidence — but must never appear as OUTPUT recommendations.`;
+- TAP, ILE, blocks, and session artifacts may inform scoring as INPUT proof of work — but must never appear as OUTPUT recommendations.`;
 
 const PLATFORM_REMEDIATION_PATTERN =
   /\b(tap|think\s+aloud(?:\s+protocol)?|ile|integrated\s+learning\s+environment|openlesson)\b|(?:complete|finish)\s+(?:the\s+)?(?:workspace\s+)?blocks?\b|block\s+completion|issue\s+(?:a\s+)?tap|run\s+(?:a\s+)?tap|schedule\s+(?:a\s+)?tap/i;
@@ -29,7 +29,7 @@ export function sanitizeRemediationStrings(items: string[]): string[] {
 
 export interface PerformanceGapItem {
   title: string;
-  evidence: string;
+  proof_of_work: string;
   severity: "low" | "medium" | "high";
   suggested_repair: string;
 }
@@ -51,7 +51,7 @@ export interface PerformanceGapAnalysis {
 
 export interface PerformanceReport {
   overall_score: number;
-  /** Estimated likelihood (0–100) of achieving the workspace conversion goal from all evidence. */
+  /** Estimated likelihood (0–100) of achieving the workspace conversion goal from all proof of work. */
   conversion_score: number;
   /** What "conversion" means for this workspace — inferred from context when not explicit. */
   conversion_goal: string;
@@ -92,7 +92,7 @@ export interface PerformanceReportContract {
   gap_analysis: {
     required: boolean;
     gaps_required: boolean;
-    item_fields: Array<"title" | "evidence" | "severity" | "suggested_repair">;
+    item_fields: Array<"title" | "proof_of_work" | "severity" | "suggested_repair">;
     next_steps_required: boolean;
     next_steps_fields: Array<"directions" | "events">;
   };
@@ -136,7 +136,7 @@ export const PERFORMANCE_GAP_ITEM_SCHEMA = {
   type: "object",
   properties: {
     title: { type: "string" },
-    evidence: { type: "string" },
+    proof_of_work: { type: "string" },
     severity: { type: "string", enum: ["low", "medium", "high"] },
     suggested_repair: {
       type: "string",
@@ -144,7 +144,7 @@ export const PERFORMANCE_GAP_ITEM_SCHEMA = {
         "Product- or workflow-specific repair action — never TAP, block completion, ILE, or OpenLesson platform mechanics",
     },
   },
-  required: ["title", "evidence", "severity", "suggested_repair"],
+  required: ["title", "proof_of_work", "severity", "suggested_repair"],
   additionalProperties: false,
 } as const;
 
@@ -155,12 +155,12 @@ export const PERFORMANCE_REPORT_SCHEMA = {
     properties: {
       overall_score: {
         type: "number",
-        description: "0-100 learning verification score synthesized from evidence",
+        description: "0-100 learning verification score synthesized from proof of work",
       },
       conversion_score: {
         type: "number",
         description:
-          "0-100 estimated likelihood of achieving the workspace conversion goal based on all evidence",
+          "0-100 estimated likelihood of achieving the workspace conversion goal based on all proof of work",
       },
       conversion_goal: {
         type: "string",
@@ -246,7 +246,7 @@ export const EXAMPLE_PERFORMANCE_REPORT: PerformanceReport = {
     gaps: [
       {
         title: "Missing quantified tradeoff analysis",
-        evidence: "Tool traces show configuration changes without ROI or risk notes.",
+        proof_of_work: "Tool traces show configuration changes without ROI or risk notes.",
         severity: "medium",
         suggested_repair: "Add a short decision log with expected impact before each major change.",
       },
@@ -294,18 +294,18 @@ export function buildPerformanceReportContract(baseUrl?: string): PerformanceRep
       type: "integer",
       range: "0-100",
       description:
-        "Learning verification score synthesized from workspace evidence, session artifacts, and competency signals.",
+        "Learning verification score synthesized from workspace proof of work, session artifacts, and competency signals.",
     },
     conversion_score: {
       type: "integer",
       range: "0-100",
       description:
-        "Estimated likelihood the learner achieves the workspace conversion goal, inferred from all evidence — distinct from learning verification.",
+        "Estimated likelihood the learner achieves the workspace conversion goal, inferred from all proof of work — distinct from learning verification.",
     },
     conversion_goal: {
       type: "string",
       description:
-        "Plain-language definition of what conversion means for this workspace (infer from title, notes, blocks, and evidence when not explicit).",
+        "Plain-language definition of what conversion means for this workspace (infer from title, notes, blocks, and proof of work when not explicit).",
     },
     marker_scores: {
       description:
@@ -318,7 +318,7 @@ export function buildPerformanceReportContract(baseUrl?: string): PerformanceRep
     gap_analysis: {
       required: true,
       gaps_required: true,
-      item_fields: ["title", "evidence", "severity", "suggested_repair"],
+      item_fields: ["title", "proof_of_work", "severity", "suggested_repair"],
       next_steps_required: true,
       next_steps_fields: ["directions", "events"],
     },
@@ -329,22 +329,22 @@ export function buildPerformanceReportContract(baseUrl?: string): PerformanceRep
 export function emptyPerformanceReport(message?: string): PerformanceReport {
   const summary =
     message ||
-    "No performance evidence is available yet. Collect product tool events, workspace evidence uploads, or linked session reports before generating a gap analysis.";
+    "No performance proof of work is available yet. Collect product tool events, workspace proof of work uploads, or linked session reports before generating a gap analysis.";
 
   return {
     overall_score: 0,
     conversion_score: 0,
-    conversion_goal: "Goal conversion not yet inferable — collect more workspace evidence.",
+    conversion_goal: "Goal conversion not yet inferable — collect more workspace proof of work.",
     marker_scores: [],
     summary,
     strengths: [],
-    growth_areas: ["Collect baseline performance evidence before assessing readiness."],
+    growth_areas: ["Collect baseline performance proof of work before assessing readiness."],
     gap_analysis: {
       summary: "Insufficient data to identify specific learning gaps.",
       gaps: [],
       next_steps: {
         directions: [
-          "Establish baseline competency evidence across priority workflow milestones",
+          "Establish baseline competency proof of work across priority workflow milestones",
         ],
         events: [
           "Upload tool usage traces for the primary workflow",
@@ -353,7 +353,7 @@ export function emptyPerformanceReport(message?: string): PerformanceReport {
       },
     },
     suggestions: [
-      "Upload the next observable product action as a tool evidence event",
+      "Upload the next observable product action as a tool proof-of-work event",
     ],
     confidence: "emerging",
   };
@@ -361,7 +361,7 @@ export function emptyPerformanceReport(message?: string): PerformanceReport {
 
 export function buildPerformanceStyleSection(stylePrompt?: string | null): string {
   if (!stylePrompt?.trim()) return "";
-  return `\n\nOutput style (apply to every narrative string in the JSON — summary, strengths, growth_areas, gap titles/evidence/suggested_repair, next_steps, suggestions, marker rationales, and conversion_goal when phrased as coaching):\n${stylePrompt.trim()}`;
+  return `\n\nOutput style (apply to every narrative string in the JSON — summary, strengths, growth_areas, gap titles/proof-of-work/suggested_repair, next_steps, suggestions, marker rationales, and conversion_goal when phrased as coaching):\n${stylePrompt.trim()}`;
 }
 
 export function buildPerformanceReportInstructions(
@@ -380,16 +380,16 @@ ${goalLine}
 Use the attached workspace performance JSON and artifact files. Return only JSON matching the schema.
 
 Required scoring outputs:
-1. overall_score — integer 0-100 **learning verification** score synthesized from all evidence (not an average of markers; use judgment). Measures demonstrated competency and readiness to perform — not business conversion directly.
-2. conversion_score — integer 0-100 **conversion likelihood** estimating how likely the learner is to achieve the workspace's outcome/conversion goal based on all evidence (tool traces, TAP, artifacts, milestones, drop-offs, re-engagement). This is separate from overall_score: strong learning can coexist with low conversion odds if evidence shows abandonment, missing activation steps, or blockers.
-3. conversion_goal — one concise phrase defining what "conversion" means for this workspace. When an authoritative workspace conversion goal is provided above, echo it exactly. Otherwise infer from workspace title, description, notes, blocks, eval definition, and evidence.
+1. overall_score — integer 0-100 **learning verification** score synthesized from all proof of work (not an average of markers; use judgment). Measures demonstrated competency and readiness to perform — not business conversion directly.
+2. conversion_score — integer 0-100 **conversion likelihood** estimating how likely the learner is to achieve the workspace's outcome/conversion goal based on all proof of work (tool traces, TAP, artifacts, milestones, drop-offs, re-engagement). This is separate from overall_score: strong learning can coexist with low conversion odds if proof of work shows abandonment, missing activation steps, or blockers.
+3. conversion_goal — one concise phrase defining what "conversion" means for this workspace. When an authoritative workspace conversion goal is provided above, echo it exactly. Otherwise infer from workspace title, description, notes, blocks, eval definition, and proof of work.
 4. marker_scores — 4-8 competency axes for spider/radar visualization. Each item needs:
    - id: snake_case competency key aligned to workspace blocks or eval definition
    - label: human-readable axis name
    - score: 0-100 for that competency
    - rationale: one sentence grounded in specific evidence
    - block_id (optional): tie axis to a workspace block when scoped
-5. gap_analysis.gaps — concrete deficiencies only (title, evidence, severity low|medium|high, suggested_repair). List every meaningful gap found; use an empty array only when evidence is truly insufficient to name gaps. Do not duplicate next steps as gaps.
+5. gap_analysis.gaps — concrete deficiencies only (title, proof_of_work, severity low|medium|high, suggested_repair). List every meaningful gap found; use an empty array only when proof of work is truly insufficient to name gaps. Do not duplicate next steps as gaps.
 6. gap_analysis.next_steps — always include, separate from gaps:
    - directions: 2-5 high-level outcomes or intermediate goals toward readiness/conversion (domain/product language)
    - events: 3-8 granular, observable product/tool actions or event verbs from the learner's real workflow
@@ -398,12 +398,12 @@ Required scoring outputs:
 ${PERFORMANCE_REMEDIATION_GUARDRAILS}
 
 Evidence inputs to weigh when scoring (not remediation outputs):
-- Tool usage, screenshots, video, and EEG evidence
+- Tool usage, screenshots, video, and EEG proof of work
 - Session reports and competency descriptions from the eval definition
 - Think Aloud Protocol (TAP) and ILE traces when present — use for scoring only
 - Uploaded workspace files
 
-Be honest when evidence is thin. Severity should reflect business risk, not politeness. Lower overall_score and marker scores when evidence is sparse.${buildPerformanceStyleSection(stylePrompt)}`;
+Be honest when proof of work is thin. Severity should reflect business risk, not politeness. Lower overall_score and marker scores when proof of work is sparse.${buildPerformanceStyleSection(stylePrompt)}`;
 }
 
 function normalizeStringList(value: unknown): string[] {
@@ -422,7 +422,7 @@ export function normalizePerformanceGapAnalysis(
           (gap): gap is PerformanceGapItem =>
             Boolean(gap) &&
             typeof gap.title === "string" &&
-            typeof gap.evidence === "string" &&
+            typeof gap.proof_of_work === "string" &&
             typeof gap.suggested_repair === "string",
         )
         .map((gap) => ({
@@ -437,8 +437,8 @@ export function normalizePerformanceGapAnalysis(
     typeof gapAnalysis?.summary === "string" && gapAnalysis.summary.trim()
       ? gapAnalysis.summary.trim()
       : gaps.length > 0
-        ? "Learning gaps were identified from the available evidence."
-        : "No specific learning gaps were identified from the available evidence.";
+        ? "Learning gaps were identified from the available proof of work."
+        : "No specific learning gaps were identified from the available proof of work.";
 
   const rawNextSteps = gapAnalysis?.next_steps;
   let next_steps: PerformanceNextSteps;

@@ -8,8 +8,8 @@ import { IntegrationQuickAccess } from "@/components/IntegrationQuickAccess";
 import { readJsonResponse } from "@/lib/read-json-response";
 
 interface WorkspaceIntegrationPanelProps {
-  planId: string;
-  planTitle: string;
+  workspaceId: string;
+  workspaceTitle: string;
   planTopic: string;
   planDescription?: string;
   planNotes?: string;
@@ -28,8 +28,8 @@ function downloadText(filename: string, content: string, mimeType: string) {
 }
 
 export function WorkspaceIntegrationPanel({
-  planId,
-  planTitle,
+  workspaceId,
+  workspaceTitle,
   planTopic,
   planDescription,
   planNotes,
@@ -38,10 +38,10 @@ export function WorkspaceIntegrationPanel({
 }: WorkspaceIntegrationPanelProps) {
   const { t } = useI18n();
   const [integrationName, setIntegrationName] = useState(() =>
-    slugifyIntegrationName(planTitle || planTopic || "workspace")
+    slugifyIntegrationName(workspaceTitle || planTopic || "workspace")
   );
   const [evalDefinition, setEvalDefinition] = useState(
-    () => planNotes?.trim() || planDescription?.trim() || planTopic || planTitle || ""
+    () => planNotes?.trim() || planDescription?.trim() || planTopic || workspaceTitle || ""
   );
   const [generatingSkill, setGeneratingSkill] = useState(false);
   const [generatingSpec, setGeneratingSpec] = useState(false);
@@ -55,11 +55,11 @@ export function WorkspaceIntegrationPanel({
     setGeneratingSkill(true);
     setError("");
     try {
-      const res = await fetch("/api/learning-plan/integration-skill", {
+      const res = await fetch("/api/workspace/integration-skill", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          planId,
+          workspaceId,
           integration_name: integrationName.trim(),
           partner_description: planDescription || planNotes || planTopic,
           eval_definition: evalDefinition.trim(),
@@ -97,11 +97,11 @@ export function WorkspaceIntegrationPanel({
     setGeneratingSpec(true);
     setError("");
     try {
-      const res = await fetch("/api/learning-plan/evidence-schema", {
+      const res = await fetch("/api/workspace/proof-of-work-schema", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          planId,
+          workspaceId,
           definition: evalDefinition.trim(),
           integration_hints: {
             tool_name: integrationName.trim(),
@@ -116,7 +116,7 @@ export function WorkspaceIntegrationPanel({
         }
         throw new Error(data.error || t("workspaceIntegration.errorGeneric"));
       }
-      const filename = `${integrationName.trim() || "workspace"}-evidence-spec.json`;
+      const filename = `${integrationName.trim() || "workspace"}-proof-of-work-spec.json`;
       downloadText(filename, JSON.stringify(data, null, 2), "application/json;charset=utf-8");
     } catch (err) {
       setError(err instanceof Error ? err.message : t("workspaceIntegration.errorGeneric"));
@@ -216,8 +216,8 @@ export function WorkspaceIntegrationPanel({
 
         <IntegrationQuickAccess
           origin={origin}
-          workspaceId={planId}
-          idPrefix={`workspace-${planId}`}
+          workspaceId={workspaceId}
+          idPrefix={`workspace-${workspaceId}`}
           layout="stack"
           showHeader={false}
           skillSection={skillSection}

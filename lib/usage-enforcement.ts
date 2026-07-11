@@ -1,17 +1,17 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
-  canSubmitEvidence,
+  canSubmitProofOfWork,
   getSessionAllowance,
   PLANS,
-  type EvidenceCheckResult,
+  type ProofOfWorkCheckResult,
   type PlanId,
   type UserProfile,
 } from "@/lib/plans";
 import {
   billingPeriodStart,
-  countEvidenceSubmissions,
-  countOrgEvidenceSubmissions,
+  countProofOfWorkSubmissions,
+  countOrgProofOfWorkSubmissions,
   countOrgTapIleSessions,
   countTapIleSessions,
   loadUsageProfile,
@@ -36,10 +36,10 @@ async function resolveUsageCounts(
   profile: UsageProfileRow,
   userId: string,
   periodStart: Date | null
-): Promise<{ sessionCount: number; evidenceCount: number; sessionAllowance: number | null }> {
+): Promise<{ sessionCount: number; proofOfWorkCount: number; sessionAllowance: number | null }> {
   const userProfile = toUserProfile(profile);
   let sessionCount = await countTapIleSessions(supabase, userId, periodStart);
-  let evidenceCount = await countEvidenceSubmissions(supabase, userId, periodStart);
+  let proofOfWorkCount = await countProofOfWorkSubmissions(supabase, userId, periodStart);
 
   if (profile.plan === "pro_teams" && profile.organization_id && periodStart) {
     const admin = createAdminClient();
@@ -51,26 +51,26 @@ async function resolveUsageCounts(
 
     if (memberIds.length > 0) {
       sessionCount = await countOrgTapIleSessions(admin, memberIds, periodStart);
-      evidenceCount = await countOrgEvidenceSubmissions(admin, memberIds, periodStart);
+      proofOfWorkCount = await countOrgProofOfWorkSubmissions(admin, memberIds, periodStart);
     }
 
     const planLimit = PLANS.pro_teams.sessionsPerPeriod;
     const effectiveOrgLimit = (planLimit ?? 0) + (profile.extra_lessons ?? 0);
     return {
       sessionCount,
-      evidenceCount,
+      proofOfWorkCount,
       sessionAllowance: userProfile.is_admin ? null : effectiveOrgLimit,
     };
   }
 
   const { limit: sessionAllowance } = getSessionAllowance(userProfile, sessionCount);
-  return { sessionCount, evidenceCount, sessionAllowance };
+  return { sessionCount, proofOfWorkCount, sessionAllowance };
 }
 
-export async function checkEvidenceSubmissionAllowance(
+export async function checkProofOfWorkSubmissionAllowance(
   supabase: SupabaseClient,
   userId: string
-): Promise<EvidenceCheckResult & { profile: UsageProfileRow | null }> {
+): Promise<ProofOfWorkCheckResult & { profile: UsageProfileRow | null }> {
   const { profile, error } = await loadUsageProfile(supabase, userId);
   if (error || !profile) {
     return {
@@ -90,23 +90,23 @@ export async function checkEvidenceSubmissionAllowance(
       ? null
       : billingPeriodStart(profile.current_period_end);
 
-  const { evidenceCount, sessionAllowance } = await resolveUsageCounts(
+  const { proofOfWorkCount, sessionAllowance } = await resolveUsageCounts(
     supabase,
     profile,
     userId,
     periodStart
   );
-  const result = canSubmitEvidence(userProfile, evidenceCount, sessionAllowance);
+  const result = canSubmitProofOfWork(userProfile, proofOfWorkCount, sessionAllowance);
 
   return { ...result, profile };
 }
 
-export async function assertCanSubmitEvidence(
+export async function assertCanSubmitProofOfWork(
   supabase: SupabaseClient,
   userId: string
 ): Promise<void> {
-  const check = await checkEvidenceSubmissionAllowance(supabase, userId);
+  const check = await checkProofOfWorkSubmissionAllowance(supabase, userId);
   if (!check.allowed) {
-    throw new Error(check.reason || "Evidence API monthly limit reached");
+    throw new Error(check.reason || "Proof-of-Work API monthly limit reached");
   }
 }

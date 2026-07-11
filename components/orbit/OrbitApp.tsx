@@ -32,18 +32,18 @@ import {
   type OrbitIssue,
   type OrbitIssueStatus,
   type OrbitPriority,
-} from "@/lib/evidence-api-demo/orbit-app-model";
+} from "@/lib/openlesson-demo/orbit-app-model";
 import {
   createOrbitIleSession,
   createOrbitTapSession,
   fetchOrbitTapGateStatus,
   openOrbitLearningUrl,
-} from "@/lib/evidence-api-demo/orbit-learning-links";
+} from "@/lib/openlesson-demo/orbit-learning-links";
 import {
   ORBIT_TAP_MIN_SCORE,
   ORBIT_TAP_VALIDATION_HINT,
-} from "@/lib/evidence-api-demo/orbit-ui-manifest";
-import { buildOrbitAppSnapshot } from "@/lib/evidence-api-demo/orbit-app-context";
+} from "@/lib/openlesson-demo/orbit-ui-manifest";
+import { buildOrbitAppSnapshot } from "@/lib/openlesson-demo/orbit-app-context";
 import {
   emitOrbitAction,
   fetchOrbitPerformance,
@@ -53,8 +53,8 @@ import {
   parseOrbitLaunchParams,
   saveOrbitBridge,
   syncOrbitAppSnapshotToBridge,
-  type OrbitEvidenceBridge,
-} from "@/lib/evidence-api-demo/orbit-bridge";
+  type OrbitProofOfWorkBridge,
+} from "@/lib/openlesson-demo/orbit-bridge";
 
 type EvidenceActionOptions = {
   reflection?: string;
@@ -89,7 +89,7 @@ function priorityActionFor(next: OrbitPriority, prev: OrbitPriority): string | n
 
 export function OrbitApp() {
   const [appState, setAppState] = useState<OrbitAppState | null>(null);
-  const [bridge, setBridge] = useState<OrbitEvidenceBridge | null>(null);
+  const [bridge, setBridge] = useState<OrbitProofOfWorkBridge | null>(null);
   const [bootError, setBootError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [isEmitting, setIsEmitting] = useState(false);
@@ -116,13 +116,13 @@ export function OrbitApp() {
     const existingBridge = loadOrbitBridge();
 
     if (!params && !existingBridge) {
-      setBootError("Launch Orbit from the openLesson demo hub to connect Evidence API.");
+      setBootError("Launch Orbit from the openLesson demo hub to connect Proof-of-Work API.");
       setAppState(createSeedOrbitState());
       return;
     }
 
     const launch = params ?? {
-      planId: existingBridge!.planId,
+      workspaceId: existingBridge!.workspaceId,
       sessionId: existingBridge!.sessionId,
       demoId: existingBridge!.demoId,
     };
@@ -147,7 +147,7 @@ export function OrbitApp() {
 
     if (nextBridge.lastPerformanceReport) {
       setReport(normalizePerformanceReport(nextBridge.lastPerformanceReport));
-    } else if (nextBridge.evidenceCount >= 1) {
+    } else if (nextBridge.proofOfWorkCount >= 1) {
       setIsReporting(true);
       void fetchOrbitPerformance(nextBridge)
         .then((performance) => {
@@ -166,8 +166,8 @@ export function OrbitApp() {
         .finally(() => setIsReporting(false));
     }
 
-    if (nextBridge.planId) {
-      void fetchOrbitTapGateStatus(nextBridge.planId, nextBridge.tapLinkUrl).then((status) => {
+    if (nextBridge.workspaceId) {
+      void fetchOrbitTapGateStatus(nextBridge.workspaceId, nextBridge.tapLinkUrl).then((status) => {
         setTapScore(status.score);
         setTapCleared(status.cleared);
         if (status.tapLinkUrl) setTapLinkUrl(status.tapLinkUrl);
@@ -221,7 +221,7 @@ export function OrbitApp() {
           setBridge(loadOrbitBridge());
         }
       } catch (err) {
-        setActionError(err instanceof Error ? err.message : "Evidence upload failed");
+        setActionError(err instanceof Error ? err.message : "Proof-of-work upload failed");
       } finally {
         setIsEmitting(false);
         setIsReporting(false);
@@ -239,7 +239,7 @@ export function OrbitApp() {
     if (!appSnapshot || !bridge) return;
     const synced = syncOrbitAppSnapshotToBridge(appSnapshot);
     if (synced) setBridge(synced);
-  }, [appSnapshot, bridge?.planId]);
+  }, [appSnapshot, bridge?.workspaceId]);
 
   const selectedIssue = useMemo(() => {
     if (!appState?.ui.selectedIssueId) return null;
@@ -254,7 +254,7 @@ export function OrbitApp() {
   }, [appState]);
 
   const persistBridgeExtras = useCallback(
-    (patch: Partial<OrbitEvidenceBridge>) => {
+    (patch: Partial<OrbitProofOfWorkBridge>) => {
       if (!bridge) return;
       const next = { ...bridge, ...patch };
       saveOrbitBridge(next);
@@ -264,11 +264,11 @@ export function OrbitApp() {
   );
 
   const refreshTapGate = useCallback(async () => {
-    if (!bridge?.planId) return;
+    if (!bridge?.workspaceId) return;
     setIsCheckingTap(true);
     setLearningError(null);
     try {
-      const status = await fetchOrbitTapGateStatus(bridge.planId, tapLinkUrl);
+      const status = await fetchOrbitTapGateStatus(bridge.workspaceId, tapLinkUrl);
       setTapScore(status.score);
       setTapCleared(status.cleared);
       persistBridgeExtras({
@@ -281,10 +281,10 @@ export function OrbitApp() {
     } finally {
       setIsCheckingTap(false);
     }
-  }, [bridge?.planId, persistBridgeExtras, tapLinkUrl]);
+  }, [bridge?.workspaceId, persistBridgeExtras, tapLinkUrl]);
 
   const handleOpenIle = useCallback(async () => {
-    if (!bridge?.planId || isOpeningIle) return;
+    if (!bridge?.workspaceId || isOpeningIle) return;
     setLearningError(null);
     if (ileSessionUrl) {
       openOrbitLearningUrl(ileSessionUrl);
@@ -293,7 +293,7 @@ export function OrbitApp() {
     setIsOpeningIle(true);
     try {
       const blockId = bridge.blocks[0]?.id;
-      const url = await createOrbitIleSession(bridge.planId, blockId);
+      const url = await createOrbitIleSession(bridge.workspaceId, blockId);
       setIleSessionUrl(url);
       persistBridgeExtras({ ileSessionUrl: url });
       openOrbitLearningUrl(url);
@@ -305,7 +305,7 @@ export function OrbitApp() {
   }, [bridge, ileSessionUrl, isOpeningIle, persistBridgeExtras]);
 
   const handleOpenTap = useCallback(async () => {
-    if (!bridge?.planId || isOpeningTap) return;
+    if (!bridge?.workspaceId || isOpeningTap) return;
     setLearningError(null);
     if (tapLinkUrl) {
       openOrbitLearningUrl(tapLinkUrl);
@@ -314,7 +314,7 @@ export function OrbitApp() {
     setIsOpeningTap(true);
     try {
       const blockId = bridge.blocks[0]?.id;
-      const url = await createOrbitTapSession(bridge.planId, blockId);
+      const url = await createOrbitTapSession(bridge.workspaceId, blockId);
       setTapLinkUrl(url);
       persistBridgeExtras({ tapLinkUrl: url });
       openOrbitLearningUrl(url);
@@ -800,7 +800,7 @@ export function OrbitApp() {
         </div>
 
         <footer className="flex items-center justify-between border-t border-[#1f1f28] px-4 py-2 text-[10px] text-[#5c5c70]">
-          <span>{isEmitting ? "Streaming evidence…" : bridge ? `Connected · ${bridge.evidenceCount} events` : "Offline demo"}</span>
+          <span>{isEmitting ? "Streaming evidence…" : bridge ? `Connected · ${bridge.proofOfWorkCount} events` : "Offline demo"}</span>
           <span className="inline-flex items-center gap-1"><Search className="size-3" /> Cmd+K quick actions</span>
         </footer>
       </div>
@@ -809,9 +809,9 @@ export function OrbitApp() {
         report={report}
         isReporting={isReporting}
         connected={Boolean(bridge)}
-        planId={bridge?.planId ?? null}
+        workspaceId={bridge?.workspaceId ?? null}
         blockId={bridge?.blocks[0]?.id ?? null}
-        evidenceCount={bridge?.evidenceCount ?? 0}
+        proofOfWorkCount={bridge?.proofOfWorkCount ?? 0}
         inferredGoal={inferredGoal}
         conversionGoalSource={conversionGoalSource}
         appSnapshot={appSnapshot}

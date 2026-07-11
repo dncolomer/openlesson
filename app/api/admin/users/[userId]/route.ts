@@ -63,7 +63,7 @@ export async function GET(
         .eq("user_id", userId)
         .order("created_at", { ascending: false }),
       adminClient
-        .from("learning_plans")
+        .from("workspaces")
         .select("id, root_topic, status, created_at, is_public")
         .eq("user_id", userId)
         .order("created_at", { ascending: false }),

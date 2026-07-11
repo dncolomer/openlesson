@@ -105,7 +105,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    if (!session.is_agent_session) {
+    if (!session.is_agent_workspace) {
       return NextResponse.json(
         { error: "This endpoint is for agent sessions only" },
         { status: 403 }

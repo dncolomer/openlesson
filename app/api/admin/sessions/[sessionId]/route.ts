@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin/require-admin";
 import { getProfileEmail } from "@/lib/admin/users";
-import { findPlanNodeForSession, getTapSessionDetail } from "@/lib/admin/sessions";
+import { findBlockForSession, getTapSessionDetail } from "@/lib/admin/sessions";
 
 export const runtime = "nodejs";
 
@@ -27,10 +27,10 @@ export async function GET(
     }
 
     if (sessionData) {
-      const [{ data: ownerData }, email, planNode] = await Promise.all([
+      const [{ data: ownerData }, email, block] = await Promise.all([
         adminClient.from("profiles").select("id, username").eq("id", sessionData.user_id).maybeSingle(),
         getProfileEmail(adminClient, sessionData.user_id),
-        findPlanNodeForSession(adminClient, sessionId),
+        findBlockForSession(adminClient, sessionId),
       ]);
 
       return NextResponse.json({
@@ -39,7 +39,7 @@ export async function GET(
           ...sessionData,
           owner: ownerData ? { ...ownerData, email } : undefined,
         },
-        planNode,
+        block,
       });
     }
 

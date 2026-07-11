@@ -24,8 +24,8 @@ interface ThoughtMemoryPanelProps {
   sentThoughtIds: ReadonlySet<string>;
   skippedThoughtIds: ReadonlySet<string>;
   onSendThought: (text: string, thoughtIds: string[]) => void;
-  planId?: string;
-  planNodeId?: string;
+  workspaceId?: string;
+  blockId?: string;
   sessionId?: string;
   className?: string;
   listClassName?: string;
@@ -43,8 +43,8 @@ export function ThoughtMemoryPanel({
   sentThoughtIds,
   skippedThoughtIds,
   onSendThought,
-  planId,
-  planNodeId,
+  workspaceId,
+  blockId,
   sessionId,
   className = "flex h-full min-h-0 flex-col",
   listClassName = "min-h-0 flex-1 space-y-0 overflow-y-auto",
@@ -67,7 +67,7 @@ export function ThoughtMemoryPanel({
   const loadInsights = useCallback(async () => {
     setLoadingInsights(true);
     try {
-      const params = planId ? `?planId=${encodeURIComponent(planId)}` : "";
+      const params = workspaceId ? `?workspaceId=${encodeURIComponent(workspaceId)}` : "";
       const response = await fetch(`/api/insights${params}`);
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Failed to load insights");
@@ -77,7 +77,7 @@ export function ThoughtMemoryPanel({
     } finally {
       setLoadingInsights(false);
     }
-  }, [planId]);
+  }, [workspaceId]);
 
   useEffect(() => {
     if (mode !== "insights") return;
@@ -121,8 +121,8 @@ export function ThoughtMemoryPanel({
         body: JSON.stringify({
           thoughtIds: selectedThoughts.map((t) => t.id),
           thoughts: selectedThoughts.map((t) => ({ id: t.id, text: t.text })),
-          planId,
-          planNodeId,
+          workspaceId,
+          blockId,
           sessionId,
         }),
       });
@@ -168,7 +168,7 @@ export function ThoughtMemoryPanel({
         <p className="mt-1 text-xs text-neutral-500">
           {mode === "memory"
             ? "Send any trace back into the dialogue, or select multiple to bookmark an insight."
-            : planId
+            : workspaceId
               ? "Insights bookmarked from this workspace."
               : "Insights synthesize selected thoughts into shareable bookmarks."}
         </p>

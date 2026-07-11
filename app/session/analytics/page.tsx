@@ -512,9 +512,9 @@ function AnalyticsContent() {
               <span>
                 {durationMin > 0 ? `${durationMin}m` : ""} {durationSec > 0 ? `${durationSec}s` : ""}
               </span>
-              {session.planTitle && (
+              {session.workspaceTitle && (
                 <span className="px-1.5 py-0.5 rounded text-[10px] bg-purple-900/30 text-purple-400">
-                  {session.planTitle}
+                  {session.workspaceTitle}
                 </span>
               )}
             </div>

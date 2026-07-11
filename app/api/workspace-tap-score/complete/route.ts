@@ -19,14 +19,14 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const privateToken = body.privateToken ? String(body.privateToken) : "";
-    let planId = String(body.planId || "");
+    let workspaceId = String(body.workspaceId || "");
     const transcript = Array.isArray(body.transcript) ? body.transcript : [];
     const durationSeconds = Number(body.durationSeconds || 0);
     let requestedDurationSeconds = Number(body.requestedDurationSeconds || 0);
     let mode = "curious" as GhcScoreMode;
     let voice = String(body.voice || "ara");
     let focusNodeIds = Array.isArray(body.focusNodeIds) ? body.focusNodeIds.filter(Boolean) : [];
-    let planNodeId = body.planNodeId ? String(body.planNodeId) : null;
+    let blockId = body.blockId ? String(body.blockId) : null;
     let focusSessionId = body.sessionId ? String(body.sessionId) : null;
     const xaiConversationId = body.xaiConversationId ? String(body.xaiConversationId) : null;
     const ghlSessionId = body.ghlSessionId ? String(body.ghlSessionId) : "";
@@ -42,33 +42,33 @@ export async function POST(req: NextRequest) {
       supabase = createAdminClient();
       const { data: session, error } = await supabase
         .from("workspace_ghc_sessions")
-        .select("id, plan_id, user_id, guest_user_id, organization_id, requested_duration_seconds, mode, voice_id, focus_node_ids, status, plan_node_id, session_id, learning_plans!inner(user_id)")
+        .select("id, workspace_id, user_id, guest_user_id, organization_id, requested_duration_seconds, mode, voice_id, focus_block_ids, status, block_id, session_id, workspaces!inner(user_id)")
         .eq("private_token_hash", hashPrivateToken(privateToken))
         .single();
 
       if (error || !session) return NextResponse.json({ error: "TAP block not found" }, { status: 404 });
       if (session.status === "completed") return NextResponse.json({ error: "TAP block is already completed" }, { status: 409 });
       existingSession = session;
-      planId = session.plan_id;
-      userId = session.user_id || (session as any).learning_plans?.user_id;
+      workspaceId = session.workspace_id;
+      userId = session.user_id || (session as any).workspaces?.user_id;
       mode = "curious";
       voice = session.voice_id || "ara";
-      focusNodeIds = session.focus_node_ids || [];
-      planNodeId = session.plan_node_id || null;
+      focusNodeIds = session.focus_block_ids || [];
+      blockId = session.block_id || null;
       focusSessionId = session.session_id || null;
       requestedDurationSeconds = session.requested_duration_seconds || requestedDurationSeconds;
-      ({ brief } = await getGhcScoreBriefForUser(planId, userId, focusNodeIds, true, focusSessionId));
+      ({ brief } = await getGhcScoreBriefForUser(workspaceId, userId, focusNodeIds, true, focusSessionId));
     } else {
-      if (!planId) return NextResponse.json({ error: "planId is required" }, { status: 400 });
+      if (!workspaceId) return NextResponse.json({ error: "workspaceId is required" }, { status: 400 });
       supabase = await createClient();
-      if (planNodeId && !focusNodeIds.includes(planNodeId)) focusNodeIds = [planNodeId, ...focusNodeIds];
-      ({ userId, brief } = await getGhcScoreBrief(planId, focusNodeIds, focusSessionId));
+      if (blockId && !focusNodeIds.includes(blockId)) focusNodeIds = [blockId, ...focusNodeIds];
+      ({ userId, brief } = await getGhcScoreBrief(workspaceId, focusNodeIds, focusSessionId));
 
       if (ghlSessionId) {
         const access = await resolveGhlSessionAccess({
-          planId,
+          workspaceId,
           ghlSessionId,
-          planNodeId,
+          blockId,
           focusSessionId,
         });
         if ("error" in access) {
@@ -92,7 +92,7 @@ export async function POST(req: NextRequest) {
     };
 
     if (resolvedGhlSessionId) {
-      const traces = await fetchGhlSessionTraces(supabase, resolvedGhlSessionId, planId);
+      const traces = await fetchGhlSessionTraces(supabase, resolvedGhlSessionId, workspaceId);
       traceContext = buildTraceScoringContext(traces);
     }
 
@@ -116,10 +116,10 @@ Return JSON with:
   "markers": ${JSON.stringify(GHC_SCORE_MARKERS.map((marker) => ({ ...marker, score: "number from 0 to 100", rationale: "string" })))},
   "gap_analysis": {
     "summary": string,
-    "gaps": [{ "title": string, "evidence": string, "severity": "low" | "medium" | "high", "suggested_repair": string }],
+    "gaps": [{ "title": string, "proof_of_work": string, "severity": "low" | "medium" | "high", "suggested_repair": string }],
     "next_practice": string[]
   },
-  "knowledge_gaps": [{ "title": string, "evidence": string, "severity": "low" | "medium" | "high", "suggested_repair": string }],
+  "knowledge_gaps": [{ "title": string, "proof_of_work": string, "severity": "low" | "medium" | "high", "suggested_repair": string }],
   "overall_reflection": string,
   "strengths": string[],
   "growth_areas": string[],
@@ -155,16 +155,16 @@ Return JSON with:
 
     const markerScores = Array.isArray(result.data.markers) ? result.data.markers : [];
     const payload = {
-      plan_id: planId,
+      workspace_id: workspaceId,
       user_id: existingSession ? existingSession.user_id : userId,
       guest_user_id: existingSession?.guest_user_id || null,
       organization_id: existingSession?.organization_id || null,
       duration_seconds: durationSeconds,
       requested_duration_seconds: requestedDurationSeconds,
-      plan_node_id: planNodeId,
+      block_id: blockId,
       session_id: focusSessionId,
       mode,
-      focus_node_ids: focusNodeIds,
+      focus_block_ids: focusNodeIds,
       voice_id: voice,
       status: "completed",
       transcript,
@@ -188,7 +188,7 @@ Return JSON with:
       : supabase.from("workspace_ghc_sessions").insert(payload);
 
     const { data: row, error: writeError } = await query
-      .select("id, plan_id, session_id, plan_node_id, analysis, summary, overall_score, marker_scores, status, created_at, completed_at")
+      .select("id, workspace_id, session_id, block_id, analysis, summary, overall_score, marker_scores, status, created_at, completed_at")
       .single();
 
     if (writeError) {
@@ -201,8 +201,8 @@ Return JSON with:
       const artifact = {
         type: "openlesson_ghl_score",
         ghl_session_id: row.id,
-        plan_id: row.plan_id,
-        plan_node_id: row.plan_node_id,
+        workspace_id: row.workspace_id,
+        block_id: row.block_id,
         session_id: row.session_id,
         completed_at: row.completed_at,
         summary: row.summary,

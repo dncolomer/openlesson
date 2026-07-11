@@ -3,7 +3,7 @@ export interface SkillGridNode {
   title: string;
   status: string;
   is_start: boolean;
-  next_node_ids: string[];
+  next_block_ids: string[];
   /** Grid column in world coordinates */
   position_x?: number;
   /** Grid row in world coordinates */
@@ -55,7 +55,7 @@ export function getOrderedSkillGridNodes(nodes: SkillGridNode[]): SkillGridNode[
     visited.add(node.id);
     ordered.push(node);
 
-    for (const nextId of node.next_node_ids || []) {
+    for (const nextId of node.next_block_ids || []) {
       const child = nodes.find((entry) => entry.id === nextId);
       if (child && !visited.has(child.id)) queue.push(child);
     }

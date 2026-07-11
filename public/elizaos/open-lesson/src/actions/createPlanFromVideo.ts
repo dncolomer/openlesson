@@ -12,12 +12,12 @@ export const createPlanFromVideoAction: Action = {
   name: "CREATE_PLAN_FROM_VIDEO",
   similes: [
     "PLAN_FROM_YOUTUBE",
-    "VIDEO_LEARNING_PLAN",
+    "VIDEO_WORKSPACE",
     "YOUTUBE_PLAN",
     "LEARN_FROM_VIDEO",
   ],
   description:
-    "Create a learning plan derived from a YouTube video URL",
+    "Create a workspace derived from a YouTube video URL",
 
   validate: async (runtime: IAgentRuntime, _message: Memory) => {
     return !!runtime.getSetting("OPENLESSON_API_KEY");
@@ -49,14 +49,14 @@ export const createPlanFromVideoAction: Action = {
       const data = await apiRequest<CreatePlanFromVideoResponse>(
         runtime,
         "POST",
-        "/plans/from-video",
+        "/workspaces/from-video",
         { youtube_url: youtubeUrl }
       );
 
       const startNode = data.nodes.find((n) => n.is_start);
 
       callback({
-        text: `Learning plan created from video for "${data.topic}" spanning ${data.duration_days} days with ${data.nodes.length} sessions. Plan ID: ${data.plan_id}. First session: "${startNode?.title ?? "N/A"}".`,
+        text: `Workspace created from video for "${data.topic}" spanning ${data.duration_days} days with ${data.nodes.length} blocks. Workspace ID: ${data.workspace_id}. First block: "${startNode?.title ?? "N/A"}".`,
         action: "CREATE_PLAN_FROM_VIDEO",
       });
     } catch (error) {

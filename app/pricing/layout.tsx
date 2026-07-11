@@ -3,7 +3,7 @@ import { Metadata } from "next";
 export const metadata: Metadata = {
   title: "Pricing - Learning Efficiency Plans | openLesson",
   description:
-    "Create Workspaces and choose monthly TAP / ILE session volume plus Evidence API submission caps.",
+    "Create Workspaces and choose monthly TAP / ILE session volume plus Proof-of-Work API submission caps.",
   keywords: [
     "AI tutor pricing",
     "learning platform cost",

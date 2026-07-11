@@ -1,6 +1,6 @@
 ---
 name: customer-agent-openlesson
-description: PumaDoc Customer Agent — background openLesson verification; stream tool + chat evidence during steps; surface learning-efficiency next actions only at validation.
+description: PumaDoc Customer Agent — background openLesson verification; stream tool + chat proof of work during steps; surface learning-efficiency next actions only at validation.
 ---
 
 # Customer Agent — OpenLesson Integration
@@ -37,8 +37,8 @@ After create: `get_learning_progress` → `list_blocks` → map `pumadoc_step_id
 
 | Order | MCP tool | Purpose |
 |-------|----------|---------|
-| 1 | `get_learning_progress` | `conversion_goal`, evidence counts, `recommended_next_actions` |
-| 2 | `generate_evidence_schema` | Evidence contract for uploads |
+| 1 | `get_learning_progress` | `conversion_goal`, proof-of-work counts, `recommended_next_actions` |
+| 2 | `generate_proof_of_work_schema` | Proof-of-work contract for uploads |
 
 ```json
 {
@@ -53,7 +53,7 @@ After create: `get_learning_progress` → `list_blocks` → map `pumadoc_step_id
 }
 ```
 
-Re-call `generate_evidence_schema` after every **5–10** `upload_evidence` calls.
+Re-call `generate_proof_of_work_schema` after every **5–10** `upload_proof_of_work` calls.
 
 Honor top-level `interruption` (TIM) on any tool result — brief reflection nudges in chat are OK; full scorecards are not.
 
@@ -61,7 +61,7 @@ Honor top-level `interruption` (TIM) on any tool result — brief reflection nud
 
 ## During progress steps (background)
 
-After each meaningful PumaDoc action **or** coaching exchange, call `upload_evidence`. No learner copy about verification unless TIM requests a short reflection.
+After each meaningful PumaDoc action **or** coaching exchange, call `upload_proof_of_work`. No learner copy about verification unless TIM requests a short reflection.
 
 | Field | Value |
 |-------|-------|
@@ -97,7 +97,7 @@ After each meaningful PumaDoc action **or** coaching exchange, call `upload_evid
 
 When the user finishes the **validation** progress step (or journey validation gate):
 
-1. Final `upload_evidence` for that step (`block_id` = validation block).
+1. Final `upload_proof_of_work` for that step (`block_id` = validation block).
 2. `analyze_performance` — **report mode** (omit `prompt`):
 
 ```json
@@ -150,8 +150,8 @@ Screenshots (`screen`), video (`video`), TAP (`create_tap_link` → `get_tap_res
 ## Checklist
 
 - [ ] Resolve or create username workspace
-- [ ] `get_learning_progress` + `generate_evidence_schema` at session start
-- [ ] `upload_evidence` after each meaningful tool action and chat turn
+- [ ] `get_learning_progress` + `generate_proof_of_work_schema` at session start
+- [ ] `upload_proof_of_work` after each meaningful tool action and chat turn
 - [ ] No mid-journey scores or gap reports
 - [ ] `analyze_performance` (report) only at validation step end
 - [ ] Post learning-efficiency next-actions block in Customer Agent chat

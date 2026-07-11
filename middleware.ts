@@ -1,5 +1,40 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { hasProductAccess } from "@/lib/plans";
+
+const SUBSCRIPTION_EXEMPT_PREFIXES = [
+  "/pricing",
+  "/login",
+  "/register",
+  "/reset-password",
+  "/auth/",
+  "/invite/",
+  "/terms",
+  "/privacy",
+  "/cookies",
+  "/legal",
+  "/tap/session/",
+  "/ghl-score/session/",
+  "/insights/",
+  "/p/",
+  "/quiz/",
+  "/oauth/",
+  "/u/",
+  "/docs/",
+  "/platform",
+  "/pitch",
+  "/new-design",
+  "/marketing/",
+  "/click-moments/",
+  "/community",
+];
+
+function isSubscriptionExemptPath(pathname: string): boolean {
+  if (pathname === "/") return true;
+  return SUBSCRIPTION_EXEMPT_PREFIXES.some(
+    (prefix) => pathname === prefix || pathname.startsWith(prefix)
+  );
+}
 
 export async function middleware(request: NextRequest) {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -40,18 +75,12 @@ export async function middleware(request: NextRequest) {
 
   const pathname = request.nextUrl.pathname;
 
-  if (pathname === "/evidence-api-demo" || pathname.startsWith("/evidence-api-demo/")) {
-    const redirectUrl = request.nextUrl.clone();
-    redirectUrl.pathname = pathname.replace(/^\/evidence-api-demo/, "/demo");
-    return NextResponse.redirect(redirectUrl);
-  }
-
   const isDemoPage =
     pathname === "/demo" ||
     pathname.startsWith("/demo/") ||
     pathname === "/demo-app" ||
     pathname.startsWith("/demo-app/");
-  const isEvidenceApiDemoApi = pathname.startsWith("/api/evidence-api-demo");
+  const isDemoApi = pathname.startsWith("/api/demo");
 
   // Protected routes - require authentication
   const protectedRoutes = ["/session", "/dashboard", "/results"];
@@ -78,11 +107,11 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(redirectUrl);
   }
 
-  if (isEvidenceApiDemoApi && !user) {
+  if (isDemoApi && !user) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
 
-  if ((isDemoPage || isEvidenceApiDemoApi) && user) {
+  if ((isDemoPage || isDemoApi) && user) {
     const { data: profile } = await supabase
       .from("profiles")
       .select("is_admin")
@@ -90,15 +119,35 @@ export async function middleware(request: NextRequest) {
       .single();
 
     if (!profile?.is_admin) {
-      if (isEvidenceApiDemoApi) {
+      if (isDemoApi) {
         return NextResponse.json({ error: "Admin access required" }, { status: 403 });
       }
       return NextResponse.redirect(new URL("/dashboard", request.url));
     }
   }
 
-  if (isAuthRoute && user) {
-    return NextResponse.redirect(new URL("/dashboard", request.url));
+  if (user && (isAuthRoute || !isSubscriptionExemptPath(pathname))) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select(
+        "plan, subscription_status, is_admin, organization_id, token_tier, token_validity_expires_at"
+      )
+      .eq("id", user.id)
+      .single();
+
+    const canUseProduct = hasProductAccess(profile);
+
+    if (isAuthRoute) {
+      return NextResponse.redirect(
+        new URL(canUseProduct ? "/dashboard" : "/pricing", request.url)
+      );
+    }
+
+    if (!canUseProduct) {
+      const pricingUrl = new URL("/pricing", request.url);
+      pricingUrl.searchParams.set("required", "1");
+      return NextResponse.redirect(pricingUrl);
+    }
   }
 
   return supabaseResponse;
@@ -108,6 +157,6 @@ export const config = {
   matcher: [
     "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$|api).*)",
     // Refresh Supabase session cookies for demo API routes (excluded from the matcher above).
-    "/api/evidence-api-demo/:path*",
+    "/api/demo/:path*",
   ],
 };

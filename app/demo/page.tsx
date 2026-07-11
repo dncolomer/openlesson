@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { EvidenceApiDemo } from "@/components/EvidenceApiDemo";
+import { ProofOfWorkApiDemo } from "@/components/ProofOfWorkApiDemo";
 
 export const metadata: Metadata = {
   title: "Demo",
@@ -7,5 +7,5 @@ export const metadata: Metadata = {
 };
 
 export default function DemoPage() {
-  return <EvidenceApiDemo />;
+  return <ProofOfWorkApiDemo />;
 }

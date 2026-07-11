@@ -12,16 +12,16 @@ import {
   Sparkles,
   X,
 } from "lucide-react";
-import { askOrbitPerformanceQuestion } from "@/lib/evidence-api-demo/orbit-learning-links";
+import { askOrbitPerformanceQuestion } from "@/lib/openlesson-demo/orbit-learning-links";
 import type { ConversionGoalSource } from "@/lib/agent-v2/conversion-goal";
 import type { PerformanceReport } from "@/lib/agent-v2/performance-report";
-import { extractGameCoaching } from "@/lib/evidence-api-demo/game-tips";
-import type { OrbitAppSnapshot } from "@/lib/evidence-api-demo/orbit-app-context";
-import { formatOrbitSnapshotForPrompt } from "@/lib/evidence-api-demo/orbit-app-context";
+import { extractGameCoaching } from "@/lib/openlesson-demo/game-tips";
+import type { OrbitAppSnapshot } from "@/lib/openlesson-demo/orbit-app-context";
+import { formatOrbitSnapshotForPrompt } from "@/lib/openlesson-demo/orbit-app-context";
 import {
   getAffordanceForAction,
   matchCoachingHintToAction,
-} from "@/lib/evidence-api-demo/orbit-coach-map";
+} from "@/lib/openlesson-demo/orbit-coach-map";
 
 const PANEL_STORAGE_KEY = "orbit-coach-panel";
 
@@ -35,9 +35,9 @@ type SmartCoachOverlayProps = {
   report: PerformanceReport | null;
   isReporting: boolean;
   connected?: boolean;
-  planId?: string | null;
+  workspaceId?: string | null;
   blockId?: string | null;
-  evidenceCount?: number;
+  proofOfWorkCount?: number;
   inferredGoal?: string | null;
   conversionGoalSource?: ConversionGoalSource;
   appSnapshot?: OrbitAppSnapshot | null;
@@ -106,9 +106,9 @@ export function SmartCoachOverlay({
   report,
   isReporting,
   connected = false,
-  planId = null,
+  workspaceId = null,
   blockId = null,
-  evidenceCount = 0,
+  proofOfWorkCount = 0,
   inferredGoal,
   conversionGoalSource,
   appSnapshot = null,
@@ -283,18 +283,18 @@ export function SmartCoachOverlay({
     null;
 
   const showIleCta = Boolean(onOpenIle && (hasCoaching || suggestions.length > 0 || (overallScore !== null && overallScore < 80)));
-  const canAskQuestion = Boolean(planId && evidenceCount > 0 && !isReporting);
+  const canAskQuestion = Boolean(workspaceId && proofOfWorkCount > 0 && !isReporting);
 
   const handleAskQuestion = async () => {
     const question = chatQuestion.trim();
-    if (!planId || !question || isAsking) return;
+    if (!workspaceId || !question || isAsking) return;
 
     setIsAsking(true);
     setChatError(null);
     setChatAnswer(null);
 
     try {
-      const answer = await askOrbitPerformanceQuestion(planId, question, {
+      const answer = await askOrbitPerformanceQuestion(workspaceId, question, {
         blockId: blockId ?? undefined,
         orbitUiContext: appSnapshot ? formatOrbitSnapshotForPrompt(appSnapshot) : undefined,
       });
@@ -334,7 +334,7 @@ export function SmartCoachOverlay({
             )}
             <span className="min-w-0 truncate text-xs font-medium text-[#d6d6e8]">
               {isReporting ? "Scoring…" : "Scorecard"}
-              {connected && evidenceCount > 0 ? ` · ${evidenceCount}` : ""}
+              {connected && proofOfWorkCount > 0 ? ` · ${proofOfWorkCount}` : ""}
               <span className="block truncate font-mono text-[9px] font-normal uppercase tracking-wide text-[#5c5c70]">
                 openLesson
               </span>
@@ -438,13 +438,13 @@ export function SmartCoachOverlay({
           <p className="mt-3 text-sm leading-relaxed text-[#d6d6e8]">{primaryHint}</p>
         ) : !isReporting && !hasScoreContent ? (
           <p className="mt-3 text-sm leading-relaxed text-[#8b8ba3]">
-            {evidenceCount < 3
-              ? `Connected · ${evidenceCount} evidence event${evidenceCount === 1 ? "" : "s"}. Scorecard updates every 3 actions.`
-              : "Pulling scorecard from Evidence API…"}
+            {proofOfWorkCount < 3
+              ? `Connected · ${proofOfWorkCount} evidence event${proofOfWorkCount === 1 ? "" : "s"}. Scorecard updates every 3 actions.`
+              : "Pulling scorecard from Proof-of-Work API…"}
           </p>
         ) : !isReporting ? (
           <p className="mt-3 text-sm leading-relaxed text-[#8b8ba3]">
-            Keep working in Orbit — coaching updates as evidence accumulates.
+            Keep working in Orbit — coaching updates as proof of work accumulates.
           </p>
         ) : null}
 
@@ -485,7 +485,7 @@ export function SmartCoachOverlay({
             <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-2 font-mono text-[9px] uppercase tracking-wide text-[#6b6b80]">
                 <MessageCircle className="size-3" />
-                Ask Evidence API
+                Ask Proof-of-Work API
               </div>
               <button
                 type="button"

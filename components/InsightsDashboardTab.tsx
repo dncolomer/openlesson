@@ -5,9 +5,9 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { archiveInsight, formatInsightDate, insightPublicPath, type InsightSummary } from "@/lib/insights";
 
 export function InsightsDashboardTab({
-  planTitles = {},
+  workspaceTitles = {},
 }: {
-  planTitles?: Record<string, string>;
+  workspaceTitles?: Record<string, string>;
 }) {
   const [insights, setInsights] = useState<InsightSummary[]>([]);
   const [loading, setLoading] = useState(true);
@@ -93,7 +93,7 @@ export function InsightsDashboardTab({
       ) : (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {sortedInsights.map((insight) => {
-            const workspaceTitle = insight.plan_id ? planTitles[insight.plan_id] : null;
+            const workspaceTitle = insight.workspace_id ? workspaceTitles[insight.workspace_id] : null;
             const isArchiving = archivingId === insight.id;
             return (
               <div

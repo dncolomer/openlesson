@@ -76,7 +76,7 @@ async function checkSchema() {
   const tables = [
     "workspace_ghc_sessions",
     "organization_guest_users",
-    "learning_plans",
+    "workspaces",
     "agent_api_keys",
   ];
 
@@ -91,13 +91,13 @@ async function checkSchema() {
 
   for (const column of ["organization_id", "guest_user_id"]) {
     const { error } = await supabase
-      .from("learning_plans")
+      .from("workspaces")
       .select(`id, ${column}`)
       .limit(1);
     if (error) {
-      fail(`db: learning_plans.${column}`, `${error.message} — apply migration 045`);
+      fail(`db: workspaces.${column}`, `${error.message} — apply migration 045`);
     } else {
-      pass(`db: learning_plans.${column}`, "present");
+      pass(`db: workspaces.${column}`, "present");
     }
   }
 

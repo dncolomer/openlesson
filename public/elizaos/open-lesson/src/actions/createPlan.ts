@@ -9,15 +9,15 @@ import { apiRequest } from "../client";
 import type { CreatePlanResponse } from "../types";
 
 export const createPlanAction: Action = {
-  name: "CREATE_LEARNING_PLAN",
+  name: "CREATE_WORKSPACE",
   similes: [
-    "GENERATE_LEARNING_PLAN",
-    "MAKE_LEARNING_PLAN",
-    "BUILD_STUDY_PLAN",
-    "CREATE_STUDY_PLAN",
+    "GENERATE_WORKSPACE",
+    "MAKE_WORKSPACE",
+    "BUILD_STUDY_WORKSPACE",
+    "CREATE_STUDY_WORKSPACE",
   ],
   description:
-    "Create a personalized learning plan as a directed graph of tutoring sessions for a given topic",
+    "Create a verification workspace as a directed graph of tutoring sessions for a given topic",
 
   validate: async (runtime: IAgentRuntime, _message: Memory) => {
     return !!runtime.getSetting("OPENLESSON_API_KEY");
@@ -34,7 +34,7 @@ export const createPlanAction: Action = {
 
     // Extract topic — everything after common trigger phrases
     const topicMatch = text.match(
-      /(?:learning plan (?:for|about|on)|learn|study|plan for)\s+(.+?)(?:\s+in\s+(\d+)\s*(days?|weeks?))?$/i
+      /(?:workspace (?:for|about|on)|learn|study|workspace for)\s+(.+?)(?:\s+in\s+(\d+)\s*(days?|weeks?))?$/i
     );
     const topic = topicMatch ? topicMatch[1].replace(/\s+in\s+\d+\s*(days?|weeks?)$/i, "").trim() : text.trim();
     let duration_days: number | undefined;
@@ -48,8 +48,8 @@ export const createPlanAction: Action = {
 
     if (!topic) {
       callback({
-        text: "Please specify a topic for the learning plan.",
-        action: "CREATE_LEARNING_PLAN",
+        text: "Please specify a topic for the workspace.",
+        action: "CREATE_WORKSPACE",
       });
       return true;
     }
@@ -61,20 +61,20 @@ export const createPlanAction: Action = {
       const data = await apiRequest<CreatePlanResponse>(
         runtime,
         "POST",
-        "/plans",
+        "/workspaces",
         body
       );
 
       const startNode = data.nodes.find((n) => n.is_start);
 
       callback({
-        text: `Learning plan created for "${data.topic}" spanning ${data.duration_days} days with ${data.nodes.length} sessions. Plan ID: ${data.plan_id}. First session: "${startNode?.title ?? "N/A"}".`,
-        action: "CREATE_LEARNING_PLAN",
+        text: `Workspace created for "${data.topic}" spanning ${data.duration_days} days with ${data.nodes.length} blocks. Workspace ID: ${data.workspace_id}. First block: "${startNode?.title ?? "N/A"}".`,
+        action: "CREATE_WORKSPACE",
       });
     } catch (error) {
       callback({
-        text: `Failed to create learning plan: ${error instanceof Error ? error.message : "Unknown error"}`,
-        action: "CREATE_LEARNING_PLAN",
+        text: `Failed to create workspace: ${error instanceof Error ? error.message : "Unknown error"}`,
+        action: "CREATE_WORKSPACE",
       });
     }
 
@@ -85,13 +85,13 @@ export const createPlanAction: Action = {
     [
       {
         user: "{{user1}}",
-        content: { text: "Create a learning plan for quantum computing" },
+        content: { text: "Create a workspace for quantum computing" },
       },
       {
         user: "{{agentName}}",
         content: {
-          text: 'Learning plan created for "quantum computing" spanning 30 days with 8 sessions. Plan ID: plan_abc123. First session: "Introduction to Qubits".',
-          action: "CREATE_LEARNING_PLAN",
+          text: 'Workspace created for "quantum computing" spanning 30 days with 8 blocks. Workspace ID: ws_abc123. First block: "Introduction to Qubits".',
+          action: "CREATE_WORKSPACE",
         },
       },
     ],
@@ -103,8 +103,8 @@ export const createPlanAction: Action = {
       {
         user: "{{agentName}}",
         content: {
-          text: 'Learning plan created for "Python" spanning 14 days with 6 sessions. Plan ID: plan_def456. First session: "Python Basics".',
-          action: "CREATE_LEARNING_PLAN",
+          text: 'Workspace created for "Python" spanning 14 days with 6 blocks. Workspace ID: ws_def456. First block: "Python Basics".',
+          action: "CREATE_WORKSPACE",
         },
       },
     ],

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { authenticateRequest, errorResponse } from "@/lib/agent-v2/auth";
 import { callXaiJSON, DEFAULT_MODEL, userMessage } from "@/lib/xai-client";
 import { uploadFileToXAI } from "@/lib/xai-files";
-import { withEvidenceApiResponse } from "@/lib/agent-v2/predictive-interruption";
+import { withProofOfWorkApiResponse } from "@/lib/agent-v2/predictive-interruption";
 import {
   fallbackConversionGoal,
   normalizeConversionGoal,
@@ -11,6 +11,7 @@ import {
 import { persistSkillGridPositions, skillGridNodesFromRefs } from "@/lib/skill-grid-positions";
 import { type PlanId } from "@/lib/plans";
 import { checkWorkspaceCreation, workspaceLimitErrorResponse } from "@/lib/workspace-limits";
+import { loadUsageProfile } from "@/lib/usage-metrics";
 
 export const runtime = "nodejs";
 
@@ -83,21 +84,20 @@ export async function POST(req: NextRequest) {
   }
 
   if (auth.user_id) {
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("plan, is_admin, extra_lessons, extra_workspaces, subscription_status, current_period_end, token_tier, token_validity_expires_at")
-      .eq("id", auth.user_id)
-      .single();
+    const { profile, error: profileError } = await loadUsageProfile(supabase, auth.user_id);
+    if (profileError || !profile) {
+      return errorResponse(500, "internal_error", profileError || "Profile not found");
+    }
 
     const workspaceCheck = await checkWorkspaceCreation(supabase, auth.user_id, {
-      plan: (profile?.plan || "free") as PlanId,
-      is_admin: profile?.is_admin ?? false,
-      extra_lessons: profile?.extra_lessons ?? 0,
-      extra_workspaces: profile?.extra_workspaces ?? 0,
-      subscription_status: profile?.subscription_status ?? "inactive",
-      current_period_end: profile?.current_period_end ?? null,
-      token_tier: profile?.token_tier ?? null,
-      token_validity_expires_at: profile?.token_validity_expires_at ?? null,
+      plan: (profile.plan || "free") as PlanId,
+      is_admin: profile.is_admin ?? false,
+      extra_lessons: profile.extra_lessons ?? 0,
+      extra_workspaces: profile.extra_workspaces ?? 0,
+      subscription_status: profile.subscription_status ?? "inactive",
+      current_period_end: profile.current_period_end ?? null,
+      token_tier: profile.token_tier ?? null,
+      token_validity_expires_at: profile.token_validity_expires_at ?? null,
     });
 
     if (!workspaceCheck.allowed) {
@@ -159,7 +159,7 @@ export async function POST(req: NextRequest) {
     });
 
   const { data: workspace, error: workspaceError } = await supabase
-    .from("learning_plans")
+    .from("workspaces")
     .insert({
       user_id: ownerUserId,
       organization_id: auth.organization_id,
@@ -170,7 +170,7 @@ export async function POST(req: NextRequest) {
       source_type: "topic",
       notes: initialPrompt,
       conversion_goal: conversionGoal,
-      is_agent_session: true,
+      is_agent_workspace: true,
     })
     .select("id, title, root_topic, status, notes, conversion_goal, created_at, updated_at")
     .single();
@@ -183,13 +183,13 @@ export async function POST(req: NextRequest) {
   const blockIdMap = new Map<string, string>();
   for (const block of generated.data.blocks) {
     const { data: insertedBlock, error: blockError } = await supabase
-      .from("plan_nodes")
+      .from("blocks")
       .insert({
-        plan_id: workspace.id,
+        workspace_id: workspace.id,
         title: block.title,
         description: block.description || "",
         is_start: block.is_start === true,
-        next_node_ids: [],
+        next_block_ids: [],
         status: "available",
       })
       .select("id")
@@ -207,7 +207,7 @@ export async function POST(req: NextRequest) {
     if (!dbId || !Array.isArray(block.next)) continue;
     const nextIds = block.next.map((id) => blockIdMap.get(id)).filter((id): id is string => Boolean(id));
     if (nextIds.length) {
-      await supabase.from("plan_nodes").update({ next_node_ids: nextIds }).eq("id", dbId);
+      await supabase.from("blocks").update({ next_block_ids: nextIds }).eq("id", dbId);
     }
   }
 
@@ -221,9 +221,9 @@ export async function POST(req: NextRequest) {
     try {
       const xaiFile = await uploadFileToXAI(file.name, file.mime_type, file.data);
       const { data: fileRecord, error: fileError } = await supabase
-        .from("plan_files")
+        .from("workspace_files")
         .insert({
-          plan_id: workspace.id,
+          workspace_id: workspace.id,
           user_id: ownerUserId,
           file_name: file.name,
           file_size: Buffer.from(file.data, "base64").length,
@@ -239,13 +239,13 @@ export async function POST(req: NextRequest) {
   }
 
   const { data: blocks } = await supabase
-    .from("plan_nodes")
-    .select("id, title, description, is_start, next_node_ids, status, position_x, position_y, created_at")
-    .eq("plan_id", workspace.id)
+    .from("blocks")
+    .select("id, title, description, is_start, next_block_ids, status, position_x, position_y, created_at")
+    .eq("workspace_id", workspace.id)
     .order("created_at", { ascending: true });
 
   return NextResponse.json(
-    withEvidenceApiResponse(
+    withProofOfWorkApiResponse(
       {
         workspace,
         blocks: blocks || [],

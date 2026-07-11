@@ -79,7 +79,7 @@ export function ChapterMapPanel({
     if (!sessionId || !editingId || suggestingEdit) return;
     setSuggestingEdit(true);
     try {
-      const response = await fetch("/api/learning-plan/suggest-chapter-edit", {
+      const response = await fetch("/api/workspace/suggest-chapter-edit", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

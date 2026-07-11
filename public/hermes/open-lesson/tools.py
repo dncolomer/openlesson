@@ -67,11 +67,11 @@ def create_plan(args: dict, **kwargs) -> str:
 def adapt_plan(args: dict, **kwargs) -> str:
     """Adapt an existing learning plan."""
     try:
-        plan_id = args["plan_id"]
+        workspace_id = args["workspace_id"]
         body: dict = {"instruction": args["instruction"]}
         if "preserve_completed" in args:
             body["preserve_completed"] = args["preserve_completed"]
-        result = _api_request("POST", f"/api/v2/agent/plans/{plan_id}/adapt", body)
+        result = _api_request("POST", f"/api/v2/agent/plans/{workspace_id}/adapt", body)
         return _ok(result)
     except Exception as exc:
         return _err(str(exc))
@@ -93,7 +93,7 @@ def start_session(args: dict, **kwargs) -> str:
     """Start a tutoring session (standalone or linked to a plan)."""
     try:
         body: dict = {"topic": args["topic"]}
-        for key in ("plan_id", "plan_node_id", "tutoring_language"):
+        for key in ("workspace_id", "block_id", "tutoring_language"):
             if key in args:
                 body[key] = args[key]
         result = _api_request("POST", "/api/v2/agent/sessions", body)

@@ -3,9 +3,9 @@ import {
   buildInterruptionContract,
   normalizePredictedInterruption,
   predictInterruption,
-  withEvidenceApiResponse,
+  withProofOfWorkApiResponse,
 } from "@/lib/agent-v2/predictive-interruption";
-import { enrichEvidenceSpecResult } from "@/lib/agent-v2/evidence-integration";
+import { enrichProofOfWorkSpecResult } from "@/lib/agent-v2/proof-of-work-integration";
 
 describe("predictive-interruption", () => {
   it("builds interruption contract with TIM semantics", () => {
@@ -26,25 +26,25 @@ describe("predictive-interruption", () => {
       endpoint: "create_workspace",
       workspace_id: "ws-1",
     });
-    expect(interruption?.intervention.type).toBe("evidence_reminder");
+    expect(interruption?.intervention.type).toBe("proof_of_work_reminder");
     expect(interruption?.delay_ms).toBeGreaterThan(0);
   });
 
   it("predicts upload reminder when evidence schema has no artifacts", () => {
     const interruption = predictInterruption({
-      endpoint: "generate_evidence_schema",
+      endpoint: "generate_proof_of_work_schema",
       workspace_id: "ws-1",
-      evidence_artifacts: 0,
+      proof_of_work_artifacts: 0,
     });
-    expect(interruption?.intervention.type).toBe("evidence_reminder");
-    expect(interruption?.intervention.consumer_action).toBe("call_upload_evidence");
+    expect(interruption?.intervention.type).toBe("proof_of_work_reminder");
+    expect(interruption?.intervention.consumer_action).toBe("call_upload_proof_of_work");
   });
 
   it("predicts performance review on evidence milestone uploads", () => {
     const interruption = predictInterruption({
-      endpoint: "upload_evidence",
+      endpoint: "upload_proof_of_work",
       workspace_id: "ws-1",
-      evidence_artifacts: 5,
+      proof_of_work_artifacts: 5,
       tool_name: "canvas",
     });
     expect(interruption?.intervention.type).toBe("performance_review");
@@ -70,7 +70,7 @@ describe("predictive-interruption", () => {
           gaps: [
             {
               title: "Weak ICP",
-              evidence: "No segment rationale in traces",
+              proof_of_work: "No segment rationale in traces",
               severity: "high",
               suggested_repair: "Document ICP hypothesis before next simulation",
             },
@@ -94,7 +94,7 @@ describe("predictive-interruption", () => {
           consumer_action: "present_modal",
         },
       },
-      "generate_evidence_schema",
+      "generate_proof_of_work_schema",
       "ws-1"
     );
     expect(normalized?.intervention.message).toContain("hypothesis");
@@ -102,7 +102,7 @@ describe("predictive-interruption", () => {
   });
 
   it("attaches interruption to API responses", () => {
-    const payload = withEvidenceApiResponse(
+    const payload = withProofOfWorkApiResponse(
       { mode: "report", report: { overall_score: 80 } },
       { endpoint: "list_blocks", workspace_id: "ws-1" }
     );
@@ -110,27 +110,27 @@ describe("predictive-interruption", () => {
     expect(payload.interruption).toBeNull();
   });
 
-  it("enriches evidence spec with interruption contract in v1.3", () => {
-    const enriched = enrichEvidenceSpecResult(
+  it("enriches proof-of-work spec with interruption contract in v1.3", () => {
+    const enriched = enrichProofOfWorkSpecResult(
       {
         schema: { type: "object" },
         schema_name: "eval_input_demo",
         rationale: "test",
         example_payload: { event: "start" },
         recommended_mime_type: "application/json",
-        recommended_evidence_type: "tool",
-        continuous_evaluation_summary: "Regenerate as evidence grows.",
+        recommended_proof_of_work_type: "tool",
+        continuous_evaluation_summary: "Regenerate as proof of work grows.",
       },
       "ws-1",
       "https://openlesson.academy",
       null,
-      { evidence_artifacts: 0, blocks: 3 }
+      { proof_of_work_artifacts: 0, blocks: 3 }
     );
 
     expect(enriched.spec_version).toBe("1.3");
     expect(enriched.interruption_contract).toBeTruthy();
     expect((enriched.interruption_contract as { intervention_types: string[] }).intervention_types).toContain(
-      "evidence_reminder"
+      "proof_of_work_reminder"
     );
   });
 });

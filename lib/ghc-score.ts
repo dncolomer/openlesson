@@ -21,15 +21,15 @@ export interface GhcScoreBrief {
   }>;
   sessions: Array<{
     id: string;
-    node_title: string | null;
+    block_title: string | null;
     problem: string | null;
     status: string | null;
     report: string | null;
   }>;
   focusSession?: {
     id: string;
-    node_id: string | null;
-    node_title: string | null;
+    block_id: string | null;
+    block_title: string | null;
     problem: string | null;
     status: string | null;
     report: string | null;
@@ -52,7 +52,7 @@ export interface GhcScoreAnalysis {
     summary: string;
     gaps: Array<{
       title: string;
-      evidence: string;
+      proof_of_work: string;
       severity: "low" | "medium" | "high";
       suggested_repair: string;
     }>;
@@ -60,7 +60,7 @@ export interface GhcScoreAnalysis {
   };
   knowledge_gaps: Array<{
     title: string;
-    evidence: string;
+    proof_of_work: string;
     severity: "low" | "medium" | "high";
     suggested_repair: string;
   }>;
@@ -96,20 +96,20 @@ export function listenerStyle(_mode: GhcScoreMode) {
   return "a neutral learning evaluator who asks clear questions that reveal what the learner can explain, connect, apply, and repair";
 }
 
-export async function getGhcScoreBrief(planId: string, focusNodeIds: string[] = [], focusSessionId?: string | null) {
+export async function getGhcScoreBrief(workspaceId: string, focusNodeIds: string[] = [], focusSessionId?: string | null) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("Not authenticated");
-  return getGhcScoreBriefForUser(planId, user.id, focusNodeIds, false, focusSessionId);
+  return getGhcScoreBriefForUser(workspaceId, user.id, focusNodeIds, false, focusSessionId);
 }
 
-export async function getGhcScoreBriefForUser(planId: string, userId: string, focusNodeIds: string[] = [], requireOwnership = true, focusSessionId?: string | null) {
+export async function getGhcScoreBriefForUser(workspaceId: string, userId: string, focusNodeIds: string[] = [], requireOwnership = true, focusSessionId?: string | null) {
   const supabase = createAdminClient();
 
   const { data: plan, error: planError } = await supabase
-    .from("learning_plans")
+    .from("workspaces")
     .select("id, user_id, organization_id, title, root_topic, description, notes, is_public, is_group")
-    .eq("id", planId)
+    .eq("id", workspaceId)
     .single();
 
   if (planError || !plan) throw new Error("Workspace not found");
@@ -135,9 +135,9 @@ export async function getGhcScoreBriefForUser(planId: string, userId: string, fo
   }
 
   let nodesQuery = supabase
-    .from("plan_nodes")
+    .from("blocks")
     .select("id, title, description, status")
-    .eq("plan_id", planId)
+    .eq("workspace_id", workspaceId)
     .order("created_at", { ascending: true });
 
   if (focusNodeIds.length > 0) {
@@ -145,18 +145,18 @@ export async function getGhcScoreBriefForUser(planId: string, userId: string, fo
   }
 
   const { data: nodes } = await nodesQuery;
-  const nodeIds = (nodes || []).map((node) => node.id);
+  const blockIds = (nodes || []).map((node) => node.id);
 
-  const { data: planNodeSessions } = nodeIds.length > 0
+  const { data: blockSessions } = blockIds.length > 0
     ? await supabase
-      .from("plan_node_sessions")
-      .select("session_id, plan_node_id, plan_nodes(title)")
-      .eq("plan_id", planId)
+      .from("block_sessions")
+      .select("session_id, block_id, blocks(title)")
+      .eq("workspace_id", workspaceId)
       .eq("user_id", userId)
-      .in("plan_node_id", nodeIds)
+      .in("block_id", blockIds)
     : { data: [] };
 
-  const sessionIds = Array.from(new Set((planNodeSessions || []).map((row: any) => row.session_id).filter(Boolean)));
+  const sessionIds = Array.from(new Set((blockSessions || []).map((row: any) => row.session_id).filter(Boolean)));
   const { data: sessions } = sessionIds.length > 0
     ? await supabase
       .from("sessions")
@@ -165,12 +165,12 @@ export async function getGhcScoreBriefForUser(planId: string, userId: string, fo
       .eq("user_id", userId)
     : { data: [] };
 
-  const nodeTitleBySessionId = new Map(
-    (planNodeSessions || []).map((row: any) => [row.session_id, row.plan_nodes?.title || null])
+  const blockTitleBySessionId = new Map(
+    (blockSessions || []).map((row: any) => [row.session_id, row.blocks?.title || null])
   );
 
   const focusSessionLink = focusSessionId
-    ? (planNodeSessions || []).find((row: any) => row.session_id === focusSessionId) || null
+    ? (blockSessions || []).find((row: any) => row.session_id === focusSessionId) || null
     : null;
   const { data: focusSession } = focusSessionId
     ? await supabase
@@ -201,15 +201,15 @@ export async function getGhcScoreBriefForUser(planId: string, userId: string, fo
       })),
       sessions: (sessions || []).map((session) => ({
         id: session.id,
-        node_title: nodeTitleBySessionId.get(session.id) || null,
+        block_title: blockTitleBySessionId.get(session.id) || null,
         problem: session.problem,
         status: session.status,
         report: session.report,
       })),
       focusSession: focusSession ? {
         id: focusSession.id,
-        node_id: focusSessionLink?.plan_node_id || null,
-        node_title: nodeTitleBySessionId.get(focusSession.id) || null,
+        block_id: focusSessionLink?.block_id || null,
+        block_title: blockTitleBySessionId.get(focusSession.id) || null,
         problem: focusSession.problem,
         status: focusSession.status,
         report: focusSession.report,
@@ -224,7 +224,7 @@ export function buildGhcScoreInstructions(brief: GhcScoreBrief, mode: GhcScoreMo
     .join("\n");
 
   const sessionSummary = brief.sessions
-    .map((session, index) => `${index + 1}. ${session.node_title || session.problem || "Session"}: ${session.report ? session.report.slice(0, 1200) : "No report yet"}`)
+    .map((session, index) => `${index + 1}. ${session.block_title || session.problem || "Session"}: ${session.report ? session.report.slice(0, 1200) : "No report yet"}`)
     .join("\n\n");
 
   const focusedBlock = brief.nodes.length === 1 ? brief.nodes[0] : null;
@@ -232,14 +232,14 @@ export function buildGhcScoreInstructions(brief: GhcScoreBrief, mode: GhcScoreMo
     ? `the performance block "${focusedBlock.title}"`
     : `the full workspace "${brief.plan.title}"`;
   const focusSessionSummary = brief.focusSession
-    ? `Related workspace session:\nTitle: ${brief.focusSession.node_title || brief.focusSession.problem || "Session"}\nStatus: ${brief.focusSession.status || "unknown"}\nProblem: ${brief.focusSession.problem || "None"}\nReport: ${brief.focusSession.report || "No report yet"}`
+    ? `Related workspace session:\nTitle: ${brief.focusSession.block_title || brief.focusSession.problem || "Session"}\nStatus: ${brief.focusSession.status || "unknown"}\nProblem: ${brief.focusSession.problem || "None"}\nReport: ${brief.focusSession.report || "No report yet"}`
     : focusedBlock
       ? "No related completed session. Evaluate the selected performance block directly."
       : "No focused block. Evaluate learning across the whole workspace.";
 
   return `You are the Think Aloud Protocol (TAP) session facilitator for OpenLesson.
 
-The learner is demonstrating what they learned about ${assessmentTarget}. Your role is to collect enough evidence to score the demonstration and identify actionable learning gaps. Route remediation into Integrated Learning Environment (ILE) practice where appropriate. You are ${listenerStyle(mode)}.
+The learner is demonstrating what they learned about ${assessmentTarget}. Your role is to collect enough proof of work to score the demonstration and identify actionable learning gaps. Route remediation into Integrated Learning Environment (ILE) practice where appropriate. You are ${listenerStyle(mode)}.
 
 Your job is to run a Socratic learning demonstration. Elicit a clear, natural explanation and expose gaps: missing definitions, weak causal links, misconceptions, shallow examples, unsupported jumps, and fragile transfer across contexts. Do not announce scores during the live session. Ask questions that reveal understanding across these learning markers: ${GHC_SCORE_MARKERS.map((marker) => marker.label).join(", ")}.
 

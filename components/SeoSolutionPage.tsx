@@ -118,7 +118,7 @@ export function SeoSolutionPage({ page, breadcrumbs }: SeoSolutionPageProps) {
                 tools.
               </p>
               <p className="mt-3 text-sm leading-relaxed text-neutral-500">
-                <span className="text-neutral-300">Evidence API</span> scores artifacts and tool
+                <span className="text-neutral-300">Proof-of-Work API</span> scores artifacts and tool
                 traces. <span className="text-neutral-300">Think Aloud Protocol</span> captures live
                 human cognition under probe. Both run inside the knowledge workspace.
               </p>
@@ -140,7 +140,7 @@ export function SeoSolutionPage({ page, breadcrumbs }: SeoSolutionPageProps) {
               Four tools. One knowledge workspace.
             </p>
             <p className="mt-3 text-sm leading-relaxed text-neutral-400">
-              Evidence API and Think Aloud Protocol verify learning. ILE and ALE augment it. All four
+              Proof-of-Work API and Think Aloud Protocol verify learning. ILE and ALE augment it. All four
               share the same workspace context, scoring model, and gap analysis.
             </p>
             <div className="mt-5">
@@ -173,16 +173,16 @@ export function SeoSolutionPage({ page, breadcrumbs }: SeoSolutionPageProps) {
               <h2 className="text-xl font-medium text-white sm:text-2xl">{section.title}</h2>
               {section.paragraphs.map((paragraph) => (
                 <p key={paragraph.slice(0, 48)} className="mt-4">
-                  {paragraph.includes("Evidence API") ? (
+                  {paragraph.includes("Proof-of-Work API") ? (
                     <>
-                      {paragraph.split("Evidence API")[0]}
+                      {paragraph.split("Proof-of-Work API")[0]}
                       <Link
                         href="/docs/agentic-v2"
                         className="text-neutral-200 underline decoration-neutral-600 underline-offset-4 hover:text-white"
                       >
-                        Evidence API
+                        Proof-of-Work API
                       </Link>
-                      {paragraph.split("Evidence API")[1]}
+                      {paragraph.split("Proof-of-Work API")[1]}
                     </>
                   ) : (
                     paragraph

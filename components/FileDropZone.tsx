@@ -73,12 +73,12 @@ export function FileDropZone({ files, onChange, compact = false, className = "" 
   const processFile = useCallback((file: File): Promise<AttachedFile | null> => {
     return new Promise((resolve) => {
       if (!ALLOWED_TYPES[file.type]) {
-        setError(t('planFiles.unsupportedType'));
+        setError(t('workspaceFiles.unsupportedType'));
         resolve(null);
         return;
       }
       if (file.size > MAX_FILE_SIZE) {
-        setError(t('planFiles.fileTooLarge'));
+        setError(t('workspaceFiles.fileTooLarge'));
         resolve(null);
         return;
       }
@@ -104,7 +104,7 @@ export function FileDropZone({ files, onChange, compact = false, className = "" 
     const arr = Array.from(incoming);
     const slots = MAX_FILES - files.length;
     if (slots <= 0) {
-      setError(t('planFiles.fileLimitReached'));
+      setError(t('workspaceFiles.fileLimitReached'));
       return;
     }
     const toProcess = arr.slice(0, slots);
@@ -118,7 +118,7 @@ export function FileDropZone({ files, onChange, compact = false, className = "" 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(false);
-    if (atLimit) { setError(t('planFiles.fileLimitReached')); return; }
+    if (atLimit) { setError(t('workspaceFiles.fileLimitReached')); return; }
     addFiles(e.dataTransfer.files);
   }, [atLimit, addFiles, t]);
 
@@ -160,7 +160,7 @@ export function FileDropZone({ files, onChange, compact = false, className = "" 
             <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
             </svg>
-            {t('planFiles.addFiles')} ({files.length}/{MAX_FILES})
+            {t('workspaceFiles.addFiles')} ({files.length}/{MAX_FILES})
           </button>
         )}
         {error && <p className="text-xs text-red-400">{error}</p>}
@@ -195,7 +195,7 @@ export function FileDropZone({ files, onChange, compact = false, className = "" 
           <svg className="w-5 h-5 text-neutral-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M18.375 12.739l-7.693 7.693a4.5 4.5 0 01-6.364-6.364l10.94-10.94A3 3 0 1119.5 7.372L8.552 18.32m.009-.01l-.01.01m5.699-9.941l-7.81 7.81a1.5 1.5 0 002.112 2.13" />
           </svg>
-          <span className="text-xs text-neutral-400">{t('planFiles.dropZoneLabel')}</span>
+          <span className="text-xs text-neutral-400">{t('workspaceFiles.dropZoneLabel')}</span>
           <span className="text-[10px] text-neutral-600">PDF, TXT, MD, JPG, PNG, WEBP · max 10 MB · {files.length}/{MAX_FILES}</span>
         </div>
       )}
@@ -226,7 +226,7 @@ export function FileDropZone({ files, onChange, compact = false, className = "" 
       )}
 
       {atLimit && (
-        <p className="text-xs text-amber-400/80">{t('planFiles.fileLimitReached')}</p>
+        <p className="text-xs text-amber-400/80">{t('workspaceFiles.fileLimitReached')}</p>
       )}
       {error && <p className="text-xs text-red-400">{error}</p>}
 

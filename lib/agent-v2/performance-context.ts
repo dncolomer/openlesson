@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { AuthContext } from "./types";
 import { filterResolvableXaiFileIds, isXaiFileId, uploadFileToXAI } from "@/lib/xai-files";
-import { evidenceQueryForAuth } from "./workspace-evidence";
+import { proofOfWorkQueryForAuth } from "./workspace-proof-of-work";
 
 const MAX_ARTIFACT_FILE_REFS = 19;
 
@@ -59,7 +59,7 @@ export interface PerformanceContextPayload {
     session_id: string | null;
   }>;
   tap_sessions: Array<Record<string, unknown>>;
-  evidence: Array<{
+  proof_of_work: Array<{
     id: string;
     type: string;
     block_id: string | null;
@@ -75,7 +75,7 @@ export interface PerformanceContextPayload {
     metadata: Record<string, unknown>;
     created_at: string;
   }>;
-  plan_files: Array<{
+  workspace_files: Array<{
     id: string;
     file_name: string;
     mime_type: string;
@@ -86,9 +86,9 @@ export interface PerformanceContextPayload {
   counts: {
     blocks: number;
     tap_sessions: number;
-    evidence_artifacts: number;
+    proof_of_work_artifacts: number;
     linked_sessions: number;
-    plan_files: number;
+    workspace_files: number;
   };
 }
 
@@ -106,7 +106,7 @@ export async function buildWorkspacePerformanceContext({
   blockId,
 }: BuildContextOptions) {
   const { data: workspace } = await supabase
-    .from("learning_plans")
+    .from("workspaces")
     .select("id, title, root_topic, description, notes, conversion_goal, user_id, organization_id, guest_user_id")
     .eq("id", workspaceId)
     .single();
@@ -114,62 +114,62 @@ export async function buildWorkspacePerformanceContext({
   if (!workspace) throw new Error("Workspace not found");
 
   let blocksQuery = supabase
-    .from("plan_nodes")
+    .from("blocks")
     .select("id, title, description, status, is_start, session_id")
-    .eq("plan_id", workspaceId)
+    .eq("workspace_id", workspaceId)
     .order("created_at", { ascending: true });
 
   if (blockId) blocksQuery = blocksQuery.eq("id", blockId);
 
-  const [{ data: blocks }, { data: planFiles }] = await Promise.all([
+  const [{ data: blocks }, { data: workspaceFiles }] = await Promise.all([
     blocksQuery,
     supabase
-      .from("plan_files")
+      .from("workspace_files")
       .select("id, file_name, mime_type, xai_file_id, created_at")
-      .eq("plan_id", workspaceId)
+      .eq("workspace_id", workspaceId)
       .order("created_at", { ascending: false }),
   ]);
 
-  const evidenceFilter = evidenceQueryForAuth(auth);
-  let evidenceQuery = supabase
-    .from("workspace_evidence")
+  const evidenceFilter = proofOfWorkQueryForAuth(auth);
+  let proofOfWorkQuery = supabase
+    .from("workspace_proof_of_work")
     .select(
-      "id, plan_node_id, session_id, evidence_type, file_name, mime_type, xai_file_id, timestamp_ms, chunk_index, metadata, tool_name, tool_action, device_name, sample_count, created_at"
+      "id, block_id, session_id, proof_of_work_type, file_name, mime_type, xai_file_id, timestamp_ms, chunk_index, metadata, tool_name, tool_action, device_name, sample_count, created_at"
     )
-    .eq("plan_id", workspaceId)
+    .eq("workspace_id", workspaceId)
     .order("created_at", { ascending: false })
     .limit(50);
 
-  if (blockId) evidenceQuery = evidenceQuery.eq("plan_node_id", blockId);
+  if (blockId) proofOfWorkQuery = proofOfWorkQuery.eq("block_id", blockId);
   if (evidenceFilter.restrictToGuest && evidenceFilter.guestUserId) {
-    evidenceQuery = evidenceQuery.eq("guest_user_id", evidenceFilter.guestUserId);
+    proofOfWorkQuery = proofOfWorkQuery.eq("guest_user_id", evidenceFilter.guestUserId);
   } else if (evidenceFilter.restrictToUser && evidenceFilter.userId) {
-    evidenceQuery = evidenceQuery.eq("user_id", evidenceFilter.userId);
+    proofOfWorkQuery = proofOfWorkQuery.eq("user_id", evidenceFilter.userId);
   }
 
   let ghlQuery = supabase
     .from("workspace_ghc_sessions")
     .select(
-      "id, plan_node_id, status, overall_score, summary, marker_scores, analysis, duration_seconds, completed_at, created_at, xai_file_id"
+      "id, block_id, status, overall_score, summary, marker_scores, analysis, duration_seconds, completed_at, created_at, xai_file_id"
     )
-    .eq("plan_id", workspaceId)
+    .eq("workspace_id", workspaceId)
     .order("created_at", { ascending: false })
     .limit(20);
 
-  if (blockId) ghlQuery = ghlQuery.eq("plan_node_id", blockId);
+  if (blockId) ghlQuery = ghlQuery.eq("block_id", blockId);
   if (evidenceFilter.restrictToGuest && evidenceFilter.guestUserId) {
     ghlQuery = ghlQuery.eq("guest_user_id", evidenceFilter.guestUserId);
   } else if (evidenceFilter.restrictToUser && evidenceFilter.userId) {
     ghlQuery = ghlQuery.eq("user_id", evidenceFilter.userId);
   }
 
-  const [{ data: evidence }, { data: ghlSessions }] = await Promise.all([evidenceQuery, ghlQuery]);
+  const [{ data: proofOfWorkRows }, { data: ghlSessions }] = await Promise.all([proofOfWorkQuery, ghlQuery]);
 
   const sessionIds = Array.from(
     new Set(
       [
         ...(blocks || []).map((block) => block.session_id).filter(Boolean),
-        ...(evidence || []).map((row) => row.session_id).filter(Boolean),
+        ...(proofOfWorkRows || []).map((row) => row.session_id).filter(Boolean),
       ] as string[]
     )
   );
@@ -203,7 +203,7 @@ export async function buildWorkspacePerformanceContext({
     })),
     tap_sessions: (ghlSessions || []).map((session) => ({
       id: session.id,
-      block_id: session.plan_node_id,
+      block_id: session.block_id,
       status: session.status,
       overall_score: session.overall_score,
       summary: session.summary,
@@ -211,10 +211,10 @@ export async function buildWorkspacePerformanceContext({
       gap_analysis: (session.analysis as { gap_analysis?: unknown } | null)?.gap_analysis || null,
       completed_at: session.completed_at,
     })),
-    evidence: (evidence || []).map((row) => ({
+    proof_of_work: (proofOfWorkRows || []).map((row) => ({
       id: row.id,
-      type: row.evidence_type,
-      block_id: row.plan_node_id,
+      type: row.proof_of_work_type,
+      block_id: row.block_id,
       session_id: row.session_id,
       file_name: row.file_name,
       mime_type: row.mime_type,
@@ -227,7 +227,7 @@ export async function buildWorkspacePerformanceContext({
       metadata: row.metadata,
       created_at: row.created_at,
     })),
-    plan_files: (planFiles || []).map((file) => ({
+    workspace_files: (workspaceFiles || []).map((file) => ({
       id: file.id,
       file_name: file.file_name,
       mime_type: file.mime_type,
@@ -245,9 +245,9 @@ export async function buildWorkspacePerformanceContext({
     counts: {
       blocks: blocks?.length || 0,
       tap_sessions: ghlSessions?.length || 0,
-      evidence_artifacts: evidence?.length || 0,
+      proof_of_work_artifacts: proofOfWorkRows?.length || 0,
       linked_sessions: sessions?.length || 0,
-      plan_files: planFiles?.length || 0,
+      workspace_files: workspaceFiles?.length || 0,
     },
   };
 
@@ -261,8 +261,8 @@ export async function buildWorkspacePerformanceContext({
   const candidateArtifactIds = Array.from(
     new Set(
       [
-        ...(evidence || []).map((row) => row.xai_file_id),
-        ...(planFiles || []).map((file) => file.xai_file_id),
+        ...(proofOfWorkRows || []).map((row) => row.xai_file_id),
+        ...(workspaceFiles || []).map((file) => file.xai_file_id),
         ...(ghlSessions || []).map((session) => session.xai_file_id),
       ].filter(isXaiFileId)
     )
@@ -288,12 +288,12 @@ export function buildPerformanceChatInstructions(
 You are an OpenLesson performance analyst. Use the attached workspace JSON summary plus any artifact files (tool usage logs, screenshots, video, EEG, Think Aloud Protocol (TAP) results, ILE practice traces, session reports, and uploaded files).
 
 When answering:
-1. Ground claims in specific evidence from the attachments.
+1. Ground claims in specific proof of work from the attachments.
 2. Separate demonstrated strengths from emerging gaps.
 3. Be constructive and actionable.
 4. Format responses in markdown.
 5. When recommending next actions, use product- and workflow-specific language only — never suggest Think Aloud Protocol (TAP) sessions, completing workspace blocks, ILE practice, or other OpenLesson platform mechanics.
 
-If evidence is sparse, say what product/tool evidence is missing and what observable actions to collect next.${buildPerformanceStyleSection(stylePrompt)}`;
+If proof of work is sparse, say what product/tool proof of work is missing and what observable actions to collect next.${buildPerformanceStyleSection(stylePrompt)}`;
 }
 

@@ -1,8 +1,8 @@
-# OpenLesson Evidence API
+# OpenLesson Proof-of-Work API
 
 Base path: `/api/v2/agent`
 
-The Evidence API supports Verification Workspace creation, evidence upload, learning analysis, block discovery, Think Aloud Protocol (TAP) link/result access, and ILE (Integrated Learning Environment) practice routing from gap findings.
+The Proof-of-Work API supports Verification Workspace creation, proof-of-work upload, learning analysis, block discovery, Think Aloud Protocol (TAP) link/result access, and ILE (Integrated Learning Environment) practice routing from gap findings.
 
 ## Authentication
 
@@ -18,10 +18,10 @@ Valid scopes are `workspaces:read`, `workspaces:write`, `tap:read`, `tap:write`,
 | :--- | :--- | :--- | :--- |
 | `POST` | `/workspaces` | `workspaces:write` | Create a Verification Workspace with an initial prompt and optional files. |
 | `GET` | `/workspaces/{workspace_id}/blocks` | `workspaces:read` | List available blocks in the workspace. |
-| `POST` | `/workspaces/{workspace_id}/evidence-schema` | `workspaces:read` | Grok-generated JSON Schema for ideal tool evidence input given workspace context + eval definition. |
+| `POST` | `/workspaces/{workspace_id}/proof-of-work-schema` | `workspaces:read` | Grok-generated JSON Schema for ideal tool proof of work input given workspace context + eval definition. |
 | `POST` | `/workspaces/{workspace_id}/integration-skill` | `workspaces:read` | Grok-generated workspace-specific `skill.md` integration guide for a partner agent. |
-| `POST` | `/workspaces/{workspace_id}/evidence` | `workspaces:write` | Upload tool usage, screenshots, video, or EEG to xAI and link to workspace/block. |
-| `POST` | `/workspaces/{workspace_id}/performance` | `workspaces:read` | Structured gap report or free-form Q&A over workspace evidence. |
+| `POST` | `/workspaces/{workspace_id}/proof-of-work` | `workspaces:write` | Upload tool usage, screenshots, video, or EEG to xAI and link to workspace/block. |
+| `POST` | `/workspaces/{workspace_id}/performance` | `workspaces:read` | Structured gap report or free-form Q&A over workspace proof of work. |
 | `POST` | `/workspaces/{workspace_id}/blocks/{block_id}/tap-links` | `tap:write` | Request a private Think Aloud Protocol (TAP) link for a block. |
 | `GET` | `/workspaces/{workspace_id}/tap-links` | `tap:read` | List existing TAP links and completion status. |
 | `GET` | `/workspaces/{workspace_id}/tap-links/{link_id}/results` | `tap:read` | Request completed TAP session results. |
@@ -29,15 +29,15 @@ Valid scopes are `workspaces:read`, `workspaces:write`, `tap:read`, `tap:write`,
 
 ## Predictive Interruptions (TIM)
 
-Every Evidence API success response (REST and MCP) includes a top-level `interruption` field powered by the **Trace Interruption Model (TIM)**.
+Every Proof-of-Work API success response (REST and MCP) includes a top-level `interruption` field powered by the **Trace Interruption Model (TIM)**.
 
 - **`interruption: null`** — no intervention predicted for this moment.
-- **`interruption: { ... }`** — consumer systems should schedule `intervention` after `delay_ms` unless a later Evidence API response supersedes it.
+- **`interruption: { ... }`** — consumer systems should schedule `intervention` after `delay_ms` unless a later Proof-of-Work API response supersedes it.
 
 ```json
 {
   "interruption": {
-    "interruption_id": "int_upload_evidence_ws1_a1b2c3d4",
+    "interruption_id": "int_upload_proof_of_work_ws1_a1b2c3d4",
     "delay_ms": 75000,
     "intervention": {
       "type": "reflection_prompt",
@@ -59,15 +59,15 @@ Every Evidence API success response (REST and MCP) includes a top-level `interru
 3. When a new response arrives before the timer fires, cancel the pending timer and apply the newest `interruption` (or clear if null).
 4. Never stack duplicate timers for the same workspace session.
 
-`POST .../evidence-schema` responses also include `interruption_contract` (machine-readable TIM spec) and may include LLM-authored `predicted_interruption` in the generated spec. Evidence spec version is **1.3**.
+`POST .../proof-of-work-schema` responses also include `interruption_contract` (machine-readable TIM spec) and may include LLM-authored `predicted_interruption` in the generated spec. Proof-of-work spec version is **1.3**.
 
-Intervention types: `reflection_prompt`, `checkpoint_probe`, `coaching_nudge`, `evidence_reminder`, `performance_review`.
+Intervention types: `reflection_prompt`, `checkpoint_probe`, `coaching_nudge`, `proof_of_work_reminder`, `performance_review`.
 
 MCP resource: `openlesson://predictive-interruptions`
 
-## Evidence Input Schema
+## Proof-of-Work Input Schema
 
-Use before uploading evidence when you want a concrete JSON contract for what your agent should serialize.
+Use before uploading proof of work when you want a concrete JSON contract for what your agent should serialize.
 
 ```json
 {
@@ -82,24 +82,24 @@ Use before uploading evidence when you want a concrete JSON contract for what yo
 }
 ```
 
-Response includes `schema` (JSON Schema), `schema_name`, `rationale`, `example_payload`, `recommended_mime_type`, `recommended_evidence_type`, `collection_guidance`, and `file_ids`.
+Response includes `schema` (JSON Schema), `schema_name`, `rationale`, `example_payload`, `recommended_mime_type`, `recommended_proof_of_work_type`, `collection_guidance`, and `file_ids`.
 
 ## Integration Skill
 
-Generate a custom `skill.md` (like `/pumadoc-evidence-performance-skill.md`) tailored to a workspace:
+Generate a custom `skill.md` (like `/pumadoc-proof-of-work-performance-skill.md`) tailored to a workspace:
 
 ```json
 {
   "integration_name": "acme-sales-copilot",
   "partner_description": "Guides reps through discovery calls",
   "base_url": "https://openlesson.academy",
-  "include_sections": ["purpose", "auth", "endpoints", "evidence_payload", "performance", "checklist"]
+  "include_sections": ["purpose", "auth", "endpoints", "proof_of_work_payload", "performance", "checklist"]
 }
 ```
 
 Response includes `skill_md`, `skill_name`, `suggested_share_path`, and `workspace_summary`.
 
-## Upload Evidence
+## Upload Proof of Work
 
 ```json
 {
@@ -172,7 +172,7 @@ Files are optional. Supported file types are PDF, text, Markdown, JPEG, PNG, and
 
 Only `15` and `30` minute sessions are supported. Any other value defaults to `15`.
 
-The response includes a private URL for the TAP session UI. Think Aloud Protocol (TAP) captures live human cognition. The private URL is a bearer link: opening `/ghl-score/session/{token}` authenticates that TAP session directly without requiring an OpenLesson login or an Evidence API key.
+The response includes a private URL for the TAP session UI. Think Aloud Protocol (TAP) captures live human cognition. The private URL is a bearer link: opening `/ghl-score/session/{token}` authenticates that TAP session directly without requiring an OpenLesson login or an Proof-of-Work API key.
 
 ## Organizations And Guests
 
@@ -195,7 +195,7 @@ Completed results include the spider score markers plus a gap analysis:
     ],
     "gap_analysis": {
       "summary": "string",
-      "gaps": [{ "title": "string", "evidence": "string", "severity": "low | medium | high", "suggested_repair": "string" }],
+      "gaps": [{ "title": "string", "proof_of_work": "string", "severity": "low | medium | high", "suggested_repair": "string" }],
       "next_practice": ["string"]
     },
     "analysis": {
@@ -212,6 +212,6 @@ Completed results include the spider score markers plus a gap analysis:
 }
 ```
 
-## Removed From Evidence API
+## Removed From Proof-of-Work API
 
-The Evidence API does not expose proof tracking, blockchain anchoring, live tutoring sessions, heartbeats, or plan adaptation. Use `POST .../evidence` for workspace-linked artifacts instead of legacy web-session upload routes.
+The Proof-of-Work API does not expose proof tracking, blockchain anchoring, live tutoring sessions, heartbeats, or plan adaptation. Use `POST .../proof-of-work` for workspace-linked artifacts instead of legacy web-session upload routes.

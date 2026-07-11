@@ -107,9 +107,9 @@ export function InsightDetailClient({ insightId }: { insightId: string }) {
                 {archiving ? "Archiving…" : "Archive"}
               </button>
             ) : null}
-            {insight.plan_id ? (
+            {insight.workspace_id ? (
               <Link
-                href={`/workspace/${insight.plan_id}`}
+                href={`/workspace/${insight.workspace_id}`}
                 className="rounded-md border border-neutral-700 bg-black/40 px-3 py-1.5 text-xs text-neutral-300 transition hover:border-neutral-500 hover:text-white"
               >
                 Back to workspace

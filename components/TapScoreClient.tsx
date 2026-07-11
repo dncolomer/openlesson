@@ -204,13 +204,6 @@ const TAP_SHORTCUT_ROWS: { keys: string[]; label: string; altKeys?: string[][] }
   { keys: ["C"], label: "Crystallize the live transcript into a thought" },
   { keys: ["Esc"], label: "Clear active thoughts and live transcription" },
   { keys: ["E"], label: "Edit the live transcription before sending" },
-  { keys: ["1", "2", "3"], label: "Send thought 1, 2, or 3" },
-  {
-    keys: ["⇧", "1"],
-    altKeys: [["⇧", "2"], ["⇧", "3"]],
-    label: "Select thoughts for a combined send",
-  },
-  { keys: ["S"], label: "Send all selected thoughts" },
 ];
 
 function TapBriefingConfig({
@@ -294,7 +287,6 @@ export function TapScoreClient({ workspaceId, blockId, sessionId, privateToken, 
   const [isListening, setIsListening] = useState(false);
   const [speechError, setSpeechError] = useState<string | null>(null);
   const [isSending, setIsSending] = useState(false);
-  const [selectedActiveThoughtIds, setSelectedActiveThoughtIds] = useState<Set<string>>(new Set());
   const [memoryThoughtIds, setMemoryThoughtIds] = useState<Set<string>>(new Set());
   const [sentThoughtIds, setSentThoughtIds] = useState<Set<string>>(new Set());
   const [editingTranscription, setEditingTranscription] = useState<{ draft: string; originalText: string } | null>(null);
@@ -403,7 +395,6 @@ export function TapScoreClient({ workspaceId, blockId, sessionId, privateToken, 
     setCrystallizableText("");
     setMemoryThoughtIds(new Set());
     setSentThoughtIds(new Set());
-    setSelectedActiveThoughtIds(new Set());
     setEditingTranscription(null);
     setStartedAt(null);
     setRemainingSeconds(0);
@@ -420,19 +411,6 @@ export function TapScoreClient({ workspaceId, blockId, sessionId, privateToken, 
   );
   const latestThoughts = useMemo(() => activeThoughts.slice(-3).reverse(), [activeThoughts]);
   const thoughtHistory = useMemo(() => thoughts.slice().reverse(), [thoughts]);
-  const selectedActiveThoughts = useMemo(
-    () => latestThoughts.slice().reverse().filter((thought) => selectedActiveThoughtIds.has(thought.id)),
-    [latestThoughts, selectedActiveThoughtIds]
-  );
-
-  useEffect(() => {
-    setSelectedActiveThoughtIds((current) => {
-      const activeIds = new Set(latestThoughts.map((thought) => thought.id));
-      const next = new Set([...current].filter((id) => activeIds.has(id)));
-      return next.size === current.size ? current : next;
-    });
-  }, [latestThoughts]);
-
   function buildThoughtRecord(text: string, currentThoughts: Thought[]): Thought | null {
     const clean = normalize(text);
     if (!clean) return null;
@@ -588,23 +566,10 @@ export function TapScoreClient({ workspaceId, blockId, sessionId, privateToken, 
         beginEditTranscription();
         return;
       }
-      if (["1", "2", "3"].includes(event.key)) {
-        const thought = latestThoughts[Number(event.key) - 1];
-        if (!thought) return;
-        event.preventDefault();
-        if (event.shiftKey) toggleActiveThought(thought.id);
-        else void sendThought(thought.text, [thought.id]);
-        return;
-      }
-      if (!event.metaKey && !event.ctrlKey && !event.shiftKey && event.key.toLowerCase() === "s") {
-        if (selectedActiveThoughts.length === 0) return;
-        event.preventDefault();
-        void sendThought(selectedActiveThoughts.map((thought) => thought.text).join("\n"), selectedActiveThoughts.map((thought) => thought.id));
-      }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [phase, latestThoughts, thoughts, selectedActiveThoughts, crystallizeCurrentTranscription, editingTranscription, crystallizableText]);
+  }, [phase, crystallizeCurrentTranscription, editingTranscription, crystallizableText]);
 
   async function sendThought(text: string, thoughtIds: string[] = []) {
     const clean = normalize(text);
@@ -629,12 +594,6 @@ export function TapScoreClient({ workspaceId, blockId, sessionId, privateToken, 
       thoughtIds.forEach((id) => next.delete(id));
       return next;
     });
-    setSelectedActiveThoughtIds((current) => {
-      const next = new Set(current);
-      thoughtIds.forEach((id) => next.delete(id));
-      return next;
-    });
-
     try {
       const response = await fetch("/api/workspace-tap-score/chat", {
         method: "POST",
@@ -662,7 +621,6 @@ export function TapScoreClient({ workspaceId, blockId, sessionId, privateToken, 
     setThoughts([]);
     setMemoryThoughtIds(new Set());
     setSentThoughtIds(new Set());
-    setSelectedActiveThoughtIds(new Set());
     clearDialogueMessages(dialogueStorageKey);
 
     try {
@@ -765,27 +723,6 @@ export function TapScoreClient({ workspaceId, blockId, sessionId, privateToken, 
     return () => window.clearInterval(interval);
   }, [phase, startedAt, minutes]);
 
-  function toggleActiveThought(thoughtId: string) {
-    const thought = thoughts.find((entry) => entry.id === thoughtId);
-    setSelectedActiveThoughtIds((current) => {
-      const next = new Set(current);
-      const selecting = !next.has(thoughtId);
-      if (selecting) next.add(thoughtId);
-      else next.delete(thoughtId);
-      if (thought) {
-        logTapTrace({
-          traceType: "system2",
-          action: selecting ? "select" : "deselect",
-          thoughtId: thought.id,
-          chainId: thought.chainId,
-          text: thought.text,
-          timestampMs: thought.timestamp,
-        });
-      }
-      return next;
-    });
-  }
-
   function beginEditTranscription() {
     const text = normalize(crystallizableText);
     if (!text) return;
@@ -806,7 +743,6 @@ export function TapScoreClient({ workspaceId, blockId, sessionId, privateToken, 
         });
       });
       setMemoryThoughtIds((current) => new Set([...current, ...activeThoughts.map((thought) => thought.id)]));
-      setSelectedActiveThoughtIds(new Set());
     }
     clearTranscriptionBuffers();
   }
@@ -908,12 +844,7 @@ export function TapScoreClient({ workspaceId, blockId, sessionId, privateToken, 
 
                 <div className="mt-3 border-t border-neutral-900/80 pt-3">
                   <p className="mb-2 text-[10px] uppercase tracking-[2px] text-neutral-600">Active thoughts</p>
-                  <ActiveThoughtSlots
-                    thoughts={latestThoughts}
-                    selectedThoughtIds={selectedActiveThoughtIds}
-                    onToggleSelect={toggleActiveThought}
-                    onSendThought={(text, thoughtId) => void sendThought(text, [thoughtId])}
-                  />
+                  <ActiveThoughtSlots thoughts={latestThoughts} />
                 </div>
               </div>
             </div>

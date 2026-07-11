@@ -110,7 +110,6 @@ export function useSessionThoughtInterface({
   const [speechError, setSpeechError] = useState<string | null>(null);
   const [isSending, setIsSending] = useState(false);
   const [sendError, setSendError] = useState("");
-  const [selectedActiveThoughtIds, setSelectedActiveThoughtIds] = useState<Set<string>>(new Set());
   const [memoryThoughtIds, setMemoryThoughtIds] = useState<Set<string>>(new Set());
   const [sentThoughtIds, setSentThoughtIds] = useState<Set<string>>(new Set());
   const [editingTranscription, setEditingTranscription] = useState<{ draft: string; originalText: string } | null>(null);
@@ -128,7 +127,6 @@ export function useSessionThoughtInterface({
     setThoughts(loadStoredThoughts(sessionId));
     setMemoryThoughtIds(new Set());
     setSentThoughtIds(new Set());
-    setSelectedActiveThoughtIds(new Set());
   }, [sessionId]);
 
   useEffect(() => {
@@ -144,18 +142,6 @@ export function useSessionThoughtInterface({
     [thoughts, memoryThoughtIds, sentThoughtIds],
   );
   const latestThoughts = useMemo(() => activeThoughts.slice(-3).reverse(), [activeThoughts]);
-  const selectedActiveThoughts = useMemo(
-    () => latestThoughts.slice().reverse().filter((thought) => selectedActiveThoughtIds.has(thought.id)),
-    [latestThoughts, selectedActiveThoughtIds],
-  );
-
-  useEffect(() => {
-    setSelectedActiveThoughtIds((current) => {
-      const activeIds = new Set(latestThoughts.map((thought) => thought.id));
-      const next = new Set([...current].filter((id) => activeIds.has(id)));
-      return next.size === current.size ? current : next;
-    });
-  }, [latestThoughts]);
 
   function buildThoughtRecord(text: string, currentThoughts: SessionThought[]): SessionThought | null {
     const clean = normalize(text);
@@ -305,11 +291,6 @@ export function useSessionThoughtInterface({
         thoughtIds.forEach((id) => next.delete(id));
         return next;
       });
-      setSelectedActiveThoughtIds((current) => {
-        const next = new Set(current);
-        thoughtIds.forEach((id) => next.delete(id));
-        return next;
-      });
       try {
         await onSendToProbe(clean, thoughtIds);
       } catch (err) {
@@ -319,30 +300,6 @@ export function useSessionThoughtInterface({
       }
     },
     [isSending, onLogTrace, onSendToProbe, sentThoughtIds],
-  );
-
-  const toggleActiveThought = useCallback(
-    (thoughtId: string) => {
-      const thought = thoughts.find((entry) => entry.id === thoughtId);
-      setSelectedActiveThoughtIds((current) => {
-        const next = new Set(current);
-        const selecting = !next.has(thoughtId);
-        if (selecting) next.add(thoughtId);
-        else next.delete(thoughtId);
-        if (thought) {
-          onLogTrace({
-            traceType: "system2",
-            action: selecting ? "select" : "deselect",
-            thoughtId: thought.id,
-            chainId: thought.chainId,
-            text: thought.text,
-            timestampMs: thought.timestamp,
-          });
-        }
-        return next;
-      });
-    },
-    [onLogTrace, thoughts],
   );
 
   const beginEditTranscription = useCallback(() => {
@@ -388,7 +345,6 @@ export function useSessionThoughtInterface({
         });
       });
       setMemoryThoughtIds((current) => new Set([...current, ...activeThoughts.map((thought) => thought.id)]));
-      setSelectedActiveThoughtIds(new Set());
     }
     clearTranscriptionBuffers();
   }, [activeThoughts, onLogTrace]);
@@ -418,37 +374,16 @@ export function useSessionThoughtInterface({
         beginEditTranscription();
         return;
       }
-      if (["1", "2", "3"].includes(event.key)) {
-        const thought = latestThoughts[Number(event.key) - 1];
-        if (!thought) return;
-        event.preventDefault();
-        if (event.shiftKey) toggleActiveThought(thought.id);
-        else void sendThought(thought.text, [thought.id]);
-        return;
-      }
-      if (!event.metaKey && !event.ctrlKey && !event.shiftKey && event.key.toLowerCase() === "s") {
-        if (selectedActiveThoughts.length === 0) return;
-        event.preventDefault();
-        void sendThought(
-          selectedActiveThoughts.map((thought) => thought.text).join("\n"),
-          selectedActiveThoughts.map((thought) => thought.id),
-        );
-      }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [
     enabled,
-    latestThoughts,
-    selectedActiveThoughts,
     crystallizeCurrentTranscription,
-    sendThought,
     beginEditTranscription,
     cancelEditTranscription,
     clearActiveThoughts,
-    crystallizableText,
     editingTranscription,
-    toggleActiveThought,
   ]);
 
   return {
@@ -461,8 +396,6 @@ export function useSessionThoughtInterface({
     sendError,
     activeThoughts,
     latestThoughts,
-    selectedActiveThoughtIds,
-    selectedActiveThoughts,
     sentThoughtIds,
     memoryThoughtIds,
     recognitionCtor,
@@ -474,7 +407,6 @@ export function useSessionThoughtInterface({
     submitEditedTranscription,
     clearActiveThoughts,
     editingTranscription,
-    toggleActiveThought,
   };
 }
 

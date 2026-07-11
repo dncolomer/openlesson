@@ -166,12 +166,7 @@ export function SessionHeliosPanel({
 
               <div className="mt-3 border-t border-neutral-900/80 pt-3">
                 <p className="mb-2 text-[10px] uppercase tracking-[2px] text-neutral-600">{t("probes.activeThoughts")}</p>
-                <ActiveThoughtSlots
-                  thoughts={thought.latestThoughts}
-                  selectedThoughtIds={thought.selectedActiveThoughtIds}
-                  onToggleSelect={thought.toggleActiveThought}
-                  onSendThought={(text, thoughtId) => void thought.sendThought(text, [thoughtId])}
-                />
+                <ActiveThoughtSlots thoughts={thought.latestThoughts} />
               </div>
             </div>
           </>

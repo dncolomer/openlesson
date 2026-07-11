@@ -202,7 +202,7 @@ function ThoughtButtonLabel({
 
 const TAP_SHORTCUT_ROWS: { keys: string[]; label: string; altKeys?: string[][] }[] = [
   { keys: ["C"], label: "Crystallize the live transcript into a thought" },
-  { keys: ["Esc"], label: "Clear all active thoughts" },
+  { keys: ["Esc"], label: "Clear active thoughts and live transcription" },
   { keys: ["E"], label: "Edit the live transcription before sending" },
   { keys: ["1", "2", "3"], label: "Send thought 1, 2, or 3" },
   {
@@ -793,20 +793,22 @@ export function TapScoreClient({ workspaceId, blockId, sessionId, privateToken, 
   }
 
   function clearActiveThoughts() {
-    if (activeThoughts.length === 0) return;
     setEditingTranscription(null);
-    activeThoughts.forEach((thought) => {
-      logTapTrace({
-        traceType: "system2",
-        action: "skip",
-        thoughtId: thought.id,
-        chainId: thought.chainId,
-        text: thought.text,
-        timestampMs: thought.timestamp,
+    if (activeThoughts.length > 0) {
+      activeThoughts.forEach((thought) => {
+        logTapTrace({
+          traceType: "system2",
+          action: "skip",
+          thoughtId: thought.id,
+          chainId: thought.chainId,
+          text: thought.text,
+          timestampMs: thought.timestamp,
+        });
       });
-    });
-    setMemoryThoughtIds((current) => new Set([...current, ...activeThoughts.map((thought) => thought.id)]));
-    setSelectedActiveThoughtIds(new Set());
+      setMemoryThoughtIds((current) => new Set([...current, ...activeThoughts.map((thought) => thought.id)]));
+      setSelectedActiveThoughtIds(new Set());
+    }
+    clearTranscriptionBuffers();
   }
 
   return (
@@ -895,7 +897,11 @@ export function TapScoreClient({ workspaceId, blockId, sessionId, privateToken, 
                   <ThoughtButton size="sm" disabled={!crystallizableText} onClick={beginEditTranscription}>
                     <ThoughtButtonLabel shortcut="E">edit</ThoughtButtonLabel>
                   </ThoughtButton>
-                  <ThoughtButton size="sm" disabled={activeThoughts.length === 0} onClick={clearActiveThoughts}>
+                  <ThoughtButton
+                    size="sm"
+                    disabled={activeThoughts.length === 0 && !crystallizableText}
+                    onClick={clearActiveThoughts}
+                  >
                     <ThoughtButtonLabel shortcut="Esc">clear</ThoughtButtonLabel>
                   </ThoughtButton>
                 </div>

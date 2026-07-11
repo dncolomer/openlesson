@@ -375,20 +375,22 @@ export function useSessionThoughtInterface({
   }, [editingTranscription, onLogTrace, sendThought]);
 
   const clearActiveThoughts = useCallback(() => {
-    if (activeThoughts.length === 0) return;
     setEditingTranscription(null);
-    activeThoughts.forEach((thought) => {
-      onLogTrace({
-        traceType: "system2",
-        action: "skip",
-        thoughtId: thought.id,
-        chainId: thought.chainId,
-        text: thought.text,
-        timestampMs: thought.timestamp,
+    if (activeThoughts.length > 0) {
+      activeThoughts.forEach((thought) => {
+        onLogTrace({
+          traceType: "system2",
+          action: "skip",
+          thoughtId: thought.id,
+          chainId: thought.chainId,
+          text: thought.text,
+          timestampMs: thought.timestamp,
+        });
       });
-    });
-    setMemoryThoughtIds((current) => new Set([...current, ...activeThoughts.map((thought) => thought.id)]));
-    setSelectedActiveThoughtIds(new Set());
+      setMemoryThoughtIds((current) => new Set([...current, ...activeThoughts.map((thought) => thought.id)]));
+      setSelectedActiveThoughtIds(new Set());
+    }
+    clearTranscriptionBuffers();
   }, [activeThoughts, onLogTrace]);
 
   useEffect(() => {

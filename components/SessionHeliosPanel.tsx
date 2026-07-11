@@ -155,7 +155,11 @@ export function SessionHeliosPanel({
                 <ThoughtButton size="sm" disabled={!thought.crystallizableText} onClick={thought.beginEditTranscription}>
                   <ThoughtButtonLabel shortcut="E">edit</ThoughtButtonLabel>
                 </ThoughtButton>
-                <ThoughtButton size="sm" disabled={thought.activeThoughts.length === 0} onClick={thought.clearActiveThoughts}>
+                <ThoughtButton
+                  size="sm"
+                  disabled={thought.activeThoughts.length === 0 && !thought.crystallizableText}
+                  onClick={thought.clearActiveThoughts}
+                >
                   <ThoughtButtonLabel shortcut="Esc">clear</ThoughtButtonLabel>
                 </ThoughtButton>
               </div>

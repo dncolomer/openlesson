@@ -70,6 +70,30 @@ export function ThoughtShortcutChord({ keys }: { keys: string[] }) {
   );
 }
 
+export const thoughtSelectionBarClass =
+  "rounded-md border border-white/25 bg-white/5";
+
+export const thoughtSelectionBarTextClass = "text-[11px] text-neutral-100";
+
+export const thoughtSelectionActionClass =
+  "text-[11px] text-neutral-200 underline underline-offset-2 transition hover:text-white disabled:cursor-not-allowed disabled:opacity-40";
+
+export function thoughtSelectionCardClass(isSelected: boolean, baseClass = "") {
+  return cn(
+    baseClass,
+    isSelected && "border-l-2 border-l-white/80 bg-white/5 pl-2",
+  );
+}
+
+export function thoughtSelectionChipClass(isSelected: boolean) {
+  return cn(
+    "flex w-full min-w-0 items-start gap-2 rounded-xl border px-3 py-2 text-left text-xs leading-relaxed transition-all active:scale-[0.99]",
+    isSelected
+      ? "border-white/60 bg-white/10 text-white"
+      : "border-neutral-800 bg-neutral-900/60 text-neutral-300 hover:border-white/35 hover:bg-white/5 hover:text-white",
+  );
+}
+
 export function ThoughtCompactAction({
   shortcut,
   label,

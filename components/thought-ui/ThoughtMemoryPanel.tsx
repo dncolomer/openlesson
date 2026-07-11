@@ -9,6 +9,12 @@ import {
   type InsightSummary,
 } from "@/lib/insights";
 import { createClient } from "@/lib/supabase/client";
+import {
+  thoughtSelectionActionClass,
+  thoughtSelectionBarClass,
+  thoughtSelectionBarTextClass,
+  thoughtSelectionCardClass,
+} from "@/components/thought-ui/ThoughtUi";
 import { cn } from "@/lib/utils";
 
 const INSIGHTS_AUTH_MESSAGE = "You need to have a user and be logged in — not available as a guest user.";
@@ -44,8 +50,8 @@ export function ThoughtMemoryPanel({
   workspaceId,
   blockId,
   sessionId,
-  className = "flex h-full min-h-0 flex-col",
-  listClassName = "min-h-0 flex-1 space-y-0 overflow-y-auto",
+  className = "flex h-full min-h-0 max-h-full flex-col overflow-hidden",
+  listClassName = "",
   emptyMessage = "Speak or press C to crystallize thoughts. Every trace appears here.",
 }: ThoughtMemoryPanelProps) {
   const [mode, setMode] = useState<"memory" | "insights">("memory");
@@ -208,8 +214,10 @@ export function ThoughtMemoryPanel({
     }
   };
 
+  const scrollListClassName = cn(listClassName, "h-0 min-h-0 flex-1 overflow-y-auto overscroll-y-contain");
+
   return (
-    <div className={cn(className, "overflow-hidden")}>
+    <div className={className}>
       <div className="mb-3 shrink-0">
         <div className="flex items-center justify-between gap-2">
           <p className="font-mono text-[10px] uppercase tracking-[2px] text-neutral-500">Thought Memory</p>
@@ -243,7 +251,7 @@ export function ThoughtMemoryPanel({
       </div>
 
       {mode === "insights" ? (
-        <div className="min-h-0 flex-1 space-y-3 overflow-y-auto text-sm text-neutral-400">
+        <div className={cn(scrollListClassName, "space-y-3 text-sm text-neutral-400")}>
           {lastInsightUrl ? (
             <div className="rounded-md border border-cyan-500/25 bg-cyan-500/10 px-3 py-2 text-xs text-cyan-100">
               Latest insight saved.{" "}
@@ -304,7 +312,7 @@ export function ThoughtMemoryPanel({
           </Link>
         </div>
       ) : (
-        <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+        <div className="flex h-0 min-h-0 flex-1 flex-col overflow-hidden">
           <div className="mb-3 shrink-0 space-y-2">
             <label className="block">
               <span className="sr-only">Search thought traces</span>
@@ -350,21 +358,17 @@ export function ThoughtMemoryPanel({
           ) : null}
 
           {selectedThoughts.length > 0 && (
-            <div className="mb-3 shrink-0 flex items-center justify-between gap-2 rounded-md border border-cyan-500/30 bg-cyan-500/10 px-2.5 py-2">
-              <span className="text-[11px] text-cyan-200">{selectedThoughts.length} selected</span>
+            <div className={cn(thoughtSelectionBarClass, "mb-3 shrink-0 flex items-center justify-between gap-2 px-2.5 py-2")}>
+              <span className={thoughtSelectionBarTextClass}>{selectedThoughts.length} selected</span>
               <div className="flex items-center gap-3">
-                <button
-                  type="button"
-                  onClick={() => setSelectedIds(new Set())}
-                  className="text-[11px] text-cyan-200/80 underline underline-offset-2 hover:text-cyan-100"
-                >
+                <button type="button" onClick={() => setSelectedIds(new Set())} className={thoughtSelectionActionClass}>
                   Clear
                 </button>
                 <button
                   type="button"
                   disabled={!insightsAvailable || creatingInsight}
                   onClick={() => void createInsight()}
-                  className="text-[11px] font-medium text-cyan-100 underline underline-offset-2 disabled:cursor-not-allowed disabled:opacity-40"
+                  className={cn(thoughtSelectionActionClass, "font-medium")}
                 >
                   {creatingInsight ? "Creating…" : "Create insight"}
                 </button>
@@ -372,7 +376,7 @@ export function ThoughtMemoryPanel({
             </div>
           )}
           {insightError ? <p className="mb-2 shrink-0 text-xs text-red-400">{insightError}</p> : null}
-          <div className={cn(listClassName, "min-h-0 flex-1 overflow-y-auto")}>
+          <div className={scrollListClassName}>
             {thoughts.length === 0 ? (
               <p className="py-8 text-center text-sm text-neutral-500">{emptyMessage}</p>
             ) : filteredThoughts.length === 0 ? (
@@ -393,9 +397,9 @@ export function ThoughtMemoryPanel({
                         toggleSelected(thought.id);
                       }
                     }}
-                    className={cn(
+                    className={thoughtSelectionCardClass(
+                      isSelected,
                       "cursor-pointer rounded-md border-b border-neutral-800/80 py-4 transition last:border-b-0 hover:bg-neutral-900/35",
-                      isSelected && "border-l-2 border-l-cyan-400 bg-cyan-500/5 pl-2",
                     )}
                   >
                     <p className="mb-2 text-[11px] tabular-nums text-neutral-500">{formatThoughtTime(thought.timestamp)}</p>

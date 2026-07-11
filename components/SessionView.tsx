@@ -2495,7 +2495,7 @@ export function SessionView({ sessionId }: { sessionId: string }) {
                   {shouldBlockTools && !["data-input", "help", "logs", "chapters"].includes(activeTool) && (
                     <div className="absolute inset-0 z-10 bg-black/30 cursor-not-allowed" />
                   )}
-                  <div className="flex-1 min-h-0 overflow-hidden relative">
+                  <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
                     {activeTool === "chapters" && (
                       <div className="h-full overflow-hidden rounded-lg border border-neutral-800">
                         <ChapterMapPanel
@@ -2567,13 +2567,15 @@ export function SessionView({ sessionId }: { sessionId: string }) {
                     )}
 
                     {activeTool === "thought-history" && (
-                      <ThoughtMemoryPanel
-                        className="flex h-full min-h-0 flex-col overflow-hidden px-1"
-                        listClassName="min-h-0 flex-1 overflow-y-auto pr-2"
-                        thoughts={sessionThoughtHistory}
-                        workspaceId={session.metadata?.workspace_id ?? undefined}
-                        sessionId={session.id}
-                      />
+                      <div className="flex h-0 min-h-0 flex-1 flex-col overflow-hidden">
+                        <ThoughtMemoryPanel
+                          className="flex h-full min-h-0 max-h-full flex-col overflow-hidden px-1"
+                          listClassName="pr-2"
+                          thoughts={sessionThoughtHistory}
+                          workspaceId={session.metadata?.workspace_id ?? undefined}
+                          sessionId={session.id}
+                        />
+                      </div>
                     )}
 
                     {activeTool === "dantes" && (

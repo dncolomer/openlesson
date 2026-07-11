@@ -1,8 +1,15 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  thoughtSelectionActionClass,
+  thoughtSelectionBarClass,
+  thoughtSelectionBarTextClass,
+  thoughtSelectionChipClass,
+} from "@/components/thought-ui/ThoughtUi";
 import { type ThinkAloudThought } from "@/lib/useThinkAloudTranscript";
 import { useI18n } from "@/lib/i18n";
+import { cn } from "@/lib/utils";
 
 interface ThinkAloudTracesProps {
   thoughts: ThinkAloudThought[];
@@ -196,8 +203,14 @@ export function ThinkAloudTraces({
 
           {thoughts.length > 0 && (
             <>
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-[10px] text-neutral-500">
+              <div
+                className={cn(
+                  thoughtSelectionBarClass,
+                  "flex items-center justify-between gap-2 px-2.5 py-2",
+                  selectedThoughts.length === 0 && "border-neutral-800 bg-transparent",
+                )}
+              >
+                <span className={selectedThoughts.length > 0 ? thoughtSelectionBarTextClass : "text-[10px] text-neutral-500"}>
                   {selectedThoughts.length > 0
                     ? t("probes.thoughtsSelected", { count: selectedThoughts.length })
                     : t("probes.selectThoughtsToSend")}
@@ -206,7 +219,10 @@ export function ThinkAloudTraces({
                   type="button"
                   onClick={sendSelectedThoughts}
                   disabled={selectedThoughts.length === 0}
-                  className="rounded-full border border-cyan-500/40 bg-cyan-500/10 px-2.5 py-1 text-[10px] font-medium text-cyan-200 hover:border-cyan-400/70 hover:bg-cyan-500/20 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                  className={cn(
+                    thoughtSelectionActionClass,
+                    "rounded-full border border-white/25 bg-white/5 px-2.5 py-1 font-medium no-underline hover:border-white/40 hover:bg-white/10 disabled:border-neutral-800 disabled:bg-transparent",
+                  )}
                 >
                   {t("probes.sendSelected")}
                 </button>
@@ -224,16 +240,12 @@ export function ThinkAloudTraces({
                         event.preventDefault();
                         sendSingleThought(thought);
                       }}
-                      className={`flex w-full min-w-0 items-start gap-2 text-left rounded-xl border px-3 py-2 text-xs leading-relaxed transition-all active:scale-[0.99] ${
-                        isSelected
-                          ? "border-cyan-500/60 bg-cyan-500/15 text-white"
-                          : "border-neutral-800 bg-neutral-900/60 text-neutral-300 hover:border-cyan-500/50 hover:bg-cyan-500/10 hover:text-white"
-                      }`}
+                      className={thoughtSelectionChipClass(isSelected)}
                       title={t("probes.selectThought")}
                     >
                       <span
                         className={`mt-0.5 h-3.5 w-3.5 shrink-0 rounded border flex items-center justify-center ${
-                          isSelected ? "border-cyan-300 bg-cyan-400 text-neutral-950" : "border-neutral-700 bg-neutral-950"
+                          isSelected ? "border-white bg-white text-neutral-950" : "border-neutral-700 bg-neutral-950"
                         }`}
                         aria-hidden="true"
                       >

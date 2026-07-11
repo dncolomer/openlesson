@@ -783,7 +783,7 @@ export function TapScoreClient({ workspaceId, blockId, sessionId, privateToken, 
   }
 
   return (
-    <main className="relative min-h-screen overflow-hidden bg-[#0a0a0a] text-white selection:bg-zinc-700">
+    <main className="relative flex h-screen min-h-0 flex-col overflow-hidden bg-[#0a0a0a] text-white selection:bg-zinc-700">
       <div className="fixed inset-0 z-0 bg-[#0a0a0a]" />
       {bgImage && (
         <div
@@ -794,7 +794,7 @@ export function TapScoreClient({ workspaceId, blockId, sessionId, privateToken, 
       <div className="fixed inset-0 z-0 bg-[#0a0a0a]/82" />
       <div className="fixed inset-0 z-0 bg-[radial-gradient(circle_at_72%_8%,rgba(14,116,144,0.18),transparent_31%),radial-gradient(circle_at_12%_18%,rgba(39,39,42,0.55),transparent_32%)]" />
 
-      <div className="relative z-10 mx-auto flex min-h-screen w-full max-w-7xl flex-col px-4 py-5 sm:px-6">
+      <div className="relative z-10 mx-auto flex h-full min-h-0 w-full max-w-7xl flex-col overflow-hidden px-4 py-5 sm:px-6">
         {phase === "briefing" && (
           <section className="relative flex min-h-[calc(100vh-2.5rem)] flex-1 py-4">
             <div className="grid min-h-0 w-full flex-1 gap-4 lg:grid-cols-2">
@@ -825,7 +825,7 @@ export function TapScoreClient({ workspaceId, blockId, sessionId, privateToken, 
         )}
 
         {phase === "live" && (
-          <section className="grid min-h-0 min-w-0 flex-1 gap-4 overflow-hidden py-4 lg:grid-cols-[minmax(0,1fr)_22rem]">
+          <section className="grid h-full min-h-0 min-w-0 flex-1 grid-rows-[minmax(0,1fr)] gap-4 overflow-hidden py-4 lg:grid-cols-[minmax(0,1fr)_22rem]">
             <div className="flex min-h-0 min-w-0 flex-col gap-4">
               <div className="flex min-h-[48vh] flex-1 flex-col overflow-hidden rounded-2xl border border-neutral-900 bg-neutral-950/65 backdrop-blur-sm">
                 <DialogueSplit
@@ -900,14 +900,16 @@ export function TapScoreClient({ workspaceId, blockId, sessionId, privateToken, 
                 </div>
               </div>
             </div>
-            <ThoughtMemoryPanel
-              className="flex h-full min-h-0 w-full flex-col overflow-hidden rounded-2xl border border-neutral-900 bg-neutral-950/65 p-4 backdrop-blur-sm"
-              listClassName="pr-1"
-              thoughts={thoughtHistory}
-              workspaceId={workspaceId}
-              blockId={blockId}
-              sessionId={sessionId}
-            />
+            <div className="flex h-full min-h-0 flex-col overflow-hidden">
+              <ThoughtMemoryPanel
+                className="flex h-full min-h-0 max-h-full w-full flex-col overflow-hidden rounded-2xl border border-neutral-900 bg-neutral-950/65 p-4 backdrop-blur-sm"
+                listClassName="pr-1"
+                thoughts={thoughtHistory}
+                workspaceId={workspaceId}
+                blockId={blockId}
+                sessionId={sessionId}
+              />
+            </div>
           </section>
         )}
 

@@ -118,6 +118,23 @@ body {
   animation: glow-pulse 1.5s ease-in-out infinite;
 }
 
+/* Subtle red pulse for the active speaker in comic dialogue */
+@keyframes dialogue-turn-pulse {
+  0%,
+  100% {
+    border-color: rgba(239, 68, 68, 0.55);
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.12);
+  }
+  50% {
+    border-color: rgba(239, 68, 68, 0.95);
+    box-shadow: 0 0 14px rgba(239, 68, 68, 0.28);
+  }
+}
+
+.animate-dialogue-turn-pulse {
+  animation: dialogue-turn-pulse 2.2s ease-in-out infinite;
+}
+
 /* Step completion celebration - full confetti explosion */
 @keyframes step-celebrate-glow {
   0% { 

@@ -119,24 +119,55 @@ export function ThoughtButtonLabel({
   );
 }
 
-export function HeliosProbeAvatar() {
+function dialogueAvatarClasses(isActiveTurn: boolean) {
+  return cn(
+    "flex h-28 w-28 items-center justify-center overflow-hidden rounded-full border bg-gradient-to-br via-neutral-800 to-neutral-900 ring-2 ring-offset-2 ring-offset-[#0a0a0a]",
+    isActiveTurn
+      ? "animate-dialogue-turn-pulse border-red-500/70 from-amber-500/15 ring-red-500/40"
+      : "border-white/70 from-white/10 ring-white/40",
+  );
+}
+
+function dialogueAvatarGlowClass(isActiveTurn: boolean) {
+  return isActiveTurn
+    ? "pointer-events-none absolute inset-0 rounded-full shadow-[0_0_32px_rgba(239,68,68,0.35)]"
+    : "pointer-events-none absolute inset-0 rounded-full shadow-[0_0_32px_rgba(255,255,255,0.22)]";
+}
+
+function dialogueBubbleClasses(isActiveTurn: boolean, cornerClass: string) {
+  return cn(
+    "rounded-2xl border px-4 py-3 backdrop-blur-sm",
+    cornerClass,
+    isActiveTurn
+      ? "animate-dialogue-turn-pulse border-red-500/70 bg-neutral-950/55"
+      : "border-white/50 bg-neutral-950/55",
+  );
+}
+
+export function HeliosProbeAvatar({ isActiveTurn = false }: { isActiveTurn?: boolean }) {
   return (
     <div className="relative shrink-0">
-      <div className="flex h-28 w-28 items-center justify-center overflow-hidden rounded-full border border-red-500/70 bg-gradient-to-br from-amber-500/15 via-neutral-800 to-neutral-900 ring-2 ring-red-500/40 ring-offset-2 ring-offset-[#0a0a0a]">
+      <div className={dialogueAvatarClasses(isActiveTurn)}>
         <span className="font-serif text-3xl text-neutral-200">H</span>
       </div>
-      <div className="pointer-events-none absolute inset-0 rounded-full shadow-[0_0_32px_rgba(239,68,68,0.35)]" />
+      <div className={dialogueAvatarGlowClass(isActiveTurn)} />
     </div>
   );
 }
 
-export function LearnerThoughtAvatar({ initial }: { initial: string }) {
+export function LearnerThoughtAvatar({
+  initial,
+  isActiveTurn = false,
+}: {
+  initial: string;
+  isActiveTurn?: boolean;
+}) {
   return (
     <div className="relative shrink-0">
-      <div className="flex h-28 w-28 items-center justify-center overflow-hidden rounded-full border border-white/70 bg-gradient-to-br from-white/10 via-neutral-800 to-neutral-900 ring-2 ring-white/40 ring-offset-2 ring-offset-[#0a0a0a]">
+      <div className={dialogueAvatarClasses(isActiveTurn)}>
         <span className="font-serif text-3xl text-neutral-100">{initial}</span>
       </div>
-      <div className="pointer-events-none absolute inset-0 rounded-full shadow-[0_0_32px_rgba(255,255,255,0.22)]" />
+      <div className={dialogueAvatarGlowClass(isActiveTurn)} />
     </div>
   );
 }
@@ -166,6 +197,9 @@ function DialogueSplitComic({
   variant?: "ile" | "tap";
 }) {
   const userLines = lastUserTurn ? lastUserTurn.content.split("\n").map((line) => line.trim()).filter(Boolean) : [];
+  const isHeliosTurn = isSending;
+  const isLearnerTurn = !isSending;
+  const hasUserBubble = userLines.length > 0 || !!emptyUserTurnText;
   const textClass = variant === "ile" ? ILE_DIALOGUE_TEXT_CLASS : TAP_DIALOGUE_TEXT_CLASS;
   const heliosPromptClass = variant === "ile" ? "text-neutral-300" : "text-neutral-500";
   const heliosReplyClass = variant === "ile" ? "text-neutral-100" : "text-neutral-200";
@@ -181,9 +215,9 @@ function DialogueSplitComic({
     <div className="flex min-h-0 flex-1 flex-col justify-center gap-4 px-4 py-4 sm:gap-5 sm:px-6 sm:py-5">
       {/* Helios — top-left */}
       <div className="flex w-full max-w-[min(100%,34rem)] items-start gap-3 sm:gap-4">
-        <HeliosProbeAvatar />
+        <HeliosProbeAvatar isActiveTurn={isHeliosTurn} />
         <div className="min-w-0 flex-1 pt-1">
-          <div className="rounded-2xl rounded-tl-md border border-neutral-800/70 bg-neutral-950/55 px-4 py-3 backdrop-blur-sm">
+          <div className={dialogueBubbleClasses(isHeliosTurn, "rounded-tl-md")}>
             {isSending ? (
               <div className="flex gap-1.5 py-1">
                 <div className={`size-2.5 animate-bounce rounded-full ${pendingDotClass}`} style={{ animationDelay: "0ms" }} />
@@ -207,25 +241,30 @@ function DialogueSplitComic({
       />
 
       {/* Learner — bottom-right */}
-      <div className="flex w-full max-w-[min(100%,34rem)] items-end gap-3 self-end sm:gap-4">
-        <div className="min-w-0 flex-1 pb-1">
-          <div className="rounded-2xl rounded-br-md border border-neutral-700/70 bg-black/55 px-4 py-3 backdrop-blur-sm">
-            {userLines.length > 0 ? (
-              <div className="space-y-3">
-                {userLines.map((line, index) => (
-                  <p key={`${lastUserTurn?.id}-${index}`} className={`${textClass} text-right ${userReplyClass}`}>
-                    {line}
-                  </p>
-                ))}
-              </div>
-            ) : emptyUserTurnText ? (
-              <p className={`${textClass} text-right ${userEmptyClass}`}>{emptyUserTurnText}</p>
-            ) : (
-              <div className="min-h-[1.25rem]" aria-hidden="true" />
-            )}
+      <div
+        className={cn(
+          "flex w-full max-w-[min(100%,34rem)] items-end gap-3 self-end sm:gap-4",
+          !hasUserBubble && "justify-end",
+        )}
+      >
+        {hasUserBubble ? (
+          <div className="min-w-0 flex-1 pb-1">
+            <div className={dialogueBubbleClasses(isLearnerTurn, "rounded-br-md bg-black/55")}>
+              {userLines.length > 0 ? (
+                <div className="space-y-3">
+                  {userLines.map((line, index) => (
+                    <p key={`${lastUserTurn?.id}-${index}`} className={`${textClass} text-right ${userReplyClass}`}>
+                      {line}
+                    </p>
+                  ))}
+                </div>
+              ) : (
+                <p className={`${textClass} text-right ${userEmptyClass}`}>{emptyUserTurnText}</p>
+              )}
+            </div>
           </div>
-        </div>
-        <LearnerThoughtAvatar initial={userInitial} />
+        ) : null}
+        <LearnerThoughtAvatar initial={userInitial} isActiveTurn={isLearnerTurn} />
       </div>
     </div>
   );

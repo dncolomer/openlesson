@@ -8,11 +8,21 @@ import {
   insightPublicPath,
   type InsightSummary,
 } from "@/lib/insights";
+import { createClient } from "@/lib/supabase/client";
+import { cn } from "@/lib/utils";
+
+const INSIGHTS_AUTH_MESSAGE = "You need to have a user and be logged in — not available as a guest user.";
 
 export interface ThoughtMemoryEntry {
   id: string;
   text: string;
   timestamp: number;
+}
+
+interface InsightSuggestion {
+  title: string;
+  summary: string;
+  thoughtIds: string[];
 }
 
 function formatThoughtTime(timestamp: number) {
@@ -51,13 +61,42 @@ export function ThoughtMemoryPanel({
   emptyMessage = "Speak or press C to crystallize thoughts. Every trace appears here.",
 }: ThoughtMemoryPanelProps) {
   const [mode, setMode] = useState<"memory" | "insights">("memory");
+  const [searchQuery, setSearchQuery] = useState("");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [creatingInsight, setCreatingInsight] = useState(false);
+  const [suggestingInsights, setSuggestingInsights] = useState(false);
+  const [insightSuggestions, setInsightSuggestions] = useState<InsightSuggestion[]>([]);
   const [insightError, setInsightError] = useState<string | null>(null);
   const [lastInsightUrl, setLastInsightUrl] = useState<string | null>(null);
   const [insights, setInsights] = useState<InsightSummary[]>([]);
   const [loadingInsights, setLoadingInsights] = useState(false);
   const [archivingInsightId, setArchivingInsightId] = useState<string | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
+
+  const insightsAvailable = isAuthenticated === true;
+
+  useEffect(() => {
+    const supabase = createClient();
+    const syncAuth = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      setIsAuthenticated(!!user);
+    };
+    void syncAuth();
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(() => {
+      void syncAuth();
+    });
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const normalizedSearch = searchQuery.trim().toLowerCase();
+  const filteredThoughts = useMemo(() => {
+    if (!normalizedSearch) return thoughts;
+    return thoughts.filter((thought) => thought.text.toLowerCase().includes(normalizedSearch));
+  }, [normalizedSearch, thoughts]);
 
   const selectedThoughts = useMemo(
     () => thoughts.filter((thought) => selectedIds.has(thought.id)),
@@ -83,6 +122,10 @@ export function ThoughtMemoryPanel({
     if (mode !== "insights") return;
     void loadInsights();
   }, [mode, loadInsights]);
+
+  useEffect(() => {
+    setInsightSuggestions([]);
+  }, [thoughts]);
 
   const toggleSelected = (thoughtId: string) => {
     setSelectedIds((current) => {
@@ -110,8 +153,41 @@ export function ThoughtMemoryPanel({
     }
   };
 
+  const suggestInsights = async () => {
+    if (!insightsAvailable || thoughts.length < 2 || suggestingInsights) return;
+    setSuggestingInsights(true);
+    setInsightError(null);
+    try {
+      const response = await fetch("/api/insights/suggest", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          thoughts: thoughts.map((thought) => ({ id: thought.id, text: thought.text })),
+        }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Failed to suggest insights");
+      const suggestions = Array.isArray(data.suggestions) ? (data.suggestions as InsightSuggestion[]) : [];
+      setInsightSuggestions(suggestions);
+      if (suggestions.length === 0) {
+        setInsightError("No strong insight patterns found yet. Keep thinking aloud and try again.");
+      }
+    } catch (error) {
+      setInsightError(error instanceof Error ? error.message : "Failed to suggest insights");
+      setInsightSuggestions([]);
+    } finally {
+      setSuggestingInsights(false);
+    }
+  };
+
+  const applySuggestion = (suggestion: InsightSuggestion) => {
+    const validIds = suggestion.thoughtIds.filter((id) => thoughts.some((thought) => thought.id === id));
+    setSelectedIds(new Set(validIds));
+    setInsightError(null);
+  };
+
   const createInsight = async () => {
-    if (selectedThoughts.length === 0 || creatingInsight) return;
+    if (!insightsAvailable || selectedThoughts.length === 0 || creatingInsight) return;
     setCreatingInsight(true);
     setInsightError(null);
     try {
@@ -130,6 +206,7 @@ export function ThoughtMemoryPanel({
       if (!response.ok) throw new Error(data.error || "Failed to create insight");
       setLastInsightUrl(insightPublicPath(data.insight));
       setSelectedIds(new Set());
+      setInsightSuggestions([]);
       setMode("insights");
       if (data.insight) {
         setInsights((current) => [data.insight, ...current]);
@@ -158,8 +235,11 @@ export function ThoughtMemoryPanel({
             </button>
             <button
               type="button"
+              disabled={!insightsAvailable}
               onClick={() => setMode("insights")}
-              className={`rounded px-2 py-1 ${mode === "insights" ? "bg-neutral-800 text-white" : "text-neutral-500"}`}
+              className={`rounded px-2 py-1 disabled:cursor-not-allowed disabled:opacity-40 ${
+                mode === "insights" ? "bg-neutral-800 text-white" : "text-neutral-500"
+              }`}
             >
               Insights
             </button>
@@ -167,7 +247,7 @@ export function ThoughtMemoryPanel({
         </div>
         <p className="mt-1 text-xs text-neutral-500">
           {mode === "memory"
-            ? "Send any trace back into the dialogue, or select multiple to bookmark an insight."
+            ? "Search traces, click cards to select, then bookmark or autosuggest insights."
             : workspaceId
               ? "Insights bookmarked from this workspace."
               : "Insights synthesize selected thoughts into shareable bookmarks."}
@@ -237,25 +317,80 @@ export function ThoughtMemoryPanel({
         </div>
       ) : (
         <>
+          <div className="mb-3 shrink-0 space-y-2">
+            <label className="block">
+              <span className="sr-only">Search thought traces</span>
+              <input
+                type="search"
+                value={searchQuery}
+                onChange={(event) => setSearchQuery(event.target.value)}
+                placeholder="Search traces…"
+                className="w-full rounded-md border border-neutral-800 bg-black/40 px-2.5 py-1.5 text-xs text-neutral-100 outline-none transition placeholder:text-neutral-600 focus:border-neutral-600"
+              />
+            </label>
+            <button
+              type="button"
+              disabled={!insightsAvailable || thoughts.length < 2 || suggestingInsights}
+              onClick={() => void suggestInsights()}
+              className="w-full rounded-md border border-neutral-800 bg-neutral-950 px-2.5 py-1.5 text-[11px] font-medium text-neutral-300 transition hover:border-neutral-600 hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              {suggestingInsights ? "Suggesting insights…" : "Suggest insights from traces"}
+            </button>
+            {!insightsAvailable && isAuthenticated !== null ? (
+              <p className="text-[11px] leading-relaxed text-neutral-500">{INSIGHTS_AUTH_MESSAGE}</p>
+            ) : null}
+          </div>
+
+          {insightSuggestions.length > 0 ? (
+            <div className="mb-3 shrink-0 space-y-2 rounded-md border border-amber-500/20 bg-amber-500/5 p-2.5">
+              <p className="text-[10px] uppercase tracking-[1.5px] text-amber-200/80">Suggested insights</p>
+              {insightSuggestions.map((suggestion, index) => (
+                <button
+                  key={`${suggestion.title}-${index}`}
+                  type="button"
+                  onClick={() => applySuggestion(suggestion)}
+                  className="block w-full rounded-md border border-neutral-800 bg-black/30 px-2.5 py-2 text-left transition hover:border-amber-500/35 hover:bg-black/45"
+                >
+                  <p className="text-sm font-medium text-neutral-100">{suggestion.title}</p>
+                  <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-neutral-500">{suggestion.summary}</p>
+                  <p className="mt-1.5 text-[10px] uppercase tracking-wide text-amber-200/70">
+                    Select {suggestion.thoughtIds.length} traces
+                  </p>
+                </button>
+              ))}
+            </div>
+          ) : null}
+
           {selectedThoughts.length > 0 && (
             <div className="mb-3 shrink-0 flex items-center justify-between gap-2 rounded-md border border-cyan-500/30 bg-cyan-500/10 px-2.5 py-2">
               <span className="text-[11px] text-cyan-200">{selectedThoughts.length} selected</span>
-              <button
-                type="button"
-                disabled={creatingInsight}
-                onClick={() => void createInsight()}
-                className="text-[11px] font-medium text-cyan-100 underline underline-offset-2 disabled:opacity-40"
-              >
-                {creatingInsight ? "Creating…" : "Create insight"}
-              </button>
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => setSelectedIds(new Set())}
+                  className="text-[11px] text-cyan-200/80 underline underline-offset-2 hover:text-cyan-100"
+                >
+                  Clear
+                </button>
+                <button
+                  type="button"
+                  disabled={!insightsAvailable || creatingInsight}
+                  onClick={() => void createInsight()}
+                  className="text-[11px] font-medium text-cyan-100 underline underline-offset-2 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  {creatingInsight ? "Creating…" : "Create insight"}
+                </button>
+              </div>
             </div>
           )}
           {insightError && <p className="mb-2 text-xs text-red-400">{insightError}</p>}
           <div className={listClassName}>
             {thoughts.length === 0 ? (
               <p className="py-8 text-center text-sm text-neutral-500">{emptyMessage}</p>
+            ) : filteredThoughts.length === 0 ? (
+              <p className="py-8 text-center text-sm text-neutral-500">No traces match your search.</p>
             ) : (
-              thoughts.map((thought) => {
+              filteredThoughts.map((thought) => {
                 const isSent = sentThoughtIds.has(thought.id);
                 const isSkipped = skippedThoughtIds.has(thought.id);
                 const statusLabel = isSent ? "sent" : isSkipped ? "skipped" : "active";
@@ -263,26 +398,33 @@ export function ThoughtMemoryPanel({
                 return (
                   <article
                     key={thought.id}
-                    className={`border-b border-neutral-800/80 py-4 last:border-b-0 ${isSelected ? "bg-cyan-500/5" : ""}`}
+                    role="button"
+                    tabIndex={0}
+                    aria-pressed={isSelected}
+                    onClick={() => toggleSelected(thought.id)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        toggleSelected(thought.id);
+                      }
+                    }}
+                    className={cn(
+                      "cursor-pointer rounded-md border-b border-neutral-800/80 py-4 transition last:border-b-0 hover:bg-neutral-900/35",
+                      isSelected && "border-l-2 border-l-cyan-400 bg-cyan-500/5 pl-2",
+                    )}
                   >
                     <div className="mb-2 flex items-center justify-between gap-3">
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="checkbox"
-                          checked={isSelected}
-                          onChange={() => toggleSelected(thought.id)}
-                          className="h-3.5 w-3.5 rounded border-neutral-600 bg-neutral-950"
-                          aria-label={`Select thought from ${formatThoughtTime(thought.timestamp)}`}
-                        />
-                        <span className="text-[11px] tabular-nums text-neutral-500">{formatThoughtTime(thought.timestamp)}</span>
-                      </div>
+                      <span className="text-[11px] tabular-nums text-neutral-500">{formatThoughtTime(thought.timestamp)}</span>
                       <div className="flex items-center gap-3">
                         <span className={`text-[10px] font-medium uppercase tracking-[1px] ${statusClasses(isSent, isSkipped)}`}>
                           {statusLabel}
                         </span>
                         <button
                           type="button"
-                          onClick={() => onSendThought(thought.text, [thought.id])}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            onSendThought(thought.text, [thought.id]);
+                          }}
                           className="text-[11px] font-medium text-neutral-300 underline decoration-neutral-600 underline-offset-2 transition hover:text-white hover:decoration-neutral-400"
                         >
                           {isSent ? "resend" : "send"}

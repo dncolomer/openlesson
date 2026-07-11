@@ -599,7 +599,7 @@
     "priceRegular2026": "from $19.99/month",
     "priceProTeams": "from $399/month",
     "proofOfWorkApi": "Proof-of-Work API",
-    "proofOfWorkApiDesc": "Create Verification Workspaces, issue TAP links, and run unified performance analysis via the Proof-of-Work API.",
+    "proofOfWorkApiDesc": "Create Workspaces, issue TAP links, and run unified performance analysis via the Proof-of-Work API.",
     "proofOfWorkApiTeamsRequired": "Proof-of-Work API keys require the Teams tier. ",
     "mcpTitle": "Proof-of-Work API MCP",
     "mcpDescription": "Connect Cursor, Claude Desktop, Grok, or custom MCP clients to the same Proof-of-Work API as REST. Use the same Teams API keys with Bearer auth.",
@@ -1749,7 +1749,7 @@
   "integrationAccess": {
     "quickStartTitle": "快速连接",
     "quickStartSubtitle": "复制智能体所需内容：skill.md、带 Bearer 的 MCP 或带 OAuth 的 MCP。",
-    "workspaceLevelNote": "在此管理 API 密钥和全局 MCP 端点。若要在工作区级别集成——工作区 REST 路径、生成的 skill/spec 文件及工作区 MCP 工具——请打开目标 Verification Workspace 并查看其集成标签页。",
+    "workspaceLevelNote": "在此管理 API 密钥和全局 MCP 端点。若要在工作区级别集成——工作区 REST 路径、生成的 skill/spec 文件及工作区 MCP 工具——请打开目标 Workspace 并查看其集成标签页。",
     "copied": "已复制！",
     "skillTitle": "skill.md",
     "skillDescription": "供加载 skill 文件的智能体使用的完整 Proof-of-Work API 与 MCP 参考。",

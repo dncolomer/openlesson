@@ -64,7 +64,7 @@ export default function Image() {
           }}
         >
           Measure what learners actually absorb — not just completion. Proof-of-Work API, Think Aloud
-          Protocol, ILE, and ALE on Verification Workspaces.
+          Protocol, ILE, and ALE on Workspaces.
         </div>
         <div
           style={{

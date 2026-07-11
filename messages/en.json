@@ -509,7 +509,7 @@
     "freeSessionAvailable": "1 free block available",
     "unlimitedContinue": "Unlimited blocks continue",
     "proofOfWorkApi": "Proof-of-Work API",
-    "proofOfWorkApiDesc": "Create Verification Workspaces, issue TAP links, and run unified performance analysis via the Proof-of-Work API.",
+    "proofOfWorkApiDesc": "Create Workspaces, issue TAP links, and run unified performance analysis via the Proof-of-Work API.",
     "proofOfWorkApiTeamsRequired": "Proof-of-Work API keys require the Teams tier. ",
     "apiKeys": "API Keys",
     "enterKeyName": "Enter key name",
@@ -1814,7 +1814,7 @@
   "integrationAccess": {
     "quickStartTitle": "Quick connect",
     "quickStartSubtitle": "Copy what your agent needs — skill.md, MCP with a Bearer API key, or MCP with OAuth.",
-    "workspaceLevelNote": "API keys and global MCP endpoints are managed here. To integrate at the workspace level — workspace-specific REST paths, generated skill/spec files, and workspace-scoped MCP tools — open the desired Verification Workspace and check its Integration tab.",
+    "workspaceLevelNote": "API keys and global MCP endpoints are managed here. To integrate at the workspace level — workspace-specific REST paths, generated skill/spec files, and workspace-scoped MCP tools — open the desired Workspace and check its Integration tab.",
     "copied": "Copied!",
     "skillTitle": "skill.md",
     "skillDescription": "Full Proof-of-Work API and MCP reference for agents that load a skill file.",

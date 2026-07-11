@@ -599,7 +599,7 @@
     "priceRegular2026": "from $19.99/month",
     "priceProTeams": "from $399/month",
     "proofOfWorkApi": "Proof-of-Work API",
-    "proofOfWorkApiDesc": "Create Verification Workspaces, issue TAP links, and run unified performance analysis via the Proof-of-Work API.",
+    "proofOfWorkApiDesc": "Create Workspaces, issue TAP links, and run unified performance analysis via the Proof-of-Work API.",
     "proofOfWorkApiTeamsRequired": "Proof-of-Work API keys require the Teams tier. ",
     "mcpTitle": "Proof-of-Work API MCP",
     "mcpDescription": "Connect Cursor, Claude Desktop, Grok, or custom MCP clients to the same Proof-of-Work API as REST. Use the same Teams API keys with Bearer auth.",
@@ -1749,7 +1749,7 @@
   "integrationAccess": {
     "quickStartTitle": "Kết nối nhanh",
     "quickStartSubtitle": "Sao chép những gì agent cần — skill.md, MCP với Bearer API key hoặc MCP với OAuth.",
-    "workspaceLevelNote": "Khóa API toàn tài khoản và endpoint MCP toàn cục được quản lý tại đây. Để tích hợp theo workspace — đường dẫn REST theo workspace, file skill/spec được tạo và công cụ MCP theo workspace — hãy mở Verification Workspace mong muốn và xem tab Tích hợp.",
+    "workspaceLevelNote": "Khóa API toàn tài khoản và endpoint MCP toàn cục được quản lý tại đây. Để tích hợp theo workspace — đường dẫn REST theo workspace, file skill/spec được tạo và công cụ MCP theo workspace — hãy mở Workspace mong muốn và xem tab Tích hợp.",
     "copied": "Đã sao chép!",
     "skillTitle": "skill.md",
     "skillDescription": "Tham chiếu đầy đủ Proof-of-Work API và MCP cho agent tải file skill.",

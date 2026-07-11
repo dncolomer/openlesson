@@ -5,7 +5,7 @@ export default function manifest(): MetadataRoute.Manifest {
     name: "openLesson",
     short_name: "openLesson",
     description:
-      "Learning efficiency for humans and agents — Proof-of-Work API, Think Aloud Protocol, ILE, and ALE on Verification Workspaces.",
+      "Learning efficiency for humans and agents — Proof-of-Work API, Think Aloud Protocol, ILE, and ALE on Workspaces.",
     start_url: "/",
     scope: "/",
     display: "standalone",

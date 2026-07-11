@@ -37,7 +37,7 @@ const ENDPOINT_SPECS: EndpointSpec[] = [
     method: "POST",
     path: "/api/v2/agent/workspaces",
     scope: "workspaces:write",
-    summary: "Create a Verification Workspace from an initial prompt and optional seed files.",
+    summary: "Create a Workspace from an initial prompt and optional seed files.",
     status: "201 Created",
     requestBody: [
       { name: "initial_prompt", type: "string", required: true, description: "Task or learning goal used to generate workspace title and blocks." },
@@ -119,7 +119,7 @@ const ENDPOINT_SPECS: EndpointSpec[] = [
     summary: "List assessable blocks in a workspace.",
     status: "200 OK",
     pathParams: [
-      { name: "workspace_id", type: "uuid", required: true, description: "Verification Workspace ID." },
+      { name: "workspace_id", type: "uuid", required: true, description: "Workspace ID." },
     ],
     responseBody: [
       { name: "blocks", type: "array", description: "All blocks for the workspace, ordered by created_at ascending." },
@@ -155,7 +155,7 @@ const ENDPOINT_SPECS: EndpointSpec[] = [
       "Given workspace context (blocks, plan files on xAI, proof-of-work metadata) plus an evaluation definition, Grok returns a JSON Schema for the ideal tool proof-of-work payload.",
     status: "200 OK",
     pathParams: [
-      { name: "workspace_id", type: "uuid", required: true, description: "Verification Workspace ID." },
+      { name: "workspace_id", type: "uuid", required: true, description: "Workspace ID." },
     ],
     requestBody: [
       {
@@ -276,7 +276,7 @@ const ENDPOINT_SPECS: EndpointSpec[] = [
       "Generate a workspace-specific skill.md integration guide via POST .../integration-skill for a custom partner agent.",
     status: "200 OK",
     pathParams: [
-      { name: "workspace_id", type: "uuid", required: true, description: "Verification Workspace ID." },
+      { name: "workspace_id", type: "uuid", required: true, description: "Workspace ID." },
     ],
     requestBody: [
       { name: "integration_name", type: "string", required: true, description: "Partner integration slug or display name (e.g. acme-sales-copilot)." },
@@ -337,7 +337,7 @@ const ENDPOINT_SPECS: EndpointSpec[] = [
     summary: "Upload tool usage, screenshots, video, or EEG to xAI Files and link to workspace/block/session.",
     status: "201 Created",
     pathParams: [
-      { name: "workspace_id", type: "uuid", required: true, description: "Verification Workspace ID." },
+      { name: "workspace_id", type: "uuid", required: true, description: "Workspace ID." },
     ],
     requestBody: [
       { name: "type", type: "string", required: true, description: "tool | screen | screenshot | video | eeg (screenshot aliases to screen)." },
@@ -418,7 +418,7 @@ const ENDPOINT_SPECS: EndpointSpec[] = [
     summary: "Analyze workspace proof of work, TAP (Think Aloud Protocol) results, ILE practice traces, sessions, and plan files. Report mode (no prompt) or chat mode (with prompt).",
     status: "200 OK",
     pathParams: [
-      { name: "workspace_id", type: "uuid", required: true, description: "Verification Workspace ID." },
+      { name: "workspace_id", type: "uuid", required: true, description: "Workspace ID." },
     ],
     requestBody: [
       { name: "prompt", type: "string", description: "If non-empty → chat mode (markdown response). If omitted or empty → report mode (structured JSON)." },
@@ -529,7 +529,7 @@ const ENDPOINT_SPECS: EndpointSpec[] = [
     summary: "Create a private Think Aloud Protocol (TAP) link for a block (15 or 30 minutes).",
     status: "201 Created",
     pathParams: [
-      { name: "workspace_id", type: "uuid", required: true, description: "Verification Workspace ID." },
+      { name: "workspace_id", type: "uuid", required: true, description: "Workspace ID." },
       { name: "block_id", type: "uuid", required: true, description: "Target block ID." },
     ],
     requestBody: [
@@ -579,7 +579,7 @@ const ENDPOINT_SPECS: EndpointSpec[] = [
     summary: "List TAP links for a workspace (filtered by caller role).",
     status: "200 OK",
     pathParams: [
-      { name: "workspace_id", type: "uuid", required: true, description: "Verification Workspace ID." },
+      { name: "workspace_id", type: "uuid", required: true, description: "Workspace ID." },
     ],
     responseBody: [
       { name: "tap_links", type: "array", description: "Sessions ordered by created_at descending." },

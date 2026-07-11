@@ -10,7 +10,7 @@ export const metadata: Metadata = {
     template: "%s | openLesson",
   },
   description:
-    "Optimize learning efficiency for humans and agentic systems. Proof-of-Work API, Think Aloud Protocol, ILE, and Agentic Learning Environment on Verification Workspaces.",
+    "Optimize learning efficiency for humans and agentic systems. Proof-of-Work API, Think Aloud Protocol, ILE, and Agentic Learning Environment on Workspaces.",
   keywords: [
     "learning efficiency platform",
     "think aloud protocol",
@@ -38,7 +38,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "openLesson — Learning Efficiency for Humans & Agents",
     description:
-      "Measure what learners actually absorb — not just completion. Four products on Verification Workspaces.",
+      "Measure what learners actually absorb — not just completion. Four products on Workspaces.",
     url: "https://openlesson.academy",
     siteName: "openLesson",
     type: "website",
@@ -71,7 +71,7 @@ const organizationSchema = {
   name: "openLesson",
   url: "https://openlesson.academy",
   description:
-    "Learning efficiency platform on Verification Workspaces: Proof-of-Work API, Think Aloud Protocol, ILE, and Agentic Learning Environment.",
+    "Learning efficiency platform on Workspaces: Proof-of-Work API, Think Aloud Protocol, ILE, and Agentic Learning Environment.",
   founder: {
     "@type": "Person",
     name: "Daniel Colomer",
@@ -95,9 +95,9 @@ const softwareSchema = {
     priceCurrency: "USD",
   },
   description:
-    "Learning efficiency measurement and improvement on Verification Workspaces—via Proof-of-Work API, Think Aloud Protocol, ILE, and Agentic Learning Environment.",
+    "Learning efficiency measurement and improvement on Workspaces—via Proof-of-Work API, Think Aloud Protocol, ILE, and Agentic Learning Environment.",
   featureList: [
-    "Verification Workspaces",
+    "Workspaces",
     "Proof-of-Work API — headless efficiency scoring",
     "Think Aloud Protocol — live human cognition",
     "Integrated Learning Environment — human learning",

@@ -100,7 +100,7 @@ export default function NewWorkspacePage() {
         <div className="w-full max-w-[940px]">
           <div className="mb-7 text-center">
             <div className="mb-5 inline-block rounded-sm border border-zinc-800 bg-zinc-950/80 px-3 py-1 font-mono text-[10px] tracking-[2px] text-zinc-500">STEP 1 • DEFINE THE WORKSPACE</div>
-            <h1 className="text-4xl font-medium leading-[1.05] tracking-[-2px] text-white sm:text-5xl">Create your Verification Workspace.</h1>
+            <h1 className="text-4xl font-medium leading-[1.05] tracking-[-2px] text-white sm:text-5xl">Create your Workspace.</h1>
             <p className="mx-auto mt-5 max-w-2xl text-base leading-relaxed text-zinc-400 sm:text-lg">Describe the skill, decision, scenario, or source material your team needs to practice against. Add files if they provide useful context.</p>
           </div>
 

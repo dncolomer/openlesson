@@ -599,7 +599,7 @@
     "priceRegular2026": "from $19.99/month",
     "priceProTeams": "from $399/month",
     "proofOfWorkApi": "Proof-of-Work API",
-    "proofOfWorkApiDesc": "Create Verification Workspaces, issue TAP links, and run unified performance analysis via the Proof-of-Work API.",
+    "proofOfWorkApiDesc": "Create Workspaces, issue TAP links, and run unified performance analysis via the Proof-of-Work API.",
     "proofOfWorkApiTeamsRequired": "Proof-of-Work API keys require the Teams tier. ",
     "mcpTitle": "Proof-of-Work API MCP",
     "mcpDescription": "Connect Cursor, Claude Desktop, Grok, or custom MCP clients to the same Proof-of-Work API as REST. Use the same Teams API keys with Bearer auth.",
@@ -1810,7 +1810,7 @@
   "integrationAccess": {
     "quickStartTitle": "Conexión rápida",
     "quickStartSubtitle": "Copia lo que tu agente necesita: skill.md, MCP con clave Bearer u MCP con OAuth.",
-    "workspaceLevelNote": "Las claves API y los endpoints MCP globales se gestionan aquí. Para integrar a nivel de espacio de trabajo — rutas REST específicas, archivos skill/spec generados y herramientas MCP por workspace — abre el Verification Workspace deseado y revisa su pestaña Integración.",
+    "workspaceLevelNote": "Las claves API y los endpoints MCP globales se gestionan aquí. Para integrar a nivel de espacio de trabajo — rutas REST específicas, archivos skill/spec generados y herramientas MCP por workspace — abre el Workspace deseado y revisa su pestaña Integración.",
     "copied": "¡Copiado!",
     "skillTitle": "skill.md",
     "skillDescription": "Referencia completa de la API Agentic y MCP para agentes que cargan un archivo skill.",

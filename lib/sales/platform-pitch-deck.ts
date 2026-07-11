@@ -61,9 +61,9 @@ export const PLATFORM_PITCH_DECK: SolutionSlideDeck = {
     {
       layout: "statement",
       kicker: "The platform",
-      title: "Four products. One Verification Workspace.",
+      title: "Four products. One Workspace.",
       subtitle:
-        "Everything runs on Verification Workspaces: structured environments you create and enrich with documents, tool traces, screen shares, video, and any proof of work from humans or agents.",
+        "Everything runs on Workspaces: structured environments you create and enrich with documents, tool traces, screen shares, video, and any proof of work from humans or agents.",
       bullets: [
         "Define skills, scenarios, and decision domains as assessable blocks",
         "Ingest proof of work via API or upload; context enriches continuously",
@@ -170,7 +170,7 @@ export const PLATFORM_PITCH_DECK: SolutionSlideDeck = {
       kicker: "How it works",
       title: "Workspace → Verify → Improve",
       bullets: [
-        "Create a Verification Workspace around the skill, scenario, or decision domain",
+        "Create a Workspace around the skill, scenario, or decision domain",
         "Verify learning with Proof-of-Work API and/or Think Aloud Protocol",
         "Get continuous marker scores, severity-ranked gaps, and auditable rationale",
         "Close gaps in the ILE (humans) or ALE (agents) with proof of work at every step",
@@ -194,7 +194,7 @@ export const PLATFORM_PITCH_DECK: SolutionSlideDeck = {
       kicker: "Next step",
       title: "Verify humans and agents, not just their outputs.",
       bullets: [
-        "Create your first Verification Workspace free",
+        "Create your first Workspace free",
         "Start with Proof-of-Work API, Think Aloud Protocol, or both on one scenario",
         "Pilot one high-stakes motion: onboarding, deploy gate, hiring, or escalation",
       ],

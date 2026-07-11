@@ -61,7 +61,7 @@ export const PLATFORM_PAGE: SeoPlatformPageConfig = {
     {
       title: "The knowledge workspace",
       paragraphs: [
-        "A Verification Workspace is where knowledge work lives: skills, scenarios, and decision domains broken into assessable blocks on a learning graph. Documents, screen shares, tool traces, transcripts, and session artifacts accumulate as work happens.",
+        "A Workspace is where knowledge work lives: skills, scenarios, and decision domains broken into assessable blocks on a learning graph. Documents, screen shares, tool traces, transcripts, and session artifacts accumulate as work happens.",
         "Software tools run on top of that context — not beside it. Verification scores learning from proof of work; augmentation routes gaps into practice. One workspace, continuous signal, auditable improvement.",
       ],
     },
@@ -103,7 +103,7 @@ export const PLATFORM_PAGE: SeoPlatformPageConfig = {
     {
       title: "Proof-of-Work API: programmatic workspace access",
       paragraphs: [
-        "The Proof-of-Work API is how builders wire the Verification Workspace into their stack. Create workspaces, upload proof of work, request unified performance reports, issue Think Aloud Protocol links, poll TAP completion, and trigger ILE practice blocks.",
+        "The Proof-of-Work API is how builders wire the Workspace into their stack. Create workspaces, upload proof of work, request unified performance reports, issue Think Aloud Protocol links, poll TAP completion, and trigger ILE practice blocks.",
         "Embed verification and augmentation into CI pipelines, internal portals, agent orchestration, or any system where humans and agents perform knowledge work.",
       ],
     },
@@ -112,7 +112,7 @@ export const PLATFORM_PAGE: SeoPlatformPageConfig = {
     {
       question: "What is a knowledge workspace?",
       answer:
-        "A Verification Workspace structures real knowledge work into assessable blocks and accumulates proof of work as humans and agents perform tasks. Software tools verify learning from that proof of work and augment it with targeted practice — all in one place.",
+        "A Workspace structures real knowledge work into assessable blocks and accumulates proof of work as humans and agents perform tasks. Software tools verify learning from that proof of work and augment it with targeted practice — all in one place.",
     },
     {
       question: "What software tools run in the workspace?",
@@ -140,7 +140,7 @@ export const PLATFORM_PAGE: SeoPlatformPageConfig = {
         "Teams where humans and AI agents perform knowledge work and need to verify learning with proof of work — then augment it when gaps appear. Builders embedding verification and practice tools via API.",
     },
   ],
-  primaryCta: { label: "Create a Verification Workspace", href: "/workspace/new" },
+  primaryCta: { label: "Create a Workspace", href: "/workspace/new" },
   secondaryCta: { label: "Proof-of-Work API docs", href: "/docs/proof-of-work-api" },
   closingTitle: "Verify learning. Augment where it breaks.",
   closingBody:

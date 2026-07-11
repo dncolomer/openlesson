@@ -121,7 +121,7 @@ Content-Type: application/json
 
 **Tools (full REST parity):** `list_workspaces`, `get_workspace`, `get_learning_progress`, `create_workspace`, `list_blocks`, `generate_proof_of_work_schema`, `generate_integration_skill`, `upload_proof_of_work`, `analyze_performance`, `list_tap_links`, `create_tap_link`
 
-**Partner agents:** call `get_learning_progress` to orient, then `generate_integration_skill` for a workspace-specific `skill.md` — use that skill's checkpoint policy with `upload_proof_of_work` and `analyze_performance`. PumaDoc examples: `/customer-agent-openlesson-skill.md`, `/pumaclaw-mentor-openlesson-skill.md`.
+**Partner agents:** call `get_learning_progress` to orient, then `upload_proof_of_work` and `analyze_performance` per your agent policy. PumaDoc policy snippets: `/customer-agent-openlesson-policy.md`, `/pumaclaw-mentor-openlesson-policy.md`.
 
 Every MCP tool result includes `interruption` (TIM) with the same semantics as REST.
 
@@ -255,7 +255,7 @@ Use this **before** uploading proof of work when you want a concrete contract fo
 
 ### `POST /api/v2/agent/workspaces/{workspace_id}/integration-skill` — `workspaces:read`
 
-Generate a workspace-specific `skill.md` integration guide (like `/pumadoc-proof-of-work-performance-skill.md`) for a custom partner agent. Grok uses workspace blocks, topic, and plan files to tailor endpoints, payload examples, and checklists.
+Generate a workspace-specific `skill.md` integration guide via `POST .../integration-skill` for a custom partner agent. Grok uses workspace blocks, topic, and plan files to tailor endpoints, payload examples, and checklists.
 
 **Request:**
 

@@ -85,7 +85,7 @@ Response includes `schema` (JSON Schema), `schema_name`, `rationale`, `example_p
 
 ## Integration Skill
 
-Generate a custom `skill.md` (like `/pumadoc-proof-of-work-performance-skill.md`) tailored to a workspace:
+Generate a custom `skill.md` via `POST .../integration-skill` tailored to a workspace:
 
 ```json
 {

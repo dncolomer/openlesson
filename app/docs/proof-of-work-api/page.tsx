@@ -273,7 +273,7 @@ const ENDPOINT_SPECS: EndpointSpec[] = [
     path: "/api/v2/agent/workspaces/{workspace_id}/integration-skill",
     scope: "workspaces:read",
     summary:
-      "Generate a workspace-specific skill.md integration guide (like /pumadoc-proof-of-work-performance-skill.md) for a custom partner agent.",
+      "Generate a workspace-specific skill.md integration guide via POST .../integration-skill for a custom partner agent.",
     status: "200 OK",
     pathParams: [
       { name: "workspace_id", type: "uuid", required: true, description: "Verification Workspace ID." },
@@ -1045,19 +1045,19 @@ Content-Type: application/json`}</code>
             </Link>{" "}
             for integration checklists, guest responsibilities, and MCP transport. Generate a custom skill per
             workspace via{" "}
-            <code className="text-neutral-300">POST .../integration-skill</code>, or use the PumaDoc examples:{" "}
+            <code className="text-neutral-300">POST .../integration-skill</code>, or add the PumaDoc policy snippets:{" "}
             <Link
-              href="/customer-agent-openlesson-skill.md"
+              href="/customer-agent-openlesson-policy.md"
               className="text-neutral-200 underline decoration-neutral-600 underline-offset-4 hover:text-white"
             >
-              Customer Agent
+              Customer Agent policy
             </Link>
             ,{" "}
             <Link
-              href="/pumaclaw-mentor-openlesson-skill.md"
+              href="/pumaclaw-mentor-openlesson-policy.md"
               className="text-neutral-200 underline decoration-neutral-600 underline-offset-4 hover:text-white"
             >
-              PumaClaw Mentor
+              PumaClaw Mentor policy
             </Link>
             .
           </p>

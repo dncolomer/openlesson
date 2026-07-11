@@ -1005,7 +1005,7 @@
     "stuckHint": "Stuck? Try {resources}, {practice} or {ask}.",
     "thinkAloudHint": "Keep thinking out loud — {name} will be sending new guiding tasks and questions very soon.",
     "thinkAloudTraces": "Think Aloud Traces",
-    "thinkAloudTracesHint": "Live speech becomes thought cards. Crystallize, select, and send them to Helios.",
+    "thinkAloudTracesHint": "Live speech fills the transcription bar. Crystallize, edit, or reset it — send from Thought Memory.",
     "activeThoughts": "Active thoughts",
     "speakToCreateThoughts": "Speak to create thought traces.",
     "listeningLive": "Listening live",
@@ -2392,7 +2392,7 @@
       "step2": {
         "title": "Think aloud, then send",
         "imageAlt": "Selective thought interface",
-        "body": "Speak your reasoning out loud while you work. Press C to crystallize live speech into thought cards.\n\nSelect one thought or combine several, then send them to Helios. Skipped thoughts move to Thought Memory — revisit any trace, resend it, or bookmark insights you want to keep."
+        "body": "Speak your reasoning out loud while you work. Your transcription stays in the bar until you crystallize or reset it.\n\nPress C to crystallize speech into active thought cards. Press E to edit the live transcription and send it to Helios. Press R to reset only the transcription bar. Press Esc to clear active thoughts and the bar. Thought Memory keeps every trace — select and resend from there, or bookmark insights."
       },
       "step3": {
         "title": "Depth over speed",
@@ -2419,7 +2419,7 @@
       "step2": {
         "title": "Selective thoughts",
         "imageAlt": "Selective thought interface",
-        "body": "Browser transcription turns speech into thought traces. Press C to crystallize, then select which thoughts to send — one card or a combined send.\n\nHelios responds under the avatar with one question at a time, not a chat thread. Thought Memory keeps every trace so you can resend or bookmark insights."
+        "body": "Browser transcription turns speech into a live bar that keeps accumulating until you crystallize or reset it.\n\nPress C to crystallize into active thought cards. Press E to edit and send the live transcription to Helios. Press R to reset only the bar. Press Esc to clear active thoughts and the bar. Keyboard shortcuts are listed on the right during briefing.\n\nHelios responds under the avatar with one question at a time. Thought Memory keeps every trace so you can resend or bookmark insights."
       },
       "step3": {
         "title": "Show what you know",
@@ -2434,7 +2434,7 @@
   "tap": {
     "welcome": {
       "greeting": "Hi, I'm {name}.",
-      "panelIntro": "Welcome to the Think Aloud Protocol. This is a timed demonstration: you explain what you learned while I listen, then I ask Socratic follow-ups to surface gaps and strengths.\n\nHow it works: speak your reasoning out loud and crystallize it into thought cards. Send one thought or combine several. I respond under my avatar with one question at a time, not a chat thread. Your Thought Memory keeps every trace so you can resend or bookmark insights.\n\nSession length and keyboard shortcuts are on the right. When time runs out, you'll return to the workspace — open the Performance tab when you're ready for unified scoring.",
+      "panelIntro": "Welcome to the Think Aloud Protocol. This is a timed demonstration: you explain what you learned while I listen, then I ask Socratic follow-ups to surface gaps and strengths.\n\nHow it works: speak out loud — your transcription accumulates in the bar. Press C to crystallize into thought cards, E to edit and send the live transcription, R to reset only the bar, and Esc to clear active thoughts and the bar. I respond under my avatar with one question at a time. Thought Memory keeps every trace for resend or bookmarking.\n\nSession length and keyboard shortcuts are on the right. When time runs out, you'll return to the workspace — open the Performance tab when you're ready for unified scoring.",
       "callToAction": "When you're ready, press Play. The timer starts, and I'll open with a specific question about what you learned here.",
       "play": "Play",
       "starting": "Starting…",
@@ -2443,7 +2443,7 @@
   },
   "welcome": {
     "greeting": "Hi — I'm {name}.",
-    "panelIntro": "Welcome to your Integrated Learning Environment. This is a desktop-first workspace for serious practice: you work through chapters on a spatial grid (pan, zoom, place steps where they belong), switch tools from the strip — Notebook, Canvas, Thought Memory, Grokipedia, and more — and face me on the right in a comic-style dialogue.\n\nHow it works: load a chapter from the map, think aloud while you work, and press C to crystallize speech into thought cards. Select one or combine several, then send them to me with 1/2/3 or S. I respond under my avatar as plain text — not a chat thread. Use Mark done when a chapter is finished; you can edit chapter text from the map even while paused.\n\nYour Thought Memory keeps every crystallized trace so you can resend or bookmark insights later. Take your time — depth matters more than speed.",
+    "panelIntro": "Welcome to your Integrated Learning Environment. This is a desktop-first workspace for serious practice: you work through chapters on a spatial grid (pan, zoom, place steps where they belong), switch tools from the strip — Notebook, Canvas, Thought Memory, Grokipedia, and more — and face me on the right in a comic-style dialogue.\n\nHow it works: load a chapter from the map and think aloud while you work. Your transcription accumulates in the bar until you crystallize or reset it. Press C to crystallize into thought cards, E to edit and send the live transcription, R to reset only the bar, and Esc to clear active thoughts and the bar. I respond under my avatar as plain text — not a chat thread. Use Mark done when a chapter is finished.\n\nThought Memory keeps every trace so you can select, resend, or bookmark insights later. Take your time — depth matters more than speed.",
     "panelIntroMobile": "Welcome to your Integrated Learning Environment. Chapters is your starting view — a grid map of your block plan. Swipe between tools and Helios chat. Think aloud, turn speech into thought cards, and send them to Helios. Tap Mark done on each chapter when you're ready to move on.",
     "callToAction": "When you're ready, press Start block. Recording begins, the chapter map stays on the left, and I'll listen to whatever you send.",
     "play": "Start block",

@@ -202,8 +202,9 @@ function ThoughtButtonLabel({
 
 const TAP_SHORTCUT_ROWS: { keys: string[]; label: string; altKeys?: string[][] }[] = [
   { keys: ["C"], label: "Crystallize the live transcript into a thought" },
-  { keys: ["Esc"], label: "Clear active thoughts and live transcription" },
   { keys: ["E"], label: "Edit the live transcription before sending" },
+  { keys: ["R"], label: "Reset the live transcription bar only" },
+  { keys: ["Esc"], label: "Clear active thoughts and live transcription" },
 ];
 
 function TapBriefingConfig({
@@ -464,7 +465,7 @@ export function TapScoreClient({ workspaceId, blockId, sessionId, privateToken, 
     return Math.max(resultIndex, consumedResultsIndexRef.current);
   }
 
-  function clearTranscriptionBuffers() {
+  function clearTranscriptionDisplay() {
     if (finalizeTimerRef.current) {
       clearTimeout(finalizeTimerRef.current);
       finalizeTimerRef.current = null;
@@ -472,7 +473,21 @@ export function TapScoreClient({ workspaceId, blockId, sessionId, privateToken, 
     finalBufferRef.current = [];
     setInterimText("");
     setCrystallizableText("");
-    markSpeechConsumed();
+  }
+
+  function restartSpeechRecognitionSession() {
+    consumedResultsIndexRef.current = 0;
+    speechResultsLengthRef.current = 0;
+    const recognition = recognitionRef.current;
+    if (!recognition || !shouldListenRef.current) return;
+    try {
+      recognition.abort();
+    } catch {}
+  }
+
+  function clearTranscriptionBuffers() {
+    clearTranscriptionDisplay();
+    restartSpeechRecognitionSession();
   }
 
   function flushFinalBuffer() {
@@ -483,7 +498,8 @@ export function TapScoreClient({ workspaceId, blockId, sessionId, privateToken, 
 
   const crystallizeCurrentTranscription = useCallback(() => {
     const text = normalize(crystallizableText);
-    clearTranscriptionBuffers();
+    clearTranscriptionDisplay();
+    restartSpeechRecognitionSession();
     if (text) addThought(text, "crystallize");
   }, [crystallizableText]);
 
@@ -564,6 +580,11 @@ export function TapScoreClient({ workspaceId, blockId, sessionId, privateToken, 
       if (!event.metaKey && !event.ctrlKey && !event.shiftKey && event.key.toLowerCase() === "e") {
         event.preventDefault();
         beginEditTranscription();
+        return;
+      }
+      if (!event.metaKey && !event.ctrlKey && !event.shiftKey && event.key.toLowerCase() === "r") {
+        event.preventDefault();
+        clearTranscription();
         return;
       }
     };
@@ -729,6 +750,12 @@ export function TapScoreClient({ workspaceId, blockId, sessionId, privateToken, 
     setEditingTranscription({ draft: text, originalText: text });
   }
 
+  function clearTranscription() {
+    setEditingTranscription(null);
+    clearTranscriptionDisplay();
+    restartSpeechRecognitionSession();
+  }
+
   function clearActiveThoughts() {
     setEditingTranscription(null);
     if (activeThoughts.length > 0) {
@@ -833,6 +860,9 @@ export function TapScoreClient({ workspaceId, blockId, sessionId, privateToken, 
                   <ThoughtButton size="sm" disabled={!crystallizableText} onClick={beginEditTranscription}>
                     <ThoughtButtonLabel shortcut="E">edit</ThoughtButtonLabel>
                   </ThoughtButton>
+                  <ThoughtButton size="sm" disabled={!crystallizableText} onClick={clearTranscription}>
+                    <ThoughtButtonLabel shortcut="R">reset</ThoughtButtonLabel>
+                  </ThoughtButton>
                   <ThoughtButton
                     size="sm"
                     disabled={activeThoughts.length === 0 && !crystallizableText}
@@ -893,7 +923,8 @@ export function TapScoreClient({ workspaceId, blockId, sessionId, privateToken, 
               text: draft,
             });
             setEditingTranscription(null);
-            clearTranscriptionBuffers();
+            clearTranscriptionDisplay();
+            restartSpeechRecognitionSession();
             void sendThought(draft, []);
           }}
           isSending={isSending}

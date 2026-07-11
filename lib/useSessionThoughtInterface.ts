@@ -179,7 +179,7 @@ export function useSessionThoughtInterface({
     consumedResultsIndexRef.current = speechResultsLengthRef.current;
   }
 
-  function clearTranscriptionBuffers() {
+  function clearTranscriptionDisplay() {
     if (finalizeTimerRef.current) {
       clearTimeout(finalizeTimerRef.current);
       finalizeTimerRef.current = null;
@@ -187,7 +187,21 @@ export function useSessionThoughtInterface({
     finalBufferRef.current = [];
     setInterimText("");
     setCrystallizableText("");
-    markSpeechConsumed();
+  }
+
+  const restartSpeechRecognitionSession = useCallback(() => {
+    consumedResultsIndexRef.current = 0;
+    speechResultsLengthRef.current = 0;
+    const recognition = recognitionRef.current;
+    if (!recognition || !shouldListenRef.current) return;
+    try {
+      recognition.abort();
+    } catch {}
+  }, []);
+
+  function clearTranscriptionBuffers() {
+    clearTranscriptionDisplay();
+    restartSpeechRecognitionSession();
   }
 
   function resetSpeechResultCursor() {
@@ -215,9 +229,10 @@ export function useSessionThoughtInterface({
 
   const crystallizeCurrentTranscription = useCallback(() => {
     const text = normalize(crystallizableText);
-    clearTranscriptionBuffers();
+    clearTranscriptionDisplay();
+    restartSpeechRecognitionSession();
     if (text) addThought(text, "crystallize");
-  }, [crystallizableText]);
+  }, [crystallizableText, restartSpeechRecognitionSession]);
 
   useEffect(() => {
     if (!enabled || !recognitionCtor) return;
@@ -327,9 +342,16 @@ export function useSessionThoughtInterface({
       text: draft,
     });
     setEditingTranscription(null);
-    clearTranscriptionBuffers();
+    clearTranscriptionDisplay();
+    restartSpeechRecognitionSession();
     await sendThought(draft, []);
-  }, [editingTranscription, onLogTrace, sendThought]);
+  }, [editingTranscription, onLogTrace, restartSpeechRecognitionSession, sendThought]);
+
+  const clearTranscription = useCallback(() => {
+    setEditingTranscription(null);
+    clearTranscriptionDisplay();
+    restartSpeechRecognitionSession();
+  }, [restartSpeechRecognitionSession]);
 
   const clearActiveThoughts = useCallback(() => {
     setEditingTranscription(null);
@@ -374,6 +396,11 @@ export function useSessionThoughtInterface({
         beginEditTranscription();
         return;
       }
+      if (!event.metaKey && !event.ctrlKey && !event.shiftKey && event.key.toLowerCase() === "r") {
+        event.preventDefault();
+        clearTranscription();
+        return;
+      }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
@@ -383,6 +410,7 @@ export function useSessionThoughtInterface({
     beginEditTranscription,
     cancelEditTranscription,
     clearActiveThoughts,
+    clearTranscription,
     editingTranscription,
   ]);
 
@@ -406,6 +434,7 @@ export function useSessionThoughtInterface({
     updateEditDraft,
     submitEditedTranscription,
     clearActiveThoughts,
+    clearTranscription,
     editingTranscription,
   };
 }

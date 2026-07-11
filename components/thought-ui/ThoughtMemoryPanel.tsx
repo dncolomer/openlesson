@@ -31,9 +31,6 @@ function formatThoughtTime(timestamp: number) {
 
 interface ThoughtMemoryPanelProps {
   thoughts: ThoughtMemoryEntry[];
-  sentThoughtIds: ReadonlySet<string>;
-  skippedThoughtIds: ReadonlySet<string>;
-  onSendThought: (text: string, thoughtIds: string[]) => void;
   workspaceId?: string;
   blockId?: string;
   sessionId?: string;
@@ -42,17 +39,8 @@ interface ThoughtMemoryPanelProps {
   emptyMessage?: string;
 }
 
-function statusClasses(isSent: boolean, isSkipped: boolean) {
-  if (isSent) return "text-emerald-400";
-  if (isSkipped) return "text-neutral-500";
-  return "text-cyan-300";
-}
-
 export function ThoughtMemoryPanel({
   thoughts,
-  sentThoughtIds,
-  skippedThoughtIds,
-  onSendThought,
   workspaceId,
   blockId,
   sessionId,
@@ -221,7 +209,7 @@ export function ThoughtMemoryPanel({
   };
 
   return (
-    <div className={className}>
+    <div className={cn(className, "overflow-hidden")}>
       <div className="mb-3 shrink-0">
         <div className="flex items-center justify-between gap-2">
           <p className="font-mono text-[10px] uppercase tracking-[2px] text-neutral-500">Thought Memory</p>
@@ -316,7 +304,7 @@ export function ThoughtMemoryPanel({
           </Link>
         </div>
       ) : (
-        <>
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
           <div className="mb-3 shrink-0 space-y-2">
             <label className="block">
               <span className="sr-only">Search thought traces</span>
@@ -383,17 +371,14 @@ export function ThoughtMemoryPanel({
               </div>
             </div>
           )}
-          {insightError && <p className="mb-2 text-xs text-red-400">{insightError}</p>}
-          <div className={listClassName}>
+          {insightError ? <p className="mb-2 shrink-0 text-xs text-red-400">{insightError}</p> : null}
+          <div className={cn(listClassName, "min-h-0 flex-1 overflow-y-auto")}>
             {thoughts.length === 0 ? (
               <p className="py-8 text-center text-sm text-neutral-500">{emptyMessage}</p>
             ) : filteredThoughts.length === 0 ? (
               <p className="py-8 text-center text-sm text-neutral-500">No traces match your search.</p>
             ) : (
               filteredThoughts.map((thought) => {
-                const isSent = sentThoughtIds.has(thought.id);
-                const isSkipped = skippedThoughtIds.has(thought.id);
-                const statusLabel = isSent ? "sent" : isSkipped ? "skipped" : "active";
                 const isSelected = selectedIds.has(thought.id);
                 return (
                   <article
@@ -413,24 +398,7 @@ export function ThoughtMemoryPanel({
                       isSelected && "border-l-2 border-l-cyan-400 bg-cyan-500/5 pl-2",
                     )}
                   >
-                    <div className="mb-2 flex items-center justify-between gap-3">
-                      <span className="text-[11px] tabular-nums text-neutral-500">{formatThoughtTime(thought.timestamp)}</span>
-                      <div className="flex items-center gap-3">
-                        <span className={`text-[10px] font-medium uppercase tracking-[1px] ${statusClasses(isSent, isSkipped)}`}>
-                          {statusLabel}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            onSendThought(thought.text, [thought.id]);
-                          }}
-                          className="text-[11px] font-medium text-neutral-300 underline decoration-neutral-600 underline-offset-2 transition hover:text-white hover:decoration-neutral-400"
-                        >
-                          {isSent ? "resend" : "send"}
-                        </button>
-                      </div>
-                    </div>
+                    <p className="mb-2 text-[11px] tabular-nums text-neutral-500">{formatThoughtTime(thought.timestamp)}</p>
                     <p className="whitespace-pre-wrap break-words text-sm leading-relaxed text-neutral-100">
                       {thought.text}
                     </p>
@@ -439,7 +407,7 @@ export function ThoughtMemoryPanel({
               })
             )}
           </div>
-        </>
+        </div>
       )}
     </div>
   );

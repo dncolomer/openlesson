@@ -199,7 +199,8 @@ function DialogueSplitComic({
   const userLines = lastUserTurn ? lastUserTurn.content.split("\n").map((line) => line.trim()).filter(Boolean) : [];
   const isHeliosTurn = isSending;
   const isLearnerTurn = !isSending;
-  const hasUserBubble = userLines.length > 0 || !!emptyUserTurnText;
+  // Show the learner bubble only while Helios is responding; clear it when the turn returns to the user.
+  const hasUserBubble = isSending && (userLines.length > 0 || !!emptyUserTurnText);
   const textClass = variant === "ile" ? ILE_DIALOGUE_TEXT_CLASS : TAP_DIALOGUE_TEXT_CLASS;
   const heliosPromptClass = variant === "ile" ? "text-neutral-300" : "text-neutral-500";
   const heliosReplyClass = variant === "ile" ? "text-neutral-100" : "text-neutral-200";

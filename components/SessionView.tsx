@@ -2571,13 +2571,8 @@ export function SessionView({ sessionId }: { sessionId: string }) {
                         className="flex h-full min-h-0 flex-col overflow-hidden px-1"
                         listClassName="min-h-0 flex-1 overflow-y-auto pr-2"
                         thoughts={sessionThoughtHistory}
-                        sentThoughtIds={sessionThoughtInterface.sentThoughtIds}
-                        skippedThoughtIds={sessionThoughtInterface.memoryThoughtIds}
                         workspaceId={session.metadata?.workspace_id ?? undefined}
                         sessionId={session.id}
-                        onSendThought={(text, thoughtIds) => {
-                          void sessionThoughtInterface.sendThought(text, thoughtIds);
-                        }}
                       />
                     )}
 

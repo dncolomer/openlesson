@@ -825,7 +825,7 @@ export function TapScoreClient({ workspaceId, blockId, sessionId, privateToken, 
         )}
 
         {phase === "live" && (
-          <section className="grid min-w-0 flex-1 gap-4 py-4 lg:grid-cols-[minmax(0,1fr)_22rem]">
+          <section className="grid min-h-0 min-w-0 flex-1 gap-4 overflow-hidden py-4 lg:grid-cols-[minmax(0,1fr)_22rem]">
             <div className="flex min-h-0 min-w-0 flex-col gap-4">
               <div className="flex min-h-[48vh] flex-1 flex-col overflow-hidden rounded-2xl border border-neutral-900 bg-neutral-950/65 backdrop-blur-sm">
                 <DialogueSplit
@@ -901,15 +901,12 @@ export function TapScoreClient({ workspaceId, blockId, sessionId, privateToken, 
               </div>
             </div>
             <ThoughtMemoryPanel
-              className="min-h-0 w-80 shrink-0 rounded-2xl border border-neutral-900 bg-neutral-950/65 p-4 backdrop-blur-sm"
-              listClassName="max-h-[72vh] overflow-y-auto pr-1"
+              className="flex h-full min-h-0 w-full flex-col overflow-hidden rounded-2xl border border-neutral-900 bg-neutral-950/65 p-4 backdrop-blur-sm"
+              listClassName="pr-1"
               thoughts={thoughtHistory}
-              sentThoughtIds={sentThoughtIds}
-              skippedThoughtIds={memoryThoughtIds}
               workspaceId={workspaceId}
               blockId={blockId}
               sessionId={sessionId}
-              onSendThought={sendThought}
             />
           </section>
         )}

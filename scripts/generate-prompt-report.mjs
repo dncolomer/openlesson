@@ -68,23 +68,16 @@ const ACTIVE = [
   "session_plan_update",
   "stuck_policy_recommendation",
 ];
-const LEGACY = [
-  "session_end_check",
-  "expand_probe",
-  "ask_question",
-  "feedback_and_question",
-  "fresh_question",
-  "check_probe_archive",
-];
+const LEGACY = [];
 
 const CALLERS = {
   gap_detection:
-    "`analyzeGap` → `POST /api/agent/session/analyze` (gap also embedded in `session_plan_update` heartbeat)",
-  opening_probe: "`generateOpeningProbe` → `POST /api/opening-probe`",
+    "`analyzeGap` in `lib/xai.ts` (embedded in `session_plan_update` heartbeat via `useSessionHeartbeat`)",
+  opening_probe: "`generateOpeningProbe` in `lib/xai.ts` (via `generate-probe` / session flow)",
   probe_generation:
     "`generateProbe` → `POST /api/generate-probe`, `POST /api/session-plan/reset-probes`",
   report_generation:
-    "`generateReport` → `POST /api/generate-report`, `POST /api/agent/session/end`",
+    "`generateReport` → `POST /api/generate-report`",
   follow_up_sessions: "`generateFollowUpSessions` → `POST /api/generate-follow-ups`",
   generate_objectives: "`generateObjectives` → `POST /api/generate-objectives`",
   session_plan_create:
@@ -114,7 +107,7 @@ const FILE_MAP = {
   "openlesson/lib/xai.ts": "getPrompt consumers: analyzeGap, generateOpeningProbe, generateProbe, generateReport, etc.",
   "openlesson/app/api/session-chat/route.ts": "BASE_SYSTEM_PROMPT — Helios Chat",
   "openlesson/app/api/session-chat/welcome/route.ts": "Session welcome system prompt",
-  "openlesson/app/api/generate-feedback/route.ts": "Transcript feedback system prompt",
+
   "openlesson/app/api/session/performance-chat/route.ts": "buildSystemInstructions (single-session performance chat)",
   "openlesson/app/api/session-plan/translate/route.ts": "Inline translation user prompt",
   "openlesson/app/api/suggest-grokipedia-terms/route.ts": "Grokipedia term suggester user prompt",
@@ -123,7 +116,7 @@ const FILE_MAP = {
   "openlesson/app/api/workspace/add-block-at-slot/route.ts": "add-block-at-slot system + user prompts",
   "openlesson/app/api/workspace/suggest-chapter-edit/route.ts": "suggest-chapter-edit system + user prompt",
   "openlesson/app/api/workspace/chat/route.ts": "SYSTEM_PROMPT workspace assistant",
-  "openlesson/app/api/workspace/describe/route.ts": "SYSTEM_PROMPT plan descriptor",
+
   "openlesson/app/api/workspace/generate/route.ts": "promptBody plan graph generator (not in rg.log — add via expand)",
   "openlesson/app/api/workspace/performance-chat/route.ts": "buildSystemInstructions multi-user performance chat",
   "openlesson/app/api/workspace/performance-report/route.ts": "buildPerformanceReportInstructions consumer",
@@ -135,13 +128,11 @@ const FILE_MAP = {
   "openlesson/app/api/demo/workspace/route.ts": "Consumer → createVerificationWorkspaceFromPrompt (lib/agent-v2/create-verification-workspace.ts)",
   "openlesson/app/api/v2/agent/workspaces/[id]/performance/route.ts": "buildPerformanceReportInstructions + buildPerformanceChatInstructions",
   "openlesson/app/api/v2/agent/workspaces/[id]/integration-skill/route.ts": "buildIntegrationSkillInstructions consumer",
-  "openlesson/app/api/workspace-tap-score/chat/route.ts": "buildGhcScoreInstructions + TAP chat overlay",
-  "openlesson/app/api/workspace-ghl-score/chat/route.ts": "buildGhcScoreInstructions + GHL chat overlay",
+  "openlesson/app/api/workspace-tap-score/chat/route.ts": "buildTapScoreInstructions + TAP chat overlay",
   "openlesson/app/api/workspace-tap-score/complete/route.ts": "TAP complete scoring system + user prompts",
-  "openlesson/app/api/workspace-ghl-score/complete/route.ts": "GHL complete scoring system + user prompts",
-  "openlesson/lib/ghc-score.ts": "buildGhcScoreInstructions, generateTapOpeningQuestion system extension + userMessage",
+  "openlesson/lib/tap-score.ts": "buildTapScoreInstructions, generateTapOpeningQuestion system extension + userMessage",
   "openlesson/lib/agent-v2/create-verification-workspace.ts": "createVerificationWorkspaceFromPrompt userMessage (3–6 blocks, proof-of-work wording)",
-  "openlesson/lib/ghl-score-traces.ts": "buildTraceScoringInstructions",
+  "openlesson/lib/tap-score-traces.ts": "buildTraceScoringInstructions",
   "openlesson/lib/agent-v2/performance-report.ts": "buildPerformanceReportInstructions, PERFORMANCE_REMEDIATION_GUARDRAILS",
   "openlesson/lib/agent-v2/performance-context.ts": "buildPerformanceChatInstructions",
   "openlesson/lib/agent-v2/proof-of-work-schema.ts": "buildProofOfWorkSchemaInstructions, buildProofOfWorkSchemaPrompt",
@@ -212,10 +203,10 @@ Scope: \`openlesson/\` production TypeScript
 
 | Prompt / Builder | Source | Primary Endpoint(s) | Override? |
 |---|---|---|---|
-| \`gap_detection\` | \`lib/prompts.ts\` → \`analyzeGap\` | \`POST /api/agent/session/analyze\` | Yes |
-| \`opening_probe\` | \`lib/prompts.ts\` → \`generateOpeningProbe\` | \`POST /api/opening-probe\` | Yes |
+| \`gap_detection\` | \`lib/prompts.ts\` → \`analyzeGap\` | session heartbeat / \`lib/xai.ts\` | Yes |
+| \`opening_probe\` | \`lib/prompts.ts\` → \`generateOpeningProbe\` | \`lib/xai.ts\` / session flow | Yes |
 | \`probe_generation\` | \`lib/prompts.ts\` → \`generateProbe\` | \`POST /api/generate-probe\`, \`session-plan/reset-probes\` | Yes |
-| \`report_generation\` | \`lib/prompts.ts\` → \`generateReport\` | \`POST /api/generate-report\`, \`agent/session/end\` | Yes |
+| \`report_generation\` | \`lib/prompts.ts\` → \`generateReport\` | \`POST /api/generate-report\` | Yes |
 | \`follow_up_sessions\` | \`lib/prompts.ts\` → \`generateFollowUpSessions\` | \`POST /api/generate-follow-ups\` | Yes |
 | \`generate_objectives\` | \`lib/prompts.ts\` → \`generateObjectives\` | \`POST /api/generate-objectives\` | Yes |
 | \`session_plan_create\` | \`lib/prompts.ts\` → \`createSessionPlanLLM\` | \`session-plan/create\`, \`regenerate\`, \`workspace/preview-session\` | Yes |
@@ -228,8 +219,8 @@ Scope: \`openlesson/\` production TypeScript
 | \`buildPerformanceChatInstructions\` | \`agent-v2/performance-context.ts\` | v2 performance chat, MCP | No |
 | \`buildProofOfWorkSchemaInstructions\` | \`agent-v2/proof-of-work-schema.ts\` | proof-of-work-schema API, MCP | No |
 | \`buildIntegrationSkillInstructions\` | \`agent-v2/integration-skill.ts\` | integration-skill API, MCP | No |
-| \`buildGhcScoreInstructions\` | \`lib/ghc-score.ts\` | TAP/GHL chat | No |
-| \`buildTraceScoringInstructions\` | \`lib/ghl-score-traces.ts\` | TAP/GHL complete scoring | No |
+| \`buildTapScoreInstructions\` | \`lib/tap-score.ts\` | TAP chat | No |
+| \`buildTraceScoringInstructions\` | \`lib/tap-score-traces.ts\` | TAP complete scoring | No |
 | suggest-plan-topic | \`suggest-plan-topic/route.ts\` | \`POST /api/suggest-plan-topic\` | No |
 
 ## Override Mechanism
@@ -237,13 +228,13 @@ Scope: \`openlesson/\` production TypeScript
 1. **Storage**: \`profiles.metadata.prompts\`
 2. **Loader**: \`getUserPrompts()\` (\`lib/user-prompts.ts\`)
 3. **Resolver**: \`getPrompt(key, overrides)\` (\`lib/prompts.ts\`)
-4. **Editor**: Dashboard (\`app/dashboard/page.tsx\`) + \`POST /api/save-prompts\`
+4. **Editor**: Dashboard (\`app/dashboard/page.tsx\`) writes \`profiles.metadata.prompts\` via Supabase client
 
 ## Active vs Legacy Registry Keys
 
 **Active (9):** ${ACTIVE.map((k) => `\`${k}\``).join(", ")}
 
-**Legacy (6):** ${LEGACY.map((k) => `\`${k}\``).join(", ")}
+**Legacy:** none (removed unused registry keys)
 
 ---
 
@@ -253,7 +244,7 @@ Every file from \`prompt-inventory-rg.log\` (${inventoryFiles.length} paths) plu
 
 | File | Prompt entry / note |
 |---|---|
-${[...inventoryFiles, "openlesson/app/api/rabbit-hole/continue/route.ts", "openlesson/app/api/v2/agent/workspaces/route.ts", "openlesson/app/api/workspace/generate/route.ts", "openlesson/app/api/workspace/expand/route.ts", "openlesson/app/api/workspace/regenerate/route.ts", "openlesson/app/api/workspaces/[id]/remix/route.ts", "openlesson/app/api/agent/workspace/route.ts", "openlesson/app/api/prep-material/route.ts", "openlesson/app/api/workspace/prepare-session/route.ts", "openlesson/app/api/rabbit-hole/interview/route.ts", "openlesson/app/api/insights/create/route.ts", "openlesson/app/api/suggest-plan-topic/route.ts", "openlesson/app/api/workspace/suggest-blocks/route.ts", "openlesson/app/api/workspace/add-block-at-slot/route.ts", "openlesson/app/api/workspace/suggest-chapter-edit/route.ts"].map((f) => `| \`${f}\` | ${FILE_MAP[f] || "See domain sections below"} |`).join("\n")}
+${[...inventoryFiles, "openlesson/app/api/rabbit-hole/continue/route.ts", "openlesson/app/api/v2/agent/workspaces/route.ts", "openlesson/app/api/workspace/generate/route.ts", "openlesson/app/api/workspace/expand/route.ts", "openlesson/app/api/workspace/regenerate/route.ts", "openlesson/app/api/workspaces/[id]/remix/route.ts", "openlesson/app/api/prep-material/route.ts", "openlesson/app/api/rabbit-hole/interview/route.ts", "openlesson/app/api/insights/create/route.ts", "openlesson/app/api/suggest-plan-topic/route.ts", "openlesson/app/api/workspace/suggest-blocks/route.ts", "openlesson/app/api/workspace/add-block-at-slot/route.ts", "openlesson/app/api/workspace/suggest-chapter-edit/route.ts"].map((f) => `| \`${f}\` | ${FILE_MAP[f] || "See domain sections below"} |`).join("\n")}
 
 ---
 
@@ -332,19 +323,6 @@ Rules:
 
 parts.push(
   block(
-    "generate-feedback system prompt",
-    {
-      File: "`app/api/generate-feedback/route.ts`",
-      "Call chain": "`POST /api/generate-feedback`",
-      Purpose: "Brief feedback from think-aloud transcripts",
-      "User-overridable": "No",
-    },
-    "You are an AI learning assistant. Based on the student's speech, give brief feedback (1-2 sentences).",
-  ),
-);
-
-parts.push(
-  block(
     "session/performance-chat `buildSystemInstructions`",
     {
       File: "`app/api/session/performance-chat/route.ts`",
@@ -417,19 +395,6 @@ parts.push(
   ),
 );
 
-parts.push(
-  block(
-    "workspace/describe `SYSTEM_PROMPT`",
-    {
-      File: "`app/api/workspace/describe/route.ts`",
-      "Call chain": "`POST /api/workspace/describe`",
-      Purpose: "Generate plan overview/highlights JSON",
-      "User-overridable": "No",
-    },
-    extractConstTemplate(read("app/api/workspace/describe/route.ts"), "SYSTEM_PROMPT"),
-  ),
-);
-
 const generatePromptBody = read("app/api/workspace/generate/route.ts").match(
   /const promptBody = `([\s\S]*?)`;/,
 )?.[1];
@@ -495,23 +460,6 @@ parts.push(
       Variables: "`{sourcePlan.root_topic}`, `{authorUsername}`, `{originalTopics}`, `{remixPrompt}`",
     },
     remixPrompt,
-  ),
-);
-
-const agentPlanPrompt = read("app/api/agent/workspace/route.ts").match(
-  /const prompt = `([\s\S]*?)`;/,
-)?.[1];
-parts.push(
-  block(
-    "agent/plan user prompt (X402)",
-    {
-      File: "`app/api/agent/workspace/route.ts`",
-      "Call chain": "`POST /api/agent/workspace`",
-      Purpose: "Agent API learning plan graph generation",
-      "User-overridable": "No",
-      Variables: "`{topic}`, `{daysNum}`, `{nodeConstraints}`",
-    },
-    agentPlanPrompt,
   ),
 );
 
@@ -629,23 +577,6 @@ parts.push(
   ),
 );
 
-const prepareSession = read("app/api/workspace/prepare-session/route.ts").match(
-  /const prompt = `([\s\S]*?)`;/,
-)?.[1];
-parts.push(
-  block(
-    "prepare-session user prompt",
-    {
-      File: "`app/api/workspace/prepare-session/route.ts`",
-      "Call chain": "`POST /api/workspace/prepare-session`",
-      Purpose: "Full pre-session prep guide (concepts, resources, activity, expectations)",
-      "User-overridable": "No",
-      Variables: "`{topic}`",
-    },
-    prepareSession,
-  ),
-);
-
 parts.push(
   block(
     "workspace/performance-chat `buildSystemInstructions`",
@@ -662,20 +593,20 @@ parts.push(
   ),
 );
 
-// Domain 5: TAP/GHC
-parts.push("---\n\n## Domain 5: TAP / GHL Scoring\n\n");
+// Domain 5: TAP scoring
+parts.push("---\n\n## Domain 5: TAP Scoring\n\n");
 
 parts.push(
   block(
-    "`buildGhcScoreInstructions`",
+    "`buildTapScoreInstructions`",
     {
-      File: "`lib/ghc-score.ts`",
-      "Call chain": "TAP/GHL chat routes, `generateTapOpeningQuestion`",
+      File: "`lib/tap-score.ts`",
+      "Call chain": "TAP chat routes, `generateTapOpeningQuestion`",
       Purpose: "TAP facilitator persona and workspace context for Socratic demonstration",
       "User-overridable": "No",
-      Variables: "`{assessmentTarget}`, `{minutes}`, `{brief.plan.*}`, `{nodeSummary}`, `{sessionSummary}`, `{focusSessionSummary}`, `{GHC_SCORE_MARKERS}`",
+      Variables: "`{assessmentTarget}`, `{minutes}`, `{brief.plan.*}`, `{nodeSummary}`, `{sessionSummary}`, `{focusSessionSummary}`, `{TAP_SCORE_MARKERS}`",
     },
-    extractFunctionReturnTemplate(read("lib/ghc-score.ts"), "buildGhcScoreInstructions"),
+    extractFunctionReturnTemplate(read("lib/tap-score.ts"), "buildTapScoreInstructions"),
   ),
 );
 
@@ -684,9 +615,9 @@ const tapChatOverlay =
 
 parts.push(
   block(
-    "TAP/GHL chat overlay (appended to buildGhcScoreInstructions)",
+    "TAP chat overlay (appended to buildTapScoreInstructions)",
     {
-      File: "`workspace-tap-score/chat/route.ts`, `workspace-ghl-score/chat/route.ts`",
+      File: "`workspace-tap-score/chat/route.ts`",
       "Call chain": "POST chat endpoints",
       Purpose: "Text-mode thought interface (not live voice)",
       "User-overridable": "No",
@@ -699,54 +630,31 @@ parts.push(
   block(
     "`buildTraceScoringInstructions`",
     {
-      File: "`lib/ghl-score-traces.ts`",
-      "Call chain": "Appended to scoring user prompt in TAP/GHL complete routes",
+      File: "`lib/tap-score-traces.ts`",
+      "Call chain": "Legacy helper (no longer appended in TAP complete route)",
       Purpose: "Instruct model to use System 1 vs System 2 thought traces as proof of work",
       "User-overridable": "No",
       Variables: "`{system1Count}`, `{system2Count}`, `{manifestText}` — empty string when no traces",
     },
-    extractFunctionReturnTemplate(read("lib/ghl-score-traces.ts"), "buildTraceScoringInstructions") ||
-      read("lib/ghl-score-traces.ts").slice(
-        read("lib/ghl-score-traces.ts").indexOf("return `"),
-        read("lib/ghl-score-traces.ts").indexOf("`;", read("lib/ghl-score-traces.ts").indexOf("return `")) + 1,
+    extractFunctionReturnTemplate(read("lib/tap-score-traces.ts"), "buildTraceScoringInstructions") ||
+      read("lib/tap-score-traces.ts").slice(
+        read("lib/tap-score-traces.ts").indexOf("return `"),
+        read("lib/tap-score-traces.ts").indexOf("`;", read("lib/tap-score-traces.ts").indexOf("return `")) + 1,
       ).replace(/^return `/, "").replace(/`;$/, ""),
   ),
 );
 
-const tapCompleteSystem =
-  "You create Think Aloud Protocol (TAP) score analyses for OpenLesson. Return only JSON. Scores are provisional from 0 to 100, not clinical or identity claims. overall_score measures learning verification from the demonstration; conversion_score estimates likelihood of achieving the workspace conversion goal (infer conversion_goal from workspace title, description, notes, and blocks when not explicit). Identify actionable gap analysis, then provide supporting marker scores. When thought trace files are attached, treat System 1 and System 2 traces as evidence alongside the dialogue transcript.";
-
-const tapScoringUser = read("app/api/workspace-tap-score/complete/route.ts").match(
-  /const scoringPrompt = `([\s\S]*?)`;/,
-)?.[1];
-
 parts.push(
   block(
-    "TAP complete scoring (system + user template)",
+    "TAP complete proof-of-work upload",
     {
       File: "`app/api/workspace-tap-score/complete/route.ts`",
       "Call chain": "`POST /api/workspace-tap-score/complete`",
-      Purpose: "Final TAP scorecard JSON from transcript + traces",
+      Purpose: "Upload tap-transcript proof of work and mark TAP session completed (no inline scoring)",
       "User-overridable": "No",
-      Variables: "`{brief.*}`, `{transcriptText}`, `{traceInstructions}`, marker schema from GHC_SCORE_MARKERS",
+      Variables: "`{transcript}`, `{durationSeconds}`, `{tapSessionId}` — uses `buildTapTranscriptPayload` + `uploadWorkspaceProofOfWork`",
     },
-    `SYSTEM:\n${tapCompleteSystem}\n\nUSER TEMPLATE:\n${tapScoringUser}`,
-  ),
-);
-
-const ghlScoringUser = read("app/api/workspace-ghl-score/complete/route.ts").match(
-  /const scoringPrompt = `([\s\S]*?)`;/,
-)?.[1];
-parts.push(
-  block(
-    "GHL complete scoring (same system, GHL transcript label)",
-    {
-      File: "`app/api/workspace-ghl-score/complete/route.ts`",
-      "Call chain": "`POST /api/workspace-ghl-score/complete`",
-      Purpose: "Final GHL scorecard — identical to TAP except transcript label",
-      "User-overridable": "No",
-    },
-    `SYSTEM:\n${tapCompleteSystem}\n\nUSER TEMPLATE:\n${ghlScoringUser}`,
+    "No LLM scoring prompt. On completion, serializes transcript to tool proof of work (`tool_name: tap-transcript`), marks `workspace_tap_sessions.status = completed`, and returns the learner to the workspace. Unified scoring happens via POST .../performance / MCP analyze_performance.",
   ),
 );
 
@@ -965,22 +873,22 @@ parts.push(
   ),
 );
 
-// generateTapOpeningQuestion (split from buildGhcScoreInstructions)
-const ghcSrc = read("lib/ghc-score.ts");
+// generateTapOpeningQuestion (split from buildTapScoreInstructions)
+const ghcSrc = read("lib/tap-score.ts");
 for (const extra of extractTapOpeningQuestionExtras(ghcSrc)) {
   const isSystem = extra.symbol.includes("system");
   parts.push(
     block(
       `\`${extra.symbol}\``,
       {
-        File: "`lib/ghc-score.ts`",
+        File: "`lib/tap-score.ts`",
         "Call chain":
           "`generateTapOpeningQuestion` → `callXai` (TAP opening question before chat)",
         Purpose: isSystem
-          ? "System extension appended after full buildGhcScoreInstructions output"
+          ? "System extension appended after full buildTapScoreInstructions output"
           : "User message naming the demonstration target block/title",
         "User-overridable": "No",
-        Variables: isSystem ? "`{context}` = full buildGhcScoreInstructions output" : "`{target}` block or plan title",
+        Variables: isSystem ? "`{context}` = full buildTapScoreInstructions output" : "`{target}` block or plan title",
       },
       extra.text,
     ),

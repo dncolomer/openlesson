@@ -15,8 +15,6 @@ const VALID_SCOPES: ApiKeyScope[] = [
   "workspaces:write",
   "tap:read",
   "tap:write",
-  "ghl:read",
-  "ghl:write",
   "org:read",
   "org:write",
 ];

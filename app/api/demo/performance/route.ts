@@ -51,7 +51,7 @@ export async function POST(req: NextRequest) {
 
     if (
       contextCounts.proof_of_work_artifacts === 0 &&
-      contextCounts.tap_sessions === 0 &&
+
       contextCounts.linked_sessions === 0 &&
       contextCounts.workspace_files === 0
     ) {

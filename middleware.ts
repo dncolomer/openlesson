@@ -14,7 +14,6 @@ const SUBSCRIPTION_EXEMPT_PREFIXES = [
   "/cookies",
   "/legal",
   "/tap/session/",
-  "/ghl-score/session/",
   "/insights/",
   "/p/",
   "/quiz/",
@@ -87,7 +86,7 @@ export async function middleware(request: NextRequest) {
     protectedRoutes.some((route) => pathname.startsWith(route)) || isDemoPage;
 
   // Public routes that should skip all auth logic
-  const publicRoutes = ["/pricing", "/tap/session", "/ghl-score/session", "/insights"];
+  const publicRoutes = ["/pricing", "/tap/session", "/insights"];
   const isPublicRoute = publicRoutes.some((route) =>
     pathname.startsWith(route)
   );

@@ -115,7 +115,7 @@ async function main() {
   record("org", "teams org exists", !!org, org ? `${org.name} (${org.slug})` : "not found");
 
   // --- Public pages ---
-  for (const path of ["/", "/login", "/pricing", "/docs/agentic-v2"]) {
+  for (const path of ["/", "/login", "/pricing", "/docs/proof-of-work-api"]) {
     try {
       const res = await fetch(`${baseUrl}${path}`, { redirect: "manual" });
       record("web", `GET ${path}`, res.status >= 200 && res.status < 400, `HTTP ${res.status}`);
@@ -188,44 +188,30 @@ async function main() {
 
         if (blockId) {
           const link = await agentJson(
-            `/api/v2/agent/workspaces/${workspaceId}/blocks/${blockId}/ghl-links`,
+            `/api/v2/agent/workspaces/${workspaceId}/blocks/${blockId}/tap-links`,
             apiKey,
             { method: "POST", body: JSON.stringify({ minutes: 15 }) }
           );
-          const linkId = link.body?.ghl_link?.id;
+          const linkId = link.body?.tap_link?.id;
           record(
             "agent-api",
-            "POST /blocks/{id}/ghl-links",
+            "POST /blocks/{id}/tap-links",
             link.res.status === 201 && !!linkId,
             linkId || `${link.res.status}`
           );
 
-          const list = await agentJson(`/api/v2/agent/workspaces/${workspaceId}/ghl-links`, apiKey);
+          const list = await agentJson(`/api/v2/agent/workspaces/${workspaceId}/tap-links`, apiKey);
           record(
             "agent-api",
-            "GET /workspaces/{id}/ghl-links",
+            "GET /workspaces/{id}/tap-links",
             list.res.status === 200,
-            `${list.body?.ghl_links?.length ?? 0} links`
+            `${list.body?.tap_links?.length ?? 0} links`
           );
-
-          if (linkId) {
-            const results = await agentJson(
-              `/api/v2/agent/workspaces/${workspaceId}/ghl-links/${linkId}/results`,
-              apiKey
-            );
-            const status = results.body?.ghl_result?.status;
-            record(
-              "agent-api",
-              "GET /ghl-links/{id}/results (pending)",
-              results.res.status === 200,
-              `status=${status}`
-            );
-          }
 
           if (link.body?.private_url) {
             const token = link.body.private_url.split("/").pop();
-            const page = await fetch(`${baseUrl}/ghl-score/session/${token}`, { redirect: "manual" });
-            record("agent-api", "private GHL page loads", page.status === 200, `HTTP ${page.status}`);
+            const page = await fetch(`${baseUrl}/tap/session/${token}`, { redirect: "manual" });
+            record("agent-api", "private TAP page loads", page.status === 200, `HTTP ${page.status}`);
           }
         }
       }

@@ -950,7 +950,7 @@ export function ProofOfWorkApiDemo() {
         body="This internal demo uses the Proof-of-Work API to create workspaces, upload proof of work, and generate performance reports. Only admin accounts can run it."
         primaryHref="/dashboard"
         primaryLabel="Back to dashboard"
-        secondaryHref="/docs/agentic-v2"
+        secondaryHref="/docs/proof-of-work-api"
         secondaryLabel="API docs"
       />
     );
@@ -982,7 +982,7 @@ export function ProofOfWorkApiDemo() {
           </div>
           <div className="flex flex-wrap gap-2">
             <Link
-              href="/docs/agentic-v2"
+              href="/docs/proof-of-work-api"
               className="rounded-md border border-zinc-700 px-3 py-2 text-xs text-zinc-300 transition hover:border-zinc-500 hover:text-white"
             >
               API reference

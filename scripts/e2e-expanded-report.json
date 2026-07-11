@@ -1,8 +1,8 @@
 {
-  "ran_at": "2026-07-11T00:12:21.113Z",
+  "ran_at": "2026-07-11T15:09:54.970Z",
   "base_url": "http://127.0.0.1:3000",
-  "total": 43,
-  "passed": 43,
+  "total": 41,
+  "passed": 41,
   "failed": 0,
   "failures": [],
   "all": [
@@ -22,7 +22,7 @@
       "area": "regular-web",
       "name": "GET /api/check-usage (allowed, plan, limit)",
       "ok": true,
-      "detail": "plan=regular_2026 limit=25 used=0"
+      "detail": "plan=regular_2026 limit=100 used=0"
     },
     {
       "area": "regular-web",
@@ -46,13 +46,13 @@
       "area": "regular-web",
       "name": "POST /api/workspace/generate (workspace create)",
       "ok": true,
-      "detail": "8b553790-fcd3-4abb-aa63-778675aabe8b"
+      "detail": "8cbb7e1b-bdcb-4e40-9cf8-d7c2aa587c15"
     },
     {
       "area": "regular-web",
       "name": "GET /workspace/{id} renders",
       "ok": true,
-      "detail": "HTTP 200 len=17830"
+      "detail": "HTTP 200 len=48453"
     },
     {
       "area": "regular-web",
@@ -62,13 +62,13 @@
     },
     {
       "area": "regular-web",
-      "name": "GET /workspace/{id}/ghl-score UI",
+      "name": "GET /workspace/{id}/tap UI",
       "ok": true,
       "detail": "HTTP 200"
     },
     {
       "area": "regular-web",
-      "name": "GET /api/workspace-ghl-score?workspaceId=…",
+      "name": "GET /api/workspace-tap-score?workspaceId=…",
       "ok": true,
       "detail": "HTTP 200 sessions=0"
     },
@@ -76,7 +76,7 @@
       "area": "teams-web",
       "name": "GET /api/check-usage (pro_teams, allowed)",
       "ok": true,
-      "detail": "plan=pro_teams limit=250 used=14"
+      "detail": "plan=pro_teams limit=1000 used=15"
     },
     {
       "area": "teams-web",
@@ -88,19 +88,19 @@
       "area": "teams-web",
       "name": "GET /api/organization guests array present",
       "ok": true,
-      "detail": "guests=19"
+      "detail": "guests=5"
     },
     {
       "area": "teams-web",
       "name": "GET /api/v2/agent/keys (session auth)",
       "ok": true,
-      "detail": "HTTP 200 keys=10"
+      "detail": "HTTP 200 keys=6"
     },
     {
       "area": "teams-web",
       "name": "POST /api/v2/agent/keys (session auth)",
       "ok": true,
-      "detail": "403 You may have at most 10 active API keys. Revoke an existing key first."
+      "detail": "201 sk_eb3c6f985"
     },
     {
       "area": "teams-web",
@@ -130,19 +130,19 @@
       "area": "agent-api",
       "name": "POST /workspaces",
       "ok": true,
-      "detail": "aba270ea-3079-4fc0-8394-a2bd4667cd4f"
+      "detail": "53b5d75c-ff5a-4d16-a531-cea711157948"
     },
     {
       "area": "agent-api",
       "name": "GET /blocks",
       "ok": true,
-      "detail": "5 blocks"
+      "detail": "6 blocks"
     },
     {
       "area": "mcp",
       "name": "tools/list",
       "ok": true,
-      "detail": "12 tools"
+      "detail": "11 tools"
     },
     {
       "area": "proof-of-work",
@@ -182,51 +182,45 @@
     },
     {
       "area": "agent-api",
-      "name": "POST GHL link",
+      "name": "POST TAP link",
       "ok": true,
-      "detail": "66206cf7-4a32-4c67-96cb-154e7e66a8ed"
+      "detail": "c8ac8675-a9ab-4f21-8016-6bcae60eeb11"
     },
     {
-      "area": "ghl-flow",
+      "area": "tap-flow",
       "name": "private session page",
       "ok": true,
       "detail": "HTTP 200"
     },
     {
-      "area": "ghl-flow",
-      "name": "POST /api/workspace-ghl-score/chat",
+      "area": "tap-flow",
+      "name": "POST /api/workspace-tap-score/chat",
       "ok": true,
-      "detail": "reply len=196"
+      "detail": "reply len=218"
     },
     {
-      "area": "ghl-flow",
-      "name": "POST /api/workspace-ghl-score/complete",
+      "area": "tap-flow",
+      "name": "POST /api/workspace-tap-score/complete",
       "ok": true,
-      "detail": "score=62"
+      "detail": "workspace=53b5d75c-ff5a-4d16-a531-cea711157948"
     },
     {
-      "area": "ghl-flow",
-      "name": "GET /ghl-links/{id}/results (scores + markers)",
+      "area": "tap-flow",
+      "name": "GET /tap-links (completed status)",
       "ok": true,
-      "detail": "score=62 markers=6"
-    },
-    {
-      "area": "mcp",
-      "name": "get_ghl_results",
-      "ok": true,
-      "detail": "completed"
+      "detail": "status=completed"
     },
     {
       "area": "agent-api",
       "name": "POST /org/guests",
       "ok": true,
-      "detail": "e2e-guest-auto+1783728718161@openlesson.academy"
+      "detail": "e2e-guest-auto+1783782579148@openlesson.academy"
     },
     {
       "area": "agent-api",
       "name": "guest key can create workspace",
       "ok": true,
-      "detail": "bbf715f7-993f-4bcf-8fba-e019d2c46c45"
+      "detail": "c747cba7-2e8d-4f44-86d8-5deccc23aa69"
     },
     {
       "area": "agent-api",
@@ -235,34 +229,28 @@
       "detail": "5 blocks"
     },
     {
-      "area": "ghl-flow",
-      "name": "guest key can create GHL link",
+      "area": "tap-flow",
+      "name": "guest key can create TAP link",
       "ok": true,
-      "detail": "443e0bf5-c8a5-4bd7-98ef-6d1a0975617e"
+      "detail": "7cf16a35-dc77-40fb-9606-555ffce4787d"
     },
     {
-      "area": "ghl-flow",
-      "name": "guest GHL private session page",
+      "area": "tap-flow",
+      "name": "guest TAP private session page",
       "ok": true,
-      "detail": "HTTP 200 len=30945"
+      "detail": "HTTP 200 len=47532"
     },
     {
-      "area": "ghl-flow",
-      "name": "guest GHL chat via private token",
+      "area": "tap-flow",
+      "name": "guest TAP chat via private token",
       "ok": true,
-      "detail": "reply len=229"
+      "detail": "reply len=170"
     },
     {
-      "area": "ghl-flow",
-      "name": "guest GHL complete via private token",
+      "area": "tap-flow",
+      "name": "guest TAP complete via private token",
       "ok": true,
-      "detail": "score=15"
-    },
-    {
-      "area": "ghl-flow",
-      "name": "guest key can fetch GHL results",
-      "ok": true,
-      "detail": "score=15"
+      "detail": "workspace=c747cba7-2e8d-4f44-86d8-5deccc23aa69"
     }
   ]
 }

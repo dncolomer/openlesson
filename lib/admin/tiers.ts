@@ -4,8 +4,8 @@ import { PLANS } from "@/lib/plans";
 /** Admin-assignable subscription tiers (current product). */
 export const ADMIN_TIER_OPTIONS = [
   { id: "free" as const, label: "Free", description: PLANS.free.features[0] },
-  { id: "regular_2026" as const, label: "Individual", description: "25+ TAP / ILE sessions / month" },
-  { id: "pro_teams" as const, label: "Pro / Teams", description: "250+ TAP / ILE sessions / month + org" },
+  { id: "regular_2026" as const, label: "Individual", description: "from $49/mo · 100+ Proof-of-Work submissions" },
+  { id: "pro_teams" as const, label: "Pro / Teams", description: "from $599/mo · 1,000+ Proof-of-Work submissions + org" },
 ] as const;
 
 export type AdminTierId = (typeof ADMIN_TIER_OPTIONS)[number]["id"];
@@ -78,21 +78,19 @@ export function tierColor(plan: string): string {
   }
 }
 
-export function describePlanLimits(plan: string, extraLessons = 0, extraWorkspaces = 0): string {
+export function describePlanLimits(plan: string, extraLessons = 0, _extraWorkspaces = 0): string {
   const def = PLANS[plan as PlanId];
   if (!def) return "Unknown plan";
 
-  const sessions =
-    def.sessionsPerPeriod === null
-      ? "Unlimited TAP / ILE sessions"
-      : `${(def.sessionsPerPeriod ?? 0) + extraLessons} TAP / ILE sessions / period`;
+  const proofOfWork =
+    def.proofOfWorkPerPeriod === null
+      ? "Unlimited Proof-of-Work submissions"
+      : `${(def.proofOfWorkPerPeriod ?? 0) + extraLessons} Proof-of-Work submissions / period`;
 
   const workspaces =
-    def.workspacesPerPeriod === null
-      ? "Unlimited workspaces"
-      : `${(def.workspacesPerPeriod ?? 0) + extraWorkspaces} workspace(s) / period`;
+    def.workspacesPerPeriod === null ? "Unlimited workspaces" : `${def.workspacesPerPeriod} workspace(s)`;
 
-  return `${sessions} · ${workspaces}`;
+  return `${proofOfWork} · ${workspaces}`;
 }
 
 export function tierChangeWarning(
@@ -103,18 +101,18 @@ export function tierChangeWarning(
   if (current === to) return null;
 
   if (isGrandfatheredPlan(from)) {
-    return `This user is on grandfathered ${tierLabel(from.plan)}. Migrating to ${tierLabel(to)} will replace legacy limits and reset extra_lessons to the new tier baseline.`;
+    return `This user is on grandfathered ${tierLabel(from.plan)}. Migrating to ${tierLabel(to)} will replace legacy limits and reset extra Proof-of-Work allowance to the new tier baseline.`;
   }
 
   if ((from.extra_lessons ?? 0) > 0 && to === "free") {
-    return `Moving to Free will set subscription_status to inactive and reset extra_lessons to 0 (currently ${from.extra_lessons}).`;
+    return `Moving to Free will set subscription_status to inactive and reset extra Proof-of-Work allowance to 0 (currently ${from.extra_lessons}).`;
   }
 
   if (to !== "free") {
-    return `Assign ${tierLabel(to)}? extra_lessons will reset to 0 and a new 30-day period will start.`;
+    return `Assign ${tierLabel(to)}? Extra Proof-of-Work allowance will reset to 0 and a new 30-day period will start.`;
   }
 
-  return `Move to Free? Subscription becomes inactive and extra_lessons reset to 0.`;
+  return `Move to Free? Subscription becomes inactive and extra Proof-of-Work allowance resets to 0.`;
 }
 
 export function buildTierUpdate(tier: AdminTierId): {

@@ -325,8 +325,7 @@ function formatWorkspaceContextSummary(payload?: PerformanceContextPayload): str
 ${blockLines || "  none"}
 - existing proof of work artifacts: ${payload.counts.proof_of_work_artifacts}
 - known tool names in prior uploads: ${evidenceTools.length ? evidenceTools.join(", ") : "none yet"}
-- plan files: ${payload.counts.workspace_files}
-- TAP sessions: ${payload.counts.tap_sessions}`;
+- plan files: ${payload.counts.workspace_files}`;
 }
 
 export function buildProofOfWorkSchemaInstructions(

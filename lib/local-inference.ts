@@ -29,9 +29,9 @@ const MODEL_ID = "onnx-community/gemma-4-E2B-it-ONNX";
 
 let instance: LocalInferenceManager | null = null;
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 let _processor: any = null;
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 let _model: any = null;
 
 export class LocalInferenceManager {

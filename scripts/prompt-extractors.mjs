@@ -101,7 +101,7 @@ export function extractTapOpeningQuestionExtras(src) {
   if (ext?.[1]) {
     entries.push({
       symbol: "generateTapOpeningQuestion-system-extension",
-      text: `[Appended after full buildGhcScoreInstructions(context) output]\n\n${ext[1]}`,
+      text: `[Appended after full buildTapScoreInstructions(context) output]\n\n${ext[1]}`,
     });
   }
   if (user?.[1]) {
@@ -117,7 +117,7 @@ const NAMED_CONST_HINT =
   /^(prompt|aiPrompt|promptBody|scoringPrompt|systemPrompt|translationPrompt|BASE_SYSTEM_PROMPT|SYSTEM_PROMPT|ILE_CONTEXT|PERFORMANCE_REMEDIATION_GUARDRAILS|ORBIT_PERFORMANCE_STYLE_PROMPT)$/i;
 
 const BUILDER_FUNCTIONS = [
-  "buildGhcScoreInstructions",
+  "buildTapScoreInstructions",
   "buildPerformanceReportInstructions",
   "buildPerformanceChatInstructions",
   "buildProofOfWorkSchemaInstructions",
@@ -150,15 +150,15 @@ export function extractAllEntries(src, relPath) {
     return entries;
   }
 
-  if (relPath === "lib/ghc-score.ts") {
-    const ghc = extractFunctionReturnTemplate(src, "buildGhcScoreInstructions");
-    if (ghc) add("buildGhcScoreInstructions", ghc);
+  if (relPath === "lib/tap-score.ts") {
+    const ghc = extractFunctionReturnTemplate(src, "buildTapScoreInstructions");
+    if (ghc) add("buildTapScoreInstructions", ghc);
     for (const extra of extractTapOpeningQuestionExtras(src)) {
       add(extra.symbol, extra.text);
     }
     const tapOverlay =
       "You are now responding in a selective thought interface, not a live voice call. The learner submits transcribed thought fragments. Reply in a Socratic style with one concise question, or at most one brief reflection followed by a question. Elicit evidence about what they learned, what they can transfer, and what gaps remain. Prioritize definitions, causal reasoning, examples, application, and repair. Do not score yet. Do not explain the answer for them unless they explicitly ask for help.";
-    add("TAP/GHL-chat-overlay", tapOverlay);
+    add("TAP-chat-overlay", tapOverlay);
     return entries;
   }
 

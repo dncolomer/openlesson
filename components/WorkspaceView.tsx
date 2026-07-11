@@ -558,7 +558,7 @@ export function WorkspaceView({ initialPlan, initialNodes }: WorkspaceViewProps)
                     </button>
                   ) : (
                     <Link
-                      href="/docs/agentic-v2"
+                      href="/docs/proof-of-work-api"
                       className="w-full rounded-md border border-white/10 bg-white/5 px-3 py-2 text-left transition-all hover:bg-white/10"
                     >
                       <span className="block text-xs font-medium text-white">{t("planView.productProofOfWorkApi")}</span>

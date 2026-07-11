@@ -322,7 +322,7 @@ export default function UsersPage() {
                   Status{getSortIcon("subscription_status")}
                 </th>
                 <th className="text-left p-4 text-neutral-400 text-sm font-medium">Organization</th>
-                <th className="text-right p-4 text-neutral-400 text-sm font-medium">Extra sessions</th>
+                <th className="text-right p-4 text-neutral-400 text-sm font-medium">Extra PoW</th>
               </tr>
             </thead>
             <tbody>

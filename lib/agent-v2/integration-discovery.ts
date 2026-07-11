@@ -23,7 +23,7 @@ export const OPENLESSON_SCOPE = {
     "Partner agents instrument their product, upload proof of work after meaningful actions, and call performance analysis for gap reports and next-step coaching. Both REST (Bearer API key) and MCP (JSON-RPC with key in URL) expose the same capabilities.",
   docs: {
     api_reference: "/skill.md",
-    human_guide: "/docs/agentic-v2",
+    human_guide: "/docs/proof-of-work-api",
   },
 } as const;
 
@@ -185,12 +185,11 @@ export function buildContinuousEvaluationMcpPolicy(
 export function recommendIntegrationActions(options: {
   proof_of_work_artifacts: number;
   blocks: number;
-  tap_sessions: number;
   has_conversion_goal: boolean;
   last_report_overall_score?: number | null;
 }): RecommendedIntegrationAction[] {
   const actions: RecommendedIntegrationAction[] = [];
-  const { proof_of_work_artifacts, blocks, tap_sessions, has_conversion_goal } = options;
+  const { proof_of_work_artifacts, blocks, has_conversion_goal } = options;
 
   if (!has_conversion_goal) {
     actions.push({
@@ -243,7 +242,7 @@ export function recommendIntegrationActions(options: {
     });
   }
 
-  if (tap_sessions === 0 && proof_of_work_artifacts >= 5 && blocks > 0) {
+  if (proof_of_work_artifacts >= 5 && blocks > 0) {
     actions.push({
       priority: 7,
       mcp_tool: "create_tap_link",

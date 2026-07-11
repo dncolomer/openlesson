@@ -199,7 +199,7 @@ export function WorkspaceIntegrationPanel({
 
       <p className="text-xs text-neutral-500">
         {t("workspaceIntegration.apiKeyLink")} ·{" "}
-        <Link href="/docs/agentic-v2" className="text-neutral-300 underline decoration-neutral-600 underline-offset-2 hover:text-white">
+        <Link href="/docs/proof-of-work-api" className="text-neutral-300 underline decoration-neutral-600 underline-offset-2 hover:text-white">
           {t("workspaceIntegration.docsLink")}
         </Link>
       </p>

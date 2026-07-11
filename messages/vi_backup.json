@@ -951,8 +951,6 @@
     "subtitle": "Để trợ lý cá nhân của bạn dạy bạn bằng công cụ của chúng tôi. Truy cập lập trình đến openLesson cho AI agents và ứng dụng tự chủ.",
     "experimental": "Thử nghiệm",
     "experimentalDesc": "chưa hỗ trợ đầy đủ tutoring harness. Đang làm việc trên đó.",
-    "elizaDescription": "Biến agent ElizaOS của bạn thành gia sư cá nhân powered by openLesson.",
-    "openclawDescription": "Biến agent OpenClaw của bạn thành gia sư cá nhân powered by openLesson.",
     "anyAgentDescription": "Biến bất kỳ AI agent nào thành gia sư cá nhân powered by openLesson.",
     "downloadPlugin": "Tải Plugin",
     "viewOnClawHub": "Xem trên ClawHub",

@@ -2,7 +2,7 @@
  * Local Context - Moving Window Buffer
  *
  * Maintains a sliding window of recent session data for local inference.
- * Replaces the Supabase queries that /api/session-plan/update normally does.
+ * Local buffer for session context used during in-browser inference.
  */
 
 interface TimestampedEntry<T> {

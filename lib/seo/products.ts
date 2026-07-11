@@ -50,7 +50,7 @@ export const PRODUCTS: ProductDefinition[] = [
         "Scores live cognition and written proof of work",
         "Fits onboarding, certification, and QA gates",
       ],
-      href: "/docs/agentic-v2",
+      href: "/docs/proof-of-work-api",
       ctaLabel: "API docs",
     },
     forAgent: {
@@ -60,7 +60,7 @@ export const PRODUCTS: ProductDefinition[] = [
         "Scores agent runs from real tool use",
         "Fits CI, eval harnesses, and deploy gates",
       ],
-      href: "/docs/agentic-v2",
+      href: "/docs/proof-of-work-api",
       ctaLabel: "API docs",
     },
   },

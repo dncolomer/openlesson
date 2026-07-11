@@ -9,26 +9,29 @@ export interface PlanDef {
   name: string;
   price: string;
   priceAmount: number; // cents
-  /** Combined TAP + ILE sessions per billing period. null = unlimited. */
-  sessionsPerPeriod: number | null;
+  /** Proof-of-Work submissions per billing period. null = unlimited. */
+  proofOfWorkPerPeriod: number | null;
   workspacesPerPeriod: number | null; // null = unlimited
   features: string[];
   stripePriceEnv: string | null; // env var name for Stripe Price ID
 }
 
 export interface VolumeTier {
-  /** Combined TAP / ILE sessions per month (stored as monthly_volume in Stripe). */
-  blocks: number;
-  workspaces: number;
+  /** Proof-of-Work submissions per month (stored as monthly_volume in Stripe). */
+  proofOfWork: number;
   priceCents: number;
 }
 
-/** Proof-of-Work API submissions allowed per month = session allowance × this ratio. */
-export const PROOF_OF_WORK_SUBMISSIONS_PER_SESSION = 4;
-export const FREE_PROOF_OF_WORK_SUBMISSIONS_PER_SESSION = 5;
+/** @deprecated Pre–PoW-only pricing stored session counts in Stripe metadata (Jul 2026). */
+export const LEGACY_SESSION_VOLUME_TIERS = new Set([25, 50, 100, 250, 500, 1000, 2500]);
 
-export const SESSION_ALLOWANCE_LABEL = "TAP / ILE sessions";
-export const PROOF_OF_WORK_ALLOWANCE_LABEL = "Proof-of-Work API submissions";
+/** @deprecated Use proofOfWork field on VolumeTier. */
+export const PROOF_OF_WORK_SUBMISSIONS_PER_SESSION = 4;
+
+export const PROOF_OF_WORK_ALLOWANCE_LABEL = "Proof-of-Work submissions";
+
+/** Extra Proof-of-Work submissions per one-time purchase pack. */
+export const EXTRA_PROOF_OF_WORK_PACK_SIZE = 4;
 
 export const PLANS: Record<PlanId, PlanDef> = {
   free: {
@@ -36,11 +39,10 @@ export const PLANS: Record<PlanId, PlanDef> = {
     name: "Free",
     price: "$0",
     priceAmount: 0,
-    sessionsPerPeriod: 5,
+    proofOfWorkPerPeriod: 25,
     workspacesPerPeriod: 1,
     features: [
-      "5 TAP / ILE sessions",
-      "25 Proof-of-Work API submissions/mo",
+      "25 Proof-of-Work submissions/mo",
       "One Workspace",
       "Basic readiness report",
     ],
@@ -51,12 +53,11 @@ export const PLANS: Record<PlanId, PlanDef> = {
     name: "Individual (legacy)",
     price: "$4.99",
     priceAmount: 499,
-    sessionsPerPeriod: 5,
+    proofOfWorkPerPeriod: 20,
     workspacesPerPeriod: 1,
     features: [
-      "5 TAP / ILE sessions per month",
-      "25 Proof-of-Work API submissions/mo",
-      "Buy extra sessions at $1.99",
+      "20 Proof-of-Work submissions/mo",
+      "Buy extra submissions at $3.99 per 4",
       "Think-aloud data uploads",
       "Muse EEG integration",
       "Session reports & history",
@@ -66,16 +67,15 @@ export const PLANS: Record<PlanId, PlanDef> = {
   regular_2026: {
     id: "regular_2026",
     name: "Individual",
-    price: "$19.99",
-    priceAmount: 1999,
-    sessionsPerPeriod: 25,
-    workspacesPerPeriod: 1,
+    price: "$49",
+    priceAmount: 4900,
+    proofOfWorkPerPeriod: 100,
+    workspacesPerPeriod: null,
     features: [
-      "25+ TAP / ILE sessions per month",
-      "100+ Proof-of-Work API submissions/mo",
-      "1+ Workspaces",
+      "100+ Proof-of-Work submissions/mo",
+      "Unlimited Workspaces",
       "Volume upgrades before checkout",
-      "Additional sessions at $3.99 each",
+      "Additional submissions at $3.99 per 4",
       "Session reports & history",
     ],
     stripePriceEnv: null,
@@ -85,11 +85,10 @@ export const PLANS: Record<PlanId, PlanDef> = {
     name: "Pro",
     price: "$14.99",
     priceAmount: 1499,
-    sessionsPerPeriod: null,
+    proofOfWorkPerPeriod: null,
     workspacesPerPeriod: null,
     features: [
-      "Unlimited TAP / ILE sessions",
-      "Unlimited Proof-of-Work API submissions",
+      "Unlimited Proof-of-Work submissions",
       "Unlimited Workspaces",
       "Think-aloud data uploads",
       "Custom system prompts",
@@ -103,17 +102,16 @@ export const PLANS: Record<PlanId, PlanDef> = {
   pro_teams: {
     id: "pro_teams",
     name: "Pro / Teams",
-    price: "$399",
-    priceAmount: 39900,
-    sessionsPerPeriod: 250,
-    workspacesPerPeriod: 5,
+    price: "$599",
+    priceAmount: 59900,
+    proofOfWorkPerPeriod: 1000,
+    workspacesPerPeriod: null,
     features: [
-      "250+ TAP / ILE sessions per month",
-      "1,000+ Proof-of-Work API submissions/mo",
-      "5+ Workspaces",
+      "1,000+ Proof-of-Work submissions/mo",
+      "Unlimited Workspaces",
       "Volume upgrades before checkout",
-      "Additional sessions at $1.99 each",
-      "Team readiness workspaces",
+      "Additional submissions at $1.99 per 4",
+      "Org guests and team API keys",
       "Readiness proof of work and history",
       "Priority support",
     ],
@@ -121,87 +119,88 @@ export const PLANS: Record<PlanId, PlanDef> = {
   },
 };
 
-/** 2026 volume tiers (blocks + workspaces + price). Canonical source for Stripe checkout. */
+/** 2026 volume tiers (PoW + price). Canonical source for Stripe checkout. */
 export const REGULAR_VOLUME_TIERS: readonly VolumeTier[] = [
-  { blocks: 25, workspaces: 1, priceCents: 1999 },
-  { blocks: 50, workspaces: 3, priceCents: 7900 },
-  { blocks: 100, workspaces: 5, priceCents: 12900 },
+  { proofOfWork: 100, priceCents: 4900 },
+  { proofOfWork: 250, priceCents: 9900 },
+  { proofOfWork: 500, priceCents: 14900 },
 ];
 
 export const TEAM_VOLUME_TIERS: readonly VolumeTier[] = [
-  { blocks: 250, workspaces: 5, priceCents: 39900 },
-  { blocks: 500, workspaces: 10, priceCents: 64900 },
-  { blocks: 1000, workspaces: 25, priceCents: 99900 },
-  { blocks: 2500, workspaces: 50, priceCents: 199900 },
+  { proofOfWork: 1000, priceCents: 59900 },
+  { proofOfWork: 2500, priceCents: 99900 },
+  { proofOfWork: 5000, priceCents: 149900 },
+  { proofOfWork: 10000, priceCents: 249900 },
 ];
 
-/** @deprecated Prefer REGULAR_VOLUME_TIERS */
+/** @deprecated Intermediate PoW tiers (Jul 2026) — never multiply on Stripe metadata read. */
+export const LEGACY_POW_VOLUME_TIERS = new Set([200, 400, 2000, 4000]);
+
 export const REGULAR_VOLUME_PRICES: Record<number, number> = Object.fromEntries(
-  REGULAR_VOLUME_TIERS.map((tier) => [tier.blocks, tier.priceCents])
+  REGULAR_VOLUME_TIERS.map((tier) => [tier.proofOfWork, tier.priceCents])
 );
 
-/** @deprecated Prefer TEAM_VOLUME_TIERS */
 export const TEAM_VOLUME_PRICES: Record<number, number> = Object.fromEntries(
-  TEAM_VOLUME_TIERS.map((tier) => [tier.blocks, tier.priceCents])
+  TEAM_VOLUME_TIERS.map((tier) => [tier.proofOfWork, tier.priceCents])
 );
 
-export const REGULAR_VOLUME_WORKSPACES: Record<number, number> = Object.fromEntries(
-  REGULAR_VOLUME_TIERS.map((tier) => [tier.blocks, tier.workspaces])
-);
+export const DEFAULT_REGULAR_VOLUME = REGULAR_VOLUME_TIERS[0].proofOfWork;
+export const DEFAULT_TEAM_VOLUME = TEAM_VOLUME_TIERS[0].proofOfWork;
 
-export const TEAM_VOLUME_WORKSPACES: Record<number, number> = Object.fromEntries(
-  TEAM_VOLUME_TIERS.map((tier) => [tier.blocks, tier.workspaces])
-);
-
-export const DEFAULT_REGULAR_VOLUME = REGULAR_VOLUME_TIERS[0].blocks;
-export const DEFAULT_TEAM_VOLUME = TEAM_VOLUME_TIERS[0].blocks;
-export const DEFAULT_REGULAR_WORKSPACES = REGULAR_VOLUME_TIERS[0].workspaces;
-export const DEFAULT_TEAM_WORKSPACES = TEAM_VOLUME_TIERS[0].workspaces;
-
-export const BASE_INCLUDED_LESSONS: Record<string, number> = {
-  regular_2026: 25,
-  pro_teams: 250,
+export const BASE_INCLUDED_PROOF_OF_WORK: Record<string, number> = {
+  regular_2026: 100,
+  pro_teams: 1000,
 };
 
-export const BASE_INCLUDED_WORKSPACES: Record<string, number> = {
-  regular_2026: 1,
-  pro_teams: 5,
-};
+/** @deprecated Use BASE_INCLUDED_PROOF_OF_WORK */
+export const BASE_INCLUDED_LESSONS = BASE_INCLUDED_PROOF_OF_WORK;
 
-/** Additional TAP / ILE session purchase price (cents). */
-export const EXTRA_BLOCK_PRICE_CENTS = 399;
-export const PRO_TEAMS_EXTRA_BLOCK_PRICE_CENTS = 199;
+/** Additional Proof-of-Work pack price (cents) — pack size is EXTRA_PROOF_OF_WORK_PACK_SIZE. */
+export const EXTRA_PROOF_OF_WORK_PACK_PRICE_CENTS = 399;
+export const PRO_TEAMS_EXTRA_PROOF_OF_WORK_PACK_PRICE_CENTS = 199;
 
-/** @deprecated Use EXTRA_BLOCK_PRICE_CENTS */
-export const EXTRA_LESSON_PRICE = EXTRA_BLOCK_PRICE_CENTS;
-/** @deprecated Use PRO_TEAMS_EXTRA_BLOCK_PRICE_CENTS */
-export const PRO_TEAMS_EXTRA_LESSON_PRICE = PRO_TEAMS_EXTRA_BLOCK_PRICE_CENTS;
+/** @deprecated Use EXTRA_PROOF_OF_WORK_PACK_PRICE_CENTS */
+export const EXTRA_BLOCK_PRICE_CENTS = EXTRA_PROOF_OF_WORK_PACK_PRICE_CENTS;
+/** @deprecated Use PRO_TEAMS_EXTRA_PROOF_OF_WORK_PACK_PRICE_CENTS */
+export const PRO_TEAMS_EXTRA_BLOCK_PRICE_CENTS = PRO_TEAMS_EXTRA_PROOF_OF_WORK_PACK_PRICE_CENTS;
+/** @deprecated Use EXTRA_PROOF_OF_WORK_PACK_PRICE_CENTS */
+export const EXTRA_LESSON_PRICE = EXTRA_PROOF_OF_WORK_PACK_PRICE_CENTS;
+/** @deprecated Use PRO_TEAMS_EXTRA_PROOF_OF_WORK_PACK_PRICE_CENTS */
+export const PRO_TEAMS_EXTRA_LESSON_PRICE = PRO_TEAMS_EXTRA_PROOF_OF_WORK_PACK_PRICE_CENTS;
 
-export function proofOfWorkLimitForSessionAllowance(
-  plan: PlanId | string,
-  sessionLimit: number | null
-): number | null {
-  if (sessionLimit === null) return null;
-  const ratio = plan === "free" ? FREE_PROOF_OF_WORK_SUBMISSIONS_PER_SESSION : PROOF_OF_WORK_SUBMISSIONS_PER_SESSION;
-  return sessionLimit * ratio;
+/**
+ * Convert Stripe `monthly_volume` to Proof-of-Work submissions.
+ * Legacy subscriptions stored session counts; new ones set metadata.volume_unit = "proof_of_work".
+ */
+export function normalizeStripeVolumeToProofOfWork(
+  volume: number,
+  volumeUnit?: string | null
+): number {
+  if (!Number.isFinite(volume) || volume <= 0) return volume;
+  if (volumeUnit === "proof_of_work") return volume;
+  if (LEGACY_POW_VOLUME_TIERS.has(volume)) return volume;
+  if (LEGACY_SESSION_VOLUME_TIERS.has(volume)) {
+    return volume * PROOF_OF_WORK_SUBMISSIONS_PER_SESSION;
+  }
+  return volume;
 }
 
-export function formatSessionAllowance(count: number): string {
-  return `${count.toLocaleString()} TAP / ILE session${count === 1 ? "" : "s"}`;
+/** @deprecated Use normalizeStripeVolumeToProofOfWork for Stripe metadata. */
+export function normalizeVolumeToProofOfWork(volume: number): number {
+  return normalizeStripeVolumeToProofOfWork(volume);
 }
 
 export function formatProofOfWorkAllowance(count: number): string {
-  return `${count.toLocaleString()} Proof-of-Work API submission${count === 1 ? "" : "s"}/mo`;
+  return `${count.toLocaleString()} Proof-of-Work submission${count === 1 ? "" : "s"}/mo`;
 }
 
 export function formatVolumeTierLabel(tier: VolumeTier): string {
-  const proofOfWorkSubmissions = tier.blocks * PROOF_OF_WORK_SUBMISSIONS_PER_SESSION;
-  return `${formatSessionAllowance(tier.blocks)}/mo · ${formatProofOfWorkAllowance(proofOfWorkSubmissions)} · ${tier.workspaces} workspace${tier.workspaces === 1 ? "" : "s"}`;
+  return formatProofOfWorkAllowance(tier.proofOfWork);
 }
 
-function findVolumeTier(priceType: string, blocks: number): VolumeTier | null {
+function findVolumeTier(priceType: string, proofOfWork: number): VolumeTier | null {
   const tiers = priceType === "pro_teams" ? TEAM_VOLUME_TIERS : priceType === "regular_2026" ? REGULAR_VOLUME_TIERS : [];
-  return tiers.find((tier) => tier.blocks === blocks) ?? null;
+  return tiers.find((tier) => tier.proofOfWork === proofOfWork) ?? null;
 }
 
 export function resolveCheckoutVolume(priceType: string, rawVolume: unknown): number {
@@ -215,30 +214,29 @@ export function resolveCheckoutVolume(priceType: string, rawVolume: unknown): nu
   return 1;
 }
 
-export function resolveCheckoutWorkspaceVolume(priceType: string, blocksVolume: number): number {
-  const tier = findVolumeTier(priceType, blocksVolume);
-  if (priceType === "regular_2026") {
-    return tier?.workspaces ?? DEFAULT_REGULAR_WORKSPACES;
-  }
-  if (priceType === "pro_teams") {
-    return tier?.workspaces ?? DEFAULT_TEAM_WORKSPACES;
-  }
-  return 1;
+export function getVolumeTier(priceType: string, proofOfWorkVolume: number): VolumeTier | null {
+  return findVolumeTier(priceType, proofOfWorkVolume);
 }
 
-export function getVolumeTier(priceType: string, blocksVolume: number): VolumeTier | null {
-  return findVolumeTier(priceType, blocksVolume);
-}
-
-export function getExtraBlockPriceCents(plan: PlanId | string | null | undefined): number {
+export function getExtraProofOfWorkPackPriceCents(plan: PlanId | string | null | undefined): number {
   return plan === "pro_teams" || plan === "pro"
-    ? PRO_TEAMS_EXTRA_BLOCK_PRICE_CENTS
-    : EXTRA_BLOCK_PRICE_CENTS;
+    ? PRO_TEAMS_EXTRA_PROOF_OF_WORK_PACK_PRICE_CENTS
+    : EXTRA_PROOF_OF_WORK_PACK_PRICE_CENTS;
 }
 
-export function formatExtraBlockPrice(plan: PlanId | string | null | undefined): string {
-  const cents = getExtraBlockPriceCents(plan);
+/** @deprecated Use getExtraProofOfWorkPackPriceCents */
+export function getExtraBlockPriceCents(plan: PlanId | string | null | undefined): number {
+  return getExtraProofOfWorkPackPriceCents(plan);
+}
+
+export function formatExtraProofOfWorkPackPrice(plan: PlanId | string | null | undefined): string {
+  const cents = getExtraProofOfWorkPackPriceCents(plan);
   return `$${(cents / 100).toFixed(2)}`;
+}
+
+/** @deprecated Use formatExtraProofOfWorkPackPrice */
+export function formatExtraBlockPrice(plan: PlanId | string | null | undefined): string {
+  return formatExtraProofOfWorkPackPrice(plan);
 }
 
 export function formatPlanMonthlyPrice(
@@ -265,6 +263,7 @@ export function formatPlanMonthlyPrice(
 export interface UserProfile {
   plan: PlanId;
   is_admin: boolean;
+  /** Extra Proof-of-Work submissions above the plan base (profiles.extra_lessons column). */
   extra_lessons: number;
   extra_workspaces?: number;
   subscription_status: string;
@@ -307,8 +306,6 @@ export interface OrgUsageSummary {
   guestCount: number;
   used: number;
   limit: number | null;
-  proofOfWorkUsed?: number;
-  proofOfWorkLimit?: number | null;
 }
 
 export interface UsageCheckResult {
@@ -318,7 +315,7 @@ export interface UsageCheckResult {
   used: number;
   limit: number | null; // null = unlimited
   isAdmin: boolean;
-  /** User's own TAP / ILE sessions in the current period (org members on Teams). */
+  /** User's own Proof-of-Work submissions in the current period (org members on Teams). */
   personalUsed?: number;
   organization?: OrgUsageSummary | null;
 }
@@ -342,160 +339,126 @@ export interface WorkspaceCheckResult {
 }
 
 export function getWorkspaceLimit(profile: UserProfile): number | null {
-  const { plan, is_admin, extra_workspaces = 0, subscription_status } = profile;
+  const { plan, is_admin, subscription_status } = profile;
 
   if (is_admin) return null;
 
   const planDef = PLANS[plan] || PLANS.free;
 
-  if (plan === "pro" && subscription_status === "active") {
+  if (subscription_status === "active" && plan !== "free") {
     return null;
   }
 
+  if (plan === "pro") return null;
+
   const base = planDef.workspacesPerPeriod;
   if (base === null) return null;
-  return base + extra_workspaces;
+  return base;
 }
 
 /**
- * Check whether a user can start a new session.
- * `sessionCount` = number of sessions in the current billing period.
+ * Resolve the effective Proof-of-Work submission allowance for a profile.
  */
-export function canStartSession(
-  profile: UserProfile,
-  sessionCount: number
-): UsageCheckResult {
+export function getProofOfWorkAllowance(profile: UserProfile): Pick<UsageCheckResult, "plan" | "limit" | "isAdmin"> {
   const { plan, is_admin, extra_lessons, subscription_status, token_tier, token_validity_expires_at } = profile;
 
-  // Admins always pass
   if (is_admin) {
-    return { allowed: true, plan, used: sessionCount, limit: null, isAdmin: true };
+    return { plan, limit: null, isAdmin: true };
   }
 
   const planDef = PLANS[plan] || PLANS.free;
 
-  // Check token tier validity (null expiry = permanent for stakers, otherwise 3-month window)
   const isTokenValid = token_tier && (
     token_validity_expires_at === null || new Date(token_validity_expires_at) > new Date()
   );
-  
-  // If token tier is valid and better than current plan, use token tier
+
   if (isTokenValid) {
     if (token_tier === "pro") {
-      return { allowed: true, plan: "pro", used: sessionCount, limit: null, isAdmin: false };
+      return { plan: "pro", limit: null, isAdmin: false };
     }
     if (token_tier === "regular") {
-      const tokenLimit = 5;
-      if (sessionCount >= tokenLimit) {
-        return {
-          allowed: false,
-          reason: `Token tier expired or insufficient. Re-verify your wallet at /pricing to continue.`,
-          plan: "regular",
-          used: sessionCount,
-          limit: tokenLimit,
-          isAdmin: false,
-        };
-      }
-      return { allowed: true, plan: "regular", used: sessionCount, limit: tokenLimit, isAdmin: false };
+      return { plan: "regular", limit: 25, isAdmin: false };
     }
   }
 
-  // Legacy Pro = unlimited. Keep existing subscribers untouched.
   if (plan === "pro" && subscription_status === "active") {
-    return { allowed: true, plan, used: sessionCount, limit: null, isAdmin: false };
+    return { plan, limit: null, isAdmin: false };
   }
 
-  // Legacy Regular = 5 per period + extras. Keep existing subscribers untouched.
-  if (plan === "regular" && subscription_status === "active") {
-    const effectiveLimit = (planDef.sessionsPerPeriod ?? 0) + extra_lessons;
-    if (sessionCount >= effectiveLimit) {
-      return {
-        allowed: false,
-        reason: `You've used all ${effectiveLimit} TAP / ILE sessions this month. Buy additional sessions to continue.`,
-        plan,
-        used: sessionCount,
-        limit: effectiveLimit,
-        isAdmin: false,
-      };
-    }
-    return { allowed: true, plan, used: sessionCount, limit: effectiveLimit, isAdmin: false };
+  if ((plan === "regular" || plan === "regular_2026" || plan === "pro_teams") && subscription_status === "active") {
+    const effectiveLimit = (planDef.proofOfWorkPerPeriod ?? 0) + extra_lessons;
+    return { plan, limit: effectiveLimit, isAdmin: false };
   }
 
-  // Current paid plans use finite monthly block allowances.
-  if ((plan === "regular_2026" || plan === "pro_teams") && subscription_status === "active") {
-    const effectiveLimit = (planDef.sessionsPerPeriod ?? 0) + extra_lessons;
-    if (sessionCount >= effectiveLimit) {
-      return {
-        allowed: false,
-        reason: `You've used all ${effectiveLimit} TAP / ILE sessions this month. Buy additional sessions to continue.`,
-        plan,
-        used: sessionCount,
-        limit: effectiveLimit,
-        isAdmin: false,
-      };
-    }
-    return { allowed: true, plan, used: sessionCount, limit: effectiveLimit, isAdmin: false };
-  }
-
-  // Free plan = starter blocks + any purchased extras.
-  const freeBaseLimit = planDef.sessionsPerPeriod ?? 1;
-  const freeEffectiveLimit = freeBaseLimit + extra_lessons;
-  if (sessionCount >= freeEffectiveLimit) {
-    return {
-      allowed: false,
-      reason: "You've used your free TAP / ILE sessions. Buy additional sessions or upgrade to continue.",
-      plan: "free",
-      used: sessionCount,
-      limit: freeEffectiveLimit,
-      isAdmin: false,
-    };
-  }
-
-  return { allowed: true, plan: "free", used: sessionCount, limit: freeEffectiveLimit, isAdmin: false };
+  const freeBaseLimit = planDef.proofOfWorkPerPeriod ?? 1;
+  return { plan: "free", limit: freeBaseLimit + extra_lessons, isAdmin: false };
 }
 
-/**
- * Resolve the effective TAP / ILE session allowance for a profile (same math as canStartSession).
- */
+/** @deprecated Use getProofOfWorkAllowance */
 export function getSessionAllowance(
   profile: UserProfile,
-  sessionCount: number
+  _sessionCount: number
 ): Pick<UsageCheckResult, "plan" | "limit" | "isAdmin"> {
-  const check = canStartSession(profile, sessionCount);
-  return { plan: check.plan, limit: check.limit, isAdmin: check.isAdmin };
+  return getProofOfWorkAllowance(profile);
 }
 
 /**
- * Check whether a user can submit another Proof-of-Work API artifact this billing period.
+ * Check whether a user can submit another Proof-of-Work artifact this billing period.
+ * TAP, ILE, and API uploads all meter against this allowance.
  */
 export function canSubmitProofOfWork(
   profile: UserProfile,
-  proofOfWorkCount: number,
-  sessionAllowance: number | null
+  proofOfWorkCount: number
 ): ProofOfWorkCheckResult {
-  const { plan, is_admin } = profile;
+  const { plan, limit, isAdmin } = getProofOfWorkAllowance(profile);
 
-  if (is_admin) {
+  if (isAdmin) {
     return { allowed: true, plan, used: proofOfWorkCount, limit: null, isAdmin: true };
   }
 
-  const proofOfWorkLimit = proofOfWorkLimitForSessionAllowance(plan, sessionAllowance);
-  if (proofOfWorkLimit === null) {
+  if (limit === null) {
     return { allowed: true, plan, used: proofOfWorkCount, limit: null, isAdmin: false };
   }
 
-  if (proofOfWorkCount >= proofOfWorkLimit) {
+  if (proofOfWorkCount >= limit) {
     return {
       allowed: false,
-      reason: `You've used all ${proofOfWorkLimit} Proof-of-Work API submissions this month. Upgrade your plan or wait for the next billing period.`,
+      reason: `You've used all ${limit} Proof-of-Work submissions this month. Buy additional submissions or upgrade to continue.`,
       plan,
       used: proofOfWorkCount,
-      limit: proofOfWorkLimit,
+      limit,
       isAdmin: false,
     };
   }
 
-  return { allowed: true, plan, used: proofOfWorkCount, limit: proofOfWorkLimit, isAdmin: false };
+  return { allowed: true, plan, used: proofOfWorkCount, limit, isAdmin: false };
+}
+
+/**
+ * Check whether a user can use the product (start TAP/ILE, upload proof of work, etc.).
+ * @deprecated Prefer canSubmitProofOfWork — kept for API compatibility.
+ */
+export function canStartSession(
+  profile: UserProfile,
+  proofOfWorkCount: number
+): UsageCheckResult {
+  const result = canSubmitProofOfWork(profile, proofOfWorkCount);
+  return {
+    allowed: result.allowed,
+    reason: result.reason,
+    plan: result.plan,
+    used: result.used,
+    limit: result.limit,
+    isAdmin: result.isAdmin,
+  };
+}
+
+/** @deprecated PoW limits are no longer derived from session allowance. */
+export function proofOfWorkLimitForSessionAllowance(
+  _plan: PlanId | string,
+  sessionAllowance: number | null
+): number | null {
+  return sessionAllowance;
 }
 
 /**
@@ -523,7 +486,7 @@ export function canCreateWorkspace(
       reason:
         plan === "free"
           ? "You've reached your free workspace limit. Upgrade or archive a workspace to create another."
-          : `You've reached your plan limit of ${limit} Workspaces. Upgrade your volume tier at /pricing or archive a workspace.`,
+          : `You've reached your plan limit of ${limit} Workspaces. Upgrade at /pricing or archive a workspace.`,
       plan,
       used: workspaceCount,
       limit,
@@ -534,17 +497,7 @@ export function canCreateWorkspace(
   return { allowed: true, plan, used: workspaceCount, limit, isAdmin: false };
 }
 
-/** Plans that may create legacy dashboard API keys (v1 /api/agent/keys). */
+/** Plans that may create Proof-of-Work API keys (v2 /api/v2/agent/keys). */
 export function hasAgentApiKeyPlan(plan: PlanId | string | null | undefined): boolean {
-  return plan === "pro" || plan === "pro_teams";
-}
-
-export function canCreateLegacyAgentApiKeys(
-  plan: PlanId | string | null | undefined,
-  subscriptionStatus: string | null | undefined,
-  isAdmin?: boolean
-): boolean {
-  if (isAdmin) return true;
-  if (!hasAgentApiKeyPlan(plan)) return false;
-  return subscriptionStatus === "active";
+  return plan === "pro_teams";
 }

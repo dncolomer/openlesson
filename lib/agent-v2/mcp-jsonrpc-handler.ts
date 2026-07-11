@@ -41,7 +41,7 @@ export function jsonRpcError(id: JsonRpcId, code: number, message: string) {
 export async function handleJsonRpc(
   message: JsonRpcMessage,
   auth: AuthContext,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   supabase: any,
   origin: string
 ) {
@@ -160,7 +160,7 @@ export async function handleJsonRpc(
 export async function processMcpJsonRpcRequest(
   req: Request,
   auth: AuthContext,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   supabase: any
 ): Promise<NextResponse> {
   const origin = new URL(req.url).origin;

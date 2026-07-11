@@ -11,7 +11,9 @@ This skill teaches the PumaDoc Customer Agent how to run **shadow-mode validatio
 
 Shadow mode is for **internal validation only** — compliance audit trails, hiring QA, mentor dashboards, program ops, fraud detection, and cohort analytics. The learner experiences a normal PumaDoc journey. OpenLesson runs in the background.
 
-**Canonical API reference:** `/skill.md` (`https://openlesson.academy/skill.md`) and `/docs/agentic-v2`. When this document and the live API differ, follow `skill.md`.
+**Canonical API reference:** `/skill.md` (`https://openlesson.academy/skill.md`) and `/docs/proof-of-work-api`. When this document and the live API differ, follow `skill.md`.
+
+**Transport:** REST (`/api/v2/agent/*`) and MCP (`POST /api/mcp`, Bearer auth) have **full parity** — prefer MCP tools (`upload_proof_of_work`, `analyze_performance`, etc.) for agent integrations.
 
 **Share URL for this integration:** `/pumadoc-shadow-mode-skill.md`
 
@@ -109,9 +111,14 @@ There is no required mapping between PumaDoc steps and OpenLesson calls. Upload 
 
 ### Tool usage is the core signal
 
-`type: "tool"` accepts `application/json`, `text/plain`, or `text/markdown` (max **10 MB**). Include `events`, `goals_achieved`, and optional `learner_reflection` in the payload — reflection is analyzed internally; **do not** prompt the learner differently for shadow mode.
+| `type` | MIME types | Role |
+|--------|------------|------|
+| `tool` | `application/json`, `text/plain`, `text/markdown` | **Required minimum** — `events`, `goals_achieved`, optional `learner_reflection` |
+| `screen` | `image/png`, `image/jpeg`, `image/webp` | Optional screenshot (alias: `screenshot`) |
+| `video` | `video/mp4`, `video/webm`, `video/quicktime` | Optional screen recording with voice |
+| `eeg` | `application/json`, `text/plain` | Optional Muse EEG (`device_name`, `sample_count`, `band_powers`) |
 
-Optional enrichments (`screen`, `video`, `eeg`) attach to the same `block_id` when available. Never delay internal scoring waiting for optional media.
+Max **10 MB** per upload. Reflection in tool JSON is analyzed internally; **do not** prompt the learner differently for shadow mode. Optional enrichments attach to the same `block_id` when available. Never delay internal scoring waiting for optional media.
 
 ---
 
@@ -144,6 +151,7 @@ Base path: `/api/v2/agent`
 | Create guest (optional) | `POST` | `/org/guests` | `org:write` |
 | Create workspace | `POST` | `/workspaces` | `workspaces:write` |
 | List blocks | `GET` | `/workspaces/{workspace_id}/blocks` | `workspaces:read` |
+| Proof-of-work schema | `POST` | `/workspaces/{workspace_id}/proof-of-work-schema` | `workspaces:read` |
 | Upload proof of work | `POST` | `/workspaces/{workspace_id}/proof-of-work` | `workspaces:write` |
 | Performance report | `POST` | `/workspaces/{workspace_id}/performance` | `workspaces:read` |
 | Performance Q&A (internal) | `POST` | `/workspaces/{workspace_id}/performance` | `workspaces:read` |
@@ -284,13 +292,23 @@ Workspace-global:
 {
   "mode": "report",
   "report": {
+    "overall_score": 72,
+    "conversion_score": 58,
+    "conversion_goal": "Founder ready for live customer validation interviews",
+    "marker_scores": [
+      { "id": "icp_clarity", "label": "ICP Clarity", "score": 78, "rationale": "..." }
+    ],
     "summary": "...",
     "strengths": ["..."],
     "growth_areas": ["..."],
-    "gap_analysis": { "gaps": [{ "title": "...", "severity": "high", "suggested_repair": "..." }] },
+    "gap_analysis": {
+      "gaps": [{ "title": "...", "severity": "high", "suggested_repair": "..." }],
+      "next_steps": { "directions": ["..."], "events": ["run_simulation"] }
+    },
     "confidence": "emerging | developing | clear | well-connected"
   },
-  "file_ids": ["file_...", "file_..."]
+  "file_ids": ["file_...", "file_..."],
+  "interruption": null
 }
 ```
 

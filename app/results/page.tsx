@@ -7,6 +7,7 @@ import {
   getSession,
   saveSession,
   createSession,
+  getIlePostSessionPath,
   type Session,
 } from "@/lib/storage";
 import { Navbar } from "@/components/Navbar";
@@ -50,8 +51,12 @@ function ResultsContent() {
 
     const loadSession = async () => {
       const s = await getSession(sessionId);
-      setSession(s);
+      if (s?.metadata?.workspace_id) {
+        router.replace(getIlePostSessionPath(s));
+        return;
+      }
 
+      setSession(s);
       setLoading(false);
 
       if (s && s.status === "completed") {
@@ -60,7 +65,7 @@ function ResultsContent() {
     };
 
     loadSession();
-  }, [sessionId]);
+  }, [sessionId, router]);
 
   const generateAndSaveReport = async (s: Session) => {
     setReportLoading(true);

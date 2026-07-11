@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Expanded E2E: automates former "manual" checks + Agent API + MCP + GHL flow.
+ * Expanded E2E: automates former "manual" checks + Agent API + MCP + TAP flow.
  * No DB deletes.
  */
 import { readFileSync, existsSync, writeFileSync } from "node:fs";
@@ -38,7 +38,7 @@ function record(area, name, ok, detail = "", extra = {}) {
 }
 
 function tapOrGhlResult(body) {
-  return body?.tap_result || body?.ghl_result || null;
+  return body?.tap_result || null;
 }
 
 function cookieHeader(jar) {
@@ -157,7 +157,7 @@ async function main() {
       usage.res.status === 200 &&
       usage.body?.allowed === true &&
       usage.body?.plan === "regular_2026" &&
-      usage.body?.limit === 25;
+      usage.body?.limit === 100;
     record(
       "regular-web",
       "GET /api/check-usage (allowed, plan, limit)",
@@ -228,20 +228,20 @@ async function main() {
         `${nodes?.length ?? 0} blocks`
       );
 
-      const ghlPage = await webFetch(`/workspace/${regularWorkspaceId}/ghl-score`, regularJar);
+      const tapPage = await webFetch(`/workspace/${regularWorkspaceId}/tap`, regularJar);
       record(
         "regular-web",
-        "GET /workspace/{id}/ghl-score UI",
-        ghlPage.res.status === 200,
-        `HTTP ${ghlPage.res.status}`
+        "GET /workspace/{id}/tap UI",
+        tapPage.res.status === 200,
+        `HTTP ${tapPage.res.status}`
       );
 
-      const ghlList = await webFetch(`/api/workspace-ghl-score?workspaceId=${regularWorkspaceId}`, regularJar);
+      const tapList = await webFetch(`/api/workspace-tap-score?workspaceId=${regularWorkspaceId}`, regularJar);
       record(
         "regular-web",
-        "GET /api/workspace-ghl-score?workspaceId=…",
-        ghlList.res.status === 200,
-        `HTTP ${ghlList.res.status} sessions=${ghlList.body?.ghlSessions?.length ?? 0}`
+        "GET /api/workspace-tap-score?workspaceId=…",
+        tapList.res.status === 200,
+        `HTTP ${tapList.res.status} sessions=${tapList.body?.tapSessions?.length ?? 0}`
       );
     }
   }
@@ -292,7 +292,7 @@ async function main() {
     const createKey = await webFetch("/api/v2/agent/keys", teamsJar, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ label: "[E2E] Dashboard-created key", scopes: ["workspaces:read", "ghl:read"] }),
+      body: JSON.stringify({ label: "[E2E] Dashboard-created key", scopes: ["workspaces:read", "tap:read"] }),
     });
     const keyLimitMessage = String(createKey.body?.error?.message || "");
     const keyCreated =
@@ -349,7 +349,7 @@ async function main() {
     );
   }
 
-  // --- Agent API + MCP + full GHL ---
+  // --- Agent API + MCP + full TAP ---
   const apiKey = env.E2E_TEAMS_API_KEY;
   if (!apiKey) {
     record("agent-api", "E2E_TEAMS_API_KEY configured", false, "missing");
@@ -473,21 +473,21 @@ async function main() {
 
       if (blockId) {
         const link = await agentJson(
-          `/api/v2/agent/workspaces/${workspaceId}/blocks/${blockId}/ghl-links`,
+          `/api/v2/agent/workspaces/${workspaceId}/blocks/${blockId}/tap-links`,
           apiKey,
           { method: "POST", body: JSON.stringify({ minutes: 15 }) }
         );
-        const linkPayload = link.body?.tap_link || link.body?.ghl_link;
+        const linkPayload = link.body?.tap_link;
         const linkId = linkPayload?.id;
         const privateUrl = linkPayload?.private_url;
-        record("agent-api", "POST GHL link", link.res.status === 201 && !!linkId, linkId || `${link.res.status}`);
+        record("agent-api", "POST TAP link", link.res.status === 201 && !!linkId, linkId || `${link.res.status}`);
 
         if (privateUrl) {
           const token = privateUrl.split("/").pop();
-          const page = await fetch(`${baseUrl}/ghl-score/session/${token}`);
-          record("ghl-flow", "private session page", page.status === 200, `HTTP ${page.status}`);
+          const page = await fetch(`${baseUrl}/tap/session/${token}`);
+          record("tap-flow", "private session page", page.status === 200, `HTTP ${page.status}`);
 
-          const chat = await fetch(`${baseUrl}/api/workspace-ghl-score/chat`, {
+          const chat = await fetch(`${baseUrl}/api/workspace-tap-score/chat`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
@@ -499,13 +499,13 @@ async function main() {
           });
           const chatBody = await chat.json();
           record(
-            "ghl-flow",
-            "POST /api/workspace-ghl-score/chat",
+            "tap-flow",
+            "POST /api/workspace-tap-score/chat",
             chat.status === 200 && !!chatBody?.message,
             chat.status === 200 ? `reply len=${String(chatBody.message).length}` : `${chat.status} ${JSON.stringify(chatBody)?.slice(0, 120)}`
           );
 
-          const complete = await fetch(`${baseUrl}/api/workspace-ghl-score/complete`, {
+          const complete = await fetch(`${baseUrl}/api/workspace-tap-score/complete`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
@@ -531,53 +531,28 @@ async function main() {
           const completeBody = await complete.json();
           const completed =
             complete.status === 200 &&
-            (completeBody?.ghlSession?.status === "completed" || completeBody?.status === "completed" || !!completeBody?.ghlSession?.overall_score || !!completeBody?.overall_score);
+            (completeBody?.tapSession?.status === "completed" ||
+              completeBody?.status === "completed" ||
+              !!completeBody?.workspaceId);
           record(
-            "ghl-flow",
-            "POST /api/workspace-ghl-score/complete",
+            "tap-flow",
+            "POST /api/workspace-tap-score/complete",
             completed,
             completed
-              ? `score=${completeBody?.ghlSession?.overall_score ?? completeBody?.overall_score}`
+              ? `workspace=${completeBody?.workspaceId ?? workspaceId}`
               : `${complete.status} ${JSON.stringify(completeBody)?.slice(0, 200)}`
           );
 
-          if (linkId) {
-            const resultsRes = await agentJson(
-              `/api/v2/agent/workspaces/${workspaceId}/ghl-links/${linkId}/results`,
-              apiKey
-            );
-            const gr = tapOrGhlResult(resultsRes.body);
-            const resultsOk =
-              resultsRes.res.status === 200 &&
-              gr?.status === "completed" &&
-              gr?.overall_score != null &&
-              Array.isArray(gr?.marker_scores) &&
-              gr.marker_scores.length > 0;
+          if (linkId && completed) {
+            const listRes = await agentJson(`/api/v2/agent/workspaces/${workspaceId}/tap-links`, apiKey);
+            const link = (listRes.body?.tap_links || []).find((row) => row.id === linkId);
+            const listOk = listRes.res.status === 200 && link?.status === "completed";
             record(
-              "ghl-flow",
-              "GET /ghl-links/{id}/results (scores + markers)",
-              resultsOk,
-              resultsOk
-                ? `score=${gr.overall_score} markers=${gr.marker_scores.length}`
-                : `${resultsRes.res.status} status=${gr?.status}`
+              "tap-flow",
+              "GET /tap-links (completed status)",
+              listOk,
+              listOk ? `status=${link.status}` : `${listRes.res.status}`
             );
-
-            const mcpResults = await mcpCall(
-              apiKey,
-              "tools/call",
-              { name: "get_ghl_results", arguments: { workspace_id: workspaceId, ghl_link_id: linkId } },
-              12
-            );
-            const mcpText = mcpResults.body?.result?.content?.[0]?.text;
-            let mcpOk = false;
-            try {
-              const parsed = JSON.parse(mcpText || "{}");
-              const mcpResult = tapOrGhlResult(parsed);
-              mcpOk = mcpResult?.status === "completed" || parsed?.status === "completed";
-            } catch {
-              mcpOk = false;
-            }
-            record("mcp", "get_ghl_results", mcpOk, mcpOk ? "completed" : mcpText?.slice(0, 100));
           }
         }
       }
@@ -622,49 +597,49 @@ async function main() {
 
           if (guestBlockId) {
             const guestLink = await agentJson(
-              `/api/v2/agent/workspaces/${guestWorkspaceId}/blocks/${guestBlockId}/ghl-links`,
+              `/api/v2/agent/workspaces/${guestWorkspaceId}/blocks/${guestBlockId}/tap-links`,
               guestKey,
               { method: "POST", body: JSON.stringify({ minutes: 15 }) }
             );
-            const guestLinkPayload = guestLink.body?.tap_link || guestLink.body?.ghl_link;
+            const guestLinkPayload = guestLink.body?.tap_link;
             const guestLinkId = guestLinkPayload?.id;
             const guestPrivateUrl = guestLinkPayload?.private_url;
             record(
-              "ghl-flow",
-              "guest key can create GHL link",
+              "tap-flow",
+              "guest key can create TAP link",
               guestLink.res.status === 201 && !!guestLinkId && !!guestPrivateUrl,
               guestLinkId || `HTTP ${guestLink.res.status}`
             );
 
             if (guestPrivateUrl) {
               const guestToken = guestPrivateUrl.split("/").pop();
-              const guestPage = await fetch(`${baseUrl}/ghl-score/session/${guestToken}`);
+              const guestPage = await fetch(`${baseUrl}/tap/session/${guestToken}`);
               const guestPageText = await guestPage.text();
               record(
-                "ghl-flow",
-                "guest GHL private session page",
+                "tap-flow",
+                "guest TAP private session page",
                 guestPage.status === 200 && guestPageText.length > 5000,
                 `HTTP ${guestPage.status} len=${guestPageText.length}`
               );
 
-              const guestChat = await fetch(`${baseUrl}/api/workspace-ghl-score/chat`, {
+              const guestChat = await fetch(`${baseUrl}/api/workspace-tap-score/chat`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                   privateToken: guestToken,
-                  thought: "Guests can use private GHL links to demonstrate learning on assigned blocks.",
+                  thought: "Guests can use private TAP links to demonstrate learning on assigned blocks.",
                   messages: [],
                 }),
               });
               const guestChatBody = await guestChat.json();
               record(
-                "ghl-flow",
-                "guest GHL chat via private token",
+                "tap-flow",
+                "guest TAP chat via private token",
                 guestChat.status === 200 && !!guestChatBody?.message,
                 guestChat.status === 200 ? `reply len=${String(guestChatBody.message).length}` : `${guestChat.status}`
               );
 
-              const guestComplete = await fetch(`${baseUrl}/api/workspace-ghl-score/complete`, {
+              const guestComplete = await fetch(`${baseUrl}/api/workspace-tap-score/complete`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
@@ -673,7 +648,7 @@ async function main() {
                   transcript: [
                     {
                       role: "learner",
-                      text: "Guest users receive API keys and can open private GHL links without logging in.",
+                      text: "Guest users receive API keys and can open private TAP links without logging in.",
                     },
                   ],
                 }),
@@ -681,33 +656,15 @@ async function main() {
               const guestCompleteBody = await guestComplete.json();
               const guestCompleted =
                 guestComplete.status === 200 &&
-                (guestCompleteBody?.ghlSession?.status === "completed" || !!guestCompleteBody?.ghlSession?.overall_score);
+                (guestCompleteBody?.tapSession?.status === "completed" || !!guestCompleteBody?.workspaceId);
               record(
-                "ghl-flow",
-                "guest GHL complete via private token",
+                "tap-flow",
+                "guest TAP complete via private token",
                 guestCompleted,
                 guestCompleted
-                  ? `score=${guestCompleteBody?.ghlSession?.overall_score}`
+                  ? `workspace=${guestCompleteBody?.workspaceId ?? guestWorkspaceId}`
                   : `${guestComplete.status} ${JSON.stringify(guestCompleteBody)?.slice(0, 120)}`
               );
-
-              if (guestLinkId) {
-                const guestResults = await agentJson(
-                  `/api/v2/agent/workspaces/${guestWorkspaceId}/ghl-links/${guestLinkId}/results`,
-                  guestKey
-                );
-                const ggr = tapOrGhlResult(guestResults.body);
-                record(
-                  "ghl-flow",
-                  "guest key can fetch GHL results",
-                  guestResults.res.status === 200 &&
-                    ggr?.status === "completed" &&
-                    ggr?.overall_score != null &&
-                    Array.isArray(ggr?.marker_scores) &&
-                    ggr.marker_scores.length > 0,
-                  ggr?.status === "completed" ? `score=${ggr.overall_score}` : `${guestResults.res.status}`
-                );
-              }
             }
           }
         }

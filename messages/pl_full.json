@@ -1092,8 +1092,6 @@
     "subtitle": "Niech Twój osobisty asystent uczy Cię za pomocą naszych narzędzi. Programowy dostęp do openLesson dla agentów AI i aplikacji autonomicznych.",
     "experimental": "Eksperymentalny",
     "experimentalDesc": "nie obsługuje jeszcze pełnego zestawu nauczania. Pracujemy nad tym.",
-    "elizaDescription": "Przekształć swojego agenta ElizaOS w osobistego korepetytora zasilanego przez openLesson.",
-    "openclawDescription": "Przekształć swojego agenta OpenClaw w osobistego korepetytora zasilanego przez openLesson.",
     "anyAgentDescription": "Przekształć dowolnego agenta AI w osobistego korepetytora zasilanego przez openLesson.",
     "downloadPlugin": "Pobierz wtyczkę",
     "viewOnClawHub": "Zobacz na ClawHub",

@@ -131,7 +131,7 @@ export function GridworksApp({
       const derived = deriveLocalStateFromWorld(worldState, createInitialSpreadsheetState());
       return derived.workbookCreated || Object.keys(derived.cells).length > 0 ? derived : prior;
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [worldState]);
 
   const fireAction = useCallback(

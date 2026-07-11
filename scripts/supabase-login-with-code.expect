@@ -1,0 +1,22 @@
+#!/usr/bin/expect -f
+set timeout 120
+set code [lindex $argv 0]
+if {$code eq ""} {
+  puts "Usage: supabase-login-with-code.expect <verification-code>"
+  exit 1
+}
+
+spawn script -q /dev/null bash -c {npx supabase@latest login --no-browser}
+expect {
+  -re {session_id=} { }
+  timeout { puts "Timed out waiting for login link"; exit 1 }
+}
+sleep 2
+send "$code\r"
+expect {
+  -re {Happy coding} { exit 0 }
+  -re {Token .* created successfully} { exit 0 }
+  -re {Error status} { puts "Login failed: invalid or expired verification code"; exit 1 }
+  timeout { puts "Timed out waiting for login to complete"; exit 1 }
+  eof { exit 1 }
+}

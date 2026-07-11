@@ -90,9 +90,10 @@ export interface SessionPlan {
  * This is the last line of defense — no invalid steps should ever reach the DB.
  */
 export function validatePlanSteps(steps: SessionPlanStep[]): void {
-  if (!steps || !Array.isArray(steps) || steps.length === 0) {
-    throw new Error("Cannot persist plan with empty steps array");
+  if (!steps || !Array.isArray(steps)) {
+    throw new Error("Cannot persist plan with invalid steps array");
   }
+  if (steps.length === 0) return;
   const emptyDescriptions = steps.filter(s => !s.description || !s.description.trim());
   if (emptyDescriptions.length > 0) {
     throw new Error(
@@ -135,7 +136,7 @@ export interface Session {
 
 // ---- Helpers: map DB rows → Session ----
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 function mapDbSession(s: any, probes: Probe[] = []): Session {
   const metadata = s.metadata || {};
   return {
@@ -158,7 +159,7 @@ function mapDbSession(s: any, probes: Probe[] = []): Session {
   };
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 function mapDbProbe(p: any): Probe {
   return {
     id: p.id,
@@ -569,6 +570,14 @@ export function endSession(
     durationMs,
     status,
   };
+}
+
+export function getIlePostSessionPath(session: Pick<Session, "metadata">): string {
+  const workspaceId = session.metadata?.workspace_id;
+  if (typeof workspaceId === "string" && workspaceId) {
+    return `/workspace/${workspaceId}`;
+  }
+  return "/dashboard";
 }
 
 // ---- Audio Storage ----
@@ -1075,7 +1084,7 @@ export async function getSessionScreenshots(sessionId: string): Promise<SessionS
     return [];
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   return data.map((row: any) => ({
     id: row.id,
     sessionId: row.session_id,
@@ -1122,7 +1131,7 @@ export async function getRecentAudioChunks(sessionId: string, ms: number): Promi
     return [];
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   return data.map((row: any) => ({
     id: row.id,
     sessionId: row.session_id,
@@ -1190,7 +1199,7 @@ export async function getRecentToolEvents(sessionId: string, ms: number): Promis
     return [];
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   return data.map((row: any) => ({
     id: row.id,
     sessionId: row.session_id,
@@ -1224,7 +1233,7 @@ export async function getRecentFacialData(sessionId: string, ms: number): Promis
     return [];
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   return data.map((row: any) => ({
     id: row.id,
     sessionId: row.session_id,
@@ -1258,7 +1267,7 @@ export async function getRecentEEGData(sessionId: string, ms: number): Promise<R
     return [];
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   return data.map((row: any) => ({
     id: row.id,
     sessionId: row.session_id,
@@ -1285,7 +1294,7 @@ export async function getRecentScreenshots(sessionId: string, ms: number): Promi
     return [];
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   return data.map((row: any) => ({
     id: row.id,
     sessionId: row.session_id,
@@ -1347,7 +1356,7 @@ export async function getAllEEGData(sessionId: string): Promise<RecentEEGData[]>
     .order("timestamp_ms", { ascending: true });
 
   if (error || !data) return [];
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   return data.map((row: any) => ({
     id: row.id,
     sessionId: row.session_id,
@@ -1367,7 +1376,7 @@ export async function getAllFacialData(sessionId: string): Promise<RecentFacialD
     .order("timestamp_ms", { ascending: true });
 
   if (error || !data) return [];
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   return data.map((row: any) => ({
     id: row.id,
     sessionId: row.session_id,
@@ -1385,7 +1394,7 @@ export async function getAllToolEvents(sessionId: string): Promise<RecentToolEve
     .order("timestamp_ms", { ascending: true });
 
   if (error || !data) return [];
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   return data.map((row: any) => ({
     id: row.id,
     sessionId: row.session_id,
@@ -1405,7 +1414,7 @@ export async function getAllAudioChunks(sessionId: string): Promise<RecentAudioC
     .order("timestamp_ms", { ascending: true });
 
   if (error || !data) return [];
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   return data.map((row: any) => ({
     id: row.id,
     sessionId: row.session_id,
@@ -1454,13 +1463,13 @@ export interface UserCalibration {
 
 export async function getUserCalibration(
   userId: string,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   supabaseClient?: any
 ): Promise<UserCalibration> {
   const supabase = supabaseClient || createClient();
 
   // Get all user's sessions with probes
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   const { data: sessions, error } = await supabase
     .from("sessions")
     .select(`
@@ -1503,7 +1512,7 @@ export async function getUserCalibration(
   const allSignals: string[] = [];
 
   for (const session of sessions) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     const probes = session.probes as any[];
     if (probes) {
       for (const probe of probes) {
@@ -1557,12 +1566,12 @@ export async function getUserCalibration(
   };
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 function calculateAvgGap(sessions: { probes: { gap_score: number }[] }[]): number {
   let total = 0;
   let count = 0;
   for (const session of sessions) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     const probes = session.probes as any[];
     if (probes) {
       for (const probe of probes) {
@@ -1623,7 +1632,7 @@ export async function getWorkspaces(options?: { includeArchived?: boolean }): Pr
     query = query.neq("status", "archived");
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   const { data } = await query.order("created_at", { ascending: false });
 
   return (data || []).map((p: any) => ({
@@ -1648,7 +1657,7 @@ export async function getWorkspaces(options?: { includeArchived?: boolean }): Pr
 export async function getBlocks(workspaceId: string): Promise<Block[]> {
   const supabase = createClient();
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   const { data } = await supabase
     .from("blocks")
     .select("*")
@@ -1670,7 +1679,7 @@ export async function getIncompleteNodes(): Promise<(Block & { workspaceTitle: s
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return [];
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   const { data: plans } = await supabase
     .from("workspaces")
     .select("id, root_topic")
@@ -1682,7 +1691,7 @@ export async function getIncompleteNodes(): Promise<(Block & { workspaceTitle: s
   const workspaceIds = plans.map((p: any) => p.id);
   const workspaceTitles = new Map(plans.map((p: any) => [p.id, p.root_topic]));
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   const { data: nodes } = await supabase
     .from("blocks")
     .select("*")
@@ -1777,7 +1786,7 @@ export async function updatePlanVisibility(
 
 // ---- Session Plans (Session Planner feature) ----
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 function mapDbSessionPlan(p: any): SessionPlan {
   return {
     id: p.id,
@@ -1796,7 +1805,7 @@ function mapDbSessionPlan(p: any): SessionPlan {
 export async function createSessionPlan(
   sessionId: string,
   plan: { goal: string; strategy: string; description?: string; steps: SessionPlanStep[] },
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   supabaseClient?: any
 ): Promise<SessionPlan> {
   // Validate steps before allowing any DB write
@@ -1826,7 +1835,7 @@ export async function createSessionPlan(
 
 export async function getSessionPlan(
   sessionId: string,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   supabaseClient?: any
 ): Promise<SessionPlan | null> {
   const supabase = supabaseClient || createClient();
@@ -1849,7 +1858,7 @@ export async function updateSessionPlan(
     steps?: SessionPlanStep[];
     currentStepIndex?: number;
   },
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   supabaseClient?: any
 ): Promise<SessionPlan> {
   const supabase = supabaseClient || createClient();

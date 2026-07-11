@@ -5,7 +5,7 @@
  * Safe by default:
  * - No Stripe checkout
  * - No workspace/plan/org/guest creation
- * - No GHL session start/complete
+ * - No TAP session start/complete
  * - No xAI calls
  *
  * Usage:
@@ -170,7 +170,7 @@ async function checkPublicPages() {
     "/pricing",
     "/for-hiring-teams",
     "/workspace/new",
-    "/docs/agentic-v2",
+    "/docs/proof-of-work-api",
     "/login",
   ];
   for (const page of pages) {
@@ -260,8 +260,8 @@ function summarize() {
 
   console.log("\nSafe next manual steps (still use a non-admin test account):");
   console.log("1. Log in locally and open /workspace/new — only submit if you accept creating a real plan row.");
-  console.log("2. Open an existing workspace you own; verify /workspace/{id}/ghl-score UI loads.");
-  console.log("3. Create a GHL link via API only with a disposable test workspace.");
+  console.log("2. Open an existing workspace you own; verify /workspace/{id}/tap UI loads.");
+  console.log("3. Create a TAP link via API only with a disposable test workspace.");
   console.log("4. Do NOT run migrations 043-045 against prod until reviewed in Supabase SQL editor.");
   console.log("5. Do NOT trigger Stripe checkout unless using sk_test_ and a test user.");
 }

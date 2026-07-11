@@ -66,7 +66,7 @@ function formatPerformanceMarkdown(content: string) {
   return formatted.join("\n");
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
+ 
 export function PerformanceChat({
   workspaceId,
   isOwner,

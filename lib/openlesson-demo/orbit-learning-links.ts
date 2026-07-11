@@ -1,6 +1,6 @@
 import { normalizeDemoSessionUrl, openDemoSessionUrl } from "./demo-session-url";
 import { ORBIT_PERFORMANCE_STYLE_PROMPT } from "./orbit-performance-style";
-import { ORBIT_TAP_MIN_SCORE } from "./orbit-ui-manifest";
+
 import { readJsonResponse } from "@/lib/read-json-response";
 
 export type OrbitTapGateStatus = {
@@ -59,22 +59,14 @@ export async function fetchOrbitTapGateStatus(
       return { cleared: false, score: null, tapLinkUrl: existingTapLinkUrl ?? null };
     }
     const data = await readJsonResponse<{
-      tapSessions?: Array<{ status?: string; overall_score?: number | null }>;
+      tapSessions?: Array<{ status?: string }>;
     }>(res);
     const sessions = data.tapSessions ?? [];
-    const completed = sessions.filter((session) => session.status === "completed");
-    const bestScore = completed.reduce<number | null>((best, session) => {
-      const score =
-        typeof session.overall_score === "number" && !Number.isNaN(session.overall_score)
-          ? Math.round(session.overall_score)
-          : null;
-      if (score === null) return best;
-      return best === null ? score : Math.max(best, score);
-    }, null);
+    const hasCompletedTap = sessions.some((session) => session.status === "completed");
 
     return {
-      cleared: bestScore !== null && bestScore >= ORBIT_TAP_MIN_SCORE,
-      score: bestScore,
+      cleared: hasCompletedTap,
+      score: null,
       tapLinkUrl: existingTapLinkUrl ?? null,
     };
   } catch {

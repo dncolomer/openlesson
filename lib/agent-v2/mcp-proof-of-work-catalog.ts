@@ -27,7 +27,6 @@ export const MCP_PROOF_OF_WORK_TOOL_CATALOG = [
     summary: "Scorecard report (no prompt) or chat Q&A (with prompt). Returns TIM interruption.",
   },
   { name: "list_tap_links", scope: "tap:read", summary: "List TAP session links and status." },
-  { name: "get_tap_results", scope: "tap:read", summary: "Read completed TAP results." },
   { name: "create_tap_link", scope: "tap:write", summary: "Create a private TAP link for a block." },
 ] as const;
 

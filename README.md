@@ -112,37 +112,40 @@ The app will be available at `http://localhost:3000`.
 
 ```
 ├── app/                  # Next.js App Router pages & API routes
-│   ├── api/              # ~44 API routes (gap analysis, probes, plans, chat, etc.)
-│   ├── session/          # Active tutoring session pages
-│   ├── dashboard/        # User dashboard
-│   ├── plan/             # Learning plan views
-│   └── ...               # Other pages (pricing, about, legal, solutions)
-├── components/           # React components
-│   ├── SessionView.tsx   # Core session UI
-│   ├── PlanFlow.tsx      # Learning plan directed graph
-│   ├── WhiteboardCanvas  # Drawing canvas
-│   ├── HeliosChat.tsx    # Helios Chat (Socratic companion)
-│   └── ...               # ~50 components total
-├── lib/                  # Core libraries
-│   ├── openrouter.ts     # LLM orchestration (prompts, gap detection, probes)
-│   ├── storage.ts        # Supabase session storage
-│   ├── muse.ts           # Muse EEG integration
-│   ├── audio.ts          # Audio recording utilities
+│   ├── api/              # 123 API routes (ILE sessions, workspaces, TAP, agent v2, admin, demo)
+│   ├── session/          # Active ILE tutoring session pages
+│   ├── workspace/        # Workspace & block graph views (/plan/:id redirects here)
+│   ├── tap/              # Think Aloud Protocol (TAP) scoring sessions
+│   ├── dashboard/        # User dashboard & API key management
+│   └── ...               # Other pages (pricing, docs, legal, platform)
+├── components/           # React components (~109 TSX files)
+│   ├── SessionView.tsx   # Core ILE session UI
+│   ├── WorkspaceView.tsx # Workspace block graph
+│   ├── TapScoreClient.tsx # TAP scoring UI
+│   └── thought-ui/       # Shared dialogue / thought components
+├── lib/                  # Core libraries (~121 modules)
+│   ├── xai.ts            # LLM orchestration (gap detection, probes, reports)
+│   ├── xai-client.ts     # xAI API client (chat, JSON schema, files)
+│   ├── prompts.ts        # Helios prompt templates
+│   ├── storage.ts        # Supabase session & workspace persistence
+│   ├── agent-v2/         # Agentic API v2 (auth, MCP, proof-of-work, TAP links)
+│   ├── tap-score*.ts     # TAP scoring logic
 │   └── ...
 ├── supabase/             # Database schema & migrations
-└── public/               # Static assets & agent skill docs
+├── tests/lib/            # Vitest unit tests (lib-focused)
+└── public/               # Static assets; skill.md for agent integrations
 ```
 
-## Agent API
+## Agent API (v2)
 
-openLesson exposes a REST API for AI agents. Generate an API key from the dashboard and use it to:
+openLesson exposes a scoped REST API and MCP transport for AI agents. Generate an API key from the dashboard (`/dashboard`) and use it to:
 
-- Create and manage learning plans
-- Start and control tutoring sessions
-- Submit audio for gap analysis
-- Retrieve session summaries and reports
+- Create and manage verification workspaces and blocks
+- Issue Think Aloud Protocol (TAP) links, poll completion via `GET .../tap-links`, and score via unified performance analysis
+- Upload proof-of-work artifacts and request performance context
+- Connect via MCP OAuth (`/api/mcp`) for tool-based integrations
 
-See [`public/skill.md`](public/skill.md) for the full agent API documentation.
+See [`public/skill.md`](public/skill.md) and [`docs/PROOF_OF_WORK_API.md`](docs/PROOF_OF_WORK_API.md) for full documentation. Interactive reference: [`/docs/proof-of-work-api`](/docs/proof-of-work-api).
 
 ## Uncertain Systems
 

@@ -47,7 +47,7 @@ export function LogsTool({ logs, transferHealth, onClear }: LogsToolProps) {
   // stable core set so common filters are always available even when empty.
   const availableSources = useMemo(() => {
     const core = new Set<string>([
-      "heartbeat",
+      "session",
       "storage",
       "analysis",
       "plan",

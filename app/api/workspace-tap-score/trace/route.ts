@@ -1,19 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
-import { resolveGhlSessionAccess } from "@/lib/ghl-score-session-auth";
+import { resolveTapSessionAccess } from "@/lib/tap-score-session-auth";
 import {
-  buildGhlThoughtTracePayload,
-  GHL_TRACE_TOOL_NAME,
-  type GhlSystem1Action,
-  type GhlSystem2Action,
-  type GhlTraceType,
-} from "@/lib/ghl-score-traces";
+  buildTapThoughtTracePayload,
+  TAP_TRACE_TOOL_NAME,
+  type TapSystem1Action,
+  type TapSystem2Action,
+  type TapTraceType,
+} from "@/lib/tap-score-traces";
 import { uploadFileToXAI } from "@/lib/xai-files";
 
 export const runtime = "nodejs";
 export const maxDuration = 30;
 
-const SYSTEM1_ACTIONS = new Set<GhlSystem1Action>(["crystallize", "pause_finalize"]);
-const SYSTEM2_ACTIONS = new Set<GhlSystem2Action>(["send", "skip", "select", "deselect", "resend"]);
+const SYSTEM1_ACTIONS = new Set<TapSystem1Action>(["crystallize", "pause_finalize"]);
+const SYSTEM2_ACTIONS = new Set<TapSystem2Action>(["send", "skip", "select", "deselect", "resend"]);
 
 export async function POST(req: NextRequest) {
   try {
@@ -22,8 +22,8 @@ export async function POST(req: NextRequest) {
     const workspaceId = body.workspaceId ? String(body.workspaceId) : "";
     const blockId = body.blockId ? String(body.blockId) : null;
     const focusSessionId = body.sessionId ? String(body.sessionId) : null;
-    const ghlSessionId = String(body.ghlSessionId || "");
-    const traceType = String(body.traceType || "") as GhlTraceType;
+    const tapSessionId = String(body.tapSessionId || "");
+    const traceType = String(body.traceType || "") as TapTraceType;
     const action = String(body.action || "");
     const thoughtId = body.thoughtId ? String(body.thoughtId) : undefined;
     const thoughtIds = Array.isArray(body.thoughtIds) ? body.thoughtIds.map(String).filter(Boolean) : undefined;
@@ -32,23 +32,23 @@ export async function POST(req: NextRequest) {
     const combined = Boolean(body.combined);
     const timestampMs = typeof body.timestampMs === "number" ? body.timestampMs : Date.now();
 
-    if (!ghlSessionId) {
-      return NextResponse.json({ error: "ghlSessionId is required" }, { status: 400 });
+    if (!tapSessionId) {
+      return NextResponse.json({ error: "tapSessionId is required" }, { status: 400 });
     }
     if (traceType !== "system1" && traceType !== "system2") {
       return NextResponse.json({ error: "traceType must be system1 or system2" }, { status: 400 });
     }
-    if (traceType === "system1" && !SYSTEM1_ACTIONS.has(action as GhlSystem1Action)) {
+    if (traceType === "system1" && !SYSTEM1_ACTIONS.has(action as TapSystem1Action)) {
       return NextResponse.json({ error: "Invalid system1 action" }, { status: 400 });
     }
-    if (traceType === "system2" && !SYSTEM2_ACTIONS.has(action as GhlSystem2Action)) {
+    if (traceType === "system2" && !SYSTEM2_ACTIONS.has(action as TapSystem2Action)) {
       return NextResponse.json({ error: "Invalid system2 action" }, { status: 400 });
     }
 
-    const access = await resolveGhlSessionAccess({
+    const access = await resolveTapSessionAccess({
       privateToken,
       workspaceId,
-      ghlSessionId,
+      tapSessionId,
       blockId,
       focusSessionId,
     });
@@ -56,10 +56,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: access.error }, { status: access.status });
     }
 
-    const payload = buildGhlThoughtTracePayload({
+    const payload = buildTapThoughtTracePayload({
       traceType,
-      action: action as GhlSystem1Action | GhlSystem2Action,
-      ghlSessionId: access.ghlSessionId,
+      action: action as TapSystem1Action | TapSystem2Action,
+      tapSessionId: access.tapSessionId,
       workspaceId: access.workspaceId,
       blockId: blockId || access.blockId,
       focusSessionId: focusSessionId || access.focusSessionId,
@@ -71,12 +71,12 @@ export async function POST(req: NextRequest) {
       timestampMs,
     });
 
-    const fileName = `ghl-trace-${traceType}-${action}-${thoughtId || timestampMs}.json`;
+    const fileName = `tap-trace-${traceType}-${action}-${thoughtId || timestampMs}.json`;
     const base64 = Buffer.from(JSON.stringify(payload, null, 2), "utf8").toString("base64");
     const uploaded = await uploadFileToXAI(fileName, "application/json", base64);
 
     const metadata = {
-      ghl_session_id: access.ghlSessionId,
+      tap_session_id: access.tapSessionId,
       trace_type: traceType,
       action,
       thought_id: thoughtId || null,
@@ -100,7 +100,7 @@ export async function POST(req: NextRequest) {
         timestamp_ms: timestampMs,
         chunk_index: 0,
         metadata,
-        tool_name: GHL_TRACE_TOOL_NAME,
+        tool_name: TAP_TRACE_TOOL_NAME,
         tool_action: `${traceType}:${action}`,
         user_id: access.userId,
         guest_user_id: access.guestUserId,

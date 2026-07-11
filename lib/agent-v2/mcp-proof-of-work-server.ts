@@ -37,11 +37,11 @@ import {
   normalizeProofOfWorkType,
 } from "./workspace-proof-of-work";
 import {
-  buildGhlScoreSessionUrl,
+  buildTapScoreSessionUrl,
   createPrivateToken,
-  getGhcScoreBriefForUser,
+  getTapScoreBriefForUser,
   hashPrivateToken,
-} from "@/lib/ghc-score";
+} from "@/lib/tap-score";
 import { persistSkillGridPositions, skillGridNodesFromRefs } from "@/lib/skill-grid-positions";
 import { callXaiJSON, callXaiResponses, callXaiResponsesWithFiles, DEFAULT_MODEL, userMessage, type ResponsesInputMessage } from "@/lib/xai-client";
 import { deleteFileFromXAI, uploadFileToXAI } from "@/lib/xai-files";
@@ -93,7 +93,7 @@ REST mirror: same loop via Bearer auth on /api/v2/agent/workspaces/{id}/...
 
 Resources: resources/read openlesson://integration-scope and openlesson://proof-of-work-loop
 
-TAP links (create_tap_link): bearer URLs at /ghl-score/session/{token}. Works for workspace owners and guests — open the link yourself or share with a learner. guest_email/guest_user_id are optional (org admins only).
+TAP links (create_tap_link): bearer URLs at /tap/session/{token}. Works for workspace owners and guests — open the link yourself or share with a learner. guest_email/guest_user_id are optional (org admins only).
 
 Partner agents: call generate_integration_skill for a workspace-specific skill.md, then use MCP tools proactively per that skill's checkpoint policy.
 
@@ -279,20 +279,6 @@ export const MCP_EVIDENCE_TOOLS = [
     annotations: { readOnlyHint: true },
   },
   {
-    name: "get_tap_results",
-    description: "Get completed TAP link results (scores + gap analysis).",
-    inputSchema: {
-      type: "object",
-      properties: {
-        workspace_id: { type: "string" },
-        tap_link_id: { type: "string" },
-      },
-      required: ["workspace_id", "tap_link_id"],
-      additionalProperties: false,
-    },
-    annotations: { readOnlyHint: true },
-  },
-  {
     name: "create_tap_link",
     description:
       "Create a private Think Aloud Protocol (TAP) link for a workspace block (15 or 30 minutes). Call list_blocks first; block_id must be the blocks UUID id field.",
@@ -316,7 +302,7 @@ export const MCP_EVIDENCE_TOOLS = [
 
 export type McpProofOfWorkToolContext = {
   auth: AuthContext;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   supabase: SupabaseClient<any>;
   origin: string;
 };
@@ -362,7 +348,6 @@ function withProgressGuidance<T extends Record<string, unknown>>(
     counts: {
       proof_of_work_artifacts: number;
       blocks: number;
-      tap_sessions: number;
     };
     conversionGoal?: string | null;
     workspaceTitle?: string;
@@ -390,7 +375,6 @@ function withProgressGuidance<T extends Record<string, unknown>>(
     recommended_next_actions: recommendIntegrationActions({
       proof_of_work_artifacts: options.counts.proof_of_work_artifacts,
       blocks: options.counts.blocks,
-      tap_sessions: options.counts.tap_sessions,
       has_conversion_goal: Boolean(options.conversionGoal?.trim()),
     }),
   };
@@ -505,14 +489,8 @@ function parseInitialFiles(value: unknown): InitialFile[] {
   });
 }
 
-const LEGACY_MCP_TOOL_ALIASES: Record<string, string> = {
-  list_ghl_links: "list_tap_links",
-  get_ghl_results: "get_tap_results",
-  create_ghl_link: "create_tap_link",
-};
-
 function tapLinkIdArg(args: Record<string, unknown>) {
-  return stringArg(args, "tap_link_id") || stringArg(args, "ghl_link_id");
+  return stringArg(args, "tap_link_id");
 }
 
 export async function callMcpProofOfWorkTool(
@@ -521,8 +499,6 @@ export async function callMcpProofOfWorkTool(
   ctx: McpProofOfWorkToolContext
 ) {
   const { auth, supabase, origin } = ctx;
-  name = LEGACY_MCP_TOOL_ALIASES[name] ?? name;
-
   if (name === "list_workspaces") {
     requireScope(auth.scopes, "workspaces:read");
     const limit = boundedInt(args.limit, 20, 1, 100);
@@ -668,7 +644,7 @@ export async function callMcpProofOfWorkTool(
     const generated = await callXaiJSON<GeneratedWorkspace>(
       [
         userMessage(
-          `Create a performance learning workspace from this prompt. Break it into available blocks that a learner can complete and later request GHL score links for.\n\nPrompt:\n${initialPrompt}${fileContext}\n\nReturn ONLY JSON:\n{\n  "title": "concise workspace title",\n  "conversion_goal": "concise success/conversion outcome for this workspace",\n  "blocks": [\n    { "id": "a", "title": "Block title", "description": "What the learner should demonstrate", "is_start": true, "next": ["b"] }\n  ]\n}\n\nRules:\n- Create 3 to 8 blocks.\n- Blocks are assessable learning/performance units.\n- Use short stable ids only for linking within this response.${WORKSPACE_GENERATION_CONVERSION_GOAL_RULE}`
+          `Create a performance learning workspace from this prompt. Break it into assessable blocks for learning verification and proof-of-work-based gap analysis.\n\nPrompt:\n${initialPrompt}${fileContext}\n\nReturn ONLY JSON:\n{\n  "title": "concise workspace title",\n  "conversion_goal": "concise success/conversion outcome for this workspace",\n  "blocks": [\n    { "id": "a", "title": "Block title", "description": "What the learner should demonstrate", "is_start": true, "next": ["b"] }\n  ]\n}\n\nRules:\n- Create 3 to 8 blocks.\n- Blocks are assessable learning/performance units.\n- Use short stable ids only for linking within this response.${WORKSPACE_GENERATION_CONVERSION_GOAL_RULE}`
         ),
       ],
       { model: DEFAULT_MODEL, maxTokens: 1800, temperature: 0.3 }
@@ -1104,7 +1080,6 @@ export async function callMcpProofOfWorkTool(
 
     if (
       contextCounts.proof_of_work_artifacts === 0 &&
-      contextCounts.tap_sessions === 0 &&
       contextCounts.linked_sessions === 0 &&
       contextCounts.workspace_files === 0
     ) {
@@ -1280,38 +1255,6 @@ export async function callMcpProofOfWorkTool(
     );
   }
 
-  if (name === "get_tap_results") {
-    requireScope(auth.scopes, "tap:read");
-    const workspaceId = stringArg(args, "workspace_id");
-    const linkId = tapLinkIdArg(args);
-    if (!workspaceId) throw new Error("workspace_id is required.");
-    if (!linkId) throw new Error("tap_link_id is required.");
-
-    let query = supabase
-      .from("workspace_tap_sessions")
-      .select(
-        "id, workspace_id, block_id, xai_file_id, status, duration_seconds, requested_duration_seconds, mode, summary, analysis, overall_score, marker_scores, created_at, started_at, completed_at"
-      )
-      .eq("id", linkId)
-      .eq("workspace_id", workspaceId);
-
-    if (auth.guest_user_id) query = query.eq("guest_user_id", auth.guest_user_id);
-    else if (!auth.is_org_admin) query = query.eq("user_id", auth.user_id);
-
-    const { data: link, error } = await query.single();
-    if (error || !link) throw new Error("TAP link not found.");
-
-    return evidenceToolResult(
-      {
-        tap_result: {
-          ...link,
-          gap_analysis: link.status === "completed" ? link.analysis?.gap_analysis || null : null,
-        },
-      },
-      { endpoint: "get_tap_results", workspace_id: workspaceId }
-    );
-  }
-
   if (name === "create_tap_link") {
     requireScope(auth.scopes, "tap:write");
     const workspaceId = stringArg(args, "workspace_id");
@@ -1362,7 +1305,7 @@ export async function callMcpProofOfWorkTool(
     if (!ownerUserId) throw new Error("Workspace owner is missing.");
 
     try {
-      await getGhcScoreBriefForUser(workspaceId, ownerUserId, [blockId], true, null);
+      await getTapScoreBriefForUser(workspaceId, ownerUserId, [blockId], true, null);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Not authorized";
       if (message === "Workspace not found") throw new Error("Workspace not found.");
@@ -1396,7 +1339,7 @@ export async function callMcpProofOfWorkTool(
     }
 
     const appBase = process.env.NEXT_PUBLIC_APP_URL || origin;
-    const privateUrl = buildGhlScoreSessionUrl(appBase, privateToken);
+    const privateUrl = buildTapScoreSessionUrl(appBase, privateToken);
     return evidenceToolResult(
       {
         tap_link: { ...link, private_url: privateUrl },

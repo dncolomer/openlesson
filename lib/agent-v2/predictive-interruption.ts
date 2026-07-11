@@ -61,7 +61,6 @@ export type ProofOfWorkApiEndpoint =
   | "analyze_performance"
   | "get_learning_progress"
   | "list_tap_links"
-  | "get_tap_results"
   | "create_tap_link"
   | "get_workspace_detail";
 
@@ -416,7 +415,6 @@ export function predictInterruption(context: InterruptionContext): ProofOfWorkAp
     case "get_workspace_detail":
     case "list_blocks":
     case "list_tap_links":
-    case "get_tap_results":
     default:
       return null;
   }

@@ -7,10 +7,10 @@ Scope: `openlesson/` production TypeScript
 
 | Prompt / Builder | Source | Primary Endpoint(s) | Override? |
 |---|---|---|---|
-| `gap_detection` | `lib/prompts.ts` → `analyzeGap` | `POST /api/agent/session/analyze` | Yes |
-| `opening_probe` | `lib/prompts.ts` → `generateOpeningProbe` | `POST /api/opening-probe` | Yes |
+| `gap_detection` | `lib/prompts.ts` → `analyzeGap` | session heartbeat / `lib/xai.ts` | Yes |
+| `opening_probe` | `lib/prompts.ts` → `generateOpeningProbe` | `lib/xai.ts` / session flow | Yes |
 | `probe_generation` | `lib/prompts.ts` → `generateProbe` | `POST /api/generate-probe`, `session-plan/reset-probes` | Yes |
-| `report_generation` | `lib/prompts.ts` → `generateReport` | `POST /api/generate-report`, `agent/session/end` | Yes |
+| `report_generation` | `lib/prompts.ts` → `generateReport` | `POST /api/generate-report` | Yes |
 | `follow_up_sessions` | `lib/prompts.ts` → `generateFollowUpSessions` | `POST /api/generate-follow-ups` | Yes |
 | `generate_objectives` | `lib/prompts.ts` → `generateObjectives` | `POST /api/generate-objectives` | Yes |
 | `session_plan_create` | `lib/prompts.ts` → `createSessionPlanLLM` | `session-plan/create`, `regenerate`, `workspace/preview-session` | Yes |
@@ -23,8 +23,8 @@ Scope: `openlesson/` production TypeScript
 | `buildPerformanceChatInstructions` | `agent-v2/performance-context.ts` | v2 performance chat, MCP | No |
 | `buildProofOfWorkSchemaInstructions` | `agent-v2/proof-of-work-schema.ts` | proof-of-work-schema API, MCP | No |
 | `buildIntegrationSkillInstructions` | `agent-v2/integration-skill.ts` | integration-skill API, MCP | No |
-| `buildGhcScoreInstructions` | `lib/ghc-score.ts` | TAP/GHL chat | No |
-| `buildTraceScoringInstructions` | `lib/ghl-score-traces.ts` | TAP/GHL complete scoring | No |
+| `buildTapScoreInstructions` | `lib/tap-score.ts` | TAP chat | No |
+| `buildTraceScoringInstructions` | `lib/tap-score-traces.ts` | TAP complete scoring | No |
 | suggest-plan-topic | `suggest-plan-topic/route.ts` | `POST /api/suggest-plan-topic` | No |
 
 ## Override Mechanism
@@ -32,32 +32,34 @@ Scope: `openlesson/` production TypeScript
 1. **Storage**: `profiles.metadata.prompts`
 2. **Loader**: `getUserPrompts()` (`lib/user-prompts.ts`)
 3. **Resolver**: `getPrompt(key, overrides)` (`lib/prompts.ts`)
-4. **Editor**: Dashboard (`app/dashboard/page.tsx`) + `POST /api/save-prompts`
+4. **Editor**: Dashboard (`app/dashboard/page.tsx`) writes `profiles.metadata.prompts` via Supabase client
 
 ## Active vs Legacy Registry Keys
 
 **Active (9):** `gap_detection`, `opening_probe`, `probe_generation`, `report_generation`, `follow_up_sessions`, `generate_objectives`, `session_plan_create`, `session_plan_update`, `stuck_policy_recommendation`
 
-**Legacy (6):** `session_end_check`, `expand_probe`, `ask_question`, `feedback_and_question`, `fresh_question`, `check_probe_archive`
+**Legacy:** none (removed unused registry keys)
 
 ---
 
 ## File Inventory Map (verification plan step 1)
 
-Every file from `prompt-inventory-rg.log` (1 paths) plus additional prompt-bearing routes discovered during audit:
+Every file from `prompt-inventory-rg.log` (5 paths) plus additional prompt-bearing routes discovered during audit:
 
 | File | Prompt entry / note |
 |---|---|
-| `(eval):1: command not found: rg` | See domain sections below |
+| `# Updated after workspace/block rename — legacy workspace API paths removed.` | See domain sections below |
+| `openlesson/app/api/workspace/chat/route.ts` | SYSTEM_PROMPT workspace assistant |
+| `openlesson/app/api/workspace/integration-skill/route.ts` | buildIntegrationSkillInstructions consumer |
+| `openlesson/app/api/workspace/performance-chat/route.ts` | buildSystemInstructions multi-user performance chat |
+| `openlesson/app/api/workspace/performance-report/route.ts` | buildPerformanceReportInstructions consumer |
 | `openlesson/app/api/rabbit-hole/continue/route.ts` | Rabbit Hole plan generator user prompt (not in rg.log) |
 | `openlesson/app/api/v2/agent/workspaces/route.ts` | Workspace block generation user prompt (not in rg.log) |
 | `openlesson/app/api/workspace/generate/route.ts` | promptBody plan graph generator (not in rg.log — add via expand) |
 | `openlesson/app/api/workspace/expand/route.ts` | See domain sections below |
 | `openlesson/app/api/workspace/regenerate/route.ts` | See domain sections below |
 | `openlesson/app/api/workspaces/[id]/remix/route.ts` | See domain sections below |
-| `openlesson/app/api/agent/workspace/route.ts` | See domain sections below |
 | `openlesson/app/api/prep-material/route.ts` | See domain sections below |
-| `openlesson/app/api/workspace/prepare-session/route.ts` | See domain sections below |
 | `openlesson/app/api/rabbit-hole/interview/route.ts` | See domain sections below |
 | `openlesson/app/api/insights/create/route.ts` | See domain sections below |
 | `openlesson/app/api/suggest-plan-topic/route.ts` | Post-session learning plan topic suggester user prompt |
@@ -73,7 +75,7 @@ Every file from `prompt-inventory-rg.log` (1 paths) plus additional prompt-beari
 ### `gap_detection` [ACTIVE]
 
 - **File**: `openlesson/lib/prompts.ts`
-- **Call chain**: `analyzeGap` → `POST /api/agent/session/analyze` (gap also embedded in `session_plan_update` heartbeat)
+- **Call chain**: `analyzeGap` in `lib/xai.ts` (embedded in `session_plan_update` heartbeat via `useSessionHeartbeat`)
 - **Purpose**: Score reasoning gaps 0-1 from transcribed think-aloud audio
 - **User-overridable**: Yes (Dashboard)
 - **Variables**: {problem}, {openProbeCount}, {secondsSinceLastProbe}
@@ -113,7 +115,7 @@ Be concise with signals - max 3 items. Use categories like: "hesitation", "unexa
 ### `opening_probe` [ACTIVE]
 
 - **File**: `openlesson/lib/prompts.ts`
-- **Call chain**: `generateOpeningProbe` → `POST /api/opening-probe`
+- **Call chain**: `generateOpeningProbe` in `lib/xai.ts` (via `generate-probe` / session flow)
 - **Purpose**: First Socratic question at session start
 - **User-overridable**: Yes (Dashboard)
 - **Variables**: {problem}, {objectives}
@@ -207,7 +209,7 @@ Return ONLY the question or task text, no JSON or formatting.
 ### `report_generation` [ACTIVE]
 
 - **File**: `openlesson/lib/prompts.ts`
-- **Call chain**: `generateReport` → `POST /api/generate-report`, `POST /api/agent/session/end`
+- **Call chain**: `generateReport` → `POST /api/generate-report`
 - **Purpose**: Post-session markdown debrief
 - **User-overridable**: Yes (Dashboard)
 - **Variables**: {problem}, {duration}, {count}, {avg_gap}, {probes_summary}, {eeg_context}
@@ -599,214 +601,6 @@ Return ONLY valid JSON:
 }
 ```
 
-### `session_end_check` [LEGACY]
-
-- **File**: `openlesson/lib/prompts.ts`
-- **Call chain**: No runtime caller (legacy)
-- **Purpose**: Legacy: whether to end session
-- **User-overridable**: Yes (Dashboard)
-- **Variables**: {elapsed}, {count}, {recent_scores}, {problem}
-
-**Full prompt text:**
-
-```
-Based on this tutoring session so far:
-- Duration: {elapsed}
-- Probes triggered: {count}
-- Recent gap scores: {recent_scores}
-- Problem: {problem}
-
-Should this session end? Return ONLY valid JSON:
-{"should_end": true/false, "reason": "brief reason"}
-
-End the session if:
-- The student has been stuck for a long time with no improvement (gap scores not decreasing)
-- The session has been very long (>30 min) and gaps are increasing
-- The student seems to have resolved the problem (consistently low gap scores for several checks)
-
-Otherwise, keep going.
-```
-
-### `expand_probe` [LEGACY]
-
-- **File**: `openlesson/lib/prompts.ts`
-- **Call chain**: No runtime caller (legacy)
-- **Purpose**: Legacy: 2-3 deeper questions on one probe
-- **User-overridable**: Yes (Dashboard)
-- **Variables**: {problem}, {probe}
-
-**Full prompt text:**
-
-```
-The student engaged with this guiding question while working on a problem:
-
-Problem: {problem}
-Original question: "{probe}"
-
-They clicked on the question wanting to go deeper. Generate 2-3 follow-up probing questions that dig into the same reasoning gap.
-
-Rules:
-- ONLY ask questions. Never give answers, hints, or suggestions.
-- Each question should probe a different angle of the same gap.
-- Keep each question to 1 sentence.
-- Make them progressively deeper.
-- Every question must be specific and concrete about the topic — ask about particular concepts, examples, or mechanisms.
-- NEVER ask abstract or meta questions like "Why does this matter?" or "What's your approach?"
-
-Return the questions as a numbered list, nothing else.
-```
-
-### `ask_question` [LEGACY]
-
-- **File**: `openlesson/lib/prompts.ts`
-- **Call chain**: No runtime caller — superseded by `BASE_SYSTEM_PROMPT` in session-chat
-- **Purpose**: Legacy: Helios answers direct student question Socratically
-- **User-overridable**: Yes (Dashboard)
-- **Variables**: {problem}, {probe}, {question}
-
-**Full prompt text:**
-
-```
-You are Helios, the learner's Socratic companion. You are the same Helios that surfaces probes in the side panel — here in Helios Chat, the student is talking to you directly. They're working through a problem using guided questioning.
-
-Problem they're working on: {problem}
-The current guiding question being explored: "{probe}"
-
-The student has asked you a direct question:
-"{question}"
-
-Answer their question helpfully while preserving the Socratic essence. Rules:
-- Be concise (2–4 short paragraphs max; max ~120 words unless they explicitly want depth).
-- Briefly acknowledge what they asked, then either clarify OR — preferably — ask ONE targeted question back that narrows the specific gap you hear.
-- Don't hand over final answers. Use examples, contrasts, or counterexamples to make them think.
-- If the question is off-topic, gently redirect to the problem at hand.
-- Warm and direct. No filler, no "great question!"
-```
-
-### `feedback_and_question` [LEGACY]
-
-- **File**: `openlesson/lib/prompts.ts`
-- **Call chain**: No runtime caller — superseded by `session_plan_update`
-- **Purpose**: Legacy: feedback + new guiding question JSON
-- **User-overridable**: Yes (Dashboard)
-- **Variables**: {problem}, {previous_probes}, {recent_context}
-
-**Full prompt text:**
-
-```
-You are Helios, the learner's Socratic companion, providing feedback and generating a follow-up question.
-
-Problem being worked on: {problem}
-
-Session so far:
-- Previous probes asked: {previous_probes}
-- Student's recent responses context: {recent_context}
-
-ENVIRONMENT: The student has access to: Helios Chat (talk to you directly), Canvas (draw/diagram), Notebook (notes), Grok / Grokipedia (Grokipedia search plus a Grok prompt bar), and Screen Sharing. Suggest tools when helpful.
-
-Provide:
-1. Brief feedback (1-2 sentences) on the student's thinking so far
-2. Then generate ONE new guiding question OR a task with tool suggestion that builds on their response
-
-Format as JSON:
-{"feedback": "your feedback here", "question": "your new question here", "suggested_tool": "canvas" | "notebook" | "grokipedia" | null}
-
-Rules for feedback:
-- Be specific to what they said, not generic
-- Acknowledge their reasoning before pushing deeper
-- Be encouraging but honest about gaps
-- If they'd benefit from a tool, mention it: "Great start! Try sketching this on the Canvas to visualize it."
-
-Rules for the new question:
-- Only ask a question, never give answers
-- Build on their last response, don't repeat previous questions
-- Keep it short (max 25 words)
-- Make it feel like a natural thought they should consider
-- The question must be specific and concrete about the topic — no abstract or meta questions
-- NEVER suggest taking a break or pausing
-- When visual thinking would help, phrase as: "Try drawing [specific thing] on the Canvas — what do you notice?"
-- When they need info: "Look up [specific concept] in Grokipedia" or "Use the Grok prompt bar to ask for examples of [specific concept]"
-```
-
-### `fresh_question` [LEGACY]
-
-- **File**: `openlesson/lib/prompts.ts`
-- **Call chain**: No runtime caller — superseded by `stuck_policy_recommendation`
-- **Purpose**: Legacy: new angle when stuck
-- **User-overridable**: Yes (Dashboard)
-- **Variables**: {problem}, {previous_probes}
-
-**Full prompt text:**
-
-```
-You are Helios, the learner's Socratic companion, using guided questioning. The student is stuck and needs a completely fresh perspective.
-
-Problem they're working on: {problem}
-
-Previous questions already asked that didn't help:
-{previous_probes}
-
-ENVIRONMENT: The student has access to: Canvas (drawing/diagrams), Notebook (notes), Grok / Grokipedia (Grokipedia search plus a Grok prompt bar), and Screen Sharing. Sometimes a tool can unlock a stuck student.
-
-Generate a brand new guiding question OR a task with tool suggestion from a completely different angle. Rules:
-- Try a different concept, assumption, or approach than previous questions
-- Only ask a question or give a concrete task, never give answers or hints
-- Keep it short (max 25 words)
-- Make it feel like a new insight they haven't considered
-- Focus on a different specific, concrete aspect of the problem
-- The question must be about a specific concept, example, or mechanism — NOT abstract or meta
-- NEVER ask about their approach, strategy, or feelings. Ask about the subject matter itself.
-- NEVER suggest taking a break or pausing.
-- Consider suggesting a tool to unblock them:
-  * "Try sketching [specific aspect] on the Canvas — sometimes drawing reveals what words miss"
-  * "Look up [specific term] in Grokipedia to ground your understanding"
-  * "Use the Grok prompt bar to ask for examples of [specific term]"
-  * "If you're working in another app, share your screen so I can see where you're stuck"
-
-Return ONLY the question or task text, no JSON or formatting.
-```
-
-### `check_probe_archive` [LEGACY]
-
-- **File**: `openlesson/lib/prompts.ts`
-- **Call chain**: No runtime caller — superseded by `session_plan_update` probes_to_archive
-- **Purpose**: Legacy: whether probe can be archived
-- **User-overridable**: Yes (Dashboard)
-- **Variables**: {probe_text}, {session_goal}, {transcript}, {whiteboard_data}, {activity_data}
-
-**Full prompt text:**
-
-```
-You are evaluating whether a probe (guiding question) has been adequately addressed by the student and can be archived.
-
-PROBE TO EVALUATE:
-"{probe_text}"
-
-SESSION CONTEXT:
-- Goal: {session_goal}
-- Recent Transcript: {transcript}
-- Whiteboard/Visual Data: {whiteboard_data}
-- Activity Data: {activity_data}
-
-A probe should be ARCHIVED if:
-1. The student has verbally addressed the question (even partially) showing they've engaged with the underlying concept
-2. Proof of work in whiteboard/code shows they've worked through the issue the probe was targeting
-3. The student has moved past this concept to more advanced thinking
-4. The probe is no longer relevant to their current line of inquiry
-
-A probe should NOT be archived if:
-1. There's no proof of work the student has engaged with it
-2. The underlying gap the probe was targeting is still present
-3. The student explicitly expressed confusion about this topic recently
-4. Archiving it would leave a critical gap unaddressed
-
-Return ONLY valid JSON:
-{
-  "can_archive": true/false,
-  "reason": "Brief explanation (1-2 sentences) of why this probe can or cannot be archived"
-}
-```
-
 ### `ILE_CONTEXT` [ORPHAN — exported, never imported]
 
 - **File**: `openlesson/lib/prompts.ts`
@@ -906,19 +700,6 @@ Rules:
 - Mention the current topic naturally.
 - End with one gentle question inviting them to begin.
 - Do not say you reviewed private data; just sound like you remember the learning journey.
-```
-
-### generate-feedback system prompt
-
-- **File**: `app/api/generate-feedback/route.ts`
-- **Call chain**: `POST /api/generate-feedback`
-- **Purpose**: Brief feedback from think-aloud transcripts
-- **User-overridable**: No
-
-**Full prompt text:**
-
-```
-You are an AI learning assistant. Based on the student's speech, give brief feedback (1-2 sentences).
 ```
 
 ### session/performance-chat `buildSystemInstructions`
@@ -1049,34 +830,6 @@ You are an AI Workspace assistant. Your role is to help users understand and cus
   - If no changes requested, just return current sessions unchanged
 ```
 
-### workspace/describe `SYSTEM_PROMPT`
-
-- **File**: `app/api/workspace/describe/route.ts`
-- **Call chain**: `POST /api/workspace/describe`
-- **Purpose**: Generate plan overview/highlights JSON
-- **User-overridable**: No
-
-**Full prompt text:**
-
-```
-You are an AI Learning Plan Descriptor. Your job is to explain a learning plan to users in a clear, helpful way.
-
- Guidelines:
- - Explain the overall structure and why topics are ordered that way
- - Mention prerequisites and how topics build on each other
- - Provide estimated time or difficulty context if relevant
- - Be encouraging and clear
- - If there are multiple paths, explain the main recommended path
-
- Response format (JSON):
- {
-   "title": "Short descriptive title for this plan",
-   "overview": "2-3 sentences explaining the plan structure and learning approach",
-   "highlights": ["Key point 1", "Key point 2", "Key point 3"],
-   "suggestions": "Optional: suggestions for how to approach this plan"
- }
-```
-
 ### workspace/generate `promptBody`
 
 - **File**: `app/api/workspace/generate/route.ts`
@@ -1191,11 +944,6 @@ Rules:
 Create a new learning plan for a new learner based on an existing one.
 
 ORIGINAL PLAN TOPIC: "${sourcePlan.root_topic}"
-${
-  authorUsername
-    ? `Originally created by: @${authorUsername}`
-    : ""
-}
 
 ORIGINAL LEARNING SESSIONS (for context only - do not use these IDs):
 ${originalTopics}
@@ -1224,41 +972,6 @@ Rules:
 - Keep titles concise (3-8 words)
 - Descriptions: 1 sentence explaining the concept
 - Include 3-10 nodes total
-```
-
-### agent/plan user prompt (X402)
-
-- **File**: `app/api/agent/workspace/route.ts`
-- **Call chain**: `POST /api/agent/workspace`
-- **Purpose**: Agent API learning plan graph generation
-- **User-overridable**: No
-- **Variables**: `{topic}`, `{daysNum}`, `{nodeConstraints}`
-
-**Full prompt text:**
-
-```
-Generate a learning plan for "${topic}" as a directed graph where each node is a session.
-
-Return ONLY valid JSON (no markdown) with this structure:
-{
-  "nodes": [
-    { "id": "a", "title": "Node Title", "description": "Why this matters", "is_start": true/false, "next": ["b", "c"] }
-  ]
-}
-
-IMPORTANT CONSTRAINT: The plan should span approximately "${daysNum} days".
-- Include ${nodeConstraints.min} to ${nodeConstraints.max} nodes total
-- Each node represents one learning session
-- Create a realistic learning path that fits within this timeframe
-
-Rules:
-- Each node is a distinct learning session
-- Use single-letter or short IDs for referencing
-- is_start: true for nodes that can begin a learning path
-- next: array of node IDs that follow this node (can be empty or have 1-3 entries)
-- Create branching paths (1 to many connections allowed)
-- Keep titles concise (3-8 words)
-- Descriptions: 1 sentence explaining the concept
 ```
 
 ### rabbit-hole/continue user prompt
@@ -1301,7 +1014,7 @@ Rules:
 **Full prompt text:**
 
 ```
-Create a performance learning workspace from this prompt. Break it into available blocks that a learner can complete and later request GHL score links for.\n\nPrompt:\n${initialPrompt}${fileContext}\n\nReturn ONLY JSON:\n{\n  "title": "concise workspace title",\n  "conversion_goal": "concise success/conversion outcome for this workspace",\n  "blocks": [\n    { "id": "a", "title": "Block title", "description": "What the learner should demonstrate", "is_start": true, "next": ["b"] }\n  ]\n}\n\nRules:\n- Create 3 to 8 blocks.\n- Blocks are assessable learning/performance units.\n- Use short stable ids only for linking within this response.${WORKSPACE_GENERATION_CONVERSION_GOAL_RULE}
+Create a performance learning workspace from this prompt. Break it into assessable blocks for learning verification and proof-of-work-based gap analysis.\n\nPrompt:\n${initialPrompt}${fileContext}\n\nReturn ONLY JSON:\n{\n  "title": "concise workspace title",\n  "conversion_goal": "concise success/conversion outcome for this workspace",\n  "blocks": [\n    { "id": "a", "title": "Block title", "description": "What the learner should demonstrate", "is_start": true, "next": ["b"] }\n  ]\n}\n\nRules:\n- Create 3 to 8 blocks.\n- Blocks are assessable learning/performance units.\n- Use short stable ids only for linking within this response.${WORKSPACE_GENERATION_CONVERSION_GOAL_RULE}
 - conversion_goal: one concise phrase (max ~12 words) defining what "conversion" or success means for this workspace (e.g. "Trial-to-paid activation", "Month-end close certification"). Infer from the prompt and blocks.
 ```
 
@@ -1486,39 +1199,6 @@ Include a very brief (5 words max) description of why each is useful.`;
         model: DEFAULT_MODEL,
 ```
 
-### prepare-session user prompt
-
-- **File**: `app/api/workspace/prepare-session/route.ts`
-- **Call chain**: `POST /api/workspace/prepare-session`
-- **Purpose**: Full pre-session prep guide (concepts, resources, activity, expectations)
-- **User-overridable**: No
-- **Variables**: `{topic}`
-
-**Full prompt text:**
-
-```
-Generate preparation material for a tutoring session on the topic: "${topic}"
-
-Create a comprehensive guide that includes:
-
-## 1. Key Concepts to Review
-- 3-5 important foundational concepts related to this topic
-- Brief explanations of each (1-2 sentences)
-
-## 2. External Resources
-- 2-3 helpful external links (real, existing URLs to reputable sources like Wikipedia, Khan Academy, MIT OpenCourseWare, etc.)
-- Include a one-sentence description of why each is useful
-
-## 3. Mini Preparation Activity
-- A small hands-on exercise, thought experiment, or practical application to try before the session
-- Should take 5-15 minutes
-
-## 4. What to Expect
-- 1-2 sentences about what the session will focus on and what kind of questions you'll be asked
-
-Format the response in clear markdown. Be concise but helpful. The goal is to help the learner feel prepared, not overwhelmed.
-```
-
 ### workspace/performance-chat `buildSystemInstructions`
 
 - **File**: `app/api/workspace/performance-chat/route.ts`
@@ -1596,16 +1276,16 @@ You only have access to performance data for the current user${currentUsername ?
 
 ---
 
-## Domain 5: TAP / GHL Scoring
+## Domain 5: TAP Scoring
 
 
-### `buildGhcScoreInstructions`
+### `buildTapScoreInstructions`
 
-- **File**: `lib/ghc-score.ts`
-- **Call chain**: TAP/GHL chat routes, `generateTapOpeningQuestion`
+- **File**: `lib/tap-score.ts`
+- **Call chain**: TAP chat routes, `generateTapOpeningQuestion`
 - **Purpose**: TAP facilitator persona and workspace context for Socratic demonstration
 - **User-overridable**: No
-- **Variables**: `{assessmentTarget}`, `{minutes}`, `{brief.plan.*}`, `{nodeSummary}`, `{sessionSummary}`, `{focusSessionSummary}`, `{GHC_SCORE_MARKERS}`
+- **Variables**: `{assessmentTarget}`, `{minutes}`, `{brief.plan.*}`, `{nodeSummary}`, `{sessionSummary}`, `{focusSessionSummary}`, `{TAP_SCORE_MARKERS}`
 
 **Full prompt text:**
 
@@ -1614,7 +1294,7 @@ You are the Think Aloud Protocol (TAP) session facilitator for OpenLesson.
 
 The learner is demonstrating what they learned about ${assessmentTarget}. Your role is to collect enough proof of work to score the demonstration and identify actionable learning gaps. Route remediation into Integrated Learning Environment (ILE) practice where appropriate. You are ${listenerStyle(mode)}.
 
-Your job is to run a Socratic learning demonstration. Elicit a clear, natural explanation and expose gaps: missing definitions, weak causal links, misconceptions, shallow examples, unsupported jumps, and fragile transfer across contexts. Do not announce scores during the live session. Ask questions that reveal understanding across these learning markers: ${GHC_SCORE_MARKERS.map((marker) => marker.label).join(", ")}.
+Your job is to run a Socratic learning demonstration. Elicit a clear, natural explanation and expose gaps: missing definitions, weak causal links, misconceptions, shallow examples, unsupported jumps, and fragile transfer across contexts. Do not announce scores during the live session. Ask questions that reveal understanding across these learning markers: ${TAP_SCORE_MARKERS.map((marker) => marker.label).join(", ")}.
 
 Rules:
 - Ask one short spoken question at a time.
@@ -1650,9 +1330,9 @@ ${sessionSummary || "No completed session reports found yet."}
 ${focusSessionSummary}
 ```
 
-### TAP/GHL chat overlay (appended to buildGhcScoreInstructions)
+### TAP chat overlay (appended to buildTapScoreInstructions)
 
-- **File**: `workspace-tap-score/chat/route.ts`, `workspace-ghl-score/chat/route.ts`
+- **File**: `workspace-tap-score/chat/route.ts`
 - **Call chain**: POST chat endpoints
 - **Purpose**: Text-mode thought interface (not live voice)
 - **User-overridable**: No
@@ -1665,8 +1345,8 @@ You are now responding in a selective thought interface, not a live voice call. 
 
 ### `buildTraceScoringInstructions`
 
-- **File**: `lib/ghl-score-traces.ts`
-- **Call chain**: Appended to scoring user prompt in TAP/GHL complete routes
+- **File**: `lib/tap-score-traces.ts`
+- **Call chain**: Appended to scoring user prompt in TAP complete routes
 - **Purpose**: Instruct model to use System 1 vs System 2 thought traces as proof of work
 - **User-overridable**: No
 - **Variables**: `{system1Count}`, `{system2Count}`, `{manifestText}` — empty string when no traces
@@ -1686,13 +1366,13 @@ Trace manifest:
 ${traceContext.manifestText || "No trace manifest available."}
 ```
 
-### TAP complete scoring (system + user template)
+### TAP complete proof-of-work upload
 
 - **File**: `app/api/workspace-tap-score/complete/route.ts`
 - **Call chain**: `POST /api/workspace-tap-score/complete`
-- **Purpose**: Final TAP scorecard JSON from transcript + traces
+- **Purpose**: Upload tap-transcript proof of work and mark TAP session completed (no inline scoring)
 - **User-overridable**: No
-- **Variables**: `{brief.*}`, `{transcriptText}`, `{traceInstructions}`, marker schema from GHC_SCORE_MARKERS
+- **Variables**: `{brief.*}`, `{transcriptText}`, `{traceInstructions}`, marker schema from TAP_SCORE_MARKERS
 
 **Full prompt text:**
 
@@ -1717,52 +1397,7 @@ Return JSON with:
   "overall_score": number from 0 to 100 (learning verification from the TAP demonstration),
   "conversion_score": number from 0 to 100 (estimated likelihood of achieving the workspace conversion goal — infer goal from workspace context when not explicit),
   "conversion_goal": string (what conversion means for this workspace, e.g. "Trial activation", "Certification sign-off"),
-  "markers": ${JSON.stringify(GHC_SCORE_MARKERS.map((marker) => ({ ...marker, score: "number from 0 to 100", rationale: "string" })))},
-  "gap_analysis": {
-    "summary": string,
-    "gaps": [{ "title": string, "proof_of_work": string, "severity": "low" | "medium" | "high", "suggested_repair": string }],
-    "next_practice": string[]
-  },
-  "knowledge_gaps": [{ "title": string, "proof_of_work": string, "severity": "low" | "medium" | "high", "suggested_repair": string }],
-  "overall_reflection": string,
-  "strengths": string[],
-  "growth_areas": string[],
-  "follow_up_prompts": string[],
-  "confidence": "emerging" | "developing" | "clear" | "well-connected"
-}
-```
-
-### GHL complete scoring (same system, GHL transcript label)
-
-- **File**: `app/api/workspace-ghl-score/complete/route.ts`
-- **Call chain**: `POST /api/workspace-ghl-score/complete`
-- **Purpose**: Final GHL scorecard — identical to TAP except transcript label
-- **User-overridable**: No
-
-**Full prompt text:**
-
-```
-SYSTEM:
-You create Think Aloud Protocol (TAP) score analyses for OpenLesson. Return only JSON. Scores are provisional from 0 to 100, not clinical or identity claims. overall_score measures learning verification from the demonstration; conversion_score estimates likelihood of achieving the workspace conversion goal (infer conversion_goal from workspace title, description, notes, and blocks when not explicit). Identify actionable gap analysis, then provide supporting marker scores. When thought trace files are attached, treat System 1 and System 2 traces as evidence alongside the dialogue transcript.
-
-USER TEMPLATE:
-Workspace: ${brief.plan.title}
-Topic: ${brief.plan.root_topic}
-Description: ${brief.plan.description || "n/a"}
-Notes: ${brief.plan.notes || "n/a"}
-Nodes: ${JSON.stringify(brief.nodes)}
-Focused session: ${JSON.stringify(brief.focusSession || null)}
-
-GHL Score transcript (System 2 dialogue — thoughts the learner explicitly submitted to the probe):
-${transcriptText}
-${traceInstructions}
-
-Return JSON with:
-{
-  "overall_score": number from 0 to 100 (learning verification from the TAP demonstration),
-  "conversion_score": number from 0 to 100 (estimated likelihood of achieving the workspace conversion goal — infer goal from workspace context when not explicit),
-  "conversion_goal": string (what conversion means for this workspace, e.g. "Trial activation", "Certification sign-off"),
-  "markers": ${JSON.stringify(GHC_SCORE_MARKERS.map((marker) => ({ ...marker, score: "number from 0 to 100", rationale: "string" })))},
+  "markers": ${JSON.stringify(TAP_SCORE_MARKERS.map((marker) => ({ ...marker, score: "number from 0 to 100", rationale: "string" })))},
   "gap_analysis": {
     "summary": string,
     "gaps": [{ "title": string, "proof_of_work": string, "severity": "low" | "medium" | "high", "suggested_repair": string }],
@@ -1938,7 +1573,7 @@ Required content:
 5. Authentication table (Bearer sk_ / gsk_, Teams tier, scopes).
 6. Endpoints table covering REST and MCP with **dual documentation** (never hide REST behind MCP):
    - REST: POST /workspaces, GET /blocks, POST /proof-of-work-schema, POST /proof-of-work, POST /performance, POST /integration-skill
-   - MCP (JSON-RPC at POST /api/mcp with Bearer auth): list_workspaces, get_workspace, get_learning_progress, list_blocks, generate_proof_of_work_schema, upload_proof_of_work, analyze_performance, generate_integration_skill, create_tap_link, list_tap_links, get_tap_results
+   - MCP (JSON-RPC at POST /api/mcp with Bearer auth): list_workspaces, get_workspace, get_learning_progress, list_blocks, generate_proof_of_work_schema, upload_proof_of_work, analyze_performance, generate_integration_skill, create_tap_link, list_tap_links
    - State that MCP tools have full parity with REST; proof-of-work spec responses include both continuous_evaluation (REST paths) and continuous_evaluation_mcp (tool names)
    - Recommend get_learning_progress / generate_proof_of_work_schema first for progress orientation
 7. **Proof-of-work specification (required section)** — explain that payloads are defined by the formal proof-of-work spec returned from POST ${proofOfWorkSchemaPath}. Include:
@@ -1958,7 +1593,7 @@ Required content:
    - Chat mode example with prompt + conversation_history
 10. Quick integration checklist: fetch proof-of-work spec → honor interruption scheduling → upload proof of work per contract → regenerate skill → request performance → repeat as proof of work grows.
 
-Canonical API reference links: ${request.base_url}/skill.md and ${request.base_url}/docs/agentic-v2
+Canonical API reference links: ${request.base_url}/skill.md and ${request.base_url}/docs/proof-of-work-api
 
 Return ONLY the markdown document. No JSON wrapper. No code fences around the entire document.
 ```
@@ -2210,23 +1845,23 @@ This route has no inline prompt strings. Prompt text lives in createVerification
 
 ### `generateTapOpeningQuestion-system-extension`
 
-- **File**: `lib/ghc-score.ts`
+- **File**: `lib/tap-score.ts`
 - **Call chain**: `generateTapOpeningQuestion` → `callXai` (TAP opening question before chat)
-- **Purpose**: System extension appended after full buildGhcScoreInstructions output
+- **Purpose**: System extension appended after full buildTapScoreInstructions output
 - **User-overridable**: No
-- **Variables**: `{context}` = full buildGhcScoreInstructions output
+- **Variables**: `{context}` = full buildTapScoreInstructions output
 
 **Full prompt text:**
 
 ```
-[Appended after full buildGhcScoreInstructions(context) output]
+[Appended after full buildTapScoreInstructions(context) output]
 
 Generate exactly ONE opening Socratic question to start the Think Aloud demonstration. The question must be specific to the workspace/block context above. Invite the learner to demonstrate what they learned — not a generic icebreaker or meta question about their approach. One sentence only. No preamble, no quotes, just the question.
 ```
 
 ### `generateTapOpeningQuestion-userMessage`
 
-- **File**: `lib/ghc-score.ts`
+- **File**: `lib/tap-score.ts`
 - **Call chain**: `generateTapOpeningQuestion` → `callXai` (TAP opening question before chat)
 - **Purpose**: User message naming the demonstration target block/title
 - **User-overridable**: No
@@ -2243,29 +1878,14 @@ Generate the opening question for demonstrating learning about: ${target}
 ## Scanner Inventory Appendix
 
 
-Discovered via `scripts/discover-llm-prompts.mjs` at 2026-07-11T00:17:24.782Z: **49** production paths.
+Discovered via `scripts/discover-llm-prompts.mjs` at 2026-07-11T13:55:45.898Z: **43** production paths.
 
 | Path | Category |
 |---|---|
-| `openlesson/app/api/agent/workspace/route.ts` | call-site |
 | `openlesson/app/api/demo/integration-skill/route.ts` | buildIntegrationSkillInstructions consumer |
 | `openlesson/app/api/demo/performance/route.ts` | buildPerformanceReportInstructions + buildPerformanceChatInstructions + Orbit context |
 | `openlesson/app/api/demo/workspace/route.ts` | Consumer → createVerificationWorkspaceFromPrompt (lib/agent-v2/create-verification-workspace.ts) |
-| `openlesson/app/api/generate-feedback/route.ts` | Transcript feedback system prompt |
 | `openlesson/app/api/insights/create/route.ts` | call-site |
-| `openlesson/app/api/workspace/add-block-at-slot/route.ts` | add-block-at-slot system + user prompts |
-| `openlesson/app/api/workspace/chat/route.ts` | SYSTEM_PROMPT workspace assistant |
-| `openlesson/app/api/workspace/describe/route.ts` | SYSTEM_PROMPT plan descriptor |
-| `openlesson/app/api/workspace/expand/route.ts` | call-site |
-| `openlesson/app/api/workspace/generate/route.ts` | promptBody plan graph generator (not in rg.log — add via expand) |
-| `openlesson/app/api/workspace/integration-skill/route.ts` | buildIntegrationSkillInstructions consumer |
-| `openlesson/app/api/workspace/performance-chat/route.ts` | buildSystemInstructions multi-user performance chat |
-| `openlesson/app/api/workspace/performance-report/route.ts` | buildPerformanceReportInstructions consumer |
-| `openlesson/app/api/workspace/prepare-session/route.ts` | call-site |
-| `openlesson/app/api/workspace/regenerate/route.ts` | call-site |
-| `openlesson/app/api/workspace/suggest-blocks/route.ts` | suggest-blocks system + user prompts |
-| `openlesson/app/api/workspace/suggest-chapter-edit/route.ts` | suggest-chapter-edit system + user prompt |
-| `openlesson/app/api/workspaces/[id]/remix/route.ts` | call-site |
 | `openlesson/app/api/prep-material/route.ts` | call-site |
 | `openlesson/app/api/rabbit-hole/continue/route.ts` | Rabbit Hole plan generator user prompt (not in rg.log) |
 | `openlesson/app/api/rabbit-hole/interview/route.ts` | call-site |
@@ -2278,10 +1898,19 @@ Discovered via `scripts/discover-llm-prompts.mjs` at 2026-07-11T00:17:24.782Z: *
 | `openlesson/app/api/v2/agent/workspaces/[id]/integration-skill/route.ts` | buildIntegrationSkillInstructions consumer |
 | `openlesson/app/api/v2/agent/workspaces/[id]/performance/route.ts` | buildPerformanceReportInstructions + buildPerformanceChatInstructions |
 | `openlesson/app/api/v2/agent/workspaces/route.ts` | Workspace block generation user prompt (not in rg.log) |
-| `openlesson/app/api/workspace-ghl-score/chat/route.ts` | buildGhcScoreInstructions + GHL chat overlay |
-| `openlesson/app/api/workspace-ghl-score/complete/route.ts` | GHL complete scoring system + user prompts |
-| `openlesson/app/api/workspace-tap-score/chat/route.ts` | buildGhcScoreInstructions + TAP chat overlay |
+| `openlesson/app/api/workspace-tap-score/chat/route.ts` | buildTapScoreInstructions + TAP chat overlay |
 | `openlesson/app/api/workspace-tap-score/complete/route.ts` | TAP complete scoring system + user prompts |
+| `openlesson/app/api/workspace/add-block-at-slot/route.ts` | add-block-at-slot system + user prompts |
+| `openlesson/app/api/workspace/chat/route.ts` | SYSTEM_PROMPT workspace assistant |
+| `openlesson/app/api/workspace/expand/route.ts` | call-site |
+| `openlesson/app/api/workspace/generate/route.ts` | promptBody plan graph generator (not in rg.log — add via expand) |
+| `openlesson/app/api/workspace/integration-skill/route.ts` | buildIntegrationSkillInstructions consumer |
+| `openlesson/app/api/workspace/performance-chat/route.ts` | buildSystemInstructions multi-user performance chat |
+| `openlesson/app/api/workspace/performance-report/route.ts` | buildPerformanceReportInstructions consumer |
+| `openlesson/app/api/workspace/regenerate/route.ts` | call-site |
+| `openlesson/app/api/workspace/suggest-blocks/route.ts` | suggest-blocks system + user prompts |
+| `openlesson/app/api/workspace/suggest-chapter-edit/route.ts` | suggest-chapter-edit system + user prompt |
+| `openlesson/app/api/workspaces/[id]/remix/route.ts` | call-site |
 | `openlesson/lib/agent-v2/create-verification-workspace.ts` | createVerificationWorkspaceFromPrompt userMessage (3–6 blocks, proof-of-work wording) |
 | `openlesson/lib/agent-v2/integration-skill.ts` | buildIntegrationSkillInstructions, buildIntegrationSkillPrompt |
 | `openlesson/lib/agent-v2/mcp-proof-of-work-server.ts` | MCP mirrors v2 prompts (workspace create, performance, integration-skill, schema) |
@@ -2289,10 +1918,10 @@ Discovered via `scripts/discover-llm-prompts.mjs` at 2026-07-11T00:17:24.782Z: *
 | `openlesson/lib/agent-v2/performance-report.ts` | buildPerformanceReportInstructions, PERFORMANCE_REMEDIATION_GUARDRAILS |
 | `openlesson/lib/agent-v2/proof-of-work-integration.ts` | generateWorkspaceProofOfWorkSpec wires schema instructions |
 | `openlesson/lib/agent-v2/proof-of-work-schema.ts` | buildProofOfWorkSchemaInstructions, buildProofOfWorkSchemaPrompt |
-| `openlesson/lib/ghc-score.ts` | buildGhcScoreInstructions, generateTapOpeningQuestion system extension + userMessage |
-| `openlesson/lib/ghl-score-traces.ts` | buildTraceScoringInstructions |
 | `openlesson/lib/labs-ai.ts` | SYSTEM_PROMPT EEG probe generator |
 | `openlesson/lib/local-inference.ts` | Gemma transcription + Socratic probe prompts (client) |
 | `openlesson/lib/prompts.ts` | Central registry: DEFAULT_PROMPTS, ILE_CONTEXT, PROMPT_META, getPrompt |
+| `openlesson/lib/tap-score-traces.ts` | buildTraceScoringInstructions |
+| `openlesson/lib/tap-score.ts` | buildTapScoreInstructions, generateTapOpeningQuestion system extension + userMessage |
 | `openlesson/lib/xai-client.ts` | call-site |
 | `openlesson/lib/xai.ts` | getPrompt consumers: analyzeGap, generateOpeningProbe, generateProbe, generateReport, etc. |

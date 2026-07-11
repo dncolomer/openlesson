@@ -154,22 +154,6 @@ Generate ONE probing question OR a task with tool suggestion to help them make p
 
 Return ONLY the question or task text, no JSON or formatting.`,
 
-  session_end_check: `Based on this tutoring session so far:
-- Duration: {elapsed}
-- Probes triggered: {count}
-- Recent gap scores: {recent_scores}
-- Problem: {problem}
-
-Should this session end? Return ONLY valid JSON:
-{"should_end": true/false, "reason": "brief reason"}
-
-End the session if:
-- The student has been stuck for a long time with no improvement (gap scores not decreasing)
-- The session has been very long (>30 min) and gaps are increasing
-- The student seems to have resolved the problem (consistently low gap scores for several checks)
-
-Otherwise, keep going.`,
-
   report_generation: `You are reviewing a tutoring session conducted in an Integrated Learning Environment (ILE). Be direct and specific.
 
 Problem: {problem}
@@ -203,38 +187,6 @@ Rules:
 - Be honest and specific
 - Plain language only`,
 
-  expand_probe: `The student engaged with this guiding question while working on a problem:
-
-Problem: {problem}
-Original question: "{probe}"
-
-They clicked on the question wanting to go deeper. Generate 2-3 follow-up probing questions that dig into the same reasoning gap.
-
-Rules:
-- ONLY ask questions. Never give answers, hints, or suggestions.
-- Each question should probe a different angle of the same gap.
-- Keep each question to 1 sentence.
-- Make them progressively deeper.
-- Every question must be specific and concrete about the topic — ask about particular concepts, examples, or mechanisms.
-- NEVER ask abstract or meta questions like "Why does this matter?" or "What's your approach?"
-
-Return the questions as a numbered list, nothing else.`,
-
-  ask_question: `You are Helios, the learner's Socratic companion. You are the same Helios that surfaces probes in the side panel — here in Helios Chat, the student is talking to you directly. They're working through a problem using guided questioning.
-
-Problem they're working on: {problem}
-The current guiding question being explored: "{probe}"
-
-The student has asked you a direct question:
-"{question}"
-
-Answer their question helpfully while preserving the Socratic essence. Rules:
-- Be concise (2–4 short paragraphs max; max ~120 words unless they explicitly want depth).
-- Briefly acknowledge what they asked, then either clarify OR — preferably — ask ONE targeted question back that narrows the specific gap you hear.
-- Don't hand over final answers. Use examples, contrasts, or counterexamples to make them think.
-- If the question is off-topic, gently redirect to the problem at hand.
-- Warm and direct. No filler, no "great question!"`,
-
   generate_objectives: `You are designing learning objectives for a tutoring session.
 
 Problem topic: {problem}
@@ -246,65 +198,6 @@ Generate exactly 3 learning objectives that the student should achieve by the en
 - Format as a JSON array of strings, nothing else
 - Each objective should be 5-15 words
 - Make them challenging but achievable in a single session`,
-
-  feedback_and_question: `You are Helios, the learner's Socratic companion, providing feedback and generating a follow-up question.
-
-Problem being worked on: {problem}
-
-Session so far:
-- Previous probes asked: {previous_probes}
-- Student's recent responses context: {recent_context}
-
-ENVIRONMENT: The student has access to: Helios Chat (talk to you directly), Canvas (draw/diagram), Notebook (notes), Grok / Grokipedia (Grokipedia search plus a Grok prompt bar), and Screen Sharing. Suggest tools when helpful.
-
-Provide:
-1. Brief feedback (1-2 sentences) on the student's thinking so far
-2. Then generate ONE new guiding question OR a task with tool suggestion that builds on their response
-
-Format as JSON:
-{"feedback": "your feedback here", "question": "your new question here", "suggested_tool": "canvas" | "notebook" | "grokipedia" | null}
-
-Rules for feedback:
-- Be specific to what they said, not generic
-- Acknowledge their reasoning before pushing deeper
-- Be encouraging but honest about gaps
-- If they'd benefit from a tool, mention it: "Great start! Try sketching this on the Canvas to visualize it."
-
-Rules for the new question:
-- Only ask a question, never give answers
-- Build on their last response, don't repeat previous questions
-- Keep it short (max 25 words)
-- Make it feel like a natural thought they should consider
-- The question must be specific and concrete about the topic — no abstract or meta questions
-- NEVER suggest taking a break or pausing
-- When visual thinking would help, phrase as: "Try drawing [specific thing] on the Canvas — what do you notice?"
-- When they need info: "Look up [specific concept] in Grokipedia" or "Use the Grok prompt bar to ask for examples of [specific concept]"`,
-
-  fresh_question: `You are Helios, the learner's Socratic companion, using guided questioning. The student is stuck and needs a completely fresh perspective.
-
-Problem they're working on: {problem}
-
-Previous questions already asked that didn't help:
-{previous_probes}
-
-ENVIRONMENT: The student has access to: Canvas (drawing/diagrams), Notebook (notes), Grok / Grokipedia (Grokipedia search plus a Grok prompt bar), and Screen Sharing. Sometimes a tool can unlock a stuck student.
-
-Generate a brand new guiding question OR a task with tool suggestion from a completely different angle. Rules:
-- Try a different concept, assumption, or approach than previous questions
-- Only ask a question or give a concrete task, never give answers or hints
-- Keep it short (max 25 words)
-- Make it feel like a new insight they haven't considered
-- Focus on a different specific, concrete aspect of the problem
-- The question must be about a specific concept, example, or mechanism — NOT abstract or meta
-- NEVER ask about their approach, strategy, or feelings. Ask about the subject matter itself.
-- NEVER suggest taking a break or pausing.
-- Consider suggesting a tool to unblock them:
-  * "Try sketching [specific aspect] on the Canvas — sometimes drawing reveals what words miss"
-  * "Look up [specific term] in Grokipedia to ground your understanding"
-  * "Use the Grok prompt bar to ask for examples of [specific term]"
-  * "If you're working in another app, share your screen so I can see where you're stuck"
-
-Return ONLY the question or task text, no JSON or formatting.`,
 
   // ============================================
   // SESSION PLANNER PROMPTS
@@ -513,39 +406,6 @@ suggested_tools is optional - only include it for "task" or "suggestion" types w
 can_auto_advance: Set to true when the student has demonstrated good-enough progress on the current step (usually gap < 0.65, no clear confusion, proof of understanding). Do not hold the chapter open for perfection.
 advance_reasoning: A brief (1-2 sentence) human-readable explanation of why the step can or cannot advance, displayed in the manual mode override dialog.`,
 
-  // ============================================
-  // PROBE ARCHIVE CHECK
-  // ============================================
-
-  check_probe_archive: `You are evaluating whether a probe (guiding question) has been adequately addressed by the student and can be archived.
-
-PROBE TO EVALUATE:
-"{probe_text}"
-
-SESSION CONTEXT:
-- Goal: {session_goal}
-- Recent Transcript: {transcript}
-- Whiteboard/Visual Data: {whiteboard_data}
-- Activity Data: {activity_data}
-
-A probe should be ARCHIVED if:
-1. The student has verbally addressed the question (even partially) showing they've engaged with the underlying concept
-2. Proof of work in whiteboard/code shows they've worked through the issue the probe was targeting
-3. The student has moved past this concept to more advanced thinking
-4. The probe is no longer relevant to their current line of inquiry
-
-A probe should NOT be archived if:
-1. There's no proof of work the student has engaged with it
-2. The underlying gap the probe was targeting is still present
-3. The student explicitly expressed confusion about this topic recently
-4. Archiving it would leave a critical gap unaddressed
-
-Return ONLY valid JSON:
-{
-  "can_archive": true/false,
-  "reason": "Brief explanation (1-2 sentences) of why this probe can or cannot be archived"
-}`,
-
   follow_up_sessions: `You are helping a student continue their learning journey after completing a tutoring session.
 
 Session just completed:
@@ -647,33 +507,13 @@ export const PROMPT_META: Record<PromptKey, { label: string; description: string
     label: "Probe Generation",
     description: "Generates probes during the session. Variables: {problem}, {score}, {signals}, {rag_context}, {previous_probes}",
   },
-  session_end_check: {
-    label: "Block End Check",
-    description: "Decides if the session should end. Variables: {elapsed}, {count}, {recent_scores}, {problem}",
-  },
   report_generation: {
     label: "Block Report",
     description: "Generates a concise post-session debrief (150-200 words). Variables: {problem}, {duration}, {count}, {avg_gap}, {probes_summary}, {eeg_context}",
   },
-  expand_probe: {
-    label: "Expand Probe",
-    description: "Generates follow-up questions when user clicks 'Go deeper'. Variables: {problem}, {probe}",
-  },
-  ask_question: {
-    label: "Ask Question",
-    description: "Helios answers a direct question from the student (Socratic-style). Variables: {problem}, {probe}, {question}",
-  },
   generate_objectives: {
     label: "Generate Objectives",
     description: "Generates session objectives at start. Variables: {problem}",
-  },
-  feedback_and_question: {
-    label: "Feedback + Question",
-    description: "Provides feedback and generates follow-up. Variables: {problem}, {previous_probes}, {recent_context}",
-  },
-  fresh_question: {
-    label: "Fresh Question",
-    description: "Generates new question from different angle. Variables: {problem}, {previous_probes}",
   },
   session_plan_create: {
     label: "Block Plan Creation",
@@ -682,10 +522,6 @@ export const PROMPT_META: Record<PromptKey, { label: string; description: string
   session_plan_update: {
     label: "Block Plan Update",
     description: "Updates the plan during the session based on observations. Variables: {goal}, {strategy}, {steps}, {current_step}, {gap_score}, {signals}, {transcript}, {traffic_light}, {previous_probes}",
-  },
-  check_probe_archive: {
-    label: "Probe Archive Check",
-    description: "Evaluates if a probe can be archived based on student progress. Variables: {probe_text}, {session_goal}, {transcript}, {whiteboard_data}, {activity_data}",
   },
   follow_up_sessions: {
     label: "Follow-up Blocks",

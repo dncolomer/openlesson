@@ -9,7 +9,9 @@ description: "[Superseded] Use /customer-agent-openlesson-skill.md — backgroun
 
 This skill teaches the PumaDoc Customer Agent how to verify customer-development learning by **serializing what the user did**, **uploading proof of work** through OpenLesson's Proof-of-Work API, and **requesting performance analysis** that returns structured gap reports or follow-up Q&A.
 
-**Canonical API reference:** `/skill.md` (`https://openlesson.academy/skill.md`) and `/docs/agentic-v2`. When this document and the live API differ, follow `skill.md`.
+**Canonical API reference:** `/skill.md` (`https://openlesson.academy/skill.md`) and `/docs/proof-of-work-api`. When this document and the live API differ, follow `skill.md`.
+
+**Transport:** REST (`/api/v2/agent/*`) and MCP (`POST /api/mcp`, Bearer auth) have **full parity**. Prefer MCP tools (`upload_proof_of_work`, `analyze_performance`, `generate_proof_of_work_schema`, etc.) when the agent already has an MCP client; REST paths below are equivalent.
 
 **Share URL for this integration:** `/pumadoc-proof-of-work-performance-skill.md`
 
@@ -86,12 +88,16 @@ OpenLesson maps these to block learning markers during `POST .../performance`.
 
 | API `type` | Role | Required? |
 |------------|------|-----------|
-| `tool` | Open tool-usage / event serialization | **Yes** — sufficient alone for scoring |
-| `screen` | Screenshot of artifact UI (alias: `screenshot`) | Optional |
-| `video` | Screen recording; may include learner voice-over | Optional |
-| `eeg` | Muse or compatible EEG chunk (`application/json`) | Optional |
+| `tool` | `application/json`, `text/plain`, `text/markdown` — open tool-usage / event serialization | **Yes** — sufficient alone for scoring |
+| `screen` | `image/png`, `image/jpeg`, `image/webp` — screenshot of artifact UI (alias: `screenshot`) | Optional |
+| `video` | `video/mp4`, `video/webm`, `video/quicktime` — screen recording; may include learner voice-over | Optional |
+| `eeg` | `application/json`, `text/plain` — Muse or compatible EEG chunk | Optional |
+
+EEG uploads may include `device_name`, `sample_count`, and `band_powers` on the request envelope (alongside `data`).
 
 Voice is not a separate proof-of-work type. Capture speech via **screen recording** (`video`) or reflect spoken reasoning inside the **tool JSON** (e.g. `learner_reflection`, transcribed notes). Do not block step progression waiting for optional media.
+
+**TAP** (Think Aloud Protocol) evidence uploads to proof of work on session completion (`tap-thought-trace`, `tap-transcript`). Issue links with `create_tap_link`, poll `list_tap_links` until `status === "completed"`, then score via `analyze_performance` / `POST .../performance`.
 
 ---
 
@@ -122,9 +128,13 @@ Base path: `/api/v2/agent`
 | Create guest (optional) | `POST` | `/org/guests` | `org:write` |
 | Create workspace | `POST` | `/workspaces` | `workspaces:write` |
 | List blocks | `GET` | `/workspaces/{workspace_id}/blocks` | `workspaces:read` |
+| Proof-of-work schema | `POST` | `/workspaces/{workspace_id}/proof-of-work-schema` | `workspaces:read` |
+| Integration skill | `POST` | `/workspaces/{workspace_id}/integration-skill` | `workspaces:read` |
 | Upload proof of work | `POST` | `/workspaces/{workspace_id}/proof-of-work` | `workspaces:write` |
 | Performance report | `POST` | `/workspaces/{workspace_id}/performance` | `workspaces:read` |
 | Performance Q&A | `POST` | `/workspaces/{workspace_id}/performance` | `workspaces:read` |
+| TAP link | `POST` | `/workspaces/{workspace_id}/blocks/{block_id}/tap-links` | `tap:write` |
+| List TAP links | `GET` | `/workspaces/{workspace_id}/tap-links` | `tap:read` |
 
 ---
 
@@ -313,7 +323,8 @@ Upload only when available. Never delay performance analysis waiting for these.
   "data": "<base64>",
   "block_id": "{block_uuid}",
   "device_name": "Muse-2",
-  "sample_count": 256
+  "sample_count": 256,
+  "band_powers": { "alpha": 0.2, "beta": 0.4, "theta": 0.15, "delta": 0.1, "gamma": 0.15 }
 }
 ```
 
@@ -364,10 +375,18 @@ or an empty body. Omit `block_id` to analyze all blocks and all workspace proof 
 
 **Response `200`:**
 
+Every report includes `overall_score` (0–100 learning verification), `conversion_score` (0–100 goal conversion likelihood), `conversion_goal`, spider/radar `marker_scores`, and `gap_analysis.gaps`. Every success response also includes top-level `interruption` (TIM).
+
 ```json
 {
   "mode": "report",
   "report": {
+    "overall_score": 72,
+    "conversion_score": 58,
+    "conversion_goal": "Founder ready for live customer validation interviews",
+    "marker_scores": [
+      { "id": "icp_clarity", "label": "ICP Clarity", "score": 78, "rationale": "..." }
+    ],
     "summary": "...",
     "strengths": ["..."],
     "growth_areas": ["..."],
@@ -381,6 +400,10 @@ or an empty body. Omit `block_id` to analyze all blocks and all workspace proof 
           "suggested_repair": "..."
         }
       ],
+      "next_steps": {
+        "directions": ["Sharpen segment falsification criteria"],
+        "events": ["run_simulation", "edit_field:icp.segment"]
+      },
       "next_practice": ["..."]
     },
     "suggestions": ["..."],
@@ -389,10 +412,12 @@ or an empty body. Omit `block_id` to analyze all blocks and all workspace proof 
   "proof_of_work_summary": {
     "blocks": 1,
     "proof_of_work_artifacts": 1,
+    "tap_sessions": 0,
     "linked_sessions": 0,
     "workspace_files": 1
   },
-  "file_ids": ["file_...", "file_..."]
+  "file_ids": ["file_...", "file_..."],
+  "interruption": null
 }
 ```
 

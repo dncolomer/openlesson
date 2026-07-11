@@ -236,7 +236,7 @@ export default function UserDetailPage() {
             <div className="text-neutral-200">{user?.extra_workspaces ?? 0}</div>
           </div>
           <div>
-            <div className="text-xs text-neutral-500">Extra sessions</div>
+            <div className="text-xs text-neutral-500">Extra Proof-of-Work submissions</div>
             <div className="flex items-center gap-2">
               <span className="text-neutral-200">{user?.extra_lessons ?? 0}</span>
               {[1, 10, 100].map((amount) => (

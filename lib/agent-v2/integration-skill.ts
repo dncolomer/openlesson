@@ -214,7 +214,7 @@ Required content:
 5. Authentication table (Bearer sk_ / gsk_, Teams tier, scopes).
 6. Endpoints table covering REST and MCP with **dual documentation** (never hide REST behind MCP):
    - REST: POST /workspaces, GET /blocks, POST /proof-of-work-schema, POST /proof-of-work, POST /performance, POST /integration-skill
-   - MCP (JSON-RPC at POST /api/mcp with Bearer auth): list_workspaces, get_workspace, get_learning_progress, list_blocks, generate_proof_of_work_schema, upload_proof_of_work, analyze_performance, generate_integration_skill, create_tap_link, list_tap_links, get_tap_results
+   - MCP (JSON-RPC at POST /api/mcp with Bearer auth): list_workspaces, get_workspace, get_learning_progress, list_blocks, generate_proof_of_work_schema, upload_proof_of_work, analyze_performance, generate_integration_skill, create_tap_link, list_tap_links
    - State that MCP tools have full parity with REST; proof-of-work spec responses include both continuous_evaluation (REST paths) and continuous_evaluation_mcp (tool names)
    - Recommend get_learning_progress / generate_proof_of_work_schema first for progress orientation
 7. **Proof-of-work specification (required section)** — explain that payloads are defined by the formal proof-of-work spec returned from POST ${proofOfWorkSchemaPath}. Include:
@@ -234,7 +234,7 @@ Required content:
    - Chat mode example with prompt + conversation_history
 10. Quick integration checklist: fetch proof-of-work spec → honor interruption scheduling → upload proof of work per contract → regenerate skill → request performance → repeat as proof of work grows.
 
-Canonical API reference links: ${request.base_url}/skill.md and ${request.base_url}/docs/agentic-v2
+Canonical API reference links: ${request.base_url}/skill.md and ${request.base_url}/docs/proof-of-work-api
 
 Return ONLY the markdown document. No JSON wrapper. No code fences around the entire document.`;
 }

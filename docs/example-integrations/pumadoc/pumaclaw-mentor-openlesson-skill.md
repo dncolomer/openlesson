@@ -5,11 +5,28 @@ description: PumaClaw Agent Mentor mode — read learner workspace progress and 
 
 # PumaClaw Mentor — OpenLesson Integration
 
-**API reference:** `/skill.md` · **Transport:** openLesson MCP (or REST Bearer — same tools)
+**API reference:** `/skill.md` · **Transport:** openLesson MCP (`POST /api/mcp`) or REST (`/api/v2/agent/*`) — full parity, Bearer auth
 
 **When:** PumaClaw Agent runs in **Mentor mode** — session start, mentor check-in, or when the learner asks how to learn faster.
 
 **Goal:** Holistic, proof-of-work-backed advice on optimizing learning — not step gating. Uses the same learner workspace the Customer Agent populated.
+
+Every MCP tool result and REST success response includes top-level `interruption` (TIM).
+
+**MCP tools:** `list_workspaces`, `get_workspace`, `get_learning_progress`, `create_workspace`, `list_blocks`, `generate_proof_of_work_schema`, `generate_integration_skill`, `upload_proof_of_work`, `analyze_performance`, `list_tap_links`, `create_tap_link`
+
+---
+
+## Proof-of-work signal the mentor can recommend
+
+| `type` | MIME types | Mentor guidance |
+|--------|------------|-----------------|
+| `tool` | `application/json`, `text/plain`, `text/markdown` | Core — tool events + chat turns (`tool_name: pumadoc` or `pumaclaw`) |
+| `screen` | `image/png`, `image/jpeg`, `image/webp` | Optional artifact screenshots |
+| `video` | `video/mp4`, `video/webm`, `video/quicktime` | Optional walkthrough with voice |
+| `eeg` | `application/json`, `text/plain` | Optional Muse EEG during focused work (`device_name`, `sample_count`, `band_powers`) |
+
+TAP (Think Aloud Protocol) evidence uploads to proof of work on completion. Poll `list_tap_links` for status, then use `analyze_performance` for unified scoring. Tool JSON alone is sufficient for `analyze_performance`.
 
 ---
 
@@ -64,7 +81,7 @@ If **no proof of work yet**, say so honestly and recommend the learner complete 
 
 ## Present advice in Mentor chat
 
-Synthesize `response` (chat mode) and/or `report.gap_analysis`, `marker_scores`, `recommended_next_actions`. Keep tone mentor — not examiner.
+Synthesize `response` (chat mode) and/or `report.gap_analysis` (including `next_steps.directions` / `next_steps.events`), `marker_scores`, `conversion_score` vs `conversion_goal`, and `recommended_next_actions`. Keep tone mentor — not examiner.
 
 **Template:**
 
@@ -99,7 +116,7 @@ If the mentor session itself produces new signal (e.g. learner articulates a pla
 | Tool | Use |
 |------|-----|
 | `list_blocks` | Name competencies when advising |
-| `get_tap_results` | Incorporate completed think-aloud gaps |
+| `list_tap_links` | Confirm TAP completion before incorporating think-aloud proof of work |
 | `generate_proof_of_work_schema` | When proof of work is thin — show what to capture next |
 
 ---

@@ -190,5 +190,5 @@ export function buildOrbitUiManifestForWorkspace(): string {
 |-----------|---------|----------------|
 ${rows.join("\n")}
 
-Ship Sprint (${ORBIT_TAP_MIN_SCORE}+ TAP score) gates sprint publication. Do not suggest actions outside this table.`;
+Ship Sprint (completed Think Aloud Protocol session) gates sprint publication. Do not suggest actions outside this table.`;
 }

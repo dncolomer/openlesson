@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { resolveGhlSessionAccess } from "@/lib/ghl-score-session-auth";
-import { generateTapOpeningQuestion, getGhcScoreBrief, getGhcScoreBriefForUser } from "@/lib/ghc-score";
+import { resolveTapSessionAccess } from "@/lib/tap-score-session-auth";
+import { generateTapOpeningQuestion, getTapScoreBrief, getTapScoreBriefForUser } from "@/lib/tap-score";
 
 export const runtime = "nodejs";
 export const maxDuration = 30;
@@ -13,12 +13,12 @@ export async function POST(req: NextRequest) {
     const blockId = body.blockId ? String(body.blockId) : null;
     const focusSessionId = body.sessionId ? String(body.sessionId) : null;
     const minutes = Math.max(1, Number(body.minutes || 15));
-    const ghlSessionId = body.ghlSessionId ? String(body.ghlSessionId) : "";
+    const tapSessionId = body.tapSessionId ? String(body.tapSessionId) : "";
 
-    const access = await resolveGhlSessionAccess({
+    const access = await resolveTapSessionAccess({
       privateToken,
       workspaceId,
-      ghlSessionId,
+      tapSessionId,
       blockId,
       focusSessionId,
     });
@@ -29,8 +29,8 @@ export async function POST(req: NextRequest) {
     const focusNodeIds = blockId ? [blockId] : access.blockId ? [access.blockId] : [];
     const resolvedFocusSessionId = focusSessionId || access.focusSessionId;
     const { brief } = access.userId
-      ? await getGhcScoreBriefForUser(access.workspaceId, access.userId, focusNodeIds, true, resolvedFocusSessionId)
-      : await getGhcScoreBrief(access.workspaceId, focusNodeIds, resolvedFocusSessionId);
+      ? await getTapScoreBriefForUser(access.workspaceId, access.userId, focusNodeIds, true, resolvedFocusSessionId)
+      : await getTapScoreBrief(access.workspaceId, focusNodeIds, resolvedFocusSessionId);
     const openingQuestion = await generateTapOpeningQuestion(brief, minutes);
 
     if (access.existingSession?.id) {
@@ -44,7 +44,7 @@ export async function POST(req: NextRequest) {
         })
         .eq("id", access.existingSession.id);
 
-      return NextResponse.json({ ghlSessionId: access.existingSession.id, openingQuestion });
+      return NextResponse.json({ tapSessionId: access.existingSession.id, openingQuestion });
     }
 
     if (privateToken) {
@@ -69,7 +69,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: error?.message || "Could not start TAP session" }, { status: 500 });
     }
 
-    return NextResponse.json({ ghlSessionId: row.id, openingQuestion });
+    return NextResponse.json({ tapSessionId: row.id, openingQuestion });
   } catch (error) {
     console.error("[workspace-tap-score/start] Error:", error);
     const message = error instanceof Error ? error.message : "Internal server error";

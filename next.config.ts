@@ -11,7 +11,12 @@ const nextConfig: NextConfig = {
     return [
       {
         source: "/docs/agentic-v2-draft",
-        destination: "/docs/agentic-v2",
+        destination: "/docs/proof-of-work-api",
+        permanent: true,
+      },
+      {
+        source: "/docs/agentic-v2",
+        destination: "/docs/proof-of-work-api",
         permanent: true,
       },
       { source: "/enterprise", destination: "/platform", permanent: true },

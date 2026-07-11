@@ -23,7 +23,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.95,
     },
     {
-      url: `${baseUrl}/docs/agentic-v2`,
+      url: `${baseUrl}/docs/proof-of-work-api`,
       lastModified: new Date(),
       changeFrequency: "monthly",
       priority: 0.85,

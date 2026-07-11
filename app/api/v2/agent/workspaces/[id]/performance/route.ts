@@ -95,7 +95,6 @@ export async function POST(req: NextRequest, { params }: RouteProps) {
 
       if (
         context.payload.counts.proof_of_work_artifacts === 0 &&
-        context.payload.counts.tap_sessions === 0 &&
         context.payload.counts.linked_sessions === 0 &&
         context.payload.counts.workspace_files === 0
       ) {
@@ -113,7 +112,7 @@ export async function POST(req: NextRequest, { params }: RouteProps) {
             {
               mode: prompt ? "chat" : "report",
               response: prompt
-                ? "No performance proof of work is attached to this workspace yet. Upload tool usage, screenshots, video, or EEG via POST /proof-of-work, complete a Think Aloud Protocol (TAP) session, or link session data before asking detailed questions."
+                ? "No performance proof of work is attached to this workspace yet. Upload tool usage, screenshots, video, or EEG via POST /proof-of-work, or complete a Think Aloud Protocol (TAP) / ILE session so traces and transcripts are recorded before asking detailed questions."
                 : null,
               report: emptyReport?.report ?? null,
               workspace_conversion_goal: emptyReport?.workspace_conversion_goal,

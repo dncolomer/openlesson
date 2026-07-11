@@ -37,10 +37,7 @@ export async function authenticateRequest(
   return authenticateApiKey(apiKey, requiredScope);
 }
 
-/**
- * Authenticate a raw API key value. Used by legacy MCP path transport (/api/mcp/{key}).
- * Prefer Bearer auth on POST /api/mcp for new integrations.
- */
+/** Authenticate a raw API key value. Use with Bearer auth on POST /api/mcp. */
 export async function authenticateApiKey(
   apiKey: string,
   requiredScope: ApiKeyScope

@@ -246,11 +246,10 @@ describe("buildProofOfWorkSchemaInstructions", () => {
         focus_block_id: null,
         generated_at: new Date().toISOString(),
         blocks: [{ id: "b1", title: "Discovery", description: "Qualify pain", status: null, is_start: true, session_id: null }],
-        tap_sessions: [],
         proof_of_work: [],
         workspace_files: [],
         linked_sessions: [],
-        counts: { blocks: 1, tap_sessions: 0, proof_of_work_artifacts: 0, linked_sessions: 0, workspace_files: 0 },
+        counts: { blocks: 1, proof_of_work_artifacts: 0, linked_sessions: 0, workspace_files: 0 },
       }
     );
 

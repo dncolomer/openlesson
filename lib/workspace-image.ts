@@ -39,7 +39,7 @@ export async function getRandomWorkspaceCoverImage(): Promise<string | null> {
 
 export async function generateAndStorePlanCover(
   supabase: {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     from: (table: string) => { update: any };
   },
   _userId: string,
@@ -49,7 +49,7 @@ export async function generateAndStorePlanCover(
   const coverUrl = await getRandomWorkspaceCoverImage();
   if (!coverUrl) return null;
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   await (supabase.from("workspaces") as any)
     .update({ cover_image_url: coverUrl })
     .eq("id", workspaceId);

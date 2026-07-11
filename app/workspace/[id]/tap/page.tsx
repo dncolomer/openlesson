@@ -1,4 +1,4 @@
-import { GhcScoreClient } from "@/components/GhcScoreClient";
+import { TapScoreClient } from "@/components/TapScoreClient";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -8,5 +8,5 @@ interface PageProps {
 export default async function GhlScorePage({ params, searchParams }: PageProps) {
   const { id } = await params;
   const { sessionId, blockId } = await searchParams;
-  return <GhcScoreClient workspaceId={id} sessionId={sessionId} blockId={blockId} />;
+  return <TapScoreClient workspaceId={id} sessionId={sessionId} blockId={blockId} />;
 }

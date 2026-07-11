@@ -1,22 +1,22 @@
 'use client';
 
 import { createContext, useContext, useEffect, useState, Suspense } from 'react';
-// eslint-disable-next-line @typescript-eslint/no-require-imports
+ 
 const en = require('../messages/en.json');
-// eslint-disable-next-line @typescript-eslint/no-require-imports
+ 
 const vi = require('../messages/vi.json');
-// eslint-disable-next-line @typescript-eslint/no-require-imports
+ 
 const zh = require('../messages/zh.json');
-// eslint-disable-next-line @typescript-eslint/no-require-imports
+ 
 const es = require('../messages/es.json');
-// eslint-disable-next-line @typescript-eslint/no-require-imports
+ 
 const de = require('../messages/de.json');
-// eslint-disable-next-line @typescript-eslint/no-require-imports
+ 
 const pl = require('../messages/pl.json');
 
 type Locale = 'en' | 'vi' | 'zh' | 'es' | 'de' | 'pl';
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 const messages: Record<Locale, any> = {
   en,
   vi,
@@ -59,7 +59,7 @@ export function translateWithLocale(
   params?: Record<string, string | number>,
 ): string {
   const tryResolve = (loc: string): string | null => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     const bundle: any = (messages as Record<string, any>)[loc];
     if (!bundle) return null;
     let value: unknown = bundle;

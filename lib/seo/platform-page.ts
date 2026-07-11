@@ -103,7 +103,7 @@ export const PLATFORM_PAGE: SeoPlatformPageConfig = {
     {
       title: "Proof-of-Work API: programmatic workspace access",
       paragraphs: [
-        "The Proof-of-Work API is how builders wire the knowledge workspace into their stack. Create workspaces, upload proof of work, request performance reports, issue Think Aloud Protocol links, poll session results, and trigger ILE practice blocks.",
+        "The Proof-of-Work API is how builders wire the Verification Workspace into their stack. Create workspaces, upload proof of work, request unified performance reports, issue Think Aloud Protocol links, poll TAP completion, and trigger ILE practice blocks.",
         "Embed verification and augmentation into CI pipelines, internal portals, agent orchestration, or any system where humans and agents perform knowledge work.",
       ],
     },
@@ -141,7 +141,7 @@ export const PLATFORM_PAGE: SeoPlatformPageConfig = {
     },
   ],
   primaryCta: { label: "Create a Verification Workspace", href: "/workspace/new" },
-  secondaryCta: { label: "Proof-of-Work API docs", href: "/docs/agentic-v2" },
+  secondaryCta: { label: "Proof-of-Work API docs", href: "/docs/proof-of-work-api" },
   closingTitle: "Verify learning. Augment where it breaks.",
   closingBody:
     "Stop trusting outputs and completion rates. Use software tools in a knowledge workspace to verify learning with proof of work, and augment it until scores move.",

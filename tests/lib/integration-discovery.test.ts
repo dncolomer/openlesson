@@ -32,7 +32,7 @@ describe("integration-discovery", () => {
     const cold = recommendIntegrationActions({
       proof_of_work_artifacts: 0,
       blocks: 2,
-      tap_sessions: 0,
+
       has_conversion_goal: true,
     });
     expect(cold.some((a) => a.mcp_tool === "generate_proof_of_work_schema")).toBe(true);
@@ -40,7 +40,7 @@ describe("integration-discovery", () => {
     const warm = recommendIntegrationActions({
       proof_of_work_artifacts: 6,
       blocks: 2,
-      tap_sessions: 0,
+
       has_conversion_goal: true,
     });
     expect(warm.some((a) => a.mcp_tool === "analyze_performance")).toBe(true);

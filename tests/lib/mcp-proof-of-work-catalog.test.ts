@@ -19,7 +19,7 @@ describe("mcp-proof-of-work-catalog", () => {
     expect(names).toContain("generate_proof_of_work_schema");
     expect(names).toContain("get_learning_progress");
     expect(names).not.toContain("pumadoc_customer_agent_toolkit");
-    expect(names.length).toBe(12);
+    expect(names.length).toBe(11);
   });
 
   it("emits MCP client config JSON with Bearer auth header", () => {

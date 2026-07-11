@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createPrivateToken, getGhcScoreBriefForUser, hashPrivateToken } from "@/lib/ghc-score";
+import { createPrivateToken, getTapScoreBriefForUser, hashPrivateToken } from "@/lib/tap-score";
 import { requireDemoAdminWorkspaceSession } from "@/lib/openlesson-demo/demo-access";
 import { buildDemoTapSessionUrl } from "@/lib/openlesson-demo/demo-session-url";
 import { selectTapValidationBlock } from "@/lib/openlesson-demo/tap-validation";
@@ -54,7 +54,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Block not found" }, { status: 404 });
     }
 
-    await getGhcScoreBriefForUser(workspaceId, access.userId, [blockId], true, null);
+    await getTapScoreBriefForUser(workspaceId, access.userId, [blockId], true, null);
 
     const privateToken = createPrivateToken();
     const { data: link, error } = await access.supabase

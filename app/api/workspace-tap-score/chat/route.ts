@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { callXai, systemMessage, userMessage } from "@/lib/xai-client";
-import { buildGhcScoreInstructions, getGhcScoreBrief, getGhcScoreBriefForUser, GhcScoreMode, hashPrivateToken } from "@/lib/ghc-score";
+import { buildTapScoreInstructions, getTapScoreBrief, getTapScoreBriefForUser, TapScoreMode, hashPrivateToken } from "@/lib/tap-score";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -11,7 +11,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const privateToken = body.privateToken ? String(body.privateToken) : "";
     let workspaceId = String(body.workspaceId || "");
-    let mode = "curious" as GhcScoreMode;
+    let mode = "curious" as TapScoreMode;
     let minutes = Number(body.minutes || 15);
     let focusNodeIds = Array.isArray(body.focusNodeIds) ? body.focusNodeIds.filter(Boolean) : [];
     const blockId = body.blockId ? String(body.blockId) : null;
@@ -50,10 +50,10 @@ export async function POST(req: NextRequest) {
     if (blockId && !focusNodeIds.includes(blockId)) focusNodeIds = [blockId, ...focusNodeIds];
 
     const { brief } = userId
-      ? await getGhcScoreBriefForUser(workspaceId, userId, focusNodeIds, true, focusSessionId)
-      : await getGhcScoreBrief(workspaceId, focusNodeIds, focusSessionId);
+      ? await getTapScoreBriefForUser(workspaceId, userId, focusNodeIds, true, focusSessionId)
+      : await getTapScoreBrief(workspaceId, focusNodeIds, focusSessionId);
 
-    const context = buildGhcScoreInstructions(brief, mode, minutes);
+    const context = buildTapScoreInstructions(brief, mode, minutes);
     const history = messages
       .slice(-12)
       .map((message: any) => `${message.role === "assistant" ? "Helios" : "Learner"}: ${String(message.content || "").slice(0, 2000)}`)

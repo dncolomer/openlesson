@@ -120,7 +120,6 @@ function classifyDomain(relPath, symbol, kind) {
   }
   if (
     relPath.includes("session-chat") ||
-    relPath.includes("generate-feedback") ||
     relPath === "app/api/session/performance-chat/route.ts"
   ) {
     return "session-helios";
@@ -144,11 +143,10 @@ function classifyDomain(relPath, symbol, kind) {
   }
   if (
     relPath.includes("workspace-tap") ||
-    relPath.includes("workspace-ghl") ||
-    relPath === "lib/ghc-score.ts" ||
-    relPath === "lib/ghl-score-traces.ts"
+    relPath === "lib/tap-score.ts" ||
+    relPath === "lib/tap-score-traces.ts"
   ) {
-    return "tap-ghc-scoring";
+    return "tap-scoring";
   }
   if (
     relPath.includes("agent-v2") ||

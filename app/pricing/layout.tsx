@@ -3,7 +3,7 @@ import { Metadata } from "next";
 export const metadata: Metadata = {
   title: "Pricing - Learning Efficiency Plans | openLesson",
   description:
-    "Create Workspaces and choose monthly TAP / ILE session volume plus Proof-of-Work API submission caps.",
+    "Choose monthly Proof-of-Work submission volume. TAP, ILE, and API usage share one meter.",
   keywords: [
     "AI tutor pricing",
     "learning platform cost",
@@ -14,7 +14,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Pricing - Learning Efficiency Plans | openLesson",
     description:
-      "Create Workspaces, measure learning efficiency, and choose monthly TAP / ILE session volume.",
+      "Create Workspaces, measure learning efficiency, and choose monthly Proof-of-Work submission volume.",
     url: "https://openlesson.academy/pricing",
     siteName: "openLesson",
     type: "website",

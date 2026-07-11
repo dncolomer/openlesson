@@ -2,11 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { createClient } from "@/lib/supabase/server";
 import {
+  EXTRA_PROOF_OF_WORK_PACK_SIZE,
   REGULAR_VOLUME_PRICES,
   TEAM_VOLUME_PRICES,
   resolveCheckoutVolume,
-  resolveCheckoutWorkspaceVolume,
-  getExtraBlockPriceCents,
+  getExtraProofOfWorkPackPriceCents,
 } from "@/lib/plans";
 
 export const runtime = "nodejs";
@@ -30,13 +30,12 @@ export async function POST(request: NextRequest) {
     }
 
     const { priceType, quantity: rawQuantity, monthlyVolume: rawMonthlyVolume } = await request.json();
-    const quantity = priceType === "extra_lesson"
+    const quantity = priceType === "extra_lesson" || priceType === "extra_proof_of_work"
       ? Math.max(1, Math.min(500, Number(rawQuantity) || 1))
       : 1;
     const monthlyVolume = resolveCheckoutVolume(priceType, rawMonthlyVolume);
-    const monthlyWorkspaceVolume = resolveCheckoutWorkspaceVolume(priceType, monthlyVolume);
 
-    if (!["regular", "pro", "regular_2026", "pro_teams", "extra_lesson", "rabbit_hole_plays"].includes(priceType)) {
+    if (!["regular", "pro", "regular_2026", "pro_teams", "extra_lesson", "extra_proof_of_work", "rabbit_hole_plays"].includes(priceType)) {
       return NextResponse.json({ error: "Invalid price type" }, { status: 400 });
     }
 
@@ -59,7 +58,7 @@ export async function POST(request: NextRequest) {
           unit_amount: REGULAR_VOLUME_PRICES[monthlyVolume],
           recurring: { interval: "month" },
           product_data: {
-            name: `openLesson Individual - ${monthlyVolume} TAP/ILE sessions/mo · ${monthlyVolume * 4} evidence/mo · ${monthlyWorkspaceVolume} workspace${monthlyWorkspaceVolume === 1 ? "" : "s"}`,
+            name: `openLesson Individual - ${monthlyVolume.toLocaleString()} Proof-of-Work submissions/mo`,
           },
         },
         quantity: 1,
@@ -72,18 +71,18 @@ export async function POST(request: NextRequest) {
           unit_amount: TEAM_VOLUME_PRICES[monthlyVolume],
           recurring: { interval: "month" },
           product_data: {
-            name: `openLesson Pro / Teams - ${monthlyVolume} TAP/ILE sessions/mo · ${monthlyVolume * 4} evidence/mo · ${monthlyWorkspaceVolume} workspaces`,
+            name: `openLesson Pro / Teams - ${monthlyVolume.toLocaleString()} Proof-of-Work submissions/mo`,
           },
         },
         quantity: 1,
       };
-    } else if (priceType === "extra_lesson") {
+    } else if (priceType === "extra_lesson" || priceType === "extra_proof_of_work") {
       const { data: planProfile } = await supabase
         .from("profiles")
         .select("plan")
         .eq("id", user.id)
         .single();
-      const unitAmount = getExtraBlockPriceCents(planProfile?.plan);
+      const unitAmount = getExtraProofOfWorkPackPriceCents(planProfile?.plan);
       mode = "payment";
       lineItem = {
         price_data: {
@@ -92,8 +91,8 @@ export async function POST(request: NextRequest) {
           product_data: {
             name:
               planProfile?.plan === "pro_teams" || planProfile?.plan === "pro"
-                ? "Additional TAP / ILE session - Pro / Teams"
-                : "Additional TAP / ILE session",
+                ? `Additional Proof-of-Work pack (${EXTRA_PROOF_OF_WORK_PACK_SIZE} submissions) - Pro / Teams`
+                : `Additional Proof-of-Work pack (${EXTRA_PROOF_OF_WORK_PACK_SIZE} submissions)`,
           },
         },
         quantity,
@@ -164,7 +163,7 @@ export async function POST(request: NextRequest) {
         price_type: priceType,
         quantity: String(quantity),
         monthly_volume: String(monthlyVolume),
-        monthly_workspace_volume: String(monthlyWorkspaceVolume),
+        volume_unit: priceType === "regular_2026" || priceType === "pro_teams" ? "proof_of_work" : "",
       },
       ...(mode === "subscription"
         ? {
@@ -173,7 +172,7 @@ export async function POST(request: NextRequest) {
                 supabase_user_id: user.id,
                 price_type: priceType,
                 monthly_volume: String(monthlyVolume),
-                monthly_workspace_volume: String(monthlyWorkspaceVolume),
+                volume_unit: priceType === "regular_2026" || priceType === "pro_teams" ? "proof_of_work" : "",
               },
             },
           }

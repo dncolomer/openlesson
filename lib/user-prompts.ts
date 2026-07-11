@@ -19,7 +19,7 @@ import type { UserPrompts } from "./prompts";
  * @param supabaseClient - Optional pre-authenticated Supabase client to avoid redundant auth calls
  * @param userId - Optional user ID if already known (skips auth.getUser() call)
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 export async function getUserPrompts(supabaseClient?: any, userId?: string): Promise<UserPrompts> {
   try {
     const supabase = supabaseClient || await createClient();

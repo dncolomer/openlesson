@@ -2,34 +2,26 @@
 
 import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { AudioRecorder } from "@/lib/audio";
 import { FacialDataPoint } from "./FaceTracker";
 import {
   getSession,
   addProbe,
   addProbeToSession,
   endSession,
+  getIlePostSessionPath,
   saveSession,
-  saveSessionEEG,
-  saveFacialData,
-  saveAudioChunk,
-  saveBrowserTranscript,
   pauseSession,
   resumeSession,
   updateSessionStatus,
-  logToolUsage,
   getSessionPlan,
+  createSessionPlan,
   archiveProbe,
   toggleProbeFocused,
   resetSessionProbes,
-  saveWithDedupString,
-  saveWithDedupBlob,
   type Session,
   type SessionPlan,
   type SessionPlanStep,
   type Probe,
-  type ObserverMode,
-  type Frequency,
   type ToolName,
   type ToolAction,
   type RequestType,
@@ -40,10 +32,8 @@ import { SessionHeliosPanel } from "./SessionHeliosPanel";
 import { ChapterMapPanel } from "./ChapterMapPanel";
 import { createClient } from "@/lib/supabase/client";
 import { useSessionThoughtInterface, type SessionThoughtTracePayload } from "@/lib/useSessionThoughtInterface";
-import { ThoughtMemoryPanel } from "@/components/ghc/ThoughtMemoryPanel";
+import { ThoughtMemoryPanel } from "@/components/thought-ui/ThoughtMemoryPanel";
 import { GrokGrokipediaTool } from "@/components/GrokGrokipediaTool";
-import { SessionControlBar } from "./SessionControlBar";
-
 import { ResizablePane, type ResizablePaneHandle } from "./ResizablePane";
 import { ExcalidrawCanvas } from "./ExcalidrawCanvas";
 import { ToolsPanel, type Tool } from "./ToolsPanel";
@@ -52,26 +42,31 @@ import { type ChatMessage, type PendingChatMessage, type StuckAction } from "./H
 import { DataInputTool } from "./DataInputTool";
 import { LogsTool, type LogEntry } from "./LogsTool";
 import { createScreenCapture } from "@/lib/screen-capture";
-import { saveScreenshot, updateSessionPlan } from "@/lib/storage";
+import { updateSessionPlan } from "@/lib/storage";
 import type { DeviceStatus } from "@/lib/muse-athena";
 import { LocalInferenceManager, type InitProgress, type LocalAnalysisContext } from "@/lib/local-inference";
 import { LocalContextBuffer } from "@/lib/local-context";
 // ModelLoadingModal no longer used -- loading UI is inline in welcome modal
 
-import { PopOutBanner } from "./PopOutBanner";
 import { WorkspaceResourcesPanel } from "./WorkspaceResourcesPanel";
 import { ConfirmDialog } from "./ui/ConfirmDialog";
-import { 
-  useSessionSync, 
-  openPopOutWindow, 
-  type SessionAction 
-} from "@/lib/broadcast-sync";
-import { useSessionHeartbeat, type StorageHeartbeatResult, type AnalysisHeartbeatResult, type StuckHeartbeatResult } from "@/lib/useSessionHeartbeat";
-import { useInactivityAutoPause } from "@/lib/useInactivityAutoPause";
+import type { TransferHealth } from "@/components/LogsTool";
 import { useVoiceActivity } from "@/lib/useVoiceActivity";
 import { useThinkAloudTranscript, type SpeechTranscriptEntry } from "@/lib/useThinkAloudTranscript";
 import { useHeliosVoicePlaybackActive } from "@/lib/useHeliosVoicePlayback";
-import { retryWithResult } from "@/lib/retry";
+import { IleEvidenceBuffer } from "@/lib/ile-evidence-buffer";
+import {
+  uploadIleEvidenceItem,
+  uploadIleProofOfWork,
+  uploadIleScreenshot,
+  textToBase64,
+} from "@/lib/ile-proof-of-work-client";
+import {
+  buildIleThoughtTracePayload,
+  ILE_TRACE_TOOL_NAME,
+  type IleSystem1Action,
+  type IleSystem2Action,
+} from "@/lib/ile-thought-traces";
 import { isChapterSlotAvailable } from "@/lib/chapter-skill-grid";
 import { translateWithLocale, useI18n } from "@/lib/i18n";
 import { tutoringLocales, tutoringLanguageNames } from "@/lib/tutoring-languages";
@@ -86,7 +81,7 @@ type ChapterWorkspace = {
   chatMessages: ChatMessage[];
   pendingChatMessage: string | PendingChatMessage | null;
   whiteboardData: string | null;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   whiteboardSceneData: { elements: any[]; appState: any; files: any } | null;
   notebookContent: string;
   canvasDirtyForHelios: boolean;
@@ -189,10 +184,17 @@ function NotebookSubmitButton({
 }
 
 // Configuration
-const STORAGE_INTERVAL_MS = 5000;
-const ANALYSIS_INTERVAL_MS = 10000;
 const CHAPTER_LOAD_DURATION_MS = 900;
-const STUCK_POLICY_ENABLED = false;
+
+function createEmptyTransferHealth(): TransferHealth {
+  return {
+    audio: { sent: 0, saved: 0, failed: 0 },
+    eeg: { sent: 0, saved: 0, failed: 0 },
+    facial: { sent: 0, saved: 0, failed: 0 },
+    screenshots: { sent: 0, saved: 0, failed: 0 },
+    tools: { sent: 0, saved: 0, failed: 0 },
+  };
+}
 const EEG_SAMPLE_RATE_HZ = 256;
 const EEG_DISPLAY_MAX_SAMPLES = 512;
 const EEG_PERSIST_MAX_SAMPLES = EEG_SAMPLE_RATE_HZ * 30;
@@ -204,10 +206,8 @@ export function SessionView({ sessionId }: { sessionId: string }) {
   const [session, setSession] = useState<Session | null>(null);
   const [isRecording, setIsRecording] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
-  const [autoPausedForInactivity, setAutoPausedForInactivity] = useState(false);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [stream, setStream] = useState<MediaStream | null>(null);
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [tutoringLanguage, setTutoringLanguage] = useState(locale);
   // Manual-advance by default: the student clicks Complete on a plan step
@@ -219,9 +219,6 @@ export function SessionView({ sessionId }: { sessionId: string }) {
   const [micStatus, setMicStatus] = useState<"idle" | "checking" | "ready" | "denied">("idle");
   const micStreamRef = useRef<MediaStream | null>(null);
 
-  // Observer controls
-  const [observerMode, setObserverMode] = useState<ObserverMode>("active");
-  const [frequency, setFrequency] = useState<Frequency>("balanced");
   const [isMuted, setIsMuted] = useState(false);
   const [muteRemaining, setMuteRemaining] = useState(0);
 
@@ -246,8 +243,6 @@ export function SessionView({ sessionId }: { sessionId: string }) {
   const chapterFocusSinceRef = useRef<Record<number, number>>({ 0: Date.now() });
   const [chapterWorkspaces, setChapterWorkspaces] = useState<Record<string, ChapterWorkspace>>({});
   const [chapterWorkspacesLoaded, setChapterWorkspacesLoaded] = useState(false);
-  const [activeStuckCheck, setActiveStuckCheck] = useState<string | null>(null);
-
   useEffect(() => {
     setActiveChapterIndex(0);
     activeChapterIndexRef.current = 0;
@@ -255,7 +250,6 @@ export function SessionView({ sessionId }: { sessionId: string }) {
     chapterFocusSinceRef.current = { 0: Date.now() };
     setChapterWorkspaces({});
     setChapterWorkspacesLoaded(false);
-    setActiveStuckCheck(null);
   }, [sessionId]);
 
   useEffect(() => {
@@ -335,7 +329,7 @@ export function SessionView({ sessionId }: { sessionId: string }) {
   // Stop-button confirmation — ending is irreversible so we gate the Stop
   // click through an explicit warning that also nudges users toward the
   // non-destructive "pause + back to dashboard" alternative.
-  const [showEndConfirm, setShowEndConfirm] = useState(false);
+
 
   // Mobile detection
   const [isMobile, setIsMobile] = useState(false);
@@ -353,8 +347,6 @@ export function SessionView({ sessionId }: { sessionId: string }) {
   const [modelLoadProgress, setModelLoadProgress] = useState<InitProgress | null>(null);
   const [modelLoadError, setModelLoadError] = useState<string | null>(null);
   const [webGPUAvailable, setWebGPUAvailable] = useState(false);
-  const [isGeneratingProbe, setIsGeneratingProbe] = useState(false);
-
   // Combined session prep modal (plan + optional model loading)
   const [prepStage, setPrepStage] = useState<"plan" | "model" | "done">("plan");
 
@@ -553,11 +545,6 @@ export function SessionView({ sessionId }: { sessionId: string }) {
   // (Prep material state used to live here for the now-removed
   // Practice/Theory side panels. That content has been merged into
   // the Helios chat surface — see fetchAndInjectPrepIntoChat below.)
-
-  // Pop-out window state
-  const [isPopOutActive, setIsPopOutActive] = useState(false);
-  const popOutWindowRef = useRef<Window | null>(null);
-  const popOutDismissedRef = useRef<boolean>(false); // Track if user explicitly dismissed
 
   // Track tool open/close events + auto-expand tool panel if collapsed
   useEffect(() => {
@@ -764,44 +751,6 @@ export function SessionView({ sessionId }: { sessionId: string }) {
     ]);
   }, []);
 
-  const addHeliosStepEvaluationCue = useCallback((_forceAdvance: boolean, _markAsSkipped = false) => {
-    const targetChapterKey = activeChapterKey;
-    const cueId = `advance_eval_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
-    updateChapterWorkspace(targetChapterKey, workspace => ({
-      chatMessages: [
-        ...workspace.chatMessages,
-        {
-          id: cueId,
-          role: "assistant",
-          content: "",
-          pending: true,
-        },
-      ],
-    }));
-    return `${targetChapterKey}::${cueId}`;
-  }, [activeChapterKey, updateChapterWorkspace]);
-
-  const removeHeliosCue = useCallback((cueId: string | null) => {
-    if (!cueId) return;
-    const [chapterKey, messageId] = cueId.split("::");
-    updateChapterWorkspace(chapterKey, workspace => ({
-      chatMessages: workspace.chatMessages.filter(message => message.id !== messageId),
-    }));
-  }, [updateChapterWorkspace]);
-
-  const resolveHeliosCue = useCallback((cueId: string | null, content: string) => {
-    if (!cueId) return;
-    const [chapterKey, messageId] = cueId.split("::");
-    const plainContent = content.replace(/\*\*([^*]+)\*\*/g, "$1");
-    updateChapterWorkspace(chapterKey, workspace => ({
-      chatMessages: workspace.chatMessages.map(message =>
-        message.id === messageId
-          ? { ...message, content: plainContent, pending: false }
-          : message
-      ),
-    }));
-  }, [updateChapterWorkspace]);
-
   const handleStepAskHelios = (stepDescription: string) => {
     // Make sure the tools pane is visible. The `activeTool` effect only
     // reopens the pane when the value actually changes, so if "chat" was
@@ -863,7 +812,7 @@ export function SessionView({ sessionId }: { sessionId: string }) {
   const [museDeviceStatus, setMuseDeviceStatus] = useState<DeviceStatus | null>(null);
   const [eegChannelData, setEegChannelData] = useState<Map<string, number[]>>(new Map());
   const [bandPowers, setBandPowers] = useState<{ delta: number; theta: number; alpha: number; beta: number; gamma: number } | null>(null);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   const museClientRef = useRef<any>(null);
   const eegIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const bandIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -887,23 +836,17 @@ export function SessionView({ sessionId }: { sessionId: string }) {
   const logsRef = useRef<LogEntry[]>([]);
 
   // Refs for interval callbacks
-  const recorderRef = useRef<AudioRecorder | null>(null);
   const sessionRef = useRef<Session | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const elapsedSecondsRef = useRef(0);
-  const lastProbeTimeRef = useRef(0);
-  const lastStuckCardTimeRef = useRef(0);
-  const stuckCardCountRef = useRef(0);
-  const isAnalyzingRef = useRef(false);
   const muteTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const chunkIndexRef = useRef(0);
   const consumeSpeechTranscriptEntriesRef = useRef<() => SpeechTranscriptEntry[]>(() => []);
   const requeueSpeechTranscriptEntriesRef = useRef<(entries: SpeechTranscriptEntry[]) => void>(() => {});
   const eegChunkIndexRef = useRef(0);
   const facialChunkIndexRef = useRef(0);
-  const observerModeRef = useRef(observerMode);
-  const frequencyRef = useRef(frequency);
-  const isMutedRef = useRef(isMuted);
+  const ileEvidenceBufferRef = useRef(new IleEvidenceBuffer());
+  const [transferHealth, setTransferHealth] = useState<TransferHealth>(createEmptyTransferHealth);
+  const transferHealthRef = useRef<TransferHealth>(createEmptyTransferHealth());
   const whiteboardDataRef = useRef(whiteboardData);
   const notebookContentRef = useRef(notebookContent);
   const activeToolRef = useRef(activeTool);
@@ -958,9 +901,6 @@ export function SessionView({ sessionId }: { sessionId: string }) {
   }, []);
 
   // Keep refs in sync
-  useEffect(() => { observerModeRef.current = observerMode; }, [observerMode]);
-  useEffect(() => { frequencyRef.current = frequency; }, [frequency]);
-  useEffect(() => { isMutedRef.current = isMuted; }, [isMuted]);
   useEffect(() => { whiteboardDataRef.current = whiteboardData; }, [whiteboardData]);
   useEffect(() => { notebookContentRef.current = notebookContent; }, [notebookContent]);
   useEffect(() => { activeToolRef.current = activeTool; }, [activeTool]);
@@ -986,6 +926,28 @@ export function SessionView({ sessionId }: { sessionId: string }) {
       stepId: step?.id,
       stepDescription: step?.description?.slice(0, 120),
     });
+  }, []);
+
+  const ensureSessionPlan = useCallback(async (): Promise<SessionPlan | null> => {
+    const currentSession = sessionRef.current;
+    if (!currentSession) return null;
+
+    const existing = await getSessionPlan(currentSession.id);
+    if (existing?.goal) {
+      setSessionPlan(existing);
+      sessionPlanRef.current = existing;
+      return existing;
+    }
+
+    const created = await createSessionPlan(currentSession.id, {
+      goal: currentSession.problem,
+      strategy: "chapter_grid",
+      description: currentSession.planningPrompt || undefined,
+      steps: [],
+    });
+    setSessionPlan(created);
+    sessionPlanRef.current = created;
+    return created;
   }, []);
 
   const persistPlanSteps = useCallback(async (
@@ -1111,186 +1073,7 @@ export function SessionView({ sessionId }: { sessionId: string }) {
     return () => window.clearInterval(interval);
   }, [session?.id, isRecording, isPaused]);
 
-  // Ref for action handlers (populated later, used for pop-out communication)
-  const actionHandlersRef = useRef<{
-    startRecording?: () => void;
-    stopRecording?: () => void;
-    handlePause?: () => void;
-    handleResume?: () => void;
-    handleReset?: () => void;
-    handleClose?: () => void;
-    handleArchiveProbe?: (probeId: string) => Promise<void>;
-    handleToggleFocus?: (probeId: string, focused: boolean) => void;
-    handleAdvanceStep?: (forceAdvance?: boolean) => Promise<void>;
-    handleRollbackToStep?: (stepIndex: number) => Promise<void>;
-  }>({});
-
-  // Handler for actions from pop-out window
-  const handlePopOutAction = useCallback((action: SessionAction) => {
-    const handlers = actionHandlersRef.current;
-    switch (action.action) {
-      case "start":
-        handlers.startRecording?.();
-        break;
-      case "stop":
-        handlers.stopRecording?.();
-        break;
-      case "pause":
-        handlers.handlePause?.();
-        break;
-      case "resume":
-        handlers.handleResume?.();
-        break;
-      case "reset":
-        handlers.handleReset?.();
-        break;
-      case "close":
-        handlers.handleClose?.();
-        break;
-      case "archive_probe":
-        if (action.probeId) handlers.handleArchiveProbe?.(action.probeId);
-        break;
-      case "toggle_focus":
-        if (action.probeId !== undefined) handlers.handleToggleFocus?.(action.probeId, action.focused ?? false);
-        break;
-      case "advance_step":
-        handlers.handleAdvanceStep?.();
-        break;
-      case "rollback_step":
-        if (action.stepIndex !== undefined) handlers.handleRollbackToStep?.(action.stepIndex);
-        break;
-    }
-  }, []);
-
-  // Broadcast sync for pop-out window communication
-  const { 
-    broadcastState, 
-    broadcastProbes, 
-    broadcastPlan, 
-    broadcastRecordingStatus 
-  } = useSessionSync({
-    sessionId,
-    isMainWindow: true,
-    onAction: handlePopOutAction,
-    onPeerConnected: () => {
-      // Don't re-enable if user explicitly dismissed the popout
-      if (popOutDismissedRef.current) return;
-      setIsPopOutActive(true);
-      // Send full state to the newly connected pop-out window
-      if (sessionRef.current) {
-        broadcastState({
-          probes: sessionRef.current.probes,
-          sessionPlan: sessionPlanRef.current,
-          isRecording,
-          isPaused,
-          elapsedSeconds,
-          cycleProgress: elapsedSeconds % 60,
-          isAnalyzing,
-          archivingProbeId,
-          planLoading,
-          planError,
-          originalPrompt: sessionRef.current.problem,
-          objectives,
-          objectiveStatuses,
-        });
-      }
-    },
-    onPeerDisconnected: () => {
-      setIsPopOutActive(false);
-      popOutWindowRef.current = null;
-    },
-  });
-
-  // Broadcast state updates when relevant state changes (excluding time-based updates)
-  useEffect(() => {
-    if (!isPopOutActive || !sessionRef.current) return;
-    broadcastState({
-      probes: sessionRef.current.probes,
-      isRecording,
-      isPaused,
-      isAnalyzing,
-      archivingProbeId,
-      planLoading,
-      planError,
-      objectives,
-      objectiveStatuses,
-    });
-  }, [isPopOutActive, isRecording, isPaused, isAnalyzing, archivingProbeId, planLoading, planError, objectives, objectiveStatuses, broadcastState]);
-
-  // Broadcast time updates separately at a lower frequency (every 5 seconds)
-  useEffect(() => {
-    if (!isPopOutActive) return;
-    if (elapsedSeconds % 5 !== 0) return; // Only broadcast every 5 seconds
-    broadcastState({
-      elapsedSeconds,
-      cycleProgress: elapsedSeconds % 60,
-    });
-  }, [isPopOutActive, elapsedSeconds, broadcastState]);
-
-  // Broadcast probes when session probes change
-  useEffect(() => {
-    if (!isPopOutActive || !session?.probes) return;
-    broadcastProbes(session.probes);
-  }, [isPopOutActive, session?.probes, broadcastProbes]);
-
-  // Broadcast session plan when it changes
-  useEffect(() => {
-    if (!isPopOutActive) return;
-    broadcastPlan(sessionPlan);
-  }, [isPopOutActive, sessionPlan, broadcastPlan]);
-
-  // Handle opening pop-out window
-  const handlePopOut = useCallback(() => {
-    if (popOutWindowRef.current && !popOutWindowRef.current.closed) {
-      // Focus existing pop-out
-      popOutWindowRef.current.focus();
-    } else {
-      // Clear dismissed state when user explicitly opens a new popout
-      popOutDismissedRef.current = false;
-      // Open new pop-out
-      const popOut = openPopOutWindow(sessionId);
-      popOutWindowRef.current = popOut;
-      if (popOut) {
-        setIsPopOutActive(true);
-      }
-    }
-  }, [sessionId]);
-
-  // Stable callback for focusing pop-out window (used by memoized overlay)
-  const handleFocusPopOut = useCallback(() => {
-    if (popOutWindowRef.current && !popOutWindowRef.current.closed) {
-      popOutWindowRef.current.focus();
-    }
-  }, []);
-
-  // Change tab title and warn on close when pop-out is active
-  useEffect(() => {
-    if (!isPopOutActive) return;
-
-    // Store original title
-    const originalTitle = document.title;
-    
-    // Change tab title to warning
-    document.title = "⚠️ Keep Open - Block Active";
-
-    // Warn user if they try to close/navigate away
-    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      e.preventDefault();
-      e.returnValue = "The monitoring block is running in a separate window. Closing this tab will end your block.";
-      return e.returnValue;
-    };
-
-    window.addEventListener("beforeunload", handleBeforeUnload);
-
-    return () => {
-      document.title = originalTitle;
-      window.removeEventListener("beforeunload", handleBeforeUnload);
-    };
-  }, [isPopOutActive]);
-
-
-
-  // Listen for probe events from ProbeNotifications
+  // Listen for probe-revealed custom events (e.g. from legacy probe UI)
   useEffect(() => {
     const handleProbeRevealed = (e: Event) => {
       const probeId = (e as CustomEvent).detail;
@@ -1391,11 +1174,9 @@ export function SessionView({ sessionId }: { sessionId: string }) {
           // First try to load existing plan - use it but user will need to confirm language to translate if needed
           const existingPlan = await getSessionPlan(s.id);
           // Validate existing plan before using
-          if (existingPlan && existingPlan.steps && Array.isArray(existingPlan.steps) && existingPlan.steps.length > 0 && existingPlan.goal) {
+          if (existingPlan?.goal) {
             setSessionPlan(existingPlan);
             sessionPlanRef.current = existingPlan;
-          } else if (existingPlan) {
-            console.warn("Loaded existing plan is invalid:", existingPlan);
           }
           // Don't create new plan here - wait for user to confirm language first
         } catch (err) {
@@ -1515,619 +1296,168 @@ export function SessionView({ sessionId }: { sessionId: string }) {
     setMuseStatus("disconnected");
   };
 
-  // Hard minimum cooldown between probes (ms) to prevent rapid slot filling
-  const PROBE_COOLDOWN_MS = 30_000;
-
-  // ---- Local Analysis Heartbeat (runs Gemma 4 E2B in-browser) ----
-  const runLocalAnalysisHeartbeat = useCallback(async () => {
-    const currentSession = sessionRef.current;
-    const currentPlan = sessionPlanRef.current;
-    const recorder = recorderRef.current;
-    const manager = LocalInferenceManager.getInstance();
-
-    if (!currentSession || !currentPlan || !manager.isReady()) return;
-    if (observerModeRef.current === "off") return;
-    if (isMutedRef.current) return;
-    if (isAnalyzingRef.current) return;
-
-    isAnalyzingRef.current = true;
-    setIsAnalyzing(true);
-
-    try {
-      // Ensure local context buffer exists
-      if (!localContextRef.current) {
-        localContextRef.current = new LocalContextBuffer();
-      }
-      const ctx = localContextRef.current;
-
-      // Step 1: Transcribe recent audio locally
-      if (recorder && isRecordingRef.current) {
-        try {
-          const recentAudio = recorder.getRecentAudio(10000); // last 10s
-          if (recentAudio && recentAudio.size > 100) {
-            const transcript = await manager.transcribe(recentAudio);
-            if (transcript) {
-              ctx.addTranscript(transcript);
-            }
-          }
-        } catch (err) {
-          console.warn("[LocalInference] Transcription error:", err);
-        }
-      }
-
-      // Step 2: Generate a probe locally (no plan update)
-      const openProbes = currentSession.probes.filter(p => !p.archived);
-
-      // Hard cooldown: don't generate probes too rapidly
-      const timeSinceLastLocal = Date.now() - (lastProbeTimeRef.current || 0);
-      if (lastProbeTimeRef.current !== 0 && timeSinceLastLocal < PROBE_COOLDOWN_MS) {
-        return;
-      }
-
-      const currentStep = currentPlan.steps?.[currentPlan.currentStepIndex];
-      const snapshot = ctx.getContext();
-
-      const analysisContext: LocalAnalysisContext = {
-        planGoal: currentPlan.goal || "",
-        currentStep: currentStep?.description || "",
-        recentTranscripts: snapshot.recentTranscripts,
-        toolEvents: snapshot.toolEvents,
-        facialSummary: snapshot.facialSummary,
-        eegSummary: snapshot.eegSummary,
-        previousProbes: currentSession.probes.map(p => p.text),
-        tutoringLanguage: tutoringLanguage,
-      };
-
-      setIsGeneratingProbe(true);
-      const probeText = await manager.generateProbe(analysisContext);
-      setIsGeneratingProbe(false);
-
-      if (probeText && probeText.trim().length > 5 && !isDuplicateProbe(probeText, currentSession.probes)) {
-        // Add probe in-memory only (not persisted to Supabase)
-        const localProbe: Probe = {
-          id: `local_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
-          timestamp: Date.now() - new Date(currentSession.startedAt).getTime(),
-          gapScore: 0.5,
-          signals: ["local-inference"],
-          text: probeText.trim(),
-          requestType: "question" as RequestType,
-          archived: false,
-          starred: false,
-          focused: false,
-          isRevealed: false,
-        };
-
-        const updatedSession = {
-          ...currentSession,
-          probes: [...currentSession.probes, localProbe],
-        };
-        setSession(updatedSession);
-        sessionRef.current = updatedSession;
-        setActiveProbe(localProbe);
-        setViewingProbeIndex(updatedSession.probes.length - 1);
-        addProbeToHeliosChat(localProbe.text);
-        lastProbeTimeRef.current = Date.now();
-      }
-    } catch (err) {
-      console.error("[LocalInference] Analysis error:", err);
-    } finally {
-      isAnalyzingRef.current = false;
-      setIsAnalyzing(false);
-      setIsGeneratingProbe(false);
-    }
-  }, [tutoringLanguage]);
-
-  // ---- Analysis Heartbeat (10s) ----
-  // Returns structured result for the heartbeat hook to track health.
-  // Browser Web Speech transcript uploads run on the storage heartbeat cycle.
-  const runAnalysisHeartbeat = useCallback(async (): Promise<AnalysisHeartbeatResult> => {
-    const startMs = Date.now();
-
-    // Route to local analysis if enabled
-    if (localInferenceEnabledRef.current) {
-      await runLocalAnalysisHeartbeat();
-      return { success: true, durationMs: Date.now() - startMs };
-    }
-
-    const currentSession = sessionRef.current;
-
-    if (!currentSession) return { success: true, durationMs: 0 };
-    if (observerModeRef.current === "off") return { success: true, durationMs: 0 };
-    if (isMutedRef.current) return { success: true, durationMs: 0 };
-    if (isAnalyzingRef.current) return { success: true, durationMs: 0 };
-
-    isAnalyzingRef.current = true;
-    setIsAnalyzing(true);
-
-    try {
-      const openProbes = currentSession.probes.filter(p => !p.archived);
-      const focusedProbes = openProbes.filter(p => p.focused).map(p => ({ id: p.id, text: p.text }));
-      const currentPlan = sessionPlanRef.current;
-
-      if (!currentPlan) {
-        return { success: true, durationMs: Date.now() - startMs };
-      }
-
-      // Helper to validate plan data
-      const isValidPlan = (plan: SessionPlan | null | undefined): boolean => {
-        return !!(plan && 
-          plan.steps && 
-          Array.isArray(plan.steps) && 
-          plan.steps.length > 0 &&
-          plan.goal);
-      };
-
-      // Single call to session-plan/update (now includes gap analysis)
-      setIsGeneratingProbe(true);
-      const res = await fetch("/api/session-plan/update", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          sessionId: currentSession.id,
-          previousProbes: currentSession.probes.map((p) => p.text),
-          // Send {id, text} so the LLM can echo real UUIDs in probes_to_archive.
-          activeProbes: openProbes.map(p => ({ id: p.id, text: p.text })),
-          focusedProbes,
-          openProbeCount: openProbes.length,
-          lastProbeTimestamp: lastProbeTimeRef.current || 0,
-        }),
-      });
-
-      if (!res.ok) {
-        return { success: false, durationMs: Date.now() - startMs, error: "Analysis service unavailable" };
-      }
-
-      const planData = await res.json();
-
-      // Update objective statuses based on gap score from the unified response
-      if (planData.gapScore !== undefined) {
-        setObjectiveStatuses(prev => {
-          if (prev.length === 0) return prev;
-          const newStatuses = [...prev];
-          const statusToSet: "red" | "yellow" | "green" = 
-            planData.gapScore >= 0.7 ? "red" : 
-            planData.gapScore >= 0.4 ? "yellow" : "green";
-          
-          const idxToUpdate = currentSession.probes.length % newStatuses.length;
-          newStatuses[idxToUpdate] = statusToSet;
-          return newStatuses;
-        });
-      }
-
-      // Process plan update response
-      if (planData) {
-        // Check for step transition BEFORE updating state
-        const previousStepIndex = sessionPlanRef.current?.currentStepIndex ?? 0;
-        const newStepIndex = planData.plan?.currentStepIndex ?? 0;
-        const totalSteps = planData.plan?.steps?.length ?? 0;
-        const llmWantsAdvance = newStepIndex > previousStepIndex && isValidPlan(planData.plan);
-        // Only allow automatic step transitions when autoAdvance is ON
-        const isStepTransition = llmWantsAdvance && autoAdvanceRef.current;
-        
-        const allStepsCompleted = planData.plan?.steps?.every((s: { status: string }) => s.status === 'completed') ?? false;
-        const isPlanComplete = isStepTransition && allStepsCompleted && totalSteps > 0;
-        
-        if (isStepTransition && isValidPlan(planData.plan)) {
-          // Auto-advance: accept the new plan with advanced step
-          setSessionPlan(planData.plan);
-          sessionPlanRef.current = planData.plan;
-          const nextStepDesc =
-            planData.plan?.steps?.[newStepIndex]?.description?.slice(0, 80) ?? "";
-          addHeartbeatLog({
-            timestamp: Date.now(),
-            level: "info",
-            source: "plan",
-            message: `Plan advanced: step ${previousStepIndex + 1} → ${newStepIndex + 1} of ${totalSteps}${nextStepDesc ? ` — ${nextStepDesc}` : ""}`,
-          });
-        } else if (llmWantsAdvance && !autoAdvanceRef.current) {
-          // Manual mode: LLM says ready to advance, but user controls when
-          // Keep current plan (don't advance), but update other fields
-          const planWithoutAdvance = {
-            ...planData.plan,
-            currentStepIndex: previousStepIndex,
-            steps: planData.plan.steps.map((s: { status: string }, idx: number) => ({
-              ...s,
-              status: idx < previousStepIndex ? "completed" 
-                : idx === previousStepIndex ? "in_progress" 
-                : s.status === "skipped" ? "skipped" : "pending",
-            })),
-          };
-          if (isValidPlan(planWithoutAdvance)) {
-            setSessionPlan(planWithoutAdvance);
-            sessionPlanRef.current = planWithoutAdvance;
-          }
-          addHeartbeatLog({
-            timestamp: Date.now(),
-            level: "info",
-            source: "plan",
-            message: `LLM suggests advance (step ${previousStepIndex + 1} → ${newStepIndex + 1}) — manual mode, waiting for user`,
-          });
-        } else if (isValidPlan(planData.plan)) {
-          setSessionPlan(planData.plan);
-          sessionPlanRef.current = planData.plan;
-        } else if (planData.plan) {
-          console.warn('[Plan Update] Plan corrupted, keeping previous state:', planData.plan);
-        }
-        
-        // On step transition: archive ALL active probes and trigger celebration
-        if (isStepTransition) {
-          const activeProbesForArchive = currentSession.probes.filter(p => !p.archived);
-          if (activeProbesForArchive.length > 0) {
-            let sessionWithArchivedProbes = currentSession;
-            for (const probe of activeProbesForArchive) {
-              await archiveProbe(probe.id);
-              sessionWithArchivedProbes = {
-                ...sessionWithArchivedProbes,
-                probes: sessionWithArchivedProbes.probes.map(p => 
-                  p.id === probe.id ? { ...p, archived: true } : p
-                ),
-              };
-            }
-            setSession(sessionWithArchivedProbes);
-            sessionRef.current = sessionWithArchivedProbes;
-          }
-          
-          if (isPlanComplete) {
-            playSessionCompleteSound();
-            addHeartbeatLog({
-              timestamp: Date.now(),
-              level: "info",
-              source: "plan",
-              message: `Plan complete (${totalSteps}/${totalSteps} steps) — block paused`,
-            });
-            setTimeout(() => {
-              setShowPlanCompleteModal(true);
-              if (isRecording && !isPaused) {
-                setIsPaused(true);
-              }
-            }, 1500);
-          } else {
-            playStepCompleteSound();
-          }
-          if (activeProbesForArchive.length > 0) {
-            addHeartbeatLog({
-              timestamp: Date.now(),
-              level: "info",
-              source: "probe",
-              message: `${activeProbesForArchive.length} probe${activeProbesForArchive.length === 1 ? "" : "s"} auto-archived (step transition)`,
-            });
-          }
-        } else if (planData.probesToArchive && planData.probesToArchive.length > 0) {
-          let updatedSession = currentSession;
-          for (const probeId of planData.probesToArchive) {
-            await archiveProbe(probeId);
-            updatedSession = {
-              ...updatedSession,
-              probes: updatedSession.probes.map(p => 
-                p.id === probeId ? { ...p, archived: true } : p
-              ),
-            };
-          }
-          setSession(updatedSession);
-          sessionRef.current = updatedSession;
-          
-          if (planData.probesToArchive.length > 0) {
-            playArchiveSound();
-            addHeartbeatLog({
-              timestamp: Date.now(),
-              level: "info",
-              source: "probe",
-              message: `${planData.probesToArchive.length} probe${planData.probesToArchive.length === 1 ? "" : "s"} auto-archived by analysis`,
-            });
-          }
-        }
-        
-        // Use the next request from the plan update
-        if (planData.nextRequest) {
-          const currentOpenProbeCount = (sessionRef.current?.probes || currentSession.probes).filter(p => !p.archived).length;
-          
-          const timeSinceLastProbe = Date.now() - (lastProbeTimeRef.current || 0);
-          const cooldownMet = lastProbeTimeRef.current === 0 || timeSinceLastProbe >= PROBE_COOLDOWN_MS;
-
-          const allProbes = (sessionRef.current?.probes || currentSession.probes);
-          const isDupe = isDuplicateProbe(planData.nextRequest.text, allProbes);
-
-          if (planData.canGenerateProbe !== false && cooldownMet && !isDupe) {
-            const savedProbe = await addProbe(currentSession.id, {
-              timestamp: Date.now() - new Date(currentSession.startedAt).getTime(),
-              gapScore: planData.gapScore ?? 0.5,
-              signals: planData.signals || [],
-              text: planData.nextRequest.text,
-              requestType: planData.nextRequest.type || "question",
-              planStepId: currentPlan.steps?.[currentPlan.currentStepIndex]?.id,
-            });
-            
-            if (planData.nextRequest.suggested_tools) {
-              savedProbe.suggestedTools = planData.nextRequest.suggested_tools;
-            }
-            
-            const updatedSession = addProbeToSession(currentSession, savedProbe);
-            setSession(updatedSession);
-            sessionRef.current = updatedSession;
-
-            setActiveProbe(savedProbe);
-            setViewingProbeIndex(updatedSession.probes.length - 1);
-            addProbeToHeliosChat(savedProbe.text);
-            lastProbeTimeRef.current = Date.now();
-
-            const probePreview = planData.nextRequest.text.slice(0, 80);
-            addHeartbeatLog({
-              timestamp: Date.now(),
-              level: "info",
-              source: "probe",
-              message: `New probe (${planData.nextRequest.type || "question"}, gap=${(planData.gapScore ?? 0.5).toFixed(2)}): ${probePreview}${planData.nextRequest.text.length > 80 ? "…" : ""}`,
-            });
-          } else if (planData.canGenerateProbe !== false) {
-            // LLM wanted to send one but we rejected it — record the reason
-            // so operators can debug why probes aren't landing.
-            const reason = isDupe
-              ? "duplicate"
-              : !cooldownMet
-                  ? `cooldown (${Math.round((PROBE_COOLDOWN_MS - timeSinceLastProbe) / 1000)}s remaining)`
-                  : "unknown";
-            addHeartbeatLog({
-              timestamp: Date.now(),
-              level: "warning",
-              source: "probe",
-              message: `New probe suppressed: ${reason}`,
-            });
-          }
-        }
-      }
-
-      return { success: true, durationMs: Date.now() - startMs, gapScore: planData.gapScore };
-    } catch (err) {
-      console.error("Analysis error:", err);
-      return { success: false, durationMs: Date.now() - startMs, error: String(err) };
-    } finally {
-      isAnalyzingRef.current = false;
-      setIsAnalyzing(false);
-      setIsGeneratingProbe(false);
-    }
-  }, []);
-
-  const runStuckHeartbeat = useCallback(async (): Promise<StuckHeartbeatResult> => {
-    const startMs = Date.now();
-    if (!STUCK_POLICY_ENABLED) {
-      return { success: true, durationMs: Date.now() - startMs, stuck: false };
-    }
-    const currentSession = sessionRef.current;
-
-    if (!currentSession) return { success: true, durationMs: 0 };
-    if (observerModeRef.current === "off") return { success: true, durationMs: 0 };
-    if (isMutedRef.current) return { success: true, durationMs: 0 };
-    if (!isRecordingRef.current || isPaused) return { success: true, durationMs: 0 };
-
-    const secondsSinceLast = lastStuckCardTimeRef.current
-      ? Math.floor((Date.now() - lastStuckCardTimeRef.current) / 1000)
-      : 9999;
-    if (secondsSinceLast < 90) {
-      return { success: true, durationMs: Date.now() - startMs, stuck: false };
-    }
-
-    try {
-      const res = await fetch("/api/session/stuck-policy", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          sessionId: currentSession.id,
-          lastStuckCardTimestamp: lastStuckCardTimeRef.current || 0,
-          stuckCardCount: stuckCardCountRef.current,
-          tutoringLanguage,
-        }),
-      });
-
-      if (!res.ok) {
-        return { success: true, durationMs: Date.now() - startMs, stuck: false };
-      }
-
-      const data = await res.json();
-      if (data?.stuck && data.recommendationMarkdown) {
-        setActiveStuckCheck(String(data.recommendationMarkdown).replace(/\s+/g, " ").trim().slice(0, 180));
-        lastStuckCardTimeRef.current = Date.now();
-        stuckCardCountRef.current += 1;
-        addHeartbeatLog({
-          timestamp: Date.now(),
-          level: "warning",
-          source: "stuck",
-          message: `Stuck check shown (${data.severity || "medium"}): ${data.title || "Stuck Check"}${data.reason ? ` — ${data.reason}` : ""}`,
-        });
-      }
-
-      return { success: true, durationMs: Date.now() - startMs, stuck: Boolean(data?.stuck) };
-    } catch (err) {
-      console.error("Stuck heartbeat error:", err);
-      return { success: false, durationMs: Date.now() - startMs, error: String(err) };
-    }
-  }, [isPaused, tutoringLanguage]);
-
-  // ---- Storage Heartbeat (5s) ----
-  // Returns structured result for the heartbeat hook to track health
-  const runStorageHeartbeat = useCallback(async (): Promise<StorageHeartbeatResult> => {
-    const currentSession = sessionRef.current;
-    const recorder = recorderRef.current;
-    const currentMuseStatus = museStatusRef.current;
-    const currentWebcamEnabled = isWebcamEnabledRef.current;
-
-    if (!currentSession || !isRecordingRef.current) {
-      return {};
-    }
-
-    const result: StorageHeartbeatResult = {};
-
-    try {
-      // Audio: get recent 5 seconds and save (with retry)
-      let transcriptChunkIndex: number | null = null;
-      let transcriptTimestamp = Date.now();
-      if (recorder) {
-        const recentAudio = recorder.getRecentAudio(5000);
-        if (recentAudio && recentAudio.size > 100) {
-          result.audio = { attempted: true, saved: false };
-          const idx = chunkIndexRef.current++;
-          transcriptChunkIndex = idx;
-          transcriptTimestamp = Date.now();
-          const saveResult = await retryWithResult(
-            () => saveAudioChunk(currentSession.id, recentAudio, idx, transcriptTimestamp),
-            { maxRetries: 2, baseDelayMs: 500 },
-          );
-          if (saveResult.success && saveResult.data === null) {
-            // saveAudioChunk returns null when the chunk is below the
-            // minimum size threshold (silence / near-silence). This is an
-            // intentional skip, not a failure — don't count it as an error.
-            result.audio = { attempted: false, saved: false };
-          } else {
-            result.audio.saved = saveResult.success && !!saveResult.data;
-            if (!result.audio.saved) {
-              // Surface the underlying error so the LogsTool shows an entry
-              // next to the incremented `failed` counter.
-              result.audio.error = saveResult.error
-                ? String((saveResult.error as Error)?.message ?? saveResult.error)
-                : "audio upload returned no data";
-            }
-          }
-        }
-      }
-
-      // Upload browser Web Speech transcripts directly to xAI Files. Audio still
-      // stays in Supabase Storage; there is no server-side STT step here.
-      if (currentSession && isRecordingRef.current) {
-        const transcriptEntries = consumeSpeechTranscriptEntriesRef.current();
-        if (transcriptEntries.length > 0) {
-          const transcriptText = transcriptEntries.map((entry) => entry.text).join(" ");
-          const idx = transcriptChunkIndex ?? chunkIndexRef.current++;
-          const timestamp = transcriptChunkIndex === null
-            ? Math.min(...transcriptEntries.map((entry) => entry.timestamp))
-            : transcriptTimestamp;
-          const transcriptResult = await retryWithResult(
-            () => saveBrowserTranscript(currentSession.id, transcriptText, idx, timestamp),
-            { maxRetries: 2, baseDelayMs: 500 },
-          );
-          if (!transcriptResult.success) {
-            requeueSpeechTranscriptEntriesRef.current(transcriptEntries);
-            console.warn("Browser transcript upload error:", transcriptResult.error);
-          }
-        }
-      }
-
-      // Tool data: save whiteboard and notebook content (with deduplication)
-      if (whiteboardDataRef.current) {
-        const whiteboardKey = `canvas_${currentSession.id}`;
-        const whiteboardResult = await saveWithDedupString(whiteboardDataRef.current, whiteboardKey);
-        if (whiteboardResult.saved) {
-          await logTool("canvas", "canvas_draw", { data: whiteboardDataRef.current });
-        }
-      }
-      if (notebookContentRef.current && notebookContentRef.current.trim().length > 0) {
-        const notebookKey = `notebook_${currentSession.id}`;
-        const notebookResult = await saveWithDedupString(notebookContentRef.current, notebookKey);
-        if (notebookResult.saved) {
-          await logTool("notebook", "notebook_edit", { data: notebookContentRef.current });
-        }
-      }
-
-      // EEG: flush persisted buffer if streaming (with retry)
-      if (currentSession && currentMuseStatus === "streaming" && eegPendingBufferRef.current.size > 0) {
-        result.eeg = { attempted: true, saved: false };
-        const channels: Record<string, number[]> = {};
-        for (const [ch, samples] of eegPendingBufferRef.current.entries()) {
-          channels[ch] = samples.slice();
-        }
-        const startedAtMs = eegPendingStartMsRef.current ?? Date.now();
-        const endedAtMs = eegLastSampleMsRef.current ?? Date.now();
-        const sampleCounts = Object.fromEntries(
-          Object.entries(channels).map(([ch, samples]) => [ch, samples.length])
-        );
-
-        const eegIdx = eegChunkIndexRef.current++;
-        const saveResult = await retryWithResult(
-          () => saveSessionEEG(currentSession.id, {
-            channels,
-            bandPowers,
-            sampleRateHz: EEG_SAMPLE_RATE_HZ,
-            startedAtMs,
-            endedAtMs,
-            sampleCounts,
-            deviceStatus: museDeviceStatusRef.current as unknown as Record<string, unknown> | null,
-          }, museClientRef.current?.deviceName, eegIdx, endedAtMs),
-          { maxRetries: 2, baseDelayMs: 500 },
-        );
-        result.eeg.saved = saveResult.success;
-        if (result.eeg.saved) {
-          for (const [ch, savedSamples] of Object.entries(channels)) {
-            const current = eegPendingBufferRef.current.get(ch) || [];
-            const remaining = current.slice(savedSamples.length);
-            if (remaining.length > 0) {
-              eegPendingBufferRef.current.set(ch, remaining);
-            } else {
-              eegPendingBufferRef.current.delete(ch);
-            }
-          }
-          eegPendingStartMsRef.current = eegPendingBufferRef.current.size > 0 ? Date.now() : null;
-          eegLastSampleMsRef.current = eegPendingBufferRef.current.size > 0 ? eegLastSampleMsRef.current : null;
-        }
-        if (!result.eeg.saved && saveResult.error) {
-          result.eeg.error = String((saveResult.error as Error)?.message ?? saveResult.error);
-        }
-      }
-
-      // Facial: flush buffer if webcam enabled (with retry)
-      if (currentSession && currentWebcamEnabled && facialBufferRef.current.length > 0) {
-        result.facial = { attempted: true, saved: false };
-        // Snapshot and CLEAR the buffer before async save to prevent duplicate data
-        const facialSnapshot = [...facialBufferRef.current];
-        facialBufferRef.current = [];
-
-        const facialIdx = facialChunkIndexRef.current++;
-        const saveResult = await retryWithResult(
-          () => saveFacialData(currentSession.id, facialSnapshot, facialIdx, Date.now()),
-          { maxRetries: 2, baseDelayMs: 500 },
-        );
-        result.facial.saved = saveResult.success;
-        if (!result.facial.saved && saveResult.error) {
-          result.facial.error = String((saveResult.error as Error)?.message ?? saveResult.error);
-        }
-      }
-
-      return result;
-    } catch (err) {
-      console.error("Storage heartbeat error:", err);
-      return { error: String(err) };
-    }
-  }, []);
-
-  // ---- Heartbeat Hook ----
-  // Centralizes scheduling, reentrancy guards, health tracking, adaptive throttling,
-  // and structured logging. Replaces the inline setInterval logic.
-  const addHeartbeatLog = useCallback((entry: Omit<LogEntry, "id">) => {
-    const logEntry: LogEntry = { ...entry, id: `hb_${Date.now()}_${Math.random().toString(36).slice(2, 6)}` };
+  const addSessionLog = useCallback((entry: Omit<LogEntry, "id">) => {
+    const logEntry: LogEntry = { ...entry, id: `log_${Date.now()}_${Math.random().toString(36).slice(2, 6)}` };
     logsRef.current.push(logEntry);
-    // Keep log buffer bounded
     if (logsRef.current.length > 500) {
       logsRef.current = logsRef.current.slice(-400);
     }
     setLogs([...logsRef.current]);
   }, []);
 
-  // Forward ref for heartbeat.recordTransferEvent — the heartbeat object is
-  // declared below, so we can't close over it directly inside `logTool`. The
-  // ref is populated in an effect right after the heartbeat is created.
-  const recordTransferEventRef = useRef<
-    ((channel: "tools", saved: boolean, error?: string) => void) | null
-  >(null);
+  const recordTransferEvent = useCallback(
+    (channel: keyof TransferHealth, saved: boolean, error?: string) => {
+      transferHealthRef.current[channel].sent++;
+      if (saved) transferHealthRef.current[channel].saved++;
+      else transferHealthRef.current[channel].failed++;
+      setTransferHealth({ ...transferHealthRef.current });
+      if (!saved && error) {
+        addSessionLog({
+          timestamp: Date.now(),
+          level: "warning",
+          source: channel,
+          message: error,
+        });
+      }
+    },
+    [addSessionLog],
+  );
+
+  const getWorkspaceId = useCallback(() => {
+    const workspaceId = sessionRef.current?.metadata?.workspace_id;
+    return typeof workspaceId === "string" && workspaceId ? workspaceId : undefined;
+  }, []);
+
+  const stageEvidenceFromRefs = useCallback(() => {
+    const buffer = ileEvidenceBufferRef.current;
+    const currentSession = sessionRef.current;
+    if (!currentSession) return;
+
+    buffer.setCanvasData(whiteboardDataRef.current);
+    buffer.setNotebookContent(notebookContentRef.current);
+
+    const transcriptEntries = consumeSpeechTranscriptEntriesRef.current();
+    if (transcriptEntries.length > 0) {
+      buffer.pushTranscript(transcriptEntries.map((entry) => entry.text).join(" "));
+    }
+
+    if (facialBufferRef.current.length > 0) {
+      const snapshot = facialBufferRef.current.splice(0);
+      buffer.pushFacialPoints(snapshot);
+    }
+
+    if (museStatusRef.current === "streaming" && eegPendingBufferRef.current.size > 0) {
+      const channels: Record<string, number[]> = {};
+      for (const [ch, samples] of eegPendingBufferRef.current.entries()) {
+        channels[ch] = samples.slice();
+      }
+      buffer.pushEegChunk({
+        channels,
+        bandPowers,
+        sampleRateHz: EEG_SAMPLE_RATE_HZ,
+        startedAtMs: eegPendingStartMsRef.current ?? Date.now(),
+        endedAtMs: eegLastSampleMsRef.current ?? Date.now(),
+        sampleCounts: Object.fromEntries(
+          Object.entries(channels).map(([ch, samples]) => [ch, samples.length]),
+        ),
+        deviceStatus: museDeviceStatusRef.current as unknown as Record<string, unknown> | null,
+        deviceName: museClientRef.current?.deviceName,
+        timestampMs: eegLastSampleMsRef.current ?? Date.now(),
+      });
+      for (const [ch, savedSamples] of Object.entries(channels)) {
+        const current = eegPendingBufferRef.current.get(ch) || [];
+        const remaining = current.slice(savedSamples.length);
+        if (remaining.length > 0) {
+          eegPendingBufferRef.current.set(ch, remaining);
+        } else {
+          eegPendingBufferRef.current.delete(ch);
+        }
+      }
+      if (eegPendingBufferRef.current.size === 0) {
+        eegPendingStartMsRef.current = null;
+        eegLastSampleMsRef.current = null;
+      }
+    }
+  }, [bandPowers]);
+
+  const flushIleEvidence = useCallback(
+    async (options?: { force?: boolean }) => {
+      const workspaceId = getWorkspaceId();
+      const currentSession = sessionRef.current;
+      if (!workspaceId || !currentSession) return;
+
+      stageEvidenceFromRefs();
+      const { uploads, screenshots } = ileEvidenceBufferRef.current.drainForSubmit(
+        currentSession.id,
+        Date.now(),
+        options?.force,
+      );
+
+      for (const item of uploads) {
+        const channel: keyof TransferHealth =
+          item.kind === "eeg" ? "eeg" : item.toolName === "facial" ? "facial" : "tools";
+        const result = await uploadIleEvidenceItem(workspaceId, currentSession.id, item);
+        recordTransferEvent(channel, result.ok, result.error);
+      }
+
+      for (const shot of screenshots) {
+        const result = await uploadIleScreenshot(workspaceId, currentSession.id, shot);
+        recordTransferEvent("screenshots", result.ok, result.error);
+        if (result.ok) setScreenshotCount((c) => c + 1);
+      }
+    },
+    [getWorkspaceId, recordTransferEvent, stageEvidenceFromRefs],
+  );
+
+  const uploadIleThoughtTrace = useCallback(
+    async (payload: SessionThoughtTracePayload) => {
+      const workspaceId = getWorkspaceId();
+      const currentSession = sessionRef.current;
+      if (!workspaceId || !currentSession) return;
+
+      const tracePayload = buildIleThoughtTracePayload({
+        traceType: payload.traceType,
+        action: payload.action as IleSystem1Action | IleSystem2Action,
+        sessionId: currentSession.id,
+        workspaceId,
+        thoughtId: payload.thoughtId,
+        thoughtIds: payload.thoughtIds,
+        chainId: payload.chainId,
+        text: payload.text,
+        combined: payload.combined,
+        timestampMs: payload.timestampMs,
+      });
+
+      const fileName = `ile-trace-${payload.traceType}-${payload.action}-${payload.thoughtId || Date.now()}.json`;
+      const result = await uploadIleProofOfWork({
+        workspaceId,
+        sessionId: currentSession.id,
+        type: "tool",
+        mime_type: "application/json",
+        data: textToBase64(JSON.stringify(tracePayload, null, 2)),
+        file_name: fileName,
+        timestamp_ms: payload.timestampMs ?? Date.now(),
+        tool_name: ILE_TRACE_TOOL_NAME,
+        tool_action: `${payload.traceType}:${payload.action}`,
+        metadata: {
+          trace_type: payload.traceType,
+          action: payload.action,
+          thought_id: payload.thoughtId ?? null,
+          thought_ids: payload.thoughtIds ?? null,
+          chain_id: payload.chainId ?? null,
+          text: payload.text ?? null,
+          combined: payload.combined ?? false,
+        },
+      });
+      recordTransferEvent("tools", result.ok, result.error);
+    },
+    [getWorkspaceId, recordTransferEvent],
+  );
+
   const logToolRef = useRef<
     ((toolName: ToolName, action: ToolAction, metadata?: Record<string, unknown>) => Promise<void>) | null
   >(null);
 
-  /**
-   * Log a tool event. Does THREE things:
-   *   1. Persists it to Supabase (`session-tool` bucket + `session_tool`
-   *      table) via `logToolUsage`.
-   *   2. Records a transfer event on the `tools` channel so sent/saved/failed
-   *      counters in the Data Transfer Health table stay in sync (same
-   *      pattern as audio / eeg / facial / screenshots).
-   *   3. Emits a log entry with `source: "tool"` so the event appears in the
-   *      Logs UI (filterable by source).
-   */
   const logTool = useCallback(
     async (
       toolName: ToolName,
@@ -2141,21 +1471,13 @@ export function SessionView({ sessionId }: { sessionId: string }) {
         ? now - new Date(currentSession.startedAt).getTime()
         : 0;
 
-      // 1 + 2. Persist to Supabase, capture granular result for the counter.
-      let persistError: string | undefined;
-      let persistOk = false;
-      try {
-        const result = await logToolUsage(currentSession.id, toolName, action, now, metadata);
-        persistOk = result.success;
-        persistError = result.error;
-      } catch (err) {
-        persistError = String((err as Error)?.message ?? err);
-      }
+      ileEvidenceBufferRef.current.pushToolEvent({
+        toolName,
+        action,
+        timestampMs: now,
+        metadata,
+      });
 
-      recordTransferEventRef.current?.("tools", persistOk, persistError);
-
-      // 3. Compact metadata preview (guard against huge payloads like full
-      // whiteboard/notebook strings so we don't flood the UI).
       const metaKeys = Object.keys(metadata);
       let metaStr = "";
       if (metaKeys.length > 0) {
@@ -2177,19 +1499,14 @@ export function SessionView({ sessionId }: { sessionId: string }) {
         }
       }
 
-      // The per-channel failure log is already emitted by
-      // `recordTransferEvent`, so here we only log the high-level success
-      // event (keeps the log from double-reporting failures).
-      if (persistOk) {
-        addHeartbeatLog({
-          timestamp: now,
-          level: "info",
-          source: "tool",
-          message: `${toolName}/${action} @${Math.round(elapsedMs / 1000)}s${metaStr}`,
-        });
-      }
+      addSessionLog({
+        timestamp: now,
+        level: "info",
+        source: "tool",
+        message: `${toolName}/${action} @${Math.round(elapsedMs / 1000)}s${metaStr}`,
+      });
     },
-    [addHeartbeatLog],
+    [addSessionLog],
   );
 
   useEffect(() => {
@@ -2198,27 +1515,9 @@ export function SessionView({ sessionId }: { sessionId: string }) {
 
   const logSessionThoughtTrace = useCallback(
     (payload: SessionThoughtTracePayload) => {
-      const actionMap: Record<string, ToolAction> = {
-        crystallize: "crystallize",
-        pause_finalize: "pause_finalize",
-        send: "thought_send",
-        resend: "thought_resend",
-        skip: "thought_skip",
-        select: "thought_select",
-        deselect: "thought_deselect",
-      };
-      void logTool("thought-trace", actionMap[payload.action] || "thought_send", {
-        trace_type: payload.traceType,
-        action: payload.action,
-        thought_id: payload.thoughtId ?? null,
-        thought_ids: payload.thoughtIds ?? null,
-        chain_id: payload.chainId ?? null,
-        text: payload.text ?? null,
-        combined: payload.combined ?? false,
-        timestamp_ms: payload.timestampMs ?? Date.now(),
-      });
+      void uploadIleThoughtTrace(payload);
     },
-    [logTool],
+    [uploadIleThoughtTrace],
   );
 
   const sessionSpeechLang =
@@ -2232,6 +1531,7 @@ export function SessionView({ sessionId }: { sessionId: string }) {
     sessionId: session?.id,
     onLogTrace: logSessionThoughtTrace,
     onSendToProbe: async (text) => {
+      await flushIleEvidence();
       await submitHeliosChatMessageNow(text);
     },
   });
@@ -2241,39 +1541,6 @@ export function SessionView({ sessionId }: { sessionId: string }) {
     [sessionThoughtInterface.thoughts],
   );
 
-  const heartbeat = useSessionHeartbeat({
-    storageIntervalMs: STORAGE_INTERVAL_MS,
-    analysisIntervalMs: ANALYSIS_INTERVAL_MS,
-    stuckIntervalMs: ANALYSIS_INTERVAL_MS,
-    onStorageHeartbeat: runStorageHeartbeat,
-    onAnalysisHeartbeat: runAnalysisHeartbeat,
-    onStuckHeartbeat: STUCK_POLICY_ENABLED ? runStuckHeartbeat : undefined,
-    onLog: addHeartbeatLog,
-  });
-
-  // Expose the heartbeat's transfer-event recorder to `logTool` (which is
-  // defined above the heartbeat). Kept in a ref so we don't need to pass
-  // `heartbeat` as a dep of every `logTool` caller.
-  recordTransferEventRef.current = heartbeat.recordTransferEvent;
-
-  /**
-   * Manual "Submit to Helios" — triggered by the user from the canvas or
-   * notebook toolbar. This is an out-of-band analysis request: the tutor
-   * normally polls every `ANALYSIS_INTERVAL_MS`, but the user explicitly
-   * wants attention *now* (e.g. "I've sketched my answer, please look").
-   *
-   * Two steps:
-   *   1. Flush tool state to Supabase via `runStorageHeartbeat`. The
-   *      analysis endpoint reads the most recent notebook/canvas uploads
-   *      by `sessionId`, so we must ensure the latest edits are stored
-   *      before asking Helios to look.
-   *   2. Fire `runAnalysisHeartbeat`. Both run-functions are guarded
-   *      against concurrent invocation (`isAnalyzingRef`, hook-level
-   *      `isAnalysisRunningRef`), so racing with the 10s timer is safe.
-   *
-   * `logTool` is called up front so the click is always recorded, even if
-   * the analysis early-exits (e.g. observer off, muted, already running).
-   */
   const handleSubmitToHelios = useCallback(
     async (toolName: "canvas" | "notebook", canvasDataUrl?: string | null) => {
       const targetChapterKey = activeChapterKey;
@@ -2294,30 +1561,14 @@ export function SessionView({ sessionId }: { sessionId: string }) {
       } else {
         metadata.hasCanvas = !!targetCanvasData;
       }
-      // Fire-and-forget the log; we don't want the network round-trip to
-      // delay the user-perceived submit.
       void logTool(toolName, "submit_to_helios", metadata);
 
       try {
-        // 1. Push latest tool state to storage so the backend has it.
-        await runStorageHeartbeat();
+        await flushIleEvidence();
       } catch (err) {
-        console.warn("[SubmitToHelios] storage heartbeat failed:", err);
-        // Continue anyway — analysis can still run against the previously
-        // stored state; better than silently doing nothing.
+        console.warn("[SubmitToHelios] evidence flush failed:", err);
       }
 
-      try {
-        // 2. Ask Helios to analyse now.
-        await runAnalysisHeartbeat();
-      } catch (err) {
-        console.warn("[SubmitToHelios] analysis heartbeat failed:", err);
-      }
-
-      // Clear the dirty flag so the button disables until the user edits
-      // again. We do this even if the analysis heartbeat threw — the user
-      // has done everything they can; re-enabling the button would invite
-      // spam retries without new content.
       if (toolName === "canvas") {
         updateChapterWorkspace(targetChapterKey, { canvasDirtyForHelios: false });
         const imageDataUrl = targetCanvasData || undefined;
@@ -2335,7 +1586,7 @@ export function SessionView({ sessionId }: { sessionId: string }) {
         }
       }
     },
-    [activeChapterKey, activeWorkspace, chapterWorkspaces, logTool, runStorageHeartbeat, runAnalysisHeartbeat, submitHeliosChatMessageNow, updateChapterWorkspace],
+    [activeChapterKey, activeWorkspace, chapterWorkspaces, logTool, flushIleEvidence, submitHeliosChatMessageNow, updateChapterWorkspace],
   );
 
   const checkMicrophone = async () => {
@@ -2361,7 +1612,7 @@ export function SessionView({ sessionId }: { sessionId: string }) {
     try {
       setError(null);
 
-      // Try to get mic — audio is optional, session can run without it
+      // Request mic for browser speech recognition (transcripts only — no audio storage).
       let mediaStream: MediaStream | null = micStreamRef.current;
       try {
         if (!mediaStream || mediaStream.getTracks().some(t => t.readyState === "ended")) {
@@ -2373,21 +1624,13 @@ export function SessionView({ sessionId }: { sessionId: string }) {
             },
           });
         }
-        micStreamRef.current = null; // hand off ownership
+        micStreamRef.current = null;
         setStream(mediaStream);
-
-        const recorder = new AudioRecorder({
-          chunkDurationMs: 60000,
-          maxBufferDurationMs: 300000,
-        });
-        recorderRef.current = recorder;
-        await recorder.start(mediaStream);
       } catch (micErr) {
-        console.warn("[SessionView] Mic unavailable, starting session without audio:", micErr);
+        console.warn("[SessionView] Mic unavailable, starting session without live speech:", micErr);
         setError(t('session.micNotFound'));
         mediaStream = null;
         micStreamRef.current = null;
-        recorderRef.current = null;
         setStream(null);
       }
 
@@ -2405,9 +1648,6 @@ export function SessionView({ sessionId }: { sessionId: string }) {
         setElapsedSeconds(Math.floor((Date.now() - startTime) / 1000));
       }, 1000);
 
-      // Start the heartbeat system (handles scheduling, reentrancy, health tracking)
-      heartbeat.start();
-
     } catch (err) {
       console.error("[SessionView] startRecording failed:", err);
       setError(t('session.micError'));
@@ -2423,15 +1663,7 @@ export function SessionView({ sessionId }: { sessionId: string }) {
       localContextRef.current?.clear();
     }
 
-    // Stop heartbeat system (waits for in-flight analysis, runs final flush)
-    await heartbeat.stop();
-
-    const recorder = recorderRef.current;
-    
-    const fullAudio = recorder?.getFullAudio() ?? null;
-    
-    await recorder?.stop();
-    recorderRef.current = null;
+    await flushIleEvidence({ force: true });
 
     if (stream) { stream.getTracks().forEach((t) => t.stop()); setStream(null); }
     setIsRecording(false);
@@ -2439,7 +1671,7 @@ export function SessionView({ sessionId }: { sessionId: string }) {
     if (!session) return;
 
     const finalSession = endSession(session, elapsedSeconds * 1000);
-    finalSession.hasAudio = !!fullAudio;
+    finalSession.hasAudio = false;
     finalSession.metadata = {
       ...finalSession.metadata,
       whiteboardData: whiteboardData || undefined,
@@ -2449,66 +1681,18 @@ export function SessionView({ sessionId }: { sessionId: string }) {
     // Persist to Supabase
     await saveSession(finalSession);
 
-    // Save any remaining EEG data before navigating
-    if (museStatus === "streaming" && eegPendingBufferRef.current.size > 0) {
-      const channels: Record<string, number[]> = {};
-      for (const [ch, samples] of eegPendingBufferRef.current.entries()) {
-        channels[ch] = samples.slice();
-      }
-      const sampleCounts = Object.fromEntries(
-        Object.entries(channels).map(([ch, samples]) => [ch, samples.length])
-      );
-      await saveSessionEEG(finalSession.id, {
-        channels,
-        bandPowers,
-        sampleRateHz: EEG_SAMPLE_RATE_HZ,
-        startedAtMs: eegPendingStartMsRef.current ?? Date.now(),
-        endedAtMs: eegLastSampleMsRef.current ?? Date.now(),
-        sampleCounts,
-        deviceStatus: museDeviceStatusRef.current as unknown as Record<string, unknown> | null,
-      }, museClientRef.current?.deviceName, eegChunkIndexRef.current++, eegLastSampleMsRef.current ?? Date.now());
-    }
-
     handleDisconnectMuse();
 
-    // Navigate after all data is saved
-    router.push(`/results?id=${finalSession.id}`);
+    // Navigate after all data is saved — scoring lives on workspace Performance tab
+    router.push(getIlePostSessionPath(finalSession));
   };
 
   // ---- Screenshot Handlers ----
-  // Screenshots run on their own interval (decoupled from the storage
-  // heartbeat), so we report every save attempt directly to the heartbeat
-  // hook via `recordTransferEvent`. That keeps the Data Transfer Health
-  // table's `screenshots` row in sync and surfaces failures in the event log.
   const handleStartScreenCapture = useCallback(async () => {
     if (!screenCaptureRef.current) {
       screenCaptureRef.current = createScreenCapture({
         onScreenshotCaptured: async (blob: Blob, timestamp: number) => {
-          const screenshotKey = `screenshot_${sessionId}`;
-          try {
-            const dedup = await saveWithDedupBlob(blob, screenshotKey);
-            // Dedup hit (content unchanged) is a no-op, not an attempt.
-            if (!dedup.saved) return;
-
-            const path = await saveScreenshot(sessionId, blob, timestamp);
-            if (path) {
-              setScreenshotCount((c) => c + 1);
-              heartbeat.recordTransferEvent("screenshots", true);
-            } else {
-              heartbeat.recordTransferEvent(
-                "screenshots",
-                false,
-                "saveScreenshot returned null (upload rejected)",
-              );
-            }
-          } catch (error) {
-            console.error("[Screenshot] Failed to save:", error);
-            heartbeat.recordTransferEvent(
-              "screenshots",
-              false,
-              String((error as Error)?.message ?? error),
-            );
-          }
+          ileEvidenceBufferRef.current.pushScreenshot({ blob, timestampMs: timestamp });
         },
         intervalMs: 5000,
         onStatusChange: (capturing: boolean) => {
@@ -2517,7 +1701,7 @@ export function SessionView({ sessionId }: { sessionId: string }) {
       });
     }
     await screenCaptureRef.current.start();
-  }, [sessionId, heartbeat]);
+  }, []);
 
   const handleStopScreenCapture = useCallback(() => {
     screenCaptureRef.current?.stop();
@@ -2525,10 +1709,9 @@ export function SessionView({ sessionId }: { sessionId: string }) {
 
   const handlePause = async () => {
     if (timerRef.current) clearInterval(timerRef.current);
-    heartbeat.pause();
 
     // Track what was active before pause (for auto-resume)
-    wasRecordingRef.current = !!recorderRef.current;
+    wasRecordingRef.current = isRecordingRef.current;
     wasScreenCapturingRef.current = isScreenCapturing;
     wasWebcamEnabledRef.current = isWebcamEnabled;
     wasMuseStreamingRef.current = museStatus === "streaming";
@@ -2537,10 +1720,6 @@ export function SessionView({ sessionId }: { sessionId: string }) {
     pausedAudioStreamRef.current = stream;
     pausedScreenStreamRef.current = screenCaptureRef.current?.getStream() || null;
     pausedWebcamStreamRef.current = null;
-
-    const recorder = recorderRef.current;
-    await recorder?.stop();
-    recorderRef.current = null;
 
     // Stop all data flows
     if (stream) { stream.getTracks().forEach((t) => t.stop()); setStream(null); }
@@ -2573,26 +1752,23 @@ export function SessionView({ sessionId }: { sessionId: string }) {
     if (!session) return;
 
     try {
-      // Try to resume audio stream — mic is optional
+      // Resume mic stream for speech recognition (no audio storage).
       try {
         let mediaStream = pausedAudioStreamRef.current;
         const tracksStillActive = mediaStream?.getTracks().some(t => t.readyState === "live");
         if (!mediaStream || !tracksStillActive) {
-          mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          mediaStream = await navigator.mediaDevices.getUserMedia({
+            audio: {
+              echoCancellation: true,
+              noiseSuppression: true,
+              sampleRate: 48000,
+            },
+          });
         }
         setStream(mediaStream);
-
-        const AudioRecorderClass = (await import("@/lib/audio")).AudioRecorder;
-        const recorder = new AudioRecorderClass({
-          chunkDurationMs: 60000,
-          maxBufferDurationMs: 300000,
-        });
-        await recorder.start(mediaStream);
-        recorderRef.current = recorder;
       } catch (micErr) {
-        console.warn("[SessionView] Mic unavailable on resume, continuing without audio:", micErr);
+        console.warn("[SessionView] Mic unavailable on resume, continuing without live speech:", micErr);
         setError(t('session.micNotFound'));
-        recorderRef.current = null;
         setStream(null);
       }
 
@@ -2608,9 +1784,6 @@ export function SessionView({ sessionId }: { sessionId: string }) {
       timerRef.current = setInterval(() => {
         setElapsedSeconds(Math.floor((Date.now() - startTime) / 1000));
       }, 1000);
-
-      // Resume heartbeat system (counter resets for immediate flush)
-      heartbeat.resume();
 
       // Auto-resume data sources that were active before pause
       // Screen capture
@@ -2655,22 +1828,6 @@ export function SessionView({ sessionId }: { sessionId: string }) {
     muteTimerRef.current = setTimeout(() => { setIsMuted(false); setMuteRemaining(0); }, durationMs);
   };
 
-  // Auto-pause after 5 min of silence + no input — cost-saving measure.
-  const handleInactivityAutoPause = useCallback(() => {
-    if (!isRecording || isPaused) return;
-    setAutoPausedForInactivity(true);
-    void handlePause();
-  }, [isRecording, isPaused]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  useInactivityAutoPause({
-    stream,
-    isRecording,
-    isPaused,
-    onAutoPause: handleInactivityAutoPause,
-    thresholdMs: 5 * 60 * 1000,
-    debug: true,
-  });
-
   // Real-time voice activity for Helios background tile-reveal + action
   // box highlight. Shares the same mic stream as inactivity detection.
   const isSpeaking = useVoiceActivity({
@@ -2687,11 +1844,6 @@ export function SessionView({ sessionId }: { sessionId: string }) {
   consumeSpeechTranscriptEntriesRef.current = thinkAloudTranscript.consumePendingTranscriptEntries;
   requeueSpeechTranscriptEntriesRef.current = thinkAloudTranscript.requeueTranscriptEntries;
 
-  // Clear the inactivity flag whenever the user manually resumes.
-  useEffect(() => {
-    if (!isPaused) setAutoPausedForInactivity(false);
-  }, [isPaused]);
-
   // Reset session - deletes probes but keeps data chunks
   const handleReset = async () => {
     if (!session) return;
@@ -2707,21 +1859,20 @@ export function SessionView({ sessionId }: { sessionId: string }) {
       setActiveProbe(null);
       setViewingProbeIndex(-1);
       
-      // Reset probe-related refs
-      lastProbeTimeRef.current = 0;
     } catch (err) {
       console.error("Reset session error:", err);
     }
   };
 
-  // Close session - navigate to dashboard without ending
+  // Close session - return to workspace without ending
   const pauseAndGoToDashboard = useCallback(async () => {
     if (session && isRecording && !isPaused) {
       await handlePause();
     } else if (session && isPaused) {
       await pauseSession(session.id, elapsedSeconds * 1000);
     }
-    router.push("/dashboard");
+    const current = sessionRef.current ?? session;
+    router.push(current ? getIlePostSessionPath(current) : "/dashboard");
   }, [session, isRecording, isPaused, elapsedSeconds, handlePause, router]);
 
   const handleClose = () => {
@@ -2747,7 +1898,7 @@ export function SessionView({ sessionId }: { sessionId: string }) {
       // Bring the session back to an actively-recording state. Three cases:
       //   1. Fresh session: `!isRecording` → startRecording (first mic req).
       //   2. Paused session (e.g. Help was just clicked): `isPaused` →
-      //      handleResume restarts the recorder/heartbeat/streams.
+      //      handleResume restarts the recorder/streams.
       //   3. Already active: no-op.
       if (!isRecording) {
         await startRecording();
@@ -2844,698 +1995,43 @@ export function SessionView({ sessionId }: { sessionId: string }) {
     await stopRecording();
   };
 
-  const handleAdvanceStep = async (forceAdvance = false, markAsSkipped = false) => {
-    if (!session) return;
-    const evaluationCueId = addHeliosStepEvaluationCue(forceAdvance, markAsSkipped);
-    let evaluationCueResolved = false;
-    try {
-    const currentSession = sessionRef.current || session;
-    const openProbes = currentSession.probes.filter(p => !p.archived);
+  const handleMarkChapterDone = useCallback(async () => {
+    const currentPlan = sessionPlanRef.current;
+    if (!currentPlan?.steps?.length) return;
 
-    // --- Local inference mode: advance step entirely in-browser ---
-    if (localInferenceEnabledRef.current) {
-      const currentPlan = sessionPlanRef.current;
-      if (!currentPlan?.steps?.length) return;
+    const idx = activeChapterIndexRef.current;
+    const step = currentPlan.steps[idx];
+    if (!step || step.status === "completed" || step.status === "skipped") return;
 
-      const currentIdx = activeChapterIndex;
-      const terminalStatus = markAsSkipped ? "skipped" as const : "completed" as const;
-
-      // Mark the focused chapter done or skipped without forcing sequential advance.
-      const nextIdx = currentIdx;
-      const updatedSteps = currentPlan.steps.map((s, i) => {
-        if (i === currentIdx) return { ...s, status: terminalStatus };
-        return s;
-      });
-      const updatedPlan = {
-        ...currentPlan,
-        steps: updatedSteps,
-        currentStepIndex: nextIdx,
-      };
-      setSessionPlan(updatedPlan);
-      sessionPlanRef.current = updatedPlan;
-
-      // Sync step completion to backend
-      updateSessionPlan(currentPlan.id, {
-        steps: updatedSteps,
-        currentStepIndex: updatedPlan.currentStepIndex,
-      }).catch(err => console.warn("[LocalInference] Failed to sync plan to backend:", err));
-
-      // Archive all active probes in-memory (not persisted since local mode)
-      if (openProbes.length > 0) {
-        const archivedSession = {
-          ...currentSession,
-          probes: currentSession.probes.map(p => !p.archived ? { ...p, archived: true } : p),
-        };
-        setSession(archivedSession);
-        sessionRef.current = archivedSession;
-      }
-
-      if (updatedSteps.every(s => s.status === "completed" || s.status === "skipped")) {
-        // All steps done
-        playSessionCompleteSound();
-        setTimeout(() => {
-          setShowPlanCompleteModal(true);
-          if (isRecording && !isPaused) setIsPaused(true);
-        }, 1500);
-      } else if (!markAsSkipped) {
-        // Chapter completed; keep focus here in the non-sequential flow.
-        playStepCompleteSound();
-        const newStep = updatedPlan.steps[updatedPlan.currentStepIndex];
-        if (newStep) {
-          let probeText = "";
-          const manager = LocalInferenceManager.getInstance();
-
-          setIsGeneratingProbe(true);
-          if (manager.isReady()) {
-            try {
-              const ctx = localContextRef.current;
-              const snapshot = ctx?.getContext();
-              const latestForProbe = sessionRef.current || currentSession;
-              probeText = await manager.generateProbe({
-                planGoal: updatedPlan.goal || "",
-                currentStep: newStep.description || "",
-                recentTranscripts: snapshot?.recentTranscripts || [],
-                toolEvents: snapshot?.toolEvents || [],
-                facialSummary: snapshot?.facialSummary,
-                eegSummary: snapshot?.eegSummary,
-                previousProbes: latestForProbe.probes.map(p => p.text),
-                tutoringLanguage,
-              });
-            } catch (err) {
-              console.warn("[LocalInference] Probe generation failed:", err);
-            }
-          }
-          setIsGeneratingProbe(false);
-
-          if (probeText && probeText.trim().length > 5) {
-            const latestSession = sessionRef.current || currentSession;
-            const localProbe: Probe = {
-              id: `local_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
-              timestamp: Date.now() - new Date(currentSession.startedAt).getTime(),
-              gapScore: 0.5,
-              signals: ["local-inference", "manual_step_advance"],
-              text: probeText.trim(),
-              requestType: (newStep.type || "question") as RequestType,
-              archived: false,
-              starred: false,
-              focused: false,
-              isRevealed: false,
-            };
-            const updatedSession = addProbeToSession(latestSession, localProbe);
-            setSession(updatedSession);
-            sessionRef.current = updatedSession;
-            setActiveProbe(localProbe);
-            setViewingProbeIndex(updatedSession.probes.length - 1);
-            lastProbeTimeRef.current = Date.now();
-          } else {
-            console.warn("[LocalInference] Failed to generate a probe for this step.");
-          }
-        }
-      }
-      return;
-    }
-
-    // --- API mode (unchanged) ---
-      const evalSinceMs = chapterFocusSinceRef.current[activeChapterIndex] ?? 0;
-      const res = await fetch("/api/session-plan/advance-step", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          sessionId: session.id,
-          forceAdvance,
-          markAsSkipped,
-          targetStepIndex: activeChapterIndex,
-          evalSinceMs,
-          previousProbes: currentSession.probes.map(p => p.text),
-          focusedProbes: openProbes.filter(p => p.focused).map(p => ({ id: p.id, text: p.text })),
-          openProbeCount: openProbes.length,
-        }),
-      });
-      
-      if (!res.ok) {
-        const errorData = await res.json().catch(() => ({}));
-        console.error("Advance step failed:", errorData);
-        return;
-      }
-      
-      const data = await res.json();
-      
-      // Handle blocked response — show reasoning and offer force-advance
-      if (data.blocked) {
-        const reasoning = data.advanceReasoning || "You may not be ready to move on yet.";
-        const verdict = data.advanceVerdict === "unavailable" ? "I couldn't evaluate this chapter." : "Not yet.";
-        resolveHeliosCue(evaluationCueId, `Helios verdict: ${verdict}\n\n${reasoning}\n\nI did not mark this chapter done.`);
-        evaluationCueResolved = true;
-        // Create a feedback probe so the user sees WHY they can't advance
-        const feedbackProbe = await addProbe(session.id, {
-          timestamp: Date.now() - new Date(session.startedAt).getTime(),
-          gapScore: data.gapScore ?? 0.6,
-          signals: ["advance_blocked"],
-          text: reasoning,
-          requestType: "feedback",
-          planStepId: sessionPlanRef.current?.steps?.[sessionPlanRef.current.currentStepIndex]?.id,
-        });
-        const updatedSession = addProbeToSession(currentSession, feedbackProbe);
-        setSession(updatedSession);
-        sessionRef.current = updatedSession;
-        setActiveProbe(feedbackProbe);
-        setViewingProbeIndex(updatedSession.probes.length - 1);
-        
-        // Also create the next request probe if the LLM suggested one
-        if (data.nextRequest && openProbes.length < 4) {
-          const nextProbe = await addProbe(session.id, {
-            timestamp: Date.now() - new Date(session.startedAt).getTime(),
-            gapScore: data.gapScore ?? 0.6,
-            signals: ["advance_blocked_followup"],
-            text: data.nextRequest.text,
-            requestType: data.nextRequest.type || "question",
-            planStepId: sessionPlanRef.current?.steps?.[sessionPlanRef.current.currentStepIndex]?.id,
-          });
-          const updatedSession2 = addProbeToSession(sessionRef.current || updatedSession, nextProbe);
-          setSession(updatedSession2);
-          sessionRef.current = updatedSession2;
-        }
-        return;
-      }
-      
-      const { plan: rawUpdatedPlan, allComplete } = data;
-      
-      // Validate plan before updating
-      if (!rawUpdatedPlan?.steps?.length || !rawUpdatedPlan?.goal) {
-        console.warn('[Advance Step] Received invalid plan, keeping previous state');
-        return;
-      }
-
-      const updatedPlan = rawUpdatedPlan;
-
-      const successReasoning = typeof data.advanceReasoning === "string" && data.advanceReasoning.trim()
-        ? `\n\n${data.advanceReasoning.trim()}`
-        : "";
-      const successVerdict = data.advanceVerdict === "skipped"
-        ? "Skipped."
-        : data.advanceVerdict === "agreed"
-          ? "Agreed."
-          : data.advanceVerdict === "forced"
-            ? "Marked done by your override."
-            : "Marked done.";
-      const successBody = data.advanceVerdict === "skipped"
-        ? "I skipped this chapter. It won't count when evaluating your other chapters."
-        : `I marked this chapter as done.${successReasoning}`;
-      resolveHeliosCue(evaluationCueId, `Helios verdict: ${successVerdict}\n\n${successBody}`);
-      evaluationCueResolved = true;
-       
-      // Update plan state
-      setSessionPlan(updatedPlan);
-      sessionPlanRef.current = updatedPlan;
-      
-      // Archive all active probes (same as automatic step transitions)
-      const activeProbes = currentSession.probes.filter(p => !p.archived);
-      if (activeProbes.length > 0) {
-        let sessionWithArchivedProbes = currentSession;
-        for (const probe of activeProbes) {
-          await archiveProbe(probe.id);
-          sessionWithArchivedProbes = {
-            ...sessionWithArchivedProbes,
-            probes: sessionWithArchivedProbes.probes.map(p => 
-              p.id === probe.id ? { ...p, archived: true } : p
-            ),
-          };
-        }
-        setSession(sessionWithArchivedProbes);
-        sessionRef.current = sessionWithArchivedProbes;
-      }
-      
-      if (allComplete) {
-        // Plan fully complete - celebrate and show modal
-        playSessionCompleteSound();
-        setTimeout(() => {
-          setShowPlanCompleteModal(true);
-          if (isRecording && !isPaused) {
-            setIsPaused(true);
-          }
-        }, 1500);
-      } else if (!markAsSkipped) {
-        // Regular step completion - generate probe for next step
-        playStepCompleteSound();
-
-        // Immediately generate a probe for the new step
-        const newStep = updatedPlan.steps?.[updatedPlan.currentStepIndex];
-        if (newStep) {
-          setIsGeneratingProbe(true);
-          try {
-            const probeRes = await fetch("/api/generate-probe", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                problem: session.problem,
-                gapScore: 0.5,
-                signals: ["manual_step_advance"],
-                previousProbes: currentSession.probes.map(p => p.text),
-                archivedProbes: currentSession.probes.filter(p => p.archived).map(p => p.text),
-                sessionPlan: updatedPlan,
-              }),
-            });
-            
-            if (probeRes.ok) {
-              const probeData = await probeRes.json();
-              if (probeData.probe?.trim()) {
-                const latestSession = sessionRef.current || currentSession;
-                const savedProbe = await addProbe(session.id, {
-                  timestamp: Date.now() - new Date(session.startedAt).getTime(),
-                  gapScore: 0.5,
-                  signals: ["manual_step_advance", "plan_step"],
-                  text: probeData.probe.trim(),
-                  requestType: probeData.requestType || newStep.type || "question",
-                  planStepId: newStep.id,
-                });
-                
-                const updatedSession = addProbeToSession(latestSession, savedProbe);
-                setSession(updatedSession);
-                sessionRef.current = updatedSession;
-                setActiveProbe(savedProbe);
-                setViewingProbeIndex(updatedSession.probes.length - 1);
-                addProbeToHeliosChat(savedProbe.text);
-              }
-            }
-          } catch (probeErr) {
-            console.warn("Failed to generate probe for new step:", probeErr);
-          } finally {
-            setIsGeneratingProbe(false);
-          }
-        }
-      }
-    } catch (err) {
-      console.error("Advance step error:", err);
-    } finally {
-      if (!evaluationCueResolved) removeHeliosCue(evaluationCueId);
-    }
-  };
-
-  const handleRollbackToStep = async (stepIndex: number) => {
-    if (!session) return;
-    const currentSession = sessionRef.current || session;
-
-    // --- Local inference mode: rollback entirely in-browser ---
-    if (localInferenceEnabledRef.current) {
-      const currentPlan = sessionPlanRef.current;
-      if (!currentPlan?.steps?.length) return;
-
-      // Reset steps: target step becomes in_progress, everything after becomes pending
-      const updatedSteps = currentPlan.steps.map((s, i) => {
-        if (i < stepIndex) return s; // keep completed steps before target
-        if (i === stepIndex) return { ...s, status: "in_progress" as const };
-        return { ...s, status: "pending" as const };
-      });
-      const updatedPlan = { ...currentPlan, steps: updatedSteps, currentStepIndex: stepIndex };
-      setSessionPlan(updatedPlan);
-      sessionPlanRef.current = updatedPlan;
-
-      // Sync to backend
-      updateSessionPlan(currentPlan.id, {
-        steps: updatedSteps,
-        currentStepIndex: stepIndex,
-      }).catch(err => console.warn("[LocalInference] Failed to sync rollback to backend:", err));
-
-      // Archive all active probes in-memory
-      const activeProbes = currentSession.probes.filter(p => !p.archived);
-      let latestSession = currentSession;
-      if (activeProbes.length > 0) {
-        latestSession = {
-          ...currentSession,
-          probes: currentSession.probes.map(p => !p.archived ? { ...p, archived: true } : p),
-        };
-        setSession(latestSession);
-        sessionRef.current = latestSession;
-      }
-
-      // Generate probe for rolled-back step
-      const targetStep = updatedPlan.steps[stepIndex];
-      if (targetStep) {
-        let probeText = "";
-        const manager = LocalInferenceManager.getInstance();
-        setIsGeneratingProbe(true);
-        if (manager.isReady()) {
-          try {
-            const ctx = localContextRef.current;
-            const snapshot = ctx?.getContext();
-            probeText = await manager.generateProbe({
-              planGoal: updatedPlan.goal || "",
-              currentStep: targetStep.description || "",
-              recentTranscripts: snapshot?.recentTranscripts || [],
-              toolEvents: snapshot?.toolEvents || [],
-              facialSummary: snapshot?.facialSummary,
-              eegSummary: snapshot?.eegSummary,
-              previousProbes: latestSession.probes.map(p => p.text),
-              tutoringLanguage,
-            });
-          } catch (err) {
-            console.warn("[LocalInference] Probe generation failed on rollback:", err);
-          }
-        }
-        setIsGeneratingProbe(false);
-        if (probeText && probeText.trim().length > 5) {
-          const localProbe: Probe = {
-            id: `local_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
-            timestamp: Date.now() - new Date(currentSession.startedAt).getTime(),
-            gapScore: 0.5,
-            signals: ["local-inference", "manual_step_rollback"],
-            text: probeText.trim(),
-            requestType: (targetStep.type || "question") as RequestType,
-            archived: false,
-            starred: false,
-            focused: false,
-            isRevealed: false,
-          };
-          const updatedSession = addProbeToSession(latestSession, localProbe);
-          setSession(updatedSession);
-          sessionRef.current = updatedSession;
-          setActiveProbe(localProbe);
-          setViewingProbeIndex(updatedSession.probes.length - 1);
-          addProbeToHeliosChat(localProbe.text);
-          lastProbeTimeRef.current = Date.now();
-        } else {
-          console.warn("[LocalInference] Failed to generate a probe for this step.");
-        }
-      }
-      return;
-    }
-
-    // --- API mode (unchanged) ---
-    try {
-      const res = await fetch("/api/session-plan/rollback-step", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sessionId: session.id, targetStepIndex: stepIndex }),
-      });
-      
-      if (!res.ok) {
-        const errorData = await res.json().catch(() => ({}));
-        console.error("Rollback step failed:", errorData);
-        return;
-      }
-      
-      const { plan: updatedPlan } = await res.json();
-      
-      // Validate plan before updating
-      if (!updatedPlan?.steps?.length || !updatedPlan?.goal) {
-        console.warn('[Rollback Step] Received invalid plan, keeping previous state');
-        return;
-      }
-      
-      // Update plan state
-      setSessionPlan(updatedPlan);
-      sessionPlanRef.current = updatedPlan;
-      
-      // Archive all active probes (clean slate for the rolled-back step)
-      const activeProbes = currentSession.probes.filter(p => !p.archived);
-      if (activeProbes.length > 0) {
-        let sessionWithArchivedProbes = currentSession;
-        for (const probe of activeProbes) {
-          await archiveProbe(probe.id);
-          sessionWithArchivedProbes = {
-            ...sessionWithArchivedProbes,
-            probes: sessionWithArchivedProbes.probes.map(p => 
-              p.id === probe.id ? { ...p, archived: true } : p
-            ),
-          };
-        }
-        setSession(sessionWithArchivedProbes);
-        sessionRef.current = sessionWithArchivedProbes;
-      }
-      
-      // Generate a probe for the rolled-back step
-      const targetStep = updatedPlan.steps?.[stepIndex];
-      if (targetStep) {
-        setIsGeneratingProbe(true);
-        try {
-          const probeRes = await fetch("/api/generate-probe", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              problem: session.problem,
-              gapScore: 0.5,
-              signals: ["manual_step_rollback"],
-              previousProbes: currentSession.probes.map(p => p.text),
-              archivedProbes: currentSession.probes.filter(p => p.archived).map(p => p.text),
-              sessionPlan: updatedPlan,
-            }),
-          });
-          
-          if (probeRes.ok) {
-            const probeData = await probeRes.json();
-            if (probeData.probe?.trim()) {
-              const latestSession = sessionRef.current || currentSession;
-              const savedProbe = await addProbe(session.id, {
-                timestamp: Date.now() - new Date(session.startedAt).getTime(),
-                gapScore: 0.5,
-                signals: ["manual_step_rollback", "plan_step"],
-                text: probeData.probe.trim(),
-                requestType: probeData.requestType || targetStep.type || "question",
-                planStepId: targetStep.id,
-              });
-              
-              const updatedSession = addProbeToSession(latestSession, savedProbe);
-              setSession(updatedSession);
-              sessionRef.current = updatedSession;
-              setActiveProbe(savedProbe);
-              setViewingProbeIndex(updatedSession.probes.length - 1);
-              addProbeToHeliosChat(savedProbe.text);
-            }
-          }
-        } catch (probeErr) {
-          console.warn("Failed to generate probe for rolled-back step:", probeErr);
-        } finally {
-          setIsGeneratingProbe(false);
-        }
-      }
-    } catch (err) {
-      console.error("Rollback step error:", err);
-    }
-  };
-
-  // ── Skip to step ────────────────────────────────────────────────
-  const handleSkipToStep = async (stepIndex: number) => {
-    if (!session) return;
-    const currentSession = sessionRef.current || session;
-
-    try {
-      const res = await fetch("/api/session-plan/skip-steps", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sessionId: session.id, skipToIndex: stepIndex }),
-      });
-
-      if (!res.ok) {
-        const errorData = await res.json().catch(() => ({}));
-        console.error("Skip steps failed:", errorData);
-        return;
-      }
-
-      const { plan: updatedPlan } = await res.json();
-
-      if (!updatedPlan?.steps?.length || !updatedPlan?.goal) {
-        console.warn("[Skip Steps] Received invalid plan, keeping previous state");
-        return;
-      }
-
-      setSessionPlan(updatedPlan);
-      sessionPlanRef.current = updatedPlan;
-
-      // Archive all active probes + generate a fresh one for the new step
-      try {
-        const resetRes = await fetch("/api/session-plan/reset-probes", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ sessionId: session.id }),
-        });
-
-        if (resetRes.ok) {
-          const resetData = await resetRes.json();
-
-          // Mark all local probes as archived
-          const updatedSession: Session = {
-            ...currentSession,
-            probes: currentSession.probes.map(p => ({ ...p, archived: true })),
-          };
-
-          // Add the new probe if we got one
-          let finalSession: Session = updatedSession;
-          if (resetData.newProbe) {
-            const newProbe: Probe = {
-              id: resetData.newProbe.id,
-              timestamp: resetData.newProbe.timestamp,
-              gapScore: resetData.newProbe.gapScore,
-              signals: resetData.newProbe.signals,
-              text: resetData.newProbe.text,
-              requestType: resetData.newProbe.requestType,
-              planStepId: resetData.newProbe.planStepId,
-              archived: false,
-              focused: false,
-            };
-            finalSession = addProbeToSession(updatedSession, newProbe);
-            setActiveProbe(newProbe);
-            setViewingProbeIndex(finalSession.probes.length - 1);
-            addProbeToHeliosChat(newProbe.text);
-            lastProbeTimeRef.current = Date.now();
-          }
-
-          setSession(finalSession);
-          sessionRef.current = finalSession;
-        }
-      } catch (probeErr) {
-        console.warn("Failed to reset probes after skip:", probeErr);
-      }
-    } catch (err) {
-      console.error("Skip to step error:", err);
-    }
-  };
-
-  // ── Regenerate remaining plan steps ────────────────────────────
-  const handleRegeneratePlan = async (reason?: string) => {
-    if (!session) return;
-    const currentSession = sessionRef.current || session;
-
-    try {
-      setIsGeneratingProbe(true);
-      const res = await fetch("/api/session-plan/regenerate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sessionId: session.id, reason }),
-      });
-
-      if (!res.ok) {
-        const errorData = await res.json().catch(() => ({}));
-        console.error("Regenerate plan failed:", errorData);
-        return;
-      }
-
-      const { plan: updatedPlan } = await res.json();
-
-      if (!updatedPlan?.steps?.length || !updatedPlan?.goal) {
-        console.warn("[Regenerate] Received invalid plan, keeping previous state");
-        return;
-      }
-
-      setSessionPlan(updatedPlan);
-      sessionPlanRef.current = updatedPlan;
-
-      // Reset probes for the new current step
-      try {
-        const resetRes = await fetch("/api/session-plan/reset-probes", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ sessionId: session.id }),
-        });
-
-        if (resetRes.ok) {
-          const resetData = await resetRes.json();
-          const updatedSession: Session = {
-            ...currentSession,
-            probes: currentSession.probes.map(p => ({ ...p, archived: true })),
-          };
-
-          let finalSession: Session = updatedSession;
-          if (resetData.newProbe) {
-            const newProbe: Probe = {
-              id: resetData.newProbe.id,
-              timestamp: resetData.newProbe.timestamp,
-              gapScore: resetData.newProbe.gapScore,
-              signals: resetData.newProbe.signals,
-              text: resetData.newProbe.text,
-              requestType: resetData.newProbe.requestType,
-              planStepId: resetData.newProbe.planStepId,
-              archived: false,
-              focused: false,
-            };
-            finalSession = addProbeToSession(updatedSession, newProbe);
-            setActiveProbe(newProbe);
-            setViewingProbeIndex(finalSession.probes.length - 1);
-            addProbeToHeliosChat(newProbe.text);
-            lastProbeTimeRef.current = Date.now();
-          }
-
-          setSession(finalSession);
-          sessionRef.current = finalSession;
-        }
-      } catch (probeErr) {
-        console.warn("Failed to reset probes after regenerate:", probeErr);
-      }
-    } catch (err) {
-      console.error("Regenerate plan error:", err);
-    } finally {
-      setIsGeneratingProbe(false);
-    }
-  };
-
-  // ── Reset probes (standalone) ──────────────────────────────────
-  const handleResetProbes = async () => {
-    if (!session) return;
-    const currentSession = sessionRef.current || session;
-
-    try {
-      setIsGeneratingProbe(true);
-      const res = await fetch("/api/session-plan/reset-probes", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sessionId: session.id }),
-      });
-
-      if (!res.ok) {
-        const errorData = await res.json().catch(() => ({}));
-        console.error("Reset probes failed:", errorData);
-        return;
-      }
-
-      const resetData = await res.json();
-      const updatedSession: Session = {
-        ...currentSession,
-        probes: currentSession.probes.map(p => ({ ...p, archived: true })),
-      };
-
-      let finalSession: Session = updatedSession;
-      if (resetData.newProbe) {
-        const newProbe: Probe = {
-          id: resetData.newProbe.id,
-          timestamp: resetData.newProbe.timestamp,
-          gapScore: resetData.newProbe.gapScore,
-          signals: resetData.newProbe.signals,
-          text: resetData.newProbe.text,
-          requestType: resetData.newProbe.requestType,
-          planStepId: resetData.newProbe.planStepId,
-          archived: false,
-          focused: false,
-        };
-        finalSession = addProbeToSession(updatedSession, newProbe);
-        setActiveProbe(newProbe);
-        setViewingProbeIndex(finalSession.probes.length - 1);
-        addProbeToHeliosChat(newProbe.text);
-        lastProbeTimeRef.current = Date.now();
-      }
-
-      setSession(finalSession);
-      sessionRef.current = finalSession;
-    } catch (err) {
-      console.error("Reset probes error:", err);
-    } finally {
-      setIsGeneratingProbe(false);
-    }
-  };
-
-  // Populate action handlers ref for pop-out window communication
-  useEffect(() => {
-    actionHandlersRef.current = {
-      startRecording,
-      stopRecording,
-      handlePause,
-      handleResume,
-      handleReset,
-      handleClose,
-      handleArchiveProbe,
-      handleToggleFocus,
-      handleAdvanceStep,
-      handleRollbackToStep,
+    const updatedSteps = currentPlan.steps.map((s, i) =>
+      i === idx ? { ...s, status: "completed" as const } : s,
+    );
+    const updatedPlan = {
+      ...currentPlan,
+      steps: updatedSteps,
+      currentStepIndex: idx,
     };
-  }, [startRecording, stopRecording, handlePause, handleResume, handleReset, handleClose, handleArchiveProbe, handleToggleFocus, handleAdvanceStep, handleRollbackToStep]);
+
+    await persistPlanSteps(updatedPlan, {
+      toolAction: "chapter_done",
+      toolData: {
+        stepIndex: idx,
+        stepId: step.id,
+        stepDescription: step.description?.slice(0, 120),
+        via: "chapter_map_mark_done",
+      },
+    });
+
+    playStepCompleteSound();
+
+    if (updatedSteps.every((s) => s.status === "completed" || s.status === "skipped")) {
+      playSessionCompleteSound();
+      setTimeout(() => {
+        setShowPlanCompleteModal(true);
+        if (isRecording && !isPaused) setIsPaused(true);
+      }, 1500);
+    }
+  }, [isPaused, isRecording, persistPlanSteps]);
 
   // Auto-pause on browser close/refresh
   useEffect(() => {
@@ -3556,7 +2052,7 @@ export function SessionView({ sessionId }: { sessionId: string }) {
   useEffect(() => {
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
-      heartbeat.pause(); // synchronous cleanup — stop interval immediately
+
       if (muteTimerRef.current) clearTimeout(muteTimerRef.current);
       if (micStreamRef.current) {
         micStreamRef.current.getTracks().forEach(t => t.stop());
@@ -3723,71 +2219,9 @@ export function SessionView({ sessionId }: { sessionId: string }) {
                               .eq("id", session.id);
                           }
                           
-                          // Check if plan exists - if so, translate it; otherwise create new
-                          const existingPlan = await getSessionPlan(session.id);
-                          let newPlan = null;
-                          
-                          if (existingPlan && existingPlan.steps && existingPlan.steps.length > 0 && existingPlan.goal) {
-                            if (tutoringLanguage === "en") {
-                              // English — no translation needed, use plan as-is
-                              newPlan = existingPlan;
-                            } else {
-                              // Translate existing plan
-                              console.log("[SessionView] Attempting to translate plan to:", tutoringLanguage);
-                              const translateRes = await fetch("/api/session-plan/translate", {
-                                method: "POST",
-                                headers: { "Content-Type": "application/json" },
-                                body: JSON.stringify({ 
-                                  sessionId: session.id, 
-                                  tutoringLanguage,
-                                  objectives,
-                                }),
-                              });
-                              console.log("[SessionView] Translate response status:", translateRes.status);
-                              if (translateRes.ok) {
-                                const { plan } = await translateRes.json();
-                                newPlan = plan;
-                                console.log("[SessionView] Translation succeeded, plan goal:", plan?.goal);
-                              } else {
-                                const err = await translateRes.json().catch(() => ({}));
-                                console.error("[SessionView] Translation failed:", err);
-                              }
-                            }
-                          } 
-                          
+                          const newPlan = await ensureSessionPlan();
                           if (!newPlan) {
-                            // Create new plan with target language
-                            console.log("[SessionView] Creating new plan with language:", tutoringLanguage);
-                            const planRes = await fetch("/api/session-plan/create", {
-                              method: "POST",
-                              headers: { "Content-Type": "application/json" },
-                              body: JSON.stringify({ 
-                                sessionId: session.id, 
-                                problem: session.problem, 
-                                objectives,
-                                planningPrompt: session.planningPrompt,
-                                force: true,
-                                tutoringLanguage,
-                              }),
-                            });
-                            console.log("[SessionView] Create plan response status:", planRes.status);
-                            if (planRes.ok) {
-                              const { plan } = await planRes.json();
-                              newPlan = plan;
-                              console.log("[SessionView] Created plan goal:", plan?.goal);
-                            } else {
-                              const errorMessage = await readErrorResponse(planRes, "Failed to create block plan");
-                              console.error("[SessionView] Create plan failed:", errorMessage);
-                              setPlanError(errorMessage);
-                            }
-                          }
-                          
-                          if (newPlan) {
-                            setSessionPlan(newPlan);
-                            sessionPlanRef.current = newPlan;
-                          } else {
-                            console.error("[SessionView] No plan could be created or translated!");
-                            setPlanError("Failed to create block plan. Please try again.");
+                            setPlanError("Failed to prepare chapter map. Please try again.");
                           }
                           
                           // Archive existing probes; the chapter question is
@@ -4070,23 +2504,14 @@ export function SessionView({ sessionId }: { sessionId: string }) {
                           loadingChapterIndex={chapterLoadingIndex}
                           onLoadChapter={handleLoadChapter}
                           onChapterDone={() => {
-                            const step = sessionPlanRef.current?.steps?.[activeChapterIndex];
-                            setActiveStuckCheck(null);
-                            void logTool("session_plan", "chapter_done", {
-                              stepIndex: activeChapterIndex,
-                              stepId: step?.id,
-                              stepDescription: step?.description?.slice(0, 120),
-                              via: "chapter_map_mark_done",
-                            });
-                            void handleAdvanceStep(true);
+                            void handleMarkChapterDone();
                           }}
                           onAddChapter={handleAddChapter}
                           onUpdateChapter={handleUpdateChapter}
                           onEnsurePositions={handleEnsureChapterPositions}
                           isSessionActive={isRecording}
-                          isGeneratingProbe={isGeneratingProbe}
                           isCurrentStepCompleted={activeStep?.status === "completed" || activeStep?.status === "skipped"}
-                          stuckCheckText={STUCK_POLICY_ENABLED ? activeStuckCheck : null}
+
                         />
                       </div>
                     )}
@@ -4191,7 +2616,7 @@ export function SessionView({ sessionId }: { sessionId: string }) {
                     {activeTool === "logs" && (
                       <LogsTool
                         logs={logs}
-                        transferHealth={heartbeat.transferHealth}
+                        transferHealth={transferHealth}
                         onClear={() => {
                           logsRef.current = [];
                           setLogs([]);
@@ -4229,11 +2654,10 @@ export function SessionView({ sessionId }: { sessionId: string }) {
                         userInitial={userInitial}
                         isSessionActive={isRecording && !isPaused}
                         isInitializing={planLoading}
-                        isGeneratingProbe={isGeneratingProbe}
                         isChapterLoading={chapterLoading}
                         loadingChapterLabel={loadingChapterLabel}
                         hasPlanSteps={(sessionPlan?.steps?.length ?? 0) > 0}
-                        stuckCheckText={STUCK_POLICY_ENABLED ? activeStuckCheck : null}
+
                         showWelcome={showWelcomePanel}
                         onWelcomePlay={handleWelcomePlay}
                         isStartingSession={isStartingSession}
@@ -4243,46 +2667,12 @@ export function SessionView({ sessionId }: { sessionId: string }) {
                         aestheticImages={selectedAesthetic?.images}
                         aestheticName={selectedAesthetic?.name}
                         thought={sessionThoughtInterface}
-                        sessionControls={(
-                          <div className="space-y-2">
-                            <SessionControlBar
-                              variant="embedded"
-                              isRecording={isRecording}
-                              isPaused={isPaused}
-                              elapsedSeconds={elapsedSeconds}
-                              onStartRecording={showWelcomePanel ? handleWelcomePlay : startRecording}
-                              onStopRecording={() => setShowEndConfirm(true)}
-                              onPause={handlePause}
-                              onResume={showWelcomePanel ? handleWelcomePlay : handleResume}
-                            />
-                            {autoPausedForInactivity && isPaused && (
-                              <div className="rounded-md border border-amber-500/20 bg-amber-500/10 px-3 py-1 text-[11px] text-amber-400 flex items-center gap-1.5">
-                                <svg className="h-3 w-3 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                </svg>
-                                <span>{t("session.autoPausedInactivity")}</span>
-                              </div>
-                            )}
-                          </div>
-                        )}
                       />
                     </div>
               }
             />
           </div>
 
-
-
-          {/* Pop-out active banner - uses DOM manipulation to avoid re-renders */}
-          <PopOutBanner 
-            isVisible={isPopOutActive} 
-            popOutWindowRef={popOutWindowRef}
-            onDismiss={() => {
-              popOutDismissedRef.current = true; // Prevent banner from re-appearing
-              setIsPopOutActive(false);
-              popOutWindowRef.current = null;
-            }}
-          />
 
 
         </div>
@@ -4301,35 +2691,6 @@ export function SessionView({ sessionId }: { sessionId: string }) {
 
       {/* SessionPrepModal removed -- loading progress now inline in welcome modal */}
 
-      {/* End Session Confirmation — Stop is irreversible, so we warn and
-          suggest the non-destructive pause + back-to-dashboard route. */}
-      <ConfirmDialog
-        open={showEndConfirm}
-        onCancel={() => setShowEndConfirm(false)}
-        onConfirm={async () => {
-          setShowEndConfirm(false);
-          try { await stopRecording(); } catch (e) { console.error(e); }
-        }}
-        onTertiary={async () => {
-          setShowEndConfirm(false);
-          if (!isPaused) {
-            try { await handlePause(); } catch (e) { console.error(e); }
-          }
-          await pauseAndGoToDashboard();
-        }}
-        variant="destructive"
-        title={t('sessionEnd.confirmEndTitle')}
-        description={t('sessionEnd.confirmEndMessage')}
-        confirmLabel={t('sessionEnd.endSession')}
-        cancelLabel={t('sessionEnd.keepGoing')}
-        tertiaryLabel={t('sessionEnd.pauseAndLeave')}
-        tertiaryIcon={
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-          </svg>
-        }
-      />
-
       {/* Plan Complete Modal - shown when all steps are done */}
       <ConfirmDialog
         open={showPlanCompleteModal}
@@ -4341,7 +2702,7 @@ export function SessionView({ sessionId }: { sessionId: string }) {
         variant="neutral"
         title={t('session.sessionComplete')}
         description={t('session.congratulationsComplete')}
-        confirmLabel={t('sessionEnd.endSession')}
+        confirmLabel={t('sessionEnd.returnToWorkspace')}
         confirmTone="primary"
         hideCancel
       />

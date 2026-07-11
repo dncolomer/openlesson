@@ -15,7 +15,7 @@ export function buildProtectedResourceMetadata(origin: string) {
     authorization_servers: [issuer],
     scopes_supported: MCP_OAUTH_SCOPES,
     bearer_methods_supported: ["header"],
-    resource_documentation: `${issuer}/docs/agentic-v2`,
+    resource_documentation: `${issuer}/docs/proof-of-work-api`,
   };
 }
 
@@ -34,7 +34,7 @@ export function buildAuthorizationServerMetadata(origin: string) {
     scopes_supported: MCP_OAUTH_SCOPES,
     client_id_metadata_document_supported: true,
     resource_parameter_supported: true,
-    service_documentation: `${issuer}/docs/agentic-v2`,
+    service_documentation: `${issuer}/docs/proof-of-work-api`,
     ui_locales_supported: ["en"],
   };
 }

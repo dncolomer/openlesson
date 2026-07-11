@@ -7,7 +7,6 @@ import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { createClient } from "@/lib/supabase/client";
 import {
-  PROOF_OF_WORK_SUBMISSIONS_PER_SESSION,
   REGULAR_VOLUME_TIERS,
   TEAM_VOLUME_TIERS,
   DEFAULT_REGULAR_VOLUME,
@@ -24,33 +23,43 @@ interface UserState {
 
 const BACKGROUND = "/aesthetics/Greco-futurism/HHnTrjJbQAAOz7K.jpeg";
 
+/**
+ * Planning range for active users per tier.
+ * Per-person usage varies widely: monthly gates (~1–4), TAP/ILE practice (~4–12),
+ * batched API uploads (~4–8), or per-action streaming (20–40+).
+ */
+function tierSizingSummary(submissions: number): string {
+  const streaming = Math.max(1, Math.round(submissions / 30));
+  const batched = Math.max(1, Math.round(submissions / 4));
+  if (streaming === batched) {
+    return `Typically ~${streaming} active user — usage depends on integration cadence`;
+  }
+  return `Typically ~${streaming}–${batched} active users — depends on how often you submit proof`;
+}
+
 const REGULAR_VOLUME_NOTES: Record<number, string> = {
-  25: "Solo operator",
-  50: "Heavy practice",
-  100: "Small cohort",
+  100: "Solo operator",
+  250: "Heavy practice",
+  500: "Small cohort",
 };
 
 const TEAM_VOLUME_NOTES: Record<number, string> = {
-  250: "Pilot team",
-  500: "Department",
-  1000: "Scaled rollout",
-  2500: "Enterprise",
+  1000: "Pilot team",
+  2500: "Department",
+  5000: "Scaled rollout",
+  10000: "Enterprise",
 };
 
 const REGULAR_VOLUMES = REGULAR_VOLUME_TIERS.map((tier) => ({
-  sessions: tier.blocks,
-  proof_of_work: tier.blocks * PROOF_OF_WORK_SUBMISSIONS_PER_SESSION,
-  workspaces: tier.workspaces,
+  proof_of_work: tier.proofOfWork,
   price: tier.priceCents / 100,
-  note: REGULAR_VOLUME_NOTES[tier.blocks] || "",
+  note: REGULAR_VOLUME_NOTES[tier.proofOfWork] || "",
 }));
 
 const TEAM_VOLUMES = TEAM_VOLUME_TIERS.map((tier) => ({
-  sessions: tier.blocks,
-  proof_of_work: tier.blocks * PROOF_OF_WORK_SUBMISSIONS_PER_SESSION,
-  workspaces: tier.workspaces,
+  proof_of_work: tier.proofOfWork,
   price: tier.priceCents / 100,
-  note: TEAM_VOLUME_NOTES[tier.blocks] || "",
+  note: TEAM_VOLUME_NOTES[tier.proofOfWork] || "",
 }));
 
 const PLANS = [
@@ -58,11 +67,10 @@ const PLANS = [
     id: "regular_2026" as const,
     name: "Individual",
     detail: "from /mo",
-    description: "For individuals optimizing learning-to-conversion. Recurring TAP / ILE practice with capped Proof-of-Work API throughput.",
+    description: "For individuals optimizing learning-to-conversion. One meter: Proof-of-Work submissions. TAP, ILE, and API usage all draw from the same pool.",
     features: [
-      "25+ TAP / ILE sessions per month",
-      "100+ Proof-of-Work API submissions/mo",
-      "1+ Workspaces",
+      "100+ Proof-of-Work submissions/mo",
+      "Unlimited Workspaces",
       "Readiness history and reports",
     ],
     checkout: "regular_2026" as const,
@@ -73,11 +81,10 @@ const PLANS = [
     id: "pro_teams" as const,
     name: "Pro / Teams",
     detail: "from /mo",
-    description: "For teams raising the ROI of learning across humans and agents — shared session pool plus Proof-of-Work API capacity.",
+    description: "For teams raising the ROI of learning across humans and agents — shared Proof-of-Work capacity for the whole organization.",
     features: [
-      "250+ shared TAP / ILE sessions per month",
-      "1,000+ Proof-of-Work API submissions/mo",
-      "5+ Workspaces",
+      "1,000+ Proof-of-Work submissions/mo",
+      "Unlimited Workspaces",
       "Org guests and team API keys",
       "Priority support",
     ],
@@ -94,9 +101,8 @@ type VolumeCapacityCardProps = {
   selected: boolean;
   note: string;
   price: number;
-  sessions: number;
   proof_of_work: number;
-  workspaces: number;
+  sizing: string;
   onSelect: () => void;
 };
 
@@ -104,9 +110,8 @@ function VolumeCapacityCard({
   selected,
   note,
   price,
-  sessions,
   proof_of_work,
-  workspaces,
+  sizing,
   onSelect,
 }: VolumeCapacityCardProps) {
   const muted = selected ? "text-black/55" : "text-neutral-500";
@@ -137,47 +142,18 @@ function VolumeCapacityCard({
       </div>
 
       <div className={`mt-4 space-y-3 border-t pt-4 ${divider}`}>
-        <CapacityRow
-          label="TAP / ILE sessions"
-          value={sessions.toLocaleString()}
-          suffix="/ mo"
-          selected={selected}
-        />
-        <CapacityRow
-          label="Proof-of-Work API submissions"
-          value={proof_of_work.toLocaleString()}
-          suffix="/ mo"
-          selected={selected}
-        />
-        <CapacityRow
-          label="Workspaces"
-          value={workspaces.toLocaleString()}
-          selected={selected}
-        />
+        <div className="flex items-baseline justify-between gap-4">
+          <span className={`text-sm leading-snug ${selected ? "text-black/70" : "text-neutral-400"}`}>
+            Proof-of-Work submissions
+          </span>
+          <span className={`shrink-0 text-right text-sm font-medium tabular-nums ${value}`}>
+            {proof_of_work.toLocaleString()}
+            <span className={`font-normal ${selected ? "text-black/50" : "text-neutral-500"}`}> / mo</span>
+          </span>
+        </div>
+        <p className={`text-xs leading-relaxed ${selected ? "text-black/55" : "text-neutral-500"}`}>{sizing}</p>
       </div>
     </button>
-  );
-}
-
-function CapacityRow({
-  label,
-  value,
-  suffix,
-  selected,
-}: {
-  label: string;
-  value: string;
-  suffix?: string;
-  selected: boolean;
-}) {
-  return (
-    <div className="flex items-baseline justify-between gap-4">
-      <span className={`text-sm leading-snug ${selected ? "text-black/70" : "text-neutral-400"}`}>{label}</span>
-      <span className={`shrink-0 text-right text-sm font-medium tabular-nums ${selected ? "text-black" : "text-white"}`}>
-        {value}
-        {suffix ? <span className={`font-normal ${selected ? "text-black/50" : "text-neutral-500"}`}> {suffix}</span> : null}
-      </span>
-    </div>
   );
 }
 
@@ -269,7 +245,8 @@ function PricingPageContent() {
             <div className="mb-6 inline-block rounded-sm border border-neutral-800 bg-neutral-950/80 px-3 py-1 font-mono text-[10px] uppercase tracking-[2px] text-neutral-500">LEARNING EFFICIENCY • HUMANS & AGENTS</div>
             <h1 className="max-w-3xl text-5xl font-medium leading-[1.05] tracking-[-2.5px] text-white sm:text-6xl">Price learning efficiency, not completion.</h1>
             <p className="mt-7 max-w-2xl text-lg leading-relaxed text-neutral-400">
-              Plans meter combined TAP / ILE sessions and monthly Proof-of-Work API submissions — so you pay for learning throughput and conversion signal, not vanity block counts.
+              Plans meter Proof-of-Work submissions — one artifact per count, whether from the API, TAP, or ILE. Chat is not
+              billed separately.
             </p>
             {needsPlan && (
               <div className="mt-8 max-w-2xl rounded-sm border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
@@ -282,7 +259,7 @@ function PricingPageContent() {
             {PLANS.map((plan) => {
               const current = user?.authenticated && user.plan === plan.id;
               const volumeOptions = "volumes" in plan && Array.isArray(plan.volumes) ? plan.volumes : [];
-              const selectedVolume = volumeOptions.find((option) => option.sessions === selectedVolumes[plan.id]) || volumeOptions[0] || null;
+              const selectedVolume = volumeOptions.find((option) => option.proof_of_work === selectedVolumes[plan.id]) || volumeOptions[0] || null;
               return (
                 <div key={plan.id} className={`border bg-neutral-950/80 p-6 backdrop-blur-sm ${plan.featured ? "border-neutral-500" : "border-neutral-800"}`}>
                   <div className="flex items-start justify-between gap-4">
@@ -303,18 +280,17 @@ function PricingPageContent() {
                       <div className="font-mono text-[10px] uppercase tracking-[1.5px] text-neutral-500">Monthly capacity</div>
                       <div className="grid gap-3">
                         {volumeOptions.map((option) => {
-                          const selected = selectedVolumes[plan.id] === option.sessions;
+                          const selected = selectedVolumes[plan.id] === option.proof_of_work;
                           return (
                             <VolumeCapacityCard
-                              key={option.sessions}
+                              key={option.proof_of_work}
                               selected={selected}
                               note={option.note}
                               price={option.price}
-                              sessions={option.sessions}
                               proof_of_work={option.proof_of_work}
-                              workspaces={option.workspaces}
+                              sizing={tierSizingSummary(option.proof_of_work)}
                               onSelect={() =>
-                                setSelectedVolumes((current) => ({ ...current, [plan.id]: option.sessions }))
+                                setSelectedVolumes((current) => ({ ...current, [plan.id]: option.proof_of_work }))
                               }
                             />
                           );
@@ -332,8 +308,8 @@ function PricingPageContent() {
                       {loadingPlan === plan.checkout
                         ? "Loading..."
                         : plan.id === "pro_teams"
-                          ? `Start Teams (${selectedVolume?.sessions ?? selectedVolumes.pro_teams} sessions · ${selectedVolume?.workspaces ?? 1} ws) →`
-                          : `Start Individual (${selectedVolume?.sessions ?? selectedVolumes.regular_2026} sessions · ${selectedVolume?.workspaces ?? 1} ws) →`}
+                          ? `Start Teams (${(selectedVolume?.proof_of_work ?? selectedVolumes.pro_teams).toLocaleString()} submissions/mo) →`
+                          : `Start Individual (${(selectedVolume?.proof_of_work ?? selectedVolumes.regular_2026).toLocaleString()} submissions/mo) →`}
                     </button>
                   ) : !user?.authenticated ? (
                     <Link href="/register" className="mt-8 block rounded-sm bg-neutral-800 px-4 py-3 text-center text-sm font-medium text-white transition hover:bg-neutral-700">Get started →</Link>

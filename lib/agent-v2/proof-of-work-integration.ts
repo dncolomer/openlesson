@@ -56,7 +56,6 @@ export function buildContinuousEvaluationPolicy(
     proof_of_work_artifacts?: number;
     blocks?: number;
     workspace_files?: number;
-    tap_sessions?: number;
   } | null
 ): ContinuousEvaluationPolicy {
   const proofOfWorkCount = contextCounts?.proof_of_work_artifacts ?? 0;
@@ -130,7 +129,6 @@ export function enrichProofOfWorkSpecResult(
     proof_of_work_artifacts?: number;
     blocks?: number;
     workspace_files?: number;
-    tap_sessions?: number;
   } | null,
   workspaceMeta?: {
     title?: string;
@@ -178,7 +176,6 @@ export function enrichProofOfWorkSpecResult(
     recommended_next_actions: recommendIntegrationActions({
       proof_of_work_artifacts: proofOfWorkCount,
       blocks: blockCount,
-      tap_sessions: contextCounts?.tap_sessions ?? 0,
       has_conversion_goal: Boolean(workspaceMeta?.conversion_goal?.trim()),
     }),
     collection_guidance: [

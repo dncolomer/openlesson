@@ -3,10 +3,8 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
   canCreateWorkspace,
-  canStartSession,
   canSubmitProofOfWork,
-  proofOfWorkLimitForSessionAllowance,
-  getSessionAllowance,
+  EXTRA_PROOF_OF_WORK_PACK_SIZE,
   PLANS,
   type OrgUsageSummary,
   type PlanId,
@@ -16,15 +14,13 @@ import {
   countActiveWorkspaces,
   countProofOfWorkSubmissions,
   countOrgProofOfWorkSubmissions,
-  countOrgTapIleSessions,
-  countTapIleSessions,
   loadUsageProfile,
 } from "@/lib/usage-metrics";
 
 export const runtime = "nodejs";
 
 /**
- * POST: Called after session creation to consume an extra lesson if needed.
+ * POST: Consume an extra Proof-of-Work pack when usage exceeds the plan base.
  */
 export async function POST() {
   try {
@@ -36,19 +32,19 @@ export async function POST() {
     if (!profile || profile.is_admin) return NextResponse.json({ ok: true });
 
     const plan = (profile.plan || "free") as PlanId;
-    const baseLimit = PLANS[plan]?.sessionsPerPeriod ?? 1;
-    const extraLessons = profile.extra_lessons ?? 0;
+    const baseLimit = PLANS[plan]?.proofOfWorkPerPeriod ?? 1;
+    const extraProofOfWork = profile.extra_lessons ?? 0;
 
     if (plan !== "free") {
       return NextResponse.json({ ok: true });
     }
 
-    const sessionCount = await countTapIleSessions(supabase, user.id);
+    const proofOfWorkCount = await countProofOfWorkSubmissions(supabase, user.id);
 
-    if (sessionCount > baseLimit && extraLessons > 0) {
+    if (proofOfWorkCount > baseLimit && extraProofOfWork >= EXTRA_PROOF_OF_WORK_PACK_SIZE) {
       await supabase
         .from("profiles")
-        .update({ extra_lessons: extraLessons - 1 })
+        .update({ extra_lessons: extraProofOfWork - EXTRA_PROOF_OF_WORK_PACK_SIZE })
         .eq("id", user.id);
     }
 
@@ -77,7 +73,7 @@ export async function GET() {
         reason: "Profile not found. Please complete account setup or contact support.",
         plan: "free",
         used: 0,
-        limit: PLANS.free.sessionsPerPeriod,
+        limit: PLANS.free.proofOfWorkPerPeriod,
         isAdmin: false,
         workspacesUsed: 0,
         workspacesLimit: PLANS.free.workspacesPerPeriod,
@@ -89,8 +85,6 @@ export async function GET() {
         ? null
         : billingPeriodStart(profile.current_period_end);
 
-    let sessionCount = await countTapIleSessions(supabase, user.id, periodStart);
-    let personalSessionCount = sessionCount;
     let personalProofOfWorkCount = await countProofOfWorkSubmissions(supabase, user.id, periodStart);
     let proofOfWorkCount = personalProofOfWorkCount;
 
@@ -105,7 +99,6 @@ export async function GET() {
       const memberIds = (orgMembers || []).map((member) => member.id);
 
       if (memberIds.length > 0) {
-        sessionCount = await countOrgTapIleSessions(admin, memberIds, periodStart);
         proofOfWorkCount = await countOrgProofOfWorkSubmissions(admin, memberIds, periodStart);
       }
 
@@ -121,7 +114,7 @@ export async function GET() {
         .eq("organization_id", profile.organization_id)
         .eq("status", "active");
 
-      const planLimit = PLANS.pro_teams.sessionsPerPeriod;
+      const planLimit = PLANS.pro_teams.proofOfWorkPerPeriod;
       const effectiveOrgLimit = (planLimit ?? 0) + (profile.extra_lessons ?? 0);
       organizationSummary = {
         id: profile.organization_id,
@@ -129,10 +122,8 @@ export async function GET() {
         isOrgAdmin: profile.is_org_admin === true,
         memberCount: memberIds.length,
         guestCount: guestCount ?? 0,
-        used: sessionCount,
+        used: proofOfWorkCount,
         limit: effectiveOrgLimit,
-        proofOfWorkUsed: proofOfWorkCount,
-        proofOfWorkLimit: proofOfWorkLimitForSessionAllowance("pro_teams", effectiveOrgLimit),
       };
     }
 
@@ -147,18 +138,16 @@ export async function GET() {
       token_validity_expires_at: profile.token_validity_expires_at,
     };
 
-    const result = canStartSession(userProfile, sessionCount);
-    const { limit: sessionAllowance } = getSessionAllowance(userProfile, sessionCount);
-    const evidenceResult = canSubmitProofOfWork(userProfile, proofOfWorkCount, sessionAllowance);
+    const result = canSubmitProofOfWork(userProfile, proofOfWorkCount);
     const workspaceCount = await countActiveWorkspaces(supabase, user.id);
     const workspaceResult = canCreateWorkspace(userProfile, workspaceCount);
 
     const proofOfWorkPayload = {
       proofOfWorkUsed: proofOfWorkCount,
       proofOfWorkPersonalUsed: personalProofOfWorkCount,
-      proofOfWorkLimit: evidenceResult.limit,
-      canSubmitProofOfWork: evidenceResult.allowed,
-      evidenceReason: evidenceResult.reason,
+      proofOfWorkLimit: result.limit,
+      canSubmitProofOfWork: result.allowed,
+      evidenceReason: result.reason,
     };
 
     if (profile.is_admin) {
@@ -169,7 +158,7 @@ export async function GET() {
         reason: "Admin",
         limit: null,
         isAdmin: true,
-        personalUsed: personalSessionCount,
+        personalUsed: personalProofOfWorkCount,
         organization: organizationSummary,
         workspacesUsed: workspaceCount,
         workspacesLimit: null,
@@ -182,7 +171,8 @@ export async function GET() {
     return NextResponse.json({
       ...result,
       ...proofOfWorkPayload,
-      personalUsed: personalSessionCount,
+      allowed: result.allowed,
+      personalUsed: personalProofOfWorkCount,
       organization: organizationSummary,
       workspacesUsed: workspaceCount,
       workspacesLimit: workspaceResult.limit,

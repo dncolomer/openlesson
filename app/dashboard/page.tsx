@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Navbar } from "@/components/Navbar";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
-import { getSessions, deleteSession, restartSession, getWorkspaces, type Session, type Workspace } from "@/lib/storage";
+import { getSessions, deleteSession, restartSession, getWorkspaces, getIlePostSessionPath, type Session, type Workspace } from "@/lib/storage";
 import { DEFAULT_PROMPTS, PROMPT_META, type PromptKey, type UserPrompts } from "@/lib/prompts";
 import { useI18n } from "@/lib/i18n";
 import { formatPlanMonthlyPrice, hasAgentApiKeyPlan, type PlanId } from "@/lib/plans";
@@ -684,7 +684,7 @@ export default function DashboardPage() {
                   return (
                   <Link
                     key={session.id}
-                    href={isCompleted ? `/results?id=${session.id}` : `/session?id=${session.id}`}
+                    href={isCompleted ? getIlePostSessionPath(session) : `/session?id=${session.id}`}
                     className="block rounded-lg border border-neutral-800 bg-neutral-900/50 overflow-hidden hover:bg-neutral-800/30 transition-colors"
                   >
                     <div className="flex items-center justify-between p-4">
@@ -1044,52 +1044,14 @@ export default function DashboardPage() {
 
                   <div className={usageCardClass}>
                     <p className={usageLabelClass}>
-                      {usageData.organization ? "Your TAP / ILE sessions this period" : t("dashboard.sessionsThisPeriod")}
+                      {usageData.organization ? "Your Proof-of-Work submissions this period" : t("dashboard.proofOfWorkThisPeriod")}
                     </p>
-                    {(() => {
-                      const displayUsed = usageData.organization ? usageData.personalUsed : usageData.used;
-                      const displayLimit = usageData.isAdmin || usageData.limit === null ? null : usageData.organization ? null : usageData.limit;
-                      return (
-                        <>
-                          <div className="mt-4 flex items-end gap-2">
-                            <span className="text-3xl font-medium tracking-[-1px] text-white">{displayUsed}</span>
-                            <span className="mb-1 text-sm text-neutral-500">
-                              / {displayLimit === null ? t("dashboard.infinity") : displayLimit}
-                            </span>
-                          </div>
-                          {displayLimit !== null && (
-                            <div className="mt-4 h-1.5 w-full rounded-full bg-neutral-800">
-                              <div
-                                className={`h-1.5 rounded-full ${
-                                  displayUsed >= displayLimit
-                                    ? "bg-red-400"
-                                    : displayUsed >= displayLimit * 0.8
-                                    ? "bg-amber-400"
-                                    : "bg-white"
-                                }`}
-                                style={{ width: `${usageProgress(displayUsed, displayLimit)}%` }}
-                              />
-                            </div>
-                          )}
-                          <p className="mt-3 text-xs text-neutral-500">
-                            {usageData.isAdmin
-                              ? "Unlimited TAP / ILE sessions — admin access bypasses plan limits."
-                              : usageData.organization
-                              ? "Your personal contribution to the organization session pool."
-                              : displayLimit === null
-                              ? t("dashboard.unlimitedSessions")
-                              : t("dashboard.sessionsRemaining", { count: Math.max(displayLimit - displayUsed, 0) })}
-                          </p>
-                        </>
-                      );
-                    })()}
-                  </div>
-
-                  <div className={usageCardClass}>
-                    <p className={usageLabelClass}>Proof-of-Work API submissions</p>
                     {(() => {
                       const displayUsed = usageData.organization ? usageData.proofOfWorkPersonalUsed : usageData.proofOfWorkUsed;
-                      const displayLimit = usageData.isAdmin || usageData.proofOfWorkLimit === null ? null : usageData.proofOfWorkLimit;
+                      const displayLimit =
+                        usageData.isAdmin || usageData.proofOfWorkLimit === null || usageData.organization
+                          ? null
+                          : usageData.proofOfWorkLimit;
                       return (
                         <>
                           <div className="mt-4 flex items-end gap-2">
@@ -1114,45 +1076,16 @@ export default function DashboardPage() {
                           )}
                           <p className="mt-3 text-xs text-neutral-500">
                             {usageData.isAdmin
-                              ? "Unlimited Proof-of-Work API submissions on admin accounts."
+                              ? "Unlimited Proof-of-Work submissions on admin accounts."
                               : usageData.organization
-                              ? "Your personal proof-of-work uploads this period."
+                              ? "Your personal Proof-of-Work usage this period (TAP, ILE, and API)."
                               : displayLimit === null
-                              ? "Unlimited Proof-of-Work API submissions on your plan."
-                              : `${Math.max(displayLimit - displayUsed, 0)} evidence submissions remaining this period.`}
+                              ? t("dashboard.unlimitedProofOfWork")
+                              : t("dashboard.proofOfWorkRemaining", { count: Math.max(displayLimit - displayUsed, 0) })}
                           </p>
                         </>
                       );
                     })()}
-                  </div>
-
-                  <div className={usageCardClass}>
-                    <p className={usageLabelClass}>Workspaces</p>
-                    <div className="mt-4 flex items-end gap-2">
-                      <span className="text-3xl font-medium tracking-[-1px] text-white">{usageData.workspacesUsed}</span>
-                      <span className="mb-1 text-sm text-neutral-500">
-                        / {usageData.workspacesLimit === null ? t("dashboard.infinity") : usageData.workspacesLimit}
-                      </span>
-                    </div>
-                    {usageData.workspacesLimit !== null && (
-                      <div className="mt-4 h-1.5 w-full rounded-full bg-neutral-800">
-                        <div
-                          className={`h-1.5 rounded-full ${
-                            usageData.workspacesUsed >= usageData.workspacesLimit
-                              ? "bg-red-400"
-                              : usageData.workspacesUsed >= usageData.workspacesLimit * 0.8
-                              ? "bg-amber-400"
-                              : "bg-white"
-                          }`}
-                          style={{ width: `${usageProgress(usageData.workspacesUsed, usageData.workspacesLimit)}%` }}
-                        />
-                      </div>
-                    )}
-                    <p className="mt-3 text-xs text-neutral-500">
-                      {usageData.workspacesLimit === null
-                        ? "Unlimited active workspaces on your plan."
-                        : "Archive a workspace to free a slot, or upgrade capacity on pricing."}
-                    </p>
                   </div>
 
                   <div className={usageCardClass}>
@@ -1173,7 +1106,7 @@ export default function DashboardPage() {
                           {usageData.plan === "pro"
                             ? t("dashboard.unlimitedContinue")
                             : usageData.plan === "pro_teams"
-                            ? "Organization TAP / ILE session pool resets each billing period."
+                            ? "Organization Proof-of-Work pool resets each billing period."
                             : t("dashboard.regularResetDesc")}
                         </p>
                       </>
@@ -1221,7 +1154,7 @@ export default function DashboardPage() {
                     <div className="mt-5 flex items-end gap-2">
                       <span className="text-3xl font-medium tracking-[-1px] text-white">{usageData.organization.used}</span>
                       <span className="mb-1 text-sm text-neutral-500">
-                        / {usageData.organization.limit === null ? t("dashboard.infinity") : usageData.organization.limit} TAP / ILE sessions this period
+                        / {usageData.organization.limit === null ? t("dashboard.infinity") : usageData.organization.limit.toLocaleString()} Proof-of-Work submissions this period
                       </span>
                     </div>
                     {usageData.organization.limit !== null && (
@@ -1239,7 +1172,7 @@ export default function DashboardPage() {
                       </div>
                     )}
                     <p className="mt-3 text-xs text-neutral-500">
-                      Teams plans share one monthly TAP / ILE session pool and Proof-of-Work API cap across all organization members.
+                      Teams plans share one monthly Proof-of-Work pool across all organization members — TAP, ILE, and API usage all draw from it.
                     </p>
                   </div>
                 )}
@@ -1261,7 +1194,7 @@ export default function DashboardPage() {
               </div>
               {usesAgenticV2Keys && (
                 <Link
-                  href="/docs/agentic-v2"
+                  href="/docs/proof-of-work-api"
                   className="inline-flex h-10 items-center justify-center rounded-sm border border-neutral-700 px-4 text-sm text-neutral-200 transition hover:border-neutral-500 hover:text-white"
                 >
                   {t("dashboard.mcpDocsLink")} →
@@ -1288,7 +1221,7 @@ export default function DashboardPage() {
                 <div className="flex items-center gap-3">
                   {usesAgenticV2Keys && (
                     <Link
-                      href="/docs/agentic-v2"
+                      href="/docs/proof-of-work-api"
                       className="text-sm text-neutral-400 underline decoration-neutral-600 underline-offset-4 transition hover:text-white"
                     >
                       API docs →

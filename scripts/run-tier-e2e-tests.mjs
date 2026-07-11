@@ -128,7 +128,7 @@ async function runTeamsAgentApiTests() {
   else fail("teams: invalid key blocked", `got ${unauthorized.res.status}`);
 
   if (!liveWrites) {
-    console.log("  (skipping live workspace/GHL writes — set E2E_ALLOW_LIVE_WRITES=1 to enable)");
+    console.log("  (skipping live workspace/TAP writes — set E2E_ALLOW_LIVE_WRITES=1 to enable)");
     return;
   }
 
@@ -154,25 +154,25 @@ async function runTeamsAgentApiTests() {
   pass("teams: list blocks", `${blocks.body.blocks.length} blocks`);
 
   const link = await agentJson(
-    `/api/v2/agent/workspaces/${workspaceId}/blocks/${blockId}/ghl-links`,
+    `/api/v2/agent/workspaces/${workspaceId}/blocks/${blockId}/tap-links`,
     apiKey,
     { method: "POST", body: JSON.stringify({ minutes: 15 }) }
   );
-  if (link.res.status !== 201 || !link.body?.ghl_link?.id) {
-    fail("teams: create GHL link", `${link.res.status} ${JSON.stringify(link.body)}`);
+  if (link.res.status !== 201 || !link.body?.tap_link?.id) {
+    fail("teams: create TAP link", `${link.res.status} ${JSON.stringify(link.body)}`);
     return;
   }
-  pass("teams: create GHL link", link.body.ghl_link.id);
+  pass("teams: create TAP link", link.body.tap_link.id);
 
-  const list = await agentJson(`/api/v2/agent/workspaces/${workspaceId}/ghl-links`, apiKey);
-  if (list.res.status === 200) pass("teams: list GHL links", `${list.body?.ghl_links?.length ?? 0} links`);
-  else fail("teams: list GHL links", String(list.res.status));
+  const list = await agentJson(`/api/v2/agent/workspaces/${workspaceId}/tap-links`, apiKey);
+  if (list.res.status === 200) pass("teams: list TAP links", `${list.body?.tap_links?.length ?? 0} links`);
+  else fail("teams: list TAP links", String(list.res.status));
 
   if (link.body?.private_url) {
     const token = link.body.private_url.split("/").pop();
-    const page = await fetch(`${baseUrl}/ghl-score/session/${token}`, { redirect: "manual" });
-    if (page.status === 200) pass("teams: private GHL page loads", token.slice(0, 8) + "…");
-    else fail("teams: private GHL page loads", String(page.status));
+    const page = await fetch(`${baseUrl}/tap/session/${token}`, { redirect: "manual" });
+    if (page.status === 200) pass("teams: private TAP page loads", token.slice(0, 8) + "…");
+    else fail("teams: private TAP page loads", String(page.status));
   }
 }
 
@@ -180,10 +180,10 @@ function printManualRegularChecklist() {
   section("Regular — manual browser checklist");
   console.log(`Log in as ${env.E2E_REGULAR_EMAIL || "(regular test user)"} at ${baseUrl}/login\n`);
   const steps = [
-    "Dashboard → Usage tab shows plan 'regular_2026' and block limit 25",
+    "Dashboard → Usage tab shows plan 'regular_2026' and proof-of-work limit 100",
     "Open /workspace/new and create workspace titled [E2E-REG] …",
     "Open the new workspace and confirm blocks render in the plan view",
-    "Open /workspace/{id}/ghl-score — verify setup UI loads (optional: run 2-min session only if accepting xAI cost)",
+    "Open /workspace/{id}/tap — verify setup UI loads (optional: run 2-min session only if accepting xAI cost)",
     "Confirm /api/check-usage shows allowed:true in Network tab after login",
     "Confirm pricing page does NOT offer Teams-only org features on this account",
   ];
@@ -198,8 +198,8 @@ function printManualTeamsChecklist() {
     "Organization page lists [E2E] Test Organization and guest section",
     "Create org guest via API or POST /api/v2/agent/org/guests (requires migration 045 guest columns)",
     "POST /api/v2/agent/keys works even if dashboard key UI still says Pro-only (known gap)",
-    "Complete one private GHL session via bearer link in incognito (no login required)",
-    "GET GHL results after completion returns marker_scores + gap_analysis",
+    "Complete one private TAP session via bearer link in incognito (no login required)",
+    "GET .../tap-links shows status=completed after TAP; score via POST .../performance",
   ];
   steps.forEach((step, i) => console.log(`${i + 1}. ${step}`));
 }

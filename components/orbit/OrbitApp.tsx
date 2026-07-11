@@ -39,10 +39,7 @@ import {
   fetchOrbitTapGateStatus,
   openOrbitLearningUrl,
 } from "@/lib/openlesson-demo/orbit-learning-links";
-import {
-  ORBIT_TAP_MIN_SCORE,
-  ORBIT_TAP_VALIDATION_HINT,
-} from "@/lib/openlesson-demo/orbit-ui-manifest";
+import { ORBIT_TAP_VALIDATION_HINT } from "@/lib/openlesson-demo/orbit-ui-manifest";
 import { buildOrbitAppSnapshot } from "@/lib/openlesson-demo/orbit-app-context";
 import {
   emitOrbitAction,
@@ -828,17 +825,15 @@ export function OrbitApp() {
               Think Aloud Protocol required
             </div>
             <p className="mt-3 text-sm leading-relaxed text-[#9b9bb8]">
-              Ship Sprint is gated until you complete a Think Aloud Protocol session scoring at least{" "}
-              {ORBIT_TAP_MIN_SCORE}/100. This keeps sprint publication tied to demonstrated judgment,
-              not just UI clicks.
+              Ship Sprint is gated until you complete a Think Aloud Protocol session. TAP evidence uploads
+              to proof of work — request a Performance report in the workspace when you want unified scoring.
             </p>
             <p className="mt-3 text-xs leading-relaxed text-[#6b6b80]">{ORBIT_TAP_VALIDATION_HINT}</p>
-            {tapScore !== null ? (
-              <p className="mt-3 font-mono text-xs text-[#9b9bb8]">
-                Latest TAP score: <span className="text-white">{tapScore}</span>/100
-                {tapCleared ? " · cleared" : ` · need ${ORBIT_TAP_MIN_SCORE}+`}
-              </p>
-            ) : null}
+            {tapCleared ? (
+              <p className="mt-3 font-mono text-xs text-emerald-300/90">TAP session complete · cleared</p>
+            ) : (
+              <p className="mt-3 font-mono text-xs text-[#9b9bb8]">TAP session not completed yet</p>
+            )}
             <div className="mt-5 flex flex-col gap-2 sm:flex-row">
               {tapCleared ? (
                 <button
@@ -870,7 +865,7 @@ export function OrbitApp() {
                     className="inline-flex flex-1 items-center justify-center gap-2 rounded-md border border-[#2a2a36] px-3 py-2 text-xs text-[#c4c9ff] transition hover:border-[#5e6ad2]/50 disabled:opacity-50"
                   >
                     {isCheckingTap ? <Loader2 className="size-3.5 animate-spin" /> : null}
-                    Check TAP score
+                    Check TAP status
                   </button>
                 </>
               )}

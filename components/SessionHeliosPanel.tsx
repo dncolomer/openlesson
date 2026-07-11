@@ -4,26 +4,25 @@ import { useEffect, useState, type ReactNode } from "react";
 import { useI18n } from "@/lib/i18n";
 import type { SessionThoughtInterface } from "@/lib/useSessionThoughtInterface";
 import {
-  GhcBackgroundLayers,
-  GhcButton,
-  GhcButtonLabel,
-  GhcDialogueSplit,
-  type GhcDialogueMessage,
-  GHC_BACKGROUND_IMAGES,
-} from "@/components/ghc/GhcUi";
+  ThoughtBackgroundLayers,
+  ThoughtButton,
+  ThoughtButtonLabel,
+  DialogueSplit,
+  type DialogueMessage,
+  THOUGHT_BACKGROUND_IMAGES,
+} from "@/components/thought-ui/ThoughtUi";
 import { SessionOnboardingGuide } from "@/components/SessionOnboardingGuide";
-import { ActiveThoughtSlots } from "@/components/ghc/ActiveThoughtSlots";
-import { SlidingTranscript } from "@/components/ghc/SlidingTranscript";
+import { ActiveThoughtSlots } from "@/components/thought-ui/ActiveThoughtSlots";
+import { SlidingTranscript } from "@/components/thought-ui/SlidingTranscript";
 
 interface SessionHeliosPanelProps {
-  lastUserTurn: GhcDialogueMessage | null;
-  lastAssistantTurn: GhcDialogueMessage | null;
+  lastUserTurn: DialogueMessage | null;
+  lastAssistantTurn: DialogueMessage | null;
   isAssistantPending?: boolean;
   chapterPrompt: string;
   userInitial: string;
   isSessionActive: boolean;
   isInitializing?: boolean;
-  isGeneratingProbe?: boolean;
   isChapterLoading?: boolean;
   loadingChapterLabel?: string | null;
   stuckCheckText?: string | null;
@@ -50,7 +49,6 @@ export function SessionHeliosPanel({
   userInitial,
   isSessionActive,
   isInitializing = false,
-  isGeneratingProbe = false,
   isChapterLoading = false,
   loadingChapterLabel = null,
   stuckCheckText = null,
@@ -72,14 +70,14 @@ export function SessionHeliosPanel({
   const [bgImage, setBgImage] = useState("");
 
   useEffect(() => {
-    const pool = aestheticImages?.length ? aestheticImages : GHC_BACKGROUND_IMAGES;
+    const pool = aestheticImages?.length ? aestheticImages : THOUGHT_BACKGROUND_IMAGES;
     setBgImage(pool[Math.floor(Math.random() * pool.length)]);
   }, [aestheticImages, sessionId]);
 
   if (showWelcome) {
     return (
       <div className="relative h-full overflow-hidden bg-[#0a0a0a]">
-        <GhcBackgroundLayers bgImage={bgImage} dimStrength="medium" />
+        <ThoughtBackgroundLayers bgImage={bgImage} dimStrength="medium" />
         <div className="relative z-10 flex h-full min-h-0 flex-col overflow-hidden">
           <SessionOnboardingGuide
             key={welcomeResetKey}
@@ -98,7 +96,7 @@ export function SessionHeliosPanel({
 
   return (
     <div className="relative h-full overflow-hidden bg-[#0a0a0a]">
-      <GhcBackgroundLayers bgImage={bgImage} dimStrength="medium" />
+      <ThoughtBackgroundLayers bgImage={bgImage} dimStrength="medium" />
 
       {isChapterLoading && (
         <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-[#0a0a0a]/88 backdrop-blur-md">
@@ -129,7 +127,7 @@ export function SessionHeliosPanel({
         ) : (
           <>
             <div className="flex min-h-[42vh] flex-1 flex-col">
-              <GhcDialogueSplit
+              <DialogueSplit
                 lastUserTurn={lastUserTurn}
                 lastAssistantTurn={lastAssistantTurn}
                 promptText={chapterPrompt}
@@ -150,10 +148,10 @@ export function SessionHeliosPanel({
                 <div className="flex h-8 min-w-0 flex-1 items-center rounded-md border border-neutral-900 bg-black/70 px-2.5 text-xs text-neutral-300">
                   <SlidingTranscript text={thought.interimText} className="w-full" />
                 </div>
-                <GhcButton size="sm" disabled={!thought.crystallizableText} onClick={thought.crystallizeCurrentTranscription}>
-                  <GhcButtonLabel shortcut="C">crystallize</GhcButtonLabel>
-                </GhcButton>
-                <GhcButton
+                <ThoughtButton size="sm" disabled={!thought.crystallizableText} onClick={thought.crystallizeCurrentTranscription}>
+                  <ThoughtButtonLabel shortcut="C">crystallize</ThoughtButtonLabel>
+                </ThoughtButton>
+                <ThoughtButton
                   size="sm"
                   disabled={thought.selectedActiveThoughts.length < 2}
                   onClick={() =>
@@ -163,11 +161,11 @@ export function SessionHeliosPanel({
                     )
                   }
                 >
-                  <GhcButtonLabel shortcut="S">send ({thought.selectedActiveThoughts.length})</GhcButtonLabel>
-                </GhcButton>
-                <GhcButton size="sm" disabled={thought.activeThoughts.length === 0} onClick={thought.skipCurrentThought}>
-                  <GhcButtonLabel shortcut="Esc">skip</GhcButtonLabel>
-                </GhcButton>
+                  <ThoughtButtonLabel shortcut="S">send ({thought.selectedActiveThoughts.length})</ThoughtButtonLabel>
+                </ThoughtButton>
+                <ThoughtButton size="sm" disabled={thought.activeThoughts.length === 0} onClick={thought.skipCurrentThought}>
+                  <ThoughtButtonLabel shortcut="Esc">skip</ThoughtButtonLabel>
+                </ThoughtButton>
               </div>
 
               <div className="mt-3 border-t border-neutral-900/80 pt-3">

@@ -58,7 +58,6 @@ export interface PerformanceContextPayload {
     is_start: boolean | null;
     session_id: string | null;
   }>;
-  tap_sessions: Array<Record<string, unknown>>;
   proof_of_work: Array<{
     id: string;
     type: string;
@@ -85,7 +84,6 @@ export interface PerformanceContextPayload {
   linked_sessions: Array<Record<string, unknown>>;
   counts: {
     blocks: number;
-    tap_sessions: number;
     proof_of_work_artifacts: number;
     linked_sessions: number;
     workspace_files: number;
@@ -147,23 +145,7 @@ export async function buildWorkspacePerformanceContext({
     proofOfWorkQuery = proofOfWorkQuery.eq("user_id", evidenceFilter.userId);
   }
 
-  let ghlQuery = supabase
-    .from("workspace_tap_sessions")
-    .select(
-      "id, block_id, status, overall_score, summary, marker_scores, analysis, duration_seconds, completed_at, created_at, xai_file_id"
-    )
-    .eq("workspace_id", workspaceId)
-    .order("created_at", { ascending: false })
-    .limit(20);
-
-  if (blockId) ghlQuery = ghlQuery.eq("block_id", blockId);
-  if (evidenceFilter.restrictToGuest && evidenceFilter.guestUserId) {
-    ghlQuery = ghlQuery.eq("guest_user_id", evidenceFilter.guestUserId);
-  } else if (evidenceFilter.restrictToUser && evidenceFilter.userId) {
-    ghlQuery = ghlQuery.eq("user_id", evidenceFilter.userId);
-  }
-
-  const [{ data: proofOfWorkRows }, { data: ghlSessions }] = await Promise.all([proofOfWorkQuery, ghlQuery]);
+  const { data: proofOfWorkRows } = await proofOfWorkQuery;
 
   const sessionIds = Array.from(
     new Set(
@@ -201,16 +183,6 @@ export async function buildWorkspacePerformanceContext({
       is_start: block.is_start,
       session_id: block.session_id,
     })),
-    tap_sessions: (ghlSessions || []).map((session) => ({
-      id: session.id,
-      block_id: session.block_id,
-      status: session.status,
-      overall_score: session.overall_score,
-      summary: session.summary,
-      marker_scores: session.marker_scores,
-      gap_analysis: (session.analysis as { gap_analysis?: unknown } | null)?.gap_analysis || null,
-      completed_at: session.completed_at,
-    })),
     proof_of_work: (proofOfWorkRows || []).map((row) => ({
       id: row.id,
       type: row.proof_of_work_type,
@@ -244,7 +216,6 @@ export async function buildWorkspacePerformanceContext({
     })),
     counts: {
       blocks: blocks?.length || 0,
-      tap_sessions: ghlSessions?.length || 0,
       proof_of_work_artifacts: proofOfWorkRows?.length || 0,
       linked_sessions: sessions?.length || 0,
       workspace_files: workspaceFiles?.length || 0,
@@ -263,7 +234,6 @@ export async function buildWorkspacePerformanceContext({
       [
         ...(proofOfWorkRows || []).map((row) => row.xai_file_id),
         ...(workspaceFiles || []).map((file) => file.xai_file_id),
-        ...(ghlSessions || []).map((session) => session.xai_file_id),
       ].filter(isXaiFileId)
     )
   ).slice(0, MAX_ARTIFACT_FILE_REFS);

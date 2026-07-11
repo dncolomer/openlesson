@@ -1,13 +1,13 @@
 import { notFound } from "next/navigation";
-import { GhcScoreClient } from "@/components/GhcScoreClient";
-import { hashPrivateToken } from "@/lib/ghc-score";
+import { TapScoreClient } from "@/components/TapScoreClient";
+import { hashPrivateToken } from "@/lib/tap-score";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 interface PageProps {
   params: Promise<{ token: string }>;
 }
 
-export default async function PrivateGhlScorePage({ params }: PageProps) {
+export default async function PrivateTapSessionPage({ params }: PageProps) {
   const { token } = await params;
   const supabase = createAdminClient();
   const tokenHash = hashPrivateToken(token);
@@ -26,7 +26,7 @@ export default async function PrivateGhlScorePage({ params }: PageProps) {
   };
 
   return (
-    <GhcScoreClient
+    <TapScoreClient
       workspaceId={session.workspace_id}
       privateToken={token}
       sessionId={session.session_id || undefined}

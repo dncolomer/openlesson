@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { SessionPlan } from "@/lib/storage";
 import { useI18n } from "@/lib/i18n";
-import { GhcButton } from "@/components/ghc/GhcUi";
+import { ThoughtButton } from "@/components/thought-ui/ThoughtUi";
 import { BlockSkillGrid } from "@/components/BlockSkillGrid";
 import { buildSkillGridLayout } from "@/lib/block-skill-grid";
 import {
@@ -23,7 +23,6 @@ interface ChapterMapPanelProps {
   onUpdateChapter: (stepId: string, description: string) => Promise<void>;
   onEnsurePositions?: (plan: SessionPlan) => void;
   isSessionActive: boolean;
-  isGeneratingProbe?: boolean;
   isCurrentStepCompleted?: boolean;
   stuckCheckText?: string | null;
 }
@@ -40,7 +39,6 @@ export function ChapterMapPanel({
   onUpdateChapter,
   onEnsurePositions,
   isSessionActive,
-  isGeneratingProbe = false,
   isCurrentStepCompleted = false,
   stuckCheckText = null,
 }: ChapterMapPanelProps) {
@@ -124,8 +122,6 @@ export function ChapterMapPanel({
     },
     [onAddChapter],
   );
-
-  const chapterActionsDisabled = isGeneratingProbe;
 
   const gridLabels = useMemo(
     () => ({
@@ -237,7 +233,7 @@ export function ChapterMapPanel({
                   className="w-full resize-none rounded-md border border-neutral-700 bg-black/60 px-3 py-2 text-sm text-neutral-200 focus:border-neutral-500 focus:outline-none"
                 />
                 <div className="grid grid-cols-2 gap-2">
-                  <GhcButton
+                  <ThoughtButton
                     size="sm"
                     className="w-full"
                     onClick={() => {
@@ -246,8 +242,8 @@ export function ChapterMapPanel({
                     }}
                   >
                     {t("chapterMap.cancel")}
-                  </GhcButton>
-                  <GhcButton
+                  </ThoughtButton>
+                  <ThoughtButton
                     size="sm"
                     variant="primary"
                     className="w-full"
@@ -255,33 +251,32 @@ export function ChapterMapPanel({
                     onClick={() => void saveEdit()}
                   >
                     {savingEdit ? "…" : t("chapterMap.save")}
-                  </GhcButton>
+                  </ThoughtButton>
                 </div>
               </div>
             ) : (
               <>
                 <p className="line-clamp-3 text-sm leading-relaxed text-neutral-300">{selectedStep.description}</p>
                 <div className="mt-3 grid grid-cols-3 gap-2">
-                  <GhcButton
+                  <ThoughtButton
                     size="sm"
                     className="w-full"
-                    disabled={chapterActionsDisabled}
                     onClick={() => {
                       setEditingId(selectedStep.id);
                       setEditDraft(selectedStep.description);
                     }}
                   >
                     {t("chapterMap.edit")}
-                  </GhcButton>
-                  <GhcButton
+                  </ThoughtButton>
+                  <ThoughtButton
                     size="sm"
                     className="w-full"
                     disabled={selectedIndex === activeChapterIndex || loadingChapterIndex === selectedIndex}
                     onClick={() => onLoadChapter(selectedIndex)}
                   >
                     {loadingChapterIndex === selectedIndex ? "…" : t("chapterMap.loadChapter")}
-                  </GhcButton>
-                  <GhcButton
+                  </ThoughtButton>
+                  <ThoughtButton
                     size="sm"
                     variant="primary"
                     className="w-full"
@@ -289,13 +284,12 @@ export function ChapterMapPanel({
                       selectedIndex !== activeChapterIndex
                       || selectedStep.status === "completed"
                       || selectedStep.status === "skipped"
-                      || chapterActionsDisabled
                       || isCurrentStepCompleted
                     }
                     onClick={onChapterDone}
                   >
-                    {isGeneratingProbe ? "…" : t("chapterMap.markDone")}
-                  </GhcButton>
+                    {t("chapterMap.markDone")}
+                  </ThoughtButton>
                 </div>
               </>
             )}

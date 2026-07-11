@@ -24,7 +24,7 @@ const SUPPLEMENTAL = [
   "lib/prompts.ts",
   "lib/local-inference.ts",
   "lib/labs-ai.ts",
-  "lib/ghl-score-traces.ts",
+  "lib/tap-score-traces.ts",
   "lib/agent-v2/performance-report.ts",
   "lib/agent-v2/performance-context.ts",
   "lib/agent-v2/proof-of-work-schema.ts",

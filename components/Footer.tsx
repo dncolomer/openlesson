@@ -6,7 +6,7 @@ import { useI18n } from "@/lib/i18n";
 const productLinks = [
   { labelKey: "footer.platform", href: "/platform" },
   { labelKey: "footer.pricing", href: "/pricing" },
-  { labelKey: "footer.agenticApi", href: "/docs/agentic-v2" },
+  { labelKey: "footer.agenticApi", href: "/docs/proof-of-work-api" },
 ];
 
 const workspaceLinks = [

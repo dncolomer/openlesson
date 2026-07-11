@@ -3,54 +3,67 @@ import {
   canCreateWorkspace,
   canStartSession,
   canSubmitProofOfWork,
-  proofOfWorkLimitForSessionAllowance,
-  formatExtraBlockPrice,
+  formatExtraProofOfWorkPackPrice,
   formatPlanMonthlyPrice,
-  getExtraBlockPriceCents,
+  getExtraProofOfWorkPackPriceCents,
+  getProofOfWorkAllowance,
   getWorkspaceLimit,
   hasAgentApiKeyPlan,
   hasProductAccess,
+  normalizeStripeVolumeToProofOfWork,
   resolveCheckoutVolume,
-  resolveCheckoutWorkspaceVolume,
   REGULAR_VOLUME_PRICES,
-  REGULAR_VOLUME_WORKSPACES,
   TEAM_VOLUME_PRICES,
-  TEAM_VOLUME_WORKSPACES,
 } from "@/lib/plans";
 
 describe("plans pricing", () => {
-  it("resolves checkout volumes", () => {
-    expect(resolveCheckoutVolume("regular_2026", 50)).toBe(50);
-    expect(resolveCheckoutVolume("regular_2026", 999)).toBe(25);
-    expect(resolveCheckoutVolume("pro_teams", 500)).toBe(500);
-    expect(resolveCheckoutVolume("pro_teams", 1)).toBe(250);
+  it("normalizes legacy session volumes to proof-of-work counts", () => {
+    expect(normalizeStripeVolumeToProofOfWork(25)).toBe(100);
+    expect(normalizeStripeVolumeToProofOfWork(250)).toBe(1000);
+    expect(normalizeStripeVolumeToProofOfWork(100)).toBe(400);
+    expect(normalizeStripeVolumeToProofOfWork(100, "proof_of_work")).toBe(100);
+    expect(normalizeStripeVolumeToProofOfWork(250, "proof_of_work")).toBe(250);
+    expect(normalizeStripeVolumeToProofOfWork(200)).toBe(200);
   });
 
-  it("resolves checkout workspace volumes from block tier", () => {
-    expect(resolveCheckoutWorkspaceVolume("regular_2026", 25)).toBe(1);
-    expect(resolveCheckoutWorkspaceVolume("regular_2026", 50)).toBe(3);
-    expect(resolveCheckoutWorkspaceVolume("pro_teams", 250)).toBe(5);
-    expect(resolveCheckoutWorkspaceVolume("pro_teams", 1000)).toBe(25);
+  it("resolves checkout volumes", () => {
+    expect(resolveCheckoutVolume("regular_2026", 250)).toBe(250);
+    expect(resolveCheckoutVolume("regular_2026", 999)).toBe(100);
+    expect(resolveCheckoutVolume("regular_2026", 100)).toBe(100);
+    expect(resolveCheckoutVolume("pro_teams", 2500)).toBe(2500);
+    expect(resolveCheckoutVolume("pro_teams", 1)).toBe(1000);
   });
 
   it("formats 2026 monthly prices", () => {
-    expect(formatPlanMonthlyPrice("regular_2026")).toBe("$19.99/month");
-    expect(formatPlanMonthlyPrice("regular_2026", 100)).toBe("$129/month");
-    expect(formatPlanMonthlyPrice("pro_teams")).toBe("$399/month");
-    expect(formatPlanMonthlyPrice("pro_teams", 1000)).toBe("$999/month");
+    expect(formatPlanMonthlyPrice("regular_2026")).toBe("$49/month");
+    expect(formatPlanMonthlyPrice("regular_2026", 500)).toBe("$149/month");
+    expect(formatPlanMonthlyPrice("pro_teams")).toBe("$599/month");
+    expect(formatPlanMonthlyPrice("pro_teams", 5000)).toBe("$1499/month");
   });
 
-  it("formats extra block prices", () => {
-    expect(getExtraBlockPriceCents("regular_2026")).toBe(399);
-    expect(getExtraBlockPriceCents("pro_teams")).toBe(199);
-    expect(formatExtraBlockPrice("pro_teams")).toBe("$1.99");
+  it("formats extra proof-of-work pack prices", () => {
+    expect(getExtraProofOfWorkPackPriceCents("regular_2026")).toBe(399);
+    expect(getExtraProofOfWorkPackPriceCents("pro_teams")).toBe(199);
+    expect(formatExtraProofOfWorkPackPrice("pro_teams")).toBe("$1.99");
   });
 
-  it("keeps stripe volume tables aligned", () => {
-    expect(REGULAR_VOLUME_PRICES[25]).toBe(1999);
-    expect(TEAM_VOLUME_PRICES[250]).toBe(39900);
-    expect(REGULAR_VOLUME_WORKSPACES[100]).toBe(5);
-    expect(TEAM_VOLUME_WORKSPACES[500]).toBe(10);
+  it("keeps stripe volume tables aligned with monotonic volume discounts", () => {
+    expect(REGULAR_VOLUME_PRICES[100]).toBe(4900);
+    expect(REGULAR_VOLUME_PRICES[250]).toBe(9900);
+    expect(REGULAR_VOLUME_PRICES[500]).toBe(14900);
+    expect(TEAM_VOLUME_PRICES[1000]).toBe(59900);
+    expect(TEAM_VOLUME_PRICES[2500]).toBe(99900);
+    expect(TEAM_VOLUME_PRICES[5000]).toBe(149900);
+    expect(TEAM_VOLUME_PRICES[10000]).toBe(249900);
+
+    const individualPerSub = [100, 250, 500].map((vol) => REGULAR_VOLUME_PRICES[vol] / vol);
+    expect(individualPerSub[1]).toBeLessThan(individualPerSub[0]);
+    expect(individualPerSub[2]).toBeLessThan(individualPerSub[1]);
+
+    const teamPerSub = [1000, 2500, 5000, 10000].map((vol) => TEAM_VOLUME_PRICES[vol] / vol);
+    expect(teamPerSub[1]).toBeLessThan(teamPerSub[0]);
+    expect(teamPerSub[2]).toBeLessThan(teamPerSub[1]);
+    expect(teamPerSub[3]).toBeLessThan(teamPerSub[2]);
   });
 });
 
@@ -65,26 +78,14 @@ describe("plans workspace limits", () => {
     token_validity_expires_at: null,
   };
 
-  it("computes workspace limits from plan base plus extras", () => {
-    expect(
-      getWorkspaceLimit({
-        ...baseProfile,
-        plan: "regular_2026",
-        extra_workspaces: 2,
-      })
-    ).toBe(3);
-    expect(
-      getWorkspaceLimit({
-        ...baseProfile,
-        plan: "pro_teams",
-        extra_workspaces: 20,
-      })
-    ).toBe(25);
+  it("gives paid plans unlimited workspaces", () => {
+    expect(getWorkspaceLimit({ ...baseProfile, plan: "regular_2026" })).toBeNull();
+    expect(getWorkspaceLimit({ ...baseProfile, plan: "pro_teams" })).toBeNull();
   });
 
-  it("blocks workspace creation at limit", () => {
+  it("blocks free workspace creation at limit", () => {
     const result = canCreateWorkspace(
-      { ...baseProfile, plan: "free", extra_workspaces: 0 },
+      { ...baseProfile, plan: "free", subscription_status: "inactive" },
       1
     );
     expect(result.allowed).toBe(false);
@@ -93,7 +94,24 @@ describe("plans workspace limits", () => {
 });
 
 describe("plans usage", () => {
-  it("allows active regular_2026 within limit", () => {
+  it("allows active regular_2026 within proof-of-work limit", () => {
+    const result = canSubmitProofOfWork(
+      {
+        plan: "regular_2026",
+        is_admin: false,
+        extra_lessons: 0,
+        subscription_status: "active",
+        current_period_end: "2026-12-31",
+        token_tier: null,
+        token_validity_expires_at: null,
+      },
+      50
+    );
+    expect(result.allowed).toBe(true);
+    expect(result.limit).toBe(100);
+  });
+
+  it("gates TAP/ILE starts through proof-of-work allowance", () => {
     const result = canStartSession(
       {
         plan: "regular_2026",
@@ -104,14 +122,14 @@ describe("plans usage", () => {
         token_tier: null,
         token_validity_expires_at: null,
       },
-      10
+      100
     );
-    expect(result.allowed).toBe(true);
-    expect(result.limit).toBe(25);
+    expect(result.allowed).toBe(false);
+    expect(result.limit).toBe(100);
   });
 });
 
-describe("plans evidence limits", () => {
+describe("plans proof-of-work limits", () => {
   const baseProfile = {
     is_admin: false,
     extra_lessons: 0,
@@ -122,17 +140,16 @@ describe("plans evidence limits", () => {
     token_validity_expires_at: null,
   };
 
-  it("derives evidence caps from session allowance", () => {
-    expect(proofOfWorkLimitForSessionAllowance("free", 5)).toBe(25);
-    expect(proofOfWorkLimitForSessionAllowance("regular_2026", 25)).toBe(100);
-    expect(proofOfWorkLimitForSessionAllowance("pro", null)).toBeNull();
+  it("resolves proof-of-work allowance from plan base plus extras", () => {
+    expect(getProofOfWorkAllowance({ ...baseProfile, plan: "free" }).limit).toBe(25);
+    expect(getProofOfWorkAllowance({ ...baseProfile, plan: "regular_2026" }).limit).toBe(100);
+    expect(getProofOfWorkAllowance({ ...baseProfile, plan: "pro" }).limit).toBeNull();
   });
 
-  it("blocks evidence submissions at monthly cap", () => {
+  it("blocks proof-of-work submissions at monthly cap", () => {
     const result = canSubmitProofOfWork(
       { ...baseProfile, plan: "regular_2026" },
-      100,
-      25
+      100
     );
     expect(result.allowed).toBe(false);
     expect(result.limit).toBe(100);
@@ -203,8 +220,8 @@ describe("product access", () => {
 });
 
 describe("agent api key plans", () => {
-  it("recognizes pro and pro_teams", () => {
-    expect(hasAgentApiKeyPlan("pro")).toBe(true);
+  it("recognizes pro_teams only", () => {
+    expect(hasAgentApiKeyPlan("pro")).toBe(false);
     expect(hasAgentApiKeyPlan("pro_teams")).toBe(true);
     expect(hasAgentApiKeyPlan("regular_2026")).toBe(false);
   });

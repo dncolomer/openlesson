@@ -320,34 +320,6 @@ export const SCHEMAS = {
     },
   },
 
-  sessionEndCheck: {
-    name: "session_end_check",
-    strict: true,
-    schema: {
-      type: "object" as const,
-      properties: {
-        should_end: { type: "boolean", description: "Whether the session should end" },
-        reason: { type: "string", description: "Brief reason for the decision" },
-      },
-      required: ["should_end", "reason"],
-      additionalProperties: false,
-    },
-  },
-
-  feedbackAndQuestion: {
-    name: "feedback_and_question",
-    strict: true,
-    schema: {
-      type: "object" as const,
-      properties: {
-        feedback: { type: "string", description: "Brief feedback on student's thinking" },
-        question: { type: "string", description: "New guiding question" },
-      },
-      required: ["feedback", "question"],
-      additionalProperties: false,
-    },
-  },
-
   sessionPlan: {
     name: "session_plan",
     strict: true,

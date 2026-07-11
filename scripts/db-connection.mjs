@@ -117,15 +117,17 @@ export async function connectTarget(target = "prod") {
 
   const supabaseUrl = isStaging
     ? env.STAGING_NEXT_PUBLIC_SUPABASE_URL
-    : env.NEXT_PUBLIC_SUPABASE_URL;
+    : env.PROD_NEXT_PUBLIC_SUPABASE_URL || env.NEXT_PUBLIC_SUPABASE_URL;
 
-  let dbUrl = isStaging ? env.STAGING_SUPABASE_DB_URL : env.SUPABASE_DB_URL;
+  let dbUrl = isStaging
+    ? env.STAGING_SUPABASE_DB_URL
+    : env.PROD_SUPABASE_DB_URL || env.SUPABASE_DB_URL;
 
   if (!supabaseUrl) {
     throw new Error(
       isStaging
         ? "Missing STAGING_NEXT_PUBLIC_SUPABASE_URL in .env.local"
-        : "Missing NEXT_PUBLIC_SUPABASE_URL in .env.local"
+        : "Missing NEXT_PUBLIC_SUPABASE_URL or PROD_NEXT_PUBLIC_SUPABASE_URL in .env.local"
     );
   }
 

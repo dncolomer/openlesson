@@ -148,3 +148,94 @@ export async function requireWorkspaceOwnerSession(
     hasTeams,
   };
 }
+
+export interface SessionWorkspaceProofOfWorkAccess {
+  userId: string;
+  workspace: WorkspaceSessionPlan;
+  auth: AuthContext;
+  supabase: SupabaseClient;
+}
+
+/** Cookie-auth access for ILE sessions uploading proof of work (no Teams gate). */
+export async function requireSessionWorkspaceProofOfWorkAccess(
+  workspaceId: string,
+  sessionId?: string | null,
+): Promise<SessionWorkspaceProofOfWorkAccess | NextResponse> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+  }
+
+  const [{ data: profile }, { data: workspace }] = await Promise.all([
+    supabase
+      .from("profiles")
+      .select("organization_id, is_org_admin, is_admin")
+      .eq("id", user.id)
+      .single(),
+    supabase
+      .from("workspaces")
+      .select("id, title, root_topic, description, notes, conversion_goal, user_id, organization_id")
+      .eq("id", workspaceId)
+      .single(),
+  ]);
+
+  if (!workspace) {
+    return NextResponse.json({ error: "Workspace not found" }, { status: 404 });
+  }
+
+  if (workspace.user_id !== user.id) {
+    return NextResponse.json(
+      { error: "Only the workspace owner can upload proof of work", code: "forbidden" },
+      { status: 403 },
+    );
+  }
+
+  if (sessionId) {
+    const { data: session } = await supabase
+      .from("sessions")
+      .select("id, user_id, metadata")
+      .eq("id", sessionId)
+      .single();
+
+    if (!session) {
+      return NextResponse.json({ error: "Session not found" }, { status: 404 });
+    }
+    if (session.user_id !== user.id) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    const linkedWorkspaceId =
+      session.metadata &&
+      typeof session.metadata === "object" &&
+      typeof (session.metadata as Record<string, unknown>).workspace_id === "string"
+        ? String((session.metadata as Record<string, unknown>).workspace_id)
+        : null;
+
+    if (linkedWorkspaceId && linkedWorkspaceId !== workspaceId) {
+      return NextResponse.json(
+        { error: "session_id does not belong to this workspace", code: "forbidden" },
+        { status: 403 },
+      );
+    }
+  }
+
+  const auth: AuthContext = {
+    user_id: user.id,
+    guest_user_id: null,
+    organization_id: profile?.organization_id || workspace.organization_id || null,
+    is_org_admin: profile?.is_org_admin === true || profile?.is_admin === true,
+    key_id: "ui-session",
+    scopes: ["workspaces:read", "workspaces:write"],
+  };
+
+  return {
+    userId: user.id,
+    workspace,
+    auth,
+    supabase: createAdminClient(),
+  };
+}

@@ -53,7 +53,7 @@ export async function POST(req: NextRequest) {
           },
           workspaceId: session.workspace_id,
         });
-        performanceNote = `Evidence: ${ctx.payload.counts.proof_of_work_artifacts} artifacts, ${ctx.payload.counts.tap_sessions} TAP sessions, ${ctx.payload.counts.linked_sessions} linked sessions. Blocks: ${ctx.payload.blocks.map((b) => b.title).filter(Boolean).join(", ") || "none"}`;
+        performanceNote = `Evidence: ${ctx.payload.counts.proof_of_work_artifacts} proof-of-work artifacts, ${ctx.payload.counts.linked_sessions} linked sessions. Blocks: ${ctx.payload.blocks.map((b) => b.title).filter(Boolean).join(", ") || "none"}`;
       } catch {
         // optional context
       }

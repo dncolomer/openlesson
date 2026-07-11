@@ -2,17 +2,8 @@ import type { ApiKeyScope } from "./types";
 
 const ORG_SCOPES: ApiKeyScope[] = ["org:read", "org:write"];
 
-const TAP_SCOPE_EQUIVALENTS: Partial<Record<ApiKeyScope, ApiKeyScope[]>> = {
-  "tap:read": ["tap:read", "ghl:read"],
-  "tap:write": ["tap:write", "ghl:write"],
-  "ghl:read": ["tap:read", "ghl:read"],
-  "ghl:write": ["tap:write", "ghl:write"],
-};
-
 export function hasScope(scopes: ApiKeyScope[], required: ApiKeyScope): boolean {
   if (scopes.includes("*")) return true;
-  const equivalents = TAP_SCOPE_EQUIVALENTS[required];
-  if (equivalents) return equivalents.some((scope) => scopes.includes(scope));
   return scopes.includes(required);
 }
 

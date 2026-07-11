@@ -15,22 +15,22 @@ const Excalidraw = dynamic(
 
 interface ExcalidrawCanvasProps {
   initialData?: string;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   initialSceneData?: { elements: any[]; appState: any; files: any } | null;
   onCanvasChange?: (data: string) => void;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   onSceneChange?: (data: { elements: any[]; appState: any; files: any }) => void;
   onSubmitToHelios?: (dataUrl?: string | null) => Promise<void> | void;
   canSubmitToHelios?: boolean;
   chapterLabel?: string;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 type ExcalidrawAPIRef = any;
 
 // Excalidraw's appState contains runtime-only fields like collaborators
 // (a Map) that do not survive JSON storage. Persist only restorable state.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 function sanitizeSceneData(scene: { elements: any[]; appState: any; files: any } | null | undefined) {
   if (!scene) return undefined;
   const { collaborators: _collaborators, ...appState } = scene.appState ?? {};
@@ -68,7 +68,7 @@ export function ExcalidrawCanvas({
   const [cameraError, setCameraError] = useState<string | null>(null);
   
   // Store the latest scene data for PNG export
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   const sceneDataRef = useRef<{ elements: any[]; appState: any; files: any } | null>(null);
   const initialSceneDataRef = useRef(sanitizeSceneData(initialSceneData));
   const onSceneChangeRef = useRef(onSceneChange);
@@ -161,11 +161,11 @@ export function ExcalidrawCanvas({
    */
   const handleChange = useCallback(
     (
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+       
       elements: readonly any[],
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+       
       appState: any,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+       
       files: any
     ) => {
       // Store scene data for potential immediate export

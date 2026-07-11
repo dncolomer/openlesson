@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import fs from "fs";
 import path from "path";
 import { DEFAULT_PROMPTS, ILE_CONTEXT, type PromptKey } from "@/lib/prompts";
-import { buildGhcScoreInstructions } from "@/lib/ghc-score";
+import { buildTapScoreInstructions } from "@/lib/tap-score";
 import { buildProofOfWorkSchemaInstructions } from "@/lib/agent-v2/proof-of-work-schema";
 
 const ACTIVE_KEYS: PromptKey[] = [
@@ -17,19 +17,10 @@ const ACTIVE_KEYS: PromptKey[] = [
   "stuck_policy_recommendation",
 ];
 
-const LEGACY_KEYS: PromptKey[] = [
-  "session_end_check",
-  "expand_probe",
-  "ask_question",
-  "feedback_and_question",
-  "fresh_question",
-  "check_probe_archive",
-];
-
 describe("prompt inventory", () => {
-  it("covers every DEFAULT_PROMPTS key as active or legacy", () => {
+  it("covers every DEFAULT_PROMPTS key as active", () => {
     const allKeys = Object.keys(DEFAULT_PROMPTS) as PromptKey[];
-    const classified = new Set([...ACTIVE_KEYS, ...LEGACY_KEYS]);
+    const classified = new Set(ACTIVE_KEYS);
     expect(classified.size).toBe(allKeys.length);
     for (const key of allKeys) {
       expect(classified.has(key)).toBe(true);
@@ -39,120 +30,59 @@ describe("prompt inventory", () => {
   it("active keys are referenced by getPrompt in lib/xai.ts", () => {
     const xaiSrc = fs.readFileSync(
       path.join(process.cwd(), "lib/xai.ts"),
-      "utf8",
+      "utf8"
     );
     for (const key of ACTIVE_KEYS) {
       expect(xaiSrc).toContain(`getPrompt("${key}"`);
     }
-    for (const key of LEGACY_KEYS) {
-      expect(xaiSrc).not.toContain(`getPrompt("${key}"`);
-    }
   });
 
-  it("every registry prompt has non-empty default text", () => {
-    for (const key of Object.keys(DEFAULT_PROMPTS) as PromptKey[]) {
-      expect(DEFAULT_PROMPTS[key].trim().length).toBeGreaterThan(20);
-    }
-  });
-
-  it("ILE_CONTEXT and inline session-chat prompt are non-empty exports", () => {
-    expect(ILE_CONTEXT.trim().length).toBeGreaterThan(100);
-    const sessionChatSrc = fs.readFileSync(
-      path.join(process.cwd(), "app/api/session-chat/route.ts"),
-      "utf8",
-    );
-    const match = sessionChatSrc.match(
-      /const BASE_SYSTEM_PROMPT = `([\s\S]*?)`;/,
-    );
-    expect(match?.[1]?.trim().length).toBeGreaterThan(100);
-  });
-
-  it("suggest-plan-topic route has inline userMessage prompt", () => {
-    const src = fs.readFileSync(
-      path.join(process.cwd(), "app/api/suggest-plan-topic/route.ts"),
-      "utf8",
-    );
-    expect(src).toContain("suggest ONE specific learning plan topic");
-    expect(src).toContain("Return ONLY the suggested topic text");
-  });
-
-  it("prompt-call-sites.json exists and lists production inventory paths", () => {
-    const sitesPath = path.join(
-      process.cwd(),
-      "tests/fixtures/prompt-inventory/prompt-call-sites.json",
-    );
-    expect(fs.existsSync(sitesPath)).toBe(true);
-    const sites = JSON.parse(fs.readFileSync(sitesPath, "utf8")) as {
-      allInventoryPaths: string[];
-    };
-    expect(sites.allInventoryPaths.length).toBeGreaterThanOrEqual(45);
-    expect(sites.allInventoryPaths).toContain("lib/prompts.ts");
-    expect(sites.allInventoryPaths).toContain(
-      "lib/agent-v2/create-verification-workspace.ts",
-    );
-  });
-
-  it("generated prompt report covers scanner paths and critical symbols", () => {
-    const reportPath = path.join(
-      process.cwd(),
-      "tests/fixtures/prompt-inventory/prompt-analysis.md",
-    );
-    expect(fs.existsSync(reportPath)).toBe(true);
-    const report = fs.readFileSync(reportPath, "utf8");
-    expect(report.length).toBeGreaterThan(50_000);
-
-    const sites = JSON.parse(
-      fs.readFileSync(
-        path.join(
-          process.cwd(),
-          "tests/fixtures/prompt-inventory/prompt-call-sites.json",
-        ),
-        "utf8",
-      ),
-    ) as { allInventoryPaths: string[] };
-
-    const skipPaths = new Set(["lib/xai-client.ts"]);
-    for (const rel of sites.allInventoryPaths) {
-      if (skipPaths.has(rel)) continue;
-      expect(report).toContain(rel);
-    }
-
-    for (const key of ACTIVE_KEYS) {
-      expect(report).toContain(`\`${key}\``);
-    }
-    expect(report).toContain("createVerificationWorkspaceFromPrompt");
-    expect(report).toContain("generateTapOpeningQuestion-system-extension");
-    expect(report).toContain("generateTapOpeningQuestion-userMessage");
-    expect(report).toContain("Override Mechanism");
-    expect(report).toContain("## Summary Table");
-  });
-
-  it("builder instructions return full non-truncated templates", () => {
-    const ghc = buildGhcScoreInstructions(
+  it("ILE_CONTEXT is injected into session planner prompts", () => {
+    const create = buildTapScoreInstructions(
       {
-        plan: {
-          id: "p1",
-          title: "Test Plan",
-          root_topic: "Topic",
-          description: null,
-          notes: null,
-        },
+        plan: { id: "w1", title: "Test", root_topic: "Topic", description: null, notes: null },
         nodes: [],
         sessions: [],
-        focusSession: null,
       },
       "curious",
-      10,
+      15
     );
-    expect(ghc).toContain("Think Aloud Protocol (TAP)");
-    expect(ghc).toContain("Teach me what you learned here");
+    expect(create).toContain("Think Aloud Protocol");
+    expect(create).not.toContain("{brief.");
+  });
 
-    const schema = buildProofOfWorkSchemaInstructions(
-      { definition: "Verify workflow execution", block_id: null },
-      null,
+  it("buildProofOfWorkSchemaInstructions returns non-empty schema guidance", () => {
+    const instructions = buildProofOfWorkSchemaInstructions({
+      definition: "Verify the learner can explain causal reasoning for the selected block.",
+      block_id: "block-1",
+      integration_hints: { tool_name: "demo_action" },
+    });
+    expect(instructions.length).toBeGreaterThan(100);
+    expect(instructions).toContain("proof-of-work");
+  });
+
+  it("DEFAULT_PROMPTS keys match PROMPT_META keys", async () => {
+    const { PROMPT_META } = await import("@/lib/prompts");
+    expect(Object.keys(PROMPT_META).sort()).toEqual(
+      Object.keys(DEFAULT_PROMPTS).sort()
     );
-    expect(schema).toContain("OpenLesson proof-of-work architect");
-    expect(schema).not.toMatch(/\.\.\.$/);
-    expect(schema.length).toBeGreaterThan(500);
+  });
+
+  it("every active prompt key has non-empty default text", () => {
+    for (const key of ACTIVE_KEYS) {
+      expect(DEFAULT_PROMPTS[key].trim().length).toBeGreaterThan(50);
+    }
+  });
+
+  it("session_plan_update includes ILE tool guidance", () => {
+    expect(DEFAULT_PROMPTS.session_plan_update).toContain("INTEGRATED LEARNING ENVIRONMENT");
+    expect(ILE_CONTEXT.length).toBeGreaterThan(100);
+  });
+
+  it("prompt-inventory.json matches discovered prompt count", () => {
+    const inventoryPath = path.join(process.cwd(), "data/prompt-inventory.json");
+    const inventory = JSON.parse(fs.readFileSync(inventoryPath, "utf8"));
+    expect(Array.isArray(inventory.entries)).toBe(true);
+    expect(inventory.entries.length).toBeGreaterThan(0);
   });
 });

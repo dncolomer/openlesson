@@ -1,8 +1,8 @@
 # OpenLesson Proof-of-Work API
 
-Use this skill when an agent needs to create Verification Workspaces, issue private Think Aloud Protocol (TAP) links, and read completion results via the OpenLesson Proof-of-Work API.
+Use this skill when an agent needs to create Verification Workspaces, issue private Think Aloud Protocol (TAP) links, and run unified performance analysis via the OpenLesson Proof-of-Work API.
 
-**Human-readable spec:** `/docs/agentic-v2`  
+**Human-readable spec:** `/docs/proof-of-work-api`  
 **Base URL:** `https://openlesson.academy` (or your self-hosted origin)
 
 ---
@@ -18,7 +18,7 @@ The Proof-of-Work API supports **only** this workflow:
 5. Request learning and gap analysis over workspace proof of work (free-form Q&A or structured report).
 6. Create a private TAP link for a block (`15` or `30` minutes).
 7. List TAP links and completion status.
-8. Read completed TAP results (marker scores + gap analysis).
+8. Poll TAP completion (`list_tap_links` / `GET .../tap-links`); score TAP proof of work via `POST .../performance`.
 
 **Out of scope** — do not describe or call removed features: blockchain tracking, proof anchoring, live tutoring session control, heartbeats, or plan adaptation. Legacy web-session upload routes (`/api/session-files/*`) are separate from this API; agents should use `POST .../proof-of-work` for workspace-linked artifacts.
 
@@ -119,7 +119,7 @@ Content-Type: application/json
 { "jsonrpc": "2.0", "id": 1, "method": "tools/list" }
 ```
 
-**Tools (full REST parity):** `list_workspaces`, `get_workspace`, `get_learning_progress`, `create_workspace`, `list_blocks`, `generate_proof_of_work_schema`, `generate_integration_skill`, `upload_proof_of_work`, `analyze_performance`, `list_tap_links`, `get_tap_results`, `create_tap_link`
+**Tools (full REST parity):** `list_workspaces`, `get_workspace`, `get_learning_progress`, `create_workspace`, `list_blocks`, `generate_proof_of_work_schema`, `generate_integration_skill`, `upload_proof_of_work`, `analyze_performance`, `list_tap_links`, `create_tap_link`
 
 **Partner agents:** call `get_learning_progress` to orient, then `generate_integration_skill` for a workspace-specific `skill.md` — use that skill's checkpoint policy with `upload_proof_of_work` and `analyze_performance`. PumaDoc examples: `/customer-agent-openlesson-skill.md`, `/pumaclaw-mentor-openlesson-skill.md`.
 
@@ -351,7 +351,7 @@ Max **10 MB** per upload. Guest keys attach proof of work to their guest identit
 
 ### `POST /api/v2/agent/workspaces/{workspace_id}/performance` — `workspaces:read`
 
-Analyze learning signals across workspace proof of work, TAP results, linked sessions, and uploaded files.
+Analyze learning signals across workspace proof of work (including TAP thought traces and transcripts), linked ILE sessions, and uploaded files.
 
 **Report mode** (omit `prompt` or send empty string) — returns structured gaps and suggestions:
 
@@ -473,7 +473,7 @@ Create a private Think Aloud Protocol (TAP) link for a block.
     "block_id": "block_id",
     "status": "pending",
     "requested_duration_seconds": 900,
-    "private_url": "https://openlesson.academy/ghl-score/session/{token}"
+    "private_url": "https://openlesson.academy/tap/session/{token}"
   }
 }
 ```
@@ -485,60 +485,6 @@ Create a private Think Aloud Protocol (TAP) link for a block.
 List TAP links for a workspace. Guests see only their own links; non-admin members see their own; org admins see org workspace links.
 
 **Response `200`:** `{ "tap_links": [ ... ] }`
-
----
-
-### `GET /api/v2/agent/workspaces/{workspace_id}/tap-links/{link_id}/results` — `tap:read`
-
-Poll for completion and scores.
-
-**Pending:**
-
-```json
-{
-  "tap_result": {
-    "id": "uuid",
-    "status": "pending",
-    "completed": false
-  }
-}
-```
-
-**Completed:**
-
-```json
-{
-  "tap_result": {
-    "id": "uuid",
-    "workspace_id": "uuid",
-    "block_id": "uuid",
-    "status": "completed",
-    "completed": true,
-    "overall_score": 82,
-    "marker_scores": [
-      {
-        "id": "conceptual_clarity",
-        "label": "Conceptual Clarity",
-        "score": 85,
-        "rationale": "..."
-      }
-    ],
-    "gap_analysis": {
-      "summary": "...",
-      "gaps": [
-        {
-          "title": "...",
-          "proof_of_work": "...",
-          "severity": "medium",
-          "suggested_repair": "..."
-        }
-      ],
-      "next_practice": ["..."]
-    },
-    "analysis": { }
-  }
-}
-```
 
 ---
 
@@ -595,9 +541,9 @@ Then create a member API key from the dashboard or `POST /api/v2/agent/keys` (se
 
 ## TAP session behavior
 
-- **Private link:** `/ghl-score/session/{token}` — bearer URL; learner needs **no** OpenLesson login or API key.
-- **Workspace UI:** `/workspace/{workspace_id}/ghl-score` (authenticated web)
-- **Live APIs:** `POST /api/workspace-ghl-score/chat`, `POST /api/workspace-ghl-score/complete` (use `privateToken` in body)
+- **Private link:** `/tap/session/{token}` — bearer URL; learner needs **no** OpenLesson login or API key.
+- **Workspace UI:** `/workspace/{workspace_id}/tap` (authenticated web)
+- **Live APIs:** `POST /api/workspace-tap-score/chat`, `POST /api/workspace-tap-score/complete` (use `privateToken` in body).
 
 Facilitation style: Socratic — one concise question at a time, follow-ups from the learner's words, no lecturing unless asked.
 
@@ -615,10 +561,10 @@ Facilitation style: Socratic — one concise question at a time, follow-ups from
 | Upload proof of work | ✅ | ✅ (own uploads) |
 | Performance analysis | ✅ | ✅ (own proof of work + links) |
 | Create TAP link | ✅; admin can assign to guest | ✅ (self only) |
-| List / read TAP results | ✅ | ✅ (own links) |
+| List TAP link status | ✅ | ✅ (own links) |
 | Create guest + issue `gsk_` | ✅ `org:write` + `is_org_admin` | ❌ |
 
-**Integration pattern:** Org admin provisions guests with `gsk_` keys. Each guest can create their own Verification Workspaces or use org-shared ones; they use their key for workspace creation, block reads, TAP links, and result polling.
+**Integration pattern:** Org admin provisions guests with `gsk_` keys. Each guest can create their own Verification Workspaces or use org-shared ones; they use their key for workspace creation, block reads, and TAP links. TAP transcripts and thought traces land in proof-of-work — score with `POST .../performance`.
 
 ---
 
@@ -631,6 +577,6 @@ Facilitation style: Socratic — one concise question at a time, follow-ups from
 5. `POST .../proof-of-work` as learners produce tool usage, screenshots, video, or EEG (optional `block_id`).
 6. `POST .../performance` for gap reports, or include `prompt` for follow-up questions.
 7. `POST .../tap-links` → send `private_url` to the learner.
-8. Poll `GET .../results` until `status === "completed"`.
-9. Re-run `POST .../performance` to synthesize TAP results with other proof of work.
+8. Poll `GET .../tap-links` until the link `status === "completed"`.
+9. `POST .../performance` to score TAP proof of work together with other artifacts.
 10. For external learners without accounts: `POST /org/guests` → give them `gsk_` + private TAP URL.

@@ -83,15 +83,20 @@ export function formatSpeechTranscriptDisplay({
 
 /** Resolve SpeechRecognition on the client — useMemo(…) caches null from SSR and never recovers. */
 export function useClientSpeechRecognitionConstructor() {
-  const [recognitionCtor, setRecognitionCtor] = useState<SpeechRecognitionConstructor | null>(null);
+  const recognitionCtorRef = useRef<SpeechRecognitionConstructor | null>(null);
   const [speechApiReady, setSpeechApiReady] = useState(false);
 
   useEffect(() => {
-    setRecognitionCtor(getSpeechRecognitionConstructor());
+    recognitionCtorRef.current = getSpeechRecognitionConstructor();
     setSpeechApiReady(true);
   }, []);
 
-  return { recognitionCtor, speechApiReady };
+  // Keep the ctor in a ref — React 19 treats functions passed to setState as updaters
+  // and would invoke SpeechRecognition() without `new`.
+  return {
+    recognitionCtor: speechApiReady ? recognitionCtorRef.current : null,
+    speechApiReady,
+  };
 }
 
 export function disposeSpeechRecognition(

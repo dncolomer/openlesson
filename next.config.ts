@@ -10,6 +10,11 @@ const nextConfig: NextConfig = {
   async redirects() {
     return [
       {
+        source: "/favicon.ico",
+        destination: "/new_logo.jpg",
+        permanent: true,
+      },
+      {
         source: "/docs/agentic-v2-draft",
         destination: "/docs/proof-of-work-api",
         permanent: true,

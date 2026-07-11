@@ -1,5 +1,7 @@
 "use client";
 
+import { ThoughtCompactAction } from "@/components/thought-ui/ThoughtUi";
+
 export const ACTIVE_THOUGHT_SLOT_COUNT = 3;
 
 export interface ActiveThoughtSlotEntry {
@@ -9,6 +11,8 @@ export interface ActiveThoughtSlotEntry {
 
 interface ActiveThoughtSlotsProps {
   thoughts: ActiveThoughtSlotEntry[];
+  onSendThought: (text: string, thoughtId: string) => void;
+  isSending?: boolean;
 }
 
 function EmptyThoughtSlot({ index }: { index: number }) {
@@ -19,11 +23,14 @@ function EmptyThoughtSlot({ index }: { index: number }) {
     >
       <p className="shrink-0 text-[10px] uppercase tracking-[1.8px] text-neutral-600">Thought {index + 1}</p>
       <div className="min-h-0 flex-1 rounded-lg border border-dashed border-neutral-800/70 bg-black/20" />
+      <div className="flex shrink-0 justify-end border-t border-neutral-900/50 pt-2">
+        <div className="h-7 w-7 rounded-md border border-dashed border-neutral-800/70" />
+      </div>
     </div>
   );
 }
 
-export function ActiveThoughtSlots({ thoughts }: ActiveThoughtSlotsProps) {
+export function ActiveThoughtSlots({ thoughts, onSendThought, isSending = false }: ActiveThoughtSlotsProps) {
   return (
     <div className="grid gap-2 md:grid-cols-3">
       {Array.from({ length: ACTIVE_THOUGHT_SLOT_COUNT }, (_, index) => {
@@ -39,11 +46,19 @@ export function ActiveThoughtSlots({ thoughts }: ActiveThoughtSlotsProps) {
           >
             <p className="shrink-0 text-[10px] uppercase tracking-[1.8px] text-neutral-500">Thought {index + 1}</p>
             <p
-              className="min-h-0 flex-1 overflow-hidden text-sm leading-relaxed text-neutral-200 line-clamp-4"
+              className="min-h-0 flex-1 overflow-hidden text-sm leading-relaxed text-neutral-200 line-clamp-3"
               title={thought.text}
             >
               {thought.text}
             </p>
+            <div className="flex shrink-0 justify-end border-t border-neutral-900 pt-2">
+              <ThoughtCompactAction
+                shortcut={String(index + 1)}
+                label="Send to Helios"
+                disabled={isSending}
+                onClick={() => onSendThought(thought.text, thought.id)}
+              />
+            </div>
           </div>
         );
       })}

@@ -22,11 +22,17 @@ export function SlidingTranscript({ text, className = "" }: SlidingTranscriptPro
   }, [text]);
 
   return (
-    <div
-      ref={scrollRef}
-      className={`min-w-0 overflow-x-auto overflow-y-hidden scrollbar-none ${className}`}
-    >
-      <span className="inline-block min-w-full whitespace-nowrap text-left">{text || "\u00a0"}</span>
+    <div className={`relative min-w-0 overflow-hidden ${className}`}>
+      <div
+        ref={scrollRef}
+        className="scrollbar-hide min-w-0 overflow-x-auto overflow-y-hidden"
+      >
+        <span className="inline-block whitespace-nowrap text-left">{text || "\u00a0"}</span>
+      </div>
+      <div
+        className="pointer-events-none absolute inset-y-0 left-0 z-10 w-10 bg-gradient-to-r from-black via-black/55 to-transparent"
+        aria-hidden
+      />
     </div>
   );
 }

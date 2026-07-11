@@ -5,8 +5,7 @@ import { useI18n } from "@/lib/i18n";
 import type { SessionThoughtInterface } from "@/lib/useSessionThoughtInterface";
 import {
   ThoughtBackgroundLayers,
-  ThoughtButton,
-  ThoughtButtonLabel,
+  ThoughtCompactAction,
   DialogueSplit,
   type DialogueMessage,
   THOUGHT_BACKGROUND_IMAGES,
@@ -145,31 +144,45 @@ export function SessionHeliosPanel({
                   {sessionControls}
                 </div>
               )}
-              <div className="flex min-w-0 items-start gap-2 overflow-hidden">
+              <div className="flex min-w-0 items-center gap-1.5 overflow-hidden">
                 <div className="flex h-8 min-w-0 flex-1 items-center rounded-md border border-neutral-900 bg-black/70 px-2.5 text-xs text-neutral-300">
                   <SlidingTranscript text={thought.crystallizableText} className="w-full" />
                 </div>
-                <ThoughtButton size="sm" disabled={!thought.crystallizableText} onClick={thought.crystallizeCurrentTranscription}>
-                  <ThoughtButtonLabel shortcut="C">crystallize</ThoughtButtonLabel>
-                </ThoughtButton>
-                <ThoughtButton size="sm" disabled={!thought.crystallizableText} onClick={thought.beginEditTranscription}>
-                  <ThoughtButtonLabel shortcut="E">edit</ThoughtButtonLabel>
-                </ThoughtButton>
-                <ThoughtButton size="sm" disabled={!thought.crystallizableText} onClick={thought.clearTranscription}>
-                  <ThoughtButtonLabel shortcut="R">reset</ThoughtButtonLabel>
-                </ThoughtButton>
-                <ThoughtButton
-                  size="sm"
-                  disabled={thought.activeThoughts.length === 0 && !thought.crystallizableText}
-                  onClick={thought.clearActiveThoughts}
-                >
-                  <ThoughtButtonLabel shortcut="Esc">clear</ThoughtButtonLabel>
-                </ThoughtButton>
+                <div className="flex shrink-0 items-center gap-0.5">
+                  <ThoughtCompactAction
+                    shortcut="C"
+                    label="Crystallize"
+                    disabled={!thought.crystallizableText}
+                    onClick={thought.crystallizeCurrentTranscription}
+                  />
+                  <ThoughtCompactAction
+                    shortcut="E"
+                    label="Edit"
+                    disabled={!thought.crystallizableText}
+                    onClick={thought.beginEditTranscription}
+                  />
+                  <ThoughtCompactAction
+                    shortcut="R"
+                    label="Reset"
+                    disabled={!thought.crystallizableText}
+                    onClick={thought.clearTranscription}
+                  />
+                  <ThoughtCompactAction
+                    shortcut="Esc"
+                    label="Clear"
+                    disabled={thought.activeThoughts.length === 0 && !thought.crystallizableText}
+                    onClick={thought.clearActiveThoughts}
+                  />
+                </div>
               </div>
 
               <div className="mt-3 border-t border-neutral-900/80 pt-3">
                 <p className="mb-2 text-[10px] uppercase tracking-[2px] text-neutral-600">{t("probes.activeThoughts")}</p>
-                <ActiveThoughtSlots thoughts={thought.latestThoughts} />
+                <ActiveThoughtSlots
+                  thoughts={thought.latestThoughts}
+                  isSending={thought.isSending}
+                  onSendThought={(text, thoughtId) => void thought.sendThought(text, [thoughtId])}
+                />
               </div>
             </div>
           </>

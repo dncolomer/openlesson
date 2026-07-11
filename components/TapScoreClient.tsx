@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 import { getIlePostSessionPath } from "@/lib/storage";
-import { DialogueSplit } from "@/components/thought-ui/ThoughtUi";
+import { DialogueSplit, ThoughtCompactAction } from "@/components/thought-ui/ThoughtUi";
 import { ActiveThoughtSlots } from "@/components/thought-ui/ActiveThoughtSlots";
 import { ThoughtEditPanel } from "@/components/thought-ui/ThoughtEditPanel";
 import { ThoughtMemoryPanel } from "@/components/thought-ui/ThoughtMemoryPanel";
@@ -205,6 +205,7 @@ const TAP_SHORTCUT_ROWS: { keys: string[]; label: string; altKeys?: string[][] }
   { keys: ["E"], label: "Edit the live transcription before sending" },
   { keys: ["R"], label: "Reset the live transcription bar only" },
   { keys: ["Esc"], label: "Clear active thoughts and live transcription" },
+  { keys: ["1", "2", "3"], label: "Send thought 1, 2, or 3" },
 ];
 
 function TapBriefingConfig({
@@ -587,10 +588,17 @@ export function TapScoreClient({ workspaceId, blockId, sessionId, privateToken, 
         clearTranscription();
         return;
       }
+      if (!event.metaKey && !event.ctrlKey && !event.shiftKey && ["1", "2", "3"].includes(event.key)) {
+        const thought = latestThoughts[Number(event.key) - 1];
+        if (!thought) return;
+        event.preventDefault();
+        void sendThought(thought.text, [thought.id]);
+        return;
+      }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [phase, crystallizeCurrentTranscription, editingTranscription, crystallizableText]);
+  }, [phase, latestThoughts, crystallizeCurrentTranscription, editingTranscription, crystallizableText]);
 
   async function sendThought(text: string, thoughtIds: string[] = []) {
     const clean = normalize(text);
@@ -850,31 +858,45 @@ export function TapScoreClient({ workspaceId, blockId, sessionId, privateToken, 
                   </div>
                 </div>
 
-                <div className="flex min-w-0 items-start gap-2 overflow-hidden">
+                <div className="flex min-w-0 items-center gap-1.5 overflow-hidden">
                   <div className="flex h-8 min-w-0 flex-1 items-center rounded-md border border-neutral-900 bg-black/70 px-2.5 text-xs text-neutral-300">
                     <SlidingTranscript text={crystallizableText} className="w-full" />
                   </div>
-                  <ThoughtButton size="sm" disabled={!crystallizableText} onClick={crystallizeCurrentTranscription}>
-                    <ThoughtButtonLabel shortcut="C">crystallize</ThoughtButtonLabel>
-                  </ThoughtButton>
-                  <ThoughtButton size="sm" disabled={!crystallizableText} onClick={beginEditTranscription}>
-                    <ThoughtButtonLabel shortcut="E">edit</ThoughtButtonLabel>
-                  </ThoughtButton>
-                  <ThoughtButton size="sm" disabled={!crystallizableText} onClick={clearTranscription}>
-                    <ThoughtButtonLabel shortcut="R">reset</ThoughtButtonLabel>
-                  </ThoughtButton>
-                  <ThoughtButton
-                    size="sm"
-                    disabled={activeThoughts.length === 0 && !crystallizableText}
-                    onClick={clearActiveThoughts}
-                  >
-                    <ThoughtButtonLabel shortcut="Esc">clear</ThoughtButtonLabel>
-                  </ThoughtButton>
+                  <div className="flex shrink-0 items-center gap-0.5">
+                    <ThoughtCompactAction
+                      shortcut="C"
+                      label="Crystallize"
+                      disabled={!crystallizableText}
+                      onClick={crystallizeCurrentTranscription}
+                    />
+                    <ThoughtCompactAction
+                      shortcut="E"
+                      label="Edit"
+                      disabled={!crystallizableText}
+                      onClick={beginEditTranscription}
+                    />
+                    <ThoughtCompactAction
+                      shortcut="R"
+                      label="Reset"
+                      disabled={!crystallizableText}
+                      onClick={clearTranscription}
+                    />
+                    <ThoughtCompactAction
+                      shortcut="Esc"
+                      label="Clear"
+                      disabled={activeThoughts.length === 0 && !crystallizableText}
+                      onClick={clearActiveThoughts}
+                    />
+                  </div>
                 </div>
 
                 <div className="mt-3 border-t border-neutral-900/80 pt-3">
                   <p className="mb-2 text-[10px] uppercase tracking-[2px] text-neutral-600">Active thoughts</p>
-                  <ActiveThoughtSlots thoughts={latestThoughts} />
+                  <ActiveThoughtSlots
+                    thoughts={latestThoughts}
+                    isSending={isSending}
+                    onSendThought={(text, thoughtId) => void sendThought(text, [thoughtId])}
+                  />
                 </div>
               </div>
             </div>

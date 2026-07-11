@@ -401,12 +401,21 @@ export function useSessionThoughtInterface({
         clearTranscription();
         return;
       }
+      if (!event.metaKey && !event.ctrlKey && !event.shiftKey && ["1", "2", "3"].includes(event.key)) {
+        const thought = latestThoughts[Number(event.key) - 1];
+        if (!thought) return;
+        event.preventDefault();
+        void sendThought(thought.text, [thought.id]);
+        return;
+      }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [
     enabled,
+    latestThoughts,
     crystallizeCurrentTranscription,
+    sendThought,
     beginEditTranscription,
     cancelEditTranscription,
     clearActiveThoughts,

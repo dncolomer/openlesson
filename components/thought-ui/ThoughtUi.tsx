@@ -70,6 +70,31 @@ export function ThoughtShortcutChord({ keys }: { keys: string[] }) {
   );
 }
 
+export function ThoughtCompactAction({
+  shortcut,
+  label,
+  disabled,
+  onClick,
+}: {
+  shortcut: string;
+  label: string;
+  disabled?: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <ThoughtButton
+      size="sm"
+      disabled={disabled}
+      onClick={onClick}
+      title={`${label} (${shortcut})`}
+      aria-label={`${label} (${shortcut})`}
+      className="h-7 min-w-7 px-1"
+    >
+      <ThoughtKeyHint>{shortcut}</ThoughtKeyHint>
+    </ThoughtButton>
+  );
+}
+
 export function ThoughtButtonLabel({
   shortcut,
   children,

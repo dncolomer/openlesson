@@ -903,7 +903,7 @@ export default function AgenticV2DocsPage() {
         <header className={`${sectionClass} mb-8`}>
           <p className={labelClass}>OpenLesson Proof-of-Work API</p>
           <h1 className="mt-3 max-w-3xl text-3xl font-medium tracking-[-1.2px] text-white sm:text-4xl">
-            Verification Workspace API Reference
+            Workspace API Reference
           </h1>
           <p className="mt-4 max-w-3xl text-sm leading-relaxed text-neutral-400 sm:text-base">
             Full request and response specifications for every Proof-of-Work API endpoint: workspaces, proof-of-work schema

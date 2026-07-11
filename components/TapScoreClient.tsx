@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, type ButtonHTMLAttributes, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { emitHeliosVoicePlayback } from "@/lib/useHeliosVoicePlayback";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 import { getIlePostSessionPath } from "@/lib/storage";
@@ -212,7 +211,6 @@ const TAP_SHORTCUT_ROWS: { keys: string[]; label: string; altKeys?: string[][] }
     label: "Select thoughts for a combined send",
   },
   { keys: ["S"], label: "Send all selected thoughts" },
-  { keys: ["V"], label: "Toggle Helios voice playback" },
 ];
 
 function TapBriefingConfig({
@@ -296,7 +294,6 @@ export function TapScoreClient({ workspaceId, blockId, sessionId, privateToken, 
   const [isListening, setIsListening] = useState(false);
   const [speechError, setSpeechError] = useState<string | null>(null);
   const [isSending, setIsSending] = useState(false);
-  const [voiceEnabled, setVoiceEnabled] = useState(false);
   const [selectedActiveThoughtIds, setSelectedActiveThoughtIds] = useState<Set<string>>(new Set());
   const [memoryThoughtIds, setMemoryThoughtIds] = useState<Set<string>>(new Set());
   const [sentThoughtIds, setSentThoughtIds] = useState<Set<string>>(new Set());
@@ -422,10 +419,6 @@ export function TapScoreClient({ workspaceId, blockId, sessionId, privateToken, 
     [thoughts, memoryThoughtIds, sentThoughtIds],
   );
   const latestThoughts = useMemo(() => activeThoughts.slice(-3).reverse(), [activeThoughts]);
-  const sourceIdRef = useRef(`tap-score-${Math.random().toString(36).slice(2, 10)}`);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-  const audioUrlRef = useRef<string | null>(null);
-
   const thoughtHistory = useMemo(() => thoughts.slice().reverse(), [thoughts]);
   const selectedActiveThoughts = useMemo(
     () => latestThoughts.slice().reverse().filter((thought) => selectedActiveThoughtIds.has(thought.id)),
@@ -439,34 +432,6 @@ export function TapScoreClient({ workspaceId, blockId, sessionId, privateToken, 
       return next.size === current.size ? current : next;
     });
   }, [latestThoughts]);
-
-  function stopVoice() {
-    audioRef.current?.pause();
-    audioRef.current = null;
-    if (audioUrlRef.current) URL.revokeObjectURL(audioUrlRef.current);
-    audioUrlRef.current = null;
-    emitHeliosVoicePlayback(sourceIdRef.current, false);
-  }
-
-  async function speak(text: string) {
-    if (!voiceEnabled) return;
-    stopVoice();
-    const response = await fetch("/api/xai-tts", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text, language: "auto" }),
-    }).catch(() => null);
-    if (!response?.ok) return;
-    const blob = await response.blob();
-    const url = URL.createObjectURL(blob);
-    audioUrlRef.current = url;
-    const audio = new Audio(url);
-    audioRef.current = audio;
-    audio.addEventListener("playing", () => emitHeliosVoicePlayback(sourceIdRef.current, true));
-    audio.addEventListener("ended", () => emitHeliosVoicePlayback(sourceIdRef.current, false));
-    audio.addEventListener("pause", () => emitHeliosVoicePlayback(sourceIdRef.current, false));
-    await audio.play().catch(() => {});
-  }
 
   function buildThoughtRecord(text: string, currentThoughts: Thought[]): Thought | null {
     const clean = normalize(text);
@@ -546,7 +511,6 @@ export function TapScoreClient({ workspaceId, blockId, sessionId, privateToken, 
 
   useEffect(() => () => {
     recognitionRef.current?.abort();
-    stopVoice();
   }, []);
 
   useEffect(() => {
@@ -637,14 +601,10 @@ export function TapScoreClient({ workspaceId, blockId, sessionId, privateToken, 
         event.preventDefault();
         void sendThought(selectedActiveThoughts.map((thought) => thought.text).join("\n"), selectedActiveThoughts.map((thought) => thought.id));
       }
-      if (!event.metaKey && !event.ctrlKey && !event.shiftKey && event.key.toLowerCase() === "v") {
-        event.preventDefault();
-        setVoiceEnabled((value) => !value);
-      }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [phase, latestThoughts, thoughts, voiceEnabled, selectedActiveThoughts, crystallizeCurrentTranscription, editingTranscription, crystallizableText]);
+  }, [phase, latestThoughts, thoughts, selectedActiveThoughts, crystallizeCurrentTranscription, editingTranscription, crystallizableText]);
 
   async function sendThought(text: string, thoughtIds: string[] = []) {
     const clean = normalize(text);
@@ -685,7 +645,6 @@ export function TapScoreClient({ workspaceId, blockId, sessionId, privateToken, 
       if (!response.ok) throw new Error(payload.error || "Could not get TAP response");
       const assistant: ChatMessage = { id: `a_${Date.now()}`, role: "assistant", content: payload.message, at: new Date().toISOString() };
       setMessages((current) => [...current, assistant]);
-      void speak(payload.message);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not get TAP response");
     } finally {
@@ -741,7 +700,6 @@ export function TapScoreClient({ workspaceId, blockId, sessionId, privateToken, 
         },
       ]);
       setPhase("live");
-      void speak(openingQuestion);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not start TAP session");
     } finally {
@@ -921,13 +879,6 @@ export function TapScoreClient({ workspaceId, blockId, sessionId, privateToken, 
                     </div>
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
-                    <ThoughtButton
-                      size="sm"
-                      variant={voiceEnabled ? "toggleOn" : "toggleOff"}
-                      onClick={() => setVoiceEnabled((value) => !value)}
-                    >
-                      <ThoughtButtonLabel shortcut="V">voice</ThoughtButtonLabel>
-                    </ThoughtButton>
                     <ThoughtButton size="sm" variant="primary" onClick={endSession}>
                       End session
                     </ThoughtButton>

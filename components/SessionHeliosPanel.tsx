@@ -2,7 +2,7 @@
 
 import { useEffect, useState, type ReactNode } from "react";
 import { useI18n } from "@/lib/i18n";
-import type { SessionThoughtInterface } from "@/lib/useSessionThoughtInterface";
+import { formatSpeechTranscriptDisplay, type SessionThoughtInterface } from "@/lib/useSessionThoughtInterface";
 import {
   ThoughtBackgroundLayers,
   ThoughtCompactAction,
@@ -146,7 +146,16 @@ export function SessionHeliosPanel({
               )}
               <div className="flex min-w-0 items-center gap-1.5 overflow-hidden">
                 <div className="flex h-8 min-w-0 flex-1 items-center rounded-md border border-neutral-900 bg-black/70 px-2.5 text-xs text-neutral-300">
-                  <SlidingTranscript text={thought.crystallizableText} className="w-full" />
+                  <SlidingTranscript
+                    text={formatSpeechTranscriptDisplay({
+                      text: thought.crystallizableText,
+                      speechError: thought.speechError,
+                      speechApiReady: thought.speechApiReady,
+                      recognitionAvailable: !!thought.recognitionCtor,
+                      isListening: thought.isListening,
+                    })}
+                    className={`w-full ${thought.speechError ? "text-amber-300/90" : ""}`}
+                  />
                 </div>
                 <div className="flex shrink-0 items-center gap-0.5">
                   <ThoughtCompactAction

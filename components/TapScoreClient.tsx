@@ -11,31 +11,17 @@ import { ThoughtEditPanel } from "@/components/thought-ui/ThoughtEditPanel";
 import { ThoughtMemoryPanel } from "@/components/thought-ui/ThoughtMemoryPanel";
 import { SlidingTranscript } from "@/components/thought-ui/SlidingTranscript";
 import { SessionOnboardingGuide } from "@/components/SessionOnboardingGuide";
-import { shouldReportSpeechRecognitionError } from "@/lib/useSessionThoughtInterface";
+import {
+  disposeSpeechRecognition,
+  formatSpeechTranscriptDisplay,
+  shouldReportSpeechRecognitionError,
+  tryStartSpeechRecognition,
+  useClientSpeechRecognitionConstructor,
+  type SpeechRecognitionEventLike,
+  type SpeechRecognitionLike,
+} from "@/lib/useSessionThoughtInterface";
 
 type Phase = "briefing" | "live" | "saving" | "error";
-
-type SpeechRecognitionResultLike = {
-  readonly isFinal: boolean;
-  readonly [index: number]: { readonly transcript: string };
-};
-type SpeechRecognitionEventLike = Event & {
-  readonly resultIndex: number;
-  readonly results: { readonly length: number; readonly [index: number]: SpeechRecognitionResultLike };
-};
-type SpeechRecognitionErrorEventLike = Event & { readonly error?: string };
-type SpeechRecognitionLike = EventTarget & {
-  continuous: boolean;
-  interimResults: boolean;
-  lang: string;
-  onresult: ((event: SpeechRecognitionEventLike) => void) | null;
-  onerror: ((event: SpeechRecognitionErrorEventLike) => void) | null;
-  onstart: (() => void) | null;
-  onend: (() => void) | null;
-  start: () => void;
-  abort: () => void;
-};
-type SpeechRecognitionConstructor = new () => SpeechRecognitionLike;
 
 interface Thought {
   id: string;
@@ -104,12 +90,6 @@ const BACKGROUND_IMAGES = [
   "/aesthetics/Greco-futurism/HHnTrlMaAAAg_4I.jpeg",
   "/aesthetics/Greco-futurism/HHnTrjJbQAAOz7K.jpeg",
 ];
-
-function getSpeechRecognitionConstructor(): SpeechRecognitionConstructor | null {
-  if (typeof window === "undefined") return null;
-  const w = window as typeof window & { SpeechRecognition?: SpeechRecognitionConstructor; webkitSpeechRecognition?: SpeechRecognitionConstructor };
-  return w.SpeechRecognition ?? w.webkitSpeechRecognition ?? null;
-}
 
 function normalize(text: string) {
   return text.replace(/\s+/g, " ").trim();
@@ -292,6 +272,7 @@ export function TapScoreClient({ workspaceId, blockId, sessionId, privateToken, 
   const [memoryThoughtIds, setMemoryThoughtIds] = useState<Set<string>>(new Set());
   const [sentThoughtIds, setSentThoughtIds] = useState<Set<string>>(new Set());
   const [editingTranscription, setEditingTranscription] = useState<{ draft: string; originalText: string } | null>(null);
+  const [speechSessionEpoch, setSpeechSessionEpoch] = useState(0);
 
   const [error, setError] = useState("");
   const [isStartingSession, setIsStartingSession] = useState(false);
@@ -379,7 +360,7 @@ export function TapScoreClient({ workspaceId, blockId, sessionId, privateToken, 
     return null;
   }, [messages]);
 
-  const recognitionCtor = useMemo(getSpeechRecognitionConstructor, []);
+  const { recognitionCtor, speechApiReady } = useClientSpeechRecognitionConstructor();
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const shouldListenRef = useRef(false);
   const finalBufferRef = useRef<string[]>([]);
@@ -476,15 +457,12 @@ export function TapScoreClient({ workspaceId, blockId, sessionId, privateToken, 
     setCrystallizableText("");
   }
 
-  function restartSpeechRecognitionSession() {
+  const restartSpeechRecognitionSession = useCallback(() => {
     consumedResultsIndexRef.current = 0;
     speechResultsLengthRef.current = 0;
-    const recognition = recognitionRef.current;
-    if (!recognition || !shouldListenRef.current) return;
-    try {
-      recognition.abort();
-    } catch {}
-  }
+    if (!shouldListenRef.current) return;
+    setSpeechSessionEpoch((epoch) => epoch + 1);
+  }, []);
 
   function clearTranscriptionBuffers() {
     clearTranscriptionDisplay();
@@ -502,14 +480,16 @@ export function TapScoreClient({ workspaceId, blockId, sessionId, privateToken, 
     clearTranscriptionDisplay();
     restartSpeechRecognitionSession();
     if (text) addThought(text, "crystallize");
-  }, [crystallizableText]);
-
-  useEffect(() => () => {
-    recognitionRef.current?.abort();
-  }, []);
+  }, [crystallizableText, restartSpeechRecognitionSession]);
 
   useEffect(() => {
-    if (phase !== "live" || !recognitionCtor) return;
+    if (!speechApiReady || phase !== "live" || !recognitionCtor) {
+      if (speechApiReady && phase === "live" && !recognitionCtor) {
+        setSpeechError("unsupported");
+      }
+      return;
+    }
+
     shouldListenRef.current = true;
     const recognition = new recognitionCtor();
     recognition.continuous = true;
@@ -517,17 +497,18 @@ export function TapScoreClient({ workspaceId, blockId, sessionId, privateToken, 
     recognition.lang = "en-US";
     recognition.onresult = (event) => {
       speechResultsLengthRef.current = event.results.length;
-      const startIndex = speechResultStartIndex(event);
+      const finals: string[] = [];
       let interim = "";
-      for (let i = startIndex; i < event.results.length; i += 1) {
+      for (let i = 0; i < event.results.length; i += 1) {
         const result = event.results[i];
         const transcript = normalize(result[0]?.transcript || "");
         if (!transcript) continue;
-        if (result.isFinal) finalBufferRef.current.push(transcript);
-        else interim = normalize(`${interim} ${transcript}`);
+        if (result.isFinal) finals.push(transcript);
+        else if (i >= event.resultIndex) interim = normalize(`${interim} ${transcript}`);
       }
+      finalBufferRef.current = finals;
       setInterimText(interim);
-      setCrystallizableText(normalize(`${finalBufferRef.current.join(" ")} ${interim}`.trim()));
+      setCrystallizableText(normalize(`${finals.join(" ")} ${interim}`.trim()));
     };
     recognition.onerror = (event) => {
       const error = event.error || "speech-recognition-error";
@@ -536,28 +517,36 @@ export function TapScoreClient({ workspaceId, blockId, sessionId, privateToken, 
       }
     };
     recognition.onend = () => {
+      if (recognitionRef.current !== recognition) return;
       setIsListening(false);
       if (shouldListenRef.current) {
-        try {
-          recognition.start();
-          setIsListening(true);
-        } catch {}
+        tryStartSpeechRecognition(
+          recognition,
+          recognitionRef,
+          shouldListenRef,
+          setIsListening,
+          setSpeechError,
+          50,
+        );
       }
     };
     recognitionRef.current = recognition;
     setSpeechError(null);
-    try {
-      recognition.start();
-      setIsListening(true);
-    } catch (err) {
-      setSpeechError(String(err));
-    }
+    tryStartSpeechRecognition(
+      recognition,
+      recognitionRef,
+      shouldListenRef,
+      setIsListening,
+      setSpeechError,
+      speechSessionEpoch > 0 ? 80 : 0,
+    );
+
     return () => {
       shouldListenRef.current = false;
-      recognition.abort();
+      disposeSpeechRecognition(recognition, recognitionRef);
       setIsListening(false);
     };
-  }, [phase, recognitionCtor]);
+  }, [phase, recognitionCtor, speechApiReady, speechSessionEpoch]);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -794,7 +783,7 @@ export function TapScoreClient({ workspaceId, blockId, sessionId, privateToken, 
       <div className="fixed inset-0 z-0 bg-[#0a0a0a]/82" />
       <div className="fixed inset-0 z-0 bg-[radial-gradient(circle_at_72%_8%,rgba(14,116,144,0.18),transparent_31%),radial-gradient(circle_at_12%_18%,rgba(39,39,42,0.55),transparent_32%)]" />
 
-      <div className="relative z-10 mx-auto flex h-full min-h-0 w-full max-w-7xl flex-col overflow-hidden px-4 py-5 sm:px-6">
+      <div className="relative z-10 mx-auto flex min-h-0 w-full max-w-7xl flex-1 flex-col overflow-hidden px-4 py-5 sm:px-6">
         {phase === "briefing" && (
           <section className="relative flex min-h-[calc(100vh-2.5rem)] flex-1 py-4">
             <div className="grid min-h-0 w-full flex-1 gap-4 lg:grid-cols-2">
@@ -825,21 +814,24 @@ export function TapScoreClient({ workspaceId, blockId, sessionId, privateToken, 
         )}
 
         {phase === "live" && (
-          <section className="grid h-full min-h-0 min-w-0 flex-1 grid-rows-[minmax(0,1fr)] gap-4 overflow-hidden py-4 lg:grid-cols-[minmax(0,1fr)_22rem]">
-            <div className="flex min-h-0 min-w-0 flex-col gap-4">
-              <div className="flex min-h-[48vh] flex-1 flex-col overflow-hidden rounded-2xl border border-neutral-900 bg-neutral-950/65 backdrop-blur-sm">
-                <DialogueSplit
-                  layout="tap"
-                  lastUserTurn={lastUserTurn}
-                  lastAssistantTurn={lastAssistantTurn}
-                  promptText=""
-                  isSending={isSending || (isStartingSession && !lastAssistantTurn)}
-                  error={error}
-                  userInitial={userInitial}
-                />
-              </div>
+          <section className="flex min-h-0 flex-1 flex-col overflow-hidden">
+            <div className="grid h-full min-h-0 gap-4 grid-rows-[minmax(0,1fr)_minmax(0,24rem)] lg:grid-cols-[minmax(0,1fr)_22rem] lg:grid-rows-[minmax(0,1fr)]">
+              <div className="flex min-h-0 min-w-0 flex-col gap-4 overflow-hidden lg:row-span-1">
+                <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-neutral-900 bg-neutral-950/65 backdrop-blur-sm">
+                  <div className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain">
+                    <DialogueSplit
+                      layout="tap"
+                      lastUserTurn={lastUserTurn}
+                      lastAssistantTurn={lastAssistantTurn}
+                      promptText=""
+                      isSending={isSending || (isStartingSession && !lastAssistantTurn)}
+                      error={error}
+                      userInitial={userInitial}
+                    />
+                  </div>
+                </div>
 
-              <div className="min-w-0 overflow-hidden rounded-2xl border border-neutral-900/80 bg-neutral-950/55 p-3 backdrop-blur-md">
+                <div className="shrink-0 min-w-0 overflow-hidden rounded-2xl border border-neutral-900/80 bg-neutral-950/55 p-3 backdrop-blur-md">
                 <div className="mb-3 flex w-full flex-wrap items-center justify-between gap-2 border-b border-neutral-900/80 pb-3">
                   <div>
                     <div className="font-mono text-[10px] uppercase tracking-[2px] text-neutral-600">Time left</div>
@@ -860,7 +852,16 @@ export function TapScoreClient({ workspaceId, blockId, sessionId, privateToken, 
 
                 <div className="flex min-w-0 items-center gap-1.5 overflow-hidden">
                   <div className="flex h-8 min-w-0 flex-1 items-center rounded-md border border-neutral-900 bg-black/70 px-2.5 text-xs text-neutral-300">
-                    <SlidingTranscript text={crystallizableText} className="w-full" />
+                    <SlidingTranscript
+                      text={formatSpeechTranscriptDisplay({
+                        text: crystallizableText,
+                        speechError,
+                        speechApiReady,
+                        recognitionAvailable: !!recognitionCtor,
+                        isListening,
+                      })}
+                      className={`w-full ${speechError ? "text-amber-300/90" : ""}`}
+                    />
                   </div>
                   <div className="flex shrink-0 items-center gap-0.5">
                     <ThoughtCompactAction
@@ -898,17 +899,18 @@ export function TapScoreClient({ workspaceId, blockId, sessionId, privateToken, 
                     onSendThought={(text, thoughtId) => void sendThought(text, [thoughtId])}
                   />
                 </div>
+                </div>
               </div>
-            </div>
-            <div className="flex h-full min-h-0 flex-col overflow-hidden">
-              <ThoughtMemoryPanel
-                className="flex h-full min-h-0 max-h-full w-full flex-col overflow-hidden rounded-2xl border border-neutral-900 bg-neutral-950/65 p-4 backdrop-blur-sm"
-                listClassName="pr-1"
-                thoughts={thoughtHistory}
-                workspaceId={workspaceId}
-                blockId={blockId}
-                sessionId={sessionId}
-              />
+              <div className="flex min-h-0 flex-col overflow-hidden lg:h-full">
+                <ThoughtMemoryPanel
+                  className="flex h-full min-h-0 max-h-full w-full flex-col overflow-hidden rounded-2xl border border-neutral-900 bg-neutral-950/65 p-4 backdrop-blur-sm"
+                  listClassName="pr-1"
+                  thoughts={thoughtHistory}
+                  workspaceId={workspaceId}
+                  blockId={blockId}
+                  sessionId={sessionId}
+                />
+              </div>
             </div>
           </section>
         )}

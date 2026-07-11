@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type MutableRefObject } from "react";
 
 export interface SessionThought {
   id: string;
@@ -13,26 +13,27 @@ export type SessionTraceType = "system1" | "system2";
 export type SessionSystem1Action = "crystallize" | "pause_finalize";
 export type SessionSystem2Action = "send" | "skip" | "select" | "deselect" | "resend" | "edit";
 
-type SpeechRecognitionResultLike = {
+export type SpeechRecognitionResultLike = {
   readonly isFinal: boolean;
   readonly [index: number]: { readonly transcript: string };
 };
-type SpeechRecognitionEventLike = Event & {
+export type SpeechRecognitionEventLike = Event & {
   readonly resultIndex: number;
   readonly results: { readonly length: number; readonly [index: number]: SpeechRecognitionResultLike };
 };
-type SpeechRecognitionErrorEventLike = Event & { readonly error?: string };
-type SpeechRecognitionLike = EventTarget & {
+export type SpeechRecognitionErrorEventLike = Event & { readonly error?: string };
+export type SpeechRecognitionLike = EventTarget & {
   continuous: boolean;
   interimResults: boolean;
   lang: string;
   onresult: ((event: SpeechRecognitionEventLike) => void) | null;
   onerror: ((event: SpeechRecognitionErrorEventLike) => void) | null;
+  onstart: (() => void) | null;
   onend: (() => void) | null;
   start: () => void;
   abort: () => void;
 };
-type SpeechRecognitionConstructor = new () => SpeechRecognitionLike;
+export type SpeechRecognitionConstructor = new () => SpeechRecognitionLike;
 
 const CHAIN_GAP_MS = 2600;
 
@@ -53,6 +54,89 @@ const BENIGN_SPEECH_RECOGNITION_ERRORS = new Set(["aborted"]);
 
 export function shouldReportSpeechRecognitionError(error?: string) {
   return !!error && !BENIGN_SPEECH_RECOGNITION_ERRORS.has(error);
+}
+
+export function formatSpeechTranscriptDisplay({
+  text,
+  speechError,
+  speechApiReady,
+  recognitionAvailable,
+  isListening,
+}: {
+  text: string;
+  speechError: string | null;
+  speechApiReady: boolean;
+  recognitionAvailable: boolean;
+  isListening: boolean;
+}) {
+  if (text) return text;
+  if (speechApiReady && !recognitionAvailable) {
+    return "Speech recognition is not supported in this browser.";
+  }
+  if (speechError && speechError !== "unsupported") {
+    return `Microphone error: ${speechError}`;
+  }
+  if (!speechApiReady || !recognitionAvailable) return "Starting microphone…";
+  if (!isListening) return "Waiting for microphone…";
+  return "";
+}
+
+/** Resolve SpeechRecognition on the client — useMemo(…) caches null from SSR and never recovers. */
+export function useClientSpeechRecognitionConstructor() {
+  const [recognitionCtor, setRecognitionCtor] = useState<SpeechRecognitionConstructor | null>(null);
+  const [speechApiReady, setSpeechApiReady] = useState(false);
+
+  useEffect(() => {
+    setRecognitionCtor(getSpeechRecognitionConstructor());
+    setSpeechApiReady(true);
+  }, []);
+
+  return { recognitionCtor, speechApiReady };
+}
+
+export function disposeSpeechRecognition(
+  recognition: SpeechRecognitionLike,
+  recognitionRef: MutableRefObject<SpeechRecognitionLike | null>,
+) {
+  recognition.onresult = null;
+  recognition.onerror = null;
+  recognition.onend = null;
+  try {
+    recognition.abort();
+  } catch {}
+  if (recognitionRef.current === recognition) {
+    recognitionRef.current = null;
+  }
+}
+
+export function tryStartSpeechRecognition(
+  recognition: SpeechRecognitionLike,
+  recognitionRef: MutableRefObject<SpeechRecognitionLike | null>,
+  shouldListenRef: MutableRefObject<boolean>,
+  onListening: (listening: boolean) => void,
+  onError: (error: string | null) => void,
+  delayMs = 0,
+) {
+  window.setTimeout(() => {
+    if (recognitionRef.current !== recognition || !shouldListenRef.current) return;
+
+    const attempt = (retriesLeft: number) => {
+      try {
+        recognition.start();
+        onListening(true);
+        onError(null);
+      } catch (err) {
+        if (retriesLeft > 0) {
+          window.setTimeout(() => attempt(retriesLeft - 1), 120);
+          return;
+        }
+        onError(String(err));
+        onListening(false);
+      }
+    };
+
+    attempt(1);
+  }, delayMs);
 }
 
 export interface SessionThoughtTracePayload {
@@ -113,8 +197,9 @@ export function useSessionThoughtInterface({
   const [memoryThoughtIds, setMemoryThoughtIds] = useState<Set<string>>(new Set());
   const [sentThoughtIds, setSentThoughtIds] = useState<Set<string>>(new Set());
   const [editingTranscription, setEditingTranscription] = useState<{ draft: string; originalText: string } | null>(null);
+  const [speechSessionEpoch, setSpeechSessionEpoch] = useState(0);
 
-  const recognitionCtor = useMemo(getSpeechRecognitionConstructor, []);
+  const { recognitionCtor, speechApiReady } = useClientSpeechRecognitionConstructor();
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const shouldListenRef = useRef(false);
   const finalBufferRef = useRef<string[]>([]);
@@ -192,11 +277,8 @@ export function useSessionThoughtInterface({
   const restartSpeechRecognitionSession = useCallback(() => {
     consumedResultsIndexRef.current = 0;
     speechResultsLengthRef.current = 0;
-    const recognition = recognitionRef.current;
-    if (!recognition || !shouldListenRef.current) return;
-    try {
-      recognition.abort();
-    } catch {}
+    if (!shouldListenRef.current) return;
+    setSpeechSessionEpoch((epoch) => epoch + 1);
   }, []);
 
   function clearTranscriptionBuffers() {
@@ -235,7 +317,13 @@ export function useSessionThoughtInterface({
   }, [crystallizableText, restartSpeechRecognitionSession]);
 
   useEffect(() => {
-    if (!enabled || !recognitionCtor) return;
+    if (!speechApiReady || !enabled || !recognitionCtor) {
+      if (speechApiReady && enabled && !recognitionCtor) {
+        setSpeechError("unsupported");
+      }
+      return;
+    }
+
     shouldListenRef.current = true;
     const recognition = new recognitionCtor();
     recognition.continuous = true;
@@ -243,17 +331,18 @@ export function useSessionThoughtInterface({
     recognition.lang = speechLang;
     recognition.onresult = (event) => {
       speechResultsLengthRef.current = event.results.length;
-      const startIndex = speechResultStartIndex(event);
+      const finals: string[] = [];
       let interim = "";
-      for (let i = startIndex; i < event.results.length; i += 1) {
+      for (let i = 0; i < event.results.length; i += 1) {
         const result = event.results[i];
         const transcript = normalize(result[0]?.transcript || "");
         if (!transcript) continue;
-        if (result.isFinal) finalBufferRef.current.push(transcript);
-        else interim = normalize(`${interim} ${transcript}`);
+        if (result.isFinal) finals.push(transcript);
+        else if (i >= event.resultIndex) interim = normalize(`${interim} ${transcript}`);
       }
+      finalBufferRef.current = finals;
       setInterimText(interim);
-      setCrystallizableText(normalize(`${finalBufferRef.current.join(" ")} ${interim}`.trim()));
+      setCrystallizableText(normalize(`${finals.join(" ")} ${interim}`.trim()));
     };
     recognition.onerror = (event) => {
       const error = event.error || "speech-recognition-error";
@@ -262,28 +351,36 @@ export function useSessionThoughtInterface({
       }
     };
     recognition.onend = () => {
+      if (recognitionRef.current !== recognition) return;
       setIsListening(false);
       if (shouldListenRef.current) {
-        try {
-          recognition.start();
-          setIsListening(true);
-        } catch {}
+        tryStartSpeechRecognition(
+          recognition,
+          recognitionRef,
+          shouldListenRef,
+          setIsListening,
+          setSpeechError,
+          50,
+        );
       }
     };
     recognitionRef.current = recognition;
     setSpeechError(null);
-    try {
-      recognition.start();
-      setIsListening(true);
-    } catch (err) {
-      setSpeechError(String(err));
-    }
+    tryStartSpeechRecognition(
+      recognition,
+      recognitionRef,
+      shouldListenRef,
+      setIsListening,
+      setSpeechError,
+      speechSessionEpoch > 0 ? 80 : 0,
+    );
+
     return () => {
       shouldListenRef.current = false;
-      recognition.abort();
+      disposeSpeechRecognition(recognition, recognitionRef);
       setIsListening(false);
     };
-  }, [enabled, recognitionCtor, speechLang]);
+  }, [enabled, recognitionCtor, speechApiReady, speechLang, speechSessionEpoch]);
 
   const sendThought = useCallback(
     async (text: string, thoughtIds: string[] = []) => {
@@ -436,6 +533,7 @@ export function useSessionThoughtInterface({
     sentThoughtIds,
     memoryThoughtIds,
     recognitionCtor,
+    speechApiReady,
     crystallizeCurrentTranscription,
     sendThought,
     beginEditTranscription,

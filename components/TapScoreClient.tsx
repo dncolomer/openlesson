@@ -204,7 +204,8 @@ function ThoughtButtonLabel({
 const TAP_SHORTCUT_ROWS: { keys: string[]; label: string; altKeys?: string[][] }[] = [
   { keys: ["C"], label: "Crystallize the live transcript into a thought" },
   { keys: ["Esc"], label: "Clear all active thoughts" },
-  { keys: ["1", "2", "3"], label: "Edit thought 1, 2, or 3" },
+  { keys: ["E"], label: "Edit the live transcription before sending" },
+  { keys: ["1", "2", "3"], label: "Send thought 1, 2, or 3" },
   {
     keys: ["⇧", "1"],
     altKeys: [["⇧", "2"], ["⇧", "3"]],
@@ -299,7 +300,7 @@ export function TapScoreClient({ workspaceId, blockId, sessionId, privateToken, 
   const [selectedActiveThoughtIds, setSelectedActiveThoughtIds] = useState<Set<string>>(new Set());
   const [memoryThoughtIds, setMemoryThoughtIds] = useState<Set<string>>(new Set());
   const [sentThoughtIds, setSentThoughtIds] = useState<Set<string>>(new Set());
-  const [editingThought, setEditingThought] = useState<{ id: string; draft: string; originalText: string } | null>(null);
+  const [editingTranscription, setEditingTranscription] = useState<{ draft: string; originalText: string } | null>(null);
 
   const [error, setError] = useState("");
   const [isStartingSession, setIsStartingSession] = useState(false);
@@ -406,7 +407,7 @@ export function TapScoreClient({ workspaceId, blockId, sessionId, privateToken, 
     setMemoryThoughtIds(new Set());
     setSentThoughtIds(new Set());
     setSelectedActiveThoughtIds(new Set());
-    setEditingThought(null);
+    setEditingTranscription(null);
     setStartedAt(null);
     setRemainingSeconds(0);
     setError("");
@@ -520,26 +521,28 @@ export function TapScoreClient({ workspaceId, blockId, sessionId, privateToken, 
     return Math.max(resultIndex, consumedResultsIndexRef.current);
   }
 
-  function flushFinalBuffer() {
-    const text = normalize(finalBufferRef.current.join(" "));
-    finalBufferRef.current = [];
-    setCrystallizableText("");
-    markSpeechConsumed();
-    if (text) addThought(text);
-  }
-
-  const crystallizeCurrentTranscription = useCallback(() => {
+  function clearTranscriptionBuffers() {
     if (finalizeTimerRef.current) {
       clearTimeout(finalizeTimerRef.current);
       finalizeTimerRef.current = null;
     }
-    const text = normalize(`${finalBufferRef.current.join(" ")} ${interimText}`.trim());
     finalBufferRef.current = [];
     setInterimText("");
     setCrystallizableText("");
     markSpeechConsumed();
+  }
+
+  function flushFinalBuffer() {
+    const text = normalize(finalBufferRef.current.join(" "));
+    clearTranscriptionBuffers();
+    if (text) addThought(text);
+  }
+
+  const crystallizeCurrentTranscription = useCallback(() => {
+    const text = normalize(crystallizableText);
+    clearTranscriptionBuffers();
     if (text) addThought(text, "crystallize");
-  }, [interimText]);
+  }, [crystallizableText]);
 
   useEffect(() => () => {
     recognitionRef.current?.abort();
@@ -604,8 +607,8 @@ export function TapScoreClient({ workspaceId, blockId, sessionId, privateToken, 
       if (target?.closest("input, textarea, select, [contenteditable='true']")) return;
       if (event.key === "Escape") {
         event.preventDefault();
-        if (editingThought) {
-          setEditingThought(null);
+        if (editingTranscription) {
+          setEditingTranscription(null);
           return;
         }
         clearActiveThoughts();
@@ -616,12 +619,17 @@ export function TapScoreClient({ workspaceId, blockId, sessionId, privateToken, 
         crystallizeCurrentTranscription();
         return;
       }
+      if (!event.metaKey && !event.ctrlKey && !event.shiftKey && event.key.toLowerCase() === "e") {
+        event.preventDefault();
+        beginEditTranscription();
+        return;
+      }
       if (["1", "2", "3"].includes(event.key)) {
         const thought = latestThoughts[Number(event.key) - 1];
         if (!thought) return;
         event.preventDefault();
         if (event.shiftKey) toggleActiveThought(thought.id);
-        else beginEditThought(thought.id);
+        else void sendThought(thought.text, [thought.id]);
         return;
       }
       if (!event.metaKey && !event.ctrlKey && !event.shiftKey && event.key.toLowerCase() === "s") {
@@ -636,7 +644,7 @@ export function TapScoreClient({ workspaceId, blockId, sessionId, privateToken, 
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [phase, latestThoughts, thoughts, voiceEnabled, selectedActiveThoughts, crystallizeCurrentTranscription, editingThought]);
+  }, [phase, latestThoughts, thoughts, voiceEnabled, selectedActiveThoughts, crystallizeCurrentTranscription, editingTranscription, crystallizableText]);
 
   async function sendThought(text: string, thoughtIds: string[] = []) {
     const clean = normalize(text);
@@ -820,15 +828,15 @@ export function TapScoreClient({ workspaceId, blockId, sessionId, privateToken, 
     });
   }
 
-  function beginEditThought(thoughtId: string) {
-    const thought = thoughts.find((entry) => entry.id === thoughtId);
-    if (!thought || sentThoughtIds.has(thoughtId) || memoryThoughtIds.has(thoughtId)) return;
-    setEditingThought({ id: thought.id, draft: thought.text, originalText: thought.text });
+  function beginEditTranscription() {
+    const text = normalize(crystallizableText);
+    if (!text) return;
+    setEditingTranscription({ draft: text, originalText: text });
   }
 
   function clearActiveThoughts() {
     if (activeThoughts.length === 0) return;
-    setEditingThought(null);
+    setEditingTranscription(null);
     activeThoughts.forEach((thought) => {
       logTapTrace({
         traceType: "system2",
@@ -928,22 +936,13 @@ export function TapScoreClient({ workspaceId, blockId, sessionId, privateToken, 
 
                 <div className="flex min-w-0 items-start gap-2 overflow-hidden">
                   <div className="flex h-8 min-w-0 flex-1 items-center rounded-md border border-neutral-900 bg-black/70 px-2.5 text-xs text-neutral-300">
-                    <SlidingTranscript text={interimText} className="w-full" />
+                    <SlidingTranscript text={crystallizableText} className="w-full" />
                   </div>
                   <ThoughtButton size="sm" disabled={!crystallizableText} onClick={crystallizeCurrentTranscription}>
                     <ThoughtButtonLabel shortcut="C">crystallize</ThoughtButtonLabel>
                   </ThoughtButton>
-                  <ThoughtButton
-                    size="sm"
-                    disabled={selectedActiveThoughts.length < 2}
-                    onClick={() =>
-                      void sendThought(
-                        selectedActiveThoughts.map((thought) => thought.text).join("\n"),
-                        selectedActiveThoughts.map((thought) => thought.id),
-                      )
-                    }
-                  >
-                    <ThoughtButtonLabel shortcut="S">send ({selectedActiveThoughts.length})</ThoughtButtonLabel>
+                  <ThoughtButton size="sm" disabled={!crystallizableText} onClick={beginEditTranscription}>
+                    <ThoughtButtonLabel shortcut="E">edit</ThoughtButtonLabel>
                   </ThoughtButton>
                   <ThoughtButton size="sm" disabled={activeThoughts.length === 0} onClick={clearActiveThoughts}>
                     <ThoughtButtonLabel shortcut="Esc">clear</ThoughtButtonLabel>
@@ -952,37 +951,11 @@ export function TapScoreClient({ workspaceId, blockId, sessionId, privateToken, 
 
                 <div className="mt-3 border-t border-neutral-900/80 pt-3">
                   <p className="mb-2 text-[10px] uppercase tracking-[2px] text-neutral-600">Active thoughts</p>
-                  {editingThought ? (
-                    <ThoughtEditPanel
-                      draft={editingThought.draft}
-                      onDraftChange={(draft) => setEditingThought((current) => (current ? { ...current, draft } : null))}
-                      onCancel={() => setEditingThought(null)}
-                      onSend={() => {
-                        const draft = normalize(editingThought.draft);
-                        if (!draft) return;
-                        const thought = thoughts.find((entry) => entry.id === editingThought.id);
-                        const thoughtId = editingThought.id;
-                        logTapTrace({
-                          traceType: "system2",
-                          action: "edit",
-                          thoughtId,
-                          chainId: thought?.chainId,
-                          originalText: editingThought.originalText,
-                          text: draft,
-                          timestampMs: thought?.timestamp,
-                        });
-                        setEditingThought(null);
-                        void sendThought(draft, [thoughtId]);
-                      }}
-                      isSending={isSending}
-                    />
-                  ) : null}
                   <ActiveThoughtSlots
                     thoughts={latestThoughts}
                     selectedThoughtIds={selectedActiveThoughtIds}
-                    editingThoughtId={editingThought?.id ?? null}
                     onToggleSelect={toggleActiveThought}
-                    onEditThought={beginEditThought}
+                    onSendThought={(text, thoughtId) => void sendThought(text, [thoughtId])}
                   />
                 </div>
               </div>
@@ -1016,6 +989,28 @@ export function TapScoreClient({ workspaceId, blockId, sessionId, privateToken, 
           </section>
         )}
       </div>
+
+      {editingTranscription ? (
+        <ThoughtEditPanel
+          draft={editingTranscription.draft}
+          onDraftChange={(draft) => setEditingTranscription((current) => (current ? { ...current, draft } : null))}
+          onCancel={() => setEditingTranscription(null)}
+          onSend={() => {
+            const draft = normalize(editingTranscription.draft);
+            if (!draft) return;
+            logTapTrace({
+              traceType: "system2",
+              action: "edit",
+              originalText: editingTranscription.originalText,
+              text: draft,
+            });
+            setEditingTranscription(null);
+            clearTranscriptionBuffers();
+            void sendThought(draft, []);
+          }}
+          isSending={isSending}
+        />
+      ) : null}
     </main>
   );
 }

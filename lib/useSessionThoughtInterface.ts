@@ -113,7 +113,7 @@ export function useSessionThoughtInterface({
   const [selectedActiveThoughtIds, setSelectedActiveThoughtIds] = useState<Set<string>>(new Set());
   const [memoryThoughtIds, setMemoryThoughtIds] = useState<Set<string>>(new Set());
   const [sentThoughtIds, setSentThoughtIds] = useState<Set<string>>(new Set());
-  const [editingThought, setEditingThought] = useState<{ id: string; draft: string; originalText: string } | null>(null);
+  const [editingTranscription, setEditingTranscription] = useState<{ draft: string; originalText: string } | null>(null);
 
   const recognitionCtor = useMemo(getSpeechRecognitionConstructor, []);
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
@@ -193,6 +193,17 @@ export function useSessionThoughtInterface({
     consumedResultsIndexRef.current = speechResultsLengthRef.current;
   }
 
+  function clearTranscriptionBuffers() {
+    if (finalizeTimerRef.current) {
+      clearTimeout(finalizeTimerRef.current);
+      finalizeTimerRef.current = null;
+    }
+    finalBufferRef.current = [];
+    setInterimText("");
+    setCrystallizableText("");
+    markSpeechConsumed();
+  }
+
   function resetSpeechResultCursor() {
     consumedResultsIndexRef.current = 0;
     speechResultsLengthRef.current = 0;
@@ -217,17 +228,10 @@ export function useSessionThoughtInterface({
   }
 
   const crystallizeCurrentTranscription = useCallback(() => {
-    if (finalizeTimerRef.current) {
-      clearTimeout(finalizeTimerRef.current);
-      finalizeTimerRef.current = null;
-    }
-    const text = normalize(`${finalBufferRef.current.join(" ")} ${interimText}`.trim());
-    finalBufferRef.current = [];
-    setInterimText("");
-    setCrystallizableText("");
-    markSpeechConsumed();
+    const text = normalize(crystallizableText);
+    clearTranscriptionBuffers();
     if (text) addThought(text, "crystallize");
-  }, [interimText]);
+  }, [crystallizableText]);
 
   useEffect(() => {
     if (!enabled || !recognitionCtor) return;
@@ -341,45 +345,38 @@ export function useSessionThoughtInterface({
     [onLogTrace, thoughts],
   );
 
-  const beginEditThought = useCallback(
-    (thoughtId: string) => {
-      const thought = thoughts.find((entry) => entry.id === thoughtId);
-      if (!thought || sentThoughtIds.has(thoughtId) || memoryThoughtIds.has(thoughtId)) return;
-      setEditingThought({ id: thought.id, draft: thought.text, originalText: thought.text });
-    },
-    [memoryThoughtIds, sentThoughtIds, thoughts],
-  );
+  const beginEditTranscription = useCallback(() => {
+    const text = normalize(crystallizableText);
+    if (!text) return;
+    setEditingTranscription({ draft: text, originalText: text });
+  }, [crystallizableText]);
 
-  const cancelEditThought = useCallback(() => {
-    setEditingThought(null);
+  const cancelEditTranscription = useCallback(() => {
+    setEditingTranscription(null);
   }, []);
 
   const updateEditDraft = useCallback((draft: string) => {
-    setEditingThought((current) => (current ? { ...current, draft } : null));
+    setEditingTranscription((current) => (current ? { ...current, draft } : null));
   }, []);
 
-  const submitEditedThought = useCallback(async () => {
-    if (!editingThought) return;
-    const draft = normalize(editingThought.draft);
+  const submitEditedTranscription = useCallback(async () => {
+    if (!editingTranscription) return;
+    const draft = normalize(editingTranscription.draft);
     if (!draft) return;
-    const thought = thoughts.find((entry) => entry.id === editingThought.id);
-    const thoughtId = editingThought.id;
     onLogTrace({
       traceType: "system2",
       action: "edit",
-      thoughtId,
-      chainId: thought?.chainId,
-      originalText: editingThought.originalText,
+      originalText: editingTranscription.originalText,
       text: draft,
-      timestampMs: thought?.timestamp,
     });
-    setEditingThought(null);
-    await sendThought(draft, [thoughtId]);
-  }, [editingThought, onLogTrace, sendThought, thoughts]);
+    setEditingTranscription(null);
+    clearTranscriptionBuffers();
+    await sendThought(draft, []);
+  }, [editingTranscription, onLogTrace, sendThought]);
 
   const clearActiveThoughts = useCallback(() => {
     if (activeThoughts.length === 0) return;
-    setEditingThought(null);
+    setEditingTranscription(null);
     activeThoughts.forEach((thought) => {
       onLogTrace({
         traceType: "system2",
@@ -402,8 +399,8 @@ export function useSessionThoughtInterface({
       if (target?.closest("input, textarea, select, [contenteditable='true']")) return;
       if (event.key === "Escape") {
         event.preventDefault();
-        if (editingThought) {
-          cancelEditThought();
+        if (editingTranscription) {
+          cancelEditTranscription();
           return;
         }
         clearActiveThoughts();
@@ -414,12 +411,17 @@ export function useSessionThoughtInterface({
         crystallizeCurrentTranscription();
         return;
       }
+      if (!event.metaKey && !event.ctrlKey && !event.shiftKey && event.key.toLowerCase() === "e") {
+        event.preventDefault();
+        beginEditTranscription();
+        return;
+      }
       if (["1", "2", "3"].includes(event.key)) {
         const thought = latestThoughts[Number(event.key) - 1];
         if (!thought) return;
         event.preventDefault();
         if (event.shiftKey) toggleActiveThought(thought.id);
-        else beginEditThought(thought.id);
+        else void sendThought(thought.text, [thought.id]);
         return;
       }
       if (!event.metaKey && !event.ctrlKey && !event.shiftKey && event.key.toLowerCase() === "s") {
@@ -439,10 +441,11 @@ export function useSessionThoughtInterface({
     selectedActiveThoughts,
     crystallizeCurrentTranscription,
     sendThought,
-    beginEditThought,
-    cancelEditThought,
+    beginEditTranscription,
+    cancelEditTranscription,
     clearActiveThoughts,
-    editingThought,
+    crystallizableText,
+    editingTranscription,
     toggleActiveThought,
   ]);
 
@@ -463,12 +466,12 @@ export function useSessionThoughtInterface({
     recognitionCtor,
     crystallizeCurrentTranscription,
     sendThought,
-    beginEditThought,
-    cancelEditThought,
+    beginEditTranscription,
+    cancelEditTranscription,
     updateEditDraft,
-    submitEditedThought,
+    submitEditedTranscription,
     clearActiveThoughts,
-    editingThought,
+    editingTranscription,
     toggleActiveThought,
   };
 }

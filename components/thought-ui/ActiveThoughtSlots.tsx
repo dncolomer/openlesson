@@ -13,7 +13,7 @@ interface ActiveThoughtSlotsProps {
   thoughts: ActiveThoughtSlotEntry[];
   selectedThoughtIds: ReadonlySet<string>;
   onToggleSelect: (thoughtId: string) => void;
-  onEditThought: (thoughtId: string) => void;
+  onSendThought: (text: string, thoughtId: string) => void;
 }
 
 function EmptyThoughtSlot({ index }: { index: number }) {
@@ -36,9 +36,8 @@ export function ActiveThoughtSlots({
   thoughts,
   selectedThoughtIds,
   onToggleSelect,
-  onEditThought,
-  editingThoughtId = null,
-}: ActiveThoughtSlotsProps & { editingThoughtId?: string | null }) {
+  onSendThought,
+}: ActiveThoughtSlotsProps) {
   return (
     <div className="grid gap-2 md:grid-cols-3">
       {Array.from({ length: ACTIVE_THOUGHT_SLOT_COUNT }, (_, index) => {
@@ -48,13 +47,12 @@ export function ActiveThoughtSlots({
         }
 
         const isSelected = selectedThoughtIds.has(thought.id);
-        const isEditing = editingThoughtId === thought.id;
 
         return (
           <div
             key={thought.id}
             className={`group flex h-32 max-h-32 flex-col gap-1.5 overflow-hidden rounded-xl border bg-black/70 p-3 text-left transition hover:border-white/50 ${
-              isEditing ? "border-amber-500/70" : isSelected ? "border-white/70" : "border-neutral-800"
+              isSelected ? "border-white/70" : "border-neutral-800"
             }`}
           >
             <p className="shrink-0 text-[10px] uppercase tracking-[1.8px] text-neutral-500">Thought {index + 1}</p>
@@ -79,8 +77,8 @@ export function ActiveThoughtSlots({
                   <ThoughtButtonLabel shortcut={["⇧", String(index + 1)]}>select</ThoughtButtonLabel>
                 )}
               </ThoughtButton>
-              <ThoughtButton size="sm" variant={isEditing ? "toggleOn" : "ghost"} onClick={() => onEditThought(thought.id)}>
-                <ThoughtButtonLabel shortcut={index + 1}>edit</ThoughtButtonLabel>
+              <ThoughtButton size="sm" onClick={() => onSendThought(thought.text, thought.id)}>
+                <ThoughtButtonLabel shortcut={index + 1}>send</ThoughtButtonLabel>
               </ThoughtButton>
             </div>
           </div>

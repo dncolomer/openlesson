@@ -147,22 +147,13 @@ export function SessionHeliosPanel({
               )}
               <div className="flex min-w-0 items-start gap-2 overflow-hidden">
                 <div className="flex h-8 min-w-0 flex-1 items-center rounded-md border border-neutral-900 bg-black/70 px-2.5 text-xs text-neutral-300">
-                  <SlidingTranscript text={thought.interimText} className="w-full" />
+                  <SlidingTranscript text={thought.crystallizableText} className="w-full" />
                 </div>
                 <ThoughtButton size="sm" disabled={!thought.crystallizableText} onClick={thought.crystallizeCurrentTranscription}>
                   <ThoughtButtonLabel shortcut="C">crystallize</ThoughtButtonLabel>
                 </ThoughtButton>
-                <ThoughtButton
-                  size="sm"
-                  disabled={thought.selectedActiveThoughts.length < 2}
-                  onClick={() =>
-                    void thought.sendThought(
-                      thought.selectedActiveThoughts.map((entry) => entry.text).join("\n"),
-                      thought.selectedActiveThoughts.map((entry) => entry.id),
-                    )
-                  }
-                >
-                  <ThoughtButtonLabel shortcut="S">send ({thought.selectedActiveThoughts.length})</ThoughtButtonLabel>
+                <ThoughtButton size="sm" disabled={!thought.crystallizableText} onClick={thought.beginEditTranscription}>
+                  <ThoughtButtonLabel shortcut="E">edit</ThoughtButtonLabel>
                 </ThoughtButton>
                 <ThoughtButton size="sm" disabled={thought.activeThoughts.length === 0} onClick={thought.clearActiveThoughts}>
                   <ThoughtButtonLabel shortcut="Esc">clear</ThoughtButtonLabel>
@@ -171,27 +162,27 @@ export function SessionHeliosPanel({
 
               <div className="mt-3 border-t border-neutral-900/80 pt-3">
                 <p className="mb-2 text-[10px] uppercase tracking-[2px] text-neutral-600">{t("probes.activeThoughts")}</p>
-                {thought.editingThought ? (
-                  <ThoughtEditPanel
-                    draft={thought.editingThought.draft}
-                    onDraftChange={thought.updateEditDraft}
-                    onCancel={thought.cancelEditThought}
-                    onSend={() => void thought.submitEditedThought()}
-                    isSending={thought.isSending}
-                  />
-                ) : null}
                 <ActiveThoughtSlots
                   thoughts={thought.latestThoughts}
                   selectedThoughtIds={thought.selectedActiveThoughtIds}
-                  editingThoughtId={thought.editingThought?.id ?? null}
                   onToggleSelect={thought.toggleActiveThought}
-                  onEditThought={thought.beginEditThought}
+                  onSendThought={(text, thoughtId) => void thought.sendThought(text, [thoughtId])}
                 />
               </div>
             </div>
           </>
         )}
       </div>
+
+      {thought.editingTranscription ? (
+        <ThoughtEditPanel
+          draft={thought.editingTranscription.draft}
+          onDraftChange={thought.updateEditDraft}
+          onCancel={thought.cancelEditTranscription}
+          onSend={() => void thought.submitEditedTranscription()}
+          isSending={thought.isSending}
+        />
+      ) : null}
 
       {aestheticName && <div className="absolute bottom-2 left-3 z-10 text-[10px] text-neutral-700">{aestheticName}</div>}
     </div>

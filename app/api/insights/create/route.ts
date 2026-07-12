@@ -1,12 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { INSIGHT_AESTHETIC_IMAGES } from "@/lib/insights-server";
 import { createClient } from "@/lib/supabase/server";
 import { callXaiJSON, systemMessage, userMessage, DEFAULT_MODEL } from "@/lib/xai-client";
-const AESTHETIC_IMAGES = [
-  "/aesthetics/Greco-futurism/HHnTrgVaQAAP-_3.jpeg",
-  "/aesthetics/Greco-futurism/HHnTrf2acAA1Juo.jpeg",
-  "/aesthetics/Greco-futurism/HHnTrlMaAAAg_4I.jpeg",
-  "/aesthetics/Greco-futurism/HHnTrjJbQAAOz7K.jpeg",
-];
 
 interface CreateInsightResponse {
   title: string;
@@ -47,7 +42,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Failed to synthesize insight" }, { status: 502 });
     }
 
-    const aestheticImage = AESTHETIC_IMAGES[Math.floor(Math.random() * AESTHETIC_IMAGES.length)];
+    const aestheticImage =
+      INSIGHT_AESTHETIC_IMAGES[Math.floor(Math.random() * INSIGHT_AESTHETIC_IMAGES.length)];
 
     const { data: insight, error } = await supabase
       .from("insights")

@@ -37,10 +37,19 @@ const ENDPOINT_SPECS: EndpointSpec[] = [
     method: "POST",
     path: "/api/v2/agent/workspaces",
     scope: "workspaces:write",
-    summary: "Create a Workspace from an initial prompt and optional seed files.",
+    summary: "Create a workspace in semantic mode (initial_prompt) or opaque mode (protocol). Optional seed files in both.",
     status: "201 Created",
     requestBody: [
-      { name: "initial_prompt", type: "string", required: true, description: "Task or learning goal used to generate workspace title and blocks." },
+      { name: "evaluation_mode", type: "string", description: "semantic (default) | opaque. Opaque disables semantic inference and stores protocol refs only." },
+      { name: "initial_prompt", type: "string", description: "Semantic mode: task or learning goal used to generate title and blocks (required unless opaque)." },
+      {
+        name: "protocol",
+        type: "object",
+        description: "Opaque mode: protocol_id and goal_ref required; optional phases[], goal_tokens[], constraints[].",
+      },
+      { name: "protocol.protocol_id", type: "string", description: "Opaque: protocol identifier (e.g. agent-trace-v3)." },
+      { name: "protocol.goal_ref", type: "string", description: "Opaque: partner-owned goal reference (not semantically interpreted)." },
+      { name: "external_refs", type: "object", description: "Opaque: partner-owned opaque references stored but not inferred." },
       {
         name: "files",
         type: "array<object>",
@@ -50,17 +59,28 @@ const ENDPOINT_SPECS: EndpointSpec[] = [
       { name: "files[].mime_type", type: "string", required: true, description: "application/pdf, text/plain, text/markdown, image/jpeg, image/png, image/webp." },
       { name: "files[].data", type: "string (base64)", required: true, description: "File bytes, max 10 MB per file." },
     ],
-    requestExample: `{
+    requestExample: `// Semantic
+{
   "initial_prompt": "Prepare a CSM to handle enterprise renewal negotiations.",
-  "files": [
-    {
-      "name": "brief.md",
-      "mime_type": "text/markdown",
-      "data": "<base64>"
-    }
-  ]
+  "files": [{ "name": "brief.md", "mime_type": "text/markdown", "data": "<base64>" }]
+}
+
+// Opaque
+{
+  "evaluation_mode": "opaque",
+  "protocol": {
+    "protocol_id": "agent-trace-v3",
+    "goal_ref": "goal_ref:partner-token-abc"
+  },
+  "external_refs": { "partner_run_id": "opaque-ref-001" }
 }`,
     responseBody: [
+      { name: "evaluation_mode", type: "string", description: "semantic | opaque" },
+      {
+        name: "privacy",
+        type: "object",
+        description: "evaluation_mode, semantic_inference (enabled|disabled), plaintext_lint (off|enforced), stored_prompt (boolean).",
+      },
       { name: "workspace.id", type: "uuid", description: "Workspace ID (workspaces.id)." },
       { name: "workspace.title", type: "string", description: "Generated workspace title." },
       { name: "workspace.root_topic", type: "string", description: "Truncated prompt summary." },
@@ -107,6 +127,8 @@ const ENDPOINT_SPECS: EndpointSpec[] = [
   "files": []
 }`,
     notes: [
+      "Semantic: initial_prompt required; Grok generates title, blocks, conversion_goal.",
+      "Opaque: protocol.protocol_id + protocol.goal_ref required; blocks generated from protocol phases; initial_prompt not stored.",
       "Guest keys (gsk_) may create workspaces; workspace is org-owned and tagged with guest_user_id.",
       "Requires Teams tier (403 teams_required otherwise).",
     ],
@@ -158,11 +180,21 @@ const ENDPOINT_SPECS: EndpointSpec[] = [
       { name: "workspace_id", type: "uuid", required: true, description: "Workspace ID." },
     ],
     requestBody: [
+      { name: "evaluation_mode", type: "string", description: "semantic | opaque. Defaults from workspace when omitted." },
       {
         name: "definition",
         type: "string",
-        required: true,
-        description: "What to evaluate — rubric text, competency description, or full eval spec from your agent.",
+        description: "Semantic mode: what to evaluate — rubric text, competency description, or eval spec.",
+      },
+      {
+        name: "definition_ref",
+        type: "string",
+        description: "Opaque mode: opaque reference token (required with contract.event_verbs).",
+      },
+      {
+        name: "contract",
+        type: "object",
+        description: "Opaque mode: event_verbs required; optional goal_tokens, required_event_fields, token_fields.",
       },
       { name: "block_id", type: "uuid", description: "Optional: scope schema design to one block." },
       {
@@ -175,14 +207,21 @@ const ENDPOINT_SPECS: EndpointSpec[] = [
       { name: "integration_hints.event_verbs", type: "string[]", description: "Actions your agent serializes (e.g. run_simulation, edit_field)." },
       { name: "integration_hints.goals", type: "string[]", description: "High-level goals to encode (e.g. simulation_completed)." },
     ],
-    requestExample: `{
-  "definition": "Evaluate whether the learner can articulate a crisp ICP with segment rationale and validation plan",
-  "block_id": "e57844a6-1b69-465c-9120-d0812d6339ae",
+    requestExample: `// Semantic
+{
+  "definition": "Evaluate whether the learner can articulate a crisp ICP with segment rationale",
   "integration_hints": {
     "tool_name": "pumadoc",
-    "partner_agent": "PumaDoc Customer Agent",
-    "event_verbs": ["run_simulation", "edit_field", "publish_artifact"],
-    "goals": ["simulation_completed", "artifact_published"]
+    "event_verbs": ["run_simulation", "edit_field"]
+  }
+}
+
+// Opaque
+{
+  "evaluation_mode": "opaque",
+  "definition_ref": "trace-audit-v3",
+  "contract": {
+    "event_verbs": ["enumerate", "fingerprint", "aggregate", "emit", "validate"]
   }
 }`,
     responseBody: [
@@ -203,7 +242,10 @@ const ENDPOINT_SPECS: EndpointSpec[] = [
       },
       { name: "workspace_id", type: "uuid", description: "Echo of path workspace_id." },
       { name: "block_id", type: "uuid | null", description: "Echo of request block_id." },
-      { name: "definition", type: "string", description: "Echo of request definition." },
+      { name: "definition", type: "string", description: "Echo of request definition (semantic)." },
+      { name: "definition_ref", type: "string", description: "Echo of opaque definition_ref." },
+      { name: "evaluation_mode", type: "string", description: "semantic | opaque" },
+      { name: "privacy", type: "object", description: "Present for opaque responses." },
       { name: "workspace_summary", type: "object", description: "id, title, root_topic." },
       { name: "context_counts", type: "object", description: "blocks, tap_sessions, proof_of_work_artifacts, linked_sessions, workspace_files." },
       { name: "file_ids", type: "string[]", description: "xAI file IDs used for generation (workspace JSON + plan files)." },
@@ -261,10 +303,11 @@ const ENDPOINT_SPECS: EndpointSpec[] = [
   "file_ids": ["file_814439bd-4894-4e11-852d-314e9f777a7f"]
 }`,
     notes: [
+      "Semantic: definition required. Opaque: definition_ref + contract.event_verbs required.",
       "Use before POST .../proof-of-work when you want a concrete JSON contract for what your agent should serialize.",
       "Builds the same workspace context bundle as performance (JSON summary + up to 19 xAI artifact refs).",
       "404 block_not_found if block_id is not in this workspace.",
-      "Grok-generated; may take up to ~120s on large workspaces.",
+      "Grok-generated (semantic); opaque specs are structural and deterministic.",
     ],
   },
   {
@@ -407,6 +450,7 @@ const ENDPOINT_SPECS: EndpointSpec[] = [
 }`,
     notes: [
       "MIME by type: tool → application/json, text/plain, text/markdown; screen → image/png, image/jpeg, image/webp; video → video/mp4, video/webm, video/quicktime; eeg → application/json, text/plain.",
+      "Opaque: metadata allowlist (trace_token, goal_ref, anon, event_count, schema_version, protocol_id, phase_id, allow_plaintext). Tool payloads plaintext-linted unless allow_plaintext=true.",
       "404 block_not_found if block_id is not in this workspace.",
     ],
   },
@@ -437,6 +481,10 @@ const ENDPOINT_SPECS: EndpointSpec[] = [
 }`,
     responseBody: [
       { name: "mode", type: "report | chat", description: "Which response shape is populated." },
+      { name: "evaluation_mode", type: "string", description: "semantic | opaque" },
+      { name: "privacy", type: "object", description: "Opaque workspaces: semantic_inference, plaintext_lint, stored_prompt." },
+      { name: "protocol_report", type: "object", description: "Opaque report mode: protocol_compliance_score, phase_coverage, trace_integrity, structural_gaps." },
+      { name: "conversion_goal_source", type: "string", description: "workspace | inferred | opaque_ref" },
       { name: "report", type: "object | null", description: "Present when mode=report." },
       { name: "report.overall_score", type: "integer", description: "0–100 readiness score synthesized from proof of work." },
       {
@@ -958,6 +1006,35 @@ Content-Type: application/json`}</code>
               (429).
             </p>
           </div>
+        </section>
+
+        <section className={`${sectionClass} mb-6`}>
+          <h2 className="text-lg font-medium text-white">Evaluation modes</h2>
+          <p className="mt-2 text-sm text-neutral-400">
+            Workspaces use <code className="text-neutral-300">evaluation_mode</code> to choose between full semantic
+            verification and privacy-preserving opaque protocol verification.
+          </p>
+          <FieldTable
+            title="Modes"
+            fields={[
+              {
+                name: "semantic",
+                type: "default",
+                description:
+                  "Create with initial_prompt. Schema uses definition. Performance returns semantic gap_analysis.",
+              },
+              {
+                name: "opaque",
+                type: "privacy mode",
+                description:
+                  "Create with protocol (protocol_id, goal_ref). Schema uses definition_ref + contract.event_verbs. Performance returns protocol_report; partner refs are stored but not semantically inferred.",
+              },
+            ]}
+          />
+          <p className="mt-4 text-sm text-neutral-500">
+            Canonical opaque protocol <code className="text-neutral-400">agent-trace-v3</code>: enumerate → fingerprint →
+            aggregate → emit → validate. Upload metadata is allowlisted; tool payloads are plaintext-linted in opaque mode.
+          </p>
         </section>
 
         <section className={`${sectionClass} mb-6`}>

@@ -6,11 +6,20 @@ Base path: `/api/v2/agent`
 
 Authenticate with `Authorization: Bearer <api_key>`.
 
+## Evaluation modes
+
+| Mode | Create | Schema | Performance |
+| :--- | :--- | :--- | :--- |
+| `semantic` (default) | `initial_prompt` | `definition` | Semantic gap analysis |
+| `opaque` | `evaluation_mode: "opaque"` + `protocol` | `definition_ref` + `contract.event_verbs` | `protocol_report` + structural scoring |
+
+Opaque mode stores partner references (`goal_ref`, `external_refs`) without semantic inference. Upload metadata is allowlisted; tool payloads are plaintext-linted.
+
 ## Endpoints
 
 | Method | Path | Scope | Purpose |
 | :--- | :--- | :--- | :--- |
-| `POST` | `/workspaces` | `workspaces:write` | Create a Verification Workspace from an initial prompt and optional files. |
+| `POST` | `/workspaces` | `workspaces:write` | Create a workspace (semantic `initial_prompt` or opaque `protocol`). |
 | `GET` | `/workspaces/{workspace_id}/blocks` | `workspaces:read` | List available blocks in a workspace. |
 | `POST` | `/workspaces/{workspace_id}/proof-of-work` | `workspaces:write` | Upload tool usage, screenshots, video, or EEG linked to workspace/block. |
 | `POST` | `/workspaces/{workspace_id}/performance` | `workspaces:read` | Structured gap report or free-form performance Q&A. |
@@ -58,6 +67,8 @@ Chat mode:
 
 `POST /api/v2/agent/workspaces`
 
+**Semantic:**
+
 ```json
 {
   "initial_prompt": "Prepare me to explain vector databases in a technical interview.",
@@ -71,7 +82,20 @@ Chat mode:
 }
 ```
 
-Files are optional. Supported types are PDF, plain text, Markdown, JPEG, PNG, and WebP. A workspace can start with up to 5 files, each up to 10 MB.
+**Opaque:**
+
+```json
+{
+  "evaluation_mode": "opaque",
+  "protocol": {
+    "protocol_id": "agent-trace-v3",
+    "goal_ref": "goal_ref:partner-token-abc"
+  },
+  "external_refs": { "partner_run_id": "opaque-ref-001" }
+}
+```
+
+Files are optional (max 5, 10 MB each). Response includes `evaluation_mode` and `privacy`.
 
 ## TAP Links
 

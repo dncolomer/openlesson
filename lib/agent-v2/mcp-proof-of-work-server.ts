@@ -100,6 +100,15 @@ Progress signals: proof_of_work_artifact counts, analyze_performance → overall
 ## Predictive interruptions (TIM)
 Every tool result includes top-level \`interruption\` (object or null). When non-null, schedule intervention after delay_ms unless a later Proof-of-Work API call supersedes it. Read interruption_contract from generate_proof_of_work_schema. Resource: openlesson://predictive-interruptions
 
+## Evaluation modes
+- **semantic** (default): \`create_workspace\` with \`initial_prompt\`. Grok decomposes the workspace; performance reports use semantic gap analysis.
+- **opaque**: \`create_workspace\` with \`evaluation_mode: "opaque"\` and \`protocol\` (\`protocol_id\`, \`goal_ref\`, optional \`phases\` / \`goal_tokens\`). Privacy-preserving structural verification — prompts are not stored, semantic inference is disabled, uploads are plaintext-linted.
+  - \`generate_proof_of_work_schema\`: opaque workspaces use \`definition_ref\` + \`contract.event_verbs\` (not \`definition\`).
+  - \`upload_proof_of_work\`: metadata allowlist only; tool payloads reject file paths unless \`metadata.allow_plaintext=true\`.
+  - \`analyze_performance\` report mode: adds \`evaluation_mode\`, \`privacy\`, and \`protocol_report\` (structural compliance).
+
+Canonical protocol \`agent-trace-v3\` phases: enumerate → fingerprint → aggregate → emit → validate.
+
 ## Start here
 1. get_learning_progress(workspace_id) — orientation + recommended_next_actions (REST equivalents included)
 2. generate_proof_of_work_schema — returns continuous_evaluation (REST) AND continuous_evaluation_mcp (tools); read both
@@ -208,19 +217,38 @@ export const MCP_EVIDENCE_TOOLS = [
   {
     name: "generate_proof_of_work_schema",
     description:
-      "Generate proof-of-work spec with tool_submissions, performance_report_contract, continuous_evaluation (REST paths), continuous_evaluation_mcp (tool names), openlesson_scope, and recommended_next_actions. Call before first upload and after every 5-10 artifacts. REST: POST .../proof-of-work-schema.",
+      "Generate proof-of-work spec with tool_submissions, performance_report_contract, continuous_evaluation (REST paths), continuous_evaluation_mcp (tool names), openlesson_scope, and recommended_next_actions. Semantic workspaces: pass definition. Opaque workspaces: pass evaluation_mode opaque with definition_ref + contract.event_verbs. Call before first upload and after every 5-10 artifacts. REST: POST .../proof-of-work-schema.",
     inputSchema: {
       type: "object",
       properties: {
         workspace_id: { type: "string" },
-        definition: { type: "string", description: "What to evaluate / capture in proof of work." },
+        evaluation_mode: {
+          type: "string",
+          enum: ["semantic", "opaque"],
+          description: "Optional override; defaults from workspace evaluation_mode.",
+        },
+        definition: { type: "string", description: "Semantic mode: what to evaluate / capture in proof of work." },
+        definition_ref: {
+          type: "string",
+          description: "Opaque mode: opaque reference token (not semantically interpreted).",
+        },
+        contract: {
+          type: "object",
+          description: "Opaque mode: event_verbs required; optional goal_tokens, required_event_fields, token_fields.",
+          properties: {
+            event_verbs: { type: "array", items: { type: "string" } },
+            goal_tokens: { type: "array", items: { type: "string" } },
+            required_event_fields: { type: "array", items: { type: "string" } },
+            token_fields: { type: "array", items: { type: "string" } },
+          },
+        },
         block_id: { type: "string", description: "Optional block scope." },
         integration_hints: {
           type: "object",
           description: "Optional tool_name, partner_agent, event_verbs, goals.",
         },
       },
-      required: ["workspace_id", "definition"],
+      required: ["workspace_id"],
       additionalProperties: false,
     },
   },
@@ -247,7 +275,7 @@ export const MCP_EVIDENCE_TOOLS = [
   {
     name: "upload_proof_of_work",
     description:
-      "Stream proof-of-work after meaningful product actions — core learning signal. Include block_id and tool_name per generate_proof_of_work_schema contract. REST: POST .../proof-of-work.",
+      "Stream proof-of-work after meaningful product actions — core learning signal. Include block_id and tool_name per generate_proof_of_work_schema contract. Opaque workspaces: metadata allowlist (trace_token, goal_ref, anon, event_count, schema_version, protocol_id, phase_id, allow_plaintext); tool payloads are plaintext-linted unless allow_plaintext=true. REST: POST .../proof-of-work.",
     inputSchema: {
       type: "object",
       properties: {
@@ -270,7 +298,7 @@ export const MCP_EVIDENCE_TOOLS = [
   {
     name: "analyze_performance",
     description:
-      "Read learning progress: overall_score, conversion_score, marker_scores, gap_analysis. Omit prompt for scorecard; include prompt (+ optional style_prompt) for chat. Returns recommended_next_actions. REST: POST .../performance.",
+      "Read learning progress: overall_score, conversion_score, marker_scores, gap_analysis. Omit prompt for scorecard; include prompt (+ optional style_prompt) for chat. Opaque workspaces also return evaluation_mode, privacy, and protocol_report (structural compliance). Returns recommended_next_actions. REST: POST .../performance.",
     inputSchema: {
       type: "object",
       properties: {

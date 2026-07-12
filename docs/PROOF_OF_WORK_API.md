@@ -12,11 +12,24 @@ Authorization: Bearer <api_key>
 
 Valid scopes are `workspaces:read`, `workspaces:write`, `tap:read`, `tap:write`, `org:read`, `org:write`, and `*`.
 
+## Evaluation Modes
+
+Workspaces support two evaluation modes (stored on `workspaces.evaluation_mode`):
+
+| Mode | Create with | Schema | Performance |
+| :--- | :--- | :--- | :--- |
+| `semantic` (default) | `initial_prompt` (+ optional `files`) | `definition` rubric text | Semantic gap analysis (`overall_score`, `marker_scores`, `gap_analysis`) |
+| `opaque` | `evaluation_mode: "opaque"` + `protocol` | `definition_ref` + `contract.event_verbs` | Structural protocol report (`protocol_report`, `privacy`; no semantic inference) |
+
+**Opaque mode** is for privacy-preserving verification: partner-owned references (`goal_ref`, `definition_ref`, `external_refs`) are stored but never semantically interpreted. Upload metadata is allowlisted; tool payloads are plaintext-linted (file paths rejected unless `metadata.allow_plaintext=true`).
+
+Canonical protocol `agent-trace-v3` phases: `enumerate` → `fingerprint` → `aggregate` → `emit` → `validate`.
+
 ## Endpoints
 
 | Method | Path | Scope | Description |
 | :--- | :--- | :--- | :--- |
-| `POST` | `/workspaces` | `workspaces:write` | Create a Verification Workspace with an initial prompt and optional files. |
+| `POST` | `/workspaces` | `workspaces:write` | Create a Verification Workspace (semantic `initial_prompt` or opaque `protocol`). |
 | `GET` | `/workspaces/{workspace_id}/blocks` | `workspaces:read` | List available blocks in the workspace. |
 | `POST` | `/workspaces/{workspace_id}/proof-of-work-schema` | `workspaces:read` | Grok-generated JSON Schema for ideal tool proof of work input given workspace context + eval definition. |
 | `POST` | `/workspaces/{workspace_id}/integration-skill` | `workspaces:read` | Grok-generated workspace-specific `skill.md` integration guide for a partner agent. |
@@ -68,6 +81,8 @@ MCP resource: `openlesson://predictive-interruptions`
 
 Use before uploading proof of work when you want a concrete JSON contract for what your agent should serialize.
 
+**Semantic workspace:**
+
 ```json
 {
   "definition": "Evaluate whether the learner can articulate a crisp ICP with segment rationale",
@@ -81,7 +96,23 @@ Use before uploading proof of work when you want a concrete JSON contract for wh
 }
 ```
 
-Response includes `schema` (JSON Schema), `schema_name`, `rationale`, `example_payload`, `recommended_mime_type`, `recommended_proof_of_work_type`, `collection_guidance`, and `file_ids`.
+**Opaque workspace:**
+
+```json
+{
+  "evaluation_mode": "opaque",
+  "definition_ref": "trace-audit-v3",
+  "contract": {
+    "event_verbs": ["enumerate", "fingerprint", "aggregate", "emit", "validate"],
+    "goal_tokens": ["goal_ref:abc123"],
+    "required_event_fields": ["verb", "timestamp_ms"],
+    "token_fields": ["path", "fingerprint", "artifact_ref", "aggregate_fp"]
+  },
+  "block_id": "optional-block-uuid"
+}
+```
+
+Response includes `schema` (JSON Schema), `schema_name`, `rationale`, `example_payload`, `recommended_mime_type`, `recommended_proof_of_work_type`, `collection_guidance`, and `file_ids`. Opaque responses also include `evaluation_mode`, `definition_ref`, and `privacy`.
 
 ## Integration Skill
 
@@ -116,6 +147,8 @@ Response includes `skill_md`, `skill_name`, `suggested_share_path`, and `workspa
 
 Types: `tool`, `screen` (`screenshot` alias), `video`, `eeg`. Max 10 MB per file.
 
+**Opaque workspaces:** `metadata` is filtered to an allowlist (`trace_token`, `goal_ref`, `anon`, `event_count`, `schema_version`, `protocol_id`, `phase_id`, `allow_plaintext`). Tool uploads are plaintext-linted; responses may include `evaluation_mode`, `privacy`, and `plaintext_lint`.
+
 ## Performance Analysis
 
 **Structured report** (no `prompt`):
@@ -140,9 +173,13 @@ Report responses always include:
 - `marker_scores[]` (spider/radar competency axes: `id`, `label`, `score`, `rationale`)
 - `gap_analysis.gaps[]` with `severity` and `suggested_repair`
 
+**Opaque workspaces** also return `evaluation_mode`, `privacy`, `conversion_goal_source: "opaque_ref"`, and `protocol_report` (structural compliance: `protocol_compliance_score`, `phase_coverage`, `trace_integrity`, `structural_gaps`).
+
 Chat responses return markdown in `response`.
 
 ## Create Workspace
+
+**Semantic (default):**
 
 ```json
 {
@@ -157,7 +194,26 @@ Chat responses return markdown in `response`.
 }
 ```
 
-Files are optional. Supported file types are PDF, text, Markdown, JPEG, PNG, and WebP. Limits are 5 files per workspace and 10 MB per file.
+**Opaque:**
+
+```json
+{
+  "evaluation_mode": "opaque",
+  "protocol": {
+    "protocol_id": "agent-trace-v3",
+    "goal_ref": "goal_ref:partner-token-abc",
+    "goal_tokens": ["goal_ref:partner-token-abc"]
+  },
+  "external_refs": {
+    "partner_run_id": "opaque-partner-ref-001"
+  }
+}
+```
+
+- Semantic: `initial_prompt` required; Grok generates title, blocks, and conversion goal.
+- Opaque: `protocol.protocol_id` and `protocol.goal_ref` required; blocks are generated from protocol phases (canonical `agent-trace-v3` if phases omitted). `initial_prompt` is not stored.
+- `files` optional in both modes (max 5; PDF, text, Markdown, JPEG, PNG, WebP; 10 MB each).
+- Create response includes `evaluation_mode` and `privacy` metadata.
 
 ## Request TAP Link
 

@@ -11,7 +11,7 @@ Use this skill when an agent needs to create Verification Workspaces, issue priv
 
 The Proof-of-Work API supports **only** this workflow:
 
-1. Create a Verification Workspace from an `initial_prompt` and optional files.
+1. Create a Verification Workspace — **semantic** mode from `initial_prompt`, or **opaque** mode from `evaluation_mode: "opaque"` + `protocol` (optional `files` in both).
 2. List blocks in that workspace.
 3. *(Optional)* Generate an ideal proof-of-work input JSON schema (`POST .../proof-of-work-schema`) or a custom integration `skill.md` (`POST .../integration-skill`) from workspace context.
 4. Upload performance proof of work (tool usage, screenshots, video, EEG) to xAI storage, linked to the workspace and/or a block.
@@ -23,6 +23,21 @@ The Proof-of-Work API supports **only** this workflow:
 **Out of scope** — do not describe or call removed features: blockchain tracking, proof anchoring, live tutoring session control, heartbeats, or plan adaptation. Legacy web-session upload routes (`/api/session-files/*`) are separate from this API; agents should use `POST .../proof-of-work` for workspace-linked artifacts.
 
 **Teams tier required.** All `/api/v2/agent/*` routes require an active `pro_teams` subscription (platform admins bypass). Individual-tier keys are rejected with `403 teams_required`.
+
+---
+
+## Evaluation modes
+
+| Mode | When to use | Create | Schema | Performance |
+|------|-------------|--------|--------|-------------|
+| `semantic` | Default — full learning verification | `initial_prompt` | `definition` | `overall_score`, semantic `gap_analysis` |
+| `opaque` | Privacy-preserving structural verification | `protocol` (`protocol_id`, `goal_ref`) | `definition_ref` + `contract.event_verbs` | `protocol_report`, `privacy`; no semantic inference |
+
+**Opaque guardrails:**
+- `goal_ref`, `definition_ref`, and `external_refs` are stored but **never interpreted** into domain meaning.
+- Upload `metadata` allowlist: `trace_token`, `goal_ref`, `anon`, `event_count`, `schema_version`, `protocol_id`, `phase_id`, `allow_plaintext`.
+- Tool payloads are plaintext-linted (file paths rejected unless `metadata.allow_plaintext=true`).
+- Canonical protocol `agent-trace-v3`: phases `enumerate`, `fingerprint`, `aggregate`, `emit`, `validate`.
 
 ---
 
@@ -121,6 +136,8 @@ Content-Type: application/json
 
 **Tools (full REST parity):** `list_workspaces`, `get_workspace`, `get_learning_progress`, `create_workspace`, `list_blocks`, `generate_proof_of_work_schema`, `generate_integration_skill`, `upload_proof_of_work`, `analyze_performance`, `list_tap_links`, `create_tap_link`
 
+Opaque mode is supported on `create_workspace` (`evaluation_mode`, `protocol`, `external_refs`), `generate_proof_of_work_schema` (`definition_ref`, `contract`), `upload_proof_of_work` (metadata allowlist + plaintext lint), and `analyze_performance` (`protocol_report`).
+
 **Partner agents:** call `get_learning_progress` to orient, then `upload_proof_of_work` and `analyze_performance` per your agent policy. PumaDoc policy snippets: `/customer-agent-openlesson-policy.md`, `/pumaclaw-mentor-openlesson-policy.md`.
 
 Every MCP tool result includes `interruption` (TIM) with the same semantics as REST.
@@ -137,7 +154,7 @@ MCP resources: `openlesson://integration-scope`, `openlesson://proof-of-work-loo
 
 Create a Verification Workspace. Guest keys with `workspaces:write` may call this; the workspace is owned by the organization and tagged with `guest_user_id`.
 
-**Request:**
+**Semantic request:**
 
 ```json
 {
@@ -152,30 +169,38 @@ Create a Verification Workspace. Guest keys with `workspaces:write` may call thi
 }
 ```
 
-- `initial_prompt` (required, string)
+**Opaque request:**
+
+```json
+{
+  "evaluation_mode": "opaque",
+  "protocol": {
+    "protocol_id": "agent-trace-v3",
+    "goal_ref": "goal_ref:partner-token-abc",
+    "goal_tokens": ["goal_ref:partner-token-abc"]
+  },
+  "external_refs": { "partner_run_id": "opaque-ref-001" }
+}
+```
+
+- Semantic: `initial_prompt` required
+- Opaque: `protocol.protocol_id` + `protocol.goal_ref` required; `initial_prompt` not stored
 - `files` (optional, max 5; PDF, text, markdown, JPEG, PNG, WebP; 10 MB each)
 
 **Response `201`:**
 
 ```json
 {
-  "workspace": {
-    "id": "uuid",
-    "title": "Generated title",
-    "root_topic": "...",
-    "status": "active",
-    "created_at": "..."
-  },
-  "blocks": [
-    {
-      "id": "uuid",
-      "title": "Block title",
-      "description": "...",
-      "is_start": true,
-      "status": "available"
-    }
-  ],
-  "files": []
+  "workspace": { "id": "uuid", "title": "...", "status": "active" },
+  "blocks": [{ "id": "uuid", "title": "...", "is_start": true, "status": "available" }],
+  "files": [],
+  "evaluation_mode": "semantic",
+  "privacy": {
+    "evaluation_mode": "semantic",
+    "semantic_inference": "enabled",
+    "plaintext_lint": "off",
+    "stored_prompt": true
+  }
 }
 ```
 
@@ -191,11 +216,9 @@ List assessable blocks. Organization members and guests may read **organization-
 
 ### `POST /api/v2/agent/workspaces/{workspace_id}/proof-of-work-schema` — `workspaces:read`
 
-Given workspace context (blocks, plan files on xAI, existing proof-of-work metadata) plus an evaluation definition from the caller, Grok returns a JSON Schema describing the **ideal tool proof-of-work payload** for optimal gap analysis.
+Given workspace context plus an evaluation definition, returns a JSON Schema for the ideal tool proof-of-work payload. Use **before** first upload.
 
-Use this **before** uploading proof of work when you want a concrete contract for what to serialize from your agent.
-
-**Request:**
+**Semantic request:**
 
 ```json
 {
@@ -207,6 +230,20 @@ Use this **before** uploading proof of work when you want a concrete contract fo
     "event_verbs": ["run_simulation", "edit_field", "publish_artifact"],
     "goals": ["simulation_completed", "artifact_published"]
   }
+}
+```
+
+**Opaque request** (opaque workspace or `evaluation_mode: "opaque"`):
+
+```json
+{
+  "evaluation_mode": "opaque",
+  "definition_ref": "trace-audit-v3",
+  "contract": {
+    "event_verbs": ["enumerate", "fingerprint", "aggregate", "emit", "validate"],
+    "goal_tokens": ["goal_ref:partner-token-abc"]
+  },
+  "block_id": "optional-block-uuid"
 }
 ```
 
@@ -327,6 +364,8 @@ Upload open-format performance proof of work to xAI Files and link it to a works
 
 Max **10 MB** per upload. Guest keys attach proof of work to their guest identity; org members attach to the workspace org.
 
+**Opaque workspaces:** `metadata` is filtered to the allowlist above. Tool payloads are plaintext-linted (reject file paths unless `metadata.allow_plaintext=true`). Response may include `evaluation_mode`, `privacy`, and `plaintext_lint`.
+
 **Response `201`:**
 
 ```json
@@ -334,16 +373,14 @@ Max **10 MB** per upload. Guest keys attach proof of work to their guest identit
   "proof_of_work": {
     "id": "uuid",
     "workspace_id": "uuid",
-    "block_id": "uuid-or-null",
-    "session_id": "uuid-or-null",
     "type": "tool",
-    "file_name": "canvas-events.json",
-    "mime_type": "application/json",
     "xai_file_id": "file_...",
-    "timestamp_ms": 1710000000000,
     "metadata": {},
     "created_at": "..."
-  }
+  },
+  "evaluation_mode": "opaque",
+  "privacy": { "semantic_inference": "disabled", "plaintext_lint": "enforced" },
+  "plaintext_lint": { "passed": true, "violations": [] }
 }
 ```
 
@@ -380,7 +417,9 @@ Analyze learning signals across workspace proof of work (including TAP thought t
 
 **Response `200` (report):**
 
-Every report includes `overall_score` (learning verification), `conversion_score` (estimated goal conversion %), `conversion_goal`, spider/radar `marker_scores`, and `gap_analysis.gaps`.
+Every report includes `overall_score`, `conversion_score`, `conversion_goal`, spider/radar `marker_scores`, and `gap_analysis.gaps`.
+
+**Opaque workspaces** also return `evaluation_mode`, `privacy`, `conversion_goal_source: "opaque_ref"`, and `protocol_report` (`protocol_compliance_score`, `phase_coverage`, `trace_integrity`, `structural_gaps`).
 
 ```json
 {
@@ -571,9 +610,9 @@ Facilitation style: Socratic — one concise question at a time, follow-ups from
 ## Quick integration checklist
 
 1. Teams user creates org (`POST /api/organization`) and API key (`sk_` with default scopes).
-2. `POST /workspaces` with task-specific `initial_prompt` (+ optional files).
-3. `GET .../blocks` → map blocks to your workflow steps.
-4. *(Optional)* `POST .../proof-of-work-schema` with your eval definition → get ideal tool JSON schema; `POST .../integration-skill` → get a custom `skill.md` for your agent.
+2. `POST /workspaces` — semantic: `initial_prompt`; opaque: `evaluation_mode: "opaque"` + `protocol` (+ optional `files`).
+3. `GET .../blocks` → map blocks to your workflow steps (opaque: protocol phases).
+4. *(Optional)* `POST .../proof-of-work-schema` — semantic: `definition`; opaque: `definition_ref` + `contract.event_verbs`; or `POST .../integration-skill` for a custom `skill.md`.
 5. `POST .../proof-of-work` as learners produce tool usage, screenshots, video, or EEG (optional `block_id`).
 6. `POST .../performance` for gap reports, or include `prompt` for follow-up questions.
 7. `POST .../tap-links` → send `private_url` to the learner.

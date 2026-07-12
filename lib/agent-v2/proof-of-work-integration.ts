@@ -11,6 +11,14 @@ import {
 } from "./proof-of-work-schema";
 import { buildWorkspacePerformanceContext } from "./performance-context";
 import {
+  buildOpaqueProofOfWorkSpec,
+  buildPrivacyMetadata,
+  isOpaqueWorkspace,
+  parseOpaqueSchemaRequest,
+  parseWorkspaceEvaluationMeta,
+  type OpaqueSchemaRequest,
+} from "./opaque-evaluation";
+import {
   buildContinuousEvaluationMcpPolicy,
   buildIntegrationSurfaces,
   buildOpenLessonScopeForWorkspace,
@@ -286,6 +294,60 @@ export interface GenerateEvidenceSpecOptions {
   blockId?: string | null;
 }
 
+export interface GenerateOpaqueEvidenceSpecOptions {
+  supabase: SupabaseClient;
+  auth: AuthContext;
+  workspaceId: string;
+  request: OpaqueSchemaRequest;
+  baseUrl: string;
+  blockId?: string | null;
+}
+
+export async function generateOpaqueWorkspaceProofOfWorkSpec(
+  options: GenerateOpaqueEvidenceSpecOptions
+): Promise<{ spec: ProofOfWorkEvalSchemaResult; contextCounts: Record<string, number> | null; fileIds: string[]; privacy: ReturnType<typeof buildPrivacyMetadata> }> {
+  const { supabase, auth, workspaceId, request, baseUrl, blockId } = options;
+
+  const { data: workspace } = await supabase
+    .from("workspaces")
+    .select("id, title, evaluation_mode, protocol_config, external_refs, conversion_goal")
+    .eq("id", workspaceId)
+    .single();
+
+  if (!workspace) throw new Error("Workspace not found");
+
+  const meta = parseWorkspaceEvaluationMeta(workspace);
+  if (!isOpaqueWorkspace(meta) || !meta.protocol_config) {
+    throw new Error("Workspace is not in opaque evaluation mode");
+  }
+
+  const context = await buildWorkspacePerformanceContext({
+    supabase,
+    auth,
+    workspaceId,
+    blockId,
+  });
+
+  const spec = enrichProofOfWorkSpecResult(
+    buildOpaqueProofOfWorkSpec(request, meta.protocol_config, workspaceId),
+    workspaceId,
+    baseUrl,
+    blockId,
+    context.payload.counts,
+    {
+      title: workspace.title || meta.protocol_config.protocol_id,
+      conversion_goal: workspace.conversion_goal,
+    }
+  );
+
+  return {
+    spec,
+    contextCounts: context.payload.counts,
+    fileIds: context.fileIds,
+    privacy: buildPrivacyMetadata(meta),
+  };
+}
+
 export async function generateWorkspaceProofOfWorkSpec(
   options: GenerateEvidenceSpecOptions
 ): Promise<{ spec: ProofOfWorkEvalSchemaResult; contextCounts: Record<string, number> | null; fileIds: string[] }> {
@@ -352,6 +414,8 @@ export function resolveEvalDefinition(
     ""
   );
 }
+
+export { parseOpaqueSchemaRequest };
 
 export function buildProofOfWorkSchemaRequestFromIntegration(
   evalDefinition: string,

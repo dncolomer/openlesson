@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   fallbackConversionGoal,
@@ -6,7 +7,24 @@ import {
   WORKSPACE_GENERATION_CONVERSION_GOAL_RULE,
 } from "./conversion-goal";
 import { parseProofOfWorkSchemaRequest } from "./proof-of-work-schema";
-import { generateWorkspaceProofOfWorkSpec } from "./proof-of-work-integration";
+import {
+  generateOpaqueWorkspaceProofOfWorkSpec,
+  generateWorkspaceProofOfWorkSpec,
+  parseOpaqueSchemaRequest,
+} from "./proof-of-work-integration";
+import { createAgentWorkspace } from "./create-agent-workspace";
+import {
+  buildOpaquePerformanceChatInstructions,
+  buildOpaquePerformanceReportInstructions,
+  buildPrivacyMetadata,
+  extractGoalRefFromConversionGoal,
+  finalizeOpaquePerformanceReport,
+  isOpaqueWorkspace,
+  lintOpaquePayload,
+  parseWorkspaceEvaluationMeta,
+  redactOpaqueFileName,
+  sanitizeOpaqueMetadata,
+} from "./opaque-evaluation";
 import {
   buildProofOfWorkSchemaRequestFromIntegration,
   resolveEvalDefinition,
@@ -140,11 +158,25 @@ export const MCP_EVIDENCE_TOOLS = [
   },
   {
     name: "create_workspace",
-    description: "Create a Verification Workspace from initial_prompt and optional seed files.",
+    description:
+      "Create a Verification Workspace from initial_prompt (semantic) or protocol (opaque). Optional seed files.",
     inputSchema: {
       type: "object",
       properties: {
-        initial_prompt: { type: "string", description: "What the learner should be verified on." },
+        evaluation_mode: { type: "string", enum: ["semantic", "opaque"] },
+        initial_prompt: { type: "string", description: "Required for semantic mode." },
+        protocol: {
+          type: "object",
+          description: "Required for opaque mode: protocol_id, goal_ref, optional phases/goal_tokens.",
+          properties: {
+            protocol_id: { type: "string" },
+            goal_ref: { type: "string" },
+            phases: { type: "array" },
+            goal_tokens: { type: "array" },
+            constraints: { type: "array" },
+          },
+        },
+        external_refs: { type: "object", description: "Partner-owned opaque refs (stored, not inferred)." },
         files: {
           type: "array",
           description: "Optional seed files (max 5): name, mime_type, data (base64).",
@@ -159,7 +191,6 @@ export const MCP_EVIDENCE_TOOLS = [
           },
         },
       },
-      required: ["initial_prompt"],
       additionalProperties: false,
     },
   },
@@ -404,6 +435,9 @@ type WorkspaceRow = {
   description: string | null;
   notes: string | null;
   conversion_goal: string | null;
+  evaluation_mode?: string | null;
+  protocol_config?: unknown;
+  external_refs?: unknown;
   status: string | null;
   created_at?: string;
   updated_at?: string;
@@ -417,7 +451,7 @@ async function loadWorkspace(
   const { data: workspace, error } = await supabase
     .from("workspaces")
     .select(
-      "id, user_id, organization_id, guest_user_id, title, root_topic, description, notes, conversion_goal, status, created_at, updated_at"
+      "id, user_id, organization_id, guest_user_id, title, root_topic, description, notes, conversion_goal, evaluation_mode, protocol_config, external_refs, status, created_at, updated_at"
     )
     .eq("id", workspaceId)
     .single();
@@ -621,145 +655,17 @@ export async function callMcpProofOfWorkTool(
       throw new Error("Guest workspace creation requires organization context.");
     }
 
-    const initialPrompt = stringArg(args, "initial_prompt");
-    if (!initialPrompt) throw new Error("initial_prompt is required.");
-
-    const files = parseInitialFiles(args.files);
-    if (files.length > CREATE_WORKSPACE_MAX_FILES) {
-      throw new Error(`A workspace can start with at most ${CREATE_WORKSPACE_MAX_FILES} files.`);
-    }
-    for (const file of files) {
-      if (!CREATE_WORKSPACE_ALLOWED_MIME.has(file.mime_type)) {
-        throw new Error(`Unsupported file type: ${file.mime_type}`);
-      }
-      if (Buffer.from(file.data, "base64").length > CREATE_WORKSPACE_MAX_FILE_SIZE) {
-        throw new Error(`File exceeds 10 MB limit: ${file.name}`);
-      }
-    }
-
-    const fileContext = files.length
-      ? `\nInitial files provided:\n${files.map((file) => `- ${file.name} (${file.mime_type})`).join("\n")}`
-      : "";
-
-    const generated = await callXaiJSON<GeneratedWorkspace>(
-      [
-        userMessage(
-          `Create a performance learning workspace from this prompt. Break it into assessable blocks for learning verification and proof-of-work-based gap analysis.\n\nPrompt:\n${initialPrompt}${fileContext}\n\nReturn ONLY JSON:\n{\n  "title": "concise workspace title",\n  "conversion_goal": "concise success/conversion outcome for this workspace",\n  "blocks": [\n    { "id": "a", "title": "Block title", "description": "What the learner should demonstrate", "is_start": true, "next": ["b"] }\n  ]\n}\n\nRules:\n- Create 3 to 8 blocks.\n- Blocks are assessable learning/performance units.\n- Use short stable ids only for linking within this response.${WORKSPACE_GENERATION_CONVERSION_GOAL_RULE}`
-        ),
-      ],
-      { model: DEFAULT_MODEL, maxTokens: 1800, temperature: 0.3 }
-    );
-
-    if (!generated.success || !generated.data?.blocks?.length) {
-      throw new Error("Failed to generate verification workspace.");
-    }
-
-    let ownerUserId = auth.user_id;
-    if (!ownerUserId && auth.organization_id) {
-      const { data: orgAdmin } = await supabase
-        .from("profiles")
-        .select("id")
-        .eq("organization_id", auth.organization_id)
-        .eq("is_org_admin", true)
-        .limit(1)
-        .maybeSingle();
-      ownerUserId = orgAdmin?.id || null;
-    }
-    if (!ownerUserId) {
-      throw new Error("No organization admin is available to own this workspace.");
-    }
-
-    const workspaceTitle = generated.data.title || "Verification Workspace";
-    const conversionGoal =
-      normalizeConversionGoal(generated.data.conversion_goal) ||
-      fallbackConversionGoal({
-        title: workspaceTitle,
-        notes: initialPrompt,
-        root_topic: initialPrompt.slice(0, 160),
-      });
-
-    const { data: workspace, error: workspaceError } = await supabase
-      .from("workspaces")
-      .insert({
-        user_id: ownerUserId,
-        organization_id: auth.organization_id,
-        guest_user_id: auth.guest_user_id,
-        title: workspaceTitle,
-        root_topic: initialPrompt.slice(0, 160),
-        status: "active",
-        source_type: "topic",
-        notes: initialPrompt,
-        conversion_goal: conversionGoal,
-        is_agent_workspace: true,
-      })
-      .select("id, title, root_topic, status, notes, conversion_goal, created_at, updated_at")
-      .single();
-
-    if (workspaceError || !workspace) {
-      throw new Error("Failed to create workspace.");
-    }
-
-    const blockIdMap = new Map<string, string>();
-    for (const block of generated.data.blocks) {
-      const { data: insertedBlock, error: blockError } = await supabase
-        .from("blocks")
-        .insert({
-          workspace_id: workspace.id,
-          title: block.title,
-          description: block.description || "",
-          is_start: block.is_start === true,
-          next_block_ids: [],
-          status: "available",
-        })
-        .select("id")
-        .single();
-
-      if (blockError || !insertedBlock) continue;
-      blockIdMap.set(block.id, insertedBlock.id);
-    }
-
-    for (const block of generated.data.blocks) {
-      const dbId = blockIdMap.get(block.id);
-      if (!dbId || !Array.isArray(block.next)) continue;
-      const nextIds = block.next.map((id) => blockIdMap.get(id)).filter((id): id is string => Boolean(id));
-      if (nextIds.length) {
-        await supabase.from("blocks").update({ next_block_ids: nextIds }).eq("id", dbId);
-      }
-    }
-
-    await persistSkillGridPositions(supabase, skillGridNodesFromRefs(generated.data.blocks, blockIdMap));
-
-    const uploadedFiles = [];
-    for (const file of files) {
-      try {
-        const xaiFile = await uploadFileToXAI(file.name, file.mime_type, file.data);
-        const { data: fileRecord, error: fileError } = await supabase
-          .from("workspace_files")
-          .insert({
-            workspace_id: workspace.id,
-            user_id: ownerUserId,
-            file_name: file.name,
-            file_size: Buffer.from(file.data, "base64").length,
-            mime_type: file.mime_type,
-            xai_file_id: xaiFile.file_id,
-          })
-          .select("id, file_name, file_size, mime_type, created_at")
-          .single();
-        if (!fileError && fileRecord) uploadedFiles.push(fileRecord);
-      } catch {
-        // non-fatal seed file upload
-      }
-    }
-
-    const { data: blocks } = await supabase
-      .from("blocks")
-      .select("id, title, description, is_start, next_block_ids, status, created_at")
-      .eq("workspace_id", workspace.id)
-      .order("created_at", { ascending: true });
+    const created = await createAgentWorkspace(supabase, auth, args as Record<string, unknown>);
 
     return evidenceToolResult(
-      { workspace, blocks: blocks || [], files: uploadedFiles },
-      { endpoint: "create_workspace", workspace_id: workspace.id }
+      {
+        workspace: created.workspace,
+        blocks: created.blocks,
+        files: created.files,
+        evaluation_mode: created.privacy.evaluation_mode,
+        privacy: created.privacy,
+      },
+      { endpoint: "create_workspace", workspace_id: created.workspace.id as string }
     );
   }
 
@@ -787,24 +693,75 @@ export async function callMcpProofOfWorkTool(
     const workspaceId = stringArg(args, "workspace_id");
     if (!workspaceId) throw new Error("workspace_id is required.");
 
-    const request = parseProofOfWorkSchemaRequest({
-      definition: args.definition,
-      block_id: args.block_id,
-      integration_hints: args.integration_hints,
-    });
-    if (!request) throw new Error("definition is required.");
+    const opaqueRequest = parseOpaqueSchemaRequest(args as Record<string, unknown>);
+    const semanticRequest = opaqueRequest
+      ? null
+      : parseProofOfWorkSchemaRequest({
+          definition: args.definition,
+          block_id: args.block_id,
+          integration_hints: args.integration_hints,
+        });
+    if (!opaqueRequest && !semanticRequest) {
+      throw new Error(
+        args.evaluation_mode === "opaque"
+          ? "definition_ref and contract.event_verbs are required for opaque schema generation."
+          : "definition is required."
+      );
+    }
 
     const workspace = await loadWorkspace(supabase, auth, workspaceId);
-    const blockId = request.block_id ?? null;
+    const blockId = (opaqueRequest?.block_id ?? semanticRequest?.block_id) || null;
     if (blockId) await assertBlockInWorkspace(supabase, workspaceId, blockId);
 
     const workspaceTitle = workspace.title || workspace.root_topic || "workspace";
+
+    if (opaqueRequest) {
+      const { spec, contextCounts, fileIds, privacy } = await generateOpaqueWorkspaceProofOfWorkSpec({
+        supabase,
+        auth,
+        workspaceId,
+        request: opaqueRequest,
+        baseUrl: origin,
+        blockId,
+      });
+
+      const llmInterruption = resolveProofOfWorkSchemaInterruption(
+        spec,
+        workspaceId,
+        blockId,
+        contextCounts?.proof_of_work_artifacts
+      );
+
+      return evidenceToolResult(
+        {
+          ...spec,
+          definition_ref: opaqueRequest.definition_ref,
+          evaluation_mode: "opaque",
+          privacy,
+          workspace_summary: {
+            id: workspace.id,
+            title: workspace.title,
+            root_topic: workspace.root_topic,
+          },
+          context_counts: contextCounts,
+          file_ids: fileIds,
+        },
+        {
+          endpoint: "generate_proof_of_work_schema",
+          workspace_id: workspaceId,
+          block_id: blockId,
+          proof_of_work_artifacts: contextCounts?.proof_of_work_artifacts,
+          llm_interruption: llmInterruption,
+        }
+      );
+    }
+
     const { spec, contextCounts, fileIds } = await generateWorkspaceProofOfWorkSpec({
       supabase,
       auth,
       workspaceId,
       workspaceTitle,
-      request,
+      request: semanticRequest!,
       baseUrl: origin,
       blockId,
     });
@@ -819,7 +776,8 @@ export async function callMcpProofOfWorkTool(
     return evidenceToolResult(
       {
         ...spec,
-        definition: request.definition,
+        definition: semanticRequest!.definition,
+        evaluation_mode: "semantic",
         workspace_summary: {
           id: workspace.id,
           title: workspace.title,
@@ -990,16 +948,28 @@ export async function callMcpProofOfWorkTool(
     }
     await assertCanSubmitProofOfWork(supabase, ownerUserId);
 
-    const fileName = defaultProofOfWorkFileName(
-      evidenceType,
-      typeof args.file_name === "string" ? args.file_name : undefined
-    );
-
-    const uploaded = await uploadFileToXAI(fileName, mimeType, base64);
-    const metadata =
+    const evalMeta = parseWorkspaceEvaluationMeta(workspace);
+    const opaque = isOpaqueWorkspace(evalMeta);
+    const rawMetadata =
       args.metadata && typeof args.metadata === "object" && !Array.isArray(args.metadata)
         ? (args.metadata as Record<string, unknown>)
         : {};
+    const allowPlaintext = opaque && rawMetadata.allow_plaintext === true;
+
+    if (opaque && evidenceType === "tool") {
+      const lint = lintOpaquePayload(fileBytes.toString("utf8"), { allowPlaintext });
+      if (!lint.passed) {
+        throw new Error(`Opaque mode plaintext lint failed: ${lint.violations.join(", ")}`);
+      }
+    }
+
+    const artifactId = randomUUID();
+    const fileName = opaque
+      ? redactOpaqueFileName(artifactId)
+      : defaultProofOfWorkFileName(evidenceType, typeof args.file_name === "string" ? args.file_name : undefined);
+
+    const uploaded = await uploadFileToXAI(fileName, mimeType, base64);
+    const metadata = opaque ? sanitizeOpaqueMetadata(rawMetadata, allowPlaintext) : rawMetadata;
 
     const { data: row, error } = await supabase
       .from("workspace_proof_of_work")
@@ -1045,6 +1015,9 @@ export async function callMcpProofOfWorkTool(
           block_id: row.block_id,
           type: row.proof_of_work_type,
         },
+        evaluation_mode: evalMeta.evaluation_mode,
+        privacy: opaque ? buildPrivacyMetadata(evalMeta) : undefined,
+        plaintext_lint: opaque ? { passed: true, violations: [] } : undefined,
       },
       {
         endpoint: "upload_proof_of_work",
@@ -1062,6 +1035,11 @@ export async function callMcpProofOfWorkTool(
     if (!workspaceId) throw new Error("workspace_id is required.");
 
     const workspace = await loadWorkspace(supabase, auth, workspaceId);
+    const evalMeta = parseWorkspaceEvaluationMeta(workspace);
+    const opaque = isOpaqueWorkspace(evalMeta);
+    const privacy = buildPrivacyMetadata(evalMeta);
+    const goalRef =
+      extractGoalRefFromConversionGoal(workspace.conversion_goal) || evalMeta.protocol_config?.goal_ref || null;
     const prompt = typeof args.prompt === "string" ? args.prompt.trim() : "";
     const stylePrompt = typeof args.style_prompt === "string" ? args.style_prompt.trim() : "";
     const blockId = typeof args.block_id === "string" ? args.block_id : null;
@@ -1139,7 +1117,9 @@ export async function callMcpProofOfWorkTool(
 
       const chatResult = await callXaiResponses({
         model: "grok-4.3",
-        instructions: buildPerformanceChatInstructions(blockId, stylePrompt),
+        instructions: opaque
+          ? buildOpaquePerformanceChatInstructions(blockId)
+          : buildPerformanceChatInstructions(blockId, stylePrompt),
         input: inputMessages,
         temperature: 0.6,
         maxOutputTokens: 4096,
@@ -1154,6 +1134,8 @@ export async function callMcpProofOfWorkTool(
         withProgressGuidance(
           {
             mode: "chat",
+            evaluation_mode: evalMeta.evaluation_mode,
+            privacy,
             response: chatResult.text,
             proof_of_work_summary: contextCounts,
             file_ids: activeFileIds,
@@ -1180,10 +1162,14 @@ export async function callMcpProofOfWorkTool(
       context.payload.workspace.conversion_goal ?? workspace.conversion_goal;
 
     const reportResult = await callXaiResponsesWithFiles<PerformanceReport>(
-      `Generate a learning and gap analysis report for workspace "${workspace.title || workspace.root_topic}".`,
+      opaque
+        ? `Generate a structural-only opaque protocol report for workspace ${workspaceId}.`
+        : `Generate a learning and gap analysis report for workspace "${workspace.title || workspace.root_topic}".`,
       activeFileIds,
       {
-        instructions: buildPerformanceReportInstructions(blockId, storedConversionGoal, stylePrompt),
+        instructions: opaque
+          ? buildOpaquePerformanceReportInstructions(blockId, goalRef)
+          : buildPerformanceReportInstructions(blockId, storedConversionGoal, stylePrompt),
         temperature: 0.35,
         maxOutputTokens: 2500,
         fetchTimeout: 120000,
@@ -1195,20 +1181,28 @@ export async function callMcpProofOfWorkTool(
       throw new Error(reportResult.error || "Failed to generate performance report.");
     }
 
-    const finalized = finalizePerformanceReport(reportResult.data, storedConversionGoal, {
-      title: workspace.title,
-      description: workspace.description,
-      notes: workspace.notes,
-      root_topic: workspace.root_topic,
-    });
+    const finalized = opaque
+      ? finalizeOpaquePerformanceReport(reportResult.data, goalRef, evalMeta.protocol_config)
+      : {
+          ...finalizePerformanceReport(reportResult.data, storedConversionGoal, {
+            title: workspace.title,
+            description: workspace.description,
+            notes: workspace.notes,
+            root_topic: workspace.root_topic,
+          }),
+          protocol_report: undefined,
+        };
 
     return evidenceToolResult(
       withProgressGuidance(
         {
           mode: "report",
+          evaluation_mode: evalMeta.evaluation_mode,
+          privacy,
           workspace_conversion_goal: finalized.workspace_conversion_goal,
           conversion_goal_source: finalized.conversion_goal_source,
           report: finalized.report,
+          protocol_report: opaque ? finalized.protocol_report : undefined,
           proof_of_work_summary: contextCounts,
           file_ids: activeFileIds,
         },

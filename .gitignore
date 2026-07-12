@@ -20,6 +20,9 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
+# PoW experiment artifacts (private skill training)
+.pow-experiment/
+
 # Local env files
 .env
 .env.local

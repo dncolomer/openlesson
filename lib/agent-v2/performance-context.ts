@@ -28,6 +28,7 @@ import {
   normalizePerformanceReport,
   PERFORMANCE_REPORT_SCHEMA,
 } from "./performance-report";
+import { parseWorkspaceEvaluationMeta, scrubOpaquePerformanceContext } from "./opaque-evaluation";
 
 export {
   buildPerformanceReportInstructions,
@@ -47,6 +48,7 @@ export interface PerformanceContextPayload {
     description: string | null;
     notes: string | null;
     conversion_goal: string | null;
+    evaluation_mode?: "semantic" | "opaque";
   };
   focus_block_id: string | null;
   generated_at: string;
@@ -105,7 +107,9 @@ export async function buildWorkspacePerformanceContext({
 }: BuildContextOptions) {
   const { data: workspace } = await supabase
     .from("workspaces")
-    .select("id, title, root_topic, description, notes, conversion_goal, user_id, organization_id, guest_user_id")
+    .select(
+      "id, title, root_topic, description, notes, conversion_goal, evaluation_mode, protocol_config, external_refs, user_id, organization_id, guest_user_id"
+    )
     .eq("id", workspaceId)
     .single();
 
@@ -164,7 +168,8 @@ export async function buildWorkspacePerformanceContext({
         .order("created_at", { ascending: false })
     : { data: [] };
 
-  const payload: PerformanceContextPayload = {
+  const evalMeta = parseWorkspaceEvaluationMeta(workspace);
+  const basePayload: PerformanceContextPayload = {
     workspace: {
       id: workspace.id,
       title: workspace.title,
@@ -172,6 +177,7 @@ export async function buildWorkspacePerformanceContext({
       description: workspace.description,
       notes: workspace.notes,
       conversion_goal: workspace.conversion_goal,
+      evaluation_mode: evalMeta.evaluation_mode,
     },
     focus_block_id: blockId || null,
     generated_at: new Date().toISOString(),
@@ -221,6 +227,11 @@ export async function buildWorkspacePerformanceContext({
       workspace_files: workspaceFiles?.length || 0,
     },
   };
+
+  const payload =
+    evalMeta.evaluation_mode === "opaque"
+      ? scrubOpaquePerformanceContext(basePayload, evalMeta.protocol_config)
+      : basePayload;
 
   const dataJson = JSON.stringify(payload, null, 2);
   const summaryUpload = await uploadFileToXAI(

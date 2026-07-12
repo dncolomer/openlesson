@@ -1,3 +1,5 @@
+import { parseJsonLoose } from "@/lib/xai-client";
+
 export interface PerformanceMarkerScore {
   id: string;
   label: string;
@@ -475,4 +477,94 @@ export function normalizePerformanceReport(report: PerformanceReport): Performan
     suggestions: sanitizeRemediationStrings(report.suggestions ?? []),
     gap_analysis,
   };
+}
+
+const VALID_CONFIDENCE_LEVELS = new Set<PerformanceReport["confidence"]>([
+  "emerging",
+  "developing",
+  "clear",
+  "well-connected",
+]);
+
+function clampPerformanceScore(value: unknown, fallback = 0): number {
+  if (typeof value !== "number" || !Number.isFinite(value)) return fallback;
+  return Math.round(Math.min(100, Math.max(0, value)));
+}
+
+function normalizeMarkerScores(value: unknown): PerformanceMarkerScore[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .filter((item): item is Record<string, unknown> => Boolean(item) && typeof item === "object")
+    .map((item, index) => ({
+      id:
+        typeof item.id === "string" && item.id.trim()
+          ? item.id.trim()
+          : `marker_${index + 1}`,
+      label:
+        typeof item.label === "string" && item.label.trim()
+          ? item.label.trim()
+          : `Competency ${index + 1}`,
+      score: clampPerformanceScore(item.score),
+      rationale:
+        typeof item.rationale === "string" && item.rationale.trim()
+          ? item.rationale.trim()
+          : "Evidence from attached proof of work.",
+      ...(typeof item.block_id === "string" ? { block_id: item.block_id } : {}),
+    }))
+    .filter((item) => item.label.length > 0);
+}
+
+function parseRecoverableReportObject(text: string): Record<string, unknown> | null {
+  const direct = parseJsonLoose<Record<string, unknown>>(text);
+  if (direct.ok) return direct.data;
+
+  const start = text.indexOf("{");
+  if (start === -1) return null;
+
+  let fragment = text.slice(start).trim();
+  const openBraces = (fragment.match(/\{/g) || []).length;
+  const closeBraces = (fragment.match(/\}/g) || []).length;
+  const openBrackets = (fragment.match(/\[/g) || []).length;
+  const closeBrackets = (fragment.match(/\]/g) || []).length;
+  fragment += "]".repeat(Math.max(0, openBrackets - closeBrackets));
+  fragment += "}".repeat(Math.max(0, openBraces - closeBraces));
+
+  const repaired = parseJsonLoose<Record<string, unknown>>(fragment);
+  return repaired.ok ? repaired.data : null;
+}
+
+/**
+ * Best-effort recovery when xAI returns text that fails strict JSON-schema parsing
+ * (truncation, trailing commas, markdown wrappers). Returns null when core fields
+ * cannot be recovered.
+ */
+export function recoverPerformanceReportFromModelText(text: string): PerformanceReport | null {
+  const raw = parseRecoverableReportObject(text);
+  if (!raw) return null;
+  const marker_scores = normalizeMarkerScores(raw.marker_scores);
+  if (marker_scores.length === 0) return null;
+
+  const overall_score = clampPerformanceScore(raw.overall_score);
+  const report: PerformanceReport = {
+    overall_score,
+    conversion_score: clampPerformanceScore(raw.conversion_score, overall_score),
+    conversion_goal:
+      typeof raw.conversion_goal === "string" ? raw.conversion_goal.trim() : "",
+    marker_scores,
+    summary:
+      typeof raw.summary === "string" && raw.summary.trim()
+        ? raw.summary.trim()
+        : "Performance report synthesized from workspace proof of work.",
+    strengths: normalizeStringList(raw.strengths),
+    growth_areas: normalizeStringList(raw.growth_areas),
+    gap_analysis: normalizePerformanceGapAnalysis(
+      raw.gap_analysis as Partial<PerformanceGapAnalysis> | null | undefined,
+    ),
+    suggestions: normalizeStringList(raw.suggestions),
+    confidence: VALID_CONFIDENCE_LEVELS.has(raw.confidence as PerformanceReport["confidence"])
+      ? (raw.confidence as PerformanceReport["confidence"])
+      : "developing",
+  };
+
+  return normalizePerformanceReport(report);
 }

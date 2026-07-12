@@ -82,7 +82,7 @@ function sleep(ms: number): Promise<void> {
  *   3. strip control chars (except newlines/tabs) and dangling commas, then parse
  * Returns { ok: true, data } on success, { ok: false } on failure.
  */
-function parseJsonLoose<T>(text: string): { ok: true; data: T } | { ok: false } {
+export function parseJsonLoose<T>(text: string): { ok: true; data: T } | { ok: false } {
   try {
     return { ok: true, data: JSON.parse(text) as T };
   } catch {
@@ -589,9 +589,20 @@ export async function callXaiResponses<T = unknown>(
         if (parsed.ok) {
           return { success: true, data: parsed.data, text, raw: apiResponse };
         }
+        console.error(
+          "[xai] responses JSON parse failed (attempt",
+          attempt + 1,
+          "). Raw text:",
+          text.substring(0, 500),
+        );
+        lastError = "Failed to parse JSON from response";
+        if (attempt < maxRetries - 1) {
+          await sleep(baseDelay * Math.pow(2, attempt));
+          continue;
+        }
         return {
           success: false,
-          error: "Failed to parse JSON from response",
+          error: lastError,
           text,
           raw: apiResponse,
         };

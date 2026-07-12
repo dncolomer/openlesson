@@ -2,7 +2,7 @@ import { normalizePerformanceReport, type PerformanceReport } from "./performanc
 
 export const CONVERSION_GOAL_MAX_LENGTH = 240;
 
-export type ConversionGoalSource = "workspace" | "inferred";
+export type ConversionGoalSource = "workspace" | "inferred" | "opaque_ref";
 
 export interface ConversionGoalContext {
   title?: string | null;

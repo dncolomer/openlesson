@@ -1,5 +1,5 @@
 {
-  "ran_at": "2026-07-11T15:18:52.550Z",
+  "ran_at": "2026-07-12T23:40:48.004Z",
   "base_url": "http://127.0.0.1:3000",
   "live_writes": true,
   "total": 26,
@@ -29,13 +29,13 @@
       "area": "teams-gate",
       "name": "teams API key can create workspace",
       "ok": true,
-      "detail": "1b4c2c04-a427-439d-ac87-9767b8fc5f3f"
+      "detail": "053da9c3-6d7e-44ca-8fff-807206bdeb9f"
     },
     {
       "area": "teams-rest",
       "name": "GET /workspaces/{id}",
       "ok": true,
-      "detail": "E2E PoW Recursion Gate Probe"
+      "detail": "Recursion Basics for E2E Teams Gate Probe"
     },
     {
       "area": "teams-rest",
@@ -47,7 +47,7 @@
       "area": "teams-rest",
       "name": "POST /proof-of-work-schema",
       "ok": true,
-      "detail": "eval_input_recursion_fundamentals"
+      "detail": "eval_input_base_case_recursion"
     },
     {
       "area": "teams-rest",
@@ -59,13 +59,13 @@
       "area": "teams-rest",
       "name": "POST /proof-of-work",
       "ok": true,
-      "detail": "bd54b96c-76b0-4c66-86f0-775ec97870cc"
+      "detail": "f57a2fcd-2333-4005-bfb8-e82576aa1a52"
     },
     {
       "area": "teams-rest",
       "name": "POST /performance report (overall_score + marker_scores)",
       "ok": true,
-      "detail": "score=15 markers=4"
+      "detail": "score=12 markers=4"
     },
     {
       "area": "teams-rest",
@@ -77,13 +77,13 @@
       "area": "teams-rest",
       "name": "POST /performance chat mode",
       "ok": true,
-      "detail": "len=1080"
+      "detail": "len=1175"
     },
     {
       "area": "teams-rest",
       "name": "POST /blocks/{id}/tap-links",
       "ok": true,
-      "detail": "e039854a-cdfa-4c07-b34c-c827d2749269"
+      "detail": "27868062-6bb6-44b6-be38-314d4df637e7"
     },
     {
       "area": "teams-rest",
@@ -113,37 +113,37 @@
       "area": "teams-mcp",
       "name": "get_workspace",
       "ok": true,
-      "detail": "E2E PoW Recursion Gate Probe"
+      "detail": "Recursion Basics for E2E Teams Gate Probe"
     },
     {
       "area": "teams-mcp",
       "name": "analyze_performance report",
       "ok": true,
-      "detail": "score=12"
+      "detail": "score=15"
     },
     {
       "area": "individual-indirect",
       "name": "create workspace via web (not agent API)",
       "ok": true,
-      "detail": "4fddb478-d5c5-42bf-b3b9-602314f7dbe4"
+      "detail": "3ee8b372-0ae4-4aa9-ba02-66be9a86f884"
     },
     {
       "area": "individual-indirect",
       "name": "workspace has block",
       "ok": true,
-      "detail": "Grasp ILE TAP Fundamentals"
+      "detail": "Grasp Core PoW Principles"
     },
     {
       "area": "individual-indirect",
       "name": "ILE proof-of-work upload (cookie auth)",
       "ok": true,
-      "detail": "5b9f1bb7-ef3a-4703-a599-acb0ff1d739b"
+      "detail": "1cd0ca3e-27a0-4083-b4d8-b3d43d470de7"
     },
     {
       "area": "individual-indirect",
       "name": "TAP session start (workspace UI route)",
       "ok": true,
-      "detail": "78bdeac4-ef3f-42e4-8156-ae91c8792522"
+      "detail": "7bdf0ead-68aa-4cbe-b6c1-92e5ef4a374e"
     },
     {
       "area": "individual-indirect",
@@ -161,7 +161,7 @@
       "area": "individual-indirect",
       "name": "Performance tab report (cookie auth, unified scoring)",
       "ok": true,
-      "detail": "score=18 markers=4"
+      "detail": "score=22 markers=5"
     }
   ]
 }

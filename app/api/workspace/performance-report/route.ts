@@ -1,14 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { finalizePerformanceReport } from "@/lib/agent-v2/conversion-goal";
-import {
-  buildPerformanceReportInstructions,
-  buildWorkspacePerformanceContext,
-  emptyPerformanceReport,
-  PERFORMANCE_REPORT_SCHEMA,
-  type PerformanceReport,
-} from "@/lib/agent-v2/performance-context";
-import { callXaiResponsesWithFiles } from "@/lib/xai-client";
+import { generateWorkspacePerformanceReport } from "@/lib/agent-v2/generate-performance-report";
+import { buildWorkspacePerformanceContext } from "@/lib/agent-v2/performance-context";
 
 export const runtime = "nodejs";
 export const maxDuration = 120;
@@ -62,23 +56,25 @@ export async function POST(req: NextRequest) {
       }, { status: 400 });
     }
 
-    const reportResult = await callXaiResponsesWithFiles<PerformanceReport>(
-      `Generate a learning and gap analysis report for workspace "${plan.title || plan.root_topic}".`,
-      context.fileIds,
-      {
-        instructions: buildPerformanceReportInstructions(null, plan.conversion_goal),
-        temperature: 0.35,
-        maxOutputTokens: 2500,
-        fetchTimeout: 120000,
-        jsonSchema: PERFORMANCE_REPORT_SCHEMA,
-      },
-    );
+    const generation = await generateWorkspacePerformanceReport({
+      workspaceId,
+      workspaceTitle: plan.title,
+      workspaceRootTopic: plan.root_topic,
+      storedConversionGoal: plan.conversion_goal,
+      fileIds: context.fileIds,
+    });
 
-    if (!reportResult.success || !reportResult.data) {
-      return NextResponse.json({ error: reportResult.error || "Failed to generate report" }, { status: 502 });
+    if (!generation.success || !generation.data) {
+      return NextResponse.json(
+        {
+          error: generation.error || "Failed to generate report",
+          code: generation.code || "performance_report_generation_failed",
+        },
+        { status: 502 },
+      );
     }
 
-    const finalized = finalizePerformanceReport(reportResult.data, plan.conversion_goal, {
+    const finalized = finalizePerformanceReport(generation.data, plan.conversion_goal, {
       title: plan.title,
       description: plan.description,
       notes: plan.notes,

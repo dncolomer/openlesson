@@ -11,7 +11,15 @@ import {
 } from "@/lib/agent-v2/workspace-proof-of-work";
 import { uploadFileToXAI, deleteFileFromXAI } from "@/lib/xai-files";
 import { checkProofOfWorkSubmissionAllowance } from "@/lib/usage-enforcement";
+import {
+  lintOpaquePayload,
+  normalizeEvaluationMode,
+  parseWorkspaceEvaluationMeta,
+  redactOpaqueFileName,
+  sanitizeOpaqueMetadata,
+} from "@/lib/agent-v2/opaque-evaluation";
 import { withProofOfWorkApiResponse } from "@/lib/agent-v2/predictive-interruption";
+import { randomUUID } from "node:crypto";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -28,7 +36,7 @@ export async function POST(req: NextRequest, { params }: RouteProps) {
 
   const { data: workspace } = await supabase
     .from("workspaces")
-    .select("id, user_id, organization_id, guest_user_id")
+    .select("id, user_id, organization_id, guest_user_id, evaluation_mode, protocol_config, external_refs")
     .eq("id", workspaceId)
     .single();
 
@@ -91,7 +99,32 @@ export async function POST(req: NextRequest, { params }: RouteProps) {
     if (!session) return errorResponse(404, "validation_error", "session_id not found");
   }
 
-  const fileName = defaultProofOfWorkFileName(evidenceType, typeof body.file_name === "string" ? body.file_name : undefined);
+  const evalMeta = parseWorkspaceEvaluationMeta(workspace);
+  const isOpaque = normalizeEvaluationMode(workspace.evaluation_mode) === "opaque";
+  const allowPlaintext: boolean =
+    isOpaque &&
+    !!(
+      body.metadata &&
+      typeof body.metadata === "object" &&
+      !Array.isArray(body.metadata) &&
+      (body.metadata as Record<string, unknown>).allow_plaintext
+    );
+
+  if (isOpaque && evidenceType === "tool") {
+    const lint = lintOpaquePayload(fileBytes.toString("utf8"), { allowPlaintext });
+    if (!lint.passed) {
+      return errorResponse(
+        400,
+        "validation_error",
+        `Opaque mode plaintext lint failed: ${lint.violations.join(", ")}`
+      );
+    }
+  }
+
+  const artifactId = randomUUID();
+  const fileName = isOpaque
+    ? redactOpaqueFileName(artifactId)
+    : defaultProofOfWorkFileName(evidenceType, typeof body.file_name === "string" ? body.file_name : undefined);
   let xaiFileId: string;
 
   try {
@@ -102,9 +135,11 @@ export async function POST(req: NextRequest, { params }: RouteProps) {
     return errorResponse(502, "internal_error", error instanceof Error ? error.message : "xAI upload failed");
   }
 
-  const metadata = body.metadata && typeof body.metadata === "object" && !Array.isArray(body.metadata)
-    ? (body.metadata as Record<string, unknown>)
-    : {};
+  const rawMetadata =
+    body.metadata && typeof body.metadata === "object" && !Array.isArray(body.metadata)
+      ? (body.metadata as Record<string, unknown>)
+      : {};
+  const metadata = isOpaque ? sanitizeOpaqueMetadata(rawMetadata, allowPlaintext) : rawMetadata;
 
   const { row, error } = await insertWorkspaceProofOfWorkRow(supabase, {
     workspace_id: workspaceId,
@@ -149,6 +184,16 @@ export async function POST(req: NextRequest, { params }: RouteProps) {
           block_id: row.block_id,
           type: row.proof_of_work_type,
         },
+        evaluation_mode: evalMeta.evaluation_mode,
+        privacy: isOpaque
+          ? {
+              evaluation_mode: "opaque" as const,
+              semantic_inference: "disabled" as const,
+              plaintext_lint: "enforced" as const,
+              stored_prompt: false,
+            }
+          : undefined,
+        plaintext_lint: isOpaque ? { passed: true, violations: [] } : undefined,
       },
       {
         endpoint: "upload_proof_of_work",

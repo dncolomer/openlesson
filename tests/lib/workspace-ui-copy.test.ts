@@ -20,7 +20,7 @@ const OUT_OF_SCOPE_FILES_WITH_LEGACY_COPY = [
   "skill.md",
   "public/skill.md",
   "lib/agent-v2/create-verification-workspace.ts",
-  "app/api/v2/agent/workspaces/route.ts",
+  "lib/agent-v2/create-agent-workspace.ts",
 ];
 
 function readRepoFile(relativePath: string): string {

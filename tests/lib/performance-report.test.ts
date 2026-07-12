@@ -8,6 +8,7 @@ import {
   normalizePerformanceReport,
   PERFORMANCE_REMEDIATION_GUARDRAILS,
   PERFORMANCE_REPORT_SCHEMA,
+  recoverPerformanceReportFromModelText,
   sanitizeRemediationStrings,
 } from "@/lib/agent-v2/performance-report";
 
@@ -134,5 +135,65 @@ describe("EXAMPLE_PERFORMANCE_REPORT", () => {
         },
       },
     });
+  });
+});
+
+describe("recoverPerformanceReportFromModelText", () => {
+  it("recovers a report from markdown-wrapped JSON with trailing commas", () => {
+    const malformed = `Here is the report:
+\`\`\`json
+{
+  "overall_score": 61,
+  "conversion_score": 54,
+  "conversion_goal": "Ship onboarding flow",
+  "marker_scores": [
+    { "id": "execution", "label": "Execution", "score": 66, "rationale": "Completed setup steps.", },
+    { "id": "reflection", "label": "Reflection", "score": 48, "rationale": "Sparse decision notes.", },
+  ],
+  "summary": "Partial readiness with execution ahead of reflection.",
+  "strengths": ["Completed primary workflow"],
+  "growth_areas": ["Document tradeoffs"],
+  "gap_analysis": {
+    "summary": "Reflection lags execution.",
+    "gaps": [],
+    "next_steps": { "directions": ["Build decision log habit"], "events": ["capture_checkpoint_metrics"], },
+  },
+  "suggestions": ["Upload checkpoint screenshots"],
+  "confidence": "developing",
+}
+\`\`\``;
+
+    const recovered = recoverPerformanceReportFromModelText(malformed);
+    expect(recovered).not.toBeNull();
+    expect(typeof recovered?.overall_score).toBe("number");
+    expect(recovered?.overall_score).toBe(61);
+    expect(Array.isArray(recovered?.marker_scores)).toBe(true);
+    expect(recovered?.marker_scores.length).toBeGreaterThan(0);
+    expect(recovered?.marker_scores[0]?.score).toBe(66);
+  });
+
+  it("recovers from truncated JSON when core marker fields are present", () => {
+    const truncated = `{
+  "overall_score": 73,
+  "conversion_score": 60,
+  "marker_scores": [
+    { "label": "Workflow Execution", "score": 78, "rationale": "Consistent traces." },
+    { "label": "Decision Quality", "score": 65, "rationale": "Reasonable choices." }
+  ],
+  "summary": "Solid execution with room to improve reflection.",
+  "gap_analysis": { "summary": "Gaps found.", "gaps": [], "next_steps": { "directions": [], "events": [] } }`;
+
+    const recovered = recoverPerformanceReportFromModelText(truncated);
+    expect(recovered).not.toBeNull();
+    expect(recovered?.overall_score).toBe(73);
+    expect(recovered?.marker_scores.length).toBe(2);
+    expect(recovered?.marker_scores[0]?.id).toBe("marker_1");
+    expect(recovered?.confidence).toBe("developing");
+  });
+
+  it("returns null when marker_scores are missing", () => {
+    expect(
+      recoverPerformanceReportFromModelText('{"overall_score": 40, "summary": "No markers"}'),
+    ).toBeNull();
   });
 });

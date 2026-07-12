@@ -1,9 +1,9 @@
 {
   "version": 1,
-  "generated_at": "2026-07-11T13:49:29.558Z",
-  "call_sites_generated_at": "2026-07-11T00:17:24.782Z",
-  "path_count": 49,
-  "entry_count": 60,
+  "generated_at": "2026-07-12T23:20:44.654Z",
+  "call_sites_generated_at": "2026-07-12T23:20:41.371Z",
+  "path_count": 42,
+  "entry_count": 63,
   "domains": [
     {
       "id": "registry",
@@ -264,15 +264,6 @@
       "charCount": 1004
     },
     {
-      "id": "app-api-session-plan-translate-route-ts::translationPrompt",
-      "domainId": "heartbeat-session-plan",
-      "file": "app/api/session-plan/translate/route.ts",
-      "symbol": "translationPrompt",
-      "kind": "inline",
-      "text": "You are a translator. Translate the following learning session plan to ${languageName}.\n\nIMPORTANT: \n- Translate ONLY the text content, NOT the structure\n- Keep all step IDs, types, statuses, and orders EXACTLY the same\n- Preserve the status of each step (e.g., if a step is \"completed\" or \"in_progress\", keep it that way)\n- Only translate: goal, strategy, description, and each step's description field\n\nOriginal Plan:\n- Goal: ${existingPlan.goal}\n- Strategy: ${existingPlan.strategy || \"N/A\"}\n- Description: ${existingPlan.description || \"N/A\"}\n- Steps: ${stepsJson}\n\nReturn ONLY valid JSON (no markdown, no explanation):\n{\n  \"goal\": \"translated goal\",\n  \"strategy\": \"translated strategy\", \n  \"description\": \"translated description\",\n  \"steps\": [\n    {\"id\": \"same-id\", \"type\": \"same-type\", \"description\": \"translated description\", \"status\": \"same-status\", \"order\": same-order},\n    ...\n  ]\n}",
-      "charCount": 893
-    },
-    {
       "id": "app-api-prep-material-route-ts::prep-material-switch-prompts",
       "domainId": "workspace-api",
       "file": "app/api/prep-material/route.ts",
@@ -364,15 +355,6 @@
       "delegatesTo": "lib/agent-v2/integration-skill.ts → buildIntegrationSkillInstructions",
       "text": "Consumer route — prompts defined in:\nlib/agent-v2/integration-skill.ts → buildIntegrationSkillInstructions",
       "charCount": 69
-    },
-    {
-      "id": "app-api-workspace-performance-chat-route-ts::buildSystemInstructions",
-      "domainId": "workspace-api",
-      "file": "app/api/workspace/performance-chat/route.ts",
-      "symbol": "buildSystemInstructions",
-      "kind": "builder",
-      "text": "=== baseInstructions (shared) ===\nYou are an AI assistant analyzing learning session performance data for an educational platform called OpenLesson.\n\nYour role is to help users understand performance patterns, identify areas for improvement, and provide actionable insights based on session reports.\n\nThe session data is provided in a JSON file attached to this conversation. Each user has:\n- A list of sessions with their reports (markdown format containing detailed feedback)\n- Session metadata (duration, status, timestamps)\n- Summary statistics\n\nWhen analyzing performance:\n1. Reference specific details from session reports to support your insights\n2. Look for patterns across sessions (improving/declining performance, recurring challenges)\n3. Be constructive and encouraging while being honest about areas needing improvement\n4. Compare users fairly if asked, focusing on objective metrics and observations\n5. Suggest specific, actionable improvements when appropriate\n\nFormat your responses in markdown for readability. Use headers, bullet points, and emphasis where appropriate.\n\n=== MULTI-USER BRANCH ===\nYou are an AI assistant analyzing learning session performance data for an educational platform called OpenLesson.\n\nYour role is to help users understand performance patterns, identify areas for improvement, and provide actionable insights based on session reports.\n\nThe session data is provided in a JSON file attached to this conversation. Each user has:\n- A list of sessions with their reports (markdown format containing detailed feedback)\n- Session metadata (duration, status, timestamps)\n- Summary statistics\n\nWhen analyzing performance:\n1. Reference specific details from session reports to support your insights\n2. Look for patterns across sessions (improving/declining performance, recurring challenges)\n3. Be constructive and encouraging while being honest about areas needing improvement\n4. Compare users fairly if asked, focusing on objective metrics and observations\n5. Suggest specific, actionable improvements when appropriate\n\nFormat your responses in markdown for readability. Use headers, bullet points, and emphasis where appropriate.\n\nYou have access to performance data for the following users: ${usersContext}\n\nYou can answer questions about individual users, compare users, identify group trends, or provide aggregate insights.\n\n=== SINGLE-USER BRANCH ===\nYou are an AI assistant analyzing learning session performance data for an educational platform called OpenLesson.\n\nYour role is to help users understand performance patterns, identify areas for improvement, and provide actionable insights based on session reports.\n\nThe session data is provided in a JSON file attached to this conversation. Each user has:\n- A list of sessions with their reports (markdown format containing detailed feedback)\n- Session metadata (duration, status, timestamps)\n- Summary statistics\n\nWhen analyzing performance:\n1. Reference specific details from session reports to support your insights\n2. Look for patterns across sessions (improving/declining performance, recurring challenges)\n3. Be constructive and encouraging while being honest about areas needing improvement\n4. Compare users fairly if asked, focusing on objective metrics and observations\n5. Suggest specific, actionable improvements when appropriate\n\nFormat your responses in markdown for readability. Use headers, bullet points, and emphasis where appropriate.\n\nYou only have access to performance data for the current user${currentUsername ? ` (@${currentUsername})` : \"\"}. Focus on providing personalized insights and improvement suggestions based on their session history.",
-      "charCount": 3662
     },
     {
       "id": "app-api-workspace-performance-report-route-ts::consumer",
@@ -477,13 +459,13 @@
       "charCount": 69
     },
     {
-      "id": "app-api-v2-agent-workspaces-route-ts::userMessage-1",
+      "id": "lib-agent-v2-create-agent-workspace-ts::userMessage-1",
       "domainId": "agent-v2",
-      "file": "app/api/v2/agent/workspaces/route.ts",
+      "file": "lib/agent-v2/create-agent-workspace.ts",
       "symbol": "userMessage#1",
       "kind": "inline",
       "text": "Create a performance learning workspace from this prompt. Break it into assessable blocks for learning verification and proof-of-work-based gap analysis.\\n\\nPrompt:\\n${initialPrompt}${fileContext}\\n\\nReturn ONLY JSON:\\n{\\n  \"title\": \"concise workspace title\",\\n  \"conversion_goal\": \"concise success/conversion outcome for this workspace\",\\n  \"blocks\": [\\n    { \"id\": \"a\", \"title\": \"Block title\", \"description\": \"What the learner should demonstrate\", \"is_start\": true, \"next\": [\"b\"] }\\n  ]\\n}\\n\\nRules:\\n- Create 3 to 8 blocks.\\n- Blocks are assessable learning/performance units.\\n- Use short stable ids only for linking within this response.${WORKSPACE_GENERATION_CONVERSION_GOAL_RULE}",
-      "charCount": 688
+      "charCount": 686
     },
     {
       "id": "lib-agent-v2-create-verification-workspace-ts::createVerificationWorkspaceFromPrompt-userMessage-1",
@@ -510,7 +492,7 @@
       "symbol": "buildIntegrationSkillInstructions",
       "kind": "builder",
       "text": "Generate a custom integration skill.md document for \"${request.integration_name}\" integrating with OpenLesson Proof-of-Work API.\n\n${scope}\n\nThis skill.md must treat the proof of work specification as a formal contract and **must be regenerated** as workspace proof of work grows. Integrators fetch the live schema dynamically; do not tell them to invent ad-hoc JSON. This document is not static.\n\nYAML frontmatter (required):\n---\nname: ${skillName}\ndescription: ${request.integration_name} integration skill for OpenLesson workspace proof of work upload and performance analysis.\n---\n\nWorkspace:\n- id: ${workspace.id}\n- title: ${workspace.title || workspace.root_topic || \"Untitled\"}\n- root_topic: ${workspace.root_topic || \"n/a\"}\n- description: ${workspace.description || \"n/a\"}\n\nPartner description from API caller:\n${request.partner_description || \"Not provided: infer reasonable integration goals from the workspace.\"}\n\nEvaluation definition (shared with proof of work spec generation):\n\"\"\"\n${evalDefinition}\n\"\"\"\n\nBlocks in this workspace:\n${blockTable || \"No blocks yet.\"}\n\nBase URL for examples: ${request.base_url}\nSuggested share path: ${sharePath}\nProof-of-work spec API (dynamic — MUST document prominently): POST ${proofOfWorkSchemaPath}\nProof-of-work upload API: POST ${evidenceUploadPath}\nIntegration skill regeneration API (self-update — MUST document prominently): POST ${integrationSkillPath}\nPerformance API (re-run as proof of work grows): POST ${performancePath}\n\nSections to include: ${sections.join(\", \")}\n${proofOfWorkSpecSection}\n\nRequired content:\n1. Purpose — what this partner agent verifies and how proof of work + performance fit the workflow.\n2. Design principles — checkpoint-agnostic timing, block-scoped vs workspace-global analysis, tool usage as core signal, always fetch the live proof-of-work spec before uploading, **more proof of work improves evaluation quality**.\n3. **Continuous evaluation and regeneration (required section)** — this is a must-have operating model, not optional maintenance. Include:\n   - Principle: verification is continuous; the more data and proof of work submitted, the better OpenLesson can learn and evaluate\n   - This skill.md is a snapshot; partner agents must **regenerate** it via POST ${integrationSkillPath} as proof of work accumulates\n   - Re-fetch the proof of work spec via POST ${proofOfWorkSchemaPath} on a recurring basis (e.g. after every 5-10 new uploads, when blocks change, or when scores feel stale)\n   - Re-request performance via POST ${performancePath} after meaningful proof-of-work batches\n   - Explicit warning: treating the initial skill.md or spec as permanent will degrade evaluation quality over time\n   - Recommended loop: upload proof of work → re-fetch spec → regenerate skill → request performance → repeat\n   - Reference the `continuous_evaluation` object returned by the proof of work spec API for machine-readable self-update triggers\n4. **Predictive interruptions (required section)** — Trace Interruption Model (TIM) on every Proof-of-Work API response:\n   - Every REST and MCP success response includes top-level `interruption` (object or null).\n   - When non-null: schedule `intervention` after `delay_ms` unless a later Proof-of-Work API response supersedes it.\n   - When null: no interruption predicted — do not schedule from that response.\n   - Document consumer obligations: read interruption every call, supersede pending timers, never stack duplicate timers.\n   - Reference `interruption_contract` from the proof of work spec API for machine-readable TIM contract and intervention types.\n   - Include JSON examples for active interruption and null (empty).\n5. Authentication table (Bearer sk_ / gsk_, Teams tier, scopes).\n6. Endpoints table covering REST and MCP with **dual documentation** (never hide REST behind MCP):\n   - REST: POST /workspaces, GET /blocks, POST /proof-of-work-schema, POST /proof-of-work, POST /performance, POST /integration-skill\n   - MCP (JSON-RPC at POST /api/mcp with Bearer auth): list_workspaces, get_workspace, get_learning_progress, list_blocks, generate_proof_of_work_schema, upload_proof_of_work, analyze_performance, generate_integration_skill, create_tap_link, list_tap_links\n   - State that MCP tools have full parity with REST; proof-of-work spec responses include both continuous_evaluation (REST paths) and continuous_evaluation_mcp (tool names)\n   - Recommend get_learning_progress / generate_proof_of_work_schema first for progress orientation\n7. **Proof-of-work specification (required section)** — explain that payloads are defined by the formal proof-of-work spec returned from POST ${proofOfWorkSchemaPath}. Include:\n   - When to call the proof of work spec endpoint (before first upload, after proof-of-work milestones, when eval definition or blocks change)\n   - Example request body with definition, optional block_id, and integration_hints\n   - That the response includes tool_submissions, proof_of_work_upload_contract, performance_report_contract, interruption_contract, continuous_evaluation, schema_name, example_payload, collection_guidance, and top-level interruption\n   - Instruction to validate tool payloads against the fetched schema before upload\n   - Do NOT embed a static schema as the source of truth; reference the API path above\n8. Workspace-specific block mapping guidance and example tool JSON payloads that match the proof of work spec (illustrative only).\n9. **Performance (required section)** — document POST ${performancePath} report mode. Every report MUST include:\n   - overall_score (0-100 integer readiness score)\n   - marker_scores (4-8 competency axes for spider/radar visualization: id, label, score, rationale, optional block_id)\n   - gap_analysis with gaps[] (title, proof_of_work, severity low|medium|high, suggested_repair) and next_steps { directions[], events[] } — remediation must be product/workflow-specific; never TAP, block completion, ILE, or OpenLesson platform tasks\n   - summary, strengths, growth_areas, suggestions, confidence\n   - Reference performance_report_contract from the proof of work spec API for the machine-readable contract and example_report\n   - Include a full JSON example response with overall_score, marker_scores, and at least one gap\n   - Chat mode example with prompt + conversation_history\n10. Quick integration checklist: fetch proof-of-work spec → honor interruption scheduling → upload proof of work per contract → regenerate skill → request performance → repeat as proof of work grows.\n\nCanonical API reference links: ${request.base_url}/skill.md and ${request.base_url}/docs/proof-of-work-api\n\nReturn ONLY the markdown document. No JSON wrapper. No code fences around the entire document.",
-      "charCount": 6732
+      "charCount": 6722
     },
     {
       "id": "lib-agent-v2-integration-skill-ts::buildIntegrationSkillPrompt",
@@ -520,15 +502,6 @@
       "kind": "builder",
       "text": "Write a complete skill.md integration guide for \"${integrationName}\" using OpenLesson workspace \"${workspaceTitle}\". The guide must reference dynamic self-updating APIs for proof-of-work spec and skill regeneration, and treat continuous evaluation (more proof of work = better learning) as a must-have operating model.",
       "charCount": 318
-    },
-    {
-      "id": "lib-agent-v2-mcp-proof-of-work-server-ts::userMessage-1",
-      "domainId": "agent-v2",
-      "file": "lib/agent-v2/mcp-proof-of-work-server.ts",
-      "symbol": "userMessage#1",
-      "kind": "inline",
-      "text": "Create a performance learning workspace from this prompt. Break it into assessable blocks for learning verification and proof-of-work-based gap analysis.\\n\\nPrompt:\\n${initialPrompt}${fileContext}\\n\\nReturn ONLY JSON:\\n{\\n  \"title\": \"concise workspace title\",\\n  \"conversion_goal\": \"concise success/conversion outcome for this workspace\",\\n  \"blocks\": [\\n    { \"id\": \"a\", \"title\": \"Block title\", \"description\": \"What the learner should demonstrate\", \"is_start\": true, \"next\": [\"b\"] }\\n  ]\\n}\\n\\nRules:\\n- Create 3 to 8 blocks.\\n- Blocks are assessable learning/performance units.\\n- Use short stable ids only for linking within this response.${WORKSPACE_GENERATION_CONVERSION_GOAL_RULE}",
-      "charCount": 688
     },
     {
       "id": "lib-agent-v2-performance-context-ts::buildPerformanceChatInstructions",
@@ -592,6 +565,24 @@
       "kind": "inline",
       "text": "Thought traces:\\n${thoughtBlock}\\n\\nSynthesize into one durable insight the learner can revisit.",
       "charCount": 96
+    },
+    {
+      "id": "app-api-insights-suggest-route-ts::systemMessage-1",
+      "domainId": "insights-rabbit-hole",
+      "file": "app/api/insights/suggest/route.ts",
+      "symbol": "systemMessage#1",
+      "kind": "inline",
+      "text": "Analyze learner thought traces and propose up to ${MAX_SUGGESTIONS} insight bookmarks. Each insight should group related traces into one durable takeaway.\n\nReturn JSON only:\n{\n  \"suggestions\": [\n    {\n      \"title\": \"4-12 words\",\n      \"summary\": \"2-3 sentences describing the synthesized insight\",\n      \"thoughtIds\": [\"id-from-input\", \"...\"]\n    }\n  ]\n}\n\nRules:\n- Use only thoughtIds that appear in the input (the bracketed ids).\n- Prefer 1-3 suggestions when patterns are clear; return an empty suggestions array if nothing is worth bookmarking.\n- Each suggestion must include at least 2 thoughtIds.\n- Traces may appear in at most one suggestion.",
+      "charCount": 649
+    },
+    {
+      "id": "app-api-insights-suggest-route-ts::userMessage-1",
+      "domainId": "insights-rabbit-hole",
+      "file": "app/api/insights/suggest/route.ts",
+      "symbol": "userMessage#1",
+      "kind": "inline",
+      "text": "Thought traces:\\n${thoughtBlock}\\n\\nSuggest insight bookmarks that group related traces.",
+      "charCount": 88
     },
     {
       "id": "app-api-rabbit-hole-continue-route-ts::userMessage-1",
@@ -666,13 +657,49 @@
       "charCount": 89
     },
     {
-      "id": "app-api-workspace-tap-score-complete-route-ts::scoringPrompt",
+      "id": "lib-tap-score-traces-ts::buildTraceScoringInstructions",
       "domainId": "tap-scoring",
-      "file": "app/api/workspace-tap-score/complete/route.ts",
-      "symbol": "scoringPrompt",
+      "file": "lib/tap-score-traces.ts",
+      "symbol": "buildTraceScoringInstructions",
+      "kind": "builder",
+      "text": "Thought trace proof of work (System 1 and System 2):\n- System 1 traces (${traceContext.system1Count}): spontaneous crystallized speech — everything the learner said aloud, including thoughts they did NOT submit to the TAP dialogue.\n- System 2 traces (${traceContext.system2Count}): deliberate learner decisions — explicit send, edit, skip, select/deselect, or resend actions.\n\nUse the dialogue transcript as the primary Socratic exchange, but treat attached trace files and the manifest below as first-class proof of work. Compare System 1 vs System 2: knowledge articulated but not sent may reveal hesitation, incomplete understanding, or metacognitive filtering. Cite both sent and unsent traces in gap_analysis proof_of_work where relevant.\n\nTrace manifest:\n${traceContext.manifestText || \"No trace manifest available.\"}",
+      "charCount": 823
+    },
+    {
+      "id": "lib-tap-score-ts::buildTapScoreInstructions",
+      "domainId": "tap-scoring",
+      "file": "lib/tap-score.ts",
+      "symbol": "buildTapScoreInstructions",
+      "kind": "builder",
+      "text": "You are the Think Aloud Protocol (TAP) session facilitator for OpenLesson.\n\nThe learner is demonstrating what they learned about ${assessmentTarget}. Your role is to collect enough proof of work to score the demonstration and identify actionable learning gaps. Route remediation into Integrated Learning Environment (ILE) practice where appropriate. You are ${listenerStyle(mode)}.\n\nYour job is to run a Socratic learning demonstration. Elicit a clear, natural explanation and expose gaps: missing definitions, weak causal links, misconceptions, shallow examples, unsupported jumps, and fragile transfer across contexts. Do not announce scores during the live session. Ask questions that reveal understanding across these learning markers: ${TAP_SCORE_MARKERS.map((marker) => marker.label).join(\", \")}.\n\nRules:\n- Ask one short spoken question at a time.\n- Do not lecture unless the user explicitly asks for help.\n- Prefer questions over statements.\n- Build each follow-up from the learner's own words.\n- Ask the learner to justify, compare, predict, give examples, or repair their explanation.\n- If the learner is wrong, ask a question that helps them notice the contradiction before correcting them.\n- Act like you do not know the subject yet, but use the hidden workspace context to notice gaps.\n- Ask for definitions when the user uses terms too quickly.\n- Ask for concrete examples when explanations are abstract.\n- Ask how ideas connect across the selected block or, if no block is selected, across the whole workspace.\n- Ask targeted questions that can confirm or falsify likely knowledge gaps.\n- Gently paraphrase your understanding and ask if you got it right.\n- Keep responses concise and conversational.\n- When the user is silent or vague, ask a clarifying question instead of filling in the answer.\n- The session is timeboxed to ${minutes} minutes.\n\nStart by saying: \"Teach me what you learned here. I will ask follow-up questions to understand where your learning is solid and where gaps remain.\"\n\nWorkspace:\nTitle: ${brief.plan.title}\nTopic: ${brief.plan.root_topic}\nDescription: ${brief.plan.description || \"None\"}\nNotes: ${brief.plan.notes || \"None\"}\n\nWorkspace sessions/nodes:\n${nodeSummary || \"No nodes found.\"}\n\nUser session context:\n${sessionSummary || \"No completed session reports found yet.\"}\n\n${focusSessionSummary}",
+      "charCount": 2338
+    },
+    {
+      "id": "lib-tap-score-ts::generateTapOpeningQuestion-system-extension",
+      "domainId": "tap-scoring",
+      "file": "lib/tap-score.ts",
+      "symbol": "generateTapOpeningQuestion-system-extension",
       "kind": "inline",
-      "text": "Workspace: ${brief.plan.title}\nTopic: ${brief.plan.root_topic}\nDescription: ${brief.plan.description || \"n/a\"}\nNotes: ${brief.plan.notes || \"n/a\"}\nNodes: ${JSON.stringify(brief.nodes)}\nFocused session: ${JSON.stringify(brief.focusSession || null)}\n\nTAP transcript (System 2 dialogue — thoughts the learner explicitly submitted to Helios):\n${transcriptText}\n${traceInstructions}\n\nReturn JSON with:\n{\n  \"overall_score\": number from 0 to 100 (learning verification from the TAP demonstration),\n  \"conversion_score\": number from 0 to 100 (estimated likelihood of achieving the workspace conversion goal — infer goal from workspace context when not explicit),\n  \"conversion_goal\": string (what conversion means for this workspace, e.g. \"Trial activation\", \"Certification sign-off\"),\n  \"markers\": ${JSON.stringify(TAP_SCORE_MARKERS.map((marker) => ({ ...marker, score: \"number from 0 to 100\", rationale: \"string\" })))},\n  \"gap_analysis\": {\n    \"summary\": string,\n    \"gaps\": [{ \"title\": string, \"proof_of_work\": string, \"severity\": \"low\" | \"medium\" | \"high\", \"suggested_repair\": string }],\n    \"next_practice\": string[]\n  },\n  \"knowledge_gaps\": [{ \"title\": string, \"proof_of_work\": string, \"severity\": \"low\" | \"medium\" | \"high\", \"suggested_repair\": string }],\n  \"overall_reflection\": string,\n  \"strengths\": string[],\n  \"growth_areas\": string[],\n  \"follow_up_prompts\": string[],\n  \"confidence\": \"emerging\" | \"developing\" | \"clear\" | \"well-connected\"\n}",
-      "charCount": 1444
+      "text": "[Appended after full buildTapScoreInstructions(context) output]\n\nGenerate exactly ONE opening Socratic question to start the Think Aloud demonstration. The question must be specific to the workspace/block context above. Invite the learner to demonstrate what they learned — not a generic icebreaker or meta question about their approach. One sentence only. No preamble, no quotes, just the question.",
+      "charCount": 399
+    },
+    {
+      "id": "lib-tap-score-ts::generateTapOpeningQuestion-userMessage",
+      "domainId": "tap-scoring",
+      "file": "lib/tap-score.ts",
+      "symbol": "generateTapOpeningQuestion-userMessage",
+      "kind": "inline",
+      "text": "Generate the opening question for demonstrating learning about: ${target}",
+      "charCount": 73
+    },
+    {
+      "id": "lib-tap-score-ts::TAP-chat-overlay",
+      "domainId": "tap-scoring",
+      "file": "lib/tap-score.ts",
+      "symbol": "TAP-chat-overlay",
+      "kind": "inline",
+      "text": "You are now responding in a selective thought interface, not a live voice call. The learner submits transcribed thought fragments. Reply in a Socratic style with one concise question, or at most one brief reflection followed by a question. Elicit evidence about what they learned, what they can transfer, and what gaps remain. Prioritize definitions, causal reasoning, examples, application, and repair. Do not score yet. Do not explain the answer for them unless they explicitly ask for help.",
+      "charCount": 493
     }
   ]
 }

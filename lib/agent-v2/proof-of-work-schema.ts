@@ -274,6 +274,8 @@ export const EVIDENCE_EVAL_SCHEMA_OUTPUT = {
 };
 
 export function parseProofOfWorkSchemaRequest(body: Record<string, unknown>): ProofOfWorkSchemaRequest | null {
+  if (body.evaluation_mode === "opaque") return null;
+
   const definition = typeof body.definition === "string" ? body.definition.trim() : "";
   if (!definition) return null;
 

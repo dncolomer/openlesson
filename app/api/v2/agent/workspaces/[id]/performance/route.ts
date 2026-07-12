@@ -2,16 +2,22 @@ import { NextRequest, NextResponse } from "next/server";
 import { authenticateRequest, errorResponse } from "@/lib/agent-v2/auth";
 import { finalizePerformanceReport } from "@/lib/agent-v2/conversion-goal";
 import {
+  buildOpaquePerformanceChatInstructions,
+  buildPrivacyMetadata,
+  extractGoalRefFromConversionGoal,
+  finalizeOpaquePerformanceReport,
+  isOpaqueWorkspace,
+  parseWorkspaceEvaluationMeta,
+} from "@/lib/agent-v2/opaque-evaluation";
+import {
   buildPerformanceChatInstructions,
-  buildPerformanceReportInstructions,
   buildWorkspacePerformanceContext,
   emptyPerformanceReport,
-  PERFORMANCE_REPORT_SCHEMA,
   type PerformanceConversationMessage,
-  type PerformanceReport,
 } from "@/lib/agent-v2/performance-context";
+import { generateWorkspacePerformanceReport } from "@/lib/agent-v2/generate-performance-report";
 import { canAccessAgentWorkspace } from "@/lib/agent-v2/workspace-access";
-import { callXaiResponses, callXaiResponsesWithFiles, type ResponsesInputMessage } from "@/lib/xai-client";
+import { callXaiResponses, type ResponsesInputMessage } from "@/lib/xai-client";
 import { withProofOfWorkApiResponse } from "@/lib/agent-v2/predictive-interruption";
 
 export const runtime = "nodejs";
@@ -43,7 +49,9 @@ export async function POST(req: NextRequest, { params }: RouteProps) {
 
   const { data: workspace } = await supabase
     .from("workspaces")
-    .select("id, user_id, organization_id, guest_user_id, title, root_topic, description, notes, conversion_goal")
+    .select(
+      "id, user_id, organization_id, guest_user_id, title, root_topic, description, notes, conversion_goal, evaluation_mode, protocol_config, external_refs"
+    )
     .eq("id", workspaceId)
     .single();
 
@@ -137,6 +145,12 @@ export async function POST(req: NextRequest, { params }: RouteProps) {
     }
   }
 
+  const evalMeta = parseWorkspaceEvaluationMeta(workspace);
+  const opaque = isOpaqueWorkspace(evalMeta);
+  const privacy = buildPrivacyMetadata(evalMeta);
+  const goalRef =
+    extractGoalRefFromConversionGoal(workspace.conversion_goal) || evalMeta.protocol_config?.goal_ref || null;
+
   if (prompt) {
     const inputMessages: ResponsesInputMessage[] = conversationHistory.map((message) => ({
       role: message.role,
@@ -153,7 +167,9 @@ export async function POST(req: NextRequest, { params }: RouteProps) {
 
     const chatResult = await callXaiResponses({
       model: "grok-4.3",
-      instructions: buildPerformanceChatInstructions(blockId, stylePrompt),
+      instructions: opaque
+        ? buildOpaquePerformanceChatInstructions(blockId)
+        : buildPerformanceChatInstructions(blockId, stylePrompt),
       input: inputMessages,
       temperature: 0.6,
       maxOutputTokens: 4096,
@@ -168,6 +184,8 @@ export async function POST(req: NextRequest, { params }: RouteProps) {
       withProofOfWorkApiResponse(
         {
           mode: "chat",
+          evaluation_mode: evalMeta.evaluation_mode,
+          privacy,
           response: chatResult.text,
           proof_of_work_summary: contextCounts,
           file_ids: activeFileIds,
@@ -186,40 +204,48 @@ export async function POST(req: NextRequest, { params }: RouteProps) {
   const storedConversionGoal =
     performanceContext?.workspace.conversion_goal ?? workspace.conversion_goal;
 
-  const reportResult = await callXaiResponsesWithFiles<PerformanceReport>(
-    `Generate a learning and gap analysis report for workspace "${workspace.title || workspace.root_topic}".`,
-    activeFileIds,
-    {
-      instructions: buildPerformanceReportInstructions(
-        blockId,
-        storedConversionGoal,
-        stylePrompt
-      ),
-      temperature: 0.35,
-      maxOutputTokens: 2500,
-      fetchTimeout: 120000,
-      jsonSchema: PERFORMANCE_REPORT_SCHEMA,
-    }
-  );
+  const generation = await generateWorkspacePerformanceReport({
+    workspaceId,
+    workspaceTitle: workspace.title,
+    workspaceRootTopic: workspace.root_topic,
+    storedConversionGoal,
+    fileIds: activeFileIds,
+    blockId,
+    stylePrompt,
+    opaque,
+    goalRef,
+  });
 
-  if (!reportResult.success || !reportResult.data) {
-    return errorResponse(500, "internal_error", reportResult.error || "Failed to generate performance report");
+  if (!generation.success || !generation.data) {
+    return errorResponse(
+      500,
+      generation.code || "internal_error",
+      generation.error || "Failed to generate performance report",
+    );
   }
 
-  const finalized = finalizePerformanceReport(reportResult.data, storedConversionGoal, {
-    title: workspace.title,
-    description: workspace.description,
-    notes: workspace.notes,
-    root_topic: workspace.root_topic,
-  });
+  const finalized = opaque
+    ? finalizeOpaquePerformanceReport(generation.data, goalRef, evalMeta.protocol_config)
+    : {
+        ...finalizePerformanceReport(generation.data, storedConversionGoal, {
+          title: workspace.title,
+          description: workspace.description,
+          notes: workspace.notes,
+          root_topic: workspace.root_topic,
+        }),
+        protocol_report: undefined,
+      };
 
   return NextResponse.json(
     withProofOfWorkApiResponse(
       {
         mode: "report",
+        evaluation_mode: evalMeta.evaluation_mode,
+        privacy,
         workspace_conversion_goal: finalized.workspace_conversion_goal,
         conversion_goal_source: finalized.conversion_goal_source,
         report: finalized.report,
+        protocol_report: opaque ? finalized.protocol_report : undefined,
         proof_of_work_summary: contextCounts,
         file_ids: activeFileIds,
       },

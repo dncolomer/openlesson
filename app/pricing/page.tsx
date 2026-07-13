@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, Suspense } from "react";
+import { useEffect, useMemo, useState, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Navbar } from "@/components/Navbar";
@@ -23,13 +23,10 @@ interface UserState {
   isAdmin: boolean;
 }
 
+type PricingPlanId = "regular_2026" | "pro_teams" | "api_metered";
+
 const BACKGROUND = "/aesthetics/Greco-futurism/HHnTrjJbQAAOz7K.jpeg";
 
-/**
- * Planning range for active users per tier.
- * Per-person usage varies widely: monthly gates (~1–4), TAP/ILE practice (~4–12),
- * batched API uploads (~4–8), or per-action streaming (20–40+).
- */
 function tierSizingSummary(submissions: number): string {
   const streaming = Math.max(1, Math.round(submissions / 30));
   const batched = Math.max(1, Math.round(submissions / 4));
@@ -67,39 +64,50 @@ const TEAM_VOLUMES = TEAM_VOLUME_TIERS.map((tier) => ({
 const API_METERED_PLATFORM_PRICE = API_METERED_PLATFORM_FEE_CENTS / 100;
 const API_METERED_CALL_PRICE = POW_API_CALL_PRICE_CENTS / 100;
 
-const PLANS = [
+const PLANS: Array<{
+  id: PricingPlanId;
+  name: string;
+  tag?: string;
+  description: string;
+  features: string[];
+  checkout: PricingPlanId;
+  volumes: typeof REGULAR_VOLUMES | null;
+  metered?: boolean;
+  featured?: boolean;
+}> = [
   {
-    id: "regular_2026" as const,
+    id: "regular_2026",
     name: "Individual",
-    detail: "from /mo",
-    description: "For individuals optimizing learning-to-conversion. One meter: Proof-of-Work submissions. TAP, ILE, and API usage all draw from the same pool.",
+    tag: "Popular",
+    description:
+      "For individuals optimizing learning-to-conversion. One meter: Proof-of-Work submissions. TAP, ILE, and API usage all draw from the same pool.",
     features: [
       "100+ Proof-of-Work submissions/mo",
       "Unlimited Workspaces",
       "Readiness history and reports",
     ],
-    checkout: "regular_2026" as const,
+    checkout: "regular_2026",
     volumes: REGULAR_VOLUMES,
     featured: true,
   },
   {
-    id: "pro_teams" as const,
+    id: "pro_teams",
     name: "Pro / Teams",
-    detail: "from /mo",
-    description: "For teams raising the ROI of learning across humans and agents — shared Proof-of-Work capacity for the whole organization.",
+    description:
+      "For teams raising the ROI of learning across humans and agents — shared Proof-of-Work capacity for the whole organization.",
     features: [
       "1,000+ Proof-of-Work submissions/mo",
       "Unlimited Workspaces",
       "Org guests and team API keys",
       "Priority support",
     ],
-    checkout: "pro_teams" as const,
+    checkout: "pro_teams",
     volumes: TEAM_VOLUMES,
   },
   {
-    id: "api_metered" as const,
+    id: "api_metered",
     name: "API Metered",
-    detail: "+ usage / mo",
+    tag: "Metered",
     description:
       "For integrators and agent builders who need unlimited Proof-of-Work API scale. No monthly submission cap — pay per API call on your invoice.",
     features: [
@@ -109,7 +117,7 @@ const PLANS = [
       "Unlimited Workspaces + API keys + MCP",
       "TAP / ILE not metered per API call",
     ],
-    checkout: "api_metered" as const,
+    checkout: "api_metered",
     volumes: null,
     metered: true,
   },
@@ -119,62 +127,35 @@ function formatTierPrice(price: number) {
   return Number.isInteger(price) ? `$${price}` : `$${price.toFixed(2)}`;
 }
 
-type VolumeCapacityCardProps = {
+type VolumeTierPillProps = {
   selected: boolean;
-  note: string;
+  label: string;
   price: number;
-  proof_of_work: number;
-  sizing: string;
+  submissions: number;
   onSelect: () => void;
 };
 
-function VolumeCapacityCard({
-  selected,
-  note,
-  price,
-  proof_of_work,
-  sizing,
-  onSelect,
-}: VolumeCapacityCardProps) {
-  const muted = selected ? "text-black/55" : "text-neutral-500";
-  const value = selected ? "text-black" : "text-white";
-  const divider = selected ? "border-black/10" : "border-neutral-800";
-
+function VolumeTierPill({ selected, label, price, submissions, onSelect }: VolumeTierPillProps) {
   return (
     <button
       type="button"
       onClick={onSelect}
-      className={`w-full rounded-sm border p-4 text-left transition sm:p-5 ${
+      className={`shrink-0 rounded-sm border px-4 py-3 text-left transition ${
         selected
           ? "border-white bg-white text-black"
-          : "border-neutral-800 bg-black/40 text-neutral-300 hover:border-neutral-600"
+          : "border-neutral-700 bg-neutral-950/60 text-neutral-300 hover:border-neutral-500"
       }`}
     >
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <p className={`font-mono text-[10px] uppercase tracking-[1.4px] ${muted}`}>Tier</p>
-          <p className={`mt-1 text-sm font-medium ${value}`}>{note || "Standard"}</p>
-        </div>
-        <div className="text-right">
-          <p className={`text-2xl font-medium leading-none tracking-[-0.5px] ${value}`}>
-            {formatTierPrice(price)}
-          </p>
-          <p className={`mt-1 text-xs ${muted}`}>/ month</p>
-        </div>
-      </div>
-
-      <div className={`mt-4 space-y-3 border-t pt-4 ${divider}`}>
-        <div className="flex items-baseline justify-between gap-4">
-          <span className={`text-sm leading-snug ${selected ? "text-black/70" : "text-neutral-400"}`}>
-            Proof-of-Work submissions
-          </span>
-          <span className={`shrink-0 text-right text-sm font-medium tabular-nums ${value}`}>
-            {proof_of_work.toLocaleString()}
-            <span className={`font-normal ${selected ? "text-black/50" : "text-neutral-500"}`}> / mo</span>
-          </span>
-        </div>
-        <p className={`text-xs leading-relaxed ${selected ? "text-black/55" : "text-neutral-500"}`}>{sizing}</p>
-      </div>
+      <p className={`font-mono text-[10px] uppercase tracking-[1.4px] ${selected ? "text-black/50" : "text-neutral-500"}`}>
+        {label}
+      </p>
+      <p className={`mt-1 text-lg font-medium tabular-nums ${selected ? "text-black" : "text-white"}`}>
+        {formatTierPrice(price)}
+        <span className={`text-xs font-normal ${selected ? "text-black/45" : "text-neutral-500"}`}> /mo</span>
+      </p>
+      <p className={`mt-1 text-xs tabular-nums ${selected ? "text-black/60" : "text-neutral-500"}`}>
+        {submissions.toLocaleString()} submissions
+      </p>
     </button>
   );
 }
@@ -184,16 +165,32 @@ function PricingPageContent() {
   const [user, setUser] = useState<UserState | null>(null);
   const [needsPlan, setNeedsPlan] = useState(false);
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
+  const [activePlanId, setActivePlanId] = useState<PricingPlanId>("regular_2026");
   const [selectedVolumes, setSelectedVolumes] = useState<Record<string, number>>({
     regular_2026: DEFAULT_REGULAR_VOLUME,
     pro_teams: DEFAULT_TEAM_VOLUME,
   });
 
+  const activePlan = useMemo(
+    () => PLANS.find((plan) => plan.id === activePlanId) ?? PLANS[0],
+    [activePlanId],
+  );
+
+  const selectedVolume = useMemo(() => {
+    if (!activePlan.volumes?.length) return null;
+    return (
+      activePlan.volumes.find((option) => option.proof_of_work === selectedVolumes[activePlan.id]) ||
+      activePlan.volumes[0]
+    );
+  }, [activePlan, selectedVolumes]);
+
   useEffect(() => {
     const load = async () => {
       try {
         const supabase = createClient();
-        const { data: { user: authUser } } = await supabase.auth.getUser();
+        const {
+          data: { user: authUser },
+        } = await supabase.auth.getUser();
         if (!authUser) {
           setUser({ authenticated: false, plan: "free", isAdmin: false });
           setNeedsPlan(searchParams.get("required") === "1");
@@ -202,29 +199,33 @@ function PricingPageContent() {
         const { data: profile } = await supabase
           .from("profiles")
           .select(
-            "plan, is_admin, subscription_status, organization_id, token_tier, token_validity_expires_at"
+            "plan, is_admin, subscription_status, organization_id, token_tier, token_validity_expires_at",
           )
           .eq("id", authUser.id)
           .single();
+        const plan = (profile?.plan || "free") as PlanId;
         setUser({
           authenticated: true,
-          plan: (profile?.plan || "free") as PlanId,
+          plan,
           isAdmin: profile?.is_admin ?? false,
         });
+        if (plan === "regular_2026" || plan === "pro_teams" || plan === "api_metered") {
+          setActivePlanId(plan);
+        }
         setNeedsPlan(
           searchParams.get("required") === "1" ||
             !hasProductAccess(
               profile
                 ? {
-                    plan: (profile.plan || "free") as PlanId,
+                    plan,
                     subscription_status: profile.subscription_status ?? "inactive",
                     is_admin: profile.is_admin ?? false,
                     organization_id: profile.organization_id,
                     token_tier: profile.token_tier,
                     token_validity_expires_at: profile.token_validity_expires_at,
                   }
-                : null
-            )
+                : null,
+            ),
         );
       } catch {
         setUser({ authenticated: false, plan: "free", isAdmin: false });
@@ -234,7 +235,7 @@ function PricingPageContent() {
     load();
   }, [searchParams]);
 
-  const handleCheckout = async (priceType: "regular_2026" | "pro_teams" | "api_metered") => {
+  const handleCheckout = async (priceType: PricingPlanId) => {
     if (!user?.authenticated) {
       window.location.href = `/login?redirect=${encodeURIComponent("/pricing?required=1")}`;
       return;
@@ -257,101 +258,177 @@ function PricingPageContent() {
     }
   };
 
+  const isCurrentPlan = user?.authenticated && user.plan === activePlan.id;
+  const checkoutLabel =
+    loadingPlan === activePlan.checkout
+      ? "Loading..."
+      : activePlan.metered
+        ? `Start API Metered (${formatTierPrice(API_METERED_PLATFORM_PRICE)}/mo + usage) →`
+        : activePlan.id === "pro_teams"
+          ? `Start Teams (${(selectedVolume?.proof_of_work ?? selectedVolumes.pro_teams).toLocaleString()} submissions/mo) →`
+          : `Start Individual (${(selectedVolume?.proof_of_work ?? selectedVolumes.regular_2026).toLocaleString()} submissions/mo) →`;
+
   return (
-    <main className="min-h-screen bg-[#0a0a0a] bg-cover bg-fixed bg-center text-neutral-200" style={{ backgroundImage: `url(${BACKGROUND})` }}>
+    <main
+      className="min-h-screen bg-[#0a0a0a] bg-cover bg-fixed bg-center text-neutral-200"
+      style={{ backgroundImage: `url(${BACKGROUND})` }}
+    >
       <div className="fixed inset-0 bg-black/78" />
       <div className="relative z-10 flex min-h-screen flex-col">
         <Navbar />
-        <section className="mx-auto w-full max-w-6xl flex-1 px-6 py-24">
-          <div className="max-w-4xl">
-            <div className="mb-6 inline-block rounded-sm border border-neutral-800 bg-neutral-950/80 px-3 py-1 font-mono text-[10px] uppercase tracking-[2px] text-neutral-500">LEARNING EFFICIENCY • HUMANS & AGENTS</div>
-            <h1 className="max-w-3xl text-5xl font-medium leading-[1.05] tracking-[-2.5px] text-white sm:text-6xl">Price learning efficiency, not completion.</h1>
-            <p className="mt-7 max-w-2xl text-lg leading-relaxed text-neutral-400">
-              Individual and Teams bundle Proof-of-Work submissions per month. API Metered has no cap on API usage — you pay
-              per Proof-of-Work API call on your monthly invoice. TAP and ILE are not billed per API call on that tier.
-            </p>
-            {needsPlan && (
-              <div className="mt-8 max-w-2xl rounded-sm border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
-                Choose Individual, Pro / Teams, or API Metered to continue. A paid plan is required to use openLesson — there is no free tier.
+        <section className="mx-auto w-full max-w-4xl flex-1 px-6 py-16 sm:py-20">
+          <div className="mb-8 inline-block rounded-sm border border-neutral-800 bg-neutral-950/80 px-3 py-1 font-mono text-[10px] uppercase tracking-[2px] text-neutral-500">
+            LEARNING EFFICIENCY • HUMANS & AGENTS
+          </div>
+          <h1 className="max-w-3xl text-4xl font-medium leading-[1.05] tracking-[-2px] text-white sm:text-5xl">
+            Price learning efficiency, not completion.
+          </h1>
+          <p className="mt-5 max-w-2xl text-base leading-relaxed text-neutral-400 sm:text-lg">
+            Pick a plan, choose your monthly capacity, and checkout — no scrolling through stacked tiers.
+          </p>
+          {needsPlan && (
+            <div className="mt-6 rounded-sm border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
+              Choose Individual, Pro / Teams, or API Metered to continue. A paid plan is required to use
+              openLesson.
+            </div>
+          )}
+
+          {/* Plan selector */}
+          <div className="mt-10">
+            <p className="font-mono text-[10px] uppercase tracking-[1.5px] text-neutral-500">1 · Choose plan</p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {PLANS.map((plan) => {
+                const selected = activePlanId === plan.id;
+                return (
+                  <button
+                    key={plan.id}
+                    type="button"
+                    onClick={() => setActivePlanId(plan.id)}
+                    className={`rounded-sm border px-4 py-2.5 text-sm font-medium transition ${
+                      selected
+                        ? "border-white bg-white text-black"
+                        : "border-neutral-700 bg-neutral-950/60 text-neutral-300 hover:border-neutral-500"
+                    }`}
+                  >
+                    {plan.name}
+                    {plan.tag && (
+                      <span
+                        className={`ml-2 font-mono text-[9px] uppercase tracking-[1px] ${
+                          selected ? "text-black/45" : "text-neutral-500"
+                        }`}
+                      >
+                        {plan.tag}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Volume tier selector — horizontal, above details */}
+          {activePlan.volumes && activePlan.volumes.length > 0 && (
+            <div className="mt-8">
+              <p className="font-mono text-[10px] uppercase tracking-[1.5px] text-neutral-500">
+                2 · Monthly capacity
+              </p>
+              <div className="-mx-1 mt-3 flex gap-2 overflow-x-auto px-1 pb-1">
+                {activePlan.volumes.map((option) => (
+                  <VolumeTierPill
+                    key={option.proof_of_work}
+                    selected={selectedVolumes[activePlan.id] === option.proof_of_work}
+                    label={option.note || "Standard"}
+                    price={option.price}
+                    submissions={option.proof_of_work}
+                    onSelect={() =>
+                      setSelectedVolumes((current) => ({
+                        ...current,
+                        [activePlan.id]: option.proof_of_work,
+                      }))
+                    }
+                  />
+                ))}
               </div>
-            )}
-          </div>
+            </div>
+          )}
 
-          <div className="mt-16 grid gap-5 lg:grid-cols-3">
-            {PLANS.map((plan) => {
-              const current = user?.authenticated && user.plan === plan.id;
-              const volumeOptions = "volumes" in plan && Array.isArray(plan.volumes) ? plan.volumes : [];
-              const selectedVolume = volumeOptions.find((option) => option.proof_of_work === selectedVolumes[plan.id]) || volumeOptions[0] || null;
-              const isMetered = "metered" in plan && plan.metered;
-              return (
-                <div key={plan.id} className={`border bg-neutral-950/80 p-6 backdrop-blur-sm ${plan.featured ? "border-neutral-500" : "border-neutral-800"}`}>
-                  <div className="flex items-start justify-between gap-4">
-                    <div>
-                      <h2 className="text-2xl font-medium text-white">{plan.name}</h2>
-                      <p className="mt-2 text-sm leading-relaxed text-neutral-500">{plan.description}</p>
-                    </div>
-                    {plan.featured && <span className="border border-neutral-700 px-2 py-1 font-mono text-[10px] uppercase tracking-[1.5px] text-neutral-400">Popular</span>}
-                    {isMetered && <span className="border border-amber-500/40 px-2 py-1 font-mono text-[10px] uppercase tracking-[1.5px] text-amber-200/90">Metered</span>}
-                  </div>
-                  <div className="mt-8 flex items-baseline gap-2">
-                    <span className="text-4xl font-medium text-white">
-                      {isMetered
-                        ? formatTierPrice(API_METERED_PLATFORM_PRICE)
-                        : formatTierPrice((selectedVolume ?? volumeOptions[0])?.price ?? 0)}
-                    </span>
-                    <span className="text-sm text-neutral-500">{plan.detail}</span>
-                  </div>
-                  {isMetered && (
-                    <p className="mt-3 text-sm text-neutral-400">
-                      + <span className="text-white">${API_METERED_CALL_PRICE.toFixed(2)}</span> per Proof-of-Work API submission on your monthly invoice
-                    </p>
-                  )}
-                  {volumeOptions.length > 0 && (
-                    <div className="mt-5 grid gap-3">
-                      <div className="font-mono text-[10px] uppercase tracking-[1.5px] text-neutral-500">Monthly capacity</div>
-                      <div className="grid gap-3">
-                        {volumeOptions.map((option) => {
-                          const selected = selectedVolumes[plan.id] === option.proof_of_work;
-                          return (
-                            <VolumeCapacityCard
-                              key={option.proof_of_work}
-                              selected={selected}
-                              note={option.note}
-                              price={option.price}
-                              proof_of_work={option.proof_of_work}
-                              sizing={tierSizingSummary(option.proof_of_work)}
-                              onSelect={() =>
-                                setSelectedVolumes((current) => ({ ...current, [plan.id]: option.proof_of_work }))
-                              }
-                            />
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
-                  <ul className="mt-8 space-y-3 text-sm text-neutral-400">
-                    {plan.features.map((feature) => <li key={feature} className="border-t border-neutral-800 pt-3">{feature}</li>)}
-                  </ul>
-                  {current ? (
-                    <div className="mt-8 rounded-sm border border-neutral-800 px-4 py-3 text-center text-sm text-neutral-500">Current plan</div>
-                  ) : plan.checkout ? (
-                    <button onClick={() => handleCheckout(plan.checkout)} disabled={loadingPlan === plan.checkout} className="mt-8 w-full rounded-sm bg-white px-4 py-3 text-sm font-medium text-black transition hover:bg-neutral-200 disabled:opacity-50">
-                      {loadingPlan === plan.checkout
-                        ? "Loading..."
-                        : plan.id === "api_metered"
-                          ? `Start API Metered ($${API_METERED_PLATFORM_PRICE}/mo + usage) →`
-                          : plan.id === "pro_teams"
-                            ? `Start Teams (${(selectedVolume?.proof_of_work ?? selectedVolumes.pro_teams).toLocaleString()} submissions/mo) →`
-                            : `Start Individual (${(selectedVolume?.proof_of_work ?? selectedVolumes.regular_2026).toLocaleString()} submissions/mo) →`}
-                    </button>
-                  ) : !user?.authenticated ? (
-                    <Link href="/register" className="mt-8 block rounded-sm bg-neutral-800 px-4 py-3 text-center text-sm font-medium text-white transition hover:bg-neutral-700">Get started →</Link>
-                  ) : null}
+          {/* Single plan detail panel */}
+          <div
+            className={`mt-8 border bg-neutral-950/80 p-6 backdrop-blur-sm sm:p-8 ${
+              activePlan.featured ? "border-neutral-500" : "border-neutral-800"
+            }`}
+          >
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div>
+                <h2 className="text-2xl font-medium text-white">{activePlan.name}</h2>
+                <p className="mt-2 max-w-xl text-sm leading-relaxed text-neutral-500">{activePlan.description}</p>
+              </div>
+              {activePlan.tag && (
+                <span
+                  className={`border px-2 py-1 font-mono text-[10px] uppercase tracking-[1.5px] ${
+                    activePlan.metered
+                      ? "border-amber-500/40 text-amber-200/90"
+                      : "border-neutral-700 text-neutral-400"
+                  }`}
+                >
+                  {activePlan.tag}
+                </span>
+              )}
+            </div>
+
+            <div className="mt-6 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+              <span className="text-4xl font-medium tracking-[-1px] text-white">
+                {activePlan.metered
+                  ? formatTierPrice(API_METERED_PLATFORM_PRICE)
+                  : formatTierPrice(selectedVolume?.price ?? 0)}
+              </span>
+              <span className="text-sm text-neutral-500">
+                {activePlan.metered ? "+ usage / mo" : "/ month"}
+              </span>
+            </div>
+
+            {activePlan.metered ? (
+              <p className="mt-3 text-sm text-neutral-400">
+                + <span className="text-white">${API_METERED_CALL_PRICE.toFixed(2)}</span> per Proof-of-Work API
+                submission on your monthly invoice
+              </p>
+            ) : selectedVolume ? (
+              <div className="mt-4 rounded-sm border border-neutral-800 bg-black/30 px-4 py-3 text-sm text-neutral-400">
+                <span className="text-white">{selectedVolume.proof_of_work.toLocaleString()}</span> Proof-of-Work
+                submissions / mo · {tierSizingSummary(selectedVolume.proof_of_work)}
+              </div>
+            ) : null}
+
+            <ul className="mt-6 grid gap-2 sm:grid-cols-2">
+              {activePlan.features.map((feature) => (
+                <li key={feature} className="border-t border-neutral-800 pt-3 text-sm text-neutral-400">
+                  {feature}
+                </li>
+              ))}
+            </ul>
+
+            <div className="mt-8">
+              {isCurrentPlan ? (
+                <div className="rounded-sm border border-neutral-800 px-4 py-3 text-center text-sm text-neutral-500">
+                  Current plan
                 </div>
-              );
-            })}
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => handleCheckout(activePlan.checkout)}
+                  disabled={loadingPlan === activePlan.checkout}
+                  className="w-full rounded-sm bg-white px-4 py-3 text-sm font-medium text-black transition hover:bg-neutral-200 disabled:opacity-50 sm:w-auto sm:min-w-[280px]"
+                >
+                  {checkoutLabel}
+                </button>
+              )}
+            </div>
           </div>
 
+          <p className="mt-6 text-center text-xs text-neutral-600">
+            Individual and Teams bundle submissions per month. API Metered bills platform + per-call usage on each
+            invoice.
+          </p>
         </section>
         <Footer />
       </div>

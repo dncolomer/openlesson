@@ -22,16 +22,19 @@ function StashSlotHeader({ index, filled }: { index: number; filled?: boolean })
   return (
     <div className="flex shrink-0 items-center justify-between gap-2">
       <p className={`text-[10px] uppercase tracking-[1.8px] ${labelClass}`}>Stash {index + 1}</p>
-      <ChevronsRight
-        className={`size-3.5 shrink-0 ${filled ? "text-neutral-500" : "text-neutral-600"}`}
-        strokeWidth={2}
-        aria-hidden
+      <span
         title={
           index < ACTIVE_THOUGHT_SLOT_COUNT - 1
             ? `Queue flows to Stash ${index + 2}`
             : "End of stash queue"
         }
-      />
+      >
+        <ChevronsRight
+          className={`size-3.5 shrink-0 ${filled ? "text-neutral-500" : "text-neutral-600"}`}
+          strokeWidth={2}
+          aria-hidden
+        />
+      </span>
     </div>
   );
 }

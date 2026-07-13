@@ -113,6 +113,7 @@ export type ErrorCode =
   | "block_not_found"
   | "tap_link_not_found"
   | "teams_required"
+  | "api_plan_required"
   | "guest_not_found"
   | "internal_error"
   | "performance_report_generation_failed";

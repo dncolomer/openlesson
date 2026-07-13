@@ -48,7 +48,8 @@ export async function POST(req: NextRequest) {
 
   const isTeams =
     profile?.is_admin === true ||
-    (profile?.plan === "pro_teams" && profile?.subscription_status === "active");
+    (profile?.plan === "pro_teams" && profile?.subscription_status === "active") ||
+    (profile?.plan === "api_metered" && profile?.subscription_status === "active");
 
   if (!isTeams) {
     return NextResponse.json(

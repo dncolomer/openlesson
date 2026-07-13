@@ -79,7 +79,10 @@ export async function authenticateApiKey(
     const isAdmin = profile?.is_admin === true;
     organizationId = organizationId || profile?.organization_id || null;
     isOrgAdmin = profile?.is_org_admin === true || isAdmin;
-    isTeams = isAdmin || (profile?.plan === "pro_teams" && profile?.subscription_status === "active");
+    isTeams =
+      isAdmin ||
+      (profile?.plan === "pro_teams" && profile?.subscription_status === "active") ||
+      (profile?.plan === "api_metered" && profile?.subscription_status === "active");
   } else if (keyData.guest_user_id) {
     const { data: guest } = await supabase
       .from("organization_guest_users")
@@ -106,7 +109,7 @@ export async function authenticateApiKey(
   if (!isTeams) {
     return errorResponse(
       403,
-      "teams_required",
+      "api_plan_required",
       "Proof-of-Work API organization and guest features require the Teams tier.",
       { renew_url: "https://openlesson.academy/pricing" }
     );

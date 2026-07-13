@@ -7,6 +7,8 @@ import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { createClient } from "@/lib/supabase/client";
 import {
+  API_METERED_PLATFORM_FEE_CENTS,
+  POW_API_CALL_PRICE_CENTS,
   REGULAR_VOLUME_TIERS,
   TEAM_VOLUME_TIERS,
   DEFAULT_REGULAR_VOLUME,
@@ -62,6 +64,9 @@ const TEAM_VOLUMES = TEAM_VOLUME_TIERS.map((tier) => ({
   note: TEAM_VOLUME_NOTES[tier.proofOfWork] || "",
 }));
 
+const API_METERED_PLATFORM_PRICE = API_METERED_PLATFORM_FEE_CENTS / 100;
+const API_METERED_CALL_PRICE = POW_API_CALL_PRICE_CENTS / 100;
+
 const PLANS = [
   {
     id: "regular_2026" as const,
@@ -90,6 +95,23 @@ const PLANS = [
     ],
     checkout: "pro_teams" as const,
     volumes: TEAM_VOLUMES,
+  },
+  {
+    id: "api_metered" as const,
+    name: "API Metered",
+    detail: "+ usage / mo",
+    description:
+      "For integrators and agent builders who need unlimited Proof-of-Work API scale. No monthly submission cap — pay per API call on your invoice.",
+    features: [
+      "Unlimited Proof-of-Work API usage",
+      `$${API_METERED_CALL_PRICE.toFixed(2)} per API submission (billed monthly)`,
+      `$${API_METERED_PLATFORM_PRICE}/mo platform access`,
+      "Unlimited Workspaces + API keys + MCP",
+      "TAP / ILE not metered per API call",
+    ],
+    checkout: "api_metered" as const,
+    volumes: null,
+    metered: true,
   },
 ];
 
@@ -212,7 +234,7 @@ function PricingPageContent() {
     load();
   }, [searchParams]);
 
-  const handleCheckout = async (priceType: "regular_2026" | "pro_teams") => {
+  const handleCheckout = async (priceType: "regular_2026" | "pro_teams" | "api_metered") => {
     if (!user?.authenticated) {
       window.location.href = `/login?redirect=${encodeURIComponent("/pricing?required=1")}`;
       return;
@@ -245,21 +267,22 @@ function PricingPageContent() {
             <div className="mb-6 inline-block rounded-sm border border-neutral-800 bg-neutral-950/80 px-3 py-1 font-mono text-[10px] uppercase tracking-[2px] text-neutral-500">LEARNING EFFICIENCY • HUMANS & AGENTS</div>
             <h1 className="max-w-3xl text-5xl font-medium leading-[1.05] tracking-[-2.5px] text-white sm:text-6xl">Price learning efficiency, not completion.</h1>
             <p className="mt-7 max-w-2xl text-lg leading-relaxed text-neutral-400">
-              Plans meter Proof-of-Work submissions — one artifact per count, whether from the API, TAP, or ILE. Chat is not
-              billed separately.
+              Individual and Teams bundle Proof-of-Work submissions per month. API Metered has no cap on API usage — you pay
+              per Proof-of-Work API call on your monthly invoice. TAP and ILE are not billed per API call on that tier.
             </p>
             {needsPlan && (
               <div className="mt-8 max-w-2xl rounded-sm border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
-                Choose Individual or Pro / Teams to continue. A paid plan is required to use openLesson — there is no free tier.
+                Choose Individual, Pro / Teams, or API Metered to continue. A paid plan is required to use openLesson — there is no free tier.
               </div>
             )}
           </div>
 
-          <div className="mt-16 grid gap-5 lg:grid-cols-2">
+          <div className="mt-16 grid gap-5 lg:grid-cols-3">
             {PLANS.map((plan) => {
               const current = user?.authenticated && user.plan === plan.id;
               const volumeOptions = "volumes" in plan && Array.isArray(plan.volumes) ? plan.volumes : [];
               const selectedVolume = volumeOptions.find((option) => option.proof_of_work === selectedVolumes[plan.id]) || volumeOptions[0] || null;
+              const isMetered = "metered" in plan && plan.metered;
               return (
                 <div key={plan.id} className={`border bg-neutral-950/80 p-6 backdrop-blur-sm ${plan.featured ? "border-neutral-500" : "border-neutral-800"}`}>
                   <div className="flex items-start justify-between gap-4">
@@ -268,13 +291,21 @@ function PricingPageContent() {
                       <p className="mt-2 text-sm leading-relaxed text-neutral-500">{plan.description}</p>
                     </div>
                     {plan.featured && <span className="border border-neutral-700 px-2 py-1 font-mono text-[10px] uppercase tracking-[1.5px] text-neutral-400">Popular</span>}
+                    {isMetered && <span className="border border-amber-500/40 px-2 py-1 font-mono text-[10px] uppercase tracking-[1.5px] text-amber-200/90">Metered</span>}
                   </div>
                   <div className="mt-8 flex items-baseline gap-2">
                     <span className="text-4xl font-medium text-white">
-                      {formatTierPrice((selectedVolume ?? volumeOptions[0])?.price ?? 0)}
+                      {isMetered
+                        ? formatTierPrice(API_METERED_PLATFORM_PRICE)
+                        : formatTierPrice((selectedVolume ?? volumeOptions[0])?.price ?? 0)}
                     </span>
                     <span className="text-sm text-neutral-500">{plan.detail}</span>
                   </div>
+                  {isMetered && (
+                    <p className="mt-3 text-sm text-neutral-400">
+                      + <span className="text-white">${API_METERED_CALL_PRICE.toFixed(2)}</span> per Proof-of-Work API submission on your monthly invoice
+                    </p>
+                  )}
                   {volumeOptions.length > 0 && (
                     <div className="mt-5 grid gap-3">
                       <div className="font-mono text-[10px] uppercase tracking-[1.5px] text-neutral-500">Monthly capacity</div>
@@ -307,9 +338,11 @@ function PricingPageContent() {
                     <button onClick={() => handleCheckout(plan.checkout)} disabled={loadingPlan === plan.checkout} className="mt-8 w-full rounded-sm bg-white px-4 py-3 text-sm font-medium text-black transition hover:bg-neutral-200 disabled:opacity-50">
                       {loadingPlan === plan.checkout
                         ? "Loading..."
-                        : plan.id === "pro_teams"
-                          ? `Start Teams (${(selectedVolume?.proof_of_work ?? selectedVolumes.pro_teams).toLocaleString()} submissions/mo) →`
-                          : `Start Individual (${(selectedVolume?.proof_of_work ?? selectedVolumes.regular_2026).toLocaleString()} submissions/mo) →`}
+                        : plan.id === "api_metered"
+                          ? `Start API Metered ($${API_METERED_PLATFORM_PRICE}/mo + usage) →`
+                          : plan.id === "pro_teams"
+                            ? `Start Teams (${(selectedVolume?.proof_of_work ?? selectedVolumes.pro_teams).toLocaleString()} submissions/mo) →`
+                            : `Start Individual (${(selectedVolume?.proof_of_work ?? selectedVolumes.regular_2026).toLocaleString()} submissions/mo) →`}
                     </button>
                   ) : !user?.authenticated ? (
                     <Link href="/register" className="mt-8 block rounded-sm bg-neutral-800 px-4 py-3 text-center text-sm font-medium text-white transition hover:bg-neutral-700">Get started →</Link>

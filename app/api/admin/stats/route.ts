@@ -38,6 +38,7 @@ export async function GET() {
       free: 0,
       regular_2026: 0,
       pro_teams: 0,
+      api_metered: 0,
       legacy: 0,
       inactive: 0,
     };

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { hasProofOfWorkApiAccess } from "@/lib/plans";
 import type { AuthContext } from "./types";
 
 export interface WorkspaceSessionPlan {
@@ -47,15 +48,15 @@ export async function requireTeamsUserSession(): Promise<TeamsUserSession | Next
     .eq("id", user.id)
     .single();
 
-  const hasTeams =
+  const hasApiAccess =
     profile?.is_admin === true ||
-    (profile?.plan === "pro_teams" && profile?.subscription_status === "active");
+    hasProofOfWorkApiAccess(profile?.plan, profile?.subscription_status);
 
-  if (!hasTeams) {
+  if (!hasApiAccess) {
     return NextResponse.json(
       {
-        error: "The Proof-of-Work API demo requires the Teams tier.",
-        code: "teams_required",
+        error: "The Proof-of-Work API requires Pro / Teams or API Metered.",
+        code: "api_plan_required",
         renew_url: "/pricing",
       },
       { status: 403 }
@@ -75,7 +76,7 @@ export async function requireTeamsUserSession(): Promise<TeamsUserSession | Next
     userId: user.id,
     auth,
     supabase: createAdminClient(),
-    hasTeams,
+    hasTeams: hasApiAccess,
     organizationId: profile?.organization_id || null,
   };
 }
@@ -116,15 +117,15 @@ export async function requireWorkspaceOwnerSession(
     );
   }
 
-  const hasTeams =
+  const hasApiAccess =
     profile?.is_admin === true ||
-    (profile?.plan === "pro_teams" && profile?.subscription_status === "active");
+    hasProofOfWorkApiAccess(profile?.plan, profile?.subscription_status);
 
-  if (!hasTeams) {
+  if (!hasApiAccess) {
     return NextResponse.json(
       {
-        error: "The Proof-of-Work API requires the Teams tier.",
-        code: "teams_required",
+        error: "The Proof-of-Work API requires Pro / Teams or API Metered.",
+        code: "api_plan_required",
         renew_url: "/pricing",
       },
       { status: 403 }
@@ -145,7 +146,7 @@ export async function requireWorkspaceOwnerSession(
     plan,
     auth,
     supabase: createAdminClient(),
-    hasTeams,
+    hasTeams: hasApiAccess,
   };
 }
 

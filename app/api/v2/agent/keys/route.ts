@@ -8,6 +8,7 @@ import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
 import { createClient } from "@/lib/supabase/server";
 import { errorResponse } from "@/lib/agent-v2/auth";
+import { hasProofOfWorkApiAccess } from "@/lib/plans";
 import { DEFAULT_API_KEY_SCOPES, validateAssignableScopes } from "@/lib/agent-v2/scopes";
 import type { ApiKeyScope } from "@/lib/agent-v2/types";
 
@@ -94,13 +95,14 @@ export async function POST(req: NextRequest) {
     }
 
     const isAdmin = profile.is_admin === true;
-    const isTeams = profile.plan === "pro_teams" && profile.subscription_status === "active";
+    const hasApiAccess =
+      hasProofOfWorkApiAccess(profile.plan, profile.subscription_status) || isAdmin;
 
-    if (!isAdmin && !isTeams) {
+    if (!hasApiAccess) {
       return errorResponse(
         403,
-        "teams_required",
-        "The Proof-of-Work API requires the Teams tier.",
+        "api_plan_required",
+        "The Proof-of-Work API requires Pro / Teams or API Metered.",
         { renew_url: "https://openlesson.academy/pricing" }
       );
     }

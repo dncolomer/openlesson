@@ -79,6 +79,13 @@ export default function DashboardPage() {
     subscriptionStatus: string;
     organization: OrgUsageSummary | null;
     isAdmin: boolean;
+    apiPowCallsUsed?: number;
+    apiMeteredInvoice?: {
+      platformCents: number;
+      usageCents: number;
+      totalCents: number;
+      apiCallCount: number;
+    } | null;
   } | null>(null);
   const [loadingUsage, setLoadingUsage] = useState(false);
 
@@ -226,6 +233,8 @@ export default function DashboardPage() {
             subscriptionStatus: profile?.subscription_status ?? "inactive",
             organization: usageResult.organization ?? null,
             isAdmin: usageResult.isAdmin === true || profile?.is_admin === true,
+            apiPowCallsUsed: usageResult.apiPowCallsUsed ?? 0,
+            apiMeteredInvoice: usageResult.apiMeteredInvoice ?? null,
           });
         } catch (err) {
           console.error("Failed to load usage data:", err);
@@ -371,7 +380,7 @@ export default function DashboardPage() {
     setUserPrompts({});
   };
 
-  const usesAgenticV2Keys = user?.plan === "pro_teams" || user?.isAdmin;
+  const usesAgenticV2Keys = hasAgentApiKeyPlan(user?.plan) || user?.isAdmin;
 
   const mcpOrigin =
     typeof window !== "undefined" ? window.location.origin : "https://openlesson.academy";
@@ -455,6 +464,7 @@ export default function DashboardPage() {
   function planDisplayName(plan: string, isAdmin?: boolean) {
     if (isAdmin) return "Platform admin";
     if (plan === "pro_teams") return "Pro / Teams";
+    if (plan === "api_metered") return "API Metered";
     if (plan === "regular_2026") return "Individual";
     if (plan === "pro") return "Pro";
     if (plan === "regular") return "Individual (legacy)";
@@ -1020,6 +1030,10 @@ export default function DashboardPage() {
                         <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[10px] uppercase tracking-[1.4px] text-neutral-400">
                           Teams
                         </span>
+                      ) : usageData.plan === "api_metered" ? (
+                        <span className="rounded-full border border-amber-500/30 bg-amber-500/10 px-2.5 py-1 text-[10px] uppercase tracking-[1.4px] text-amber-100/90">
+                          Metered
+                        </span>
                       ) : usageData.plan === "pro" ? (
                         <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[10px] uppercase tracking-[1.4px] text-neutral-400">
                           {t("dashboard.pro")}
@@ -1106,6 +1120,8 @@ export default function DashboardPage() {
                         <p className="mt-2 text-sm text-neutral-500">
                           {usageData.plan === "pro"
                             ? t("dashboard.unlimitedContinue")
+                            : usageData.plan === "api_metered"
+                            ? "API usage is tallied through this date and added to your monthly invoice."
                             : usageData.plan === "pro_teams"
                             ? "Organization Proof-of-Work pool resets each billing period."
                             : t("dashboard.regularResetDesc")}
@@ -1131,6 +1147,31 @@ export default function DashboardPage() {
                     )}
                   </div>
                 </div>
+
+                {usageData.plan === "api_metered" && usageData.apiMeteredInvoice && (
+                  <div className={`${usageCardClass} mt-4`}>
+                    <p className={usageLabelClass}>API Metered billing (this period)</p>
+                    <div className="mt-4 grid gap-4 sm:grid-cols-3">
+                      <div>
+                        <p className="text-xs text-neutral-500">API submissions</p>
+                        <p className="mt-1 text-2xl font-medium text-white">{usageData.apiPowCallsUsed ?? 0}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-neutral-500">Usage charges</p>
+                        <p className="mt-1 text-2xl font-medium text-white">
+                          ${(usageData.apiMeteredInvoice.usageCents / 100).toFixed(2)}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-neutral-500">Est. monthly total</p>
+                        <p className="mt-1 text-2xl font-medium text-white">
+                          ${(usageData.apiMeteredInvoice.totalCents / 100).toFixed(2)}
+                        </p>
+                        <p className="mt-1 text-xs text-neutral-500">Includes $99 platform + usage on invoice</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 {usageData.organization && (
                   <div className={`${usageCardClass} border-white/10`}>

@@ -20,6 +20,7 @@ interface Stats {
     free: number;
     regular_2026: number;
     pro_teams: number;
+    api_metered: number;
     legacy: number;
     inactive: number;
   };
@@ -109,6 +110,7 @@ export default function AdminPage() {
             <span>Free: {stats.tierBreakdown.free}</span>
             <span className="text-blue-400">Individual: {stats.tierBreakdown.regular_2026}</span>
             <span className="text-purple-400">Teams: {stats.tierBreakdown.pro_teams}</span>
+            <span className="text-amber-200">API Metered: {stats.tierBreakdown.api_metered}</span>
             <span className="text-amber-300">Legacy: {stats.tierBreakdown.legacy}</span>
             <span>Inactive: {stats.tierBreakdown.inactive}</span>
           </div>

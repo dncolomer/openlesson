@@ -125,6 +125,31 @@ export async function countProofOfWorkSubmissions(
   return countTableRows(supabase, "workspace_proof_of_work", userId, periodStart);
 }
 
+/** Proof-of-Work rows created via the Agentic API (Bearer key or OAuth), for metered billing. */
+export async function countPowApiSubmissions(
+  supabase: SupabaseClient,
+  userId: string,
+  periodStart?: Date | null
+): Promise<number> {
+  let query = supabase
+    .from("workspace_proof_of_work")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", userId)
+    .not("created_by_api_key_id", "is", null);
+
+  if (periodStart) {
+    query = query.gte("created_at", periodStart.toISOString());
+  }
+
+  const { count, error } = await query;
+  if (error) {
+    console.error("[usage-metrics] pow api count failed:", error);
+    return 0;
+  }
+
+  return count ?? 0;
+}
+
 export async function countOrgTapIleSessions(
   supabase: SupabaseClient,
   memberIds: string[],

@@ -4,8 +4,10 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import {
   BASE_INCLUDED_PROOF_OF_WORK,
   EXTRA_PROOF_OF_WORK_PACK_SIZE,
+  POW_API_CALL_PRICE_CENTS,
   normalizeStripeVolumeToProofOfWork,
 } from "@/lib/plans";
+import { billingPeriodStart, countPowApiSubmissions } from "@/lib/usage-metrics";
 
 export const runtime = "nodejs";
 
@@ -93,13 +95,15 @@ export async function POST(request: NextRequest) {
           Math.max(1, Number(subscription.metadata?.monthly_volume) || BASE_INCLUDED_PROOF_OF_WORK[priceType || ""] || 0),
           subscription.metadata?.volume_unit
         );
-        const plan = priceType === "pro_teams"
-          ? "pro_teams"
-          : priceType === "regular_2026"
-            ? "regular_2026"
-            : priceType === "pro"
-              ? "pro"
-              : "regular";
+        const plan = priceType === "api_metered"
+          ? "api_metered"
+          : priceType === "pro_teams"
+            ? "pro_teams"
+            : priceType === "regular_2026"
+              ? "regular_2026"
+              : priceType === "pro"
+                ? "pro"
+                : "regular";
 
         // In the 2026 Stripe API, current_period_end lives on subscription items
         const periodEnd = subscription.items?.data?.[0]?.current_period_end;
@@ -138,6 +142,41 @@ export async function POST(request: NextRequest) {
         break;
       }
 
+      case "invoice.created": {
+        const invoice = event.data.object as Stripe.Invoice;
+        if (invoice.status !== "draft") break;
+
+        const subscriptionRef = invoice.parent?.subscription_details?.subscription;
+        const subscriptionId =
+          typeof subscriptionRef === "string" ? subscriptionRef : subscriptionRef?.id ?? null;
+        if (!subscriptionId) break;
+
+        const subscription = await getStripe().subscriptions.retrieve(subscriptionId).catch(() => null);
+        if (!subscription || subscription.metadata?.price_type !== "api_metered") break;
+
+        const userId = subscription.metadata.supabase_user_id;
+        if (!userId) break;
+
+        const periodStartUnix = subscription.items?.data?.[0]?.current_period_start;
+        const periodStart = periodStartUnix ? new Date(periodStartUnix * 1000) : null;
+        const apiCalls = await countPowApiSubmissions(supabase, userId, periodStart);
+
+        if (apiCalls > 0 && invoice.id) {
+          const customerId =
+            typeof invoice.customer === "string" ? invoice.customer : invoice.customer?.id;
+          if (customerId) {
+            await getStripe().invoiceItems.create({
+              customer: customerId,
+              invoice: invoice.id,
+              description: `${apiCalls.toLocaleString()} Proof-of-Work API submission${apiCalls === 1 ? "" : "s"} @ $${(POW_API_CALL_PRICE_CENTS / 100).toFixed(2)}`,
+              amount: apiCalls * POW_API_CALL_PRICE_CENTS,
+              currency: "usd",
+            });
+          }
+        }
+        break;
+      }
+
       case "invoice.payment_succeeded": {
         const invoice = event.data.object as Stripe.Invoice;
         // In the 2026 Stripe API, subscription is under parent.subscription_details
@@ -159,7 +198,14 @@ export async function POST(request: NextRequest) {
           // Reset extra lessons at the start of each new billing period
           const subscription = await getStripe().subscriptions.retrieve(subscriptionId).catch(() => null);
           const priceType = subscription?.metadata?.price_type;
-          const plan = priceType === "pro_teams" ? "pro_teams" : priceType === "regular_2026" ? "regular_2026" : null;
+          const plan =
+            priceType === "api_metered"
+              ? "api_metered"
+              : priceType === "pro_teams"
+                ? "pro_teams"
+                : priceType === "regular_2026"
+                  ? "regular_2026"
+                  : null;
           const monthlyVolume = normalizeStripeVolumeToProofOfWork(
             Math.max(0, Number(subscription?.metadata?.monthly_volume) || (plan ? BASE_INCLUDED_PROOF_OF_WORK[plan] : 0)),
             subscription?.metadata?.volume_unit

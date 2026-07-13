@@ -8,9 +8,14 @@ import {
   getExtraProofOfWorkPackPriceCents,
   getProofOfWorkAllowance,
   getWorkspaceLimit,
+  API_METERED_PLATFORM_FEE_CENTS,
+  estimateApiMeteredInvoice,
   hasAgentApiKeyPlan,
   hasProductAccess,
+  hasProofOfWorkApiAccess,
+  isApiMeteredPlan,
   normalizeStripeVolumeToProofOfWork,
+  POW_API_CALL_PRICE_CENTS,
   resolveCheckoutVolume,
   REGULAR_VOLUME_PRICES,
   TEAM_VOLUME_PRICES,
@@ -220,9 +225,57 @@ describe("product access", () => {
 });
 
 describe("agent api key plans", () => {
-  it("recognizes pro_teams only", () => {
+  it("recognizes pro_teams and api_metered", () => {
     expect(hasAgentApiKeyPlan("pro")).toBe(false);
     expect(hasAgentApiKeyPlan("pro_teams")).toBe(true);
+    expect(hasAgentApiKeyPlan("api_metered")).toBe(true);
     expect(hasAgentApiKeyPlan("regular_2026")).toBe(false);
+  });
+
+  it("grants proof-of-work API access on active api_metered", () => {
+    expect(hasProofOfWorkApiAccess("api_metered", "active")).toBe(true);
+    expect(hasProofOfWorkApiAccess("api_metered", "inactive")).toBe(false);
+    expect(hasProofOfWorkApiAccess("pro_teams", "active")).toBe(true);
+  });
+});
+
+describe("api metered pricing", () => {
+  it("estimates monthly invoice from API call count", () => {
+    const estimate = estimateApiMeteredInvoice(50);
+    expect(estimate.platformCents).toBe(API_METERED_PLATFORM_FEE_CENTS);
+    expect(estimate.usageCents).toBe(50 * POW_API_CALL_PRICE_CENTS);
+    expect(estimate.totalCents).toBe(API_METERED_PLATFORM_FEE_CENTS + 50 * POW_API_CALL_PRICE_CENTS);
+    expect(isApiMeteredPlan("api_metered")).toBe(true);
+  });
+
+  it("gives unlimited proof-of-work allowance for active api_metered", () => {
+    expect(
+      getProofOfWorkAllowance({
+        plan: "api_metered",
+        is_admin: false,
+        extra_lessons: 0,
+        subscription_status: "active",
+        current_period_end: "2026-12-31",
+        token_tier: null,
+        token_validity_expires_at: null,
+      }).limit
+    ).toBeNull();
+  });
+
+  it("includes api_metered in product access", () => {
+    expect(
+      hasProductAccess({
+        plan: "api_metered",
+        subscription_status: "active",
+        is_admin: false,
+        token_tier: null,
+        token_validity_expires_at: null,
+      })
+    ).toBe(true);
+  });
+
+  it("formats api metered monthly price label", () => {
+    expect(formatPlanMonthlyPrice("api_metered")).toContain("$99/month");
+    expect(formatPlanMonthlyPrice("api_metered")).toContain("$1.99");
   });
 });

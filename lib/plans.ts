@@ -2,7 +2,7 @@
 // PLAN DEFINITIONS & USAGE LIMITS
 // ============================================
 
-export type PlanId = "free" | "regular" | "pro" | "regular_2026" | "pro_teams";
+export type PlanId = "free" | "regular" | "pro" | "regular_2026" | "pro_teams" | "api_metered";
 
 export interface PlanDef {
   id: PlanId;
@@ -117,7 +117,31 @@ export const PLANS: Record<PlanId, PlanDef> = {
     ],
     stripePriceEnv: null,
   },
+  api_metered: {
+    id: "api_metered",
+    name: "API Metered",
+    price: "$99",
+    priceAmount: 9900,
+    proofOfWorkPerPeriod: null,
+    workspacesPerPeriod: null,
+    features: [
+      "Unlimited Proof-of-Work API usage (no monthly cap)",
+      "$1.99 per API submission — invoiced monthly",
+      "$99/mo platform access",
+      "Unlimited Workspaces",
+      "Agentic API keys + MCP",
+      "TAP / ILE included without per-call API metering",
+      "Priority support",
+    ],
+    stripePriceEnv: null,
+  },
 };
+
+/** Monthly platform fee for API Metered (cents). */
+export const API_METERED_PLATFORM_FEE_CENTS = 9900;
+
+/** Per Proof-of-Work API submission on API Metered (cents) — higher than bundled tiers. */
+export const POW_API_CALL_PRICE_CENTS = 199;
 
 /** 2026 volume tiers (PoW + price). Canonical source for Stripe checkout. */
 export const REGULAR_VOLUME_TIERS: readonly VolumeTier[] = [
@@ -253,6 +277,9 @@ export function formatPlanMonthlyPrice(
     const cents = TEAM_VOLUME_PRICES[vol] ?? TEAM_VOLUME_PRICES[DEFAULT_TEAM_VOLUME];
     return `$${cents / 100}/month`;
   }
+  if (plan === "api_metered") {
+    return `$${API_METERED_PLATFORM_FEE_CENTS / 100}/month + $${POW_API_CALL_PRICE_CENTS / 100} per API submission`;
+  }
   if (plan === "pro") return "$14.99/month";
   if (plan === "regular") return "$4.99/month";
   if (plan === "free") return "$0";
@@ -279,7 +306,13 @@ export type ProductAccessProfile = Pick<
   organization_id?: string | null;
 };
 
-const PAID_PRODUCT_PLANS = new Set<PlanId>(["regular_2026", "pro_teams", "regular", "pro"]);
+const PAID_PRODUCT_PLANS = new Set<PlanId>([
+  "regular_2026",
+  "pro_teams",
+  "api_metered",
+  "regular",
+  "pro",
+]);
 
 /** True when the user may use the product (paid plan, org member, token tier, or admin). */
 export function hasProductAccess(profile: ProductAccessProfile | null | undefined): boolean {
@@ -382,6 +415,10 @@ export function getProofOfWorkAllowance(profile: UserProfile): Pick<UsageCheckRe
   }
 
   if (plan === "pro" && subscription_status === "active") {
+    return { plan, limit: null, isAdmin: false };
+  }
+
+  if (plan === "api_metered" && subscription_status === "active") {
     return { plan, limit: null, isAdmin: false };
   }
 
@@ -497,7 +534,39 @@ export function canCreateWorkspace(
   return { allowed: true, plan, used: workspaceCount, limit, isAdmin: false };
 }
 
+export function isApiMeteredPlan(plan: PlanId | string | null | undefined): boolean {
+  return plan === "api_metered";
+}
+
+export function formatPowApiCallPrice(): string {
+  return `$${(POW_API_CALL_PRICE_CENTS / 100).toFixed(2)}`;
+}
+
+export function estimateApiMeteredInvoice(apiCallCount: number): {
+  platformCents: number;
+  usageCents: number;
+  totalCents: number;
+  apiCallCount: number;
+} {
+  const usageCents = Math.max(0, apiCallCount) * POW_API_CALL_PRICE_CENTS;
+  return {
+    platformCents: API_METERED_PLATFORM_FEE_CENTS,
+    usageCents,
+    totalCents: API_METERED_PLATFORM_FEE_CENTS + usageCents,
+    apiCallCount: Math.max(0, apiCallCount),
+  };
+}
+
+/** Active subscription may use the Proof-of-Work REST/MCP API. */
+export function hasProofOfWorkApiAccess(
+  plan: PlanId | string | null | undefined,
+  subscriptionStatus?: string | null,
+): boolean {
+  if (subscriptionStatus !== "active") return false;
+  return plan === "pro_teams" || plan === "api_metered";
+}
+
 /** Plans that may create Proof-of-Work API keys (v2 /api/v2/agent/keys). */
 export function hasAgentApiKeyPlan(plan: PlanId | string | null | undefined): boolean {
-  return plan === "pro_teams";
+  return plan === "pro_teams" || plan === "api_metered";
 }

@@ -6,6 +6,11 @@ export const ADMIN_TIER_OPTIONS = [
   { id: "free" as const, label: "Free", description: PLANS.free.features[0] },
   { id: "regular_2026" as const, label: "Individual", description: "from $49/mo · 100+ Proof-of-Work submissions" },
   { id: "pro_teams" as const, label: "Pro / Teams", description: "from $599/mo · 1,000+ Proof-of-Work submissions + org" },
+  {
+    id: "api_metered" as const,
+    label: "API Metered",
+    description: "$99/mo platform · $1.99 per API submission (monthly invoice)",
+  },
 ] as const;
 
 export type AdminTierId = (typeof ADMIN_TIER_OPTIONS)[number]["id"];
@@ -56,6 +61,7 @@ export function normalizeAdminTier(user: {
 export function tierLabel(plan: string): string {
   if (plan === "regular_2026") return "Individual";
   if (plan === "pro_teams") return "Pro / Teams";
+  if (plan === "api_metered") return "API Metered";
   if (plan === "free") return "Free";
   if (plan === "regular") return "Individual (legacy)";
   if (plan === "pro") return "Pro (legacy)";
@@ -66,6 +72,7 @@ export function tierColor(plan: string): string {
   switch (plan) {
     case "pro":
     case "pro_teams":
+    case "api_metered":
       return "text-purple-400";
     case "regular_2026":
       return "text-blue-400";

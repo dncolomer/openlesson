@@ -4,7 +4,9 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import {
   canCreateWorkspace,
   canSubmitProofOfWork,
+  estimateApiMeteredInvoice,
   EXTRA_PROOF_OF_WORK_PACK_SIZE,
+  isApiMeteredPlan,
   PLANS,
   type OrgUsageSummary,
   type PlanId,
@@ -14,6 +16,7 @@ import {
   countActiveWorkspaces,
   countProofOfWorkSubmissions,
   countOrgProofOfWorkSubmissions,
+  countPowApiSubmissions,
   loadUsageProfile,
 } from "@/lib/usage-metrics";
 
@@ -142,12 +145,21 @@ export async function GET() {
     const workspaceCount = await countActiveWorkspaces(supabase, user.id);
     const workspaceResult = canCreateWorkspace(userProfile, workspaceCount);
 
+    let apiPowCallsUsed = 0;
+    let apiMeteredInvoice: ReturnType<typeof estimateApiMeteredInvoice> | null = null;
+    if (isApiMeteredPlan(userProfile.plan)) {
+      apiPowCallsUsed = await countPowApiSubmissions(supabase, user.id, periodStart);
+      apiMeteredInvoice = estimateApiMeteredInvoice(apiPowCallsUsed);
+    }
+
     const proofOfWorkPayload = {
       proofOfWorkUsed: proofOfWorkCount,
       proofOfWorkPersonalUsed: personalProofOfWorkCount,
       proofOfWorkLimit: result.limit,
       canSubmitProofOfWork: result.allowed,
       evidenceReason: result.reason,
+      apiPowCallsUsed,
+      apiMeteredInvoice,
     };
 
     if (profile.is_admin) {

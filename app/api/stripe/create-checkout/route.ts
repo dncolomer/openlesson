@@ -2,7 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { createClient } from "@/lib/supabase/server";
 import {
+  API_METERED_PLATFORM_FEE_CENTS,
   EXTRA_PROOF_OF_WORK_PACK_SIZE,
+  POW_API_CALL_PRICE_CENTS,
   REGULAR_VOLUME_PRICES,
   TEAM_VOLUME_PRICES,
   resolveCheckoutVolume,
@@ -35,7 +37,18 @@ export async function POST(request: NextRequest) {
       : 1;
     const monthlyVolume = resolveCheckoutVolume(priceType, rawMonthlyVolume);
 
-    if (!["regular", "pro", "regular_2026", "pro_teams", "extra_lesson", "extra_proof_of_work", "rabbit_hole_plays"].includes(priceType)) {
+    if (
+      ![
+        "regular",
+        "pro",
+        "regular_2026",
+        "pro_teams",
+        "api_metered",
+        "extra_lesson",
+        "extra_proof_of_work",
+        "rabbit_hole_plays",
+      ].includes(priceType)
+    ) {
       return NextResponse.json({ error: "Invalid price type" }, { status: 400 });
     }
 
@@ -72,6 +85,20 @@ export async function POST(request: NextRequest) {
           recurring: { interval: "month" },
           product_data: {
             name: `openLesson Pro / Teams - ${monthlyVolume.toLocaleString()} Proof-of-Work submissions/mo`,
+          },
+        },
+        quantity: 1,
+      };
+    } else if (priceType === "api_metered") {
+      mode = "subscription";
+      lineItem = {
+        price_data: {
+          currency: "usd",
+          unit_amount: API_METERED_PLATFORM_FEE_CENTS,
+          recurring: { interval: "month" },
+          product_data: {
+            name: "openLesson API Metered — platform access",
+            description: `Unlimited API usage. Proof-of-Work API submissions billed at $${(POW_API_CALL_PRICE_CENTS / 100).toFixed(2)} each on your monthly invoice.`,
           },
         },
         quantity: 1,

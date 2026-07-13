@@ -75,7 +75,7 @@ export function WorkspaceIntegrationPanel({
         skill_md?: string;
       }>(res);
       if (!res.ok) {
-        if (data.code === "teams_required") {
+        if (data.code === "teams_required" || data.code === "api_plan_required") {
           throw new Error(t("workspaceIntegration.teamsRequired"));
         }
         throw new Error(data.error || t("workspaceIntegration.errorGeneric"));
@@ -111,7 +111,7 @@ export function WorkspaceIntegrationPanel({
       });
       const data = await readJsonResponse<{ error?: string; code?: string }>(res);
       if (!res.ok) {
-        if (data.code === "teams_required") {
+        if (data.code === "teams_required" || data.code === "api_plan_required") {
           throw new Error(t("workspaceIntegration.teamsRequired"));
         }
         throw new Error(data.error || t("workspaceIntegration.errorGeneric"));

@@ -45,7 +45,9 @@ export async function authenticateOAuthAccessToken(
 
   const isAdmin = profile?.is_admin === true;
   const isTeams =
-    isAdmin || (profile?.plan === "pro_teams" && profile?.subscription_status === "active");
+    isAdmin ||
+    (profile?.plan === "pro_teams" && profile?.subscription_status === "active") ||
+    (profile?.plan === "api_metered" && profile?.subscription_status === "active");
 
   if (!isTeams) {
     return errorResponse(

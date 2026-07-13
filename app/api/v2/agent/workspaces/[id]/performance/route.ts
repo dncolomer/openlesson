@@ -219,7 +219,7 @@ export async function POST(req: NextRequest, { params }: RouteProps) {
   if (!generation.success || !generation.data) {
     return errorResponse(
       500,
-      generation.code || "internal_error",
+      generation.code ?? "internal_error",
       generation.error || "Failed to generate performance report",
     );
   }

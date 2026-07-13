@@ -1,3 +1,4 @@
+import type { ErrorCode } from "@/lib/agent-v2/types";
 import { buildOpaquePerformanceReportInstructions } from "@/lib/agent-v2/opaque-evaluation";
 import {
   buildPerformanceReportInstructions,
@@ -23,7 +24,7 @@ export interface GenerateWorkspacePerformanceReportResult {
   success: boolean;
   data?: PerformanceReport;
   error?: string;
-  code?: string;
+  code?: ErrorCode;
   recovered?: boolean;
 }
 

@@ -114,7 +114,8 @@ export type ErrorCode =
   | "tap_link_not_found"
   | "teams_required"
   | "guest_not_found"
-  | "internal_error";
+  | "internal_error"
+  | "performance_report_generation_failed";
 
 export interface ApiError {
   code: ErrorCode;

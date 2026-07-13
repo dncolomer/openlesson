@@ -25,9 +25,14 @@ export function TrackedCtaLink({
     trackCtaClick({ location, label, href, page });
   };
 
-  if (href.startsWith("mailto:")) {
+  if (href.startsWith("mailto:") || href.startsWith("http://") || href.startsWith("https://")) {
     return (
-      <a href={href} onClick={handleClick} className={className}>
+      <a
+        href={href}
+        onClick={handleClick}
+        className={className}
+        {...(href.startsWith("http") ? { target: "_blank", rel: "noopener noreferrer" } : {})}
+      >
         {children ?? label}
       </a>
     );

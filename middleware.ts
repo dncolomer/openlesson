@@ -20,6 +20,7 @@ const SUBSCRIPTION_EXEMPT_PREFIXES = [
   "/oauth/",
   "/docs/",
   "/platform",
+  "/products",
   "/pitch",
   "/new-design",
   "/marketing/",

@@ -45,13 +45,13 @@ export const PRODUCTS: ProductDefinition[] = [
     title: "Proof-of-Work API",
     forHuman: {
       summary:
-        "Send recordings, write-ups, or session artifacts from human workflows. Get readiness scores and a clear gap list before promotion or sign-off.",
+        "Optimize what you teach to convert users. Score proof of work from real workflows and power dynamic, agentic onboarding that closes gaps before drop-off.",
       bullets: [
-        "Scores live cognition and written proof of work",
+        "Learning optimization tied to conversion — not completion rates",
         "Fits onboarding, certification, and QA gates",
       ],
-      href: "/docs/proof-of-work-api",
-      ctaLabel: "API docs",
+      href: "/products/proof-of-work-api",
+      ctaLabel: "Learn more",
     },
     forAgent: {
       summary:
@@ -60,8 +60,8 @@ export const PRODUCTS: ProductDefinition[] = [
         "Scores agent runs from real tool use",
         "Fits CI, eval harnesses, and deploy gates",
       ],
-      href: "/docs/proof-of-work-api",
-      ctaLabel: "API docs",
+      href: "/products/proof-of-work-api",
+      ctaLabel: "Learn more",
     },
   },
   {
@@ -70,13 +70,13 @@ export const PRODUCTS: ProductDefinition[] = [
     title: "Think Aloud Protocol",
     forHuman: {
       summary:
-        "Send someone a link. They talk through their thinking while they work. You get a scored report on what they actually understand.",
+        "Hard skill and human verification via live think-aloud sessions. Capture reasoning while people work — not rehearsed answers or AI-polished output.",
       bullets: [
-        "Captures live reasoning, not polished write-ups",
+        "Captures live cognition under Socratic probe",
         "Shareable links per workspace or practice block",
       ],
-      href: "/workspace/new",
-      ctaLabel: "Create a workspace",
+      href: "/products/think-aloud-protocol",
+      ctaLabel: "Learn more",
     },
   },
   {
@@ -85,27 +85,28 @@ export const PRODUCTS: ProductDefinition[] = [
     title: "Integrated Learning Environment",
     forHuman: {
       summary:
-        "Where people practice after gaps show up. Guided scenarios and coaching until scores improve.",
+        "Drop-in replacement for tests and take-homes when you need complex cognitive analysis — guided practice wired to verified gaps.",
       bullets: [
-        "Practice targets the gaps that were found",
+        "Depth over checkbox completion",
         "Progress tracked in the same workspace",
       ],
-      href: "/workspace/new",
-      ctaLabel: "Start practicing",
+      href: "/products/integrated-learning-environment",
+      ctaLabel: "Learn more",
     },
   },
   {
     id: "ale",
     eyebrow: "Skill evolution",
     title: "Agentic Learning Environment",
-    status: "upcoming",
     forAgent: {
       summary:
-        "Agents are not born with skills. ALE evolves skill.md files as agents learn from real workspace runs, closing gaps until Proof-of-Work API scores say the skill is ready to deploy.",
+        "Private environment to train agents and validate skills on sensitive workflows — evolve skill.md files without leaking corporate data to public sandboxes.",
       bullets: [
-        "Skill file evolution driven by proof of work, not one-shot prompt edits",
-        "Sandbox practice on real scenarios until the agent earns the skill",
+        "Skill evolution driven by proof of work, not one-shot prompt edits",
+        "Validate before deploy inside your data boundary",
       ],
+      href: "/products/agentic-learning-environment",
+      ctaLabel: "Learn more",
     },
   },
 ];

@@ -2,6 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { callXai, systemMessage, userMessage } from "@/lib/xai-client";
 import { buildTapScoreInstructions, getTapScoreBrief, getTapScoreBriefForUser, TapScoreMode, hashPrivateToken } from "@/lib/tap-score";
+import { resolveTapSessionAccess } from "@/lib/tap-score-session-auth";
+import {
+  buildTapChatExchangePayload,
+  TAP_CHAT_TOOL_NAME,
+} from "@/lib/tap-score-traces";
+import { uploadFileToXAI } from "@/lib/xai-files";
+import { countWorkspaceProofOfWorkForPlan } from "@/lib/agent-v2/workspace-proof-of-work";
+import { withProofOfWorkApiResponse } from "@/lib/agent-v2/predictive-interruption";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -16,6 +24,7 @@ export async function POST(req: NextRequest) {
     let focusNodeIds = Array.isArray(body.focusNodeIds) ? body.focusNodeIds.filter(Boolean) : [];
     const blockId = body.blockId ? String(body.blockId) : null;
     let focusSessionId = body.sessionId ? String(body.sessionId) : null;
+    const tapSessionId = body.tapSessionId ? String(body.tapSessionId) : "";
     const messages = Array.isArray(body.messages) ? body.messages : [];
     const latestThought = String(body.thought || "").trim();
     let userId: string | null = null;
@@ -70,7 +79,80 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: response.error || "Failed to generate TAP response" }, { status: 500 });
     }
 
-    return NextResponse.json({ message: response.data });
+    const heliosReply = response.data;
+    let proofOfWorkCount = 0;
+
+    if (tapSessionId) {
+      const access = await resolveTapSessionAccess({
+        privateToken,
+        workspaceId,
+        tapSessionId,
+        blockId,
+        focusSessionId,
+      });
+
+      if (!("error" in access)) {
+        const timestampMs = Date.now();
+        const payload = buildTapChatExchangePayload({
+          tapSessionId: access.tapSessionId,
+          workspaceId: access.workspaceId,
+          blockId: blockId || access.blockId,
+          focusSessionId: focusSessionId || access.focusSessionId,
+          learnerThought: latestThought,
+          heliosReply,
+          timestampMs,
+        });
+
+        const fileName = `tap-chat-${access.tapSessionId}-${timestampMs}.json`;
+        const base64 = Buffer.from(JSON.stringify(payload, null, 2), "utf8").toString("base64");
+        const uploaded = await uploadFileToXAI(fileName, "application/json", base64);
+
+        await access.supabase.from("workspace_proof_of_work").insert({
+          workspace_id: access.workspaceId,
+          block_id: blockId || access.blockId,
+          session_id: focusSessionId || access.focusSessionId,
+          proof_of_work_type: "tool",
+          file_name: fileName,
+          mime_type: "application/json",
+          file_size: Buffer.byteLength(JSON.stringify(payload), "utf8"),
+          xai_file_id: uploaded.file_id,
+          timestamp_ms: timestampMs,
+          chunk_index: 0,
+          metadata: {
+            tap_session_id: access.tapSessionId,
+            learner_thought: latestThought,
+            helios_reply: heliosReply,
+          },
+          tool_name: TAP_CHAT_TOOL_NAME,
+          tool_action: "chat_exchange",
+          user_id: access.userId,
+          guest_user_id: access.guestUserId,
+          organization_id: access.organizationId,
+        });
+
+        proofOfWorkCount = await countWorkspaceProofOfWorkForPlan(access.supabase, access.workspaceId);
+      }
+    }
+
+    return NextResponse.json(
+      await withProofOfWorkApiResponse(
+        { message: heliosReply },
+        {
+          endpoint: "upload_tap_chat",
+          workspace_id: workspaceId,
+          block_id: blockId,
+          proof_of_work_artifacts: proofOfWorkCount,
+          tool_name: TAP_CHAT_TOOL_NAME,
+          artifact_summary: latestThought
+            ? `Learner: "${latestThought.slice(0, 400)}" → Helios: "${heliosReply.slice(0, 400)}"`
+            : `Helios: "${heliosReply.slice(0, 500)}"`,
+          artifact_metadata: {
+            learner_thought: latestThought || null,
+            helios_reply: heliosReply,
+          },
+        },
+      ),
+    );
   } catch (error) {
     console.error("[workspace-tap-score/chat] Error:", error);
     const message = error instanceof Error ? error.message : "Internal server error";

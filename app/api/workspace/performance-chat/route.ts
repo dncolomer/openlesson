@@ -5,7 +5,7 @@ import {
   buildPerformanceChatInstructions,
   buildWorkspacePerformanceContext,
 } from "@/lib/agent-v2/performance-context";
-import { callXaiResponses, type ResponsesInputMessage } from "@/lib/xai-client";
+import { callXaiResponses, DEFAULT_MODEL, type ResponsesInputMessage } from "@/lib/xai-client";
 
 export const runtime = "nodejs";
 export const maxDuration = 120;
@@ -117,7 +117,7 @@ export async function POST(req: NextRequest) {
     });
 
     const result = await callXaiResponses({
-      model: "grok-4.3",
+      model: DEFAULT_MODEL,
       instructions: buildPerformanceChatInstructions(null),
       input: inputMessages,
       temperature: 0.6,

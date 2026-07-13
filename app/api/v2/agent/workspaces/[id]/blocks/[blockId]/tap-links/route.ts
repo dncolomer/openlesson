@@ -107,7 +107,7 @@ export async function POST(req: NextRequest, { params }: RouteProps) {
   }
 
   return NextResponse.json(
-    withProofOfWorkApiResponse(
+    await withProofOfWorkApiResponse(
       {
         tap_link: {
           ...link,

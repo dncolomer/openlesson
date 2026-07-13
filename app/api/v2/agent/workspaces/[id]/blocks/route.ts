@@ -35,7 +35,7 @@ export async function GET(req: NextRequest, { params }: RouteProps) {
   }
 
   return NextResponse.json(
-    withProofOfWorkApiResponse(
+    await withProofOfWorkApiResponse(
       { blocks: blocks || [] },
       { endpoint: "list_blocks", workspace_id: id }
     )

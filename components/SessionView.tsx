@@ -14,7 +14,6 @@ import {
   resumeSession,
   updateSessionStatus,
   getSessionPlan,
-  createSessionPlan,
   archiveProbe,
   toggleProbeFocused,
   resetSessionProbes,
@@ -54,7 +53,22 @@ import type { TransferHealth } from "@/components/LogsTool";
 import { useVoiceActivity } from "@/lib/useVoiceActivity";
 import { useThinkAloudTranscript, type SpeechTranscriptEntry } from "@/lib/useThinkAloudTranscript";
 import { useHeliosVoicePlaybackActive } from "@/lib/useHeliosVoicePlayback";
-import { IleEvidenceBuffer } from "@/lib/ile-evidence-buffer";
+import type { IleProofOfWorkUploadItem } from "@/lib/ile-evidence-buffer";
+import {
+  buildIleCanvasUploadItem,
+  buildIleEegUploadItem,
+  buildIleFacialUploadItem,
+  buildIleNotebookUploadItem,
+  buildIleToolEventUploadItem,
+  hashIlePowContent,
+  ILE_EVIDENCE_THRESHOLDS,
+  ILE_POW_DEBOUNCE_MS,
+  meetsCanvasUploadThreshold,
+  meetsEegUploadThreshold,
+  meetsFacialUploadThreshold,
+  meetsNotebookUploadThreshold,
+  totalIleEegSamples,
+} from "@/lib/ile-realtime-pow";
 import {
   uploadIleEvidenceItem,
   uploadIleProofOfWork,
@@ -62,11 +76,19 @@ import {
   textToBase64,
 } from "@/lib/ile-proof-of-work-client";
 import {
+  buildIleChatExchangePayload,
   buildIleThoughtTracePayload,
+  ILE_CHAT_TOOL_NAME,
   ILE_TRACE_TOOL_NAME,
   type IleSystem1Action,
   type IleSystem2Action,
 } from "@/lib/ile-thought-traces";
+import type { HeliosTurnMode } from "@/components/thought-ui/ThoughtUi";
+import type { ProofOfWorkApiInterruption } from "@/lib/agent-v2/predictive-interruption";
+import { useTapPredictiveInterruption } from "@/lib/useTapPredictiveInterruption";
+import { useTapIdleProofOfWork } from "@/lib/useTapIdleProofOfWork";
+import { useTapSpeechProofOfWork } from "@/lib/useTapSpeechProofOfWork";
+import { ILE_POW_API_PATHS } from "@/lib/session-pow-api-paths";
 import { isChapterSlotAvailable } from "@/lib/chapter-skill-grid";
 import { translateWithLocale, useI18n } from "@/lib/i18n";
 import { tutoringLocales, tutoringLanguageNames } from "@/lib/tutoring-languages";
@@ -662,7 +684,13 @@ export function SessionView({ sessionId }: { sessionId: string }) {
     updateChapterWorkspace(targetChapterKey, { pendingChatMessage: message });
   }, [activeChapterKey, updateChapterWorkspace]);
 
-  const submitHeliosChatMessageNow = useCallback(async (message: string, imageDataUrl?: string) => {
+  const handlePowInterruptionRef = useRef<(interruption: ProofOfWorkApiInterruption | undefined) => void>(() => {});
+
+  const submitHeliosChatMessageNow = useCallback(async (
+    message: string,
+    imageDataUrl?: string,
+    options?: { uploadThoughtChatExchange?: boolean },
+  ) => {
     const text = message.trim();
     if (!text || !session) return;
 
@@ -709,6 +737,35 @@ export function SessionView({ sessionId }: { sessionId: string }) {
             : message
         ),
       }));
+
+      if (options?.uploadThoughtChatExchange) {
+        const workspaceId = session.metadata?.workspace_id as string | undefined;
+        if (workspaceId && content) {
+          const chatPayload = buildIleChatExchangePayload({
+            sessionId: session.id,
+            workspaceId,
+            learnerThought: text,
+            heliosReply: content,
+          });
+          const chatPow = await uploadIleProofOfWork({
+            workspaceId,
+            sessionId: session.id,
+            type: "tool",
+            mime_type: "application/json",
+            data: textToBase64(JSON.stringify(chatPayload, null, 2)),
+            file_name: `ile-chat-${session.id}-${Date.now()}.json`,
+            tool_name: ILE_CHAT_TOOL_NAME,
+            tool_action: "chat_exchange",
+            metadata: {
+              learner_thought: text,
+              helios_reply: content,
+            },
+          });
+          if (chatPow.ok) {
+            handlePowInterruptionRef.current(chatPow.interruption);
+          }
+        }
+      }
     } catch (error) {
       console.error("Helios direct chat error:", error);
       updateChapterWorkspace(chapterKey, workspace => ({
@@ -844,7 +901,12 @@ export function SessionView({ sessionId }: { sessionId: string }) {
   const requeueSpeechTranscriptEntriesRef = useRef<(entries: SpeechTranscriptEntry[]) => void>(() => {});
   const eegChunkIndexRef = useRef(0);
   const facialChunkIndexRef = useRef(0);
-  const ileEvidenceBufferRef = useRef(new IleEvidenceBuffer());
+  const powSessionEnabledRef = useRef(false);
+  const lastUploadedCanvasHashRef = useRef<string | null>(null);
+  const lastUploadedNotebookHashRef = useRef<string | null>(null);
+  const canvasPowDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const notebookPowDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const bandPowersRef = useRef(bandPowers);
   const [transferHealth, setTransferHealth] = useState<TransferHealth>(createEmptyTransferHealth);
   const transferHealthRef = useRef<TransferHealth>(createEmptyTransferHealth());
   const whiteboardDataRef = useRef(whiteboardData);
@@ -870,11 +932,16 @@ export function SessionView({ sessionId }: { sessionId: string }) {
   const pausedScreenStreamRef = useRef<MediaStream | null>(null);
   const pausedWebcamStreamRef = useRef<MediaStream | null>(null);
 
+  const tryUploadFacialBatchRef = useRef<(force?: boolean) => void>(() => {});
+
   const handleFacialData = useCallback((data: FacialDataPoint) => {
     setLatestFacialData(data);
     facialBufferRef.current.push(data);
     if (facialBufferRef.current.length > 120) {
       facialBufferRef.current = facialBufferRef.current.slice(-120);
+    }
+    if (meetsFacialUploadThreshold(facialBufferRef.current.length)) {
+      tryUploadFacialBatchRef.current();
     }
     // Feed into local context buffer if local inference is active
     if (localInferenceEnabledRef.current && localContextRef.current) {
@@ -903,6 +970,7 @@ export function SessionView({ sessionId }: { sessionId: string }) {
   // Keep refs in sync
   useEffect(() => { whiteboardDataRef.current = whiteboardData; }, [whiteboardData]);
   useEffect(() => { notebookContentRef.current = notebookContent; }, [notebookContent]);
+  useEffect(() => { bandPowersRef.current = bandPowers; }, [bandPowers]);
   useEffect(() => { activeToolRef.current = activeTool; }, [activeTool]);
   useEffect(() => { objectivesRef.current = objectives; }, [objectives]);
   useEffect(() => { isRecordingRef.current = isRecording; }, [isRecording]);
@@ -926,28 +994,6 @@ export function SessionView({ sessionId }: { sessionId: string }) {
       stepId: step?.id,
       stepDescription: step?.description?.slice(0, 120),
     });
-  }, []);
-
-  const ensureSessionPlan = useCallback(async (): Promise<SessionPlan | null> => {
-    const currentSession = sessionRef.current;
-    if (!currentSession) return null;
-
-    const existing = await getSessionPlan(currentSession.id);
-    if (existing?.goal) {
-      setSessionPlan(existing);
-      sessionPlanRef.current = existing;
-      return existing;
-    }
-
-    const created = await createSessionPlan(currentSession.id, {
-      goal: currentSession.problem,
-      strategy: "chapter_grid",
-      description: currentSession.planningPrompt || undefined,
-      steps: [],
-    });
-    setSessionPlan(created);
-    sessionPlanRef.current = created;
-    return created;
   }, []);
 
   const persistPlanSteps = useCallback(async (
@@ -1173,8 +1219,8 @@ export function SessionView({ sessionId }: { sessionId: string }) {
         try {
           // First try to load existing plan - use it but user will need to confirm language to translate if needed
           const existingPlan = await getSessionPlan(s.id);
-          // Validate existing plan before using
-          if (existingPlan?.goal) {
+          // Only hydrate plans that already have chapters — empty shells are regenerated on confirm.
+          if (existingPlan?.goal && existingPlan.steps?.length > 0) {
             setSessionPlan(existingPlan);
             sessionPlanRef.current = existingPlan;
           }
@@ -1328,32 +1374,89 @@ export function SessionView({ sessionId }: { sessionId: string }) {
     return typeof workspaceId === "string" && workspaceId ? workspaceId : undefined;
   }, []);
 
-  const stageEvidenceFromRefs = useCallback(() => {
-    const buffer = ileEvidenceBufferRef.current;
-    const currentSession = sessionRef.current;
-    if (!currentSession) return;
+  const uploadPowItem = useCallback(
+    async (item: IleProofOfWorkUploadItem, channel: keyof TransferHealth) => {
+      const workspaceId = getWorkspaceId();
+      const currentSession = sessionRef.current;
+      if (!workspaceId || !currentSession || !powSessionEnabledRef.current) return;
 
-    buffer.setCanvasData(whiteboardDataRef.current);
-    buffer.setNotebookContent(notebookContentRef.current);
-
-    const transcriptEntries = consumeSpeechTranscriptEntriesRef.current();
-    if (transcriptEntries.length > 0) {
-      buffer.pushTranscript(transcriptEntries.map((entry) => entry.text).join(" "));
-    }
-
-    if (facialBufferRef.current.length > 0) {
-      const snapshot = facialBufferRef.current.splice(0);
-      buffer.pushFacialPoints(snapshot);
-    }
-
-    if (museStatusRef.current === "streaming" && eegPendingBufferRef.current.size > 0) {
-      const channels: Record<string, number[]> = {};
-      for (const [ch, samples] of eegPendingBufferRef.current.entries()) {
-        channels[ch] = samples.slice();
+      const result = await uploadIleEvidenceItem(workspaceId, currentSession.id, item);
+      recordTransferEvent(channel, result.ok, result.error);
+      if (result.ok && result.interruption) {
+        handlePowInterruptionRef.current(result.interruption);
       }
-      buffer.pushEegChunk({
+    },
+    [getWorkspaceId, recordTransferEvent],
+  );
+
+  const uploadScreenshotPow = useCallback(
+    async (blob: Blob, timestampMs: number) => {
+      const workspaceId = getWorkspaceId();
+      const currentSession = sessionRef.current;
+      if (!workspaceId || !currentSession || !powSessionEnabledRef.current) return;
+
+      const result = await uploadIleScreenshot(workspaceId, currentSession.id, { blob, timestampMs });
+      recordTransferEvent("screenshots", result.ok, result.error);
+      if (result.ok) {
+        setScreenshotCount((count) => count + 1);
+        if (result.interruption) {
+          handlePowInterruptionRef.current(result.interruption);
+        }
+      }
+    },
+    [getWorkspaceId, recordTransferEvent],
+  );
+
+  const tryUploadFacialBatch = useCallback(
+    (force = false) => {
+      const currentSession = sessionRef.current;
+      if (!currentSession || !powSessionEnabledRef.current) return;
+      if (!meetsFacialUploadThreshold(facialBufferRef.current.length, force)) return;
+
+      const data = facialBufferRef.current.splice(0);
+      const item = buildIleFacialUploadItem(currentSession.id, data);
+      void uploadPowItem(item, "facial");
+    },
+    [uploadPowItem],
+  );
+
+  const consumePendingEegSamples = useCallback(() => {
+    const channels: Record<string, number[]> = {};
+    for (const [ch, samples] of eegPendingBufferRef.current.entries()) {
+      channels[ch] = samples.slice();
+    }
+    return channels;
+  }, []);
+
+  const clearConsumedEegSamples = useCallback((channels: Record<string, number[]>) => {
+    for (const [ch, savedSamples] of Object.entries(channels)) {
+      const current = eegPendingBufferRef.current.get(ch) || [];
+      const remaining = current.slice(savedSamples.length);
+      if (remaining.length > 0) {
+        eegPendingBufferRef.current.set(ch, remaining);
+      } else {
+        eegPendingBufferRef.current.delete(ch);
+      }
+    }
+    if (eegPendingBufferRef.current.size === 0) {
+      eegPendingStartMsRef.current = null;
+      eegLastSampleMsRef.current = null;
+    }
+  }, []);
+
+  const tryUploadPendingEegChunk = useCallback(
+    (force = false) => {
+      const currentSession = sessionRef.current;
+      if (!currentSession || !powSessionEnabledRef.current) return;
+      if (museStatusRef.current !== "streaming" || eegPendingBufferRef.current.size === 0) return;
+
+      const channels = consumePendingEegSamples();
+      const sampleCount = totalIleEegSamples(channels);
+      if (!meetsEegUploadThreshold(sampleCount, force)) return;
+
+      const item = buildIleEegUploadItem(currentSession.id, {
         channels,
-        bandPowers,
+        bandPowers: bandPowersRef.current,
         sampleRateHz: EEG_SAMPLE_RATE_HZ,
         startedAtMs: eegPendingStartMsRef.current ?? Date.now(),
         endedAtMs: eegLastSampleMsRef.current ?? Date.now(),
@@ -1364,50 +1467,170 @@ export function SessionView({ sessionId }: { sessionId: string }) {
         deviceName: museClientRef.current?.deviceName,
         timestampMs: eegLastSampleMsRef.current ?? Date.now(),
       });
-      for (const [ch, savedSamples] of Object.entries(channels)) {
-        const current = eegPendingBufferRef.current.get(ch) || [];
-        const remaining = current.slice(savedSamples.length);
-        if (remaining.length > 0) {
-          eegPendingBufferRef.current.set(ch, remaining);
-        } else {
-          eegPendingBufferRef.current.delete(ch);
-        }
-      }
-      if (eegPendingBufferRef.current.size === 0) {
-        eegPendingStartMsRef.current = null;
-        eegLastSampleMsRef.current = null;
-      }
-    }
-  }, [bandPowers]);
-
-  const flushIleEvidence = useCallback(
-    async (options?: { force?: boolean }) => {
-      const workspaceId = getWorkspaceId();
-      const currentSession = sessionRef.current;
-      if (!workspaceId || !currentSession) return;
-
-      stageEvidenceFromRefs();
-      const { uploads, screenshots } = ileEvidenceBufferRef.current.drainForSubmit(
-        currentSession.id,
-        Date.now(),
-        options?.force,
-      );
-
-      for (const item of uploads) {
-        const channel: keyof TransferHealth =
-          item.kind === "eeg" ? "eeg" : item.toolName === "facial" ? "facial" : "tools";
-        const result = await uploadIleEvidenceItem(workspaceId, currentSession.id, item);
-        recordTransferEvent(channel, result.ok, result.error);
-      }
-
-      for (const shot of screenshots) {
-        const result = await uploadIleScreenshot(workspaceId, currentSession.id, shot);
-        recordTransferEvent("screenshots", result.ok, result.error);
-        if (result.ok) setScreenshotCount((c) => c + 1);
-      }
+      clearConsumedEegSamples(channels);
+      void uploadPowItem(item, "eeg");
     },
-    [getWorkspaceId, recordTransferEvent, stageEvidenceFromRefs],
+    [clearConsumedEegSamples, consumePendingEegSamples, uploadPowItem],
   );
+
+  const uploadCanvasPowNow = useCallback(
+    (force = false) => {
+      const currentSession = sessionRef.current;
+      const data = whiteboardDataRef.current;
+      if (!currentSession || !data || !powSessionEnabledRef.current) return;
+      if (!meetsCanvasUploadThreshold(data.length, force)) return;
+
+      const hash = hashIlePowContent(data);
+      if (hash === lastUploadedCanvasHashRef.current) return;
+      lastUploadedCanvasHashRef.current = hash;
+
+      void uploadPowItem(buildIleCanvasUploadItem(currentSession.id, data), "tools");
+    },
+    [uploadPowItem],
+  );
+
+  const uploadNotebookPowNow = useCallback(
+    (force = false) => {
+      const currentSession = sessionRef.current;
+      const content = notebookContentRef.current?.trim() || "";
+      if (!currentSession || !content || !powSessionEnabledRef.current) return;
+      if (!meetsNotebookUploadThreshold(content.length, force)) return;
+
+      const hash = hashIlePowContent(content);
+      if (hash === lastUploadedNotebookHashRef.current) return;
+      lastUploadedNotebookHashRef.current = hash;
+
+      void uploadPowItem(buildIleNotebookUploadItem(currentSession.id, content), "tools");
+    },
+    [uploadPowItem],
+  );
+
+  const scheduleCanvasPowUpload = useCallback(() => {
+    if (canvasPowDebounceRef.current) {
+      clearTimeout(canvasPowDebounceRef.current);
+    }
+    canvasPowDebounceRef.current = setTimeout(() => {
+      canvasPowDebounceRef.current = null;
+      uploadCanvasPowNow();
+    }, ILE_POW_DEBOUNCE_MS);
+  }, [uploadCanvasPowNow]);
+
+  const scheduleNotebookPowUpload = useCallback(() => {
+    if (notebookPowDebounceRef.current) {
+      clearTimeout(notebookPowDebounceRef.current);
+    }
+    notebookPowDebounceRef.current = setTimeout(() => {
+      notebookPowDebounceRef.current = null;
+      uploadNotebookPowNow();
+    }, ILE_POW_DEBOUNCE_MS);
+  }, [uploadNotebookPowNow]);
+
+  const flushRemainingIlePow = useCallback(
+    async (options?: { force?: boolean }) => {
+      const force = options?.force ?? false;
+      if (canvasPowDebounceRef.current) {
+        clearTimeout(canvasPowDebounceRef.current);
+        canvasPowDebounceRef.current = null;
+      }
+      if (notebookPowDebounceRef.current) {
+        clearTimeout(notebookPowDebounceRef.current);
+        notebookPowDebounceRef.current = null;
+      }
+      uploadCanvasPowNow(force);
+      uploadNotebookPowNow(force);
+      tryUploadFacialBatch(force);
+      tryUploadPendingEegChunk(force);
+    },
+    [tryUploadFacialBatch, tryUploadPendingEegChunk, uploadCanvasPowNow, uploadNotebookPowNow],
+  );
+
+  const [heliosTurnMode, setHeliosTurnMode] = useState<HeliosTurnMode>("idle");
+  const powSessionEnabled = isRecording && !isPaused && !showWelcomePanel;
+
+  useEffect(() => {
+    powSessionEnabledRef.current = powSessionEnabled;
+    if (!powSessionEnabled) {
+      void flushRemainingIlePow({ force: true });
+    }
+  }, [powSessionEnabled, flushRemainingIlePow]);
+
+  useEffect(() => {
+    lastUploadedCanvasHashRef.current = null;
+    lastUploadedNotebookHashRef.current = null;
+  }, [session?.id, activeChapterKey]);
+
+  useEffect(() => {
+    if (!powSessionEnabled) return;
+    scheduleCanvasPowUpload();
+  }, [powSessionEnabled, whiteboardData, scheduleCanvasPowUpload]);
+
+  useEffect(() => {
+    if (!powSessionEnabled) return;
+    scheduleNotebookPowUpload();
+  }, [powSessionEnabled, notebookContent, scheduleNotebookPowUpload]);
+
+  useEffect(() => {
+    if (!powSessionEnabled || museStatus !== "streaming") return;
+    const interval = window.setInterval(() => {
+      tryUploadPendingEegChunk();
+    }, 3_000);
+    return () => window.clearInterval(interval);
+  }, [museStatus, powSessionEnabled, tryUploadPendingEegChunk]);
+
+  const ilePowContext = useMemo(
+    () => ({
+      workspaceId: getWorkspaceId() ?? undefined,
+      sessionId: session?.id ?? null,
+    }),
+    [getWorkspaceId, session?.id],
+  );
+
+  const { applyInterruption, clearPendingInterruption } = useTapPredictiveInterruption(
+    useCallback(
+      ({ message }) => {
+        const chapterKey = activeChapterKey;
+        updateChapterWorkspace(chapterKey, (workspace) => ({
+          chatMessages: [
+            ...workspace.chatMessages,
+            { id: `int_${Date.now()}`, role: "assistant", content: message },
+          ],
+        }));
+        setHeliosTurnMode("interruption");
+      },
+      [activeChapterKey, updateChapterWorkspace],
+    ),
+  );
+
+  const handlePowInterruption = useCallback(
+    (interruption: ProofOfWorkApiInterruption | undefined) => {
+      if (interruption === undefined) return;
+      applyInterruption(interruption);
+    },
+    [applyInterruption],
+  );
+
+  useEffect(() => {
+    handlePowInterruptionRef.current = handlePowInterruption;
+  }, [handlePowInterruption]);
+
+  const notifySpeechResultRef = useRef<(text: string) => void>(() => {});
+  const bumpUserActivityRef = useRef<() => void>(() => {});
+
+  const {
+    isTranscriptionActive,
+    notifySpeechResult,
+    flushSpeechSegment,
+    resetSpeechTracking,
+  } = useTapSpeechProofOfWork(
+    powSessionEnabled,
+    ilePowContext,
+    handlePowInterruption,
+    ILE_POW_API_PATHS.speech,
+  );
+
+  useEffect(() => {
+    notifySpeechResultRef.current = notifySpeechResult;
+  }, [notifySpeechResult]);
 
   const uploadIleThoughtTrace = useCallback(
     async (payload: SessionThoughtTracePayload) => {
@@ -1452,8 +1675,11 @@ export function SessionView({ sessionId }: { sessionId: string }) {
         },
       });
       recordTransferEvent("tools", result.ok, result.error);
+      if (result.ok) {
+        handlePowInterruption(result.interruption);
+      }
     },
-    [getWorkspaceId, recordTransferEvent],
+    [getWorkspaceId, recordTransferEvent, handlePowInterruption],
   );
 
   const logToolRef = useRef<
@@ -1473,12 +1699,15 @@ export function SessionView({ sessionId }: { sessionId: string }) {
         ? now - new Date(currentSession.startedAt).getTime()
         : 0;
 
-      ileEvidenceBufferRef.current.pushToolEvent({
-        toolName,
-        action,
-        timestampMs: now,
-        metadata,
-      });
+      if (powSessionEnabledRef.current) {
+        const item = buildIleToolEventUploadItem(currentSession.id, {
+          toolName,
+          action,
+          timestampMs: now,
+          metadata,
+        });
+        void uploadPowItem(item, "tools");
+      }
 
       const metaKeys = Object.keys(metadata);
       let metaStr = "";
@@ -1508,12 +1737,16 @@ export function SessionView({ sessionId }: { sessionId: string }) {
         message: `${toolName}/${action} @${Math.round(elapsedMs / 1000)}s${metaStr}`,
       });
     },
-    [addSessionLog],
+    [addSessionLog, uploadPowItem],
   );
 
   useEffect(() => {
     logToolRef.current = logTool;
   }, [logTool]);
+
+  useEffect(() => {
+    tryUploadFacialBatchRef.current = tryUploadFacialBatch;
+  }, [tryUploadFacialBatch]);
 
   const logSessionThoughtTrace = useCallback(
     (payload: SessionThoughtTracePayload) => {
@@ -1528,15 +1761,49 @@ export function SessionView({ sessionId }: { sessionId: string }) {
     ] || "en-US";
 
   const sessionThoughtInterface = useSessionThoughtInterface({
-    enabled: isRecording && !isPaused && !showWelcomePanel,
+    enabled: powSessionEnabled,
     speechLang: sessionSpeechLang,
     sessionId: session?.id,
     onLogTrace: logSessionThoughtTrace,
+    onSpeechTranscript: (text) => notifySpeechResultRef.current(text),
+    onUserActivity: () => bumpUserActivityRef.current(),
     onSendToProbe: async (text) => {
-      await flushIleEvidence();
-      await submitHeliosChatMessageNow(text);
+      setHeliosTurnMode("idle");
+      await flushRemainingIlePow();
+      await submitHeliosChatMessageNow(text, undefined, { uploadThoughtChatExchange: true });
     },
   });
+
+  const { bumpUserActivity, resetIdleTracking } = useTapIdleProofOfWork(
+    powSessionEnabled,
+    ilePowContext,
+    handlePowInterruption,
+    {
+      speechText: sessionThoughtInterface.crystallizableText,
+      isTranscriptionActive,
+    },
+    ILE_POW_API_PATHS.idle,
+  );
+
+  useEffect(() => {
+    bumpUserActivityRef.current = bumpUserActivity;
+  }, [bumpUserActivity]);
+
+  useEffect(() => {
+    if (!powSessionEnabled) {
+      clearPendingInterruption();
+      flushSpeechSegment();
+      resetIdleTracking();
+      resetSpeechTracking();
+      setHeliosTurnMode("idle");
+    }
+  }, [
+    powSessionEnabled,
+    clearPendingInterruption,
+    flushSpeechSegment,
+    resetIdleTracking,
+    resetSpeechTracking,
+  ]);
 
   const sessionThoughtHistory = useMemo(
     () => sessionThoughtInterface.thoughts.slice().reverse(),
@@ -1566,9 +1833,9 @@ export function SessionView({ sessionId }: { sessionId: string }) {
       void logTool(toolName, "submit_to_helios", metadata);
 
       try {
-        await flushIleEvidence();
+        await flushRemainingIlePow();
       } catch (err) {
-        console.warn("[SubmitToHelios] evidence flush failed:", err);
+        console.warn("[SubmitToHelios] pow flush failed:", err);
       }
 
       if (toolName === "canvas") {
@@ -1588,7 +1855,7 @@ export function SessionView({ sessionId }: { sessionId: string }) {
         }
       }
     },
-    [activeChapterKey, activeWorkspace, chapterWorkspaces, logTool, flushIleEvidence, submitHeliosChatMessageNow, updateChapterWorkspace],
+    [activeChapterKey, activeWorkspace, chapterWorkspaces, logTool, flushRemainingIlePow, submitHeliosChatMessageNow, updateChapterWorkspace],
   );
 
   const checkMicrophone = async () => {
@@ -1665,7 +1932,7 @@ export function SessionView({ sessionId }: { sessionId: string }) {
       localContextRef.current?.clear();
     }
 
-    await flushIleEvidence({ force: true });
+    await flushRemainingIlePow({ force: true });
 
     if (stream) { stream.getTracks().forEach((t) => t.stop()); setStream(null); }
     setIsRecording(false);
@@ -1694,7 +1961,7 @@ export function SessionView({ sessionId }: { sessionId: string }) {
     if (!screenCaptureRef.current) {
       screenCaptureRef.current = createScreenCapture({
         onScreenshotCaptured: async (blob: Blob, timestamp: number) => {
-          ileEvidenceBufferRef.current.pushScreenshot({ blob, timestampMs: timestamp });
+          await uploadScreenshotPow(blob, timestamp);
         },
         intervalMs: 5000,
         onStatusChange: (capturing: boolean) => {
@@ -1703,7 +1970,7 @@ export function SessionView({ sessionId }: { sessionId: string }) {
       });
     }
     await screenCaptureRef.current.start();
-  }, []);
+  }, [uploadScreenshotPow]);
 
   const handleStopScreenCapture = useCallback(() => {
     screenCaptureRef.current?.stop();
@@ -2221,8 +2488,59 @@ export function SessionView({ sessionId }: { sessionId: string }) {
                               .eq("id", session.id);
                           }
                           
-                          const newPlan = await ensureSessionPlan();
+                          const existingPlan = await getSessionPlan(session.id);
+                          let newPlan: SessionPlan | null = null;
+
+                          if ((existingPlan?.steps?.length ?? 0) > 0 && existingPlan?.goal) {
+                            if (tutoringLanguage === "en") {
+                              newPlan = existingPlan;
+                            } else {
+                              const translateRes = await fetch("/api/session-plan/translate", {
+                                method: "POST",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({
+                                  sessionId: session.id,
+                                  tutoringLanguage,
+                                  objectives,
+                                }),
+                              });
+                              if (translateRes.ok) {
+                                const { plan } = await translateRes.json();
+                                newPlan = plan;
+                              } else {
+                                const err = await translateRes.json().catch(() => ({}));
+                                console.error("[SessionView] Translation failed:", err);
+                              }
+                            }
+                          }
+
                           if (!newPlan) {
+                            const planRes = await fetch("/api/session-plan/create", {
+                              method: "POST",
+                              headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify({
+                                sessionId: session.id,
+                                problem: session.problem,
+                                objectives,
+                                planningPrompt: session.planningPrompt,
+                                force: true,
+                                tutoringLanguage,
+                              }),
+                            });
+                            if (planRes.ok) {
+                              const { plan } = await planRes.json();
+                              newPlan = plan;
+                            } else {
+                              const errorMessage = await readErrorResponse(planRes, "Failed to create block plan");
+                              console.error("[SessionView] Create plan failed:", errorMessage);
+                              setPlanError(errorMessage);
+                            }
+                          }
+
+                          if (newPlan) {
+                            setSessionPlan(newPlan);
+                            sessionPlanRef.current = newPlan;
+                          } else {
                             setPlanError("Failed to prepare chapter map. Please try again.");
                           }
                           
@@ -2649,6 +2967,7 @@ export function SessionView({ sessionId }: { sessionId: string }) {
                         lastUserTurn={lastDialogueUserTurn}
                         lastAssistantTurn={lastDialogueAssistantTurn}
                         isAssistantPending={isHeliosAssistantPending}
+                        heliosTurnMode={heliosTurnMode}
                         chapterPrompt={chapterDialoguePrompt}
                         userInitial={userInitial}
                         isSessionActive={isRecording && !isPaused}

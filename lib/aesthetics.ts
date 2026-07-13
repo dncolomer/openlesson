@@ -13,6 +13,22 @@ export interface AestheticPackage {
   previewImage: string;
 }
 
+/** Assign distinct images to a fixed number of UI slots (cycles only if pool is smaller). */
+export function aestheticImagesForSlots(count: number, images = FALLBACK_AESTHETIC_IMAGES) {
+  const pool = images.length > 0 ? images : FALLBACK_AESTHETIC_IMAGES;
+  const picks: string[] = [];
+  for (let index = 0; index < count; index += 1) {
+    let image = pool[index % pool.length];
+    let offset = 0;
+    while (picks.includes(image) && offset < pool.length) {
+      offset += 1;
+      image = pool[(index + offset) % pool.length];
+    }
+    picks.push(image);
+  }
+  return picks;
+}
+
 /** Stable per-id pick — same image on server and client (no Math.random). */
 export function aestheticImageForId(id: string, images = FALLBACK_AESTHETIC_IMAGES) {
   if (images.length === 0) return FALLBACK_AESTHETIC_IMAGES[0];

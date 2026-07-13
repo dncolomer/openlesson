@@ -9,6 +9,7 @@ import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
 import "katex/dist/katex.min.css";
 import { useI18n } from "@/lib/i18n";
+import { DEFAULT_MODEL } from "@/lib/xai-client";
 
 interface Message {
   id: string;
@@ -70,7 +71,7 @@ export function ChatPanel({
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const currentModel = (model || "grok-4.3").replace(/^x-ai\//, "");
+  const currentModel = (model || DEFAULT_MODEL).replace(/^x-ai\//, "");
 
   const hints = [
     { label: t("workspaceChat.addSessions"), example: t("chatPanel.exampleAdd") },

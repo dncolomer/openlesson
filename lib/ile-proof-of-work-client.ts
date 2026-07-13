@@ -1,3 +1,4 @@
+import type { ProofOfWorkApiInterruption } from "@/lib/agent-v2/predictive-interruption";
 import type { IleBufferedScreenshot, IleProofOfWorkUploadItem } from "@/lib/ile-evidence-buffer";
 
 export interface UploadIleProofOfWorkInput {
@@ -20,6 +21,7 @@ export interface UploadIleProofOfWorkResult {
   ok: boolean;
   error?: string;
   proof_of_work?: Record<string, unknown>;
+  interruption?: ProofOfWorkApiInterruption;
 }
 
 export function textToBase64(text: string): string {
@@ -62,7 +64,11 @@ export async function uploadIleProofOfWork(
     if (!res.ok) {
       return { ok: false, error: body?.error || `Proof-of-work upload failed (${res.status})` };
     }
-    return { ok: true, proof_of_work: body.proof_of_work };
+    return {
+      ok: true,
+      proof_of_work: body.proof_of_work,
+      interruption: body.interruption ?? null,
+    };
   } catch (error) {
     return { ok: false, error: error instanceof Error ? error.message : "Proof-of-work upload failed" };
   }

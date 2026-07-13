@@ -17,7 +17,7 @@ import {
 } from "@/lib/agent-v2/performance-context";
 import { generateWorkspacePerformanceReport } from "@/lib/agent-v2/generate-performance-report";
 import { canAccessAgentWorkspace } from "@/lib/agent-v2/workspace-access";
-import { callXaiResponses, type ResponsesInputMessage } from "@/lib/xai-client";
+import { callXaiResponses, DEFAULT_MODEL, type ResponsesInputMessage } from "@/lib/xai-client";
 import { withProofOfWorkApiResponse } from "@/lib/agent-v2/predictive-interruption";
 
 export const runtime = "nodejs";
@@ -116,7 +116,7 @@ export async function POST(req: NextRequest, { params }: RouteProps) {
             });
 
         return NextResponse.json(
-          withProofOfWorkApiResponse(
+          await withProofOfWorkApiResponse(
             {
               mode: prompt ? "chat" : "report",
               response: prompt
@@ -135,6 +135,9 @@ export async function POST(req: NextRequest, { params }: RouteProps) {
               mode: prompt ? "chat" : "report",
               report: emptyReport?.report ?? null,
               proof_of_work_artifacts: contextCounts?.proof_of_work_artifacts,
+              workspace_title: workspace.title || workspace.root_topic || null,
+              conversion_goal: workspace.conversion_goal,
+              artifact_summary: prompt || "Empty workspace performance request",
             }
           )
         );
@@ -166,7 +169,7 @@ export async function POST(req: NextRequest, { params }: RouteProps) {
     });
 
     const chatResult = await callXaiResponses({
-      model: "grok-4.3",
+      model: DEFAULT_MODEL,
       instructions: opaque
         ? buildOpaquePerformanceChatInstructions(blockId)
         : buildPerformanceChatInstructions(blockId, stylePrompt),
@@ -181,7 +184,7 @@ export async function POST(req: NextRequest, { params }: RouteProps) {
     }
 
     return NextResponse.json(
-      withProofOfWorkApiResponse(
+      await withProofOfWorkApiResponse(
         {
           mode: "chat",
           evaluation_mode: evalMeta.evaluation_mode,
@@ -196,6 +199,13 @@ export async function POST(req: NextRequest, { params }: RouteProps) {
           block_id: blockId,
           mode: "chat",
           proof_of_work_artifacts: contextCounts?.proof_of_work_artifacts,
+          workspace_title: workspace.title || workspace.root_topic || null,
+          conversion_goal: workspace.conversion_goal,
+          artifact_summary: `Performance chat — learner asked: "${prompt.slice(0, 400)}"`,
+          artifact_metadata: {
+            learner_prompt: prompt,
+            helios_response_preview: chatResult.text.slice(0, 500),
+          },
         }
       )
     );
@@ -237,7 +247,7 @@ export async function POST(req: NextRequest, { params }: RouteProps) {
       };
 
   return NextResponse.json(
-    withProofOfWorkApiResponse(
+    await withProofOfWorkApiResponse(
       {
         mode: "report",
         evaluation_mode: evalMeta.evaluation_mode,
@@ -256,6 +266,9 @@ export async function POST(req: NextRequest, { params }: RouteProps) {
         mode: "report",
         report: finalized.report,
         proof_of_work_artifacts: contextCounts?.proof_of_work_artifacts,
+        workspace_title: workspace.title || workspace.root_topic || null,
+        conversion_goal: workspace.conversion_goal,
+        artifact_summary: finalized.report.summary || `Performance report score ${finalized.report.overall_score}`,
       }
     )
   );

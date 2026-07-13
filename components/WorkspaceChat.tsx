@@ -6,6 +6,7 @@ import { ChatPanel } from "./ChatPanel";
 import { SessionList } from "./SessionList";
 import { RemixModal } from "./RemixModal";
 import { useI18n } from "@/lib/i18n";
+import { DEFAULT_MODEL } from "@/lib/xai-client";
 
 const DIVIDER_STORAGE_KEY = "plan-divider-width";
 
@@ -47,7 +48,7 @@ interface WorkspaceChatProps {
 }
 
 const MODEL_STORAGE_KEY = "planner-model";
-const DEFAULT_PLANNER_MODEL = "grok-4.3";
+const DEFAULT_PLANNER_MODEL = DEFAULT_MODEL;
 
 function nodesHaveChanged(oldNodes: Block[], newNodes: Block[]): Set<string> {
   const changedIds = new Set<string>();

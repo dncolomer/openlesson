@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { ChevronLeft, ChevronRight, LayoutGrid } from "lucide-react";
 import { translateWithLocale } from "@/lib/i18n";
 
@@ -16,6 +16,10 @@ export type SessionOnboardingGuideProps = {
   showStartAction?: boolean;
   onStart?: () => void;
   isStarting?: boolean;
+  /** TAP-only: replaces the default step-3 play button (e.g. topic cards). */
+  renderStep3Action?: () => ReactNode;
+  /** TAP-only: hide the quote block on step 3 when showing topic cards. */
+  hideStep3Quote?: boolean;
   /** Optional hero image for step 1 (TAP placeholder; overrides ILE video if set). */
   stepImages?: [string | undefined, string | undefined];
   /** Optional override for ILE step 1 grid-pan clip. */
@@ -140,6 +144,8 @@ export function SessionOnboardingGuide({
   showStartAction = false,
   onStart,
   isStarting = false,
+  renderStep3Action,
+  hideStep3Quote = false,
   stepImages,
   step1VideoSrc = STEP1_ILE_GRID_PAN_VIDEO,
   step2VideoSrc = STEP2_THOUGHT_INTERFACE_VIDEO,
@@ -264,7 +270,7 @@ export function SessionOnboardingGuide({
                     isActive={step === index}
                   />
                 </div>
-              ) : (
+              ) : hideStep3Quote ? null : (
                 <OnboardingQuote text={slide.quoteText} author={slide.quoteAuthor} />
               )}
 
@@ -273,7 +279,8 @@ export function SessionOnboardingGuide({
                 {slide.body}
               </p>
 
-              {index === 2 && showStartAction ? (
+              {index === 2 && renderStep3Action ? renderStep3Action() : null}
+              {index === 2 && showStartAction && !renderStep3Action ? (
                 <button
                   type="button"
                   onClick={onStart}

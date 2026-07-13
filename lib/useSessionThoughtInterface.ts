@@ -263,6 +263,8 @@ interface UseSessionThoughtInterfaceOptions {
   sessionId?: string;
   onLogTrace: (payload: SessionThoughtTracePayload) => void;
   onSendToProbe: (text: string, thoughtIds: string[]) => Promise<void>;
+  onSpeechTranscript?: (text: string) => void;
+  onUserActivity?: () => void;
 }
 
 export function useSessionThoughtInterface({
@@ -271,7 +273,19 @@ export function useSessionThoughtInterface({
   sessionId,
   onLogTrace,
   onSendToProbe,
+  onSpeechTranscript,
+  onUserActivity,
 }: UseSessionThoughtInterfaceOptions) {
+  const onSpeechTranscriptRef = useRef(onSpeechTranscript);
+  const onUserActivityRef = useRef(onUserActivity);
+
+  useEffect(() => {
+    onSpeechTranscriptRef.current = onSpeechTranscript;
+  }, [onSpeechTranscript]);
+
+  useEffect(() => {
+    onUserActivityRef.current = onUserActivity;
+  }, [onUserActivity]);
   const [thoughts, setThoughts] = useState<SessionThought[]>([]);
   const [interimText, setInterimText] = useState("");
   const [crystallizableText, setCrystallizableText] = useState("");
@@ -305,11 +319,11 @@ export function useSessionThoughtInterface({
     );
   }, [sessionId, thoughts]);
 
-  const activeThoughts = useMemo(
+  const stashedThoughts = useMemo(
     () => thoughts.filter((thought) => !memoryThoughtIds.has(thought.id) && !sentThoughtIds.has(thought.id)),
     [thoughts, memoryThoughtIds, sentThoughtIds],
   );
-  const latestThoughts = useMemo(() => activeThoughts.slice(-3).reverse(), [activeThoughts]);
+  const latestThoughts = useMemo(() => stashedThoughts.slice(-3).reverse(), [stashedThoughts]);
 
   function buildThoughtRecord(text: string, currentThoughts: SessionThought[]): SessionThought | null {
     const clean = normalize(text);
@@ -328,6 +342,7 @@ export function useSessionThoughtInterface({
   }
 
   function addThought(text: string, system1Action: SessionSystem1Action = "pause_finalize") {
+    onUserActivityRef.current?.();
     setThoughts((current) => {
       const thought = buildThoughtRecord(text, current);
       if (!thought) return current;
@@ -373,8 +388,10 @@ export function useSessionThoughtInterface({
           else if (i >= event.resultIndex) interim = normalize(`${interim} ${transcript}`);
         }
         finalBufferRef.current = finals;
+        const displayText = normalize(`${finals.join(" ")} ${interim}`.trim());
         setInterimText(interim);
-        setCrystallizableText(normalize(`${finals.join(" ")} ${interim}`.trim()));
+        setCrystallizableText(displayText);
+        onSpeechTranscriptRef.current?.(displayText);
       },
       onListeningChange: setIsListening,
       onError: setSpeechError,
@@ -416,11 +433,11 @@ export function useSessionThoughtInterface({
     if (text) addThought(text);
   }
 
-  const crystallizeCurrentTranscription = useCallback(() => {
+  const stashCurrentTranscription = useCallback(() => {
     const text = normalize(crystallizableText);
     clearTranscriptionDisplay();
     restartSpeechRecognitionSession();
-    if (text) addThought(text, "crystallize");
+    if (text) addThought(text);
   }, [crystallizableText, restartSpeechRecognitionSession]);
 
   useEffect(() => {
@@ -447,6 +464,7 @@ export function useSessionThoughtInterface({
         text: clean,
         combined: thoughtIds.length > 1,
       });
+      onUserActivityRef.current?.();
       setIsSending(true);
       setSendError("");
       setSentThoughtIds((current) => new Set([...current, ...thoughtIds]));
@@ -466,9 +484,18 @@ export function useSessionThoughtInterface({
     [isSending, onLogTrace, onSendToProbe, sentThoughtIds],
   );
 
+  const sendCurrentTranscription = useCallback(async () => {
+    const text = normalize(crystallizableText);
+    if (!text) return;
+    clearTranscriptionDisplay();
+    restartSpeechRecognitionSession();
+    await sendThought(text, []);
+  }, [crystallizableText, restartSpeechRecognitionSession, sendThought]);
+
   const beginEditTranscription = useCallback(() => {
     const text = normalize(crystallizableText);
     if (!text) return;
+    onUserActivityRef.current?.();
     setEditingTranscription({ draft: text, originalText: text });
   }, [crystallizableText]);
 
@@ -496,35 +523,11 @@ export function useSessionThoughtInterface({
     await sendThought(draft, []);
   }, [editingTranscription, onLogTrace, restartSpeechRecognitionSession, sendThought]);
 
-  const clearTranscription = useCallback(() => {
-    setEditingTranscription(null);
-    clearTranscriptionDisplay();
-    restartSpeechRecognitionSession();
-  }, [restartSpeechRecognitionSession]);
-
   const retryMicrophone = useCallback(() => {
     if (!enabled) return;
     setSpeechError(null);
     startLiveSpeechRecognition(speechBindings, speechLang);
   }, [enabled, speechBindings, speechLang]);
-
-  const clearActiveThoughts = useCallback(() => {
-    setEditingTranscription(null);
-    if (activeThoughts.length > 0) {
-      activeThoughts.forEach((thought) => {
-        onLogTrace({
-          traceType: "system2",
-          action: "skip",
-          thoughtId: thought.id,
-          chainId: thought.chainId,
-          text: thought.text,
-          timestampMs: thought.timestamp,
-        });
-      });
-      setMemoryThoughtIds((current) => new Set([...current, ...activeThoughts.map((thought) => thought.id)]));
-    }
-    clearTranscriptionBuffers();
-  }, [activeThoughts, onLogTrace]);
 
   useEffect(() => {
     if (!enabled) return;
@@ -532,28 +535,24 @@ export function useSessionThoughtInterface({
       if (event.altKey) return;
       const target = event.target as HTMLElement | null;
       if (target?.closest("input, textarea, select, [contenteditable='true']")) return;
-      if (event.key === "Escape") {
+      if (event.key === "Escape" && editingTranscription) {
         event.preventDefault();
-        if (editingTranscription) {
-          cancelEditTranscription();
-          return;
-        }
-        clearActiveThoughts();
+        cancelEditTranscription();
         return;
       }
-      if (!event.metaKey && !event.ctrlKey && !event.shiftKey && event.key.toLowerCase() === "c") {
+      if (!event.metaKey && !event.ctrlKey && !event.shiftKey && event.key === "Enter") {
         event.preventDefault();
-        crystallizeCurrentTranscription();
+        void sendCurrentTranscription();
+        return;
+      }
+      if (!event.metaKey && !event.ctrlKey && !event.shiftKey && (event.key === "Delete" || event.key === "Backspace")) {
+        event.preventDefault();
+        stashCurrentTranscription();
         return;
       }
       if (!event.metaKey && !event.ctrlKey && !event.shiftKey && event.key.toLowerCase() === "e") {
         event.preventDefault();
         beginEditTranscription();
-        return;
-      }
-      if (!event.metaKey && !event.ctrlKey && !event.shiftKey && event.key.toLowerCase() === "r") {
-        event.preventDefault();
-        clearTranscription();
         return;
       }
       if (!event.metaKey && !event.ctrlKey && !event.shiftKey && ["1", "2", "3"].includes(event.key)) {
@@ -569,12 +568,11 @@ export function useSessionThoughtInterface({
   }, [
     enabled,
     latestThoughts,
-    crystallizeCurrentTranscription,
+    stashCurrentTranscription,
+    sendCurrentTranscription,
     sendThought,
     beginEditTranscription,
     cancelEditTranscription,
-    clearActiveThoughts,
-    clearTranscription,
     editingTranscription,
   ]);
 
@@ -586,19 +584,18 @@ export function useSessionThoughtInterface({
     speechError,
     isSending,
     sendError,
-    activeThoughts,
+    stashedThoughts,
     latestThoughts,
     sentThoughtIds,
     memoryThoughtIds,
     speechSupported,
-    crystallizeCurrentTranscription,
+    stashCurrentTranscription,
+    sendCurrentTranscription,
     sendThought,
     beginEditTranscription,
     cancelEditTranscription,
     updateEditDraft,
     submitEditedTranscription,
-    clearActiveThoughts,
-    clearTranscription,
     retryMicrophone,
     editingTranscription,
   };

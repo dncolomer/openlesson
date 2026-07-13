@@ -372,12 +372,12 @@ function textToolResult(value: unknown) {
   };
 }
 
-function evidenceToolResult(
+async function evidenceToolResult(
   value: Record<string, unknown>,
   interruptionContext?: InterruptionContext
 ) {
   const payload = interruptionContext
-    ? withProofOfWorkApiResponse(value, interruptionContext)
+    ? await withProofOfWorkApiResponse(value, interruptionContext)
     : { ...value, interruption: null };
   return textToolResult(payload);
 }
@@ -583,7 +583,7 @@ export async function callMcpProofOfWorkTool(
     const { data, error, count } = await query;
     if (error) throw new Error(error.message);
 
-    return evidenceToolResult(
+    return await evidenceToolResult(
       {
         workspaces: data || [],
         pagination: {
@@ -602,7 +602,7 @@ export async function callMcpProofOfWorkTool(
     const workspaceId = stringArg(args, "workspace_id");
     if (!workspaceId) throw new Error("workspace_id is required.");
     const workspace = await loadWorkspace(supabase, auth, workspaceId);
-    return evidenceToolResult(
+    return await evidenceToolResult(
       { workspace },
       { endpoint: "get_workspace", workspace_id: workspaceId }
     );
@@ -631,7 +631,7 @@ export async function callMcpProofOfWorkTool(
     const counts = context.payload.counts;
     const workspaceTitle = workspace.title || workspace.root_topic || "workspace";
 
-    return evidenceToolResult(
+    return await evidenceToolResult(
       withProgressGuidance(
         {
           workspace: {
@@ -685,7 +685,7 @@ export async function callMcpProofOfWorkTool(
 
     const created = await createAgentWorkspace(supabase, auth, args as Record<string, unknown>);
 
-    return evidenceToolResult(
+    return await evidenceToolResult(
       {
         workspace: created.workspace,
         blocks: created.blocks,
@@ -710,7 +710,7 @@ export async function callMcpProofOfWorkTool(
       .order("created_at", { ascending: true });
 
     if (error) throw new Error(error.message);
-    return evidenceToolResult(
+    return await evidenceToolResult(
       { blocks: blocks || [] },
       { endpoint: "list_blocks", workspace_id: workspaceId }
     );
@@ -753,14 +753,9 @@ export async function callMcpProofOfWorkTool(
         blockId,
       });
 
-      const llmInterruption = resolveProofOfWorkSchemaInterruption(
-        spec,
-        workspaceId,
-        blockId,
-        contextCounts?.proof_of_work_artifacts
-      );
+      const llmInterruption = resolveProofOfWorkSchemaInterruption(spec, workspaceId);
 
-      return evidenceToolResult(
+      return await evidenceToolResult(
         {
           ...spec,
           definition_ref: opaqueRequest.definition_ref,
@@ -794,14 +789,9 @@ export async function callMcpProofOfWorkTool(
       blockId,
     });
 
-    const llmInterruption = resolveProofOfWorkSchemaInterruption(
-      spec,
-      workspaceId,
-      blockId,
-      contextCounts?.proof_of_work_artifacts
-    );
+    const llmInterruption = resolveProofOfWorkSchemaInterruption(spec, workspaceId);
 
-    return evidenceToolResult(
+    return await evidenceToolResult(
       {
         ...spec,
         definition: semanticRequest!.definition,
@@ -912,7 +902,7 @@ export async function callMcpProofOfWorkTool(
       throw new Error(skillResult.error || "Failed to generate integration skill.");
     }
 
-    return evidenceToolResult(
+    return await evidenceToolResult(
       {
         skill_md: skillResult.text,
         skill_name: deriveSkillName(request.integration_name),
@@ -1035,7 +1025,7 @@ export async function callMcpProofOfWorkTool(
       .select("id", { count: "exact", head: true })
       .eq("workspace_id", workspaceId);
 
-    return evidenceToolResult(
+    return await evidenceToolResult(
       {
         proof_of_work: {
           ...row,
@@ -1098,7 +1088,7 @@ export async function callMcpProofOfWorkTool(
             root_topic: workspace.root_topic,
           });
 
-      return evidenceToolResult(
+      return await evidenceToolResult(
         withProgressGuidance(
           {
             mode: prompt ? "chat" : "report",
@@ -1144,7 +1134,7 @@ export async function callMcpProofOfWorkTool(
       });
 
       const chatResult = await callXaiResponses({
-        model: "grok-4.3",
+        model: DEFAULT_MODEL,
         instructions: opaque
           ? buildOpaquePerformanceChatInstructions(blockId)
           : buildPerformanceChatInstructions(blockId, stylePrompt),
@@ -1158,7 +1148,7 @@ export async function callMcpProofOfWorkTool(
         throw new Error(chatResult.error || "Failed to generate performance chat response.");
       }
 
-      return evidenceToolResult(
+      return await evidenceToolResult(
         withProgressGuidance(
           {
             mode: "chat",
@@ -1221,7 +1211,7 @@ export async function callMcpProofOfWorkTool(
           protocol_report: undefined,
         };
 
-    return evidenceToolResult(
+    return await evidenceToolResult(
       withProgressGuidance(
         {
           mode: "report",
@@ -1271,7 +1261,7 @@ export async function callMcpProofOfWorkTool(
 
     const { data: links, error } = await query;
     if (error) throw new Error(error.message);
-    return evidenceToolResult(
+    return await evidenceToolResult(
       { tap_links: links || [] },
       { endpoint: "list_tap_links", workspace_id: workspaceId }
     );
@@ -1362,7 +1352,7 @@ export async function callMcpProofOfWorkTool(
 
     const appBase = process.env.NEXT_PUBLIC_APP_URL || origin;
     const privateUrl = buildTapScoreSessionUrl(appBase, privateToken);
-    return evidenceToolResult(
+    return await evidenceToolResult(
       {
         tap_link: { ...link, private_url: privateUrl },
         private_url: privateUrl,

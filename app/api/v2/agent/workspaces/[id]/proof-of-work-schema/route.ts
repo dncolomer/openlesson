@@ -80,15 +80,10 @@ export async function POST(req: NextRequest, { params }: RouteProps) {
         blockId,
       });
 
-      const llmInterruption = resolveProofOfWorkSchemaInterruption(
-        spec,
-        workspaceId,
-        blockId,
-        contextCounts?.proof_of_work_artifacts
-      );
+      const llmInterruption = resolveProofOfWorkSchemaInterruption(spec, workspaceId);
 
       return NextResponse.json(
-        withProofOfWorkApiResponse(
+        await withProofOfWorkApiResponse(
           {
             ...spec,
             definition_ref: opaqueRequest.definition_ref,
@@ -123,15 +118,10 @@ export async function POST(req: NextRequest, { params }: RouteProps) {
       blockId,
     });
 
-    const llmInterruption = resolveProofOfWorkSchemaInterruption(
-      spec,
-      workspaceId,
-      blockId,
-      contextCounts?.proof_of_work_artifacts
-    );
+    const llmInterruption = resolveProofOfWorkSchemaInterruption(spec, workspaceId);
 
     return NextResponse.json(
-      withProofOfWorkApiResponse(
+      await withProofOfWorkApiResponse(
         {
           ...spec,
           definition: semanticRequest!.definition,

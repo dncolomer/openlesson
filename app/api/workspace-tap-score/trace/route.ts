@@ -8,6 +8,8 @@ import {
   type TapTraceType,
 } from "@/lib/tap-score-traces";
 import { uploadFileToXAI } from "@/lib/xai-files";
+import { countWorkspaceProofOfWorkForPlan } from "@/lib/agent-v2/workspace-proof-of-work";
+import { withProofOfWorkApiResponse } from "@/lib/agent-v2/predictive-interruption";
 
 export const runtime = "nodejs";
 export const maxDuration = 30;
@@ -116,7 +118,26 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: error?.message || "Failed to store TAP trace" }, { status: 500 });
     }
 
-    return NextResponse.json({ trace: row }, { status: 201 });
+    const proofOfWorkCount = await countWorkspaceProofOfWorkForPlan(access.supabase, access.workspaceId);
+
+    return NextResponse.json(
+      await withProofOfWorkApiResponse(
+        { trace: row },
+        {
+          endpoint: "upload_tap_trace",
+          workspace_id: access.workspaceId,
+          block_id: blockId || access.blockId,
+          proof_of_work_artifacts: proofOfWorkCount,
+          tool_name: TAP_TRACE_TOOL_NAME,
+          tap_action: `${traceType}:${action}`,
+          artifact_summary: text
+            ? `${traceType}:${action} — "${text.slice(0, 500)}"`
+            : `${traceType}:${action}${originalText ? ` (edited from "${originalText.slice(0, 200)}")` : ""}`,
+          artifact_metadata: metadata,
+        },
+      ),
+      { status: 201 },
+    );
   } catch (error) {
     console.error("[workspace-tap-score/trace] Error:", error);
     const message = error instanceof Error ? error.message : "Internal server error";

@@ -1,4 +1,5 @@
 import type { PerformanceReport } from "./performance-report";
+import { predictInterruptionWithLlm } from "./tim-llm-predictor";
 
 /** Trace Interruption Model (TIM) — intervention types a consumer may trigger toward the user. */
 export type InterruptionInterventionType =
@@ -58,6 +59,14 @@ export type ProofOfWorkApiEndpoint =
   | "generate_proof_of_work_schema"
   | "generate_integration_skill"
   | "upload_proof_of_work"
+  | "upload_tap_trace"
+  | "upload_tap_chat"
+  | "upload_tap_idle"
+  | "upload_tap_speech"
+  | "upload_ile_trace"
+  | "upload_ile_chat"
+  | "upload_ile_idle"
+  | "upload_ile_speech"
   | "analyze_performance"
   | "get_learning_progress"
   | "list_tap_links"
@@ -75,7 +84,29 @@ export interface InterruptionContext {
   llm_interruption?: ProofOfWorkApiInterruption;
   tool_name?: string | null;
   tap_minutes?: number;
+  /** TAP trace action, e.g. system1:pause_finalize or system2:send */
+  tap_action?: string | null;
+  /** Human-readable summary of the triggering artifact or event. */
+  artifact_summary?: string | null;
+  /** Structured metadata about the artifact (tool payload, chat exchange, etc.). */
+  artifact_metadata?: Record<string, unknown> | null;
+  /** Recent proof-of-work manifest for session context. */
+  recent_pow_manifest?: string | null;
+  workspace_title?: string | null;
+  conversion_goal?: string | null;
+  /** Idle duration in ms when endpoint is upload_*_idle */
+  idle_duration_ms?: number | null;
+  /** Speech transcript snapshot when available */
+  speech_transcript?: string | null;
 }
+
+const NO_INTERRUPTION_ENDPOINTS = new Set<ProofOfWorkApiEndpoint>([
+  "list_workspaces",
+  "get_workspace",
+  "get_workspace_detail",
+  "list_blocks",
+  "list_tap_links",
+]);
 
 const DEFAULT_EXAMPLE: PredictiveInterruption = {
   interruption_id: "int_example_001",
@@ -138,7 +169,7 @@ function clampDelayMs(value: number, min: number, max: number): number {
 export function normalizePredictedInterruption(
   raw: unknown,
   fallbackEndpoint: ProofOfWorkApiEndpoint,
-  workspaceId?: string
+  workspaceId?: string,
 ): ProofOfWorkApiInterruption {
   if (raw === null || raw === undefined) return null;
   if (typeof raw !== "object" || Array.isArray(raw)) return null;
@@ -198,235 +229,44 @@ export function normalizePredictedInterruption(
   };
 }
 
-function interruptionFromPerformanceReport(
-  report: PerformanceReport | null | undefined,
-  context: InterruptionContext
-): ProofOfWorkApiInterruption {
-  if (!report) return null;
-
-  const topGap = report.gap_analysis?.gaps?.find((gap) => gap.severity === "high") ||
-    report.gap_analysis?.gaps?.find((gap) => gap.severity === "medium") ||
-    report.gap_analysis?.gaps?.[0];
-
-  if (topGap) {
-    return {
-      interruption_id: createInterruptionId("analyze_performance", context.workspace_id),
-      delay_ms: topGap.severity === "high" ? 45_000 : 90_000,
-      intervention: {
-        type: "coaching_nudge",
-        message: topGap.suggested_repair || `Address: ${topGap.title}`,
-        rationale: topGap.proof_of_work || report.gap_analysis.summary,
-        consumer_action: "surface_coaching_nudge",
-        block_id: context.block_id ?? null,
-      },
-      confidence: topGap.severity === "high" ? "high" : "medium",
-      predicted_at: new Date().toISOString(),
-    };
-  }
-
-  if (report.overall_score < 60) {
-    return {
-      interruption_id: createInterruptionId("analyze_performance", context.workspace_id),
-      delay_ms: 120_000,
-      intervention: {
-        type: "reflection_prompt",
-        message: "What part of this workflow felt least confident before your last action?",
-        rationale: report.summary || "Readiness score suggests a reflection checkpoint would help.",
-        consumer_action: "present_reflection_prompt",
-        block_id: context.block_id ?? null,
-      },
-      confidence: "medium",
-      predicted_at: new Date().toISOString(),
-    };
-  }
-
-  return null;
-}
-
-export function predictInterruption(context: InterruptionContext): ProofOfWorkApiInterruption {
+export async function predictInterruption(context: InterruptionContext): Promise<ProofOfWorkApiInterruption> {
   if (context.llm_interruption) {
     return context.llm_interruption;
   }
 
-  const proofOfWorkCount = context.proof_of_work_artifacts ?? 0;
-
-  switch (context.endpoint) {
-    case "create_workspace":
-      return {
-        interruption_id: createInterruptionId("create_workspace", context.workspace_id),
-        delay_ms: 60_000,
-        intervention: {
-          type: "proof_of_work_reminder",
-          message: "Generate an proof-of-work schema and upload your first tool trace for this workspace.",
-          rationale: "New workspaces need initial proof of work before learning verification can begin.",
-          consumer_action: "call_generate_proof_of_work_schema",
-        },
-        confidence: "high",
-        predicted_at: new Date().toISOString(),
-      };
-
-    case "generate_proof_of_work_schema":
-      if (proofOfWorkCount === 0) {
-        return {
-          interruption_id: createInterruptionId("generate_proof_of_work_schema", context.workspace_id),
-          delay_ms: 30_000,
-          intervention: {
-            type: "proof_of_work_reminder",
-            message: "Upload your first proof-of-work artifact using the tool_submissions contract.",
-            rationale: "Proof-of-work spec is ready; verification improves once tool traces arrive.",
-            consumer_action: "call_upload_proof_of_work",
-            block_id: context.block_id ?? null,
-          },
-          confidence: "high",
-          predicted_at: new Date().toISOString(),
-        };
-      }
-      if (proofOfWorkCount > 0 && proofOfWorkCount % 5 === 0) {
-        return {
-          interruption_id: createInterruptionId("generate_proof_of_work_schema", context.workspace_id),
-          delay_ms: 90_000,
-          intervention: {
-            type: "performance_review",
-            message: "Request a refreshed performance scorecard after this proof-of-work milestone.",
-            rationale: `${proofOfWorkCount} artifacts accumulated — scores may have shifted.`,
-            consumer_action: "call_analyze_performance",
-            block_id: context.block_id ?? null,
-          },
-          confidence: "medium",
-          predicted_at: new Date().toISOString(),
-        };
-      }
-      return null;
-
-    case "generate_integration_skill":
-      return {
-        interruption_id: createInterruptionId("generate_integration_skill", context.workspace_id),
-        delay_ms: 45_000,
-        intervention: {
-          type: "proof_of_work_reminder",
-          message: "Begin uploading proof of work per the integration skill and live proof-of-work spec.",
-          rationale: "Integration skill is a snapshot — proof-of-work uploads activate continuous evaluation.",
-          consumer_action: "call_upload_proof_of_work",
-          block_id: context.block_id ?? null,
-        },
-        confidence: "medium",
-        predicted_at: new Date().toISOString(),
-      };
-
-    case "upload_proof_of_work":
-      if (proofOfWorkCount > 0 && proofOfWorkCount % 5 === 0) {
-        return {
-          interruption_id: createInterruptionId("upload_proof_of_work", context.workspace_id),
-          delay_ms: 60_000,
-          intervention: {
-            type: "performance_review",
-            message: "Run a performance report to see updated marker scores and gaps.",
-            rationale: `Reached ${proofOfWorkCount} proof-of-work artifacts — good checkpoint for scoring.`,
-            consumer_action: "call_analyze_performance",
-            block_id: context.block_id ?? null,
-          },
-          confidence: "high",
-          predicted_at: new Date().toISOString(),
-        };
-      }
-      if (context.tool_name) {
-        return {
-          interruption_id: createInterruptionId("upload_proof_of_work", context.workspace_id),
-          delay_ms: 75_000,
-          intervention: {
-            type: "reflection_prompt",
-            message: "Briefly note why you chose that action before continuing the workflow.",
-            rationale: `Tool trace from ${context.tool_name} benefits from explicit rationale.`,
-            consumer_action: "present_reflection_prompt",
-            block_id: context.block_id ?? null,
-          },
-          confidence: "low",
-          predicted_at: new Date().toISOString(),
-        };
-      }
-      return null;
-
-    case "analyze_performance":
-      if (context.mode === "chat") {
-        return {
-          interruption_id: createInterruptionId("analyze_performance", context.workspace_id),
-          delay_ms: 120_000,
-          intervention: {
-            type: "checkpoint_probe",
-            message: "Apply one coaching suggestion from the last answer in your next product action.",
-            rationale: "Chat coaching is most effective when followed by observable practice.",
-            consumer_action: "prompt_apply_coaching",
-            block_id: context.block_id ?? null,
-          },
-          confidence: "medium",
-          predicted_at: new Date().toISOString(),
-        };
-      }
-      return interruptionFromPerformanceReport(context.report, context);
-
-    case "get_learning_progress":
-      if (proofOfWorkCount === 0) {
-        return {
-          interruption_id: createInterruptionId("get_learning_progress", context.workspace_id),
-          delay_ms: 20_000,
-          intervention: {
-            type: "proof_of_work_reminder",
-            message: "Call generate_proof_of_work_schema, then upload your first tool proof of work.",
-            rationale: "No artifacts yet — progress tracking needs proof-of-work uploads.",
-            consumer_action: "call_generate_proof_of_work_schema",
-          },
-          confidence: "high",
-          predicted_at: new Date().toISOString(),
-        };
-      }
-      if (proofOfWorkCount >= 3) {
-        return {
-          interruption_id: createInterruptionId("get_learning_progress", context.workspace_id),
-          delay_ms: 90_000,
-          intervention: {
-            type: "performance_review",
-            message: "Request analyze_performance for an updated readiness scorecard.",
-            rationale: `${proofOfWorkCount} artifacts provide enough signal for meaningful scoring.`,
-            consumer_action: "call_analyze_performance",
-          },
-          confidence: "medium",
-          predicted_at: new Date().toISOString(),
-        };
-      }
-      return null;
-
-    case "create_tap_link":
-      return {
-        interruption_id: createInterruptionId("create_tap_link", context.workspace_id),
-        delay_ms: clampDelayMs((context.tap_minutes ?? 15) * 60_000 * 0.25, 60_000, 300_000),
-        intervention: {
-          type: "checkpoint_probe",
-          message: "Before the TAP session, state your hypothesis for this block out loud.",
-          rationale: "Think Aloud Protocol works best when the learner enters with a clear prediction.",
-          consumer_action: "present_pre_tap_probe",
-          block_id: context.block_id ?? null,
-        },
-        confidence: "medium",
-        predicted_at: new Date().toISOString(),
-      };
-
-    case "list_workspaces":
-    case "get_workspace":
-    case "get_workspace_detail":
-    case "list_blocks":
-    case "list_tap_links":
-    default:
-      return null;
+  if (NO_INTERRUPTION_ENDPOINTS.has(context.endpoint)) {
+    return null;
   }
+
+  const raw = await predictInterruptionWithLlm(context);
+  if (!raw?.should_interrupt) {
+    return null;
+  }
+
+  return normalizePredictedInterruption(
+    {
+      delay_ms: raw.delay_ms,
+      confidence: raw.confidence,
+      intervention: {
+        type: raw.intervention_type,
+        message: raw.message,
+        rationale: raw.rationale,
+        consumer_action: raw.consumer_action,
+        block_id: context.block_id ?? null,
+      },
+    },
+    context.endpoint,
+    context.workspace_id,
+  );
 }
 
-export function withProofOfWorkApiResponse<T extends Record<string, unknown>>(
+export async function withProofOfWorkApiResponse<T extends Record<string, unknown>>(
   payload: T,
-  context: InterruptionContext
-): T & { interruption: ProofOfWorkApiInterruption } {
+  context: InterruptionContext,
+): Promise<T & { interruption: ProofOfWorkApiInterruption }> {
   return {
     ...payload,
-    interruption: predictInterruption(context),
+    interruption: await predictInterruption(context),
   };
 }
 

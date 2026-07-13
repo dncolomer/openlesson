@@ -52,7 +52,7 @@ export function ThoughtMemoryPanel({
   sessionId,
   className = "flex h-full min-h-0 max-h-full flex-col overflow-hidden",
   listClassName = "",
-  emptyMessage = "Speak or press C to crystallize thoughts. Every trace appears here.",
+  emptyMessage = "Speak, press Del to stash thoughts, or Enter to send. Every trace appears here.",
 }: ThoughtMemoryPanelProps) {
   const [mode, setMode] = useState<"memory" | "insights">("memory");
   const [searchQuery, setSearchQuery] = useState("");

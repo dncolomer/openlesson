@@ -50,26 +50,49 @@ export function ProductLandingPage({ page }: ProductLandingPageProps) {
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(webPageSchema) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }} />
 
-      <LandingNav />
-
-      <div
-        className="relative flex h-[min(52vh,420px)] w-full items-end border-b border-zinc-800 bg-zinc-950"
-        role="img"
-        aria-label={page.heroImageAlt}
-      >
-        <div className="absolute inset-0 bg-[linear-gradient(135deg,#18181b_0%,#09090b_45%,#0c1a1f_100%)]" />
-        <div
-          className="absolute inset-0 opacity-30"
-          style={{
-            backgroundImage:
-              "repeating-linear-gradient(0deg, transparent, transparent 47px, rgba(255,255,255,0.03) 48px), repeating-linear-gradient(90deg, transparent, transparent 47px, rgba(255,255,255,0.03) 48px)",
-          }}
-        />
-        <div className="relative z-10 mx-auto w-full max-w-5xl px-6 pb-8 pt-24">
-          <p className="font-mono text-[10px] uppercase tracking-[2px] text-zinc-500">Image placeholder</p>
-          <p className="mt-2 max-w-xl text-sm text-zinc-400">{page.heroImageAlt}</p>
+      {page.heroVideoSrc ? (
+        <div className="relative">
+          <LandingNav overlay />
+          <div
+            className="relative h-[min(52vh,420px)] w-full overflow-hidden bg-[#0a0a0a]"
+            aria-label={page.heroImageAlt}
+          >
+            <video
+              className="absolute inset-0 block h-full w-full object-cover"
+              style={page.heroVideoPosition ? { objectPosition: page.heroVideoPosition } : undefined}
+              src={page.heroVideoSrc}
+              autoPlay
+              muted
+              loop
+              playsInline
+              preload="auto"
+              aria-hidden
+            />
+            <div className="absolute inset-0 bg-gradient-to-b from-[#0a0a0a]/60 via-transparent to-[#0a0a0a]" />
+          </div>
         </div>
-      </div>
+      ) : (
+        <>
+          <LandingNav />
+          <div
+            className="relative h-[min(52vh,420px)] w-full overflow-hidden border-b border-zinc-800 bg-zinc-950"
+            aria-label={page.heroImageAlt}
+          >
+            <div className="absolute inset-0 bg-[linear-gradient(135deg,#18181b_0%,#09090b_45%,#0c1a1f_100%)]" />
+            <div
+              className="absolute inset-0 opacity-30"
+              style={{
+                backgroundImage:
+                  "repeating-linear-gradient(0deg, transparent, transparent 47px, rgba(255,255,255,0.03) 48px), repeating-linear-gradient(90deg, transparent, transparent 47px, rgba(255,255,255,0.03) 48px)",
+              }}
+            />
+            <div className="absolute inset-x-0 bottom-0 z-10 mx-auto w-full max-w-5xl px-6 pb-8">
+              <p className="font-mono text-[10px] uppercase tracking-[2px] text-zinc-500">Image placeholder</p>
+              <p className="mt-2 max-w-xl text-sm text-zinc-400">{page.heroImageAlt}</p>
+            </div>
+          </div>
+        </>
+      )}
 
       <main className="mx-auto max-w-3xl px-6 py-12 sm:py-16">
         <nav aria-label="Breadcrumb" className="mb-8 text-xs text-zinc-500">

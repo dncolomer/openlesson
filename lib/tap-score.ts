@@ -1,7 +1,16 @@
 import crypto from "crypto";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { callXai, systemMessage, userMessage } from "@/lib/xai-client";
+import { callXai, callXaiJSON, systemMessage, userMessage } from "@/lib/xai-client";
+
+export interface TapStartingTopic {
+  id: string;
+  title: string;
+  subtitle: string;
+  openingQuestion: string;
+}
+
+const TAP_STARTING_TOPIC_COUNT = 3;
 
 export type TapScoreMode = "curious";
 
@@ -283,6 +292,144 @@ export function buildTapOpeningQuestionFallback(brief: TapScoreBrief) {
     return `Teach me what you learned about "${focusedBlock.title}". What is the core idea, and how would you explain it to someone encountering it for the first time?`;
   }
   return `Teach me what you learned in "${brief.plan.title}". What stands out as most important, and why?`;
+}
+
+function slugifyTopicId(value: string, index: number) {
+  const slug = value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 48);
+  return slug || `topic-${index + 1}`;
+}
+
+function normalizeTapStartingTopics(raw: unknown): TapStartingTopic[] | null {
+  if (!Array.isArray(raw)) return null;
+  const topics = raw
+    .map((item, index) => {
+      if (!item || typeof item !== "object") return null;
+      const record = item as Record<string, unknown>;
+      const title = String(record.title || "").trim();
+      const subtitle = String(record.subtitle || "").trim();
+      const openingQuestion = String(record.openingQuestion || "").trim();
+      if (!title || !openingQuestion) return null;
+      const id = String(record.id || "").trim() || slugifyTopicId(title, index);
+      return {
+        id,
+        title,
+        subtitle: subtitle || `Demonstrate your understanding of ${title}.`,
+        openingQuestion,
+      } satisfies TapStartingTopic;
+    })
+    .filter((topic): topic is TapStartingTopic => topic !== null)
+    .slice(0, TAP_STARTING_TOPIC_COUNT);
+
+  return topics.length === TAP_STARTING_TOPIC_COUNT ? topics : null;
+}
+
+export function buildTapStartingTopicsFallback(brief: TapScoreBrief): TapStartingTopic[] {
+  const focusedBlock = brief.nodes.length === 1 ? brief.nodes[0] : null;
+  const planTitle = brief.plan.title || brief.plan.root_topic;
+
+  if (focusedBlock) {
+    return [
+      {
+        id: "core-idea",
+        title: `Core idea of ${focusedBlock.title}`,
+        subtitle: "Explain the central concept in your own words.",
+        openingQuestion: `What is the core idea behind "${focusedBlock.title}", and how would you explain it to someone encountering it for the first time?`,
+      },
+      {
+        id: "why-it-matters",
+        title: "Why it matters",
+        subtitle: "Connect the concept to a real problem or decision.",
+        openingQuestion: `Why does "${focusedBlock.title}" matter in practice, and where would misunderstanding it cause trouble?`,
+      },
+      {
+        id: "transfer",
+        title: "Apply and transfer",
+        subtitle: "Show how you would use this beyond the original example.",
+        openingQuestion: `How would you apply what you learned about "${focusedBlock.title}" in a new context? Walk me through an example.`,
+      },
+    ];
+  }
+
+  const nodeTopics = brief.nodes.slice(0, TAP_STARTING_TOPIC_COUNT).map((node, index) => ({
+    id: slugifyTopicId(node.title, index),
+    title: node.title,
+    subtitle: node.description?.trim() || `Demonstrate what you learned about ${node.title}.`,
+    openingQuestion: `Teach me what you learned about "${node.title}". What is the key idea, and how confident are you that you could explain it clearly?`,
+  }));
+
+  if (nodeTopics.length === TAP_STARTING_TOPIC_COUNT) {
+    return nodeTopics;
+  }
+
+  const fillers: TapStartingTopic[] = [
+    {
+      id: "big-picture",
+      title: `${planTitle}: big picture`,
+      subtitle: "Start with what matters most across the workspace.",
+      openingQuestion: `What is the most important thing you learned in "${planTitle}", and why does it stand out?`,
+    },
+    {
+      id: "causal-links",
+      title: "Causal connections",
+      subtitle: "Show how ideas depend on or explain each other.",
+      openingQuestion: `In "${planTitle}", what causes what? Pick one relationship you understand and explain the mechanism behind it.`,
+    },
+    {
+      id: "blind-spots",
+      title: "Gaps and blind spots",
+      subtitle: "Surface what still feels fuzzy or fragile.",
+      openingQuestion: `Where is your understanding of "${planTitle}" still weakest, and how would you test whether you've actually learned it?`,
+    },
+  ];
+
+  return [...nodeTopics, ...fillers].slice(0, TAP_STARTING_TOPIC_COUNT);
+}
+
+export async function generateTapStartingTopics(brief: TapScoreBrief, minutes: number): Promise<TapStartingTopic[]> {
+  const context = buildTapScoreInstructions(brief, "curious", minutes);
+  const focusedBlock = brief.nodes.length === 1 ? brief.nodes[0] : null;
+  const target = focusedBlock?.title || brief.plan.title;
+
+  const response = await callXaiJSON<{ topics?: TapStartingTopic[] }>(
+    [
+      systemMessage(
+        `${context}\n\nGenerate exactly ${TAP_STARTING_TOPIC_COUNT} distinct starting topics for a Think Aloud Protocol session. Each topic should be a concrete angle on what the learner could demonstrate from the workspace context above — not generic study advice.
+
+Return JSON only:
+{
+  "topics": [
+    {
+      "id": "short-slug",
+      "title": "Short card title (max 6 words)",
+      "subtitle": "One inviting line for the card (max 18 words)",
+      "openingQuestion": "One Socratic opening question Helios will ask first if the learner picks this topic"
+    }
+  ]
+}
+
+Rules:
+- Topics must be meaningfully different from each other.
+- openingQuestion must be one sentence, specific to the topic, and invite demonstration of learning.
+- No preamble inside openingQuestion.
+- Titles should feel like session entry points, not chapter headings copied verbatim.`,
+      ),
+      userMessage(`Generate ${TAP_STARTING_TOPIC_COUNT} starting topics for demonstrating learning about: ${target}`),
+    ],
+    { maxTokens: 900, temperature: 0.45, fetchTimeout: 45000 },
+  );
+
+  if (response.success && response.data) {
+    const parsed =
+      normalizeTapStartingTopics(response.data.topics) ??
+      normalizeTapStartingTopics((response.data as { topics?: unknown }).topics);
+    if (parsed) return parsed;
+  }
+
+  return buildTapStartingTopicsFallback(brief);
 }
 
 export async function generateTapOpeningQuestion(brief: TapScoreBrief, minutes: number) {

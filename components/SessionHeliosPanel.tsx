@@ -8,6 +8,7 @@ import {
   ThoughtCompactAction,
   DialogueSplit,
   type DialogueMessage,
+  type HeliosTurnMode,
   THOUGHT_BACKGROUND_IMAGES,
 } from "@/components/thought-ui/ThoughtUi";
 import { SessionOnboardingGuide } from "@/components/SessionOnboardingGuide";
@@ -19,6 +20,7 @@ interface SessionHeliosPanelProps {
   lastUserTurn: DialogueMessage | null;
   lastAssistantTurn: DialogueMessage | null;
   isAssistantPending?: boolean;
+  heliosTurnMode?: HeliosTurnMode;
   chapterPrompt: string;
   userInitial: string;
   isSessionActive: boolean;
@@ -45,6 +47,7 @@ export function SessionHeliosPanel({
   lastUserTurn,
   lastAssistantTurn,
   isAssistantPending = false,
+  heliosTurnMode = "idle",
   chapterPrompt,
   userInitial,
   isSessionActive,
@@ -132,6 +135,13 @@ export function SessionHeliosPanel({
                 lastAssistantTurn={lastAssistantTurn}
                 promptText={chapterPrompt}
                 isSending={thought.isSending || isAssistantPending}
+                heliosTurnMode={
+                  heliosTurnMode === "interruption"
+                    ? "interruption"
+                    : thought.isSending || isAssistantPending
+                      ? "responding"
+                      : "idle"
+                }
                 error={thought.sendError}
                 userInitial={userInitial}
                 emptyUserTurnText=""
@@ -167,10 +177,16 @@ export function SessionHeliosPanel({
                 ) : null}
                 <div className="flex shrink-0 items-center gap-0.5">
                   <ThoughtCompactAction
-                    shortcut="C"
-                    label="Crystallize"
+                    shortcut="↵"
+                    label="Send"
+                    disabled={!thought.crystallizableText || thought.isSending}
+                    onClick={() => void thought.sendCurrentTranscription()}
+                  />
+                  <ThoughtCompactAction
+                    shortcut="Del"
+                    label="Stash"
                     disabled={!thought.crystallizableText}
-                    onClick={thought.crystallizeCurrentTranscription}
+                    onClick={thought.stashCurrentTranscription}
                   />
                   <ThoughtCompactAction
                     shortcut="E"
@@ -178,23 +194,11 @@ export function SessionHeliosPanel({
                     disabled={!thought.crystallizableText}
                     onClick={thought.beginEditTranscription}
                   />
-                  <ThoughtCompactAction
-                    shortcut="R"
-                    label="Reset"
-                    disabled={!thought.crystallizableText}
-                    onClick={thought.clearTranscription}
-                  />
-                  <ThoughtCompactAction
-                    shortcut="Esc"
-                    label="Clear"
-                    disabled={thought.activeThoughts.length === 0 && !thought.crystallizableText}
-                    onClick={thought.clearActiveThoughts}
-                  />
                 </div>
               </div>
 
               <div className="mt-3 border-t border-neutral-900/80 pt-3">
-                <p className="mb-2 text-[10px] uppercase tracking-[2px] text-neutral-600">{t("probes.activeThoughts")}</p>
+                <p className="mb-2 text-[10px] uppercase tracking-[2px] text-neutral-600">{t("probes.stashedThoughts")}</p>
                 <ActiveThoughtSlots
                   thoughts={thought.latestThoughts}
                   isSending={thought.isSending}

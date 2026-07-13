@@ -135,6 +135,23 @@ body {
   animation: dialogue-turn-pulse 2.2s ease-in-out infinite;
 }
 
+/* Blue pulse for TIM predictive interruptions in comic dialogue */
+@keyframes dialogue-interruption-pulse {
+  0%,
+  100% {
+    border-color: rgba(56, 189, 248, 0.55);
+    box-shadow: 0 0 0 0 rgba(56, 189, 248, 0.12);
+  }
+  50% {
+    border-color: rgba(56, 189, 248, 0.95);
+    box-shadow: 0 0 14px rgba(56, 189, 248, 0.32);
+  }
+}
+
+.animate-dialogue-interruption-pulse {
+  animation: dialogue-interruption-pulse 2.2s ease-in-out infinite;
+}
+
 /* Step completion celebration - full confetti explosion */
 @keyframes step-celebrate-glow {
   0% { 

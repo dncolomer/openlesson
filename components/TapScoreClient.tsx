@@ -5,12 +5,19 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 import { getIlePostSessionPath } from "@/lib/storage";
-import { DialogueSplit, ThoughtCompactAction } from "@/components/thought-ui/ThoughtUi";
+import { DialogueSplit, ThoughtCompactAction, type HeliosTurnMode } from "@/components/thought-ui/ThoughtUi";
+import { useTapPredictiveInterruption } from "@/lib/useTapPredictiveInterruption";
+import { useTapIdleProofOfWork } from "@/lib/useTapIdleProofOfWork";
+import { useTapSpeechProofOfWork } from "@/lib/useTapSpeechProofOfWork";
+import type { ProofOfWorkApiInterruption } from "@/lib/agent-v2/predictive-interruption";
 import { ActiveThoughtSlots } from "@/components/thought-ui/ActiveThoughtSlots";
 import { ThoughtEditPanel } from "@/components/thought-ui/ThoughtEditPanel";
 import { ThoughtMemoryPanel } from "@/components/thought-ui/ThoughtMemoryPanel";
 import { SlidingTranscript } from "@/components/thought-ui/SlidingTranscript";
 import { SessionOnboardingGuide } from "@/components/SessionOnboardingGuide";
+import { TapStartingTopicCards } from "@/components/TapStartingTopicCards";
+import { useI18n } from "@/lib/i18n";
+import type { TapStartingTopic } from "@/lib/tap-score";
 import {
   formatSpeechTranscriptDisplay,
   restartLiveSpeechRecognition,
@@ -181,14 +188,6 @@ function ThoughtButtonLabel({
   );
 }
 
-const TAP_SHORTCUT_ROWS: { keys: string[]; label: string; altKeys?: string[][] }[] = [
-  { keys: ["C"], label: "Crystallize the live transcript into a thought" },
-  { keys: ["E"], label: "Edit the live transcription before sending" },
-  { keys: ["R"], label: "Reset the live transcription bar only" },
-  { keys: ["Esc"], label: "Clear active thoughts and live transcription" },
-  { keys: ["1", "2", "3"], label: "Send thought 1, 2, or 3" },
-];
-
 function TapBriefingConfig({
   workspaceTitle,
   minutes,
@@ -202,6 +201,15 @@ function TapBriefingConfig({
   showDurationPicker: boolean;
   disabled?: boolean;
 }) {
+  const { t } = useI18n();
+
+  const shortcutRows: { keys: string[]; label: string }[] = [
+    { keys: ["Enter"], label: t("tap.briefing.shortcutSend") },
+    { keys: ["Del"], label: t("tap.briefing.shortcutStash") },
+    { keys: ["E"], label: t("tap.briefing.shortcutEdit") },
+    { keys: ["1", "2", "3"], label: t("tap.briefing.shortcutSendStashed") },
+  ];
+
   return (
     <div className="flex min-h-0 flex-1 flex-col justify-center gap-8 overflow-y-auto px-5 py-8 sm:px-8 lg:px-10">
       <div>
@@ -209,15 +217,12 @@ function TapBriefingConfig({
         <h2 className="mt-2 text-2xl font-medium tracking-tight text-neutral-100 sm:text-3xl">
           {THINK_ALOUD_PROTOCOL_LABEL}
         </h2>
-        <p className="mt-3 max-w-md text-sm leading-relaxed text-neutral-400">
-          Browser transcription turns speech into thought traces. Use keyboard shortcuts to stay in flow without reaching
-          for the mouse.
-        </p>
+        <p className="mt-3 max-w-md text-sm leading-relaxed text-neutral-400">{t("tap.briefing.intro")}</p>
       </div>
 
       {showDurationPicker ? (
         <div>
-          <p className="font-mono text-[10px] uppercase tracking-[1.5px] text-neutral-600">Session length</p>
+          <p className="font-mono text-[10px] uppercase tracking-[1.5px] text-neutral-600">{t("tap.briefing.sessionLength")}</p>
           <div className="mt-2 grid max-w-xs grid-cols-2 gap-2">
             {DURATIONS.map((duration) => (
               <ThoughtButton
@@ -228,7 +233,7 @@ function TapBriefingConfig({
                 disabled={disabled}
                 onClick={() => onMinutesChange(duration)}
               >
-                {duration} minutes
+                {t("tap.briefing.minutes", { minutes: duration })}
               </ThoughtButton>
             ))}
           </div>
@@ -236,17 +241,11 @@ function TapBriefingConfig({
       ) : null}
 
       <div>
-        <p className="font-mono text-[10px] uppercase tracking-[1.5px] text-neutral-600">Keyboard shortcuts</p>
+        <p className="font-mono text-[10px] uppercase tracking-[1.5px] text-neutral-600">{t("tap.briefing.keyboardShortcuts")}</p>
         <ul className="mt-3 space-y-2.5 text-sm text-neutral-400">
-          {TAP_SHORTCUT_ROWS.map((row) => (
+          {shortcutRows.map((row) => (
             <li key={row.label} className="flex flex-wrap items-center gap-2">
               <ThoughtShortcutChord keys={row.keys} />
-              {row.altKeys?.map((altKeys, index) => (
-                <span key={`${row.label}-alt-${index}`} className="inline-flex items-center gap-2">
-                  <span className="text-neutral-600">/</span>
-                  <ThoughtShortcutChord keys={altKeys} />
-                </span>
-              ))}
               <span>{row.label}</span>
             </li>
           ))}
@@ -260,6 +259,7 @@ function TapBriefingConfig({
 
 export function TapScoreClient({ workspaceId, blockId, sessionId, privateToken, initialSession }: TapScoreClientProps) {
   const router = useRouter();
+  const { t } = useI18n();
   const [phase, setPhase] = useState<Phase>("briefing");
   const [minutes, setMinutes] = useState(DURATIONS.includes(Number(initialSession?.requested_duration_seconds || 900) / 60) ? Number(initialSession?.requested_duration_seconds || 900) / 60 : 15);
   const [workspaceTitle] = useState(initialSession?.workspaceTitle || "Workspace");
@@ -270,11 +270,15 @@ export function TapScoreClient({ workspaceId, blockId, sessionId, privateToken, 
   const [isListening, setIsListening] = useState(false);
   const [speechError, setSpeechError] = useState<string | null>(null);
   const [isSending, setIsSending] = useState(false);
+  const [heliosTurnMode, setHeliosTurnMode] = useState<HeliosTurnMode>("idle");
   const [memoryThoughtIds, setMemoryThoughtIds] = useState<Set<string>>(new Set());
   const [sentThoughtIds, setSentThoughtIds] = useState<Set<string>>(new Set());
   const [editingTranscription, setEditingTranscription] = useState<{ draft: string; originalText: string } | null>(null);
   const [error, setError] = useState("");
   const [isStartingSession, setIsStartingSession] = useState(false);
+  const [startingTopics, setStartingTopics] = useState<TapStartingTopic[]>([]);
+  const [startingTopicId, setStartingTopicId] = useState<string | null>(null);
+  const [topicsError, setTopicsError] = useState("");
   const [startedAt, setStartedAt] = useState<number | null>(null);
   const [remainingSeconds, setRemainingSeconds] = useState(0);
   const [bgImage, setBgImage] = useState("");
@@ -293,6 +297,57 @@ export function TapScoreClient({ workspaceId, blockId, sessionId, privateToken, 
   useEffect(() => {
     setBgImage(BACKGROUND_IMAGES[Math.floor(Math.random() * BACKGROUND_IMAGES.length)]);
   }, []);
+
+  const { applyInterruption, clearPendingInterruption } = useTapPredictiveInterruption(
+    useCallback(({ message }) => {
+      const assistant: ChatMessage = {
+        id: `int_${Date.now()}`,
+        role: "assistant",
+        content: message,
+        at: new Date().toISOString(),
+      };
+      setMessages((current) => [...current, assistant]);
+      setHeliosTurnMode("interruption");
+    }, []),
+  );
+
+  const handlePowInterruption = useCallback(
+    (interruption: ProofOfWorkApiInterruption | undefined) => {
+      if (interruption === undefined) return;
+      applyInterruption(interruption);
+    },
+    [applyInterruption],
+  );
+
+  const idlePowContext = useMemo(
+    () => ({
+      workspaceId,
+      blockId,
+      sessionId,
+      privateToken,
+      tapSessionId,
+    }),
+    [workspaceId, blockId, sessionId, privateToken, tapSessionId],
+  );
+
+  const {
+    isTranscriptionActive,
+    notifySpeechResult,
+    flushSpeechSegment,
+    resetSpeechTracking,
+  } = useTapSpeechProofOfWork(phase === "live", idlePowContext, handlePowInterruption);
+
+  const { bumpUserActivity, resetIdleTracking } = useTapIdleProofOfWork(
+    phase === "live",
+    idlePowContext,
+    handlePowInterruption,
+    { speechText: crystallizableText, isTranscriptionActive },
+  );
+
+  const notifySpeechResultRef = useRef(notifySpeechResult);
+  useEffect(() => {
+    notifySpeechResultRef.current = notifySpeechResult;
+  }, [notifySpeechResult]);
 
   const logTapTrace = useCallback(
     (input: {
@@ -319,9 +374,15 @@ export function TapScoreClient({ workspaceId, blockId, sessionId, privateToken, 
           tapSessionId: activeTapSessionId,
           ...input,
         }),
-      }).catch(() => {});
+      })
+        .then(async (response) => {
+          const payload = await response.json();
+          if (!response.ok) return;
+          handlePowInterruption(payload.interruption ?? null);
+        })
+        .catch(() => {});
     },
-    [workspaceId, blockId, sessionId, privateToken],
+    [workspaceId, blockId, sessionId, privateToken, handlePowInterruption],
   );
 
   useEffect(() => {
@@ -378,20 +439,63 @@ export function TapScoreClient({ workspaceId, blockId, sessionId, privateToken, 
     setMemoryThoughtIds(new Set());
     setSentThoughtIds(new Set());
     setEditingTranscription(null);
+    setHeliosTurnMode("idle");
+    clearPendingInterruption();
+    resetIdleTracking();
+    resetSpeechTracking();
     setStartedAt(null);
     setRemainingSeconds(0);
     setError("");
     setIsStartingSession(false);
+    setStartingTopics([]);
+    setStartingTopicId(null);
+    setTopicsError("");
     speechResultsLengthRef.current = 0;
     consumedResultsIndexRef.current = 0;
     finalBufferRef.current = [];
-  }, [dialogueStorageKey]);
+  }, [dialogueStorageKey, clearPendingInterruption, resetIdleTracking, resetSpeechTracking]);
 
-  const activeThoughts = useMemo(
+  useEffect(() => {
+    if (phase !== "briefing") return;
+
+    let cancelled = false;
+    setStartingTopics([]);
+    setTopicsError("");
+
+    void (async () => {
+      try {
+        const response = await fetch("/api/workspace-tap-score/topics", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            workspaceId,
+            blockId,
+            sessionId,
+            privateToken,
+            minutes,
+            tapSessionId: tapSessionIdRef.current,
+          }),
+        });
+        const payload = await response.json();
+        if (!response.ok) throw new Error(payload.error || "Could not load starting topics");
+        if (cancelled) return;
+        setStartingTopics(Array.isArray(payload.topics) ? payload.topics : []);
+      } catch (err) {
+        if (cancelled) return;
+        setTopicsError(err instanceof Error ? err.message : "Could not load starting topics");
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [phase, workspaceId, blockId, sessionId, privateToken, minutes]);
+
+  const stashedThoughts = useMemo(
     () => thoughts.filter((thought) => !memoryThoughtIds.has(thought.id) && !sentThoughtIds.has(thought.id)),
     [thoughts, memoryThoughtIds, sentThoughtIds],
   );
-  const latestThoughts = useMemo(() => activeThoughts.slice(-3).reverse(), [activeThoughts]);
+  const latestThoughts = useMemo(() => stashedThoughts.slice(-3).reverse(), [stashedThoughts]);
   const thoughtHistory = useMemo(() => thoughts.slice().reverse(), [thoughts]);
   function buildThoughtRecord(text: string, currentThoughts: Thought[]): Thought | null {
     const clean = normalize(text);
@@ -410,6 +514,7 @@ export function TapScoreClient({ workspaceId, blockId, sessionId, privateToken, 
   }
 
   function addThought(text: string, system1Action: TapSystem1Action = "pause_finalize") {
+    bumpUserActivity();
     setThoughts((current) => {
       const thought = buildThoughtRecord(text, current);
       if (!thought) return current;
@@ -472,8 +577,10 @@ export function TapScoreClient({ workspaceId, blockId, sessionId, privateToken, 
           else if (i >= event.resultIndex) interim = normalize(`${interim} ${transcript}`);
         }
         finalBufferRef.current = finals;
+        const displayText = normalize(`${finals.join(" ")} ${interim}`.trim());
         setInterimText(interim);
-        setCrystallizableText(normalize(`${finals.join(" ")} ${interim}`.trim()));
+        setCrystallizableText(displayText);
+        notifySpeechResultRef.current(displayText);
       },
       onListeningChange: setIsListening,
       onError: setSpeechError,
@@ -498,11 +605,11 @@ export function TapScoreClient({ workspaceId, blockId, sessionId, privateToken, 
     if (text) addThought(text);
   }
 
-  const crystallizeCurrentTranscription = useCallback(() => {
+  const stashCurrentTranscription = useCallback(() => {
     const text = normalize(crystallizableText);
     clearTranscriptionDisplay();
     restartSpeechRecognitionSession();
-    if (text) addThought(text, "crystallize");
+    if (text) addThought(text);
   }, [crystallizableText, restartSpeechRecognitionSession]);
 
   useEffect(() => {
@@ -522,28 +629,24 @@ export function TapScoreClient({ workspaceId, blockId, sessionId, privateToken, 
       if (phase !== "live" || event.altKey) return;
       const target = event.target as HTMLElement | null;
       if (target?.closest("input, textarea, select, [contenteditable='true']")) return;
-      if (event.key === "Escape") {
+      if (event.key === "Escape" && editingTranscription) {
         event.preventDefault();
-        if (editingTranscription) {
-          setEditingTranscription(null);
-          return;
-        }
-        clearActiveThoughts();
+        setEditingTranscription(null);
         return;
       }
-      if (!event.metaKey && !event.ctrlKey && !event.shiftKey && event.key.toLowerCase() === "c") {
+      if (!event.metaKey && !event.ctrlKey && !event.shiftKey && event.key === "Enter") {
         event.preventDefault();
-        crystallizeCurrentTranscription();
+        void sendCurrentTranscription();
+        return;
+      }
+      if (!event.metaKey && !event.ctrlKey && !event.shiftKey && (event.key === "Delete" || event.key === "Backspace")) {
+        event.preventDefault();
+        stashCurrentTranscription();
         return;
       }
       if (!event.metaKey && !event.ctrlKey && !event.shiftKey && event.key.toLowerCase() === "e") {
         event.preventDefault();
         beginEditTranscription();
-        return;
-      }
-      if (!event.metaKey && !event.ctrlKey && !event.shiftKey && event.key.toLowerCase() === "r") {
-        event.preventDefault();
-        clearTranscription();
         return;
       }
       if (!event.metaKey && !event.ctrlKey && !event.shiftKey && ["1", "2", "3"].includes(event.key)) {
@@ -556,7 +659,7 @@ export function TapScoreClient({ workspaceId, blockId, sessionId, privateToken, 
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [phase, latestThoughts, crystallizeCurrentTranscription, editingTranscription, crystallizableText]);
+  }, [phase, latestThoughts, stashCurrentTranscription, sendCurrentTranscription, editingTranscription, crystallizableText]);
 
   async function sendThought(text: string, thoughtIds: string[] = []) {
     const clean = normalize(text);
@@ -570,7 +673,9 @@ export function TapScoreClient({ workspaceId, blockId, sessionId, privateToken, 
       text: clean,
       combined: thoughtIds.length > 1,
     });
+    bumpUserActivity();
     setIsSending(true);
+    setHeliosTurnMode("idle");
     setError("");
     const userMessage: ChatMessage = { id: `u_${Date.now()}`, role: "user", content: clean, at: new Date().toISOString() };
     const nextMessages = [...messages, userMessage];
@@ -585,17 +690,35 @@ export function TapScoreClient({ workspaceId, blockId, sessionId, privateToken, 
       const response = await fetch("/api/workspace-tap-score/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ workspaceId, blockId, sessionId, privateToken, minutes, thought: clean, messages: nextMessages }),
+        body: JSON.stringify({
+          workspaceId,
+          blockId,
+          sessionId,
+          privateToken,
+          tapSessionId: tapSessionIdRef.current,
+          minutes,
+          thought: clean,
+          messages: nextMessages,
+        }),
       });
       const payload = await response.json();
       if (!response.ok) throw new Error(payload.error || "Could not get TAP response");
       const assistant: ChatMessage = { id: `a_${Date.now()}`, role: "assistant", content: payload.message, at: new Date().toISOString() };
       setMessages((current) => [...current, assistant]);
+      handlePowInterruption(payload.interruption ?? null);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not get TAP response");
     } finally {
       setIsSending(false);
     }
+  }
+
+  async function sendCurrentTranscription() {
+    const text = normalize(crystallizableText);
+    if (!text) return;
+    clearTranscriptionDisplay();
+    restartSpeechRecognitionSession();
+    await sendThought(text, []);
   }
 
   function retryMicrophone() {
@@ -604,9 +727,14 @@ export function TapScoreClient({ workspaceId, blockId, sessionId, privateToken, 
     startLiveSpeechRecognition(speechBindings, "en-US");
   }
 
-  async function startSession() {
+  async function startSession(topic?: TapStartingTopic) {
     isEndingRef.current = false;
+    clearPendingInterruption();
+    resetIdleTracking();
+    resetSpeechTracking();
+    setHeliosTurnMode("idle");
     setIsStartingSession(true);
+    setStartingTopicId(topic?.id ?? null);
     setError("");
     setSpeechError(null);
     speechResultsLengthRef.current = 0;
@@ -629,6 +757,9 @@ export function TapScoreClient({ workspaceId, blockId, sessionId, privateToken, 
           privateToken,
           minutes,
           tapSessionId: tapSessionIdRef.current,
+          openingQuestion: topic?.openingQuestion,
+          topicId: topic?.id,
+          topicTitle: topic?.title,
         }),
       });
       const payload = await response.json();
@@ -652,18 +783,26 @@ export function TapScoreClient({ workspaceId, blockId, sessionId, privateToken, 
           at: new Date().toISOString(),
         },
       ]);
+      resetIdleTracking();
+      resetSpeechTracking();
       setPhase("live");
     } catch (err) {
       stopLiveSpeechRecognition(speechBindings);
       setError(err instanceof Error ? err.message : "Could not start TAP session");
     } finally {
       setIsStartingSession(false);
+      setStartingTopicId(null);
     }
   }
 
   async function endSession() {
     if (isEndingRef.current) return;
     isEndingRef.current = true;
+    clearPendingInterruption();
+    flushSpeechSegment();
+    resetIdleTracking();
+    resetSpeechTracking();
+    setHeliosTurnMode("idle");
     flushFinalBuffer();
     setPhase("saving");
     stopLiveSpeechRecognition(speechBindings);
@@ -721,31 +860,8 @@ export function TapScoreClient({ workspaceId, blockId, sessionId, privateToken, 
   function beginEditTranscription() {
     const text = normalize(crystallizableText);
     if (!text) return;
+    bumpUserActivity();
     setEditingTranscription({ draft: text, originalText: text });
-  }
-
-  function clearTranscription() {
-    setEditingTranscription(null);
-    clearTranscriptionDisplay();
-    restartSpeechRecognitionSession();
-  }
-
-  function clearActiveThoughts() {
-    setEditingTranscription(null);
-    if (activeThoughts.length > 0) {
-      activeThoughts.forEach((thought) => {
-        logTapTrace({
-          traceType: "system2",
-          action: "skip",
-          thoughtId: thought.id,
-          chainId: thought.chainId,
-          text: thought.text,
-          timestampMs: thought.timestamp,
-        });
-      });
-      setMemoryThoughtIds((current) => new Set([...current, ...activeThoughts.map((thought) => thought.id)]));
-    }
-    clearTranscriptionBuffers();
   }
 
   return (
@@ -767,9 +883,23 @@ export function TapScoreClient({ workspaceId, blockId, sessionId, privateToken, 
               <div className="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-2xl border border-neutral-900 bg-neutral-950/65 backdrop-blur-sm">
                 <SessionOnboardingGuide
                   variant="tap"
-                  showStartAction
-                  onStart={() => void startSession()}
-                  isStarting={isStartingSession}
+                  hideStep3Quote
+                  renderStep3Action={() => (
+                    <>
+                      <TapStartingTopicCards
+                        topics={startingTopics}
+                        isStarting={isStartingSession}
+                        startingTopicId={startingTopicId}
+                        onStartTopic={(selectedTopic) => void startSession(selectedTopic)}
+                        loadingLabel={t("tap.briefing.topicsLoading")}
+                        startLabel={t("onboardingGuide.tap.step3.start")}
+                        startingLabel={t("onboardingGuide.tap.step3.starting")}
+                      />
+                      {topicsError ? (
+                        <p className="mt-2 text-center text-xs text-amber-300/90">{topicsError}</p>
+                      ) : null}
+                    </>
+                  )}
                 />
               </div>
               <div className="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-2xl border border-neutral-900/80 bg-neutral-950/55 backdrop-blur-md">
@@ -802,6 +932,9 @@ export function TapScoreClient({ workspaceId, blockId, sessionId, privateToken, 
                       lastAssistantTurn={lastAssistantTurn}
                       promptText=""
                       isSending={isSending || (isStartingSession && !lastAssistantTurn)}
+                      heliosTurnMode={
+                        heliosTurnMode === "interruption" ? "interruption" : isSending ? "responding" : "idle"
+                      }
                       error={error}
                       userInitial={userInitial}
                     />
@@ -846,10 +979,16 @@ export function TapScoreClient({ workspaceId, blockId, sessionId, privateToken, 
                   ) : null}
                   <div className="flex shrink-0 items-center gap-0.5">
                     <ThoughtCompactAction
-                      shortcut="C"
-                      label="Crystallize"
+                      shortcut="↵"
+                      label="Send"
+                      disabled={!crystallizableText || isSending}
+                      onClick={() => void sendCurrentTranscription()}
+                    />
+                    <ThoughtCompactAction
+                      shortcut="Del"
+                      label="Stash"
                       disabled={!crystallizableText}
-                      onClick={crystallizeCurrentTranscription}
+                      onClick={stashCurrentTranscription}
                     />
                     <ThoughtCompactAction
                       shortcut="E"
@@ -857,23 +996,11 @@ export function TapScoreClient({ workspaceId, blockId, sessionId, privateToken, 
                       disabled={!crystallizableText}
                       onClick={beginEditTranscription}
                     />
-                    <ThoughtCompactAction
-                      shortcut="R"
-                      label="Reset"
-                      disabled={!crystallizableText}
-                      onClick={clearTranscription}
-                    />
-                    <ThoughtCompactAction
-                      shortcut="Esc"
-                      label="Clear"
-                      disabled={activeThoughts.length === 0 && !crystallizableText}
-                      onClick={clearActiveThoughts}
-                    />
                   </div>
                 </div>
 
                 <div className="mt-3 border-t border-neutral-900/80 pt-3">
-                  <p className="mb-2 text-[10px] uppercase tracking-[2px] text-neutral-600">Active thoughts</p>
+                  <p className="mb-2 text-[10px] uppercase tracking-[2px] text-neutral-600">Stashed thoughts</p>
                   <ActiveThoughtSlots
                     thoughts={latestThoughts}
                     isSending={isSending}

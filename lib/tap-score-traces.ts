@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { queryWorkspaceProofOfWorkRows } from "@/lib/agent-v2/workspace-proof-of-work";
 
 export const TAP_TRACE_TOOL_NAME = "tap-thought-trace";
+export const TAP_CHAT_TOOL_NAME = "tap-helios-chat";
 export const TAP_TRANSCRIPT_TOOL_NAME = "tap-transcript";
 
 export interface TapTranscriptEntry {
@@ -46,6 +47,41 @@ export type TapTraceType = "system1" | "system2";
 
 export type TapSystem1Action = "crystallize" | "pause_finalize";
 export type TapSystem2Action = "send" | "skip" | "select" | "deselect" | "resend" | "edit";
+
+export interface TapChatExchangePayload {
+  type: "openlesson_tap_chat_exchange";
+  tap_session_id: string;
+  workspace_id: string;
+  block_id?: string | null;
+  focus_session_id?: string | null;
+  learner_thought: string;
+  helios_reply: string;
+  timestamp_ms: number;
+  at: string;
+}
+
+export function buildTapChatExchangePayload(input: {
+  tapSessionId: string;
+  workspaceId: string;
+  blockId?: string | null;
+  focusSessionId?: string | null;
+  learnerThought: string;
+  heliosReply: string;
+  timestampMs?: number;
+}): TapChatExchangePayload {
+  const timestampMs = input.timestampMs ?? Date.now();
+  return {
+    type: "openlesson_tap_chat_exchange",
+    tap_session_id: input.tapSessionId,
+    workspace_id: input.workspaceId,
+    block_id: input.blockId ?? null,
+    focus_session_id: input.focusSessionId ?? null,
+    learner_thought: input.learnerThought,
+    helios_reply: input.heliosReply,
+    timestamp_ms: timestampMs,
+    at: new Date(timestampMs).toISOString(),
+  };
+}
 
 export interface TapThoughtTracePayload {
   type: "openlesson_tap_thought_trace";

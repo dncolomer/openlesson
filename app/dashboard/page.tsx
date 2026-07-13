@@ -12,6 +12,7 @@ import { formatPlanMonthlyPrice, hasAgentApiKeyPlan, type PlanId } from "@/lib/p
 import { InsightsDashboardTab } from "@/components/InsightsDashboardTab";
 import { buildMcpClientConfig } from "@/lib/agent-v2/mcp-proof-of-work-catalog";
 import { IntegrationQuickAccess } from "@/components/IntegrationQuickAccess";
+import { DEFAULT_MODEL } from "@/lib/xai-client";
 
 const DASHBOARD_BACKGROUND = "/aesthetics/Greco-futurism/HHnTrgVaQAAP-_3.jpeg";
 
@@ -106,10 +107,10 @@ export default function DashboardPage() {
 
   // Config tab
   const [availableModels, setAvailableModels] = useState<AvailableModel[]>([]);
-  const [tutorModel, setTutorModel] = useState<string>("grok-4.3");
-  const [askModel, setAskModel] = useState<string>("grok-4.3");
-  const [plannerModel, setPlannerModel] = useState<string>("grok-4.3");
-  const [coderModel, setCoderModel] = useState<string>("grok-4.3");
+  const [tutorModel, setTutorModel] = useState<string>(DEFAULT_MODEL);
+  const [askModel, setAskModel] = useState<string>(DEFAULT_MODEL);
+  const [plannerModel, setPlannerModel] = useState<string>(DEFAULT_MODEL);
+  const [coderModel, setCoderModel] = useState<string>(DEFAULT_MODEL);
   const [modelsLoading, setModelsLoading] = useState(true);
   const [modelSaving, setModelSaving] = useState(false);
   const [modelSaved, setModelSaved] = useState(false);
@@ -1404,7 +1405,7 @@ export default function DashboardPage() {
                     </label>
                     <p className="text-xs text-neutral-500 mb-3">{slot.desc}</p>
                     <div className="w-full bg-neutral-950 border border-neutral-700 rounded-lg px-3 py-2 text-sm text-neutral-300">
-                      Grok 4.3 <span className="text-neutral-500">(grok-4.3)</span>
+                      Grok 4.3 <span className="text-neutral-500">({DEFAULT_MODEL})</span>
                     </div>
                   </div>
                 ))}

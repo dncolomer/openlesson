@@ -60,12 +60,16 @@ function totalEegSamples(channels: Record<string, number[]>): number {
   return Object.values(channels).reduce((sum, samples) => sum + samples.length, 0);
 }
 
-function simpleHash(value: string): string {
+export function hashIlePowContent(value: string): string {
   let hash = 0;
   for (let i = 0; i < value.length; i++) {
     hash = (hash * 31 + value.charCodeAt(i)) | 0;
   }
   return String(hash);
+}
+
+function simpleHash(value: string): string {
+  return hashIlePowContent(value);
 }
 
 export class IleEvidenceBuffer {

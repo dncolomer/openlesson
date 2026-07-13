@@ -9,7 +9,7 @@ import {
   type PerformanceReport,
 } from "@/lib/agent-v2/performance-context";
 import { requireDemoAdminWorkspaceSession } from "@/lib/openlesson-demo/demo-access";
-import { callXaiResponses, callXaiResponsesWithFiles, type ResponsesInputMessage } from "@/lib/xai-client";
+import { callXaiResponses, callXaiResponsesWithFiles, DEFAULT_MODEL, type ResponsesInputMessage } from "@/lib/xai-client";
 
 export const runtime = "nodejs";
 export const maxDuration = 120;
@@ -102,7 +102,7 @@ export async function POST(req: NextRequest) {
       ];
 
       const chatResult = await callXaiResponses({
-        model: "grok-4.3",
+        model: DEFAULT_MODEL,
         instructions: buildPerformanceChatInstructions(blockId, stylePrompt),
         input: inputMessages,
         temperature: 0.6,

@@ -1,13 +1,66 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   buildInterruptionContract,
   normalizePredictedInterruption,
   predictInterruption,
   withProofOfWorkApiResponse,
 } from "@/lib/agent-v2/predictive-interruption";
+import { setTimLlmPredictorForTests } from "@/lib/agent-v2/tim-llm-predictor";
 import { enrichProofOfWorkSpecResult } from "@/lib/agent-v2/proof-of-work-integration";
 
 describe("predictive-interruption", () => {
+  beforeEach(() => {
+    setTimLlmPredictorForTests(async (context) => {
+      if (context.endpoint === "create_workspace") {
+        return {
+          should_interrupt: true,
+          delay_ms: 60_000,
+          confidence: "high",
+          intervention_type: "proof_of_work_reminder",
+          message: "Generate a proof-of-work schema and upload your first tool trace for this workspace.",
+          rationale: "New workspaces need initial proof of work.",
+          consumer_action: "call_generate_proof_of_work_schema",
+        };
+      }
+      if (context.endpoint === "generate_proof_of_work_schema" && context.proof_of_work_artifacts === 0) {
+        return {
+          should_interrupt: true,
+          delay_ms: 30_000,
+          confidence: "high",
+          intervention_type: "proof_of_work_reminder",
+          message: "Upload your first proof-of-work artifact using the tool_submissions contract.",
+          consumer_action: "call_upload_proof_of_work",
+        };
+      }
+      if (context.endpoint === "upload_proof_of_work" && context.proof_of_work_artifacts === 5) {
+        return {
+          should_interrupt: true,
+          delay_ms: 60_000,
+          confidence: "high",
+          intervention_type: "performance_review",
+          message: "Run a performance report to see updated marker scores and gaps.",
+          consumer_action: "call_analyze_performance",
+        };
+      }
+      if (context.endpoint === "analyze_performance" && context.report) {
+        return {
+          should_interrupt: true,
+          delay_ms: 45_000,
+          confidence: "high",
+          intervention_type: "coaching_nudge",
+          message: "Document ICP hypothesis before next simulation",
+          rationale: "High-severity gap detected",
+          consumer_action: "surface_coaching_nudge",
+        };
+      }
+      return { should_interrupt: false };
+    });
+  });
+
+  afterEach(() => {
+    setTimLlmPredictorForTests(null);
+  });
+
   it("builds interruption contract with TIM semantics", () => {
     const contract = buildInterruptionContract();
     expect(contract.empty_value).toBeNull();
@@ -16,13 +69,17 @@ describe("predictive-interruption", () => {
     expect(contract.supersession_rule).toContain("replaces");
   });
 
-  it("returns null for list-style endpoints", () => {
-    expect(predictInterruption({ endpoint: "list_blocks", workspace_id: "ws-1" })).toBeNull();
-    expect(predictInterruption({ endpoint: "list_tap_links", workspace_id: "ws-1" })).toBeNull();
+  it("returns null for list-style endpoints without calling LLM", async () => {
+    const llm = vi.fn(async () => ({ should_interrupt: true, message: "nope" }));
+    setTimLlmPredictorForTests(llm);
+
+    expect(await predictInterruption({ endpoint: "list_blocks", workspace_id: "ws-1" })).toBeNull();
+    expect(await predictInterruption({ endpoint: "list_tap_links", workspace_id: "ws-1" })).toBeNull();
+    expect(llm).not.toHaveBeenCalled();
   });
 
-  it("predicts evidence reminder after workspace creation", () => {
-    const interruption = predictInterruption({
+  it("predicts evidence reminder after workspace creation via LLM", async () => {
+    const interruption = await predictInterruption({
       endpoint: "create_workspace",
       workspace_id: "ws-1",
     });
@@ -30,8 +87,8 @@ describe("predictive-interruption", () => {
     expect(interruption?.delay_ms).toBeGreaterThan(0);
   });
 
-  it("predicts upload reminder when evidence schema has no artifacts", () => {
-    const interruption = predictInterruption({
+  it("predicts upload reminder when evidence schema has no artifacts", async () => {
+    const interruption = await predictInterruption({
       endpoint: "generate_proof_of_work_schema",
       workspace_id: "ws-1",
       proof_of_work_artifacts: 0,
@@ -40,8 +97,8 @@ describe("predictive-interruption", () => {
     expect(interruption?.intervention.consumer_action).toBe("call_upload_proof_of_work");
   });
 
-  it("predicts performance review on evidence milestone uploads", () => {
-    const interruption = predictInterruption({
+  it("predicts performance review on evidence milestone uploads", async () => {
+    const interruption = await predictInterruption({
       endpoint: "upload_proof_of_work",
       workspace_id: "ws-1",
       proof_of_work_artifacts: 5,
@@ -50,8 +107,8 @@ describe("predictive-interruption", () => {
     expect(interruption?.intervention.type).toBe("performance_review");
   });
 
-  it("predicts coaching nudge from high-severity performance gaps", () => {
-    const interruption = predictInterruption({
+  it("predicts coaching nudge from performance report context", async () => {
+    const interruption = await predictInterruption({
       endpoint: "analyze_performance",
       workspace_id: "ws-1",
       mode: "report",
@@ -83,6 +140,43 @@ describe("predictive-interruption", () => {
     expect(interruption?.confidence).toBe("high");
   });
 
+  it("returns null when LLM declines interruption", async () => {
+    setTimLlmPredictorForTests(async () => ({ should_interrupt: false }));
+    const interruption = await predictInterruption({
+      endpoint: "upload_tap_trace",
+      workspace_id: "ws-1",
+      tap_action: "system2:select",
+    });
+    expect(interruption).toBeNull();
+  });
+
+  it("passes through llm_interruption without calling TIM LLM", async () => {
+    const llm = vi.fn(async () => ({ should_interrupt: true, message: "should not run" }));
+    setTimLlmPredictorForTests(llm);
+
+    const passthrough = normalizePredictedInterruption(
+      {
+        delay_ms: 20_000,
+        confidence: "medium",
+        intervention: {
+          type: "checkpoint_probe",
+          message: "From schema spec",
+        },
+      },
+      "generate_proof_of_work_schema",
+      "ws-1",
+    );
+
+    const interruption = await predictInterruption({
+      endpoint: "generate_proof_of_work_schema",
+      workspace_id: "ws-1",
+      llm_interruption: passthrough,
+    });
+
+    expect(interruption?.intervention.message).toContain("From schema spec");
+    expect(llm).not.toHaveBeenCalled();
+  });
+
   it("normalizes LLM interruption payloads", () => {
     const normalized = normalizePredictedInterruption(
       {
@@ -95,16 +189,16 @@ describe("predictive-interruption", () => {
         },
       },
       "generate_proof_of_work_schema",
-      "ws-1"
+      "ws-1",
     );
     expect(normalized?.intervention.message).toContain("hypothesis");
     expect(normalized?.interruption_id).toContain("int_");
   });
 
-  it("attaches interruption to API responses", () => {
-    const payload = withProofOfWorkApiResponse(
+  it("attaches interruption to API responses", async () => {
+    const payload = await withProofOfWorkApiResponse(
       { mode: "report", report: { overall_score: 80 } },
-      { endpoint: "list_blocks", workspace_id: "ws-1" }
+      { endpoint: "list_blocks", workspace_id: "ws-1" },
     );
     expect(payload).toHaveProperty("interruption");
     expect(payload.interruption).toBeNull();
@@ -124,13 +218,13 @@ describe("predictive-interruption", () => {
       "ws-1",
       "https://openlesson.academy",
       null,
-      { proof_of_work_artifacts: 0, blocks: 3 }
+      { proof_of_work_artifacts: 0, blocks: 3 },
     );
 
     expect(enriched.spec_version).toBe("1.3");
     expect(enriched.interruption_contract).toBeTruthy();
     expect((enriched.interruption_contract as { intervention_types: string[] }).intervention_types).toContain(
-      "proof_of_work_reminder"
+      "proof_of_work_reminder",
     );
   });
 });

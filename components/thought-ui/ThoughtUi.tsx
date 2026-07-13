@@ -1,7 +1,10 @@
 "use client";
 
 import { type ButtonHTMLAttributes, type ReactNode } from "react";
+import { Zap } from "lucide-react";
 import { cn } from "@/lib/utils";
+
+export type HeliosTurnMode = "idle" | "responding" | "interruption";
 
 export const THOUGHT_BACKGROUND_IMAGES = [
   "/aesthetics/Greco-futurism/HHnTrgVaQAAP-_3.jpeg",
@@ -143,38 +146,56 @@ export function ThoughtButtonLabel({
   );
 }
 
-function dialogueAvatarClasses(isActiveTurn: boolean) {
+function dialogueAvatarClasses(isActiveTurn: boolean, turnMode: HeliosTurnMode = "idle") {
   return cn(
     "grid h-28 w-28 shrink-0 place-items-center overflow-hidden rounded-full border bg-gradient-to-br via-neutral-800 to-neutral-900 ring-2 ring-offset-2 ring-offset-[#0a0a0a]",
-    isActiveTurn
-      ? "animate-dialogue-turn-pulse border-red-500/70 from-amber-500/15 ring-red-500/40"
-      : "border-white/70 from-white/10 ring-white/40",
+    turnMode === "interruption"
+      ? "animate-dialogue-interruption-pulse border-sky-500/70 from-sky-500/15 ring-sky-500/40"
+      : isActiveTurn
+        ? "animate-dialogue-turn-pulse border-red-500/70 from-amber-500/15 ring-red-500/40"
+        : "border-white/70 from-white/10 ring-white/40",
   );
 }
 
-function dialogueAvatarGlowClass(isActiveTurn: boolean) {
+function dialogueAvatarGlowClass(isActiveTurn: boolean, turnMode: HeliosTurnMode = "idle") {
+  if (turnMode === "interruption") {
+    return "pointer-events-none absolute inset-0 rounded-full shadow-[0_0_32px_rgba(56,189,248,0.4)]";
+  }
   return isActiveTurn
     ? "pointer-events-none absolute inset-0 rounded-full shadow-[0_0_32px_rgba(239,68,68,0.35)]"
     : "pointer-events-none absolute inset-0 rounded-full shadow-[0_0_32px_rgba(255,255,255,0.22)]";
 }
 
-function dialogueBubbleClasses(isActiveTurn: boolean, cornerClass: string) {
+function dialogueBubbleClasses(isActiveTurn: boolean, cornerClass: string, turnMode: HeliosTurnMode = "idle") {
   return cn(
     "rounded-2xl border px-4 py-3 backdrop-blur-sm",
     cornerClass,
-    isActiveTurn
-      ? "animate-dialogue-turn-pulse border-red-500/70 bg-neutral-950/55"
-      : "border-white/50 bg-neutral-950/55",
+    turnMode === "interruption"
+      ? "animate-dialogue-interruption-pulse border-sky-500/70 bg-neutral-950/55"
+      : isActiveTurn
+        ? "animate-dialogue-turn-pulse border-red-500/70 bg-neutral-950/55"
+        : "border-white/50 bg-neutral-950/55",
   );
 }
 
-export function HeliosProbeAvatar({ isActiveTurn = false }: { isActiveTurn?: boolean }) {
+export function HeliosProbeAvatar({
+  isActiveTurn = false,
+  turnMode = "idle",
+}: {
+  isActiveTurn?: boolean;
+  turnMode?: HeliosTurnMode;
+}) {
+  const isInterruption = turnMode === "interruption";
   return (
     <div className="relative h-28 w-28 shrink-0">
-      <div className={dialogueAvatarClasses(isActiveTurn)}>
-        <span className="font-serif text-3xl leading-none text-neutral-200">H</span>
+      <div className={dialogueAvatarClasses(isActiveTurn, turnMode)}>
+        {isInterruption ? (
+          <Zap className="size-8 text-sky-300" strokeWidth={2.25} aria-hidden />
+        ) : (
+          <span className="font-serif text-3xl leading-none text-neutral-200">H</span>
+        )}
       </div>
-      <div className={dialogueAvatarGlowClass(isActiveTurn)} />
+      <div className={dialogueAvatarGlowClass(isActiveTurn, turnMode)} />
     </div>
   );
 }
@@ -206,6 +227,7 @@ function DialogueSplitComic({
   lastAssistantTurn,
   promptText,
   isSending,
+  heliosTurnMode = "idle",
   error,
   userInitial,
   emptyUserTurnText,
@@ -215,14 +237,22 @@ function DialogueSplitComic({
   lastAssistantTurn: DialogueMessage | null;
   promptText: string;
   isSending: boolean;
+  heliosTurnMode?: HeliosTurnMode;
   error: string;
   userInitial: string;
   emptyUserTurnText: string;
   variant?: "ile" | "tap";
 }) {
   const userLines = lastUserTurn ? lastUserTurn.content.split("\n").map((line) => line.trim()).filter(Boolean) : [];
-  const isHeliosTurn = isSending;
-  const isLearnerTurn = !isSending;
+  const isHeliosInterruption = heliosTurnMode === "interruption";
+  const heliosVisualMode: HeliosTurnMode = isHeliosInterruption
+    ? "interruption"
+    : isSending
+      ? "responding"
+      : "idle";
+  const isHeliosResponding = heliosVisualMode === "responding";
+  const isHeliosTurn = isSending || isHeliosInterruption;
+  const isLearnerTurn = !isSending && !isHeliosInterruption;
   // Show the learner bubble only while Helios is responding; clear it when the turn returns to the user.
   const hasUserBubble = isSending && (userLines.length > 0 || !!emptyUserTurnText);
   const textClass = variant === "ile" ? ILE_DIALOGUE_TEXT_CLASS : TAP_DIALOGUE_TEXT_CLASS;
@@ -241,9 +271,9 @@ function DialogueSplitComic({
       {/* Helios — centered vertically in the top half */}
       <div className="flex min-h-0 flex-1 items-center">
         <div className="flex w-full max-w-[min(100%,34rem)] items-center gap-3 sm:gap-4">
-          <HeliosProbeAvatar isActiveTurn={isHeliosTurn} />
+          <HeliosProbeAvatar isActiveTurn={isHeliosResponding} turnMode={heliosVisualMode} />
           <div className="min-w-0 flex-1">
-            <div className={dialogueBubbleClasses(isHeliosTurn, "rounded-tl-md")}>
+            <div className={dialogueBubbleClasses(isHeliosResponding, "rounded-tl-md", heliosVisualMode)}>
               {isSending ? (
                 <div className="flex gap-1.5 py-1">
                   <div className={`size-2.5 animate-bounce rounded-full ${pendingDotClass}`} style={{ animationDelay: "0ms" }} />
@@ -316,6 +346,7 @@ export function DialogueSplit({
   lastAssistantTurn,
   promptText,
   isSending,
+  heliosTurnMode = "idle",
   error,
   userInitial,
   emptyUserTurnText = "",
@@ -325,6 +356,7 @@ export function DialogueSplit({
   lastAssistantTurn: DialogueMessage | null;
   promptText: string;
   isSending: boolean;
+  heliosTurnMode?: HeliosTurnMode;
   error: string;
   userInitial: string;
   emptyUserTurnText?: string;
@@ -336,6 +368,7 @@ export function DialogueSplit({
     lastAssistantTurn,
     promptText,
     isSending,
+    heliosTurnMode,
     error,
     userInitial,
     emptyUserTurnText,

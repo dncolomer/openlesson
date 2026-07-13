@@ -64,7 +64,7 @@ export async function POST(req: NextRequest) {
     const created = await createAgentWorkspace(supabase, auth, body);
 
     return NextResponse.json(
-      withProofOfWorkApiResponse(
+      await withProofOfWorkApiResponse(
         {
           workspace: created.workspace,
           blocks: created.blocks,
@@ -72,7 +72,16 @@ export async function POST(req: NextRequest) {
           evaluation_mode: created.privacy.evaluation_mode,
           privacy: created.privacy,
         },
-        { endpoint: "create_workspace", workspace_id: created.workspace.id as string }
+        {
+          endpoint: "create_workspace",
+          workspace_id: created.workspace.id as string,
+          workspace_title:
+            typeof created.workspace.title === "string" ? created.workspace.title : null,
+          conversion_goal:
+            typeof created.workspace.conversion_goal === "string"
+              ? created.workspace.conversion_goal
+              : null,
+        },
       ),
       { status: 201 }
     );

@@ -31,7 +31,8 @@ export async function POST(req: NextRequest) {
     const { brief } = access.userId
       ? await getTapScoreBriefForUser(access.workspaceId, access.userId, focusNodeIds, true, resolvedFocusSessionId)
       : await getTapScoreBrief(access.workspaceId, focusNodeIds, resolvedFocusSessionId);
-    const openingQuestion = await generateTapOpeningQuestion(brief, minutes);
+    const requestedOpeningQuestion = body.openingQuestion ? String(body.openingQuestion).trim() : "";
+    const openingQuestion = requestedOpeningQuestion || (await generateTapOpeningQuestion(brief, minutes));
 
     if (access.existingSession?.id) {
       await access.supabase

@@ -36,7 +36,9 @@ export async function POST(req: NextRequest, { params }: RouteProps) {
 
   const { data: workspace } = await supabase
     .from("workspaces")
-    .select("id, user_id, organization_id, guest_user_id, evaluation_mode, protocol_config, external_refs")
+    .select(
+      "id, user_id, organization_id, guest_user_id, evaluation_mode, protocol_config, external_refs, title, root_topic, conversion_goal",
+    )
     .eq("id", workspaceId)
     .single();
 
@@ -176,7 +178,7 @@ export async function POST(req: NextRequest, { params }: RouteProps) {
   const proofOfWorkCount = await countWorkspaceProofOfWorkForPlan(supabase, workspaceId);
 
   return NextResponse.json(
-    withProofOfWorkApiResponse(
+    await withProofOfWorkApiResponse(
       {
         proof_of_work: {
           ...row,
@@ -201,6 +203,16 @@ export async function POST(req: NextRequest, { params }: RouteProps) {
         block_id: blockId,
         proof_of_work_artifacts: proofOfWorkCount ?? 1,
         tool_name: row.tool_name,
+        tap_action: row.tool_action,
+        workspace_title: workspace.title || workspace.root_topic || null,
+        conversion_goal: workspace.conversion_goal,
+        artifact_summary: row.tool_name
+          ? `${row.tool_name}${row.tool_action ? `:${row.tool_action}` : ""}`
+          : null,
+        artifact_metadata:
+          row.metadata && typeof row.metadata === "object" && !Array.isArray(row.metadata)
+            ? (row.metadata as Record<string, unknown>)
+            : null,
       }
     ),
     { status: 201 }

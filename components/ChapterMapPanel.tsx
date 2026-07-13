@@ -149,10 +149,17 @@ export function ChapterMapPanel({
     );
   }
 
-  if (!plan) {
+  if (!plan || steps.length === 0) {
     return (
-      <div className="flex h-full items-center justify-center text-sm text-neutral-600">
-        {t("chapterMap.noChapters")}
+      <div className="flex h-full flex-col items-center justify-center bg-[#0b0b0b] p-6">
+        {loading ? (
+          <>
+            <div className="mb-4 h-8 w-8 animate-spin rounded-full border-2 border-neutral-800 border-t-amber-500/70" />
+            <p className="text-sm text-neutral-500">{t("chapterMap.preparing")}</p>
+          </>
+        ) : (
+          <p className="text-sm text-neutral-600">{t("chapterMap.noChapters")}</p>
+        )}
       </div>
     );
   }

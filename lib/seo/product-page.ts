@@ -17,6 +17,8 @@ export type SeoProductPageConfig = {
   metaDescription: string;
   keywords: string[];
   heroImageAlt: string;
+  heroVideoSrc?: string;
+  heroVideoPosition?: string;
   useCases: ProductUseCase[];
   highlights: string[];
   faqs: { question: string; answer: string }[];
@@ -256,6 +258,8 @@ export const ALE_PAGE: SeoProductPageConfig = {
     "agent validation",
   ],
   heroImageAlt: "Agentic Learning Environment product hero",
+  heroVideoSrc: "/animations/labi.mp4",
+  heroVideoPosition: "center 68%",
   useCases: [
     {
       title: "Private skill evolution",

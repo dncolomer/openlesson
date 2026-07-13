@@ -30,7 +30,6 @@ import {
   buildInterruptionContract,
   formatInterruptionContractForSkillPrompt,
   normalizePredictedInterruption,
-  predictInterruption,
   type ProofOfWorkApiInterruption,
 } from "./predictive-interruption";
 import { callXaiResponsesWithFiles } from "@/lib/xai-client";
@@ -272,16 +271,12 @@ ${formatInterruptionContractForSkillPrompt()}`;
 export function resolveProofOfWorkSchemaInterruption(
   spec: ProofOfWorkEvalSchemaResult,
   workspaceId: string,
-  blockId?: string | null,
-  evidenceArtifacts?: number
 ): ProofOfWorkApiInterruption {
-  return predictInterruption({
-    endpoint: "generate_proof_of_work_schema",
-    workspace_id: workspaceId,
-    block_id: blockId,
-    proof_of_work_artifacts: evidenceArtifacts,
-    llm_interruption: spec.predicted_interruption ?? null,
-  });
+  return normalizePredictedInterruption(
+    spec.predicted_interruption,
+    "generate_proof_of_work_schema",
+    workspaceId,
+  );
 }
 
 export interface GenerateEvidenceSpecOptions {

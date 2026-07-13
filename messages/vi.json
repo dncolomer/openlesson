@@ -951,7 +951,7 @@
     "thinkAloudHint": "Hãy tiếp tục nghĩ thành tiếng — {name} sẽ gửi câu hỏi và nhiệm vụ dẫn dắt mới rất sớm.",
     "thinkAloudTraces": "Think Aloud Traces",
     "thinkAloudTracesHint": "Lời nói trực tiếp trở thành thẻ suy nghĩ. Kết tinh, chọn và gửi chúng cho Helios.",
-    "activeThoughts": "Suy nghĩ đang hoạt động",
+    "stashedThoughts": "Suy nghĩ đã lưu",
     "speakToCreateThoughts": "Nói để tạo dấu vết suy nghĩ.",
     "listeningLive": "Listening live",
     "waitingForSpeech": "Waiting",
@@ -2412,11 +2412,11 @@
       "step2": {
         "title": "Think aloud, then send",
         "imageAlt": "Selective thought interface",
-        "body": "Speak your reasoning out loud while you work. Press C to crystallize live speech into thought cards.\n\nSelect one thought or combine several, then send them to Helios. Skipped thoughts move to Thought Memory — revisit any trace, resend it, or bookmark insights you want to keep."
+        "body": "Speak your reasoning out loud while you work. Your transcription stays in the bar until you send or stash it.\n\nPress Enter to send the live transcription to Helios. Press Del to stash speech into the stashed-thoughts pool below. Press 1, 2, or 3 to send from that pool. Press E to edit before sending. Thought Memory keeps every trace — select and resend from there, or bookmark insights."
       },
       "step3": {
         "title": "Depth over speed",
-        "body": "When you're ready, press Start block. Recording begins and Helios will listen to whatever you send. Take your time — messy thinking is how real learning surfaces.",
+        "body": "When you're ready, press Start block. Recording begins and Helios will listen to whatever you send — Enter for the live bar, or a number key for stashed thoughts. Take your time — messy thinking is how real learning surfaces.",
         "quoteText": "Learning is not attained by chance; it must be sought with ardor and attended to with diligence.",
         "quoteAuthor": "Abigail Adams",
         "start": "Start block",
@@ -2437,13 +2437,13 @@
         "body": "TAP is a timed demonstration: explain what you learned while Helios listens, then answer Socratic follow-ups to surface gaps and strengths.\n\nSession length and keyboard shortcuts are on the right. When time runs out, you'll return to the workspace — open the Performance tab when you're ready for unified scoring."
       },
       "step2": {
-        "title": "Selective thoughts",
+        "title": "Stash or send",
         "imageAlt": "Selective thought interface",
-        "body": "Browser transcription turns speech into thought traces. Press C to crystallize, then select which thoughts to send — one card or a combined send.\n\nHelios responds under the avatar with one question at a time, not a chat thread. Thought Memory keeps every trace so you can resend or bookmark insights."
+        "body": "Browser transcription turns speech into a live bar that keeps accumulating until you send or stash it.\n\nPress Enter to send the live transcription to Helios. Press Del to stash into the stashed-thoughts pool below. Press 1, 2, or 3 to send from that pool. Press E to edit before sending. The full shortcut list is on the right during briefing.\n\nHelios responds under the avatar with one question at a time. Thought Memory keeps every trace so you can resend or bookmark insights."
       },
       "step3": {
-        "title": "Show what you know",
-        "body": "Press Play when you're ready. The timer starts and Helios opens with a specific question about what you learned here.",
+        "title": "Pick your starting focus",
+        "body": "Helios generated three entry points from your workspace. Choose the angle you want to demonstrate first — the timer starts and your session opens with that topic's question.",
         "quoteText": "The expert in anything was once a beginner who refused to give up.",
         "quoteAuthor": "",
         "start": "Play",

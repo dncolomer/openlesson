@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { uploadFileToXAI } from "@/lib/xai-files";
-import { callXaiResponses, ResponsesInputMessage } from "@/lib/xai-client";
+import { callXaiResponses, DEFAULT_MODEL, ResponsesInputMessage } from "@/lib/xai-client";
 
 export const runtime = "nodejs";
 export const maxDuration = 120;
@@ -134,7 +134,7 @@ export async function POST(req: NextRequest) {
 
     // Call xAI Responses API
     const result = await callXaiResponses({
-      model: "grok-4.3",
+      model: DEFAULT_MODEL,
       instructions: systemInstructions,
       input: inputMessages,
       temperature: 0.7,

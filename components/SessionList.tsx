@@ -8,9 +8,10 @@ import { BlockDetailDrawer } from "./BlockDetailDrawer";
 import { buildSkillGridLayout, getWeightedNeighborhood } from "@/lib/block-skill-grid";
 import { createBrowserClient } from "@supabase/ssr";
 import { useI18n } from "@/lib/i18n";
+import { DEFAULT_MODEL } from "@/lib/xai-client";
 
 const MODEL_STORAGE_KEY = "planner-model";
-const DEFAULT_PLANNER_MODEL = "grok-4.3";
+const DEFAULT_PLANNER_MODEL = DEFAULT_MODEL;
 
 interface Block {
   id: string;

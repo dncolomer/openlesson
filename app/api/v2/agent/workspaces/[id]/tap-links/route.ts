@@ -40,7 +40,7 @@ export async function GET(req: NextRequest, { params }: RouteProps) {
   }
 
   return NextResponse.json(
-    withProofOfWorkApiResponse(
+    await withProofOfWorkApiResponse(
       { tap_links: links || [] },
       { endpoint: "list_tap_links", workspace_id: id }
     )

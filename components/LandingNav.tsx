@@ -22,11 +22,21 @@ function PrimaryCta({ compact = false }: { compact?: boolean }) {
   );
 }
 
-export function LandingNav() {
+type LandingNavProps = {
+  overlay?: boolean;
+};
+
+export function LandingNav({ overlay = false }: LandingNavProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
-    <header className="sticky top-0 z-40 border-b border-zinc-900 bg-[#0a0a0a]/86 px-5 py-4 backdrop-blur-md">
+    <header
+      className={`z-40 px-5 py-4 backdrop-blur-md ${
+        overlay
+          ? "absolute inset-x-0 top-0 border-b-0 bg-[#0a0a0a]/40"
+          : "sticky top-0 border-b border-zinc-900 bg-[#0a0a0a]/86"
+      }`}
+    >
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-4">
         <Link href="/" className="text-base font-semibold tracking-tight text-white transition hover:text-zinc-300">
           openLesson

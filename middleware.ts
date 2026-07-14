@@ -96,6 +96,14 @@ export async function middleware(request: NextRequest) {
     return supabaseResponse;
   }
 
+  if (pathname.startsWith("/register")) {
+    const sessionId = request.nextUrl.searchParams.get("session_id");
+    const returnUrl = request.nextUrl.searchParams.get("returnUrl");
+    if (!sessionId && !returnUrl?.startsWith("/invite/")) {
+      return NextResponse.redirect(new URL("/pricing", request.url));
+    }
+  }
+
   // Auth routes - redirect to dashboard if already logged in
   const authRoutes = ["/login", "/register"];
   const isAuthRoute = authRoutes.some((route) => pathname.startsWith(route));
@@ -129,7 +137,7 @@ export async function middleware(request: NextRequest) {
     const { data: profile } = await supabase
       .from("profiles")
       .select(
-        "plan, subscription_status, is_admin, organization_id, token_tier, token_validity_expires_at"
+        "plan, subscription_status, is_admin, organization_id, token_tier, token_validity_expires_at, current_period_end"
       )
       .eq("id", user.id)
       .single();

@@ -189,7 +189,7 @@ function LoginForm() {
 
       <p className="text-center text-xs text-neutral-600 mt-6">
         {t('auth.noAccount')}{" "}
-        <Link href="/register" className="text-neutral-400 hover:text-white transition-colors">
+        <Link href="/pricing" className="text-neutral-400 hover:text-white transition-colors">
           {t('auth.signUp')}
         </Link>
       </p>

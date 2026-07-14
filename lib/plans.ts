@@ -2,7 +2,7 @@
 // PLAN DEFINITIONS & USAGE LIMITS
 // ============================================
 
-export type PlanId = "free" | "regular" | "pro" | "regular_2026" | "pro_teams" | "api_metered";
+export type PlanId = "free" | "trial" | "regular" | "pro" | "regular_2026" | "pro_teams" | "api_metered";
 
 export interface PlanDef {
   id: PlanId;
@@ -33,6 +33,10 @@ export const PROOF_OF_WORK_ALLOWANCE_LABEL = "Proof-of-Work submissions";
 /** Extra Proof-of-Work submissions per one-time purchase pack. */
 export const EXTRA_PROOF_OF_WORK_PACK_SIZE = 4;
 
+/** One-time trial: full product access for this many days after payment. */
+export const TRIAL_ACCESS_DAYS = 3;
+export const TRIAL_PRICE_CENTS = 1999;
+
 export const PLANS: Record<PlanId, PlanDef> = {
   free: {
     id: "free",
@@ -45,6 +49,21 @@ export const PLANS: Record<PlanId, PlanDef> = {
       "25 Proof-of-Work submissions/mo",
       "One Workspace",
       "Basic readiness report",
+    ],
+    stripePriceEnv: null,
+  },
+  trial: {
+    id: "trial",
+    name: "3-Day Trial",
+    price: "$19.99",
+    priceAmount: TRIAL_PRICE_CENTS,
+    proofOfWorkPerPeriod: null,
+    workspacesPerPeriod: null,
+    features: [
+      "Full access for 3 days",
+      "Unlimited Proof-of-Work submissions",
+      "Unlimited Workspaces",
+      "All core product features",
     ],
     stripePriceEnv: null,
   },
@@ -280,6 +299,7 @@ export function formatPlanMonthlyPrice(
   if (plan === "api_metered") {
     return `$${API_METERED_PLATFORM_FEE_CENTS / 100}/month + $${POW_API_CALL_PRICE_CENTS / 100} per API submission`;
   }
+  if (plan === "trial") return `$${TRIAL_PRICE_CENTS / 100} one-time`;
   if (plan === "pro") return "$14.99/month";
   if (plan === "regular") return "$4.99/month";
   if (plan === "free") return "$0";
@@ -304,15 +324,28 @@ export type ProductAccessProfile = Pick<
   "plan" | "subscription_status" | "is_admin" | "token_tier" | "token_validity_expires_at"
 > & {
   organization_id?: string | null;
+  current_period_end?: string | null;
 };
 
 const PAID_PRODUCT_PLANS = new Set<PlanId>([
+  "trial",
   "regular_2026",
   "pro_teams",
   "api_metered",
   "regular",
   "pro",
 ]);
+
+/** True when subscription_status is active and the billing window has not ended. */
+export function isBillingPeriodActive(
+  profile: Pick<UserProfile, "subscription_status" | "current_period_end"> | null | undefined
+): boolean {
+  if (!profile || profile.subscription_status !== "active") return false;
+  if (profile.current_period_end && new Date(profile.current_period_end) <= new Date()) {
+    return false;
+  }
+  return true;
+}
 
 /** True when the user may use the product (paid plan, org member, token tier, or admin). */
 export function hasProductAccess(profile: ProductAccessProfile | null | undefined): boolean {
@@ -326,7 +359,14 @@ export function hasProductAccess(profile: ProductAccessProfile | null | undefine
       new Date(profile.token_validity_expires_at) > new Date());
   if (isTokenValid) return true;
 
-  if (profile.subscription_status !== "active") return false;
+  if (
+    !isBillingPeriodActive({
+      subscription_status: profile.subscription_status,
+      current_period_end: profile.current_period_end ?? null,
+    })
+  ) {
+    return false;
+  }
 
   return PAID_PRODUCT_PLANS.has(profile.plan);
 }
@@ -372,11 +412,15 @@ export interface WorkspaceCheckResult {
 }
 
 export function getWorkspaceLimit(profile: UserProfile): number | null {
-  const { plan, is_admin, subscription_status } = profile;
+  const { plan, is_admin, subscription_status, current_period_end } = profile;
 
   if (is_admin) return null;
 
   const planDef = PLANS[plan] || PLANS.free;
+
+  if (plan === "trial" && isBillingPeriodActive({ subscription_status, current_period_end })) {
+    return null;
+  }
 
   if (subscription_status === "active" && plan !== "free") {
     return null;
@@ -393,7 +437,7 @@ export function getWorkspaceLimit(profile: UserProfile): number | null {
  * Resolve the effective Proof-of-Work submission allowance for a profile.
  */
 export function getProofOfWorkAllowance(profile: UserProfile): Pick<UsageCheckResult, "plan" | "limit" | "isAdmin"> {
-  const { plan, is_admin, extra_lessons, subscription_status, token_tier, token_validity_expires_at } = profile;
+  const { plan, is_admin, extra_lessons, subscription_status, current_period_end, token_tier, token_validity_expires_at } = profile;
 
   if (is_admin) {
     return { plan, limit: null, isAdmin: true };
@@ -419,6 +463,10 @@ export function getProofOfWorkAllowance(profile: UserProfile): Pick<UsageCheckRe
   }
 
   if (plan === "api_metered" && subscription_status === "active") {
+    return { plan, limit: null, isAdmin: false };
+  }
+
+  if (plan === "trial" && isBillingPeriodActive({ subscription_status, current_period_end })) {
     return { plan, limit: null, isAdmin: false };
   }
 

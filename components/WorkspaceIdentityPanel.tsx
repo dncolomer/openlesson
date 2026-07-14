@@ -219,7 +219,7 @@ export function WorkspaceIdentityPanel({
             <GitBranch className="h-3.5 w-3.5" />
           </button>
         ) : (
-          <Link href="/register" className={iconButtonClass} title={t("planView.forkRemix")}>
+          <Link href="/pricing" className={iconButtonClass} title={t("planView.forkRemix")}>
             <GitBranch className="h-3.5 w-3.5" />
           </Link>
         ))}

@@ -18,6 +18,7 @@ interface Stats {
   activeSubscriptions: number;
   tierBreakdown: {
     free: number;
+    trial: number;
     regular_2026: number;
     pro_teams: number;
     api_metered: number;
@@ -108,6 +109,7 @@ export default function AdminPage() {
           <h2 className="mb-3 text-sm font-medium text-white">Plan breakdown</h2>
           <div className="flex flex-wrap gap-4 text-sm text-neutral-400">
             <span>Free: {stats.tierBreakdown.free}</span>
+            <span className="text-emerald-400">Trial: {stats.tierBreakdown.trial}</span>
             <span className="text-blue-400">Individual: {stats.tierBreakdown.regular_2026}</span>
             <span className="text-purple-400">Teams: {stats.tierBreakdown.pro_teams}</span>
             <span className="text-amber-200">API Metered: {stats.tierBreakdown.api_metered}</span>

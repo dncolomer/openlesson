@@ -1,9 +1,10 @@
 import type { PlanId } from "@/lib/plans";
-import { PLANS } from "@/lib/plans";
+import { PLANS, TRIAL_ACCESS_DAYS } from "@/lib/plans";
 
 /** Admin-assignable subscription tiers (current product). */
 export const ADMIN_TIER_OPTIONS = [
   { id: "free" as const, label: "Free", description: PLANS.free.features[0] },
+  { id: "trial" as const, label: "3-Day Trial", description: "$19.99 one-time · full access for 3 days" },
   { id: "regular_2026" as const, label: "Individual", description: "from $49/mo · 100+ Proof-of-Work submissions" },
   { id: "pro_teams" as const, label: "Pro / Teams", description: "from $599/mo · 1,000+ Proof-of-Work submissions + org" },
   {
@@ -62,6 +63,7 @@ export function tierLabel(plan: string): string {
   if (plan === "regular_2026") return "Individual";
   if (plan === "pro_teams") return "Pro / Teams";
   if (plan === "api_metered") return "API Metered";
+  if (plan === "trial") return "3-Day Trial";
   if (plan === "free") return "Free";
   if (plan === "regular") return "Individual (legacy)";
   if (plan === "pro") return "Pro (legacy)";
@@ -76,6 +78,8 @@ export function tierColor(plan: string): string {
       return "text-purple-400";
     case "regular_2026":
       return "text-blue-400";
+    case "trial":
+      return "text-emerald-400";
     case "regular":
       return "text-cyan-400";
     case "free":
@@ -140,7 +144,7 @@ export function buildTierUpdate(tier: AdminTierId): {
   }
 
   const periodEnd = new Date();
-  periodEnd.setDate(periodEnd.getDate() + 30);
+  periodEnd.setDate(periodEnd.getDate() + (tier === "trial" ? TRIAL_ACCESS_DAYS : 30));
 
   return {
     plan: tier,

@@ -117,7 +117,7 @@ export function InsightDetailClient({ insightId }: { insightId: string }) {
             ) : null}
             {isAuthenticated === false ? (
               <Link
-                href={`/register?redirect=${encodeURIComponent(insightPublicPath(insight))}`}
+                href={`/pricing?redirect=${encodeURIComponent(insightPublicPath(insight))}`}
                 className="rounded-md border border-white/15 bg-white px-3 py-1.5 text-xs font-medium text-black transition hover:bg-zinc-200"
               >
                 Sign up

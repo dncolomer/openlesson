@@ -13,6 +13,7 @@ import {
   TEAM_VOLUME_TIERS,
   DEFAULT_REGULAR_VOLUME,
   DEFAULT_TEAM_VOLUME,
+  TRIAL_PRICE_CENTS,
   hasProductAccess,
   type PlanId,
 } from "@/lib/plans";
@@ -23,7 +24,7 @@ interface UserState {
   isAdmin: boolean;
 }
 
-type PricingPlanId = "regular_2026" | "pro_teams" | "api_metered";
+type PricingPlanId = "trial_3day" | "regular_2026" | "pro_teams" | "api_metered";
 
 const BACKGROUND = "/aesthetics/Greco-futurism/HHnTrjJbQAAOz7K.jpeg";
 
@@ -73,8 +74,25 @@ const PLANS: Array<{
   checkout: PricingPlanId;
   volumes: typeof REGULAR_VOLUMES | null;
   metered?: boolean;
+  trial?: boolean;
   featured?: boolean;
 }> = [
+  {
+    id: "trial_3day",
+    name: "3-Day Trial",
+    tag: "Try it",
+    description:
+      "Pay once, get full access for 3 days. After checkout you’ll create your account — no email confirmation step.",
+    features: [
+      "Full product access for 3 days",
+      "Unlimited Proof-of-Work submissions",
+      "Unlimited Workspaces",
+      "One-time $19.99 — no subscription",
+    ],
+    checkout: "trial_3day",
+    volumes: null,
+    trial: true,
+  },
   {
     id: "regular_2026",
     name: "Individual",
@@ -165,7 +183,7 @@ function PricingPageContent() {
   const [user, setUser] = useState<UserState | null>(null);
   const [needsPlan, setNeedsPlan] = useState(false);
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
-  const [activePlanId, setActivePlanId] = useState<PricingPlanId>("regular_2026");
+  const [activePlanId, setActivePlanId] = useState<PricingPlanId>("trial_3day");
   const [selectedVolumes, setSelectedVolumes] = useState<Record<string, number>>({
     regular_2026: DEFAULT_REGULAR_VOLUME,
     pro_teams: DEFAULT_TEAM_VOLUME,
@@ -199,7 +217,7 @@ function PricingPageContent() {
         const { data: profile } = await supabase
           .from("profiles")
           .select(
-            "plan, is_admin, subscription_status, organization_id, token_tier, token_validity_expires_at",
+            "plan, is_admin, subscription_status, organization_id, token_tier, token_validity_expires_at, current_period_end",
           )
           .eq("id", authUser.id)
           .single();
@@ -223,6 +241,7 @@ function PricingPageContent() {
                     organization_id: profile.organization_id,
                     token_tier: profile.token_tier,
                     token_validity_expires_at: profile.token_validity_expires_at,
+                    current_period_end: profile.current_period_end ?? null,
                   }
                 : null,
             ),
@@ -236,16 +255,18 @@ function PricingPageContent() {
   }, [searchParams]);
 
   const handleCheckout = async (priceType: PricingPlanId) => {
-    if (!user?.authenticated) {
-      window.location.href = `/login?redirect=${encodeURIComponent("/pricing?required=1")}`;
-      return;
-    }
     setLoadingPlan(priceType);
     try {
+      const monthlyVolume =
+        priceType === "regular_2026"
+          ? selectedVolumes.regular_2026
+          : priceType === "pro_teams"
+            ? selectedVolumes.pro_teams
+            : 1;
       const res = await fetch("/api/stripe/create-checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ priceType, monthlyVolume: selectedVolumes[priceType] }),
+        body: JSON.stringify({ priceType, monthlyVolume }),
       });
       const data = await res.json();
       if (data.url) window.location.href = data.url;
@@ -258,15 +279,19 @@ function PricingPageContent() {
     }
   };
 
-  const isCurrentPlan = user?.authenticated && user.plan === activePlan.id;
+  const isCurrentPlan =
+    user?.authenticated &&
+    ((activePlan.id === "trial_3day" && user.plan === "trial") || user.plan === activePlan.id);
   const checkoutLabel =
     loadingPlan === activePlan.checkout
       ? "Loading..."
-      : activePlan.metered
-        ? `Start API Metered (${formatTierPrice(API_METERED_PLATFORM_PRICE)}/mo + usage) →`
-        : activePlan.id === "pro_teams"
-          ? `Start Teams (${(selectedVolume?.proof_of_work ?? selectedVolumes.pro_teams).toLocaleString()} submissions/mo) →`
-          : `Start Individual (${(selectedVolume?.proof_of_work ?? selectedVolumes.regular_2026).toLocaleString()} submissions/mo) →`;
+      : activePlan.trial
+        ? `Pay $${(TRIAL_PRICE_CENTS / 100).toFixed(2)} — 3 days full access →`
+        : activePlan.metered
+          ? `Start API Metered (${formatTierPrice(API_METERED_PLATFORM_PRICE)}/mo + usage) →`
+          : activePlan.id === "pro_teams"
+            ? `Start Teams (${(selectedVolume?.proof_of_work ?? selectedVolumes.pro_teams).toLocaleString()} submissions/mo) →`
+            : `Start Individual (${(selectedVolume?.proof_of_work ?? selectedVolumes.regular_2026).toLocaleString()} submissions/mo) →`;
 
   return (
     <main
@@ -284,12 +309,11 @@ function PricingPageContent() {
             Price learning efficiency, not completion.
           </h1>
           <p className="mt-5 max-w-2xl text-base leading-relaxed text-neutral-400 sm:text-lg">
-            Pick a plan, choose your monthly capacity, and checkout — no scrolling through stacked tiers.
+            Pay first, then create your account. Stripe checkout collects your email — no separate confirmation step.
           </p>
           {needsPlan && (
             <div className="mt-6 rounded-sm border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
-              Choose Individual, Pro / Teams, or API Metered to continue. A paid plan is required to use
-              openLesson.
+              Choose a plan to continue. Try the 3-day trial ($19.99) or pick a monthly plan.
             </div>
           )}
 
@@ -378,12 +402,14 @@ function PricingPageContent() {
 
             <div className="mt-6 flex flex-wrap items-baseline gap-x-3 gap-y-1">
               <span className="text-4xl font-medium tracking-[-1px] text-white">
-                {activePlan.metered
-                  ? formatTierPrice(API_METERED_PLATFORM_PRICE)
-                  : formatTierPrice(selectedVolume?.price ?? 0)}
+                {activePlan.trial
+                  ? `$${(TRIAL_PRICE_CENTS / 100).toFixed(2)}`
+                  : activePlan.metered
+                    ? formatTierPrice(API_METERED_PLATFORM_PRICE)
+                    : formatTierPrice(selectedVolume?.price ?? 0)}
               </span>
               <span className="text-sm text-neutral-500">
-                {activePlan.metered ? "+ usage / mo" : "/ month"}
+                {activePlan.trial ? "one-time" : activePlan.metered ? "+ usage / mo" : "/ month"}
               </span>
             </div>
 

@@ -7,9 +7,11 @@ import {
   POW_API_CALL_PRICE_CENTS,
   REGULAR_VOLUME_PRICES,
   TEAM_VOLUME_PRICES,
+  TRIAL_PRICE_CENTS,
   resolveCheckoutVolume,
   getExtraProofOfWorkPackPriceCents,
 } from "@/lib/plans";
+import { checkoutModeForPriceType, type CheckoutPriceType } from "@/lib/stripe-checkout";
 
 export const runtime = "nodejs";
 
@@ -19,6 +21,15 @@ function getStripe() {
   });
 }
 
+const GUEST_CHECKOUT_TYPES = new Set<CheckoutPriceType>([
+  "regular",
+  "pro",
+  "regular_2026",
+  "pro_teams",
+  "api_metered",
+  "trial_3day",
+]);
+
 export async function POST(request: NextRequest) {
   const stripe = getStripe();
   try {
@@ -27,14 +38,11 @@ export async function POST(request: NextRequest) {
       data: { user },
     } = await supabase.auth.getUser();
 
-    if (!user) {
-      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-    }
-
     const { priceType, quantity: rawQuantity, monthlyVolume: rawMonthlyVolume } = await request.json();
-    const quantity = priceType === "extra_lesson" || priceType === "extra_proof_of_work"
-      ? Math.max(1, Math.min(500, Number(rawQuantity) || 1))
-      : 1;
+    const quantity =
+      priceType === "extra_lesson" || priceType === "extra_proof_of_work"
+        ? Math.max(1, Math.min(500, Number(rawQuantity) || 1))
+        : 1;
     const monthlyVolume = resolveCheckoutVolume(priceType, rawMonthlyVolume);
 
     if (
@@ -44,6 +52,7 @@ export async function POST(request: NextRequest) {
         "regular_2026",
         "pro_teams",
         "api_metered",
+        "trial_3day",
         "extra_lesson",
         "extra_proof_of_work",
         "rabbit_hole_plays",
@@ -52,19 +61,21 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Invalid price type" }, { status: 400 });
     }
 
-    // Resolve the Stripe Price ID from env
+    const isGuestCheckout = GUEST_CHECKOUT_TYPES.has(priceType as CheckoutPriceType) && !user;
+
+    if ((priceType === "extra_lesson" || priceType === "extra_proof_of_work" || priceType === "rabbit_hole_plays") && !user) {
+      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+    }
+
     let priceId = "";
-    let mode: "subscription" | "payment";
+    const mode = checkoutModeForPriceType(priceType as CheckoutPriceType);
     let lineItem: Stripe.Checkout.SessionCreateParams.LineItem | null = null;
 
     if (priceType === "regular") {
       priceId = process.env.STRIPE_PRICE_REGULAR || "";
-      mode = "subscription";
     } else if (priceType === "pro") {
       priceId = process.env.STRIPE_PRICE_PRO || "";
-      mode = "subscription";
     } else if (priceType === "regular_2026") {
-      mode = "subscription";
       lineItem = {
         price_data: {
           currency: "usd",
@@ -77,7 +88,6 @@ export async function POST(request: NextRequest) {
         quantity: 1,
       };
     } else if (priceType === "pro_teams") {
-      mode = "subscription";
       lineItem = {
         price_data: {
           currency: "usd",
@@ -90,7 +100,6 @@ export async function POST(request: NextRequest) {
         quantity: 1,
       };
     } else if (priceType === "api_metered") {
-      mode = "subscription";
       lineItem = {
         price_data: {
           currency: "usd",
@@ -103,14 +112,25 @@ export async function POST(request: NextRequest) {
         },
         quantity: 1,
       };
+    } else if (priceType === "trial_3day") {
+      lineItem = {
+        price_data: {
+          currency: "usd",
+          unit_amount: TRIAL_PRICE_CENTS,
+          product_data: {
+            name: "openLesson 3-Day Trial",
+            description: "Full access for 3 days. One-time payment.",
+          },
+        },
+        quantity: 1,
+      };
     } else if (priceType === "extra_lesson" || priceType === "extra_proof_of_work") {
       const { data: planProfile } = await supabase
         .from("profiles")
         .select("plan")
-        .eq("id", user.id)
+        .eq("id", user!.id)
         .single();
       const unitAmount = getExtraProofOfWorkPackPriceCents(planProfile?.plan);
-      mode = "payment";
       lineItem = {
         price_data: {
           currency: "usd",
@@ -126,7 +146,6 @@ export async function POST(request: NextRequest) {
       };
     } else {
       priceId = process.env.STRIPE_PRICE_RABBIT_HOLE || "";
-      mode = "payment";
     }
 
     if (!priceId && !lineItem && priceType !== "rabbit_hole_plays") {
@@ -136,74 +155,81 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get or create Stripe customer
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("stripe_customer_id")
-      .eq("id", user.id)
-      .single();
+    const origin = request.headers.get("origin") || process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
-    let customerId = profile?.stripe_customer_id;
+    let customerId: string | undefined;
+    if (user) {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("stripe_customer_id")
+        .eq("id", user.id)
+        .single();
 
-    if (customerId) {
-      try {
-        await stripe.customers.retrieve(customerId);
-      } catch {
-        customerId = null;
+      customerId = profile?.stripe_customer_id ?? undefined;
+
+      if (customerId) {
+        try {
+          await stripe.customers.retrieve(customerId);
+        } catch {
+          customerId = undefined;
+        }
+      }
+
+      if (!customerId) {
+        const customer = await stripe.customers.create({
+          email: user.email,
+          metadata: { supabase_user_id: user.id },
+        });
+        customerId = customer.id;
+        await supabase.from("profiles").update({ stripe_customer_id: customerId }).eq("id", user.id);
       }
     }
 
-    if (!customerId) {
-      const customer = await stripe.customers.create({
-        email: user.email,
-        metadata: { supabase_user_id: user.id },
-      });
-      customerId = customer.id;
+    const metadata: Record<string, string> = {
+      price_type: priceType,
+      quantity: String(quantity),
+      monthly_volume: String(monthlyVolume),
+      volume_unit: priceType === "regular_2026" || priceType === "pro_teams" ? "proof_of_work" : "",
+      ...(user ? { supabase_user_id: user.id } : {}),
+    };
 
-      // Save customer ID to profile
-      await supabase
-        .from("profiles")
-        .update({ stripe_customer_id: customerId })
-        .eq("id", user.id);
-    }
+    const successUrl = isGuestCheckout
+      ? `${origin}/register?session_id={CHECKOUT_SESSION_ID}`
+      : priceType === "rabbit_hole_plays"
+        ? `${origin}/rabbit-hole?unlocked=1`
+        : `${origin}/pricing/success?session_id={CHECKOUT_SESSION_ID}`;
 
-    const origin = request.headers.get("origin") || process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+    const cancelUrl =
+      priceType === "rabbit_hole_plays" ? `${origin}/rabbit-hole` : `${origin}/pricing`;
 
-    // Create Checkout Session
     const session = await stripe.checkout.sessions.create({
-      customer: customerId,
+      ...(customerId ? { customer: customerId } : {}),
       mode,
-      line_items: [lineItem ?? (priceType === "rabbit_hole_plays" && !priceId
-        ? {
-            price_data: {
-              currency: "usd",
-              unit_amount: 199,
-              product_data: { name: "3 Rabbit Hole plays" },
-            },
-            quantity: 1,
-          }
-        : { price: priceId, quantity: 1 })],
-      success_url: priceType === "rabbit_hole_plays" ? `${origin}/rabbit-hole?unlocked=1` : `${origin}/pricing/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: priceType === "rabbit_hole_plays" ? `${origin}/rabbit-hole` : `${origin}/pricing`,
-      metadata: {
-        supabase_user_id: user.id,
-        price_type: priceType,
-        quantity: String(quantity),
-        monthly_volume: String(monthlyVolume),
-        volume_unit: priceType === "regular_2026" || priceType === "pro_teams" ? "proof_of_work" : "",
-      },
+      line_items: [
+        lineItem ??
+          (priceType === "rabbit_hole_plays" && !priceId
+            ? {
+                price_data: {
+                  currency: "usd",
+                  unit_amount: 199,
+                  product_data: { name: "3 Rabbit Hole plays" },
+                },
+                quantity: 1,
+              }
+            : { price: priceId, quantity: 1 }),
+      ],
+      success_url: successUrl,
+      cancel_url: cancelUrl,
+      metadata,
       ...(mode === "subscription"
         ? {
             subscription_data: {
-              metadata: {
-                supabase_user_id: user.id,
-                price_type: priceType,
-                monthly_volume: String(monthlyVolume),
-                volume_unit: priceType === "regular_2026" || priceType === "pro_teams" ? "proof_of_work" : "",
-              },
+              metadata,
             },
           }
-        : { payment_intent_data: { metadata: { supabase_user_id: user.id, price_type: priceType } } }),
+        : {
+            payment_intent_data: { metadata },
+          }),
     });
 
     return NextResponse.json({ url: session.url });

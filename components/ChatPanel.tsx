@@ -336,7 +336,7 @@ export function ChatPanel({
           <div className="text-center">
             <p className="mb-2 text-xs text-neutral-500">{t("chatPanel.signUpToCustomize")}</p>
             <a
-              href="/register"
+              href="/pricing"
               className="inline-flex rounded-md bg-white px-4 py-2 text-xs font-medium text-black transition-colors hover:bg-neutral-200"
             >
               {t("chatPanel.signUpCta")}

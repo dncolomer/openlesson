@@ -54,7 +54,7 @@ export function SolutionLanding({
               <span>Dashboard</span>
             </Link>
           ) : user === null ? (
-            <Link href="/register" className="rounded-md border border-white/10 bg-white px-5 py-2.5 text-sm font-medium text-black transition hover:bg-zinc-200">Sign up</Link>
+            <Link href="/pricing" className="rounded-md border border-white/10 bg-white px-5 py-2.5 text-sm font-medium text-black transition hover:bg-zinc-200">Get started</Link>
           ) : null}
         </div>
 

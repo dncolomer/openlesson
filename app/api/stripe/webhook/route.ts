@@ -7,6 +7,12 @@ import {
   POW_API_CALL_PRICE_CENTS,
   normalizeStripeVolumeToProofOfWork,
 } from "@/lib/plans";
+import { upsertPendingCheckoutFromSession } from "@/lib/pending-checkout";
+import {
+  isGuestCheckoutPriceType,
+  periodEndForCheckout,
+  profileUpdateFromCheckout,
+} from "@/lib/stripe-checkout";
 import { billingPeriodStart, countPowApiSubmissions } from "@/lib/usage-metrics";
 
 export const runtime = "nodejs";
@@ -50,11 +56,39 @@ export async function POST(request: NextRequest) {
       case "checkout.session.completed": {
         const session = event.data.object as Stripe.Checkout.Session;
         const userId = session.metadata?.supabase_user_id;
-        const priceType = session.metadata?.price_type;
+        const priceType = session.metadata?.price_type || "";
+
+        if (!userId && priceType && isGuestCheckoutPriceType(priceType)) {
+          let subscription: Stripe.Subscription | null = null;
+          const subscriptionId =
+            typeof session.subscription === "string"
+              ? session.subscription
+              : session.subscription?.id;
+          if (subscriptionId) {
+            subscription = await getStripe().subscriptions.retrieve(subscriptionId).catch(() => null);
+          }
+          await upsertPendingCheckoutFromSession(supabase, session, subscription);
+          break;
+        }
 
         if (!userId) break;
 
-        if (priceType === "rabbit_hole_plays") {
+        if (priceType === "trial_3day") {
+          const stripeCustomerId =
+            typeof session.customer === "string" ? session.customer : session.customer?.id ?? null;
+          await supabase
+            .from("profiles")
+            .update(
+              profileUpdateFromCheckout({
+                priceType,
+                monthlyVolume: 0,
+                stripeCustomerId,
+                stripeSubscriptionId: null,
+                currentPeriodEnd: periodEndForCheckout(priceType),
+              })
+            )
+            .eq("id", userId);
+        } else if (priceType === "rabbit_hole_plays") {
           const { data: profile } = await supabase
             .from("profiles")
             .select("rabbit_hole_bonus_plays")

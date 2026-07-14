@@ -674,7 +674,7 @@ export function WorkspaceView({ initialPlan, initialNodes }: WorkspaceViewProps)
                     </button>
                   ) : (
                     <Link
-                      href="/register"
+                      href="/pricing"
                       className="block w-full rounded-md border border-white/15 bg-white/10 px-3 py-2 text-center text-xs text-neutral-200 transition-all hover:bg-white/15"
                     >
                       {t("planView.forkRemix")}

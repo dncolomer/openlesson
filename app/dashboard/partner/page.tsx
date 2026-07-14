@@ -138,7 +138,7 @@ export default function PartnerPage() {
 
   const copyReferralLink = () => {
     if (!partnerData?.partner) return;
-    const link = `${window.location.origin}/register?ref=${partnerData.partner.referralCode}`;
+    const link = `${window.location.origin}/pricing?ref=${partnerData.partner.referralCode}`;
     navigator.clipboard.writeText(link);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
@@ -390,7 +390,7 @@ export default function PartnerPage() {
   if (!partner || !stats) return null;
 
   const tierInfo = PARTNER_TIERS[partner.tier];
-  const inviteLink = `${window.location.origin}/register?ref=${partner.referralCode}`;
+  const inviteLink = `${window.location.origin}/pricing?ref=${partner.referralCode}`;
   const daysRemaining = stats.unlockDate
     ? Math.max(0, Math.ceil((new Date(stats.unlockDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
     : 0;

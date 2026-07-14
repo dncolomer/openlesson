@@ -814,7 +814,7 @@ export default function DashboardPage() {
                   </p>
                 </div>
                 <Link
-                  href="/"
+                  href="/workspace/new"
                   className="inline-flex h-12 items-center justify-center rounded-sm bg-white px-6 text-sm font-medium text-black transition hover:bg-neutral-200"
                 >
                   Create a New Workspace →
@@ -847,7 +847,7 @@ export default function DashboardPage() {
             {filteredWorkspaces.length === 0 ? (
               <div className="text-center py-8 text-neutral-500 border border-neutral-800 rounded-lg">
                 <p className="text-sm">{t('dashboard.noMatchingWorkspaces')}</p>
-                <Link href="/" className="text-blue-400 hover:underline mt-2 inline-block text-sm">
+                <Link href="/workspace/new" className="text-blue-400 hover:underline mt-2 inline-block text-sm">
                   {t('dashboard.createYourFirstPlan')}
                 </Link>
               </div>

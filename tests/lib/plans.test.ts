@@ -14,6 +14,7 @@ import {
   hasProductAccess,
   hasProofOfWorkApiAccess,
   isApiMeteredPlan,
+  isBillingPeriodActive,
   normalizeStripeVolumeToProofOfWork,
   POW_API_CALL_PRICE_CENTS,
   resolveCheckoutVolume,
@@ -158,6 +159,51 @@ describe("plans proof-of-work limits", () => {
     );
     expect(result.allowed).toBe(false);
     expect(result.limit).toBe(100);
+  });
+});
+
+describe("billing period", () => {
+  it("expires access when current_period_end is in the past", () => {
+    expect(
+      isBillingPeriodActive({
+        subscription_status: "active",
+        current_period_end: "2000-01-01T00:00:00.000Z",
+      })
+    ).toBe(false);
+    expect(
+      hasProductAccess({
+        plan: "trial",
+        subscription_status: "active",
+        current_period_end: "2000-01-01T00:00:00.000Z",
+        is_admin: false,
+        token_tier: null,
+        token_validity_expires_at: null,
+      })
+    ).toBe(false);
+  });
+
+  it("grants trial access during the active window", () => {
+    expect(
+      hasProductAccess({
+        plan: "trial",
+        subscription_status: "active",
+        current_period_end: "2099-01-01T00:00:00.000Z",
+        is_admin: false,
+        token_tier: null,
+        token_validity_expires_at: null,
+      })
+    ).toBe(true);
+    expect(
+      getProofOfWorkAllowance({
+        plan: "trial",
+        subscription_status: "active",
+        current_period_end: "2099-01-01T00:00:00.000Z",
+        is_admin: false,
+        extra_lessons: 0,
+        token_tier: null,
+        token_validity_expires_at: null,
+      }).limit
+    ).toBeNull();
   });
 });
 

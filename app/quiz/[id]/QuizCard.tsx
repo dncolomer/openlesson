@@ -221,7 +221,7 @@ export function QuizCard({ question, backgroundImage }: QuizCardProps) {
                 </p>
                 <p className="mt-2 text-sm leading-5 text-neutral-300">{question.explanation}</p>
                 <Link
-                  href="/register?offer=10-free-lessons"
+                  href="/pricing"
                   className="mt-4 flex h-12 items-center justify-center rounded-[3px] bg-white px-5 text-sm font-semibold text-black transition hover:bg-neutral-200"
                 >
                   Claim 10 free lessons

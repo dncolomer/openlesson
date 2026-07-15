@@ -104,34 +104,6 @@ export default function AllYouCanLearnPage() {
       <LandingNav />
 
       <section className="relative z-10 mx-auto w-full max-w-5xl px-4 py-10 sm:px-6 sm:py-14">
-        <header className="mb-8 text-center">
-          <p className="mb-4 font-mono text-[10px] uppercase tracking-[2px] text-zinc-500">
-            Recreational learning · Events
-          </p>
-          <h1 className="text-3xl font-medium tracking-[-1.6px] text-white sm:text-5xl">
-            All-You-Can-Learn
-          </h1>
-          {activeTab === "lifetime" ? (
-            <>
-              <p className="mx-auto mt-5 max-w-2xl text-base leading-relaxed text-zinc-300 sm:text-lg">
-                For people who binge-learn for the sake of learning — not a credential, a cohort, or a
-                deadline. Pick a topic, dive deep on a Saturday, wander back months later, and follow
-                curiosity wherever it pulls you.
-              </p>
-              <p className="mx-auto mt-4 max-w-2xl text-sm leading-relaxed text-zinc-500 sm:text-base">
-                Each package below is an editorially curated, dynamic learning environment: a living
-                workspace with chapters, practice, and depth already wired in. Pay once, fork it to
-                your private copy, and make it yours for life — your link, your pace, your rabbit holes.
-              </p>
-            </>
-          ) : (
-            <p className="mx-auto mt-5 max-w-2xl text-base leading-relaxed text-zinc-300 sm:text-lg">
-              In-person and online events where builders learn emerging paradigms by doing — lectures,
-              mentors, teams, and demos around frontier computing topics.
-            </p>
-          )}
-        </header>
-
         <div className="mb-8 flex justify-center">
           <div
             className="inline-flex rounded-sm border border-zinc-800 bg-zinc-950/80 p-1"
@@ -156,6 +128,35 @@ export default function AllYouCanLearnPage() {
             ))}
           </div>
         </div>
+
+        <header className="mb-8 text-center">
+          <p className="mb-4 font-mono text-[10px] uppercase tracking-[2px] text-zinc-500">
+            Recreational learning · Events
+          </p>
+          <h1 className="text-3xl font-medium tracking-[-1.6px] text-white sm:text-5xl">
+            All-You-Can-Learn
+          </h1>
+          {activeTab === "lifetime" ? (
+            <>
+              <p className="mx-auto mt-5 max-w-2xl text-base leading-relaxed text-zinc-300 sm:text-lg">
+                For people who binge-learn for the sake of learning — not a credential, a cohort, or a
+                deadline. Pick a topic, dive deep on a Saturday, wander back months later, and follow
+                curiosity wherever it pulls you.
+              </p>
+              <p className="mx-auto mt-4 max-w-2xl text-sm leading-relaxed text-zinc-500 sm:text-base">
+                Each package below is an editorially curated, dynamic learning environment: a living
+                workspace with chapters, practice, and depth already wired in. Pay once, fork it to
+                your private copy, and make it yours for life — your link, your pace, your rabbit holes.
+              </p>
+            </>
+          ) : (
+            <p className="mx-auto mt-5 max-w-2xl text-base leading-relaxed text-zinc-300 sm:text-lg">
+              In-person and online events where curious people learn frontier knowledge by doing — lectures,
+              mentors, teams, and demos on ideas that are still taking shape across science, culture, and
+              practice.
+            </p>
+          )}
+        </header>
 
         {error ? (
           <p className="mb-6 text-center text-sm text-red-400">{error}</p>

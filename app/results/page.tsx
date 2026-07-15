@@ -15,6 +15,7 @@ import { useI18n } from "@/lib/i18n";
 import { FileDropZone, type AttachedFile } from "@/components/FileDropZone";
 import { SessionPerformanceChat } from "@/components/SessionPerformanceChat";
 import { TutorBackground } from "@/components/TutorBackground";
+import { LoadingStatusMessage } from "@/components/LoadingStatusMessage";
 
 interface FollowUpSuggestion {
   title: string;
@@ -326,9 +327,9 @@ function ResultsContent() {
                 <div className="w-16 h-16 mb-4 rounded-full bg-gradient-to-br from-violet-500/15 via-neutral-800 to-neutral-900 border border-neutral-800 flex items-center justify-center">
                   <span className="text-xl font-serif text-neutral-400">H</span>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-3">
                   <div className="animate-spin w-4 h-4 border-2 border-violet-500 border-t-transparent rounded-full" />
-                  <p className="text-sm text-neutral-500">{t('results.generatingReport')}</p>
+                  <LoadingStatusMessage tone="subtle" message={t("results.generatingReport")} />
                 </div>
               </div>
             )}
@@ -344,9 +345,9 @@ function ResultsContent() {
               <p className="text-[11px] text-neutral-500 mb-3">{t('results.continueLearningSuggestionsDesc')}</p>
               
               {followUpsLoading ? (
-                <div className="flex items-center gap-2 py-3 justify-center">
+                <div className="flex items-center gap-3 py-3 justify-center">
                   <div className="animate-spin w-3.5 h-3.5 border-2 border-emerald-500 border-t-transparent rounded-full" />
-                  <p className="text-xs text-neutral-500">{t('results.generatingFollowUps')}</p>
+                  <LoadingStatusMessage size="sm" tone="subtle" message={t("results.generatingFollowUps")} />
                 </div>
               ) : followUps.length > 0 ? (
                 <div className="space-y-2">

@@ -104,11 +104,14 @@ export async function uploadWorkspaceProofOfWork(
     throw new Error("Proof-of-work file exceeds 10 MB limit");
   }
 
-  const ownerUserId = auth.user_id || workspace.user_id;
-  if (!ownerUserId) {
+  const billingUserId = workspace.user_id || auth.user_id;
+  if (!billingUserId) {
     throw new Error("Workspace owner is missing.");
   }
-  await assertCanSubmitProofOfWork(supabase, ownerUserId);
+  await assertCanSubmitProofOfWork(supabase, billingUserId);
+
+  const participantUserId = auth.guest_user_id ? null : auth.user_id || null;
+  const participantGuestUserId = isUuid(auth.guest_user_id) ? auth.guest_user_id : null;
 
   if (input.block_id) {
     const { data: block } = await supabase
@@ -148,8 +151,8 @@ export async function uploadWorkspaceProofOfWork(
     metadata,
     tool_name: input.tool_name || null,
     tool_action: input.tool_action || null,
-    user_id: ownerUserId,
-    guest_user_id: isUuid(auth.guest_user_id) ? auth.guest_user_id : null,
+    user_id: participantUserId,
+    guest_user_id: participantGuestUserId,
     organization_id: organizationId,
     created_by_api_key_id: createdByApiKeyId(auth),
   });

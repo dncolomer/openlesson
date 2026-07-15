@@ -21,6 +21,7 @@ interface PerformanceChatProps {
   currentUserId: string | null;
   isGroupPlan?: boolean;
   compact?: boolean;
+  ayclToken?: string;
 }
 
 const STARTER_PROMPT_KEYS = [
@@ -73,6 +74,7 @@ export function PerformanceChat({
   currentUserId,
   isGroupPlan = false,
   compact = false,
+  ayclToken,
 }: PerformanceChatProps) {
   const { t } = useI18n();
   const starterPrompts = STARTER_PROMPT_KEYS.map((key) => t(key));
@@ -137,6 +139,7 @@ export function PerformanceChat({
           message: userMessage.content,
           conversationHistory,
           fileIds,
+          ...(ayclToken ? { ayclToken } : {}),
         }),
       });
 

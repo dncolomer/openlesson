@@ -37,6 +37,7 @@ import { ResizablePane, type ResizablePaneHandle } from "./ResizablePane";
 import { ExcalidrawCanvas } from "./ExcalidrawCanvas";
 import { ToolsPanel, type Tool } from "./ToolsPanel";
 import { MobileBlockScreen } from "./MobileBlockScreen";
+import { LoadingStatusMessage } from "./LoadingStatusMessage";
 import { type ChatMessage, type PendingChatMessage, type StuckAction } from "./HeliosChat";
 import { DataInputTool } from "./DataInputTool";
 import { LogsTool, type LogEntry } from "./LogsTool";
@@ -222,7 +223,13 @@ const EEG_DISPLAY_MAX_SAMPLES = 512;
 const EEG_PERSIST_MAX_SAMPLES = EEG_SAMPLE_RATE_HZ * 30;
 
 
-export function SessionView({ sessionId }: { sessionId: string }) {
+export function SessionView({
+  sessionId,
+  ayclToken,
+}: {
+  sessionId: string;
+  ayclToken?: string;
+}) {
   const router = useRouter();
   const { t, locale, supportedLocales } = useI18n();
   const [session, setSession] = useState<Session | null>(null);
@@ -723,6 +730,7 @@ export function SessionView({ sessionId }: { sessionId: string }) {
           sessionPlan,
           sessionId: session.id,
           tutoringLanguage,
+          ...(ayclToken ? { ayclToken } : {}),
           messages: [...existingMessages, userMsg].map(m => ({ role: m.role, content: m.content, imageDataUrl: m.imageDataUrl })),
         }),
       });
@@ -1168,7 +1176,9 @@ export function SessionView({ sessionId }: { sessionId: string }) {
   useEffect(() => {
     let cancelled = false;
     async function load() {
-      const s = await getSession(sessionId);
+      const s = ayclToken
+        ? await (await import("@/lib/aycl-storage")).getAyclSession(ayclToken, sessionId)
+        : await getSession(sessionId);
       if (cancelled) return;
       if (s) {
         setSession(s);
@@ -1197,7 +1207,10 @@ export function SessionView({ sessionId }: { sessionId: string }) {
             const objRes = await fetch("/api/generate-objectives", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ problem: s.problem }),
+              body: JSON.stringify({
+                problem: s.problem,
+                ...(ayclToken ? { ayclToken } : {}),
+              }),
             });
             if (!cancelled && objRes.ok) {
               const { objectives: generatedObjectives } = await objRes.json();
@@ -1947,13 +1960,18 @@ export function SessionView({ sessionId }: { sessionId: string }) {
       notebookData: notebookContent || undefined,
     };
 
-    // Persist to Supabase
-    await saveSession(finalSession);
+    if (ayclToken) {
+      const { saveAyclSession } = await import("@/lib/aycl-storage");
+      await saveAyclSession(ayclToken, finalSession);
+    } else {
+      await saveSession(finalSession);
+    }
 
     handleDisconnectMuse();
 
-    // Navigate after all data is saved — scoring lives on workspace Performance tab
-    router.push(getIlePostSessionPath(finalSession));
+    router.push(
+      ayclToken ? `/learn/${ayclToken}` : getIlePostSessionPath(finalSession)
+    );
   };
 
   // ---- Screenshot Handlers ----
@@ -2340,9 +2358,7 @@ export function SessionView({ sessionId }: { sessionId: string }) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-[#0a0a0a] gap-4">
         <div className="animate-spin w-8 h-8 border-2 border-neutral-800 border-t-neutral-300 rounded-full" />
-        {isSaving && (
-          <p className="text-sm text-neutral-500 animate-pulse">{t('session.savingSession')}</p>
-        )}
+        {isSaving && <LoadingStatusMessage tone="subtle" message={t("session.savingSession")} />}
       </div>
     );
   }
@@ -2475,17 +2491,24 @@ export function SessionView({ sessionId }: { sessionId: string }) {
                         setModelLoadProgress(null);
                         
                         try {
-                          // Save language to session metadata
-                          const { data: sessionData } = await (await import("@/lib/supabase/client")).createClient()
-                            .from("sessions")
-                            .select("metadata")
-                            .eq("id", session.id)
-                            .single();
-                          if (sessionData?.metadata) {
-                            await (await import("@/lib/supabase/client")).createClient()
+                          if (ayclToken) {
+                            const { saveAyclSession } = await import("@/lib/aycl-storage");
+                            await saveAyclSession(ayclToken, {
+                              ...session,
+                              metadata: { ...(session.metadata || {}), tutoringLanguage },
+                            });
+                          } else {
+                            const { data: sessionData } = await (await import("@/lib/supabase/client")).createClient()
                               .from("sessions")
-                              .update({ metadata: { ...sessionData.metadata, tutoringLanguage } })
-                              .eq("id", session.id);
+                              .select("metadata")
+                              .eq("id", session.id)
+                              .single();
+                            if (sessionData?.metadata) {
+                              await (await import("@/lib/supabase/client")).createClient()
+                                .from("sessions")
+                                .update({ metadata: { ...sessionData.metadata, tutoringLanguage } })
+                                .eq("id", session.id);
+                            }
                           }
                           
                           const existingPlan = await getSessionPlan(session.id);
@@ -2502,6 +2525,7 @@ export function SessionView({ sessionId }: { sessionId: string }) {
                                   sessionId: session.id,
                                   tutoringLanguage,
                                   objectives,
+                                  ...(ayclToken ? { ayclToken } : {}),
                                 }),
                               });
                               if (translateRes.ok) {
@@ -2525,6 +2549,7 @@ export function SessionView({ sessionId }: { sessionId: string }) {
                                 planningPrompt: session.planningPrompt,
                                 force: true,
                                 tutoringLanguage,
+                                ...(ayclToken ? { ayclToken } : {}),
                               }),
                             });
                             if (planRes.ok) {
@@ -2819,6 +2844,8 @@ export function SessionView({ sessionId }: { sessionId: string }) {
                         <ChapterMapPanel
                           plan={sessionPlan}
                           sessionId={session.id}
+                          ayclToken={ayclToken}
+                          locale={locale}
                           loading={planLoading}
                           activeChapterIndex={activeChapterIndex}
                           loadingChapterIndex={chapterLoadingIndex}

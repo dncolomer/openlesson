@@ -10,6 +10,7 @@ import { DEFAULT_PROMPTS, PROMPT_META, type PromptKey, type UserPrompts } from "
 import { useI18n } from "@/lib/i18n";
 import { formatPlanMonthlyPrice, hasAgentApiKeyPlan, type PlanId } from "@/lib/plans";
 import { InsightsDashboardTab } from "@/components/InsightsDashboardTab";
+import { WorkspaceDashboardCard } from "@/components/WorkspaceDashboardCard";
 import { buildMcpClientConfig } from "@/lib/agent-v2/mcp-proof-of-work-catalog";
 import { IntegrationQuickAccess } from "@/components/IntegrationQuickAccess";
 import { DEFAULT_MODEL } from "@/lib/xai-client";
@@ -807,10 +808,12 @@ export default function DashboardPage() {
                     Workspaces
                   </p>
                   <h2 className="max-w-2xl text-3xl font-medium tracking-[-1.2px] text-white sm:text-4xl">
-                    Start with curiosity. Leave with a workspace.
+                    Verification, optimization, and augmentation — in one workspace.
                   </h2>
                   <p className="mt-3 max-w-xl text-sm leading-relaxed text-neutral-400">
-                    Turn any topic, repo, video, file, or hard question into a guided path toward your next aha moment.
+                    Define a skill or scenario, attach proof of work, and run every product on the same learning
+                    world model: verify humans and agents before hire or deploy, optimize practice until gaps
+                    close, and augment reasoning inside real workflows.
                   </p>
                 </div>
                 <Link
@@ -852,120 +855,38 @@ export default function DashboardPage() {
                 </Link>
               </div>
             ) : (
-              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+              <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
                 {paginatedPlans.map((plan) => (
-                  <div
+                  <WorkspaceDashboardCard
                     key={plan.id}
-                    className="group overflow-hidden rounded-md border border-neutral-800 bg-neutral-950/75 transition-colors hover:border-neutral-700 hover:bg-neutral-900/80"
-                  >
-                    <Link href={`/workspace/${plan.id}`} className="block">
-                      <div className="relative h-36 bg-neutral-900">
-                        {plan.cover_image_url ? (
-                          <img src={plan.cover_image_url} alt="" className="h-full w-full object-cover opacity-70 grayscale transition group-hover:opacity-85" />
-                        ) : (
-                          <div className="h-full w-full bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.16),transparent_34%),linear-gradient(135deg,#171717,#050505)]" />
-                        )}
-                        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent" />
-                        <div className="absolute left-4 top-4 flex gap-2">
-                          <span className="border border-white/10 bg-black/50 px-2 py-1 font-mono text-[10px] uppercase tracking-[1.5px] text-neutral-300 backdrop-blur-sm">
-                            {plan.source_type === "youtube" ? "Video" : "Workspace"}
-                          </span>
-                          {plan.is_group && (
-                            <span className="border border-white/10 bg-black/50 px-2 py-1 font-mono text-[10px] uppercase tracking-[1.5px] text-neutral-300 backdrop-blur-sm">
-                              Group
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </Link>
-
-                    <div className="p-4">
-                      <Link href={`/workspace/${plan.id}`} className="block">
-                        <h4 className="line-clamp-2 text-base font-medium leading-snug text-neutral-100 transition group-hover:text-white">
-                          {plan.title || plan.root_topic}
-                        </h4>
-                        <p className="mt-2 line-clamp-2 text-sm leading-relaxed text-neutral-500">
-                          {plan.root_topic !== plan.title && plan.title ? plan.root_topic : plan.source_summary || "A guided path toward your next aha moment."}
-                        </p>
-                      </Link>
-
-                      <div className="mt-4 flex flex-wrap items-center gap-2 text-[11px] text-neutral-500">
-                        <span>{formatDate(plan.created_at)}</span>
-                        <span>•</span>
-                        <span
-                          className={
-                            plan.status === "archived"
-                              ? "rounded border border-amber-500/30 px-1.5 py-0.5 text-amber-200"
-                              : "capitalize"
-                          }
-                        >
-                          {plan.status}
-                        </span>
-                        {(plan.remix_count ?? 0) > 0 && (
-                          <>
-                            <span>•</span>
-                            <span>{plan.remix_count} remixes</span>
-                          </>
-                        )}
-                      </div>
-
-                      <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-neutral-800 pt-4">
-                        <Link href={`/workspace/${plan.id}`} className="text-sm font-medium text-neutral-200 hover:text-white">
-                          Open workspace →
-                        </Link>
-                        <div className="flex flex-wrap items-center gap-2">
-                      {plan.status === "archived" ? (
-                        <button
-                          type="button"
-                          onClick={() => handleRestorePlan(plan.id)}
-                          disabled={archivingWorkspaceId === plan.id}
-                          className="rounded border border-neutral-700 px-2 py-1 text-xs text-neutral-300 transition hover:border-neutral-500 hover:text-white disabled:opacity-50"
-                        >
-                          {archivingWorkspaceId === plan.id ? "Restoring…" : "Restore"}
-                        </button>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() => handleArchivePlan(plan.id)}
-                          disabled={archivingWorkspaceId === plan.id}
-                          className="rounded border border-neutral-700 px-2 py-1 text-xs text-neutral-400 transition hover:border-amber-500/40 hover:text-amber-200 disabled:opacity-50"
-                        >
-                          {archivingWorkspaceId === plan.id ? "Archiving…" : "Archive"}
-                        </button>
-                      )}
-                      <button
-                        onClick={async () => {
-                          try {
-                            const isPublic = (plan as any).is_public ?? false;
-                            const res = await fetch(`/api/workspaces/${plan.id}/visibility`, {
-                              method: "PUT",
-                              headers: { "Content-Type": "application/json" },
-                              body: JSON.stringify({ is_public: !isPublic }),
-                            });
-                            const data = await res.json();
-                            if (data.success) {
-                              setWorkspaces((plans) =>
-                                plans.map((p) =>
-                                  p.id === plan.id ? { ...p, is_public: !isPublic } : p
-                                )
-                              );
-                            }
-                          } catch (err) {
-                            console.error("Error toggling visibility:", err);
-                          }
-                        }}
-                        className={`text-xs px-2 py-1 rounded border transition-colors ${
-                          (plan as any).is_public
-                            ? "bg-green-900/30 border-green-800 text-green-400 hover:bg-green-900/50"
-                            : "bg-neutral-800 border-neutral-700 text-neutral-500 hover:text-neutral-400"
-                        }`}
-                      >
-                        {(plan as any).is_public ? t('dashboard.public') : t('dashboard.private')}
-                      </button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+                    plan={plan}
+                    formatDate={formatDate}
+                    archivingWorkspaceId={archivingWorkspaceId}
+                    publicLabel={t("dashboard.public")}
+                    privateLabel={t("dashboard.private")}
+                    onArchive={handleArchivePlan}
+                    onRestore={handleRestorePlan}
+                    onToggleVisibility={async (workspace) => {
+                      try {
+                        const isPublic = workspace.is_public ?? false;
+                        const res = await fetch(`/api/workspaces/${workspace.id}/visibility`, {
+                          method: "PUT",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ is_public: !isPublic }),
+                        });
+                        const data = await res.json();
+                        if (data.success) {
+                          setWorkspaces((plans) =>
+                            plans.map((entry) =>
+                              entry.id === workspace.id ? { ...entry, is_public: !isPublic } : entry,
+                            ),
+                          );
+                        }
+                      } catch (err) {
+                        console.error("Error toggling visibility:", err);
+                      }
+                    }}
+                  />
                 ))}
               </div>
             )}

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { ayclTokenFromBody, guardWorkspaceRoute } from "@/lib/api/require-auth";
 import { callXaiJSON, systemMessage, userMessage, buildImageContent, DEFAULT_MODEL, MessageContent } from "@/lib/xai-client";
 
 const SYSTEM_PROMPT = `You are an AI Workspace assistant. Your role is to help users understand and customize their workspaces.
@@ -49,20 +49,17 @@ interface ChatResponse {
 
 export async function POST(req: NextRequest) {
   try {
-    const supabase = await createClient();
-    
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    
-    if (authError || !user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const body = await req.json();
+    const { workspaceId, userPrompt, conversationHistory, model: userModel, locale, images, gridRow, gridCol } = body;
 
-    const { workspaceId, userPrompt, conversationHistory, model: userModel, locale, images, gridRow, gridCol } =
-      await req.json();
-    
     if (!workspaceId || !userPrompt) {
       return NextResponse.json({ error: "Plan ID and prompt are required" }, { status: 400 });
     }
+
+    const auth = await guardWorkspaceRoute(workspaceId, { ayclToken: ayclTokenFromBody(body) });
+    if (!auth.ok) return auth.response;
+
+    const { user, supabase } = auth;
 
     const languageNote = locale && locale !== 'en' 
       ? `\n\nIMPORTANT: Respond in ${locale} language (e.g., for 'vi' respond in Vietnamese, 'zh' in Chinese, 'es' in Spanish, 'de' in German, 'pl' in Polish).`

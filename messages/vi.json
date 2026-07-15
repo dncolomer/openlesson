@@ -83,6 +83,7 @@
     "workspace": "Workspace",
     "resources": "Resources",
     "platform": "Platform",
+    "useCases": "Trường hợp sử dụng",
     "agenticApi": "Proof-of-Work API",
     "skillFile": "Agent skill file",
     "createWorkspace": "Create workspace",

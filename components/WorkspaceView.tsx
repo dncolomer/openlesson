@@ -49,6 +49,7 @@ export interface Workspace {
   notes?: string;
   conversion_goal?: string | null;
   cover_image_url?: string;
+  is_all_you_can_learn?: boolean;
 }
 
 interface WorkspaceViewProps {
@@ -739,7 +740,7 @@ export function WorkspaceView({ initialPlan, initialNodes }: WorkspaceViewProps)
           <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/20 to-black/70" />
 
           <div className="relative z-20 hidden shrink-0 px-3 pt-3 pb-1 sm:px-4 md:block">
-            <div className="overflow-hidden rounded-xl border border-neutral-800/70 bg-neutral-950/90 shadow-[0_10px_40px_rgba(0,0,0,0.45)] backdrop-blur-md">
+            <div className="overflow-visible rounded-xl border border-neutral-800/70 bg-neutral-950/90 shadow-[0_10px_40px_rgba(0,0,0,0.45)] backdrop-blur-md">
               <WorkspaceIdentityPanel
                 plan={plan}
                 workspaceId={workspaceId}

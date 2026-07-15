@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createSessionPlanLLM } from "@/lib/xai";
 import { createSessionPlan, getUserCalibration, getSessionPlan } from "@/lib/storage";
 import { getUserPrompts } from "@/lib/user-prompts";
-import { createClient } from "@/lib/supabase/server";
+import { ayclTokenFromBody, guardSessionRoute } from "@/lib/api/require-auth";
 import { getLanguageName } from "@/lib/tutoring-languages";
 
 export const runtime = "nodejs";
@@ -20,12 +20,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const auth = await guardSessionRoute(sessionId, { ayclToken: ayclTokenFromBody(body) });
+    if (!auth.ok) return auth.response;
 
-    if (!user) {
-      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-    }
+    const { user, supabase } = auth;
 
     let tutoringLanguage = bodyLanguage;
     if (!tutoringLanguage) {
@@ -112,7 +110,7 @@ export async function POST(request: NextRequest) {
         type: step.type,
         order: step.order,
       })),
-    }, supabase);
+    }, supabase, { userId: user.id });
 
     return NextResponse.json({ plan: savedPlan });
   } catch (error) {

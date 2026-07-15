@@ -1,17 +1,58 @@
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getTapScoreBrief, hashPrivateToken } from "@/lib/tap-score";
+import type { TapPostSessionMode } from "@/lib/agent-v2/tap-link-config";
 
 export interface ResolvedTapSessionContext {
   supabase: ReturnType<typeof createAdminClient>;
   workspaceId: string;
   userId: string | null;
   guestUserId: string | null;
+  assignedUserId: string | null;
   organizationId: string | null;
   blockId: string | null;
   focusSessionId: string | null;
   tapSessionId: string;
+  postSession: TapPostSessionMode;
+  redirectUrl: string | null;
+  completionWebhookUrl: string | null;
   existingSession: Record<string, unknown> | null;
+}
+
+const TAP_SESSION_SELECT =
+  "id, workspace_id, user_id, guest_user_id, assigned_user_id, organization_id, block_id, session_id, status, requested_duration_seconds, post_session, redirect_url, completion_webhook_url, workspaces!inner(user_id)";
+
+function participantAuthFromSession(session: {
+  user_id: string | null;
+  guest_user_id: string | null;
+  assigned_user_id: string | null;
+  workspaces?: { user_id?: string } | Array<{ user_id?: string }>;
+}): { userId: string | null; guestUserId: string | null; assignedUserId: string | null } {
+  const workspaceOwner = Array.isArray(session.workspaces)
+    ? session.workspaces[0]?.user_id
+    : session.workspaces?.user_id;
+
+  if (session.assigned_user_id) {
+    return {
+      userId: session.assigned_user_id,
+      guestUserId: null,
+      assignedUserId: session.assigned_user_id,
+    };
+  }
+
+  if (session.guest_user_id) {
+    return {
+      userId: null,
+      guestUserId: session.guest_user_id,
+      assignedUserId: null,
+    };
+  }
+
+  return {
+    userId: session.user_id || workspaceOwner || null,
+    guestUserId: null,
+    assignedUserId: null,
+  };
 }
 
 export async function resolveTapSessionAccess(input: {
@@ -28,7 +69,7 @@ export async function resolveTapSessionAccess(input: {
     const supabase = createAdminClient();
     const { data: session, error } = await supabase
       .from("workspace_tap_sessions")
-      .select("id, workspace_id, user_id, guest_user_id, organization_id, block_id, session_id, status, requested_duration_seconds, workspaces!inner(user_id)")
+      .select(TAP_SESSION_SELECT)
       .eq("private_token_hash", hashPrivateToken(privateToken))
       .single();
 
@@ -37,15 +78,32 @@ export async function resolveTapSessionAccess(input: {
       return { error: "TAP session ID does not match private link", status: 403 };
     }
 
+    if (session.assigned_user_id) {
+      const authSupabase = await createClient();
+      const {
+        data: { user },
+      } = await authSupabase.auth.getUser();
+      if (!user) return { error: "Sign in required for this TAP link", status: 401 };
+      if (user.id !== session.assigned_user_id) {
+        return { error: "This TAP link is assigned to another user", status: 403 };
+      }
+    }
+
+    const participant = participantAuthFromSession(session);
+
     return {
       supabase,
       workspaceId: session.workspace_id,
-      userId: session.user_id || (session as { workspaces?: { user_id?: string } }).workspaces?.user_id || null,
-      guestUserId: session.guest_user_id || null,
+      userId: participant.userId,
+      guestUserId: participant.guestUserId,
+      assignedUserId: participant.assignedUserId,
       organizationId: session.organization_id || null,
       blockId: session.block_id || null,
       focusSessionId: session.session_id || null,
       tapSessionId: session.id,
+      postSession: (session.post_session as TapPostSessionMode) || "redirect_workspace",
+      redirectUrl: session.redirect_url || null,
+      completionWebhookUrl: session.completion_webhook_url || null,
       existingSession: session,
     };
   }
@@ -73,13 +131,18 @@ export async function resolveTapSessionAccess(input: {
   if (tapSessionId) {
     const { data: session, error } = await supabase
       .from("workspace_tap_sessions")
-      .select("id, workspace_id, user_id, guest_user_id, organization_id, block_id, session_id, status, requested_duration_seconds")
+      .select(
+        "id, workspace_id, user_id, guest_user_id, assigned_user_id, organization_id, block_id, session_id, status, requested_duration_seconds, post_session, redirect_url, completion_webhook_url"
+      )
       .eq("id", tapSessionId)
       .eq("workspace_id", workspaceId)
       .single();
 
     if (error || !session) return { error: "TAP session not found", status: 404 };
-    if (session.user_id && session.user_id !== user.id) {
+    if (session.assigned_user_id && session.assigned_user_id !== user.id) {
+      return { error: "Not authorized", status: 403 };
+    }
+    if (session.user_id && session.user_id !== user.id && !session.assigned_user_id) {
       return { error: "Not authorized", status: 403 };
     }
     existingSession = session;
@@ -90,10 +153,14 @@ export async function resolveTapSessionAccess(input: {
     workspaceId,
     userId: user.id,
     guestUserId: null,
+    assignedUserId: existingSession?.assigned_user_id?.toString() || null,
     organizationId: null,
     blockId: input.blockId || existingSession?.block_id?.toString() || null,
     focusSessionId: input.focusSessionId || existingSession?.session_id?.toString() || null,
     tapSessionId: tapSessionId || "",
+    postSession: (existingSession?.post_session as TapPostSessionMode) || "redirect_workspace",
+    redirectUrl: (existingSession?.redirect_url as string | null) || null,
+    completionWebhookUrl: (existingSession?.completion_webhook_url as string | null) || null,
     existingSession,
   };
 }

@@ -39,7 +39,7 @@ export function ProductLandingPage({ page }: ProductLandingPageProps) {
     "@type": "BreadcrumbList",
     itemListElement: [
       { "@type": "ListItem", position: 1, name: "Home", item: BASE_URL },
-      { "@type": "ListItem", position: 2, name: "Platform", item: `${BASE_URL}/platform` },
+      { "@type": "ListItem", position: 2, name: "Use cases", item: `${BASE_URL}/use-cases` },
       { "@type": "ListItem", position: 3, name: page.eyebrow, item: `${BASE_URL}${page.path}` },
     ],
   };
@@ -104,8 +104,8 @@ export function ProductLandingPage({ page }: ProductLandingPageProps) {
             </li>
             <li className="text-zinc-700">/</li>
             <li>
-              <Link href="/platform" className="transition hover:text-white">
-                Platform
+              <Link href="/use-cases" className="transition hover:text-white">
+                Use cases
               </Link>
             </li>
             <li className="text-zinc-700">/</li>
@@ -202,9 +202,9 @@ export function ProductLandingPage({ page }: ProductLandingPageProps) {
               Book a demo
             </TrackedCtaLink>
             <TrackedCtaLink
-              href="/platform"
-              label="View platform"
-              location="product_closing_platform"
+              href="/use-cases"
+              label="View use cases"
+              location="product_closing_use_cases"
               page={page.path}
               className="inline-flex h-11 items-center justify-center rounded-sm border border-zinc-700 px-5 text-sm text-zinc-300 transition hover:border-zinc-500 hover:text-white"
             />

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { generateFollowUpSessions } from "@/lib/xai";
 import { getUserPrompts } from "@/lib/user-prompts";
-import { guardSessionRoute } from "@/lib/api/require-auth";
+import { ayclTokenFromBody, guardSessionRoute } from "@/lib/api/require-auth";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Missing problem" }, { status: 400 });
     }
 
-    const auth = await guardSessionRoute(sessionId);
+    const auth = await guardSessionRoute(sessionId, { ayclToken: ayclTokenFromBody(body) });
     if (!auth.ok) return auth.response;
     const { supabase } = auth;
 

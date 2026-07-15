@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { SessionPlan } from "@/lib/storage";
 import { useI18n } from "@/lib/i18n";
+import { LoadingStatusMessage } from "@/components/LoadingStatusMessage";
 import { ThoughtButton } from "@/components/thought-ui/ThoughtUi";
 import { BlockSkillGrid } from "@/components/BlockSkillGrid";
 import { buildSkillGridLayout } from "@/lib/block-skill-grid";
@@ -14,6 +15,8 @@ import {
 interface ChapterMapPanelProps {
   plan: SessionPlan | null;
   sessionId?: string;
+  ayclToken?: string;
+  locale?: string;
   loading?: boolean;
   activeChapterIndex: number;
   loadingChapterIndex?: number | null;
@@ -30,6 +33,8 @@ interface ChapterMapPanelProps {
 export function ChapterMapPanel({
   plan,
   sessionId,
+  ayclToken,
+  locale = "en",
   loading = false,
   activeChapterIndex,
   loadingChapterIndex = null,
@@ -85,6 +90,8 @@ export function ChapterMapPanel({
           stepId: editingId,
           currentDescription: editDraft,
           prompt: editPrompt,
+          locale,
+          ...(ayclToken ? { ayclToken } : {}),
         }),
       });
       const data = await response.json();
@@ -95,7 +102,7 @@ export function ChapterMapPanel({
     } finally {
       setSuggestingEdit(false);
     }
-  }, [editDraft, editPrompt, editingId, sessionId, suggestingEdit]);
+  }, [ayclToken, editDraft, editPrompt, editingId, locale, sessionId, suggestingEdit]);
 
   const saveEdit = useCallback(async () => {
     if (!editingId || savingEdit) return;
@@ -144,7 +151,7 @@ export function ChapterMapPanel({
     return (
       <div className="flex h-full flex-col items-center justify-center bg-[#0b0b0b] p-6">
         <div className="mb-4 h-8 w-8 animate-spin rounded-full border-2 border-neutral-800 border-t-amber-500/70" />
-        <p className="text-sm text-neutral-500">{t("chapterMap.preparing")}</p>
+        <LoadingStatusMessage tone="subtle" message={t("chapterMap.preparing")} />
       </div>
     );
   }
@@ -155,7 +162,7 @@ export function ChapterMapPanel({
         {loading ? (
           <>
             <div className="mb-4 h-8 w-8 animate-spin rounded-full border-2 border-neutral-800 border-t-amber-500/70" />
-            <p className="text-sm text-neutral-500">{t("chapterMap.preparing")}</p>
+            <LoadingStatusMessage tone="subtle" message={t("chapterMap.preparing")} />
           </>
         ) : (
           <p className="text-sm text-neutral-600">{t("chapterMap.noChapters")}</p>
@@ -175,6 +182,8 @@ export function ChapterMapPanel({
         showProgress
         isAdding={adding}
         sessionId={sessionId}
+        ayclToken={ayclToken}
+        locale={locale}
         suggestMode="chapter"
         recenterCell={activeCell}
         followCell={activeCell}

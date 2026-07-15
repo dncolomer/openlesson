@@ -47,6 +47,7 @@ interface ChatPanelProps {
   isOwner?: boolean;
   currentUserId?: string | null;
   embedded?: boolean;
+  ayclToken?: string;
 }
 
 export function ChatPanel({
@@ -59,6 +60,7 @@ export function ChatPanel({
   isOwner = true,
   currentUserId,
   embedded = false,
+  ayclToken,
 }: ChatPanelProps) {
   const router = useRouter();
   const { t, locale } = useI18n();
@@ -127,6 +129,7 @@ export function ChatPanel({
           model: currentModel,
           locale,
           images: uploadedImages.map((img) => ({ data: img.data, mimeType: img.mimeType })),
+          ...(ayclToken ? { ayclToken } : {}),
         }),
       });
 

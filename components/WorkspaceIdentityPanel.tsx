@@ -57,6 +57,8 @@ export function WorkspaceIdentityPanel({
   const [savingConversionGoal, setSavingConversionGoal] = useState(false);
   const [descriptionExpanded, setDescriptionExpanded] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [togglingAycl, setTogglingAycl] = useState(false);
 
   useEffect(() => {
     setEditTitle(plan.title || plan.root_topic);
@@ -69,6 +71,14 @@ export function WorkspaceIdentityPanel({
   useEffect(() => {
     setEditConversionGoal(plan.conversion_goal || "");
   }, [plan.conversion_goal]);
+
+  useEffect(() => {
+    if (!isOwner) return;
+    fetch("/api/demo/status")
+      .then((res) => res.json())
+      .then((data) => setIsAdmin(Boolean(data.isAdmin)))
+      .catch(() => setIsAdmin(false));
+  }, [isOwner]);
 
   const showShare = plan.is_public || plan.is_group;
   const showFork =
@@ -152,6 +162,27 @@ export function WorkspaceIdentityPanel({
     setMenuOpen(false);
   };
 
+  const toggleAycl = async () => {
+    setTogglingAycl(true);
+    try {
+      const enabled = !(plan.is_all_you_can_learn ?? false);
+      const res = await fetch(`/api/workspaces/${workspaceId}/aycl`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ is_all_you_can_learn: enabled }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        onPlanUpdate({ ...plan, is_all_you_can_learn: enabled });
+      }
+    } catch (err) {
+      console.error("Error toggling AYCL:", err);
+    } finally {
+      setTogglingAycl(false);
+      setMenuOpen(false);
+    }
+  };
+
   const togglePublic = async () => {
     try {
       const isPublic = plan.is_public ?? false;
@@ -187,6 +218,11 @@ export function WorkspaceIdentityPanel({
         <span className="text-[10px] text-neutral-500">
           {plan.remix_count}{" "}
           {(plan.remix_count || 0) === 1 ? t("planView.fork") : t("planView.forks", { count: plan.remix_count || 0 })}
+        </span>
+      )}
+      {plan.is_all_you_can_learn && (
+        <span className="rounded border border-amber-500/25 bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wider text-amber-300/90">
+          Paid
         </span>
       )}
       {plan.original_workspace_id && (
@@ -237,23 +273,36 @@ export function WorkspaceIdentityPanel({
           {menuOpen && (
             <>
               <div className="fixed inset-0 z-20" onClick={() => setMenuOpen(false)} />
-              <div className="absolute right-0 top-full z-30 mt-1 w-52 rounded-md border border-neutral-800 bg-neutral-950 py-1 shadow-xl">
+              <div className="absolute right-0 top-full z-50 mt-1 min-w-[12rem] max-w-[14rem] rounded-md border border-neutral-800 bg-neutral-950 py-1 shadow-xl">
                 <button
                   type="button"
                   onClick={toggleGroup}
-                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs text-neutral-300 transition-colors hover:bg-neutral-900"
+                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs leading-snug text-neutral-300 transition-colors hover:bg-neutral-900"
                 >
-                  <Users className="h-3.5 w-3.5" />
-                  {plan.is_group ? t("planView.groupPlan") : t("planView.makeGroupPlan")}
+                  <Users className="h-3.5 w-3.5 shrink-0" />
+                  <span className="min-w-0 whitespace-normal">{plan.is_group ? t("planView.groupPlan") : t("planView.makeGroupPlan")}</span>
                 </button>
                 <button
                   type="button"
                   onClick={togglePublic}
-                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs text-neutral-300 transition-colors hover:bg-neutral-900"
+                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs leading-snug text-neutral-300 transition-colors hover:bg-neutral-900"
                 >
-                  {plan.is_public ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
-                  {plan.is_public ? t("planView.makePrivate") : t("planView.makePublic")}
+                  {plan.is_public ? <EyeOff className="h-3.5 w-3.5 shrink-0" /> : <Eye className="h-3.5 w-3.5 shrink-0" />}
+                  <span className="min-w-0 whitespace-normal">{plan.is_public ? t("planView.makePrivate") : t("planView.makePublic")}</span>
                 </button>
+                {isAdmin ? (
+                  <button
+                    type="button"
+                    onClick={toggleAycl}
+                    disabled={togglingAycl}
+                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs leading-snug text-neutral-300 transition-colors hover:bg-neutral-900 disabled:opacity-50"
+                  >
+                    <span className="flex h-3.5 w-3.5 shrink-0 items-center justify-center text-[10px] font-bold">$</span>
+                    <span className="min-w-0 whitespace-normal">
+                      {plan.is_all_you_can_learn ? "Remove from All-You-Can-Learn" : "Enable Paid (AYCL)"}
+                    </span>
+                  </button>
+                ) : null}
               </div>
             </>
           )}

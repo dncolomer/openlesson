@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { callXaiText, userMessage, DEFAULT_MODEL } from "@/lib/xai-client";
-import { guardSessionRoute } from "@/lib/api/require-auth";
+import { ayclTokenFromBody, guardSessionRoute } from "@/lib/api/require-auth";
 
 export const runtime = "nodejs";
 export const maxDuration = 30;
@@ -14,7 +14,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Missing problem or report" }, { status: 400 });
     }
 
-    const auth = await guardSessionRoute(sessionId);
+    const auth = await guardSessionRoute(sessionId, { ayclToken: ayclTokenFromBody(body) });
     if (!auth.ok) return auth.response;
     const { supabase } = auth;
 

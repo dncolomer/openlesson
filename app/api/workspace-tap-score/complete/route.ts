@@ -137,9 +137,29 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: writeError.message }, { status: 500 });
     }
 
+    if (access.completionWebhookUrl) {
+      void fetch(access.completionWebhookUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          event: "tap_session.completed",
+          workspace_id: access.workspaceId,
+          tap_session_id: resolvedTapSessionId,
+          guest_user_id: access.guestUserId,
+          assigned_user_id: access.assignedUserId,
+          completed_at: completedAt,
+          duration_seconds: durationSeconds,
+        }),
+      }).catch((webhookError) => {
+        console.error("[workspace-tap-score/complete] Webhook error:", webhookError);
+      });
+    }
+
     return NextResponse.json({
       workspaceId: access.workspaceId,
       tapSession: row,
+      postSession: access.postSession,
+      redirectUrl: access.redirectUrl,
     });
   } catch (error) {
     console.error("[workspace-tap-score/complete] Error:", error);

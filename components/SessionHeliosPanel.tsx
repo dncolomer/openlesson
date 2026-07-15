@@ -2,6 +2,7 @@
 
 import { useEffect, useState, type ReactNode } from "react";
 import { useI18n } from "@/lib/i18n";
+import { LoadingStatusMessage } from "@/components/LoadingStatusMessage";
 import { formatSpeechTranscriptDisplay, type SessionThoughtInterface } from "@/lib/useSessionThoughtInterface";
 import {
   ThoughtBackgroundLayers,
@@ -124,7 +125,7 @@ export function SessionHeliosPanel({
             )}
             <div className="flex items-center justify-center gap-3 py-8">
               <div className="h-6 w-6 animate-spin rounded-full border border-neutral-800 border-t-amber-500/70" />
-              <p className="text-xs text-neutral-500">{t("probes.preparing")}</p>
+              <LoadingStatusMessage size="sm" tone="subtle" message={t("probes.preparing")} />
             </div>
           </div>
         ) : (

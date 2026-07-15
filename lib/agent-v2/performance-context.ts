@@ -97,6 +97,8 @@ interface BuildContextOptions {
   auth: AuthContext;
   workspaceId: string;
   blockId?: string | null;
+  participantUserId?: string | null;
+  participantGuestUserId?: string | null;
 }
 
 export async function buildWorkspacePerformanceContext({
@@ -104,6 +106,8 @@ export async function buildWorkspacePerformanceContext({
   auth,
   workspaceId,
   blockId,
+  participantUserId,
+  participantGuestUserId,
 }: BuildContextOptions) {
   const { data: workspace } = await supabase
     .from("workspaces")
@@ -132,7 +136,15 @@ export async function buildWorkspacePerformanceContext({
       .order("created_at", { ascending: false }),
   ]);
 
-  const evidenceFilter = proofOfWorkQueryForAuth(auth);
+  const evidenceFilter =
+    participantGuestUserId || participantUserId
+      ? {
+          guestUserId: participantGuestUserId || null,
+          restrictToGuest: !!participantGuestUserId,
+          restrictToUser: !!participantUserId && !participantGuestUserId,
+          userId: participantUserId || null,
+        }
+      : proofOfWorkQueryForAuth(auth);
   let proofOfWorkQuery = supabase
     .from("workspace_proof_of_work")
     .select(

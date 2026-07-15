@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useI18n } from "@/lib/i18n";
 
 const productLinks = [
-  { labelKey: "footer.platform", href: "/platform" },
+  { labelKey: "footer.useCases", href: "/use-cases" },
   { labelKey: "footer.pricing", href: "/pricing" },
   { labelKey: "footer.agenticApi", href: "/docs/proof-of-work-api" },
 ];

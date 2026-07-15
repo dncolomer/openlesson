@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
 
 export default function AgentPage() {
-  redirect("/platform");
+  redirect("/products/agentic-learning-environment");
 }

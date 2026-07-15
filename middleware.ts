@@ -19,13 +19,15 @@ const SUBSCRIPTION_EXEMPT_PREFIXES = [
   "/quiz/",
   "/oauth/",
   "/docs/",
-  "/platform",
+  "/use-cases",
   "/products",
   "/pitch",
   "/new-design",
   "/marketing/",
   "/click-moments/",
   "/community",
+  "/all-you-can-learn",
+  "/learn/",
 ];
 
 function isSubscriptionExemptPath(pathname: string): boolean {
@@ -87,7 +89,7 @@ export async function middleware(request: NextRequest) {
     protectedRoutes.some((route) => pathname.startsWith(route)) || isDemoPage;
 
   // Public routes that should skip all auth logic
-  const publicRoutes = ["/pricing", "/tap/session", "/insights"];
+  const publicRoutes = ["/pricing", "/tap/session", "/insights", "/learn"];
   const isPublicRoute = publicRoutes.some((route) =>
     pathname.startsWith(route)
   );

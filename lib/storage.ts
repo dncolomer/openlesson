@@ -139,6 +139,7 @@ export interface Session {
  
 function mapDbSession(s: any, probes: Probe[] = []): Session {
   const metadata = s.metadata || {};
+  const storedObjectives = metadata.objectives;
   return {
     id: s.id,
     problem: s.problem,
@@ -147,7 +148,7 @@ function mapDbSession(s: any, probes: Probe[] = []): Session {
     durationMs: s.duration_ms || 0,
     status: s.status || "completed",
     probes,
-    objectives: s.objectives || [],
+    objectives: Array.isArray(storedObjectives) ? storedObjectives : [],
     hasAudio: !!s.audio_path,
     audioPath: s.audio_path ?? undefined,
     report: s.report ?? undefined,
@@ -1807,20 +1808,25 @@ export async function createSessionPlan(
   sessionId: string,
   plan: { goal: string; strategy: string; description?: string; steps: SessionPlanStep[] },
    
-  supabaseClient?: any
+  supabaseClient?: any,
+  options?: { userId?: string }
 ): Promise<SessionPlan> {
   // Validate steps before allowing any DB write
   validatePlanSteps(plan.steps);
 
   const supabase = supabaseClient || createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) throw new Error("Not authenticated");
+  let userId = options?.userId;
+  if (!userId) {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error("Not authenticated");
+    userId = user.id;
+  }
 
   const { data, error } = await supabase
     .from("session_plans")
     .insert({
       session_id: sessionId,
-      user_id: user.id,
+      user_id: userId,
       goal: plan.goal,
       strategy: plan.strategy,
       description: plan.description || null,

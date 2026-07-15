@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { ayclTokenFromBody, guardWorkspaceRoute } from "@/lib/api/require-auth";
 import { callXaiJSON, systemMessage, userMessage, DEFAULT_MODEL } from "@/lib/xai-client";
 import {
   buildSkillGridLayout,
@@ -16,21 +16,17 @@ interface AddBlockResponse {
 
 export async function POST(req: NextRequest) {
   try {
-    const supabase = await createClient();
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-
-    if (authError || !user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const { workspaceId, row, col, prompt, model: userModel, locale, weightedNeighbors } = await req.json();
+    const body = await req.json();
+    const { workspaceId, row, col, prompt, model: userModel, locale, weightedNeighbors } = body;
 
     if (!workspaceId || typeof row !== "number" || typeof col !== "number" || !prompt?.trim()) {
       return NextResponse.json({ error: "Plan ID, grid position, and prompt are required" }, { status: 400 });
     }
+
+    const auth = await guardWorkspaceRoute(workspaceId, { ayclToken: ayclTokenFromBody(body) });
+    if (!auth.ok) return auth.response;
+
+    const { supabase } = auth;
 
     const { data: plan, error: planError } = await supabase
       .from("workspaces")
@@ -40,10 +36,6 @@ export async function POST(req: NextRequest) {
 
     if (planError || !plan) {
       return NextResponse.json({ error: "Plan not found" }, { status: 404 });
-    }
-
-    if (plan.user_id !== user.id) {
-      return NextResponse.json({ error: "Access denied" }, { status: 403 });
     }
 
     const { data: nodes, error: nodesError } = await supabase

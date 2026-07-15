@@ -13,6 +13,7 @@ import {
   periodEndForCheckout,
   profileUpdateFromCheckout,
 } from "@/lib/stripe-checkout";
+import { fulfillAyclPurchase } from "@/lib/aycl";
 import { billingPeriodStart, countPowApiSubmissions } from "@/lib/usage-metrics";
 
 export const runtime = "nodejs";
@@ -57,6 +58,11 @@ export async function POST(request: NextRequest) {
         const session = event.data.object as Stripe.Checkout.Session;
         const userId = session.metadata?.supabase_user_id;
         const priceType = session.metadata?.price_type || "";
+
+        if (priceType === "all_you_can_learn") {
+          await fulfillAyclPurchase(supabase, session);
+          break;
+        }
 
         if (!userId && priceType && isGuestCheckoutPriceType(priceType)) {
           let subscription: Stripe.Subscription | null = null;

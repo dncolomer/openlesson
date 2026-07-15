@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { buildImageContent, callXaiText, systemMessage, userMessage, DEFAULT_MODEL, RECOMMENDED_TEMPS } from "@/lib/xai-client";
 import { getLanguageName } from "@/lib/tutoring-languages";
-import { guardSessionRoute } from "@/lib/api/require-auth";
+import { ayclTokenFromBody, guardSessionRoute } from "@/lib/api/require-auth";
 
 const BASE_SYSTEM_PROMPT = `You are Helios, the learner's Socratic companion in openLesson.
 
@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Missing problem" }, { status: 400 });
     }
 
-    const auth = await guardSessionRoute(sessionId);
+    const auth = await guardSessionRoute(sessionId, { ayclToken: ayclTokenFromBody(body) });
     if (!auth.ok) return auth.response;
     const { supabase } = auth;
 

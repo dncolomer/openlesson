@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
 import { FileDropZone, type AttachedFile } from "@/components/FileDropZone";
 import { Footer } from "@/components/Footer";
+import { LoadingStatusMessage } from "@/components/LoadingStatusMessage";
 import { trackWorkspaceCreated } from "@/lib/analytics";
 
 const BACKGROUND_IMAGES = [
@@ -81,14 +82,7 @@ export default function NewWorkspacePage() {
       <div className="fixed inset-0 z-0 bg-[#0a0a0a]/76" />
       <div className="fixed inset-0 z-0 bg-[radial-gradient(circle_at_72%_8%,rgba(14,116,144,0.16),transparent_32%)]" />
       <div className={`fixed inset-0 z-30 flex items-center justify-center transition-opacity duration-700 ${busy ? "opacity-100" : "pointer-events-none opacity-0"}`} aria-live="polite" aria-atomic="true">
-        <div className="font-mono text-sm uppercase tracking-[4px] text-white/90 sm:text-base">
-          <span className="animate-pulse">Creating workspace</span>
-          <span className="ml-2 inline-flex w-8 justify-between align-middle" aria-hidden="true">
-            <span className="animate-bounce">.</span>
-            <span className="animate-bounce" style={{ animationDelay: "120ms" }}>.</span>
-            <span className="animate-bounce" style={{ animationDelay: "240ms" }}>.</span>
-          </span>
-        </div>
+        <LoadingStatusMessage message="Creating workspace" />
       </div>
 
       <header className={`relative z-10 flex w-full items-center justify-between px-6 py-5 transition-opacity duration-700 ${busy ? "pointer-events-none opacity-0" : "opacity-100"}`}>

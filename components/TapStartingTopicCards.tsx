@@ -1,6 +1,7 @@
 "use client";
 
 import { aestheticImagesForSlots } from "@/lib/aesthetics";
+import { LoadingStatusMessage } from "@/components/LoadingStatusMessage";
 import type { TapStartingTopic } from "@/lib/tap-score";
 
 interface TapStartingTopicCardsProps {
@@ -113,7 +114,9 @@ export function TapStartingTopicCards({
           <TopicCardSkeleton />
           <TopicCardSkeleton wide />
         </div>
-        <p className="mt-3 text-center text-xs text-neutral-500">{loadingLabel}</p>
+        <div className="mt-3 flex justify-center">
+          <LoadingStatusMessage size="sm" tone="subtle" message={loadingLabel} />
+        </div>
       </div>
     );
   }

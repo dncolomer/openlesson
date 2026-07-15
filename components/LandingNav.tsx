@@ -43,14 +43,14 @@ export function LandingNav({ overlay = false }: LandingNavProps) {
         </Link>
 
         <nav className="hidden items-center gap-6 text-sm text-zinc-500 md:flex" aria-label="Main navigation">
-          <Link href="/platform" className="transition hover:text-white">
-            Platform
+          <Link href="/use-cases" className="transition hover:text-white">
+            Use cases
           </Link>
           <Link href="/#products" className="transition hover:text-white">
             Products
           </Link>
-          <Link href="/#how" className="transition hover:text-white">
-            How it works
+          <Link href="/all-you-can-learn" className="transition hover:text-white">
+            All-You-Can-Learn
           </Link>
           <Link href="/pricing" className="transition hover:text-white">
             Pricing
@@ -78,8 +78,8 @@ export function LandingNav({ overlay = false }: LandingNavProps) {
         <nav className="mx-auto mt-4 max-w-6xl border-t border-zinc-900 pt-4 md:hidden" aria-label="Mobile navigation">
           <ul className="space-y-1 text-sm">
             <li>
-              <Link href="/platform" className="block rounded-sm px-2 py-2 text-zinc-300" onClick={() => setMobileOpen(false)}>
-                Platform
+              <Link href="/use-cases" className="block rounded-sm px-2 py-2 text-zinc-300" onClick={() => setMobileOpen(false)}>
+                Use cases
               </Link>
             </li>
             <li>
@@ -88,8 +88,8 @@ export function LandingNav({ overlay = false }: LandingNavProps) {
               </Link>
             </li>
             <li>
-              <Link href="/#how" className="block rounded-sm px-2 py-2 text-zinc-300" onClick={() => setMobileOpen(false)}>
-                How it Works
+              <Link href="/all-you-can-learn" className="block rounded-sm px-2 py-2 text-zinc-300" onClick={() => setMobileOpen(false)}>
+                All-You-Can-Learn
               </Link>
             </li>
             <li>

@@ -1,17 +1,25 @@
 import { NextRequest, NextResponse } from "next/server";
 import { generateObjectives } from "@/lib/xai";
 import { getUserPrompts } from "@/lib/user-prompts";
-import { requireAuthenticatedUser } from "@/lib/api/require-auth";
+import { ayclTokenFromBody, requireAuthenticatedUser } from "@/lib/api/require-auth";
+import { resolveAyclAccess } from "@/lib/aycl-session-auth";
 
 export const runtime = "nodejs";
 export const maxDuration = 15;
 
 export async function POST(request: NextRequest) {
   try {
-    const auth = await requireAuthenticatedUser();
-    if (!auth.ok) return auth.response;
-
     const body = await request.json();
+    const ayclToken = ayclTokenFromBody(body);
+    if (!ayclToken) {
+      const auth = await requireAuthenticatedUser();
+      if (!auth.ok) return auth.response;
+    } else {
+      const aycl = await resolveAyclAccess(ayclToken);
+      if ("error" in aycl) {
+        return NextResponse.json({ error: aycl.error }, { status: aycl.status });
+      }
+    }
     const { problem } = body;
 
     if (!problem) {

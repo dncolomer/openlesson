@@ -13,6 +13,7 @@ import {
   parseOpaqueSchemaRequest,
 } from "./proof-of-work-integration";
 import { createAgentWorkspace } from "./create-agent-workspace";
+import { CreateTapLinkError, createWorkspaceTapLink } from "./create-tap-link";
 import {
   buildOpaquePerformanceChatInstructions,
   buildOpaquePerformanceReportInstructions,
@@ -54,12 +55,6 @@ import {
   MAX_WORKSPACE_PROOF_OF_WORK_BYTES,
   normalizeProofOfWorkType,
 } from "./workspace-proof-of-work";
-import {
-  buildTapScoreSessionUrl,
-  createPrivateToken,
-  getTapScoreBriefForUser,
-  hashPrivateToken,
-} from "@/lib/tap-score";
 import { persistSkillGridPositions, skillGridNodesFromRefs } from "@/lib/skill-grid-positions";
 import { callXaiJSON, callXaiResponses, callXaiResponsesWithFiles, DEFAULT_MODEL, userMessage, type ResponsesInputMessage } from "@/lib/xai-client";
 import { deleteFileFromXAI, uploadFileToXAI } from "@/lib/xai-files";
@@ -340,7 +335,7 @@ export const MCP_EVIDENCE_TOOLS = [
   {
     name: "create_tap_link",
     description:
-      "Create a private Think Aloud Protocol (TAP) link for a workspace block (15 or 30 minutes). Call list_blocks first; block_id must be the blocks UUID id field.",
+      "Create a private Think Aloud Protocol (TAP) link for a workspace block. Call list_blocks first; block_id must be the blocks UUID id field.",
     inputSchema: {
       type: "object",
       properties: {
@@ -349,9 +344,20 @@ export const MCP_EVIDENCE_TOOLS = [
           type: "string",
           description: "blocks.id UUID from list_blocks (not title, slug, or index).",
         },
-        minutes: { type: "number", description: "15 or 30. Default 15." },
+        minutes: { type: "number", description: "Session length in minutes (1–120). Default 15." },
+        participant_type: {
+          type: "string",
+          description: "anonymous | guest | user. anonymous provisions a link-scoped guest identity.",
+        },
         guest_email: { type: "string" },
         guest_user_id: { type: "string" },
+        user_id: { type: "string", description: "Org member user id when participant_type=user (requires sign-in)." },
+        post_session: {
+          type: "string",
+          description: "redirect_workspace | show_results | redirect_url",
+        },
+        redirect_url: { type: "string", description: "Required when post_session=redirect_url." },
+        completion_webhook_url: { type: "string", description: "Optional webhook URL on TAP completion." },
       },
       required: ["workspace_id", "block_id"],
       additionalProperties: false,
@@ -1251,13 +1257,16 @@ export async function callMcpProofOfWorkTool(
     let query = supabase
       .from("workspace_tap_sessions")
       .select(
-        "id, workspace_id, block_id, status, requested_duration_seconds, duration_seconds, mode, overall_score, created_at, started_at, completed_at"
+        "id, workspace_id, block_id, status, requested_duration_seconds, duration_seconds, mode, overall_score, created_at, started_at, completed_at, participant_type, post_session, redirect_url, guest_user_id, assigned_user_id"
       )
       .eq("workspace_id", workspaceId)
       .order("created_at", { ascending: false });
 
-    if (auth.guest_user_id) query = query.eq("guest_user_id", auth.guest_user_id);
-    else if (!auth.is_org_admin) query = query.eq("user_id", auth.user_id);
+    if (auth.guest_user_id) {
+      query = query.eq("guest_user_id", auth.guest_user_id);
+    } else if (!auth.is_org_admin && auth.user_id) {
+      query = query.or(`user_id.eq.${auth.user_id},assigned_user_id.eq.${auth.user_id}`);
+    }
 
     const { data: links, error } = await query;
     if (error) throw new Error(error.message);
@@ -1274,96 +1283,33 @@ export async function callMcpProofOfWorkTool(
     if (!workspaceId) throw new Error("workspace_id is required.");
     if (!blockId) throw new Error("block_id is required.");
 
-    const requestedMinutes = Number(args.minutes || 15);
-    const minutes = requestedMinutes === 30 ? 30 : 15;
-    const guestEmail = typeof args.guest_email === "string" ? args.guest_email.trim().toLowerCase() : "";
-    const requestedGuestId = typeof args.guest_user_id === "string" ? args.guest_user_id : null;
-
-    const { data: block, error: blockError } = await supabase
-      .from("blocks")
-      .select("id, workspace_id, workspaces!inner(id, user_id, organization_id, guest_user_id)")
-      .eq("id", blockId)
-      .eq("workspace_id", workspaceId)
-      .single();
-
-    if (blockError || !block) throw new Error("Block not found.");
-
-    const workspaceRaw = (block as { workspaces: unknown }).workspaces;
-    const workspace = (Array.isArray(workspaceRaw) ? workspaceRaw[0] : workspaceRaw) as {
-      id: string;
-      user_id: string | null;
-      organization_id: string | null;
-      guest_user_id: string | null;
-    };
-    if (!canAccessAgentWorkspace(auth, workspace)) throw new Error("Workspace not found.");
-
-    let guestUserId = auth.guest_user_id;
-    if (!guestUserId && (requestedGuestId || guestEmail)) {
-      if (!auth.is_org_admin || !auth.organization_id) {
-        throw new Error("Only organization admins can assign TAP links to guests.");
-      }
-      let guestQuery = supabase
-        .from("organization_guest_users")
-        .select("id, status")
-        .eq("organization_id", auth.organization_id)
-        .eq("status", "active");
-      guestQuery = requestedGuestId ? guestQuery.eq("id", requestedGuestId) : guestQuery.eq("email", guestEmail);
-      const { data: guest } = await guestQuery.single();
-      if (!guest) throw new Error("Guest user not found.");
-      guestUserId = guest.id;
-    }
-
-    const ownerUserId = auth.user_id || (workspace.user_id as string);
-    if (!ownerUserId) throw new Error("Workspace owner is missing.");
-
     try {
-      await getTapScoreBriefForUser(workspaceId, ownerUserId, [blockId], true, null);
+      const appBase = process.env.NEXT_PUBLIC_APP_URL || origin;
+      const tapLink = await createWorkspaceTapLink({
+        supabase,
+        auth,
+        workspaceId,
+        blockId,
+        body: args,
+        baseUrl: appBase,
+      });
+
+      return await evidenceToolResult(
+        {
+          tap_link: tapLink,
+          private_url: tapLink.private_url,
+        },
+        {
+          endpoint: "create_tap_link",
+          workspace_id: workspaceId,
+          block_id: blockId,
+          tap_minutes: Math.round(tapLink.requested_duration_seconds / 60),
+        }
+      );
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Not authorized";
-      if (message === "Workspace not found") throw new Error("Workspace not found.");
-      throw new Error(message);
+      if (error instanceof CreateTapLinkError) throw new Error(error.message);
+      throw error;
     }
-
-    const privateToken = createPrivateToken();
-    const { data: link, error } = await supabase
-      .from("workspace_tap_sessions")
-      .insert({
-        workspace_id: workspaceId,
-        user_id: ownerUserId,
-        guest_user_id: guestUserId,
-        organization_id: auth.organization_id || (workspace.organization_id as string),
-        created_by_api_key_id: createdByApiKeyId(auth),
-        private_token_hash: hashPrivateToken(privateToken),
-        requested_duration_seconds: Math.round(minutes * 60),
-        block_id: blockId,
-        mode: "curious",
-        focus_block_ids: [blockId],
-        voice_id: "ara",
-        status: "pending",
-      })
-      .select("id, workspace_id, block_id, status, requested_duration_seconds, focus_block_ids, created_at")
-      .single();
-
-    if (error || !link) {
-      console.error("[mcp/create_tap_link] Create error:", error);
-      const detail = typeof error?.message === "string" ? error.message : null;
-      throw new Error(detail ? `Failed to create TAP link: ${detail}` : "Failed to create TAP link.");
-    }
-
-    const appBase = process.env.NEXT_PUBLIC_APP_URL || origin;
-    const privateUrl = buildTapScoreSessionUrl(appBase, privateToken);
-    return await evidenceToolResult(
-      {
-        tap_link: { ...link, private_url: privateUrl },
-        private_url: privateUrl,
-      },
-      {
-        endpoint: "create_tap_link",
-        workspace_id: workspaceId,
-        block_id: blockId,
-        tap_minutes: minutes,
-      }
-    );
   }
 
   throw new Error(`Unknown tool: ${name}`);

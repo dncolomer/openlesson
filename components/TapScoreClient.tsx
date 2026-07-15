@@ -16,8 +16,13 @@ import { ThoughtMemoryPanel } from "@/components/thought-ui/ThoughtMemoryPanel";
 import { SlidingTranscript } from "@/components/thought-ui/SlidingTranscript";
 import { SessionOnboardingGuide } from "@/components/SessionOnboardingGuide";
 import { TapStartingTopicCards } from "@/components/TapStartingTopicCards";
+import { LoadingStatusMessage } from "@/components/LoadingStatusMessage";
 import { useI18n } from "@/lib/i18n";
 import type { TapStartingTopic } from "@/lib/tap-score";
+import type { TapPostSessionMode } from "@/lib/agent-v2/tap-link-config";
+import { TAP_LINK_MAX_MINUTES, TAP_LINK_MIN_MINUTES } from "@/lib/agent-v2/tap-link-config";
+import type { PerformanceReport } from "@/lib/agent-v2/performance-report";
+import { PerformanceReportCard } from "@/components/PerformanceReportCard";
 import {
   formatSpeechTranscriptDisplay,
   restartLiveSpeechRecognition,
@@ -29,7 +34,7 @@ import {
   type SpeechRecognitionLike,
 } from "@/lib/useSessionThoughtInterface";
 
-type Phase = "briefing" | "live" | "saving" | "error";
+type Phase = "briefing" | "live" | "saving" | "results" | "error";
 
 interface Thought {
   id: string;
@@ -91,6 +96,15 @@ interface TapScoreClientProps {
 const CHAIN_GAP_MS = 2600;
 
 const DURATIONS = [15, 30];
+
+function resolveInitialMinutes(requestedDurationSeconds: unknown): number {
+  const minutes = Number(requestedDurationSeconds || 900) / 60;
+  if (!Number.isFinite(minutes)) return 15;
+  if (minutes >= TAP_LINK_MIN_MINUTES && minutes <= TAP_LINK_MAX_MINUTES) {
+    return Math.trunc(minutes);
+  }
+  return DURATIONS.includes(minutes) ? minutes : 15;
+}
 
 const BACKGROUND_IMAGES = [
   "/aesthetics/Greco-futurism/HHnTrgVaQAAP-_3.jpeg",
@@ -261,7 +275,12 @@ export function TapScoreClient({ workspaceId, blockId, sessionId, privateToken, 
   const router = useRouter();
   const { t } = useI18n();
   const [phase, setPhase] = useState<Phase>("briefing");
-  const [minutes, setMinutes] = useState(DURATIONS.includes(Number(initialSession?.requested_duration_seconds || 900) / 60) ? Number(initialSession?.requested_duration_seconds || 900) / 60 : 15);
+  const [minutes, setMinutes] = useState(resolveInitialMinutes(initialSession?.requested_duration_seconds));
+  const postSession = (initialSession?.post_session as TapPostSessionMode) || "redirect_workspace";
+  const configuredRedirectUrl =
+    typeof initialSession?.redirect_url === "string" ? initialSession.redirect_url : null;
+  const [performanceReport, setPerformanceReport] = useState<PerformanceReport | null>(null);
+  const [resultsError, setResultsError] = useState("");
   const [workspaceTitle] = useState(initialSession?.workspaceTitle || "Workspace");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [thoughts, setThoughts] = useState<Thought[]>([]);
@@ -614,7 +633,7 @@ export function TapScoreClient({ workspaceId, blockId, sessionId, privateToken, 
 
   useEffect(() => {
     if (phase !== "live") {
-      if (phase === "briefing" || phase === "saving" || phase === "error") {
+      if (phase === "briefing" || phase === "saving" || phase === "results" || phase === "error") {
         stopLiveSpeechRecognition(speechBindings);
       }
       return;
@@ -825,6 +844,40 @@ export function TapScoreClient({ workspaceId, blockId, sessionId, privateToken, 
       });
       const payload = await response.json();
       if (!response.ok) throw new Error(payload.error || "Could not save TAP session");
+
+      const resolvedPostSession = (payload.postSession as TapPostSessionMode) || postSession;
+      const resolvedRedirectUrl =
+        typeof payload.redirectUrl === "string" ? payload.redirectUrl : configuredRedirectUrl;
+
+      if (resolvedPostSession === "show_results") {
+        setPhase("saving");
+        const reportResponse = await fetch("/api/workspace-tap-score/performance", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            privateToken,
+            workspaceId: payload.workspaceId || resolvedWorkspaceId,
+            tapSessionId: tapSessionIdRef.current,
+            blockId,
+          }),
+        });
+        const reportPayload = await reportResponse.json();
+        if (!reportResponse.ok) {
+          setResultsError(reportPayload.error || "Could not generate performance results");
+          setPhase("error");
+          isEndingRef.current = false;
+          return;
+        }
+        setPerformanceReport(reportPayload.report);
+        setPhase("results");
+        return;
+      }
+
+      if (resolvedPostSession === "redirect_url" && resolvedRedirectUrl) {
+        window.location.href = resolvedRedirectUrl;
+        return;
+      }
+
       const targetWorkspaceId = payload.workspaceId || resolvedWorkspaceId;
       if (targetWorkspaceId) {
         router.push(getIlePostSessionPath({ metadata: { workspace_id: targetWorkspaceId } }));
@@ -1024,14 +1077,30 @@ export function TapScoreClient({ workspaceId, blockId, sessionId, privateToken, 
         )}
 
         {phase === "saving" && (
-          <section className="flex flex-1 items-center justify-center text-neutral-400">
-            Saving proof of work and returning to workspace...
+          <section className="flex flex-1 items-center justify-center">
+            <LoadingStatusMessage
+              tone="muted"
+              message={
+                postSession === "show_results"
+                  ? t("tap.postSession.generatingResults")
+                  : t("tap.postSession.savingAndReturning")
+              }
+            />
           </section>
         )}
+        {phase === "results" && performanceReport ? (
+          <section className="mx-auto flex w-full max-w-4xl flex-1 flex-col overflow-y-auto py-6">
+            <h1 className="text-2xl font-medium text-neutral-100">{t("tap.postSession.resultsTitle")}</h1>
+            <p className="mt-2 max-w-2xl text-sm text-neutral-400">{t("tap.postSession.resultsHint")}</p>
+            <div className="mt-6 min-h-0 flex-1 rounded-lg border border-neutral-800 bg-neutral-950/50 p-4 md:p-5">
+              <PerformanceReportCard report={performanceReport} layout="spacious" fillHeight label={t("tap.postSession.resultsTitle")} />
+            </div>
+          </section>
+        ) : null}
         {phase === "error" && (
           <section className="flex flex-1 flex-col items-center justify-center text-center">
             <h1 className="text-2xl font-medium">Could not end TAP session</h1>
-            <p className="mt-3 max-w-md text-sm text-red-300">{error}</p>
+            <p className="mt-3 max-w-md text-sm text-red-300">{resultsError || error}</p>
             <ThoughtButton size="md" variant="primary" className="mt-6" onClick={() => setPhase("briefing")}>
               Try again
             </ThoughtButton>

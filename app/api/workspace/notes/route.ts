@@ -1,23 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { ayclTokenFromBody, guardWorkspaceRoute } from "@/lib/api/require-auth";
 
 export const runtime = "nodejs";
 
 export async function PUT(req: NextRequest) {
   try {
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-    }
-
-    const { workspaceId, notes } = await req.json();
+    const body = await req.json();
+    const { workspaceId, notes } = body;
 
     if (!workspaceId || typeof notes !== "string") {
       return NextResponse.json({ error: "workspaceId and notes are required" }, { status: 400 });
     }
 
-    // Verify ownership and update in one query (RLS also enforces this)
+    const auth = await guardWorkspaceRoute(workspaceId, { ayclToken: ayclTokenFromBody(body) });
+    if (!auth.ok) return auth.response;
+
+    const { user, supabase } = auth;
+
     const { error: updateError } = await supabase
       .from("workspaces")
       .update({ notes })

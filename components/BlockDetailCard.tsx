@@ -17,7 +17,7 @@ type BlockDetailCardProps = {
   isLocked?: boolean;
   showActions: boolean;
   onStartIle: () => void;
-  onStartEval: (event: React.MouseEvent) => void;
+  onStartEval?: (event: React.MouseEvent) => void;
   forkCallout?: ReactNode;
   promptSection?: ReactNode;
   highlighted?: boolean;
@@ -189,15 +189,19 @@ export function BlockDetailCard({
         "sessionItem.ileHelpPoint3",
       ],
     },
-    {
-      titleKey: "sessionItem.evalHelpTitle",
-      summaryKey: "sessionItem.evalHelpSummary",
-      pointKeys: [
-        "sessionItem.evalHelpPoint1",
-        "sessionItem.evalHelpPoint2",
-        "sessionItem.evalHelpPoint3",
-      ],
-    },
+    ...(onStartEval
+      ? [
+          {
+            titleKey: "sessionItem.evalHelpTitle",
+            summaryKey: "sessionItem.evalHelpSummary",
+            pointKeys: [
+              "sessionItem.evalHelpPoint1",
+              "sessionItem.evalHelpPoint2",
+              "sessionItem.evalHelpPoint3",
+            ],
+          },
+        ]
+      : []),
   ] as const;
 
   const heroLayout = isModal ? "modal" : isStacked ? "stacked" : "horizontal";
@@ -229,7 +233,17 @@ export function BlockDetailCard({
         </button>
       </div>
 
-      <div className={`grid gap-2 ${isModal ? "grid-cols-2" : isStacked ? "grid-cols-1" : "grid-cols-1 sm:grid-cols-2"}`}>
+      <div
+        className={`grid gap-2 ${
+          onStartEval
+            ? isModal
+              ? "grid-cols-2"
+              : isStacked
+                ? "grid-cols-1"
+                : "grid-cols-1 sm:grid-cols-2"
+            : "grid-cols-1"
+        }`}
+      >
         <button
           type="button"
           onClick={onStartIle}
@@ -241,16 +255,18 @@ export function BlockDetailCard({
             {isStarting ? t("sessionItem.starting") : t("sessionItem.ileCtaHint")}
           </span>
         </button>
-        <button
-          type="button"
-          onClick={onStartEval}
-          className="group flex flex-col items-start gap-1 rounded-lg border-2 border-white/40 bg-transparent px-3 py-2.5 text-left transition hover:border-white/70 hover:bg-white/5"
-        >
-          <span className="text-xs font-semibold tracking-tight text-white">{evalLabel}</span>
-          <span className="text-[10px] leading-snug text-neutral-500 group-hover:text-neutral-400">
-            {t("sessionItem.evalCtaHint")}
-          </span>
-        </button>
+        {onStartEval ? (
+          <button
+            type="button"
+            onClick={onStartEval}
+            className="group flex flex-col items-start gap-1 rounded-lg border-2 border-white/40 bg-transparent px-3 py-2.5 text-left transition hover:border-white/70 hover:bg-white/5"
+          >
+            <span className="text-xs font-semibold tracking-tight text-white">{evalLabel}</span>
+            <span className="text-[10px] leading-snug text-neutral-500 group-hover:text-neutral-400">
+              {t("sessionItem.evalCtaHint")}
+            </span>
+          </button>
+        ) : null}
       </div>
     </div>
   ) : null;

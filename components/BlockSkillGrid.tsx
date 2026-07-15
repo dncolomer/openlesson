@@ -32,6 +32,7 @@ interface BlockSkillGridProps {
   isAdding?: boolean;
   workspaceId?: string;
   sessionId?: string;
+  ayclToken?: string;
   suggestMode?: "block" | "chapter";
   locale?: string;
   /** Override recenter + initial viewport target (defaults to start block). */
@@ -87,6 +88,7 @@ export function BlockSkillGrid({
   isAdding = false,
   workspaceId,
   sessionId,
+  ayclToken,
   suggestMode = "block",
   locale = "en",
   recenterCell = null,
@@ -305,6 +307,7 @@ export function BlockSkillGrid({
           weightedNeighbors: pendingWeightedNeighbors,
           model,
           locale,
+          ...(ayclToken ? { ayclToken } : {}),
         }),
       });
 
@@ -329,6 +332,7 @@ export function BlockSkillGrid({
     locale,
     pendingCell,
     pendingWeightedNeighbors,
+    ayclToken,
     workspaceId,
     sessionId,
     suggestMode,

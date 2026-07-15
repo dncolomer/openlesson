@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { ayclTokenFromBody, guardSessionRoute, guardWorkspaceRoute } from "@/lib/api/require-auth";
 import { callXaiJSON, systemMessage, userMessage, DEFAULT_MODEL } from "@/lib/xai-client";
 import { formatWeightedNeighborhoodSummary, type WeightedGridNeighbor } from "@/lib/block-skill-grid";
 
@@ -9,16 +9,7 @@ interface SuggestBlocksResponse {
 
 export async function POST(req: NextRequest) {
   try {
-    const supabase = await createClient();
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-
-    if (authError || !user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
+    const body = await req.json();
     const {
       workspaceId,
       sessionId,
@@ -29,7 +20,8 @@ export async function POST(req: NextRequest) {
       weightedNeighbors,
       model: userModel,
       locale,
-    } = await req.json();
+    } = body;
+    const ayclToken = ayclTokenFromBody(body);
 
     if (row === undefined || col === undefined) {
       return NextResponse.json({ error: "Grid position is required" }, { status: 400 });
@@ -42,6 +34,14 @@ export async function POST(req: NextRequest) {
     if (mode === "block" && !workspaceId) {
       return NextResponse.json({ error: "Plan ID is required for block suggestions" }, { status: 400 });
     }
+
+    const auth =
+      mode === "chapter"
+        ? await guardSessionRoute(sessionId, { ayclToken })
+        : await guardWorkspaceRoute(workspaceId, { ayclToken });
+    if (!auth.ok) return auth.response;
+
+    const { user, supabase } = auth;
 
     const languageNote =
       locale && locale !== "en"

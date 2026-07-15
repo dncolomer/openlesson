@@ -1,4 +1,4 @@
-import crypto from "crypto";
+import { createPrivateToken, hashPrivateToken } from "@/lib/private-token";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { callXai, callXaiJSON, systemMessage, userMessage } from "@/lib/xai-client";
@@ -89,16 +89,10 @@ export const TAP_SCORE_MARKERS = [
   { id: "metacognitive_awareness", label: "Metacognitive Awareness" },
 ] as const;
 
-export function createPrivateToken() {
-  return crypto.randomBytes(32).toString("base64url");
-}
+export { createPrivateToken, hashPrivateToken };
 
 export function buildTapScoreSessionUrl(baseUrl: string, privateToken: string) {
   return `${baseUrl.replace(/\/$/, "")}/tap/session/${privateToken}`;
-}
-
-export function hashPrivateToken(token: string) {
-  return crypto.createHash("sha256").update(token).digest("hex");
 }
 
 export function listenerStyle(_mode: TapScoreMode) {

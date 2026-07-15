@@ -16,6 +16,7 @@ describe("stripe checkout helpers", () => {
 
   it("uses payment mode for trial checkout", () => {
     expect(checkoutModeForPriceType("trial_3day")).toBe("payment");
+    expect(checkoutModeForPriceType("all_you_can_learn")).toBe("payment");
     expect(checkoutModeForPriceType("regular_2026")).toBe("subscription");
   });
 

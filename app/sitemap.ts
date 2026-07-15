@@ -17,10 +17,34 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.9,
     },
     {
-      url: `${baseUrl}/platform`,
+      url: `${baseUrl}/use-cases`,
       lastModified: new Date(),
       changeFrequency: "monthly",
       priority: 0.95,
+    },
+    {
+      url: `${baseUrl}/use-cases/learning-verification`,
+      lastModified: new Date(),
+      changeFrequency: "monthly",
+      priority: 0.9,
+    },
+    {
+      url: `${baseUrl}/use-cases/learning-optimization`,
+      lastModified: new Date(),
+      changeFrequency: "monthly",
+      priority: 0.9,
+    },
+    {
+      url: `${baseUrl}/use-cases/reasoning-augmentation`,
+      lastModified: new Date(),
+      changeFrequency: "monthly",
+      priority: 0.9,
+    },
+    {
+      url: `${baseUrl}/products/trace-interruption-model`,
+      lastModified: new Date(),
+      changeFrequency: "monthly",
+      priority: 0.9,
     },
     {
       url: `${baseUrl}/products/proof-of-work-api`,

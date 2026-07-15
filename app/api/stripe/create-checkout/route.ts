@@ -11,6 +11,8 @@ import {
   resolveCheckoutVolume,
   getExtraProofOfWorkPackPriceCents,
 } from "@/lib/plans";
+import { AYCL_PRICE_CENTS, createPendingAyclPurchase } from "@/lib/aycl";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { checkoutModeForPriceType, type CheckoutPriceType } from "@/lib/stripe-checkout";
 
 export const runtime = "nodejs";
@@ -38,7 +40,12 @@ export async function POST(request: NextRequest) {
       data: { user },
     } = await supabase.auth.getUser();
 
-    const { priceType, quantity: rawQuantity, monthlyVolume: rawMonthlyVolume } = await request.json();
+    const {
+      priceType,
+      quantity: rawQuantity,
+      monthlyVolume: rawMonthlyVolume,
+      workspaceId: rawWorkspaceId,
+    } = await request.json();
     const quantity =
       priceType === "extra_lesson" || priceType === "extra_proof_of_work"
         ? Math.max(1, Math.min(500, Number(rawQuantity) || 1))
@@ -53,12 +60,18 @@ export async function POST(request: NextRequest) {
         "pro_teams",
         "api_metered",
         "trial_3day",
+        "all_you_can_learn",
         "extra_lesson",
         "extra_proof_of_work",
         "rabbit_hole_plays",
       ].includes(priceType)
     ) {
       return NextResponse.json({ error: "Invalid price type" }, { status: 400 });
+    }
+
+    const workspaceId = typeof rawWorkspaceId === "string" ? rawWorkspaceId.trim() : "";
+    if (priceType === "all_you_can_learn" && !workspaceId) {
+      return NextResponse.json({ error: "workspaceId is required" }, { status: 400 });
     }
 
     const isGuestCheckout = GUEST_CHECKOUT_TYPES.has(priceType as CheckoutPriceType) && !user;
@@ -120,6 +133,30 @@ export async function POST(request: NextRequest) {
           product_data: {
             name: "openLesson 3-Day Trial",
             description: "Full access for 3 days. One-time payment.",
+          },
+        },
+        quantity: 1,
+      };
+    } else if (priceType === "all_you_can_learn") {
+      const admin = createAdminClient();
+      const { data: catalogWorkspace } = await admin
+        .from("workspaces")
+        .select("id, title, root_topic, is_all_you_can_learn")
+        .eq("id", workspaceId)
+        .single();
+
+      if (!catalogWorkspace?.is_all_you_can_learn) {
+        return NextResponse.json({ error: "Workspace is not available for All-You-Can-Learn" }, { status: 404 });
+      }
+
+      const workspaceTitle = catalogWorkspace.title || catalogWorkspace.root_topic || "Learning Workspace";
+      lineItem = {
+        price_data: {
+          currency: "usd",
+          unit_amount: AYCL_PRICE_CENTS,
+          product_data: {
+            name: `All-You-Can-Learn: ${workspaceTitle}`,
+            description: "Lifetime access to your personal copy. ILE included. No account required.",
           },
         },
         quantity: 1,
@@ -191,16 +228,24 @@ export async function POST(request: NextRequest) {
       monthly_volume: String(monthlyVolume),
       volume_unit: priceType === "regular_2026" || priceType === "pro_teams" ? "proof_of_work" : "",
       ...(user ? { supabase_user_id: user.id } : {}),
+      ...(priceType === "all_you_can_learn" ? { workspace_id: workspaceId } : {}),
     };
 
-    const successUrl = isGuestCheckout
-      ? `${origin}/register?session_id={CHECKOUT_SESSION_ID}`
-      : priceType === "rabbit_hole_plays"
-        ? `${origin}/rabbit-hole?unlocked=1`
-        : `${origin}/pricing/success?session_id={CHECKOUT_SESSION_ID}`;
+    const successUrl =
+      priceType === "all_you_can_learn"
+        ? `${origin}/all-you-can-learn/success?session_id={CHECKOUT_SESSION_ID}`
+        : isGuestCheckout
+          ? `${origin}/register?session_id={CHECKOUT_SESSION_ID}`
+          : priceType === "rabbit_hole_plays"
+            ? `${origin}/rabbit-hole?unlocked=1`
+            : `${origin}/pricing/success?session_id={CHECKOUT_SESSION_ID}`;
 
     const cancelUrl =
-      priceType === "rabbit_hole_plays" ? `${origin}/rabbit-hole` : `${origin}/pricing`;
+      priceType === "all_you_can_learn"
+        ? `${origin}/all-you-can-learn`
+        : priceType === "rabbit_hole_plays"
+          ? `${origin}/rabbit-hole`
+          : `${origin}/pricing`;
 
     const session = await stripe.checkout.sessions.create({
       ...(customerId ? { customer: customerId } : {}),
@@ -232,7 +277,21 @@ export async function POST(request: NextRequest) {
           }),
     });
 
-    return NextResponse.json({ url: session.url });
+    let ayclAccessToken: string | undefined;
+    if (priceType === "all_you_can_learn") {
+      const admin = createAdminClient();
+      const pending = await createPendingAyclPurchase(admin, {
+        sourceWorkspaceId: workspaceId,
+        stripeCheckoutSessionId: session.id,
+        purchaserEmail: user?.email ?? null,
+      });
+      ayclAccessToken = pending.accessToken;
+    }
+
+    return NextResponse.json({
+      url: session.url,
+      ...(ayclAccessToken ? { ayclAccessToken } : {}),
+    });
   } catch (error) {
     console.error("Create checkout error:", error);
     const message = error instanceof Error ? error.message : "Unknown error";

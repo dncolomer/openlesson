@@ -1,38 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { ayclTokenFromBody, guardWorkspaceRoute } from "@/lib/api/require-auth";
 import { persistSkillGridPositions, toSkillGridNodes } from "@/lib/skill-grid-positions";
 
 /** Backfill missing block coordinates for legacy workspaces without 2D data. */
 export async function POST(req: NextRequest) {
   try {
-    const supabase = await createClient();
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-
-    if (authError || !user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const { workspaceId } = await req.json();
+    const body = await req.json();
+    const workspaceId = typeof body.workspaceId === "string" ? body.workspaceId : "";
     if (!workspaceId) {
       return NextResponse.json({ error: "Plan ID is required" }, { status: 400 });
     }
 
-    const { data: plan, error: planError } = await supabase
-      .from("workspaces")
-      .select("id, user_id")
-      .eq("id", workspaceId)
-      .single();
+    const auth = await guardWorkspaceRoute(workspaceId, { ayclToken: ayclTokenFromBody(body) });
+    if (!auth.ok) return auth.response;
 
-    if (planError || !plan) {
-      return NextResponse.json({ error: "Plan not found" }, { status: 404 });
-    }
-
-    if (plan.user_id !== user.id) {
-      return NextResponse.json({ error: "Access denied" }, { status: 403 });
-    }
+    const { supabase } = auth;
 
     const { data: nodes, error: nodesError } = await supabase
       .from("blocks")

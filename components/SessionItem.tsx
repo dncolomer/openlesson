@@ -43,6 +43,8 @@ interface SessionItemProps {
   workspaceId?: string;
   variant?: "compact" | "detail";
   detailLayout?: "inline" | "drawer";
+  hideTap?: boolean;
+  onCustomStart?: (node: Block) => Promise<void>;
 }
 
 export function SessionItem({
@@ -66,6 +68,8 @@ export function SessionItem({
   workspaceId,
   variant = "compact",
   detailLayout = "inline",
+  hideTap = false,
+  onCustomStart,
 }: SessionItemProps) {
   const { t } = useI18n();
   const router = useRouter();
@@ -122,6 +126,11 @@ export function SessionItem({
 
     setIsStarting(true);
     try {
+      if (onCustomStart) {
+        await onCustomStart(node);
+        return;
+      }
+
       if (isGroupPlan && !isOwner) {
         const res = await fetch("/api/group-workspace/start-session", {
           method: "POST",
@@ -232,17 +241,19 @@ export function SessionItem({
           {isStarting ? t("sessionItem.starting") : activeSession ? t("sessionItem.resumeLesson") : t("sessionItem.startLesson")}
         </button>
       )}
-      <button
-        onClick={handleStartGhl}
-        className={
-          isDetail
-            ? `${detailButtonClass} border border-neutral-600 bg-neutral-900/80 text-white hover:border-neutral-400 hover:bg-neutral-800`
-            : "shrink-0 rounded-md border border-neutral-700/80 bg-neutral-900/50 px-2.5 py-1.5 text-xs font-medium text-neutral-300 transition-colors hover:border-neutral-600 hover:text-white"
-        }
-        title={t("sessionItem.startEvaluationEnv")}
-      >
-        {t("sessionItem.startEvaluationEnv")}
-      </button>
+      {!hideTap ? (
+        <button
+          onClick={handleStartGhl}
+          className={
+            isDetail
+              ? `${detailButtonClass} border border-neutral-600 bg-neutral-900/80 text-white hover:border-neutral-400 hover:bg-neutral-800`
+              : "shrink-0 rounded-md border border-neutral-700/80 bg-neutral-900/50 px-2.5 py-1.5 text-xs font-medium text-neutral-300 transition-colors hover:border-neutral-600 hover:text-white"
+          }
+          title={t("sessionItem.startEvaluationEnv")}
+        >
+          {t("sessionItem.startEvaluationEnv")}
+        </button>
+      ) : null}
     </div>
   );
 
@@ -345,7 +356,7 @@ export function SessionItem({
           isLocked={isLocked}
           showActions={!isLocked && (isOwner || isGroupPlan) && !maskProgress}
           onStartIle={() => void handleStart()}
-          onStartEval={handleStartGhl}
+          onStartEval={hideTap ? undefined : handleStartGhl}
           forkCallout={
             maskProgress && onRequestFork && forkLoginHref ? (
               <PublicWorkspaceForkCallout

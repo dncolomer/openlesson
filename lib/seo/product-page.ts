@@ -52,68 +52,177 @@ export function productPageMetadata(page: SeoProductPageConfig): Metadata {
   };
 }
 
+export const TIM_PAGE: SeoProductPageConfig = {
+  slug: "trace-interruption-model",
+  path: "/products/trace-interruption-model",
+  eyebrow: "Trace Interruption Model",
+  h1: "Predict optimal learning-path interruptions — not the next funnel step.",
+  intro:
+    "TIM is not a product you buy on its own. It is the core model behind every openLesson surface — trained to decide when to interrupt a learner’s path with the right probe, coaching nudge, or proof-of-work request, at the right moment. That is how we break the linearity of classic analytics and turn-based chat.",
+  metaTitle: "Trace Interruption Model (TIM) | Core Learning Interruption Engine",
+  metaDescription:
+    "TIM predicts optimal learning-path interruptions across TAP, ILE, Proof-of-Work API, and ALE. The shared model behind verification, optimization, and augmentation — not a standalone SKU.",
+  keywords: [
+    "trace interruption model",
+    "TIM",
+    "learning path interruption",
+    "predictive coaching",
+    "Socratic probing",
+    "learning world model",
+    "non-linear learning analytics",
+  ],
+  heroImageAlt: "Trace Interruption Model — predictive learning interruptions",
+  useCases: [
+    {
+      title: "Proof-of-Work API responses",
+      description:
+        "Every API success can carry an interruption prediction — type, message, delay, and confidence — so your app schedules reflection prompts, probes, or coaching without hard-coding a static checklist.",
+    },
+    {
+      title: "Think Aloud Protocol probes",
+      description:
+        "Live TAP sessions use TIM to target hesitations and reasoning breaks with Socratic follow-ups while the candidate is still in flow — not after a form submit.",
+    },
+    {
+      title: "ILE coaching moments",
+      description:
+        "Practice blocks interrupt when the model predicts a gap is ripe for coaching — routing humans into depth at the moment understanding frays, not at arbitrary chapter ends.",
+    },
+    {
+      title: "Agentic consumer systems",
+      description:
+        "Agents and orchestrators read interruption contracts from PoW responses, schedule interventions, and supersede stale timers when newer evidence arrives — agent-native learning loops.",
+    },
+    {
+      title: "Learning world model growth",
+      description:
+        "Each interruption is grounded in accumulated proof of work and performance context. TIM learns what still needs to be measured and when the path should bend — feeding the model that all products share.",
+    },
+    {
+      title: "Verification vs. augmentation timing",
+      description:
+        "The same predictor chooses between checkpoint probes (verify now), coaching nudges (optimize next), and proof reminders (augment with evidence) — aligned to the three verticals on one workspace.",
+    },
+  ],
+  highlights: [
+    "Trained to predict when and how to interrupt — not just what happened last",
+    "Shared across Proof-of-Work API, TAP, ILE, and ALE on every workspace",
+    "Surfaces as interruption payloads with delay, confidence, and consumer obligations",
+    "Foundation layer — not sold separately; powers the products you integrate",
+  ],
+  faqs: [
+    {
+      question: "Can I call TIM directly?",
+      answer:
+        "No. TIM runs inside openLesson products. You experience it through TAP probes, ILE coaching, PoW API interruption fields, and performance-driven schema evolution — not as a standalone endpoint.",
+    },
+    {
+      question: "How is this different from funnel analytics?",
+      answer:
+        "Funnel tools record that a step completed. TIM predicts whether the learner needs an intervention before they drift, fake understanding, or drop off — using proof-of-work context, not page views alone.",
+    },
+    {
+      question: "What does an interruption look like?",
+      answer:
+        "A structured prediction: intervention type (reflection, probe, coaching nudge, proof reminder, performance review), message, optional delay in milliseconds, confidence, and rules for supersession when newer API responses arrive.",
+    },
+    {
+      question: "Does TIM replace my LMS rules engine?",
+      answer:
+        "It complements it. You keep your UX; TIM tells your system when openLesson believes an interruption will advance the learning world model for that user or agent — grounded in workspace evidence.",
+    },
+  ],
+  secondaryCta: { label: "See all products", href: "/#products" },
+  closingTitle: "One model. Every product.",
+  closingBody:
+    "Book a demo to see how TIM-powered interruptions flow through verification, optimization, and augmentation in your stack.",
+};
+
 export const POW_API_PAGE: SeoProductPageConfig = {
   slug: "proof-of-work-api",
   path: "/products/proof-of-work-api",
   eyebrow: "Proof-of-Work API",
-  h1: "Optimize learning to convert — before users drop off.",
+  h1: "The base layer for verification, optimization, and augmentation you build yourself.",
   intro:
-    "Use proof-of-work signals from real workflows to learn what people and agents still need before they convert, promote, or deploy. Build dynamic, agentic onboarding that teaches the right thing at the right moment — not a static checklist.",
-  metaTitle: "Proof-of-Work API | Learning Optimization for Conversion",
+    "Proof-of-Work API is how customers embed openLesson into their own products — custom hiring gates, onboarding loops, edTech depth checks, agent deploy bars, or entirely new use cases across all three verticals. Every artifact and tool trace you send is fuel for a learning world model that grows gradually with the user or agent, not a one-shot score from a static form.",
+  metaTitle: "Proof-of-Work API | Evolving Learning World Model Foundation",
   metaDescription:
-    "Headless API that scores live cognition and tool traces so you can optimize onboarding, certification, and conversion with proof of work — not completion rates.",
+    "Build custom verification, optimization, and augmentation apps on Proof-of-Work API. A dynamically evolving interface that grows your learning world model — agentic-ready, not a static contract.",
   keywords: [
     "proof of work API",
-    "learning optimization",
-    "conversion optimization",
-    "agentic onboarding",
+    "learning world model",
+    "agentic integration",
+    "custom verification API",
+    "learning augmentation API",
+    "MCP proof of work",
+    "evolving API",
     "skills gap analysis",
-    "readiness scoring",
   ],
-  heroImageAlt: "Proof-of-Work API product hero",
+  heroImageAlt: "Proof-of-Work API — foundation for custom learning applications",
   useCases: [
     {
-      title: "Agentic onboarding",
+      title: "Custom verification applications",
       description:
-        "Pipe tool traces and session artifacts into scoring endpoints. Trigger the next coaching step only when gaps are real — not when a progress bar hits 100%.",
+        "Build hiring screens, certification gates, TAP-cha human checks, or agent readiness bars on top of one workspace. Your UI, our measurement layer — proof of work in, verified capability out.",
     },
     {
-      title: "Conversion diagnostics",
+      title: "Custom optimization applications",
       description:
-        "See which concepts block activation or upgrade. Rank gaps by severity so product and enablement teams know what to teach next.",
+        "Wire gap scores into onboarding, enablement, or agent skill loops you own. The API tells your product what to teach or retry next based on what the model already knows is missing.",
     },
     {
-      title: "Deploy and promotion gates",
+      title: "Custom augmentation applications",
       description:
-        "Hold agents and humans to the same readiness bar before production access, certification, or customer-facing work.",
+        "Embed in-course probes, coach triggers, or in-tool interruptions in your LMS, IDE, or internal portal. Augmentation runs on the same evidence stream as verification and optimization.",
     },
     {
-      title: "CI and eval harnesses",
+      title: "Agentic integrations",
       description:
-        "Embed scoring in pipelines. Compare runs over time and prove improvement with auditable gap reports — not vanity metrics.",
+        "Agents submit proof of work over REST or MCP, read performance and schema tools, and participate in the loop — not just call a fixed scoring endpoint. Built for orchestrators that need to act on gaps.",
+    },
+    {
+      title: "Gradual learning world model",
+      description:
+        "Each submission extends the picture of skills, scenarios, and gaps for that workspace. The API is the door through which that model is built — session by session, artifact by artifact.",
+    },
+    {
+      title: "Self-evolving measurement surface",
+      description:
+        "As the model matures, the interface adapts: new proof-of-work schemas, performance dimensions, and integration hints reflect what still needs to be measured. The system optimizes what it asks for to keep building the model.",
     },
   ],
   highlights: [
-    "Headless — fits portals, LMS hooks, agent orchestration, and internal tools",
-    "Works for human artifacts and agent tool traces in the same workspace model",
-    "Continuous readiness scores with severity-ranked gaps",
+    "Foundation for custom apps across verification, optimization, and augmentation",
+    "Dynamically evolving interface — adapts as the learning world model grows, not a frozen OpenAPI contract",
+    "Agentic-ready via REST and MCP; self-directing evidence and schema generation over time",
+    "Human and agent proof of work on one workspace, one model, one meter",
   ],
   faqs: [
     {
-      question: "How is this different from quiz completion?",
+      question: "Is this a static API contract?",
       answer:
-        "Completion tells you someone finished a flow. Proof-of-Work API scores whether they can perform the underlying skill from real artifacts and traces.",
+        "No. Proof-of-work schemas, performance reports, and integration surfaces evolve as your workspace accumulates evidence. Early calls look different from mature ones — by design — because the learning world model is still being built.",
     },
     {
-      question: "Do I need a hosted session?",
+      question: "What do I actually send?",
       answer:
-        "No. Send recordings, write-ups, tool traces, or other proof-of-work artifacts via API and receive structured gap analysis.",
+        "Artifacts and traces: documents, recordings, tool logs, session exports, screen captures — anything that proves work happened. The API scores, ranks gaps, and feeds the model that drives what gets asked for next.",
+    },
+    {
+      question: "How does this relate to TAP and ILE?",
+      answer:
+        "TAP and ILE are hosted product experiences. Proof-of-Work API is the programmable layer underneath — for when you need your own UX, your own gates, or agent-native integration while sharing the same workspace and model.",
+    },
+    {
+      question: "Why call it self-evolving?",
+      answer:
+        "The system learns what evidence is still missing to complete the learning world model for a user or agent, and surfaces that through updated schemas and measurement — optimizing its own asks over time instead of returning the same checklist forever.",
     },
   ],
   secondaryCta: { label: "View API docs", href: "/docs/proof-of-work-api" },
-  closingTitle: "Teach what actually blocks conversion.",
+  closingTitle: "Build your application on a model that keeps learning what to measure.",
   closingBody:
-    "Book a demo to see how proof-of-work scoring powers dynamic onboarding and agentic learning loops in your stack.",
+    "Book a demo to see Proof-of-Work API as the foundation for custom verification, optimization, and augmentation — with an interface that grows as your users’ world model does.",
 };
 
 export const TAP_PAGE: SeoProductPageConfig = {
@@ -304,4 +413,4 @@ export const ALE_PAGE: SeoProductPageConfig = {
     "Book a demo to see private agent skill training, scoring, and iteration inside the openLesson workspace.",
 };
 
-export const PRODUCT_PAGES = [POW_API_PAGE, TAP_PAGE, ILE_PAGE, ALE_PAGE] as const;
+export const PRODUCT_PAGES = [TIM_PAGE, POW_API_PAGE, TAP_PAGE, ILE_PAGE, ALE_PAGE] as const;

@@ -70,6 +70,10 @@ export async function POST(req: NextRequest, { params }: RouteProps) {
   const stylePrompt =
     typeof body.style_prompt === "string" ? body.style_prompt.trim() : "";
   const blockId = typeof body.block_id === "string" ? body.block_id : null;
+  const participantGuestUserId =
+    auth.is_org_admin && typeof body.guest_user_id === "string" ? body.guest_user_id.trim() : null;
+  const participantUserId =
+    auth.is_org_admin && typeof body.user_id === "string" ? body.user_id.trim() : null;
   const conversationHistory = parseConversationHistory(body.conversation_history);
   const persistedFileIds = Array.isArray(body.file_ids)
     ? body.file_ids.filter((id): id is string => typeof id === "string" && id.length > 0)
@@ -96,6 +100,8 @@ export async function POST(req: NextRequest, { params }: RouteProps) {
         auth,
         workspaceId,
         blockId,
+        participantUserId: participantUserId || null,
+        participantGuestUserId: participantGuestUserId || null,
       });
       activeFileIds = context.fileIds;
       contextCounts = context.payload.counts;

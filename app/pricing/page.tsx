@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { Navbar } from "@/components/Navbar";
+import { LandingNav } from "@/components/LandingNav";
 import { Footer } from "@/components/Footer";
 import { createClient } from "@/lib/supabase/client";
 import {
@@ -300,16 +300,23 @@ function PricingPageContent() {
     >
       <div className="fixed inset-0 bg-black/78" />
       <div className="relative z-10 flex min-h-screen flex-col">
-        <Navbar />
+        <LandingNav />
         <section className="mx-auto w-full max-w-4xl flex-1 px-6 py-16 sm:py-20">
           <div className="mb-8 inline-block rounded-sm border border-neutral-800 bg-neutral-950/80 px-3 py-1 font-mono text-[10px] uppercase tracking-[2px] text-neutral-500">
             LEARNING EFFICIENCY • HUMANS & AGENTS
           </div>
           <h1 className="max-w-3xl text-4xl font-medium leading-[1.05] tracking-[-2px] text-white sm:text-5xl">
-            Price learning efficiency, not completion.
+            Pricing built on proof of work.
           </h1>
           <p className="mt-5 max-w-2xl text-base leading-relaxed text-neutral-400 sm:text-lg">
-            Pay first, then create your account. Stripe checkout collects your email — no separate confirmation step.
+            You pay for how much proof of work you send — artifacts, tool traces, and session evidence
+            submitted across TAP, ILE, the API, and every other product on one shared meter. Volume scales
+            with the measurement work on our side: scoring, gap analysis, and building the learning world
+            models that power verification, optimization, and augmentation.
+          </p>
+          <p className="mt-4 max-w-2xl text-sm leading-relaxed text-neutral-500">
+            Pay first, then create your account. Stripe checkout collects your email — no separate
+            confirmation step.
           </p>
           {needsPlan && (
             <div className="mt-6 rounded-sm border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">

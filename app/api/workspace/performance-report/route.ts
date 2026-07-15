@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { ayclTokenFromBody, guardWorkspaceRoute } from "@/lib/api/require-auth";
 import { finalizePerformanceReport } from "@/lib/agent-v2/conversion-goal";
 import { generateWorkspacePerformanceReport } from "@/lib/agent-v2/generate-performance-report";
 import { buildWorkspacePerformanceContext } from "@/lib/agent-v2/performance-context";
@@ -9,19 +9,16 @@ export const maxDuration = 120;
 
 export async function POST(req: NextRequest) {
   try {
-    const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) {
-      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-    }
-
-    const { workspaceId } = await req.json();
+    const body = await req.json();
+    const workspaceId = typeof body.workspaceId === "string" ? body.workspaceId : "";
     if (!workspaceId) {
       return NextResponse.json({ error: "workspaceId is required" }, { status: 400 });
     }
+
+    const auth = await guardWorkspaceRoute(workspaceId, { ayclToken: ayclTokenFromBody(body) });
+    if (!auth.ok) return auth.response;
+
+    const { user, supabase } = auth;
 
     const { data: plan } = await supabase
       .from("workspaces")

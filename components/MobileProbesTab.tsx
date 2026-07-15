@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { type Probe, type SessionPlan } from "@/lib/storage";
 import { useI18n } from "@/lib/i18n";
+import { LoadingStatusMessage } from "@/components/LoadingStatusMessage";
 import { useTypewriter } from "@/lib/useTypewriter";
 import { isProbeTyped, markProbeTyped } from "@/lib/welcomeState";
 import { SessionOnboardingGuide } from "./SessionOnboardingGuide";
@@ -243,9 +244,9 @@ export function MobileProbesTab({
               </div>
             </div>
             {isGeneratingProbe ? (
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-3">
                 <div className="w-3.5 h-3.5 border border-neutral-700 border-t-amber-500/70 rounded-full animate-spin" />
-                <span className="text-xs text-neutral-500">{t('probes.generatingProbe')}</span>
+                <LoadingStatusMessage size="sm" tone="subtle" message={t("probes.generatingProbe")} />
               </div>
             ) : (
               <p className="text-xs text-neutral-600 max-w-[240px]">

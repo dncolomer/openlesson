@@ -45,6 +45,9 @@ interface SessionListProps {
   workspaceId?: string;
   onRefresh?: () => void;
   onNodesUpdate?: (nodes: Block[]) => void;
+  hideTap?: boolean;
+  onCustomStart?: (node: Block) => Promise<void>;
+  ayclToken?: string;
 }
 
 function getOrderedSessions(nodes: Block[]): Block[] {
@@ -99,6 +102,9 @@ export function SessionList({
   workspaceId,
   onRefresh,
   onNodesUpdate,
+  hideTap = false,
+  onCustomStart,
+  ayclToken,
 }: SessionListProps) {
   const router = useRouter();
   const [expandedNodeId, setExpandedNodeId] = useState<string | null>(null);
@@ -135,7 +141,7 @@ export function SessionList({
     void fetch("/api/workspace/ensure-grid-positions", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ workspaceId }),
+      body: JSON.stringify({ workspaceId, ...(ayclToken ? { ayclToken } : {}) }),
     })
       .then(async (response) => {
         if (!response.ok) {
@@ -151,7 +157,7 @@ export function SessionList({
         gridBackfillAttemptedRef.current = null;
         console.warn("Failed to backfill block grid positions:", error);
       });
-  }, [isOwner, nodes, onNodesUpdate, workspaceId]);
+  }, [ayclToken, isOwner, nodes, onNodesUpdate, workspaceId]);
 
   const handleAddBlock = useCallback(
     async (prompt: string, position: { row: number; col: number }) => {
@@ -184,6 +190,7 @@ export function SessionList({
             weightedNeighbors,
             model,
             locale,
+            ...(ayclToken ? { ayclToken } : {}),
           }),
         });
 
@@ -212,7 +219,7 @@ export function SessionList({
         setIsAddingBlock(false);
       }
     },
-    [isOwner, locale, nodes, onNodesUpdate, onRefresh, workspaceId, router],
+    [ayclToken, isOwner, locale, nodes, onNodesUpdate, onRefresh, workspaceId, router],
   );
 
   const selectedGridNode = nodes.find((node) => node.id === expandedNodeId) ?? null;
@@ -244,6 +251,8 @@ export function SessionList({
         workspaceId={workspaceId}
         variant="detail"
         detailLayout="drawer"
+        hideTap={hideTap}
+        onCustomStart={onCustomStart}
       />
     ) : null;
 
@@ -268,6 +277,7 @@ export function SessionList({
             showProgress={!maskProgress}
             isAdding={isAddingBlock}
             workspaceId={workspaceId}
+            ayclToken={ayclToken}
             locale={locale}
             onAddBlock={handleAddBlock}
             labels={{

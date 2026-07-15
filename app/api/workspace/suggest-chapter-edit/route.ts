@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { ayclTokenFromBody, guardSessionRoute } from "@/lib/api/require-auth";
 import { callXaiJSON, systemMessage, userMessage, DEFAULT_MODEL } from "@/lib/xai-client";
 import { buildWorkspacePerformanceContext } from "@/lib/agent-v2/performance-context";
 
@@ -9,16 +9,16 @@ interface SuggestChapterEditResponse {
 
 export async function POST(req: NextRequest) {
   try {
-    const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
-    const { sessionId, stepId, currentDescription, prompt, locale } = await req.json();
+    const body = await req.json();
+    const { sessionId, stepId, currentDescription, prompt, locale } = body;
     if (!sessionId || !stepId) {
       return NextResponse.json({ error: "sessionId and stepId are required" }, { status: 400 });
     }
+
+    const auth = await guardSessionRoute(sessionId, { ayclToken: ayclTokenFromBody(body) });
+    if (!auth.ok) return auth.response;
+
+    const { user, supabase } = auth;
 
     const { data: session } = await supabase
       .from("sessions")

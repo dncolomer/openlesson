@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { ayclTokenFromBody, guardWorkspaceRoute } from "@/lib/api/require-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
   buildPerformanceChatInstructions,
@@ -17,15 +17,6 @@ interface PerformanceConversationMessage {
 
 export async function POST(req: NextRequest) {
   try {
-    const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) {
-      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-    }
-
     const body = await req.json();
     const workspaceId = typeof body.workspaceId === "string" ? body.workspaceId : "";
     const message = typeof body.message === "string" ? body.message.trim() : "";
@@ -41,6 +32,11 @@ export async function POST(req: NextRequest) {
     if (!message) {
       return NextResponse.json({ error: "message is required" }, { status: 400 });
     }
+
+    const auth = await guardWorkspaceRoute(workspaceId, { ayclToken: ayclTokenFromBody(body) });
+    if (!auth.ok) return auth.response;
+
+    const { user, supabase } = auth;
 
     const { data: profile } = await supabase
       .from("profiles")

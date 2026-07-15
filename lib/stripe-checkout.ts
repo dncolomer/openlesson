@@ -12,6 +12,7 @@ export type CheckoutPriceType =
   | "pro_teams"
   | "api_metered"
   | "trial_3day"
+  | "all_you_can_learn"
   | "extra_lesson"
   | "extra_proof_of_work"
   | "rabbit_hole_plays";
@@ -39,6 +40,7 @@ export function planIdFromPriceType(priceType: string): PlanId {
 export function checkoutModeForPriceType(priceType: CheckoutPriceType): "subscription" | "payment" {
   if (
     priceType === "trial_3day" ||
+    priceType === "all_you_can_learn" ||
     priceType === "extra_lesson" ||
     priceType === "extra_proof_of_work" ||
     priceType === "rabbit_hole_plays"

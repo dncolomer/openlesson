@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Navbar } from "@/components/Navbar";
+import { LandingNav } from "@/components/LandingNav";
 import { useI18n } from "@/lib/i18n";
 
 export default function PricingSuccessPage() {
@@ -19,7 +19,7 @@ export default function PricingSuccessPage() {
 
   return (
     <main className="min-h-screen flex flex-col bg-[#0a0a0a]">
-      <Navbar showNav={false} />
+      <LandingNav />
 
       <div className="flex-1 flex flex-col items-center justify-center px-6 text-center">
         <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-500/10 border border-green-500/20 text-green-400 mb-6">

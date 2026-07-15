@@ -45,6 +45,7 @@ interface WorkspaceChatProps {
   isGroupPlan?: boolean;
   hideSessions?: boolean;
   embedded?: boolean;
+  ayclToken?: string;
 }
 
 const MODEL_STORAGE_KEY = "planner-model";
@@ -71,7 +72,7 @@ function nodesHaveChanged(oldNodes: Block[], newNodes: Block[]): Set<string> {
   return changedIds;
 }
 
-export function WorkspaceChat({ plan, nodes: initialNodes, onRefresh, onNodesUpdate, supabase, workspaceId, isOwner = true, currentUserId, isGroupPlan = false, hideSessions = false, embedded = false }: WorkspaceChatProps) {
+export function WorkspaceChat({ plan, nodes: initialNodes, onRefresh, onNodesUpdate, supabase, workspaceId, isOwner = true, currentUserId, isGroupPlan = false, hideSessions = false, embedded = false, ayclToken }: WorkspaceChatProps) {
   const router = useRouter();
   const { t } = useI18n();
   const [nodes, setNodes] = useState(initialNodes);
@@ -258,6 +259,7 @@ export function WorkspaceChat({ plan, nodes: initialNodes, onRefresh, onNodesUpd
               isOwner={isOwner}
               currentUserId={currentUserId}
               embedded={embedded}
+              ayclToken={ayclToken}
             />
           </div>
         </div>
@@ -312,6 +314,7 @@ export function WorkspaceChat({ plan, nodes: initialNodes, onRefresh, onNodesUpd
             supabase={supabase}
             isOwner={isOwner}
             currentUserId={currentUserId}
+            ayclToken={ayclToken}
           />
         </div>
       )}
@@ -406,6 +409,7 @@ export function WorkspaceChat({ plan, nodes: initialNodes, onRefresh, onNodesUpd
                   supabase={supabase}
                   isOwner={isOwner}
                   currentUserId={currentUserId}
+                  ayclToken={ayclToken}
                 />
               </div>
             </div>

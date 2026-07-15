@@ -11,6 +11,7 @@ import {
   FileCode2,
   Gauge,
   LayoutGrid,
+  ShieldCheck,
   Check,
   Loader2,
   Play,
@@ -1486,6 +1487,15 @@ function ExternalLaunchPanel({
   );
 }
 
+type DemoVerticalCard = {
+  id: string;
+  title: string;
+  description: string;
+  status: "available" | "coming_soon";
+  demo?: ProofOfWorkApiDemoDefinition;
+  icon: ReactNode;
+};
+
 function DemoUseCasePicker({
   demos,
   onSelect,
@@ -1493,50 +1503,110 @@ function DemoUseCasePicker({
   demos: ProofOfWorkApiDemoDefinition[];
   onSelect: (demo: ProofOfWorkApiDemoDefinition) => void;
 }) {
+  const orbitDemo = demos.find((demo) => demo.id === "orbit") ?? demos[0];
+
+  const verticals: DemoVerticalCard[] = [
+    {
+      id: "verification",
+      title: "Learning Verification",
+      description:
+        "Verify what candidates, employees, and agents can actually do before hire, deploy, or certify — with TAP, ILE, and Proof-of-Work API scoring.",
+      status: "coming_soon",
+      icon: <ShieldCheck className="size-5" />,
+    },
+    {
+      id: "optimization",
+      title: "Learning Optimization",
+      description: orbitDemo
+        ? `${orbitDemo.productName} — ${orbitDemo.description}`
+        : "Turn verification findings into onboarding and agent skill loops that close gaps until adoption improves.",
+      status: "available",
+      demo: orbitDemo,
+      icon: <Gauge className="size-5" />,
+    },
+    {
+      id: "augmentation",
+      title: "Learning Augmentation",
+      description:
+        "Strengthen how learners think inside courses, prep programs, and certification journeys — with coached practice beyond shallow knowledge checks.",
+      status: "coming_soon",
+      icon: <Sparkles className="size-5" />,
+    },
+  ];
+
   return (
     <section className="rounded-lg border border-zinc-800 bg-zinc-950/70 p-5 sm:p-8">
       <div className="max-w-2xl">
         <div className="font-mono text-[10px] uppercase tracking-[2px] text-zinc-500">
-          Step 1 · Choose a use case
+          Step 1 · Choose a vertical
         </div>
-        <h2 className="mt-2 text-2xl font-medium text-white sm:text-3xl">What workflow are we helping someone learn?</h2>
+        <h2 className="mt-2 text-2xl font-medium text-white sm:text-3xl">
+          Verification, optimization, and augmentation in action
+        </h2>
         <p className="mt-3 text-sm leading-relaxed text-zinc-400">
-          Pick a preset scenario to verify learning and conversion inside a real product UI. The same Proof-of-Work API
-          flow throughout — score cards coach gaps and next steps toward adoption, not exam completion.
+          Each demo shows one openLesson vertical inside a real product workflow. Score cards coach gaps and next steps
+          toward adoption — not exam completion.
         </p>
       </div>
 
-      <div className={`mt-8 grid gap-4 ${demos.length > 1 ? "sm:grid-cols-2" : ""}`}>
-        {demos.map((demo) => {
-          const styles = demoPanelStyles(demo.accent);
-          const verificationPills = getDemoVerificationPills(demo);
+      <div className="mt-8 grid gap-4 lg:grid-cols-3">
+        {verticals.map((vertical) => {
+          const styles = demoPanelStyles(vertical.demo?.accent);
+          const isAvailable = vertical.status === "available" && vertical.demo;
+
+          if (isAvailable) {
+            const demo = vertical.demo!;
+            const verificationPills = getDemoVerificationPills(demo);
+            return (
+              <button
+                key={vertical.id}
+                type="button"
+                onClick={() => onSelect(demo)}
+                className={`group rounded-lg border p-5 text-left transition hover:-translate-y-0.5 hover:shadow-lg hover:shadow-black/20 ${styles.section}`}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <div className="flex size-10 items-center justify-center rounded-md border border-zinc-700 bg-black/40 text-zinc-300">
+                      {vertical.icon}
+                    </div>
+                    <div>
+                      <div className="text-base font-medium text-white">{vertical.title}</div>
+                      <div className={`text-xs ${styles.subtitle}`}>{demo.productName} demo</div>
+                    </div>
+                  </div>
+                  <DemoVerificationPills pills={verificationPills} />
+                </div>
+                <p className={`mt-4 text-sm leading-relaxed ${styles.bodyText}`}>{vertical.description}</p>
+                <div className="mt-5 flex items-center gap-2 text-xs font-medium text-white/90">
+                  {demo.simulatorMode === "external" ? "Launch full-screen app" : "Run this demo"}
+                  <ArrowRight className="size-3.5 transition group-hover:translate-x-0.5" />
+                </div>
+              </button>
+            );
+          }
+
           return (
-            <button
-              key={demo.id}
-              type="button"
-              onClick={() => onSelect(demo)}
-              className={`group rounded-lg border p-5 text-left transition hover:-translate-y-0.5 hover:shadow-lg hover:shadow-black/20 ${styles.section}`}
+            <div
+              key={vertical.id}
+              className={`rounded-lg border p-5 text-left opacity-80 ${styles.section}`}
+              aria-disabled
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="flex items-center gap-3">
-                  <div
-                    className={`flex size-10 items-center justify-center rounded-md text-sm font-bold ${styles.logo}`}
-                  >
-                    {demo.initials}
+                  <div className="flex size-10 items-center justify-center rounded-md border border-zinc-800 bg-black/20 text-zinc-500">
+                    {vertical.icon}
                   </div>
                   <div>
-                    <div className="text-base font-medium text-white">{demo.productName}</div>
-                    <div className={`text-xs ${styles.subtitle}`}>{demo.tagline}</div>
+                    <div className="text-base font-medium text-zinc-300">{vertical.title}</div>
+                    <div className="text-xs text-zinc-600">Demo coming soon</div>
                   </div>
                 </div>
-                <DemoVerificationPills pills={verificationPills} />
+                <span className="rounded border border-zinc-800 bg-black/20 px-2 py-1 font-mono text-[9px] uppercase tracking-[1.5px] text-zinc-500">
+                  Soon
+                </span>
               </div>
-              <p className={`mt-4 text-sm leading-relaxed ${styles.bodyText}`}>{demo.description}</p>
-              <div className="mt-5 flex items-center gap-2 text-xs font-medium text-white/90">
-                {demo.simulatorMode === "external" ? "Launch full-screen app" : "Run this demo"}
-                <ArrowRight className="size-3.5 transition group-hover:translate-x-0.5" />
-              </div>
-            </button>
+              <p className={`mt-4 text-sm leading-relaxed ${styles.bodyText}`}>{vertical.description}</p>
+            </div>
           );
         })}
       </div>

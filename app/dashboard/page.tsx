@@ -384,7 +384,7 @@ export default function DashboardPage() {
   const usesAgenticV2Keys = hasAgentApiKeyPlan(user?.plan) || user?.isAdmin;
 
   const mcpOrigin =
-    typeof window !== "undefined" ? window.location.origin : "https://openlesson.academy";
+    typeof window !== "undefined" ? window.location.origin : "https://uncertain.systems";
 
   const mcpClientConfig = useMemo(() => {
     if (newKeyValue) {

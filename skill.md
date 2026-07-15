@@ -1,9 +1,9 @@
-# OpenLesson Proof-of-Work API
+# Uncertain Systems Proof-of-Work API
 
-Use this skill when an agent needs to create Verification Workspaces, issue private Think Aloud Protocol (TAP) links, and run unified performance analysis via the OpenLesson Proof-of-Work API.
+Use this skill when an agent needs to create Verification Workspaces, issue private Think Aloud Protocol (TAP) links, and run unified performance analysis via the Uncertain Systems Proof-of-Work API.
 
 **Human-readable spec:** `/docs/proof-of-work-api`  
-**Base URL:** `https://openlesson.academy` (or your self-hosted origin)
+**Base URL:** `https://uncertain.systems` (or your self-hosted origin)
 
 ---
 
@@ -301,7 +301,7 @@ Generate a workspace-specific `skill.md` integration guide via `POST .../integra
   "integration_name": "acme-sales-copilot",
   "partner_description": "Guides reps through discovery calls and objection handling",
   "block_id": "optional-block-uuid",
-  "base_url": "https://openlesson.academy",
+  "base_url": "https://uncertain.systems",
   "include_sections": ["purpose", "auth", "endpoints", "proof_of_work_payload", "performance", "checklist"]
 }
 ```
@@ -512,7 +512,7 @@ Create a private Think Aloud Protocol (TAP) link for a block.
     "block_id": "block_id",
     "status": "pending",
     "requested_duration_seconds": 900,
-    "private_url": "https://openlesson.academy/tap/session/{token}"
+    "private_url": "https://uncertain.systems/tap/session/{token}"
   }
 }
 ```
@@ -580,7 +580,7 @@ Then create a member API key from the dashboard or `POST /api/v2/agent/keys` (se
 
 ## TAP session behavior
 
-- **Private link:** `/tap/session/{token}` — bearer URL; learner needs **no** OpenLesson login or API key.
+- **Private link:** `/tap/session/{token}` — bearer URL; learner needs **no** Uncertain Systems login or API key.
 - **Workspace UI:** `/workspace/{workspace_id}/tap` (authenticated web)
 - **Live APIs:** `POST /api/workspace-tap-score/chat`, `POST /api/workspace-tap-score/complete` (use `privateToken` in body).
 

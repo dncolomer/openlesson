@@ -6,7 +6,7 @@ export const PLATFORM_PITCH_DECK: SolutionSlideDeck = {
   slides: [
     {
       layout: "title",
-      kicker: "openLesson · Learning Verification",
+      kicker: "Uncertain Systems · Learning Verification",
       title: "Beyond benchmarks for AI. Beyond tests for humans.",
       subtitle:
         "Verify learning through proof of work, and cognitive analysis for people as well as AI agents performing knowledge work.",
@@ -199,7 +199,7 @@ export const PLATFORM_PITCH_DECK: SolutionSlideDeck = {
         "Pilot one high-stakes motion: onboarding, deploy gate, hiring, or escalation",
       ],
       footnote:
-        "openlesson.academy · Proof-of-Work API · Think Aloud Protocol · ILE · Agentic Learning Environment",
+        "uncertain.systems · Proof-of-Work API · Think Aloud Protocol · ILE · Agentic Learning Environment",
     },
   ],
 };

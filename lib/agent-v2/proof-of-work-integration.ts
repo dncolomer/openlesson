@@ -92,7 +92,7 @@ export function buildContinuousEvaluationPolicy(
 
   return {
     principle:
-      "OpenLesson verification is continuous. The proof-of-work spec and integration skill are living documents derived from workspace context and accumulated proof of work.",
+      "Uncertain Systems verification is continuous. The proof-of-work spec and integration skill are living documents derived from workspace context and accumulated proof of work.",
     more_evidence_improves:
       "The more tool usage, artifacts, and session proof of work you submit, the richer workspace context becomes and the better POST .../performance can learn, score, and surface gaps.",
     regeneration_required: true,

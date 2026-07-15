@@ -325,7 +325,7 @@ const ENDPOINT_SPECS: EndpointSpec[] = [
       { name: "integration_name", type: "string", required: true, description: "Partner integration slug or display name (e.g. acme-sales-copilot)." },
       { name: "partner_description", type: "string", description: "What the external agent does; Grok uses this to tailor examples." },
       { name: "block_id", type: "uuid", description: "Optional: focus the skill on one block." },
-      { name: "base_url", type: "string", description: "Origin for example URLs; default https://openlesson.academy." },
+      { name: "base_url", type: "string", description: "Origin for example URLs; default https://uncertain.systems." },
       {
         name: "include_sections",
         type: "string[]",
@@ -335,7 +335,7 @@ const ENDPOINT_SPECS: EndpointSpec[] = [
     requestExample: `{
   "integration_name": "acme-sales-copilot",
   "partner_description": "Guides reps through discovery calls and objection handling",
-  "base_url": "https://openlesson.academy",
+  "base_url": "https://uncertain.systems",
   "include_sections": ["purpose", "auth", "endpoints", "proof_of_work_payload", "performance", "checklist"]
 }`,
     responseBody: [
@@ -347,7 +347,7 @@ const ENDPOINT_SPECS: EndpointSpec[] = [
       { name: "file_ids", type: "string[]", description: "xAI file IDs attached during generation." },
     ],
     responseExample: `{
-  "skill_md": "---\\nname: acme-sales-copilot-openlesson-proof-of-work-performance\\ndescription: Acme Sales Copilot integration skill for OpenLesson proof-of-work upload and performance analysis.\\n---\\n\\n# Acme Sales Copilot — OpenLesson Proof-of-Work & Performance\\n\\n...",
+  "skill_md": "---\\nname: acme-sales-copilot-openlesson-proof-of-work-performance\\ndescription: Acme Sales Copilot integration skill for Uncertain Systems proof-of-work upload and performance analysis.\\n---\\n\\n# Acme Sales Copilot — Uncertain Systems Proof-of-Work & Performance\\n\\n...",
   "skill_name": "acme-sales-copilot-openlesson-proof-of-work-performance",
   "suggested_share_path": "/acme-sales-copilot-skill.md",
   "workspace_summary": {
@@ -609,7 +609,7 @@ const ENDPOINT_SPECS: EndpointSpec[] = [
     "requested_duration_seconds": 900,
     "focus_block_ids": ["88a43ad8-62f8-4252-a847-2cbc0b754a57"],
     "created_at": "2026-06-23T01:29:03.861663+00:00",
-    "private_url": "https://openlesson.academy/tap/session/E8-ouJ9lErgDEmteyKc4tJ39meJ91vzZFNUiuRauHvw"
+    "private_url": "https://uncertain.systems/tap/session/E8-ouJ9lErgDEmteyKc4tJ39meJ91vzZFNUiuRauHvw"
   }
 }`,
     notes: [
@@ -949,7 +949,7 @@ export default function AgenticV2DocsPage() {
       <Navbar />
       <main className="mx-auto max-w-5xl px-4 py-10 sm:px-6 sm:py-14">
         <header className={`${sectionClass} mb-8`}>
-          <p className={labelClass}>OpenLesson Proof-of-Work API</p>
+          <p className={labelClass}>Uncertain Systems Proof-of-Work API</p>
           <h1 className="mt-3 max-w-3xl text-3xl font-medium tracking-[-1.2px] text-white sm:text-4xl">
             Workspace API Reference
           </h1>

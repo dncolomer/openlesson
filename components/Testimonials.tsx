@@ -88,7 +88,7 @@ export const PLACEHOLDER_TESTIMONIALS: Testimonial[] = [
     context: "AWS Solutions Architect prep",
   },
   {
-    quote: "As a homeschool parent, I can't be an expert in everything. openLesson fills the gaps and shows me exactly where my kids need help.",
+    quote: "As a homeschool parent, I can't be an expert in everything. Uncertain Systems fills the gaps and shows me exactly where my kids need help.",
     name: "Jennifer",
     context: "Homeschool parent of 3",
   },

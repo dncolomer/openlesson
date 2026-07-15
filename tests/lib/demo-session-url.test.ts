@@ -17,7 +17,7 @@ describe("demo session urls", () => {
       value: { location: { origin: "http://localhost:3000" } },
     });
 
-    expect(normalizeDemoSessionUrl("https://openlesson.academy/tap/session/token-1")).toBe(
+    expect(normalizeDemoSessionUrl("https://uncertain.systems/tap/session/token-1")).toBe(
       "http://localhost:3000/tap/session/token-1"
     );
   });

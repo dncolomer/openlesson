@@ -82,9 +82,9 @@ export const MCP_PROOF_OF_WORK_PROTOCOL_VERSION = "2025-03-26";
 export const MCP_PROOF_OF_WORK_SERVER_NAME = "openlesson-proof-of-work-api";
 export const MCP_PROOF_OF_WORK_SERVER_VERSION = "1.3.0";
 
-export const MCP_PROOF_OF_WORK_SERVER_INSTRUCTIONS = `openLesson Proof-of-Work API MCP — full parity with Proof-of-Work API REST.
+export const MCP_PROOF_OF_WORK_SERVER_INSTRUCTIONS = `Uncertain Systems Proof-of-Work API MCP — full parity with Proof-of-Work API REST.
 
-## What openLesson is
+## What Uncertain Systems is
 ${OPENLESSON_SCOPE.mission}
 Pillars: ${OPENLESSON_SCOPE.pillars.join(" | ")}
 

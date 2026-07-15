@@ -32,7 +32,7 @@ export type SeoPlatformPageConfig = {
   closingBody: string;
 };
 
-const BASE_URL = "https://openlesson.academy";
+const BASE_URL = "https://uncertain.systems";
 const DEFAULT_BACKGROUND = "/aesthetics/Greco-futurism/HHnTrgVaQAAP-_3.jpeg";
 
 export const PLATFORM_PAGE: SeoPlatformPageConfig = {
@@ -41,7 +41,7 @@ export const PLATFORM_PAGE: SeoPlatformPageConfig = {
   eyebrow: "Knowledge Workspace",
   h1: "Verify and augment learning where knowledge work happens.",
   intro:
-    "openLesson is a knowledge workspace with software tools that verify learning through proof of work, proof of work, and cognitive analysis — then augment it with targeted practice. Humans and AI agents perform real work inside the workspace; openLesson scores whether they actually learned, and routes gaps into improvement loops.",
+    "Uncertain Systems is a knowledge workspace with software tools that verify learning through proof of work, proof of work, and cognitive analysis — then augment it with targeted practice. Humans and AI agents perform real work inside the workspace; Uncertain Systems scores whether they actually learned, and routes gaps into improvement loops.",
   metaTitle: "Knowledge Workspace: Learning Efficiency for Humans & Agents",
   metaDescription:
     "A knowledge workspace that measures learning efficiency from proof of work and augments gaps with practice. Proof-of-Work API, Think Aloud Protocol, ILE, and ALE for humans and agents.",
@@ -135,7 +135,7 @@ export const PLATFORM_PAGE: SeoPlatformPageConfig = {
         "Documents, screen recordings, video, EEG traces, call transcripts, tool traces, think-aloud transcripts, and any artifact produced during knowledge work. Enrich programmatically via the Proof-of-Work API or manual upload.",
     },
     {
-      question: "Who is openLesson for?",
+      question: "Who is Uncertain Systems for?",
       answer:
         "Teams where humans and AI agents perform knowledge work and need to verify learning with proof of work — then augment it when gaps appear. Builders embedding verification and practice tools via API.",
     },
@@ -157,7 +157,7 @@ export function platformMetadata(page: SeoPlatformPageConfig): Metadata {
       title: page.metaTitle,
       description: page.metaDescription,
       url,
-      siteName: "openLesson",
+      siteName: "Uncertain Systems",
       type: "website",
     },
     twitter: {

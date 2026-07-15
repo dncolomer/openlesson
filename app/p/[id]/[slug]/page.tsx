@@ -60,21 +60,21 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   
   if (!result) {
     return {
-      title: "Plan Not Found - openLesson",
+      title: "Plan Not Found - Uncertain Systems",
     };
   }
 
   const { plan } = result;
   const title = plan.title || plan.root_topic;
-  const description = plan.description || `A workspace on openLesson`;
+  const description = plan.description || `A workspace on Uncertain Systems`;
 
   const ogImage = await getRandomWorkspaceCoverImage() || `/p/${id}/${slug}/opengraph-image`;
 
   return {
-    title: `${title} - openLesson`,
+    title: `${title} - Uncertain Systems`,
     description,
     openGraph: {
-      title: `${title} - openLesson`,
+      title: `${title} - Uncertain Systems`,
       description,
       type: "website",
       images: [
@@ -88,7 +88,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     },
     twitter: {
       card: "summary_large_image",
-      title: `${title} - openLesson`,
+      title: `${title} - Uncertain Systems`,
       description,
       images: [ogImage],
     },

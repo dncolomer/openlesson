@@ -1,5 +1,5 @@
 // ============================================
-// OpenLesson Agentic API v2 - Key Management
+// Uncertain Systems Agentic API v2 - Key Management
 // GET  /api/v2/agent/keys   → List keys
 // POST /api/v2/agent/keys   → Create key
 // ============================================
@@ -103,7 +103,7 @@ export async function POST(req: NextRequest) {
         403,
         "api_plan_required",
         "The Proof-of-Work API requires Pro / Teams or API Metered.",
-        { renew_url: "https://openlesson.academy/pricing" }
+        { renew_url: "https://uncertain.systems/pricing" }
       );
     }
 

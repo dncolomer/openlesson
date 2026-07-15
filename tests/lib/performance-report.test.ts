@@ -33,7 +33,7 @@ describe("buildPerformanceReportInstructions", () => {
     expect(instructions).toContain("gap_analysis.next_steps");
     expect(instructions).toContain("spider/radar");
     expect(instructions).toContain(PERFORMANCE_REMEDIATION_GUARDRAILS);
-    expect(instructions).toContain("NEVER mention OpenLesson platform mechanics");
+    expect(instructions).toContain("NEVER mention Uncertain Systems platform mechanics");
   });
 
   it("embeds authoritative workspace conversion goal when provided", () => {
@@ -55,7 +55,7 @@ describe("buildPerformanceReportInstructions", () => {
 
 describe("buildPerformanceReportContract", () => {
   it("describes spider visualization and gap list", () => {
-    const contract = buildPerformanceReportContract("https://openlesson.academy");
+    const contract = buildPerformanceReportContract("https://uncertain.systems");
     expect(contract.endpoint_pattern).toContain("/performance");
     expect(contract.marker_scores.visualization).toBe("spider_radar");
     expect(contract.gap_analysis.gaps_required).toBe(true);
@@ -106,7 +106,7 @@ describe("remediation guardrails", () => {
             title: "Missing scout coverage",
             proof_of_work: "No scout events in trace.",
             severity: "medium",
-            suggested_repair: "Complete the scouting block in OpenLesson",
+            suggested_repair: "Complete the scouting block in Uncertain Systems",
           },
         ],
       },

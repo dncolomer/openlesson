@@ -1,4 +1,4 @@
-# OpenLesson Proof-of-Work API
+# Uncertain Systems Proof-of-Work API
 
 Base path: `/api/v2/agent`
 
@@ -122,7 +122,7 @@ Generate a custom `skill.md` via `POST .../integration-skill` tailored to a work
 {
   "integration_name": "acme-sales-copilot",
   "partner_description": "Guides reps through discovery calls",
-  "base_url": "https://openlesson.academy",
+  "base_url": "https://uncertain.systems",
   "include_sections": ["purpose", "auth", "endpoints", "proof_of_work_payload", "performance", "checklist"]
 }
 ```
@@ -227,7 +227,7 @@ Chat responses return markdown in `response`.
 
 Only `15` and `30` minute sessions are supported. Any other value defaults to `15`.
 
-The response includes a private URL for the TAP session UI. Think Aloud Protocol (TAP) captures live human cognition. The private URL is a bearer link: opening `/tap/session/{token}` authenticates that TAP session directly without requiring an OpenLesson login or an Proof-of-Work API key.
+The response includes a private URL for the TAP session UI. Think Aloud Protocol (TAP) captures live human cognition. The private URL is a bearer link: opening `/tap/session/{token}` authenticates that TAP session directly without requiring an Uncertain Systems login or an Proof-of-Work API key.
 
 ## Organizations And Guests
 

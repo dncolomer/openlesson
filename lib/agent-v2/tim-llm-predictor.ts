@@ -132,7 +132,7 @@ function buildTimPrompt(context: InterruptionContext): Message[] {
   };
 
   return [
-    systemMessage(`You are the Trace Interruption Model (TIM) for OpenLesson proof-of-work APIs.
+    systemMessage(`You are the Trace Interruption Model (TIM) for Uncertain Systems proof-of-work APIs.
 
 Your job: decide whether the consumer should schedule a learner intervention after this API response, and if so, what intervention fits semantically.
 

@@ -24,7 +24,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
   return {
     title: question ? `Quiz ${question.id}: ${question.topic}` : "Helios Quiz",
-    description: question?.question ?? "A quick openLesson quiz.",
+    description: question?.question ?? "A quick Uncertain Systems quiz.",
   };
 }
 

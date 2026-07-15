@@ -8,7 +8,7 @@ import {
   type SeoProductPageConfig,
 } from "@/lib/seo/product-page";
 
-const BASE_URL = "https://openlesson.academy";
+const BASE_URL = "https://uncertain.systems";
 
 type ProductLandingPageProps = {
   page: SeoProductPageConfig;
@@ -31,7 +31,7 @@ export function ProductLandingPage({ page }: ProductLandingPageProps) {
     name: page.metaTitle,
     description: page.metaDescription,
     url: `${BASE_URL}${page.path}`,
-    isPartOf: { "@type": "WebSite", name: "openLesson", url: BASE_URL },
+    isPartOf: { "@type": "WebSite", name: "Uncertain Systems", url: BASE_URL },
   };
 
   const breadcrumbSchema = {
@@ -148,7 +148,7 @@ export function ProductLandingPage({ page }: ProductLandingPageProps) {
         <section className="mb-14">
           <h2 className="text-xl font-medium tracking-[-0.5px] text-white sm:text-2xl">Use cases</h2>
           <p className="mt-3 text-sm leading-relaxed text-zinc-500">
-            Where teams deploy {page.eyebrow} inside the openLesson knowledge workspace.
+            Where teams deploy {page.eyebrow} inside the Uncertain Systems knowledge workspace.
           </p>
           <div className="mt-8 grid gap-4 sm:grid-cols-2">
             {page.useCases.map((useCase) => (

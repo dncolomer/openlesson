@@ -1,7 +1,7 @@
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Pricing - Proof-of-Work Volume | openLesson",
+  title: "Pricing - Proof-of-Work Volume | Uncertain Systems",
   description:
     "Pay for proof-of-work submissions across every product. Pricing scales with measurement volume and learning world model building.",
   keywords: [
@@ -12,22 +12,22 @@ export const metadata: Metadata = {
     "open source AI tutor",
   ],
   openGraph: {
-    title: "Pricing - Proof-of-Work Volume | openLesson",
+    title: "Pricing - Proof-of-Work Volume | Uncertain Systems",
     description:
       "Meter proof-of-work artifacts across TAP, ILE, and the API. Plans scale with measurement and learning world model effort.",
-    url: "https://openlesson.academy/pricing",
-    siteName: "openLesson",
+    url: "https://uncertain.systems/pricing",
+    siteName: "Uncertain Systems",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Pricing | openLesson",
+    title: "Pricing | Uncertain Systems",
     description:
       "Proof-of-work volume pricing for humans and agents.",
     creator: "@uncertainsys",
   },
   alternates: {
-    canonical: "https://openlesson.academy/pricing",
+    canonical: "https://uncertain.systems/pricing",
   },
 };
 

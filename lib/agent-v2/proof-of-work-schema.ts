@@ -355,13 +355,13 @@ export function buildProofOfWorkSchemaInstructions(
 
   return `${scope}
 
-You are an OpenLesson proof-of-work architect. Produce a **formal proof-of-work specification** that tells integrators exactly how to submit tool usage and related artifacts for learning verification.
+You are an Uncertain Systems proof-of-work architect. Produce a **formal proof-of-work specification** that tells integrators exactly how to submit tool usage and related artifacts for learning verification.
 
-openLesson scope: verify learning (overall_score, marker_scores), measure conversion toward a workspace conversion_goal (conversion_score), and collect proof-of-work via proof-of-work uploads. Verification is **continuous** — specs and skills regenerate as proof of work grows.
+Uncertain Systems scope: verify learning (overall_score, marker_scores), measure conversion toward a workspace conversion_goal (conversion_score), and collect proof-of-work via proof-of-work uploads. Verification is **continuous** — specs and skills regenerate as proof of work grows.
 
 Integrators may use **REST** (Bearer API key: POST .../proof-of-work, POST .../performance) or **MCP** (JSON-RPC tools upload_proof_of_work, analyze_performance, generate_proof_of_work_schema) with identical semantics. Document REST paths in contracts; the platform also attaches continuous_evaluation_mcp with tool names after generation — your continuous_evaluation_summary must mention both surfaces.
 
-Use the full workspace context: attached JSON summary, block titles/descriptions, existing proof of work patterns, plan files, and Think Aloud Protocol (TAP) session signals when present. TAP and ILE may inform scoring — but performance report remediation (gaps, next_steps, suggestions) must stay product-independent: never recommend TAP sessions, block completion, ILE, or other OpenLesson platform mechanics.
+Use the full workspace context: attached JSON summary, block titles/descriptions, existing proof of work patterns, plan files, and Think Aloud Protocol (TAP) session signals when present. TAP and ILE may inform scoring — but performance report remediation (gaps, next_steps, suggestions) must stay product-independent: never recommend TAP sessions, block completion, ILE, or other Uncertain Systems platform mechanics.
 
 ${formatWorkspaceContextSummary(workspacePayload)}
 
@@ -393,7 +393,7 @@ Output rules:
    - marker_scores: 4-8 competency axes (id, label, score, rationale, optional block_id) for spider/radar visualization — derive labels from workspace blocks and eval definition
    - gap_analysis: required gaps array with title, proof_of_work, severity, suggested_repair — remediation must use product/workflow language only (never TAP, block completion, or ILE)
    - gap_analysis.next_steps: directions (domain goals) and events (granular product/tool actions) — same remediation rules
-   - example_report: realistic example with overall_score, conversion_score, conversion_goal, marker_scores, and at least one gap when proof of work would support it; example remediation must be OpenLesson-independent
+   - example_report: realistic example with overall_score, conversion_score, conversion_goal, marker_scores, and at least one gap when proof of work would support it; example remediation must be Uncertain Systems-independent
 7. "collection_guidance" explains cadence, checkpoint timing, block-scoped vs workspace-global uploads, and that **more proof of work submitted improves learning verification and gap analysis**. Encourage ongoing uploads, not one-time dumps.
 8. "continuous_evaluation_summary" must state clearly that:
    - This proof-of-work spec is a snapshot derived from current workspace context and proof-of-work history
@@ -415,5 +415,5 @@ Return only JSON matching the output schema.`;
 }
 
 export function buildProofOfWorkSchemaPrompt(workspaceTitle: string): string {
-  return `Generate the formal proof-of-work specification for evaluating "${workspaceTitle}" in OpenLesson, using the full workspace context.`;
+  return `Generate the formal proof-of-work specification for evaluating "${workspaceTitle}" in Uncertain Systems, using the full workspace context.`;
 }

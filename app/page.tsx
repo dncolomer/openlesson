@@ -47,7 +47,7 @@ export default function B2BLandingPage() {
           </h1>
           <div className="mt-7 max-w-5xl space-y-4 text-base leading-relaxed text-zinc-400 sm:text-lg">
             <p>
-              openLesson is built on three verticals for human and agentic learning:{" "}
+              Uncertain Systems is built on three verticals for human and agentic learning:{" "}
               <span className="text-zinc-200">verification</span>,{" "}
               <span className="text-zinc-200">optimization</span>, and{" "}
               <span className="text-zinc-200">augmentation</span>.
@@ -83,7 +83,7 @@ export default function B2BLandingPage() {
         />
         <div className="mt-6 border border-zinc-800 bg-zinc-950/70 p-6 text-lg leading-relaxed text-zinc-400 backdrop-blur-sm sm:p-8">
           <p>
-            openLesson builds a learning world model from real work — skills, scenarios, proof of work, and
+            Uncertain Systems builds a learning world model from real work — skills, scenarios, proof of work, and
             where reasoning breaks — instead of stitching together linear funnel analytics. The Trace
             Interruption Model uses that live picture to drive verification, optimization, and augmentation
             in context.

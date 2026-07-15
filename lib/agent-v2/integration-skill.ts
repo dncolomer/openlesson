@@ -56,7 +56,7 @@ export function parseIntegrationSkillRequest(body: Record<string, unknown>): Int
   const baseUrl =
     typeof body.base_url === "string" && body.base_url.trim()
       ? body.base_url.trim().replace(/\/$/, "")
-      : "https://openlesson.academy";
+      : "https://uncertain.systems";
 
   let include_sections: string[] | undefined;
   if (Array.isArray(body.include_sections)) {
@@ -134,7 +134,7 @@ export function buildIntegrationSkillInstructions(
   const skillName = deriveSkillName(request.integration_name);
   const sharePath = deriveSuggestedSharePath(request.integration_name);
   const scope = blockId ? "Focus the skill on one workspace block." : "Cover the full workspace.";
-  const baseUrl = request.base_url || "https://openlesson.academy";
+  const baseUrl = request.base_url || "https://uncertain.systems";
   const proofOfWorkSchemaPath = buildProofOfWorkSchemaApiPath(workspace.id, baseUrl);
   const evidenceUploadPath = buildProofOfWorkUploadApiPath(workspace.id, baseUrl);
   const integrationSkillPath = buildIntegrationSkillApiPath(workspace.id, baseUrl);
@@ -154,7 +154,7 @@ export function buildIntegrationSkillInstructions(
     ? `\n\nWorkspace proof-of-work specification (use as reference; skill.md must still point to the dynamic API):\n${formatProofOfWorkSpecForSkillPrompt(proofOfWorkSpec)}`
     : "";
 
-  return `Generate a custom integration skill.md document for "${request.integration_name}" integrating with OpenLesson Proof-of-Work API.
+  return `Generate a custom integration skill.md document for "${request.integration_name}" integrating with Uncertain Systems Proof-of-Work API.
 
 ${scope}
 
@@ -163,7 +163,7 @@ This skill.md must treat the proof of work specification as a formal contract an
 YAML frontmatter (required):
 ---
 name: ${skillName}
-description: ${request.integration_name} integration skill for OpenLesson workspace proof of work upload and performance analysis.
+description: ${request.integration_name} integration skill for Uncertain Systems workspace proof of work upload and performance analysis.
 ---
 
 Workspace:
@@ -197,7 +197,7 @@ Required content:
 1. Purpose — what this partner agent verifies and how proof of work + performance fit the workflow.
 2. Design principles — checkpoint-agnostic timing, block-scoped vs workspace-global analysis, tool usage as core signal, always fetch the live proof-of-work spec before uploading, **more proof of work improves evaluation quality**.
 3. **Continuous evaluation and regeneration (required section)** — this is a must-have operating model, not optional maintenance. Include:
-   - Principle: verification is continuous; the more data and proof of work submitted, the better OpenLesson can learn and evaluate
+   - Principle: verification is continuous; the more data and proof of work submitted, the better Uncertain Systems can learn and evaluate
    - This skill.md is a snapshot; partner agents must **regenerate** it via POST ${integrationSkillPath} as proof of work accumulates
    - Re-fetch the proof of work spec via POST ${proofOfWorkSchemaPath} on a recurring basis (e.g. after every 5-10 new uploads, when blocks change, or when scores feel stale)
    - Re-request performance via POST ${performancePath} after meaningful proof-of-work batches
@@ -227,7 +227,7 @@ Required content:
 9. **Performance (required section)** — document POST ${performancePath} report mode. Every report MUST include:
    - overall_score (0-100 integer readiness score)
    - marker_scores (4-8 competency axes for spider/radar visualization: id, label, score, rationale, optional block_id)
-   - gap_analysis with gaps[] (title, proof_of_work, severity low|medium|high, suggested_repair) and next_steps { directions[], events[] } — remediation must be product/workflow-specific; never TAP, block completion, ILE, or OpenLesson platform tasks
+   - gap_analysis with gaps[] (title, proof_of_work, severity low|medium|high, suggested_repair) and next_steps { directions[], events[] } — remediation must be product/workflow-specific; never TAP, block completion, ILE, or Uncertain Systems platform tasks
    - summary, strengths, growth_areas, suggestions, confidence
    - Reference performance_report_contract from the proof of work spec API for the machine-readable contract and example_report
    - Include a full JSON example response with overall_score, marker_scores, and at least one gap
@@ -240,5 +240,5 @@ Return ONLY the markdown document. No JSON wrapper. No code fences around the en
 }
 
 export function buildIntegrationSkillPrompt(workspaceTitle: string, integrationName: string): string {
-  return `Write a complete skill.md integration guide for "${integrationName}" using OpenLesson workspace "${workspaceTitle}". The guide must reference dynamic self-updating APIs for proof-of-work spec and skill regeneration, and treat continuous evaluation (more proof of work = better learning) as a must-have operating model.`;
+  return `Write a complete skill.md integration guide for "${integrationName}" using Uncertain Systems workspace "${workspaceTitle}". The guide must reference dynamic self-updating APIs for proof-of-work spec and skill regeneration, and treat continuous evaluation (more proof of work = better learning) as a must-have operating model.`;
 }

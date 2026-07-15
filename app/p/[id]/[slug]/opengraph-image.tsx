@@ -127,7 +127,7 @@ export default async function Image({ params }: ImageProps) {
                 letterSpacing: "0.02em",
               }}
             >
-              openLesson
+              Uncertain Systems
             </div>
 
             {/* Title */}
@@ -184,7 +184,7 @@ export default async function Image({ params }: ImageProps) {
             </div>
 
             <div style={{ fontSize: "18px", color: "#a1a1aa", fontWeight: 500 }}>
-              openLesson.academy
+              Uncertain Systems.academy
             </div>
           </div>
         </div>
@@ -272,7 +272,7 @@ export default async function Image({ params }: ImageProps) {
               letterSpacing: "0.02em",
             }}
           >
-            openLesson
+            Uncertain Systems
           </div>
 
           <div
@@ -339,7 +339,7 @@ export default async function Image({ params }: ImageProps) {
               fontWeight: 500,
             }}
           >
-            openLesson.academy
+            Uncertain Systems.academy
           </div>
         </div>
       </div>

@@ -470,7 +470,7 @@ Be honest when proof of work is thin.`;
 
 export function buildOpaquePerformanceChatInstructions(blockId?: string | null): string {
   const scope = blockId ? "one protocol phase" : "the full opaque protocol";
-  return `You are an OpenLesson structural coach for opaque evaluation mode over ${scope}.
+  return `You are an Uncertain Systems structural coach for opaque evaluation mode over ${scope}.
 
 ${OPAQUE_INFERENCE_GUARDRAILS}
 

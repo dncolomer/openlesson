@@ -13,7 +13,7 @@ export async function POST(request: NextRequest) {
   const { rootQuestion } = await request.json();
   if (!rootQuestion || typeof rootQuestion !== "string") return NextResponse.json({ error: "Missing root question" }, { status: 400 });
 
-  const result = await callXaiJSON<PlanData>([userMessage(`Generate a concise OpenLesson learning plan from this Rabbit Hole question: "${rootQuestion}".
+  const result = await callXaiJSON<PlanData>([userMessage(`Generate a concise Uncertain Systems learning plan from this Rabbit Hole question: "${rootQuestion}".
 
 Return JSON with this shape:
 {

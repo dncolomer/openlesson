@@ -1,18 +1,18 @@
-# openLesson
+# Uncertain Systems
 
 **The AI Tutor That Listens to You Think**
 
-openLesson is an open-source AI tutoring platform built on the Socratic method. Instead of giving answers, it listens to students reason aloud, detects gaps in their thinking in real-time, and asks targeted questions to deepen understanding.
+Uncertain Systems is an open-source AI tutoring platform built on the Socratic method. Instead of giving answers, it listens to students reason aloud, detects gaps in their thinking in real-time, and asks targeted questions to deepen understanding.
 
-Live at [openlesson.academy](https://openlesson.academy)
+Live at [uncertain.systems](https://uncertain.systems)
 
 ---
 
 ## About
 
-openLesson (codename **Socrates**) is built by [Uncertain Systems](https://x.com/uncertainsys) — a project focused on building the open stack for educational technology.
+Uncertain Systems (codename **Socrates**) is built by [Uncertain Systems](https://x.com/uncertainsys) — a project focused on building the open stack for educational technology.
 
-The core thesis is simple: when you speak your reasoning out loud, gaps become audible — hesitations, contradictions, circular thinking, skipped steps, unexamined assumptions. openLesson uses LLMs to detect those gaps in real-time and responds not with answers, but with the right question at the right time.
+The core thesis is simple: when you speak your reasoning out loud, gaps become audible — hesitations, contradictions, circular thinking, skipped steps, unexamined assumptions. Uncertain Systems uses LLMs to detect those gaps in real-time and responds not with answers, but with the right question at the right time.
 
 ## How It Works
 
@@ -31,7 +31,7 @@ The core thesis is simple: when you speak your reasoning out loud, gaps become a
 - **Session reports** — AI-generated post-session reports covering gaps, progress, strengths, and next steps
 - **Muse EEG integration** — Real-time brainwave monitoring via Muse headband over Web Bluetooth
 - **Face tracking** — MediaPipe-based engagement and attention signals
-- **Agent API** — Full REST API for AI agents to use openLesson as a skill programmatically
+- **Agent API** — Full REST API for AI agents to use Uncertain Systems as a skill programmatically
 - **YouTube-based plans** — Generate structured learning plans from YouTube video URLs
 
 ## Tech Stack
@@ -138,7 +138,7 @@ The app will be available at `http://localhost:3000`.
 
 ## Agent API (v2)
 
-openLesson exposes a scoped REST API and MCP transport for AI agents. Generate an API key from the dashboard (`/dashboard`) and use it to:
+Uncertain Systems exposes a scoped REST API and MCP transport for AI agents. Generate an API key from the dashboard (`/dashboard`) and use it to:
 
 - Create and manage verification workspaces and blocks
 - Issue Think Aloud Protocol (TAP) links, poll completion via `GET .../tap-links`, and score via unified performance analysis
@@ -149,9 +149,9 @@ See [`public/skill.md`](public/skill.md) and [`docs/PROOF_OF_WORK_API.md`](docs/
 
 ## Uncertain Systems
 
-openLesson is developed by **Uncertain Systems**, founded by [Daniel Colomer](https://x.com/uncertainsys). The mission is to build open-source infrastructure for education technology — tools that make deep learning accessible to everyone through AI-guided reasoning.
+Uncertain Systems is developed by **Uncertain Systems**, founded by [Daniel Colomer](https://x.com/uncertainsys). The mission is to build open-source infrastructure for education technology — tools that make deep learning accessible to everyone through AI-guided reasoning.
 
-- Website: [openlesson.academy](https://openlesson.academy)
+- Website: [uncertain.systems](https://uncertain.systems)
 - Twitter/X: [@uncertainsys](https://x.com/uncertainsys)
 - Email: daniel@uncertain.systems
 

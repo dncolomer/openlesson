@@ -8,7 +8,7 @@ import {
 
 describe("integration-discovery", () => {
   it("builds dual REST and MCP surfaces", () => {
-    const surfaces = buildIntegrationSurfaces("https://openlesson.academy");
+    const surfaces = buildIntegrationSurfaces("https://uncertain.systems");
     expect(surfaces).toHaveLength(2);
     expect(surfaces.map((s) => s.transport)).toEqual(["rest", "mcp"]);
     expect(surfaces[0]?.entrypoint).toContain("/api/v2/agent");
@@ -17,7 +17,7 @@ describe("integration-discovery", () => {
   });
 
   it("maps MCP tools to REST equivalents in continuous_evaluation_mcp", () => {
-    const policy = buildContinuousEvaluationMcpPolicy("ws-1", "https://openlesson.academy", {
+    const policy = buildContinuousEvaluationMcpPolicy("ws-1", "https://uncertain.systems", {
       proof_of_work_artifacts: 0,
       blocks: 3,
     });
@@ -48,11 +48,11 @@ describe("integration-discovery", () => {
   });
 
   it("serves MCP resource markdown for scope and proof-of-work loop", () => {
-    const scope = buildMcpResourceContent("openlesson://integration-scope", "https://openlesson.academy");
-    expect(scope).toContain("OpenLesson");
+    const scope = buildMcpResourceContent("openlesson://integration-scope", "https://uncertain.systems");
+    expect(scope).toContain("Uncertain Systems");
     expect(scope).toContain("REST");
 
-    const loop = buildMcpResourceContent("openlesson://proof-of-work-loop", "https://openlesson.academy");
+    const loop = buildMcpResourceContent("openlesson://proof-of-work-loop", "https://uncertain.systems");
     expect(loop).toContain("get_learning_progress");
     expect(loop).toContain("continuous_evaluation_mcp");
   });

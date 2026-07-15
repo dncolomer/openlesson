@@ -10,27 +10,27 @@ import crypto from "crypto";
 
 describe("mcp oauth metadata", () => {
   it("exposes protected resource metadata for the MCP endpoint", () => {
-    const metadata = buildProtectedResourceMetadata("https://openlesson.academy");
-    expect(metadata.resource).toBe("https://openlesson.academy/api/mcp");
-    expect(metadata.authorization_servers).toEqual(["https://openlesson.academy"]);
+    const metadata = buildProtectedResourceMetadata("https://uncertain.systems");
+    expect(metadata.resource).toBe("https://uncertain.systems/api/mcp");
+    expect(metadata.authorization_servers).toEqual(["https://uncertain.systems"]);
     expect(metadata.scopes_supported).toContain("workspaces:read");
   });
 
   it("exposes authorization server metadata with OAuth endpoints", () => {
-    const metadata = buildAuthorizationServerMetadata("https://openlesson.academy");
-    expect(metadata.issuer).toBe("https://openlesson.academy");
-    expect(metadata.authorization_endpoint).toBe("https://openlesson.academy/api/oauth/authorize");
-    expect(metadata.token_endpoint).toBe("https://openlesson.academy/api/oauth/token");
-    expect(metadata.registration_endpoint).toBe("https://openlesson.academy/api/oauth/register");
+    const metadata = buildAuthorizationServerMetadata("https://uncertain.systems");
+    expect(metadata.issuer).toBe("https://uncertain.systems");
+    expect(metadata.authorization_endpoint).toBe("https://uncertain.systems/api/oauth/authorize");
+    expect(metadata.token_endpoint).toBe("https://uncertain.systems/api/oauth/token");
+    expect(metadata.registration_endpoint).toBe("https://uncertain.systems/api/oauth/register");
     expect(metadata.code_challenge_methods_supported).toEqual(["S256"]);
     expect(metadata.client_id_metadata_document_supported).toBe(true);
   });
 
   it("builds dashboard discovery URLs", () => {
-    const discovery = buildMcpOAuthDiscovery("https://openlesson.academy");
-    expect(discovery.resource).toBe("https://openlesson.academy/api/mcp");
+    const discovery = buildMcpOAuthDiscovery("https://uncertain.systems");
+    expect(discovery.resource).toBe("https://uncertain.systems/api/mcp");
     expect(discovery.protected_resource_metadata).toBe(
-      "https://openlesson.academy/.well-known/oauth-protected-resource/api/mcp"
+      "https://uncertain.systems/.well-known/oauth-protected-resource/api/mcp"
     );
   });
 });

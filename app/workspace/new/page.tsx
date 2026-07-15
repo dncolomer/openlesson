@@ -86,7 +86,7 @@ export default function NewWorkspacePage() {
       </div>
 
       <header className={`relative z-10 flex w-full items-center justify-between px-6 py-5 transition-opacity duration-700 ${busy ? "pointer-events-none opacity-0" : "opacity-100"}`}>
-        <Link href="/" className="text-base font-semibold tracking-tight text-white transition hover:text-zinc-300">openLesson</Link>
+        <Link href="/" className="text-base font-semibold tracking-tight text-white transition hover:text-zinc-300">Uncertain Systems</Link>
         <Link href="/login" className="rounded-sm border border-zinc-800 bg-zinc-950/70 px-4 py-2 text-sm text-zinc-400 backdrop-blur-md transition hover:border-zinc-700 hover:text-white">Login</Link>
       </header>
 

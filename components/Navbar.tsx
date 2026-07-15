@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
+import { BrandLogo } from "@/components/BrandLogo";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { useI18n } from "@/lib/i18n";
 
@@ -68,8 +69,11 @@ export function Navbar({ breadcrumbs = [], showNav = true }: NavbarProps) {
     <header className="border-b border-neutral-800/60 px-4 sm:px-6 py-4 backdrop-blur-sm bg-[#0a0a0a]/85 sticky top-0 z-20">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Link href="/" className="text-base sm:text-lg font-semibold text-white tracking-tight hover:text-neutral-300 transition-colors">
-            {t('nav.openLesson')}
+          <Link href="/" className="transition hover:opacity-90">
+            <BrandLogo
+              name={t("nav.openLesson")}
+              nameClassName="text-base sm:text-lg font-semibold text-white tracking-tight"
+            />
           </Link>
           
           {breadcrumbs.length > 0 && (

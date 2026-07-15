@@ -1,6 +1,6 @@
 import { ImageResponse } from "next/og";
 
-export const alt = "openLesson — learning efficiency for humans and agents";
+export const alt = "Uncertain Systems — learning efficiency for humans and agents";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -41,7 +41,7 @@ export default function Image() {
           }}
         />
         <div style={{ fontSize: 34, color: "#34d399", fontWeight: 700, letterSpacing: "0.04em" }}>
-          openLesson
+          Uncertain Systems
         </div>
         <div
           style={{
@@ -86,7 +86,7 @@ export default function Image() {
           >
             LEARNING EFFICIENCY • HUMANS & AGENTS
           </div>
-          <div style={{ fontSize: 22, color: "#71717a", fontWeight: 600 }}>openlesson.academy</div>
+          <div style={{ fontSize: 22, color: "#71717a", fontWeight: 600 }}>uncertain.systems</div>
         </div>
       </div>
     ),

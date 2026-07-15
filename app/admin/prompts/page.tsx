@@ -30,7 +30,7 @@ export default function AdminPromptsPage() {
   return (
     <div>
       <p className="mb-6 max-w-3xl text-sm text-neutral-400">
-        Read-only browser for every LLM prompt in openLesson — registry defaults, inline route
+        Read-only browser for every LLM prompt in Uncertain Systems — registry defaults, inline route
         prompts, and shared builders. Regenerate with{" "}
         <code className="text-neutral-300">npm run generate:prompt-inventory</code>.
       </p>

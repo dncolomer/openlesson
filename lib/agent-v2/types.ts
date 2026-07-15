@@ -1,5 +1,5 @@
 // ============================================
-// OpenLesson Agentic API v2 - Shared Types
+// Uncertain Systems Agentic API v2 - Shared Types
 // ============================================
 
 // --- API Key Types ---

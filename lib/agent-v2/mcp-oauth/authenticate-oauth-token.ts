@@ -54,7 +54,7 @@ export async function authenticateOAuthAccessToken(
       403,
       "teams_required",
       "Proof-of-Work API organization and guest features require the Teams tier.",
-      { renew_url: "https://openlesson.academy/pricing" }
+      { renew_url: "https://uncertain.systems/pricing" }
     );
   }
 

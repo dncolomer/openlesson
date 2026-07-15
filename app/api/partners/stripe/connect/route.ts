@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import Stripe from "stripe";
+import { getAppOrigin } from "@/lib/app-url";
 import { createClient } from "@/lib/supabase/server";
 import { getAdminClient } from "@/lib/partners";
 
@@ -67,7 +68,7 @@ export async function POST(request: Request) {
     }
 
     // Create account link for onboarding
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
+    const baseUrl = getAppOrigin(request);
     const accountLink = await stripe.accountLinks.create({
       account: accountId,
       refresh_url: `${baseUrl}/dashboard/partner?stripe_refresh=1`,

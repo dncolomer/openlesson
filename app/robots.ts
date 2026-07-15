@@ -19,6 +19,6 @@ export default function robots(): MetadataRoute.Robots {
         ],
       },
     ],
-    sitemap: "https://openlesson.academy/sitemap.xml",
+    sitemap: "https://uncertain.systems/sitemap.xml",
   };
 }

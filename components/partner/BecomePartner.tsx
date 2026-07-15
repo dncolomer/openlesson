@@ -139,7 +139,7 @@ export function BecomePartner({ onClose }: BecomePartnerProps) {
             <Crown className="w-5 h-5 text-amber-400" />
           </div>
           <div>
-            <h3 className="text-lg font-semibold text-white">{t('partner.becomeOpenLessonPartner')}</h3>
+            <h3 className="text-lg font-semibold text-white">{t('partner.becomeUncertainSystemsPartner')}</h3>
             <p className="text-sm text-neutral-400">{t('partner.earnRevenue')}</p>
           </div>
         </div>

@@ -20,7 +20,7 @@ describe("mcp-jsonrpc-handler", () => {
       { jsonrpc: "2.0", id: 1, method: "initialize", params: {} },
       auth,
       {},
-      "https://openlesson.academy"
+      "https://uncertain.systems"
     );
 
     expect(response?.result).toMatchObject({
@@ -34,7 +34,7 @@ describe("mcp-jsonrpc-handler", () => {
       { jsonrpc: "2.0", id: 2, method: "tools/list", params: {} },
       auth,
       {},
-      "https://openlesson.academy"
+      "https://uncertain.systems"
     );
 
     const tools = (response?.result as { tools?: { name: string }[] })?.tools ?? [];
@@ -43,10 +43,10 @@ describe("mcp-jsonrpc-handler", () => {
   });
 
   it("emits absolute endpoint URLs for streamable HTTP discovery", async () => {
-    const response = mcpEndpointDiscoveryResponse("https://openlesson.academy/api/mcp");
+    const response = mcpEndpointDiscoveryResponse("https://uncertain.systems/api/mcp");
     expect(response.headers.get("Content-Type")).toContain("text/event-stream");
     const body = await response.text();
     expect(body).toContain("event: endpoint");
-    expect(body).toContain("data: https://openlesson.academy/api/mcp");
+    expect(body).toContain("data: https://uncertain.systems/api/mcp");
   });
 });

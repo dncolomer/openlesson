@@ -1,5 +1,5 @@
 // ============================================
-// OpenLesson Agentic API v2 - Authentication
+// Uncertain Systems Agentic API v2 - Authentication
 // ============================================
 
 import { NextRequest, NextResponse } from "next/server";
@@ -111,7 +111,7 @@ export async function authenticateApiKey(
       403,
       "api_plan_required",
       "Proof-of-Work API organization and guest features require the Teams tier.",
-      { renew_url: "https://openlesson.academy/pricing" }
+      { renew_url: "https://uncertain.systems/pricing" }
     );
   }
 

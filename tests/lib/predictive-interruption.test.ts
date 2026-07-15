@@ -216,7 +216,7 @@ describe("predictive-interruption", () => {
         continuous_evaluation_summary: "Regenerate as proof of work grows.",
       },
       "ws-1",
-      "https://openlesson.academy",
+      "https://uncertain.systems",
       null,
       { proof_of_work_artifacts: 0, blocks: 3 },
     );

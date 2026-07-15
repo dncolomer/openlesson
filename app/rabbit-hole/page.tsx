@@ -234,7 +234,7 @@ export default function RabbitHolePage() {
 
   async function share(platform: string) {
     const shareUrl = window.location.origin + "/rabbit-hole";
-    const shareText = `I went ${path.length} questions deep in Rabbit Hole by OpenLesson.`;
+    const shareText = `I went ${path.length} questions deep in Rabbit Hole by Uncertain Systems.`;
     const clipboardText = `${shareText} ${shareUrl}`;
     const text = encodeURIComponent(shareText);
     const url = encodeURIComponent(shareUrl);
@@ -247,7 +247,7 @@ export default function RabbitHolePage() {
     if (platform !== "X") {
       if (canNativeShare) {
         try {
-          await navigator.share({ title: "Rabbit Hole by OpenLesson", text: shareText, url: shareUrl });
+          await navigator.share({ title: "Rabbit Hole by Uncertain Systems", text: shareText, url: shareUrl });
         } catch {
           return;
         }
@@ -273,7 +273,7 @@ export default function RabbitHolePage() {
   async function continueFullLesson() {
     if (!root || continuing) return;
     setContinuing(true);
-    setMessage("Building your full OpenLesson workspace...");
+    setMessage("Building your full Uncertain Systems workspace...");
     const res = await fetch("/api/rabbit-hole/continue", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ rootQuestion: root.question }) });
     const payload = await res.json();
     if (payload.workspaceId) router.push(`/workspace/${payload.workspaceId}`);
@@ -411,7 +411,7 @@ export default function RabbitHolePage() {
                 <p className="mt-6 text-sm text-zinc-400">Share your result on social media to unlock an <span className="font-semibold underline underline-offset-4 text-zinc-100">extra play and bonus points.</span></p>
                 <div className="mt-8 flex flex-col gap-3 sm:flex-row"><button onClick={() => share("X")} className="inline-flex items-center justify-center gap-2 rounded-sm border border-zinc-800 px-4 py-3 text-sm text-zinc-300"><Twitter size={15} strokeWidth={1.8} />Share on X</button><button onClick={() => share("Instagram")} className="inline-flex items-center justify-center gap-2 rounded-sm border border-zinc-800 px-4 py-3 text-sm text-zinc-300"><Instagram size={15} strokeWidth={1.8} />Instagram</button><button onClick={() => share("LinkedIn")} className="inline-flex items-center justify-center gap-2 rounded-sm border border-zinc-800 px-4 py-3 text-sm text-zinc-300"><Linkedin size={15} strokeWidth={1.8} />LinkedIn</button></div>
                 {message && <p className="mt-4 text-sm text-zinc-400">{message}</p>}
-                <button onClick={continueFullLesson} disabled={continuing} className="mt-4 rounded-sm bg-white px-4 py-3 text-sm font-medium text-black transition hover:bg-zinc-200 disabled:cursor-wait disabled:opacity-60">{continuing ? "Building full lesson..." : "Continue this in full OpenLesson"}</button>
+                <button onClick={continueFullLesson} disabled={continuing} className="mt-4 rounded-sm bg-white px-4 py-3 text-sm font-medium text-black transition hover:bg-zinc-200 disabled:cursor-wait disabled:opacity-60">{continuing ? "Building full lesson..." : "Continue this in full Uncertain Systems"}</button>
               </div>
             )}
             {finalizing && stage === "dive" && (

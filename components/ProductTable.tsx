@@ -18,7 +18,7 @@ export const LANDING_PRODUCT_ROWS: ProductTableRow[] = [
     icon: Layers,
     pitch: "Foundation for every verification, optimization, and augmentation flow.",
     description:
-      "Structure skills and scenarios, attach docs and proof of work, and run every openLesson product against one live learning world model.",
+      "Structure skills and scenarios, attach docs and proof of work, and run every Uncertain Systems product against one live learning world model.",
     href: "/workspace/new",
     ctaLabel: "Create workspace",
   },

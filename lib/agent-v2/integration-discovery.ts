@@ -8,7 +8,7 @@ import {
 } from "./proof-of-work-integration";
 
 export const OPENLESSON_SCOPE = {
-  product: "openLesson",
+  product: "Uncertain Systems",
   mission:
     "Verify learning and measure readiness-to-perform using real product proof of work — not quizzes in isolation.",
   pillars: [
@@ -295,8 +295,8 @@ export function formatDualSurfaceGuidance(
 export const MCP_RESOURCE_CATALOG = [
   {
     uri: "openlesson://integration-scope",
-    name: "OpenLesson integration scope",
-    description: "What openLesson is, workspace model, and learning-vs-conversion goals.",
+    name: "Uncertain Systems integration scope",
+    description: "What Uncertain Systems is, workspace model, and learning-vs-conversion goals.",
     mimeType: "text/markdown",
   },
   {
@@ -317,7 +317,7 @@ export function buildMcpResourceContent(uri: string, baseUrl: string): string | 
   const base = baseUrl.replace(/\/$/, "");
 
   if (uri === "openlesson://integration-scope") {
-    return `# OpenLesson integration scope
+    return `# Uncertain Systems integration scope
 
 ${OPENLESSON_SCOPE.mission}
 

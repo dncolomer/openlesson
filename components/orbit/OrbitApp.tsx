@@ -113,7 +113,7 @@ export function OrbitApp() {
     const existingBridge = loadOrbitBridge();
 
     if (!params && !existingBridge) {
-      setBootError("Launch Orbit from the openLesson demo hub to connect Proof-of-Work API.");
+      setBootError("Launch Orbit from the Uncertain Systems demo hub to connect Proof-of-Work API.");
       setAppState(createSeedOrbitState());
       return;
     }

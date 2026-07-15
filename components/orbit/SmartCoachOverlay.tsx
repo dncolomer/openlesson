@@ -336,7 +336,7 @@ export function SmartCoachOverlay({
               {isReporting ? "Scoring…" : "Scorecard"}
               {connected && proofOfWorkCount > 0 ? ` · ${proofOfWorkCount}` : ""}
               <span className="block truncate font-mono text-[9px] font-normal uppercase tracking-wide text-[#5c5c70]">
-                openLesson
+                Uncertain Systems
               </span>
             </span>
             {overallScore !== null ? (
@@ -376,7 +376,7 @@ export function SmartCoachOverlay({
             <span className="truncate">{isReporting ? "Scoring your work…" : "Scorecard coach"}</span>
           </div>
           <span className="pl-5 font-mono text-[9px] uppercase tracking-wide text-[#5c5c70]">
-            Powered by openLesson
+            Powered by Uncertain Systems
           </span>
         </div>
         <button

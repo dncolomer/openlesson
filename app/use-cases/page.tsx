@@ -14,10 +14,10 @@ const BACKGROUND_IMAGE = aestheticImageForId("use-cases-hub", [
 ]);
 
 export const metadata: Metadata = {
-  title: "Use Cases | openLesson",
+  title: "Use Cases | Uncertain Systems",
   description:
     "Learning verification, learning optimization, and reasoning augmentation — plus Proof-of-Work API, TAP, ILE, and ALE product pages.",
-  alternates: { canonical: "https://openlesson.academy/use-cases" },
+  alternates: { canonical: "https://uncertain.systems/use-cases" },
 };
 
 export default function UseCasesHubPage() {
@@ -38,7 +38,7 @@ export default function UseCasesHubPage() {
         <header className="mb-12">
           <p className="font-mono text-[10px] uppercase tracking-[2px] text-zinc-500">Use cases & products</p>
           <h1 className="mt-4 text-3xl font-medium tracking-[-1.2px] text-white sm:text-4xl">
-            Where openLesson fits your stack
+            Where Uncertain Systems fits your stack
           </h1>
           <p className="mt-5 text-lg leading-relaxed text-zinc-400">
             Start from a use case — verification, optimization, or reasoning augmentation — then pick the

@@ -7,8 +7,8 @@ import {
 
 describe("mcp-proof-of-work-catalog", () => {
   it("builds MCP endpoint URL without embedding the API key", () => {
-    expect(buildMcpEndpointUrl("https://openlesson.academy")).toBe(
-      "https://openlesson.academy/api/mcp"
+    expect(buildMcpEndpointUrl("https://uncertain.systems")).toBe(
+      "https://uncertain.systems/api/mcp"
     );
   });
 

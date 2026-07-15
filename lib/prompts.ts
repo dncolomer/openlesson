@@ -1,7 +1,7 @@
 // ============================================
 // PROMPTS
 //
-// Single source of truth for all LLM prompts used in openLesson.
+// Single source of truth for all LLM prompts used in Uncertain Systems.
 //   - DEFAULT_PROMPTS: the baked-in defaults, by key
 //   - PROMPT_META: labels + descriptions shown in the Dashboard prompt editor
 //   - UserPrompts / PromptKey: types shared across API routes + UI

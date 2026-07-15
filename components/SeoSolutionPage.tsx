@@ -41,7 +41,7 @@ export function SeoSolutionPage({ page, breadcrumbs }: SeoSolutionPageProps) {
     url: `${BASE_URL}${page.path}`,
     isPartOf: {
       "@type": "WebSite",
-      name: "openLesson",
+      name: "Uncertain Systems",
       url: BASE_URL,
     },
   };

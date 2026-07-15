@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "Blockchain TX Validation Click Moment",
-  description: "A shareable openLesson card capturing the blockchain transaction validation click moment.",
+  description: "A shareable Uncertain Systems card capturing the blockchain transaction validation click moment.",
 };
 
 const backgroundImage = "/aesthetics/Greco-futurism/HHnTrgVaQAAP-_3.jpeg";
@@ -87,7 +87,7 @@ export default function BlockchainTxValidationPage() {
           <header className="flex items-start justify-between gap-8">
             <div>
               <p className="inline-block rounded-sm border border-zinc-800 bg-black/70 px-3 py-1 font-mono text-[clamp(9px,1vw,12px)] uppercase tracking-[0.32em] text-zinc-500">
-                OpenLesson Click Moment 001
+                Uncertain Systems Click Moment 001
               </p>
               <h1 className="mt-6 max-w-[760px] text-[clamp(46px,7.2vw,86px)] font-medium leading-[0.92] tracking-[-0.08em] text-white">
                 The moment Blockchain TX validation stops feeling like magic.
@@ -148,7 +148,7 @@ export default function BlockchainTxValidationPage() {
 
           <footer className="mt-8 flex flex-col items-stretch justify-between gap-4 border-t border-zinc-800 pt-5 sm:mt-[4%] sm:flex-row sm:items-end sm:gap-6">
             <div className="rounded-sm border border-zinc-800 bg-black/25 p-4 text-center sm:border-0 sm:bg-transparent sm:p-0 sm:text-left">
-              <p className="text-xl font-semibold tracking-[-0.04em] text-white">openLesson</p>
+              <p className="text-xl font-semibold tracking-[-0.04em] text-white">Uncertain Systems</p>
               <div className="mt-3 flex flex-wrap justify-center gap-2 sm:hidden">
                 {['Think aloud', 'Get probed', 'Feel the click'].map((item) => (
                   <span key={item} className="rounded-sm border border-zinc-800 bg-zinc-950/70 px-2.5 py-1 font-mono text-[9px] uppercase tracking-[0.16em] text-zinc-500">

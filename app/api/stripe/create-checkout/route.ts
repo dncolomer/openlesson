@@ -13,6 +13,7 @@ import {
 } from "@/lib/plans";
 import { AYCL_PRICE_CENTS, createPendingAyclPurchase } from "@/lib/aycl";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getAppOrigin } from "@/lib/app-url";
 import { checkoutModeForPriceType, type CheckoutPriceType } from "@/lib/stripe-checkout";
 
 export const runtime = "nodejs";
@@ -95,7 +96,7 @@ export async function POST(request: NextRequest) {
           unit_amount: REGULAR_VOLUME_PRICES[monthlyVolume],
           recurring: { interval: "month" },
           product_data: {
-            name: `openLesson Individual - ${monthlyVolume.toLocaleString()} Proof-of-Work submissions/mo`,
+            name: `Uncertain Systems Individual - ${monthlyVolume.toLocaleString()} Proof-of-Work submissions/mo`,
           },
         },
         quantity: 1,
@@ -107,7 +108,7 @@ export async function POST(request: NextRequest) {
           unit_amount: TEAM_VOLUME_PRICES[monthlyVolume],
           recurring: { interval: "month" },
           product_data: {
-            name: `openLesson Pro / Teams - ${monthlyVolume.toLocaleString()} Proof-of-Work submissions/mo`,
+            name: `Uncertain Systems Pro / Teams - ${monthlyVolume.toLocaleString()} Proof-of-Work submissions/mo`,
           },
         },
         quantity: 1,
@@ -119,7 +120,7 @@ export async function POST(request: NextRequest) {
           unit_amount: API_METERED_PLATFORM_FEE_CENTS,
           recurring: { interval: "month" },
           product_data: {
-            name: "openLesson API Metered — platform access",
+            name: "Uncertain Systems API Metered — platform access",
             description: `Unlimited API usage. Proof-of-Work API submissions billed at $${(POW_API_CALL_PRICE_CENTS / 100).toFixed(2)} each on your monthly invoice.`,
           },
         },
@@ -131,7 +132,7 @@ export async function POST(request: NextRequest) {
           currency: "usd",
           unit_amount: TRIAL_PRICE_CENTS,
           product_data: {
-            name: "openLesson 3-Day Trial",
+            name: "Uncertain Systems 3-Day Trial",
             description: "Full access for 3 days. One-time payment.",
           },
         },
@@ -192,7 +193,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const origin = request.headers.get("origin") || process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+    const origin = request.headers.get("origin") || getAppOrigin(request);
 
     let customerId: string | undefined;
     if (user) {

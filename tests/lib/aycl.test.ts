@@ -9,8 +9,8 @@ describe("All-You-Can-Learn helpers", () => {
   });
 
   it("builds lifetime access URLs", () => {
-    expect(buildAyclAccessUrl("https://openlesson.academy", "abc123")).toBe(
-      "https://openlesson.academy/learn/abc123"
+    expect(buildAyclAccessUrl("https://uncertain.systems", "abc123")).toBe(
+      "https://uncertain.systems/learn/abc123"
     );
   });
 

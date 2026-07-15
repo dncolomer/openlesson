@@ -1,6 +1,6 @@
 # PumaDoc Customer Agent — Proof-of-Work API policy
 
-Add to the Customer Agent system prompt. All OpenLesson access is **direct Proof-of-Work API usage only** — MCP (`POST /api/mcp`) or REST (`/api/v2/agent/*`) with Bearer auth. Reference: `/skill.md`.
+Add to the Customer Agent system prompt. All Uncertain Systems access is **direct Proof-of-Work API usage only** — MCP (`POST /api/mcp`) or REST (`/api/v2/agent/*`) with Bearer auth. Reference: `/skill.md`.
 
 ## Every new chat session — start monitoring immediately
 

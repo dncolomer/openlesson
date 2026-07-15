@@ -1,13 +1,14 @@
 import type { Metadata } from "next";
 import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
+import { BRAND_LOGO_PATH } from "../lib/brand";
 import { I18nProvider } from "../lib/i18n";
 import "./globals.css";
 
 export const metadata: Metadata = {
   title: {
-    default: "openLesson — Learning Efficiency for Humans & Agents",
-    template: "%s | openLesson",
+    default: "Uncertain Systems — Learning Efficiency for Humans & Agents",
+    template: "%s | Uncertain Systems",
   },
   description:
     "Optimize learning efficiency for humans and agentic systems. Proof-of-Work API, Think Aloud Protocol, ILE, and Agentic Learning Environment on Workspaces.",
@@ -25,28 +26,28 @@ export const metadata: Metadata = {
     "AI training evaluation",
     "educational technology",
   ],
-  metadataBase: new URL("https://openlesson.academy"),
+  metadataBase: new URL("https://uncertain.systems"),
   icons: {
-    icon: "/new_logo.jpg",
-    shortcut: "/new_logo.jpg",
-    apple: "/new_logo.jpg",
+    icon: BRAND_LOGO_PATH,
+    shortcut: BRAND_LOGO_PATH,
+    apple: BRAND_LOGO_PATH,
   },
   manifest: "/manifest.webmanifest",
   alternates: {
-    canonical: "https://openlesson.academy",
+    canonical: "https://uncertain.systems",
   },
   openGraph: {
-    title: "openLesson — Learning Efficiency for Humans & Agents",
+    title: "Uncertain Systems — Learning Efficiency for Humans & Agents",
     description:
       "Measure what learners actually absorb — not just completion. Four products on Workspaces.",
-    url: "https://openlesson.academy",
-    siteName: "openLesson",
+    url: "https://uncertain.systems",
+    siteName: "Uncertain Systems",
     type: "website",
     locale: "en_US",
   },
   twitter: {
     card: "summary_large_image",
-    title: "openLesson — Learning Efficiency Platform",
+    title: "Uncertain Systems — Learning Efficiency Platform",
     description:
       "Optimize learning efficiency with Proof-of-Work API, Think Aloud Protocol, ILE, and Agentic Learning Environment.",
     creator: "@uncertainsys",
@@ -68,8 +69,8 @@ export const metadata: Metadata = {
 const organizationSchema = {
   "@context": "https://schema.org",
   "@type": "Organization",
-  name: "openLesson",
-  url: "https://openlesson.academy",
+  name: "Uncertain Systems",
+  url: "https://uncertain.systems",
   description:
     "Learning efficiency platform on Workspaces: Proof-of-Work API, Think Aloud Protocol, ILE, and Agentic Learning Environment.",
   founder: {
@@ -86,7 +87,7 @@ const organizationSchema = {
 const softwareSchema = {
   "@context": "https://schema.org",
   "@type": "SoftwareApplication",
-  name: "openLesson",
+  name: "Uncertain Systems",
   applicationCategory: "EducationalApplication",
   operatingSystem: "Web",
   offers: {

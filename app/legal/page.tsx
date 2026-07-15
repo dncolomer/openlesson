@@ -27,7 +27,7 @@ export default function LegalPage() {
               <p><strong className="text-neutral-300">{t('legal.ownerLabel')}:</strong> Daniel Colomer</p>
               <p><strong className="text-neutral-300">{t('legal.locationLabel')}:</strong> Hamburg, Germany</p>
               <p><strong className="text-neutral-300">{t('legal.contactEmailLabel')}:</strong> daniel@uncertain.systems</p>
-              <p><strong className="text-neutral-300">{t('legal.websiteLabel')}:</strong> openlesson.academy</p>
+              <p><strong className="text-neutral-300">{t('legal.websiteLabel')}:</strong> uncertain.systems</p>
             </div>
           </section>
 

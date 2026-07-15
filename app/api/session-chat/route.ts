@@ -3,7 +3,7 @@ import { buildImageContent, callXaiText, systemMessage, userMessage, DEFAULT_MOD
 import { getLanguageName } from "@/lib/tutoring-languages";
 import { ayclTokenFromBody, guardSessionRoute } from "@/lib/api/require-auth";
 
-const BASE_SYSTEM_PROMPT = `You are Helios, the learner's Socratic companion in openLesson.
+const BASE_SYSTEM_PROMPT = `You are Helios, the learner's Socratic companion in Uncertain Systems.
 
 The user is in a live session thinking aloud about a topic. Your probing questions and the user's replies flow directly in this chat.
 

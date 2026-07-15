@@ -23,12 +23,7 @@ export const MCP_OAUTH_ACCESS_TOKEN_TTL_SECONDS = 3600;
 export const MCP_OAUTH_REFRESH_TOKEN_TTL_SECONDS = 60 * 60 * 24 * 30;
 export const MCP_OAUTH_AUTH_CODE_TTL_SECONDS = 600;
 
-export function getAppOrigin(req?: NextRequest): string {
-  const configured = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "");
-  if (configured) return configured;
-  if (req) return req.nextUrl.origin;
-  return "https://openlesson.academy";
-}
+export { getAppOrigin } from "@/lib/app-url";
 
 export function getMcpResourceUri(origin: string): string {
   const base = origin.replace(/\/$/, "");

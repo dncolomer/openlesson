@@ -10,7 +10,7 @@ export interface PerformanceMarkerScore {
 
 /** Shared guardrails for score-card remediation — import into other agent prompts. */
 export const PERFORMANCE_REMEDIATION_GUARDRAILS = `Remediation output rules (gap_analysis.gaps[].suggested_repair, gap_analysis.next_steps, suggestions, and any growth_areas that recommend action):
-- NEVER mention OpenLesson platform mechanics: Think Aloud Protocol (TAP), TAP sessions or links, ILE, Integrated Learning Environment, workspace blocks, completing or finishing blocks, block completion, or returning to OpenLesson.
+- NEVER mention Uncertain Systems platform mechanics: Think Aloud Protocol (TAP), TAP sessions or links, ILE, Integrated Learning Environment, workspace blocks, completing or finishing blocks, block completion, or returning to Uncertain Systems.
 - Write remediation in product- and workflow-specific language — the same vocabulary as real tool events and domain tasks (e.g. "connect Slack", "route_energy_grid", "document tradeoff before config change").
 - gap_analysis.next_steps.events must be granular, observable product/tool actions or event verbs — not platform tasks.
 - gap_analysis.next_steps.directions must be intermediate competency goals in domain language — not "complete block X" or "run a TAP".
@@ -121,7 +121,7 @@ export const PERFORMANCE_NEXT_STEPS_SCHEMA = {
       type: "array",
       items: { type: "string" },
       description:
-        "High-level domain goals toward readiness/conversion — product/workflow language only; never TAP, blocks, or OpenLesson platform tasks",
+        "High-level domain goals toward readiness/conversion — product/workflow language only; never TAP, blocks, or Uncertain Systems platform tasks",
     },
     events: {
       type: "array",
@@ -143,7 +143,7 @@ export const PERFORMANCE_GAP_ITEM_SCHEMA = {
     suggested_repair: {
       type: "string",
       description:
-        "Product- or workflow-specific repair action — never TAP, block completion, ILE, or OpenLesson platform mechanics",
+        "Product- or workflow-specific repair action — never TAP, block completion, ILE, or Uncertain Systems platform mechanics",
     },
   },
   required: ["title", "proof_of_work", "severity", "suggested_repair"],
@@ -376,7 +376,7 @@ export function buildPerformanceReportInstructions(
     ? `\nAuthoritative workspace conversion goal (use exactly for conversion_goal; score conversion_score against this):\n"${workspaceConversionGoal.trim()}"\n`
     : "";
 
-  return `You produce structured learning and gap analysis for ${scope} in OpenLesson.
+  return `You produce structured learning and gap analysis for ${scope} in Uncertain Systems.
 ${goalLine}
 
 Use the attached workspace performance JSON and artifact files. Return only JSON matching the schema.

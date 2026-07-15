@@ -3,7 +3,7 @@ import Link from "next/link";
 
 export const metadata: Metadata = {
   title: "Click Moments",
-  description: "A library of shareable openLesson click moments.",
+  description: "A library of shareable Uncertain Systems click moments.",
 };
 
 const moments = [
@@ -34,7 +34,7 @@ export default function ClickMomentsPage() {
       <div className="relative z-10 mx-auto flex min-h-screen w-full max-w-7xl flex-col px-5 py-8 sm:px-8 lg:px-10">
         <header className="flex items-center justify-between border-b border-zinc-800 pb-5">
           <Link href="/" className="text-lg font-semibold tracking-[-0.04em] text-white">
-            openLesson
+            Uncertain Systems
           </Link>
           <p className="font-mono text-[10px] uppercase tracking-[0.28em] text-zinc-500">
             Shareable learning artifacts
@@ -50,7 +50,7 @@ export default function ClickMomentsPage() {
               A library of the exact moment something clicks.
             </h1>
             <p className="mt-6 max-w-2xl text-lg leading-8 text-zinc-400">
-              Each card captures one specific openLesson learning breakthrough: the quote, the mental model, and the source moment that made it portable.
+              Each card captures one specific Uncertain Systems learning breakthrough: the quote, the mental model, and the source moment that made it portable.
             </p>
           </div>
 

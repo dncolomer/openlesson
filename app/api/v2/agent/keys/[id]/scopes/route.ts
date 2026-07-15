@@ -1,5 +1,5 @@
 // ============================================
-// OpenLesson Agentic API v2 - Scope Management
+// Uncertain Systems Agentic API v2 - Scope Management
 // PATCH /api/v2/agent/keys/:id/scopes → Update
 // ============================================
 

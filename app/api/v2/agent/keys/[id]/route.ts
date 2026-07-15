@@ -1,5 +1,5 @@
 // ============================================
-// OpenLesson Agentic API v2 - Key Revocation
+// Uncertain Systems Agentic API v2 - Key Revocation
 // DELETE /api/v2/agent/keys/:id → Soft-delete
 // ============================================
 

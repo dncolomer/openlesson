@@ -27,7 +27,7 @@ export type SeoProductPageConfig = {
   closingBody: string;
 };
 
-const BASE_URL = "https://openlesson.academy";
+const BASE_URL = "https://uncertain.systems";
 
 export function productPageMetadata(page: SeoProductPageConfig): Metadata {
   const url = `${BASE_URL}${page.path}`;
@@ -39,7 +39,7 @@ export function productPageMetadata(page: SeoProductPageConfig): Metadata {
       title: page.metaTitle,
       description: page.metaDescription,
       url,
-      siteName: "openLesson",
+      siteName: "Uncertain Systems",
       type: "website",
     },
     twitter: {
@@ -58,7 +58,7 @@ export const TIM_PAGE: SeoProductPageConfig = {
   eyebrow: "Trace Interruption Model",
   h1: "Predict optimal learning-path interruptions — not the next funnel step.",
   intro:
-    "TIM is not a product you buy on its own. It is the core model behind every openLesson surface — trained to decide when to interrupt a learner’s path with the right probe, coaching nudge, or proof-of-work request, at the right moment. That is how we break the linearity of classic analytics and turn-based chat.",
+    "TIM is not a product you buy on its own. It is the core model behind every Uncertain Systems surface — trained to decide when to interrupt a learner’s path with the right probe, coaching nudge, or proof-of-work request, at the right moment. That is how we break the linearity of classic analytics and turn-based chat.",
   metaTitle: "Trace Interruption Model (TIM) | Core Learning Interruption Engine",
   metaDescription:
     "TIM predicts optimal learning-path interruptions across TAP, ILE, Proof-of-Work API, and ALE. The shared model behind verification, optimization, and augmentation — not a standalone SKU.",
@@ -114,7 +114,7 @@ export const TIM_PAGE: SeoProductPageConfig = {
     {
       question: "Can I call TIM directly?",
       answer:
-        "No. TIM runs inside openLesson products. You experience it through TAP probes, ILE coaching, PoW API interruption fields, and performance-driven schema evolution — not as a standalone endpoint.",
+        "No. TIM runs inside Uncertain Systems products. You experience it through TAP probes, ILE coaching, PoW API interruption fields, and performance-driven schema evolution — not as a standalone endpoint.",
     },
     {
       question: "How is this different from funnel analytics?",
@@ -129,7 +129,7 @@ export const TIM_PAGE: SeoProductPageConfig = {
     {
       question: "Does TIM replace my LMS rules engine?",
       answer:
-        "It complements it. You keep your UX; TIM tells your system when openLesson believes an interruption will advance the learning world model for that user or agent — grounded in workspace evidence.",
+        "It complements it. You keep your UX; TIM tells your system when Uncertain Systems believes an interruption will advance the learning world model for that user or agent — grounded in workspace evidence.",
     },
   ],
   secondaryCta: { label: "See all products", href: "/#products" },
@@ -144,7 +144,7 @@ export const POW_API_PAGE: SeoProductPageConfig = {
   eyebrow: "Proof-of-Work API",
   h1: "The base layer for verification, optimization, and augmentation you build yourself.",
   intro:
-    "Proof-of-Work API is how customers embed openLesson into their own products — custom hiring gates, onboarding loops, edTech depth checks, agent deploy bars, or entirely new use cases across all three verticals. Every artifact and tool trace you send is fuel for a learning world model that grows gradually with the user or agent, not a one-shot score from a static form.",
+    "Proof-of-Work API is how customers embed Uncertain Systems into their own products — custom hiring gates, onboarding loops, edTech depth checks, agent deploy bars, or entirely new use cases across all three verticals. Every artifact and tool trace you send is fuel for a learning world model that grows gradually with the user or agent, not a one-shot score from a static form.",
   metaTitle: "Proof-of-Work API | Evolving Learning World Model Foundation",
   metaDescription:
     "Build custom verification, optimization, and augmentation apps on Proof-of-Work API. A dynamically evolving interface that grows your learning world model — agentic-ready, not a static contract.",
@@ -336,7 +336,7 @@ export const ILE_PAGE: SeoProductPageConfig = {
     {
       question: "Is ILE an LMS?",
       answer:
-        "No. It is the improvement layer inside openLesson — practice targets what verification surfaced in your actual work context.",
+        "No. It is the improvement layer inside Uncertain Systems — practice targets what verification surfaced in your actual work context.",
     },
     {
       question: "Can I use ILE without TAP?",
@@ -405,12 +405,12 @@ export const ALE_PAGE: SeoProductPageConfig = {
     {
       question: "Can humans and agents share a workspace?",
       answer:
-        "Yes. openLesson is built for mixed teams — verification and practice use the same graph and gap model.",
+        "Yes. Uncertain Systems is built for mixed teams — verification and practice use the same graph and gap model.",
     },
   ],
   closingTitle: "Validate agents on your terms.",
   closingBody:
-    "Book a demo to see private agent skill training, scoring, and iteration inside the openLesson workspace.",
+    "Book a demo to see private agent skill training, scoring, and iteration inside the Uncertain Systems workspace.",
 };
 
 export const PRODUCT_PAGES = [TIM_PAGE, POW_API_PAGE, TAP_PAGE, ILE_PAGE, ALE_PAGE] as const;

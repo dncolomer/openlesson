@@ -1,6 +1,6 @@
 # PumaClaw Mentor — Proof-of-Work API policy
 
-Add when Mentor mode is active. All OpenLesson access is **direct Proof-of-Work API usage only** — MCP (`POST /api/mcp`) or REST (`/api/v2/agent/*`) with Bearer auth. Reference: `/skill.md`.
+Add when Mentor mode is active. All Uncertain Systems access is **direct Proof-of-Work API usage only** — MCP (`POST /api/mcp`) or REST (`/api/v2/agent/*`) with Bearer auth. Reference: `/skill.md`.
 
 ## Mentor button — user is mentor type
 

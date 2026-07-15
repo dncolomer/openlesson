@@ -105,8 +105,8 @@ description: Custom skill
 
 describe("evidence integration helpers", () => {
   it("builds proof-of-work spec API paths", () => {
-    expect(buildProofOfWorkSchemaApiPath("ws-1", "https://openlesson.academy")).toBe(
-      "https://openlesson.academy/api/v2/agent/workspaces/ws-1/proof-of-work-schema"
+    expect(buildProofOfWorkSchemaApiPath("ws-1", "https://uncertain.systems")).toBe(
+      "https://uncertain.systems/api/v2/agent/workspaces/ws-1/proof-of-work-schema"
     );
   });
 
@@ -122,7 +122,7 @@ describe("evidence integration helpers", () => {
         continuous_evaluation_summary: "Regenerate as proof of work grows.",
       },
       "ws-1",
-      "https://openlesson.academy",
+      "https://uncertain.systems",
       null,
       { proof_of_work_artifacts: 12, blocks: 3 }
     );
@@ -145,16 +145,16 @@ describe("evidence integration helpers", () => {
   });
 
   it("builds continuous evaluation policy with proof of work-aware triggers", () => {
-    const policy = buildContinuousEvaluationPolicy("ws-1", "https://openlesson.academy", {
+    const policy = buildContinuousEvaluationPolicy("ws-1", "https://uncertain.systems", {
       proof_of_work_artifacts: 0,
     });
 
     expect(policy.more_evidence_improves).toContain("more");
     expect(policy.proof_of_work_spec.api_path).toBe(
-      buildProofOfWorkSchemaApiPath("ws-1", "https://openlesson.academy")
+      buildProofOfWorkSchemaApiPath("ws-1", "https://uncertain.systems")
     );
     expect(policy.integration_skill.api_path).toBe(
-      buildIntegrationSkillApiPath("ws-1", "https://openlesson.academy")
+      buildIntegrationSkillApiPath("ws-1", "https://uncertain.systems")
     );
     expect(policy.proof_of_work_spec.when_to_call[0]).toContain("little or no proof of work");
   });
@@ -167,7 +167,7 @@ describe("evidence integration helpers", () => {
       example_payload: { tool: "demo" },
       recommended_mime_type: "application/json",
       recommended_proof_of_work_type: "tool",
-      proof_of_work_spec_api_path: "https://openlesson.academy/api/v2/agent/workspaces/ws-1/proof-of-work-schema",
+      proof_of_work_spec_api_path: "https://uncertain.systems/api/v2/agent/workspaces/ws-1/proof-of-work-schema",
       tool_submissions: [
         {
           tool_name: "demo",
@@ -205,7 +205,7 @@ describe("buildIntegrationSkillInstructions", () => {
     const instructions = buildIntegrationSkillInstructions(
       {
         integration_name: "Acme Copilot",
-        base_url: "https://openlesson.academy",
+        base_url: "https://uncertain.systems",
         eval_definition: "Verify tool adoption",
       },
       { id: "ws-1", title: "Onboarding", root_topic: "SaaS onboarding" },

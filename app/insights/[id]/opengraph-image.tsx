@@ -6,7 +6,7 @@ import {
   resolveInsightAestheticImage,
 } from "@/lib/insights-server";
 
-export const alt = "openLesson insight";
+export const alt = "Uncertain Systems insight";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -30,7 +30,7 @@ export default async function Image({ params }: ImageProps) {
   const { id } = await params;
   const insight = await getPublicInsightForMeta(id);
   const title = truncateTitle(insight?.title || "Insight");
-  const summary = truncateSummary(insight?.summary || "A bookmark from think-aloud learning on openLesson.");
+  const summary = truncateSummary(insight?.summary || "A bookmark from think-aloud learning on Uncertain Systems.");
   const backgroundImage = absoluteSiteUrl(resolveInsightAestheticImage(insight?.aesthetic_image));
 
   return new ImageResponse(
@@ -109,7 +109,7 @@ export default async function Image({ params }: ImageProps) {
                 letterSpacing: "0.02em",
               }}
             >
-              openLesson
+              Uncertain Systems
             </div>
             <div
               style={{
@@ -186,7 +186,7 @@ export default async function Image({ params }: ImageProps) {
           </div>
 
           <div style={{ fontSize: "18px", color: "#a1a1aa", fontWeight: 500 }}>
-            {insight ? `openlesson.academy/insights/${insightPublicSlug(insight)}` : "openlesson.academy"}
+            {insight ? `uncertain.systems/insights/${insightPublicSlug(insight)}` : "uncertain.systems"}
           </div>
         </div>
       </div>

@@ -118,7 +118,7 @@ export function createPaymentLink(
   const params = new URLSearchParams({
     "price_data[unit_amount]": price.toString(),
     "price_data[currency]": "usd",
-    "price_data[product_data][name]": `openLesson - ${description}`,
+    "price_data[product_data][name]": `Uncertain Systems - ${description}`,
     "price_data[product_data][description]": `Payment for ${endpoint}`,
     "quantity": "1",
     "success_url": successUrl,

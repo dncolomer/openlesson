@@ -21,7 +21,7 @@ export type PublicInsightMeta = {
 
 const SITE_ORIGIN =
   process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ||
-  (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "https://openlesson.academy");
+  (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "https://uncertain.systems");
 
 export function insightPublicSlug(insight: Pick<PublicInsightMeta, "id" | "share_token">) {
   return insight.share_token || insight.id;

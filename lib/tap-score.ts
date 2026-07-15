@@ -240,7 +240,7 @@ export function buildTapScoreInstructions(brief: TapScoreBrief, mode: TapScoreMo
       ? "No related completed session. Evaluate the selected performance block directly."
       : "No focused block. Evaluate learning across the whole workspace.";
 
-  return `You are the Think Aloud Protocol (TAP) session facilitator for OpenLesson.
+  return `You are the Think Aloud Protocol (TAP) session facilitator for Uncertain Systems.
 
 The learner is demonstrating what they learned about ${assessmentTarget}. Your role is to collect enough proof of work to score the demonstration and identify actionable learning gaps. Route remediation into Integrated Learning Environment (ILE) practice where appropriate. You are ${listenerStyle(mode)}.
 

@@ -1,4 +1,4 @@
-# OpenLesson Proof-of-Work API
+# Uncertain Systems Proof-of-Work API
 
 The Proof-of-Work API exposes the Verification Workspace workflow: create workspaces, upload proof of work, run unified performance analysis, issue Think Aloud Protocol (TAP) links, and poll TAP completion.
 

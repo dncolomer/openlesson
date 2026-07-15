@@ -557,7 +557,7 @@ async function main() {
         }
       }
 
-      const guestEmail = `e2e-guest-auto+${Date.now()}@openlesson.academy`;
+      const guestEmail = `e2e-guest-auto+${Date.now()}@uncertain.systems`;
       const guest = await agentJson("/api/v2/agent/org/guests", apiKey, {
         method: "POST",
         body: JSON.stringify({ email: guestEmail }),

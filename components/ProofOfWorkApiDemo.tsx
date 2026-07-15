@@ -973,10 +973,10 @@ export function ProofOfWorkApiDemo() {
               Interactive demo
             </div>
             <h1 className="mt-2 text-3xl font-medium tracking-[-1px] text-white sm:text-4xl">
-              openLesson in action
+              Uncertain Systems in action
             </h1>
             <p className="mt-3 max-w-2xl text-sm leading-relaxed text-zinc-400 sm:text-base">
-              Interactive demos for openLesson&apos;s three pillars:{" "}
+              Interactive demos for Uncertain Systems&apos;s three pillars:{" "}
               <span className="text-zinc-200">verification</span>,{" "}
               <span className="text-zinc-200">optimization</span>, and{" "}
               <span className="text-zinc-200">augmentation</span>.
@@ -1545,7 +1545,7 @@ function DemoUseCasePicker({
           Verification, optimization, and augmentation in action
         </h2>
         <p className="mt-3 text-sm leading-relaxed text-zinc-400">
-          Each demo shows one openLesson vertical inside a real product workflow. Score cards coach gaps and next steps
+          Each demo shows one Uncertain Systems vertical inside a real product workflow. Score cards coach gaps and next steps
           toward adoption — not exam completion.
         </p>
       </div>
@@ -1736,7 +1736,7 @@ function SimulatorPanel({
             <p className={`mt-2 max-w-md text-sm leading-relaxed ${styles.bodyText}`}>
               {demo.scenarioIntro.replace(/\*\*/g, "")} Use calendar gap tools to record idle time between
               sessions — then request score cards with separate gap analysis and next steps (intermediate goals
-              plus granular events). Regenerate OpenLesson specs as proof of work grows.
+              plus granular events). Regenerate Uncertain Systems specs as proof of work grows.
             </p>
             <div className="mt-8 flex flex-wrap items-center gap-3">
               <button

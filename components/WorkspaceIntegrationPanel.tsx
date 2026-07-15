@@ -48,7 +48,7 @@ export function WorkspaceIntegrationPanel({
   const [error, setError] = useState("");
 
   const origin =
-    typeof window !== "undefined" ? window.location.origin : "https://openlesson.academy";
+    typeof window !== "undefined" ? window.location.origin : "https://uncertain.systems";
 
   const handleDownloadSkill = async () => {
     if (!integrationName.trim()) return;

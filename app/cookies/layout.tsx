@@ -1,6 +1,6 @@
 export const metadata = {
-  title: "Cookie Policy - openLesson",
-  description: "Cookie Policy for openLesson - How we use cookies on our website",
+  title: "Cookie Policy - Uncertain Systems",
+  description: "Cookie Policy for Uncertain Systems - How we use cookies on our website",
 };
 
 export default function CookiesLayout({ children }: { children: React.ReactNode }) {

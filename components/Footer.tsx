@@ -1,9 +1,12 @@
 "use client";
 
 import Link from "next/link";
+import { BrandLogo } from "@/components/BrandLogo";
 import { useI18n } from "@/lib/i18n";
 
 const productLinks = [
+  { labelKey: "footer.vision", href: "/vision" },
+  { labelKey: "footer.science", href: "/science" },
   { labelKey: "footer.useCases", href: "/use-cases" },
   { labelKey: "footer.pricing", href: "/pricing" },
   { labelKey: "footer.agenticApi", href: "/docs/proof-of-work-api" },
@@ -34,7 +37,10 @@ export function Footer() {
       <div className="max-w-6xl mx-auto px-6 py-12">
         <div className="grid grid-cols-2 md:grid-cols-5 gap-8 pb-8 border-b border-neutral-900">
           <div className="col-span-2 md:col-span-1">
-            <p className="text-sm font-medium text-neutral-300">openLesson</p>
+            <BrandLogo
+              size={24}
+              nameClassName="text-sm font-medium text-neutral-300"
+            />
             <p className="mt-3 text-sm leading-relaxed text-neutral-600">
               {t('footer.seoBlurb')}
             </p>

@@ -29,7 +29,7 @@ export type SeoUseCasePageConfig = {
   closingBody: string;
 };
 
-const BASE_URL = "https://openlesson.academy";
+const BASE_URL = "https://uncertain.systems";
 
 export function useCasePageMetadata(page: SeoUseCasePageConfig): Metadata {
   const url = `${BASE_URL}${page.path}`;
@@ -41,7 +41,7 @@ export function useCasePageMetadata(page: SeoUseCasePageConfig): Metadata {
       title: page.metaTitle,
       description: page.metaDescription,
       url,
-      siteName: "openLesson",
+      siteName: "Uncertain Systems",
       type: "website",
     },
     twitter: {
@@ -300,7 +300,7 @@ export const LEARNING_AUGMENTATION_PAGE: SeoUseCasePageConfig = {
     {
       question: "Can this replace our existing quiz engine?",
       answer:
-        "For depth checks, yes — TAP and ILE measure cognition quizzes cannot. Many teams keep lightweight recall checks and add openLesson where understanding must be proven.",
+        "For depth checks, yes — TAP and ILE measure cognition quizzes cannot. Many teams keep lightweight recall checks and add Uncertain Systems where understanding must be proven.",
     },
     {
       question: "How do learners experience interruptions?",

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { Menu, X } from "lucide-react";
+import { BrandLogo } from "@/components/BrandLogo";
 import { TrackedCtaLink } from "@/components/TrackedCtaLink";
 
 const CTA = "Create your Workspace";
@@ -38,11 +39,17 @@ export function LandingNav({ overlay = false }: LandingNavProps) {
       }`}
     >
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-4">
-        <Link href="/" className="text-base font-semibold tracking-tight text-white transition hover:text-zinc-300">
-          openLesson
+        <Link href="/" className="transition hover:opacity-90">
+          <BrandLogo nameClassName="text-base font-semibold tracking-tight text-white" />
         </Link>
 
         <nav className="hidden items-center gap-6 text-sm text-zinc-500 md:flex" aria-label="Main navigation">
+          <Link href="/vision" className="transition hover:text-white">
+            Vision
+          </Link>
+          <Link href="/science" className="transition hover:text-white">
+            Science
+          </Link>
           <Link href="/use-cases" className="transition hover:text-white">
             Use cases
           </Link>
@@ -77,6 +84,16 @@ export function LandingNav({ overlay = false }: LandingNavProps) {
       {mobileOpen && (
         <nav className="mx-auto mt-4 max-w-6xl border-t border-zinc-900 pt-4 md:hidden" aria-label="Mobile navigation">
           <ul className="space-y-1 text-sm">
+            <li>
+              <Link href="/vision" className="block rounded-sm px-2 py-2 text-zinc-300" onClick={() => setMobileOpen(false)}>
+                Vision
+              </Link>
+            </li>
+            <li>
+              <Link href="/science" className="block rounded-sm px-2 py-2 text-zinc-300" onClick={() => setMobileOpen(false)}>
+                Science
+              </Link>
+            </li>
             <li>
               <Link href="/use-cases" className="block rounded-sm px-2 py-2 text-zinc-300" onClick={() => setMobileOpen(false)}>
                 Use cases

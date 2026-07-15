@@ -314,10 +314,6 @@ function PricingPageContent() {
             with the measurement work on our side: scoring, gap analysis, and building the learning world
             models that power verification, optimization, and augmentation.
           </p>
-          <p className="mt-4 max-w-2xl text-sm leading-relaxed text-neutral-500">
-            Pay first, then create your account. Stripe checkout collects your email — no separate
-            confirmation step.
-          </p>
           {needsPlan && (
             <div className="mt-6 rounded-sm border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
               Choose a plan to continue. Try the 3-day trial ($19.99) or pick a monthly plan.

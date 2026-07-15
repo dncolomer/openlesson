@@ -44,12 +44,6 @@ export function LandingNav({ overlay = false }: LandingNavProps) {
         </Link>
 
         <nav className="hidden items-center gap-6 text-sm text-zinc-500 md:flex" aria-label="Main navigation">
-          <Link href="/vision" className="transition hover:text-white">
-            Vision
-          </Link>
-          <Link href="/science" className="transition hover:text-white">
-            Science
-          </Link>
           <Link href="/use-cases" className="transition hover:text-white">
             Use cases
           </Link>
@@ -61,6 +55,12 @@ export function LandingNav({ overlay = false }: LandingNavProps) {
           </Link>
           <Link href="/pricing" className="transition hover:text-white">
             Pricing
+          </Link>
+          <Link href="/vision" className="transition hover:text-white">
+            Vision
+          </Link>
+          <Link href="/science" className="transition hover:text-white">
+            Science
           </Link>
         </nav>
 
@@ -85,16 +85,6 @@ export function LandingNav({ overlay = false }: LandingNavProps) {
         <nav className="mx-auto mt-4 max-w-6xl border-t border-zinc-900 pt-4 md:hidden" aria-label="Mobile navigation">
           <ul className="space-y-1 text-sm">
             <li>
-              <Link href="/vision" className="block rounded-sm px-2 py-2 text-zinc-300" onClick={() => setMobileOpen(false)}>
-                Vision
-              </Link>
-            </li>
-            <li>
-              <Link href="/science" className="block rounded-sm px-2 py-2 text-zinc-300" onClick={() => setMobileOpen(false)}>
-                Science
-              </Link>
-            </li>
-            <li>
               <Link href="/use-cases" className="block rounded-sm px-2 py-2 text-zinc-300" onClick={() => setMobileOpen(false)}>
                 Use cases
               </Link>
@@ -112,6 +102,16 @@ export function LandingNav({ overlay = false }: LandingNavProps) {
             <li>
               <Link href="/pricing" className="block rounded-sm px-2 py-2 text-zinc-300" onClick={() => setMobileOpen(false)}>
                 Pricing
+              </Link>
+            </li>
+            <li>
+              <Link href="/vision" className="block rounded-sm px-2 py-2 text-zinc-300" onClick={() => setMobileOpen(false)}>
+                Vision
+              </Link>
+            </li>
+            <li>
+              <Link href="/science" className="block rounded-sm px-2 py-2 text-zinc-300" onClick={() => setMobileOpen(false)}>
+                Science
               </Link>
             </li>
             <li>

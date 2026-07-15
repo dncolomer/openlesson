@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
- * Register Stripe payment method domains for Checkout / Elements and update business profile URL.
- * Idempotent: skips domains that already exist. Keeps existing domains untouched.
+ * Register Stripe payment method domains, webhook endpoints, and business profile URL.
+ * Idempotent: skips resources that already exist. Keeps existing domains/webhooks untouched.
  *
  * Usage:
  *   node scripts/add-stripe-domains.mjs              # test (STRIPE_SECRET_KEY from .env.local)
@@ -20,6 +20,18 @@ const DOMAINS = [
   "openlesson.academy",
   "www.openlesson.academy",
   "openlesson-uncertainsystems.vercel.app",
+];
+
+// Single canonical URL (matches legacy www.openlesson.academy webhook pattern).
+const WEBHOOK_URLS = ["https://www.uncertain.systems/api/stripe/webhook"];
+
+const WEBHOOK_EVENTS = [
+  "checkout.session.completed",
+  "customer.subscription.created",
+  "customer.subscription.deleted",
+  "customer.subscription.updated",
+  "invoice.created",
+  "invoice.payment_succeeded",
 ];
 
 const BUSINESS_PROFILE_URL = "https://uncertain.systems";
@@ -95,4 +107,50 @@ try {
   console.warn(`[warn] business_profile.url not updated (${message}). Set manually in Stripe Dashboard → Settings → Business details if needed.`);
 }
 
-console.log(`Done. Added ${added} domain(s). Total registered: ${existingNames.size + added}.`);
+const existingWebhooks = await stripe.webhookEndpoints.list({ limit: 100 });
+const webhookByUrl = new Map(existingWebhooks.data.map((endpoint) => [endpoint.url, endpoint]));
+
+let webhooksAdded = 0;
+let webhooksUpdated = 0;
+for (const url of WEBHOOK_URLS) {
+  const existingEndpoint = webhookByUrl.get(url);
+  if (!existingEndpoint) {
+    try {
+      const created = await stripe.webhookEndpoints.create({
+        url,
+        enabled_events: WEBHOOK_EVENTS,
+        description: "Uncertain Systems app webhook",
+      });
+      console.log(`[added] webhook ${created.url}`);
+      console.log(`        signing secret: ${created.secret} (set STRIPE_WEBHOOK_SECRET on Vercel if new)`);
+      webhooksAdded++;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      console.error(`[error] webhook ${url}: ${message}`);
+    }
+    continue;
+  }
+
+  const missingEvents = WEBHOOK_EVENTS.filter(
+    (event) => !existingEndpoint.enabled_events.includes(event)
+  );
+  if (missingEvents.length === 0) {
+    console.log(`[skip] webhook ${url} (already configured)`);
+    continue;
+  }
+
+  try {
+    const updated = await stripe.webhookEndpoints.update(existingEndpoint.id, {
+      enabled_events: [...new Set([...existingEndpoint.enabled_events, ...WEBHOOK_EVENTS])],
+    });
+    console.log(`[updated] webhook ${updated.url} (+${missingEvents.length} event(s))`);
+    webhooksUpdated++;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error(`[error] webhook ${url}: ${message}`);
+  }
+}
+
+console.log(
+  `Done. Domains added: ${added}. Webhooks added: ${webhooksAdded}, updated: ${webhooksUpdated}.`
+);

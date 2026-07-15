@@ -52,6 +52,8 @@ export function Navbar({ breadcrumbs = [], showNav = true }: NavbarProps) {
 
   const navLinks = [
     { href: "/pricing", label: "Upgrade" },
+    { href: "/vision", label: "Vision" },
+    { href: "/science", label: "Science" },
     { href: "/dashboard", label: t('nav.dashboard') },
   ];
 

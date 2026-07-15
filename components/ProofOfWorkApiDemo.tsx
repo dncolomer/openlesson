@@ -976,9 +976,10 @@ export function ProofOfWorkApiDemo() {
               openLesson in action
             </h1>
             <p className="mt-3 max-w-2xl text-sm leading-relaxed text-zinc-400 sm:text-base">
-              Pick a learning scenario — adopt Orbit for sprint delivery or paste your own product workflow — then
-              watch openLesson verify learning and conversion from live proof of work. Score cards separate gaps from
-              next steps: what to learn next and which product actions move adoption forward.
+              Interactive demos for openLesson&apos;s three pillars:{" "}
+              <span className="text-zinc-200">verification</span>,{" "}
+              <span className="text-zinc-200">optimization</span>, and{" "}
+              <span className="text-zinc-200">augmentation</span>.
             </p>
           </div>
           <div className="flex flex-wrap gap-2">

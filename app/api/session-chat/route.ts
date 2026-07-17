@@ -29,7 +29,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Missing problem" }, { status: 400 });
     }
 
-    const auth = await guardSessionRoute(sessionId, { ayclToken: ayclTokenFromBody(body) });
+    const ayclToken = ayclTokenFromBody(body);
+    const auth = await guardSessionRoute(sessionId, {
+      ayclToken,
+      // Cookie-auth chat is always session-bound in product UI.
+      requireSessionId: !ayclToken,
+    });
     if (!auth.ok) return auth.response;
     const { supabase } = auth;
 

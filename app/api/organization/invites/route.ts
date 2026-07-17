@@ -1,20 +1,16 @@
 import { NextResponse } from "next/server";
 import { requireAuthenticatedUser } from "@/lib/api/require-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
+import {
+  createInviteToken,
+  hashInviteToken,
+  inviteTokenStoragePlaceholder,
+} from "@/lib/organization/invite-token";
 
 export const runtime = "nodejs";
 
 function getAdminClient() {
   return createAdminClient();
-}
-
-function generateToken(): string {
-  const chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-  let result = "";
-  for (let i = 0; i < 24; i++) {
-    result += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return result;
 }
 
 // POST /api/organization/invites - Create invite token(s) (org admin only)
@@ -44,33 +40,52 @@ export async function POST(request: Request) {
     }
 
     const { count = 1 } = await request.json();
-    
+
     // Limit to max 50 invites at once
     const inviteCount = Math.min(Math.max(1, count), 50);
 
     const adminClient = getAdminClient();
 
-    // Generate invites
-    const invites = [];
+    // Generate invites: store hash at rest; return plaintext once.
+    const pending: Array<{ plaintext: string; row: Record<string, unknown> }> = [];
     for (let i = 0; i < inviteCount; i++) {
-      invites.push({
-        organization_id: profile.organization_id,
-        token: generateToken(),
-        created_by: user.id,
+      const plaintext = createInviteToken();
+      const tokenHash = hashInviteToken(plaintext);
+      pending.push({
+        plaintext,
+        row: {
+          organization_id: profile.organization_id,
+          token: inviteTokenStoragePlaceholder(tokenHash),
+          token_hash: tokenHash,
+          created_by: user.id,
+        },
       });
     }
 
     const { data: createdInvites, error } = await adminClient
       .from("organization_invites")
-      .insert(invites)
-      .select();
+      .insert(pending.map((p) => p.row))
+      .select("id, organization_id, created_by, used_by, used_at, created_at, token_hash");
 
     if (error) {
       console.error("Error creating invites:", error);
       return NextResponse.json({ error: "Failed to create invites" }, { status: 500 });
     }
 
-    return NextResponse.json({ invites: createdInvites });
+    // Map returned rows back to one-time plaintext tokens by hash.
+    const hashToPlain = new Map(pending.map((p) => [p.row.token_hash as string, p.plaintext]));
+    const invites = (createdInvites || []).map((row) => ({
+      id: row.id,
+      organization_id: row.organization_id,
+      created_by: row.created_by,
+      used_by: row.used_by,
+      used_at: row.used_at,
+      created_at: row.created_at,
+      // One-time secret for sharing; not stored as plaintext.
+      token: hashToPlain.get(row.token_hash as string) || null,
+    }));
+
+    return NextResponse.json({ invites });
   } catch (error) {
     console.error("Create invites error:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });

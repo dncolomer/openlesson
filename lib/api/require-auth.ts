@@ -3,6 +3,7 @@ import type { User } from "@supabase/supabase-js";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import { resolveAyclAccess, resolveAyclSessionAccess } from "@/lib/aycl-session-auth";
+import { requireProductAccess } from "@/lib/api/product-access";
 
 export type AuthenticatedRequest =
   | { ok: true; user: User; supabase: SupabaseClient; ayclAccess?: boolean }
@@ -42,7 +43,7 @@ export async function requireSessionOwnership(
     .single();
 
   if (error || !session) {
-    return NextResponse.json({ error: "Block not found" }, { status: 404 });
+    return NextResponse.json({ error: "Session not found" }, { status: 404 });
   }
 
   if (session.user_id !== userId) {
@@ -52,10 +53,19 @@ export async function requireSessionOwnership(
   return null;
 }
 
+async function enforceProductAccessUnlessAycl(
+  auth: Extract<AuthenticatedRequest, { ok: true }>
+): Promise<AuthenticatedRequest> {
+  if (auth.ayclAccess) return auth;
+  const access = await requireProductAccess(auth.supabase, auth.user);
+  if (!access.ok) return { ok: false, response: access.response };
+  return auth;
+}
+
 /** Auth for workspace-scoped routes (builder, performance, notes, grid). */
 export async function guardWorkspaceRoute(
   workspaceId: string,
-  options?: { ayclToken?: string | null }
+  options?: { ayclToken?: string | null; requireProductAccess?: boolean }
 ): Promise<AuthenticatedRequest> {
   const normalizedWorkspaceId = workspaceId.trim();
   if (!normalizedWorkspaceId) {
@@ -111,15 +121,28 @@ export async function guardWorkspaceRoute(
     };
   }
 
+  if (options?.requireProductAccess !== false) {
+    return enforceProductAccessUnlessAycl(auth);
+  }
+
   return auth;
 }
+
+export type GuardSessionOptions = {
+  ayclToken?: string | null;
+  /** When true, sessionId must be present for non-AYCL auth. Default false for back-compat. */
+  requireSessionId?: boolean;
+  /** Enforce product entitlement for cookie-auth users. Default true. */
+  requireProductAccess?: boolean;
+};
 
 /** Auth + optional session ownership for LLM/session API routes. */
 export async function guardSessionRoute(
   sessionId?: string | null,
-  options?: { ayclToken?: string | null }
+  options?: GuardSessionOptions
 ): Promise<AuthenticatedRequest> {
   const ayclToken = options?.ayclToken?.trim() || "";
+  const requireProduct = options?.requireProductAccess !== false;
 
   if (ayclToken && sessionId) {
     const aycl = await resolveAyclSessionAccess(ayclToken, sessionId);
@@ -141,6 +164,13 @@ export async function guardSessionRoute(
   const auth = await requireAuthenticatedUser();
   if (!auth.ok) return auth;
 
+  if (options?.requireSessionId && !sessionId) {
+    return {
+      ok: false,
+      response: NextResponse.json({ error: "sessionId is required" }, { status: 400 }),
+    };
+  }
+
   if (sessionId) {
     const denied = await requireSessionOwnership(auth.supabase, auth.user.id, sessionId);
     if (denied) {
@@ -148,5 +178,19 @@ export async function guardSessionRoute(
     }
   }
 
+  if (requireProduct) {
+    return enforceProductAccessUnlessAycl(auth);
+  }
+
   return auth;
+}
+
+/**
+ * Authenticated user with product access (for routes without session/workspace binding).
+ * Prefer guardSessionRoute / guardWorkspaceRoute when a resource id is available.
+ */
+export async function requireAuthenticatedProductUser(): Promise<AuthenticatedRequest> {
+  const auth = await requireAuthenticatedUser();
+  if (!auth.ok) return auth;
+  return enforceProductAccessUnlessAycl(auth);
 }

@@ -60,8 +60,59 @@ export function normalizeRedirectUrl(value: unknown): string | null {
   }
 }
 
+/** True for loopback, link-local, private RFC1918, and cloud metadata hosts. */
+export function isBlockedWebhookHost(hostname: string): boolean {
+  const host = hostname.trim().toLowerCase().replace(/^\[|\]$/g, "");
+
+  if (
+    host === "localhost" ||
+    host === "metadata.google.internal" ||
+    host.endsWith(".localhost") ||
+    host === "metadata" ||
+    host === "0.0.0.0" ||
+    host === "::" ||
+    host === "::1"
+  ) {
+    return true;
+  }
+
+  // IPv4
+  const ipv4 = host.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
+  if (ipv4) {
+    const parts = ipv4.slice(1).map((p) => Number(p));
+    if (parts.some((n) => n > 255)) return true;
+    const [a, b] = parts;
+    if (a === 10) return true;
+    if (a === 127) return true;
+    if (a === 0) return true;
+    if (a === 169 && b === 254) return true; // link-local / cloud metadata 169.254.169.254
+    if (a === 172 && b >= 16 && b <= 31) return true;
+    if (a === 192 && b === 168) return true;
+    if (a === 100 && b >= 64 && b <= 127) return true; // CGNAT
+    return false;
+  }
+
+  // IPv6 loopback / ULA / link-local
+  if (host === "::1" || host.startsWith("fc") || host.startsWith("fd") || host.startsWith("fe80")) {
+    return true;
+  }
+
+  return false;
+}
+
+/**
+ * Normalize completion webhook URLs. Rejects non-http(s) and private/link-local targets (SSRF).
+ */
 export function normalizeWebhookUrl(value: unknown): string | null {
-  return normalizeRedirectUrl(value);
+  const normalized = normalizeRedirectUrl(value);
+  if (!normalized) return null;
+  try {
+    const url = new URL(normalized);
+    if (isBlockedWebhookHost(url.hostname)) return null;
+    return url.toString();
+  } catch {
+    return null;
+  }
 }
 
 export function resolveTapParticipantType(input: CreateTapLinkInput): TapParticipantType | null {

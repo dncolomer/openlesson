@@ -137,7 +137,7 @@ export async function getSessions(): Promise<Session[]> {
 export async function saveSession(session: Session): Promise<void> {
   const supabase = createClient();
 
-  await supabase
+  const { error } = await supabase
     .from("sessions")
     .update({
       problem: session.problem,
@@ -151,6 +151,11 @@ export async function saveSession(session: Session): Promise<void> {
       metadata: session.metadata,
     })
     .eq("id", session.id);
+
+  if (error) {
+    console.error("[saveSession] Failed to persist session:", error);
+    throw new Error(error.message || "Failed to save session");
+  }
 }
 
 export async function deleteSession(id: string): Promise<void> {

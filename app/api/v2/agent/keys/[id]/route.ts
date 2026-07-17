@@ -5,6 +5,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { errorResponse } from "@/lib/agent-v2/auth";
 
 export async function DELETE(
@@ -30,7 +31,7 @@ export async function DELETE(
       return errorResponse(400, "validation_error", "Invalid key ID format");
     }
 
-    // Verify the key exists and belongs to this user
+    // Verify the key exists and belongs to this user (user-scoped select still allowed)
     const { data: existing, error: lookupError } = await supabase
       .from("agent_api_keys")
       .select("id, is_active")
@@ -46,8 +47,9 @@ export async function DELETE(
       return errorResponse(400, "validation_error", "API key is already revoked");
     }
 
-    // Soft-delete: set is_active = false
-    const { error: updateError } = await supabase
+    // Soft-delete via service role (client UPDATE policy removed)
+    const admin = createAdminClient();
+    const { error: updateError } = await admin
       .from("agent_api_keys")
       .update({ is_active: false })
       .eq("id", id)

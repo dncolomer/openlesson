@@ -133,7 +133,9 @@ export async function saveAudioChunk(
 
   if (insertError) {
     console.error("[saveAudioChunk] Failed to insert session_audio record:", insertError);
-    // Don't throw - the file is uploaded, just log the warning
+    // Best-effort cleanup of orphan blob so storage and DB stay consistent.
+    await supabase.storage.from("session-audio").remove([path]).catch(() => {});
+    throw insertError;
   }
 
   console.log("[saveAudioChunk] Success:", path);

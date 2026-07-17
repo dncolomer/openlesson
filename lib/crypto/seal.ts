@@ -8,21 +8,48 @@ function deriveKey(secret: string): Buffer {
   return createHash("sha256").update(secret, "utf8").digest();
 }
 
+/**
+ * Prefer dedicated encryption secrets. Service-role fallback is last-resort so
+ * existing sealed rows remain openable when only SUPABASE_SERVICE_ROLE_KEY was used.
+ * Never prefer service role when a dedicated secret is configured.
+ */
+export function resolveSealSecrets(): string[] {
+  const dedicated = [
+    process.env.XAI_ORG_KEY_ENCRYPTION_SECRET,
+    process.env.ORG_SECRETS_ENCRYPTION_KEY,
+  ].filter((s): s is string => typeof s === "string" && s.length > 0);
+
+  // Deduplicate while preserving order
+  const seen = new Set<string>();
+  const ordered: string[] = [];
+  for (const s of dedicated) {
+    if (!seen.has(s)) {
+      seen.add(s);
+      ordered.push(s);
+    }
+  }
+
+  const serviceRole = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (serviceRole && !seen.has(serviceRole)) {
+    ordered.push(serviceRole);
+  }
+
+  return ordered;
+}
+
 function getSealSecret(): string {
-  const secret =
-    process.env.XAI_ORG_KEY_ENCRYPTION_SECRET ||
-    process.env.ORG_SECRETS_ENCRYPTION_KEY ||
-    process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!secret) {
+  const secrets = resolveSealSecrets();
+  if (secrets.length === 0) {
     throw new Error(
-      "Missing encryption secret: set XAI_ORG_KEY_ENCRYPTION_SECRET (or SUPABASE_SERVICE_ROLE_KEY fallback)"
+      "Missing encryption secret: set XAI_ORG_KEY_ENCRYPTION_SECRET (or ORG_SECRETS_ENCRYPTION_KEY)"
     );
   }
-  return secret;
+  return secrets[0];
 }
 
 /**
  * Seal a UTF-8 string. Output format: base64(iv || tag || ciphertext).
+ * Uses the first dedicated secret when present (not service role if dedicated is set).
  */
 export function sealString(plaintext: string, secret?: string): string {
   const key = deriveKey(secret ?? getSealSecret());
@@ -35,9 +62,33 @@ export function sealString(plaintext: string, secret?: string): string {
 
 /**
  * Open a sealed string produced by sealString.
+ * Tries dedicated secrets first, then service-role fallback for legacy data.
  */
 export function openSealedString(sealed: string, secret?: string): string {
-  const key = deriveKey(secret ?? getSealSecret());
+  if (secret) {
+    return openWithSecret(sealed, secret);
+  }
+
+  const secrets = resolveSealSecrets();
+  if (secrets.length === 0) {
+    throw new Error(
+      "Missing encryption secret: set XAI_ORG_KEY_ENCRYPTION_SECRET (or ORG_SECRETS_ENCRYPTION_KEY)"
+    );
+  }
+
+  let lastError: unknown;
+  for (const s of secrets) {
+    try {
+      return openWithSecret(sealed, s);
+    } catch (err) {
+      lastError = err;
+    }
+  }
+  throw lastError instanceof Error ? lastError : new Error("Failed to open sealed payload");
+}
+
+function openWithSecret(sealed: string, secret: string): string {
+  const key = deriveKey(secret);
   const buf = Buffer.from(sealed, "base64");
   if (buf.length < IV_LENGTH + TAG_LENGTH + 1) {
     throw new Error("Invalid sealed payload");

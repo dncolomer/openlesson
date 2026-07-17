@@ -217,8 +217,9 @@ export async function POST(req: NextRequest) {
       ? new Date(Date.now() + expires_in_days * 86_400_000).toISOString()
       : null;
 
-    // ── Insert ──────────────────────────────────────────────────
-    const { data: inserted, error: insertError } = await supabase
+    // ── Insert via service role (client INSERT policy removed) ──
+    const admin = createAdminClient();
+    const { data: inserted, error: insertError } = await admin
       .from("agent_api_keys")
       .insert({
         user_id: user.id,

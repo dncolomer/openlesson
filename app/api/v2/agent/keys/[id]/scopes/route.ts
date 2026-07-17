@@ -5,6 +5,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { errorResponse } from "@/lib/agent-v2/auth";
 import { validateAssignableScopes } from "@/lib/agent-v2/scopes";
 import type { ApiKeyScope } from "@/lib/agent-v2/types";
@@ -97,10 +98,11 @@ export async function PATCH(
       return errorResponse(400, "validation_error", "Cannot update scopes on a revoked key");
     }
 
-    // ── Update scopes ───────────────────────────────────────────
+    // ── Update scopes via service role (client UPDATE removed) ──
     const now = new Date().toISOString();
+    const admin = createAdminClient();
 
-    const { data: updated, error: updateError } = await supabase
+    const { data: updated, error: updateError } = await admin
       .from("agent_api_keys")
       .update({ scopes: validatedScopes, updated_at: now })
       .eq("id", id)

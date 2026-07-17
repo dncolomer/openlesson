@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { callXaiText, userMessage, DEFAULT_MODEL } from "@/lib/xai-client";
-import { requireAuthenticatedUser } from "@/lib/api/require-auth";
+import { requireAuthenticatedProductUser } from "@/lib/api/require-auth";
 
 export const runtime = "nodejs";
 export const maxDuration = 30;
@@ -13,7 +13,7 @@ interface GrokipediaTermsRequest {
 
 export async function POST(request: NextRequest) {
   try {
-    const auth = await requireAuthenticatedUser();
+    const auth = await requireAuthenticatedProductUser();
     if (!auth.ok) return auth.response;
 
     const body: GrokipediaTermsRequest = await request.json();

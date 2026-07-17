@@ -8,7 +8,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { hashApiKey } from "@/lib/x402";
 import type { AuthContext, ApiKeyScope, ApiError } from "./types";
-import { checkRateLimit } from "./rate-limit";
+import { checkRateLimitAsync } from "./rate-limit";
 import { hasScope } from "./scopes";
 
 /**
@@ -115,7 +115,7 @@ export async function authenticateApiKey(
   }
 
   const rateLimit = keyData.rate_limit ?? 120;
-  const rateCheck = checkRateLimit(keyData.id, rateLimit);
+  const rateCheck = await checkRateLimitAsync(keyData.id, rateLimit);
   if (!rateCheck.allowed) {
     return errorResponse(429, "rate_limit_exceeded", "API rate limit exceeded", {
       limit: rateCheck.limit,

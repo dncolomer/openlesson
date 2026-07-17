@@ -54,7 +54,7 @@ function productSurface(page: SeoProductPageConfig, extras?: Partial<OgSurface>)
   };
 }
 
-function useCaseSurface(page: SeoUseCasePageConfig, extras?: Partial<OgSurface>): OgSurface {
+function buildUseCaseSurface(page: SeoUseCasePageConfig, extras?: Partial<OgSurface>): OgSurface {
   return {
     id: `use-case:${page.slug}`,
     path: page.path,
@@ -157,9 +157,9 @@ export const OG_SURFACES: Record<string, OgSurface> = {
   "product:think-aloud-protocol": productSurface(TAP_PAGE),
   "product:integrated-learning-environment": productSurface(ILE_PAGE),
   "product:agentic-learning-environment": productSurface(ALE_PAGE),
-  "use-case:learning-verification": useCaseSurface(LEARNING_VERIFICATION_PAGE),
-  "use-case:learning-optimization": useCaseSurface(LEARNING_OPTIMIZATION_PAGE),
-  "use-case:reasoning-augmentation": useCaseSurface(LEARNING_AUGMENTATION_PAGE),
+  "use-case:learning-verification": buildUseCaseSurface(LEARNING_VERIFICATION_PAGE),
+  "use-case:learning-optimization": buildUseCaseSurface(LEARNING_OPTIMIZATION_PAGE),
+  "use-case:reasoning-augmentation": buildUseCaseSurface(LEARNING_AUGMENTATION_PAGE),
   /** Entity chrome — title/description filled at request time. */
   insight: {
     id: "insight",

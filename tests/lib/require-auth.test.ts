@@ -65,7 +65,7 @@ describe("require-auth helpers", () => {
     const supabase = { from } as never;
     const res = await requireSessionOwnership(supabase, "user-1", "sess-1");
     expect(res?.status).toBe(404);
-    expect(await res?.json()).toEqual({ error: "Block not found" });
+    expect(await res?.json()).toEqual({ error: "Session not found" });
   });
 
   it("requireSessionOwnership returns 403 when owned by another user", async () => {
@@ -121,9 +121,23 @@ describe("require-auth helpers", () => {
 
   it("guardSessionRoute requires auth when no session id", async () => {
     getUser.mockResolvedValue({ data: { user: null }, error: null });
-    const result = await guardSessionRoute();
+    const result = await guardSessionRoute(undefined, { requireProductAccess: false });
     expect(result.ok).toBe(false);
     if (result.ok) return;
     expect(result.response.status).toBe(401);
+  });
+
+  it("guardWorkspaceRoute skips product access when disabled", async () => {
+    getUser.mockResolvedValue({ data: { user: { id: "user-1" } }, error: null });
+    const single = vi
+      .fn()
+      .mockResolvedValue({ data: { id: "ws-1", user_id: "user-1" }, error: null });
+    from.mockReturnValue({
+      select: () => ({
+        eq: () => ({ single }),
+      }),
+    });
+    const result = await guardWorkspaceRoute("ws-1", { requireProductAccess: false });
+    expect(result.ok).toBe(true);
   });
 });

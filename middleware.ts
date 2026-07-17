@@ -85,7 +85,7 @@ export async function middleware(request: NextRequest) {
   const isDemoApi = pathname.startsWith("/api/demo");
 
   // Protected routes - require authentication
-  const protectedRoutes = ["/session", "/dashboard", "/results"];
+  const protectedRoutes = ["/session", "/dashboard", "/results", "/admin"];
   const isProtectedRoute =
     protectedRoutes.some((route) => pathname.startsWith(route)) || isDemoPage;
 

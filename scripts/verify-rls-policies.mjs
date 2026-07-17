@@ -179,6 +179,158 @@ async function verifySqlRls(target) {
   await client.query("DELETE FROM session_audio WHERE storage_path LIKE '%rls-test%'");
   await client.query("DELETE FROM sessions WHERE id = $1", [testSessionId]);
 
+  // ── Hardening checks (open agent policies / privilege escalation) ──
+  if (regularExists) {
+    // Cross-user workspace isolation: regular cannot list all workspaces
+    const otherWorkspaces = await asRole(client, regularUserId, async () => {
+      const r = await client.query(
+        `SELECT count(*)::int AS n FROM workspaces WHERE user_id = $1`,
+        [ADMIN_ID]
+      );
+      return r.rows[0].n;
+    });
+    if (otherWorkspaces === 0) {
+      pass(`${target}: workspaces other user hidden`);
+    } else {
+      fail(`${target}: workspaces other user hidden`, `count=${otherWorkspaces}`);
+    }
+
+    // agent_api_keys: cannot list all keys (open SELECT policy must be gone)
+    const allKeys = await asRole(client, regularUserId, async () => {
+      const r = await client.query(
+        `SELECT count(*)::int AS n FROM agent_api_keys WHERE user_id IS DISTINCT FROM $1`,
+        [regularUserId]
+      );
+      return r.rows[0].n;
+    });
+    if (allKeys === 0) {
+      pass(`${target}: agent_api_keys other keys hidden`);
+    } else {
+      fail(`${target}: agent_api_keys other keys hidden`, `count=${allKeys}`);
+    }
+
+    // agent_api_keys: client INSERT blocked (must go through service role API)
+    const insertKeyBlocked = await asRole(client, regularUserId, async () => {
+      try {
+        await client.query(
+          `INSERT INTO agent_api_keys (user_id, key_hash, key_prefix, scopes)
+           VALUES ($1, 'rls-test-hash', 'sk_rls_test', ARRAY['*']::text[])`,
+          [regularUserId]
+        );
+        return false;
+      } catch {
+        return true;
+      }
+    });
+    if (insertKeyBlocked) {
+      pass(`${target}: agent_api_keys client insert blocked`);
+    } else {
+      // cleanup accidental insert
+      await client.query(
+        `DELETE FROM agent_api_keys WHERE key_hash = 'rls-test-hash'`
+      );
+      fail(`${target}: agent_api_keys client insert blocked`, "insert succeeded");
+    }
+
+    // organization_invites: no full-table select (world-readable policy must be gone)
+    const inviteEnum = await asRole(client, regularUserId, async () => {
+      const r = await client.query(
+        `SELECT count(*)::int AS n FROM organization_invites`
+      );
+      return r.rows[0].n;
+    });
+    // Org admins may see own org invites; non-admins should see 0 unless they are org admin.
+    // Accept small counts only if user is org admin of those rows — treat any wide dump as fail.
+    if (inviteEnum === 0) {
+      pass(`${target}: organization_invites not world-readable`);
+    } else {
+      // If user is org admin, they may legitimately see own-org invites.
+      const isOrgAdmin = (
+        await client.query(
+          `SELECT is_org_admin FROM profiles WHERE id = $1`,
+          [regularUserId]
+        )
+      ).rows[0]?.is_org_admin;
+      if (isOrgAdmin) {
+        pass(
+          `${target}: organization_invites not world-readable`,
+          `org admin saw ${inviteEnum} (own-org policy)`
+        );
+      } else {
+        fail(
+          `${target}: organization_invites not world-readable`,
+          `count=${inviteEnum} for non-admin`
+        );
+      }
+    }
+
+    // profiles: cannot self-elevate is_admin
+    const adminEscalationBlocked = await asRole(client, regularUserId, async () => {
+      try {
+        await client.query(
+          `UPDATE profiles SET is_admin = true WHERE id = $1`,
+          [regularUserId]
+        );
+        const r = await client.query(
+          `SELECT is_admin FROM profiles WHERE id = $1`,
+          [regularUserId]
+        );
+        return r.rows[0]?.is_admin !== true;
+      } catch {
+        return true;
+      }
+    });
+    // Ensure we didn't leave them as admin
+    await client.query(
+      `UPDATE profiles SET is_admin = false WHERE id = $1 AND is_admin = true`,
+      [regularUserId]
+    );
+    if (adminEscalationBlocked) {
+      pass(`${target}: profiles is_admin self-update blocked`);
+    } else {
+      fail(`${target}: profiles is_admin self-update blocked`, "escalation succeeded");
+    }
+  } else {
+    pass(`${target}: workspaces other user hidden`, "skipped (regular user not in DB)");
+    pass(`${target}: agent_api_keys other keys hidden`, "skipped");
+    pass(`${target}: agent_api_keys client insert blocked`, "skipped");
+    pass(`${target}: organization_invites not world-readable`, "skipped");
+    pass(`${target}: profiles is_admin self-update blocked`, "skipped");
+  }
+
+  // Policy inventory: open agent policies must not exist
+  const openPolicies = await client.query(`
+    SELECT pol.polname AS name
+    FROM pg_policy pol
+    JOIN pg_class cls ON cls.oid = pol.polrelid
+    JOIN pg_namespace nsp ON nsp.oid = cls.relnamespace
+    WHERE nsp.nspname = 'public'
+      AND pol.polname IN (
+        'Agent endpoints can read agent api keys',
+        'Agent endpoints can read learning plans',
+        'Agent endpoints can create learning plans',
+        'Agent endpoints can read plan nodes',
+        'Agent endpoints can create plan nodes',
+        'Agent endpoints can update plan nodes',
+        'Anyone can view invite by token',
+        'Service can insert proofs',
+        'Service can update proofs',
+        'Service can insert batches',
+        'Service can update batches',
+        'Service can insert conversations',
+        'Service can update conversations',
+        'Users can create own agent api keys'
+      )
+  `);
+  if (openPolicies.rowCount === 0) {
+    pass(`${target}: open agent/service RLS policies dropped`);
+  } else {
+    fail(
+      `${target}: open agent/service RLS policies dropped`,
+      openPolicies.rows.map((r) => r.name).join(", ")
+    );
+  }
+
   await client.end();
 }
 

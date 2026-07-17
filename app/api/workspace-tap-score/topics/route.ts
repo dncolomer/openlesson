@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { resolveTapSessionAccess } from "@/lib/tap-score-session-auth";
-import { generateTapStartingTopics, getTapScoreBrief, getTapScoreBriefForUser } from "@/lib/tap-score";
+import {
+  loadTapScoreBriefForAccess,
+  resolveTapSessionAccess,
+} from "@/lib/tap-score-session-auth";
+import { generateTapStartingTopics } from "@/lib/tap-score";
 
 export const runtime = "nodejs";
 export const maxDuration = 45;
@@ -28,9 +31,12 @@ export async function POST(req: NextRequest) {
 
     const focusNodeIds = blockId ? [blockId] : access.blockId ? [access.blockId] : [];
     const resolvedFocusSessionId = focusSessionId || access.focusSessionId;
-    const { brief } = access.userId
-      ? await getTapScoreBriefForUser(access.workspaceId, access.userId, focusNodeIds, true, resolvedFocusSessionId)
-      : await getTapScoreBrief(access.workspaceId, focusNodeIds, resolvedFocusSessionId);
+    // Brief as workspace owner for guest/assigned private links.
+    const { brief } = await loadTapScoreBriefForAccess(
+      access,
+      focusNodeIds,
+      resolvedFocusSessionId
+    );
 
     const topics = await generateTapStartingTopics(brief, minutes);
     return NextResponse.json({ topics });

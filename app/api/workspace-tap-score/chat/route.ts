@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createAdminClient } from "@/lib/supabase/admin";
 import { callXai, systemMessage, userMessage } from "@/lib/xai-client";
-import { buildTapScoreInstructions, getTapScoreBrief, getTapScoreBriefForUser, TapScoreMode, hashPrivateToken } from "@/lib/tap-score";
+import { buildTapScoreInstructions, TapScoreMode } from "@/lib/tap-score";
 import { buildTapSelectiveThoughtSystemPrompt } from "@/lib/prompt-kernel/surfaces/tap";
-import { resolveTapSessionAccess } from "@/lib/tap-score-session-auth";
+import {
+  loadTapScoreBriefForAccess,
+  resolveTapSessionAccess,
+} from "@/lib/tap-score-session-auth";
 import {
   buildTapChatExchangePayload,
   TAP_CHAT_TOOL_NAME,
@@ -11,6 +13,7 @@ import {
 import { uploadFileToXAI } from "@/lib/xai-files";
 import { countWorkspaceProofOfWorkForPlan } from "@/lib/agent-v2/workspace-proof-of-work";
 import { withProofOfWorkApiResponse } from "@/lib/agent-v2/predictive-interruption";
+import { buildTapInProgressPatch } from "@/lib/tap-started-at";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -28,43 +31,64 @@ export async function POST(req: NextRequest) {
     const tapSessionId = body.tapSessionId ? String(body.tapSessionId) : "";
     const messages = Array.isArray(body.messages) ? body.messages : [];
     const latestThought = String(body.thought || "").trim();
-    let userId: string | null = null;
 
     if (!latestThought) return NextResponse.json({ error: "thought is required" }, { status: 400 });
 
-    if (privateToken) {
-      const supabase = createAdminClient();
-      const { data: session, error } = await supabase
-        .from("workspace_tap_sessions")
-        .select("id, workspace_id, user_id, guest_user_id, organization_id, requested_duration_seconds, mode, focus_block_ids, status, session_id, workspaces!inner(user_id)")
-        .eq("private_token_hash", hashPrivateToken(privateToken))
-        .single();
+    // Always resolve access first (enforces assigned_user_id when present).
+    const access = await resolveTapSessionAccess({
+      privateToken: privateToken || undefined,
+      workspaceId: workspaceId || undefined,
+      tapSessionId: tapSessionId || undefined,
+      blockId,
+      focusSessionId,
+    });
 
-      if (error || !session) return NextResponse.json({ error: "TAP block not found" }, { status: 404 });
-      await supabase
-        .from("workspace_tap_sessions")
-        .update({ status: "in_progress", started_at: new Date().toISOString() })
-        .eq("id", session.id);
+    if ("error" in access) {
+      return NextResponse.json({ error: access.error }, { status: access.status });
+    }
 
-      workspaceId = session.workspace_id;
-      userId = session.user_id || (session as any).workspaces?.user_id || null;
+    workspaceId = access.workspaceId;
+    focusSessionId = access.focusSessionId;
+    if (access.blockId && !focusNodeIds.includes(access.blockId)) {
+      focusNodeIds = [access.blockId, ...focusNodeIds];
+    }
+
+    const existing = access.existingSession as {
+      status?: string | null;
+      started_at?: string | null;
+      requested_duration_seconds?: number | null;
+      focus_block_ids?: string[] | null;
+      session_id?: string | null;
+    } | null;
+
+    if (privateToken && access.tapSessionId) {
+      const patch = buildTapInProgressPatch(existing);
+      await access.supabase
+        .from("workspace_tap_sessions")
+        .update(patch)
+        .eq("id", access.tapSessionId);
+
       mode = "curious";
-      minutes = Math.max(1, Math.round((session.requested_duration_seconds || 900) / 60));
-      focusNodeIds = session.focus_block_ids || [];
-      focusSessionId = session.session_id || null;
+      minutes = Math.max(1, Math.round((existing?.requested_duration_seconds || 900) / 60));
+      if (Array.isArray(existing?.focus_block_ids) && existing!.focus_block_ids!.length > 0) {
+        focusNodeIds = existing!.focus_block_ids as string[];
+      }
+      if (existing?.session_id) focusSessionId = existing.session_id;
     }
 
     if (!workspaceId) return NextResponse.json({ error: "workspaceId is required" }, { status: 400 });
     if (blockId && !focusNodeIds.includes(blockId)) focusNodeIds = [blockId, ...focusNodeIds];
 
-    const { brief } = userId
-      ? await getTapScoreBriefForUser(workspaceId, userId, focusNodeIds, true, focusSessionId)
-      : await getTapScoreBrief(workspaceId, focusNodeIds, focusSessionId);
+    // Shared brief loader: owner for guest/assigned private links (not participant userId).
+    // PoW insert below uses access.userId / access.guestUserId for attribution.
+    const { brief } = await loadTapScoreBriefForAccess(access, focusNodeIds, focusSessionId);
 
     const context = buildTapScoreInstructions(brief, mode, minutes);
     const history = messages
       .slice(-12)
-      .map((message: any) => `${message.role === "assistant" ? "Helios" : "Learner"}: ${String(message.content || "").slice(0, 2000)}`)
+      .map((message: { role?: string; content?: string }) =>
+        `${message.role === "assistant" ? "Helios" : "Learner"}: ${String(message.content || "").slice(0, 2000)}`
+      )
       .join("\n\n");
 
     const response = await callXai([
@@ -83,56 +107,61 @@ export async function POST(req: NextRequest) {
     const heliosReply = response.data;
     let proofOfWorkCount = 0;
 
-    if (tapSessionId) {
-      const access = await resolveTapSessionAccess({
-        privateToken,
-        workspaceId,
-        tapSessionId,
-        blockId,
-        focusSessionId,
+    // Fail closed: when a TAP session is in play, PoW must be recorded or we error.
+    if (access.tapSessionId) {
+      const timestampMs = Date.now();
+      const payload = buildTapChatExchangePayload({
+        tapSessionId: access.tapSessionId,
+        workspaceId: access.workspaceId,
+        blockId: blockId || access.blockId,
+        focusSessionId: focusSessionId || access.focusSessionId,
+        learnerThought: latestThought,
+        heliosReply,
+        timestampMs,
       });
 
-      if (!("error" in access)) {
-        const timestampMs = Date.now();
-        const payload = buildTapChatExchangePayload({
-          tapSessionId: access.tapSessionId,
-          workspaceId: access.workspaceId,
-          blockId: blockId || access.blockId,
-          focusSessionId: focusSessionId || access.focusSessionId,
-          learnerThought: latestThought,
-          heliosReply,
-          timestampMs,
-        });
-
-        const fileName = `tap-chat-${access.tapSessionId}-${timestampMs}.json`;
-        const base64 = Buffer.from(JSON.stringify(payload, null, 2), "utf8").toString("base64");
-        const uploaded = await uploadFileToXAI(fileName, "application/json", base64);
-
-        await access.supabase.from("workspace_proof_of_work").insert({
-          workspace_id: access.workspaceId,
-          block_id: blockId || access.blockId,
-          session_id: focusSessionId || access.focusSessionId,
-          proof_of_work_type: "tool",
-          file_name: fileName,
-          mime_type: "application/json",
-          file_size: Buffer.byteLength(JSON.stringify(payload), "utf8"),
-          xai_file_id: uploaded.file_id,
-          timestamp_ms: timestampMs,
-          chunk_index: 0,
-          metadata: {
-            tap_session_id: access.tapSessionId,
-            learner_thought: latestThought,
-            helios_reply: heliosReply,
-          },
-          tool_name: TAP_CHAT_TOOL_NAME,
-          tool_action: "chat_exchange",
-          user_id: access.userId,
-          guest_user_id: access.guestUserId,
-          organization_id: access.organizationId,
-        });
-
-        proofOfWorkCount = await countWorkspaceProofOfWorkForPlan(access.supabase, access.workspaceId);
+      const fileName = `tap-chat-${access.tapSessionId}-${timestampMs}.json`;
+      const base64 = Buffer.from(JSON.stringify(payload, null, 2), "utf8").toString("base64");
+      let uploaded: { file_id: string };
+      try {
+        uploaded = await uploadFileToXAI(fileName, "application/json", base64);
+      } catch (err) {
+        console.error("[workspace-tap-score/chat] PoW upload failed:", err);
+        return NextResponse.json(
+          { error: err instanceof Error ? err.message : "Failed to store proof of work" },
+          { status: 502 }
+        );
       }
+
+      const { error: insertError } = await access.supabase.from("workspace_proof_of_work").insert({
+        workspace_id: access.workspaceId,
+        block_id: blockId || access.blockId,
+        session_id: focusSessionId || access.focusSessionId,
+        proof_of_work_type: "tool",
+        file_name: fileName,
+        mime_type: "application/json",
+        file_size: Buffer.byteLength(JSON.stringify(payload), "utf8"),
+        xai_file_id: uploaded.file_id,
+        timestamp_ms: timestampMs,
+        chunk_index: 0,
+        metadata: {
+          tap_session_id: access.tapSessionId,
+          learner_thought: latestThought,
+          helios_reply: heliosReply,
+        },
+        tool_name: TAP_CHAT_TOOL_NAME,
+        tool_action: "chat_exchange",
+        user_id: access.userId,
+        guest_user_id: access.guestUserId,
+        organization_id: access.organizationId,
+      });
+
+      if (insertError) {
+        console.error("[workspace-tap-score/chat] PoW insert failed:", insertError);
+        return NextResponse.json({ error: "Failed to store proof of work" }, { status: 500 });
+      }
+
+      proofOfWorkCount = await countWorkspaceProofOfWorkForPlan(access.supabase, access.workspaceId);
     }
 
     return NextResponse.json(

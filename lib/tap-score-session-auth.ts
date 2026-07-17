@@ -1,14 +1,24 @@
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { getTapScoreBrief, hashPrivateToken } from "@/lib/tap-score";
+import {
+  getTapScoreBrief,
+  getTapScoreBriefForUser,
+  hashPrivateToken,
+} from "@/lib/tap-score";
 import type { TapPostSessionMode } from "@/lib/agent-v2/tap-link-config";
 
 export interface ResolvedTapSessionContext {
   supabase: ReturnType<typeof createAdminClient>;
   workspaceId: string;
+  /** Participant for PoW / attribution (assigned user, null for guest, owner otherwise). */
   userId: string | null;
   guestUserId: string | null;
   assignedUserId: string | null;
+  /**
+   * Workspace owner (session.user_id || workspace.user_id).
+   * Use for TAP brief / ownership-scoped content — not guest or assignee.
+   */
+  workspaceOwnerUserId: string | null;
   organizationId: string | null;
   blockId: string | null;
   focusSessionId: string | null;
@@ -19,19 +29,32 @@ export interface ResolvedTapSessionContext {
   existingSession: Record<string, unknown> | null;
 }
 
-const TAP_SESSION_SELECT =
-  "id, workspace_id, user_id, guest_user_id, assigned_user_id, organization_id, block_id, session_id, status, requested_duration_seconds, post_session, redirect_url, completion_webhook_url, workspaces!inner(user_id)";
+export const TAP_SESSION_SELECT =
+  "id, workspace_id, user_id, guest_user_id, assigned_user_id, organization_id, block_id, session_id, status, started_at, requested_duration_seconds, focus_block_ids, post_session, redirect_url, completion_webhook_url, workspaces!inner(user_id)";
 
-function participantAuthFromSession(session: {
+const TAP_SESSION_SELECT_NO_JOIN =
+  "id, workspace_id, user_id, guest_user_id, assigned_user_id, organization_id, block_id, session_id, status, started_at, requested_duration_seconds, focus_block_ids, post_session, redirect_url, completion_webhook_url";
+
+export function workspaceOwnerFromSession(session: {
+  user_id?: string | null;
+  workspaces?: { user_id?: string } | Array<{ user_id?: string }> | null;
+}): string | null {
+  const workspaceOwner = Array.isArray(session.workspaces)
+    ? session.workspaces[0]?.user_id
+    : session.workspaces?.user_id;
+  return session.user_id || workspaceOwner || null;
+}
+
+/**
+ * Participant identity for access + PoW attribution.
+ * Does NOT substitute assignee/guest for workspace owner (brief uses workspaceOwnerFromSession).
+ */
+export function participantAuthFromSession(session: {
   user_id: string | null;
   guest_user_id: string | null;
   assigned_user_id: string | null;
   workspaces?: { user_id?: string } | Array<{ user_id?: string }>;
 }): { userId: string | null; guestUserId: string | null; assignedUserId: string | null } {
-  const workspaceOwner = Array.isArray(session.workspaces)
-    ? session.workspaces[0]?.user_id
-    : session.workspaces?.user_id;
-
   if (session.assigned_user_id) {
     return {
       userId: session.assigned_user_id,
@@ -49,10 +72,48 @@ function participantAuthFromSession(session: {
   }
 
   return {
-    userId: session.user_id || workspaceOwner || null,
+    userId: workspaceOwnerFromSession(session),
     guestUserId: null,
     assignedUserId: null,
   };
+}
+
+/**
+ * User id to pass to getTapScoreBriefForUser after private-token access is resolved.
+ * Always the workspace owner when available so guest/assigned links do not fail ownership.
+ */
+export function selectTapBriefUserId(access: {
+  workspaceOwnerUserId?: string | null;
+  userId?: string | null;
+}): string | null {
+  return access.workspaceOwnerUserId || access.userId || null;
+}
+
+/**
+ * Load TAP brief for an already-resolved session access context.
+ * Uses workspace owner for ownership-gated brief (guest/assigned private links).
+ * Cookie path falls back to getTapScoreBrief when no owner id is known.
+ */
+export async function loadTapScoreBriefForAccess(
+  access: {
+    workspaceId: string;
+    workspaceOwnerUserId?: string | null;
+    userId?: string | null;
+  },
+  focusNodeIds: string[] = [],
+  focusSessionId?: string | null
+) {
+  const briefUserId = selectTapBriefUserId(access);
+  if (briefUserId) {
+    return getTapScoreBriefForUser(
+      access.workspaceId,
+      briefUserId,
+      focusNodeIds,
+      true,
+      focusSessionId
+    );
+  }
+  return getTapScoreBrief(access.workspaceId, focusNodeIds, focusSessionId);
 }
 
 export async function resolveTapSessionAccess(input: {
@@ -90,6 +151,7 @@ export async function resolveTapSessionAccess(input: {
     }
 
     const participant = participantAuthFromSession(session);
+    const workspaceOwnerUserId = workspaceOwnerFromSession(session);
 
     return {
       supabase,
@@ -97,6 +159,7 @@ export async function resolveTapSessionAccess(input: {
       userId: participant.userId,
       guestUserId: participant.guestUserId,
       assignedUserId: participant.assignedUserId,
+      workspaceOwnerUserId,
       organizationId: session.organization_id || null,
       blockId: session.block_id || null,
       focusSessionId: session.session_id || null,
@@ -131,9 +194,7 @@ export async function resolveTapSessionAccess(input: {
   if (tapSessionId) {
     const { data: session, error } = await supabase
       .from("workspace_tap_sessions")
-      .select(
-        "id, workspace_id, user_id, guest_user_id, assigned_user_id, organization_id, block_id, session_id, status, requested_duration_seconds, post_session, redirect_url, completion_webhook_url"
-      )
+      .select(TAP_SESSION_SELECT_NO_JOIN)
       .eq("id", tapSessionId)
       .eq("workspace_id", workspaceId)
       .single();
@@ -154,6 +215,7 @@ export async function resolveTapSessionAccess(input: {
     userId: user.id,
     guestUserId: null,
     assignedUserId: existingSession?.assigned_user_id?.toString() || null,
+    workspaceOwnerUserId: user.id,
     organizationId: null,
     blockId: input.blockId || existingSession?.block_id?.toString() || null,
     focusSessionId: input.focusSessionId || existingSession?.session_id?.toString() || null,

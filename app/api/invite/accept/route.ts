@@ -1,11 +1,57 @@
 import { NextResponse } from "next/server";
 import { requireAuthenticatedUser } from "@/lib/api/require-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { hashInviteToken } from "@/lib/organization/invite-token";
 
 export const runtime = "nodejs";
 
 function getAdminClient() {
   return createAdminClient();
+}
+
+async function findInviteByToken(
+  adminClient: ReturnType<typeof createAdminClient>,
+  token: string
+) {
+  const tokenHash = hashInviteToken(token);
+
+  // Prefer hash lookup (new invites); fall back to legacy plaintext column.
+  const { data: byHash } = await adminClient
+    .from("organization_invites")
+    .select(
+      `
+        id,
+        token,
+        token_hash,
+        used_by,
+        used_at,
+        organization_id,
+        organization:organizations(id, name, slug)
+      `
+    )
+    .eq("token_hash", tokenHash)
+    .maybeSingle();
+
+  if (byHash) return byHash;
+
+  const { data: byPlain, error } = await adminClient
+    .from("organization_invites")
+    .select(
+      `
+        id,
+        token,
+        token_hash,
+        used_by,
+        used_at,
+        organization_id,
+        organization:organizations(id, name, slug)
+      `
+    )
+    .eq("token", token)
+    .maybeSingle();
+
+  if (error || !byPlain) return null;
+  return byPlain;
 }
 
 // GET /api/invite/accept?token=xxx - Get invite details
@@ -19,20 +65,9 @@ export async function GET(request: Request) {
     }
 
     const adminClient = getAdminClient();
+    const invite = await findInviteByToken(adminClient, token);
 
-    const { data: invite, error } = await adminClient
-      .from("organization_invites")
-      .select(`
-        id,
-        token,
-        used_by,
-        used_at,
-        organization:organizations(id, name, slug)
-      `)
-      .eq("token", token)
-      .single();
-
-    if (error || !invite) {
+    if (!invite) {
       return NextResponse.json({ error: "Invalid invite token" }, { status: 404 });
     }
 
@@ -42,7 +77,8 @@ export async function GET(request: Request) {
     return NextResponse.json({
       invite: {
         id: invite.id,
-        token: invite.token,
+        // Do not echo stored placeholder/hash; client already has the secret token.
+        token,
         is_used: invite.used_by !== null,
         organization: org
           ? {
@@ -112,18 +148,9 @@ export async function POST(request: Request) {
     // Inline transfer fallback (same semantics as migration RPC)
     console.warn("accept_organization_invite RPC unavailable, using inline transfer:", rpcError);
 
-    const { data: invite, error: inviteError } = await adminClient
-      .from("organization_invites")
-      .select(`
-        id,
-        organization_id,
-        used_by,
-        organization:organizations(id, name, slug)
-      `)
-      .eq("token", token)
-      .single();
+    const invite = await findInviteByToken(adminClient, token);
 
-    if (inviteError || !invite) {
+    if (!invite) {
       return NextResponse.json({ error: "Invalid invite token" }, { status: 404 });
     }
 

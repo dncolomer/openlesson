@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { ayclTokenFromBody, guardSessionRoute, requireAuthenticatedUser } from "@/lib/api/require-auth";
+import { ayclTokenFromBody, guardSessionRoute } from "@/lib/api/require-auth";
 import { callXaiText, systemMessage, userMessage, DEFAULT_MODEL, RECOMMENDED_TEMPS } from "@/lib/xai-client";
 import { getLanguageName } from "@/lib/tutoring-languages";
 
@@ -16,12 +16,20 @@ function sanitizeAssistantText(text: string) {
 
 export async function POST(request: NextRequest) {
   try {
-    const { sessionId, problem, tutoringLanguage } = await request.json();
+    const body = await request.json();
+    const { sessionId, problem, tutoringLanguage } = body as {
+      sessionId?: string;
+      problem?: string;
+      tutoringLanguage?: string;
+    };
     if (!sessionId || !problem) {
       return NextResponse.json({ error: "Missing sessionId or problem" }, { status: 400 });
     }
 
-    const auth = await requireAuthenticatedUser();
+    const auth = await guardSessionRoute(sessionId, {
+      ayclToken: ayclTokenFromBody(body as Record<string, unknown>),
+      requireSessionId: true,
+    });
     if (!auth.ok) return auth.response;
     const { user, supabase } = auth;
 
@@ -31,7 +39,7 @@ export async function POST(request: NextRequest) {
       .eq("id", sessionId)
       .single();
 
-    if (!currentSession || currentSession.user_id !== user.id) {
+    if (!currentSession) {
       return NextResponse.json({ error: "Not authorized" }, { status: 403 });
     }
 

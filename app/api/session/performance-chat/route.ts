@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { ayclTokenFromBody, guardSessionRoute, requireAuthenticatedUser } from "@/lib/api/require-auth";
+import { ayclTokenFromBody, guardSessionRoute } from "@/lib/api/require-auth";
 import { uploadFileToXAI } from "@/lib/xai-files";
 import { callXaiResponses, DEFAULT_MODEL, ResponsesInputMessage } from "@/lib/xai-client";
 
@@ -24,10 +24,6 @@ interface SessionPerformanceData {
 
 export async function POST(req: NextRequest) {
   try {
-    const auth = await requireAuthenticatedUser();
-    if (!auth.ok) return auth.response;
-    const { user, supabase } = auth;
-
     const body = await req.json();
     const { sessionId, message, conversationHistory = [], fileIds = [] } = body;
 
@@ -39,17 +35,24 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "message is required" }, { status: 400 });
     }
 
-    // Get the session and verify ownership
+    const auth = await guardSessionRoute(sessionId, {
+      ayclToken: ayclTokenFromBody(body as Record<string, unknown>),
+      requireSessionId: true,
+    });
+    if (!auth.ok) return auth.response;
+    const { user, supabase } = auth;
+
+    // Get the session (ownership already enforced by guardSessionRoute)
     const { data: session, error: sessionError } = await supabase
       .from("sessions")
       .select("*")
       .eq("id", sessionId)
-      .eq("user_id", user.id)
       .single();
 
     if (sessionError || !session) {
-      return NextResponse.json({ error: "Block not found" }, { status: 404 });
+      return NextResponse.json({ error: "Session not found" }, { status: 404 });
     }
+    void user;
 
     // If this is the first message (no fileIds), we need to fetch and upload data
     let activeFileIds = fileIds;

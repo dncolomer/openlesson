@@ -31,7 +31,16 @@ export async function ensureTrialExpiryApplied<
   const patch = demoteExpiredTrialProfile(profile);
   if (!patch) return profile;
 
-  const { error } = await supabase
+  // Prefer service-role client so privileged-column freeze trigger allows demotion.
+  let writer = supabase;
+  try {
+    const { createAdminClient } = await import("@/lib/supabase/admin");
+    writer = createAdminClient();
+  } catch {
+    writer = supabase;
+  }
+
+  const { error } = await writer
     .from("profiles")
     .update({
       plan: patch.plan,

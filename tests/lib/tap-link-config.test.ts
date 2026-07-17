@@ -26,6 +26,12 @@ describe("tap-link-config", () => {
     expect(normalizeRedirectUrl("not-a-url")).toBeNull();
   });
 
+  it("blocks private webhook targets while allowing public ones", async () => {
+    const { normalizeWebhookUrl } = await import("@/lib/agent-v2/tap-link-config");
+    expect(normalizeWebhookUrl("https://hooks.example.com/x")).toBe("https://hooks.example.com/x");
+    expect(normalizeWebhookUrl("http://127.0.0.1/x")).toBeNull();
+  });
+
   it("resolves participant types", () => {
     expect(resolveTapParticipantType({ participant_type: "anonymous" })).toBe("anonymous");
     expect(resolveTapParticipantType({ user_id: "user-1" })).toBe("user");

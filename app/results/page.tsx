@@ -77,6 +77,7 @@ function ResultsContent() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          sessionId: s.id,
           problem: s.problem,
           duration: `${durationMin} minutes`,
           probeCount: s.probes.length,

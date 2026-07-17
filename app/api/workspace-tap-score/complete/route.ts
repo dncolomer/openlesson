@@ -138,21 +138,29 @@ export async function POST(req: NextRequest) {
     }
 
     if (access.completionWebhookUrl) {
-      void fetch(access.completionWebhookUrl, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          event: "tap_session.completed",
-          workspace_id: access.workspaceId,
-          tap_session_id: resolvedTapSessionId,
-          guest_user_id: access.guestUserId,
-          assigned_user_id: access.assignedUserId,
-          completed_at: completedAt,
-          duration_seconds: durationSeconds,
-        }),
-      }).catch((webhookError) => {
-        console.error("[workspace-tap-score/complete] Webhook error:", webhookError);
-      });
+      const { normalizeWebhookUrl } = await import("@/lib/agent-v2/tap-link-config");
+      const safeWebhook = normalizeWebhookUrl(access.completionWebhookUrl);
+      if (safeWebhook) {
+        void fetch(safeWebhook, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            event: "tap_session.completed",
+            workspace_id: access.workspaceId,
+            tap_session_id: resolvedTapSessionId,
+            guest_user_id: access.guestUserId,
+            assigned_user_id: access.assignedUserId,
+            completed_at: completedAt,
+            duration_seconds: durationSeconds,
+          }),
+        }).catch((webhookError) => {
+          console.error("[workspace-tap-score/complete] Webhook error:", webhookError);
+        });
+      } else {
+        console.warn(
+          "[workspace-tap-score/complete] Skipping blocked or invalid completion webhook URL"
+        );
+      }
     }
 
     return NextResponse.json({

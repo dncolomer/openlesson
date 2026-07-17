@@ -34,7 +34,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Missing gapScore" }, { status: 400 });
     }
 
-    const auth = await guardSessionRoute(sessionId, { ayclToken: ayclTokenFromBody(body) });
+    const auth = await guardSessionRoute(sessionId, {
+      ayclToken: ayclTokenFromBody(body),
+      // Prefer binding to a session when provided; product access always enforced for cookie auth.
+    });
     if (!auth.ok) return auth.response;
     const { supabase } = auth;
 

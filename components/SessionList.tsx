@@ -8,7 +8,7 @@ import { BlockDetailDrawer } from "./BlockDetailDrawer";
 import { buildSkillGridLayout, getWeightedNeighborhood } from "@/lib/block-skill-grid";
 import { type SupabaseBrowserClient } from "@/lib/supabase/client";
 import { useI18n } from "@/lib/i18n";
-import { DEFAULT_MODEL } from "@/lib/xai-client";
+import { DEFAULT_MODEL } from "@/lib/xai-models";
 
 const MODEL_STORAGE_KEY = "planner-model";
 const DEFAULT_PLANNER_MODEL = DEFAULT_MODEL;

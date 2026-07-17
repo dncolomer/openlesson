@@ -9,7 +9,7 @@ import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
 import "katex/dist/katex.min.css";
 import { useI18n } from "@/lib/i18n";
-import { DEFAULT_MODEL } from "@/lib/xai-client";
+import { DEFAULT_MODEL } from "@/lib/xai-models";
 
 interface Message {
   id: string;

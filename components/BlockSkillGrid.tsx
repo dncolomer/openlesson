@@ -16,7 +16,7 @@ import {
   type GridCell,
   type SkillGridNode,
 } from "@/lib/block-skill-grid";
-import { DEFAULT_MODEL } from "@/lib/xai-client";
+import { DEFAULT_MODEL } from "@/lib/xai-models";
 
 const MODEL_STORAGE_KEY = "planner-model";
 const DEFAULT_PLANNER_MODEL = DEFAULT_MODEL;

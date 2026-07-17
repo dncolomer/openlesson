@@ -107,9 +107,9 @@ export function ProblemInput({ initialTopic, theme = "neutral", placeholder: pro
     }
 
     try {
-      // Create session in Supabase and consume an extra lesson if over base limit
+      // Create session in Supabase
       const session = await createSession(problem.trim());
-      // Consume extra lesson server-side
+      // Legacy no-op: older clients still POST here after session create
       fetch("/api/check-usage", { method: "POST" }).catch(() => {});
       // Navigate to session page with DB id
       router.push(`/session?id=${session.id}`);

@@ -6,7 +6,7 @@ import { ChatPanel } from "./ChatPanel";
 import { SessionList } from "./SessionList";
 import { RemixModal } from "./RemixModal";
 import { useI18n } from "@/lib/i18n";
-import { DEFAULT_MODEL } from "@/lib/xai-client";
+import { DEFAULT_MODEL } from "@/lib/xai-models";
 
 const DIVIDER_STORAGE_KEY = "plan-divider-width";
 

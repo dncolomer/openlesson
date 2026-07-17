@@ -1,25 +1,24 @@
 import { describe, expect, it } from "vitest";
+import { nexusfrontDemo } from "@/lib/product-demos/demos/nexusfront";
+import { getDemoWorkspaceModelFile } from "@/lib/product-demos/demo-definition";
 import {
-  SIMULATION_ACTIONS,
-  SIMULATION_CATEGORY_ORDER,
   applySimulationAction,
   buildSimulationProofOfWorkPayload,
   countDistinctProofOfWorkActions,
   createInitialWorldState,
   getActionsByCategory,
-  getDemoWorkspaceModelFile,
   shouldSuggestSkillRegeneration,
-} from "@/lib/openlesson-demo/flowstack";
+} from "@/lib/product-demos/simulation";
 
-describe("flowstack simulation toolkit", () => {
+describe("nexusfront simulation toolkit", () => {
   it("exposes non-linear categories including simulation tools", () => {
-    expect(SIMULATION_CATEGORY_ORDER).toContain("simulation_tools");
-    expect(getActionsByCategory("simulation_tools").length).toBeGreaterThanOrEqual(3);
-    expect(SIMULATION_ACTIONS.length).toBeGreaterThan(20);
+    expect(nexusfrontDemo.categoryOrder).toContain("simulation_tools");
+    expect(getActionsByCategory(nexusfrontDemo, "simulation_tools").length).toBeGreaterThanOrEqual(3);
+    expect(nexusfrontDemo.actions.length).toBeGreaterThan(20);
   });
 
   it("advances simulated days on time tools", () => {
-    const waitDay = SIMULATION_ACTIONS.find((action) => action.id === "wait_1_day");
+    const waitDay = nexusfrontDemo.actions.find((action) => action.id === "wait_1_day");
     expect(waitDay).toBeDefined();
 
     const next = applySimulationAction(createInitialWorldState(), waitDay!);
@@ -28,8 +27,8 @@ describe("flowstack simulation toolkit", () => {
   });
 
   it("builds time-gap proof-of-work payloads", () => {
-    const waitWeek = SIMULATION_ACTIONS.find((action) => action.id === "wait_1_week")!;
-    const payload = buildSimulationProofOfWorkPayload(waitWeek, {
+    const waitWeek = nexusfrontDemo.actions.find((action) => action.id === "wait_1_week")!;
+    const payload = buildSimulationProofOfWorkPayload(nexusfrontDemo, waitWeek, {
       sessionId: "session-1",
       worldState: createInitialWorldState(),
     });
@@ -44,7 +43,7 @@ describe("flowstack simulation toolkit", () => {
   });
 
   it("provides a demo workspace model file for workspace_files upload", () => {
-    const file = getDemoWorkspaceModelFile();
+    const file = getDemoWorkspaceModelFile(nexusfrontDemo);
     expect(file.name).toBe("nexusfront-eval-model.md");
     expect(file.mime_type).toBe("text/markdown");
     expect(file.data.length).toBeGreaterThan(100);
@@ -57,13 +56,13 @@ describe("flowstack simulation toolkit", () => {
 
   it("tracks distinct evidence actions for coverage", () => {
     let state = createInitialWorldState();
-    const found = SIMULATION_ACTIONS.find((action) => action.id === "commission_outpost")!;
-    const wait = SIMULATION_ACTIONS.find((action) => action.id === "wait_1_day")!;
+    const found = nexusfrontDemo.actions.find((action) => action.id === "commission_outpost")!;
+    const wait = nexusfrontDemo.actions.find((action) => action.id === "wait_1_day")!;
 
     state = applySimulationAction(state, found);
     state = applySimulationAction(state, wait);
 
-    expect(countDistinctProofOfWorkActions(state)).toBe(1);
+    expect(countDistinctProofOfWorkActions(nexusfrontDemo, state)).toBe(1);
     expect(shouldSuggestSkillRegeneration(3, null)).toBe(true);
     expect(shouldSuggestSkillRegeneration(4, 3)).toBe(false);
     expect(shouldSuggestSkillRegeneration(5, 3)).toBe(true);

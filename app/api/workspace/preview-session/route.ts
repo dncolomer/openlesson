@@ -1,17 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
+import { ayclTokenFromBody, guardWorkspaceRoute, requireAuthenticatedUser } from "@/lib/api/require-auth";
 import { createSessionPlanLLM } from "@/lib/xai";
-import { createClient } from "@/lib/supabase/server";
 
 export const runtime = "nodejs";
 export const maxDuration = 30;
 
 export async function POST(req: NextRequest) {
   try {
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-    }
+    const auth = await requireAuthenticatedUser();
+    if (!auth.ok) return auth.response;
+    const { user, supabase } = auth;
 
     const { blockTitle, nodeDescription, planTopic, planningPrompt } = await req.json();
 

@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { createBrowserClient } from "@supabase/ssr";
+import { createClient } from "@/lib/supabase/client";
 import Link from "next/link";
 import { WorkspaceChat } from "@/components/WorkspaceChat";
 import { Navbar } from "@/components/Navbar";
@@ -19,6 +19,7 @@ import { WorkspaceBuilderShell } from "@/components/WorkspaceBuilderShell";
 import { WorkspaceIdentityPanel } from "@/components/WorkspaceIdentityPanel";
 import { WorkspaceTabBar } from "@/components/WorkspaceTabBar";
 import { WorkspaceIntegrationPanel } from "@/components/WorkspaceIntegrationPanel";
+import { LoadingStatusMessage } from "@/components/LoadingStatusMessage";
 
 export interface Block {
   id: string;
@@ -90,10 +91,7 @@ export function WorkspaceView({ initialPlan, initialNodes }: WorkspaceViewProps)
   const [authChecked, setAuthChecked] = useState(false);
   const forkModalAutoOpenedRef = useRef(false);
   
-  const supabase = createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
+  const supabase = createClient();
 
   const isOwner = currentUserId ? plan?.user_id === currentUserId : false;
   const needsFork = authChecked && !!plan?.is_public && !plan?.is_group && !isOwner;
@@ -366,7 +364,7 @@ export function WorkspaceView({ initialPlan, initialNodes }: WorkspaceViewProps)
   if (loading) {
     return (
       <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
-        <div className="text-neutral-400">{t('planView.loading')}</div>
+        <LoadingStatusMessage message={t('planView.loading')} />
       </div>
     );
   }

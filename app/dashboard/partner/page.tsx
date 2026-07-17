@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/client";
 import { PARTNER_TIERS, UNSTAKE_LOCKUP_DAYS, PartnerTier } from "@/lib/partners";
 import { Copy, ExternalLink, DollarSign, Users, Link2, AlertTriangle, Check, X, Wallet, ArrowRight } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
+import { LoadingStatusMessage } from "@/components/LoadingStatusMessage";
 
 const DASHBOARD_BACKGROUND = "/aesthetics/Greco-futurism/HHnTrgVaQAAP-_3.jpeg";
 
@@ -201,7 +202,7 @@ export default function PartnerPage() {
         className="min-h-screen bg-[#0a0a0a] bg-cover bg-center flex items-center justify-center"
         style={{ backgroundImage: `linear-gradient(rgba(10,10,10,0.82), rgba(10,10,10,0.82)), url(${DASHBOARD_BACKGROUND})` }}
       >
-        <div className="text-neutral-400">{t('common.loading')}</div>
+        <LoadingStatusMessage message={t('common.loading')} />
       </div>
     );
   }

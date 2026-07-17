@@ -48,11 +48,11 @@ describe("integration-discovery", () => {
   });
 
   it("serves MCP resource markdown for scope and proof-of-work loop", () => {
-    const scope = buildMcpResourceContent("openlesson://integration-scope", "https://uncertain.systems");
+    const scope = buildMcpResourceContent("uncertain-systems://integration-scope", "https://uncertain.systems");
     expect(scope).toContain("Uncertain Systems");
     expect(scope).toContain("REST");
 
-    const loop = buildMcpResourceContent("openlesson://proof-of-work-loop", "https://uncertain.systems");
+    const loop = buildMcpResourceContent("uncertain-systems://proof-of-work-loop", "https://uncertain.systems");
     expect(loop).toContain("get_learning_progress");
     expect(loop).toContain("continuous_evaluation_mcp");
   });

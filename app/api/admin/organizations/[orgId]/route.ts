@@ -1,12 +1,8 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { requireAdmin } from "@/lib/admin/require-admin";
 
 export const runtime = "nodejs";
 
-function getAdminClient() {
-  return createAdminClient();
-}
 
 // GET /api/admin/organizations/[orgId] - Get organization details with members
 export async function GET(
@@ -15,24 +11,9 @@ export async function GET(
 ) {
   try {
     const { orgId } = await params;
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    
-    if (!user) {
-      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-    }
-
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("is_admin")
-      .eq("id", user.id)
-      .single();
-
-    if (!profile?.is_admin) {
-      return NextResponse.json({ error: "Admin access required" }, { status: 403 });
-    }
-
-    const adminClient = getAdminClient();
+    const auth = await requireAdmin();
+    if ("error" in auth) return auth.error;
+    const { adminClient, user } = auth;
 
     // Get organization
     const { data: organization, error: orgError } = await adminClient
@@ -113,22 +94,9 @@ export async function PUT(
 ) {
   try {
     const { orgId } = await params;
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    
-    if (!user) {
-      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-    }
-
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("is_admin")
-      .eq("id", user.id)
-      .single();
-
-    if (!profile?.is_admin) {
-      return NextResponse.json({ error: "Admin access required" }, { status: 403 });
-    }
+    const auth = await requireAdmin();
+    if ("error" in auth) return auth.error;
+    const { adminClient, user } = auth;
 
     const body = await request.json();
     const { name, slug, metadata } = body;
@@ -147,8 +115,6 @@ export async function PUT(
       updateData.slug = slug;
     }
     if (metadata !== undefined) updateData.metadata = metadata;
-
-    const adminClient = getAdminClient();
 
     // If changing slug, check it's not taken
     if (slug) {
@@ -190,24 +156,9 @@ export async function DELETE(
 ) {
   try {
     const { orgId } = await params;
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    
-    if (!user) {
-      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-    }
-
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("is_admin")
-      .eq("id", user.id)
-      .single();
-
-    if (!profile?.is_admin) {
-      return NextResponse.json({ error: "Admin access required" }, { status: 403 });
-    }
-
-    const adminClient = getAdminClient();
+    const auth = await requireAdmin();
+    if ("error" in auth) return auth.error;
+    const { adminClient, user } = auth;
 
     // First, remove all members from the organization (set their org_id to null)
     await adminClient

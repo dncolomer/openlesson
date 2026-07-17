@@ -34,56 +34,27 @@ import {
   type SpeechRecognitionLike,
 } from "@/lib/useSessionThoughtInterface";
 
-type Phase = "briefing" | "live" | "saving" | "results" | "error";
-
-interface Thought {
-  id: string;
-  text: string;
-  timestamp: number;
-  chainId: string;
-}
-
-type TapTraceType = "system1" | "system2";
-type TapSystem1Action = "crystallize" | "pause_finalize";
-type TapSystem2Action = "send" | "skip" | "select" | "deselect" | "resend" | "edit";
-
-interface ChatMessage {
-  id: string;
-  role: "user" | "assistant";
-  content: string;
-  at: string;
-}
-
-const OPENING_MESSAGE_ID = "opening";
-const THINK_ALOUD_PROTOCOL_LABEL = "Think Aloud Protocol";
-
-function getDialogueStorageKey({
-  workspaceId,
-  sessionId,
-  blockId,
-  privateToken,
-}: {
-  workspaceId?: string;
-  sessionId?: string;
-  blockId?: string;
-  privateToken?: string;
-}) {
-  return [
-    "openlesson",
-    "tap-dialogue",
-    workspaceId || "workspace",
-    privateToken || sessionId || blockId || "session",
-  ].join(":");
-}
-
-function clearDialogueMessages(storageKey: string) {
-  if (typeof window === "undefined") return;
-  try {
-    window.localStorage.removeItem(storageKey);
-  } catch {
-    // ignore
-  }
-}
+import {
+  type Phase,
+  type Thought,
+  type TapTraceType,
+  type TapSystem1Action,
+  type TapSystem2Action,
+  type TapChatMessage as ChatMessage,
+  OPENING_MESSAGE_ID,
+  THINK_ALOUD_PROTOCOL_LABEL,
+  CHAIN_GAP_MS,
+  DURATIONS,
+  BACKGROUND_IMAGES,
+  getDialogueStorageKey,
+  clearDialogueMessages,
+  resolveInitialMinutes,
+  normalize,
+  formatCountdown,
+  thoughtButtonClasses,
+  type ThoughtButtonSize,
+  type ThoughtButtonVariant,
+} from "@/lib/tap-score-client-helpers";
 
 interface TapScoreClientProps {
   workspaceId?: string;
@@ -91,61 +62,6 @@ interface TapScoreClientProps {
   sessionId?: string;
   privateToken?: string;
   initialSession?: any;
-}
-
-const CHAIN_GAP_MS = 2600;
-
-const DURATIONS = [15, 30];
-
-function resolveInitialMinutes(requestedDurationSeconds: unknown): number {
-  const minutes = Number(requestedDurationSeconds || 900) / 60;
-  if (!Number.isFinite(minutes)) return 15;
-  if (minutes >= TAP_LINK_MIN_MINUTES && minutes <= TAP_LINK_MAX_MINUTES) {
-    return Math.trunc(minutes);
-  }
-  return DURATIONS.includes(minutes) ? minutes : 15;
-}
-
-const BACKGROUND_IMAGES = [
-  "/aesthetics/Greco-futurism/HHnTrgVaQAAP-_3.jpeg",
-  "/aesthetics/Greco-futurism/HHnTrf2acAA1Juo.jpeg",
-  "/aesthetics/Greco-futurism/HHnTrlMaAAAg_4I.jpeg",
-  "/aesthetics/Greco-futurism/HHnTrjJbQAAOz7K.jpeg",
-];
-
-function normalize(text: string) {
-  return text.replace(/\s+/g, " ").trim();
-}
-
-function formatCountdown(totalSeconds: number) {
-  const mins = Math.floor(totalSeconds / 60);
-  const secs = totalSeconds % 60;
-  return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
-}
-
-type ThoughtButtonSize = "sm" | "md" | "lg";
-type ThoughtButtonVariant = "ghost" | "primary" | "toggleOn" | "toggleOff";
-
-function thoughtButtonClasses({
-  size = "md",
-  variant = "ghost",
-  className = "",
-}: {
-  size?: ThoughtButtonSize;
-  variant?: ThoughtButtonVariant;
-  className?: string;
-}) {
-  return cn(
-    "inline-flex shrink-0 items-center justify-center rounded-md font-medium transition disabled:cursor-not-allowed disabled:opacity-40",
-    size === "sm" && "h-8 px-2.5 text-xs",
-    size === "md" && "h-9 px-3.5 text-xs",
-    size === "lg" && "h-11 px-4 text-sm",
-    variant === "ghost" && "border border-neutral-800 bg-neutral-950 text-neutral-300 hover:border-neutral-600 hover:text-white",
-    variant === "primary" && "border border-transparent bg-white text-black hover:bg-neutral-200",
-    variant === "toggleOn" && "border border-white bg-white text-black",
-    variant === "toggleOff" && "border border-neutral-800 bg-neutral-950 text-neutral-500 hover:border-neutral-600 hover:text-neutral-300",
-    className,
-  );
 }
 
 function ThoughtButton({
@@ -442,6 +358,8 @@ export function TapScoreClient({ workspaceId, blockId, sessionId, privateToken, 
   const speechSupported = useSpeechSupported();
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const shouldListenRef = useRef(false);
+  const restartTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const langRef = useRef("en-US");
   const finalBufferRef = useRef<string[]>([]);
   const finalizeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const speechResultsLengthRef = useRef(0);
@@ -584,6 +502,8 @@ export function TapScoreClient({ workspaceId, blockId, sessionId, privateToken, 
     () => ({
       recognitionRef,
       shouldListenRef,
+      restartTimerRef,
+      langRef,
       onResult: (event: SpeechRecognitionEventLike) => {
         speechResultsLengthRef.current = event.results.length;
         const finals: string[] = [];
@@ -638,9 +558,9 @@ export function TapScoreClient({ workspaceId, blockId, sessionId, privateToken, 
       }
       return;
     }
-    if (!recognitionRef.current) {
-      startLiveSpeechRecognition(speechBindings, "en-US");
-    }
+    // Always (re)arm recognition when entering/staying live so a dead mic
+    // after pause-like transitions does not leave TAP stuck idle.
+    startLiveSpeechRecognition(speechBindings, "en-US");
   }, [phase, speechBindings]);
 
   useEffect(() => {
@@ -743,6 +663,7 @@ export function TapScoreClient({ workspaceId, blockId, sessionId, privateToken, 
   function retryMicrophone() {
     if (phase !== "live") return;
     setSpeechError(null);
+    stopLiveSpeechRecognition(speechBindings);
     startLiveSpeechRecognition(speechBindings, "en-US");
   }
 
@@ -1021,13 +942,15 @@ export function TapScoreClient({ workspaceId, blockId, sessionId, privateToken, 
                         speechError,
                         speechSupported,
                         isListening,
+                        // Speech strip only mounts in live phase; keep enabled tied to it.
+                        enabled: phase === "live",
                       })}
-                      className={`w-full ${speechError ? "text-amber-300/90" : ""}`}
+                      className={`w-full ${speechError ? "text-amber-300/90" : "text-neutral-300"}`}
                     />
                   </div>
-                  {speechError === "not-allowed" ? (
+                  {speechSupported !== false && !isListening ? (
                     <ThoughtButton size="sm" variant="primary" onClick={() => void retryMicrophone()}>
-                      Retry
+                      {speechError ? "Retry" : "Start"}
                     </ThoughtButton>
                   ) : null}
                   <div className="flex shrink-0 items-center gap-0.5">

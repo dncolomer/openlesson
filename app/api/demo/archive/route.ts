@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { setWorkspaceArchived } from "@/lib/workspace-archive";
-import { requireDemoAdminWorkspaceSession } from "@/lib/openlesson-demo/demo-access";
+import { requireDemoAdminWorkspaceSession } from "@/lib/product-demos/demo-access";
 
 export const runtime = "nodejs";
 

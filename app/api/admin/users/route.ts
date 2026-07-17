@@ -1,35 +1,16 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { requireAdmin } from "@/lib/admin/require-admin";
 import { buildTierUpdate, isAdminTier } from "@/lib/admin/tiers";
 import { listAdminProfiles, listAllAuthUsers } from "@/lib/admin/users";
 
 export const runtime = "nodejs";
 
-function getAdminClient() {
-  return createAdminClient();
-}
 
 export async function GET() {
   try {
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    
-    if (!user) {
-      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-    }
-
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("is_admin")
-      .eq("id", user.id)
-      .single();
-
-    if (!profile?.is_admin) {
-      return NextResponse.json({ error: "Admin access required" }, { status: 403 });
-    }
-
-    const adminClient = getAdminClient();
+    const auth = await requireAdmin();
+    if ("error" in auth) return auth.error;
+    const { adminClient, user } = auth;
 
     const { profiles: users, error } = await listAdminProfiles(adminClient);
 
@@ -94,22 +75,9 @@ export async function GET() {
 
 export async function PUT(request: Request) {
   try {
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    
-    if (!user) {
-      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-    }
-
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("is_admin")
-      .eq("id", user.id)
-      .single();
-
-    if (!profile?.is_admin) {
-      return NextResponse.json({ error: "Admin access required" }, { status: 403 });
-    }
+    const auth = await requireAdmin();
+    if ("error" in auth) return auth.error;
+    const { adminClient, user } = auth;
 
     const {
       userId,
@@ -142,8 +110,6 @@ export async function PUT(request: Request) {
     if (is_admin !== undefined) updateData.is_admin = is_admin;
     if (organization_id !== undefined) updateData.organization_id = organization_id;
     if (is_org_admin !== undefined) updateData.is_org_admin = is_org_admin;
-
-    const adminClient = getAdminClient();
 
     const { data, error } = await adminClient
       .from("profiles")

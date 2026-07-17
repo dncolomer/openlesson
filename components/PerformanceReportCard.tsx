@@ -79,6 +79,22 @@ function confidenceLabel(
   }
 }
 
+function ghcConfidenceLabel(
+  confidence: PerformanceReport["ghc_confidence"] | undefined,
+  t: (key: string) => string,
+) {
+  switch (confidence) {
+    case "high":
+      return t("performanceReportCard.ghcConfidenceHigh");
+    case "medium":
+      return t("performanceReportCard.ghcConfidenceMedium");
+    case "low":
+      return t("performanceReportCard.ghcConfidenceLow");
+    default:
+      return t("performanceReportCard.ghcConfidenceNone");
+  }
+}
+
 export function getScoreCardMetrics(report: PerformanceReport | null) {
   if (!report) return null;
   const gapAnalysis = normalizePerformanceGapAnalysis(report.gap_analysis);
@@ -235,6 +251,11 @@ function ScoreEvolution({ history, flat = false }: { history: PerformanceReportS
                     C {Math.round(snapshot.report.conversion_score)}%
                   </span>
                 ) : null}
+                {typeof snapshot.report.ghc_score === "number" ? (
+                  <span className="rounded-full border border-zinc-700 px-2 py-0.5 font-mono text-[10px] text-white">
+                    G {Math.round(snapshot.report.ghc_score)}/100
+                  </span>
+                ) : null}
                 <span className="rounded-full border border-zinc-700 px-2 py-0.5 font-mono text-[10px] uppercase text-zinc-400">
                   {confidenceLabel(snapshot.report.confidence, t)}
                 </span>
@@ -379,6 +400,7 @@ export function PerformanceReportCard({
   const cardLabel = label ?? t("performanceReportCard.defaultLabel");
   const overallScore = clampScore(report.overall_score);
   const conversionScore = clampScore(report.conversion_score);
+  const ghcScore = clampScore(report.ghc_score);
   const conversionGoal =
     workspaceConversionGoal?.trim() || report.conversion_goal?.trim() || null;
   const markerScores = report.marker_scores ?? [];
@@ -421,6 +443,12 @@ export function PerformanceReportCard({
             {conversionScore != null ? (
               <span className="font-mono text-2xl text-white">C {conversionScore}%</span>
             ) : null}
+            {ghcScore != null ? (
+              <span className="font-mono text-2xl text-white">
+                G {ghcScore}
+                <span className="ml-1 text-sm text-zinc-500">/100</span>
+              </span>
+            ) : null}
             <span className="text-xs font-medium uppercase tracking-wide text-zinc-500">
               {confidenceLabel(report.confidence, t)}
             </span>
@@ -439,7 +467,7 @@ export function PerformanceReportCard({
         <div role="tabpanel" className={tabPanelClassName}>
           {activeTab === "overview" ? (
             <div className="flex w-full flex-col items-center px-2 py-6 text-center sm:py-10">
-              <div className="grid w-full grid-cols-2 gap-8 sm:max-w-md sm:gap-12">
+              <div className="grid w-full grid-cols-1 gap-8 sm:max-w-3xl sm:grid-cols-3 sm:gap-10">
                 {overallScore != null ? (
                   <div>
                     <div className="font-mono text-xs uppercase tracking-[2px] text-zinc-500">
@@ -460,6 +488,20 @@ export function PerformanceReportCard({
                       {conversionScore}
                     </div>
                     <div className="mt-2 font-mono text-base text-zinc-500">%</div>
+                  </div>
+                ) : null}
+                {ghcScore != null ? (
+                  <div>
+                    <div className="font-mono text-xs uppercase tracking-[2px] text-zinc-500">
+                      {t("performanceReportCard.ghc")}
+                    </div>
+                    <div className="mt-4 font-mono text-6xl font-medium tracking-tight text-white sm:text-7xl">
+                      {ghcScore}
+                    </div>
+                    <div className="mt-2 font-mono text-base text-zinc-500">/ 100</div>
+                    <div className="mt-2 font-mono text-[10px] uppercase tracking-wide text-zinc-500">
+                      {ghcConfidenceLabel(report.ghc_confidence, t)}
+                    </div>
                   </div>
                 ) : null}
               </div>
@@ -580,6 +622,15 @@ export function PerformanceReportCard({
           {conversionScore != null ? (
             <span className="rounded-full border border-zinc-700 bg-zinc-950 px-3 py-0.5 font-mono text-sm text-white">
               C {conversionScore}%
+            </span>
+          ) : null}
+          {ghcScore != null ? (
+            <span
+              className="rounded-full border border-zinc-700 bg-zinc-950 px-3 py-0.5 font-mono text-sm text-white"
+              title={ghcConfidenceLabel(report.ghc_confidence, t)}
+            >
+              G {ghcScore}
+              <span className="ml-1 text-[10px] text-zinc-500">/100</span>
             </span>
           ) : null}
           <span className="rounded-full border border-zinc-700 bg-zinc-950 px-2.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-zinc-300">

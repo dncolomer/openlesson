@@ -11,11 +11,11 @@ import {
 } from "lucide-react";
 import { DemoPerformanceHud } from "@/components/proof-of-work-demo/DemoPerformanceHud";
 import { DemoVerificationPills } from "@/components/proof-of-work-demo/DemoVerificationPills";
-import { getDemoVerificationPills } from "@/lib/openlesson-demo/verification-pills";
-import { GRIDWORKS_TAP_VALIDATION_HINT } from "@/lib/openlesson-demo/tap-validation";
+import { getDemoVerificationPills } from "@/lib/product-demos/verification-pills";
+import { GRIDWORKS_TAP_VALIDATION_HINT } from "@/lib/product-demos/tap-validation";
 import type { ConversionGoalSource } from "@/lib/agent-v2/conversion-goal";
 import type { PerformanceReport } from "@/lib/agent-v2/performance-context";
-import type { ProofOfWorkApiDemoDefinition } from "@/lib/openlesson-demo/demo-definition";
+import type { ProofOfWorkApiDemoDefinition } from "@/lib/product-demos/demo-definition";
 import {
   applyInAppAction,
   CALENDAR_PAUSE_ACTIONS,
@@ -33,9 +33,9 @@ import {
   type AppMenu,
   type InAppAction,
   type SheetId,
-} from "@/lib/openlesson-demo/gridworks-app-model";
-import { totalActionCount } from "@/lib/openlesson-demo/simulation";
-import type { SimulationAction, SimulationWorldState } from "@/lib/openlesson-demo/types";
+} from "@/lib/product-demos/gridworks-app-model";
+import { totalActionCount } from "@/lib/product-demos/simulation";
+import type { SimulationAction, SimulationWorldState } from "@/lib/product-demos/types";
 
 const MENU_META: Array<{ id: AppMenu; label: string; icon: typeof Database }> = [
   { id: "data", label: "Data", icon: Database },

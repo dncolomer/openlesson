@@ -38,9 +38,6 @@ export function getDefaultSkillGridZoom(viewportWidth: number, viewportHeight: n
   return clampSkillGridZoom(zoom);
 }
 
-/** @deprecated Use SKILL_GRID_MIN_COLS */
-export const SKILL_GRID_COLS = 5;
-
 export function getOrderedSkillGridNodes(nodes: SkillGridNode[]): SkillGridNode[] {
   if (nodes.length === 0) return [];
 

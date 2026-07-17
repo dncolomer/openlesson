@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { requireAuthenticatedUser } from "@/lib/api/require-auth";
 import Stripe from "stripe";
 import { createClient } from "@/lib/supabase/server";
 import {

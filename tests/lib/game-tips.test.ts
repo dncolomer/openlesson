@@ -1,13 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
   extractGameCoaching,
-  extractGameTips,
   isAppDemo,
   isExternalDemo,
   isGameDemo,
   isInteractiveDemo,
-} from "@/lib/openlesson-demo/game-tips";
-import { orbitDemo } from "@/lib/openlesson-demo/demos/orbit";
+} from "@/lib/product-demos/game-tips";
+import { orbitDemo } from "@/lib/product-demos/demos/orbit";
 import type { PerformanceReport } from "@/lib/agent-v2/performance-report";
 
 describe("game demo helpers", () => {
@@ -56,9 +55,5 @@ describe("game demo helpers", () => {
       "Move ORB-12 to In Progress only after triage.",
     ]);
     expect(coaching.gapRepairs).toEqual(["Assign the regression issue before changing status."]);
-
-    const tips = extractGameTips(report);
-    expect(tips).toContain("Complete inbox triage.");
-    expect(tips).toContain("Assign the regression issue to yourself.");
   });
 });

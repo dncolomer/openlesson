@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
+import { requireAdmin } from "@/lib/admin/require-admin";
 import Stripe from "stripe";
-import { createClient } from "@/lib/supabase/server";
 import { getAdminClient, PARTNER_TIERS, PartnerTier } from "@/lib/partners";
 
 export const runtime = "nodejs";
@@ -13,30 +13,15 @@ function getStripe() {
 
 export async function POST(request: Request) {
   try {
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-
-    if (!user) {
-      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-    }
-
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("is_admin")
-      .eq("id", user.id)
-      .single();
-
-    if (!profile?.is_admin) {
-      return NextResponse.json({ error: "Admin access required" }, { status: 403 });
-    }
+    const auth = await requireAdmin();
+    if ("error" in auth) return auth.error;
+    const { adminClient, user } = auth;
 
     const { partnerId } = await request.json();
 
     if (!partnerId) {
       return NextResponse.json({ error: "Partner ID required" }, { status: 400 });
     }
-
-    const adminClient = getAdminClient();
 
     // Get partner with all pending revenue
     const { data: partner, error: partnerError } = await adminClient

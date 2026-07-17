@@ -4,6 +4,8 @@ import { createSessionPlan, getUserCalibration, getSessionPlan } from "@/lib/sto
 import { getUserPrompts } from "@/lib/user-prompts";
 import { ayclTokenFromBody, guardSessionRoute } from "@/lib/api/require-auth";
 import { getLanguageName } from "@/lib/tutoring-languages";
+import { resolveInitialChaptersFromBody } from "@/lib/initial-chapters";
+import { toPersistedCreatePlanSteps } from "@/lib/session-plan-create";
 
 export const runtime = "nodejs";
 export const maxDuration = 30;
@@ -11,7 +13,15 @@ export const maxDuration = 30;
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { sessionId, problem, objectives, force, planningPrompt, tutoringLanguage: bodyLanguage } = body;
+    const {
+      sessionId,
+      problem,
+      objectives,
+      force,
+      planningPrompt,
+      tutoringLanguage: bodyLanguage,
+    } = body;
+    const initialChapters = resolveInitialChaptersFromBody(body);
 
     if (!sessionId || !problem) {
       return NextResponse.json(
@@ -42,18 +52,12 @@ export async function POST(request: NextRequest) {
     }
     const languageName = tutoringLanguage ? getLanguageName(tutoringLanguage) : undefined;
 
-    if (force) {
-      const existingPlan = await getSessionPlan(sessionId, supabase);
-      if (existingPlan) {
-        const { error: deleteError } = await supabase
-          .from("session_plans")
-          .delete()
-          .eq("id", existingPlan.id);
-        if (deleteError) {
-          console.error("[session-plan/create] Failed to delete existing plan:", deleteError);
-          return NextResponse.json({ error: `Could not replace existing plan: ${deleteError.message}` }, { status: 500 });
-        }
-      }
+    // Look up any existing plan up front. When force-replacing, generate the
+    // new plan first and only delete the old row after generation succeeds —
+    // otherwise a failed regenerate permanently wipes chapters.
+    const existingPlan = await getSessionPlan(sessionId, supabase);
+    if (existingPlan && !force) {
+      return NextResponse.json({ plan: existingPlan });
     }
 
     let calibrationText = "";
@@ -78,6 +82,7 @@ export async function POST(request: NextRequest) {
       promptOverrides,
       planningPrompt,
       tutoringLanguage: languageName,
+      initialChapters,
     });
 
     if (!result.success || !result.plan) {
@@ -99,17 +104,22 @@ export async function POST(request: NextRequest) {
     }
     result.plan.steps = validSteps;
 
+    if (existingPlan && force) {
+      const { error: deleteError } = await supabase
+        .from("session_plans")
+        .delete()
+        .eq("id", existingPlan.id);
+      if (deleteError) {
+        console.error("[session-plan/create] Failed to delete existing plan:", deleteError);
+        return NextResponse.json({ error: `Could not replace existing plan: ${deleteError.message}` }, { status: 500 });
+      }
+    }
+
     const savedPlan = await createSessionPlan(sessionId, {
       goal: result.plan.goal,
       strategy: result.plan.strategy,
       description: result.plan.description,
-      steps: result.plan.steps.map((step, idx) => ({
-        id: step.id || `step_${idx + 1}_${Date.now()}`,
-        description: step.description,
-        status: idx === 0 ? "in_progress" : "pending",
-        type: step.type,
-        order: step.order,
-      })),
+      steps: toPersistedCreatePlanSteps(result.plan.steps),
     }, supabase, { userId: user.id });
 
     return NextResponse.json({ plan: savedPlan });

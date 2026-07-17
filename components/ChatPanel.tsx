@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { createBrowserClient } from "@supabase/ssr";
+import { type SupabaseBrowserClient } from "@/lib/supabase/client";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
@@ -43,7 +43,7 @@ interface ChatPanelProps {
   onModelChange?: (model: string) => void;
   onRefresh?: () => void;
   onNodesUpdate?: (nodes: Block[]) => void;
-  supabase?: ReturnType<typeof createBrowserClient>;
+  supabase?: SupabaseBrowserClient;
   isOwner?: boolean;
   currentUserId?: string | null;
   embedded?: boolean;

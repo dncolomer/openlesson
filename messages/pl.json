@@ -30,10 +30,10 @@
     "connecting": "Łączenie...",
     "connect": "Połącz",
     "disconnect": "Rozłącz",
-    "saving": "Zapisywanie..."
+    "saving": "Zapisywanie...",
+    "signIn": "Zaloguj się"
   },
   "nav": {
-    "Uncertain Systems": "Uncertain Systems",
     "solutions": "Rozwiązania",
     "forIndividuals": "Dla osób prywatnych",
     "forSales": "Dla sprzedaży",
@@ -63,7 +63,8 @@
     "signOut": "Wyloguj",
     "signIn": "Zaloguj",
     "toggleMenu": "Przełącz menu",
-    "labs": "Labs"
+    "labs": "Labs",
+    "brandName": "Uncertain Systems"
   },
   "footer": {
     "product": "Produkt",
@@ -444,8 +445,8 @@
     "faqFollowUpAnswer": "Wielu klientów znajduje wartość w 2-3 blokch. Napisz do mnie na X (@uncertainsys), aby omówić opcje pakietów lub stałe ustalenia coachingowe.",
     "faqLevelQuestion": "Czy to jest dla początkujących czy zaawansowanych?",
     "faqLevelAnswer": "Oba. Prowadzone pytania działają na każdym poziomie — spotykam cię tam, gdzie jesteś i pomagam ci się odblokować, czy to podstawowa algebra czy mechanika kwantowa na poziomie graduate.",
-    "faqOpenlessonQuestion": "Jaki jest związek z Uncertain Systems?",
-    "faqOpenlessonAnswer": "Zbudowałem Uncertain Systems, aby skalować podejście coachingowe dla wszystkich. Tutor AI wykorzystuje tę samą metodologię prowadzonych pytań. Coaching to premium, spersonalizowana wersja z człowiekiem.",
+    "faqBrandQuestion": "Jaki jest związek z Uncertain Systems?",
+    "faqBrandAnswer": "Zbudowałem Uncertain Systems, aby skalować podejście coachingowe dla wszystkich. Tutor AI wykorzystuje tę samą metodologię prowadzonych pytań. Coaching to premium, spersonalizowana wersja z człowiekiem.",
     "faqTopics": "What topics can we cover?",
     "faqPrepare": "How should I prepare?",
     "faqFollowUp": "What if I need follow-up blocks?",
@@ -619,9 +620,10 @@
     "mcpWorkflowSteps": "1. get_learning_progress(workspace_id) — orient on conversion_goal\n2. generate_proof_of_work_schema — read continuous_evaluation (REST) + continuous_evaluation_mcp (tools)\n3. upload_proof_of_work after product actions (repeat)\n4. analyze_performance for scorecard or chat\n5. Re-fetch schema as proof of work grows",
     "mcpDualNote": "Schema responses include both REST paths and MCP tool names. Use either transport — they stay in sync.",
     "mcpResourcesTitle": "MCP resources",
-    "mcpResourcesHint": "resources/read → openlesson://integration-scope · openlesson://proof-of-work-loop",
+    "mcpResourcesHint": "resources/read → uncertain-systems://integration-scope · uncertain-systems://proof-of-work-loop",
     "mcpDocsLink": "Proof-of-Work API docs",
-    "mcpSkillLink": "skill.md"
+    "mcpSkillLink": "skill.md",
+    "noApiKeysYet": "Brak kluczy API"
   },
   "pricing": {
     "openSource": "Open source",
@@ -820,6 +822,13 @@
     "aesthetics": "Estetyka",
     "aestheticsLoading": "Ładowanie stylów...",
     "noAestheticsFound": "Nie znaleziono pakietów estetyki. Dodaj obrazy w public/aesthetics/{folder-name}.",
+    "mapSize": "Początkowe rozdziały",
+    "mapSizeNarrow": "Wąska",
+    "mapSizeNarrowDesc": "Mniej rozdziałów — spokojniejszy start dla początkujących",
+    "mapSizeMid": "Zrównoważona",
+    "mapSizeMidDesc": "Standardowa szerokość dla większości uczących się",
+    "mapSizeBroad": "Szeroka",
+    "mapSizeBroadDesc": "Więcej rozdziałów dla pewnych siebie odkrywców",
     "autoAdvanceOn": "Auto-advance ON",
     "manualMode": "Manual mode",
     "aiDecidesMoveForward": "AI decides when to move forward automatically",
@@ -845,14 +854,28 @@
     "stopped": "Ready",
     "tutorialBannerTitle": "New here? Try our Simple Tutorial first",
     "tutorialBannerDesc": "A quick 10-minute guided tutorial that covers the basics so you're ready to use the full Integrated Learning Environment (ILE).",
-    "trySimpleTutorial": "Start Simple Tutorial"
+    "trySimpleTutorial": "Start Simple Tutorial",
+    "initialChapters": "Początkowe rozdziały",
+    "initialChaptersNarrow": "Wąska",
+    "initialChaptersNarrowDesc": "Mniej rozdziałów — spokojniejszy start dla początkujących",
+    "initialChaptersMid": "Zrównoważona",
+    "initialChaptersMidDesc": "Standardowa liczba dla większości uczących się",
+    "initialChaptersBroad": "Szeroka",
+    "initialChaptersBroadDesc": "Więcej rozdziałów i głębsze gałęzie dla odkrywców",
+    "initialChaptersExisting": "Już wygenerowane",
+    "initialChaptersChecking": "Sprawdzanie…",
+    "initialChaptersLoading": "Sprawdzanie istniejących rozdziałów",
+    "initialChaptersLoadingDesc": "To może chwilę potrwać, jeśli mapa rozdziałów jest już zapisana",
+    "regenerateChapters": "Wygeneruj rozdziały ponownie",
+    "regenerateChaptersDesc": "Zastąp istniejącą mapę rozdziałów nową o wybranym powyżej rozmiarze"
   },
   "sessionEnd": {
     "endSession": "Zakończ blok",
     "keepGoing": "Kontynuuj",
     "confirmEndTitle": "Zakończyć tę blok?",
     "confirmEndMessage": "Zakończenie bloków jest trwałe — nie będziesz mógł jej wznowić. Jeśli chcesz tylko na chwilę wyjść, wstrzymaj blok i kliknij Wróć do panelu; zawsze możesz wrócić i kontynuować od miejsca, w którym skończyłeś.",
-    "pauseAndLeave": "Wstrzymaj i wróć do panelu"
+    "pauseAndLeave": "Wstrzymaj i wróć do panelu",
+    "returnToWorkspace": "Wróć do workspace"
   },
   "planning": {
     "analyzingHistory": "Analizowanie historii uczenia...",
@@ -986,7 +1009,8 @@
     "focusedHint": "Focused - AI will prioritize checking if this is resolved",
     "aiFeedback": "AI Feedback",
     "starred": "Starred",
-    "manualMessage": "Manual message"
+    "manualMessage": "Manual message",
+    "pressToToggle": "Naciśnij, aby rozwinąć lub zwinąć"
   },
   "tools": {
     "tools": "Narzędzia",
@@ -1216,7 +1240,20 @@
     "subtitleWithoutYoutube": "Wpisz temat, a my utworzymy strukturalny plan nauki. Poznawaj koncepcje w sposób uporządkowany, jedna blok na raz.",
     "youtubePlaceholder": "Wklej URL wideo YouTube (np. https://youtube.com/watch?v=...)",
     "imageAttached": "Image attached",
-    "pasteOrUploadImage": "Paste or upload image"
+    "pasteOrUploadImage": "Paste or upload image",
+    "initialChapters": "Początkowe rozdziały",
+    "initialChaptersNarrow": "Wąska",
+    "initialChaptersNarrowDesc": "Mniej rozdziałów — spokojniejszy start dla początkujących",
+    "initialChaptersMid": "Zrównoważona",
+    "initialChaptersMidDesc": "Standardowa liczba dla większości uczących się",
+    "initialChaptersBroad": "Szeroka",
+    "initialChaptersBroadDesc": "Więcej rozdziałów i głębsze gałęzie dla odkrywców",
+    "initialChaptersExisting": "Już wygenerowane",
+    "initialChaptersChecking": "Sprawdzanie…",
+    "initialChaptersLoading": "Sprawdzanie istniejących rozdziałów",
+    "initialChaptersLoadingDesc": "To może chwilę potrwać, jeśli mapa rozdziałów jest już zapisana",
+    "regenerateChapters": "Wygeneruj rozdziały ponownie",
+    "regenerateChaptersDesc": "Zastąp istniejącą mapę rozdziałów nową o wybranym powyżej rozmiarze"
   },
   "workspaceFiles": {
     "title": "Pliki planu",
@@ -1605,7 +1642,9 @@
     "noChapters": "Brak rozdziałów",
     "preparing": "Przygotowywanie rozdziałów…",
     "probes": "{count, plural, one {# sonda} few {# sondy} many {# sond} other {# sond}}",
-    "hasWork": "Ma notatki"
+    "hasWork": "Ma notatki",
+    "editPromptPlaceholder": "Opisz, jak przepisać ten rozdział…",
+    "editSuggest": "Zaproponuj wersje"
   },
   "heliosChat": {
     "assistant": "Helios",
@@ -1789,7 +1828,7 @@
     "mcpToolsTitle": "Narzędzia MCP (zgodność z REST)",
     "mcpScopeNote": "Zakresy: workspaces:read, workspaces:write, tap:read, tap:write na kluczu API.",
     "mcpResourcesTitle": "Zasoby MCP",
-    "mcpResourcesHint": "Agenci mogą używać resources/read dla openlesson://integration-scope i openlesson://proof-of-work-loop.",
+    "mcpResourcesHint": "Agenci mogą używać resources/read dla uncertain-systems://integration-scope i uncertain-systems://proof-of-work-loop.",
     "mcpWorkspaceHint": "Przekaż workspace_id {workspaceId} w każdym narzędziu MCP tego workspace.",
     "endpointsTitle": "Endpointy dla tego workspace",
     "endpointsHint": "Ścieżka bazowa /api/v2/agent — podstaw swoje ID workspace w każdej ścieżce poniżej.",
@@ -2379,6 +2418,12 @@
     "confidenceEmerging": "Pojawiające się",
     "learning": "Nauka",
     "conversion": "Konwersja",
+    "ghc": "GHC",
+    "ghcFull": "Prawdziwa ludzka kognicja",
+    "ghcConfidenceHigh": "Wysoki sygnał",
+    "ghcConfidenceMedium": "Średni sygnał",
+    "ghcConfidenceLow": "Niski sygnał",
+    "ghcConfidenceNone": "Brak sygnału myślenia",
     "conversionGoal": "Cel konwersji",
     "sourceWorkspace": "Przestrzeń robocza",
     "sourceInferred": "Wnioskowany",

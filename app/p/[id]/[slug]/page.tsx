@@ -3,7 +3,6 @@ import { Metadata } from "next";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { WorkspaceView } from "@/components/WorkspaceView";
-import { getRandomWorkspaceCoverImage } from "@/lib/workspace-image";
 
 interface PageProps {
   params: Promise<{
@@ -67,8 +66,8 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const { plan } = result;
   const title = plan.title || plan.root_topic;
   const description = plan.description || `A workspace on Uncertain Systems`;
-
-  const ogImage = await getRandomWorkspaceCoverImage() || `/p/${id}/${slug}/opengraph-image`;
+  // Composed OG (aesthetics + dynamic title) — never raw cover-only assets.
+  const ogImage = `/p/${id}/${slug}/opengraph-image`;
 
   return {
     title: `${title} - Uncertain Systems`,

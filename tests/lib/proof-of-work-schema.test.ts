@@ -85,19 +85,19 @@ describe("parseIntegrationSkillRequest", () => {
 describe("integration skill helpers", () => {
   it("slugifies integration names", () => {
     expect(slugifyIntegrationName("Acme Sales Copilot")).toBe("acme-sales-copilot");
-    expect(deriveSkillName("Acme Sales Copilot")).toBe("acme-sales-copilot-openlesson-proof-of-work-performance");
+    expect(deriveSkillName("Acme Sales Copilot")).toBe("acme-sales-copilot-uncertain-systems-proof-of-work-performance");
     expect(deriveSuggestedSharePath("Acme Sales Copilot")).toBe("/acme-sales-copilot-skill.md");
   });
 
   it("parses skill frontmatter", () => {
     const md = `---
-name: acme-openlesson
+name: acme-uncertain-systems
 description: Custom skill
 ---
 
 # Title`;
     expect(parseSkillFrontmatter(md)).toEqual({
-      name: "acme-openlesson",
+      name: "acme-uncertain-systems",
       description: "Custom skill",
     });
   });
@@ -138,7 +138,7 @@ describe("evidence integration helpers", () => {
     expect(enriched.continuous_evaluation_mcp?.proof_of_work_spec.mcp_tool).toBe("generate_proof_of_work_schema");
     expect(enriched.continuous_evaluation_mcp?.performance.rest_equivalent).toContain("/performance");
     expect(enriched.integration_surfaces?.length).toBe(2);
-    expect(enriched.openlesson_scope).toBeTruthy();
+    expect(enriched.uncertain_systems_scope).toBeTruthy();
     expect(enriched.recommended_next_actions?.length).toBeGreaterThan(0);
     expect(enriched.collection_guidance).toContain("Self-update");
     expect(enriched.collection_guidance).toContain("MCP");

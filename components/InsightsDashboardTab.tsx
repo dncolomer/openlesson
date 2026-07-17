@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { LoadingStatusMessage } from "@/components/LoadingStatusMessage";
 import { archiveInsight, formatInsightDate, insightPublicPath, type InsightSummary } from "@/lib/insights";
 
 export function InsightsDashboardTab({
@@ -56,8 +57,8 @@ export function InsightsDashboardTab({
 
   if (loading) {
     return (
-      <div className="rounded-md border border-neutral-800 bg-neutral-950/75 px-6 py-12 text-center text-sm text-neutral-500">
-        Loading insights…
+      <div className="rounded-md border border-neutral-800 bg-neutral-950/75 px-6 py-12 flex items-center justify-center">
+        <LoadingStatusMessage tone="subtle" message="Loading insights" />
       </div>
     );
   }

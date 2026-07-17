@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { nexusfrontDemo } from "@/lib/openlesson-demo/demos/nexusfront";
+import { nexusfrontDemo } from "@/lib/product-demos/demos/nexusfront";
 import {
   createInitialLocalState,
   getAvailableInGameActions,
@@ -8,8 +8,8 @@ import {
   isSimulationActionDone,
   PLOT_COUNT,
   plotDisplayCoords,
-} from "@/lib/openlesson-demo/nexusfront-game-model";
-import { createInitialWorldState } from "@/lib/openlesson-demo/simulation";
+} from "@/lib/product-demos/nexusfront-game-model";
+import { createInitialWorldState } from "@/lib/product-demos/simulation";
 
 describe("haven rise city game model", () => {
   it("uses a 6x6 plot grid with the town hall at the center", () => {

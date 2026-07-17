@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getDemoFromBody } from "@/lib/openlesson-demo/resolve-demo";
+import { getDemoFromBody } from "@/lib/product-demos/resolve-demo";
 import {
   buildProofOfWorkSchemaRequestFromIntegration,
   generateWorkspaceProofOfWorkSpec,
@@ -11,7 +11,7 @@ import {
   deriveSuggestedSharePath,
 } from "@/lib/agent-v2/integration-skill";
 import { buildWorkspacePerformanceContext } from "@/lib/agent-v2/performance-context";
-import { requireDemoAdminWorkspaceSession } from "@/lib/openlesson-demo/demo-access";
+import { requireDemoAdminWorkspaceSession } from "@/lib/product-demos/demo-access";
 import { callXaiResponsesWithFiles } from "@/lib/xai-client";
 
 export const runtime = "nodejs";

@@ -12,7 +12,7 @@ export interface TapTranscriptEntry {
 }
 
 export interface TapTranscriptPayload {
-  type: "openlesson_tap_transcript";
+  type: "uncertain_systems_tap_transcript";
   tap_session_id: string;
   workspace_id: string;
   block_id?: string | null;
@@ -32,7 +32,7 @@ export function buildTapTranscriptPayload(input: {
   completedAt?: string;
 }): TapTranscriptPayload {
   return {
-    type: "openlesson_tap_transcript",
+    type: "uncertain_systems_tap_transcript",
     tap_session_id: input.tapSessionId,
     workspace_id: input.workspaceId,
     block_id: input.blockId ?? null,
@@ -49,7 +49,7 @@ export type TapSystem1Action = "crystallize" | "pause_finalize";
 export type TapSystem2Action = "send" | "skip" | "select" | "deselect" | "resend" | "edit";
 
 export interface TapChatExchangePayload {
-  type: "openlesson_tap_chat_exchange";
+  type: "uncertain_systems_tap_chat_exchange";
   tap_session_id: string;
   workspace_id: string;
   block_id?: string | null;
@@ -71,7 +71,7 @@ export function buildTapChatExchangePayload(input: {
 }): TapChatExchangePayload {
   const timestampMs = input.timestampMs ?? Date.now();
   return {
-    type: "openlesson_tap_chat_exchange",
+    type: "uncertain_systems_tap_chat_exchange",
     tap_session_id: input.tapSessionId,
     workspace_id: input.workspaceId,
     block_id: input.blockId ?? null,
@@ -84,7 +84,7 @@ export function buildTapChatExchangePayload(input: {
 }
 
 export interface TapThoughtTracePayload {
-  type: "openlesson_tap_thought_trace";
+  type: "uncertain_systems_tap_thought_trace";
   trace_type: TapTraceType;
   action: TapSystem1Action | TapSystem2Action;
   tap_session_id: string;
@@ -125,7 +125,7 @@ export function buildTapThoughtTracePayload(input: {
 }): TapThoughtTracePayload {
   const timestampMs = input.timestampMs ?? Date.now();
   return {
-    type: "openlesson_tap_thought_trace",
+    type: "uncertain_systems_tap_thought_trace",
     trace_type: input.traceType,
     action: input.action,
     tap_session_id: input.tapSessionId,
@@ -149,15 +149,13 @@ export async function fetchTapSessionTraces(
   workspaceId: string,
 ): Promise<TapTraceEvidenceRow[]> {
   const { data, error } = await queryWorkspaceProofOfWorkRows<TapTraceEvidenceRow>(
-    supabase,
-    (table) =>
-      supabase
-        .from(table)
-        .select("xai_file_id, metadata, timestamp_ms, tool_action")
-        .eq("workspace_id", workspaceId)
-        .eq("tool_name", TAP_TRACE_TOOL_NAME)
-        .contains("metadata", { tap_session_id: tapSessionId })
-        .order("timestamp_ms", { ascending: true })
+    supabase
+      .from("workspace_proof_of_work")
+      .select("xai_file_id, metadata, timestamp_ms, tool_action")
+      .eq("workspace_id", workspaceId)
+      .eq("tool_name", TAP_TRACE_TOOL_NAME)
+      .contains("metadata", { tap_session_id: tapSessionId })
+      .order("timestamp_ms", { ascending: true })
   );
 
   if (error) throw new Error(error.message);
@@ -229,11 +227,13 @@ export function buildTraceScoringInstructions(traceContext: ReturnType<typeof bu
 
   return `
 
-Thought trace proof of work (System 1 and System 2):
-- System 1 traces (${traceContext.system1Count}): spontaneous crystallized speech — everything the learner said aloud, including thoughts they did NOT submit to the TAP dialogue.
+Thought trace proof of work (System 1 and System 2) — primary GHC (Genuine Human Cognition) signal:
+- System 1 traces (${traceContext.system1Count}): spontaneous crystallized speech — everything the learner said aloud, including thoughts they did NOT submit (stashed/unsent) to the TAP dialogue.
 - System 2 traces (${traceContext.system2Count}): deliberate learner decisions — explicit send, edit, skip, select/deselect, or resend actions.
 
-Use the dialogue transcript as the primary Socratic exchange, but treat attached trace files and the manifest below as first-class proof of work. Compare System 1 vs System 2: knowledge articulated but not sent may reveal hesitation, incomplete understanding, or metacognitive filtering. Cite both sent and unsent traces in gap_analysis proof_of_work where relevant.
+Use the dialogue transcript as the primary TAP exchange (System 1 and System 2 elicitation), and treat attached trace files and the manifest below as first-class proof of work for overall_score, conversion_score, and especially ghc_score / ghc_confidence.
+Compare System 1 vs System 2: knowledge articulated but not sent may reveal hesitation, incomplete understanding, or metacognitive filtering — cite both sent and unsent traces in gap_analysis proof_of_work and temporal_summary where relevant.
+Timestamps on traces inform temporal scoring (inter-event gaps, dwell before send, idle before crystallize).
 
 Trace manifest:
 ${traceContext.manifestText || "No trace manifest available."}`;

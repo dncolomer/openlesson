@@ -205,7 +205,7 @@ function printManualTeamsChecklist() {
 }
 
 async function main() {
-  console.log("OpenLesson tier E2E tests");
+  console.log("Uncertain Systems tier E2E tests");
   console.log(`Base URL: ${baseUrl}`);
   console.log(`Live writes: ${liveWrites ? "ON (xAI + DB)" : "OFF"}\n`);
 

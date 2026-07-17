@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { orbitDemo } from "@/lib/openlesson-demo/demos/orbit";
-import { selectPracticeBlock, selectTapValidationBlock } from "@/lib/openlesson-demo/tap-validation";
-import { getDemoVerificationPills } from "@/lib/openlesson-demo/verification-pills";
+import { orbitDemo } from "@/lib/product-demos/demos/orbit";
+import { selectPracticeBlock, selectTapValidationBlock } from "@/lib/product-demos/tap-validation";
+import { getDemoVerificationPills } from "@/lib/product-demos/verification-pills";
 
 describe("demo verification pills", () => {
   it("marks Orbit as Proof-of-Work API plus TAP", () => {

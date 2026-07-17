@@ -13,14 +13,14 @@ const patches = {
     sessionItem: {
       blockDetailGuideTitle: "Live-Denken, deine Materialien",
       blockDetailGuideIntro:
-        "OpenLesson ist für live Denken und Argumentieren gebaut, nicht um Lehrbücher, Docs oder Kurse zu ersetzen. Helios prüft, was du verstehst, während du arbeitest; den Inhalt bringst du mit.",
+        "Uncertain Systems ist für live Denken und Argumentieren gebaut, nicht um Lehrbücher, Docs oder Kurse zu ersetzen. Helios prüft, was du verstehst, während du arbeitest; den Inhalt bringst du mit.",
       blockDetailGuideSourcesTitle: "Nutze deine eigenen Quellen",
       blockDetailGuideSourcesBody:
         "Verwende Grok, Grokipedia, Notizbücher oder beliebige Referenzen neben der Sitzung. Nachschlagen und Üben passieren außerhalb der Probe, die Sitzung erfasst, wie du mit dem Gefundenen argumentierst.",
       blockDetailGuideMaterialsTitle: "Passe den Arbeitsbereich an",
       blockDetailGuideMaterialsBody:
         "Hänge PDFs, Notizen und Bilder im Tab Dateien an und stimm jeden Block mit den benutzerdefinierten Anweisungen unten ab. Je mehr Kontext du hinzufügst, desto gezielter wird Helios.",
-      blockDetailGuideHintsTitle: "OpenLesson optimal nutzen",
+      blockDetailGuideHintsTitle: "Uncertain Systems optimal nutzen",
       blockDetailGuideHint1:
         "Tab Dateien: Referenzmaterial hinzufügen, damit Probes zu dem passen, was du wirklich lernst.",
       blockDetailGuideHint2:
@@ -117,14 +117,14 @@ const patches = {
     sessionItem: {
       blockDetailGuideTitle: "Pensamiento en vivo, tus materiales",
       blockDetailGuideIntro:
-        "OpenLesson está pensado para el pensamiento y razonamiento en vivo, no para sustituir tus libros, documentos o cursos. Helios sondea lo que entiendes mientras trabajas; tú aportas el contenido.",
+        "Uncertain Systems está pensado para el pensamiento y razonamiento en vivo, no para sustituir tus libros, documentos o cursos. Helios sondea lo que entiendes mientras trabajas; tú aportas el contenido.",
       blockDetailGuideSourcesTitle: "Consulta tus propias fuentes",
       blockDetailGuideSourcesBody:
         "Usa Grok, Grokipedia, cuadernos o cualquier referencia junto a la sesión. La búsqueda y la práctica quedan fuera de la sonda, la sesión captura cómo razonas con lo que encuentras.",
       blockDetailGuideMaterialsTitle: "Adapta el espacio de trabajo",
       blockDetailGuideMaterialsBody:
         "Adjunta PDFs, notas e imágenes en la pestaña Archivos y ajusta cada bloque con instrucciones personalizadas abajo. Cuanto más contexto añadas, más preciso será Helios.",
-      blockDetailGuideHintsTitle: "Usa OpenLesson bien",
+      blockDetailGuideHintsTitle: "Usa Uncertain Systems bien",
       blockDetailGuideHint1:
         "Pestaña Archivos: añade material de referencia para que las sondas coincidan con lo que realmente aprendes.",
       blockDetailGuideHint2:
@@ -221,14 +221,14 @@ const patches = {
     sessionItem: {
       blockDetailGuideTitle: "Myślenie na żywo, twoje materiały",
       blockDetailGuideIntro:
-        "OpenLesson służy myśleniu i rozumowaniu na żywo, nie zastępuje podręczników, dokumentów ani kursów. Helios bada to, co rozumiesz podczas pracy; treść dostarczasz ty.",
+        "Uncertain Systems służy myśleniu i rozumowaniu na żywo, nie zastępuje podręczników, dokumentów ani kursów. Helios bada to, co rozumiesz podczas pracy; treść dostarczasz ty.",
       blockDetailGuideSourcesTitle: "Korzystaj z własnych źródeł",
       blockDetailGuideSourcesBody:
         "Używaj Groka, Grokipedii, notatek lub dowolnych materiałów obok sesji. Wyszukiwanie i ćwiczenia są poza sondą, sesja rejestruje, jak rozumujesz z tym, co znajdujesz.",
       blockDetailGuideMaterialsTitle: "Dostosuj przestrzeń roboczą",
       blockDetailGuideMaterialsBody:
         "Dołącz PDF-y, notatki i obrazy w zakładce Pliki oraz dostosuj każdy blok poniższymi instrukcjami. Im więcej kontekstu dodasz, tym celniejszy będzie Helios.",
-      blockDetailGuideHintsTitle: "Używaj OpenLesson dobrze",
+      blockDetailGuideHintsTitle: "Używaj Uncertain Systems dobrze",
       blockDetailGuideHint1:
         "Zakładka Pliki: dodaj materiały referencyjne, by sondy pasowały do tego, czego naprawdę się uczysz.",
       blockDetailGuideHint2:
@@ -325,14 +325,14 @@ const patches = {
     sessionItem: {
       blockDetailGuideTitle: "实时思考，你的资料",
       blockDetailGuideIntro:
-        "OpenLesson 面向实时思考与推理，不是替代你的教材、文档或课程。Helios 在你工作时探测你的理解；内容由你带来。",
+        "Uncertain Systems 面向实时思考与推理，不是替代你的教材、文档或课程。Helios 在你工作时探测你的理解；内容由你带来。",
       blockDetailGuideSourcesTitle: "查阅你自己的资料",
       blockDetailGuideSourcesBody:
         "在会话旁使用 Grok、Grokipedia、笔记本或任何参考资料。查找与练习在探测之外，会话记录你如何运用所找到的内容进行推理。",
       blockDetailGuideMaterialsTitle: "定制工作区",
       blockDetailGuideMaterialsBody:
         "在“文件”标签页附加 PDF、笔记和图片，并在下方用自定义说明调整每个区块。你添加的上下文越多，Helios 就越精准。",
-      blockDetailGuideHintsTitle: "更好地使用 OpenLesson",
+      blockDetailGuideHintsTitle: "更好地使用 Uncertain Systems",
       blockDetailGuideHint1: "文件标签页，添加参考资料，使探测与你实际学习的内容一致。",
       blockDetailGuideHint2: "自定义说明，将此区块导向你的工作、考试或项目。",
       blockDetailGuideHint3: "ILE，大声思考，将语音凝结为想法，并在工作中发送给 Helios。",
@@ -420,14 +420,14 @@ const patches = {
     sessionItem: {
       blockDetailGuideTitle: "Tư duy trực tiếp, tài liệu của bạn",
       blockDetailGuideIntro:
-        "OpenLesson được xây dựng cho tư duy và lập luận trực tiếp, không thay thế sách, tài liệu hay khóa học của bạn. Helios thăm dò những gì bạn hiểu khi bạn làm việc; bạn mang nội dung đến.",
+        "Uncertain Systems được xây dựng cho tư duy và lập luận trực tiếp, không thay thế sách, tài liệu hay khóa học của bạn. Helios thăm dò những gì bạn hiểu khi bạn làm việc; bạn mang nội dung đến.",
       blockDetailGuideSourcesTitle: "Tham khảo nguồn của riêng bạn",
       blockDetailGuideSourcesBody:
         "Dùng Grok, Grokipedia, sổ ghi chép hoặc tài liệu tham khảo bên cạnh phiên. Tra cứu và luyện tập nằm ngoài thăm dò, phiên ghi lại cách bạn lập luận với những gì tìm được.",
       blockDetailGuideMaterialsTitle: "Tùy chỉnh không gian làm việc",
       blockDetailGuideMaterialsBody:
         "Đính kèm PDF, ghi chú và hình ảnh trong tab Tệp, và tinh chỉnh từng khối bằng hướng dẫn tùy chỉnh bên dưới. Càng nhiều ngữ cảnh, Helios càng nhắm đúng hơn.",
-      blockDetailGuideHintsTitle: "Dùng OpenLesson hiệu quả",
+      blockDetailGuideHintsTitle: "Dùng Uncertain Systems hiệu quả",
       blockDetailGuideHint1:
         "Tab Tệp: thêm tài liệu tham khảo để thăm dò khớp với những gì bạn thực sự đang học.",
       blockDetailGuideHint2:

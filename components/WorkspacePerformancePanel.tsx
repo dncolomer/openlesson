@@ -112,6 +112,7 @@ export function WorkspacePerformancePanel({
   const [blocks, setBlocks] = useState<WorkspaceBlock[]>([]);
   const [tapLinks, setTapLinks] = useState<TapLinkRow[]>([]);
   const [orgMembers, setOrgMembers] = useState<OrgMember[]>([]);
+  /** Empty string = entire workspace; UUID = that block. */
   const [selectedBlockId, setSelectedBlockId] = useState("");
   const [selectedMemberId, setSelectedMemberId] = useState("");
   const [minutes, setMinutes] = useState(TAP_LINK_DEFAULT_MINUTES);
@@ -130,12 +131,9 @@ export function WorkspacePerformancePanel({
     { id: "chat", label: t("planView.performanceSubTabChat") },
   ];
 
-  const defaultBlockId = useMemo(() => {
-    const startBlock = blocks.find((block) => block.is_start);
-    return startBlock?.id || blocks[0]?.id || "";
+  const blockTitleById = useMemo(() => {
+    return new Map(blocks.map((block) => [block.id, block.title || block.id]));
   }, [blocks]);
-
-  const effectiveBlockId = selectedBlockId || defaultBlockId;
 
   const loadTapResources = useCallback(async () => {
     if (!currentUserId || !isOwner) return;
@@ -215,17 +213,18 @@ export function WorkspacePerformancePanel({
 
   const createTapLink = useCallback(
     async (participantType: "anonymous" | "user") => {
-      if (!effectiveBlockId) return;
       setCreatingLink(true);
       setCreateError(null);
       try {
         const body: Record<string, unknown> = {
           workspaceId,
-          blockId: effectiveBlockId,
           minutes,
           participant_type: participantType,
           post_session: postSession,
         };
+        if (selectedBlockId) {
+          body.blockId = selectedBlockId;
+        }
         if (postSession === "redirect_url") {
           body.redirect_url = redirectUrl.trim();
         }
@@ -254,11 +253,11 @@ export function WorkspacePerformancePanel({
       }
     },
     [
-      effectiveBlockId,
       loadTapResources,
       minutes,
       postSession,
       redirectUrl,
+      selectedBlockId,
       selectedMemberId,
       t,
       workspaceId,
@@ -341,13 +340,13 @@ export function WorkspacePerformancePanel({
 
                 <div className="mt-4 grid gap-4 sm:grid-cols-2">
                   <label className="block text-xs text-neutral-400">
-                    {t("planView.tapLinksBlock")}
+                    {t("planView.tapLinksScope")}
                     <select
-                      value={effectiveBlockId}
+                      value={selectedBlockId}
                       onChange={(event) => setSelectedBlockId(event.target.value)}
                       className="mt-1 w-full rounded-md border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-white"
                     >
-                      {!effectiveBlockId ? <option value="">{t("planView.tapLinksSelectBlock")}</option> : null}
+                      <option value="">{t("planView.tapLinksEntireWorkspace")}</option>
                       {blocks.map((block) => (
                         <option key={block.id} value={block.id}>
                           {block.title || block.id}
@@ -398,7 +397,7 @@ export function WorkspacePerformancePanel({
                 <div className="mt-4 flex flex-wrap gap-2">
                   <button
                     type="button"
-                    disabled={creatingLink || !effectiveBlockId}
+                    disabled={creatingLink}
                     onClick={() => void createTapLink("anonymous")}
                     className="rounded-md bg-white px-3 py-2 text-xs font-medium text-black transition hover:bg-neutral-200 disabled:opacity-40"
                   >
@@ -421,7 +420,7 @@ export function WorkspacePerformancePanel({
                       </select>
                       <button
                         type="button"
-                        disabled={creatingLink || !effectiveBlockId || !selectedMemberId}
+                        disabled={creatingLink || !selectedMemberId}
                         onClick={() => void createTapLink("user")}
                         className="rounded-md border border-neutral-600 px-3 py-2 text-xs font-medium text-white transition hover:border-neutral-400 disabled:opacity-40"
                       >
@@ -448,6 +447,9 @@ export function WorkspacePerformancePanel({
                     <ul className="mt-3 space-y-2">
                       {tapLinks.map((link) => {
                         const privateUrl = createdLinks[link.id];
+                        const scopeLabel = link.block_id
+                          ? blockTitleById.get(link.block_id) || link.block_id
+                          : t("planView.tapLinksEntireWorkspace");
                         return (
                           <li
                             key={link.id}
@@ -456,6 +458,9 @@ export function WorkspacePerformancePanel({
                             <div className="min-w-0 text-neutral-400">
                               <p className="text-neutral-300">
                                 {t("planView.tapLinksStatus")}: {link.status}
+                              </p>
+                              <p>
+                                {t("planView.tapLinksScope")}: {scopeLabel}
                               </p>
                               <p>
                                 {t("planView.tapLinksParticipant")}: {participantLabel(link, t)}

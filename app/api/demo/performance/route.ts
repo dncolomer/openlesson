@@ -8,7 +8,7 @@ import {
   PERFORMANCE_REPORT_SCHEMA,
   type PerformanceReport,
 } from "@/lib/agent-v2/performance-context";
-import { requireDemoAdminWorkspaceSession } from "@/lib/openlesson-demo/demo-access";
+import { requireDemoAdminWorkspaceSession } from "@/lib/product-demos/demo-access";
 import { callXaiResponses, callXaiResponsesWithFiles, DEFAULT_MODEL, type ResponsesInputMessage } from "@/lib/xai-client";
 
 export const runtime = "nodejs";

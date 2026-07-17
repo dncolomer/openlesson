@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { ayclTokenFromBody, guardWorkspaceRoute, requireAuthenticatedUser } from "@/lib/api/require-auth";
 
 export async function PUT(
   req: NextRequest,
@@ -7,12 +7,9 @@ export async function PUT(
 ) {
   try {
     const { id: workspaceId } = await params;
-    const supabase = await createClient();
-
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const auth = await requireAuthenticatedUser();
+    if (!auth.ok) return auth.response;
+    const { user, supabase } = auth;
 
     const { is_group } = await req.json();
     if (typeof is_group !== "boolean") {

@@ -11,6 +11,8 @@ interface BlockRef {
   title: string;
   is_start?: boolean;
   next?: string[];
+  position_x?: number | null;
+  position_y?: number | null;
 }
 
 interface DbBlock {
@@ -65,6 +67,8 @@ export function skillGridNodesFromRefs(
         next_block_ids: (ref.next || [])
           .map((nextId) => idMap.get(nextId))
           .filter((id): id is string => Boolean(id)),
+        position_x: ref.position_x ?? undefined,
+        position_y: ref.position_y ?? undefined,
       },
     ];
   });

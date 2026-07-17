@@ -11,10 +11,10 @@ import {
   TrendingUp,
   Trees,
 } from "lucide-react";
-import type { ProofOfWorkApiDemoDefinition } from "@/lib/openlesson-demo/demo-definition";
+import type { ProofOfWorkApiDemoDefinition } from "@/lib/product-demos/demo-definition";
 import { DemoPerformanceHud } from "@/components/proof-of-work-demo/DemoPerformanceHud";
 import { DemoVerificationPills } from "@/components/proof-of-work-demo/DemoVerificationPills";
-import { getDemoVerificationPills } from "@/lib/openlesson-demo/verification-pills";
+import { getDemoVerificationPills } from "@/lib/product-demos/verification-pills";
 import {
   applyInGameAction,
   CAMPAIGN_PAUSE_ACTIONS,
@@ -37,11 +37,11 @@ import {
   PLOT_COORDS,
   PLOT_COUNT,
   resolveSimulationAction,
-} from "@/lib/openlesson-demo/nexusfront-game-model";
-import { totalActionCount } from "@/lib/openlesson-demo/simulation";
+} from "@/lib/product-demos/nexusfront-game-model";
+import { totalActionCount } from "@/lib/product-demos/simulation";
 import type { ConversionGoalSource } from "@/lib/agent-v2/conversion-goal";
 import type { PerformanceReport } from "@/lib/agent-v2/performance-context";
-import type { SimulationAction, SimulationWorldState } from "@/lib/openlesson-demo/types";
+import type { SimulationAction, SimulationWorldState } from "@/lib/product-demos/types";
 
 const GRID = {
   spacing: 2.85,

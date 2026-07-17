@@ -11,7 +11,7 @@ Use this skill when an agent needs to create Verification Workspaces, issue priv
 
 The Proof-of-Work API supports **only** this workflow:
 
-1. Create a Verification Workspace — **semantic** mode from `initial_prompt`, or **opaque** mode from `evaluation_mode: "opaque"` + `protocol` (optional `files` in both).
+1. Create a Verification Workspace — **semantic** mode from `initial_prompt` (optional `initial_chapters`: `narrow`|`mid`|`broad` for block count; blocks start at `(0,0)` with signed multi-quadrant sparse branching paths), or **opaque** mode from `evaluation_mode: "opaque"` + `protocol` (optional `files` in both).
 2. List blocks in that workspace.
 3. *(Optional)* Generate an ideal proof-of-work input JSON schema (`POST .../proof-of-work-schema`) or a custom integration `skill.md` (`POST .../integration-skill`) from workspace context.
 4. Upload performance proof of work (tool usage, screenshots, video, EEG) to xAI storage, linked to the workspace and/or a block.
@@ -117,7 +117,7 @@ Intervention types: `reflection_prompt`, `checkpoint_probe`, `coaching_nudge`, `
 
 Proof-of-work spec responses (`POST .../proof-of-work-schema`, MCP `generate_proof_of_work_schema`) also return `interruption_contract` and may include workspace-specific `predicted_interruption` from Grok (spec version **1.3**).
 
-MCP resource: `resources/read openlesson://predictive-interruptions`
+MCP resource: `resources/read uncertain-systems://predictive-interruptions`
 
 ---
 
@@ -138,13 +138,13 @@ Content-Type: application/json
 
 Opaque mode is supported on `create_workspace` (`evaluation_mode`, `protocol`, `external_refs`), `generate_proof_of_work_schema` (`definition_ref`, `contract`), `upload_proof_of_work` (metadata allowlist + plaintext lint), and `analyze_performance` (`protocol_report`).
 
-**Partner agents:** call `get_learning_progress` to orient, then `upload_proof_of_work` and `analyze_performance` per your agent policy. PumaDoc policy snippets: `/customer-agent-openlesson-policy.md`, `/pumaclaw-mentor-openlesson-policy.md`.
+**Partner agents:** call `get_learning_progress` to orient, then `upload_proof_of_work` and `analyze_performance` per your agent policy. PumaDoc policy snippets: `/customer-agent-uncertain-systems-policy.md`, `/pumaclaw-mentor-uncertain-systems-policy.md`.
 
 Every MCP tool result includes `interruption` (TIM) with the same semantics as REST.
 
 REST and MCP both use `Authorization: Bearer <api_key>` with Teams API keys from the dashboard. Treat API keys as secrets.
 
-MCP resources: `openlesson://integration-scope`, `openlesson://proof-of-work-loop`, `openlesson://predictive-interruptions`
+MCP resources: `uncertain-systems://integration-scope`, `uncertain-systems://proof-of-work-loop`, `uncertain-systems://predictive-interruptions`
 
 ---
 
@@ -310,8 +310,8 @@ Generate a workspace-specific `skill.md` integration guide via `POST .../integra
 
 ```json
 {
-  "skill_md": "---\nname: acme-sales-copilot-openlesson-proof-of-work-performance\n...",
-  "skill_name": "acme-sales-copilot-openlesson-proof-of-work-performance",
+  "skill_md": "---\nname: acme-sales-copilot-uncertain-systems-proof-of-work-performance\n...",
+  "skill_name": "acme-sales-copilot-uncertain-systems-proof-of-work-performance",
   "suggested_share_path": "/acme-sales-copilot-skill.md",
   "workspace_summary": {
     "id": "uuid",
@@ -455,7 +455,10 @@ Every report includes `overall_score`, `conversion_score`, `conversion_goal`, sp
           "suggested_repair": "..."
         }
       ],
-      "next_practice": ["..."]
+      "next_steps": {
+        "directions": ["..."],
+        "events": ["..."]
+      }
     },
     "suggestions": ["..."],
     "confidence": "developing"

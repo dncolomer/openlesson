@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { createBrowserClient } from "@supabase/ssr";
+import { createClient } from "@/lib/supabase/client";
 import { BrandLogo } from "@/components/BrandLogo";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { useI18n } from "@/lib/i18n";
@@ -24,10 +24,7 @@ export function Navbar({ breadcrumbs = [], showNav = true }: NavbarProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { t } = useI18n();
 
-  const supabase = createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
+  const supabase = createClient();
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
@@ -73,7 +70,7 @@ export function Navbar({ breadcrumbs = [], showNav = true }: NavbarProps) {
         <div className="flex items-center gap-2">
           <Link href="/" className="transition hover:opacity-90">
             <BrandLogo
-              name={t("nav.openLesson")}
+              name={t("nav.brandName")}
               nameClassName="text-base sm:text-lg font-semibold text-white tracking-tight"
             />
           </Link>

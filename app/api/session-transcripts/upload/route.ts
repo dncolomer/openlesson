@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { requireAuthenticatedUser } from "@/lib/api/require-auth";
 import { deleteFileFromXAI, uploadFileToXAI } from "@/lib/xai-files";
 
 export const runtime = "nodejs";
@@ -23,11 +23,9 @@ function countWords(text: string) {
 
 export async function POST(req: NextRequest) {
   try {
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const auth = await requireAuthenticatedUser();
+    if (!auth.ok) return auth.response;
+    const { user, supabase } = auth;
 
     const body = (await req.json()) as UploadTranscriptRequest;
     const transcript = normalizeTranscript(body.transcript || "");

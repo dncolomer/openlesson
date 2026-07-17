@@ -30,10 +30,10 @@
     "connect": "Kết nối",
     "disconnect": "Ngắt kết nối",
     "saving": "Đang lưu...",
-    "dismiss": "Dismiss"
+    "dismiss": "Dismiss",
+    "signIn": "Đăng nhập"
   },
   "nav": {
-    "Uncertain Systems": "Uncertain Systems",
     "solutions": "Giải pháp",
     "forIndividuals": "Cho cá nhân",
     "forSales": "Cho bán hàng",
@@ -63,7 +63,8 @@
     "signOut": "Đăng xuất",
     "signIn": "Đăng nhập",
     "toggleMenu": "Chuyển đổi menu",
-    "labs": "Labs"
+    "labs": "Labs",
+    "brandName": "Uncertain Systems"
   },
   "footer": {
     "product": "Sản phẩm",
@@ -444,8 +445,8 @@
     "faqFollowUpAnswer": "Nhiều khách hàng thấy 2-3 khối có giá trị. DM tôi trên X (@uncertainsys) để thảo luận về gói hoặc sắp xếp huấn luyện liên tục.",
     "faqLevelQuestion": "Điều này dành cho người mới bắt đầu hay học viên nâng cao?",
     "faqLevelAnswer": "Cả hai. Hỏi dẫn dắt hoạt động ở mọi cấp độ — tôi gặp bạn ở nơi bạn đang ở và giúp bạn thoát khỏi vấn đề, cho dù đó là đại số cơ bản hay cơ học lượng tử trình độ cao.",
-    "faqOpenlessonQuestion": "Kết nối với Uncertain Systems là gì?",
-    "faqOpenlessonAnswer": "Tôi đã xây dựng Uncertain Systems để mở rộng phương pháp huấn luyện cho tất cả mọi người. Trợ lý AI sử dụng cùng phương pháp hỏi dẫn dắt. Huấn luyện là phiên bản cao cấp, được cá nhân hóa với con người.",
+    "faqBrandQuestion": "Kết nối với Uncertain Systems là gì?",
+    "faqBrandAnswer": "Tôi đã xây dựng Uncertain Systems để mở rộng phương pháp huấn luyện cho tất cả mọi người. Trợ lý AI sử dụng cùng phương pháp hỏi dẫn dắt. Huấn luyện là phiên bản cao cấp, được cá nhân hóa với con người.",
     "faqTopics": "Những chủ đề nào chúng ta có thể bao gồm?",
     "faqPrepare": "Tôi nên chuẩn bị như thế nào?",
     "faqFollowUp": "Nếu tôi cần các khối tiếp theo thì sao?",
@@ -619,9 +620,10 @@
     "mcpWorkflowSteps": "1. get_learning_progress(workspace_id) — orient on conversion_goal\n2. generate_proof_of_work_schema — read continuous_evaluation (REST) + continuous_evaluation_mcp (tools)\n3. upload_proof_of_work after product actions (repeat)\n4. analyze_performance for scorecard or chat\n5. Re-fetch schema as proof of work grows",
     "mcpDualNote": "Schema responses include both REST paths and MCP tool names. Use either transport — they stay in sync.",
     "mcpResourcesTitle": "MCP resources",
-    "mcpResourcesHint": "resources/read → openlesson://integration-scope · openlesson://proof-of-work-loop",
+    "mcpResourcesHint": "resources/read → uncertain-systems://integration-scope · uncertain-systems://proof-of-work-loop",
     "mcpDocsLink": "Proof-of-Work API docs",
-    "mcpSkillLink": "skill.md"
+    "mcpSkillLink": "skill.md",
+    "noApiKeysYet": "Chưa có API key"
   },
   "pricing": {
     "openSource": "Mã nguồn mở",
@@ -820,6 +822,13 @@
     "aesthetics": "Thẩm mỹ",
     "aestheticsLoading": "Đang tải phong cách...",
     "noAestheticsFound": "Không tìm thấy gói thẩm mỹ. Thêm ảnh vào public/aesthetics/{folder-name}.",
+    "mapSize": "Chương ban đầu",
+    "mapSizeNarrow": "Hẹp",
+    "mapSizeNarrowDesc": "Ít chương hơn — bắt đầu nhẹ nhàng cho người mới",
+    "mapSizeMid": "Cân bằng",
+    "mapSizeMidDesc": "Độ rộng tiêu chuẩn cho hầu hết người học",
+    "mapSizeBroad": "Rộng",
+    "mapSizeBroadDesc": "Nhiều chương hơn cho người khám phá tự tin",
     "autoAdvanceOn": "Tự động tiến BẬT",
     "manualMode": "Chế độ thủ công",
     "aiDecidesMoveForward": "AI quyết định khi nào tự động tiến về phía trước",
@@ -845,14 +854,28 @@
     "stopped": "Ready",
     "tutorialBannerTitle": "New here? Try our Simple Tutorial first",
     "tutorialBannerDesc": "A quick 10-minute guided tutorial that covers the basics so you're ready to use the full Integrated Learning Environment (ILE).",
-    "trySimpleTutorial": "Start Simple Tutorial"
+    "trySimpleTutorial": "Start Simple Tutorial",
+    "initialChapters": "Chương ban đầu",
+    "initialChaptersNarrow": "Hẹp",
+    "initialChaptersNarrowDesc": "Ít chương hơn — bắt đầu nhẹ nhàng cho người mới",
+    "initialChaptersMid": "Cân bằng",
+    "initialChaptersMidDesc": "Số lượng tiêu chuẩn cho hầu hết người học",
+    "initialChaptersBroad": "Rộng",
+    "initialChaptersBroadDesc": "Nhiều chương hơn và nhánh sâu hơn cho người khám phá",
+    "initialChaptersExisting": "Đã tạo sẵn",
+    "initialChaptersChecking": "Đang kiểm tra…",
+    "initialChaptersLoading": "Đang kiểm tra chương hiện có",
+    "initialChaptersLoadingDesc": "Có thể mất một chút nếu bản đồ chương đã được lưu",
+    "regenerateChapters": "Tạo lại các chương",
+    "regenerateChaptersDesc": "Thay bản đồ chương hiện có bằng bản mới theo kích thước ở trên"
   },
   "sessionEnd": {
     "endSession": "Kết thúc khối",
     "keepGoing": "Tiếp tục",
     "confirmEndTitle": "Kết thúc khối học này?",
     "confirmEndMessage": "Kết thúc khối học là vĩnh viễn — bạn không thể tiếp tục sau đó. Nếu chỉ muốn tạm rời, hãy tạm dừng và nhấn Quay về Bảng điều khiển; bạn có thể quay lại tiếp tục bất cứ lúc nào.",
-    "pauseAndLeave": "Tạm dừng & về Bảng điều khiển"
+    "pauseAndLeave": "Tạm dừng & về Bảng điều khiển",
+    "returnToWorkspace": "Quay lại workspace"
   },
   "planning": {
     "analyzingHistory": "Đang phân tích lịch sử học tập của bạn...",
@@ -986,7 +1009,8 @@
     "sendSelected": "Send selected",
     "selectThought": "Select thought",
     "manualMessage": "Manual message",
-    "goToStep": "Go to step {number}"
+    "goToStep": "Go to step {number}",
+    "pressToToggle": "Nhấn để mở rộng hoặc thu gọn"
   },
   "tools": {
     "tools": "Công cụ",
@@ -1216,7 +1240,20 @@
     "subtitleWithoutYoutube": "Nhập một chủ đề và chúng tôi sẽ tạo kế hoạch học tập có cấu trúc. Khám phá các khái niệm theo cách có cấu trúc, một buổi học tại một thời điểm.",
     "youtubePlaceholder": "Dán URL video YouTube (ví dụ, https://youtube.com/watch?v=...)",
     "imageAttached": "Image attached",
-    "pasteOrUploadImage": "Paste or upload image"
+    "pasteOrUploadImage": "Paste or upload image",
+    "initialChapters": "Chương ban đầu",
+    "initialChaptersNarrow": "Hẹp",
+    "initialChaptersNarrowDesc": "Ít chương hơn — bắt đầu nhẹ nhàng cho người mới",
+    "initialChaptersMid": "Cân bằng",
+    "initialChaptersMidDesc": "Số lượng tiêu chuẩn cho hầu hết người học",
+    "initialChaptersBroad": "Rộng",
+    "initialChaptersBroadDesc": "Nhiều chương hơn và nhánh sâu hơn cho người khám phá",
+    "initialChaptersExisting": "Đã tạo sẵn",
+    "initialChaptersChecking": "Đang kiểm tra…",
+    "initialChaptersLoading": "Đang kiểm tra chương hiện có",
+    "initialChaptersLoadingDesc": "Có thể mất một chút nếu bản đồ chương đã được lưu",
+    "regenerateChapters": "Tạo lại các chương",
+    "regenerateChaptersDesc": "Thay bản đồ chương hiện có bằng bản mới theo kích thước ở trên"
   },
   "workspaceFiles": {
     "title": "Plan Files",
@@ -1605,7 +1642,9 @@
     "noChapters": "Chưa có chương nào",
     "preparing": "Đang chuẩn bị chương…",
     "probes": "{count, plural, other {# câu hỏi}}",
-    "hasWork": "Có ghi chú"
+    "hasWork": "Có ghi chú",
+    "editPromptPlaceholder": "Mô tả cách viết lại chương này…",
+    "editSuggest": "Gợi ý viết lại"
   },
   "heliosChat": {
     "assistant": "Helios",
@@ -1789,7 +1828,7 @@
     "mcpToolsTitle": "Công cụ MCP (tương đương REST)",
     "mcpScopeNote": "Phạm vi: workspaces:read, workspaces:write, tap:read, tap:write trên khóa API.",
     "mcpResourcesTitle": "Tài nguyên MCP",
-    "mcpResourcesHint": "Agent có thể resources/read openlesson://integration-scope và openlesson://proof-of-work-loop.",
+    "mcpResourcesHint": "Agent có thể resources/read uncertain-systems://integration-scope và uncertain-systems://proof-of-work-loop.",
     "mcpWorkspaceHint": "Truyền workspace_id {workspaceId} trên mọi công cụ MCP của workspace này.",
     "endpointsTitle": "Endpoint cho workspace này",
     "endpointsHint": "Đường dẫn gốc /api/v2/agent — thay ID workspace của bạn vào mỗi đường dẫn bên dưới.",
@@ -2379,6 +2418,12 @@
     "confidenceEmerging": "Mới nổi",
     "learning": "Học tập",
     "conversion": "Chuyển đổi",
+    "ghc": "GHC",
+    "ghcFull": "Nhận thức con người đích thực",
+    "ghcConfidenceHigh": "Tín hiệu cao",
+    "ghcConfidenceMedium": "Tín hiệu trung bình",
+    "ghcConfidenceLow": "Tín hiệu thấp",
+    "ghcConfidenceNone": "Không có tín hiệu suy nghĩ",
     "conversionGoal": "Mục tiêu chuyển đổi",
     "sourceWorkspace": "Không gian làm việc",
     "sourceInferred": "Suy luận",

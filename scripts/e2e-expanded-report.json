@@ -1,5 +1,5 @@
 {
-  "ran_at": "2026-07-11T15:09:54.970Z",
+  "ran_at": "2026-07-16T23:09:05.438Z",
   "base_url": "http://127.0.0.1:3000",
   "total": 41,
   "passed": 41,
@@ -34,7 +34,7 @@
       "area": "regular-web",
       "name": "POST /api/v2/agent/keys blocked (non-teams)",
       "ok": true,
-      "detail": "HTTP 403 The Proof-of-Work API requires the Teams tier."
+      "detail": "HTTP 403 The Proof-of-Work API requires Pro / Teams or API Metered."
     },
     {
       "area": "regular-web",
@@ -46,13 +46,13 @@
       "area": "regular-web",
       "name": "POST /api/workspace/generate (workspace create)",
       "ok": true,
-      "detail": "8cbb7e1b-bdcb-4e40-9cf8-d7c2aa587c15"
+      "detail": "f9288d81-788a-4205-9089-b21116e89747"
     },
     {
       "area": "regular-web",
       "name": "GET /workspace/{id} renders",
       "ok": true,
-      "detail": "HTTP 200 len=48453"
+      "detail": "HTTP 200 len=51178"
     },
     {
       "area": "regular-web",
@@ -76,7 +76,7 @@
       "area": "teams-web",
       "name": "GET /api/check-usage (pro_teams, allowed)",
       "ok": true,
-      "detail": "plan=pro_teams limit=1000 used=15"
+      "detail": "plan=pro_teams limit=1000 used=0"
     },
     {
       "area": "teams-web",
@@ -88,19 +88,19 @@
       "area": "teams-web",
       "name": "GET /api/organization guests array present",
       "ok": true,
-      "detail": "guests=5"
+      "detail": "guests=0"
     },
     {
       "area": "teams-web",
       "name": "GET /api/v2/agent/keys (session auth)",
       "ok": true,
-      "detail": "HTTP 200 keys=6"
+      "detail": "HTTP 200 keys=1"
     },
     {
       "area": "teams-web",
       "name": "POST /api/v2/agent/keys (session auth)",
       "ok": true,
-      "detail": "201 sk_eb3c6f985"
+      "detail": "201 sk_4ea0df879"
     },
     {
       "area": "teams-web",
@@ -130,7 +130,7 @@
       "area": "agent-api",
       "name": "POST /workspaces",
       "ok": true,
-      "detail": "53b5d75c-ff5a-4d16-a531-cea711157948"
+      "detail": "453fe77d-0476-4526-b4cf-c348ef28a524"
     },
     {
       "area": "agent-api",
@@ -178,13 +178,13 @@
       "area": "mcp",
       "name": "list_workspaces",
       "ok": true,
-      "detail": "workspaces=5"
+      "detail": "workspaces=1"
     },
     {
       "area": "agent-api",
       "name": "POST TAP link",
       "ok": true,
-      "detail": "c8ac8675-a9ab-4f21-8016-6bcae60eeb11"
+      "detail": "061f1340-8fb2-4fa1-be7b-3f252c0d4053"
     },
     {
       "area": "tap-flow",
@@ -196,13 +196,13 @@
       "area": "tap-flow",
       "name": "POST /api/workspace-tap-score/chat",
       "ok": true,
-      "detail": "reply len=218"
+      "detail": "reply len=227"
     },
     {
       "area": "tap-flow",
       "name": "POST /api/workspace-tap-score/complete",
       "ok": true,
-      "detail": "workspace=53b5d75c-ff5a-4d16-a531-cea711157948"
+      "detail": "workspace=453fe77d-0476-4526-b4cf-c348ef28a524"
     },
     {
       "area": "tap-flow",
@@ -214,13 +214,13 @@
       "area": "agent-api",
       "name": "POST /org/guests",
       "ok": true,
-      "detail": "e2e-guest-auto+1783782579148@uncertain.systems"
+      "detail": "e2e-guest-auto+1784243309737@uncertain.systems"
     },
     {
       "area": "agent-api",
       "name": "guest key can create workspace",
       "ok": true,
-      "detail": "c747cba7-2e8d-4f44-86d8-5deccc23aa69"
+      "detail": "50bdea71-145d-47a4-80f4-50aa3e5d1341"
     },
     {
       "area": "agent-api",
@@ -232,25 +232,25 @@
       "area": "tap-flow",
       "name": "guest key can create TAP link",
       "ok": true,
-      "detail": "7cf16a35-dc77-40fb-9606-555ffce4787d"
+      "detail": "8a39d9c8-da43-4840-9177-bf52c45757d8"
     },
     {
       "area": "tap-flow",
       "name": "guest TAP private session page",
       "ok": true,
-      "detail": "HTTP 200 len=47532"
+      "detail": "HTTP 200 len=71018"
     },
     {
       "area": "tap-flow",
       "name": "guest TAP chat via private token",
       "ok": true,
-      "detail": "reply len=170"
+      "detail": "reply len=188"
     },
     {
       "area": "tap-flow",
       "name": "guest TAP complete via private token",
       "ok": true,
-      "detail": "workspace=c747cba7-2e8d-4f44-86d8-5deccc23aa69"
+      "detail": "workspace=50bdea71-145d-47a4-80f4-50aa3e5d1341"
     }
   ]
 }

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { requireAuthenticatedUser } from "@/lib/api/require-auth";
 import { callXaiJSON, DEFAULT_MODEL, userMessage } from "@/lib/xai-client";
 import { persistSkillGridPositions, skillGridNodesFromRefs } from "@/lib/skill-grid-positions";
 
@@ -7,9 +7,9 @@ type Block = { id: string; title: string; description: string; is_start: boolean
 type PlanData = { title: string; nodes: Block[] };
 
 export async function POST(request: NextRequest) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+  const auth = await requireAuthenticatedUser();
+    if (!auth.ok) return auth.response;
+    const { user, supabase } = auth;
   const { rootQuestion } = await request.json();
   if (!rootQuestion || typeof rootQuestion !== "string") return NextResponse.json({ error: "Missing root question" }, { status: 400 });
 

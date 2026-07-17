@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { createBrowserClient } from "@supabase/ssr";
+import { createClient } from "@/lib/supabase/client";
 import type { User } from "@supabase/supabase-js";
 import { Footer } from "@/components/Footer";
 
@@ -34,10 +34,7 @@ export default function NewDesignLanding() {
   const router = useRouter();
 
   const supabase = useMemo(
-    () => createBrowserClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    ),
+    () => createClient(),
     []
   );
 
@@ -75,7 +72,7 @@ export default function NewDesignLanding() {
       <div className="fixed inset-0 bg-[#0a0a0a]/70 z-0" />
       {/* Subtle top bar */}
       <div className="absolute top-0 w-full flex justify-center pt-6 z-10">
-        <div className="text-[10px] tracking-[3px] text-zinc-600 font-mono">OPENLESSON</div>
+        <div className="text-[10px] tracking-[3px] text-zinc-600 font-mono">UNCERTAIN SYSTEMS</div>
       </div>
 
       <div className="absolute right-6 top-5 z-20">
@@ -119,7 +116,7 @@ export default function NewDesignLanding() {
           </h1>
 
           <p className="text-lg sm:text-xl leading-relaxed text-zinc-400 tracking-[-0.35px]">
-            Open Lesson is a think aloud tool that makes learning chill.<br />Get ready to achieve your first &quot;aha&quot; moment within 30 minutes of any lesson.
+            Uncertain Systems is a think aloud tool that makes learning chill.<br />Get ready to achieve your first &quot;aha&quot; moment within 30 minutes of any lesson.
           </p>
         </div>
 

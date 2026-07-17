@@ -19,16 +19,6 @@ export function canUserManageWorkspace(workspace: { user_id: string }, userId: s
   return workspace.user_id === userId;
 }
 
-function isMissingArchivedAtColumn(error: PostgrestError | null): boolean {
-  if (!error) return false;
-  const message = error.message.toLowerCase();
-  return (
-    error.code === "42703" ||
-    message.includes("archived_at") ||
-    message.includes("column") && message.includes("does not exist")
-  );
-}
-
 function workspaceLookupError(error: PostgrestError | null): Error {
   if (!error) {
     return new Error("Workspace not found");
@@ -48,7 +38,7 @@ async function applyArchiveUpdate(
   const nextStatus = archived ? "archived" : "active";
   const archivedAt = archived ? new Date().toISOString() : null;
 
-  const withTimestamp = await supabase
+  const { data, error } = await supabase
     .from("workspaces")
     .update({
       status: nextStatus,
@@ -56,36 +46,14 @@ async function applyArchiveUpdate(
     })
     .eq("id", workspaceId)
     .eq("user_id", userId)
-    .select("id, user_id, status, title, root_topic")
+    .select("id, user_id, status, archived_at, title, root_topic")
     .single();
 
-  if (!withTimestamp.error && withTimestamp.data) {
-    return {
-      ...withTimestamp.data,
-      archived_at: archivedAt,
-    };
+  if (error || !data) {
+    throw new Error(error?.message || "Failed to update workspace archive status");
   }
 
-  if (isMissingArchivedAtColumn(withTimestamp.error)) {
-    const statusOnly = await supabase
-      .from("workspaces")
-      .update({ status: nextStatus })
-      .eq("id", workspaceId)
-      .eq("user_id", userId)
-      .select("id, user_id, status, title, root_topic")
-      .single();
-
-    if (statusOnly.error || !statusOnly.data) {
-      throw new Error(statusOnly.error?.message || "Failed to update workspace archive status");
-    }
-
-    return {
-      ...statusOnly.data,
-      archived_at: null,
-    };
-  }
-
-  throw new Error(withTimestamp.error?.message || "Failed to update workspace archive status");
+  return data as WorkspaceArchiveRow;
 }
 
 export async function setWorkspaceArchived(
@@ -96,7 +64,7 @@ export async function setWorkspaceArchived(
 ): Promise<WorkspaceArchiveRow> {
   const { data: workspace, error: fetchError } = await supabase
     .from("workspaces")
-    .select("id, user_id, status, title, root_topic")
+    .select("id, user_id, status, archived_at, title, root_topic")
     .eq("id", workspaceId)
     .single();
 

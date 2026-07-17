@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useI18n } from "@/lib/i18n";
 import { FileDropZone, type AttachedFile } from "@/components/FileDropZone";
+import { LoadingStatusMessage } from "@/components/LoadingStatusMessage";
 
 interface PlanFile {
   id: string;
@@ -146,8 +147,8 @@ export function WorkspaceFilesTab({ workspaceId, isOwner }: WorkspaceFilesTabPro
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-16 text-neutral-500 text-sm">
-        {t('common.loading')}
+      <div className="flex items-center justify-center py-16">
+        <LoadingStatusMessage size="sm" tone="subtle" message={t('common.loading')} />
       </div>
     );
   }

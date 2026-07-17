@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { gridworksDemo } from "@/lib/openlesson-demo/demos/gridworks";
+import { gridworksDemo } from "@/lib/product-demos/demos/gridworks";
 import {
   applyInAppAction,
   createInitialSpreadsheetState,
   getAvailableInAppActions,
   IN_APP_ACTIONS,
-} from "@/lib/openlesson-demo/gridworks-app-model";
-import { createInitialWorldState } from "@/lib/openlesson-demo/simulation";
+} from "@/lib/product-demos/gridworks-app-model";
+import { createInitialWorldState } from "@/lib/product-demos/simulation";
 
 describe("gridworks app model", () => {
   it("starts with workbook creation actions only", () => {

@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { requireAuthenticatedUser } from "@/lib/api/require-auth";
 import { getUserTimezone, localDayKey } from "@/lib/rabbit-hole";
 
 export async function GET(request: NextRequest) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+  const auth = await requireAuthenticatedUser();
+    if (!auth.ok) return auth.response;
+    const { user, supabase } = auth;
 
   const timezone = getUserTimezone(request.nextUrl.searchParams.get("timezone"));
   const day = localDayKey(timezone);

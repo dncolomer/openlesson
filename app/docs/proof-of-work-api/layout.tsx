@@ -1,4 +1,10 @@
 import { Metadata } from "next";
+import { openGraphImagesForRoutePath } from "@/lib/og/paths";
+
+const ogImages = openGraphImagesForRoutePath(
+  "/docs/proof-of-work-api",
+  "Proof-of-Work API Specification",
+);
 
 export const metadata: Metadata = {
   title: "Proof-of-Work API Specification - Uncertain Systems",
@@ -9,6 +15,13 @@ export const metadata: Metadata = {
     url: "https://uncertain.systems/docs/proof-of-work-api",
     siteName: "Uncertain Systems",
     type: "website",
+    images: ogImages,
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Proof-of-Work API Specification",
+    description: "Enable AI agents to create Workspaces, issue Think Aloud Protocol (TAP) links, route ILE practice, and read learning efficiency results.",
+    images: ogImages.map((image) => image.url),
   },
   robots: {
     index: true,

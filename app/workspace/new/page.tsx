@@ -3,11 +3,17 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { createBrowserClient } from "@supabase/ssr";
+import { createClient } from "@/lib/supabase/client";
 import { FileDropZone, type AttachedFile } from "@/components/FileDropZone";
 import { Footer } from "@/components/Footer";
 import { LoadingStatusMessage } from "@/components/LoadingStatusMessage";
 import { trackWorkspaceCreated } from "@/lib/analytics";
+import {
+  DEFAULT_INITIAL_CHAPTERS,
+  INITIAL_CHAPTERS_BANDS,
+  INITIAL_CHAPTERS_LEVELS,
+  type InitialChaptersLevel,
+} from "@/lib/initial-chapters";
 
 const BACKGROUND_IMAGES = [
   "/aesthetics/Greco-futurism/HHnTrgVaQAAP-_3.jpeg",
@@ -16,19 +22,37 @@ const BACKGROUND_IMAGES = [
   "/aesthetics/Greco-futurism/HHnTrjJbQAAOz7K.jpeg",
 ];
 
+const LEVEL_COPY: Record<
+  InitialChaptersLevel,
+  { title: string; description: string }
+> = {
+  narrow: {
+    title: "Narrow",
+    description: "Fewer blocks — calmer start",
+  },
+  mid: {
+    title: "Balanced",
+    description: "Standard block count",
+  },
+  broad: {
+    title: "Broad",
+    description: "More blocks and deeper branches",
+  },
+};
+
 export default function NewWorkspacePage() {
   const [topic, setTopic] = useState("");
   const [bgImage, setBgImage] = useState("");
   const [files, setFiles] = useState<AttachedFile[]>([]);
+  const [initialChapters, setInitialChapters] = useState<InitialChaptersLevel>(
+    DEFAULT_INITIAL_CHAPTERS,
+  );
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const router = useRouter();
 
   const supabase = useMemo(
-    () => createBrowserClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    ),
+    () => createClient(),
     []
   );
 
@@ -55,6 +79,7 @@ export default function NewWorkspacePage() {
         body: JSON.stringify({
           topic: topic.trim(),
           days: 28,
+          initialChapters,
           ...(files.length > 0 ? { files: files.map(({ name, mimeType, data }) => ({ name, mimeType, data })) } : {}),
         }),
       });
@@ -103,6 +128,43 @@ export default function NewWorkspacePage() {
               <input value={topic} onChange={(e) => setTopic(e.target.value)} placeholder="Describe the performance scenario or skill to verify..." className="h-16 min-w-0 flex-1 bg-transparent px-7 text-xl outline-none placeholder:text-zinc-500 sm:h-[68px] sm:text-2xl" spellCheck={false} />
               <button type="submit" disabled={!topic.trim() || busy} className="flex h-14 w-full shrink-0 items-center justify-center rounded-sm bg-white text-[15px] font-medium text-black transition-all hover:bg-zinc-200 disabled:cursor-not-allowed disabled:opacity-40 sm:h-[68px] sm:w-[210px]">{busy ? "Creating..." : "Create Workspace →"}</button>
             </div>
+
+            <div className="mx-auto mt-4 w-full">
+              <div className="mb-2 flex items-end justify-between gap-3">
+                <label className="block font-mono text-[10px] uppercase tracking-[2px] text-zinc-500">
+                  Initial chapters
+                </label>
+                <span className="text-[11px] text-zinc-600">
+                  About {INITIAL_CHAPTERS_BANDS[initialChapters].target} blocks
+                  {" "}({INITIAL_CHAPTERS_BANDS[initialChapters].min}–{INITIAL_CHAPTERS_BANDS[initialChapters].max})
+                </span>
+              </div>
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                {INITIAL_CHAPTERS_LEVELS.map((level) => {
+                  const selected = initialChapters === level;
+                  const copy = LEVEL_COPY[level];
+                  return (
+                    <button
+                      key={level}
+                      type="button"
+                      onClick={() => setInitialChapters(level)}
+                      disabled={busy}
+                      className={`rounded-md border px-3 py-3 text-left transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+                        selected
+                          ? "border-zinc-300 bg-zinc-900 ring-1 ring-zinc-300/30"
+                          : "border-zinc-800 bg-zinc-950/80 hover:border-zinc-600"
+                      }`}
+                    >
+                      <span className="block text-sm font-medium text-zinc-100">{copy.title}</span>
+                      <span className="mt-1 block text-[11px] leading-snug text-zinc-500">
+                        {copy.description}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
             <div className="mx-auto mt-3 w-full">
               <FileDropZone files={files} onChange={setFiles} compact className="rounded-md bg-zinc-950/70 p-2" />
               {error && <p className="mt-3 text-sm text-red-300">{error}</p>}

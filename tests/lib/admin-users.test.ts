@@ -2,7 +2,8 @@ import { describe, expect, it } from "vitest";
 import { listAdminProfiles } from "@/lib/admin/users";
 
 describe("listAdminProfiles", () => {
-  it("falls back when extra_workspaces column is missing", async () => {
+  it("selects extra_workspaces in a single modern query", async () => {
+    const selects: string[] = [];
     const baseRow = {
       id: "user-1",
       username: "jane",
@@ -10,6 +11,7 @@ describe("listAdminProfiles", () => {
       plan: "free",
       is_admin: false,
       extra_lessons: 2,
+      extra_workspaces: 3,
       subscription_status: "active",
       current_period_end: null,
       token_tier: null,
@@ -22,20 +24,13 @@ describe("listAdminProfiles", () => {
     const adminClient = {
       from: (table: string) => {
         if (table !== "profiles") throw new Error("unexpected table");
-        let pass = 0;
         return {
-          select: (fields: string) => ({
-            order: async () => {
-              pass += 1;
-              if (fields.includes("extra_workspaces") && pass === 1) {
-                return {
-                  data: null,
-                  error: { code: "42703", message: "column profiles.extra_workspaces does not exist" },
-                };
-              }
-              return { data: [baseRow], error: null };
-            },
-          }),
+          select: (fields: string) => {
+            selects.push(fields);
+            return {
+              order: async () => ({ data: [baseRow], error: null }),
+            };
+          },
         };
       },
     };
@@ -43,7 +38,35 @@ describe("listAdminProfiles", () => {
     const result = await listAdminProfiles(adminClient as never);
     expect(result.error).toBeNull();
     expect(result.profiles).toHaveLength(1);
-    expect(result.profiles[0].extra_workspaces).toBe(0);
+    expect(result.profiles[0].extra_workspaces).toBe(3);
     expect(result.profiles[0].username).toBe("jane");
+    expect(selects).toHaveLength(1);
+    expect(selects[0]).toContain("extra_workspaces");
+  });
+
+  it("surfaces error when the profiles query fails (no dual-path fallback)", async () => {
+    const selects: string[] = [];
+    const adminClient = {
+      from: (table: string) => {
+        if (table !== "profiles") throw new Error("unexpected table");
+        return {
+          select: (fields: string) => {
+            selects.push(fields);
+            return {
+              order: async () => ({
+                data: null,
+                error: { code: "42703", message: "column profiles.extra_workspaces does not exist" },
+              }),
+            };
+          },
+        };
+      },
+    };
+
+    const result = await listAdminProfiles(adminClient as never);
+    expect(result.profiles).toEqual([]);
+    expect(result.error?.message).toMatch(/extra_workspaces/i);
+    expect(selects).toHaveLength(1);
+    expect(selects[0]).toContain("extra_workspaces");
   });
 });

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Discovers all LLM prompt call-site files in openlesson/.
+ * Discovers all LLM prompt call-site files in .
  * Output: PROMPT_SCRATCH/prompt-call-sites.json (default: tests/fixtures/prompt-inventory)
  */
 import fs from "fs";

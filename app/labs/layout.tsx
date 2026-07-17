@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Navbar } from "@/components/Navbar";
 import { createClient } from "@/lib/supabase/client";
+import { LoadingStatusMessage } from "@/components/LoadingStatusMessage";
 
 export default function LabsLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -23,7 +24,7 @@ export default function LabsLayout({ children }: { children: React.ReactNode }) 
   if (loading) {
     return (
       <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
-        <div className="animate-spin w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full" />
+        <LoadingStatusMessage message="Loading" />
       </div>
     );
   }

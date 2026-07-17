@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildDemoTapSessionUrl,
   normalizeDemoSessionUrl,
-} from "@/lib/openlesson-demo/demo-session-url";
+} from "@/lib/product-demos/demo-session-url";
 
 describe("demo session urls", () => {
   it("builds tap session urls from the request origin", () => {

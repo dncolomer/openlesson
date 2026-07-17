@@ -32,8 +32,6 @@ interface ProbesPanelProps {
   onOpenPractice?: (text: string) => void;
   onAskAssistant?: (text: string) => void;
   onAdvanceStep?: (forceAdvance?: boolean) => Promise<void> | void;
-  stuckCheckText?: string | null;
-  onDismissStuckCheck?: () => void;
   thinkAloudThoughts?: ThinkAloudThought[];
   thinkAloudInterimText?: string;
   thinkAloudListening?: boolean;
@@ -92,8 +90,6 @@ export function ProbesPanel({
   onOpenPractice,
   onAskAssistant,
   onAdvanceStep,
-  stuckCheckText,
-  onDismissStuckCheck,
   thinkAloudThoughts = [],
   thinkAloudInterimText = "",
   thinkAloudListening = false,
@@ -243,11 +239,8 @@ export function ProbesPanel({
     }
   }, [currentProbeId]);
 
-  const actionButtonClass = `py-3 px-3 text-[12px] font-medium rounded-md border disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2 ${
-    stuckCheckText
-      ? "bg-red-500/10 border-red-400/35 text-red-100 hover:bg-red-500/15 hover:border-red-300/50 hover:text-white"
-      : "bg-neutral-800 border-neutral-700 text-neutral-200 hover:bg-neutral-700 hover:border-neutral-600 hover:text-white"
-  }`;
+  const actionButtonClass =
+    "py-3 px-3 text-[12px] font-medium rounded-md border disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2 bg-neutral-800 border-neutral-700 text-neutral-200 hover:bg-neutral-700 hover:border-neutral-600 hover:text-white";
 
   // Parent-controlled welcome surface. Takes precedence over both the
   // empty state and the active-probe carousel — this lets the Help
@@ -477,10 +470,7 @@ export function ProbesPanel({
                 cacheKey={`step:${currentStepId}`}
               />
 
-              {/* Action row — framed card with a subtle "stuck?" hint.
-                  Lives inside the centered tutor+message group so it sits
-                  right after the probe text rather than being anchored to
-                  the bottom of the panel with a big empty gap above. */}
+              {/* Action row — framed card under the probe text. */}
               <div className="shrink-0 w-full max-w-[680px] px-2">
                 {isCurrentStepCompleted ? (
                   <div className="rounded-md border border-neutral-800 bg-neutral-950/40 px-5 py-4 text-center text-sm font-medium text-neutral-200">
@@ -488,15 +478,7 @@ export function ProbesPanel({
                   </div>
                 ) : (
                   <>
-                    <div className={`actions-box rounded-md border p-3 transition-colors ${stuckCheckText ? "border-red-400/40 bg-red-500/10" : "border-neutral-800 bg-neutral-950/40"}`}>
-                      {stuckCheckText && (
-                        <div className="mb-3 flex items-start justify-between gap-3 rounded-md border border-red-400/25 bg-red-400/10 px-3 py-2 text-xs text-red-100">
-                          <p className="leading-relaxed">{stuckCheckText}</p>
-                          <button type="button" onClick={onDismissStuckCheck} className="shrink-0 rounded-md px-2 py-1 text-[11px] text-red-100/80 hover:bg-red-300/10 hover:text-red-50">
-                            {t("common.dismiss")}
-                          </button>
-                        </div>
-                      )}
+                    <div className="actions-box rounded-md border border-neutral-800 bg-neutral-950/40 p-3 transition-colors">
                       <div className="grid grid-cols-4 gap-2.5 @container">
                         <button
                           onClick={() => {

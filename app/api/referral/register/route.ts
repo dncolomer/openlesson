@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
+import { requireAuthenticatedUser } from "@/lib/api/require-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { createClient } from "@/lib/supabase/server";
 
 export const runtime = "nodejs";
 
@@ -46,14 +46,9 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) {
-      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-    }
+    const auth = await requireAuthenticatedUser();
+    if (!auth.ok) return auth.response;
+    const { user, supabase } = auth;
 
     const { referralCode } = await request.json();
     const userId = user.id;

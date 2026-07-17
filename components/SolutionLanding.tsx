@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { createBrowserClient } from "@supabase/ssr";
+import { createClient } from "@/lib/supabase/client";
 import type { User } from "@supabase/supabase-js";
 import { Footer } from "@/components/Footer";
 
@@ -25,10 +25,7 @@ export function SolutionLanding({
 }: SolutionLandingProps) {
   const [user, setUser] = useState<User | null | undefined>(undefined);
   const supabase = useMemo(
-    () => createBrowserClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    ),
+    () => createClient(),
     []
   );
 
@@ -87,7 +84,7 @@ export function SolutionLanding({
 
             <section className="border border-zinc-800/70 bg-zinc-950/75 p-6 backdrop-blur-sm">
               <h2 className="mb-5 font-mono text-xs uppercase tracking-[2px] text-zinc-500">
-                How Open Lesson Solves It
+                How Uncertain Systems Solves It
               </h2>
               <ul className="space-y-4 text-lg leading-relaxed text-zinc-300">
                 {solutions.map((item) => (

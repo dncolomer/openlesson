@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import type { ProductUseCase } from "@/lib/seo/product-page";
 import { DEMO_BOOKING_URL } from "@/lib/seo/product-page";
+import { openGraphImagesForRoutePath } from "@/lib/og/paths";
 
 export type IntegrationTier = {
   level: string;
@@ -31,8 +32,9 @@ export type SeoUseCasePageConfig = {
 
 const BASE_URL = "https://uncertain.systems";
 
-export function useCasePageMetadata(page: SeoUseCasePageConfig): Metadata {
+export function buildUseCasePageMetadata(page: SeoUseCasePageConfig): Metadata {
   const url = `${BASE_URL}${page.path}`;
+  const images = openGraphImagesForRoutePath(page.path, page.metaTitle);
   return {
     title: page.metaTitle,
     description: page.metaDescription,
@@ -43,12 +45,14 @@ export function useCasePageMetadata(page: SeoUseCasePageConfig): Metadata {
       url,
       siteName: "Uncertain Systems",
       type: "website",
+      images,
     },
     twitter: {
       card: "summary_large_image",
       title: page.metaTitle,
       description: page.metaDescription,
       creator: "@uncertainsys",
+      images: images.map((image) => image.url),
     },
     alternates: { canonical: url },
   };

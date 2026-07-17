@@ -7,7 +7,7 @@ import {
   buildPerformanceApiPath,
 } from "./proof-of-work-integration";
 
-export const OPENLESSON_SCOPE = {
+export const UNCERTAIN_SYSTEMS_SCOPE = {
   product: "Uncertain Systems",
   mission:
     "Verify learning and measure readiness-to-perform using real product proof of work — not quizzes in isolation.",
@@ -126,7 +126,7 @@ export function buildContinuousEvaluationMcpPolicy(
   }
 
   return {
-    principle: OPENLESSON_SCOPE.workspace_model,
+    principle: UNCERTAIN_SYSTEMS_SCOPE.workspace_model,
     more_evidence_improves:
       "More upload_proof_of_work / POST .../proof-of-work calls improve marker_scores, gap_analysis, and conversion_score accuracy.",
     regeneration_required: true,
@@ -261,14 +261,14 @@ export function recommendIntegrationActions(options: {
   return actions.sort((a, b) => a.priority - b.priority);
 }
 
-export function buildOpenLessonScopeForWorkspace(options: {
+export function buildUncertainSystemsScopeForWorkspace(options: {
   workspaceTitle: string;
   conversionGoal?: string | null;
   blockCount: number;
   proofOfWorkCount: number;
 }): Record<string, unknown> {
   return {
-    ...OPENLESSON_SCOPE,
+    ...UNCERTAIN_SYSTEMS_SCOPE,
     workspace_context: {
       title: options.workspaceTitle,
       conversion_goal: options.conversionGoal?.trim() || "Infer from workspace title, notes, and proof of work.",
@@ -294,19 +294,19 @@ export function formatDualSurfaceGuidance(
 
 export const MCP_RESOURCE_CATALOG = [
   {
-    uri: "openlesson://integration-scope",
+    uri: "uncertain-systems://integration-scope",
     name: "Uncertain Systems integration scope",
     description: "What Uncertain Systems is, workspace model, and learning-vs-conversion goals.",
     mimeType: "text/markdown",
   },
   {
-    uri: "openlesson://proof-of-work-loop",
+    uri: "uncertain-systems://proof-of-work-loop",
     name: "Proof-of-work loop and progress tracking",
     description: "Continuous evaluation loop, REST + MCP tool mapping, when to score.",
     mimeType: "text/markdown",
   },
   {
-    uri: "openlesson://predictive-interruptions",
+    uri: "uncertain-systems://predictive-interruptions",
     name: "Predictive interruptions (TIM)",
     description: "Trace Interruption Model contract: interruption field, delay_ms, supersession, consumer obligations.",
     mimeType: "text/markdown",
@@ -316,29 +316,29 @@ export const MCP_RESOURCE_CATALOG = [
 export function buildMcpResourceContent(uri: string, baseUrl: string): string | null {
   const base = baseUrl.replace(/\/$/, "");
 
-  if (uri === "openlesson://integration-scope") {
+  if (uri === "uncertain-systems://integration-scope") {
     return `# Uncertain Systems integration scope
 
-${OPENLESSON_SCOPE.mission}
+${UNCERTAIN_SYSTEMS_SCOPE.mission}
 
 ## Pillars
-${OPENLESSON_SCOPE.pillars.map((p) => `- ${p}`).join("\n")}
+${UNCERTAIN_SYSTEMS_SCOPE.pillars.map((p) => `- ${p}`).join("\n")}
 
 ## Workspace model
-${OPENLESSON_SCOPE.workspace_model}
+${UNCERTAIN_SYSTEMS_SCOPE.workspace_model}
 
 ## Integrator model
-${OPENLESSON_SCOPE.integrator_model}
+${UNCERTAIN_SYSTEMS_SCOPE.integrator_model}
 
 ## Surfaces (use either)
 - **REST:** \`${base}/api/v2/agent/workspaces/{workspace_id}\` with Bearer API key
 - **MCP:** \`${buildMcpEndpointPattern(baseUrl)}\` with Bearer API key and JSON-RPC tools/list
 
-Docs: ${base}${OPENLESSON_SCOPE.docs.api_reference} · ${base}${OPENLESSON_SCOPE.docs.human_guide}
+Docs: ${base}${UNCERTAIN_SYSTEMS_SCOPE.docs.api_reference} · ${base}${UNCERTAIN_SYSTEMS_SCOPE.docs.human_guide}
 `;
   }
 
-  if (uri === "openlesson://proof-of-work-loop") {
+  if (uri === "uncertain-systems://proof-of-work-loop") {
     return `# Proof-of-work loop and learning progress
 
 Progress is **continuous**, not one-time setup.
@@ -366,7 +366,7 @@ Every Proof-of-Work API success response also includes \`interruption\` (TIM) �
 `;
   }
 
-  if (uri === "openlesson://predictive-interruptions") {
+  if (uri === "uncertain-systems://predictive-interruptions") {
     return `# Predictive interruptions (Trace Interruption Model)
 
 ${formatInterruptionContractForSkillPrompt()}

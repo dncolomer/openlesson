@@ -1,10 +1,10 @@
 import { UseCaseLandingPage } from "@/components/UseCaseLandingPage";
 import {
   LEARNING_VERIFICATION_PAGE,
-  useCasePageMetadata,
+  buildUseCasePageMetadata,
 } from "@/lib/seo/use-case-page";
 
-export const metadata = useCasePageMetadata(LEARNING_VERIFICATION_PAGE);
+export const metadata = buildUseCasePageMetadata(LEARNING_VERIFICATION_PAGE);
 
 export default function LearningVerificationUseCasePage() {
   return <UseCaseLandingPage page={LEARNING_VERIFICATION_PAGE} />;

@@ -1,5 +1,5 @@
 // ============================================
-// AI PROBE GENERATOR - Generates targeted questions via Grok 4.3
+// AI PROBE GENERATOR - Generates targeted questions via Grok 4.5
 // ============================================
 
 import { callXai, DEFAULT_MODEL, type Message } from "./xai-client";

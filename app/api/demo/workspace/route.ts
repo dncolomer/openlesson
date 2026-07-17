@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createVerificationWorkspaceFromPrompt } from "@/lib/agent-v2/create-verification-workspace";
-import { requireDemoAdminSession } from "@/lib/openlesson-demo/demo-access";
-import { getDemoWorkspaceModelFile } from "@/lib/openlesson-demo/demo-definition";
-import { getDemoFromBody } from "@/lib/openlesson-demo/resolve-demo";
+import { requireDemoAdminSession } from "@/lib/product-demos/demo-access";
+import { getDemoWorkspaceModelFile } from "@/lib/product-demos/demo-definition";
+import { getDemoFromBody } from "@/lib/product-demos/resolve-demo";
 import {
   buildProofOfWorkSchemaApiPath,
   buildProofOfWorkUploadApiPath,

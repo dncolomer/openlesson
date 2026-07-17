@@ -1,38 +1,25 @@
 import type { PerformanceReport } from "./performance-report";
-import { predictInterruptionWithLlm } from "./tim-llm-predictor";
+import type { LearningWorldModelV0 } from "@/lib/prompt-kernel/world-model";
+import { TIM_CONTRACT_NARRATIVE } from "@/lib/prompt-kernel/tim";
+import { buildTimFeatureEnvelope } from "./tim-feature-envelope";
+import { predictWithTimProvider } from "./tim-provider";
+import { normalizePredictedInterruption } from "./tim-normalize";
 
-/** Trace Interruption Model (TIM) — intervention types a consumer may trigger toward the user. */
-export type InterruptionInterventionType =
-  | "reflection_prompt"
-  | "checkpoint_probe"
-  | "coaching_nudge"
-  | "proof_of_work_reminder"
-  | "performance_review";
+export type {
+  InterruptionInterventionType,
+  InterruptionIntervention,
+  PredictiveInterruption,
+  ProofOfWorkApiInterruption,
+  ProofOfWorkApiEndpoint,
+} from "./predictive-interruption-types";
+export { normalizePredictedInterruption } from "./tim-normalize";
 
-export interface InterruptionIntervention {
-  type: InterruptionInterventionType;
-  /** Message or prompt the consumer should present to the user. */
-  message: string;
-  /** Why this intervention is predicted at this moment. */
-  rationale?: string;
-  /** Machine-oriented hint for the consumer system (e.g. call analyze_performance). */
-  consumer_action?: string;
-  block_id?: string | null;
-}
-
-export interface PredictiveInterruption {
-  /** Unique id for this prediction. A newer response supersedes any pending timer with a different id. */
-  interruption_id: string;
-  /** Milliseconds to wait before triggering the intervention unless superseded. */
-  delay_ms: number;
-  intervention: InterruptionIntervention;
-  confidence: "low" | "medium" | "high";
-  /** ISO-8601 timestamp when this prediction was issued. */
-  predicted_at: string;
-}
-
-/** null = no interruption predicted (empty interruption). */
-export type ProofOfWorkApiInterruption = PredictiveInterruption | null;
+import type {
+  InterruptionInterventionType,
+  PredictiveInterruption,
+  ProofOfWorkApiEndpoint,
+  ProofOfWorkApiInterruption,
+} from "./predictive-interruption-types";
 
 export interface InterruptionContract {
   description: string;
@@ -50,28 +37,6 @@ export interface InterruptionContract {
   example_active: PredictiveInterruption;
   example_empty: null;
 }
-
-export type ProofOfWorkApiEndpoint =
-  | "create_workspace"
-  | "list_workspaces"
-  | "get_workspace"
-  | "list_blocks"
-  | "generate_proof_of_work_schema"
-  | "generate_integration_skill"
-  | "upload_proof_of_work"
-  | "upload_tap_trace"
-  | "upload_tap_chat"
-  | "upload_tap_idle"
-  | "upload_tap_speech"
-  | "upload_ile_trace"
-  | "upload_ile_chat"
-  | "upload_ile_idle"
-  | "upload_ile_speech"
-  | "analyze_performance"
-  | "get_learning_progress"
-  | "list_tap_links"
-  | "create_tap_link"
-  | "get_workspace_detail";
 
 export interface InterruptionContext {
   endpoint: ProofOfWorkApiEndpoint;
@@ -98,6 +63,8 @@ export interface InterruptionContext {
   idle_duration_ms?: number | null;
   /** Speech transcript snapshot when available */
   speech_transcript?: string | null;
+  /** Optional learning world model snapshot for TIM features. */
+  learning_world_model?: LearningWorldModelV0 | null;
 }
 
 const NO_INTERRUPTION_ENDPOINTS = new Set<ProofOfWorkApiEndpoint>([
@@ -124,7 +91,7 @@ const DEFAULT_EXAMPLE: PredictiveInterruption = {
 export function buildInterruptionContract(): InterruptionContract {
   return {
     description:
-      "Every Proof-of-Work API success response includes an interruption field powered by the Trace Interruption Model (TIM). When non-null, schedule the intervention after delay_ms unless a later Proof-of-Work API response supersedes it.",
+      "Every Proof-of-Work API success response includes an interruption field powered by the Trace Interruption Model (TIM). When non-null, schedule the intervention after delay_ms unless a later Proof-of-Work API response supersedes it. TIM is a swappable interruption world model (baked-in default today; may later run as an independent external service) — the consumer interruption envelope stays stable.",
     empty_value: null,
     consumer_obligations: [
       "Read interruption on every Proof-of-Work API response (REST and MCP).",
@@ -155,80 +122,6 @@ export function buildInterruptionContract(): InterruptionContract {
   };
 }
 
-function createInterruptionId(endpoint: ProofOfWorkApiEndpoint, workspaceId?: string): string {
-  const suffix = Math.random().toString(36).slice(2, 10);
-  const scope = workspaceId ? workspaceId.slice(0, 8) : "global";
-  return `int_${endpoint}_${scope}_${suffix}`;
-}
-
-function clampDelayMs(value: number, min: number, max: number): number {
-  if (!Number.isFinite(value)) return min;
-  return Math.min(Math.max(Math.trunc(value), min), max);
-}
-
-export function normalizePredictedInterruption(
-  raw: unknown,
-  fallbackEndpoint: ProofOfWorkApiEndpoint,
-  workspaceId?: string,
-): ProofOfWorkApiInterruption {
-  if (raw === null || raw === undefined) return null;
-  if (typeof raw !== "object" || Array.isArray(raw)) return null;
-
-  const record = raw as Record<string, unknown>;
-  const interventionRaw = record.intervention;
-  if (!interventionRaw || typeof interventionRaw !== "object" || Array.isArray(interventionRaw)) {
-    return null;
-  }
-
-  const intervention = interventionRaw as Record<string, unknown>;
-  const type = intervention.type;
-  const message = typeof intervention.message === "string" ? intervention.message.trim() : "";
-  if (!message) return null;
-
-  const allowedTypes: InterruptionInterventionType[] = [
-    "reflection_prompt",
-    "checkpoint_probe",
-    "coaching_nudge",
-    "proof_of_work_reminder",
-    "performance_review",
-  ];
-  const interventionType = allowedTypes.includes(type as InterruptionInterventionType)
-    ? (type as InterruptionInterventionType)
-    : "reflection_prompt";
-
-  const confidenceRaw = record.confidence;
-  const confidence =
-    confidenceRaw === "low" || confidenceRaw === "medium" || confidenceRaw === "high"
-      ? confidenceRaw
-      : "medium";
-
-  return {
-    interruption_id:
-      typeof record.interruption_id === "string" && record.interruption_id.trim()
-        ? record.interruption_id.trim()
-        : createInterruptionId(fallbackEndpoint, workspaceId),
-    delay_ms: clampDelayMs(Number(record.delay_ms), 15_000, 600_000),
-    intervention: {
-      type: interventionType,
-      message: message.slice(0, 2000),
-      rationale:
-        typeof intervention.rationale === "string" ? intervention.rationale.trim().slice(0, 2000) : undefined,
-      consumer_action:
-        typeof intervention.consumer_action === "string"
-          ? intervention.consumer_action.trim().slice(0, 500)
-          : undefined,
-      block_id:
-        typeof intervention.block_id === "string"
-          ? intervention.block_id
-          : intervention.block_id === null
-            ? null
-            : undefined,
-    },
-    confidence,
-    predicted_at: new Date().toISOString(),
-  };
-}
-
 export async function predictInterruption(context: InterruptionContext): Promise<ProofOfWorkApiInterruption> {
   if (context.llm_interruption) {
     return context.llm_interruption;
@@ -238,26 +131,8 @@ export async function predictInterruption(context: InterruptionContext): Promise
     return null;
   }
 
-  const raw = await predictInterruptionWithLlm(context);
-  if (!raw?.should_interrupt) {
-    return null;
-  }
-
-  return normalizePredictedInterruption(
-    {
-      delay_ms: raw.delay_ms,
-      confidence: raw.confidence,
-      intervention: {
-        type: raw.intervention_type,
-        message: raw.message,
-        rationale: raw.rationale,
-        consumer_action: raw.consumer_action,
-        block_id: context.block_id ?? null,
-      },
-    },
-    context.endpoint,
-    context.workspace_id,
-  );
+  const features = buildTimFeatureEnvelope(context, context.learning_world_model);
+  return predictWithTimProvider(features);
 }
 
 export async function withProofOfWorkApiResponse<T extends Record<string, unknown>>(
@@ -272,11 +147,7 @@ export async function withProofOfWorkApiResponse<T extends Record<string, unknow
 
 export function formatInterruptionContractForSkillPrompt(): string {
   const contract = buildInterruptionContract();
-  return `Predictive interruptions (TIM — Trace Interruption Model):
-${contract.description}
-
-Consumer obligations:
-${contract.consumer_obligations.map((line) => `- ${line}`).join("\n")}
+  return `${TIM_CONTRACT_NARRATIVE}
 
 Supersession: ${contract.supersession_rule}
 
@@ -285,5 +156,7 @@ Intervention types: ${contract.intervention_types.join(", ")}
 Example active interruption:
 ${JSON.stringify(contract.example_active, null, 2)}
 
-Empty interruption (no prediction): null`;
+Empty interruption (no prediction): null
+
+TIM provider note: the platform may host TIM in-process or as an independent world model service; integrators only depend on the interruption field and supersession rules above.`;
 }

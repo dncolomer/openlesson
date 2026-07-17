@@ -41,7 +41,8 @@ export interface CreateTapLinkOptions {
   supabase: SupabaseClient;
   auth: AuthContext;
   workspaceId: string;
-  blockId: string;
+  /** When omitted/null, the link scopes to the entire workspace. */
+  blockId?: string | null;
   body: CreateTapLinkInput;
   baseUrl: string;
   allowAnonymousForNonAdmin?: boolean;
@@ -50,7 +51,7 @@ export interface CreateTapLinkOptions {
 export interface CreatedTapLink {
   id: string;
   workspace_id: string;
-  block_id: string;
+  block_id: string | null;
   status: string;
   requested_duration_seconds: number;
   focus_block_ids: string[];
@@ -168,7 +169,9 @@ async function resolveAssignedUserId(
 }
 
 export async function createWorkspaceTapLink(options: CreateTapLinkOptions): Promise<CreatedTapLink> {
-  const { supabase, auth, workspaceId, blockId, body, baseUrl, allowAnonymousForNonAdmin = false } = options;
+  const { supabase, auth, workspaceId, body, baseUrl, allowAnonymousForNonAdmin = false } = options;
+  const blockId =
+    typeof options.blockId === "string" && options.blockId.trim() ? options.blockId.trim() : null;
 
   const minutes = normalizeTapLinkMinutes(body.minutes);
   const postSession = normalizeTapPostSession(body.post_session);
@@ -185,24 +188,45 @@ export async function createWorkspaceTapLink(options: CreateTapLinkOptions): Pro
 
   const participantType = resolveTapParticipantType(body);
 
-  const { data: block, error: blockError } = await supabase
-    .from("blocks")
-    .select("id, workspace_id, workspaces!inner(id, user_id, organization_id, guest_user_id)")
-    .eq("id", blockId)
-    .eq("workspace_id", workspaceId)
-    .single();
-
-  if (blockError || !block) {
-    throw new CreateTapLinkError("Block not found", 404, "block_not_found");
-  }
-
-  const workspaceRaw = (block as { workspaces: unknown }).workspaces;
-  const workspace = (Array.isArray(workspaceRaw) ? workspaceRaw[0] : workspaceRaw) as {
+  let workspace: {
     id: string;
     user_id: string | null;
     organization_id: string | null;
     guest_user_id: string | null;
   };
+
+  if (blockId) {
+    const { data: block, error: blockError } = await supabase
+      .from("blocks")
+      .select("id, workspace_id, workspaces!inner(id, user_id, organization_id, guest_user_id)")
+      .eq("id", blockId)
+      .eq("workspace_id", workspaceId)
+      .single();
+
+    if (blockError || !block) {
+      throw new CreateTapLinkError("Block not found", 404, "block_not_found");
+    }
+
+    const workspaceRaw = (block as { workspaces: unknown }).workspaces;
+    workspace = (Array.isArray(workspaceRaw) ? workspaceRaw[0] : workspaceRaw) as {
+      id: string;
+      user_id: string | null;
+      organization_id: string | null;
+      guest_user_id: string | null;
+    };
+  } else {
+    const { data: workspaceRow, error: workspaceError } = await supabase
+      .from("workspaces")
+      .select("id, user_id, organization_id, guest_user_id")
+      .eq("id", workspaceId)
+      .single();
+
+    if (workspaceError || !workspaceRow) {
+      throw new CreateTapLinkError("Workspace not found", 404, "workspace_not_found");
+    }
+
+    workspace = workspaceRow;
+  }
 
   if (!canAccessAgentWorkspace(auth, workspace)) {
     throw new CreateTapLinkError("Workspace not found", 404, "workspace_not_found");
@@ -229,7 +253,7 @@ export async function createWorkspaceTapLink(options: CreateTapLinkOptions): Pro
   }
 
   try {
-    await getTapScoreBriefForUser(workspaceId, ownerUserId, [blockId], true, null);
+    await getTapScoreBriefForUser(workspaceId, ownerUserId, blockId ? [blockId] : [], true, null);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Not authorized";
     if (message === "Workspace not found") {
@@ -252,7 +276,7 @@ export async function createWorkspaceTapLink(options: CreateTapLinkOptions): Pro
       requested_duration_seconds: Math.round(minutes * 60),
       block_id: blockId,
       mode: "curious",
-      focus_block_ids: [blockId],
+      focus_block_ids: blockId ? [blockId] : [],
       voice_id: "ara",
       status: "pending",
       participant_type: participantType,

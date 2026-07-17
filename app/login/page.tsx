@@ -6,6 +6,7 @@ import Link from "next/link";
 import { Navbar } from "@/components/Navbar";
 import { createClient } from "@/lib/supabase/client";
 import { useI18n } from "@/lib/i18n";
+import { LoadingStatusMessage } from "@/components/LoadingStatusMessage";
 
 function LoginForm() {
   const [email, setEmail] = useState("");
@@ -206,7 +207,9 @@ export default function LoginPage() {
 
       <div className="flex-1 flex items-center justify-center px-6">
         <Suspense fallback={
-          <div className="w-full max-w-sm text-center text-neutral-600 text-sm">{t('common.loading')}</div>
+          <div className="w-full max-w-sm flex justify-center">
+            <LoadingStatusMessage tone="muted" message={t('common.loading')} />
+          </div>
         }>
           <LoginForm />
         </Suspense>

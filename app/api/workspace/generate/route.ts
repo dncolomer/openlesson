@@ -1,13 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { requireAuthenticatedUser } from "@/lib/api/require-auth";
 import { callXaiJSON, callXaiText, userMessage, DEFAULT_MODEL } from "@/lib/xai-client";
 import type { Message, MessageContent } from "@/lib/xai-client";
 import { uploadFileToXAI, deleteFileFromXAI } from "@/lib/xai-files";
 import { callXaiResponses, type ResponsesInputContent } from "@/lib/xai-client";
-import { persistSkillGridPositions, skillGridNodesFromRefs } from "@/lib/skill-grid-positions";
 import { type PlanId } from "@/lib/plans";
 import { checkWorkspaceCreation, workspaceLimitErrorResponse } from "@/lib/workspace-limits";
 import { loadUsageProfile } from "@/lib/usage-metrics";
+import {
+  getInitialChaptersBand,
+  resolveInitialChaptersFromBody,
+} from "@/lib/initial-chapters";
+import {
+  composeWorkspacePlanGeneratePrompt,
+  normalizeGeneratedPlanNodes,
+} from "@/lib/workspace-spatial-create";
+import {
+  extractGeneratedPlanNodes,
+  insertGeneratedWorkspaceBlocks,
+} from "@/lib/insert-workspace-blocks";
 
 const ALLOWED_MIME_TYPES = new Set([
   "application/pdf",
@@ -34,21 +45,14 @@ interface NodeData {
   description: string;
   is_start: boolean;
   next?: string[];
+  position_x?: number;
+  position_y?: number;
 }
 
 interface PlanData {
   title: string;
   nodes: NodeData[];
 }
-
-const DAYS_TO_NODES: Record<number, { min: number; max: number }> = {
-  7: { min: 3, max: 5 },
-  14: { min: 4, max: 7 },
-  30: { min: 5, max: 10 },
-  60: { min: 8, max: 14 },
-  90: { min: 10, max: 18 },
-  180: { min: 15, max: 25 },
-};
 
 // xAI JSON schema for plan generation (used by Responses API)
 const PLAN_JSON_SCHEMA = {
@@ -67,7 +71,10 @@ const PLAN_JSON_SCHEMA = {
             description: { type: "string", description: "1 sentence explaining the concept" },
             is_start: { type: "boolean" },
             next: { type: "array", items: { type: "string" } },
+            position_x: { type: "integer", description: "Grid column (may be negative); start at 0" },
+            position_y: { type: "integer", description: "Grid row (may be negative); start at 0" },
           },
+          // Positions preferred but optional — normalize + radial backfill handle gaps.
           required: ["id", "title", "description", "is_start"],
           additionalProperties: false,
         },
@@ -89,14 +96,14 @@ interface ProcessedFile {
 
 export async function POST(req: NextRequest) {
   try {
-    const supabase = await createClient();
+    const auth = await requireAuthenticatedUser();
+    if (!auth.ok) return auth.response;
+    const { user, supabase } = auth;
 
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const { topic, days, image, files: rawFiles } = await req.json();
+    const body = await req.json();
+    const { topic, days, image, files: rawFiles } = body;
+    const initialChapters = resolveInitialChaptersFromBody(body);
+    const band = getInitialChaptersBand(initialChapters);
 
     if (!topic || typeof topic !== "string") {
       return NextResponse.json({ error: "Topic is required" }, { status: 400 });
@@ -161,7 +168,6 @@ export async function POST(req: NextRequest) {
     );
 
     const daysNum = typeof days === "number" ? days : 30;
-    const nodeConstraints = DAYS_TO_NODES[daysNum] || DAYS_TO_NODES[30];
 
     // Partition uploaded files into image-files (handled via chat completions multimodal)
     // vs document-files (handled via Responses API + input_file)
@@ -179,30 +185,14 @@ export async function POST(req: NextRequest) {
       ? `\nThe user has attached ${docFiles.length} document(s) as reference material. Search and analyze them, then incorporate their content into the plan alongside the topic "${topic}".`
       : "";
 
-    const promptBody = `Generate a learning plan for "${topic}" as a directed graph where each node is a session.${imageContext}${fileContext}
-
-Return JSON with this structure:
-{
-  "title": "A short, catchy, social-media-friendly title for this plan (max 6 words, creative and engaging — NOT just the topic name)",
-  "nodes": [
-    { "id": "a", "title": "Node Title", "description": "Why this matters", "is_start": true/false, "next": ["b", "c"] }
-  ]
-}
-
-IMPORTANT: The plan should span approximately "${daysNum} days".
-- Include ${nodeConstraints.min} to ${nodeConstraints.max} nodes total
-- Each node represents one learning session
-- Create a realistic learning path that fits within this timeframe
-
-Rules:
-- The top-level "title" must be a catchy, memorable name for the plan (like a course name or book title). NOT just "Learning X". Be creative.
-- Each node is a distinct learning session
-- Use single-letter or short IDs for referencing
-- is_start: true for nodes that can begin a learning path
-- next: array of node IDs that follow this node (can be empty or have 1-3 entries)
-- Create branching paths (1 to many connections allowed)
-- Keep titles concise (3-8 words)
-- Descriptions: 1 sentence explaining the concept`;
+    const promptBody = composeWorkspacePlanGeneratePrompt({
+      topic,
+      initialChapters,
+      imageContext,
+      fileContext,
+      daysHint: daysNum,
+    });
+    const maxTokens = Math.min(5000, 1600 + band.max * 140);
 
     let planData: PlanData | null = null;
 
@@ -232,7 +222,7 @@ Rules:
       const response = await callXaiResponses<PlanData>({
         model: DEFAULT_MODEL,
         input: [{ role: "user", content }],
-        maxOutputTokens: 4000,
+        maxOutputTokens: maxTokens,
         temperature: 0.3,
         jsonSchema: PLAN_JSON_SCHEMA,
       });
@@ -268,7 +258,7 @@ Rules:
       const messages: Message[] = [{ role: "user", content: contentParts }];
       const textResponse = await callXaiText(messages, {
         model: DEFAULT_MODEL,
-        maxTokens: 2000,
+        maxTokens,
         temperature: 0.3,
       });
 
@@ -308,7 +298,7 @@ Rules:
     else {
       const response = await callXaiJSON<PlanData>([userMessage(promptBody)], {
         model: DEFAULT_MODEL,
-        maxTokens: 2000,
+        maxTokens,
         temperature: 0.3,
       });
 
@@ -320,14 +310,22 @@ Rules:
       planData = response.data;
     }
 
-    if (!planData || !planData.nodes || !Array.isArray(planData.nodes)) {
+    const rawNodes = extractGeneratedPlanNodes(planData);
+    const nodeRefs = normalizeGeneratedPlanNodes(rawNodes);
+
+    if (nodeRefs.length === 0) {
+      console.error("[generate] LLM returned no usable nodes:", {
+        hasNodes: Array.isArray((planData as PlanData | null)?.nodes),
+        hasBlocks: Array.isArray((planData as { blocks?: unknown })?.blocks),
+        title: (planData as PlanData | null)?.title,
+      });
       await rollbackXaiUploads(processedFiles);
       return NextResponse.json({ error: "Invalid plan data format" }, { status: 500 });
     }
 
-    const catchyTitle = planData.title || `Learning ${topic}`;
+    const catchyTitle = (planData as PlanData | null)?.title || `Learning ${topic}`;
 
-    // Create the learning plan
+    // Create workspace only after we have a valid node list
     const { data: plan, error: planError } = await supabase
       .from("workspaces")
       .insert({
@@ -345,50 +343,22 @@ Rules:
       return NextResponse.json({ error: "Failed to create plan" }, { status: 500 });
     }
 
-    // Create nodes (two passes for ID resolution)
-    const blockIdMap = new Map<string, string>();
-    const nodeRefs = planData.nodes;
-
-    for (const nodeData of nodeRefs) {
-      const { data: node, error: nodeError } = await supabase
-        .from("blocks")
-        .insert({
-          workspace_id: plan.id,
-          title: nodeData.title,
-          description: nodeData.description || "",
-          is_start: nodeData.is_start || false,
-          next_block_ids: [],
-          status: "available",
-        })
-        .select()
-        .single();
-
-      if (nodeError || !node) {
-        console.error("Failed to create node:", nodeError);
-        continue;
-      }
-      blockIdMap.set(nodeData.id, node.id);
+    try {
+      await insertGeneratedWorkspaceBlocks(supabase, plan.id, nodeRefs);
+    } catch (insertError) {
+      console.error("[generate] Block insert failed; rolling back workspace:", insertError);
+      await supabase.from("workspaces").delete().eq("id", plan.id);
+      await rollbackXaiUploads(processedFiles);
+      return NextResponse.json(
+        {
+          error:
+            insertError instanceof Error
+              ? insertError.message
+              : "Failed to create workspace blocks",
+        },
+        { status: 500 },
+      );
     }
-
-    for (const nodeData of nodeRefs) {
-      const currentNodeId = blockIdMap.get(nodeData.id);
-      if (!currentNodeId) continue;
-
-      const nextIds: string[] = [];
-      if (nodeData.next && Array.isArray(nodeData.next)) {
-        for (const nextId of nodeData.next) {
-          const targetId = blockIdMap.get(nextId);
-          if (targetId) nextIds.push(targetId);
-        }
-      }
-
-      await supabase.from("blocks").update({ next_block_ids: nextIds }).eq("id", currentNodeId);
-    }
-
-    await persistSkillGridPositions(
-      supabase,
-      skillGridNodesFromRefs(nodeRefs, blockIdMap),
-    );
 
     // Persist workspace_files records (already uploaded to xAI above)
     const fileStorageWarnings: string[] = [];

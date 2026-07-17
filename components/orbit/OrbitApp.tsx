@@ -21,6 +21,7 @@ import {
   normalizePerformanceReport,
   type PerformanceReport,
 } from "@/lib/agent-v2/performance-report";
+import { LoadingStatusMessage } from "@/components/LoadingStatusMessage";
 import { SmartCoachOverlay } from "@/components/orbit/SmartCoachOverlay";
 import {
   createSeedOrbitState,
@@ -32,15 +33,15 @@ import {
   type OrbitIssue,
   type OrbitIssueStatus,
   type OrbitPriority,
-} from "@/lib/openlesson-demo/orbit-app-model";
+} from "@/lib/product-demos/orbit-app-model";
 import {
   createOrbitIleSession,
   createOrbitTapSession,
   fetchOrbitTapGateStatus,
   openOrbitLearningUrl,
-} from "@/lib/openlesson-demo/orbit-learning-links";
-import { ORBIT_TAP_VALIDATION_HINT } from "@/lib/openlesson-demo/orbit-ui-manifest";
-import { buildOrbitAppSnapshot } from "@/lib/openlesson-demo/orbit-app-context";
+} from "@/lib/product-demos/orbit-learning-links";
+import { ORBIT_TAP_VALIDATION_HINT } from "@/lib/product-demos/orbit-ui-manifest";
+import { buildOrbitAppSnapshot } from "@/lib/product-demos/orbit-app-context";
 import {
   emitOrbitAction,
   fetchOrbitPerformance,
@@ -51,7 +52,7 @@ import {
   saveOrbitBridge,
   syncOrbitAppSnapshotToBridge,
   type OrbitProofOfWorkBridge,
-} from "@/lib/openlesson-demo/orbit-bridge";
+} from "@/lib/product-demos/orbit-bridge";
 
 type EvidenceActionOptions = {
   reflection?: string;
@@ -421,8 +422,8 @@ export function OrbitApp() {
 
   if (!appState) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#0d0d0d] text-[#9b9bb8]">
-        <Loader2 className="size-5 animate-spin" />
+      <div className="flex min-h-screen items-center justify-center bg-[#0d0d0d]">
+        <LoadingStatusMessage message="Loading" />
       </div>
     );
   }

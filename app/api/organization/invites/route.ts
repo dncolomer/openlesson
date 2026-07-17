@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { requireAuthenticatedUser } from "@/lib/api/require-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export const runtime = "nodejs";
@@ -20,12 +20,9 @@ function generateToken(): string {
 // POST /api/organization/invites - Create invite token(s) (org admin only)
 export async function POST(request: Request) {
   try {
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    
-    if (!user) {
-      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-    }
+    const auth = await requireAuthenticatedUser();
+    if (!auth.ok) return auth.response;
+    const { user, supabase } = auth;
 
     // Get user's profile
     const { data: profile, error: profileError } = await supabase
@@ -83,12 +80,9 @@ export async function POST(request: Request) {
 // DELETE /api/organization/invites - Revoke an unused invite (org admin only)
 export async function DELETE(request: Request) {
   try {
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    
-    if (!user) {
-      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-    }
+    const auth = await requireAuthenticatedUser();
+    if (!auth.ok) return auth.response;
+    const { user, supabase } = auth;
 
     // Get user's profile
     const { data: profile, error: profileError } = await supabase

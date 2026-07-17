@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { requireAuthenticatedUser } from "@/lib/api/require-auth";
 import type { RabbitHoleNode } from "@/lib/rabbit-hole";
 
 type DbNode = { id: string; top_question_id: string; parent_id: string | null; question: string; depth: number; branch_order: number };
@@ -46,9 +46,9 @@ function buildTree(nodes: DbNode[], topQuestion: string): RabbitHoleNode | null 
 }
 
 export async function GET() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+  const auth = await requireAuthenticatedUser();
+    if (!auth.ok) return auth.response;
+    const { user, supabase } = auth;
 
   const { data: questions, error } = await supabase
     .from("rabbit_hole_top_questions")

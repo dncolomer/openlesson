@@ -62,8 +62,8 @@ import { assertCanSubmitProofOfWork } from "@/lib/usage-enforcement";
 import {
   buildContinuousEvaluationMcpPolicy,
   buildIntegrationSurfaces,
-  buildOpenLessonScopeForWorkspace,
-  OPENLESSON_SCOPE,
+  buildUncertainSystemsScopeForWorkspace,
+  UNCERTAIN_SYSTEMS_SCOPE,
   recommendIntegrationActions,
 } from "./integration-discovery";
 import {
@@ -79,21 +79,21 @@ import {
 } from "./predictive-interruption";
 
 export const MCP_PROOF_OF_WORK_PROTOCOL_VERSION = "2025-03-26";
-export const MCP_PROOF_OF_WORK_SERVER_NAME = "openlesson-proof-of-work-api";
+export const MCP_PROOF_OF_WORK_SERVER_NAME = "uncertain-systems-proof-of-work-api";
 export const MCP_PROOF_OF_WORK_SERVER_VERSION = "1.3.0";
 
 export const MCP_PROOF_OF_WORK_SERVER_INSTRUCTIONS = `Uncertain Systems Proof-of-Work API MCP — full parity with Proof-of-Work API REST.
 
 ## What Uncertain Systems is
-${OPENLESSON_SCOPE.mission}
-Pillars: ${OPENLESSON_SCOPE.pillars.join(" | ")}
+${UNCERTAIN_SYSTEMS_SCOPE.mission}
+Pillars: ${UNCERTAIN_SYSTEMS_SCOPE.pillars.join(" | ")}
 
 ## Workspace & progress model
-${OPENLESSON_SCOPE.workspace_model}
+${UNCERTAIN_SYSTEMS_SCOPE.workspace_model}
 Progress signals: proof_of_work_artifact counts, analyze_performance → overall_score, conversion_score vs conversion_goal, marker_scores, gap_analysis.
 
 ## Predictive interruptions (TIM)
-Every tool result includes top-level \`interruption\` (object or null). When non-null, schedule intervention after delay_ms unless a later Proof-of-Work API call supersedes it. Read interruption_contract from generate_proof_of_work_schema. Resource: openlesson://predictive-interruptions
+Every tool result includes top-level \`interruption\` (object or null). When non-null, schedule intervention after delay_ms unless a later Proof-of-Work API call supersedes it. Read interruption_contract from generate_proof_of_work_schema. Resource: uncertain-systems://predictive-interruptions
 
 ## Evaluation modes
 - **semantic** (default): \`create_workspace\` with \`initial_prompt\`. Grok decomposes the workspace; performance reports use semantic gap analysis.
@@ -113,9 +113,9 @@ Canonical protocol \`agent-trace-v3\` phases: enumerate → fingerprint → aggr
 
 REST mirror: same loop via Bearer auth on /api/v2/agent/workspaces/{id}/...
 
-Resources: resources/read openlesson://integration-scope and openlesson://proof-of-work-loop
+Resources: resources/read uncertain-systems://integration-scope and uncertain-systems://proof-of-work-loop
 
-TAP links (create_tap_link): bearer URLs at /tap/session/{token}. Works for workspace owners and guests — open the link yourself or share with a learner. guest_email/guest_user_id are optional (org admins only).
+TAP links (create_tap_link): bearer URLs at /tap/session/{token}. Scope to the full workspace (omit block_id) or a single block. Works for workspace owners and guests — open the link yourself or share with a learner. guest_email/guest_user_id are optional (org admins only).
 
 Partner agents: call generate_integration_skill for a workspace-specific skill.md, then use MCP tools proactively per that skill's checkpoint policy.
 
@@ -139,7 +139,7 @@ export const MCP_EVIDENCE_TOOLS = [
   {
     name: "get_learning_progress",
     description:
-      "One-call learning progress snapshot: conversion_goal, blocks, proof-of-work counts, openlesson_scope, dual REST+MCP evaluation policies, and recommended_next_actions. Call first when orienting mid-session.",
+      "One-call learning progress snapshot: conversion_goal, blocks, proof-of-work counts, uncertain_systems_scope, dual REST+MCP evaluation policies, and recommended_next_actions. Call first when orienting mid-session.",
     inputSchema: {
       type: "object",
       properties: { workspace_id: { type: "string", description: "Workspace UUID." } },
@@ -163,12 +163,18 @@ export const MCP_EVIDENCE_TOOLS = [
   {
     name: "create_workspace",
     description:
-      "Create a Verification Workspace from initial_prompt (semantic) or protocol (opaque). Optional seed files.",
+      "Create a Verification Workspace from initial_prompt (semantic) or protocol (opaque). Optional seed files. Semantic mode places blocks on a 2D skill grid starting at (0,0) with signed multi-quadrant coords, sparse branching paths, and an initial_chapters band (narrow|mid|broad) controlling how many blocks to generate.",
     inputSchema: {
       type: "object",
       properties: {
         evaluation_mode: { type: "string", enum: ["semantic", "opaque"] },
         initial_prompt: { type: "string", description: "Required for semantic mode." },
+        initial_chapters: {
+          type: "string",
+          enum: ["narrow", "mid", "broad"],
+          description:
+            "Initial chapters/blocks band for semantic create: narrow (fewest), mid (default), broad (most; deeper branch arms). Controls generate count and spatial breadth.",
+        },
         protocol: {
           type: "object",
           description: "Required for opaque mode: protocol_id, goal_ref, optional phases/goal_tokens.",
@@ -212,7 +218,7 @@ export const MCP_EVIDENCE_TOOLS = [
   {
     name: "generate_proof_of_work_schema",
     description:
-      "Generate proof-of-work spec with tool_submissions, performance_report_contract, continuous_evaluation (REST paths), continuous_evaluation_mcp (tool names), openlesson_scope, and recommended_next_actions. Semantic workspaces: pass definition. Opaque workspaces: pass evaluation_mode opaque with definition_ref + contract.event_verbs. Call before first upload and after every 5-10 artifacts. REST: POST .../proof-of-work-schema.",
+      "Generate proof-of-work spec with tool_submissions, performance_report_contract, continuous_evaluation (REST paths), continuous_evaluation_mcp (tool names), uncertain_systems_scope, and recommended_next_actions. Semantic workspaces: pass definition. Opaque workspaces: pass evaluation_mode opaque with definition_ref + contract.event_verbs. Call before first upload and after every 5-10 artifacts. REST: POST .../proof-of-work-schema.",
     inputSchema: {
       type: "object",
       properties: {
@@ -335,14 +341,15 @@ export const MCP_EVIDENCE_TOOLS = [
   {
     name: "create_tap_link",
     description:
-      "Create a private Think Aloud Protocol (TAP) link for a workspace block. Call list_blocks first; block_id must be the blocks UUID id field.",
+      "Create a private Think Aloud Protocol (TAP) link for a workspace or a single block. Omit block_id for full-workspace scope. When scoping to a block, call list_blocks first; block_id must be the blocks UUID id field.",
     inputSchema: {
       type: "object",
       properties: {
         workspace_id: { type: "string" },
         block_id: {
           type: "string",
-          description: "blocks.id UUID from list_blocks (not title, slug, or index).",
+          description:
+            "Optional. blocks.id UUID from list_blocks (not title, slug, or index). Omit for a full-workspace TAP link.",
         },
         minutes: { type: "number", description: "Session length in minutes (1–120). Default 15." },
         participant_type: {
@@ -359,7 +366,7 @@ export const MCP_EVIDENCE_TOOLS = [
         redirect_url: { type: "string", description: "Required when post_session=redirect_url." },
         completion_webhook_url: { type: "string", description: "Optional webhook URL on TAP completion." },
       },
-      required: ["workspace_id", "block_id"],
+      required: ["workspace_id"],
       additionalProperties: false,
     },
   },
@@ -418,14 +425,14 @@ function withProgressGuidance<T extends Record<string, unknown>>(
     workspaceTitle?: string;
   }
 ): T & {
-  openlesson_scope: Record<string, unknown>;
+  uncertain_systems_scope: Record<string, unknown>;
   integration_surfaces: ReturnType<typeof buildIntegrationSurfaces>;
   continuous_evaluation_mcp: ReturnType<typeof buildContinuousEvaluationMcpPolicy>;
   recommended_next_actions: ReturnType<typeof recommendIntegrationActions>;
 } {
   return {
     ...payload,
-    openlesson_scope: buildOpenLessonScopeForWorkspace({
+    uncertain_systems_scope: buildUncertainSystemsScopeForWorkspace({
       workspaceTitle: options.workspaceTitle || "workspace",
       conversionGoal: options.conversionGoal,
       blockCount: options.counts.blocks,
@@ -1279,9 +1286,8 @@ export async function callMcpProofOfWorkTool(
   if (name === "create_tap_link") {
     requireScope(auth.scopes, "tap:write");
     const workspaceId = stringArg(args, "workspace_id");
-    const blockId = stringArg(args, "block_id");
+    const blockId = stringArg(args, "block_id") || null;
     if (!workspaceId) throw new Error("workspace_id is required.");
-    if (!blockId) throw new Error("block_id is required.");
 
     try {
       const appBase = process.env.NEXT_PUBLIC_APP_URL || origin;

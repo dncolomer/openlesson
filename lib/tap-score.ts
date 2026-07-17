@@ -2,6 +2,11 @@ import { createPrivateToken, hashPrivateToken } from "@/lib/private-token";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { callXai, callXaiJSON, systemMessage, userMessage } from "@/lib/xai-client";
+import {
+  buildTapFacilitatorInstructions,
+  buildTapOpeningQuestionTask,
+  buildTapStartingTopicsTask,
+} from "@/lib/prompt-kernel/surfaces/tap";
 
 export interface TapStartingTopic {
   id: string;
@@ -65,7 +70,6 @@ export interface TapScoreAnalysis {
       severity: "low" | "medium" | "high";
       suggested_repair: string;
     }>;
-    next_practice: string[];
   };
   knowledge_gaps: Array<{
     title: string;
@@ -96,7 +100,7 @@ export function buildTapScoreSessionUrl(baseUrl: string, privateToken: string) {
 }
 
 export function listenerStyle(_mode: TapScoreMode) {
-  return "a neutral learning evaluator who asks clear questions that reveal what the learner can explain, connect, apply, and repair";
+  return "a neutral TAP facilitator who elicits System 1 and System 2 think-aloud traces so later analysis can see what the learner can explain, connect, apply, and repair";
 }
 
 export async function getTapScoreBrief(workspaceId: string, focusNodeIds: string[] = [], focusSessionId?: string | null) {
@@ -240,32 +244,7 @@ export function buildTapScoreInstructions(brief: TapScoreBrief, mode: TapScoreMo
       ? "No related completed session. Evaluate the selected performance block directly."
       : "No focused block. Evaluate learning across the whole workspace.";
 
-  return `You are the Think Aloud Protocol (TAP) session facilitator for Uncertain Systems.
-
-The learner is demonstrating what they learned about ${assessmentTarget}. Your role is to collect enough proof of work to score the demonstration and identify actionable learning gaps. Route remediation into Integrated Learning Environment (ILE) practice where appropriate. You are ${listenerStyle(mode)}.
-
-Your job is to run a Socratic learning demonstration. Elicit a clear, natural explanation and expose gaps: missing definitions, weak causal links, misconceptions, shallow examples, unsupported jumps, and fragile transfer across contexts. Do not announce scores during the live session. Ask questions that reveal understanding across these learning markers: ${TAP_SCORE_MARKERS.map((marker) => marker.label).join(", ")}.
-
-Rules:
-- Ask one short spoken question at a time.
-- Do not lecture unless the user explicitly asks for help.
-- Prefer questions over statements.
-- Build each follow-up from the learner's own words.
-- Ask the learner to justify, compare, predict, give examples, or repair their explanation.
-- If the learner is wrong, ask a question that helps them notice the contradiction before correcting them.
-- Act like you do not know the subject yet, but use the hidden workspace context to notice gaps.
-- Ask for definitions when the user uses terms too quickly.
-- Ask for concrete examples when explanations are abstract.
-- Ask how ideas connect across the selected block or, if no block is selected, across the whole workspace.
-- Ask targeted questions that can confirm or falsify likely knowledge gaps.
-- Gently paraphrase your understanding and ask if you got it right.
-- Keep responses concise and conversational.
-- When the user is silent or vague, ask a clarifying question instead of filling in the answer.
-- The session is timeboxed to ${minutes} minutes.
-
-Start by saying: "Teach me what you learned here. I will ask follow-up questions to understand where your learning is solid and where gaps remain."
-
-Workspace:
+  const workspaceBlock = `Workspace:
 Title: ${brief.plan.title}
 Topic: ${brief.plan.root_topic}
 Description: ${brief.plan.description || "None"}
@@ -278,6 +257,14 @@ User session context:
 ${sessionSummary || "No completed session reports found yet."}
 
 ${focusSessionSummary}`;
+
+  return buildTapFacilitatorInstructions({
+    assessmentTarget,
+    listenerStyle: listenerStyle(mode),
+    markers: TAP_SCORE_MARKERS.map((marker) => marker.label).join(", "),
+    minutes,
+    workspaceBlock,
+  });
 }
 
 export function buildTapOpeningQuestionFallback(brief: TapScoreBrief) {
@@ -390,28 +377,8 @@ export async function generateTapStartingTopics(brief: TapScoreBrief, minutes: n
 
   const response = await callXaiJSON<{ topics?: TapStartingTopic[] }>(
     [
-      systemMessage(
-        `${context}\n\nGenerate exactly ${TAP_STARTING_TOPIC_COUNT} distinct starting topics for a Think Aloud Protocol session. Each topic should be a concrete angle on what the learner could demonstrate from the workspace context above — not generic study advice.
-
-Return JSON only:
-{
-  "topics": [
-    {
-      "id": "short-slug",
-      "title": "Short card title (max 6 words)",
-      "subtitle": "One inviting line for the card (max 18 words)",
-      "openingQuestion": "One Socratic opening question Helios will ask first if the learner picks this topic"
-    }
-  ]
-}
-
-Rules:
-- Topics must be meaningfully different from each other.
-- openingQuestion must be one sentence, specific to the topic, and invite demonstration of learning.
-- No preamble inside openingQuestion.
-- Titles should feel like session entry points, not chapter headings copied verbatim.`,
-      ),
-      userMessage(`Generate ${TAP_STARTING_TOPIC_COUNT} starting topics for demonstrating learning about: ${target}`),
+      systemMessage(`${context}\n\n${buildTapStartingTopicsTask(TAP_STARTING_TOPIC_COUNT)}`),
+      userMessage(`Generate ${TAP_STARTING_TOPIC_COUNT} starting topics for think-aloud demonstration about: ${target}`),
     ],
     { maxTokens: 900, temperature: 0.45, fetchTimeout: 45000 },
   );
@@ -433,10 +400,8 @@ export async function generateTapOpeningQuestion(brief: TapScoreBrief, minutes: 
 
   const response = await callXai(
     [
-      systemMessage(
-        `${context}\n\nGenerate exactly ONE opening Socratic question to start the Think Aloud demonstration. The question must be specific to the workspace/block context above. Invite the learner to demonstrate what they learned — not a generic icebreaker or meta question about their approach. One sentence only. No preamble, no quotes, just the question.`,
-      ),
-      userMessage(`Generate the opening question for demonstrating learning about: ${target}`),
+      systemMessage(`${context}\n\n${buildTapOpeningQuestionTask()}`),
+      userMessage(`Generate the opening think-aloud prompt for demonstrating learning about: ${target}`),
     ],
     { maxTokens: 120, temperature: 0.55, fetchTimeout: 30000 },
   );

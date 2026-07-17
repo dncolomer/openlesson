@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { matchCoachingHintToAction } from "@/lib/openlesson-demo/orbit-coach-map";
+import { matchCoachingHintToAction } from "@/lib/product-demos/orbit-coach-map";
 
 describe("orbit coach map", () => {
   it("matches scorecard hints to actionable UI targets", () => {

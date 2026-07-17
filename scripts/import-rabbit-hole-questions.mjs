@@ -9,7 +9,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const projectRoot = path.resolve(__dirname, "..");
 const csvPath = process.argv[2]
   ? path.resolve(process.cwd(), process.argv[2])
-  : path.join(projectRoot, "rabbit-hole-questions-trees.csv");
+  : path.join(projectRoot, "scripts/data/rabbit-hole/rabbit-hole-questions-trees.csv");
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;

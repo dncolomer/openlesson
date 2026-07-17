@@ -1,4 +1,4 @@
-import type { DemoVerificationPill } from "@/lib/openlesson-demo/verification-pills";
+import type { DemoVerificationPill } from "@/lib/product-demos/verification-pills";
 
 const PILL_STYLES: Record<DemoVerificationPill, string> = {
   "Proof-of-Work API": "border-zinc-700 bg-black/40 text-zinc-300",

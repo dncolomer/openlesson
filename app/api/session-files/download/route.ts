@@ -4,7 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { requireAuthenticatedUser } from "@/lib/api/require-auth";
 import { getFileContentResponse } from "@/lib/xai-files";
 
 export const runtime = "nodejs";
@@ -22,9 +22,9 @@ const TABLES = [
 
 export async function GET(req: NextRequest) {
   try {
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const auth = await requireAuthenticatedUser();
+    if (!auth.ok) return auth.response;
+    const { user, supabase } = auth;
 
     const fileId = req.nextUrl.searchParams.get("fileId");
     if (!fileId) {

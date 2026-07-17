@@ -24,8 +24,8 @@ describe("mcp-proof-of-work-catalog", () => {
 
   it("emits MCP client config JSON with Bearer auth header", () => {
     const config = JSON.parse(buildMcpClientConfig("http://localhost:3000", "sk_test"));
-    expect(config.mcpServers.openlesson.type).toBe("streamable-http");
-    expect(config.mcpServers.openlesson.url).toBe("http://localhost:3000/api/mcp");
-    expect(config.mcpServers.openlesson.headers.Authorization).toBe("Bearer sk_test");
+    expect(config.mcpServers["uncertain-systems"].type).toBe("streamable-http");
+    expect(config.mcpServers["uncertain-systems"].url).toBe("http://localhost:3000/api/mcp");
+    expect(config.mcpServers["uncertain-systems"].headers.Authorization).toBe("Bearer sk_test");
   });
 });

@@ -16,10 +16,6 @@ interface ResizablePaneProps {
   defaultLeftWidth?: number;
   minLeftWidth?: number;
   minRightWidth?: number;
-  /** @deprecated no longer used; kept for backward-compatible props */
-  leftLabel?: string;
-  /** @deprecated no longer used; kept for backward-compatible props */
-  rightLabel?: string;
   storageKey?: string;
 }
 

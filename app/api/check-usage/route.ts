@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { requireAuthenticatedUser } from "@/lib/api/require-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
   canCreateWorkspace,
@@ -27,9 +27,9 @@ export const runtime = "nodejs";
  */
 export async function POST() {
   try {
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return NextResponse.json({ ok: false }, { status: 401 });
+    const auth = await requireAuthenticatedUser();
+    if (!auth.ok) return auth.response;
+    const { user, supabase } = auth;
 
     const { profile } = await loadUsageProfile(supabase, user.id);
     if (!profile || profile.is_admin) return NextResponse.json({ ok: true });
@@ -59,14 +59,9 @@ export async function POST() {
 
 export async function GET() {
   try {
-    const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) {
-      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-    }
+    const auth = await requireAuthenticatedUser();
+    if (!auth.ok) return auth.response;
+    const { user, supabase } = auth;
 
     const { profile, error: profileError } = await loadUsageProfile(supabase, user.id);
 

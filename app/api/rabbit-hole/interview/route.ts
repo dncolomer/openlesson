@@ -1,14 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
+import { requireAuthenticatedUser } from "@/lib/api/require-auth";
 import { callXaiJSON, DEFAULT_MODEL, systemMessage, userMessage } from "@/lib/xai-client";
-import { createClient } from "@/lib/supabase/server";
 import { getUserTimezone, localDayKey, scoreRabbitHole } from "@/lib/rabbit-hole";
 
 type Interview = { question: string; choices: string[]; correctIndex: number; rationale: string };
 
 export async function POST(request: NextRequest) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+  const auth = await requireAuthenticatedUser();
+    if (!auth.ok) return auth.response;
+    const { user, supabase } = auth;
 
   const body = await request.json();
   const path = Array.isArray(body.path) ? body.path : [];

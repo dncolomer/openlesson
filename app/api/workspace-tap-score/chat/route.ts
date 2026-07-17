@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { callXai, systemMessage, userMessage } from "@/lib/xai-client";
 import { buildTapScoreInstructions, getTapScoreBrief, getTapScoreBriefForUser, TapScoreMode, hashPrivateToken } from "@/lib/tap-score";
+import { buildTapSelectiveThoughtSystemPrompt } from "@/lib/prompt-kernel/surfaces/tap";
 import { resolveTapSessionAccess } from "@/lib/tap-score-session-auth";
 import {
   buildTapChatExchangePayload,
@@ -67,7 +68,7 @@ export async function POST(req: NextRequest) {
       .join("\n\n");
 
     const response = await callXai([
-      systemMessage(`${context}\n\nYou are now responding in a selective thought interface, not a live voice call. The learner submits transcribed thought fragments. Reply in a Socratic style with one concise question, or at most one brief reflection followed by a question. Elicit evidence about what they learned, what they can transfer, and what gaps remain. Prioritize definitions, causal reasoning, examples, application, and repair. Do not score yet. Do not explain the answer for them unless they explicitly ask for help.`),
+      systemMessage(buildTapSelectiveThoughtSystemPrompt(context)),
       userMessage(`Conversation so far:\n${history || "None"}\n\nLatest submitted thought:\n${latestThought}`),
     ], {
       maxTokens: 500,

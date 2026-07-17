@@ -25,7 +25,7 @@ export async function createAnonymousTapGuest(
   }
 
   const guestToken = crypto.randomUUID();
-  const email = `anonymous+${guestToken}@tap-link.openlesson`;
+  const email = `anonymous+${guestToken}@tap-link.uncertain-systems`;
 
   const { data, error } = await supabase
     .from("organization_guest_users")

@@ -27,7 +27,6 @@ interface ChapterMapPanelProps {
   onEnsurePositions?: (plan: SessionPlan) => void;
   isSessionActive: boolean;
   isCurrentStepCompleted?: boolean;
-  stuckCheckText?: string | null;
 }
 
 export function ChapterMapPanel({
@@ -45,7 +44,6 @@ export function ChapterMapPanel({
   onEnsurePositions,
   isSessionActive,
   isCurrentStepCompleted = false,
-  stuckCheckText = null,
 }: ChapterMapPanelProps) {
   const { t } = useI18n();
   const [selectedStepId, setSelectedStepId] = useState<string | null>(null);
@@ -150,7 +148,6 @@ export function ChapterMapPanel({
   if (loading) {
     return (
       <div className="flex h-full flex-col items-center justify-center bg-[#0b0b0b] p-6">
-        <div className="mb-4 h-8 w-8 animate-spin rounded-full border-2 border-neutral-800 border-t-amber-500/70" />
         <LoadingStatusMessage tone="subtle" message={t("chapterMap.preparing")} />
       </div>
     );
@@ -160,10 +157,7 @@ export function ChapterMapPanel({
     return (
       <div className="flex h-full flex-col items-center justify-center bg-[#0b0b0b] p-6">
         {loading ? (
-          <>
-            <div className="mb-4 h-8 w-8 animate-spin rounded-full border-2 border-neutral-800 border-t-amber-500/70" />
-            <LoadingStatusMessage tone="subtle" message={t("chapterMap.preparing")} />
-          </>
+          <LoadingStatusMessage tone="subtle" message={t("chapterMap.preparing")} />
         ) : (
           <p className="text-sm text-neutral-600">{t("chapterMap.noChapters")}</p>
         )}

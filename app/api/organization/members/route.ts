@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { requireAuthenticatedUser } from "@/lib/api/require-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export const runtime = "nodejs";
@@ -11,12 +11,9 @@ function getAdminClient() {
 // DELETE /api/organization/members - Remove a member from organization
 export async function DELETE(request: Request) {
   try {
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    
-    if (!user) {
-      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-    }
+    const auth = await requireAuthenticatedUser();
+    if (!auth.ok) return auth.response;
+    const { user, supabase } = auth;
 
     const { memberId } = await request.json();
 

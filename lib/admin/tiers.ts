@@ -51,14 +51,6 @@ export function planFilterBucket(user: { plan: string; subscription_status: stri
   return "free";
 }
 
-/** @deprecated Use planFilterBucket or adminTierSelectValue */
-export function normalizeAdminTier(user: {
-  plan: string;
-  subscription_status: string;
-}): AdminTierId {
-  return adminTierSelectValue(user) ?? "free";
-}
-
 export function tierLabel(plan: string): string {
   if (plan === "regular_2026") return "Individual";
   if (plan === "pro_teams") return "Pro / Teams";

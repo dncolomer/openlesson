@@ -40,7 +40,7 @@ function main() {
   );
 
   const body = sanitizeDump(fs.readFileSync(rawPath, "utf8"));
-  const header = `-- OpenLesson schema baseline (squashed from production public schema)
+  const header = `-- Uncertain Systems schema baseline (squashed from production public schema)
 -- Generated: ${new Date().toISOString()}
 -- Do not edit by hand. Create a new forward migration instead.
 

@@ -1,13 +1,18 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { createBrowserClient } from "@supabase/ssr";
+import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useI18n } from "@/lib/i18n";
 import { FileDropZone, type AttachedFile } from "@/components/FileDropZone";
 import { TopicBrowser } from "@/components/TopicBrowser";
 import { createSession } from "@/lib/storage";
+import {
+  DEFAULT_INITIAL_CHAPTERS,
+  INITIAL_CHAPTERS_LEVELS,
+  type InitialChaptersLevel,
+} from "@/lib/initial-chapters";
 
 const MAX_ATTACHED_FILES = 5;
 
@@ -47,13 +52,11 @@ interface HumanModeSelectProps {
 export function HumanModeSelect({ initialTopic = "", compact = false }: HumanModeSelectProps) {
   const { t } = useI18n();
   const router = useRouter();
-  const supabase = createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-  );
+  const supabase = createClient();
 
   const [topic, setTopic] = useState(initialTopic);
   const [weeks, setWeeks] = useState(4);
+  const [initialChapters, setInitialChapters] = useState<InitialChaptersLevel>(DEFAULT_INITIAL_CHAPTERS);
   const [attachedFiles, setAttachedFiles] = useState<AttachedFile[]>([]);
   const [showFileZone, setShowFileZone] = useState(false);
   const [busy, setBusy] = useState<null | "session" | "plan">(null);
@@ -170,6 +173,7 @@ export function HumanModeSelect({ initialTopic = "", compact = false }: HumanMod
       const body = {
         topic: topic.trim(),
         days: weeks * 7,
+        initialChapters,
         ...(attachedFiles.length > 0
           ? {
               files: attachedFiles.map((f) => ({
@@ -268,6 +272,39 @@ export function HumanModeSelect({ initialTopic = "", compact = false }: HumanMod
               }`
             : t("workspaceFiles.attachFiles")}
         </button>
+
+        {/* Initial chapters — drives block count / spatial breadth on generate */}
+        <div className="relative inline-flex items-center">
+          <label className="text-xs text-slate-500 mr-2">
+            {t("planMode.initialChapters")}
+          </label>
+          <select
+            value={initialChapters}
+            onChange={(e) => setInitialChapters(e.target.value as InitialChaptersLevel)}
+            disabled={inputDisabled}
+            aria-label={t("planMode.initialChapters")}
+            className="appearance-none bg-slate-900/50 border border-slate-800 hover:border-slate-700 focus:border-slate-600 focus:outline-none rounded-lg pl-3 pr-7 py-1.5 text-xs text-slate-200 cursor-pointer transition-colors"
+          >
+            {INITIAL_CHAPTERS_LEVELS.map((level) => (
+              <option key={level} value={level}>
+                {level === "narrow"
+                  ? t("planMode.initialChaptersNarrow")
+                  : level === "mid"
+                    ? t("planMode.initialChaptersMid")
+                    : t("planMode.initialChaptersBroad")}
+              </option>
+            ))}
+          </select>
+          <svg
+            className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-500 pointer-events-none"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth={2.5}
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+          </svg>
+        </div>
 
         {/* Plan length dropdown — compact select with custom chevron. */}
         <div className="relative inline-flex items-center">

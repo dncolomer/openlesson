@@ -5,60 +5,92 @@ import {
   predictInterruption,
   withProofOfWorkApiResponse,
 } from "@/lib/agent-v2/predictive-interruption";
-import { setTimLlmPredictorForTests } from "@/lib/agent-v2/tim-llm-predictor";
+import { setTimProviderForTests, type TimProvider } from "@/lib/agent-v2/tim-provider";
+import { buildTimFeatureEnvelope } from "@/lib/agent-v2/tim-feature-envelope";
+import { emptyLearningWorldModel } from "@/lib/prompt-kernel/world-model";
 import { enrichProofOfWorkSpecResult } from "@/lib/agent-v2/proof-of-work-integration";
+import type { TimFeatureEnvelopeV1 } from "@/lib/agent-v2/tim-feature-envelope";
+import type { ProofOfWorkApiInterruption } from "@/lib/agent-v2/predictive-interruption";
+
+function providerFromRules(
+  decide: (features: TimFeatureEnvelopeV1) => ProofOfWorkApiInterruption | null,
+): TimProvider {
+  return {
+    id: "test-rules",
+    async predict(features) {
+      return decide(features);
+    },
+  };
+}
 
 describe("predictive-interruption", () => {
   beforeEach(() => {
-    setTimLlmPredictorForTests(async (context) => {
-      if (context.endpoint === "create_workspace") {
-        return {
-          should_interrupt: true,
-          delay_ms: 60_000,
-          confidence: "high",
-          intervention_type: "proof_of_work_reminder",
-          message: "Generate a proof-of-work schema and upload your first tool trace for this workspace.",
-          rationale: "New workspaces need initial proof of work.",
-          consumer_action: "call_generate_proof_of_work_schema",
-        };
-      }
-      if (context.endpoint === "generate_proof_of_work_schema" && context.proof_of_work_artifacts === 0) {
-        return {
-          should_interrupt: true,
-          delay_ms: 30_000,
-          confidence: "high",
-          intervention_type: "proof_of_work_reminder",
-          message: "Upload your first proof-of-work artifact using the tool_submissions contract.",
-          consumer_action: "call_upload_proof_of_work",
-        };
-      }
-      if (context.endpoint === "upload_proof_of_work" && context.proof_of_work_artifacts === 5) {
-        return {
-          should_interrupt: true,
-          delay_ms: 60_000,
-          confidence: "high",
-          intervention_type: "performance_review",
-          message: "Run a performance report to see updated marker scores and gaps.",
-          consumer_action: "call_analyze_performance",
-        };
-      }
-      if (context.endpoint === "analyze_performance" && context.report) {
-        return {
-          should_interrupt: true,
-          delay_ms: 45_000,
-          confidence: "high",
-          intervention_type: "coaching_nudge",
-          message: "Document ICP hypothesis before next simulation",
-          rationale: "High-severity gap detected",
-          consumer_action: "surface_coaching_nudge",
-        };
-      }
-      return { should_interrupt: false };
-    });
+    setTimProviderForTests(
+      providerFromRules((features) => {
+        const endpoint = features.event.endpoint;
+        const artifacts = features.proof_of_work.artifacts_count ?? 0;
+        if (endpoint === "create_workspace") {
+          return {
+            interruption_id: "int_create",
+            delay_ms: 60_000,
+            confidence: "high",
+            predicted_at: new Date().toISOString(),
+            intervention: {
+              type: "proof_of_work_reminder",
+              message:
+                "Generate a proof-of-work schema and upload your first tool trace for this workspace.",
+              rationale: "New workspaces need initial proof of work.",
+              consumer_action: "call_generate_proof_of_work_schema",
+            },
+          };
+        }
+        if (endpoint === "generate_proof_of_work_schema" && artifacts === 0) {
+          return {
+            interruption_id: "int_schema",
+            delay_ms: 30_000,
+            confidence: "high",
+            predicted_at: new Date().toISOString(),
+            intervention: {
+              type: "proof_of_work_reminder",
+              message: "Upload your first proof-of-work artifact using the tool_submissions contract.",
+              consumer_action: "call_upload_proof_of_work",
+            },
+          };
+        }
+        if (endpoint === "upload_proof_of_work" && artifacts === 5) {
+          return {
+            interruption_id: "int_upload",
+            delay_ms: 60_000,
+            confidence: "high",
+            predicted_at: new Date().toISOString(),
+            intervention: {
+              type: "performance_review",
+              message: "Run a performance report to see updated marker scores and gaps.",
+              consumer_action: "call_analyze_performance",
+            },
+          };
+        }
+        if (endpoint === "analyze_performance" && features.performance_summary) {
+          return {
+            interruption_id: "int_perf",
+            delay_ms: 45_000,
+            confidence: "high",
+            predicted_at: new Date().toISOString(),
+            intervention: {
+              type: "coaching_nudge",
+              message: "Document ICP hypothesis before next simulation",
+              rationale: "High-severity gap detected",
+              consumer_action: "surface_coaching_nudge",
+            },
+          };
+        }
+        return null;
+      }),
+    );
   });
 
   afterEach(() => {
-    setTimLlmPredictorForTests(null);
+    setTimProviderForTests(null);
   });
 
   it("builds interruption contract with TIM semantics", () => {
@@ -67,18 +99,26 @@ describe("predictive-interruption", () => {
     expect(contract.intervention_types).toContain("reflection_prompt");
     expect(contract.consumer_obligations.length).toBeGreaterThan(2);
     expect(contract.supersession_rule).toContain("replaces");
+    expect(contract.description).toMatch(/Trace Interruption Model \(TIM\)/);
+    expect(contract.description).toMatch(/independent external service|swappable/i);
   });
 
-  it("returns null for list-style endpoints without calling LLM", async () => {
-    const llm = vi.fn(async () => ({ should_interrupt: true, message: "nope" }));
-    setTimLlmPredictorForTests(llm);
+  it("returns null for list-style endpoints without calling provider", async () => {
+    const predict = vi.fn(async () => ({
+      interruption_id: "x",
+      delay_ms: 15_000,
+      confidence: "low" as const,
+      predicted_at: new Date().toISOString(),
+      intervention: { type: "reflection_prompt" as const, message: "nope" },
+    }));
+    setTimProviderForTests({ id: "spy", predict });
 
     expect(await predictInterruption({ endpoint: "list_blocks", workspace_id: "ws-1" })).toBeNull();
     expect(await predictInterruption({ endpoint: "list_tap_links", workspace_id: "ws-1" })).toBeNull();
-    expect(llm).not.toHaveBeenCalled();
+    expect(predict).not.toHaveBeenCalled();
   });
 
-  it("predicts evidence reminder after workspace creation via LLM", async () => {
+  it("predicts evidence reminder after workspace creation", async () => {
     const interruption = await predictInterruption({
       endpoint: "create_workspace",
       workspace_id: "ws-1",
@@ -116,6 +156,8 @@ describe("predictive-interruption", () => {
         overall_score: 55,
         conversion_score: 40,
         conversion_goal: "Activation",
+        ghc_score: 20,
+        ghc_confidence: "low",
         marker_scores: [],
         summary: "Gaps remain",
         strengths: [],
@@ -140,8 +182,62 @@ describe("predictive-interruption", () => {
     expect(interruption?.confidence).toBe("high");
   });
 
-  it("returns null when LLM declines interruption", async () => {
-    setTimLlmPredictorForTests(async () => ({ should_interrupt: false }));
+  it("uses injected TimProvider for fixed interruptions", async () => {
+    const fixed: TimProvider = {
+      id: "test-fixed",
+      async predict() {
+        return {
+          interruption_id: "int_test_fixed",
+          delay_ms: 42_000,
+          confidence: "high",
+          predicted_at: new Date().toISOString(),
+          intervention: {
+            type: "coaching_nudge",
+            message: "Fixed provider message",
+            consumer_action: "surface_test",
+          },
+        };
+      },
+    };
+    setTimProviderForTests(fixed);
+
+    const interruption = await predictInterruption({
+      endpoint: "upload_proof_of_work",
+      workspace_id: "ws-1",
+      proof_of_work_artifacts: 2,
+    });
+    expect(interruption?.interruption_id).toBe("int_test_fixed");
+    expect(interruption?.intervention.message).toBe("Fixed provider message");
+    expect(interruption?.delay_ms).toBe(42_000);
+  });
+
+  it("includes evidence appetite in TIM feature envelope when world model supplied", () => {
+    const model = emptyLearningWorldModel("ws-1");
+    model.evidence_appetite = {
+      want_more: ["decision_rationale", "tap_system1"],
+      saturated: ["tool_crud_events"],
+    };
+    const features = buildTimFeatureEnvelope(
+      {
+        endpoint: "upload_proof_of_work",
+        workspace_id: "ws-1",
+        proof_of_work_artifacts: 3,
+        learning_world_model: model,
+      },
+      model,
+    );
+    expect(features.schema_version).toBe(1);
+    expect(features.learning_world_model?.evidence_appetite?.want_more).toContain("decision_rationale");
+    expect(features.learning_world_model?.evidence_appetite?.saturated).toContain("tool_crud_events");
+  });
+
+  it("returns null when provider declines interruption", async () => {
+    setTimProviderForTests({
+      id: "quiet",
+      async predict() {
+        return null;
+      },
+    });
     const interruption = await predictInterruption({
       endpoint: "upload_tap_trace",
       workspace_id: "ws-1",
@@ -150,9 +246,9 @@ describe("predictive-interruption", () => {
     expect(interruption).toBeNull();
   });
 
-  it("passes through llm_interruption without calling TIM LLM", async () => {
-    const llm = vi.fn(async () => ({ should_interrupt: true, message: "should not run" }));
-    setTimLlmPredictorForTests(llm);
+  it("passes through llm_interruption without calling TIM provider", async () => {
+    const predict = vi.fn(async () => null);
+    setTimProviderForTests({ id: "spy", predict });
 
     const passthrough = normalizePredictedInterruption(
       {
@@ -174,10 +270,10 @@ describe("predictive-interruption", () => {
     });
 
     expect(interruption?.intervention.message).toContain("From schema spec");
-    expect(llm).not.toHaveBeenCalled();
+    expect(predict).not.toHaveBeenCalled();
   });
 
-  it("normalizes LLM interruption payloads", () => {
+  it("normalizes interruption payloads", () => {
     const normalized = normalizePredictedInterruption(
       {
         delay_ms: 45_000,

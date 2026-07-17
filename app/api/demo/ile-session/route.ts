@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireDemoAdminWorkspaceSession } from "@/lib/openlesson-demo/demo-access";
-import { selectPracticeBlock } from "@/lib/openlesson-demo/tap-validation";
+import { requireDemoAdminWorkspaceSession } from "@/lib/product-demos/demo-access";
+import { selectPracticeBlock } from "@/lib/product-demos/tap-validation";
 
 export const runtime = "nodejs";
 

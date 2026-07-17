@@ -28,7 +28,6 @@ interface SessionHeliosPanelProps {
   isInitializing?: boolean;
   isChapterLoading?: boolean;
   loadingChapterLabel?: string | null;
-  stuckCheckText?: string | null;
   showWelcome?: boolean;
   onWelcomePlay?: () => void;
   isStartingSession?: boolean;
@@ -55,7 +54,6 @@ export function SessionHeliosPanel({
   isInitializing = false,
   isChapterLoading = false,
   loadingChapterLabel = null,
-  stuckCheckText = null,
   showWelcome = false,
   onWelcomePlay,
   isStartingSession = false,
@@ -103,14 +101,10 @@ export function SessionHeliosPanel({
       <ThoughtBackgroundLayers bgImage={bgImage} dimStrength="medium" />
 
       {isChapterLoading && (
-        <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-[#0a0a0a]/88 backdrop-blur-md">
-          <div className="relative">
-            <div className="h-12 w-12 animate-spin rounded-full border-2 border-neutral-800 border-t-amber-500/80" />
-            <div className="absolute inset-0 animate-ping rounded-full border border-amber-500/20" />
-          </div>
-          <p className="mt-5 text-sm font-medium text-neutral-300">{t("chapterMap.loadingChapter")}</p>
+        <div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-3 bg-[#0a0a0a]/88 backdrop-blur-md">
+          <LoadingStatusMessage message={t("chapterMap.loadingChapter")} />
           {loadingChapterLabel && (
-            <p className="mt-2 max-w-md px-6 text-center text-base leading-relaxed text-neutral-400">{loadingChapterLabel}</p>
+            <p className="max-w-md px-6 text-center text-base leading-relaxed text-neutral-400">{loadingChapterLabel}</p>
           )}
         </div>
       )}
@@ -123,8 +117,7 @@ export function SessionHeliosPanel({
                 {sessionControls}
               </div>
             )}
-            <div className="flex items-center justify-center gap-3 py-8">
-              <div className="h-6 w-6 animate-spin rounded-full border border-neutral-800 border-t-amber-500/70" />
+            <div className="flex items-center justify-center py-8">
               <LoadingStatusMessage size="sm" tone="subtle" message={t("probes.preparing")} />
             </div>
           </div>
@@ -163,17 +156,20 @@ export function SessionHeliosPanel({
                       speechError: thought.speechError,
                       speechSupported: thought.speechSupported,
                       isListening: thought.isListening,
+                      enabled: thought.speechEnabled,
                     })}
-                    className={`w-full ${thought.speechError ? "text-amber-300/90" : ""}`}
+                    className={`w-full ${thought.speechError ? "text-amber-300/90" : "text-neutral-300"}`}
                   />
                 </div>
-                {thought.speechError === "not-allowed" ? (
+                {thought.speechEnabled &&
+                thought.speechSupported !== false &&
+                !thought.isListening ? (
                   <button
                     type="button"
                     onClick={() => void thought.retryMicrophone()}
                     className="shrink-0 rounded-md border border-amber-500/40 bg-amber-500/10 px-2 py-1 text-[10px] font-medium text-amber-200 transition hover:border-amber-400/60 hover:bg-amber-500/20"
                   >
-                    Retry
+                    {thought.speechError ? "Retry" : "Start"}
                   </button>
                 ) : null}
                 <div className="flex shrink-0 items-center gap-0.5">

@@ -42,7 +42,7 @@ export function buildAuthorizationServerMetadata(origin: string) {
 export function buildMcpUnauthorizedResponse(origin: string) {
   const resourceMetadataUrl = getProtectedResourceMetadataUrl(origin);
   const scope = MCP_OAUTH_SCOPES.join(" ");
-  const challenge = `Bearer realm="openlesson", resource_metadata="${resourceMetadataUrl}", scope="${scope}"`;
+  const challenge = `Bearer realm="uncertain-systems", resource_metadata="${resourceMetadataUrl}", scope="${scope}"`;
 
   return NextResponse.json(
     {

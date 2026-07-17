@@ -6,6 +6,7 @@ import Link from "next/link";
 import { Navbar } from "@/components/Navbar";
 import { createClient } from "@/lib/supabase/client";
 import { useI18n } from "@/lib/i18n";
+import { LoadingStatusMessage } from "@/components/LoadingStatusMessage";
 
 interface Organization {
   id: string;
@@ -198,8 +199,8 @@ export default function OrganizationPage() {
     return (
       <div className="min-h-screen bg-[#0a0a0a]">
         <Navbar />
-        <div className="max-w-5xl mx-auto p-6">
-          <div className="text-neutral-400">{t('common.loading')}</div>
+        <div className="flex items-center justify-center py-24">
+          <LoadingStatusMessage message={t('common.loading')} />
         </div>
       </div>
     );

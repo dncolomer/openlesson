@@ -385,6 +385,8 @@ export function buildOpaquePerformanceReportContract(): PerformanceReportContrac
       "overall_score",
       "conversion_score",
       "conversion_goal",
+      "ghc_score",
+      "ghc_confidence",
       "marker_scores",
       "gap_analysis",
       "protocol_compliance_score",
@@ -392,7 +394,7 @@ export function buildOpaquePerformanceReportContract(): PerformanceReportContrac
     overall_score: {
       type: "integer",
       range: "0-100",
-      description: "Structural trace completeness score (opaque mode)",
+      description: "Structural trace completeness / phase coverage score (opaque mode)",
     },
     conversion_score: {
       type: "integer",
@@ -402,6 +404,16 @@ export function buildOpaquePerformanceReportContract(): PerformanceReportContrac
     conversion_goal: {
       type: "string",
       description: "Opaque goal_ref token only",
+    },
+    ghc_score: {
+      type: "integer",
+      range: "0-100",
+      description:
+        "Opaque mode: structural authenticity only (0 when no human selective-thought signal); typically ghc_confidence none|low",
+    },
+    ghc_confidence: {
+      type: "string",
+      description: "none | low | medium | high — usually none or low in opaque structural mode",
     },
     marker_scores: {
       description: "One marker per protocol phase; rationales cite observable event fields only",
@@ -421,6 +433,8 @@ export function buildOpaquePerformanceReportContract(): PerformanceReportContrac
       overall_score: 0,
       conversion_score: 0,
       conversion_goal: "goal_ref:example",
+      ghc_score: 0,
+      ghc_confidence: "none",
       marker_scores: [],
       summary: "Insufficient proof of work.",
       strengths: [],
@@ -458,12 +472,14 @@ ${goalLine}
 ${OPAQUE_INFERENCE_GUARDRAILS}
 
 Score outputs:
-1. overall_score — structural trace completeness (0-100)
+1. overall_score — structural trace completeness / phase coverage (0-100)
 2. conversion_score — protocol compliance: phase coverage + goals_achieved presence (0-100). This replaces semantic conversion likelihood in opaque mode.
 3. conversion_goal — echo goal_ref exactly when provided
-4. marker_scores — one axis per protocol phase block; rationales cite event fields only
-5. gap_analysis — structural deficits only; use codes in titles when possible
-6. protocol_compliance_score — same integer as conversion_score (duplicate for opaque consumers)
+4. ghc_score — structural authenticity only (0 when no human selective-thought signal); typically low
+5. ghc_confidence — none or low in opaque mode (no semantic GHC)
+6. marker_scores — one axis per protocol phase block; rationales cite event fields only
+7. gap_analysis — structural deficits only; use codes in titles when possible
+8. protocol_compliance_score — same integer as conversion_score (duplicate for opaque consumers)
 
 Be honest when proof of work is thin.`;
 }
@@ -581,6 +597,9 @@ export function finalizeOpaquePerformanceReport(
       ...report,
       conversion_goal: conversionGoal,
       conversion_score: complianceScore,
+      overall_score: report.overall_score,
+      ghc_score: report.ghc_score ?? 0,
+      ghc_confidence: report.ghc_confidence ?? "none",
     },
     workspace_conversion_goal: conversionGoal,
     conversion_goal_source: "opaque_ref",

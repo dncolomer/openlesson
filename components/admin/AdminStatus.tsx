@@ -1,9 +1,11 @@
 "use client";
 
-export function AdminLoading() {
+import { LoadingStatusMessage } from "@/components/LoadingStatusMessage";
+
+export function AdminLoading({ message = "Loading" }: { message?: string } = {}) {
   return (
-    <div className="flex min-h-[40vh] items-center justify-center text-neutral-400">
-      Loading...
+    <div className="flex min-h-[40vh] items-center justify-center">
+      <LoadingStatusMessage tone="muted" message={message} />
     </div>
   );
 }

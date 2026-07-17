@@ -12,16 +12,16 @@ import {
   Sparkles,
   X,
 } from "lucide-react";
-import { askOrbitPerformanceQuestion } from "@/lib/openlesson-demo/orbit-learning-links";
+import { askOrbitPerformanceQuestion } from "@/lib/product-demos/orbit-learning-links";
 import type { ConversionGoalSource } from "@/lib/agent-v2/conversion-goal";
 import type { PerformanceReport } from "@/lib/agent-v2/performance-report";
-import { extractGameCoaching } from "@/lib/openlesson-demo/game-tips";
-import type { OrbitAppSnapshot } from "@/lib/openlesson-demo/orbit-app-context";
-import { formatOrbitSnapshotForPrompt } from "@/lib/openlesson-demo/orbit-app-context";
+import { extractGameCoaching } from "@/lib/product-demos/game-tips";
+import type { OrbitAppSnapshot } from "@/lib/product-demos/orbit-app-context";
+import { formatOrbitSnapshotForPrompt } from "@/lib/product-demos/orbit-app-context";
 import {
   getAffordanceForAction,
   matchCoachingHintToAction,
-} from "@/lib/openlesson-demo/orbit-coach-map";
+} from "@/lib/product-demos/orbit-coach-map";
 
 const PANEL_STORAGE_KEY = "orbit-coach-panel";
 

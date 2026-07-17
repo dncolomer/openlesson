@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { uploadWorkspaceProofOfWork } from "@/lib/agent-v2/upload-workspace-proof-of-work";
-import { requireDemoAdminWorkspaceSession } from "@/lib/openlesson-demo/demo-access";
+import { requireDemoAdminWorkspaceSession } from "@/lib/product-demos/demo-access";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;

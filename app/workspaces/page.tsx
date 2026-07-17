@@ -2,10 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { createBrowserClient } from "@supabase/ssr";
+import { createClient } from "@/lib/supabase/client";
 import { Navbar } from "@/components/Navbar";
 import Link from "next/link";
 import { useI18n } from "@/lib/i18n";
+import { LoadingStatusMessage } from "@/components/LoadingStatusMessage";
 
 interface Workspace {
   id: string;
@@ -21,10 +22,7 @@ export default function WorkspacesPage() {
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const supabase = createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
+  const supabase = createClient();
 
   useEffect(() => {
     async function loadWorkspaces() {
@@ -69,7 +67,7 @@ export default function WorkspacesPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
-        <div className="text-neutral-400">{t('common.loading')}</div>
+        <LoadingStatusMessage message={t('common.loading')} />
       </div>
     );
   }

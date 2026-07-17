@@ -9,7 +9,7 @@ export type IleSystem1Action = "crystallize" | "pause_finalize";
 export type IleSystem2Action = "send" | "skip" | "select" | "deselect" | "resend" | "edit";
 
 export interface IleThoughtTracePayload {
-  type: "openlesson_ile_thought_trace";
+  type: "uncertain_systems_ile_thought_trace";
   trace_type: IleTraceType;
   action: IleSystem1Action | IleSystem2Action;
   session_id: string;
@@ -26,7 +26,7 @@ export interface IleThoughtTracePayload {
 }
 
 export interface IleChatExchangePayload {
-  type: "openlesson_ile_chat_exchange";
+  type: "uncertain_systems_ile_chat_exchange";
   session_id: string;
   workspace_id: string;
   block_id?: string | null;
@@ -46,7 +46,7 @@ export function buildIleChatExchangePayload(input: {
 }): IleChatExchangePayload {
   const timestampMs = input.timestampMs ?? Date.now();
   return {
-    type: "openlesson_ile_chat_exchange",
+    type: "uncertain_systems_ile_chat_exchange",
     session_id: input.sessionId,
     workspace_id: input.workspaceId,
     block_id: input.blockId ?? null,
@@ -58,7 +58,7 @@ export function buildIleChatExchangePayload(input: {
 }
 
 export interface IleIdleHeartbeatPayload {
-  type: "openlesson_ile_idle_heartbeat";
+  type: "uncertain_systems_ile_idle_heartbeat";
   session_id: string;
   workspace_id: string;
   block_id?: string | null;
@@ -78,7 +78,7 @@ export function buildIleIdleHeartbeatPayload(input: {
 }): IleIdleHeartbeatPayload {
   const timestampMs = input.timestampMs ?? Date.now();
   return {
-    type: "openlesson_ile_idle_heartbeat",
+    type: "uncertain_systems_ile_idle_heartbeat",
     session_id: input.sessionId,
     workspace_id: input.workspaceId,
     block_id: input.blockId ?? null,
@@ -92,7 +92,7 @@ export function buildIleIdleHeartbeatPayload(input: {
 export type IleSpeechSegmentEvent = "start" | "stop";
 
 export interface IleSpeechSegmentPayload {
-  type: "openlesson_ile_speech_segment";
+  type: "uncertain_systems_ile_speech_segment";
   event: IleSpeechSegmentEvent;
   session_id: string;
   workspace_id: string;
@@ -114,7 +114,7 @@ export function buildIleSpeechSegmentPayload(input: {
 }): IleSpeechSegmentPayload {
   const timestampMs = input.timestampMs ?? Date.now();
   return {
-    type: "openlesson_ile_speech_segment",
+    type: "uncertain_systems_ile_speech_segment",
     event: input.event,
     session_id: input.sessionId,
     workspace_id: input.workspaceId,
@@ -146,7 +146,7 @@ export function buildIleThoughtTracePayload(input: {
 }): IleThoughtTracePayload {
   const timestampMs = input.timestampMs ?? Date.now();
   return {
-    type: "openlesson_ile_thought_trace",
+    type: "uncertain_systems_ile_thought_trace",
     trace_type: input.traceType,
     action: input.action,
     session_id: input.sessionId,

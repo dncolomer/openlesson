@@ -163,9 +163,6 @@ export function PreviewSessionModal({
         <div className="flex-1 overflow-y-auto px-5 py-4">
           {loading && (
             <div className="flex flex-col items-center justify-center py-16 gap-3">
-              <div className="relative">
-                <div className="w-10 h-10 rounded-full border-2 border-neutral-800 border-t-blue-500 animate-spin" />
-              </div>
               <LoadingStatusMessage tone="subtle" message={t("previewSession.planningSession")} />
               <p className="text-[11px] text-neutral-600">{t('previewSession.mayTakeFewSeconds')}</p>
             </div>

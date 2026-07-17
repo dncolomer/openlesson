@@ -106,7 +106,7 @@ export function slugifyIntegrationName(name: string): string {
 
 export function deriveSkillName(integrationName: string): string {
   const slug = slugifyIntegrationName(integrationName);
-  return `${slug}-openlesson-proof-of-work-performance`;
+  return `${slug}-uncertain-systems-proof-of-work-performance`;
 }
 
 export function deriveSuggestedSharePath(integrationName: string): string {

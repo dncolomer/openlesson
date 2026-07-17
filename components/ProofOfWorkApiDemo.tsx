@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import Link from "next/link";
-import { createBrowserClient } from "@supabase/ssr";
+import { createClient } from "@/lib/supabase/client";
 import {
   ArrowRight,
   BarChart3,
@@ -20,6 +20,7 @@ import {
   Zap,
 } from "lucide-react";
 import { Footer } from "@/components/Footer";
+import { LoadingStatusMessage } from "@/components/LoadingStatusMessage";
 import { Navbar } from "@/components/Navbar";
 import {
   getScoreCardMetrics,
@@ -29,22 +30,22 @@ import {
 import { normalizePerformanceReport, type PerformanceReport } from "@/lib/agent-v2/performance-context";
 import type { ConversionGoalSource } from "@/lib/agent-v2/conversion-goal";
 import type { ProofOfWorkEvalSchemaResult } from "@/lib/agent-v2/proof-of-work-schema";
-import type { ProofOfWorkApiDemoDefinition } from "@/lib/openlesson-demo/demo-definition";
+import type { ProofOfWorkApiDemoDefinition } from "@/lib/product-demos/demo-definition";
 import { DemoVerificationPills } from "@/components/proof-of-work-demo/DemoVerificationPills";
-import { PROOF_OF_WORK_API_DEMOS, resolveDemoId } from "@/lib/openlesson-demo/demos";
-import { isExternalDemo, isInteractiveDemo } from "@/lib/openlesson-demo/game-tips";
+import { PROOF_OF_WORK_API_DEMOS, resolveDemoId } from "@/lib/product-demos/demos";
+import { isExternalDemo, isInteractiveDemo } from "@/lib/product-demos/game-tips";
 import {
   buildOrbitLaunchUrl,
   initOrbitBridge,
   ORBIT_BRIDGE_STORAGE_KEY,
   readOrbitBridgeForPlan,
-} from "@/lib/openlesson-demo/orbit-bridge";
+} from "@/lib/product-demos/orbit-bridge";
 import {
   normalizeDemoSessionUrl,
   openDemoSessionUrl,
-} from "@/lib/openlesson-demo/demo-session-url";
-import { selectTapValidationBlock } from "@/lib/openlesson-demo/tap-validation";
-import { getDemoVerificationPills } from "@/lib/openlesson-demo/verification-pills";
+} from "@/lib/product-demos/demo-session-url";
+import { selectTapValidationBlock } from "@/lib/product-demos/tap-validation";
+import { getDemoVerificationPills } from "@/lib/product-demos/verification-pills";
 import {
   applySimulationAction,
   buildSimulationProofOfWorkPayload,
@@ -56,13 +57,13 @@ import {
   matchBlockToStep,
   shouldSuggestSkillRegeneration,
   totalActionCount,
-} from "@/lib/openlesson-demo/simulation";
+} from "@/lib/product-demos/simulation";
 import type {
   DemoWorkspaceBlock,
   SimulationAction,
   SimulationCategory,
   SimulationWorldState,
-} from "@/lib/openlesson-demo/types";
+} from "@/lib/product-demos/types";
 import { aestheticImageForId, fetchAestheticPackages } from "@/lib/aesthetics";
 import { readJsonResponse } from "@/lib/read-json-response";
 
@@ -125,7 +126,7 @@ type PerformanceResponse = {
   file_ids?: string[];
 };
 
-const STORAGE_KEY = "openlesson-demo";
+const STORAGE_KEY = "uncertain-systems-demo";
 
 type PersistedDemoState = {
   workspaceId: string;
@@ -234,10 +235,10 @@ export function ProofOfWorkApiDemo() {
   const [isCreatingTapLink, setIsCreatingTapLink] = useState(false);
   const [activeView, setActiveView] = useState<DemoView>("simulator");
   const [backgroundImage, setBackgroundImage] = useState(() =>
-    aestheticImageForId("openlesson-demo")
+    aestheticImageForId("uncertain-systems-demo")
   );
 
-  const backgroundSeed = workspaceId ?? demoId ?? "openlesson-demo";
+  const backgroundSeed = workspaceId ?? demoId ?? "uncertain-systems-demo";
 
   const actionCount = totalActionCount(worldState);
   const distinctEvidenceActions = countDistinctProofOfWorkActions(activeDemo, worldState);
@@ -261,10 +262,7 @@ export function ProofOfWorkApiDemo() {
   }, [backgroundSeed]);
 
   useEffect(() => {
-    const supabase = createBrowserClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    );
+    const supabase = createClient();
 
     let cancelled = false;
 
@@ -921,9 +919,8 @@ export function ProofOfWorkApiDemo() {
   if (authState === "loading") {
     return (
       <DemoFlowShell backgroundImage={backgroundImage}>
-        <div className="flex min-h-[70vh] flex-col items-center justify-center gap-3 text-zinc-400">
-          <Loader2 className="size-6 animate-spin" />
-          <p className="text-sm text-zinc-500">Checking your account…</p>
+        <div className="flex min-h-[70vh] flex-col items-center justify-center">
+          <LoadingStatusMessage message="Checking your account" />
         </div>
       </DemoFlowShell>
     );

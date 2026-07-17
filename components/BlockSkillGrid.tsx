@@ -480,12 +480,31 @@ export function BlockSkillGrid({
             <h3 className="text-sm font-medium text-white">{labels.addTitle}</h3>
             <p className="mt-1 text-[11px] text-neutral-500">
               Slot {formatGridCoordinate(pendingCell.row, pendingCell.col)}
-              {pendingWeightedNeighbors.length > 0 &&
-                ` · influenced by ${pendingWeightedNeighbors
-                  .slice(0, 3)
-                  .map((entry) => entry.title)
-                  .join(", ")}`}
             </p>
+            {pendingWeightedNeighbors.length > 0 && (
+              <div className="mt-3">
+                <p className="mb-1.5 text-[10px] font-medium uppercase tracking-[0.14em] text-neutral-500">
+                  Influenced by
+                </p>
+                <div className="grid grid-cols-3 gap-1.5">
+                  {pendingWeightedNeighbors.slice(0, 3).map((entry) => (
+                    <div
+                      key={entry.id}
+                      title={entry.title}
+                      className="flex min-h-[4.5rem] flex-col rounded-lg border border-neutral-700/80 bg-neutral-900/70 px-2 py-1.5 shadow-sm shadow-black/30"
+                    >
+                      <span className="font-mono text-[9px] text-neutral-500">
+                        {formatGridCoordinate(entry.row, entry.col)}
+                        <span className="text-neutral-600"> · d{entry.distance}</span>
+                      </span>
+                      <span className="mt-1 line-clamp-3 text-[10px] font-medium leading-snug text-neutral-200">
+                        {entry.title}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
             <div className="mt-3 flex items-center justify-between gap-2">
               <button
                 type="button"

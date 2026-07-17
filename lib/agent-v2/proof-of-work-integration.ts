@@ -21,7 +21,7 @@ import {
 import {
   buildContinuousEvaluationMcpPolicy,
   buildIntegrationSurfaces,
-  buildOpenLessonScopeForWorkspace,
+  buildUncertainSystemsScopeForWorkspace,
   formatDualSurfaceGuidance,
   recommendIntegrationActions,
 } from "./integration-discovery";
@@ -173,7 +173,7 @@ export function enrichProofOfWorkSpecResult(
     performance_report_contract: performanceContract,
     continuous_evaluation: continuousEvaluation,
     continuous_evaluation_mcp: continuousEvaluationMcp,
-    openlesson_scope: buildOpenLessonScopeForWorkspace({
+    uncertain_systems_scope: buildUncertainSystemsScopeForWorkspace({
       workspaceTitle: workspaceMeta?.title || result.schema_name,
       conversionGoal: workspaceMeta?.conversion_goal,
       blockCount,

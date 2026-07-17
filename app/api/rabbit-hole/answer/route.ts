@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { requireAuthenticatedUser } from "@/lib/api/require-auth";
 import { scoreRabbitHole } from "@/lib/rabbit-hole";
 
 export async function POST(request: NextRequest) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+  const auth = await requireAuthenticatedUser();
+    if (!auth.ok) return auth.response;
+    const { user, supabase } = auth;
   const { playId, choiceIndex } = await request.json();
   if (typeof playId !== "string" || !Number.isInteger(choiceIndex) || choiceIndex < 0 || choiceIndex > 2) return NextResponse.json({ error: "Invalid answer" }, { status: 400 });
 

@@ -66,7 +66,6 @@ const ACTIVE = [
   "generate_objectives",
   "session_plan_create",
   "session_plan_update",
-  "stuck_policy_recommendation",
 ];
 const LEGACY = [];
 
@@ -84,13 +83,11 @@ const CALLERS = {
     "`createSessionPlanLLM` → `POST /api/session-plan/create`, `regenerate`, `POST /api/workspace/preview-session`",
   session_plan_update:
     "`updateSessionPlanLLM` → `POST /api/session-plan/update`, `advance-step`",
-  stuck_policy_recommendation:
-    "`generateStuckPolicyRecommendation` → `POST /api/session/stuck-policy`",
   session_end_check: "No runtime caller (legacy)",
   expand_probe: "No runtime caller (legacy)",
   ask_question: "No runtime caller — superseded by `BASE_SYSTEM_PROMPT` in session-chat",
   feedback_and_question: "No runtime caller — superseded by `session_plan_update`",
-  fresh_question: "No runtime caller — superseded by `stuck_policy_recommendation`",
+  fresh_question: "No runtime caller — superseded by TIM interruptions",
   check_probe_archive: "No runtime caller — superseded by `session_plan_update` probes_to_archive",
 };
 
@@ -98,59 +95,59 @@ const inventoryFiles = fs.existsSync(LOG)
   ? fs.readFileSync(LOG, "utf8").trim().split("\n").filter(Boolean)
   : fs.existsSync(SITES_PATH)
     ? JSON.parse(fs.readFileSync(SITES_PATH, "utf8")).allInventoryPaths.map(
-        (p) => `openlesson/${p}`,
+        (p) => `${p}`,
       )
     : [];
 
 const FILE_MAP = {
-  "openlesson/lib/prompts.ts": "Central registry: DEFAULT_PROMPTS, ILE_CONTEXT, PROMPT_META, getPrompt",
-  "openlesson/lib/xai.ts": "getPrompt consumers: analyzeGap, generateOpeningProbe, generateProbe, generateReport, etc.",
-  "openlesson/app/api/session-chat/route.ts": "BASE_SYSTEM_PROMPT — Helios Chat",
-  "openlesson/app/api/session-chat/welcome/route.ts": "Session welcome system prompt",
+  "lib/prompts.ts": "Central registry: DEFAULT_PROMPTS, ILE_CONTEXT, PROMPT_META, getPrompt",
+  "lib/xai.ts": "getPrompt consumers: analyzeGap, generateOpeningProbe, generateProbe, generateReport, etc.",
+  "app/api/session-chat/route.ts": "BASE_SYSTEM_PROMPT — Helios Chat",
+  "app/api/session-chat/welcome/route.ts": "Session welcome system prompt",
 
-  "openlesson/app/api/session/performance-chat/route.ts": "buildSystemInstructions (single-session performance chat)",
-  "openlesson/app/api/session-plan/translate/route.ts": "Inline translation user prompt",
-  "openlesson/app/api/suggest-grokipedia-terms/route.ts": "Grokipedia term suggester user prompt",
-  "openlesson/app/api/suggest-plan-topic/route.ts": "Post-session learning plan topic suggester user prompt",
-  "openlesson/app/api/workspace/suggest-blocks/route.ts": "suggest-blocks system + user prompts",
-  "openlesson/app/api/workspace/add-block-at-slot/route.ts": "add-block-at-slot system + user prompts",
-  "openlesson/app/api/workspace/suggest-chapter-edit/route.ts": "suggest-chapter-edit system + user prompt",
-  "openlesson/app/api/workspace/chat/route.ts": "SYSTEM_PROMPT workspace assistant",
+  "app/api/session/performance-chat/route.ts": "buildSystemInstructions (single-session performance chat)",
+  "app/api/session-plan/translate/route.ts": "Inline translation user prompt",
+  "app/api/suggest-grokipedia-terms/route.ts": "Grokipedia term suggester user prompt",
+  "app/api/suggest-plan-topic/route.ts": "Post-session learning plan topic suggester user prompt",
+  "app/api/workspace/suggest-blocks/route.ts": "suggest-blocks system + user prompts",
+  "app/api/workspace/add-block-at-slot/route.ts": "add-block-at-slot system + user prompts",
+  "app/api/workspace/suggest-chapter-edit/route.ts": "suggest-chapter-edit system + user prompt",
+  "app/api/workspace/chat/route.ts": "SYSTEM_PROMPT workspace assistant",
 
-  "openlesson/app/api/workspace/generate/route.ts": "promptBody plan graph generator (not in rg.log — add via expand)",
-  "openlesson/app/api/workspace/performance-chat/route.ts": "buildSystemInstructions multi-user performance chat",
-  "openlesson/app/api/workspace/performance-report/route.ts": "buildPerformanceReportInstructions consumer",
-  "openlesson/app/api/workspace/integration-skill/route.ts": "buildIntegrationSkillInstructions consumer",
-  "openlesson/app/api/rabbit-hole/continue/route.ts": "Rabbit Hole plan generator user prompt (not in rg.log)",
-  "openlesson/app/api/v2/agent/workspaces/route.ts": "Workspace block generation user prompt (not in rg.log)",
-  "openlesson/app/api/demo/performance/route.ts": "buildPerformanceReportInstructions + buildPerformanceChatInstructions + Orbit context",
-  "openlesson/app/api/demo/integration-skill/route.ts": "buildIntegrationSkillInstructions consumer",
-  "openlesson/app/api/demo/workspace/route.ts": "Consumer → createVerificationWorkspaceFromPrompt (lib/agent-v2/create-verification-workspace.ts)",
-  "openlesson/app/api/v2/agent/workspaces/[id]/performance/route.ts": "buildPerformanceReportInstructions + buildPerformanceChatInstructions",
-  "openlesson/app/api/v2/agent/workspaces/[id]/integration-skill/route.ts": "buildIntegrationSkillInstructions consumer",
-  "openlesson/app/api/workspace-tap-score/chat/route.ts": "buildTapScoreInstructions + TAP chat overlay",
-  "openlesson/app/api/workspace-tap-score/complete/route.ts": "TAP complete scoring system + user prompts",
-  "openlesson/lib/tap-score.ts": "buildTapScoreInstructions, generateTapOpeningQuestion system extension + userMessage",
-  "openlesson/lib/agent-v2/create-verification-workspace.ts": "createVerificationWorkspaceFromPrompt userMessage (3–6 blocks, proof-of-work wording)",
-  "openlesson/lib/tap-score-traces.ts": "buildTraceScoringInstructions",
-  "openlesson/lib/agent-v2/performance-report.ts": "buildPerformanceReportInstructions, PERFORMANCE_REMEDIATION_GUARDRAILS",
-  "openlesson/lib/agent-v2/performance-context.ts": "buildPerformanceChatInstructions",
-  "openlesson/lib/agent-v2/proof-of-work-schema.ts": "buildProofOfWorkSchemaInstructions, buildProofOfWorkSchemaPrompt",
-  "openlesson/lib/agent-v2/integration-skill.ts": "buildIntegrationSkillInstructions, buildIntegrationSkillPrompt",
-  "openlesson/lib/agent-v2/proof-of-work-integration.ts": "generateWorkspaceProofOfWorkSpec wires schema instructions",
-  "openlesson/lib/agent-v2/mcp-proof-of-work-server.ts": "MCP mirrors v2 prompts (workspace create, performance, integration-skill, schema)",
-  "openlesson/lib/agent-v2/integration-discovery.ts": "No LLM prompt strings (grep false positive)",
-  "openlesson/lib/labs-ai.ts": "SYSTEM_PROMPT EEG probe generator",
-  "openlesson/lib/local-inference.ts": "Gemma transcription + Socratic probe prompts (client)",
-  "openlesson/lib/sales/platform-pitch-deck.ts": "No LLM prompt — marketing slide copy (grep false positive: 'you' in prose)",
-  "openlesson/components/HeliosChat.tsx": "No LLM prompt — UI calls session-chat API (grep false positive: 'prompt' identifier)",
-  "openlesson/app/api/partners/stake/route.ts": "No LLM prompt — error string 'You are already a partner'",
-  "openlesson/app/api/partners/unstake/route.ts": "No LLM prompt — error string",
-  "openlesson/app/api/partners/confirm-unstake/route.ts": "No LLM prompt — error string",
-  "openlesson/app/api/partners/stripe/connect/route.ts": "No LLM prompt — error string",
-  "openlesson/tests/lib/integration-discovery.test.ts": "Test-only — asserts integration discovery shapes",
-  "openlesson/tests/lib/performance-report.test.ts": "Test-only — asserts buildPerformanceReportInstructions content",
-  "openlesson/tests/lib/proof-of-work-schema.test.ts": "Test-only — asserts buildProofOfWorkSchemaInstructions content",
+  "app/api/workspace/generate/route.ts": "promptBody plan graph generator (not in rg.log — add via expand)",
+  "app/api/workspace/performance-chat/route.ts": "buildSystemInstructions multi-user performance chat",
+  "app/api/workspace/performance-report/route.ts": "buildPerformanceReportInstructions consumer",
+  "app/api/workspace/integration-skill/route.ts": "buildIntegrationSkillInstructions consumer",
+  "app/api/rabbit-hole/continue/route.ts": "Rabbit Hole plan generator user prompt (not in rg.log)",
+  "app/api/v2/agent/workspaces/route.ts": "Workspace block generation user prompt (not in rg.log)",
+  "app/api/demo/performance/route.ts": "buildPerformanceReportInstructions + buildPerformanceChatInstructions + Orbit context",
+  "app/api/demo/integration-skill/route.ts": "buildIntegrationSkillInstructions consumer",
+  "app/api/demo/workspace/route.ts": "Consumer → createVerificationWorkspaceFromPrompt (lib/agent-v2/create-verification-workspace.ts)",
+  "app/api/v2/agent/workspaces/[id]/performance/route.ts": "buildPerformanceReportInstructions + buildPerformanceChatInstructions",
+  "app/api/v2/agent/workspaces/[id]/integration-skill/route.ts": "buildIntegrationSkillInstructions consumer",
+  "app/api/workspace-tap-score/chat/route.ts": "buildTapScoreInstructions + TAP chat overlay",
+  "app/api/workspace-tap-score/complete/route.ts": "TAP complete scoring system + user prompts",
+  "lib/tap-score.ts": "buildTapScoreInstructions, generateTapOpeningQuestion system extension + userMessage",
+  "lib/agent-v2/create-verification-workspace.ts": "createVerificationWorkspaceFromPrompt userMessage (3–6 blocks, proof-of-work wording)",
+  "lib/tap-score-traces.ts": "buildTraceScoringInstructions",
+  "lib/agent-v2/performance-report.ts": "buildPerformanceReportInstructions, PERFORMANCE_REMEDIATION_GUARDRAILS",
+  "lib/agent-v2/performance-context.ts": "buildPerformanceChatInstructions",
+  "lib/agent-v2/proof-of-work-schema.ts": "buildProofOfWorkSchemaInstructions, buildProofOfWorkSchemaPrompt",
+  "lib/agent-v2/integration-skill.ts": "buildIntegrationSkillInstructions, buildIntegrationSkillPrompt",
+  "lib/agent-v2/proof-of-work-integration.ts": "generateWorkspaceProofOfWorkSpec wires schema instructions",
+  "lib/agent-v2/mcp-proof-of-work-server.ts": "MCP mirrors v2 prompts (workspace create, performance, integration-skill, schema)",
+  "lib/agent-v2/integration-discovery.ts": "No LLM prompt strings (grep false positive)",
+  "lib/labs-ai.ts": "SYSTEM_PROMPT EEG probe generator",
+  "lib/local-inference.ts": "Gemma transcription + Socratic probe prompts (client)",
+  "lib/sales/platform-pitch-deck.ts": "No LLM prompt — marketing slide copy (grep false positive: 'you' in prose)",
+  "components/HeliosChat.tsx": "No LLM prompt — UI calls session-chat API (grep false positive: 'prompt' identifier)",
+  "app/api/partners/stake/route.ts": "No LLM prompt — error string 'You are already a partner'",
+  "app/api/partners/unstake/route.ts": "No LLM prompt — error string",
+  "app/api/partners/confirm-unstake/route.ts": "No LLM prompt — error string",
+  "app/api/partners/stripe/connect/route.ts": "No LLM prompt — error string",
+  "tests/lib/integration-discovery.test.ts": "Test-only — asserts integration discovery shapes",
+  "tests/lib/performance-report.test.ts": "Test-only — asserts buildPerformanceReportInstructions content",
+  "tests/lib/proof-of-work-schema.test.ts": "Test-only — asserts buildProofOfWorkSchemaInstructions content",
 };
 
 const PROMPT_PURPOSE = {
@@ -162,7 +159,6 @@ const PROMPT_PURPOSE = {
   generate_objectives: "3 measurable session objectives at start",
   session_plan_create: "Initial 5-8 step session plan JSON",
   session_plan_update: "Heartbeat: gap score, plan changes, next probe, archive, auto-advance",
-  stuck_policy_recommendation: "Stuck-recovery card decision (independent from probes)",
   session_end_check: "Legacy: whether to end session",
   expand_probe: "Legacy: 2-3 deeper questions on one probe",
   ask_question: "Legacy: Helios answers direct student question Socratically",
@@ -181,8 +177,6 @@ const PROMPT_VARS = {
   session_plan_create: "{problem}, {objectives}, {calibration}",
   session_plan_update:
     "{goal}, {strategy}, {steps}, {current_step}, {context_description}, {transcript}, {previous_probes}, {active_probes}, {open_probe_count}, {focused_probes}, {secondsSinceLastProbe}",
-  stuck_policy_recommendation:
-    "{problem}, {current_step}, {activity_summary}, {transcript}, {seconds_since_last_stuck_card}, {stuck_card_count}",
   session_end_check: "{elapsed}, {count}, {recent_scores}, {problem}",
   expand_probe: "{problem}, {probe}",
   ask_question: "{problem}, {probe}, {question}",
@@ -194,10 +188,10 @@ const PROMPT_VARS = {
 
 const parts = [];
 
-parts.push(`# openLesson LLM Prompt Inventory
+parts.push(`# Uncertain Systems LLM Prompt Inventory
 
 Generated: 2026-07-11  
-Scope: \`openlesson/\` production TypeScript
+Scope: \`\` production TypeScript
 
 ## Summary Table
 
@@ -211,7 +205,6 @@ Scope: \`openlesson/\` production TypeScript
 | \`generate_objectives\` | \`lib/prompts.ts\` → \`generateObjectives\` | \`POST /api/generate-objectives\` | Yes |
 | \`session_plan_create\` | \`lib/prompts.ts\` → \`createSessionPlanLLM\` | \`session-plan/create\`, \`regenerate\`, \`workspace/preview-session\` | Yes |
 | \`session_plan_update\` | \`lib/prompts.ts\` → \`updateSessionPlanLLM\` | \`session-plan/update\`, \`advance-step\` | Yes |
-| \`stuck_policy_recommendation\` | \`lib/prompts.ts\` → \`generateStuckPolicyRecommendation\` | \`POST /api/session/stuck-policy\` | Yes |
 | \`BASE_SYSTEM_PROMPT\` | \`session-chat/route.ts\` | \`POST /api/session-chat\` | No |
 | Rabbit Hole continue | \`rabbit-hole/continue/route.ts\` | \`POST /api/rabbit-hole/continue\` | No |
 | v2 workspace create | \`v2/agent/workspaces/route.ts\` | \`POST /api/v2/agent/workspaces\` | No |
@@ -244,7 +237,7 @@ Every file from \`prompt-inventory-rg.log\` (${inventoryFiles.length} paths) plu
 
 | File | Prompt entry / note |
 |---|---|
-${[...inventoryFiles, "openlesson/app/api/rabbit-hole/continue/route.ts", "openlesson/app/api/v2/agent/workspaces/route.ts", "openlesson/app/api/workspace/generate/route.ts", "openlesson/app/api/workspace/expand/route.ts", "openlesson/app/api/workspace/regenerate/route.ts", "openlesson/app/api/workspaces/[id]/remix/route.ts", "openlesson/app/api/prep-material/route.ts", "openlesson/app/api/rabbit-hole/interview/route.ts", "openlesson/app/api/insights/create/route.ts", "openlesson/app/api/suggest-plan-topic/route.ts", "openlesson/app/api/workspace/suggest-blocks/route.ts", "openlesson/app/api/workspace/add-block-at-slot/route.ts", "openlesson/app/api/workspace/suggest-chapter-edit/route.ts"].map((f) => `| \`${f}\` | ${FILE_MAP[f] || "See domain sections below"} |`).join("\n")}
+${[...inventoryFiles, "app/api/rabbit-hole/continue/route.ts", "app/api/v2/agent/workspaces/route.ts", "app/api/workspace/generate/route.ts", "app/api/workspace/expand/route.ts", "app/api/workspace/regenerate/route.ts", "app/api/workspaces/[id]/remix/route.ts", "app/api/prep-material/route.ts", "app/api/rabbit-hole/interview/route.ts", "app/api/insights/create/route.ts", "app/api/suggest-plan-topic/route.ts", "app/api/workspace/suggest-blocks/route.ts", "app/api/workspace/add-block-at-slot/route.ts", "app/api/workspace/suggest-chapter-edit/route.ts"].map((f) => `| \`${f}\` | ${FILE_MAP[f] || "See domain sections below"} |`).join("\n")}
 
 ---
 
@@ -258,7 +251,7 @@ for (const key of [...ACTIVE, ...LEGACY]) {
     block(
       `\`${key}\` [${status}]`,
       {
-        File: "`openlesson/lib/prompts.ts`",
+        File: "`lib/prompts.ts`",
         "Call chain": CALLERS[key],
         Purpose: PROMPT_PURPOSE[key] || "See prompt text",
         "User-overridable": "Yes (Dashboard)",
@@ -274,7 +267,7 @@ parts.push(
   block(
     "`ILE_CONTEXT` [ORPHAN — exported, never imported]",
     {
-      File: "`openlesson/lib/prompts.ts`",
+      File: "`lib/prompts.ts`",
       Purpose: "Shared ILE tool guidance (duplicated inline in other prompts instead)",
       "User-overridable": "No",
     },
@@ -906,7 +899,7 @@ if (fs.existsSync(SITES_PATH)) {
   const consumerSet = new Set(sites.consumers || []);
   const supplementalSet = new Set(sites.supplemental || []);
   for (const p of sites.allInventoryPaths) {
-    const rel = `openlesson/${p}`;
+    const rel = `${p}`;
     let cat = "call-site";
     if (consumerSet.has(p)) cat = "consumer";
     else if (supplementalSet.has(p)) cat = "supplemental";

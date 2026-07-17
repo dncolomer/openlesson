@@ -1,7 +1,7 @@
 # Uncertain Systems LLM Prompt Inventory
 
 Generated: 2026-07-11  
-Scope: `openlesson/` production TypeScript
+Scope: `` production TypeScript
 
 ## Summary Table
 
@@ -49,23 +49,23 @@ Every file from `prompt-inventory-rg.log` (5 paths) plus additional prompt-beari
 | File | Prompt entry / note |
 |---|---|
 | `# Updated after workspace/block rename — legacy workspace API paths removed.` | See domain sections below |
-| `openlesson/app/api/workspace/chat/route.ts` | SYSTEM_PROMPT workspace assistant |
-| `openlesson/app/api/workspace/integration-skill/route.ts` | buildIntegrationSkillInstructions consumer |
-| `openlesson/app/api/workspace/performance-chat/route.ts` | buildSystemInstructions multi-user performance chat |
-| `openlesson/app/api/workspace/performance-report/route.ts` | buildPerformanceReportInstructions consumer |
-| `openlesson/app/api/rabbit-hole/continue/route.ts` | Rabbit Hole plan generator user prompt (not in rg.log) |
-| `openlesson/app/api/v2/agent/workspaces/route.ts` | Workspace block generation user prompt (not in rg.log) |
-| `openlesson/app/api/workspace/generate/route.ts` | promptBody plan graph generator (not in rg.log — add via expand) |
-| `openlesson/app/api/workspace/expand/route.ts` | See domain sections below |
-| `openlesson/app/api/workspace/regenerate/route.ts` | See domain sections below |
-| `openlesson/app/api/workspaces/[id]/remix/route.ts` | See domain sections below |
-| `openlesson/app/api/prep-material/route.ts` | See domain sections below |
-| `openlesson/app/api/rabbit-hole/interview/route.ts` | See domain sections below |
-| `openlesson/app/api/insights/create/route.ts` | See domain sections below |
-| `openlesson/app/api/suggest-plan-topic/route.ts` | Post-session learning plan topic suggester user prompt |
-| `openlesson/app/api/workspace/suggest-blocks/route.ts` | suggest-blocks system + user prompts |
-| `openlesson/app/api/workspace/add-block-at-slot/route.ts` | add-block-at-slot system + user prompts |
-| `openlesson/app/api/workspace/suggest-chapter-edit/route.ts` | suggest-chapter-edit system + user prompt |
+| `app/api/workspace/chat/route.ts` | SYSTEM_PROMPT workspace assistant |
+| `app/api/workspace/integration-skill/route.ts` | buildIntegrationSkillInstructions consumer |
+| `app/api/workspace/performance-chat/route.ts` | buildSystemInstructions multi-user performance chat |
+| `app/api/workspace/performance-report/route.ts` | buildPerformanceReportInstructions consumer |
+| `app/api/rabbit-hole/continue/route.ts` | Rabbit Hole plan generator user prompt (not in rg.log) |
+| `app/api/v2/agent/workspaces/route.ts` | Workspace block generation user prompt (not in rg.log) |
+| `app/api/workspace/generate/route.ts` | promptBody plan graph generator (not in rg.log — add via expand) |
+| `app/api/workspace/expand/route.ts` | See domain sections below |
+| `app/api/workspace/regenerate/route.ts` | See domain sections below |
+| `app/api/workspaces/[id]/remix/route.ts` | See domain sections below |
+| `app/api/prep-material/route.ts` | See domain sections below |
+| `app/api/rabbit-hole/interview/route.ts` | See domain sections below |
+| `app/api/insights/create/route.ts` | See domain sections below |
+| `app/api/suggest-plan-topic/route.ts` | Post-session learning plan topic suggester user prompt |
+| `app/api/workspace/suggest-blocks/route.ts` | suggest-blocks system + user prompts |
+| `app/api/workspace/add-block-at-slot/route.ts` | add-block-at-slot system + user prompts |
+| `app/api/workspace/suggest-chapter-edit/route.ts` | suggest-chapter-edit system + user prompt |
 
 ---
 
@@ -74,7 +74,7 @@ Every file from `prompt-inventory-rg.log` (5 paths) plus additional prompt-beari
 
 ### `gap_detection` [ACTIVE]
 
-- **File**: `openlesson/lib/prompts.ts`
+- **File**: `lib/prompts.ts`
 - **Call chain**: `analyzeGap` in `lib/xai.ts` (embedded in `session_plan_update` heartbeat via `useSessionHeartbeat`)
 - **Purpose**: Score reasoning gaps 0-1 from transcribed think-aloud audio
 - **User-overridable**: Yes (Dashboard)
@@ -114,7 +114,7 @@ Be concise with signals - max 3 items. Use categories like: "hesitation", "unexa
 
 ### `opening_probe` [ACTIVE]
 
-- **File**: `openlesson/lib/prompts.ts`
+- **File**: `lib/prompts.ts`
 - **Call chain**: `generateOpeningProbe` in `lib/xai.ts` (via `generate-probe` / session flow)
 - **Purpose**: First Socratic question at session start
 - **User-overridable**: Yes (Dashboard)
@@ -164,7 +164,7 @@ Rules:
 
 ### `probe_generation` [ACTIVE]
 
-- **File**: `openlesson/lib/prompts.ts`
+- **File**: `lib/prompts.ts`
 - **Call chain**: `generateProbe` → `POST /api/generate-probe`, `POST /api/session-plan/reset-probes`
 - **Purpose**: Mid-session probe after gap detection
 - **User-overridable**: Yes (Dashboard)
@@ -208,7 +208,7 @@ Return ONLY the question or task text, no JSON or formatting.
 
 ### `report_generation` [ACTIVE]
 
-- **File**: `openlesson/lib/prompts.ts`
+- **File**: `lib/prompts.ts`
 - **Call chain**: `generateReport` → `POST /api/generate-report`
 - **Purpose**: Post-session markdown debrief
 - **User-overridable**: Yes (Dashboard)
@@ -253,7 +253,7 @@ Rules:
 
 ### `follow_up_sessions` [ACTIVE]
 
-- **File**: `openlesson/lib/prompts.ts`
+- **File**: `lib/prompts.ts`
 - **Call chain**: `generateFollowUpSessions` → `POST /api/generate-follow-ups`
 - **Purpose**: 3 follow-up session topic suggestions after completion
 - **User-overridable**: Yes (Dashboard)
@@ -292,7 +292,7 @@ Return ONLY valid JSON:
 
 ### `generate_objectives` [ACTIVE]
 
-- **File**: `openlesson/lib/prompts.ts`
+- **File**: `lib/prompts.ts`
 - **Call chain**: `generateObjectives` → `POST /api/generate-objectives`
 - **Purpose**: 3 measurable session objectives at start
 - **User-overridable**: Yes (Dashboard)
@@ -316,7 +316,7 @@ Generate exactly 3 learning objectives that the student should achieve by the en
 
 ### `session_plan_create` [ACTIVE]
 
-- **File**: `openlesson/lib/prompts.ts`
+- **File**: `lib/prompts.ts`
 - **Call chain**: `createSessionPlanLLM` → `POST /api/session-plan/create`, `regenerate`, `POST /api/workspace/preview-session`
 - **Purpose**: Initial 5-8 step session plan JSON
 - **User-overridable**: Yes (Dashboard)
@@ -364,7 +364,7 @@ Return ONLY valid JSON (no markdown, no explanation):
 
 ### `session_plan_update` [ACTIVE]
 
-- **File**: `openlesson/lib/prompts.ts`
+- **File**: `lib/prompts.ts`
 - **Call chain**: `updateSessionPlanLLM` → `POST /api/session-plan/update`, `advance-step`
 - **Purpose**: Heartbeat: gap score, plan changes, next probe, archive, auto-advance
 - **User-overridable**: Yes (Dashboard)
@@ -543,7 +543,7 @@ advance_reasoning: A brief (1-2 sentence) human-readable explanation of why the 
 
 ### `stuck_policy_recommendation` [ACTIVE]
 
-- **File**: `openlesson/lib/prompts.ts`
+- **File**: `lib/prompts.ts`
 - **Call chain**: `generateStuckPolicyRecommendation` → `POST /api/session/stuck-policy`
 - **Purpose**: Stuck-recovery card decision (independent from probes)
 - **User-overridable**: Yes (Dashboard)
@@ -603,7 +603,7 @@ Return ONLY valid JSON:
 
 ### `ILE_CONTEXT` [ORPHAN — exported, never imported]
 
-- **File**: `openlesson/lib/prompts.ts`
+- **File**: `lib/prompts.ts`
 - **Purpose**: Shared ILE tool guidance (duplicated inline in other prompts instead)
 - **User-overridable**: No
 
@@ -1882,46 +1882,46 @@ Discovered via `scripts/discover-llm-prompts.mjs` at 2026-07-11T13:55:45.898Z: *
 
 | Path | Category |
 |---|---|
-| `openlesson/app/api/demo/integration-skill/route.ts` | buildIntegrationSkillInstructions consumer |
-| `openlesson/app/api/demo/performance/route.ts` | buildPerformanceReportInstructions + buildPerformanceChatInstructions + Orbit context |
-| `openlesson/app/api/demo/workspace/route.ts` | Consumer → createVerificationWorkspaceFromPrompt (lib/agent-v2/create-verification-workspace.ts) |
-| `openlesson/app/api/insights/create/route.ts` | call-site |
-| `openlesson/app/api/prep-material/route.ts` | call-site |
-| `openlesson/app/api/rabbit-hole/continue/route.ts` | Rabbit Hole plan generator user prompt (not in rg.log) |
-| `openlesson/app/api/rabbit-hole/interview/route.ts` | call-site |
-| `openlesson/app/api/session-chat/route.ts` | BASE_SYSTEM_PROMPT — Helios Chat |
-| `openlesson/app/api/session-chat/welcome/route.ts` | Session welcome system prompt |
-| `openlesson/app/api/session-plan/translate/route.ts` | Inline translation user prompt |
-| `openlesson/app/api/session/performance-chat/route.ts` | buildSystemInstructions (single-session performance chat) |
-| `openlesson/app/api/suggest-grokipedia-terms/route.ts` | Grokipedia term suggester user prompt |
-| `openlesson/app/api/suggest-plan-topic/route.ts` | Post-session learning plan topic suggester user prompt |
-| `openlesson/app/api/v2/agent/workspaces/[id]/integration-skill/route.ts` | buildIntegrationSkillInstructions consumer |
-| `openlesson/app/api/v2/agent/workspaces/[id]/performance/route.ts` | buildPerformanceReportInstructions + buildPerformanceChatInstructions |
-| `openlesson/app/api/v2/agent/workspaces/route.ts` | Workspace block generation user prompt (not in rg.log) |
-| `openlesson/app/api/workspace-tap-score/chat/route.ts` | buildTapScoreInstructions + TAP chat overlay |
-| `openlesson/app/api/workspace-tap-score/complete/route.ts` | TAP complete scoring system + user prompts |
-| `openlesson/app/api/workspace/add-block-at-slot/route.ts` | add-block-at-slot system + user prompts |
-| `openlesson/app/api/workspace/chat/route.ts` | SYSTEM_PROMPT workspace assistant |
-| `openlesson/app/api/workspace/expand/route.ts` | call-site |
-| `openlesson/app/api/workspace/generate/route.ts` | promptBody plan graph generator (not in rg.log — add via expand) |
-| `openlesson/app/api/workspace/integration-skill/route.ts` | buildIntegrationSkillInstructions consumer |
-| `openlesson/app/api/workspace/performance-chat/route.ts` | buildSystemInstructions multi-user performance chat |
-| `openlesson/app/api/workspace/performance-report/route.ts` | buildPerformanceReportInstructions consumer |
-| `openlesson/app/api/workspace/regenerate/route.ts` | call-site |
-| `openlesson/app/api/workspace/suggest-blocks/route.ts` | suggest-blocks system + user prompts |
-| `openlesson/app/api/workspace/suggest-chapter-edit/route.ts` | suggest-chapter-edit system + user prompt |
-| `openlesson/app/api/workspaces/[id]/remix/route.ts` | call-site |
-| `openlesson/lib/agent-v2/create-verification-workspace.ts` | createVerificationWorkspaceFromPrompt userMessage (3–6 blocks, proof-of-work wording) |
-| `openlesson/lib/agent-v2/integration-skill.ts` | buildIntegrationSkillInstructions, buildIntegrationSkillPrompt |
-| `openlesson/lib/agent-v2/mcp-proof-of-work-server.ts` | MCP mirrors v2 prompts (workspace create, performance, integration-skill, schema) |
-| `openlesson/lib/agent-v2/performance-context.ts` | buildPerformanceChatInstructions |
-| `openlesson/lib/agent-v2/performance-report.ts` | buildPerformanceReportInstructions, PERFORMANCE_REMEDIATION_GUARDRAILS |
-| `openlesson/lib/agent-v2/proof-of-work-integration.ts` | generateWorkspaceProofOfWorkSpec wires schema instructions |
-| `openlesson/lib/agent-v2/proof-of-work-schema.ts` | buildProofOfWorkSchemaInstructions, buildProofOfWorkSchemaPrompt |
-| `openlesson/lib/labs-ai.ts` | SYSTEM_PROMPT EEG probe generator |
-| `openlesson/lib/local-inference.ts` | Gemma transcription + Socratic probe prompts (client) |
-| `openlesson/lib/prompts.ts` | Central registry: DEFAULT_PROMPTS, ILE_CONTEXT, PROMPT_META, getPrompt |
-| `openlesson/lib/tap-score-traces.ts` | buildTraceScoringInstructions |
-| `openlesson/lib/tap-score.ts` | buildTapScoreInstructions, generateTapOpeningQuestion system extension + userMessage |
-| `openlesson/lib/xai-client.ts` | call-site |
-| `openlesson/lib/xai.ts` | getPrompt consumers: analyzeGap, generateOpeningProbe, generateProbe, generateReport, etc. |
+| `app/api/demo/integration-skill/route.ts` | buildIntegrationSkillInstructions consumer |
+| `app/api/demo/performance/route.ts` | buildPerformanceReportInstructions + buildPerformanceChatInstructions + Orbit context |
+| `app/api/demo/workspace/route.ts` | Consumer → createVerificationWorkspaceFromPrompt (lib/agent-v2/create-verification-workspace.ts) |
+| `app/api/insights/create/route.ts` | call-site |
+| `app/api/prep-material/route.ts` | call-site |
+| `app/api/rabbit-hole/continue/route.ts` | Rabbit Hole plan generator user prompt (not in rg.log) |
+| `app/api/rabbit-hole/interview/route.ts` | call-site |
+| `app/api/session-chat/route.ts` | BASE_SYSTEM_PROMPT — Helios Chat |
+| `app/api/session-chat/welcome/route.ts` | Session welcome system prompt |
+| `app/api/session-plan/translate/route.ts` | Inline translation user prompt |
+| `app/api/session/performance-chat/route.ts` | buildSystemInstructions (single-session performance chat) |
+| `app/api/suggest-grokipedia-terms/route.ts` | Grokipedia term suggester user prompt |
+| `app/api/suggest-plan-topic/route.ts` | Post-session learning plan topic suggester user prompt |
+| `app/api/v2/agent/workspaces/[id]/integration-skill/route.ts` | buildIntegrationSkillInstructions consumer |
+| `app/api/v2/agent/workspaces/[id]/performance/route.ts` | buildPerformanceReportInstructions + buildPerformanceChatInstructions |
+| `app/api/v2/agent/workspaces/route.ts` | Workspace block generation user prompt (not in rg.log) |
+| `app/api/workspace-tap-score/chat/route.ts` | buildTapScoreInstructions + TAP chat overlay |
+| `app/api/workspace-tap-score/complete/route.ts` | TAP complete scoring system + user prompts |
+| `app/api/workspace/add-block-at-slot/route.ts` | add-block-at-slot system + user prompts |
+| `app/api/workspace/chat/route.ts` | SYSTEM_PROMPT workspace assistant |
+| `app/api/workspace/expand/route.ts` | call-site |
+| `app/api/workspace/generate/route.ts` | promptBody plan graph generator (not in rg.log — add via expand) |
+| `app/api/workspace/integration-skill/route.ts` | buildIntegrationSkillInstructions consumer |
+| `app/api/workspace/performance-chat/route.ts` | buildSystemInstructions multi-user performance chat |
+| `app/api/workspace/performance-report/route.ts` | buildPerformanceReportInstructions consumer |
+| `app/api/workspace/regenerate/route.ts` | call-site |
+| `app/api/workspace/suggest-blocks/route.ts` | suggest-blocks system + user prompts |
+| `app/api/workspace/suggest-chapter-edit/route.ts` | suggest-chapter-edit system + user prompt |
+| `app/api/workspaces/[id]/remix/route.ts` | call-site |
+| `lib/agent-v2/create-verification-workspace.ts` | createVerificationWorkspaceFromPrompt userMessage (3–6 blocks, proof-of-work wording) |
+| `lib/agent-v2/integration-skill.ts` | buildIntegrationSkillInstructions, buildIntegrationSkillPrompt |
+| `lib/agent-v2/mcp-proof-of-work-server.ts` | MCP mirrors v2 prompts (workspace create, performance, integration-skill, schema) |
+| `lib/agent-v2/performance-context.ts` | buildPerformanceChatInstructions |
+| `lib/agent-v2/performance-report.ts` | buildPerformanceReportInstructions, PERFORMANCE_REMEDIATION_GUARDRAILS |
+| `lib/agent-v2/proof-of-work-integration.ts` | generateWorkspaceProofOfWorkSpec wires schema instructions |
+| `lib/agent-v2/proof-of-work-schema.ts` | buildProofOfWorkSchemaInstructions, buildProofOfWorkSchemaPrompt |
+| `lib/labs-ai.ts` | SYSTEM_PROMPT EEG probe generator |
+| `lib/local-inference.ts` | Gemma transcription + Socratic probe prompts (client) |
+| `lib/prompts.ts` | Central registry: DEFAULT_PROMPTS, ILE_CONTEXT, PROMPT_META, getPrompt |
+| `lib/tap-score-traces.ts` | buildTraceScoringInstructions |
+| `lib/tap-score.ts` | buildTapScoreInstructions, generateTapOpeningQuestion system extension + userMessage |
+| `lib/xai-client.ts` | call-site |
+| `lib/xai.ts` | getPrompt consumers: analyzeGap, generateOpeningProbe, generateProbe, generateReport, etc. |

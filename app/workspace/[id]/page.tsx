@@ -2,7 +2,6 @@ import { Metadata } from "next";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { WorkspaceView } from "@/components/WorkspaceView";
-import { getRandomWorkspaceCoverImage } from "@/lib/workspace-image";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -37,9 +36,15 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
   const title = plan.title || plan.root_topic || "Workspace";
   const description = plan.description || "A workspace on Uncertain Systems";
-
-  const ogImage = await getRandomWorkspaceCoverImage() || "/opengraph-image";
-  const images = [{ url: ogImage, width: 1200, height: 630, alt: title }];
+  // Private workspace UI has no dedicated OG route; use composed root card (not raw aesthetics).
+  const images = [
+    {
+      url: "/opengraph-image",
+      width: 1200,
+      height: 630,
+      alt: title,
+    },
+  ];
 
   return {
     title: `${title} - Uncertain Systems`,
@@ -54,7 +59,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       card: "summary_large_image",
       title: `${title} - Uncertain Systems`,
       description,
-      images: images.map(i => i.url),
+      images: images.map((i) => i.url),
     },
   };
 }

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { ayclTokenFromBody, guardSessionRoute, requireAuthenticatedUser } from "@/lib/api/require-auth";
 import { callXaiText, systemMessage, userMessage, DEFAULT_MODEL, RECOMMENDED_TEMPS } from "@/lib/xai-client";
 import { getLanguageName } from "@/lib/tutoring-languages";
 
@@ -21,9 +21,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Missing sessionId or problem" }, { status: 400 });
     }
 
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+    const auth = await requireAuthenticatedUser();
+    if (!auth.ok) return auth.response;
+    const { user, supabase } = auth;
 
     const { data: currentSession } = await supabase
       .from("sessions")
@@ -58,8 +58,9 @@ export async function POST(request: NextRequest) {
       })
       .join("\n") || "No prior completed sessions available.";
 
+    const { buildIleWelcomeSystemPrompt } = await import("@/lib/prompt-kernel/surfaces/ile");
     const response = await callXaiText([
-      systemMessage(`You are Helios, a warm Socratic tutor. Write a short first chat message for a returning learner.
+      systemMessage(`${buildIleWelcomeSystemPrompt()}
 
 Rules:
 - ${languageName ? `Write in ${languageName}.` : "Write in English."}
@@ -67,7 +68,7 @@ Rules:
 - Sound personal and welcoming, not generic.
 - If prior sessions are relevant, lightly connect to them without sounding creepy or over-specific.
 - Mention the current topic naturally.
-- End with one gentle question inviting them to begin.
+- End with one gentle invitation to resume practice (question or next-step prompt).
 - Do not say you reviewed private data; just sound like you remember the learning journey.`),
       userMessage(`Current session topic: ${problem}\n\nRecent sessions:\n${recentContext}`),
     ], {

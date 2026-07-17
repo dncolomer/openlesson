@@ -1,4 +1,10 @@
 import { Metadata } from "next";
+import { openGraphImagesForRoutePath } from "@/lib/og/paths";
+
+const ogImages = openGraphImagesForRoutePath(
+  "/pricing",
+  "Pricing - Proof-of-Work Volume | Uncertain Systems",
+);
 
 export const metadata: Metadata = {
   title: "Pricing - Proof-of-Work Volume | Uncertain Systems",
@@ -18,6 +24,7 @@ export const metadata: Metadata = {
     url: "https://uncertain.systems/pricing",
     siteName: "Uncertain Systems",
     type: "website",
+    images: ogImages,
   },
   twitter: {
     card: "summary_large_image",
@@ -25,6 +32,7 @@ export const metadata: Metadata = {
     description:
       "Proof-of-work volume pricing for humans and agents.",
     creator: "@uncertainsys",
+    images: ogImages.map((image) => image.url),
   },
   alternates: {
     canonical: "https://uncertain.systems/pricing",

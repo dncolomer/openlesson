@@ -1,12 +1,8 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { requireAdmin } from "@/lib/admin/require-admin";
 
 export const runtime = "nodejs";
 
-function getAdminClient() {
-  return createAdminClient();
-}
 
 function generateToken(): string {
   const chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
@@ -24,29 +20,14 @@ export async function POST(
 ) {
   try {
     const { orgId } = await params;
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    
-    if (!user) {
-      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-    }
-
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("is_admin")
-      .eq("id", user.id)
-      .single();
-
-    if (!profile?.is_admin) {
-      return NextResponse.json({ error: "Admin access required" }, { status: 403 });
-    }
+    const auth = await requireAdmin();
+    if ("error" in auth) return auth.error;
+    const { adminClient, user } = auth;
 
     const { count = 1 } = await request.json();
     
     // Limit to max 50 invites at once
     const inviteCount = Math.min(Math.max(1, count), 50);
-
-    const adminClient = getAdminClient();
 
     // Verify organization exists
     const { data: org } = await adminClient
@@ -93,30 +74,15 @@ export async function DELETE(
 ) {
   try {
     const { orgId } = await params;
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    
-    if (!user) {
-      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-    }
-
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("is_admin")
-      .eq("id", user.id)
-      .single();
-
-    if (!profile?.is_admin) {
-      return NextResponse.json({ error: "Admin access required" }, { status: 403 });
-    }
+    const auth = await requireAdmin();
+    if ("error" in auth) return auth.error;
+    const { adminClient, user } = auth;
 
     const { inviteId } = await request.json();
 
     if (!inviteId) {
       return NextResponse.json({ error: "Invite ID required" }, { status: 400 });
     }
-
-    const adminClient = getAdminClient();
 
     // Only delete if unused
     const { error } = await adminClient

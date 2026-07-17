@@ -1,5 +1,5 @@
 -- ============================================
--- OPENLESSON — Database Schema (authoritative entry point)
+-- Uncertain Systems — Database Schema (authoritative entry point)
 -- ============================================
 --
 -- This file is NOT a source of truth. The database is defined by timestamped

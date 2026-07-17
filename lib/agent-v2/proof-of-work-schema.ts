@@ -6,6 +6,7 @@ import type {
 import type { PerformanceContextPayload } from "./performance-context";
 import type { PerformanceReportContract } from "./performance-report";
 import type { ProofOfWorkApiInterruption, InterruptionContract } from "./predictive-interruption";
+import { composePrompt } from "@/lib/prompt-kernel/compose";
 
 export interface ProofOfWorkSchemaIntegrationHints {
   tool_name?: string;
@@ -76,7 +77,7 @@ export interface ProofOfWorkEvalSchemaResult {
   proof_of_work_upload_contract?: ProofOfWorkUploadContract;
   continuous_evaluation?: ContinuousEvaluationPolicy;
   continuous_evaluation_mcp?: ContinuousEvaluationMcpPolicy;
-  openlesson_scope?: Record<string, unknown>;
+  uncertain_systems_scope?: Record<string, unknown>;
   integration_surfaces?: IntegrationSurfaceRef[];
   recommended_next_actions?: RecommendedIntegrationAction[];
   performance_report_contract?: PerformanceReportContract;
@@ -333,7 +334,8 @@ ${blockLines || "  none"}
 export function buildProofOfWorkSchemaInstructions(
   request: ProofOfWorkSchemaRequest,
   blockId?: string | null,
-  workspacePayload?: PerformanceContextPayload
+  workspacePayload?: PerformanceContextPayload,
+  worldModelAppetiteGuidance?: string | null,
 ): string {
   const scope = blockId
     ? "Design a formal proof-of-work specification for ONE block inside this verification workspace."
@@ -353,18 +355,22 @@ export function buildProofOfWorkSchemaInstructions(
       )
     : "none provided";
 
-  return `${scope}
+  const appetiteBlock = worldModelAppetiteGuidance?.trim()
+    ? `\n\n${worldModelAppetiteGuidance.trim()}\n`
+    : "";
+
+  const task = `${scope}
 
 You are an Uncertain Systems proof-of-work architect. Produce a **formal proof-of-work specification** that tells integrators exactly how to submit tool usage and related artifacts for learning verification.
 
-Uncertain Systems scope: verify learning (overall_score, marker_scores), measure conversion toward a workspace conversion_goal (conversion_score), and collect proof-of-work via proof-of-work uploads. Verification is **continuous** — specs and skills regenerate as proof of work grows.
+Uncertain Systems scope: verify learning (overall_score, marker_scores), measure conversion toward a workspace conversion_goal (conversion_score), score Genuine Human Cognition (ghc_score + ghc_confidence) when selective-thought PoW is present, and collect proof-of-work via proof-of-work uploads. Verification is **continuous** — specs and skills regenerate as proof of work grows.
 
 Integrators may use **REST** (Bearer API key: POST .../proof-of-work, POST .../performance) or **MCP** (JSON-RPC tools upload_proof_of_work, analyze_performance, generate_proof_of_work_schema) with identical semantics. Document REST paths in contracts; the platform also attaches continuous_evaluation_mcp with tool names after generation — your continuous_evaluation_summary must mention both surfaces.
 
 Use the full workspace context: attached JSON summary, block titles/descriptions, existing proof of work patterns, plan files, and Think Aloud Protocol (TAP) session signals when present. TAP and ILE may inform scoring — but performance report remediation (gaps, next_steps, suggestions) must stay product-independent: never recommend TAP sessions, block completion, ILE, or other Uncertain Systems platform mechanics.
 
 ${formatWorkspaceContextSummary(workspacePayload)}
-
+${appetiteBlock}
 The caller's evaluation definition:
 """
 ${request.definition}
@@ -382,36 +388,39 @@ Output rules:
    - encoding: "base64"
    - proof_of_work_types: tool (application/json, text/plain), screen (image/png, image/jpeg, image/webp), video (video/mp4, video/webm), eeg (application/json) with when_to_use guidance
    - common_fields: proof_of_work_type, data, mime_type, file_name, block_id, session_id, timestamp_ms, tool_name, tool_action, metadata
-5. Optimize payloads for POST .../performance: time-ordered events, learner reflections, goals achieved, artifact summaries, decision rationale, outcomes, block-relevant competencies. The performance report always returns overall_score (0-100 learning verification), conversion_score (0-100 goal conversion likelihood), conversion_goal, marker_scores (spider/radar axes), and gap_analysis.gaps.
+5. Optimize payloads for POST .../performance: time-ordered events, learner reflections, goals achieved, artifact summaries, decision rationale, outcomes, block-relevant competencies. The performance report always returns overall_score (0-100 learning/exploration), conversion_score (0-100 goal conversion likelihood), conversion_goal, ghc_score + ghc_confidence, marker_scores (spider/radar axes), and gap_analysis.gaps.
 6. "performance_report_contract" must formally describe POST .../performance report mode:
    - endpoint_pattern: "POST /api/v2/agent/workspaces/{workspace_id}/performance"
    - response_mode: "report"
-   - required_fields: overall_score, conversion_score, conversion_goal, marker_scores, gap_analysis, gap_analysis.gaps, summary, strengths, growth_areas, suggestions, confidence
-   - overall_score: integer 0-100 learning verification score
-   - conversion_score: integer 0-100 estimated conversion likelihood (distinct from learning verification)
+   - required_fields: overall_score, conversion_score, conversion_goal, ghc_score, ghc_confidence, marker_scores, gap_analysis, gap_analysis.gaps, summary, strengths, growth_areas, suggestions, confidence
+   - overall_score: integer 0-100 learning/exploration (must match)
+   - conversion_score: integer 0-100 estimated conversion likelihood (distinct from exploration)
    - conversion_goal: string defining what conversion means for this workspace
+   - ghc_score / ghc_confidence: Genuine Human Cognition score and confidence
    - marker_scores: 4-8 competency axes (id, label, score, rationale, optional block_id) for spider/radar visualization — derive labels from workspace blocks and eval definition
    - gap_analysis: required gaps array with title, proof_of_work, severity, suggested_repair — remediation must use product/workflow language only (never TAP, block completion, or ILE)
    - gap_analysis.next_steps: directions (domain goals) and events (granular product/tool actions) — same remediation rules
-   - example_report: realistic example with overall_score, conversion_score, conversion_goal, marker_scores, and at least one gap when proof of work would support it; example remediation must be Uncertain Systems-independent
-7. "collection_guidance" explains cadence, checkpoint timing, block-scoped vs workspace-global uploads, and that **more proof of work submitted improves learning verification and gap analysis**. Encourage ongoing uploads, not one-time dumps.
+   - example_report: realistic example with scores, marker_scores, and at least one gap when proof of work would support it; example remediation must be Uncertain Systems-independent
+7. "collection_guidance" explains cadence, checkpoint timing, block-scoped vs workspace-global uploads, and that **more proof of work submitted improves learning verification and gap analysis**. Encourage ongoing uploads, not one-time dumps. When learning world model evidence appetite is provided above, bias collection_guidance and tool_submissions toward want_more types and de-emphasize saturated types.
 8. "continuous_evaluation_summary" must state clearly that:
    - This proof-of-work spec is a snapshot derived from current workspace context and proof-of-work history
    - Integrators must **re-fetch** POST .../proof-of-work-schema (REST) or call generate_proof_of_work_schema (MCP) as proof of work accumulates
    - Integrators must **regenerate** POST .../integration-skill (REST) or generate_integration_skill (MCP) so skill.md stays aligned
-   - Progress tracking uses analyze_performance / POST .../performance for marker_scores, gaps, and conversion_score vs conversion_goal
+   - Progress tracking uses analyze_performance / POST .../performance for marker_scores, gaps, overall_score, conversion_score vs conversion_goal, and ghc_score
    - get_learning_progress (MCP) orients agents mid-session; REST equivalents remain authoritative in API paths
    - Continuous evaluation is the intended operating model, not a one-time setup
 9. schema_name must be snake_case prefixed with "eval_input_".
 10. Keep required_fields practical; use optional_fields for enrichments.
-11. "predicted_interruption" — Trace Interruption Model (TIM) prediction for the consumer system:
+11. "predicted_interruption" — Trace Interruption Model (TIM) prediction for the consumer system (TIM is a swappable interruption world model; consumer envelope stays stable):
    - Return null when no intervention is predicted (user is on track, or context is too thin).
    - When non-null, set delay_ms (15000-600000) and intervention { type, message, optional rationale, consumer_action, block_id }.
    - Types: reflection_prompt (articulate reasoning), checkpoint_probe (verify understanding), coaching_nudge (gap-driven nudge), proof_of_work_reminder (upload proof-of-work), performance_review (request scorecard).
-   - Ground predictions in workspace blocks, eval definition, proof-of-work history, and collection_guidance — not generic coaching.
+   - Ground predictions in workspace blocks, eval definition, proof-of-work history, evidence appetite, and collection_guidance — not generic coaching.
    - The consumer schedules the intervention after delay_ms unless any later Proof-of-Work API response supersedes it.
 
 Return only JSON matching the output schema.`;
+
+  return composePrompt({ ontology: "full", task });
 }
 
 export function buildProofOfWorkSchemaPrompt(workspaceTitle: string): string {

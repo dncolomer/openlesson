@@ -25,6 +25,11 @@ import {
 } from "./xai-client";
 import { transcribeAudioBase64 } from "./xai-stt";
 import { getPrompt, type UserPrompts } from "./prompts";
+import { getInitialChaptersBand } from "./initial-chapters";
+import {
+  composeSessionPlanCreatePrompt,
+  normalizeSessionPlanCreateSteps,
+} from "./session-plan-create";
 
 const MODEL = DEFAULT_MODEL;
 
@@ -439,6 +444,8 @@ export interface SessionPlanStep {
   description: string;
   order: number;
   status?: "pending" | "in_progress" | "completed" | "skipped";
+  position_x?: number;
+  position_y?: number;
 }
 
 export interface CreateSessionPlanResult {
@@ -455,13 +462,24 @@ export async function createSessionPlanLLM(options: {
   promptOverrides?: UserPrompts;
   planningPrompt?: string; // Custom instructions for plan generation
   tutoringLanguage?: string; // Full language name for LLM response
+  /**
+   * Initial chapters level from welcome UI / API (narrow | mid | broad).
+   * Prefer initialChapters; mapSize kept as legacy alias.
+   */
+  initialChapters?: string | null;
+  /** @deprecated Prefer initialChapters */
+  mapSize?: string | null;
 }): Promise<{ success: boolean; plan?: CreateSessionPlanResult; error?: string }> {
-  let prompt = getPrompt("session_plan_create", options.promptOverrides)
-    .replace("{problem}", options.problem)
-    .replace("{objectives}", options.objectives?.length
-      ? options.objectives.map((o, i) => `${i + 1}. ${o}`).join("\n")
-      : "No specific objectives defined")
-    .replace("{calibration}", options.calibration || "No prior learning data available");
+  const initialChapters = options.initialChapters ?? options.mapSize;
+  let prompt = composeSessionPlanCreatePrompt(
+    getPrompt("session_plan_create", options.promptOverrides),
+    {
+      problem: options.problem,
+      objectives: options.objectives,
+      calibration: options.calibration,
+      initialChapters,
+    },
+  );
 
   // Prepend language instruction if tutoring language specified
   if (options.tutoringLanguage) {
@@ -476,11 +494,15 @@ export async function createSessionPlanLLM(options: {
     );
   }
 
+  const band = getInitialChaptersBand(initialChapters);
+  // Scale output budget with map breadth so broad plans are not truncated mid-JSON.
+  const maxTokens = Math.min(5000, 1400 + band.max * 140);
+
   const response = await callXaiJSON<CreateSessionPlanResult>(
     [userMessage(prompt)],
     {
       model: MODEL,
-      maxTokens: 1500,
+      maxTokens,
       temperature: 0.3,
     }
   );
@@ -489,26 +511,14 @@ export async function createSessionPlanLLM(options: {
     return { success: false, error: response.error || "No plan generated" };
   }
 
-  // Normalize the plan and filter out steps with empty descriptions
-  const allSteps = (response.data.steps || []).map((step: SessionPlanStep, idx: number) => ({
-    id: `step_${idx + 1}_${Date.now()}`,
-    type: step.type || "question",
-    description: step.description || "",
-    order: step.order || idx + 1,
-    status: "pending" as const,
-  }));
-
-  const validSteps = allSteps.filter((s: SessionPlanStep) => s.description.trim().length > 0);
-  if (validSteps.length === 0) {
+  const numberedSteps = normalizeSessionPlanCreateSteps(response.data.steps || []);
+  if (numberedSteps.length === 0) {
     return { success: false, error: "LLM generated plan with no valid steps (all descriptions empty)" };
   }
 
-  // Re-number orders after filtering
-  const numberedSteps = validSteps.map((s: SessionPlanStep, idx: number) => ({ ...s, order: idx + 1 }));
-
   const plan: CreateSessionPlanResult = {
     goal: response.data.goal || "Understand the topic deeply",
-    strategy: response.data.strategy || "Guide through Socratic questioning",
+    strategy: response.data.strategy || "Optimize practice progress and augment with tools that produce proof of work",
     description: response.data.description,
     steps: numberedSteps,
   };
@@ -537,14 +547,6 @@ export interface SessionPlanUpdateResult {
   signals: string[];
   canAutoAdvance: boolean;
   advanceReasoning: string;
-}
-
-export interface StuckPolicyRecommendationResult {
-  stuck: boolean;
-  severity: "low" | "medium" | "high";
-  title: string;
-  recommendationMarkdown: string;
-  reason: string;
 }
 
 export interface FocusedProbeInfo {
@@ -744,92 +746,4 @@ export async function updateSessionPlanLLM(options: {
   };
 
   return { success: true, result };
-}
-
-export async function generateStuckPolicyRecommendation(options: {
-  problem: string;
-  currentStep?: string;
-  activitySummary: string;
-  transcript: string;
-  secondsSinceLastStuckCard: number;
-  stuckCardCount: number;
-  sessionFileIds?: string[];
-  promptOverrides?: UserPrompts;
-  tutoringLanguage?: string;
-}): Promise<{ success: boolean; result?: StuckPolicyRecommendationResult; error?: string }> {
-  let prompt = getPrompt("stuck_policy_recommendation", options.promptOverrides)
-    .replace("{problem}", options.problem)
-    .replace("{current_step}", options.currentStep || "No current step available")
-    .replace("{activity_summary}", options.activitySummary || "No recent activity available")
-    .replace("{transcript}", options.transcript || "No recent transcript available")
-    .replace("{seconds_since_last_stuck_card}", options.secondsSinceLastStuckCard.toString())
-    .replace("{stuck_card_count}", options.stuckCardCount.toString());
-
-  if (options.tutoringLanguage) {
-    prompt = `IMPORTANT: Respond in ${options.tutoringLanguage} throughout. Keep JSON keys exactly as specified.\n\n${prompt}`;
-  }
-
-  interface RawStuckPolicyResult {
-    stuck?: boolean;
-    severity?: "low" | "medium" | "high";
-    title?: string;
-    recommendation_markdown?: string;
-    reason?: string;
-  }
-
-  const jsonSchema = {
-    name: "stuck_policy_recommendation",
-    schema: {
-      type: "object",
-      properties: {
-        stuck: { type: "boolean" },
-        severity: { type: "string", enum: ["low", "medium", "high"] },
-        title: { type: "string" },
-        recommendation_markdown: { type: "string" },
-        reason: { type: "string" },
-      },
-      required: ["stuck", "severity", "title", "recommendation_markdown", "reason"],
-      additionalProperties: false,
-    },
-  };
-
-  const fileIds = options.sessionFileIds?.filter(Boolean) || [];
-  const response = fileIds.length > 0
-    ? await callXaiResponsesWithFiles<RawStuckPolicyResult>(prompt, fileIds, {
-      model: MODEL,
-      maxOutputTokens: 700,
-      temperature: 0.3,
-      jsonSchema,
-      retries: 2,
-      retryDelay: 500,
-      fetchTimeout: 30_000,
-    })
-    : await callXaiJSON<RawStuckPolicyResult>(
-      [userMessage(prompt)],
-      {
-        model: MODEL,
-        maxTokens: 700,
-        temperature: 0.3,
-      }
-    );
-
-  if (!response.success || !response.data) {
-    return { success: false, error: response.error || "No stuck policy result generated" };
-  }
-
-  const raw = response.data;
-  const severity = raw.severity === "high" || raw.severity === "medium" || raw.severity === "low"
-    ? raw.severity
-    : "medium";
-
-  return {
-    success: true,
-    result: {
-      stuck: Boolean(raw.stuck),
-      severity,
-      title: raw.title || "Stuck Check",
-      recommendationMarkdown: raw.recommendation_markdown || "",
-      reason: raw.reason || "",
-    },
-  };
 }

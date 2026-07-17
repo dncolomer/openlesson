@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { ayclTokenFromBody, guardSessionRoute, requireAuthenticatedUser } from "@/lib/api/require-auth";
 import { uploadFileToXAI } from "@/lib/xai-files";
 import { callXaiResponses, DEFAULT_MODEL, ResponsesInputMessage } from "@/lib/xai-client";
 
@@ -24,12 +24,9 @@ interface SessionPerformanceData {
 
 export async function POST(req: NextRequest) {
   try {
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    
-    if (!user) {
-      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-    }
+    const auth = await requireAuthenticatedUser();
+    if (!auth.ok) return auth.response;
+    const { user, supabase } = auth;
 
     const body = await req.json();
     const { sessionId, message, conversationHistory = [], fileIds = [] } = body;

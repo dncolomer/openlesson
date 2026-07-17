@@ -21,7 +21,6 @@ const ACTIVE_KEYS = [
   "generate_objectives",
   "session_plan_create",
   "session_plan_update",
-  "stuck_policy_recommendation",
 ];
 
 const XAI_USAGE = {
@@ -33,7 +32,6 @@ const XAI_USAGE = {
   generate_objectives: ["generateObjectives"],
   session_plan_create: ["createSessionPlanLLM"],
   session_plan_update: ["updateSessionPlanLLM"],
-  stuck_policy_recommendation: ["recommendStuckPolicy"],
 };
 
 const CONSUMER_DELEGATES = {
@@ -70,7 +68,7 @@ const DOMAINS = [
     id: "heartbeat-session-plan",
     label: "Heartbeat & Session Plan",
     description:
-      "Session plan creation/update, stuck-policy recommendations, plan translation, and agent/plan routing.",
+      "Session plan creation/update, plan translation, and agent/plan routing.",
     order: 3,
   },
   {
@@ -127,8 +125,7 @@ function classifyDomain(relPath, symbol, kind) {
   if (
     relPath.includes("session-plan") ||
     relPath.includes("agent/plan") ||
-    symbol?.includes("session_plan") ||
-    symbol?.includes("stuck_policy")
+    symbol?.includes("session_plan")
   ) {
     return "heartbeat-session-plan";
   }

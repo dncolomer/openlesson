@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { LoadingStatusMessage } from "@/components/LoadingStatusMessage";
 import {
   archiveInsight,
   formatInsightDate,
@@ -73,8 +74,8 @@ export function InsightDetailClient({ insightId }: { insightId: string }) {
 
   if (!insight) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#0a0a0a] text-neutral-500">
-        Loading insight…
+      <div className="flex min-h-screen items-center justify-center bg-[#0a0a0a]">
+        <LoadingStatusMessage message="Loading insight" />
       </div>
     );
   }

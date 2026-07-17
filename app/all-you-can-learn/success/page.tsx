@@ -4,6 +4,7 @@ import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { LandingNav } from "@/components/LandingNav";
+import { LoadingStatusMessage } from "@/components/LoadingStatusMessage";
 import { AYCL_TOKEN_STORAGE_KEY, buildAyclAccessUrl } from "@/lib/aycl-shared";
 
 function SuccessContent() {
@@ -60,10 +61,7 @@ function SuccessContent() {
   return (
     <div className="flex flex-1 flex-col items-center justify-center px-6 py-16 text-center">
       {loading ? (
-        <>
-          <div className="mb-6 h-10 w-10 animate-spin rounded-full border-2 border-white/20 border-t-white" />
-          <p className="text-sm text-neutral-500">Preparing your lifetime access link…</p>
-        </>
+        <LoadingStatusMessage message="Preparing your lifetime access link" />
       ) : error ? (
         <>
           <h1 className="mb-2 text-2xl font-semibold text-white">Almost there</h1>
@@ -118,7 +116,7 @@ export default function AllYouCanLearnSuccessPage() {
       <Suspense
         fallback={
           <div className="flex flex-1 items-center justify-center">
-            <div className="h-8 w-8 animate-spin rounded-full border-2 border-white/20 border-t-transparent" />
+            <LoadingStatusMessage message="Loading" />
           </div>
         }
       >

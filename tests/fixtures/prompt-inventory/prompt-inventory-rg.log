@@ -1,5 +1,5 @@
 # Updated after workspace/block rename — legacy workspace API paths removed.
-openlesson/app/api/workspace/chat/route.ts
-openlesson/app/api/workspace/integration-skill/route.ts
-openlesson/app/api/workspace/performance-chat/route.ts
-openlesson/app/api/workspace/performance-report/route.ts
+app/api/workspace/chat/route.ts
+app/api/workspace/integration-skill/route.ts
+app/api/workspace/performance-chat/route.ts
+app/api/workspace/performance-report/route.ts

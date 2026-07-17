@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { requireAuthenticatedUser } from "@/lib/api/require-auth";
 import { INSIGHT_AESTHETIC_IMAGES } from "@/lib/insights-server";
-import { createClient } from "@/lib/supabase/server";
 import { callXaiJSON, systemMessage, userMessage, DEFAULT_MODEL } from "@/lib/xai-client";
 
 interface CreateInsightResponse {
@@ -10,11 +10,9 @@ interface CreateInsightResponse {
 
 export async function POST(req: NextRequest) {
   try {
-    const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const auth = await requireAuthenticatedUser();
+    if (!auth.ok) return auth.response;
+    const { user, supabase } = auth;
 
     const { thoughtIds, thoughts, workspaceId, blockId, sessionId } = await req.json();
     const sourceThoughts = Array.isArray(thoughts)

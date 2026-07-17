@@ -340,15 +340,15 @@ const ENDPOINT_SPECS: EndpointSpec[] = [
 }`,
     responseBody: [
       { name: "skill_md", type: "string", description: "Full markdown document with YAML frontmatter (name, description)." },
-      { name: "skill_name", type: "string", description: "Derived frontmatter name, e.g. acme-sales-copilot-openlesson-proof-of-work-performance." },
+      { name: "skill_name", type: "string", description: "Derived frontmatter name, e.g. acme-sales-copilot-uncertain-systems-proof-of-work-performance." },
       { name: "suggested_share_path", type: "string", description: "Suggested public path, e.g. /acme-sales-copilot-skill.md." },
       { name: "workspace_summary", type: "object", description: "id, title, root_topic, block_count." },
       { name: "context_counts", type: "object | null", description: "Workspace context counts used during generation." },
       { name: "file_ids", type: "string[]", description: "xAI file IDs attached during generation." },
     ],
     responseExample: `{
-  "skill_md": "---\\nname: acme-sales-copilot-openlesson-proof-of-work-performance\\ndescription: Acme Sales Copilot integration skill for Uncertain Systems proof-of-work upload and performance analysis.\\n---\\n\\n# Acme Sales Copilot — Uncertain Systems Proof-of-Work & Performance\\n\\n...",
-  "skill_name": "acme-sales-copilot-openlesson-proof-of-work-performance",
+  "skill_md": "---\\nname: acme-sales-copilot-uncertain-systems-proof-of-work-performance\\ndescription: Acme Sales Copilot integration skill for Uncertain Systems proof-of-work upload and performance analysis.\\n---\\n\\n# Acme Sales Copilot — Uncertain Systems Proof-of-Work & Performance\\n\\n...",
+  "skill_name": "acme-sales-copilot-uncertain-systems-proof-of-work-performance",
   "suggested_share_path": "/acme-sales-copilot-skill.md",
   "workspace_summary": {
     "id": "a3090aa0-3498-4be8-aa87-32a1a6591641",
@@ -497,7 +497,7 @@ const ENDPOINT_SPECS: EndpointSpec[] = [
       { name: "report.growth_areas", type: "string[]", description: "Areas needing development." },
       { name: "report.gap_analysis.summary", type: "string", description: "Gap analysis overview." },
       { name: "report.gap_analysis.gaps", type: "array", description: "title, proof_of_work, severity (low|medium|high), suggested_repair." },
-      { name: "report.gap_analysis.next_practice", type: "string[]", description: "Recommended practice actions." },
+      { name: "report.gap_analysis.next_steps", type: "object", description: "directions (string[]) and events (string[]) for domain next actions." },
       { name: "report.suggestions", type: "string[]", description: "Additional recommendations." },
       { name: "report.confidence", type: "string", description: "emerging | developing | clear | well-connected" },
       { name: "response", type: "string | null", description: "Markdown answer when mode=chat." },
@@ -535,7 +535,10 @@ const ENDPOINT_SPECS: EndpointSpec[] = [
           "suggested_repair": "Add probability-weighted revenue loss to ROI table."
         }
       ],
-      "next_practice": ["Run 3 simulated procurement scenarios with churn math"]
+      "next_steps": {
+        "directions": ["Build a repeatable churn model habit before pricing talks"],
+        "events": ["Run 3 simulated procurement scenarios with churn math"]
+      }
     },
     "suggestions": ["Practice live role-play with procurement pushback"],
     "confidence": "emerging"
@@ -572,30 +575,34 @@ const ENDPOINT_SPECS: EndpointSpec[] = [
   {
     id: "create-tap-link",
     method: "POST",
-    path: "/api/v2/agent/workspaces/{workspace_id}/blocks/{block_id}/tap-links",
+    path: "/api/v2/agent/workspaces/{workspace_id}/tap-links",
     scope: "tap:write",
-    summary: "Create a private Think Aloud Protocol (TAP) link for a block (15 or 30 minutes).",
+    summary: "Create a private Think Aloud Protocol (TAP) link for the workspace (or a block via body/path).",
     status: "201 Created",
     pathParams: [
       { name: "workspace_id", type: "uuid", required: true, description: "Workspace ID." },
-      { name: "block_id", type: "uuid", required: true, description: "Target block ID." },
     ],
     requestBody: [
-      { name: "minutes", type: "integer", description: "15 or 30 only; any other value defaults to 15." },
+      { name: "block_id", type: "uuid", description: "Optional. When set, scopes the TAP session to that block. Omit for full-workspace scope." },
+      { name: "minutes", type: "integer", description: "1–120; default 15." },
       { name: "guest_user_id", type: "uuid", description: "Org admin only: assign link to a guest by ID." },
       { name: "guest_email", type: "string", description: "Org admin only: assign link to a guest by email." },
+      { name: "participant_type", type: "string", description: "anonymous | guest | user." },
+      { name: "user_id", type: "uuid", description: "Member user id when participant_type=user." },
+      { name: "post_session", type: "string", description: "redirect_workspace | show_results | redirect_url." },
+      { name: "redirect_url", type: "string", description: "Required when post_session=redirect_url." },
     ],
     requestExample: `{
   "minutes": 15,
-  "guest_email": "learner@example.com"
+  "participant_type": "anonymous"
 }`,
     responseBody: [
       { name: "tap_link.id", type: "uuid", description: "TAP link / session row ID." },
       { name: "tap_link.workspace_id", type: "uuid", description: "Workspace ID." },
-      { name: "tap_link.block_id", type: "uuid", description: "Block ID." },
+      { name: "tap_link.block_id", type: "uuid | null", description: "Block ID when scoped; null for full workspace." },
       { name: "tap_link.status", type: "string", description: "pending | in_progress | completed" },
-      { name: "tap_link.requested_duration_seconds", type: "integer", description: "900 (15 min) or 1800 (30 min)." },
-      { name: "tap_link.focus_block_ids", type: "uuid[]", description: "Focused block IDs (usually the target block)." },
+      { name: "tap_link.requested_duration_seconds", type: "integer", description: "Requested duration in seconds." },
+      { name: "tap_link.focus_block_ids", type: "uuid[]", description: "Focused block IDs (empty = full workspace)." },
       { name: "tap_link.created_at", type: "ISO-8601", description: "Link creation time." },
       { name: "tap_link.private_url", type: "string", description: "Bearer URL: /tap/session/{token}. No login required." },
       { name: "interruption", type: "object | null", description: "TIM predictive interruption (see Predictive interruptions)." },
@@ -604,16 +611,16 @@ const ENDPOINT_SPECS: EndpointSpec[] = [
   "tap_link": {
     "id": "ae0cc774-1832-4bb5-bc7d-bf119ddf759f",
     "workspace_id": "75b3b4ef-4e47-4f39-bb09-f61406603d75",
-    "block_id": "88a43ad8-62f8-4252-a847-2cbc0b754a57",
+    "block_id": null,
     "status": "pending",
     "requested_duration_seconds": 900,
-    "focus_block_ids": ["88a43ad8-62f8-4252-a847-2cbc0b754a57"],
+    "focus_block_ids": [],
     "created_at": "2026-06-23T01:29:03.861663+00:00",
     "private_url": "https://uncertain.systems/tap/session/E8-ouJ9lErgDEmteyKc4tJ39meJ91vzZFNUiuRauHvw"
   }
 }`,
     notes: [
-
+      "Also available as POST .../blocks/{block_id}/tap-links for block-scoped links (same body fields).",
       "Guest keys auto-attach the link to their guest identity.",
       "Org admins may set guest_user_id or guest_email to assign the link (404 guest_not_found if missing).",
       "Learner completes session at private_url without an API key.",
@@ -633,7 +640,7 @@ const ENDPOINT_SPECS: EndpointSpec[] = [
       { name: "tap_links", type: "array", description: "Sessions ordered by created_at descending." },
       { name: "tap_links[].id", type: "uuid", description: "Link ID." },
       { name: "tap_links[].workspace_id", type: "uuid", description: "Workspace ID." },
-      { name: "tap_links[].block_id", type: "uuid", description: "Block ID." },
+      { name: "tap_links[].block_id", type: "uuid | null", description: "Block ID when scoped; null for full workspace." },
       { name: "tap_links[].status", type: "string", description: "pending | in_progress | completed" },
       { name: "tap_links[].requested_duration_seconds", type: "integer", description: "Requested duration." },
       { name: "tap_links[].duration_seconds", type: "integer", description: "Actual duration (0 until completed)." },
@@ -1124,14 +1131,14 @@ Content-Type: application/json`}</code>
             workspace via{" "}
             <code className="text-neutral-300">POST .../integration-skill</code>, or add the PumaDoc policy snippets:{" "}
             <Link
-              href="/customer-agent-openlesson-policy.md"
+              href="/customer-agent-uncertain-systems-policy.md"
               className="text-neutral-200 underline decoration-neutral-600 underline-offset-4 hover:text-white"
             >
               Customer Agent policy
             </Link>
             ,{" "}
             <Link
-              href="/pumaclaw-mentor-openlesson-policy.md"
+              href="/pumaclaw-mentor-uncertain-systems-policy.md"
               className="text-neutral-200 underline decoration-neutral-600 underline-offset-4 hover:text-white"
             >
               PumaClaw Mentor policy

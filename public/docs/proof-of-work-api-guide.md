@@ -23,7 +23,8 @@ Opaque mode stores partner references (`goal_ref`, `external_refs`) without sema
 | `GET` | `/workspaces/{workspace_id}/blocks` | `workspaces:read` | List available blocks in a workspace. |
 | `POST` | `/workspaces/{workspace_id}/proof-of-work` | `workspaces:write` | Upload tool usage, screenshots, video, or EEG linked to workspace/block. |
 | `POST` | `/workspaces/{workspace_id}/performance` | `workspaces:read` | Structured gap report or free-form performance Q&A. |
-| `POST` | `/workspaces/{workspace_id}/blocks/{block_id}/tap-links` | `tap:write` | Request a private Think Aloud Protocol (TAP) link for a block. Links open `/tap/session/{token}`. |
+| `POST` | `/workspaces/{workspace_id}/tap-links` | `tap:write` | Request a private TAP link for the full workspace (optional body `block_id`). Links open `/tap/session/{token}`. |
+| `POST` | `/workspaces/{workspace_id}/blocks/{block_id}/tap-links` | `tap:write` | Request a private TAP link scoped to a single block. |
 | `GET` | `/workspaces/{workspace_id}/tap-links` | `tap:read` | List existing TAP links and completion status. |
 
 | `POST` | `/org/guests` | `org:write` | Organization admins create guest users by email and issue guest API keys. |
@@ -72,6 +73,7 @@ Chat mode:
 ```json
 {
   "initial_prompt": "Prepare me to explain vector databases in a technical interview.",
+  "initial_chapters": "mid",
   "files": [
     {
       "name": "notes.md",
@@ -97,7 +99,19 @@ Chat mode:
 
 Files are optional (max 5, 10 MB each). Response includes `evaluation_mode` and `privacy`.
 
+Optional semantic field `initial_chapters` (`narrow` | `mid` | `broad`) sets how many initial skill-grid blocks to generate. Blocks start at `(0,0)`, may use signed multi-quadrant coordinates, sparse branching paths, and persisted `position_x` / `position_y` plus `next` links. MCP `create_workspace` accepts the same parameter.
+
 ## TAP Links
+
+**Full workspace** (omit `block_id`):
+
+`POST /api/v2/agent/workspaces/{workspace_id}/tap-links`
+
+```json
+{ "minutes": 15 }
+```
+
+**Single block** (path or body):
 
 `POST /api/v2/agent/workspaces/{workspace_id}/blocks/{block_id}/tap-links`
 
@@ -105,7 +119,7 @@ Files are optional (max 5, 10 MB each). Response includes `evaluation_mode` and 
 { "minutes": 15 }
 ```
 
-Returns a `private_url` for `/tap/session/{token}`. Poll `GET .../tap-links` for link `status`, then call `POST .../performance` to score TAP proof of work.
+Returns a `private_url` for `/tap/session/{token}`. Workspace-scoped links evaluate the whole workspace; block-scoped links focus on that block. Poll `GET .../tap-links` for link `status`, then call `POST .../performance` to score TAP proof of work.
 
 Identified gaps can be routed into Integrated Learning Environment (ILE) practice blocks for remediation.
 

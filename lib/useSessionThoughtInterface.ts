@@ -37,7 +37,19 @@ export type SpeechRecognitionConstructor = new () => SpeechRecognitionLike;
 
 const CHAIN_GAP_MS = 2600;
 
+/** Test-only override so node vitest can exercise the real start/stop path. */
+let speechRecognitionCtorForTests: SpeechRecognitionConstructor | null | undefined;
+
+export function setSpeechRecognitionConstructorForTests(
+  ctor: SpeechRecognitionConstructor | null | undefined,
+) {
+  speechRecognitionCtorForTests = ctor;
+}
+
 export function getSpeechRecognitionConstructor(): SpeechRecognitionConstructor | null {
+  if (speechRecognitionCtorForTests !== undefined) {
+    return speechRecognitionCtorForTests;
+  }
   if (typeof window === "undefined") return null;
   const w = window as typeof window & {
     SpeechRecognition?: SpeechRecognitionConstructor;
@@ -46,11 +58,30 @@ export function getSpeechRecognitionConstructor(): SpeechRecognitionConstructor 
   return w.SpeechRecognition ?? w.webkitSpeechRecognition ?? null;
 }
 
+/**
+ * ILE thought-interface speech is armed only while the learner is in an
+ * active monitoring session (recording, not paused, onboarding not covering Helios).
+ */
+export function isIleSpeechCaptureEnabled(input: {
+  isRecording: boolean;
+  isPaused: boolean;
+  showWelcomePanel: boolean;
+}): boolean {
+  return input.isRecording && !input.isPaused && !input.showWelcomePanel;
+}
+
+/** Exported for lifecycle unit tests (Chrome needs a beat before re-start). */
+export const SPEECH_RESTART_DELAY_MS_FOR_TESTS = 280;
+
 function normalize(text: string) {
   return text.replace(/\s+/g, " ").trim();
 }
 
-const BENIGN_SPEECH_RECOGNITION_ERRORS = new Set(["aborted"]);
+/** Errors that end a turn but should not surface as permanent mic failures. */
+const BENIGN_SPEECH_RECOGNITION_ERRORS = new Set(["aborted", "no-speech"]);
+
+/** Delay before restarting after onend — Chrome often rejects immediate start(). */
+const SPEECH_RESTART_DELAY_MS = SPEECH_RESTART_DELAY_MS_FOR_TESTS;
 
 export function shouldReportSpeechRecognitionError(error?: string) {
   return !!error && !BENIGN_SPEECH_RECOGNITION_ERRORS.has(error);
@@ -65,25 +96,32 @@ export function formatSpeechTranscriptDisplay({
   speechError,
   speechSupported,
   isListening,
+  enabled = true,
 }: {
   text: string;
   speechError: string | null;
   speechSupported: boolean | null;
   isListening: boolean;
+  /** When false, speech capture is intentionally off (session paused / not started). */
+  enabled?: boolean;
 }) {
   if (text) return text;
   if (speechSupported === false) {
     return "Speech recognition is not supported in this browser.";
   }
   if (speechError === "not-allowed") {
-    return "Microphone blocked — allow access for this site, then click Retry.";
+    return "Microphone blocked — allow access for this site, then click Start.";
   }
-  if (speechError && speechError !== "unsupported") {
+  if (speechError === "unsupported") {
+    return "Speech recognition is not supported in this browser.";
+  }
+  if (speechError) {
     return `Microphone error: ${speechError}`;
   }
   if (speechSupported === null) return "Starting microphone…";
-  if (!isListening) return "Listening…";
-  return "";
+  if (!enabled) return "Speech capture off — start the session to listen";
+  if (isListening) return "Listening…";
+  return "Mic idle — click Start to listen";
 }
 
 export function useSpeechSupported() {
@@ -97,16 +135,57 @@ export function useSpeechSupported() {
 export type LiveSpeechRecognitionBindings = {
   recognitionRef: MutableRefObject<SpeechRecognitionLike | null>;
   shouldListenRef: MutableRefObject<boolean>;
+  /** Pending delayed restart after onend (Chrome needs a beat before start()). */
+  restartTimerRef: MutableRefObject<ReturnType<typeof setTimeout> | null>;
+  /** BCP-47 language for recreating the recognizer after a hard failure. */
+  langRef: MutableRefObject<string>;
   onResult: (event: SpeechRecognitionEventLike) => void;
   onListeningChange: (listening: boolean) => void;
   onError: (error: string | null) => void;
 };
+
+function clearSpeechRestartTimer(bindings: LiveSpeechRecognitionBindings) {
+  if (bindings.restartTimerRef.current != null) {
+    clearTimeout(bindings.restartTimerRef.current);
+    bindings.restartTimerRef.current = null;
+  }
+}
+
+function scheduleSpeechRestart(bindings: LiveSpeechRecognitionBindings, recognition: SpeechRecognitionLike) {
+  clearSpeechRestartTimer(bindings);
+  bindings.restartTimerRef.current = setTimeout(() => {
+    bindings.restartTimerRef.current = null;
+    if (!bindings.shouldListenRef.current) return;
+    if (bindings.recognitionRef.current !== recognition) return;
+    try {
+      recognition.start();
+      // isListening flips true in onstart; do not optimistically set it here.
+    } catch (err) {
+      const message = String(err);
+      if (/already\s+started/i.test(message)) {
+        bindings.onListeningChange(true);
+        bindings.onError(null);
+        return;
+      }
+      // Instance may be dead — rebuild a fresh recognizer.
+      disposeSpeechRecognition(recognition, bindings);
+      if (bindings.shouldListenRef.current) {
+        startLiveSpeechRecognition(bindings, bindings.langRef.current);
+      }
+    }
+  }, SPEECH_RESTART_DELAY_MS);
+}
 
 function attachLiveSpeechRecognitionHandlers(
   recognition: SpeechRecognitionLike,
   bindings: LiveSpeechRecognitionBindings,
 ) {
   recognition.onresult = bindings.onResult;
+  recognition.onstart = () => {
+    if (bindings.recognitionRef.current !== recognition) return;
+    bindings.onListeningChange(true);
+    bindings.onError(null);
+  };
   recognition.onerror = (event) => {
     const error = event.error || "speech-recognition-error";
     if (isFatalSpeechRecognitionError(error)) {
@@ -120,21 +199,32 @@ function attachLiveSpeechRecognitionHandlers(
     if (bindings.recognitionRef.current !== recognition) return;
     bindings.onListeningChange(false);
     if (!bindings.shouldListenRef.current) return;
-    try {
-      recognition.start();
-      bindings.onListeningChange(true);
-      bindings.onError(null);
-    } catch (err) {
-      const message = String(err);
-      bindings.onError(message);
-      if (isFatalSpeechRecognitionError(message)) {
-        bindings.shouldListenRef.current = false;
-      }
-    }
+    scheduleSpeechRestart(bindings, recognition);
   };
 }
 
-/** Start or resume a single continuous SpeechRecognition session. Call from a user gesture when possible. */
+function tryStartRecognition(recognition: SpeechRecognitionLike, bindings: LiveSpeechRecognitionBindings) {
+  try {
+    recognition.start();
+    // Wait for onstart before claiming we are listening.
+  } catch (err) {
+    const message = String(err);
+    if (/already\s+started/i.test(message)) {
+      bindings.onListeningChange(true);
+      bindings.onError(null);
+      return true;
+    }
+    bindings.onError(message);
+    bindings.onListeningChange(false);
+    if (isFatalSpeechRecognitionError(message)) {
+      bindings.shouldListenRef.current = false;
+    }
+    return false;
+  }
+  return true;
+}
+
+/** Start or resume a single continuous SpeechRecognition session. Prefer calling from a user gesture. */
 export function startLiveSpeechRecognition(
   bindings: LiveSpeechRecognitionBindings,
   lang: string,
@@ -146,29 +236,15 @@ export function startLiveSpeechRecognition(
   }
 
   bindings.shouldListenRef.current = true;
+  bindings.langRef.current = lang;
+  clearSpeechRestartTimer(bindings);
 
   const existing = bindings.recognitionRef.current;
   if (existing) {
+    existing.lang = lang;
     attachLiveSpeechRecognitionHandlers(existing, bindings);
-    try {
-      existing.start();
-      bindings.onListeningChange(true);
-      bindings.onError(null);
-      return existing;
-    } catch (err) {
-      const message = String(err);
-      if (/already\s+started/i.test(message)) {
-        bindings.onListeningChange(true);
-        bindings.onError(null);
-        return existing;
-      }
-      if (!isFatalSpeechRecognitionError(message)) {
-        bindings.onError(message);
-        bindings.onListeningChange(false);
-        return existing;
-      }
-      disposeSpeechRecognition(existing, bindings.recognitionRef);
-    }
+    tryStartRecognition(existing, bindings);
+    return existing;
   }
 
   const recognition = new ctor();
@@ -177,44 +253,41 @@ export function startLiveSpeechRecognition(
   recognition.lang = lang;
   attachLiveSpeechRecognitionHandlers(recognition, bindings);
   bindings.recognitionRef.current = recognition;
-
-  try {
-    recognition.start();
-    bindings.onListeningChange(true);
-    bindings.onError(null);
-  } catch (err) {
-    bindings.onError(String(err));
-    bindings.onListeningChange(false);
-    if (isFatalSpeechRecognitionError(String(err))) {
-      bindings.shouldListenRef.current = false;
-    }
-  }
-
+  tryStartRecognition(recognition, bindings);
   return recognition;
 }
 
 export function restartLiveSpeechRecognition(bindings: LiveSpeechRecognitionBindings) {
   const recognition = bindings.recognitionRef.current;
   if (!recognition || !bindings.shouldListenRef.current) return;
+  clearSpeechRestartTimer(bindings);
   try {
     recognition.abort();
   } catch {}
+  // onend → scheduleSpeechRestart will call start() after a short delay.
 }
 
 export function stopLiveSpeechRecognition(bindings: LiveSpeechRecognitionBindings) {
   bindings.shouldListenRef.current = false;
+  clearSpeechRestartTimer(bindings);
   if (bindings.recognitionRef.current) {
-    disposeSpeechRecognition(bindings.recognitionRef.current, bindings.recognitionRef);
+    disposeSpeechRecognition(bindings.recognitionRef.current, bindings);
   }
   bindings.onListeningChange(false);
 }
 
 export function disposeSpeechRecognition(
   recognition: SpeechRecognitionLike,
-  recognitionRef: MutableRefObject<SpeechRecognitionLike | null>,
+  bindingsOrRef: LiveSpeechRecognitionBindings | MutableRefObject<SpeechRecognitionLike | null>,
 ) {
+  const recognitionRef =
+    "recognitionRef" in bindingsOrRef ? bindingsOrRef.recognitionRef : bindingsOrRef;
+  if ("restartTimerRef" in bindingsOrRef) {
+    clearSpeechRestartTimer(bindingsOrRef);
+  }
   recognition.onresult = null;
   recognition.onerror = null;
+  recognition.onstart = null;
   recognition.onend = null;
   try {
     recognition.abort();
@@ -241,7 +314,7 @@ const THOUGHT_HISTORY_LIMIT = 50;
 function loadStoredThoughts(sessionId: string): SessionThought[] {
   if (typeof window === "undefined") return [];
   try {
-    const stored = window.localStorage.getItem(`openlesson:${sessionId}:thought-history`);
+    const stored = window.localStorage.getItem(`uncertain-systems:${sessionId}:thought-history`);
     const parsed = stored ? JSON.parse(stored) : [];
     if (!Array.isArray(parsed)) return [];
     return parsed
@@ -299,10 +372,21 @@ export function useSessionThoughtInterface({
   const speechSupported = useSpeechSupported();
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const shouldListenRef = useRef(false);
+  const restartTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const langRef = useRef(speechLang);
   const finalBufferRef = useRef<string[]>([]);
   const finalizeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const speechResultsLengthRef = useRef(0);
   const consumedResultsIndexRef = useRef(0);
+  const isListeningRef = useRef(false);
+
+  useEffect(() => {
+    langRef.current = speechLang;
+  }, [speechLang]);
+
+  useEffect(() => {
+    isListeningRef.current = isListening;
+  }, [isListening]);
 
   useEffect(() => {
     if (!sessionId) return;
@@ -314,7 +398,7 @@ export function useSessionThoughtInterface({
   useEffect(() => {
     if (!sessionId || typeof window === "undefined") return;
     window.localStorage.setItem(
-      `openlesson:${sessionId}:thought-history`,
+      `uncertain-systems:${sessionId}:thought-history`,
       JSON.stringify(thoughts.slice(-THOUGHT_HISTORY_LIMIT)),
     );
   }, [sessionId, thoughts]);
@@ -376,6 +460,8 @@ export function useSessionThoughtInterface({
     () => ({
       recognitionRef,
       shouldListenRef,
+      restartTimerRef,
+      langRef,
       onResult: (event) => {
         speechResultsLengthRef.current = event.results.length;
         const finals: string[] = [];
@@ -446,7 +532,18 @@ export function useSessionThoughtInterface({
       return;
     }
     startLiveSpeechRecognition(speechBindings, speechLang);
+
+    // Auto-recover if start() never reaches onstart (common when kickoff
+    // happens outside a user gesture right after session Play).
+    const recoverTimers = [400, 1200, 2500].map((ms) =>
+      window.setTimeout(() => {
+        if (!shouldListenRef.current || isListeningRef.current) return;
+        startLiveSpeechRecognition(speechBindings, speechLang);
+      }, ms),
+    );
+
     return () => {
+      recoverTimers.forEach((id) => window.clearTimeout(id));
       stopLiveSpeechRecognition(speechBindings);
     };
   }, [enabled, speechLang, speechBindings]);
@@ -524,8 +621,11 @@ export function useSessionThoughtInterface({
   }, [editingTranscription, onLogTrace, restartSpeechRecognitionSession, sendThought]);
 
   const retryMicrophone = useCallback(() => {
-    if (!enabled) return;
+    // Prefer calling from a click so browsers attach recognition under a gesture.
     setSpeechError(null);
+    if (!enabled) return;
+    // Hard reset: drop the old instance so a user click can fully re-arm the mic.
+    stopLiveSpeechRecognition(speechBindings);
     startLiveSpeechRecognition(speechBindings, speechLang);
   }, [enabled, speechBindings, speechLang]);
 
@@ -581,6 +681,8 @@ export function useSessionThoughtInterface({
     interimText,
     crystallizableText,
     isListening,
+    /** Mirrors the hook `enabled` flag — false when session is paused / not started. */
+    speechEnabled: enabled,
     speechError,
     isSending,
     sendError,

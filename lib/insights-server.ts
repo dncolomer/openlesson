@@ -33,7 +33,9 @@ export function absoluteSiteUrl(path: string) {
 }
 
 export function resolveInsightAestheticImage(aestheticImage?: string | null) {
-  if (aestheticImage?.trim()) return aestheticImage.trim();
+  const candidate = aestheticImage?.trim();
+  // Only accept aesthetics-folder paths for OG/share cards.
+  if (candidate?.startsWith("/aesthetics/")) return candidate;
   return INSIGHT_AESTHETIC_IMAGES[0];
 }
 

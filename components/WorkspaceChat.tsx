@@ -31,14 +31,14 @@ interface Workspace {
   description?: string;
 }
 
-import { createBrowserClient } from "@supabase/ssr";
+import { type SupabaseBrowserClient } from "@/lib/supabase/client";
 
 interface WorkspaceChatProps {
   plan: Workspace;
   nodes: Block[];
   onRefresh?: () => void;
   onNodesUpdate?: (nodes: Block[]) => void;
-  supabase?: ReturnType<typeof createBrowserClient>;
+  supabase?: SupabaseBrowserClient;
   workspaceId?: string;
   isOwner?: boolean;
   currentUserId?: string | null;

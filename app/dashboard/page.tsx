@@ -14,6 +14,7 @@ import { WorkspaceDashboardCard } from "@/components/WorkspaceDashboardCard";
 import { buildMcpClientConfig } from "@/lib/agent-v2/mcp-proof-of-work-catalog";
 import { IntegrationQuickAccess } from "@/components/IntegrationQuickAccess";
 import { DEFAULT_MODEL } from "@/lib/xai-client";
+import { LoadingStatusMessage } from "@/components/LoadingStatusMessage";
 
 const DASHBOARD_BACKGROUND = "/aesthetics/Greco-futurism/HHnTrgVaQAAP-_3.jpeg";
 
@@ -591,7 +592,7 @@ export default function DashboardPage() {
         className="min-h-screen bg-[#0a0a0a] bg-cover bg-center flex items-center justify-center"
         style={{ backgroundImage: `linear-gradient(rgba(10,10,10,0.82), rgba(10,10,10,0.82)), url(${DASHBOARD_BACKGROUND})` }}
       >
-        <div className="text-neutral-400">{t('common.loading')}</div>
+        <LoadingStatusMessage message={t('common.loading')} />
       </div>
     );
   }
@@ -1367,7 +1368,7 @@ export default function DashboardPage() {
                     </label>
                     <p className="text-xs text-neutral-500 mb-3">{slot.desc}</p>
                     <div className="w-full bg-neutral-950 border border-neutral-700 rounded-lg px-3 py-2 text-sm text-neutral-300">
-                      Grok 4.3 <span className="text-neutral-500">({DEFAULT_MODEL})</span>
+                      Grok 4.5 <span className="text-neutral-500">({DEFAULT_MODEL})</span>
                     </div>
                   </div>
                 ))}

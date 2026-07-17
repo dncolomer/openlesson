@@ -6,6 +6,7 @@ import { ArrowRight, ExternalLink } from "lucide-react";
 import { Footer } from "@/components/Footer";
 import { LandingNav } from "@/components/LandingNav";
 import { WorkspaceCardHero } from "@/components/WorkspaceCardHero";
+import { LoadingStatusMessage } from "@/components/LoadingStatusMessage";
 import { aestheticImageForId } from "@/lib/aesthetics";
 import { AYCL_PRICE_LABEL, AYCL_TOKEN_STORAGE_KEY } from "@/lib/aycl-shared";
 
@@ -202,7 +203,7 @@ function LifetimeAccessTab({
 
       {loading ? (
         <div className="flex justify-center py-16">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-white/20 border-t-white" />
+          <LoadingStatusMessage message="Loading" />
         </div>
       ) : workspaces.length === 0 ? (
         <div className="rounded-xl border border-zinc-800 bg-zinc-950/70 px-6 py-12 text-center backdrop-blur-sm">

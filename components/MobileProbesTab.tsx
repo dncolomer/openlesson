@@ -24,8 +24,6 @@ interface MobileProbesTabProps {
   onOpenPractice?: (text: string) => void;
   onAskAssistant?: (text: string) => void;
   onAdvanceStep?: (forceAdvance?: boolean) => Promise<void> | void;
-  stuckCheckText?: string | null;
-  onDismissStuckCheck?: () => void;
   onShareScreen?: () => void;
   /**
    * Destructive — archives every active probe for this session and
@@ -74,8 +72,6 @@ export function MobileProbesTab({
   onOpenPractice,
   onAskAssistant,
   onAdvanceStep,
-  stuckCheckText,
-  onDismissStuckCheck,
   onShareScreen,
   onResetProbes,
   archivingProbeId,
@@ -190,11 +186,8 @@ export function MobileProbesTab({
     }
   }, [currentProbeId]);
 
-  const actionButtonClass = `py-2.5 px-2 text-[11px] font-medium rounded-md border disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center justify-center ${
-    stuckCheckText
-      ? "bg-red-500/10 border-red-400/35 text-red-100 active:bg-red-500/15"
-      : "bg-neutral-800 border-neutral-700 text-neutral-200 active:bg-neutral-700"
-  }`;
+  const actionButtonClass =
+    "py-2.5 px-2 text-[11px] font-medium rounded-md border disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center justify-center bg-neutral-800 border-neutral-700 text-neutral-200 active:bg-neutral-700";
 
   // Fresh-session welcome takes precedence over the empty state
   // Parent-controlled welcome surface — overrides the probe carousel so
@@ -426,13 +419,7 @@ export function MobileProbesTab({
                 </div>
               ) : (
                 <>
-                  <div className={`grid grid-cols-4 gap-1.5 rounded-md border p-1.5 transition-colors ${stuckCheckText ? "border-red-400/40 bg-red-500/10" : "border-neutral-800 bg-neutral-950/40"}`}>
-                    {stuckCheckText && (
-                      <div className="col-span-4 flex items-start justify-between gap-2 rounded-md border border-red-400/25 bg-red-400/10 px-3 py-2 text-xs text-red-100">
-                        <p className="leading-relaxed">{stuckCheckText}</p>
-                        <button type="button" onClick={onDismissStuckCheck} className="shrink-0 rounded-md px-2 py-1 text-[11px] text-red-100/80 active:bg-red-300/10">{t("common.dismiss")}</button>
-                      </div>
-                    )}
+                  <div className="grid grid-cols-4 gap-1.5 rounded-md border border-neutral-800 bg-neutral-950/40 p-1.5 transition-colors">
                     <button
                       onClick={() => onOpenResources?.(currentStepText)}
                       disabled={!isSessionActive}
@@ -476,7 +463,7 @@ export function MobileProbesTab({
                   </div>
                   <button
                     onClick={handleDone}
-                    disabled={advancing || !isSessionActive || isCurrentStepCompleted || !!stuckCheckText}
+                    disabled={advancing || !isSessionActive || isCurrentStepCompleted}
                     title={t('session.markAsDone')}
                     className="mt-2 w-full py-2.5 px-3 text-xs font-medium rounded-md bg-neutral-100 text-neutral-900 active:bg-white disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-1.5"
                   >

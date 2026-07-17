@@ -3,7 +3,7 @@
 import { useState, useCallback, useEffect } from "react";
 import type React from "react";
 import { useRouter } from "next/navigation";
-import { createBrowserClient } from "@supabase/ssr";
+import { createClient, type SupabaseBrowserClient } from "@/lib/supabase/client";
 import { useI18n } from "../lib/i18n";
 import { aestheticImageForId, fetchAestheticPackages } from "@/lib/aesthetics";
 import { BlockDetailCard } from "./BlockDetailCard";
@@ -37,7 +37,7 @@ interface SessionItemProps {
   onRequestFork?: () => void;
   forkLoginHref?: string;
   isLoggedIn?: boolean;
-  supabase?: ReturnType<typeof createBrowserClient>;
+  supabase?: SupabaseBrowserClient;
   onNavigateToNode?: (blockId: string) => void;
   planTopic?: string;
   workspaceId?: string;
@@ -75,7 +75,7 @@ export function SessionItem({
   const router = useRouter();
   const supabase =
     propSupabase ||
-    createBrowserClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
+    createClient();
 
   const isDetail = variant === "detail";
 

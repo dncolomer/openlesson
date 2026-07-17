@@ -17,6 +17,17 @@ import {
   parseOpaqueWorkspaceCreateRequest,
   type OpaqueWorkspaceCreateRequest,
 } from "./opaque-evaluation";
+import {
+  getInitialChaptersBand,
+  resolveInitialChaptersFromBody,
+  type InitialChaptersLevel,
+} from "@/lib/initial-chapters";
+import {
+  composeWorkspaceSpatialGeneratePrompt,
+  normalizeGeneratedWorkspaceBlocks,
+  type WorkspaceBlockRef,
+} from "@/lib/workspace-spatial-create";
+import { insertGeneratedWorkspaceBlocks } from "@/lib/insert-workspace-blocks";
 import { persistSkillGridPositions, skillGridNodesFromRefs } from "@/lib/skill-grid-positions";
 import type { AuthContext } from "./types";
 
@@ -45,6 +56,8 @@ interface GeneratedBlock {
   description: string;
   is_start?: boolean;
   next?: string[];
+  position_x?: number;
+  position_y?: number;
 }
 
 interface GeneratedWorkspace {
@@ -137,22 +150,38 @@ async function createSemanticAgentWorkspace(
   supabase: SupabaseClient,
   auth: AuthContext,
   initialPrompt: string,
-  files: WorkspaceInitialFile[]
+  files: WorkspaceInitialFile[],
+  initialChapters: InitialChaptersLevel,
 ) {
   const fileContext = files.length
     ? `\nInitial files provided:\n${files.map((file) => `- ${file.name} (${file.mime_type})`).join("\n")}`
     : "";
 
+  const band = getInitialChaptersBand(initialChapters);
+  const prompt = composeWorkspaceSpatialGeneratePrompt({
+    topicOrPrompt: initialPrompt,
+    initialChapters,
+    fileContext,
+    extraRules: WORKSPACE_GENERATION_CONVERSION_GOAL_RULE,
+  });
+
   const generated = await callXaiJSON<GeneratedWorkspace>(
-    [
-      userMessage(
-        `Create a performance learning workspace from this prompt. Break it into assessable blocks for learning verification and proof-of-work-based gap analysis.\n\nPrompt:\n${initialPrompt}${fileContext}\n\nReturn ONLY JSON:\n{\n  "title": "concise workspace title",\n  "conversion_goal": "concise success/conversion outcome for this workspace",\n  "blocks": [\n    { "id": "a", "title": "Block title", "description": "What the learner should demonstrate", "is_start": true, "next": ["b"] }\n  ]\n}\n\nRules:\n- Create 3 to 8 blocks.\n- Blocks are assessable learning/performance units.\n- Use short stable ids only for linking within this response.${WORKSPACE_GENERATION_CONVERSION_GOAL_RULE}`
-      ),
-    ],
-    { model: DEFAULT_MODEL, maxTokens: 1800, temperature: 0.3 }
+    [userMessage(prompt)],
+    {
+      model: DEFAULT_MODEL,
+      maxTokens: Math.min(5000, 1600 + band.max * 140),
+      temperature: 0.3,
+    },
   );
 
   if (!generated.success || !generated.data?.blocks?.length) {
+    throw new Error("Failed to generate verification workspace");
+  }
+
+  const normalizedBlocks: WorkspaceBlockRef[] = normalizeGeneratedWorkspaceBlocks(
+    generated.data.blocks,
+  );
+  if (normalizedBlocks.length === 0) {
     throw new Error("Failed to generate verification workspace");
   }
 
@@ -194,38 +223,14 @@ async function createSemanticAgentWorkspace(
     throw new Error("Failed to create workspace");
   }
 
-  const blockIdMap = new Map<string, string>();
-  for (const block of generated.data.blocks) {
-    const { data: insertedBlock, error: blockError } = await supabase
-      .from("blocks")
-      .insert({
-        workspace_id: workspace.id,
-        title: block.title,
-        description: block.description || "",
-        is_start: block.is_start === true,
-        next_block_ids: [],
-        status: "available",
-      })
-      .select("id")
-      .single();
-
-    if (blockError || !insertedBlock) continue;
-    blockIdMap.set(block.id, insertedBlock.id);
+  try {
+    await insertGeneratedWorkspaceBlocks(supabase, workspace.id, normalizedBlocks);
+  } catch (insertError) {
+    await supabase.from("workspaces").delete().eq("id", workspace.id);
+    throw insertError instanceof Error
+      ? insertError
+      : new Error("Failed to create workspace blocks");
   }
-
-  for (const block of generated.data.blocks) {
-    const dbId = blockIdMap.get(block.id);
-    if (!dbId || !Array.isArray(block.next)) continue;
-    const nextIds = block.next.map((id) => blockIdMap.get(id)).filter((id): id is string => Boolean(id));
-    if (nextIds.length) {
-      await supabase.from("blocks").update({ next_block_ids: nextIds }).eq("id", dbId);
-    }
-  }
-
-  await persistSkillGridPositions(
-    supabase,
-    skillGridNodesFromRefs(generated.data.blocks, blockIdMap)
-  );
 
   const uploadedFiles = await uploadWorkspaceSeedFiles(supabase, workspace.id, ownerUserId, files);
 
@@ -342,5 +347,6 @@ export async function createAgentWorkspace(
     throw new Error("initial_prompt is required unless evaluation_mode is opaque with protocol");
   }
 
-  return createSemanticAgentWorkspace(supabase, auth, initialPrompt, files);
+  const initialChapters = resolveInitialChaptersFromBody(body);
+  return createSemanticAgentWorkspace(supabase, auth, initialPrompt, files, initialChapters);
 }

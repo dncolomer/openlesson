@@ -13,21 +13,30 @@ import {
 } from "@/lib/agent-v2/performance-report";
 
 describe("PERFORMANCE_REPORT_SCHEMA", () => {
-  it("requires learning, conversion, marker_scores, and gap_analysis", () => {
+  it("requires learning, conversion, GHC, marker_scores, and gap_analysis", () => {
     expect(PERFORMANCE_REPORT_SCHEMA.schema.required).toContain("overall_score");
+    expect(PERFORMANCE_REPORT_SCHEMA.schema.required).not.toContain("exploration_score");
     expect(PERFORMANCE_REPORT_SCHEMA.schema.required).toContain("conversion_score");
     expect(PERFORMANCE_REPORT_SCHEMA.schema.required).toContain("conversion_goal");
+    expect(PERFORMANCE_REPORT_SCHEMA.schema.required).toContain("ghc_score");
+    expect(PERFORMANCE_REPORT_SCHEMA.schema.required).toContain("ghc_confidence");
     expect(PERFORMANCE_REPORT_SCHEMA.schema.required).toContain("marker_scores");
     expect(PERFORMANCE_REPORT_SCHEMA.schema.required).toContain("gap_analysis");
+    expect(JSON.stringify(PERFORMANCE_REPORT_SCHEMA.schema)).not.toContain("next_practice");
   });
 });
 
 describe("buildPerformanceReportInstructions", () => {
-  it("mentions spider scores and gaps", () => {
+  it("mentions triple scores, ontology, temporal PoW, spider scores and gaps", () => {
     const instructions = buildPerformanceReportInstructions(null);
+    expect(instructions).toContain("WORKSPACE ONTOLOGY");
     expect(instructions).toContain("overall_score");
+    expect(instructions).not.toMatch(/compatibility alias|also emitted as overall_score/i);
     expect(instructions).toContain("conversion_score");
     expect(instructions).toContain("conversion_goal");
+    expect(instructions).toContain("ghc_score");
+    expect(instructions).toContain("Genuine Human Cognition");
+    expect(instructions).toContain("temporal");
     expect(instructions).toContain("marker_scores");
     expect(instructions).toContain("gap_analysis.gaps");
     expect(instructions).toContain("gap_analysis.next_steps");
@@ -54,16 +63,19 @@ describe("buildPerformanceReportInstructions", () => {
 });
 
 describe("buildPerformanceReportContract", () => {
-  it("describes spider visualization and gap list", () => {
+  it("describes spider visualization and gap list without dual score fields", () => {
     const contract = buildPerformanceReportContract("https://uncertain.systems");
     expect(contract.endpoint_pattern).toContain("/performance");
     expect(contract.marker_scores.visualization).toBe("spider_radar");
     expect(contract.gap_analysis.gaps_required).toBe(true);
+    expect(contract.required_fields).toContain("overall_score");
+    expect(contract.required_fields).not.toContain("exploration_score");
     expect(contract.example_report.overall_score).toBeGreaterThan(0);
     expect(contract.example_report.conversion_score).toBeGreaterThan(0);
     expect(contract.example_report.conversion_goal.length).toBeGreaterThan(0);
     expect(contract.example_report.marker_scores.length).toBeGreaterThanOrEqual(4);
     expect(contract.example_report.gap_analysis.gaps.length).toBeGreaterThan(0);
+    expect(contract.example_report).not.toHaveProperty("exploration_score");
   });
 });
 
@@ -71,16 +83,35 @@ describe("emptyPerformanceReport", () => {
   it("returns zero score and empty markers with gap scaffold", () => {
     const report = emptyPerformanceReport();
     expect(report.overall_score).toBe(0);
+    expect(report).not.toHaveProperty("exploration_score");
     expect(report.conversion_score).toBe(0);
+    expect(report.ghc_score).toBe(0);
+    expect(report.ghc_confidence).toBe("none");
     expect(report.conversion_goal.length).toBeGreaterThan(0);
     expect(report.marker_scores).toEqual([]);
     expect(report.gap_analysis.gaps).toEqual([]);
+    expect(report.gap_analysis).not.toHaveProperty("next_practice");
     expect(report.gap_analysis.next_steps.directions.length).toBeGreaterThan(0);
     expect(report.gap_analysis.next_steps.events.length).toBeGreaterThan(0);
     expect(report.summary).not.toMatch(/TAP/i);
     for (const event of report.gap_analysis.next_steps.events) {
       expect(isPlatformRemediationSuggestion(event)).toBe(false);
     }
+  });
+});
+
+describe("normalizePerformanceReport", () => {
+  it("clamps scores and defaults GHC confidence", () => {
+    const normalized = normalizePerformanceReport({
+      ...EXAMPLE_PERFORMANCE_REPORT,
+      overall_score: 80,
+      ghc_score: undefined as unknown as number,
+      ghc_confidence: "not-a-level" as unknown as "none",
+    });
+    expect(normalized.overall_score).toBe(80);
+    expect(normalized).not.toHaveProperty("exploration_score");
+    expect(normalized.ghc_confidence).toBe("none");
+    expect(normalized.gap_analysis).not.toHaveProperty("next_practice");
   });
 });
 
@@ -126,6 +157,8 @@ describe("EXAMPLE_PERFORMANCE_REPORT", () => {
       overall_score: expect.any(Number),
       conversion_score: expect.any(Number),
       conversion_goal: expect.any(String),
+      ghc_score: expect.any(Number),
+      ghc_confidence: expect.any(String),
       marker_scores: expect.any(Array),
       gap_analysis: {
         gaps: expect.any(Array),
@@ -135,6 +168,7 @@ describe("EXAMPLE_PERFORMANCE_REPORT", () => {
         },
       },
     });
+    expect(EXAMPLE_PERFORMANCE_REPORT).not.toHaveProperty("exploration_score");
   });
 });
 
@@ -167,6 +201,7 @@ describe("recoverPerformanceReportFromModelText", () => {
     expect(recovered).not.toBeNull();
     expect(typeof recovered?.overall_score).toBe("number");
     expect(recovered?.overall_score).toBe(61);
+    expect(recovered?.ghc_confidence).toBe("none");
     expect(Array.isArray(recovered?.marker_scores)).toBe(true);
     expect(recovered?.marker_scores.length).toBeGreaterThan(0);
     expect(recovered?.marker_scores[0]?.score).toBe(66);
@@ -186,14 +221,13 @@ describe("recoverPerformanceReportFromModelText", () => {
     const recovered = recoverPerformanceReportFromModelText(truncated);
     expect(recovered).not.toBeNull();
     expect(recovered?.overall_score).toBe(73);
+    expect(recovered?.ghc_score).toBe(0);
     expect(recovered?.marker_scores.length).toBe(2);
     expect(recovered?.marker_scores[0]?.id).toBe("marker_1");
     expect(recovered?.confidence).toBe("developing");
   });
 
   it("returns null when marker_scores are missing", () => {
-    expect(
-      recoverPerformanceReportFromModelText('{"overall_score": 40, "summary": "No markers"}'),
-    ).toBeNull();
+    expect(recoverPerformanceReportFromModelText('{"overall_score": 10}')).toBeNull();
   });
 });

@@ -1,10 +1,15 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { createBrowserClient } from "@supabase/ssr";
+import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import { useI18n } from "@/lib/i18n";
 import { FileDropZone, type AttachedFile } from "@/components/FileDropZone";
+import {
+  DEFAULT_INITIAL_CHAPTERS,
+  INITIAL_CHAPTERS_LEVELS,
+  type InitialChaptersLevel,
+} from "@/lib/initial-chapters";
 
 const MAX_ATTACHED_FILES = 5;
 
@@ -132,8 +137,6 @@ interface PlanModeSelectProps {
   subtitle?: string;
   placeholder?: string;
   exampleTopics?: string[];
-  /** @deprecated YouTube tab has been removed. Prop kept for backward compatibility. */
-  showYouTubeTab?: boolean;
 }
 
 export function PlanModeSelect({ 
@@ -154,16 +157,14 @@ export function PlanModeSelect({
   const displaySubtitle = subtitle ?? t('planMode.subtitleWithoutYoutube');
   const [topic, setTopic] = useState("");
   const [weeks, setWeeks] = useState(4);
+  const [initialChapters, setInitialChapters] = useState<InitialChaptersLevel>(DEFAULT_INITIAL_CHAPTERS);
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState("");
   const [user, setUser] = useState<{ id: string } | null>(null);
   const [attachedFiles, setAttachedFiles] = useState<AttachedFile[]>([]);
   const [showFileZone, setShowFileZone] = useState(false);
   const router = useRouter();
-  const supabase = createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
+  const supabase = createClient();
 
   const styles = themeStyles[theme];
 
@@ -224,6 +225,7 @@ export function PlanModeSelect({
       const body = {
         topic: topic.trim(),
         days: weeks * 7,
+        initialChapters,
         ...(attachedFiles.length > 0 ? {
           files: attachedFiles.map(f => ({ name: f.name, mimeType: f.mimeType, data: f.data }))
         } : {}),
@@ -330,6 +332,44 @@ export function PlanModeSelect({
         {error && (
           <p className="mt-3 text-sm text-red-400">{error}</p>
         )}
+      </div>
+
+      {/* Initial chapters — how many skill-grid blocks to generate */}
+      <div className="mb-6">
+        <label className={`block text-sm mb-3 ${styles.label}`}>
+          {t("planMode.initialChapters")}
+        </label>
+        <div className="grid grid-cols-3 gap-2">
+          {INITIAL_CHAPTERS_LEVELS.map((level) => {
+            const selected = initialChapters === level;
+            const titleKey =
+              level === "narrow"
+                ? "planMode.initialChaptersNarrow"
+                : level === "mid"
+                  ? "planMode.initialChaptersMid"
+                  : "planMode.initialChaptersBroad";
+            const descKey =
+              level === "narrow"
+                ? "planMode.initialChaptersNarrowDesc"
+                : level === "mid"
+                  ? "planMode.initialChaptersMidDesc"
+                  : "planMode.initialChaptersBroadDesc";
+            return (
+              <button
+                key={level}
+                type="button"
+                onClick={() => setInitialChapters(level)}
+                disabled={isGenerating}
+                className={`rounded-xl border px-2.5 py-2.5 text-left transition-colors disabled:opacity-50 ${
+                  selected ? styles.weekActive : styles.weekInactive
+                }`}
+              >
+                <span className="block text-xs font-medium leading-tight">{t(titleKey)}</span>
+                <span className="block text-[10px] opacity-70 leading-snug mt-1">{t(descKey)}</span>
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {/* Weeks Selector */}

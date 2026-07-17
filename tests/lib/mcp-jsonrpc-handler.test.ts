@@ -25,7 +25,7 @@ describe("mcp-jsonrpc-handler", () => {
 
     expect(response?.result).toMatchObject({
       protocolVersion: "2025-03-26",
-      serverInfo: { name: "openlesson-proof-of-work-api" },
+      serverInfo: { name: "uncertain-systems-proof-of-work-api" },
     });
   });
 

@@ -197,7 +197,7 @@ async function waitForServer(timeoutMs = 30000) {
 }
 
 async function main() {
-  console.log("OpenLesson safe prod smoke test");
+  console.log("Uncertain Systems safe prod smoke test");
   console.log("Mode: read-only DB probes + unauthenticated HTTP checks\n");
 
   if (stripeKey.startsWith("sk_live_")) {

@@ -1,12 +1,9 @@
 import { NextResponse } from "next/server";
+import { requireAdmin } from "@/lib/admin/require-admin";
 import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
 
 export const runtime = "nodejs";
 
-function getAdminClient() {
-  return createAdminClient();
-}
 
 export async function GET(
   request: Request,
@@ -14,24 +11,9 @@ export async function GET(
 ) {
   try {
     const { userId } = await params;
-    const supabase = await createClient();
-    const { data: { user: authUser } } = await supabase.auth.getUser();
-    
-    if (!authUser) {
-      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-    }
-
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("is_admin")
-      .eq("id", authUser.id)
-      .single();
-
-    if (!profile?.is_admin) {
-      return NextResponse.json({ error: "Admin access required" }, { status: 403 });
-    }
-
-    const adminClient = getAdminClient();
+    const auth = await requireAdmin();
+    if ("error" in auth) return auth.error;
+    const { adminClient, user: authUser } = auth;
 
     const { data: userProfile, error: profileError } = await adminClient
       .from("profiles")

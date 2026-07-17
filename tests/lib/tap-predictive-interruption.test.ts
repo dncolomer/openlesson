@@ -3,97 +3,121 @@ import {
   predictInterruption,
   withProofOfWorkApiResponse,
 } from "@/lib/agent-v2/predictive-interruption";
-import { setTimLlmPredictorForTests } from "@/lib/agent-v2/tim-llm-predictor";
+import { setTimProviderForTests, type TimProvider } from "@/lib/agent-v2/tim-provider";
+import type { TimFeatureEnvelopeV1 } from "@/lib/agent-v2/tim-feature-envelope";
+import type { ProofOfWorkApiInterruption } from "@/lib/agent-v2/predictive-interruption";
 
-describe("tap predictive interruptions (LLM-backed TIM)", () => {
+function rulesProvider(
+  decide: (features: TimFeatureEnvelopeV1) => ProofOfWorkApiInterruption | null,
+): TimProvider {
+  return {
+    id: "tap-rules",
+    async predict(features) {
+      return decide(features);
+    },
+  };
+}
+
+function active(
+  type: NonNullable<ProofOfWorkApiInterruption>["intervention"]["type"],
+  message: string,
+  delay_ms: number,
+  extra?: Partial<NonNullable<ProofOfWorkApiInterruption>["intervention"]> & {
+    confidence?: "low" | "medium" | "high";
+  },
+): ProofOfWorkApiInterruption {
+  const { confidence = "medium", ...interventionExtra } = extra || {};
+  return {
+    interruption_id: `int_${type}`,
+    delay_ms,
+    confidence,
+    predicted_at: new Date().toISOString(),
+    intervention: {
+      type,
+      message,
+      ...interventionExtra,
+    },
+  };
+}
+
+describe("tap predictive interruptions (TIM provider)", () => {
   beforeEach(() => {
-    setTimLlmPredictorForTests(async (context) => {
-      const action = context.tap_action || "";
+    setTimProviderForTests(
+      rulesProvider((features) => {
+        const endpoint = features.event.endpoint;
+        const action = features.proof_of_work.tool_action || "";
+        const artifacts = features.proof_of_work.artifacts_count ?? 0;
 
-      if (context.endpoint === "upload_tap_trace" && action === "system1:pause_finalize") {
-        return {
-          should_interrupt: true,
-          delay_ms: 45_000,
-          confidence: "medium",
-          intervention_type: "reflection_prompt",
-          message:
+        if (endpoint === "upload_tap_trace" && action === "system1:pause_finalize") {
+          return active(
+            "reflection_prompt",
             "You stashed a thought without sending it to Helios — what made you hold back, or what were you still forming?",
-          consumer_action: "present_tap_reflection",
-        };
-      }
-      if (context.endpoint === "upload_tap_trace" && action.startsWith("system2:send")) {
-        return {
-          should_interrupt: true,
-          delay_ms: 90_000,
-          confidence: "low",
-          intervention_type: "checkpoint_probe",
-          message: "Before your next thought, state one claim from your last answer you are least sure about.",
-          consumer_action: "present_tap_checkpoint",
-        };
-      }
-      if (context.endpoint === "upload_tap_trace" && context.proof_of_work_artifacts === 5) {
-        return {
-          should_interrupt: true,
-          delay_ms: 60_000,
-          confidence: "medium",
-          intervention_type: "coaching_nudge",
-          message: "Pause and summarize the main idea you have demonstrated so far in one sentence.",
-          consumer_action: "present_tap_synthesis",
-        };
-      }
-      if (context.endpoint === "upload_tap_chat") {
-        return {
-          should_interrupt: true,
-          delay_ms: 75_000,
-          confidence: "medium",
-          intervention_type: "checkpoint_probe",
-          message: "Helios asked a question — can you answer it out loud before you type your next thought?",
-          consumer_action: "present_verbal_probe",
-        };
-      }
-      if (context.endpoint === "upload_ile_trace" && action === "system1:pause_finalize") {
-        return {
-          should_interrupt: true,
-          delay_ms: 45_000,
-          confidence: "medium",
-          intervention_type: "reflection_prompt",
-          message: "You paused without sending — what were you still forming?",
-        };
-      }
-      if (context.endpoint === "upload_tap_speech" && action === "speech_start") {
-        return {
-          should_interrupt: true,
-          delay_ms: 120_000,
-          confidence: "low",
-          intervention_type: "checkpoint_probe",
-          message: "Keep going — can you connect this thought to something specific you learned?",
-        };
-      }
-      if (context.endpoint === "upload_tap_speech" && action === "speech_stop") {
-        return {
-          should_interrupt: true,
-          delay_ms: 30_000,
-          confidence: "low",
-          intervention_type: "reflection_prompt",
-          message: "You paused — what were you about to say next, or what made you stop there?",
-        };
-      }
-      if (context.endpoint === "upload_tap_idle") {
-        return {
-          should_interrupt: true,
-          delay_ms: 15_000,
-          confidence: "medium",
-          intervention_type: "coaching_nudge",
-          message: "You have been quiet for a minute — say your current thought out loud, even if it is unfinished.",
-          consumer_action: "present_idle_nudge",
-        };
-      }
-      return { should_interrupt: false };
-    });
+            45_000,
+            { consumer_action: "present_tap_reflection" },
+          );
+        }
+        if (endpoint === "upload_tap_trace" && action.startsWith("system2:send")) {
+          return active(
+            "checkpoint_probe",
+            "Before your next thought, state one claim from your last answer you are least sure about.",
+            90_000,
+            { confidence: "low", consumer_action: "present_tap_checkpoint" },
+          );
+        }
+        if (endpoint === "upload_tap_trace" && artifacts === 5) {
+          return active(
+            "coaching_nudge",
+            "Pause and summarize the main idea you have demonstrated so far in one sentence.",
+            60_000,
+            { consumer_action: "present_tap_synthesis" },
+          );
+        }
+        if (endpoint === "upload_tap_chat") {
+          return active(
+            "checkpoint_probe",
+            "Helios asked a question — can you answer it out loud before you type your next thought?",
+            75_000,
+            { consumer_action: "present_verbal_probe" },
+          );
+        }
+        if (endpoint === "upload_ile_trace" && action === "system1:pause_finalize") {
+          return active(
+            "reflection_prompt",
+            "You paused without sending — what were you still forming?",
+            45_000,
+          );
+        }
+        if (endpoint === "upload_tap_speech" && action === "speech_start") {
+          return active(
+            "checkpoint_probe",
+            "Keep going — can you connect this thought to something specific you learned?",
+            120_000,
+            { confidence: "low" },
+          );
+        }
+        if (endpoint === "upload_tap_speech" && action === "speech_stop") {
+          return active(
+            "reflection_prompt",
+            "You paused — what were you about to say next, or what made you stop there?",
+            30_000,
+            { confidence: "low" },
+          );
+        }
+        if (endpoint === "upload_tap_idle") {
+          return active(
+            "coaching_nudge",
+            "You have been quiet for a minute — say your current thought out loud, even if it is unfinished.",
+            15_000,
+            { consumer_action: "present_idle_nudge" },
+          );
+        }
+        return null;
+      }),
+    );
   });
 
   afterEach(() => {
-    setTimLlmPredictorForTests(null);
+    setTimProviderForTests(null);
   });
 
   it("predicts reflection after stash (system1 pause_finalize)", async () => {
@@ -128,7 +152,7 @@ describe("tap predictive interruptions (LLM-backed TIM)", () => {
     expect(interruption?.intervention.type).toBe("coaching_nudge");
   });
 
-  it("returns null for low-signal trace actions when LLM declines", async () => {
+  it("returns null for low-signal trace actions when provider declines", async () => {
     expect(
       await predictInterruption({
         endpoint: "upload_tap_trace",

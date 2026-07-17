@@ -1,4 +1,16 @@
 import { parseJsonLoose } from "@/lib/xai-client";
+import { composePrompt } from "@/lib/prompt-kernel/compose";
+import {
+  SCORE_FIELD_DESCRIPTIONS,
+  TRIPLE_SCORE_INSTRUCTIONS,
+  type GhcConfidence,
+} from "@/lib/prompt-kernel/scores";
+import {
+  WORLD_MODEL_DELTA_INSTRUCTIONS,
+  type LearningWorldModelDelta,
+} from "@/lib/prompt-kernel/world-model";
+
+export type { GhcConfidence };
 
 export interface PerformanceMarkerScore {
   id: string;
@@ -17,7 +29,7 @@ export const PERFORMANCE_REMEDIATION_GUARDRAILS = `Remediation output rules (gap
 - TAP, ILE, blocks, and session artifacts may inform scoring as INPUT proof of work — but must never appear as OUTPUT recommendations.`;
 
 const PLATFORM_REMEDIATION_PATTERN =
-  /\b(tap|think\s+aloud(?:\s+protocol)?|ile|integrated\s+learning\s+environment|openlesson)\b|(?:complete|finish)\s+(?:the\s+)?(?:workspace\s+)?blocks?\b|block\s+completion|issue\s+(?:a\s+)?tap|run\s+(?:a\s+)?tap|schedule\s+(?:a\s+)?tap/i;
+  /\b(tap|think\s+aloud(?:\s+protocol)?|ile|integrated\s+learning\s+environment|openlesson|uncertain\s+systems)\b|(?:complete|finish)\s+(?:the\s+)?(?:[\w-]+\s+)*(?:workspace\s+)?blocks?\b|block\s+completion|issue\s+(?:a\s+)?tap|run\s+(?:a\s+)?tap|schedule\s+(?:a\s+)?tap/i;
 
 export function isPlatformRemediationSuggestion(text: string): boolean {
   return PLATFORM_REMEDIATION_PATTERN.test(text.trim());
@@ -47,16 +59,23 @@ export interface PerformanceGapAnalysis {
   summary: string;
   gaps: PerformanceGapItem[];
   next_steps: PerformanceNextSteps;
-  /** @deprecated Normalized into next_steps.events when present. */
-  next_practice?: string[];
 }
 
 export interface PerformanceReport {
+  /** Learning / exploration score 0–100: workspace exploration + demonstrated knowledge coverage. */
   overall_score: number;
   /** Estimated likelihood (0–100) of achieving the workspace conversion goal from all proof of work. */
   conversion_score: number;
   /** What "conversion" means for this workspace — inferred from context when not explicit. */
   conversion_goal: string;
+  /** Genuine Human Cognition score 0–100. Low confidence when only tool dumps are present. */
+  ghc_score: number;
+  /** Confidence in ghc_score given signal quality. */
+  ghc_confidence: GhcConfidence;
+  /** Optional note on inter-event timing that informed scores. */
+  temporal_summary?: string;
+  /** Optional partial learning world model update from this evaluation. */
+  world_model_delta?: LearningWorldModelDelta;
   marker_scores: PerformanceMarkerScore[];
   summary: string;
   strengths: string[];
@@ -81,6 +100,15 @@ export interface PerformanceReportContract {
     description: string;
   };
   conversion_goal: {
+    type: "string";
+    description: string;
+  };
+  ghc_score: {
+    type: "integer";
+    range: "0-100";
+    description: string;
+  };
+  ghc_confidence: {
     type: "string";
     description: string;
   };
@@ -157,17 +185,33 @@ export const PERFORMANCE_REPORT_SCHEMA = {
     properties: {
       overall_score: {
         type: "number",
-        description: "0-100 learning verification score synthesized from proof of work",
+        description: SCORE_FIELD_DESCRIPTIONS.overall_score,
       },
       conversion_score: {
         type: "number",
-        description:
-          "0-100 estimated likelihood of achieving the workspace conversion goal based on all proof of work",
+        description: SCORE_FIELD_DESCRIPTIONS.conversion_score,
       },
       conversion_goal: {
         type: "string",
-        description:
-          "What conversion means in this workspace (e.g. trial activation, certification sign-off); infer from context when not explicit",
+        description: SCORE_FIELD_DESCRIPTIONS.conversion_goal,
+      },
+      ghc_score: {
+        type: "number",
+        description: SCORE_FIELD_DESCRIPTIONS.ghc_score,
+      },
+      ghc_confidence: {
+        type: "string",
+        enum: ["none", "low", "medium", "high"],
+        description: SCORE_FIELD_DESCRIPTIONS.ghc_confidence,
+      },
+      temporal_summary: {
+        type: "string",
+        description: SCORE_FIELD_DESCRIPTIONS.temporal_summary,
+      },
+      world_model_delta: {
+        type: "object",
+        description: "Partial learning world model update from this evaluation",
+        additionalProperties: true,
       },
       marker_scores: {
         type: "array",
@@ -186,7 +230,6 @@ export const PERFORMANCE_REPORT_SCHEMA = {
             items: PERFORMANCE_GAP_ITEM_SCHEMA,
           },
           next_steps: PERFORMANCE_NEXT_STEPS_SCHEMA,
-          next_practice: { type: "array", items: { type: "string" } },
         },
         required: ["summary", "gaps", "next_steps"],
         additionalProperties: false,
@@ -198,6 +241,8 @@ export const PERFORMANCE_REPORT_SCHEMA = {
       "overall_score",
       "conversion_score",
       "conversion_goal",
+      "ghc_score",
+      "ghc_confidence",
       "marker_scores",
       "summary",
       "strengths",
@@ -214,6 +259,20 @@ export const EXAMPLE_PERFORMANCE_REPORT: PerformanceReport = {
   overall_score: 72,
   conversion_score: 58,
   conversion_goal: "Trial-to-paid subscription activation",
+  ghc_score: 45,
+  ghc_confidence: "low",
+  temporal_summary: "Tool events clustered with short gaps; little reflective dwell between decisions.",
+  world_model_delta: {
+    evidence_appetite: {
+      want_more: ["decision_rationale", "reflection_checkpoint"],
+      saturated: ["tool_crud_events"],
+    },
+    scores_snapshot: {
+      exploration_score: 72,
+      conversion_score: 58,
+      ghc_score: 45,
+    },
+  },
   marker_scores: [
     {
       id: "workflow_execution",
@@ -280,6 +339,8 @@ export function buildPerformanceReportContract(baseUrl?: string): PerformanceRep
       "overall_score",
       "conversion_score",
       "conversion_goal",
+      "ghc_score",
+      "ghc_confidence",
       "marker_scores",
       "summary",
       "strengths",
@@ -295,19 +356,25 @@ export function buildPerformanceReportContract(baseUrl?: string): PerformanceRep
     overall_score: {
       type: "integer",
       range: "0-100",
-      description:
-        "Learning verification score synthesized from workspace proof of work, session artifacts, and competency signals.",
+      description: SCORE_FIELD_DESCRIPTIONS.overall_score,
     },
     conversion_score: {
       type: "integer",
       range: "0-100",
-      description:
-        "Estimated likelihood the learner achieves the workspace conversion goal, inferred from all proof of work — distinct from learning verification.",
+      description: SCORE_FIELD_DESCRIPTIONS.conversion_score,
     },
     conversion_goal: {
       type: "string",
-      description:
-        "Plain-language definition of what conversion means for this workspace (infer from title, notes, blocks, and proof of work when not explicit).",
+      description: SCORE_FIELD_DESCRIPTIONS.conversion_goal,
+    },
+    ghc_score: {
+      type: "integer",
+      range: "0-100",
+      description: SCORE_FIELD_DESCRIPTIONS.ghc_score,
+    },
+    ghc_confidence: {
+      type: "string",
+      description: SCORE_FIELD_DESCRIPTIONS.ghc_confidence,
     },
     marker_scores: {
       description:
@@ -337,6 +404,9 @@ export function emptyPerformanceReport(message?: string): PerformanceReport {
     overall_score: 0,
     conversion_score: 0,
     conversion_goal: "Goal conversion not yet inferable — collect more workspace proof of work.",
+    ghc_score: 0,
+    ghc_confidence: "none",
+    temporal_summary: "No temporal proof-of-work series available yet.",
     marker_scores: [],
     summary,
     strengths: [],
@@ -376,36 +446,38 @@ export function buildPerformanceReportInstructions(
     ? `\nAuthoritative workspace conversion goal (use exactly for conversion_goal; score conversion_score against this):\n"${workspaceConversionGoal.trim()}"\n`
     : "";
 
-  return `You produce structured learning and gap analysis for ${scope} in Uncertain Systems.
+  const task = `You produce structured learning and gap analysis for ${scope} in Uncertain Systems.
 ${goalLine}
 
 Use the attached workspace performance JSON and artifact files. Return only JSON matching the schema.
 
-Required scoring outputs:
-1. overall_score — integer 0-100 **learning verification** score synthesized from all proof of work (not an average of markers; use judgment). Measures demonstrated competency and readiness to perform — not business conversion directly.
-2. conversion_score — integer 0-100 **conversion likelihood** estimating how likely the learner is to achieve the workspace's outcome/conversion goal based on all proof of work (tool traces, TAP, artifacts, milestones, drop-offs, re-engagement). This is separate from overall_score: strong learning can coexist with low conversion odds if proof of work shows abandonment, missing activation steps, or blockers.
-3. conversion_goal — one concise phrase defining what "conversion" means for this workspace. When an authoritative workspace conversion goal is provided above, echo it exactly. Otherwise infer from workspace title, description, notes, blocks, eval definition, and proof of work.
-4. marker_scores — 4-8 competency axes for spider/radar visualization. Each item needs:
+${TRIPLE_SCORE_INSTRUCTIONS}
+
+Additional required outputs:
+8. marker_scores — 4-8 competency axes for spider/radar visualization. Each item needs:
    - id: snake_case competency key aligned to workspace blocks or eval definition
    - label: human-readable axis name
    - score: 0-100 for that competency
    - rationale: one sentence grounded in specific evidence
    - block_id (optional): tie axis to a workspace block when scoped
-5. gap_analysis.gaps — concrete deficiencies only (title, proof_of_work, severity low|medium|high, suggested_repair). List every meaningful gap found; use an empty array only when proof of work is truly insufficient to name gaps. Do not duplicate next steps as gaps.
-6. gap_analysis.next_steps — always include, separate from gaps:
+9. gap_analysis.gaps — concrete deficiencies only (title, proof_of_work, severity low|medium|high, suggested_repair). List every meaningful gap found; use an empty array only when proof of work is truly insufficient to name gaps. Do not duplicate next steps as gaps.
+10. gap_analysis.next_steps — always include, separate from gaps:
    - directions: 2-5 high-level outcomes or intermediate goals toward readiness/conversion (domain/product language)
    - events: 3-8 granular, observable product/tool actions or event verbs from the learner's real workflow
-7. suggestions — short product/workflow follow-ups; same remediation rules as gaps and next_steps.
+11. suggestions — short product/workflow follow-ups; same remediation rules as gaps and next_steps.
+12. ${WORLD_MODEL_DELTA_INSTRUCTIONS}
 
 ${PERFORMANCE_REMEDIATION_GUARDRAILS}
 
 Evidence inputs to weigh when scoring (not remediation outputs):
-- Tool usage, screenshots, video, and EEG proof of work
+- Tool usage, screenshots, video, and EEG proof of work (timestamps matter — use inter-event timing for temporal_summary and GHC)
 - Session reports and competency descriptions from the eval definition
-- Think Aloud Protocol (TAP) and ILE traces when present — use for scoring only
+- Think Aloud Protocol (TAP) and ILE selective thought traces when present — use for scoring and GHC only
 - Uploaded workspace files
 
 Be honest when proof of work is thin. Severity should reflect business risk, not politeness. Lower overall_score and marker scores when proof of work is sparse.${buildPerformanceStyleSection(stylePrompt)}`;
+
+  return composePrompt({ ontology: "full", task });
 }
 
 function normalizeStringList(value: unknown): string[] {
@@ -443,36 +515,52 @@ export function normalizePerformanceGapAnalysis(
         : "No specific learning gaps were identified from the available proof of work.";
 
   const rawNextSteps = gapAnalysis?.next_steps;
-  let next_steps: PerformanceNextSteps;
-  if (rawNextSteps && typeof rawNextSteps === "object") {
-    next_steps = {
-      directions: sanitizeRemediationStrings(normalizeStringList(rawNextSteps.directions)),
-      events: sanitizeRemediationStrings(normalizeStringList(rawNextSteps.events)),
-    };
-  } else {
-    next_steps = {
-      directions: [],
-      events: sanitizeRemediationStrings(normalizeStringList(gapAnalysis?.next_practice)),
-    };
-  }
-
-  const legacyPractice =
-    next_steps.directions.length > 0 || next_steps.events.length > 0
-      ? [...next_steps.directions, ...next_steps.events]
-      : sanitizeRemediationStrings(normalizeStringList(gapAnalysis?.next_practice));
+  const next_steps: PerformanceNextSteps =
+    rawNextSteps && typeof rawNextSteps === "object"
+      ? {
+          directions: sanitizeRemediationStrings(normalizeStringList(rawNextSteps.directions)),
+          events: sanitizeRemediationStrings(normalizeStringList(rawNextSteps.events)),
+        }
+      : { directions: [], events: [] };
 
   return {
     summary,
     gaps,
     next_steps,
-    ...(legacyPractice.length > 0 ? { next_practice: legacyPractice } : {}),
   };
+}
+
+const VALID_GHC_CONFIDENCE = new Set<GhcConfidence>(["none", "low", "medium", "high"]);
+
+function normalizeGhcConfidence(value: unknown): GhcConfidence {
+  if (typeof value === "string" && VALID_GHC_CONFIDENCE.has(value as GhcConfidence)) {
+    return value as GhcConfidence;
+  }
+  return "none";
 }
 
 export function normalizePerformanceReport(report: PerformanceReport): PerformanceReport {
   const gap_analysis = normalizePerformanceGapAnalysis(report.gap_analysis);
+  const overall_score = clampPerformanceScore(report.overall_score);
+  const ghc_score = clampPerformanceScore(report.ghc_score);
+  const ghc_confidence = normalizeGhcConfidence(report.ghc_confidence);
+  const temporal_summary =
+    typeof report.temporal_summary === "string" && report.temporal_summary.trim()
+      ? report.temporal_summary.trim()
+      : undefined;
+  const world_model_delta =
+    report.world_model_delta && typeof report.world_model_delta === "object"
+      ? report.world_model_delta
+      : undefined;
+
   return {
     ...report,
+    overall_score,
+    conversion_score: clampPerformanceScore(report.conversion_score),
+    ghc_score,
+    ghc_confidence,
+    ...(temporal_summary ? { temporal_summary } : {}),
+    ...(world_model_delta ? { world_model_delta } : {}),
     growth_areas: sanitizeRemediationStrings(report.growth_areas ?? []),
     suggestions: sanitizeRemediationStrings(report.suggestions ?? []),
     gap_analysis,
@@ -550,6 +638,14 @@ export function recoverPerformanceReportFromModelText(text: string): Performance
     conversion_score: clampPerformanceScore(raw.conversion_score, overall_score),
     conversion_goal:
       typeof raw.conversion_goal === "string" ? raw.conversion_goal.trim() : "",
+    ghc_score: clampPerformanceScore(raw.ghc_score, 0),
+    ghc_confidence: normalizeGhcConfidence(raw.ghc_confidence),
+    ...(typeof raw.temporal_summary === "string" && raw.temporal_summary.trim()
+      ? { temporal_summary: raw.temporal_summary.trim() }
+      : {}),
+    ...(raw.world_model_delta && typeof raw.world_model_delta === "object"
+      ? { world_model_delta: raw.world_model_delta as LearningWorldModelDelta }
+      : {}),
     marker_scores,
     summary:
       typeof raw.summary === "string" && raw.summary.trim()

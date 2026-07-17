@@ -6,7 +6,7 @@ import { SessionItem } from "./SessionItem";
 import { BlockSkillGrid } from "./BlockSkillGrid";
 import { BlockDetailDrawer } from "./BlockDetailDrawer";
 import { buildSkillGridLayout, getWeightedNeighborhood } from "@/lib/block-skill-grid";
-import { createBrowserClient } from "@supabase/ssr";
+import { type SupabaseBrowserClient } from "@/lib/supabase/client";
 import { useI18n } from "@/lib/i18n";
 import { DEFAULT_MODEL } from "@/lib/xai-client";
 
@@ -40,7 +40,7 @@ interface SessionListProps {
   onRequestFork?: () => void;
   forkLoginHref?: string;
   isLoggedIn?: boolean;
-  supabase?: ReturnType<typeof createBrowserClient>;
+  supabase?: SupabaseBrowserClient;
   planTopic?: string;
   workspaceId?: string;
   onRefresh?: () => void;

@@ -17,7 +17,7 @@ const IN_SCOPE_UI_FILES = [
 ];
 
 const OUT_OF_SCOPE_FILES_WITH_LEGACY_COPY = [
-  "skill.md",
+  // Canonical agent skill doc (root skill.md was deduped away)
   "public/skill.md",
   "lib/agent-v2/create-verification-workspace.ts",
   "lib/agent-v2/create-agent-workspace.ts",

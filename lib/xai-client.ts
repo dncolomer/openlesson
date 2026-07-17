@@ -18,7 +18,17 @@
 const XAI_CHAT_URL = "https://api.x.ai/v1/chat/completions";
 const XAI_RESPONSES_URL = "https://api.x.ai/v1/responses";
 
-export const DEFAULT_MODEL = "grok-4.3";
+export const DEFAULT_MODEL = "grok-4.5";
+
+/**
+ * Grok 4.5 reasoning depth. API default is "high" (slow); we default to "low"
+ * for interactive latency. Reasoning cannot be fully disabled on grok-4.5.
+ * @see https://docs.x.ai/developers/model-capabilities/text/reasoning
+ */
+export type ReasoningEffort = "low" | "medium" | "high";
+
+/** Prefer low for chat/UX; override to medium/high for hard analysis jobs. */
+export const DEFAULT_REASONING_EFFORT: ReasoningEffort = "low";
 
 export interface ModelOption {
   id: string;
@@ -27,7 +37,7 @@ export interface ModelOption {
 }
 
 export const AVAILABLE_MODELS: readonly ModelOption[] = [
-  { id: "grok-4.3", label: "Grok 4.3", description: "Newest xAI flagship model" },
+  { id: "grok-4.5", label: "Grok 4.5", description: "Newest xAI flagship model" },
 ] as const;
 
 export type ModelId = (typeof AVAILABLE_MODELS)[number]["id"] | string;
@@ -137,6 +147,12 @@ export interface XaiChatConfig {
   temperature: number;
   responseFormat?: "json" | "json_schema";
   jsonSchema?: JsonSchema;
+  /**
+   * Reasoning depth for grok-4.5+. Chat Completions uses top-level
+   * `reasoning_effort`. Defaults to DEFAULT_REASONING_EFFORT ("low").
+   * Note: `stop` is not supported with reasoning models.
+   */
+  reasoningEffort?: ReasoningEffort;
   stop?: string | string[];
   retries?: number;
   retryDelay?: number;
@@ -174,6 +190,7 @@ interface ChatRequestBody {
   messages: Message[];
   max_tokens: number;
   temperature: number;
+  reasoning_effort?: ReasoningEffort;
   response_format?: { type: "json_object" } | { type: "json_schema"; json_schema: JsonSchema };
   stop?: string | string[];
 }
@@ -184,12 +201,16 @@ function buildChatBody(messages: Message[], config: XaiChatConfig): ChatRequestB
     messages,
     max_tokens: config.maxTokens,
     temperature: config.temperature,
+    // Explicit effort — xAI defaults grok-4.5 to "high", which is slow for interactive UX.
+    reasoning_effort: config.reasoningEffort ?? DEFAULT_REASONING_EFFORT,
   };
   if (config.responseFormat === "json") {
     body.response_format = { type: "json_object" };
   } else if (config.responseFormat === "json_schema" && config.jsonSchema) {
     body.response_format = { type: "json_schema", json_schema: config.jsonSchema };
   }
+  // `stop` is not supported by reasoning models (grok-4.5+); only send if caller opts in
+  // and we are not using reasoning (unlikely path kept for non-reasoning model ids).
   if (config.stop) body.stop = config.stop;
   return body;
 }
@@ -478,6 +499,18 @@ export interface CallResponsesOptions {
   instructions?: string;
   maxOutputTokens?: number;
   temperature?: number;
+  /**
+   * Reasoning depth. Responses API field is `reasoning.effort`.
+   * Defaults to DEFAULT_REASONING_EFFORT ("low") for latency.
+   */
+  reasoningEffort?: ReasoningEffort;
+  /**
+   * Whether xAI should persist the response for later retrieval.
+   * Defaults to false — large file-backed chats (performance chat, PoW)
+   * hit "Response is too large to store" when store is true (API default).
+   * We manage conversation history client/server-side already.
+   */
+  store?: boolean;
   /** When provided, forces structured JSON output via text.format. */
   jsonSchema?: { name: string; schema: Record<string, unknown> };
   /** Per-request timeout in milliseconds */
@@ -536,6 +569,12 @@ export async function callXaiResponses<T = unknown>(
   const body: Record<string, unknown> = {
     model: options.model || DEFAULT_MODEL,
     input: options.input,
+    // Avoid "Response is too large to store" on file-heavy requests; we don't use previous_response_id.
+    store: options.store ?? false,
+    // Explicit effort — API default for grok-4.5 is "high".
+    reasoning: {
+      effort: options.reasoningEffort ?? DEFAULT_REASONING_EFFORT,
+    },
   };
   if (options.instructions) body.instructions = options.instructions;
   if (typeof options.maxOutputTokens === "number") body.max_output_tokens = options.maxOutputTokens;

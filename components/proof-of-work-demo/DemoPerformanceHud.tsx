@@ -3,8 +3,8 @@
 import { Gauge, Loader2, Sparkles, Target } from "lucide-react";
 import type { ConversionGoalSource } from "@/lib/agent-v2/conversion-goal";
 import type { PerformanceReport } from "@/lib/agent-v2/performance-context";
-import { normalizeDemoSessionUrl } from "@/lib/openlesson-demo/demo-session-url";
-import { extractGameCoaching } from "@/lib/openlesson-demo/game-tips";
+import { normalizeDemoSessionUrl } from "@/lib/product-demos/demo-session-url";
+import { extractGameCoaching } from "@/lib/product-demos/game-tips";
 import { useMemo } from "react";
 
 function clampScore(value: unknown): number | null {
@@ -36,11 +36,13 @@ export function DemoPerformanceHud({
   const coaching = useMemo(() => extractGameCoaching(report), [report]);
   const overallScore = clampScore(report?.overall_score);
   const conversionScore = clampScore(report?.conversion_score);
+  const ghcScore = clampScore(report?.ghc_score);
   const conversionGoal =
     workspaceConversionGoal?.trim() || report?.conversion_goal?.trim() || null;
   const hasCoaching =
     coaching.directions.length > 0 || coaching.events.length > 0 || coaching.gapRepairs.length > 0;
-  const hasScores = overallScore !== null || conversionScore !== null || conversionGoal !== null;
+  const hasScores =
+    overallScore !== null || conversionScore !== null || ghcScore !== null || conversionGoal !== null;
 
   const directionPreview = coaching.directions.slice(0, 2);
   const eventPreview = coaching.events.slice(0, 2);
@@ -53,7 +55,7 @@ export function DemoPerformanceHud({
             <Gauge className="size-3" />
             Score
           </div>
-          <div className="mt-1.5 flex gap-3">
+          <div className="mt-1.5 flex flex-wrap gap-3">
             {overallScore !== null ? (
               <div>
                 <div className="font-mono text-[9px] uppercase text-zinc-500">Learn</div>
@@ -67,6 +69,15 @@ export function DemoPerformanceHud({
               <div>
                 <div className="font-mono text-[9px] uppercase text-zinc-500">Conv</div>
                 <div className="font-mono text-lg text-white">{conversionScore}%</div>
+              </div>
+            ) : null}
+            {ghcScore !== null ? (
+              <div>
+                <div className="font-mono text-[9px] uppercase text-zinc-500">GHC</div>
+                <div className="font-mono text-lg text-white">
+                  {ghcScore}
+                  <span className="text-xs text-zinc-500">/100</span>
+                </div>
               </div>
             ) : null}
           </div>

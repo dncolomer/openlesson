@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { requireAuthenticatedUser } from "@/lib/api/require-auth";
 import { createClient } from "@/lib/supabase/server";
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {

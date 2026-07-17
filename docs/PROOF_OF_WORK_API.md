@@ -35,7 +35,8 @@ Canonical protocol `agent-trace-v3` phases: `enumerate` → `fingerprint` → `a
 | `POST` | `/workspaces/{workspace_id}/integration-skill` | `workspaces:read` | Grok-generated workspace-specific `skill.md` integration guide for a partner agent. |
 | `POST` | `/workspaces/{workspace_id}/proof-of-work` | `workspaces:write` | Upload tool usage, screenshots, video, or EEG to xAI and link to workspace/block. |
 | `POST` | `/workspaces/{workspace_id}/performance` | `workspaces:read` | Structured gap report or free-form Q&A over workspace proof of work. |
-| `POST` | `/workspaces/{workspace_id}/blocks/{block_id}/tap-links` | `tap:write` | Request a private Think Aloud Protocol (TAP) link for a block. |
+| `POST` | `/workspaces/{workspace_id}/tap-links` | `tap:write` | Request a private Think Aloud Protocol (TAP) link for the full workspace (optional body `block_id` scopes to a block). |
+| `POST` | `/workspaces/{workspace_id}/blocks/{block_id}/tap-links` | `tap:write` | Request a private TAP link scoped to a single block. |
 | `GET` | `/workspaces/{workspace_id}/tap-links` | `tap:read` | List existing TAP links and completion status. TAP evidence is uploaded to proof-of-work; use `POST .../performance` to score. |
 | `POST` | `/org/guests` | `org:write` | Organization admins create guest users by email and issue guest API keys. |
 
@@ -75,7 +76,7 @@ Every Proof-of-Work API success response (REST and MCP) includes a top-level `in
 
 Intervention types: `reflection_prompt`, `checkpoint_probe`, `coaching_nudge`, `proof_of_work_reminder`, `performance_review`.
 
-MCP resource: `openlesson://predictive-interruptions`
+MCP resource: `uncertain-systems://predictive-interruptions`
 
 ## Proof-of-Work Input Schema
 
@@ -184,6 +185,7 @@ Chat responses return markdown in `response`.
 ```json
 {
   "initial_prompt": "Prepare me to explain vector databases in a technical interview.",
+  "initial_chapters": "mid",
   "files": [
     {
       "name": "notes.md",
@@ -211,9 +213,12 @@ Chat responses return markdown in `response`.
 ```
 
 - Semantic: `initial_prompt` required; Grok generates title, blocks, and conversion goal.
+- `initial_chapters` (optional, semantic only): `narrow` | `mid` (default) | `broad`. Controls how many **initial chapters/blocks** are generated (narrow fewest, broad most with deeper branch arms). Also accepted as camelCase `initialChapters`.
+- Semantic block layout is a **2D skill grid**: start at `(0,0)`, use **positive and negative** coordinates (all quadrants), prefer **sparse paths** (not a filled rectangle), and allow **branching** (`next` may have multiple children; some arms deeper). Generated `position_x` / `position_y` and graph links are persisted onto blocks.
 - Opaque: `protocol.protocol_id` and `protocol.goal_ref` required; blocks are generated from protocol phases (canonical `agent-trace-v3` if phases omitted). `initial_prompt` is not stored.
 - `files` optional in both modes (max 5; PDF, text, Markdown, JPEG, PNG, WebP; 10 MB each).
 - Create response includes `evaluation_mode` and `privacy` metadata.
+- MCP tool `create_workspace` accepts the same fields (`initial_chapters` included on the tool schema).
 
 ## Request TAP Link
 

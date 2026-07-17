@@ -214,12 +214,12 @@ export function HeliosChat({ problem, messages: externalMessages, onMessagesChan
   };
 
   useEffect(() => {
-    const stored = window.localStorage.getItem("openlesson:helios-auto-voice");
+    const stored = window.localStorage.getItem("uncertain-systems:helios-auto-voice");
     if (stored === "1") setAutoVoiceEnabled(true);
   }, []);
 
   useEffect(() => {
-    window.localStorage.setItem("openlesson:helios-auto-voice", autoVoiceEnabled ? "1" : "0");
+    window.localStorage.setItem("uncertain-systems:helios-auto-voice", autoVoiceEnabled ? "1" : "0");
   }, [autoVoiceEnabled]);
 
   useEffect(() => {

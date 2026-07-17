@@ -1,17 +1,14 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { requireAuthenticatedUser } from "@/lib/api/require-auth";
 import { PARTNER_TIERS, isUnstakeLocked, getUnstakeUnlockDate } from "@/lib/partners";
 
 export const runtime = "nodejs";
 
 export async function GET() {
   try {
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-
-    if (!user) {
-      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-    }
+    const auth = await requireAuthenticatedUser();
+    if (!auth.ok) return auth.response;
+    const { user, supabase } = auth;
 
     // Get partner record with related stats
     const { data: partner, error } = await supabase

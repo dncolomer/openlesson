@@ -95,133 +95,33 @@ import { translateWithLocale, useI18n } from "@/lib/i18n";
 import { tutoringLocales, tutoringLanguageNames } from "@/lib/tutoring-languages";
 import { isSessionWelcomeSeen, markSessionWelcomeSeen } from "@/lib/welcomeState";
 import { fetchAestheticPackages, type AestheticPackage } from "@/lib/aesthetics";
+import {
+  DEFAULT_INITIAL_CHAPTERS,
+  INITIAL_CHAPTERS_LEVELS,
+  type InitialChaptersLevel,
+} from "@/lib/initial-chapters";
+import { isIleSpeechCaptureEnabled } from "@/lib/useSessionThoughtInterface";
 import { AestheticPicker } from "./AestheticPicker";
 
 
 import { DantesTool } from "./DantesTool";
 
-type ChapterWorkspace = {
-  chatMessages: ChatMessage[];
-  pendingChatMessage: string | PendingChatMessage | null;
-  whiteboardData: string | null;
-   
-  whiteboardSceneData: { elements: any[]; appState: any; files: any } | null;
-  notebookContent: string;
-  canvasDirtyForHelios: boolean;
-  notebookDirtyForHelios: boolean;
-};
 
-const createChapterWorkspace = (): ChapterWorkspace => ({
-  chatMessages: [],
-  pendingChatMessage: null,
-  whiteboardData: null,
-  whiteboardSceneData: null,
-  notebookContent: "",
-  canvasDirtyForHelios: true,
-  notebookDirtyForHelios: true,
-});
-
-
-// Check if a new probe is a duplicate of any existing probe (normalized comparison)
-function isDuplicateProbe(newText: string, existingProbes: { text: string; archived?: boolean }[]): boolean {
-  const normalize = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
-  const newNorm = normalize(newText);
-  return existingProbes.some(p => {
-    const existingNorm = normalize(p.text);
-    // Exact match after normalization
-    if (newNorm === existingNorm) return true;
-    // One is a substring of the other (catches minor rewording)
-    if (newNorm.length > 20 && existingNorm.length > 20) {
-      if (newNorm.includes(existingNorm) || existingNorm.includes(newNorm)) return true;
-    }
-    return false;
-  });
-}
-
-async function readErrorResponse(response: Response, fallback: string) {
-  const text = await response.text().catch(() => "");
-  if (!text.trim()) return `${fallback} (HTTP ${response.status})`;
-  try {
-    const parsed = JSON.parse(text) as { error?: unknown; message?: unknown };
-    const message = parsed.error || parsed.message;
-    if (typeof message === "string" && message.trim()) {
-      return `${message} (HTTP ${response.status})`;
-    }
-  } catch {
-    // Non-JSON error body; include a short preview for debugging.
-  }
-  return `${fallback} (HTTP ${response.status}): ${text.slice(0, 300)}`;
-}
-
-/**
- * Small inline button for the notebook footer. Kept as a separate component
- * so it can own its own `isSubmitting` state without bloating SessionView's
- * already-large state surface — the parent just passes an async onSubmit.
- *
- * The `disabled` prop covers two distinct reasons to block submission:
- *   1. Notebook empty (nothing to submit).
- *   2. Notebook content unchanged since last submit (no point re-asking).
- * The parent decides which; we just reflect the result.
- */
-function NotebookSubmitButton({
-  onSubmit,
-  disabled,
-  disabledReason,
-}: {
-  onSubmit: () => Promise<void> | void;
-  disabled?: boolean;
-  disabledReason?: string;
-}) {
-  const { t } = useI18n();
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const handleClick = async () => {
-    if (isSubmitting || disabled) return;
-    setIsSubmitting(true);
-    try {
-      await onSubmit();
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-  return (
-    <button
-      onClick={handleClick}
-      disabled={isSubmitting || disabled}
-      title={disabled ? (disabledReason ?? '') : t('whiteboard.submitHint')}
-      aria-label={t('whiteboard.submitToHelios')}
-      className="inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] text-white bg-white/10 border border-white/30 hover:bg-white/20 hover:border-white/50 disabled:opacity-40 disabled:cursor-not-allowed rounded-md transition-colors"
-    >
-      {isSubmitting ? (
-        <svg className="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24">
-          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-        </svg>
-      ) : (
-        <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M5 12l5 5L20 7" />
-        </svg>
-      )}
-      <span>{isSubmitting ? t('whiteboard.submitting') : t('whiteboard.submitToHelios')}</span>
-    </button>
-  );
-}
-
-// Configuration
-const CHAPTER_LOAD_DURATION_MS = 900;
-
-function createEmptyTransferHealth(): TransferHealth {
-  return {
-    audio: { sent: 0, saved: 0, failed: 0 },
-    eeg: { sent: 0, saved: 0, failed: 0 },
-    facial: { sent: 0, saved: 0, failed: 0 },
-    screenshots: { sent: 0, saved: 0, failed: 0 },
-    tools: { sent: 0, saved: 0, failed: 0 },
-  };
-}
-const EEG_SAMPLE_RATE_HZ = 256;
-const EEG_DISPLAY_MAX_SAMPLES = 512;
-const EEG_PERSIST_MAX_SAMPLES = EEG_SAMPLE_RATE_HZ * 30;
-
+import { NotebookSubmitButton } from "@/components/session/NotebookSubmitButton";
+import {
+  isDuplicateProbe,
+  readErrorResponse,
+  createEmptyTransferHealth,
+  computeBandPowers,
+  CHAPTER_LOAD_DURATION_MS,
+  EEG_SAMPLE_RATE_HZ,
+  EEG_DISPLAY_MAX_SAMPLES,
+  EEG_PERSIST_MAX_SAMPLES,
+  createChapterWorkspace,
+  type ChapterWorkspace,
+} from "@/components/session/sessionViewHelpers";
+import { useSessionChapterWorkspaces } from "@/lib/useSessionChapterWorkspaces";
+import { useSessionPaneLayout } from "@/lib/useSessionPaneLayout";
 
 export function SessionView({
   sessionId,
@@ -261,92 +161,62 @@ export function SessionView({
   const [showEndDialog, setShowEndDialog] = useState(false);
   const [endReason, setEndReason] = useState("");
 
-  // Chapter-scoped workspace. Chat, canvas, notes, and submit-dirty state
-  // switch together when the focused chapter changes. This is intentionally
-  // browser-local; it is not persisted to the backend.
-  const [activeChapterIndex, setActiveChapterIndex] = useState(0);
-  const activeChapterIndexRef = useRef(0);
-  const planInitializedRef = useRef(false);
-  const [chapterLoading, setChapterLoading] = useState(false);
-  const [chapterLoadingIndex, setChapterLoadingIndex] = useState<number | null>(null);
-  const chapterFocusSinceRef = useRef<Record<number, number>>({ 0: Date.now() });
-  const [chapterWorkspaces, setChapterWorkspaces] = useState<Record<string, ChapterWorkspace>>({});
-  const [chapterWorkspacesLoaded, setChapterWorkspacesLoaded] = useState(false);
-  useEffect(() => {
-    setActiveChapterIndex(0);
-    activeChapterIndexRef.current = 0;
-    planInitializedRef.current = false;
-    chapterFocusSinceRef.current = { 0: Date.now() };
-    setChapterWorkspaces({});
-    setChapterWorkspacesLoaded(false);
-  }, [sessionId]);
+  // Session Plan state (needed before chapter workspaces hook)
+  // Session Plan state
+  const [sessionPlan, setSessionPlan] = useState<SessionPlan | null>(null);
+  const [planLoading, setPlanLoading] = useState(false);
+  const [planError, setPlanError] = useState<string | null>(null);
+  const sessionPlanRef = useRef<SessionPlan | null>(null);
+  const [languageConfirmed, setLanguageConfirmed] = useState(false);
 
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    try {
-      const stored = window.sessionStorage.getItem(`openlesson:${sessionId}:chapter-workspaces`);
-      if (stored) setChapterWorkspaces(JSON.parse(stored));
-    } catch {
-      /* Ignore corrupt local workspace snapshots. */
-    } finally {
-      setChapterWorkspacesLoaded(true);
-    }
-  }, [sessionId]);
+  const {
+    activeChapterIndex,
+    setActiveChapterIndex,
+    activeChapterIndexRef,
+    planInitializedRef,
+    chapterLoading,
+    setChapterLoading,
+    chapterLoadingIndex,
+    setChapterLoadingIndex,
+    chapterFocusSinceRef,
+    chapterWorkspaces,
+    setChapterWorkspaces,
+    chapterWorkspacesLoaded,
+    activeStep,
+    activeChapterKey,
+    activeWorkspace,
+    chatMessages,
+    pendingChatMessage,
+    whiteboardData,
+    whiteboardSceneData,
+    notebookContent,
+    canvasDirtyForHelios,
+    notebookDirtyForHelios,
+    updateChapterWorkspace,
+    updateActiveChapterWorkspace,
+    setChatMessages,
+    setPendingChatMessage,
+    setWhiteboardData,
+    setNotebookContent,
+    setCanvasDirtyForHelios,
+    setNotebookDirtyForHelios,
+  } = useSessionChapterWorkspaces(sessionId, sessionPlan);
 
-  useEffect(() => {
-    if (!chapterWorkspacesLoaded) return;
-    if (typeof window === "undefined") return;
-    try {
-      window.sessionStorage.setItem(`openlesson:${sessionId}:chapter-workspaces`, JSON.stringify(chapterWorkspaces));
-    } catch {
-      /* Session storage can fail on quota, especially with canvas data. */
-    }
-  }, [chapterWorkspaces, chapterWorkspacesLoaded, sessionId]);
+  const activeChapterLabel = activeStep ? `Chapter ${activeChapterIndex + 1}` : "this chapter";
 
-  // New 3-panel layout state
-  const [activeTool, setActiveTool] = useState<Tool>("chapters");
+  const {
+    activeTool,
+    setActiveTool,
+    prevToolRef,
+    resizablePaneRef,
+    paneVisibility,
+    setPaneVisibility,
+    applyPaneVisibility,
+    ensureVisible,
+    applyIleChapterGridStartup,
+  } = useSessionPaneLayout();
+
   const [userInitial, setUserInitial] = useState("Y");
-  const prevToolRef = useRef<Tool | null>(null);
-  const resizablePaneRef = useRef<ResizablePaneHandle>(null);
-  // Source-of-truth for which of the three workspace views are visible.
-  // Kept in sync with the ResizablePane collapsed state via the toggle
-  // UI in the top bar. At least one must be true at all times.
-  type PaneVis = { tools: boolean; tutor: boolean; plan: boolean };
-  const [paneVisibility, setPaneVisibility] = useState<PaneVis>({
-    tools: true,
-    tutor: true,
-    plan: true,
-  });
-  // Canonical applier: writes both the toggle state AND the underlying
-  // ResizablePane collapsed states, so the UI and the actual layout are
-  // always in lockstep. At least one of the three must be true.
-  const applyPaneVisibility = useCallback((next: PaneVis) => {
-    // Helios (tutor) pane is always visible — force the invariant here so
-    // no call site can ever hide it, regardless of persisted state.
-    next = { ...next, tutor: true };
-    if (!next.tools && !next.tutor && !next.plan) return;
-    setPaneVisibility(next);
-    // Left = Tools, right = Helios
-    if (!next.tools) {
-      resizablePaneRef.current?.setLayout({ collapsedSide: "left" });
-    } else if (!next.tutor) {
-      resizablePaneRef.current?.setLayout({ collapsedSide: "right" });
-    } else {
-      resizablePaneRef.current?.setLayout({ collapsedSide: null });
-    }
-  }, []);
-  // Turn a single view on without touching the other two.
-  const ensureVisible = useCallback((view: keyof PaneVis) => {
-    if (paneVisibility[view]) return;
-    applyPaneVisibility({ ...paneVisibility, [view]: true });
-  }, [paneVisibility, applyPaneVisibility]);
-
-  const applyIleChapterGridStartup = useCallback(() => {
-    prevToolRef.current = null;
-    setActiveTool("chapters");
-    applyPaneVisibility({ tools: true, tutor: true, plan: true });
-  }, [applyPaneVisibility]);
-
   const [objectives, setObjectives] = useState<string[]>([]);
   const [objectiveStatuses, setObjectiveStatuses] = useState<("red" | "yellow" | "green" | "blue")[]>([]);
 
@@ -429,33 +299,23 @@ export function SessionView({
   // Mobile detection
 
 
-  // Session Plan state
-  const [sessionPlan, setSessionPlan] = useState<SessionPlan | null>(null);
-  const [planLoading, setPlanLoading] = useState(false);
-  const [planError, setPlanError] = useState<string | null>(null);
-  const sessionPlanRef = useRef<SessionPlan | null>(null);
-  useEffect(() => {
-    if (!sessionPlan?.steps?.length || planInitializedRef.current) return;
-    planInitializedRef.current = true;
-    const idx = Math.min(
-      Math.max(0, sessionPlan.currentStepIndex ?? 0),
-      sessionPlan.steps.length - 1,
-    );
-    setActiveChapterIndex(idx);
-    activeChapterIndexRef.current = idx;
-    chapterFocusSinceRef.current[idx] = Date.now();
-  }, [sessionPlan]);
-  const [languageConfirmed, setLanguageConfirmed] = useState(false);
   const [isPreparing, setIsPreparing] = useState(false);
   const [aestheticPackages, setAestheticPackages] = useState<AestheticPackage[]>([]);
   const [aestheticsLoading, setAestheticsLoading] = useState(true);
   const [selectedAestheticId, setSelectedAestheticId] = useState<string | null>(null);
+  const [initialChapters, setInitialChapters] = useState<InitialChaptersLevel>(DEFAULT_INITIAL_CHAPTERS);
+  /**
+   * Whether a persisted chapter map already exists for this session.
+   * Tracked separately from `sessionPlan` so the regenerate UI stays stable
+   * even while plan state is loading / briefly cleared.
+   * - unknown: still loading from DB
+   * - empty: no chapters yet → size picker is interactive
+   * - exists: chapters present → size picker grayed + regenerate checkbox
+   */
+  const [chapterPlanStatus, setChapterPlanStatus] = useState<"unknown" | "empty" | "exists">("unknown");
+  /** When a chapter set already exists, keep size controls grayed until user opts in. */
+  const [regenerateChapters, setRegenerateChapters] = useState(false);
 
-  const activeStep = sessionPlan?.steps?.[activeChapterIndex];
-  const activeChapterKey = activeStep?.id ?? `step-${activeChapterIndex}`;
-  const activeWorkspace = chapterWorkspaces[activeChapterKey] ?? createChapterWorkspace();
-  const chatMessages = activeWorkspace.chatMessages;
-  const pendingChatMessage = activeWorkspace.pendingChatMessage;
 
   const lastDialogueUserTurn = useMemo(() => {
     for (let index = chatMessages.length - 1; index >= 0; index -= 1) {
@@ -502,57 +362,6 @@ export function SessionView({
       if (initial) setUserInitial(initial);
     });
   }, []);
-  const whiteboardData = activeWorkspace.whiteboardData;
-  const whiteboardSceneData = activeWorkspace.whiteboardSceneData;
-  const notebookContent = activeWorkspace.notebookContent;
-  const canvasDirtyForHelios = activeWorkspace.canvasDirtyForHelios;
-  const notebookDirtyForHelios = activeWorkspace.notebookDirtyForHelios;
-  const activeChapterLabel = activeStep ? `Chapter ${activeChapterIndex + 1}` : "this chapter";
-
-  const updateChapterWorkspace = useCallback((chapterKey: string, update: Partial<ChapterWorkspace> | ((workspace: ChapterWorkspace) => Partial<ChapterWorkspace>)) => {
-    setChapterWorkspaces(prev => {
-      const current = prev[chapterKey] ?? createChapterWorkspace();
-      const patch = typeof update === "function" ? update(current) : update;
-      return { ...prev, [chapterKey]: { ...current, ...patch } };
-    });
-  }, []);
-
-  const updateActiveChapterWorkspace = useCallback((update: Partial<ChapterWorkspace> | ((workspace: ChapterWorkspace) => Partial<ChapterWorkspace>)) => {
-    updateChapterWorkspace(activeChapterKey, update);
-  }, [activeChapterKey, updateChapterWorkspace]);
-
-  const setChatMessages = useCallback((value: ChatMessage[] | ((messages: ChatMessage[]) => ChatMessage[])) => {
-    updateActiveChapterWorkspace(workspace => ({
-      chatMessages: typeof value === "function" ? value(workspace.chatMessages) : value,
-    }));
-  }, [updateActiveChapterWorkspace]);
-
-  const setPendingChatMessage = useCallback((value: string | PendingChatMessage | null) => {
-    updateActiveChapterWorkspace({ pendingChatMessage: value });
-  }, [updateActiveChapterWorkspace]);
-
-  const setWhiteboardData = useCallback((value: string | null) => {
-    updateActiveChapterWorkspace({ whiteboardData: value });
-  }, [updateActiveChapterWorkspace]);
-
-  const setNotebookContent = useCallback((value: string) => {
-    updateActiveChapterWorkspace({ notebookContent: value });
-  }, [updateActiveChapterWorkspace]);
-
-  const setCanvasDirtyForHelios = useCallback((value: boolean) => {
-    updateActiveChapterWorkspace({ canvasDirtyForHelios: value });
-  }, [updateActiveChapterWorkspace]);
-
-  const setNotebookDirtyForHelios = useCallback((value: boolean) => {
-    updateActiveChapterWorkspace({ notebookDirtyForHelios: value });
-  }, [updateActiveChapterWorkspace]);
-
-  useEffect(() => {
-    if (!sessionPlan?.steps?.length) return;
-    if (activeChapterIndex > sessionPlan.steps.length - 1) {
-      setActiveChapterIndex(sessionPlan.steps.length - 1);
-    }
-  }, [activeChapterIndex, sessionPlan?.steps?.length]);
 
   useEffect(() => {
     let cancelled = false;
@@ -1229,17 +1038,25 @@ export function SessionView({
         // Load or create session plan - but wait for language confirmation first
         setPlanLoading(true);
         setPlanError(null);
+        setChapterPlanStatus("unknown");
+        setRegenerateChapters(false);
         try {
           // First try to load existing plan - use it but user will need to confirm language to translate if needed
           const existingPlan = await getSessionPlan(s.id);
-          // Only hydrate plans that already have chapters — empty shells are regenerated on confirm.
-          if (existingPlan?.goal && existingPlan.steps?.length > 0) {
+          // Hydrate any plan that already has chapter steps. Empty shells stay
+          // out of state so confirm can generate a real map.
+          const hasChapters = (existingPlan?.steps?.length ?? 0) > 0;
+          if (hasChapters && existingPlan) {
             setSessionPlan(existingPlan);
             sessionPlanRef.current = existingPlan;
+            if (!cancelled) setChapterPlanStatus("exists");
+          } else if (!cancelled) {
+            setChapterPlanStatus("empty");
           }
           // Don't create new plan here - wait for user to confirm language first
         } catch (err) {
           console.warn("Session plan loading failed:", err);
+          if (!cancelled) setChapterPlanStatus("empty");
         } finally {
           if (!cancelled) setPlanLoading(false);
         }
@@ -1558,7 +1375,14 @@ export function SessionView({
   );
 
   const [heliosTurnMode, setHeliosTurnMode] = useState<HeliosTurnMode>("idle");
-  const powSessionEnabled = isRecording && !isPaused && !showWelcomePanel;
+  // Speech + PoW uploads arm only while the learner is actively in-session.
+  // Returning users who skip the welcome panel must still call startRecording
+  // on entry — otherwise Helios shows "Speech capture off" with no way to arm.
+  const powSessionEnabled = isIleSpeechCaptureEnabled({
+    isRecording,
+    isPaused,
+    showWelcomePanel,
+  });
 
   useEffect(() => {
     powSessionEnabledRef.current = powSessionEnabled;
@@ -2219,7 +2043,6 @@ export function SessionView({
     }
     // startRecording / handleResume are defined inline and reference many
     // setters/refs; including them as deps would cause noise.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isRecording, isPaused]);
 
   // Archive a probe (immediately, without LLM validation)
@@ -2356,9 +2179,10 @@ export function SessionView({
 
   if (!session || isSaving) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-[#0a0a0a] gap-4">
-        <div className="animate-spin w-8 h-8 border-2 border-neutral-800 border-t-neutral-300 rounded-full" />
-        {isSaving && <LoadingStatusMessage tone="subtle" message={t("session.savingSession")} />}
+      <div className="min-h-screen flex flex-col items-center justify-center bg-[#0a0a0a]">
+        <LoadingStatusMessage
+          message={isSaving ? t("session.savingSession") : t("common.loading")}
+        />
       </div>
     );
   }
@@ -2426,6 +2250,129 @@ export function SessionView({
                       loading={aestheticsLoading}
                     />
 
+                    {/* Initial chapters — interactive only when no chapter set exists
+                        (or user opts in to regenerate). Status is persisted-plan aware
+                        so the regenerate checkbox does not flicker/disappear. */}
+                    {(() => {
+                      const hasExistingChapters = chapterPlanStatus === "exists";
+                      const statusUnknown = chapterPlanStatus === "unknown";
+                      const chaptersLocked =
+                        statusUnknown || (hasExistingChapters && !regenerateChapters);
+                      const chaptersDisabled = isButtonDisabled || chaptersLocked;
+
+                      return (
+                        <div
+                          className={`mb-4 transition-colors ${
+                            chaptersLocked
+                              ? "rounded-xl border border-neutral-800/80 bg-neutral-950/40 p-3"
+                              : ""
+                          }`}
+                        >
+                          <div className="mb-2 flex items-center justify-between gap-2">
+                            <label
+                              className={`block text-[11px] font-medium uppercase tracking-[0.12em] ${
+                                chaptersLocked ? "text-neutral-600" : "text-neutral-500"
+                              }`}
+                            >
+                              {t("session.initialChapters")}
+                            </label>
+                            {statusUnknown ? (
+                              <span className="text-[10px] text-neutral-600">
+                                {t("session.initialChaptersChecking")}
+                              </span>
+                            ) : hasExistingChapters ? (
+                              <span className="text-[10px] text-neutral-600">
+                                {t("session.initialChaptersExisting")}
+                              </span>
+                            ) : null}
+                          </div>
+                          <div
+                            className={`grid grid-cols-3 gap-2 ${chaptersLocked ? "opacity-40 pointer-events-none" : ""}`}
+                          >
+                            {INITIAL_CHAPTERS_LEVELS.map((level) => {
+                              const selected = initialChapters === level;
+                              const titleKey =
+                                level === "narrow"
+                                  ? "session.initialChaptersNarrow"
+                                  : level === "mid"
+                                    ? "session.initialChaptersMid"
+                                    : "session.initialChaptersBroad";
+                              const descKey =
+                                level === "narrow"
+                                  ? "session.initialChaptersNarrowDesc"
+                                  : level === "mid"
+                                    ? "session.initialChaptersMidDesc"
+                                    : "session.initialChaptersBroadDesc";
+                              return (
+                                <button
+                                  key={level}
+                                  type="button"
+                                  onClick={() => setInitialChapters(level)}
+                                  disabled={chaptersDisabled}
+                                  className={`rounded-xl border px-2.5 py-2.5 text-left transition-colors disabled:cursor-not-allowed ${
+                                    selected && !chaptersLocked
+                                      ? "border-neutral-200 bg-neutral-800 ring-1 ring-neutral-200/40"
+                                      : "border-neutral-800 bg-neutral-900 hover:border-neutral-600 disabled:hover:border-neutral-800"
+                                  } ${isButtonDisabled && !chaptersLocked ? "opacity-50" : ""}`}
+                                >
+                                  <span
+                                    className={`block text-xs font-medium leading-tight ${
+                                      chaptersLocked ? "text-neutral-500" : "text-neutral-200"
+                                    }`}
+                                  >
+                                    {t(titleKey)}
+                                  </span>
+                                  <span className="block text-[10px] text-neutral-500 leading-snug mt-1">
+                                    {t(descKey)}
+                                  </span>
+                                </button>
+                              );
+                            })}
+                          </div>
+                          {statusUnknown && (
+                            <div
+                              className="mt-3 flex items-center gap-2.5 rounded-lg border border-neutral-800 bg-neutral-900/70 px-3 py-2.5"
+                              role="status"
+                              aria-live="polite"
+                            >
+                              <div className="h-3.5 w-3.5 shrink-0 animate-spin rounded-full border border-neutral-600 border-t-neutral-300" />
+                              <span className="min-w-0">
+                                <span className="block text-xs font-medium text-neutral-300 leading-tight">
+                                  {t("session.initialChaptersLoading")}
+                                </span>
+                                <span className="block text-[10px] text-neutral-500 leading-snug mt-0.5">
+                                  {t("session.initialChaptersLoadingDesc")}
+                                </span>
+                              </span>
+                            </div>
+                          )}
+                          {hasExistingChapters && (
+                            <label
+                              className={`mt-3 flex cursor-pointer items-start gap-2.5 rounded-lg border border-neutral-800 bg-neutral-900/70 px-3 py-2.5 transition-colors hover:border-neutral-700 ${
+                                isButtonDisabled ? "pointer-events-none opacity-50" : ""
+                              }`}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={regenerateChapters}
+                                disabled={isButtonDisabled}
+                                onChange={(e) => setRegenerateChapters(e.target.checked)}
+                                className="mt-0.5 h-3.5 w-3.5 shrink-0 rounded border-neutral-600 bg-neutral-950 text-white focus:ring-1 focus:ring-neutral-500"
+                              />
+                              <span className="min-w-0">
+                                <span className="block text-xs font-medium text-neutral-200 leading-tight">
+                                  {t("session.regenerateChapters")}
+                                </span>
+                                <span className="block text-[10px] text-neutral-500 leading-snug mt-0.5">
+                                  {t("session.regenerateChaptersDesc")}
+                                </span>
+                              </span>
+                            </label>
+                          )}
+                        </div>
+                      );
+                    })()}
+
                     {/* Auto-advance toggle — hidden in UI (manual mode is the
                         default). Underlying state remains wired; remove the
                         `hidden` wrapper to bring the toggle back. */}
@@ -2479,6 +2426,12 @@ export function SessionView({
                       </div>
                     </button>
 
+                    {planError && !isPreparing && (
+                      <div className="mb-3 px-3 py-2.5 bg-red-500/5 border border-red-500/20 rounded-xl">
+                        <p className="text-xs text-red-400 leading-relaxed">{planError}</p>
+                      </div>
+                    )}
+
                     <button
                       onClick={async () => {
                         if (!session || isPreparing) return;
@@ -2513,8 +2466,16 @@ export function SessionView({
                           
                           const existingPlan = await getSessionPlan(session.id);
                           let newPlan: SessionPlan | null = null;
+                          const hasExistingChapters = (existingPlan?.steps?.length ?? 0) > 0;
+                          // Keep regenerate checkbox stable even if sessionPlan state lags.
+                          if (hasExistingChapters) {
+                            setChapterPlanStatus("exists");
+                          } else {
+                            setChapterPlanStatus("empty");
+                          }
+                          const shouldReuseExisting = hasExistingChapters && !regenerateChapters;
 
-                          if ((existingPlan?.steps?.length ?? 0) > 0 && existingPlan?.goal) {
+                          if (shouldReuseExisting && existingPlan) {
                             if (tutoringLanguage === "en") {
                               newPlan = existingPlan;
                             } else {
@@ -2534,6 +2495,14 @@ export function SessionView({
                               } else {
                                 const err = await translateRes.json().catch(() => ({}));
                                 console.error("[SessionView] Translation failed:", err);
+                                // Do not force-recreate on translate failure when the user
+                                // did not opt into regeneration — keep existing chapters.
+                                setPlanError(
+                                  typeof err?.error === "string"
+                                    ? err.error
+                                    : "Failed to translate chapter map. Try again or regenerate chapters.",
+                                );
+                                return;
                               }
                             }
                           }
@@ -2547,27 +2516,35 @@ export function SessionView({
                                 problem: session.problem,
                                 objectives,
                                 planningPrompt: session.planningPrompt,
-                                force: true,
+                                // Only force-replace when user opted in or no chapters exist.
+                                force: hasExistingChapters ? regenerateChapters : true,
                                 tutoringLanguage,
+                                initialChapters,
                                 ...(ayclToken ? { ayclToken } : {}),
                               }),
                             });
                             if (planRes.ok) {
                               const { plan } = await planRes.json();
                               newPlan = plan;
+                              setRegenerateChapters(false);
                             } else {
                               const errorMessage = await readErrorResponse(planRes, "Failed to create block plan");
                               console.error("[SessionView] Create plan failed:", errorMessage);
                               setPlanError(errorMessage);
+                              return;
                             }
                           }
 
-                          if (newPlan) {
-                            setSessionPlan(newPlan);
-                            sessionPlanRef.current = newPlan;
-                          } else {
+                          if (!newPlan) {
                             setPlanError("Failed to prepare chapter map. Please try again.");
+                            return;
                           }
+
+                          setSessionPlan(newPlan);
+                          sessionPlanRef.current = newPlan;
+                          setChapterPlanStatus(
+                            (newPlan.steps?.length ?? 0) > 0 ? "exists" : "empty",
+                          );
                           
                           // Archive existing probes; the chapter question is
                           // enough to start the discussion.
@@ -2584,7 +2561,8 @@ export function SessionView({
 
                           // A session is "fresh" if the user has not yet
                           // clicked Play for it. In that case we show the
-                          // typed tutor welcome + Play button.
+                          // typed tutor welcome + Play button. Returning
+                          // sessions skip that guide and must arm capture now.
                           const isFreshSession = !isSessionWelcomeSeen(session.id);
                           if (isFreshSession) {
                             setShowWelcomePanel(true);
@@ -2614,6 +2592,11 @@ export function SessionView({
                           setPrepStage("done");
                           setIsPaused(false); // Reset paused state from previous session load
                           setShowWelcomeModal(false);
+                          // Arm monitoring + speech when the welcome guide is not shown.
+                          // Fresh sessions wait for Play inside the guide (handleWelcomePlay).
+                          if (!isFreshSession) {
+                            await startRecording();
+                          }
                         } catch (err) {
                           console.error("Failed to prepare session:", err);
                           setPlanError("Failed to prepare block");
@@ -2733,19 +2716,24 @@ export function SessionView({
 
               // Phase 2: Ready (already confirmed before, e.g. page refresh).
               // If the user has never clicked Play on this session we drop
-              // them into the in-panel tutor welcome. Otherwise straight in.
+              // them into the in-panel tutor welcome. Otherwise arm capture
+              // immediately so Helios speech is not stuck "off".
               return (
                 <button
                   onClick={() => {
-                    setIsPaused(false);
-                    if (
-                      session &&
-                      !isSessionWelcomeSeen(session.id) &&
-                      session.probes.filter(p => !p.archived).length === 0
-                    ) {
-                      setShowWelcomePanel(true);
-                    }
-                    setShowWelcomeModal(false);
+                    void (async () => {
+                      setIsPaused(false);
+                      const needsWelcome =
+                        !!session &&
+                        !isSessionWelcomeSeen(session.id) &&
+                        session.probes.filter((p) => !p.archived).length === 0;
+                      if (needsWelcome) {
+                        setShowWelcomePanel(true);
+                      } else {
+                        await startRecording();
+                      }
+                      setShowWelcomeModal(false);
+                    })();
                   }}
                   className="w-full py-3 px-4 text-sm font-medium rounded-xl transition-colors bg-neutral-100 text-neutral-900 hover:bg-white"
                 >
@@ -2830,8 +2818,6 @@ export function SessionView({
             <ResizablePane
               ref={resizablePaneRef}
               defaultLeftWidth={40}
-              leftLabel={t('session.tools')}
-              rightLabel={t('session.studentMonitoring')}
               storageKey="session-split-tools-helios"
               left={
                 <div className="flex flex-col min-w-0 p-4 overflow-hidden h-full relative">
@@ -3053,45 +3039,4 @@ export function SessionView({
       />
     </div>
   );
-}
-
-// ---- Band Power Computation ----
-
-function computeBandPowers(af7: number[], af8: number[]) {
-  const n = 256;
-  const sampleRate = 256;
-  const bandRanges: Record<string, [number, number]> = {
-    delta: [1, 4], theta: [4, 8], alpha: [8, 13], beta: [13, 30], gamma: [30, 44],
-  };
-
-  function channelBands(samples: number[]) {
-    const windowed = samples.map((s, i) => s * (0.5 - 0.5 * Math.cos((2 * Math.PI * i) / (n - 1))));
-    const powers: Record<string, number> = {};
-    for (const [band, [fLow, fHigh]] of Object.entries(bandRanges)) {
-      let power = 0;
-      const binLow = Math.floor((fLow * n) / sampleRate);
-      const binHigh = Math.min(Math.ceil((fHigh * n) / sampleRate), n / 2);
-      for (let k = binLow; k <= binHigh; k++) {
-        let re = 0, im = 0;
-        for (let j = 0; j < n; j++) {
-          const angle = (2 * Math.PI * k * j) / n;
-          re += windowed[j] * Math.cos(angle);
-          im -= windowed[j] * Math.sin(angle);
-        }
-        power += (re * re + im * im) / (n * n);
-      }
-      powers[band] = power;
-    }
-    return powers;
-  }
-
-  const p1 = channelBands(af7.slice(-n));
-  const p2 = channelBands(af8.slice(-n));
-  const avg: Record<string, number> = {};
-  for (const band of Object.keys(bandRanges)) avg[band] = ((p1[band] || 0) + (p2[band] || 0)) / 2;
-
-  const total = Object.values(avg).reduce((s, v) => s + v, 0);
-  if (total > 0) for (const band of Object.keys(avg)) avg[band] /= total;
-
-  return { delta: avg.delta || 0, theta: avg.theta || 0, alpha: avg.alpha || 0, beta: avg.beta || 0, gamma: avg.gamma || 0 };
 }

@@ -22,11 +22,11 @@ export interface VolumeTier {
   priceCents: number;
 }
 
-/** @deprecated Pre–PoW-only pricing stored session counts in Stripe metadata (Jul 2026). */
-export const LEGACY_SESSION_VOLUME_TIERS = new Set([25, 50, 100, 250, 500, 1000, 2500]);
-
-/** @deprecated Use proofOfWork field on VolumeTier. */
+/** Multiplier when converting legacy session-count Stripe volume metadata to PoW submissions. */
 export const PROOF_OF_WORK_SUBMISSIONS_PER_SESSION = 4;
+
+/** Pre–PoW-only pricing stored session counts in Stripe metadata (Jul 2026). */
+export const LEGACY_SESSION_VOLUME_TIERS = new Set([25, 50, 100, 250, 500, 1000, 2500]);
 
 export const PROOF_OF_WORK_ALLOWANCE_LABEL = "Proof-of-Work submissions";
 
@@ -176,7 +176,7 @@ export const TEAM_VOLUME_TIERS: readonly VolumeTier[] = [
   { proofOfWork: 10000, priceCents: 249900 },
 ];
 
-/** @deprecated Intermediate PoW tiers (Jul 2026) — never multiply on Stripe metadata read. */
+/** Intermediate PoW tiers already stored as PoW counts in Stripe metadata — do not multiply. */
 export const LEGACY_POW_VOLUME_TIERS = new Set([200, 400, 2000, 4000]);
 
 export const REGULAR_VOLUME_PRICES: Record<number, number> = Object.fromEntries(
@@ -195,21 +195,9 @@ export const BASE_INCLUDED_PROOF_OF_WORK: Record<string, number> = {
   pro_teams: 1000,
 };
 
-/** @deprecated Use BASE_INCLUDED_PROOF_OF_WORK */
-export const BASE_INCLUDED_LESSONS = BASE_INCLUDED_PROOF_OF_WORK;
-
 /** Additional Proof-of-Work pack price (cents) — pack size is EXTRA_PROOF_OF_WORK_PACK_SIZE. */
 export const EXTRA_PROOF_OF_WORK_PACK_PRICE_CENTS = 399;
 export const PRO_TEAMS_EXTRA_PROOF_OF_WORK_PACK_PRICE_CENTS = 199;
-
-/** @deprecated Use EXTRA_PROOF_OF_WORK_PACK_PRICE_CENTS */
-export const EXTRA_BLOCK_PRICE_CENTS = EXTRA_PROOF_OF_WORK_PACK_PRICE_CENTS;
-/** @deprecated Use PRO_TEAMS_EXTRA_PROOF_OF_WORK_PACK_PRICE_CENTS */
-export const PRO_TEAMS_EXTRA_BLOCK_PRICE_CENTS = PRO_TEAMS_EXTRA_PROOF_OF_WORK_PACK_PRICE_CENTS;
-/** @deprecated Use EXTRA_PROOF_OF_WORK_PACK_PRICE_CENTS */
-export const EXTRA_LESSON_PRICE = EXTRA_PROOF_OF_WORK_PACK_PRICE_CENTS;
-/** @deprecated Use PRO_TEAMS_EXTRA_PROOF_OF_WORK_PACK_PRICE_CENTS */
-export const PRO_TEAMS_EXTRA_LESSON_PRICE = PRO_TEAMS_EXTRA_PROOF_OF_WORK_PACK_PRICE_CENTS;
 
 /**
  * Convert Stripe `monthly_volume` to Proof-of-Work submissions.
@@ -226,11 +214,6 @@ export function normalizeStripeVolumeToProofOfWork(
     return volume * PROOF_OF_WORK_SUBMISSIONS_PER_SESSION;
   }
   return volume;
-}
-
-/** @deprecated Use normalizeStripeVolumeToProofOfWork for Stripe metadata. */
-export function normalizeVolumeToProofOfWork(volume: number): number {
-  return normalizeStripeVolumeToProofOfWork(volume);
 }
 
 export function formatProofOfWorkAllowance(count: number): string {
@@ -267,19 +250,9 @@ export function getExtraProofOfWorkPackPriceCents(plan: PlanId | string | null |
     : EXTRA_PROOF_OF_WORK_PACK_PRICE_CENTS;
 }
 
-/** @deprecated Use getExtraProofOfWorkPackPriceCents */
-export function getExtraBlockPriceCents(plan: PlanId | string | null | undefined): number {
-  return getExtraProofOfWorkPackPriceCents(plan);
-}
-
 export function formatExtraProofOfWorkPackPrice(plan: PlanId | string | null | undefined): string {
   const cents = getExtraProofOfWorkPackPriceCents(plan);
   return `$${(cents / 100).toFixed(2)}`;
-}
-
-/** @deprecated Use formatExtraProofOfWorkPackPrice */
-export function formatExtraBlockPrice(plan: PlanId | string | null | undefined): string {
-  return formatExtraProofOfWorkPackPrice(plan);
 }
 
 export function formatPlanMonthlyPrice(
@@ -479,14 +452,6 @@ export function getProofOfWorkAllowance(profile: UserProfile): Pick<UsageCheckRe
   return { plan: "free", limit: freeBaseLimit + extra_lessons, isAdmin: false };
 }
 
-/** @deprecated Use getProofOfWorkAllowance */
-export function getSessionAllowance(
-  profile: UserProfile,
-  _sessionCount: number
-): Pick<UsageCheckResult, "plan" | "limit" | "isAdmin"> {
-  return getProofOfWorkAllowance(profile);
-}
-
 /**
  * Check whether a user can submit another Proof-of-Work artifact this billing period.
  * TAP, ILE, and API uploads all meter against this allowance.
@@ -517,33 +482,6 @@ export function canSubmitProofOfWork(
   }
 
   return { allowed: true, plan, used: proofOfWorkCount, limit, isAdmin: false };
-}
-
-/**
- * Check whether a user can use the product (start TAP/ILE, upload proof of work, etc.).
- * @deprecated Prefer canSubmitProofOfWork — kept for API compatibility.
- */
-export function canStartSession(
-  profile: UserProfile,
-  proofOfWorkCount: number
-): UsageCheckResult {
-  const result = canSubmitProofOfWork(profile, proofOfWorkCount);
-  return {
-    allowed: result.allowed,
-    reason: result.reason,
-    plan: result.plan,
-    used: result.used,
-    limit: result.limit,
-    isAdmin: result.isAdmin,
-  };
-}
-
-/** @deprecated PoW limits are no longer derived from session allowance. */
-export function proofOfWorkLimitForSessionAllowance(
-  _plan: PlanId | string,
-  sessionAllowance: number | null
-): number | null {
-  return sessionAllowance;
 }
 
 /**

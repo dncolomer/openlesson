@@ -6,7 +6,7 @@ export const TAP_SPEECH_SEGMENT_GAP_MS = 2_600;
 export type TapSpeechSegmentEvent = "start" | "stop";
 
 export interface TapSpeechSegmentPayload {
-  type: "openlesson_tap_speech_segment";
+  type: "uncertain_systems_tap_speech_segment";
   event: TapSpeechSegmentEvent;
   tap_session_id: string;
   workspace_id: string;
@@ -30,7 +30,7 @@ export function buildTapSpeechSegmentPayload(input: {
 }): TapSpeechSegmentPayload {
   const timestampMs = input.timestampMs ?? Date.now();
   return {
-    type: "openlesson_tap_speech_segment",
+    type: "uncertain_systems_tap_speech_segment",
     event: input.event,
     tap_session_id: input.tapSessionId,
     workspace_id: input.workspaceId,

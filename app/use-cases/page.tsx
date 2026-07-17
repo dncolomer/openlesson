@@ -18,6 +18,18 @@ export const metadata: Metadata = {
   description:
     "Learning verification, learning optimization, and reasoning augmentation — plus Proof-of-Work API, TAP, ILE, and ALE product pages.",
   alternates: { canonical: "https://uncertain.systems/use-cases" },
+  openGraph: {
+    title: "Use Cases | Uncertain Systems",
+    description:
+      "Learning verification, learning optimization, and reasoning augmentation — plus Proof-of-Work API, TAP, ILE, and ALE.",
+    url: "https://uncertain.systems/use-cases",
+    images: [{ url: "/use-cases/opengraph-image", width: 1200, height: 630, alt: "Use cases" }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Use Cases | Uncertain Systems",
+    images: ["/use-cases/opengraph-image"],
+  },
 };
 
 export default function UseCasesHubPage() {

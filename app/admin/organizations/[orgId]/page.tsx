@@ -5,6 +5,7 @@ import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { tierColor, tierLabel } from "@/lib/admin/tiers";
+import { AdminLoading } from "@/components/admin/AdminStatus";
 
 interface Organization {
   id: string;
@@ -276,11 +277,7 @@ export default function OrganizationDetailPage() {
   };
 
   if (loading) {
-    return (
-      <div className="max-w-5xl mx-auto p-6">
-        <div className="text-neutral-400">Loading...</div>
-      </div>
-    );
+    return <AdminLoading />;
   }
 
   if (error) {

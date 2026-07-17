@@ -14,7 +14,6 @@ const ACTIVE_KEYS: PromptKey[] = [
   "generate_objectives",
   "session_plan_create",
   "session_plan_update",
-  "stuck_policy_recommendation",
 ];
 
 describe("prompt inventory", () => {

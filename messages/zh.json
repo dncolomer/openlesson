@@ -30,10 +30,10 @@
     "connect": "连接",
     "disconnect": "断开",
     "saving": "保存中...",
-    "dismiss": "Dismiss"
+    "dismiss": "Dismiss",
+    "signIn": "登录"
   },
   "nav": {
-    "Uncertain Systems": "Uncertain Systems",
     "solutions": "解决方案",
     "forIndividuals": "个人",
     "forSales": "销售",
@@ -63,7 +63,8 @@
     "signOut": "退出登录",
     "signIn": "登录",
     "toggleMenu": "切换菜单",
-    "labs": "实验室"
+    "labs": "实验室",
+    "brandName": "Uncertain Systems"
   },
   "footer": {
     "product": "产品",
@@ -444,8 +445,8 @@
     "faqFollowUpAnswer": "许多客户发现2-3节课很有价值。在X上私信我（@uncertainsys）讨论套餐选项或持续辅导安排。",
     "faqLevelQuestion": "这是面向初学者还是高级学习者？",
     "faqLevelAnswer": "两者皆可。引导式提问适用于任何级别——我会在你所在的地方与你相遇，帮助你脱困，无论是基础代数还是研究生级别的量子力学。",
-    "faqOpenlessonQuestion": "与Uncertain Systems的联系是什么？",
-    "faqOpenlessonAnswer": "我构建Uncertain Systems是为了将辅导方法扩展到每个人。AI导师使用相同的引导式提问方法。辅导是带有个人化色彩的Premium版本。",
+    "faqBrandQuestion": "与Uncertain Systems的联系是什么？",
+    "faqBrandAnswer": "我构建Uncertain Systems是为了将辅导方法扩展到每个人。AI导师使用相同的引导式提问方法。辅导是带有个人化色彩的Premium版本。",
     "faqTopics": "我们可以涵盖哪些主题？",
     "faqPrepare": "我应该如何准备？",
     "faqFollowUp": "如果我需要后续区块怎么办？",
@@ -619,9 +620,10 @@
     "mcpWorkflowSteps": "1. get_learning_progress(workspace_id) — orient on conversion_goal\n2. generate_proof_of_work_schema — read continuous_evaluation (REST) + continuous_evaluation_mcp (tools)\n3. upload_proof_of_work after product actions (repeat)\n4. analyze_performance for scorecard or chat\n5. Re-fetch schema as proof of work grows",
     "mcpDualNote": "Schema responses include both REST paths and MCP tool names. Use either transport — they stay in sync.",
     "mcpResourcesTitle": "MCP resources",
-    "mcpResourcesHint": "resources/read → openlesson://integration-scope · openlesson://proof-of-work-loop",
+    "mcpResourcesHint": "resources/read → uncertain-systems://integration-scope · uncertain-systems://proof-of-work-loop",
     "mcpDocsLink": "Proof-of-Work API docs",
-    "mcpSkillLink": "skill.md"
+    "mcpSkillLink": "skill.md",
+    "noApiKeysYet": "尚无 API 密钥"
   },
   "pricing": {
     "openSource": "开源",
@@ -820,6 +822,13 @@
     "aesthetics": "美学风格",
     "aestheticsLoading": "正在加载风格...",
     "noAestheticsFound": "未找到美学包。请在 public/aesthetics/{folder-name} 下添加图片。",
+    "mapSize": "初始章节",
+    "mapSizeNarrow": "精简",
+    "mapSizeNarrowDesc": "章节更少——适合初学者的平静开局",
+    "mapSizeMid": "适中",
+    "mapSizeMidDesc": "适合大多数学习者的标准广度",
+    "mapSizeBroad": "广阔",
+    "mapSizeBroadDesc": "更多章节——适合自信的探索者",
     "autoAdvanceOn": "自动前进 开",
     "manualMode": "手动模式",
     "aiDecidesMoveForward": "AI自动决定何时前进",
@@ -845,14 +854,28 @@
     "stopped": "Ready",
     "tutorialBannerTitle": "New here? Try our Simple Tutorial first",
     "tutorialBannerDesc": "A quick 10-minute guided tutorial that covers the basics so you're ready to use the full Integrated Learning Environment (ILE).",
-    "trySimpleTutorial": "Start Simple Tutorial"
+    "trySimpleTutorial": "Start Simple Tutorial",
+    "initialChapters": "初始章节",
+    "initialChaptersNarrow": "精简",
+    "initialChaptersNarrowDesc": "章节更少——适合初学者的平静开局",
+    "initialChaptersMid": "适中",
+    "initialChaptersMidDesc": "适合大多数学习者的标准数量",
+    "initialChaptersBroad": "广阔",
+    "initialChaptersBroadDesc": "更多章节与更深分支——适合探索者",
+    "initialChaptersExisting": "已生成",
+    "initialChaptersChecking": "检查中…",
+    "initialChaptersLoading": "正在检查已有章节",
+    "initialChaptersLoadingDesc": "若章节地图已保存，可能需要片刻",
+    "regenerateChapters": "重新生成章节",
+    "regenerateChaptersDesc": "用上方所选规模替换现有章节地图"
   },
   "sessionEnd": {
     "endSession": "结束区块",
     "keepGoing": "继续",
     "confirmEndTitle": "结束这个区块吗？",
     "confirmEndMessage": "结束区块是永久性的——之后无法恢复。如果你只是想暂时离开，请暂停区块并点击「返回主面板」；你随时可以回来继续未完成的部分。",
-    "pauseAndLeave": "暂停并返回主面板"
+    "pauseAndLeave": "暂停并返回主面板",
+    "returnToWorkspace": "返回工作区"
   },
   "planning": {
     "analyzingHistory": "正在分析您的学习历史...",
@@ -986,7 +1009,8 @@
     "sendSelected": "Send selected",
     "selectThought": "Select thought",
     "manualMessage": "Manual message",
-    "goToStep": "Go to step {number}"
+    "goToStep": "Go to step {number}",
+    "pressToToggle": "按一下展开或收起"
   },
   "tools": {
     "tools": "工具",
@@ -1216,7 +1240,20 @@
     "subtitleWithoutYoutube": "输入一个主题，我们将创建一个结构化学习计划。以结构化的方式探索概念，一次一个环节。",
     "youtubePlaceholder": "粘贴 YouTube 视频链接（例如 https://youtube.com/watch?v=...）",
     "imageAttached": "已附加图片",
-    "pasteOrUploadImage": "粘贴或上传图片"
+    "pasteOrUploadImage": "粘贴或上传图片",
+    "initialChapters": "初始章节",
+    "initialChaptersNarrow": "精简",
+    "initialChaptersNarrowDesc": "章节更少——适合初学者的平静开局",
+    "initialChaptersMid": "适中",
+    "initialChaptersMidDesc": "适合大多数学习者的标准数量",
+    "initialChaptersBroad": "广阔",
+    "initialChaptersBroadDesc": "更多章节与更深分支——适合探索者",
+    "initialChaptersExisting": "已生成",
+    "initialChaptersChecking": "检查中…",
+    "initialChaptersLoading": "正在检查已有章节",
+    "initialChaptersLoadingDesc": "若章节地图已保存，可能需要片刻",
+    "regenerateChapters": "重新生成章节",
+    "regenerateChaptersDesc": "用上方所选规模替换现有章节地图"
   },
   "workspaceFiles": {
     "title": "计划文件",
@@ -1605,7 +1642,9 @@
     "noChapters": "尚无章节",
     "preparing": "正在准备章节…",
     "probes": "{count, plural, other {# 个探针}}",
-    "hasWork": "有笔记"
+    "hasWork": "有笔记",
+    "editPromptPlaceholder": "描述如何改写这一章…",
+    "editSuggest": "建议改写"
   },
   "heliosChat": {
     "assistant": "Helios",
@@ -1789,7 +1828,7 @@
     "mcpToolsTitle": "MCP 工具（与 REST 对等）",
     "mcpScopeNote": "作用域：workspaces:read、workspaces:write、tap:read、tap:write（API 密钥）。",
     "mcpResourcesTitle": "MCP 资源",
-    "mcpResourcesHint": "智能体可 resources/read：openlesson://integration-scope 与 openlesson://proof-of-work-loop。",
+    "mcpResourcesHint": "智能体可 resources/read：uncertain-systems://integration-scope 与 uncertain-systems://proof-of-work-loop。",
     "mcpWorkspaceHint": "在每个工作区范围的 MCP 工具中传入 workspace_id {workspaceId}。",
     "endpointsTitle": "此工作区的端点",
     "endpointsHint": "基础路径 /api/v2/agent — 在下方各路径中替换您的工作区 ID。",
@@ -2379,6 +2418,12 @@
     "confidenceEmerging": "初现",
     "learning": "学习",
     "conversion": "转化",
+    "ghc": "GHC",
+    "ghcFull": "真实人类认知",
+    "ghcConfidenceHigh": "高信号",
+    "ghcConfidenceMedium": "中信号",
+    "ghcConfidenceLow": "低信号",
+    "ghcConfidenceNone": "无思维信号",
     "conversionGoal": "转化目标",
     "sourceWorkspace": "工作区",
     "sourceInferred": "推断",

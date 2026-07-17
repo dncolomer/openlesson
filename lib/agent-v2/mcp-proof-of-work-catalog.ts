@@ -8,7 +8,12 @@ export const MCP_PROOF_OF_WORK_TOOL_CATALOG = [
     summary: "Progress snapshot: goal, blocks, counts, recommended_next_actions (REST + MCP).",
   },
   { name: "get_workspace", scope: "workspaces:read", summary: "Read workspace metadata and conversion_goal." },
-  { name: "create_workspace", scope: "workspaces:write", summary: "Create a workspace from initial_prompt." },
+  {
+    name: "create_workspace",
+    scope: "workspaces:write",
+    summary:
+      "Create a workspace from initial_prompt (optional initial_chapters: narrow|mid|broad; spatial signed grid).",
+  },
   { name: "list_blocks", scope: "workspaces:read", summary: "List assessable blocks." },
   {
     name: "generate_proof_of_work_schema",
@@ -27,7 +32,7 @@ export const MCP_PROOF_OF_WORK_TOOL_CATALOG = [
     summary: "Scorecard report (no prompt) or chat Q&A (with prompt). Returns TIM interruption.",
   },
   { name: "list_tap_links", scope: "tap:read", summary: "List TAP session links and status." },
-  { name: "create_tap_link", scope: "tap:write", summary: "Create a private TAP link for a block." },
+  { name: "create_tap_link", scope: "tap:write", summary: "Create a private TAP link for a workspace or block." },
 ] as const;
 
 export function buildMcpEndpointUrl(origin: string): string {
@@ -43,7 +48,7 @@ export function buildMcpClientConfig(origin: string, apiKeyPlaceholder = "YOUR_A
   return JSON.stringify(
     {
       mcpServers: {
-        openlesson: {
+        "uncertain-systems": {
           type: "streamable-http",
           url: buildMcpEndpointUrl(origin),
           headers: {
@@ -78,7 +83,7 @@ export function buildMcpOAuthClientConfig(origin: string): string {
   return JSON.stringify(
     {
       mcpServers: {
-        openlesson: {
+        "uncertain-systems": {
           type: "streamable-http",
           url: buildMcpEndpointUrl(origin),
         },

@@ -2,7 +2,7 @@ export const TAP_IDLE_TOOL_NAME = "tap-idle-heartbeat";
 export const TAP_IDLE_POW_INTERVAL_MS = 60_000;
 
 export interface TapIdleHeartbeatPayload {
-  type: "openlesson_tap_idle_heartbeat";
+  type: "uncertain_systems_tap_idle_heartbeat";
   tap_session_id: string;
   workspace_id: string;
   block_id?: string | null;
@@ -24,7 +24,7 @@ export function buildTapIdleHeartbeatPayload(input: {
 }): TapIdleHeartbeatPayload {
   const timestampMs = input.timestampMs ?? Date.now();
   return {
-    type: "openlesson_tap_idle_heartbeat",
+    type: "uncertain_systems_tap_idle_heartbeat",
     tap_session_id: input.tapSessionId,
     workspace_id: input.workspaceId,
     block_id: input.blockId ?? null,

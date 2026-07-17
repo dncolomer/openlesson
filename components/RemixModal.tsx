@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { createBrowserClient } from "@supabase/ssr";
+import { createClient } from "@/lib/supabase/client";
 import { useI18n } from "../lib/i18n";
 
 interface CommunityPlan {
@@ -23,10 +23,7 @@ export function RemixModal({ plan, onClose, onComplete }: RemixModalProps) {
   const [exactCopy, setExactCopy] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const supabase = createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
+  const supabase = createClient();
 
   const handleRemix = async () => {
     if (!title.trim()) {

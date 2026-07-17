@@ -24,22 +24,10 @@ export type AdminProfileRow = {
   is_org_admin: boolean;
 };
 
-const ADMIN_PROFILE_FIELDS_BASE =
-  "id, username, created_at, plan, is_admin, extra_lessons, subscription_status, current_period_end, token_tier, token_validity_expires_at, metadata, organization_id, is_org_admin";
+const ADMIN_PROFILE_FIELDS =
+  "id, username, created_at, plan, is_admin, extra_lessons, extra_workspaces, subscription_status, current_period_end, token_tier, token_validity_expires_at, metadata, organization_id, is_org_admin";
 
-function isMissingColumn(
-  error: { code?: string; message?: string } | null,
-  column: string
-): boolean {
-  if (!error) return false;
-  const message = (error.message || "").toLowerCase();
-  return error.code === "42703" || message.includes(column.toLowerCase());
-}
-
-function normalizeAdminProfile(
-  row: Record<string, unknown>,
-  extraWorkspaces = 0
-): AdminProfileRow {
+function normalizeAdminProfile(row: Record<string, unknown>): AdminProfileRow {
   return {
     id: String(row.id),
     username: (row.username as string | null) ?? null,
@@ -47,7 +35,7 @@ function normalizeAdminProfile(
     plan: String(row.plan ?? "free"),
     is_admin: Boolean(row.is_admin),
     extra_lessons: Number(row.extra_lessons ?? 0),
-    extra_workspaces: extraWorkspaces,
+    extra_workspaces: Number(row.extra_workspaces ?? 0),
     subscription_status: String(row.subscription_status ?? "inactive"),
     current_period_end: (row.current_period_end as string | null) ?? null,
     token_tier: (row.token_tier as string | null) ?? null,
@@ -61,35 +49,17 @@ function normalizeAdminProfile(
 export async function listAdminProfiles(
   adminClient: SupabaseClient
 ): Promise<{ profiles: AdminProfileRow[]; error: { message: string } | null }> {
-  const withWorkspaces = await adminClient
+  const { data, error } = await adminClient
     .from("profiles")
-    .select(`${ADMIN_PROFILE_FIELDS_BASE}, extra_workspaces`)
+    .select(ADMIN_PROFILE_FIELDS)
     .order("created_at", { ascending: false });
 
-  if (!withWorkspaces.error) {
-    return {
-      profiles: (withWorkspaces.data || []).map((row) =>
-        normalizeAdminProfile(row, Number(row.extra_workspaces ?? 0))
-      ),
-      error: null,
-    };
-  }
-
-  if (!isMissingColumn(withWorkspaces.error, "extra_workspaces")) {
-    return { profiles: [], error: { message: withWorkspaces.error.message } };
-  }
-
-  const fallback = await adminClient
-    .from("profiles")
-    .select(ADMIN_PROFILE_FIELDS_BASE)
-    .order("created_at", { ascending: false });
-
-  if (fallback.error) {
-    return { profiles: [], error: { message: fallback.error.message } };
+  if (error) {
+    return { profiles: [], error: { message: error.message } };
   }
 
   return {
-    profiles: (fallback.data || []).map((row) => normalizeAdminProfile(row, 0)),
+    profiles: (data || []).map((row) => normalizeAdminProfile(row)),
     error: null,
   };
 }

@@ -21,6 +21,7 @@ import {
 } from "@/lib/storage";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
+import { LoadingStatusMessage } from "@/components/LoadingStatusMessage";
 import { useI18n } from "@/lib/i18n";
 
 // ---- Types ----
@@ -461,10 +462,7 @@ function AnalyticsContent() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#0a0a0a]">
-        <div className="flex items-center gap-3">
-          <div className="animate-spin w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full" />
-          <span className="text-sm text-neutral-400">{t("analytics.loading")}</span>
-        </div>
+        <LoadingStatusMessage message={t("analytics.loading")} />
       </div>
     );
   }
@@ -888,7 +886,7 @@ export default function SessionAnalyticsPage() {
     <Suspense
       fallback={
         <div className="min-h-screen flex items-center justify-center bg-[#0a0a0a]">
-          <div className="animate-spin w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full" />
+          <LoadingStatusMessage message="Loading" />
         </div>
       }
     >

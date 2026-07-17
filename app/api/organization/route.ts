@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { requireAuthenticatedUser } from "@/lib/api/require-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export const runtime = "nodejs";
@@ -11,12 +11,9 @@ function getAdminClient() {
 // GET /api/organization - Get current user's organization details
 export async function GET() {
   try {
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    
-    if (!user) {
-      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-    }
+    const auth = await requireAuthenticatedUser();
+    if (!auth.ok) return auth.response;
+    const { user, supabase } = auth;
 
     // Get user's profile with organization
     const { data: profile, error: profileError } = await supabase
@@ -136,9 +133,9 @@ function slugify(value: string) {
 // POST /api/organization - Create an organization and make current user its admin.
 export async function POST(req: NextRequest) {
   try {
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+    const auth = await requireAuthenticatedUser();
+    if (!auth.ok) return auth.response;
+    const { user, supabase } = auth;
 
     const body = await req.json().catch(() => ({}));
     const name = typeof body.name === "string" ? body.name.trim() : "";

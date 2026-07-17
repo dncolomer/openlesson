@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
   canCreateWorkspace,
-  canStartSession,
   canSubmitProofOfWork,
   formatExtraProofOfWorkPackPrice,
   formatPlanMonthlyPrice,
@@ -117,8 +116,8 @@ describe("plans usage", () => {
     expect(result.limit).toBe(100);
   });
 
-  it("gates TAP/ILE starts through proof-of-work allowance", () => {
-    const result = canStartSession(
+  it("gates product usage when proof-of-work allowance is exhausted", () => {
+    const result = canSubmitProofOfWork(
       {
         plan: "regular_2026",
         is_admin: false,

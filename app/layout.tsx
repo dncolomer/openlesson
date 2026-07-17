@@ -44,6 +44,14 @@ export const metadata: Metadata = {
     siteName: "Uncertain Systems",
     type: "website",
     locale: "en_US",
+    images: [
+      {
+        url: "/opengraph-image",
+        width: 1200,
+        height: 630,
+        alt: "Uncertain Systems — Learning Efficiency for Humans & Agents",
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
@@ -51,6 +59,7 @@ export const metadata: Metadata = {
     description:
       "Optimize learning efficiency with Proof-of-Work API, Think Aloud Protocol, ILE, and Agentic Learning Environment.",
     creator: "@uncertainsys",
+    images: ["/opengraph-image"],
   },
   robots: {
     index: true,

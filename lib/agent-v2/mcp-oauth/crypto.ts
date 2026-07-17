@@ -12,7 +12,7 @@ export function getOAuthSigningSecret(): string {
   return (
     process.env.MCP_OAUTH_SECRET ||
     process.env.SUPABASE_SERVICE_ROLE_KEY ||
-    "openlesson-mcp-oauth-dev-secret"
+    "uncertain-systems-mcp-oauth-dev-secret"
   );
 }
 

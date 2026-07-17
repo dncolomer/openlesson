@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createPrivateToken, getTapScoreBriefForUser, hashPrivateToken } from "@/lib/tap-score";
-import { requireDemoAdminWorkspaceSession } from "@/lib/openlesson-demo/demo-access";
-import { buildDemoTapSessionUrl } from "@/lib/openlesson-demo/demo-session-url";
-import { selectTapValidationBlock } from "@/lib/openlesson-demo/tap-validation";
+import { requireDemoAdminWorkspaceSession } from "@/lib/product-demos/demo-access";
+import { buildDemoTapSessionUrl } from "@/lib/product-demos/demo-session-url";
+import { selectTapValidationBlock } from "@/lib/product-demos/tap-validation";
 import { isUuid } from "@/lib/storage";
 
 export const runtime = "nodejs";

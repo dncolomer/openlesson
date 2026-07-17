@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { ayclTokenFromBody, guardWorkspaceRoute, requireAuthenticatedUser } from "@/lib/api/require-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { CreateTapLinkError, createWorkspaceTapLink } from "@/lib/agent-v2/create-tap-link";
 import type { AuthContext } from "@/lib/agent-v2/types";
@@ -14,14 +14,11 @@ async function resolveWebAuth(workspaceId: string): Promise<
   | { error: string; status: number }
   | { auth: AuthContext; supabase: ReturnType<typeof createAdminClient>; isOwner: boolean }
 > {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
+  const auth = await requireAuthenticatedUser();
+  if (!auth.ok) {
     return { error: "Not authenticated", status: 401 };
   }
+  const { user, supabase } = auth;
 
   const admin = createAdminClient();
   const { data: workspace } = await admin
@@ -98,8 +95,8 @@ export async function POST(req: NextRequest) {
     const workspaceId = typeof body.workspaceId === "string" ? body.workspaceId.trim() : "";
     const blockId = typeof body.blockId === "string" ? body.blockId.trim() : "";
 
-    if (!workspaceId || !blockId) {
-      return NextResponse.json({ error: "workspaceId and blockId are required" }, { status: 400 });
+    if (!workspaceId) {
+      return NextResponse.json({ error: "workspaceId is required" }, { status: 400 });
     }
 
     const access = await resolveWebAuth(workspaceId);
@@ -111,7 +108,7 @@ export async function POST(req: NextRequest) {
       supabase: access.supabase,
       auth: access.auth,
       workspaceId,
-      blockId,
+      blockId: blockId || null,
       body,
       baseUrl: baseUrl(req),
       allowAnonymousForNonAdmin: access.isOwner,

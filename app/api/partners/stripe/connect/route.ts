@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
+import { requireAuthenticatedUser } from "@/lib/api/require-auth";
 import Stripe from "stripe";
 import { getAppOrigin } from "@/lib/app-url";
-import { createClient } from "@/lib/supabase/server";
 import { getAdminClient } from "@/lib/partners";
 
 export const runtime = "nodejs";
@@ -14,12 +14,9 @@ function getStripe() {
 
 export async function POST(request: Request) {
   try {
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-
-    if (!user) {
-      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-    }
+    const auth = await requireAuthenticatedUser();
+    if (!auth.ok) return auth.response;
+    const { user, supabase } = auth;
 
     // Get partner record
     const { data: partner, error } = await supabase
@@ -32,9 +29,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "You are not a partner" }, { status: 400 });
     }
 
-    // Get user email for Stripe onboarding
-    const { data: authUser } = await supabase.auth.getUser();
-    const userEmail = authUser.user?.email;
+    // Prefer email from the already-authenticated user
+    const userEmail = user.email;
 
     const stripe = getStripe();
 
@@ -87,12 +83,9 @@ export async function POST(request: Request) {
 
 export async function GET(request: Request) {
   try {
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-
-    if (!user) {
-      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-    }
+    const auth = await requireAuthenticatedUser();
+    if (!auth.ok) return auth.response;
+    const { user, supabase } = auth;
 
     // Check account status
     const { data: partner } = await supabase

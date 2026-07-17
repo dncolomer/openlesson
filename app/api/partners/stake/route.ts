@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { requireAuthenticatedUser } from "@/lib/api/require-auth";
 import { getTierFromStake, generateReferralCode, PARTNER_TIERS, PartnerTier } from "@/lib/partners";
 
 export const runtime = "nodejs";
@@ -93,12 +93,9 @@ async function checkTransferToTreasury(userWallet: string, stakeAmount: number):
 
 export async function POST(request: Request) {
   try {
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-
-    if (!user) {
-      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-    }
+    const auth = await requireAuthenticatedUser();
+    if (!auth.ok) return auth.response;
+    const { user, supabase } = auth;
 
     const { stakeAmount, walletAddress } = await request.json();
 

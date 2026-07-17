@@ -9,6 +9,18 @@ export const metadata: Metadata = {
   description:
     "A holistic model of knowledge: brain configuration, proximity, transformation, and a non-invasive path to self-driving learning.",
   alternates: { canonical: "https://uncertain.systems/science" },
+  openGraph: {
+    title: "Science | Uncertain Systems",
+    description:
+      "A holistic model of knowledge: brain configuration, proximity, transformation, and self-driving learning.",
+    url: "https://uncertain.systems/science",
+    images: [{ url: "/science/opengraph-image", width: 1200, height: 630, alt: "Science" }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Science | Uncertain Systems",
+    images: ["/science/opengraph-image"],
+  },
 };
 
 const BACKGROUND_IMAGE = "/aesthetics/Greco-futurism/HHnTrlMaAAAg_4I.jpeg";

@@ -1103,6 +1103,11 @@
   "organization": {
     "orgNamePlaceholder": "ABC Firma",
     "orgSlugPlaceholder": "abc-corp",
+    "uploadLogo": "Logo hochladen",
+    "changeLogo": "Logo ändern",
+    "uploadingLogo": "Wird hochgeladen…",
+    "logoHelper": "Wird auf Einladungslinks angezeigt. PNG, JPEG, WebP, GIF oder SVG · max. 2 MB.",
+    "logoUploadError": "Logo konnte nicht hochgeladen werden",
     "loadError": "Organisation konnte nicht geladen werden",
     "noOrganization": "Keine Organisation",
     "noOrganizationDesc": "Du bist noch Teil keiner Organisation. Bitte deinen Admin um einen Einladungslink.",

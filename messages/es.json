@@ -1195,7 +1195,12 @@
     "leaveConfirm": "¿Estás seguro de que quieres salir de esta organización?",
     "loadError": "Error al cargar la organización",
     "orgNamePlaceholder": "Empresa ABC",
-    "orgSlugPlaceholder": "abc-corp"
+    "orgSlugPlaceholder": "abc-corp",
+    "uploadLogo": "Subir logo",
+    "changeLogo": "Cambiar logo",
+    "uploadingLogo": "Subiendo…",
+    "logoHelper": "Se muestra en los enlaces de invitación. PNG, JPEG, WebP, GIF o SVG · máx. 2 MB.",
+    "logoUploadError": "Error al subir el logo"
   },
   "admin": {
     "title": "Panel de Admin",

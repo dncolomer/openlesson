@@ -1103,6 +1103,11 @@
   "organization": {
     "orgNamePlaceholder": "Firma ABC",
     "orgSlugPlaceholder": "abc-corp",
+    "uploadLogo": "Prześlij logo",
+    "changeLogo": "Zmień logo",
+    "uploadingLogo": "Przesyłanie…",
+    "logoHelper": "Wyświetlane na linkach zaproszeń. PNG, JPEG, WebP, GIF lub SVG · maks. 2 MB.",
+    "logoUploadError": "Nie udało się przesłać logo",
     "noOrganization": "No Organization",
     "noOrganizationDesc": "You're not part of any organization yet. Ask your organization admin for an invite link to join.",
     "goToDashboard": "Go to Dashboard",

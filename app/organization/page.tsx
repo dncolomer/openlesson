@@ -3,15 +3,21 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { Navbar } from "@/components/Navbar";
 import { createClient } from "@/lib/supabase/client";
 import { useI18n } from "@/lib/i18n";
 import { LoadingStatusMessage } from "@/components/LoadingStatusMessage";
+import {
+  fileToLogoPayload,
+  validateLogoFile,
+} from "@/lib/organization/logo-client";
 
 interface Organization {
   id: string;
   name: string;
   slug: string;
+  logo_url?: string | null;
   created_at: string;
 }
 
@@ -50,6 +56,7 @@ export default function OrganizationPage() {
   const [inviteCount, setInviteCount] = useState(1);
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [removingMember, setRemovingMember] = useState<string | null>(null);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
 
   useEffect(() => {
     loadOrganization();
@@ -178,6 +185,35 @@ export default function OrganizationPage() {
     alert(t('organization.inviteCopied'));
   };
 
+  const handleLogoUpload = async (file: File | null) => {
+    if (!file) return;
+    const err = validateLogoFile(file);
+    if (err) {
+      alert(err);
+      return;
+    }
+    setUploadingLogo(true);
+    try {
+      const logo = await fileToLogoPayload(file);
+      const res = await fetch("/api/organization/logo", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ logo }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        alert(data.error || t("organization.logoUploadError"));
+      } else if (organization) {
+        setOrganization({ ...organization, logo_url: data.logo_url });
+      }
+    } catch (uploadErr) {
+      console.error("Logo upload error:", uploadErr);
+      alert(t("organization.logoUploadError"));
+    } finally {
+      setUploadingLogo(false);
+    }
+  };
+
   const formatDate = (dateStr: string | null) => {
     if (!dateStr) return "-";
     return new Date(dateStr).toLocaleDateString("en-US", {
@@ -257,16 +293,58 @@ export default function OrganizationPage() {
           <Link href="/dashboard" className="text-neutral-400 hover:text-white text-sm">
             &larr; {t('organization.backToDashboard')}
           </Link>
-          <h1 className="text-2xl font-bold text-white mt-2">{organization.name}</h1>
-          <div className="flex items-center gap-3 mt-1">
-            <code className="text-sm text-neutral-400 bg-neutral-800 px-2 py-1 rounded">
-              {organization.slug}
-            </code>
-            {isOrgAdmin && (
-              <span className="px-2 py-1 text-xs rounded bg-purple-500/20 text-purple-400 border border-purple-500/30">
-                {t('organization.orgAdmin')}
-              </span>
-            )}
+          <div className="mt-3 flex items-start gap-4">
+            <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-md border border-neutral-700 bg-neutral-900">
+              {organization.logo_url ? (
+                <Image
+                  src={organization.logo_url}
+                  alt={`${organization.name} logo`}
+                  width={64}
+                  height={64}
+                  className="h-full w-full object-cover"
+                  unoptimized
+                />
+              ) : (
+                <span className="text-xl font-medium text-neutral-500">
+                  {organization.name.charAt(0).toUpperCase()}
+                </span>
+              )}
+            </div>
+            <div className="min-w-0 flex-1">
+              <h1 className="text-2xl font-bold text-white">{organization.name}</h1>
+              <div className="mt-1 flex flex-wrap items-center gap-3">
+                <code className="text-sm text-neutral-400 bg-neutral-800 px-2 py-1 rounded">
+                  {organization.slug}
+                </code>
+                {isOrgAdmin && (
+                  <span className="px-2 py-1 text-xs rounded bg-purple-500/20 text-purple-400 border border-purple-500/30">
+                    {t('organization.orgAdmin')}
+                  </span>
+                )}
+              </div>
+              {isOrgAdmin && (
+                <div className="mt-3">
+                  <label className="inline-flex cursor-pointer items-center gap-2 rounded-md border border-neutral-700 bg-neutral-900 px-3 py-1.5 text-xs text-neutral-300 hover:border-neutral-600 hover:text-white">
+                    <input
+                      type="file"
+                      accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml"
+                      className="hidden"
+                      disabled={uploadingLogo}
+                      onChange={(e) => {
+                        void handleLogoUpload(e.target.files?.[0] ?? null);
+                        e.target.value = "";
+                      }}
+                    />
+                    {uploadingLogo
+                      ? t("organization.uploadingLogo")
+                      : organization.logo_url
+                        ? t("organization.changeLogo")
+                        : t("organization.uploadLogo")}
+                  </label>
+                  <p className="mt-1 text-xs text-neutral-500">{t("organization.logoHelper")}</p>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 

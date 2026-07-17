@@ -1,11 +1,27 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
 import { useI18n } from "@/lib/i18n";
 import { LoadingStatusMessage } from "@/components/LoadingStatusMessage";
+import { BrandLogo } from "@/components/BrandLogo";
+
+const INVITE_BACKGROUND = "/aesthetics/Greco-futurism/HHnTrgVaQAAP-_3.jpeg";
+
+const shellStyle = {
+  backgroundImage: `linear-gradient(rgba(10,10,10,0.82), rgba(10,10,10,0.82)), url(${INVITE_BACKGROUND})`,
+} as const;
+
+const cardClass =
+  "w-full max-w-md rounded-md border border-neutral-800 bg-neutral-950/75 p-6 sm:p-8 backdrop-blur-sm";
+const labelClass = "font-mono text-[10px] uppercase tracking-[2px] text-neutral-500";
+const primaryBtnClass =
+  "inline-flex w-full items-center justify-center rounded-sm bg-white px-4 py-3 text-sm font-medium text-black transition hover:bg-neutral-200 disabled:cursor-not-allowed disabled:opacity-50";
+const secondaryBtnClass =
+  "inline-flex w-full items-center justify-center rounded-sm border border-neutral-700 bg-neutral-900/80 px-4 py-3 text-sm font-medium text-neutral-200 transition hover:border-neutral-600 hover:bg-neutral-800 hover:text-white";
 
 interface InviteDetails {
   id: string;
@@ -15,7 +31,82 @@ interface InviteDetails {
     id: string;
     name: string;
     slug: string;
+    logo_url?: string | null;
   } | null;
+}
+
+function InviteShell({ children }: { children: ReactNode }) {
+  return (
+    <div
+      className="min-h-screen bg-[#0a0a0a] bg-cover bg-fixed bg-center text-white"
+      style={shellStyle}
+    >
+      <div className="flex min-h-screen flex-col">
+        <header className="border-b border-neutral-800/60 px-5 py-4">
+          <Link href="/" className="inline-flex opacity-90 transition hover:opacity-100">
+            <BrandLogo size={28} nameClassName="text-sm font-semibold tracking-tight text-white" />
+          </Link>
+        </header>
+        <main className="flex flex-1 items-center justify-center p-4 sm:p-6">{children}</main>
+      </div>
+    </div>
+  );
+}
+
+function OrgMark({
+  name,
+  logoUrl,
+  size = 64,
+}: {
+  name: string;
+  logoUrl?: string | null;
+  size?: number;
+}) {
+  if (logoUrl) {
+    return (
+      <Image
+        src={logoUrl}
+        alt={`${name} logo`}
+        width={size}
+        height={size}
+        className="rounded-md border border-neutral-700 object-cover"
+        style={{ width: size, height: size }}
+        unoptimized
+      />
+    );
+  }
+
+  return (
+    <div
+      className="flex items-center justify-center rounded-md border border-neutral-700 bg-neutral-900/80 font-medium text-neutral-300"
+      style={{ width: size, height: size, fontSize: size * 0.35 }}
+    >
+      {name.charAt(0).toUpperCase() || "?"}
+    </div>
+  );
+}
+
+function StatusIcon({ tone }: { tone: "success" | "error" | "warning" }) {
+  const tones = {
+    success: "border-emerald-500/30 bg-emerald-500/10 text-emerald-400",
+    error: "border-red-500/30 bg-red-500/10 text-red-400",
+    warning: "border-amber-500/30 bg-amber-500/10 text-amber-400",
+  };
+  const paths = {
+    success: "M5 13l4 4L19 7",
+    error: "M6 18L18 6M6 6l12 12",
+    warning:
+      "M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z",
+  };
+  return (
+    <div
+      className={`mx-auto mb-6 flex h-14 w-14 items-center justify-center rounded-full border ${tones[tone]}`}
+    >
+      <svg className="h-7 w-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={paths[tone]} />
+      </svg>
+    </div>
+  );
 }
 
 export default function InvitePage() {
@@ -24,7 +115,7 @@ export default function InvitePage() {
   const token = params.token as string;
   const supabase = createClient();
   const { t } = useI18n();
-  
+
   const [loading, setLoading] = useState(true);
   const [accepting, setAccepting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -35,35 +126,35 @@ export default function InvitePage() {
 
   useEffect(() => {
     loadInviteAndUser();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
   const loadInviteAndUser = async () => {
     try {
-      // Load invite details
       const inviteRes = await fetch(`/api/invite/accept?token=${token}`);
       const inviteData = await inviteRes.json();
-      
+
       if (!inviteRes.ok) {
         setError(inviteData.error || "Invalid invite link");
         setLoading(false);
         return;
       }
-      
+
       setInvite(inviteData.invite);
 
-      // Check if user is logged in
-      const { data: { user: authUser } } = await supabase.auth.getUser();
-      
+      const {
+        data: { user: authUser },
+      } = await supabase.auth.getUser();
+
       if (authUser) {
         setUser({ id: authUser.id, email: authUser.email || undefined });
-        
-        // Check if user already has an organization
+
         const { data: profile } = await supabase
           .from("profiles")
           .select("organization_id")
           .eq("id", authUser.id)
           .single();
-        
+
         if (profile?.organization_id) {
           setUserOrg(profile.organization_id);
         }
@@ -78,8 +169,7 @@ export default function InvitePage() {
 
   const handleAccept = async () => {
     if (!user) {
-      // Redirect to login with return URL
-      router.push(`/login?returnUrl=/invite/${token}`);
+      router.push(`/login?redirect=${encodeURIComponent(`/invite/${token}`)}`);
       return;
     }
 
@@ -90,9 +180,9 @@ export default function InvitePage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ token }),
       });
-      
+
       const data = await res.json();
-      
+
       if (!res.ok) {
         setError(data.error || "Failed to accept invite");
       } else {
@@ -108,182 +198,197 @@ export default function InvitePage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
-        <LoadingStatusMessage message={t('common.loading')} />
+      <div
+        className="flex min-h-screen items-center justify-center bg-[#0a0a0a] bg-cover bg-center"
+        style={shellStyle}
+      >
+        <LoadingStatusMessage message={t("common.loading")} />
       </div>
     );
   }
 
-  // Success state
   if (success && invite?.organization) {
     return (
-      <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center p-4">
-        <div className="max-w-md w-full bg-neutral-900/50 border border-neutral-800 rounded-lg p-8 text-center">
-          <div className="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
-            <svg className="w-8 h-8 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-            </svg>
+      <InviteShell>
+        <div className={`${cardClass} text-center`}>
+          <div className="relative mx-auto mb-6 inline-flex">
+            <OrgMark
+              name={invite.organization.name}
+              logoUrl={invite.organization.logo_url}
+              size={72}
+            />
+            <span className="absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full border border-emerald-500/40 bg-emerald-500/20 text-emerald-400">
+              <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+              </svg>
+            </span>
           </div>
-          <h1 className="text-2xl font-bold text-white mb-2">{t('invite.welcomeTo', { org: invite.organization.name })}</h1>
-          <p className="text-neutral-400 mb-6">
-            {t('invite.successfullyJoined')}
+          <p className={labelClass}>{t("invite.organizationLabel")}</p>
+          <h1 className="mt-2 text-2xl font-medium tracking-[-0.5px] text-white sm:text-3xl">
+            {t("invite.welcomeTo", { org: invite.organization.name })}
+          </h1>
+          <p className="mt-3 text-sm leading-relaxed text-neutral-400">
+            {t("invite.successfullyJoined")}
           </p>
-          <Link
-            href="/dashboard"
-            className="inline-block px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
-          >
-            {t('invite.goToDashboard')}
+          <Link href="/dashboard" className={`${primaryBtnClass} mt-8`}>
+            {t("invite.goToDashboard")}
           </Link>
         </div>
-      </div>
+      </InviteShell>
     );
   }
 
-  // Error states
   if (error || !invite) {
     return (
-      <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center p-4">
-        <div className="max-w-md w-full bg-neutral-900/50 border border-neutral-800 rounded-lg p-8 text-center">
-          <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
-            <svg className="w-8 h-8 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </div>
-          <h1 className="text-2xl font-bold text-white mb-2">{t('invite.invalidInvite')}</h1>
-          <p className="text-neutral-400 mb-6">
-            {error || t('invite.invalidOrExpired')}
+      <InviteShell>
+        <div className={`${cardClass} text-center`}>
+          <StatusIcon tone="error" />
+          <p className={labelClass}>Invite</p>
+          <h1 className="mt-2 text-2xl font-medium tracking-[-0.5px] text-white">
+            {t("invite.invalidInvite")}
+          </h1>
+          <p className="mt-3 text-sm leading-relaxed text-neutral-400">
+            {error || t("invite.invalidOrExpired")}
           </p>
-          <Link
-            href="/"
-            className="inline-block px-6 py-3 bg-neutral-800 hover:bg-neutral-700 text-white rounded-lg transition-colors"
-          >
-            {t('invite.goHome')}
+          <Link href="/" className={`${secondaryBtnClass} mt-8`}>
+            {t("invite.goHome")}
           </Link>
         </div>
-      </div>
+      </InviteShell>
     );
   }
 
-  // Invite already used
   if (invite.is_used) {
     return (
-      <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center p-4">
-        <div className="max-w-md w-full bg-neutral-900/50 border border-neutral-800 rounded-lg p-8 text-center">
-          <div className="w-16 h-16 bg-yellow-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
-            <svg className="w-8 h-8 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-            </svg>
-          </div>
-          <h1 className="text-2xl font-bold text-white mb-2">{t('invite.alreadyUsed')}</h1>
-          <p className="text-neutral-400 mb-6">
-            {t('invite.alreadyUsedDesc')}
+      <InviteShell>
+        <div className={`${cardClass} text-center`}>
+          {invite.organization && (
+            <div className="mb-6 flex justify-center">
+              <OrgMark
+                name={invite.organization.name}
+                logoUrl={invite.organization.logo_url}
+                size={64}
+              />
+            </div>
+          )}
+          <StatusIcon tone="warning" />
+          <p className={labelClass}>Invite</p>
+          <h1 className="mt-2 text-2xl font-medium tracking-[-0.5px] text-white">
+            {t("invite.alreadyUsed")}
+          </h1>
+          <p className="mt-3 text-sm leading-relaxed text-neutral-400">
+            {t("invite.alreadyUsedDesc")}
           </p>
-          <Link
-            href="/"
-            className="inline-block px-6 py-3 bg-neutral-800 hover:bg-neutral-700 text-white rounded-lg transition-colors"
-          >
-            {t('invite.goHome')}
+          <Link href="/" className={`${secondaryBtnClass} mt-8`}>
+            {t("invite.goHome")}
           </Link>
         </div>
-      </div>
+      </InviteShell>
     );
   }
 
-  // User already in an organization
   if (user && userOrg) {
     return (
-      <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center p-4">
-        <div className="max-w-md w-full bg-neutral-900/50 border border-neutral-800 rounded-lg p-8 text-center">
-          <div className="w-16 h-16 bg-yellow-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
-            <svg className="w-8 h-8 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-            </svg>
-          </div>
-          <h1 className="text-2xl font-bold text-white mb-2">{t('invite.alreadyInOrg')}</h1>
-          <p className="text-neutral-400 mb-6">
-            {t('invite.alreadyInOrgDesc')}
+      <InviteShell>
+        <div className={`${cardClass} text-center`}>
+          {invite.organization && (
+            <div className="mb-6 flex justify-center">
+              <OrgMark
+                name={invite.organization.name}
+                logoUrl={invite.organization.logo_url}
+                size={64}
+              />
+            </div>
+          )}
+          <StatusIcon tone="warning" />
+          <p className={labelClass}>Invite</p>
+          <h1 className="mt-2 text-2xl font-medium tracking-[-0.5px] text-white">
+            {t("invite.alreadyInOrg")}
+          </h1>
+          <p className="mt-3 text-sm leading-relaxed text-neutral-400">
+            {t("invite.alreadyInOrgDesc")}
           </p>
-          <div className="flex gap-3 justify-center">
-            <Link
-              href="/organization"
-              className="px-6 py-3 bg-neutral-800 hover:bg-neutral-700 text-white rounded-lg transition-colors"
-            >
-              {t('invite.manageOrganization')}
+          <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+            <Link href="/organization" className={secondaryBtnClass}>
+              {t("invite.manageOrganization")}
             </Link>
-            <Link
-              href="/dashboard"
-              className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
-            >
-              {t('invite.goToDashboard')}
+            <Link href="/dashboard" className={primaryBtnClass}>
+              {t("invite.goToDashboard")}
             </Link>
           </div>
         </div>
-      </div>
+      </InviteShell>
     );
   }
 
-  // Main invite acceptance view
+  const orgName = invite.organization?.name || t("invite.organizationFallback");
+
   return (
-    <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center p-4">
-      <div className="max-w-md w-full bg-neutral-900/50 border border-neutral-800 rounded-lg p-8">
-        <div className="text-center mb-8">
-          <div className="w-16 h-16 bg-blue-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
-            <svg className="w-8 h-8 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-            </svg>
+    <InviteShell>
+      <div className={cardClass}>
+        <div className="text-center">
+          <div className="mb-6 flex justify-center">
+            <OrgMark
+              name={orgName}
+              logoUrl={invite.organization?.logo_url}
+              size={72}
+            />
           </div>
-          <h1 className="text-2xl font-bold text-white mb-2">
-            {t('invite.joinOrg', { org: invite.organization?.name || t('invite.organizationFallback') })}
+          <p className={labelClass}>{t("invite.organizationLabel")}</p>
+          <h1 className="mt-2 text-2xl font-medium tracking-[-0.5px] text-white sm:text-3xl">
+            {t("invite.joinOrg", { org: orgName })}
           </h1>
-          <p className="text-neutral-400">
-            {t('invite.invitedToJoin')}
+          <p className="mt-3 text-sm leading-relaxed text-neutral-400">
+            {t("invite.invitedToJoin")}
           </p>
         </div>
 
         {invite.organization && (
-          <div className="bg-neutral-800/50 rounded-lg p-4 mb-6">
-            <div className="text-sm text-neutral-400 mb-1">{t('invite.organizationLabel')}</div>
-            <div className="text-lg text-white font-medium">{invite.organization.name}</div>
-            <code className="text-xs text-neutral-500">{invite.organization.slug}</code>
+          <div className="mt-8 rounded-md border border-neutral-800 bg-black/40 p-4">
+            <div className={labelClass}>{t("invite.organizationLabel")}</div>
+            <div className="mt-2 text-lg font-medium text-white">{invite.organization.name}</div>
+            <code className="mt-1 block font-mono text-xs text-neutral-500">
+              {invite.organization.slug}
+            </code>
           </div>
         )}
 
         {user ? (
-          <div className="space-y-4">
-            <div className="bg-neutral-800/50 rounded-lg p-4">
-              <div className="text-sm text-neutral-400 mb-1">{t('invite.joiningAs')}</div>
-              <div className="text-white">{user.email}</div>
+          <div className="mt-6 space-y-4">
+            <div className="rounded-md border border-neutral-800 bg-black/40 p-4">
+              <div className={labelClass}>{t("invite.joiningAs")}</div>
+              <div className="mt-2 text-sm text-neutral-200">{user.email}</div>
             </div>
             <button
               onClick={handleAccept}
               disabled={accepting}
-              className="w-full py-3 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium rounded-lg transition-colors"
+              className={primaryBtnClass}
             >
-              {accepting ? t('invite.joining') : t('invite.acceptInvite')}
+              {accepting ? t("invite.joining") : t("invite.acceptInvite")}
             </button>
           </div>
         ) : (
-          <div className="space-y-4">
-            <p className="text-neutral-400 text-sm text-center">
-              {t('invite.loginToAccept')}
+          <div className="mt-6 space-y-4">
+            <p className="text-center text-sm text-neutral-400">
+              {t("invite.loginToAccept")}
             </p>
-            <div className="flex gap-3">
+            <div className="flex flex-col gap-3 sm:flex-row">
               <Link
-                href={`/login?returnUrl=/invite/${token}`}
-                className="flex-1 py-3 bg-neutral-800 hover:bg-neutral-700 text-white text-center font-medium rounded-lg transition-colors"
+                href={`/login?redirect=${encodeURIComponent(`/invite/${token}`)}`}
+                className={secondaryBtnClass}
               >
-                {t('invite.logIn')}
+                {t("invite.logIn")}
               </Link>
               <Link
-                href={`/register?returnUrl=/invite/${token}`}
-                className="flex-1 py-3 bg-blue-600 hover:bg-blue-700 text-white text-center font-medium rounded-lg transition-colors"
+                href={`/register?returnUrl=${encodeURIComponent(`/invite/${token}`)}`}
+                className={primaryBtnClass}
               >
-                {t('invite.signUp')}
+                {t("invite.signUp")}
               </Link>
             </div>
           </div>
         )}
       </div>
-    </div>
+    </InviteShell>
   );
 }

@@ -1103,6 +1103,11 @@
   "organization": {
     "orgNamePlaceholder": "ABC公司",
     "orgSlugPlaceholder": "abc-corp",
+    "uploadLogo": "上传标志",
+    "changeLogo": "更换标志",
+    "uploadingLogo": "上传中…",
+    "logoHelper": "显示在邀请链接页面。PNG、JPEG、WebP、GIF 或 SVG · 最大 2 MB。",
+    "logoUploadError": "标志上传失败",
     "noOrganization": "没有组织",
     "noOrganizationDesc": "您还不是任何组织的成员。请联系您的组织管理员获取邀请链接。",
     "goToDashboard": "前往仪表板",

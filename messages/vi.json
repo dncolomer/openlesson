@@ -1103,6 +1103,11 @@
   "organization": {
     "orgNamePlaceholder": "Công ty ABC",
     "orgSlugPlaceholder": "abc-corp",
+    "uploadLogo": "Tải logo lên",
+    "changeLogo": "Đổi logo",
+    "uploadingLogo": "Đang tải…",
+    "logoHelper": "Hiển thị trên liên kết mời. PNG, JPEG, WebP, GIF hoặc SVG · tối đa 2 MB.",
+    "logoUploadError": "Không thể tải logo lên",
     "noOrganization": "No Organization",
     "noOrganizationDesc": "You're not part of any organization yet. Ask your organization admin for an invite link to join.",
     "goToDashboard": "Go to Dashboard",

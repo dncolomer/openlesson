@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuthenticatedUser } from "@/lib/api/require-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
+import {
+  parseLogoPayload,
+  uploadOrganizationLogo,
+} from "@/lib/organization/upload-logo";
 
 export const runtime = "nodejs";
 
@@ -140,6 +144,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json().catch(() => ({}));
     const name = typeof body.name === "string" ? body.name.trim() : "";
     if (!name) return NextResponse.json({ error: "Organization name is required" }, { status: 400 });
+    const logo = parseLogoPayload(body);
 
     const adminClient = getAdminClient();
     const { resolveUserBilling, userHasOrgApiAccess } = await import(
@@ -214,13 +219,23 @@ export async function POST(req: NextRequest) {
           return NextResponse.json({ error: "Failed to update organization" }, { status: 500 });
         }
 
+        let finalOrg = organization;
+        if (logo) {
+          const logoResult = await uploadOrganizationLogo(adminClient, organization.id, logo);
+          if (logoResult.ok) {
+            finalOrg = { ...organization, logo_url: logoResult.logoUrl };
+          } else {
+            console.error("Promote org logo upload failed:", logoResult.error);
+          }
+        }
+
         await adminClient
           .from("agent_api_keys")
           .update({ organization_id: organization.id })
           .eq("user_id", user.id)
           .is("organization_id", null);
 
-        return NextResponse.json({ organization, is_org_admin: true, promoted: true }, { status: 200 });
+        return NextResponse.json({ organization: finalOrg, is_org_admin: true, promoted: true }, { status: 200 });
       }
 
       return NextResponse.json(
@@ -259,6 +274,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Failed to create organization" }, { status: 500 });
     }
 
+    let finalOrg = organization;
+    if (logo) {
+      const logoResult = await uploadOrganizationLogo(adminClient, organization.id, logo);
+      if (logoResult.ok) {
+        finalOrg = { ...organization, logo_url: logoResult.logoUrl };
+      } else {
+        console.error("Create org logo upload failed:", logoResult.error);
+      }
+    }
+
     const { error: updateError } = await adminClient
       .from("profiles")
       .update({ organization_id: organization.id, is_org_admin: true })
@@ -275,7 +300,7 @@ export async function POST(req: NextRequest) {
       .eq("user_id", user.id)
       .is("organization_id", null);
 
-    return NextResponse.json({ organization, is_org_admin: true }, { status: 201 });
+    return NextResponse.json({ organization: finalOrg, is_org_admin: true }, { status: 201 });
   } catch (error) {
     console.error("Create organization error:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });

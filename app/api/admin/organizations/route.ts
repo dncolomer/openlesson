@@ -5,6 +5,17 @@ import {
   ensureOrgXaiApiKey,
   ensureOrgXaiCollection,
 } from "@/lib/organization/ensure-xai-resources";
+import {
+  parseLogoPayload,
+  uploadOrganizationLogo,
+} from "@/lib/organization/upload-logo";
+import {
+  ORG_DETAIL_SELECT,
+  ORG_DETAIL_SELECT_NO_LOGO,
+  ORG_LIST_SELECT,
+  ORG_LIST_SELECT_NO_LOGO,
+  isMissingLogoUrlColumn,
+} from "@/lib/organization/org-select";
 
 export const runtime = "nodejs";
 
@@ -15,19 +26,43 @@ export async function GET() {
     if ("error" in auth) return auth.error;
     const { adminClient } = auth;
 
-    const { data: organizations, error } = await adminClient
-      .from("organizations")
-      .select(
-        "id, name, slug, kind, billing_mode, plan, subscription_status, current_period_end, extra_lessons, billing_email, archived_at, xai_api_key_id, xai_api_key_name, xai_api_key_status, xai_collection_id, xai_collection_status, created_at, updated_at"
-      )
-      .order("created_at", { ascending: false });
+    let organizations: Array<Record<string, unknown>> | null = null;
+    let error: { message?: string; code?: string; details?: string; hint?: string } | null = null;
+
+    {
+      const first = await adminClient
+        .from("organizations")
+        .select(ORG_LIST_SELECT)
+        .order("created_at", { ascending: false });
+      organizations = first.data as Array<Record<string, unknown>> | null;
+      error = first.error;
+    }
+
+    // Migration 20260717200000_organization_logo may not be applied yet.
+    if (error && isMissingLogoUrlColumn(error)) {
+      console.warn(
+        "organizations.logo_url missing — falling back without logo (apply migration 20260717200000_organization_logo)"
+      );
+      const fallback = await adminClient
+        .from("organizations")
+        .select(ORG_LIST_SELECT_NO_LOGO)
+        .order("created_at", { ascending: false });
+      organizations = fallback.data as Array<Record<string, unknown>> | null;
+      error = fallback.error;
+    }
 
     if (error) {
       console.error("Error fetching organizations:", error);
-      return NextResponse.json({ error: "Failed to fetch organizations" }, { status: 500 });
+      return NextResponse.json(
+        {
+          error: "Failed to fetch organizations",
+          details: error.message,
+        },
+        { status: 500 }
+      );
     }
 
-    const orgIds = (organizations || []).map((o) => o.id);
+    const orgIds = (organizations || []).map((o) => String(o.id));
 
     const { data: members } =
       orgIds.length > 0
@@ -57,11 +92,14 @@ export async function GET() {
       }
     });
 
-    const enrichedOrganizations = (organizations || []).map((org) => ({
-      ...org,
-      member_count: memberCounts[org.id] || 0,
-      pending_invites: inviteCounts[org.id] || 0,
-    }));
+    const enrichedOrganizations = (organizations || []).map((org) => {
+      const id = String(org.id);
+      return {
+        ...org,
+        member_count: memberCounts[id] || 0,
+        pending_invites: inviteCounts[id] || 0,
+      };
+    });
 
     return NextResponse.json({ organizations: enrichedOrganizations });
   } catch (error) {
@@ -170,6 +208,14 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Failed to create organization" }, { status: 500 });
     }
 
+    const logo = parseLogoPayload(body);
+    if (logo) {
+      const logoResult = await uploadOrganizationLogo(adminClient, organization.id, logo);
+      if (!logoResult.ok) {
+        console.error("Admin create org logo upload failed:", logoResult.error);
+      }
+    }
+
     // Optional: attach org admin by user id or email
     let attachedAdminUserId: string | null = null;
     if (admin_user_id) {
@@ -205,13 +251,23 @@ export async function POST(request: Request) {
       });
     }
 
-    const { data: refreshed } = await adminClient
+    const refreshedWithLogo = await adminClient
       .from("organizations")
-      .select(
-        "id, name, slug, metadata, kind, billing_mode, plan, subscription_status, current_period_end, extra_lessons, stripe_customer_id, stripe_subscription_id, billing_email, archived_at, xai_api_key_id, xai_api_key_name, xai_api_key_status, xai_api_key_error, xai_collection_id, xai_collection_name, xai_collection_status, xai_collection_error, created_at, updated_at"
-      )
+      .select(ORG_DETAIL_SELECT)
       .eq("id", organization.id)
       .single();
+
+    let refreshed = refreshedWithLogo.data;
+    if (refreshedWithLogo.error && isMissingLogoUrlColumn(refreshedWithLogo.error)) {
+      const fallback = await adminClient
+        .from("organizations")
+        .select(ORG_DETAIL_SELECT_NO_LOGO)
+        .eq("id", organization.id)
+        .single();
+      refreshed = fallback.data as typeof refreshed;
+    } else if (refreshedWithLogo.error) {
+      refreshed = null;
+    }
 
     return NextResponse.json({ organization: refreshed || organization });
   } catch (error) {

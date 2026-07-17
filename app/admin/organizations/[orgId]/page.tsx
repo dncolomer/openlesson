@@ -3,14 +3,20 @@
 import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
 import { tierColor, tierLabel } from "@/lib/admin/tiers";
 import { AdminLoading } from "@/components/admin/AdminStatus";
+import {
+  fileToLogoPayload,
+  validateLogoFile,
+} from "@/lib/organization/logo-client";
 
 interface Organization {
   id: string;
   name: string;
   slug: string;
+  logo_url?: string | null;
   created_at: string;
   updated_at: string;
   metadata: Record<string, unknown>;
@@ -75,6 +81,7 @@ export default function OrganizationDetailPage() {
   const [editPlan, setEditPlan] = useState("inactive");
   const [editBillingMode, setEditBillingMode] = useState("subscription");
   const [editExtraLessons, setEditExtraLessons] = useState(0);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
 
   useEffect(() => {
     checkAdminAndLoad();
@@ -310,6 +317,35 @@ export default function OrganizationDetailPage() {
     alert("Invite link copied to clipboard!");
   };
 
+  const handleLogoUpload = async (file: File | null) => {
+    if (!file) return;
+    const err = validateLogoFile(file);
+    if (err) {
+      alert(err);
+      return;
+    }
+    setUploadingLogo(true);
+    try {
+      const logo = await fileToLogoPayload(file);
+      const res = await fetch(`/api/admin/organizations/${orgId}/logo`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ logo }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        alert(data.error || "Failed to upload logo");
+      } else if (organization) {
+        setOrganization({ ...organization, logo_url: data.logo_url });
+      }
+    } catch (uploadErr) {
+      console.error("Logo upload error:", uploadErr);
+      alert("Failed to upload logo");
+    } finally {
+      setUploadingLogo(false);
+    }
+  };
+
   const formatDate = (dateStr: string | null) => {
     if (!dateStr) return "-";
     return new Date(dateStr).toLocaleDateString("en-US", {
@@ -344,12 +380,143 @@ export default function OrganizationDetailPage() {
   const unusedInvites = invites.filter(i => !i.used_by);
   const usedInvites = invites.filter(i => i.used_by);
 
+  const logoMark = (
+    <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-md border border-neutral-700 bg-neutral-900">
+      {organization.logo_url ? (
+        <Image
+          src={organization.logo_url}
+          alt={`${organization.name} logo`}
+          width={64}
+          height={64}
+          className="h-full w-full object-cover"
+          unoptimized
+        />
+      ) : (
+        <span className="text-xl font-medium text-neutral-500">
+          {organization.name.charAt(0).toUpperCase()}
+        </span>
+      )}
+    </div>
+  );
+
+  const logoFileInput = (
+    <label className="inline-flex cursor-pointer items-center gap-2 rounded-md border border-neutral-700 bg-neutral-800 px-3 py-1.5 text-xs text-neutral-200 hover:border-neutral-600 hover:text-white">
+      <input
+        type="file"
+        accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml"
+        className="hidden"
+        disabled={uploadingLogo}
+        onChange={(e) => {
+          void handleLogoUpload(e.target.files?.[0] ?? null);
+          e.target.value = "";
+        }}
+      />
+      {uploadingLogo
+        ? "Uploading…"
+        : organization.logo_url
+          ? "Change logo"
+          : "Upload logo"}
+    </label>
+  );
+
   return (
     <div className="max-w-5xl mx-auto p-6">
       <div className="mb-6">
         <Link href="/admin/organizations" className="text-neutral-400 hover:text-white text-sm">
           &larr; Back to Organizations
         </Link>
+      </div>
+
+      {/* Organization Header */}
+      <div className="bg-neutral-900/50 border border-neutral-800 rounded-lg p-6 mb-6">
+        {editing ? (
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm text-neutral-400 mb-2">Organization logo</label>
+              <div className="flex items-center gap-4">
+                {logoMark}
+                <div className="min-w-0">
+                  {logoFileInput}
+                  <p className="mt-1 text-xs text-neutral-500">
+                    Shown on invite links. PNG, JPEG, WebP, GIF, or SVG · max 2 MB.
+                  </p>
+                </div>
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm text-neutral-400 mb-2">Organization Name</label>
+              <input
+                type="text"
+                value={editName}
+                onChange={(e) => setEditName(e.target.value)}
+                className="w-full px-4 py-2 bg-neutral-800 border border-neutral-700 rounded-lg text-white focus:outline-none focus:border-neutral-600"
+              />
+            </div>
+            <div>
+              <label className="block text-sm text-neutral-400 mb-2">Slug</label>
+              <input
+                type="text"
+                value={editSlug}
+                onChange={(e) => setEditSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))}
+                className="w-full px-4 py-2 bg-neutral-800 border border-neutral-700 rounded-lg text-white font-mono focus:outline-none focus:border-neutral-600"
+              />
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setEditing(false);
+                  setEditName(organization.name);
+                  setEditSlug(organization.slug);
+                }}
+                className="px-4 py-2 bg-neutral-800 hover:bg-neutral-700 text-white rounded-lg transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSave}
+                disabled={saving}
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-lg transition-colors"
+              >
+                {saving ? "Saving..." : "Save Changes"}
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div className="flex min-w-0 items-start gap-4">
+              {logoMark}
+              <div className="min-w-0">
+                <h1 className="text-2xl font-bold text-white">{organization.name}</h1>
+                <code className="mt-2 inline-block rounded bg-neutral-800 px-2 py-1 text-sm text-neutral-400">
+                  {organization.slug}
+                </code>
+                <p className="mt-2 text-sm text-neutral-500">
+                  Created {formatDate(organization.created_at)}
+                </p>
+                <div className="mt-3 flex flex-wrap items-center gap-3">
+                  {logoFileInput}
+                  <span className="text-xs text-neutral-500">
+                    Shown on invite links · max 2 MB
+                  </span>
+                </div>
+              </div>
+            </div>
+            <div className="flex shrink-0 gap-2">
+              <button
+                onClick={() => setEditing(true)}
+                className="px-4 py-2 bg-neutral-800 hover:bg-neutral-700 text-white rounded-lg transition-colors"
+              >
+                Edit
+              </button>
+              <button
+                onClick={handleDelete}
+                className="px-4 py-2 bg-red-600/20 hover:bg-red-600/30 text-red-400 rounded-lg transition-colors"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Billing / xAI resources */}
@@ -426,77 +593,6 @@ export default function OrganizationDetailPage() {
         >
           {savingBilling ? "Saving…" : "Save billing"}
         </button>
-      </div>
-
-      {/* Organization Header */}
-      <div className="bg-neutral-900/50 border border-neutral-800 rounded-lg p-6 mb-6">
-        {editing ? (
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm text-neutral-400 mb-2">Organization Name</label>
-              <input
-                type="text"
-                value={editName}
-                onChange={(e) => setEditName(e.target.value)}
-                className="w-full px-4 py-2 bg-neutral-800 border border-neutral-700 rounded-lg text-white focus:outline-none focus:border-neutral-600"
-              />
-            </div>
-            <div>
-              <label className="block text-sm text-neutral-400 mb-2">Slug</label>
-              <input
-                type="text"
-                value={editSlug}
-                onChange={(e) => setEditSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))}
-                className="w-full px-4 py-2 bg-neutral-800 border border-neutral-700 rounded-lg text-white font-mono focus:outline-none focus:border-neutral-600"
-              />
-            </div>
-            <div className="flex gap-3">
-              <button
-                onClick={() => {
-                  setEditing(false);
-                  setEditName(organization.name);
-                  setEditSlug(organization.slug);
-                }}
-                className="px-4 py-2 bg-neutral-800 hover:bg-neutral-700 text-white rounded-lg transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleSave}
-                disabled={saving}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-lg transition-colors"
-              >
-                {saving ? "Saving..." : "Save Changes"}
-              </button>
-            </div>
-          </div>
-        ) : (
-          <div className="flex items-start justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-white">{organization.name}</h1>
-              <code className="text-sm text-neutral-400 bg-neutral-800 px-2 py-1 rounded mt-2 inline-block">
-                {organization.slug}
-              </code>
-              <p className="text-neutral-500 text-sm mt-2">
-                Created {formatDate(organization.created_at)}
-              </p>
-            </div>
-            <div className="flex gap-2">
-              <button
-                onClick={() => setEditing(true)}
-                className="px-4 py-2 bg-neutral-800 hover:bg-neutral-700 text-white rounded-lg transition-colors"
-              >
-                Edit
-              </button>
-              <button
-                onClick={handleDelete}
-                className="px-4 py-2 bg-red-600/20 hover:bg-red-600/30 text-red-400 rounded-lg transition-colors"
-              >
-                Delete
-              </button>
-            </div>
-          </div>
-        )}
       </div>
 
       {/* Stats */}

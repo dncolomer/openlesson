@@ -1,5 +1,10 @@
 import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin/require-admin";
+import {
+  ORG_DETAIL_SELECT,
+  ORG_DETAIL_SELECT_NO_LOGO,
+  isMissingLogoUrlColumn,
+} from "@/lib/organization/org-select";
 
 export const runtime = "nodejs";
 
@@ -16,16 +21,28 @@ export async function GET(
     const { adminClient, user } = auth;
 
     // Get organization (never expose xai_api_key_ciphertext)
-    const { data: organization, error: orgError } = await adminClient
-      .from("organizations")
-      .select(
-        "id, name, slug, metadata, kind, billing_mode, plan, subscription_status, current_period_end, extra_lessons, stripe_customer_id, stripe_subscription_id, billing_email, archived_at, xai_api_key_id, xai_api_key_name, xai_api_key_status, xai_api_key_error, xai_api_key_created_at, xai_collection_id, xai_collection_name, xai_collection_status, xai_collection_error, created_at, updated_at"
-      )
-      .eq("id", orgId)
-      .single();
-
-    if (orgError || !organization) {
-      return NextResponse.json({ error: "Organization not found" }, { status: 404 });
+    let organization: Record<string, unknown> | null = null;
+    {
+      const first = await adminClient
+        .from("organizations")
+        .select(ORG_DETAIL_SELECT)
+        .eq("id", orgId)
+        .single();
+      if (first.error && isMissingLogoUrlColumn(first.error)) {
+        const fallback = await adminClient
+          .from("organizations")
+          .select(ORG_DETAIL_SELECT_NO_LOGO)
+          .eq("id", orgId)
+          .single();
+        organization = (fallback.data as Record<string, unknown> | null) ?? null;
+        if (fallback.error || !organization) {
+          return NextResponse.json({ error: "Organization not found" }, { status: 404 });
+        }
+      } else if (first.error || !first.data) {
+        return NextResponse.json({ error: "Organization not found" }, { status: 404 });
+      } else {
+        organization = first.data as Record<string, unknown>;
+      }
     }
 
     // Get members
@@ -197,14 +214,26 @@ export async function PUT(
       }
     }
 
-    const { data: organization, error } = await adminClient
+    const updated = await adminClient
       .from("organizations")
       .update(updateData)
       .eq("id", orgId)
-      .select(
-        "id, name, slug, metadata, kind, billing_mode, plan, subscription_status, current_period_end, extra_lessons, stripe_customer_id, stripe_subscription_id, billing_email, archived_at, xai_api_key_id, xai_api_key_name, xai_api_key_status, xai_api_key_error, xai_api_key_created_at, xai_collection_id, xai_collection_name, xai_collection_status, xai_collection_error, created_at, updated_at"
-      )
+      .select(ORG_DETAIL_SELECT)
       .single();
+
+    let organization = updated.data;
+    let error = updated.error;
+
+    if (error && isMissingLogoUrlColumn(error)) {
+      const fallback = await adminClient
+        .from("organizations")
+        .update(updateData)
+        .eq("id", orgId)
+        .select(ORG_DETAIL_SELECT_NO_LOGO)
+        .single();
+      organization = fallback.data as typeof organization;
+      error = fallback.error;
+    }
 
     if (error) {
       console.error("Error updating organization:", error);

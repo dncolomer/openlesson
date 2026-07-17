@@ -3,13 +3,21 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
 import { useI18n } from "@/lib/i18n";
+import {
+  fileToLogoPayload,
+  fileToPreviewUrl,
+  validateLogoFile,
+  type LogoPayload,
+} from "@/lib/organization/logo-client";
 
 interface Organization {
   id: string;
   name: string;
   slug: string;
+  logo_url?: string | null;
   created_at: string;
   updated_at: string;
   member_count: number;
@@ -31,6 +39,9 @@ export default function OrganizationsPage() {
   const [creating, setCreating] = useState(false);
   const [newOrgName, setNewOrgName] = useState("");
   const [newOrgSlug, setNewOrgSlug] = useState("");
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const [logoPayload, setLogoPayload] = useState<LogoPayload | null>(null);
+  const [logoError, setLogoError] = useState<string | null>(null);
 
   useEffect(() => {
     checkAdminAndLoadOrgs();
@@ -74,7 +85,8 @@ export default function OrganizationsPage() {
       const data = await res.json();
       
       if (!res.ok) {
-        setError(data.error || "Failed to load organizations");
+        const detail = typeof data.details === "string" ? ` (${data.details})` : "";
+        setError((data.error || "Failed to load organizations") + detail);
       } else {
         setOrganizations(data.organizations || []);
       }
@@ -83,6 +95,37 @@ export default function OrganizationsPage() {
       setError("Failed to load organizations");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const resetCreateForm = () => {
+    setShowCreateModal(false);
+    setNewOrgName("");
+    setNewOrgSlug("");
+    if (logoPreview) URL.revokeObjectURL(logoPreview);
+    setLogoPreview(null);
+    setLogoPayload(null);
+    setLogoError(null);
+  };
+
+  const handleLogoSelect = async (file: File | null) => {
+    setLogoError(null);
+    if (logoPreview) URL.revokeObjectURL(logoPreview);
+    setLogoPreview(null);
+    setLogoPayload(null);
+    if (!file) return;
+
+    const err = validateLogoFile(file);
+    if (err) {
+      setLogoError(err);
+      return;
+    }
+    try {
+      const payload = await fileToLogoPayload(file);
+      setLogoPayload(payload);
+      setLogoPreview(fileToPreviewUrl(file));
+    } catch {
+      setLogoError("Failed to read logo file");
     }
   };
 
@@ -95,7 +138,11 @@ export default function OrganizationsPage() {
       const res = await fetch("/api/admin/organizations", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: newOrgName.trim(), slug: newOrgSlug.trim().toLowerCase() }),
+        body: JSON.stringify({
+          name: newOrgName.trim(),
+          slug: newOrgSlug.trim().toLowerCase(),
+          ...(logoPayload ? { logo: logoPayload } : {}),
+        }),
       });
       
       const data = await res.json();
@@ -103,9 +150,7 @@ export default function OrganizationsPage() {
       if (!res.ok) {
         alert(data.error || "Failed to create organization");
       } else {
-        setShowCreateModal(false);
-        setNewOrgName("");
-        setNewOrgSlug("");
+        resetCreateForm();
         loadOrganizations();
       }
     } catch (err) {
@@ -210,7 +255,21 @@ export default function OrganizationsPage() {
               paginatedOrgs.map((org) => (
                 <tr key={org.id} className="border-b border-neutral-800/50 hover:bg-neutral-800/20">
                   <td className="p-4">
-                    <Link href={`/admin/organizations/${org.id}`} className="hover:text-blue-400">
+                    <Link href={`/admin/organizations/${org.id}`} className="flex items-center gap-3 hover:text-blue-400">
+                      {org.logo_url ? (
+                        <Image
+                          src={org.logo_url}
+                          alt=""
+                          width={28}
+                          height={28}
+                          className="h-7 w-7 rounded-sm object-cover border border-neutral-700"
+                          unoptimized
+                        />
+                      ) : (
+                        <span className="flex h-7 w-7 items-center justify-center rounded-sm border border-neutral-700 bg-neutral-800 text-[10px] font-medium text-neutral-400">
+                          {org.name.charAt(0).toUpperCase()}
+                        </span>
+                      )}
                       <div className="text-neutral-200 font-medium">{org.name}</div>
                     </Link>
                   </td>
@@ -283,7 +342,7 @@ export default function OrganizationsPage() {
                   required
                 />
               </div>
-              <div className="mb-6">
+              <div className="mb-4">
                 <label className="block text-sm text-neutral-400 mb-2">Slug (URL identifier)</label>
                 <input
                   type="text"
@@ -295,14 +354,42 @@ export default function OrganizationsPage() {
                 />
                 <p className="text-xs text-neutral-500 mt-1">Lowercase letters, numbers, and hyphens only</p>
               </div>
+              <div className="mb-6">
+                <label className="block text-sm text-neutral-400 mb-2">Organization logo (optional)</label>
+                <div className="flex items-center gap-4">
+                  <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-md border border-neutral-700 bg-neutral-800">
+                    {logoPreview ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={logoPreview} alt="Logo preview" className="h-full w-full object-cover" />
+                    ) : (
+                      <span className="text-xs text-neutral-500">Logo</span>
+                    )}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <input
+                      type="file"
+                      accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml"
+                      onChange={(e) => void handleLogoSelect(e.target.files?.[0] ?? null)}
+                      className="block w-full text-sm text-neutral-400 file:mr-3 file:rounded-md file:border-0 file:bg-neutral-800 file:px-3 file:py-1.5 file:text-sm file:text-white hover:file:bg-neutral-700"
+                    />
+                    <p className="mt-1 text-xs text-neutral-500">PNG, JPEG, WebP, GIF, or SVG · max 2 MB. Shown on invite links.</p>
+                    {logoError && <p className="mt-1 text-xs text-red-400">{logoError}</p>}
+                    {logoPreview && (
+                      <button
+                        type="button"
+                        onClick={() => void handleLogoSelect(null)}
+                        className="mt-1 text-xs text-neutral-400 hover:text-white"
+                      >
+                        Remove
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
               <div className="flex gap-3">
                 <button
                   type="button"
-                  onClick={() => {
-                    setShowCreateModal(false);
-                    setNewOrgName("");
-                    setNewOrgSlug("");
-                  }}
+                  onClick={resetCreateForm}
                   className="flex-1 px-4 py-2 bg-neutral-800 hover:bg-neutral-700 text-white rounded-lg transition-colors"
                 >
                   Cancel

@@ -9,6 +9,26 @@ function getAdminClient() {
   return createAdminClient();
 }
 
+const INVITE_SELECT_WITH_LOGO = `
+  id,
+  token,
+  token_hash,
+  used_by,
+  used_at,
+  organization_id,
+  organization:organizations(id, name, slug, logo_url)
+`;
+
+const INVITE_SELECT_NO_LOGO = `
+  id,
+  token,
+  token_hash,
+  used_by,
+  used_at,
+  organization_id,
+  organization:organizations(id, name, slug)
+`;
+
 async function findInviteByToken(
   adminClient: ReturnType<typeof createAdminClient>,
   token: string
@@ -16,39 +36,35 @@ async function findInviteByToken(
   const tokenHash = hashInviteToken(token);
 
   // Prefer hash lookup (new invites); fall back to legacy plaintext column.
-  const { data: byHash } = await adminClient
+  let { data: byHash, error: hashError } = await adminClient
     .from("organization_invites")
-    .select(
-      `
-        id,
-        token,
-        token_hash,
-        used_by,
-        used_at,
-        organization_id,
-        organization:organizations(id, name, slug)
-      `
-    )
+    .select(INVITE_SELECT_WITH_LOGO)
     .eq("token_hash", tokenHash)
     .maybeSingle();
 
+  if (hashError && /logo_url/i.test(hashError.message || "")) {
+    ({ data: byHash } = await adminClient
+      .from("organization_invites")
+      .select(INVITE_SELECT_NO_LOGO)
+      .eq("token_hash", tokenHash)
+      .maybeSingle());
+  }
+
   if (byHash) return byHash;
 
-  const { data: byPlain, error } = await adminClient
+  let { data: byPlain, error } = await adminClient
     .from("organization_invites")
-    .select(
-      `
-        id,
-        token,
-        token_hash,
-        used_by,
-        used_at,
-        organization_id,
-        organization:organizations(id, name, slug)
-      `
-    )
+    .select(INVITE_SELECT_WITH_LOGO)
     .eq("token", token)
     .maybeSingle();
+
+  if (error && /logo_url/i.test(error.message || "")) {
+    ({ data: byPlain, error } = await adminClient
+      .from("organization_invites")
+      .select(INVITE_SELECT_NO_LOGO)
+      .eq("token", token)
+      .maybeSingle());
+  }
 
   if (error || !byPlain) return null;
   return byPlain;
@@ -85,6 +101,7 @@ export async function GET(request: Request) {
               id: org.id,
               name: org.name,
               slug: org.slug,
+              logo_url: org.logo_url ?? null,
             }
           : null,
       },

@@ -1199,7 +1199,12 @@
     "leaveConfirm": "Are you sure you want to leave this organization?",
     "loadError": "Failed to load organization",
     "orgNamePlaceholder": "Acme Corp",
-    "orgSlugPlaceholder": "acme-corp"
+    "orgSlugPlaceholder": "acme-corp",
+    "uploadLogo": "Upload logo",
+    "changeLogo": "Change logo",
+    "uploadingLogo": "Uploading…",
+    "logoHelper": "Shown on invite links. PNG, JPEG, WebP, GIF, or SVG · max 2 MB.",
+    "logoUploadError": "Failed to upload logo"
   },
   "admin": {
     "title": "Admin Dashboard",

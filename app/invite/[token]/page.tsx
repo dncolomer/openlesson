@@ -380,7 +380,7 @@ export default function InvitePage() {
                 {t("invite.logIn")}
               </Link>
               <Link
-                href={`/register?returnUrl=${encodeURIComponent(`/invite/${token}`)}`}
+                href={`/register?inviteToken=${encodeURIComponent(token)}`}
                 className={primaryBtnClass}
               >
                 {t("invite.signUp")}

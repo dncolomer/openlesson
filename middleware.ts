@@ -102,7 +102,14 @@ export async function middleware(request: NextRequest) {
   if (pathname.startsWith("/register")) {
     const sessionId = request.nextUrl.searchParams.get("session_id");
     const returnUrl = request.nextUrl.searchParams.get("returnUrl");
-    if (!sessionId && !returnUrl?.startsWith("/invite/")) {
+    const inviteToken =
+      request.nextUrl.searchParams.get("inviteToken") ||
+      request.nextUrl.searchParams.get("invite");
+    const isInviteSignup =
+      Boolean(inviteToken?.trim()) ||
+      Boolean(returnUrl?.startsWith("/invite/"));
+    // Paid checkout (session_id) or organization invite signup only.
+    if (!sessionId && !isInviteSignup) {
       return NextResponse.redirect(new URL("/pricing", request.url));
     }
   }
@@ -170,6 +177,25 @@ export async function middleware(request: NextRequest) {
     const canUseProduct = hasProductAccess(profile, orgBilling);
 
     if (isAuthRoute) {
+      // Prefer completing an invite over bouncing paid/inactive users to pricing.
+      const inviteTokenParam =
+        request.nextUrl.searchParams.get("inviteToken") ||
+        request.nextUrl.searchParams.get("invite");
+      const inviteReturn = request.nextUrl.searchParams.get("returnUrl");
+      const postAuthRedirect = request.nextUrl.searchParams.get("redirect");
+
+      if (inviteTokenParam?.trim()) {
+        return NextResponse.redirect(
+          new URL(`/invite/${encodeURIComponent(inviteTokenParam.trim())}`, request.url)
+        );
+      }
+      if (inviteReturn?.startsWith("/invite/")) {
+        return NextResponse.redirect(new URL(inviteReturn, request.url));
+      }
+      if (postAuthRedirect?.startsWith("/invite/")) {
+        return NextResponse.redirect(new URL(postAuthRedirect, request.url));
+      }
+
       return NextResponse.redirect(
         new URL(canUseProduct ? "/dashboard" : "/pricing", request.url)
       );

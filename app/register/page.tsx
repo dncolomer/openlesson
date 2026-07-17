@@ -18,22 +18,70 @@ interface VerifiedCheckout {
   periodEnd: string | null;
 }
 
+function extractInviteToken(searchParams: URLSearchParams): string | null {
+  const direct = searchParams.get("inviteToken") || searchParams.get("invite");
+  if (direct?.trim()) return direct.trim();
+
+  const returnUrl = searchParams.get("returnUrl");
+  if (!returnUrl) return null;
+  try {
+    const path = returnUrl.startsWith("http")
+      ? new URL(returnUrl).pathname
+      : returnUrl.split("?")[0];
+    const match = path.match(/^\/invite\/([^/]+)$/);
+    return match?.[1] ? decodeURIComponent(match[1]) : null;
+  } catch {
+    return null;
+  }
+}
+
 function RegisterForm() {
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [verifying, setVerifying] = useState(true);
   const [checkout, setCheckout] = useState<VerifiedCheckout | null>(null);
+  const [inviteOrgName, setInviteOrgName] = useState<string | null>(null);
+  const [inviteLoading, setInviteLoading] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
   const { t } = useI18n();
   const sessionId = searchParams.get("session_id");
-  const inviteReturnUrl = searchParams.get("returnUrl");
+  const inviteToken = extractInviteToken(searchParams);
+  const invitePath = inviteToken ? `/invite/${inviteToken}` : null;
 
   useEffect(() => {
-    if (inviteReturnUrl?.startsWith("/invite/")) {
+    if (inviteToken) {
       setVerifying(false);
-      return;
+      setInviteLoading(true);
+      let cancelled = false;
+      (async () => {
+        try {
+          const res = await fetch(`/api/invite/accept?token=${encodeURIComponent(inviteToken)}`);
+          const data = await res.json();
+          if (cancelled) return;
+          if (!res.ok) {
+            setError(data.error || "Invalid invite link");
+            return;
+          }
+          if (data.invite?.organization?.name) {
+            setInviteOrgName(data.invite.organization.name);
+          }
+          if (data.invite?.is_used) {
+            setError("This invite has already been used. Sign in instead.");
+          } else {
+            setError(null);
+          }
+        } catch {
+          if (!cancelled) setError("Failed to load invite details");
+        } finally {
+          if (!cancelled) setInviteLoading(false);
+        }
+      })();
+      return () => {
+        cancelled = true;
+      };
     }
 
     if (!sessionId) {
@@ -73,7 +121,62 @@ function RegisterForm() {
     return () => {
       cancelled = true;
     };
-  }, [sessionId, inviteReturnUrl, router]);
+  }, [sessionId, inviteToken, router]);
+
+  const handleInviteRegister = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!inviteToken) return;
+    setError(null);
+    setLoading(true);
+
+    try {
+      const res = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          inviteToken,
+          email: email.trim(),
+          password,
+        }),
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        if (data.code === "email_exists") {
+          setError("An account with this email already exists.");
+        } else {
+          setError(data.error || t("common.error"));
+        }
+        return;
+      }
+
+      const supabase = createClient();
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: data.email || email.trim(),
+        password,
+      });
+
+      if (signInError) {
+        setError("Account created but sign-in failed. Please log in.");
+        router.push(`/login?redirect=${encodeURIComponent(invitePath || "/dashboard")}`);
+        return;
+      }
+
+      trackSignupCompleted({ hasReferral: false });
+
+      if (data.joined) {
+        router.push("/dashboard");
+      } else {
+        // Join failed server-side; land on invite page to retry accept.
+        router.push(invitePath || "/dashboard");
+      }
+      router.refresh();
+    } catch {
+      setError(t("common.error"));
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -120,22 +223,100 @@ function RegisterForm() {
     }
   };
 
-  if (inviteReturnUrl?.startsWith("/invite/")) {
+  // ── Invite signup ──────────────────────────────────────────────────────────
+  if (inviteToken) {
+    if (inviteLoading) {
+      return (
+        <div className="animate-pulse space-y-3.5">
+          <div className="h-10 bg-neutral-800 rounded-xl" />
+          <div className="h-10 bg-neutral-800 rounded-xl" />
+          <div className="h-10 bg-neutral-800 rounded-xl" />
+        </div>
+      );
+    }
+
     return (
-      <div className="p-4 bg-amber-500/10 border border-amber-500/30 rounded-xl text-amber-100 text-sm">
-        Organization invites use a separate flow.{" "}
-        <Link href={inviteReturnUrl} className="underline">
-          Return to your invite
-        </Link>{" "}
-        and sign in, or choose a plan on{" "}
-        <Link href="/pricing" className="underline">
-          pricing
-        </Link>
-        .
-      </div>
+      <>
+        <div className="mb-4 rounded-lg border border-white/10 bg-white/[0.03] p-3">
+          <p className="font-mono text-[10px] uppercase tracking-[1.5px] text-neutral-500">
+            Organization invite
+          </p>
+          <p className="mt-1 text-sm text-neutral-300">
+            {inviteOrgName
+              ? `Create an account to join ${inviteOrgName}. No payment required — you'll use the organization's plan.`
+              : "Create an account to accept this organization invite. No payment required."}
+          </p>
+        </div>
+
+        <form onSubmit={handleInviteRegister} className="space-y-3.5">
+          <div>
+            <label
+              htmlFor="email"
+              className="mb-1.5 block text-[11px] uppercase tracking-wider text-neutral-500"
+            >
+              {t("auth.email")}
+            </label>
+            <input
+              id="email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              autoComplete="email"
+              className="w-full rounded-xl border border-neutral-800 bg-neutral-900/80 px-3.5 py-2.5 text-sm text-white transition-colors focus:border-neutral-600 focus:outline-none"
+              required
+            />
+          </div>
+
+          <div>
+            <label
+              htmlFor="password"
+              className="mb-1.5 block text-[11px] uppercase tracking-wider text-neutral-500"
+            >
+              {t("auth.password")}
+            </label>
+            <input
+              id="password"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              autoComplete="new-password"
+              className="w-full rounded-xl border border-neutral-800 bg-neutral-900/80 px-3.5 py-2.5 text-sm text-white transition-colors focus:border-neutral-600 focus:outline-none"
+              minLength={6}
+              required
+            />
+            <p className="mt-1 text-[11px] text-neutral-600">At least 6 characters</p>
+          </div>
+
+          {error && (
+            <div className="rounded-xl border border-red-500/20 bg-red-500/5 p-3 text-xs text-red-400">
+              {error}
+              {(error.includes("already exists") || error.includes("already been used")) && (
+                <span>
+                  {" "}
+                  <Link
+                    href={`/login?redirect=${encodeURIComponent(invitePath || "/dashboard")}`}
+                    className="underline"
+                  >
+                    Sign in
+                  </Link>
+                </span>
+              )}
+            </div>
+          )}
+
+          <button
+            type="submit"
+            disabled={loading || !!error?.toLowerCase().includes("invalid invite")}
+            className="mt-2 w-full rounded-xl bg-white py-2.5 text-sm font-medium text-black transition-colors hover:bg-neutral-200 disabled:bg-neutral-800 disabled:text-neutral-600"
+          >
+            {loading ? t("auth.creatingAccount") : "Create account & join →"}
+          </button>
+        </form>
+      </>
     );
   }
 
+  // ── Paid checkout signup ───────────────────────────────────────────────────
   if (verifying) {
     return (
       <div className="animate-pulse space-y-3.5">
@@ -149,12 +330,12 @@ function RegisterForm() {
   if (!checkout) {
     return (
       <div className="space-y-4">
-        <div className="p-3 bg-red-500/5 border border-red-500/20 rounded-xl text-red-400 text-xs">
+        <div className="rounded-xl border border-red-500/20 bg-red-500/5 p-3 text-xs text-red-400">
           {error || "Payment required before creating an account."}
         </div>
         <Link
           href="/pricing"
-          className="block w-full py-2.5 text-center bg-white hover:bg-neutral-200 text-black text-sm font-medium rounded-xl transition-colors"
+          className="block w-full rounded-xl bg-white py-2.5 text-center text-sm font-medium text-black transition-colors hover:bg-neutral-200"
         >
           View plans
         </Link>
@@ -164,7 +345,7 @@ function RegisterForm() {
 
   return (
     <>
-      <div className="mb-4 p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-lg">
+      <div className="mb-4 rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-3">
         <p className="text-sm text-emerald-400">
           Payment confirmed — {tierLabel(checkout.plan)}. Create your password to finish setup.
         </p>
@@ -172,7 +353,10 @@ function RegisterForm() {
 
       <form onSubmit={handleRegister} className="space-y-3.5">
         <div>
-          <label htmlFor="email" className="block text-[11px] text-neutral-500 uppercase tracking-wider mb-1.5">
+          <label
+            htmlFor="email"
+            className="mb-1.5 block text-[11px] uppercase tracking-wider text-neutral-500"
+          >
             {t("auth.email")}
           </label>
           <input
@@ -180,12 +364,15 @@ function RegisterForm() {
             type="email"
             value={checkout.email}
             readOnly
-            className="w-full px-3.5 py-2.5 bg-neutral-900/50 border border-neutral-800 rounded-xl text-neutral-400 text-sm cursor-not-allowed"
+            className="w-full cursor-not-allowed rounded-xl border border-neutral-800 bg-neutral-900/50 px-3.5 py-2.5 text-sm text-neutral-400"
           />
         </div>
 
         <div>
-          <label htmlFor="password" className="block text-[11px] text-neutral-500 uppercase tracking-wider mb-1.5">
+          <label
+            htmlFor="password"
+            className="mb-1.5 block text-[11px] uppercase tracking-wider text-neutral-500"
+          >
             {t("auth.password")}
           </label>
           <input
@@ -193,7 +380,7 @@ function RegisterForm() {
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="w-full px-3.5 py-2.5 bg-neutral-900/80 border border-neutral-800 rounded-xl text-white text-sm focus:outline-none focus:border-neutral-600 transition-colors"
+            className="w-full rounded-xl border border-neutral-800 bg-neutral-900/80 px-3.5 py-2.5 text-sm text-white transition-colors focus:border-neutral-600 focus:outline-none"
             minLength={6}
             required
             disabled={!checkout.claimable}
@@ -201,7 +388,7 @@ function RegisterForm() {
         </div>
 
         {error && (
-          <div className="p-3 bg-red-500/5 border border-red-500/20 rounded-xl text-red-400 text-xs">
+          <div className="rounded-xl border border-red-500/20 bg-red-500/5 p-3 text-xs text-red-400">
             {error}
             {error.includes("already exists") && (
               <span>
@@ -217,12 +404,51 @@ function RegisterForm() {
         <button
           type="submit"
           disabled={loading || !checkout.claimable}
-          className="w-full py-2.5 bg-white hover:bg-neutral-200 disabled:bg-neutral-800 disabled:text-neutral-600 text-black text-sm font-medium rounded-xl transition-colors mt-2"
+          className="mt-2 w-full rounded-xl bg-white py-2.5 text-sm font-medium text-black transition-colors hover:bg-neutral-200 disabled:bg-neutral-800 disabled:text-neutral-600"
         >
           {loading ? t("auth.creatingAccount") : "Create account →"}
         </button>
       </form>
     </>
+  );
+}
+
+function RegisterShell() {
+  const { t } = useI18n();
+  const searchParams = useSearchParams();
+  const inviteToken = extractInviteToken(searchParams);
+  const invitePath = inviteToken ? `/invite/${inviteToken}` : null;
+
+  return (
+    <main className="flex min-h-screen flex-col bg-[#0a0a0a]">
+      <Navbar showNav={false} />
+
+      <div className="flex flex-1 items-center justify-center px-6">
+        <div className="w-full max-w-sm">
+          <h2 className="mb-1 text-xl font-semibold text-white">{t("auth.createAccount")}</h2>
+          <p className="mb-8 text-sm text-neutral-500">
+            {inviteToken
+              ? "Set your email and password to join the organization."
+              : "You've paid — set a password to activate your account."}
+          </p>
+          <RegisterForm />
+
+          <p className="mt-6 text-center text-xs text-neutral-600">
+            {t("auth.alreadyHaveAccount")}{" "}
+            <Link
+              href={
+                invitePath
+                  ? `/login?redirect=${encodeURIComponent(invitePath)}`
+                  : "/login"
+              }
+              className="text-neutral-400 transition-colors hover:text-white"
+            >
+              {t("auth.signInLink")}
+            </Link>
+          </p>
+        </div>
+      </div>
+    </main>
   );
 }
 
@@ -232,41 +458,22 @@ export default function RegisterPage() {
   return (
     <Suspense
       fallback={
-        <main className="min-h-screen flex flex-col bg-[#0a0a0a]">
+        <main className="flex min-h-screen flex-col bg-[#0a0a0a]">
           <Navbar showNav={false} />
-          <div className="flex-1 flex items-center justify-center px-6">
+          <div className="flex flex-1 items-center justify-center px-6">
             <div className="w-full max-w-sm">
-              <h2 className="text-xl font-semibold text-white mb-1">{t("auth.createAccount")}</h2>
-              <p className="text-sm text-neutral-500 mb-8">Confirming your payment…</p>
+              <h2 className="mb-1 text-xl font-semibold text-white">{t("auth.createAccount")}</h2>
+              <p className="mb-8 text-sm text-neutral-500">Loading…</p>
               <div className="animate-pulse space-y-3.5">
-                <div className="h-10 bg-neutral-800 rounded-xl" />
-                <div className="h-10 bg-neutral-800 rounded-xl" />
+                <div className="h-10 rounded-xl bg-neutral-800" />
+                <div className="h-10 rounded-xl bg-neutral-800" />
               </div>
             </div>
           </div>
         </main>
       }
     >
-      <main className="min-h-screen flex flex-col bg-[#0a0a0a]">
-        <Navbar showNav={false} />
-
-        <div className="flex-1 flex items-center justify-center px-6">
-          <div className="w-full max-w-sm">
-            <h2 className="text-xl font-semibold text-white mb-1">{t("auth.createAccount")}</h2>
-            <p className="text-sm text-neutral-500 mb-8">
-              You&apos;ve paid — set a password to activate your account.
-            </p>
-            <RegisterForm />
-
-            <p className="text-center text-xs text-neutral-600 mt-6">
-              {t("auth.alreadyHaveAccount")}{" "}
-              <Link href="/login" className="text-neutral-400 hover:text-white transition-colors">
-                {t("auth.signInLink")}
-              </Link>
-            </p>
-          </div>
-        </div>
-      </main>
+      <RegisterShell />
     </Suspense>
   );
 }

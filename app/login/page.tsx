@@ -192,9 +192,25 @@ function LoginForm() {
 
       <p className="text-center text-xs text-neutral-600 mt-6">
         {t('auth.noAccount')}{" "}
-        <Link href="/pricing" className="text-neutral-400 hover:text-white transition-colors">
-          {t('auth.signUp')}
-        </Link>
+        {(() => {
+          const redirect = searchParams.get("redirect") || "";
+          const inviteMatch = redirect.match(/^\/invite\/([^/?#]+)/);
+          if (inviteMatch) {
+            return (
+              <Link
+                href={`/register?inviteToken=${encodeURIComponent(decodeURIComponent(inviteMatch[1]))}`}
+                className="text-neutral-400 hover:text-white transition-colors"
+              >
+                {t('auth.signUp')}
+              </Link>
+            );
+          }
+          return (
+            <Link href="/pricing" className="text-neutral-400 hover:text-white transition-colors">
+              {t('auth.signUp')}
+            </Link>
+          );
+        })()}
       </p>
     </div>
   );

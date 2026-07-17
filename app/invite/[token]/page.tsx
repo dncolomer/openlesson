@@ -309,7 +309,7 @@ export default function InvitePage() {
             {t("invite.alreadyInOrgDesc")}
           </p>
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-            <Link href="/organization" className={secondaryBtnClass}>
+            <Link href="/dashboard?tab=organization" className={secondaryBtnClass}>
               {t("invite.manageOrganization")}
             </Link>
             <Link href="/dashboard" className={primaryBtnClass}>

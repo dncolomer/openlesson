@@ -11,6 +11,7 @@ import { useI18n } from "@/lib/i18n";
 import { formatPlanMonthlyPrice, hasAgentApiKeyPlan, type PlanId } from "@/lib/plans";
 import { dashboardUsesAgenticKeys } from "@/lib/dashboard-agent-access";
 import { InsightsDashboardTab } from "@/components/InsightsDashboardTab";
+import { OrganizationDashboardTab } from "@/components/OrganizationDashboardTab";
 import { WorkspaceDashboardCard } from "@/components/WorkspaceDashboardCard";
 import { buildMcpClientConfig } from "@/lib/agent-v2/mcp-proof-of-work-catalog";
 import { IntegrationQuickAccess } from "@/components/IntegrationQuickAccess";
@@ -19,7 +20,14 @@ import { LoadingStatusMessage } from "@/components/LoadingStatusMessage";
 
 const DASHBOARD_BACKGROUND = "/aesthetics/Greco-futurism/HHnTrgVaQAAP-_3.jpeg";
 
-type Tab = "sessions" | "plans" | "usage" | "integrations" | "insights" | "config";
+type Tab =
+  | "sessions"
+  | "plans"
+  | "usage"
+  | "integrations"
+  | "insights"
+  | "organization"
+  | "config";
 
 interface AvailableModel {
   id: string;
@@ -57,7 +65,9 @@ export default function DashboardPage() {
   const searchParams = useSearchParams();
   const initialTab = (searchParams.get("tab") as Tab) || "plans";
   const [activeTab, setActiveTab] = useState<Tab>(
-    ["plans", "usage", "integrations", "insights"].includes(initialTab) ? initialTab : "plans"
+    ["plans", "usage", "integrations", "insights", "organization"].includes(initialTab)
+      ? initialTab
+      : "plans"
   );
   // User state
   const [user, setUser] = useState<{
@@ -721,6 +731,7 @@ export default function DashboardPage() {
               { id: "plans", label: "Workspaces" },
               { id: "insights", label: "Insights" },
               { id: "usage", label: t("dashboard.usageTab") },
+              { id: "organization", label: "Organization" },
               { id: "integrations", label: t("dashboard.integrationsTab") },
             ].map((tab) => (
               <button
@@ -739,16 +750,6 @@ export default function DashboardPage() {
               </button>
             ))}
           </div>
-          {usageData?.organization && (
-            <Link
-              href="/organization"
-              className="hidden shrink-0 text-sm text-neutral-400 transition-colors hover:text-white sm:inline-flex"
-              title={usageData.organization.name}
-            >
-              {usageData.organization.isOrgAdmin ? "Organization" : "My organization"}
-              <span className="ml-1 text-neutral-600">→</span>
-            </Link>
-          )}
         </div>
       </div>
 
@@ -1041,6 +1042,8 @@ export default function DashboardPage() {
 
         {activeTab === "insights" && <InsightsDashboardTab workspaceTitles={workspaceTitlesById} />}
 
+        {activeTab === "organization" && <OrganizationDashboardTab />}
+
         {/* Usage Tab */}
         {activeTab === "usage" && (() => {
           const isBillingBypass =
@@ -1143,14 +1146,15 @@ export default function DashboardPage() {
               </div>
               <div className="flex flex-wrap items-center gap-2">
                 {usageData?.organization && (
-                  <Link
-                    href="/organization"
+                  <button
+                    type="button"
+                    onClick={() => setDashboardTab("organization")}
                     className="inline-flex h-10 items-center justify-center rounded-sm border border-neutral-700 px-4 text-sm text-neutral-200 transition hover:border-neutral-500 hover:text-white"
                   >
                     {usageData.organization.isOrgAdmin
                       ? "Manage organization →"
                       : "View organization →"}
-                  </Link>
+                  </button>
                 )}
                 {!isBillingBypass && (
                   <Link
@@ -1342,12 +1346,13 @@ export default function DashboardPage() {
                               {usageData.organization.name}
                             </p>
                           </div>
-                          <Link
-                            href="/organization"
+                          <button
+                            type="button"
+                            onClick={() => setDashboardTab("organization")}
                             className="text-xs text-neutral-400 underline decoration-neutral-700 underline-offset-2 transition hover:text-white"
                           >
                             {usageData.organization.isOrgAdmin ? "Manage" : "View"} →
-                          </Link>
+                          </button>
                         </div>
                         <div className="mt-4 flex items-end gap-2">
                           <span className="text-3xl font-medium tracking-[-1px] text-white">

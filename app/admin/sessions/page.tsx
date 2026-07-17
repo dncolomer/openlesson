@@ -5,6 +5,15 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { useI18n } from "@/lib/i18n";
+import { AdminError } from "@/components/admin/AdminStatus";
+import {
+  adminBtnClass,
+  adminCardPaddedClass,
+  adminInputClass,
+  adminLabelClass,
+  adminPageTitleClass,
+  adminSelectClass,
+} from "@/components/admin/styles";
 
 interface UserProfile {
   id: string;
@@ -136,47 +145,41 @@ export default function SessionsPage() {
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
 
   if (error) {
-    return (
-      <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
-        <div className="text-red-400">{error}</div>
-      </div>
-    );
+    return <AdminError message={error} />;
   }
 
   return (
-    <div className="max-w-7xl mx-auto p-6">
-        <div className="mb-6">
-          <Link href="/admin" className="text-neutral-400 hover:text-white text-sm">
-            ← Back to Admin
-          </Link>
-          <h1 className="text-2xl font-bold text-white mt-2">Blocks</h1>
-          <p className="text-neutral-400 text-sm">{totalCount} total blocks</p>
+    <div className="space-y-6">
+        <div>
+          <p className={`mb-2 ${adminLabelClass}`}>Activity</p>
+          <h1 className={adminPageTitleClass}>Sessions</h1>
+          <p className="mt-1 text-sm text-neutral-400">{totalCount} total blocks</p>
         </div>
 
         {/* KPI Summary */}
-        <div className="grid grid-cols-3 gap-4 mb-6">
-          <div className="bg-neutral-900/50 border border-neutral-800 rounded-lg p-4">
-            <div className="text-2xl font-bold text-white">{totalCount}</div>
-            <div className="text-neutral-500 text-xs mt-1">Total Blocks</div>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <div className={adminCardPaddedClass}>
+            <div className="text-2xl font-semibold text-white">{totalCount}</div>
+            <div className={`mt-1 ${adminLabelClass}`}>Total Blocks</div>
           </div>
-          <div className="bg-neutral-900/50 border border-neutral-800 rounded-lg p-4">
-            <div className="text-2xl font-bold text-white">
+          <div className={adminCardPaddedClass}>
+            <div className="text-2xl font-semibold text-white">
               {sessions.filter(s => s.status === "completed").length}
             </div>
-            <div className="text-neutral-500 text-xs mt-1">Completed (this page)</div>
-            <div className="flex gap-2 mt-2 text-[11px]">
+            <div className={`mt-1 ${adminLabelClass}`}>Completed (this page)</div>
+            <div className="mt-2 flex gap-2 text-[11px]">
               <span className="text-blue-400">Active: {sessions.filter(s => s.status === "active").length}</span>
               <span className="text-yellow-400">Paused: {sessions.filter(s => s.status === "paused").length}</span>
             </div>
           </div>
-          <div className="bg-neutral-900/50 border border-neutral-800 rounded-lg p-4">
-            <div className="text-2xl font-bold text-white">
+          <div className={adminCardPaddedClass}>
+            <div className="text-2xl font-semibold text-white">
               {sessions.length > 0
                 ? formatDuration(sessions.reduce((sum, s) => sum + s.duration_ms, 0) / sessions.length)
                 : "—"}
             </div>
-            <div className="text-neutral-500 text-xs mt-1">Avg Duration (this page)</div>
-            <div className="flex gap-2 mt-2 text-[11px]">
+            <div className={`mt-1 ${adminLabelClass}`}>Avg Duration (this page)</div>
+            <div className="mt-2 flex gap-2 text-[11px]">
               <span className="text-neutral-400">
                 Total: {sessions.length > 0 ? formatDuration(sessions.reduce((sum, s) => sum + s.duration_ms, 0)) : "—"}
               </span>
@@ -184,14 +187,14 @@ export default function SessionsPage() {
           </div>
         </div>
 
-        <div className="flex flex-wrap gap-4 mb-6">
-          <div className="flex-1 min-w-[200px]">
+        <div className="flex flex-wrap gap-3">
+          <div className="min-w-[200px] flex-1">
             <input
               type="text"
               placeholder={t('admin.searchByProblem')}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full px-4 py-2 bg-neutral-900 border border-neutral-800 rounded-lg text-white placeholder-neutral-500 focus:outline-none focus:border-neutral-700"
+              className={adminInputClass}
             />
           </div>
           <select
@@ -200,7 +203,7 @@ export default function SessionsPage() {
               setStatusFilter(e.target.value);
               setPage(1);
             }}
-            className="px-4 py-2 bg-neutral-900 border border-neutral-800 rounded-lg text-white focus:outline-none focus:border-neutral-700"
+            className={adminSelectClass}
           >
             <option value="all">All Status</option>
             <option value="active">Active</option>
@@ -209,25 +212,25 @@ export default function SessionsPage() {
           </select>
         </div>
 
-        <div className="bg-neutral-900/50 border border-neutral-800 rounded-lg overflow-hidden">
+        <div className="overflow-hidden rounded-md border border-neutral-800 bg-neutral-950/75 backdrop-blur-sm">
           <table className="w-full">
             <thead>
-              <tr className="border-b border-neutral-800">
-                <th className="text-left p-4 text-neutral-400 text-sm font-medium">User</th>
-                <th className="text-left p-4 text-neutral-400 text-sm font-medium">Problem</th>
+              <tr className="border-b border-neutral-800 font-mono text-[10px] uppercase tracking-[1.5px] text-neutral-500">
+                <th className="p-4 text-left font-medium">User</th>
+                <th className="p-4 text-left font-medium">Problem</th>
                 <th 
-                  className="text-left p-4 text-neutral-400 text-sm font-medium cursor-pointer hover:text-white"
+                  className="cursor-pointer p-4 text-left font-medium hover:text-white"
                   onClick={() => handleSort("created_at")}
                 >
                   Date {sortField === "created_at" && (sortDirection === "asc" ? "↑" : "↓")}
                 </th>
                 <th 
-                  className="text-left p-4 text-neutral-400 text-sm font-medium cursor-pointer hover:text-white"
+                  className="cursor-pointer p-4 text-left font-medium hover:text-white"
                   onClick={() => handleSort("duration_ms")}
                 >
                   Duration {sortField === "duration_ms" && (sortDirection === "asc" ? "↑" : "↓")}
                 </th>
-                <th className="text-center p-4 text-neutral-400 text-sm font-medium">Status</th>
+                <th className="p-4 text-center font-medium">Status</th>
               </tr>
             </thead>
             <tbody>
@@ -286,11 +289,11 @@ export default function SessionsPage() {
         </div>
 
         {totalPages > 1 && (
-          <div className="flex items-center justify-between mt-6">
+          <div className="flex items-center justify-between">
             <button
               onClick={() => setPage(p => Math.max(1, p - 1))}
               disabled={page === 1}
-              className="px-4 py-2 bg-neutral-900 border border-neutral-800 rounded-lg text-white disabled:opacity-50 disabled:cursor-not-allowed hover:border-neutral-700"
+              className={adminBtnClass}
             >
               Previous
             </button>
@@ -300,7 +303,7 @@ export default function SessionsPage() {
             <button
               onClick={() => setPage(p => Math.min(totalPages, p + 1))}
               disabled={page === totalPages}
-              className="px-4 py-2 bg-neutral-900 border border-neutral-800 rounded-lg text-white disabled:opacity-50 disabled:cursor-not-allowed hover:border-neutral-700"
+              className={adminBtnClass}
             >
               Next
             </button>

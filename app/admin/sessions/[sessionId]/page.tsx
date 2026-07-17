@@ -4,6 +4,11 @@ import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import { AdminError, AdminLoading } from "@/components/admin/AdminStatus";
+import {
+  adminBackLinkClass,
+  adminItemClass,
+  adminLabelClass,
+} from "@/components/admin/styles";
 
 interface SessionOwner {
   id: string;
@@ -145,16 +150,16 @@ export default function AdminSessionDetailPage() {
   if (payload.kind === "tap") {
     const { session, plan, block, owner } = payload;
     return (
-      <main>
-        <Link href="/admin/sessions" className="mb-4 inline-block text-sm text-neutral-400 hover:text-white">
+      <div className="space-y-6">
+        <Link href="/admin/sessions" className={adminBackLinkClass}>
           ← Back to sessions
         </Link>
 
-        <div className="mb-6 rounded-lg border border-neutral-800 bg-neutral-900 p-6">
+        <div className="rounded-md border border-neutral-800 bg-neutral-950/75 p-5 backdrop-blur-sm sm:p-6">
           <div className="mb-4 flex items-start justify-between">
             <div>
-              <p className="mb-1 font-mono text-[10px] uppercase tracking-[1.5px] text-neutral-500">TAP session</p>
-              <h1 className="text-xl font-semibold text-white">
+              <p className={`mb-2 ${adminLabelClass}`}>TAP session</p>
+              <h1 className="text-xl font-medium tracking-[-0.3px] text-white">
                 {block?.title || plan?.display_topic || "Think Aloud Protocol"}
               </h1>
               {owner && (
@@ -183,33 +188,33 @@ export default function AdminSessionDetailPage() {
         </div>
 
         {(plan || block) && (
-          <div className="rounded-lg border border-neutral-800 bg-neutral-900 p-6">
+          <div className="rounded-md border border-neutral-800 bg-neutral-950/75 backdrop-blur-sm p-6">
             <h2 className="mb-4 text-lg font-medium text-white">Linked workspace</h2>
             {plan && (
-              <Link href={`/admin/workspaces/${plan.id}`} className="block rounded-lg bg-neutral-800/50 p-3 hover:bg-neutral-800/70">
+              <Link href={`/admin/workspaces/${plan.id}`} className={`block ${adminItemClass}`}>
                 <div className="text-sm text-blue-400">{plan.display_topic || plan.root_topic}</div>
                 {block && <div className="mt-1 text-xs text-neutral-500">Block: {block.title}</div>}
               </Link>
             )}
           </div>
         )}
-      </main>
+      </div>
     );
   }
 
   const { session, block } = payload;
 
   return (
-    <main>
-      <Link href="/admin/sessions" className="mb-4 inline-block text-sm text-neutral-400 hover:text-white">
+    <div className="space-y-6">
+      <Link href="/admin/sessions" className={adminBackLinkClass}>
         ← Back to sessions
       </Link>
 
-      <div className="mb-6 rounded-lg border border-neutral-800 bg-neutral-900 p-6">
+      <div className="rounded-md border border-neutral-800 bg-neutral-950/75 p-5 backdrop-blur-sm sm:p-6">
         <div className="mb-4 flex items-start justify-between">
           <div className="mr-4 flex-1">
-            <p className="mb-1 font-mono text-[10px] uppercase tracking-[1.5px] text-neutral-500">ILE session</p>
-            <h1 className="mb-2 text-xl font-semibold text-white">{session.problem}</h1>
+            <p className={`mb-2 ${adminLabelClass}`}>ILE session</p>
+            <h1 className="mb-2 text-xl font-medium tracking-[-0.3px] text-white">{session.problem}</h1>
             {session.owner && (
               <Link href={`/admin/users/${session.user_id}`} className="text-sm text-blue-400 hover:text-blue-300">
                 {session.owner.email || session.owner.username}
@@ -228,9 +233,9 @@ export default function AdminSessionDetailPage() {
       </div>
 
       {block && (
-        <div className="rounded-lg border border-neutral-800 bg-neutral-900 p-6">
+        <div className="rounded-md border border-neutral-800 bg-neutral-950/75 backdrop-blur-sm p-6">
           <h2 className="mb-4 text-lg font-medium text-white">Linked workspace</h2>
-          <Link href={`/admin/workspaces/${block.workspace_id}`} className="block rounded-lg bg-neutral-800/50 p-3 hover:bg-neutral-800/70">
+          <Link href={`/admin/workspaces/${block.workspace_id}`} className={`block ${adminItemClass}`}>
             <div className="mb-1 text-sm text-blue-400">
               {block.plan?.display_topic || block.plan?.root_topic || "Unknown workspace"}
             </div>
@@ -238,14 +243,14 @@ export default function AdminSessionDetailPage() {
           </Link>
         </div>
       )}
-    </main>
+    </div>
   );
 }
 
 function Field({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
   return (
     <div>
-      <div className="text-xs text-neutral-500">{label}</div>
+      <div className={adminLabelClass}>{label}</div>
       <div className={`text-neutral-200 ${mono ? "font-mono text-xs" : ""}`}>{value}</div>
     </div>
   );

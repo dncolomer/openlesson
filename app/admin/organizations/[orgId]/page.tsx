@@ -6,7 +6,14 @@ import Link from "next/link";
 import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
 import { tierColor, tierLabel } from "@/lib/admin/tiers";
-import { AdminLoading } from "@/components/admin/AdminStatus";
+import { AdminError, AdminLoading } from "@/components/admin/AdminStatus";
+import {
+  adminBackLinkClass,
+  adminDangerBtnClass,
+  adminLabelClass,
+  adminPageTitleClass,
+  adminPrimaryBtnClass,
+} from "@/components/admin/styles";
 import {
   fileToLogoPayload,
   validateLogoFile,
@@ -362,19 +369,11 @@ export default function OrganizationDetailPage() {
   }
 
   if (error) {
-    return (
-      <div className="max-w-5xl mx-auto p-6">
-        <div className="text-red-400">{error}</div>
-      </div>
-    );
+    return <AdminError message={error} />;
   }
 
   if (!organization) {
-    return (
-      <div className="max-w-5xl mx-auto p-6">
-        <div className="text-red-400">Organization not found</div>
-      </div>
-    );
+    return <AdminError message="Organization not found" />;
   }
 
   const unusedInvites = invites.filter(i => !i.used_by);
@@ -420,19 +419,17 @@ export default function OrganizationDetailPage() {
   );
 
   return (
-    <div className="max-w-5xl mx-auto p-6">
-      <div className="mb-6">
-        <Link href="/admin/organizations" className="text-neutral-400 hover:text-white text-sm">
-          &larr; Back to Organizations
-        </Link>
-      </div>
+    <div className="space-y-6">
+      <Link href="/admin/organizations" className={adminBackLinkClass}>
+        &larr; Back to Organizations
+      </Link>
 
       {/* Organization Header */}
-      <div className="bg-neutral-900/50 border border-neutral-800 rounded-lg p-6 mb-6">
+      <div className="rounded-md border border-neutral-800 bg-neutral-950/75 p-5 backdrop-blur-sm sm:p-6">
         {editing ? (
           <div className="space-y-4">
             <div>
-              <label className="block text-sm text-neutral-400 mb-2">Organization logo</label>
+              <label className={`mb-2 block ${adminLabelClass}`}>Organization logo</label>
               <div className="flex items-center gap-4">
                 {logoMark}
                 <div className="min-w-0">
@@ -475,7 +472,7 @@ export default function OrganizationDetailPage() {
               <button
                 onClick={handleSave}
                 disabled={saving}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-lg transition-colors"
+                className={adminPrimaryBtnClass}
               >
                 {saving ? "Saving..." : "Save Changes"}
               </button>
@@ -486,8 +483,9 @@ export default function OrganizationDetailPage() {
             <div className="flex min-w-0 items-start gap-4">
               {logoMark}
               <div className="min-w-0">
-                <h1 className="text-2xl font-bold text-white">{organization.name}</h1>
-                <code className="mt-2 inline-block rounded bg-neutral-800 px-2 py-1 text-sm text-neutral-400">
+                <p className={`mb-2 ${adminLabelClass}`}>Organization</p>
+                <h1 className={adminPageTitleClass}>{organization.name}</h1>
+                <code className="mt-2 inline-block rounded bg-neutral-800/80 px-2 py-1 font-mono text-sm text-neutral-400">
                   {organization.slug}
                 </code>
                 <p className="mt-2 text-sm text-neutral-500">
@@ -510,7 +508,7 @@ export default function OrganizationDetailPage() {
               </button>
               <button
                 onClick={handleDelete}
-                className="px-4 py-2 bg-red-600/20 hover:bg-red-600/30 text-red-400 rounded-lg transition-colors"
+                className={adminDangerBtnClass}
               >
                 Delete
               </button>
@@ -520,8 +518,9 @@ export default function OrganizationDetailPage() {
       </div>
 
       {/* Billing / xAI resources */}
-      <div className="bg-neutral-900/50 border border-neutral-800 rounded-lg p-6 mb-6 space-y-4">
-        <h2 className="text-lg font-medium text-white">Billing &amp; xAI</h2>
+      <div className="space-y-4 rounded-md border border-neutral-800 bg-neutral-950/75 p-5 backdrop-blur-sm sm:p-6">
+        <p className={adminLabelClass}>Billing &amp; xAI</p>
+        <h2 className="text-lg font-medium text-white">Plan and platform resources</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
             <label className="block text-sm text-neutral-400 mb-2">Plan tier</label>
@@ -589,47 +588,47 @@ export default function OrganizationDetailPage() {
         <button
           onClick={handleSaveBilling}
           disabled={savingBilling}
-          className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-lg transition-colors"
+          className={adminPrimaryBtnClass}
         >
           {savingBilling ? "Saving…" : "Save billing"}
         </button>
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-3 gap-4 mb-6">
-        <div className="bg-neutral-900/50 border border-neutral-800 rounded-lg p-4">
-          <div className="text-2xl font-bold text-white">{members.length}</div>
-          <div className="text-neutral-400 text-sm">Members</div>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <div className="rounded-md border border-neutral-800 bg-neutral-950/75 p-4 backdrop-blur-sm sm:p-5">
+          <div className="text-2xl font-semibold text-white">{members.length}</div>
+          <div className={`mt-1 ${adminLabelClass}`}>Members</div>
         </div>
-        <div className="bg-neutral-900/50 border border-neutral-800 rounded-lg p-4">
-          <div className="text-2xl font-bold text-white">
+        <div className="rounded-md border border-neutral-800 bg-neutral-950/75 p-4 backdrop-blur-sm sm:p-5">
+          <div className="text-2xl font-semibold text-white">
             {members.filter(m => m.is_org_admin).length}
           </div>
-          <div className="text-neutral-400 text-sm">Org Admins</div>
+          <div className={`mt-1 ${adminLabelClass}`}>Org Admins</div>
         </div>
-        <div className="bg-neutral-900/50 border border-neutral-800 rounded-lg p-4">
-          <div className="text-2xl font-bold text-yellow-400">{unusedInvites.length}</div>
-          <div className="text-neutral-400 text-sm">Pending Invites</div>
+        <div className="rounded-md border border-neutral-800 bg-neutral-950/75 p-4 backdrop-blur-sm sm:p-5">
+          <div className="text-2xl font-semibold text-yellow-400">{unusedInvites.length}</div>
+          <div className={`mt-1 ${adminLabelClass}`}>Pending Invites</div>
         </div>
       </div>
 
       {/* Members */}
-      <div className="bg-neutral-900/50 border border-neutral-800 rounded-lg mb-6">
-        <div className="p-4 border-b border-neutral-800">
-          <h2 className="text-lg font-semibold text-white">Members</h2>
+      <div className="overflow-hidden rounded-md border border-neutral-800 bg-neutral-950/75 backdrop-blur-sm">
+        <div className="border-b border-neutral-800 p-4">
+          <h2 className="text-sm font-medium text-white">Members</h2>
         </div>
         {members.length === 0 ? (
-          <div className="p-8 text-center text-neutral-400">
+          <div className="p-8 text-center text-sm text-neutral-400">
             No members yet. Generate invite links below.
           </div>
         ) : (
           <table className="w-full">
             <thead>
-              <tr className="border-b border-neutral-800">
-                <th className="text-left p-4 text-neutral-400 text-sm font-medium">User</th>
-                <th className="text-left p-4 text-neutral-400 text-sm font-medium">Plan</th>
-                <th className="text-left p-4 text-neutral-400 text-sm font-medium">Role</th>
-                <th className="text-right p-4 text-neutral-400 text-sm font-medium">Actions</th>
+              <tr className="border-b border-neutral-800 font-mono text-[10px] uppercase tracking-[1.5px] text-neutral-500">
+                <th className="p-4 text-left font-medium">User</th>
+                <th className="p-4 text-left font-medium">Plan</th>
+                <th className="p-4 text-left font-medium">Role</th>
+                <th className="p-4 text-right font-medium">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -681,12 +680,12 @@ export default function OrganizationDetailPage() {
       </div>
 
       {/* Invites */}
-      <div className="bg-neutral-900/50 border border-neutral-800 rounded-lg">
-        <div className="p-4 border-b border-neutral-800 flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-white">Invite Links</h2>
+      <div className="overflow-hidden rounded-md border border-neutral-800 bg-neutral-950/75 backdrop-blur-sm">
+        <div className="flex items-center justify-between border-b border-neutral-800 p-4">
+          <h2 className="text-sm font-medium text-white">Invite Links</h2>
           <button
             onClick={() => setShowInviteModal(true)}
-            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg transition-colors"
+            className={adminPrimaryBtnClass}
           >
             Generate Invites
           </button>
@@ -749,20 +748,21 @@ export default function OrganizationDetailPage() {
 
       {/* Generate Invites Modal */}
       {showInviteModal && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
-          <div className="bg-neutral-900 border border-neutral-800 rounded-lg p-6 max-w-md w-full mx-4">
-            <h2 className="text-xl font-bold text-white mb-4">Generate Invite Links</h2>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
+          <div className="mx-4 w-full max-w-md rounded-md border border-neutral-800 bg-neutral-950/95 p-6 backdrop-blur-md">
+            <p className={`mb-2 ${adminLabelClass}`}>Invites</p>
+            <h2 className="mb-4 text-xl font-medium text-white">Generate Invite Links</h2>
             <div className="mb-6">
-              <label className="block text-sm text-neutral-400 mb-2">Number of invites</label>
+              <label className={`mb-2 block ${adminLabelClass}`}>Number of invites</label>
               <input
                 type="number"
                 min={1}
                 max={50}
                 value={inviteCount}
                 onChange={(e) => setInviteCount(Math.min(50, Math.max(1, parseInt(e.target.value) || 1)))}
-                className="w-full px-4 py-2 bg-neutral-800 border border-neutral-700 rounded-lg text-white focus:outline-none focus:border-neutral-600"
+                className="w-full rounded-md border border-neutral-800 bg-neutral-950/60 px-4 py-2 text-sm text-white focus:border-neutral-600 focus:outline-none"
               />
-              <p className="text-xs text-neutral-500 mt-1">Each invite can only be used once (max 50)</p>
+              <p className="mt-1 text-xs text-neutral-500">Each invite can only be used once (max 50)</p>
             </div>
             <div className="flex gap-3">
               <button
@@ -770,14 +770,14 @@ export default function OrganizationDetailPage() {
                   setShowInviteModal(false);
                   setInviteCount(1);
                 }}
-                className="flex-1 px-4 py-2 bg-neutral-800 hover:bg-neutral-700 text-white rounded-lg transition-colors"
+                className="flex-1 rounded-md border border-neutral-800 bg-neutral-950/60 px-4 py-2 text-sm text-white transition-colors hover:border-neutral-700"
               >
                 Cancel
               </button>
               <button
                 onClick={handleGenerateInvites}
                 disabled={generatingInvites}
-                className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-lg transition-colors"
+                className={`flex-1 ${adminPrimaryBtnClass}`}
               >
                 {generatingInvites ? "Generating..." : "Generate"}
               </button>

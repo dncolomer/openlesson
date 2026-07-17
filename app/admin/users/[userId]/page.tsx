@@ -16,6 +16,12 @@ import {
   type AdminTierId,
 } from "@/lib/admin/tiers";
 import type { AdminProofOfWorkDetails } from "@/lib/admin/proof-of-work";
+import {
+  adminBackLinkClass,
+  adminItemClass,
+  adminLabelClass,
+  adminPageTitleClass,
+} from "@/components/admin/styles";
 
 interface Plan {
   id: string;
@@ -162,16 +168,19 @@ export default function UserDetailPage() {
     return <AdminError message={authError || error || "Admin access required"} />;
 
   return (
-    <main>
-      <Link href="/admin/users" className="mb-4 inline-block text-sm text-neutral-400 hover:text-white">
+    <div className="space-y-6">
+      <Link href="/admin/users" className={adminBackLinkClass}>
         ← Back to users
       </Link>
 
-      <div className="mb-6 rounded-lg border border-neutral-800 bg-neutral-900 p-6">
+      <div className="rounded-md border border-neutral-800 bg-neutral-950/75 p-5 backdrop-blur-sm sm:p-6">
         <div className="mb-4 flex items-start justify-between">
           <div>
-            <h1 className="text-xl font-semibold">{user?.username || user?.email || "No name"}</h1>
-            <p className="text-sm text-neutral-500">{user?.email}</p>
+            <p className={`mb-2 ${adminLabelClass}`}>User</p>
+            <h1 className={adminPageTitleClass}>
+              {user?.username || user?.email || "No name"}
+            </h1>
+            <p className="mt-1 text-sm text-neutral-500">{user?.email}</p>
           </div>
           {user?.is_admin && (
             <span className="rounded border border-yellow-500/30 bg-yellow-500/20 px-2 py-1 text-xs text-yellow-400">
@@ -182,7 +191,7 @@ export default function UserDetailPage() {
 
         <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
           <div>
-            <div className="text-xs text-neutral-500">Plan</div>
+            <div className={adminLabelClass}>Plan</div>
             <div className="space-y-2">
               <AdminTierSelect
                 value={user ? adminTierSelectValue(user) : "inactive"}
@@ -201,7 +210,7 @@ export default function UserDetailPage() {
             </div>
           </div>
           <div>
-            <div className="text-xs text-neutral-500">Status</div>
+            <div className={adminLabelClass}>Status</div>
             <span
               className={`rounded px-2 py-0.5 text-xs ${getStatusColor(user?.subscription_status || "")}`}
             >
@@ -209,11 +218,11 @@ export default function UserDetailPage() {
             </span>
           </div>
           <div>
-            <div className="text-xs text-neutral-500">Extra workspaces</div>
+            <div className={adminLabelClass}>Extra workspaces</div>
             <div className="text-neutral-200">{user?.extra_workspaces ?? 0}</div>
           </div>
           <div>
-            <div className="text-xs text-neutral-500">PoW volume overage</div>
+            <div className={adminLabelClass}>PoW volume overage</div>
             <div className="flex flex-col gap-1">
               <div className="flex items-center gap-2">
                 <span className="text-neutral-200">{user?.extra_lessons ?? 0}</span>
@@ -245,20 +254,20 @@ export default function UserDetailPage() {
             </div>
           </div>
           <div>
-            <div className="text-xs text-neutral-500">Token Tier</div>
+            <div className={adminLabelClass}>Token Tier</div>
             <div className="text-neutral-200">{user?.token_tier || "-"}</div>
           </div>
           <div>
-            <div className="text-xs text-neutral-500">Joined</div>
+            <div className={adminLabelClass}>Joined</div>
             <div className="text-neutral-200">{formatDate(user?.created_at || null)}</div>
           </div>
           <div>
-            <div className="text-xs text-neutral-500">Period Ends</div>
+            <div className={adminLabelClass}>Period Ends</div>
             <div className="text-neutral-200">{formatDate(user?.current_period_end || null)}</div>
           </div>
           {user?.stripe_customer_id && (
             <div>
-              <div className="text-xs text-neutral-500">Stripe</div>
+              <div className={adminLabelClass}>Stripe</div>
               <a
                 href={`https://dashboard.stripe.com/customers/${user.stripe_customer_id}`}
                 target="_blank"
@@ -270,15 +279,15 @@ export default function UserDetailPage() {
             </div>
           )}
           <div>
-            <div className="text-xs text-neutral-500">Proof of work</div>
+            <div className={adminLabelClass}>Proof of work</div>
             <div className="text-neutral-200">{proofOfWork.length}</div>
           </div>
           <div>
-            <div className="text-xs text-neutral-500">Workspaces</div>
+            <div className={adminLabelClass}>Workspaces</div>
             <div className="text-neutral-200">{plans.length}</div>
           </div>
           <div>
-            <div className="text-xs text-neutral-500">Organization</div>
+            <div className={adminLabelClass}>Organization</div>
             {user?.organization ? (
               <Link
                 href={`/admin/organizations/${user.organization.id}`}
@@ -295,8 +304,10 @@ export default function UserDetailPage() {
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
-        <div className="rounded-lg border border-neutral-800 bg-neutral-900 p-4">
-          <h2 className="mb-4 text-lg font-medium">Proof of work ({filteredPow.length})</h2>
+        <div className="rounded-md border border-neutral-800 bg-neutral-950/75 p-4 backdrop-blur-sm sm:p-5">
+          <h2 className="mb-4 text-sm font-medium text-white">
+            Proof of work ({filteredPow.length})
+          </h2>
 
           <div className="mb-4 flex flex-wrap gap-2">
             <select
@@ -396,8 +407,8 @@ export default function UserDetailPage() {
           )}
         </div>
 
-        <div className="rounded-lg border border-neutral-800 bg-neutral-900 p-4">
-          <h2 className="mb-4 text-lg font-medium">Workspaces ({plans.length})</h2>
+        <div className="rounded-md border border-neutral-800 bg-neutral-950/75 p-4 backdrop-blur-sm sm:p-5">
+          <h2 className="mb-4 text-sm font-medium text-white">Workspaces ({plans.length})</h2>
           {plans.length === 0 ? (
             <p className="text-sm text-neutral-500">No workspaces found</p>
           ) : (
@@ -407,7 +418,7 @@ export default function UserDetailPage() {
                   <Link
                     key={plan.id}
                     href={`/admin/workspaces/${plan.id}`}
-                    className="block rounded-lg bg-neutral-800/50 p-3 transition-colors hover:bg-neutral-800/70"
+                    className={`block ${adminItemClass}`}
                   >
                     <div className="mb-1 flex items-start justify-between">
                       <div className="line-clamp-1 text-sm text-neutral-200">
@@ -458,6 +469,6 @@ export default function UserDetailPage() {
           )}
         </div>
       </div>
-    </main>
+    </div>
   );
 }

@@ -6,6 +6,13 @@ import { AdminError, AdminLoading } from "@/components/admin/AdminStatus";
 import { PowDetailsPanel } from "@/components/admin/PowDetailsPanel";
 import { useAdminGuard } from "@/components/admin/useAdminGuard";
 import {
+  adminCardClass,
+  adminCardPaddedClass,
+  adminLabelClass,
+  adminPillClass,
+  adminSectionTitleClass,
+} from "@/components/admin/styles";
+import {
   activityTypeLabel,
   type ActiveUserRow,
   type ActivityEvent,
@@ -38,10 +45,10 @@ const WINDOWS: Array<{ id: ActivityWindow; label: string }> = [
 ];
 
 const SECTION_LINKS = [
-  { href: "/admin/users", label: "Users" },
-  { href: "/admin/organizations", label: "Organizations" },
-  { href: "/admin/workspaces", label: "Workspaces" },
-  { href: "/admin/sessions", label: "Sessions" },
+  { href: "/admin/users", label: "Users", description: "Accounts, plans, overage" },
+  { href: "/admin/organizations", label: "Organizations", description: "Teams, invites, billing" },
+  { href: "/admin/workspaces", label: "Workspaces", description: "Plans, visibility, TAP" },
+  { href: "/admin/sessions", label: "Sessions", description: "ILE blocks and TAP runs" },
 ] as const;
 
 export default function AdminPage() {
@@ -98,14 +105,21 @@ export default function AdminPage() {
   if (error || !isAdmin) return <AdminError message={error || "Admin access required"} />;
 
   return (
-    <div>
-      <p className="mb-6 text-sm text-neutral-400">
-        Active-user overview — who has been on the platform recently and what they did.
-      </p>
+    <div className="space-y-8">
+      <div className={`${adminCardPaddedClass} sm:px-8 sm:py-8`}>
+        <p className={`mb-3 ${adminLabelClass}`}>Overview</p>
+        <h2 className="max-w-2xl text-3xl font-medium tracking-[-1.2px] text-white sm:text-4xl">
+          Who is on the platform — and what they just did.
+        </h2>
+        <p className="mt-3 max-w-xl text-sm leading-relaxed text-neutral-400">
+          Active-user overview for support and ops. Jump into users, orgs, workspaces, or sessions
+          from the nav or the cards below.
+        </p>
+      </div>
 
-      {statsError && <p className="mb-4 text-sm text-red-400">{statsError}</p>}
+      {statsError && <p className="text-sm text-red-400">{statsError}</p>}
 
-      <div className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <StatCard label="Users" value={stats?.totalUsers ?? 0} />
         <StatCard label="MAU" value={stats?.monthlyActiveUsers ?? 0} />
         <StatCard label="Active subs" value={stats?.activeSubscriptions ?? 0} />
@@ -116,8 +130,11 @@ export default function AdminPage() {
         <StatCard label="Proof of work" value={stats?.totalEvidence ?? 0} />
       </div>
 
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-sm font-medium text-white">Recent activity</h2>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 className={adminSectionTitleClass}>Recent activity</h2>
+          <p className="mt-0.5 text-xs text-neutral-500">Ranked and filtered by window</p>
+        </div>
         <div className="flex gap-1 rounded-md border border-neutral-800 bg-neutral-950/60 p-0.5">
           {WINDOWS.map((w) => (
             <button
@@ -136,25 +153,29 @@ export default function AdminPage() {
         </div>
       </div>
 
-      {activityError && <p className="mb-4 text-sm text-red-400">{activityError}</p>}
+      {activityError && <p className="text-sm text-red-400">{activityError}</p>}
 
-      <div className="mb-8 grid grid-cols-1 gap-4 xl:grid-cols-2">
-        <section className="rounded-lg border border-neutral-800 bg-neutral-900/50">
-          <div className="border-b border-neutral-800 px-4 py-3">
-            <h3 className="text-sm font-medium text-white">Recently active users</h3>
-            <p className="mt-0.5 text-xs text-neutral-500">Ranked by last activity in the selected window</p>
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+        <section className={adminCardClass}>
+          <div className="border-b border-neutral-800 px-4 py-3 sm:px-5">
+            <h3 className={adminSectionTitleClass}>Recently active users</h3>
+            <p className="mt-0.5 text-xs text-neutral-500">
+              Ranked by last activity in the selected window
+            </p>
           </div>
           {activityLoading ? (
             <div className="p-6">
               <AdminLoading message="Loading users" />
             </div>
           ) : activeUsers.length === 0 ? (
-            <p className="px-4 py-8 text-center text-sm text-neutral-500">No active users in this window</p>
+            <p className="px-4 py-8 text-center text-sm text-neutral-500">
+              No active users in this window
+            </p>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-left text-sm">
                 <thead>
-                  <tr className="border-b border-neutral-800 text-xs uppercase tracking-wide text-neutral-500">
+                  <tr className="border-b border-neutral-800 font-mono text-[10px] uppercase tracking-[1.5px] text-neutral-500">
                     <th className="px-4 py-2 font-medium">User</th>
                     <th className="px-4 py-2 font-medium">Last seen</th>
                     <th className="px-4 py-2 font-medium">Activity</th>
@@ -175,16 +196,14 @@ export default function AdminPage() {
                           <div className="text-xs text-neutral-500">{user.email}</div>
                         )}
                       </td>
-                      <td className="px-4 py-2.5 text-neutral-400 whitespace-nowrap">
+                      <td className="whitespace-nowrap px-4 py-2.5 text-neutral-400">
                         {formatRelative(user.lastActiveAt)}
                       </td>
                       <td className="px-4 py-2.5 text-neutral-400">
                         <span className="text-neutral-300">{activityCountLabel(user)}</span>
                       </td>
                       <td className="px-4 py-2.5">
-                        <span className="rounded bg-neutral-800 px-1.5 py-0.5 text-xs text-neutral-300">
-                          {user.plan}
-                        </span>
+                        <span className={adminPillClass}>{user.plan}</span>
                       </td>
                     </tr>
                   ))}
@@ -194,17 +213,21 @@ export default function AdminPage() {
           )}
         </section>
 
-        <section className="rounded-lg border border-neutral-800 bg-neutral-900/50">
-          <div className="border-b border-neutral-800 px-4 py-3">
-            <h3 className="text-sm font-medium text-white">Activity feed</h3>
-            <p className="mt-0.5 text-xs text-neutral-500">ILE, TAP, workspaces, and proof-of-work</p>
+        <section className={adminCardClass}>
+          <div className="border-b border-neutral-800 px-4 py-3 sm:px-5">
+            <h3 className={adminSectionTitleClass}>Activity feed</h3>
+            <p className="mt-0.5 text-xs text-neutral-500">
+              ILE, TAP, workspaces, and proof-of-work
+            </p>
           </div>
           {activityLoading ? (
             <div className="p-6">
               <AdminLoading message="Loading activity" />
             </div>
           ) : recentActivity.length === 0 ? (
-            <p className="px-4 py-8 text-center text-sm text-neutral-500">No activity in this window</p>
+            <p className="px-4 py-8 text-center text-sm text-neutral-500">
+              No activity in this window
+            </p>
           ) : (
             <ul className="divide-y divide-neutral-800/80">
               {recentActivity.map((event) => {
@@ -213,13 +236,11 @@ export default function AdminPage() {
                 const expanded = expandedActivityKey === key;
 
                 return (
-                  <li key={key} className="px-4 py-3">
+                  <li key={key} className="px-4 py-3 sm:px-5">
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-2 text-xs">
-                          <span className="rounded bg-neutral-800 px-1.5 py-0.5 text-neutral-300">
-                            {activityTypeLabel(event.type)}
-                          </span>
+                          <span className={adminPillClass}>{activityTypeLabel(event.type)}</span>
                           <span className="text-neutral-500">{formatRelative(event.createdAt)}</span>
                           {event.status && (
                             <span className="text-neutral-600">{event.status}</span>
@@ -284,27 +305,31 @@ export default function AdminPage() {
       </div>
 
       {stats?.tierBreakdown && (
-        <div className="mb-8 rounded-lg border border-neutral-800 bg-neutral-900/50 p-4">
-          <h2 className="mb-3 text-sm font-medium text-white">Plan breakdown</h2>
+        <div className={adminCardPaddedClass}>
+          <p className={`mb-3 ${adminLabelClass}`}>Plan breakdown</p>
           <div className="flex flex-wrap gap-4 text-sm text-neutral-400">
             <span>Inactive: {stats.tierBreakdown.inactive}</span>
             <span className="text-emerald-400">Trial: {stats.tierBreakdown.trial}</span>
             <span className="text-blue-400">Individual: {stats.tierBreakdown.regular_2026}</span>
             <span className="text-purple-400">Teams: {stats.tierBreakdown.pro_teams}</span>
             <span className="text-amber-200">API Metered: {stats.tierBreakdown.api_metered}</span>
-            <span className="text-orange-300">Trial expired: {stats.tierBreakdown.trial_expired}</span>
+            <span className="text-orange-300">
+              Trial expired: {stats.tierBreakdown.trial_expired}
+            </span>
           </div>
         </div>
       )}
 
-      <div className="flex flex-wrap gap-2">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {SECTION_LINKS.map((link) => (
           <Link
             key={link.href}
             href={link.href}
-            className="rounded-md border border-neutral-800 bg-neutral-950/60 px-3 py-1.5 text-sm text-neutral-400 transition-colors hover:border-neutral-700 hover:text-white"
+            className={`${adminCardPaddedClass} transition-colors hover:border-neutral-700`}
           >
-            {link.label}
+            <p className={adminLabelClass}>{link.label}</p>
+            <p className="mt-2 text-sm text-neutral-300">{link.description}</p>
+            <p className="mt-3 text-xs text-neutral-500">Open →</p>
           </Link>
         ))}
       </div>
@@ -314,9 +339,11 @@ export default function AdminPage() {
 
 function StatCard({ label, value }: { label: string; value: number }) {
   return (
-    <div className="rounded-lg border border-neutral-800 bg-neutral-900/50 p-3">
-      <div className="text-xl font-semibold text-white tabular-nums">{value.toLocaleString()}</div>
-      <div className="mt-0.5 text-[11px] uppercase tracking-wide text-neutral-500">{label}</div>
+    <div className={adminCardPaddedClass}>
+      <div className="text-xl font-semibold tabular-nums text-white sm:text-2xl">
+        {value.toLocaleString()}
+      </div>
+      <div className={`mt-1 ${adminLabelClass}`}>{label}</div>
     </div>
   );
 }

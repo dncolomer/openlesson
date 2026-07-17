@@ -5,6 +5,15 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { useI18n } from "@/lib/i18n";
+import { AdminError } from "@/components/admin/AdminStatus";
+import {
+  adminBtnClass,
+  adminCardPaddedClass,
+  adminInputClass,
+  adminLabelClass,
+  adminPageTitleClass,
+  adminSelectClass,
+} from "@/components/admin/styles";
 
 interface PlanOwner {
   id: string;
@@ -146,62 +155,56 @@ export default function AdminPlansPage() {
     : "—";
 
   if (error) {
-    return (
-      <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
-        <div className="text-red-400">{error}</div>
-      </div>
-    );
+    return <AdminError message={error} />;
   }
 
   return (
-    <div className="max-w-7xl mx-auto p-6">
-      <div className="mb-6">
-        <Link href="/admin" className="text-neutral-400 hover:text-white text-sm">
-          ← Back to Admin
-        </Link>
-        <h1 className="text-2xl font-bold text-white mt-2">Workspaces</h1>
-        <p className="text-neutral-400 text-sm">{totalCount} total plans</p>
+    <div className="space-y-6">
+      <div>
+        <p className={`mb-2 ${adminLabelClass}`}>Catalog</p>
+        <h1 className={adminPageTitleClass}>Workspaces</h1>
+        <p className="mt-1 text-sm text-neutral-400">{totalCount} total plans</p>
       </div>
 
       {/* KPI Summary */}
-      <div className="grid grid-cols-3 gap-4 mb-6">
-        <div className="bg-neutral-900/50 border border-neutral-800 rounded-lg p-4">
-          <div className="text-2xl font-bold text-white">{kpiPlans.length}</div>
-          <div className="text-neutral-500 text-xs mt-1">Plans (this page)</div>
-          <div className="flex gap-2 mt-2 text-[11px]">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <div className={adminCardPaddedClass}>
+          <div className="text-2xl font-semibold text-white">{kpiPlans.length}</div>
+          <div className={`mt-1 ${adminLabelClass}`}>Plans (this page)</div>
+          <div className="mt-2 flex gap-2 text-[11px]">
             <span className="text-green-400">Public: {publicCount}</span>
             <span className="text-neutral-400">Private: {kpiPlans.length - publicCount}</span>
           </div>
         </div>
-        <div className="bg-neutral-900/50 border border-neutral-800 rounded-lg p-4">
-          <div className="text-2xl font-bold text-white">{avgNodes}</div>
-          <div className="text-neutral-500 text-xs mt-1">Avg Nodes per Plan</div>
-          <div className="flex gap-2 mt-2 text-[11px]">
+        <div className={adminCardPaddedClass}>
+          <div className="text-2xl font-semibold text-white">{avgNodes}</div>
+          <div className={`mt-1 ${adminLabelClass}`}>Avg Nodes per Plan</div>
+          <div className="mt-2 flex gap-2 text-[11px]">
             <span className="text-neutral-400">
               Total nodes: {kpiPlans.reduce((sum, p) => sum + p.node_count, 0)}
             </span>
           </div>
         </div>
-        <div className="bg-neutral-900/50 border border-neutral-800 rounded-lg p-4">
-          <div className="text-2xl font-bold text-cyan-400">
+        <div className={adminCardPaddedClass}>
+          <div className="text-2xl font-semibold text-cyan-400">
             {kpiPlans.reduce((sum, p) => sum + (p.tap_session_count || 0), 0)}
           </div>
-          <div className="text-neutral-500 text-xs mt-1">TAP sessions (this page)</div>
-          <div className="flex gap-2 mt-2 text-[11px]">
+          <div className={`mt-1 ${adminLabelClass}`}>TAP sessions (this page)</div>
+          <div className="mt-2 flex gap-2 text-[11px]">
             <span className="text-blue-400">Agent-created: {agentCount}</span>
           </div>
         </div>
       </div>
 
       {/* Filters */}
-      <div className="flex flex-wrap gap-4 mb-6">
-        <div className="flex-1 min-w-[200px]">
+      <div className="flex flex-wrap gap-3">
+        <div className="min-w-[200px] flex-1">
           <input
             type="text"
             placeholder={t('admin.searchByTopic')}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full px-4 py-2 bg-neutral-900 border border-neutral-800 rounded-lg text-white placeholder-neutral-500 focus:outline-none focus:border-neutral-700"
+            className={adminInputClass}
           />
         </div>
         <select
@@ -210,7 +213,7 @@ export default function AdminPlansPage() {
             setVisibilityFilter(e.target.value);
             setPage(1);
           }}
-          className="px-4 py-2 bg-neutral-900 border border-neutral-800 rounded-lg text-white focus:outline-none focus:border-neutral-700"
+          className={adminSelectClass}
         >
           <option value="all">All Visibility</option>
           <option value="public">Public</option>
@@ -222,7 +225,7 @@ export default function AdminPlansPage() {
             setStatusFilter(e.target.value);
             setPage(1);
           }}
-          className="px-4 py-2 bg-neutral-900 border border-neutral-800 rounded-lg text-white focus:outline-none focus:border-neutral-700"
+          className={adminSelectClass}
         >
           <option value="active">Hide archived</option>
           <option value="archived">Archived only</option>
@@ -231,32 +234,32 @@ export default function AdminPlansPage() {
       </div>
 
       {/* Table */}
-      <div className="bg-neutral-900/50 border border-neutral-800 rounded-lg overflow-hidden">
+      <div className="overflow-hidden rounded-md border border-neutral-800 bg-neutral-950/75 backdrop-blur-sm">
         <table className="w-full">
           <thead>
-            <tr className="border-b border-neutral-800">
-              <th className="text-left text-xs text-neutral-400 font-medium px-4 py-3">User</th>
+            <tr className="border-b border-neutral-800 font-mono text-[10px] uppercase tracking-[1.5px] text-neutral-500">
+              <th className="px-4 py-3 text-left font-medium">User</th>
               <th
-                className="text-left text-xs text-neutral-400 font-medium px-4 py-3 cursor-pointer hover:text-white"
+                className="cursor-pointer px-4 py-3 text-left font-medium hover:text-white"
                 onClick={() => handleSort("root_topic")}
               >
                 Topic{getSortIcon("root_topic")}
               </th>
               <th
-                className="text-left text-xs text-neutral-400 font-medium px-4 py-3 cursor-pointer hover:text-white"
+                className="cursor-pointer px-4 py-3 text-left font-medium hover:text-white"
                 onClick={() => handleSort("created_at")}
               >
                 Created{getSortIcon("created_at")}
               </th>
               <th
-                className="text-left text-xs text-neutral-400 font-medium px-4 py-3 cursor-pointer hover:text-white"
+                className="cursor-pointer px-4 py-3 text-left font-medium hover:text-white"
                 onClick={() => handleSort("node_count")}
               >
                 Nodes{getSortIcon("node_count")}
               </th>
-              <th className="text-left text-xs text-neutral-400 font-medium px-4 py-3">Visibility</th>
-              <th className="text-left text-xs text-neutral-400 font-medium px-4 py-3">TAP</th>
-              <th className="text-left text-xs text-neutral-400 font-medium px-4 py-3">Source</th>
+              <th className="px-4 py-3 text-left font-medium">Visibility</th>
+              <th className="px-4 py-3 text-left font-medium">TAP</th>
+              <th className="px-4 py-3 text-left font-medium">Source</th>
             </tr>
           </thead>
           <tbody>
@@ -320,7 +323,7 @@ export default function AdminPlansPage() {
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <div className="flex items-center justify-between mt-4">
+        <div className="flex items-center justify-between">
           <p className="text-xs text-neutral-500">
             Page {page} of {totalPages} ({totalCount} total)
           </p>
@@ -328,14 +331,14 @@ export default function AdminPlansPage() {
             <button
               onClick={() => setPage(p => Math.max(1, p - 1))}
               disabled={page === 1}
-              className="px-3 py-1 text-xs text-neutral-400 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed border border-neutral-700 rounded transition-colors"
+              className={adminBtnClass}
             >
               Previous
             </button>
             <button
               onClick={() => setPage(p => Math.min(totalPages, p + 1))}
               disabled={page === totalPages}
-              className="px-3 py-1 text-xs text-neutral-400 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed border border-neutral-700 rounded transition-colors"
+              className={adminBtnClass}
             >
               Next
             </button>

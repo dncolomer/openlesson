@@ -3,7 +3,13 @@
 import React, { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
-import { LoadingStatusMessage } from "@/components/LoadingStatusMessage";
+import { AdminError, AdminLoading } from "@/components/admin/AdminStatus";
+import {
+  adminBackLinkClass,
+  adminItemClass,
+  adminLabelClass,
+  adminPageTitleClass,
+} from "@/components/admin/styles";
 
 interface PlanOwner {
   id: string;
@@ -126,38 +132,28 @@ export default function AdminPlanDetailPage() {
   };
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
-        <LoadingStatusMessage message="Loading" />
-      </div>
-    );
+    return <AdminLoading />;
   }
 
   if (error) {
-    return (
-      <div className="min-h-screen bg-[#0a0a0a] flex flex-col items-center justify-center gap-4">
-        <div className="text-red-400">{error}</div>
-        <Link href="/admin/workspaces" className="text-sm text-neutral-400 hover:text-white">
-          Back to workspaces
-        </Link>
-      </div>
-    );
+    return <AdminError message={error} />;
   }
 
   const completedNodes = nodes.filter((n) => n.status === "completed").length;
 
   return (
-    <main className="max-w-6xl mx-auto p-4 sm:px-6 py-8">
-      <Link href="/admin/workspaces" className="text-sm text-neutral-400 hover:text-white mb-4 inline-block">
+    <div className="space-y-6">
+      <Link href="/admin/workspaces" className={adminBackLinkClass}>
         &larr; Back to workspaces
       </Link>
 
-      <div className="bg-neutral-900 border border-neutral-800 rounded-lg p-6 mb-6">
-        <div className="flex items-start justify-between mb-4">
+      <div className="rounded-md border border-neutral-800 bg-neutral-950/75 p-5 backdrop-blur-sm sm:p-6">
+        <div className="mb-4 flex items-start justify-between">
           <div>
-            <h1 className="text-xl font-semibold text-white">{plan?.display_topic}</h1>
+            <p className={`mb-2 ${adminLabelClass}`}>Workspace</p>
+            <h1 className={adminPageTitleClass}>{plan?.display_topic}</h1>
             {plan?.owner && (
-              <Link href={`/admin/users/${plan.user_id}`} className="text-sm text-blue-400 hover:text-blue-300">
+              <Link href={`/admin/users/${plan.user_id}`} className="mt-1 inline-block text-sm text-blue-400 hover:text-blue-300">
                 {plan.owner.username || plan.owner.email}
               </Link>
             )}
@@ -178,47 +174,47 @@ export default function AdminPlanDetailPage() {
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div>
-            <div className="text-xs text-neutral-500">Created</div>
+            <div className={adminLabelClass}>Created</div>
             <div className="text-neutral-200">{formatDate(plan?.created_at || null)}</div>
           </div>
           <div>
-            <div className="text-xs text-neutral-500">Status</div>
+            <div className={adminLabelClass}>Status</div>
             <span className={`px-2 py-0.5 rounded text-xs ${getStatusColor(plan?.status || "")}`}>
               {plan?.status}
             </span>
           </div>
           <div>
-            <div className="text-xs text-neutral-500">Blocks</div>
+            <div className={adminLabelClass}>Blocks</div>
             <div className="text-neutral-200">{completedNodes} / {nodes.length} completed</div>
           </div>
           <div>
-            <div className="text-xs text-neutral-500">TAP sessions</div>
+            <div className={adminLabelClass}>TAP sessions</div>
             <div className="text-neutral-200">{tapSessions.length}</div>
           </div>
         </div>
       </div>
 
-      <div className="grid md:grid-cols-2 gap-6">
-        <div className="bg-neutral-900 border border-neutral-800 rounded-lg p-4">
-          <h2 className="text-lg font-medium mb-4 text-white">Blocks ({nodes.length})</h2>
+      <div className="grid gap-6 md:grid-cols-2">
+        <div className="rounded-md border border-neutral-800 bg-neutral-950/75 p-4 backdrop-blur-sm sm:p-5">
+          <h2 className="mb-4 text-sm font-medium text-white">Blocks ({nodes.length})</h2>
           {nodes.length === 0 ? (
-            <p className="text-neutral-500 text-sm">No blocks found</p>
+            <p className="text-sm text-neutral-500">No blocks found</p>
           ) : (
-            <div className="space-y-2 max-h-[500px] overflow-y-auto">
+            <div className="max-h-[500px] space-y-2 overflow-y-auto">
               {nodes.map((node) => (
-                <div key={node.id} className="p-3 bg-neutral-800/50 rounded-lg">
+                <div key={node.id} className={adminItemClass}>
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <div className="text-sm text-neutral-200">{node.title}</div>
                       {node.description && (
-                        <div className="text-xs text-neutral-500 mt-1 line-clamp-2">{node.description}</div>
+                        <div className="mt-1 line-clamp-2 text-xs text-neutral-500">{node.description}</div>
                       )}
                     </div>
-                    <span className={`px-1.5 py-0.5 text-xs rounded shrink-0 ${getStatusColor(node.status)}`}>
+                    <span className={`shrink-0 rounded px-1.5 py-0.5 text-xs ${getStatusColor(node.status)}`}>
                       {node.status}
                     </span>
                   </div>
-                  {node.is_start && <div className="text-[10px] text-cyan-400 mt-1">Start block</div>}
+                  {node.is_start && <div className="mt-1 text-[10px] text-cyan-400">Start block</div>}
                 </div>
               ))}
             </div>
@@ -226,21 +222,21 @@ export default function AdminPlanDetailPage() {
         </div>
 
         <div className="space-y-6">
-          <div className="bg-neutral-900 border border-neutral-800 rounded-lg p-4">
-            <h2 className="text-lg font-medium mb-4 text-white">Tutoring Blocks ({sessions.length})</h2>
+          <div className="rounded-md border border-neutral-800 bg-neutral-950/75 p-4 backdrop-blur-sm sm:p-5">
+            <h2 className="mb-4 text-sm font-medium text-white">Tutoring Blocks ({sessions.length})</h2>
             {sessions.length === 0 ? (
-              <p className="text-neutral-500 text-sm">No linked tutoring blocks</p>
+              <p className="text-sm text-neutral-500">No linked tutoring blocks</p>
             ) : (
-              <div className="space-y-3 max-h-[220px] overflow-y-auto">
+              <div className="max-h-[220px] space-y-3 overflow-y-auto">
                 {sessions.map((session) => (
-                  <Link key={session.id} href={`/admin/sessions/${session.id}`} className="block p-3 bg-neutral-800/50 rounded-lg hover:bg-neutral-800/70 transition-colors">
-                    <div className="flex items-start justify-between mb-1">
-                      <div className="text-sm text-neutral-200 line-clamp-1">{session.problem}</div>
-                      <span className={`ml-2 px-1.5 py-0.5 text-xs rounded ${getStatusColor(session.status)}`}>
+                  <Link key={session.id} href={`/admin/sessions/${session.id}`} className={`block ${adminItemClass}`}>
+                    <div className="mb-1 flex items-start justify-between">
+                      <div className="line-clamp-1 text-sm text-neutral-200">{session.problem}</div>
+                      <span className={`ml-2 rounded px-1.5 py-0.5 text-xs ${getStatusColor(session.status)}`}>
                         {session.status}
                       </span>
                     </div>
-                    <div className="flex gap-3 text-xs text-neutral-500 items-center">
+                    <div className="flex items-center gap-3 text-xs text-neutral-500">
                       <span>{formatDate(session.created_at)}</span>
                       {session.duration_ms > 0 && <span>{formatDuration(session.duration_ms)}</span>}
                     </div>
@@ -250,23 +246,23 @@ export default function AdminPlanDetailPage() {
             )}
           </div>
 
-          <div className="bg-neutral-900 border border-neutral-800 rounded-lg p-4">
-            <h2 className="text-lg font-medium mb-4 text-white">TAP sessions ({tapSessions.length})</h2>
+          <div className="rounded-md border border-neutral-800 bg-neutral-950/75 p-4 backdrop-blur-sm sm:p-5">
+            <h2 className="mb-4 text-sm font-medium text-white">TAP sessions ({tapSessions.length})</h2>
             {tapSessions.length === 0 ? (
-              <p className="text-neutral-500 text-sm">No TAP sessions yet</p>
+              <p className="text-sm text-neutral-500">No TAP sessions yet</p>
             ) : (
-              <div className="space-y-3 max-h-[220px] overflow-y-auto">
+              <div className="max-h-[220px] space-y-3 overflow-y-auto">
                 {tapSessions.map((session) => (
-                  <div key={session.id} className="p-3 bg-neutral-800/50 rounded-lg">
-                    <div className="flex items-start justify-between mb-1">
+                  <div key={session.id} className={adminItemClass}>
+                    <div className="mb-1 flex items-start justify-between">
                       <div className="text-sm text-neutral-200">
                         {session.requested_duration_seconds / 60} min session
                       </div>
-                      <span className={`ml-2 px-1.5 py-0.5 text-xs rounded ${getStatusColor(session.status)}`}>
+                      <span className={`ml-2 rounded px-1.5 py-0.5 text-xs ${getStatusColor(session.status)}`}>
                         {session.status}
                       </span>
                     </div>
-                    <div className="flex gap-3 text-xs text-neutral-500 items-center">
+                    <div className="flex items-center gap-3 text-xs text-neutral-500">
                       <span>{formatDate(session.created_at)}</span>
                       {session.overall_score != null && <span>Score: {session.overall_score}</span>}
                     </div>
@@ -277,6 +273,6 @@ export default function AdminPlanDetailPage() {
           </div>
         </div>
       </div>
-    </main>
+    </div>
   );
 }

@@ -17,6 +17,14 @@ import {
   type AdminTierId,
   type PlanFilterBucket,
 } from "@/lib/admin/tiers";
+import {
+  adminBtnClass,
+  adminCardPaddedClass,
+  adminInputClass,
+  adminLabelClass,
+  adminPageTitleClass,
+  adminSelectClass,
+} from "@/components/admin/styles";
 
 interface User {
   id: string;
@@ -213,20 +221,21 @@ export default function UsersPage() {
   if (authError || error || !isAdmin) return <AdminError message={authError || error || "Admin access required"} />;
 
   return (
-    <div>
-        <div className="mb-6">
-          <h2 className="text-xl font-semibold text-white">Users</h2>
-          <p className="text-sm text-neutral-400">
+    <div className="space-y-6">
+        <div>
+          <p className={`mb-2 ${adminLabelClass}`}>Directory</p>
+          <h2 className={adminPageTitleClass}>Users</h2>
+          <p className="mt-1 text-sm text-neutral-400">
             {filteredUsers.length} users · trial_expired is the email cohort for churned trials
           </p>
         </div>
 
         {/* KPI Summary */}
-        <div className="grid grid-cols-3 gap-4 mb-6">
-          <div className="bg-neutral-900/50 border border-neutral-800 rounded-lg p-4">
-            <div className="text-2xl font-bold text-white">{kpiUsers.length}</div>
-            <div className="text-neutral-500 text-xs mt-1">Total Users</div>
-            <div className="flex flex-wrap gap-2 mt-2 text-[11px]">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <div className={adminCardPaddedClass}>
+            <div className="text-2xl font-semibold text-white">{kpiUsers.length}</div>
+            <div className={`mt-1 ${adminLabelClass}`}>Total Users</div>
+            <div className="mt-2 flex flex-wrap gap-2 text-[11px]">
               {ADMIN_TIER_OPTIONS.map((tier) => (
                 <span key={tier.id} className={tierColor(tier.id)}>
                   {tier.label}: {kpiUsers.filter((u) => planFilterBucket(u) === tier.id).length}
@@ -237,39 +246,39 @@ export default function UsersPage() {
               </span>
             </div>
           </div>
-          <div className="bg-neutral-900/50 border border-neutral-800 rounded-lg p-4">
-            <div className="text-2xl font-bold text-green-400">{kpiUsers.filter(u => u.subscription_status === "active").length}</div>
-            <div className="text-neutral-500 text-xs mt-1">Active Subscriptions</div>
-            <div className="flex flex-wrap gap-2 mt-2 text-[11px]">
+          <div className={adminCardPaddedClass}>
+            <div className="text-2xl font-semibold text-green-400">{kpiUsers.filter(u => u.subscription_status === "active").length}</div>
+            <div className={`mt-1 ${adminLabelClass}`}>Active Subscriptions</div>
+            <div className="mt-2 flex flex-wrap gap-2 text-[11px]">
               <span className="text-red-400">Inactive: {kpiUsers.filter(u => u.subscription_status === "inactive" || !u.subscription_status).length}</span>
               <span className="text-orange-300">Trial expired: {kpiUsers.filter(u => u.subscription_status === "trial_expired").length}</span>
               <span className="text-yellow-400">Past Due: {kpiUsers.filter(u => u.subscription_status === "past_due").length}</span>
             </div>
           </div>
-          <div className="bg-neutral-900/50 border border-neutral-800 rounded-lg p-4">
-            <div className="text-2xl font-bold text-white">{kpiUsers.reduce((sum, u) => sum + (u.lessons_count || 0), 0)}</div>
-            <div className="text-neutral-500 text-xs mt-1">Total Blocks Created</div>
-            <div className="flex gap-2 mt-2 text-[11px]">
+          <div className={adminCardPaddedClass}>
+            <div className="text-2xl font-semibold text-white">{kpiUsers.reduce((sum, u) => sum + (u.lessons_count || 0), 0)}</div>
+            <div className={`mt-1 ${adminLabelClass}`}>Total Blocks Created</div>
+            <div className="mt-2 flex gap-2 text-[11px]">
               <span className="text-neutral-400">Plans: {kpiUsers.reduce((sum, u) => sum + (u.plans_count || 0), 0)}</span>
               <span className="text-neutral-400">Admins: {users.filter(u => u.is_admin).length}</span>
             </div>
           </div>
         </div>
 
-        <div className="flex flex-wrap gap-4 mb-6">
-          <div className="flex-1 min-w-[200px]">
+        <div className="flex flex-wrap gap-3">
+          <div className="min-w-[200px] flex-1">
             <input
               type="text"
               placeholder={t('admin.searchUsers')}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full px-4 py-2 bg-neutral-900 border border-neutral-800 rounded-lg text-white placeholder-neutral-500 focus:outline-none focus:border-neutral-700"
+              className={adminInputClass}
             />
           </div>
           <select
             value={tierFilter}
             onChange={(e) => setTierFilter(e.target.value as TierOption)}
-            className="px-4 py-2 bg-neutral-900 border border-neutral-800 rounded-lg text-white focus:outline-none focus:border-neutral-700"
+            className={adminSelectClass}
           >
             <option value="all">All tiers</option>
             {ADMIN_TIER_OPTIONS.map((tier) => (
@@ -280,7 +289,7 @@ export default function UsersPage() {
           <select
             value={dateFilter}
             onChange={(e) => setDateFilter(e.target.value as DateFilter)}
-            className="px-4 py-2 bg-neutral-900 border border-neutral-800 rounded-lg text-white focus:outline-none focus:border-neutral-700"
+            className={adminSelectClass}
           >
             <option value="all">All Time</option>
             <option value="7days">Last 7 Days</option>
@@ -290,43 +299,43 @@ export default function UsersPage() {
           </select>
         </div>
 
-        <div className="bg-neutral-900/50 border border-neutral-800 rounded-lg overflow-hidden">
+        <div className="overflow-hidden rounded-md border border-neutral-800 bg-neutral-950/75 backdrop-blur-sm">
           <table className="w-full">
             <thead>
-              <tr className="border-b border-neutral-800">
-                <th className="text-left p-4 text-neutral-400 text-sm font-medium">User</th>
+              <tr className="border-b border-neutral-800 font-mono text-[10px] uppercase tracking-[1.5px] text-neutral-500">
+                <th className="p-4 text-left font-medium">User</th>
                 <th 
-                  className="text-left p-4 text-neutral-400 text-sm font-medium cursor-pointer hover:text-white"
+                  className="cursor-pointer p-4 text-left font-medium hover:text-white"
                   onClick={() => handleSort("created_at")}
                 >
                   Joined{getSortIcon("created_at")}
                 </th>
                 <th 
-                  className="text-right p-4 text-neutral-400 text-sm font-medium cursor-pointer hover:text-white"
+                  className="cursor-pointer p-4 text-right font-medium hover:text-white"
                   onClick={() => handleSort("lessons_count")}
                 >
                   Lessons{getSortIcon("lessons_count")}
                 </th>
                 <th 
-                  className="text-right p-4 text-neutral-400 text-sm font-medium cursor-pointer hover:text-white"
+                  className="cursor-pointer p-4 text-right font-medium hover:text-white"
                   onClick={() => handleSort("plans_count")}
                 >
                   Plans{getSortIcon("plans_count")}
                 </th>
                 <th 
-                  className="text-left p-4 text-neutral-400 text-sm font-medium cursor-pointer hover:text-white"
+                  className="cursor-pointer p-4 text-left font-medium hover:text-white"
                   onClick={() => handleSort("plan")}
                 >
                   Tier{getSortIcon("plan")}
                 </th>
                 <th 
-                  className="text-left p-4 text-neutral-400 text-sm font-medium cursor-pointer hover:text-white"
+                  className="cursor-pointer p-4 text-left font-medium hover:text-white"
                   onClick={() => handleSort("subscription_status")}
                 >
                   Status{getSortIcon("subscription_status")}
                 </th>
-                <th className="text-left p-4 text-neutral-400 text-sm font-medium">Organization</th>
-                <th className="text-right p-4 text-neutral-400 text-sm font-medium" title="Volume-tier overage above plan base (not a purchased pack)">
+                <th className="p-4 text-left font-medium">Organization</th>
+                <th className="p-4 text-right font-medium" title="Volume-tier overage above plan base (not a purchased pack)">
                   PoW overage
                 </th>
               </tr>
@@ -410,11 +419,11 @@ export default function UsersPage() {
         </div>
 
         {totalPages > 1 && (
-          <div className="flex items-center justify-between mt-6">
+          <div className="flex items-center justify-between">
             <button
               onClick={() => setPage(p => Math.max(1, p - 1))}
               disabled={page === 1}
-              className="px-4 py-2 bg-neutral-900 border border-neutral-800 rounded-lg text-white disabled:opacity-50 disabled:cursor-not-allowed hover:border-neutral-700"
+              className={adminBtnClass}
             >
               Previous
             </button>
@@ -424,7 +433,7 @@ export default function UsersPage() {
             <button
               onClick={() => setPage(p => Math.min(totalPages, p + 1))}
               disabled={page === totalPages}
-              className="px-4 py-2 bg-neutral-900 border border-neutral-800 rounded-lg text-white disabled:opacity-50 disabled:cursor-not-allowed hover:border-neutral-700"
+              className={adminBtnClass}
             >
               Next
             </button>

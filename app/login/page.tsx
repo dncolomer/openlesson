@@ -98,6 +98,8 @@ function LoginForm() {
       const { error: authError } = await supabase.auth.signInWithOtp({
         email,
         options: {
+          // Existing users only — do not auto-create Free accounts via magic link.
+          shouldCreateUser: false,
           emailRedirectTo: callbackUrl.toString(),
         },
       });

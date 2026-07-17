@@ -364,6 +364,8 @@ export interface OrgUsageSummary {
   guestCount: number;
   used: number;
   limit: number | null;
+  /** Org-level billing: partner = Stripe bypass / complimentary entitlement. */
+  billingMode?: "subscription" | "partner";
 }
 
 export interface UsageCheckResult {

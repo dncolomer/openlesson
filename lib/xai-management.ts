@@ -94,6 +94,108 @@ export async function deleteTeamApiKey(apiKeyId: string): Promise<void> {
   }
 }
 
+// ---------- Billing / usage (per API key) ----------
+
+export type XaiUsageLine = {
+  description: string;
+  usd: number;
+};
+
+export type XaiApiKeyUsageResult = {
+  apiKeyId: string;
+  periodStart: string;
+  periodEnd: string;
+  totalUsd: number;
+  lines: XaiUsageLine[];
+};
+
+/** Format a Date as `YYYY-MM-DD HH:MM:SS` for the Management usage API. */
+export function formatXaiUsageTimestamp(date: Date): string {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${date.getUTCFullYear()}-${pad(date.getUTCMonth() + 1)}-${pad(date.getUTCDate())} ${pad(date.getUTCHours())}:${pad(date.getUTCMinutes())}:${pad(date.getUTCSeconds())}`;
+}
+
+/**
+ * Sum USD spend for a single team API key over [start, end).
+ * Uses POST /v1/billing/teams/{teamId}/usage with api_key_id filter.
+ */
+export async function getTeamApiKeyUsage(params: {
+  apiKeyId: string;
+  start: Date;
+  end: Date;
+  timezone?: string;
+}): Promise<XaiApiKeyUsageResult> {
+  if (!isXaiManagementConfigured()) {
+    throw new Error("xAI Management API not configured");
+  }
+
+  const teamId = getTeamId();
+  const startTime = formatXaiUsageTimestamp(params.start);
+  const endTime = formatXaiUsageTimestamp(params.end);
+  // Filter syntax verified against Management API: api_key_id="uuid"
+  const filter = `api_key_id="${params.apiKeyId}"`;
+
+  const res = await fetch(
+    `${MANAGEMENT_BASE}/v1/billing/teams/${encodeURIComponent(teamId)}/usage`,
+    {
+      method: "POST",
+      headers: managementHeaders(),
+      body: JSON.stringify({
+        analyticsRequest: {
+          timeRange: {
+            startTime,
+            endTime,
+            timezone: params.timezone || "Etc/GMT",
+          },
+          timeUnit: "TIME_UNIT_NONE",
+          values: [{ name: "usd", aggregation: "AGGREGATION_SUM" }],
+          groupBy: ["description"],
+          filters: [filter],
+        },
+      }),
+    }
+  );
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(`xAI usage query failed (${res.status}): ${text.slice(0, 500)}`);
+  }
+
+  const data = (await res.json()) as {
+    timeSeries?: Array<{
+      group?: string[];
+      groupLabels?: string[];
+      dataPoints?: Array<{ values?: number[] }>;
+    }>;
+  };
+
+  const lines: XaiUsageLine[] = [];
+  let totalUsd = 0;
+
+  for (const series of data.timeSeries || []) {
+    const description =
+      series.groupLabels?.[0] || series.group?.[0] || "Unknown";
+    let usd = 0;
+    for (const point of series.dataPoints || []) {
+      const v = point.values?.[0];
+      if (typeof v === "number" && Number.isFinite(v)) usd += v;
+    }
+    if (usd === 0 && description === "Unknown") continue;
+    lines.push({ description, usd });
+    totalUsd += usd;
+  }
+
+  lines.sort((a, b) => b.usd - a.usd);
+
+  return {
+    apiKeyId: params.apiKeyId,
+    periodStart: params.start.toISOString(),
+    periodEnd: params.end.toISOString(),
+    totalUsd,
+    lines,
+  };
+}
+
 // ---------- Collections ----------
 
 export type CreateCollectionResult = {

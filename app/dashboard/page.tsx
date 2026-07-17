@@ -47,6 +47,7 @@ interface OrgUsageSummary {
   guestCount: number;
   used: number;
   limit: number | null;
+  billingMode?: "subscription" | "partner";
 }
 
 export default function DashboardPage() {
@@ -80,6 +81,8 @@ export default function DashboardPage() {
     subscriptionStatus: string;
     organization: OrgUsageSummary | null;
     isAdmin: boolean;
+    /** Org partner billing = Stripe bypass; hide commercial billing UI. */
+    billingMode?: "subscription" | "partner" | null;
     canUseAgentApi?: boolean;
     apiPowCallsUsed?: number;
     apiMeteredInvoice?: {
@@ -88,8 +91,34 @@ export default function DashboardPage() {
       totalCents: number;
       apiCallCount: number;
     } | null;
+    /** Inference spend for the org's dedicated xAI API key (period-filtered). */
+    xaiUsage?: {
+      available: boolean;
+      apiKeyId: string;
+      apiKeyName: string | null;
+      periodStart: string;
+      periodEnd: string;
+      totalUsd: number;
+      lines: Array<{ description: string; usd: number }>;
+      error?: string;
+    } | null;
   } | null>(null);
   const [loadingUsage, setLoadingUsage] = useState(false);
+
+  type XaiPeriodPreset = "7d" | "30d" | "90d" | "billing";
+  type XaiUsageState = {
+    available: boolean;
+    apiKeyId: string;
+    apiKeyName: string | null;
+    periodStart: string;
+    periodEnd: string;
+    totalUsd: number;
+    lines: Array<{ description: string; usd: number }>;
+    error?: string;
+  };
+  const [xaiPeriod, setXaiPeriod] = useState<XaiPeriodPreset>("billing");
+  const [xaiUsageOverride, setXaiUsageOverride] = useState<XaiUsageState | null>(null);
+  const [xaiUsageLoading, setXaiUsageLoading] = useState(false);
 
   // Sessions tab
   const [sessions, setSessions] = useState<Session[]>([]);
@@ -235,6 +264,10 @@ export default function DashboardPage() {
               usageResult.subscriptionStatus ?? profile?.subscription_status ?? "inactive",
             organization: usageResult.organization ?? null,
             isAdmin: usageResult.isAdmin === true || profile?.is_admin === true,
+            billingMode:
+              usageResult.billingMode ??
+              usageResult.organization?.billingMode ??
+              null,
             canUseAgentApi:
               usageResult.canUseAgentApi === true ||
               usageResult.isAdmin === true ||
@@ -242,7 +275,10 @@ export default function DashboardPage() {
               hasAgentApiKeyPlan(orgResolvedPlan),
             apiPowCallsUsed: usageResult.apiPowCallsUsed ?? 0,
             apiMeteredInvoice: usageResult.apiMeteredInvoice ?? null,
+            xaiUsage: usageResult.xaiUsage ?? null,
           });
+          setXaiUsageOverride(null);
+          setXaiPeriod("billing");
           // Keep user.plan aligned with org-resolved entitlement (not demoted personal plan)
           setUser((prev) => ({
             ...prev,
@@ -483,6 +519,62 @@ export default function DashboardPage() {
   const usageCardClass = "rounded-md border border-neutral-800 bg-neutral-950/75 p-5 sm:p-6";
   const usageLabelClass = "font-mono text-[10px] uppercase tracking-[2px] text-neutral-500";
 
+  const loadXaiUsage = async (period: XaiPeriodPreset) => {
+    setXaiUsageLoading(true);
+    try {
+      const res = await fetch(
+        `/api/organization/xai-usage?period=${encodeURIComponent(period)}`
+      );
+      const data = await res.json();
+      if (!res.ok && !data.apiKeyId) {
+        setXaiUsageOverride({
+          available: false,
+          apiKeyId: "",
+          apiKeyName: null,
+          periodStart: new Date().toISOString(),
+          periodEnd: new Date().toISOString(),
+          totalUsd: 0,
+          lines: [],
+          error: data.error || "Failed to load xAI usage",
+        });
+        return;
+      }
+      setXaiUsageOverride({
+        available: data.available === true,
+        apiKeyId: data.apiKeyId || "",
+        apiKeyName: data.apiKeyName ?? null,
+        periodStart: data.periodStart || new Date().toISOString(),
+        periodEnd: data.periodEnd || new Date().toISOString(),
+        totalUsd: typeof data.totalUsd === "number" ? data.totalUsd : 0,
+        lines: Array.isArray(data.lines) ? data.lines : [],
+        error: data.error,
+      });
+    } catch (err) {
+      console.error("Failed to load xAI usage:", err);
+      setXaiUsageOverride((prev) =>
+        prev
+          ? { ...prev, available: false, error: "Failed to load xAI usage" }
+          : {
+              available: false,
+              apiKeyId: "",
+              apiKeyName: null,
+              periodStart: new Date().toISOString(),
+              periodEnd: new Date().toISOString(),
+              totalUsd: 0,
+              lines: [],
+              error: "Failed to load xAI usage",
+            }
+      );
+    } finally {
+      setXaiUsageLoading(false);
+    }
+  };
+
+  const handleXaiPeriodChange = (period: XaiPeriodPreset) => {
+    setXaiPeriod(period);
+    void loadXaiUsage(period);
+  };
+
   function planDisplayName(plan: string, isAdmin?: boolean) {
     if (isAdmin) return "Platform admin";
     if (plan === "pro_teams") return "Pro / Teams";
@@ -623,28 +715,40 @@ export default function DashboardPage() {
 
       {/* Tabs */}
       <div className="border-b border-neutral-800/60">
-        <div className="max-w-7xl mx-auto flex gap-1 px-4 sm:px-6 lg:px-8">
-          {[
-            { id: "plans", label: "Workspaces" },
-            { id: "insights", label: "Insights" },
-            { id: "usage", label: t("dashboard.usageTab") },
-            { id: "integrations", label: t("dashboard.integrationsTab") },
-          ].map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setDashboardTab(tab.id as Tab)}
-              className={`px-4 py-3 text-sm font-medium transition-colors relative ${
-                activeTab === tab.id
-                  ? "text-white"
-                  : "text-neutral-500 hover:text-neutral-300"
-              }`}
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
+          <div className="flex gap-1 overflow-x-auto">
+            {[
+              { id: "plans", label: "Workspaces" },
+              { id: "insights", label: "Insights" },
+              { id: "usage", label: t("dashboard.usageTab") },
+              { id: "integrations", label: t("dashboard.integrationsTab") },
+            ].map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setDashboardTab(tab.id as Tab)}
+                className={`relative whitespace-nowrap px-4 py-3 text-sm font-medium transition-colors ${
+                  activeTab === tab.id
+                    ? "text-white"
+                    : "text-neutral-500 hover:text-neutral-300"
+                }`}
+              >
+                {tab.label}
+                {activeTab === tab.id && (
+                  <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-white" />
+                )}
+              </button>
+            ))}
+          </div>
+          {usageData?.organization && (
+            <Link
+              href="/organization"
+              className="hidden shrink-0 text-sm text-neutral-400 transition-colors hover:text-white sm:inline-flex"
+              title={usageData.organization.name}
             >
-              {tab.label}
-              {activeTab === tab.id && (
-                <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-white" />
-              )}
-            </button>
-          ))}
+              {usageData.organization.isOrgAdmin ? "Organization" : "My organization"}
+              <span className="ml-1 text-neutral-600">→</span>
+            </Link>
+          )}
         </div>
       </div>
 
@@ -938,20 +1042,45 @@ export default function DashboardPage() {
         {activeTab === "insights" && <InsightsDashboardTab workspaceTitles={workspaceTitlesById} />}
 
         {/* Usage Tab */}
-        {activeTab === "usage" && (
+        {activeTab === "usage" && (() => {
+          const isBillingBypass =
+            usageData?.billingMode === "partner" ||
+            usageData?.organization?.billingMode === "partner";
+
+          return (
           <div className="space-y-8">
             <div className="flex flex-wrap items-center justify-between gap-3 border border-neutral-800 bg-neutral-950/75 px-6 py-5">
               <div>
                 <p className={usageLabelClass}>Account</p>
-                <h2 className="mt-2 text-2xl font-medium tracking-[-0.5px] text-white">{t("dashboard.yourSubscription")}</h2>
-                <p className="mt-1 text-sm text-neutral-500">{t("dashboard.usageSubtitle")}</p>
+                <h2 className="mt-2 text-2xl font-medium tracking-[-0.5px] text-white">
+                  {isBillingBypass ? "Usage" : t("dashboard.yourSubscription")}
+                </h2>
+                <p className="mt-1 text-sm text-neutral-500">
+                  {isBillingBypass
+                    ? "Proof-of-Work usage for your organization. Commercial billing is bypassed."
+                    : t("dashboard.usageSubtitle")}
+                </p>
               </div>
-              <Link
-                href="/pricing"
-                className="inline-flex h-10 items-center justify-center rounded-sm border border-neutral-700 px-4 text-sm text-neutral-200 transition hover:border-neutral-500 hover:text-white"
-              >
-                View pricing →
-              </Link>
+              <div className="flex flex-wrap items-center gap-2">
+                {usageData?.organization && (
+                  <Link
+                    href="/organization"
+                    className="inline-flex h-10 items-center justify-center rounded-sm border border-neutral-700 px-4 text-sm text-neutral-200 transition hover:border-neutral-500 hover:text-white"
+                  >
+                    {usageData.organization.isOrgAdmin
+                      ? "Manage organization →"
+                      : "View organization →"}
+                  </Link>
+                )}
+                {!isBillingBypass && (
+                  <Link
+                    href="/pricing"
+                    className="inline-flex h-10 items-center justify-center rounded-sm border border-neutral-700 px-4 text-sm text-neutral-200 transition hover:border-neutral-500 hover:text-white"
+                  >
+                    View pricing →
+                  </Link>
+                )}
+              </div>
             </div>
             {loadingUsage ? (
               <div className="text-center py-12 text-neutral-400">{t("common.loading")}</div>
@@ -960,8 +1089,14 @@ export default function DashboardPage() {
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className={usageCardClass}>
                     <div className="flex items-center justify-between gap-3">
-                      <p className={usageLabelClass}>{t("dashboard.currentPlan")}</p>
-                      {usageData.isAdmin ? (
+                      <p className={usageLabelClass}>
+                        {isBillingBypass ? "Access" : t("dashboard.currentPlan")}
+                      </p>
+                      {isBillingBypass ? (
+                        <span className="rounded-full border border-violet-500/30 bg-violet-500/10 px-2.5 py-1 text-[10px] uppercase tracking-[1.4px] text-violet-100/90">
+                          Bypass
+                        </span>
+                      ) : usageData.isAdmin ? (
                         <span className="rounded-full border border-white/15 bg-white/10 px-2.5 py-1 text-[10px] uppercase tracking-[1.4px] text-neutral-200">
                           Admin
                         </span>
@@ -990,13 +1125,28 @@ export default function DashboardPage() {
                     <div className="mt-4 text-3xl font-medium tracking-[-1px] text-white">
                       {planDisplayName(usageData.plan, usageData.isAdmin)}
                     </div>
-                    <p className="mt-2 text-sm text-neutral-500">{planPriceLabel(usageData.plan, usageData.isAdmin)}</p>
-                    {!usageData.isAdmin && usageData.subscriptionStatus !== "active" && (
-                      <p className="mt-3 text-xs text-neutral-600">
-                        {usageData.subscriptionStatus === "trial_expired"
-                          ? "Your 3-day trial has ended. Upgrade to continue."
-                          : t("dashboard.subscriptionNotActive")}
-                      </p>
+                    {isBillingBypass ? (
+                      <>
+                        <p className="mt-2 text-sm text-neutral-300">
+                          Billing: <span className="font-medium text-white">Bypass</span>
+                        </p>
+                        <p className="mt-1 text-xs text-neutral-500">
+                          Product billing is complimentary. Inference cost below is from your org xAI key.
+                        </p>
+                      </>
+                    ) : (
+                      <>
+                        <p className="mt-2 text-sm text-neutral-500">
+                          {planPriceLabel(usageData.plan, usageData.isAdmin)}
+                        </p>
+                        {!usageData.isAdmin && usageData.subscriptionStatus !== "active" && (
+                          <p className="mt-3 text-xs text-neutral-600">
+                            {usageData.subscriptionStatus === "trial_expired"
+                              ? "Your 3-day trial has ended. Upgrade to continue."
+                              : t("dashboard.subscriptionNotActive")}
+                          </p>
+                        )}
+                      </>
                     )}
                   </div>
 
@@ -1046,6 +1196,7 @@ export default function DashboardPage() {
                     })()}
                   </div>
 
+                  {!isBillingBypass && (
                   <div className={usageCardClass}>
                     <p className={usageLabelClass}>{t("dashboard.billingPeriod")}</p>
                     {usageData.isAdmin ? (
@@ -1097,9 +1248,10 @@ export default function DashboardPage() {
                       </Link>
                     )}
                   </div>
+                  )}
                 </div>
 
-                {usageData.plan === "api_metered" && usageData.apiMeteredInvoice && (
+                {!isBillingBypass && usageData.plan === "api_metered" && usageData.apiMeteredInvoice && (
                   <div className={`${usageCardClass} mt-4`}>
                     <p className={usageLabelClass}>API Metered billing (this period)</p>
                     <div className="mt-4 grid gap-4 sm:grid-cols-3">
@@ -1124,6 +1276,100 @@ export default function DashboardPage() {
                   </div>
                 )}
 
+                {(xaiUsageOverride || usageData.xaiUsage) && (() => {
+                  const xai = xaiUsageOverride || usageData.xaiUsage!;
+                  const periodOptions: { id: XaiPeriodPreset; label: string }[] = [
+                    { id: "billing", label: "Billing period" },
+                    { id: "7d", label: "7 days" },
+                    { id: "30d", label: "30 days" },
+                    { id: "90d", label: "90 days" },
+                  ];
+                  return (
+                  <div className={`${usageCardClass} border-white/10`}>
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div>
+                        <p className={usageLabelClass}>
+                          {isBillingBypass ? "Org inference spend (xAI)" : "Org xAI spend"}
+                        </p>
+                        <h3 className="mt-2 text-xl font-medium text-white">
+                          {xaiUsageLoading
+                            ? "…"
+                            : xai.available
+                              ? `$${xai.totalUsd.toFixed(2)}`
+                              : "—"}
+                        </h3>
+                        <p className="mt-1 text-xs text-neutral-500">
+                          Filtered by org API key
+                          {xai.apiKeyName ? ` · ${xai.apiKeyName}` : ""}
+                          {" · "}
+                          {new Date(xai.periodStart).toLocaleDateString("en-US", {
+                            month: "short",
+                            day: "numeric",
+                          })}
+                          {" – "}
+                          {new Date(xai.periodEnd).toLocaleDateString("en-US", {
+                            month: "short",
+                            day: "numeric",
+                          })}
+                        </p>
+                      </div>
+                      <div className="flex flex-col items-end gap-2">
+                        {isBillingBypass && (
+                          <span className="rounded-full border border-violet-500/30 bg-violet-500/10 px-2.5 py-1 text-[10px] uppercase tracking-[1.4px] text-violet-100/90">
+                            Billing: Bypass
+                          </span>
+                        )}
+                        <div className="flex flex-wrap justify-end gap-1">
+                          {periodOptions.map((opt) => (
+                            <button
+                              key={opt.id}
+                              type="button"
+                              disabled={xaiUsageLoading}
+                              onClick={() => handleXaiPeriodChange(opt.id)}
+                              className={`rounded-sm border px-2.5 py-1 text-[11px] transition ${
+                                xaiPeriod === opt.id
+                                  ? "border-white/20 bg-white/10 text-white"
+                                  : "border-neutral-800 bg-black/30 text-neutral-400 hover:border-neutral-600 hover:text-neutral-200"
+                              } disabled:opacity-50`}
+                            >
+                              {opt.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                    {xaiUsageLoading && (
+                      <p className="mt-3 text-xs text-neutral-500">Loading spend for selected period…</p>
+                    )}
+                    {!xaiUsageLoading && !xai.available && (
+                      <p className="mt-3 text-xs text-amber-200/80">
+                        {xai.error || "Could not load xAI usage for this key."}
+                      </p>
+                    )}
+                    {!xaiUsageLoading && xai.available && xai.lines.length > 0 && (
+                      <div className="mt-4 space-y-2 border-t border-neutral-800 pt-4">
+                        {xai.lines.slice(0, 8).map((line) => (
+                          <div
+                            key={line.description}
+                            className="flex items-center justify-between gap-3 text-sm"
+                          >
+                            <span className="truncate text-neutral-400">{line.description}</span>
+                            <span className="shrink-0 font-mono text-neutral-200">
+                              ${line.usd.toFixed(2)}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {!xaiUsageLoading && xai.available && xai.lines.length === 0 && (
+                      <p className="mt-3 text-xs text-neutral-500">
+                        No inference spend recorded for this org key in the selected period.
+                      </p>
+                    )}
+                  </div>
+                  );
+                })()}
+
                 {usageData.organization && (
                   <div className={`${usageCardClass} border-white/10`}>
                     <div className="flex flex-wrap items-start justify-between gap-4">
@@ -1135,14 +1381,14 @@ export default function DashboardPage() {
                           {usageData.organization.isOrgAdmin ? " · Org admin" : " · Member"}
                         </p>
                       </div>
-                      {usageData.organization.isOrgAdmin && (
-                        <Link
-                          href="/organization"
-                          className="inline-flex h-10 items-center justify-center rounded-sm border border-neutral-700 px-4 text-sm text-neutral-200 transition hover:border-neutral-500 hover:text-white"
-                        >
-                          Manage organization →
-                        </Link>
-                      )}
+                      <Link
+                        href="/organization"
+                        className="inline-flex h-10 items-center justify-center rounded-sm border border-neutral-700 px-4 text-sm text-neutral-200 transition hover:border-neutral-500 hover:text-white"
+                      >
+                        {usageData.organization.isOrgAdmin
+                          ? "Manage organization →"
+                          : "View organization →"}
+                      </Link>
                     </div>
                     <div className="mt-5 flex items-end gap-2">
                       <span className="text-3xl font-medium tracking-[-1px] text-white">{usageData.organization.used}</span>
@@ -1165,7 +1411,9 @@ export default function DashboardPage() {
                       </div>
                     )}
                     <p className="mt-3 text-xs text-neutral-500">
-                      Teams plans share one monthly Proof-of-Work pool across all organization members — TAP, ILE, and API usage all draw from it.
+                      {isBillingBypass
+                        ? "Organization Proof-of-Work usage across members for the current period."
+                        : "Teams plans share one monthly Proof-of-Work pool across all organization members — TAP, ILE, and API usage all draw from it."}
                     </p>
                   </div>
                 )}
@@ -1174,7 +1422,8 @@ export default function DashboardPage() {
               <div className="text-center py-12 text-neutral-400">{t("dashboard.unableToLoadUsage")}</div>
             )}
           </div>
-        )}
+          );
+        })()}
 
         {/* Integrations Tab */}
         {activeTab === "integrations" && (

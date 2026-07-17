@@ -23,6 +23,11 @@ import {
   countPowApiSubmissions,
   loadUsageProfile,
 } from "@/lib/usage-metrics";
+import {
+  getTeamApiKeyUsage,
+  isXaiManagementConfigured,
+  type XaiApiKeyUsageResult,
+} from "@/lib/xai-management";
 
 export const runtime = "nodejs";
 
@@ -67,11 +72,16 @@ export async function GET() {
       const { data: orgRow } = await admin
         .from("organizations")
         .select(
-          "id, name, plan, subscription_status, current_period_end, extra_lessons, billing_mode, kind, archived_at"
+          "id, name, plan, subscription_status, current_period_end, extra_lessons, billing_mode, kind, archived_at, xai_api_key_id, xai_api_key_name, xai_api_key_status"
         )
         .eq("id", profile.organization_id)
         .maybeSingle();
-      org = (orgRow as (OrgBillingRow & { name?: string }) | null) ?? null;
+      org = (orgRow as (OrgBillingRow & {
+        name?: string;
+        xai_api_key_id?: string | null;
+        xai_api_key_name?: string | null;
+        xai_api_key_status?: string | null;
+      }) | null) ?? null;
     }
 
     const entity = resolveBillingEntity(
@@ -136,6 +146,7 @@ export async function GET() {
         guestCount: guestCount ?? 0,
         used: proofOfWorkCount,
         limit: entity.limit,
+        billingMode: entity.billingMode,
       };
     }
 
@@ -187,6 +198,67 @@ export async function GET() {
           ? entity.currentPeriodEnd
           : null;
 
+    const billingMode =
+      entity.source === "organization" ? entity.billingMode : null;
+
+    // Per-org xAI inference spend (Management API, filtered by org API key + period).
+    let xaiUsage: (XaiApiKeyUsageResult & {
+      apiKeyName: string | null;
+      available: boolean;
+      error?: string;
+    }) | null = null;
+
+    const orgWithKey = org as (OrgBillingRow & {
+      name?: string;
+      xai_api_key_id?: string | null;
+      xai_api_key_name?: string | null;
+      xai_api_key_status?: string | null;
+    }) | null;
+
+    if (
+      entity.source === "organization" &&
+      orgWithKey?.xai_api_key_status === "ready" &&
+      orgWithKey.xai_api_key_id &&
+      isXaiManagementConfigured()
+    ) {
+      const end = new Date();
+      let start: Date;
+      if (periodStart) {
+        start = periodStart;
+      } else if (entity.currentPeriodEnd) {
+        start = billingPeriodStart(entity.currentPeriodEnd) ?? new Date(end.getTime() - 30 * 86400000);
+      } else {
+        start = new Date(end.getTime() - 30 * 86400000);
+      }
+      // Usage API end is exclusive; nudge a second past now so in-progress spend is included.
+      const queryEnd = new Date(end.getTime() + 1000);
+
+      try {
+        const usage = await getTeamApiKeyUsage({
+          apiKeyId: orgWithKey.xai_api_key_id,
+          start,
+          end: queryEnd,
+        });
+        xaiUsage = {
+          ...usage,
+          apiKeyName: orgWithKey.xai_api_key_name ?? null,
+          available: true,
+        };
+      } catch (err) {
+        console.error("check-usage xAI spend query failed:", err);
+        xaiUsage = {
+          apiKeyId: orgWithKey.xai_api_key_id,
+          apiKeyName: orgWithKey.xai_api_key_name ?? null,
+          periodStart: start.toISOString(),
+          periodEnd: end.toISOString(),
+          totalUsd: 0,
+          lines: [],
+          available: false,
+          error: err instanceof Error ? err.message : "Failed to load xAI usage",
+        };
+      }
+    }
+
     return NextResponse.json({
       allowed: result.allowed,
       reason: result.reason,
@@ -201,8 +273,12 @@ export async function GET() {
       canCreateWorkspace: workspaceResult.allowed,
       workspaceReason: workspaceResult.reason,
       billingSource: entity.source,
+      /** subscription | partner (org Stripe bypass) | null when not org-billed */
+      billingMode,
       subscriptionStatus,
       periodEnd,
+      /** Org inference cost from xAI Management API (per org API key + period). */
+      xaiUsage,
       // Teams / API Metered product features (org-resolved plan)
       canUseAgentApi:
         result.isAdmin || result.plan === "pro_teams" || result.plan === "api_metered",

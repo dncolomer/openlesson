@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
@@ -12,6 +12,26 @@ import {
   fileToLogoPayload,
   validateLogoFile,
 } from "@/lib/organization/logo-client";
+
+const ORG_BACKGROUND = "/aesthetics/Greco-futurism/HHnTrgVaQAAP-_3.jpeg";
+
+const shellStyle: CSSProperties = {
+  backgroundImage: `linear-gradient(rgba(10,10,10,0.82), rgba(10,10,10,0.82)), url(${ORG_BACKGROUND})`,
+};
+
+const cardClass =
+  "rounded-md border border-neutral-800 bg-neutral-950/75 backdrop-blur-sm";
+const cardPaddedClass = `${cardClass} p-5 sm:p-6`;
+const labelClass =
+  "font-mono text-[10px] uppercase tracking-[2px] text-neutral-500";
+const primaryBtnClass =
+  "inline-flex h-10 items-center justify-center rounded-sm bg-white px-4 text-sm font-medium text-black transition hover:bg-neutral-200 disabled:cursor-not-allowed disabled:opacity-50";
+const secondaryBtnClass =
+  "inline-flex h-10 items-center justify-center rounded-sm border border-neutral-700 bg-neutral-950/60 px-4 text-sm text-neutral-200 transition hover:border-neutral-500 hover:text-white disabled:cursor-not-allowed disabled:opacity-50";
+const dangerBtnClass =
+  "inline-flex h-8 items-center justify-center rounded-sm border border-red-900/40 bg-red-950/40 px-3 text-xs text-red-400 transition hover:bg-red-950/60 disabled:opacity-50";
+const inputClass =
+  "w-full rounded-md border border-neutral-800 bg-neutral-950/60 px-4 py-2 text-sm text-white placeholder-neutral-500 focus:border-neutral-600 focus:outline-none";
 
 interface Organization {
   id: string;
@@ -39,11 +59,23 @@ interface Invite {
   created_at: string;
 }
 
+function OrgShell({ children }: { children: ReactNode }) {
+  return (
+    <div
+      className="min-h-screen bg-[#0a0a0a] bg-cover bg-fixed bg-center text-white"
+      style={shellStyle}
+    >
+      <Navbar />
+      {children}
+    </div>
+  );
+}
+
 export default function OrganizationPage() {
   const { t } = useI18n();
   const router = useRouter();
   const supabase = createClient();
-  
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [organization, setOrganization] = useState<Organization | null>(null);
@@ -51,33 +83,37 @@ export default function OrganizationPage() {
   const [members, setMembers] = useState<Member[]>([]);
   const [invites, setInvites] = useState<Invite[]>([]);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
-  
+
   const [generatingInvites, setGeneratingInvites] = useState(false);
   const [inviteCount, setInviteCount] = useState(1);
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [removingMember, setRemovingMember] = useState<string | null>(null);
   const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [linkCopiedId, setLinkCopiedId] = useState<string | null>(null);
 
   useEffect(() => {
     loadOrganization();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const loadOrganization = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
       if (!user) {
         router.push("/login");
         return;
       }
-      
+
       setCurrentUserId(user.id);
 
       const res = await fetch("/api/organization");
       const data = await res.json();
-      
+
       if (!res.ok) {
-        setError(data.error || t('organization.loadError'));
+        setError(data.error || t("organization.loadError"));
         setLoading(false);
         return;
       }
@@ -88,7 +124,7 @@ export default function OrganizationPage() {
       setInvites(data.invites || []);
     } catch (err) {
       console.error("Load organization error:", err);
-      setError(t('organization.loadError'));
+      setError(t("organization.loadError"));
     } finally {
       setLoading(false);
     }
@@ -102,11 +138,11 @@ export default function OrganizationPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ count: inviteCount }),
       });
-      
+
       const data = await res.json();
-      
+
       if (!res.ok) {
-        alert(data.error || t('organization.generateError'));
+        alert(data.error || t("organization.generateError"));
       } else {
         setShowInviteModal(false);
         setInviteCount(1);
@@ -114,42 +150,42 @@ export default function OrganizationPage() {
       }
     } catch (err) {
       console.error("Generate invites error:", err);
-      alert(t('organization.generateError'));
+      alert(t("organization.generateError"));
     } finally {
       setGeneratingInvites(false);
     }
   };
 
   const handleDeleteInvite = async (inviteId: string) => {
-    if (!confirm(t('organization.revokeConfirm'))) return;
-    
+    if (!confirm(t("organization.revokeConfirm"))) return;
+
     try {
       const res = await fetch("/api/organization/invites", {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ inviteId }),
       });
-      
+
       if (!res.ok) {
         const data = await res.json();
-        alert(data.error || t('organization.revokeError'));
+        alert(data.error || t("organization.revokeError"));
       } else {
         loadOrganization();
       }
     } catch (err) {
       console.error("Delete invite error:", err);
-      alert(t('organization.revokeError'));
+      alert(t("organization.revokeError"));
     }
   };
 
   const handleRemoveMember = async (memberId: string, memberName: string) => {
     const isSelf = memberId === currentUserId;
-    const message = isSelf 
-      ? t('organization.leaveConfirm')
-      : t('organization.removeMemberConfirm', { memberName });
-    
+    const message = isSelf
+      ? t("organization.leaveConfirm")
+      : t("organization.removeMemberConfirm", { memberName });
+
     if (!confirm(message)) return;
-    
+
     setRemovingMember(memberId);
     try {
       const res = await fetch("/api/organization/members", {
@@ -157,14 +193,13 @@ export default function OrganizationPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ memberId }),
       });
-      
+
       const data = await res.json();
-      
+
       if (!res.ok) {
-        alert(data.error || t('organization.removeMemberError'));
+        alert(data.error || t("organization.removeMemberError"));
       } else {
         if (isSelf) {
-          // User left the org, refresh the page
           router.refresh();
           loadOrganization();
         } else {
@@ -173,16 +208,21 @@ export default function OrganizationPage() {
       }
     } catch (err) {
       console.error("Remove member error:", err);
-      alert(t('organization.removeMemberError'));
+      alert(t("organization.removeMemberError"));
     } finally {
       setRemovingMember(null);
     }
   };
 
-  const copyInviteLink = (token: string) => {
+  const copyInviteLink = async (inviteId: string, token: string) => {
     const url = `${window.location.origin}/invite/${token}`;
-    navigator.clipboard.writeText(url);
-    alert(t('organization.inviteCopied'));
+    try {
+      await navigator.clipboard.writeText(url);
+      setLinkCopiedId(inviteId);
+      setTimeout(() => setLinkCopiedId(null), 2000);
+    } catch {
+      alert(t("organization.inviteCopied"));
+    }
   };
 
   const handleLogoUpload = async (file: File | null) => {
@@ -223,327 +263,397 @@ export default function OrganizationPage() {
     });
   };
 
-  const getPlanColor = (plan: string) => {
-    switch (plan) {
-      case "pro": return "text-purple-400";
-      case "regular": return "text-blue-400";
-      default: return "text-neutral-400";
-    }
+  const planLabel = (plan: string) => {
+    if (plan === "pro_teams") return "Pro / Teams";
+    if (plan === "api_metered") return "API Metered";
+    if (plan === "regular_2026") return "Individual";
+    if (plan === "trial") return "Trial";
+    if (plan === "inactive") return "Inactive";
+    return plan;
   };
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#0a0a0a]">
-        <Navbar />
+      <OrgShell>
         <div className="flex items-center justify-center py-24">
-          <LoadingStatusMessage message={t('common.loading')} />
+          <LoadingStatusMessage message={t("common.loading")} />
         </div>
-      </div>
+      </OrgShell>
     );
   }
 
   if (error) {
     return (
-      <div className="min-h-screen bg-[#0a0a0a]">
-        <Navbar />
-        <div className="max-w-5xl mx-auto p-6">
-          <div className="text-red-400">{error}</div>
-        </div>
-      </div>
+      <OrgShell>
+        <main className="mx-auto w-full max-w-5xl p-4 py-8 sm:px-6 lg:px-8">
+          <div className={`${cardPaddedClass} text-sm text-red-400`}>{error}</div>
+        </main>
+      </OrgShell>
     );
   }
 
-  // No organization
   if (!organization) {
     return (
-      <div className="min-h-screen bg-[#0a0a0a]">
-        <Navbar />
-        <div className="max-w-5xl mx-auto p-6">
-          <div className="bg-neutral-900/50 border border-neutral-800 rounded-lg p-8 text-center">
-            <div className="w-16 h-16 bg-neutral-800 rounded-full flex items-center justify-center mx-auto mb-6">
-              <svg className="w-8 h-8 text-neutral-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-              </svg>
-            </div>
-            <h1 className="text-2xl font-bold text-white mb-2">{t('organization.noOrganization')}</h1>
-            <p className="text-neutral-400 mb-6">
-              {t('organization.noOrganizationDesc')}
+      <OrgShell>
+        <main className="mx-auto w-full max-w-5xl p-4 py-8 sm:px-6 lg:px-8">
+          <div className={`${cardPaddedClass} text-center`}>
+            <p className={labelClass}>Organization</p>
+            <h1 className="mt-2 text-2xl font-medium tracking-[-0.5px] text-white">
+              {t("organization.noOrganization")}
+            </h1>
+            <p className="mx-auto mt-3 max-w-md text-sm text-neutral-400">
+              {t("organization.noOrganizationDesc")}
             </p>
-            <Link
-              href="/dashboard"
-              className="inline-block px-6 py-3 bg-neutral-800 hover:bg-neutral-700 text-white rounded-lg transition-colors"
-            >
-              {t('organization.goToDashboard')}
+            <Link href="/dashboard" className={`${primaryBtnClass} mt-8`}>
+              {t("organization.goToDashboard")}
             </Link>
           </div>
-        </div>
-      </div>
+        </main>
+      </OrgShell>
     );
   }
 
-  const unusedInvites = invites.filter(i => !i.used_by);
-  const usedInvites = invites.filter(i => i.used_by);
+  const unusedInvites = invites.filter((i) => !i.used_by);
+  const usedInvites = invites.filter((i) => i.used_by);
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a]">
-      <Navbar />
-      <div className="max-w-5xl mx-auto p-6">
-        {/* Header */}
-        <div className="mb-6">
-          <Link href="/dashboard" className="text-neutral-400 hover:text-white text-sm">
-            &larr; {t('organization.backToDashboard')}
+    <OrgShell>
+      <main className="mx-auto w-full max-w-5xl space-y-6 p-4 py-8 sm:px-6 lg:px-8">
+        <div>
+          <Link
+            href="/dashboard?tab=usage"
+            className="text-sm text-neutral-400 transition-colors hover:text-white"
+          >
+            &larr; {t("organization.backToDashboard")}
           </Link>
-          <div className="mt-3 flex items-start gap-4">
-            <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-md border border-neutral-700 bg-neutral-900">
-              {organization.logo_url ? (
-                <Image
-                  src={organization.logo_url}
-                  alt={`${organization.name} logo`}
-                  width={64}
-                  height={64}
-                  className="h-full w-full object-cover"
-                  unoptimized
-                />
-              ) : (
-                <span className="text-xl font-medium text-neutral-500">
-                  {organization.name.charAt(0).toUpperCase()}
-                </span>
-              )}
-            </div>
-            <div className="min-w-0 flex-1">
-              <h1 className="text-2xl font-bold text-white">{organization.name}</h1>
-              <div className="mt-1 flex flex-wrap items-center gap-3">
-                <code className="text-sm text-neutral-400 bg-neutral-800 px-2 py-1 rounded">
-                  {organization.slug}
-                </code>
-                {isOrgAdmin && (
-                  <span className="px-2 py-1 text-xs rounded bg-purple-500/20 text-purple-400 border border-purple-500/30">
-                    {t('organization.orgAdmin')}
+        </div>
+
+        {/* Header card */}
+        <section className={cardPaddedClass}>
+          <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
+            <div className="flex min-w-0 items-start gap-4">
+              <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-md border border-neutral-700 bg-neutral-900/80">
+                {organization.logo_url ? (
+                  <Image
+                    src={organization.logo_url}
+                    alt={`${organization.name} logo`}
+                    width={64}
+                    height={64}
+                    className="h-full w-full object-cover"
+                    unoptimized
+                  />
+                ) : (
+                  <span className="text-xl font-medium text-neutral-500">
+                    {organization.name.charAt(0).toUpperCase()}
                   </span>
                 )}
               </div>
-              {isOrgAdmin && (
-                <div className="mt-3">
-                  <label className="inline-flex cursor-pointer items-center gap-2 rounded-md border border-neutral-700 bg-neutral-900 px-3 py-1.5 text-xs text-neutral-300 hover:border-neutral-600 hover:text-white">
-                    <input
-                      type="file"
-                      accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml"
-                      className="hidden"
-                      disabled={uploadingLogo}
-                      onChange={(e) => {
-                        void handleLogoUpload(e.target.files?.[0] ?? null);
-                        e.target.value = "";
-                      }}
-                    />
-                    {uploadingLogo
-                      ? t("organization.uploadingLogo")
-                      : organization.logo_url
-                        ? t("organization.changeLogo")
-                        : t("organization.uploadLogo")}
-                  </label>
-                  <p className="mt-1 text-xs text-neutral-500">{t("organization.logoHelper")}</p>
+              <div className="min-w-0">
+                <p className={labelClass}>Organization</p>
+                <h1 className="mt-1 text-2xl font-medium tracking-[-0.5px] text-white sm:text-3xl">
+                  {organization.name}
+                </h1>
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  <code className="rounded border border-neutral-800 bg-black/40 px-2 py-0.5 font-mono text-xs text-neutral-400">
+                    {organization.slug}
+                  </code>
+                  {isOrgAdmin ? (
+                    <span className="rounded-full border border-violet-500/30 bg-violet-500/10 px-2.5 py-0.5 text-[10px] uppercase tracking-[1.4px] text-violet-100/90">
+                      {t("organization.orgAdmin")}
+                    </span>
+                  ) : (
+                    <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-0.5 text-[10px] uppercase tracking-[1.4px] text-neutral-400">
+                      {t("organization.member")}
+                    </span>
+                  )}
                 </div>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Stats (for org admins) */}
-        {isOrgAdmin && (
-          <div className="grid grid-cols-3 gap-4 mb-6">
-            <div className="bg-neutral-900/50 border border-neutral-800 rounded-lg p-4">
-              <div className="text-2xl font-bold text-white">{members.length}</div>
-              <div className="text-neutral-400 text-sm">{t('organization.members')}</div>
-            </div>
-            <div className="bg-neutral-900/50 border border-neutral-800 rounded-lg p-4">
-              <div className="text-2xl font-bold text-white">
-                {members.filter(m => m.is_org_admin).length}
+                {isOrgAdmin && (
+                  <div className="mt-4">
+                    <label className="inline-flex cursor-pointer items-center gap-2 rounded-sm border border-neutral-700 bg-neutral-950/60 px-3 py-1.5 text-xs text-neutral-300 transition hover:border-neutral-500 hover:text-white">
+                      <input
+                        type="file"
+                        accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml"
+                        className="hidden"
+                        disabled={uploadingLogo}
+                        onChange={(e) => {
+                          void handleLogoUpload(e.target.files?.[0] ?? null);
+                          e.target.value = "";
+                        }}
+                      />
+                      {uploadingLogo
+                        ? t("organization.uploadingLogo")
+                        : organization.logo_url
+                          ? t("organization.changeLogo")
+                          : t("organization.uploadLogo")}
+                    </label>
+                    <p className="mt-1.5 text-xs text-neutral-500">
+                      {t("organization.logoHelper")}
+                    </p>
+                  </div>
+                )}
               </div>
-              <div className="text-neutral-400 text-sm">{t('organization.admins')}</div>
-            </div>
-            <div className="bg-neutral-900/50 border border-neutral-800 rounded-lg p-4">
-              <div className="text-2xl font-bold text-yellow-400">{unusedInvites.length}</div>
-              <div className="text-neutral-400 text-sm">{t('organization.pendingInvites')}</div>
             </div>
           </div>
+        </section>
+
+        {/* Stats */}
+        {isOrgAdmin && (
+          <section className="grid gap-4 sm:grid-cols-3">
+            <div className={cardPaddedClass}>
+              <p className={labelClass}>{t("organization.members")}</p>
+              <p className="mt-3 text-3xl font-medium tracking-[-1px] text-white">
+                {members.length}
+              </p>
+            </div>
+            <div className={cardPaddedClass}>
+              <p className={labelClass}>{t("organization.admins")}</p>
+              <p className="mt-3 text-3xl font-medium tracking-[-1px] text-white">
+                {members.filter((m) => m.is_org_admin).length}
+              </p>
+            </div>
+            <div className={cardPaddedClass}>
+              <p className={labelClass}>{t("organization.pendingInvites")}</p>
+              <p className="mt-3 text-3xl font-medium tracking-[-1px] text-amber-300">
+                {unusedInvites.length}
+              </p>
+            </div>
+          </section>
         )}
 
-        {/* Members (for org admins) */}
+        {/* Members */}
         {isOrgAdmin && (
-          <div className="bg-neutral-900/50 border border-neutral-800 rounded-lg mb-6">
-            <div className="p-4 border-b border-neutral-800">
-              <h2 className="text-lg font-semibold text-white">{t('organization.members')}</h2>
+          <section className={`${cardClass} overflow-hidden`}>
+            <div className="border-b border-neutral-800 px-5 py-4 sm:px-6">
+              <p className={labelClass}>{t("organization.members")}</p>
+              <h2 className="mt-1 text-sm font-medium text-white">
+                People in this organization
+              </h2>
             </div>
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-neutral-800">
-                   <th className="text-left p-4 text-neutral-400 text-sm font-medium">{t('organization.user')}</th>
-                   <th className="text-left p-4 text-neutral-400 text-sm font-medium">{t('organization.plan')}</th>
-                   <th className="text-left p-4 text-neutral-400 text-sm font-medium">{t('organization.role')}</th>
-                   <th className="text-right p-4 text-neutral-400 text-sm font-medium">{t('organization.actions')}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {members.map((member) => (
-                  <tr key={member.id} className="border-b border-neutral-800/50 hover:bg-neutral-800/20">
-                    <td className="p-4">
-                      <div className="text-neutral-200">{member.username || member.email || t('organization.unknown')}</div>
-                      <div className="text-xs text-neutral-500">{member.email}</div>
-                      {member.id === currentUserId && (
-                        <span className="text-xs text-blue-400">{t('organization.you')}</span>
-                      )}
-                    </td>
-                    <td className="p-4">
-                      <span className={getPlanColor(member.plan)}>{member.plan}</span>
-                    </td>
-                    <td className="p-4">
-                      {member.is_org_admin ? (
-                        <span className="px-2 py-1 text-xs rounded bg-purple-500/20 text-purple-400 border border-purple-500/30">
-                          {t('organization.admin')}
-                        </span>
-                      ) : (
-                        <span className="text-neutral-500 text-sm">{t('organization.member')}</span>
-                      )}
-                    </td>
-                    <td className="p-4 text-right">
-                      <button
-                        onClick={() => handleRemoveMember(member.id, member.username || member.email || "this user")}
-                        disabled={removingMember === member.id}
-                        className="px-3 py-1 text-xs bg-red-600/20 hover:bg-red-600/30 text-red-400 rounded transition-colors disabled:opacity-50"
-                      >
-                        {member.id === currentUserId ? t('organization.leave') : t('organization.remove')}
-                      </button>
-                    </td>
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[560px]">
+                <thead>
+                  <tr className="border-b border-neutral-800">
+                    <th className="px-5 py-3 text-left font-mono text-[10px] uppercase tracking-[1.5px] text-neutral-500 sm:px-6">
+                      {t("organization.user")}
+                    </th>
+                    <th className="px-4 py-3 text-left font-mono text-[10px] uppercase tracking-[1.5px] text-neutral-500">
+                      {t("organization.plan")}
+                    </th>
+                    <th className="px-4 py-3 text-left font-mono text-[10px] uppercase tracking-[1.5px] text-neutral-500">
+                      {t("organization.role")}
+                    </th>
+                    <th className="px-5 py-3 text-right font-mono text-[10px] uppercase tracking-[1.5px] text-neutral-500 sm:px-6">
+                      {t("organization.actions")}
+                    </th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {members.map((member) => (
+                    <tr
+                      key={member.id}
+                      className="border-b border-neutral-800/50 last:border-0 hover:bg-white/[0.02]"
+                    >
+                      <td className="px-5 py-3.5 sm:px-6">
+                        <div className="text-sm text-neutral-200">
+                          {member.username || member.email || t("organization.unknown")}
+                        </div>
+                        <div className="text-xs text-neutral-500">{member.email}</div>
+                        {member.id === currentUserId && (
+                          <span className="text-xs text-neutral-400">
+                            {t("organization.you")}
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3.5 text-sm text-neutral-400">
+                        {planLabel(member.plan)}
+                      </td>
+                      <td className="px-4 py-3.5">
+                        {member.is_org_admin ? (
+                          <span className="rounded-full border border-violet-500/30 bg-violet-500/10 px-2 py-0.5 text-[10px] uppercase tracking-[1.2px] text-violet-100/90">
+                            {t("organization.admin")}
+                          </span>
+                        ) : (
+                          <span className="text-sm text-neutral-500">
+                            {t("organization.member")}
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-5 py-3.5 text-right sm:px-6">
+                        <button
+                          onClick={() =>
+                            handleRemoveMember(
+                              member.id,
+                              member.username || member.email || "this user"
+                            )
+                          }
+                          disabled={removingMember === member.id}
+                          className={dangerBtnClass}
+                        >
+                          {member.id === currentUserId
+                            ? t("organization.leave")
+                            : t("organization.remove")}
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
         )}
 
-        {/* Invites (for org admins) */}
+        {/* Invites */}
         {isOrgAdmin && (
-          <div className="bg-neutral-900/50 border border-neutral-800 rounded-lg">
-            <div className="p-4 border-b border-neutral-800 flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-white">{t('organization.inviteLinks')}</h2>
+          <section className={`${cardClass} overflow-hidden`}>
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-neutral-800 px-5 py-4 sm:px-6">
+              <div>
+                <p className={labelClass}>{t("organization.inviteLinks")}</p>
+                <h2 className="mt-1 text-sm font-medium text-white">
+                  Share single-use links to add members
+                </h2>
+              </div>
               <button
                 onClick={() => setShowInviteModal(true)}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg transition-colors"
+                className={primaryBtnClass}
               >
-                {t('organization.generateInvites')}
+                {t("organization.generateInvites")}
               </button>
             </div>
-            
+
             {invites.length === 0 ? (
-              <div className="p-8 text-center text-neutral-400">
-                {t('organization.noInvitesYet')}
+              <div className="px-5 py-10 text-center text-sm text-neutral-500 sm:px-6">
+                {t("organization.noInvitesYet")}
               </div>
             ) : (
-              <div className="divide-y divide-neutral-800/50">
-                {/* Unused invites first */}
+              <div className="divide-y divide-neutral-800/60">
                 {unusedInvites.map((invite) => (
-                  <div key={invite.id} className="p-4 flex items-center justify-between hover:bg-neutral-800/20">
-                    <div>
-                      <code className="text-sm text-green-400 bg-green-900/20 px-2 py-1 rounded">
+                  <div
+                    key={invite.id}
+                    className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6"
+                  >
+                    <div className="min-w-0">
+                      <code className="break-all rounded border border-emerald-500/20 bg-emerald-500/10 px-2 py-1 font-mono text-xs text-emerald-300/90">
                         {invite.token}
                       </code>
-                      <div className="text-xs text-neutral-500 mt-1">
-                        {t('organization.created', { date: formatDate(invite.created_at) })}
-                      </div>
+                      <p className="mt-1.5 text-xs text-neutral-500">
+                        {t("organization.created", {
+                          date: formatDate(invite.created_at),
+                        })}
+                      </p>
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex shrink-0 gap-2">
                       <button
-                        onClick={() => copyInviteLink(invite.token)}
-                        className="px-3 py-1 text-xs bg-neutral-800 hover:bg-neutral-700 text-white rounded transition-colors"
+                        onClick={() => copyInviteLink(invite.id, invite.token)}
+                        className={secondaryBtnClass}
                       >
-                        {t('organization.copyLink')}
+                        {linkCopiedId === invite.id
+                          ? t("common.copied")
+                          : t("organization.copyLink")}
                       </button>
                       <button
                         onClick={() => handleDeleteInvite(invite.id)}
-                        className="px-3 py-1 text-xs bg-red-600/20 hover:bg-red-600/30 text-red-400 rounded transition-colors"
+                        className={dangerBtnClass}
                       >
-                        {t('organization.revoke')}
+                        {t("organization.revoke")}
                       </button>
                     </div>
                   </div>
                 ))}
-                
-                {/* Used invites */}
+
                 {usedInvites.map((invite) => (
-                  <div key={invite.id} className="p-4 flex items-center justify-between opacity-60">
-                    <div>
-                      <code className="text-sm text-neutral-500 bg-neutral-800 px-2 py-1 rounded line-through">
+                  <div
+                    key={invite.id}
+                    className="flex flex-col gap-2 px-5 py-4 opacity-55 sm:flex-row sm:items-center sm:justify-between sm:px-6"
+                  >
+                    <div className="min-w-0">
+                      <code className="break-all rounded border border-neutral-800 bg-black/40 px-2 py-1 font-mono text-xs text-neutral-500 line-through">
                         {invite.token}
                       </code>
-                      <div className="text-xs text-neutral-500 mt-1">
-                        {t('organization.usedOn', { date: formatDate(invite.used_at) })}
-                      </div>
+                      <p className="mt-1.5 text-xs text-neutral-600">
+                        {t("organization.usedOn", {
+                          date: formatDate(invite.used_at),
+                        })}
+                      </p>
                     </div>
-                    <span className="px-2 py-1 text-xs bg-neutral-800 text-neutral-500 rounded">
-                      {t('organization.used')}
+                    <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[10px] uppercase tracking-[1.4px] text-neutral-500">
+                      {t("organization.used")}
                     </span>
                   </div>
                 ))}
               </div>
             )}
-          </div>
+          </section>
         )}
 
-        {/* Non-admin view */}
+        {/* Non-admin */}
         {!isOrgAdmin && (
-          <div className="bg-neutral-900/50 border border-neutral-800 rounded-lg p-6">
-            <p className="text-neutral-400 mb-4">
-              {t('organization.leaveOrgMessage')}
+          <section className={cardPaddedClass}>
+            <p className={labelClass}>Membership</p>
+            <p className="mt-2 max-w-xl text-sm leading-relaxed text-neutral-400">
+              {t("organization.leaveOrgMessage")}
             </p>
             <button
               onClick={() => handleRemoveMember(currentUserId!, "yourself")}
               disabled={removingMember === currentUserId}
-              className="px-4 py-2 bg-red-600/20 hover:bg-red-600/30 text-red-400 rounded-lg transition-colors disabled:opacity-50"
+              className={`${dangerBtnClass} mt-5 h-10 px-4 text-sm`}
             >
-              {t('organization.leaveOrganization')}
+              {t("organization.leaveOrganization")}
             </button>
-          </div>
+          </section>
         )}
+      </main>
 
-        {/* Generate Invites Modal */}
-        {showInviteModal && (
-          <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
-            <div className="bg-neutral-900 border border-neutral-800 rounded-lg p-6 max-w-md w-full mx-4">
-              <h2 className="text-xl font-bold text-white mb-4">{t('organization.generateInviteModal')}</h2>
-              <div className="mb-6">
-                <label className="block text-sm text-neutral-400 mb-2">{t('organization.numberOfInvites')}</label>
-                <input
-                  type="number"
-                  min={1}
-                  max={50}
-                  value={inviteCount}
-                  onChange={(e) => setInviteCount(Math.min(50, Math.max(1, parseInt(e.target.value) || 1)))}
-                  className="w-full px-4 py-2 bg-neutral-800 border border-neutral-700 rounded-lg text-white focus:outline-none focus:border-neutral-600"
-                />
-                <p className="text-xs text-neutral-500 mt-1">{t('organization.inviteHelper')}</p>
-              </div>
-              <div className="flex gap-3">
-                <button
-                  onClick={() => {
-                    setShowInviteModal(false);
-                    setInviteCount(1);
-                  }}
-                  className="flex-1 px-4 py-2 bg-neutral-800 hover:bg-neutral-700 text-white rounded-lg transition-colors"
-                >
-                  {t('common.cancel')}
-                </button>
-                <button
-                  onClick={handleGenerateInvites}
-                  disabled={generatingInvites}
-                  className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-lg transition-colors"
-                >
-                  {generatingInvites ? t('organization.generating') : t('organization.generate')}
-                </button>
-              </div>
+      {/* Generate Invites Modal */}
+      {showInviteModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
+          <div className={`${cardClass} w-full max-w-md p-6`}>
+            <p className={labelClass}>Invites</p>
+            <h2 className="mt-1 text-xl font-medium tracking-[-0.5px] text-white">
+              {t("organization.generateInviteModal")}
+            </h2>
+            <div className="mt-6">
+              <label className="mb-2 block text-sm text-neutral-400">
+                {t("organization.numberOfInvites")}
+              </label>
+              <input
+                type="number"
+                min={1}
+                max={50}
+                value={inviteCount}
+                onChange={(e) =>
+                  setInviteCount(
+                    Math.min(50, Math.max(1, parseInt(e.target.value, 10) || 1))
+                  )
+                }
+                className={inputClass}
+              />
+              <p className="mt-1.5 text-xs text-neutral-500">
+                {t("organization.inviteHelper")}
+              </p>
+            </div>
+            <div className="mt-6 flex gap-3">
+              <button
+                onClick={() => {
+                  setShowInviteModal(false);
+                  setInviteCount(1);
+                }}
+                className={`${secondaryBtnClass} flex-1`}
+              >
+                {t("common.cancel")}
+              </button>
+              <button
+                onClick={handleGenerateInvites}
+                disabled={generatingInvites}
+                className={`${primaryBtnClass} flex-1`}
+              >
+                {generatingInvites
+                  ? t("organization.generating")
+                  : t("organization.generate")}
+              </button>
             </div>
           </div>
-        )}
-      </div>
-    </div>
+        </div>
+      )}
+    </OrgShell>
   );
 }

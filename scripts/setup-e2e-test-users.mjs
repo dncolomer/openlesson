@@ -103,7 +103,22 @@ async function ensureTeamsOrg(admin, userId) {
     .eq("id", userId)
     .single();
 
-  if (profile?.organization_id) return profile.organization_id;
+  const billingPatch = {
+    plan: "pro_teams",
+    billing_mode: "partner",
+    subscription_status: "active",
+    current_period_end: null,
+    extra_lessons: 0,
+  };
+
+  if (profile?.organization_id) {
+    const { error: updateError } = await admin
+      .from("organizations")
+      .update(billingPatch)
+      .eq("id", profile.organization_id);
+    if (updateError) throw updateError;
+    return profile.organization_id;
+  }
 
   const slug = `e2e-test-org-${userId.slice(0, 8)}`;
   const { data: org, error: orgError } = await admin
@@ -111,7 +126,9 @@ async function ensureTeamsOrg(admin, userId) {
     .insert({
       name: "[E2E] Test Organization",
       slug,
+      kind: "team",
       metadata: { source: "e2e-setup", created_by: userId },
+      ...billingPatch,
     })
     .select("id")
     .single();
@@ -217,17 +234,18 @@ async function main() {
 
   const teamsUserId = await ensureAuthUser(admin, E2E_TEAMS_EMAIL, E2E_TEAMS_PASSWORD);
   const orgId = await ensureTeamsOrg(admin, teamsUserId);
+  // Org is the billing entity; keep personal profile demoted (org-first model).
   await ensureProfile(admin, teamsUserId, {
-    plan: "pro_teams",
-    subscription_status: "active",
-    current_period_end: periodEnd(),
+    plan: "inactive",
+    subscription_status: "inactive",
+    current_period_end: null,
     extra_lessons: 0,
     is_admin: false,
     organization_id: orgId,
     is_org_admin: true,
   });
   console.log(`✓ Teams user: ${E2E_TEAMS_EMAIL} (${teamsUserId})`);
-  console.log(`✓ Teams org: ${orgId}`);
+  console.log(`✓ Teams org: ${orgId} (pro_teams / partner Stripe Bypass)`);
 
   const keyResult = await ensureTeamsApiKey(admin, teamsUserId, orgId);
   if (keyResult.reused) {

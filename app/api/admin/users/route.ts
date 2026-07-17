@@ -129,21 +129,27 @@ export async function PUT(request: Request) {
         "@/lib/organization/apply-org-billing"
       );
       const tierPatch = plan !== undefined ? buildTierUpdate(plan) : null;
+      const nextPlan = tierPatch?.plan ?? plan ?? "inactive";
+      // Admin tier grants are complimentary — partner mode bypasses Stripe.
+      const billingMode = nextPlan === "inactive" ? "subscription" : "partner";
       await applyBillingToUserOrganization(adminClient, {
         userId,
-        plan: tierPatch?.plan ?? plan ?? "inactive",
+        plan: nextPlan,
         subscriptionStatus:
           subscription_status ??
           tierPatch?.subscription_status ??
           "inactive",
         currentPeriodEnd:
-          current_period_end !== undefined
-            ? current_period_end
-            : (tierPatch?.current_period_end ?? null),
+          billingMode === "partner"
+            ? null
+            : current_period_end !== undefined
+              ? current_period_end
+              : (tierPatch?.current_period_end ?? null),
         extraLessons:
           extra_lessons !== undefined
             ? extra_lessons
             : (tierPatch?.extra_lessons ?? 0),
+        billingMode,
       });
     }
 

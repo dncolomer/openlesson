@@ -15,7 +15,6 @@ function readRepoFile(relativePath: string): string {
 /** Full-page / primary gate screens that must use the shared CREATING WORKSPACE treatment. */
 const GATE_FILES = [
   "app/dashboard/page.tsx",
-  "app/dashboard/partner/page.tsx",
   "app/workspaces/page.tsx",
   "app/plans/page.tsx",
   "app/organization/page.tsx",
@@ -40,7 +39,6 @@ const GATE_FILES = [
   "components/orbit/OrbitApp.tsx",
   "components/ProofOfWorkApiDemo.tsx",
   "app/admin/workspaces/[workspaceId]/page.tsx",
-  "app/admin/partners/page.tsx",
   "app/admin/organizations/[orgId]/page.tsx",
 ] as const;
 

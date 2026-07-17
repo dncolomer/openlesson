@@ -14,24 +14,42 @@ export async function GET() {
     monthStart.setDate(1);
     monthStart.setHours(0, 0, 0, 0);
 
-    const [usersRes, profilesRes, sessionsRes, completedRes, plansRes, orgsRes, tapRes, evidenceRes, monthlySessionsRes] =
-      await Promise.all([
-        adminClient.from("profiles").select("id", { count: "exact", head: true }),
-        adminClient.from("profiles").select("plan, subscription_status"),
-        adminClient.from("sessions").select("id", { count: "exact", head: true }),
-        adminClient.from("sessions").select("id", { count: "exact", head: true }).eq("status", "completed"),
-        adminClient.from("workspaces").select("id", { count: "exact", head: true }),
-        adminClient.from("organizations").select("id", { count: "exact", head: true }),
-        adminClient.from("workspace_tap_sessions").select("id", { count: "exact", head: true }),
-        adminClient.from("workspace_proof_of_work").select("id", { count: "exact", head: true }),
-        adminClient
-          .from("sessions")
-          .select("user_id")
-          .gte("created_at", monthStart.toISOString()),
-      ]);
+    const [
+      usersRes,
+      profilesRes,
+      sessionsRes,
+      completedRes,
+      plansRes,
+      orgsRes,
+      tapRes,
+      evidenceRes,
+      monthlyIleRes,
+      monthlyTapRes,
+    ] = await Promise.all([
+      adminClient.from("profiles").select("id", { count: "exact", head: true }),
+      adminClient.from("profiles").select("plan, subscription_status"),
+      adminClient.from("sessions").select("id", { count: "exact", head: true }),
+      adminClient.from("sessions").select("id", { count: "exact", head: true }).eq("status", "completed"),
+      adminClient.from("workspaces").select("id", { count: "exact", head: true }),
+      adminClient.from("organizations").select("id", { count: "exact", head: true }),
+      adminClient.from("workspace_tap_sessions").select("id", { count: "exact", head: true }),
+      adminClient.from("workspace_proof_of_work").select("id", { count: "exact", head: true }),
+      adminClient
+        .from("sessions")
+        .select("user_id")
+        .gte("created_at", monthStart.toISOString()),
+      adminClient
+        .from("workspace_tap_sessions")
+        .select("user_id")
+        .not("user_id", "is", null)
+        .gte("created_at", monthStart.toISOString()),
+    ]);
 
     const monthlyActiveUsers = new Set(
-      (monthlySessionsRes.data || []).map((row: { user_id: string }) => row.user_id)
+      [
+        ...(monthlyIleRes.data || []).map((row: { user_id: string }) => row.user_id),
+        ...(monthlyTapRes.data || []).map((row: { user_id: string | null }) => row.user_id),
+      ].filter((id): id is string => Boolean(id))
     ).size;
 
     const tierBreakdown = {

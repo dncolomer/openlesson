@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import { AdminTierSelect } from "@/components/AdminTierSelect";
 import { AdminError, AdminLoading } from "@/components/admin/AdminStatus";
+import { PowDetailsPanel } from "@/components/admin/PowDetailsPanel";
 import { useAdminGuard } from "@/components/admin/useAdminGuard";
 import {
   ADMIN_TIER_OPTIONS,
@@ -15,22 +16,12 @@ import {
   tierLabel,
   type AdminTierId,
 } from "@/lib/admin/tiers";
-
-interface Lesson {
-  id: string;
-  problem: string;
-  status: string;
-  created_at: string;
-  duration_ms: number;
-  audio_path: string | null;
-  report_generated_at: string | null;
-  has_audio: boolean;
-  has_eeg: boolean;
-}
+import type { AdminProofOfWorkDetails } from "@/lib/admin/proof-of-work";
 
 interface Plan {
   id: string;
   root_topic: string;
+  title?: string | null;
   status: string;
   created_at: string;
   is_public: boolean;
@@ -59,19 +50,17 @@ export default function UserDetailPage() {
   const params = useParams();
   const userId = params.userId as string;
   const { loading: authLoading, error: authError, isAdmin } = useAdminGuard();
-  
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [user, setUser] = useState<UserDetail | null>(null);
-  const [lessons, setLessons] = useState<Lesson[]>([]);
+  const [proofOfWork, setProofOfWork] = useState<AdminProofOfWorkDetails[]>([]);
   const [plans, setPlans] = useState<Plan[]>([]);
-  
-  const [lessonPage, setLessonPage] = useState(1);
+
+  const [powPage, setPowPage] = useState(1);
   const [workspacePage, setPlanPage] = useState(1);
-  const [audioFilter, setAudioFilter] = useState<"all" | "yes" | "no">("all");
-  const [transcriptFilter, setTranscriptFilter] = useState<"all" | "yes" | "no">("all");
-  const [eegFilter, setEegFilter] = useState<"all" | "yes" | "no">("all");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [typeFilter, setTypeFilter] = useState<string>("all");
+  const [expandedPowId, setExpandedPowId] = useState<string | null>(null);
   const [tierUpdating, setTierUpdating] = useState(false);
 
   useEffect(() => {
@@ -83,12 +72,12 @@ export default function UserDetailPage() {
     try {
       const res = await fetch(`/api/admin/users/${userId}`);
       const data = await res.json();
-      
+
       if (!res.ok) {
         setError(data.error || "Failed to load user");
       } else {
         setUser(data.user);
-        setLessons(data.lessons || []);
+        setProofOfWork(data.proofOfWork || []);
         setPlans(data.plans || []);
       }
     } catch (err) {
@@ -105,42 +94,42 @@ export default function UserDetailPage() {
       month: "short",
       day: "numeric",
       year: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
     });
-  };
-
-  const formatDuration = (ms: number) => {
-    const minutes = Math.floor(ms / 60000);
-    const seconds = Math.floor((ms % 60000) / 1000);
-    return `${minutes}m ${seconds}s`;
   };
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "active": return "bg-green-900/30 text-green-400";
-      case "completed": return "bg-blue-900/30 text-blue-400";
-      case "paused": return "bg-yellow-900/30 text-yellow-400";
-      default: return "bg-neutral-700 text-neutral-400";
+      case "active":
+        return "bg-green-900/30 text-green-400";
+      case "completed":
+        return "bg-blue-900/30 text-blue-400";
+      case "paused":
+        return "bg-yellow-900/30 text-yellow-400";
+      default:
+        return "bg-neutral-700 text-neutral-400";
     }
   };
 
-  const filteredLessons = lessons.filter(l => {
-    if (audioFilter === "yes" && !l.has_audio) return false;
-    if (audioFilter === "no" && l.has_audio) return false;
-    if (transcriptFilter === "yes" && !l.report_generated_at) return false;
-    if (transcriptFilter === "no" && l.report_generated_at) return false;
-    if (eegFilter === "yes" && !l.has_eeg) return false;
-    if (eegFilter === "no" && l.has_eeg) return false;
-    if (statusFilter !== "all" && l.status !== statusFilter) return false;
+  const filteredPow = proofOfWork.filter((row) => {
+    if (typeFilter !== "all" && row.proofOfWorkType !== typeFilter) return false;
     return true;
   });
 
-  const LESSON_PAGE_SIZE = 10;
-  const lessonTotalPages = Math.ceil(filteredLessons.length / LESSON_PAGE_SIZE);
-  const paginatedLessons = filteredLessons.slice((lessonPage - 1) * LESSON_PAGE_SIZE, lessonPage * LESSON_PAGE_SIZE);
+  const POW_PAGE_SIZE = 10;
+  const powTotalPages = Math.ceil(filteredPow.length / POW_PAGE_SIZE) || 1;
+  const paginatedPow = filteredPow.slice(
+    (powPage - 1) * POW_PAGE_SIZE,
+    powPage * POW_PAGE_SIZE
+  );
 
   const PLAN_PAGE_SIZE = 10;
-  const planTotalPages = Math.ceil(plans.length / PLAN_PAGE_SIZE);
-  const paginatedPlans = plans.slice((workspacePage - 1) * PLAN_PAGE_SIZE, workspacePage * PLAN_PAGE_SIZE);
+  const planTotalPages = Math.ceil(plans.length / PLAN_PAGE_SIZE) || 1;
+  const paginatedPlans = plans.slice(
+    (workspacePage - 1) * PLAN_PAGE_SIZE,
+    workspacePage * PLAN_PAGE_SIZE
+  );
 
   const applyTierChange = async (tier: AdminTierId) => {
     if (!user) return;
@@ -164,7 +153,8 @@ export default function UserDetailPage() {
   };
 
   if (authLoading || loading) return <AdminLoading />;
-  if (authError || error || !isAdmin) return <AdminError message={authError || error || "Admin access required"} />;
+  if (authError || error || !isAdmin)
+    return <AdminError message={authError || error || "Admin access required"} />;
 
   return (
     <main>
@@ -172,20 +162,20 @@ export default function UserDetailPage() {
         ← Back to users
       </Link>
 
-      <div className="bg-neutral-900 border border-neutral-800 rounded-lg p-6 mb-6">
-        <div className="flex items-start justify-between mb-4">
+      <div className="mb-6 rounded-lg border border-neutral-800 bg-neutral-900 p-6">
+        <div className="mb-4 flex items-start justify-between">
           <div>
             <h1 className="text-xl font-semibold">{user?.username || user?.email || "No name"}</h1>
             <p className="text-sm text-neutral-500">{user?.email}</p>
           </div>
           {user?.is_admin && (
-            <span className="px-2 py-1 text-xs rounded bg-yellow-500/20 text-yellow-400 border border-yellow-500/30">
+            <span className="rounded border border-yellow-500/30 bg-yellow-500/20 px-2 py-1 text-xs text-yellow-400">
               ADMIN
             </span>
           )}
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
           <div>
             <div className="text-xs text-neutral-500">Plan</div>
             <div className="space-y-2">
@@ -227,7 +217,9 @@ export default function UserDetailPage() {
           </div>
           <div>
             <div className="text-xs text-neutral-500">Status</div>
-            <span className={`px-2 py-0.5 rounded text-xs ${getStatusColor(user?.subscription_status || "")}`}>
+            <span
+              className={`rounded px-2 py-0.5 text-xs ${getStatusColor(user?.subscription_status || "")}`}
+            >
               {user?.subscription_status}
             </span>
           </div>
@@ -250,10 +242,10 @@ export default function UserDetailPage() {
                       body: JSON.stringify({ userId: user?.id, extra_lessons: newTotal }),
                     });
                     if (res.ok) {
-                      setUser((prev) => prev ? { ...prev, extra_lessons: newTotal } : prev);
+                      setUser((prev) => (prev ? { ...prev, extra_lessons: newTotal } : prev));
                     }
                   }}
-                  className="px-1.5 py-0.5 text-[10px] font-medium bg-green-900/30 text-green-400 border border-green-800/50 rounded hover:bg-green-900/50 transition-colors"
+                  className="rounded border border-green-800/50 bg-green-900/30 px-1.5 py-0.5 text-[10px] font-medium text-green-400 transition-colors hover:bg-green-900/50"
                 >
                   +{amount}
                 </button>
@@ -279,26 +271,29 @@ export default function UserDetailPage() {
                 href={`https://dashboard.stripe.com/customers/${user.stripe_customer_id}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-blue-400 hover:text-blue-300 text-sm"
+                className="text-sm text-blue-400 hover:text-blue-300"
               >
                 View in Stripe →
               </a>
             </div>
           )}
           <div>
-            <div className="text-xs text-neutral-500">Lessons</div>
-            <div className="text-neutral-200">{lessons.length}</div>
+            <div className="text-xs text-neutral-500">Proof of work</div>
+            <div className="text-neutral-200">{proofOfWork.length}</div>
           </div>
           <div>
-            <div className="text-xs text-neutral-500">Plans</div>
+            <div className="text-xs text-neutral-500">Workspaces</div>
             <div className="text-neutral-200">{plans.length}</div>
           </div>
           <div>
             <div className="text-xs text-neutral-500">Organization</div>
             {user?.organization ? (
-              <Link href={`/admin/organizations/${user.organization.id}`} className="text-blue-400 hover:text-blue-300">
+              <Link
+                href={`/admin/organizations/${user.organization.id}`}
+                className="text-blue-400 hover:text-blue-300"
+              >
                 {user.organization.name}
-                {user.is_org_admin && <span className="text-purple-400 ml-1">(admin)</span>}
+                {user.is_org_admin && <span className="ml-1 text-purple-400">(admin)</span>}
               </Link>
             ) : (
               <div className="text-neutral-500">-</div>
@@ -307,90 +302,97 @@ export default function UserDetailPage() {
         </div>
       </div>
 
-      <div className="grid md:grid-cols-2 gap-6">
-        <div className="bg-neutral-900 border border-neutral-800 rounded-lg p-4">
-          <h2 className="text-lg font-medium mb-4">Lessons ({filteredLessons.length})</h2>
-          
-          <div className="flex flex-wrap gap-2 mb-4">
+      <div className="grid gap-6 md:grid-cols-2">
+        <div className="rounded-lg border border-neutral-800 bg-neutral-900 p-4">
+          <h2 className="mb-4 text-lg font-medium">Proof of work ({filteredPow.length})</h2>
+
+          <div className="mb-4 flex flex-wrap gap-2">
             <select
-              value={audioFilter}
-              onChange={(e) => { setAudioFilter(e.target.value as any); setLessonPage(1); }}
-              className="bg-neutral-800 border border-neutral-700 rounded px-2 py-1 text-xs text-neutral-200"
+              value={typeFilter}
+              onChange={(e) => {
+                setTypeFilter(e.target.value);
+                setPowPage(1);
+              }}
+              className="rounded border border-neutral-700 bg-neutral-800 px-2 py-1 text-xs text-neutral-200"
             >
-              <option value="all">Audio: All</option>
-              <option value="yes">Audio: Yes</option>
-              <option value="no">Audio: No</option>
-            </select>
-            <select
-              value={transcriptFilter}
-              onChange={(e) => { setTranscriptFilter(e.target.value as any); setLessonPage(1); }}
-              className="bg-neutral-800 border border-neutral-700 rounded px-2 py-1 text-xs text-neutral-200"
-            >
-              <option value="all">Transcript: All</option>
-              <option value="yes">Transcript: Yes</option>
-              <option value="no">Transcript: No</option>
-            </select>
-            <select
-              value={eegFilter}
-              onChange={(e) => { setEegFilter(e.target.value as any); setLessonPage(1); }}
-              className="bg-neutral-800 border border-neutral-700 rounded px-2 py-1 text-xs text-neutral-200"
-            >
-              <option value="all">EEG: All</option>
-              <option value="yes">EEG: Yes</option>
-              <option value="no">EEG: No</option>
-            </select>
-            <select
-              value={statusFilter}
-              onChange={(e) => { setStatusFilter(e.target.value); setLessonPage(1); }}
-              className="bg-neutral-800 border border-neutral-700 rounded px-2 py-1 text-xs text-neutral-200"
-            >
-              <option value="all">Status: All</option>
-              <option value="active">Status: Active</option>
-              <option value="paused">Status: Paused</option>
-              <option value="completed">Status: Completed</option>
+              <option value="all">Type: All</option>
+              <option value="tool">Type: Tool</option>
+              <option value="screen">Type: Screen</option>
+              <option value="video">Type: Video</option>
+              <option value="eeg">Type: EEG</option>
             </select>
           </div>
 
-          {filteredLessons.length === 0 ? (
-            <p className="text-neutral-500 text-sm">No lessons found</p>
+          {filteredPow.length === 0 ? (
+            <p className="text-sm text-neutral-500">No proof of work found</p>
           ) : (
             <React.Fragment>
-              <div className="space-y-3">
-                {paginatedLessons.map((lesson) => (
-                <Link key={lesson.id} href={`/admin/sessions/${lesson.id}`} className="block p-3 bg-neutral-800/50 rounded-lg hover:bg-neutral-800/70 transition-colors">
-                  <div className="flex items-start justify-between mb-1">
-                    <div className="text-sm text-neutral-200 line-clamp-1">{lesson.problem}</div>
-                    <span className={`ml-2 px-1.5 py-0.5 text-xs rounded ${getStatusColor(lesson.status)}`}>
-                      {lesson.status}
-                    </span>
-                  </div>
-                  <div className="flex gap-3 text-xs text-neutral-500 items-center">
-                    <span>{formatDate(lesson.created_at)}</span>
-                    {lesson.duration_ms > 0 && <span>{formatDuration(lesson.duration_ms)}</span>}
-                  </div>
-                </Link>
-                ))}
+              <div className="space-y-2">
+                {paginatedPow.map((row) => {
+                  const expanded = expandedPowId === row.id;
+                  return (
+                    <div
+                      key={row.id}
+                      className="rounded-lg bg-neutral-800/50 transition-colors hover:bg-neutral-800/70"
+                    >
+                      <button
+                        type="button"
+                        onClick={() => setExpandedPowId(expanded ? null : row.id)}
+                        className="flex w-full items-start justify-between gap-3 p-3 text-left"
+                      >
+                        <div className="min-w-0">
+                          <div className="mb-1 flex flex-wrap items-center gap-2">
+                            <span className="rounded bg-neutral-700 px-1.5 py-0.5 text-[11px] text-neutral-200">
+                              {row.proofOfWorkType}
+                            </span>
+                            {row.toolName && (
+                              <span className="text-xs text-neutral-400">{row.toolName}</span>
+                            )}
+                          </div>
+                          <div className="truncate text-sm text-neutral-200">
+                            {row.fileName}
+                            {row.workspaceTitle ? (
+                              <span className="text-neutral-500"> · {row.workspaceTitle}</span>
+                            ) : null}
+                          </div>
+                          <div className="mt-1 text-xs text-neutral-500">
+                            {formatDate(row.createdAt)}
+                          </div>
+                        </div>
+                        <span className="shrink-0 text-xs text-neutral-500">
+                          {expanded ? "Hide" : "Details"}
+                        </span>
+                      </button>
+                      {expanded && (
+                        <div className="px-3 pb-3">
+                          <PowDetailsPanel details={row} />
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
-              
-              {lessonTotalPages > 1 && (
-                <div className="flex items-center justify-between mt-4 pt-4 border-t border-neutral-800">
+
+              {powTotalPages > 1 && (
+                <div className="mt-4 flex items-center justify-between border-t border-neutral-800 pt-4">
                   <div className="text-xs text-neutral-500">
-                    {(lessonPage - 1) * LESSON_PAGE_SIZE + 1}-{Math.min(lessonPage * LESSON_PAGE_SIZE, filteredLessons.length)} of {filteredLessons.length}
+                    {(powPage - 1) * POW_PAGE_SIZE + 1}-
+                    {Math.min(powPage * POW_PAGE_SIZE, filteredPow.length)} of {filteredPow.length}
                   </div>
                   <div className="flex gap-2">
                     <button
-                      onClick={() => setLessonPage(p => Math.max(1, p - 1))}
-                      disabled={lessonPage === 1}
+                      onClick={() => setPowPage((p) => Math.max(1, p - 1))}
+                      disabled={powPage === 1}
                       className="px-2 py-1 text-xs text-neutral-400 hover:text-white disabled:opacity-50"
                     >
                       ← Prev
                     </button>
                     <span className="px-2 py-1 text-xs text-neutral-500">
-                      {lessonPage} / {lessonTotalPages}
+                      {powPage} / {powTotalPages}
                     </span>
                     <button
-                      onClick={() => setLessonPage(p => Math.min(lessonTotalPages, p + 1))}
-                      disabled={lessonPage === lessonTotalPages}
+                      onClick={() => setPowPage((p) => Math.min(powTotalPages, p + 1))}
+                      disabled={powPage === powTotalPages}
                       className="px-2 py-1 text-xs text-neutral-400 hover:text-white disabled:opacity-50"
                     >
                       Next →
@@ -402,37 +404,46 @@ export default function UserDetailPage() {
           )}
         </div>
 
-        <div className="bg-neutral-900 border border-neutral-800 rounded-lg p-4">
-          <h2 className="text-lg font-medium mb-4">Workspaces ({plans.length})</h2>
+        <div className="rounded-lg border border-neutral-800 bg-neutral-900 p-4">
+          <h2 className="mb-4 text-lg font-medium">Workspaces ({plans.length})</h2>
           {plans.length === 0 ? (
-            <p className="text-neutral-500 text-sm">No plans found</p>
+            <p className="text-sm text-neutral-500">No workspaces found</p>
           ) : (
             <React.Fragment>
               <div className="space-y-3">
                 {paginatedPlans.map((plan) => (
-                <Link key={plan.id} href={`/admin/workspaces/${plan.id}`} className="block p-3 bg-neutral-800/50 rounded-lg hover:bg-neutral-800/70 transition-colors">
-                  <div className="flex items-start justify-between mb-1">
-                    <div className="text-sm text-neutral-200 line-clamp-1">{plan.root_topic}</div>
-                    <span className={`ml-2 px-1.5 py-0.5 text-xs rounded ${getStatusColor(plan.status)}`}>
-                      {plan.status}
-                    </span>
-                  </div>
-                  <div className="flex gap-3 text-xs text-neutral-500">
-                    <span>{formatDate(plan.created_at)}</span>
-                    {plan.is_public && <span className="text-cyan-400">Public</span>}
-                  </div>
-                </Link>
+                  <Link
+                    key={plan.id}
+                    href={`/admin/workspaces/${plan.id}`}
+                    className="block rounded-lg bg-neutral-800/50 p-3 transition-colors hover:bg-neutral-800/70"
+                  >
+                    <div className="mb-1 flex items-start justify-between">
+                      <div className="line-clamp-1 text-sm text-neutral-200">
+                        {plan.title || plan.root_topic}
+                      </div>
+                      <span
+                        className={`ml-2 rounded px-1.5 py-0.5 text-xs ${getStatusColor(plan.status)}`}
+                      >
+                        {plan.status}
+                      </span>
+                    </div>
+                    <div className="flex gap-3 text-xs text-neutral-500">
+                      <span>{formatDate(plan.created_at)}</span>
+                      {plan.is_public && <span className="text-cyan-400">Public</span>}
+                    </div>
+                  </Link>
                 ))}
               </div>
-              
+
               {planTotalPages > 1 && (
-                <div className="flex items-center justify-between mt-4 pt-4 border-t border-neutral-800">
+                <div className="mt-4 flex items-center justify-between border-t border-neutral-800 pt-4">
                   <div className="text-xs text-neutral-500">
-                    {(workspacePage - 1) * PLAN_PAGE_SIZE + 1}-{Math.min(workspacePage * PLAN_PAGE_SIZE, plans.length)} of {plans.length}
+                    {(workspacePage - 1) * PLAN_PAGE_SIZE + 1}-
+                    {Math.min(workspacePage * PLAN_PAGE_SIZE, plans.length)} of {plans.length}
                   </div>
                   <div className="flex gap-2">
                     <button
-                      onClick={() => setPlanPage(p => Math.max(1, p - 1))}
+                      onClick={() => setPlanPage((p) => Math.max(1, p - 1))}
                       disabled={workspacePage === 1}
                       className="px-2 py-1 text-xs text-neutral-400 hover:text-white disabled:opacity-50"
                     >
@@ -442,7 +453,7 @@ export default function UserDetailPage() {
                       {workspacePage} / {planTotalPages}
                     </span>
                     <button
-                      onClick={() => setPlanPage(p => Math.min(planTotalPages, p + 1))}
+                      onClick={() => setPlanPage((p) => Math.min(planTotalPages, p + 1))}
                       disabled={workspacePage === planTotalPages}
                       className="px-2 py-1 text-xs text-neutral-400 hover:text-white disabled:opacity-50"
                     >

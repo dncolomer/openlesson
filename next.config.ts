@@ -33,7 +33,6 @@ const nextConfig: NextConfig = {
       { source: "/certify", destination: "/use-cases/reasoning-augmentation", permanent: true },
       { source: "/solutions", destination: "/use-cases", permanent: true },
       { source: "/solutions/:path*", destination: "/use-cases", permanent: true },
-      { source: "/prompts", destination: "/admin/prompts", permanent: false },
       { source: "/plan/:id", destination: "/workspace/:id", permanent: true },
       { source: "/plans", destination: "/workspaces", permanent: true },
       { source: "/admin/plans", destination: "/admin/workspaces", permanent: true },

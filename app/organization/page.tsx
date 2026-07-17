@@ -29,7 +29,7 @@ const primaryBtnClass =
 const secondaryBtnClass =
   "inline-flex h-10 items-center justify-center rounded-sm border border-neutral-700 bg-neutral-950/60 px-4 text-sm text-neutral-200 transition hover:border-neutral-500 hover:text-white disabled:cursor-not-allowed disabled:opacity-50";
 const dangerBtnClass =
-  "inline-flex h-8 items-center justify-center rounded-sm border border-red-900/40 bg-red-950/40 px-3 text-xs text-red-400 transition hover:bg-red-950/60 disabled:opacity-50";
+  "inline-flex h-8 items-center justify-center rounded-sm border border-neutral-700 bg-neutral-950/60 px-3 text-xs text-neutral-300 transition hover:bg-neutral-900 disabled:opacity-50";
 const inputClass =
   "w-full rounded-md border border-neutral-800 bg-neutral-950/60 px-4 py-2 text-sm text-white placeholder-neutral-500 focus:border-neutral-600 focus:outline-none";
 
@@ -286,7 +286,7 @@ export default function OrganizationPage() {
     return (
       <OrgShell>
         <main className="mx-auto w-full max-w-5xl p-4 py-8 sm:px-6 lg:px-8">
-          <div className={`${cardPaddedClass} text-sm text-red-400`}>{error}</div>
+          <div className={`${cardPaddedClass} text-sm text-neutral-300`}>{error}</div>
         </main>
       </OrgShell>
     );
@@ -358,7 +358,7 @@ export default function OrganizationPage() {
                     {organization.slug}
                   </code>
                   {isOrgAdmin ? (
-                    <span className="rounded-full border border-violet-500/30 bg-violet-500/10 px-2.5 py-0.5 text-[10px] uppercase tracking-[1.4px] text-violet-100/90">
+                    <span className="rounded-full border border-white/15 bg-white/[0.06] px-2.5 py-0.5 text-[10px] uppercase tracking-[1.4px] text-white">
                       {t("organization.orgAdmin")}
                     </span>
                   ) : (
@@ -413,7 +413,7 @@ export default function OrganizationPage() {
             </div>
             <div className={cardPaddedClass}>
               <p className={labelClass}>{t("organization.pendingInvites")}</p>
-              <p className="mt-3 text-3xl font-medium tracking-[-1px] text-amber-300">
+              <p className="mt-3 text-3xl font-medium tracking-[-1px] text-white">
                 {unusedInvites.length}
               </p>
             </div>
@@ -469,7 +469,7 @@ export default function OrganizationPage() {
                       </td>
                       <td className="px-4 py-3.5">
                         {member.is_org_admin ? (
-                          <span className="rounded-full border border-violet-500/30 bg-violet-500/10 px-2 py-0.5 text-[10px] uppercase tracking-[1.2px] text-violet-100/90">
+                          <span className="rounded-full border border-white/15 bg-white/[0.06] px-2 py-0.5 text-[10px] uppercase tracking-[1.2px] text-white">
                             {t("organization.admin")}
                           </span>
                         ) : (
@@ -532,7 +532,7 @@ export default function OrganizationPage() {
                     className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6"
                   >
                     <div className="min-w-0">
-                      <code className="break-all rounded border border-emerald-500/20 bg-emerald-500/10 px-2 py-1 font-mono text-xs text-emerald-300/90">
+                      <code className="break-all rounded border border-white/15 bg-white/[0.06] px-2 py-1 font-mono text-xs text-white">
                         {invite.token}
                       </code>
                       <p className="mt-1.5 text-xs text-neutral-500">

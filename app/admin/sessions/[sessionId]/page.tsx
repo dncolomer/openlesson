@@ -131,12 +131,12 @@ export default function AdminSessionDetailPage() {
     switch (status) {
       case "active":
       case "in_progress":
-        return "bg-green-900/30 text-green-400";
+        return "bg-white/[0.06] text-white";
       case "completed":
-        return "bg-blue-900/30 text-blue-400";
+        return "bg-white/[0.06] text-white";
       case "paused":
       case "pending":
-        return "bg-yellow-900/30 text-yellow-400";
+        return "bg-white/[0.06] text-white";
       default:
         return "bg-neutral-700 text-neutral-400";
     }
@@ -163,7 +163,7 @@ export default function AdminSessionDetailPage() {
                 {block?.title || plan?.display_topic || "Think Aloud Protocol"}
               </h1>
               {owner && (
-                <Link href={`/admin/users/${session.user_id}`} className="text-sm text-blue-400 hover:text-blue-300">
+                <Link href={`/admin/users/${session.user_id}`} className="text-sm text-white hover:text-neutral-200">
                   {owner.email || owner.username}
                 </Link>
               )}
@@ -192,7 +192,7 @@ export default function AdminSessionDetailPage() {
             <h2 className="mb-4 text-lg font-medium text-white">Linked workspace</h2>
             {plan && (
               <Link href={`/admin/workspaces/${plan.id}`} className={`block ${adminItemClass}`}>
-                <div className="text-sm text-blue-400">{plan.display_topic || plan.root_topic}</div>
+                <div className="text-sm text-white">{plan.display_topic || plan.root_topic}</div>
                 {block && <div className="mt-1 text-xs text-neutral-500">Block: {block.title}</div>}
               </Link>
             )}
@@ -216,7 +216,7 @@ export default function AdminSessionDetailPage() {
             <p className={`mb-2 ${adminLabelClass}`}>ILE session</p>
             <h1 className="mb-2 text-xl font-medium tracking-[-0.3px] text-white">{session.problem}</h1>
             {session.owner && (
-              <Link href={`/admin/users/${session.user_id}`} className="text-sm text-blue-400 hover:text-blue-300">
+              <Link href={`/admin/users/${session.user_id}`} className="text-sm text-white hover:text-neutral-200">
                 {session.owner.email || session.owner.username}
               </Link>
             )}
@@ -236,7 +236,7 @@ export default function AdminSessionDetailPage() {
         <div className="rounded-md border border-neutral-800 bg-neutral-950/75 backdrop-blur-sm p-6">
           <h2 className="mb-4 text-lg font-medium text-white">Linked workspace</h2>
           <Link href={`/admin/workspaces/${block.workspace_id}`} className={`block ${adminItemClass}`}>
-            <div className="mb-1 text-sm text-blue-400">
+            <div className="mb-1 text-sm text-white">
               {block.plan?.display_topic || block.plan?.root_topic || "Unknown workspace"}
             </div>
             <div className="text-xs text-neutral-500">Block: {block.title}</div>

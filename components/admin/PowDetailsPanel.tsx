@@ -52,7 +52,7 @@ export function PowDetailsPanel({ details }: { details: AdminProofOfWorkDetails 
           <DetailRow label="Workspace">
             <Link
               href={`/admin/workspaces/${details.workspaceId}`}
-              className="text-blue-400 hover:text-blue-300 hover:underline"
+              className="text-white hover:text-neutral-200 hover:underline"
             >
               {details.workspaceTitle || details.workspaceId}
             </Link>
@@ -62,7 +62,7 @@ export function PowDetailsPanel({ details }: { details: AdminProofOfWorkDetails 
           <DetailRow label="Session">
             <Link
               href={`/admin/sessions/${details.sessionId}`}
-              className="text-blue-400 hover:text-blue-300 hover:underline"
+              className="text-white hover:text-neutral-200 hover:underline"
             >
               {details.sessionId}
             </Link>

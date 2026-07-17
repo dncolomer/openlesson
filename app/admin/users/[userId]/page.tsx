@@ -107,17 +107,17 @@ export default function UserDetailPage() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case "active":
-        return "bg-green-900/30 text-green-400";
+        return "bg-white/[0.06] text-white";
       case "trial_expired":
         return "bg-orange-900/30 text-orange-300";
       case "inactive":
       case "canceled":
-        return "bg-red-900/30 text-red-400";
+        return "bg-white/[0.04] text-neutral-300";
       case "completed":
-        return "bg-blue-900/30 text-blue-400";
+        return "bg-white/[0.06] text-white";
       case "paused":
       case "past_due":
-        return "bg-yellow-900/30 text-yellow-400";
+        return "bg-white/[0.06] text-white";
       default:
         return "bg-neutral-700 text-neutral-400";
     }
@@ -183,7 +183,7 @@ export default function UserDetailPage() {
             <p className="mt-1 text-sm text-neutral-500">{user?.email}</p>
           </div>
           {user?.is_admin && (
-            <span className="rounded border border-yellow-500/30 bg-yellow-500/20 px-2 py-1 text-xs text-yellow-400">
+            <span className="rounded border border-white/15 bg-white/[0.08] px-2 py-1 text-xs text-white">
               ADMIN
             </span>
           )}
@@ -241,7 +241,7 @@ export default function UserDetailPage() {
                         setUser((prev) => (prev ? { ...prev, extra_lessons: newTotal } : prev));
                       }
                     }}
-                    className="rounded border border-green-800/50 bg-green-900/30 px-1.5 py-0.5 text-[10px] font-medium text-green-400 transition-colors hover:bg-green-900/50"
+                    className="rounded border border-white/15 bg-white/[0.06] px-1.5 py-0.5 text-[10px] font-medium text-white transition-colors hover:bg-white/[0.1]"
                     title="Support grant (volume overage is normally set by Stripe subscription volume)"
                   >
                     +{amount}
@@ -272,7 +272,7 @@ export default function UserDetailPage() {
                 href={`https://dashboard.stripe.com/customers/${user.stripe_customer_id}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-sm text-blue-400 hover:text-blue-300"
+                className="text-sm text-white hover:text-neutral-200"
               >
                 View in Stripe →
               </a>
@@ -291,10 +291,10 @@ export default function UserDetailPage() {
             {user?.organization ? (
               <Link
                 href={`/admin/organizations/${user.organization.id}`}
-                className="text-blue-400 hover:text-blue-300"
+                className="text-white hover:text-neutral-200"
               >
                 {user.organization.name}
-                {user.is_org_admin && <span className="ml-1 text-purple-400">(admin)</span>}
+                {user.is_org_admin && <span className="ml-1 text-white">(admin)</span>}
               </Link>
             ) : (
               <div className="text-neutral-500">-</div>
@@ -432,7 +432,7 @@ export default function UserDetailPage() {
                     </div>
                     <div className="flex gap-3 text-xs text-neutral-500">
                       <span>{formatDate(plan.created_at)}</span>
-                      {plan.is_public && <span className="text-cyan-400">Public</span>}
+                      {plan.is_public && <span className="text-white">Public</span>}
                     </div>
                   </Link>
                 ))}

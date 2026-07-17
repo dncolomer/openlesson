@@ -120,12 +120,12 @@ export default function AdminPlanDetailPage() {
     switch (status) {
       case "active":
       case "in_progress":
-        return "bg-green-900/30 text-green-400";
+        return "bg-white/[0.06] text-white";
       case "completed":
-        return "bg-blue-900/30 text-blue-400";
+        return "bg-white/[0.06] text-white";
       case "paused":
       case "pending":
-        return "bg-yellow-900/30 text-yellow-400";
+        return "bg-white/[0.06] text-white";
       default:
         return "bg-neutral-700 text-neutral-400";
     }
@@ -153,16 +153,16 @@ export default function AdminPlanDetailPage() {
             <p className={`mb-2 ${adminLabelClass}`}>Workspace</p>
             <h1 className={adminPageTitleClass}>{plan?.display_topic}</h1>
             {plan?.owner && (
-              <Link href={`/admin/users/${plan.user_id}`} className="mt-1 inline-block text-sm text-blue-400 hover:text-blue-300">
+              <Link href={`/admin/users/${plan.user_id}`} className="mt-1 inline-block text-sm text-white hover:text-neutral-200">
                 {plan.owner.username || plan.owner.email}
               </Link>
             )}
           </div>
           <div className="flex gap-2">
-            <span className={`px-2 py-1 text-xs rounded ${plan?.is_public ? "bg-green-900/30 text-green-400" : "bg-neutral-800 text-neutral-500"}`}>
+            <span className={`px-2 py-1 text-xs rounded ${plan?.is_public ? "bg-white/[0.06] text-white" : "bg-neutral-800 text-neutral-500"}`}>
               {plan?.is_public ? "Public" : "Private"}
             </span>
-            <span className={`px-2 py-1 text-xs rounded ${plan?.is_agent_workspace ? "bg-blue-900/30 text-blue-400" : "bg-neutral-800 text-neutral-500"}`}>
+            <span className={`px-2 py-1 text-xs rounded ${plan?.is_agent_workspace ? "bg-white/[0.06] text-white" : "bg-neutral-800 text-neutral-500"}`}>
               {plan?.is_agent_workspace ? "Agent" : "User"}
             </span>
           </div>
@@ -214,7 +214,7 @@ export default function AdminPlanDetailPage() {
                       {node.status}
                     </span>
                   </div>
-                  {node.is_start && <div className="mt-1 text-[10px] text-cyan-400">Start block</div>}
+                  {node.is_start && <div className="mt-1 text-[10px] text-white">Start block</div>}
                 </div>
               ))}
             </div>

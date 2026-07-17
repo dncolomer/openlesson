@@ -117,7 +117,7 @@ export default function AdminPage() {
         </p>
       </div>
 
-      {statsError && <p className="text-sm text-red-400">{statsError}</p>}
+      {statsError && <p className="text-sm text-neutral-300">{statsError}</p>}
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <StatCard label="Users" value={stats?.totalUsers ?? 0} />
@@ -153,7 +153,7 @@ export default function AdminPage() {
         </div>
       </div>
 
-      {activityError && <p className="text-sm text-red-400">{activityError}</p>}
+      {activityError && <p className="text-sm text-neutral-300">{activityError}</p>}
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
         <section className={adminCardClass}>
@@ -309,10 +309,10 @@ export default function AdminPage() {
           <p className={`mb-3 ${adminLabelClass}`}>Plan breakdown</p>
           <div className="flex flex-wrap gap-4 text-sm text-neutral-400">
             <span>Inactive: {stats.tierBreakdown.inactive}</span>
-            <span className="text-emerald-400">Trial: {stats.tierBreakdown.trial}</span>
-            <span className="text-blue-400">Individual: {stats.tierBreakdown.regular_2026}</span>
-            <span className="text-purple-400">Teams: {stats.tierBreakdown.pro_teams}</span>
-            <span className="text-amber-200">API Metered: {stats.tierBreakdown.api_metered}</span>
+            <span className="text-white">Trial: {stats.tierBreakdown.trial}</span>
+            <span className="text-white">Individual: {stats.tierBreakdown.regular_2026}</span>
+            <span className="text-white">Teams: {stats.tierBreakdown.pro_teams}</span>
+            <span className="text-neutral-200">API Metered: {stats.tierBreakdown.api_metered}</span>
             <span className="text-orange-300">
               Trial expired: {stats.tierBreakdown.trial_expired}
             </span>

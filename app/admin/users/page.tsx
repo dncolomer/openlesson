@@ -206,10 +206,10 @@ export default function UsersPage() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "active": return "bg-green-900/30 text-green-400";
-      case "inactive": return "bg-red-900/30 text-red-400";
+      case "active": return "bg-white/[0.06] text-white";
+      case "inactive": return "bg-white/[0.04] text-neutral-300";
       case "trial_expired": return "bg-orange-900/30 text-orange-300";
-      case "past_due": return "bg-yellow-900/30 text-yellow-400";
+      case "past_due": return "bg-white/[0.06] text-white";
       case "canceled": return "bg-neutral-800 text-neutral-400";
       default: return "bg-neutral-800 text-neutral-400";
     }
@@ -247,12 +247,12 @@ export default function UsersPage() {
             </div>
           </div>
           <div className={adminCardPaddedClass}>
-            <div className="text-2xl font-semibold text-green-400">{kpiUsers.filter(u => u.subscription_status === "active").length}</div>
+            <div className="text-2xl font-semibold text-white">{kpiUsers.filter(u => u.subscription_status === "active").length}</div>
             <div className={`mt-1 ${adminLabelClass}`}>Active Subscriptions</div>
             <div className="mt-2 flex flex-wrap gap-2 text-[11px]">
-              <span className="text-red-400">Inactive: {kpiUsers.filter(u => u.subscription_status === "inactive" || !u.subscription_status).length}</span>
+              <span className="text-neutral-300">Inactive: {kpiUsers.filter(u => u.subscription_status === "inactive" || !u.subscription_status).length}</span>
               <span className="text-orange-300">Trial expired: {kpiUsers.filter(u => u.subscription_status === "trial_expired").length}</span>
-              <span className="text-yellow-400">Past Due: {kpiUsers.filter(u => u.subscription_status === "past_due").length}</span>
+              <span className="text-white">Past Due: {kpiUsers.filter(u => u.subscription_status === "past_due").length}</span>
             </div>
           </div>
           <div className={adminCardPaddedClass}>
@@ -357,14 +357,14 @@ export default function UsersPage() {
                 paginatedUsers.map((user) => (
                   <tr key={user.id} className="border-b border-neutral-800/50 hover:bg-neutral-800/20">
                     <td className="p-4">
-                      <Link href={`/admin/users/${user.id}`} className="hover:text-blue-400">
+                      <Link href={`/admin/users/${user.id}`} className="hover:text-white">
                         <div>
                           <div className="text-neutral-200 font-medium">
                             {user.username || user.email || "No name"}
                           </div>
                           <div className="text-xs text-neutral-500">{user.email}</div>
                           {user.is_admin && (
-                            <span className="inline-block mt-1 px-1.5 py-0.5 text-[10px] rounded bg-yellow-500/20 text-yellow-400 border border-yellow-500/30">
+                            <span className="inline-block mt-1 px-1.5 py-0.5 text-[10px] rounded bg-white/[0.08] text-white border border-white/15">
                               ADMIN
                             </span>
                           )}
@@ -396,10 +396,10 @@ export default function UsersPage() {
                     </td>
                     <td className="p-4">
                       {user.organization ? (
-                        <Link href={`/admin/organizations/${user.organization.id}`} className="hover:text-blue-400">
+                        <Link href={`/admin/organizations/${user.organization.id}`} className="hover:text-white">
                           <div className="text-neutral-300 text-sm">{user.organization.name}</div>
                           {user.is_org_admin && (
-                            <span className="text-[10px] text-purple-400">admin</span>
+                            <span className="text-[10px] text-white">admin</span>
                           )}
                         </Link>
                       ) : (

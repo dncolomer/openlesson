@@ -13,7 +13,7 @@ export function AdminLoading({ message = "Loading" }: { message?: string } = {})
 
 export function AdminError({ message }: { message: string }) {
   return (
-    <div className={`${adminCardPaddedClass} flex min-h-[40vh] flex-col items-center justify-center gap-2 text-red-400`}>
+    <div className={`${adminCardPaddedClass} flex min-h-[40vh] flex-col items-center justify-center gap-2 text-neutral-300`}>
       <p className="text-sm">{message}</p>
     </div>
   );

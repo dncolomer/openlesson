@@ -257,7 +257,7 @@ export default function OrganizationsPage() {
               paginatedOrgs.map((org) => (
                 <tr key={org.id} className="border-b border-neutral-800/50 hover:bg-neutral-800/20">
                   <td className="p-4">
-                    <Link href={`/admin/organizations/${org.id}`} className="flex items-center gap-3 hover:text-blue-400">
+                    <Link href={`/admin/organizations/${org.id}`} className="flex items-center gap-3 hover:text-white">
                       {org.logo_url ? (
                         <Image
                           src={org.logo_url}
@@ -285,7 +285,7 @@ export default function OrganizationsPage() {
                   </td>
                   <td className="p-4 text-right">
                     {org.pending_invites > 0 ? (
-                      <span className="text-yellow-400">{org.pending_invites}</span>
+                      <span className="text-white">{org.pending_invites}</span>
                     ) : (
                       <span className="text-neutral-500">0</span>
                     )}
@@ -376,7 +376,7 @@ export default function OrganizationsPage() {
                       className="block w-full text-sm text-neutral-400 file:mr-3 file:rounded-md file:border-0 file:bg-neutral-800 file:px-3 file:py-1.5 file:text-sm file:text-white hover:file:bg-neutral-700"
                     />
                     <p className="mt-1 text-xs text-neutral-500">PNG, JPEG, WebP, GIF, or SVG · max 2 MB. Shown on invite links.</p>
-                    {logoError && <p className="mt-1 text-xs text-red-400">{logoError}</p>}
+                    {logoError && <p className="mt-1 text-xs text-neutral-300">{logoError}</p>}
                     {logoPreview && (
                       <button
                         type="button"

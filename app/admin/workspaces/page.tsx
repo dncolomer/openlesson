@@ -172,7 +172,7 @@ export default function AdminPlansPage() {
           <div className="text-2xl font-semibold text-white">{kpiPlans.length}</div>
           <div className={`mt-1 ${adminLabelClass}`}>Plans (this page)</div>
           <div className="mt-2 flex gap-2 text-[11px]">
-            <span className="text-green-400">Public: {publicCount}</span>
+            <span className="text-white">Public: {publicCount}</span>
             <span className="text-neutral-400">Private: {kpiPlans.length - publicCount}</span>
           </div>
         </div>
@@ -186,12 +186,12 @@ export default function AdminPlansPage() {
           </div>
         </div>
         <div className={adminCardPaddedClass}>
-          <div className="text-2xl font-semibold text-cyan-400">
+          <div className="text-2xl font-semibold text-white">
             {kpiPlans.reduce((sum, p) => sum + (p.tap_session_count || 0), 0)}
           </div>
           <div className={`mt-1 ${adminLabelClass}`}>TAP sessions (this page)</div>
           <div className="mt-2 flex gap-2 text-[11px]">
-            <span className="text-blue-400">Agent-created: {agentCount}</span>
+            <span className="text-white">Agent-created: {agentCount}</span>
           </div>
         </div>
       </div>
@@ -276,7 +276,7 @@ export default function AdminPlansPage() {
                 <tr key={plan.id} className="border-b border-neutral-800/50 hover:bg-neutral-800/20">
                   <td className="px-4 py-3">
                     <Link href={`/admin/users/${plan.user_id}`} className="block hover:opacity-80">
-                      <div className="text-blue-400 hover:text-blue-300 text-sm">
+                      <div className="text-white hover:text-neutral-200 text-sm">
                         {plan.owner?.email || plan.user_id.slice(0, 8)}
                       </div>
                       {plan.owner?.username && (
@@ -298,7 +298,7 @@ export default function AdminPlansPage() {
                   <td className="px-4 py-3">
                     <span className={`px-2 py-0.5 rounded text-xs ${
                       plan.is_public
-                        ? "bg-green-900/30 text-green-400"
+                        ? "bg-white/[0.06] text-white"
                         : "bg-neutral-800 text-neutral-500"
                     }`}>
                       {plan.is_public ? "Public" : "Private"}
@@ -308,7 +308,7 @@ export default function AdminPlansPage() {
                   <td className="px-4 py-3">
                     <span className={`px-2 py-0.5 rounded text-xs ${
                       plan.is_agent_workspace
-                        ? "bg-blue-900/30 text-blue-400"
+                        ? "bg-white/[0.06] text-white"
                         : "bg-neutral-800 text-neutral-500"
                     }`}>
                       {plan.is_agent_workspace ? "Agent" : "User"}

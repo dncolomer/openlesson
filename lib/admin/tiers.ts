@@ -55,22 +55,10 @@ export function tierLabel(plan: string): string {
   return plan;
 }
 
+/** Tier indicator color — monochrome admin UI (white / muted). */
 export function tierColor(plan: string): string {
-  switch (plan) {
-    case "pro_teams":
-    case "api_metered":
-      return "text-purple-400";
-    case "regular_2026":
-      return "text-blue-400";
-    case "trial":
-      return "text-emerald-400";
-    case "inactive":
-    case "free":
-    case "regular":
-    case "pro":
-    default:
-      return "text-neutral-400";
-  }
+  if (plan === "inactive" || plan === "free" || !plan) return "text-neutral-400";
+  return "text-white";
 }
 
 export function statusLabel(status: string): string {

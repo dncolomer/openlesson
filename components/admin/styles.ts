@@ -35,7 +35,7 @@ export const adminPrimaryBtnClass =
   "inline-flex h-10 items-center justify-center rounded-sm bg-white px-4 text-sm font-medium text-black transition hover:bg-neutral-200 disabled:cursor-not-allowed disabled:opacity-50";
 
 export const adminDangerBtnClass =
-  "rounded-md border border-red-900/40 bg-red-950/40 px-4 py-2 text-sm text-red-400 transition-colors hover:bg-red-950/60";
+  "rounded-md border border-neutral-700 bg-neutral-950/60 px-4 py-2 text-sm text-neutral-300 transition-colors hover:bg-neutral-900";
 
 export const adminTableHeadClass =
   "border-b border-neutral-800 text-left font-mono text-[10px] uppercase tracking-[1.5px] text-neutral-500";

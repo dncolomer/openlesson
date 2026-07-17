@@ -607,7 +607,7 @@ export default function OrganizationDetailPage() {
           <div className={`mt-1 ${adminLabelClass}`}>Org Admins</div>
         </div>
         <div className="rounded-md border border-neutral-800 bg-neutral-950/75 p-4 backdrop-blur-sm sm:p-5">
-          <div className="text-2xl font-semibold text-yellow-400">{unusedInvites.length}</div>
+          <div className="text-2xl font-semibold text-white">{unusedInvites.length}</div>
           <div className={`mt-1 ${adminLabelClass}`}>Pending Invites</div>
         </div>
       </div>
@@ -635,7 +635,7 @@ export default function OrganizationDetailPage() {
               {members.map((member) => (
                 <tr key={member.id} className="border-b border-neutral-800/50 hover:bg-neutral-800/20">
                   <td className="p-4">
-                    <Link href={`/admin/users/${member.id}`} className="hover:text-blue-400">
+                    <Link href={`/admin/users/${member.id}`} className="hover:text-white">
                       <div className="text-neutral-200">{member.username || member.email || "Unknown"}</div>
                       <div className="text-xs text-neutral-500">{member.email}</div>
                     </Link>
@@ -647,7 +647,7 @@ export default function OrganizationDetailPage() {
                   </td>
                   <td className="p-4">
                     {member.is_org_admin ? (
-                      <span className="px-2 py-1 text-xs rounded bg-purple-500/20 text-purple-400 border border-purple-500/30">
+                      <span className="px-2 py-1 text-xs rounded bg-white/[0.08] text-white border border-white/15">
                         Org Admin
                       </span>
                     ) : (
@@ -666,7 +666,7 @@ export default function OrganizationDetailPage() {
                       <button
                         onClick={() => handleRemoveMember(member.id, member.username || member.email || "this user")}
                         disabled={updatingMember === member.id}
-                        className="px-3 py-1 text-xs bg-red-600/20 hover:bg-red-600/30 text-red-400 rounded transition-colors disabled:opacity-50"
+                        className="px-3 py-1 text-xs bg-white/[0.06] hover:bg-white/[0.1] text-neutral-300 rounded transition-colors disabled:opacity-50"
                       >
                         Remove
                       </button>
@@ -701,7 +701,7 @@ export default function OrganizationDetailPage() {
             {unusedInvites.map((invite) => (
               <div key={invite.id} className="p-4 flex items-center justify-between hover:bg-neutral-800/20">
                 <div>
-                  <code className="text-sm text-green-400 bg-green-900/20 px-2 py-1 rounded">
+                  <code className="text-sm text-white bg-white/[0.06] px-2 py-1 rounded">
                     {invite.token}
                   </code>
                   <div className="text-xs text-neutral-500 mt-1">
@@ -718,7 +718,7 @@ export default function OrganizationDetailPage() {
                   </button>
                   <button
                     onClick={() => handleDeleteInvite(invite.id)}
-                    className="px-3 py-1 text-xs bg-red-600/20 hover:bg-red-600/30 text-red-400 rounded transition-colors"
+                    className="px-3 py-1 text-xs bg-white/[0.06] hover:bg-white/[0.1] text-neutral-300 rounded transition-colors"
                   >
                     Revoke
                   </button>

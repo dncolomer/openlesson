@@ -168,8 +168,8 @@ export default function SessionsPage() {
             </div>
             <div className={`mt-1 ${adminLabelClass}`}>Completed (this page)</div>
             <div className="mt-2 flex gap-2 text-[11px]">
-              <span className="text-blue-400">Active: {sessions.filter(s => s.status === "active").length}</span>
-              <span className="text-yellow-400">Paused: {sessions.filter(s => s.status === "paused").length}</span>
+              <span className="text-white">Active: {sessions.filter(s => s.status === "active").length}</span>
+              <span className="text-white">Paused: {sessions.filter(s => s.status === "paused").length}</span>
             </div>
           </div>
           <div className={adminCardPaddedClass}>
@@ -251,7 +251,7 @@ export default function SessionsPage() {
                   <tr key={session.id} className="border-b border-neutral-800/50 hover:bg-neutral-800/20">
                     <td className="p-4">
                       <Link href={`/admin/users/${session.user_id}`} className="block hover:opacity-80">
-                        <div className="text-blue-400 hover:text-blue-300 text-sm">
+                        <div className="text-white hover:text-neutral-200 text-sm">
                           {session.user?.email || session.user_id?.slice(0, 8)}
                         </div>
                         {session.user?.username && (
@@ -274,9 +274,9 @@ export default function SessionsPage() {
                     </td>
                     <td className="p-4 text-center">
                       <span className={`px-2 py-0.5 rounded text-xs ${
-                        session.status === "active" ? "bg-green-500/20 text-green-400" :
-                        session.status === "completed" ? "bg-blue-500/20 text-blue-400" :
-                        "bg-yellow-500/20 text-yellow-400"
+                        session.status === "active" ? "bg-white/[0.08] text-white" :
+                        session.status === "completed" ? "bg-white/[0.08] text-white" :
+                        "bg-white/[0.08] text-white"
                       }`}>
                         {session.status}
                       </span>

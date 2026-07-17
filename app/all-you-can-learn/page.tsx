@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowRight, ExternalLink } from "lucide-react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { ArrowRight } from "lucide-react";
 import { Footer } from "@/components/Footer";
 import { LandingNav } from "@/components/LandingNav";
 import { WorkspaceCardHero } from "@/components/WorkspaceCardHero";
@@ -34,9 +35,10 @@ const HACKATHONS = [
     host: "ETH Zurich",
     date: "June 10, 2026",
     location: "Zurich, Switzerland",
+    status: "Past event" as const,
     description:
-      "A hands-on day on probabilistic and thermodynamic computing — Energy-Based Models, THRML, lectures, team builds, and demos.",
-    href: "https://pc-hackathon.openlesson.academy/",
+      "A hands-on day on probabilistic and thermodynamic computing — Energy-Based Models, THRML, lectures, team builds, and demos. Winners and lifetime packages coming soon.",
+    href: "/hackathons/probabilistic-computing",
     image:
       "https://cdn.sanity.io/images/otrk6k1t/production/7ef4d9c0fcf06719cb7ddd7ebdb20b02a2355793-1736x1284.webp?auto=format&fit=max&q=75&w=868",
   },
@@ -47,12 +49,41 @@ const TABS: { id: AyclTab; label: string }[] = [
   { id: "hackathons", label: "Hackathons" },
 ];
 
+const VALID_TABS = new Set<AyclTab>(["lifetime", "hackathons"]);
+
+function parseTab(value: string | null): AyclTab {
+  if (value && VALID_TABS.has(value as AyclTab)) {
+    return value as AyclTab;
+  }
+  return "lifetime";
+}
+
 export default function AllYouCanLearnPage() {
-  const [activeTab, setActiveTab] = useState<AyclTab>("lifetime");
+  return (
+    <Suspense
+      fallback={
+        <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#0a0a0a] text-zinc-200">
+          <LoadingStatusMessage message="Loading" />
+        </main>
+      }
+    >
+      <AllYouCanLearnContent />
+    </Suspense>
+  );
+}
+
+function AllYouCanLearnContent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const [activeTab, setActiveTab] = useState<AyclTab>(() => parseTab(searchParams.get("tab")));
   const [workspaces, setWorkspaces] = useState<CatalogWorkspace[]>([]);
   const [loading, setLoading] = useState(true);
   const [checkoutWorkspaceId, setCheckoutWorkspaceId] = useState<string | null>(null);
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    setActiveTab(parseTab(searchParams.get("tab")));
+  }, [searchParams]);
 
   useEffect(() => {
     fetch("/api/aycl/workspaces")
@@ -63,6 +94,11 @@ export default function AllYouCanLearnPage() {
       .catch(() => setError("Failed to load workspaces"))
       .finally(() => setLoading(false));
   }, []);
+
+  const setAyclTab = (tab: AyclTab) => {
+    setActiveTab(tab);
+    router.replace(`/all-you-can-learn?tab=${tab}`, { scroll: false });
+  };
 
   const startCheckout = async (workspaceId: string) => {
     setCheckoutWorkspaceId(workspaceId);
@@ -104,32 +140,34 @@ export default function AllYouCanLearnPage() {
 
       <LandingNav />
 
-      <section className="relative z-10 mx-auto w-full max-w-5xl px-4 py-10 sm:px-6 sm:py-14">
-        <div className="mb-8 flex justify-center">
-          <div
-            className="inline-flex rounded-sm border border-zinc-800 bg-zinc-950/80 p-1"
-            role="tablist"
-            aria-label="All-You-Can-Learn sections"
-          >
+      {/* Tab switcher — dashboard-style underline bar */}
+      <div className="relative z-10 border-b border-neutral-800/60">
+        <div className="mx-auto flex max-w-5xl items-center justify-center px-4 sm:px-6">
+          <div className="flex gap-1 overflow-x-auto" role="tablist" aria-label="All-You-Can-Learn sections">
             {TABS.map((tab) => (
               <button
                 key={tab.id}
                 type="button"
                 role="tab"
                 aria-selected={activeTab === tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`rounded-sm px-4 py-2 text-sm font-medium transition ${
+                onClick={() => setAyclTab(tab.id)}
+                className={`relative whitespace-nowrap px-4 py-3 text-sm font-medium transition-colors ${
                   activeTab === tab.id
-                    ? "bg-white text-black"
-                    : "text-zinc-400 hover:text-white"
+                    ? "text-white"
+                    : "text-neutral-500 hover:text-neutral-300"
                 }`}
               >
                 {tab.label}
+                {activeTab === tab.id ? (
+                  <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-white" />
+                ) : null}
               </button>
             ))}
           </div>
         </div>
+      </div>
 
+      <section className="relative z-10 mx-auto w-full max-w-5xl px-4 py-10 sm:px-6 sm:py-14">
         <header className="mb-8 text-center">
           <p className="mb-4 font-mono text-[10px] uppercase tracking-[2px] text-zinc-500">
             Recreational learning · Events
@@ -272,23 +310,26 @@ function HackathonsTab() {
     <>
       <div className="mb-5 text-center">
         <p className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-600">
-          Upcoming events
+          Past & upcoming events
         </p>
       </div>
 
       <div className="grid gap-5 sm:grid-cols-2">
         {HACKATHONS.map((hackathon) => (
-          <a
+          <Link
             key={hackathon.id}
             href={hackathon.href}
-            target="_blank"
-            rel="noopener noreferrer"
             className="group overflow-hidden rounded-xl border border-zinc-800/90 bg-zinc-950/75 backdrop-blur-sm transition hover:border-zinc-600"
           >
             <div
-              className="h-44 bg-cover bg-center sm:h-48"
+              className="relative h-44 bg-cover bg-center sm:h-48"
               style={{ backgroundImage: `url(${hackathon.image})` }}
-            />
+            >
+              <div className="absolute inset-0 bg-gradient-to-t from-zinc-950/80 via-transparent to-transparent" />
+              <span className="absolute left-4 top-4 border border-zinc-600/80 bg-black/60 px-2 py-1 font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-300 backdrop-blur-sm">
+                {hackathon.status}
+              </span>
+            </div>
             <div className="space-y-4 p-5">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="border border-cyan-500/30 bg-black/55 px-2 py-1 font-mono text-[10px] uppercase tracking-[1.5px] text-cyan-200/90">
@@ -311,11 +352,11 @@ function HackathonsTab() {
                 </div>
                 <span className="inline-flex items-center gap-1.5 text-sm font-medium text-white">
                   View event
-                  <ExternalLink size={14} className="transition group-hover:translate-x-0.5" />
+                  <ArrowRight size={14} className="transition group-hover:translate-x-0.5" />
                 </span>
               </div>
             </div>
-          </a>
+          </Link>
         ))}
       </div>
 

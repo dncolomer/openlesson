@@ -2,12 +2,16 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
   canSubmitProofOfWork,
-  getProofOfWorkAllowance,
   PLANS,
   type ProofOfWorkCheckResult,
   type PlanId,
   type UserProfile,
 } from "@/lib/plans";
+import {
+  billingEntityToUserProfile,
+  resolveBillingEntity,
+  type OrgBillingRow,
+} from "@/lib/billing-entity";
 import {
   billingPeriodStart,
   countProofOfWorkSubmissions,
@@ -16,9 +20,25 @@ import {
   type UsageProfileRow,
 } from "@/lib/usage-metrics";
 
+const ORG_BILLING_SELECT =
+  "id, plan, subscription_status, current_period_end, extra_lessons, billing_mode, kind, archived_at";
+
+async function loadOrgBilling(
+  organizationId: string | null | undefined
+): Promise<OrgBillingRow | null> {
+  if (!organizationId) return null;
+  const admin = createAdminClient();
+  const { data } = await admin
+    .from("organizations")
+    .select(ORG_BILLING_SELECT)
+    .eq("id", organizationId)
+    .maybeSingle();
+  return (data as OrgBillingRow | null) ?? null;
+}
+
 function toUserProfile(profile: UsageProfileRow): UserProfile {
   return {
-    plan: (profile.plan || "free") as PlanId,
+    plan: (profile.plan || "inactive") as PlanId,
     is_admin: profile.is_admin ?? false,
     extra_lessons: profile.extra_lessons ?? 0,
     extra_workspaces: profile.extra_workspaces ?? 0,
@@ -29,37 +49,29 @@ function toUserProfile(profile: UsageProfileRow): UserProfile {
   };
 }
 
-async function resolveProofOfWorkCounts(
-  supabase: SupabaseClient,
-  profile: UsageProfileRow,
-  userId: string,
-  periodStart: Date | null
-): Promise<{ proofOfWorkCount: number; proofOfWorkAllowance: number | null }> {
-  const userProfile = toUserProfile(profile);
-  let proofOfWorkCount = await countProofOfWorkSubmissions(supabase, userId, periodStart);
+function resolvePeriodStart(
+  entity: ReturnType<typeof resolveBillingEntity>
+): Date | null {
+  if (!entity.entitled) return null;
 
-  if (profile.plan === "pro_teams" && profile.organization_id && periodStart) {
-    const admin = createAdminClient();
-    const { data: orgMembers } = await admin
-      .from("profiles")
-      .select("id")
-      .eq("organization_id", profile.organization_id);
-    const memberIds = (orgMembers || []).map((member) => member.id);
-
-    if (memberIds.length > 0) {
-      proofOfWorkCount = await countOrgProofOfWorkSubmissions(admin, memberIds, periodStart);
+  if (entity.source === "organization") {
+    if (entity.currentPeriodEnd) {
+      return billingPeriodStart(entity.currentPeriodEnd);
     }
-
-    const planLimit = PLANS.pro_teams.proofOfWorkPerPeriod;
-    const effectiveOrgLimit = (planLimit ?? 0) + (profile.extra_lessons ?? 0);
-    return {
-      proofOfWorkCount,
-      proofOfWorkAllowance: userProfile.is_admin ? null : effectiveOrgLimit,
-    };
+    // Partner without period end: rolling 30 days
+    if (entity.billingMode === "partner") {
+      const start = new Date();
+      start.setDate(start.getDate() - 30);
+      return start;
+    }
+    return null;
   }
 
-  const { limit: proofOfWorkAllowance } = getProofOfWorkAllowance(userProfile);
-  return { proofOfWorkCount, proofOfWorkAllowance };
+  if (entity.source === "user" && entity.currentPeriodEnd) {
+    return billingPeriodStart(entity.currentPeriodEnd);
+  }
+
+  return null;
 }
 
 export async function checkProofOfWorkSubmissionAllowance(
@@ -71,26 +83,41 @@ export async function checkProofOfWorkSubmissionAllowance(
     return {
       allowed: false,
       reason: "Profile not found",
-      plan: "free",
+      plan: "inactive",
       used: 0,
-      limit: PLANS.free.proofOfWorkPerPeriod,
+      limit: PLANS.inactive.proofOfWorkPerPeriod,
       isAdmin: false,
       profile: null,
     };
   }
 
-  const userProfile = toUserProfile(profile);
-  const periodStart =
-    profile.plan === "free" || !profile.current_period_end
-      ? null
-      : billingPeriodStart(profile.current_period_end);
-
-  const { proofOfWorkCount } = await resolveProofOfWorkCounts(
-    supabase,
-    profile,
-    userId,
-    periodStart
+  const org = await loadOrgBilling(profile.organization_id);
+  const entity = resolveBillingEntity(
+    {
+      ...toUserProfile(profile),
+      organization_id: profile.organization_id,
+    },
+    org
   );
+
+  const periodStart = resolvePeriodStart(entity);
+  let proofOfWorkCount = 0;
+
+  if (entity.source === "organization" && profile.organization_id && periodStart) {
+    const admin = createAdminClient();
+    const { data: orgMembers } = await admin
+      .from("profiles")
+      .select("id")
+      .eq("organization_id", profile.organization_id);
+    const memberIds = (orgMembers || []).map((member) => member.id);
+    if (memberIds.length > 0) {
+      proofOfWorkCount = await countOrgProofOfWorkSubmissions(admin, memberIds, periodStart);
+    }
+  } else {
+    proofOfWorkCount = await countProofOfWorkSubmissions(supabase, userId, periodStart);
+  }
+
+  const userProfile = billingEntityToUserProfile(entity);
   const result = canSubmitProofOfWork(userProfile, proofOfWorkCount);
 
   return { ...result, profile };

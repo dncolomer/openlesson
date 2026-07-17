@@ -39,15 +39,18 @@ export async function authenticateOAuthAccessToken(
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("plan, subscription_status, is_admin, organization_id, is_org_admin")
+    .select("is_admin, organization_id, is_org_admin")
     .eq("id", tokenData.user_id)
     .single();
 
   const isAdmin = profile?.is_admin === true;
-  const isTeams =
-    isAdmin ||
-    (profile?.plan === "pro_teams" && profile?.subscription_status === "active") ||
-    (profile?.plan === "api_metered" && profile?.subscription_status === "active");
+  let isTeams = isAdmin;
+  if (!isTeams) {
+    const { userHasOrgApiAccess } = await import(
+      "@/lib/organization/resolve-user-billing"
+    );
+    isTeams = await userHasOrgApiAccess(supabase, tokenData.user_id);
+  }
 
   if (!isTeams) {
     return errorResponse(

@@ -8,7 +8,8 @@ import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
 import { createClient } from "@/lib/supabase/server";
 import { errorResponse } from "@/lib/agent-v2/auth";
-import { hasProofOfWorkApiAccess } from "@/lib/plans";
+import { resolveBillingEntity, billingEntityHasApiAccess } from "@/lib/billing-entity";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { DEFAULT_API_KEY_SCOPES, validateAssignableScopes } from "@/lib/agent-v2/scopes";
 import type { ApiKeyScope } from "@/lib/agent-v2/types";
 
@@ -95,8 +96,35 @@ export async function POST(req: NextRequest) {
     }
 
     const isAdmin = profile.is_admin === true;
-    const hasApiAccess =
-      hasProofOfWorkApiAccess(profile.plan, profile.subscription_status) || isAdmin;
+    let hasApiAccess = isAdmin;
+    if (!hasApiAccess) {
+      let org = null;
+      if (profile.organization_id) {
+        const admin = createAdminClient();
+        const { data: orgRow } = await admin
+          .from("organizations")
+          .select(
+            "id, plan, subscription_status, current_period_end, extra_lessons, billing_mode, archived_at"
+          )
+          .eq("id", profile.organization_id)
+          .maybeSingle();
+        org = orgRow;
+      }
+      const entity = resolveBillingEntity(
+        {
+          plan: profile.plan,
+          is_admin: profile.is_admin,
+          extra_lessons: 0,
+          subscription_status: profile.subscription_status,
+          current_period_end: null,
+          token_tier: null,
+          token_validity_expires_at: null,
+          organization_id: profile.organization_id,
+        },
+        org
+      );
+      hasApiAccess = billingEntityHasApiAccess(entity);
+    }
 
     if (!hasApiAccess) {
       return errorResponse(

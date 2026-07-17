@@ -119,7 +119,7 @@ describe("admin activity helpers", () => {
   it("ranks active users by last activity and aggregates counts", () => {
     const profiles = new Map([
       ["u1", { username: "alice", email: "a@example.com", plan: "trial" }],
-      ["u2", { username: "bob", email: "b@example.com", plan: "free" }],
+      ["u2", { username: "bob", email: "b@example.com", plan: "inactive" }],
     ]);
 
     const ranked = rankActiveUsers(sampleRows, profiles, 10);

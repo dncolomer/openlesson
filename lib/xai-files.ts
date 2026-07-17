@@ -9,14 +9,27 @@
 
 const XAI_BASE_URL = "https://api.x.ai";
 
-function getApiKey(): string {
+function getApiKey(override?: string | null): string {
+  if (override) return override;
+  if (typeof window === "undefined") {
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const { getContextualXaiApiKey } = require("@/lib/xai-context") as {
+        getContextualXaiApiKey: () => string | null;
+      };
+      const ctxKey = getContextualXaiApiKey();
+      if (ctxKey) return ctxKey;
+    } catch {
+      /* no context */
+    }
+  }
   const key = process.env.XAI_API_KEY;
   if (!key) throw new Error("XAI_API_KEY not configured");
   return key;
 }
 
-function authHeader(): Record<string, string> {
-  return { Authorization: `Bearer ${getApiKey()}` };
+function authHeader(apiKey?: string | null): Record<string, string> {
+  return { Authorization: `Bearer ${getApiKey(apiKey)}` };
 }
 
 function ensureTimestampedName(name: string): string {
@@ -82,7 +95,8 @@ export async function filterResolvableXaiFileIds(fileIds: string[]): Promise<str
 export async function uploadFileToXAI(
   name: string,
   mimeType: string,
-  base64Data: string
+  base64Data: string,
+  options?: { apiKey?: string | null }
 ): Promise<XAIFileMetadata> {
   const timestampedName = ensureTimestampedName(name);
   const buffer = Buffer.from(base64Data, "base64");
@@ -94,7 +108,7 @@ export async function uploadFileToXAI(
   const res = await fetch(`${XAI_BASE_URL}/v1/files`, {
     method: "POST",
     // Do NOT set Content-Type manually — fetch sets the multipart boundary
-    headers: authHeader(),
+    headers: authHeader(options?.apiKey),
     body: formData,
   });
 

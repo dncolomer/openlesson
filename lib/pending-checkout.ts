@@ -113,14 +113,22 @@ export async function claimPendingCheckout(
     currentPeriodEnd: pending.current_period_end,
   });
 
-  const { error: profileError } = await supabase
-    .from("profiles")
-    .update(update)
-    .eq("id", userId);
-
-  if (profileError) {
-    console.error("claimPendingCheckout profile update error:", profileError);
-    return { ok: false, error: "Failed to activate subscription on profile." };
+  try {
+    const { applyBillingToUserOrganization } = await import(
+      "@/lib/organization/apply-org-billing"
+    );
+    await applyBillingToUserOrganization(supabase, {
+      userId,
+      plan: update.plan,
+      subscriptionStatus: update.subscription_status,
+      currentPeriodEnd: update.current_period_end,
+      extraLessons: update.extra_lessons,
+      stripeCustomerId: pending.stripe_customer_id,
+      stripeSubscriptionId: pending.stripe_subscription_id,
+    });
+  } catch (err) {
+    console.error("claimPendingCheckout org billing error:", err);
+    return { ok: false, error: "Failed to activate subscription on organization." };
   }
 
   const { error: claimError } = await supabase

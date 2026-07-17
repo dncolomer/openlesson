@@ -2,7 +2,20 @@
 // PLAN DEFINITIONS & USAGE LIMITS
 // ============================================
 
-export type PlanId = "free" | "trial" | "regular" | "pro" | "regular_2026" | "pro_teams" | "api_metered";
+/**
+ * Current product plans. `inactive` = no personal paid entitlement.
+ * Legacy free/regular/pro plan ids are removed; use inactive + subscription_status.
+ */
+export type PlanId = "inactive" | "trial" | "regular_2026" | "pro_teams" | "api_metered";
+
+/** Subscription statuses we set intentionally (Stripe may pass through others). */
+export type SubscriptionStatus =
+  | "active"
+  | "inactive"
+  | "trial_expired"
+  | "canceled"
+  | "past_due"
+  | string;
 
 export interface PlanDef {
   id: PlanId;
@@ -30,25 +43,24 @@ export const LEGACY_SESSION_VOLUME_TIERS = new Set([25, 50, 100, 250, 500, 1000,
 
 export const PROOF_OF_WORK_ALLOWANCE_LABEL = "Proof-of-Work submissions";
 
-/** Extra Proof-of-Work submissions per one-time purchase pack. */
-export const EXTRA_PROOF_OF_WORK_PACK_SIZE = 4;
-
 /** One-time trial: full product access for this many days after payment. */
 export const TRIAL_ACCESS_DAYS = 3;
 export const TRIAL_PRICE_CENTS = 1999;
 
+/** Token-tier regular: fixed PoW allowance when a valid token is present. */
+export const TOKEN_REGULAR_PROOF_OF_WORK_LIMIT = 25;
+
 export const PLANS: Record<PlanId, PlanDef> = {
-  free: {
-    id: "free",
-    name: "Free",
+  inactive: {
+    id: "inactive",
+    name: "Inactive",
     price: "$0",
     priceAmount: 0,
-    proofOfWorkPerPeriod: 25,
-    workspacesPerPeriod: 1,
+    proofOfWorkPerPeriod: 0,
+    workspacesPerPeriod: 0,
     features: [
-      "25 Proof-of-Work submissions/mo",
-      "One Workspace",
-      "Basic readiness report",
+      "No active subscription",
+      "Upgrade or start a trial to use the product",
     ],
     stripePriceEnv: null,
   },
@@ -67,22 +79,6 @@ export const PLANS: Record<PlanId, PlanDef> = {
     ],
     stripePriceEnv: null,
   },
-  regular: {
-    id: "regular",
-    name: "Individual (legacy)",
-    price: "$4.99",
-    priceAmount: 499,
-    proofOfWorkPerPeriod: 20,
-    workspacesPerPeriod: 1,
-    features: [
-      "20 Proof-of-Work submissions/mo",
-      "Buy extra submissions at $3.99 per 4",
-      "Think-aloud data uploads",
-      "Muse EEG integration",
-      "Session reports & history",
-    ],
-    stripePriceEnv: "STRIPE_PRICE_REGULAR",
-  },
   regular_2026: {
     id: "regular_2026",
     name: "Individual",
@@ -94,29 +90,9 @@ export const PLANS: Record<PlanId, PlanDef> = {
       "100+ Proof-of-Work submissions/mo",
       "Unlimited Workspaces",
       "Volume upgrades before checkout",
-      "Additional submissions at $3.99 per 4",
       "Session reports & history",
     ],
     stripePriceEnv: null,
-  },
-  pro: {
-    id: "pro",
-    name: "Pro",
-    price: "$14.99",
-    priceAmount: 1499,
-    proofOfWorkPerPeriod: null,
-    workspacesPerPeriod: null,
-    features: [
-      "Unlimited Proof-of-Work submissions",
-      "Unlimited Workspaces",
-      "Think-aloud data uploads",
-      "Custom system prompts",
-      "Muse EEG integration",
-      "Session reports & history",
-      "Priority support",
-      "Agentic Tutoring (API keys)",
-    ],
-    stripePriceEnv: "STRIPE_PRICE_PRO",
   },
   pro_teams: {
     id: "pro_teams",
@@ -129,7 +105,6 @@ export const PLANS: Record<PlanId, PlanDef> = {
       "1,000+ Proof-of-Work submissions/mo",
       "Unlimited Workspaces",
       "Volume upgrades before checkout",
-      "Additional submissions at $1.99 per 4",
       "Org guests and team API keys",
       "Readiness proof of work and history",
       "Priority support",
@@ -195,10 +170,6 @@ export const BASE_INCLUDED_PROOF_OF_WORK: Record<string, number> = {
   pro_teams: 1000,
 };
 
-/** Additional Proof-of-Work pack price (cents) — pack size is EXTRA_PROOF_OF_WORK_PACK_SIZE. */
-export const EXTRA_PROOF_OF_WORK_PACK_PRICE_CENTS = 399;
-export const PRO_TEAMS_EXTRA_PROOF_OF_WORK_PACK_PRICE_CENTS = 199;
-
 /**
  * Convert Stripe `monthly_volume` to Proof-of-Work submissions.
  * Legacy subscriptions stored session counts; new ones set metadata.volume_unit = "proof_of_work".
@@ -244,17 +215,6 @@ export function getVolumeTier(priceType: string, proofOfWorkVolume: number): Vol
   return findVolumeTier(priceType, proofOfWorkVolume);
 }
 
-export function getExtraProofOfWorkPackPriceCents(plan: PlanId | string | null | undefined): number {
-  return plan === "pro_teams" || plan === "pro"
-    ? PRO_TEAMS_EXTRA_PROOF_OF_WORK_PACK_PRICE_CENTS
-    : EXTRA_PROOF_OF_WORK_PACK_PRICE_CENTS;
-}
-
-export function formatExtraProofOfWorkPackPrice(plan: PlanId | string | null | undefined): string {
-  const cents = getExtraProofOfWorkPackPriceCents(plan);
-  return `$${(cents / 100).toFixed(2)}`;
-}
-
 export function formatPlanMonthlyPrice(
   plan: PlanId | string,
   volume?: number
@@ -273,17 +233,47 @@ export function formatPlanMonthlyPrice(
     return `$${API_METERED_PLATFORM_FEE_CENTS / 100}/month + $${POW_API_CALL_PRICE_CENTS / 100} per API submission`;
   }
   if (plan === "trial") return `$${TRIAL_PRICE_CENTS / 100} one-time`;
-  if (plan === "pro") return "$14.99/month";
-  if (plan === "regular") return "$4.99/month";
-  if (plan === "free") return "$0";
+  if (plan === "inactive") return "$0";
   const def = PLANS[plan as PlanId];
   return def ? `${def.price}/month` : String(plan);
+}
+
+export function isInactivePlan(plan: PlanId | string | null | undefined): boolean {
+  return plan === "inactive" || plan === "free" || plan === "regular" || plan === "pro";
+}
+
+export function isTrialExpiredStatus(status: string | null | undefined): boolean {
+  return status === "trial_expired";
+}
+
+export function normalizePlanId(plan: string | null | undefined): PlanId {
+  if (plan === "trial" || plan === "regular_2026" || plan === "pro_teams" || plan === "api_metered") {
+    return plan;
+  }
+  return "inactive";
+}
+
+/**
+ * Pure check: active trial whose period has ended should demote to inactive + trial_expired.
+ */
+export function demoteExpiredTrialProfile(profile: {
+  plan: string;
+  subscription_status: string;
+  current_period_end: string | null;
+}): { plan: "inactive"; subscription_status: "trial_expired" } | null {
+  if (profile.plan !== "trial") return null;
+  if (!profile.current_period_end) return null;
+  if (new Date(profile.current_period_end) > new Date()) return null;
+  return { plan: "inactive", subscription_status: "trial_expired" };
 }
 
 export interface UserProfile {
   plan: PlanId;
   is_admin: boolean;
-  /** Extra Proof-of-Work submissions above the plan base (profiles.extra_lessons column). */
+  /**
+   * Volume-tier overage above the plan base (profiles.extra_lessons column).
+   * Set by Stripe from monthly_volume − base; not a one-time purchase pack.
+   */
   extra_lessons: number;
   extra_workspaces?: number;
   subscription_status: string;
@@ -300,13 +290,22 @@ export type ProductAccessProfile = Pick<
   current_period_end?: string | null;
 };
 
+/** Org billing snapshot for access checks (loaded separately from profile). */
+export type ProductAccessOrg = {
+  id: string;
+  plan: string | null;
+  subscription_status: string | null;
+  current_period_end: string | null;
+  billing_mode?: string | null;
+  archived_at?: string | null;
+  extra_lessons?: number | null;
+};
+
 const PAID_PRODUCT_PLANS = new Set<PlanId>([
   "trial",
   "regular_2026",
   "pro_teams",
   "api_metered",
-  "regular",
-  "pro",
 ]);
 
 /** True when subscription_status is active and the billing window has not ended. */
@@ -320,11 +319,17 @@ export function isBillingPeriodActive(
   return true;
 }
 
-/** True when the user may use the product (paid plan, org member, token tier, or admin). */
-export function hasProductAccess(profile: ProductAccessProfile | null | undefined): boolean {
+/**
+ * True when the user may use the product.
+ * Priority: admin → valid token → entitled organization → personal paid plan.
+ * Membership alone does **not** grant access (org must be entitled).
+ */
+export function hasProductAccess(
+  profile: ProductAccessProfile | null | undefined,
+  org?: ProductAccessOrg | null
+): boolean {
   if (!profile) return false;
   if (profile.is_admin) return true;
-  if (profile.organization_id) return true;
 
   const isTokenValid =
     profile.token_tier &&
@@ -332,16 +337,23 @@ export function hasProductAccess(profile: ProductAccessProfile | null | undefine
       new Date(profile.token_validity_expires_at) > new Date());
   if (isTokenValid) return true;
 
-  if (
-    !isBillingPeriodActive({
-      subscription_status: profile.subscription_status,
-      current_period_end: profile.current_period_end ?? null,
-    })
-  ) {
-    return false;
+  if (profile.organization_id && org && org.id === profile.organization_id) {
+    if (org.archived_at) return false;
+    const plan = normalizePlanId(org.plan);
+    const mode = org.billing_mode || "subscription";
+    if (mode === "partner") {
+      return plan !== "inactive";
+    }
+    if (org.subscription_status !== "active") return false;
+    if (plan === "inactive") return false;
+    if (org.current_period_end && new Date(org.current_period_end) <= new Date()) {
+      return false;
+    }
+    return PAID_PRODUCT_PLANS.has(plan);
   }
 
-  return PAID_PRODUCT_PLANS.has(profile.plan);
+  // No org → no product access (except admin/token). Personal profiles.plan is not authoritative.
+  return false;
 }
 
 export interface OrgUsageSummary {
@@ -389,17 +401,16 @@ export function getWorkspaceLimit(profile: UserProfile): number | null {
 
   if (is_admin) return null;
 
-  const planDef = PLANS[plan] || PLANS.free;
+  const normalized = normalizePlanId(plan);
+  const planDef = PLANS[normalized];
 
-  if (plan === "trial" && isBillingPeriodActive({ subscription_status, current_period_end })) {
+  if (normalized === "trial" && isBillingPeriodActive({ subscription_status, current_period_end })) {
     return null;
   }
 
-  if (subscription_status === "active" && plan !== "free") {
+  if (subscription_status === "active" && normalized !== "inactive") {
     return null;
   }
-
-  if (plan === "pro") return null;
 
   const base = planDef.workspacesPerPeriod;
   if (base === null) return null;
@@ -411,12 +422,13 @@ export function getWorkspaceLimit(profile: UserProfile): number | null {
  */
 export function getProofOfWorkAllowance(profile: UserProfile): Pick<UsageCheckResult, "plan" | "limit" | "isAdmin"> {
   const { plan, is_admin, extra_lessons, subscription_status, current_period_end, token_tier, token_validity_expires_at } = profile;
+  const normalized = normalizePlanId(plan);
 
   if (is_admin) {
-    return { plan, limit: null, isAdmin: true };
+    return { plan: normalized, limit: null, isAdmin: true };
   }
 
-  const planDef = PLANS[plan] || PLANS.free;
+  const planDef = PLANS[normalized];
 
   const isTokenValid = token_tier && (
     token_validity_expires_at === null || new Date(token_validity_expires_at) > new Date()
@@ -424,32 +436,28 @@ export function getProofOfWorkAllowance(profile: UserProfile): Pick<UsageCheckRe
 
   if (isTokenValid) {
     if (token_tier === "pro") {
-      return { plan: "pro", limit: null, isAdmin: false };
+      return { plan: normalized, limit: null, isAdmin: false };
     }
     if (token_tier === "regular") {
-      return { plan: "regular", limit: 25, isAdmin: false };
+      return { plan: normalized, limit: TOKEN_REGULAR_PROOF_OF_WORK_LIMIT, isAdmin: false };
     }
   }
 
-  if (plan === "pro" && subscription_status === "active") {
-    return { plan, limit: null, isAdmin: false };
+  if (normalized === "api_metered" && subscription_status === "active") {
+    return { plan: normalized, limit: null, isAdmin: false };
   }
 
-  if (plan === "api_metered" && subscription_status === "active") {
-    return { plan, limit: null, isAdmin: false };
+  if (normalized === "trial" && isBillingPeriodActive({ subscription_status, current_period_end })) {
+    return { plan: normalized, limit: null, isAdmin: false };
   }
 
-  if (plan === "trial" && isBillingPeriodActive({ subscription_status, current_period_end })) {
-    return { plan, limit: null, isAdmin: false };
-  }
-
-  if ((plan === "regular" || plan === "regular_2026" || plan === "pro_teams") && subscription_status === "active") {
+  if ((normalized === "regular_2026" || normalized === "pro_teams") && subscription_status === "active") {
     const effectiveLimit = (planDef.proofOfWorkPerPeriod ?? 0) + extra_lessons;
-    return { plan, limit: effectiveLimit, isAdmin: false };
+    return { plan: normalized, limit: effectiveLimit, isAdmin: false };
   }
 
-  const freeBaseLimit = planDef.proofOfWorkPerPeriod ?? 1;
-  return { plan: "free", limit: freeBaseLimit + extra_lessons, isAdmin: false };
+  // Inactive / expired / unknown — no freemium PoW pool
+  return { plan: "inactive", limit: 0, isAdmin: false };
 }
 
 /**
@@ -470,10 +478,13 @@ export function canSubmitProofOfWork(
     return { allowed: true, plan, used: proofOfWorkCount, limit: null, isAdmin: false };
   }
 
-  if (proofOfWorkCount >= limit) {
+  if (limit <= 0 || proofOfWorkCount >= limit) {
     return {
       allowed: false,
-      reason: `You've used all ${limit} Proof-of-Work submissions this month. Buy additional submissions or upgrade to continue.`,
+      reason:
+        limit <= 0
+          ? "No active subscription. Start a trial or upgrade at /pricing to submit Proof-of-Work."
+          : `You've used all ${limit} Proof-of-Work submissions this month. Upgrade your plan volume to continue.`,
       plan,
       used: proofOfWorkCount,
       limit,
@@ -492,23 +503,24 @@ export function canCreateWorkspace(
   profile: UserProfile,
   workspaceCount: number
 ): WorkspaceCheckResult {
-  const { plan, is_admin } = profile;
+  const plan = normalizePlanId(profile.plan);
+  const { is_admin } = profile;
 
   if (is_admin) {
     return { allowed: true, plan, used: workspaceCount, limit: null, isAdmin: true };
   }
 
-  const limit = getWorkspaceLimit(profile);
+  const limit = getWorkspaceLimit({ ...profile, plan });
   if (limit === null) {
     return { allowed: true, plan, used: workspaceCount, limit: null, isAdmin: false };
   }
 
-  if (workspaceCount >= limit) {
+  if (limit <= 0 || workspaceCount >= limit) {
     return {
       allowed: false,
       reason:
-        plan === "free"
-          ? "You've reached your free workspace limit. Upgrade or archive a workspace to create another."
+        plan === "inactive"
+          ? "No active subscription. Start a trial or upgrade at /pricing to create a workspace."
           : `You've reached your plan limit of ${limit} Workspaces. Upgrade at /pricing or archive a workspace.`,
       plan,
       used: workspaceCount,

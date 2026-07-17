@@ -3,9 +3,8 @@ import { authenticateRequest, errorResponse } from "@/lib/agent-v2/auth";
 import { createAgentWorkspace } from "@/lib/agent-v2/create-agent-workspace";
 import { parseOpaqueWorkspaceCreateRequest } from "@/lib/agent-v2/opaque-evaluation";
 import { withProofOfWorkApiResponse } from "@/lib/agent-v2/predictive-interruption";
-import { type PlanId } from "@/lib/plans";
 import { checkWorkspaceCreation, workspaceLimitErrorResponse } from "@/lib/workspace-limits";
-import { loadUsageProfile } from "@/lib/usage-metrics";
+import { resolveUserBilling } from "@/lib/organization/resolve-user-billing";
 
 export const runtime = "nodejs";
 
@@ -38,21 +37,16 @@ export async function POST(req: NextRequest) {
   }
 
   if (auth.user_id) {
-    const { profile, error: profileError } = await loadUsageProfile(supabase, auth.user_id);
-    if (profileError || !profile) {
-      return errorResponse(500, "internal_error", profileError || "Profile not found");
+    const billing = await resolveUserBilling(supabase, auth.user_id);
+    if ("error" in billing) {
+      return errorResponse(500, "internal_error", billing.error);
     }
 
-    const workspaceCheck = await checkWorkspaceCreation(supabase, auth.user_id, {
-      plan: (profile.plan || "free") as PlanId,
-      is_admin: profile.is_admin ?? false,
-      extra_lessons: profile.extra_lessons ?? 0,
-      extra_workspaces: profile.extra_workspaces ?? 0,
-      subscription_status: profile.subscription_status ?? "inactive",
-      current_period_end: profile.current_period_end ?? null,
-      token_tier: profile.token_tier ?? null,
-      token_validity_expires_at: profile.token_validity_expires_at ?? null,
-    });
+    const workspaceCheck = await checkWorkspaceCreation(
+      supabase,
+      auth.user_id,
+      billing.userProfile
+    );
 
     if (!workspaceCheck.allowed) {
       const payload = workspaceLimitErrorResponse(workspaceCheck);

@@ -32,7 +32,7 @@ function normalizeAdminProfile(row: Record<string, unknown>): AdminProfileRow {
     id: String(row.id),
     username: (row.username as string | null) ?? null,
     created_at: String(row.created_at ?? ""),
-    plan: String(row.plan ?? "free"),
+    plan: String(row.plan ?? "inactive"),
     is_admin: Boolean(row.is_admin),
     extra_lessons: Number(row.extra_lessons ?? 0),
     extra_workspaces: Number(row.extra_workspaces ?? 0),

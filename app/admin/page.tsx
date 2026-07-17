@@ -22,13 +22,12 @@ interface Stats {
   totalEvidence: number;
   activeSubscriptions: number;
   tierBreakdown: {
-    free: number;
+    inactive: number;
     trial: number;
     regular_2026: number;
     pro_teams: number;
     api_metered: number;
-    legacy: number;
-    inactive: number;
+    trial_expired: number;
   };
 }
 
@@ -288,13 +287,12 @@ export default function AdminPage() {
         <div className="mb-8 rounded-lg border border-neutral-800 bg-neutral-900/50 p-4">
           <h2 className="mb-3 text-sm font-medium text-white">Plan breakdown</h2>
           <div className="flex flex-wrap gap-4 text-sm text-neutral-400">
-            <span>Free: {stats.tierBreakdown.free}</span>
+            <span>Inactive: {stats.tierBreakdown.inactive}</span>
             <span className="text-emerald-400">Trial: {stats.tierBreakdown.trial}</span>
             <span className="text-blue-400">Individual: {stats.tierBreakdown.regular_2026}</span>
             <span className="text-purple-400">Teams: {stats.tierBreakdown.pro_teams}</span>
             <span className="text-amber-200">API Metered: {stats.tierBreakdown.api_metered}</span>
-            <span className="text-amber-300">Legacy: {stats.tierBreakdown.legacy}</span>
-            <span>Inactive: {stats.tierBreakdown.inactive}</span>
+            <span className="text-orange-300">Trial expired: {stats.tierBreakdown.trial_expired}</span>
           </div>
         </div>
       )}

@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { PlanId } from "@/lib/plans";
+import { demoteExpiredTrialProfile, type PlanId } from "@/lib/plans";
 
 export type UsageProfileRow = {
   plan: PlanId | string;
@@ -17,9 +17,42 @@ export type UsageProfileRow = {
 const PROFILE_FIELDS =
   "plan, is_admin, extra_lessons, extra_workspaces, subscription_status, current_period_end, token_tier, token_validity_expires_at, organization_id, is_org_admin";
 
+/**
+ * If the user is on an active trial whose period ended, persist plan=inactive + trial_expired.
+ * Idempotent. Returns the (possibly updated) profile fields for access checks.
+ */
+export async function ensureTrialExpiryApplied<
+  T extends {
+    plan: string;
+    subscription_status: string;
+    current_period_end: string | null;
+  },
+>(supabase: SupabaseClient, userId: string, profile: T): Promise<T> {
+  const patch = demoteExpiredTrialProfile(profile);
+  if (!patch) return profile;
+
+  const { error } = await supabase
+    .from("profiles")
+    .update({
+      plan: patch.plan,
+      subscription_status: patch.subscription_status,
+    })
+    .eq("id", userId)
+    .eq("plan", "trial");
+
+  if (error) {
+    console.error("[usage-metrics] trial expiry demotion failed:", error);
+    // Still return demoted view so access is denied this request
+    return { ...profile, ...patch };
+  }
+
+  return { ...profile, ...patch };
+}
+
 export async function loadUsageProfile(
   supabase: SupabaseClient,
-  userId: string
+  userId: string,
+  options?: { applyTrialExpiry?: boolean }
 ): Promise<{ profile: UsageProfileRow | null; error: string | null }> {
   const { data, error } = await supabase
     .from("profiles")
@@ -31,12 +64,18 @@ export async function loadUsageProfile(
     return { profile: null, error: error?.message || "Profile not found" };
   }
 
+  let profile = {
+    ...data,
+    plan: data.plan || "inactive",
+    extra_workspaces: data.extra_workspaces ?? 0,
+  } as UsageProfileRow;
+
+  if (options?.applyTrialExpiry !== false) {
+    profile = await ensureTrialExpiryApplied(supabase, userId, profile);
+  }
+
   return {
-    profile: {
-      ...data,
-      plan: data.plan || "free",
-      extra_workspaces: data.extra_workspaces ?? 0,
-    } as UsageProfileRow,
+    profile,
     error: null,
   };
 }

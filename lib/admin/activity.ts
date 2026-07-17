@@ -166,7 +166,7 @@ export function rankActiveUsers(
         userId,
         username: profile?.username ?? null,
         email: profile?.email ?? null,
-        plan: profile?.plan ?? "free",
+        plan: profile?.plan ?? "inactive",
         lastActiveAt: stats.lastActiveAt,
         ileSessions: stats.ileSessions,
         tapSessions: stats.tapSessions,

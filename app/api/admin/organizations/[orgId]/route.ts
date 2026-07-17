@@ -15,10 +15,12 @@ export async function GET(
     if ("error" in auth) return auth.error;
     const { adminClient, user } = auth;
 
-    // Get organization
+    // Get organization (never expose xai_api_key_ciphertext)
     const { data: organization, error: orgError } = await adminClient
       .from("organizations")
-      .select("*")
+      .select(
+        "id, name, slug, metadata, kind, billing_mode, plan, subscription_status, current_period_end, extra_lessons, stripe_customer_id, stripe_subscription_id, billing_email, archived_at, xai_api_key_id, xai_api_key_name, xai_api_key_status, xai_api_key_error, xai_api_key_created_at, xai_collection_id, xai_collection_name, xai_collection_status, xai_collection_error, created_at, updated_at"
+      )
       .eq("id", orgId)
       .single();
 
@@ -99,7 +101,18 @@ export async function PUT(
     const { adminClient, user } = auth;
 
     const body = await request.json();
-    const { name, slug, metadata } = body;
+    const {
+      name,
+      slug,
+      metadata,
+      plan,
+      billing_mode,
+      extra_lessons,
+      billing_email,
+      kind,
+      subscription_status,
+      current_period_end,
+    } = body;
 
     const updateData: Record<string, unknown> = { updated_at: new Date().toISOString() };
     
@@ -115,6 +128,60 @@ export async function PUT(
       updateData.slug = slug;
     }
     if (metadata !== undefined) updateData.metadata = metadata;
+    if (billing_email !== undefined) updateData.billing_email = billing_email;
+    if (kind !== undefined) {
+      if (!["personal", "team", "partner"].includes(kind)) {
+        return NextResponse.json({ error: "Invalid kind" }, { status: 400 });
+      }
+      updateData.kind = kind;
+    }
+    if (billing_mode !== undefined) {
+      if (!["subscription", "partner"].includes(billing_mode)) {
+        return NextResponse.json({ error: "Invalid billing_mode" }, { status: 400 });
+      }
+      updateData.billing_mode = billing_mode;
+    }
+    if (typeof extra_lessons === "number" && extra_lessons >= 0) {
+      updateData.extra_lessons = extra_lessons;
+    }
+    if (subscription_status !== undefined) {
+      updateData.subscription_status = subscription_status;
+    }
+    if (current_period_end !== undefined) {
+      updateData.current_period_end = current_period_end;
+    }
+
+    // Assign tier using same semantics as user admin tiers
+    if (plan !== undefined) {
+      const { buildTierUpdate, isAdminTier } = await import("@/lib/admin/tiers");
+      if (!isAdminTier(plan)) {
+        return NextResponse.json({ error: "Invalid plan tier" }, { status: 400 });
+      }
+      const tierPatch = buildTierUpdate(plan);
+      updateData.plan = tierPatch.plan;
+      const mode =
+        billing_mode ??
+        (
+          await adminClient
+            .from("organizations")
+            .select("billing_mode")
+            .eq("id", orgId)
+            .single()
+        ).data?.billing_mode;
+
+      if (mode === "partner" && plan !== "inactive") {
+        updateData.subscription_status = "active";
+        updateData.current_period_end = null;
+        updateData.extra_lessons =
+          typeof extra_lessons === "number" ? extra_lessons : tierPatch.extra_lessons;
+      } else {
+        updateData.subscription_status = tierPatch.subscription_status;
+        updateData.current_period_end = tierPatch.current_period_end;
+        if (typeof extra_lessons !== "number") {
+          updateData.extra_lessons = tierPatch.extra_lessons;
+        }
+      }
+    }
 
     // If changing slug, check it's not taken
     if (slug) {
@@ -134,7 +201,9 @@ export async function PUT(
       .from("organizations")
       .update(updateData)
       .eq("id", orgId)
-      .select()
+      .select(
+        "id, name, slug, metadata, kind, billing_mode, plan, subscription_status, current_period_end, extra_lessons, stripe_customer_id, stripe_subscription_id, billing_email, archived_at, xai_api_key_id, xai_api_key_name, xai_api_key_status, xai_api_key_error, xai_api_key_created_at, xai_collection_id, xai_collection_name, xai_collection_status, xai_collection_error, created_at, updated_at"
+      )
       .single();
 
     if (error) {

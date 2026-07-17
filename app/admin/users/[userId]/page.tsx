@@ -8,10 +8,9 @@ import { AdminError, AdminLoading } from "@/components/admin/AdminStatus";
 import { PowDetailsPanel } from "@/components/admin/PowDetailsPanel";
 import { useAdminGuard } from "@/components/admin/useAdminGuard";
 import {
-  ADMIN_TIER_OPTIONS,
   adminTierSelectValue,
   describePlanLimits,
-  isGrandfatheredPlan,
+  statusLabel,
   tierChangeWarning,
   tierLabel,
   type AdminTierId,
@@ -103,9 +102,15 @@ export default function UserDetailPage() {
     switch (status) {
       case "active":
         return "bg-green-900/30 text-green-400";
+      case "trial_expired":
+        return "bg-orange-900/30 text-orange-300";
+      case "inactive":
+      case "canceled":
+        return "bg-red-900/30 text-red-400";
       case "completed":
         return "bg-blue-900/30 text-blue-400";
       case "paused":
+      case "past_due":
         return "bg-yellow-900/30 text-yellow-400";
       default:
         return "bg-neutral-700 text-neutral-400";
@@ -180,8 +185,7 @@ export default function UserDetailPage() {
             <div className="text-xs text-neutral-500">Plan</div>
             <div className="space-y-2">
               <AdminTierSelect
-                value={user ? adminTierSelectValue(user) : "free"}
-                lockedLabel={user && isGrandfatheredPlan(user) ? tierLabel(user.plan) : undefined}
+                value={user ? adminTierSelectValue(user) : "inactive"}
                 disabled={tierUpdating || !user}
                 onChange={applyTierChange}
                 className="rounded border border-neutral-700 bg-neutral-900 px-2 py-1 text-xs text-neutral-200"
@@ -189,29 +193,10 @@ export default function UserDetailPage() {
               {user && (
                 <p className="text-[11px] text-neutral-500">
                   {describePlanLimits(user.plan, user.extra_lessons, user.extra_workspaces ?? 0)}
+                  {user.plan !== adminTierSelectValue(user) && user.subscription_status !== "active"
+                    ? ` · stored plan ${tierLabel(user.plan)}`
+                    : ""}
                 </p>
-              )}
-              {user && isGrandfatheredPlan(user) && (
-                <div className="flex items-center gap-2">
-                  <span className="text-[11px] text-amber-300">Migrate to</span>
-                  <select
-                    disabled={tierUpdating}
-                    defaultValue=""
-                    onChange={(e) => {
-                      const tier = e.target.value as AdminTierId;
-                      if (tier) void applyTierChange(tier);
-                      e.target.value = "";
-                    }}
-                    className="rounded border border-neutral-700 bg-neutral-900 px-2 py-1 text-xs text-neutral-200"
-                  >
-                    <option value="">Select tier…</option>
-                    {ADMIN_TIER_OPTIONS.filter((t) => t.id !== "free").map((tier) => (
-                      <option key={tier.id} value={tier.id}>
-                        {tier.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
               )}
             </div>
           </div>
@@ -220,7 +205,7 @@ export default function UserDetailPage() {
             <span
               className={`rounded px-2 py-0.5 text-xs ${getStatusColor(user?.subscription_status || "")}`}
             >
-              {user?.subscription_status}
+              {statusLabel(user?.subscription_status || "inactive")}
             </span>
           </div>
           <div>
@@ -228,28 +213,35 @@ export default function UserDetailPage() {
             <div className="text-neutral-200">{user?.extra_workspaces ?? 0}</div>
           </div>
           <div>
-            <div className="text-xs text-neutral-500">Extra Proof-of-Work submissions</div>
-            <div className="flex items-center gap-2">
-              <span className="text-neutral-200">{user?.extra_lessons ?? 0}</span>
-              {[1, 10, 100].map((amount) => (
-                <button
-                  key={amount}
-                  onClick={async () => {
-                    const newTotal = (user?.extra_lessons ?? 0) + amount;
-                    const res = await fetch("/api/admin/users", {
-                      method: "PUT",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({ userId: user?.id, extra_lessons: newTotal }),
-                    });
-                    if (res.ok) {
-                      setUser((prev) => (prev ? { ...prev, extra_lessons: newTotal } : prev));
-                    }
-                  }}
-                  className="rounded border border-green-800/50 bg-green-900/30 px-1.5 py-0.5 text-[10px] font-medium text-green-400 transition-colors hover:bg-green-900/50"
-                >
-                  +{amount}
-                </button>
-              ))}
+            <div className="text-xs text-neutral-500">PoW volume overage</div>
+            <div className="flex flex-col gap-1">
+              <div className="flex items-center gap-2">
+                <span className="text-neutral-200">{user?.extra_lessons ?? 0}</span>
+                <span className="text-[10px] text-neutral-600">above plan base</span>
+                {[1, 10, 100].map((amount) => (
+                  <button
+                    key={amount}
+                    onClick={async () => {
+                      const newTotal = (user?.extra_lessons ?? 0) + amount;
+                      const res = await fetch("/api/admin/users", {
+                        method: "PUT",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ userId: user?.id, extra_lessons: newTotal }),
+                      });
+                      if (res.ok) {
+                        setUser((prev) => (prev ? { ...prev, extra_lessons: newTotal } : prev));
+                      }
+                    }}
+                    className="rounded border border-green-800/50 bg-green-900/30 px-1.5 py-0.5 text-[10px] font-medium text-green-400 transition-colors hover:bg-green-900/50"
+                    title="Support grant (volume overage is normally set by Stripe subscription volume)"
+                  >
+                    +{amount}
+                  </button>
+                ))}
+              </div>
+              <p className="text-[10px] text-neutral-600">
+                From volume tiers or support grants — not a customer pack product.
+              </p>
             </div>
           </div>
           <div>

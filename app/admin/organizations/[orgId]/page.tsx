@@ -14,6 +14,18 @@ interface Organization {
   created_at: string;
   updated_at: string;
   metadata: Record<string, unknown>;
+  kind?: string;
+  billing_mode?: string;
+  plan?: string;
+  subscription_status?: string;
+  current_period_end?: string | null;
+  extra_lessons?: number;
+  billing_email?: string | null;
+  xai_api_key_id?: string | null;
+  xai_api_key_name?: string | null;
+  xai_api_key_status?: string | null;
+  xai_collection_id?: string | null;
+  xai_collection_status?: string | null;
 }
 
 interface Member {
@@ -59,6 +71,10 @@ export default function OrganizationDetailPage() {
   const [showInviteModal, setShowInviteModal] = useState(false);
   
   const [updatingMember, setUpdatingMember] = useState<string | null>(null);
+  const [savingBilling, setSavingBilling] = useState(false);
+  const [editPlan, setEditPlan] = useState("inactive");
+  const [editBillingMode, setEditBillingMode] = useState("subscription");
+  const [editExtraLessons, setEditExtraLessons] = useState(0);
 
   useEffect(() => {
     checkAdminAndLoad();
@@ -105,6 +121,9 @@ export default function OrganizationDetailPage() {
         setInvites(data.invites || []);
         setEditName(data.organization.name);
         setEditSlug(data.organization.slug);
+        setEditPlan(data.organization.plan || "inactive");
+        setEditBillingMode(data.organization.billing_mode || "subscription");
+        setEditExtraLessons(data.organization.extra_lessons ?? 0);
       }
     } catch (err) {
       console.error("Load organization error:", err);
@@ -138,6 +157,32 @@ export default function OrganizationDetailPage() {
       alert("Failed to save changes");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleSaveBilling = async () => {
+    setSavingBilling(true);
+    try {
+      const res = await fetch(`/api/admin/organizations/${orgId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          plan: editPlan,
+          billing_mode: editBillingMode,
+          extra_lessons: editExtraLessons,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        alert(data.error || "Failed to update billing");
+      } else {
+        setOrganization(data.organization);
+      }
+    } catch (err) {
+      console.error("Save billing error:", err);
+      alert("Failed to save billing");
+    } finally {
+      setSavingBilling(false);
     }
   };
 
@@ -305,6 +350,82 @@ export default function OrganizationDetailPage() {
         <Link href="/admin/organizations" className="text-neutral-400 hover:text-white text-sm">
           &larr; Back to Organizations
         </Link>
+      </div>
+
+      {/* Billing / xAI resources */}
+      <div className="bg-neutral-900/50 border border-neutral-800 rounded-lg p-6 mb-6 space-y-4">
+        <h2 className="text-lg font-medium text-white">Billing &amp; xAI</h2>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div>
+            <label className="block text-sm text-neutral-400 mb-2">Plan tier</label>
+            <select
+              value={editPlan}
+              onChange={(e) => setEditPlan(e.target.value)}
+              className="w-full px-3 py-2 bg-neutral-800 border border-neutral-700 rounded-lg text-white"
+            >
+              <option value="inactive">Inactive</option>
+              <option value="trial">3-Day Trial</option>
+              <option value="regular_2026">Individual</option>
+              <option value="pro_teams">Pro / Teams</option>
+              <option value="api_metered">API Metered</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm text-neutral-400 mb-2">Billing mode</label>
+            <select
+              value={editBillingMode}
+              onChange={(e) => setEditBillingMode(e.target.value)}
+              className="w-full px-3 py-2 bg-neutral-800 border border-neutral-700 rounded-lg text-white"
+            >
+              <option value="subscription">Subscription (Stripe)</option>
+              <option value="partner">Partner (bypass Stripe)</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm text-neutral-400 mb-2">PoW volume overage</label>
+            <input
+              type="number"
+              min={0}
+              value={editExtraLessons}
+              onChange={(e) => setEditExtraLessons(Number(e.target.value) || 0)}
+              className="w-full px-3 py-2 bg-neutral-800 border border-neutral-700 rounded-lg text-white"
+            />
+          </div>
+        </div>
+        <div className="flex flex-wrap gap-4 text-sm text-neutral-400">
+          <span>
+            Kind: <span className="text-neutral-200">{organization.kind || "team"}</span>
+          </span>
+          <span>
+            Status:{" "}
+            <span className={tierColor(organization.plan || "inactive")}>
+              {tierLabel(organization.plan || "inactive")} / {organization.subscription_status || "—"}
+            </span>
+          </span>
+          <span>
+            xAI key:{" "}
+            <span className="text-neutral-200 font-mono text-xs">
+              {organization.xai_api_key_status || "pending"}
+              {organization.xai_api_key_name ? ` (${organization.xai_api_key_name})` : ""}
+            </span>
+          </span>
+          <span>
+            Collection:{" "}
+            <span className="text-neutral-200 font-mono text-xs">
+              {organization.xai_collection_status || "pending"}
+              {organization.xai_collection_id
+                ? ` · ${organization.xai_collection_id.slice(0, 12)}…`
+                : ""}
+            </span>
+          </span>
+        </div>
+        <button
+          onClick={handleSaveBilling}
+          disabled={savingBilling}
+          className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-lg transition-colors"
+        >
+          {savingBilling ? "Saving…" : "Save billing"}
+        </button>
       </div>
 
       {/* Organization Header */}

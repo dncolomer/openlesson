@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { ensurePersonalOrganization } from "@/lib/organization/ensure-personal-org";
 
 function safeRedirectPath(next: string | null) {
   if (!next || !next.startsWith("/") || next.startsWith("//")) return "/dashboard";
@@ -52,6 +53,14 @@ export async function GET(request: Request) {
             .from("organization_guest_users")
             .update({ status: "claimed", claimed_by_user_id: user.id, claimed_at: new Date().toISOString() })
             .eq("id", guest.id);
+        } else {
+          // Self-serve users get a personal org (idempotent)
+          await ensurePersonalOrganization(admin, user.id, {
+            email,
+            username: user.user_metadata?.username ?? null,
+          }).catch((err) => {
+            console.error("[auth/callback] ensurePersonalOrganization failed:", err);
+          });
         }
       }
       return NextResponse.redirect(new URL(next, requestUrl.origin));

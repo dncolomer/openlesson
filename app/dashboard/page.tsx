@@ -9,11 +9,12 @@ import { getSessions, deleteSession, restartSession, getWorkspaces, getIlePostSe
 import { DEFAULT_PROMPTS, PROMPT_META, type PromptKey, type UserPrompts } from "@/lib/prompts";
 import { useI18n } from "@/lib/i18n";
 import { formatPlanMonthlyPrice, hasAgentApiKeyPlan, type PlanId } from "@/lib/plans";
+import { dashboardUsesAgenticKeys } from "@/lib/dashboard-agent-access";
 import { InsightsDashboardTab } from "@/components/InsightsDashboardTab";
 import { WorkspaceDashboardCard } from "@/components/WorkspaceDashboardCard";
 import { buildMcpClientConfig } from "@/lib/agent-v2/mcp-proof-of-work-catalog";
 import { IntegrationQuickAccess } from "@/components/IntegrationQuickAccess";
-import { DEFAULT_MODEL } from "@/lib/xai-client";
+import { DEFAULT_MODEL } from "@/lib/xai-models";
 import { LoadingStatusMessage } from "@/components/LoadingStatusMessage";
 
 const DASHBOARD_BACKGROUND = "/aesthetics/Greco-futurism/HHnTrgVaQAAP-_3.jpeg";
@@ -62,7 +63,6 @@ export default function DashboardPage() {
     email?: string;
     plan?: string;
     isAdmin?: boolean;
-    extraLessons?: number;
   } | null>(null);
 
   // Usage tab
@@ -76,11 +76,11 @@ export default function DashboardPage() {
     proofOfWorkLimit: number | null;
     workspacesUsed: number;
     workspacesLimit: number | null;
-    extraLessons: number;
     periodEnd: string | null;
     subscriptionStatus: string;
     organization: OrgUsageSummary | null;
     isAdmin: boolean;
+    canUseAgentApi?: boolean;
     apiPowCallsUsed?: number;
     apiMeteredInvoice?: {
       platformCents: number;
@@ -163,16 +163,15 @@ export default function DashboardPage() {
       // Fetch profile
       const { data: profile } = await supabase
         .from("profiles")
-        .select("metadata, plan, is_admin, extra_lessons, subscription_status, current_period_end")
+        .select("metadata, plan, is_admin, subscription_status, current_period_end")
         .eq("id", authUser.id)
         .single();
 
       if (profile) {
         setUser({
           email: authUser.email,
-          plan: profile.plan || "free",
+          plan: profile.plan || "inactive",
           isAdmin: profile.is_admin || false,
-          extraLessons: profile.extra_lessons || 0,
         });
 
         if (profile.metadata?.prompts) {
@@ -220,8 +219,9 @@ export default function DashboardPage() {
             throw new Error(`HTTP ${usageRes.status}`);
           }
           const usageResult = await usageRes.json();
+          const orgResolvedPlan = (usageResult.plan || "inactive") as string;
           setUsageData({
-            plan: usageResult.plan || profile?.plan || "free",
+            plan: orgResolvedPlan,
             used: usageResult.used ?? 0,
             personalUsed: usageResult.personalUsed ?? usageResult.used ?? 0,
             limit: usageResult.isAdmin ? null : (usageResult.limit ?? null),
@@ -230,14 +230,26 @@ export default function DashboardPage() {
             proofOfWorkLimit: usageResult.isAdmin ? null : (usageResult.proofOfWorkLimit ?? null),
             workspacesUsed: usageResult.workspacesUsed ?? 0,
             workspacesLimit: usageResult.isAdmin ? null : (usageResult.workspacesLimit ?? null),
-            extraLessons: profile?.extra_lessons ?? 0,
-            periodEnd: profile?.current_period_end ?? null,
-            subscriptionStatus: profile?.subscription_status ?? "inactive",
+            periodEnd: usageResult.periodEnd ?? profile?.current_period_end ?? null,
+            subscriptionStatus:
+              usageResult.subscriptionStatus ?? profile?.subscription_status ?? "inactive",
             organization: usageResult.organization ?? null,
             isAdmin: usageResult.isAdmin === true || profile?.is_admin === true,
+            canUseAgentApi:
+              usageResult.canUseAgentApi === true ||
+              usageResult.isAdmin === true ||
+              profile?.is_admin === true ||
+              hasAgentApiKeyPlan(orgResolvedPlan),
             apiPowCallsUsed: usageResult.apiPowCallsUsed ?? 0,
             apiMeteredInvoice: usageResult.apiMeteredInvoice ?? null,
           });
+          // Keep user.plan aligned with org-resolved entitlement (not demoted personal plan)
+          setUser((prev) => ({
+            ...prev,
+            email: authUser.email,
+            plan: orgResolvedPlan,
+            isAdmin: usageResult.isAdmin === true || profile?.is_admin === true || prev?.isAdmin,
+          }));
         } catch (err) {
           console.error("Failed to load usage data:", err);
         }
@@ -382,7 +394,15 @@ export default function DashboardPage() {
     setUserPrompts({});
   };
 
-  const usesAgenticV2Keys = hasAgentApiKeyPlan(user?.plan) || user?.isAdmin;
+  // Prefer org-resolved plan from /api/check-usage (usageData), not demoted profiles.plan
+  const effectivePlan = usageData?.plan || user?.plan || "inactive";
+  const usesAgenticV2Keys = dashboardUsesAgenticKeys({
+    usagePlan: usageData?.plan,
+    canUseAgentApi: usageData?.canUseAgentApi,
+    usageIsAdmin: usageData?.isAdmin,
+    userIsAdmin: user?.isAdmin,
+    userPlan: user?.plan,
+  });
 
   const mcpOrigin =
     typeof window !== "undefined" ? window.location.origin : "https://uncertain.systems";
@@ -405,7 +425,7 @@ export default function DashboardPage() {
   };
 
   const handleCreateApiKey = async () => {
-    if (!hasAgentApiKeyPlan(user?.plan) && !user?.isAdmin) {
+    if (!usesAgenticV2Keys) {
       alert(t('dashboard.apiKeysProOnly'));
       return;
     }
@@ -468,17 +488,14 @@ export default function DashboardPage() {
     if (plan === "pro_teams") return "Pro / Teams";
     if (plan === "api_metered") return "API Metered";
     if (plan === "regular_2026") return "Individual";
-    if (plan === "pro") return "Pro";
-    if (plan === "regular") return "Individual (legacy)";
-    if (plan === "free") return "Free";
+    if (plan === "trial") return "3-Day Trial";
+    if (plan === "inactive") return "Inactive";
     return plan;
   }
 
   function planPriceLabel(plan: string, isAdmin?: boolean) {
     if (isAdmin) return "Unlimited platform access";
-    if (plan === "pro") return t("dashboard.pricePro");
-    if (plan === "regular") return t("dashboard.priceRegular");
-    if (plan === "free") return t("dashboard.priceFree");
+    if (plan === "inactive") return t("dashboard.priceFree");
     return formatPlanMonthlyPrice(plan as PlanId);
   }
 
@@ -956,17 +973,17 @@ export default function DashboardPage() {
                         <span className="rounded-full border border-amber-500/30 bg-amber-500/10 px-2.5 py-1 text-[10px] uppercase tracking-[1.4px] text-amber-100/90">
                           Metered
                         </span>
-                      ) : usageData.plan === "pro" ? (
-                        <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[10px] uppercase tracking-[1.4px] text-neutral-400">
-                          {t("dashboard.pro")}
+                      ) : usageData.plan === "trial" ? (
+                        <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 text-[10px] uppercase tracking-[1.4px] text-emerald-100/90">
+                          Trial
                         </span>
-                      ) : usageData.plan === "regular" || usageData.plan === "regular_2026" ? (
+                      ) : usageData.plan === "regular_2026" ? (
                         <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[10px] uppercase tracking-[1.4px] text-neutral-400">
                           {t("dashboard.regular")}
                         </span>
                       ) : (
                         <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[10px] uppercase tracking-[1.4px] text-neutral-400">
-                          {t("dashboard.free")}
+                          Inactive
                         </span>
                       )}
                     </div>
@@ -974,8 +991,12 @@ export default function DashboardPage() {
                       {planDisplayName(usageData.plan, usageData.isAdmin)}
                     </div>
                     <p className="mt-2 text-sm text-neutral-500">{planPriceLabel(usageData.plan, usageData.isAdmin)}</p>
-                    {!usageData.isAdmin && usageData.subscriptionStatus !== "active" && usageData.plan !== "free" && (
-                      <p className="mt-3 text-xs text-neutral-600">{t("dashboard.subscriptionNotActive")}</p>
+                    {!usageData.isAdmin && usageData.subscriptionStatus !== "active" && (
+                      <p className="mt-3 text-xs text-neutral-600">
+                        {usageData.subscriptionStatus === "trial_expired"
+                          ? "Your 3-day trial has ended. Upgrade to continue."
+                          : t("dashboard.subscriptionNotActive")}
+                      </p>
                     )}
                   </div>
 
@@ -1040,26 +1061,34 @@ export default function DashboardPage() {
                           })}
                         </div>
                         <p className="mt-2 text-sm text-neutral-500">
-                          {usageData.plan === "pro"
-                            ? t("dashboard.unlimitedContinue")
-                            : usageData.plan === "api_metered"
+                          {usageData.plan === "api_metered"
                             ? "API usage is tallied through this date and added to your monthly invoice."
                             : usageData.plan === "pro_teams"
                             ? "Organization Proof-of-Work pool resets each billing period."
+                            : usageData.plan === "trial"
+                            ? "Trial access ends on this date."
                             : t("dashboard.regularResetDesc")}
                         </p>
                       </>
                     ) : (
                       <>
                         <div className="mt-4 text-lg font-medium text-white">
-                          {usageData.plan === "free" ? t("dashboard.noSubscription") : t("dashboard.inactive")}
+                          {usageData.subscriptionStatus === "trial_expired"
+                            ? "Trial ended"
+                            : t("dashboard.noSubscription")}
                         </div>
                         <p className="mt-2 text-sm text-neutral-500">
-                          {usageData.plan === "free" ? t("dashboard.freeSessionAvailable") : t("dashboard.subscriptionNotActive")}
+                          {usageData.subscriptionStatus === "trial_expired"
+                            ? "Your 3-day trial has ended. Upgrade at pricing to continue."
+                            : t("dashboard.subscriptionNotActive")}
                         </p>
                       </>
                     )}
-                    {!usageData.isAdmin && (usageData.plan === "free" || usageData.plan === "regular" || usageData.plan === "regular_2026") && (
+                    {!usageData.isAdmin &&
+                      (usageData.plan === "inactive" ||
+                        usageData.subscriptionStatus === "trial_expired" ||
+                        usageData.plan === "regular_2026" ||
+                        usageData.plan === "trial") && (
                       <Link
                         href="/pricing"
                         className="mt-4 inline-flex text-sm text-neutral-300 underline decoration-neutral-600 underline-offset-4 transition hover:text-white"
@@ -1201,9 +1230,9 @@ export default function DashboardPage() {
                   ? t("dashboard.proofOfWorkApiDesc")
                   : t("dashboard.apiExperimentalDesc")}
               </p>
-              {!hasAgentApiKeyPlan(user?.plan) && !user?.isAdmin && (
+              {!usesAgenticV2Keys && (
                 <div className="rounded-md border border-neutral-800 bg-black/40 p-4 text-sm text-neutral-400">
-                  {user?.plan === "regular" || user?.plan === "regular_2026"
+                  {effectivePlan === "regular_2026"
                     ? t("dashboard.proofOfWorkApiTeamsRequired")
                     : `${t("dashboard.apiKeysAvailableOnPro")} `}
                   <Link href="/pricing" className="text-neutral-200 underline decoration-neutral-600 underline-offset-4 hover:text-white">

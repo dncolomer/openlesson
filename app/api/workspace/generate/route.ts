@@ -4,9 +4,8 @@ import { callXaiJSON, callXaiText, userMessage, DEFAULT_MODEL } from "@/lib/xai-
 import type { Message, MessageContent } from "@/lib/xai-client";
 import { uploadFileToXAI, deleteFileFromXAI } from "@/lib/xai-files";
 import { callXaiResponses, type ResponsesInputContent } from "@/lib/xai-client";
-import { type PlanId } from "@/lib/plans";
 import { checkWorkspaceCreation, workspaceLimitErrorResponse } from "@/lib/workspace-limits";
-import { loadUsageProfile } from "@/lib/usage-metrics";
+import { resolveUserBilling } from "@/lib/organization/resolve-user-billing";
 import {
   getInitialChaptersBand,
   resolveInitialChaptersFromBody,
@@ -109,24 +108,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Topic is required" }, { status: 400 });
     }
 
-    const { profile, error: profileError } = await loadUsageProfile(supabase, user.id);
-    if (profileError || !profile) {
-      return NextResponse.json(
-        { error: profileError || "Profile not found" },
-        { status: 500 }
-      );
+    const billing = await resolveUserBilling(supabase, user.id);
+    if ("error" in billing) {
+      return NextResponse.json({ error: billing.error }, { status: 500 });
     }
 
-    const workspaceCheck = await checkWorkspaceCreation(supabase, user.id, {
-      plan: (profile.plan || "free") as PlanId,
-      is_admin: profile.is_admin ?? false,
-      extra_lessons: profile.extra_lessons ?? 0,
-      extra_workspaces: profile.extra_workspaces ?? 0,
-      subscription_status: profile.subscription_status ?? "inactive",
-      current_period_end: profile.current_period_end ?? null,
-      token_tier: profile.token_tier ?? null,
-      token_validity_expires_at: profile.token_validity_expires_at ?? null,
-    });
+    const workspaceCheck = await checkWorkspaceCreation(
+      supabase,
+      user.id,
+      billing.userProfile
+    );
 
     if (!workspaceCheck.allowed) {
       return NextResponse.json(workspaceLimitErrorResponse(workspaceCheck), { status: 403 });

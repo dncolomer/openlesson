@@ -7,6 +7,7 @@ import {
   upsertPendingCheckoutFromSession,
 } from "@/lib/pending-checkout";
 import { emailFromCheckoutSession, isGuestCheckoutPriceType } from "@/lib/stripe-checkout";
+import { ensurePersonalOrganization } from "@/lib/organization/ensure-personal-org";
 
 export const runtime = "nodejs";
 
@@ -87,6 +88,11 @@ export async function POST(request: NextRequest) {
         metadata: { supabase_user_id: created.user.id },
       });
     }
+
+    // Personal org (copies claimed plan onto org when present)
+    await ensurePersonalOrganization(admin, created.user.id, { email }).catch((err) => {
+      console.error("[register] ensurePersonalOrganization failed:", err);
+    });
 
     return NextResponse.json({
       ok: true,

@@ -52,21 +52,22 @@ export async function GET() {
       ].filter((id): id is string => Boolean(id))
     ).size;
 
-    const tierBreakdown = {
-      free: 0,
+    const tierBreakdown: Record<string, number> = {
+      inactive: 0,
       trial: 0,
       regular_2026: 0,
       pro_teams: 0,
       api_metered: 0,
-      legacy: 0,
-      inactive: 0,
+      trial_expired: 0,
     };
 
     let activeSubscriptions = 0;
 
     for (const profile of profilesRes.data || []) {
       const bucket = planFilterBucket(profile);
-      if (bucket !== "all") tierBreakdown[bucket] += 1;
+      if (bucket !== "all") {
+        tierBreakdown[bucket] = (tierBreakdown[bucket] ?? 0) + 1;
+      }
       if (profile.subscription_status === "active") activeSubscriptions += 1;
     }
 

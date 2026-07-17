@@ -42,14 +42,17 @@ export async function POST(req: NextRequest) {
 
   const { data: profile } = await supabaseSession
     .from("profiles")
-    .select("is_org_admin, is_admin, plan, subscription_status")
+    .select("is_org_admin, is_admin, organization_id")
     .eq("id", user.id)
     .single();
 
-  const isTeams =
-    profile?.is_admin === true ||
-    (profile?.plan === "pro_teams" && profile?.subscription_status === "active") ||
-    (profile?.plan === "api_metered" && profile?.subscription_status === "active");
+  let isTeams = profile?.is_admin === true;
+  if (!isTeams) {
+    const { userHasOrgApiAccess } = await import(
+      "@/lib/organization/resolve-user-billing"
+    );
+    isTeams = await userHasOrgApiAccess(supabaseSession, user.id);
+  }
 
   if (!isTeams) {
     return NextResponse.json(

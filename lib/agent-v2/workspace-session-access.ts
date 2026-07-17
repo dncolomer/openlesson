@@ -2,8 +2,46 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { hasProofOfWorkApiAccess } from "@/lib/plans";
+import { resolveBillingEntity, billingEntityHasApiAccess } from "@/lib/billing-entity";
 import type { AuthContext } from "./types";
+
+async function profileHasApiAccess(profile: {
+  plan: string | null;
+  subscription_status: string | null;
+  is_admin: boolean | null;
+  organization_id: string | null;
+} | null): Promise<boolean> {
+  if (!profile) return false;
+  if (profile.is_admin === true) return true;
+
+  let org = null;
+  if (profile.organization_id) {
+    const admin = createAdminClient();
+    const { data: orgRow } = await admin
+      .from("organizations")
+      .select(
+        "id, plan, subscription_status, current_period_end, extra_lessons, billing_mode, archived_at"
+      )
+      .eq("id", profile.organization_id)
+      .maybeSingle();
+    org = orgRow;
+  }
+
+  const entity = resolveBillingEntity(
+    {
+      plan: (profile.plan || "inactive") as import("@/lib/plans").PlanId,
+      is_admin: !!profile.is_admin,
+      extra_lessons: 0,
+      subscription_status: profile.subscription_status || "inactive",
+      current_period_end: null,
+      token_tier: null,
+      token_validity_expires_at: null,
+      organization_id: profile.organization_id,
+    },
+    org
+  );
+  return billingEntityHasApiAccess(entity);
+}
 
 export interface WorkspaceSessionPlan {
   id: string;
@@ -48,9 +86,7 @@ export async function requireTeamsUserSession(): Promise<TeamsUserSession | Next
     .eq("id", user.id)
     .single();
 
-  const hasApiAccess =
-    profile?.is_admin === true ||
-    hasProofOfWorkApiAccess(profile?.plan, profile?.subscription_status);
+  const hasApiAccess = await profileHasApiAccess(profile);
 
   if (!hasApiAccess) {
     return NextResponse.json(
@@ -117,9 +153,7 @@ export async function requireWorkspaceOwnerSession(
     );
   }
 
-  const hasApiAccess =
-    profile?.is_admin === true ||
-    hasProofOfWorkApiAccess(profile?.plan, profile?.subscription_status);
+  const hasApiAccess = await profileHasApiAccess(profile);
 
   if (!hasApiAccess) {
     return NextResponse.json(

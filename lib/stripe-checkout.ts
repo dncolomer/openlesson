@@ -6,21 +6,15 @@ import {
 } from "@/lib/plans";
 
 export type CheckoutPriceType =
-  | "regular"
-  | "pro"
   | "regular_2026"
   | "pro_teams"
   | "api_metered"
   | "trial_3day"
   | "all_you_can_learn"
-  | "extra_lesson"
-  | "extra_proof_of_work"
   | "rabbit_hole_plays";
 
 export function isGuestCheckoutPriceType(priceType: string): boolean {
   return [
-    "regular",
-    "pro",
     "regular_2026",
     "pro_teams",
     "api_metered",
@@ -33,16 +27,14 @@ export function planIdFromPriceType(priceType: string): PlanId {
   if (priceType === "api_metered") return "api_metered";
   if (priceType === "pro_teams") return "pro_teams";
   if (priceType === "regular_2026") return "regular_2026";
-  if (priceType === "pro") return "pro";
-  return "regular";
+  // Unknown / removed legacy price types do not grant a paid plan
+  return "inactive";
 }
 
 export function checkoutModeForPriceType(priceType: CheckoutPriceType): "subscription" | "payment" {
   if (
     priceType === "trial_3day" ||
     priceType === "all_you_can_learn" ||
-    priceType === "extra_lesson" ||
-    priceType === "extra_proof_of_work" ||
     priceType === "rabbit_hole_plays"
   ) {
     return "payment";
@@ -88,6 +80,7 @@ export function emailFromCheckoutSession(session: Stripe.Checkout.Session): stri
   );
 }
 
+/** Billing fields derived from a checkout (applied to organization, not personal plan). */
 export function profileUpdateFromCheckout(params: {
   priceType: string;
   monthlyVolume: number;
@@ -106,7 +99,7 @@ export function profileUpdateFromCheckout(params: {
   const plan = planIdFromPriceType(params.priceType);
   return {
     plan,
-    subscription_status: "active",
+    subscription_status: plan === "inactive" ? "inactive" : "active",
     ...(params.stripeCustomerId ? { stripe_customer_id: params.stripeCustomerId } : {}),
     stripe_subscription_id: params.stripeSubscriptionId ?? null,
     current_period_end: params.currentPeriodEnd ?? null,
@@ -114,3 +107,6 @@ export function profileUpdateFromCheckout(params: {
     extra_workspaces: 0,
   };
 }
+
+/** Alias: checkout billing is org-level; same field shape as historical profile updates. */
+export const orgBillingUpdateFromCheckout = profileUpdateFromCheckout;

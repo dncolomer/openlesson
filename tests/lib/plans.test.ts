@@ -2,9 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   canCreateWorkspace,
   canSubmitProofOfWork,
-  formatExtraProofOfWorkPackPrice,
+  demoteExpiredTrialProfile,
   formatPlanMonthlyPrice,
-  getExtraProofOfWorkPackPriceCents,
   getProofOfWorkAllowance,
   getWorkspaceLimit,
   API_METERED_PLATFORM_FEE_CENTS,
@@ -14,6 +13,7 @@ import {
   hasProofOfWorkApiAccess,
   isApiMeteredPlan,
   isBillingPeriodActive,
+  normalizePlanId,
   normalizeStripeVolumeToProofOfWork,
   POW_API_CALL_PRICE_CENTS,
   resolveCheckoutVolume,
@@ -44,12 +44,6 @@ describe("plans pricing", () => {
     expect(formatPlanMonthlyPrice("regular_2026", 500)).toBe("$149/month");
     expect(formatPlanMonthlyPrice("pro_teams")).toBe("$599/month");
     expect(formatPlanMonthlyPrice("pro_teams", 5000)).toBe("$1499/month");
-  });
-
-  it("formats extra proof-of-work pack prices", () => {
-    expect(getExtraProofOfWorkPackPriceCents("regular_2026")).toBe(399);
-    expect(getExtraProofOfWorkPackPriceCents("pro_teams")).toBe(199);
-    expect(formatExtraProofOfWorkPackPrice("pro_teams")).toBe("$1.99");
   });
 
   it("keeps stripe volume tables aligned with monotonic volume discounts", () => {
@@ -88,13 +82,13 @@ describe("plans workspace limits", () => {
     expect(getWorkspaceLimit({ ...baseProfile, plan: "pro_teams" })).toBeNull();
   });
 
-  it("blocks free workspace creation at limit", () => {
+  it("blocks inactive workspace creation", () => {
     const result = canCreateWorkspace(
-      { ...baseProfile, plan: "free", subscription_status: "inactive" },
-      1
+      { ...baseProfile, plan: "inactive", subscription_status: "inactive" },
+      0
     );
     expect(result.allowed).toBe(false);
-    expect(result.limit).toBe(1);
+    expect(result.limit).toBe(0);
   });
 });
 
@@ -146,9 +140,9 @@ describe("plans proof-of-work limits", () => {
   };
 
   it("resolves proof-of-work allowance from plan base plus extras", () => {
-    expect(getProofOfWorkAllowance({ ...baseProfile, plan: "free" }).limit).toBe(25);
+    expect(getProofOfWorkAllowance({ ...baseProfile, plan: "inactive", subscription_status: "inactive" }).limit).toBe(0);
     expect(getProofOfWorkAllowance({ ...baseProfile, plan: "regular_2026" }).limit).toBe(100);
-    expect(getProofOfWorkAllowance({ ...baseProfile, plan: "pro" }).limit).toBeNull();
+    expect(getProofOfWorkAllowance({ ...baseProfile, plan: "api_metered" }).limit).toBeNull();
   });
 
   it("blocks proof-of-work submissions at monthly cap", () => {
@@ -158,6 +152,13 @@ describe("plans proof-of-work limits", () => {
     );
     expect(result.allowed).toBe(false);
     expect(result.limit).toBe(100);
+  });
+
+  it("normalizes legacy plan ids to inactive", () => {
+    expect(normalizePlanId("free")).toBe("inactive");
+    expect(normalizePlanId("regular")).toBe("inactive");
+    expect(normalizePlanId("pro")).toBe("inactive");
+    expect(normalizePlanId("regular_2026")).toBe("regular_2026");
   });
 });
 
@@ -170,27 +171,47 @@ describe("billing period", () => {
       })
     ).toBe(false);
     expect(
-      hasProductAccess({
-        plan: "trial",
-        subscription_status: "active",
-        current_period_end: "2000-01-01T00:00:00.000Z",
-        is_admin: false,
-        token_tier: null,
-        token_validity_expires_at: null,
-      })
+      hasProductAccess(
+        {
+          plan: "inactive",
+          subscription_status: "inactive",
+          current_period_end: null,
+          is_admin: false,
+          token_tier: null,
+          token_validity_expires_at: null,
+          organization_id: "org-1",
+        },
+        {
+          id: "org-1",
+          plan: "trial",
+          subscription_status: "active",
+          current_period_end: "2000-01-01T00:00:00.000Z",
+          billing_mode: "subscription",
+        }
+      )
     ).toBe(false);
   });
 
-  it("grants trial access during the active window", () => {
+  it("grants trial access during the active window via org", () => {
     expect(
-      hasProductAccess({
-        plan: "trial",
-        subscription_status: "active",
-        current_period_end: "2099-01-01T00:00:00.000Z",
-        is_admin: false,
-        token_tier: null,
-        token_validity_expires_at: null,
-      })
+      hasProductAccess(
+        {
+          plan: "inactive",
+          subscription_status: "inactive",
+          current_period_end: null,
+          is_admin: false,
+          token_tier: null,
+          token_validity_expires_at: null,
+          organization_id: "org-1",
+        },
+        {
+          id: "org-1",
+          plan: "trial",
+          subscription_status: "active",
+          current_period_end: "2099-01-01T00:00:00.000Z",
+          billing_mode: "subscription",
+        }
+      )
     ).toBe(true);
     expect(
       getProofOfWorkAllowance({
@@ -204,19 +225,49 @@ describe("billing period", () => {
       }).limit
     ).toBeNull();
   });
+
+  it("demotes expired trials to inactive + trial_expired", () => {
+    expect(
+      demoteExpiredTrialProfile({
+        plan: "trial",
+        subscription_status: "active",
+        current_period_end: "2000-01-01T00:00:00.000Z",
+      })
+    ).toEqual({ plan: "inactive", subscription_status: "trial_expired" });
+
+    expect(
+      demoteExpiredTrialProfile({
+        plan: "trial",
+        subscription_status: "active",
+        current_period_end: "2099-01-01T00:00:00.000Z",
+      })
+    ).toBeNull();
+
+    expect(
+      hasProductAccess({
+        plan: "inactive",
+        subscription_status: "trial_expired",
+        current_period_end: "2000-01-01T00:00:00.000Z",
+        is_admin: false,
+        token_tier: null,
+        token_validity_expires_at: null,
+      })
+    ).toBe(false);
+  });
 });
 
 describe("product access", () => {
-  it("requires an active paid plan for new users", () => {
+  it("requires an entitled organization (personal plan alone is not enough)", () => {
     expect(
       hasProductAccess({
-        plan: "free",
+        plan: "inactive",
         subscription_status: "inactive",
         is_admin: false,
         token_tier: null,
         token_validity_expires_at: null,
       })
     ).toBe(false);
+    // Personal plan without org is not product truth
     expect(
       hasProductAccess({
         plan: "regular_2026",
@@ -225,41 +276,71 @@ describe("product access", () => {
         token_tier: null,
         token_validity_expires_at: null,
       })
-    ).toBe(true);
+    ).toBe(false);
     expect(
-      hasProductAccess({
-        plan: "pro_teams",
-        subscription_status: "active",
-        is_admin: false,
-        token_tier: null,
-        token_validity_expires_at: null,
-      })
+      hasProductAccess(
+        {
+          plan: "inactive",
+          subscription_status: "inactive",
+          is_admin: false,
+          token_tier: null,
+          token_validity_expires_at: null,
+          organization_id: "org-1",
+        },
+        {
+          id: "org-1",
+          plan: "pro_teams",
+          subscription_status: "active",
+          current_period_end: "2099-01-01T00:00:00.000Z",
+          billing_mode: "subscription",
+        }
+      )
     ).toBe(true);
   });
 
-  it("allows admins, org members, and valid token tiers", () => {
+  it("allows admins, entitled org members, and valid token tiers", () => {
     expect(
       hasProductAccess({
-        plan: "free",
+        plan: "inactive",
         subscription_status: "inactive",
         is_admin: true,
         token_tier: null,
         token_validity_expires_at: null,
       })
     ).toBe(true);
+    // Membership alone is not enough
     expect(
       hasProductAccess({
-        plan: "free",
+        plan: "inactive",
         subscription_status: "inactive",
         is_admin: false,
         organization_id: "org-1",
         token_tier: null,
         token_validity_expires_at: null,
       })
+    ).toBe(false);
+    expect(
+      hasProductAccess(
+        {
+          plan: "inactive",
+          subscription_status: "inactive",
+          is_admin: false,
+          organization_id: "org-1",
+          token_tier: null,
+          token_validity_expires_at: null,
+        },
+        {
+          id: "org-1",
+          plan: "pro_teams",
+          subscription_status: "active",
+          current_period_end: "2099-01-01T00:00:00.000Z",
+          billing_mode: "subscription",
+        }
+      )
     ).toBe(true);
     expect(
       hasProductAccess({
-        plan: "free",
+        plan: "inactive",
         subscription_status: "inactive",
         is_admin: false,
         token_tier: "pro",
@@ -271,10 +352,10 @@ describe("product access", () => {
 
 describe("agent api key plans", () => {
   it("recognizes pro_teams and api_metered", () => {
-    expect(hasAgentApiKeyPlan("pro")).toBe(false);
     expect(hasAgentApiKeyPlan("pro_teams")).toBe(true);
     expect(hasAgentApiKeyPlan("api_metered")).toBe(true);
     expect(hasAgentApiKeyPlan("regular_2026")).toBe(false);
+    expect(hasAgentApiKeyPlan("inactive")).toBe(false);
   });
 
   it("grants proof-of-work API access on active api_metered", () => {
@@ -307,15 +388,25 @@ describe("api metered pricing", () => {
     ).toBeNull();
   });
 
-  it("includes api_metered in product access", () => {
+  it("includes api_metered in product access via org", () => {
     expect(
-      hasProductAccess({
-        plan: "api_metered",
-        subscription_status: "active",
-        is_admin: false,
-        token_tier: null,
-        token_validity_expires_at: null,
-      })
+      hasProductAccess(
+        {
+          plan: "inactive",
+          subscription_status: "inactive",
+          is_admin: false,
+          token_tier: null,
+          token_validity_expires_at: null,
+          organization_id: "org-api",
+        },
+        {
+          id: "org-api",
+          plan: "api_metered",
+          subscription_status: "active",
+          current_period_end: "2099-01-01T00:00:00.000Z",
+          billing_mode: "subscription",
+        }
+      )
     ).toBe(true);
   });
 

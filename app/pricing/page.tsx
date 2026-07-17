@@ -210,7 +210,7 @@ function PricingPageContent() {
           data: { user: authUser },
         } = await supabase.auth.getUser();
         if (!authUser) {
-          setUser({ authenticated: false, plan: "free", isAdmin: false });
+          setUser({ authenticated: false, plan: "inactive", isAdmin: false });
           setNeedsPlan(searchParams.get("required") === "1");
           return;
         }
@@ -221,7 +221,30 @@ function PricingPageContent() {
           )
           .eq("id", authUser.id)
           .single();
-        const plan = (profile?.plan || "free") as PlanId;
+
+        let orgBilling: {
+          id: string;
+          plan: string | null;
+          subscription_status: string | null;
+          current_period_end: string | null;
+          billing_mode: string | null;
+          archived_at: string | null;
+        } | null = null;
+        if (profile?.organization_id) {
+          const { data: org } = await supabase
+            .from("organizations")
+            .select("id, plan, subscription_status, current_period_end, billing_mode, archived_at")
+            .eq("id", profile.organization_id)
+            .maybeSingle();
+          orgBilling = org;
+        }
+
+        // Display plan from org (product truth), not demoted personal profile
+        const plan = (
+          (orgBilling?.plan as PlanId | undefined) ||
+          (profile?.plan as PlanId | undefined) ||
+          "inactive"
+        ) as PlanId;
         setUser({
           authenticated: true,
           plan,
@@ -235,7 +258,7 @@ function PricingPageContent() {
             !hasProductAccess(
               profile
                 ? {
-                    plan,
+                    plan: (profile.plan || "inactive") as PlanId,
                     subscription_status: profile.subscription_status ?? "inactive",
                     is_admin: profile.is_admin ?? false,
                     organization_id: profile.organization_id,
@@ -244,10 +267,11 @@ function PricingPageContent() {
                     current_period_end: profile.current_period_end ?? null,
                   }
                 : null,
+              orgBilling,
             ),
         );
       } catch {
-        setUser({ authenticated: false, plan: "free", isAdmin: false });
+        setUser({ authenticated: false, plan: "inactive", isAdmin: false });
         setNeedsPlan(searchParams.get("required") === "1");
       }
     };

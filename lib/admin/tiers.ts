@@ -1,9 +1,9 @@
 import type { PlanId } from "@/lib/plans";
-import { PLANS, TRIAL_ACCESS_DAYS } from "@/lib/plans";
+import { PLANS, TRIAL_ACCESS_DAYS, isTrialExpiredStatus, normalizePlanId } from "@/lib/plans";
 
 /** Admin-assignable subscription tiers (current product). */
 export const ADMIN_TIER_OPTIONS = [
-  { id: "free" as const, label: "Free", description: PLANS.free.features[0] },
+  { id: "inactive" as const, label: "Inactive", description: "No paid entitlement · use for demotion" },
   { id: "trial" as const, label: "3-Day Trial", description: "$19.99 one-time · full access for 3 days" },
   { id: "regular_2026" as const, label: "Individual", description: "from $49/mo · 100+ Proof-of-Work submissions" },
   { id: "pro_teams" as const, label: "Pro / Teams", description: "from $599/mo · 1,000+ Proof-of-Work submissions + org" },
@@ -16,39 +16,32 @@ export const ADMIN_TIER_OPTIONS = [
 
 export type AdminTierId = (typeof ADMIN_TIER_OPTIONS)[number]["id"];
 
-export type PlanFilterBucket = "all" | AdminTierId | "legacy" | "inactive";
-
-const LEGACY_PLANS = new Set<PlanId>(["regular", "pro"]);
-
-export function isLegacyPlan(plan: string): plan is "regular" | "pro" {
-  return LEGACY_PLANS.has(plan as PlanId);
-}
+export type PlanFilterBucket = "all" | AdminTierId | "trial_expired";
 
 export function isAdminTier(plan: string): plan is AdminTierId {
   return ADMIN_TIER_OPTIONS.some((tier) => tier.id === plan);
 }
 
-/** True when user is on a grandfathered legacy paid plan that admin UI must not overwrite accidentally. */
-export function isGrandfatheredPlan(user: { plan: string; subscription_status: string }): boolean {
-  return user.subscription_status === "active" && isLegacyPlan(user.plan);
-}
-
-/** Value for the admin tier dropdown — only current product tiers; null when grandfathered. */
+/** Value for the admin tier dropdown. */
 export function adminTierSelectValue(user: {
   plan: string;
   subscription_status: string;
-}): AdminTierId | null {
-  if (user.subscription_status !== "active") return "free";
+}): AdminTierId {
+  if (isTrialExpiredStatus(user.subscription_status)) return "inactive";
+  if (user.subscription_status !== "active") return "inactive";
   if (isAdminTier(user.plan)) return user.plan;
-  return null;
+  return "inactive";
 }
 
-/** Bucket for list filters and KPIs — preserves legacy subscribers instead of lumping them into Free. */
+/**
+ * Bucket for list filters and KPIs.
+ * trial_expired is a status cohort for email targeting (plan is inactive).
+ */
 export function planFilterBucket(user: { plan: string; subscription_status: string }): PlanFilterBucket {
+  if (isTrialExpiredStatus(user.subscription_status)) return "trial_expired";
   if (user.subscription_status !== "active") return "inactive";
-  if (isLegacyPlan(user.plan)) return "legacy";
   if (isAdminTier(user.plan)) return user.plan;
-  return "free";
+  return "inactive";
 }
 
 export function tierLabel(plan: string): string {
@@ -56,7 +49,7 @@ export function tierLabel(plan: string): string {
   if (plan === "pro_teams") return "Pro / Teams";
   if (plan === "api_metered") return "API Metered";
   if (plan === "trial") return "3-Day Trial";
-  if (plan === "free") return "Free";
+  if (plan === "inactive" || plan === "free") return "Inactive";
   if (plan === "regular") return "Individual (legacy)";
   if (plan === "pro") return "Pro (legacy)";
   return plan;
@@ -64,7 +57,6 @@ export function tierLabel(plan: string): string {
 
 export function tierColor(plan: string): string {
   switch (plan) {
-    case "pro":
     case "pro_teams":
     case "api_metered":
       return "text-purple-400";
@@ -72,26 +64,42 @@ export function tierColor(plan: string): string {
       return "text-blue-400";
     case "trial":
       return "text-emerald-400";
-    case "regular":
-      return "text-cyan-400";
+    case "inactive":
     case "free":
-      return "text-neutral-400";
+    case "regular":
+    case "pro":
     default:
       return "text-neutral-400";
   }
 }
 
+export function statusLabel(status: string): string {
+  if (status === "trial_expired") return "Trial expired";
+  if (status === "active") return "Active";
+  if (status === "inactive") return "Inactive";
+  if (status === "canceled") return "Canceled";
+  if (status === "past_due") return "Past due";
+  return status;
+}
+
 export function describePlanLimits(plan: string, extraLessons = 0, _extraWorkspaces = 0): string {
-  const def = PLANS[plan as PlanId];
+  const normalized = normalizePlanId(plan);
+  const def = PLANS[normalized];
   if (!def) return "Unknown plan";
 
   const proofOfWork =
     def.proofOfWorkPerPeriod === null
       ? "Unlimited Proof-of-Work submissions"
-      : `${(def.proofOfWorkPerPeriod ?? 0) + extraLessons} Proof-of-Work submissions / period`;
+      : def.proofOfWorkPerPeriod === 0
+        ? "No Proof-of-Work entitlement"
+        : `${(def.proofOfWorkPerPeriod ?? 0) + extraLessons} Proof-of-Work submissions / period`;
 
   const workspaces =
-    def.workspacesPerPeriod === null ? "Unlimited workspaces" : `${def.workspacesPerPeriod} workspace(s)`;
+    def.workspacesPerPeriod === null
+      ? "Unlimited workspaces"
+      : def.workspacesPerPeriod === 0
+        ? "No workspace entitlement"
+        : `${def.workspacesPerPeriod} workspace(s)`;
 
   return `${proofOfWork} · ${workspaces}`;
 }
@@ -103,19 +111,19 @@ export function tierChangeWarning(
   const current = adminTierSelectValue(from);
   if (current === to) return null;
 
-  if (isGrandfatheredPlan(from)) {
-    return `This user is on grandfathered ${tierLabel(from.plan)}. Migrating to ${tierLabel(to)} will replace legacy limits and reset extra Proof-of-Work allowance to the new tier baseline.`;
+  if (isTrialExpiredStatus(from.subscription_status) && to === "inactive") {
+    return null;
   }
 
-  if ((from.extra_lessons ?? 0) > 0 && to === "free") {
-    return `Moving to Free will set subscription_status to inactive and reset extra Proof-of-Work allowance to 0 (currently ${from.extra_lessons}).`;
+  if ((from.extra_lessons ?? 0) > 0 && to === "inactive") {
+    return `Moving to Inactive will set subscription_status to inactive and reset PoW volume overage to 0 (currently ${from.extra_lessons}).`;
   }
 
-  if (to !== "free") {
-    return `Assign ${tierLabel(to)}? Extra Proof-of-Work allowance will reset to 0 and a new 30-day period will start.`;
+  if (to !== "inactive") {
+    return `Assign ${tierLabel(to)}? PoW volume overage will reset to 0 and a new period will start.`;
   }
 
-  return `Move to Free? Subscription becomes inactive and extra Proof-of-Work allowance resets to 0.`;
+  return `Move to Inactive? Subscription becomes inactive and PoW volume overage resets to 0.`;
 }
 
 export function buildTierUpdate(tier: AdminTierId): {
@@ -125,9 +133,9 @@ export function buildTierUpdate(tier: AdminTierId): {
   extra_workspaces: number;
   current_period_end: string | null;
 } {
-  if (tier === "free") {
+  if (tier === "inactive") {
     return {
-      plan: "free",
+      plan: "inactive",
       subscription_status: "inactive",
       extra_lessons: 0,
       extra_workspaces: 0,

@@ -130,43 +130,127 @@ function slugify(value: string) {
     .slice(0, 64) || `org-${Date.now()}`;
 }
 
-// POST /api/organization - Create an organization and make current user its admin.
+// POST /api/organization - Create a team org, or promote personal org to team (org-billing gate).
 export async function POST(req: NextRequest) {
   try {
     const auth = await requireAuthenticatedUser();
     if (!auth.ok) return auth.response;
-    const { user, supabase } = auth;
+    const { user } = auth;
 
     const body = await req.json().catch(() => ({}));
     const name = typeof body.name === "string" ? body.name.trim() : "";
     if (!name) return NextResponse.json({ error: "Organization name is required" }, { status: 400 });
 
     const adminClient = getAdminClient();
+    const { resolveUserBilling, userHasOrgApiAccess } = await import(
+      "@/lib/organization/resolve-user-billing"
+    );
+
     const { data: profile, error: profileError } = await adminClient
       .from("profiles")
-      .select("id, organization_id, plan, subscription_status, is_admin")
+      .select("id, organization_id, is_admin, is_org_admin")
       .eq("id", user.id)
       .single();
 
-    if (profileError || !profile) return NextResponse.json({ error: "Profile not found" }, { status: 404 });
-    if (profile.organization_id) return NextResponse.json({ error: "User already belongs to an organization" }, { status: 409 });
+    if (profileError || !profile) {
+      return NextResponse.json({ error: "Profile not found" }, { status: 404 });
+    }
 
-    const isTeams = profile.is_admin || (profile.plan === "pro_teams" && profile.subscription_status === "active");
-    if (!isTeams) {
-      return NextResponse.json({ error: "Teams tier is required to create an organization" }, { status: 403 });
+    const isAdmin = profile.is_admin === true;
+    const hasApi = isAdmin || (await userHasOrgApiAccess(adminClient, user.id));
+    if (!hasApi) {
+      return NextResponse.json(
+        { error: "Teams or API Metered org entitlement is required to create a team organization" },
+        { status: 403 }
+      );
     }
 
     const baseSlug = slugify(typeof body.slug === "string" ? body.slug : name);
     let slug = baseSlug;
     for (let attempt = 1; attempt <= 5; attempt += 1) {
-      const { data: existing } = await adminClient.from("organizations").select("id").eq("slug", slug).maybeSingle();
+      const { data: existing } = await adminClient
+        .from("organizations")
+        .select("id")
+        .eq("slug", slug)
+        .maybeSingle();
       if (!existing) break;
+      // Allow keeping same slug when updating own personal org
+      if (profile.organization_id && existing.id === profile.organization_id) break;
       slug = `${baseSlug}-${attempt + 1}`;
     }
 
+    // Promote existing personal org (sole member) to named team org
+    if (profile.organization_id) {
+      const { data: currentOrg } = await adminClient
+        .from("organizations")
+        .select("id, kind")
+        .eq("id", profile.organization_id)
+        .single();
+      const { count: memberCount } = await adminClient
+        .from("profiles")
+        .select("id", { count: "exact", head: true })
+        .eq("organization_id", profile.organization_id);
+
+      if (
+        currentOrg &&
+        (currentOrg.kind === "personal" || (memberCount ?? 0) <= 1) &&
+        profile.is_org_admin
+      ) {
+        const { data: organization, error: orgError } = await adminClient
+          .from("organizations")
+          .update({
+            name,
+            slug,
+            kind: "team",
+            updated_at: new Date().toISOString(),
+            metadata: { created_by: user.id, source: "user_promoted_personal" },
+          })
+          .eq("id", profile.organization_id)
+          .select("*")
+          .single();
+
+        if (orgError || !organization) {
+          console.error("Promote organization error:", orgError);
+          return NextResponse.json({ error: "Failed to update organization" }, { status: 500 });
+        }
+
+        await adminClient
+          .from("agent_api_keys")
+          .update({ organization_id: organization.id })
+          .eq("user_id", user.id)
+          .is("organization_id", null);
+
+        return NextResponse.json({ organization, is_org_admin: true, promoted: true }, { status: 200 });
+      }
+
+      return NextResponse.json(
+        {
+          error:
+            "You already belong to a multi-member organization. Leave it before creating another.",
+        },
+        { status: 409 }
+      );
+    }
+
+    // No organization_id (should be rare post-migrate): create team org
+    const billing = await resolveUserBilling(adminClient, user.id);
+    const orgPlan =
+      !("error" in billing) && billing.entity.source === "organization"
+        ? billing.entity.plan
+        : "inactive";
+
     const { data: organization, error: orgError } = await adminClient
       .from("organizations")
-      .insert({ name, slug, metadata: { created_by: user.id, source: "user" } })
+      .insert({
+        name,
+        slug,
+        kind: "team",
+        billing_mode: "subscription",
+        plan: orgPlan !== "inactive" ? orgPlan : "inactive",
+        subscription_status:
+          !("error" in billing) && billing.entity.entitled ? "active" : "inactive",
+        metadata: { created_by: user.id, source: "user" },
+      })
       .select("*")
       .single();
 

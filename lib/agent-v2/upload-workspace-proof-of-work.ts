@@ -10,6 +10,11 @@ import { createdByApiKeyId } from "./auth";
 import type { AuthContext } from "./types";
 import { uploadFileToXAI, deleteFileFromXAI } from "@/lib/xai-files";
 import { assertCanSubmitProofOfWork } from "@/lib/usage-enforcement";
+import { createAdminClient } from "@/lib/supabase/admin";
+import {
+  attachFileToOrgCollection,
+  ensureOrgXaiApiKey,
+} from "@/lib/organization/ensure-xai-resources";
 
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -124,8 +129,6 @@ export async function uploadWorkspaceProofOfWork(
   }
 
   const fileName = defaultProofOfWorkFileName(evidenceType, input.file_name);
-  const uploaded = await uploadFileToXAI(fileName, mimeType, base64);
-  const xaiFileId = uploaded.file_id;
 
   const { session_id: resolvedSessionId, metadata } = await resolveProofOfWorkSession(
     supabase,
@@ -137,6 +140,39 @@ export async function uploadWorkspaceProofOfWork(
     auth.organization_id || workspace.organization_id
   );
 
+  // Prefer org-scoped xAI API key for cost attribution in the xAI console
+  let xaiApiKey: string | undefined;
+  if (organizationId) {
+    try {
+      const admin = createAdminClient();
+      const ensured = await ensureOrgXaiApiKey(admin, organizationId);
+      xaiApiKey = ensured.apiKey;
+    } catch (err) {
+      console.error("[upload-workspace-proof-of-work] org xAI key resolve failed:", err);
+    }
+  }
+
+  const uploaded = await uploadFileToXAI(fileName, mimeType, base64, {
+    apiKey: xaiApiKey,
+  });
+  const xaiFileId = uploaded.file_id;
+
+  // Best-effort: group PoW file into the org's xAI Collection
+  let xaiCollectionId: string | null = null;
+  if (organizationId) {
+    try {
+      const admin = createAdminClient();
+      xaiCollectionId = await attachFileToOrgCollection(admin, organizationId, xaiFileId, {
+        organization_id: organizationId,
+        workspace_id: input.workspaceId,
+        proof_of_work_type: evidenceType,
+        ...(participantUserId ? { user_id: participantUserId } : {}),
+      });
+    } catch (err) {
+      console.error("[upload-workspace-proof-of-work] collection attach failed:", err);
+    }
+  }
+
   const { row, error } = await insertWorkspaceProofOfWorkRow(supabase, {
     workspace_id: input.workspaceId,
     block_id: input.block_id || null,
@@ -146,6 +182,7 @@ export async function uploadWorkspaceProofOfWork(
     mime_type: mimeType,
     file_size: fileBytes.length,
     xai_file_id: xaiFileId,
+    xai_collection_id: xaiCollectionId,
     timestamp_ms: input.timestamp_ms ?? Date.now(),
     chunk_index: 0,
     metadata,

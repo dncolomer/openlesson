@@ -12,6 +12,8 @@ describe("stripe checkout helpers", () => {
     expect(planIdFromPriceType("trial_3day")).toBe("trial");
     expect(planIdFromPriceType("regular_2026")).toBe("regular_2026");
     expect(planIdFromPriceType("api_metered")).toBe("api_metered");
+    expect(planIdFromPriceType("regular")).toBe("inactive");
+    expect(planIdFromPriceType("pro")).toBe("inactive");
   });
 
   it("uses payment mode for trial checkout", () => {

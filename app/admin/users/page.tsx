@@ -9,8 +9,8 @@ import { useAdminGuard } from "@/components/admin/useAdminGuard";
 import {
   ADMIN_TIER_OPTIONS,
   adminTierSelectValue,
-  isGrandfatheredPlan,
   planFilterBucket,
+  statusLabel,
   tierChangeWarning,
   tierColor,
   tierLabel,
@@ -200,7 +200,9 @@ export default function UsersPage() {
     switch (status) {
       case "active": return "bg-green-900/30 text-green-400";
       case "inactive": return "bg-red-900/30 text-red-400";
+      case "trial_expired": return "bg-orange-900/30 text-orange-300";
       case "past_due": return "bg-yellow-900/30 text-yellow-400";
+      case "canceled": return "bg-neutral-800 text-neutral-400";
       default: return "bg-neutral-800 text-neutral-400";
     }
   };
@@ -214,7 +216,9 @@ export default function UsersPage() {
     <div>
         <div className="mb-6">
           <h2 className="text-xl font-semibold text-white">Users</h2>
-          <p className="text-sm text-neutral-400">{filteredUsers.length} users · legacy plans are grandfathered until migrated</p>
+          <p className="text-sm text-neutral-400">
+            {filteredUsers.length} users · trial_expired is the email cohort for churned trials
+          </p>
         </div>
 
         {/* KPI Summary */}
@@ -222,22 +226,23 @@ export default function UsersPage() {
           <div className="bg-neutral-900/50 border border-neutral-800 rounded-lg p-4">
             <div className="text-2xl font-bold text-white">{kpiUsers.length}</div>
             <div className="text-neutral-500 text-xs mt-1">Total Users</div>
-            <div className="flex gap-2 mt-2 text-[11px]">
+            <div className="flex flex-wrap gap-2 mt-2 text-[11px]">
               {ADMIN_TIER_OPTIONS.map((tier) => (
                 <span key={tier.id} className={tierColor(tier.id)}>
                   {tier.label}: {kpiUsers.filter((u) => planFilterBucket(u) === tier.id).length}
                 </span>
               ))}
-              <span className="text-amber-300">
-                Legacy: {kpiUsers.filter((u) => planFilterBucket(u) === "legacy").length}
+              <span className="text-orange-300">
+                Trial expired: {kpiUsers.filter((u) => planFilterBucket(u) === "trial_expired").length}
               </span>
             </div>
           </div>
           <div className="bg-neutral-900/50 border border-neutral-800 rounded-lg p-4">
             <div className="text-2xl font-bold text-green-400">{kpiUsers.filter(u => u.subscription_status === "active").length}</div>
             <div className="text-neutral-500 text-xs mt-1">Active Subscriptions</div>
-            <div className="flex gap-2 mt-2 text-[11px]">
+            <div className="flex flex-wrap gap-2 mt-2 text-[11px]">
               <span className="text-red-400">Inactive: {kpiUsers.filter(u => u.subscription_status === "inactive" || !u.subscription_status).length}</span>
+              <span className="text-orange-300">Trial expired: {kpiUsers.filter(u => u.subscription_status === "trial_expired").length}</span>
               <span className="text-yellow-400">Past Due: {kpiUsers.filter(u => u.subscription_status === "past_due").length}</span>
             </div>
           </div>
@@ -270,8 +275,7 @@ export default function UsersPage() {
             {ADMIN_TIER_OPTIONS.map((tier) => (
               <option key={tier.id} value={tier.id}>{tier.label}</option>
             ))}
-            <option value="legacy">Legacy (regular / pro)</option>
-            <option value="inactive">Inactive</option>
+            <option value="trial_expired">Trial expired</option>
           </select>
           <select
             value={dateFilter}
@@ -322,7 +326,9 @@ export default function UsersPage() {
                   Status{getSortIcon("subscription_status")}
                 </th>
                 <th className="text-left p-4 text-neutral-400 text-sm font-medium">Organization</th>
-                <th className="text-right p-4 text-neutral-400 text-sm font-medium">Extra PoW</th>
+                <th className="text-right p-4 text-neutral-400 text-sm font-medium" title="Volume-tier overage above plan base (not a purchased pack)">
+                  PoW overage
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -368,18 +374,15 @@ export default function UsersPage() {
                     <td className="p-4">
                       <AdminTierSelect
                         value={adminTierSelectValue(user)}
-                        lockedLabel={isGrandfatheredPlan(user) ? tierLabel(user.plan) : undefined}
                         disabled={updatingUserId === user.id}
                         onChange={(tier) => handleTierChange(user, tier)}
                         className={`rounded border px-2 py-1 text-xs ${tierColor(user.plan)} bg-neutral-900 border-neutral-700`}
                       />
-                      {!isGrandfatheredPlan(user) && (
-                        <div className="mt-1 text-[10px] text-neutral-500">{tierLabel(user.plan)}</div>
-                      )}
+                      <div className="mt-1 text-[10px] text-neutral-500">{tierLabel(user.plan)}</div>
                     </td>
                     <td className="p-4">
                       <span className={`px-2 py-0.5 rounded text-xs ${getStatusColor(user.subscription_status)}`}>
-                        {user.subscription_status}
+                        {statusLabel(user.subscription_status)}
                       </span>
                     </td>
                     <td className="p-4">
@@ -395,7 +398,9 @@ export default function UsersPage() {
                       )}
                     </td>
                     <td className="p-4 text-right">
-                      <span className="text-neutral-500 text-sm">{user.extra_lessons ?? 0} extra</span>
+                      <span className="text-neutral-500 text-sm">
+                        {(user.extra_lessons ?? 0) > 0 ? `+${user.extra_lessons}` : "—"}
+                      </span>
                     </td>
                   </tr>
                 ))

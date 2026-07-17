@@ -28,6 +28,8 @@ interface TranscribeOptions {
   language?: string; // e.g. "en", "fr"
   format?: boolean;  // Inverse Text Normalization (numbers/currencies → written form). Requires language.
   diarize?: boolean;
+  /** Per-organization xAI API key when available. */
+  apiKey?: string | null;
 }
 
 /**
@@ -42,7 +44,7 @@ export async function transcribeAudio(
   mimeType: string,
   options: TranscribeOptions = {}
 ): Promise<TranscriptionResult | null> {
-  const apiKey = process.env.XAI_API_KEY;
+  const apiKey = options.apiKey || process.env.XAI_API_KEY;
   if (!apiKey) {
     console.error("[xai-stt] XAI_API_KEY not configured");
     return null;

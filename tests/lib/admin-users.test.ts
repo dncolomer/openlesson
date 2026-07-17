@@ -8,7 +8,7 @@ describe("listAdminProfiles", () => {
       id: "user-1",
       username: "jane",
       created_at: "2026-01-01T00:00:00Z",
-      plan: "free",
+      plan: "inactive",
       is_admin: false,
       extra_lessons: 2,
       extra_workspaces: 3,

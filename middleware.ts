@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { hasProductAccess } from "@/lib/plans";
+import { ensureTrialExpiryApplied } from "@/lib/usage-metrics";
 
 const SUBSCRIPTION_EXEMPT_PREFIXES = [
   "/pricing",
@@ -136,7 +137,7 @@ export async function middleware(request: NextRequest) {
   }
 
   if (user && (isAuthRoute || !isSubscriptionExemptPath(pathname))) {
-    const { data: profile } = await supabase
+    const { data: rawProfile } = await supabase
       .from("profiles")
       .select(
         "plan, subscription_status, is_admin, organization_id, token_tier, token_validity_expires_at, current_period_end"
@@ -144,7 +145,29 @@ export async function middleware(request: NextRequest) {
       .eq("id", user.id)
       .single();
 
-    const canUseProduct = hasProductAccess(profile);
+    const profile = rawProfile
+      ? await ensureTrialExpiryApplied(supabase, user.id, rawProfile)
+      : null;
+
+    let orgBilling: {
+      id: string;
+      plan: string | null;
+      subscription_status: string | null;
+      current_period_end: string | null;
+      billing_mode: string | null;
+      archived_at: string | null;
+    } | null = null;
+
+    if (profile?.organization_id) {
+      const { data: org } = await supabase
+        .from("organizations")
+        .select("id, plan, subscription_status, current_period_end, billing_mode, archived_at")
+        .eq("id", profile.organization_id)
+        .maybeSingle();
+      orgBilling = org;
+    }
+
+    const canUseProduct = hasProductAccess(profile, orgBilling);
 
     if (isAuthRoute) {
       return NextResponse.redirect(

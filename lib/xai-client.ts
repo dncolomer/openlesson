@@ -9,38 +9,35 @@
 //
 // For the Files API see lib/xai-files.ts, STT lib/xai-stt.ts, TTS app/api/xai-tts,
 // image gen lib/plan-image.ts.
+//
+// Client components: import model constants from lib/xai-models.ts only.
+// Do not import this module from "use client" files (server-only API key path).
 // ============================================
- 
+
 // ============================================
 // CONFIG
 // ============================================
 
+import {
+  AVAILABLE_MODELS,
+  DEFAULT_MODEL,
+  DEFAULT_REASONING_EFFORT,
+  type ModelId,
+  type ModelOption,
+  type ReasoningEffort,
+} from "@/lib/xai-models";
+
+export {
+  AVAILABLE_MODELS,
+  DEFAULT_MODEL,
+  DEFAULT_REASONING_EFFORT,
+  type ModelId,
+  type ModelOption,
+  type ReasoningEffort,
+};
+
 const XAI_CHAT_URL = "https://api.x.ai/v1/chat/completions";
 const XAI_RESPONSES_URL = "https://api.x.ai/v1/responses";
-
-export const DEFAULT_MODEL = "grok-4.5";
-
-/**
- * Grok 4.5 reasoning depth. API default is "high" (slow); we default to "low"
- * for interactive latency. Reasoning cannot be fully disabled on grok-4.5.
- * @see https://docs.x.ai/developers/model-capabilities/text/reasoning
- */
-export type ReasoningEffort = "low" | "medium" | "high";
-
-/** Prefer low for chat/UX; override to medium/high for hard analysis jobs. */
-export const DEFAULT_REASONING_EFFORT: ReasoningEffort = "low";
-
-export interface ModelOption {
-  id: string;
-  label: string;
-  description: string;
-}
-
-export const AVAILABLE_MODELS: readonly ModelOption[] = [
-  { id: "grok-4.5", label: "Grok 4.5", description: "Newest xAI flagship model" },
-] as const;
-
-export type ModelId = (typeof AVAILABLE_MODELS)[number]["id"] | string;
 
 export interface ProviderInfo {
   provider: "xai";
@@ -60,18 +57,38 @@ export function getProviderInfo(): ProviderInfo {
   };
 }
 
-function getApiKey(): string {
+function getApiKey(override?: string | null): string {
+  if (override) return override;
+  // Only resolve request-scoped org keys on the server (AsyncLocalStorage).
+  if (typeof window === "undefined") {
+    try {
+      // Lazy require to avoid circular deps / client bundling of async_hooks
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const { getContextualXaiApiKey } = require("@/lib/xai-context") as {
+        getContextualXaiApiKey: () => string | null;
+      };
+      const ctxKey = getContextualXaiApiKey();
+      if (ctxKey) return ctxKey;
+    } catch {
+      /* no context */
+    }
+  }
   const key = process.env.XAI_API_KEY;
   if (!key) throw new Error("XAI_API_KEY not configured. Set it in your .env.local file.");
   return key;
 }
 
-function getHeaders(): Record<string, string> {
+function getHeaders(apiKey?: string | null): Record<string, string> {
   return {
-    Authorization: `Bearer ${getApiKey()}`,
+    Authorization: `Bearer ${getApiKey(apiKey)}`,
     "Content-Type": "application/json",
   };
 }
+
+/** Optional per-request credentials (e.g. per-organization xAI API key). */
+export type XaiAuthOptions = {
+  apiKey?: string | null;
+};
 
 // ============================================
 // SHARED UTILS
@@ -158,6 +175,8 @@ export interface XaiChatConfig {
   retryDelay?: number;
   /** Per-request fetch timeout in milliseconds. */
   fetchTimeout?: number;
+  /** Per-organization xAI API key (server-resolved). Falls back to XAI_API_KEY. */
+  apiKey?: string | null;
 }
 
 export interface XaiResponse<T = string> {
@@ -235,7 +254,7 @@ export async function callXai<T = string>(
     try {
       const fetchOptions: RequestInit = {
         method: "POST",
-        headers: getHeaders(),
+        headers: getHeaders(config.apiKey),
         body: JSON.stringify(buildChatBody(messages, config)),
       };
       if (config.fetchTimeout) {
@@ -517,6 +536,8 @@ export interface CallResponsesOptions {
   fetchTimeout?: number;
   retries?: number;
   retryDelay?: number;
+  /** Per-organization xAI API key (server-resolved). Falls back to XAI_API_KEY. */
+  apiKey?: string | null;
 }
 
 export interface CallResponsesResult<T = unknown> {
@@ -596,7 +617,7 @@ export async function callXaiResponses<T = unknown>(
     try {
       const fetchOptions: RequestInit = {
         method: "POST",
-        headers: getHeaders(),
+        headers: getHeaders(options.apiKey),
         body: JSON.stringify(body),
       };
       if (options.fetchTimeout) {

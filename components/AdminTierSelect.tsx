@@ -21,7 +21,7 @@ export function AdminTierSelect({
     return (
       <span
         className={`inline-flex items-center rounded border border-amber-500/30 bg-amber-500/10 px-2 py-1 text-xs text-amber-200 ${className}`}
-        title="Grandfathered legacy plan — use Migrate to change tier"
+        title="Locked tier label"
       >
         {lockedLabel}
       </span>
@@ -30,7 +30,7 @@ export function AdminTierSelect({
 
   return (
     <select
-      value={value ?? "free"}
+      value={value ?? "inactive"}
       disabled={disabled}
       onChange={(e) => onChange(e.target.value as AdminTierId)}
       className={className}

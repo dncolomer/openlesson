@@ -72,17 +72,21 @@ export async function authenticateApiKey(
   if (keyData.user_id) {
     const { data: profile } = await supabase
       .from("profiles")
-      .select("plan, subscription_status, is_admin, organization_id, is_org_admin")
+      .select("is_admin, organization_id, is_org_admin")
       .eq("id", keyData.user_id)
       .single();
 
     const isAdmin = profile?.is_admin === true;
     organizationId = organizationId || profile?.organization_id || null;
     isOrgAdmin = profile?.is_org_admin === true || isAdmin;
-    isTeams =
-      isAdmin ||
-      (profile?.plan === "pro_teams" && profile?.subscription_status === "active") ||
-      (profile?.plan === "api_metered" && profile?.subscription_status === "active");
+    if (isAdmin) {
+      isTeams = true;
+    } else {
+      const { userHasOrgApiAccess } = await import(
+        "@/lib/organization/resolve-user-billing"
+      );
+      isTeams = await userHasOrgApiAccess(supabase, keyData.user_id);
+    }
   } else if (keyData.guest_user_id) {
     const { data: guest } = await supabase
       .from("organization_guest_users")
@@ -95,15 +99,10 @@ export async function authenticateApiKey(
     }
 
     organizationId = organizationId || guest.organization_id;
-    const { data: teamsAdmin } = await supabase
-      .from("profiles")
-      .select("id")
-      .eq("organization_id", organizationId)
-      .eq("is_org_admin", true)
-      .eq("plan", "pro_teams")
-      .eq("subscription_status", "active")
-      .limit(1);
-    isTeams = !!teamsAdmin?.length;
+    const { organizationHasApiAccess } = await import(
+      "@/lib/organization/resolve-user-billing"
+    );
+    isTeams = await organizationHasApiAccess(organizationId);
   }
 
   if (!isTeams) {

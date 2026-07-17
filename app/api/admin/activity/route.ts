@@ -182,7 +182,7 @@ export async function GET(request: NextRequest) {
         profileMap.set(profile.id, {
           username: profile.username,
           email,
-          plan: profile.plan || "free",
+          plan: profile.plan || "inactive",
         });
         userMap.set(profile.id, {
           id: profile.id,
@@ -195,7 +195,7 @@ export async function GET(request: NextRequest) {
         if (!userMap.has(id)) {
           const email = emailById.get(id) || null;
           userMap.set(id, { id, username: null, email });
-          profileMap.set(id, { username: null, email, plan: "free" });
+          profileMap.set(id, { username: null, email, plan: "inactive" });
         }
       }
     }

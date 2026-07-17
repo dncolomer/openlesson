@@ -4,13 +4,11 @@ import Stripe from "stripe";
 import { createClient } from "@/lib/supabase/server";
 import {
   API_METERED_PLATFORM_FEE_CENTS,
-  EXTRA_PROOF_OF_WORK_PACK_SIZE,
   POW_API_CALL_PRICE_CENTS,
   REGULAR_VOLUME_PRICES,
   TEAM_VOLUME_PRICES,
   TRIAL_PRICE_CENTS,
   resolveCheckoutVolume,
-  getExtraProofOfWorkPackPriceCents,
 } from "@/lib/plans";
 import { AYCL_PRICE_CENTS, createPendingAyclPurchase } from "@/lib/aycl";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -26,8 +24,6 @@ function getStripe() {
 }
 
 const GUEST_CHECKOUT_TYPES = new Set<CheckoutPriceType>([
-  "regular",
-  "pro",
   "regular_2026",
   "pro_teams",
   "api_metered",
@@ -44,27 +40,18 @@ export async function POST(request: NextRequest) {
 
     const {
       priceType,
-      quantity: rawQuantity,
       monthlyVolume: rawMonthlyVolume,
       workspaceId: rawWorkspaceId,
     } = await request.json();
-    const quantity =
-      priceType === "extra_lesson" || priceType === "extra_proof_of_work"
-        ? Math.max(1, Math.min(500, Number(rawQuantity) || 1))
-        : 1;
     const monthlyVolume = resolveCheckoutVolume(priceType, rawMonthlyVolume);
 
     if (
       ![
-        "regular",
-        "pro",
         "regular_2026",
         "pro_teams",
         "api_metered",
         "trial_3day",
         "all_you_can_learn",
-        "extra_lesson",
-        "extra_proof_of_work",
         "rabbit_hole_plays",
       ].includes(priceType)
     ) {
@@ -78,7 +65,7 @@ export async function POST(request: NextRequest) {
 
     const isGuestCheckout = GUEST_CHECKOUT_TYPES.has(priceType as CheckoutPriceType) && !user;
 
-    if ((priceType === "extra_lesson" || priceType === "extra_proof_of_work" || priceType === "rabbit_hole_plays") && !user) {
+    if (priceType === "rabbit_hole_plays" && !user) {
       return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
     }
 
@@ -86,11 +73,7 @@ export async function POST(request: NextRequest) {
     const mode = checkoutModeForPriceType(priceType as CheckoutPriceType);
     let lineItem: Stripe.Checkout.SessionCreateParams.LineItem | null = null;
 
-    if (priceType === "regular") {
-      priceId = process.env.STRIPE_PRICE_REGULAR || "";
-    } else if (priceType === "pro") {
-      priceId = process.env.STRIPE_PRICE_PRO || "";
-    } else if (priceType === "regular_2026") {
+    if (priceType === "regular_2026") {
       lineItem = {
         price_data: {
           currency: "usd",
@@ -163,26 +146,6 @@ export async function POST(request: NextRequest) {
         },
         quantity: 1,
       };
-    } else if (priceType === "extra_lesson" || priceType === "extra_proof_of_work") {
-      const { data: planProfile } = await supabase
-        .from("profiles")
-        .select("plan")
-        .eq("id", user!.id)
-        .single();
-      const unitAmount = getExtraProofOfWorkPackPriceCents(planProfile?.plan);
-      lineItem = {
-        price_data: {
-          currency: "usd",
-          unit_amount: unitAmount,
-          product_data: {
-            name:
-              planProfile?.plan === "pro_teams" || planProfile?.plan === "pro"
-                ? `Additional Proof-of-Work pack (${EXTRA_PROOF_OF_WORK_PACK_SIZE} submissions) - Pro / Teams`
-                : `Additional Proof-of-Work pack (${EXTRA_PROOF_OF_WORK_PACK_SIZE} submissions)`,
-          },
-        },
-        quantity,
-      };
     } else {
       priceId = process.env.STRIPE_PRICE_RABBIT_HOLE || "";
     }
@@ -226,7 +189,7 @@ export async function POST(request: NextRequest) {
 
     const metadata: Record<string, string> = {
       price_type: priceType,
-      quantity: String(quantity),
+      quantity: "1",
       monthly_volume: String(monthlyVolume),
       volume_unit: priceType === "regular_2026" || priceType === "pro_teams" ? "proof_of_work" : "",
       ...(user ? { supabase_user_id: user.id } : {}),

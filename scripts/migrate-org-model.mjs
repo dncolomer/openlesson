@@ -24,7 +24,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(__dirname, "..");
 const SCRATCH =
   process.env.GOAL_SCRATCH_DIR ||
-  "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-c8b1546cbcf3/implementer";
+  "/var/folders/kd/98qlvkyd4mb3_9t32p9bmt_r0000gn/T/grok-goal-ca5ed58fd0de/implementer";
 
 function log(msg, lines) {
   console.log(msg);

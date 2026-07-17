@@ -1047,8 +1047,88 @@ export default function DashboardPage() {
             usageData?.billingMode === "partner" ||
             usageData?.organization?.billingMode === "partner";
 
+          const planBadge = (() => {
+            if (isBillingBypass) {
+              return (
+                <span className="rounded-full border border-violet-500/30 bg-violet-500/10 px-2.5 py-1 text-[10px] uppercase tracking-[1.4px] text-violet-100/90">
+                  Bypass
+                </span>
+              );
+            }
+            if (usageData?.isAdmin) {
+              return (
+                <span className="rounded-full border border-white/15 bg-white/10 px-2.5 py-1 text-[10px] uppercase tracking-[1.4px] text-neutral-200">
+                  Admin
+                </span>
+              );
+            }
+            if (usageData?.plan === "pro_teams") {
+              return (
+                <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[10px] uppercase tracking-[1.4px] text-neutral-400">
+                  Teams
+                </span>
+              );
+            }
+            if (usageData?.plan === "api_metered") {
+              return (
+                <span className="rounded-full border border-amber-500/30 bg-amber-500/10 px-2.5 py-1 text-[10px] uppercase tracking-[1.4px] text-amber-100/90">
+                  Metered
+                </span>
+              );
+            }
+            if (usageData?.plan === "trial") {
+              return (
+                <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 text-[10px] uppercase tracking-[1.4px] text-emerald-100/90">
+                  Trial
+                </span>
+              );
+            }
+            if (usageData?.plan === "regular_2026") {
+              return (
+                <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[10px] uppercase tracking-[1.4px] text-neutral-400">
+                  {t("dashboard.regular")}
+                </span>
+              );
+            }
+            return (
+              <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[10px] uppercase tracking-[1.4px] text-neutral-400">
+                Inactive
+              </span>
+            );
+          })();
+
+          const personalUsed = usageData
+            ? usageData.organization
+              ? usageData.proofOfWorkPersonalUsed
+              : usageData.proofOfWorkUsed
+            : 0;
+          const personalLimit = usageData
+            ? usageData.isAdmin ||
+              usageData.proofOfWorkLimit === null ||
+              usageData.organization
+              ? null
+              : usageData.proofOfWorkLimit
+            : 0;
+
+          const xai = xaiUsageOverride || usageData?.xaiUsage || null;
+          const periodOptions: { id: XaiPeriodPreset; label: string }[] = [
+            { id: "billing", label: "Billing period" },
+            { id: "7d", label: "7 days" },
+            { id: "30d", label: "30 days" },
+            { id: "90d", label: "90 days" },
+          ];
+
+          const sectionTitle = (kicker: string, title: string, hint?: string) => (
+            <div className="mb-3">
+              <p className={usageLabelClass}>{kicker}</p>
+              <h3 className="mt-1 text-base font-medium text-white">{title}</h3>
+              {hint ? <p className="mt-0.5 text-xs text-neutral-500">{hint}</p> : null}
+            </div>
+          );
+
           return (
-          <div className="space-y-8">
+          <div className="space-y-10">
+            {/* Page header */}
             <div className="flex flex-wrap items-center justify-between gap-3 border border-neutral-800 bg-neutral-950/75 px-6 py-5">
               <div>
                 <p className={usageLabelClass}>Account</p>
@@ -1057,7 +1137,7 @@ export default function DashboardPage() {
                 </h2>
                 <p className="mt-1 text-sm text-neutral-500">
                   {isBillingBypass
-                    ? "Proof-of-Work usage for your organization. Commercial billing is bypassed."
+                    ? "Proof-of-Work and inference spend for your organization."
                     : t("dashboard.usageSubtitle")}
                 </p>
               </div>
@@ -1082,344 +1162,385 @@ export default function DashboardPage() {
                 )}
               </div>
             </div>
+
             {loadingUsage ? (
               <div className="text-center py-12 text-neutral-400">{t("common.loading")}</div>
             ) : usageData ? (
               <>
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div className={usageCardClass}>
-                    <div className="flex items-center justify-between gap-3">
-                      <p className={usageLabelClass}>
-                        {isBillingBypass ? "Access" : t("dashboard.currentPlan")}
-                      </p>
+                {/* 1 · Plan & access */}
+                <section>
+                  {sectionTitle(
+                    "1 · Plan & access",
+                    isBillingBypass ? "What you have access to" : "Your plan",
+                    isBillingBypass
+                      ? "Product entitlement is complimentary (Stripe bypass)."
+                      : "Subscription tier and billing cycle."
+                  )}
+                  <div className={`grid gap-4 ${isBillingBypass ? "md:grid-cols-1" : "md:grid-cols-2"}`}>
+                    <div className={usageCardClass}>
+                      <div className="flex items-center justify-between gap-3">
+                        <p className={usageLabelClass}>
+                          {isBillingBypass ? "Access tier" : t("dashboard.currentPlan")}
+                        </p>
+                        {planBadge}
+                      </div>
+                      <div className="mt-4 text-3xl font-medium tracking-[-1px] text-white">
+                        {planDisplayName(usageData.plan, usageData.isAdmin)}
+                      </div>
                       {isBillingBypass ? (
-                        <span className="rounded-full border border-violet-500/30 bg-violet-500/10 px-2.5 py-1 text-[10px] uppercase tracking-[1.4px] text-violet-100/90">
-                          Bypass
-                        </span>
-                      ) : usageData.isAdmin ? (
-                        <span className="rounded-full border border-white/15 bg-white/10 px-2.5 py-1 text-[10px] uppercase tracking-[1.4px] text-neutral-200">
-                          Admin
-                        </span>
-                      ) : usageData.plan === "pro_teams" ? (
-                        <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[10px] uppercase tracking-[1.4px] text-neutral-400">
-                          Teams
-                        </span>
-                      ) : usageData.plan === "api_metered" ? (
-                        <span className="rounded-full border border-amber-500/30 bg-amber-500/10 px-2.5 py-1 text-[10px] uppercase tracking-[1.4px] text-amber-100/90">
-                          Metered
-                        </span>
-                      ) : usageData.plan === "trial" ? (
-                        <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 text-[10px] uppercase tracking-[1.4px] text-emerald-100/90">
-                          Trial
-                        </span>
-                      ) : usageData.plan === "regular_2026" ? (
-                        <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[10px] uppercase tracking-[1.4px] text-neutral-400">
-                          {t("dashboard.regular")}
-                        </span>
-                      ) : (
-                        <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[10px] uppercase tracking-[1.4px] text-neutral-400">
-                          Inactive
-                        </span>
-                      )}
-                    </div>
-                    <div className="mt-4 text-3xl font-medium tracking-[-1px] text-white">
-                      {planDisplayName(usageData.plan, usageData.isAdmin)}
-                    </div>
-                    {isBillingBypass ? (
-                      <>
                         <p className="mt-2 text-sm text-neutral-300">
                           Billing: <span className="font-medium text-white">Bypass</span>
                         </p>
-                        <p className="mt-1 text-xs text-neutral-500">
-                          Product billing is complimentary. Inference cost below is from your org xAI key.
-                        </p>
-                      </>
-                    ) : (
-                      <>
-                        <p className="mt-2 text-sm text-neutral-500">
-                          {planPriceLabel(usageData.plan, usageData.isAdmin)}
-                        </p>
-                        {!usageData.isAdmin && usageData.subscriptionStatus !== "active" && (
-                          <p className="mt-3 text-xs text-neutral-600">
-                            {usageData.subscriptionStatus === "trial_expired"
-                              ? "Your 3-day trial has ended. Upgrade to continue."
-                              : t("dashboard.subscriptionNotActive")}
+                      ) : (
+                        <>
+                          <p className="mt-2 text-sm text-neutral-500">
+                            {planPriceLabel(usageData.plan, usageData.isAdmin)}
                           </p>
+                          {!usageData.isAdmin && usageData.subscriptionStatus !== "active" && (
+                            <p className="mt-3 text-xs text-neutral-600">
+                              {usageData.subscriptionStatus === "trial_expired"
+                                ? "Your 3-day trial has ended. Upgrade to continue."
+                                : t("dashboard.subscriptionNotActive")}
+                            </p>
+                          )}
+                        </>
+                      )}
+                      {usageData.organization && (
+                        <p className="mt-4 border-t border-neutral-800 pt-3 text-xs text-neutral-500">
+                          Organization:{" "}
+                          <span className="text-neutral-300">{usageData.organization.name}</span>
+                          {" · "}
+                          {usageData.organization.isOrgAdmin ? "Org admin" : "Member"}
+                          {" · "}
+                          {usageData.organization.memberCount} members
+                        </p>
+                      )}
+                    </div>
+
+                    {!isBillingBypass && (
+                      <div className={usageCardClass}>
+                        <p className={usageLabelClass}>{t("dashboard.billingPeriod")}</p>
+                        {usageData.isAdmin ? (
+                          <>
+                            <div className="mt-4 text-lg font-medium text-white">No billing limits</div>
+                            <p className="mt-2 text-sm text-neutral-500">
+                              Admin accounts are not metered against plan quotas.
+                            </p>
+                          </>
+                        ) : usageData.subscriptionStatus === "active" && usageData.periodEnd ? (
+                          <>
+                            <div className="mt-4 text-lg font-medium text-white">
+                              {t("dashboard.resetsOn", {
+                                date: new Date(usageData.periodEnd).toLocaleDateString("en-US", {
+                                  month: "short",
+                                  day: "numeric",
+                                }),
+                              })}
+                            </div>
+                            <p className="mt-2 text-sm text-neutral-500">
+                              {usageData.plan === "api_metered"
+                                ? "API usage is tallied through this date and added to your monthly invoice."
+                                : usageData.plan === "pro_teams"
+                                  ? "Organization Proof-of-Work pool resets each billing period."
+                                  : usageData.plan === "trial"
+                                    ? "Trial access ends on this date."
+                                    : t("dashboard.regularResetDesc")}
+                            </p>
+                          </>
+                        ) : (
+                          <>
+                            <div className="mt-4 text-lg font-medium text-white">
+                              {usageData.subscriptionStatus === "trial_expired"
+                                ? "Trial ended"
+                                : t("dashboard.noSubscription")}
+                            </div>
+                            <p className="mt-2 text-sm text-neutral-500">
+                              {usageData.subscriptionStatus === "trial_expired"
+                                ? "Your 3-day trial has ended. Upgrade at pricing to continue."
+                                : t("dashboard.subscriptionNotActive")}
+                            </p>
+                          </>
                         )}
-                      </>
+                        {!usageData.isAdmin &&
+                          (usageData.plan === "inactive" ||
+                            usageData.subscriptionStatus === "trial_expired" ||
+                            usageData.plan === "regular_2026" ||
+                            usageData.plan === "trial") && (
+                            <Link
+                              href="/pricing"
+                              className="mt-4 inline-flex text-sm text-neutral-300 underline decoration-neutral-600 underline-offset-4 transition hover:text-white"
+                            >
+                              {t("dashboard.upgradeToPro")} →
+                            </Link>
+                          )}
+                      </div>
                     )}
                   </div>
+                </section>
 
-                  <div className={usageCardClass}>
-                    <p className={usageLabelClass}>
-                      {usageData.organization ? "Your Proof-of-Work submissions this period" : t("dashboard.proofOfWorkThisPeriod")}
-                    </p>
-                    {(() => {
-                      const displayUsed = usageData.organization ? usageData.proofOfWorkPersonalUsed : usageData.proofOfWorkUsed;
-                      const displayLimit =
-                        usageData.isAdmin || usageData.proofOfWorkLimit === null || usageData.organization
-                          ? null
-                          : usageData.proofOfWorkLimit;
-                      return (
-                        <>
-                          <div className="mt-4 flex items-end gap-2">
-                            <span className="text-3xl font-medium tracking-[-1px] text-white">{displayUsed}</span>
-                            <span className="mb-1 text-sm text-neutral-500">
-                              / {displayLimit === null ? t("dashboard.infinity") : displayLimit}
-                            </span>
+                {/* 2 · Proof of Work */}
+                <section>
+                  {sectionTitle(
+                    "2 · Proof of Work",
+                    "Submission usage",
+                    usageData.organization
+                      ? "Your personal activity and the shared organization pool."
+                      : "How many Proof-of-Work submissions you’ve used this period."
+                  )}
+                  <div
+                    className={`grid gap-4 ${
+                      usageData.organization ? "md:grid-cols-2" : "md:grid-cols-1 max-w-xl"
+                    }`}
+                  >
+                    <div className={usageCardClass}>
+                      <p className={usageLabelClass}>
+                        {usageData.organization
+                          ? "Your submissions"
+                          : t("dashboard.proofOfWorkThisPeriod")}
+                      </p>
+                      <div className="mt-4 flex items-end gap-2">
+                        <span className="text-3xl font-medium tracking-[-1px] text-white">
+                          {personalUsed}
+                        </span>
+                        <span className="mb-1 text-sm text-neutral-500">
+                          / {personalLimit === null ? t("dashboard.infinity") : personalLimit}
+                        </span>
+                      </div>
+                      {personalLimit !== null && (
+                        <div className="mt-4 h-1.5 w-full rounded-full bg-neutral-800">
+                          <div
+                            className={`h-1.5 rounded-full ${
+                              personalUsed >= personalLimit
+                                ? "bg-red-400"
+                                : personalUsed >= personalLimit * 0.8
+                                  ? "bg-amber-400"
+                                  : "bg-white"
+                            }`}
+                            style={{ width: `${usageProgress(personalUsed, personalLimit)}%` }}
+                          />
+                        </div>
+                      )}
+                      <p className="mt-3 text-xs text-neutral-500">
+                        {usageData.isAdmin
+                          ? "Unlimited Proof-of-Work submissions on admin accounts."
+                          : usageData.organization
+                            ? "Your personal Proof-of-Work this period (TAP, ILE, and API)."
+                            : personalLimit === null
+                              ? t("dashboard.unlimitedProofOfWork")
+                              : t("dashboard.proofOfWorkRemaining", {
+                                  count: Math.max(personalLimit - personalUsed, 0),
+                                })}
+                      </p>
+                    </div>
+
+                    {usageData.organization && (
+                      <div className={usageCardClass}>
+                        <div className="flex flex-wrap items-start justify-between gap-2">
+                          <div>
+                            <p className={usageLabelClass}>Organization pool</p>
+                            <p className="mt-1 text-sm text-neutral-300">
+                              {usageData.organization.name}
+                            </p>
                           </div>
-                          {displayLimit !== null && (
-                            <div className="mt-4 h-1.5 w-full rounded-full bg-neutral-800">
-                              <div
-                                className={`h-1.5 rounded-full ${
-                                  displayUsed >= displayLimit
-                                    ? "bg-red-400"
-                                    : displayUsed >= displayLimit * 0.8
+                          <Link
+                            href="/organization"
+                            className="text-xs text-neutral-400 underline decoration-neutral-700 underline-offset-2 transition hover:text-white"
+                          >
+                            {usageData.organization.isOrgAdmin ? "Manage" : "View"} →
+                          </Link>
+                        </div>
+                        <div className="mt-4 flex items-end gap-2">
+                          <span className="text-3xl font-medium tracking-[-1px] text-white">
+                            {usageData.organization.used}
+                          </span>
+                          <span className="mb-1 text-sm text-neutral-500">
+                            /{" "}
+                            {usageData.organization.limit === null
+                              ? t("dashboard.infinity")
+                              : usageData.organization.limit.toLocaleString()}
+                          </span>
+                        </div>
+                        {usageData.organization.limit !== null && (
+                          <div className="mt-4 h-1.5 w-full rounded-full bg-neutral-800">
+                            <div
+                              className={`h-1.5 rounded-full ${
+                                usageData.organization.used >= usageData.organization.limit
+                                  ? "bg-red-400"
+                                  : usageData.organization.used >=
+                                      usageData.organization.limit * 0.8
                                     ? "bg-amber-400"
                                     : "bg-white"
-                                }`}
-                                style={{ width: `${usageProgress(displayUsed, displayLimit)}%` }}
-                              />
+                              }`}
+                              style={{
+                                width: `${usageProgress(
+                                  usageData.organization.used,
+                                  usageData.organization.limit
+                                )}%`,
+                              }}
+                            />
+                          </div>
+                        )}
+                        <p className="mt-3 text-xs text-neutral-500">
+                          {usageData.organization.memberCount} members ·{" "}
+                          {usageData.organization.guestCount} guests
+                          {isBillingBypass
+                            ? " · Shared pool for this period"
+                            : " · Shared monthly pool (TAP, ILE, API)"}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </section>
+
+                {/* 3 · Spend */}
+                {(xai ||
+                  (!isBillingBypass &&
+                    usageData.plan === "api_metered" &&
+                    usageData.apiMeteredInvoice)) && (
+                  <section>
+                    {sectionTitle(
+                      "3 · Spend",
+                      isBillingBypass ? "Inference cost (xAI)" : "Billing & inference",
+                      isBillingBypass
+                        ? "Attributed to your organization’s dedicated xAI API key."
+                        : "Product charges and optional org inference spend."
+                    )}
+                    <div className="space-y-4">
+                      {!isBillingBypass &&
+                        usageData.plan === "api_metered" &&
+                        usageData.apiMeteredInvoice && (
+                          <div className={usageCardClass}>
+                            <p className={usageLabelClass}>API Metered invoice (this period)</p>
+                            <div className="mt-4 grid gap-4 sm:grid-cols-3">
+                              <div>
+                                <p className="text-xs text-neutral-500">API submissions</p>
+                                <p className="mt-1 text-2xl font-medium text-white">
+                                  {usageData.apiPowCallsUsed ?? 0}
+                                </p>
+                              </div>
+                              <div>
+                                <p className="text-xs text-neutral-500">Usage charges</p>
+                                <p className="mt-1 text-2xl font-medium text-white">
+                                  $
+                                  {(usageData.apiMeteredInvoice.usageCents / 100).toFixed(2)}
+                                </p>
+                              </div>
+                              <div>
+                                <p className="text-xs text-neutral-500">Est. monthly total</p>
+                                <p className="mt-1 text-2xl font-medium text-white">
+                                  $
+                                  {(usageData.apiMeteredInvoice.totalCents / 100).toFixed(2)}
+                                </p>
+                                <p className="mt-1 text-xs text-neutral-500">
+                                  Includes $99 platform + usage
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                      {xai && (
+                        <div className={usageCardClass}>
+                          <div className="flex flex-wrap items-start justify-between gap-3">
+                            <div>
+                              <p className={usageLabelClass}>
+                                {isBillingBypass
+                                  ? "xAI inference spend"
+                                  : "Org xAI inference spend"}
+                              </p>
+                              <h3 className="mt-2 text-3xl font-medium tracking-[-1px] text-white">
+                                {xaiUsageLoading
+                                  ? "…"
+                                  : xai.available
+                                    ? `$${xai.totalUsd.toFixed(2)}`
+                                    : "—"}
+                              </h3>
+                              <p className="mt-1 text-xs text-neutral-500">
+                                {xai.apiKeyName ? `${xai.apiKeyName} · ` : ""}
+                                {new Date(xai.periodStart).toLocaleDateString("en-US", {
+                                  month: "short",
+                                  day: "numeric",
+                                })}
+                                {" – "}
+                                {new Date(xai.periodEnd).toLocaleDateString("en-US", {
+                                  month: "short",
+                                  day: "numeric",
+                                })}
+                              </p>
+                            </div>
+                            <div className="flex flex-col items-end gap-2">
+                              {isBillingBypass && (
+                                <span className="rounded-full border border-violet-500/30 bg-violet-500/10 px-2.5 py-1 text-[10px] uppercase tracking-[1.4px] text-violet-100/90">
+                                  Billing: Bypass
+                                </span>
+                              )}
+                              <div className="flex flex-wrap justify-end gap-1">
+                                {periodOptions.map((opt) => (
+                                  <button
+                                    key={opt.id}
+                                    type="button"
+                                    disabled={xaiUsageLoading}
+                                    onClick={() => handleXaiPeriodChange(opt.id)}
+                                    className={`rounded-sm border px-2.5 py-1 text-[11px] transition ${
+                                      xaiPeriod === opt.id
+                                        ? "border-white/20 bg-white/10 text-white"
+                                        : "border-neutral-800 bg-black/30 text-neutral-400 hover:border-neutral-600 hover:text-neutral-200"
+                                    } disabled:opacity-50`}
+                                  >
+                                    {opt.label}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+                          {xaiUsageLoading && (
+                            <p className="mt-3 text-xs text-neutral-500">
+                              Loading spend for selected period…
+                            </p>
+                          )}
+                          {!xaiUsageLoading && !xai.available && (
+                            <p className="mt-3 text-xs text-amber-200/80">
+                              {xai.error || "Could not load xAI usage for this key."}
+                            </p>
+                          )}
+                          {!xaiUsageLoading && xai.available && xai.lines.length > 0 && (
+                            <div className="mt-4 space-y-2 border-t border-neutral-800 pt-4">
+                              <p className="mb-2 font-mono text-[10px] uppercase tracking-[1.5px] text-neutral-600">
+                                Breakdown
+                              </p>
+                              {xai.lines.slice(0, 8).map((line) => (
+                                <div
+                                  key={line.description}
+                                  className="flex items-center justify-between gap-3 text-sm"
+                                >
+                                  <span className="truncate text-neutral-400">
+                                    {line.description}
+                                  </span>
+                                  <span className="shrink-0 font-mono text-neutral-200">
+                                    ${line.usd.toFixed(2)}
+                                  </span>
+                                </div>
+                              ))}
                             </div>
                           )}
-                          <p className="mt-3 text-xs text-neutral-500">
-                            {usageData.isAdmin
-                              ? "Unlimited Proof-of-Work submissions on admin accounts."
-                              : usageData.organization
-                              ? "Your personal Proof-of-Work usage this period (TAP, ILE, and API)."
-                              : displayLimit === null
-                              ? t("dashboard.unlimitedProofOfWork")
-                              : t("dashboard.proofOfWorkRemaining", { count: Math.max(displayLimit - displayUsed, 0) })}
-                          </p>
-                        </>
-                      );
-                    })()}
-                  </div>
-
-                  {!isBillingBypass && (
-                  <div className={usageCardClass}>
-                    <p className={usageLabelClass}>{t("dashboard.billingPeriod")}</p>
-                    {usageData.isAdmin ? (
-                      <>
-                        <div className="mt-4 text-lg font-medium text-white">No billing limits</div>
-                        <p className="mt-2 text-sm text-neutral-500">Admin accounts are not metered against plan quotas.</p>
-                      </>
-                    ) : usageData.subscriptionStatus === "active" && usageData.periodEnd ? (
-                      <>
-                        <div className="mt-4 text-lg font-medium text-white">
-                          {t("dashboard.resetsOn", {
-                            date: new Date(usageData.periodEnd).toLocaleDateString("en-US", { month: "short", day: "numeric" }),
-                          })}
+                          {!xaiUsageLoading &&
+                            xai.available &&
+                            xai.lines.length === 0 && (
+                              <p className="mt-3 text-xs text-neutral-500">
+                                No inference spend recorded for this org key in the selected
+                                period.
+                              </p>
+                            )}
                         </div>
-                        <p className="mt-2 text-sm text-neutral-500">
-                          {usageData.plan === "api_metered"
-                            ? "API usage is tallied through this date and added to your monthly invoice."
-                            : usageData.plan === "pro_teams"
-                            ? "Organization Proof-of-Work pool resets each billing period."
-                            : usageData.plan === "trial"
-                            ? "Trial access ends on this date."
-                            : t("dashboard.regularResetDesc")}
-                        </p>
-                      </>
-                    ) : (
-                      <>
-                        <div className="mt-4 text-lg font-medium text-white">
-                          {usageData.subscriptionStatus === "trial_expired"
-                            ? "Trial ended"
-                            : t("dashboard.noSubscription")}
-                        </div>
-                        <p className="mt-2 text-sm text-neutral-500">
-                          {usageData.subscriptionStatus === "trial_expired"
-                            ? "Your 3-day trial has ended. Upgrade at pricing to continue."
-                            : t("dashboard.subscriptionNotActive")}
-                        </p>
-                      </>
-                    )}
-                    {!usageData.isAdmin &&
-                      (usageData.plan === "inactive" ||
-                        usageData.subscriptionStatus === "trial_expired" ||
-                        usageData.plan === "regular_2026" ||
-                        usageData.plan === "trial") && (
-                      <Link
-                        href="/pricing"
-                        className="mt-4 inline-flex text-sm text-neutral-300 underline decoration-neutral-600 underline-offset-4 transition hover:text-white"
-                      >
-                        {t("dashboard.upgradeToPro")} →
-                      </Link>
-                    )}
-                  </div>
-                  )}
-                </div>
-
-                {!isBillingBypass && usageData.plan === "api_metered" && usageData.apiMeteredInvoice && (
-                  <div className={`${usageCardClass} mt-4`}>
-                    <p className={usageLabelClass}>API Metered billing (this period)</p>
-                    <div className="mt-4 grid gap-4 sm:grid-cols-3">
-                      <div>
-                        <p className="text-xs text-neutral-500">API submissions</p>
-                        <p className="mt-1 text-2xl font-medium text-white">{usageData.apiPowCallsUsed ?? 0}</p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-neutral-500">Usage charges</p>
-                        <p className="mt-1 text-2xl font-medium text-white">
-                          ${(usageData.apiMeteredInvoice.usageCents / 100).toFixed(2)}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-neutral-500">Est. monthly total</p>
-                        <p className="mt-1 text-2xl font-medium text-white">
-                          ${(usageData.apiMeteredInvoice.totalCents / 100).toFixed(2)}
-                        </p>
-                        <p className="mt-1 text-xs text-neutral-500">Includes $99 platform + usage on invoice</p>
-                      </div>
+                      )}
                     </div>
-                  </div>
-                )}
-
-                {(xaiUsageOverride || usageData.xaiUsage) && (() => {
-                  const xai = xaiUsageOverride || usageData.xaiUsage!;
-                  const periodOptions: { id: XaiPeriodPreset; label: string }[] = [
-                    { id: "billing", label: "Billing period" },
-                    { id: "7d", label: "7 days" },
-                    { id: "30d", label: "30 days" },
-                    { id: "90d", label: "90 days" },
-                  ];
-                  return (
-                  <div className={`${usageCardClass} border-white/10`}>
-                    <div className="flex flex-wrap items-start justify-between gap-3">
-                      <div>
-                        <p className={usageLabelClass}>
-                          {isBillingBypass ? "Org inference spend (xAI)" : "Org xAI spend"}
-                        </p>
-                        <h3 className="mt-2 text-xl font-medium text-white">
-                          {xaiUsageLoading
-                            ? "…"
-                            : xai.available
-                              ? `$${xai.totalUsd.toFixed(2)}`
-                              : "—"}
-                        </h3>
-                        <p className="mt-1 text-xs text-neutral-500">
-                          Filtered by org API key
-                          {xai.apiKeyName ? ` · ${xai.apiKeyName}` : ""}
-                          {" · "}
-                          {new Date(xai.periodStart).toLocaleDateString("en-US", {
-                            month: "short",
-                            day: "numeric",
-                          })}
-                          {" – "}
-                          {new Date(xai.periodEnd).toLocaleDateString("en-US", {
-                            month: "short",
-                            day: "numeric",
-                          })}
-                        </p>
-                      </div>
-                      <div className="flex flex-col items-end gap-2">
-                        {isBillingBypass && (
-                          <span className="rounded-full border border-violet-500/30 bg-violet-500/10 px-2.5 py-1 text-[10px] uppercase tracking-[1.4px] text-violet-100/90">
-                            Billing: Bypass
-                          </span>
-                        )}
-                        <div className="flex flex-wrap justify-end gap-1">
-                          {periodOptions.map((opt) => (
-                            <button
-                              key={opt.id}
-                              type="button"
-                              disabled={xaiUsageLoading}
-                              onClick={() => handleXaiPeriodChange(opt.id)}
-                              className={`rounded-sm border px-2.5 py-1 text-[11px] transition ${
-                                xaiPeriod === opt.id
-                                  ? "border-white/20 bg-white/10 text-white"
-                                  : "border-neutral-800 bg-black/30 text-neutral-400 hover:border-neutral-600 hover:text-neutral-200"
-                              } disabled:opacity-50`}
-                            >
-                              {opt.label}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                    {xaiUsageLoading && (
-                      <p className="mt-3 text-xs text-neutral-500">Loading spend for selected period…</p>
-                    )}
-                    {!xaiUsageLoading && !xai.available && (
-                      <p className="mt-3 text-xs text-amber-200/80">
-                        {xai.error || "Could not load xAI usage for this key."}
-                      </p>
-                    )}
-                    {!xaiUsageLoading && xai.available && xai.lines.length > 0 && (
-                      <div className="mt-4 space-y-2 border-t border-neutral-800 pt-4">
-                        {xai.lines.slice(0, 8).map((line) => (
-                          <div
-                            key={line.description}
-                            className="flex items-center justify-between gap-3 text-sm"
-                          >
-                            <span className="truncate text-neutral-400">{line.description}</span>
-                            <span className="shrink-0 font-mono text-neutral-200">
-                              ${line.usd.toFixed(2)}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                    {!xaiUsageLoading && xai.available && xai.lines.length === 0 && (
-                      <p className="mt-3 text-xs text-neutral-500">
-                        No inference spend recorded for this org key in the selected period.
-                      </p>
-                    )}
-                  </div>
-                  );
-                })()}
-
-                {usageData.organization && (
-                  <div className={`${usageCardClass} border-white/10`}>
-                    <div className="flex flex-wrap items-start justify-between gap-4">
-                      <div>
-                        <p className={usageLabelClass}>Organization pool</p>
-                        <h3 className="mt-2 text-xl font-medium text-white">{usageData.organization.name}</h3>
-                        <p className="mt-2 text-xs text-neutral-500">
-                          {usageData.organization.memberCount} members · {usageData.organization.guestCount} guests
-                          {usageData.organization.isOrgAdmin ? " · Org admin" : " · Member"}
-                        </p>
-                      </div>
-                      <Link
-                        href="/organization"
-                        className="inline-flex h-10 items-center justify-center rounded-sm border border-neutral-700 px-4 text-sm text-neutral-200 transition hover:border-neutral-500 hover:text-white"
-                      >
-                        {usageData.organization.isOrgAdmin
-                          ? "Manage organization →"
-                          : "View organization →"}
-                      </Link>
-                    </div>
-                    <div className="mt-5 flex items-end gap-2">
-                      <span className="text-3xl font-medium tracking-[-1px] text-white">{usageData.organization.used}</span>
-                      <span className="mb-1 text-sm text-neutral-500">
-                        / {usageData.organization.limit === null ? t("dashboard.infinity") : usageData.organization.limit.toLocaleString()} Proof-of-Work submissions this period
-                      </span>
-                    </div>
-                    {usageData.organization.limit !== null && (
-                      <div className="mt-4 h-1.5 w-full rounded-full bg-neutral-800">
-                        <div
-                          className={`h-1.5 rounded-full ${
-                            usageData.organization.used >= usageData.organization.limit
-                              ? "bg-red-400"
-                              : usageData.organization.used >= usageData.organization.limit * 0.8
-                              ? "bg-amber-400"
-                              : "bg-white"
-                          }`}
-                          style={{ width: `${usageProgress(usageData.organization.used, usageData.organization.limit)}%` }}
-                        />
-                      </div>
-                    )}
-                    <p className="mt-3 text-xs text-neutral-500">
-                      {isBillingBypass
-                        ? "Organization Proof-of-Work usage across members for the current period."
-                        : "Teams plans share one monthly Proof-of-Work pool across all organization members — TAP, ILE, and API usage all draw from it."}
-                    </p>
-                  </div>
+                  </section>
                 )}
               </>
             ) : (
-              <div className="text-center py-12 text-neutral-400">{t("dashboard.unableToLoadUsage")}</div>
+              <div className="text-center py-12 text-neutral-400">
+                {t("dashboard.unableToLoadUsage")}
+              </div>
             )}
           </div>
           );

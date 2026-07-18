@@ -146,7 +146,7 @@ export const LEARNING_VERIFICATION_PAGE: SeoUseCasePageConfig = {
   highlights: [
     "One workspace model for human and agentic validation",
     "Auditable gap reports — not vanity completion metrics",
-    "Pick depth by role: TAP for speed, ILE for complexity, API for native integration",
+    "Pick depth by role: TAP for speed, ILE for complexity, PoW API for native integration",
   ],
   faqs: [
     {

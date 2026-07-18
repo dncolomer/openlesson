@@ -3,7 +3,7 @@ import { SalesSlideDeck } from "@/components/SalesSlideDeck";
 import { PLATFORM_PITCH_DECK } from "@/lib/sales/platform-pitch-deck";
 
 export const metadata: Metadata = {
-  title: "Sales Pitch",
+  title: "Platform Pitch",
   robots: {
     index: false,
     follow: false,

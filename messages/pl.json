@@ -1736,7 +1736,7 @@
     "makePublic": "Zrób publicznym",
     "forkRemix": "Fork / Remiksuj",
     "failedToLoadNodes": "Nie udało się załadować węzłów",
-    "planBuilder": "Plan Builder",
+    "planBuilder": "Builder",
     "notes": "Notes",
     "performance": "Wyniki",
     "files": "Files",
@@ -1911,7 +1911,14 @@
     "gridAddCancel": "Anuluj",
     "gridSuggestTopics": "Zasugeruj 3 tematy",
     "gridSuggesting": "Sugerowanie…",
-    "gridSuggestError": "Nie udało się wczytać sugestii"
+    "gridSuggestError": "Nie udało się wczytać sugestii",
+    "gridMerge": "Scal",
+    "gridSplit": "Podziel",
+    "gridMove": "Przenieś",
+    "gridGenerateShape": "Generuj w kształcie",
+    "gridEditBlock": "Edytuj blok",
+    "gridClearSelection": "Wyczyść",
+    "gridMultiSelectHint": "Shift/⌘-klik na komórki lub bloki do wielokrotnego wyboru"
   },
   "remixModal": {
     "remixTitle": "Remiksuj \"{topic}\"",

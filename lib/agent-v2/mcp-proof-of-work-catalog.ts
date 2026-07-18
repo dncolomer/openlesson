@@ -12,7 +12,7 @@ export const MCP_PROOF_OF_WORK_TOOL_CATALOG = [
     name: "create_workspace",
     scope: "workspaces:write",
     summary:
-      "Create a workspace from initial_prompt (optional initial_chapters: narrow|mid|broad; spatial signed grid).",
+      "Create a workspace from Files + Goal only: initial_prompt is the Goal (optional files, initial_chapters: narrow|mid|broad; spatial signed grid). Blank and Template modes are UI-only.",
   },
   { name: "list_blocks", scope: "workspaces:read", summary: "List assessable blocks." },
   {

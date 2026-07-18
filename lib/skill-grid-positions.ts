@@ -4,6 +4,8 @@ import { buildSkillGridLayout, type SkillGridNode } from "@/lib/block-skill-grid
 export interface SkillGridPosition {
   position_x: number;
   position_y: number;
+  span_w?: number;
+  span_h?: number;
 }
 
 interface BlockRef {
@@ -13,6 +15,8 @@ interface BlockRef {
   next?: string[];
   position_x?: number | null;
   position_y?: number | null;
+  span_w?: number | null;
+  span_h?: number | null;
 }
 
 interface DbBlock {
@@ -23,15 +27,23 @@ interface DbBlock {
   next_block_ids?: string[];
   position_x?: number | null;
   position_y?: number | null;
+  span_w?: number | null;
+  span_h?: number | null;
 }
 
 /** Grid column/row for every node using the same rules as the skill grid UI. */
 export function getSkillGridPositions(nodes: SkillGridNode[]): Map<string, SkillGridPosition> {
-  const { placements } = buildSkillGridLayout(nodes);
+  const { placements, spans } = buildSkillGridLayout(nodes);
   const result = new Map<string, SkillGridPosition>();
 
   for (const [id, cell] of placements) {
-    result.set(id, { position_x: cell.col, position_y: cell.row });
+    const span = spans.get(id);
+    result.set(id, {
+      position_x: cell.col,
+      position_y: cell.row,
+      span_w: span?.span_w ?? 1,
+      span_h: span?.span_h ?? 1,
+    });
   }
 
   return result;
@@ -44,8 +56,11 @@ export function toSkillGridNodes(nodes: DbBlock[]): SkillGridNode[] {
     status: node.status || "available",
     is_start: node.is_start || false,
     next_block_ids: node.next_block_ids || [],
+    description: (node as DbBlock & { description?: string }).description,
     position_x: node.position_x ?? undefined,
     position_y: node.position_y ?? undefined,
+    span_w: node.span_w ?? undefined,
+    span_h: node.span_h ?? undefined,
   }));
 }
 
@@ -69,6 +84,8 @@ export function skillGridNodesFromRefs(
           .filter((id): id is string => Boolean(id)),
         position_x: ref.position_x ?? undefined,
         position_y: ref.position_y ?? undefined,
+        span_w: ref.span_w ?? undefined,
+        span_h: ref.span_h ?? undefined,
       },
     ];
   });

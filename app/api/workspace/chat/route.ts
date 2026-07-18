@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { ayclTokenFromBody, guardWorkspaceRoute } from "@/lib/api/require-auth";
 import { callXaiJSON, systemMessage, userMessage, buildImageContent, DEFAULT_MODEL, MessageContent } from "@/lib/xai-client";
+import { composeBlockGenerationContext } from "@/lib/workspace-create-modes";
 
 const SYSTEM_PROMPT = `You are an AI Workspace assistant. Your role is to help users understand and customize their workspaces.
 
@@ -93,6 +94,18 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Failed to fetch nodes" }, { status: 500 });
     }
 
+    const { data: workspaceFiles } = await supabase
+      .from("workspace_files")
+      .select("file_name")
+      .eq("workspace_id", workspaceId);
+
+    const alwaysContext = composeBlockGenerationContext({
+      workspaceTitle: plan.title || plan.root_topic || undefined,
+      goal: plan.conversion_goal || plan.root_topic,
+      notes: plan.notes,
+      fileNames: (workspaceFiles || []).map((f: { file_name: string }) => f.file_name).filter(Boolean),
+    });
+
     const model = userModel || DEFAULT_MODEL;
 
     // Build conversation history context
@@ -108,7 +121,9 @@ export async function POST(req: NextRequest) {
 ${nodes.map((n: { id: string; status: string; title: string; description?: string }, i: number) => `${n.id} | order:${i+1} | ${n.status === "completed" ? "✓ DONE" : "active"} | ${n.title}: ${n.description || "No description"}`).join("\n")}`
       : `CURRENT SESSIONS: None yet - this is a new/empty plan. Create sessions based on the user's request.`;
 
-    const prompt = `Current Workspace: "${plan.root_topic}"
+    const prompt = `${alwaysContext}
+
+Current Workspace: "${plan.root_topic}"
 
 ${sessionsSection}
 
@@ -117,6 +132,8 @@ CONVERSATION HISTORY:${historyContext}
 Current User request: "${userPrompt}"
 
 ${plan.description ? `Plan context: ${plan.description}` : ""}
+
+Always honor workspace files and notes when creating or modifying sessions.
 
 IMPORTANT: You MUST include a "sessions" array in your response with the complete plan. For new sessions, omit the "id" field.
 

@@ -23,12 +23,16 @@ import {
   type InitialChaptersLevel,
 } from "@/lib/initial-chapters";
 import {
-  composeWorkspaceSpatialGeneratePrompt,
   normalizeGeneratedWorkspaceBlocks,
   type WorkspaceBlockRef,
 } from "@/lib/workspace-spatial-create";
 import { insertGeneratedWorkspaceBlocks } from "@/lib/insert-workspace-blocks";
 import { persistSkillGridPositions, skillGridNodesFromRefs } from "@/lib/skill-grid-positions";
+import {
+  assertApiCreateMode,
+  composeAgentFilesGoalPrompt,
+  goalFieldsFromPrompt,
+} from "@/lib/workspace-create-modes";
 import type { AuthContext } from "./types";
 
 export const CREATE_WORKSPACE_MAX_FILES = 5;
@@ -158,12 +162,12 @@ async function createSemanticAgentWorkspace(
     : "";
 
   const band = getInitialChaptersBand(initialChapters);
-  const prompt = composeWorkspaceSpatialGeneratePrompt({
-    topicOrPrompt: initialPrompt,
-    initialChapters,
-    fileContext,
-    extraRules: WORKSPACE_GENERATION_CONVERSION_GOAL_RULE,
-  });
+  const prompt =
+    composeAgentFilesGoalPrompt({
+      goalPrompt: initialPrompt,
+      initialChapters,
+      fileContext,
+    }) + `\n${WORKSPACE_GENERATION_CONVERSION_GOAL_RULE}`;
 
   const generated = await callXaiJSON<GeneratedWorkspace>(
     [userMessage(prompt)],
@@ -191,8 +195,10 @@ async function createSemanticAgentWorkspace(
   }
 
   const workspaceTitle = generated.data.title || "Verification Workspace";
+  const goalFields = goalFieldsFromPrompt(initialPrompt);
   const conversionGoal =
     normalizeConversionGoal(generated.data.conversion_goal) ||
+    goalFields.conversion_goal ||
     fallbackConversionGoal({
       title: workspaceTitle,
       notes: initialPrompt,
@@ -206,10 +212,10 @@ async function createSemanticAgentWorkspace(
       organization_id: auth.organization_id,
       guest_user_id: auth.guest_user_id,
       title: workspaceTitle,
-      root_topic: initialPrompt.slice(0, 160),
+      root_topic: goalFields.root_topic,
       status: "active",
       source_type: "topic",
-      notes: initialPrompt,
+      notes: goalFields.notes,
       conversion_goal: conversionGoal,
       is_agent_workspace: true,
       evaluation_mode: "semantic",
@@ -340,6 +346,12 @@ export async function createAgentWorkspace(
 
   if (opaqueRequest) {
     return createOpaqueAgentWorkspace(supabase, auth, opaqueRequest, files);
+  }
+
+  // Semantic API create is Files + Goal only (no blank / template / Dantes modes).
+  const modeCheck = assertApiCreateMode(body.create_mode ?? body.createMode);
+  if (!modeCheck.ok) {
+    throw new Error(modeCheck.error);
   }
 
   const initialPrompt = typeof body.initial_prompt === "string" ? body.initial_prompt.trim() : "";

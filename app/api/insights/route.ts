@@ -8,11 +8,13 @@ export async function GET(req: NextRequest) {
 
   const workspaceId = req.nextUrl.searchParams.get("workspaceId");
 
+  // Dashboard Insights = bookmarks originating from workspaces only (not Performance).
   let query = supabase
     .from("insights")
     .select("id, title, summary, workspace_id, block_id, session_id, aesthetic_image, share_token, created_at")
     .eq("user_id", user.id)
     .is("archived_at", null)
+    .not("workspace_id", "is", null)
     .order("created_at", { ascending: false });
 
   if (workspaceId) {

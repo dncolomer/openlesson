@@ -22,6 +22,8 @@ interface Block {
   status: string;
   position_x?: number;
   position_y?: number;
+  span_w?: number;
+  span_h?: number;
   planning_prompt?: string;
   session_id?: string;
 }
@@ -109,8 +111,23 @@ export function SessionList({
   const router = useRouter();
   const [expandedNodeId, setExpandedNodeId] = useState<string | null>(null);
   const [isAddingBlock, setIsAddingBlock] = useState(false);
+  const [appearingNodeIds, setAppearingNodeIds] = useState<string[]>([]);
+  const prevNodeIdsRef = useRef<Set<string>>(new Set());
   const gridBackfillAttemptedRef = useRef<string | null>(null);
   const { t, locale } = useI18n();
+
+  // Track newly added nodes for sequential appear animation (AI builder path)
+  useEffect(() => {
+    const currentIds = new Set(nodes.map((n) => n.id));
+    const prev = prevNodeIdsRef.current;
+    if (prev.size > 0) {
+      const added = nodes.filter((n) => !prev.has(n.id)).map((n) => n.id);
+      if (added.length > 0) {
+        setAppearingNodeIds(added);
+      }
+    }
+    prevNodeIdsRef.current = currentIds;
+  }, [nodes]);
 
   const { completedSessions } = useMemo(() => {
     const ordered = getOrderedSessions(nodes);
@@ -222,6 +239,86 @@ export function SessionList({
     [ayclToken, isOwner, locale, nodes, onNodesUpdate, onRefresh, workspaceId, router],
   );
 
+  const handleGridOp = useCallback(
+    async (payload: {
+      op: "generate_shape" | "merge" | "split" | "move" | "update_block";
+      prompt?: string;
+      cells?: Array<{ row: number; col: number }>;
+      blockIds?: string[];
+      dRow?: number;
+      dCol?: number;
+      blockId?: string;
+      title?: string;
+      description?: string;
+    }) => {
+      if (!workspaceId || !isOwner) return;
+
+      const nodesById = new Map(nodes.map((node) => [node.id, node]));
+      const { placements } = buildSkillGridLayout(nodes);
+      const anchor =
+        payload.cells?.[0] ||
+        (payload.blockIds?.[0]
+          ? (() => {
+              const cell = placements.get(payload.blockIds[0]);
+              return cell ? { row: cell.row, col: cell.col } : null;
+            })()
+          : null);
+      const weightedNeighbors = anchor
+        ? getWeightedNeighborhood(anchor, placements, nodesById)
+        : [];
+
+      const savedModel =
+        typeof window !== "undefined"
+          ? window.localStorage.getItem(MODEL_STORAGE_KEY)?.replace(/^x-ai\//, "")
+          : null;
+      const model = savedModel || DEFAULT_PLANNER_MODEL;
+
+      setIsAddingBlock(true);
+      try {
+        const response = await fetch("/api/workspace/grid-ops", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            workspaceId,
+            ...payload,
+            weightedNeighbors,
+            model,
+            locale,
+            ...(ayclToken ? { ayclToken } : {}),
+          }),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.error || "Grid operation failed");
+        }
+
+        const data = await response.json();
+        if (data.updatedNodes?.length > 0) {
+          if (onNodesUpdate) onNodesUpdate(data.updatedNodes);
+          if (data.placedNodeId) {
+            setExpandedNodeId(data.placedNodeId);
+            if (data.appearSequentially) {
+              setAppearingNodeIds([data.placedNodeId]);
+            }
+          } else if (data.appearSequentially) {
+            const prev = prevNodeIdsRef.current;
+            const added = (data.updatedNodes as Block[])
+              .filter((n) => !prev.has(n.id))
+              .map((n) => n.id);
+            if (added.length) setAppearingNodeIds(added);
+          }
+        }
+        if (onRefresh) onRefresh();
+        router.refresh();
+        return data;
+      } finally {
+        setIsAddingBlock(false);
+      }
+    },
+    [ayclToken, isOwner, locale, nodes, onNodesUpdate, onRefresh, workspaceId, router],
+  );
+
   const selectedGridNode = nodes.find((node) => node.id === expandedNodeId) ?? null;
   const selectedGridIndex = selectedGridNode
     ? getOrderedSessions(nodes).findIndex((node) => node.id === selectedGridNode.id)
@@ -280,6 +377,9 @@ export function SessionList({
             ayclToken={ayclToken}
             locale={locale}
             onAddBlock={handleAddBlock}
+            onGridOp={handleGridOp}
+            appearingNodeIds={appearingNodeIds}
+            onAppearingComplete={() => setAppearingNodeIds([])}
             labels={{
               emptyCell: t("sessionList.gridEmptyCell"),
               addTitle: t("sessionList.gridAddTitle"),
@@ -292,6 +392,13 @@ export function SessionList({
               recenter: t("sessionList.gridRecenter"),
               zoomIn: t("sessionList.gridZoomIn"),
               zoomOut: t("sessionList.gridZoomOut"),
+              merge: t("sessionList.gridMerge"),
+              split: t("sessionList.gridSplit"),
+              move: t("sessionList.gridMove"),
+              generateShape: t("sessionList.gridGenerateShape"),
+              editBlock: t("sessionList.gridEditBlock"),
+              clearSelection: t("sessionList.gridClearSelection"),
+              multiSelectHint: t("sessionList.gridMultiSelectHint"),
             }}
           />
         </div>

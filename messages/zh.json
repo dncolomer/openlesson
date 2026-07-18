@@ -1736,7 +1736,7 @@
     "makePublic": "设为公开",
     "forkRemix": "复制 / 改编",
     "failedToLoadNodes": "加载节点失败",
-    "planBuilder": "计划构建器",
+    "planBuilder": "构建器",
     "notes": "笔记",
     "performance": "表现",
     "files": "文件",
@@ -1911,7 +1911,14 @@
     "gridAddCancel": "取消",
     "gridSuggestTopics": "推荐 3 个主题",
     "gridSuggesting": "正在推荐…",
-    "gridSuggestError": "无法加载推荐"
+    "gridSuggestError": "无法加载推荐",
+    "gridMerge": "合并",
+    "gridSplit": "拆分",
+    "gridMove": "移动",
+    "gridGenerateShape": "按形状生成",
+    "gridEditBlock": "编辑块",
+    "gridClearSelection": "清除选择",
+    "gridMultiSelectHint": "Shift/⌘-点击单元格或块进行多选"
   },
   "remixModal": {
     "remixTitle": "改编「{topic}」",

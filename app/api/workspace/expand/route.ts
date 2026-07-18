@@ -38,7 +38,7 @@ export async function POST(req: NextRequest) {
 
     const { data: plan } = await supabase
       .from("workspaces")
-      .select("user_id, is_public")
+      .select("user_id, is_public, title, root_topic, notes, conversion_goal")
       .eq("id", node.workspace_id)
       .single();
 
@@ -46,7 +46,22 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Access denied" }, { status: 403 });
     }
 
-    const prompt = `Expand the topic "${node.title}" with 2-4 follow-up learning sessions as a directed graph.
+    const { data: workspaceFiles } = await supabase
+      .from("workspace_files")
+      .select("file_name")
+      .eq("workspace_id", node.workspace_id);
+
+    const { composeBlockGenerationContext } = await import("@/lib/workspace-create-modes");
+    const alwaysContext = composeBlockGenerationContext({
+      workspaceTitle: plan.title || plan.root_topic || undefined,
+      goal: plan.conversion_goal || plan.root_topic,
+      notes: plan.notes,
+      fileNames: (workspaceFiles || []).map((f: { file_name: string }) => f.file_name).filter(Boolean),
+    });
+
+    const prompt = `${alwaysContext}
+
+Expand the topic "${node.title}" with 2-4 follow-up learning sessions as a directed graph. Always honor workspace files and notes as context.
 
 Return ONLY valid JSON:
 {

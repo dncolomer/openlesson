@@ -12,14 +12,17 @@ import {
   isCellOccupied,
   SKILL_GRID_CELL_SIZE,
   SKILL_GRID_DEFAULT_ZOOM_AT_REFERENCE,
+  SKILL_GRID_GAP,
   SKILL_GRID_PITCH,
   type GridCell,
   type SkillGridNode,
 } from "@/lib/block-skill-grid";
+import { footprintFromCells, normalizeSpan } from "@/lib/skill-grid-ops";
 import { DEFAULT_MODEL } from "@/lib/xai-models";
 
 const MODEL_STORAGE_KEY = "planner-model";
 const DEFAULT_PLANNER_MODEL = DEFAULT_MODEL;
+const APPEAR_STAGGER_MS = 140;
 
 interface BlockSkillGridProps {
   nodes: SkillGridNode[];
@@ -40,6 +43,21 @@ interface BlockSkillGridProps {
   /** Pan to this cell when it changes (e.g. after loading a chapter). */
   followCell?: GridCell | null;
   onAddBlock: (prompt: string, position: { row: number; col: number }) => Promise<void>;
+  /** Multi-select / multi-cell / merge / split / move ops (workspace builder). */
+  onGridOp?: (payload: {
+    op: "generate_shape" | "merge" | "split" | "move" | "update_block";
+    prompt?: string;
+    cells?: Array<{ row: number; col: number }>;
+    blockIds?: string[];
+    dRow?: number;
+    dCol?: number;
+    blockId?: string;
+    title?: string;
+    description?: string;
+  }) => Promise<{ updatedNodes?: SkillGridNode[]; placedNodeId?: string; appearSequentially?: boolean } | void>;
+  /** Block ids that should play entrance animation (staggered). */
+  appearingNodeIds?: string[];
+  onAppearingComplete?: (nodeIds: string[]) => void;
   labels: {
     emptyCell: string;
     addTitle: string;
@@ -52,6 +70,13 @@ interface BlockSkillGridProps {
     recenter: string;
     zoomIn: string;
     zoomOut: string;
+    merge?: string;
+    split?: string;
+    move?: string;
+    generateShape?: string;
+    editBlock?: string;
+    clearSelection?: string;
+    multiSelectHint?: string;
   };
 }
 
@@ -78,6 +103,10 @@ function cellStatusClass(status: string, selected: boolean, focused: boolean, sh
   return `${base}border-neutral-700/80 bg-neutral-950/75 text-neutral-100`;
 }
 
+function cellKey(cell: GridCell) {
+  return `${cell.row}:${cell.col}`;
+}
+
 export function BlockSkillGrid({
   nodes,
   selectedNodeId,
@@ -94,6 +123,9 @@ export function BlockSkillGrid({
   recenterCell = null,
   followCell = null,
   onAddBlock,
+  onGridOp,
+  appearingNodeIds = [],
+  onAppearingComplete,
   labels,
 }: BlockSkillGridProps) {
   const viewportRef = useRef<HTMLDivElement>(null);
@@ -117,16 +149,40 @@ export function BlockSkillGrid({
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(SKILL_GRID_DEFAULT_ZOOM_AT_REFERENCE);
 
+  // Multi-select
+  const [selectedEmptyCells, setSelectedEmptyCells] = useState<GridCell[]>([]);
+  const [selectedBlockIds, setSelectedBlockIds] = useState<string[]>([]);
+  const [shapePromptOpen, setShapePromptOpen] = useState(false);
+  const [mergePromptOpen, setMergePromptOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [editTitle, setEditTitle] = useState("");
+  const [editDescription, setEditDescription] = useState("");
+  const [localBusy, setLocalBusy] = useState(false);
+  const [visibleAppearing, setVisibleAppearing] = useState<Set<string>>(new Set());
+
   const nodesById = useMemo(() => new Map(nodes.map((node) => [node.id, node])), [nodes]);
-  const { occupancy, placements, startCell } = useMemo(() => buildSkillGridLayout(nodes), [nodes]);
+  const { occupancy, placements, spans, startCell } = useMemo(
+    () => buildSkillGridLayout(nodes),
+    [nodes],
+  );
   const canSuggest =
     suggestMode === "chapter" ? Boolean(sessionId) : Boolean(workspaceId);
   const viewportCenterCell = recenterCell ?? startCell;
+  const busy = isAdding || localBusy;
 
   const visibleCells = useMemo(
     () => getVisibleGridCells(viewportSize.width, viewportSize.height, pan.x, pan.y, zoom),
     [viewportSize.width, viewportSize.height, pan.x, pan.y, zoom],
   );
+
+  // Render anchors only once per multi-cell block
+  const renderedBlockIds = useMemo(() => {
+    const ids = new Set<string>();
+    for (const node of nodes) {
+      if (placements.has(node.id)) ids.add(node.id);
+    }
+    return ids;
+  }, [nodes, placements]);
 
   const applyCenterOnStart = useCallback(
     (nextZoom = zoom) => {
@@ -169,9 +225,30 @@ export function BlockSkillGrid({
       if (current.x === next.x && current.y === next.y) return current;
       return next;
     });
-    // Only follow when the target cell moves — not when zoom changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [followCell?.row, followCell?.col, viewportSize.width, viewportSize.height]);
+
+  // Sequential appear animation for AI-added blocks
+  useEffect(() => {
+    if (!appearingNodeIds.length) {
+      setVisibleAppearing(new Set());
+      return;
+    }
+    setVisibleAppearing(new Set());
+    const timers: ReturnType<typeof setTimeout>[] = [];
+    appearingNodeIds.forEach((id, index) => {
+      timers.push(
+        setTimeout(() => {
+          setVisibleAppearing((prev) => new Set(prev).add(id));
+        }, index * APPEAR_STAGGER_MS),
+      );
+    });
+    const done = setTimeout(() => {
+      onAppearingComplete?.(appearingNodeIds);
+    }, appearingNodeIds.length * APPEAR_STAGGER_MS + 420);
+    timers.push(done);
+    return () => timers.forEach(clearTimeout);
+  }, [appearingNodeIds, onAppearingComplete]);
 
   const recenter = useCallback(() => {
     const nextZoom = getDefaultSkillGridZoom(viewportSize.width, viewportSize.height);
@@ -216,7 +293,7 @@ export function BlockSkillGrid({
 
   const handlePointerDown = useCallback(
     (event: React.PointerEvent<HTMLDivElement>) => {
-      if (event.button !== 0 || pendingCell) return;
+      if (event.button !== 0 || pendingCell || shapePromptOpen || mergePromptOpen || editOpen) return;
       if ((event.target as HTMLElement).closest("[data-skill-cell]")) return;
 
       panMovedRef.current = false;
@@ -229,7 +306,7 @@ export function BlockSkillGrid({
       };
       event.currentTarget.setPointerCapture(event.pointerId);
     },
-    [pan.x, pan.y, pendingCell],
+    [pan.x, pan.y, pendingCell, shapePromptOpen, mergePromptOpen, editOpen],
   );
 
   const handlePointerMove = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
@@ -254,21 +331,70 @@ export function BlockSkillGrid({
     }
   }, []);
 
+  const clearSelection = useCallback(() => {
+    setSelectedEmptyCells([]);
+    setSelectedBlockIds([]);
+    setShapePromptOpen(false);
+    setMergePromptOpen(false);
+    setEditOpen(false);
+    setPrompt("");
+  }, []);
+
   const handleCellSelect = useCallback(
-    (blockId: string) => {
+    (blockId: string, event: React.MouseEvent) => {
+      if (canEdit && (event.metaKey || event.ctrlKey || event.shiftKey)) {
+        event.preventDefault();
+        setSelectedEmptyCells([]);
+        setSelectedBlockIds((prev) =>
+          prev.includes(blockId) ? prev.filter((id) => id !== blockId) : [...prev, blockId],
+        );
+        return;
+      }
+      if (selectedBlockIds.length > 0 || selectedEmptyCells.length > 0) {
+        // plain click while multi-selecting focuses single
+        setSelectedEmptyCells([]);
+        setSelectedBlockIds([blockId]);
+      }
       onSelectNode(blockId);
     },
-    [onSelectNode],
+    [canEdit, onSelectNode, selectedBlockIds.length, selectedEmptyCells.length],
   );
 
   const handleEmptyCellClick = useCallback(
-    (cell: GridCell) => {
-      if (!canEdit || isAdding) return;
+    (cell: GridCell, event: React.MouseEvent) => {
+      if (!canEdit || busy) return;
       if (isCellOccupied(occupancy, cell.row, cell.col)) return;
+
+      if (event.metaKey || event.ctrlKey || event.shiftKey) {
+        event.preventDefault();
+        setSelectedBlockIds([]);
+        setSelectedEmptyCells((prev) => {
+          const key = cellKey(cell);
+          if (prev.some((c) => cellKey(c) === key)) {
+            return prev.filter((c) => cellKey(c) !== key);
+          }
+          return [...prev, cell];
+        });
+        return;
+      }
+
+      // If already multi-selecting empties, toggle without meta
+      if (selectedEmptyCells.length > 0) {
+        setSelectedBlockIds([]);
+        setSelectedEmptyCells((prev) => {
+          const key = cellKey(cell);
+          if (prev.some((c) => cellKey(c) === key)) {
+            return prev.filter((c) => cellKey(c) !== key);
+          }
+          return [...prev, cell];
+        });
+        return;
+      }
+
       setAddError(null);
       setPendingCell(cell);
     },
-    [canEdit, isAdding, occupancy],
+    [busy, canEdit, occupancy, selectedEmptyCells.length],
   );
 
   useEffect(() => {
@@ -282,6 +408,11 @@ export function BlockSkillGrid({
     if (!pendingCell) return [];
     return getWeightedNeighborhood(pendingCell, placements, nodesById);
   }, [nodesById, pendingCell, placements]);
+
+  const shapeFootprint = useMemo(
+    () => (selectedEmptyCells.length > 0 ? footprintFromCells(selectedEmptyCells) : null),
+    [selectedEmptyCells],
+  );
 
   const handleSuggestTopics = useCallback(async () => {
     if (!canSuggest || !pendingCell || isSuggesting) return;
@@ -339,7 +470,7 @@ export function BlockSkillGrid({
   ]);
 
   const submitAdd = async () => {
-    if (!pendingCell || !prompt.trim() || isAdding) return;
+    if (!pendingCell || !prompt.trim() || busy) return;
     if (isCellOccupied(occupancy, pendingCell.row, pendingCell.col)) {
       setAddError("That grid slot is already occupied.");
       return;
@@ -354,13 +485,48 @@ export function BlockSkillGrid({
     }
   };
 
+  const runGridOp = async (
+    payload: Parameters<NonNullable<typeof onGridOp>>[0],
+  ) => {
+    if (!onGridOp || busy) return;
+    setLocalBusy(true);
+    setAddError(null);
+    try {
+      await onGridOp(payload);
+      clearSelection();
+    } catch (error) {
+      setAddError(error instanceof Error ? error.message : "Grid operation failed");
+    } finally {
+      setLocalBusy(false);
+    }
+  };
+
+  const openEditSelected = () => {
+    const id = selectedBlockIds[0] || selectedNodeId;
+    if (!id) return;
+    const node = nodesById.get(id);
+    if (!node) return;
+    setEditTitle(node.title);
+    setEditDescription(node.description || "");
+    setEditOpen(true);
+    if (!selectedBlockIds.includes(id)) setSelectedBlockIds([id]);
+  };
+
   if (nodes.length === 0 && !canEdit) {
     return <div className="flex h-full items-center justify-center text-sm text-neutral-600">{labels.emptyCell}</div>;
   }
 
+  const multiToolbarVisible =
+    canEdit &&
+    (selectedEmptyCells.length > 0 || selectedBlockIds.length > 0) &&
+    !pendingCell &&
+    !shapePromptOpen &&
+    !mergePromptOpen &&
+    !editOpen;
+
   return (
     <div className="relative flex h-full min-h-0 flex-col overflow-hidden rounded-md border border-neutral-800/60 bg-[radial-gradient(circle_at_50%_0%,rgba(255,255,255,0.04),rgba(8,8,8,0.98))]">
-      {isAdding && (
+      {busy && (
         <div className="pointer-events-none absolute inset-0 z-[15] backdrop-blur-[2px] bg-black/20 transition-all duration-500" />
       )}
       <div
@@ -388,14 +554,16 @@ export function BlockSkillGrid({
             transformOrigin: "0 0",
           }}
         >
+          {/* Empty cells + selection highlights */}
           {visibleCells.map((cell) => {
             const blockId = occupancy.get(`${cell.row}:${cell.col}`);
-            const node = blockId ? nodesById.get(blockId) : undefined;
-            const nodeCell = node ? placements.get(node.id) : null;
-
+            if (blockId) return null;
+            const selectedEmpty = selectedEmptyCells.some(
+              (c) => c.row === cell.row && c.col === cell.col,
+            );
             return (
               <div
-                key={`${cell.row}:${cell.col}`}
+                key={`empty-${cell.row}:${cell.col}`}
                 data-skill-cell
                 className="absolute"
                 style={{
@@ -405,40 +573,89 @@ export function BlockSkillGrid({
                   height: SKILL_GRID_CELL_SIZE,
                 }}
               >
-                {node ? (
-                  <button
-                    type="button"
-                    onClick={() => handleCellSelect(node.id)}
-                    className={`relative flex h-full w-full flex-col items-center justify-center rounded-lg border px-2 text-center transition hover:brightness-110 ${cellStatusClass(node.status, selectedNodeId === node.id, focusedNodeId === node.id, showProgress)}`}
-                    title={node.title}
-                  >
-                    {nodeCell && (
-                      <span className="absolute left-1.5 top-1 font-mono text-[9px] text-neutral-500">
-                        {formatGridCoordinate(nodeCell.row, nodeCell.col)}
-                      </span>
-                    )}
-                    {node.is_start && (
-                      <span className="absolute right-1.5 top-1 text-[8px] uppercase tracking-[0.12em] text-neutral-400">
-                        Start
-                      </span>
-                    )}
-                    <span className="line-clamp-3 text-[11px] font-medium leading-tight">{node.title}</span>
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    disabled={!canEdit || isAdding}
-                    onClick={() => handleEmptyCellClick(cell)}
-                    className={`flex h-full w-full flex-col items-center justify-center rounded-lg border border-dashed text-neutral-600 transition ${
-                      canEdit
+                <button
+                  type="button"
+                  disabled={!canEdit || busy}
+                  onClick={(e) => handleEmptyCellClick(cell, e)}
+                  className={`flex h-full w-full flex-col items-center justify-center rounded-lg border border-dashed text-neutral-600 transition ${
+                    selectedEmpty
+                      ? "border-cyan-400/70 bg-cyan-500/15 text-cyan-100 ring-2 ring-cyan-400/40"
+                      : canEdit
                         ? "border-neutral-700/90 bg-neutral-950/35 hover:border-neutral-500 hover:bg-neutral-900/50 hover:text-neutral-300"
                         : "border-neutral-800/70 bg-neutral-950/20 opacity-50"
-                    }`}
-                    title={canEdit ? labels.emptyCell : undefined}
-                  >
-                    {canEdit && <span className="text-xl leading-none text-neutral-600">+</span>}
-                  </button>
-                )}
+                  }`}
+                  title={canEdit ? labels.emptyCell : undefined}
+                >
+                  {canEdit && <span className="text-xl leading-none text-neutral-600">+</span>}
+                </button>
+              </div>
+            );
+          })}
+
+          {/* Occupied blocks (anchor only, may span multiple cells) */}
+          {[...renderedBlockIds].map((blockId) => {
+            const node = nodesById.get(blockId);
+            const nodeCell = placements.get(blockId);
+            if (!node || !nodeCell) return null;
+            const span = spans.get(blockId) || {
+              span_w: normalizeSpan(node.span_w),
+              span_h: normalizeSpan(node.span_h),
+            };
+            const width =
+              span.span_w * SKILL_GRID_CELL_SIZE + (span.span_w - 1) * SKILL_GRID_GAP;
+            const height =
+              span.span_h * SKILL_GRID_CELL_SIZE + (span.span_h - 1) * SKILL_GRID_GAP;
+            const multiSelected = selectedBlockIds.includes(node.id);
+            const isAppearingTarget = appearingNodeIds.includes(node.id);
+            const appeared = !isAppearingTarget || visibleAppearing.has(node.id);
+
+            return (
+              <div
+                key={`block-${node.id}`}
+                data-skill-cell
+                className="absolute"
+                style={{
+                  left: nodeCell.col * SKILL_GRID_PITCH,
+                  top: nodeCell.row * SKILL_GRID_PITCH,
+                  width,
+                  height,
+                }}
+              >
+                <button
+                  type="button"
+                  onClick={(e) => handleCellSelect(node.id, e)}
+                  className={`relative flex h-full w-full flex-col items-center justify-center rounded-lg border px-2 text-center transition hover:brightness-110 ${cellStatusClass(
+                    node.status,
+                    selectedNodeId === node.id || multiSelected,
+                    focusedNodeId === node.id,
+                    showProgress,
+                  )} ${multiSelected ? "ring-2 ring-cyan-400/60" : ""} ${
+                    isAppearingTarget
+                      ? appeared
+                        ? "opacity-100 scale-100 shadow-[0_0_18px_rgba(34,211,238,0.35)]"
+                        : "opacity-0 scale-95"
+                      : ""
+                  }`}
+                  style={{
+                    transition: isAppearingTarget
+                      ? "opacity 380ms ease, transform 380ms ease, box-shadow 380ms ease"
+                      : undefined,
+                  }}
+                  title={node.title}
+                >
+                  <span className="absolute left-1.5 top-1 font-mono text-[9px] text-neutral-500">
+                    {formatGridCoordinate(nodeCell.row, nodeCell.col)}
+                    {(span.span_w > 1 || span.span_h > 1) && (
+                      <span className="text-neutral-600"> · {span.span_w}×{span.span_h}</span>
+                    )}
+                  </span>
+                  {node.is_start && (
+                    <span className="absolute right-1.5 top-1 text-[8px] uppercase tracking-[0.12em] text-neutral-400">
+                      Start
+                    </span>
+                  )}
+                  <span className="line-clamp-3 text-[11px] font-medium leading-tight">{node.title}</span>
+                </button>
               </div>
             );
           })}
@@ -472,7 +689,108 @@ export function BlockSkillGrid({
             </svg>
           </button>
         </div>
+
+        {canEdit && (
+          <div className="pointer-events-none absolute left-2 bottom-2 z-10 max-w-[min(100%,18rem)] rounded-md border border-neutral-800/80 bg-neutral-950/80 px-2 py-1 text-[10px] text-neutral-500">
+            {labels.multiSelectHint || "Shift/⌘-click cells or blocks to multi-select"}
+          </div>
+        )}
       </div>
+
+      {multiToolbarVisible && (
+        <div className="absolute inset-x-0 bottom-0 z-20 border-t border-neutral-800 bg-neutral-950/95 p-2 backdrop-blur-md">
+          <div className="flex flex-wrap items-center gap-1.5">
+            {selectedEmptyCells.length > 0 && (
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => setShapePromptOpen(true)}
+                className="rounded-md bg-white px-2.5 py-1.5 text-xs font-medium text-black hover:bg-neutral-200 disabled:opacity-40"
+              >
+                {labels.generateShape || "Generate in shape"} ({selectedEmptyCells.length})
+              </button>
+            )}
+            {selectedBlockIds.length >= 2 && (
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => setMergePromptOpen(true)}
+                className="rounded-md border border-neutral-600 bg-neutral-900 px-2.5 py-1.5 text-xs text-neutral-100 hover:border-neutral-400 disabled:opacity-40"
+              >
+                {labels.merge || "Merge"} ({selectedBlockIds.length})
+              </button>
+            )}
+            {selectedBlockIds.length >= 1 && (
+              <>
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() =>
+                    void runGridOp({ op: "split", blockIds: selectedBlockIds })
+                  }
+                  className="rounded-md border border-neutral-600 bg-neutral-900 px-2.5 py-1.5 text-xs text-neutral-100 hover:border-neutral-400 disabled:opacity-40"
+                >
+                  {labels.split || "Split"}
+                </button>
+                <div className="flex items-center gap-1 rounded-md border border-neutral-700 bg-neutral-900/80 px-1.5 py-1">
+                  <span className="px-1 text-[10px] uppercase tracking-wide text-neutral-500">
+                    {labels.move || "Move"}
+                  </span>
+                  {(
+                    [
+                      ["↑", -1, 0],
+                      ["↓", 1, 0],
+                      ["←", 0, -1],
+                      ["→", 0, 1],
+                    ] as const
+                  ).map(([label, dr, dc]) => (
+                    <button
+                      key={label}
+                      type="button"
+                      disabled={busy}
+                      onClick={() =>
+                        void runGridOp({
+                          op: "move",
+                          blockIds: selectedBlockIds,
+                          dRow: dr,
+                          dCol: dc,
+                        })
+                      }
+                      className="flex h-6 w-6 items-center justify-center rounded text-xs text-neutral-200 hover:bg-neutral-800 disabled:opacity-40"
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+                {selectedBlockIds.length === 1 && (
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={openEditSelected}
+                    className="rounded-md border border-neutral-600 bg-neutral-900 px-2.5 py-1.5 text-xs text-neutral-100 hover:border-neutral-400 disabled:opacity-40"
+                  >
+                    {labels.editBlock || "Edit"}
+                  </button>
+                )}
+              </>
+            )}
+            <button
+              type="button"
+              onClick={clearSelection}
+              className="ml-auto rounded-md px-2 py-1.5 text-xs text-neutral-400 hover:text-white"
+            >
+              {labels.clearSelection || "Clear"}
+            </button>
+          </div>
+          {addError && <p className="mt-1.5 text-xs text-red-400/90">{addError}</p>}
+          {shapeFootprint && selectedEmptyCells.length > 0 && (
+            <p className="mt-1 text-[10px] text-neutral-500">
+              Shape {shapeFootprint.span_w}×{shapeFootprint.span_h} at{" "}
+              {formatGridCoordinate(shapeFootprint.position_y, shapeFootprint.position_x)}
+            </p>
+          )}
+        </div>
+      )}
 
       {pendingCell && (
         <div className="absolute inset-0 z-20 flex items-end justify-center bg-black/55 p-3 sm:items-center">
@@ -508,7 +826,7 @@ export function BlockSkillGrid({
             <div className="mt-3 flex items-center justify-between gap-2">
               <button
                 type="button"
-                disabled={!canSuggest || isSuggesting || isAdding}
+                disabled={!canSuggest || isSuggesting || busy}
                 onClick={() => void handleSuggestTopics()}
                 className="rounded-md border border-neutral-700 bg-neutral-900/80 px-2.5 py-1.5 text-xs text-neutral-300 transition hover:border-neutral-500 hover:text-white disabled:opacity-40"
               >
@@ -554,11 +872,154 @@ export function BlockSkillGrid({
               </button>
               <button
                 type="button"
-                disabled={!prompt.trim() || isAdding}
+                disabled={!prompt.trim() || busy}
                 onClick={() => void submitAdd()}
                 className="rounded-md bg-white px-3 py-1.5 text-xs font-medium text-black transition hover:bg-neutral-200 disabled:opacity-40"
               >
-                {isAdding ? "..." : labels.addSubmit}
+                {busy ? "..." : labels.addSubmit}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {shapePromptOpen && (
+        <div className="absolute inset-0 z-30 flex items-end justify-center bg-black/55 p-3 sm:items-center">
+          <div className="w-full max-w-md rounded-xl border border-neutral-700/80 bg-neutral-950 p-4 shadow-2xl">
+            <h3 className="text-sm font-medium text-white">
+              {labels.generateShape || "Generate block in shape"}
+            </h3>
+            <p className="mt-1 text-[11px] text-neutral-500">
+              {shapeFootprint
+                ? `${shapeFootprint.span_w}×${shapeFootprint.span_h} at ${formatGridCoordinate(shapeFootprint.position_y, shapeFootprint.position_x)}`
+                : `${selectedEmptyCells.length} cells`}
+            </p>
+            <textarea
+              value={prompt}
+              onChange={(e) => setPrompt(e.target.value)}
+              placeholder={labels.addPlaceholder}
+              className="mt-3 w-full resize-none rounded-md border border-neutral-700 bg-black/60 px-3 py-2 text-sm text-white placeholder:text-neutral-600 focus:border-neutral-500 focus:outline-none"
+              rows={3}
+              autoFocus
+            />
+            {addError && <p className="mt-2 text-xs text-red-400/90">{addError}</p>}
+            <div className="mt-3 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setShapePromptOpen(false);
+                  setPrompt("");
+                }}
+                className="rounded-md px-3 py-1.5 text-xs text-neutral-400 hover:text-white"
+              >
+                {labels.addCancel}
+              </button>
+              <button
+                type="button"
+                disabled={!prompt.trim() || busy}
+                onClick={() =>
+                  void runGridOp({
+                    op: "generate_shape",
+                    prompt: prompt.trim(),
+                    cells: selectedEmptyCells,
+                  })
+                }
+                className="rounded-md bg-white px-3 py-1.5 text-xs font-medium text-black disabled:opacity-40"
+              >
+                {busy ? "..." : labels.addSubmit}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {mergePromptOpen && (
+        <div className="absolute inset-0 z-30 flex items-end justify-center bg-black/55 p-3 sm:items-center">
+          <div className="w-full max-w-md rounded-xl border border-neutral-700/80 bg-neutral-950 p-4 shadow-2xl">
+            <h3 className="text-sm font-medium text-white">{labels.merge || "Merge blocks"}</h3>
+            <p className="mt-1 text-[11px] text-neutral-500">
+              Merging {selectedBlockIds.length} blocks into one larger geometric topic
+            </p>
+            <textarea
+              value={prompt}
+              onChange={(e) => setPrompt(e.target.value)}
+              placeholder="Optional guidance for the merged topic..."
+              className="mt-3 w-full resize-none rounded-md border border-neutral-700 bg-black/60 px-3 py-2 text-sm text-white placeholder:text-neutral-600 focus:border-neutral-500 focus:outline-none"
+              rows={3}
+              autoFocus
+            />
+            {addError && <p className="mt-2 text-xs text-red-400/90">{addError}</p>}
+            <div className="mt-3 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setMergePromptOpen(false);
+                  setPrompt("");
+                }}
+                className="rounded-md px-3 py-1.5 text-xs text-neutral-400 hover:text-white"
+              >
+                {labels.addCancel}
+              </button>
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() =>
+                  void runGridOp({
+                    op: "merge",
+                    prompt: prompt.trim() || undefined,
+                    blockIds: selectedBlockIds,
+                  })
+                }
+                className="rounded-md bg-white px-3 py-1.5 text-xs font-medium text-black disabled:opacity-40"
+              >
+                {busy ? "..." : labels.merge || "Merge"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {editOpen && selectedBlockIds[0] && (
+        <div className="absolute inset-0 z-30 flex items-end justify-center bg-black/55 p-3 sm:items-center">
+          <div className="w-full max-w-md rounded-xl border border-neutral-700/80 bg-neutral-950 p-4 shadow-2xl">
+            <h3 className="text-sm font-medium text-white">{labels.editBlock || "Edit block"}</h3>
+            <input
+              value={editTitle}
+              onChange={(e) => setEditTitle(e.target.value)}
+              className="mt-3 w-full rounded-md border border-neutral-700 bg-black/60 px-3 py-2 text-sm text-white focus:border-neutral-500 focus:outline-none"
+              placeholder="Title"
+              autoFocus
+            />
+            <textarea
+              value={editDescription}
+              onChange={(e) => setEditDescription(e.target.value)}
+              className="mt-2 w-full resize-none rounded-md border border-neutral-700 bg-black/60 px-3 py-2 text-sm text-white placeholder:text-neutral-600 focus:border-neutral-500 focus:outline-none"
+              rows={4}
+              placeholder="Description"
+            />
+            {addError && <p className="mt-2 text-xs text-red-400/90">{addError}</p>}
+            <div className="mt-3 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setEditOpen(false)}
+                className="rounded-md px-3 py-1.5 text-xs text-neutral-400 hover:text-white"
+              >
+                {labels.addCancel}
+              </button>
+              <button
+                type="button"
+                disabled={!editTitle.trim() || busy}
+                onClick={() =>
+                  void runGridOp({
+                    op: "update_block",
+                    blockId: selectedBlockIds[0],
+                    title: editTitle.trim(),
+                    description: editDescription,
+                  })
+                }
+                className="rounded-md bg-white px-3 py-1.5 text-xs font-medium text-black disabled:opacity-40"
+              >
+                {busy ? "..." : "Save"}
               </button>
             </div>
           </div>

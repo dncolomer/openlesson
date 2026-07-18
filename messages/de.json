@@ -1736,7 +1736,7 @@
     "makePublic": "Öffentlich machen",
     "forkRemix": "Fork / Remix",
     "failedToLoadNodes": "Knoten konnten nicht geladen werden",
-    "planBuilder": "Arbeitsbereich-Editor",
+    "planBuilder": "Builder",
     "notes": "Notizen",
     "performance": "Leistung",
     "files": "Dateien",
@@ -1911,7 +1911,14 @@
     "gridAddCancel": "Abbrechen",
     "gridSuggestTopics": "3 Themen vorschlagen",
     "gridSuggesting": "Vorschläge werden geladen…",
-    "gridSuggestError": "Vorschläge konnten nicht geladen werden"
+    "gridSuggestError": "Vorschläge konnten nicht geladen werden",
+    "gridMerge": "Zusammenführen",
+    "gridSplit": "Teilen",
+    "gridMove": "Verschieben",
+    "gridGenerateShape": "In Form erzeugen",
+    "gridEditBlock": "Block bearbeiten",
+    "gridClearSelection": "Auswahl löschen",
+    "gridMultiSelectHint": "Shift/⌘-Klick auf Zellen oder Blöcke für Mehrfachauswahl"
   },
   "remixModal": {
     "remixTitle": "\"{topic}\" remixen",

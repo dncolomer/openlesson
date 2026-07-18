@@ -18,6 +18,15 @@ import {
   extractGeneratedPlanNodes,
   insertGeneratedWorkspaceBlocks,
 } from "@/lib/insert-workspace-blocks";
+import {
+  composeDantesResourceContext,
+  composeFilesGoalCreatePrompt,
+  composeTemplateCreatePrompt,
+  composeTemplateWorkspaceNotes,
+  goalFieldsFromPrompt,
+  parseWorkspaceCreateMode,
+  type WorkspaceCreateMode,
+} from "@/lib/workspace-create-modes";
 
 const ALLOWED_MIME_TYPES = new Set([
   "application/pdf",
@@ -100,9 +109,51 @@ export async function POST(req: NextRequest) {
     const { user, supabase } = auth;
 
     const body = await req.json();
-    const { topic, days, image, files: rawFiles } = body;
+    const { topic, days, image, files: rawFiles, goal: goalBody } = body;
+    const createMode: WorkspaceCreateMode =
+      parseWorkspaceCreateMode(body.createMode ?? body.create_mode) || "files_goal";
     const initialChapters = resolveInitialChaptersFromBody(body);
     const band = getInitialChaptersBand(initialChapters);
+
+    // ── Blank: empty workspace, zero blocks ──────────────────────────
+    if (createMode === "blank") {
+      const billing = await resolveUserBilling(supabase, user.id);
+      if ("error" in billing) {
+        return NextResponse.json({ error: billing.error }, { status: 500 });
+      }
+      const workspaceCheck = await checkWorkspaceCreation(
+        supabase,
+        user.id,
+        billing.userProfile,
+      );
+      if (!workspaceCheck.allowed) {
+        return NextResponse.json(workspaceLimitErrorResponse(workspaceCheck), { status: 403 });
+      }
+
+      const { data: plan, error: planError } = await supabase
+        .from("workspaces")
+        .insert({
+          user_id: user.id,
+          title: "Blank workspace",
+          root_topic: "Blank workspace",
+          status: "active",
+          source_type: "topic",
+          notes: "",
+        })
+        .select()
+        .single();
+
+      if (planError || !plan) {
+        return NextResponse.json({ error: "Failed to create blank workspace" }, { status: 500 });
+      }
+
+      return NextResponse.json({
+        workspaceId: plan.id,
+        title: plan.title,
+        createMode: "blank",
+        blockCount: 0,
+      });
+    }
 
     if (!topic || typeof topic !== "string") {
       return NextResponse.json({ error: "Topic is required" }, { status: 400 });
@@ -172,17 +223,64 @@ export async function POST(req: NextRequest) {
       ? `\nThe user has provided an image. Analyze it and incorporate its content into the learning plan alongside the topic "${topic}".`
       : "";
 
-    const fileContext = hasDocFiles
+    let fileContext = hasDocFiles
       ? `\nThe user has attached ${docFiles.length} document(s) as reference material. Search and analyze them, then incorporate their content into the plan alongside the topic "${topic}".`
       : "";
 
-    const promptBody = composeWorkspacePlanGeneratePrompt({
-      topic,
-      initialChapters,
-      imageContext,
-      fileContext,
-      daysHint: daysNum,
-    });
+    // Template mode: selected resources as generation context (+ persisted notes later)
+    let templateNotes: string | null = null;
+    if (createMode === "template") {
+      const dantesTopic =
+        body.dantesTopic && typeof body.dantesTopic === "object"
+          ? (body.dantesTopic as { name?: string; slug?: string; description?: string | null })
+          : null;
+      const dantesResources = Array.isArray(body.dantesResources) ? body.dantesResources : [];
+      const topicName =
+        (typeof dantesTopic?.name === "string" && dantesTopic.name) || topic;
+      const resourceItems = dantesResources.map((r: Record<string, unknown>) => ({
+        title: typeof r.title === "string" ? r.title : "Resource",
+        type: typeof r.type === "string" ? r.type : undefined,
+        url: typeof r.url === "string" ? r.url : undefined,
+        description: typeof r.description === "string" ? r.description : null,
+        difficulty: typeof r.difficulty === "string" ? r.difficulty : undefined,
+      }));
+      fileContext =
+        composeDantesResourceContext(topicName, resourceItems) + (fileContext || "");
+      templateNotes = composeTemplateWorkspaceNotes(topicName, resourceItems, {
+        topicDescription:
+          typeof dantesTopic?.description === "string" ? dantesTopic.description : null,
+      });
+    }
+
+    const goalPromptText =
+      typeof goalBody === "string" && goalBody.trim()
+        ? goalBody.trim()
+        : typeof topic === "string"
+          ? topic.trim()
+          : "";
+
+    const promptBody =
+      createMode === "files_goal"
+        ? composeFilesGoalCreatePrompt({
+            goalPrompt: goalPromptText,
+            initialChapters,
+            fileContext: `${imageContext}${fileContext}`,
+            daysHint: daysNum,
+          })
+        : createMode === "template"
+          ? composeTemplateCreatePrompt({
+              topicName: topic,
+              dantesContext: `${imageContext}${fileContext}`,
+              initialChapters,
+              daysHint: daysNum,
+            })
+          : composeWorkspacePlanGeneratePrompt({
+              topic,
+              initialChapters,
+              imageContext,
+              fileContext,
+              daysHint: daysNum,
+            });
     const maxTokens = Math.min(5000, 1600 + band.max * 140);
 
     let planData: PlanData | null = null;
@@ -316,14 +414,33 @@ export async function POST(req: NextRequest) {
 
     const catchyTitle = (planData as PlanData | null)?.title || `Learning ${topic}`;
 
+    // Files+Goal: persist prompt as Goal. Template: notes = linked resource list (selected cards).
+    const goalFields =
+      createMode === "files_goal"
+        ? goalFieldsFromPrompt(goalPromptText)
+        : createMode === "template"
+          ? {
+              root_topic: topic.slice(0, 160),
+              notes: templateNotes || composeTemplateWorkspaceNotes(topic, []),
+              conversion_goal: null as string | null,
+            }
+          : {
+              root_topic: topic.slice(0, 160),
+              notes: null as string | null,
+              conversion_goal: null as string | null,
+            };
+
     // Create workspace only after we have a valid node list
     const { data: plan, error: planError } = await supabase
       .from("workspaces")
       .insert({
         user_id: user.id,
         title: catchyTitle,
-        root_topic: topic,
+        root_topic: goalFields.root_topic || topic,
         status: "active",
+        source_type: createMode === "template" ? "topic" : "topic",
+        notes: goalFields.notes,
+        conversion_goal: goalFields.conversion_goal,
       })
       .select()
       .single();

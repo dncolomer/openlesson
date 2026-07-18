@@ -1795,7 +1795,7 @@
     "makePublic": "Make Public",
     "forkRemix": "Fork / Remix",
     "failedToLoadNodes": "Failed to load nodes",
-    "planBuilder": "Workspace Builder",
+    "planBuilder": "Builder",
     "notes": "Notes",
     "performance": "Performance",
     "files": "Files",
@@ -2039,7 +2039,14 @@
     "gridAddCancel": "Cancel",
     "gridSuggestTopics": "Suggest 3 topics",
     "gridSuggesting": "Suggesting…",
-    "gridSuggestError": "Couldn't load suggestions"
+    "gridSuggestError": "Couldn't load suggestions",
+    "gridMerge": "Merge",
+    "gridSplit": "Split",
+    "gridMove": "Move",
+    "gridGenerateShape": "Generate in shape",
+    "gridEditBlock": "Edit block",
+    "gridClearSelection": "Clear",
+    "gridMultiSelectHint": "Shift/⌘-click cells or blocks to multi-select · move preserves shape"
   },
   "remixModal": {
     "remixTitle": "Remix \"{topic}\"",

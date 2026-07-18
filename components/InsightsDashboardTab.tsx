@@ -76,8 +76,11 @@ export function InsightsDashboardTab({
       <div className="border border-neutral-800 bg-neutral-950/75 px-6 py-7 sm:px-8 sm:py-8 backdrop-blur-sm">
         <p className="mb-3 font-mono text-[10px] uppercase tracking-[2px] text-neutral-500">Insights</p>
         <h2 className="max-w-2xl text-3xl font-medium tracking-[-1.2px] text-white sm:text-4xl">
-          Bookmarks from your thinking
+          Bookmarks from your workspaces
         </h2>
+        <p className="mt-2 max-w-2xl text-sm text-neutral-500">
+          Insights originating from your workspaces — separate from Performance metrics inside a workspace.
+        </p>
         <p className="mt-3 max-w-xl text-sm leading-relaxed text-neutral-400">
           Select thought traces in any workspace, synthesize them into durable insights, and share the detail page
           anonymously.

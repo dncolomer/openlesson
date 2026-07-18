@@ -1736,7 +1736,7 @@
     "makePublic": "Chuyển sang công khai",
     "forkRemix": "Sao chép / Remix",
     "failedToLoadNodes": "Không thể tải các node",
-    "planBuilder": "Plan Builder",
+    "planBuilder": "Builder",
     "notes": "Notes",
     "performance": "Performance",
     "files": "Files",
@@ -1911,7 +1911,14 @@
     "gridAddCancel": "Hủy",
     "gridSuggestTopics": "Gợi ý 3 chủ đề",
     "gridSuggesting": "Đang gợi ý…",
-    "gridSuggestError": "Không thể tải gợi ý"
+    "gridSuggestError": "Không thể tải gợi ý",
+    "gridMerge": "Gộp",
+    "gridSplit": "Tách",
+    "gridMove": "Di chuyển",
+    "gridGenerateShape": "Tạo theo hình",
+    "gridEditBlock": "Sửa khối",
+    "gridClearSelection": "Xóa chọn",
+    "gridMultiSelectHint": "Shift/⌘-click ô hoặc khối để chọn nhiều"
   },
   "remixModal": {
     "remixTitle": "Remix \"{topic}\"",

@@ -4,10 +4,16 @@ export interface SkillGridNode {
   status: string;
   is_start: boolean;
   next_block_ids: string[];
-  /** Grid column in world coordinates */
+  /** Optional body text for hand-edit surfaces */
+  description?: string;
+  /** Grid column in world coordinates (anchor / top-left of multi-cell span) */
   position_x?: number;
-  /** Grid row in world coordinates */
+  /** Grid row in world coordinates (anchor / top-left of multi-cell span) */
   position_y?: number;
+  /** Width in cells (≥1). Default 1. */
+  span_w?: number;
+  /** Height in cells (≥1). Default 1. */
+  span_h?: number;
 }
 
 export interface GridCell {
@@ -162,19 +168,50 @@ export function formatWeightedNeighborhoodSummary(neighbors: WeightedGridNeighbo
     .join("\n");
 }
 
-/** World-space layout: honors saved grid cells, then fills gaps radially from origin. */
+function nodeSpanW(node: SkillGridNode) {
+  return typeof node.span_w === "number" && node.span_w >= 1 ? Math.min(node.span_w, 24) : 1;
+}
+
+function nodeSpanH(node: SkillGridNode) {
+  return typeof node.span_h === "number" && node.span_h >= 1 ? Math.min(node.span_h, 24) : 1;
+}
+
+/** Mark every cell in a rectangular footprint as occupied by blockId. Returns false if any cell taken. */
+function claimFootprint(
+  occupancy: Map<string, string>,
+  blockId: string,
+  row: number,
+  col: number,
+  spanW: number,
+  spanH: number,
+): boolean {
+  const keys: string[] = [];
+  for (let dr = 0; dr < spanH; dr++) {
+    for (let dc = 0; dc < spanW; dc++) {
+      const key = getCellKey(row + dr, col + dc);
+      if (occupancy.has(key)) return false;
+      keys.push(key);
+    }
+  }
+  for (const key of keys) occupancy.set(key, blockId);
+  return true;
+}
+
+/** World-space layout: honors saved grid cells (with multi-cell spans), then fills gaps radially from origin. */
 export function buildSkillGridLayout(nodes: SkillGridNode[]) {
   const ordered = getOrderedSkillGridNodes(nodes);
   const placements = new Map<string, GridCell>();
+  const spans = new Map<string, { span_w: number; span_h: number }>();
   const occupancy = new Map<string, string>();
 
   for (const node of nodes) {
     if (!hasGridPosition(node)) continue;
+    const spanW = nodeSpanW(node);
+    const spanH = nodeSpanH(node);
     const cell = { row: node.position_y!, col: node.position_x! };
-    const key = cellKey(cell);
-    if (occupancy.has(key)) continue;
+    if (!claimFootprint(occupancy, node.id, cell.row, cell.col, spanW, spanH)) continue;
     placements.set(node.id, cell);
-    occupancy.set(key, node.id);
+    spans.set(node.id, { span_w: spanW, span_h: spanH });
   }
 
   const unplaced = ordered.filter((node) => !placements.has(node.id));
@@ -183,12 +220,13 @@ export function buildSkillGridLayout(nodes: SkillGridNode[]) {
     let slotIndex = 0;
 
     for (const node of unplaced) {
+      const spanW = nodeSpanW(node);
+      const spanH = nodeSpanH(node);
       while (slotIndex < radialSlots.length) {
         const cell = radialSlots[slotIndex++];
-        const key = cellKey(cell);
-        if (occupancy.has(key)) continue;
+        if (!claimFootprint(occupancy, node.id, cell.row, cell.col, spanW, spanH)) continue;
         placements.set(node.id, cell);
-        occupancy.set(key, node.id);
+        spans.set(node.id, { span_w: spanW, span_h: spanH });
         break;
       }
     }
@@ -197,7 +235,7 @@ export function buildSkillGridLayout(nodes: SkillGridNode[]) {
   const startNode = ordered.find((node) => node.is_start) ?? ordered[0];
   const startCell = startNode ? (placements.get(startNode.id) ?? { row: 0, col: 0 }) : { row: 0, col: 0 };
 
-  return { ordered, placements, occupancy, startCell };
+  return { ordered, placements, occupancy, spans, startCell };
 }
 
 export function getNeighborTitles(

@@ -1797,7 +1797,7 @@
     "makePublic": "Hacer público",
     "forkRemix": "Bifurcar / Remix",
     "failedToLoadNodes": "Error al cargar nodos",
-    "planBuilder": "Constructor de Plan",
+    "planBuilder": "Constructor",
     "notes": "Notas",
     "performance": "Rendimiento",
     "files": "Archivos",
@@ -1972,7 +1972,14 @@
     "gridAddCancel": "Cancelar",
     "gridSuggestTopics": "Sugerir 3 temas",
     "gridSuggesting": "Sugiriendo…",
-    "gridSuggestError": "No se pudieron cargar las sugerencias"
+    "gridSuggestError": "No se pudieron cargar las sugerencias",
+    "gridMerge": "Fusionar",
+    "gridSplit": "Dividir",
+    "gridMove": "Mover",
+    "gridGenerateShape": "Generar en forma",
+    "gridEditBlock": "Editar bloque",
+    "gridClearSelection": "Limpiar",
+    "gridMultiSelectHint": "Shift/⌘-clic en celdas o bloques para multi-selección"
   },
   "remixModal": {
     "remixTitle": "Remixear \"{topic}\"",

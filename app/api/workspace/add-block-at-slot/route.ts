@@ -8,6 +8,7 @@ import {
   type WeightedGridNeighbor,
 } from "@/lib/block-skill-grid";
 import { toSkillGridNodes } from "@/lib/skill-grid-positions";
+import { composeBlockGenerationContext } from "@/lib/workspace-create-modes";
 
 interface AddBlockResponse {
   title: string;
@@ -30,7 +31,7 @@ export async function POST(req: NextRequest) {
 
     const { data: plan, error: planError } = await supabase
       .from("workspaces")
-      .select("id, user_id, root_topic, title, description")
+      .select("id, user_id, root_topic, title, description, notes, conversion_goal")
       .eq("id", workspaceId)
       .single();
 
@@ -47,6 +48,11 @@ export async function POST(req: NextRequest) {
     if (nodesError || !nodes) {
       return NextResponse.json({ error: "Failed to fetch blocks" }, { status: 500 });
     }
+
+    const { data: workspaceFiles } = await supabase
+      .from("workspace_files")
+      .select("file_name")
+      .eq("workspace_id", workspaceId);
 
     const skillNodes = toSkillGridNodes(nodes);
     const { occupancy } = buildSkillGridLayout(skillNodes);
@@ -82,7 +88,14 @@ export async function POST(req: NextRequest) {
       })
       .join("\n");
 
-    const aiPrompt = `Workspace: ${workspaceTitle}
+    const alwaysContext = composeBlockGenerationContext({
+      workspaceTitle,
+      goal: plan.conversion_goal || plan.root_topic,
+      notes: plan.notes,
+      fileNames: (workspaceFiles || []).map((f: { file_name: string }) => f.file_name).filter(Boolean),
+    });
+
+    const aiPrompt = `${alwaysContext}
 ${plan.description ? `Description: ${plan.description}\n` : ""}Existing blocks:
 ${blockList || "(none yet)"}
 
@@ -92,7 +105,7 @@ ${neighborSummary}
 
 User request for the new block: "${prompt.trim()}"
 
-Create exactly one learning block that belongs at this grid slot. The topic should fit the spatial context: complement nearby blocks, avoid duplicates, and respect distance-weighted influence.${languageNote ? `\n\n${languageNote}` : ""}`;
+Create exactly one learning block that belongs at this grid slot. The topic should fit the spatial context: complement nearby blocks, avoid duplicates, and respect distance-weighted influence. Always honor workspace files and notes as context.${languageNote ? `\n\n${languageNote}` : ""}`;
 
     const aiResponse = await callXaiJSON<AddBlockResponse>(
       [

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { ayclTokenFromBody, guardWorkspaceRoute, requireAuthenticatedUser } from "@/lib/api/require-auth";
 import { callXaiJSON, userMessage, DEFAULT_MODEL } from "@/lib/xai-client";
 import { persistSkillGridPositions, toSkillGridNodes } from "@/lib/skill-grid-positions";
+import { composeBlockGenerationContext } from "@/lib/workspace-create-modes";
 
 interface NodeData {
   id: string;
@@ -29,7 +30,7 @@ export async function POST(req: NextRequest) {
 
     const { data: plan, error: planError } = await supabase
       .from("workspaces")
-      .select("id, user_id, root_topic")
+      .select("id, user_id, root_topic, title, notes, conversion_goal")
       .eq("id", workspaceId)
       .single();
 
@@ -50,6 +51,18 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Failed to fetch nodes" }, { status: 500 });
     }
 
+    const { data: workspaceFiles } = await supabase
+      .from("workspace_files")
+      .select("file_name")
+      .eq("workspace_id", workspaceId);
+
+    const alwaysContext = composeBlockGenerationContext({
+      workspaceTitle: plan.title || plan.root_topic || undefined,
+      goal: plan.conversion_goal || plan.root_topic,
+      notes: plan.notes,
+      fileNames: (workspaceFiles || []).map((f: { file_name: string }) => f.file_name).filter(Boolean),
+    });
+
     const nodeToDelete = allNodes.find((n: { id: string }) => n.id === blockId);
     if (!nodeToDelete) {
       return NextResponse.json({ error: "Node not found" }, { status: 404 });
@@ -61,7 +74,10 @@ export async function POST(req: NextRequest) {
     const preservedNodes = allNodes.filter((n: { id: string }) => !nodesToDelete.has(n.id));
     const preservedCompleted = preservedNodes.filter((n: { status: string }) => n.status === "completed");
 
-    const prompt = `Regenerate a learning plan for "${plan.root_topic}" as a directed graph where each node is a session.
+    const prompt = `${alwaysContext}
+
+Regenerate a learning plan for "${plan.root_topic}" as a directed graph where each node is a session.
+Always honor workspace files and notes when creating blocks.
     
 The plan already has these completed nodes that must be preserved in the learning path:
 ${preservedCompleted.map((n: { title: string; description?: string }) => `- ${n.title}: ${n.description}`).join("\n")}

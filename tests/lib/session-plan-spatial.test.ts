@@ -364,13 +364,16 @@ describe("create surface wiring (structural)", () => {
     expect(newWorkspaceSrc).toContain("initialChapters");
     expect(newWorkspaceSrc).toContain("INITIAL_CHAPTERS_LEVELS");
     expect(newWorkspaceSrc).toMatch(/initialChapters,/);
-    expect(newWorkspaceSrc).toMatch(/Initial chapters/i);
+    // UI labels starting size (initial chapters band); still wires initialChapters payload
+    expect(newWorkspaceSrc).toMatch(/Starting size|Initial chapters/i);
 
     const agentSrc = readFileSync(
       path.join(process.cwd(), "lib/agent-v2/create-agent-workspace.ts"),
       "utf8",
     );
-    expect(agentSrc).toContain("composeWorkspaceSpatialGeneratePrompt");
+    expect(agentSrc).toMatch(
+      /composeWorkspaceSpatialGeneratePrompt|composeAgentFilesGoalPrompt/,
+    );
     expect(agentSrc).toContain("normalizeGeneratedWorkspaceBlocks");
     expect(agentSrc).toContain("resolveInitialChaptersFromBody");
 

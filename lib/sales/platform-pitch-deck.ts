@@ -227,7 +227,7 @@ export const PLATFORM_PITCH_DECK: SolutionSlideDeck = {
       kicker: "The loop",
       title: "Three verticals, one business context — synergy, not silos.",
       subtitle:
-        "Verification, optimization, and augmentation share the same workspace and learning world model. Win one high-stakes entry motion, then unlock the other two inside the same customer relationship — without re-instrumenting the stack.",
+        "Verification, optimization, and augmentation share the same workspace and learning world model. Start where the decision is sharpest — then the same foundation carries practice and deeper thinking without rebuilding the stack.",
       backgroundImage: PITCH_ASSETS.aesthetics.verticals,
       cards: [
         {
@@ -239,17 +239,17 @@ export const PLATFORM_PITCH_DECK: SolutionSlideDeck = {
           body: "Talent platform example: ship TAP / PoW gates for hiring, promotion, and agent deploy readiness — proof of skill before the decision.",
         },
         {
-          label: "2 · Unlock optimization",
-          body: "Same context: gap reports become dynamic onboarding, post-hire ramp, and ALE skill loops for the people and agents you just verified.",
+          label: "2 · Then optimization",
+          body: "Same foundation: gap reports become dynamic onboarding, post-hire ramp, and ALE skill loops for the people and agents you already verified.",
         },
         {
-          label: "3 · Unlock augmentation",
-          body: "Same context: probes in academy, certification prep, and in-product checks — L&D and product go deeper without a second vendor stack.",
+          label: "3 · Then augmentation",
+          body: "Same foundation: probes in academy, certification prep, and in-product checks — deeper thinking on the evidence and context you already hold.",
         },
       ],
       bullets: [
-        "One workspace, three revenue motions: verification opens the door; optimization and augmentation expand the account on the evidence you already score.",
-        "Land and expand without re-instrumenting the stack — the same learning world model powers every vertical.",
+        "One workspace, three verticals: verification establishes the signal; optimization and augmentation reuse that same proof of work across the business context.",
+        "The learning world model is the foundation — every vertical runs on it, so you do not re-instrument when you go from gates to practice to probes.",
       ],
     },
     {

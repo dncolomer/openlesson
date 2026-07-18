@@ -636,7 +636,7 @@ describe("pitch deck content (shipped modules)", () => {
     expect(corpus).toContain("verification");
     expect(corpus).toContain("optimization");
     expect(corpus).toContain("augmentation");
-    expect(corpus).toMatch(/synergy|same (business )?context|unlock|expand the account/);
+    expect(corpus).toMatch(/synergy|same (business )?context|foundation|reuse that same proof/);
 
     // Not only the old linear workspace checklist as the whole story
     expect(loop!.title).not.toMatch(/^Workspace → Verify → Optimize → Augment$/);

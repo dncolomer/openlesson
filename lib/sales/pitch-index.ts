@@ -3,6 +3,7 @@ import { PLATFORM_PITCH_DECK } from "@/lib/sales/platform-pitch-deck";
 import { VERIFICATION_PITCH_DECK } from "@/lib/sales/verification-pitch-deck";
 import { OPTIMIZATION_PITCH_DECK } from "@/lib/sales/optimization-pitch-deck";
 import { AUGMENTATION_PITCH_DECK } from "@/lib/sales/augmentation-pitch-deck";
+import { PRODUCT_PITCH_DECK } from "@/lib/sales/product-pitch-deck";
 
 export type PitchIndexEntry = {
   path: string;
@@ -18,9 +19,17 @@ export const PITCH_INDEX: PitchIndexEntry[] = [
     path: "/pitch",
     title: "Platform Pitch",
     description:
-      "Full Uncertain Systems narrative: three verticals, learning world model, Trace Interruption Model, Workspace foundation, and the product suite.",
+      "Full Uncertain Systems narrative: three verticals, Workspace learning world model (with TIM interruptions today), and the product suite.",
     vertical: "platform",
     deck: PLATFORM_PITCH_DECK,
+  },
+  {
+    path: "/pitch-product",
+    title: "Product Pitch",
+    description:
+      "Crisp four-slide product thesis: proximity over quiz scores, PoW + cognition + trace interruptions, Submit–Stash and selective thought UI, integration surfaces.",
+    vertical: "product",
+    deck: PRODUCT_PITCH_DECK,
   },
   {
     path: "/pitch-verification",

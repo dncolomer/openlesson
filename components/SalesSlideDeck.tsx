@@ -238,6 +238,9 @@ function SlideContent({ slide }: { slide: SalesSlide }) {
   }
 
   if (slide.layout === "media") {
+    // Always reserve the right column for media layout (real art or empty slot for later).
+    const isPlaceholder = !slide.image;
+
     return (
       <SlideFrame>
         <ContentPanel>
@@ -245,8 +248,8 @@ function SlideContent({ slide }: { slide: SalesSlide }) {
           <h2 className={TITLE_H2}>{slide.title}</h2>
           {slide.subtitle && <p className={SUBTITLE}>{slide.subtitle}</p>}
           {/*
-            Media layout exception (Karpathy / Omega Quest): explicit side-by-side stage.
-            Title/subtitle full-width; then copy | screenshot on md+ (no float stack).
+            Media layout exception (Karpathy / Omega Quest / product pitch): side-by-side stage.
+            Title/subtitle full-width; then copy | image-or-placeholder on md+ (no float stack).
           */}
           <div
             data-pitch-media-stage
@@ -254,23 +257,46 @@ function SlideContent({ slide }: { slide: SalesSlide }) {
             className="mt-4 grid w-full min-h-0 grid-cols-1 items-start gap-4 text-left md:mt-5 md:grid-cols-[minmax(0,1fr)_minmax(0,min(42%,26rem))] md:gap-6 lg:gap-8"
           >
             <div className="min-w-0 order-2 md:order-1">
+              {slide.cards && slide.cards.length > 0 && <CardGrid cards={slide.cards} />}
+              {slide.highlights && slide.highlights.length > 0 && (
+                <HighlightCallouts items={slide.highlights} labels={slide.highlightLabels} />
+              )}
               {slide.bullets && slide.bullets.length > 0 && <BulletList items={slide.bullets} />}
             </div>
-            {slide.image && (
-              <figure className="order-1 min-w-0 w-full overflow-hidden rounded-sm border border-white/15 bg-black/40 shadow-[0_16px_48px_rgba(0,0,0,0.35)] md:order-2 md:sticky md:top-0">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
+            <figure
+              data-pitch-media-figure
+              data-pitch-image-placeholder={isPlaceholder ? "true" : undefined}
+              className="order-1 min-w-0 w-full overflow-hidden rounded-sm border border-white/15 bg-black/40 shadow-[0_16px_48px_rgba(0,0,0,0.35)] md:order-2 md:sticky md:top-0"
+            >
+              {slide.image ? (
+                // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={slide.image}
                   alt={slide.imageAlt ?? slide.title}
                   className="max-h-[22vh] w-full object-contain object-top bg-transparent md:max-h-[min(42vh,360px)]"
                 />
-                {slide.imageCaption && (
-                  <figcaption className="border-t border-white/10 px-3 py-1.5 text-left font-mono text-[10px] uppercase tracking-[1.6px] text-zinc-300 sm:text-[11px]">
-                    {slide.imageCaption}
-                  </figcaption>
-                )}
-              </figure>
-            )}
+              ) : (
+                <div
+                  data-pitch-image-placeholder-slot
+                  className="flex min-h-[22vh] w-full flex-col items-center justify-center gap-2 border border-dashed border-white/20 bg-black/30 px-4 py-8 md:min-h-[min(36vh,280px)]"
+                  aria-label={slide.imageCaption ?? "Image placeholder"}
+                >
+                  <span className="font-mono text-[10px] uppercase tracking-[2px] text-zinc-500">
+                    Image placeholder
+                  </span>
+                  {slide.imageCaption && (
+                    <span className="max-w-[16rem] text-center text-sm text-zinc-400">
+                      {slide.imageCaption}
+                    </span>
+                  )}
+                </div>
+              )}
+              {slide.image && slide.imageCaption && (
+                <figcaption className="border-t border-white/10 px-3 py-1.5 text-left font-mono text-[10px] uppercase tracking-[1.6px] text-zinc-300 sm:text-[11px]">
+                  {slide.imageCaption}
+                </figcaption>
+              )}
+            </figure>
           </div>
         </ContentPanel>
       </SlideFrame>

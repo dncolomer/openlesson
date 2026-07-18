@@ -34,6 +34,11 @@ export type SalesSlide = {
   image?: string;
   imageAlt?: string;
   imageCaption?: string;
+  /**
+   * When true (or when layout is media and image is absent), the media stage
+   * always renders a right-side image slot the presenter can fill later.
+   */
+  imagePlaceholder?: boolean;
 };
 
 export type SolutionSlideDeck = {

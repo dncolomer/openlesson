@@ -14,6 +14,8 @@ export type SlideFieldInventory = {
   rightItems: string[];
   footnote?: string;
   image?: string;
+  imageCaption?: string;
+  imagePlaceholder?: boolean;
   allTextStrings: string[];
 };
 
@@ -25,7 +27,7 @@ export type DeckInventory = {
   allTextStrings: string[];
 };
 
-/** Walk every narrative field on a slide (shipped data — pure, no React). */
+/** Walk every narrative field on a slide (shipped data; pure, no React). */
 export function inventorySlide(slide: SalesSlide, index: number): SlideFieldInventory {
   const bullets = slide.bullets ?? [];
   const highlights = slide.highlights ?? [];
@@ -62,6 +64,8 @@ export function inventorySlide(slide: SalesSlide, index: number): SlideFieldInve
     rightItems,
     footnote: slide.footnote,
     image: slide.image,
+    imageCaption: slide.imageCaption,
+    imagePlaceholder: slide.imagePlaceholder,
     allTextStrings,
   };
 }

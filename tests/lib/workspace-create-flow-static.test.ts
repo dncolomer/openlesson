@@ -106,7 +106,32 @@ describe("workspace create + builder static wiring", () => {
     expect(create).toContain("assertApiCreateMode");
     expect(create).toContain("composeAgentFilesGoalPrompt");
     expect(create).toContain("goalFieldsFromPrompt");
+    // Mode gate runs before goal-prompt composition / LLM path
+    expect(create.indexOf("assertApiCreateMode")).toBeLessThan(
+      create.indexOf("composeAgentFilesGoalPrompt"),
+    );
     const catalog = read("lib/agent-v2/mcp-proof-of-work-catalog.ts");
     expect(catalog).toMatch(/Files \+ Goal only/i);
+  });
+
+  it("generate route is mode-aware for blank, template, and files_goal", () => {
+    const gen = read("app/api/workspace/generate/route.ts");
+    expect(gen).toContain("parseWorkspaceCreateMode");
+    expect(gen).toContain("blankWorkspaceCreateOutcome");
+    expect(gen).toContain('createMode === "blank"');
+    expect(gen).toContain('createMode === "template"');
+    expect(gen).toContain('createMode === "files_goal"');
+    expect(gen).toContain("composeTemplateCreatePrompt");
+    expect(gen).toContain("composeFilesGoalCreatePrompt");
+    expect(gen).toContain("composeTemplateWorkspaceNotes");
+    // Blank short-circuit: uses pure zero-block outcome
+    const blankIdx = gen.indexOf('createMode === "blank"');
+    const blankReturn = gen.indexOf("blockCount: blankOutcome.blocks.length");
+    expect(blankIdx).toBeGreaterThan(-1);
+    expect(blankReturn).toBeGreaterThan(blankIdx);
+    // Call sites for template/files_goal composition appear after blank early-return block
+    const afterBlank = gen.slice(blankReturn);
+    expect(afterBlank).toContain("composeTemplateCreatePrompt(");
+    expect(afterBlank).toContain("composeFilesGoalCreatePrompt(");
   });
 });

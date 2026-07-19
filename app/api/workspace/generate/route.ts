@@ -19,6 +19,7 @@ import {
   insertGeneratedWorkspaceBlocks,
 } from "@/lib/insert-workspace-blocks";
 import {
+  blankWorkspaceCreateOutcome,
   composeDantesResourceContext,
   composeFilesGoalCreatePrompt,
   composeTemplateCreatePrompt,
@@ -117,6 +118,7 @@ export async function POST(req: NextRequest) {
 
     // ── Blank: empty workspace, zero blocks ──────────────────────────
     if (createMode === "blank") {
+      const blankOutcome = blankWorkspaceCreateOutcome();
       const billing = await resolveUserBilling(supabase, user.id);
       if ("error" in billing) {
         return NextResponse.json({ error: billing.error }, { status: 500 });
@@ -150,8 +152,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({
         workspaceId: plan.id,
         title: plan.title,
-        createMode: "blank",
-        blockCount: 0,
+        createMode: blankOutcome.mode,
+        blockCount: blankOutcome.blocks.length,
       });
     }
 

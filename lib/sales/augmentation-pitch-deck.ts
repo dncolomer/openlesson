@@ -18,8 +18,22 @@ export const AUGMENTATION_PITCH_DECK: SolutionSlideDeck = {
       kicker: "Learning Augmentation · Uncertain Systems",
       title: "Augment thinking where courses stop at recall.",
       subtitle:
-        "Strengthen how learners think — not just what they recall. Engineer interruptions that probe a deeper reasoning layer inside onboarding, courses, and certification prep.",
+        "Strengthen how learners think inside paths you already ship. Example: an online course platform or corporate academy replaces “check your knowledge” quizzes with timed probes and coached practice in the lesson flow.",
       backgroundImage: PITCH_ASSETS.aesthetics.augmentation,
+      cards: [
+        {
+          label: "1 · Drop probes into the lesson",
+          body: "Embed TAP or ILE blocks after a module instead of a multiple-choice gate. Learners talk through real scenarios on a clock while staying in course context.",
+        },
+        {
+          label: "2 · Interrupt shallow fluency",
+          body: "TIM fires probes when the workspace detects weak causal chains or hesitation—not on a fixed quiz schedule. Completion no longer means only recall passed.",
+        },
+        {
+          label: "3 · Score and coach in-path",
+          body: "Gap reports and practice route back into the same LMS or academy flow. Publishers and prep programs ship verification layers with content, not a bolt-on tutor tab.",
+        },
+      ],
     },
     ...buildFounderSlides("augmentation"),
     {
@@ -32,7 +46,7 @@ export const AUGMENTATION_PITCH_DECK: SolutionSlideDeck = {
       ...labeledHighlights([
         [
           "The trap",
-          "“Check your knowledge” is not understanding — linear quizzes measure recall, not configuration under work.",
+          "“Check your knowledge” is not understanding.",
         ],
         [
           "What survives",
@@ -58,14 +72,14 @@ export const AUGMENTATION_PITCH_DECK: SolutionSlideDeck = {
       bullets: [
         "Onboarding, courses, and prep get the same workspace world model",
         "TAP and ILE replace lightweight recall widgets where depth matters",
-        "Probes arrive in context — mid-scenario, after a chapter, during practice",
+        "Probes arrive in context",
         "Coaching tuned to the gap the workspace already detected",
       ],
     },
     {
       layout: "split",
       kicker: "How it embeds",
-      title: "Links, practice, and API — not a bolt-on tutoring tab",
+      title: "Links, practice, and API without a bolt-on tutoring tab",
       backgroundImage: PITCH_ASSETS.aesthetics.products,
       left: {
         label: "In the flow",
@@ -92,7 +106,7 @@ export const AUGMENTATION_PITCH_DECK: SolutionSlideDeck = {
       kicker: "Use case · Onboarding",
       title: "Corporate academy & product onboarding depth",
       subtitle:
-        "Augment video-and-quiz curricula with interruption moments that catch shallow fluency before learners claim completion — or before users claim they are activated.",
+        "Augment video-and-quiz curricula with interruption moments that catch shallow fluency before learners claim completion.",
       backgroundImage: PITCH_ASSETS.aesthetics.useCase,
       bullets: [
         "Onboarding probes for judgment, not only feature tours",
@@ -106,7 +120,7 @@ export const AUGMENTATION_PITCH_DECK: SolutionSlideDeck = {
       kicker: "Use case · Courses",
       title: "EdTech platforms & “check your knowledge” replacement",
       subtitle:
-        "Replace lightweight knowledge checks with verification that measures understanding — then route weak spots into coached practice inside the same course context.",
+        "Replace lightweight knowledge checks with verification that measures understanding.",
       backgroundImage: PITCH_ASSETS.aesthetics.useCase,
       ...labeledHighlights([
         [
@@ -115,7 +129,7 @@ export const AUGMENTATION_PITCH_DECK: SolutionSlideDeck = {
         ],
         [
           "Outcome",
-          "Weak spots route into coached practice inside the same course context — no bolt-on tutoring tab.",
+          "Weak spots route into coached practice inside the same course context.",
         ],
       ]),
       bullets: [
@@ -136,7 +150,7 @@ export const AUGMENTATION_PITCH_DECK: SolutionSlideDeck = {
         "Bootcamp & cohort programs get reasoning traces per learner",
         "Instructors calibrate coaching to verified gaps, not homework volume",
         "Prep agencies differentiate on depth, not bank size",
-        "TIM interruptions force reconstruction — not recognition of answer keys",
+        "TIM interruptions force reconstruction",
       ],
     },
     {
@@ -149,28 +163,6 @@ export const AUGMENTATION_PITCH_DECK: SolutionSlideDeck = {
         "Corporate academy depth beyond video completion",
         "Bootcamp & cohort programs with auditable traces",
         "Publisher & content licensing of verification layers",
-      ],
-    },
-    {
-      layout: "bullets",
-      kicker: "Why it works",
-      title: "Highlights buyers care about",
-      backgroundImage: PITCH_ASSETS.aesthetics.products,
-      ...labeledHighlights([
-        [
-          "Break quiz linearity",
-          "Trace Interruption Model breaks turn-based quiz linearity with probes timed to the learning path.",
-        ],
-        [
-          "Science-backed depth",
-          "Knowledge as proximity, learning as transformation — verification plus practice in one workspace.",
-        ],
-      ]),
-      bullets: [
-        "Trace Interruption Model breaks turn-based quiz linearity",
-        "Embeddable links and API hooks for LMS and course builders",
-        "Verification plus practice in one workspace — no bolt-on tutoring tab",
-        "Science-backed: knowledge as proximity, learning as transformation",
       ],
     },
     {

@@ -108,6 +108,7 @@ export function OrbitApp() {
   const [isOpeningIle, setIsOpeningIle] = useState(false);
   const [isCheckingTap, setIsCheckingTap] = useState(false);
   const [learningError, setLearningError] = useState<string | null>(null);
+  const [activeCoachKey, setActiveCoachKey] = useState<string | null>(null);
 
   useEffect(() => {
     const params = parseOrbitLaunchParams(window.location.search);
@@ -442,6 +443,7 @@ export function OrbitApp() {
             active={appState.ui.view === "inbox"}
             collapsed={appState.ui.sidebarCollapsed}
             coachKey="inbox"
+            activeCoachKey={activeCoachKey}
             onClick={() => handleSelectView("inbox")}
           />
           <SidebarItem
@@ -450,6 +452,7 @@ export function OrbitApp() {
             active={appState.ui.view === "my_issues"}
             collapsed={appState.ui.sidebarCollapsed}
             coachKey="filter"
+            activeCoachKey={activeCoachKey}
             onClick={() => handleSelectView("my_issues")}
           />
           {!appState.ui.sidebarCollapsed ? (
@@ -463,10 +466,17 @@ export function OrbitApp() {
               active={appState.ui.view === "project" && appState.ui.selectedProjectId === project.id}
               collapsed={appState.ui.sidebarCollapsed}
               coachKey="project"
+              activeCoachKey={activeCoachKey}
               onClick={() => {
+                // Clear assignee filter so unowned sprint work (e.g. ORB-12) is list-visible.
                 persistApp({
                   ...appState,
-                  ui: { ...appState.ui, view: "project", selectedProjectId: project.id },
+                  ui: {
+                    ...appState.ui,
+                    view: "project",
+                    selectedProjectId: project.id,
+                    assigneeFilter: null,
+                  },
                 });
               }}
             />
@@ -493,7 +503,7 @@ export function OrbitApp() {
                     : tapCleared
                       ? "bg-emerald-600 text-white hover:bg-emerald-500"
                       : "border border-amber-500/40 bg-amber-500/10 text-amber-100 hover:border-amber-400/60"
-                }`}
+                } ${coachHighlightClass(activeCoachKey, "publish")}`}
               >
                 {appState.ui.sprintPublished ? (
                   <>
@@ -520,7 +530,7 @@ export function OrbitApp() {
                 setPaletteOpen(true);
                 void runEvidenceAction("open_command_palette");
               }}
-              className="inline-flex items-center gap-1 rounded border border-[#2a2a36] px-2 py-1 text-xs text-[#9b9bb8] transition hover:border-[#5e6ad2]/50 hover:text-white"
+              className={`inline-flex items-center gap-1 rounded border border-[#2a2a36] px-2 py-1 text-xs text-[#9b9bb8] transition hover:border-[#5e6ad2]/50 hover:text-white ${coachHighlightClass(activeCoachKey, "command-palette")}`}
             >
               <Command className="size-3.5" />K
             </button>
@@ -528,7 +538,7 @@ export function OrbitApp() {
               type="button"
               data-coach="create-issue"
               onClick={() => setNewIssueOpen(true)}
-              className="inline-flex items-center gap-1 rounded bg-[#5e6ad2] px-3 py-1.5 text-xs font-medium text-white transition hover:bg-[#6f7be0]"
+              className={`inline-flex items-center gap-1 rounded bg-[#5e6ad2] px-3 py-1.5 text-xs font-medium text-white transition hover:bg-[#6f7be0] ${coachHighlightClass(activeCoachKey, "create-issue")}`}
             >
               <Plus className="size-3.5" />
               New issue
@@ -591,10 +601,14 @@ export function OrbitApp() {
             </div>
 
             <ul className="divide-y divide-[#1a1a24]">
-              {visibleIssues.map((issue) => (
+              {visibleIssues.map((issue) => {
+                const isCoachFocus = appSnapshot?.focus_issue_id === issue.id;
+                return (
                 <li key={issue.id}>
                   <button
                     type="button"
+                    data-coach={isCoachFocus ? "focus-issue" : undefined}
+                    data-issue-id={issue.id}
                     onClick={() => {
                       if (issue.unread) handleTriage(issue);
                       persistApp({
@@ -604,14 +618,14 @@ export function OrbitApp() {
                     }}
                     className={`flex w-full items-center gap-3 px-4 py-3 text-left transition hover:bg-white/[0.03] ${
                       appState.ui.selectedIssueId === issue.id ? "bg-white/[0.04]" : ""
-                    }`}
+                    } ${isCoachFocus ? "ring-2 ring-[#5e6ad2] ring-offset-2 ring-offset-[#0d0d0d] shadow-[0_0_20px_rgba(94,106,210,0.35)]" : ""}`}
                   >
                     <span className="w-16 shrink-0 font-mono text-xs text-[#6b6b80]">{issue.identifier}</span>
                     <span className="min-w-0 flex-1 truncate text-sm">{issue.title}</span>
                     {issue.unread ? (
                       <span
                         data-coach="triage"
-                        className="rounded bg-[#5e6ad2]/20 px-2 py-0.5 text-[10px] text-[#aeb4ff]"
+                        className={`rounded bg-[#5e6ad2]/20 px-2 py-0.5 text-[10px] text-[#aeb4ff] ${coachHighlightClass(activeCoachKey, "triage")}`}
                         onClick={(event) => {
                           event.stopPropagation();
                           handleTriage(issue);
@@ -624,7 +638,8 @@ export function OrbitApp() {
                     <ChevronRight className="size-4 text-[#4f4f62]" />
                   </button>
                 </li>
-              ))}
+              );
+              })}
               {visibleIssues.length === 0 ? (
                 <li className="px-4 py-10 text-center text-sm text-[#6b6b80]">No issues in this view.</li>
               ) : null}
@@ -657,7 +672,7 @@ export function OrbitApp() {
                         void runEvidenceAction("close_issue", { appState: nextState });
                       }
                     }}
-                    className="w-full rounded border border-[#2a2a36] bg-[#0d0d0d] px-2 py-1.5 text-sm"
+                    className={`w-full rounded border border-[#2a2a36] bg-[#0d0d0d] px-2 py-1.5 text-sm ${coachHighlightClass(activeCoachKey, "status")}`}
                   >
                     {STATUS_OPTIONS.map((option) => (
                       <option key={option.value} value={option.value}>
@@ -676,7 +691,7 @@ export function OrbitApp() {
                       const actionId = priorityActionFor(next, selectedIssue.priority);
                       updateIssue(selectedIssue.id, { priority: next }, actionId);
                     }}
-                    className="w-full rounded border border-[#2a2a36] bg-[#0d0d0d] px-2 py-1.5 text-sm"
+                    className={`w-full rounded border border-[#2a2a36] bg-[#0d0d0d] px-2 py-1.5 text-sm ${coachHighlightClass(activeCoachKey, "priority")}`}
                   >
                     {PRIORITY_OPTIONS.map((option) => (
                       <option key={option.value} value={option.value}>
@@ -706,7 +721,7 @@ export function OrbitApp() {
                       persistApp(nextState);
                       void runEvidenceAction("move_to_project", { appState: nextState });
                     }}
-                    className="w-full rounded border border-[#2a2a36] bg-[#0d0d0d] px-2 py-1.5 text-sm"
+                    className={`w-full rounded border border-[#2a2a36] bg-[#0d0d0d] px-2 py-1.5 text-sm ${coachHighlightClass(activeCoachKey, "project")}`}
                   >
                     {appState.projects.map((project) => (
                       <option key={project.id} value={project.id}>
@@ -722,7 +737,7 @@ export function OrbitApp() {
                       type="button"
                       data-coach="assign"
                       onClick={() => updateIssue(selectedIssue.id, { assignee: "You" }, "assign_to_self")}
-                      className="flex-1 rounded border border-[#2a2a36] px-2 py-1.5 transition hover:border-[#5e6ad2]/50"
+                      className={`flex-1 rounded border border-[#2a2a36] px-2 py-1.5 transition hover:border-[#5e6ad2]/50 ${coachHighlightClass(activeCoachKey, "assign")}`}
                     >
                       Assign to me
                     </button>
@@ -737,7 +752,10 @@ export function OrbitApp() {
                 </Field>
 
                 <Field label="Labels">
-                  <div className="flex flex-wrap gap-2" data-coach="labels">
+                  <div
+                    className={`flex flex-wrap gap-2 ${coachHighlightClass(activeCoachKey, "labels")}`}
+                    data-coach="labels"
+                  >
                     <button
                       type="button"
                       onClick={() => {
@@ -778,7 +796,7 @@ export function OrbitApp() {
                     onChange={(event) => setCommentDraft(event.target.value)}
                     rows={3}
                     placeholder="Add context for the team…"
-                    className="w-full resize-y rounded border border-[#2a2a36] bg-[#0d0d0d] px-2 py-1.5 text-sm"
+                    className={`w-full resize-y rounded border border-[#2a2a36] bg-[#0d0d0d] px-2 py-1.5 text-sm ${coachHighlightClass(activeCoachKey, "comment")}`}
                   />
                   <button
                     type="button"
@@ -816,6 +834,7 @@ export function OrbitApp() {
         ileSessionUrl={ileSessionUrl}
         isOpeningIle={isOpeningIle}
         onOpenIle={() => void handleOpenIle()}
+        onCoachTargetChange={setActiveCoachKey}
       />
 
       {tapGateOpen ? (
@@ -947,12 +966,18 @@ export function OrbitApp() {
   );
 }
 
+function coachHighlightClass(activeCoachKey: string | null | undefined, coachKey?: string): string {
+  if (!coachKey || !activeCoachKey || activeCoachKey !== coachKey) return "";
+  return "ring-2 ring-[#5e6ad2] ring-offset-2 ring-offset-[#0d0d0d] shadow-[0_0_20px_rgba(94,106,210,0.35)]";
+}
+
 function SidebarItem({
   icon,
   label,
   active,
   collapsed,
   coachKey,
+  activeCoachKey,
   onClick,
 }: {
   icon: ReactNode;
@@ -960,6 +985,7 @@ function SidebarItem({
   active: boolean;
   collapsed: boolean;
   coachKey?: string;
+  activeCoachKey?: string | null;
   onClick: () => void;
 }) {
   return (
@@ -969,7 +995,7 @@ function SidebarItem({
       onClick={onClick}
       className={`flex w-full items-center gap-2 rounded px-2 py-2 text-left transition ${
         active ? "bg-white/10 text-white" : "text-[#9b9bb8] hover:bg-white/5 hover:text-white"
-      }`}
+      } ${coachHighlightClass(activeCoachKey, coachKey)}`}
     >
       {icon}
       {!collapsed ? <span className="truncate">{label}</span> : null}

@@ -19,8 +19,9 @@ import { extractGameCoaching } from "@/lib/product-demos/game-tips";
 import type { OrbitAppSnapshot } from "@/lib/product-demos/orbit-app-context";
 import { formatOrbitSnapshotForPrompt } from "@/lib/product-demos/orbit-app-context";
 import {
+  formatExactCoachInstruction,
   getAffordanceForAction,
-  matchCoachingHintToAction,
+  resolveOrbitPrimaryCoachStep,
 } from "@/lib/product-demos/orbit-coach-map";
 
 const PANEL_STORAGE_KEY = "orbit-coach-panel";
@@ -44,6 +45,8 @@ type SmartCoachOverlayProps = {
   ileSessionUrl?: string | null;
   isOpeningIle?: boolean;
   onOpenIle?: () => void;
+  /** Active coach key for in-app highlight (data-coach). */
+  onCoachTargetChange?: (coachKey: string | null) => void;
 };
 
 function clampScore(value: unknown): number | null {
@@ -115,6 +118,7 @@ export function SmartCoachOverlay({
   ileSessionUrl,
   isOpeningIle = false,
   onOpenIle,
+  onCoachTargetChange,
 }: SmartCoachOverlayProps) {
   const panelRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<{ pointerId: number; startX: number; startY: number; originX: number; originY: number } | null>(
@@ -133,8 +137,8 @@ export function SmartCoachOverlay({
   const coaching = useMemo(() => extractGameCoaching(report), [report]);
   const coachTarget = useMemo(
     () =>
-      matchCoachingHintToAction(
-        [...coaching.events, ...coaching.gapRepairs, ...coaching.directions],
+      resolveOrbitPrimaryCoachStep(
+        [...coaching.gapRepairs, ...coaching.events, ...coaching.directions],
         appSnapshot
       ),
     [appSnapshot, coaching]
@@ -142,8 +146,28 @@ export function SmartCoachOverlay({
 
   const coachInstruction = useMemo(() => {
     if (!coachTarget) return null;
-    return getAffordanceForAction(coachTarget.actionId, appSnapshot) ?? coachTarget.instruction;
+    return formatExactCoachInstruction(coachTarget, appSnapshot);
   }, [appSnapshot, coachTarget]);
+
+  const coachWhy = useMemo(() => {
+    if (!coachTarget) return null;
+    const reason = getAffordanceForAction(coachTarget.actionId, appSnapshot);
+    if (!reason) return null;
+    // Avoid duplicating the click path already shown as instruction.
+    if (coachInstruction && reason.startsWith(coachInstruction)) {
+      const rest = reason.slice(coachInstruction.length).replace(/^\.\s*/, "").trim();
+      return rest || null;
+    }
+    if (reason.includes("→") && coachInstruction?.includes("→")) {
+      const afterPath = reason.split(". ").slice(1).join(". ").trim();
+      return afterPath || null;
+    }
+    return reason;
+  }, [appSnapshot, coachInstruction, coachTarget]);
+
+  useEffect(() => {
+    onCoachTargetChange?.(coachTarget?.coachKey ?? null);
+  }, [coachTarget?.coachKey, onCoachTargetChange]);
 
   const suggestions = useMemo(
     () =>
@@ -157,7 +181,7 @@ export function SmartCoachOverlay({
   const goalText =
     inferredGoal?.trim() ||
     report?.conversion_goal?.trim() ||
-    null;
+    "ship productive Sprint 12 work after triaging and owning the critical path";
 
   const overallScore = clampScore(report?.overall_score);
   const conversionScore = clampScore(report?.conversion_score);
@@ -172,7 +196,8 @@ export function SmartCoachOverlay({
     suggestions.length > 0 ||
     overallScore !== null ||
     coachTarget;
-  const showCard = connected || hasScoreContent;
+  // Always show coach when we can name an exact next click — even before PoW scores.
+  const showCard = Boolean(connected || hasScoreContent || coachTarget || appSnapshot);
 
   useEffect(() => {
     const saved = loadPanelLayout();
@@ -333,7 +358,7 @@ export function SmartCoachOverlay({
               <Sparkles className="size-3.5 shrink-0 text-[#5e6ad2]" />
             )}
             <span className="min-w-0 truncate text-xs font-medium text-[#d6d6e8]">
-              {isReporting ? "Scoring…" : "Scorecard"}
+              {isReporting ? "Scoring…" : coachTarget ? "Do this next" : "Coach"}
               {connected && proofOfWorkCount > 0 ? ` · ${proofOfWorkCount}` : ""}
               <span className="block truncate font-mono text-[9px] font-normal uppercase tracking-wide text-[#5c5c70]">
                 Uncertain Systems
@@ -373,7 +398,9 @@ export function SmartCoachOverlay({
           <div className="flex min-w-0 items-center gap-2 text-xs font-medium text-[#9b9bb8]">
             <GripHorizontal className="size-3.5 shrink-0 text-[#6b6b80]" />
             {isReporting ? <Loader2 className="size-3.5 animate-spin" /> : <Sparkles className="size-3.5 text-[#5e6ad2]" />}
-            <span className="truncate">{isReporting ? "Scoring your work…" : "Scorecard coach"}</span>
+            <span className="truncate">
+              {isReporting ? "Scoring your work…" : coachTarget ? "Exact next step" : "Coach"}
+            </span>
           </div>
           <span className="pl-5 font-mono text-[9px] uppercase tracking-wide text-[#5c5c70]">
             Powered by Uncertain Systems
@@ -394,16 +421,46 @@ export function SmartCoachOverlay({
           <p className="rounded-md border border-[#5e6ad2]/25 bg-[#5e6ad2]/10 px-3 py-2 text-sm leading-snug text-[#d6d6e8]">
             Are you trying to{" "}
             <span className="font-medium text-white">{goalText}</span>?
-            {conversionGoalSource ? (
+            {conversionGoalSource || report ? (
               <span className="mt-1 block font-mono text-[9px] uppercase tracking-wide text-[#6b6b80]">
-                {conversionGoalSource === "workspace" ? "Workspace goal" : "Inferred goal"}
+                {conversionGoalSource === "workspace"
+                  ? "Workspace goal"
+                  : conversionGoalSource === "inferred"
+                    ? "Inferred goal"
+                    : "Demo conversion goal"}
               </span>
-            ) : null}
+            ) : (
+              <span className="mt-1 block font-mono text-[9px] uppercase tracking-wide text-[#6b6b80]">
+                Demo conversion goal
+              </span>
+            )}
           </p>
         ) : null}
 
+        {coachTarget ? (
+          <div
+            className="mt-3 rounded-md border border-[#5e6ad2]/45 bg-[#5e6ad2]/15 px-3 py-3 text-sm shadow-[0_0_0_1px_rgba(94,106,210,0.15)]"
+            data-testid="orbit-exact-next-step"
+          >
+            <div className="font-mono text-[9px] uppercase tracking-wide text-[#aeb4ff]">
+              Do this next
+              {coachTarget.source === "snapshot" && !hasCoaching ? (
+                <span className="ml-2 text-[#6b6b80]">live board · Uncertain Systems</span>
+              ) : null}
+            </div>
+            <div className="mt-1.5 text-base font-semibold text-white">{coachTarget.label}</div>
+            <p className="mt-1.5 text-sm leading-snug text-[#d6d6e8]">{coachInstruction}</p>
+            {coachWhy ? (
+              <p className="mt-2 text-xs leading-snug text-[#9b9bb8]">{coachWhy}</p>
+            ) : null}
+            {!coachTarget.inMainUi ? (
+              <span className="mt-2 block text-[10px] text-[#6b6b80]">Reachable via Cmd+K</span>
+            ) : null}
+          </div>
+        ) : null}
+
         {overallScore !== null || conversionScore !== null ? (
-          <div className="mt-2 flex gap-4 font-mono text-[10px] uppercase tracking-wide text-[#6b6b80]">
+          <div className="mt-3 flex gap-4 font-mono text-[10px] uppercase tracking-wide text-[#6b6b80]">
             {overallScore !== null ? (
               <span>
                 Learn <span className="text-white">{overallScore}</span>/100
@@ -434,15 +491,15 @@ export function SmartCoachOverlay({
           </div>
         ) : null}
 
-        {primaryHint ? (
+        {primaryHint && coachTarget?.source !== "snapshot" ? (
           <p className="mt-3 text-sm leading-relaxed text-[#d6d6e8]">{primaryHint}</p>
-        ) : !isReporting && !hasScoreContent ? (
+        ) : !isReporting && !hasScoreContent && !coachTarget ? (
           <p className="mt-3 text-sm leading-relaxed text-[#8b8ba3]">
             {proofOfWorkCount < 3
               ? `Connected · ${proofOfWorkCount} evidence event${proofOfWorkCount === 1 ? "" : "s"}. Scorecard updates every 3 actions.`
               : "Pulling scorecard from Proof-of-Work API…"}
           </p>
-        ) : !isReporting ? (
+        ) : !isReporting && !coachTarget ? (
           <p className="mt-3 text-sm leading-relaxed text-[#8b8ba3]">
             Keep working in Orbit — coaching updates as proof of work accumulates.
           </p>
@@ -459,16 +516,6 @@ export function SmartCoachOverlay({
                 </li>
               ))}
             </ul>
-          </div>
-        ) : null}
-
-        {coachTarget ? (
-          <div className="mt-3 rounded-md border border-[#3a3a48] bg-[#1a1a22] px-3 py-2 text-xs text-[#c4c9ff]">
-            <span className="font-medium text-white">{coachTarget.label}</span>
-            <span className="mt-1 block text-[#9b9bb8]">{coachInstruction}</span>
-            {!coachTarget.inMainUi ? (
-              <span className="mt-1 block text-[10px] text-[#6b6b80]">Reachable via Cmd+K</span>
-            ) : null}
           </div>
         ) : null}
 

@@ -5,7 +5,9 @@ export type SalesSlideLayout =
   | "split"
   | "close"
   | "founder"
-  | "media";
+  | "media"
+  /** Full-stage image (no side copy) — e.g. product pitch config-space art. */
+  | "fullImage";
 
 export type SalesSlide = {
   layout: SalesSlideLayout;
@@ -23,19 +25,31 @@ export type SalesSlide = {
   /**
    * Framed pillar/vertical boxes (e.g. title slide: verification · optimization · augmentation).
    * Prefer 3 cards for a balanced grid on presentation widths.
+   * Optional `ideas` nest idea-boxes under the tool/column title (icon + title + body each).
    */
-  cards?: Array<{ label: string; body: string }>;
+  cards?: Array<{
+    label: string;
+    /** Plain body when the card is a single block (legacy / simple pillars). */
+    body?: string;
+    /** Nested idea boxes under the column title (e.g. product pitch use-case slide). */
+    ideas?: Array<{ title: string; body: string }>;
+  }>;
   left?: { label: string; items: string[] };
   right?: { label: string; items: string[] };
   footnote?: string;
   /** Per-slide aesthetic background (public path). Falls back to deck.backgroundImage. */
   backgroundImage?: string;
-  /** Portrait or media image for founder / media layouts */
+  /** Portrait, media, or fullImage asset path */
   image?: string;
   imageAlt?: string;
   imageCaption?: string;
   /**
-   * When true (or when layout is media and image is absent), the media stage
+   * Optional media-stage video (public path). Preferred over image when set.
+   * Rendered autoplay, muted, loop, playsInline for presentation decks.
+   */
+  video?: string;
+  /**
+   * When true (or when layout is media and image/video is absent), the media stage
    * always renders a right-side image slot the presenter can fill later.
    */
   imagePlaceholder?: boolean;

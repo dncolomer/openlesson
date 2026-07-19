@@ -1,13 +1,13 @@
 /**
- * Shared science hypothesis + Proof-of-Work proxy lines for every deck’s
- * “Our thesis” slide — rendered as highlighted callouts, then vertical thesis bullets.
+ * Shared science hypothesis + Proof-of-Work proxy lines for every deck's
+ * "Our thesis" slide. Rendered as highlighted callouts, then vertical thesis bullets.
  */
 
 export type ThesisFocus = "platform" | "verification" | "optimization" | "augmentation";
 
 /** Core science line (shared). */
 export const THESIS_SCIENCE_HYPOTHESIS =
-  "Science hypothesis: learning is movement through brain configuration space — knowledge is proximity to a useful state (retrieve, apply, transform), not a binary flag or completion score.";
+  "Science hypothesis: learning is movement through brain configuration space. Knowledge is proximity to a useful state (retrieve, apply, transform), not a binary flag or completion score.";
 
 /** Core PoW proxy line (platform / default). */
 export const THESIS_POW_PROXY_DEFAULT =
@@ -15,17 +15,17 @@ export const THESIS_POW_PROXY_DEFAULT =
 
 /**
  * Vertical-adapted science + PoW highlights for the thesis slide.
- * Science stays shared; PoW proxy is framed for the deck’s motion.
+ * Science stays shared; PoW proxy is framed for the deck's motion.
  */
 export function thesisScienceHighlights(focus: ThesisFocus = "platform"): string[] {
   const powByFocus: Record<ThesisFocus, string> = {
     platform: THESIS_POW_PROXY_DEFAULT,
     verification:
-      "Proof of Work is the best proxy for that proximity: verify hire, promote, certify, and deploy from real artifacts, tool traces, and think-aloud under probe — not polished outputs, self-report, or benchmark pass rates.",
+      "Proof of Work is the best proxy for that proximity: verify hire, promote, certify, and deploy from real artifacts, tool traces, and think-aloud under probe. Not polished outputs, self-report, or benchmark pass rates alone.",
     optimization:
-      "Proof of Work is the best proxy for that proximity: severity-ranked PoW scores show which configuration gaps block adoption — so optimization practices what actually moves skill, not checklist completion.",
+      "Proof of Work is the best proxy for that proximity: severity-ranked PoW scores show which configuration gaps block adoption, so optimization practices what actually moves skill rather than checklist completion.",
     augmentation:
-      "Proof of Work is the best proxy for that proximity: probes and scored traces interrupt shallow fluency and replace “check your knowledge” quizzes that never measure configuration under real work.",
+      "Proof of Work is the best proxy for that proximity: probes and scored traces interrupt shallow fluency and replace check-your-knowledge quizzes that never measure configuration under real work.",
   };
 
   return [THESIS_SCIENCE_HYPOTHESIS, powByFocus[focus]];
@@ -34,7 +34,7 @@ export function thesisScienceHighlights(focus: ThesisFocus = "platform"): string
 /** Labels paired with thesisScienceHighlights() for UI chrome. */
 export const THESIS_HIGHLIGHT_LABELS = ["Science hypothesis", "Proof of Work proxy"] as const;
 
-/** @deprecated Prefer thesisScienceHighlights — kept for tests that expect two bullet strings. */
+/** @deprecated Prefer thesisScienceHighlights. Kept for tests that expect two bullet strings. */
 export const THESIS_SCIENCE_POW_BULLETS = [
   THESIS_SCIENCE_HYPOTHESIS,
   THESIS_POW_PROXY_DEFAULT,

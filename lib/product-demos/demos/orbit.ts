@@ -21,7 +21,7 @@ const EVAL_DEFINITION = `Verify that engineering operators are learning Orbit an
 - Think Aloud Protocol gate before Ship Sprint publication (min score 70),
 - re-engagement after idle gaps between triage sessions.
 
-Score-card coaching must reference only in-app Orbit actions from the UI manifest (sidebar Inbox/My issues/Projects, issue panel fields, header New issue and Ship Sprint, Cmd+K palette). Do not suggest actions that are not reachable in the demo UI. When learners are blocked, remediation can route to ILE practice — but gap text should still use product event language.`;
+Score-card coaching must reference only in-app Orbit actions from the UI manifest (sidebar Inbox/My issues/Projects, issue panel fields, header New issue and Ship Sprint, Cmd+K palette). Do not suggest actions that are not reachable in the demo UI. Prefer a single primary next step that unblocks the path (inbox triage before assignment, assignment before status, priority repair before starting low-impact work, TAP before Ship Sprint). Name the control (sidebar / issue panel / header / Cmd+K). When learners are blocked, remediation can route to ILE practice — but gap text should still use product event language.`;
 
 const ORBIT_ACTIONS: SimulationAction[] = [
   {

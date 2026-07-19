@@ -46,7 +46,11 @@ function slideCorpus(deck: SolutionSlideDeck): string {
         slide.footnote,
         ...(slide.highlights ?? []),
         ...(slide.highlightLabels ?? []),
-        ...((slide.cards ?? []).flatMap((c) => [c.label, c.body])),
+        ...((slide.cards ?? []).flatMap((c) => [
+          c.label,
+          c.body,
+          ...((c.ideas ?? []).flatMap((idea) => [idea.title, idea.body])),
+        ])),
         ...(slide.bullets ?? []),
         ...(slide.left?.items ?? []),
         ...(slide.right?.items ?? []),
@@ -124,7 +128,7 @@ describe("pitch deck content (shipped modules)", () => {
       "augmentation",
     ]);
     for (const card of title.cards ?? []) {
-      expect(card.body.trim().length).toBeGreaterThan(20);
+      expect(card.body?.trim().length).toBeGreaterThan(20);
     }
 
     const deckUi = fs.readFileSync(path.join(REPO_ROOT, "components/SalesSlideDeck.tsx"), "utf8");
@@ -318,61 +322,170 @@ describe("pitch deck content (shipped modules)", () => {
     }
   });
 
-  it("product pitch deck: 4 media slides, schema anchors, right-side image placeholders", () => {
+  it("product pitch deck: thesis + fullImage + 2 media video + productized + 3 use-case slides, schema anchors", () => {
     expect(PRODUCT_PITCH_DECK.vertical).toBe("product");
     expect(PRODUCT_PITCH_DECK.label.toLowerCase()).toContain("product");
-    expect(PRODUCT_PITCH_DECK.slides).toHaveLength(4);
+    expect(PRODUCT_PITCH_DECK.slides).toHaveLength(8);
     assertNonEmptyTitles(PRODUCT_PITCH_DECK);
 
     const inv = inventoryDeck(PRODUCT_PITCH_DECK);
-    expect(inv.slideCount).toBe(4);
+    expect(inv.slideCount).toBe(8);
 
     const corpus = slideCorpus(PRODUCT_PITCH_DECK).toLowerCase();
-    // Schema anchors across thesis → implement → productize → use
+    // Schema anchors across thesis → TAP method ×2 → productize → use
     expect(corpus).toMatch(/thesis|ratio of correct answers/);
     expect(corpus).toMatch(/brain config|proximity/);
-    expect(corpus).toMatch(/proof of work|pow/);
-    expect(corpus).toMatch(/chain.of.thought|cognition/);
-    expect(corpus).toMatch(/selective thought/);
-    expect(corpus).toMatch(/trace interruption/);
+    expect(corpus).toMatch(/think aloud protocol/);
     expect(corpus).toMatch(/submit.stash|submit\/stash|submit–stash/);
-    expect(corpus).toContain("tap");
-    expect(corpus).toContain("ile");
-    // At least two integration example phrases
+    expect(corpus).toMatch(/system 1/);
+    expect(corpus).toMatch(/system 2/);
+    expect(corpus).toMatch(/embedding/);
+    expect(corpus).toMatch(/tool agnostic|silence ratio|protocol purity/);
+    expect(corpus).toMatch(/selective thought|tap|ile/);
+    // Use cases clustered under PoW · TAP · ILE (business-value phrasing)
+    expect(corpus).toMatch(/\bpow\b/);
+    expect(corpus).toMatch(/\btap\b/);
+    expect(corpus).toMatch(/\bile\b/);
     const integrationHits = [
-      /pow api|api gates/,
-      /lms|course/,
-      /hiring|ats/,
-      /agent eval|skill\.md|deploy/,
-      /onboarding|enablement/,
+      /hire|hiring|résumé|resume/,
+      /certif/,
+      /interview|think-aloud|think aloud/,
+      /take-home|practice|onboard/,
+      /agent|ci|remote work/,
     ].filter((re) => re.test(corpus));
-    expect(integrationHits.length).toBeGreaterThanOrEqual(2);
+    expect(integrationHits.length).toBeGreaterThanOrEqual(3);
 
-    // Ordered narrative kickers
+    // Ordered narrative kickers (method split across two slides; fullImage has no kicker)
     expect(PRODUCT_PITCH_DECK.slides[0]?.kicker?.toLowerCase()).toMatch(/thesis/);
-    expect(PRODUCT_PITCH_DECK.slides[1]?.kicker?.toLowerCase()).toMatch(/test|implement/);
-    expect(PRODUCT_PITCH_DECK.slides[2]?.kicker?.toLowerCase()).toMatch(/product/);
-    expect(PRODUCT_PITCH_DECK.slides[3]?.kicker?.toLowerCase()).toMatch(/used|use/);
+    expect(PRODUCT_PITCH_DECK.slides[1]?.layout).toBe("fullImage");
+    expect(PRODUCT_PITCH_DECK.slides[2]?.kicker?.toLowerCase()).toMatch(/test|implement/);
+    expect(PRODUCT_PITCH_DECK.slides[2]?.title.toLowerCase()).toMatch(/think aloud/);
+    expect(PRODUCT_PITCH_DECK.slides[3]?.kicker?.toLowerCase()).toMatch(/test|implement/);
+    expect(PRODUCT_PITCH_DECK.slides[3]?.title.toLowerCase()).toMatch(/ai|game|tool|purity/);
+    expect(PRODUCT_PITCH_DECK.slides[4]?.kicker?.toLowerCase()).toMatch(/product/);
+    expect(PRODUCT_PITCH_DECK.slides[5]?.kicker?.toLowerCase()).toMatch(/used|use/);
+    expect(PRODUCT_PITCH_DECK.slides[5]?.kicker?.toLowerCase()).toMatch(/pow/);
+    expect(PRODUCT_PITCH_DECK.slides[6]?.kicker?.toLowerCase()).toMatch(/tap/);
+    expect(PRODUCT_PITCH_DECK.slides[7]?.kicker?.toLowerCase()).toMatch(/ile/);
 
-    for (const slide of PRODUCT_PITCH_DECK.slides) {
-      expect(slide.layout).toBe("media");
-      expect(slide.imagePlaceholder).toBe(true);
+    // Slide 1: text-only thesis (no image)
+    const thesisSlide = PRODUCT_PITCH_DECK.slides[0];
+    expect(thesisSlide?.layout).toBe("statement");
+    expect(thesisSlide?.image).toBeUndefined();
+    expect(thesisSlide?.video).toBeUndefined();
+    expect(thesisSlide?.imagePlaceholder).toBeUndefined();
+    expect(
+      publicAssetExists(thesisSlide?.backgroundImage ?? PRODUCT_PITCH_DECK.backgroundImage ?? ""),
+    ).toBe(true);
+
+    // Slide 2: full-stage config-space art
+    const configSlide = PRODUCT_PITCH_DECK.slides[1];
+    expect(configSlide?.layout).toBe("fullImage");
+    expect(configSlide?.image).toBe("/config space.png");
+    expect(publicAssetExists(configSlide?.image ?? "")).toBe(true);
+    expect(configSlide?.imageCaption?.trim().length).toBeGreaterThan(0);
+    expect(
+      publicAssetExists(configSlide?.backgroundImage ?? PRODUCT_PITCH_DECK.backgroundImage ?? ""),
+    ).toBe(true);
+
+    // Slides 3–4: TAP method media share the same autoplay video treatment
+    const tapSlide = PRODUCT_PITCH_DECK.slides[2];
+    expect(tapSlide?.layout).toBe("media");
+    expect(tapSlide?.video).toBe("/animations/selective_interface.mp4");
+    expect(publicAssetExists(tapSlide?.video ?? "")).toBe(true);
+    expect(tapSlide?.imagePlaceholder).toBeUndefined();
+    expect(tapSlide?.cards?.map((c) => c.label.toLowerCase())).toEqual([
+      "system 1",
+      "system 2",
+    ]);
+    expect(tapSlide?.cards?.some((c) => /metacognition|final answer/i.test(c.label))).toBe(false);
+
+    const puritySlide = PRODUCT_PITCH_DECK.slides[3];
+    expect(puritySlide?.layout).toBe("media");
+    expect(puritySlide?.video).toBe("/animations/selective_interface.mp4");
+    expect(publicAssetExists(puritySlide?.video ?? "")).toBe(true);
+    expect(puritySlide?.imagePlaceholder).toBeUndefined();
+    expect(puritySlide?.image).toBeUndefined();
+    expect(puritySlide?.title.toLowerCase()).toMatch(/ai|game|tool|purity/);
+
+    // Slide 5: productized full-width statement (no image column)
+    const productizedSlide = PRODUCT_PITCH_DECK.slides[4];
+    expect(productizedSlide?.layout).toBe("statement");
+    expect(productizedSlide?.imagePlaceholder).toBeUndefined();
+    expect(productizedSlide?.image).toBeUndefined();
+    expect(productizedSlide?.video).toBeUndefined();
+    expect(productizedSlide?.imageCaption).toBeUndefined();
+    expect(productizedSlide?.cards?.length).toBeGreaterThanOrEqual(2);
+    expect(
+      publicAssetExists(
+        productizedSlide?.backgroundImage ?? PRODUCT_PITCH_DECK.backgroundImage ?? "",
+      ),
+    ).toBe(true);
+
+    // Slides 6–8: one product per use-case slide (no scroll from cramming three tools)
+    const useCaseSlides = PRODUCT_PITCH_DECK.slides.slice(5, 8);
+    expect(useCaseSlides.map((s) => s.cards?.[0]?.label.toLowerCase())).toEqual([
+      "pow",
+      "tap",
+      "ile",
+    ]);
+    for (const slide of useCaseSlides) {
+      expect(slide.layout).toBe("statement");
+      expect(slide.imagePlaceholder).toBeUndefined();
       expect(slide.image).toBeUndefined();
-      expect(slide.imageCaption?.trim().length).toBeGreaterThan(0);
+      expect(slide.video).toBeUndefined();
+      expect(slide.cards?.length).toBe(1);
+      expect(slide.cards?.[0]?.ideas?.length).toBeGreaterThanOrEqual(2);
+      for (const idea of slide.cards?.[0]?.ideas ?? []) {
+        expect(idea.title.trim().length).toBeGreaterThan(0);
+        expect(idea.body.trim().length).toBeGreaterThan(40);
+      }
       expect(
         publicAssetExists(slide.backgroundImage ?? PRODUCT_PITCH_DECK.backgroundImage ?? ""),
       ).toBe(true);
     }
+    const useCaseCorpus = useCaseSlides
+      .flatMap((s) =>
+        (s.cards ?? []).flatMap((c) =>
+          (c.ideas ?? []).flatMap((idea) => [idea.title, idea.body]),
+        ),
+      )
+      .join("\n")
+      .toLowerCase();
+    expect(useCaseCorpus).toMatch(/dynamic saas onboarding|dynamic onboarding/);
+    expect(useCaseCorpus).toMatch(/learning-to-conversion|learning to conversion/);
+    expect(useCaseCorpus).toMatch(/tap-cha/);
 
-    // Inventory surfaces placeholder contract
-    for (const slide of inv.slides) {
-      expect(slide.layout).toBe("media");
-      expect(slide.imagePlaceholder).toBe(true);
-      expect(slide.imageCaption?.trim().length).toBeGreaterThan(0);
-    }
+    // Inventory: thesis + fullImage + two TAP videos + productized + three use-case statements
+    expect(inv.slides[0]?.layout).toBe("statement");
+    expect(inv.slides[0]?.image).toBeUndefined();
+    expect(inv.slides[1]?.layout).toBe("fullImage");
+    expect(inv.slides[1]?.image).toBe("/config space.png");
+    expect(inv.slides[2]?.layout).toBe("media");
+    expect(inv.slides[3]?.layout).toBe("media");
+    expect(inv.slides[4]?.layout).toBe("statement");
+    expect(inv.slides[4]?.imagePlaceholder).toBeUndefined();
+    expect(inv.slides[5]?.layout).toBe("statement");
+    expect(inv.slides[6]?.layout).toBe("statement");
+    expect(inv.slides[7]?.layout).toBe("statement");
+    // Nested idea copy is inventory-visible across the product trio
+    expect(inv.slides[5]?.allTextStrings.join(" ").toLowerCase()).toMatch(
+      /dynamic saas onboarding|learning-to-conversion/,
+    );
+    expect(inv.slides[6]?.allTextStrings.join(" ").toLowerCase()).toMatch(/tap-cha/);
+    expect(inv.slides[7]?.allTextStrings.join(" ").toLowerCase()).toMatch(
+      /onboarding repair|coached take-home|role ramp/,
+    );
 
-    // Renderer always reserves right slot + empty-state markup
+    // Renderer: idea boxes + media video/placeholder + fullImage contract
     const deckUi = fs.readFileSync(path.join(REPO_ROOT, "components/SalesSlideDeck.tsx"), "utf8");
+    expect(deckUi).toContain("data-pitch-idea");
+    expect(deckUi).toContain("data-pitch-idea-icon");
+    expect(deckUi).toContain("data-pitch-media-video");
+    expect(deckUi).toContain("data-pitch-full-image");
+    expect(deckUi).toContain('slide.layout === "fullImage"');
+    expect(deckUi).toMatch(/autoPlay/);
+    expect(deckUi).toMatch(/muted/);
     expect(deckUi).toContain("data-pitch-image-placeholder");
     expect(deckUi).toContain("data-pitch-image-placeholder-slot");
     expect(deckUi).toContain("Image placeholder");
@@ -420,8 +533,17 @@ describe("pitch deck content (shipped modules)", () => {
     // Panels may scroll if dense — never hard-clip narrative with overflow-hidden alone
     expect(deckUi).toContain("overflow-y-auto");
 
-    // All pitch layouts route through ContentPanel
-    for (const layout of ["title", "founder", "media", "statement", "bullets", "split", "close"] as const) {
+    // All pitch layouts are handled (fullImage is full-stage image; others use ContentPanel)
+    for (const layout of [
+      "title",
+      "founder",
+      "media",
+      "fullImage",
+      "statement",
+      "bullets",
+      "split",
+      "close",
+    ] as const) {
       if (layout === "close") {
         expect(deckUi).toContain("ContentPanel");
         continue;
@@ -714,7 +836,10 @@ describe("pitch deck content (shipped modules)", () => {
   it("platform The loop slide is vertical synergy with verification→optimization→augmentation example", () => {
     const loop = PLATFORM_PITCH_DECK.slides.find((s) => /the loop/i.test(s.kicker ?? ""));
     expect(loop).toBeTruthy();
-    const cardText = (loop!.cards ?? []).flatMap((c) => [c.label, c.body]).join("\n");
+    const cardText = (loop!.cards ?? [])
+      .flatMap((c) => [c.label, c.body, ...((c.ideas ?? []).flatMap((i) => [i.title, i.body]))])
+      .filter(Boolean)
+      .join("\n");
     const corpus = [loop!.title, loop!.subtitle, cardText, ...(loop!.bullets ?? [])]
       .join("\n")
       .toLowerCase();
@@ -731,9 +856,9 @@ describe("pitch deck content (shipped modules)", () => {
     // Framed synergy boxes (visual card grid)
     expect(loop!.cards?.length).toBeGreaterThanOrEqual(3);
     expect(loop!.cards?.some((c) => /synergy/i.test(c.label))).toBe(true);
-    expect(loop!.cards?.some((c) => /verification/i.test(c.label + c.body))).toBe(true);
-    expect(loop!.cards?.some((c) => /optimization/i.test(c.label + c.body))).toBe(true);
-    expect(loop!.cards?.some((c) => /augmentation/i.test(c.label + c.body))).toBe(true);
+    expect(loop!.cards?.some((c) => /verification/i.test(c.label + (c.body ?? "")))).toBe(true);
+    expect(loop!.cards?.some((c) => /optimization/i.test(c.label + (c.body ?? "")))).toBe(true);
+    expect(loop!.cards?.some((c) => /augmentation/i.test(c.label + (c.body ?? "")))).toBe(true);
 
     const deckUi = fs.readFileSync(path.join(REPO_ROOT, "components/SalesSlideDeck.tsx"), "utf8");
     expect(deckUi).toContain("data-pitch-card-grid");

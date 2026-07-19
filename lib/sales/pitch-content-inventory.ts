@@ -16,6 +16,7 @@ export type SlideFieldInventory = {
   image?: string;
   imageCaption?: string;
   imagePlaceholder?: boolean;
+  video?: string;
   allTextStrings: string[];
 };
 
@@ -33,7 +34,11 @@ export function inventorySlide(slide: SalesSlide, index: number): SlideFieldInve
   const highlights = slide.highlights ?? [];
   const leftItems = slide.left?.items ?? [];
   const rightItems = slide.right?.items ?? [];
-  const cardStrings = (slide.cards ?? []).flatMap((c) => [c.label, c.body]);
+  const cardStrings = (slide.cards ?? []).flatMap((c) => [
+    c.label,
+    ...(c.body ? [c.body] : []),
+    ...((c.ideas ?? []).flatMap((idea) => [idea.title, idea.body])),
+  ]);
   const allTextStrings = [
     slide.kicker,
     slide.title,
@@ -66,6 +71,7 @@ export function inventorySlide(slide: SalesSlide, index: number): SlideFieldInve
     image: slide.image,
     imageCaption: slide.imageCaption,
     imagePlaceholder: slide.imagePlaceholder,
+    video: slide.video,
     allTextStrings,
   };
 }

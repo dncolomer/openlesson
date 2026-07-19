@@ -27,7 +27,7 @@ export const PITCH_INDEX: PitchIndexEntry[] = [
     path: "/pitch-product",
     title: "Product Pitch",
     description:
-      "Crisp four-slide product thesis: proximity over quiz scores, PoW + cognition + trace interruptions, Submit–Stash and selective thought UI, integration surfaces.",
+      "Product thesis: proximity over quiz scores, config-space visual, Think Aloud Protocol method, PoW stash/submit interface (TAP + ILE implement it), integration surfaces.",
     vertical: "product",
     deck: PRODUCT_PITCH_DECK,
   },

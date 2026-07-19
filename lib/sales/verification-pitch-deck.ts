@@ -18,8 +18,22 @@ export const VERIFICATION_PITCH_DECK: SolutionSlideDeck = {
       kicker: "Learning Verification · Uncertain Systems",
       title: "Verify skills before they cost you downstream.",
       subtitle:
-        "Confirm what candidates, employees, and agents can actually do — before you hire, promote, certify, or deploy. Signal beyond polished deliverables and benchmark pass rates.",
+        "Confirm what candidates, employees, and agents can actually do before hire, promote, certify, or deploy. Example: an HR tech or talent marketplace embeds verification into its existing funnel.",
       backgroundImage: PITCH_ASSETS.aesthetics.verification,
+      cards: [
+        {
+          label: "1 · Hosted TAP in the ATS",
+          body: "At screening or final interview, send a shareable Think Aloud Protocol link scoped to a role skill block. Candidates talk through real work on a clock. Scores and gap reports land back in the applicant record.",
+        },
+        {
+          label: "2 · ILE for senior depth",
+          body: "For staff and technical tracks, run coached ILE scenarios instead of one-shot take-homes. Same workspace markers; deeper multi-step judgment, debugging, or design tradeoffs.",
+        },
+        {
+          label: "3 · PoW API in their stack",
+          body: "When the product owns the UX, pipe recordings, docs, and agent tool traces into Proof-of-Work API endpoints. Anonymized payloads if needed. Deploy gates and compliance links use the same scoring model.",
+        },
+      ],
     },
     ...buildFounderSlides("verification"),
     {
@@ -32,7 +46,7 @@ export const VERIFICATION_PITCH_DECK: SolutionSlideDeck = {
       ...labeledHighlights([
         [
           "The trap",
-          "Polished output is no longer proof of skill — assist makes take-homes, interviews, and agent demos look production-ready.",
+          "Polished output is no longer proof of skill.",
         ],
         [
           "What buyers need",
@@ -51,7 +65,7 @@ export const VERIFICATION_PITCH_DECK: SolutionSlideDeck = {
       kicker: "Our thesis",
       title: "The definition of Learning is radically changing",
       subtitle:
-        "One workspace model scores live cognition and tool traces. Auditable gap reports — not vanity completion metrics — before hire, deploy, or certify.",
+        "One workspace model scores live cognition and tool traces. Auditable gap reports.",
       backgroundImage: PITCH_ASSETS.aesthetics.verticals,
       highlights: thesisScienceHighlights("verification"),
       highlightLabels: [...THESIS_HIGHLIGHT_LABELS],
@@ -63,28 +77,26 @@ export const VERIFICATION_PITCH_DECK: SolutionSlideDeck = {
       ],
     },
     {
-      layout: "split",
+      layout: "statement",
       kicker: "Integration depth",
-      title: "Three tiers — pick speed vs depth vs native embed",
+      title: "Three flavours for speed, depth, and native embed",
+      subtitle:
+        "Same workspace scoring model in every flavour. Pick hosted speed, hosted depth, or full API integration into your stack.",
       backgroundImage: PITCH_ASSETS.aesthetics.products,
-      left: {
-        label: "01 TAP · 02 ILE — hosted processes",
-        items: [
-          "TAP and ILE are hosted processes on Uncertain Systems — shareable links, no build-your-own UX required",
-          "Think Aloud Protocol: live, time-framed verification sessions as a hosted product experience",
-          "ILE: hosted open-ended assignment and project-style depth for complex judgment under coach",
-          "Ideal when you want speed (screening, interviews) or depth without integrating scoring into your stack first",
-        ],
-      },
-      right: {
-        label: "03 Proof-of-Work API — native integration",
-        items: [
-          "Full integration into ATS, HRIS, LMS, CI, agent pipelines when you own the UX",
-          "Pipe recordings, documents, traces, and screen shares — including anonymized or redacted payloads",
-          "Scoring endpoints wired to your gates and data model",
-          "Same markers for human and agent paths as the hosted TAP and ILE processes",
-        ],
-      },
+      cards: [
+        {
+          label: "01 · TAP (Think Aloud Protocol)",
+          body: "Hosted process. Live, time-framed verification links. Ideal for high-volume screening and interview stages without building your own UX.",
+        },
+        {
+          label: "02 · ILE (Integrated Learning Environment)",
+          body: "Hosted process. Open-ended assignment and project-style depth for complex judgment, debugging, and design tradeoffs under coach.",
+        },
+        {
+          label: "03 · PoW API (Proof-of-Work)",
+          body: "Native integration into ATS, HRIS, LMS, CI, and agent pipelines when you own the UX. Pipe traces and artifacts (including anonymized payloads) into the same markers.",
+        },
+      ],
     },
     buildPrivacyDataSlide(),
     {
@@ -96,7 +108,7 @@ export const VERIFICATION_PITCH_DECK: SolutionSlideDeck = {
       backgroundImage: PITCH_ASSETS.aesthetics.useCase,
       bullets: [
         "Shareable TAP links scoped to role-critical skill blocks",
-        "Marker scores with rationale — not a single opaque pass/fail score",
+        "Marker scores with rationale",
         "Compare candidates on the same workspace scenarios",
         "Surface cognitive skills and judgment moves multiple-choice cannot fake",
       ],
@@ -106,16 +118,16 @@ export const VERIFICATION_PITCH_DECK: SolutionSlideDeck = {
       kicker: "Use case · TAP-cha",
       title: "Prove a live human is behind the keyboard.",
       subtitle:
-        "A short Think Aloud Protocol session confirms a real person — not a bot, scripted agent, or AI-fed impersonation. Hesitations, self-corrections, and causal reasoning under probe are signal a completion checkbox cannot fake.",
+        "A short Think Aloud Protocol session confirms a real person.",
       backgroundImage: PITCH_ASSETS.aesthetics.useCase,
       ...labeledHighlights([
         [
           "Use case",
-          "TAP-cha: a short Think Aloud Protocol to prove a live human is behind the keyboard — not a bot or AI-fed impersonation.",
+          "TAP-cha: a short Think Aloud Protocol to prove a live human is behind the keyboard.",
         ],
         [
           "Signal that sticks",
-          "Hesitations, self-corrections, and causal reasoning under probe — signal a completion checkbox cannot fake.",
+          "Hesitations, self-corrections, and causal reasoning under probe.",
         ],
       ]),
       bullets: [
@@ -130,7 +142,7 @@ export const VERIFICATION_PITCH_DECK: SolutionSlideDeck = {
       kicker: "Use case · Deploy gates",
       title: "Agent vendor & deploy readiness",
       subtitle:
-        "Validate agentic skill before production rollout. Score tool traces and run scenarios the same way you gate human hires — one standard across your stack.",
+        "Validate agentic skill before production rollout. Score tool traces and run scenarios the same way you gate human hires.",
       backgroundImage: PITCH_ASSETS.aesthetics.useCase,
       bullets: [
         "Beyond benchmark pass rates: tool use under realistic workspace constraints",
@@ -145,32 +157,10 @@ export const VERIFICATION_PITCH_DECK: SolutionSlideDeck = {
       title: "Where teams put verification first",
       backgroundImage: PITCH_ASSETS.aesthetics.verification,
       bullets: [
-        "Internal mobility & promotion gates — realistic workflows, not self-reported proficiency",
-        "Staffing & talent marketplace quality — auditable gap reports per skill block for buyers",
-        "Certification & compliance attestations — verification links per role or regulation",
-        "Soft skill & judgment checks — tradeoffs, stakeholder reasoning, metacognitive moves",
-      ],
-    },
-    {
-      layout: "bullets",
-      kicker: "Why it works",
-      title: "Highlights buyers care about",
-      backgroundImage: PITCH_ASSETS.aesthetics.products,
-      ...labeledHighlights([
-        [
-          "One model",
-          "One workspace model for human and agentic validation — same markers across TAP, ILE, and PoW API.",
-        ],
-        [
-          "Auditable depth",
-          "Gap reports with rationale, not vanity completion metrics — pick hosted speed or native PoW embed.",
-        ],
-      ]),
-      bullets: [
-        "One workspace model for human and agentic validation",
-        "Auditable gap reports — not vanity completion metrics",
-        "Pick depth by role: TAP for speed, ILE for complexity, PoW API for native integration",
-        "Learning world model + Trace Interruption Model under every probe",
+        "Internal mobility & promotion gates",
+        "Staffing & talent marketplace quality",
+        "Certification & compliance attestations",
+        "Soft skill & judgment checks",
       ],
     },
     {

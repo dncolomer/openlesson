@@ -18,12 +18,12 @@ export const PLATFORM_PITCH_DECK: SolutionSlideDeck = {
       kicker: "Uncertain Systems · Three verticals",
       title: "Beyond benchmarks for AI. Beyond tests for humans.",
       subtitle:
-        "One learning world model and product suite for human and agentic learning — proof of work turned into hire, deploy, adopt, and certify decisions.",
+        "One learning world model and product suite for human and agentic learning.",
       backgroundImage: PITCH_ASSETS.aesthetics.title,
       cards: [
         {
           label: "Verification",
-          body: "Prove skill before hire, promote, certify, or deploy — for humans and agents, beyond surface polish and thin benchmark scores.",
+          body: "Prove skill before hire, promote, certify, or deploy.",
         },
         {
           label: "Optimization",
@@ -31,7 +31,7 @@ export const PLATFORM_PITCH_DECK: SolutionSlideDeck = {
         },
         {
           label: "Augmentation",
-          body: "Interrupt shallow fluency with probes inside onboarding, courses, and prep — replace “check your knowledge” with real thinking.",
+          body: "Interrupt shallow fluency with probes inside onboarding, courses, and prep.",
         },
       ],
     },
@@ -41,12 +41,12 @@ export const PLATFORM_PITCH_DECK: SolutionSlideDeck = {
       kicker: "The problem",
       title: "Outputs look ready before learning is verified.",
       subtitle:
-        "Real-time assist and copilots make polished delivery easy. Quizzes and benchmark pass rates were never reliable proxies for learning — for people or agents.",
+        "Real-time assist and copilots make polished delivery easy. Quizzes and benchmark pass rates were never reliable proxies for learning.",
       backgroundImage: PITCH_ASSETS.aesthetics.problem,
       ...labeledHighlights([
         [
           "The trap",
-          "Outputs look ready before learning is verified — copilots make polish cheap for humans and agents alike.",
+          "Outputs look ready before learning is verified.",
         ],
         [
           "Why proxies fail",
@@ -74,13 +74,13 @@ export const PLATFORM_PITCH_DECK: SolutionSlideDeck = {
         ],
         [
           "Software first",
-          "Attention loops, Socratic probes, and proof of work today — world models and biofeedback on the path.",
+          "Attention loops, Socratic probes, and proof of work today.",
         ],
       ]),
       bullets: [
         "Low-ROI learning still demands too much effort for the depth it returns",
         "Self-driving learning: more attention markers without a proportional energy cost",
-        "Software first — attention loops, Socratic probes, proof of work — then world models and biofeedback",
+        "Software first",
       ],
     },
     {
@@ -88,30 +88,28 @@ export const PLATFORM_PITCH_DECK: SolutionSlideDeck = {
       kicker: "Science",
       title: "A holistic model of knowledge",
       subtitle:
-        "We treat learning as physics of mind, not as a quiz score: brains and agent policies sit in configuration space. Useful knowledge is proximity to a state you can retrieve, apply, and transform — and educational technology should shorten that path without burning proportional human energy. Proof of work is how we measure that proximity in software today.",
+        "Learning is physics of mind, not a quiz score. Brains and agents sit in configuration space; useful knowledge is proximity to a state you can retrieve, apply, and transform.",
       backgroundImage: PITCH_ASSETS.aesthetics.science,
       ...labeledHighlights([
         [
           "Knowledge = proximity",
-          "Knowledge is not a binary flag — it is closeness to a configuration where you can retrieve, apply, and transform what the task demands.",
+          "Closeness to a useful configuration. Not a binary flag or completion percentage.",
         ],
         [
           "PoW measures proximity",
-          "Artifacts, tool traces, and think-aloud under probe are a better proxy for configuration than tests and benchmarks that sample thin output slices.",
+          "Artifacts, tool traces, and think-aloud under probe. Better than thin test or benchmark slices.",
         ],
       ]),
       bullets: [
-        "Brain configuration: the full physical (or agent) state at a point in time — every skill, memory, and decision lives as a configuration of activity, not as a completion checkbox.",
-        "Knowledge = proximity: knowledge is not a binary flag. It is how near the current configuration is to one where you can reliably retrieve, apply, and transform what the task demands. Closeness — not percent complete — is the signal that matters.",
-        "Learning = transformation: to learn is to move through configuration space toward a more useful state, ideally with less wasted effort. Good edtech shortens that path while preserving depth of understanding.",
-        "Non-invasive path: we start with software attention loops, Socratic probes, and proof-of-work verification; over time we layer world models, non-invasive stimulation, and biofeedback — toward self-driving learning without asking humans to spend proportionally more energy.",
-        "Why measurement must change: tests and benchmarks sample thin slices of output; proof of work (artifacts, tool traces, think-aloud under probe) is a better proxy for configuration proximity — and that is what verification, optimization, and augmentation all score against.",
+        "Brain configuration: the full physical (or agent) state at a point in time",
+        "Learning = transformation: move through configuration space with less wasted effort",
+        "Non-invasive path: software probes and proof of work today; world models and biofeedback later",
       ],
     },
     {
       layout: "statement",
       kicker: "Our thesis",
-      title: "A learning world model — not linear analytics.",
+      title: "A learning world model, not linear analytics.",
       subtitle:
         "Uncertain Systems builds a live picture from skills, scenarios, proof of work, and where reasoning breaks. The Trace Interruption Model uses that model to drive verification, optimization, and augmentation in context.",
       backgroundImage: PITCH_ASSETS.aesthetics.verticals,
@@ -121,56 +119,32 @@ export const PLATFORM_PITCH_DECK: SolutionSlideDeck = {
         "Verification scores whether humans and agents can perform before hire, deploy, or certify",
         "Optimization routes the next practice or coaching step when gaps show up in the model",
         "Augmentation interrupts shallow fluency with probes tuned to what the workspace already knows",
-        "One model, three verticals — embedded in your existing tools",
+        "One model, three verticals",
       ],
-    },
-    {
-      layout: "split",
-      kicker: "Three verticals",
-      title: "Where the platform meets real work",
-      backgroundImage: PITCH_ASSETS.aesthetics.verticals,
-      left: {
-        label: "Verification · Optimization",
-        items: [
-          "Verify skills before hire, promote, certify, or deploy",
-          "TAP-cha and hard-skill probes for humans; tool-trace gates for agents",
-          "Optimize until adoption, score movement, and deploy readiness improve",
-          "Dynamic onboarding and ALE skill loops from verified gaps",
-        ],
-      },
-      right: {
-        label: "Augmentation · Outcomes",
-        items: [
-          "Augment how people think inside onboarding, courses, and prep",
-          "Replace “check your knowledge” widgets with reasoning under probe",
-          "Humans: did they learn enough to activate, adopt, and convert?",
-          "Agents: did they learn enough to deploy and perform in production?",
-        ],
-      },
     },
     {
       layout: "statement",
       kicker: "Foundation",
-      title: "Workspace — one live learning world model",
+      title: "Workspace: where the learning world model lives",
       subtitle:
-        "Everything runs on Workspaces: structure skills and scenarios, attach documents and proof of work, and run every product against one shared context.",
+        "Everything runs on Workspaces: skills, scenarios, proof of work, and the live learning world model in one shared context. The Trace Interruption Model is the interruption layer on top of that context today; it is separate for practical development reasons and is on a path to merge into the learning world model.",
       backgroundImage: PITCH_ASSETS.aesthetics.products,
+      ...labeledHighlights([
+        [
+          "Learning world model",
+          "Lives in the Workspace: structured skills and scenarios, ingested proof of work, continuous scores and gaps.",
+        ],
+        [
+          "TIM today → one model later",
+          "Trace Interruption Model predicts when to probe, coach, or request proof. Built as a separate model for now so we can ship interruptions; destination is a single learning world model that includes interruption.",
+        ],
+      ]),
       bullets: [
-        "Define skills, scenarios, and decision domains as assessable blocks",
+        "Define skills, scenarios, and decision domains as assessable blocks inside the workspace",
         "Ingest proof of work via API, upload, screen share, or tool traces",
-        "One workspace powers verification, scoring, gap analysis, and improvement",
-      ],
-    },
-    {
-      layout: "bullets",
-      kicker: "Trace Interruption Model",
-      title: "The shared model behind every product",
-      backgroundImage: PITCH_ASSETS.aesthetics.products,
-      bullets: [
-        "Not a standalone SKU — the intelligence layer under verification, optimization, and augmentation",
-        "Trained to predict optimal interruptions: when to probe, coach, or request proof",
-        "Breaks turn-based quiz linearity; acts on the live learning world model instead of funnel events",
-        "Same TIM loop for human think-aloud and agent tool-use paths",
+        "TIM is not a standalone SKU: it powers interruption under verification, optimization, and augmentation against workspace context",
+        "Same interruption loop for human think-aloud and agent tool-use paths, acting on workspace state instead of linear funnel events",
+        "Today: learning world model + TIM as two cooperating pieces; tomorrow: one unified model as the architecture converges",
       ],
     },
     {
@@ -225,18 +199,18 @@ export const PLATFORM_PITCH_DECK: SolutionSlideDeck = {
     {
       layout: "statement",
       kicker: "The loop",
-      title: "Three verticals, one business context — synergy, not silos.",
+      title: "Three verticals, one business context. Synergy, not silos.",
       subtitle:
-        "Verification, optimization, and augmentation share the same workspace and learning world model. Start where the decision is sharpest — then the same foundation carries practice and deeper thinking without rebuilding the stack.",
+        "Verification, optimization, and augmentation share the same workspace and learning world model. Start where the decision is sharpest.",
       backgroundImage: PITCH_ASSETS.aesthetics.verticals,
       cards: [
         {
           label: "Synergy",
-          body: "Each vertical feeds the others — verified gaps drive practice; practice and probes produce new proof of work; the model gets sharper over time.",
+          body: "Each vertical feeds the others.",
         },
         {
           label: "1 · Start in verification",
-          body: "Talent platform example: ship TAP / PoW gates for hiring, promotion, and agent deploy readiness — proof of skill before the decision.",
+          body: "Talent platform example: ship TAP / PoW gates for hiring, promotion, and agent deploy readiness.",
         },
         {
           label: "2 · Then optimization",
@@ -244,12 +218,12 @@ export const PLATFORM_PITCH_DECK: SolutionSlideDeck = {
         },
         {
           label: "3 · Then augmentation",
-          body: "Same foundation: probes in academy, certification prep, and in-product checks — deeper thinking on the evidence and context you already hold.",
+          body: "Same foundation: probes in academy, certification prep, and in-product checks.",
         },
       ],
       bullets: [
         "One workspace, three verticals: verification establishes the signal; optimization and augmentation reuse that same proof of work across the business context.",
-        "The learning world model is the foundation — every vertical runs on it, so you do not re-instrument when you go from gates to practice to probes.",
+        "The learning world model is the foundation.",
       ],
     },
     {
@@ -268,7 +242,7 @@ export const PLATFORM_PITCH_DECK: SolutionSlideDeck = {
         ],
       ]),
       bullets: [
-        "Verify agent skills and tool use before production — not just benchmark pass rates",
+        "Verify agent skills and tool use before production",
         "Confirm humans learned a workflow, not just clicked through training",
         "Detect hidden gaps before client work, incidents, or bad deploys",
         "Separate genuine human thinking from AI-fed interview polish",
@@ -279,7 +253,7 @@ export const PLATFORM_PITCH_DECK: SolutionSlideDeck = {
     {
       layout: "close",
       kicker: "Next step",
-      title: "Verify, optimize, and augment learning — not just outputs.",
+      title: "Verify, optimize, and augment learning.",
       backgroundImage: PITCH_ASSETS.aesthetics.close,
       bullets: [
         "Create your first Workspace free",

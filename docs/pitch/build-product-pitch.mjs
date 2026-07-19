@@ -1,5 +1,5 @@
 /**
- * Product pitch — 4 crisp slides (thesis → method → product → uses)
+ * Product pitch — 5 crisp slides (thesis → method ×2 → product → uses)
  * Layout: content left, image placeholder right on every slide.
  */
 import pptxgen from "pptxgenjs";
@@ -160,7 +160,67 @@ pres.author = "Uncertain Systems";
 pres.title = "Product Pitch — Learning World Model";
 pres.subject = "Thesis, method, productization, integrations";
 
-const TOTAL = 4;
+const TOTAL = 5;
+
+/** Shared layer-card renderer for the "How we test it" slides */
+function addLayerCard(slide, layer, { y, h }) {
+  slide.addShape(pres.shapes.ROUNDED_RECTANGLE, {
+    x: LEFT_X,
+    y,
+    w: LEFT_W,
+    h,
+    fill: { color: COLORS.card },
+    line: { color: COLORS.border, width: 1 },
+    rectRadius: 0.08,
+  });
+
+  const badgeY = y + (h - 0.52) / 2;
+  slide.addShape(pres.shapes.ROUNDED_RECTANGLE, {
+    x: LEFT_X + 0.18,
+    y: badgeY,
+    w: 0.52,
+    h: 0.52,
+    fill: { color: COLORS.cardAlt },
+    line: { color: COLORS.border, width: 1 },
+    rectRadius: 0.06,
+  });
+  slide.addText(layer.n, {
+    x: LEFT_X + 0.18,
+    y: badgeY,
+    w: 0.52,
+    h: 0.52,
+    fontFace: FONT.mono,
+    fontSize: 12,
+    color: layer.accent,
+    bold: true,
+    align: "center",
+    valign: "middle",
+    margin: 0,
+  });
+
+  slide.addText(layer.title, {
+    x: LEFT_X + 0.9,
+    y: y + 0.22,
+    w: LEFT_W - 1.15,
+    h: 0.36,
+    fontFace: FONT.head,
+    fontSize: 17,
+    bold: true,
+    color: COLORS.white,
+    margin: 0,
+  });
+  slide.addText(layer.body, {
+    x: LEFT_X + 0.9,
+    y: y + 0.62,
+    w: LEFT_W - 1.15,
+    h: h - 0.82,
+    fontFace: FONT.body,
+    fontSize: 13,
+    color: COLORS.muted,
+    margin: 0,
+    valign: "top",
+  });
+}
 
 // ─────────────────────────────────────────────────────────────
 // SLIDE 1 — Our Thesis
@@ -256,14 +316,14 @@ const TOTAL = 4;
 }
 
 // ─────────────────────────────────────────────────────────────
-// SLIDE 2 — How we implement / test the thesis
+// SLIDE 2 — How we test it (layers 01–02)
 // ─────────────────────────────────────────────────────────────
 {
   const slide = pres.addSlide();
   addBackground(slide);
   addSlideChrome(slide, { num: 2, total: TOTAL, kicker: "02  ·  HOW WE TEST IT" });
   addTitle(slide, "Three layers that make\nproximity measurable.", { h: 0.72 });
-  addImagePlaceholder(slide, "Stack / cognition layers");
+  addImagePlaceholder(slide, "PoW + cognition layers");
 
   const layers = [
     {
@@ -278,79 +338,99 @@ const TOTAL = 4;
       body: "Chain-of-thought linearity analysis. How we capture thought is decisive — Selective Thought Interface.",
       accent: COLORS.green,
     },
+  ];
+
+  const cardH = 1.55;
+  const cardGap = 0.2;
+  const cardY0 = 1.55;
+
+  layers.forEach((layer, i) => {
+    addLayerCard(slide, layer, {
+      y: cardY0 + i * (cardH + cardGap),
+      h: cardH,
+    });
+  });
+}
+
+// ─────────────────────────────────────────────────────────────
+// SLIDE 3 — How we test it (layer 03)
+// ─────────────────────────────────────────────────────────────
+{
+  const slide = pres.addSlide();
+  addBackground(slide);
+  addSlideChrome(slide, { num: 3, total: TOTAL, kicker: "03  ·  HOW WE TEST IT" });
+  addTitle(slide, "The third layer: probe\ngaps mid-reasoning.", { h: 0.72 });
+  addImagePlaceholder(slide, "Trace interruptions");
+
+  // Featured layer 03 card
+  addLayerCard(
+    slide,
     {
       n: "03",
       title: "Learning Model · Trace Interruptions",
       body: "World-model style. Trace interruptions probe gaps mid-reasoning — and measure how interruption changes learning effectiveness.",
       accent: COLORS.amber,
     },
+    { y: 1.55, h: 1.85 }
+  );
+
+  // Supporting detail cards under the featured layer
+  const details = [
+    {
+      label: "PROBE GAPS",
+      body: "Interrupt at decision points to surface missing knowledge while reasoning is still live.",
+    },
+    {
+      label: "MEASURE EFFECT",
+      body: "Track how interruptions shift learning effectiveness — not just whether the final answer was right.",
+    },
   ];
 
-  layers.forEach((layer, i) => {
-    const y = 1.55 + i * 1.2;
+  const detailW = (LEFT_W - 0.16) / 2;
+  details.forEach((d, i) => {
+    const x = LEFT_X + i * (detailW + 0.16);
+    const y = 3.6;
     slide.addShape(pres.shapes.ROUNDED_RECTANGLE, {
-      x: LEFT_X,
+      x,
       y,
-      w: LEFT_W,
-      h: 1.08,
+      w: detailW,
+      h: 1.45,
       fill: { color: COLORS.card },
       line: { color: COLORS.border, width: 1 },
       rectRadius: 0.08,
     });
-    // Number badge
-    slide.addShape(pres.shapes.ROUNDED_RECTANGLE, {
-      x: LEFT_X + 0.14,
-      y: y + 0.28,
-      w: 0.48,
-      h: 0.48,
-      fill: { color: COLORS.cardAlt },
-      line: { color: COLORS.border, width: 1 },
-      rectRadius: 0.06,
-    });
-    slide.addText(layer.n, {
-      x: LEFT_X + 0.14,
-      y: y + 0.28,
-      w: 0.48,
-      h: 0.48,
+    slide.addText(d.label, {
+      x: x + 0.18,
+      y: y + 0.22,
+      w: detailW - 0.36,
+      h: 0.3,
       fontFace: FONT.mono,
-      fontSize: 11,
-      color: layer.accent,
+      fontSize: 10,
+      color: COLORS.amber,
       bold: true,
-      align: "center",
-      valign: "middle",
+      charSpacing: 0.8,
       margin: 0,
     });
-    slide.addText(layer.title, {
-      x: LEFT_X + 0.78,
-      y: y + 0.16,
-      w: LEFT_W - 1.0,
-      h: 0.32,
-      fontFace: FONT.head,
-      fontSize: 15,
-      bold: true,
-      color: COLORS.white,
-      margin: 0,
-    });
-    slide.addText(layer.body, {
-      x: LEFT_X + 0.78,
-      y: y + 0.5,
-      w: LEFT_W - 1.0,
-      h: 0.48,
+    slide.addText(d.body, {
+      x: x + 0.18,
+      y: y + 0.58,
+      w: detailW - 0.36,
+      h: 0.7,
       fontFace: FONT.body,
       fontSize: 12,
-      color: COLORS.muted,
+      color: COLORS.ice,
       margin: 0,
     });
   });
 }
 
 // ─────────────────────────────────────────────────────────────
-// SLIDE 3 — Productization
+// SLIDE 4 — Productization
 // ─────────────────────────────────────────────────────────────
 {
   const slide = pres.addSlide();
   addBackground(slide);
-  addSlideChrome(slide, { num: 3, total: TOTAL, kicker: "03  ·  PRODUCTIZED" });
+  addSlideChrome(slide, { num: 4, total: TOTAL, kicker: "04  ·  PRODUCTIZED" });
   addTitle(slide, "Model surfaces in\ntwo product primitives.", { h: 0.72 });
   addImagePlaceholder(slide, "UI / interaction model");
 
@@ -450,61 +530,106 @@ const TOTAL = 4;
 }
 
 // ─────────────────────────────────────────────────────────────
-// SLIDE 4 — How these can be used
+// SLIDE 5 — How these can be used
 // ─────────────────────────────────────────────────────────────
 {
   const slide = pres.addSlide();
   addBackground(slide);
-  addSlideChrome(slide, { num: 4, total: TOTAL, kicker: "04  ·  HOW THEY'RE USED" });
-  addTitle(slide, "Integration surfaces.", { h: 0.55 });
+  addSlideChrome(slide, { num: 5, total: TOTAL, kicker: "05  ·  HOW THEY'RE USED" });
+  addTitle(slide, "What each product is for.", { h: 0.5 });
   addImagePlaceholder(slide, "Integration map");
 
-  const uses = [
-    { title: "PoW API gates", body: "Embed score + submit/stash into hiring, cert, or CI pipelines." },
-    { title: "TAP sessions", body: "Shareable think-aloud links for live human verification." },
-    { title: "ILE practice", body: "Coached scenarios as take-home / quiz replacements." },
-    { title: "LMS / courses", body: "Interruption + proximity scoring inside existing learning paths." },
-    { title: "Enablement", body: "Onboarding and sales/tech readiness scored on real work traces." },
-    { title: "Agent eval", body: "Same PoW + interruption loop for tool-use and skill.md iteration." },
+  // Three product groups: PoW · TAP · ILE — business-value use cases
+  const groups = [
+    {
+      label: "PoW",
+      accent: COLORS.accent,
+      cases: [
+        "Screen hires on real work, not résumés",
+        "Gate certifications on proof, not quizzes",
+        "Stop weak agent or CI output before it ships",
+      ],
+    },
+    {
+      label: "TAP",
+      accent: COLORS.green,
+      cases: [
+        "Run live think-aloud interviews",
+        "Capture how experts actually solve problems",
+        "Verify remote work was done by a human",
+      ],
+    },
+    {
+      label: "ILE",
+      accent: COLORS.amber,
+      cases: [
+        "Replace take-homes with coached practice",
+        "Close skill gaps found after assessment",
+        "Onboard teams with real job scenarios",
+      ],
+    },
   ];
 
-  uses.forEach((u, i) => {
-    const col = i % 2;
-    const row = Math.floor(i / 2);
-    const cardW = LEFT_W / 2 - 0.08;
-    const x = LEFT_X + col * (cardW + 0.16);
-    const y = 1.4 + row * 1.25;
+  const cardH = 1.15;
+  const cardGap = 0.12;
+  const cardY0 = 1.35;
+
+  groups.forEach((g, i) => {
+    const y = cardY0 + i * (cardH + cardGap);
 
     slide.addShape(pres.shapes.ROUNDED_RECTANGLE, {
-      x,
+      x: LEFT_X,
       y,
-      w: cardW,
-      h: 1.12,
+      w: LEFT_W,
+      h: cardH,
       fill: { color: COLORS.card },
       line: { color: COLORS.border, width: 1 },
       rectRadius: 0.08,
     });
-    slide.addText(u.title, {
-      x: x + 0.16,
-      y: y + 0.18,
-      w: cardW - 0.32,
-      h: 0.3,
-      fontFace: FONT.head,
-      fontSize: 14,
+
+    // Left accent bar
+    slide.addShape(pres.shapes.RECTANGLE, {
+      x: LEFT_X,
+      y,
+      w: 0.07,
+      h: cardH,
+      fill: { color: g.accent },
+      line: { color: g.accent, width: 0 },
+    });
+
+    // Group label
+    slide.addText(g.label, {
+      x: LEFT_X + 0.22,
+      y: y + 0.14,
+      w: 0.7,
+      h: cardH - 0.28,
+      fontFace: FONT.mono,
+      fontSize: 13,
+      color: g.accent,
       bold: true,
-      color: COLORS.white,
       margin: 0,
+      valign: "middle",
     });
-    slide.addText(u.body, {
-      x: x + 0.16,
-      y: y + 0.52,
-      w: cardW - 0.32,
-      h: 0.48,
-      fontFace: FONT.body,
-      fontSize: 12,
-      color: COLORS.muted,
-      margin: 0,
-    });
+
+    // Use cases as one multi-line block
+    slide.addText(
+      g.cases.map((c, j) => ({
+        text: `·  ${c}`,
+        options: { breakLine: j < g.cases.length - 1 },
+      })),
+      {
+        x: LEFT_X + 1.0,
+        y: y + 0.12,
+        w: LEFT_W - 1.2,
+        h: cardH - 0.24,
+        fontFace: FONT.body,
+        fontSize: 12,
+        color: COLORS.ice,
+        margin: 0,
+        valign: "middle",
+        paraSpaceAfter: 3,
+      }
+    );
   });
 }
 

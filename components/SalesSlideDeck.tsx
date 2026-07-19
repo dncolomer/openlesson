@@ -1,11 +1,58 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { SalesSlide, SolutionSlideDeck } from "@/lib/sales/solution-slide-decks";
 
 type SalesSlideDeckProps = {
   deck: SolutionSlideDeck;
 };
+
+/**
+ * Pitch media video: full frame (no zoom/crop), muted autoplay.
+ * object-contain shows the whole clip; column width drives size, max-height caps stage scroll.
+ */
+function PitchMediaVideo({
+  src,
+  label,
+}: {
+  src: string;
+  label: string;
+}) {
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+
+  useEffect(() => {
+    const el = videoRef.current;
+    if (!el) return;
+    el.muted = true;
+    el.defaultMuted = true;
+    el.playsInline = true;
+    const tryPlay = () => {
+      void el.play().catch(() => {
+        /* Autoplay blocked — still show first frame */
+      });
+    };
+    tryPlay();
+    el.addEventListener("loadeddata", tryPlay);
+    return () => el.removeEventListener("loadeddata", tryPlay);
+  }, [src]);
+
+  return (
+    <div data-pitch-media-video-frame className="relative w-full overflow-hidden bg-black">
+      <video
+        ref={videoRef}
+        data-pitch-media-video
+        src={src}
+        autoPlay
+        muted
+        loop
+        playsInline
+        preload="auto"
+        aria-label={label}
+        className="pointer-events-none block h-auto w-full max-h-[min(52vh,28rem)] object-contain object-center bg-black"
+      />
+    </div>
+  );
+}
 
 /**
  * Slide stage: full width/height. Top-left single-column copy.
@@ -118,8 +165,35 @@ function HighlightCallouts({
   );
 }
 
+function IdeaIcon() {
+  return (
+    <span
+      data-pitch-idea-icon
+      className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-cyan-300/35 bg-cyan-400/10 text-cyan-200"
+      aria-hidden
+    >
+      <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="1.8">
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          d="M9.5 18h5M10 21h4M8.2 15.2A5.8 5.8 0 1 1 15.8 15.2c-.7.9-1.3 1.7-1.6 2.8H9.8c-.3-1.1-.9-1.9-1.6-2.8Z"
+        />
+      </svg>
+    </span>
+  );
+}
+
 /** Equal framed boxes for pillars / synergy steps (e.g. three verticals, loop flow). */
-function CardGrid({ cards }: { cards: Array<{ label: string; body: string }> }) {
+function CardGrid({
+  cards,
+}: {
+  cards: Array<{
+    label: string;
+    body?: string;
+    ideas?: Array<{ title: string; body: string }>;
+  }>;
+}) {
+  const hasIdeas = cards.some((card) => (card.ideas?.length ?? 0) > 0);
   const colClass =
     cards.length >= 4
       ? "grid-cols-1 sm:grid-cols-2 xl:grid-cols-4"
@@ -132,6 +206,7 @@ function CardGrid({ cards }: { cards: Array<{ label: string; body: string }> }) 
   return (
     <div
       data-pitch-card-grid
+      data-pitch-card-grid-ideas={hasIdeas ? "true" : undefined}
       className={`mt-5 grid w-full gap-3 text-left sm:mt-6 sm:gap-4 ${colClass}`}
     >
       {cards.map((card) => (
@@ -143,9 +218,35 @@ function CardGrid({ cards }: { cards: Array<{ label: string; body: string }> }) 
           <p className="font-mono text-[10px] font-semibold uppercase tracking-[1.8px] text-cyan-200/90 sm:text-[11px]">
             {card.label}
           </p>
-          <p className="mt-2.5 text-[clamp(0.95rem,0.4vw+0.85rem,1.15rem)] font-medium leading-snug text-white">
-            {card.body}
-          </p>
+          {card.ideas && card.ideas.length > 0 ? (
+            <div data-pitch-idea-list className="mt-3 flex flex-col gap-2.5 sm:mt-3.5 sm:gap-3">
+              {card.ideas.map((idea) => (
+                <div
+                  key={`${card.label}-${idea.title}`}
+                  data-pitch-idea
+                  className="rounded-md border border-white/15 bg-white/[0.05] px-3 py-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] sm:px-3.5 sm:py-3"
+                >
+                  <div className="flex gap-2.5">
+                    <IdeaIcon />
+                    <div className="min-w-0">
+                      <p className="text-left text-[clamp(0.92rem,0.35vw+0.82rem,1.08rem)] font-semibold leading-snug text-white">
+                        {idea.title}
+                      </p>
+                      <p className="mt-1 text-left text-[clamp(0.82rem,0.28vw+0.74rem,0.98rem)] leading-snug text-zinc-200">
+                        {idea.body}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            card.body && (
+              <p className="mt-2.5 whitespace-pre-line text-[clamp(0.95rem,0.4vw+0.85rem,1.15rem)] font-medium leading-snug text-white">
+                {card.body}
+              </p>
+            )
+          )}
         </article>
       ))}
     </div>
@@ -237,26 +338,75 @@ function SlideContent({ slide }: { slide: SalesSlide }) {
     );
   }
 
+  if (slide.layout === "fullImage") {
+    // Full-stage image — no side copy; fills the available slide viewport.
+    return (
+      <SlideFrame>
+        <figure
+          data-pitch-full-image
+          className="relative flex h-full min-h-0 w-full flex-1 flex-col overflow-hidden rounded-md border border-white/10 bg-black/55 shadow-[0_20px_60px_rgba(0,0,0,0.4)] backdrop-blur-md"
+        >
+          {slide.image ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              data-pitch-full-image-asset
+              src={slide.image}
+              alt={slide.imageAlt ?? slide.title}
+              className="h-full w-full object-contain object-center bg-black/30"
+            />
+          ) : (
+            <div
+              className="flex h-full w-full items-center justify-center font-mono text-sm uppercase tracking-[2px] text-zinc-500"
+              aria-label={slide.imageCaption ?? slide.title}
+            >
+              Image missing
+            </div>
+          )}
+          {slide.imageCaption && (
+            <figcaption className="absolute inset-x-0 bottom-0 border-t border-white/10 bg-black/55 px-4 py-2 text-left font-mono text-[10px] uppercase tracking-[1.6px] text-zinc-200 backdrop-blur-sm sm:text-[11px]">
+              {slide.imageCaption}
+            </figcaption>
+          )}
+        </figure>
+      </SlideFrame>
+    );
+  }
+
   if (slide.layout === "media") {
-    // Always reserve the right column for media layout (real art or empty slot for later).
-    const isPlaceholder = !slide.image;
+    // Always reserve the right column for media layout (real art/video or empty slot for later).
+    const hasMedia = Boolean(slide.video || slide.image);
+    const isPlaceholder = !hasMedia;
+    const isVideo = Boolean(slide.video);
+    // Video column as large as possible while keeping a readable text min width (~18rem).
+    const mediaStageCols = isVideo
+      ? "md:grid-cols-[minmax(18rem,0.85fr)_minmax(16rem,1.25fr)] md:gap-5 lg:gap-6"
+      : "md:grid-cols-[minmax(0,1fr)_minmax(0,min(42%,26rem))] md:gap-6 lg:gap-8";
 
     return (
       <SlideFrame>
-        <ContentPanel>
+        {/*
+          Video media: panel stays overflow-hidden so the stage never scrolls; video sits
+          sticky on the right with an inline height so it cannot collapse to 0.
+        */}
+        <ContentPanel className={isVideo ? "!overflow-hidden" : undefined}>
           {slide.kicker && <Eyebrow>{slide.kicker}</Eyebrow>}
           <h2 className={TITLE_H2}>{slide.title}</h2>
           {slide.subtitle && <p className={SUBTITLE}>{slide.subtitle}</p>}
           {/*
             Media layout exception (Karpathy / Omega Quest / product pitch): side-by-side stage.
-            Title/subtitle full-width; then copy | image-or-placeholder on md+ (no float stack).
+            Title/subtitle full-width; then copy | image/video-or-placeholder on md+ (no float stack).
           */}
           <div
             data-pitch-media-stage
             data-pitch-media-float
-            className="mt-4 grid w-full min-h-0 grid-cols-1 items-start gap-4 text-left md:mt-5 md:grid-cols-[minmax(0,1fr)_minmax(0,min(42%,26rem))] md:gap-6 lg:gap-8"
+            data-pitch-media-video-stage={isVideo ? "true" : undefined}
+            className={`mt-4 grid w-full min-h-0 flex-1 grid-cols-1 items-start gap-4 text-left md:mt-5 ${mediaStageCols}`}
           >
-            <div className="min-w-0 order-2 md:order-1">
+            {/*
+              Zero first-child top margin so cards/highlights align with the media figure
+              (CardGrid/HighlightCallouts default mt-* is for below titles, not side columns).
+            */}
+            <div className="min-h-0 min-w-0 order-2 overflow-y-auto md:order-1 [&>*:first-child]:!mt-0">
               {slide.cards && slide.cards.length > 0 && <CardGrid cards={slide.cards} />}
               {slide.highlights && slide.highlights.length > 0 && (
                 <HighlightCallouts items={slide.highlights} labels={slide.highlightLabels} />
@@ -266,9 +416,18 @@ function SlideContent({ slide }: { slide: SalesSlide }) {
             <figure
               data-pitch-media-figure
               data-pitch-image-placeholder={isPlaceholder ? "true" : undefined}
-              className="order-1 min-w-0 w-full overflow-hidden rounded-sm border border-white/15 bg-black/40 shadow-[0_16px_48px_rgba(0,0,0,0.35)] md:order-2 md:sticky md:top-0"
+              className={
+                isVideo
+                  ? "order-1 min-w-0 w-full shrink-0 overflow-hidden rounded-sm border-0 bg-black shadow-[0_16px_48px_rgba(0,0,0,0.35)] md:order-2 md:sticky md:top-0"
+                  : "order-1 min-w-0 w-full overflow-hidden rounded-sm border border-white/15 bg-black/40 shadow-[0_16px_48px_rgba(0,0,0,0.35)] md:order-2 md:sticky md:top-0"
+              }
             >
-              {slide.image ? (
+              {slide.video ? (
+                <PitchMediaVideo
+                  src={slide.video}
+                  label={slide.imageAlt ?? slide.imageCaption ?? slide.title}
+                />
+              ) : slide.image ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={slide.image}
@@ -291,7 +450,7 @@ function SlideContent({ slide }: { slide: SalesSlide }) {
                   )}
                 </div>
               )}
-              {slide.image && slide.imageCaption && (
+              {hasMedia && slide.imageCaption && (
                 <figcaption className="border-t border-white/10 px-3 py-1.5 text-left font-mono text-[10px] uppercase tracking-[1.6px] text-zinc-300 sm:text-[11px]">
                   {slide.imageCaption}
                 </figcaption>
@@ -304,9 +463,13 @@ function SlideContent({ slide }: { slide: SalesSlide }) {
   }
 
   if (slide.layout === "statement") {
+    // Single-product idea slides (one card with nested ideas) must fit without scroll.
+    const isSingleProductIdeas =
+      slide.cards?.length === 1 && (slide.cards[0]?.ideas?.length ?? 0) > 0;
+
     return (
       <SlideFrame>
-        <ContentPanel>
+        <ContentPanel className={isSingleProductIdeas ? "!overflow-hidden" : undefined}>
           {slide.kicker && <Eyebrow>{slide.kicker}</Eyebrow>}
           <h2 className={TITLE_H2}>{slide.title}</h2>
           {slide.subtitle && <p className={SUBTITLE}>{slide.subtitle}</p>}

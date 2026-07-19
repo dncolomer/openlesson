@@ -16,10 +16,24 @@ export const OPTIMIZATION_PITCH_DECK: SolutionSlideDeck = {
     {
       layout: "title",
       kicker: "Learning Optimization · Uncertain Systems",
-      title: "Make learning convert — not just complete.",
+      title: "Make learning convert.",
       subtitle:
-        "Turn verification findings into learning that shows up downstream: adoption, deployment, and real use. Optimize onboarding and agent skills with loops that close gaps instead of checking boxes.",
+        "Turn verification findings into learning that shows up downstream: adoption, deployment, and real use. Example: a B2B SaaS product team wires gap scores into onboarding, success, and agent skill loops.",
       backgroundImage: PITCH_ASSETS.aesthetics.optimization,
+      cards: [
+        {
+          label: "1 · Score post-signup work",
+          body: "After trial activation, PoW API or short TAP sessions score whether users can run the core workflow. Severity-ranked gaps feed the CRM or customer-success queue, not a vanity completion dashboard.",
+        },
+        {
+          label: "2 · Dynamic onboarding in product",
+          body: "Only the failed skill blocks trigger ILE practice or in-app coaching. High scorers skip ahead. Learning-to-conversion replaces fixed module checklists for every cohort.",
+        },
+        {
+          label: "3 · Agent skill loops (ALE)",
+          body: "The same workspace scores agent tool traces in CI. ALE iterates skill.md until deploy readiness clears. Human onboarding and agent eval share one model.",
+        },
+      ],
     },
     ...buildFounderSlides("optimization"),
     {
@@ -32,7 +46,7 @@ export const OPTIMIZATION_PITCH_DECK: SolutionSlideDeck = {
       ...labeledHighlights([
         [
           "The trap",
-          "Training finishes. Behavior does not change — static checklists ignore verified gaps.",
+          "Training finishes. Behavior does not change.",
         ],
         [
           "What breaks",
@@ -58,7 +72,7 @@ export const OPTIMIZATION_PITCH_DECK: SolutionSlideDeck = {
       bullets: [
         "Dynamic onboarding flows triggered by proof-of-work severity",
         "Agentic skill optimization (ALE) until learning efficiency clears the deploy bar",
-        "Same workspace context as verification — no orphan coaching tab",
+        "Same workspace context as verification",
         "Tie every intervention to adoption, deploy, and conversion metrics",
       ],
     },
@@ -73,7 +87,7 @@ export const OPTIMIZATION_PITCH_DECK: SolutionSlideDeck = {
           "Severity-ranked gaps from TAP or Proof-of-Work API",
           "Coached scenarios only where the model says it is needed",
           "Track score movement with proof of work at every step",
-          "Managers get a repair path after evaluation — not a label",
+          "Managers get a repair path after evaluation",
         ],
       },
       right: {
@@ -97,11 +111,11 @@ export const OPTIMIZATION_PITCH_DECK: SolutionSlideDeck = {
       ...labeledHighlights([
         [
           "Use case",
-          "Product activation: diagnose which concepts block conversion after signup — rank gaps by severity.",
+          "Product activation: diagnose which concepts block conversion after signup.",
         ],
         [
           "Outcome",
-          "Enablement teaches what actually stops users from succeeding — learning-to-conversion, not module completion.",
+          "Enablement teaches what actually stops users from succeeding.",
         ],
       ]),
       bullets: [
@@ -116,7 +130,7 @@ export const OPTIMIZATION_PITCH_DECK: SolutionSlideDeck = {
       kicker: "Use case · Coaching",
       title: "Dynamic onboarding & post-hire ramp",
       subtitle:
-        "Adapt the next coaching step to verified gaps — not a static checklist. Route new hires into targeted practice blocks after verification.",
+        "Adapt the next coaching step to verified gaps.",
       backgroundImage: PITCH_ASSETS.aesthetics.useCase,
       bullets: [
         "Compound efficiency gains instead of one-off training completions",
@@ -130,11 +144,11 @@ export const OPTIMIZATION_PITCH_DECK: SolutionSlideDeck = {
       kicker: "Use case · Score movement",
       title: "CI and eval improvement loops for agents",
       subtitle:
-        "Embed scoring in agent pipelines. Compare runs over time and prove skill movement with auditable reports — not vanity benchmark deltas.",
+        "Embed scoring in agent pipelines. Compare runs over time and prove skill movement with auditable reports.",
       backgroundImage: PITCH_ASSETS.aesthetics.useCase,
       bullets: [
         "ALE iterates capabilities until learning efficiency clears your bar",
-        "Agents are not born with skills — treat skill.md as living product",
+        "Agents are not born with skills",
         "Same TIM loop as human optimization, shared workspace blocks",
         "Vendor and internal agents judged on deploy readiness, not demos",
       ],
@@ -145,32 +159,10 @@ export const OPTIMIZATION_PITCH_DECK: SolutionSlideDeck = {
       title: "Where score movement pays for itself",
       backgroundImage: PITCH_ASSETS.aesthetics.optimization,
       bullets: [
-        "Customer success & expansion plays — intervene on workflow misunderstanding early",
+        "Customer success & expansion plays",
         "Agentic skill optimization (ALE) until adoption and deploy readiness clear",
         "Post-hire ramp & role transitions with targeted practice blocks",
         "Enablement that teaches blockers to conversion, not the full catalog",
-      ],
-    },
-    {
-      layout: "bullets",
-      kicker: "Why it works",
-      title: "Highlights buyers care about",
-      backgroundImage: PITCH_ASSETS.aesthetics.products,
-      ...labeledHighlights([
-        [
-          "Practice what failed",
-          "Verification findings drive what gets practiced next — not a static catalog.",
-        ],
-        [
-          "Humans and agents",
-          "ILE for humans, ALE for agents — same workspace context, outcomes tied to adoption and deploy.",
-        ],
-      ]),
-      bullets: [
-        "Verification findings drive what gets practiced next",
-        "ILE for humans, ALE for agents — same workspace context",
-        "Tie every intervention to adoption, deploy, and conversion metrics",
-        "Learning world model + Trace Interruption Model under every loop",
       ],
     },
     {

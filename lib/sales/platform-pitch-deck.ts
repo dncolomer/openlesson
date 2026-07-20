@@ -7,10 +7,17 @@ import { buildPrivacyDataSlides } from "@/lib/sales/privacy-data-slide";
 /**
  * Platform pitch = founder first, then product narrative.
  * Open: founder slides
- * Body: thesis → config space → embeddings → TAP method ×2
+ * Body: title (What is Uncertain Systems?) → thesis → config space → embeddings → TAP method ×2
  * Close: productized PoW → data posture ×2 → Our products (PoW API / TAP / ILE)
  */
 const PLATFORM_BODY: SalesSlide[] = [
+  {
+    layout: "title",
+    title: "What is Uncertain Systems?",
+    image: PITCH_ASSETS.logo,
+    imageAlt: "Uncertain Systems logo",
+    backgroundImage: PITCH_ASSETS.aesthetics.title,
+  },
   {
     layout: "statement",
     kicker: "Our thesis",

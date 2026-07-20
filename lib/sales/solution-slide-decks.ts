@@ -67,6 +67,8 @@ export type SolutionSlideDeck = {
 export const PITCH_ASSETS = {
   founder: "/founder.png",
   andrej: "/andrej.png",
+  /** Favicon / brand mark (public/unsyslogo.jpeg). */
+  logo: "/unsyslogo.jpeg",
   aesthetics: {
     title: "/aesthetics/Greco-futurism/HHnTrgVaQAAP-_3.jpeg",
     problem: "/aesthetics/Greco-futurism/HHnTrf2acAA1Juo.jpeg",

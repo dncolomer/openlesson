@@ -302,6 +302,16 @@ function SlideContent({ slide }: { slide: SalesSlide }) {
       <SlideFrame>
         <ContentPanel>
           {slide.kicker && <Eyebrow>{slide.kicker}</Eyebrow>}
+          {slide.image && (
+            <div className="mb-5 shrink-0 sm:mb-6" data-pitch-title-logo>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={slide.image}
+                alt={slide.imageAlt ?? "Uncertain Systems"}
+                className="h-auto w-[min(100%,5.5rem)] rounded-md border border-white/15 object-contain shadow-lg shadow-black/40 sm:w-[min(100%,6.5rem)]"
+              />
+            </div>
+          )}
           <h1 className={TITLE_H1}>{slide.title}</h1>
           {slide.subtitle && <p className={SUBTITLE}>{slide.subtitle}</p>}
           {slide.cards && slide.cards.length > 0 && <CardGrid cards={slide.cards} />}

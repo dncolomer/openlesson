@@ -116,7 +116,46 @@ export type ErrorCode =
   | "api_plan_required"
   | "guest_not_found"
   | "internal_error"
-  | "performance_report_generation_failed";
+  | "performance_report_generation_failed"
+  /** Re-run blocked until new proof of work is available for this vertical. */
+  | "no_new_pow"
+  | "model_id_required"
+  | "region_id_required"
+  | "custom_verification_model_error"
+  | "knowledge_distance_error";
+
+const ERROR_CODES: ReadonlySet<string> = new Set<ErrorCode>([
+  "unauthorized",
+  "key_expired",
+  "key_revoked",
+  "forbidden",
+  "subscription_lapsed",
+  "not_found",
+  "validation_error",
+  "rate_limit_exceeded",
+  "workspace_not_found",
+  "workspace_limit_reached",
+  "usage_limit_reached",
+  "block_not_found",
+  "tap_link_not_found",
+  "teams_required",
+  "api_plan_required",
+  "guest_not_found",
+  "internal_error",
+  "performance_report_generation_failed",
+  "no_new_pow",
+  "model_id_required",
+  "region_id_required",
+  "custom_verification_model_error",
+  "knowledge_distance_error",
+]);
+
+/** Narrow unknown thrown codes to a valid API ErrorCode. */
+export function toErrorCode(value: unknown, fallback: ErrorCode = "internal_error"): ErrorCode {
+  return typeof value === "string" && ERROR_CODES.has(value)
+    ? (value as ErrorCode)
+    : fallback;
+}
 
 export interface ApiError {
   code: ErrorCode;

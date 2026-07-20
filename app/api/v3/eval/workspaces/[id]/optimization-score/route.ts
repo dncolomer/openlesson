@@ -3,6 +3,7 @@ import { authenticateRequest, errorResponse } from "@/lib/agent-v2/auth";
 import { canAccessAgentWorkspace } from "@/lib/agent-v2/workspace-access";
 import { runVerticalScore } from "@/lib/agent-v2/run-vertical-score";
 import { withProofOfWorkApiResponse } from "@/lib/agent-v2/predictive-interruption";
+import { toErrorCode } from "@/lib/agent-v2/types";
 
 export const runtime = "nodejs";
 export const maxDuration = 120;
@@ -105,10 +106,11 @@ export async function POST(req: NextRequest, { params }: RouteProps) {
   } catch (error) {
     console.error("[agent/optimization-score] failed:", error);
     const message = error instanceof Error ? error.message : "Failed to generate optimization score";
-    const code =
+    const code = toErrorCode(
       error && typeof error === "object" && "code" in error
-        ? String((error as { code: string }).code)
-        : "internal_error";
+        ? (error as { code: unknown }).code
+        : undefined,
+    );
     const status =
       error && typeof error === "object" && "status" in error
         ? Number((error as { status: number }).status)

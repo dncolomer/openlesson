@@ -61,7 +61,10 @@ export interface KnowledgeConfigProjection2D {
   coords: Array<{ t: string; as_of_ms: number; x: number; y: number; confidence: number }>;
 }
 
-export function isKnowledgeConfigVector(vector: unknown, dim = KNOWLEDGE_CONFIG_DIM): vector is number[] {
+export function isKnowledgeConfigVector(
+  vector: unknown,
+  dim: number = KNOWLEDGE_CONFIG_DIM,
+): vector is number[] {
   return (
     Array.isArray(vector) &&
     vector.length === dim &&

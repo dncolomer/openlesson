@@ -59,7 +59,9 @@ function scoresDeltaFromReport(
 
   // Only set fields we know — null must not clobber other verticals already stored on LWM.
   // mergeLearningWorldModelDelta shallow-merges scores_snapshot; omit unknown verticals.
-  const scoresFromDelta = base.scores_snapshot ?? {};
+  const scoresFromDelta: Partial<
+    NonNullable<LearningWorldModelDelta["scores_snapshot"]>
+  > = base.scores_snapshot ?? {};
   const scores: NonNullable<LearningWorldModelDelta["scores_snapshot"]> = {
     verification_score:
       scoresFromDelta.verification_score !== undefined

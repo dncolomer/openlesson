@@ -392,7 +392,7 @@ export function powRowsFromPerformanceContext(
 
 export function knowledgeConfigPointerFromEmbedding(
   embedding: KnowledgeConfigEmbeddingV1,
-): LearningWorldModelV0["knowledge_config"] {
+): NonNullable<LearningWorldModelV0["knowledge_config"]> {
   return {
     embedding_model_id: embedding.embedding_model_id,
     dim: embedding.dim,

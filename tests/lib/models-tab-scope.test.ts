@@ -36,7 +36,7 @@ describe("resolveModelsTabScope", () => {
     expect(r.kind).toBe("single");
     expect(r.subjects).toEqual([{ user_id: OTHER }]);
     expect(r.query.user_id).toBe(OTHER);
-    expect(r.query.subject).toBeUndefined();
+    expect(r.query.guest_user_id).toBeUndefined();
   });
 
   it("owner user mode self uses unique user_id", () => {

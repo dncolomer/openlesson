@@ -49,7 +49,7 @@ describe("buildVerticalScoreReportSchema", () => {
       expect(schema.schema.required).toContain("marker_scores");
       expect(schema.schema.required).toContain("gap_analysis");
       expect(schema.schema.required).toContain("summary");
-      const required = schema.schema.required as string[];
+      const required = [...schema.schema.required];
       expect(required).not.toContain("conversion_score");
       expect(required).not.toContain("conversion_goal");
       expect(required).not.toContain("overall_score");

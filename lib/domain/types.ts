@@ -155,6 +155,8 @@ export interface Session {
     tutoringLanguage?: string;
     autoAdvance?: boolean;
     workspace_id?: string;
+    /** ILE chapter / workspace block linked to this session (PoW context). */
+    block_id?: string;
   };
 }
 

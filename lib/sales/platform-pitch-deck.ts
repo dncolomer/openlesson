@@ -73,7 +73,7 @@ const PLATFORM_THESIS: SalesSlide[] = [
     layout: "fullImage",
     title: "Knowledge config · proximity model",
     backgroundImage: PITCH_ASSETS.aesthetics.science,
-    image: "/config space.png",
+    image: "/mechaarm2.jpg",
     imageAlt: "Configuration space — proximity to a cognitive target",
     imageCaption: "Knowledge config · proximity model",
   },

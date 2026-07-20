@@ -118,7 +118,7 @@ describe("pitch deck content (platform only)", () => {
     const thesisStart = 1 + founderSlides.length;
     expect(PLATFORM_PITCH_DECK.slides[thesisStart]?.title).toMatch(/What is Uncertain Systems\?/);
     expect(PLATFORM_PITCH_DECK.slides[thesisStart + 1]?.kicker?.toLowerCase()).toMatch(/thesis/);
-    expect(PLATFORM_PITCH_DECK.slides[thesisStart + 2]?.image).toBe("/config space.png");
+    expect(PLATFORM_PITCH_DECK.slides[thesisStart + 2]?.image).toBe("/mechaarm2.jpg");
     expect(PLATFORM_PITCH_DECK.slides[thesisStart + 3]?.image).toBe("/embeddings.png");
 
     // Method section
@@ -203,7 +203,7 @@ describe("pitch deck content (platform only)", () => {
 
     const configSlide = PLATFORM_PITCH_DECK.slides[thesisTitleIdx + 2];
     expect(configSlide?.layout).toBe("fullImage");
-    expect(configSlide?.image).toBe("/config space.png");
+    expect(configSlide?.image).toBe("/mechaarm2.jpg");
     expect(publicAssetExists(configSlide?.image ?? "")).toBe(true);
     expect(configSlide?.imageCaption?.trim().length).toBeGreaterThan(0);
 

@@ -6,16 +6,16 @@ import {
   normalizeSubject,
   saveLearningWorldModel,
   subjectFromAuthAndParticipants,
-} from "@/lib/agent-v2/learning-world-model-store";
+} from "@/lib/pow-api/learning-world-model-store";
 import {
   insertKnowledgeConfigSnapshot,
   loadKnowledgeConfigTrajectory,
   loadLatestKnowledgeConfig,
   projectTrajectory2D,
   trajectoryPathLength,
-} from "@/lib/agent-v2/knowledge-config-store";
-import { updateLearnerStateAfterScore } from "@/lib/agent-v2/learner-state-engine";
-import { resolveEvaluationSubject } from "@/lib/agent-v2/evaluation-subject";
+} from "@/lib/pow-api/knowledge-config-store";
+import { updateLearnerStateAfterScore } from "@/lib/pow-api/learner-state-engine";
+import { resolveEvaluationSubject } from "@/lib/pow-api/evaluation-subject";
 import {
   KNOWLEDGE_CONFIG_DIM,
   KNOWLEDGE_CONFIG_EMBEDDING_MODEL_ID,
@@ -24,8 +24,8 @@ import {
   l2Distance,
 } from "@/lib/knowledge-config";
 import { emptyLearningWorldModel } from "@/lib/prompt-kernel/world-model";
-import type { VerticalScoreReport } from "@/lib/agent-v2/performance-report";
-import type { AuthContext } from "@/lib/agent-v2/types";
+import type { VerticalScoreReport } from "@/lib/pow-api/performance-report";
+import type { AuthContext } from "@/lib/pow-api/types";
 
 function auth(partial: Partial<AuthContext> = {}): AuthContext {
   return {

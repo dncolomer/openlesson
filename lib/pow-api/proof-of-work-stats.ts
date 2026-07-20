@@ -2,7 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   WORKSPACE_PROOF_OF_WORK_TYPES,
   type WorkspaceProofOfWorkType,
-} from "@/lib/agent-v2/workspace-proof-of-work";
+} from "@/lib/pow-api/workspace-proof-of-work";
 
 /** Max rows scanned for breakdowns. Exact total still uses a head count. */
 export const POW_STATS_SAMPLE_LIMIT = 2000;

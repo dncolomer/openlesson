@@ -4,7 +4,7 @@ import {
   normalizeTapLinkMinutes,
   normalizeTapPostSession,
   resolveTapParticipantType,
-} from "@/lib/agent-v2/tap-link-config";
+} from "@/lib/pow-api/tap-link-config";
 
 describe("tap-link-config", () => {
   it("normalizes minutes within bounds", () => {
@@ -27,7 +27,7 @@ describe("tap-link-config", () => {
   });
 
   it("blocks private webhook targets while allowing public ones", async () => {
-    const { normalizeWebhookUrl } = await import("@/lib/agent-v2/tap-link-config");
+    const { normalizeWebhookUrl } = await import("@/lib/pow-api/tap-link-config");
     expect(normalizeWebhookUrl("https://hooks.example.com/x")).toBe("https://hooks.example.com/x");
     expect(normalizeWebhookUrl("http://127.0.0.1/x")).toBeNull();
   });

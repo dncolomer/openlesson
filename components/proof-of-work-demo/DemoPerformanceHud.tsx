@@ -1,8 +1,8 @@
 "use client";
 
 import { Gauge, Loader2, Sparkles, Target } from "lucide-react";
-import type { WorkspaceGoalSource } from "@/lib/agent-v2/conversion-goal";
-import type { PerformanceReport } from "@/lib/agent-v2/performance-context";
+import type { WorkspaceGoalSource } from "@/lib/pow-api/conversion-goal";
+import type { PerformanceReport } from "@/lib/pow-api/performance-context";
 import { normalizeDemoSessionUrl } from "@/lib/product-demos/demo-session-url";
 import { extractGameCoaching } from "@/lib/product-demos/game-tips";
 import { useMemo } from "react";

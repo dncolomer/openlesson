@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { authenticateRequest, errorResponse } from "@/lib/agent-v2/auth";
-import { CreateTapLinkError, createWorkspaceTapLink } from "@/lib/agent-v2/create-tap-link";
-import { withProofOfWorkApiResponse } from "@/lib/agent-v2/predictive-interruption";
+import { authenticateRequest, errorResponse } from "@/lib/pow-api/auth";
+import { CreateTapLinkError, createWorkspaceTapLink } from "@/lib/pow-api/create-tap-link";
+import { withProofOfWorkApiResponse } from "@/lib/pow-api/predictive-interruption";
 
 export const runtime = "nodejs";
 

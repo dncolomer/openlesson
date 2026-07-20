@@ -1,5 +1,5 @@
 // Pure helpers for TAP score client UI
-import { TAP_LINK_MAX_MINUTES, TAP_LINK_MIN_MINUTES } from "@/lib/agent-v2/tap-link-config";
+import { TAP_LINK_MAX_MINUTES, TAP_LINK_MIN_MINUTES } from "@/lib/pow-api/tap-link-config";
 import { cn } from "@/lib/utils";
 
 export type Phase = "briefing" | "live" | "saving" | "results" | "error";

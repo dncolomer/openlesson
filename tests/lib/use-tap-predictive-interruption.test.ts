@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
-import type { ProofOfWorkApiInterruption } from "@/lib/agent-v2/predictive-interruption";
+import type { ProofOfWorkApiInterruption } from "@/lib/pow-api/predictive-interruption";
 
 /** Mirrors scheduling semantics from useTapPredictiveInterruption for unit testing. */
 function createInterruptionScheduler(onIntervention: (payload: { interruptionId: string; message: string }) => void) {

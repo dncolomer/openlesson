@@ -17,7 +17,7 @@ import {
   VERTICAL_MCP_TOOL,
   VERTICAL_REST_PATH,
   VERTICAL_SCORE_FIELD,
-} from "@/lib/agent-v2/performance-report";
+} from "@/lib/pow-api/performance-report";
 
 describe("vertical score naming", () => {
   it("exposes verification-score, augmentation-score, optimization-score paths and tools", () => {

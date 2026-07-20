@@ -2,10 +2,10 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   predictInterruption,
   withProofOfWorkApiResponse,
-} from "@/lib/agent-v2/predictive-interruption";
-import { setTimProviderForTests, type TimProvider } from "@/lib/agent-v2/tim-provider";
-import type { TimFeatureEnvelopeV1 } from "@/lib/agent-v2/tim-feature-envelope";
-import type { ProofOfWorkApiInterruption } from "@/lib/agent-v2/predictive-interruption";
+} from "@/lib/pow-api/predictive-interruption";
+import { setTimProviderForTests, type TimProvider } from "@/lib/pow-api/tim-provider";
+import type { TimFeatureEnvelopeV1 } from "@/lib/pow-api/tim-feature-envelope";
+import type { ProofOfWorkApiInterruption } from "@/lib/pow-api/predictive-interruption";
 
 function rulesProvider(
   decide: (features: TimFeatureEnvelopeV1) => ProofOfWorkApiInterruption | null,

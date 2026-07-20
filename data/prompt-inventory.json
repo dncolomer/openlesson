@@ -1,9 +1,9 @@
 {
   "version": 1,
-  "generated_at": "2026-07-16T22:28:56.712Z",
-  "call_sites_generated_at": "2026-07-12T23:20:41.371Z",
+  "generated_at": "2026-07-20T21:19:00.204Z",
+  "call_sites_generated_at": "2026-07-20T21:19:00.167Z",
   "path_count": 42,
-  "entry_count": 57,
+  "entry_count": 55,
   "domains": [
     {
       "id": "registry",
@@ -36,7 +36,7 @@
       "order": 5
     },
     {
-      "id": "agent-v2",
+      "id": "pow-api",
       "label": "Agent v2",
       "description": "Proof-of-work schema, integration skills, performance reports, verification workspace builders, and PoW/Eval API routes.",
       "order": 6
@@ -159,12 +159,12 @@
       "kind": "registry",
       "status": "active",
       "label": "Block Plan Creation",
-      "description": "Creates the initial learning plan for a session. Variables: {problem}, {objectives}, {calibration}",
+      "description": "Creates the initial learning plan for a session. Variables: {problem}, {objectives}, {calibration}, {initial_chapters_level}, {initial_chapters_audience}, {initial_chapters_instruction}, {spatial_map_layout_rules}, {target_step_count}, {min_steps}, {max_steps}",
       "usedBy": [
         "createSessionPlanLLM"
       ],
-      "text": "You are an ILE session planner for Uncertain Systems. Design a practice plan that optimizes progress toward the session goal and augments the learner with tools/tasks that produce proof of work — not a pure question-only validation sequence.\n\nProblem/Topic: {problem}\nSession Objectives: {objectives}\nStudent Background (if available): {calibration}\n\nCreate a session plan with:\n1. A clear learning GOAL (1-2 sentences: what they should be able to do/demonstrate by the end)\n2. A STRATEGY (how you optimize progress and augment practice — tools, tasks, transfer, checkpoints; name the approach in practical terms)\n3. A brief DESCRIPTION (1-2 sentences for display)\n4. An ordered list of 5-8 STEPS mixing interaction types so the learner externalizes work\n\nEach step should have:\n- type: one of \"question\" | \"task\" | \"suggestion\" | \"checkpoint\"\n  - question: targeted elicitation only when it unblocks the next practice act\n  - task: concrete practice that creates artifacts (solve, sketch on Canvas, implement, compare examples)\n  - suggestion: tool/route guidance (Notebook log, Grokipedia lookup, screen share, external IDE)\n  - checkpoint: good-enough progress checks and PoW reflection (\"Summarize the decision you just made\", \"Mark what you can demonstrate now\")\n- description: concise text for the student (1-2 sentences max)\n- order: Sequential number starting from 1\n\nPlan design rules:\n- Optimize for forward progress and transferable skill, not validate-for-validation's-sake.\n- Include more tasks/suggestions than pure questions when the topic is procedural or tool-heavy.\n- Start foundational, then apply/transfer; include at least one mid checkpoint and one near the end.\n- Prefer steps that leave observable PoW (sketch, note, worked example, tool use).\n\nReturn ONLY valid JSON (no markdown, no explanation):\n{\n  \"goal\": \"...\",\n  \"strategy\": \"...\",\n  \"description\": \"...\",\n  \"steps\": [\n    {\"type\": \"question\", \"description\": \"...\", \"order\": 1},\n    {\"type\": \"task\", \"description\": \"...\", \"order\": 2},\n    {\"type\": \"checkpoint\", \"description\": \"...\", \"order\": 3},\n    ...\n  ]\n}",
-      "charCount": 2091
+      "text": "You are an ILE session planner for Uncertain Systems. Design a practice plan that optimizes progress toward the session goal and augments the learner with tools/tasks that produce proof of work — not a pure question-only validation sequence.\n\nProblem/Topic: {problem}\nSession Objectives: {objectives}\nStudent Background (if available): {calibration}\nInitial chapters level: {initial_chapters_level} ({initial_chapters_audience})\n{initial_chapters_instruction}\nTarget step count: about {target_step_count} (acceptable range {min_steps}-{max_steps})\n\nCreate a session plan with:\n1. A clear learning GOAL (1-2 sentences: what they should be able to do/demonstrate by the end)\n2. A STRATEGY (how you optimize progress and augment practice — tools, tasks, transfer, checkpoints; name the approach in practical terms)\n3. A brief DESCRIPTION (1-2 sentences for display)\n4. An ordered list of STEPS (count within the target range above) mixing interaction types so the learner externalizes work\n\n{spatial_map_layout_rules}\n\nAdditional spatial notes for ILE chapters:\n- \"order\" is a suggested practice sequence; geometry encodes branching and multi-quadrant exploration beyond sequence.\n- Grow outward from (0,0) along sparse paths/rings; explore some arms deeper (more steps along one branch) while keeping other directions shorter.\n- Include chapters in negative coordinates as well as positive ones.\n\nEach step should have:\n- type: one of \"question\" | \"task\" | \"suggestion\" | \"checkpoint\"\n  - question: targeted elicitation only when it unblocks the next practice act\n  - task: concrete practice that creates artifacts (solve, sketch on Canvas, implement, compare examples)\n  - suggestion: tool/route guidance (Notebook log, Grokipedia lookup, screen share, external IDE)\n  - checkpoint: good-enough progress checks and PoW reflection (\"Summarize the decision you just made\", \"Mark what you can demonstrate now\")\n- description: concise text for the student (1-2 sentences max)\n- order: Sequential number starting from 1\n- position_x: integer grid column (may be negative)\n- position_y: integer grid row (may be negative)\n\nPlan design rules:\n- Optimize for forward progress and transferable skill, not validate-for-validation's-sake.\n- Include more tasks/suggestions than pure questions when the topic is procedural or tool-heavy.\n- Start foundational at (0,0), then apply/transfer along branched sparse paths; include at least one mid checkpoint and one near the end.\n- Prefer steps that leave observable PoW (sketch, note, worked example, tool use).\n- Respect the initial chapters count band: fewer for narrow (calm beginner start), more for broad (confident explorer with deeper branches).\n\nReturn ONLY valid JSON (no markdown, no explanation):\n{\n  \"goal\": \"...\",\n  \"strategy\": \"...\",\n  \"description\": \"...\",\n  \"steps\": [\n    {\"type\": \"question\", \"description\": \"...\", \"order\": 1, \"position_x\": 0, \"position_y\": 0},\n    {\"type\": \"task\", \"description\": \"...\", \"order\": 2, \"position_x\": 1, \"position_y\": 0},\n    {\"type\": \"task\", \"description\": \"...\", \"order\": 3, \"position_x\": -1, \"position_y\": 0},\n    {\"type\": \"checkpoint\", \"description\": \"...\", \"order\": 4, \"position_x\": 0, \"position_y\": -1},\n    ...\n  ]\n}",
+      "charCount": 3203
     },
     {
       "id": "lib-prompts-ts::session_plan_update",
@@ -229,6 +229,15 @@
       "charCount": 1004
     },
     {
+      "id": "app-api-session-plan-translate-route-ts::translationPrompt",
+      "domainId": "heartbeat-session-plan",
+      "file": "app/api/session-plan/translate/route.ts",
+      "symbol": "translationPrompt",
+      "kind": "inline",
+      "text": "You are a translator. Translate the following learning session plan to ${languageName}.\n\nIMPORTANT: \n- Translate ONLY the text content, NOT the structure\n- Keep all step IDs, types, statuses, and orders EXACTLY the same\n- Preserve the status of each step (e.g., if a step is \"completed\" or \"in_progress\", keep it that way)\n- Only translate: goal, strategy, description, and each step's description field\n\nOriginal Plan:\n- Goal: ${existingPlan.goal}\n- Strategy: ${existingPlan.strategy || \"N/A\"}\n- Description: ${existingPlan.description || \"N/A\"}\n- Steps: ${stepsJson}\n\nReturn ONLY valid JSON (no markdown, no explanation):\n{\n  \"goal\": \"translated goal\",\n  \"strategy\": \"translated strategy\", \n  \"description\": \"translated description\",\n  \"steps\": [\n    {\"id\": \"same-id\", \"type\": \"same-type\", \"description\": \"translated description\", \"status\": \"same-status\", \"order\": same-order},\n    ...\n  ]\n}",
+      "charCount": 893
+    },
+    {
       "id": "app-api-prep-material-route-ts::prep-material-switch-prompts",
       "domainId": "workspace-api",
       "file": "app/api/prep-material/route.ts",
@@ -261,8 +270,8 @@
       "file": "app/api/workspace/add-block-at-slot/route.ts",
       "symbol": "aiPrompt",
       "kind": "inline",
-      "text": "Workspace: ${workspaceTitle}\n${plan.description ? `Description: ${plan.description}\\n` : \"\"}Existing blocks:\n${blockList || \"(none yet)\"}\n\nTarget grid slot: row ${row}, column ${col}\nNearby blocks (distance-weighted influence — closer blocks matter more):\n${neighborSummary}\n\nUser request for the new block: \"${prompt.trim()}\"\n\nCreate exactly one learning block that belongs at this grid slot. The topic should fit the spatial context: complement nearby blocks, avoid duplicates, and respect distance-weighted influence.${languageNote ? `\\n\\n${languageNote}` : \"\"}",
-      "charCount": 564
+      "text": "${alwaysContext}\n${plan.description ? `Description: ${plan.description}\\n` : \"\"}Existing blocks:\n${blockList || \"(none yet)\"}\n\nTarget grid slot: row ${row}, column ${col}\nNearby blocks (distance-weighted influence — closer blocks matter more):\n${neighborSummary}\n\nUser request for the new block: \"${prompt.trim()}\"\n\nCreate exactly one learning block that belongs at this grid slot. The topic should fit the spatial context: complement nearby blocks, avoid duplicates, and respect distance-weighted influence. Always honor workspace files and notes as context.${languageNote ? `\\n\\n${languageNote}` : \"\"}",
+      "charCount": 603
     },
     {
       "id": "app-api-workspace-add-block-at-slot-route-ts::systemMessage-quoted-1",
@@ -279,8 +288,8 @@
       "file": "app/api/workspace/chat/route.ts",
       "symbol": "prompt",
       "kind": "inline",
-      "text": "Current Workspace: \"${plan.root_topic}\"\n\n${sessionsSection}\n\nCONVERSATION HISTORY:${historyContext}\n\nCurrent User request: \"${userPrompt}\"\n\n${plan.description ? `Plan context: ${plan.description}` : \"\"}\n\nIMPORTANT: You MUST include a \"sessions\" array in your response with the complete plan. For new sessions, omit the \"id\" field.\n\nRespond with JSON containing your explanation and the complete updated sessions array.",
-      "charCount": 418
+      "text": "${alwaysContext}\n\nCurrent Workspace: \"${plan.root_topic}\"\n\n${sessionsSection}\n\nCONVERSATION HISTORY:${historyContext}\n\nCurrent User request: \"${userPrompt}\"\n\n${plan.description ? `Plan context: ${plan.description}` : \"\"}\n\nAlways honor workspace files and notes when creating or modifying sessions.\n\nIMPORTANT: You MUST include a \"sessions\" array in your response with the complete plan. For new sessions, omit the \"id\" field.\n\nRespond with JSON containing your explanation and the complete updated sessions array.",
+      "charCount": 513
     },
     {
       "id": "app-api-workspace-chat-route-ts::SYSTEM_PROMPT",
@@ -297,17 +306,8 @@
       "file": "app/api/workspace/expand/route.ts",
       "symbol": "prompt",
       "kind": "inline",
-      "text": "Expand the topic \"${node.title}\" with 2-4 follow-up learning sessions as a directed graph.\n\nReturn ONLY valid JSON:\n{\n  \"nodes\": [\n    { \"id\": \"a\", \"title\": \"Session Title\", \"description\": \"Why this matters\", \"next\": [\"b\"] }\n  ]\n}\n\nRules:\n- 2-4 new nodes\n- Each is a distinct learning session building on \"${node.title}\"\n- Use simple IDs (a, b, c...) for referencing\n- next: array of IDs this node points to (can create chains or branches)\n- Keep titles concise (3-8 words)\n- Descriptions: 1 sentence",
-      "charCount": 500
-    },
-    {
-      "id": "app-api-workspace-generate-route-ts::promptBody",
-      "domainId": "workspace-api",
-      "file": "app/api/workspace/generate/route.ts",
-      "symbol": "promptBody",
-      "kind": "inline",
-      "text": "Generate a learning plan for \"${topic}\" as a directed graph where each node is a session.${imageContext}${fileContext}\n\nReturn JSON with this structure:\n{\n  \"title\": \"A short, catchy, social-media-friendly title for this plan (max 6 words, creative and engaging — NOT just the topic name)\",\n  \"nodes\": [\n    { \"id\": \"a\", \"title\": \"Node Title\", \"description\": \"Why this matters\", \"is_start\": true/false, \"next\": [\"b\", \"c\"] }\n  ]\n}\n\nIMPORTANT: The plan should span approximately \"${daysNum} days\".\n- Include ${nodeConstraints.min} to ${nodeConstraints.max} nodes total\n- Each node represents one learning session\n- Create a realistic learning path that fits within this timeframe\n\nRules:\n- The top-level \"title\" must be a catchy, memorable name for the plan (like a course name or book title). NOT just \"Learning X\". Be creative.\n- Each node is a distinct learning session\n- Use single-letter or short IDs for referencing\n- is_start: true for nodes that can begin a learning path\n- next: array of node IDs that follow this node (can be empty or have 1-3 entries)\n- Create branching paths (1 to many connections allowed)\n- Keep titles concise (3-8 words)\n- Descriptions: 1 sentence explaining the concept",
-      "charCount": 1201
+      "text": "${alwaysContext}\n\nExpand the topic \"${node.title}\" with 2-4 follow-up learning sessions as a directed graph. Always honor workspace files and notes as context.\n\nReturn ONLY valid JSON:\n{\n  \"nodes\": [\n    { \"id\": \"a\", \"title\": \"Session Title\", \"description\": \"Why this matters\", \"next\": [\"b\"] }\n  ]\n}\n\nRules:\n- 2-4 new nodes\n- Each is a distinct learning session building on \"${node.title}\"\n- Use simple IDs (a, b, c...) for referencing\n- next: array of IDs this node points to (can create chains or branches)\n- Keep titles concise (3-8 words)\n- Descriptions: 1 sentence",
+      "charCount": 569
     },
     {
       "id": "app-api-workspace-integration-skill-route-ts::consumer",
@@ -317,9 +317,9 @@
       "kind": "consumer",
       "label": "route",
       "description": "API route that delegates prompt construction to a lib helper.",
-      "delegatesTo": "lib/agent-v2/integration-skill.ts → buildIntegrationSkillInstructions",
-      "text": "Consumer route — prompts defined in:\nlib/agent-v2/integration-skill.ts → buildIntegrationSkillInstructions",
-      "charCount": 69
+      "delegatesTo": "lib/pow-api/integration-skill.ts → buildIntegrationSkillInstructions",
+      "text": "Consumer route — prompts defined in:\nlib/pow-api/integration-skill.ts → buildIntegrationSkillInstructions",
+      "charCount": 68
     },
     {
       "id": "app-api-workspace-performance-report-route-ts::consumer",
@@ -329,9 +329,9 @@
       "kind": "consumer",
       "label": "route",
       "description": "API route that delegates prompt construction to a lib helper.",
-      "delegatesTo": "lib/agent-v2/performance-report.ts → buildPerformanceReportInstructions",
-      "text": "Consumer route — prompts defined in:\nlib/agent-v2/performance-report.ts → buildPerformanceReportInstructions",
-      "charCount": 71
+      "delegatesTo": "lib/pow-api/performance-report.ts → buildPerformanceReportInstructions",
+      "text": "Consumer route — prompts defined in:\nlib/pow-api/performance-report.ts → buildPerformanceReportInstructions",
+      "charCount": 70
     },
     {
       "id": "app-api-workspace-regenerate-route-ts::prompt",
@@ -339,26 +339,8 @@
       "file": "app/api/workspace/regenerate/route.ts",
       "symbol": "prompt",
       "kind": "inline",
-      "text": "Regenerate a learning plan for \"${plan.root_topic}\" as a directed graph where each node is a session.\n    \nThe plan already has these completed nodes that must be preserved in the learning path:\n${preservedCompleted.map((n: { title: string; description?: string }) => `- ${n.title}: ${n.description}`).join(\"\\n\")}\n\nReturn ONLY valid JSON (no markdown) with this structure:\n{\n  \"nodes\": [\n    { \"id\": \"a\", \"title\": \"Node Title\", \"description\": \"Why this matters\", \"is_start\": true/false, \"next\": [\"b\", \"c\"] }\n  ]\n}\n\nRules:\n- The completed nodes above should be integrated naturally into the new learning path\n- Use single-letter or short IDs for referencing (a, b, c...)\n- is_start: true for nodes that can begin a learning path (must have at least one)\n- next: array of node IDs that follow this node (can be empty or have 1-3 entries)\n- Create branching paths (1 to many connections allowed)\n- Keep titles concise (3-8 words)\n- Descriptions: 1 sentence explaining the concept\n- Include 3-8 nodes total",
-      "charCount": 1002
-    },
-    {
-      "id": "app-api-workspace-suggest-blocks-route-ts::prompt",
-      "domainId": "workspace-api",
-      "file": "app/api/workspace/suggest-blocks/route.ts",
-      "symbol": "prompt",
-      "kind": "inline",
-      "text": "Workspace: ${workspaceTitle}\n${workspaceDescription ? `Description: ${workspaceDescription}\\n` : \"\"}Existing ${mode === \"chapter\" ? \"chapters\" : \"blocks\"}:\n${blockList}\n\nNew ${entityLabel} grid slot: row ${row}, column ${col}\nNearby ${mode === \"chapter\" ? \"chapters\" : \"blocks\"} (distance-weighted — closer items should influence suggestions more):\n${spatialContext}\n\nSuggest exactly 3 distinct ${entityLabel} topics that would fit naturally at this position in the skill grid. Each should complement existing items without duplicating them. Closer neighbors should have stronger thematic influence. Keep each suggestion 4-14 words, specific and actionable as a title.${languageNote ? `\\n\\n${languageNote}` : \"\"}",
-      "charCount": 712
-    },
-    {
-      "id": "app-api-workspace-suggest-blocks-route-ts::systemMessage-1",
-      "domainId": "workspace-api",
-      "file": "app/api/workspace/suggest-blocks/route.ts",
-      "symbol": "systemMessage#1",
-      "kind": "inline",
-      "text": "You suggest ${entityLabel} topics for a skill grid. Return JSON only: { \"suggestions\": [\"...\", \"...\", \"...\"] } with exactly 3 concise titles.",
-      "charCount": 141
+      "text": "${alwaysContext}\n\nRegenerate a learning plan for \"${plan.root_topic}\" as a directed graph where each node is a session.\nAlways honor workspace files and notes when creating blocks.\n    \nThe plan already has these completed nodes that must be preserved in the learning path:\n${preservedCompleted.map((n: { title: string; description?: string }) => `- ${n.title}: ${n.description}`).join(\"\\n\")}\n\nReturn ONLY valid JSON (no markdown) with this structure:\n{\n  \"nodes\": [\n    { \"id\": \"a\", \"title\": \"Node Title\", \"description\": \"Why this matters\", \"is_start\": true/false, \"next\": [\"b\", \"c\"] }\n  ]\n}\n\nRules:\n- The completed nodes above should be integrated naturally into the new learning path\n- Use single-letter or short IDs for referencing (a, b, c...)\n- is_start: true for nodes that can begin a learning path (must have at least one)\n- next: array of node IDs that follow this node (can be empty or have 1-3 entries)\n- Create branching paths (1 to many connections allowed)\n- Keep titles concise (3-8 words)\n- Descriptions: 1 sentence explaining the concept\n- Include 3-8 nodes total",
+      "charCount": 1081
     },
     {
       "id": "app-api-workspace-suggest-chapter-edit-route-ts::systemMessage-quoted-1",
@@ -389,116 +371,116 @@
     },
     {
       "id": "app-api-demo-integration-skill-route-ts::consumer",
-      "domainId": "agent-v2",
+      "domainId": "pow-api",
       "file": "app/api/demo/integration-skill/route.ts",
       "symbol": "(consumer)",
       "kind": "consumer",
       "label": "route",
       "description": "API route that delegates prompt construction to a lib helper.",
-      "delegatesTo": "lib/agent-v2/integration-skill.ts → buildIntegrationSkillInstructions",
-      "text": "Consumer route — prompts defined in:\nlib/agent-v2/integration-skill.ts → buildIntegrationSkillInstructions",
-      "charCount": 69
+      "delegatesTo": "lib/pow-api/integration-skill.ts → buildIntegrationSkillInstructions",
+      "text": "Consumer route — prompts defined in:\nlib/pow-api/integration-skill.ts → buildIntegrationSkillInstructions",
+      "charCount": 68
     },
     {
       "id": "app-api-demo-workspace-route-ts::consumer",
-      "domainId": "agent-v2",
+      "domainId": "pow-api",
       "file": "app/api/demo/workspace/route.ts",
       "symbol": "(consumer)",
       "kind": "consumer",
       "label": "route",
       "description": "API route that delegates prompt construction to a lib helper.",
-      "delegatesTo": "lib/agent-v2/create-verification-workspace.ts → createVerificationWorkspaceFromPrompt",
-      "text": "Consumer route — prompts defined in:\nlib/agent-v2/create-verification-workspace.ts → createVerificationWorkspaceFromPrompt",
-      "charCount": 85
+      "delegatesTo": "lib/pow-api/create-verification-workspace.ts → createVerificationWorkspaceFromPrompt",
+      "text": "Consumer route — prompts defined in:\nlib/pow-api/create-verification-workspace.ts → createVerificationWorkspaceFromPrompt",
+      "charCount": 84
     },
     {
-      "id": "app-api-v2-agent-workspaces-[id]-integration-skill-route-ts::consumer",
-      "domainId": "agent-v2",
+      "id": "app-api-v3-pow-workspaces-[id]-integration-skill-route-ts::consumer",
+      "domainId": "pow-api",
       "file": "app/api/v3/pow/workspaces/[id]/integration-skill/route.ts",
       "symbol": "(consumer)",
       "kind": "consumer",
       "label": "route",
       "description": "API route that delegates prompt construction to a lib helper.",
-      "delegatesTo": "lib/agent-v2/integration-skill.ts → buildIntegrationSkillInstructions",
-      "text": "Consumer route — prompts defined in:\nlib/agent-v2/integration-skill.ts → buildIntegrationSkillInstructions",
-      "charCount": 69
+      "delegatesTo": "lib/pow-api/integration-skill.ts → buildIntegrationSkillInstructions",
+      "text": "Consumer route — prompts defined in:\nlib/pow-api/integration-skill.ts → buildIntegrationSkillInstructions",
+      "charCount": 68
     },
     {
-      "id": "lib-agent-v2-create-agent-workspace-ts::userMessage-1",
-      "domainId": "agent-v2",
-      "file": "lib/agent-v2/create-agent-workspace.ts",
-      "symbol": "userMessage#1",
-      "kind": "inline",
-      "text": "Create a performance learning workspace from this prompt. Break it into assessable blocks for learning verification and proof-of-work-based gap analysis.\\n\\nPrompt:\\n${initialPrompt}${fileContext}\\n\\nReturn ONLY JSON:\\n{\\n  \"title\": \"concise workspace title\",\\n  \"conversion_goal\": \"concise success/conversion outcome for this workspace\",\\n  \"blocks\": [\\n    { \"id\": \"a\", \"title\": \"Block title\", \"description\": \"What the learner should demonstrate\", \"is_start\": true, \"next\": [\"b\"] }\\n  ]\\n}\\n\\nRules:\\n- Create 3 to 8 blocks.\\n- Blocks are assessable learning/performance units.\\n- Use short stable ids only for linking within this response.${WORKSPACE_GENERATION_CONVERSION_GOAL_RULE}",
-      "charCount": 686
-    },
-    {
-      "id": "lib-agent-v2-create-verification-workspace-ts::createVerificationWorkspaceFromPrompt-userMessage-1",
-      "domainId": "agent-v2",
-      "file": "lib/agent-v2/create-verification-workspace.ts",
+      "id": "lib-pow-api-create-verification-workspace-ts::createVerificationWorkspaceFromPrompt-userMessage-1",
+      "domainId": "pow-api",
+      "file": "lib/pow-api/create-verification-workspace.ts",
       "symbol": "createVerificationWorkspaceFromPrompt-userMessage#1",
       "kind": "inline",
-      "text": "Create a performance learning workspace from this prompt. Break it into assessable blocks for learning verification and proof-of-work-based gap analysis.\\n\\nPrompt:\\n${initialPrompt}${fileContext}\\n\\nReturn ONLY JSON:\\n{\\n  \"title\": \"concise workspace title\",\\n  \"conversion_goal\": \"concise success/conversion outcome for this workspace\",\\n  \"blocks\": [\\n    { \"id\": \"a\", \"title\": \"Block title\", \"description\": \"What the learner should demonstrate\", \"is_start\": true, \"next\": [\"b\"] }\\n  ]\\n}\\n\\nRules:\\n- Create 3 to 6 blocks.\\n- Blocks are assessable learning/performance units.\\n- Use short stable ids only for linking within this response.${WORKSPACE_GENERATION_CONVERSION_GOAL_RULE}",
-      "charCount": 686
+      "text": "Create a performance learning workspace from this prompt. Break it into assessable blocks for learning verification and proof-of-work-based gap analysis.\\n\\nPrompt:\\n${initialPrompt}${fileContext}\\n\\nReturn ONLY JSON:\\n{\\n  \"title\": \"concise workspace title\",\\n  \"workspace_goal\": \"concise success outcome for this workspace\",\\n  \"blocks\": [\\n    { \"id\": \"a\", \"title\": \"Block title\", \"description\": \"What the learner should demonstrate\", \"is_start\": true, \"next\": [\"b\"] }\\n  ]\\n}\\n\\nRules:\\n- Create 3 to 6 blocks.\\n- Blocks are assessable learning/performance units.\\n- Use short stable ids only for linking within this response.${WORKSPACE_GENERATION_GOAL_RULE}",
+      "charCount": 663
     },
     {
-      "id": "lib-agent-v2-create-verification-workspace-ts::userMessage-1",
-      "domainId": "agent-v2",
-      "file": "lib/agent-v2/create-verification-workspace.ts",
+      "id": "lib-pow-api-create-verification-workspace-ts::userMessage-1",
+      "domainId": "pow-api",
+      "file": "lib/pow-api/create-verification-workspace.ts",
       "symbol": "userMessage#1",
       "kind": "inline",
-      "text": "Create a performance learning workspace from this prompt. Break it into assessable blocks for learning verification and proof-of-work-based gap analysis.\\n\\nPrompt:\\n${initialPrompt}${fileContext}\\n\\nReturn ONLY JSON:\\n{\\n  \"title\": \"concise workspace title\",\\n  \"conversion_goal\": \"concise success/conversion outcome for this workspace\",\\n  \"blocks\": [\\n    { \"id\": \"a\", \"title\": \"Block title\", \"description\": \"What the learner should demonstrate\", \"is_start\": true, \"next\": [\"b\"] }\\n  ]\\n}\\n\\nRules:\\n- Create 3 to 6 blocks.\\n- Blocks are assessable learning/performance units.\\n- Use short stable ids only for linking within this response.${WORKSPACE_GENERATION_CONVERSION_GOAL_RULE}",
-      "charCount": 686
+      "text": "Create a performance learning workspace from this prompt. Break it into assessable blocks for learning verification and proof-of-work-based gap analysis.\\n\\nPrompt:\\n${initialPrompt}${fileContext}\\n\\nReturn ONLY JSON:\\n{\\n  \"title\": \"concise workspace title\",\\n  \"workspace_goal\": \"concise success outcome for this workspace\",\\n  \"blocks\": [\\n    { \"id\": \"a\", \"title\": \"Block title\", \"description\": \"What the learner should demonstrate\", \"is_start\": true, \"next\": [\"b\"] }\\n  ]\\n}\\n\\nRules:\\n- Create 3 to 6 blocks.\\n- Blocks are assessable learning/performance units.\\n- Use short stable ids only for linking within this response.${WORKSPACE_GENERATION_GOAL_RULE}",
+      "charCount": 663
     },
     {
-      "id": "lib-agent-v2-integration-skill-ts::buildIntegrationSkillInstructions",
-      "domainId": "agent-v2",
-      "file": "lib/agent-v2/integration-skill.ts",
+      "id": "lib-pow-api-custom-verification-model-store-ts::systemMessage-1",
+      "domainId": "pow-api",
+      "file": "lib/pow-api/custom-verification-model-store.ts",
+      "symbol": "systemMessage#1",
+      "kind": "inline",
+      "text": "You design synthetic knowledge regions for a fixed knowledge configuration embedding space (knowledgecfg-v1-d64).\nReturn JSON only describing an idealized competency region. Scores are 0-100.\npow_types should be a subset of: tool, screen, speech, video, eeg.\npreferred_modalities examples: tool, speech, canvas, notebook.\nKeep strengths and friction_patterns short concrete phrases (max 8 each).",
+      "charCount": 395
+    },
+    {
+      "id": "lib-pow-api-integration-skill-ts::buildIntegrationSkillInstructions",
+      "domainId": "pow-api",
+      "file": "lib/pow-api/integration-skill.ts",
       "symbol": "buildIntegrationSkillInstructions",
       "kind": "builder",
-      "text": "Generate a custom integration skill.md document for \"${request.integration_name}\" integrating with Uncertain Systems Proof-of-Work API.\n\n${scope}\n\nThis skill.md must treat the proof of work specification as a formal contract and **must be regenerated** as workspace proof of work grows. Integrators fetch the live schema dynamically; do not tell them to invent ad-hoc JSON. This document is not static.\n\nYAML frontmatter (required):\n---\nname: ${skillName}\ndescription: ${request.integration_name} integration skill for Uncertain Systems workspace proof of work upload and performance analysis.\n---\n\nWorkspace:\n- id: ${workspace.id}\n- title: ${workspace.title || workspace.root_topic || \"Untitled\"}\n- root_topic: ${workspace.root_topic || \"n/a\"}\n- description: ${workspace.description || \"n/a\"}\n\nPartner description from API caller:\n${request.partner_description || \"Not provided: infer reasonable integration goals from the workspace.\"}\n\nEvaluation definition (shared with proof of work spec generation):\n\"\"\"\n${evalDefinition}\n\"\"\"\n\nBlocks in this workspace:\n${blockTable || \"No blocks yet.\"}\n\nBase URL for examples: ${request.base_url}\nSuggested share path: ${sharePath}\nProof-of-work spec API (dynamic — MUST document prominently): POST ${proofOfWorkSchemaPath}\nProof-of-work upload API: POST ${evidenceUploadPath}\nIntegration skill regeneration API (self-update — MUST document prominently): POST ${integrationSkillPath}\nPerformance API (re-run as proof of work grows): POST ${performancePath}\n\nSections to include: ${sections.join(\", \")}\n${proofOfWorkSpecSection}\n\nRequired content:\n1. Purpose — what this partner agent verifies and how proof of work + performance fit the workflow.\n2. Design principles — checkpoint-agnostic timing, block-scoped vs workspace-global analysis, tool usage as core signal, always fetch the live proof-of-work spec before uploading, **more proof of work improves evaluation quality**.\n3. **Continuous evaluation and regeneration (required section)** — this is a must-have operating model, not optional maintenance. Include:\n   - Principle: verification is continuous; the more data and proof of work submitted, the better Uncertain Systems can learn and evaluate\n   - This skill.md is a snapshot; partner agents must **regenerate** it via POST ${integrationSkillPath} as proof of work accumulates\n   - Re-fetch the proof of work spec via POST ${proofOfWorkSchemaPath} on a recurring basis (e.g. after every 5-10 new uploads, when blocks change, or when scores feel stale)\n   - Re-request performance via POST ${performancePath} after meaningful proof-of-work batches\n   - Explicit warning: treating the initial skill.md or spec as permanent will degrade evaluation quality over time\n   - Recommended loop: upload proof of work → re-fetch spec → regenerate skill → request performance → repeat\n   - Reference the `continuous_evaluation` object returned by the proof of work spec API for machine-readable self-update triggers\n4. **Predictive interruptions (required section)** — Trace Interruption Model (TIM) on every Proof-of-Work API response:\n   - Every REST and MCP success response includes top-level `interruption` (object or null).\n   - When non-null: schedule `intervention` after `delay_ms` unless a later Proof-of-Work API response supersedes it.\n   - When null: no interruption predicted — do not schedule from that response.\n   - Document consumer obligations: read interruption every call, supersede pending timers, never stack duplicate timers.\n   - Reference `interruption_contract` from the proof of work spec API for machine-readable TIM contract and intervention types.\n   - Include JSON examples for active interruption and null (empty).\n5. Authentication table (Bearer sk_ / gsk_, Teams tier, scopes).\n6. Endpoints table covering REST and MCP with **dual documentation** (never hide REST behind MCP):\n   - REST: POST /workspaces, GET /blocks, POST /proof-of-work-schema, POST /proof-of-work, POST /performance, POST /integration-skill\n   - MCP (JSON-RPC at POST /api/mcp with Bearer auth): list_workspaces, get_workspace, get_learning_progress, list_blocks, generate_proof_of_work_schema, upload_proof_of_work, analyze_performance, generate_integration_skill, create_tap_link, list_tap_links\n   - State that MCP tools have full parity with REST; proof-of-work spec responses include both continuous_evaluation (REST paths) and continuous_evaluation_mcp (tool names)\n   - Recommend get_learning_progress / generate_proof_of_work_schema first for progress orientation\n7. **Proof-of-work specification (required section)** — explain that payloads are defined by the formal proof-of-work spec returned from POST ${proofOfWorkSchemaPath}. Include:\n   - When to call the proof of work spec endpoint (before first upload, after proof-of-work milestones, when eval definition or blocks change)\n   - Example request body with definition, optional block_id, and integration_hints\n   - That the response includes tool_submissions, proof_of_work_upload_contract, performance_report_contract, interruption_contract, continuous_evaluation, schema_name, example_payload, collection_guidance, and top-level interruption\n   - Instruction to validate tool payloads against the fetched schema before upload\n   - Do NOT embed a static schema as the source of truth; reference the API path above\n8. Workspace-specific block mapping guidance and example tool JSON payloads that match the proof of work spec (illustrative only).\n9. **Performance (required section)** — document POST ${performancePath} report mode. Every report MUST include:\n   - overall_score (0-100 integer readiness score)\n   - marker_scores (4-8 competency axes for spider/radar visualization: id, label, score, rationale, optional block_id)\n   - gap_analysis with gaps[] (title, proof_of_work, severity low|medium|high, suggested_repair) and next_steps { directions[], events[] } — remediation must be product/workflow-specific; never TAP, block completion, ILE, or Uncertain Systems platform tasks\n   - summary, strengths, growth_areas, suggestions, confidence\n   - Reference performance_report_contract from the proof of work spec API for the machine-readable contract and example_report\n   - Include a full JSON example response with overall_score, marker_scores, and at least one gap\n   - Chat mode example with prompt + conversation_history\n10. Quick integration checklist: fetch proof-of-work spec → honor interruption scheduling → upload proof of work per contract → regenerate skill → request performance → repeat as proof of work grows.\n\nCanonical API reference links: ${request.base_url}/skill.md and ${request.base_url}/docs/proof-of-work-api\n\nReturn ONLY the markdown document. No JSON wrapper. No code fences around the entire document.",
-      "charCount": 6750
+      "text": "Generate a custom integration skill.md document for \"${request.integration_name}\" integrating with Uncertain Systems Proof-of-Work API.\n\n${scope}\n\nThis skill.md is a **snapshot tailored to the workspace's current status** (blocks, goal, notes, proof-of-work volume, known tools). It must treat the proof of work specification as a formal contract and **must be regenerated** as workspace proof of work grows. Integrators fetch the live schema dynamically; do not tell them to invent ad-hoc JSON. This document is not static.\n\nYAML frontmatter (required):\n---\nname: ${skillName}\ndescription: ${request.integration_name} integration skill for Uncertain Systems workspace proof of work upload and performance analysis (current workspace snapshot).\n---\n\nWorkspace:\n- id: ${workspace.id}\n- title: ${workspace.title || workspace.root_topic || \"Untitled\"}\n- root_topic: ${workspace.root_topic || \"n/a\"}\n- description: ${workspace.description || status?.workspace.description || \"n/a\"}\n- workspace_goal: ${workspace.workspace_goal || status?.workspace.workspace_goal || \"n/a\"}\n\nPartner description from API caller:\n${request.partner_description || \"Not provided: infer reasonable integration goals from the current workspace status.\"}\n\nEvaluation definition (derived from workspace notes/goal when not supplied):\n\"\"\"\n${evalDefinition}\n\"\"\"\n\n${statusSection}\n\nBase URL for examples: ${request.base_url}\nSuggested share path: ${sharePath}\nProof-of-work spec API (dynamic — MUST document prominently): POST ${proofOfWorkSchemaPath}\nProof-of-work upload API: POST ${evidenceUploadPath}\nIntegration skill regeneration API (self-update — MUST document prominently): POST ${integrationSkillPath}\nVertical score APIs (re-run as proof of work grows):\n- Verification (TAP default): POST ${performancePath}\n- Augmentation: POST ${performancePath.replace(\"/verification-score\", \"/augmentation-score\")}\n- Optimization: POST ${performancePath.replace(\"/verification-score\", \"/optimization-score\")}\n\nSections to include: ${sections.join(\", \")}\n${proofOfWorkSpecSection}\n\nRequired content:\n1. Purpose — what this partner agent verifies **given the current workspace status** and how proof of work + the three vertical scores fit the workflow.\n2. Design principles — checkpoint-agnostic timing, block-scoped vs workspace-global analysis, tool usage as core signal, always fetch the live proof-of-work spec before uploading, **more proof of work improves evaluation quality**.\n3. **Continuous evaluation and regeneration (required section)** — this is a must-have operating model, not optional maintenance. Include:\n   - Principle: verification is continuous; the more data and proof of work submitted, the better Uncertain Systems can learn and evaluate\n   - This skill.md is a snapshot; partner agents must **regenerate** it via POST ${integrationSkillPath} as proof of work accumulates\n   - Re-fetch the proof of work spec via POST ${proofOfWorkSchemaPath} on a recurring basis (e.g. after every 5-10 new uploads, when blocks change, or when scores feel stale)\n   - Re-request vertical scores via POST .../verification-score | .../augmentation-score | .../optimization-score after meaningful proof-of-work batches\n   - Explicit warning: treating the initial skill.md or spec as permanent will degrade evaluation quality over time\n   - Recommended loop: upload proof of work → re-fetch spec → regenerate skill → request vertical scores → repeat\n   - Reference the `continuous_evaluation` object returned by the proof of work spec API for machine-readable self-update triggers\n4. **Predictive interruptions (required section)** — Trace Interruption Model (TIM) on every Proof-of-Work API response:\n   - Every REST and MCP success response includes top-level `interruption` (object or null).\n   - When non-null: schedule `intervention` after `delay_ms` unless a later Proof-of-Work API response supersedes it.\n   - When null: no interruption predicted — do not schedule from that response.\n   - Document consumer obligations: read interruption every call, supersede pending timers, never stack duplicate timers.\n   - Reference `interruption_contract` from the proof of work spec API for machine-readable TIM contract and intervention types.\n   - Include JSON examples for active interruption and null (empty).\n5. Authentication table (Bearer sk_ / gsk_, Teams tier, scopes).\n6. Endpoints table covering REST and MCP with **dual documentation** (never hide REST behind MCP):\n   - REST: GET /blocks, POST /proof-of-work-schema, POST /proof-of-work, POST /verification-score, POST /augmentation-score, POST /optimization-score, POST /integration-skill (workspace create is UI-only; do not document POST /workspaces or MCP create_workspace as supported)\n   - MCP (JSON-RPC at POST /api/mcp with Bearer auth): list_workspaces, get_workspace, get_learning_progress, list_blocks, generate_proof_of_work_schema, upload_proof_of_work, verification_score, augmentation_score, optimization_score, generate_integration_skill, create_tap_link, list_tap_links\n   - State that MCP tools have parity with REST for capture/score flows; workspace creation is product UI only (/workspace/new); proof-of-work spec responses include both continuous_evaluation (REST paths) and continuous_evaluation_mcp (tool names)\n   - Recommend get_learning_progress / generate_proof_of_work_schema first for progress orientation on an existing workspace\n7. **Proof-of-work specification (required section)** — explain that payloads are defined by the formal proof-of-work spec returned from POST ${proofOfWorkSchemaPath}. Include:\n   - When to call the proof of work spec endpoint (before first upload, after proof-of-work milestones, when eval definition or blocks change)\n   - Example request body with definition, optional block_id, and integration_hints\n   - That the response includes tool_submissions, proof_of_work_upload_contract, performance_report_contract (verification default), vertical_score_contracts, interruption_contract, continuous_evaluation, schema_name, example_payload, collection_guidance, and top-level interruption\n   - Instruction to validate tool payloads against the fetched schema before upload\n   - Do NOT embed a static schema as the source of truth; reference the API path above\n8. Workspace-specific block mapping guidance and example tool JSON payloads that match the proof of work spec (illustrative only).\n9. **Vertical scores (required section)** — document the three score endpoints (not a unified multi-score card). Each call returns ONE primary score for that vertical plus spider breakdown, analysis, and next actions:\n   - POST .../verification-score (MCP verification_score) — learning verification; **TAP auto-results use this only**\n   - POST .../augmentation-score (MCP augmentation_score) — practice / improvement readiness\n   - POST .../optimization-score (MCP optimization_score) — progress toward workspace_goal (0–100 score units)\n   - Every score response MUST include: score + named primary field, vertical, workspace_goal, marker_scores (4-8 spider axes: id, label, score, rationale), gap_analysis with gaps[] and next_steps { directions[], events[] }, summary, strengths, growth_areas, suggestions, confidence\n   - Remediation must be product/workflow-specific; never TAP, block completion, ILE, or Uncertain Systems platform tasks\n   - Reference performance_report_contract / vertical_score_contracts from the proof of work spec API for machine-readable contracts\n   - Include a full JSON example for verification-score with score, verification_score, workspace_goal, marker_scores, and at least one gap + next_steps\n10. Quick integration checklist: fetch proof-of-work spec → honor interruption scheduling → upload proof of work per contract → regenerate skill → request vertical scores → repeat as proof of work grows.\n\nCanonical API reference links: ${request.base_url}/skill.md and ${request.base_url}/docs/proof-of-work-api\n\nReturn ONLY the markdown document. No JSON wrapper. No code fences around the entire document.",
+      "charCount": 8020
     },
     {
-      "id": "lib-agent-v2-integration-skill-ts::buildIntegrationSkillPrompt",
-      "domainId": "agent-v2",
-      "file": "lib/agent-v2/integration-skill.ts",
+      "id": "lib-pow-api-integration-skill-ts::buildIntegrationSkillPrompt",
+      "domainId": "pow-api",
+      "file": "lib/pow-api/integration-skill.ts",
       "symbol": "buildIntegrationSkillPrompt",
       "kind": "builder",
-      "text": "Write a complete skill.md integration guide for \"${integrationName}\" using Uncertain Systems workspace \"${workspaceTitle}\". The guide must reference dynamic self-updating APIs for proof-of-work spec and skill regeneration, and treat continuous evaluation (more proof of work = better learning) as a must-have operating model.",
-      "charCount": 325
+      "text": "Write a complete skill.md integration guide for \"${integrationName}\" tailored to the **current status** of Uncertain Systems workspace \"${workspaceTitle}\" (blocks, goal, notes, existing proof of work). The guide must reference dynamic self-updating APIs for proof-of-work spec and skill regeneration, and treat continuous evaluation (more proof of work = better learning) as a must-have operating model.",
+      "charCount": 403
     },
     {
-      "id": "lib-agent-v2-performance-context-ts::buildPerformanceChatInstructions",
-      "domainId": "agent-v2",
-      "file": "lib/agent-v2/performance-context.ts",
+      "id": "lib-pow-api-performance-context-ts::buildPerformanceChatInstructions",
+      "domainId": "pow-api",
+      "file": "lib/pow-api/performance-context.ts",
       "symbol": "buildPerformanceChatInstructions",
       "kind": "builder",
       "text": "${scope}\n\nYou are an Uncertain Systems performance analyst. Use the attached workspace JSON summary plus any artifact files (tool usage logs, screenshots, video, EEG, Think Aloud Protocol (TAP) results, ILE practice traces, session reports, and uploaded files).\n\nWhen answering:\n1. Ground claims in specific proof of work from the attachments.\n2. Separate demonstrated strengths from emerging gaps.\n3. Be constructive and actionable.\n4. Format responses in markdown.\n5. When recommending next actions, use product- and workflow-specific language only — never suggest Think Aloud Protocol (TAP) sessions, completing workspace blocks, ILE practice, or other Uncertain Systems platform mechanics.\n\nIf proof of work is sparse, say what product/tool proof of work is missing and what observable actions to collect next.${buildPerformanceStyleSection(stylePrompt)}",
       "charCount": 858
     },
     {
-      "id": "lib-agent-v2-performance-report-ts::PERFORMANCE_REMEDIATION_GUARDRAILS",
-      "domainId": "agent-v2",
-      "file": "lib/agent-v2/performance-report.ts",
+      "id": "lib-pow-api-performance-report-ts::PERFORMANCE_REMEDIATION_GUARDRAILS",
+      "domainId": "pow-api",
+      "file": "lib/pow-api/performance-report.ts",
       "symbol": "PERFORMANCE_REMEDIATION_GUARDRAILS",
       "kind": "inline",
       "text": "Remediation output rules (gap_analysis.gaps[].suggested_repair, gap_analysis.next_steps, suggestions, and any growth_areas that recommend action):\n- NEVER mention Uncertain Systems platform mechanics: Think Aloud Protocol (TAP), TAP sessions or links, ILE, Integrated Learning Environment, workspace blocks, completing or finishing blocks, block completion, or returning to Uncertain Systems.\n- Write remediation in product- and workflow-specific language — the same vocabulary as real tool events and domain tasks (e.g. \"connect Slack\", \"route_energy_grid\", \"document tradeoff before config change\").\n- gap_analysis.next_steps.events must be granular, observable product/tool actions or event verbs — not platform tasks.\n- gap_analysis.next_steps.directions must be intermediate competency goals in domain language — not \"complete block X\" or \"run a TAP\".\n- TAP, ILE, blocks, and session artifacts may inform scoring as INPUT proof of work — but must never appear as OUTPUT recommendations.",
       "charCount": 991
     },
     {
-      "id": "lib-agent-v2-proof-of-work-schema-ts::buildProofOfWorkSchemaInstructions",
-      "domainId": "agent-v2",
-      "file": "lib/agent-v2/proof-of-work-schema.ts",
+      "id": "lib-pow-api-proof-of-work-schema-ts::buildProofOfWorkSchemaInstructions",
+      "domainId": "pow-api",
+      "file": "lib/pow-api/proof-of-work-schema.ts",
       "symbol": "buildProofOfWorkSchemaInstructions",
       "kind": "builder",
       "text": "Generate the formal proof-of-work specification for evaluating \"${workspaceTitle}\" in Uncertain Systems, using the full workspace context.",
       "charCount": 138
     },
     {
-      "id": "lib-agent-v2-proof-of-work-schema-ts::buildProofOfWorkSchemaPrompt",
-      "domainId": "agent-v2",
-      "file": "lib/agent-v2/proof-of-work-schema.ts",
+      "id": "lib-pow-api-proof-of-work-schema-ts::buildProofOfWorkSchemaPrompt",
+      "domainId": "pow-api",
+      "file": "lib/pow-api/proof-of-work-schema.ts",
       "symbol": "buildProofOfWorkSchemaPrompt",
       "kind": "builder",
       "text": "Generate the formal proof-of-work specification for evaluating \"${workspaceTitle}\" in Uncertain Systems, using the full workspace context.",
@@ -609,8 +591,8 @@
       "file": "lib/tap-score-traces.ts",
       "symbol": "buildTraceScoringInstructions",
       "kind": "builder",
-      "text": "Thought trace proof of work (System 1 and System 2) — primary GHC (Genuine Human Cognition) signal:\n- System 1 traces (${traceContext.system1Count}): spontaneous crystallized speech — everything the learner said aloud, including thoughts they did NOT submit (stashed/unsent) to the TAP dialogue.\n- System 2 traces (${traceContext.system2Count}): deliberate learner decisions — explicit send, edit, skip, select/deselect, or resend actions.\n\nUse the dialogue transcript as the primary TAP exchange (System 1 and System 2 elicitation), and treat attached trace files and the manifest below as first-class proof of work for exploration_score, conversion_score, and especially ghc_score / ghc_confidence.\nCompare System 1 vs System 2: knowledge articulated but not sent may reveal hesitation, incomplete understanding, or metacognitive filtering — cite both sent and unsent traces in gap_analysis proof_of_work and temporal_summary where relevant.\nTimestamps on traces inform temporal scoring (inter-event gaps, dwell before send, idle before crystallize).\n\nTrace manifest:\n${traceContext.manifestText || \"No trace manifest available.\"}",
-      "charCount": 1132
+      "text": "Thought trace proof of work (System 1 and System 2) — primary GHC (Genuine Human Cognition) signal:\n- System 1 traces (${traceContext.system1Count}): spontaneous crystallized speech — everything the learner said aloud, including thoughts they did NOT submit (stashed/unsent) to the TAP dialogue.\n- System 2 traces (${traceContext.system2Count}): deliberate learner decisions — explicit send, edit, skip, select/deselect, or resend actions.\n\nUse the dialogue transcript as the primary TAP exchange (System 1 and System 2 elicitation), and treat attached trace files and the manifest below as first-class proof of work for verification score and especially ghc_score / ghc_confidence.\nCompare System 1 vs System 2: knowledge articulated but not sent may reveal hesitation, incomplete understanding, or metacognitive filtering — cite both sent and unsent traces in gap_analysis proof_of_work and temporal_summary where relevant.\nTimestamps on traces inform temporal scoring (inter-event gaps, dwell before send, idle before crystallize).\n\nTrace manifest:\n${traceContext.manifestText || \"No trace manifest available.\"}",
+      "charCount": 1114
     },
     {
       "id": "lib-tap-score-ts::buildTapScoreInstructions",

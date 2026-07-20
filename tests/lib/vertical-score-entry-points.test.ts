@@ -12,9 +12,9 @@ import {
   VERTICAL_REST_PATH,
   VERTICAL_SCORE_FIELD,
   type ScoreVertical,
-} from "@/lib/agent-v2/performance-report";
-import { finalizeVerticalScoreReport } from "@/lib/agent-v2/workspace-goal";
-import { MCP_PROOF_OF_WORK_TOOL_CATALOG } from "@/lib/agent-v2/mcp-proof-of-work-catalog";
+} from "@/lib/pow-api/performance-report";
+import { finalizeVerticalScoreReport } from "@/lib/pow-api/workspace-goal";
+import { MCP_PROOF_OF_WORK_TOOL_CATALOG } from "@/lib/pow-api/mcp-proof-of-work-catalog";
 
 const ROOT = join(__dirname, "../..");
 
@@ -31,16 +31,16 @@ const SCORE_SURFACE_FILES = [
   "app/api/workspace-tap-score/performance/route.ts",
   "app/api/demo/performance/route.ts",
   // Core score libs
-  "lib/agent-v2/performance-report.ts",
-  "lib/agent-v2/workspace-goal.ts",
-  "lib/agent-v2/generate-performance-report.ts",
-  "lib/agent-v2/run-vertical-score.ts",
-  "lib/agent-v2/mcp-proof-of-work-catalog.ts",
-  "lib/agent-v2/mcp-proof-of-work-server.ts",
-  "lib/agent-v2/integration-skill.ts",
-  "lib/agent-v2/integration-discovery.ts",
-  "lib/agent-v2/proof-of-work-schema.ts",
-  "lib/agent-v2/proof-of-work-integration.ts",
+  "lib/pow-api/performance-report.ts",
+  "lib/pow-api/workspace-goal.ts",
+  "lib/pow-api/generate-performance-report.ts",
+  "lib/pow-api/run-vertical-score.ts",
+  "lib/pow-api/mcp-proof-of-work-catalog.ts",
+  "lib/pow-api/mcp-proof-of-work-server.ts",
+  "lib/pow-api/integration-skill.ts",
+  "lib/pow-api/integration-discovery.ts",
+  "lib/pow-api/proof-of-work-schema.ts",
+  "lib/pow-api/proof-of-work-integration.ts",
   // UI
   "components/WorkspacePerformancePanel.tsx",
   "components/PerformanceReportCard.tsx",
@@ -67,10 +67,10 @@ const SCORE_DOCS_FILES = [
   "public/customer-agent-uncertain-systems-policy.md",
   "public/pumaclaw-mentor-uncertain-systems-policy.md",
   "app/docs/proof-of-work-api/page.tsx",
-  "lib/agent-v2/mcp-proof-of-work-catalog.ts",
-  "lib/agent-v2/mcp-proof-of-work-server.ts",
-  "lib/agent-v2/integration-skill.ts",
-  "lib/agent-v2/integration-discovery.ts",
+  "lib/pow-api/mcp-proof-of-work-catalog.ts",
+  "lib/pow-api/mcp-proof-of-work-server.ts",
+  "lib/pow-api/integration-skill.ts",
+  "lib/pow-api/integration-discovery.ts",
 ] as const;
 
 const BANNED_CONTRACT_PATTERNS: Array<{ re: RegExp; label: string }> = [
@@ -237,9 +237,9 @@ describe("vertical score entry points (shipped wiring)", () => {
     expect(
       existsSync(join(ROOT, "app/api/v3/pow/workspaces/[id]/performance/route.ts"))
     ).toBe(false);
-    const server = readFileSync(join(ROOT, "lib/agent-v2/mcp-proof-of-work-server.ts"), "utf8");
+    const server = readFileSync(join(ROOT, "lib/pow-api/mcp-proof-of-work-server.ts"), "utf8");
     expect(server).not.toContain('name: "analyze_performance"');
-    const catalog = readFileSync(join(ROOT, "lib/agent-v2/mcp-proof-of-work-catalog.ts"), "utf8");
+    const catalog = readFileSync(join(ROOT, "lib/pow-api/mcp-proof-of-work-catalog.ts"), "utf8");
     expect(catalog).not.toContain("analyze_performance");
   });
 
@@ -249,7 +249,7 @@ describe("vertical score entry points (shipped wiring)", () => {
       for (const { re, label } of BANNED_CONTRACT_PATTERNS) {
         // recovery helpers in performance-report may still parse legacy model text
         if (
-          rel === "lib/agent-v2/performance-report.ts" &&
+          rel === "lib/pow-api/performance-report.ts" &&
           (label === "conversion_score" || label === "conversion_goal")
         ) {
           // only allow inside recoverVerticalScoreReportFromModelText legacy fallbacks
@@ -261,7 +261,7 @@ describe("vertical score entry points (shipped wiring)", () => {
           continue;
         }
         // workspace-goal re-export shim may mention old names in comments
-        if (rel === "lib/agent-v2/workspace-goal.ts" && label.startsWith("conversion_")) {
+        if (rel === "lib/pow-api/workspace-goal.ts" && label.startsWith("conversion_")) {
           continue;
         }
         expect(text, `${rel} still has banned pattern: ${label}`).not.toMatch(re);

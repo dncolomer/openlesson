@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDemoFromBody } from "@/lib/product-demos/resolve-demo";
-import { parseProofOfWorkSchemaRequest } from "@/lib/agent-v2/proof-of-work-schema";
+import { parseProofOfWorkSchemaRequest } from "@/lib/pow-api/proof-of-work-schema";
 import {
   generateProofOfWorkSchemaForWorkspace,
   proofOfWorkSchemaErrorResponse,
-} from "@/lib/agent-v2/proof-of-work-schema-handler";
+} from "@/lib/pow-api/proof-of-work-schema-handler";
 import { requireDemoAdminWorkspaceSession } from "@/lib/product-demos/demo-access";
 
 export const runtime = "nodejs";

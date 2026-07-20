@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import {
   MCP_OAUTH_PENDING_COOKIE,
   readPendingAuthorizationCookie,
-} from "@/lib/agent-v2/mcp-oauth/pending-auth";
+} from "@/lib/pow-api/mcp-oauth/pending-auth";
 
 export async function GET(req: NextRequest) {
   const pending = readPendingAuthorizationCookie(req.cookies.get(MCP_OAUTH_PENDING_COOKIE)?.value);

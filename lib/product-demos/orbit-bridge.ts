@@ -1,5 +1,5 @@
-import type { WorkspaceGoalSource } from "@/lib/agent-v2/conversion-goal";
-import type { PerformanceReport } from "@/lib/agent-v2/performance-report";
+import type { WorkspaceGoalSource } from "@/lib/pow-api/conversion-goal";
+import type { PerformanceReport } from "@/lib/pow-api/performance-report";
 import type { OrbitAppState } from "./orbit-app-model";
 import {
   buildActionReflection,

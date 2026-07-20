@@ -3,7 +3,7 @@ import {
   buildProofOfWorkSchemaRequestFromIntegration,
   generateWorkspaceProofOfWorkSpec,
   resolveEvalDefinition,
-} from "@/lib/agent-v2/proof-of-work-integration";
+} from "@/lib/pow-api/proof-of-work-integration";
 import {
   buildIntegrationSkillInstructions,
   buildIntegrationSkillPrompt,
@@ -11,9 +11,9 @@ import {
   deriveSuggestedSharePath,
   parseIntegrationSkillRequest,
   slugifyIntegrationName,
-} from "@/lib/agent-v2/integration-skill";
-import { buildWorkspacePerformanceContext } from "@/lib/agent-v2/performance-context";
-import { requireWorkspaceOwnerSession } from "@/lib/agent-v2/workspace-session-access";
+} from "@/lib/pow-api/integration-skill";
+import { buildWorkspacePerformanceContext } from "@/lib/pow-api/performance-context";
+import { requireWorkspaceOwnerSession } from "@/lib/pow-api/workspace-session-access";
 import { callXaiResponsesWithFiles } from "@/lib/xai-client";
 
 export const runtime = "nodejs";

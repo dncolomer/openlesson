@@ -168,16 +168,16 @@ describe("workspace create + builder static wiring", () => {
     expect(route).not.toContain("createAgentWorkspace");
     expect(route).toContain("WORKSPACE_CREATE_UI_ONLY_MESSAGE");
 
-    const catalog = read("lib/agent-v2/mcp-proof-of-work-catalog.ts");
+    const catalog = read("lib/pow-api/mcp-proof-of-work-catalog.ts");
     expect(catalog).not.toMatch(/name:\s*"create_workspace"/);
 
-    const mcp = read("lib/agent-v2/mcp-proof-of-work-server.ts");
+    const mcp = read("lib/pow-api/mcp-proof-of-work-server.ts");
     expect(mcp).toContain("rejectProgrammaticWorkspaceCreate");
     // create_workspace must hard-fail, not call createAgentWorkspace
     expect(mcp).not.toMatch(/await createAgentWorkspace/);
 
     // Internal helper may still exist for legacy/demo paths, but public surfaces reject
-    const create = read("lib/agent-v2/create-agent-workspace.ts");
+    const create = read("lib/pow-api/create-agent-workspace.ts");
     expect(create).toContain("assertApiCreateMode");
   });
 

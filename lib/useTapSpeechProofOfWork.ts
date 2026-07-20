@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { ProofOfWorkApiInterruption } from "@/lib/agent-v2/predictive-interruption";
+import type { ProofOfWorkApiInterruption } from "@/lib/pow-api/predictive-interruption";
 import { TAP_SPEECH_SEGMENT_GAP_MS } from "@/lib/tap-speech-proof-of-work";
 import type { SessionPowContext } from "@/lib/session-pow-api-paths";
 import { ILE_POW_API_PATHS, TAP_POW_API_PATHS } from "@/lib/session-pow-api-paths";

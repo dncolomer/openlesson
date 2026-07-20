@@ -3,7 +3,7 @@ import fs from "fs";
 import path from "path";
 import { DEFAULT_PROMPTS, ILE_CONTEXT, type PromptKey } from "@/lib/prompts";
 import { buildTapScoreInstructions } from "@/lib/tap-score";
-import { buildProofOfWorkSchemaInstructions } from "@/lib/agent-v2/proof-of-work-schema";
+import { buildProofOfWorkSchemaInstructions } from "@/lib/pow-api/proof-of-work-schema";
 
 const ACTIVE_KEYS: PromptKey[] = [
   "gap_detection",

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   decideEvalPowGate,
   NO_NEW_POW_CODE,
-} from "@/lib/agent-v2/eval-pow-gate";
+} from "@/lib/pow-api/eval-pow-gate";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
@@ -62,7 +62,7 @@ describe("decideEvalPowGate", () => {
 describe("eval pow gate wiring", () => {
   it("runVerticalScore and workspace performance-report call the gate", () => {
     const run = readFileSync(
-      join(process.cwd(), "lib/agent-v2/run-vertical-score.ts"),
+      join(process.cwd(), "lib/pow-api/run-vertical-score.ts"),
       "utf8",
     );
     const web = readFileSync(

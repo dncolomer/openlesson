@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createVerificationWorkspaceFromPrompt } from "@/lib/agent-v2/create-verification-workspace";
+import { createVerificationWorkspaceFromPrompt } from "@/lib/pow-api/create-verification-workspace";
 import { requireDemoAdminSession } from "@/lib/product-demos/demo-access";
 import { getDemoWorkspaceModelFile } from "@/lib/product-demos/demo-definition";
 import { getDemoFromBody } from "@/lib/product-demos/resolve-demo";
@@ -8,7 +8,7 @@ import {
   buildProofOfWorkUploadApiPath,
   buildIntegrationSkillApiPath,
   buildPerformanceApiPath,
-} from "@/lib/agent-v2/proof-of-work-integration";
+} from "@/lib/pow-api/proof-of-work-integration";
 
 export const runtime = "nodejs";
 export const maxDuration = 120;

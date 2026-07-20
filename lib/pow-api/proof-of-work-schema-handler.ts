@@ -2,10 +2,10 @@ import { NextResponse } from "next/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   generateWorkspaceProofOfWorkSpec,
-} from "@/lib/agent-v2/proof-of-work-integration";
-import type { ProofOfWorkSchemaRequest } from "@/lib/agent-v2/proof-of-work-schema";
-import type { AuthContext } from "@/lib/agent-v2/types";
-import type { WorkspaceSessionPlan } from "@/lib/agent-v2/workspace-session-access";
+} from "@/lib/pow-api/proof-of-work-integration";
+import type { ProofOfWorkSchemaRequest } from "@/lib/pow-api/proof-of-work-schema";
+import type { AuthContext } from "@/lib/pow-api/types";
+import type { WorkspaceSessionPlan } from "@/lib/pow-api/workspace-session-access";
 
 export async function generateProofOfWorkSchemaForWorkspace(input: {
   supabase: SupabaseClient;

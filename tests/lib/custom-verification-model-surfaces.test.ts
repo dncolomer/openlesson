@@ -10,7 +10,7 @@ function read(rel: string) {
 
 const SURFACES = [
   "lib/knowledge-config/custom-verification-model.ts",
-  "lib/agent-v2/custom-verification-model-store.ts",
+  "lib/pow-api/custom-verification-model-store.ts",
   "app/api/workspace/custom-verification-models/route.ts",
   "app/api/v3/eval/workspaces/[id]/custom-verification-models/route.ts",
   "components/CustomVerificationModelsPanel.tsx",
@@ -88,7 +88,7 @@ describe("custom verification model surfaces", () => {
     expect(cookie).toContain("knowledge_distance");
     expect(cookie).toContain("listSubjectsWithKnowledgeConfig");
 
-    const store = read("lib/agent-v2/custom-verification-model-store.ts");
+    const store = read("lib/pow-api/custom-verification-model-store.ts");
     expect(store).toContain("generateSyntheticRegionProfileWithGrok");
     expect(store).toContain("DEFAULT_MODEL");
     expect(store).toContain("createSyntheticKnowledgeRegionFromProfile");
@@ -100,7 +100,7 @@ describe("custom verification model surfaces", () => {
 
     const kdApi = read("app/api/v3/eval/workspaces/[id]/knowledge-distance/route.ts");
     expect(kdApi).toContain("computeKnowledgeDistanceForSubject");
-    expect(kdApi).not.toMatch(/from ["']@\/lib\/agent-v2\/run-vertical-score["']/);
+    expect(kdApi).not.toMatch(/from ["']@\/lib\/pow-api\/run-vertical-score["']/);
   });
 
   it("privacy slide uses custom verification model language", () => {

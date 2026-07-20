@@ -34,7 +34,7 @@ import {
   projectTrajectory2D,
   trajectoryPathLength,
   knowledgeConfigPointerFromEmbedding,
-} from "@/lib/agent-v2/knowledge-config-store";
+} from "@/lib/pow-api/knowledge-config-store";
 import type { KnowledgeConfigTrajectoryPoint } from "@/lib/knowledge-config";
 
 function basePow(n: number, startMs = 1_000_000) {

@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { resolveTapSessionAccess } from "@/lib/tap-score-session-auth";
-import { finalizeVerticalScoreReport } from "@/lib/agent-v2/workspace-goal";
-import { buildWorkspacePerformanceContext } from "@/lib/agent-v2/performance-context";
-import { generateWorkspaceVerticalScoreReport } from "@/lib/agent-v2/generate-performance-report";
-import { TAP_AUTO_SCORE_VERTICAL } from "@/lib/agent-v2/performance-report";
+import { finalizeVerticalScoreReport } from "@/lib/pow-api/workspace-goal";
+import { buildWorkspacePerformanceContext } from "@/lib/pow-api/performance-context";
+import { generateWorkspaceVerticalScoreReport } from "@/lib/pow-api/generate-performance-report";
+import { TAP_AUTO_SCORE_VERTICAL } from "@/lib/pow-api/performance-report";
 
 export const runtime = "nodejs";
 export const maxDuration = 120;

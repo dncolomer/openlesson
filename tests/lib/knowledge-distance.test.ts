@@ -111,8 +111,8 @@ describe("Knowledge distance surfaces", () => {
     expect(src).toContain('computation: "knowledge_distance"');
     expect(src).toContain("knowledge_distance");
     // No vertical-score imports or history writers on this route.
-    expect(src).not.toMatch(/from ["']@\/lib\/agent-v2\/run-vertical-score["']/);
-    expect(src).not.toMatch(/from ["']@\/lib\/agent-v2\/eval-run-history-store["']/);
+    expect(src).not.toMatch(/from ["']@\/lib\/pow-api\/run-vertical-score["']/);
+    expect(src).not.toMatch(/from ["']@\/lib\/pow-api\/eval-run-history-store["']/);
     expect(src).not.toContain("insertEvalRunHistory");
     expect(src).toContain("workspaces:read");
   });

@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { authenticateRequest, errorResponse } from "@/lib/agent-v2/auth";
-import { listAgentWorkspaces } from "@/lib/agent-v2/agent-workspace-ops";
+import { authenticateRequest, errorResponse } from "@/lib/pow-api/auth";
+import { listAgentWorkspaces } from "@/lib/pow-api/agent-workspace-ops";
 import {
   WORKSPACE_CREATE_UI_ONLY_ERROR_CODE,
   WORKSPACE_CREATE_UI_ONLY_HTTP_STATUS,
   WORKSPACE_CREATE_UI_ONLY_MESSAGE,
-} from "@/lib/agent-v2/workspace-create-ui-only";
-import { withProofOfWorkApiResponse } from "@/lib/agent-v2/predictive-interruption";
+} from "@/lib/pow-api/workspace-create-ui-only";
+import { withProofOfWorkApiResponse } from "@/lib/pow-api/predictive-interruption";
 
 export const runtime = "nodejs";
 

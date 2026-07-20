@@ -1,20 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
-import { authenticateRequest, errorResponse } from "@/lib/agent-v2/auth";
+import { authenticateRequest, errorResponse } from "@/lib/pow-api/auth";
 import {
   buildProofOfWorkSchemaRequestFromIntegration,
   generateWorkspaceProofOfWorkSpec,
   resolveEvalDefinition,
-} from "@/lib/agent-v2/proof-of-work-integration";
+} from "@/lib/pow-api/proof-of-work-integration";
 import {
   buildIntegrationSkillInstructions,
   buildIntegrationSkillPrompt,
   deriveSkillName,
   deriveSuggestedSharePath,
   parseIntegrationSkillRequest,
-} from "@/lib/agent-v2/integration-skill";
-import { buildWorkspacePerformanceContext } from "@/lib/agent-v2/performance-context";
-import { canAccessAgentWorkspace } from "@/lib/agent-v2/workspace-access";
-import { withProofOfWorkApiResponse } from "@/lib/agent-v2/predictive-interruption";
+} from "@/lib/pow-api/integration-skill";
+import { buildWorkspacePerformanceContext } from "@/lib/pow-api/performance-context";
+import { canAccessAgentWorkspace } from "@/lib/pow-api/workspace-access";
+import { withProofOfWorkApiResponse } from "@/lib/pow-api/predictive-interruption";
 import { callXaiResponsesWithFiles } from "@/lib/xai-client";
 
 export const runtime = "nodejs";

@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { getServiceClient } from "@/lib/agent-v2/auth";
-import { validateAssignableScopes } from "@/lib/agent-v2/scopes";
+import { getServiceClient } from "@/lib/pow-api/auth";
+import { validateAssignableScopes } from "@/lib/pow-api/scopes";
 import {
   MCP_OAUTH_PENDING_COOKIE,
   readPendingAuthorizationCookie,
-} from "@/lib/agent-v2/mcp-oauth/pending-auth";
-import { issueAuthorizationCode } from "@/lib/agent-v2/mcp-oauth/tokens";
+} from "@/lib/pow-api/mcp-oauth/pending-auth";
+import { issueAuthorizationCode } from "@/lib/pow-api/mcp-oauth/tokens";
 
 export const runtime = "nodejs";
 

@@ -120,20 +120,20 @@ const FILE_MAP = {
   "app/api/v3/pow/workspaces/route.ts": "Workspace block generation user prompt (not in rg.log)",
   "app/api/demo/performance/route.ts": "buildPerformanceReportInstructions + buildPerformanceChatInstructions + Orbit context",
   "app/api/demo/integration-skill/route.ts": "buildIntegrationSkillInstructions consumer",
-  "app/api/demo/workspace/route.ts": "Consumer → createVerificationWorkspaceFromPrompt (lib/agent-v2/create-verification-workspace.ts)",
+  "app/api/demo/workspace/route.ts": "Consumer → createVerificationWorkspaceFromPrompt (lib/pow-api/create-verification-workspace.ts)",
   "app/api/v3/pow/workspaces/[id]/integration-skill/route.ts": "buildIntegrationSkillInstructions consumer",
   "app/api/workspace-tap-score/chat/route.ts": "buildTapScoreInstructions + TAP chat overlay",
   "app/api/workspace-tap-score/complete/route.ts": "TAP complete scoring system + user prompts",
   "lib/tap-score.ts": "buildTapScoreInstructions, generateTapOpeningQuestion system extension + userMessage",
-  "lib/agent-v2/create-verification-workspace.ts": "createVerificationWorkspaceFromPrompt userMessage (3–6 blocks, proof-of-work wording)",
+  "lib/pow-api/create-verification-workspace.ts": "createVerificationWorkspaceFromPrompt userMessage (3–6 blocks, proof-of-work wording)",
   "lib/tap-score-traces.ts": "buildTraceScoringInstructions",
-  "lib/agent-v2/performance-report.ts": "buildPerformanceReportInstructions, PERFORMANCE_REMEDIATION_GUARDRAILS",
-  "lib/agent-v2/performance-context.ts": "buildPerformanceChatInstructions",
-  "lib/agent-v2/proof-of-work-schema.ts": "buildProofOfWorkSchemaInstructions, buildProofOfWorkSchemaPrompt",
-  "lib/agent-v2/integration-skill.ts": "buildIntegrationSkillInstructions, buildIntegrationSkillPrompt",
-  "lib/agent-v2/proof-of-work-integration.ts": "generateWorkspaceProofOfWorkSpec wires schema instructions",
-  "lib/agent-v2/mcp-proof-of-work-server.ts": "MCP mirrors v2 prompts (workspace create, performance, integration-skill, schema)",
-  "lib/agent-v2/integration-discovery.ts": "No LLM prompt strings (grep false positive)",
+  "lib/pow-api/performance-report.ts": "buildPerformanceReportInstructions, PERFORMANCE_REMEDIATION_GUARDRAILS",
+  "lib/pow-api/performance-context.ts": "buildPerformanceChatInstructions",
+  "lib/pow-api/proof-of-work-schema.ts": "buildProofOfWorkSchemaInstructions, buildProofOfWorkSchemaPrompt",
+  "lib/pow-api/integration-skill.ts": "buildIntegrationSkillInstructions, buildIntegrationSkillPrompt",
+  "lib/pow-api/proof-of-work-integration.ts": "generateWorkspaceProofOfWorkSpec wires schema instructions",
+  "lib/pow-api/mcp-proof-of-work-server.ts": "MCP mirrors v2 prompts (workspace create, performance, integration-skill, schema)",
+  "lib/pow-api/integration-discovery.ts": "No LLM prompt strings (grep false positive)",
   "lib/labs-ai.ts": "SYSTEM_PROMPT EEG probe generator",
   "lib/local-inference.ts": "Gemma transcription + Socratic probe prompts (client)",
   "lib/sales/platform-pitch-deck.ts": "No LLM prompt — marketing slide copy (grep false positive: 'you' in prose)",
@@ -201,10 +201,10 @@ Scope: \`\` production TypeScript
 | \`BASE_SYSTEM_PROMPT\` | \`session-chat/route.ts\` | \`POST /api/session-chat\` | No |
 | Rabbit Hole continue | \`rabbit-hole/continue/route.ts\` | \`POST /api/rabbit-hole/continue\` | No |
 | v2 workspace create | \`v3/pow/workspaces/route.ts\` | \`POST /api/v3/pow/workspaces\` | No |
-| \`buildPerformanceReportInstructions\` | \`agent-v2/performance-report.ts\` | v2 performance report, MCP | No |
-| \`buildPerformanceChatInstructions\` | \`agent-v2/performance-context.ts\` | Orbit demo performance chat | No |
-| \`buildProofOfWorkSchemaInstructions\` | \`agent-v2/proof-of-work-schema.ts\` | proof-of-work-schema API, MCP | No |
-| \`buildIntegrationSkillInstructions\` | \`agent-v2/integration-skill.ts\` | integration-skill API, MCP | No |
+| \`buildPerformanceReportInstructions\` | \`pow-api/performance-report.ts\` | v2 performance report, MCP | No |
+| \`buildPerformanceChatInstructions\` | \`pow-api/performance-context.ts\` | Orbit demo performance chat | No |
+| \`buildProofOfWorkSchemaInstructions\` | \`pow-api/proof-of-work-schema.ts\` | proof-of-work-schema API, MCP | No |
+| \`buildIntegrationSkillInstructions\` | \`pow-api/integration-skill.ts\` | integration-skill API, MCP | No |
 | \`buildTapScoreInstructions\` | \`lib/tap-score.ts\` | TAP chat | No |
 | \`buildTraceScoringInstructions\` | \`lib/tap-score-traces.ts\` | TAP complete scoring | No |
 | suggest-plan-topic | \`suggest-plan-topic/route.ts\` | \`POST /api/suggest-plan-topic\` | No |
@@ -471,7 +471,7 @@ parts.push(
 const v2Ws = read("app/api/v3/pow/workspaces/route.ts").match(
   /userMessage\(`([\s\S]*?)`\)/,
 )?.[1];
-const conversionRule = extractConstTemplate(read("lib/agent-v2/conversion-goal.ts"), "WORKSPACE_GENERATION_CONVERSION_GOAL_RULE");
+const conversionRule = extractConstTemplate(read("lib/pow-api/conversion-goal.ts"), "WORKSPACE_GENERATION_CONVERSION_GOAL_RULE");
 parts.push(
   block(
     "v3/pow/workspaces user prompt",
@@ -635,14 +635,14 @@ parts.push(
   block(
     "`buildProofOfWorkSchemaInstructions`",
     {
-      File: "`lib/agent-v2/proof-of-work-schema.ts`",
+      File: "`lib/pow-api/proof-of-work-schema.ts`",
       "Call chain": "`generateWorkspaceProofOfWorkSpec` → Responses API",
       Purpose: "Formal proof-of-work spec JSON (schema, upload contract, performance contract, TIM)",
       "User-overridable": "No",
       Variables: "`{request.definition}`, `{integration_hints}`, `{blockId}` scope, `{workspacePayload}` summary",
     },
     extractFunctionReturnTemplate(
-      read("lib/agent-v2/proof-of-work-schema.ts"),
+      read("lib/pow-api/proof-of-work-schema.ts"),
       "buildProofOfWorkSchemaInstructions",
     ),
   ),
@@ -652,13 +652,13 @@ parts.push(
   block(
     "`buildProofOfWorkSchemaPrompt`",
     {
-      File: "`lib/agent-v2/proof-of-work-schema.ts`",
+      File: "`lib/pow-api/proof-of-work-schema.ts`",
       "Call chain": "User message paired with instructions above",
       Purpose: "One-line generation request",
       Variables: "`{workspaceTitle}`",
     },
     extractFunctionReturnTemplate(
-      read("lib/agent-v2/proof-of-work-schema.ts"),
+      read("lib/pow-api/proof-of-work-schema.ts"),
       "buildProofOfWorkSchemaPrompt",
     ),
   ),
@@ -668,14 +668,14 @@ parts.push(
   block(
     "`buildIntegrationSkillInstructions`",
     {
-      File: "`lib/agent-v2/integration-skill.ts`",
+      File: "`lib/pow-api/integration-skill.ts`",
       "Call chain": "integration-skill routes + MCP",
       Purpose: "Generate partner skill.md with continuous evaluation + REST/MCP docs",
       "User-overridable": "No",
       Variables: "`{integration_name}`, `{workspace.*}`, `{blocks}`, API paths, optional proofOfWorkSpec section",
     },
     extractFunctionReturnTemplate(
-      read("lib/agent-v2/integration-skill.ts"),
+      read("lib/pow-api/integration-skill.ts"),
       "buildIntegrationSkillInstructions",
     ),
   ),
@@ -685,12 +685,12 @@ parts.push(
   block(
     "`buildIntegrationSkillPrompt`",
     {
-      File: "`lib/agent-v2/integration-skill.ts`",
+      File: "`lib/pow-api/integration-skill.ts`",
       Purpose: "User message for skill.md generation",
       Variables: "`{workspaceTitle}`, `{integrationName}`",
     },
     extractFunctionReturnTemplate(
-      read("lib/agent-v2/integration-skill.ts"),
+      read("lib/pow-api/integration-skill.ts"),
       "buildIntegrationSkillPrompt",
     ),
   ),
@@ -700,14 +700,14 @@ parts.push(
   block(
     "`buildPerformanceReportInstructions`",
     {
-      File: "`lib/agent-v2/performance-report.ts`",
+      File: "`lib/pow-api/performance-report.ts`",
       "Call chain": "v2 performance report mode, workspace performance-report, MCP",
       Purpose: "Structured scorecard: overall_score, conversion_score, marker_scores, gap_analysis",
       "User-overridable": "No (optional `style_prompt`)",
       Variables: "`{blockId}` scope, `{workspaceConversionGoal}`, `{stylePrompt}`",
     },
     extractFunctionReturnTemplate(
-      read("lib/agent-v2/performance-report.ts"),
+      read("lib/pow-api/performance-report.ts"),
       "buildPerformanceReportInstructions",
     ),
   ),
@@ -717,10 +717,10 @@ parts.push(
   block(
     "`PERFORMANCE_REMEDIATION_GUARDRAILS`",
     {
-      File: "`lib/agent-v2/performance-report.ts`",
+      File: "`lib/pow-api/performance-report.ts`",
       Purpose: "Shared guardrails — no TAP/ILE/block remediation in outputs",
     },
-    extractConstTemplate(read("lib/agent-v2/performance-report.ts"), "PERFORMANCE_REMEDIATION_GUARDRAILS"),
+    extractConstTemplate(read("lib/pow-api/performance-report.ts"), "PERFORMANCE_REMEDIATION_GUARDRAILS"),
   ),
 );
 
@@ -728,13 +728,13 @@ parts.push(
   block(
     "`buildPerformanceChatInstructions`",
     {
-      File: "`lib/agent-v2/performance-context.ts`",
+      File: "`lib/pow-api/performance-context.ts`",
       "Call chain": "demo performance chat (Orbit); not a public Proof-of-Work API surface",
       Purpose: "Conversational performance analysis grounded in attachments",
       Variables: "`{blockId}`, `{stylePrompt}`",
     },
     extractFunctionReturnTemplate(
-      read("lib/agent-v2/performance-context.ts"),
+      read("lib/pow-api/performance-context.ts"),
       "buildPerformanceChatInstructions",
     ),
   ),
@@ -810,14 +810,14 @@ parts.push(
 );
 
 // create-verification-workspace + demo/workspace consumer
-const cvwSrc = read("lib/agent-v2/create-verification-workspace.ts");
+const cvwSrc = read("lib/pow-api/create-verification-workspace.ts");
 const cvwUsers = extractUserMessageTemplates(cvwSrc);
 parts.push("---\n\n## Domain 6b: Verification Workspace Generation\n\n");
 parts.push(
   block(
     "`createVerificationWorkspaceFromPrompt` userMessage",
     {
-      File: "`lib/agent-v2/create-verification-workspace.ts`",
+      File: "`lib/pow-api/create-verification-workspace.ts`",
       "Call chain":
         "`POST /api/demo/workspace` → `createVerificationWorkspaceFromPrompt`; also `POST /api/v3/pow/workspaces` uses a related template",
       Purpose:
@@ -837,7 +837,7 @@ parts.push(
       "Call chain": "`POST /api/demo/workspace` → `createVerificationWorkspaceFromPrompt(demo.workspacePrompt, …)`",
       Purpose: "Demo admin: materialize verification workspace from demo definition prompt",
       "User-overridable": "No",
-      "Delegates to": "`lib/agent-v2/create-verification-workspace.ts` — see verbatim userMessage above",
+      "Delegates to": "`lib/pow-api/create-verification-workspace.ts` — see verbatim userMessage above",
     },
     "This route has no inline prompt strings. Prompt text lives in createVerificationWorkspaceFromPrompt.",
   ),

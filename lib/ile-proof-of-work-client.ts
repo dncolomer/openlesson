@@ -1,4 +1,4 @@
-import type { ProofOfWorkApiInterruption } from "@/lib/agent-v2/predictive-interruption";
+import type { ProofOfWorkApiInterruption } from "@/lib/pow-api/predictive-interruption";
 import type { IleBufferedScreenshot, IleProofOfWorkUploadItem } from "@/lib/ile-evidence-buffer";
 
 export interface UploadIleProofOfWorkInput {

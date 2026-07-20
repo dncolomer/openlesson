@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import type { AuthContext } from "@/lib/agent-v2/types";
+import type { AuthContext } from "@/lib/pow-api/types";
 import type {
   TeamsUserSession,
   WorkspaceSessionAccess,
   WorkspaceSessionPlan,
-} from "@/lib/agent-v2/workspace-session-access";
+} from "@/lib/pow-api/workspace-session-access";
 
 function adminRequiredResponse() {
   return NextResponse.json(

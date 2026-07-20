@@ -5,8 +5,8 @@ import {
   buildTapTranscriptPayload,
   TAP_TRANSCRIPT_TOOL_NAME,
 } from "@/lib/tap-score-traces";
-import { uploadWorkspaceProofOfWork } from "@/lib/agent-v2/upload-workspace-proof-of-work";
-import type { AuthContext } from "@/lib/agent-v2/types";
+import { uploadWorkspaceProofOfWork } from "@/lib/pow-api/upload-workspace-proof-of-work";
+import type { AuthContext } from "@/lib/pow-api/types";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -138,7 +138,7 @@ export async function POST(req: NextRequest) {
     }
 
     if (access.completionWebhookUrl) {
-      const { normalizeWebhookUrl } = await import("@/lib/agent-v2/tap-link-config");
+      const { normalizeWebhookUrl } = await import("@/lib/pow-api/tap-link-config");
       const safeWebhook = normalizeWebhookUrl(access.completionWebhookUrl);
       if (safeWebhook) {
         void fetch(safeWebhook, {

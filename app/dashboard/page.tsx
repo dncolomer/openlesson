@@ -12,7 +12,7 @@ import { formatPlanMonthlyPrice, hasAgentApiKeyPlan, type PlanId } from "@/lib/p
 import { dashboardUsesAgenticKeys } from "@/lib/dashboard-agent-access";
 import { OrganizationDashboardTab } from "@/components/OrganizationDashboardTab";
 import { WorkspaceDashboardCard } from "@/components/WorkspaceDashboardCard";
-import { buildMcpClientConfig } from "@/lib/agent-v2/mcp-proof-of-work-catalog";
+import { buildMcpClientConfig } from "@/lib/pow-api/mcp-proof-of-work-catalog";
 import { IntegrationQuickAccess } from "@/components/IntegrationQuickAccess";
 import { DEFAULT_MODEL } from "@/lib/xai-models";
 import { LoadingStatusMessage } from "@/components/LoadingStatusMessage";

@@ -6,7 +6,7 @@ import { LoadingStatusMessage } from "@/components/LoadingStatusMessage";
 import {
   formatProofOfWorkBytes,
   type WorkspaceProofOfWorkStats,
-} from "@/lib/agent-v2/proof-of-work-stats";
+} from "@/lib/pow-api/proof-of-work-stats";
 
 interface ProofOfWorkStatsPanelProps {
   workspaceId: string;

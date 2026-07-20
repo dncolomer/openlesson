@@ -4,13 +4,13 @@ import {
   normalizePredictedInterruption,
   predictInterruption,
   withProofOfWorkApiResponse,
-} from "@/lib/agent-v2/predictive-interruption";
-import { setTimProviderForTests, type TimProvider } from "@/lib/agent-v2/tim-provider";
-import { buildTimFeatureEnvelope } from "@/lib/agent-v2/tim-feature-envelope";
+} from "@/lib/pow-api/predictive-interruption";
+import { setTimProviderForTests, type TimProvider } from "@/lib/pow-api/tim-provider";
+import { buildTimFeatureEnvelope } from "@/lib/pow-api/tim-feature-envelope";
 import { emptyLearningWorldModel } from "@/lib/prompt-kernel/world-model";
-import { enrichProofOfWorkSpecResult } from "@/lib/agent-v2/proof-of-work-integration";
-import type { TimFeatureEnvelopeV1 } from "@/lib/agent-v2/tim-feature-envelope";
-import type { ProofOfWorkApiInterruption } from "@/lib/agent-v2/predictive-interruption";
+import { enrichProofOfWorkSpecResult } from "@/lib/pow-api/proof-of-work-integration";
+import type { TimFeatureEnvelopeV1 } from "@/lib/pow-api/tim-feature-envelope";
+import type { ProofOfWorkApiInterruption } from "@/lib/pow-api/predictive-interruption";
 
 function providerFromRules(
   decide: (features: TimFeatureEnvelopeV1) => ProofOfWorkApiInterruption | null,

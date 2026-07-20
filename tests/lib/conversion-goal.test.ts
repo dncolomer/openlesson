@@ -3,8 +3,8 @@ import {
   fallbackWorkspaceGoal,
   finalizeVerticalScoreReport,
   normalizeWorkspaceGoal,
-} from "@/lib/agent-v2/workspace-goal";
-import { emptyVerticalScoreReport } from "@/lib/agent-v2/performance-report";
+} from "@/lib/pow-api/workspace-goal";
+import { emptyVerticalScoreReport } from "@/lib/pow-api/performance-report";
 
 describe("normalizeWorkspaceGoal", () => {
   it("trims and caps length", () => {

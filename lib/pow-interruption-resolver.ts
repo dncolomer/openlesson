@@ -1,4 +1,4 @@
-import type { InterruptionContext, ProofOfWorkApiEndpoint } from "@/lib/agent-v2/predictive-interruption";
+import type { InterruptionContext, ProofOfWorkApiEndpoint } from "@/lib/pow-api/predictive-interruption";
 import { ILE_CHAT_TOOL_NAME, ILE_IDLE_TOOL_NAME, ILE_SPEECH_TOOL_NAME, ILE_TRACE_TOOL_NAME } from "@/lib/ile-thought-traces";
 import { TAP_CHAT_TOOL_NAME, TAP_TRACE_TOOL_NAME } from "@/lib/tap-score-traces";
 import { TAP_IDLE_TOOL_NAME } from "@/lib/tap-idle-proof-of-work";

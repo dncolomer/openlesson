@@ -166,7 +166,7 @@ export function extractAllEntries(src, relPath) {
     if (switchBlock.length > 50) add("prep-material-switch-prompts", switchBlock);
   }
 
-  if (relPath === "lib/agent-v2/create-verification-workspace.ts") {
+  if (relPath === "lib/pow-api/create-verification-workspace.ts") {
     const users = extractUserMessageTemplates(src);
     users.forEach((t, i) =>
       add(`createVerificationWorkspaceFromPrompt-userMessage#${i + 1}`, t),

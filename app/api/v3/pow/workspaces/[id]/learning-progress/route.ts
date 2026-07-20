@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { authenticateRequest, errorResponse } from "@/lib/agent-v2/auth";
-import { getAgentLearningProgress } from "@/lib/agent-v2/agent-workspace-ops";
-import { getAppOrigin } from "@/lib/agent-v2/mcp-oauth/config";
-import { withProofOfWorkApiResponse } from "@/lib/agent-v2/predictive-interruption";
+import { authenticateRequest, errorResponse } from "@/lib/pow-api/auth";
+import { getAgentLearningProgress } from "@/lib/pow-api/agent-workspace-ops";
+import { getAppOrigin } from "@/lib/pow-api/mcp-oauth/config";
+import { withProofOfWorkApiResponse } from "@/lib/pow-api/predictive-interruption";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;

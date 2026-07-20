@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import {
   buildMcpResourceContent,
   MCP_RESOURCE_CATALOG,
-} from "@/lib/agent-v2/integration-discovery";
+} from "@/lib/pow-api/integration-discovery";
 import {
   callMcpProofOfWorkTool,
   MCP_PROOF_OF_WORK_PROTOCOL_VERSION,
@@ -10,8 +10,8 @@ import {
   MCP_PROOF_OF_WORK_SERVER_NAME,
   MCP_PROOF_OF_WORK_SERVER_VERSION,
   MCP_EVIDENCE_TOOLS,
-} from "@/lib/agent-v2/mcp-proof-of-work-server";
-import type { AuthContext } from "@/lib/agent-v2/types";
+} from "@/lib/pow-api/mcp-proof-of-work-server";
+import type { AuthContext } from "@/lib/pow-api/types";
 
 export type JsonRpcId = string | number | null;
 

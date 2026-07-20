@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServiceClient } from "@/lib/agent-v2/auth";
-import { getOAuthClient, verifyClientSecret } from "@/lib/agent-v2/mcp-oauth/clients";
-import { getAppOrigin, getMcpResourceUri } from "@/lib/agent-v2/mcp-oauth/config";
-import { exchangeAuthorizationCode, refreshAccessToken } from "@/lib/agent-v2/mcp-oauth/tokens";
+import { getServiceClient } from "@/lib/pow-api/auth";
+import { getOAuthClient, verifyClientSecret } from "@/lib/pow-api/mcp-oauth/clients";
+import { getAppOrigin, getMcpResourceUri } from "@/lib/pow-api/mcp-oauth/config";
+import { exchangeAuthorizationCode, refreshAccessToken } from "@/lib/pow-api/mcp-oauth/tokens";
 
 export const runtime = "nodejs";
 

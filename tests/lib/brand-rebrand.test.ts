@@ -2,12 +2,12 @@ import { describe, expect, it } from "vitest";
 import { existsSync, readFileSync, readdirSync, statSync } from "fs";
 import path from "path";
 import { BRAND_NAME, BRAND_SLUG, MCP_RESOURCE_SCHEME } from "@/lib/brand";
-import { MCP_PROOF_OF_WORK_SERVER_NAME } from "@/lib/agent-v2/mcp-proof-of-work-server";
+import { MCP_PROOF_OF_WORK_SERVER_NAME } from "@/lib/pow-api/mcp-proof-of-work-server";
 import { buildTapThoughtTracePayload } from "@/lib/tap-score-traces";
 import { buildIleThoughtTracePayload } from "@/lib/ile-thought-traces";
-import { deriveSkillName } from "@/lib/agent-v2/integration-skill";
-import { buildMcpClientConfig } from "@/lib/agent-v2/mcp-proof-of-work-catalog";
-import { UNCERTAIN_SYSTEMS_SCOPE } from "@/lib/agent-v2/integration-discovery";
+import { deriveSkillName } from "@/lib/pow-api/integration-skill";
+import { buildMcpClientConfig } from "@/lib/pow-api/mcp-proof-of-work-catalog";
+import { UNCERTAIN_SYSTEMS_SCOPE } from "@/lib/pow-api/integration-discovery";
 
 const ROOT = process.cwd();
 
@@ -72,7 +72,7 @@ function collectOffenders(files: string[]): string[] {
   for (const file of files) {
     if (!existsSync(file)) continue;
     // remediation filter may still ban the token as platform language
-    if (file.endsWith("performance-report.ts") && file.includes("agent-v2")) continue;
+    if (file.endsWith("performance-report.ts") && file.includes("pow-api")) continue;
     // this test file itself lists forbidden patterns
     if (file.endsWith("brand-rebrand.test.ts")) continue;
     let text = scrubAllowed(readFileSync(file, "utf8"), ROOT);

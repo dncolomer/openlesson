@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { ayclTokenFromBody, guardWorkspaceRoute, requireAuthenticatedUser } from "@/lib/api/require-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { CreateTapLinkError, createWorkspaceTapLink } from "@/lib/agent-v2/create-tap-link";
-import type { AuthContext } from "@/lib/agent-v2/types";
+import { CreateTapLinkError, createWorkspaceTapLink } from "@/lib/pow-api/create-tap-link";
+import type { AuthContext } from "@/lib/pow-api/types";
 
 export const runtime = "nodejs";
 

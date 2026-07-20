@@ -27,9 +27,9 @@ import {
   PerformanceReportCard,
   type PerformanceReportSnapshot,
 } from "@/components/PerformanceReportCard";
-import { normalizePerformanceReport, type PerformanceReport } from "@/lib/agent-v2/performance-context";
-import type { WorkspaceGoalSource } from "@/lib/agent-v2/conversion-goal";
-import type { ProofOfWorkEvalSchemaResult } from "@/lib/agent-v2/proof-of-work-schema";
+import { normalizePerformanceReport, type PerformanceReport } from "@/lib/pow-api/performance-context";
+import type { WorkspaceGoalSource } from "@/lib/pow-api/conversion-goal";
+import type { ProofOfWorkEvalSchemaResult } from "@/lib/pow-api/proof-of-work-schema";
 import type { ProofOfWorkApiDemoDefinition } from "@/lib/product-demos/demo-definition";
 import { DemoVerificationPills } from "@/components/proof-of-work-demo/DemoVerificationPills";
 import { PROOF_OF_WORK_API_DEMOS, resolveDemoId } from "@/lib/product-demos/demos";

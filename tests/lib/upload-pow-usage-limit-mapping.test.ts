@@ -9,14 +9,14 @@ import { canSubmitProofOfWork, type UserProfile } from "@/lib/plans";
 import {
   mapUploadWorkspaceProofOfWorkError,
   UsageLimitReachedError,
-} from "@/lib/agent-v2/upload-workspace-proof-of-work";
+} from "@/lib/pow-api/upload-workspace-proof-of-work";
 import { assertCanSubmitProofOfWork } from "@/lib/usage-enforcement";
 
 const ROOT = join(__dirname, "../..");
 
 function inactiveProfile(): UserProfile {
   return {
-    plan: "free",
+    plan: "inactive",
     is_admin: false,
     subscription_status: "canceled",
     extra_lessons: 0,

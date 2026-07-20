@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
-import { authenticateRequest, errorResponse } from "@/lib/agent-v2/auth";
+import { authenticateRequest, errorResponse } from "@/lib/pow-api/auth";
 import { hashApiKey } from "@/lib/x402";
-import { GUEST_API_KEY_SCOPES } from "@/lib/agent-v2/scopes";
+import { GUEST_API_KEY_SCOPES } from "@/lib/pow-api/scopes";
 
 export const runtime = "nodejs";
 

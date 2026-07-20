@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import fs from "node:fs";
 import path from "node:path";
-import { ileTokenFromPowBody } from "@/lib/agent-v2/workspace-session-access";
+import { ileTokenFromPowBody } from "@/lib/pow-api/workspace-session-access";
 import { buildIleSessionUrl } from "@/lib/ile-link";
 
 const REPO_ROOT = path.resolve(__dirname, "../..");
@@ -30,7 +30,7 @@ describe("buildIleSessionUrl", () => {
 
 describe("shareable ILE guest PoW wiring", () => {
   const accessSource = fs.readFileSync(
-    path.join(REPO_ROOT, "lib/agent-v2/workspace-session-access.ts"),
+    path.join(REPO_ROOT, "lib/pow-api/workspace-session-access.ts"),
     "utf8",
   );
   const speechSource = fs.readFileSync(

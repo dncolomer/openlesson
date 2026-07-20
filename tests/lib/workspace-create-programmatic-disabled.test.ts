@@ -8,16 +8,16 @@ import { POST } from "@/app/api/v3/pow/workspaces/route";
 import {
   MCP_EVIDENCE_TOOLS,
   callMcpProofOfWorkTool,
-} from "@/lib/agent-v2/mcp-proof-of-work-server";
-import { MCP_PROOF_OF_WORK_TOOL_CATALOG } from "@/lib/agent-v2/mcp-proof-of-work-catalog";
+} from "@/lib/pow-api/mcp-proof-of-work-server";
+import { MCP_PROOF_OF_WORK_TOOL_CATALOG } from "@/lib/pow-api/mcp-proof-of-work-catalog";
 import {
   WORKSPACE_CREATE_UI_ONLY_ERROR_CODE,
   WORKSPACE_CREATE_UI_ONLY_HTTP_STATUS,
   WORKSPACE_CREATE_UI_ONLY_MESSAGE,
   isProgrammaticWorkspaceCreateRejectedMessage,
   rejectProgrammaticWorkspaceCreate,
-} from "@/lib/agent-v2/workspace-create-ui-only";
-import type { AuthContext } from "@/lib/agent-v2/types";
+} from "@/lib/pow-api/workspace-create-ui-only";
+import type { AuthContext } from "@/lib/pow-api/types";
 import fs from "node:fs";
 import path from "node:path";
 
@@ -128,7 +128,7 @@ describe("programmatic workspace create disabled", () => {
     expect(skill).toContain("`create_workspace`"); // mentioned as disabled/rejected
 
     const catalog = fs.readFileSync(
-      path.join(ROOT, "lib/agent-v2/mcp-proof-of-work-catalog.ts"),
+      path.join(ROOT, "lib/pow-api/mcp-proof-of-work-catalog.ts"),
       "utf8"
     );
     expect(catalog).not.toMatch(/name:\s*"create_workspace"/);

@@ -2,12 +2,12 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useI18n } from "@/lib/i18n";
-import type { TapPostSessionMode } from "@/lib/agent-v2/tap-link-config";
+import type { TapPostSessionMode } from "@/lib/pow-api/tap-link-config";
 import {
   TAP_LINK_DEFAULT_MINUTES,
   TAP_LINK_MAX_MINUTES,
   TAP_LINK_MIN_MINUTES,
-} from "@/lib/agent-v2/tap-link-config";
+} from "@/lib/pow-api/tap-link-config";
 import { LoadingStatusMessage } from "@/components/LoadingStatusMessage";
 
 interface WorkspaceBlock {

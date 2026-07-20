@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { ayclTokenFromBody, guardWorkspaceRoute } from "@/lib/api/require-auth";
-import { loadWorkspaceProofOfWorkStats } from "@/lib/agent-v2/proof-of-work-stats";
+import { loadWorkspaceProofOfWorkStats } from "@/lib/pow-api/proof-of-work-stats";
 
 export const runtime = "nodejs";
 

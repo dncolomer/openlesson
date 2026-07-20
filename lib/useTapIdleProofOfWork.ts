@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef } from "react";
-import type { ProofOfWorkApiInterruption } from "@/lib/agent-v2/predictive-interruption";
+import type { ProofOfWorkApiInterruption } from "@/lib/pow-api/predictive-interruption";
 import { TAP_IDLE_POW_INTERVAL_MS } from "@/lib/tap-idle-proof-of-work";
 import type { SessionPowContext } from "@/lib/session-pow-api-paths";
 import { ILE_POW_API_PATHS, TAP_POW_API_PATHS } from "@/lib/session-pow-api-paths";

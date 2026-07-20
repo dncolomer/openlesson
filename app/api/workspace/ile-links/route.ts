@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuthenticatedUser } from "@/lib/api/require-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { CreateIleLinkError, createWorkspaceIleLink } from "@/lib/agent-v2/create-ile-link";
-import type { AuthContext } from "@/lib/agent-v2/types";
+import { CreateIleLinkError, createWorkspaceIleLink } from "@/lib/pow-api/create-ile-link";
+import type { AuthContext } from "@/lib/pow-api/types";
 
 export const runtime = "nodejs";
 

@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   handleJsonRpc,
   mcpEndpointDiscoveryResponse,
-} from "@/lib/agent-v2/mcp-jsonrpc-handler";
-import type { AuthContext } from "@/lib/agent-v2/types";
+} from "@/lib/pow-api/mcp-jsonrpc-handler";
+import type { AuthContext } from "@/lib/pow-api/types";
 
 const auth: AuthContext = {
   key_id: "key-1",

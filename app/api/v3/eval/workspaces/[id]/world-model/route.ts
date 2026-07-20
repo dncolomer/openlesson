@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { authenticateRequest, errorResponse } from "@/lib/agent-v2/auth";
-import { canAccessAgentWorkspace } from "@/lib/agent-v2/workspace-access";
-import { loadLearningWorldModel } from "@/lib/agent-v2/learning-world-model-store";
-import { resolveEvaluationSubject } from "@/lib/agent-v2/evaluation-subject";
+import { authenticateRequest, errorResponse } from "@/lib/pow-api/auth";
+import { canAccessAgentWorkspace } from "@/lib/pow-api/workspace-access";
+import { loadLearningWorldModel } from "@/lib/pow-api/learning-world-model-store";
+import { resolveEvaluationSubject } from "@/lib/pow-api/evaluation-subject";
 
 export const runtime = "nodejs";
 

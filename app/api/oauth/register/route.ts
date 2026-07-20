@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServiceClient } from "@/lib/agent-v2/auth";
-import { registerOAuthClient } from "@/lib/agent-v2/mcp-oauth/clients";
+import { getServiceClient } from "@/lib/pow-api/auth";
+import { registerOAuthClient } from "@/lib/pow-api/mcp-oauth/clients";
 
 export const runtime = "nodejs";
 

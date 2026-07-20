@@ -128,7 +128,7 @@ The app will be available at `http://localhost:3000`.
 │   ├── xai-client.ts     # xAI API client (chat, JSON schema, files)
 │   ├── prompts.ts        # Helios prompt templates
 │   ├── storage.ts        # Supabase session & workspace persistence
-│   ├── agent-v2/         # Proof-of-Work API (auth, MCP, proof-of-work, TAP links)
+│   ├── pow-api/         # PoW / Eval / Stash / MCP libs (/api/v3/{pow,eval,stash}, /api/mcp)
 │   ├── tap-score*.ts     # TAP scoring logic
 │   └── ...
 ├── supabase/             # Database schema & migrations

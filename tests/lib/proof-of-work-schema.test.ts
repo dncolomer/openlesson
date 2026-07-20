@@ -3,7 +3,7 @@ import {
   buildProofOfWorkSchemaInstructions,
   parseProofOfWorkSchemaRequest,
   EVIDENCE_EVAL_SCHEMA_OUTPUT,
-} from "@/lib/agent-v2/proof-of-work-schema";
+} from "@/lib/pow-api/proof-of-work-schema";
 import {
   buildContinuousEvaluationPolicy,
   buildProofOfWorkSchemaApiPath,
@@ -11,7 +11,7 @@ import {
   buildIntegrationSkillApiPath,
   enrichProofOfWorkSpecResult,
   formatProofOfWorkSpecForSkillPrompt,
-} from "@/lib/agent-v2/proof-of-work-integration";
+} from "@/lib/pow-api/proof-of-work-integration";
 import {
   deriveSkillName,
   deriveSuggestedSharePath,
@@ -19,8 +19,8 @@ import {
   parseSkillFrontmatter,
   slugifyIntegrationName,
   buildIntegrationSkillInstructions,
-} from "@/lib/agent-v2/integration-skill";
-import { ENDPOINT_SCOPES } from "@/lib/agent-v2/types";
+} from "@/lib/pow-api/integration-skill";
+import { ENDPOINT_SCOPES } from "@/lib/pow-api/types";
 
 describe("parseProofOfWorkSchemaRequest", () => {
   it("requires definition", () => {

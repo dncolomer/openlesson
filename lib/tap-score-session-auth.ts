@@ -5,7 +5,7 @@ import {
   getTapScoreBriefForUser,
   hashPrivateToken,
 } from "@/lib/tap-score";
-import type { TapPostSessionMode } from "@/lib/agent-v2/tap-link-config";
+import type { TapPostSessionMode } from "@/lib/pow-api/tap-link-config";
 
 export interface ResolvedTapSessionContext {
   supabase: ReturnType<typeof createAdminClient>;

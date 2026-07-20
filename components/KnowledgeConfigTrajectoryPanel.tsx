@@ -12,7 +12,7 @@ import type { KnowledgeRegionListItem } from "@/components/CustomVerificationMod
 import {
   resolveModelsTabScope,
   type ModelsTabSubjectRef,
-} from "@/lib/agent-v2/models-tab-scope";
+} from "@/lib/pow-api/models-tab-scope";
 import {
   projectTrajectoryAndRegions,
   PROJECTION_ALGORITHM_OPTIONS,

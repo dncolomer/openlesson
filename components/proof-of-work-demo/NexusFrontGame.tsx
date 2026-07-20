@@ -39,8 +39,8 @@ import {
   resolveSimulationAction,
 } from "@/lib/product-demos/nexusfront-game-model";
 import { totalActionCount } from "@/lib/product-demos/simulation";
-import type { WorkspaceGoalSource } from "@/lib/agent-v2/conversion-goal";
-import type { PerformanceReport } from "@/lib/agent-v2/performance-context";
+import type { WorkspaceGoalSource } from "@/lib/pow-api/conversion-goal";
+import type { PerformanceReport } from "@/lib/pow-api/performance-context";
 import type { SimulationAction, SimulationWorldState } from "@/lib/product-demos/types";
 
 const GRID = {

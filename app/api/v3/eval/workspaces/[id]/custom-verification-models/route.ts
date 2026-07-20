@@ -1,14 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
-import { authenticateRequest, errorResponse } from "@/lib/agent-v2/auth";
-import { canAccessAgentWorkspace } from "@/lib/agent-v2/workspace-access";
+import { authenticateRequest, errorResponse } from "@/lib/pow-api/auth";
+import { canAccessAgentWorkspace } from "@/lib/pow-api/workspace-access";
 import {
   createCustomVerificationModelFromSubjects,
   evalSubjectAgainstCustomVerificationModel,
   listCustomVerificationModels,
   listSubjectsWithKnowledgeConfig,
-} from "@/lib/agent-v2/custom-verification-model-store";
+} from "@/lib/pow-api/custom-verification-model-store";
 import { CustomVerificationModelError } from "@/lib/knowledge-config/custom-verification-model";
-import { resolveEvaluationSubject } from "@/lib/agent-v2/evaluation-subject";
+import { resolveEvaluationSubject } from "@/lib/pow-api/evaluation-subject";
 
 export const runtime = "nodejs";
 

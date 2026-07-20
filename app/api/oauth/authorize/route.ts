@@ -1,16 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { getOAuthClient, redirectUriAllowed } from "@/lib/agent-v2/mcp-oauth/clients";
+import { getOAuthClient, redirectUriAllowed } from "@/lib/pow-api/mcp-oauth/clients";
 import {
   getAppOrigin,
   getMcpResourceUri,
   parseRequestedScopes,
-} from "@/lib/agent-v2/mcp-oauth/config";
+} from "@/lib/pow-api/mcp-oauth/config";
 import {
   createPendingAuthorizationCookie,
   MCP_OAUTH_PENDING_COOKIE,
-} from "@/lib/agent-v2/mcp-oauth/pending-auth";
-import { getServiceClient } from "@/lib/agent-v2/auth";
+} from "@/lib/pow-api/mcp-oauth/pending-auth";
+import { getServiceClient } from "@/lib/pow-api/auth";
 
 export const runtime = "nodejs";
 

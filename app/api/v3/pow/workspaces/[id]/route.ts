@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { authenticateRequest, errorResponse } from "@/lib/agent-v2/auth";
-import { normalizeWorkspaceGoal } from "@/lib/agent-v2/conversion-goal";
-import { canAccessAgentWorkspace } from "@/lib/agent-v2/workspace-access";
+import { authenticateRequest, errorResponse } from "@/lib/pow-api/auth";
+import { normalizeWorkspaceGoal } from "@/lib/pow-api/conversion-goal";
+import { canAccessAgentWorkspace } from "@/lib/pow-api/workspace-access";
 
 export const runtime = "nodejs";
 

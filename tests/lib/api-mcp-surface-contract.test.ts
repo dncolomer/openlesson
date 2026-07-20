@@ -14,22 +14,44 @@ import {
   powWorkspaceResource,
   stashWorkspaceResource,
 } from "@/lib/api/agent-api-paths";
-import { MCP_EVIDENCE_TOOLS } from "@/lib/agent-v2/mcp-proof-of-work-server";
-import { MCP_PROOF_OF_WORK_TOOL_CATALOG } from "@/lib/agent-v2/mcp-proof-of-work-catalog";
+import { MCP_EVIDENCE_TOOLS } from "@/lib/pow-api/mcp-proof-of-work-server";
+import { MCP_PROOF_OF_WORK_TOOL_CATALOG } from "@/lib/pow-api/mcp-proof-of-work-catalog";
 import {
   AGENT_TOOL_SURFACE,
   PLAN_GATE_ERROR_CODE,
   agentToolNames,
-} from "@/lib/agent-v2/agent-tool-surface";
+} from "@/lib/pow-api/agent-tool-surface";
 import {
   TAP_LINK_DEFAULT_MINUTES,
   TAP_LINK_MAX_MINUTES,
   TAP_LINK_MIN_MINUTES,
   normalizeTapLinkMinutes,
-} from "@/lib/agent-v2/tap-link-config";
-import { toErrorCode } from "@/lib/agent-v2/types";
+} from "@/lib/pow-api/tap-link-config";
+import { toErrorCode } from "@/lib/pow-api/types";
 
 const ROOT = join(__dirname, "../..");
+
+describe("lib/pow-api package path (renamed from agent-v2)", () => {
+  it("ships under lib/pow-api and not lib/agent-v2", () => {
+    expect(existsSync(join(ROOT, "lib/pow-api/auth.ts"))).toBe(true);
+    expect(existsSync(join(ROOT, "lib/pow-api/mcp-proof-of-work-server.ts"))).toBe(true);
+    expect(existsSync(join(ROOT, "lib/agent-v2"))).toBe(false);
+  });
+
+  it("v3/MCP routes import from @/lib/pow-api not agent-v2", () => {
+    const samples = [
+      "app/api/mcp/route.ts",
+      "app/api/v3/pow/workspaces/route.ts",
+      "app/api/v3/eval/workspaces/[id]/verification-score/route.ts",
+      "app/api/v3/stash/workspaces/[id]/stash/route.ts",
+    ];
+    for (const rel of samples) {
+      const src = readFileSync(join(ROOT, rel), "utf8");
+      expect(src, rel).toMatch(/@\/lib\/pow-api\//);
+      expect(src, rel).not.toMatch(/agent-v2/);
+    }
+  });
+});
 
 function collectRouteTs(dir: string, acc: string[] = []): string[] {
   if (!existsSync(dir)) return acc;
@@ -182,7 +204,7 @@ describe("API ↔ MCP surface contract (shipped code)", () => {
   });
 
   it("MCP upload_proof_of_work uses the same shared helper", () => {
-    const src = readFileSync(join(ROOT, "lib/agent-v2/mcp-proof-of-work-server.ts"), "utf8");
+    const src = readFileSync(join(ROOT, "lib/pow-api/mcp-proof-of-work-server.ts"), "utf8");
     expect(src).toMatch(/uploadWorkspaceProofOfWork/);
   });
 
@@ -201,11 +223,11 @@ describe("API ↔ MCP surface contract (shipped code)", () => {
   it("auth plan gate uses canonical api_plan_required", () => {
     expect(PLAN_GATE_ERROR_CODE).toBe("api_plan_required");
     expect(toErrorCode("api_plan_required")).toBe("api_plan_required");
-    const authSrc = readFileSync(join(ROOT, "lib/agent-v2/auth.ts"), "utf8");
+    const authSrc = readFileSync(join(ROOT, "lib/pow-api/auth.ts"), "utf8");
     expect(authSrc).toContain('"api_plan_required"');
     expect(authSrc).not.toMatch(/errorResponse\(\s*403,\s*"teams_required"/);
     const oauthSrc = readFileSync(
-      join(ROOT, "lib/agent-v2/mcp-oauth/authenticate-oauth-token.ts"),
+      join(ROOT, "lib/pow-api/mcp-oauth/authenticate-oauth-token.ts"),
       "utf8",
     );
     expect(oauthSrc).toContain('"api_plan_required"');
@@ -213,7 +235,7 @@ describe("API ↔ MCP surface contract (shipped code)", () => {
   });
 
   it("dead blockchain/proof types are removed from agent types", () => {
-    const typesSrc = readFileSync(join(ROOT, "lib/agent-v2/types.ts"), "utf8");
+    const typesSrc = readFileSync(join(ROOT, "lib/pow-api/types.ts"), "utf8");
     expect(typesSrc).not.toMatch(/export type ProofType/);
     expect(typesSrc).not.toMatch(/export interface Proof\b/);
     expect(typesSrc).not.toMatch(/export interface ProofBatch/);

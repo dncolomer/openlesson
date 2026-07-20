@@ -16,11 +16,11 @@ import {
   Search,
   User,
 } from "lucide-react";
-import type { WorkspaceGoalSource } from "@/lib/agent-v2/conversion-goal";
+import type { WorkspaceGoalSource } from "@/lib/pow-api/conversion-goal";
 import {
   normalizePerformanceReport,
   type PerformanceReport,
-} from "@/lib/agent-v2/performance-report";
+} from "@/lib/pow-api/performance-report";
 import { LoadingStatusMessage } from "@/components/LoadingStatusMessage";
 import { SmartCoachOverlay } from "@/components/orbit/SmartCoachOverlay";
 import {

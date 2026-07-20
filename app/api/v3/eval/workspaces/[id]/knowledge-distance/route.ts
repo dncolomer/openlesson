@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { authenticateRequest, errorResponse } from "@/lib/agent-v2/auth";
-import { canAccessAgentWorkspace } from "@/lib/agent-v2/workspace-access";
-import { resolveEvaluationSubject } from "@/lib/agent-v2/evaluation-subject";
-import { computeKnowledgeDistanceForSubject } from "@/lib/agent-v2/custom-verification-model-store";
+import { authenticateRequest, errorResponse } from "@/lib/pow-api/auth";
+import { canAccessAgentWorkspace } from "@/lib/pow-api/workspace-access";
+import { resolveEvaluationSubject } from "@/lib/pow-api/evaluation-subject";
+import { computeKnowledgeDistanceForSubject } from "@/lib/pow-api/custom-verification-model-store";
 import { CustomVerificationModelError } from "@/lib/knowledge-config/custom-verification-model";
 
 export const runtime = "nodejs";

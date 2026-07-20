@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   isBlockedWebhookHost,
   normalizeWebhookUrl,
-} from "@/lib/agent-v2/tap-link-config";
+} from "@/lib/pow-api/tap-link-config";
 
 describe("webhook URL SSRF hardening", () => {
   it("allows public https hosts", () => {

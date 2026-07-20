@@ -7,7 +7,7 @@ import {
   isInteractiveDemo,
 } from "@/lib/product-demos/game-tips";
 import { orbitDemo } from "@/lib/product-demos/demos/orbit";
-import type { PerformanceReport } from "@/lib/agent-v2/performance-report";
+import type { PerformanceReport } from "@/lib/pow-api/performance-report";
 
 describe("game demo helpers", () => {
   it("detects interactive simulator modes", () => {

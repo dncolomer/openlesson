@@ -1,5 +1,5 @@
-import { normalizePerformanceGapAnalysis } from "@/lib/agent-v2/performance-context";
-import type { PerformanceReport } from "@/lib/agent-v2/performance-report";
+import { normalizePerformanceGapAnalysis } from "@/lib/pow-api/performance-context";
+import type { PerformanceReport } from "@/lib/pow-api/performance-report";
 
 export function isGameDemo(demo: { id: string; simulatorMode?: string }): boolean {
   return demo.simulatorMode === "game" || demo.id === "nexusfront";

@@ -9,7 +9,7 @@ import { DialogueSplit, ThoughtCompactAction, type HeliosTurnMode } from "@/comp
 import { useTapPredictiveInterruption } from "@/lib/useTapPredictiveInterruption";
 import { useTapIdleProofOfWork } from "@/lib/useTapIdleProofOfWork";
 import { useTapSpeechProofOfWork } from "@/lib/useTapSpeechProofOfWork";
-import type { ProofOfWorkApiInterruption } from "@/lib/agent-v2/predictive-interruption";
+import type { ProofOfWorkApiInterruption } from "@/lib/pow-api/predictive-interruption";
 import { ActiveThoughtSlots } from "@/components/thought-ui/ActiveThoughtSlots";
 import { ThoughtEditPanel } from "@/components/thought-ui/ThoughtEditPanel";
 import { ThoughtMemoryPanel } from "@/components/thought-ui/ThoughtMemoryPanel";
@@ -19,9 +19,9 @@ import { TapStartingTopicCards } from "@/components/TapStartingTopicCards";
 import { LoadingStatusMessage } from "@/components/LoadingStatusMessage";
 import { useI18n } from "@/lib/i18n";
 import type { TapStartingTopic } from "@/lib/tap-score";
-import type { TapPostSessionMode } from "@/lib/agent-v2/tap-link-config";
-import { TAP_LINK_MAX_MINUTES, TAP_LINK_MIN_MINUTES } from "@/lib/agent-v2/tap-link-config";
-import type { PerformanceReport } from "@/lib/agent-v2/performance-report";
+import type { TapPostSessionMode } from "@/lib/pow-api/tap-link-config";
+import { TAP_LINK_MAX_MINUTES, TAP_LINK_MIN_MINUTES } from "@/lib/pow-api/tap-link-config";
+import type { PerformanceReport } from "@/lib/pow-api/performance-report";
 import { PerformanceReportCard } from "@/components/PerformanceReportCard";
 import {
   formatSpeechTranscriptDisplay,

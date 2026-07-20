@@ -6,8 +6,8 @@ import {
   type TapSpeechSegmentEvent,
 } from "@/lib/tap-speech-proof-of-work";
 import { uploadFileToXAI } from "@/lib/xai-files";
-import { countWorkspaceProofOfWorkForPlan } from "@/lib/agent-v2/workspace-proof-of-work";
-import { withProofOfWorkApiResponse } from "@/lib/agent-v2/predictive-interruption";
+import { countWorkspaceProofOfWorkForPlan } from "@/lib/pow-api/workspace-proof-of-work";
+import { withProofOfWorkApiResponse } from "@/lib/pow-api/predictive-interruption";
 
 export const runtime = "nodejs";
 export const maxDuration = 30;

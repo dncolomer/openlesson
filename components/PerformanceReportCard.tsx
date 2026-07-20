@@ -3,9 +3,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { MarkerRadarChart } from "@/components/MarkerRadarChart";
 import { useI18n } from "@/lib/i18n";
-import type { WorkspaceGoalSource } from "@/lib/agent-v2/conversion-goal";
-import { normalizePerformanceGapAnalysis } from "@/lib/agent-v2/performance-context";
-import type { PerformanceGapAnalysis, PerformanceReport } from "@/lib/agent-v2/performance-report";
+import type { WorkspaceGoalSource } from "@/lib/pow-api/conversion-goal";
+import { normalizePerformanceGapAnalysis } from "@/lib/pow-api/performance-context";
+import type { PerformanceGapAnalysis, PerformanceReport } from "@/lib/pow-api/performance-report";
 
 export type ScoreCardTab =
   | "overview"

@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { authenticateRequest, errorResponse } from "@/lib/agent-v2/auth";
-import { canAccessAgentWorkspace } from "@/lib/agent-v2/workspace-access";
-import { countWorkspaceProofOfWorkForPlan } from "@/lib/agent-v2/workspace-proof-of-work";
+import { authenticateRequest, errorResponse } from "@/lib/pow-api/auth";
+import { canAccessAgentWorkspace } from "@/lib/pow-api/workspace-access";
+import { countWorkspaceProofOfWorkForPlan } from "@/lib/pow-api/workspace-proof-of-work";
 import {
   getUploadProofOfWorkMeta,
   mapUploadWorkspaceProofOfWorkError,
   uploadWorkspaceProofOfWork,
-} from "@/lib/agent-v2/upload-workspace-proof-of-work";
-import { withProofOfWorkApiResponse } from "@/lib/agent-v2/predictive-interruption";
+} from "@/lib/pow-api/upload-workspace-proof-of-work";
+import { withProofOfWorkApiResponse } from "@/lib/pow-api/predictive-interruption";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;

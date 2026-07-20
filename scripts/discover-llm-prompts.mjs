@@ -25,12 +25,12 @@ const SUPPLEMENTAL = [
   "lib/local-inference.ts",
   "lib/labs-ai.ts",
   "lib/tap-score-traces.ts",
-  "lib/agent-v2/performance-report.ts",
-  "lib/agent-v2/performance-context.ts",
-  "lib/agent-v2/proof-of-work-schema.ts",
-  "lib/agent-v2/integration-skill.ts",
-  "lib/agent-v2/create-verification-workspace.ts",
-  "lib/agent-v2/proof-of-work-integration.ts",
+  "lib/pow-api/performance-report.ts",
+  "lib/pow-api/performance-context.ts",
+  "lib/pow-api/proof-of-work-schema.ts",
+  "lib/pow-api/integration-skill.ts",
+  "lib/pow-api/create-verification-workspace.ts",
+  "lib/pow-api/proof-of-work-integration.ts",
 ];
 
 /** Routes that delegate to lib helpers (no inline prompt strings) */

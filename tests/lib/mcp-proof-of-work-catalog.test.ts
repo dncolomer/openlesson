@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { MCP_PROOF_OF_WORK_TOOL_CATALOG } from "@/lib/agent-v2/mcp-proof-of-work-catalog";
+import { MCP_PROOF_OF_WORK_TOOL_CATALOG } from "@/lib/pow-api/mcp-proof-of-work-catalog";
 
 describe("MCP_PROOF_OF_WORK_TOOL_CATALOG", () => {
   it("includes the three vertical score tools by name", () => {

@@ -1,14 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
-import { authenticateRequest, errorResponse } from "@/lib/agent-v2/auth";
-import { parseProofOfWorkSchemaRequest } from "@/lib/agent-v2/proof-of-work-schema";
+import { authenticateRequest, errorResponse } from "@/lib/pow-api/auth";
+import { parseProofOfWorkSchemaRequest } from "@/lib/pow-api/proof-of-work-schema";
 import {
   generateOpaqueWorkspaceProofOfWorkSpec,
   generateWorkspaceProofOfWorkSpec,
   parseOpaqueSchemaRequest,
   resolveProofOfWorkSchemaInterruption,
-} from "@/lib/agent-v2/proof-of-work-integration";
-import { withProofOfWorkApiResponse } from "@/lib/agent-v2/predictive-interruption";
-import { canAccessAgentWorkspace } from "@/lib/agent-v2/workspace-access";
+} from "@/lib/pow-api/proof-of-work-integration";
+import { withProofOfWorkApiResponse } from "@/lib/pow-api/predictive-interruption";
+import { canAccessAgentWorkspace } from "@/lib/pow-api/workspace-access";
 
 export const runtime = "nodejs";
 export const maxDuration = 120;

@@ -13,8 +13,8 @@ import { DemoPerformanceHud } from "@/components/proof-of-work-demo/DemoPerforma
 import { DemoVerificationPills } from "@/components/proof-of-work-demo/DemoVerificationPills";
 import { getDemoVerificationPills } from "@/lib/product-demos/verification-pills";
 import { GRIDWORKS_TAP_VALIDATION_HINT } from "@/lib/product-demos/tap-validation";
-import type { WorkspaceGoalSource } from "@/lib/agent-v2/conversion-goal";
-import type { PerformanceReport } from "@/lib/agent-v2/performance-context";
+import type { WorkspaceGoalSource } from "@/lib/pow-api/conversion-goal";
+import type { PerformanceReport } from "@/lib/pow-api/performance-context";
 import type { ProofOfWorkApiDemoDefinition } from "@/lib/product-demos/demo-definition";
 import {
   applyInAppAction,

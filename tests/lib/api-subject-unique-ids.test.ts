@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
-import { resolveEvaluationSubject } from "@/lib/agent-v2/evaluation-subject";
-import { resolveModelsTabScope } from "@/lib/agent-v2/models-tab-scope";
-import type { AuthContext } from "@/lib/agent-v2/types";
+import { resolveEvaluationSubject } from "@/lib/pow-api/evaluation-subject";
+import { resolveModelsTabScope } from "@/lib/pow-api/models-tab-scope";
+import type { AuthContext } from "@/lib/pow-api/types";
 
 const ROOT = join(__dirname, "../..");
 

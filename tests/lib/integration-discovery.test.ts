@@ -4,7 +4,7 @@ import {
   buildIntegrationSurfaces,
   buildMcpResourceContent,
   recommendIntegrationActions,
-} from "@/lib/agent-v2/integration-discovery";
+} from "@/lib/pow-api/integration-discovery";
 
 describe("integration-discovery", () => {
   it("builds dual REST and MCP surfaces", () => {

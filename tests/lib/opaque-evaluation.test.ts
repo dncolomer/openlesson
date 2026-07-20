@@ -12,9 +12,9 @@ import {
   redactOpaqueFileName,
   sanitizeOpaqueMetadata,
   scrubOpaquePerformanceContext,
-} from "@/lib/agent-v2/opaque-evaluation";
-import { parseProofOfWorkSchemaRequest } from "@/lib/agent-v2/proof-of-work-schema";
-import { emptyVerticalScoreReport } from "@/lib/agent-v2/performance-report";
+} from "@/lib/pow-api/opaque-evaluation";
+import { parseProofOfWorkSchemaRequest } from "@/lib/pow-api/proof-of-work-schema";
+import { emptyVerticalScoreReport } from "@/lib/pow-api/performance-report";
 
 describe("parseOpaqueWorkspaceCreateRequest", () => {
   it("requires protocol_id and goal_ref", () => {

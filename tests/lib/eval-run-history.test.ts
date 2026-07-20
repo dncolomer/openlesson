@@ -4,10 +4,10 @@ import {
   insertEvalRunHistory,
   listEvalRunHistory,
   resolveHistorySubjectScope,
-} from "@/lib/agent-v2/eval-run-history-store";
-import { updateLearnerStateAfterScore } from "@/lib/agent-v2/learner-state-engine";
-import type { VerticalScoreReport } from "@/lib/agent-v2/performance-report";
-import type { AuthContext } from "@/lib/agent-v2/types";
+} from "@/lib/pow-api/eval-run-history-store";
+import { updateLearnerStateAfterScore } from "@/lib/pow-api/learner-state-engine";
+import type { VerticalScoreReport } from "@/lib/pow-api/performance-report";
+import type { AuthContext } from "@/lib/pow-api/types";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
@@ -358,7 +358,7 @@ describe("eval history API surfaces", () => {
 
   it("score paths wire historySource into learner state", () => {
     const run = readFileSync(
-      join(process.cwd(), "lib/agent-v2/run-vertical-score.ts"),
+      join(process.cwd(), "lib/pow-api/run-vertical-score.ts"),
       "utf8",
     );
     const web = readFileSync(

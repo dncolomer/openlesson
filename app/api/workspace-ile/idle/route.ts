@@ -2,11 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import {
   ileTokenFromPowBody,
   requireSessionWorkspaceProofOfWorkAccess,
-} from "@/lib/agent-v2/workspace-session-access";
+} from "@/lib/pow-api/workspace-session-access";
 import { buildIleIdleHeartbeatPayload, ILE_IDLE_TOOL_NAME } from "@/lib/ile-thought-traces";
 import { uploadFileToXAI } from "@/lib/xai-files";
-import { countWorkspaceProofOfWorkForPlan } from "@/lib/agent-v2/workspace-proof-of-work";
-import { withProofOfWorkApiResponse } from "@/lib/agent-v2/predictive-interruption";
+import { countWorkspaceProofOfWorkForPlan } from "@/lib/pow-api/workspace-proof-of-work";
+import { withProofOfWorkApiResponse } from "@/lib/pow-api/predictive-interruption";
 
 export const runtime = "nodejs";
 export const maxDuration = 30;

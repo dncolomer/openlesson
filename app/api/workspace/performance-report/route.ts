@@ -2,16 +2,16 @@ import { NextRequest, NextResponse } from "next/server";
 import { ayclTokenFromBody, requireAuthenticatedUser } from "@/lib/api/require-auth";
 import { resolveAyclAccess } from "@/lib/aycl-session-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { finalizeVerticalScoreReport } from "@/lib/agent-v2/workspace-goal";
-import { generateWorkspaceVerticalScoreReport } from "@/lib/agent-v2/generate-performance-report";
-import { buildWorkspacePerformanceContext } from "@/lib/agent-v2/performance-context";
-import { SCORE_VERTICALS, type ScoreVertical } from "@/lib/agent-v2/performance-report";
+import { finalizeVerticalScoreReport } from "@/lib/pow-api/workspace-goal";
+import { generateWorkspaceVerticalScoreReport } from "@/lib/pow-api/generate-performance-report";
+import { buildWorkspacePerformanceContext } from "@/lib/pow-api/performance-context";
+import { SCORE_VERTICALS, type ScoreVertical } from "@/lib/pow-api/performance-report";
 import {
   canAccessWorkspaceEval,
   resolveEvalPersistenceClientMode,
   resolveScoreParticipantIds,
-} from "@/lib/agent-v2/evaluation-subject";
-import type { AuthContext } from "@/lib/agent-v2/types";
+} from "@/lib/pow-api/evaluation-subject";
+import type { AuthContext } from "@/lib/pow-api/types";
 import type { User } from "@supabase/supabase-js";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -192,7 +192,7 @@ export async function POST(req: NextRequest) {
     }
 
     const { assertEvalAllowedWithNewPow, NO_NEW_POW_CODE } = await import(
-      "@/lib/agent-v2/eval-pow-gate"
+      "@/lib/pow-api/eval-pow-gate"
     );
     try {
       await assertEvalAllowedWithNewPow(supabase, {
@@ -259,7 +259,7 @@ export async function POST(req: NextRequest) {
     let eval_run_history_error: string | null = null;
     try {
       const { updateLearnerStateAfterScore } = await import(
-        "@/lib/agent-v2/learner-state-engine"
+        "@/lib/pow-api/learner-state-engine"
       );
       const state = await updateLearnerStateAfterScore({
         supabase,

@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { authenticateRequest, errorResponse } from "@/lib/agent-v2/auth";
-import { canAccessAgentWorkspace } from "@/lib/agent-v2/workspace-access";
-import { runVerticalScore } from "@/lib/agent-v2/run-vertical-score";
-import { withProofOfWorkApiResponse } from "@/lib/agent-v2/predictive-interruption";
-import { toErrorCode } from "@/lib/agent-v2/types";
+import { authenticateRequest, errorResponse } from "@/lib/pow-api/auth";
+import { canAccessAgentWorkspace } from "@/lib/pow-api/workspace-access";
+import { runVerticalScore } from "@/lib/pow-api/run-vertical-score";
+import { withProofOfWorkApiResponse } from "@/lib/pow-api/predictive-interruption";
+import { toErrorCode } from "@/lib/pow-api/types";
 
 export const runtime = "nodejs";
 export const maxDuration = 120;
@@ -41,7 +41,7 @@ export async function POST(req: NextRequest, { params }: RouteProps) {
     typeof body.style_prompt === "string" ? body.style_prompt.trim() : "";
   const blockId = typeof body.block_id === "string" ? body.block_id : null;
   const isWorkspaceOwner = Boolean(auth.user_id && workspace.user_id === auth.user_id);
-  const { resolveScoreParticipantIds } = await import("@/lib/agent-v2/evaluation-subject");
+  const { resolveScoreParticipantIds } = await import("@/lib/pow-api/evaluation-subject");
   const { participantUserId, participantGuestUserId } = resolveScoreParticipantIds({
     auth,
     isWorkspaceOwner,

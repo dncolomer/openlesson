@@ -6,7 +6,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import {
   canAccessWorkspaceEval,
   resolveEvalPersistenceClientMode,
-} from "@/lib/agent-v2/evaluation-subject";
+} from "@/lib/pow-api/evaluation-subject";
 import {
   loadLatestKnowledgeConfig,
   loadLatestKnowledgeConfigAnySubject,
@@ -16,22 +16,22 @@ import {
   projectionFrameIdForAlgorithm,
   trajectoryPathLength,
   type TrajectorySubjectFilter,
-} from "@/lib/agent-v2/knowledge-config-store";
+} from "@/lib/pow-api/knowledge-config-store";
 import {
   loadAllLearningWorldModels,
   loadLearningWorldModel,
   loadLearningWorldModelsForSubjects,
-} from "@/lib/agent-v2/learning-world-model-store";
+} from "@/lib/pow-api/learning-world-model-store";
 import {
   aggregateLearningWorldModels,
   resolveModelsTabScopeFromRequest,
-} from "@/lib/agent-v2/models-tab-scope";
+} from "@/lib/pow-api/models-tab-scope";
 import {
   KNOWLEDGE_CONFIG_EMBEDDING_MODEL_ID,
   emptyKnowledgeConfig,
   parseProjectionAlgorithmId,
 } from "@/lib/knowledge-config";
-import { listSubjectsWithKnowledgeConfig } from "@/lib/agent-v2/custom-verification-model-store";
+import { listSubjectsWithKnowledgeConfig } from "@/lib/pow-api/custom-verification-model-store";
 import type { LearningWorldModelV0 } from "@/lib/prompt-kernel/world-model";
 
 export const runtime = "nodejs";

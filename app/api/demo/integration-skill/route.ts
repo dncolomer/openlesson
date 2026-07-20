@@ -3,14 +3,14 @@ import { getDemoFromBody } from "@/lib/product-demos/resolve-demo";
 import {
   buildProofOfWorkSchemaRequestFromIntegration,
   generateWorkspaceProofOfWorkSpec,
-} from "@/lib/agent-v2/proof-of-work-integration";
+} from "@/lib/pow-api/proof-of-work-integration";
 import {
   buildIntegrationSkillInstructions,
   buildIntegrationSkillPrompt,
   deriveSkillName,
   deriveSuggestedSharePath,
-} from "@/lib/agent-v2/integration-skill";
-import { buildWorkspacePerformanceContext } from "@/lib/agent-v2/performance-context";
+} from "@/lib/pow-api/integration-skill";
+import { buildWorkspacePerformanceContext } from "@/lib/pow-api/performance-context";
 import { requireDemoAdminWorkspaceSession } from "@/lib/product-demos/demo-access";
 import { callXaiResponsesWithFiles } from "@/lib/xai-client";
 

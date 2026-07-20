@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { resolveTapSessionAccess } from "@/lib/tap-score-session-auth";
 import { buildTapIdleHeartbeatPayload, TAP_IDLE_TOOL_NAME } from "@/lib/tap-idle-proof-of-work";
 import { uploadFileToXAI } from "@/lib/xai-files";
-import { countWorkspaceProofOfWorkForPlan } from "@/lib/agent-v2/workspace-proof-of-work";
-import { withProofOfWorkApiResponse } from "@/lib/agent-v2/predictive-interruption";
+import { countWorkspaceProofOfWorkForPlan } from "@/lib/pow-api/workspace-proof-of-work";
+import { withProofOfWorkApiResponse } from "@/lib/pow-api/predictive-interruption";
 
 export const runtime = "nodejs";
 export const maxDuration = 30;

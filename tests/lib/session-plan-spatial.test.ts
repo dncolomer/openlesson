@@ -369,7 +369,7 @@ describe("create surface wiring (structural)", () => {
 
     // Public MCP surface no longer offers create_workspace / initial_chapters on create
     const mcpSrc = readFileSync(
-      path.join(process.cwd(), "lib/agent-v2/mcp-proof-of-work-server.ts"),
+      path.join(process.cwd(), "lib/pow-api/mcp-proof-of-work-server.ts"),
       "utf8",
     );
     expect(mcpSrc).toContain("rejectProgrammaticWorkspaceCreate");

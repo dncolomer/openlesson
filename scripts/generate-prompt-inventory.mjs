@@ -36,15 +36,15 @@ const XAI_USAGE = {
 
 const CONSUMER_DELEGATES = {
   "app/api/demo/workspace/route.ts":
-    "lib/agent-v2/create-verification-workspace.ts → createVerificationWorkspaceFromPrompt",
+    "lib/pow-api/create-verification-workspace.ts → createVerificationWorkspaceFromPrompt",
   "app/api/demo/integration-skill/route.ts":
-    "lib/agent-v2/integration-skill.ts → buildIntegrationSkillInstructions",
+    "lib/pow-api/integration-skill.ts → buildIntegrationSkillInstructions",
   "app/api/workspace/integration-skill/route.ts":
-    "lib/agent-v2/integration-skill.ts → buildIntegrationSkillInstructions",
+    "lib/pow-api/integration-skill.ts → buildIntegrationSkillInstructions",
   "app/api/workspace/performance-report/route.ts":
-    "lib/agent-v2/performance-report.ts → buildPerformanceReportInstructions",
+    "lib/pow-api/performance-report.ts → buildPerformanceReportInstructions",
   "app/api/v3/pow/workspaces/[id]/integration-skill/route.ts":
-    "lib/agent-v2/integration-skill.ts → buildIntegrationSkillInstructions",
+    "lib/pow-api/integration-skill.ts → buildIntegrationSkillInstructions",
 };
 
 const SKIP_PATHS = new Set(["lib/xai-client.ts"]);
@@ -86,7 +86,7 @@ const DOMAINS = [
     order: 5,
   },
   {
-    id: "agent-v2",
+    id: "pow-api",
     label: "Agent v2",
     description:
       "Proof-of-work schema, integration skills, performance reports, verification workspace builders, and PoW/Eval API routes.",
@@ -146,11 +146,11 @@ function classifyDomain(relPath, symbol, kind) {
     return "tap-scoring";
   }
   if (
-    relPath.includes("agent-v2") ||
+    relPath.includes("pow-api") ||
     relPath.includes("v3/pow") ||
     relPath.includes("demo/")
   ) {
-    return "agent-v2";
+    return "pow-api";
   }
   if (relPath.includes("rabbit-hole") || relPath.includes("insights")) {
     return "insights-rabbit-hole";
@@ -253,7 +253,7 @@ function buildConsumerEntries(relPath) {
         kind: "consumer",
         label: path.basename(relPath, ".ts"),
         description: "Delegates to a lib builder — no inline prompt strings.",
-        delegatesTo: "See related lib/agent-v2 files",
+        delegatesTo: "See related lib/pow-api files",
         text: "This route does not define prompt text inline. It calls a shared builder in lib/.",
         charCount: 0,
       },

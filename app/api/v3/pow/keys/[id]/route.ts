@@ -6,7 +6,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { errorResponse } from "@/lib/agent-v2/auth";
+import { errorResponse } from "@/lib/pow-api/auth";
 
 export async function DELETE(
   _req: NextRequest,

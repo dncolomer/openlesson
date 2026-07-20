@@ -6,7 +6,7 @@ import {
   insertWorkspaceProofOfWorkRow,
   queryWorkspaceProofOfWorkRows,
   countWorkspaceProofOfWorkForPlan,
-} from "@/lib/agent-v2/workspace-proof-of-work";
+} from "@/lib/pow-api/workspace-proof-of-work";
 
 describe("workspace proof of work helpers", () => {
   it("normalizes proof-of-work type aliases", () => {

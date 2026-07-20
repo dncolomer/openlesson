@@ -85,7 +85,7 @@ import {
   type IleSystem2Action,
 } from "@/lib/ile-thought-traces";
 import type { HeliosTurnMode } from "@/components/thought-ui/ThoughtUi";
-import type { ProofOfWorkApiInterruption } from "@/lib/agent-v2/predictive-interruption";
+import type { ProofOfWorkApiInterruption } from "@/lib/pow-api/predictive-interruption";
 import { useTapPredictiveInterruption } from "@/lib/useTapPredictiveInterruption";
 import { useTapIdleProofOfWork } from "@/lib/useTapIdleProofOfWork";
 import { useTapSpeechProofOfWork } from "@/lib/useTapSpeechProofOfWork";

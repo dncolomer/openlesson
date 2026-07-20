@@ -7,7 +7,7 @@ import {
   evalSubjectAgainstCustomVerificationModel,
   listCustomVerificationModels,
   listSubjectsWithKnowledgeConfig,
-} from "@/lib/agent-v2/custom-verification-model-store";
+} from "@/lib/pow-api/custom-verification-model-store";
 import { CustomVerificationModelError } from "@/lib/knowledge-config/custom-verification-model";
 
 export const runtime = "nodejs";

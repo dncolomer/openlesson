@@ -7,9 +7,9 @@ import {
   buildPerformanceApiPath,
   buildProofOfWorkSchemaApiPath,
   buildProofOfWorkUploadApiPath as buildUpload,
-} from "@/lib/agent-v2/proof-of-work-integration";
-import { buildVerticalScoreReportContract } from "@/lib/agent-v2/performance-report";
-import { buildIntegrationSurfaces } from "@/lib/agent-v2/integration-discovery";
+} from "@/lib/pow-api/proof-of-work-integration";
+import { buildVerticalScoreReportContract } from "@/lib/pow-api/performance-report";
+import { buildIntegrationSurfaces } from "@/lib/pow-api/integration-discovery";
 
 const ROOT = join(__dirname, "../..");
 

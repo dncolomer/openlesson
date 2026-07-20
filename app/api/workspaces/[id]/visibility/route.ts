@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { ayclTokenFromBody, guardWorkspaceRoute, requireAuthenticatedUser } from "@/lib/api/require-auth";
-import { normalizeWorkspaceGoal } from "@/lib/agent-v2/conversion-goal";
+import { normalizeWorkspaceGoal } from "@/lib/pow-api/conversion-goal";
 
 export async function PUT(
   req: NextRequest,

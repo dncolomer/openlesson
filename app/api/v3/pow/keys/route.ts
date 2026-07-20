@@ -7,11 +7,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
 import { createClient } from "@/lib/supabase/server";
-import { errorResponse } from "@/lib/agent-v2/auth";
+import { errorResponse } from "@/lib/pow-api/auth";
 import { resolveBillingEntity, billingEntityHasApiAccess } from "@/lib/billing-entity";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { DEFAULT_API_KEY_SCOPES, validateAssignableScopes } from "@/lib/agent-v2/scopes";
-import type { ApiKeyScope } from "@/lib/agent-v2/types";
+import { DEFAULT_API_KEY_SCOPES, validateAssignableScopes } from "@/lib/pow-api/scopes";
+import type { ApiKeyScope } from "@/lib/pow-api/types";
 
 const VALID_SCOPES: ApiKeyScope[] = [
   "*",

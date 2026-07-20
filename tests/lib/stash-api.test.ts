@@ -18,12 +18,12 @@ import {
   systemFlagForDecision,
   unitToPowUploadInput,
   type StashPowFlushUploader,
-} from "@/lib/agent-v2/stash-api";
+} from "@/lib/pow-api/stash-api";
 import {
   isAllowedProofOfWorkMime,
   normalizeProofOfWorkType,
   WORKSPACE_PROOF_OF_WORK_TYPES,
-} from "@/lib/agent-v2/workspace-proof-of-work";
+} from "@/lib/pow-api/workspace-proof-of-work";
 import { PRODUCTS, AGENT_COLUMN_PRODUCTS } from "@/lib/seo/products";
 import { LANDING_PRODUCT_ROWS } from "@/components/ProductTable";
 import { PLATFORM_PITCH_DECK } from "@/lib/sales/platform-pitch-deck";
@@ -311,7 +311,7 @@ describe("Stash API entry paths (handlers + routes)", () => {
 
   it("imports and invokes decision handlers from a fresh consumer path", async () => {
     // Dynamic import simulates a fresh consumer loading the public API surface
-    const stashApi = await import("@/lib/agent-v2/stash-api");
+    const stashApi = await import("@/lib/pow-api/stash-api");
     stashApi.resetAllStashBuffersForTests();
 
     const subject = stashApi.bufferSubjectId(mockAuth);

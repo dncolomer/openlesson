@@ -3,7 +3,7 @@ import {
   aggregateProofOfWorkStats,
   formatProofOfWorkBytes,
   type ProofOfWorkStatsRow,
-} from "@/lib/agent-v2/proof-of-work-stats";
+} from "@/lib/pow-api/proof-of-work-stats";
 
 function row(partial: Partial<ProofOfWorkStatsRow> & { created_at: string }): ProofOfWorkStatsRow {
   return {

@@ -6,9 +6,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { errorResponse } from "@/lib/agent-v2/auth";
-import { validateAssignableScopes } from "@/lib/agent-v2/scopes";
-import type { ApiKeyScope } from "@/lib/agent-v2/types";
+import { errorResponse } from "@/lib/pow-api/auth";
+import { validateAssignableScopes } from "@/lib/pow-api/scopes";
+import type { ApiKeyScope } from "@/lib/pow-api/types";
 
 const VALID_SCOPES: ApiKeyScope[] = [
   "*",

@@ -15,7 +15,7 @@ import {
   projectionFrameId,
   type ProjectionAlgorithmId,
 } from "@/lib/knowledge-config";
-import { projectTrajectory2D } from "@/lib/agent-v2/knowledge-config-store";
+import { projectTrajectory2D } from "@/lib/pow-api/knowledge-config-store";
 import type { KnowledgeConfigTrajectoryPoint } from "@/lib/knowledge-config";
 
 /** Build a dim-d vector with a few non-zero entries. */

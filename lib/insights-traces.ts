@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { queryWorkspaceProofOfWorkRows } from "@/lib/agent-v2/workspace-proof-of-work";
+import { queryWorkspaceProofOfWorkRows } from "@/lib/pow-api/workspace-proof-of-work";
 import { ILE_TRACE_TOOL_NAME } from "@/lib/ile-thought-traces";
 
 /** Max PoW rows scanned when building Knowledge insight suggestions. */

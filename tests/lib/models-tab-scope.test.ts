@@ -5,7 +5,7 @@ import {
   parseIdList,
   resolveModelsTabScope,
   resolveModelsTabScopeFromRequest,
-} from "@/lib/agent-v2/models-tab-scope";
+} from "@/lib/pow-api/models-tab-scope";
 import { emptyLearningWorldModel } from "@/lib/prompt-kernel/world-model";
 
 const ME = "11111111-1111-1111-1111-111111111111";

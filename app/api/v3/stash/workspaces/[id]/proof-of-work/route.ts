@@ -4,13 +4,13 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { authenticateRequest, errorResponse } from "@/lib/agent-v2/auth";
-import { canAccessAgentWorkspace } from "@/lib/agent-v2/workspace-access";
+import { authenticateRequest, errorResponse } from "@/lib/pow-api/auth";
+import { canAccessAgentWorkspace } from "@/lib/pow-api/workspace-access";
 import {
   bufferSubjectId,
   getStashBufferSize,
   ingestStashUnit,
-} from "@/lib/agent-v2/stash-api";
+} from "@/lib/pow-api/stash-api";
 
 export const runtime = "nodejs";
 export const maxDuration = 30;

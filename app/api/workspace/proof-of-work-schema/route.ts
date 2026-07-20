@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { parseProofOfWorkSchemaRequest } from "@/lib/agent-v2/proof-of-work-schema";
-import { resolveEvalDefinition } from "@/lib/agent-v2/proof-of-work-integration";
+import { parseProofOfWorkSchemaRequest } from "@/lib/pow-api/proof-of-work-schema";
+import { resolveEvalDefinition } from "@/lib/pow-api/proof-of-work-integration";
 import {
   generateProofOfWorkSchemaForWorkspace,
   proofOfWorkSchemaErrorResponse,
-} from "@/lib/agent-v2/proof-of-work-schema-handler";
-import { requireWorkspaceOwnerSession } from "@/lib/agent-v2/workspace-session-access";
+} from "@/lib/pow-api/proof-of-work-schema-handler";
+import { requireWorkspaceOwnerSession } from "@/lib/pow-api/workspace-session-access";
 
 export const runtime = "nodejs";
 export const maxDuration = 120;

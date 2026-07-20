@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { authenticateRequest, errorResponse } from "@/lib/agent-v2/auth";
-import { canAccessAgentWorkspace } from "@/lib/agent-v2/workspace-access";
-import { resolveEvaluationSubject } from "@/lib/agent-v2/evaluation-subject";
+import { authenticateRequest, errorResponse } from "@/lib/pow-api/auth";
+import { canAccessAgentWorkspace } from "@/lib/pow-api/workspace-access";
+import { resolveEvaluationSubject } from "@/lib/pow-api/evaluation-subject";
 import {
   listEvalRunHistory,
   resolveHistorySubjectScope,
-} from "@/lib/agent-v2/eval-run-history-store";
-import { SCORE_VERTICALS, type ScoreVertical } from "@/lib/agent-v2/performance-report";
+} from "@/lib/pow-api/eval-run-history-store";
+import { SCORE_VERTICALS, type ScoreVertical } from "@/lib/pow-api/performance-report";
 
 export const runtime = "nodejs";
 

@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { authenticateRequest, errorResponse } from "@/lib/agent-v2/auth";
-import { canAccessAgentWorkspace } from "@/lib/agent-v2/workspace-access";
-import { resolveEvaluationSubject } from "@/lib/agent-v2/evaluation-subject";
+import { authenticateRequest, errorResponse } from "@/lib/pow-api/auth";
+import { canAccessAgentWorkspace } from "@/lib/pow-api/workspace-access";
+import { resolveEvaluationSubject } from "@/lib/pow-api/evaluation-subject";
 import {
   loadKnowledgeConfigTrajectory,
   projectTrajectory2D,
   trajectoryPathLength,
-} from "@/lib/agent-v2/knowledge-config-store";
+} from "@/lib/pow-api/knowledge-config-store";
 import {
   KNOWLEDGE_CONFIG_EMBEDDING_MODEL_ID,
 } from "@/lib/knowledge-config";

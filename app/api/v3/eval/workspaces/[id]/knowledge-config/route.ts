@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { authenticateRequest, errorResponse } from "@/lib/agent-v2/auth";
-import { canAccessAgentWorkspace } from "@/lib/agent-v2/workspace-access";
-import { resolveEvaluationSubject } from "@/lib/agent-v2/evaluation-subject";
-import { loadLatestKnowledgeConfig } from "@/lib/agent-v2/knowledge-config-store";
-import { loadLearningWorldModel } from "@/lib/agent-v2/learning-world-model-store";
+import { authenticateRequest, errorResponse } from "@/lib/pow-api/auth";
+import { canAccessAgentWorkspace } from "@/lib/pow-api/workspace-access";
+import { resolveEvaluationSubject } from "@/lib/pow-api/evaluation-subject";
+import { loadLatestKnowledgeConfig } from "@/lib/pow-api/knowledge-config-store";
+import { loadLearningWorldModel } from "@/lib/pow-api/learning-world-model-store";
 import {
   KNOWLEDGE_CONFIG_DIM,
   KNOWLEDGE_CONFIG_EMBEDDING_MODEL_ID,

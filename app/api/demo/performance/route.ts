@@ -1,15 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
-import { finalizeVerticalScoreReport } from "@/lib/agent-v2/workspace-goal";
+import { finalizeVerticalScoreReport } from "@/lib/pow-api/workspace-goal";
 import {
   buildPerformanceChatInstructions,
   buildWorkspacePerformanceContext,
   emptyVerticalScoreReport,
-} from "@/lib/agent-v2/performance-context";
+} from "@/lib/pow-api/performance-context";
 import {
   SCORE_VERTICALS,
   type ScoreVertical,
-} from "@/lib/agent-v2/performance-report";
-import { generateWorkspaceVerticalScoreReport } from "@/lib/agent-v2/generate-performance-report";
+} from "@/lib/pow-api/performance-report";
+import { generateWorkspaceVerticalScoreReport } from "@/lib/pow-api/generate-performance-report";
 import { requireDemoAdminWorkspaceSession } from "@/lib/product-demos/demo-access";
 import { callXaiResponses, DEFAULT_MODEL, type ResponsesInputMessage } from "@/lib/xai-client";
 

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { ayclTokenFromBody,
   ileTokenFromBody, guardSessionRoute } from "@/lib/api/require-auth";
 import { callXaiJSON, systemMessage, userMessage, DEFAULT_MODEL } from "@/lib/xai-client";
-import { buildWorkspacePerformanceContext } from "@/lib/agent-v2/performance-context";
+import { buildWorkspacePerformanceContext } from "@/lib/pow-api/performance-context";
 
 interface SuggestChapterEditResponse {
   suggestions: string[];

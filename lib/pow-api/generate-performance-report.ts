@@ -1,12 +1,12 @@
-import type { ErrorCode } from "@/lib/agent-v2/types";
-import { buildOpaqueVerticalScoreInstructions } from "@/lib/agent-v2/opaque-evaluation";
+import type { ErrorCode } from "@/lib/pow-api/types";
+import { buildOpaqueVerticalScoreInstructions } from "@/lib/pow-api/opaque-evaluation";
 import {
   buildVerticalScoreInstructions,
   buildVerticalScoreReportSchema,
   recoverVerticalScoreReportFromModelText,
   type ScoreVertical,
   type VerticalScoreReport,
-} from "@/lib/agent-v2/performance-report";
+} from "@/lib/pow-api/performance-report";
 import { callXaiResponsesWithFiles, type CallResponsesResult } from "@/lib/xai-client";
 
 export interface GenerateWorkspacePerformanceReportInput {

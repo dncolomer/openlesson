@@ -5,15 +5,15 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import {
   listEvalRunHistory,
   resolveHistorySubjectScope,
-} from "@/lib/agent-v2/eval-run-history-store";
-import { getAllEvalPowGateStatuses } from "@/lib/agent-v2/eval-pow-gate";
+} from "@/lib/pow-api/eval-run-history-store";
+import { getAllEvalPowGateStatuses } from "@/lib/pow-api/eval-pow-gate";
 import {
   canAccessWorkspaceEval,
   resolveEvalPersistenceClientMode,
   resolveEvaluationSubject,
-} from "@/lib/agent-v2/evaluation-subject";
-import { SCORE_VERTICALS, type ScoreVertical } from "@/lib/agent-v2/performance-report";
-import type { AuthContext } from "@/lib/agent-v2/types";
+} from "@/lib/pow-api/evaluation-subject";
+import { SCORE_VERTICALS, type ScoreVertical } from "@/lib/pow-api/performance-report";
+import type { AuthContext } from "@/lib/pow-api/types";
 import type { User } from "@supabase/supabase-js";
 import type { SupabaseClient } from "@supabase/supabase-js";
 

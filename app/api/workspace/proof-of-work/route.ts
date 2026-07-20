@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { uploadWorkspaceProofOfWork } from "@/lib/agent-v2/upload-workspace-proof-of-work";
+import { uploadWorkspaceProofOfWork } from "@/lib/pow-api/upload-workspace-proof-of-work";
 import {
   ileTokenFromPowBody,
   requireSessionWorkspaceProofOfWorkAccess,
-} from "@/lib/agent-v2/workspace-session-access";
-import { countWorkspaceProofOfWorkForPlan } from "@/lib/agent-v2/workspace-proof-of-work";
-import { withProofOfWorkApiResponse } from "@/lib/agent-v2/predictive-interruption";
+} from "@/lib/pow-api/workspace-session-access";
+import { countWorkspaceProofOfWorkForPlan } from "@/lib/pow-api/workspace-proof-of-work";
+import { withProofOfWorkApiResponse } from "@/lib/pow-api/predictive-interruption";
 import { resolvePowInterruptionContext } from "@/lib/pow-interruption-resolver";
 
 export const runtime = "nodejs";

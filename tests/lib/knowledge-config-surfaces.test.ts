@@ -11,11 +11,11 @@ const FEATURE_SURFACE_FILES = [
   "lib/knowledge-config/encoder.ts",
   "lib/knowledge-config/index.ts",
   "lib/prompt-kernel/world-model.ts",
-  "lib/agent-v2/learning-world-model-store.ts",
-  "lib/agent-v2/knowledge-config-store.ts",
-  "lib/agent-v2/learner-state-engine.ts",
-  "lib/agent-v2/evaluation-subject.ts",
-  "lib/agent-v2/run-vertical-score.ts",
+  "lib/pow-api/learning-world-model-store.ts",
+  "lib/pow-api/knowledge-config-store.ts",
+  "lib/pow-api/learner-state-engine.ts",
+  "lib/pow-api/evaluation-subject.ts",
+  "lib/pow-api/run-vertical-score.ts",
   // Evaluation API
   "app/api/v3/eval/workspaces/[id]/world-model/route.ts",
   "app/api/v3/eval/workspaces/[id]/knowledge-config/route.ts",
@@ -95,7 +95,7 @@ describe("knowledge config / LWM feature surfaces", () => {
   });
 
   it("score paths wire learner state + return knowledge_config fields", () => {
-    const run = read("lib/agent-v2/run-vertical-score.ts");
+    const run = read("lib/pow-api/run-vertical-score.ts");
     expect(run).toContain("updateLearnerStateAfterScore");
     expect(run).toContain("learning_world_model");
     expect(run).toContain("knowledge_config");
@@ -337,7 +337,7 @@ describe("knowledge config / LWM feature surfaces", () => {
   });
 
   it("PoW schema integration loads evidence appetite from durable LWM", () => {
-    const src = read("lib/agent-v2/proof-of-work-integration.ts");
+    const src = read("lib/pow-api/proof-of-work-integration.ts");
     expect(src).toContain("loadLearningWorldModel");
     expect(src).toContain("formatEvidenceAppetiteGuidance");
     expect(src).toContain("worldModelAppetiteGuidance");

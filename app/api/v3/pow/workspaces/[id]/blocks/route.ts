@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { authenticateRequest, errorResponse } from "@/lib/agent-v2/auth";
-import { canAccessAgentWorkspace } from "@/lib/agent-v2/workspace-access";
-import { withProofOfWorkApiResponse } from "@/lib/agent-v2/predictive-interruption";
+import { authenticateRequest, errorResponse } from "@/lib/pow-api/auth";
+import { canAccessAgentWorkspace } from "@/lib/pow-api/workspace-access";
+import { withProofOfWorkApiResponse } from "@/lib/pow-api/predictive-interruption";
 
 interface RouteProps {
   params: Promise<{ id: string }>;

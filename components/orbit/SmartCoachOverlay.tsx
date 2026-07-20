@@ -13,8 +13,8 @@ import {
   X,
 } from "lucide-react";
 import { askOrbitPerformanceQuestion } from "@/lib/product-demos/orbit-learning-links";
-import type { WorkspaceGoalSource } from "@/lib/agent-v2/workspace-goal";
-import type { PerformanceReport } from "@/lib/agent-v2/performance-report";
+import type { WorkspaceGoalSource } from "@/lib/pow-api/workspace-goal";
+import type { PerformanceReport } from "@/lib/pow-api/performance-report";
 import { extractGameCoaching } from "@/lib/product-demos/game-tips";
 import type { OrbitAppSnapshot } from "@/lib/product-demos/orbit-app-context";
 import { formatOrbitSnapshotForPrompt } from "@/lib/product-demos/orbit-app-context";

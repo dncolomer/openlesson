@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useI18n } from "@/lib/i18n";
-import { slugifyIntegrationName } from "@/lib/agent-v2/integration-skill";
+import { slugifyIntegrationName } from "@/lib/pow-api/integration-skill";
 import { IntegrationQuickAccess } from "@/components/IntegrationQuickAccess";
 import { WorkspaceAccessSettings } from "@/components/WorkspaceAccessSettings";
 import { WorkspaceIdentitySettings } from "@/components/WorkspaceIdentitySettings";

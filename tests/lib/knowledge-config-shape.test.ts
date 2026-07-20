@@ -12,7 +12,7 @@ import {
   KNOWLEDGE_CONFIG_DIM,
   isKnowledgeConfigVector,
 } from "@/lib/knowledge-config";
-import { knowledgeConfigPointerFromEmbedding } from "@/lib/agent-v2/knowledge-config-store";
+import { knowledgeConfigPointerFromEmbedding } from "@/lib/pow-api/knowledge-config-store";
 
 describe("knowledge config shipped encode path shapes", () => {
   it("encodeKnowledgeConfig returns knowledgecfg-v1-d64 pointer-ready shape", () => {

@@ -11,8 +11,8 @@ import {
   TIM_SYSTEM_ROLE,
   WORKSPACE_ONTOLOGY,
 } from "@/lib/prompt-kernel";
-import { buildPerformanceReportInstructions } from "@/lib/agent-v2/performance-report";
-import { buildProofOfWorkSchemaInstructions } from "@/lib/agent-v2/proof-of-work-schema";
+import { buildPerformanceReportInstructions } from "@/lib/pow-api/performance-report";
+import { buildProofOfWorkSchemaInstructions } from "@/lib/pow-api/proof-of-work-schema";
 
 describe("prompt kernel", () => {
   it("exports a versioned kernel and ontology", () => {

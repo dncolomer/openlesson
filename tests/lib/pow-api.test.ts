@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { createdByApiKeyId } from "@/lib/agent-v2/auth";
-import { checkRateLimit, resetRateLimitsForTests } from "@/lib/agent-v2/rate-limit";
+import { createdByApiKeyId } from "@/lib/pow-api/auth";
+import { checkRateLimit, resetRateLimitsForTests } from "@/lib/pow-api/rate-limit";
 import {
   canAssignApiKeyScopes,
   DEFAULT_API_KEY_SCOPES,
@@ -8,7 +8,7 @@ import {
   hasScope,
   requiresOrgAdminScope,
   validateAssignableScopes,
-} from "@/lib/agent-v2/scopes";
+} from "@/lib/pow-api/scopes";
 
 describe("createdByApiKeyId", () => {
   it("returns key id for API key auth", () => {

@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { authenticateMcpRequest } from "@/lib/agent-v2/mcp-oauth/authenticate-mcp-request";
-import { getAppOrigin, getMcpResourceUri } from "@/lib/agent-v2/mcp-oauth/config";
+import { authenticateMcpRequest } from "@/lib/pow-api/mcp-oauth/authenticate-mcp-request";
+import { getAppOrigin, getMcpResourceUri } from "@/lib/pow-api/mcp-oauth/config";
 import {
   mcpEndpointDiscoveryResponse,
   processMcpJsonRpcRequest,
-} from "@/lib/agent-v2/mcp-jsonrpc-handler";
+} from "@/lib/pow-api/mcp-jsonrpc-handler";
 
 export const runtime = "nodejs";
 export const maxDuration = 180;

@@ -2,8 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useI18n } from "@/lib/i18n";
-import type { PerformanceReport, ScoreVertical } from "@/lib/agent-v2/performance-report";
-import { formatEvalSubjectLabel } from "@/lib/agent-v2/evaluation-subject";
+import type { PerformanceReport, ScoreVertical } from "@/lib/pow-api/performance-report";
+import { formatEvalSubjectLabel } from "@/lib/pow-api/evaluation-subject";
 import { PerformanceReportCard } from "@/components/PerformanceReportCard";
 import { LoadingStatusMessage } from "@/components/LoadingStatusMessage";
 import { KnowledgeConfigTrajectoryPanel } from "@/components/KnowledgeConfigTrajectoryPanel";

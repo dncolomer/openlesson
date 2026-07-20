@@ -10,8 +10,8 @@ import {
   scoreInstructionsRequirePowOnly,
   scoreInstructionsRequireSubmitStashAnalysis,
 } from "@/lib/prompt-kernel/surfaces/score-context";
-import { buildVerticalScoreInstructions } from "@/lib/agent-v2/performance-report";
-import { buildOpaqueVerticalScoreInstructions } from "@/lib/agent-v2/opaque-evaluation";
+import { buildVerticalScoreInstructions } from "@/lib/pow-api/performance-report";
+import { buildOpaqueVerticalScoreInstructions } from "@/lib/pow-api/opaque-evaluation";
 
 const ROOT = join(__dirname, "../..");
 
@@ -100,7 +100,7 @@ describe("buildOpaqueVerticalScoreInstructions", () => {
 describe("live generator wiring", () => {
   it("generate-performance-report calls layered score instruction builders", () => {
     const gen = readFileSync(
-      join(ROOT, "lib/agent-v2/generate-performance-report.ts"),
+      join(ROOT, "lib/pow-api/generate-performance-report.ts"),
       "utf8"
     );
     expect(gen).toContain("buildVerticalScoreInstructions");
@@ -109,14 +109,14 @@ describe("live generator wiring", () => {
   });
 
   it("performance-report builder uses buildScoreContextSurface + composePrompt", () => {
-    const src = readFileSync(join(ROOT, "lib/agent-v2/performance-report.ts"), "utf8");
+    const src = readFileSync(join(ROOT, "lib/pow-api/performance-report.ts"), "utf8");
     expect(src).toContain("buildScoreContextSurface");
     expect(src).toContain("composePrompt");
     expect(src).toMatch(/surface:\s*buildScoreContextSurface\(vertical\)/);
   });
 
   it("opaque builder uses buildOpaqueScoreContextSurface + composePrompt", () => {
-    const src = readFileSync(join(ROOT, "lib/agent-v2/opaque-evaluation.ts"), "utf8");
+    const src = readFileSync(join(ROOT, "lib/pow-api/opaque-evaluation.ts"), "utf8");
     expect(src).toContain("buildOpaqueScoreContextSurface");
     expect(src).toContain("composePrompt");
     expect(src).toMatch(/surface:\s*buildOpaqueScoreContextSurface/);

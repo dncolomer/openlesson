@@ -426,7 +426,12 @@ describe("Stash API product surfaces", () => {
     ]);
     expect(productsSlide?.cards).toHaveLength(4);
     const stashCard = productsSlide?.cards?.find((c) => /stash api/i.test(c.label));
-    expect(stashCard?.body?.toLowerCase()).toMatch(/alatap|evaluate agents|system 1|system 2/);
+    expect(stashCard?.body?.toLowerCase()).toMatch(
+      /evaluate agentic knowledge.*systems? 1 and 2 traces/,
+    );
+    expect(stashCard?.ideas?.[0]?.body?.toLowerCase()).toMatch(
+      /buffer agent proof of work.*stash \(system 1\).*submit \(system 2\)/,
+    );
 
     expect(
       PLATFORM_PITCH_DECK.slides.some((s) =>

@@ -287,7 +287,8 @@ describe("pitch deck content (platform only)", () => {
     expect(productsCorpus).toMatch(/tap-cha/);
     expect(productsCorpus).toMatch(/onboarding repair|repair loop/);
     expect(productsCorpus).toMatch(/stash api/);
-    expect(productsCorpus).toMatch(/alatap|evaluate agents|system 1|system 2/);
+    expect(productsCorpus).toMatch(/evaluate agentic knowledge|systems? 1 and 2/);
+    expect(productsCorpus).toMatch(/buffer agent proof of work|stash \(system 1\)|submit \(system 2\)/);
     expect(productsCorpus).toMatch(/knowledge config|measurement/);
     expect(
       PLATFORM_PITCH_DECK.slides.some((s) =>

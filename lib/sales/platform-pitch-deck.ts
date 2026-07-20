@@ -193,11 +193,12 @@ const PLATFORM_CLOSE: SalesSlide[] = [
       },
       {
         label: "Stash API",
-        body: "The first Agentic Product (alaTAP) — evaluate agents the same way we evaluate humans with TAP. Buffer PoW, then Stash (System 1) or Submit (System 2).",
+        // Same content as landing ProductTable Stash API row (pitch + description).
+        body: "Evaluate Agentic Knowledge by probing their Systems 1 and 2 traces",
         ideas: [
           {
-            title: "Enterprise agent validation",
-            body: "Use Stash API as the agent validation framework before deploying agents in the enterprise — prove readiness on real work with stash/submit intent, not a green CI bar alone.",
+            title: "Pure-API Think Aloud for agents",
+            body: "Buffer agent proof of work, then Stash (System 1) or Submit (System 2) into the regular PoW API — pure-API Think Aloud for agents.",
           },
         ],
       },

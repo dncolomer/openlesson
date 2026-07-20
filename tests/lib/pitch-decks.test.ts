@@ -99,12 +99,13 @@ describe("pitch deck content (platform only)", () => {
     expect(sectionTitles.map((s) => s.title)).toEqual([
       "Founder",
       "What is Uncertain Systems?",
-      "How we test it",
+      "How do we collect high quality data?",
       "Productized",
       "Data posture",
       "Our products",
     ]);
-    expect(sectionTitles[1]?.image).toBe(PITCH_ASSETS.logo);
+    // Every section title shows the brand favicon.
+    expect(sectionTitles.every((s) => s.image === PITCH_ASSETS.logo)).toBe(true);
 
     // Founder section title then founder content
     expect(PLATFORM_PITCH_DECK.slides[0]?.layout).toBe("title");
@@ -122,7 +123,9 @@ describe("pitch deck content (platform only)", () => {
 
     // Method section
     const methodStart = thesisStart + 4;
-    expect(PLATFORM_PITCH_DECK.slides[methodStart]?.title).toBe("How we test it");
+    expect(PLATFORM_PITCH_DECK.slides[methodStart]?.title).toBe(
+      "How do we collect high quality data?",
+    );
     expect(PLATFORM_PITCH_DECK.slides[methodStart + 1]?.title.toLowerCase()).toMatch(/think aloud/);
     expect(PLATFORM_PITCH_DECK.slides[methodStart + 2]?.title.toLowerCase()).toMatch(
       /grounded|game/,
@@ -197,7 +200,9 @@ describe("pitch deck content (platform only)", () => {
 
     // Method section title + TAP media
     const methodTitleIdx = thesisTitleIdx + 4;
-    expect(PLATFORM_PITCH_DECK.slides[methodTitleIdx]?.title).toBe("How we test it");
+    expect(PLATFORM_PITCH_DECK.slides[methodTitleIdx]?.title).toBe(
+      "How do we collect high quality data?",
+    );
     const tapSlide = PLATFORM_PITCH_DECK.slides[methodTitleIdx + 1];
     expect(tapSlide?.layout).toBe("media");
     expect(tapSlide?.video).toBe("/animations/selective_interface.mp4");

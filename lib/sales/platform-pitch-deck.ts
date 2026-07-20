@@ -4,7 +4,7 @@ import { PITCH_ASSETS } from "@/lib/sales/solution-slide-decks";
 import { labeledHighlights } from "@/lib/sales/slide-highlights";
 import { buildPrivacyDataSlides } from "@/lib/sales/privacy-data-slide";
 
-/** Centered section divider (title layout). */
+/** Centered section divider (title layout) — always shows brand favicon. */
 function sectionTitle(
   title: string,
   opts?: {
@@ -20,15 +20,15 @@ function sectionTitle(
     title,
     kicker: opts?.kicker,
     subtitle: opts?.subtitle,
-    image: opts?.image,
-    imageAlt: opts?.imageAlt,
+    image: opts?.image ?? PITCH_ASSETS.logo,
+    imageAlt: opts?.imageAlt ?? "Uncertain Systems logo",
     backgroundImage: opts?.backgroundImage ?? PITCH_ASSETS.aesthetics.title,
   };
 }
 
 /**
  * Platform pitch = section title before each block, founder first.
- * Sections: Founder · What is Uncertain Systems? · How we test it · Productized · Data posture · Our products
+ * Sections: Founder · What is Uncertain Systems? · How do we collect high quality data? · Productized · Data posture · Our products
  */
 const PLATFORM_FOUNDER: SalesSlide[] = [
   sectionTitle("Founder", {
@@ -39,8 +39,6 @@ const PLATFORM_FOUNDER: SalesSlide[] = [
 
 const PLATFORM_THESIS: SalesSlide[] = [
   sectionTitle("What is Uncertain Systems?", {
-    image: PITCH_ASSETS.logo,
-    imageAlt: "Uncertain Systems logo",
     backgroundImage: PITCH_ASSETS.aesthetics.title,
   }),
   {
@@ -90,12 +88,12 @@ const PLATFORM_THESIS: SalesSlide[] = [
 ];
 
 const PLATFORM_METHOD: SalesSlide[] = [
-  sectionTitle("How we test it", {
+  sectionTitle("How do we collect high quality data?", {
     backgroundImage: PITCH_ASSETS.aesthetics.products,
   }),
   {
     layout: "media",
-    kicker: "How we test it",
+    kicker: "How do we collect high quality data?",
     title: "The Think Aloud Protocol.",
     subtitle:
       "A structured protocol to externalize and capture genuine thinking while staying practical with today's AI and LLMs. Example: “Does Person X know Algebra?”",
@@ -126,7 +124,7 @@ const PLATFORM_METHOD: SalesSlide[] = [
   },
   {
     layout: "media",
-    kicker: "How we test it",
+    kicker: "How do we collect high quality data?",
     title: "Real World Grounded and extremely hard to game",
     subtitle:
       "The protocol stays tool-agnostic and enforces purity so sessions remain verifiable even under real AI use.",

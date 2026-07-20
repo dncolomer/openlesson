@@ -28,7 +28,7 @@ function sectionTitle(
 
 /**
  * Platform pitch = section title before each block, founder first.
- * Sections: Founder · What is Uncertain Systems? · How do we collect high quality data? · Productized · Data posture · Our products
+ * Sections: Founder · What is Uncertain Systems? · How do we collect high quality data? · Productized · Data Privacy and Confidential Learning · Our products
  */
 const PLATFORM_FOUNDER: SalesSlide[] = [
   sectionTitle("Founder", {
@@ -177,7 +177,7 @@ const PLATFORM_CLOSE: SalesSlide[] = [
       "TAP and ILE are not separate products — they are PoW surfaces that implement stash / submit",
     ],
   },
-  sectionTitle("Data posture", {
+  sectionTitle("Data Privacy and Confidential Learning", {
     backgroundImage: PITCH_ASSETS.aesthetics.products,
   }),
   ...buildPrivacyDataSlides(),

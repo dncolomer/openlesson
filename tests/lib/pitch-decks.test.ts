@@ -101,7 +101,7 @@ describe("pitch deck content (platform only)", () => {
       "What is Uncertain Systems?",
       "How do we collect high quality data?",
       "Productized",
-      "Data posture",
+      "Data Privacy and Confidential Learning",
       "Our products",
     ]);
     // Every section title shows the brand favicon.
@@ -131,13 +131,19 @@ describe("pitch deck content (platform only)", () => {
       /grounded|game/,
     );
 
-    // Close sections: Productized · Data posture · Our products
+    // Close sections: Productized · Data Privacy and Confidential Learning · Our products
     const closeStart = methodStart + 3;
     expect(PLATFORM_PITCH_DECK.slides[closeStart]?.title).toBe("Productized");
     expect(PLATFORM_PITCH_DECK.slides[closeStart + 1]?.kicker?.toLowerCase()).toMatch(/productized/);
-    expect(PLATFORM_PITCH_DECK.slides[closeStart + 2]?.title).toBe("Data posture");
-    expect(PLATFORM_PITCH_DECK.slides[closeStart + 3]?.kicker?.toLowerCase()).toMatch(/data/);
-    expect(PLATFORM_PITCH_DECK.slides[closeStart + 4]?.kicker?.toLowerCase()).toMatch(/data/);
+    expect(PLATFORM_PITCH_DECK.slides[closeStart + 2]?.title).toBe(
+      "Data Privacy and Confidential Learning",
+    );
+    expect(PLATFORM_PITCH_DECK.slides[closeStart + 3]?.kicker?.toLowerCase()).toMatch(
+      /data privacy|confidential learning/,
+    );
+    expect(PLATFORM_PITCH_DECK.slides[closeStart + 4]?.kicker?.toLowerCase()).toMatch(
+      /data privacy|confidential learning/,
+    );
     expect(PLATFORM_PITCH_DECK.slides[closeStart + 5]?.title).toBe("Our products");
     expect(PLATFORM_PITCH_DECK.slides[closeStart + 6]?.cards?.map((c) => c.label.toLowerCase())).toEqual([
       "pow api",
@@ -225,10 +231,14 @@ describe("pitch deck content (platform only)", () => {
     expect(productizedSlide?.cards?.length).toBeGreaterThanOrEqual(2);
 
     const dataTitleIdx = productizedTitleIdx + 2;
-    expect(PLATFORM_PITCH_DECK.slides[dataTitleIdx]?.title).toBe("Data posture");
+    expect(PLATFORM_PITCH_DECK.slides[dataTitleIdx]?.title).toBe(
+      "Data Privacy and Confidential Learning",
+    );
     const privacySlides = PLATFORM_PITCH_DECK.slides.slice(dataTitleIdx + 1, dataTitleIdx + 3);
     expect(privacySlides).toHaveLength(2);
-    expect(privacySlides.every((s) => /data/i.test(s.kicker ?? ""))).toBe(true);
+    expect(
+      privacySlides.every((s) => /data privacy|confidential learning/i.test(s.kicker ?? "")),
+    ).toBe(true);
     expect(privacySlides.every((s) => s.layout === "statement")).toBe(true);
     expect(privacySlides.every((s) => !s.imagePlaceholder && !s.image && !s.video)).toBe(true);
     expect(
@@ -650,7 +660,7 @@ describe("pitch deck content (platform only)", () => {
     expect(privacyCorpus).toMatch(/internal talent|internal candidates/);
 
     const platformPrivacy = PLATFORM_PITCH_DECK.slides.filter((s) =>
-      /data posture/i.test(s.kicker ?? ""),
+      /data privacy|confidential learning/i.test(s.kicker ?? ""),
     );
     expect(platformPrivacy.length, "platform deck should include two privacy slides").toBe(2);
     const platformText = PLATFORM_PITCH_DECK.slides

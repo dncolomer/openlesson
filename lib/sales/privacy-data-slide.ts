@@ -3,14 +3,14 @@ import { PITCH_ASSETS } from "@/lib/sales/solution-slide-decks";
 import { labeledHighlights } from "@/lib/sales/slide-highlights";
 
 /**
- * Enterprise data posture slides for the **platform** pitch deck (2 slides).
+ * Enterprise data privacy / confidential learning slides for the **platform** pitch (2 slides).
  * Text-only statement layout (no image placeholders).
  */
 export function buildPrivacyDataSlides(): SalesSlide[] {
   return [
     {
       layout: "statement",
-      kicker: "Data posture · 1/2",
+      kicker: "Data Privacy and Confidential Learning · 1/2",
       title: "Proprietary “knowing X” cannot live on a public quiz.",
       subtitle:
         "In the enterprise, skill is entangled with confidential systems. Example: does this new SRE know how to manage our production system? That knowledge is not a shareable answer key.",
@@ -32,7 +32,7 @@ export function buildPrivacyDataSlides(): SalesSlide[] {
     },
     {
       layout: "statement",
-      kicker: "Data posture · 2/2",
+      kicker: "Data Privacy and Confidential Learning · 2/2",
       title: "Custom verification models in hashed knowledge config space.",
       subtitle:
         "Distill internal talent into a high-validation region, then evaluate candidates on that geometry — with hashed or redacted traces only.",

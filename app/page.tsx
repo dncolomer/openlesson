@@ -72,7 +72,7 @@ export default function B2BLandingPage() {
               See the products
             </a>
           </div>
-          <p className="mt-6 font-mono text-[11px] uppercase tracking-[1.6px] text-zinc-600">Trace Interruption Model • Proof-of-Work API • Think Aloud Protocol • ILE • Agentic Learning Environment</p>
+          <p className="mt-6 font-mono text-[11px] uppercase tracking-[1.6px] text-zinc-600">Trace Interruption Model • Proof-of-Work API • Stash API • Think Aloud Protocol • ILE • Agentic Learning Environment</p>
         </div>
       </section>
 

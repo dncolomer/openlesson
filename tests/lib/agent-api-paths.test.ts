@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { existsSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
-import { EVAL_API_BASE, POW_API_BASE } from "@/lib/api/agent-api-paths";
+import { EVAL_API_BASE, POW_API_BASE, STASH_API_BASE } from "@/lib/api/agent-api-paths";
 import {
   buildIntegrationSkillApiPath,
   buildPerformanceApiPath,
@@ -27,6 +27,7 @@ describe("Proof-of-Work API v3 path contract", () => {
   it("exports fixed bases", () => {
     expect(POW_API_BASE).toBe("/api/v3/pow");
     expect(EVAL_API_BASE).toBe("/api/v3/eval");
+    expect(STASH_API_BASE).toBe("/api/v3/stash");
   });
 
   it("shipped path builders use pow for capture and eval for scores", () => {
@@ -57,8 +58,15 @@ describe("Proof-of-Work API v3 path contract", () => {
   it("v3 route trees exist and v2 agent/evaluation handlers are gone", () => {
     const powRoutes = collectRouteTs(join(ROOT, "app/api/v3/pow"));
     const evalRoutes = collectRouteTs(join(ROOT, "app/api/v3/eval"));
+    const stashRoutes = collectRouteTs(join(ROOT, "app/api/v3/stash"));
     expect(powRoutes.length).toBeGreaterThan(5);
     expect(evalRoutes.length).toBeGreaterThanOrEqual(6);
+    expect(stashRoutes.length).toBeGreaterThanOrEqual(3);
+    expect(
+      existsSync(join(ROOT, "app/api/v3/stash/workspaces/[id]/proof-of-work/route.ts")),
+    ).toBe(true);
+    expect(existsSync(join(ROOT, "app/api/v3/stash/workspaces/[id]/stash/route.ts"))).toBe(true);
+    expect(existsSync(join(ROOT, "app/api/v3/stash/workspaces/[id]/submit/route.ts"))).toBe(true);
 
     expect(existsSync(join(ROOT, "app/api/v3/pow/workspaces/route.ts"))).toBe(true);
     expect(

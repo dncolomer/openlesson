@@ -89,10 +89,10 @@ describe("pitch deck content (platform only)", () => {
     assertNonEmptyTitles(PLATFORM_PITCH_DECK);
 
     const founderSlides = buildFounderSlides("platform");
-    // Section titles (5) + founder content + thesis (3) + method (2) + privacy×2 + products (interface + stack)
-    // = 1+founders + 1+3 + 1+2 + 1+2 + 1+2
+    // Section titles (5) + founder content + thesis (3) + method (2) + privacy×2 + products stack (1)
+    // = 1+founders + 1+3 + 1+2 + 1+2 + 1+1
     expect(PLATFORM_PITCH_DECK.slides).toHaveLength(
-      5 + founderSlides.length + 3 + 2 + 2 + 2,
+      5 + founderSlides.length + 3 + 2 + 2 + 1,
     );
 
     const sectionTitles = PLATFORM_PITCH_DECK.slides.filter((s) => s.layout === "title");
@@ -143,21 +143,25 @@ describe("pitch deck content (platform only)", () => {
       /data privacy|confidential learning/,
     );
     expect(PLATFORM_PITCH_DECK.slides[closeStart + 3]?.title).toBe("Our products");
-    // PoW stash/submit interface lives under products (was former productized content slide)
-    expect(PLATFORM_PITCH_DECK.slides[closeStart + 4]?.title.toLowerCase()).toMatch(
-      /stash|submit|proof of work/,
-    );
+    // Products stack is the only content slide under Our products (interface slide removed)
     expect(PLATFORM_PITCH_DECK.slides[closeStart + 4]?.kicker?.toLowerCase()).toMatch(
       /our products/,
     );
-    expect(PLATFORM_PITCH_DECK.slides[closeStart + 5]?.cards?.map((c) => c.label.toLowerCase())).toEqual([
+    expect(PLATFORM_PITCH_DECK.slides[closeStart + 4]?.cards?.map((c) => c.label.toLowerCase())).toEqual([
       "pow api",
       "tap",
       "ile",
+      "stash api",
     ]);
+    // Former “One interface: Proof of Work with stash / submit” slide is gone
+    expect(
+      PLATFORM_PITCH_DECK.slides.some((s) =>
+        /one interface:\s*proof of work with stash/i.test(s.title ?? ""),
+      ),
+    ).toBe(false);
   });
 
-  it("platform deck: thesis + fullImage + 2 media video + privacy×2 + products (interface + stack), schema anchors", () => {
+  it("platform deck: thesis + fullImage + 2 media video + privacy×2 + products stack, schema anchors", () => {
     const corpus = slideCorpus(PLATFORM_PITCH_DECK).toLowerCase();
     expect(corpus).toMatch(/thesis|ratio of correct answers/);
     expect(corpus).toMatch(/knowledge config|proximity/);
@@ -248,29 +252,26 @@ describe("pitch deck content (platform only)", () => {
 
     const productsTitleIdx = dataTitleIdx + 3;
     expect(PLATFORM_PITCH_DECK.slides[productsTitleIdx]?.title).toBe("Our products");
-    // Interface slide (former productized content) then three-product stack
-    const interfaceSlide = PLATFORM_PITCH_DECK.slides[productsTitleIdx + 1];
-    expect(interfaceSlide?.layout).toBe("statement");
-    expect(interfaceSlide?.kicker?.toLowerCase()).toMatch(/our products/);
-    expect(interfaceSlide?.title.toLowerCase()).toMatch(/stash|submit|proof of work/);
-    expect(interfaceSlide?.cards?.length).toBeGreaterThanOrEqual(2);
-
-    const productsSlide = PLATFORM_PITCH_DECK.slides[productsTitleIdx + 2];
+    // Four-product stack only (interface slide removed)
+    const productsSlide = PLATFORM_PITCH_DECK.slides[productsTitleIdx + 1];
     expect(productsSlide?.layout).toBe("statement");
     expect(productsSlide?.kicker?.toLowerCase()).toMatch(/our products/);
+    expect(productsSlide?.title.toLowerCase()).toMatch(/four products/);
     expect(productsSlide?.cards?.map((c) => c.label.toLowerCase())).toEqual([
       "pow api",
       "tap",
       "ile",
+      "stash api",
     ]);
-    expect(productsSlide?.cards).toHaveLength(3);
+    expect(productsSlide?.cards).toHaveLength(4);
     for (const card of productsSlide?.cards ?? []) {
       expect(card.body?.trim().length).toBeGreaterThan(40);
       expect(card.ideas?.length).toBe(1);
       expect(card.ideas?.[0]?.title.trim().length).toBeGreaterThan(0);
       expect(card.ideas?.[0]?.body.trim().length).toBeGreaterThan(40);
     }
-    expect((productsSlide?.bullets ?? []).length).toBeGreaterThanOrEqual(2);
+    // 2×2 product grid only — no bullets outside the cards (no-scroll stage)
+    expect(productsSlide?.bullets ?? []).toHaveLength(0);
     const productsCorpus = [
       productsSlide?.subtitle,
       ...(productsSlide?.cards ?? []).flatMap((c) => [
@@ -278,7 +279,6 @@ describe("pitch deck content (platform only)", () => {
         c.body,
         ...(c.ideas ?? []).flatMap((i) => [i.title, i.body]),
       ]),
-      ...(productsSlide?.bullets ?? []),
     ]
       .join("\n")
       .toLowerCase();
@@ -286,7 +286,22 @@ describe("pitch deck content (platform only)", () => {
     expect(productsCorpus).toMatch(/dynamic saas onboarding|dynamic onboarding/);
     expect(productsCorpus).toMatch(/tap-cha/);
     expect(productsCorpus).toMatch(/onboarding repair|repair loop/);
+    expect(productsCorpus).toMatch(/stash api/);
+    expect(productsCorpus).toMatch(/alatap|evaluate agents|system 1|system 2/);
     expect(productsCorpus).toMatch(/knowledge config|measurement/);
+    expect(
+      PLATFORM_PITCH_DECK.slides.some((s) =>
+        /one interface:\s*proof of work with stash/i.test(s.title ?? ""),
+      ),
+    ).toBe(false);
+
+    const deckUiProducts = fs.readFileSync(
+      path.join(REPO_ROOT, "components/SalesSlideDeck.tsx"),
+      "utf8",
+    );
+    expect(deckUiProducts).toContain("data-pitch-card-grid-2x2");
+    expect(deckUiProducts).toMatch(/grid-cols-2/);
+    expect(deckUiProducts).toMatch(/isProducts2x2/);
 
     const deckUi = fs.readFileSync(path.join(REPO_ROOT, "components/SalesSlideDeck.tsx"), "utf8");
     expect(deckUi).toContain("data-pitch-idea");
@@ -513,6 +528,7 @@ describe("pitch deck content (platform only)", () => {
       "submit",
       "tap-cha",
       "ile",
+      "stash api",
     ]) {
       expect(platformText).toContain(anchor);
     }

@@ -39,6 +39,14 @@ export const LANDING_PRODUCT_ROWS: ProductTableRow[] = [
     href: "/products/proof-of-work-api",
   },
   {
+    name: "Stash API",
+    icon: Bot,
+    pitch: "Evaluate Agentic Knowledge by probing their Systems 1 and 2 traces",
+    description:
+      "Buffer agent proof of work, then Stash (System 1) or Submit (System 2) into the regular PoW API — pure-API Think Aloud for agents.",
+    href: "/products/stash-api",
+  },
+  {
     name: "Think Aloud Protocol",
     icon: Mic,
     pitch: "Live verification links with Socratic probe.",

@@ -984,6 +984,41 @@ export function BlockSkillGrid({
     }
   };
 
+  const isViewportTool = (t?: BlockMapToolId) =>
+    t === "zoom_in" || t === "zoom_out" || t === "recenter";
+  const isModeTool = (t?: BlockMapToolId) => t === "select" || t === "move";
+  const modeTools = stripTools.filter((t) => isModeTool(t));
+  const actionTools = stripTools.filter((t) => !isModeTool(t) && !isViewportTool(t));
+  const viewportTools = stripTools.filter((t) => isViewportTool(t));
+
+  const renderToolButton = (tool: BlockMapToolId) => {
+    const enabled = isBlockMapToolEnabled(tool, toolEnablement);
+    const isActiveMode = (tool === "select" || tool === "move") && activeTool === tool;
+    const title = toolTooltip(tool, labels);
+    return (
+      <button
+        key={tool}
+        type="button"
+        data-block-map-tool={tool}
+        data-active={isActiveMode ? "true" : "false"}
+        disabled={!enabled}
+        onClick={() => handleToolClick(tool)}
+        title={title}
+        aria-label={title}
+        aria-pressed={tool === "select" || tool === "move" ? isActiveMode : undefined}
+        className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-md border text-sm transition ${
+          isActiveMode
+            ? "border-cyan-400/70 bg-cyan-500/20 text-cyan-50 shadow-[0_0_10px_rgba(34,211,238,0.25)]"
+            : enabled
+              ? "border-transparent bg-transparent text-neutral-300 hover:border-neutral-600 hover:bg-neutral-800/80 hover:text-white"
+              : "border-transparent bg-transparent text-neutral-600 opacity-45"
+        } disabled:cursor-not-allowed`}
+      >
+        <ToolIcon id={tool} />
+      </button>
+    );
+  };
+
   return (
     <div
       className="relative flex h-full min-h-0 flex-col overflow-hidden rounded-md border border-neutral-800/60 bg-[radial-gradient(circle_at_50%_0%,rgba(255,255,255,0.04),rgba(8,8,8,0.98))]"
@@ -994,16 +1029,42 @@ export function BlockSkillGrid({
       {busy && (
         <div className="pointer-events-none absolute inset-0 z-[15] backdrop-blur-[2px] bg-black/20 transition-all duration-500" />
       )}
-      <div
-        ref={viewportRef}
-        className={`relative min-h-0 flex-1 touch-none overflow-hidden ${
-          activeTool === "move" ? "cursor-grab active:cursor-grabbing" : "cursor-default"
-        }`}
-        onPointerDown={handlePointerDown}
-        onPointerMove={handlePointerMove}
-        onPointerUp={endDrag}
-        onPointerCancel={endDrag}
-      >
+      <div className="flex min-h-0 flex-1 flex-row overflow-hidden">
+        {/* Full-height icon rail (not a floating toolbox) */}
+        <div
+          data-block-map-tool-strip
+          className="flex h-full w-11 shrink-0 flex-col items-center border-r border-neutral-800/80 bg-neutral-950/95 py-2"
+          onPointerDown={(e) => e.stopPropagation()}
+        >
+          <div className="flex flex-col items-center gap-0.5">{modeTools.map(renderToolButton)}</div>
+          {actionTools.length > 0 && (
+            <>
+              <div className="my-1.5 h-px w-6 shrink-0 bg-neutral-700/80" aria-hidden />
+              <div className="flex min-h-0 flex-1 flex-col items-center gap-0.5 overflow-y-auto">
+                {actionTools.map(renderToolButton)}
+              </div>
+            </>
+          )}
+          {viewportTools.length > 0 && (
+            <>
+              <div className="my-1.5 h-px w-6 shrink-0 bg-neutral-700/80" aria-hidden />
+              <div className="flex flex-col items-center gap-0.5">
+                {viewportTools.map(renderToolButton)}
+              </div>
+            </>
+          )}
+        </div>
+
+        <div
+          ref={viewportRef}
+          className={`relative min-h-0 flex-1 touch-none overflow-hidden ${
+            activeTool === "move" ? "cursor-grab active:cursor-grabbing" : "cursor-default"
+          }`}
+          onPointerDown={handlePointerDown}
+          onPointerMove={handlePointerMove}
+          onPointerUp={endDrag}
+          onPointerCancel={endDrag}
+        >
         <div
           className="absolute inset-0 pointer-events-none opacity-40"
           style={{
@@ -1298,59 +1359,8 @@ export function BlockSkillGrid({
           })}
         </div>
 
-        {/* Photoshop-style vertical icon tool strip — always visible */}
-        <div
-          data-block-map-tool-strip
-          className="absolute left-2 top-2 z-20 flex flex-col items-center gap-1"
-          onPointerDown={(e) => e.stopPropagation()}
-        >
-          <div className="flex flex-col gap-0.5 rounded-lg border border-neutral-700/80 bg-neutral-950/90 p-1 shadow-lg shadow-black/40 backdrop-blur-md">
-            {stripTools.map((tool, index) => {
-              const prev = stripTools[index - 1];
-              // Divider before first action after modes, and before viewport cluster
-              const isViewportTool = (t?: BlockMapToolId) =>
-                t === "zoom_in" || t === "zoom_out" || t === "recenter";
-              const isModeTool = (t?: BlockMapToolId) => t === "select" || t === "move";
-              const insertDividerBefore =
-                index > 0 &&
-                ((isModeTool(prev) && !isModeTool(tool) && !isViewportTool(tool)) ||
-                  tool === "clear_selection" ||
-                  (isViewportTool(tool) && !isViewportTool(prev)));
-              const enabled = isBlockMapToolEnabled(tool, toolEnablement);
-              const isActiveMode = (tool === "select" || tool === "move") && activeTool === tool;
-              const title = toolTooltip(tool, labels);
-              return (
-                <div key={tool} className="flex flex-col items-center">
-                  {insertDividerBefore && (
-                    <div className="my-0.5 h-px w-6 bg-neutral-700/80" aria-hidden />
-                  )}
-                  <button
-                    type="button"
-                    data-block-map-tool={tool}
-                    data-active={isActiveMode ? "true" : "false"}
-                    disabled={!enabled}
-                    onClick={() => handleToolClick(tool)}
-                    title={title}
-                    aria-label={title}
-                    aria-pressed={tool === "select" || tool === "move" ? isActiveMode : undefined}
-                    className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-md border text-sm transition ${
-                      isActiveMode
-                        ? "border-cyan-400/70 bg-cyan-500/20 text-cyan-50 shadow-[0_0_10px_rgba(34,211,238,0.25)]"
-                        : enabled
-                          ? "border-transparent bg-transparent text-neutral-300 hover:border-neutral-600 hover:bg-neutral-800/80 hover:text-white"
-                          : "border-transparent bg-transparent text-neutral-600 opacity-45"
-                    } disabled:cursor-not-allowed`}
-                  >
-                    <ToolIcon id={tool} />
-                  </button>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
         {canEdit && (
-          <div className="pointer-events-none absolute bottom-2 left-14 right-2 z-10 max-w-[min(100%,22rem)] rounded-md border border-neutral-800/80 bg-neutral-950/80 px-2 py-1 text-[10px] text-neutral-500">
+          <div className="pointer-events-none absolute bottom-2 left-2 right-2 z-10 max-w-[min(100%,22rem)] rounded-md border border-neutral-800/80 bg-neutral-950/80 px-2 py-1 text-[10px] text-neutral-500">
             {manipulationMode
               ? activeTool === "select"
                 ? `Select: click boxes to multi-select (${selectedBlockIds.length} blocks · ${selectedEmptyCells.length} empty) · double-click empty to add · double-click block for TAP/ILE`
@@ -1370,6 +1380,7 @@ export function BlockSkillGrid({
             {addError && <span className="ml-1 text-red-400/90">· {addError}</span>}
           </div>
         )}
+        </div>
       </div>
 
       {pendingCell && (

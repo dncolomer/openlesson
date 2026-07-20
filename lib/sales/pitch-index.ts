@@ -18,7 +18,7 @@ export const PITCH_INDEX: PitchIndexEntry[] = [
     path: "/pitch",
     title: "Platform Pitch",
     description:
-      "Founder story first, then product thesis and method: proximity over quiz scores, Think Aloud Protocol, Proof of Work stash/submit, and use cases across PoW · TAP · ILE.",
+      "Founder story first, then product thesis and method: proximity over quiz scores, Think Aloud Protocol, and use cases across PoW · TAP · ILE · Stash API (alaTAP).",
     vertical: "platform",
     deck: PLATFORM_PITCH_DECK,
   },

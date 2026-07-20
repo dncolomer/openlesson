@@ -70,8 +70,13 @@ const TITLE_H1 =
   "w-full text-left text-[clamp(1.85rem,2.8vw+0.85rem,3.5rem)] font-medium leading-[1.12] tracking-[-0.04em] text-white";
 const TITLE_H2 =
   "w-full text-left text-[clamp(1.5rem,2vw+0.7rem,2.75rem)] font-medium leading-[1.15] tracking-[-0.03em] text-white";
+/** Tighter title for dense 2×2 product stack (no-scroll). */
+const TITLE_H2_COMPACT =
+  "w-full shrink-0 text-left text-[clamp(1.25rem,1.5vw+0.65rem,2.1rem)] font-medium leading-[1.15] tracking-[-0.03em] text-white";
 const SUBTITLE =
   "mt-3 w-full text-left text-[clamp(1.05rem,0.7vw+0.85rem,1.4rem)] leading-snug text-zinc-200";
+const SUBTITLE_COMPACT =
+  "mt-2 w-full shrink-0 text-left text-[clamp(0.9rem,0.45vw+0.78rem,1.15rem)] leading-snug text-zinc-200";
 const BODY =
   "text-left text-[clamp(1rem,0.45vw+0.88rem,1.25rem)] leading-snug text-zinc-50";
 const SECTION_LABEL =
@@ -188,55 +193,61 @@ function IdeaIcon() {
   );
 }
 
-/** Equal framed boxes for pillars / synergy steps (e.g. three verticals, loop flow). */
+/** Equal framed boxes for pillars / synergy steps (e.g. three verticals, 2×2 products). */
 function CardGrid({
   cards,
   fill = false,
+  /** Force a 2×2 layout (products stack) instead of a 1×4 row. */
+  twoByTwo = false,
 }: {
   cards: Array<{
     label: string;
     body?: string;
     ideas?: Array<{ title: string; body: string }>;
   }>;
-  /** Stretch cards to fill remaining slide height (e.g. products trio). */
+  /** Stretch cards to fill remaining slide height (e.g. products stack). */
   fill?: boolean;
+  twoByTwo?: boolean;
 }) {
   const hasIdeas = cards.some((card) => (card.ideas?.length ?? 0) > 0);
-  const colClass =
-    cards.length >= 4
-      ? "grid-cols-1 sm:grid-cols-2 xl:grid-cols-4"
-      : cards.length === 3
-        ? "grid-cols-1 md:grid-cols-3"
-        : cards.length === 2
-          ? "grid-cols-1 md:grid-cols-2"
-          : "grid-cols-1";
+  const is2x2 = twoByTwo || cards.length === 4;
+  const colClass = is2x2
+    ? "grid-cols-2"
+    : cards.length === 3
+      ? "grid-cols-1 md:grid-cols-3"
+      : cards.length === 2
+        ? "grid-cols-1 md:grid-cols-2"
+        : "grid-cols-1";
 
   return (
     <div
       data-pitch-card-grid
       data-pitch-card-grid-ideas={hasIdeas ? "true" : undefined}
       data-pitch-card-grid-fill={fill ? "true" : undefined}
-      className={`mt-5 grid w-full gap-3 text-left sm:mt-6 sm:gap-4 ${colClass} ${
-        fill ? "min-h-0 flex-1 auto-rows-fr" : ""
+      data-pitch-card-grid-2x2={is2x2 ? "true" : undefined}
+      className={`mt-3 grid w-full gap-2.5 text-left sm:mt-4 sm:gap-3 ${colClass} ${
+        fill ? "min-h-0 flex-1 auto-rows-fr grid-rows-2" : ""
       }`}
     >
       {cards.map((card) => (
         <article
           key={card.label}
           data-pitch-card
-          className={`flex min-h-0 flex-col rounded-md border border-white/25 bg-black/55 p-4 shadow-[0_16px_40px_rgba(0,0,0,0.35)] backdrop-blur-sm sm:p-5 md:p-6 ${
-            fill ? "h-full min-h-[12rem]" : "h-full"
+          className={`flex min-h-0 flex-col overflow-hidden rounded-md border border-white/25 bg-black/55 p-3 shadow-[0_16px_40px_rgba(0,0,0,0.35)] backdrop-blur-sm sm:p-4 md:p-5 ${
+            fill ? "h-full min-h-0" : "h-full"
           }`}
         >
-          <p className="font-mono text-[10px] font-semibold uppercase tracking-[1.8px] text-cyan-200/90 sm:text-[11px]">
+          <p className="shrink-0 font-mono text-[10px] font-semibold uppercase tracking-[1.8px] text-cyan-200/90 sm:text-[11px]">
             {card.label}
           </p>
           {card.body && (
             <p
-              className={`mt-2.5 whitespace-pre-line font-medium leading-snug text-white ${
-                hasIdeas
-                  ? "text-[clamp(0.92rem,0.35vw+0.82rem,1.1rem)] text-zinc-100"
-                  : "text-[clamp(0.95rem,0.4vw+0.85rem,1.15rem)]"
+              className={`mt-1.5 shrink-0 whitespace-pre-line font-medium leading-snug text-white sm:mt-2 ${
+                is2x2 && hasIdeas
+                  ? "text-[clamp(0.78rem,0.28vw+0.72rem,0.98rem)] text-zinc-100"
+                  : hasIdeas
+                    ? "text-[clamp(0.92rem,0.35vw+0.82rem,1.1rem)] text-zinc-100"
+                    : "text-[clamp(0.95rem,0.4vw+0.85rem,1.15rem)]"
               }`}
             >
               {card.body}
@@ -245,23 +256,35 @@ function CardGrid({
           {card.ideas && card.ideas.length > 0 ? (
             <div
               data-pitch-idea-list
-              className={`mt-3 flex flex-col gap-2.5 sm:mt-4 sm:gap-3 ${fill ? "min-h-0 flex-1" : ""}`}
+              className={`mt-2 flex min-h-0 flex-col gap-2 sm:mt-2.5 sm:gap-2.5 ${fill ? "flex-1" : ""}`}
             >
               {card.ideas.map((idea) => (
                 <div
                   key={`${card.label}-${idea.title}`}
                   data-pitch-idea
-                  className={`rounded-md border border-white/15 bg-white/[0.05] px-3 py-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] sm:px-3.5 sm:py-3 ${
-                    fill ? "flex min-h-0 flex-1 flex-col" : ""
+                  className={`min-h-0 overflow-hidden rounded-md border border-white/15 bg-white/[0.05] px-2.5 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] sm:px-3 sm:py-2.5 ${
+                    fill ? "flex flex-1 flex-col" : ""
                   }`}
                 >
-                  <div className="flex gap-2.5">
+                  <div className="flex min-h-0 gap-2">
                     <IdeaIcon />
-                    <div className="min-w-0">
-                      <p className="text-left text-[clamp(0.95rem,0.4vw+0.85rem,1.12rem)] font-semibold leading-snug text-white">
+                    <div className="min-w-0 min-h-0 flex-1 overflow-hidden">
+                      <p
+                        className={`text-left font-semibold leading-snug text-white ${
+                          is2x2
+                            ? "text-[clamp(0.82rem,0.28vw+0.75rem,1rem)]"
+                            : "text-[clamp(0.95rem,0.4vw+0.85rem,1.12rem)]"
+                        }`}
+                      >
                         {idea.title}
                       </p>
-                      <p className="mt-1.5 text-left text-[clamp(0.88rem,0.32vw+0.78rem,1.05rem)] leading-snug text-zinc-200">
+                      <p
+                        className={`mt-1 text-left leading-snug text-zinc-200 ${
+                          is2x2
+                            ? "text-[clamp(0.75rem,0.25vw+0.7rem,0.95rem)]"
+                            : "text-[clamp(0.88rem,0.32vw+0.78rem,1.05rem)]"
+                        }`}
+                      >
                         {idea.body}
                       </p>
                     </div>
@@ -526,30 +549,40 @@ function SlideContent({ slide }: { slide: SalesSlide }) {
     // Single-product idea slides (one card with nested ideas) must fit without scroll.
     const isSingleProductIdeas =
       slide.cards?.length === 1 && (slide.cards[0]?.ideas?.length ?? 0) > 0;
-    // Three product cards with examples — grow to fill the stage.
-    const isProductsTrio =
-      slide.cards?.length === 3 &&
+    // Product stack cards with examples (3 or 4) — fill the stage; 4 → 2×2, no bullets.
+    const isProductsStack =
+      (slide.cards?.length === 3 || slide.cards?.length === 4) &&
       slide.cards.every((c) => (c.ideas?.length ?? 0) >= 1);
+    const isProducts2x2 = isProductsStack && slide.cards?.length === 4;
 
     return (
       <SlideFrame>
         <ContentPanel
           className={
-            isSingleProductIdeas || isProductsTrio
+            isSingleProductIdeas || isProductsStack
               ? "!overflow-hidden"
               : undefined
           }
         >
           {slide.kicker && <Eyebrow>{slide.kicker}</Eyebrow>}
-          <h2 className={TITLE_H2}>{slide.title}</h2>
-          {slide.subtitle && <p className={SUBTITLE}>{slide.subtitle}</p>}
+          <h2 className={isProducts2x2 ? TITLE_H2_COMPACT : TITLE_H2}>{slide.title}</h2>
+          {slide.subtitle && (
+            <p className={isProducts2x2 ? SUBTITLE_COMPACT : SUBTITLE}>{slide.subtitle}</p>
+          )}
           {slide.cards && slide.cards.length > 0 && (
-            <CardGrid cards={slide.cards} fill={isProductsTrio} />
+            <CardGrid
+              cards={slide.cards}
+              fill={isProductsStack}
+              twoByTwo={isProducts2x2}
+            />
           )}
           {slide.highlights && slide.highlights.length > 0 && (
             <HighlightCallouts items={slide.highlights} labels={slide.highlightLabels} />
           )}
-          {slide.bullets && slide.bullets.length > 0 && <BulletList items={slide.bullets} />}
+          {/* Products 2×2 keeps all copy inside cards — never bullets under the grid. */}
+          {!isProducts2x2 && slide.bullets && slide.bullets.length > 0 && (
+            <BulletList items={slide.bullets} />
+          )}
         </ContentPanel>
       </SlideFrame>
     );

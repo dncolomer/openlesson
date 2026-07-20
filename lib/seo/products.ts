@@ -22,7 +22,7 @@ export const TIM_FOUNDATION = {
   summary:
     "The shared brain behind every product. It watches how people and agents think during real work, then steps in with a targeted question instead of waiting for the next chat reply.",
   bullets: [
-    "Same model across Proof-of-Work API, TAP, ILE, and ALE",
+    "Same model across Proof-of-Work API, Stash API, TAP, ILE, and ALE",
     "Grounded in your workflow, skills, and conversion goals",
   ],
 };
@@ -61,6 +61,21 @@ export const PRODUCTS: ProductDefinition[] = [
         "Fits CI, eval harnesses, and deploy gates",
       ],
       href: "/products/proof-of-work-api",
+      ctaLabel: "Learn more",
+    },
+  },
+  {
+    id: "stash-api",
+    eyebrow: "Agentic API · alaTAP",
+    title: "Stash API",
+    forAgent: {
+      summary:
+        "Evaluate agents the same way we evaluate humans with TAP. Buffer proof of work, then Stash (System 1) or Submit (System 2) into the regular PoW stack.",
+      bullets: [
+        "Same PoW types as Proof-of-Work API — tool, screen, video, EEG",
+        "Temporary memory until Stash or Submit; intent is first-class evidence",
+      ],
+      href: "/products/stash-api",
       ctaLabel: "Learn more",
     },
   },

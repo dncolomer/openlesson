@@ -47,12 +47,19 @@ export function Navbar({ breadcrumbs = [], showNav = true }: NavbarProps) {
     router.refresh();
   };
 
-  const navLinks = [
-    { href: "/pricing", label: "Upgrade" },
-    { href: "/vision", label: "Vision" },
-    { href: "/science", label: "Science" },
-    { href: "/dashboard", label: t('nav.dashboard') },
-  ];
+  // Logged-in: product nav only (Upgrade + Dashboard). Vision/Science stay for guests.
+  const navLinks =
+    isLoggedIn === true
+      ? [
+          { href: "/pricing", label: "Upgrade" },
+          { href: "/dashboard", label: t("nav.dashboard") },
+        ]
+      : [
+          { href: "/pricing", label: "Upgrade" },
+          { href: "/vision", label: "Vision" },
+          { href: "/science", label: "Science" },
+          { href: "/dashboard", label: t("nav.dashboard") },
+        ];
 
   const solutionLinks = [
     { href: "/", label: t('nav.forIndividuals') },

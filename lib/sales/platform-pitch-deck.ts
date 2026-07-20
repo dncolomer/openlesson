@@ -156,37 +156,9 @@ const PLATFORM_CLOSE: SalesSlide[] = [
   {
     layout: "statement",
     kicker: "Our products",
-    title: "One interface: Proof of Work with stash / submit.",
+    title: "Four products. One measurement stack.",
     subtitle:
-      "The PoW interface is the product surface. Work and thought stream continuously; each unit is either stashed (kept private / parked) or submitted (committed as evidence). Scoring attaches to that deliberate choice.",
-    backgroundImage: PITCH_ASSETS.aesthetics.verticals,
-    ...labeledHighlights([
-      [
-        "PoW interface",
-        "Stash or submit every unit of work and thought. Intent is first-class evidence — the same contract for humans, agents, and tools.",
-      ],
-    ]),
-    cards: [
-      {
-        label: "TAP implements it",
-        body: "Think Aloud Protocol runs the stash / submit model on selective thought: spontaneous System 1 can be stashed; deliberate System 2 is submitted under probe.",
-      },
-      {
-        label: "ILE implements it",
-        body: "Integrated Learning Environment tools run the same model on practice work — notebook, canvas, and tool traces stash or submit as continuous proof of work.",
-      },
-    ],
-    bullets: [
-      "One contract: stream → stash or submit → score intent and evidence together",
-      "TAP and ILE are not separate products — they are PoW surfaces that implement stash / submit",
-    ],
-  },
-  {
-    layout: "statement",
-    kicker: "Our products",
-    title: "Three products. One measurement stack.",
-    subtitle:
-      "PoW API, Think Aloud Protocol, and ILE are different surfaces for the same knowledge configuration model — measure proximity to “knowing X,” not quiz pass rates.",
+      "PoW API, Think Aloud Protocol, ILE, and Stash API are different surfaces for the same knowledge configuration model — measure proximity to “knowing X,” not quiz pass rates.",
     backgroundImage: PITCH_ASSETS.aesthetics.useCase,
     cards: [
       {
@@ -219,11 +191,18 @@ const PLATFORM_CLOSE: SalesSlide[] = [
           },
         ],
       },
+      {
+        label: "Stash API",
+        body: "The first Agentic Product (alaTAP) — evaluate agents the same way we evaluate humans with TAP. Buffer PoW, then Stash (System 1) or Submit (System 2).",
+        ideas: [
+          {
+            title: "Enterprise agent validation",
+            body: "Use Stash API as the agent validation framework before deploying agents in the enterprise — prove readiness on real work with stash/submit intent, not a green CI bar alone.",
+          },
+        ],
+      },
     ],
-    bullets: [
-      "One measurement contract across all three: proof of work → knowledge config embeddings → distance to labeled regions",
-      "Humans, agents, and tools share the same readiness bar — different surfaces, same stack",
-    ],
+    // No bullets under the 2×2 product grid — all copy lives in the four cards (no-scroll stage).
   },
 ];
 

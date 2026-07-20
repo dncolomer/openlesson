@@ -117,17 +117,22 @@ describe("workspace create + builder static wiring", () => {
     expect(ops).toContain("block-footprint-prompt");
   });
 
-  it("block map exposes a vertical icon tool strip with Select and wired grid ops", () => {
+  it("block map exposes a full-height icon tool column with Select and wired grid ops", () => {
     const grid = read("components/BlockSkillGrid.tsx");
     expect(grid).toContain("data-block-map-tool-strip");
-    expect(grid).toContain('data-block-map-tool={tool}');
+    // Full top–bottom rail column (not floating absolute toolbox)
+    expect(grid).toContain("h-full w-11 shrink-0 flex-col");
+    expect(grid).toContain("border-r border-neutral-800");
+    expect(grid).not.toMatch(/data-block-map-tool-strip[\s\S]{0,120}absolute left-2 top-2/);
+    expect(grid).toContain("data-block-map-tool={tool}");
     expect(grid).toContain("activeTool");
     expect(grid).toContain("DEFAULT_BLOCK_MAP_MODE");
     expect(grid).toContain("nextActiveModeTool");
     expect(grid).toContain("isBlockMapToolEnabled");
     expect(grid).toContain("handleToolClick");
-    // Select plain-click must populate selectedBlockIds via shared resolver
-    expect(grid).toContain("resolveBlockSelectionOnClick");
+    // Select plain-click must populate selectedBlockIds via shared selection helpers
+    expect(grid).toContain("toggleOrReplaceBlockSelection");
+    expect(grid).toContain("applyBlockSelection");
     expect(grid).toContain("setSelectedBlockIds");
     // Explicit Select tool + mode affordance
     expect(grid).toContain('"select"');

@@ -417,4 +417,75 @@ export const ALE_PAGE: SeoProductPageConfig = {
     "Book a demo to see private agent skill training, scoring, and iteration inside the Uncertain Systems workspace.",
 };
 
-export const PRODUCT_PAGES = [TIM_PAGE, POW_API_PAGE, TAP_PAGE, ILE_PAGE, ALE_PAGE] as const;
+export const STASH_API_PAGE: SeoProductPageConfig = {
+  slug: "stash-api",
+  path: "/products/stash-api",
+  eyebrow: "Stash API · alaTAP",
+  h1: "Evaluate agents the same way we evaluate humans with TAP.",
+  intro:
+    "Stash API is the first Agentic Product (alaTAP) — a pure-API Think Aloud Protocol for agents. Stream the same proof-of-work types as Proof-of-Work API into temporary memory, then decide Stash (System 1) or Submit (System 2). Every decision flushes into the regular PoW stack with workspace and user references so scoring can contrast intent the same way TAP does for humans.",
+  metaTitle: "Stash API | alaTAP — Agent Evaluation like Think Aloud Protocol",
+  metaDescription:
+    "Stash API buffers agent proof of work, then Stash (System 1) or Submit (System 2) into Proof-of-Work API. Evaluate agents the same way we evaluate humans with TAP.",
+  keywords: [
+    "stash API",
+    "alaTAP",
+    "agent evaluation",
+    "agent think aloud",
+    "system 1 system 2 agents",
+    "proof of work stash submit",
+    "agentic product",
+  ],
+  heroImageAlt: "Stash API — alaTAP agent evaluation",
+  useCases: [
+    {
+      title: "Agent think-aloud over REST",
+      description:
+        "Orchestrators buffer tool traces, screens, video, and EEG as they work — then call Stash or Submit when the agent parks or commits a reasoning step.",
+    },
+    {
+      title: "System 1 vs System 2 for agents",
+      description:
+        "Stash marks fast, provisional work (System 1). Submit marks deliberate commits (System 2). Both become durable PoW with intent metadata for scoring.",
+    },
+    {
+      title: "Same meter as human TAP",
+      description:
+        "Agents are evaluated on the same knowledge-config stack as humans: proof of work → embeddings → distance to labeled regions — not a separate agent quiz.",
+    },
+    {
+      title: "CI and deploy gates with intent",
+      description:
+        "Flush buffered agent runs as evidence before promotion. Intent (stash vs submit) is first-class, not just the final polished artifact.",
+    },
+  ],
+  highlights: [
+    "First Agentic Product (alaTAP) — pure-API TAP for agents",
+    "Same PoW types as Proof-of-Work API: tool, screen, video, EEG",
+    "Temporary buffer until Stash (System 1) or Submit (System 2); memory resets after flush",
+    "Flushes through the regular PoW API with workspace, user, and system flags",
+  ],
+  faqs: [
+    {
+      question: "How is Stash API different from Proof-of-Work API?",
+      answer:
+        "PoW API stores evidence immediately. Stash API holds units in temporary memory until you Stash or Submit — matching TAP’s deliberate intent choice for agents over pure API calls.",
+    },
+    {
+      question: "What happens on Stash vs Submit?",
+      answer:
+        "Both flush every buffered unit through Proof-of-Work API with workspace and user references. Stash attaches System 1 metadata; Submit attaches System 2. The buffer then resets.",
+    },
+    {
+      question: "Is this a replacement for TAP?",
+      answer:
+        "No. TAP is the live human protocol. Stash API is alaTAP — the agentic product that applies the same stash/submit evaluation model to agents.",
+    },
+  ],
+  secondaryCta: { label: "View Proof-of-Work API docs", href: "/docs/proof-of-work-api" },
+  closingTitle: "Give agents the same evaluation bar as humans.",
+  closingBody:
+    "Book a demo to see Stash API buffer → stash/submit → PoW scoring for agent workflows on the Uncertain Systems stack.",
+};
+
+export const PRODUCT_PAGES = [TIM_PAGE, POW_API_PAGE, STASH_API_PAGE, TAP_PAGE, ILE_PAGE, ALE_PAGE] as const;

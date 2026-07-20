@@ -11,7 +11,7 @@ export const metadata: Metadata = {
   description: "Comprehensive specification for the Uncertain Systems Proof-of-Work API, enabling external AI agents to measure learning efficiency from workspaces, evidence, and TAP sessions.",
   openGraph: {
     title: "Proof-of-Work API Specification",
-    description: "Enable AI agents to create Workspaces, issue Think Aloud Protocol (TAP) links, route ILE practice, and read learning efficiency results.",
+    description: "Enable AI agents to upload proof of work on Workspaces, issue Think Aloud Protocol (TAP) links, route ILE practice, and read learning efficiency results.",
     url: "https://uncertain.systems/docs/proof-of-work-api",
     siteName: "Uncertain Systems",
     type: "website",
@@ -20,7 +20,7 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "Proof-of-Work API Specification",
-    description: "Enable AI agents to create Workspaces, issue Think Aloud Protocol (TAP) links, route ILE practice, and read learning efficiency results.",
+    description: "Enable AI agents to upload proof of work on Workspaces, issue Think Aloud Protocol (TAP) links, route ILE practice, and read learning efficiency results.",
     images: ogImages.map((image) => image.url),
   },
   robots: {

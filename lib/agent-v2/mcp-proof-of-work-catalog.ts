@@ -8,12 +8,6 @@ export const MCP_PROOF_OF_WORK_TOOL_CATALOG = [
     summary: "Progress snapshot: workspace_goal, blocks, counts, recommended_next_actions (REST + MCP).",
   },
   { name: "get_workspace", scope: "workspaces:read", summary: "Read workspace metadata and workspace_goal." },
-  {
-    name: "create_workspace",
-    scope: "workspaces:write",
-    summary:
-      "Create a workspace from Files + Goal only: initial_prompt is the Goal (optional files, initial_chapters: narrow|mid|broad; spatial signed grid). Blank and Template modes are UI-only.",
-  },
   { name: "list_blocks", scope: "workspaces:read", summary: "List assessable blocks." },
   {
     name: "generate_proof_of_work_schema",

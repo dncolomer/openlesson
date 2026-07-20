@@ -158,17 +158,22 @@ describe("workspace create + builder static wiring", () => {
     expect(tools).toContain("isBlockMapManipulationMode");
   });
 
-  it("API/agent create is files+goal only", () => {
+  it("programmatic API/MCP create is disabled; UI generate remains", () => {
+    const route = read("app/api/v3/pow/workspaces/route.ts");
+    expect(route).not.toContain("createAgentWorkspace");
+    expect(route).toContain("WORKSPACE_CREATE_UI_ONLY_MESSAGE");
+
+    const catalog = read("lib/agent-v2/mcp-proof-of-work-catalog.ts");
+    expect(catalog).not.toMatch(/name:\s*"create_workspace"/);
+
+    const mcp = read("lib/agent-v2/mcp-proof-of-work-server.ts");
+    expect(mcp).toContain("rejectProgrammaticWorkspaceCreate");
+    // create_workspace must hard-fail, not call createAgentWorkspace
+    expect(mcp).not.toMatch(/await createAgentWorkspace/);
+
+    // Internal helper may still exist for legacy/demo paths, but public surfaces reject
     const create = read("lib/agent-v2/create-agent-workspace.ts");
     expect(create).toContain("assertApiCreateMode");
-    expect(create).toContain("composeAgentFilesGoalPrompt");
-    expect(create).toContain("goalFieldsFromPrompt");
-    // Mode gate runs before goal-prompt composition / LLM path
-    expect(create.indexOf("assertApiCreateMode")).toBeLessThan(
-      create.indexOf("composeAgentFilesGoalPrompt"),
-    );
-    const catalog = read("lib/agent-v2/mcp-proof-of-work-catalog.ts");
-    expect(catalog).toMatch(/Files \+ Goal only/i);
   });
 
   it("generate route is mode-aware for blank, template, and files_goal", () => {

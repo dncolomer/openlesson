@@ -300,10 +300,10 @@ Required content:
    - Include JSON examples for active interruption and null (empty).
 5. Authentication table (Bearer sk_ / gsk_, Teams tier, scopes).
 6. Endpoints table covering REST and MCP with **dual documentation** (never hide REST behind MCP):
-   - REST: POST /workspaces, GET /blocks, POST /proof-of-work-schema, POST /proof-of-work, POST /verification-score, POST /augmentation-score, POST /optimization-score, POST /integration-skill
+   - REST: GET /blocks, POST /proof-of-work-schema, POST /proof-of-work, POST /verification-score, POST /augmentation-score, POST /optimization-score, POST /integration-skill (workspace create is UI-only; do not document POST /workspaces or MCP create_workspace as supported)
    - MCP (JSON-RPC at POST /api/mcp with Bearer auth): list_workspaces, get_workspace, get_learning_progress, list_blocks, generate_proof_of_work_schema, upload_proof_of_work, verification_score, augmentation_score, optimization_score, generate_integration_skill, create_tap_link, list_tap_links
-   - State that MCP tools have full parity with REST; proof-of-work spec responses include both continuous_evaluation (REST paths) and continuous_evaluation_mcp (tool names)
-   - Recommend get_learning_progress / generate_proof_of_work_schema first for progress orientation
+   - State that MCP tools have parity with REST for capture/score flows; workspace creation is product UI only (/workspace/new); proof-of-work spec responses include both continuous_evaluation (REST paths) and continuous_evaluation_mcp (tool names)
+   - Recommend get_learning_progress / generate_proof_of_work_schema first for progress orientation on an existing workspace
 7. **Proof-of-work specification (required section)** — explain that payloads are defined by the formal proof-of-work spec returned from POST ${proofOfWorkSchemaPath}. Include:
    - When to call the proof of work spec endpoint (before first upload, after proof-of-work milestones, when eval definition or blocks change)
    - Example request body with definition, optional block_id, and integration_hints

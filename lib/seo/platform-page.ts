@@ -104,7 +104,7 @@ export const PLATFORM_PAGE: SeoPlatformPageConfig = {
     {
       title: "Proof-of-Work API: programmatic workspace access",
       paragraphs: [
-        "The Proof-of-Work API is how builders wire the Workspace into their stack. Create workspaces, upload proof of work, request unified performance reports, issue Think Aloud Protocol links, poll TAP completion, and trigger ILE practice blocks.",
+        "The Proof-of-Work API is how builders wire the Workspace into their stack. Upload proof of work on UI-created workspaces, request unified performance reports, issue Think Aloud Protocol links, poll TAP completion, and trigger ILE practice blocks.",
         "Embed verification and augmentation into CI pipelines, internal portals, agent orchestration, or any system where humans and agents perform knowledge work.",
       ],
     },

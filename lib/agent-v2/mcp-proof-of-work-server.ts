@@ -12,8 +12,8 @@ import {
   generateWorkspaceProofOfWorkSpec,
   parseOpaqueSchemaRequest,
 } from "./proof-of-work-integration";
-import { createAgentWorkspace } from "./create-agent-workspace";
 import { CreateTapLinkError, createWorkspaceTapLink } from "./create-tap-link";
+import { rejectProgrammaticWorkspaceCreate } from "./workspace-create-ui-only";
 import {
   buildPrivacyMetadata,
   extractGoalRefFromWorkspaceGoal,
@@ -87,8 +87,9 @@ Progress signals: proof_of_work_artifact counts; verification_score / augmentati
 Every tool result includes top-level \`interruption\` (object or null). When non-null, schedule intervention after delay_ms unless a later Proof-of-Work API call supersedes it. Read interruption_contract from generate_proof_of_work_schema. Resource: uncertain-systems://predictive-interruptions
 
 ## Evaluation modes
-- **semantic** (default): \`create_workspace\` with \`initial_prompt\`. Grok decomposes the workspace; performance reports use semantic gap analysis.
-- **opaque**: \`create_workspace\` with \`evaluation_mode: "opaque"\` and \`protocol\` (\`protocol_id\`, \`goal_ref\`, optional \`phases\` / \`goal_tokens\`). Privacy-preserving structural verification — prompts are not stored, semantic inference is disabled, uploads are plaintext-linted.
+Workspaces are created **only in the product UI** (\`/workspace/new\`). Programmatic create (\`create_workspace\` / \`POST /workspaces\`) is not available.
+- **semantic** (default): performance reports use semantic gap analysis against the workspace goal and blocks.
+- **opaque**: privacy-preserving structural verification — prompts are not stored, semantic inference is disabled, uploads are plaintext-linted.
   - \`generate_proof_of_work_schema\`: opaque workspaces use \`definition_ref\` + \`contract.event_verbs\` (not \`definition\`).
   - \`upload_proof_of_work\`: metadata allowlist only; tool payloads reject file paths unless \`metadata.allow_plaintext=true\`.
   - Vertical score tools (\`verification_score\`, \`augmentation_score\`, \`optimization_score\`): add \`evaluation_mode\`, \`privacy\`, and \`protocol_report\` (structural compliance) on opaque workspaces.
@@ -96,12 +97,12 @@ Every tool result includes top-level \`interruption\` (object or null). When non
 Canonical protocol \`agent-trace-v3\` phases: enumerate → fingerprint → aggregate → emit → validate.
 
 ## Start here
-1. get_learning_progress(workspace_id) — orientation + recommended_next_actions (REST equivalents included)
+1. list_workspaces or get_learning_progress(workspace_id) — orient on an existing UI-created workspace
 2. generate_proof_of_work_schema — returns continuous_evaluation (REST) AND continuous_evaluation_mcp (tools); read both
 3. upload_proof_of_work after product actions (repeat)
 4. verification_score / augmentation_score / optimization_score for scorecards (each one primary score + spider + analysis + next actions)
 5. Re-fetch schema + regenerate skill as proof of work grows
-Note: TAP auto-results always use verification_score only.
+Note: TAP auto-results always use verification_score only. Workspace creation is UI-only.
 
 REST mirror: capture via Bearer auth on /api/v3/pow/workspaces/{id}/...; scores via /api/v3/eval/workspaces/{id}/... (POST .../verification-score | .../augmentation-score | .../optimization-score).
 
@@ -151,50 +152,6 @@ export const MCP_EVIDENCE_TOOLS = [
       additionalProperties: false,
     },
     annotations: { readOnlyHint: true },
-  },
-  {
-    name: "create_workspace",
-    description:
-      "Create a Verification Workspace from initial_prompt (semantic) or protocol (opaque). Optional seed files. Semantic mode places blocks on a 2D skill grid starting at (0,0) with signed multi-quadrant coords, sparse branching paths, and an initial_chapters band (narrow|mid|broad) controlling how many blocks to generate.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        evaluation_mode: { type: "string", enum: ["semantic", "opaque"] },
-        initial_prompt: { type: "string", description: "Required for semantic mode." },
-        initial_chapters: {
-          type: "string",
-          enum: ["narrow", "mid", "broad"],
-          description:
-            "Initial chapters/blocks band for semantic create: narrow (fewest), mid (default), broad (most; deeper branch arms). Controls generate count and spatial breadth.",
-        },
-        protocol: {
-          type: "object",
-          description: "Required for opaque mode: protocol_id, goal_ref, optional phases/goal_tokens.",
-          properties: {
-            protocol_id: { type: "string" },
-            goal_ref: { type: "string" },
-            phases: { type: "array" },
-            goal_tokens: { type: "array" },
-            constraints: { type: "array" },
-          },
-        },
-        external_refs: { type: "object", description: "Partner-owned opaque refs (stored, not inferred)." },
-        files: {
-          type: "array",
-          description: "Optional seed files (max 5): name, mime_type, data (base64).",
-          items: {
-            type: "object",
-            properties: {
-              name: { type: "string" },
-              mime_type: { type: "string" },
-              data: { type: "string" },
-            },
-            required: ["name", "mime_type", "data"],
-          },
-        },
-      },
-      additionalProperties: false,
-    },
   },
   {
     name: "list_blocks",
@@ -520,51 +477,6 @@ async function assertBlockInWorkspace(
   if (!block) throw new Error("Block not found in this workspace.");
 }
 
-interface InitialFile {
-  name: string;
-  mime_type: string;
-  data: string;
-}
-
-interface GeneratedBlock {
-  id: string;
-  title: string;
-  description: string;
-  is_start?: boolean;
-  next?: string[];
-}
-
-interface GeneratedWorkspace {
-  title: string;
-  workspace_goal?: string;
-  blocks: GeneratedBlock[];
-}
-
-const CREATE_WORKSPACE_MAX_FILES = 5;
-const CREATE_WORKSPACE_MAX_FILE_SIZE = 10 * 1024 * 1024;
-const CREATE_WORKSPACE_ALLOWED_MIME = new Set([
-  "application/pdf",
-  "text/plain",
-  "text/markdown",
-  "text/x-markdown",
-  "image/jpeg",
-  "image/png",
-  "image/webp",
-  "image/jpg",
-]);
-
-function parseInitialFiles(value: unknown): InitialFile[] {
-  if (!Array.isArray(value)) return [];
-  return value.filter((file): file is InitialFile => {
-    const candidate = file as Partial<InitialFile>;
-    return (
-      typeof candidate.name === "string" &&
-      typeof candidate.mime_type === "string" &&
-      typeof candidate.data === "string"
-    );
-  });
-}
-
 function tapLinkIdArg(args: Record<string, unknown>) {
   return stringArg(args, "tap_link_id");
 }
@@ -690,26 +602,8 @@ export async function callMcpProofOfWorkTool(
   }
 
   if (name === "create_workspace") {
-    requireScope(auth.scopes, "workspaces:write");
-    if (!auth.user_id && !auth.guest_user_id) {
-      throw new Error("A user or guest API key is required to create workspaces.");
-    }
-    if (auth.guest_user_id && !auth.organization_id) {
-      throw new Error("Guest workspace creation requires organization context.");
-    }
-
-    const created = await createAgentWorkspace(supabase, auth, args as Record<string, unknown>);
-
-    return await evidenceToolResult(
-      {
-        workspace: created.workspace,
-        blocks: created.blocks,
-        files: created.files,
-        evaluation_mode: created.privacy.evaluation_mode,
-        privacy: created.privacy,
-      },
-      { endpoint: "create_workspace", workspace_id: created.workspace.id as string }
-    );
+    // Tool removed from catalog; hard-fail if a client still calls it.
+    rejectProgrammaticWorkspaceCreate();
   }
 
   if (name === "list_blocks") {

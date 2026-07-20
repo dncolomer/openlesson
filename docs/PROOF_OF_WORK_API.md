@@ -3,7 +3,7 @@
 Capture base path: **`/api/v3/pow`**  
 Evaluation base path: **`/api/v3/eval`**
 
-- **PoW (`/api/v3/pow`)** — workspace create/read, proof-of-work upload, proof-of-work schema, integration skill, blocks, TAP links, API keys, org guests.
+- **PoW (`/api/v3/pow`)** — workspace read, proof-of-work upload, proof-of-work schema, integration skill, blocks, TAP links, API keys, org guests. **Workspace creation is UI-only** (`/workspace/new`); `POST /workspaces` is not available.
 - **Eval (`/api/v3/eval`)** — vertical scores (`verification-score`, `augmentation-score`, `optimization-score`), durable learning world model, knowledge-config latest + trajectory, and pure **Knowledge distance** geometry (user ↔ knowledge region; not a vertical Eval).
 
 There is no `/api/v2/*` agent surface.
@@ -45,10 +45,10 @@ Valid scopes are `workspaces:read`, `workspaces:write`, `tap:read`, `tap:write`,
 
 Workspaces support two evaluation modes (stored on `workspaces.evaluation_mode`):
 
-| Mode | Create with | Schema | Performance |
+| Mode | How workspaces are created | Schema | Performance |
 | :--- | :--- | :--- | :--- |
-| `semantic` (default) | `initial_prompt` (+ optional `files`) | `definition` rubric text | Vertical scores (`verification_score` / `augmentation_score` / `optimization_score` each with `marker_scores`, analysis, next actions) |
-| `opaque` | `evaluation_mode: "opaque"` + `protocol` | `definition_ref` + `contract.event_verbs` | Structural protocol report (`protocol_report`, `privacy`; no semantic inference) |
+| `semantic` (default) | **UI only** (`/workspace/new`) | `definition` rubric text | Vertical scores (`verification_score` / `augmentation_score` / `optimization_score` each with `marker_scores`, analysis, next actions) |
+| `opaque` | **UI only** (`/workspace/new`) | `definition_ref` + `contract.event_verbs` | Structural protocol report (`protocol_report`, `privacy`; no semantic inference) |
 
 **Opaque mode** is for privacy-preserving verification: partner-owned references (`goal_ref`, `definition_ref`, `external_refs`) are stored but never semantically interpreted. Upload metadata is allowlisted; tool payloads are plaintext-linted (file paths rejected unless `metadata.allow_plaintext=true`).
 
@@ -58,7 +58,6 @@ Canonical protocol `agent-trace-v3` phases: `enumerate` → `fingerprint` → `a
 
 | Method | Path | Scope | Description |
 | :--- | :--- | :--- | :--- |
-| `POST` | `/workspaces` | `workspaces:write` | Create a Verification Workspace (semantic `initial_prompt` or opaque `protocol`). |
 | `GET` | `/workspaces/{workspace_id}/blocks` | `workspaces:read` | List available blocks in the workspace. |
 | `POST` | `/workspaces/{workspace_id}/proof-of-work-schema` | `workspaces:read` | Grok-generated JSON Schema for ideal tool proof of work input given workspace context + eval definition. |
 | `POST` | `/workspaces/{workspace_id}/integration-skill` | `workspaces:read` | Grok-generated workspace-specific `skill.md` integration guide for a partner agent. |
@@ -218,47 +217,11 @@ Score responses always include:
 
 **Opaque workspaces** also return `evaluation_mode`, `privacy`, `workspace_goal_source: "opaque_ref"`, and `protocol_report` (structural compliance: `protocol_compliance_score`, `phase_coverage`, `trace_integrity`, `structural_gaps`).
 
-## Create Workspace
+## Create Workspace (UI only)
 
-**Semantic (default):**
+**Workspace creation is not available via REST or MCP.** `POST /api/v3/pow/workspaces` and the MCP tool `create_workspace` are rejected with `403 forbidden` and a message that create is UI-only.
 
-```json
-{
-  "initial_prompt": "Prepare me to explain vector databases in a technical interview.",
-  "initial_chapters": "mid",
-  "files": [
-    {
-      "name": "notes.md",
-      "mime_type": "text/markdown",
-      "data": "base64-encoded-file"
-    }
-  ]
-}
-```
-
-**Opaque:**
-
-```json
-{
-  "evaluation_mode": "opaque",
-  "protocol": {
-    "protocol_id": "agent-trace-v3",
-    "goal_ref": "goal_ref:partner-token-abc",
-    "goal_tokens": ["goal_ref:partner-token-abc"]
-  },
-  "external_refs": {
-    "partner_run_id": "opaque-partner-ref-001"
-  }
-}
-```
-
-- Semantic: `initial_prompt` required; Grok generates title, blocks, and workspace goal.
-- `initial_chapters` (optional, semantic only): `narrow` | `mid` (default) | `broad`. Controls how many **initial chapters/blocks** are generated (narrow fewest, broad most with deeper branch arms). Also accepted as camelCase `initialChapters`.
-- Semantic block layout is a **2D skill grid**: start at `(0,0)`, use **positive and negative** coordinates (all quadrants), prefer **sparse paths** (not a filled rectangle), and allow **branching** (`next` may have multiple children; some arms deeper). Generated `position_x` / `position_y` and graph links are persisted onto blocks.
-- Opaque: `protocol.protocol_id` and `protocol.goal_ref` required; blocks are generated from protocol phases (canonical `agent-trace-v3` if phases omitted). `initial_prompt` is not stored.
-- `files` optional in both modes (max 5; PDF, text, Markdown, JPEG, PNG, WebP; 10 MB each).
-- Create response includes `evaluation_mode` and `privacy` metadata.
-- MCP tool `create_workspace` accepts the same fields (`initial_chapters` included on the tool schema).
+Create workspaces manually in the product UI at **`/workspace/new`** (blank, template, or files+goal modes). Semantic and opaque evaluation modes still apply to existing workspaces; integrators `list_workspaces` / `get_workspace` / `get_learning_progress` against IDs created in the UI.
 
 ## Request TAP Link
 
@@ -276,7 +239,7 @@ The response includes a private URL for the TAP session UI. Think Aloud Protocol
 
 ## Organizations And Guests
 
-Users on the Teams tier can create an organization with `POST /api/organization` and become its admin. Organization admins can use `POST /api/v3/pow/org/guests` with an `org:write` API key to create guest users by email. Guest users receive individual API keys scoped to workspace creation, workspace reading, and TAP link usage (`workspaces:read`, `workspaces:write`, `tap:read`, `tap:write`).
+Users on the Teams tier can create an organization with `POST /api/organization` and become its admin. Organization admins can use `POST /api/v3/pow/org/guests` with an `org:write` API key to create guest users by email. Guest users receive individual API keys scoped to workspace reading, proof-of-work upload, and TAP link usage (`workspaces:read`, `workspaces:write`, `tap:read`, `tap:write`). Workspace **creation** remains UI-only.
 
 Organization-owned workspaces are visible to all real users and guest users in that organization. When a guest signs up later with the same email, their real user account inherits the guest organization membership, TAP sessions, and guest API keys.
 

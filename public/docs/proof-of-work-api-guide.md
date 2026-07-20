@@ -1,6 +1,6 @@
 # Uncertain Systems Proof-of-Work API
 
-The Proof-of-Work API exposes the Verification Workspace workflow: create workspaces, upload proof of work, run **three vertical scores** (verification, augmentation, optimization), issue Think Aloud Protocol (TAP) links, and poll TAP completion.
+The Proof-of-Work API exposes the Verification Workspace workflow on **UI-created** workspaces: upload proof of work, run **three vertical scores** (verification, augmentation, optimization), issue Think Aloud Protocol (TAP) links, and poll TAP completion. Workspace creation is product UI only (`/workspace/new`).
 
 Capture: `/api/v3/pow` · Evaluation: `/api/v3/eval`
 
@@ -10,8 +10,8 @@ Authenticate with `Authorization: Bearer <api_key>`.
 
 | Mode | Create | Schema | Scoring |
 | :--- | :--- | :--- | :--- |
-| `semantic` (default) | `initial_prompt` | `definition` | Vertical scores with semantic gap analysis |
-| `opaque` | `evaluation_mode: "opaque"` + `protocol` | `definition_ref` + `contract.event_verbs` | `protocol_report` + structural scoring |
+| `semantic` (default) | **UI only** (`/workspace/new`) | `definition` | Vertical scores with semantic gap analysis |
+| `opaque` | **UI only** (`/workspace/new`) | `definition_ref` + `contract.event_verbs` | `protocol_report` + structural scoring |
 
 Opaque mode stores partner references (`goal_ref`, `external_refs`) without semantic inference. Upload metadata is allowlisted; tool payloads are plaintext-linted.
 
@@ -19,7 +19,6 @@ Opaque mode stores partner references (`goal_ref`, `external_refs`) without sema
 
 | Method | Path | Scope | Purpose |
 | :--- | :--- | :--- | :--- |
-| `POST` | `/workspaces` | `workspaces:write` | Create a workspace (semantic `initial_prompt` or opaque `protocol`). |
 | `GET` | `/workspaces/{workspace_id}/blocks` | `workspaces:read` | List available blocks in a workspace. |
 | `POST` | `/workspaces/{workspace_id}/proof-of-work` | `workspaces:write` | Upload tool usage, screenshots, video, or EEG linked to workspace/block. |
 | `POST` | `/workspaces/{workspace_id}/verification-score` | `workspaces:read` | Learning verification score (0–100) + spider, analysis, next actions. **TAP auto-results use this only.** |
@@ -64,42 +63,9 @@ Each score endpoint returns **one** primary 0–100 score for that vertical, plu
 - **Augmentation** — practice / improvement readiness.
 - **Optimization** — progress toward the inferred `workspace_goal` (score units 0–100; replaces former conversion %).
 
-## Create Workspace
+## Create Workspace (UI only)
 
-`POST /api/v3/pow/workspaces`
-
-**Semantic:**
-
-```json
-{
-  "initial_prompt": "Prepare me to explain vector databases in a technical interview.",
-  "initial_chapters": "mid",
-  "files": [
-    {
-      "name": "notes.md",
-      "mime_type": "text/markdown",
-      "data": "base64-encoded-file"
-    }
-  ]
-}
-```
-
-**Opaque:**
-
-```json
-{
-  "evaluation_mode": "opaque",
-  "protocol": {
-    "protocol_id": "agent-trace-v3",
-    "goal_ref": "goal_ref:partner-token-abc"
-  },
-  "external_refs": { "partner_run_id": "opaque-ref-001" }
-}
-```
-
-Files are optional (max 5, 10 MB each). Response includes `evaluation_mode` and `privacy`. The workspace stores an inferred `workspace_goal` (owner-editable).
-
-Optional semantic field `initial_chapters` (`narrow` | `mid` | `broad`) sets how many initial skill-grid blocks to generate. Blocks start at `(0,0)`, may use signed multi-quadrant coordinates, sparse branching paths, and persisted `position_x` / `position_y` plus `next` links. MCP `create_workspace` accepts the same parameter.
+Programmatic create is **not available**. `POST /api/v3/pow/workspaces` and MCP `create_workspace` are rejected with `403 forbidden`. Create workspaces in the product UI at `/workspace/new`, then use list/get/progress APIs against that workspace ID.
 
 ## TAP Links
 
@@ -125,4 +91,4 @@ Identified gaps can be routed into Integrated Learning Environment (ILE) practic
 
 ## Guests
 
-Org admins with `org:write` can call `POST /org/guests` to mint `gsk_` keys. Guests may create workspaces, upload proof of work, run vertical scores on their own artifacts, and use TAP links.
+Org admins with `org:write` can call `POST /org/guests` to mint `gsk_` keys. Guests may upload proof of work, run vertical scores on their own artifacts, and use TAP links on accessible (UI-created) workspaces.

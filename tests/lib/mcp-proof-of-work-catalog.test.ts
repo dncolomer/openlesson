@@ -24,6 +24,11 @@ describe("MCP_PROOF_OF_WORK_TOOL_CATALOG", () => {
     expect(names).not.toContain("analyze_performance");
   });
 
+  it("does not offer create_workspace (UI-only create)", () => {
+    const names = MCP_PROOF_OF_WORK_TOOL_CATALOG.map((tool) => tool.name);
+    expect(names).not.toContain("create_workspace");
+  });
+
   it("does not advertise conversion scorecard branding", () => {
     const blob = JSON.stringify(MCP_PROOF_OF_WORK_TOOL_CATALOG);
     expect(blob).not.toContain("conversion_score");

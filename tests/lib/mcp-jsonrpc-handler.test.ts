@@ -29,7 +29,7 @@ describe("mcp-jsonrpc-handler", () => {
     });
   });
 
-  it("lists MCP tools", async () => {
+  it("lists MCP tools without create_workspace", async () => {
     const response = await handleJsonRpc(
       { jsonrpc: "2.0", id: 2, method: "tools/list", params: {} },
       auth,
@@ -38,8 +38,10 @@ describe("mcp-jsonrpc-handler", () => {
     );
 
     const tools = (response?.result as { tools?: { name: string }[] })?.tools ?? [];
-    expect(tools.map((tool) => tool.name)).toContain("list_workspaces");
-    expect(tools.map((tool) => tool.name)).toContain("upload_proof_of_work");
+    const names = tools.map((tool) => tool.name);
+    expect(names).toContain("list_workspaces");
+    expect(names).toContain("upload_proof_of_work");
+    expect(names).not.toContain("create_workspace");
   });
 
   it("emits absolute endpoint URLs for streamable HTTP discovery", async () => {

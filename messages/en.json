@@ -513,7 +513,7 @@
     "freeSessionAvailable": "1 free block available",
     "unlimitedContinue": "Unlimited blocks continue",
     "proofOfWorkApi": "Proof-of-Work API",
-    "proofOfWorkApiDesc": "Create Workspaces, issue TAP links, and run unified performance analysis via the Proof-of-Work API.",
+    "proofOfWorkApiDesc": "Upload proof of work on Workspaces, issue TAP links, and run unified performance analysis via the Proof-of-Work API.",
     "proofOfWorkApiTeamsRequired": "Proof-of-Work API keys require the Teams tier. ",
     "apiKeys": "API Keys",
     "noApiKeysYet": "No API keys yet",

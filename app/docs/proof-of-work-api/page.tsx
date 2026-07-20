@@ -37,100 +37,28 @@ const ENDPOINT_SPECS: EndpointSpec[] = [
     method: "POST",
     path: "/api/v3/pow/workspaces",
     scope: "workspaces:write",
-    summary: "Create a workspace in semantic mode (initial_prompt) or opaque mode (protocol). Optional seed files in both.",
-    status: "201 Created",
-    requestBody: [
-      { name: "evaluation_mode", type: "string", description: "semantic (default) | opaque. Opaque disables semantic inference and stores protocol refs only." },
-      { name: "initial_prompt", type: "string", description: "Semantic mode: task or learning goal used to generate title and blocks (required unless opaque)." },
-      {
-        name: "protocol",
-        type: "object",
-        description: "Opaque mode: protocol_id and goal_ref required; optional phases[], goal_tokens[], constraints[].",
-      },
-      { name: "protocol.protocol_id", type: "string", description: "Opaque: protocol identifier (e.g. agent-trace-v3)." },
-      { name: "protocol.goal_ref", type: "string", description: "Opaque: partner-owned goal reference (not semantically interpreted)." },
-      { name: "external_refs", type: "object", description: "Opaque: partner-owned opaque references stored but not inferred." },
-      {
-        name: "files",
-        type: "array<object>",
-        description: "Optional seed files (max 5). Each item: name (string), mime_type (string), data (base64 string).",
-      },
-      { name: "files[].name", type: "string", required: true, description: "Filename including extension." },
-      { name: "files[].mime_type", type: "string", required: true, description: "application/pdf, text/plain, text/markdown, image/jpeg, image/png, image/webp." },
-      { name: "files[].data", type: "string (base64)", required: true, description: "File bytes, max 10 MB per file." },
-    ],
-    requestExample: `// Semantic
-{
-  "initial_prompt": "Prepare a CSM to handle enterprise renewal negotiations.",
-  "files": [{ "name": "brief.md", "mime_type": "text/markdown", "data": "<base64>" }]
-}
-
-// Opaque
-{
-  "evaluation_mode": "opaque",
-  "protocol": {
-    "protocol_id": "agent-trace-v3",
-    "goal_ref": "goal_ref:partner-token-abc"
-  },
-  "external_refs": { "partner_run_id": "opaque-ref-001" }
-}`,
+    summary:
+      "Not available. Programmatic workspace creation is disabled; create workspaces manually in the product UI at /workspace/new.",
+    status: "403 Forbidden",
     responseBody: [
-      { name: "evaluation_mode", type: "string", description: "semantic | opaque" },
+      { name: "error.code", type: "string", description: "forbidden" },
       {
-        name: "privacy",
-        type: "object",
-        description: "evaluation_mode, semantic_inference (enabled|disabled), plaintext_lint (off|enforced), stored_prompt (boolean).",
+        name: "error.message",
+        type: "string",
+        description:
+          "Workspace creation is not available via API or MCP. Create workspaces manually in the product UI at /workspace/new.",
       },
-      { name: "workspace.id", type: "uuid", description: "Workspace ID (workspaces.id)." },
-      { name: "workspace.title", type: "string", description: "Generated workspace title." },
-      { name: "workspace.root_topic", type: "string", description: "Truncated prompt summary." },
-      { name: "workspace.status", type: "string", description: "active" },
-      { name: "workspace.notes", type: "string", description: "Full initial prompt stored as notes." },
-      { name: "workspace.created_at", type: "ISO-8601", description: "Creation timestamp." },
-      { name: "workspace.updated_at", type: "ISO-8601", description: "Last update timestamp." },
-      { name: "blocks", type: "array", description: "Generated assessable blocks (3–8)." },
-      { name: "blocks[].id", type: "uuid", description: "Block ID (blocks.id)." },
-      { name: "blocks[].title", type: "string", description: "Block title." },
-      { name: "blocks[].description", type: "string", description: "What the learner should demonstrate." },
-      { name: "blocks[].is_start", type: "boolean", description: "True for the entry block." },
-      { name: "blocks[].next_block_ids", type: "uuid[]", description: "Linked next blocks in the graph." },
-      { name: "blocks[].status", type: "string", description: "available" },
-      { name: "blocks[].created_at", type: "ISO-8601", description: "Block creation timestamp." },
-      { name: "files", type: "array", description: "Uploaded workspace_files records (empty if none)." },
-      { name: "files[].id", type: "uuid", description: "workspace_files.id" },
-      { name: "files[].file_name", type: "string", description: "Original filename." },
-      { name: "files[].file_size", type: "integer", description: "Bytes." },
-      { name: "files[].mime_type", type: "string", description: "MIME type." },
-      { name: "files[].created_at", type: "ISO-8601", description: "Upload timestamp." },
     ],
     responseExample: `{
-  "workspace": {
-    "id": "a3090aa0-3498-4be8-aa87-32a1a6591641",
-    "title": "Enterprise Renewal Negotiation Prep",
-    "root_topic": "Prepare a CSM to handle enterprise renewal negotiations.",
-    "status": "active",
-    "notes": "Prepare a CSM to handle enterprise renewal negotiations.",
-    "created_at": "2026-06-23T13:01:32.64659+00:00",
-    "updated_at": "2026-06-23T13:01:32.64659+00:00"
-  },
-  "blocks": [
-    {
-      "id": "e57844a6-1b69-465c-9120-d0812d6339ae",
-      "title": "Context & Procurement Tactics",
-      "description": "Demonstrate knowledge of renewal cycles and procurement pushback.",
-      "is_start": true,
-      "next_block_ids": ["b454f31a-3045-4c23-a60e-820b43d0e9ce"],
-      "status": "available",
-      "created_at": "2026-06-23T13:01:32.691293+00:00"
-    }
-  ],
-  "files": []
+  "error": {
+    "code": "forbidden",
+    "message": "Workspace creation is not available via API or MCP. Create workspaces manually in the product UI at /workspace/new."
+  }
 }`,
     notes: [
-      "Semantic: initial_prompt required; Grok generates title, blocks, workspace_goal.",
-      "Opaque: protocol.protocol_id + protocol.goal_ref required; blocks generated from protocol phases; initial_prompt not stored.",
-      "Guest keys (gsk_) may create workspaces; workspace is org-owned and tagged with guest_user_id.",
-      "Requires Teams tier (403 teams_required otherwise).",
+      "Workspace creation is UI-only (blank, template, or files+goal at /workspace/new).",
+      "MCP tool create_workspace is not offered and hard-fails with the same message if called.",
+      "Use list_workspaces / get_workspace / get_learning_progress against UI-created workspace IDs.",
     ],
   },
   {
@@ -1227,7 +1155,7 @@ Content-Type: application/json`}</code>
             title="Scope reference"
             fields={[
               { name: "workspaces:read", type: "scope", description: "List blocks; generate proof-of-work schemas and integration skills; call verification-score / augmentation-score / optimization-score." },
-              { name: "workspaces:write", type: "scope", description: "Create workspaces; upload proof of work." },
+              { name: "workspaces:write", type: "scope", description: "Upload proof of work (workspace create is UI-only)." },
               { name: "tap:read", type: "scope", description: "List TAP links and poll completion status (score via POST .../verification-score)." },
               { name: "tap:write", type: "scope", description: "Create Think Aloud Protocol (TAP) links for blocks." },
               { name: "org:read", type: "scope", description: "Reserved for org admin keys (future org read endpoints)." },

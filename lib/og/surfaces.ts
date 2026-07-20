@@ -135,7 +135,7 @@ export const OG_SURFACES: Record<string, OgSurface> = {
     path: "/docs/proof-of-work-api",
     title: "Proof-of-Work API specification",
     description:
-      "Enable AI agents to create Workspaces, issue Think Aloud Protocol links, route ILE practice, and read learning efficiency results.",
+      "Enable AI agents to upload proof of work on Workspaces, issue Think Aloud Protocol links, route ILE practice, and read learning efficiency results.",
     eyebrow: "Docs",
     brand: BRAND,
     footerLabel: "API reference",

@@ -600,7 +600,7 @@
     "priceRegular2026": "from $19.99/month",
     "priceProTeams": "from $399/month",
     "proofOfWorkApi": "Proof-of-Work API",
-    "proofOfWorkApiDesc": "Create Workspaces, issue TAP links, and run unified performance analysis via the Proof-of-Work API.",
+    "proofOfWorkApiDesc": "Upload proof of work on Workspaces, issue TAP links, and run unified performance analysis via the Proof-of-Work API.",
     "proofOfWorkApiTeamsRequired": "Proof-of-Work API keys require the Teams tier. ",
     "mcpTitle": "Proof-of-Work API MCP",
     "mcpDescription": "Connect Cursor, Claude Desktop, Grok, or custom MCP clients to the same Proof-of-Work API as REST. Use the same Teams API keys with Bearer auth.",

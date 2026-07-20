@@ -1,6 +1,6 @@
 # Uncertain Systems Proof-of-Work API
 
-Use this skill when an agent needs to create Verification Workspaces, issue private Think Aloud Protocol (TAP) links, and run unified performance analysis via the Uncertain Systems Proof-of-Work API.
+Use this skill when an agent needs to work with existing Verification Workspaces (created in the product UI), issue private Think Aloud Protocol (TAP) links, upload proof of work, and run unified performance analysis via the Uncertain Systems Proof-of-Work API.
 
 **Human-readable spec:** `/docs/proof-of-work-api`  
 **Base URL:** `https://uncertain.systems` (or your self-hosted origin)
@@ -11,7 +11,7 @@ Use this skill when an agent needs to create Verification Workspaces, issue priv
 
 The Proof-of-Work API supports **only** this workflow:
 
-1. Create a Verification Workspace — **semantic** mode from `initial_prompt` (optional `initial_chapters`: `narrow`|`mid`|`broad` for block count; blocks start at `(0,0)` with signed multi-quadrant sparse branching paths), or **opaque** mode from `evaluation_mode: "opaque"` + `protocol` (optional `files` in both).
+1. Resolve an existing Verification Workspace created in the product UI (`/workspace/new`) — use `list_workspaces` / `get_workspace` / `get_learning_progress`. **Do not** call `POST /workspaces` or MCP `create_workspace` (rejected: create is UI-only).
 2. List blocks in that workspace.
 3. *(Optional)* Generate an ideal proof-of-work input JSON schema (`POST .../proof-of-work-schema`) or a custom integration `skill.md` (`POST .../integration-skill`) from workspace context.
 4. Upload performance proof of work (tool usage, screenshots, video, EEG) to xAI storage, linked to the workspace and/or a block.
@@ -20,7 +20,7 @@ The Proof-of-Work API supports **only** this workflow:
 7. List TAP links and completion status.
 8. Poll TAP completion (`list_tap_links` / `GET .../tap-links`); score TAP proof of work via `POST .../verification-score` only (TAP is a verification tool).
 
-**Out of scope** — do not describe or call removed features: blockchain tracking, proof anchoring, live tutoring session control, heartbeats, or plan adaptation. Legacy web-session upload routes (`/api/session-files/*`) are separate from this API; agents should use `POST .../proof-of-work` for workspace-linked artifacts.
+**Out of scope** — do not describe or call removed features: programmatic workspace create, blockchain tracking, proof anchoring, live tutoring session control, heartbeats, or plan adaptation. Legacy web-session upload routes (`/api/session-files/*`) are separate from this API; agents should use `POST .../proof-of-work` for workspace-linked artifacts.
 
 **Teams tier required.** All `/api/v3/pow/*` routes require an active `pro_teams` subscription (platform admins bypass). Individual-tier keys are rejected with `403 teams_required`.
 
@@ -30,8 +30,8 @@ The Proof-of-Work API supports **only** this workflow:
 
 | Mode | When to use | Create | Schema | Performance |
 |------|-------------|--------|--------|-------------|
-| `semantic` | Default — full learning verification | `initial_prompt` | `definition` | Vertical scores (`verification_score` / `augmentation_score` / `optimization_score`), semantic gap analysis |
-| `opaque` | Privacy-preserving structural verification | `protocol` (`protocol_id`, `goal_ref`) | `definition_ref` + `contract.event_verbs` | `protocol_report`, `privacy`; no semantic inference |
+| `semantic` | Default — full learning verification | **UI only** (`/workspace/new`) | `definition` | Vertical scores (`verification_score` / `augmentation_score` / `optimization_score`), semantic gap analysis |
+| `opaque` | Privacy-preserving structural verification | **UI only** (`/workspace/new`) | `definition_ref` + `contract.event_verbs` | `protocol_report`, `privacy`; no semantic inference |
 
 **Opaque guardrails:**
 - `goal_ref`, `definition_ref`, and `external_refs` are stored but **never interpreted** into domain meaning.
@@ -134,9 +134,9 @@ Content-Type: application/json
 { "jsonrpc": "2.0", "id": 1, "method": "tools/list" }
 ```
 
-**Tools (full REST parity):** `list_workspaces`, `get_workspace`, `get_learning_progress`, `create_workspace`, `list_blocks`, `generate_proof_of_work_schema`, `generate_integration_skill`, `upload_proof_of_work`, `verification_score`, `augmentation_score`, `optimization_score`, `list_tap_links`, `create_tap_link`
+**Tools (REST parity for capture/score; create is UI-only):** `list_workspaces`, `get_workspace`, `get_learning_progress`, `list_blocks`, `generate_proof_of_work_schema`, `generate_integration_skill`, `upload_proof_of_work`, `verification_score`, `augmentation_score`, `optimization_score`, `list_tap_links`, `create_tap_link`
 
-Opaque mode is supported on `create_workspace` (`evaluation_mode`, `protocol`, `external_refs`), `generate_proof_of_work_schema` (`definition_ref`, `contract`), `upload_proof_of_work` (metadata allowlist + plaintext lint), and vertical score tools (`protocol_report`).
+Workspace creation is **not** available via MCP or REST — create workspaces in the product UI at `/workspace/new`. Opaque mode is supported on existing workspaces for `generate_proof_of_work_schema` (`definition_ref`, `contract`), `upload_proof_of_work` (metadata allowlist + plaintext lint), and vertical score tools (`protocol_report`).
 
 **Partner agents:** call `get_learning_progress` to orient, then `upload_proof_of_work` and the vertical score tools (`verification_score` / `augmentation_score` / `optimization_score`) per your agent policy. PumaDoc policy snippets: `/customer-agent-uncertain-systems-policy.md`, `/pumaclaw-mentor-uncertain-systems-policy.md`.
 
@@ -150,56 +150,19 @@ MCP resources: `uncertain-systems://integration-scope`, `uncertain-systems://pro
 
 ## Endpoints
 
-### `POST /api/v3/pow/workspaces` — `workspaces:write`
+### `POST /api/v3/pow/workspaces` — not available (UI-only create)
 
-Create a Verification Workspace. Guest keys with `workspaces:write` may call this; the workspace is owned by the organization and tagged with `guest_user_id`.
+Programmatic workspace creation is **disabled**. This endpoint returns `403 forbidden` with a message that create is UI-only. MCP `create_workspace` is not in the tool catalog and hard-fails with the same message if called.
 
-**Semantic request:**
+**Create workspaces in the product UI** at `/workspace/new` (blank, template, or files+goal). Then use `list_workspaces` / `get_workspace` / `get_learning_progress` with the resulting workspace ID.
 
-```json
-{
-  "initial_prompt": "Prepare the learner to explain vector databases for interview prep.",
-  "files": [
-    {
-      "name": "brief.md",
-      "mime_type": "text/markdown",
-      "data": "<base64>"
-    }
-  ]
-}
-```
-
-**Opaque request:**
+**Response `403`:**
 
 ```json
 {
-  "evaluation_mode": "opaque",
-  "protocol": {
-    "protocol_id": "agent-trace-v3",
-    "goal_ref": "goal_ref:partner-token-abc",
-    "goal_tokens": ["goal_ref:partner-token-abc"]
-  },
-  "external_refs": { "partner_run_id": "opaque-ref-001" }
-}
-```
-
-- Semantic: `initial_prompt` required
-- Opaque: `protocol.protocol_id` + `protocol.goal_ref` required; `initial_prompt` not stored
-- `files` (optional, max 5; PDF, text, markdown, JPEG, PNG, WebP; 10 MB each)
-
-**Response `201`:**
-
-```json
-{
-  "workspace": { "id": "uuid", "title": "...", "status": "active" },
-  "blocks": [{ "id": "uuid", "title": "...", "is_start": true, "status": "available" }],
-  "files": [],
-  "evaluation_mode": "semantic",
-  "privacy": {
-    "evaluation_mode": "semantic",
-    "semantic_inference": "enabled",
-    "plaintext_lint": "off",
-    "stored_prompt": true
+  "error": {
+    "code": "forbidden",
+    "message": "Workspace creation is not available via API or MCP. Create workspaces manually in the product UI at /workspace/new."
   }
 }
 ```
@@ -581,7 +544,7 @@ Facilitation style: Socratic — one concise question at a time, follow-ups from
 
 | Action | Org-admin / member key (`sk_`) | Guest key (`gsk_`) |
 |--------|-------------------------------|---------------------|
-| Create workspace | ✅ `workspaces:write` | ✅ `workspaces:write` |
+| Create workspace | ❌ UI only (`/workspace/new`) | ❌ UI only |
 | List blocks | ✅ | ✅ (org workspaces) |
 | Proof-of-work schema / integration skill | ✅ | ✅ |
 | Upload proof of work | ✅ | ✅ (own uploads) |
@@ -590,15 +553,15 @@ Facilitation style: Socratic — one concise question at a time, follow-ups from
 | List TAP link status | ✅ | ✅ (own links) |
 | Create guest + issue `gsk_` | ✅ `org:write` + `is_org_admin` | ❌ |
 
-**Integration pattern:** Org admin provisions guests with `gsk_` keys. Each guest can create their own Verification Workspaces or use org-shared ones; they use their key for workspace creation, block reads, and TAP links. TAP transcripts and thought traces land in proof-of-work — score with `POST .../verification-score` only.
+**Integration pattern:** Org admin provisions guests with `gsk_` keys. Workspaces are created in the product UI; guests use their keys for proof-of-work upload, block reads, and TAP links on accessible workspaces. TAP transcripts and thought traces land in proof-of-work — score with `POST .../verification-score` only.
 
 ---
 
 ## Quick integration checklist
 
 1. Teams user creates org (`POST /api/organization`) and API key (`sk_` with default scopes).
-2. `POST /workspaces` — semantic: `initial_prompt`; opaque: `evaluation_mode: "opaque"` + `protocol` (+ optional `files`).
-3. `GET .../blocks` → map blocks to your workflow steps (opaque: protocol phases).
+2. Create a Verification Workspace in the product UI at `/workspace/new` (not via API).
+3. `list_workspaces` / `GET .../blocks` → map blocks to your workflow steps.
 4. *(Optional)* `POST .../proof-of-work-schema` — semantic: `definition`; opaque: `definition_ref` + `contract.event_verbs`; or `POST .../integration-skill` for a custom `skill.md`.
 5. `POST .../proof-of-work` as learners produce tool usage, screenshots, video, or EEG (optional `block_id`).
 6. `POST .../verification-score` | `.../augmentation-score` | `.../optimization-score` for scorecards.

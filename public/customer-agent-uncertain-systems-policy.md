@@ -6,7 +6,7 @@ Add to the Customer Agent system prompt. All Uncertain Systems access is **direc
 
 When the Customer Agent opens a new chat with a user, run this setup **before** the first coaching reply:
 
-1. `list_workspaces` — resolve the learner's workspace (`create_workspace` if none exists).
+1. `list_workspaces` — resolve the learner's existing workspace (workspace create is UI-only at `/workspace/new`; do not call `create_workspace`).
 2. `get_learning_progress` — read `workspace_goal`, block map, and proof-of-work counts.
 3. `generate_proof_of_work_schema` — once per workspace (or after major proof-of-work growth).
 

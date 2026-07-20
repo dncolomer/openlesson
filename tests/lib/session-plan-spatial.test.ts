@@ -332,7 +332,7 @@ describe("create surface wiring (structural)", () => {
     expect(llmIdx).toBeLessThan(deleteIdx);
   });
 
-  it("workspace generate + UI + agent create + MCP document initial_chapters", () => {
+  it("workspace generate + UI document initial_chapters (programmatic create is UI-only)", () => {
     const genSrc = readFileSync(
       path.join(process.cwd(), "app/api/workspace/generate/route.ts"),
       "utf8",
@@ -367,28 +367,18 @@ describe("create surface wiring (structural)", () => {
     // UI labels starting size (initial chapters band); still wires initialChapters payload
     expect(newWorkspaceSrc).toMatch(/Starting size|Initial chapters/i);
 
-    const agentSrc = readFileSync(
-      path.join(process.cwd(), "lib/agent-v2/create-agent-workspace.ts"),
-      "utf8",
-    );
-    expect(agentSrc).toMatch(
-      /composeWorkspaceSpatialGeneratePrompt|composeAgentFilesGoalPrompt/,
-    );
-    expect(agentSrc).toContain("normalizeGeneratedWorkspaceBlocks");
-    expect(agentSrc).toContain("resolveInitialChaptersFromBody");
-
+    // Public MCP surface no longer offers create_workspace / initial_chapters on create
     const mcpSrc = readFileSync(
       path.join(process.cwd(), "lib/agent-v2/mcp-proof-of-work-server.ts"),
       "utf8",
     );
-    expect(mcpSrc).toContain("initial_chapters");
-    expect(mcpSrc).toMatch(/enum:\s*\[\s*"narrow"\s*,\s*"mid"\s*,\s*"broad"\s*\]/);
+    expect(mcpSrc).toContain("rejectProgrammaticWorkspaceCreate");
+    expect(mcpSrc).not.toMatch(/name:\s*"create_workspace"/);
 
     const docs = readFileSync(
       path.join(process.cwd(), "docs/PROOF_OF_WORK_API.md"),
       "utf8",
     );
-    expect(docs).toContain("initial_chapters");
-    expect(docs).toMatch(/0,\s*0|\(0,0\)/);
+    expect(docs).toMatch(/UI only|UI-only/i);
   });
 });

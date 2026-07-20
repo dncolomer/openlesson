@@ -1,18 +1,11 @@
 {
-  "ran_at": "2026-07-20T21:56:58.315Z",
+  "ran_at": "2026-07-20T22:00:48.692Z",
   "base_url": "http://127.0.0.1:3000",
   "live_writes": true,
-  "total": 26,
-  "passed": 25,
-  "failed": 1,
-  "failures": [
-    {
-      "area": "teams-mcp",
-      "name": "verification_score tool",
-      "ok": false,
-      "detail": "no score"
-    }
-  ],
+  "total": 27,
+  "passed": 27,
+  "failed": 0,
+  "failures": [],
   "all": [
     {
       "area": "auth",
@@ -60,7 +53,7 @@
       "area": "teams-rest",
       "name": "POST /proof-of-work-schema",
       "ok": true,
-      "detail": "eval_input_guest_access_foundations_pow"
+      "detail": "eval_input_guest_access_foundations_tool_pow"
     },
     {
       "area": "teams-rest",
@@ -72,7 +65,7 @@
       "area": "teams-rest",
       "name": "POST /proof-of-work",
       "ok": true,
-      "detail": "723221d7-7db2-499c-8c83-307987b36dd6"
+      "detail": "5e55f16b-e1f2-4a98-b5f1-c3a144970b07"
     },
     {
       "area": "teams-rest",
@@ -84,19 +77,19 @@
       "area": "teams-rest",
       "name": "verification-score response includes proof_of_work_summary",
       "ok": true,
-      "detail": "artifacts=3"
+      "detail": "artifacts=4"
     },
     {
       "area": "teams-rest",
       "name": "POST /blocks/{id}/tap-links",
       "ok": true,
-      "detail": "bdd4ea37-a36e-4cc3-93fb-52a414d9c542"
+      "detail": "fc5d4634-0702-415f-a332-6a49fd3aabaf"
     },
     {
       "area": "teams-rest",
       "name": "GET /tap-links",
       "ok": true,
-      "detail": "2 links"
+      "detail": "3 links"
     },
     {
       "area": "teams-mcp",
@@ -114,7 +107,7 @@
       "area": "teams-mcp",
       "name": "get_learning_progress",
       "ok": true,
-      "detail": "artifacts=3"
+      "detail": "artifacts=4"
     },
     {
       "area": "teams-mcp",
@@ -124,33 +117,39 @@
     },
     {
       "area": "teams-mcp",
+      "name": "upload_proof_of_work tool (pre-score)",
+      "ok": true,
+      "detail": "5c2adedb-3702-4e25-9f93-4c96570edb86"
+    },
+    {
+      "area": "teams-mcp",
       "name": "verification_score tool",
-      "ok": false,
-      "detail": "no score"
+      "ok": true,
+      "detail": "score=18"
     },
     {
       "area": "individual-indirect",
       "name": "create workspace via web (not Proof-of-Work API)",
       "ok": true,
-      "detail": "7d748b78-308a-489b-acae-1a9b6ea7cc2c"
+      "detail": "3fe5622e-afd4-4d6d-b51e-f01241ec652a"
     },
     {
       "area": "individual-indirect",
       "name": "workspace has block",
       "ok": true,
-      "detail": "PoW Workspace Foundations"
+      "detail": "Indirect PoW Foundations"
     },
     {
       "area": "individual-indirect",
       "name": "ILE proof-of-work upload (cookie auth)",
       "ok": true,
-      "detail": "2b360ee3-9b46-407e-a2a9-4b733fa11526"
+      "detail": "57a27066-1843-45db-a163-b924c50ddeb1"
     },
     {
       "area": "individual-indirect",
       "name": "TAP session start (workspace UI route)",
       "ok": true,
-      "detail": "e45673be-8779-4dcb-90d3-54459dff42cf"
+      "detail": "6d9c3bd6-e8af-4d03-82cc-d43e920d3035"
     },
     {
       "area": "individual-indirect",
@@ -168,7 +167,7 @@
       "area": "individual-indirect",
       "name": "Performance tab verification report (cookie auth)",
       "ok": true,
-      "detail": "score=12 markers=8"
+      "detail": "score=18 markers=8"
     }
   ]
 }

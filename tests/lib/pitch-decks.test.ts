@@ -89,10 +89,10 @@ describe("pitch deck content (platform only)", () => {
     assertNonEmptyTitles(PLATFORM_PITCH_DECK);
 
     const founderSlides = buildFounderSlides("platform");
-    // Section titles (6) + founder content + thesis block (3) + method (2) + productized + privacy×2 + products
-    // = 1+founders + 1+3 + 1+2 + 1+1 + 1+2 + 1+1
+    // Section titles (5) + founder content + thesis (3) + method (2) + privacy×2 + products (interface + stack)
+    // = 1+founders + 1+3 + 1+2 + 1+2 + 1+2
     expect(PLATFORM_PITCH_DECK.slides).toHaveLength(
-      6 + founderSlides.length + 3 + 2 + 1 + 2 + 1,
+      5 + founderSlides.length + 3 + 2 + 2 + 2,
     );
 
     const sectionTitles = PLATFORM_PITCH_DECK.slides.filter((s) => s.layout === "title");
@@ -100,12 +100,12 @@ describe("pitch deck content (platform only)", () => {
       "Founder",
       "What is Uncertain Systems?",
       "How do we collect high quality data?",
-      "Productized",
       "Data Privacy and Confidential Learning",
       "Our products",
     ]);
     // Every section title shows the brand favicon.
     expect(sectionTitles.every((s) => s.image === PITCH_ASSETS.logo)).toBe(true);
+    expect(sectionTitles.map((s) => s.title)).not.toContain("Productized");
 
     // Founder section title then founder content
     expect(PLATFORM_PITCH_DECK.slides[0]?.layout).toBe("title");
@@ -131,28 +131,33 @@ describe("pitch deck content (platform only)", () => {
       /grounded|game/,
     );
 
-    // Close sections: Productized · Data Privacy and Confidential Learning · Our products
+    // Close sections: Data Privacy and Confidential Learning · Our products
     const closeStart = methodStart + 3;
-    expect(PLATFORM_PITCH_DECK.slides[closeStart]?.title).toBe("Productized");
-    expect(PLATFORM_PITCH_DECK.slides[closeStart + 1]?.kicker?.toLowerCase()).toMatch(/productized/);
-    expect(PLATFORM_PITCH_DECK.slides[closeStart + 2]?.title).toBe(
+    expect(PLATFORM_PITCH_DECK.slides[closeStart]?.title).toBe(
       "Data Privacy and Confidential Learning",
     );
-    expect(PLATFORM_PITCH_DECK.slides[closeStart + 3]?.kicker?.toLowerCase()).toMatch(
+    expect(PLATFORM_PITCH_DECK.slides[closeStart + 1]?.kicker?.toLowerCase()).toMatch(
       /data privacy|confidential learning/,
+    );
+    expect(PLATFORM_PITCH_DECK.slides[closeStart + 2]?.kicker?.toLowerCase()).toMatch(
+      /data privacy|confidential learning/,
+    );
+    expect(PLATFORM_PITCH_DECK.slides[closeStart + 3]?.title).toBe("Our products");
+    // PoW stash/submit interface lives under products (was former productized content slide)
+    expect(PLATFORM_PITCH_DECK.slides[closeStart + 4]?.title.toLowerCase()).toMatch(
+      /stash|submit|proof of work/,
     );
     expect(PLATFORM_PITCH_DECK.slides[closeStart + 4]?.kicker?.toLowerCase()).toMatch(
-      /data privacy|confidential learning/,
+      /our products/,
     );
-    expect(PLATFORM_PITCH_DECK.slides[closeStart + 5]?.title).toBe("Our products");
-    expect(PLATFORM_PITCH_DECK.slides[closeStart + 6]?.cards?.map((c) => c.label.toLowerCase())).toEqual([
+    expect(PLATFORM_PITCH_DECK.slides[closeStart + 5]?.cards?.map((c) => c.label.toLowerCase())).toEqual([
       "pow api",
       "tap",
       "ile",
     ]);
   });
 
-  it("platform deck: thesis + fullImage + 2 media video + productized + privacy×2 + 3 use-case slides, schema anchors", () => {
+  it("platform deck: thesis + fullImage + 2 media video + privacy×2 + products (interface + stack), schema anchors", () => {
     const corpus = slideCorpus(PLATFORM_PITCH_DECK).toLowerCase();
     expect(corpus).toMatch(/thesis|ratio of correct answers/);
     expect(corpus).toMatch(/knowledge config|proximity/);
@@ -223,14 +228,7 @@ describe("pitch deck content (platform only)", () => {
     expect(puritySlide?.video).toBe("/animations/selective_interface.mp4");
     expect(publicAssetExists(puritySlide?.video ?? "")).toBe(true);
 
-    const productizedTitleIdx = methodTitleIdx + 3;
-    expect(PLATFORM_PITCH_DECK.slides[productizedTitleIdx]?.title).toBe("Productized");
-    const productizedSlide = PLATFORM_PITCH_DECK.slides[productizedTitleIdx + 1];
-    expect(productizedSlide?.layout).toBe("statement");
-    expect(productizedSlide?.kicker?.toLowerCase()).toMatch(/productized/);
-    expect(productizedSlide?.cards?.length).toBeGreaterThanOrEqual(2);
-
-    const dataTitleIdx = productizedTitleIdx + 2;
+    const dataTitleIdx = methodTitleIdx + 3;
     expect(PLATFORM_PITCH_DECK.slides[dataTitleIdx]?.title).toBe(
       "Data Privacy and Confidential Learning",
     );
@@ -250,7 +248,14 @@ describe("pitch deck content (platform only)", () => {
 
     const productsTitleIdx = dataTitleIdx + 3;
     expect(PLATFORM_PITCH_DECK.slides[productsTitleIdx]?.title).toBe("Our products");
-    const productsSlide = PLATFORM_PITCH_DECK.slides[productsTitleIdx + 1];
+    // Interface slide (former productized content) then three-product stack
+    const interfaceSlide = PLATFORM_PITCH_DECK.slides[productsTitleIdx + 1];
+    expect(interfaceSlide?.layout).toBe("statement");
+    expect(interfaceSlide?.kicker?.toLowerCase()).toMatch(/our products/);
+    expect(interfaceSlide?.title.toLowerCase()).toMatch(/stash|submit|proof of work/);
+    expect(interfaceSlide?.cards?.length).toBeGreaterThanOrEqual(2);
+
+    const productsSlide = PLATFORM_PITCH_DECK.slides[productsTitleIdx + 2];
     expect(productsSlide?.layout).toBe("statement");
     expect(productsSlide?.kicker?.toLowerCase()).toMatch(/our products/);
     expect(productsSlide?.cards?.map((c) => c.label.toLowerCase())).toEqual([

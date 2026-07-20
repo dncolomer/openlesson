@@ -28,7 +28,7 @@ function sectionTitle(
 
 /**
  * Platform pitch = section title before each block, founder first.
- * Sections: Founder · What is Uncertain Systems? · How do we collect high quality data? · Productized · Data Privacy and Confidential Learning · Our products
+ * Sections: Founder · What is Uncertain Systems? · How do we collect high quality data? · Data Privacy and Confidential Learning · Our products
  */
 const PLATFORM_FOUNDER: SalesSlide[] = [
   sectionTitle("Founder", {
@@ -146,12 +146,16 @@ const PLATFORM_METHOD: SalesSlide[] = [
 ];
 
 const PLATFORM_CLOSE: SalesSlide[] = [
-  sectionTitle("Productized", {
-    backgroundImage: PITCH_ASSETS.aesthetics.verticals,
+  sectionTitle("Data Privacy and Confidential Learning", {
+    backgroundImage: PITCH_ASSETS.aesthetics.products,
+  }),
+  ...buildPrivacyDataSlides(),
+  sectionTitle("Our products", {
+    backgroundImage: PITCH_ASSETS.aesthetics.useCase,
   }),
   {
     layout: "statement",
-    kicker: "Productized",
+    kicker: "Our products",
     title: "One interface: Proof of Work with stash / submit.",
     subtitle:
       "The PoW interface is the product surface. Work and thought stream continuously; each unit is either stashed (kept private / parked) or submitted (committed as evidence). Scoring attaches to that deliberate choice.",
@@ -177,13 +181,6 @@ const PLATFORM_CLOSE: SalesSlide[] = [
       "TAP and ILE are not separate products — they are PoW surfaces that implement stash / submit",
     ],
   },
-  sectionTitle("Data Privacy and Confidential Learning", {
-    backgroundImage: PITCH_ASSETS.aesthetics.products,
-  }),
-  ...buildPrivacyDataSlides(),
-  sectionTitle("Our products", {
-    backgroundImage: PITCH_ASSETS.aesthetics.useCase,
-  }),
   {
     layout: "statement",
     kicker: "Our products",

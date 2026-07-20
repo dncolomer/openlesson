@@ -191,12 +191,15 @@ function IdeaIcon() {
 /** Equal framed boxes for pillars / synergy steps (e.g. three verticals, loop flow). */
 function CardGrid({
   cards,
+  fill = false,
 }: {
   cards: Array<{
     label: string;
     body?: string;
     ideas?: Array<{ title: string; body: string }>;
   }>;
+  /** Stretch cards to fill remaining slide height (e.g. products trio). */
+  fill?: boolean;
 }) {
   const hasIdeas = cards.some((card) => (card.ideas?.length ?? 0) > 0);
   const colClass =
@@ -212,32 +215,53 @@ function CardGrid({
     <div
       data-pitch-card-grid
       data-pitch-card-grid-ideas={hasIdeas ? "true" : undefined}
-      className={`mt-5 grid w-full gap-3 text-left sm:mt-6 sm:gap-4 ${colClass}`}
+      data-pitch-card-grid-fill={fill ? "true" : undefined}
+      className={`mt-5 grid w-full gap-3 text-left sm:mt-6 sm:gap-4 ${colClass} ${
+        fill ? "min-h-0 flex-1 auto-rows-fr" : ""
+      }`}
     >
       {cards.map((card) => (
         <article
           key={card.label}
           data-pitch-card
-          className="flex h-full min-h-0 flex-col rounded-md border border-white/25 bg-black/55 p-4 shadow-[0_16px_40px_rgba(0,0,0,0.35)] backdrop-blur-sm sm:p-5"
+          className={`flex min-h-0 flex-col rounded-md border border-white/25 bg-black/55 p-4 shadow-[0_16px_40px_rgba(0,0,0,0.35)] backdrop-blur-sm sm:p-5 md:p-6 ${
+            fill ? "h-full min-h-[12rem]" : "h-full"
+          }`}
         >
           <p className="font-mono text-[10px] font-semibold uppercase tracking-[1.8px] text-cyan-200/90 sm:text-[11px]">
             {card.label}
           </p>
+          {card.body && (
+            <p
+              className={`mt-2.5 whitespace-pre-line font-medium leading-snug text-white ${
+                hasIdeas
+                  ? "text-[clamp(0.92rem,0.35vw+0.82rem,1.1rem)] text-zinc-100"
+                  : "text-[clamp(0.95rem,0.4vw+0.85rem,1.15rem)]"
+              }`}
+            >
+              {card.body}
+            </p>
+          )}
           {card.ideas && card.ideas.length > 0 ? (
-            <div data-pitch-idea-list className="mt-3 flex flex-col gap-2.5 sm:mt-3.5 sm:gap-3">
+            <div
+              data-pitch-idea-list
+              className={`mt-3 flex flex-col gap-2.5 sm:mt-4 sm:gap-3 ${fill ? "min-h-0 flex-1" : ""}`}
+            >
               {card.ideas.map((idea) => (
                 <div
                   key={`${card.label}-${idea.title}`}
                   data-pitch-idea
-                  className="rounded-md border border-white/15 bg-white/[0.05] px-3 py-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] sm:px-3.5 sm:py-3"
+                  className={`rounded-md border border-white/15 bg-white/[0.05] px-3 py-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] sm:px-3.5 sm:py-3 ${
+                    fill ? "flex min-h-0 flex-1 flex-col" : ""
+                  }`}
                 >
                   <div className="flex gap-2.5">
                     <IdeaIcon />
                     <div className="min-w-0">
-                      <p className="text-left text-[clamp(0.92rem,0.35vw+0.82rem,1.08rem)] font-semibold leading-snug text-white">
+                      <p className="text-left text-[clamp(0.95rem,0.4vw+0.85rem,1.12rem)] font-semibold leading-snug text-white">
                         {idea.title}
                       </p>
-                      <p className="mt-1 text-left text-[clamp(0.82rem,0.28vw+0.74rem,0.98rem)] leading-snug text-zinc-200">
+                      <p className="mt-1.5 text-left text-[clamp(0.88rem,0.32vw+0.78rem,1.05rem)] leading-snug text-zinc-200">
                         {idea.body}
                       </p>
                     </div>
@@ -245,13 +269,7 @@ function CardGrid({
                 </div>
               ))}
             </div>
-          ) : (
-            card.body && (
-              <p className="mt-2.5 whitespace-pre-line text-[clamp(0.95rem,0.4vw+0.85rem,1.15rem)] font-medium leading-snug text-white">
-                {card.body}
-              </p>
-            )
-          )}
+          ) : null}
         </article>
       ))}
     </div>
@@ -508,14 +526,26 @@ function SlideContent({ slide }: { slide: SalesSlide }) {
     // Single-product idea slides (one card with nested ideas) must fit without scroll.
     const isSingleProductIdeas =
       slide.cards?.length === 1 && (slide.cards[0]?.ideas?.length ?? 0) > 0;
+    // Three product cards with examples — grow to fill the stage.
+    const isProductsTrio =
+      slide.cards?.length === 3 &&
+      slide.cards.every((c) => (c.ideas?.length ?? 0) >= 1);
 
     return (
       <SlideFrame>
-        <ContentPanel className={isSingleProductIdeas ? "!overflow-hidden" : undefined}>
+        <ContentPanel
+          className={
+            isSingleProductIdeas || isProductsTrio
+              ? "!overflow-hidden"
+              : undefined
+          }
+        >
           {slide.kicker && <Eyebrow>{slide.kicker}</Eyebrow>}
           <h2 className={TITLE_H2}>{slide.title}</h2>
           {slide.subtitle && <p className={SUBTITLE}>{slide.subtitle}</p>}
-          {slide.cards && slide.cards.length > 0 && <CardGrid cards={slide.cards} />}
+          {slide.cards && slide.cards.length > 0 && (
+            <CardGrid cards={slide.cards} fill={isProductsTrio} />
+          )}
           {slide.highlights && slide.highlights.length > 0 && (
             <HighlightCallouts items={slide.highlights} labels={slide.highlightLabels} />
           )}

@@ -188,21 +188,44 @@ const PLATFORM_CLOSE: SalesSlide[] = [
     layout: "statement",
     kicker: "Our products",
     title: "Three products. One measurement stack.",
-    subtitle: "Each surface captures proof under the same knowledge configuration model.",
+    subtitle:
+      "PoW API, Think Aloud Protocol, and ILE are different surfaces for the same knowledge configuration model — measure proximity to “knowing X,” not quiz pass rates.",
     backgroundImage: PITCH_ASSETS.aesthetics.useCase,
     cards: [
       {
         label: "PoW API",
-        body: "Dynamic SaaS onboarding — score the first real workflow after signup; open only the failed skill blocks.",
+        body: "Pipe real work and agent traces into scoring endpoints. Capability gates in product, CI, and hiring without a separate quiz stack.",
+        ideas: [
+          {
+            title: "Dynamic SaaS onboarding",
+            body: "After signup, score the first real workflow — import, configure, ship a unit of value. Severity-ranked gaps open only the failed skill blocks; power users skip the checklist entirely.",
+          },
+        ],
       },
       {
         label: "TAP",
-        body: "TAP-cha — a short Think Aloud that proves a live human is behind the keyboard under probe.",
+        body: "Think Aloud Protocol externalizes genuine thinking under probe — for humans you hire, interview, or need to verify live.",
+        ideas: [
+          {
+            title: "TAP-cha",
+            body: "A short Think Aloud that proves a live human is behind the keyboard: hesitations, self-corrections, and causal answers under probe that AI-fed polish cannot fake.",
+          },
+        ],
       },
       {
         label: "ILE",
-        body: "Onboarding repair loops — when PoW flags a gap, coached practice on that block until the marker moves.",
+        body: "Integrated Learning Environment — coached practice that closes the gaps verification found, in-product, under the same markers.",
+        ideas: [
+          {
+            title: "Onboarding repair loops",
+            body: "When PoW flags a failed skill, drop the learner into a coached scenario for that block only. Practice until the marker moves — then return them to product.",
+          },
+        ],
       },
+    ],
+    bullets: [
+      "One measurement contract across all three: proof of work → knowledge config embeddings → distance to labeled regions",
+      "Humans, agents, and tools share the same readiness bar — different surfaces, same stack",
     ],
   },
 ];

@@ -260,17 +260,28 @@ describe("pitch deck content (platform only)", () => {
     ]);
     expect(productsSlide?.cards).toHaveLength(3);
     for (const card of productsSlide?.cards ?? []) {
-      expect(card.body?.trim().length).toBeGreaterThan(20);
-      expect(card.ideas).toBeUndefined();
+      expect(card.body?.trim().length).toBeGreaterThan(40);
+      expect(card.ideas?.length).toBe(1);
+      expect(card.ideas?.[0]?.title.trim().length).toBeGreaterThan(0);
+      expect(card.ideas?.[0]?.body.trim().length).toBeGreaterThan(40);
     }
-    const productsCorpus = (productsSlide?.cards ?? [])
-      .flatMap((c) => [c.label, c.body])
+    expect((productsSlide?.bullets ?? []).length).toBeGreaterThanOrEqual(2);
+    const productsCorpus = [
+      productsSlide?.subtitle,
+      ...(productsSlide?.cards ?? []).flatMap((c) => [
+        c.label,
+        c.body,
+        ...(c.ideas ?? []).flatMap((i) => [i.title, i.body]),
+      ]),
+      ...(productsSlide?.bullets ?? []),
+    ]
       .join("\n")
       .toLowerCase();
     expect(productsCorpus).toMatch(/pow api/);
     expect(productsCorpus).toMatch(/dynamic saas onboarding|dynamic onboarding/);
     expect(productsCorpus).toMatch(/tap-cha/);
     expect(productsCorpus).toMatch(/onboarding repair|repair loop/);
+    expect(productsCorpus).toMatch(/knowledge config|measurement/);
 
     const deckUi = fs.readFileSync(path.join(REPO_ROOT, "components/SalesSlideDeck.tsx"), "utf8");
     expect(deckUi).toContain("data-pitch-idea");

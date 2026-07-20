@@ -10,7 +10,12 @@ import {
 import { createdByApiKeyId } from "./auth";
 import type { AuthContext } from "./types";
 import { uploadFileToXAI, deleteFileFromXAI } from "@/lib/xai-files";
-import { assertCanSubmitProofOfWork } from "@/lib/usage-enforcement";
+import {
+  assertCanSubmitProofOfWork,
+  isUsageLimitReachedError,
+  UsageLimitReachedError,
+} from "@/lib/usage-enforcement";
+import type { ErrorCode } from "./types";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
   attachFileToOrgCollection,
@@ -335,3 +340,50 @@ export function getUploadProofOfWorkMeta(
     }
   );
 }
+
+export type UploadProofOfWorkHttpError = {
+  status: number;
+  code: ErrorCode;
+  message: string;
+};
+
+/**
+ * Map errors from uploadWorkspaceProofOfWork / assertCanSubmitProofOfWork into
+ * the public agent REST envelope (used by POST .../proof-of-work).
+ */
+export function mapUploadWorkspaceProofOfWorkError(error: unknown): UploadProofOfWorkHttpError {
+  if (isUsageLimitReachedError(error) || error instanceof UsageLimitReachedError) {
+    return {
+      status: 402,
+      code: "usage_limit_reached",
+      message: error.message,
+    };
+  }
+
+  const message = error instanceof Error ? error.message : "Upload failed";
+
+  if (message.includes("Workspace owner is missing")) {
+    return { status: 500, code: "internal_error", message };
+  }
+  if (message.includes("Block not found")) {
+    return { status: 404, code: "block_not_found", message };
+  }
+  if (message.includes("session_id not found")) {
+    return { status: 404, code: "validation_error", message };
+  }
+  if (message.includes("xAI") || message.includes("Failed to store")) {
+    return { status: 502, code: "internal_error", message };
+  }
+  // Fallback: plain Error with usage-limit wording (legacy throws / re-wrapped)
+  if (
+    /Proof-of-Work submissions this month/i.test(message) ||
+    /No active subscription.*Proof-of-Work/i.test(message) ||
+    /Proof-of-Work monthly limit reached/i.test(message)
+  ) {
+    return { status: 402, code: "usage_limit_reached", message };
+  }
+
+  return { status: 400, code: "validation_error", message };
+}
+
+export { UsageLimitReachedError, isUsageLimitReachedError };

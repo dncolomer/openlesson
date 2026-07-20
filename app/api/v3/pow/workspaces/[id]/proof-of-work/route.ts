@@ -4,6 +4,7 @@ import { canAccessAgentWorkspace } from "@/lib/agent-v2/workspace-access";
 import { countWorkspaceProofOfWorkForPlan } from "@/lib/agent-v2/workspace-proof-of-work";
 import {
   getUploadProofOfWorkMeta,
+  mapUploadWorkspaceProofOfWorkError,
   uploadWorkspaceProofOfWork,
 } from "@/lib/agent-v2/upload-workspace-proof-of-work";
 import { withProofOfWorkApiResponse } from "@/lib/agent-v2/predictive-interruption";
@@ -114,22 +115,7 @@ export async function POST(req: NextRequest, { params }: RouteProps) {
       { status: 201 },
     );
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Upload failed";
-    if (message.includes("Workspace owner is missing")) {
-      return errorResponse(500, "internal_error", message);
-    }
-    if (message.includes("monthly") || message.includes("usage") || message.includes("limit reached")) {
-      return errorResponse(402, "usage_limit_reached", message);
-    }
-    if (message.includes("Block not found")) {
-      return errorResponse(404, "block_not_found", message);
-    }
-    if (message.includes("session_id not found")) {
-      return errorResponse(404, "validation_error", message);
-    }
-    if (message.includes("xAI") || message.includes("Failed to store")) {
-      return errorResponse(502, "internal_error", message);
-    }
-    return errorResponse(400, "validation_error", message);
+    const mapped = mapUploadWorkspaceProofOfWorkError(error);
+    return errorResponse(mapped.status, mapped.code, mapped.message);
   }
 }

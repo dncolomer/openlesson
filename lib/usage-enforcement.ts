@@ -123,12 +123,31 @@ export async function checkProofOfWorkSubmissionAllowance(
   return { ...result, profile };
 }
 
+/**
+ * Thrown when Proof-of-Work submission is blocked by plan/quota.
+ * REST agents map this to HTTP 402 + error.code = "usage_limit_reached".
+ */
+export class UsageLimitReachedError extends Error {
+  readonly code = "usage_limit_reached" as const;
+
+  constructor(message: string) {
+    super(message);
+    this.name = "UsageLimitReachedError";
+  }
+}
+
+export function isUsageLimitReachedError(error: unknown): error is UsageLimitReachedError {
+  return error instanceof UsageLimitReachedError;
+}
+
 export async function assertCanSubmitProofOfWork(
   supabase: SupabaseClient,
   userId: string
 ): Promise<void> {
   const check = await checkProofOfWorkSubmissionAllowance(supabase, userId);
   if (!check.allowed) {
-    throw new Error(check.reason || "Proof-of-Work monthly limit reached");
+    throw new UsageLimitReachedError(
+      check.reason || "Proof-of-Work monthly limit reached",
+    );
   }
 }

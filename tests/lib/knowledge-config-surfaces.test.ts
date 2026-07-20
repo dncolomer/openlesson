@@ -178,16 +178,22 @@ describe("knowledge config / LWM feature surfaces", () => {
     expect(models).toContain("data-embeddings-projection");
     expect(models).toContain('data-picker="embeddings"');
     expect(models).toContain("data-region-overlay-picker");
+    expect(models).toContain("data-projection-algorithm-picker");
     expect(models).toContain("data-projection-widget");
-    // Sidebar hosts user + region pickers; projection is the right pane.
+    // Sidebar hosts user + projection algorithm + region pickers; canvas is the right pane.
     const sidebarIdx = models.indexOf("data-embeddings-sidebar");
     const projectionIdx = models.indexOf("data-embeddings-projection");
     const pickerIdx = models.indexOf('data-picker="embeddings"');
+    const algoPickerIdx = models.indexOf("data-projection-algorithm-picker");
     const regionPickerIdx = models.indexOf("data-region-overlay-picker");
     expect(sidebarIdx).toBeGreaterThan(-1);
     expect(projectionIdx).toBeGreaterThan(sidebarIdx);
     expect(pickerIdx).toBeGreaterThan(sidebarIdx);
     expect(pickerIdx).toBeLessThan(projectionIdx);
+    // Projection dropdown sits directly under the user dropdown in the sidebar.
+    expect(algoPickerIdx).toBeGreaterThan(pickerIdx);
+    expect(algoPickerIdx).toBeLessThan(regionPickerIdx);
+    expect(algoPickerIdx).toBeLessThan(projectionIdx);
     expect(regionPickerIdx).toBeGreaterThan(sidebarIdx);
     expect(regionPickerIdx).toBeLessThan(projectionIdx);
     // Fill-height flex; models root avoids overflow-y-auto (no whole-tab scroll).

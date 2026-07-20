@@ -1208,6 +1208,29 @@ export function KnowledgeConfigTrajectoryPanel({
                 }}
               />
 
+              <div className="w-full" data-projection-algorithm-picker>
+                <label className="block w-full">
+                  <span className="mb-1 block text-[11px] font-medium uppercase tracking-wide text-neutral-500">
+                    Projection
+                  </span>
+                  <select
+                    value={projectionAlgorithm}
+                    onChange={(e) =>
+                      setProjectionAlgorithm(parseProjectionAlgorithmId(e.target.value, "random"))
+                    }
+                    aria-label="2D projection algorithm"
+                    data-projection-algorithm-select
+                    className="w-full rounded-md border border-neutral-700 bg-neutral-900 px-3 py-2 text-xs text-white outline-none transition hover:border-neutral-500 focus:border-neutral-500"
+                  >
+                    {PROJECTION_ALGORITHM_OPTIONS.map((opt) => (
+                      <option key={opt.id} value={opt.id} title={opt.description}>
+                        {opt.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+
               <div
                 data-region-overlay-picker
                 aria-label="Region overlay multi-select"
@@ -1406,42 +1429,19 @@ export function KnowledgeConfigTrajectoryPanel({
               className="flex min-h-0 min-w-0 flex-1 flex-col gap-2"
             >
               <div className="flex shrink-0 flex-wrap items-center justify-between gap-2">
-                <div className="flex min-w-0 flex-wrap items-center gap-2">
-                  <p className="min-w-0 truncate text-[11px] text-neutral-500">
-                    {embScope.label ? (
-                      <span className="text-neutral-400">{embScope.label}</span>
-                    ) : (
-                      <span>Knowledge config trajectory</span>
-                    )}
-                    {summary ? (
-                      <span className="text-neutral-600">
-                        {" "}
-                        · {summary.points} sample{summary.points === 1 ? "" : "s"}
-                      </span>
-                    ) : null}
-                  </p>
-                  <label
-                    className="inline-flex items-center gap-1.5 text-[11px] text-neutral-400"
-                    data-projection-algorithm-picker
-                  >
-                    <span className="shrink-0 text-neutral-500">Projection</span>
-                    <select
-                      value={projectionAlgorithm}
-                      onChange={(e) =>
-                        setProjectionAlgorithm(parseProjectionAlgorithmId(e.target.value, "random"))
-                      }
-                      aria-label="2D projection algorithm"
-                      data-projection-algorithm-select
-                      className="max-w-[11rem] rounded-md border border-neutral-700 bg-neutral-900 px-2 py-1 text-[11px] text-neutral-200 outline-none transition hover:border-neutral-500 focus:border-neutral-500"
-                    >
-                      {PROJECTION_ALGORITHM_OPTIONS.map((opt) => (
-                        <option key={opt.id} value={opt.id} title={opt.description}>
-                          {opt.label}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                </div>
+                <p className="min-w-0 truncate text-[11px] text-neutral-500">
+                  {embScope.label ? (
+                    <span className="text-neutral-400">{embScope.label}</span>
+                  ) : (
+                    <span>Knowledge config trajectory</span>
+                  )}
+                  {summary ? (
+                    <span className="text-neutral-600">
+                      {" "}
+                      · {summary.points} sample{summary.points === 1 ? "" : "s"}
+                    </span>
+                  ) : null}
+                </p>
                 <button
                   type="button"
                   onClick={() => void loadEmbeddings()}

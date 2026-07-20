@@ -5,12 +5,12 @@ import { labeledHighlights } from "@/lib/sales/slide-highlights";
 import { buildPrivacyDataSlides } from "@/lib/sales/privacy-data-slide";
 
 /**
- * Platform pitch = product narrative with founder block mid-deck.
- * Open: thesis → config space → TAP method ×2
- * Mid: founder slides
+ * Platform pitch = founder first, then product narrative.
+ * Open: founder slides
+ * Body: thesis → config space → TAP method ×2
  * Close: productized PoW → data posture ×2 → use cases (PoW / TAP / ILE)
  */
-const PLATFORM_OPEN: SalesSlide[] = [
+const PLATFORM_BODY: SalesSlide[] = [
   {
     layout: "statement",
     kicker: "Our thesis",
@@ -213,5 +213,5 @@ export const PLATFORM_PITCH_DECK: SolutionSlideDeck = {
   vertical: "pitch",
   label: "Platform Pitch",
   backgroundImage: PITCH_ASSETS.aesthetics.science,
-  slides: [...PLATFORM_OPEN, ...buildFounderSlides("platform"), ...PLATFORM_CLOSE],
+  slides: [...buildFounderSlides("platform"), ...PLATFORM_BODY, ...PLATFORM_CLOSE],
 };

@@ -15,9 +15,9 @@ function trajectoryTitle(focus: FounderPitchFocus = "platform"): string {
 }
 
 /**
- * Shared founder slide set for every pitch deck.
- * Placed at the beginning of each deck (after the title open).
- * Facts are intentional and should stay consistent across platform + vertical decks.
+ * Shared founder slide set for pitch decks.
+ * Platform deck places this block first (before thesis).
+ * Facts are intentional and should stay consistent if vertical decks return.
  */
 export function buildFounderSlides(focus: FounderPitchFocus = "platform"): SalesSlide[] {
   return [

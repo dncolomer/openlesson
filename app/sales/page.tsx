@@ -39,7 +39,7 @@ export default function SalesIndexPage() {
           Pitch decks
         </h1>
         <p className="mt-6 max-w-2xl text-lg leading-relaxed text-zinc-400">
-          Live presentation deck for the Uncertain Systems platform. Vertical deep-dives are coming soon.
+          Live presentation deck for the Uncertain Systems platform.
         </p>
 
         <ul className="mt-10 space-y-4" data-pitch-links>

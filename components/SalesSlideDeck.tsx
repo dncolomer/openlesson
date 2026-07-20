@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type HTMLAttributes } from "react";
 import type { SalesSlide, SolutionSlideDeck } from "@/lib/sales/solution-slide-decks";
 
 type SalesSlideDeckProps = {
@@ -80,12 +80,17 @@ const SECTION_LABEL =
 function ContentPanel({
   children,
   className = "",
+  ...rest
 }: {
   children: React.ReactNode;
   className?: string;
-}) {
+} & HTMLAttributes<HTMLDivElement>) {
   return (
-    <div data-pitch-content-panel className={`${CONTENT_PANEL_CLASS} ${className}`.trim()}>
+    <div
+      data-pitch-content-panel
+      className={`${CONTENT_PANEL_CLASS} ${className}`.trim()}
+      {...rest}
+    >
       {children}
     </div>
   );
@@ -298,23 +303,43 @@ function StackedSections({
 
 function SlideContent({ slide }: { slide: SalesSlide }) {
   if (slide.layout === "title") {
+    // Section title beats: fully centered (vertical + horizontal).
     return (
       <SlideFrame>
-        <ContentPanel>
-          {slide.kicker && <Eyebrow>{slide.kicker}</Eyebrow>}
-          {slide.image && (
-            <div className="mb-5 shrink-0 sm:mb-6" data-pitch-title-logo>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={slide.image}
-                alt={slide.imageAlt ?? "Uncertain Systems"}
-                className="h-auto w-[min(100%,5.5rem)] rounded-md border border-white/15 object-contain shadow-lg shadow-black/40 sm:w-[min(100%,6.5rem)]"
-              />
-            </div>
-          )}
-          <h1 className={TITLE_H1}>{slide.title}</h1>
-          {slide.subtitle && <p className={SUBTITLE}>{slide.subtitle}</p>}
-          {slide.cards && slide.cards.length > 0 && <CardGrid cards={slide.cards} />}
+        <ContentPanel
+          data-pitch-title-centered
+          className="!items-center !justify-center !overflow-hidden !text-center"
+        >
+          <div
+            data-pitch-title-inner
+            className="flex w-full max-w-4xl flex-col items-center justify-center text-center"
+          >
+            {slide.kicker && (
+              <p className="mb-4 inline-block rounded-sm border border-zinc-600/80 bg-black/50 px-2.5 py-0.5 font-mono text-[10px] uppercase tracking-[2px] text-zinc-300 sm:mb-5 sm:text-[11px]">
+                {slide.kicker}
+              </p>
+            )}
+            {slide.image && (
+              <div className="mb-6 shrink-0 sm:mb-8" data-pitch-title-logo>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={slide.image}
+                  alt={slide.imageAlt ?? "Uncertain Systems"}
+                  className="mx-auto h-auto w-[min(100%,5.5rem)] rounded-md border border-white/15 object-contain shadow-lg shadow-black/40 sm:w-[min(100%,6.5rem)]"
+                />
+              </div>
+            )}
+            <h1
+              className={`${TITLE_H1} !w-auto max-w-4xl !text-center`}
+              data-pitch-title-heading
+            >
+              {slide.title}
+            </h1>
+            {slide.subtitle && (
+              <p className={`${SUBTITLE} !w-auto max-w-2xl !text-center`}>{slide.subtitle}</p>
+            )}
+            {slide.cards && slide.cards.length > 0 && <CardGrid cards={slide.cards} />}
+          </div>
         </ContentPanel>
       </SlideFrame>
     );

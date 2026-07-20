@@ -4,20 +4,45 @@ import { PITCH_ASSETS } from "@/lib/sales/solution-slide-decks";
 import { labeledHighlights } from "@/lib/sales/slide-highlights";
 import { buildPrivacyDataSlides } from "@/lib/sales/privacy-data-slide";
 
-/**
- * Platform pitch = founder first, then product narrative.
- * Open: founder slides
- * Body: title (What is Uncertain Systems?) → thesis → config space → embeddings → TAP method ×2
- * Close: productized PoW → data posture ×2 → Our products (PoW API / TAP / ILE)
- */
-const PLATFORM_BODY: SalesSlide[] = [
-  {
+/** Centered section divider (title layout). */
+function sectionTitle(
+  title: string,
+  opts?: {
+    backgroundImage?: string;
+    image?: string;
+    imageAlt?: string;
+    kicker?: string;
+    subtitle?: string;
+  },
+): SalesSlide {
+  return {
     layout: "title",
-    title: "What is Uncertain Systems?",
+    title,
+    kicker: opts?.kicker,
+    subtitle: opts?.subtitle,
+    image: opts?.image,
+    imageAlt: opts?.imageAlt,
+    backgroundImage: opts?.backgroundImage ?? PITCH_ASSETS.aesthetics.title,
+  };
+}
+
+/**
+ * Platform pitch = section title before each block, founder first.
+ * Sections: Founder · What is Uncertain Systems? · How we test it · Productized · Data posture · Our products
+ */
+const PLATFORM_FOUNDER: SalesSlide[] = [
+  sectionTitle("Founder", {
+    backgroundImage: PITCH_ASSETS.aesthetics.founder,
+  }),
+  ...buildFounderSlides("platform"),
+];
+
+const PLATFORM_THESIS: SalesSlide[] = [
+  sectionTitle("What is Uncertain Systems?", {
     image: PITCH_ASSETS.logo,
     imageAlt: "Uncertain Systems logo",
     backgroundImage: PITCH_ASSETS.aesthetics.title,
-  },
+  }),
   {
     layout: "statement",
     kicker: "Our thesis",
@@ -62,6 +87,12 @@ const PLATFORM_BODY: SalesSlide[] = [
     imageAlt: "High-dimensional embeddings with labeled knowing-X regions",
     imageCaption: "Embeddings · knowing-X regions",
   },
+];
+
+const PLATFORM_METHOD: SalesSlide[] = [
+  sectionTitle("How we test it", {
+    backgroundImage: PITCH_ASSETS.aesthetics.products,
+  }),
   {
     layout: "media",
     kicker: "How we test it",
@@ -117,6 +148,9 @@ const PLATFORM_BODY: SalesSlide[] = [
 ];
 
 const PLATFORM_CLOSE: SalesSlide[] = [
+  sectionTitle("Productized", {
+    backgroundImage: PITCH_ASSETS.aesthetics.verticals,
+  }),
   {
     layout: "statement",
     kicker: "Productized",
@@ -145,7 +179,13 @@ const PLATFORM_CLOSE: SalesSlide[] = [
       "TAP and ILE are not separate products — they are PoW surfaces that implement stash / submit",
     ],
   },
+  sectionTitle("Data posture", {
+    backgroundImage: PITCH_ASSETS.aesthetics.products,
+  }),
   ...buildPrivacyDataSlides(),
+  sectionTitle("Our products", {
+    backgroundImage: PITCH_ASSETS.aesthetics.useCase,
+  }),
   {
     layout: "statement",
     kicker: "Our products",
@@ -173,5 +213,5 @@ export const PLATFORM_PITCH_DECK: SolutionSlideDeck = {
   vertical: "pitch",
   label: "Platform Pitch",
   backgroundImage: PITCH_ASSETS.aesthetics.science,
-  slides: [...buildFounderSlides("platform"), ...PLATFORM_BODY, ...PLATFORM_CLOSE],
+  slides: [...PLATFORM_FOUNDER, ...PLATFORM_THESIS, ...PLATFORM_METHOD, ...PLATFORM_CLOSE],
 };

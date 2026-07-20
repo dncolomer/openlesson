@@ -83,48 +83,60 @@ const FOUNDER_FACT_ANCHORS = [
 ];
 
 describe("pitch deck content (platform only)", () => {
-  it("platform deck opens with founder slides, then thesis and product narrative", () => {
+  it("platform deck opens each section with a centered title slide", () => {
     expect(PLATFORM_PITCH_DECK.vertical).toBe("pitch");
     expect(PLATFORM_PITCH_DECK.label.toLowerCase()).toContain("platform");
     assertNonEmptyTitles(PLATFORM_PITCH_DECK);
 
     const founderSlides = buildFounderSlides("platform");
-    // founders + body (6: title + thesis + config + embeddings + TAP×2) + close (4)
-    expect(PLATFORM_PITCH_DECK.slides).toHaveLength(founderSlides.length + 6 + 4);
-
-    const founderBlock = PLATFORM_PITCH_DECK.slides.slice(0, founderSlides.length);
-    const body = PLATFORM_PITCH_DECK.slides.slice(
-      founderSlides.length,
-      founderSlides.length + 6,
+    // Section titles (6) + founder content + thesis block (3) + method (2) + productized + privacy×2 + products
+    // = 1+founders + 1+3 + 1+2 + 1+1 + 1+2 + 1+1
+    expect(PLATFORM_PITCH_DECK.slides).toHaveLength(
+      6 + founderSlides.length + 3 + 2 + 1 + 2 + 1,
     );
-    const close = PLATFORM_PITCH_DECK.slides.slice(founderSlides.length + 6);
 
-    // Founder first
+    const sectionTitles = PLATFORM_PITCH_DECK.slides.filter((s) => s.layout === "title");
+    expect(sectionTitles.map((s) => s.title)).toEqual([
+      "Founder",
+      "What is Uncertain Systems?",
+      "How we test it",
+      "Productized",
+      "Data posture",
+      "Our products",
+    ]);
+    expect(sectionTitles[1]?.image).toBe(PITCH_ASSETS.logo);
+
+    // Founder section title then founder content
+    expect(PLATFORM_PITCH_DECK.slides[0]?.layout).toBe("title");
+    expect(PLATFORM_PITCH_DECK.slides[0]?.title).toBe("Founder");
+    const founderBlock = PLATFORM_PITCH_DECK.slides.slice(1, 1 + founderSlides.length);
     expect(founderBlock.map((s) => s.title)).toEqual(founderSlides.map((s) => s.title));
     expect(founderBlock[0]?.layout).toBe("founder");
-    expect(PLATFORM_PITCH_DECK.slides[0]?.layout).toBe("founder");
 
-    // Body = title → thesis → config → embeddings → TAP ×2
-    expect(body[0]?.layout).toBe("title");
-    expect(body[0]?.title).toMatch(/What is Uncertain Systems\?/);
-    expect(body[0]?.image).toBe(PITCH_ASSETS.logo);
-    expect(body[1]?.kicker?.toLowerCase()).toMatch(/thesis/);
-    expect(body[1]?.layout).toBe("statement");
-    expect(body[2]?.layout).toBe("fullImage");
-    expect(body[2]?.image).toBe("/config space.png");
-    expect(body[3]?.layout).toBe("fullImage");
-    expect(body[3]?.image).toBe("/embeddings.png");
-    expect(body[4]?.layout).toBe("media");
-    expect(body[4]?.title.toLowerCase()).toMatch(/think aloud/);
-    expect(body[5]?.layout).toBe("media");
-    expect(body[5]?.title.toLowerCase()).toMatch(/ai|game|tool|purity|grounded/);
+    // Thesis section after founder block
+    const thesisStart = 1 + founderSlides.length;
+    expect(PLATFORM_PITCH_DECK.slides[thesisStart]?.title).toMatch(/What is Uncertain Systems\?/);
+    expect(PLATFORM_PITCH_DECK.slides[thesisStart + 1]?.kicker?.toLowerCase()).toMatch(/thesis/);
+    expect(PLATFORM_PITCH_DECK.slides[thesisStart + 2]?.image).toBe("/config space.png");
+    expect(PLATFORM_PITCH_DECK.slides[thesisStart + 3]?.image).toBe("/embeddings.png");
 
-    // Close = productized → data posture ×2 → Our products
-    expect(close[0]?.kicker?.toLowerCase()).toMatch(/productized/);
-    expect(close[1]?.kicker?.toLowerCase()).toMatch(/data/);
-    expect(close[2]?.kicker?.toLowerCase()).toMatch(/data/);
-    expect(close[3]?.kicker?.toLowerCase()).toMatch(/our products/);
-    expect(close[3]?.cards?.map((c) => c.label.toLowerCase())).toEqual([
+    // Method section
+    const methodStart = thesisStart + 4;
+    expect(PLATFORM_PITCH_DECK.slides[methodStart]?.title).toBe("How we test it");
+    expect(PLATFORM_PITCH_DECK.slides[methodStart + 1]?.title.toLowerCase()).toMatch(/think aloud/);
+    expect(PLATFORM_PITCH_DECK.slides[methodStart + 2]?.title.toLowerCase()).toMatch(
+      /grounded|game/,
+    );
+
+    // Close sections: Productized · Data posture · Our products
+    const closeStart = methodStart + 3;
+    expect(PLATFORM_PITCH_DECK.slides[closeStart]?.title).toBe("Productized");
+    expect(PLATFORM_PITCH_DECK.slides[closeStart + 1]?.kicker?.toLowerCase()).toMatch(/productized/);
+    expect(PLATFORM_PITCH_DECK.slides[closeStart + 2]?.title).toBe("Data posture");
+    expect(PLATFORM_PITCH_DECK.slides[closeStart + 3]?.kicker?.toLowerCase()).toMatch(/data/);
+    expect(PLATFORM_PITCH_DECK.slides[closeStart + 4]?.kicker?.toLowerCase()).toMatch(/data/);
+    expect(PLATFORM_PITCH_DECK.slides[closeStart + 5]?.title).toBe("Our products");
+    expect(PLATFORM_PITCH_DECK.slides[closeStart + 6]?.cards?.map((c) => c.label.toLowerCase())).toEqual([
       "pow api",
       "tap",
       "ile",
@@ -155,16 +167,15 @@ describe("pitch deck content (platform only)", () => {
     expect(integrationHits.length).toBeGreaterThanOrEqual(3);
 
     const founderCount = buildFounderSlides("platform").length;
-
-    // Title beat after founders (logo + question)
-    const titleSlide = PLATFORM_PITCH_DECK.slides[founderCount];
+    // After: Founder title + founder slides
+    const thesisTitleIdx = 1 + founderCount;
+    const titleSlide = PLATFORM_PITCH_DECK.slides[thesisTitleIdx];
     expect(titleSlide?.layout).toBe("title");
     expect(titleSlide?.title).toBe("What is Uncertain Systems?");
     expect(titleSlide?.image).toBe(PITCH_ASSETS.logo);
     expect(publicAssetExists(titleSlide?.image ?? "")).toBe(true);
 
-    // Thesis after title
-    const thesisSlide = PLATFORM_PITCH_DECK.slides[founderCount + 1];
+    const thesisSlide = PLATFORM_PITCH_DECK.slides[thesisTitleIdx + 1];
     expect(thesisSlide?.layout).toBe("statement");
     expect(thesisSlide?.kicker?.toLowerCase()).toMatch(/thesis/);
     expect(thesisSlide?.video).toBeUndefined();
@@ -172,22 +183,22 @@ describe("pitch deck content (platform only)", () => {
       publicAssetExists(thesisSlide?.backgroundImage ?? PLATFORM_PITCH_DECK.backgroundImage ?? ""),
     ).toBe(true);
 
-    // full-stage config-space art
-    const configSlide = PLATFORM_PITCH_DECK.slides[founderCount + 2];
+    const configSlide = PLATFORM_PITCH_DECK.slides[thesisTitleIdx + 2];
     expect(configSlide?.layout).toBe("fullImage");
     expect(configSlide?.image).toBe("/config space.png");
     expect(publicAssetExists(configSlide?.image ?? "")).toBe(true);
     expect(configSlide?.imageCaption?.trim().length).toBeGreaterThan(0);
 
-    // embeddings full-stage art (right after config space)
-    const embeddingsSlide = PLATFORM_PITCH_DECK.slides[founderCount + 3];
+    const embeddingsSlide = PLATFORM_PITCH_DECK.slides[thesisTitleIdx + 3];
     expect(embeddingsSlide?.layout).toBe("fullImage");
     expect(embeddingsSlide?.image).toBe("/embeddings.png");
     expect(publicAssetExists(embeddingsSlide?.image ?? "")).toBe(true);
     expect(embeddingsSlide?.imageCaption?.trim().length).toBeGreaterThan(0);
 
-    // TAP method media
-    const tapSlide = PLATFORM_PITCH_DECK.slides[founderCount + 4];
+    // Method section title + TAP media
+    const methodTitleIdx = thesisTitleIdx + 4;
+    expect(PLATFORM_PITCH_DECK.slides[methodTitleIdx]?.title).toBe("How we test it");
+    const tapSlide = PLATFORM_PITCH_DECK.slides[methodTitleIdx + 1];
     expect(tapSlide?.layout).toBe("media");
     expect(tapSlide?.video).toBe("/animations/selective_interface.mp4");
     expect(publicAssetExists(tapSlide?.video ?? "")).toBe(true);
@@ -196,23 +207,23 @@ describe("pitch deck content (platform only)", () => {
       "system 2",
     ]);
 
-    const puritySlide = PLATFORM_PITCH_DECK.slides[founderCount + 5];
+    const puritySlide = PLATFORM_PITCH_DECK.slides[methodTitleIdx + 2];
     expect(puritySlide?.layout).toBe("media");
     expect(puritySlide?.video).toBe("/animations/selective_interface.mp4");
     expect(publicAssetExists(puritySlide?.video ?? "")).toBe(true);
 
-    const productizedSlide = PLATFORM_PITCH_DECK.slides[founderCount + 6];
+    const productizedTitleIdx = methodTitleIdx + 3;
+    expect(PLATFORM_PITCH_DECK.slides[productizedTitleIdx]?.title).toBe("Productized");
+    const productizedSlide = PLATFORM_PITCH_DECK.slides[productizedTitleIdx + 1];
     expect(productizedSlide?.layout).toBe("statement");
     expect(productizedSlide?.kicker?.toLowerCase()).toMatch(/productized/);
     expect(productizedSlide?.cards?.length).toBeGreaterThanOrEqual(2);
 
-    const privacySlides = PLATFORM_PITCH_DECK.slides.slice(
-      founderCount + 7,
-      founderCount + 9,
-    );
+    const dataTitleIdx = productizedTitleIdx + 2;
+    expect(PLATFORM_PITCH_DECK.slides[dataTitleIdx]?.title).toBe("Data posture");
+    const privacySlides = PLATFORM_PITCH_DECK.slides.slice(dataTitleIdx + 1, dataTitleIdx + 3);
     expect(privacySlides).toHaveLength(2);
     expect(privacySlides.every((s) => /data/i.test(s.kicker ?? ""))).toBe(true);
-    // Privacy beats are text-only statement slides (no image placeholders).
     expect(privacySlides.every((s) => s.layout === "statement")).toBe(true);
     expect(privacySlides.every((s) => !s.imagePlaceholder && !s.image && !s.video)).toBe(true);
     expect(
@@ -222,7 +233,9 @@ describe("pitch deck content (platform only)", () => {
         .toLowerCase(),
     ).toMatch(/custom verification model|knowledge config|proprietary/);
 
-    const productsSlide = PLATFORM_PITCH_DECK.slides[founderCount + 9];
+    const productsTitleIdx = dataTitleIdx + 3;
+    expect(PLATFORM_PITCH_DECK.slides[productsTitleIdx]?.title).toBe("Our products");
+    const productsSlide = PLATFORM_PITCH_DECK.slides[productsTitleIdx + 1];
     expect(productsSlide?.layout).toBe("statement");
     expect(productsSlide?.kicker?.toLowerCase()).toMatch(/our products/);
     expect(productsSlide?.cards?.map((c) => c.label.toLowerCase())).toEqual([
@@ -250,6 +263,7 @@ describe("pitch deck content (platform only)", () => {
     expect(deckUi).toContain("data-pitch-media-video");
     expect(deckUi).toContain("data-pitch-full-image");
     expect(deckUi).toContain("data-pitch-title-logo");
+    expect(deckUi).toContain("data-pitch-title-centered");
     expect(deckUi).toContain('slide.layout === "fullImage"');
     expect(deckUi).toMatch(/autoPlay/);
     expect(deckUi).toMatch(/muted/);
@@ -302,19 +316,20 @@ describe("pitch deck content (platform only)", () => {
     expect(founderText).toContain("i*");
     expect(founderText).toMatch(/modeling goals using i\*/);
 
-    // Platform: founder block first, then title, then thesis
-    expect(PLATFORM_PITCH_DECK.slides[0]?.layout).toBe("founder");
-    const platformFounder = PLATFORM_PITCH_DECK.slides.slice(0, founderSlides.length);
+    // Platform: Founder section title, founder content, then thesis section title
+    expect(PLATFORM_PITCH_DECK.slides[0]?.layout).toBe("title");
+    expect(PLATFORM_PITCH_DECK.slides[0]?.title).toBe("Founder");
+    const platformFounder = PLATFORM_PITCH_DECK.slides.slice(1, 1 + founderSlides.length);
     expect(platformFounder.map((s) => s.title)).toEqual(founderSlides.map((s) => s.title));
     const platformTrajectory = platformFounder.find((s) => s.kicker === "Trajectory");
     expect(platformTrajectory?.title).toMatch(
       /From modeling goals using i\* to building learning verification, optimization, and augmentation tech/,
     );
-    expect(PLATFORM_PITCH_DECK.slides[founderSlides.length]?.layout).toBe("title");
-    expect(PLATFORM_PITCH_DECK.slides[founderSlides.length]?.title).toMatch(
+    expect(PLATFORM_PITCH_DECK.slides[1 + founderSlides.length]?.layout).toBe("title");
+    expect(PLATFORM_PITCH_DECK.slides[1 + founderSlides.length]?.title).toMatch(
       /What is Uncertain Systems\?/,
     );
-    expect(PLATFORM_PITCH_DECK.slides[founderSlides.length + 1]?.kicker?.toLowerCase()).toMatch(
+    expect(PLATFORM_PITCH_DECK.slides[2 + founderSlides.length]?.kicker?.toLowerCase()).toMatch(
       /thesis/,
     );
   });
@@ -527,10 +542,11 @@ describe("pitch deck content (platform only)", () => {
     expect(thesisCorpus).toMatch(/tools/);
     expect(thesisCorpus).toMatch(/intractable|proxy|ways of thinking/);
 
-    // Thesis comes after founder block + title beat
+    // Thesis comes after Founder title + founder slides + What is Uncertain Systems? title
     const founderCount = buildFounderSlides("platform").length;
-    expect(PLATFORM_PITCH_DECK.slides[founderCount]?.layout).toBe("title");
-    expect(PLATFORM_PITCH_DECK.slides[founderCount + 1]).toBe(platformThesis);
+    expect(PLATFORM_PITCH_DECK.slides[0]?.title).toBe("Founder");
+    expect(PLATFORM_PITCH_DECK.slides[1 + founderCount]?.title).toMatch(/What is Uncertain Systems\?/);
+    expect(PLATFORM_PITCH_DECK.slides[2 + founderCount]).toBe(platformThesis);
   });
 
   it("pitch slide copy avoids mocking theater/theatre framing", () => {

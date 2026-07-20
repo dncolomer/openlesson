@@ -89,38 +89,43 @@ describe("pitch deck content (platform only)", () => {
     assertNonEmptyTitles(PLATFORM_PITCH_DECK);
 
     const founderSlides = buildFounderSlides("platform");
-    // founders + body (4) + close (6: productized + privacy×2 + 3 use cases)
-    expect(PLATFORM_PITCH_DECK.slides).toHaveLength(founderSlides.length + 4 + 6);
+    // founders + body (5: thesis + config + embeddings + TAP×2) + close (4: productized + privacy×2 + products)
+    expect(PLATFORM_PITCH_DECK.slides).toHaveLength(founderSlides.length + 5 + 4);
 
     const founderBlock = PLATFORM_PITCH_DECK.slides.slice(0, founderSlides.length);
     const body = PLATFORM_PITCH_DECK.slides.slice(
       founderSlides.length,
-      founderSlides.length + 4,
+      founderSlides.length + 5,
     );
-    const close = PLATFORM_PITCH_DECK.slides.slice(founderSlides.length + 4);
+    const close = PLATFORM_PITCH_DECK.slides.slice(founderSlides.length + 5);
 
     // Founder first
     expect(founderBlock.map((s) => s.title)).toEqual(founderSlides.map((s) => s.title));
     expect(founderBlock[0]?.layout).toBe("founder");
     expect(PLATFORM_PITCH_DECK.slides[0]?.layout).toBe("founder");
 
-    // Body = thesis → config → TAP ×2
+    // Body = thesis → config → embeddings → TAP ×2
     expect(body[0]?.kicker?.toLowerCase()).toMatch(/thesis/);
     expect(body[0]?.layout).toBe("statement");
     expect(body[1]?.layout).toBe("fullImage");
     expect(body[1]?.image).toBe("/config space.png");
-    expect(body[2]?.layout).toBe("media");
-    expect(body[2]?.title.toLowerCase()).toMatch(/think aloud/);
+    expect(body[2]?.layout).toBe("fullImage");
+    expect(body[2]?.image).toBe("/embeddings.png");
     expect(body[3]?.layout).toBe("media");
-    expect(body[3]?.title.toLowerCase()).toMatch(/ai|game|tool|purity/);
+    expect(body[3]?.title.toLowerCase()).toMatch(/think aloud/);
+    expect(body[4]?.layout).toBe("media");
+    expect(body[4]?.title.toLowerCase()).toMatch(/ai|game|tool|purity/);
 
-    // Close = productized → data posture ×2 → PoW / TAP / ILE use cases
-    expect(close[0]?.kicker?.toLowerCase()).toMatch(/product/);
+    // Close = productized → data posture ×2 → Our products
+    expect(close[0]?.kicker?.toLowerCase()).toMatch(/productized/);
     expect(close[1]?.kicker?.toLowerCase()).toMatch(/data/);
     expect(close[2]?.kicker?.toLowerCase()).toMatch(/data/);
-    expect(close[3]?.kicker?.toLowerCase()).toMatch(/pow/);
-    expect(close[4]?.kicker?.toLowerCase()).toMatch(/tap/);
-    expect(close[5]?.kicker?.toLowerCase()).toMatch(/ile/);
+    expect(close[3]?.kicker?.toLowerCase()).toMatch(/our products/);
+    expect(close[3]?.cards?.map((c) => c.label.toLowerCase())).toEqual([
+      "pow api",
+      "tap",
+      "ile",
+    ]);
   });
 
   it("platform deck: thesis + fullImage + 2 media video + productized + privacy×2 + 3 use-case slides, schema anchors", () => {
@@ -165,8 +170,15 @@ describe("pitch deck content (platform only)", () => {
     expect(publicAssetExists(configSlide?.image ?? "")).toBe(true);
     expect(configSlide?.imageCaption?.trim().length).toBeGreaterThan(0);
 
+    // embeddings full-stage art (right after config space)
+    const embeddingsSlide = PLATFORM_PITCH_DECK.slides[founderCount + 2];
+    expect(embeddingsSlide?.layout).toBe("fullImage");
+    expect(embeddingsSlide?.image).toBe("/embeddings.png");
+    expect(publicAssetExists(embeddingsSlide?.image ?? "")).toBe(true);
+    expect(embeddingsSlide?.imageCaption?.trim().length).toBeGreaterThan(0);
+
     // TAP method media
-    const tapSlide = PLATFORM_PITCH_DECK.slides[founderCount + 2];
+    const tapSlide = PLATFORM_PITCH_DECK.slides[founderCount + 3];
     expect(tapSlide?.layout).toBe("media");
     expect(tapSlide?.video).toBe("/animations/selective_interface.mp4");
     expect(publicAssetExists(tapSlide?.video ?? "")).toBe(true);
@@ -175,24 +187,25 @@ describe("pitch deck content (platform only)", () => {
       "system 2",
     ]);
 
-    const puritySlide = PLATFORM_PITCH_DECK.slides[founderCount + 3];
+    const puritySlide = PLATFORM_PITCH_DECK.slides[founderCount + 4];
     expect(puritySlide?.layout).toBe("media");
     expect(puritySlide?.video).toBe("/animations/selective_interface.mp4");
     expect(publicAssetExists(puritySlide?.video ?? "")).toBe(true);
 
-    const productizedSlide = PLATFORM_PITCH_DECK.slides[founderCount + 4];
+    const productizedSlide = PLATFORM_PITCH_DECK.slides[founderCount + 5];
     expect(productizedSlide?.layout).toBe("statement");
-    expect(productizedSlide?.kicker?.toLowerCase()).toMatch(/product/);
+    expect(productizedSlide?.kicker?.toLowerCase()).toMatch(/productized/);
     expect(productizedSlide?.cards?.length).toBeGreaterThanOrEqual(2);
 
     const privacySlides = PLATFORM_PITCH_DECK.slides.slice(
-      founderCount + 5,
-      founderCount + 7,
+      founderCount + 6,
+      founderCount + 8,
     );
     expect(privacySlides).toHaveLength(2);
     expect(privacySlides.every((s) => /data/i.test(s.kicker ?? ""))).toBe(true);
-    expect(privacySlides.every((s) => s.layout === "media")).toBe(true);
-    expect(privacySlides.every((s) => !s.image && !s.video)).toBe(true);
+    // Privacy beats are text-only statement slides (no image placeholders).
+    expect(privacySlides.every((s) => s.layout === "statement")).toBe(true);
+    expect(privacySlides.every((s) => !s.imagePlaceholder && !s.image && !s.video)).toBe(true);
     expect(
       privacySlides
         .flatMap((s) => [s.title, s.subtitle, ...(s.highlights ?? [])])
@@ -200,38 +213,27 @@ describe("pitch deck content (platform only)", () => {
         .toLowerCase(),
     ).toMatch(/custom verification model|knowledge config|proprietary/);
 
-    const useCaseSlides = PLATFORM_PITCH_DECK.slides.slice(
-      founderCount + 7,
-      founderCount + 10,
-    );
-    expect(useCaseSlides.map((s) => s.cards?.[0]?.label.toLowerCase())).toEqual([
-      "pow",
+    const productsSlide = PLATFORM_PITCH_DECK.slides[founderCount + 8];
+    expect(productsSlide?.layout).toBe("statement");
+    expect(productsSlide?.kicker?.toLowerCase()).toMatch(/our products/);
+    expect(productsSlide?.cards?.map((c) => c.label.toLowerCase())).toEqual([
+      "pow api",
       "tap",
       "ile",
     ]);
-    for (const slide of useCaseSlides) {
-      expect(slide.layout).toBe("statement");
-      expect(slide.cards?.length).toBe(1);
-      expect(slide.cards?.[0]?.ideas?.length).toBeGreaterThanOrEqual(2);
-      for (const idea of slide.cards?.[0]?.ideas ?? []) {
-        expect(idea.title.trim().length).toBeGreaterThan(0);
-        expect(idea.body.trim().length).toBeGreaterThan(40);
-      }
-      expect(
-        publicAssetExists(slide.backgroundImage ?? PLATFORM_PITCH_DECK.backgroundImage ?? ""),
-      ).toBe(true);
+    expect(productsSlide?.cards).toHaveLength(3);
+    for (const card of productsSlide?.cards ?? []) {
+      expect(card.body?.trim().length).toBeGreaterThan(20);
+      expect(card.ideas).toBeUndefined();
     }
-    const useCaseCorpus = useCaseSlides
-      .flatMap((s) =>
-        (s.cards ?? []).flatMap((c) =>
-          (c.ideas ?? []).flatMap((idea) => [idea.title, idea.body]),
-        ),
-      )
+    const productsCorpus = (productsSlide?.cards ?? [])
+      .flatMap((c) => [c.label, c.body])
       .join("\n")
       .toLowerCase();
-    expect(useCaseCorpus).toMatch(/dynamic saas onboarding|dynamic onboarding/);
-    expect(useCaseCorpus).toMatch(/learning-to-conversion|learning to conversion/);
-    expect(useCaseCorpus).toMatch(/tap-cha/);
+    expect(productsCorpus).toMatch(/pow api/);
+    expect(productsCorpus).toMatch(/dynamic saas onboarding|dynamic onboarding/);
+    expect(productsCorpus).toMatch(/tap-cha/);
+    expect(productsCorpus).toMatch(/onboarding repair|repair loop/);
 
     const deckUi = fs.readFileSync(path.join(REPO_ROOT, "components/SalesSlideDeck.tsx"), "utf8");
     expect(deckUi).toContain("data-pitch-idea");
@@ -475,19 +477,41 @@ describe("pitch deck content (platform only)", () => {
     }
   });
 
-  it("platform Our thesis slide keeps product thesis highlights", () => {
+  it("platform Our thesis slide: short concept cards then supporting bullets", () => {
     const deckUi = fs.readFileSync(path.join(REPO_ROOT, "components/SalesSlideDeck.tsx"), "utf8");
-    expect(deckUi).toContain("data-pitch-highlights");
-    expect(deckUi).toContain("HighlightCallouts");
+    expect(deckUi).toContain("CardGrid");
+    expect(deckUi).toContain("data-pitch-card-grid");
+    expect(deckUi).toContain("data-pitch-bullet-list");
 
     const platformThesis = PLATFORM_PITCH_DECK.slides.find((s) => /our thesis/i.test(s.kicker ?? ""));
     expect(platformThesis).toBeTruthy();
-    expect(platformThesis!.title.toLowerCase()).toMatch(/correct answers|hard skills/);
-    expect(platformThesis!.highlights?.length).toBe(2);
-    expect(platformThesis!.highlightLabels?.join(" ").toLowerCase()).toMatch(
-      /knowledge configuration|proximity/,
-    );
-    expect((platformThesis!.bullets ?? []).length).toBeGreaterThanOrEqual(2);
+    expect(platformThesis!.title.toLowerCase()).toMatch(/ratio of correct|correct (test )?answers/);
+    expect(platformThesis!.subtitle?.toLowerCase()).toMatch(/knowledge configuration space/);
+    expect(platformThesis!.cards).toHaveLength(3);
+    expect(platformThesis!.cards?.map((c) => c.label.toLowerCase())).toEqual([
+      "configuration space",
+      "proof of work proxy",
+      "distance to “knowing x”",
+    ]);
+    // Cards stay scannable; depth lives in bullets underneath.
+    for (const card of platformThesis!.cards ?? []) {
+      expect(card.body?.trim().length).toBeGreaterThan(10);
+      expect(card.body!.trim().length).toBeLessThan(90);
+    }
+    expect(platformThesis!.bullets?.length).toBeGreaterThanOrEqual(3);
+    const thesisCorpus = [
+      platformThesis!.title,
+      platformThesis!.subtitle,
+      ...(platformThesis!.cards ?? []).flatMap((c) => [c.label, c.body]),
+      ...(platformThesis!.bullets ?? []),
+    ]
+      .join("\n")
+      .toLowerCase();
+    expect(thesisCorpus).toMatch(/configuration space/);
+    expect(thesisCorpus).toMatch(/proof of work|pow/);
+    expect(thesisCorpus).toMatch(/embedding|distance/);
+    expect(thesisCorpus).toMatch(/tools/);
+    expect(thesisCorpus).toMatch(/intractable|proxy|ways of thinking/);
 
     // Thesis comes after founder block
     const founderCount = buildFounderSlides("platform").length;
@@ -528,7 +552,7 @@ describe("pitch deck content (platform only)", () => {
     }
   });
 
-  it("labeled highlight callouts appear on platform deck", () => {
+  it("labeled highlight callouts appear on platform deck method/product slides", () => {
     const deckUi = fs.readFileSync(path.join(REPO_ROOT, "components/SalesSlideDeck.tsx"), "utf8");
     expect(deckUi).toContain("data-pitch-highlight");
     expect(deckUi).toContain("HighlightCallouts");
@@ -536,9 +560,9 @@ describe("pitch deck content (platform only)", () => {
     const platformHighlights = PLATFORM_PITCH_DECK.slides.filter(
       (s) => (s.highlights?.length ?? 0) > 0 && (s.highlightLabels?.length ?? 0) > 0,
     );
-    expect(platformHighlights.length).toBeGreaterThanOrEqual(4);
-    const platformThesis = platformHighlights.find((s) => /our thesis/i.test(s.kicker ?? ""));
-    expect(platformThesis).toBeTruthy();
+    // Thesis uses three cards; method / productized / privacy still use highlights.
+    expect(platformHighlights.length).toBeGreaterThanOrEqual(3);
+    expect(platformHighlights.every((s) => !/our thesis/i.test(s.kicker ?? ""))).toBe(true);
   });
 
   it("media layout is side-by-side grid; Karpathy media + TAP video media on platform", () => {
@@ -568,10 +592,8 @@ describe("pitch deck content (platform only)", () => {
   it("platform deck includes privacy / custom verification model slides", () => {
     const privacySlides = buildPrivacyDataSlides();
     expect(privacySlides).toHaveLength(2);
-    expect(privacySlides.every((s) => s.layout === "media")).toBe(true);
-    expect(privacySlides.every((s) => s.imagePlaceholder === true || (!s.image && !s.video))).toBe(
-      true,
-    );
+    expect(privacySlides.every((s) => s.layout === "statement")).toBe(true);
+    expect(privacySlides.every((s) => !s.imagePlaceholder && !s.image && !s.video)).toBe(true);
     const privacyCorpus = privacySlides
       .flatMap((s) => [
         s.kicker,

@@ -3,21 +3,18 @@ import { PITCH_ASSETS } from "@/lib/sales/solution-slide-decks";
 import { labeledHighlights } from "@/lib/sales/slide-highlights";
 
 /**
- * Enterprise data posture slides for the **platform** pitch deck (2 slides, no scroll).
- * Split so each fits a media layout with an image placeholder stage.
+ * Enterprise data posture slides for the **platform** pitch deck (2 slides).
+ * Text-only statement layout (no image placeholders).
  */
 export function buildPrivacyDataSlides(): SalesSlide[] {
   return [
     {
-      layout: "media",
+      layout: "statement",
       kicker: "Data posture · 1/2",
       title: "Proprietary “knowing X” cannot live on a public quiz.",
       subtitle:
         "In the enterprise, skill is entangled with confidential systems. Example: does this new SRE know how to manage our production system? That knowledge is not a shareable answer key.",
       backgroundImage: PITCH_ASSETS.aesthetics.products,
-      imagePlaceholder: true,
-      imageCaption: "Privacy · proprietary systems",
-      imageAlt: "Placeholder for enterprise privacy visual",
       ...labeledHighlights([
         [
           "Confidential by nature",
@@ -34,15 +31,12 @@ export function buildPrivacyDataSlides(): SalesSlide[] {
       ],
     },
     {
-      layout: "media",
+      layout: "statement",
       kicker: "Data posture · 2/2",
       title: "Custom verification models in hashed knowledge config space.",
       subtitle:
         "Distill internal talent into a high-validation region, then evaluate candidates on that geometry — with hashed or redacted traces only.",
       backgroundImage: PITCH_ASSETS.aesthetics.products,
-      imagePlaceholder: true,
-      imageCaption: "Custom verification model · knowledge config",
-      imageAlt: "Placeholder for custom verification model visual",
       ...labeledHighlights([
         [
           "Custom verification models",

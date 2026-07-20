@@ -3,7 +3,8 @@ import { generateProbe } from "@/lib/xai";
 import { getUserPrompts } from "@/lib/user-prompts";
 import type { RequestType, SessionPlan } from "@/lib/storage";
 import { getLanguageName } from "@/lib/tutoring-languages";
-import { ayclTokenFromBody, guardSessionRoute } from "@/lib/api/require-auth";
+import { ayclTokenFromBody,
+  ileTokenFromBody, guardSessionRoute } from "@/lib/api/require-auth";
 
 export const runtime = "nodejs";
 export const maxDuration = 30;
@@ -35,7 +36,7 @@ export async function POST(request: NextRequest) {
     }
 
     const auth = await guardSessionRoute(sessionId, {
-      ayclToken: ayclTokenFromBody(body),
+      ayclToken: ayclTokenFromBody(body), ileToken: ileTokenFromBody(body),
       // Prefer binding to a session when provided; product access always enforced for cookie auth.
     });
     if (!auth.ok) return auth.response;

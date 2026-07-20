@@ -13,7 +13,7 @@ import {
   X,
 } from "lucide-react";
 import { askOrbitPerformanceQuestion } from "@/lib/product-demos/orbit-learning-links";
-import type { ConversionGoalSource } from "@/lib/agent-v2/conversion-goal";
+import type { WorkspaceGoalSource } from "@/lib/agent-v2/score-goal";
 import type { PerformanceReport } from "@/lib/agent-v2/performance-report";
 import { extractGameCoaching } from "@/lib/product-demos/game-tips";
 import type { OrbitAppSnapshot } from "@/lib/product-demos/orbit-app-context";
@@ -40,7 +40,7 @@ type SmartCoachOverlayProps = {
   blockId?: string | null;
   proofOfWorkCount?: number;
   inferredGoal?: string | null;
-  conversionGoalSource?: ConversionGoalSource;
+  workspaceGoalSource?: WorkspaceGoalSource;
   appSnapshot?: OrbitAppSnapshot | null;
   ileSessionUrl?: string | null;
   isOpeningIle?: boolean;
@@ -113,7 +113,7 @@ export function SmartCoachOverlay({
   blockId = null,
   proofOfWorkCount = 0,
   inferredGoal,
-  conversionGoalSource,
+  workspaceGoalSource,
   appSnapshot = null,
   ileSessionUrl,
   isOpeningIle = false,
@@ -180,11 +180,10 @@ export function SmartCoachOverlay({
 
   const goalText =
     inferredGoal?.trim() ||
-    report?.conversion_goal?.trim() ||
+    report?.workspace_goal?.trim() ||
     "ship productive Sprint 12 work after triaging and owning the critical path";
 
-  const overallScore = clampScore(report?.overall_score);
-  const conversionScore = clampScore(report?.conversion_score);
+  const primaryScore = clampScore(report?.score);
   const hasCoaching =
     coaching.directions.length > 0 ||
     coaching.events.length > 0 ||
@@ -194,7 +193,7 @@ export function SmartCoachOverlay({
     goalText ||
     hasCoaching ||
     suggestions.length > 0 ||
-    overallScore !== null ||
+    primaryScore !== null ||
     coachTarget;
   // Always show coach when we can name an exact next click — even before PoW scores.
   const showCard = Boolean(connected || hasScoreContent || coachTarget || appSnapshot);
@@ -307,7 +306,7 @@ export function SmartCoachOverlay({
     coaching.directions[0] ??
     null;
 
-  const showIleCta = Boolean(onOpenIle && (hasCoaching || suggestions.length > 0 || (overallScore !== null && overallScore < 80)));
+  const showIleCta = Boolean(onOpenIle && (hasCoaching || suggestions.length > 0 || (primaryScore !== null && primaryScore < 80)));
   const canAskQuestion = Boolean(workspaceId && proofOfWorkCount > 0 && !isReporting);
 
   const handleAskQuestion = async () => {
@@ -364,8 +363,8 @@ export function SmartCoachOverlay({
                 Uncertain Systems
               </span>
             </span>
-            {overallScore !== null ? (
-              <span className="shrink-0 font-mono text-[10px] text-white">{overallScore}</span>
+            {primaryScore !== null ? (
+              <span className="shrink-0 font-mono text-[10px] text-white">{primaryScore}</span>
             ) : null}
           </div>
           <button
@@ -421,17 +420,17 @@ export function SmartCoachOverlay({
           <p className="rounded-md border border-[#5e6ad2]/25 bg-[#5e6ad2]/10 px-3 py-2 text-sm leading-snug text-[#d6d6e8]">
             Are you trying to{" "}
             <span className="font-medium text-white">{goalText}</span>?
-            {conversionGoalSource || report ? (
+            {workspaceGoalSource || report ? (
               <span className="mt-1 block font-mono text-[9px] uppercase tracking-wide text-[#6b6b80]">
-                {conversionGoalSource === "workspace"
+                {workspaceGoalSource === "workspace"
                   ? "Workspace goal"
-                  : conversionGoalSource === "inferred"
+                  : workspaceGoalSource === "inferred"
                     ? "Inferred goal"
-                    : "Demo conversion goal"}
+                    : "Demo score goal"}
               </span>
             ) : (
               <span className="mt-1 block font-mono text-[9px] uppercase tracking-wide text-[#6b6b80]">
-                Demo conversion goal
+                Demo score goal
               </span>
             )}
           </p>
@@ -459,18 +458,16 @@ export function SmartCoachOverlay({
           </div>
         ) : null}
 
-        {overallScore !== null || conversionScore !== null ? (
+        {primaryScore !== null ? (
           <div className="mt-3 flex gap-4 font-mono text-[10px] uppercase tracking-wide text-[#6b6b80]">
-            {overallScore !== null ? (
-              <span>
-                Learn <span className="text-white">{overallScore}</span>/100
-              </span>
-            ) : null}
-            {conversionScore !== null ? (
-              <span>
-                Conv <span className="text-white">{conversionScore}%</span>
-              </span>
-            ) : null}
+            <span>
+              {(report?.vertical === "augmentation"
+                ? "Augment"
+                : report?.vertical === "optimization"
+                  ? "Optimize"
+                  : "Verify")}{" "}
+              <span className="text-white">{primaryScore}</span>/100
+            </span>
           </div>
         ) : null}
 

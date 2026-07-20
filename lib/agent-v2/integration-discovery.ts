@@ -6,21 +6,23 @@ import {
   buildIntegrationSkillApiPath,
   buildPerformanceApiPath,
 } from "./proof-of-work-integration";
+import { POW_API_BASE } from "@/lib/api/agent-api-paths";
 
 export const UNCERTAIN_SYSTEMS_SCOPE = {
   product: "Uncertain Systems",
   mission:
     "Verify learning and measure readiness-to-perform using real product proof of work — not quizzes in isolation.",
   pillars: [
-    "Learning verification — overall_score and marker_scores from tool traces, artifacts, and sessions",
-    "Learning-to-conversion — conversion_score and conversion_goal tie competency to business outcomes",
+    "Learning verification — verification_score and marker_scores from tool traces, artifacts, and sessions (TAP uses verification only)",
+    "Learning augmentation — augmentation_score measures practice / improvement readiness from proof of work",
+    "Learning optimization — optimization_score measures progress toward workspace_goal (0–100 score units)",
     "Proof of work — upload_proof_of_work / POST .../proof-of-work streams observable actions as durable artifacts",
     "Predictive interruptions (TIM) — every response includes interruption (object or null) with delay_ms and intervention hints",
   ],
   workspace_model:
-    "A Verification Workspace has blocks (assessable units), a conversion_goal (what success means), and accumulates proof of work. Progress is continuous: upload → re-fetch spec → score → coach → repeat.",
+    "A Verification Workspace has blocks (assessable units), a workspace_goal (what success means), and accumulates proof of work. Progress is continuous: upload → re-fetch spec → score → repeat.",
   integrator_model:
-    "Partner agents instrument their product, upload proof of work after meaningful actions, and call performance analysis for gap reports and next-step coaching. Both REST (Bearer API key) and MCP (JSON-RPC with key in URL) expose the same capabilities.",
+    "Partner agents instrument their product, upload proof of work after meaningful actions, and call vertical score tools for gap reports and next actions. Both REST (Bearer API key) and MCP (JSON-RPC with Bearer auth) expose the same capabilities.",
   docs: {
     api_reference: "/skill.md",
     human_guide: "/docs/proof-of-work-api",
@@ -74,7 +76,7 @@ export function buildIntegrationSurfaces(baseUrl: string): IntegrationSurfaceRef
       transport: "rest",
       label: "Proof-of-Work API (REST)",
       auth: "Authorization: Bearer <api_key>",
-      entrypoint: `${base}/api/v2/agent/workspaces/{workspace_id}`,
+      entrypoint: `${base}${POW_API_BASE}/workspaces/{workspace_id}`,
       when_to_use: "Production integrations, server-side agents, and clients with standard HTTP + Bearer auth.",
     },
     {
@@ -128,7 +130,7 @@ export function buildContinuousEvaluationMcpPolicy(
   return {
     principle: UNCERTAIN_SYSTEMS_SCOPE.workspace_model,
     more_evidence_improves:
-      "More upload_proof_of_work / POST .../proof-of-work calls improve marker_scores, gap_analysis, and conversion_score accuracy.",
+      "More upload_proof_of_work / POST .../proof-of-work calls improve verification, augmentation, and optimization score accuracy.",
     regeneration_required: true,
     mcp_endpoint_pattern: buildMcpEndpointPattern(baseUrl),
     proof_of_work_spec: {
@@ -158,45 +160,45 @@ export function buildContinuousEvaluationMcpPolicy(
       ],
     },
     performance: {
-      mcp_tool: "analyze_performance",
+      mcp_tool: "verification_score",
       rest_equivalent: performanceRest,
-      purpose: "Read learning progress: overall_score, marker_scores, gaps, next_steps; or chat with prompt",
+      purpose: "Vertical scores: verification_score / augmentation_score / optimization_score — each one primary score + spider + analysis + next actions",
       when_to_call: [
         "After each meaningful proof-of-work batch (e.g. every 3-10 uploads)",
-        "Before coaching the user on what to do next",
-        "Omit prompt for structured scorecard; include prompt for Q&A",
+        "Call verification_score for learning verification (TAP auto-results use this)",
+        "Call augmentation_score for practice readiness; optimization_score for workspace_goal progress",
       ],
     },
     progress_snapshot: {
       mcp_tool: "get_learning_progress",
-      rest_equivalent: `GET ${baseUrl.replace(/\/$/, "")}/api/v2/agent/workspaces/${workspaceId} + performance summary`,
+      rest_equivalent: `GET ${baseUrl.replace(/\/$/, "")}/api/v3/pow/workspaces/${workspaceId} + performance summary`,
       purpose:
-        "One-call orientation: conversion_goal, block map, proof-of-work counts, recommended next MCP tool and REST equivalent",
+        "One-call orientation: workspace_goal, block map, proof-of-work counts, recommended next MCP tool and REST equivalent",
       when_to_call: [
         "When connecting MCP mid-session and need workspace progress context",
-        "Before choosing between upload_proof_of_work vs analyze_performance",
+        "Before choosing between upload_proof_of_work vs verification_score / augmentation_score / optimization_score",
         "After long idle gaps to re-orient the agent",
       ],
     },
-    recommended_cadence: `MCP loop: generate_proof_of_work_schema → upload_proof_of_work (repeat) → analyze_performance → regenerate schema/skill. REST mirror: ${uploadRest} → ${proofOfWorkSpecRest} → ${performanceRest}.`,
+    recommended_cadence: `MCP loop: generate_proof_of_work_schema → upload_proof_of_work (repeat) → verification_score|augmentation_score|optimization_score → regenerate schema/skill. REST mirror: ${uploadRest} → ${proofOfWorkSpecRest} → ${performanceRest}.`,
   };
 }
 
 export function recommendIntegrationActions(options: {
   proof_of_work_artifacts: number;
   blocks: number;
-  has_conversion_goal: boolean;
-  last_report_overall_score?: number | null;
+  has_workspace_goal: boolean;
+  last_report_score?: number | null;
 }): RecommendedIntegrationAction[] {
   const actions: RecommendedIntegrationAction[] = [];
-  const { proof_of_work_artifacts, blocks, has_conversion_goal } = options;
+  const { proof_of_work_artifacts, blocks, has_workspace_goal } = options;
 
-  if (!has_conversion_goal) {
+  if (!has_workspace_goal) {
     actions.push({
       priority: 1,
       mcp_tool: "get_workspace",
       rest_equivalent: "GET .../workspaces/{id}",
-      reason: "Read conversion_goal — defines what learning progress should optimize toward.",
+      reason: "Read workspace_goal — defines what learning progress should optimize toward.",
     });
   }
 
@@ -227,8 +229,8 @@ export function recommendIntegrationActions(options: {
   if (proof_of_work_artifacts >= 1 && (proof_of_work_artifacts < 3 || proof_of_work_artifacts % 3 === 0)) {
     actions.push({
       priority: 5,
-      mcp_tool: "analyze_performance",
-      rest_equivalent: "POST .../performance",
+      mcp_tool: "verification_score",
+      rest_equivalent: "POST .../verification-score",
       reason: "Enough signal to score — request scorecard (no prompt) for marker_scores and gap_analysis.",
     });
   }
@@ -255,7 +257,7 @@ export function recommendIntegrationActions(options: {
     priority: 8,
     mcp_tool: "get_learning_progress",
     rest_equivalent: "Composite progress snapshot",
-    reason: "Re-orient on conversion_goal, counts, and recommended next steps.",
+    reason: "Re-orient on workspace_goal, counts, and recommended next steps.",
   });
 
   return actions.sort((a, b) => a.priority - b.priority);
@@ -263,7 +265,7 @@ export function recommendIntegrationActions(options: {
 
 export function buildUncertainSystemsScopeForWorkspace(options: {
   workspaceTitle: string;
-  conversionGoal?: string | null;
+  workspaceGoal?: string | null;
   blockCount: number;
   proofOfWorkCount: number;
 }): Record<string, unknown> {
@@ -271,11 +273,11 @@ export function buildUncertainSystemsScopeForWorkspace(options: {
     ...UNCERTAIN_SYSTEMS_SCOPE,
     workspace_context: {
       title: options.workspaceTitle,
-      conversion_goal: options.conversionGoal?.trim() || "Infer from workspace title, notes, and proof of work.",
+      workspace_goal: options.workspaceGoal?.trim() || "Infer from workspace title, notes, and proof of work.",
       block_count: options.blockCount,
       proof_of_work_artifact_count: options.proofOfWorkCount,
       progress_interpretation:
-        "Learning progress = proof-of-work volume + quality of marker_scores/gaps from analyze_performance, measured against conversion_goal.",
+        "Learning progress = proof-of-work volume + quality of marker_scores/gaps from the three vertical score tools, measured against workspace_goal.",
     },
   };
 }
@@ -331,7 +333,7 @@ ${UNCERTAIN_SYSTEMS_SCOPE.workspace_model}
 ${UNCERTAIN_SYSTEMS_SCOPE.integrator_model}
 
 ## Surfaces (use either)
-- **REST:** \`${base}/api/v2/agent/workspaces/{workspace_id}\` with Bearer API key
+- **REST:** \`${base}/api/v3/pow/workspaces/{workspace_id}\` with Bearer API key
 - **MCP:** \`${buildMcpEndpointPattern(baseUrl)}\` with Bearer API key and JSON-RPC tools/list
 
 Docs: ${base}${UNCERTAIN_SYSTEMS_SCOPE.docs.api_reference} · ${base}${UNCERTAIN_SYSTEMS_SCOPE.docs.human_guide}
@@ -347,15 +349,15 @@ Progress is **continuous**, not one-time setup.
 1. **generate_proof_of_work_schema** / POST .../proof-of-work-schema — get tool_submissions + contracts
 2. **list_blocks** / GET .../blocks — map competencies to block_id
 3. **upload_proof_of_work** / POST .../proof-of-work — after each meaningful product action (repeat)
-4. **analyze_performance** / POST .../performance — scorecard (no prompt) or chat (with prompt)
+4. **verification_score** / **augmentation_score** / **optimization_score** — vertical scorecards
 5. Re-fetch schema + regenerate skill as proof of work grows
 
 ## Progress signals
 - \`proof_of_work_summary.proof_of_work_artifacts\` — how much signal exists
-- \`report.overall_score\` — learning verification (0-100)
-- \`report.conversion_score\` — likelihood of achieving conversion_goal
-- \`report.marker_scores\` — per-competency radar axes
-- \`report.gap_analysis\` — deficiencies + product-language next steps
+- \`report.score\` / named \`verification_score\` | \`augmentation_score\` | \`optimization_score\` — primary 0-100 for that vertical
+- \`report.workspace_goal\` — inferred or owner-set workspace goal
+- \`report.marker_scores\` — per-competency spider/radar axes
+- \`report.gap_analysis\` — analysis + product-language next actions
 
 ## Quick orientation
 Call **get_learning_progress** with \`workspace_id\` for a one-shot snapshot and recommended_next_actions.

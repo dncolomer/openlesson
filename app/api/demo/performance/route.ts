@@ -1,18 +1,27 @@
 import { NextRequest, NextResponse } from "next/server";
-import { finalizePerformanceReport } from "@/lib/agent-v2/conversion-goal";
+import { finalizeVerticalScoreReport } from "@/lib/agent-v2/workspace-goal";
 import {
   buildPerformanceChatInstructions,
-  buildPerformanceReportInstructions,
   buildWorkspacePerformanceContext,
-  emptyPerformanceReport,
-  PERFORMANCE_REPORT_SCHEMA,
-  type PerformanceReport,
+  emptyVerticalScoreReport,
 } from "@/lib/agent-v2/performance-context";
+import {
+  SCORE_VERTICALS,
+  type ScoreVertical,
+} from "@/lib/agent-v2/performance-report";
+import { generateWorkspaceVerticalScoreReport } from "@/lib/agent-v2/generate-performance-report";
 import { requireDemoAdminWorkspaceSession } from "@/lib/product-demos/demo-access";
-import { callXaiResponses, callXaiResponsesWithFiles, DEFAULT_MODEL, type ResponsesInputMessage } from "@/lib/xai-client";
+import { callXaiResponses, DEFAULT_MODEL, type ResponsesInputMessage } from "@/lib/xai-client";
 
 export const runtime = "nodejs";
 export const maxDuration = 120;
+
+function parseVertical(value: unknown): ScoreVertical {
+  if (typeof value === "string" && (SCORE_VERTICALS as readonly string[]).includes(value)) {
+    return value as ScoreVertical;
+  }
+  return "verification";
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -37,6 +46,7 @@ export async function POST(req: NextRequest) {
     const blockId = typeof body.block_id === "string" ? body.block_id : null;
     const orbitUiContext =
       typeof body.orbit_ui_context === "string" ? body.orbit_ui_context.trim() : "";
+    const vertical = parseVertical(body.vertical);
 
     const context = await buildWorkspacePerformanceContext({
       supabase: access.supabase,
@@ -46,33 +56,38 @@ export async function POST(req: NextRequest) {
     });
 
     const workspaceTitle = access.plan.title || access.plan.root_topic || "workspace";
-    const storedConversionGoal = context.payload.workspace.conversion_goal;
+    const storedWorkspaceGoal = context.payload.workspace.workspace_goal;
     const contextCounts = context.payload.counts;
 
     if (
       contextCounts.proof_of_work_artifacts === 0 &&
-
       contextCounts.linked_sessions === 0 &&
       contextCounts.workspace_files === 0
     ) {
       const emptyReport = prompt
         ? null
-        : finalizePerformanceReport(emptyPerformanceReport(), storedConversionGoal, {
-            title: context.payload.workspace.title,
-            description: context.payload.workspace.description,
-            notes: context.payload.workspace.notes,
-            root_topic: context.payload.workspace.root_topic,
-          });
+        : finalizeVerticalScoreReport(
+            emptyVerticalScoreReport(vertical),
+            storedWorkspaceGoal,
+            {
+              title: context.payload.workspace.title,
+              description: context.payload.workspace.description,
+              notes: context.payload.workspace.notes,
+              root_topic: context.payload.workspace.root_topic,
+            },
+            vertical
+          );
 
       return NextResponse.json({
-        mode: prompt ? "chat" : "report",
+        mode: prompt ? "chat" : "score",
+        vertical: prompt ? undefined : vertical,
         response: prompt
           ? stylePrompt
             ? "No evidence is attached to this workspace yet. Take a few actions in Orbit first, then ask what you should improve."
             : "No evidence is attached to this workspace yet. Take a few actions in Orbit first, then ask what to improve."
           : null,
-        workspace_conversion_goal: emptyReport?.workspace_conversion_goal,
-        conversion_goal_source: emptyReport?.conversion_goal_source,
+        workspace_goal: emptyReport?.workspace_goal,
+        workspace_goal_source: emptyReport?.workspace_goal_source,
         report: emptyReport?.report ?? null,
         proof_of_work_summary: contextCounts,
         file_ids: [],
@@ -125,49 +140,48 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    const reportPrompt = [
-      `Generate a learning and gap analysis report for workspace "${workspaceTitle}".`,
-      orbitUiContext
-        ? `Current Orbit UI state (ground coaching in what is actually available — do not suggest triage when inbox unread is 0):\n${orbitUiContext}`
-        : "",
-    ]
-      .filter(Boolean)
-      .join("\n\n");
+    const generation = await generateWorkspaceVerticalScoreReport({
+      workspaceId,
+      workspaceTitle,
+      workspaceRootTopic: access.plan.root_topic,
+      storedWorkspaceGoal,
+      fileIds: context.fileIds,
+      vertical,
+      blockId,
+      stylePrompt: [
+        stylePrompt,
+        orbitUiContext
+          ? `Current Orbit UI state (ground coaching in what is actually available — do not suggest triage when inbox unread is 0):\n${orbitUiContext}`
+          : "",
+      ]
+        .filter(Boolean)
+        .join("\n\n"),
+    });
 
-    const reportResult = await callXaiResponsesWithFiles<PerformanceReport>(
-      reportPrompt,
-      context.fileIds,
-      {
-        instructions: buildPerformanceReportInstructions(
-          blockId,
-          storedConversionGoal,
-          stylePrompt
-        ),
-        temperature: 0.35,
-        maxOutputTokens: 2500,
-        fetchTimeout: 120000,
-        jsonSchema: PERFORMANCE_REPORT_SCHEMA,
-      }
-    );
-
-    if (!reportResult.success || !reportResult.data) {
+    if (!generation.success || !generation.data) {
       return NextResponse.json(
-        { error: reportResult.error || "Failed to generate performance report" },
+        { error: generation.error || "Failed to generate performance report" },
         { status: 500 }
       );
     }
 
-    const finalized = finalizePerformanceReport(reportResult.data, storedConversionGoal, {
-      title: context.payload.workspace.title,
-      description: context.payload.workspace.description,
-      notes: context.payload.workspace.notes,
-      root_topic: context.payload.workspace.root_topic,
-    });
+    const finalized = finalizeVerticalScoreReport(
+      generation.data,
+      storedWorkspaceGoal,
+      {
+        title: context.payload.workspace.title,
+        description: context.payload.workspace.description,
+        notes: context.payload.workspace.notes,
+        root_topic: context.payload.workspace.root_topic,
+      },
+      vertical
+    );
 
     return NextResponse.json({
-      mode: "report",
-      workspace_conversion_goal: finalized.workspace_conversion_goal,
-      conversion_goal_source: finalized.conversion_goal_source,
+      mode: "score",
+      vertical,
+      workspace_goal: finalized.workspace_goal,
+      workspace_goal_source: finalized.workspace_goal_source,
       report: finalized.report,
       proof_of_work_summary: contextCounts,
       file_ids: context.fileIds,

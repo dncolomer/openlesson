@@ -1,52 +1,56 @@
 import { describe, expect, it } from "vitest";
 import {
-  fallbackConversionGoal,
-  finalizePerformanceReport,
-  normalizeConversionGoal,
-} from "@/lib/agent-v2/conversion-goal";
-import { emptyPerformanceReport } from "@/lib/agent-v2/performance-report";
+  fallbackWorkspaceGoal,
+  finalizeVerticalScoreReport,
+  normalizeWorkspaceGoal,
+} from "@/lib/agent-v2/workspace-goal";
+import { emptyVerticalScoreReport } from "@/lib/agent-v2/performance-report";
 
-describe("normalizeConversionGoal", () => {
+describe("normalizeWorkspaceGoal", () => {
   it("trims and caps length", () => {
-    expect(normalizeConversionGoal("  Trial activation  ")).toBe("Trial activation");
-    expect(normalizeConversionGoal("")).toBeNull();
+    expect(normalizeWorkspaceGoal("  Trial activation  ")).toBe("Trial activation");
+    expect(normalizeWorkspaceGoal("")).toBeNull();
   });
 });
 
-describe("finalizePerformanceReport", () => {
+describe("finalizeVerticalScoreReport", () => {
   it("uses stored workspace goal when present", () => {
-    const base = emptyPerformanceReport();
-    const result = finalizePerformanceReport(base, "Paid plan activation", {
+    const base = emptyVerticalScoreReport("verification");
+    const result = finalizeVerticalScoreReport(base, "Paid plan activation", {
       title: "Demo",
     });
-    expect(result.conversion_goal_source).toBe("workspace");
-    expect(result.workspace_conversion_goal).toBe("Paid plan activation");
-    expect(result.report.conversion_goal).toBe("Paid plan activation");
+    expect(result.workspace_goal_source).toBe("workspace");
+    expect(result.workspace_goal).toBe("Paid plan activation");
+    expect(result.report.workspace_goal).toBe("Paid plan activation");
+    expect(result.report).not.toHaveProperty("conversion_goal");
   });
 
   it("falls back to inferred goal when workspace goal is absent", () => {
-    const base = { ...emptyPerformanceReport(), conversion_goal: "Model inferred goal" };
-    const result = finalizePerformanceReport(base, null, { title: "Sales onboarding" });
-    expect(result.conversion_goal_source).toBe("inferred");
-    expect(result.workspace_conversion_goal).toBe("Model inferred goal");
+    const base = {
+      ...emptyVerticalScoreReport("optimization"),
+      workspace_goal: "Model inferred goal",
+    };
+    const result = finalizeVerticalScoreReport(base, null, { title: "Sales onboarding" });
+    expect(result.workspace_goal_source).toBe("inferred");
+    expect(result.workspace_goal).toBe("Model inferred goal");
   });
 
   it("uses fallback from workspace context when nothing is stored", () => {
-    const base = { ...emptyPerformanceReport(), conversion_goal: "" };
-    const result = finalizePerformanceReport(base, null, {
+    const base = { ...emptyVerticalScoreReport("augmentation"), workspace_goal: "" };
+    const result = finalizeVerticalScoreReport(base, null, {
       description: "Close the quarter with certified reps",
     });
-    expect(result.conversion_goal_source).toBe("inferred");
-    expect(result.workspace_conversion_goal).toBe("Close the quarter with certified reps");
+    expect(result.workspace_goal_source).toBe("inferred");
+    expect(result.workspace_goal).toBe("Close the quarter with certified reps");
   });
 });
 
-describe("fallbackConversionGoal", () => {
+describe("fallbackWorkspaceGoal", () => {
   it("prefers description then title", () => {
-    expect(
-      fallbackConversionGoal({ description: "Launch approval", title: "Ignored" })
-    ).toBe("Launch approval");
-    expect(fallbackConversionGoal({ title: "Pipeline mastery" })).toBe(
+    expect(fallbackWorkspaceGoal({ description: "Launch approval", title: "Ignored" })).toBe(
+      "Launch approval"
+    );
+    expect(fallbackWorkspaceGoal({ title: "Pipeline mastery" })).toBe(
       "Demonstrate readiness: Pipeline mastery"
     );
   });

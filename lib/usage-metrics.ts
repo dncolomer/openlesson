@@ -138,7 +138,7 @@ export async function countProofOfWorkSubmissions(
   return countTableRows(supabase, "workspace_proof_of_work", userId, periodStart);
 }
 
-/** Proof-of-Work rows created via the Agentic API (Bearer key or OAuth), for metered billing. */
+/** Proof-of-Work rows created via the Proof-of-Work API (Bearer key or OAuth), for metered billing. */
 export async function countPowApiSubmissions(
   supabase: SupabaseClient,
   userId: string,

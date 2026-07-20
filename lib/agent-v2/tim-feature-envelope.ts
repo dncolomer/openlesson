@@ -50,16 +50,20 @@ export interface TimFeatureEnvelopeV1 {
     inferred_goal?: string | null;
     evidence_appetite?: { want_more: string[]; saturated: string[] };
     scores_snapshot?: {
-      exploration_score?: number | null;
-      conversion_score?: number | null;
+      verification_score?: number | null;
+      augmentation_score?: number | null;
+      optimization_score?: number | null;
       ghc_score?: number | null;
     };
     temporal_patterns?: Record<string, unknown> | null;
   };
   performance_summary?: {
-    overall_score?: number;
-    conversion_score?: number;
-    conversion_goal?: string | null;
+    vertical?: string;
+    score?: number;
+    verification_score?: number | null;
+    augmentation_score?: number | null;
+    optimization_score?: number | null;
+    workspace_goal?: string | null;
     ghc_score?: number | null;
     top_gaps?: Array<{ title: string; severity: string }>;
   } | null;
@@ -83,9 +87,12 @@ function summarizeReportForTim(
 ): TimFeatureEnvelopeV1["performance_summary"] {
   if (!report) return null;
   return {
-    overall_score: report.overall_score,
-    conversion_score: report.conversion_score,
-    conversion_goal: report.conversion_goal ?? null,
+    vertical: report.vertical,
+    score: report.score,
+    verification_score: report.vertical === "verification" ? report.score : report.verification_score ?? null,
+    augmentation_score: report.vertical === "augmentation" ? report.score : report.augmentation_score ?? null,
+    optimization_score: report.vertical === "optimization" ? report.score : report.optimization_score ?? null,
+    workspace_goal: report.workspace_goal ?? null,
     ghc_score: report.ghc_score ?? null,
     top_gaps: report.gap_analysis?.gaps?.slice(0, 3).map((gap) => ({
       title: gap.title,

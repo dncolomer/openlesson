@@ -82,7 +82,7 @@ ${SPATIAL_MAP_LAYOUT_RULES}
 Return ONLY JSON:
 {
   "title": "concise workspace title",
-  "conversion_goal": "concise success/conversion outcome for this workspace",
+  "workspace_goal": "concise success outcome for this workspace",
   "blocks": [
     {
       "id": "a",

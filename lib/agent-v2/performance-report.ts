@@ -2,15 +2,28 @@ import { parseJsonLoose } from "@/lib/xai-client";
 import { composePrompt } from "@/lib/prompt-kernel/compose";
 import {
   SCORE_FIELD_DESCRIPTIONS,
-  TRIPLE_SCORE_INSTRUCTIONS,
+  SCORE_VERTICALS,
+  VERTICAL_MCP_TOOL,
+  VERTICAL_REST_PATH,
+  VERTICAL_SCORE_FIELD,
+  VERTICAL_SCORE_INSTRUCTIONS,
   type GhcConfidence,
+  type ScoreVertical,
 } from "@/lib/prompt-kernel/scores";
+import { buildScoreContextSurface } from "@/lib/prompt-kernel/surfaces/score-context";
 import {
   WORLD_MODEL_DELTA_INSTRUCTIONS,
   type LearningWorldModelDelta,
 } from "@/lib/prompt-kernel/world-model";
+import { evalScoreEndpointPattern } from "@/lib/api/agent-api-paths";
 
-export type { GhcConfidence };
+export type { GhcConfidence, ScoreVertical };
+export {
+  SCORE_VERTICALS,
+  VERTICAL_MCP_TOOL,
+  VERTICAL_REST_PATH,
+  VERTICAL_SCORE_FIELD,
+};
 
 export interface PerformanceMarkerScore {
   id: string;
@@ -49,7 +62,7 @@ export interface PerformanceGapItem {
 }
 
 export interface PerformanceNextSteps {
-  /** High-level direction and intermediate goals toward readiness or conversion. */
+  /** High-level direction and intermediate goals toward readiness or the workspace goal. */
   directions: string[];
   /** Granular, observable actions or events to complete next. */
   events: string[];
@@ -61,22 +74,31 @@ export interface PerformanceGapAnalysis {
   next_steps: PerformanceNextSteps;
 }
 
-export interface PerformanceReport {
-  /** Learning / exploration score 0–100: workspace exploration + demonstrated knowledge coverage. */
-  overall_score: number;
-  /** Estimated likelihood (0–100) of achieving the workspace conversion goal from all proof of work. */
-  conversion_score: number;
-  /** What "conversion" means for this workspace — inferred from context when not explicit. */
-  conversion_goal: string;
-  /** Genuine Human Cognition score 0–100. Low confidence when only tool dumps are present. */
+/**
+ * One vertical score report: a single primary 0–100 score plus spider breakdown,
+ * analysis (summary/strengths/growth/gaps), and next actions (gap_analysis.next_steps).
+ */
+export interface VerticalScoreReport {
+  vertical: ScoreVertical;
+  /** Primary 0–100 score for this vertical only. */
+  score: number;
+  /**
+   * Named primary field matching the vertical (verification_score | augmentation_score | optimization_score).
+   * Always equals `score` for the active vertical.
+   */
+  verification_score?: number;
+  augmentation_score?: number;
+  optimization_score?: number;
+  /** Inferred or owner-set workspace goal. */
+  workspace_goal: string;
+  /** Genuine Human Cognition — secondary signal, not a fourth primary vertical. */
   ghc_score: number;
-  /** Confidence in ghc_score given signal quality. */
   ghc_confidence: GhcConfidence;
-  /** Optional note on inter-event timing that informed scores. */
   temporal_summary?: string;
-  /** Optional partial learning world model update from this evaluation. */
   world_model_delta?: LearningWorldModelDelta;
+  /** Spider/radar competency breakdown. */
   marker_scores: PerformanceMarkerScore[];
+  /** Narrative analysis of the score. */
   summary: string;
   strengths: string[];
   growth_areas: string[];
@@ -85,21 +107,22 @@ export interface PerformanceReport {
   confidence: "emerging" | "developing" | "clear" | "well-connected";
 }
 
-export interface PerformanceReportContract {
+/** @deprecated Prefer VerticalScoreReport — kept as alias for gradual call-site renames */
+export type PerformanceReport = VerticalScoreReport;
+
+export interface VerticalScoreReportContract {
   endpoint_pattern: string;
-  response_mode: "report";
+  mcp_tool: string;
+  vertical: ScoreVertical;
+  primary_score_field: string;
+  response_mode: "score";
   required_fields: string[];
-  overall_score: {
+  primary_score: {
     type: "integer";
     range: "0-100";
     description: string;
   };
-  conversion_score: {
-    type: "integer";
-    range: "0-100";
-    description: string;
-  };
-  conversion_goal: {
+  workspace_goal: {
     type: "string";
     description: string;
   };
@@ -126,8 +149,11 @@ export interface PerformanceReportContract {
     next_steps_required: boolean;
     next_steps_fields: Array<"directions" | "events">;
   };
-  example_report: PerformanceReport;
+  example_report: VerticalScoreReport;
 }
+
+/** @deprecated Use VerticalScoreReportContract */
+export type PerformanceReportContract = VerticalScoreReportContract;
 
 export const PERFORMANCE_MARKER_SCORE_SCHEMA = {
   type: "object",
@@ -149,7 +175,7 @@ export const PERFORMANCE_NEXT_STEPS_SCHEMA = {
       type: "array",
       items: { type: "string" },
       description:
-        "High-level domain goals toward readiness/conversion — product/workflow language only; never TAP, blocks, or Uncertain Systems platform tasks",
+        "High-level domain goals toward readiness/workspace goal — product/workflow language only; never TAP, blocks, or Uncertain Systems platform tasks",
     },
     events: {
       type: "array",
@@ -178,167 +204,224 @@ export const PERFORMANCE_GAP_ITEM_SCHEMA = {
   additionalProperties: false,
 } as const;
 
-export const PERFORMANCE_REPORT_SCHEMA = {
-  name: "workspace_performance_report",
-  schema: {
-    type: "object",
-    properties: {
-      overall_score: {
-        type: "number",
-        description: SCORE_FIELD_DESCRIPTIONS.overall_score,
-      },
-      conversion_score: {
-        type: "number",
-        description: SCORE_FIELD_DESCRIPTIONS.conversion_score,
-      },
-      conversion_goal: {
-        type: "string",
-        description: SCORE_FIELD_DESCRIPTIONS.conversion_goal,
-      },
-      ghc_score: {
-        type: "number",
-        description: SCORE_FIELD_DESCRIPTIONS.ghc_score,
-      },
-      ghc_confidence: {
-        type: "string",
-        enum: ["none", "low", "medium", "high"],
-        description: SCORE_FIELD_DESCRIPTIONS.ghc_confidence,
-      },
-      temporal_summary: {
-        type: "string",
-        description: SCORE_FIELD_DESCRIPTIONS.temporal_summary,
-      },
-      world_model_delta: {
-        type: "object",
-        description: "Partial learning world model update from this evaluation",
-        additionalProperties: true,
-      },
-      marker_scores: {
-        type: "array",
-        description: "Spider/radar competency axes for visualization",
-        items: PERFORMANCE_MARKER_SCORE_SCHEMA,
-      },
-      summary: { type: "string" },
-      strengths: { type: "array", items: { type: "string" } },
-      growth_areas: { type: "array", items: { type: "string" } },
-      gap_analysis: {
-        type: "object",
-        properties: {
-          summary: { type: "string" },
-          gaps: {
-            type: "array",
-            items: PERFORMANCE_GAP_ITEM_SCHEMA,
-          },
-          next_steps: PERFORMANCE_NEXT_STEPS_SCHEMA,
+function primaryScoreDescription(vertical: ScoreVertical): string {
+  switch (vertical) {
+    case "verification":
+      return SCORE_FIELD_DESCRIPTIONS.verification_score;
+    case "augmentation":
+      return SCORE_FIELD_DESCRIPTIONS.augmentation_score;
+    case "optimization":
+      return SCORE_FIELD_DESCRIPTIONS.optimization_score;
+  }
+}
+
+export function buildVerticalScoreReportSchema(vertical: ScoreVertical) {
+  const primaryField = VERTICAL_SCORE_FIELD[vertical];
+  return {
+    name: `workspace_${vertical}_score_report`,
+    schema: {
+      type: "object",
+      properties: {
+        score: {
+          type: "number",
+          description: primaryScoreDescription(vertical),
         },
-        required: ["summary", "gaps", "next_steps"],
-        additionalProperties: false,
+        workspace_goal: {
+          type: "string",
+          description: SCORE_FIELD_DESCRIPTIONS.workspace_goal,
+        },
+        ghc_score: {
+          type: "number",
+          description: SCORE_FIELD_DESCRIPTIONS.ghc_score,
+        },
+        ghc_confidence: {
+          type: "string",
+          enum: ["none", "low", "medium", "high"],
+          description: SCORE_FIELD_DESCRIPTIONS.ghc_confidence,
+        },
+        temporal_summary: {
+          type: "string",
+          description: SCORE_FIELD_DESCRIPTIONS.temporal_summary,
+        },
+        world_model_delta: {
+          type: "object",
+          description: "Partial learning world model update from this evaluation",
+          additionalProperties: true,
+        },
+        marker_scores: {
+          type: "array",
+          description: "Spider/radar competency axes for visualization",
+          items: PERFORMANCE_MARKER_SCORE_SCHEMA,
+        },
+        summary: { type: "string" },
+        strengths: { type: "array", items: { type: "string" } },
+        growth_areas: { type: "array", items: { type: "string" } },
+        gap_analysis: {
+          type: "object",
+          properties: {
+            summary: { type: "string" },
+            gaps: {
+              type: "array",
+              items: PERFORMANCE_GAP_ITEM_SCHEMA,
+            },
+            next_steps: PERFORMANCE_NEXT_STEPS_SCHEMA,
+          },
+          required: ["summary", "gaps", "next_steps"],
+          additionalProperties: false,
+        },
+        suggestions: { type: "array", items: { type: "string" } },
+        confidence: {
+          type: "string",
+          enum: ["emerging", "developing", "clear", "well-connected"],
+        },
       },
-      suggestions: { type: "array", items: { type: "string" } },
-      confidence: { type: "string", enum: ["emerging", "developing", "clear", "well-connected"] },
+      required: [
+        "score",
+        "workspace_goal",
+        "ghc_score",
+        "ghc_confidence",
+        "marker_scores",
+        "summary",
+        "strengths",
+        "growth_areas",
+        "gap_analysis",
+        "suggestions",
+        "confidence",
+      ],
+      additionalProperties: false,
     },
-    required: [
-      "overall_score",
-      "conversion_score",
-      "conversion_goal",
-      "ghc_score",
-      "ghc_confidence",
-      "marker_scores",
-      "summary",
-      "strengths",
-      "growth_areas",
-      "gap_analysis",
-      "suggestions",
-      "confidence",
-    ],
-    additionalProperties: false,
-  },
-};
+    primary_field: primaryField,
+    vertical,
+  } as const;
+}
 
-export const EXAMPLE_PERFORMANCE_REPORT: PerformanceReport = {
-  overall_score: 72,
-  conversion_score: 58,
-  conversion_goal: "Trial-to-paid subscription activation",
-  ghc_score: 45,
-  ghc_confidence: "low",
-  temporal_summary: "Tool events clustered with short gaps; little reflective dwell between decisions.",
-  world_model_delta: {
-    evidence_appetite: {
-      want_more: ["decision_rationale", "reflection_checkpoint"],
-      saturated: ["tool_crud_events"],
+/** Schema used for verification (default); generators pick per-vertical via buildVerticalScoreReportSchema. */
+export const PERFORMANCE_REPORT_SCHEMA = buildVerticalScoreReportSchema("verification");
+
+function exampleReportForVertical(vertical: ScoreVertical): VerticalScoreReport {
+  const score =
+    vertical === "verification" ? 72 : vertical === "augmentation" ? 64 : 58;
+  const base: VerticalScoreReport = {
+    vertical,
+    score,
+    workspace_goal: "Trial-to-paid subscription activation",
+    ghc_score: 45,
+    ghc_confidence: "low",
+    temporal_summary:
+      "Tool events clustered with short gaps; little reflective dwell between decisions.",
+    world_model_delta: {
+      evidence_appetite: {
+        want_more: ["decision_rationale", "reflection_checkpoint"],
+        saturated: ["tool_crud_events"],
+      },
+      scores_snapshot: {
+        verification_score: vertical === "verification" ? score : null,
+        augmentation_score: vertical === "augmentation" ? score : null,
+        optimization_score: vertical === "optimization" ? score : null,
+        ghc_score: 45,
+      },
     },
-    scores_snapshot: {
-      exploration_score: 72,
-      conversion_score: 58,
-      ghc_score: 45,
-    },
-  },
-  marker_scores: [
-    {
-      id: "workflow_execution",
-      label: "Workflow Execution",
-      score: 78,
-      rationale: "Completed core setup steps with consistent tool traces.",
-    },
-    {
-      id: "decision_quality",
-      label: "Decision Quality",
-      score: 65,
-      rationale: "Choices were reasonable but lacked quantified tradeoff analysis.",
-    },
-    {
-      id: "artifact_quality",
-      label: "Artifact Quality",
-      score: 70,
-      rationale: "Deliverables were usable but missing edge-case coverage.",
-    },
-    {
-      id: "reflection_depth",
-      label: "Reflection Depth",
-      score: 58,
-      rationale: "Learner reflections were brief and did not cite counterfactuals.",
-    },
-  ],
-  summary: "Learner demonstrates partial readiness with solid execution but shallow reflection.",
-  strengths: ["Completed primary workflow without blocking errors"],
-  growth_areas: ["Quantify tradeoffs before committing to configuration choices"],
-  gap_analysis: {
-    summary: "Reflection and risk quantification lag behind execution skill.",
-    gaps: [
+    marker_scores: [
       {
-        title: "Missing quantified tradeoff analysis",
-        proof_of_work: "Tool traces show configuration changes without ROI or risk notes.",
-        severity: "medium",
-        suggested_repair: "Add a short decision log with expected impact before each major change.",
+        id: "workflow_execution",
+        label: "Workflow Execution",
+        score: 78,
+        rationale: "Completed core setup steps with consistent tool traces.",
+      },
+      {
+        id: "decision_quality",
+        label: "Decision Quality",
+        score: 65,
+        rationale: "Choices were reasonable but lacked quantified tradeoff analysis.",
+      },
+      {
+        id: "artifact_quality",
+        label: "Artifact Quality",
+        score: 70,
+        rationale: "Deliverables were usable but missing edge-case coverage.",
+      },
+      {
+        id: "reflection_depth",
+        label: "Reflection Depth",
+        score: 58,
+        rationale: "Learner reflections were brief and did not cite counterfactuals.",
       },
     ],
-    next_steps: {
-      directions: [
-        "Build a repeatable decision log habit before changing production configuration",
+    summary:
+      vertical === "verification"
+        ? "Learner demonstrates partial knowledge coverage with solid execution but shallow reflection."
+        : vertical === "augmentation"
+          ? "Practice readiness is developing; targeted drills on tradeoffs would close the largest gaps."
+          : "Progress toward the workspace goal is partial — activation milestones remain incomplete.",
+    strengths: ["Completed primary workflow without blocking errors"],
+    growth_areas: ["Quantify tradeoffs before committing to configuration choices"],
+    gap_analysis: {
+      summary: "Reflection and risk quantification lag behind execution skill.",
+      gaps: [
+        {
+          title: "Missing quantified tradeoff analysis",
+          proof_of_work: "Tool traces show configuration changes without ROI or risk notes.",
+          severity: "medium",
+          suggested_repair:
+            "Add a short decision log with expected impact before each major change.",
+        },
       ],
-      events: [
-        "Re-run the workflow with explicit before/after metrics",
-        "Upload screenshots at each configuration checkpoint",
-        "Document expected impact before the next configuration change",
-      ],
+      next_steps: {
+        directions: [
+          "Build a repeatable decision log habit before changing production configuration",
+        ],
+        events: [
+          "Re-run the workflow with explicit before/after metrics",
+          "Upload screenshots at each configuration checkpoint",
+          "Document expected impact before the next configuration change",
+        ],
+      },
     },
-  },
-  suggestions: ["Collect screenshots at each decision checkpoint"],
-  confidence: "developing",
-};
+    suggestions: ["Collect screenshots at each decision checkpoint"],
+    confidence: "developing",
+  };
+  return applyNamedScoreField(base);
+}
 
-export function buildPerformanceReportContract(baseUrl?: string): PerformanceReportContract {
-  const endpoint = baseUrl
-    ? `${baseUrl.replace(/\/$/, "")}/api/v2/agent/workspaces/{workspace_id}/performance`
-    : "POST /api/v2/agent/workspaces/{workspace_id}/performance";
+export const EXAMPLE_PERFORMANCE_REPORT = exampleReportForVertical("verification");
+export const EXAMPLE_VERIFICATION_SCORE_REPORT = EXAMPLE_PERFORMANCE_REPORT;
+export const EXAMPLE_AUGMENTATION_SCORE_REPORT = exampleReportForVertical("augmentation");
+export const EXAMPLE_OPTIMIZATION_SCORE_REPORT = exampleReportForVertical("optimization");
+
+export function applyNamedScoreField(report: VerticalScoreReport): VerticalScoreReport {
+  const field = VERTICAL_SCORE_FIELD[report.vertical];
+  return {
+    ...report,
+    verification_score: undefined,
+    augmentation_score: undefined,
+    optimization_score: undefined,
+    [field]: report.score,
+  };
+}
+
+export function primaryScoreOf(report: VerticalScoreReport): number {
+  return clampPerformanceScore(report.score);
+}
+
+export function buildVerticalScoreReportContract(
+  vertical: ScoreVertical,
+  baseUrl?: string
+): VerticalScoreReportContract {
+  const path = VERTICAL_REST_PATH[vertical];
+  const endpoint = evalScoreEndpointPattern(path, baseUrl);
+  const primaryField = VERTICAL_SCORE_FIELD[vertical];
 
   return {
     endpoint_pattern: endpoint,
-    response_mode: "report",
+    mcp_tool: VERTICAL_MCP_TOOL[vertical],
+    vertical,
+    primary_score_field: primaryField,
+    response_mode: "score",
     required_fields: [
-      "overall_score",
-      "conversion_score",
-      "conversion_goal",
+      "score",
+      primaryField,
+      "vertical",
+      "workspace_goal",
       "ghc_score",
       "ghc_confidence",
       "marker_scores",
@@ -353,19 +436,14 @@ export function buildPerformanceReportContract(baseUrl?: string): PerformanceRep
       "suggestions",
       "confidence",
     ],
-    overall_score: {
+    primary_score: {
       type: "integer",
       range: "0-100",
-      description: SCORE_FIELD_DESCRIPTIONS.overall_score,
+      description: primaryScoreDescription(vertical),
     },
-    conversion_score: {
-      type: "integer",
-      range: "0-100",
-      description: SCORE_FIELD_DESCRIPTIONS.conversion_score,
-    },
-    conversion_goal: {
+    workspace_goal: {
       type: "string",
-      description: SCORE_FIELD_DESCRIPTIONS.conversion_goal,
+      description: SCORE_FIELD_DESCRIPTIONS.workspace_goal,
     },
     ghc_score: {
       type: "integer",
@@ -391,19 +469,32 @@ export function buildPerformanceReportContract(baseUrl?: string): PerformanceRep
       next_steps_required: true,
       next_steps_fields: ["directions", "events"],
     },
-    example_report: EXAMPLE_PERFORMANCE_REPORT,
+    example_report: exampleReportForVertical(vertical),
   };
 }
 
-export function emptyPerformanceReport(message?: string): PerformanceReport {
+/** Build contracts for all three vertical score endpoints. */
+export function buildAllVerticalScoreContracts(baseUrl?: string): VerticalScoreReportContract[] {
+  return SCORE_VERTICALS.map((v) => buildVerticalScoreReportContract(v, baseUrl));
+}
+
+/** @deprecated Prefer buildVerticalScoreReportContract / buildAllVerticalScoreContracts */
+export function buildPerformanceReportContract(baseUrl?: string): VerticalScoreReportContract {
+  return buildVerticalScoreReportContract("verification", baseUrl);
+}
+
+export function emptyVerticalScoreReport(
+  vertical: ScoreVertical = "verification",
+  message?: string
+): VerticalScoreReport {
   const summary =
     message ||
     "No performance proof of work is available yet. Collect product tool events, workspace proof of work uploads, or linked session reports before generating a gap analysis.";
 
-  return {
-    overall_score: 0,
-    conversion_score: 0,
-    conversion_goal: "Goal conversion not yet inferable — collect more workspace proof of work.",
+  return applyNamedScoreField({
+    vertical,
+    score: 0,
+    workspace_goal: "Workspace goal not yet inferable — collect more workspace proof of work.",
     ghc_score: 0,
     ghc_confidence: "none",
     temporal_summary: "No temporal proof-of-work series available yet.",
@@ -428,56 +519,78 @@ export function emptyPerformanceReport(message?: string): PerformanceReport {
       "Upload the next observable product action as a tool proof-of-work event",
     ],
     confidence: "emerging",
-  };
+  });
+}
+
+/** @deprecated Prefer emptyVerticalScoreReport(vertical) */
+export function emptyPerformanceReport(message?: string): VerticalScoreReport {
+  return emptyVerticalScoreReport("verification", message);
 }
 
 export function buildPerformanceStyleSection(stylePrompt?: string | null): string {
   if (!stylePrompt?.trim()) return "";
-  return `\n\nOutput style (apply to every narrative string in the JSON — summary, strengths, growth_areas, gap titles/proof-of-work/suggested_repair, next_steps, suggestions, marker rationales, and conversion_goal when phrased as coaching):\n${stylePrompt.trim()}`;
+  return `\n\nOutput style (apply to every narrative string in the JSON — summary, strengths, growth_areas, gap titles/proof-of-work/suggested_repair, next_steps, suggestions, marker rationales, and workspace_goal when phrased as coaching):\n${stylePrompt.trim()}`;
 }
 
-export function buildPerformanceReportInstructions(
+export function buildVerticalScoreInstructions(
+  vertical: ScoreVertical,
   blockId?: string | null,
-  workspaceConversionGoal?: string | null,
+  workspaceGoal?: string | null,
   stylePrompt?: string | null
 ): string {
   const scope = blockId ? "a single workspace block" : "the full workspace";
-  const goalLine = workspaceConversionGoal?.trim()
-    ? `\nAuthoritative workspace conversion goal (use exactly for conversion_goal; score conversion_score against this):\n"${workspaceConversionGoal.trim()}"\n`
+  const goalLine = workspaceGoal?.trim()
+    ? `\nAuthoritative workspace goal (use exactly for workspace_goal; score ${VERTICAL_SCORE_FIELD[vertical]} against this):\n"${workspaceGoal.trim()}"\n`
     : "";
 
-  const task = `You produce structured learning and gap analysis for ${scope} in Uncertain Systems.
+  const verticalLabel =
+    vertical === "verification"
+      ? "learning verification"
+      : vertical === "augmentation"
+        ? "learning augmentation (practice readiness)"
+        : "learning optimization (progress toward workspace goal)";
+
+  const task = `You produce a structured **${verticalLabel}** score report for ${scope} in Uncertain Systems.
+This call scores ONLY the ${vertical} vertical. Return one primary score field ("score") plus spider breakdown, analysis, and next actions.
 ${goalLine}
 
-Use the attached workspace performance JSON and artifact files. Return only JSON matching the schema.
+Use the attached workspace performance JSON and artifact files **as PoW context catalogs and file refs** — score only from the proof-of-work they reference (see SCORE GENERATION CONTEXT). Return only JSON matching the schema.
 
-${TRIPLE_SCORE_INSTRUCTIONS}
+${VERTICAL_SCORE_INSTRUCTIONS[vertical]}
 
 Additional required outputs:
-8. marker_scores — 4-8 competency axes for spider/radar visualization. Each item needs:
+6. marker_scores — 4-8 competency axes for spider/radar visualization. Each item needs:
    - id: snake_case competency key aligned to workspace blocks or eval definition
    - label: human-readable axis name
    - score: 0-100 for that competency
-   - rationale: one sentence grounded in specific evidence
+   - rationale: one sentence grounded in specific PoW evidence (cite artifact/trace/event, not marketing)
    - block_id (optional): tie axis to a workspace block when scoped
-9. gap_analysis.gaps — concrete deficiencies only (title, proof_of_work, severity low|medium|high, suggested_repair). List every meaningful gap found; use an empty array only when proof of work is truly insufficient to name gaps. Do not duplicate next steps as gaps.
-10. gap_analysis.next_steps — always include, separate from gaps:
-   - directions: 2-5 high-level outcomes or intermediate goals toward readiness/conversion (domain/product language)
+7. gap_analysis.gaps — concrete deficiencies only (title, proof_of_work, severity low|medium|high, suggested_repair). proof_of_work must reference observed PoW or explicit absence. List every meaningful gap found; use an empty array only when proof of work is truly insufficient to name gaps. Do not duplicate next steps as gaps.
+8. gap_analysis.next_steps — always include, separate from gaps:
+   - directions: 2-5 high-level outcomes or intermediate goals in domain/product language
    - events: 3-8 granular, observable product/tool actions or event verbs from the learner's real workflow
-11. suggestions — short product/workflow follow-ups; same remediation rules as gaps and next_steps.
-12. ${WORLD_MODEL_DELTA_INSTRUCTIONS}
+9. suggestions — short product/workflow follow-ups; same remediation rules as gaps and next_steps.
+10. ${WORLD_MODEL_DELTA_INSTRUCTIONS}
 
 ${PERFORMANCE_REMEDIATION_GUARDRAILS}
 
-Evidence inputs to weigh when scoring (not remediation outputs):
-- Tool usage, screenshots, video, and EEG proof of work (timestamps matter — use inter-event timing for temporal_summary and GHC)
-- Session reports and competency descriptions from the eval definition
-- Think Aloud Protocol (TAP) and ILE selective thought traces when present — use for scoring and GHC only
-- Uploaded workspace files
+Be honest when proof of work is thin. Severity should reflect business risk, not politeness. Lower the primary score and marker scores when proof of work is sparse.${buildPerformanceStyleSection(stylePrompt)}`;
 
-Be honest when proof of work is thin. Severity should reflect business risk, not politeness. Lower overall_score and marker scores when proof of work is sparse.${buildPerformanceStyleSection(stylePrompt)}`;
+  // ontology → score-context surface (PoW-only + verification submit/stash) → task
+  return composePrompt({
+    ontology: "full",
+    surface: buildScoreContextSurface(vertical),
+    task,
+  });
+}
 
-  return composePrompt({ ontology: "full", task });
+/** @deprecated Prefer buildVerticalScoreInstructions */
+export function buildPerformanceReportInstructions(
+  blockId?: string | null,
+  workspaceGoal?: string | null,
+  stylePrompt?: string | null
+): string {
+  return buildVerticalScoreInstructions("verification", blockId, workspaceGoal, stylePrompt);
 }
 
 function normalizeStringList(value: unknown): string[] {
@@ -488,7 +601,7 @@ function normalizeStringList(value: unknown): string[] {
 }
 
 export function normalizePerformanceGapAnalysis(
-  gapAnalysis: Partial<PerformanceGapAnalysis> | null | undefined,
+  gapAnalysis: Partial<PerformanceGapAnalysis> | null | undefined
 ): PerformanceGapAnalysis {
   const gaps = Array.isArray(gapAnalysis?.gaps)
     ? gapAnalysis.gaps
@@ -497,7 +610,7 @@ export function normalizePerformanceGapAnalysis(
             Boolean(gap) &&
             typeof gap.title === "string" &&
             typeof gap.proof_of_work === "string" &&
-            typeof gap.suggested_repair === "string",
+            typeof gap.suggested_repair === "string"
         )
         .map((gap) => ({
           ...gap,
@@ -539,9 +652,26 @@ function normalizeGhcConfidence(value: unknown): GhcConfidence {
   return "none";
 }
 
-export function normalizePerformanceReport(report: PerformanceReport): PerformanceReport {
+export function normalizeVerticalScoreReport(
+  report: VerticalScoreReport | (Partial<VerticalScoreReport> & { score?: number }),
+  vertical: ScoreVertical = "verification"
+): VerticalScoreReport {
   const gap_analysis = normalizePerformanceGapAnalysis(report.gap_analysis);
-  const overall_score = clampPerformanceScore(report.overall_score);
+  const resolvedVertical =
+    report.vertical && SCORE_VERTICALS.includes(report.vertical as ScoreVertical)
+      ? (report.vertical as ScoreVertical)
+      : vertical;
+
+  // Accept named primary fields from model output if score is missing
+  const namedField = VERTICAL_SCORE_FIELD[resolvedVertical];
+  const namedValue = (report as Record<string, unknown>)[namedField];
+  const score = clampPerformanceScore(
+    typeof report.score === "number"
+      ? report.score
+      : typeof namedValue === "number"
+        ? namedValue
+        : 0
+  );
   const ghc_score = clampPerformanceScore(report.ghc_score);
   const ghc_confidence = normalizeGhcConfidence(report.ghc_confidence);
   const temporal_summary =
@@ -552,22 +682,39 @@ export function normalizePerformanceReport(report: PerformanceReport): Performan
     report.world_model_delta && typeof report.world_model_delta === "object"
       ? report.world_model_delta
       : undefined;
+  const workspace_goal =
+    typeof report.workspace_goal === "string" ? report.workspace_goal.trim() : "";
 
-  return {
-    ...report,
-    overall_score,
-    conversion_score: clampPerformanceScore(report.conversion_score),
+  return applyNamedScoreField({
+    vertical: resolvedVertical,
+    score,
+    workspace_goal,
     ghc_score,
     ghc_confidence,
     ...(temporal_summary ? { temporal_summary } : {}),
     ...(world_model_delta ? { world_model_delta } : {}),
+    marker_scores: Array.isArray(report.marker_scores)
+      ? normalizeMarkerScores(report.marker_scores)
+      : [],
+    summary: typeof report.summary === "string" ? report.summary : "",
+    strengths: normalizeStringList(report.strengths),
     growth_areas: sanitizeRemediationStrings(report.growth_areas ?? []),
     suggestions: sanitizeRemediationStrings(report.suggestions ?? []),
     gap_analysis,
-  };
+    confidence: VALID_CONFIDENCE_LEVELS.has(report.confidence as VerticalScoreReport["confidence"])
+      ? (report.confidence as VerticalScoreReport["confidence"])
+      : "developing",
+  });
 }
 
-const VALID_CONFIDENCE_LEVELS = new Set<PerformanceReport["confidence"]>([
+/** @deprecated Prefer normalizeVerticalScoreReport */
+export function normalizePerformanceReport(
+  report: VerticalScoreReport
+): VerticalScoreReport {
+  return normalizeVerticalScoreReport(report, report.vertical ?? "verification");
+}
+
+const VALID_CONFIDENCE_LEVELS = new Set<VerticalScoreReport["confidence"]>([
   "emerging",
   "developing",
   "clear",
@@ -626,18 +773,39 @@ function parseRecoverableReportObject(text: string): Record<string, unknown> | n
  * (truncation, trailing commas, markdown wrappers). Returns null when core fields
  * cannot be recovered.
  */
-export function recoverPerformanceReportFromModelText(text: string): PerformanceReport | null {
+export function recoverVerticalScoreReportFromModelText(
+  text: string,
+  vertical: ScoreVertical = "verification"
+): VerticalScoreReport | null {
   const raw = parseRecoverableReportObject(text);
   if (!raw) return null;
   const marker_scores = normalizeMarkerScores(raw.marker_scores);
   if (marker_scores.length === 0) return null;
 
-  const overall_score = clampPerformanceScore(raw.overall_score);
-  const report: PerformanceReport = {
-    overall_score,
-    conversion_score: clampPerformanceScore(raw.conversion_score, overall_score),
-    conversion_goal:
-      typeof raw.conversion_goal === "string" ? raw.conversion_goal.trim() : "",
+  const namedField = VERTICAL_SCORE_FIELD[vertical];
+  const score = clampPerformanceScore(
+    typeof raw.score === "number"
+      ? raw.score
+      : typeof raw[namedField] === "number"
+        ? raw[namedField]
+        : typeof raw.overall_score === "number"
+          ? raw.overall_score
+          : typeof raw.conversion_score === "number" && vertical === "optimization"
+            ? raw.conversion_score
+            : 0
+  );
+
+  const workspace_goal =
+    typeof raw.workspace_goal === "string"
+      ? raw.workspace_goal.trim()
+      : typeof raw.conversion_goal === "string"
+        ? raw.conversion_goal.trim()
+        : "";
+
+  const report: VerticalScoreReport = {
+    vertical,
+    score,
+    workspace_goal,
     ghc_score: clampPerformanceScore(raw.ghc_score, 0),
     ghc_confidence: normalizeGhcConfidence(raw.ghc_confidence),
     ...(typeof raw.temporal_summary === "string" && raw.temporal_summary.trim()
@@ -650,17 +818,27 @@ export function recoverPerformanceReportFromModelText(text: string): Performance
     summary:
       typeof raw.summary === "string" && raw.summary.trim()
         ? raw.summary.trim()
-        : "Performance report synthesized from workspace proof of work.",
+        : "Score report synthesized from workspace proof of work.",
     strengths: normalizeStringList(raw.strengths),
     growth_areas: normalizeStringList(raw.growth_areas),
     gap_analysis: normalizePerformanceGapAnalysis(
-      raw.gap_analysis as Partial<PerformanceGapAnalysis> | null | undefined,
+      raw.gap_analysis as Partial<PerformanceGapAnalysis> | null | undefined
     ),
     suggestions: normalizeStringList(raw.suggestions),
-    confidence: VALID_CONFIDENCE_LEVELS.has(raw.confidence as PerformanceReport["confidence"])
-      ? (raw.confidence as PerformanceReport["confidence"])
+    confidence: VALID_CONFIDENCE_LEVELS.has(raw.confidence as VerticalScoreReport["confidence"])
+      ? (raw.confidence as VerticalScoreReport["confidence"])
       : "developing",
   };
 
-  return normalizePerformanceReport(report);
+  return normalizeVerticalScoreReport(report, vertical);
 }
+
+/** @deprecated Prefer recoverVerticalScoreReportFromModelText */
+export function recoverPerformanceReportFromModelText(
+  text: string
+): VerticalScoreReport | null {
+  return recoverVerticalScoreReportFromModelText(text, "verification");
+}
+
+/** TAP post-session auto-results always use verification only. */
+export const TAP_AUTO_SCORE_VERTICAL: ScoreVertical = "verification";

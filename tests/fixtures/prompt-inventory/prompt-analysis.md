@@ -18,7 +18,7 @@ Scope: `` production TypeScript
 | `stuck_policy_recommendation` | `lib/prompts.ts` → `generateStuckPolicyRecommendation` | `POST /api/session/stuck-policy` | Yes |
 | `BASE_SYSTEM_PROMPT` | `session-chat/route.ts` | `POST /api/session-chat` | No |
 | Rabbit Hole continue | `rabbit-hole/continue/route.ts` | `POST /api/rabbit-hole/continue` | No |
-| v2 workspace create | `v2/agent/workspaces/route.ts` | `POST /api/v2/agent/workspaces` | No |
+| v2 workspace create | `v2/agent/workspaces/route.ts` | `POST /api/v3/pow/workspaces` | No |
 | `buildPerformanceReportInstructions` | `agent-v2/performance-report.ts` | v2 performance report, MCP | No |
 | `buildPerformanceChatInstructions` | `agent-v2/performance-context.ts` | v2 performance chat, MCP | No |
 | `buildProofOfWorkSchemaInstructions` | `agent-v2/proof-of-work-schema.ts` | proof-of-work-schema API, MCP | No |
@@ -51,10 +51,9 @@ Every file from `prompt-inventory-rg.log` (5 paths) plus additional prompt-beari
 | `# Updated after workspace/block rename — legacy workspace API paths removed.` | See domain sections below |
 | `app/api/workspace/chat/route.ts` | SYSTEM_PROMPT workspace assistant |
 | `app/api/workspace/integration-skill/route.ts` | buildIntegrationSkillInstructions consumer |
-| `app/api/workspace/performance-chat/route.ts` | buildSystemInstructions multi-user performance chat |
 | `app/api/workspace/performance-report/route.ts` | buildPerformanceReportInstructions consumer |
 | `app/api/rabbit-hole/continue/route.ts` | Rabbit Hole plan generator user prompt (not in rg.log) |
-| `app/api/v2/agent/workspaces/route.ts` | Workspace block generation user prompt (not in rg.log) |
+| `app/api/v3/pow/workspaces/route.ts` | Workspace block generation user prompt (not in rg.log) |
 | `app/api/workspace/generate/route.ts` | promptBody plan graph generator (not in rg.log — add via expand) |
 | `app/api/workspace/expand/route.ts` | See domain sections below |
 | `app/api/workspace/regenerate/route.ts` | See domain sections below |
@@ -1005,8 +1004,8 @@ Rules:
 
 ### v2/agent/workspaces user prompt
 
-- **File**: `app/api/v2/agent/workspaces/route.ts`
-- **Call chain**: `POST /api/v2/agent/workspaces` → `callXaiJSON`
+- **File**: `app/api/v3/pow/workspaces/route.ts`
+- **Call chain**: `POST /api/v3/pow/workspaces` → `callXaiJSON`
 - **Purpose**: Create verification workspace with 3-8 assessable blocks + conversion_goal
 - **User-overridable**: No
 - **Variables**: `{initialPrompt}`, `{fileContext}`, appended `WORKSPACE_GENERATION_CONVERSION_GOAL_RULE`
@@ -1199,80 +1198,6 @@ Include a very brief (5 words max) description of why each is useful.`;
         model: DEFAULT_MODEL,
 ```
 
-### workspace/performance-chat `buildSystemInstructions`
-
-- **File**: `app/api/workspace/performance-chat/route.ts`
-- **Call chain**: `POST /api/workspace/performance-chat`
-- **Purpose**: Multi-user workspace session performance analysis
-- **User-overridable**: No
-- **Variables**: `{canSeeAllUsers}`, `{usersContext}`, `{currentUsername}` — two branch templates below
-
-**Full prompt text:**
-
-```
-=== baseInstructions (shared) ===
-You are an AI assistant analyzing learning session performance data for an educational platform called Uncertain Systems.
-
-Your role is to help users understand performance patterns, identify areas for improvement, and provide actionable insights based on session reports.
-
-The session data is provided in a JSON file attached to this conversation. Each user has:
-- A list of sessions with their reports (markdown format containing detailed feedback)
-- Session metadata (duration, status, timestamps)
-- Summary statistics
-
-When analyzing performance:
-1. Reference specific details from session reports to support your insights
-2. Look for patterns across sessions (improving/declining performance, recurring challenges)
-3. Be constructive and encouraging while being honest about areas needing improvement
-4. Compare users fairly if asked, focusing on objective metrics and observations
-5. Suggest specific, actionable improvements when appropriate
-
-Format your responses in markdown for readability. Use headers, bullet points, and emphasis where appropriate.
-
-=== MULTI-USER BRANCH ===
-You are an AI assistant analyzing learning session performance data for an educational platform called Uncertain Systems.
-
-Your role is to help users understand performance patterns, identify areas for improvement, and provide actionable insights based on session reports.
-
-The session data is provided in a JSON file attached to this conversation. Each user has:
-- A list of sessions with their reports (markdown format containing detailed feedback)
-- Session metadata (duration, status, timestamps)
-- Summary statistics
-
-When analyzing performance:
-1. Reference specific details from session reports to support your insights
-2. Look for patterns across sessions (improving/declining performance, recurring challenges)
-3. Be constructive and encouraging while being honest about areas needing improvement
-4. Compare users fairly if asked, focusing on objective metrics and observations
-5. Suggest specific, actionable improvements when appropriate
-
-Format your responses in markdown for readability. Use headers, bullet points, and emphasis where appropriate.
-
-You have access to performance data for the following users: ${usersContext}
-
-You can answer questions about individual users, compare users, identify group trends, or provide aggregate insights.
-
-=== SINGLE-USER BRANCH ===
-You are an AI assistant analyzing learning session performance data for an educational platform called Uncertain Systems.
-
-Your role is to help users understand performance patterns, identify areas for improvement, and provide actionable insights based on session reports.
-
-The session data is provided in a JSON file attached to this conversation. Each user has:
-- A list of sessions with their reports (markdown format containing detailed feedback)
-- Session metadata (duration, status, timestamps)
-- Summary statistics
-
-When analyzing performance:
-1. Reference specific details from session reports to support your insights
-2. Look for patterns across sessions (improving/declining performance, recurring challenges)
-3. Be constructive and encouraging while being honest about areas needing improvement
-4. Compare users fairly if asked, focusing on objective metrics and observations
-5. Suggest specific, actionable improvements when appropriate
-
-Format your responses in markdown for readability. Use headers, bullet points, and emphasis where appropriate.
-
-You only have access to performance data for the current user${currentUsername ? ` (@${currentUsername})` : ""}. Focus on providing personalized insights and improvement suggestions based on their session history.
-```
 
 ---
 
@@ -1434,7 +1359,7 @@ You are an Uncertain Systems proof-of-work architect. Produce a **formal proof-o
 
 Uncertain Systems scope: verify learning (overall_score, marker_scores), measure conversion toward a workspace conversion_goal (conversion_score), and collect proof-of-work via proof-of-work uploads. Verification is **continuous** — specs and skills regenerate as proof of work grows.
 
-Integrators may use **REST** (Bearer API key: POST .../proof-of-work, POST .../performance) or **MCP** (JSON-RPC tools upload_proof_of_work, analyze_performance, generate_proof_of_work_schema) with identical semantics. Document REST paths in contracts; the platform also attaches continuous_evaluation_mcp with tool names after generation — your continuous_evaluation_summary must mention both surfaces.
+Integrators may use **REST** (Bearer API key: POST .../proof-of-work, POST .../verification-score) or **MCP** (JSON-RPC tools upload_proof_of_work, verification_score, generate_proof_of_work_schema) with identical semantics. Document REST paths in contracts; the platform also attaches continuous_evaluation_mcp with tool names after generation — your continuous_evaluation_summary must mention both surfaces.
 
 Use the full workspace context: attached JSON summary, block titles/descriptions, existing proof of work patterns, plan files, and Think Aloud Protocol (TAP) session signals when present. TAP and ILE may inform scoring — but performance report remediation (gaps, next_steps, suggestions) must stay product-independent: never recommend TAP sessions, block completion, ILE, or other Uncertain Systems platform mechanics.
 
@@ -1453,13 +1378,13 @@ Output rules:
 2. "tool_submissions" must list one or more formal tool submission specs. Include separate entries when the workspace implies multiple tools, workflows, or block-specific payloads. Each entry needs tool_name, purpose, when_to_submit, schema, example_payload, and optional block_ids tying submissions to workspace blocks.
 3. Align every schema with workspace blocks, root topic, notes, and any tool names already present in proof-of-work history.
 4. "proof_of_work_upload_contract" must formally describe POST .../proof-of-work:
-   - endpoint_pattern: "POST /api/v2/agent/workspaces/{workspace_id}/proof-of-work"
+   - endpoint_pattern: "POST /api/v3/pow/workspaces/{workspace_id}/proof-of-work"
    - encoding: "base64"
    - proof_of_work_types: tool (application/json, text/plain), screen (image/png, image/jpeg, image/webp), video (video/mp4, video/webm), eeg (application/json) with when_to_use guidance
    - common_fields: proof_of_work_type, data, mime_type, file_name, block_id, session_id, timestamp_ms, tool_name, tool_action, metadata
 5. Optimize payloads for POST .../performance: time-ordered events, learner reflections, goals achieved, artifact summaries, decision rationale, outcomes, block-relevant competencies. The performance report always returns overall_score (0-100 learning verification), conversion_score (0-100 goal conversion likelihood), conversion_goal, marker_scores (spider/radar axes), and gap_analysis.gaps.
 6. "performance_report_contract" must formally describe POST .../performance report mode:
-   - endpoint_pattern: "POST /api/v2/agent/workspaces/{workspace_id}/performance"
+   - endpoint_pattern: "POST /api/v3/pow/workspaces/{workspace_id}/performance"
    - response_mode: "report"
    - required_fields: overall_score, conversion_score, conversion_goal, marker_scores, gap_analysis, gap_analysis.gaps, summary, strengths, growth_areas, suggestions, confidence
    - overall_score: integer 0-100 learning verification score
@@ -1474,7 +1399,7 @@ Output rules:
    - This proof-of-work spec is a snapshot derived from current workspace context and proof-of-work history
    - Integrators must **re-fetch** POST .../proof-of-work-schema (REST) or call generate_proof_of_work_schema (MCP) as proof of work accumulates
    - Integrators must **regenerate** POST .../integration-skill (REST) or generate_integration_skill (MCP) so skill.md stays aligned
-   - Progress tracking uses analyze_performance / POST .../performance for marker_scores, gaps, and conversion_score vs conversion_goal
+   - Progress tracking uses verification_score / augmentation_score / optimization_score (POST .../*-score) for marker_scores, gaps, and workspace_goal progress
    - get_learning_progress (MCP) orients agents mid-session; REST equivalents remain authoritative in API paths
    - Continuous evaluation is the intended operating model, not a one-time setup
 9. schema_name must be snake_case prefixed with "eval_input_".
@@ -1573,7 +1498,7 @@ Required content:
 5. Authentication table (Bearer sk_ / gsk_, Teams tier, scopes).
 6. Endpoints table covering REST and MCP with **dual documentation** (never hide REST behind MCP):
    - REST: POST /workspaces, GET /blocks, POST /proof-of-work-schema, POST /proof-of-work, POST /performance, POST /integration-skill
-   - MCP (JSON-RPC at POST /api/mcp with Bearer auth): list_workspaces, get_workspace, get_learning_progress, list_blocks, generate_proof_of_work_schema, upload_proof_of_work, analyze_performance, generate_integration_skill, create_tap_link, list_tap_links
+   - MCP (JSON-RPC at POST /api/mcp with Bearer auth): list_workspaces, get_workspace, get_learning_progress, list_blocks, generate_proof_of_work_schema, upload_proof_of_work, verification_score, generate_integration_skill, create_tap_link, list_tap_links
    - State that MCP tools have full parity with REST; proof-of-work spec responses include both continuous_evaluation (REST paths) and continuous_evaluation_mcp (tool names)
    - Recommend get_learning_progress / generate_proof_of_work_schema first for progress orientation
 7. **Proof-of-work specification (required section)** — explain that payloads are defined by the formal proof-of-work spec returned from POST ${proofOfWorkSchemaPath}. Include:
@@ -1672,7 +1597,7 @@ Remediation output rules (gap_analysis.gaps[].suggested_repair, gap_analysis.nex
 ### `buildPerformanceChatInstructions`
 
 - **File**: `lib/agent-v2/performance-context.ts`
-- **Call chain**: v2 performance chat mode, demo performance, MCP analyze_performance chat
+- **Call chain**: demo performance chat (Orbit); not a public Proof-of-Work API surface
 - **Purpose**: Conversational performance analysis grounded in attachments
 - **Variables**: `{blockId}`, `{stylePrompt}`
 
@@ -1818,7 +1743,7 @@ Turn learner thought traces into one insight bookmark. Return JSON: { "title": "
 ### `createVerificationWorkspaceFromPrompt` userMessage
 
 - **File**: `lib/agent-v2/create-verification-workspace.ts`
-- **Call chain**: `POST /api/demo/workspace` → `createVerificationWorkspaceFromPrompt`; also `POST /api/v2/agent/workspaces` uses a related template
+- **Call chain**: `POST /api/demo/workspace` → `createVerificationWorkspaceFromPrompt`; also `POST /api/v3/pow/workspaces` uses a related template
 - **Purpose**: Generate 3–6 assessable workspace blocks with conversion_goal from natural-language prompt (+ optional files)
 - **User-overridable**: No
 - **Variables**: `{initialPrompt}`, `{fileContext}`, appended `WORKSPACE_GENERATION_CONVERSION_GOAL_RULE`
@@ -1895,9 +1820,8 @@ Discovered via `scripts/discover-llm-prompts.mjs` at 2026-07-11T13:55:45.898Z: *
 | `app/api/session/performance-chat/route.ts` | buildSystemInstructions (single-session performance chat) |
 | `app/api/suggest-grokipedia-terms/route.ts` | Grokipedia term suggester user prompt |
 | `app/api/suggest-plan-topic/route.ts` | Post-session learning plan topic suggester user prompt |
-| `app/api/v2/agent/workspaces/[id]/integration-skill/route.ts` | buildIntegrationSkillInstructions consumer |
-| `app/api/v2/agent/workspaces/[id]/performance/route.ts` | buildPerformanceReportInstructions + buildPerformanceChatInstructions |
-| `app/api/v2/agent/workspaces/route.ts` | Workspace block generation user prompt (not in rg.log) |
+| `app/api/v3/pow/workspaces/[id]/integration-skill/route.ts` | buildIntegrationSkillInstructions consumer |
+| `app/api/v3/pow/workspaces/route.ts` | Workspace block generation user prompt (not in rg.log) |
 | `app/api/workspace-tap-score/chat/route.ts` | buildTapScoreInstructions + TAP chat overlay |
 | `app/api/workspace-tap-score/complete/route.ts` | TAP complete scoring system + user prompts |
 | `app/api/workspace/add-block-at-slot/route.ts` | add-block-at-slot system + user prompts |
@@ -1905,7 +1829,6 @@ Discovered via `scripts/discover-llm-prompts.mjs` at 2026-07-11T13:55:45.898Z: *
 | `app/api/workspace/expand/route.ts` | call-site |
 | `app/api/workspace/generate/route.ts` | promptBody plan graph generator (not in rg.log — add via expand) |
 | `app/api/workspace/integration-skill/route.ts` | buildIntegrationSkillInstructions consumer |
-| `app/api/workspace/performance-chat/route.ts` | buildSystemInstructions multi-user performance chat |
 | `app/api/workspace/performance-report/route.ts` | buildPerformanceReportInstructions consumer |
 | `app/api/workspace/regenerate/route.ts` | call-site |
 | `app/api/workspace/suggest-blocks/route.ts` | suggest-blocks system + user prompts |

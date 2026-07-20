@@ -73,7 +73,7 @@ export async function requireDemoAdminWorkspaceSession(
       .single(),
     supabase
       .from("workspaces")
-      .select("id, title, root_topic, description, notes, conversion_goal, user_id, organization_id")
+      .select("id, title, root_topic, description, notes, workspace_goal, user_id, organization_id")
       .eq("id", workspaceId)
       .single(),
   ]);

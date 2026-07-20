@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Tier-based E2E checks for Regular (web) and Teams (Agent API).
+ * Tier-based E2E checks for Regular (web) and Teams (Proof-of-Work API).
  *
  * Usage:
  *   node scripts/run-tier-e2e-tests.mjs
@@ -112,15 +112,15 @@ async function agentJson(path, apiKey, init = {}) {
 }
 
 async function runTeamsAgentApiTests() {
-  section("Teams — Agent API (automated)");
+  section("Teams — Proof-of-Work API (automated)");
 
   const apiKey = env.E2E_TEAMS_API_KEY;
   if (!apiKey) {
-    fail("teams api key", "missing E2E_TEAMS_API_KEY — rerun setup or create via POST /api/v2/agent/keys");
+    fail("teams api key", "missing E2E_TEAMS_API_KEY — rerun setup or create via POST /api/v3/pow/keys");
     return;
   }
 
-  const unauthorized = await agentJson("/api/v2/agent/workspaces", "sk_invalid", {
+  const unauthorized = await agentJson("/api/v3/pow/workspaces", "sk_invalid", {
     method: "POST",
     body: JSON.stringify({ initial_prompt: "noop" }),
   });
@@ -132,7 +132,7 @@ async function runTeamsAgentApiTests() {
     return;
   }
 
-  const create = await agentJson("/api/v2/agent/workspaces", apiKey, {
+  const create = await agentJson("/api/v3/pow/workspaces", apiKey, {
     method: "POST",
     body: JSON.stringify({
       initial_prompt: "[E2E-TEST] Demonstrate basic recursion reasoning for a technical interview.",
@@ -145,7 +145,7 @@ async function runTeamsAgentApiTests() {
   const workspaceId = create.body.workspace.id;
   pass("teams: create workspace", workspaceId);
 
-  const blocks = await agentJson(`/api/v2/agent/workspaces/${workspaceId}/blocks`, apiKey);
+  const blocks = await agentJson(`/api/v3/pow/workspaces/${workspaceId}/blocks`, apiKey);
   if (blocks.res.status !== 200 || !blocks.body?.blocks?.length) {
     fail("teams: list blocks", `${blocks.res.status}`);
     return;
@@ -154,7 +154,7 @@ async function runTeamsAgentApiTests() {
   pass("teams: list blocks", `${blocks.body.blocks.length} blocks`);
 
   const link = await agentJson(
-    `/api/v2/agent/workspaces/${workspaceId}/blocks/${blockId}/tap-links`,
+    `/api/v3/pow/workspaces/${workspaceId}/blocks/${blockId}/tap-links`,
     apiKey,
     { method: "POST", body: JSON.stringify({ minutes: 15 }) }
   );
@@ -164,7 +164,7 @@ async function runTeamsAgentApiTests() {
   }
   pass("teams: create TAP link", link.body.tap_link.id);
 
-  const list = await agentJson(`/api/v2/agent/workspaces/${workspaceId}/tap-links`, apiKey);
+  const list = await agentJson(`/api/v3/pow/workspaces/${workspaceId}/tap-links`, apiKey);
   if (list.res.status === 200) pass("teams: list TAP links", `${list.body?.tap_links?.length ?? 0} links`);
   else fail("teams: list TAP links", String(list.res.status));
 
@@ -196,10 +196,10 @@ function printManualTeamsChecklist() {
   const steps = [
     "Dashboard → Usage shows 'pro_teams' and org block pool",
     "Organization page lists [E2E] Test Organization and guest section",
-    "Create org guest via API or POST /api/v2/agent/org/guests (requires migration 045 guest columns)",
-    "POST /api/v2/agent/keys works even if dashboard key UI still says Pro-only (known gap)",
+    "Create org guest via API or POST /api/v3/pow/org/guests (requires migration 045 guest columns)",
+    "POST /api/v3/pow/keys works even if dashboard key UI still says Pro-only (known gap)",
     "Complete one private TAP session via bearer link in incognito (no login required)",
-    "GET .../tap-links shows status=completed after TAP; score via POST .../performance",
+    "GET .../tap-links shows status=completed after TAP; score via POST .../verification-score",
   ];
   steps.forEach((step, i) => console.log(`${i + 1}. ${step}`));
 }

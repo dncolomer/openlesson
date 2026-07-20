@@ -1,7 +1,6 @@
 import { buildFounderSlides } from "@/lib/sales/founder-slides";
 import type { SolutionSlideDeck } from "@/lib/sales/solution-slide-decks";
 import { PITCH_ASSETS } from "@/lib/sales/solution-slide-decks";
-import { buildPrivacyDataSlide } from "@/lib/sales/privacy-data-slide";
 import { labeledHighlights } from "@/lib/sales/slide-highlights";
 import {
   THESIS_HIGHLIGHT_LABELS,
@@ -98,7 +97,6 @@ export const VERIFICATION_PITCH_DECK: SolutionSlideDeck = {
         },
       ],
     },
-    buildPrivacyDataSlide(),
     {
       layout: "statement",
       kicker: "Use case · Hiring",

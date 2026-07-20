@@ -2,12 +2,12 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { callXaiJSON, DEFAULT_MODEL, userMessage } from "@/lib/xai-client";
 import { uploadFileToXAI } from "@/lib/xai-files";
 import {
-  fallbackConversionGoal,
-  normalizeConversionGoal,
-  WORKSPACE_GENERATION_CONVERSION_GOAL_RULE,
+  fallbackWorkspaceGoal,
+  normalizeWorkspaceGoal,
+  WORKSPACE_GENERATION_GOAL_RULE,
 } from "./conversion-goal";
 import {
-  buildOpaqueConversionGoal,
+  buildOpaqueWorkspaceGoal,
   buildOpaqueGeneratedBlocks,
   buildOpaqueRootTopic,
   buildOpaqueWorkspaceNotes,
@@ -66,7 +66,7 @@ interface GeneratedBlock {
 
 interface GeneratedWorkspace {
   title: string;
-  conversion_goal?: string;
+  workspace_goal?: string;
   blocks: GeneratedBlock[];
 }
 
@@ -167,7 +167,7 @@ async function createSemanticAgentWorkspace(
       goalPrompt: initialPrompt,
       initialChapters,
       fileContext,
-    }) + `\n${WORKSPACE_GENERATION_CONVERSION_GOAL_RULE}`;
+    }) + `\n${WORKSPACE_GENERATION_GOAL_RULE}`;
 
   const generated = await callXaiJSON<GeneratedWorkspace>(
     [userMessage(prompt)],
@@ -196,10 +196,10 @@ async function createSemanticAgentWorkspace(
 
   const workspaceTitle = generated.data.title || "Verification Workspace";
   const goalFields = goalFieldsFromPrompt(initialPrompt);
-  const conversionGoal =
-    normalizeConversionGoal(generated.data.conversion_goal) ||
-    goalFields.conversion_goal ||
-    fallbackConversionGoal({
+  const workspaceGoal =
+    normalizeWorkspaceGoal(generated.data.workspace_goal) ||
+    goalFields.workspace_goal ||
+    fallbackWorkspaceGoal({
       title: workspaceTitle,
       notes: initialPrompt,
       root_topic: initialPrompt.slice(0, 160),
@@ -216,12 +216,12 @@ async function createSemanticAgentWorkspace(
       status: "active",
       source_type: "topic",
       notes: goalFields.notes,
-      conversion_goal: conversionGoal,
+      workspace_goal: workspaceGoal,
       is_agent_workspace: true,
       evaluation_mode: "semantic",
     })
     .select(
-      "id, title, root_topic, status, notes, conversion_goal, evaluation_mode, protocol_config, external_refs, created_at, updated_at"
+      "id, title, root_topic, status, notes, workspace_goal, evaluation_mode, protocol_config, external_refs, created_at, updated_at"
     )
     .single();
 
@@ -267,7 +267,7 @@ async function createOpaqueAgentWorkspace(
 
   const protocol = request.protocol;
   const workspaceTitle = buildOpaqueWorkspaceTitle(protocol);
-  const conversionGoal = buildOpaqueConversionGoal(protocol);
+  const workspaceGoal = buildOpaqueWorkspaceGoal(protocol);
 
   const { data: workspace, error: workspaceError } = await supabase
     .from("workspaces")
@@ -281,14 +281,14 @@ async function createOpaqueAgentWorkspace(
       source_type: "topic",
       description: "Opaque protocol evaluation workspace",
       notes: buildOpaqueWorkspaceNotes(protocol),
-      conversion_goal: conversionGoal,
+      workspace_goal: workspaceGoal,
       is_agent_workspace: true,
       evaluation_mode: "opaque",
       protocol_config: protocol,
       external_refs: request.external_refs || null,
     })
     .select(
-      "id, title, root_topic, status, notes, conversion_goal, evaluation_mode, protocol_config, external_refs, created_at, updated_at"
+      "id, title, root_topic, status, notes, workspace_goal, evaluation_mode, protocol_config, external_refs, created_at, updated_at"
     )
     .single();
 

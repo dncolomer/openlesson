@@ -200,7 +200,7 @@ export function composeAgentFilesGoalPrompt(vars: {
     initialChapters: vars.initialChapters,
     fileContext: vars.fileContext,
     extraRules:
-      "The initial_prompt is the workspace Goal. Persist and honor it as conversion/success intent.",
+      "The initial_prompt is the workspace Goal. Persist and honor it as the inferred workspace goal.",
   });
 }
 
@@ -212,14 +212,14 @@ export function blankWorkspaceCreateOutcome(): { blocks: []; mode: "blank" } {
 export function goalFieldsFromPrompt(goalPrompt: string): {
   root_topic: string;
   notes: string;
-  conversion_goal: string;
+  workspace_goal: string;
   goal: string;
 } {
   const goal = goalPrompt.trim();
   return {
     root_topic: goal.slice(0, 160) || "Untitled goal",
     notes: goal,
-    conversion_goal: goal.slice(0, 500),
+    workspace_goal: goal.slice(0, 500),
     goal,
   };
 }

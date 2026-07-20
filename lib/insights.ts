@@ -11,6 +11,53 @@ export type InsightSummary = {
   archived_at?: string | null;
 };
 
+/**
+ * Product surfaces that host Thought Memory and/or Insights.
+ * Generation (suggest/create) is allowed in ILE and Knowledge only — never TAP.
+ */
+export type InsightSurface = "tap" | "ile" | "knowledge";
+
+export type InsightSurfaceCapabilities = {
+  /** Suggest + create insights from thought traces. */
+  allowInsightGeneration: boolean;
+  /** Browse/list insights for a workspace (or session context). */
+  allowInsightList: boolean;
+};
+
+/**
+ * Pure capability map for insight generation/list UI.
+ * Call sites pass the result into ThoughtMemoryPanel / Knowledge hosts — do not re-implement in tests.
+ */
+export function resolveInsightSurfaceCapabilities(
+  surface: InsightSurface,
+): InsightSurfaceCapabilities {
+  switch (surface) {
+    case "tap":
+      return { allowInsightGeneration: false, allowInsightList: false };
+    case "ile":
+      return { allowInsightGeneration: true, allowInsightList: true };
+    case "knowledge":
+      return { allowInsightGeneration: true, allowInsightList: true };
+    default: {
+      const _exhaustive: never = surface;
+      return _exhaustive;
+    }
+  }
+}
+
+/** Build insights list URL; always scopes when workspaceId is provided. */
+export function insightsListUrl(workspaceId?: string | null): string {
+  if (workspaceId) {
+    return `/api/insights?workspaceId=${encodeURIComponent(workspaceId)}`;
+  }
+  return "/api/insights";
+}
+
+/** Path back to a workspace's Knowledge Insights surface after archive/detail actions. */
+export function workspaceKnowledgeInsightsPath(workspaceId: string): string {
+  return `/workspace/${workspaceId}?section=knowledge&subview=insights`;
+}
+
 export function formatInsightDate(value: string) {
   return new Date(value).toLocaleDateString("en-US", {
     month: "short",

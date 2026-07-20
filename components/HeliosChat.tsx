@@ -78,8 +78,7 @@ const CHAT_WELCOME_MESSAGES: Record<string, string> = {
   ca: "Hola, sóc Helios. Envia'm un pensament i respondré aquí en text pla, un torn cada vegada.",
 };
 
-// Small circular avatar with a violet gradient and a serif "H" — matches the
-// Helios avatar used in PerformanceChat so the brand reads as one entity.
+// Small circular avatar with a violet gradient and a serif "H" — Helios brand mark.
 function HeliosAvatar({ size = 28 }: { size?: number }) {
   return (
     <div

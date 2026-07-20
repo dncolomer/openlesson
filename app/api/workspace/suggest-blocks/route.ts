@@ -1,10 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
-import { ayclTokenFromBody, guardSessionRoute, guardWorkspaceRoute } from "@/lib/api/require-auth";
+import { ayclTokenFromBody,
+  ileTokenFromBody, guardSessionRoute, guardWorkspaceRoute } from "@/lib/api/require-auth";
 import { callXaiJSON, systemMessage, userMessage, DEFAULT_MODEL } from "@/lib/xai-client";
 import { formatWeightedNeighborhoodSummary, type WeightedGridNeighbor } from "@/lib/block-skill-grid";
+import {
+  blockFootprintCellCount,
+  composeSuggestShapeBlockTitlesSystemMessage,
+  composeSuggestShapeBlockTitlesUserPrompt,
+} from "@/lib/block-footprint-prompt";
 
 interface SuggestBlocksResponse {
   suggestions: string[];
+}
+
+function parsePositiveInt(value: unknown, fallback: number): number {
+  const n = typeof value === "number" ? value : Number(value);
+  if (!Number.isFinite(n)) return fallback;
+  return Math.max(1, Math.floor(n));
 }
 
 export async function POST(req: NextRequest) {
@@ -20,12 +32,29 @@ export async function POST(req: NextRequest) {
       weightedNeighbors,
       model: userModel,
       locale,
+      span_w: spanWRaw,
+      span_h: spanHRaw,
+      cells,
+      shape,
     } = body;
     const ayclToken = ayclTokenFromBody(body);
+    const ileToken = ileTokenFromBody(body);
 
     if (row === undefined || col === undefined) {
       return NextResponse.json({ error: "Grid position is required" }, { status: 400 });
     }
+
+    const spanW = parsePositiveInt(spanWRaw, 1);
+    const spanH = parsePositiveInt(spanHRaw, 1);
+    const cellList = Array.isArray(cells) ? cells : [];
+    const cellCount =
+      cellList.length > 0 ? cellList.length : blockFootprintCellCount(spanW, spanH);
+    // Shape mode: multi-cell footprint for Generate-in-shape suggest.
+    const isShapeSuggest =
+      shape === true ||
+      spanW > 1 ||
+      spanH > 1 ||
+      cellList.length > 1;
 
     if (mode === "chapter" && !sessionId) {
       return NextResponse.json({ error: "Session ID is required for chapter suggestions" }, { status: 400 });
@@ -37,8 +66,8 @@ export async function POST(req: NextRequest) {
 
     const auth =
       mode === "chapter"
-        ? await guardSessionRoute(sessionId, { ayclToken })
-        : await guardWorkspaceRoute(workspaceId, { ayclToken });
+        ? await guardSessionRoute(sessionId, { ayclToken, ileToken })
+        : await guardWorkspaceRoute(workspaceId, { ayclToken, ileToken });
     if (!auth.ok) return auth.response;
 
     const { user, supabase } = auth;
@@ -145,7 +174,21 @@ export async function POST(req: NextRequest) {
           ? neighborTitles.join(", ")
           : "none";
 
-    const prompt = `Workspace: ${workspaceTitle}
+    const prompt = isShapeSuggest
+      ? composeSuggestShapeBlockTitlesUserPrompt({
+          workspaceTitle,
+          workspaceDescription,
+          existingBlocksSummary: blockList,
+          entityLabel,
+          spanW,
+          spanH,
+          anchorRow: Number(row),
+          anchorCol: Number(col),
+          cellCount,
+          neighborSummary: spatialContext,
+          languageNote: languageNote || undefined,
+        })
+      : `Workspace: ${workspaceTitle}
 ${workspaceDescription ? `Description: ${workspaceDescription}\n` : ""}Existing ${mode === "chapter" ? "chapters" : "blocks"}:
 ${blockList}
 
@@ -155,13 +198,12 @@ ${spatialContext}
 
 Suggest exactly 3 distinct ${entityLabel} topics that would fit naturally at this position in the skill grid. Each should complement existing items without duplicating them. Closer neighbors should have stronger thematic influence. Keep each suggestion 4-14 words, specific and actionable as a title.${languageNote ? `\n\n${languageNote}` : ""}`;
 
+    const system = isShapeSuggest
+      ? composeSuggestShapeBlockTitlesSystemMessage(entityLabel)
+      : `You suggest ${entityLabel} topics for a skill grid. Return JSON only: { "suggestions": ["...", "...", "..."] } with exactly 3 concise titles.`;
+
     const response = await callXaiJSON<SuggestBlocksResponse>(
-      [
-        systemMessage(
-          `You suggest ${entityLabel} topics for a skill grid. Return JSON only: { "suggestions": ["...", "...", "..."] } with exactly 3 concise titles.`,
-        ),
-        userMessage(prompt),
-      ],
+      [systemMessage(system), userMessage(prompt)],
       {
         model: userModel || DEFAULT_MODEL,
         maxTokens: 300,

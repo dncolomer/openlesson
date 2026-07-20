@@ -3,6 +3,10 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { resolveBillingEntity, billingEntityHasApiAccess } from "@/lib/billing-entity";
+import {
+  resolveIleLinkAccess,
+  resolveIleLinkSessionAccess,
+} from "@/lib/ile-link-auth";
 import type { AuthContext } from "./types";
 
 async function profileHasApiAccess(profile: {
@@ -49,7 +53,7 @@ export interface WorkspaceSessionPlan {
   root_topic: string | null;
   description: string | null;
   notes: string | null;
-  conversion_goal: string | null;
+  workspace_goal: string | null;
   user_id: string;
   organization_id: string | null;
 }
@@ -137,7 +141,7 @@ export async function requireWorkspaceOwnerSession(
       .single(),
     supabase
       .from("workspaces")
-      .select("id, title, root_topic, description, notes, conversion_goal, user_id, organization_id")
+      .select("id, title, root_topic, description, notes, workspace_goal, user_id, organization_id")
       .eq("id", workspaceId)
       .single(),
   ]);
@@ -191,11 +195,64 @@ export interface SessionWorkspaceProofOfWorkAccess {
   supabase: SupabaseClient;
 }
 
-/** Cookie-auth access for ILE sessions uploading proof of work (no Teams gate). */
+export type SessionWorkspaceProofOfWorkAccessOptions = {
+  /** Private token for shareable ILE guest links (`/ile/session/{token}`). */
+  ileToken?: string | null;
+};
+
+/**
+ * Access for ILE sessions uploading proof of work (no Teams gate).
+ * Supports cookie-auth owners and shareable ILE private tokens.
+ */
 export async function requireSessionWorkspaceProofOfWorkAccess(
   workspaceId: string,
   sessionId?: string | null,
+  options?: SessionWorkspaceProofOfWorkAccessOptions,
 ): Promise<SessionWorkspaceProofOfWorkAccess | NextResponse> {
+  const normalizedWorkspaceId = workspaceId.trim();
+  if (!normalizedWorkspaceId) {
+    return NextResponse.json({ error: "workspaceId is required" }, { status: 400 });
+  }
+
+  const ileToken = options?.ileToken?.trim() || "";
+  if (ileToken) {
+    const ile = sessionId
+      ? await resolveIleLinkSessionAccess(ileToken, sessionId)
+      : await resolveIleLinkAccess(ileToken);
+    if ("error" in ile) {
+      return NextResponse.json({ error: ile.error }, { status: ile.status });
+    }
+    if (ile.workspaceId !== normalizedWorkspaceId) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    const { data: workspace } = await ile.supabase
+      .from("workspaces")
+      .select("id, title, root_topic, description, notes, workspace_goal, user_id, organization_id")
+      .eq("id", normalizedWorkspaceId)
+      .single();
+
+    if (!workspace) {
+      return NextResponse.json({ error: "Workspace not found" }, { status: 404 });
+    }
+
+    const auth: AuthContext = {
+      user_id: ile.ownerUserId,
+      guest_user_id: ile.guestUserId,
+      organization_id: workspace.organization_id,
+      is_org_admin: false,
+      key_id: "ile-link",
+      scopes: ["workspaces:read", "workspaces:write"],
+    };
+
+    return {
+      userId: ile.ownerUserId,
+      workspace,
+      auth,
+      supabase: ile.supabase,
+    };
+  }
+
   const supabase = await createClient();
   const {
     data: { user },
@@ -213,8 +270,8 @@ export async function requireSessionWorkspaceProofOfWorkAccess(
       .single(),
     supabase
       .from("workspaces")
-      .select("id, title, root_topic, description, notes, conversion_goal, user_id, organization_id")
-      .eq("id", workspaceId)
+      .select("id, title, root_topic, description, notes, workspace_goal, user_id, organization_id")
+      .eq("id", normalizedWorkspaceId)
       .single(),
   ]);
 
@@ -250,7 +307,7 @@ export async function requireSessionWorkspaceProofOfWorkAccess(
         ? String((session.metadata as Record<string, unknown>).workspace_id)
         : null;
 
-    if (linkedWorkspaceId && linkedWorkspaceId !== workspaceId) {
+    if (linkedWorkspaceId && linkedWorkspaceId !== normalizedWorkspaceId) {
       return NextResponse.json(
         { error: "session_id does not belong to this workspace", code: "forbidden" },
         { status: 403 },
@@ -273,4 +330,10 @@ export async function requireSessionWorkspaceProofOfWorkAccess(
     auth,
     supabase: createAdminClient(),
   };
+}
+
+/** Extract ILE private token from a JSON body (ileToken, ile_token, or privateToken). */
+export function ileTokenFromPowBody(body: Record<string, unknown>): string | null {
+  const raw = body.ileToken ?? body.ile_token ?? body.privateToken ?? body.private_token;
+  return typeof raw === "string" && raw.trim() ? raw.trim() : null;
 }

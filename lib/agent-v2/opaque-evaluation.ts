@@ -1,6 +1,15 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { composePrompt } from "@/lib/prompt-kernel/compose";
+import { buildOpaqueScoreContextSurface } from "@/lib/prompt-kernel/surfaces/score-context";
 import type { PerformanceContextPayload } from "./performance-context";
-import type { PerformanceReport, PerformanceReportContract } from "./performance-report";
+import {
+  applyNamedScoreField,
+  buildVerticalScoreReportContract,
+  emptyVerticalScoreReport,
+  type ScoreVertical,
+  type VerticalScoreReport,
+  type VerticalScoreReportContract,
+} from "./performance-report";
 import type { ProofOfWorkEvalSchemaResult, ProofOfWorkSchemaRequest } from "./proof-of-work-schema";
 
 export type EvaluationMode = "semantic" | "opaque";
@@ -215,7 +224,7 @@ export function buildOpaqueWorkspaceTitle(protocol: OpaqueProtocol): string {
   return `Opaque Protocol ${protocol.protocol_id}`;
 }
 
-export function buildOpaqueConversionGoal(protocol: OpaqueProtocol): string {
+export function buildOpaqueWorkspaceGoal(protocol: OpaqueProtocol): string {
   return `goal_ref:${protocol.goal_ref}`;
 }
 
@@ -370,84 +379,48 @@ export function buildOpaqueProofOfWorkSpec(
         optional_fields: ["goals_achieved"],
       },
     ],
-    performance_report_contract: buildOpaquePerformanceReportContract(),
-    spec_version: "1.4-opaque",
+    performance_report_contract: buildOpaqueVerticalScoreContract("verification"),
+    vertical_score_contracts: {
+      verification: buildOpaqueVerticalScoreContract("verification"),
+      augmentation: buildOpaqueVerticalScoreContract("augmentation"),
+      optimization: buildOpaqueVerticalScoreContract("optimization"),
+    },
+    spec_version: "1.5-opaque",
     workspace_id: workspaceId,
     block_id: request.block_id ?? null,
   };
 }
 
-export function buildOpaquePerformanceReportContract(): PerformanceReportContract {
+export function buildOpaqueVerticalScoreContract(
+  vertical: ScoreVertical = "verification"
+): VerticalScoreReportContract {
+  const base = buildVerticalScoreReportContract(vertical);
+  const example = emptyVerticalScoreReport(vertical);
+  example.workspace_goal = "goal_ref:example";
   return {
-    endpoint_pattern: "(workspace)/performance",
-    response_mode: "report",
-    required_fields: [
-      "overall_score",
-      "conversion_score",
-      "conversion_goal",
-      "ghc_score",
-      "ghc_confidence",
-      "marker_scores",
-      "gap_analysis",
-      "protocol_compliance_score",
-    ],
-    overall_score: {
-      type: "integer",
-      range: "0-100",
-      description: "Structural trace completeness / phase coverage score (opaque mode)",
-    },
-    conversion_score: {
-      type: "integer",
-      range: "0-100",
-      description: "Protocol compliance score — goals_achieved and phase coverage",
-    },
-    conversion_goal: {
-      type: "string",
-      description: "Opaque goal_ref token only",
-    },
-    ghc_score: {
+    ...base,
+    endpoint_pattern: `(workspace)/${vertical}-score`,
+    primary_score: {
       type: "integer",
       range: "0-100",
       description:
-        "Opaque mode: structural authenticity only (0 when no human selective-thought signal); typically ghc_confidence none|low",
+        vertical === "verification"
+          ? "Structural trace completeness / phase coverage score (opaque mode)"
+          : vertical === "optimization"
+            ? "Protocol compliance score — goals_achieved and phase coverage (opaque mode)"
+            : "Structural practice-readiness from phase completeness (opaque mode)",
     },
-    ghc_confidence: {
+    workspace_goal: {
       type: "string",
-      description: "none | low | medium | high — usually none or low in opaque structural mode",
+      description: "Opaque goal_ref token only",
     },
-    marker_scores: {
-      description: "One marker per protocol phase; rationales cite observable event fields only",
-      min_markers: 3,
-      max_markers: 8,
-      visualization: "spider_radar",
-      item_fields: ["id", "label", "score", "rationale", "block_id"],
-    },
-    gap_analysis: {
-      required: true,
-      gaps_required: true,
-      item_fields: ["title", "proof_of_work", "severity", "suggested_repair"],
-      next_steps_required: true,
-      next_steps_fields: ["directions", "events"],
-    },
-    example_report: {
-      overall_score: 0,
-      conversion_score: 0,
-      conversion_goal: "goal_ref:example",
-      ghc_score: 0,
-      ghc_confidence: "none",
-      marker_scores: [],
-      summary: "Insufficient proof of work.",
-      strengths: [],
-      growth_areas: [],
-      gap_analysis: {
-        summary: "No artifacts yet.",
-        gaps: [],
-        next_steps: { directions: [], events: [] },
-      },
-      suggestions: [],
-      confidence: "emerging",
-    },
+    example_report: example,
   };
+}
+
+/** @deprecated Prefer buildOpaqueVerticalScoreContract */
+export function buildOpaquePerformanceReportContract(): VerticalScoreReportContract {
+  return buildOpaqueVerticalScoreContract("verification");
 }
 
 export const OPAQUE_INFERENCE_GUARDRAILS = `Opaque evaluation guardrails (MANDATORY):
@@ -456,41 +429,55 @@ export const OPAQUE_INFERENCE_GUARDRAILS = `Opaque evaluation guardrails (MANDAT
 - Rationales must cite only observable event fields: verb, timestamp_ms, items_found, byte_count, count_check, resample_match, goals_achieved, anon, event_count.
 - gap_analysis.gaps[].title must use structural codes (e.g. MISSING_PHASE, INCOMPLETE_VALIDATION, TRACE_ID_MISMATCH).
 - suggestions and next_steps.events must reference protocol verbs and structural metadata only — never domain tasks.
-- conversion_goal must echo the authoritative goal_ref exactly when provided.`;
+- workspace_goal must echo the authoritative goal_ref exactly when provided.`;
 
-export function buildOpaquePerformanceReportInstructions(
+export function buildOpaqueVerticalScoreInstructions(
+  vertical: ScoreVertical,
   blockId?: string | null,
   goalRef?: string | null
 ): string {
   const scope = blockId ? "a single protocol phase" : "the full opaque protocol";
   const goalLine = goalRef?.trim()
-    ? `\nAuthoritative goal_ref (echo exactly as conversion_goal; do not interpret):\n"${goalRef.trim()}"\n`
+    ? `\nAuthoritative goal_ref (echo exactly as workspace_goal; do not interpret):\n"${goalRef.trim()}"\n`
     : "";
 
-  return `You produce **structural-only** learning verification for ${scope} in opaque evaluation mode.
+  const verticalHint =
+    vertical === "verification"
+      ? "score — structural trace completeness / phase coverage (0-100) as verification_score"
+      : vertical === "optimization"
+        ? "score — protocol compliance: phase coverage + goals_achieved presence (0-100) as optimization_score"
+        : "score — structural practice readiness from phase completeness (0-100) as augmentation_score";
+
+  const task = `You produce a **structural-only** ${vertical} score for ${scope} in opaque evaluation mode.
+This call scores ONLY the ${vertical} vertical.
 ${goalLine}
 ${OPAQUE_INFERENCE_GUARDRAILS}
 
 Score outputs:
-1. overall_score — structural trace completeness / phase coverage (0-100)
-2. conversion_score — protocol compliance: phase coverage + goals_achieved presence (0-100). This replaces semantic conversion likelihood in opaque mode.
-3. conversion_goal — echo goal_ref exactly when provided
-4. ghc_score — structural authenticity only (0 when no human selective-thought signal); typically low
-5. ghc_confidence — none or low in opaque mode (no semantic GHC)
-6. marker_scores — one axis per protocol phase block; rationales cite event fields only
-7. gap_analysis — structural deficits only; use codes in titles when possible
-8. protocol_compliance_score — same integer as conversion_score (duplicate for opaque consumers)
+1. ${verticalHint}
+2. workspace_goal — echo goal_ref exactly when provided
+3. ghc_score — structural authenticity only (0 when no human selective-thought signal); typically low
+4. ghc_confidence — none or low in opaque mode (no semantic GHC)
+5. marker_scores — one axis per protocol phase block; rationales cite event fields only
+6. gap_analysis — structural deficits only; use codes in titles when possible
+7. summary, strengths, growth_areas, suggestions, confidence
 
 Be honest when proof of work is thin.`;
+
+  // ontology omitted (opaque); structural PoW-only surface → task
+  return composePrompt({
+    ontology: "none",
+    surface: buildOpaqueScoreContextSurface(vertical),
+    task,
+  });
 }
 
-export function buildOpaquePerformanceChatInstructions(blockId?: string | null): string {
-  const scope = blockId ? "one protocol phase" : "the full opaque protocol";
-  return `You are an Uncertain Systems structural coach for opaque evaluation mode over ${scope}.
-
-${OPAQUE_INFERENCE_GUARDRAILS}
-
-Answer using only observable trace structure. Recommend metadata and validation improvements — never domain-specific implementation details.`;
+/** @deprecated Prefer buildOpaqueVerticalScoreInstructions */
+export function buildOpaquePerformanceReportInstructions(
+  blockId?: string | null,
+  goalRef?: string | null
+): string {
+  return buildOpaqueVerticalScoreInstructions("verification", blockId, goalRef);
 }
 
 export function redactOpaqueFileName(artifactId: string): string {
@@ -542,7 +529,9 @@ export function scrubOpaquePerformanceContext(
       root_topic: protocol ? buildOpaqueRootTopic(protocol) : "opaque",
       description: "Opaque protocol evaluation workspace",
       notes: protocol ? buildOpaqueWorkspaceNotes(protocol) : "evaluation_mode=opaque",
-      conversion_goal: protocol ? buildOpaqueConversionGoal(protocol) : payload.workspace.conversion_goal,
+      workspace_goal: protocol
+        ? buildOpaqueWorkspaceGoal(protocol)
+        : payload.workspace.workspace_goal,
     },
     blocks: payload.blocks.map((block) => ({
       ...block,
@@ -553,23 +542,26 @@ export function scrubOpaquePerformanceContext(
   };
 }
 
-export function extractGoalRefFromConversionGoal(conversionGoal: string | null | undefined): string | null {
-  if (!conversionGoal) return null;
-  const match = conversionGoal.match(/^goal_ref:(.+)$/);
+export function extractGoalRefFromWorkspaceGoal(
+  workspaceGoal: string | null | undefined
+): string | null {
+  if (!workspaceGoal) return null;
+  const match = workspaceGoal.match(/^goal_ref:(.+)$/);
   return match?.[1]?.trim() || null;
 }
 
-export function finalizeOpaquePerformanceReport(
-  report: PerformanceReport,
+export function finalizeOpaqueVerticalScoreReport(
+  report: VerticalScoreReport,
   goalRef: string | null,
-  protocol: OpaqueProtocol | null
+  protocol: OpaqueProtocol | null,
+  vertical: ScoreVertical = "verification"
 ): {
-  report: PerformanceReport;
-  workspace_conversion_goal: string;
-  conversion_goal_source: "opaque_ref";
+  report: VerticalScoreReport;
+  workspace_goal: string;
+  workspace_goal_source: "opaque_ref";
   protocol_report: OpaqueProtocolReport;
 } {
-  const complianceScore = report.conversion_score;
+  const complianceScore = report.score;
   const phases = protocol ? resolveProtocolPhases(protocol) : [];
   const phaseVerbs = phases.map((p) => p.verb);
 
@@ -590,20 +582,34 @@ export function finalizeOpaquePerformanceReport(
     })),
   };
 
-  const conversionGoal = goalRef ? `goal_ref:${goalRef}` : report.conversion_goal;
+  const workspaceGoal = goalRef ? `goal_ref:${goalRef}` : report.workspace_goal;
 
   return {
-    report: {
+    report: applyNamedScoreField({
       ...report,
-      conversion_goal: conversionGoal,
-      conversion_score: complianceScore,
-      overall_score: report.overall_score,
+      vertical,
+      score: complianceScore,
+      workspace_goal: workspaceGoal,
       ghc_score: report.ghc_score ?? 0,
       ghc_confidence: report.ghc_confidence ?? "none",
-    },
-    workspace_conversion_goal: conversionGoal,
-    conversion_goal_source: "opaque_ref",
+    }),
+    workspace_goal: workspaceGoal,
+    workspace_goal_source: "opaque_ref",
     protocol_report: protocolReport,
+  };
+}
+
+/** @deprecated Prefer finalizeOpaqueVerticalScoreReport */
+export function finalizeOpaquePerformanceReport(
+  report: VerticalScoreReport,
+  goalRef: string | null,
+  protocol: OpaqueProtocol | null
+) {
+  const result = finalizeOpaqueVerticalScoreReport(report, goalRef, protocol, report.vertical ?? "verification");
+  return {
+    ...result,
+    workspace_goal: result.workspace_goal,
+    workspace_goal_source: result.workspace_goal_source,
   };
 }
 

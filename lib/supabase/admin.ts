@@ -2,7 +2,7 @@
 // Supabase admin (service-role) client
 //
 // Use this when you need to bypass RLS from a trusted server route — e.g.
-// Stripe webhooks, invite acceptance, admin endpoints, agent API key lookups.
+// Stripe webhooks, invite acceptance, admin endpoints, Proof-of-Work API key lookups.
 //
 // RULES:
 //   - NEVER import this from client components. The service role key is

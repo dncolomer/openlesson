@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { SessionItem } from "./SessionItem";
 import { BlockSkillGrid } from "./BlockSkillGrid";
@@ -129,19 +129,15 @@ export function SessionList({
     prevNodeIdsRef.current = currentIds;
   }, [nodes]);
 
-  const { completedSessions } = useMemo(() => {
-    const ordered = getOrderedSessions(nodes);
-    const completed = ordered.filter((n) => n.status === "completed");
-    return { completedSessions: completed };
-  }, [nodes]);
-
   useEffect(() => {
+    // Owners edit the map with Select/drag tools — do not auto-open TAP/ILE detail.
+    if (isOwner) return;
     if (expandedNodeId) return;
     if (window.matchMedia("(min-width: 768px)").matches) return;
     const ordered = getOrderedSessions(nodes);
     const first = ordered.find((n) => n.status !== "completed") ?? ordered[0];
     if (first) setExpandedNodeId(first.id);
-  }, [expandedNodeId, nodes]);
+  }, [expandedNodeId, isOwner, nodes]);
 
   useEffect(() => {
     if (!workspaceId || !isOwner) return;
@@ -225,7 +221,8 @@ export function SessionList({
               : data.updatedNodes.find(
                   (node: Block) => node.position_x === position.col && node.position_y === position.row,
                 );
-          if (placedNode) setExpandedNodeId(placedNode.id);
+          // Don't open detail overlay for owners (blocks map multi-select).
+          if (placedNode && !isOwner) setExpandedNodeId(placedNode.id);
         }
         if (onRefresh) onRefresh();
         router.refresh();
@@ -296,17 +293,21 @@ export function SessionList({
         const data = await response.json();
         if (data.updatedNodes?.length > 0) {
           if (onNodesUpdate) onNodesUpdate(data.updatedNodes);
-          if (data.placedNodeId) {
+          // Owners multi-select on the map — do not open the full-screen detail
+          // overlay after grid ops (it blocks further multi-select).
+          if (data.placedNodeId && !isOwner) {
             setExpandedNodeId(data.placedNodeId);
-            if (data.appearSequentially) {
+          }
+          if (data.appearSequentially) {
+            if (data.placedNodeId) {
               setAppearingNodeIds([data.placedNodeId]);
+            } else {
+              const prev = prevNodeIdsRef.current;
+              const added = (data.updatedNodes as Block[])
+                .filter((n) => !prev.has(n.id))
+                .map((n) => n.id);
+              if (added.length) setAppearingNodeIds(added);
             }
-          } else if (data.appearSequentially) {
-            const prev = prevNodeIdsRef.current;
-            const added = (data.updatedNodes as Block[])
-              .filter((n) => !prev.has(n.id))
-              .map((n) => n.id);
-            if (added.length) setAppearingNodeIds(added);
           }
         }
         if (onRefresh) onRefresh();
@@ -324,6 +325,10 @@ export function SessionList({
     ? getOrderedSessions(nodes).findIndex((node) => node.id === selectedGridNode.id)
     : -1;
 
+  // Owners use Select multi-select on the map — never cover it with a full-screen
+  // detail modal except when they explicitly double-click a block (expandedNodeId set
+  // from double-click / after create). Still allow detail when expanded is set.
+  // The modal's backdrop dismisses via onClose → setExpandedNodeId(null).
   const showBlockDetail = selectedGridNode != null && selectedGridIndex >= 0;
 
   const renderBlockDetail = () =>
@@ -355,15 +360,6 @@ export function SessionList({
 
   return (
     <div className="relative flex h-full flex-col overflow-hidden p-2.5">
-      <div className="mb-2 px-0.5">
-        <h2 className="text-xs font-medium uppercase tracking-[0.12em] text-neutral-500">{t("sessionList.sessions")}</h2>
-        <span className="font-mono text-[11px] tabular-nums text-neutral-600">
-          {maskProgress
-            ? t("sessionList.blockCount", { total: nodes.length })
-            : t("sessionList.progressDone", { completed: completedSessions.length, total: nodes.length })}
-        </span>
-      </div>
-
       <div className="flex min-h-0 flex-1 flex-col gap-2.5">
         <div className="min-h-0 flex-1">
           <BlockSkillGrid
@@ -392,6 +388,7 @@ export function SessionList({
               recenter: t("sessionList.gridRecenter"),
               zoomIn: t("sessionList.gridZoomIn"),
               zoomOut: t("sessionList.gridZoomOut"),
+              select: t("sessionList.gridSelect"),
               merge: t("sessionList.gridMerge"),
               split: t("sessionList.gridSplit"),
               move: t("sessionList.gridMove"),

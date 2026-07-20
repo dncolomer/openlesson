@@ -7,7 +7,7 @@ export type ThesisFocus = "platform" | "verification" | "optimization" | "augmen
 
 /** Core science line (shared). */
 export const THESIS_SCIENCE_HYPOTHESIS =
-  "Science hypothesis: learning is movement through brain configuration space. Knowledge is proximity to a useful state (retrieve, apply, transform), not a binary flag or completion score.";
+  "Science hypothesis: learning is movement through knowledge configuration space. Knowledge is proximity to a useful state (retrieve, apply, transform), not a binary flag or completion score.";
 
 /** Core PoW proxy line (platform / default). */
 export const THESIS_POW_PROXY_DEFAULT =
@@ -42,7 +42,7 @@ export const THESIS_SCIENCE_POW_BULLETS = [
 
 /** Anchors tests and smoke should find on every thesis slide. */
 export const THESIS_SCIENCE_POW_ANCHORS = [
-  "brain configuration",
+  "knowledge configuration",
   "proximity",
   "Proof of Work",
   "proxy",

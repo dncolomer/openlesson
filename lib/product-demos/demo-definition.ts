@@ -122,7 +122,7 @@ export function buildModelDoc(
 ${demo.scenarioIntro.trim()}
 
 This document defines how partner integrations should collect proof of work and how Uncertain Systems evaluates
-competency. Attach at workspace creation via \`POST /api/v2/agent/workspaces\` with \`files[]\` so
+competency. Attach at workspace creation via \`POST /api/v3/pow/workspaces\` with \`files[]\` so
 performance analysis, proof-of-work-spec generation, and integration-skill regeneration stay grounded in
 a stable eval model — not only live tool traces.
 
@@ -137,7 +137,7 @@ ${competencyRows}
 ## Proof-of-work contract
 - **Tool events**: JSON payloads via \`POST .../proof-of-work\` (type: tool)
 - **Time gaps**: \`time_gap_elapsed\` events with \`days_elapsed\` when calendar idle time matters
-- **Performance reports**: \`overall_score\`, \`conversion_score\`, \`conversion_goal\`, \`marker_scores\` (spider/radar), \`gap_analysis.gaps[]\`, \`gap_analysis.next_steps.directions[]\`, \`gap_analysis.next_steps.events[]\`
+- **Performance reports**: \`verification_score\`, \`optimization_score\`, \`workspace_goal\`, \`marker_scores\` (spider/radar), \`gap_analysis.gaps[]\`, \`gap_analysis.next_steps.directions[]\`, \`gap_analysis.next_steps.events[]\`
 - **Remediation rule**: gaps, next_steps, and suggestions must stay product-independent — never recommend TAP sessions, block completion, or ILE; use domain/tool event language only
 - **Continuous evaluation**: re-fetch \`proof-of-work-schema\`, regenerate \`integration-skill\` as artifacts grow
 

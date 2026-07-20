@@ -66,11 +66,11 @@ describe("predictive-interruption", () => {
             intervention: {
               type: "performance_review",
               message: "Run a performance report to see updated marker scores and gaps.",
-              consumer_action: "call_analyze_performance",
+              consumer_action: "call_verification_score",
             },
           };
         }
-        if (endpoint === "analyze_performance" && features.performance_summary) {
+        if (endpoint === "verification_score" && features.performance_summary) {
           return {
             interruption_id: "int_perf",
             delay_ms: 45_000,
@@ -149,13 +149,14 @@ describe("predictive-interruption", () => {
 
   it("predicts coaching nudge from performance report context", async () => {
     const interruption = await predictInterruption({
-      endpoint: "analyze_performance",
+      endpoint: "verification_score",
       workspace_id: "ws-1",
-      mode: "report",
+      mode: "score",
       report: {
-        overall_score: 55,
-        conversion_score: 40,
-        conversion_goal: "Activation",
+        vertical: "verification",
+        score: 55,
+        verification_score: 55,
+        workspace_goal: "Activation",
         ghc_score: 20,
         ghc_confidence: "low",
         marker_scores: [],
@@ -293,7 +294,7 @@ describe("predictive-interruption", () => {
 
   it("attaches interruption to API responses", async () => {
     const payload = await withProofOfWorkApiResponse(
-      { mode: "report", report: { overall_score: 80 } },
+      { mode: "score", report: { vertical: "verification", score: 80 } },
       { endpoint: "list_blocks", workspace_id: "ws-1" },
     );
     expect(payload).toHaveProperty("interruption");

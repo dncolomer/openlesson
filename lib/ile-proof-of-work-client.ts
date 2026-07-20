@@ -15,6 +15,8 @@ export interface UploadIleProofOfWorkInput {
   band_powers?: Record<string, number> | null;
   device_name?: string | null;
   sample_count?: number | null;
+  /** Shareable ILE guest link token so unauthenticated guests can upload PoW. */
+  ileToken?: string;
 }
 
 export interface UploadIleProofOfWorkResult {
@@ -51,13 +53,14 @@ export async function uploadIleProofOfWork(
   input: UploadIleProofOfWorkInput,
 ): Promise<UploadIleProofOfWorkResult> {
   try {
-    const { sessionId, ...rest } = input;
+    const { sessionId, ileToken, ...rest } = input;
     const res = await fetch("/api/workspace/proof-of-work", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         ...rest,
         session_id: sessionId,
+        ...(ileToken ? { ileToken } : {}),
       }),
     });
     const body = await res.json().catch(() => ({}));
@@ -78,6 +81,7 @@ export async function uploadIleEvidenceItem(
   workspaceId: string,
   sessionId: string,
   item: IleProofOfWorkUploadItem,
+  ileToken?: string,
 ): Promise<UploadIleProofOfWorkResult> {
   return uploadIleProofOfWork({
     workspaceId,
@@ -93,6 +97,7 @@ export async function uploadIleEvidenceItem(
     band_powers: item.bandPowers,
     device_name: item.deviceName,
     sample_count: item.sampleCount,
+    ...(ileToken ? { ileToken } : {}),
   });
 }
 
@@ -100,6 +105,7 @@ export async function uploadIleScreenshot(
   workspaceId: string,
   sessionId: string,
   screenshot: IleBufferedScreenshot,
+  ileToken?: string,
 ): Promise<UploadIleProofOfWorkResult> {
   const mime = screenshot.blob.type || "image/png";
   return uploadIleProofOfWork({
@@ -111,5 +117,6 @@ export async function uploadIleScreenshot(
     file_name: `ile-screen-${screenshot.timestampMs}.png`,
     timestamp_ms: screenshot.timestampMs,
     metadata: { size: screenshot.blob.size },
+    ...(ileToken ? { ileToken } : {}),
   });
 }

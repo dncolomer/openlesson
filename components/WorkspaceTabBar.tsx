@@ -3,7 +3,9 @@
 import type { ReactNode } from "react";
 import { useI18n } from "@/lib/i18n";
 
-export type WorkspaceTabKey = "graph" | "notes" | "performance" | "files" | "integration";
+/** Workspace-local tabs (graph / notes / files) plus legacy keys still used by AYCL shell. */
+export type WorkspaceLocalTabKey = "graph" | "notes" | "files";
+export type WorkspaceTabKey = WorkspaceLocalTabKey | "performance" | "integration";
 
 export type WorkspaceTabItem = {
   key: WorkspaceTabKey;

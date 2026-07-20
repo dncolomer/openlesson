@@ -9,6 +9,7 @@ import {
   formatInsightDate,
   insightPublicPath,
   insightShareUrl,
+  workspaceKnowledgeInsightsPath,
   type InsightSummary,
 } from "@/lib/insights";
 
@@ -57,7 +58,11 @@ export function InsightDetailClient({ insightId }: { insightId: string }) {
     setArchiving(true);
     try {
       await archiveInsight(insight.id);
-      router.push("/dashboard?tab=insights");
+      if (insight.workspace_id) {
+        router.push(workspaceKnowledgeInsightsPath(insight.workspace_id));
+      } else {
+        router.push("/dashboard");
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to archive insight");
       setArchiving(false);

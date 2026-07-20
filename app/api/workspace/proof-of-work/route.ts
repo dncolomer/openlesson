@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { uploadWorkspaceProofOfWork } from "@/lib/agent-v2/upload-workspace-proof-of-work";
-import { requireSessionWorkspaceProofOfWorkAccess } from "@/lib/agent-v2/workspace-session-access";
+import {
+  ileTokenFromPowBody,
+  requireSessionWorkspaceProofOfWorkAccess,
+} from "@/lib/agent-v2/workspace-session-access";
 import { countWorkspaceProofOfWorkForPlan } from "@/lib/agent-v2/workspace-proof-of-work";
 import { withProofOfWorkApiResponse } from "@/lib/agent-v2/predictive-interruption";
 import { resolvePowInterruptionContext } from "@/lib/pow-interruption-resolver";
@@ -28,7 +31,9 @@ export async function POST(req: NextRequest) {
         : typeof body.sessionId === "string"
           ? body.sessionId
           : null;
-    const access = await requireSessionWorkspaceProofOfWorkAccess(workspaceId, sessionId);
+    const access = await requireSessionWorkspaceProofOfWorkAccess(workspaceId, sessionId, {
+      ileToken: ileTokenFromPowBody(body),
+    });
     if (access instanceof NextResponse) return access;
 
     const base64 = typeof body.data === "string" ? body.data : "";

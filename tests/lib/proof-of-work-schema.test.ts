@@ -106,7 +106,7 @@ description: Custom skill
 describe("evidence integration helpers", () => {
   it("builds proof-of-work spec API paths", () => {
     expect(buildProofOfWorkSchemaApiPath("ws-1", "https://uncertain.systems")).toBe(
-      "https://uncertain.systems/api/v2/agent/workspaces/ws-1/proof-of-work-schema"
+      "https://uncertain.systems/api/v3/pow/workspaces/ws-1/proof-of-work-schema"
     );
   });
 
@@ -136,7 +136,7 @@ describe("evidence integration helpers", () => {
     expect(enriched.continuous_evaluation?.regeneration_required).toBe(true);
     expect(enriched.continuous_evaluation?.integration_skill.api_path).toContain("/integration-skill");
     expect(enriched.continuous_evaluation_mcp?.proof_of_work_spec.mcp_tool).toBe("generate_proof_of_work_schema");
-    expect(enriched.continuous_evaluation_mcp?.performance.rest_equivalent).toContain("/performance");
+    expect(enriched.continuous_evaluation_mcp?.performance.rest_equivalent).toContain("/verification-score");
     expect(enriched.integration_surfaces?.length).toBe(2);
     expect(enriched.uncertain_systems_scope).toBeTruthy();
     expect(enriched.recommended_next_actions?.length).toBeGreaterThan(0);
@@ -167,7 +167,7 @@ describe("evidence integration helpers", () => {
       example_payload: { tool: "demo" },
       recommended_mime_type: "application/json",
       recommended_proof_of_work_type: "tool",
-      proof_of_work_spec_api_path: "https://uncertain.systems/api/v2/agent/workspaces/ws-1/proof-of-work-schema",
+      proof_of_work_spec_api_path: "https://uncertain.systems/api/v3/pow/workspaces/ws-1/proof-of-work-schema",
       tool_submissions: [
         {
           tool_name: "demo",
@@ -181,8 +181,8 @@ describe("evidence integration helpers", () => {
 
     expect(text).toContain("proof-of-work-schema");
     expect(text).toContain("demo");
-    expect(text).toContain("Performance report contract");
-    expect(text).toContain("overall_score");
+    expect(text).toContain("Vertical score contracts");
+    expect(text).toContain("verification_score");
     expect(text).toContain("spider_radar");
   });
 
@@ -214,18 +214,93 @@ describe("buildIntegrationSkillInstructions", () => {
       null
     );
 
-    expect(instructions).toContain("/api/v2/agent/workspaces/ws-1/proof-of-work-schema");
-    expect(instructions).toContain("/api/v2/agent/workspaces/ws-1/integration-skill");
+    expect(instructions).toContain("/api/v3/pow/workspaces/ws-1/proof-of-work-schema");
+    expect(instructions).toContain("/api/v3/pow/workspaces/ws-1/integration-skill");
     expect(instructions).toContain("Proof-of-work specification");
     expect(instructions).toContain("Continuous evaluation and regeneration");
     expect(instructions).toContain("Predictive interruptions");
     expect(instructions).toContain("do not tell them to invent ad-hoc JSON");
     expect(instructions).toContain("regenerate");
-    expect(instructions).toContain("overall_score");
+    expect(instructions).toContain("verification_score");
     expect(instructions).toContain("marker_scores");
     expect(instructions).toContain("performance_report_contract");
     expect(instructions).toContain("Predictive interruptions");
     expect(instructions).toContain("interruption_contract");
+    expect(instructions).toContain("current status");
+  });
+
+  it("embeds live workspace status snapshot when provided", () => {
+    const instructions = buildIntegrationSkillInstructions(
+      {
+        integration_name: "Acme Copilot",
+        base_url: "https://uncertain.systems",
+      },
+      {
+        id: "ws-1",
+        title: "Onboarding",
+        root_topic: "SaaS onboarding",
+        workspace_goal: "Ship first project",
+      },
+      [{ id: "block-1", title: "Setup", description: "First project", status: "in_progress" }],
+      null,
+      null,
+      {
+        workspace: {
+          id: "ws-1",
+          title: "Onboarding",
+          root_topic: "SaaS onboarding",
+          description: null,
+          notes: "Focus on CRM handoff",
+          workspace_goal: "Ship first project",
+          evaluation_mode: "semantic",
+        },
+        focus_block_id: null,
+        generated_at: "2026-07-20T00:00:00.000Z",
+        blocks: [
+          {
+            id: "block-1",
+            title: "Setup",
+            description: "First project",
+            status: "in_progress",
+            is_start: true,
+            session_id: null,
+          },
+        ],
+        proof_of_work: [
+          {
+            id: "pow-1",
+            type: "tool",
+            block_id: "block-1",
+            session_id: null,
+            file_name: "event.json",
+            mime_type: "application/json",
+            xai_file_id: "file-1",
+            timestamp_ms: 1,
+            tool_name: "crm.update",
+            tool_action: "update",
+            device_name: null,
+            sample_count: null,
+            metadata: {},
+            created_at: "2026-07-20T00:00:00.000Z",
+          },
+        ],
+        workspace_files: [],
+        linked_sessions: [],
+        counts: {
+          blocks: 1,
+          proof_of_work_artifacts: 1,
+          linked_sessions: 0,
+          workspace_files: 0,
+        },
+      }
+    );
+
+    expect(instructions).toContain("Current workspace status");
+    expect(instructions).toContain("Ship first project");
+    expect(instructions).toContain("status=in_progress");
+    expect(instructions).toContain("crm.update");
+    expect(instructions).toContain("proof_of_work_artifacts=1");
+    expect(instructions).toContain("Focus on CRM handoff");
   });
 });
 
@@ -241,7 +316,7 @@ describe("buildProofOfWorkSchemaInstructions", () => {
           root_topic: "Discovery",
           description: null,
           notes: null,
-          conversion_goal: null,
+          workspace_goal: null,
         },
         focus_block_id: null,
         generated_at: new Date().toISOString(),

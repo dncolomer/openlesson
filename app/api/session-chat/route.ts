@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { buildImageContent, callXaiText, systemMessage, userMessage, DEFAULT_MODEL, RECOMMENDED_TEMPS } from "@/lib/xai-client";
 import { getLanguageName } from "@/lib/tutoring-languages";
-import { ayclTokenFromBody, guardSessionRoute } from "@/lib/api/require-auth";
+import { ayclTokenFromBody,
+  ileTokenFromBody, guardSessionRoute } from "@/lib/api/require-auth";
 import { buildIleHeliosChatSystemPrompt } from "@/lib/prompt-kernel/surfaces/ile";
 
 const BASE_SYSTEM_PROMPT = buildIleHeliosChatSystemPrompt();
@@ -30,10 +31,12 @@ export async function POST(request: NextRequest) {
     }
 
     const ayclToken = ayclTokenFromBody(body);
+    const ileToken = ileTokenFromBody(body);
     const auth = await guardSessionRoute(sessionId, {
       ayclToken,
+      ileToken,
       // Cookie-auth chat is always session-bound in product UI.
-      requireSessionId: !ayclToken,
+      requireSessionId: !ayclToken && !ileToken,
     });
     if (!auth.ok) return auth.response;
     const { supabase } = auth;

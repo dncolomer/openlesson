@@ -35,7 +35,7 @@ const ENDPOINT_SPECS: EndpointSpec[] = [
   {
     id: "create-workspace",
     method: "POST",
-    path: "/api/v2/agent/workspaces",
+    path: "/api/v3/pow/workspaces",
     scope: "workspaces:write",
     summary: "Create a workspace in semantic mode (initial_prompt) or opaque mode (protocol). Optional seed files in both.",
     status: "201 Created",
@@ -127,7 +127,7 @@ const ENDPOINT_SPECS: EndpointSpec[] = [
   "files": []
 }`,
     notes: [
-      "Semantic: initial_prompt required; Grok generates title, blocks, conversion_goal.",
+      "Semantic: initial_prompt required; Grok generates title, blocks, workspace_goal.",
       "Opaque: protocol.protocol_id + protocol.goal_ref required; blocks generated from protocol phases; initial_prompt not stored.",
       "Guest keys (gsk_) may create workspaces; workspace is org-owned and tagged with guest_user_id.",
       "Requires Teams tier (403 teams_required otherwise).",
@@ -136,7 +136,7 @@ const ENDPOINT_SPECS: EndpointSpec[] = [
   {
     id: "list-blocks",
     method: "GET",
-    path: "/api/v2/agent/workspaces/{workspace_id}/blocks",
+    path: "/api/v3/pow/workspaces/{workspace_id}/blocks",
     scope: "workspaces:read",
     summary: "List assessable blocks in a workspace.",
     status: "200 OK",
@@ -171,7 +171,7 @@ const ENDPOINT_SPECS: EndpointSpec[] = [
   {
     id: "proof-of-work-schema",
     method: "POST",
-    path: "/api/v2/agent/workspaces/{workspace_id}/proof-of-work-schema",
+    path: "/api/v3/pow/workspaces/{workspace_id}/proof-of-work-schema",
     scope: "workspaces:read",
     summary:
       "Given workspace context (blocks, plan files on xAI, proof-of-work metadata) plus an evaluation definition, Grok returns a JSON Schema for the ideal tool proof-of-work payload.",
@@ -238,7 +238,7 @@ const ENDPOINT_SPECS: EndpointSpec[] = [
         name: "performance_report_contract",
         type: "object",
         description:
-          "Formal contract for POST .../performance report mode: overall_score, marker_scores (spider_radar), gap_analysis.gaps, and example_report.",
+          "Formal contract for POST .../verification-score (and sibling augmentation-score / optimization-score): one primary score, workspace_goal, marker_scores (spider_radar), gap_analysis, next actions.",
       },
       { name: "workspace_id", type: "uuid", description: "Echo of path workspace_id." },
       { name: "block_id", type: "uuid | null", description: "Echo of request block_id." },
@@ -313,7 +313,7 @@ const ENDPOINT_SPECS: EndpointSpec[] = [
   {
     id: "integration-skill",
     method: "POST",
-    path: "/api/v2/agent/workspaces/{workspace_id}/integration-skill",
+    path: "/api/v3/pow/workspaces/{workspace_id}/integration-skill",
     scope: "workspaces:read",
     summary:
       "Generate a workspace-specific skill.md integration guide via POST .../integration-skill for a custom partner agent.",
@@ -375,7 +375,7 @@ const ENDPOINT_SPECS: EndpointSpec[] = [
   {
     id: "upload-proof-of-work",
     method: "POST",
-    path: "/api/v2/agent/workspaces/{workspace_id}/proof-of-work",
+    path: "/api/v3/pow/workspaces/{workspace_id}/proof-of-work",
     scope: "workspaces:write",
     summary: "Upload tool usage, screenshots, video, or EEG to xAI Files and link to workspace/block/session.",
     status: "201 Created",
@@ -455,44 +455,39 @@ const ENDPOINT_SPECS: EndpointSpec[] = [
     ],
   },
   {
-    id: "performance",
+    id: "verification-score",
     method: "POST",
-    path: "/api/v2/agent/workspaces/{workspace_id}/performance",
+    path: "/api/v3/eval/workspaces/{workspace_id}/verification-score",
     scope: "workspaces:read",
-    summary: "Analyze workspace proof of work, TAP (Think Aloud Protocol) results, ILE practice traces, sessions, and plan files. Report mode (no prompt) or chat mode (with prompt).",
+    summary: 'Learning verification score (0–100) + spider markers, analysis, and next actions. TAP auto-results use this only.',
     status: "200 OK",
     pathParams: [
       { name: "workspace_id", type: "uuid", required: true, description: "Workspace ID." },
     ],
     requestBody: [
-      { name: "prompt", type: "string", description: "If non-empty → chat mode (markdown response). If omitted or empty → report mode (structured JSON)." },
       { name: "block_id", type: "uuid", description: "Optional: scope analysis to one block." },
-      { name: "conversation_history", type: "array", description: "Chat mode only. Up to 12 prior turns: { role: user|assistant, content: string }." },
-      { name: "file_ids", type: "string[]", description: "Optional xAI file IDs from a prior performance call. Empty → rebuild context bundle." },
+      { name: "style_prompt", type: "string", description: "Optional voice/tone for narrative fields." },
+      { name: "file_ids", type: "string[]", description: "Optional xAI file IDs from a prior score call. Empty → rebuild context bundle." },
     ],
-    requestExample: `// Report mode
-{ "block_id": "e57844a6-1b69-465c-9120-d0812d6339ae" }
-
-// Chat mode
-{
-  "block_id": "e57844a6-1b69-465c-9120-d0812d6339ae",
-  "prompt": "What is the single biggest readiness gap?",
-  "file_ids": ["file_814439bd-4894-4e11-852d-314e9f777a7f"]
-}`,
+    requestExample: `{ "block_id": "e57844a6-1b69-465c-9120-d0812d6339ae" }`,
     responseBody: [
-      { name: "mode", type: "report | chat", description: "Which response shape is populated." },
+      { name: "mode", type: '"score"', description: "Always score for this endpoint." },
+      { name: "vertical", type: "string", description: "verification | augmentation | optimization" },
       { name: "evaluation_mode", type: "string", description: "semantic | opaque" },
       { name: "privacy", type: "object", description: "Opaque workspaces: semantic_inference, plaintext_lint, stored_prompt." },
-      { name: "protocol_report", type: "object", description: "Opaque report mode: protocol_compliance_score, phase_coverage, trace_integrity, structural_gaps." },
-      { name: "conversion_goal_source", type: "string", description: "workspace | inferred | opaque_ref" },
-      { name: "report", type: "object | null", description: "Present when mode=report." },
-      { name: "report.overall_score", type: "integer", description: "0–100 readiness score synthesized from proof of work." },
+      { name: "protocol_report", type: "object", description: "Opaque: protocol_compliance_score, phase_coverage, trace_integrity, structural_gaps." },
+      { name: "workspace_goal", type: "string", description: "Inferred or owner-set workspace goal." },
+      { name: "workspace_goal_source", type: "string", description: "workspace | inferred | opaque_ref" },
+      { name: "report", type: "object", description: "Vertical score report payload." },
+      { name: "report.score", type: "integer", description: "0–100 primary score for this vertical." },
+      { name: "report.vertical", type: "string", description: "Matches the endpoint vertical." },
+      { name: "report.workspace_goal", type: "string", description: "Same as top-level workspace_goal when finalized." },
       {
         name: "report.marker_scores",
         type: "array",
         description: "Spider/radar competency axes: id, label, score (0–100), rationale, optional block_id.",
       },
-      { name: "report.summary", type: "string", description: "Executive summary." },
+      { name: "report.summary", type: "string", description: "Executive analysis." },
       { name: "report.strengths", type: "string[]", description: "Demonstrated strengths." },
       { name: "report.growth_areas", type: "string[]", description: "Areas needing development." },
       { name: "report.gap_analysis.summary", type: "string", description: "Gap analysis overview." },
@@ -500,26 +495,25 @@ const ENDPOINT_SPECS: EndpointSpec[] = [
       { name: "report.gap_analysis.next_steps", type: "object", description: "directions (string[]) and events (string[]) for domain next actions." },
       { name: "report.suggestions", type: "string[]", description: "Additional recommendations." },
       { name: "report.confidence", type: "string", description: "emerging | developing | clear | well-connected" },
-      { name: "response", type: "string | null", description: "Markdown answer when mode=chat." },
-      { name: "proof_of_work_summary", type: "object | null", description: "Counts used in context (blocks, tap_sessions, proof_of_work_artifacts, linked_sessions, workspace_files)." },
-      { name: "file_ids", type: "string[]", description: "xAI file IDs for follow-up calls; pass back as file_ids." },
+      { name: "proof_of_work_summary", type: "object | null", description: "Counts used in context." },
+      { name: "file_ids", type: "string[]", description: "xAI file IDs for follow-up calls." },
     ],
     responseExample: `{
-  "mode": "report",
+  "mode": "score",
+  "vertical": "verification",
+  "workspace_goal": "Trial-to-paid subscription activation",
+  "workspace_goal_source": "workspace",
   "report": {
-    "overall_score": 68,
+    "vertical": "verification",
+    "score": 68,
+    "verification_score": 68,
+    "workspace_goal": "Trial-to-paid subscription activation",
     "marker_scores": [
       {
         "id": "negotiation_prep",
         "label": "Negotiation Preparation",
         "score": 74,
         "rationale": "Used CRM and ROI table before price discussion."
-      },
-      {
-        "id": "risk_quantification",
-        "label": "Risk Quantification",
-        "score": 52,
-        "rationale": "Churn risk was discussed but never modeled numerically."
       }
     ],
     "summary": "Learner prepared for renewal negotiation using simulated tool traces.",
@@ -545,21 +539,6 @@ const ENDPOINT_SPECS: EndpointSpec[] = [
   },
   "proof_of_work_summary": {
     "blocks": 1,
-    "tap_sessions": 0,
-    "proof_of_work_artifacts": 2,
-    "linked_sessions": 0,
-    "workspace_files": 0
-  },
-  "file_ids": ["file_814439bd-4894-4e11-852d-314e9f777a7f"]
-}
-
-// Chat mode response
-{
-  "mode": "chat",
-  "response": "The biggest readiness gap is **churn risk quantification** — the learner discussed renewal value but never modeled probability-weighted revenue loss.",
-  "proof_of_work_summary": {
-    "blocks": 1,
-    "tap_sessions": 0,
     "proof_of_work_artifacts": 2,
     "linked_sessions": 0,
     "workspace_files": 0
@@ -567,15 +546,209 @@ const ENDPOINT_SPECS: EndpointSpec[] = [
   "file_ids": ["file_814439bd-4894-4e11-852d-314e9f777a7f"]
 }`,
     notes: [
+      "One primary score per call — not a multi-vertical unified scorecard.",
       "First call with empty file_ids uploads a workspace performance JSON summary + up to 19 artifact files to xAI.",
-      "If no proof of work exists, both modes still return 200 with an empty-data template (report object or chat message).",
-      "Chat mode: pass returned file_ids on follow-up calls to avoid re-uploading the context bundle.",
+      "If no proof of work exists, returns 200 with an empty-data score template.",
+    ],
+  },
+  {
+    id: "augmentation-score",
+    method: "POST",
+    path: "/api/v3/eval/workspaces/{workspace_id}/augmentation-score",
+    scope: "workspaces:read",
+    summary: 'Learning augmentation / practice-readiness score (0–100) + spider markers, analysis, and next actions.',
+    status: "200 OK",
+    pathParams: [
+      { name: "workspace_id", type: "uuid", required: true, description: "Workspace ID." },
+    ],
+    requestBody: [
+      { name: "block_id", type: "uuid", description: "Optional: scope analysis to one block." },
+      { name: "style_prompt", type: "string", description: "Optional voice/tone for narrative fields." },
+      { name: "file_ids", type: "string[]", description: "Optional xAI file IDs from a prior score call. Empty → rebuild context bundle." },
+    ],
+    requestExample: `{ "block_id": "e57844a6-1b69-465c-9120-d0812d6339ae" }`,
+    responseBody: [
+      { name: "mode", type: '"score"', description: "Always score for this endpoint." },
+      { name: "vertical", type: "string", description: "verification | augmentation | optimization" },
+      { name: "evaluation_mode", type: "string", description: "semantic | opaque" },
+      { name: "privacy", type: "object", description: "Opaque workspaces: semantic_inference, plaintext_lint, stored_prompt." },
+      { name: "protocol_report", type: "object", description: "Opaque: protocol_compliance_score, phase_coverage, trace_integrity, structural_gaps." },
+      { name: "workspace_goal", type: "string", description: "Inferred or owner-set workspace goal." },
+      { name: "workspace_goal_source", type: "string", description: "workspace | inferred | opaque_ref" },
+      { name: "report", type: "object", description: "Vertical score report payload." },
+      { name: "report.score", type: "integer", description: "0–100 primary score for this vertical." },
+      { name: "report.vertical", type: "string", description: "Matches the endpoint vertical." },
+      { name: "report.workspace_goal", type: "string", description: "Same as top-level workspace_goal when finalized." },
+      {
+        name: "report.marker_scores",
+        type: "array",
+        description: "Spider/radar competency axes: id, label, score (0–100), rationale, optional block_id.",
+      },
+      { name: "report.summary", type: "string", description: "Executive analysis." },
+      { name: "report.strengths", type: "string[]", description: "Demonstrated strengths." },
+      { name: "report.growth_areas", type: "string[]", description: "Areas needing development." },
+      { name: "report.gap_analysis.summary", type: "string", description: "Gap analysis overview." },
+      { name: "report.gap_analysis.gaps", type: "array", description: "title, proof_of_work, severity (low|medium|high), suggested_repair." },
+      { name: "report.gap_analysis.next_steps", type: "object", description: "directions (string[]) and events (string[]) for domain next actions." },
+      { name: "report.suggestions", type: "string[]", description: "Additional recommendations." },
+      { name: "report.confidence", type: "string", description: "emerging | developing | clear | well-connected" },
+      { name: "proof_of_work_summary", type: "object | null", description: "Counts used in context." },
+      { name: "file_ids", type: "string[]", description: "xAI file IDs for follow-up calls." },
+    ],
+    responseExample: `{
+  "mode": "score",
+  "vertical": "augmentation",
+  "workspace_goal": "Trial-to-paid subscription activation",
+  "workspace_goal_source": "workspace",
+  "report": {
+    "vertical": "augmentation",
+    "score": 68,
+    "augmentation_score": 68,
+    "workspace_goal": "Trial-to-paid subscription activation",
+    "marker_scores": [
+      {
+        "id": "negotiation_prep",
+        "label": "Negotiation Preparation",
+        "score": 74,
+        "rationale": "Used CRM and ROI table before price discussion."
+      }
+    ],
+    "summary": "Learner prepared for renewal negotiation using simulated tool traces.",
+    "strengths": ["Used CRM and ROI table before price discussion"],
+    "growth_areas": ["Did not quantify churn risk"],
+    "gap_analysis": {
+      "summary": "Missing churn risk quantification.",
+      "gaps": [
+        {
+          "title": "Missing churn risk quantification",
+          "proof_of_work": "Reflection states churn risk was not modeled.",
+          "severity": "medium",
+          "suggested_repair": "Add probability-weighted revenue loss to ROI table."
+        }
+      ],
+      "next_steps": {
+        "directions": ["Build a repeatable churn model habit before pricing talks"],
+        "events": ["Run 3 simulated procurement scenarios with churn math"]
+      }
+    },
+    "suggestions": ["Practice live role-play with procurement pushback"],
+    "confidence": "emerging"
+  },
+  "proof_of_work_summary": {
+    "blocks": 1,
+    "proof_of_work_artifacts": 2,
+    "linked_sessions": 0,
+    "workspace_files": 0
+  },
+  "file_ids": ["file_814439bd-4894-4e11-852d-314e9f777a7f"]
+}`,
+    notes: [
+      "One primary score per call — not a multi-vertical unified scorecard.",
+      "First call with empty file_ids uploads a workspace performance JSON summary + up to 19 artifact files to xAI.",
+      "If no proof of work exists, returns 200 with an empty-data score template.",
+    ],
+  },
+  {
+    id: "optimization-score",
+    method: "POST",
+    path: "/api/v3/eval/workspaces/{workspace_id}/optimization-score",
+    scope: "workspaces:read",
+    summary: 'Learning optimization score toward workspace_goal (0–100) + spider markers, analysis, and next actions.',
+    status: "200 OK",
+    pathParams: [
+      { name: "workspace_id", type: "uuid", required: true, description: "Workspace ID." },
+    ],
+    requestBody: [
+      { name: "block_id", type: "uuid", description: "Optional: scope analysis to one block." },
+      { name: "style_prompt", type: "string", description: "Optional voice/tone for narrative fields." },
+      { name: "file_ids", type: "string[]", description: "Optional xAI file IDs from a prior score call. Empty → rebuild context bundle." },
+    ],
+    requestExample: `{ "block_id": "e57844a6-1b69-465c-9120-d0812d6339ae" }`,
+    responseBody: [
+      { name: "mode", type: '"score"', description: "Always score for this endpoint." },
+      { name: "vertical", type: "string", description: "verification | augmentation | optimization" },
+      { name: "evaluation_mode", type: "string", description: "semantic | opaque" },
+      { name: "privacy", type: "object", description: "Opaque workspaces: semantic_inference, plaintext_lint, stored_prompt." },
+      { name: "protocol_report", type: "object", description: "Opaque: protocol_compliance_score, phase_coverage, trace_integrity, structural_gaps." },
+      { name: "workspace_goal", type: "string", description: "Inferred or owner-set workspace goal." },
+      { name: "workspace_goal_source", type: "string", description: "workspace | inferred | opaque_ref" },
+      { name: "report", type: "object", description: "Vertical score report payload." },
+      { name: "report.score", type: "integer", description: "0–100 primary score for this vertical." },
+      { name: "report.vertical", type: "string", description: "Matches the endpoint vertical." },
+      { name: "report.workspace_goal", type: "string", description: "Same as top-level workspace_goal when finalized." },
+      {
+        name: "report.marker_scores",
+        type: "array",
+        description: "Spider/radar competency axes: id, label, score (0–100), rationale, optional block_id.",
+      },
+      { name: "report.summary", type: "string", description: "Executive analysis." },
+      { name: "report.strengths", type: "string[]", description: "Demonstrated strengths." },
+      { name: "report.growth_areas", type: "string[]", description: "Areas needing development." },
+      { name: "report.gap_analysis.summary", type: "string", description: "Gap analysis overview." },
+      { name: "report.gap_analysis.gaps", type: "array", description: "title, proof_of_work, severity (low|medium|high), suggested_repair." },
+      { name: "report.gap_analysis.next_steps", type: "object", description: "directions (string[]) and events (string[]) for domain next actions." },
+      { name: "report.suggestions", type: "string[]", description: "Additional recommendations." },
+      { name: "report.confidence", type: "string", description: "emerging | developing | clear | well-connected" },
+      { name: "proof_of_work_summary", type: "object | null", description: "Counts used in context." },
+      { name: "file_ids", type: "string[]", description: "xAI file IDs for follow-up calls." },
+    ],
+    responseExample: `{
+  "mode": "score",
+  "vertical": "optimization",
+  "workspace_goal": "Trial-to-paid subscription activation",
+  "workspace_goal_source": "workspace",
+  "report": {
+    "vertical": "optimization",
+    "score": 68,
+    "optimization_score": 68,
+    "workspace_goal": "Trial-to-paid subscription activation",
+    "marker_scores": [
+      {
+        "id": "negotiation_prep",
+        "label": "Negotiation Preparation",
+        "score": 74,
+        "rationale": "Used CRM and ROI table before price discussion."
+      }
+    ],
+    "summary": "Learner prepared for renewal negotiation using simulated tool traces.",
+    "strengths": ["Used CRM and ROI table before price discussion"],
+    "growth_areas": ["Did not quantify churn risk"],
+    "gap_analysis": {
+      "summary": "Missing churn risk quantification.",
+      "gaps": [
+        {
+          "title": "Missing churn risk quantification",
+          "proof_of_work": "Reflection states churn risk was not modeled.",
+          "severity": "medium",
+          "suggested_repair": "Add probability-weighted revenue loss to ROI table."
+        }
+      ],
+      "next_steps": {
+        "directions": ["Build a repeatable churn model habit before pricing talks"],
+        "events": ["Run 3 simulated procurement scenarios with churn math"]
+      }
+    },
+    "suggestions": ["Practice live role-play with procurement pushback"],
+    "confidence": "emerging"
+  },
+  "proof_of_work_summary": {
+    "blocks": 1,
+    "proof_of_work_artifacts": 2,
+    "linked_sessions": 0,
+    "workspace_files": 0
+  },
+  "file_ids": ["file_814439bd-4894-4e11-852d-314e9f777a7f"]
+}`,
+    notes: [
+      "One primary score per call — not a multi-vertical unified scorecard.",
+      "First call with empty file_ids uploads a workspace performance JSON summary + up to 19 artifact files to xAI.",
+      "If no proof of work exists, returns 200 with an empty-data score template.",
     ],
   },
   {
     id: "create-tap-link",
     method: "POST",
-    path: "/api/v2/agent/workspaces/{workspace_id}/tap-links",
+    path: "/api/v3/pow/workspaces/{workspace_id}/tap-links",
     scope: "tap:write",
     summary: "Create a private Think Aloud Protocol (TAP) link for the workspace (or a block via body/path).",
     status: "201 Created",
@@ -629,7 +802,7 @@ const ENDPOINT_SPECS: EndpointSpec[] = [
   {
     id: "list-tap-links",
     method: "GET",
-    path: "/api/v2/agent/workspaces/{workspace_id}/tap-links",
+    path: "/api/v3/pow/workspaces/{workspace_id}/tap-links",
     scope: "tap:read",
     summary: "List TAP links for a workspace (filtered by caller role).",
     status: "200 OK",
@@ -645,7 +818,7 @@ const ENDPOINT_SPECS: EndpointSpec[] = [
       { name: "tap_links[].requested_duration_seconds", type: "integer", description: "Requested duration." },
       { name: "tap_links[].duration_seconds", type: "integer", description: "Actual duration (0 until completed)." },
       { name: "tap_links[].focus_block_ids", type: "uuid[]", description: "Focused blocks." },
-      { name: "tap_links[].overall_score", type: "integer | null", description: "Score when completed." },
+      { name: "tap_links[].verification_score", type: "integer | null", description: "Score when completed." },
       { name: "tap_links[].created_at", type: "ISO-8601", description: "Created at." },
       { name: "tap_links[].started_at", type: "ISO-8601 | null", description: "Started at." },
       { name: "tap_links[].completed_at", type: "ISO-8601 | null", description: "Completed at." },
@@ -661,7 +834,7 @@ const ENDPOINT_SPECS: EndpointSpec[] = [
       "requested_duration_seconds": 900,
       "duration_seconds": 120,
       "focus_block_ids": ["88a43ad8-62f8-4252-a847-2cbc0b754a57"],
-      "overall_score": 72,
+      "verification_score": 72,
       "created_at": "2026-06-23T01:29:03.861663+00:00",
       "started_at": "2026-06-23T01:30:00+00:00",
       "completed_at": "2026-06-23T01:32:21.492+00:00"
@@ -678,7 +851,7 @@ const ENDPOINT_SPECS: EndpointSpec[] = [
   {
     id: "create-guest",
     method: "POST",
-    path: "/api/v2/agent/org/guests",
+    path: "/api/v3/pow/org/guests",
     scope: "org:write",
     summary: "Create or look up a guest by email and issue a new guest API key (gsk_).",
     status: "201 Created (new guest) or 200 OK (existing guest)",
@@ -729,7 +902,7 @@ const ENDPOINT_SPECS: EndpointSpec[] = [
   {
     id: "list-keys",
     method: "GET",
-    path: "/api/v2/agent/keys",
+    path: "/api/v3/pow/keys",
     scope: "browser session",
     summary: "List API keys for the signed-in dashboard user. Uses Supabase session cookies — not Bearer API key auth.",
     status: "200 OK",
@@ -765,7 +938,7 @@ const ENDPOINT_SPECS: EndpointSpec[] = [
   {
     id: "create-key",
     method: "POST",
-    path: "/api/v2/agent/keys",
+    path: "/api/v3/pow/keys",
     scope: "browser session",
     summary: "Create a new sk_ API key for the signed-in user. Raw key returned once.",
     status: "201 Created",
@@ -814,7 +987,7 @@ const ENDPOINT_SPECS: EndpointSpec[] = [
   {
     id: "revoke-key",
     method: "DELETE",
-    path: "/api/v2/agent/keys/{key_id}",
+    path: "/api/v3/pow/keys/{key_id}",
     scope: "browser session",
     summary: "Revoke (soft-delete) an API key owned by the signed-in user.",
     status: "200 OK",
@@ -834,7 +1007,7 @@ const ENDPOINT_SPECS: EndpointSpec[] = [
   {
     id: "update-key-scopes",
     method: "PATCH",
-    path: "/api/v2/agent/keys/{key_id}/scopes",
+    path: "/api/v3/pow/keys/{key_id}/scopes",
     scope: "browser session",
     summary: "Replace scopes on an active API key.",
     status: "200 OK",
@@ -964,7 +1137,7 @@ export default function AgenticV2DocsPage() {
             Full request and response specifications for every Proof-of-Work API endpoint: workspaces, proof-of-work schema
             generation, integration skill generation, proof-of-work upload, performance analysis, TAP links, ILE practice, guest
             provisioning, and dashboard key management. Bearer endpoints use base path{" "}
-            <code className="text-neutral-300">/api/v2/agent</code> and require active{" "}
+            <code className="text-neutral-300">/api/v3/pow</code> and require active{" "}
             <code className="text-neutral-300">pro_teams</code>.
           </p>
           <div className="mt-6 flex flex-wrap gap-3">
@@ -992,8 +1165,8 @@ Content-Type: application/json`}</code>
           <FieldTable
             title="Key types"
             fields={[
-              { name: "sk_", type: "string prefix", description: "Organization member key from dashboard or POST /api/v2/agent/keys (browser session)." },
-              { name: "gsk_", type: "string prefix", description: "Guest key from POST /api/v2/agent/org/guests." },
+              { name: "sk_", type: "string prefix", description: "Organization member key from dashboard or POST /api/v3/pow/keys (browser session)." },
+              { name: "gsk_", type: "string prefix", description: "Guest key from POST /api/v3/pow/org/guests." },
             ]}
           />
           <div className="mt-4">
@@ -1053,9 +1226,9 @@ Content-Type: application/json`}</code>
           <FieldTable
             title="Scope reference"
             fields={[
-              { name: "workspaces:read", type: "scope", description: "List blocks; generate proof-of-work schemas and integration skills; run performance analysis (report or chat)." },
+              { name: "workspaces:read", type: "scope", description: "List blocks; generate proof-of-work schemas and integration skills; call verification-score / augmentation-score / optimization-score." },
               { name: "workspaces:write", type: "scope", description: "Create workspaces; upload proof of work." },
-              { name: "tap:read", type: "scope", description: "List TAP links and poll completion status (score via POST .../performance)." },
+              { name: "tap:read", type: "scope", description: "List TAP links and poll completion status (score via POST .../verification-score)." },
               { name: "tap:write", type: "scope", description: "Create Think Aloud Protocol (TAP) links for blocks." },
               { name: "org:read", type: "scope", description: "Reserved for org admin keys (future org read endpoints)." },
               { name: "org:write", type: "scope", description: "Create guest users and issue gsk_ keys." },

@@ -1,5 +1,5 @@
 // ============================================
-// Uncertain Systems Agentic API v2 - Authentication
+// Uncertain Systems Proof-of-Work API - Authentication
 // ============================================
 
 import { NextRequest, NextResponse } from "next/server";

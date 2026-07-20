@@ -3,14 +3,20 @@ import type { User } from "@supabase/supabase-js";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import { resolveAyclAccess, resolveAyclSessionAccess } from "@/lib/aycl-session-auth";
+import { resolveIleLinkAccess, resolveIleLinkSessionAccess } from "@/lib/ile-link-auth";
 import { requireProductAccess } from "@/lib/api/product-access";
 
 export type AuthenticatedRequest =
-  | { ok: true; user: User; supabase: SupabaseClient; ayclAccess?: boolean }
+  | { ok: true; user: User; supabase: SupabaseClient; ayclAccess?: boolean; ileAccess?: boolean }
   | { ok: false; response: NextResponse };
 
 export function ayclTokenFromBody(body: Record<string, unknown>): string | null {
   const raw = body.ayclToken ?? body.aycl_token;
+  return typeof raw === "string" && raw.trim() ? raw.trim() : null;
+}
+
+export function ileTokenFromBody(body: Record<string, unknown>): string | null {
+  const raw = body.ileToken ?? body.ile_token;
   return typeof raw === "string" && raw.trim() ? raw.trim() : null;
 }
 
@@ -56,7 +62,7 @@ export async function requireSessionOwnership(
 async function enforceProductAccessUnlessAycl(
   auth: Extract<AuthenticatedRequest, { ok: true }>
 ): Promise<AuthenticatedRequest> {
-  if (auth.ayclAccess) return auth;
+  if (auth.ayclAccess || auth.ileAccess) return auth;
   const access = await requireProductAccess(auth.supabase, auth.user);
   if (!access.ok) return { ok: false, response: access.response };
   return auth;
@@ -65,7 +71,7 @@ async function enforceProductAccessUnlessAycl(
 /** Auth for workspace-scoped routes (builder, performance, notes, grid). */
 export async function guardWorkspaceRoute(
   workspaceId: string,
-  options?: { ayclToken?: string | null; requireProductAccess?: boolean }
+  options?: { ayclToken?: string | null; ileToken?: string | null; requireProductAccess?: boolean }
 ): Promise<AuthenticatedRequest> {
   const normalizedWorkspaceId = workspaceId.trim();
   if (!normalizedWorkspaceId) {
@@ -95,6 +101,29 @@ export async function guardWorkspaceRoute(
       user: aycl.actingUser as User,
       supabase: aycl.supabase,
       ayclAccess: true,
+    };
+  }
+
+  const ileToken = options?.ileToken?.trim() || "";
+  if (ileToken) {
+    const ile = await resolveIleLinkAccess(ileToken);
+    if ("error" in ile) {
+      return {
+        ok: false,
+        response: NextResponse.json({ error: ile.error }, { status: ile.status }),
+      };
+    }
+    if (ile.workspaceId !== normalizedWorkspaceId) {
+      return {
+        ok: false,
+        response: NextResponse.json({ error: "Forbidden" }, { status: 403 }),
+      };
+    }
+    return {
+      ok: true,
+      user: ile.actingUser as User,
+      supabase: ile.supabase,
+      ileAccess: true,
     };
   }
 
@@ -130,6 +159,7 @@ export async function guardWorkspaceRoute(
 
 export type GuardSessionOptions = {
   ayclToken?: string | null;
+  ileToken?: string | null;
   /** When true, sessionId must be present for non-AYCL auth. Default false for back-compat. */
   requireSessionId?: boolean;
   /** Enforce product entitlement for cookie-auth users. Default true. */
@@ -142,6 +172,7 @@ export async function guardSessionRoute(
   options?: GuardSessionOptions
 ): Promise<AuthenticatedRequest> {
   const ayclToken = options?.ayclToken?.trim() || "";
+  const ileToken = options?.ileToken?.trim() || "";
   const requireProduct = options?.requireProductAccess !== false;
 
   if (ayclToken && sessionId) {
@@ -158,6 +189,23 @@ export async function guardSessionRoute(
       user: aycl.actingUser as User,
       supabase: aycl.supabase,
       ayclAccess: true,
+    };
+  }
+
+  if (ileToken && sessionId) {
+    const ile = await resolveIleLinkSessionAccess(ileToken, sessionId);
+    if ("error" in ile) {
+      return {
+        ok: false,
+        response: NextResponse.json({ error: ile.error }, { status: ile.status }),
+      };
+    }
+
+    return {
+      ok: true,
+      user: ile.actingUser as User,
+      supabase: ile.supabase,
+      ileAccess: true,
     };
   }
 

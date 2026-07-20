@@ -5,9 +5,9 @@ export const MCP_PROOF_OF_WORK_TOOL_CATALOG = [
   {
     name: "get_learning_progress",
     scope: "workspaces:read",
-    summary: "Progress snapshot: goal, blocks, counts, recommended_next_actions (REST + MCP).",
+    summary: "Progress snapshot: workspace_goal, blocks, counts, recommended_next_actions (REST + MCP).",
   },
-  { name: "get_workspace", scope: "workspaces:read", summary: "Read workspace metadata and conversion_goal." },
+  { name: "get_workspace", scope: "workspaces:read", summary: "Read workspace metadata and workspace_goal." },
   {
     name: "create_workspace",
     scope: "workspaces:write",
@@ -27,9 +27,22 @@ export const MCP_PROOF_OF_WORK_TOOL_CATALOG = [
   },
   { name: "upload_proof_of_work", scope: "workspaces:write", summary: "Upload tool/screen/video/EEG proof of work." },
   {
-    name: "analyze_performance",
+    name: "verification_score",
     scope: "workspaces:read",
-    summary: "Scorecard report (no prompt) or chat Q&A (with prompt). Returns TIM interruption.",
+    summary:
+      "Learning verification score (0–100) + spider markers, analysis, next actions. REST: POST .../verification-score. TAP auto-results use this only.",
+  },
+  {
+    name: "augmentation_score",
+    scope: "workspaces:read",
+    summary:
+      "Learning augmentation score (0–100 practice readiness) + spider, analysis, next actions. REST: POST .../augmentation-score.",
+  },
+  {
+    name: "optimization_score",
+    scope: "workspaces:read",
+    summary:
+      "Learning optimization score (0–100 toward workspace_goal) + spider, analysis, next actions. REST: POST .../optimization-score.",
   },
   { name: "list_tap_links", scope: "tap:read", summary: "List TAP session links and status." },
   { name: "create_tap_link", scope: "tap:write", summary: "Create a private TAP link for a workspace or block." },

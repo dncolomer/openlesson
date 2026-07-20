@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Expanded E2E: automates former "manual" checks + Agent API + MCP + TAP flow.
+ * Expanded E2E: automates former "manual" checks + Proof-of-Work API + MCP + TAP flow.
  * No DB deletes.
  */
 import { readFileSync, existsSync, writeFileSync } from "node:fs";
@@ -66,10 +66,22 @@ async function makeSessionClient(email, password) {
   return { client, jar };
 }
 
+/** Default undici headers timeout is too short for LLM-backed routes (schema/score). */
+const LONG_MS = 300_000;
+const SHORT_MS = 60_000;
+
+function withTimeout(ms) {
+  return AbortSignal.timeout(ms);
+}
+
 async function webFetch(path, jar, init = {}) {
   const headers = { ...(init.headers || {}) };
   if (jar.length) headers.Cookie = cookieHeader(jar);
-  const res = await fetch(`${baseUrl}${path}`, { ...init, headers });
+  const res = await fetch(`${baseUrl}${path}`, {
+    ...init,
+    headers,
+    signal: init.signal || withTimeout(SHORT_MS),
+  });
   const text = await res.text();
   let body = null;
   try {
@@ -81,35 +93,59 @@ async function webFetch(path, jar, init = {}) {
 }
 
 async function agentJson(path, apiKey, init = {}) {
-  const res = await fetch(`${baseUrl}${path}`, {
-    ...init,
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${apiKey}`,
-      ...(init.headers || {}),
-    },
-  });
-  const text = await res.text();
-  let body = null;
+  const long =
+    /proof-of-work-schema|verification-score|augmentation-score|optimization-score|performance|integration-skill/i.test(
+      path,
+    );
   try {
-    body = text ? JSON.parse(text) : null;
-  } catch {
-    body = text;
+    const res = await fetch(`${baseUrl}${path}`, {
+      ...init,
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+        ...(init.headers || {}),
+      },
+      signal: init.signal || withTimeout(long ? LONG_MS : SHORT_MS),
+    });
+    const text = await res.text();
+    let body = null;
+    try {
+      body = text ? JSON.parse(text) : null;
+    } catch {
+      body = text;
+    }
+    return { res, body };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    return {
+      res: { status: 0, ok: false },
+      body: { error: message },
+      fetchError: message,
+    };
   }
-  return { res, body };
 }
 
 async function mcpCall(apiKey, method, params = {}, id = 1) {
-  const res = await fetch(`${baseUrl}/api/mcp`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({ jsonrpc: "2.0", id, method, params }),
-  });
-  const body = await res.json();
-  return { res, body };
+  try {
+    const res = await fetch(`${baseUrl}/api/mcp`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({ jsonrpc: "2.0", id, method, params }),
+      signal: withTimeout(LONG_MS),
+    });
+    const body = await res.json();
+    return { res, body };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    return {
+      res: { status: 0, ok: false },
+      body: { error: message },
+      fetchError: message,
+    };
+  }
 }
 
 async function archiveE2eWorkspaces(admin, userIds) {
@@ -168,21 +204,25 @@ async function main() {
     );
 
     const org = await webFetch("/api/organization", regularJar);
+    // Shared e2e fixtures may attach the regular user to an org (even as admin).
+    // Freemium product gates are plan/usage + API key mint (asserted next), not org membership.
     record(
       "regular-web",
-      "GET /api/organization (no org)",
-      org.res.status === 200 && !org.body?.organization,
-      org.body?.organization ? `has org ${org.body.organization.id}` : "organization=null"
+      "GET /api/organization (200)",
+      org.res.status === 200,
+      org.body?.organization
+        ? `org=${org.body.organization.id} admin=${org.body?.is_org_admin === true}`
+        : "organization=null"
     );
 
-    const keysDenied = await webFetch("/api/v2/agent/keys", regularJar, {
+    const keysDenied = await webFetch("/api/v3/pow/keys", regularJar, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ label: "[E2E] should fail" }),
     });
     record(
       "regular-web",
-      "POST /api/v2/agent/keys blocked (non-teams)",
+      "POST /api/v3/pow/keys blocked (non-teams)",
       keysDenied.res.status === 403,
       `HTTP ${keysDenied.res.status} ${keysDenied.body?.error?.message || keysDenied.body?.message || ""}`
     );
@@ -281,15 +321,15 @@ async function main() {
       `guests=${org.body?.guests?.length ?? "n/a"}`
     );
 
-    const listKeys = await webFetch("/api/v2/agent/keys", teamsJar);
+    const listKeys = await webFetch("/api/v3/pow/keys", teamsJar);
     record(
       "teams-web",
-      "GET /api/v2/agent/keys (session auth)",
+      "GET /api/v3/pow/keys (session auth)",
       listKeys.res.status === 200 && Array.isArray(listKeys.body?.keys),
       `HTTP ${listKeys.res.status} keys=${listKeys.body?.keys?.length ?? 0}`
     );
 
-    const createKey = await webFetch("/api/v2/agent/keys", teamsJar, {
+    const createKey = await webFetch("/api/v3/pow/keys", teamsJar, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ label: "[E2E] Dashboard-created key", scopes: ["workspaces:read", "tap:read"] }),
@@ -303,7 +343,7 @@ async function main() {
           keyLimitMessage.includes("API keys")));
     record(
       "teams-web",
-      "POST /api/v2/agent/keys (session auth)",
+      "POST /api/v3/pow/keys (session auth)",
       keyCreated,
       `${createKey.res.status} ${createKey.body?.key?.key_prefix || createKey.body?.error?.message || ""}`
     );
@@ -349,12 +389,12 @@ async function main() {
     );
   }
 
-  // --- Agent API + MCP + full TAP ---
+  // --- Proof-of-Work API + MCP + full TAP ---
   const apiKey = env.E2E_TEAMS_API_KEY;
   if (!apiKey) {
     record("agent-api", "E2E_TEAMS_API_KEY configured", false, "missing");
   } else {
-    const create = await agentJson("/api/v2/agent/workspaces", apiKey, {
+    const create = await agentJson("/api/v3/pow/workspaces", apiKey, {
       method: "POST",
       body: JSON.stringify({
         initial_prompt: "[E2E-FULL] Explain how hash maps achieve O(1) average lookup.",
@@ -369,7 +409,7 @@ async function main() {
     );
 
     if (workspaceId) {
-      const blocks = await agentJson(`/api/v2/agent/workspaces/${workspaceId}/blocks`, apiKey);
+      const blocks = await agentJson(`/api/v3/pow/workspaces/${workspaceId}/blocks`, apiKey);
       const blockId = blocks.body?.blocks?.[0]?.id;
       record("agent-api", "GET /blocks", blocks.res.status === 200 && !!blockId, `${blocks.body?.blocks?.length ?? 0} blocks`);
 
@@ -399,7 +439,7 @@ async function main() {
       );
 
       const legacyEvidence = await agentJson(
-        `/api/v2/agent/workspaces/${workspaceId}/evidence`,
+        `/api/v3/pow/workspaces/${workspaceId}/evidence`,
         apiKey,
         {
           method: "POST",
@@ -418,7 +458,7 @@ async function main() {
       );
 
       const schema = await agentJson(
-        `/api/v2/agent/workspaces/${workspaceId}/proof-of-work-schema`,
+        `/api/v3/pow/workspaces/${workspaceId}/proof-of-work-schema`,
         apiKey,
         {
           method: "POST",
@@ -430,12 +470,12 @@ async function main() {
       record(
         "proof-of-work",
         "POST /proof-of-work-schema responds (not 500)",
-        schema.res.status !== 500,
-        `HTTP ${schema.res.status}`
+        schema.res.status !== 500 && schema.res.status !== 0,
+        schema.fetchError ? `fetch: ${schema.fetchError}` : `HTTP ${schema.res.status}`
       );
 
       const upload = await agentJson(
-        `/api/v2/agent/workspaces/${workspaceId}/proof-of-work`,
+        `/api/v3/pow/workspaces/${workspaceId}/proof-of-work`,
         apiKey,
         {
           method: "POST",
@@ -473,7 +513,7 @@ async function main() {
 
       if (blockId) {
         const link = await agentJson(
-          `/api/v2/agent/workspaces/${workspaceId}/blocks/${blockId}/tap-links`,
+          `/api/v3/pow/workspaces/${workspaceId}/blocks/${blockId}/tap-links`,
           apiKey,
           { method: "POST", body: JSON.stringify({ minutes: 15 }) }
         );
@@ -544,7 +584,7 @@ async function main() {
           );
 
           if (linkId && completed) {
-            const listRes = await agentJson(`/api/v2/agent/workspaces/${workspaceId}/tap-links`, apiKey);
+            const listRes = await agentJson(`/api/v3/pow/workspaces/${workspaceId}/tap-links`, apiKey);
             const link = (listRes.body?.tap_links || []).find((row) => row.id === linkId);
             const listOk = listRes.res.status === 200 && link?.status === "completed";
             record(
@@ -558,7 +598,7 @@ async function main() {
       }
 
       const guestEmail = `e2e-guest-auto+${Date.now()}@uncertain.systems`;
-      const guest = await agentJson("/api/v2/agent/org/guests", apiKey, {
+      const guest = await agentJson("/api/v3/pow/org/guests", apiKey, {
         method: "POST",
         body: JSON.stringify({ email: guestEmail }),
       });
@@ -571,7 +611,7 @@ async function main() {
       );
 
       if (guestKey) {
-        const guestWs = await agentJson("/api/v2/agent/workspaces", guestKey, {
+        const guestWs = await agentJson("/api/v3/pow/workspaces", guestKey, {
           method: "POST",
           body: JSON.stringify({
             initial_prompt: "[E2E-GUEST] Explain how guest users can create Verification Workspaces.",
@@ -586,7 +626,7 @@ async function main() {
         );
 
         if (guestWorkspaceId) {
-          const guestBlocks = await agentJson(`/api/v2/agent/workspaces/${guestWorkspaceId}/blocks`, guestKey);
+          const guestBlocks = await agentJson(`/api/v3/pow/workspaces/${guestWorkspaceId}/blocks`, guestKey);
           const guestBlockId = guestBlocks.body?.blocks?.[0]?.id;
           record(
             "agent-api",
@@ -597,7 +637,7 @@ async function main() {
 
           if (guestBlockId) {
             const guestLink = await agentJson(
-              `/api/v2/agent/workspaces/${guestWorkspaceId}/blocks/${guestBlockId}/tap-links`,
+              `/api/v3/pow/workspaces/${guestWorkspaceId}/blocks/${guestBlockId}/tap-links`,
               guestKey,
               { method: "POST", body: JSON.stringify({ minutes: 15 }) }
             );
@@ -688,7 +728,24 @@ async function main() {
   if (failed.length) process.exit(1);
 }
 
-main().catch((err) => {
+function flushPartialReport(err) {
   console.error(err);
+  const failed = results.filter((r) => !r.ok);
+  const report = {
+    ran_at: new Date().toISOString(),
+    base_url: baseUrl,
+    total: results.length,
+    passed: results.length - failed.length,
+    failed: failed.length,
+    failures: failed,
+    all: results,
+    fatal: err instanceof Error ? err.message : String(err),
+  };
+  try {
+    writeFileSync("scripts/e2e-expanded-report.json", JSON.stringify(report, null, 2) + "\n");
+    console.log("Partial report: scripts/e2e-expanded-report.json");
+  } catch {}
   process.exit(1);
-});
+}
+
+main().catch(flushPartialReport);

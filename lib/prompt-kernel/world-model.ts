@@ -1,13 +1,20 @@
 /**
- * Learning world model v0 — simple evolving representation of how a learner
+ * Learning world model v0 — evolving representation of how a learner
  * explores a workspace. Separate from TIM (interruption world model).
+ *
+ * Optional dual geometry: knowledge_config points into the fixed knowledgecfg-v1-d64 space
+ * (see lib/knowledge-config). Subject scoping enables multi-learner workspaces.
  */
+
+import type { KnowledgeConfigPointer, KnowledgeConfigSubject } from "@/lib/knowledge-config/types";
 
 export type BlockCoverageDepth = "none" | "shallow" | "solid";
 
 export interface LearningWorldModelV0 {
   version: 1;
   workspace_id: string;
+  /** Learner subject within the workspace. Omitted = workspace-level aggregate. */
+  subject?: KnowledgeConfigSubject;
   updated_at: string;
   inferred_goal: {
     text: string;
@@ -37,23 +44,36 @@ export interface LearningWorldModelV0 {
     saturated: string[];
   };
   scores_snapshot: {
-    exploration_score: number | null;
-    conversion_score: number | null;
+    verification_score: number | null;
+    augmentation_score: number | null;
+    optimization_score: number | null;
     ghc_score: number | null;
   };
+  /** Latest knowledge config pointer (vector lives in snapshots table / Evaluation API). */
+  knowledge_config?: KnowledgeConfigPointer | null;
 }
 
 export type LearningWorldModelDelta = Partial<
   Pick<
     LearningWorldModelV0,
-    "inferred_goal" | "exploration" | "learning_profile" | "evidence_appetite" | "scores_snapshot"
+    | "inferred_goal"
+    | "exploration"
+    | "learning_profile"
+    | "evidence_appetite"
+    | "scores_snapshot"
+    | "subject"
+    | "knowledge_config"
   >
 >;
 
-export function emptyLearningWorldModel(workspaceId: string): LearningWorldModelV0 {
+export function emptyLearningWorldModel(
+  workspaceId: string,
+  subject?: KnowledgeConfigSubject | null,
+): LearningWorldModelV0 {
   return {
     version: 1,
     workspace_id: workspaceId,
+    ...(subject ? { subject: { ...subject } } : {}),
     updated_at: new Date().toISOString(),
     inferred_goal: {
       text: "",
@@ -79,10 +99,12 @@ export function emptyLearningWorldModel(workspaceId: string): LearningWorldModel
       saturated: [],
     },
     scores_snapshot: {
-      exploration_score: null,
-      conversion_score: null,
+      verification_score: null,
+      augmentation_score: null,
+      optimization_score: null,
       ghc_score: null,
     },
+    knowledge_config: null,
   };
 }
 
@@ -96,6 +118,7 @@ export function mergeLearningWorldModelDelta(
   return {
     ...base,
     updated_at: new Date().toISOString(),
+    subject: delta.subject ? { ...base.subject, ...delta.subject } : base.subject,
     inferred_goal: delta.inferred_goal
       ? { ...base.inferred_goal, ...delta.inferred_goal }
       : base.inferred_goal,
@@ -126,8 +149,16 @@ export function mergeLearningWorldModelDelta(
         }
       : base.evidence_appetite,
     scores_snapshot: delta.scores_snapshot
-      ? { ...base.scores_snapshot, ...delta.scores_snapshot }
+      ? {
+          ...base.scores_snapshot,
+          // Ignore explicit nulls so a partial scores_snapshot cannot wipe other verticals.
+          ...Object.fromEntries(
+            Object.entries(delta.scores_snapshot).filter(([, v]) => v !== null && v !== undefined),
+          ),
+        }
       : base.scores_snapshot,
+    knowledge_config:
+      delta.knowledge_config !== undefined ? delta.knowledge_config : base.knowledge_config ?? null,
   };
 }
 
@@ -140,7 +171,11 @@ export function parseLearningWorldModel(raw: unknown): LearningWorldModelV0 | nu
   if (!raw || typeof raw !== "object") return null;
   const obj = raw as Record<string, unknown>;
   if (obj.version !== 1 || typeof obj.workspace_id !== "string") return null;
-  const base = emptyLearningWorldModel(obj.workspace_id);
+  const subject =
+    obj.subject && typeof obj.subject === "object"
+      ? (obj.subject as KnowledgeConfigSubject)
+      : undefined;
+  const base = emptyLearningWorldModel(obj.workspace_id, subject);
   return mergeLearningWorldModelDelta(base, obj as LearningWorldModelDelta);
 }
 
@@ -151,11 +186,13 @@ export function learningWorldModelForTim(
   inferred_goal?: string | null;
   evidence_appetite?: { want_more: string[]; saturated: string[] };
   scores_snapshot?: {
-    exploration_score?: number | null;
-    conversion_score?: number | null;
+    verification_score?: number | null;
+    augmentation_score?: number | null;
+    optimization_score?: number | null;
     ghc_score?: number | null;
   };
   temporal_patterns?: Record<string, unknown> | null;
+  knowledge_config_confidence?: number | null;
 } | undefined {
   if (!model) return undefined;
   return {
@@ -163,6 +200,7 @@ export function learningWorldModelForTim(
     evidence_appetite: model.evidence_appetite,
     scores_snapshot: model.scores_snapshot,
     temporal_patterns: model.learning_profile?.temporal_patterns ?? null,
+    knowledge_config_confidence: model.knowledge_config?.confidence ?? null,
   };
 }
 
@@ -189,5 +227,5 @@ Optional world_model_delta: when enough proof of work exists, return a partial l
 - exploration.block_coverage / blind_spots
 - learning_profile strengths, friction_patterns, preferred_modalities, temporal_patterns
 - evidence_appetite.want_more vs saturated (what PoW types TIM and schema generation should bias toward next)
-- scores_snapshot mirroring overall_score (as exploration_score field), conversion_score, ghc_score
+- scores_snapshot mirroring verification_score, augmentation_score, optimization_score, ghc_score (include the primary vertical score from this evaluation)
 `.trim();

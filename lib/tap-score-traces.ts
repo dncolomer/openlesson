@@ -199,9 +199,9 @@ export const TAP_SCORE_ANALYSIS_SCHEMA = {
     type: "object",
     additionalProperties: true,
     properties: {
-      overall_score: { type: "number" },
-      conversion_score: { type: "number" },
-      conversion_goal: { type: "string" },
+      score: { type: "number" },
+      verification_score: { type: "number" },
+      workspace_goal: { type: "string" },
       markers: { type: "array" },
       gap_analysis: { type: "object" },
       knowledge_gaps: { type: "array" },
@@ -212,9 +212,9 @@ export const TAP_SCORE_ANALYSIS_SCHEMA = {
       confidence: { type: "string" },
     },
     required: [
-      "overall_score",
-      "conversion_score",
-      "conversion_goal",
+      "score",
+      "verification_score",
+      "workspace_goal",
       "markers",
       "overall_reflection",
       "confidence",
@@ -231,7 +231,7 @@ Thought trace proof of work (System 1 and System 2) — primary GHC (Genuine Hum
 - System 1 traces (${traceContext.system1Count}): spontaneous crystallized speech — everything the learner said aloud, including thoughts they did NOT submit (stashed/unsent) to the TAP dialogue.
 - System 2 traces (${traceContext.system2Count}): deliberate learner decisions — explicit send, edit, skip, select/deselect, or resend actions.
 
-Use the dialogue transcript as the primary TAP exchange (System 1 and System 2 elicitation), and treat attached trace files and the manifest below as first-class proof of work for overall_score, conversion_score, and especially ghc_score / ghc_confidence.
+Use the dialogue transcript as the primary TAP exchange (System 1 and System 2 elicitation), and treat attached trace files and the manifest below as first-class proof of work for verification score and especially ghc_score / ghc_confidence.
 Compare System 1 vs System 2: knowledge articulated but not sent may reveal hesitation, incomplete understanding, or metacognitive filtering — cite both sent and unsent traces in gap_analysis proof_of_work and temporal_summary where relevant.
 Timestamps on traces inform temporal scoring (inter-event gaps, dwell before send, idle before crystallize).
 

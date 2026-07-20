@@ -28,7 +28,7 @@ import {
   type PerformanceReportSnapshot,
 } from "@/components/PerformanceReportCard";
 import { normalizePerformanceReport, type PerformanceReport } from "@/lib/agent-v2/performance-context";
-import type { ConversionGoalSource } from "@/lib/agent-v2/conversion-goal";
+import type { WorkspaceGoalSource } from "@/lib/agent-v2/conversion-goal";
 import type { ProofOfWorkEvalSchemaResult } from "@/lib/agent-v2/proof-of-work-schema";
 import type { ProofOfWorkApiDemoDefinition } from "@/lib/product-demos/demo-definition";
 import { DemoVerificationPills } from "@/components/proof-of-work-demo/DemoVerificationPills";
@@ -118,9 +118,10 @@ type EvidenceResponse = {
 };
 
 type PerformanceResponse = {
-  mode: "report";
-  workspace_conversion_goal: string;
-  conversion_goal_source: ConversionGoalSource;
+  mode: "score" | "chat";
+  vertical?: "verification" | "augmentation" | "optimization";
+  workspace_goal: string;
+  workspace_goal_source: WorkspaceGoalSource;
   report: PerformanceReport;
   proof_of_work_summary: { proof_of_work_artifacts: number; blocks: number };
   file_ids?: string[];
@@ -341,8 +342,8 @@ export function ProofOfWorkApiDemo() {
           prev
             ? {
                 ...prev,
-                workspace_conversion_goal: bridge.inferredConversionGoal!,
-                conversion_goal_source: bridge.conversionGoalSource ?? prev.conversion_goal_source,
+                workspace_goal: bridge.inferredConversionGoal!,
+                workspace_goal_source: bridge.workspaceGoalSource ?? prev.workspace_goal_source,
               }
             : null
         );
@@ -1087,8 +1088,8 @@ export function ProofOfWorkApiDemo() {
                 proofOfWorkCount={proofOfWorkCount}
                 report={report}
                 isReporting={isReporting}
-                workspaceConversionGoal={performanceResponseRaw?.workspace_conversion_goal}
-                conversionGoalSource={performanceResponseRaw?.conversion_goal_source}
+                workspaceGoal={performanceResponseRaw?.workspace_goal}
+                workspaceGoalSource={performanceResponseRaw?.workspace_goal_source}
                 onRequestPerformance={() => void handleRequestPerformance()}
                 tapLinkUrl={tapLinkUrl}
                 isCreatingTapLink={isCreatingTapLink}
@@ -1243,14 +1244,16 @@ function DemoStatusBar({
           ? "Live"
           : "Idle";
 
-  const overallScore =
-    typeof report?.overall_score === "number"
-      ? Math.round(Math.max(0, Math.min(100, report.overall_score)))
+  const primaryScore =
+    typeof report?.score === "number"
+      ? Math.round(Math.max(0, Math.min(100, report.score)))
       : null;
-  const conversionScore =
-    typeof report?.conversion_score === "number"
-      ? Math.round(Math.max(0, Math.min(100, report.conversion_score)))
-      : null;
+  const verticalLabel =
+    report?.vertical === "augmentation"
+      ? "Augmentation"
+      : report?.vertical === "optimization"
+        ? "Optimization"
+        : "Verification";
   const scoreMetrics = getScoreCardMetrics(report);
 
   return (
@@ -1266,14 +1269,9 @@ function DemoStatusBar({
           <span className="font-mono text-zinc-500">
             Evidence <span className="text-white">{proofOfWorkCount}</span>
           </span>
-          {overallScore != null ? (
+          {primaryScore != null ? (
             <span className="font-mono text-zinc-500">
-              Learning <span className="text-white">{overallScore}/100</span>
-            </span>
-          ) : null}
-          {conversionScore != null ? (
-            <span className="font-mono text-zinc-500">
-              Conversion <span className="text-white">{conversionScore}%</span>
+              {verticalLabel} <span className="text-white">{primaryScore}/100</span>
             </span>
           ) : null}
           {scoreMetrics ? (
@@ -1421,7 +1419,7 @@ function ExternalLaunchPanel({
   sessionId,
   proofOfWorkCount,
   inferredGoal,
-  conversionGoalSource,
+  workspaceGoalSource,
   styles,
 }: {
   demo: ProofOfWorkApiDemoDefinition;
@@ -1429,7 +1427,7 @@ function ExternalLaunchPanel({
   sessionId: string | null;
   proofOfWorkCount: number;
   inferredGoal?: string | null;
-  conversionGoalSource?: ConversionGoalSource;
+  workspaceGoalSource?: WorkspaceGoalSource;
   styles: ReturnType<typeof demoPanelStyles>;
 }) {
   const canLaunch = Boolean(workspaceId && sessionId);
@@ -1452,9 +1450,9 @@ function ExternalLaunchPanel({
       {inferredGoal ? (
         <p className="mt-4 max-w-lg rounded-md border border-zinc-700 bg-black/30 px-4 py-3 text-sm leading-snug text-zinc-200">
           Are you trying to <span className="font-medium text-white">{inferredGoal}</span>?
-          {conversionGoalSource ? (
+          {workspaceGoalSource ? (
             <span className="mt-1 block font-mono text-[9px] uppercase tracking-wide text-zinc-500">
-              {conversionGoalSource === "workspace" ? "Workspace goal" : "Inferred goal"}
+              {workspaceGoalSource === "workspace" ? "Workspace goal" : "Inferred goal"}
             </span>
           ) : null}
         </p>
@@ -1636,8 +1634,8 @@ function SimulatorPanel({
   proofOfWorkCount = 0,
   report = null,
   isReporting = false,
-  workspaceConversionGoal,
-  conversionGoalSource,
+  workspaceGoal,
+  workspaceGoalSource,
   onRequestPerformance,
   tapLinkUrl = null,
   isCreatingTapLink = false,
@@ -1656,8 +1654,8 @@ function SimulatorPanel({
   proofOfWorkCount?: number;
   report?: PerformanceReport | null;
   isReporting?: boolean;
-  workspaceConversionGoal?: string;
-  conversionGoalSource?: ConversionGoalSource;
+  workspaceGoal?: string;
+  workspaceGoalSource?: WorkspaceGoalSource;
   onRequestPerformance?: () => void;
   tapLinkUrl?: string | null;
   isCreatingTapLink?: boolean;
@@ -1774,8 +1772,8 @@ function SimulatorPanel({
                 workspaceId={workspaceId}
                 sessionId={sessionId}
                 proofOfWorkCount={proofOfWorkCount}
-                inferredGoal={workspaceConversionGoal}
-                conversionGoalSource={conversionGoalSource}
+                inferredGoal={workspaceGoal}
+                workspaceGoalSource={workspaceGoalSource}
                 styles={styles}
               />
             ) : interactiveMode && phase === "simulating" ? null : (
@@ -2356,8 +2354,8 @@ function ScoreView({
               report={report}
               reportHistory={reportHistory}
               layout="spacious"
-              workspaceConversionGoal={performanceResponse?.workspace_conversion_goal}
-              conversionGoalSource={performanceResponse?.conversion_goal_source}
+              workspaceGoal={performanceResponse?.workspace_goal}
+              workspaceGoalSource={performanceResponse?.workspace_goal_source}
               label={
                 latestSnapshot
                   ? `Latest score · day ${latestSnapshot.simulatedDays} · ${latestSnapshot.actionCount} actions`

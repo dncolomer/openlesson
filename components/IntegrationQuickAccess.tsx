@@ -96,6 +96,12 @@ export function IntegrationQuickAccess({
         </div>
       ) : null}
 
+      {workspaceId ? (
+        <p className="text-xs text-neutral-500">
+          {t("integrationAccess.mcpWorkspaceHint", { workspaceId })}
+        </p>
+      ) : null}
+
       <div className={layout === "stack" ? "flex flex-col gap-5" : "grid gap-4 lg:grid-cols-3"}>
         {showSkill ? (
           skillSection ? (
@@ -129,11 +135,6 @@ export function IntegrationQuickAccess({
               <p className={sectionTitleClass}>{t("integrationAccess.mcpBearerTitle")}</p>
               <p className="mt-2 text-sm text-neutral-400">{t("integrationAccess.mcpBearerDescription")}</p>
             </div>
-            {workspaceId ? (
-              <p className="text-xs text-neutral-500">
-                {t("integrationAccess.mcpWorkspaceHint", { workspaceId })}
-              </p>
-            ) : null}
             <div>
               <p className="text-[10px] uppercase tracking-[0.12em] text-neutral-600">
                 {t("integrationAccess.mcpBearerEndpoint")}
@@ -172,11 +173,6 @@ export function IntegrationQuickAccess({
               <p className={sectionTitleClass}>{t("integrationAccess.mcpOAuthTitle")}</p>
               <p className="mt-2 text-sm text-neutral-400">{t("integrationAccess.mcpOAuthDescription")}</p>
             </div>
-            {workspaceId ? (
-              <p className="text-xs text-neutral-500">
-                {t("integrationAccess.mcpWorkspaceHint", { workspaceId })}
-              </p>
-            ) : null}
             <div>
               <p className="text-[10px] uppercase tracking-[0.12em] text-neutral-600">
                 {t("integrationAccess.mcpOAuthServerUrl")}

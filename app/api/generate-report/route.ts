@@ -3,6 +3,7 @@ import { generateReport } from "@/lib/xai";
 import { getUserPrompts } from "@/lib/user-prompts";
 import {
   ayclTokenFromBody,
+  ileTokenFromBody,
   guardSessionRoute,
 } from "@/lib/api/require-auth";
 
@@ -28,7 +29,7 @@ export async function POST(request: NextRequest) {
     }
 
     const auth = await guardSessionRoute(sessionId, {
-      ayclToken: ayclTokenFromBody(body),
+      ayclToken: ayclTokenFromBody(body), ileToken: ileTokenFromBody(body),
       requireSessionId: true,
     });
     if (!auth.ok) return auth.response;

@@ -1,5 +1,5 @@
 {
-  "ran_at": "2026-07-16T23:09:05.438Z",
+  "ran_at": "2026-07-19T10:46:41.204Z",
   "base_url": "http://127.0.0.1:3000",
   "total": 41,
   "passed": 41,
@@ -22,17 +22,17 @@
       "area": "regular-web",
       "name": "GET /api/check-usage (allowed, plan, limit)",
       "ok": true,
-      "detail": "plan=regular_2026 limit=100 used=0"
+      "detail": "plan=regular_2026 limit=100 used=4"
     },
     {
       "area": "regular-web",
-      "name": "GET /api/organization (no org)",
+      "name": "GET /api/organization (200)",
       "ok": true,
-      "detail": "organization=null"
+      "detail": "org=e63386a9-3011-4ccc-852a-b48f0a02eee9 admin=true"
     },
     {
       "area": "regular-web",
-      "name": "POST /api/v2/agent/keys blocked (non-teams)",
+      "name": "POST /api/v3/pow/keys blocked (non-teams)",
       "ok": true,
       "detail": "HTTP 403 The Proof-of-Work API requires Pro / Teams or API Metered."
     },
@@ -46,19 +46,19 @@
       "area": "regular-web",
       "name": "POST /api/workspace/generate (workspace create)",
       "ok": true,
-      "detail": "f9288d81-788a-4205-9089-b21116e89747"
+      "detail": "4d21fe90-17b5-40fd-9bf3-e880a9ba35dd"
     },
     {
       "area": "regular-web",
       "name": "GET /workspace/{id} renders",
       "ok": true,
-      "detail": "HTTP 200 len=51178"
+      "detail": "HTTP 200 len=41260"
     },
     {
       "area": "regular-web",
       "name": "workspace has plan blocks in DB",
       "ok": true,
-      "detail": "4 blocks"
+      "detail": "12 blocks"
     },
     {
       "area": "regular-web",
@@ -76,7 +76,7 @@
       "area": "teams-web",
       "name": "GET /api/check-usage (pro_teams, allowed)",
       "ok": true,
-      "detail": "plan=pro_teams limit=1000 used=0"
+      "detail": "plan=pro_teams limit=1000 used=10"
     },
     {
       "area": "teams-web",
@@ -88,19 +88,19 @@
       "area": "teams-web",
       "name": "GET /api/organization guests array present",
       "ok": true,
-      "detail": "guests=0"
+      "detail": "guests=3"
     },
     {
       "area": "teams-web",
-      "name": "GET /api/v2/agent/keys (session auth)",
+      "name": "GET /api/v3/pow/keys (session auth)",
       "ok": true,
-      "detail": "HTTP 200 keys=1"
+      "detail": "HTTP 200 keys=5"
     },
     {
       "area": "teams-web",
-      "name": "POST /api/v2/agent/keys (session auth)",
+      "name": "POST /api/v3/pow/keys (session auth)",
       "ok": true,
-      "detail": "201 sk_4ea0df879"
+      "detail": "201 sk_ff2ceb8c0"
     },
     {
       "area": "teams-web",
@@ -130,19 +130,19 @@
       "area": "agent-api",
       "name": "POST /workspaces",
       "ok": true,
-      "detail": "453fe77d-0476-4526-b4cf-c348ef28a524"
+      "detail": "11076cf3-06ba-4155-a2fa-7040785cb00f"
     },
     {
       "area": "agent-api",
       "name": "GET /blocks",
       "ok": true,
-      "detail": "6 blocks"
+      "detail": "12 blocks"
     },
     {
       "area": "mcp",
       "name": "tools/list",
       "ok": true,
-      "detail": "11 tools"
+      "detail": "14 tools"
     },
     {
       "area": "proof-of-work",
@@ -178,13 +178,13 @@
       "area": "mcp",
       "name": "list_workspaces",
       "ok": true,
-      "detail": "workspaces=1"
+      "detail": "workspaces=5"
     },
     {
       "area": "agent-api",
       "name": "POST TAP link",
       "ok": true,
-      "detail": "061f1340-8fb2-4fa1-be7b-3f252c0d4053"
+      "detail": "0a79d5a2-3eb1-453d-b4dd-08fa94890b0f"
     },
     {
       "area": "tap-flow",
@@ -196,13 +196,13 @@
       "area": "tap-flow",
       "name": "POST /api/workspace-tap-score/chat",
       "ok": true,
-      "detail": "reply len=227"
+      "detail": "reply len=269"
     },
     {
       "area": "tap-flow",
       "name": "POST /api/workspace-tap-score/complete",
       "ok": true,
-      "detail": "workspace=453fe77d-0476-4526-b4cf-c348ef28a524"
+      "detail": "workspace=11076cf3-06ba-4155-a2fa-7040785cb00f"
     },
     {
       "area": "tap-flow",
@@ -214,43 +214,43 @@
       "area": "agent-api",
       "name": "POST /org/guests",
       "ok": true,
-      "detail": "e2e-guest-auto+1784243309737@uncertain.systems"
+      "detail": "e2e-guest-auto+1784457969634@uncertain.systems"
     },
     {
       "area": "agent-api",
       "name": "guest key can create workspace",
       "ok": true,
-      "detail": "50bdea71-145d-47a4-80f4-50aa3e5d1341"
+      "detail": "87408283-89d3-4f44-b9ae-0a05429c3a64"
     },
     {
       "area": "agent-api",
       "name": "guest key can list blocks",
       "ok": true,
-      "detail": "5 blocks"
+      "detail": "12 blocks"
     },
     {
       "area": "tap-flow",
       "name": "guest key can create TAP link",
       "ok": true,
-      "detail": "8a39d9c8-da43-4840-9177-bf52c45757d8"
+      "detail": "4825f970-b347-4bab-a53c-23f396c8700c"
     },
     {
       "area": "tap-flow",
       "name": "guest TAP private session page",
       "ok": true,
-      "detail": "HTTP 200 len=71018"
+      "detail": "HTTP 200 len=69725"
     },
     {
       "area": "tap-flow",
       "name": "guest TAP chat via private token",
       "ok": true,
-      "detail": "reply len=188"
+      "detail": "reply len=203"
     },
     {
       "area": "tap-flow",
       "name": "guest TAP complete via private token",
       "ok": true,
-      "detail": "workspace=50bdea71-145d-47a4-80f4-50aa3e5d1341"
+      "detail": "workspace=87408283-89d3-4f44-b9ae-0a05429c3a64"
     }
   ]
 }

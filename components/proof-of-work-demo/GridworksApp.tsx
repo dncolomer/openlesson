@@ -13,7 +13,7 @@ import { DemoPerformanceHud } from "@/components/proof-of-work-demo/DemoPerforma
 import { DemoVerificationPills } from "@/components/proof-of-work-demo/DemoVerificationPills";
 import { getDemoVerificationPills } from "@/lib/product-demos/verification-pills";
 import { GRIDWORKS_TAP_VALIDATION_HINT } from "@/lib/product-demos/tap-validation";
-import type { ConversionGoalSource } from "@/lib/agent-v2/conversion-goal";
+import type { WorkspaceGoalSource } from "@/lib/agent-v2/conversion-goal";
 import type { PerformanceReport } from "@/lib/agent-v2/performance-context";
 import type { ProofOfWorkApiDemoDefinition } from "@/lib/product-demos/demo-definition";
 import {
@@ -79,8 +79,8 @@ export function GridworksApp({
   onRunAction,
   report,
   isReporting,
-  workspaceConversionGoal,
-  conversionGoalSource,
+  workspaceGoal,
+  workspaceGoalSource,
   tapLinkUrl = null,
   isCreatingTapLink = false,
   onOpenTapValidation,
@@ -91,8 +91,8 @@ export function GridworksApp({
   onRunAction: (action: SimulationAction) => void;
   report: PerformanceReport | null;
   isReporting: boolean;
-  workspaceConversionGoal?: string;
-  conversionGoalSource?: ConversionGoalSource;
+  workspaceGoal?: string;
+  workspaceGoalSource?: WorkspaceGoalSource;
   tapLinkUrl?: string | null;
   isCreatingTapLink?: boolean;
   onOpenTapValidation?: () => void;
@@ -314,8 +314,8 @@ export function GridworksApp({
       <DemoPerformanceHud
         report={report}
         isReporting={isReporting}
-        workspaceConversionGoal={workspaceConversionGoal}
-        conversionGoalSource={conversionGoalSource}
+        workspaceGoal={workspaceGoal}
+        workspaceGoalSource={workspaceGoalSource}
         showTapValidation
         tapValidationHint={GRIDWORKS_TAP_VALIDATION_HINT}
         tapLinkUrl={tapLinkUrl}

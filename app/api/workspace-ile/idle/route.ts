@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireSessionWorkspaceProofOfWorkAccess } from "@/lib/agent-v2/workspace-session-access";
+import {
+  ileTokenFromPowBody,
+  requireSessionWorkspaceProofOfWorkAccess,
+} from "@/lib/agent-v2/workspace-session-access";
 import { buildIleIdleHeartbeatPayload, ILE_IDLE_TOOL_NAME } from "@/lib/ile-thought-traces";
 import { uploadFileToXAI } from "@/lib/xai-files";
 import { countWorkspaceProofOfWorkForPlan } from "@/lib/agent-v2/workspace-proof-of-work";
@@ -22,7 +25,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "workspaceId and sessionId are required" }, { status: 400 });
     }
 
-    const access = await requireSessionWorkspaceProofOfWorkAccess(workspaceId, sessionId);
+    const access = await requireSessionWorkspaceProofOfWorkAccess(workspaceId, sessionId, {
+      ileToken: ileTokenFromPowBody(body as Record<string, unknown>),
+    });
     if (access instanceof NextResponse) return access;
 
     const payload = buildIleIdleHeartbeatPayload({

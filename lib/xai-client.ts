@@ -525,7 +525,7 @@ export interface CallResponsesOptions {
   reasoningEffort?: ReasoningEffort;
   /**
    * Whether xAI should persist the response for later retrieval.
-   * Defaults to false — large file-backed chats (performance chat, PoW)
+   * Defaults to false — large file-backed chats (demo performance, PoW)
    * hit "Response is too large to store" when store is true (API default).
    * We manage conversation history client/server-side already.
    */

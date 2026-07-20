@@ -1,0 +1,73 @@
+export {
+  KNOWLEDGE_CONFIG_DIM,
+  KNOWLEDGE_CONFIG_EMBEDDING_MODEL_ID,
+  KNOWLEDGE_CONFIG_SEM_DIM,
+  KNOWLEDGE_CONFIG_STRUCT_DIM,
+  isKnowledgeConfigVector,
+  type KnowledgeConfigEmbeddingModelId,
+  type KnowledgeConfigEmbeddingV1,
+  type KnowledgeConfigPointer,
+  type KnowledgeConfigProjection2D,
+  type KnowledgeConfigSnapshotTrigger,
+  type KnowledgeConfigSubject,
+  type KnowledgeConfigTrajectoryPoint,
+} from "./types";
+
+export {
+  cosineSimilarity,
+  l2Distance,
+  l2Norm,
+  l2Normalize,
+  scoreToUnit,
+} from "./math";
+
+export {
+  emptyKnowledgeConfig,
+  encodeKnowledgeConfig,
+  projectKnowledgeConfigTo2D,
+  type KnowledgeConfigEncodeInput,
+  type PowFeatureRow,
+} from "./encoder";
+
+export {
+  createCustomVerificationModelFromVectors,
+  computeKnowledgeDistance,
+  scoreAgainstCustomVerificationModel,
+  CustomVerificationModelError,
+  type CustomVerificationModelSpec,
+  type CustomVerificationScore,
+  type CustomVerificationSubjectRef,
+  type KnowledgeDistance,
+} from "./custom-verification-model";
+
+export {
+  encodeSyntheticRegionProfile,
+  createSyntheticKnowledgeRegionFromProfile,
+  projectKnowledgeRegionToOverlay,
+  projectKnowledgeRegionsToOverlays,
+  type SyntheticRegionProfile,
+  type KnowledgeRegionOverlay2D,
+} from "./synthetic-knowledge-region";
+
+export {
+  computeDataBounds,
+  computeProjectionFitBounds,
+  selectProjectionDisplayPoints,
+  fitViewTransform,
+  zoomViewTransform,
+  panViewTransform,
+  dataToScreen,
+  screenToData,
+  mapRadiusToScreen,
+  generateAxisTicks,
+  generateGridTicks,
+  formatTickLabel,
+  clampZoom,
+  MIN_ZOOM,
+  MAX_ZOOM,
+  type DataBounds,
+  type ViewTransform,
+  type ScreenRect,
+  type TickMark,
+  type ProjectionDisplayMode,
+} from "./projection-view";

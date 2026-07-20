@@ -17,15 +17,21 @@ export type {
   PerformanceNextSteps,
   PerformanceReport,
   PerformanceReportContract,
+  VerticalScoreReport,
+  VerticalScoreReportContract,
+  ScoreVertical,
 } from "./performance-report";
 
 import {
   buildPerformanceReportInstructions,
   buildPerformanceStyleSection,
+  buildVerticalScoreInstructions,
   emptyPerformanceReport,
+  emptyVerticalScoreReport,
   EXAMPLE_PERFORMANCE_REPORT,
   normalizePerformanceGapAnalysis,
   normalizePerformanceReport,
+  normalizeVerticalScoreReport,
   PERFORMANCE_REPORT_SCHEMA,
 } from "./performance-report";
 import { parseWorkspaceEvaluationMeta, scrubOpaquePerformanceContext } from "./opaque-evaluation";
@@ -33,10 +39,13 @@ import { parseWorkspaceEvaluationMeta, scrubOpaquePerformanceContext } from "./o
 export {
   buildPerformanceReportInstructions,
   buildPerformanceStyleSection,
+  buildVerticalScoreInstructions,
   emptyPerformanceReport,
+  emptyVerticalScoreReport,
   EXAMPLE_PERFORMANCE_REPORT,
   normalizePerformanceGapAnalysis,
   normalizePerformanceReport,
+  normalizeVerticalScoreReport,
   PERFORMANCE_REPORT_SCHEMA,
 };
 
@@ -47,7 +56,7 @@ export interface PerformanceContextPayload {
     root_topic: string | null;
     description: string | null;
     notes: string | null;
-    conversion_goal: string | null;
+    workspace_goal: string | null;
     evaluation_mode?: "semantic" | "opaque";
   };
   focus_block_id: string | null;
@@ -112,7 +121,7 @@ export async function buildWorkspacePerformanceContext({
   const { data: workspace } = await supabase
     .from("workspaces")
     .select(
-      "id, title, root_topic, description, notes, conversion_goal, evaluation_mode, protocol_config, external_refs, user_id, organization_id, guest_user_id"
+      "id, title, root_topic, description, notes, workspace_goal, evaluation_mode, protocol_config, external_refs, user_id, organization_id, guest_user_id"
     )
     .eq("id", workspaceId)
     .single();
@@ -188,7 +197,7 @@ export async function buildWorkspacePerformanceContext({
       root_topic: workspace.root_topic,
       description: workspace.description,
       notes: workspace.notes,
-      conversion_goal: workspace.conversion_goal,
+      workspace_goal: workspace.workspace_goal,
       evaluation_mode: evalMeta.evaluation_mode,
     },
     focus_block_id: blockId || null,

@@ -50,18 +50,39 @@ export function getSkillGridPositions(nodes: SkillGridNode[]): Map<string, Skill
 }
 
 export function toSkillGridNodes(nodes: DbBlock[]): SkillGridNode[] {
-  return nodes.map((node) => ({
-    id: node.id,
-    title: node.title,
-    status: node.status || "available",
-    is_start: node.is_start || false,
-    next_block_ids: node.next_block_ids || [],
-    description: (node as DbBlock & { description?: string }).description,
-    position_x: node.position_x ?? undefined,
-    position_y: node.position_y ?? undefined,
-    span_w: node.span_w ?? undefined,
-    span_h: node.span_h ?? undefined,
-  }));
+  return nodes.map((node) => {
+    const raw = node as DbBlock & {
+      description?: string;
+      shape_cells?: unknown;
+    };
+    let shape_cells: Array<{ dr: number; dc: number }> | null | undefined;
+    if (Array.isArray(raw.shape_cells)) {
+      const parsed = raw.shape_cells
+        .map((item) => {
+          if (!item || typeof item !== "object") return null;
+          const rec = item as Record<string, unknown>;
+          const dr = Number(rec.dr ?? rec.dRow ?? rec.row);
+          const dc = Number(rec.dc ?? rec.dCol ?? rec.col);
+          if (!Number.isInteger(dr) || !Number.isInteger(dc)) return null;
+          return { dr, dc };
+        })
+        .filter((o): o is { dr: number; dc: number } => o != null);
+      shape_cells = parsed.length > 0 ? parsed : null;
+    }
+    return {
+      id: node.id,
+      title: node.title,
+      status: node.status || "available",
+      is_start: node.is_start || false,
+      next_block_ids: node.next_block_ids || [],
+      description: raw.description,
+      position_x: node.position_x ?? undefined,
+      position_y: node.position_y ?? undefined,
+      span_w: node.span_w ?? undefined,
+      span_h: node.span_h ?? undefined,
+      shape_cells: shape_cells ?? undefined,
+    };
+  });
 }
 
 export function skillGridNodesFromRefs(

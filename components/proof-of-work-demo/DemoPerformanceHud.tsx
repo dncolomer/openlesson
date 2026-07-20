@@ -1,7 +1,7 @@
 "use client";
 
 import { Gauge, Loader2, Sparkles, Target } from "lucide-react";
-import type { ConversionGoalSource } from "@/lib/agent-v2/conversion-goal";
+import type { WorkspaceGoalSource } from "@/lib/agent-v2/conversion-goal";
 import type { PerformanceReport } from "@/lib/agent-v2/performance-context";
 import { normalizeDemoSessionUrl } from "@/lib/product-demos/demo-session-url";
 import { extractGameCoaching } from "@/lib/product-demos/game-tips";
@@ -15,8 +15,8 @@ function clampScore(value: unknown): number | null {
 export function DemoPerformanceHud({
   report,
   isReporting,
-  workspaceConversionGoal,
-  conversionGoalSource,
+  workspaceGoal,
+  workspaceGoalSource,
   showTapValidation = false,
   tapValidationHint,
   tapLinkUrl = null,
@@ -25,8 +25,8 @@ export function DemoPerformanceHud({
 }: {
   report: PerformanceReport | null;
   isReporting: boolean;
-  workspaceConversionGoal?: string;
-  conversionGoalSource?: ConversionGoalSource;
+  workspaceGoal?: string;
+  workspaceGoalSource?: WorkspaceGoalSource;
   showTapValidation?: boolean;
   tapValidationHint?: string;
   tapLinkUrl?: string | null;
@@ -34,15 +34,17 @@ export function DemoPerformanceHud({
   onOpenTapValidation?: () => void;
 }) {
   const coaching = useMemo(() => extractGameCoaching(report), [report]);
-  const overallScore = clampScore(report?.overall_score);
-  const conversionScore = clampScore(report?.conversion_score);
-  const ghcScore = clampScore(report?.ghc_score);
-  const conversionGoal =
-    workspaceConversionGoal?.trim() || report?.conversion_goal?.trim() || null;
+  const primaryScore = clampScore(report?.score);
+  const verticalLabel =
+    report?.vertical === "augmentation"
+      ? "Augment"
+      : report?.vertical === "optimization"
+        ? "Optimize"
+        : "Verify";
+  const goalText = workspaceGoal?.trim() || report?.workspace_goal?.trim() || null;
   const hasCoaching =
     coaching.directions.length > 0 || coaching.events.length > 0 || coaching.gapRepairs.length > 0;
-  const hasScores =
-    overallScore !== null || conversionScore !== null || ghcScore !== null || conversionGoal !== null;
+  const hasScores = primaryScore !== null || goalText !== null;
 
   const directionPreview = coaching.directions.slice(0, 2);
   const eventPreview = coaching.events.slice(0, 2);
@@ -56,35 +58,20 @@ export function DemoPerformanceHud({
             Score
           </div>
           <div className="mt-1.5 flex flex-wrap gap-3">
-            {overallScore !== null ? (
+            {primaryScore !== null ? (
               <div>
-                <div className="font-mono text-[9px] uppercase text-zinc-500">Learn</div>
+                <div className="font-mono text-[9px] uppercase text-zinc-500">{verticalLabel}</div>
                 <div className="font-mono text-lg text-white">
-                  {overallScore}
-                  <span className="text-xs text-zinc-500">/100</span>
-                </div>
-              </div>
-            ) : null}
-            {conversionScore !== null ? (
-              <div>
-                <div className="font-mono text-[9px] uppercase text-zinc-500">Conv</div>
-                <div className="font-mono text-lg text-white">{conversionScore}%</div>
-              </div>
-            ) : null}
-            {ghcScore !== null ? (
-              <div>
-                <div className="font-mono text-[9px] uppercase text-zinc-500">GHC</div>
-                <div className="font-mono text-lg text-white">
-                  {ghcScore}
+                  {primaryScore}
                   <span className="text-xs text-zinc-500">/100</span>
                 </div>
               </div>
             ) : null}
           </div>
-          {conversionGoal ? (
+          {goalText ? (
             <p className="mt-2 line-clamp-2 text-[10px] leading-snug text-zinc-400">
-              {conversionGoalSource === "workspace" ? "◎ " : "◇ "}
-              {conversionGoal}
+              {workspaceGoalSource === "workspace" ? "◎ " : "◇ "}
+              {goalText}
             </p>
           ) : null}
         </div>

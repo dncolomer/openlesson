@@ -16,7 +16,7 @@ export type ProductAccessResult =
 /**
  * Verify the authenticated user has product entitlement (admin, valid token,
  * or entitled organization). Same rules as middleware `hasProductAccess`.
- * Skip this for AYCL token, TAP private-token, and agent API-key auth paths.
+ * Skip this for AYCL token, TAP private-token, and Proof-of-Work API-key auth paths.
  */
 export async function requireProductAccess(
   supabase: SupabaseClient,

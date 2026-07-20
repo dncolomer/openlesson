@@ -38,9 +38,31 @@ describe("prompt kernel", () => {
     const base = emptyLearningWorldModel("ws-abc");
     const merged = mergeLearningWorldModelDelta(base, {
       evidence_appetite: { want_more: ["reflection"], saturated: ["crud"] },
-      scores_snapshot: { exploration_score: 40, conversion_score: 30, ghc_score: 10 },
+      scores_snapshot: {
+        verification_score: 40,
+        augmentation_score: null,
+        optimization_score: 30,
+        ghc_score: 10,
+      },
     });
     expect(merged.evidence_appetite.want_more).toEqual(["reflection"]);
+    // null scores in delta must not wipe siblings; only optimization/verification set
+    expect(merged.scores_snapshot.verification_score).toBe(40);
+    expect(merged.scores_snapshot.optimization_score).toBe(30);
+    expect(merged.scores_snapshot.augmentation_score).toBeNull();
+
+    const preserved = mergeLearningWorldModelDelta(merged, {
+      scores_snapshot: {
+        verification_score: null,
+        augmentation_score: 55,
+        optimization_score: null,
+        ghc_score: null,
+      },
+    });
+    expect(preserved.scores_snapshot.verification_score).toBe(40);
+    expect(preserved.scores_snapshot.augmentation_score).toBe(55);
+    expect(preserved.scores_snapshot.optimization_score).toBe(30);
+
     const json = serializeLearningWorldModel(merged);
     const parsed = parseLearningWorldModel(JSON.parse(json));
     expect(parsed?.workspace_id).toBe("ws-abc");
@@ -48,7 +70,7 @@ describe("prompt kernel", () => {
 
     const forTim = learningWorldModelForTim(merged);
     expect(forTim?.evidence_appetite?.want_more).toContain("reflection");
-    expect(forTim?.scores_snapshot?.exploration_score).toBe(40);
+    expect(forTim?.scores_snapshot?.verification_score).toBe(40);
 
     const guidance = formatEvidenceAppetiteGuidance(merged);
     expect(guidance).toContain("Prefer more of");
@@ -58,8 +80,10 @@ describe("prompt kernel", () => {
   it("performance and PoW schema builders consume ontology (shipped wiring)", () => {
     const perf = buildPerformanceReportInstructions(null, "Activate trial");
     expect(perf).toContain("WORKSPACE ONTOLOGY");
-    expect(perf).toContain("overall_score");
+    expect(perf).toContain("SCORE GENERATION CONTEXT");
+    expect(perf).toContain("verification");
     expect(perf).toContain("ghc_score");
+    expect(perf).toMatch(/System\s*1/i);
 
     const schema = buildProofOfWorkSchemaInstructions(
       { definition: "Evaluate onboarding readiness" },

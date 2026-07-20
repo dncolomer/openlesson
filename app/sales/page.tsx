@@ -39,35 +39,65 @@ export default function SalesIndexPage() {
           Pitch decks
         </h1>
         <p className="mt-6 max-w-2xl text-lg leading-relaxed text-zinc-400">
-          Live presentation decks for the Uncertain Systems platform and each vertical.
+          Live presentation deck for the Uncertain Systems platform. Vertical deep-dives are coming soon.
         </p>
 
         <ul className="mt-10 space-y-4" data-pitch-links>
-          {PITCH_INDEX.map((entry) => (
-            <li key={entry.path}>
-              <Link
-                href={entry.path}
-                className="group flex flex-col gap-3 border border-zinc-800 bg-zinc-950/70 p-5 transition hover:border-zinc-600 sm:flex-row sm:items-center sm:justify-between sm:p-6"
-              >
-                <div className="min-w-0">
-                  <p className="font-mono text-[10px] uppercase tracking-[1.6px] text-zinc-500">
-                    {entry.vertical}
-                  </p>
-                  <h2 className="mt-2 text-xl font-medium tracking-[-0.6px] text-white sm:text-2xl">
-                    {entry.title}
-                  </h2>
-                  <p className="mt-2 max-w-2xl text-sm leading-relaxed text-zinc-500 sm:text-base">
-                    {entry.description}
-                  </p>
-                  <p className="mt-3 font-mono text-xs text-zinc-600">{entry.path}</p>
-                </div>
-                <span className="inline-flex shrink-0 items-center gap-1.5 text-sm font-medium text-zinc-300 transition group-hover:text-white">
-                  Open deck
-                  <ArrowRight size={14} />
-                </span>
-              </Link>
-            </li>
-          ))}
+          {PITCH_INDEX.map((entry) => {
+            if (entry.comingSoon) {
+              return (
+                <li key={entry.path}>
+                  <div
+                    className="flex flex-col gap-3 border border-zinc-900/80 bg-zinc-950/40 p-5 opacity-45 sm:flex-row sm:items-center sm:justify-between sm:p-6"
+                    data-pitch-coming-soon
+                    aria-disabled="true"
+                  >
+                    <div className="min-w-0">
+                      <p className="font-mono text-[10px] uppercase tracking-[1.6px] text-zinc-600">
+                        {entry.vertical}
+                      </p>
+                      <h2 className="mt-2 text-xl font-medium tracking-[-0.6px] text-zinc-500 sm:text-2xl">
+                        {entry.title}
+                      </h2>
+                      <p className="mt-2 max-w-2xl text-sm leading-relaxed text-zinc-600 sm:text-base">
+                        {entry.description}
+                      </p>
+                      <p className="mt-3 font-mono text-xs text-zinc-700">{entry.path}</p>
+                    </div>
+                    <span className="inline-flex shrink-0 items-center rounded-sm border border-zinc-800 bg-zinc-950/60 px-2.5 py-1 font-mono text-[10px] uppercase tracking-[1.4px] text-zinc-600">
+                      Coming soon
+                    </span>
+                  </div>
+                </li>
+              );
+            }
+
+            return (
+              <li key={entry.path}>
+                <Link
+                  href={entry.path}
+                  className="group flex flex-col gap-3 border border-zinc-800 bg-zinc-950/70 p-5 transition hover:border-zinc-600 sm:flex-row sm:items-center sm:justify-between sm:p-6"
+                >
+                  <div className="min-w-0">
+                    <p className="font-mono text-[10px] uppercase tracking-[1.6px] text-zinc-500">
+                      {entry.vertical}
+                    </p>
+                    <h2 className="mt-2 text-xl font-medium tracking-[-0.6px] text-white sm:text-2xl">
+                      {entry.title}
+                    </h2>
+                    <p className="mt-2 max-w-2xl text-sm leading-relaxed text-zinc-500 sm:text-base">
+                      {entry.description}
+                    </p>
+                    <p className="mt-3 font-mono text-xs text-zinc-600">{entry.path}</p>
+                  </div>
+                  <span className="inline-flex shrink-0 items-center gap-1.5 text-sm font-medium text-zinc-300 transition group-hover:text-white">
+                    Open deck
+                    <ArrowRight size={14} />
+                  </span>
+                </Link>
+              </li>
+            );
+          })}
         </ul>
 
         <p className="mt-10 font-mono text-[11px] uppercase tracking-[1.6px] text-zinc-600">

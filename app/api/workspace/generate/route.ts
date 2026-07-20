@@ -424,12 +424,12 @@ export async function POST(req: NextRequest) {
           ? {
               root_topic: topic.slice(0, 160),
               notes: templateNotes || composeTemplateWorkspaceNotes(topic, []),
-              conversion_goal: null as string | null,
+              workspace_goal: null as string | null,
             }
           : {
               root_topic: topic.slice(0, 160),
               notes: null as string | null,
-              conversion_goal: null as string | null,
+              workspace_goal: null as string | null,
             };
 
     // Create workspace only after we have a valid node list
@@ -442,7 +442,7 @@ export async function POST(req: NextRequest) {
         status: "active",
         source_type: createMode === "template" ? "topic" : "topic",
         notes: goalFields.notes,
-        conversion_goal: goalFields.conversion_goal,
+        workspace_goal: goalFields.workspace_goal,
       })
       .select()
       .single();

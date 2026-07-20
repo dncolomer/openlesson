@@ -3,9 +3,9 @@ import { callXaiJSON, DEFAULT_MODEL, userMessage } from "@/lib/xai-client";
 import { uploadFileToXAI } from "@/lib/xai-files";
 import { persistSkillGridPositions, skillGridNodesFromRefs } from "@/lib/skill-grid-positions";
 import {
-  fallbackConversionGoal,
-  normalizeConversionGoal,
-  WORKSPACE_GENERATION_CONVERSION_GOAL_RULE,
+  fallbackWorkspaceGoal,
+  normalizeWorkspaceGoal,
+  WORKSPACE_GENERATION_GOAL_RULE,
 } from "./conversion-goal";
 import type { AuthContext } from "./types";
 
@@ -33,7 +33,7 @@ interface GeneratedBlock {
 
 interface GeneratedWorkspace {
   title: string;
-  conversion_goal?: string;
+  workspace_goal?: string;
   blocks: GeneratedBlock[];
 }
 
@@ -59,7 +59,7 @@ export async function createVerificationWorkspaceFromPrompt(
   const generated = await callXaiJSON<GeneratedWorkspace>(
     [
       userMessage(
-        `Create a performance learning workspace from this prompt. Break it into assessable blocks for learning verification and proof-of-work-based gap analysis.\n\nPrompt:\n${initialPrompt}${fileContext}\n\nReturn ONLY JSON:\n{\n  "title": "concise workspace title",\n  "conversion_goal": "concise success/conversion outcome for this workspace",\n  "blocks": [\n    { "id": "a", "title": "Block title", "description": "What the learner should demonstrate", "is_start": true, "next": ["b"] }\n  ]\n}\n\nRules:\n- Create 3 to 6 blocks.\n- Blocks are assessable learning/performance units.\n- Use short stable ids only for linking within this response.${WORKSPACE_GENERATION_CONVERSION_GOAL_RULE}`
+        `Create a performance learning workspace from this prompt. Break it into assessable blocks for learning verification and proof-of-work-based gap analysis.\n\nPrompt:\n${initialPrompt}${fileContext}\n\nReturn ONLY JSON:\n{\n  "title": "concise workspace title",\n  "workspace_goal": "concise success outcome for this workspace",\n  "blocks": [\n    { "id": "a", "title": "Block title", "description": "What the learner should demonstrate", "is_start": true, "next": ["b"] }\n  ]\n}\n\nRules:\n- Create 3 to 6 blocks.\n- Blocks are assessable learning/performance units.\n- Use short stable ids only for linking within this response.${WORKSPACE_GENERATION_GOAL_RULE}`
       ),
     ],
     { model: DEFAULT_MODEL, maxTokens: 1800, temperature: 0.3 }
@@ -87,9 +87,9 @@ export async function createVerificationWorkspaceFromPrompt(
   const workspaceTitle = generated.data.title || "Verification Workspace";
   const workspaceDescription =
     options?.description || "Verification workspace for learning and performance assessment";
-  const conversionGoal =
-    normalizeConversionGoal(generated.data.conversion_goal) ||
-    fallbackConversionGoal({
+  const workspaceGoal =
+    normalizeWorkspaceGoal(generated.data.workspace_goal) ||
+    fallbackWorkspaceGoal({
       title: workspaceTitle,
       description: workspaceDescription,
       notes: initialPrompt,
@@ -108,10 +108,10 @@ export async function createVerificationWorkspaceFromPrompt(
       source_type: "topic",
       notes: initialPrompt,
       description: workspaceDescription,
-      conversion_goal: conversionGoal,
+      workspace_goal: workspaceGoal,
       is_agent_workspace: options?.isAgentSession ?? true,
     })
-    .select("id, title, root_topic, status, notes, description, conversion_goal, created_at, updated_at")
+    .select("id, title, root_topic, status, notes, description, workspace_goal, created_at, updated_at")
     .single();
 
   if (workspaceError || !workspace) {

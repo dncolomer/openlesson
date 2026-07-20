@@ -1,4 +1,4 @@
-import type { ConversionGoalSource } from "@/lib/agent-v2/conversion-goal";
+import type { WorkspaceGoalSource } from "@/lib/agent-v2/conversion-goal";
 import type { PerformanceReport } from "@/lib/agent-v2/performance-report";
 import type { OrbitAppState } from "./orbit-app-model";
 import {
@@ -30,7 +30,7 @@ export type OrbitProofOfWorkBridge = {
   worldState: SimulationWorldState;
   proofOfWorkCount: number;
   inferredConversionGoal?: string;
-  conversionGoalSource?: ConversionGoalSource;
+  workspaceGoalSource?: WorkspaceGoalSource;
   ileSessionUrl?: string;
   tapLinkUrl?: string;
   tapScore?: number | null;
@@ -48,8 +48,8 @@ export type OrbitLaunchParams = {
 
 export type OrbitPerformanceResponse = {
   report: PerformanceReport | null;
-  workspace_conversion_goal: string;
-  conversion_goal_source: ConversionGoalSource;
+  workspace_goal: string;
+  workspace_goal_source: WorkspaceGoalSource;
 };
 
 export function buildOrbitLaunchUrl(params: OrbitLaunchParams, origin = ""): string {
@@ -168,13 +168,13 @@ export function applyPerformanceToBridge(
   performance: OrbitPerformanceResponse
 ): OrbitProofOfWorkBridge {
   const goal =
-    performance.workspace_conversion_goal?.trim() ||
-    performance.report?.conversion_goal?.trim() ||
+    performance.workspace_goal?.trim() ||
+    performance.report?.workspace_goal?.trim() ||
     "";
   const next: OrbitProofOfWorkBridge = {
     ...bridge,
     inferredConversionGoal: goal || bridge.inferredConversionGoal,
-    conversionGoalSource: performance.conversion_goal_source ?? bridge.conversionGoalSource,
+    workspaceGoalSource: performance.workspace_goal_source ?? bridge.workspaceGoalSource,
     lastPerformanceReport: performance.report ?? bridge.lastPerformanceReport ?? null,
   };
   saveOrbitBridge(next);
@@ -217,8 +217,8 @@ export async function fetchOrbitPerformance(
   });
   const data = await readJsonResponse<{
     report?: PerformanceReport;
-    workspace_conversion_goal?: string;
-    conversion_goal_source?: ConversionGoalSource;
+    workspace_goal?: string;
+    workspace_goal_source?: WorkspaceGoalSource;
     error?: string;
   }>(res);
   if (!res.ok) {
@@ -227,8 +227,8 @@ export async function fetchOrbitPerformance(
 
   const performance: OrbitPerformanceResponse = {
     report: data.report ?? null,
-    workspace_conversion_goal: data.workspace_conversion_goal ?? "",
-    conversion_goal_source: data.conversion_goal_source ?? "inferred",
+    workspace_goal: data.workspace_goal ?? "",
+    workspace_goal_source: data.workspace_goal_source ?? "inferred",
   };
   applyPerformanceToBridge(bridge, performance);
   return performance;

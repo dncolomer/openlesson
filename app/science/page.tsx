@@ -7,12 +7,12 @@ import { LandingNav } from "@/components/LandingNav";
 export const metadata: Metadata = {
   title: "Science",
   description:
-    "A holistic model of knowledge: brain configuration, proximity, transformation, and a non-invasive path to self-driving learning.",
+    "A holistic model of knowledge: knowledge configuration, proximity, transformation, and a non-invasive path to self-driving learning.",
   alternates: { canonical: "https://uncertain.systems/science" },
   openGraph: {
     title: "Science | Uncertain Systems",
     description:
-      "A holistic model of knowledge: brain configuration, proximity, transformation, and self-driving learning.",
+      "A holistic model of knowledge: knowledge configuration, proximity, transformation, and self-driving learning.",
     url: "https://uncertain.systems/science",
     images: [{ url: "/science/opengraph-image", width: 1200, height: 630, alt: "Science" }],
   },
@@ -28,7 +28,7 @@ const BACKGROUND_IMAGE = "/aesthetics/Greco-futurism/HHnTrlMaAAAg_4I.jpeg";
 const PRINCIPLES = [
   {
     number: "01",
-    title: "Brain Configuration",
+    title: "Knowledge Configuration",
     subtitle: "The full physical state of a human brain at a specific point in time.",
     body: "Every moment of thought, memory, and skill lives in a unique configuration of neural activity. Understanding learning means understanding how one configuration relates to another — not just what was answered on a test.",
   },
@@ -74,8 +74,8 @@ export default function SciencePage() {
           A holistic model of knowledge.
         </h1>
         <p className="mt-7 max-w-3xl text-lg leading-relaxed text-zinc-400">
-          Uncertain Systems is grounded in a physical view of learning: brains as configuration spaces, knowledge
-          as proximity, and education technology as a path toward transformation with less wasted effort.
+          Uncertain Systems is grounded in a physical view of learning: knowledge configuration space, proximity
+          as the measure of knowing, and education technology as a path toward transformation with less wasted effort.
         </p>
       </section>
 

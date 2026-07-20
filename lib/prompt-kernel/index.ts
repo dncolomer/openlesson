@@ -18,6 +18,7 @@ export {
   type LearningWorldModelDelta,
   type LearningWorldModelV0,
 } from "./world-model";
+// Knowledge config geometry lives in @/lib/knowledge-config (knowledgecfg-v1-d64).
 export { composePrompt, type ComposePromptOptions, type OntologyDensity } from "./compose";
 export {
   TAP_SURFACE,
@@ -34,3 +35,12 @@ export {
   buildIleHeliosChatSystemPrompt,
   buildIleWelcomeSystemPrompt,
 } from "./surfaces/ile";
+export {
+  SCORE_POW_CONTEXT_LAYER,
+  SCORE_POW_CONTEXT_LAYER_OPAQUE,
+  SCORE_VERIFICATION_SUBMIT_STASH_OVERLAY,
+  buildScoreContextSurface,
+  buildOpaqueScoreContextSurface,
+  scoreInstructionsRequirePowOnly,
+  scoreInstructionsRequireSubmitStashAnalysis,
+} from "./surfaces/score-context";

@@ -126,10 +126,23 @@ import { useSessionPaneLayout } from "@/lib/useSessionPaneLayout";
 export function SessionView({
   sessionId,
   ayclToken,
+  ileToken,
 }: {
   sessionId: string;
   ayclToken?: string;
+  /** Private token for guest ILE practice links (`/ile/session/{token}`). */
+  ileToken?: string;
 }) {
+  const guestAccessKind: "aycl" | "ile" | null = ayclToken ? "aycl" : ileToken ? "ile" : null;
+  const guestAccessBody = useMemo(
+    () =>
+      guestAccessKind === "aycl" && ayclToken
+        ? { ayclToken }
+        : guestAccessKind === "ile" && ileToken
+          ? { ileToken }
+          : {},
+    [guestAccessKind, ayclToken, ileToken]
+  );
   const router = useRouter();
   const { t, locale, supportedLocales } = useI18n();
   const [session, setSession] = useState<Session | null>(null);
@@ -539,7 +552,7 @@ export function SessionView({
           sessionPlan,
           sessionId: session.id,
           tutoringLanguage,
-          ...(ayclToken ? { ayclToken } : {}),
+          ...guestAccessBody,
           messages: [...existingMessages, userMsg].map(m => ({ role: m.role, content: m.content, imageDataUrl: m.imageDataUrl })),
         }),
       });
@@ -577,6 +590,7 @@ export function SessionView({
               learner_thought: text,
               helios_reply: content,
             },
+            ...(ileToken ? { ileToken } : {}),
           });
           if (chatPow.ok) {
             handlePowInterruptionRef.current(chatPow.interruption);
@@ -985,9 +999,12 @@ export function SessionView({
   useEffect(() => {
     let cancelled = false;
     async function load() {
-      const s = ayclToken
-        ? await (await import("@/lib/aycl-storage")).getAyclSession(ayclToken, sessionId)
-        : await getSession(sessionId);
+      const s =
+        guestAccessKind === "aycl" && ayclToken
+          ? await (await import("@/lib/aycl-storage")).getAyclSession(ayclToken, sessionId)
+          : guestAccessKind === "ile" && ileToken
+            ? await (await import("@/lib/ile-link-storage")).getIleLinkSession(ileToken, sessionId)
+            : await getSession(sessionId);
       if (cancelled) return;
       if (s) {
         setSession(s);
@@ -1018,7 +1035,7 @@ export function SessionView({
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
                 problem: s.problem,
-                ...(ayclToken ? { ayclToken } : {}),
+                ...guestAccessBody,
               }),
             });
             if (!cancelled && objRes.ok) {
@@ -1075,7 +1092,7 @@ export function SessionView({
     }
     load();
     return () => { cancelled = true; };
-  }, [sessionId, router]);
+  }, [sessionId, router, guestAccessKind, ayclToken, ileToken, guestAccessBody]);
 
   // ---- Muse EEG ----
   const handleConnectMuse = async () => {
@@ -1210,13 +1227,18 @@ export function SessionView({
       const currentSession = sessionRef.current;
       if (!workspaceId || !currentSession || !powSessionEnabledRef.current) return;
 
-      const result = await uploadIleEvidenceItem(workspaceId, currentSession.id, item);
+      const result = await uploadIleEvidenceItem(
+        workspaceId,
+        currentSession.id,
+        item,
+        ileToken,
+      );
       recordTransferEvent(channel, result.ok, result.error);
       if (result.ok && result.interruption) {
         handlePowInterruptionRef.current(result.interruption);
       }
     },
-    [getWorkspaceId, recordTransferEvent],
+    [getWorkspaceId, recordTransferEvent, ileToken],
   );
 
   const uploadScreenshotPow = useCallback(
@@ -1225,7 +1247,12 @@ export function SessionView({
       const currentSession = sessionRef.current;
       if (!workspaceId || !currentSession || !powSessionEnabledRef.current) return;
 
-      const result = await uploadIleScreenshot(workspaceId, currentSession.id, { blob, timestampMs });
+      const result = await uploadIleScreenshot(
+        workspaceId,
+        currentSession.id,
+        { blob, timestampMs },
+        ileToken,
+      );
       recordTransferEvent("screenshots", result.ok, result.error);
       if (result.ok) {
         setScreenshotCount((count) => count + 1);
@@ -1234,7 +1261,7 @@ export function SessionView({
         }
       }
     },
-    [getWorkspaceId, recordTransferEvent],
+    [getWorkspaceId, recordTransferEvent, ileToken],
   );
 
   const tryUploadFacialBatch = useCallback(
@@ -1418,8 +1445,12 @@ export function SessionView({
     () => ({
       workspaceId: getWorkspaceId() ?? undefined,
       sessionId: session?.id ?? null,
+      // Shareable ILE guests authenticate PoW routes with the private link token.
+      privateToken: ileToken || undefined,
+      blockId:
+        typeof session?.metadata?.block_id === "string" ? session.metadata.block_id : undefined,
     }),
-    [getWorkspaceId, session?.id],
+    [getWorkspaceId, session?.id, session?.metadata?.block_id, ileToken],
   );
 
   const { applyInterruption, clearPendingInterruption } = useTapPredictiveInterruption(
@@ -1510,13 +1541,14 @@ export function SessionView({
           original_text: payload.originalText ?? null,
           combined: payload.combined ?? false,
         },
+        ...(ileToken ? { ileToken } : {}),
       });
       recordTransferEvent("tools", result.ok, result.error);
       if (result.ok) {
         handlePowInterruption(result.interruption);
       }
     },
-    [getWorkspaceId, recordTransferEvent, handlePowInterruption],
+    [getWorkspaceId, recordTransferEvent, handlePowInterruption, ileToken],
   );
 
   const logToolRef = useRef<
@@ -1784,9 +1816,12 @@ export function SessionView({
       notebookData: notebookContent || undefined,
     };
 
-    if (ayclToken) {
+    if (guestAccessKind === "aycl" && ayclToken) {
       const { saveAyclSession } = await import("@/lib/aycl-storage");
       await saveAyclSession(ayclToken, finalSession);
+    } else if (guestAccessKind === "ile" && ileToken) {
+      const { saveIleLinkSession } = await import("@/lib/ile-link-storage");
+      await saveIleLinkSession(ileToken, finalSession);
     } else {
       await saveSession(finalSession);
     }
@@ -1794,7 +1829,11 @@ export function SessionView({
     handleDisconnectMuse();
 
     router.push(
-      ayclToken ? `/learn/${ayclToken}` : getIlePostSessionPath(finalSession)
+      guestAccessKind === "aycl" && ayclToken
+        ? `/learn/${ayclToken}`
+        : guestAccessKind === "ile"
+          ? `/ile/session/${ileToken}`
+          : getIlePostSessionPath(finalSession)
     );
   };
 
@@ -2444,9 +2483,15 @@ export function SessionView({
                         setModelLoadProgress(null);
                         
                         try {
-                          if (ayclToken) {
+                          if (guestAccessKind === "aycl" && ayclToken) {
                             const { saveAyclSession } = await import("@/lib/aycl-storage");
                             await saveAyclSession(ayclToken, {
+                              ...session,
+                              metadata: { ...(session.metadata || {}), tutoringLanguage },
+                            });
+                          } else if (guestAccessKind === "ile" && ileToken) {
+                            const { saveIleLinkSession } = await import("@/lib/ile-link-storage");
+                            await saveIleLinkSession(ileToken, {
                               ...session,
                               metadata: { ...(session.metadata || {}), tutoringLanguage },
                             });
@@ -2486,7 +2531,7 @@ export function SessionView({
                                   sessionId: session.id,
                                   tutoringLanguage,
                                   objectives,
-                                  ...(ayclToken ? { ayclToken } : {}),
+                                  ...guestAccessBody,
                                 }),
                               });
                               if (translateRes.ok) {
@@ -2520,7 +2565,7 @@ export function SessionView({
                                 force: hasExistingChapters ? regenerateChapters : true,
                                 tutoringLanguage,
                                 initialChapters,
-                                ...(ayclToken ? { ayclToken } : {}),
+                                ...guestAccessBody,
                               }),
                             });
                             if (planRes.ok) {
@@ -2831,6 +2876,7 @@ export function SessionView({
                           plan={sessionPlan}
                           sessionId={session.id}
                           ayclToken={ayclToken}
+                          ileToken={ileToken}
                           locale={locale}
                           loading={planLoading}
                           activeChapterIndex={activeChapterIndex}
@@ -2905,6 +2951,8 @@ export function SessionView({
                           thoughts={sessionThoughtHistory}
                           workspaceId={session.metadata?.workspace_id ?? undefined}
                           sessionId={session.id}
+                          insightSurface="ile"
+                          allowInsightGeneration={true}
                         />
                       </div>
                     )}

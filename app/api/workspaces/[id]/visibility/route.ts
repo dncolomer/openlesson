@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { ayclTokenFromBody, guardWorkspaceRoute, requireAuthenticatedUser } from "@/lib/api/require-auth";
-import { normalizeConversionGoal } from "@/lib/agent-v2/conversion-goal";
+import { normalizeWorkspaceGoal } from "@/lib/agent-v2/conversion-goal";
 
 export async function PUT(
   req: NextRequest,
@@ -13,7 +13,7 @@ export async function PUT(
     const { user, supabase } = auth;
 
     const body = await req.json();
-    const { is_public, title, description, conversion_goal } = body;
+    const { is_public, title, description, workspace_goal } = body;
 
     const updates: Record<string, unknown> = {};
 
@@ -30,9 +30,9 @@ export async function PUT(
       updates.description = description.trim() || null;
     }
 
-    if ("conversion_goal" in body) {
-      updates.conversion_goal =
-        conversion_goal === null ? null : normalizeConversionGoal(conversion_goal);
+    if ("workspace_goal" in body) {
+      updates.workspace_goal =
+        workspace_goal === null ? null : normalizeWorkspaceGoal(workspace_goal);
     }
 
     if (Object.keys(updates).length === 0) {
@@ -72,7 +72,7 @@ export async function PUT(
     // Verify the update
     const { data: verifyPlan } = await supabase
       .from("workspaces")
-      .select("is_public, title, description, conversion_goal")
+      .select("is_public, title, description, workspace_goal")
       .eq("id", workspaceId)
       .single();
 
@@ -100,8 +100,8 @@ export async function PUT(
       response.description = verifyPlan?.description;
     }
 
-    if ("conversion_goal" in body) {
-      response.conversion_goal = verifyPlan?.conversion_goal;
+    if ("workspace_goal" in body) {
+      response.workspace_goal = verifyPlan?.workspace_goal;
     }
 
     return NextResponse.json(response);

@@ -101,7 +101,7 @@ export async function POST(req: NextRequest) {
 
     const alwaysContext = composeBlockGenerationContext({
       workspaceTitle: plan.title || plan.root_topic || undefined,
-      goal: plan.conversion_goal || plan.root_topic,
+      goal: plan.workspace_goal || plan.root_topic,
       notes: plan.notes,
       fileNames: (workspaceFiles || []).map((f: { file_name: string }) => f.file_name).filter(Boolean),
     });

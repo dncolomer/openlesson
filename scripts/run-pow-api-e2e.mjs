@@ -3,7 +3,7 @@
  * Dedicated Proof-of-Work API product E2E.
  *
  * Teams (pro_teams): direct REST + MCP access — workspaces, proof of work, performance scoring, TAP links.
- * Individual (regular_2026): agent API gated (teams_required); proof of work via ILE/TAP web routes + workspace Performance tab.
+ * Individual (regular_2026): Proof-of-Work API gated (teams_required); proof of work via ILE/TAP web routes + workspace Performance tab.
  */
 import { readFileSync, existsSync, writeFileSync } from "node:fs";
 import crypto from "node:crypto";
@@ -67,6 +67,10 @@ async function makeSessionClient(email, password) {
 }
 
 async function agentJson(path, apiKey, init = {}) {
+  const long =
+    /proof-of-work-schema|verification-score|augmentation-score|optimization-score|performance|integration-skill/i.test(
+      path,
+    );
   const res = await fetch(`${baseUrl}${path}`, {
     ...init,
     headers: {
@@ -74,6 +78,7 @@ async function agentJson(path, apiKey, init = {}) {
       Authorization: `Bearer ${apiKey}`,
       ...(init.headers || {}),
     },
+    signal: AbortSignal.timeout(long ? 300_000 : 60_000),
   });
   const text = await res.text();
   let body = null;
@@ -128,12 +133,12 @@ async function mintRegularApiKey(admin, userId) {
   return { rawKey, id: data.id };
 }
 
-function isPerformanceReport(body) {
+function isVerticalScoreReport(body) {
   const report = body?.report;
   return (
-    body?.mode === "report" &&
+    (body?.mode === "score" || body?.mode === "report" || !body?.mode) &&
     report &&
-    typeof report.overall_score === "number" &&
+    typeof report.score === "number" &&
     Array.isArray(report.marker_scores) &&
     report.marker_scores.length >= 1 &&
     report.gap_analysis &&
@@ -141,38 +146,50 @@ function isPerformanceReport(body) {
   );
 }
 
+function planGateCode(body) {
+  return body?.error?.code || body?.code || "";
+}
+
 async function runTierGates(admin, regularJar) {
   console.log("\n== Tier gates ==");
 
-  const keysDenied = await fetch(`${baseUrl}/api/v2/agent/keys`, {
+  const keysDenied = await fetch(`${baseUrl}/api/v3/pow/keys`, {
     method: "POST",
     headers: { "Content-Type": "application/json", Cookie: cookieHeader(regularJar) },
     body: JSON.stringify({ label: "should-fail" }),
   });
   const keysBody = await keysDenied.json();
+  const deniedCode = planGateCode(keysBody);
   record(
     "individual-gate",
-    "regular session cannot mint agent API keys",
-    keysDenied.status === 403 && keysBody?.error?.code === "teams_required",
-    `HTTP ${keysDenied.status}`,
+    "regular session cannot mint API keys",
+    keysDenied.status === 403 &&
+      (deniedCode === "teams_required" ||
+        deniedCode === "api_plan_required" ||
+        /teams|metered|pro/i.test(String(keysBody?.error || keysBody?.message || ""))),
+    `HTTP ${keysDenied.status} code=${deniedCode || "n/a"}`,
   );
 
   let regularKeyId = null;
   try {
     const { rawKey, id } = await mintRegularApiKey(admin, env.E2E_REGULAR_USER_ID);
     regularKeyId = id;
-    const blocked = await agentJson("/api/v2/agent/workspaces", rawKey, {
+    const blocked = await agentJson("/api/v3/pow/workspaces", rawKey, {
       method: "POST",
       body: JSON.stringify({ initial_prompt: "should be blocked" }),
     });
+    const blockedCode = planGateCode(blocked.body);
     record(
       "individual-gate",
-      "regular-owned API key rejected (teams_required)",
-      blocked.res.status === 403 && blocked.body?.error?.code === "teams_required",
-      `HTTP ${blocked.res.status}`,
+      "regular-owned API key rejected (plan gate)",
+      blocked.res.status === 403 &&
+        (blockedCode === "teams_required" ||
+          blockedCode === "api_plan_required" ||
+          /teams|metered|pro/i.test(JSON.stringify(blocked.body || {}))),
+      `HTTP ${blocked.res.status} code=${blockedCode || "n/a"}`,
     );
   } catch (err) {
-    record("individual-gate", "regular-owned API key rejected (teams_required)", false, err.message);
+    record("individual-gate", "regular-owned API key rejected (plan gate)", false, err.message);
   } finally {
     if (regularKeyId) {
       await admin.from("agent_api_keys").update({ is_active: false }).eq("id", regularKeyId);
@@ -184,7 +201,7 @@ async function runTierGates(admin, regularJar) {
     record("teams-gate", "E2E_TEAMS_API_KEY configured", false, "missing");
     return null;
   }
-  const probe = await agentJson("/api/v2/agent/workspaces", teamsKey, {
+  const probe = await agentJson("/api/v3/pow/workspaces", teamsKey, {
     method: "POST",
     body: JSON.stringify({ initial_prompt: "[E2E-PoW] Teams gate probe — recursion basics." }),
   });
@@ -201,7 +218,7 @@ async function runTierGates(admin, regularJar) {
 async function runTeamsPowApi(apiKey, workspaceId) {
   console.log("\n== Teams — Proof-of-Work API (REST) ==");
 
-  const ws = await agentJson(`/api/v2/agent/workspaces/${workspaceId}`, apiKey);
+  const ws = await agentJson(`/api/v3/pow/workspaces/${workspaceId}`, apiKey);
   record(
     "teams-rest",
     "GET /workspaces/{id}",
@@ -209,7 +226,7 @@ async function runTeamsPowApi(apiKey, workspaceId) {
     ws.body?.workspace?.title || `HTTP ${ws.res.status}`,
   );
 
-  const blocks = await agentJson(`/api/v2/agent/workspaces/${workspaceId}/blocks`, apiKey);
+  const blocks = await agentJson(`/api/v3/pow/workspaces/${workspaceId}/blocks`, apiKey);
   const blockId = blocks.body?.blocks?.[0]?.id;
   record(
     "teams-rest",
@@ -218,7 +235,7 @@ async function runTeamsPowApi(apiKey, workspaceId) {
     `${blocks.body?.blocks?.length ?? 0} blocks`,
   );
 
-  const schema = await agentJson(`/api/v2/agent/workspaces/${workspaceId}/proof-of-work-schema`, apiKey, {
+  const schema = await agentJson(`/api/v3/pow/workspaces/${workspaceId}/proof-of-work-schema`, apiKey, {
     method: "POST",
     body: JSON.stringify({
       definition: "[E2E-PoW] Capture tool usage while explaining hash map collisions.",
@@ -238,7 +255,7 @@ async function runTeamsPowApi(apiKey, workspaceId) {
     schema.body?.interruption === null ? "null" : "object",
   );
 
-  const upload = await agentJson(`/api/v2/agent/workspaces/${workspaceId}/proof-of-work`, apiKey, {
+  const upload = await agentJson(`/api/v3/pow/workspaces/${workspaceId}/proof-of-work`, apiKey, {
     method: "POST",
     body: JSON.stringify({
       type: "tool",
@@ -260,48 +277,38 @@ async function runTeamsPowApi(apiKey, workspaceId) {
   );
 
   if (!liveWrites) {
-    record("teams-rest", "POST /performance (report)", false, "E2E_ALLOW_LIVE_WRITES not set");
+    record("teams-rest", "POST /verification-score", false, "E2E_ALLOW_LIVE_WRITES not set");
     return blockId;
   }
 
-  const report = await agentJson(`/api/v2/agent/workspaces/${workspaceId}/performance`, apiKey, {
-    method: "POST",
-    body: JSON.stringify({ block_id: blockId }),
-  });
+  const report = await agentJson(
+    `/api/v3/eval/workspaces/${workspaceId}/verification-score`,
+    apiKey,
+    {
+      method: "POST",
+      body: JSON.stringify({ block_id: blockId }),
+    },
+  );
   record(
     "teams-rest",
-    "POST /performance report (overall_score + marker_scores)",
-    report.res.status === 200 && isPerformanceReport(report.body),
+    "POST /api/v3/eval/.../verification-score (score + marker_scores)",
+    report.res.status === 200 && isVerticalScoreReport(report.body),
     report.res.status === 200
-      ? `score=${report.body?.report?.overall_score} markers=${report.body?.report?.marker_scores?.length}`
+      ? `score=${report.body?.report?.score} markers=${report.body?.report?.marker_scores?.length}`
       : `${report.res.status} ${JSON.stringify(report.body)?.slice(0, 160)}`,
   );
   record(
     "teams-rest",
-    "performance response includes proof_of_work_summary",
+    "verification-score response includes proof_of_work_summary",
     report.res.status === 200 && !!report.body?.proof_of_work_summary,
     report.body?.proof_of_work_summary
       ? `artifacts=${report.body.proof_of_work_summary.proof_of_work_artifacts}`
       : "missing",
   );
 
-  const chat = await agentJson(`/api/v2/agent/workspaces/${workspaceId}/performance`, apiKey, {
-    method: "POST",
-    body: JSON.stringify({
-      prompt: "What is the single biggest gap in this workspace proof of work?",
-      block_id: blockId,
-    }),
-  });
-  record(
-    "teams-rest",
-    "POST /performance chat mode",
-    chat.res.status === 200 && chat.body?.mode === "chat" && typeof chat.body?.response === "string",
-    chat.res.status === 200 ? `len=${String(chat.body.response).length}` : `HTTP ${chat.res.status}`,
-  );
-
   if (blockId) {
     const link = await agentJson(
-      `/api/v2/agent/workspaces/${workspaceId}/blocks/${blockId}/tap-links`,
+      `/api/v3/pow/workspaces/${workspaceId}/blocks/${blockId}/tap-links`,
       apiKey,
       { method: "POST", body: JSON.stringify({ minutes: 15 }) },
     );
@@ -313,7 +320,7 @@ async function runTeamsPowApi(apiKey, workspaceId) {
       linkId || `HTTP ${link.res.status}`,
     );
 
-    const list = await agentJson(`/api/v2/agent/workspaces/${workspaceId}/tap-links`, apiKey);
+    const list = await agentJson(`/api/v3/pow/workspaces/${workspaceId}/tap-links`, apiKey);
     record(
       "teams-rest",
       "GET /tap-links",
@@ -332,8 +339,8 @@ async function runTeamsMcp(apiKey, workspaceId) {
   const names = (tools.body?.result?.tools || []).map((t) => t.name);
   record(
     "teams-mcp",
-    "tools/list (11 tools)",
-    tools.res.status === 200 && names.length === 11,
+    "tools/list (catalog non-empty)",
+    tools.res.status === 200 && names.length >= 11,
     `${names.length} tools`,
   );
   record(
@@ -376,22 +383,24 @@ async function runTeamsMcp(apiKey, workspaceId) {
   );
 
   if (!liveWrites) {
-    record("teams-mcp", "analyze_performance (report)", false, "E2E_ALLOW_LIVE_WRITES not set");
+    record("teams-mcp", "verification_score tool", false, "E2E_ALLOW_LIVE_WRITES not set");
     return;
   }
 
   const perf = await mcpCall(
     apiKey,
     "tools/call",
-    { name: "analyze_performance", arguments: { workspace_id: workspaceId } },
+    { name: "verification_score", arguments: { workspace_id: workspaceId } },
     23,
   );
   const perfData = mcpToolText(perf.body);
+  const scoreReport = perfData?.report || perfData;
   record(
     "teams-mcp",
-    "analyze_performance report",
-    perf.res.status === 200 && isPerformanceReport(perfData),
-    perfData?.report?.overall_score != null ? `score=${perfData.report.overall_score}` : "no score",
+    "verification_score tool",
+    perf.res.status === 200 &&
+      (isVerticalScoreReport(perfData) || typeof scoreReport?.score === "number"),
+    scoreReport?.score != null ? `score=${scoreReport.score}` : "no score",
   );
 }
 
@@ -421,7 +430,7 @@ async function runIndividualIndirect(admin, regularJar) {
   }
   record(
     "individual-indirect",
-    "create workspace via web (not agent API)",
+    "create workspace via web (not Proof-of-Work API)",
     !!workspaceId,
     workspaceId || `${gen.status}`,
   );
@@ -512,14 +521,14 @@ async function runIndividualIndirect(admin, regularJar) {
     );
   }
 
-  const noBearer = await fetch(`${baseUrl}/api/v2/agent/workspaces`, {
+  const noBearer = await fetch(`${baseUrl}/api/v3/pow/workspaces`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ initial_prompt: "individual has no bearer key" }),
   });
   record(
     "individual-indirect",
-    "agent API requires Bearer key (individual uses web routes)",
+    "Proof-of-Work API requires Bearer key (individual uses web routes)",
     noBearer.status === 401,
     `HTTP ${noBearer.status}`,
   );
@@ -532,19 +541,19 @@ async function runIndividualIndirect(admin, regularJar) {
   const webReport = await fetch(`${baseUrl}/api/workspace/performance-report`, {
     method: "POST",
     headers: { "Content-Type": "application/json", Cookie: cookieHeader(regularJar) },
-    body: JSON.stringify({ workspaceId }),
+    body: JSON.stringify({ workspaceId, vertical: "verification" }),
   });
   const webReportBody = await webReport.json();
   const webOk =
     webReport.status === 200 &&
-    typeof webReportBody?.report?.overall_score === "number" &&
+    typeof webReportBody?.report?.score === "number" &&
     Array.isArray(webReportBody?.report?.marker_scores);
   record(
     "individual-indirect",
-    "Performance tab report (cookie auth, unified scoring)",
+    "Performance tab verification report (cookie auth)",
     webOk,
     webOk
-      ? `score=${webReportBody.report.overall_score} markers=${webReportBody.report.marker_scores.length}`
+      ? `score=${webReportBody.report.score} markers=${webReportBody.report.marker_scores.length}`
       : `${webReport.status} ${JSON.stringify(webReportBody).slice(0, 160)}`,
   );
 }

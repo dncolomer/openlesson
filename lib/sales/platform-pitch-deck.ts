@@ -1,267 +1,217 @@
 import { buildFounderSlides } from "@/lib/sales/founder-slides";
-import type { SolutionSlideDeck } from "@/lib/sales/solution-slide-decks";
+import type { SalesSlide, SolutionSlideDeck } from "@/lib/sales/solution-slide-decks";
 import { PITCH_ASSETS } from "@/lib/sales/solution-slide-decks";
-import { buildPrivacyDataSlide } from "@/lib/sales/privacy-data-slide";
 import { labeledHighlights } from "@/lib/sales/slide-highlights";
-import {
-  THESIS_HIGHLIGHT_LABELS,
-  thesisScienceHighlights,
-} from "@/lib/sales/thesis-science-snippet";
+import { buildPrivacyDataSlides } from "@/lib/sales/privacy-data-slide";
+
+/**
+ * Platform pitch = product narrative with founder block mid-deck.
+ * Open: thesis → config space → TAP method ×2
+ * Mid: founder slides
+ * Close: productized PoW → data posture ×2 → use cases (PoW / TAP / ILE)
+ */
+const PLATFORM_OPEN: SalesSlide[] = [
+  {
+    layout: "statement",
+    kicker: "Our thesis",
+    title: "Hard skills cannot be measured as a ratio of correct answers.",
+    subtitle:
+      "Quizzes sample thin outputs. Competence is proximity to a useful cognitive configuration — retrievable, applicable, and transformable under real work.",
+    backgroundImage: PITCH_ASSETS.aesthetics.science,
+    ...labeledHighlights([
+      [
+        "Knowledge configuration model",
+        "Holistic representation of knowledge that extends beyond one's brain to the tools we rely on as well — not a scoreboard of right/wrong items.",
+      ],
+      [
+        "Proximity, not pass-rate",
+        "We built a model that measures distance to a learning model — a cognitive target — instead of percent correct.",
+      ],
+    ]),
+    bullets: [
+      "Correct-answer ratios collapse under AI assist and polished delivery",
+      "Useful knowledge is closeness to a configuration you can retrieve, apply, and transform",
+      "The product scores that proximity continuously from proof of work and thought under probe",
+    ],
+  },
+  {
+    layout: "fullImage",
+    title: "Knowledge config · proximity model",
+    backgroundImage: PITCH_ASSETS.aesthetics.science,
+    image: "/config space.png",
+    imageAlt: "Configuration space — proximity to a cognitive target",
+    imageCaption: "Knowledge config · proximity model",
+  },
+  {
+    layout: "media",
+    kicker: "How we test it",
+    title: "The Think Aloud Protocol.",
+    subtitle:
+      "A structured protocol to externalize and capture genuine thinking while staying practical with today's AI and LLMs. Example: “Does Person X know Algebra?”",
+    backgroundImage: PITCH_ASSETS.aesthetics.products,
+    video: "/animations/selective_interface.mp4",
+    imageAlt: "Selective interface — submit and stash thought traces",
+    imageCaption: "Submit–Stash · thought traces",
+    ...labeledHighlights([
+      [
+        "Submit / Stash rule",
+        "Think out loud naturally — but consciously submit (share) or stash (keep private) each thought. That deliberate choice is the key signal.",
+      ],
+      [
+        "Embedding space",
+        "Traces project into an embedding space where correctness is an explicit dimension — raw thought streams become rich, analyzable vectors.",
+      ],
+    ]),
+    cards: [
+      {
+        label: "System 1",
+        body: "Fast, intuitive thinking externalized as it fires.",
+      },
+      {
+        label: "System 2",
+        body: "Slow, deliberate reasoning made inspectable.",
+      },
+    ],
+  },
+  {
+    layout: "media",
+    kicker: "How we test it",
+    title: "Practical with AI — and hard to game.",
+    subtitle:
+      "The protocol stays tool-agnostic and enforces purity so sessions remain verifiable even under real AI use.",
+    backgroundImage: PITCH_ASSETS.aesthetics.products,
+    video: "/animations/selective_interface.mp4",
+    imageAlt: "Selective interface — tool-agnostic submit and stash",
+    imageCaption: "Tool-agnostic · protocol purity",
+    ...labeledHighlights([
+      [
+        "Tool agnostic",
+        "Pen and paper, mental calc, or LLMs — value is the thinking you externalize, not the tool. Ends “you used AI so it doesn’t count.” Models still score reasoning quality and metacognitive depth in real time.",
+      ],
+      [
+        "Protocol purity",
+        "Submit–Stash keeps intent first-class: System 1 (stashed/unsent) and System 2 (submitted) both become proof of work. Scoring and GHC use that contrast—not polished finals alone—so over-filtering and non-cooperation show up in the evidence, not a vanity transcript.",
+      ],
+    ]),
+  },
+];
+
+const PLATFORM_CLOSE: SalesSlide[] = [
+  {
+    layout: "statement",
+    kicker: "Productized",
+    title: "One interface: Proof of Work with stash / submit.",
+    subtitle:
+      "The PoW interface is the product surface. Work and thought stream continuously; each unit is either stashed (kept private / parked) or submitted (committed as evidence). Scoring attaches to that deliberate choice.",
+    backgroundImage: PITCH_ASSETS.aesthetics.verticals,
+    ...labeledHighlights([
+      [
+        "PoW interface",
+        "Stash or submit every unit of work and thought. Intent is first-class evidence — the same contract for humans, agents, and tools.",
+      ],
+    ]),
+    cards: [
+      {
+        label: "TAP implements it",
+        body: "Think Aloud Protocol runs the stash / submit model on selective thought: spontaneous System 1 can be stashed; deliberate System 2 is submitted under probe.",
+      },
+      {
+        label: "ILE implements it",
+        body: "Integrated Learning Environment tools run the same model on practice work — notebook, canvas, and tool traces stash or submit as continuous proof of work.",
+      },
+    ],
+    bullets: [
+      "One contract: stream → stash or submit → score intent and evidence together",
+      "TAP and ILE are not separate products — they are PoW surfaces that implement stash / submit",
+    ],
+  },
+  ...buildPrivacyDataSlides(),
+  {
+    layout: "statement",
+    kicker: "How they're used · PoW",
+    title: "Proof of Work",
+    subtitle:
+      "Score real capability in the product surface — not tour completions or quiz pass rates.",
+    backgroundImage: PITCH_ASSETS.aesthetics.useCase,
+    cards: [
+      {
+        label: "PoW",
+        ideas: [
+          {
+            title: "Dynamic SaaS onboarding",
+            body: "After signup, score the first real workflow (import, configure, ship a unit of value). Severity-ranked gaps open only the failed skill blocks — power users skip the checklist entirely.",
+          },
+          {
+            title: "Learning-to-conversion",
+            body: "Tie proof of work to the aha path that predicts paid conversion. CS and product see who can run the product, not who finished a tour — trials convert on verified capability.",
+          },
+          {
+            title: "Agent & CI deploy gates",
+            body: "Pipe agent tool traces and PR artifacts into the same PoW model. Block merge or go-live until skill markers clear — humans and agents share one readiness bar.",
+          },
+        ],
+      },
+    ],
+  },
+  {
+    layout: "statement",
+    kicker: "How they're used · TAP",
+    title: "Think Aloud Protocol",
+    subtitle:
+      "Externalize genuine thinking under probe — for humans you hire, interview, or need to verify live.",
+    backgroundImage: PITCH_ASSETS.aesthetics.useCase,
+    cards: [
+      {
+        label: "TAP",
+        ideas: [
+          {
+            title: "TAP-cha",
+            body: "A short Think Aloud Protocol that proves a live human is behind the keyboard — hesitations, self-corrections, and causal answers under probe that AI-fed polish cannot fake.",
+          },
+          {
+            title: "Live skill interviews",
+            body: "Replace polished take-homes with a timed think-aloud on the actual job task. Scores and gap reports land back in the ATS while the candidate still has context fresh.",
+          },
+          {
+            title: "Expert capture",
+            body: "Record how senior operators actually solve hard problems. Stash/submit traces become training gold and evaluation rubrics — not a polished slide deck of how work “should” go.",
+          },
+        ],
+      },
+    ],
+  },
+  {
+    layout: "statement",
+    kicker: "How they're used · ILE",
+    title: "Integrated Learning Environment",
+    subtitle:
+      "Coached practice that closes the gaps verification found — in-product, on the job, under the same markers.",
+    backgroundImage: PITCH_ASSETS.aesthetics.useCase,
+    cards: [
+      {
+        label: "ILE",
+        ideas: [
+          {
+            title: "Onboarding repair loops",
+            body: "When PoW flags a failed onboarding skill, drop the user into a coached ILE scenario for that block only. Practice until the marker moves — then return them to product.",
+          },
+          {
+            title: "Coached take-homes",
+            body: "Senior and technical tracks get multi-step judgment in a workspace, not a weekend coding puzzle. Coach and score debugging, design tradeoffs, and tool use under realistic constraints.",
+          },
+          {
+            title: "Role ramp scenarios",
+            body: "New hires and internal mobility candidates run job-real scenarios instead of LMS module checklists. Gap reports route the next practice day — ramp becomes auditable skill movement.",
+          },
+        ],
+      },
+    ],
+  },
+];
 
 export const PLATFORM_PITCH_DECK: SolutionSlideDeck = {
   vertical: "pitch",
   label: "Platform Pitch",
-  backgroundImage: PITCH_ASSETS.aesthetics.title,
-  slides: [
-    {
-      layout: "title",
-      kicker: "Uncertain Systems · Three verticals",
-      title: "Beyond benchmarks for AI. Beyond tests for humans.",
-      subtitle:
-        "One learning world model and product suite for human and agentic learning.",
-      backgroundImage: PITCH_ASSETS.aesthetics.title,
-      cards: [
-        {
-          label: "Verification",
-          body: "Prove skill before hire, promote, certify, or deploy.",
-        },
-        {
-          label: "Optimization",
-          body: "Route the next practice or coaching step from verified gaps until adoption, score movement, and deploy readiness improve.",
-        },
-        {
-          label: "Augmentation",
-          body: "Interrupt shallow fluency with probes inside onboarding, courses, and prep.",
-        },
-      ],
-    },
-    ...buildFounderSlides("platform"),
-    {
-      layout: "statement",
-      kicker: "The problem",
-      title: "Outputs look ready before learning is verified.",
-      subtitle:
-        "Real-time assist and copilots make polished delivery easy. Quizzes and benchmark pass rates were never reliable proxies for learning.",
-      backgroundImage: PITCH_ASSETS.aesthetics.problem,
-      ...labeledHighlights([
-        [
-          "The trap",
-          "Outputs look ready before learning is verified.",
-        ],
-        [
-          "Why proxies fail",
-          "Quizzes and benchmark pass rates sample thin outputs, not configuration proximity under real work.",
-        ],
-      ]),
-      bullets: [
-        "Humans finish training without learning how to use tools in production",
-        "Agents pass benchmark suites without reliable tool use under real constraints",
-        "Completion dashboards and leaderboard accuracy hide shallow understanding",
-        "The gap shows up in client work, incidents, bad deploys, and churn",
-      ],
-    },
-    {
-      layout: "statement",
-      kicker: "Vision",
-      title: "Automating human learning.",
-      subtitle:
-        "We are building self-driving technology for learning: non-invasive systems that raise attention and understanding without asking humans to burn proportionally more energy.",
-      backgroundImage: PITCH_ASSETS.aesthetics.vision,
-      ...labeledHighlights([
-        [
-          "The goal",
-          "More attention and deeper understanding without proportional energy cost to the learner.",
-        ],
-        [
-          "Software first",
-          "Attention loops, Socratic probes, and proof of work today.",
-        ],
-      ]),
-      bullets: [
-        "Low-ROI learning still demands too much effort for the depth it returns",
-        "Self-driving learning: more attention markers without a proportional energy cost",
-        "Software first",
-      ],
-    },
-    {
-      layout: "statement",
-      kicker: "Science",
-      title: "A holistic model of knowledge",
-      subtitle:
-        "Learning is physics of mind, not a quiz score. Brains and agents sit in configuration space; useful knowledge is proximity to a state you can retrieve, apply, and transform.",
-      backgroundImage: PITCH_ASSETS.aesthetics.science,
-      ...labeledHighlights([
-        [
-          "Knowledge = proximity",
-          "Closeness to a useful configuration. Not a binary flag or completion percentage.",
-        ],
-        [
-          "PoW measures proximity",
-          "Artifacts, tool traces, and think-aloud under probe. Better than thin test or benchmark slices.",
-        ],
-      ]),
-      bullets: [
-        "Brain configuration: the full physical (or agent) state at a point in time",
-        "Learning = transformation: move through configuration space with less wasted effort",
-        "Non-invasive path: software probes and proof of work today; world models and biofeedback later",
-      ],
-    },
-    {
-      layout: "statement",
-      kicker: "Our thesis",
-      title: "A learning world model, not linear analytics.",
-      subtitle:
-        "Uncertain Systems builds a live picture from skills, scenarios, proof of work, and where reasoning breaks. The Trace Interruption Model uses that model to drive verification, optimization, and augmentation in context.",
-      backgroundImage: PITCH_ASSETS.aesthetics.verticals,
-      highlights: thesisScienceHighlights("platform"),
-      highlightLabels: [...THESIS_HIGHLIGHT_LABELS],
-      bullets: [
-        "Verification scores whether humans and agents can perform before hire, deploy, or certify",
-        "Optimization routes the next practice or coaching step when gaps show up in the model",
-        "Augmentation interrupts shallow fluency with probes tuned to what the workspace already knows",
-        "One model, three verticals",
-      ],
-    },
-    {
-      layout: "statement",
-      kicker: "Foundation",
-      title: "Workspace: where the learning world model lives",
-      subtitle:
-        "Everything runs on Workspaces: skills, scenarios, proof of work, and the live learning world model in one shared context. The Trace Interruption Model is the interruption layer on top of that context today; it is separate for practical development reasons and is on a path to merge into the learning world model.",
-      backgroundImage: PITCH_ASSETS.aesthetics.products,
-      ...labeledHighlights([
-        [
-          "Learning world model",
-          "Lives in the Workspace: structured skills and scenarios, ingested proof of work, continuous scores and gaps.",
-        ],
-        [
-          "TIM today → one model later",
-          "Trace Interruption Model predicts when to probe, coach, or request proof. Built as a separate model for now so we can ship interruptions; destination is a single learning world model that includes interruption.",
-        ],
-      ]),
-      bullets: [
-        "Define skills, scenarios, and decision domains as assessable blocks inside the workspace",
-        "Ingest proof of work via API, upload, screen share, or tool traces",
-        "TIM is not a standalone SKU: it powers interruption under verification, optimization, and augmentation against workspace context",
-        "Same interruption loop for human think-aloud and agent tool-use paths, acting on workspace state instead of linear funnel events",
-        "Today: learning world model + TIM as two cooperating pieces; tomorrow: one unified model as the architecture converges",
-      ],
-    },
-    {
-      layout: "split",
-      kicker: "Product suite · 01–02",
-      title: "Proof-of-Work API & Think Aloud Protocol",
-      backgroundImage: PITCH_ASSETS.aesthetics.products,
-      left: {
-        label: "Proof-of-Work API",
-        items: [
-          "Headless scoring for humans and agents",
-          "Artifacts, tool traces, transcripts, screen captures",
-          "TIM-powered interruption hints and severity-ranked gaps",
-          "Programmable base for gates inside your stack",
-        ],
-      },
-      right: {
-        label: "Think Aloud Protocol",
-        items: [
-          "Hosted verification for live human cognition",
-          "Shareable URLs scoped to a block or full workspace",
-          "Socratic probes on hesitations, revisions, causal chains",
-          "TAP-cha: confirm a live human, not AI-fed polish",
-        ],
-      },
-    },
-    {
-      layout: "split",
-      kicker: "Product suite · 03–04",
-      title: "ILE & Agentic Learning Environment",
-      backgroundImage: PITCH_ASSETS.aesthetics.products,
-      left: {
-        label: "Integrated Learning Environment",
-        items: [
-          "Hosted practice when depth beats checkbox tests",
-          "Coached scenarios wired to verified gaps",
-          "Score movement with proof of work at every step",
-          "Take-home and quiz replacement for complex cognition",
-        ],
-      },
-      right: {
-        label: "Agentic Learning Environment",
-        items: [
-          "Evolve agent skill.md files from real runs",
-          "Validate tool use inside your data boundary",
-          "Iterate until deploy readiness clears",
-          "Same workspace and TIM loop as human products",
-        ],
-      },
-    },
-    buildPrivacyDataSlide(),
-    {
-      layout: "statement",
-      kicker: "The loop",
-      title: "Three verticals, one business context. Synergy, not silos.",
-      subtitle:
-        "Verification, optimization, and augmentation share the same workspace and learning world model. Start where the decision is sharpest.",
-      backgroundImage: PITCH_ASSETS.aesthetics.verticals,
-      cards: [
-        {
-          label: "Synergy",
-          body: "Each vertical feeds the others.",
-        },
-        {
-          label: "1 · Start in verification",
-          body: "Talent platform example: ship TAP / PoW gates for hiring, promotion, and agent deploy readiness.",
-        },
-        {
-          label: "2 · Then optimization",
-          body: "Same foundation: gap reports become dynamic onboarding, post-hire ramp, and ALE skill loops for the people and agents you already verified.",
-        },
-        {
-          label: "3 · Then augmentation",
-          body: "Same foundation: probes in academy, certification prep, and in-product checks.",
-        },
-      ],
-      bullets: [
-        "One workspace, three verticals: verification establishes the signal; optimization and augmentation reuse that same proof of work across the business context.",
-        "The learning world model is the foundation.",
-      ],
-    },
-    {
-      layout: "bullets",
-      kicker: "Outcomes",
-      title: "Stop measuring completion. Start measuring learning.",
-      backgroundImage: PITCH_ASSETS.aesthetics.close,
-      ...labeledHighlights([
-        [
-          "Stop equating completion with skill",
-          "Stop treating module completion and benchmark pass rates as if they were skill.",
-        ],
-        [
-          "Start learning proof",
-          "Start measuring learning with auditable proof of work tied to hire, deploy, adopt, and certify decisions.",
-        ],
-      ]),
-      bullets: [
-        "Verify agent skills and tool use before production",
-        "Confirm humans learned a workflow, not just clicked through training",
-        "Detect hidden gaps before client work, incidents, or bad deploys",
-        "Separate genuine human thinking from AI-fed interview polish",
-        "Create auditable proof of work for compliance, promotion, and high-stakes roles",
-        "Tie every intervention to adoption, deploy readiness, and conversion",
-      ],
-    },
-    {
-      layout: "close",
-      kicker: "Next step",
-      title: "Verify, optimize, and augment learning.",
-      backgroundImage: PITCH_ASSETS.aesthetics.close,
-      bullets: [
-        "Create your first Workspace free",
-        "Pilot one high-stakes motion: hiring, deploy gate, onboarding, or certification prep",
-        "Start with Proof-of-Work API, Think Aloud Protocol, ILE, or ALE against one scenario",
-      ],
-      footnote:
-        "uncertain.systems · Verification · Optimization · Augmentation · Trace Interruption Model · Workspace",
-    },
-  ],
+  backgroundImage: PITCH_ASSETS.aesthetics.science,
+  slides: [...PLATFORM_OPEN, ...buildFounderSlides("platform"), ...PLATFORM_CLOSE],
 };

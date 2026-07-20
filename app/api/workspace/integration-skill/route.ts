@@ -79,7 +79,7 @@ export async function POST(req: NextRequest) {
 
     const blocksQuery = supabase
       .from("blocks")
-      .select("id, title, description, is_start")
+      .select("id, title, description, status, is_start")
       .eq("workspace_id", workspaceId)
       .order("created_at", { ascending: true });
 
@@ -142,10 +142,13 @@ export async function POST(req: NextRequest) {
             title: plan.title,
             root_topic: plan.root_topic,
             description: plan.description,
+            notes: plan.notes,
+            workspace_goal: plan.workspace_goal ?? null,
           },
           blocks || [],
           blockId,
-          proofOfWorkSpec
+          proofOfWorkSpec,
+          contextResult?.payload ?? null
         ),
         temperature: 0.45,
         maxOutputTokens: 8192,

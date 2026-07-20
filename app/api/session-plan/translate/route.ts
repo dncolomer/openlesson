@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSessionPlan, updateSessionPlan } from "@/lib/storage";
 import { callXaiJSON, userMessage, DEFAULT_MODEL } from "@/lib/xai-client";
-import { ayclTokenFromBody, guardSessionRoute } from "@/lib/api/require-auth";
+import { ayclTokenFromBody,
+  ileTokenFromBody, guardSessionRoute } from "@/lib/api/require-auth";
 import { getLanguageName } from "@/lib/tutoring-languages";
 
 export const runtime = "nodejs";
@@ -27,7 +28,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const auth = await guardSessionRoute(sessionId, { ayclToken: ayclTokenFromBody(body) });
+    const auth = await guardSessionRoute(sessionId, { ayclToken: ayclTokenFromBody(body), ileToken: ileTokenFromBody(body) });
     if (!auth.ok) return auth.response;
 
     const { supabase } = auth;

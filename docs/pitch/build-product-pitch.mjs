@@ -230,7 +230,7 @@ function addLayerCard(slide, layer, { y, h }) {
   addBackground(slide);
   addSlideChrome(slide, { num: 1, total: TOTAL, kicker: "01  ·  OUR THESIS" });
   addTitle(slide, "Hard skills are not\na ratio of correct answers.");
-  addImagePlaceholder(slide, "Brain config / proximity");
+  addImagePlaceholder(slide, "Knowledge config / proximity");
 
   // Core statement card
   slide.addShape(pres.shapes.ROUNDED_RECTANGLE, {
@@ -268,8 +268,8 @@ function addLayerCard(slide, layer, { y, h }) {
   // Two pillars
   const pillars = [
     {
-      label: "BRAIN CONFIG MODEL",
-      body: "Holistic state of mind — not a scoreboard of right/wrong items.",
+      label: "KNOWLEDGE CONFIG MODEL",
+      body: "Holistic representation of knowledge that extends beyond one's brain to the tools we rely on as well — not a scoreboard of right/wrong items.",
     },
     {
       label: "PROXIMITY, NOT %",

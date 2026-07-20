@@ -113,7 +113,7 @@ export const OG_SURFACES: Record<string, OgSurface> = {
     path: "/science",
     title: "A holistic model of knowledge",
     description:
-      "Brain configuration, proximity, transformation, and a non-invasive path to self-driving learning.",
+      "Knowledge configuration, proximity, transformation, and a non-invasive path to self-driving learning.",
     eyebrow: "Science",
     brand: BRAND,
     footerLabel: "Research",

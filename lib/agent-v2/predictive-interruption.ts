@@ -43,7 +43,7 @@ export interface InterruptionContext {
   workspace_id?: string;
   proof_of_work_artifacts?: number;
   block_id?: string | null;
-  mode?: "report" | "chat";
+  mode?: "report" | "score";
   report?: PerformanceReport | null;
   /** Workspace- or LLM-authored interruption candidate from proof of work spec generation. */
   llm_interruption?: ProofOfWorkApiInterruption;
@@ -58,7 +58,7 @@ export interface InterruptionContext {
   /** Recent proof-of-work manifest for session context. */
   recent_pow_manifest?: string | null;
   workspace_title?: string | null;
-  conversion_goal?: string | null;
+  workspace_goal?: string | null;
   /** Idle duration in ms when endpoint is upload_*_idle */
   idle_duration_ms?: number | null;
   /** Speech transcript snapshot when available */

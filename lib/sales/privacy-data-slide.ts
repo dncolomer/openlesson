@@ -3,34 +3,66 @@ import { PITCH_ASSETS } from "@/lib/sales/solution-slide-decks";
 import { labeledHighlights } from "@/lib/sales/slide-highlights";
 
 /**
- * Shared enterprise data posture slide for every pitch deck.
- * PoW API + learning model work on anonymized / redacted proof of work so
- * customers do not need to leak proprietary secrets into our stack.
+ * Enterprise data posture slides for the **platform** pitch deck (2 slides, no scroll).
+ * Split so each fits a media layout with an image placeholder stage.
  */
+export function buildPrivacyDataSlides(): SalesSlide[] {
+  return [
+    {
+      layout: "media",
+      kicker: "Data posture · 1/2",
+      title: "Proprietary “knowing X” cannot live on a public quiz.",
+      subtitle:
+        "In the enterprise, skill is entangled with confidential systems. Example: does this new SRE know how to manage our production system? That knowledge is not a shareable answer key.",
+      backgroundImage: PITCH_ASSETS.aesthetics.products,
+      imagePlaceholder: true,
+      imageCaption: "Privacy · proprietary systems",
+      imageAlt: "Placeholder for enterprise privacy visual",
+      ...labeledHighlights([
+        [
+          "Confidential by nature",
+          "Production runbooks, topology, customer workflows, and internal tooling must stay inside your boundary.",
+        ],
+        [
+          "Quizzes break the model",
+          "Public or vendor-hosted quiz banks force you to externalize secrets you cannot expose to Uncertain Systems or the outside world.",
+        ],
+      ]),
+      bullets: [
+        "Enterprise “knowing X” is often proprietary by construction — not something you can redact into a multiple-choice form",
+        "Hiring, ramp, and internal mobility still need a measurable signal of competence without leaking production detail",
+      ],
+    },
+    {
+      layout: "media",
+      kicker: "Data posture · 2/2",
+      title: "Custom verification models in hashed knowledge config space.",
+      subtitle:
+        "Distill internal talent into a high-validation region, then evaluate candidates on that geometry — with hashed or redacted traces only.",
+      backgroundImage: PITCH_ASSETS.aesthetics.products,
+      imagePlaceholder: true,
+      imageCaption: "Custom verification model · knowledge config",
+      imageAlt: "Placeholder for custom verification model visual",
+      ...labeledHighlights([
+        [
+          "Custom verification models",
+          "Pick internal experts in a workspace, distill their knowledge config embeddings into a high-validation region, and score others against that model.",
+        ],
+        [
+          "Hashed / anonymized knowledge config",
+          "Send hashed or redacted traces. Geometry still works for internal scoring; secrets never leave your control.",
+        ],
+      ]),
+      bullets: [
+        "Create custom verification models from existing internal talent embeddings",
+        "Evaluate internal candidates without shipping proprietary source, topology, or customer secrets",
+        "Same verification loop — custom eval against your high-validation region, not only platform vertical scores",
+      ],
+    },
+  ];
+}
+
+/** @deprecated Prefer buildPrivacyDataSlides() — kept for call sites that need the first privacy beat. */
 export function buildPrivacyDataSlide(): SalesSlide {
-  return {
-    layout: "statement",
-    kicker: "Data posture",
-    title: "Anonymized proof of work. No need to leak enterprise secrets.",
-    subtitle:
-      "The Proof-of-Work API and learning world model are built to score skill from evidence you control. Send anonymized, redacted, or synthetic traces. Keep proprietary source, customer PII, and confidential IP inside your boundary.",
-    backgroundImage: PITCH_ASSETS.aesthetics.products,
-    ...labeledHighlights([
-      [
-        "Privacy-first PoW",
-        "Score skill from anonymized, redacted, or synthetic proof of work rather than a dump of your enterprise corpus.",
-      ],
-      [
-        "Keep secrets local",
-        "Proprietary source, customer PII, and confidential IP stay inside your boundary; marker scores travel without the raw secrets.",
-      ],
-    ]),
-    bullets: [
-      "Pipe tool traces, transcripts, and artifacts with PII stripped or tokenized before they leave your environment",
-      "Learning model and marker scores run on skill-relevant structure rather than your full enterprise corpus",
-      "Hosted TAP and ILE sessions can be scoped to non-sensitive scenarios; PoW API integrates where data never leaves your VPC",
-      "Auditable gap reports without shipping customer secrets, source code, or internal docs you cannot share",
-      "Same verification, optimization, and augmentation loop with privacy-preserving design",
-    ],
-  };
+  return buildPrivacyDataSlides()[0];
 }

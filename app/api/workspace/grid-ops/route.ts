@@ -6,15 +6,26 @@ import { buildSkillGridLayout, type WeightedGridNeighbor } from "@/lib/block-ski
 import { toSkillGridNodes } from "@/lib/skill-grid-positions";
 import {
   buildOccupancyFromPlaced,
+  canPlaceAbsoluteCells,
   canPlaceFootprint,
-  footprintFromCells,
-  mergeBlockFootprints,
+  freeformShapeFromCells,
+  mergeBlocksToFreeform,
   normalizeSpan,
+  parseShapeCells,
+  selectionIsFreeformLectureShape,
   splitBlocksToSingles,
   translateBlocksPreservingShape,
   type PlacedBlockRef,
 } from "@/lib/skill-grid-ops";
 import { composeBlockGenerationContext } from "@/lib/workspace-create-modes";
+import {
+  composeGenerateShapeBlockSystemMessage,
+  composeGenerateShapeBlockUserPrompt,
+  composeMergeBlockSystemMessage,
+  composeMergeBlockUserPrompt,
+  composeSplitBlockSystemMessage,
+  composeSplitBlockUserPrompt,
+} from "@/lib/block-footprint-prompt";
 
 type GridOp = "generate_shape" | "merge" | "split" | "move" | "update_block";
 
@@ -23,10 +34,14 @@ interface AiBlockPayload {
   description: string;
 }
 
+interface AiSplitPayload {
+  parts?: Array<{ index?: number; title?: string; description?: string }>;
+}
+
 async function loadWorkspaceContext(supabase: SupabaseClient, workspaceId: string) {
   const { data: plan } = await supabase
     .from("workspaces")
-    .select("id, title, root_topic, description, notes, conversion_goal")
+    .select("id, title, root_topic, description, notes, workspace_goal")
     .eq("id", workspaceId)
     .single();
 
@@ -47,6 +62,7 @@ function placedFromNodes(nodes: Array<{
   position_y?: number | null;
   span_w?: number | null;
   span_h?: number | null;
+  shape_cells?: unknown;
 }>): PlacedBlockRef[] {
   return nodes
     .filter((n) => n.position_x != null && n.position_y != null)
@@ -56,6 +72,7 @@ function placedFromNodes(nodes: Array<{
       position_y: n.position_y!,
       span_w: normalizeSpan(n.span_w),
       span_h: normalizeSpan(n.span_h),
+      shape_cells: parseShapeCells(n.shape_cells ?? null),
     }));
 }
 
@@ -213,6 +230,18 @@ export async function POST(req: NextRequest) {
           })),
       );
 
+      const { plan, fileNames } = await loadWorkspaceContext(supabase, workspaceId);
+      const context = composeBlockGenerationContext({
+        workspaceTitle: plan?.title || plan?.root_topic || undefined,
+        goal: plan?.workspace_goal || plan?.root_topic,
+        notes: plan?.notes,
+        fileNames,
+      });
+      const languageNote =
+        locale && locale !== "en"
+          ? `Respond in ${locale} language. Titles and descriptions must be in that language.`
+          : "";
+
       // Only expand multi-cell blocks; 1x1 stay as-is
       for (const target of targets) {
         const spanW = normalizeSpan(target.span_w);
@@ -222,8 +251,45 @@ export async function POST(req: NextRequest) {
         const parts = singles.filter((s) => s.sourceId === target.id);
         if (parts.length <= 1) continue;
 
+        const partSpecs = parts.map((p, index) => ({
+          position_x: p.position_x,
+          position_y: p.position_y,
+          index,
+        }));
+
+        const aiPrompt = composeSplitBlockUserPrompt({
+          context,
+          sourceTitle: target.title,
+          sourceDescription: target.description,
+          sourceSpanW: spanW,
+          sourceSpanH: spanH,
+          parts: partSpecs,
+          languageNote: languageNote || undefined,
+        });
+
+        const aiResponse = await callXaiJSON<AiSplitPayload>(
+          [systemMessage(composeSplitBlockSystemMessage()), userMessage(aiPrompt)],
+          {
+            model: userModel || DEFAULT_MODEL,
+            maxTokens: 1200,
+            temperature: 0.45,
+          },
+        );
+
+        const named = new Map<number, { title: string; description: string }>();
+        if (aiResponse.success && Array.isArray(aiResponse.data?.parts)) {
+          for (const part of aiResponse.data.parts) {
+            if (typeof part?.index !== "number" || !part.title?.trim()) continue;
+            named.set(part.index, {
+              title: part.title.trim(),
+              description: part.description?.trim() || "",
+            });
+          }
+        }
+
         // Keep first cell on original block; create new blocks for remaining
         const [first, ...rest] = parts;
+        const firstName = named.get(0);
         await supabase
           .from("blocks")
           .update({
@@ -231,16 +297,19 @@ export async function POST(req: NextRequest) {
             position_y: first.position_y,
             span_w: 1,
             span_h: 1,
-            title: target.title,
-            description: target.description || "",
+            shape_cells: null,
+            title: firstName?.title || target.title,
+            description: firstName?.description || target.description || "",
           })
           .eq("id", target.id);
 
-        for (const part of rest) {
+        for (let i = 0; i < rest.length; i++) {
+          const part = rest[i];
+          const name = named.get(i + 1);
           await supabase.from("blocks").insert({
             workspace_id: workspaceId,
-            title: `${target.title} · ${part.position_y},${part.position_x}`,
-            description: target.description || "",
+            title: name?.title || `${target.title} · ${part.position_y},${part.position_x}`,
+            description: name?.description || target.description || "",
             is_start: false,
             next_block_ids: [],
             status: "available",
@@ -252,9 +321,6 @@ export async function POST(req: NextRequest) {
         }
       }
 
-      // Also support multi-block selection: if multiple 1x1 selected, split is a no-op geometrically
-      // (already singles). Done.
-
       const { data: updatedNodes } = await supabase
         .from("blocks")
         .select("*")
@@ -264,7 +330,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({
         planModified: true,
         updatedNodes: updatedNodes || [],
-        explanation: `Split selection into single-square blocks.`,
+        explanation: `Split selection into single-square blocks (size-aware ILE/TAP scopes).`,
         appearSequentially: true,
       });
     }
@@ -279,56 +345,59 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: "Not enough blocks to merge" }, { status: 400 });
       }
 
-      const footprint = mergeBlockFootprints(
-        targets
-          .filter((n) => n.position_x != null && n.position_y != null)
-          .map((n) => ({
-            id: n.id,
-            position_x: n.position_x!,
-            position_y: n.position_y!,
-            span_w: normalizeSpan(n.span_w),
-            span_h: normalizeSpan(n.span_h),
-          })),
-      );
-      if (!footprint) {
+      const mergePlaced = targets
+        .filter((n) => n.position_x != null && n.position_y != null)
+        .map((n) => ({
+          id: n.id,
+          position_x: n.position_x!,
+          position_y: n.position_y!,
+          span_w: normalizeSpan(n.span_w),
+          span_h: normalizeSpan(n.span_h),
+          shape_cells: parseShapeCells((n as { shape_cells?: unknown }).shape_cells ?? null),
+        }));
+      const freeform = mergeBlocksToFreeform(mergePlaced);
+      if (!freeform) {
         return NextResponse.json({ error: "Could not compute merge footprint" }, { status: 400 });
       }
+      const footprint = freeform.footprint;
 
-      // Allow placement ignoring the blocks being merged
-      if (!canPlaceFootprint(footprint, occupancy, ids)) {
-        return NextResponse.json({ error: "Merge footprint collides with other blocks" }, { status: 409 });
+      // Only the union of source cells is required free (ignoring the sources themselves).
+      if (!canPlaceAbsoluteCells(freeform.absoluteCells, placedOccupancy, ids)) {
+        return NextResponse.json(
+          { error: "Merge region collides with other blocks" },
+          { status: 409 },
+        );
       }
 
       const { plan, fileNames } = await loadWorkspaceContext(supabase, workspaceId);
       const context = composeBlockGenerationContext({
         workspaceTitle: plan?.title || plan?.root_topic || undefined,
-        goal: plan?.conversion_goal || plan?.root_topic,
+        goal: plan?.workspace_goal || plan?.root_topic,
         notes: plan?.notes,
         fileNames,
       });
 
-      const titles = targets.map((t) => t.title).join(", ");
       const languageNote =
         locale && locale !== "en"
           ? `Respond in ${locale} language. Title and description must be in that language.`
           : "";
 
-      const aiPrompt = `${context}
-
-Merge these learning blocks into one larger topic that covers the combined geometric region:
-${titles}
-
-User guidance: ${prompt?.trim() || "Synthesize a broader topic that unifies these blocks."}
-
-Return one block title and description for the merged topic.${languageNote ? `\n\n${languageNote}` : ""}`;
+      const aiPrompt = composeMergeBlockUserPrompt({
+        context,
+        sourceBlocks: targets.map((t) => ({
+          title: t.title,
+          span_w: normalizeSpan(t.span_w),
+          span_h: normalizeSpan(t.span_h),
+          description: t.description,
+        })),
+        resultSpanW: footprint.span_w,
+        resultSpanH: footprint.span_h,
+        userGuidance: prompt?.trim() || "Synthesize a broader topic that unifies these blocks.",
+        languageNote: languageNote || undefined,
+      });
 
       const aiResponse = await callXaiJSON<AiBlockPayload>(
-        [
-          systemMessage(
-            'You merge learning blocks into one larger topic. Return JSON only: { "title": "...", "description": "..." }.',
-          ),
-          userMessage(aiPrompt),
-        ],
+        [systemMessage(composeMergeBlockSystemMessage()), userMessage(aiPrompt)],
         {
           model: userModel || DEFAULT_MODEL,
           maxTokens: 700,
@@ -353,18 +422,25 @@ Return one block title and description for the merged topic.${languageNote ? `\n
         await supabase.from("blocks").update({ next_block_ids: rewritten }).eq("id", node.id);
       }
 
-      await supabase
-        .from("blocks")
-        .update({
-          title: aiResponse.data.title.trim(),
-          description: aiResponse.data.description?.trim() || "",
-          position_x: footprint.position_x,
-          position_y: footprint.position_y,
-          span_w: footprint.span_w,
-          span_h: footprint.span_h,
-          is_start: targets.some((t) => t.is_start) || false,
-        })
-        .eq("id", keepId);
+      const mergeUpdate: Record<string, unknown> = {
+        title: aiResponse.data.title.trim(),
+        description: aiResponse.data.description?.trim() || "",
+        position_x: footprint.position_x,
+        position_y: footprint.position_y,
+        span_w: footprint.span_w,
+        span_h: footprint.span_h,
+        shape_cells: freeform.shape_cells,
+        is_start: targets.some((t) => t.is_start) || false,
+      };
+      let { error: mergeErr } = await supabase.from("blocks").update(mergeUpdate).eq("id", keepId);
+      if (mergeErr && /shape_cells|schema cache/i.test(mergeErr.message || "")) {
+        const { shape_cells: _sc, ...withoutShape } = mergeUpdate;
+        const retry = await supabase.from("blocks").update(withoutShape).eq("id", keepId);
+        mergeErr = retry.error;
+      }
+      if (mergeErr) {
+        return NextResponse.json({ error: "Failed to update merged block" }, { status: 500 });
+      }
 
       if (dropIds.length) {
         await supabase.from("blocks").delete().in("id", dropIds);
@@ -387,21 +463,43 @@ Return one block title and description for the merged topic.${languageNote ? `\n
 
     if (op === "generate_shape") {
       const selection = Array.isArray(cells) ? cells : [];
-      const footprint = footprintFromCells(selection);
-      if (!footprint) {
+      const freeformSel = selectionIsFreeformLectureShape(selection);
+      if (!freeformSel.footprint || freeformSel.reason === "empty") {
         return NextResponse.json({ error: "cells required for generate_shape" }, { status: 400 });
       }
+      if (freeformSel.reason === "not_contiguous") {
+        return NextResponse.json(
+          {
+            error:
+              "Select a contiguous region (edge-connected cells). Diagonal-only gaps are not allowed.",
+            code: "selection_not_contiguous",
+            selectedCount: freeformSel.selectedCount,
+          },
+          { status: 400 },
+        );
+      }
+      const footprint = freeformSel.footprint;
+      const shapeCells = freeformSel.shape_cells;
+      const absolute =
+        freeformShapeFromCells(selection)?.absoluteCells ?? selection;
       if (!prompt?.trim()) {
         return NextResponse.json({ error: "prompt required for generate_shape" }, { status: 400 });
       }
-      if (!canPlaceFootprint(footprint, occupancy)) {
-        return NextResponse.json({ error: "Selected cells are occupied" }, { status: 409 });
+      // Only selected cells must be free (freeform shapes may leave bbox holes empty).
+      if (!canPlaceAbsoluteCells(absolute, placedOccupancy)) {
+        return NextResponse.json(
+          {
+            error: "One or more selected cells are already occupied",
+            code: "cells_occupied",
+          },
+          { status: 409 },
+        );
       }
 
       const { plan, fileNames } = await loadWorkspaceContext(supabase, workspaceId);
       const context = composeBlockGenerationContext({
         workspaceTitle: plan?.title || plan?.root_topic || undefined,
-        goal: plan?.conversion_goal || plan?.root_topic,
+        goal: plan?.workspace_goal || plan?.root_topic,
         notes: plan?.notes,
         fileNames,
       });
@@ -421,23 +519,22 @@ Return one block title and description for the merged topic.${languageNote ? `\n
           ? `Respond in ${locale} language. Title and description must be in that language.`
           : "";
 
-      const aiPrompt = `${context}
-
-Target multi-cell region: anchor (${footprint.position_y},${footprint.position_x}) span ${footprint.span_w}×${footprint.span_h}
-Nearby blocks:
-${neighborSummary}
-
-User request: "${prompt.trim()}"
-
-Create exactly one learning block that occupies this combined shape.${languageNote ? `\n\n${languageNote}` : ""}`;
+      const cellCount = absolute.length;
+      const aiPrompt = composeGenerateShapeBlockUserPrompt({
+        context,
+        spanW: footprint.span_w,
+        spanH: footprint.span_h,
+        anchorRow: footprint.position_y,
+        anchorCol: footprint.position_x,
+        neighborSummary,
+        userRequest: prompt.trim(),
+        languageNote: languageNote || undefined,
+        cellCount,
+        freeform: Boolean(shapeCells),
+      });
 
       const aiResponse = await callXaiJSON<AiBlockPayload>(
-        [
-          systemMessage(
-            'You create a single learning block for a multi-cell skill grid region. Return JSON only: { "title": "...", "description": "..." }.',
-          ),
-          userMessage(aiPrompt),
-        ],
+        [systemMessage(composeGenerateShapeBlockSystemMessage()), userMessage(aiPrompt)],
         {
           model: userModel || DEFAULT_MODEL,
           maxTokens: 600,
@@ -460,6 +557,7 @@ Create exactly one learning block that occupies this combined shape.${languageNo
         position_y: footprint.position_y,
         span_w: footprint.span_w,
         span_h: footprint.span_h,
+        shape_cells: shapeCells,
       };
 
       let { data: newNode, error: insertError } = await supabase
@@ -468,10 +566,15 @@ Create exactly one learning block that occupies this combined shape.${languageNo
         .select()
         .single();
 
-      // Graceful fallback if span columns not migrated yet
-      if (insertError && /span_w|span_h|schema cache/i.test(insertError.message || "")) {
-        const { span_w: _sw, span_h: _sh, ...withoutSpan } = insertPayload;
-        const retry = await supabase.from("blocks").insert(withoutSpan).select().single();
+      // Graceful fallback if span/shape columns not migrated yet
+      if (insertError && /span_w|span_h|shape_cells|schema cache/i.test(insertError.message || "")) {
+        const { span_w: _sw, span_h: _sh, shape_cells: _sc, ...rest } = insertPayload;
+        let retryPayload: Record<string, unknown> = { ...rest, span_w: footprint.span_w, span_h: footprint.span_h };
+        let retry = await supabase.from("blocks").insert(retryPayload).select().single();
+        if (retry.error && /span_w|span_h|schema cache/i.test(retry.error.message || "")) {
+          retryPayload = rest;
+          retry = await supabase.from("blocks").insert(retryPayload).select().single();
+        }
         newNode = retry.data;
         insertError = retry.error;
       }
@@ -490,7 +593,9 @@ Create exactly one learning block that occupies this combined shape.${languageNo
         planModified: true,
         updatedNodes: updatedNodes || [],
         placedNodeId: newNode.id,
-        explanation: `Added "${newNode.title}" spanning ${footprint.span_w}×${footprint.span_h}.`,
+        explanation: `Added "${newNode.title}" (${cellCount} cell${cellCount === 1 ? "" : "s"}${
+          shapeCells ? " freeform" : ` ${footprint.span_w}×${footprint.span_h}`
+        }).`,
         appearSequentially: true,
       });
     }

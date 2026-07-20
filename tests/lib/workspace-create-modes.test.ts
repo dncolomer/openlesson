@@ -81,7 +81,7 @@ describe("workspace create modes", () => {
     const goalPrompt = "Ship a verified onboarding flow for enterprise sales";
     const fields = goalFieldsFromPrompt(goalPrompt);
     expect(fields.goal).toBe(goalPrompt);
-    expect(fields.conversion_goal).toBe(goalPrompt);
+    expect(fields.workspace_goal).toBe(goalPrompt);
     expect(fields.notes).toBe(goalPrompt);
     expect(fields.root_topic).toContain("Ship a verified");
 

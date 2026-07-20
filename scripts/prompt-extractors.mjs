@@ -65,31 +65,6 @@ export function extractUserMessageTemplates(src) {
   return [...src.matchAll(/userMessage\(\s*`([\s\S]*?)`\s*\)/g)].map((m) => m[1]);
 }
 
-export function extractWorkspacePerformanceChatInstructions(src) {
-  const fnSlice = src.slice(src.indexOf("function buildSystemInstructions"));
-  const base = fnSlice.match(/const baseInstructions = `([\s\S]*?)`;/);
-  if (!base) return null;
-  const baseText = base[1];
-  const multi = fnSlice.match(
-    /if \(canSeeAllUsers && usersContext\) \{\s*return `\$\{baseInstructions\}\n\n([\s\S]*?)`;\s*\} else/,
-  );
-  const single = fnSlice.match(
-    /\} else \{\s*return `\$\{baseInstructions\}\n\n([\s\S]*?)`;\s*\}/,
-  );
-  return `=== baseInstructions (shared) ===
-${baseText}
-
-=== MULTI-USER BRANCH ===
-${baseText}
-
-${multi?.[1] ?? ""}
-
-=== SINGLE-USER BRANCH ===
-${baseText}
-
-${single?.[1] ?? ""}`;
-}
-
 export function extractTapOpeningQuestionExtras(src) {
   const fnSlice = src.slice(src.indexOf("export async function generateTapOpeningQuestion"));
   if (fnSlice.length < 50) return [];
@@ -141,12 +116,6 @@ export function extractAllEntries(src, relPath) {
   }
 
   if (relPath === "lib/prompts.ts") {
-    return entries;
-  }
-
-  if (relPath === "app/api/workspace/performance-chat/route.ts") {
-    const t = extractWorkspacePerformanceChatInstructions(src);
-    if (t) add("buildSystemInstructions", t);
     return entries;
   }
 

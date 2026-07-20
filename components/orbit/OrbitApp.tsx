@@ -16,7 +16,7 @@ import {
   Search,
   User,
 } from "lucide-react";
-import type { ConversionGoalSource } from "@/lib/agent-v2/conversion-goal";
+import type { WorkspaceGoalSource } from "@/lib/agent-v2/conversion-goal";
 import {
   normalizePerformanceReport,
   type PerformanceReport,
@@ -94,7 +94,7 @@ export function OrbitApp() {
   const [report, setReport] = useState<PerformanceReport | null>(null);
   const [isReporting, setIsReporting] = useState(false);
   const [inferredGoal, setInferredGoal] = useState<string | null>(null);
-  const [conversionGoalSource, setConversionGoalSource] = useState<ConversionGoalSource | undefined>();
+  const [workspaceGoalSource, setConversionGoalSource] = useState<WorkspaceGoalSource | undefined>();
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [newIssueOpen, setNewIssueOpen] = useState(false);
   const [newIssueTitle, setNewIssueTitle] = useState("");
@@ -129,7 +129,7 @@ export function OrbitApp() {
     const nextBridge = initOrbitBridge(launch, existingBridge?.blocks ?? []);
     setBridge(nextBridge);
     setInferredGoal(nextBridge.inferredConversionGoal ?? null);
-    setConversionGoalSource(nextBridge.conversionGoalSource);
+    setConversionGoalSource(nextBridge.workspaceGoalSource);
     setTapLinkUrl(nextBridge.tapLinkUrl ?? null);
     setTapScore(nextBridge.tapScore ?? null);
     setTapCleared(nextBridge.tapCleared ?? false);
@@ -154,11 +154,11 @@ export function OrbitApp() {
             setReport(normalizePerformanceReport(performance.report));
           }
           const goal =
-            performance.workspace_conversion_goal?.trim() ||
-            performance.report?.conversion_goal?.trim() ||
+            performance.workspace_goal?.trim() ||
+            performance.report?.workspace_goal?.trim() ||
             null;
           if (goal) setInferredGoal(goal);
-          setConversionGoalSource(performance.conversion_goal_source);
+          setConversionGoalSource(performance.workspace_goal_source);
           setBridge(loadOrbitBridge());
         })
         .catch(() => {})
@@ -212,11 +212,11 @@ export function OrbitApp() {
             performance.report ? normalizePerformanceReport(performance.report) : null
           );
           const goal =
-            performance.workspace_conversion_goal?.trim() ||
-            performance.report?.conversion_goal?.trim() ||
+            performance.workspace_goal?.trim() ||
+            performance.report?.workspace_goal?.trim() ||
             null;
           setInferredGoal(goal);
-          setConversionGoalSource(performance.conversion_goal_source);
+          setConversionGoalSource(performance.workspace_goal_source);
           setBridge(loadOrbitBridge());
         }
       } catch (err) {
@@ -829,7 +829,7 @@ export function OrbitApp() {
         blockId={bridge?.blocks[0]?.id ?? null}
         proofOfWorkCount={bridge?.proofOfWorkCount ?? 0}
         inferredGoal={inferredGoal}
-        conversionGoalSource={conversionGoalSource}
+        workspaceGoalSource={workspaceGoalSource}
         appSnapshot={appSnapshot}
         ileSessionUrl={ileSessionUrl}
         isOpeningIle={isOpeningIle}

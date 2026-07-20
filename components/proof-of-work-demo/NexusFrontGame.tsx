@@ -39,7 +39,7 @@ import {
   resolveSimulationAction,
 } from "@/lib/product-demos/nexusfront-game-model";
 import { totalActionCount } from "@/lib/product-demos/simulation";
-import type { ConversionGoalSource } from "@/lib/agent-v2/conversion-goal";
+import type { WorkspaceGoalSource } from "@/lib/agent-v2/conversion-goal";
 import type { PerformanceReport } from "@/lib/agent-v2/performance-context";
 import type { SimulationAction, SimulationWorldState } from "@/lib/product-demos/types";
 
@@ -390,8 +390,8 @@ export function NexusFrontGame({
   onRunAction,
   report,
   isReporting,
-  workspaceConversionGoal,
-  conversionGoalSource,
+  workspaceGoal,
+  workspaceGoalSource,
 }: {
   demo: ProofOfWorkApiDemoDefinition;
   worldState: SimulationWorldState;
@@ -400,8 +400,8 @@ export function NexusFrontGame({
   report: PerformanceReport | null;
   isReporting: boolean;
   proofOfWorkCount?: number;
-  workspaceConversionGoal?: string;
-  conversionGoalSource?: ConversionGoalSource;
+  workspaceGoal?: string;
+  workspaceGoalSource?: WorkspaceGoalSource;
 }) {
   const canvasHostRef = useRef<HTMLDivElement>(null);
   const sceneRef = useRef<SceneHandle | null>(null);
@@ -1068,8 +1068,8 @@ export function NexusFrontGame({
       <DemoPerformanceHud
         report={report}
         isReporting={isReporting}
-        workspaceConversionGoal={workspaceConversionGoal}
-        conversionGoalSource={conversionGoalSource}
+        workspaceGoal={workspaceGoal}
+        workspaceGoalSource={workspaceGoalSource}
       />
     </div>
   );

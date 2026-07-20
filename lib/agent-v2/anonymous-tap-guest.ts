@@ -15,6 +15,8 @@ export async function createAnonymousTapGuest(
     organizationId: string | null;
     createdByUserId: string;
     createdByApiKeyId?: string | null;
+    /** Defaults to anonymous TAP link guest. Use `anonymous_ile_link` for ILE. */
+    guestType?: "anonymous_tap_link" | "anonymous_ile_link";
   }
 ): Promise<{ id: string }> {
   if (!isUuid(input.workspaceId)) {
@@ -24,8 +26,11 @@ export async function createAnonymousTapGuest(
     throw new Error("createdByUserId is required");
   }
 
+  const guestType = input.guestType || "anonymous_tap_link";
   const guestToken = crypto.randomUUID();
-  const email = `anonymous+${guestToken}@tap-link.uncertain-systems`;
+  const emailDomain =
+    guestType === "anonymous_ile_link" ? "ile-link.uncertain-systems" : "tap-link.uncertain-systems";
+  const email = `anonymous+${guestToken}@${emailDomain}`;
 
   const { data, error } = await supabase
     .from("organization_guest_users")
@@ -35,7 +40,7 @@ export async function createAnonymousTapGuest(
       email,
       created_by_user_id: input.createdByUserId,
       created_by_api_key_id: input.createdByApiKeyId || null,
-      metadata: { type: "anonymous_tap_link" },
+      metadata: { type: guestType },
     })
     .select("id")
     .single();

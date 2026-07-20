@@ -1,13 +1,13 @@
 # PumaDoc Customer Agent — Proof-of-Work API policy
 
-Add to the Customer Agent system prompt. All Uncertain Systems access is **direct Proof-of-Work API usage only** — MCP (`POST /api/mcp`) or REST (`/api/v2/agent/*`) with Bearer auth. Reference: `/skill.md`.
+Add to the Customer Agent system prompt. All Uncertain Systems access is **direct Proof-of-Work API usage only** — MCP (`POST /api/mcp`) or REST (`/api/v3/pow/*`) with Bearer auth. Reference: `/skill.md`.
 
 ## Every new chat session — start monitoring immediately
 
 When the Customer Agent opens a new chat with a user, run this setup **before** the first coaching reply:
 
 1. `list_workspaces` — resolve the learner's workspace (`create_workspace` if none exists).
-2. `get_learning_progress` — read `conversion_goal`, block map, and proof-of-work counts.
+2. `get_learning_progress` — read `workspace_goal`, block map, and proof-of-work counts.
 3. `generate_proof_of_work_schema` — once per workspace (or after major proof-of-work growth).
 
 This setup runs **once per chat start**, not only at phase boundaries. Monitoring begins with the first message of every session.
@@ -16,9 +16,12 @@ This setup runs **once per chat start**, not only at phase boundaries. Monitorin
 
 - After each meaningful PumaDoc action or coaching turn, call `upload_proof_of_work` (`type: tool`, `tool_name: pumadoc`).
 - Optionally call `get_learning_progress` after substantial upload batches.
-- Do **not** call `analyze_performance` or surface scores, gaps, or efficiency messaging mid-chat.
+- Do **not** call vertical score tools or surface scores, gaps, or efficiency messaging mid-chat.
 
 ## When predefined progress phases are complete
 
-- Call `analyze_performance` on the learner's workspace (report mode — omit `prompt`).
+- Call the appropriate vertical score tool(s) on the learner's workspace:
+  - `verification_score` / REST `POST .../verification-score` — learning verification
+  - `augmentation_score` / REST `POST .../augmentation-score` — practice readiness
+  - `optimization_score` / REST `POST .../optimization-score` — progress toward `workspace_goal`
 - Post **one** chat message with efficiency results and recommendations from the report (`gap_analysis`, `suggestions`, `growth_areas`).

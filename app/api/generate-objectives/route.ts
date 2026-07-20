@@ -3,9 +3,11 @@ import { generateObjectives } from "@/lib/xai";
 import { getUserPrompts } from "@/lib/user-prompts";
 import {
   ayclTokenFromBody,
+  ileTokenFromBody,
   requireAuthenticatedProductUser,
 } from "@/lib/api/require-auth";
 import { resolveAyclAccess } from "@/lib/aycl-session-auth";
+import { resolveIleLinkAccess } from "@/lib/ile-link-auth";
 
 export const runtime = "nodejs";
 export const maxDuration = 15;
@@ -14,14 +16,20 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const ayclToken = ayclTokenFromBody(body);
-    if (!ayclToken) {
-      const auth = await requireAuthenticatedProductUser();
-      if (!auth.ok) return auth.response;
-    } else {
+    const ileToken = ileTokenFromBody(body);
+    if (ayclToken) {
       const aycl = await resolveAyclAccess(ayclToken);
       if ("error" in aycl) {
         return NextResponse.json({ error: aycl.error }, { status: aycl.status });
       }
+    } else if (ileToken) {
+      const ile = await resolveIleLinkAccess(ileToken);
+      if ("error" in ile) {
+        return NextResponse.json({ error: ile.error }, { status: ile.status });
+      }
+    } else {
+      const auth = await requireAuthenticatedProductUser();
+      if (!auth.ok) return auth.response;
     }
     const { problem } = body;
 

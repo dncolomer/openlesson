@@ -169,10 +169,10 @@ async function main() {
   );
 
   const apiKey = env.E2E_TEAMS_API_KEY;
-  const agentCreate = await fetch(`${baseUrl}/api/v2/agent/workspaces`, {
+  const agentCreate = await fetch(`${baseUrl}/api/v3/pow/workspaces`, {
     method: "POST",
     headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ initial_prompt: "[E2E-PoW] Agent API smoke" }),
+    body: JSON.stringify({ initial_prompt: "[E2E-PoW] Proof-of-Work API smoke" }),
   });
   const agentBody = await agentCreate.json();
   let agentWsId = agentBody.workspace?.id || workspaceId;
@@ -183,7 +183,7 @@ async function main() {
       `reused ${agentWsId} (create: ${agentCreate.status})`,
     );
   }
-  const upload = await fetch(`${baseUrl}/api/v2/agent/workspaces/${agentWsId}/proof-of-work`, {
+  const upload = await fetch(`${baseUrl}/api/v3/pow/workspaces/${agentWsId}/proof-of-work`, {
     method: "POST",
     headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
     body: JSON.stringify({

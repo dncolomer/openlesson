@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { createSessionPlanLLM } from "@/lib/xai";
 import { createSessionPlan, getUserCalibration, getSessionPlan } from "@/lib/storage";
 import { getUserPrompts } from "@/lib/user-prompts";
-import { ayclTokenFromBody, guardSessionRoute } from "@/lib/api/require-auth";
+import { ayclTokenFromBody,
+  ileTokenFromBody, guardSessionRoute } from "@/lib/api/require-auth";
 import { getLanguageName } from "@/lib/tutoring-languages";
 import { resolveInitialChaptersFromBody } from "@/lib/initial-chapters";
 import { toPersistedCreatePlanSteps } from "@/lib/session-plan-create";
@@ -30,7 +31,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const auth = await guardSessionRoute(sessionId, { ayclToken: ayclTokenFromBody(body) });
+    const auth = await guardSessionRoute(sessionId, { ayclToken: ayclTokenFromBody(body), ileToken: ileTokenFromBody(body) });
     if (!auth.ok) return auth.response;
 
     const { user, supabase } = auth;

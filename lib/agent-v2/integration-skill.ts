@@ -1,4 +1,5 @@
 import type { ProofOfWorkEvalSchemaResult, ProofOfWorkSchemaIntegrationHints } from "./proof-of-work-schema";
+import type { PerformanceContextPayload } from "./performance-context";
 import {
   buildProofOfWorkSchemaApiPath,
   buildProofOfWorkUploadApiPath,
@@ -123,12 +124,93 @@ export function parseSkillFrontmatter(skillMd: string): { name?: string; descrip
   return { name, description };
 }
 
+/** Snapshot of live workspace state for skill.md generation. */
+export function formatSkillWorkspaceStatus(
+  status?: PerformanceContextPayload | null,
+  blocks?: Array<{
+    id: string;
+    title: string | null;
+    description: string | null;
+    is_start?: boolean | null;
+    status?: string | null;
+  }>
+): string {
+  if (status) {
+    const blockLines = status.blocks
+      .map((block) => {
+        const flags = [
+          block.is_start ? "start" : null,
+          block.status ? `status=${block.status}` : null,
+        ]
+          .filter(Boolean)
+          .join(", ");
+        const desc = block.description ? ` — ${block.description}` : "";
+        return `- ${block.title || "Untitled"} (${block.id})${flags ? ` [${flags}]` : ""}${desc}`;
+      })
+      .join("\n");
+
+    const evidenceTools = Array.from(
+      new Set(
+        status.proof_of_work
+          .map((row) => row.tool_name)
+          .filter((name): name is string => !!name)
+      )
+    );
+    const fileNames = status.workspace_files
+      .slice(0, 12)
+      .map((f) => f.file_name)
+      .filter(Boolean);
+
+    return `Current workspace status (snapshot — skill.md must reflect this state):
+- workspace_goal: ${status.workspace.workspace_goal || "not set"}
+- evaluation_mode: ${status.workspace.evaluation_mode || "semantic"}
+- notes: ${status.workspace.notes || "n/a"}
+- generated_at: ${status.generated_at}
+- counts: blocks=${status.counts.blocks}, proof_of_work_artifacts=${status.counts.proof_of_work_artifacts}, linked_sessions=${status.counts.linked_sessions}, workspace_files=${status.counts.workspace_files}
+- known tool names in prior proof of work: ${evidenceTools.length ? evidenceTools.join(", ") : "none yet"}
+- workspace files (sample): ${fileNames.length ? fileNames.join(", ") : "none"}
+- blocks:
+${blockLines || "  none"}`;
+  }
+
+  const blockTable = (blocks || [])
+    .map((block) => {
+      const flags = [
+        block.is_start ? "start" : null,
+        block.status ? `status=${block.status}` : null,
+      ]
+        .filter(Boolean)
+        .join(", ");
+      return `- ${block.title || "Untitled"} (${block.id})${flags ? ` [${flags}]` : ""}`;
+    })
+    .join("\n");
+
+  return `Current workspace status (limited — full context may be attached as files):
+- blocks:
+${blockTable || "  No blocks yet."}`;
+}
+
 export function buildIntegrationSkillInstructions(
   request: IntegrationSkillRequest,
-  workspace: { id: string; title: string | null; root_topic: string | null; description?: string | null },
-  blocks: Array<{ id: string; title: string | null; description: string | null; is_start?: boolean | null }>,
+  workspace: {
+    id: string;
+    title: string | null;
+    root_topic: string | null;
+    description?: string | null;
+    notes?: string | null;
+    workspace_goal?: string | null;
+  },
+  blocks: Array<{
+    id: string;
+    title: string | null;
+    description: string | null;
+    is_start?: boolean | null;
+    status?: string | null;
+  }>,
   blockId?: string | null,
-  proofOfWorkSpec?: ProofOfWorkEvalSchemaResult | null
+  proofOfWorkSpec?: ProofOfWorkEvalSchemaResult | null,
+  /** Live performance context so skill.md reflects current workspace status. */
+  status?: PerformanceContextPayload | null
 ): string {
   const sections = request.include_sections?.length ? request.include_sections : [...DEFAULT_SECTIONS];
   const skillName = deriveSkillName(request.integration_name);
@@ -140,15 +222,17 @@ export function buildIntegrationSkillInstructions(
   const integrationSkillPath = buildIntegrationSkillApiPath(workspace.id, baseUrl);
   const performancePath = buildPerformanceApiPath(workspace.id, baseUrl);
 
-  const blockTable = blocks
-    .map((block) => `- ${block.title || "Untitled"} (${block.id})${block.is_start ? " [start]" : ""}`)
-    .join("\n");
-
   const evalDefinition =
     request.eval_definition?.trim() ||
     request.partner_description?.trim() ||
+    status?.workspace.notes?.trim() ||
+    workspace.notes?.trim() ||
     workspace.description?.trim() ||
+    status?.workspace.workspace_goal?.trim() ||
+    workspace.workspace_goal?.trim() ||
     "Verify learning for this workspace with proof-of-work-backed gap analysis.";
+
+  const statusSection = formatSkillWorkspaceStatus(status, blocks);
 
   const proofOfWorkSpecSection = proofOfWorkSpec
     ? `\n\nWorkspace proof-of-work specification (use as reference; skill.md must still point to the dynamic API):\n${formatProofOfWorkSpecForSkillPrompt(proofOfWorkSpec)}`
@@ -158,51 +242,54 @@ export function buildIntegrationSkillInstructions(
 
 ${scope}
 
-This skill.md must treat the proof of work specification as a formal contract and **must be regenerated** as workspace proof of work grows. Integrators fetch the live schema dynamically; do not tell them to invent ad-hoc JSON. This document is not static.
+This skill.md is a **snapshot tailored to the workspace's current status** (blocks, goal, notes, proof-of-work volume, known tools). It must treat the proof of work specification as a formal contract and **must be regenerated** as workspace proof of work grows. Integrators fetch the live schema dynamically; do not tell them to invent ad-hoc JSON. This document is not static.
 
 YAML frontmatter (required):
 ---
 name: ${skillName}
-description: ${request.integration_name} integration skill for Uncertain Systems workspace proof of work upload and performance analysis.
+description: ${request.integration_name} integration skill for Uncertain Systems workspace proof of work upload and performance analysis (current workspace snapshot).
 ---
 
 Workspace:
 - id: ${workspace.id}
 - title: ${workspace.title || workspace.root_topic || "Untitled"}
 - root_topic: ${workspace.root_topic || "n/a"}
-- description: ${workspace.description || "n/a"}
+- description: ${workspace.description || status?.workspace.description || "n/a"}
+- workspace_goal: ${workspace.workspace_goal || status?.workspace.workspace_goal || "n/a"}
 
 Partner description from API caller:
-${request.partner_description || "Not provided: infer reasonable integration goals from the workspace."}
+${request.partner_description || "Not provided: infer reasonable integration goals from the current workspace status."}
 
-Evaluation definition (shared with proof of work spec generation):
+Evaluation definition (derived from workspace notes/goal when not supplied):
 """
 ${evalDefinition}
 """
 
-Blocks in this workspace:
-${blockTable || "No blocks yet."}
+${statusSection}
 
 Base URL for examples: ${request.base_url}
 Suggested share path: ${sharePath}
 Proof-of-work spec API (dynamic — MUST document prominently): POST ${proofOfWorkSchemaPath}
 Proof-of-work upload API: POST ${evidenceUploadPath}
 Integration skill regeneration API (self-update — MUST document prominently): POST ${integrationSkillPath}
-Performance API (re-run as proof of work grows): POST ${performancePath}
+Vertical score APIs (re-run as proof of work grows):
+- Verification (TAP default): POST ${performancePath}
+- Augmentation: POST ${performancePath.replace("/verification-score", "/augmentation-score")}
+- Optimization: POST ${performancePath.replace("/verification-score", "/optimization-score")}
 
 Sections to include: ${sections.join(", ")}
 ${proofOfWorkSpecSection}
 
 Required content:
-1. Purpose — what this partner agent verifies and how proof of work + performance fit the workflow.
+1. Purpose — what this partner agent verifies **given the current workspace status** and how proof of work + the three vertical scores fit the workflow.
 2. Design principles — checkpoint-agnostic timing, block-scoped vs workspace-global analysis, tool usage as core signal, always fetch the live proof-of-work spec before uploading, **more proof of work improves evaluation quality**.
 3. **Continuous evaluation and regeneration (required section)** — this is a must-have operating model, not optional maintenance. Include:
    - Principle: verification is continuous; the more data and proof of work submitted, the better Uncertain Systems can learn and evaluate
    - This skill.md is a snapshot; partner agents must **regenerate** it via POST ${integrationSkillPath} as proof of work accumulates
    - Re-fetch the proof of work spec via POST ${proofOfWorkSchemaPath} on a recurring basis (e.g. after every 5-10 new uploads, when blocks change, or when scores feel stale)
-   - Re-request performance via POST ${performancePath} after meaningful proof-of-work batches
+   - Re-request vertical scores via POST .../verification-score | .../augmentation-score | .../optimization-score after meaningful proof-of-work batches
    - Explicit warning: treating the initial skill.md or spec as permanent will degrade evaluation quality over time
-   - Recommended loop: upload proof of work → re-fetch spec → regenerate skill → request performance → repeat
+   - Recommended loop: upload proof of work → re-fetch spec → regenerate skill → request vertical scores → repeat
    - Reference the \`continuous_evaluation\` object returned by the proof of work spec API for machine-readable self-update triggers
 4. **Predictive interruptions (required section)** — Trace Interruption Model (TIM) on every Proof-of-Work API response:
    - Every REST and MCP success response includes top-level \`interruption\` (object or null).
@@ -213,26 +300,26 @@ Required content:
    - Include JSON examples for active interruption and null (empty).
 5. Authentication table (Bearer sk_ / gsk_, Teams tier, scopes).
 6. Endpoints table covering REST and MCP with **dual documentation** (never hide REST behind MCP):
-   - REST: POST /workspaces, GET /blocks, POST /proof-of-work-schema, POST /proof-of-work, POST /performance, POST /integration-skill
-   - MCP (JSON-RPC at POST /api/mcp with Bearer auth): list_workspaces, get_workspace, get_learning_progress, list_blocks, generate_proof_of_work_schema, upload_proof_of_work, analyze_performance, generate_integration_skill, create_tap_link, list_tap_links
+   - REST: POST /workspaces, GET /blocks, POST /proof-of-work-schema, POST /proof-of-work, POST /verification-score, POST /augmentation-score, POST /optimization-score, POST /integration-skill
+   - MCP (JSON-RPC at POST /api/mcp with Bearer auth): list_workspaces, get_workspace, get_learning_progress, list_blocks, generate_proof_of_work_schema, upload_proof_of_work, verification_score, augmentation_score, optimization_score, generate_integration_skill, create_tap_link, list_tap_links
    - State that MCP tools have full parity with REST; proof-of-work spec responses include both continuous_evaluation (REST paths) and continuous_evaluation_mcp (tool names)
    - Recommend get_learning_progress / generate_proof_of_work_schema first for progress orientation
 7. **Proof-of-work specification (required section)** — explain that payloads are defined by the formal proof-of-work spec returned from POST ${proofOfWorkSchemaPath}. Include:
    - When to call the proof of work spec endpoint (before first upload, after proof-of-work milestones, when eval definition or blocks change)
    - Example request body with definition, optional block_id, and integration_hints
-   - That the response includes tool_submissions, proof_of_work_upload_contract, performance_report_contract, interruption_contract, continuous_evaluation, schema_name, example_payload, collection_guidance, and top-level interruption
+   - That the response includes tool_submissions, proof_of_work_upload_contract, performance_report_contract (verification default), vertical_score_contracts, interruption_contract, continuous_evaluation, schema_name, example_payload, collection_guidance, and top-level interruption
    - Instruction to validate tool payloads against the fetched schema before upload
    - Do NOT embed a static schema as the source of truth; reference the API path above
 8. Workspace-specific block mapping guidance and example tool JSON payloads that match the proof of work spec (illustrative only).
-9. **Performance (required section)** — document POST ${performancePath} report mode. Every report MUST include:
-   - overall_score (0-100 integer readiness score)
-   - marker_scores (4-8 competency axes for spider/radar visualization: id, label, score, rationale, optional block_id)
-   - gap_analysis with gaps[] (title, proof_of_work, severity low|medium|high, suggested_repair) and next_steps { directions[], events[] } — remediation must be product/workflow-specific; never TAP, block completion, ILE, or Uncertain Systems platform tasks
-   - summary, strengths, growth_areas, suggestions, confidence
-   - Reference performance_report_contract from the proof of work spec API for the machine-readable contract and example_report
-   - Include a full JSON example response with overall_score, marker_scores, and at least one gap
-   - Chat mode example with prompt + conversation_history
-10. Quick integration checklist: fetch proof-of-work spec → honor interruption scheduling → upload proof of work per contract → regenerate skill → request performance → repeat as proof of work grows.
+9. **Vertical scores (required section)** — document the three score endpoints (not a unified multi-score card). Each call returns ONE primary score for that vertical plus spider breakdown, analysis, and next actions:
+   - POST .../verification-score (MCP verification_score) — learning verification; **TAP auto-results use this only**
+   - POST .../augmentation-score (MCP augmentation_score) — practice / improvement readiness
+   - POST .../optimization-score (MCP optimization_score) — progress toward workspace_goal (0–100 score units)
+   - Every score response MUST include: score + named primary field, vertical, workspace_goal, marker_scores (4-8 spider axes: id, label, score, rationale), gap_analysis with gaps[] and next_steps { directions[], events[] }, summary, strengths, growth_areas, suggestions, confidence
+   - Remediation must be product/workflow-specific; never TAP, block completion, ILE, or Uncertain Systems platform tasks
+   - Reference performance_report_contract / vertical_score_contracts from the proof of work spec API for machine-readable contracts
+   - Include a full JSON example for verification-score with score, verification_score, workspace_goal, marker_scores, and at least one gap + next_steps
+10. Quick integration checklist: fetch proof-of-work spec → honor interruption scheduling → upload proof of work per contract → regenerate skill → request vertical scores → repeat as proof of work grows.
 
 Canonical API reference links: ${request.base_url}/skill.md and ${request.base_url}/docs/proof-of-work-api
 
@@ -240,5 +327,5 @@ Return ONLY the markdown document. No JSON wrapper. No code fences around the en
 }
 
 export function buildIntegrationSkillPrompt(workspaceTitle: string, integrationName: string): string {
-  return `Write a complete skill.md integration guide for "${integrationName}" using Uncertain Systems workspace "${workspaceTitle}". The guide must reference dynamic self-updating APIs for proof-of-work spec and skill regeneration, and treat continuous evaluation (more proof of work = better learning) as a must-have operating model.`;
+  return `Write a complete skill.md integration guide for "${integrationName}" tailored to the **current status** of Uncertain Systems workspace "${workspaceTitle}" (blocks, goal, notes, existing proof of work). The guide must reference dynamic self-updating APIs for proof-of-work spec and skill regeneration, and treat continuous evaluation (more proof of work = better learning) as a must-have operating model.`;
 }

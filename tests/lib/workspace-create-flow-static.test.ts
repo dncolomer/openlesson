@@ -31,20 +31,31 @@ describe("workspace create + builder static wiring", () => {
     expect(en.planView.planBuilder).toBe("Builder");
   });
 
-  it("dashboard Insights mounts InsightsDashboardTab and is not Performance", () => {
+  it("workspace Knowledge hosts InsightsDashboardTab; Dashboard no longer has Insights tab", () => {
     const dash = read("app/dashboard/page.tsx");
-    expect(dash).toContain("InsightsDashboardTab");
-    expect(dash).toContain('id: "insights"');
-    expect(dash).toContain('label: "Insights"');
-    // Performance is a workspace tab, not a dashboard Insights subtab
+    expect(dash).not.toContain("InsightsDashboardTab");
+    expect(dash).not.toMatch(/id:\s*"insights"/);
+    expect(dash).not.toContain('activeTab === "insights"');
+
+    const knowledge = read("components/WorkspacePerformancePanel.tsx");
+    expect(knowledge).toContain("InsightsDashboardTab");
+    expect(knowledge).toContain('id: "insights"');
+    expect(knowledge).toContain("workspaceId={workspaceId}");
+    expect(knowledge).toContain("<InsightsDashboardTab");
+
+    // Workspace-scoped list UI; not Performance chat
     const insightsTab = read("components/InsightsDashboardTab.tsx");
-    expect(insightsTab).toMatch(/workspaces/i);
+    expect(insightsTab).toContain("workspaceId");
+    expect(insightsTab).toContain("insightsListUrl(workspaceId)");
+    expect(insightsTab).toMatch(/workspace/i);
     expect(insightsTab).not.toContain("PerformanceChat");
   });
 
-  it("insights API filters to workspace-origin only", () => {
+  it("insights API filters to workspace-origin only and supports workspaceId scope", () => {
     const route = read("app/api/insights/route.ts");
     expect(route).toContain('.not("workspace_id", "is", null)');
+    expect(route).toContain('searchParams.get("workspaceId")');
+    expect(route).toContain('.eq("workspace_id", workspaceId)');
   });
 
   it("block create/generate paths pass files + notes into context", () => {
@@ -99,6 +110,52 @@ describe("workspace create + builder static wiring", () => {
     expect(ops).toContain('op === "split"');
     expect(ops).toContain('op === "move"');
     expect(ops).toContain('op === "generate_shape"');
+    // Size-relative ILE/TAP prompts for merge / split / generate-in-shape
+    expect(ops).toContain("composeMergeBlockUserPrompt");
+    expect(ops).toContain("composeSplitBlockUserPrompt");
+    expect(ops).toContain("composeGenerateShapeBlockUserPrompt");
+    expect(ops).toContain("block-footprint-prompt");
+  });
+
+  it("block map exposes a vertical icon tool strip with Select and wired grid ops", () => {
+    const grid = read("components/BlockSkillGrid.tsx");
+    expect(grid).toContain("data-block-map-tool-strip");
+    expect(grid).toContain('data-block-map-tool={tool}');
+    expect(grid).toContain("activeTool");
+    expect(grid).toContain("DEFAULT_BLOCK_MAP_MODE");
+    expect(grid).toContain("nextActiveModeTool");
+    expect(grid).toContain("isBlockMapToolEnabled");
+    expect(grid).toContain("handleToolClick");
+    // Select plain-click must populate selectedBlockIds via shared resolver
+    expect(grid).toContain("resolveBlockSelectionOnClick");
+    expect(grid).toContain("setSelectedBlockIds");
+    // Explicit Select tool + mode affordance
+    expect(grid).toContain('"select"');
+    expect(grid).toMatch(/aria-pressed/);
+    expect(grid).toMatch(/title=\{title\}/);
+    // Ops still routed through real handlers / onGridOp
+    expect(grid).toContain('op: "split"');
+    expect(grid).toContain('op: "move"');
+    expect(grid).toContain("setMergePromptOpen(true)");
+    expect(grid).toContain("setShapePromptOpen(true)");
+    expect(grid).toContain("openEditSelected");
+    // Select/Move: drag-drop move, no arrow pad, no TAP/ILE on single click
+    expect(grid).toContain("isBlockMapManipulationMode");
+    expect(grid).toContain("handleBlockPointerDown");
+    expect(grid).toContain("data-block-map-draggable");
+    expect(grid).toContain("onSelectNode(null)");
+    expect(grid).toContain("handleBlockDoubleClick");
+    expect(grid).not.toContain("data-block-map-move");
+    expect(grid).not.toContain("showMovePad");
+    // Bottom text multi-toolbar is no longer the primary chrome
+    expect(grid).not.toContain("multiToolbarVisible");
+    const tools = read("lib/block-map-tools.ts");
+    expect(tools).toContain("DEFAULT_BLOCK_MAP_MODE");
+    expect(tools).toContain('"select"');
+    expect(tools).toContain("isBlockMapToolEnabled");
+    expect(tools).toContain("resolveBlockSelectionOnClick");
+    expect(tools).toContain("blockDragMoveDelta");
+    expect(tools).toContain("isBlockMapManipulationMode");
   });
 
   it("API/agent create is files+goal only", () => {

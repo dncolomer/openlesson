@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  buildOpaqueConversionGoal,
+  buildOpaqueWorkspaceGoal,
   buildOpaqueGeneratedBlocks,
   buildOpaqueProofOfWorkSpec,
   buildOpaqueWorkspaceNotes,
@@ -14,7 +14,7 @@ import {
   scrubOpaquePerformanceContext,
 } from "@/lib/agent-v2/opaque-evaluation";
 import { parseProofOfWorkSchemaRequest } from "@/lib/agent-v2/proof-of-work-schema";
-import { emptyPerformanceReport } from "@/lib/agent-v2/performance-report";
+import { emptyVerticalScoreReport } from "@/lib/agent-v2/performance-report";
 
 describe("parseOpaqueWorkspaceCreateRequest", () => {
   it("requires protocol_id and goal_ref", () => {
@@ -94,7 +94,7 @@ describe("opaque helpers", () => {
 
   it("builds opaque conversion goal and notes without semantic prompt", () => {
     const protocol = { protocol_id: "agent-trace-v3", goal_ref: "secret-hash" };
-    expect(buildOpaqueConversionGoal(protocol)).toBe("goal_ref:secret-hash");
+    expect(buildOpaqueWorkspaceGoal(protocol)).toBe("goal_ref:secret-hash");
     expect(buildOpaqueWorkspaceNotes(protocol)).toContain("evaluation_mode=opaque");
     expect(buildOpaqueWorkspaceNotes(protocol)).not.toContain("fingerprint");
   });
@@ -144,7 +144,7 @@ describe("opaque helpers", () => {
           root_topic: "full prompt here",
           description: "desc",
           notes: "notes",
-          conversion_goal: "Demonstrate X",
+          workspace_goal: "Demonstrate X",
         },
         focus_block_id: null,
         generated_at: "now",
@@ -158,19 +158,19 @@ describe("opaque helpers", () => {
     );
 
     expect(scrubbed.workspace.title).toBe("Opaque Protocol agent-trace-v3");
-    expect(scrubbed.workspace.conversion_goal).toBe("goal_ref:hash1");
+    expect(scrubbed.workspace.workspace_goal).toBe("goal_ref:hash1");
     expect(scrubbed.workspace.notes).not.toContain("full prompt");
   });
 
   it("finalizes opaque performance report with opaque_ref source", () => {
     const finalized = finalizeOpaquePerformanceReport(
-      { ...emptyPerformanceReport(), conversion_score: 88 },
+      { ...emptyVerticalScoreReport('verification'), score: 88 },
       "hash1",
       { protocol_id: "agent-trace-v3", goal_ref: "hash1" }
     );
 
-    expect(finalized.conversion_goal_source).toBe("opaque_ref");
-    expect(finalized.workspace_conversion_goal).toBe("goal_ref:hash1");
+    expect(finalized.workspace_goal_source).toBe("opaque_ref");
+    expect(finalized.workspace_goal).toBe("goal_ref:hash1");
     expect(finalized.protocol_report.protocol_compliance_score).toBe(88);
   });
 

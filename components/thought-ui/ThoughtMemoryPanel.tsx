@@ -6,7 +6,11 @@ import {
   archiveInsight,
   formatInsightDate,
   insightPublicPath,
+  insightsListUrl,
+  resolveInsightSurfaceCapabilities,
+  workspaceKnowledgeInsightsPath,
   type InsightSummary,
+  type InsightSurface,
 } from "@/lib/insights";
 import { createClient } from "@/lib/supabase/client";
 import {
@@ -43,6 +47,14 @@ interface ThoughtMemoryPanelProps {
   className?: string;
   listClassName?: string;
   emptyMessage?: string;
+  /**
+   * Product surface. Controls insight generation (suggest/create) and list UI.
+   * TAP: traces only. ILE/Knowledge: generation + list.
+   * Prefer this over the raw allowInsightGeneration flag when known.
+   */
+  insightSurface?: InsightSurface;
+  /** Explicit override; when omitted, derived from insightSurface (default ile). */
+  allowInsightGeneration?: boolean;
 }
 
 export function ThoughtMemoryPanel({
@@ -53,7 +65,14 @@ export function ThoughtMemoryPanel({
   className = "flex h-full min-h-0 max-h-full flex-col overflow-hidden",
   listClassName = "",
   emptyMessage = "Speak, press Del to stash thoughts, or Enter to send. Every trace appears here.",
+  insightSurface = "ile",
+  allowInsightGeneration,
 }: ThoughtMemoryPanelProps) {
+  const surfaceCaps = resolveInsightSurfaceCapabilities(insightSurface);
+  const generationEnabled =
+    allowInsightGeneration !== undefined ? allowInsightGeneration : surfaceCaps.allowInsightGeneration;
+  const listEnabled = surfaceCaps.allowInsightList || generationEnabled;
+
   const [mode, setMode] = useState<"memory" | "insights">("memory");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -67,7 +86,7 @@ export function ThoughtMemoryPanel({
   const [archivingInsightId, setArchivingInsightId] = useState<string | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
 
-  const insightsAvailable = isAuthenticated === true;
+  const insightsAvailable = isAuthenticated === true && generationEnabled;
 
   useEffect(() => {
     const supabase = createClient();
@@ -98,10 +117,10 @@ export function ThoughtMemoryPanel({
   );
 
   const loadInsights = useCallback(async () => {
+    if (!listEnabled) return;
     setLoadingInsights(true);
     try {
-      const params = workspaceId ? `?workspaceId=${encodeURIComponent(workspaceId)}` : "";
-      const response = await fetch(`/api/insights${params}`);
+      const response = await fetch(insightsListUrl(workspaceId));
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Failed to load insights");
       setInsights(data.insights || []);
@@ -110,12 +129,18 @@ export function ThoughtMemoryPanel({
     } finally {
       setLoadingInsights(false);
     }
-  }, [workspaceId]);
+  }, [listEnabled, workspaceId]);
 
   useEffect(() => {
-    if (mode !== "insights") return;
+    if (!listEnabled && mode === "insights") {
+      setMode("memory");
+    }
+  }, [listEnabled, mode]);
+
+  useEffect(() => {
+    if (mode !== "insights" || !listEnabled) return;
     void loadInsights();
-  }, [mode, loadInsights]);
+  }, [mode, loadInsights, listEnabled]);
 
   useEffect(() => {
     setInsightSuggestions([]);
@@ -148,7 +173,7 @@ export function ThoughtMemoryPanel({
   };
 
   const suggestInsights = async () => {
-    if (!insightsAvailable || thoughts.length < 2 || suggestingInsights) return;
+    if (!generationEnabled || !insightsAvailable || thoughts.length < 2 || suggestingInsights) return;
     setSuggestingInsights(true);
     setInsightError(null);
     try {
@@ -181,7 +206,7 @@ export function ThoughtMemoryPanel({
   };
 
   const createInsight = async () => {
-    if (!insightsAvailable || selectedThoughts.length === 0 || creatingInsight) return;
+    if (!generationEnabled || !insightsAvailable || selectedThoughts.length === 0 || creatingInsight) return;
     setCreatingInsight(true);
     setInsightError(null);
     try {
@@ -221,29 +246,33 @@ export function ThoughtMemoryPanel({
       <div className="mb-3 shrink-0">
         <div className="flex items-center justify-between gap-2">
           <p className="font-mono text-[10px] uppercase tracking-[2px] text-neutral-500">Thought Memory</p>
-          <div className="flex rounded-md border border-neutral-800 p-0.5 text-[10px]">
-            <button
-              type="button"
-              onClick={() => setMode("memory")}
-              className={`rounded px-2 py-1 ${mode === "memory" ? "bg-neutral-800 text-white" : "text-neutral-500"}`}
-            >
-              Memory
-            </button>
-            <button
-              type="button"
-              disabled={!insightsAvailable}
-              onClick={() => setMode("insights")}
-              className={`rounded px-2 py-1 disabled:cursor-not-allowed disabled:opacity-40 ${
-                mode === "insights" ? "bg-neutral-800 text-white" : "text-neutral-500"
-              }`}
-            >
-              Insights
-            </button>
-          </div>
+          {listEnabled ? (
+            <div className="flex rounded-md border border-neutral-800 p-0.5 text-[10px]">
+              <button
+                type="button"
+                onClick={() => setMode("memory")}
+                className={`rounded px-2 py-1 ${mode === "memory" ? "bg-neutral-800 text-white" : "text-neutral-500"}`}
+              >
+                Memory
+              </button>
+              <button
+                type="button"
+                disabled={!isAuthenticated}
+                onClick={() => setMode("insights")}
+                className={`rounded px-2 py-1 disabled:cursor-not-allowed disabled:opacity-40 ${
+                  mode === "insights" ? "bg-neutral-800 text-white" : "text-neutral-500"
+                }`}
+              >
+                Insights
+              </button>
+            </div>
+          ) : null}
         </div>
         <p className="mt-1 text-xs text-neutral-500">
           {mode === "memory"
-            ? "Search traces, click cards to select, then bookmark or autosuggest insights."
+            ? generationEnabled
+              ? "Search traces, click cards to select, then bookmark or autosuggest insights."
+              : "Search and review thought traces from this session."
             : workspaceId
               ? "Insights bookmarked from this workspace."
               : "Insights synthesize selected thoughts into shareable bookmarks."}
@@ -304,12 +333,14 @@ export function ThoughtMemoryPanel({
             </div>
           )}
 
-          <Link
-            href="/dashboard?tab=insights"
-            className="inline-flex text-xs text-neutral-300 underline underline-offset-2 hover:text-white"
-          >
-            Open all insights on Dashboard
-          </Link>
+          {workspaceId ? (
+            <Link
+              href={workspaceKnowledgeInsightsPath(workspaceId)}
+              className="inline-flex text-xs text-neutral-300 underline underline-offset-2 hover:text-white"
+            >
+              Open workspace insights in Knowledge
+            </Link>
+          ) : null}
         </div>
       ) : (
         <div className="flex h-0 min-h-0 flex-1 flex-col overflow-hidden">
@@ -324,20 +355,24 @@ export function ThoughtMemoryPanel({
                 className="w-full rounded-md border border-neutral-800 bg-black/40 px-2.5 py-1.5 text-xs text-neutral-100 outline-none transition placeholder:text-neutral-600 focus:border-neutral-600"
               />
             </label>
-            <button
-              type="button"
-              disabled={!insightsAvailable || thoughts.length < 2 || suggestingInsights}
-              onClick={() => void suggestInsights()}
-              className="w-full rounded-md border border-neutral-800 bg-neutral-950 px-2.5 py-1.5 text-[11px] font-medium text-neutral-300 transition hover:border-neutral-600 hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              {suggestingInsights ? "Suggesting insights…" : "Suggest insights from traces"}
-            </button>
-            {!insightsAvailable && isAuthenticated !== null ? (
-              <p className="text-[11px] leading-relaxed text-neutral-500">{INSIGHTS_AUTH_MESSAGE}</p>
+            {generationEnabled ? (
+              <>
+                <button
+                  type="button"
+                  disabled={!insightsAvailable || thoughts.length < 2 || suggestingInsights}
+                  onClick={() => void suggestInsights()}
+                  className="w-full rounded-md border border-neutral-800 bg-neutral-950 px-2.5 py-1.5 text-[11px] font-medium text-neutral-300 transition hover:border-neutral-600 hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  {suggestingInsights ? "Suggesting insights…" : "Suggest insights from traces"}
+                </button>
+                {!insightsAvailable && isAuthenticated !== null ? (
+                  <p className="text-[11px] leading-relaxed text-neutral-500">{INSIGHTS_AUTH_MESSAGE}</p>
+                ) : null}
+              </>
             ) : null}
           </div>
 
-          {insightSuggestions.length > 0 ? (
+          {generationEnabled && insightSuggestions.length > 0 ? (
             <div className="mb-3 shrink-0 space-y-2 rounded-md border border-amber-500/20 bg-amber-500/5 p-2.5">
               <p className="text-[10px] uppercase tracking-[1.5px] text-amber-200/80">Suggested insights</p>
               {insightSuggestions.map((suggestion, index) => (
@@ -357,7 +392,7 @@ export function ThoughtMemoryPanel({
             </div>
           ) : null}
 
-          {selectedThoughts.length > 0 && (
+          {generationEnabled && selectedThoughts.length > 0 && (
             <div className={cn(thoughtSelectionBarClass, "mb-3 shrink-0 flex items-center justify-between gap-2 px-2.5 py-2")}>
               <span className={thoughtSelectionBarTextClass}>{selectedThoughts.length} selected</span>
               <div className="flex items-center gap-3">
@@ -383,7 +418,20 @@ export function ThoughtMemoryPanel({
               <p className="py-8 text-center text-sm text-neutral-500">No traces match your search.</p>
             ) : (
               filteredThoughts.map((thought) => {
-                const isSelected = selectedIds.has(thought.id);
+                const isSelected = generationEnabled && selectedIds.has(thought.id);
+                if (!generationEnabled) {
+                  return (
+                    <article
+                      key={thought.id}
+                      className="rounded-md border-b border-neutral-800/80 py-4 last:border-b-0"
+                    >
+                      <p className="mb-2 text-[11px] tabular-nums text-neutral-500">{formatThoughtTime(thought.timestamp)}</p>
+                      <p className="whitespace-pre-wrap break-words text-sm leading-relaxed text-neutral-100">
+                        {thought.text}
+                      </p>
+                    </article>
+                  );
+                }
                 return (
                   <article
                     key={thought.id}

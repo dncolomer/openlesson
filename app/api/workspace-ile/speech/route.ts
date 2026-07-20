@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireSessionWorkspaceProofOfWorkAccess } from "@/lib/agent-v2/workspace-session-access";
+import {
+  ileTokenFromPowBody,
+  requireSessionWorkspaceProofOfWorkAccess,
+} from "@/lib/agent-v2/workspace-session-access";
 import {
   buildIleSpeechSegmentPayload,
   ILE_SPEECH_TOOL_NAME,
@@ -32,7 +35,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "event must be start or stop" }, { status: 400 });
     }
 
-    const access = await requireSessionWorkspaceProofOfWorkAccess(workspaceId, sessionId);
+    const access = await requireSessionWorkspaceProofOfWorkAccess(workspaceId, sessionId, {
+      ileToken: ileTokenFromPowBody(body as Record<string, unknown>),
+    });
     if (access instanceof NextResponse) return access;
 
     const payload = buildIleSpeechSegmentPayload({

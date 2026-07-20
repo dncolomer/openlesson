@@ -123,7 +123,7 @@ export const PLANS: Record<PlanId, PlanDef> = {
       "$1.99 per API submission — invoiced monthly",
       "$99/mo platform access",
       "Unlimited Workspaces",
-      "Agentic API keys + MCP",
+      "Proof-of-Work API keys + MCP",
       "TAP / ILE included without per-call API metering",
       "Priority support",
     ],
@@ -566,7 +566,7 @@ export function hasProofOfWorkApiAccess(
   return plan === "pro_teams" || plan === "api_metered";
 }
 
-/** Plans that may create Proof-of-Work API keys (v2 /api/v2/agent/keys). */
+/** Plans that may create Proof-of-Work API keys (v2 /api/v3/pow/keys). */
 export function hasAgentApiKeyPlan(plan: PlanId | string | null | undefined): boolean {
   return plan === "pro_teams" || plan === "api_metered";
 }

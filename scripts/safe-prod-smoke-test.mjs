@@ -129,8 +129,8 @@ async function fetchStatus(path, expected = [200]) {
 async function checkWriteEndpointsBlocked() {
   const writeChecks = [
     {
-      name: "POST /api/v2/agent/workspaces",
-      path: "/api/v2/agent/workspaces",
+      name: "POST /api/v3/pow/workspaces",
+      path: "/api/v3/pow/workspaces",
       body: { initial_prompt: "smoke-test-do-not-create" },
     },
     {

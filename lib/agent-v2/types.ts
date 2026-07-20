@@ -1,5 +1,5 @@
 // ============================================
-// Uncertain Systems Agentic API v2 - Shared Types
+// Uncertain Systems Proof-of-Work API - Shared Types
 // ============================================
 
 // --- API Key Types ---
@@ -173,7 +173,6 @@ export const ENDPOINT_SCOPES: Record<string, ApiKeyScope> = {
   "POST /workspaces/:id/proof-of-work": "workspaces:write",
   "POST /workspaces/:id/proof-of-work-schema": "workspaces:read",
   "POST /workspaces/:id/integration-skill": "workspaces:read",
-  "POST /workspaces/:id/performance": "workspaces:read",
   "POST /workspaces/:id/blocks/:blockId/tap-links": "tap:write",
   "GET /workspaces/:id/tap-links": "tap:read",
 };

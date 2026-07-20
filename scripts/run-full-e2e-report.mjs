@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Full E2E report: tier checks + Agent API v2 (live writes, no deletes).
+ * Full E2E report: tier checks + Proof-of-Work API v2 (live writes, no deletes).
  */
 import { readFileSync, existsSync } from "node:fs";
 import { createClient } from "@supabase/supabase-js";
@@ -132,20 +132,20 @@ async function main() {
   if (!apiKey) {
     record("agent-api", "teams API key configured", false, "missing E2E_TEAMS_API_KEY");
   } else {
-    const bad = await agentJson("/api/v2/agent/workspaces", "sk_invalid_test_key", {
+    const bad = await agentJson("/api/v3/pow/workspaces", "sk_invalid_test_key", {
       method: "POST",
       body: JSON.stringify({ initial_prompt: "noop" }),
     });
     record("agent-api", "invalid API key rejected", bad.res.status === 401, `HTTP ${bad.res.status}`);
 
-    const noAuth = await fetch(`${baseUrl}/api/v2/agent/workspaces`, {
+    const noAuth = await fetch(`${baseUrl}/api/v3/pow/workspaces`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ initial_prompt: "test" }),
     });
     record("agent-api", "missing Authorization rejected", noAuth.status === 401, `HTTP ${noAuth.status}`);
 
-    const badBody = await agentJson("/api/v2/agent/workspaces", apiKey, {
+    const badBody = await agentJson("/api/v3/pow/workspaces", apiKey, {
       method: "POST",
       body: JSON.stringify({}),
     });
@@ -159,7 +159,7 @@ async function main() {
     if (!liveWrites) {
       record("agent-api", "live writes", false, "E2E_ALLOW_LIVE_WRITES not set");
     } else {
-      const create = await agentJson("/api/v2/agent/workspaces", apiKey, {
+      const create = await agentJson("/api/v3/pow/workspaces", apiKey, {
         method: "POST",
         body: JSON.stringify({
           initial_prompt:
@@ -177,7 +177,7 @@ async function main() {
       );
 
       if (workspaceId) {
-        const blocks = await agentJson(`/api/v2/agent/workspaces/${workspaceId}/blocks`, apiKey);
+        const blocks = await agentJson(`/api/v3/pow/workspaces/${workspaceId}/blocks`, apiKey);
         const blockId = blocks.body?.blocks?.[0]?.id;
         record(
           "agent-api",
@@ -188,7 +188,7 @@ async function main() {
 
         if (blockId) {
           const link = await agentJson(
-            `/api/v2/agent/workspaces/${workspaceId}/blocks/${blockId}/tap-links`,
+            `/api/v3/pow/workspaces/${workspaceId}/blocks/${blockId}/tap-links`,
             apiKey,
             { method: "POST", body: JSON.stringify({ minutes: 15 }) }
           );
@@ -200,7 +200,7 @@ async function main() {
             linkId || `${link.res.status}`
           );
 
-          const list = await agentJson(`/api/v2/agent/workspaces/${workspaceId}/tap-links`, apiKey);
+          const list = await agentJson(`/api/v3/pow/workspaces/${workspaceId}/tap-links`, apiKey);
           record(
             "agent-api",
             "GET /workspaces/{id}/tap-links",
@@ -217,7 +217,7 @@ async function main() {
       }
 
       const guestEmail = `e2e-guest+${Date.now()}@uncertain.systems`;
-      const guest = await agentJson("/api/v2/agent/org/guests", apiKey, {
+      const guest = await agentJson("/api/v3/pow/org/guests", apiKey, {
         method: "POST",
         body: JSON.stringify({ email: guestEmail }),
       });
@@ -233,7 +233,7 @@ async function main() {
       if (typeof guest.body?.api_key === "string") {
         const guestKey = guest.body.api_key;
         const guestBlocks = await agentJson(
-          `/api/v2/agent/workspaces/${guest.body?.guest ? "00000000-0000-0000-0000-000000000000" : ""}/blocks`,
+          `/api/v3/pow/workspaces/${guest.body?.guest ? "00000000-0000-0000-0000-000000000000" : ""}/blocks`,
           guestKey
         );
         // Guest should not read arbitrary workspace; expect 404/403 not 500

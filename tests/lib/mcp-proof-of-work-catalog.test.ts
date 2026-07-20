@@ -1,31 +1,33 @@
 import { describe, expect, it } from "vitest";
-import {
-  buildMcpClientConfig,
-  buildMcpEndpointUrl,
-  MCP_PROOF_OF_WORK_TOOL_CATALOG,
-} from "@/lib/agent-v2/mcp-proof-of-work-catalog";
+import { MCP_PROOF_OF_WORK_TOOL_CATALOG } from "@/lib/agent-v2/mcp-proof-of-work-catalog";
 
-describe("mcp-proof-of-work-catalog", () => {
-  it("builds MCP endpoint URL without embedding the API key", () => {
-    expect(buildMcpEndpointUrl("https://uncertain.systems")).toBe(
-      "https://uncertain.systems/api/mcp"
-    );
-  });
-
-  it("includes full Proof-of-Work API tool catalog", () => {
+describe("MCP_PROOF_OF_WORK_TOOL_CATALOG", () => {
+  it("includes the three vertical score tools by name", () => {
     const names = MCP_PROOF_OF_WORK_TOOL_CATALOG.map((tool) => tool.name);
-    expect(names).toContain("upload_proof_of_work");
-    expect(names).toContain("analyze_performance");
-    expect(names).toContain("generate_proof_of_work_schema");
-    expect(names).toContain("get_learning_progress");
-    expect(names).not.toContain("pumadoc_customer_agent_toolkit");
-    expect(names.length).toBe(11);
+    expect(names).toContain("verification_score");
+    expect(names).toContain("augmentation_score");
+    expect(names).toContain("optimization_score");
   });
 
-  it("emits MCP client config JSON with Bearer auth header", () => {
-    const config = JSON.parse(buildMcpClientConfig("http://localhost:3000", "sk_test"));
-    expect(config.mcpServers["uncertain-systems"].type).toBe("streamable-http");
-    expect(config.mcpServers["uncertain-systems"].url).toBe("http://localhost:3000/api/mcp");
-    expect(config.mcpServers["uncertain-systems"].headers.Authorization).toBe("Bearer sk_test");
+  it("documents REST path equivalence in summaries", () => {
+    const verification = MCP_PROOF_OF_WORK_TOOL_CATALOG.find((t) => t.name === "verification_score");
+    const augmentation = MCP_PROOF_OF_WORK_TOOL_CATALOG.find((t) => t.name === "augmentation_score");
+    const optimization = MCP_PROOF_OF_WORK_TOOL_CATALOG.find((t) => t.name === "optimization_score");
+    expect(verification?.summary).toContain("verification-score");
+    expect(augmentation?.summary).toContain("augmentation-score");
+    expect(optimization?.summary).toContain("optimization-score");
+    expect(verification?.summary.toLowerCase()).toContain("tap");
+  });
+
+  it("does not expose analyze_performance chat tooling", () => {
+    const names = MCP_PROOF_OF_WORK_TOOL_CATALOG.map((tool) => tool.name);
+    expect(names).not.toContain("analyze_performance");
+  });
+
+  it("does not advertise conversion scorecard branding", () => {
+    const blob = JSON.stringify(MCP_PROOF_OF_WORK_TOOL_CATALOG);
+    expect(blob).not.toContain("conversion_score");
+    expect(blob).not.toContain("conversion_goal");
+    expect(blob).not.toContain("overall_score");
   });
 });

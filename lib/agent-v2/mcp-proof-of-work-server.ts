@@ -1,11 +1,11 @@
 import { randomUUID } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import {
-  fallbackConversionGoal,
-  finalizePerformanceReport,
-  normalizeConversionGoal,
-  WORKSPACE_GENERATION_CONVERSION_GOAL_RULE,
-} from "./conversion-goal";
+  fallbackWorkspaceGoal,
+  finalizeVerticalScoreReport,
+  normalizeWorkspaceGoal,
+  WORKSPACE_GENERATION_GOAL_RULE,
+} from "./workspace-goal";
 import { parseProofOfWorkSchemaRequest } from "./proof-of-work-schema";
 import {
   generateOpaqueWorkspaceProofOfWorkSpec,
@@ -15,17 +15,16 @@ import {
 import { createAgentWorkspace } from "./create-agent-workspace";
 import { CreateTapLinkError, createWorkspaceTapLink } from "./create-tap-link";
 import {
-  buildOpaquePerformanceChatInstructions,
-  buildOpaquePerformanceReportInstructions,
   buildPrivacyMetadata,
-  extractGoalRefFromConversionGoal,
-  finalizeOpaquePerformanceReport,
+  extractGoalRefFromWorkspaceGoal,
   isOpaqueWorkspace,
   lintOpaquePayload,
   parseWorkspaceEvaluationMeta,
   redactOpaqueFileName,
   sanitizeOpaqueMetadata,
 } from "./opaque-evaluation";
+import { runVerticalScore } from "./run-vertical-score";
+import type { ScoreVertical } from "./performance-report";
 import {
   buildProofOfWorkSchemaRequestFromIntegration,
   resolveEvalDefinition,
@@ -37,15 +36,7 @@ import {
   deriveSuggestedSharePath,
   parseIntegrationSkillRequest,
 } from "./integration-skill";
-import {
-  buildPerformanceChatInstructions,
-  buildPerformanceReportInstructions,
-  buildWorkspacePerformanceContext,
-  emptyPerformanceReport,
-  PERFORMANCE_REPORT_SCHEMA,
-  type PerformanceConversationMessage,
-  type PerformanceReport,
-} from "./performance-context";
+import { buildWorkspacePerformanceContext } from "./performance-context";
 import type { ApiKeyScope, AuthContext } from "./types";
 import { createdByApiKeyId, hasScope } from "./auth";
 import { canAccessAgentWorkspace } from "./workspace-access";
@@ -56,7 +47,7 @@ import {
   normalizeProofOfWorkType,
 } from "./workspace-proof-of-work";
 import { persistSkillGridPositions, skillGridNodesFromRefs } from "@/lib/skill-grid-positions";
-import { callXaiJSON, callXaiResponses, callXaiResponsesWithFiles, DEFAULT_MODEL, userMessage, type ResponsesInputMessage } from "@/lib/xai-client";
+import { callXaiResponsesWithFiles } from "@/lib/xai-client";
 import { deleteFileFromXAI, uploadFileToXAI } from "@/lib/xai-files";
 import { assertCanSubmitProofOfWork } from "@/lib/usage-enforcement";
 import {
@@ -90,7 +81,7 @@ Pillars: ${UNCERTAIN_SYSTEMS_SCOPE.pillars.join(" | ")}
 
 ## Workspace & progress model
 ${UNCERTAIN_SYSTEMS_SCOPE.workspace_model}
-Progress signals: proof_of_work_artifact counts, analyze_performance → overall_score, conversion_score vs conversion_goal, marker_scores, gap_analysis.
+Progress signals: proof_of_work_artifact counts; verification_score / augmentation_score / optimization_score (each vertical returns one primary score + spider + analysis + next actions); workspace_goal.
 
 ## Predictive interruptions (TIM)
 Every tool result includes top-level \`interruption\` (object or null). When non-null, schedule intervention after delay_ms unless a later Proof-of-Work API call supersedes it. Read interruption_contract from generate_proof_of_work_schema. Resource: uncertain-systems://predictive-interruptions
@@ -100,7 +91,7 @@ Every tool result includes top-level \`interruption\` (object or null). When non
 - **opaque**: \`create_workspace\` with \`evaluation_mode: "opaque"\` and \`protocol\` (\`protocol_id\`, \`goal_ref\`, optional \`phases\` / \`goal_tokens\`). Privacy-preserving structural verification — prompts are not stored, semantic inference is disabled, uploads are plaintext-linted.
   - \`generate_proof_of_work_schema\`: opaque workspaces use \`definition_ref\` + \`contract.event_verbs\` (not \`definition\`).
   - \`upload_proof_of_work\`: metadata allowlist only; tool payloads reject file paths unless \`metadata.allow_plaintext=true\`.
-  - \`analyze_performance\` report mode: adds \`evaluation_mode\`, \`privacy\`, and \`protocol_report\` (structural compliance).
+  - Vertical score tools (\`verification_score\`, \`augmentation_score\`, \`optimization_score\`): add \`evaluation_mode\`, \`privacy\`, and \`protocol_report\` (structural compliance) on opaque workspaces.
 
 Canonical protocol \`agent-trace-v3\` phases: enumerate → fingerprint → aggregate → emit → validate.
 
@@ -108,10 +99,11 @@ Canonical protocol \`agent-trace-v3\` phases: enumerate → fingerprint → aggr
 1. get_learning_progress(workspace_id) — orientation + recommended_next_actions (REST equivalents included)
 2. generate_proof_of_work_schema — returns continuous_evaluation (REST) AND continuous_evaluation_mcp (tools); read both
 3. upload_proof_of_work after product actions (repeat)
-4. analyze_performance without prompt = scorecard; with prompt = coaching chat
+4. verification_score / augmentation_score / optimization_score for scorecards (each one primary score + spider + analysis + next actions)
 5. Re-fetch schema + regenerate skill as proof of work grows
+Note: TAP auto-results always use verification_score only.
 
-REST mirror: same loop via Bearer auth on /api/v2/agent/workspaces/{id}/...
+REST mirror: capture via Bearer auth on /api/v3/pow/workspaces/{id}/...; scores via /api/v3/eval/workspaces/{id}/... (POST .../verification-score | .../augmentation-score | .../optimization-score).
 
 Resources: resources/read uncertain-systems://integration-scope and uncertain-systems://proof-of-work-loop
 
@@ -139,7 +131,7 @@ export const MCP_EVIDENCE_TOOLS = [
   {
     name: "get_learning_progress",
     description:
-      "One-call learning progress snapshot: conversion_goal, blocks, proof-of-work counts, uncertain_systems_scope, dual REST+MCP evaluation policies, and recommended_next_actions. Call first when orienting mid-session.",
+      "One-call learning progress snapshot: workspace_goal, blocks, proof-of-work counts, uncertain_systems_scope, dual REST+MCP evaluation policies, and recommended_next_actions. Call first when orienting mid-session.",
     inputSchema: {
       type: "object",
       properties: { workspace_id: { type: "string", description: "Workspace UUID." } },
@@ -151,7 +143,7 @@ export const MCP_EVIDENCE_TOOLS = [
   {
     name: "get_workspace",
     description:
-      "Get workspace metadata including conversion_goal — the outcome learning progress is scored against. REST: GET .../workspaces/{id}.",
+      "Get workspace metadata including workspace_goal — the outcome learning progress is scored against. REST: GET .../workspaces/{id}.",
     inputSchema: {
       type: "object",
       properties: { workspace_id: { type: "string", description: "Workspace UUID." } },
@@ -297,30 +289,53 @@ export const MCP_EVIDENCE_TOOLS = [
     },
   },
   {
-    name: "analyze_performance",
+    name: "verification_score",
     description:
-      "Read learning progress: overall_score, conversion_score, marker_scores, gap_analysis. Omit prompt for scorecard; include prompt (+ optional style_prompt) for chat. Opaque workspaces also return evaluation_mode, privacy, and protocol_report (structural compliance). Returns recommended_next_actions. REST: POST .../performance.",
+      "Learning verification score (0–100) plus spider marker_scores, analysis (summary/gaps), and next actions. TAP auto-results use this only. Opaque workspaces also return evaluation_mode, privacy, and protocol_report. REST: POST .../verification-score.",
     inputSchema: {
       type: "object",
       properties: {
         workspace_id: { type: "string" },
         block_id: { type: "string" },
-        prompt: { type: "string", description: "Chat question. Omit for report mode." },
         style_prompt: {
           type: "string",
           description: "Optional voice/tone (e.g. second person, formal coach).",
         },
-        conversation_history: {
-          type: "array",
-          description: "Prior chat turns for multi-turn Q&A.",
-          items: {
-            type: "object",
-            properties: {
-              role: { type: "string", enum: ["user", "assistant"] },
-              content: { type: "string" },
-            },
-            required: ["role", "content"],
-          },
+      },
+      required: ["workspace_id"],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "augmentation_score",
+    description:
+      "Learning augmentation score (0–100 practice readiness) plus spider marker_scores, analysis, and next actions. REST: POST .../augmentation-score.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        workspace_id: { type: "string" },
+        block_id: { type: "string" },
+        style_prompt: {
+          type: "string",
+          description: "Optional voice/tone (e.g. second person, formal coach).",
+        },
+      },
+      required: ["workspace_id"],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "optimization_score",
+    description:
+      "Learning optimization score (0–100 toward workspace_goal) plus spider marker_scores, analysis, and next actions. REST: POST .../optimization-score.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        workspace_id: { type: "string" },
+        block_id: { type: "string" },
+        style_prompt: {
+          type: "string",
+          description: "Optional voice/tone (e.g. second person, formal coach).",
         },
       },
       required: ["workspace_id"],
@@ -421,7 +436,7 @@ function withProgressGuidance<T extends Record<string, unknown>>(
       proof_of_work_artifacts: number;
       blocks: number;
     };
-    conversionGoal?: string | null;
+    workspaceGoal?: string | null;
     workspaceTitle?: string;
   }
 ): T & {
@@ -434,7 +449,7 @@ function withProgressGuidance<T extends Record<string, unknown>>(
     ...payload,
     uncertain_systems_scope: buildUncertainSystemsScopeForWorkspace({
       workspaceTitle: options.workspaceTitle || "workspace",
-      conversionGoal: options.conversionGoal,
+      workspaceGoal: options.workspaceGoal,
       blockCount: options.counts.blocks,
       proofOfWorkCount: options.counts.proof_of_work_artifacts,
     }),
@@ -447,23 +462,9 @@ function withProgressGuidance<T extends Record<string, unknown>>(
     recommended_next_actions: recommendIntegrationActions({
       proof_of_work_artifacts: options.counts.proof_of_work_artifacts,
       blocks: options.counts.blocks,
-      has_conversion_goal: Boolean(options.conversionGoal?.trim()),
+      has_workspace_goal: Boolean(options.workspaceGoal?.trim()),
     }),
   };
-}
-
-function parseConversationHistory(value: unknown): PerformanceConversationMessage[] {
-  if (!Array.isArray(value)) return [];
-  return value
-    .filter((entry): entry is PerformanceConversationMessage => {
-      const item = entry as Partial<PerformanceConversationMessage>;
-      return (item.role === "user" || item.role === "assistant") && typeof item.content === "string";
-    })
-    .map((entry) => ({
-      role: entry.role,
-      content: entry.content.slice(0, 8000),
-    }))
-    .slice(-12);
 }
 
 type WorkspaceRow = {
@@ -475,7 +476,7 @@ type WorkspaceRow = {
   root_topic: string | null;
   description: string | null;
   notes: string | null;
-  conversion_goal: string | null;
+  workspace_goal: string | null;
   evaluation_mode?: string | null;
   protocol_config?: unknown;
   external_refs?: unknown;
@@ -492,7 +493,7 @@ async function loadWorkspace(
   const { data: workspace, error } = await supabase
     .from("workspaces")
     .select(
-      "id, user_id, organization_id, guest_user_id, title, root_topic, description, notes, conversion_goal, evaluation_mode, protocol_config, external_refs, status, created_at, updated_at"
+      "id, user_id, organization_id, guest_user_id, title, root_topic, description, notes, workspace_goal, evaluation_mode, protocol_config, external_refs, status, created_at, updated_at"
     )
     .eq("id", workspaceId)
     .single();
@@ -535,7 +536,7 @@ interface GeneratedBlock {
 
 interface GeneratedWorkspace {
   title: string;
-  conversion_goal?: string;
+  workspace_goal?: string;
   blocks: GeneratedBlock[];
 }
 
@@ -651,7 +652,7 @@ export async function callMcpProofOfWorkTool(
             id: workspace.id,
             title: workspace.title,
             root_topic: workspace.root_topic,
-            conversion_goal: workspace.conversion_goal,
+            workspace_goal: workspace.workspace_goal,
             status: workspace.status,
           },
           blocks: blocks || [],
@@ -663,8 +664,9 @@ export async function callMcpProofOfWorkTool(
             performance: buildPerformanceApiPath(workspaceId, origin),
           },
           progress_interpretation: {
-            learning_verification: "Request analyze_performance (no prompt) for overall_score and marker_scores.",
-            conversion_tracking: "Compare conversion_score to conversion_goal from workspace metadata.",
+            learning_verification: "Call verification_score for verification_score + marker_scores.",
+            learning_augmentation: "Call augmentation_score for practice readiness.",
+            learning_optimization: "Call optimization_score for progress toward workspace_goal.",
             evidence_health:
               counts.proof_of_work_artifacts === 0
                 ? "No artifacts yet — call generate_proof_of_work_schema then upload_proof_of_work."
@@ -675,7 +677,7 @@ export async function callMcpProofOfWorkTool(
           origin,
           workspaceId,
           counts,
-          conversionGoal: workspace.conversion_goal,
+          workspaceGoal: workspace.workspace_goal,
           workspaceTitle,
         }
       ),
@@ -852,7 +854,7 @@ export async function callMcpProofOfWorkTool(
 
     let blocksQuery = supabase
       .from("blocks")
-      .select("id, title, description, is_start")
+      .select("id, title, description, status, is_start")
       .eq("workspace_id", workspaceId)
       .order("created_at", { ascending: true });
     if (blockId) blocksQuery = blocksQuery.eq("id", blockId);
@@ -900,10 +902,13 @@ export async function callMcpProofOfWorkTool(
             title: workspace.title,
             root_topic: workspace.root_topic,
             description: workspace.description,
+            notes: workspace.notes,
+            workspace_goal: workspace.workspace_goal ?? null,
           },
           blocks || [],
           blockId,
-          proofOfWorkSpec
+          proofOfWorkSpec,
+          contextResult?.payload ?? null
         ),
         temperature: 0.45,
         maxOutputTokens: 8192,
@@ -1060,198 +1065,65 @@ export async function callMcpProofOfWorkTool(
     );
   }
 
-  if (name === "analyze_performance") {
+  if (
+    name === "verification_score" ||
+    name === "augmentation_score" ||
+    name === "optimization_score"
+  ) {
     requireScope(auth.scopes, "workspaces:read");
     const workspaceId = stringArg(args, "workspace_id");
     if (!workspaceId) throw new Error("workspace_id is required.");
 
+    const vertical = name.replace("_score", "") as ScoreVertical;
     const workspace = await loadWorkspace(supabase, auth, workspaceId);
-    const evalMeta = parseWorkspaceEvaluationMeta(workspace);
-    const opaque = isOpaqueWorkspace(evalMeta);
-    const privacy = buildPrivacyMetadata(evalMeta);
-    const goalRef =
-      extractGoalRefFromConversionGoal(workspace.conversion_goal) || evalMeta.protocol_config?.goal_ref || null;
-    const prompt = typeof args.prompt === "string" ? args.prompt.trim() : "";
     const stylePrompt = typeof args.style_prompt === "string" ? args.style_prompt.trim() : "";
     const blockId = typeof args.block_id === "string" ? args.block_id : null;
-    const conversationHistory = parseConversationHistory(args.conversation_history);
-
     if (blockId) await assertBlockInWorkspace(supabase, workspaceId, blockId);
 
-    const context = await buildWorkspacePerformanceContext({
+    const scored = await runVerticalScore({
       supabase,
       auth,
       workspaceId,
+      vertical,
       blockId,
+      stylePrompt,
+      workspaceRow: workspace,
     });
-    const activeFileIds = context.fileIds;
-    const contextCounts = context.payload.counts;
-
-    if (
-      contextCounts.proof_of_work_artifacts === 0 &&
-      contextCounts.linked_sessions === 0 &&
-      contextCounts.workspace_files === 0
-    ) {
-      const emptyReport = prompt
-        ? null
-        : finalizePerformanceReport(emptyPerformanceReport(), workspace.conversion_goal, {
-            title: workspace.title,
-            description: workspace.description,
-            notes: workspace.notes,
-            root_topic: workspace.root_topic,
-          });
-
-      return await evidenceToolResult(
-        withProgressGuidance(
-          {
-            mode: prompt ? "chat" : "report",
-            response: prompt
-              ? "No performance proof of work is attached to this workspace yet. Upload tool usage via upload_proof_of_work or complete a TAP session before asking detailed questions."
-              : null,
-            report: emptyReport?.report ?? null,
-            workspace_conversion_goal: emptyReport?.workspace_conversion_goal,
-            conversion_goal_source: emptyReport?.conversion_goal_source,
-            proof_of_work_summary: contextCounts,
-            file_ids: [],
-          },
-          {
-            origin,
-            workspaceId,
-            counts: contextCounts,
-            conversionGoal: workspace.conversion_goal,
-            workspaceTitle: workspace.title || workspace.root_topic || "workspace",
-          }
-        ),
-        {
-          endpoint: "analyze_performance",
-          workspace_id: workspaceId,
-          block_id: blockId,
-          mode: prompt ? "chat" : "report",
-          report: emptyReport?.report ?? null,
-          proof_of_work_artifacts: contextCounts.proof_of_work_artifacts,
-        }
-      );
-    }
-
-    if (prompt) {
-      const inputMessages: ResponsesInputMessage[] = conversationHistory.map((message) => ({
-        role: message.role,
-        content: message.content,
-      }));
-      inputMessages.push({
-        role: "user",
-        content: [
-          { type: "input_text", text: prompt },
-          ...activeFileIds.map((fileId) => ({ type: "input_file" as const, file_id: fileId })),
-        ],
-      });
-
-      const chatResult = await callXaiResponses({
-        model: DEFAULT_MODEL,
-        instructions: opaque
-          ? buildOpaquePerformanceChatInstructions(blockId)
-          : buildPerformanceChatInstructions(blockId, stylePrompt),
-        input: inputMessages,
-        temperature: 0.6,
-        maxOutputTokens: 4096,
-        fetchTimeout: 120000,
-      });
-
-      if (!chatResult.success || !chatResult.text) {
-        throw new Error(chatResult.error || "Failed to generate performance chat response.");
-      }
-
-      return await evidenceToolResult(
-        withProgressGuidance(
-          {
-            mode: "chat",
-            evaluation_mode: evalMeta.evaluation_mode,
-            privacy,
-            response: chatResult.text,
-            proof_of_work_summary: contextCounts,
-            file_ids: activeFileIds,
-          },
-          {
-            origin,
-            workspaceId,
-            counts: contextCounts,
-            conversionGoal: workspace.conversion_goal,
-            workspaceTitle: workspace.title || workspace.root_topic || "workspace",
-          }
-        ),
-        {
-          endpoint: "analyze_performance",
-          workspace_id: workspaceId,
-          block_id: blockId,
-          mode: "chat",
-          proof_of_work_artifacts: contextCounts.proof_of_work_artifacts,
-        }
-      );
-    }
-
-    const storedConversionGoal =
-      context.payload.workspace.conversion_goal ?? workspace.conversion_goal;
-
-    const reportResult = await callXaiResponsesWithFiles<PerformanceReport>(
-      opaque
-        ? `Generate a structural-only opaque protocol report for workspace ${workspaceId}.`
-        : `Generate a learning and gap analysis report for workspace "${workspace.title || workspace.root_topic}".`,
-      activeFileIds,
-      {
-        instructions: opaque
-          ? buildOpaquePerformanceReportInstructions(blockId, goalRef)
-          : buildPerformanceReportInstructions(blockId, storedConversionGoal, stylePrompt),
-        temperature: 0.35,
-        maxOutputTokens: 2500,
-        fetchTimeout: 120000,
-        jsonSchema: PERFORMANCE_REPORT_SCHEMA,
-      }
-    );
-
-    if (!reportResult.success || !reportResult.data) {
-      throw new Error(reportResult.error || "Failed to generate performance report.");
-    }
-
-    const finalized = opaque
-      ? finalizeOpaquePerformanceReport(reportResult.data, goalRef, evalMeta.protocol_config)
-      : {
-          ...finalizePerformanceReport(reportResult.data, storedConversionGoal, {
-            title: workspace.title,
-            description: workspace.description,
-            notes: workspace.notes,
-            root_topic: workspace.root_topic,
-          }),
-          protocol_report: undefined,
-        };
 
     return await evidenceToolResult(
       withProgressGuidance(
         {
-          mode: "report",
-          evaluation_mode: evalMeta.evaluation_mode,
-          privacy,
-          workspace_conversion_goal: finalized.workspace_conversion_goal,
-          conversion_goal_source: finalized.conversion_goal_source,
-          report: finalized.report,
-          protocol_report: opaque ? finalized.protocol_report : undefined,
-          proof_of_work_summary: contextCounts,
-          file_ids: activeFileIds,
+          mode: "score",
+          vertical,
+          evaluation_mode: scored.evaluation_mode,
+          privacy: scored.privacy,
+          workspace_goal: scored.workspace_goal,
+          workspace_goal_source: scored.workspace_goal_source,
+          report: scored.report,
+          protocol_report: scored.protocol_report,
+          proof_of_work_summary: scored.proof_of_work_summary,
+          file_ids: scored.file_ids,
         },
         {
           origin,
           workspaceId,
-          counts: contextCounts,
-          conversionGoal: workspace.conversion_goal,
+          counts: scored.proof_of_work_summary ?? {
+            blocks: 0,
+            proof_of_work_artifacts: 0,
+            linked_sessions: 0,
+            workspace_files: 0,
+          },
+          workspaceGoal: workspace.workspace_goal,
           workspaceTitle: workspace.title || workspace.root_topic || "workspace",
         }
       ),
       {
-        endpoint: "analyze_performance",
+        endpoint: name as "verification_score" | "augmentation_score" | "optimization_score",
         workspace_id: workspaceId,
         block_id: blockId,
-        mode: "report",
-        report: finalized.report,
-        proof_of_work_artifacts: contextCounts.proof_of_work_artifacts,
+        mode: "score",
+        report: scored.report,
+        proof_of_work_artifacts: scored.proof_of_work_summary?.proof_of_work_artifacts,
       }
     );
   }

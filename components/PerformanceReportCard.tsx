@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { MarkerRadarChart } from "@/components/MarkerRadarChart";
 import { useI18n } from "@/lib/i18n";
-import type { ConversionGoalSource } from "@/lib/agent-v2/conversion-goal";
+import type { WorkspaceGoalSource } from "@/lib/agent-v2/conversion-goal";
 import { normalizePerformanceGapAnalysis } from "@/lib/agent-v2/performance-context";
 import type { PerformanceGapAnalysis, PerformanceReport } from "@/lib/agent-v2/performance-report";
 
@@ -30,8 +30,8 @@ export interface PerformanceReportCardProps {
   label?: string;
   layout?: "compact" | "spacious";
   reportHistory?: PerformanceReportSnapshot[];
-  workspaceConversionGoal?: string;
-  conversionGoalSource?: ConversionGoalSource;
+  workspaceGoal?: string;
+  workspaceGoalSource?: WorkspaceGoalSource;
   /** When true, tab panels grow to fill the parent flex column (workspace performance tab). */
   fillHeight?: boolean;
 }
@@ -241,19 +241,9 @@ function ScoreEvolution({ history, flat = false }: { history: PerformanceReportS
                 })}
               </span>
               <div className="flex flex-wrap items-center gap-2">
-                {typeof snapshot.report.overall_score === "number" ? (
+                {typeof snapshot.report.score === "number" ? (
                   <span className="rounded-full border border-zinc-600 px-2 py-0.5 font-mono text-[10px] text-white">
-                    L {Math.round(snapshot.report.overall_score)}/100
-                  </span>
-                ) : null}
-                {typeof snapshot.report.conversion_score === "number" ? (
-                  <span className="rounded-full border border-zinc-700 px-2 py-0.5 font-mono text-[10px] text-white">
-                    C {Math.round(snapshot.report.conversion_score)}%
-                  </span>
-                ) : null}
-                {typeof snapshot.report.ghc_score === "number" ? (
-                  <span className="rounded-full border border-zinc-700 px-2 py-0.5 font-mono text-[10px] text-white">
-                    G {Math.round(snapshot.report.ghc_score)}/100
+                    {Math.round(snapshot.report.score)}/100
                   </span>
                 ) : null}
                 <span className="rounded-full border border-zinc-700 px-2 py-0.5 font-mono text-[10px] uppercase text-zinc-400">
@@ -392,17 +382,21 @@ export function PerformanceReportCard({
   label,
   layout = "compact",
   reportHistory = [],
-  workspaceConversionGoal,
-  conversionGoalSource,
+  workspaceGoal: workspaceGoalProp,
+  workspaceGoalSource,
   fillHeight = false,
 }: PerformanceReportCardProps) {
   const { t } = useI18n();
   const cardLabel = label ?? t("performanceReportCard.defaultLabel");
-  const overallScore = clampScore(report.overall_score);
-  const conversionScore = clampScore(report.conversion_score);
-  const ghcScore = clampScore(report.ghc_score);
-  const conversionGoal =
-    workspaceConversionGoal?.trim() || report.conversion_goal?.trim() || null;
+  const primaryScore = clampScore(report.score);
+  const workspaceGoalText =
+    workspaceGoalProp?.trim() || report.workspace_goal?.trim() || null;
+  const verticalLabel =
+    report.vertical === "augmentation"
+      ? t("performanceReportCard.augmentation")
+      : report.vertical === "optimization"
+        ? t("performanceReportCard.optimization")
+        : t("performanceReportCard.verification");
   const markerScores = report.marker_scores ?? [];
   const gapAnalysis = useMemo(
     () => normalizePerformanceGapAnalysis(report.gap_analysis),
@@ -434,18 +428,9 @@ export function PerformanceReportCard({
         <div className="flex flex-wrap items-center justify-between gap-4">
           <h3 className="text-sm text-zinc-400">{cardLabel}</h3>
           <div className="flex flex-wrap items-center gap-3">
-            {overallScore != null ? (
+            {primaryScore != null ? (
               <span className="font-mono text-2xl text-white">
-                L {overallScore}
-                <span className="ml-1 text-sm text-zinc-500">/100</span>
-              </span>
-            ) : null}
-            {conversionScore != null ? (
-              <span className="font-mono text-2xl text-white">C {conversionScore}%</span>
-            ) : null}
-            {ghcScore != null ? (
-              <span className="font-mono text-2xl text-white">
-                G {ghcScore}
+                {primaryScore}
                 <span className="ml-1 text-sm text-zinc-500">/100</span>
               </span>
             ) : null}
@@ -467,60 +452,35 @@ export function PerformanceReportCard({
         <div role="tabpanel" className={tabPanelClassName}>
           {activeTab === "overview" ? (
             <div className="flex w-full flex-col items-center px-2 py-6 text-center sm:py-10">
-              <div className="grid w-full grid-cols-1 gap-8 sm:max-w-3xl sm:grid-cols-3 sm:gap-10">
-                {overallScore != null ? (
+              <div className="grid w-full grid-cols-1 gap-8 sm:max-w-md">
+                {primaryScore != null ? (
                   <div>
                     <div className="font-mono text-xs uppercase tracking-[2px] text-zinc-500">
-                      {t("performanceReportCard.learning")}
+                      {verticalLabel}
                     </div>
                     <div className="mt-4 font-mono text-6xl font-medium tracking-tight text-white sm:text-7xl">
-                      {overallScore}
+                      {primaryScore}
                     </div>
                     <div className="mt-2 font-mono text-base text-zinc-500">/ 100</div>
-                  </div>
-                ) : null}
-                {conversionScore != null ? (
-                  <div>
-                    <div className="font-mono text-xs uppercase tracking-[2px] text-zinc-500">
-                      {t("performanceReportCard.conversion")}
-                    </div>
-                    <div className="mt-4 font-mono text-6xl font-medium tracking-tight text-white sm:text-7xl">
-                      {conversionScore}
-                    </div>
-                    <div className="mt-2 font-mono text-base text-zinc-500">%</div>
-                  </div>
-                ) : null}
-                {ghcScore != null ? (
-                  <div>
-                    <div className="font-mono text-xs uppercase tracking-[2px] text-zinc-500">
-                      {t("performanceReportCard.ghc")}
-                    </div>
-                    <div className="mt-4 font-mono text-6xl font-medium tracking-tight text-white sm:text-7xl">
-                      {ghcScore}
-                    </div>
-                    <div className="mt-2 font-mono text-base text-zinc-500">/ 100</div>
-                    <div className="mt-2 font-mono text-[10px] uppercase tracking-wide text-zinc-500">
-                      {ghcConfidenceLabel(report.ghc_confidence, t)}
-                    </div>
                   </div>
                 ) : null}
               </div>
-              {conversionGoal ? (
+              {workspaceGoalText ? (
                 <div className="mt-8 w-full text-left">
                   <div className="flex flex-wrap items-center justify-center gap-2">
                     <span className="font-mono text-xs uppercase tracking-[1.5px] text-zinc-600">
-                      {t("performanceReportCard.conversionGoal")}
+                      {t("performanceReportCard.workspaceGoal")}
                     </span>
-                    {conversionGoalSource ? (
+                    {workspaceGoalSource ? (
                       <span className="rounded-full border border-zinc-700 px-2 py-0.5 font-mono text-[10px] uppercase tracking-wide text-zinc-400">
-                        {conversionGoalSource === "workspace"
+                        {workspaceGoalSource === "workspace"
                           ? t("performanceReportCard.sourceWorkspace")
                           : t("performanceReportCard.sourceInferred")}
                       </span>
                     ) : null}
                   </div>
                   <p className="mt-3 text-center text-base leading-relaxed text-zinc-300 sm:text-lg">
-                    {conversionGoal}
+                    {workspaceGoalText}
                   </p>
                 </div>
               ) : null}
@@ -613,23 +573,9 @@ export function PerformanceReportCard({
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h3 className="text-sm font-medium text-white">{cardLabel}</h3>
         <div className="flex flex-wrap items-center gap-2">
-          {overallScore != null ? (
+          {primaryScore != null ? (
             <span className="rounded-full border border-zinc-600 bg-zinc-950 px-3 py-0.5 font-mono text-sm text-white">
-              L {overallScore}
-              <span className="ml-1 text-[10px] text-zinc-500">/100</span>
-            </span>
-          ) : null}
-          {conversionScore != null ? (
-            <span className="rounded-full border border-zinc-700 bg-zinc-950 px-3 py-0.5 font-mono text-sm text-white">
-              C {conversionScore}%
-            </span>
-          ) : null}
-          {ghcScore != null ? (
-            <span
-              className="rounded-full border border-zinc-700 bg-zinc-950 px-3 py-0.5 font-mono text-sm text-white"
-              title={ghcConfidenceLabel(report.ghc_confidence, t)}
-            >
-              G {ghcScore}
+              {primaryScore}
               <span className="ml-1 text-[10px] text-zinc-500">/100</span>
             </span>
           ) : null}
@@ -639,12 +585,12 @@ export function PerformanceReportCard({
         </div>
       </div>
 
-      {conversionGoal ? (
+      {workspaceGoalText ? (
         <div>
           <div className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-600">
-            {t("performanceReportCard.conversionGoal")}
+            {t("performanceReportCard.workspaceGoal")}
           </div>
-          <p className="mt-2 text-sm leading-relaxed text-zinc-300">{conversionGoal}</p>
+          <p className="mt-2 text-sm leading-relaxed text-zinc-300">{workspaceGoalText}</p>
         </div>
       ) : null}
 

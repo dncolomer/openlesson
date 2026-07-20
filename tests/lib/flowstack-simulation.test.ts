@@ -50,7 +50,7 @@ describe("nexusfront simulation toolkit", () => {
     const decoded = Buffer.from(file.data, "base64").toString("utf8");
     expect(decoded).toContain("Haven Rise");
     expect(decoded).toContain("Resource-gathering city growth certification");
-    expect(decoded).toContain("overall_score");
+    expect(decoded).toContain("verification_score");
     expect(decoded).toContain("integration-skill");
   });
 

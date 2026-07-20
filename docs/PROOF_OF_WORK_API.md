@@ -1,8 +1,37 @@
 # Uncertain Systems Proof-of-Work API
 
-Base path: `/api/v2/agent`
+Capture base path: **`/api/v3/pow`**  
+Evaluation base path: **`/api/v3/eval`**
 
-The Proof-of-Work API supports Verification Workspace creation, proof-of-work upload, unified performance analysis, block discovery, Think Aloud Protocol (TAP) link issuance and status polling, and ILE (Integrated Learning Environment) practice routing from gap findings.
+- **PoW (`/api/v3/pow`)** — workspace create/read, proof-of-work upload, proof-of-work schema, integration skill, blocks, TAP links, API keys, org guests.
+- **Eval (`/api/v3/eval`)** — vertical scores (`verification-score`, `augmentation-score`, `optimization-score`), durable learning world model, knowledge-config latest + trajectory, and pure **Knowledge distance** geometry (user ↔ knowledge region; not a vertical Eval).
+
+There is no `/api/v2/*` agent surface.
+
+## Evaluation API (scores, world model, knowledge config)
+
+Base path: `/api/v3/eval`
+
+| Method | Path | Scope | Description |
+| :--- | :--- | :--- | :--- |
+| `GET` | `/workspaces/{id}/world-model` | `workspaces:read` | Durable merged **learning world model** for a workspace × subject (`?user_id=` / `guest_user_id=` unique IDs; omit to default to the authenticated caller UUID). |
+| `GET` | `/workspaces/{id}/knowledge-config` | `workspaces:read` | Latest **knowledge configuration** embedding (`knowledgecfg-v1-d64`, D=64). Address subject with `user_id` / `guest_user_id`. |
+| `GET` | `/workspaces/{id}/knowledge-config/trajectory` | `workspaces:read` | Time series of knowledge config snapshots + fixed 2D projection (`?from=&to=&max_points=&project=`). Subject via unique `user_id` / `guest_user_id`. |
+| `GET` / `POST` | `/workspaces/{id}/knowledge-distance` | `workspaces:read` | **Knowledge distance** between a user (`user_id` / `guest_user_id`) and a custom knowledge region (`region_id`). Pure embedding geometry — **not** a vertical Eval and **not** written to `eval_run_history`. |
+| `GET` | `/workspaces/{id}/eval-history` | `workspaces:read` | Append-only **eval run history** (full scorecards). Filter by unique `user_id` / `guest_user_id`, multi-user cohort `user_ids=a,b`, guests `guest_user_ids=`, `vertical=`, `from=`, `to=`, `limit=`. Non-admins are scoped to self; owners/org admins may list workspace or group cohorts. |
+| `POST` | `/workspaces/{id}/verification-score` | `workspaces:read` | Learning verification score + optional `learning_world_model` / `knowledge_config` after persistence. |
+| `POST` | `/workspaces/{id}/augmentation-score` | `workspaces:read` | Learning augmentation / practice-readiness score. |
+| `POST` | `/workspaces/{id}/optimization-score` | `workspaces:read` | Learning optimization score toward `workspace_goal`. |
+
+**Knowledge config contract:** all vectors share model id `knowledgecfg-v1-d64` (dimension 64). Vectors with different model ids are not comparable. Workspace scopes trajectories; the axes are global so expert regions and cross-user distance are well-defined.
+
+**Subject addressing:** Evaluation APIs address learners with unique `user_id` and/or `guest_user_id` only. There is no `subject=me` / `subject=self` token — pass the caller's UUID explicitly, or omit IDs to default to the authenticated identity.
+
+**Learning world model:** symbolic state (exploration, evidence appetite, scores). Co-evolves with knowledge config on each vertical score. Score responses may include `learning_world_model` and `knowledge_config` after a successful evaluation.
+
+**Eval run history:** every successful vertical score appends an immutable row (`eval_run_history`) with the full report JSON, workspace, subject, vertical, and timestamp. Use this for retroactive inspection; LWM/knowledge config remain latest-state and geometry, not scorecard archives.
+
+**Re-run gate:** re-running the **same** vertical (`verification` / `augmentation` / `optimization`) for the same subject requires **new proof of work** since that vertical’s last eval (`ran_at`). Other verticals stay independent. Without new PoW, score endpoints return `409` with `code: no_new_pow`.
 
 ## Authentication
 
@@ -18,14 +47,14 @@ Workspaces support two evaluation modes (stored on `workspaces.evaluation_mode`)
 
 | Mode | Create with | Schema | Performance |
 | :--- | :--- | :--- | :--- |
-| `semantic` (default) | `initial_prompt` (+ optional `files`) | `definition` rubric text | Semantic gap analysis (`overall_score`, `marker_scores`, `gap_analysis`) |
+| `semantic` (default) | `initial_prompt` (+ optional `files`) | `definition` rubric text | Vertical scores (`verification_score` / `augmentation_score` / `optimization_score` each with `marker_scores`, analysis, next actions) |
 | `opaque` | `evaluation_mode: "opaque"` + `protocol` | `definition_ref` + `contract.event_verbs` | Structural protocol report (`protocol_report`, `privacy`; no semantic inference) |
 
 **Opaque mode** is for privacy-preserving verification: partner-owned references (`goal_ref`, `definition_ref`, `external_refs`) are stored but never semantically interpreted. Upload metadata is allowlisted; tool payloads are plaintext-linted (file paths rejected unless `metadata.allow_plaintext=true`).
 
 Canonical protocol `agent-trace-v3` phases: `enumerate` → `fingerprint` → `aggregate` → `emit` → `validate`.
 
-## Endpoints
+## Endpoints (capture — base `/api/v3/pow`)
 
 | Method | Path | Scope | Description |
 | :--- | :--- | :--- | :--- |
@@ -34,11 +63,23 @@ Canonical protocol `agent-trace-v3` phases: `enumerate` → `fingerprint` → `a
 | `POST` | `/workspaces/{workspace_id}/proof-of-work-schema` | `workspaces:read` | Grok-generated JSON Schema for ideal tool proof of work input given workspace context + eval definition. |
 | `POST` | `/workspaces/{workspace_id}/integration-skill` | `workspaces:read` | Grok-generated workspace-specific `skill.md` integration guide for a partner agent. |
 | `POST` | `/workspaces/{workspace_id}/proof-of-work` | `workspaces:write` | Upload tool usage, screenshots, video, or EEG to xAI and link to workspace/block. |
-| `POST` | `/workspaces/{workspace_id}/performance` | `workspaces:read` | Structured gap report or free-form Q&A over workspace proof of work. |
 | `POST` | `/workspaces/{workspace_id}/tap-links` | `tap:write` | Request a private Think Aloud Protocol (TAP) link for the full workspace (optional body `block_id` scopes to a block). |
 | `POST` | `/workspaces/{workspace_id}/blocks/{block_id}/tap-links` | `tap:write` | Request a private TAP link scoped to a single block. |
-| `GET` | `/workspaces/{workspace_id}/tap-links` | `tap:read` | List existing TAP links and completion status. TAP evidence is uploaded to proof-of-work; use `POST .../performance` to score. |
+| `GET` | `/workspaces/{workspace_id}/tap-links` | `tap:read` | List existing TAP links and completion status. TAP evidence is uploaded to proof-of-work; score with `POST /api/v3/eval/.../verification-score`. |
 | `POST` | `/org/guests` | `org:write` | Organization admins create guest users by email and issue guest API keys. |
+
+## Endpoints (evaluation — base `/api/v3/eval`)
+
+| Method | Path | Scope | Description |
+| :--- | :--- | :--- | :--- |
+| `POST` | `/workspaces/{workspace_id}/verification-score` | `workspaces:read` | Learning verification score (0–100) + spider, analysis, next actions. TAP auto-results use this only. |
+| `POST` | `/workspaces/{workspace_id}/augmentation-score` | `workspaces:read` | Learning augmentation / practice-readiness score (0–100). |
+| `POST` | `/workspaces/{workspace_id}/optimization-score` | `workspaces:read` | Learning optimization score toward `workspace_goal` (0–100). |
+| `GET` | `/workspaces/{workspace_id}/world-model` | `workspaces:read` | Durable learning world model for a subject. |
+| `GET` | `/workspaces/{workspace_id}/knowledge-config` | `workspaces:read` | Latest knowledge config embedding (`knowledgecfg-v1-d64`). |
+| `GET` | `/workspaces/{workspace_id}/knowledge-config/trajectory` | `workspaces:read` | Knowledge config trajectory + optional 2D projection. |
+| `GET` / `POST` | `/workspaces/{workspace_id}/knowledge-distance` | `workspaces:read` | Knowledge distance (user ↔ region) in knowledgecfg space. Query/body: `region_id`, `user_id` and/or `guest_user_id` (unique IDs; omit to default to the authenticated caller). Returns `knowledge_distance`, `l2_distance`, `cosine_similarity`, `cosine_distance`, `in_region`. Not a score endpoint and does not archive history. |
+| `GET` | `/workspaces/{workspace_id}/eval-history` | `workspaces:read` | Prior vertical eval scorecards; workspace / subject / multi-user (`user_ids`) filters. |
 
 ## Predictive Interruptions (TIM)
 
@@ -150,33 +191,32 @@ Types: `tool`, `screen` (`screenshot` alias), `video`, `eeg`. Max 10 MB per file
 
 **Opaque workspaces:** `metadata` is filtered to an allowlist (`trace_token`, `goal_ref`, `anon`, `event_count`, `schema_version`, `protocol_id`, `phase_id`, `allow_plaintext`). Tool uploads are plaintext-linted; responses may include `evaluation_mode`, `privacy`, and `plaintext_lint`.
 
-## Performance Analysis
+## Vertical scores
 
-**Structured report** (no `prompt`):
+Three dedicated score endpoints — one primary 0–100 score per call (not a multi-vertical unified card):
+
+| Path | MCP tool | Primary field | Meaning |
+| :--- | :--- | :--- | :--- |
+| `POST .../verification-score` | `verification_score` | `verification_score` | Learning verification. **TAP auto-results use this only.** |
+| `POST .../augmentation-score` | `augmentation_score` | `augmentation_score` | Practice / improvement readiness |
+| `POST .../optimization-score` | `optimization_score` | `optimization_score` | Progress toward `workspace_goal` (0–100 score units) |
+
+**Request body** (all three):
 
 ```json
-{ "block_id": "optional-block-uuid" }
+{ "block_id": "optional-block-uuid", "style_prompt": "optional voice/tone" }
 ```
 
-**Free-form Q&A**:
-
-```json
-{
-  "prompt": "Where are the biggest readiness gaps?",
-  "block_id": "optional-block-uuid",
-  "conversation_history": [],
-  "file_ids": []
-}
-```
-
-Report responses always include:
-- `overall_score` (0–100 integer readiness score)
+Score responses always include:
+- `mode: "score"`, `vertical`
+- `score` / named primary field (`verification_score` | `augmentation_score` | `optimization_score`) — one 0–100 score per vertical call
+- `workspace_goal` (inferred or owner-set workspace goal)
 - `marker_scores[]` (spider/radar competency axes: `id`, `label`, `score`, `rationale`)
+- `summary` analysis, strengths, growth_areas
 - `gap_analysis.gaps[]` with `severity` and `suggested_repair`
+- `gap_analysis.next_steps` (`directions[]`, `events[]`)
 
-**Opaque workspaces** also return `evaluation_mode`, `privacy`, `conversion_goal_source: "opaque_ref"`, and `protocol_report` (structural compliance: `protocol_compliance_score`, `phase_coverage`, `trace_integrity`, `structural_gaps`).
-
-Chat responses return markdown in `response`.
+**Opaque workspaces** also return `evaluation_mode`, `privacy`, `workspace_goal_source: "opaque_ref"`, and `protocol_report` (structural compliance: `protocol_compliance_score`, `phase_coverage`, `trace_integrity`, `structural_gaps`).
 
 ## Create Workspace
 
@@ -212,7 +252,7 @@ Chat responses return markdown in `response`.
 }
 ```
 
-- Semantic: `initial_prompt` required; Grok generates title, blocks, and conversion goal.
+- Semantic: `initial_prompt` required; Grok generates title, blocks, and workspace goal.
 - `initial_chapters` (optional, semantic only): `narrow` | `mid` (default) | `broad`. Controls how many **initial chapters/blocks** are generated (narrow fewest, broad most with deeper branch arms). Also accepted as camelCase `initialChapters`.
 - Semantic block layout is a **2D skill grid**: start at `(0,0)`, use **positive and negative** coordinates (all quadrants), prefer **sparse paths** (not a filled rectangle), and allow **branching** (`next` may have multiple children; some arms deeper). Generated `position_x` / `position_y` and graph links are persisted onto blocks.
 - Opaque: `protocol.protocol_id` and `protocol.goal_ref` required; blocks are generated from protocol phases (canonical `agent-trace-v3` if phases omitted). `initial_prompt` is not stored.
@@ -236,13 +276,13 @@ The response includes a private URL for the TAP session UI. Think Aloud Protocol
 
 ## Organizations And Guests
 
-Users on the Teams tier can create an organization with `POST /api/organization` and become its admin. Organization admins can use `POST /api/v2/agent/org/guests` with an `org:write` API key to create guest users by email. Guest users receive individual API keys scoped to workspace creation, workspace reading, and TAP link usage (`workspaces:read`, `workspaces:write`, `tap:read`, `tap:write`).
+Users on the Teams tier can create an organization with `POST /api/organization` and become its admin. Organization admins can use `POST /api/v3/pow/org/guests` with an `org:write` API key to create guest users by email. Guest users receive individual API keys scoped to workspace creation, workspace reading, and TAP link usage (`workspaces:read`, `workspaces:write`, `tap:read`, `tap:write`).
 
 Organization-owned workspaces are visible to all real users and guest users in that organization. When a guest signs up later with the same email, their real user account inherits the guest organization membership, TAP sessions, and guest API keys.
 
 ## TAP Evidence
 
-Think Aloud Protocol sessions upload proof of work (`tap-thought-trace`, `tap-transcript`) to the workspace. Poll `GET .../tap-links` for link `status`, then call `POST .../performance` for unified scoring alongside other artifacts.
+Think Aloud Protocol sessions upload proof of work (`tap-thought-trace`, `tap-transcript`) to the workspace. Poll `GET .../tap-links` for link `status`, then call `POST .../verification-score` for verification scoring (TAP auto-results are always verification-only).
 
 ## Removed From Proof-of-Work API
 

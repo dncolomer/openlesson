@@ -103,10 +103,13 @@ export async function POST(req: NextRequest) {
             title: access.plan.title,
             root_topic: access.plan.root_topic,
             description: access.plan.description,
+            notes: access.plan.notes,
+            workspace_goal: access.plan.workspace_goal ?? null,
           },
           blocks || [],
           null,
-          proofOfWorkSpec
+          proofOfWorkSpec,
+          contextResult?.payload ?? null
         ),
         temperature: 0.45,
         maxOutputTokens: 8192,

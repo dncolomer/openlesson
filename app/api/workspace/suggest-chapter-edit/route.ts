@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { ayclTokenFromBody, guardSessionRoute } from "@/lib/api/require-auth";
+import { ayclTokenFromBody,
+  ileTokenFromBody, guardSessionRoute } from "@/lib/api/require-auth";
 import { callXaiJSON, systemMessage, userMessage, DEFAULT_MODEL } from "@/lib/xai-client";
 import { buildWorkspacePerformanceContext } from "@/lib/agent-v2/performance-context";
 
@@ -15,7 +16,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "sessionId and stepId are required" }, { status: 400 });
     }
 
-    const auth = await guardSessionRoute(sessionId, { ayclToken: ayclTokenFromBody(body) });
+    const auth = await guardSessionRoute(sessionId, { ayclToken: ayclTokenFromBody(body), ileToken: ileTokenFromBody(body) });
     if (!auth.ok) return auth.response;
 
     const { user, supabase } = auth;

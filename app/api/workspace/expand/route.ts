@@ -38,7 +38,7 @@ export async function POST(req: NextRequest) {
 
     const { data: plan } = await supabase
       .from("workspaces")
-      .select("user_id, is_public, title, root_topic, notes, conversion_goal")
+      .select("user_id, is_public, title, root_topic, notes, workspace_goal")
       .eq("id", node.workspace_id)
       .single();
 
@@ -54,7 +54,7 @@ export async function POST(req: NextRequest) {
     const { composeBlockGenerationContext } = await import("@/lib/workspace-create-modes");
     const alwaysContext = composeBlockGenerationContext({
       workspaceTitle: plan.title || plan.root_topic || undefined,
-      goal: plan.conversion_goal || plan.root_topic,
+      goal: plan.workspace_goal || plan.root_topic,
       notes: plan.notes,
       fileNames: (workspaceFiles || []).map((f: { file_name: string }) => f.file_name).filter(Boolean),
     });

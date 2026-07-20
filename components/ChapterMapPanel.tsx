@@ -16,6 +16,7 @@ interface ChapterMapPanelProps {
   plan: SessionPlan | null;
   sessionId?: string;
   ayclToken?: string;
+  ileToken?: string;
   locale?: string;
   loading?: boolean;
   activeChapterIndex: number;
@@ -33,6 +34,7 @@ export function ChapterMapPanel({
   plan,
   sessionId,
   ayclToken,
+  ileToken,
   locale = "en",
   loading = false,
   activeChapterIndex,
@@ -45,6 +47,11 @@ export function ChapterMapPanel({
   isSessionActive,
   isCurrentStepCompleted = false,
 }: ChapterMapPanelProps) {
+  const guestAccessBody = ayclToken
+    ? { ayclToken }
+    : ileToken
+      ? { ileToken }
+      : {};
   const { t } = useI18n();
   const [selectedStepId, setSelectedStepId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -89,7 +96,7 @@ export function ChapterMapPanel({
           currentDescription: editDraft,
           prompt: editPrompt,
           locale,
-          ...(ayclToken ? { ayclToken } : {}),
+          ...guestAccessBody,
         }),
       });
       const data = await response.json();
@@ -100,7 +107,7 @@ export function ChapterMapPanel({
     } finally {
       setSuggestingEdit(false);
     }
-  }, [ayclToken, editDraft, editPrompt, editingId, locale, sessionId, suggestingEdit]);
+  }, [ayclToken, ileToken, editDraft, editPrompt, editingId, locale, sessionId, suggestingEdit]);
 
   const saveEdit = useCallback(async () => {
     if (!editingId || savingEdit) return;
@@ -177,6 +184,7 @@ export function ChapterMapPanel({
         isAdding={adding}
         sessionId={sessionId}
         ayclToken={ayclToken}
+        ileToken={ileToken}
         locale={locale}
         suggestMode="chapter"
         recenterCell={activeCell}

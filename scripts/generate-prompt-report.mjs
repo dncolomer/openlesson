@@ -13,7 +13,6 @@ import {
   extractVarTemplate,
   extractUserMessageTemplates,
   extractTapOpeningQuestionExtras,
-  extractWorkspacePerformanceChatInstructions,
 } from "./prompt-extractors.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -115,16 +114,14 @@ const FILE_MAP = {
   "app/api/workspace/chat/route.ts": "SYSTEM_PROMPT workspace assistant",
 
   "app/api/workspace/generate/route.ts": "promptBody plan graph generator (not in rg.log — add via expand)",
-  "app/api/workspace/performance-chat/route.ts": "buildSystemInstructions multi-user performance chat",
   "app/api/workspace/performance-report/route.ts": "buildPerformanceReportInstructions consumer",
   "app/api/workspace/integration-skill/route.ts": "buildIntegrationSkillInstructions consumer",
   "app/api/rabbit-hole/continue/route.ts": "Rabbit Hole plan generator user prompt (not in rg.log)",
-  "app/api/v2/agent/workspaces/route.ts": "Workspace block generation user prompt (not in rg.log)",
+  "app/api/v3/pow/workspaces/route.ts": "Workspace block generation user prompt (not in rg.log)",
   "app/api/demo/performance/route.ts": "buildPerformanceReportInstructions + buildPerformanceChatInstructions + Orbit context",
   "app/api/demo/integration-skill/route.ts": "buildIntegrationSkillInstructions consumer",
   "app/api/demo/workspace/route.ts": "Consumer → createVerificationWorkspaceFromPrompt (lib/agent-v2/create-verification-workspace.ts)",
-  "app/api/v2/agent/workspaces/[id]/performance/route.ts": "buildPerformanceReportInstructions + buildPerformanceChatInstructions",
-  "app/api/v2/agent/workspaces/[id]/integration-skill/route.ts": "buildIntegrationSkillInstructions consumer",
+  "app/api/v3/pow/workspaces/[id]/integration-skill/route.ts": "buildIntegrationSkillInstructions consumer",
   "app/api/workspace-tap-score/chat/route.ts": "buildTapScoreInstructions + TAP chat overlay",
   "app/api/workspace-tap-score/complete/route.ts": "TAP complete scoring system + user prompts",
   "lib/tap-score.ts": "buildTapScoreInstructions, generateTapOpeningQuestion system extension + userMessage",
@@ -203,9 +200,9 @@ Scope: \`\` production TypeScript
 | \`session_plan_update\` | \`lib/prompts.ts\` → \`updateSessionPlanLLM\` | \`session-plan/update\`, \`advance-step\` | Yes |
 | \`BASE_SYSTEM_PROMPT\` | \`session-chat/route.ts\` | \`POST /api/session-chat\` | No |
 | Rabbit Hole continue | \`rabbit-hole/continue/route.ts\` | \`POST /api/rabbit-hole/continue\` | No |
-| v2 workspace create | \`v2/agent/workspaces/route.ts\` | \`POST /api/v2/agent/workspaces\` | No |
+| v2 workspace create | \`v3/pow/workspaces/route.ts\` | \`POST /api/v3/pow/workspaces\` | No |
 | \`buildPerformanceReportInstructions\` | \`agent-v2/performance-report.ts\` | v2 performance report, MCP | No |
-| \`buildPerformanceChatInstructions\` | \`agent-v2/performance-context.ts\` | v2 performance chat, MCP | No |
+| \`buildPerformanceChatInstructions\` | \`agent-v2/performance-context.ts\` | Orbit demo performance chat | No |
 | \`buildProofOfWorkSchemaInstructions\` | \`agent-v2/proof-of-work-schema.ts\` | proof-of-work-schema API, MCP | No |
 | \`buildIntegrationSkillInstructions\` | \`agent-v2/integration-skill.ts\` | integration-skill API, MCP | No |
 | \`buildTapScoreInstructions\` | \`lib/tap-score.ts\` | TAP chat | No |
@@ -233,7 +230,7 @@ Every file from \`prompt-inventory-rg.log\` (${inventoryFiles.length} paths) plu
 
 | File | Prompt entry / note |
 |---|---|
-${[...inventoryFiles, "app/api/rabbit-hole/continue/route.ts", "app/api/v2/agent/workspaces/route.ts", "app/api/workspace/generate/route.ts", "app/api/workspace/expand/route.ts", "app/api/workspace/regenerate/route.ts", "app/api/workspaces/[id]/remix/route.ts", "app/api/prep-material/route.ts", "app/api/rabbit-hole/interview/route.ts", "app/api/insights/create/route.ts", "app/api/suggest-plan-topic/route.ts", "app/api/workspace/suggest-blocks/route.ts", "app/api/workspace/add-block-at-slot/route.ts", "app/api/workspace/suggest-chapter-edit/route.ts"].map((f) => `| \`${f}\` | ${FILE_MAP[f] || "See domain sections below"} |`).join("\n")}
+${[...inventoryFiles, "app/api/rabbit-hole/continue/route.ts", "app/api/v3/pow/workspaces/route.ts", "app/api/workspace/generate/route.ts", "app/api/workspace/expand/route.ts", "app/api/workspace/regenerate/route.ts", "app/api/workspaces/[id]/remix/route.ts", "app/api/prep-material/route.ts", "app/api/rabbit-hole/interview/route.ts", "app/api/insights/create/route.ts", "app/api/suggest-plan-topic/route.ts", "app/api/workspace/suggest-blocks/route.ts", "app/api/workspace/add-block-at-slot/route.ts", "app/api/workspace/suggest-chapter-edit/route.ts"].map((f) => `| \`${f}\` | ${FILE_MAP[f] || "See domain sections below"} |`).join("\n")}
 
 ---
 
@@ -471,16 +468,16 @@ parts.push(
 );
 
 // v2 workspaces
-const v2Ws = read("app/api/v2/agent/workspaces/route.ts").match(
+const v2Ws = read("app/api/v3/pow/workspaces/route.ts").match(
   /userMessage\(`([\s\S]*?)`\)/,
 )?.[1];
 const conversionRule = extractConstTemplate(read("lib/agent-v2/conversion-goal.ts"), "WORKSPACE_GENERATION_CONVERSION_GOAL_RULE");
 parts.push(
   block(
-    "v2/agent/workspaces user prompt",
+    "v3/pow/workspaces user prompt",
     {
-      File: "`app/api/v2/agent/workspaces/route.ts`",
-      "Call chain": "`POST /api/v2/agent/workspaces` → `callXaiJSON`",
+      File: "`app/api/v3/pow/workspaces/route.ts`",
+      "Call chain": "`POST /api/v3/pow/workspaces` → `callXaiJSON`",
       Purpose: "Create verification workspace with 3-8 assessable blocks + conversion_goal",
       "User-overridable": "No",
       Variables: "`{initialPrompt}`, `{fileContext}`, appended `WORKSPACE_GENERATION_CONVERSION_GOAL_RULE`",
@@ -566,22 +563,6 @@ parts.push(
   ),
 );
 
-parts.push(
-  block(
-    "workspace/performance-chat `buildSystemInstructions`",
-    {
-      File: "`app/api/workspace/performance-chat/route.ts`",
-      "Call chain": "`POST /api/workspace/performance-chat`",
-      Purpose: "Multi-user workspace session performance analysis",
-      "User-overridable": "No",
-      Variables: "`{canSeeAllUsers}`, `{usersContext}`, `{currentUsername}` — two branch templates below",
-    },
-    extractWorkspacePerformanceChatInstructions(
-      read("app/api/workspace/performance-chat/route.ts"),
-    ),
-  ),
-);
-
 // Domain 5: TAP scoring
 parts.push("---\n\n## Domain 5: TAP Scoring\n\n");
 
@@ -643,7 +624,7 @@ parts.push(
       "User-overridable": "No",
       Variables: "`{transcript}`, `{durationSeconds}`, `{tapSessionId}` — uses `buildTapTranscriptPayload` + `uploadWorkspaceProofOfWork`",
     },
-    "No LLM scoring prompt. On completion, serializes transcript to tool proof of work (`tool_name: tap-transcript`), marks `workspace_tap_sessions.status = completed`, and returns the learner to the workspace. Unified scoring happens via POST .../performance / MCP analyze_performance.",
+    "No LLM scoring prompt. On completion, serializes transcript to tool proof of work (`tool_name: tap-transcript`), marks `workspace_tap_sessions.status = completed`, and returns the learner to the workspace. Score via POST .../verification-score (MCP verification_score).",
   ),
 );
 
@@ -748,7 +729,7 @@ parts.push(
     "`buildPerformanceChatInstructions`",
     {
       File: "`lib/agent-v2/performance-context.ts`",
-      "Call chain": "v2 performance chat mode, demo performance, MCP analyze_performance chat",
+      "Call chain": "demo performance chat (Orbit); not a public Proof-of-Work API surface",
       Purpose: "Conversational performance analysis grounded in attachments",
       Variables: "`{blockId}`, `{stylePrompt}`",
     },
@@ -838,7 +819,7 @@ parts.push(
     {
       File: "`lib/agent-v2/create-verification-workspace.ts`",
       "Call chain":
-        "`POST /api/demo/workspace` → `createVerificationWorkspaceFromPrompt`; also `POST /api/v2/agent/workspaces` uses a related template",
+        "`POST /api/demo/workspace` → `createVerificationWorkspaceFromPrompt`; also `POST /api/v3/pow/workspaces` uses a related template",
       Purpose:
         "Generate 3–6 assessable workspace blocks with conversion_goal from natural-language prompt (+ optional files)",
       "User-overridable": "No",

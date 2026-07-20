@@ -10,7 +10,6 @@ import { DEFAULT_PROMPTS, PROMPT_META, type PromptKey, type UserPrompts } from "
 import { useI18n } from "@/lib/i18n";
 import { formatPlanMonthlyPrice, hasAgentApiKeyPlan, type PlanId } from "@/lib/plans";
 import { dashboardUsesAgenticKeys } from "@/lib/dashboard-agent-access";
-import { InsightsDashboardTab } from "@/components/InsightsDashboardTab";
 import { OrganizationDashboardTab } from "@/components/OrganizationDashboardTab";
 import { WorkspaceDashboardCard } from "@/components/WorkspaceDashboardCard";
 import { buildMcpClientConfig } from "@/lib/agent-v2/mcp-proof-of-work-catalog";
@@ -25,7 +24,6 @@ type Tab =
   | "plans"
   | "usage"
   | "integrations"
-  | "insights"
   | "organization"
   | "config";
 
@@ -65,7 +63,7 @@ export default function DashboardPage() {
   const searchParams = useSearchParams();
   const initialTab = (searchParams.get("tab") as Tab) || "plans";
   const [activeTab, setActiveTab] = useState<Tab>(
-    ["plans", "usage", "integrations", "insights", "organization"].includes(initialTab)
+    ["plans", "usage", "integrations", "organization"].includes(initialTab)
       ? initialTab
       : "plans"
   );
@@ -302,7 +300,7 @@ export default function DashboardPage() {
 
       // Load Proof-of-Work API keys (v2 Teams tier)
       try {
-        const keysRes = await fetch("/api/v2/agent/keys");
+        const keysRes = await fetch("/api/v3/pow/keys");
         if (keysRes.ok) {
           const keysPayload = await keysRes.json();
           const keys = (keysPayload.keys || []).filter((key: AgentApiKey) => key.is_active !== false);
@@ -478,7 +476,7 @@ export default function DashboardPage() {
     if (!newKeyName.trim()) return;
     setCreatingKey(true);
     try {
-      const res = await fetch("/api/v2/agent/keys", {
+      const res = await fetch("/api/v3/pow/keys", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ label: newKeyName.trim() }),
@@ -519,7 +517,7 @@ export default function DashboardPage() {
   const handleDeleteApiKey = async (id: string) => {
     if (!confirm(t('dashboard.deleteApiKeyConfirm'))) return;
     try {
-      await fetch(`/api/v2/agent/keys/${id}`, { method: "DELETE" });
+      await fetch(`/api/v3/pow/keys/${id}`, { method: "DELETE" });
       setApiKeys((prev) => prev.filter((k) => k.id !== id));
     } catch (err) {
       console.error("Failed to delete key:", err);
@@ -691,15 +689,6 @@ export default function DashboardPage() {
     workspacePage * workspacePageSize
   );
 
-  const workspaceTitlesById = useMemo(
-    () =>
-      workspaces.reduce<Record<string, string>>((titles, plan) => {
-        titles[plan.id] = plan.title || plan.root_topic;
-        return titles;
-      }, {}),
-    [workspaces]
-  );
-
   const setDashboardTab = (tab: Tab) => {
     setActiveTab(tab);
     router.replace(`/dashboard?tab=${tab}`, { scroll: false });
@@ -729,7 +718,6 @@ export default function DashboardPage() {
           <div className="flex gap-1 overflow-x-auto">
             {[
               { id: "plans", label: "Workspaces" },
-              { id: "insights", label: "Insights" },
               { id: "usage", label: t("dashboard.usageTab") },
               { id: "organization", label: "Organization" },
               { id: "integrations", label: t("dashboard.integrationsTab") },
@@ -1039,8 +1027,6 @@ export default function DashboardPage() {
             )}
           </div>
         )}
-
-        {activeTab === "insights" && <InsightsDashboardTab workspaceTitles={workspaceTitlesById} />}
 
         {activeTab === "organization" && <OrganizationDashboardTab />}
 

@@ -1,12 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { resolveTapSessionAccess } from "@/lib/tap-score-session-auth";
-import { finalizePerformanceReport } from "@/lib/agent-v2/conversion-goal";
+import { finalizeVerticalScoreReport } from "@/lib/agent-v2/workspace-goal";
 import { buildWorkspacePerformanceContext } from "@/lib/agent-v2/performance-context";
-import { generateWorkspacePerformanceReport } from "@/lib/agent-v2/generate-performance-report";
+import { generateWorkspaceVerticalScoreReport } from "@/lib/agent-v2/generate-performance-report";
+import { TAP_AUTO_SCORE_VERTICAL } from "@/lib/agent-v2/performance-report";
 
 export const runtime = "nodejs";
 export const maxDuration = 120;
 
+/**
+ * TAP post-session auto-results always use the verification score only —
+ * TAP is a verification tool.
+ */
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
@@ -27,7 +32,7 @@ export async function POST(req: NextRequest) {
 
     const { data: workspace } = await access.supabase
       .from("workspaces")
-      .select("id, user_id, title, root_topic, description, notes, conversion_goal")
+      .select("id, user_id, title, root_topic, description, notes, workspace_goal")
       .eq("id", access.workspaceId)
       .single();
 
@@ -62,12 +67,13 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const generation = await generateWorkspacePerformanceReport({
+    const generation = await generateWorkspaceVerticalScoreReport({
       workspaceId: access.workspaceId,
       workspaceTitle: workspace.title,
       workspaceRootTopic: workspace.root_topic,
-      storedConversionGoal: workspace.conversion_goal,
+      storedWorkspaceGoal: workspace.workspace_goal,
       fileIds: context.fileIds,
+      vertical: TAP_AUTO_SCORE_VERTICAL,
     });
 
     if (!generation.success || !generation.data) {
@@ -80,13 +86,23 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const finalized = finalizePerformanceReport(generation.data, workspace.conversion_goal, {
-      title: workspace.title,
-      description: workspace.description,
-      notes: workspace.notes,
-    });
+    const finalized = finalizeVerticalScoreReport(
+      generation.data,
+      workspace.workspace_goal,
+      {
+        title: workspace.title,
+        description: workspace.description,
+        notes: workspace.notes,
+      },
+      TAP_AUTO_SCORE_VERTICAL
+    );
 
-    return NextResponse.json({ report: finalized.report });
+    return NextResponse.json({
+      report: finalized.report,
+      vertical: TAP_AUTO_SCORE_VERTICAL,
+      workspace_goal: finalized.workspace_goal,
+      workspace_goal_source: finalized.workspace_goal_source,
+    });
   } catch (error) {
     console.error("[workspace-tap-score/performance] Error:", error);
     const message = error instanceof Error ? error.message : "Internal server error";

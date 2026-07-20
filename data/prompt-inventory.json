@@ -38,7 +38,7 @@
     {
       "id": "agent-v2",
       "label": "Agent v2",
-      "description": "Proof-of-work schema, integration skills, performance reports, verification workspace builders, and v2 agent routes.",
+      "description": "Proof-of-work schema, integration skills, performance reports, verification workspace builders, and PoW/Eval API routes.",
       "order": 6
     },
     {
@@ -414,7 +414,7 @@
     {
       "id": "app-api-v2-agent-workspaces-[id]-integration-skill-route-ts::consumer",
       "domainId": "agent-v2",
-      "file": "app/api/v2/agent/workspaces/[id]/integration-skill/route.ts",
+      "file": "app/api/v3/pow/workspaces/[id]/integration-skill/route.ts",
       "symbol": "(consumer)",
       "kind": "consumer",
       "label": "route",

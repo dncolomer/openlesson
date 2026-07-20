@@ -43,7 +43,7 @@ const CONSUMER_DELEGATES = {
     "lib/agent-v2/integration-skill.ts → buildIntegrationSkillInstructions",
   "app/api/workspace/performance-report/route.ts":
     "lib/agent-v2/performance-report.ts → buildPerformanceReportInstructions",
-  "app/api/v2/agent/workspaces/[id]/integration-skill/route.ts":
+  "app/api/v3/pow/workspaces/[id]/integration-skill/route.ts":
     "lib/agent-v2/integration-skill.ts → buildIntegrationSkillInstructions",
 };
 
@@ -89,7 +89,7 @@ const DOMAINS = [
     id: "agent-v2",
     label: "Agent v2",
     description:
-      "Proof-of-work schema, integration skills, performance reports, verification workspace builders, and v2 agent routes.",
+      "Proof-of-work schema, integration skills, performance reports, verification workspace builders, and PoW/Eval API routes.",
     order: 6,
   },
   {
@@ -147,7 +147,7 @@ function classifyDomain(relPath, symbol, kind) {
   }
   if (
     relPath.includes("agent-v2") ||
-    relPath.includes("v2/agent") ||
+    relPath.includes("v3/pow") ||
     relPath.includes("demo/")
   ) {
     return "agent-v2";

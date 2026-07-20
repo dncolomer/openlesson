@@ -993,6 +993,8 @@ export function TapScoreClient({ workspaceId, blockId, sessionId, privateToken, 
                   workspaceId={workspaceId}
                   blockId={blockId}
                   sessionId={sessionId}
+                  insightSurface="tap"
+                  allowInsightGeneration={false}
                 />
               </div>
             </div>
@@ -1016,7 +1018,12 @@ export function TapScoreClient({ workspaceId, blockId, sessionId, privateToken, 
             <h1 className="text-2xl font-medium text-neutral-100">{t("tap.postSession.resultsTitle")}</h1>
             <p className="mt-2 max-w-2xl text-sm text-neutral-400">{t("tap.postSession.resultsHint")}</p>
             <div className="mt-6 min-h-0 flex-1 rounded-lg border border-neutral-800 bg-neutral-950/50 p-4 md:p-5">
-              <PerformanceReportCard report={performanceReport} layout="spacious" fillHeight label={t("tap.postSession.resultsTitle")} />
+              <PerformanceReportCard
+                report={performanceReport}
+                layout="spacious"
+                fillHeight
+                label={t("tap.postSession.verificationResultsTitle")}
+              />
             </div>
           </section>
         ) : null}

@@ -18,11 +18,11 @@ The Proof-of-Work API supports **only** this workflow:
 5. Request learning and gap analysis over workspace proof of work (free-form Q&A or structured report).
 6. Create a private TAP link for a block (`15` or `30` minutes).
 7. List TAP links and completion status.
-8. Poll TAP completion (`list_tap_links` / `GET .../tap-links`); score TAP proof of work via `POST .../performance`.
+8. Poll TAP completion (`list_tap_links` / `GET .../tap-links`); score TAP proof of work via `POST .../verification-score` only (TAP is a verification tool).
 
 **Out of scope** — do not describe or call removed features: blockchain tracking, proof anchoring, live tutoring session control, heartbeats, or plan adaptation. Legacy web-session upload routes (`/api/session-files/*`) are separate from this API; agents should use `POST .../proof-of-work` for workspace-linked artifacts.
 
-**Teams tier required.** All `/api/v2/agent/*` routes require an active `pro_teams` subscription (platform admins bypass). Individual-tier keys are rejected with `403 teams_required`.
+**Teams tier required.** All `/api/v3/pow/*` routes require an active `pro_teams` subscription (platform admins bypass). Individual-tier keys are rejected with `403 teams_required`.
 
 ---
 
@@ -30,7 +30,7 @@ The Proof-of-Work API supports **only** this workflow:
 
 | Mode | When to use | Create | Schema | Performance |
 |------|-------------|--------|--------|-------------|
-| `semantic` | Default — full learning verification | `initial_prompt` | `definition` | `overall_score`, semantic `gap_analysis` |
+| `semantic` | Default — full learning verification | `initial_prompt` | `definition` | Vertical scores (`verification_score` / `augmentation_score` / `optimization_score`), semantic gap analysis |
 | `opaque` | Privacy-preserving structural verification | `protocol` (`protocol_id`, `goal_ref`) | `definition_ref` + `contract.event_verbs` | `protocol_report`, `privacy`; no semantic inference |
 
 **Opaque guardrails:**
@@ -52,8 +52,8 @@ Content-Type: application/json
 
 | Key type | Prefix | Created via |
 |----------|--------|-------------|
-| Organization member (Teams admin) | `sk_` | Dashboard **Usage → API Access**, or `POST /api/v2/agent/keys` (browser session) |
-| Organization guest | `gsk_` | `POST /api/v2/agent/org/guests` (org-admin key with `org:write`) |
+| Organization member (Teams admin) | `sk_` | Dashboard **Usage → API Access**, or `POST /api/v3/pow/keys` (browser session) |
+| Organization guest | `gsk_` | `POST /api/v3/pow/org/guests` (org-admin key with `org:write`) |
 
 **Default scopes** for new member keys: `workspaces:read`, `workspaces:write`, `tap:read`, `tap:write`.
 
@@ -134,11 +134,11 @@ Content-Type: application/json
 { "jsonrpc": "2.0", "id": 1, "method": "tools/list" }
 ```
 
-**Tools (full REST parity):** `list_workspaces`, `get_workspace`, `get_learning_progress`, `create_workspace`, `list_blocks`, `generate_proof_of_work_schema`, `generate_integration_skill`, `upload_proof_of_work`, `analyze_performance`, `list_tap_links`, `create_tap_link`
+**Tools (full REST parity):** `list_workspaces`, `get_workspace`, `get_learning_progress`, `create_workspace`, `list_blocks`, `generate_proof_of_work_schema`, `generate_integration_skill`, `upload_proof_of_work`, `verification_score`, `augmentation_score`, `optimization_score`, `list_tap_links`, `create_tap_link`
 
-Opaque mode is supported on `create_workspace` (`evaluation_mode`, `protocol`, `external_refs`), `generate_proof_of_work_schema` (`definition_ref`, `contract`), `upload_proof_of_work` (metadata allowlist + plaintext lint), and `analyze_performance` (`protocol_report`).
+Opaque mode is supported on `create_workspace` (`evaluation_mode`, `protocol`, `external_refs`), `generate_proof_of_work_schema` (`definition_ref`, `contract`), `upload_proof_of_work` (metadata allowlist + plaintext lint), and vertical score tools (`protocol_report`).
 
-**Partner agents:** call `get_learning_progress` to orient, then `upload_proof_of_work` and `analyze_performance` per your agent policy. PumaDoc policy snippets: `/customer-agent-uncertain-systems-policy.md`, `/pumaclaw-mentor-uncertain-systems-policy.md`.
+**Partner agents:** call `get_learning_progress` to orient, then `upload_proof_of_work` and the vertical score tools (`verification_score` / `augmentation_score` / `optimization_score`) per your agent policy. PumaDoc policy snippets: `/customer-agent-uncertain-systems-policy.md`, `/pumaclaw-mentor-uncertain-systems-policy.md`.
 
 Every MCP tool result includes `interruption` (TIM) with the same semantics as REST.
 
@@ -150,7 +150,7 @@ MCP resources: `uncertain-systems://integration-scope`, `uncertain-systems://pro
 
 ## Endpoints
 
-### `POST /api/v2/agent/workspaces` — `workspaces:write`
+### `POST /api/v3/pow/workspaces` — `workspaces:write`
 
 Create a Verification Workspace. Guest keys with `workspaces:write` may call this; the workspace is owned by the organization and tagged with `guest_user_id`.
 
@@ -206,7 +206,7 @@ Create a Verification Workspace. Guest keys with `workspaces:write` may call thi
 
 ---
 
-### `GET /api/v2/agent/workspaces/{workspace_id}/blocks` — `workspaces:read`
+### `GET /api/v3/pow/workspaces/{workspace_id}/blocks` — `workspaces:read`
 
 List assessable blocks. Organization members and guests may read **organization-owned** workspaces.
 
@@ -214,7 +214,7 @@ List assessable blocks. Organization members and guests may read **organization-
 
 ---
 
-### `POST /api/v2/agent/workspaces/{workspace_id}/proof-of-work-schema` — `workspaces:read`
+### `POST /api/v3/pow/workspaces/{workspace_id}/proof-of-work-schema` — `workspaces:read`
 
 Given workspace context plus an evaluation definition, returns a JSON Schema for the ideal tool proof-of-work payload. Use **before** first upload.
 
@@ -290,7 +290,7 @@ Given workspace context plus an evaluation definition, returns a JSON Schema for
 
 ---
 
-### `POST /api/v2/agent/workspaces/{workspace_id}/integration-skill` — `workspaces:read`
+### `POST /api/v3/pow/workspaces/{workspace_id}/integration-skill` — `workspaces:read`
 
 Generate a workspace-specific `skill.md` integration guide via `POST .../integration-skill` for a custom partner agent. Grok uses workspace blocks, topic, and plan files to tailor endpoints, payload examples, and checklists.
 
@@ -328,7 +328,7 @@ Host the returned markdown at your suggested path or inject `skill_md` directly 
 
 ---
 
-### `POST /api/v2/agent/workspaces/{workspace_id}/proof-of-work` — `workspaces:write`
+### `POST /api/v3/pow/workspaces/{workspace_id}/proof-of-work` — `workspaces:write`
 
 Upload open-format performance proof of work to xAI Files and link it to a workspace, optionally scoped to a block or session.
 
@@ -386,48 +386,42 @@ Max **10 MB** per upload. Guest keys attach proof of work to their guest identit
 
 ---
 
-### `POST /api/v2/agent/workspaces/{workspace_id}/performance` — `workspaces:read`
+### Vertical scores — `workspaces:read`
 
-Analyze learning signals across workspace proof of work (including TAP thought traces and transcripts), linked ILE sessions, and uploaded files.
+Three dedicated score endpoints (one primary 0–100 score per call). Each returns spider/radar `marker_scores`, analysis (`summary`, strengths/growth/gaps), and next actions (`gap_analysis.next_steps`).
 
-**Report mode** (omit `prompt` or send empty string) — returns structured gaps and suggestions:
+| Method | Path | MCP tool | Primary field |
+| :--- | :--- | :--- | :--- |
+| `POST` | `/api/v3/eval/workspaces/{workspace_id}/verification-score` | `verification_score` | `verification_score` |
+| `POST` | `/api/v3/eval/workspaces/{workspace_id}/augmentation-score` | `augmentation_score` | `augmentation_score` |
+| `POST` | `/api/v3/eval/workspaces/{workspace_id}/optimization-score` | `optimization_score` | `optimization_score` |
+
+- **Verification** — learning verification (knowledge coverage / demonstrated competency). **TAP auto-results always use verification only.**
+- **Augmentation** — practice / improvement readiness from proof of work.
+- **Optimization** — progress toward the inferred `workspace_goal` (0–100 score units; replaces the former conversion % branding).
+
+**Request** (all three endpoints share the same body shape):
 
 ```json
 {
-  "block_id": "optional-block-uuid"
-}
-```
-
-**Chat mode** — free-form Q&A over the same proof-of-work bundle:
-
-```json
-{
-  "prompt": "Which blocks show the weakest causal reasoning?",
   "block_id": "optional-block-uuid",
-  "conversation_history": [
-    { "role": "user", "content": "..." },
-    { "role": "assistant", "content": "..." }
-  ],
-  "file_ids": []
+  "style_prompt": "optional voice/tone"
 }
 ```
 
-- First call with empty `file_ids` builds a workspace performance context JSON, uploads it to xAI, and attaches up to 19 artifact files (proof of work, plan files, TAP artifacts).
-- Pass returned `file_ids` on follow-up calls to reuse the same context without rebuilding.
-
-**Response `200` (report):**
-
-Every report includes `overall_score`, `conversion_score`, `conversion_goal`, spider/radar `marker_scores`, and `gap_analysis.gaps`.
-
-**Opaque workspaces** also return `evaluation_mode`, `privacy`, `conversion_goal_source: "opaque_ref"`, and `protocol_report` (`protocol_compliance_score`, `phase_coverage`, `trace_integrity`, `structural_gaps`).
+**Response `200`:**
 
 ```json
 {
-  "mode": "report",
+  "mode": "score",
+  "vertical": "verification",
+  "workspace_goal": "Trial-to-paid subscription activation",
+  "workspace_goal_source": "workspace",
   "report": {
-    "overall_score": 72,
-    "conversion_score": 58,
-    "conversion_goal": "Trial-to-paid subscription activation",
+    "vertical": "verification",
+    "score": 72,
+    "verification_score": 72,
+    "workspace_goal": "Trial-to-paid subscription activation",
     "marker_scores": [
       {
         "id": "workflow_execution",
@@ -465,7 +459,6 @@ Every report includes `overall_score`, `conversion_score`, `conversion_goal`, sp
   },
   "proof_of_work_summary": {
     "blocks": 5,
-    "tap_sessions": 2,
     "proof_of_work_artifacts": 4,
     "linked_sessions": 1,
     "workspace_files": 0
@@ -474,20 +467,11 @@ Every report includes `overall_score`, `conversion_score`, `conversion_goal`, sp
 }
 ```
 
-**Response `200` (chat):**
-
-```json
-{
-  "mode": "chat",
-  "response": "Markdown analysis...",
-  "proof_of_work_summary": { },
-  "file_ids": ["file_..."]
-}
-```
+**Opaque workspaces** also return `evaluation_mode`, `privacy`, `workspace_goal_source: "opaque_ref"`, and `protocol_report`.
 
 ---
 
-### `POST /api/v2/agent/workspaces/{workspace_id}/blocks/{block_id}/tap-links` — `tap:write`
+### `POST /api/v3/pow/workspaces/{workspace_id}/blocks/{block_id}/tap-links` — `tap:write`
 
 Create a private Think Aloud Protocol (TAP) link for a block.
 
@@ -522,7 +506,7 @@ Create a private Think Aloud Protocol (TAP) link for a block.
 
 ---
 
-### `GET /api/v2/agent/workspaces/{workspace_id}/tap-links` — `tap:read`
+### `GET /api/v3/pow/workspaces/{workspace_id}/tap-links` — `tap:read`
 
 List TAP links for a workspace. Guests see only their own links; non-admin members see their own; org admins see org workspace links.
 
@@ -530,7 +514,7 @@ List TAP links for a workspace. Guests see only their own links; non-admin membe
 
 ---
 
-### `POST /api/v2/agent/org/guests` — `org:write`
+### `POST /api/v3/pow/org/guests` — `org:write`
 
 Create (or look up) a guest by email and mint a **new** guest API key. Caller must be an **organization admin** with `org:write` on their key.
 
@@ -577,7 +561,7 @@ Content-Type: application/json
 
 Requires `pro_teams` active. Returns `{ "organization", "is_org_admin": true }`.
 
-Then create a member API key from the dashboard or `POST /api/v2/agent/keys` (session auth).
+Then create a member API key from the dashboard or `POST /api/v3/pow/keys` (session auth).
 
 ---
 
@@ -606,7 +590,7 @@ Facilitation style: Socratic — one concise question at a time, follow-ups from
 | List TAP link status | ✅ | ✅ (own links) |
 | Create guest + issue `gsk_` | ✅ `org:write` + `is_org_admin` | ❌ |
 
-**Integration pattern:** Org admin provisions guests with `gsk_` keys. Each guest can create their own Verification Workspaces or use org-shared ones; they use their key for workspace creation, block reads, and TAP links. TAP transcripts and thought traces land in proof-of-work — score with `POST .../performance`.
+**Integration pattern:** Org admin provisions guests with `gsk_` keys. Each guest can create their own Verification Workspaces or use org-shared ones; they use their key for workspace creation, block reads, and TAP links. TAP transcripts and thought traces land in proof-of-work — score with `POST .../verification-score` only.
 
 ---
 
@@ -617,8 +601,8 @@ Facilitation style: Socratic — one concise question at a time, follow-ups from
 3. `GET .../blocks` → map blocks to your workflow steps (opaque: protocol phases).
 4. *(Optional)* `POST .../proof-of-work-schema` — semantic: `definition`; opaque: `definition_ref` + `contract.event_verbs`; or `POST .../integration-skill` for a custom `skill.md`.
 5. `POST .../proof-of-work` as learners produce tool usage, screenshots, video, or EEG (optional `block_id`).
-6. `POST .../performance` for gap reports, or include `prompt` for follow-up questions.
+6. `POST .../verification-score` | `.../augmentation-score` | `.../optimization-score` for scorecards.
 7. `POST .../tap-links` → send `private_url` to the learner.
 8. Poll `GET .../tap-links` until the link `status === "completed"`.
-9. `POST .../performance` to score TAP proof of work together with other artifacts.
+9. `POST .../verification-score` to score TAP proof of work (verification only) together with other artifacts.
 10. For external learners without accounts: `POST /org/guests` → give them `gsk_` + private TAP URL.

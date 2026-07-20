@@ -39,7 +39,7 @@ const CONSUMER_PATHS = [
   "app/api/demo/integration-skill/route.ts",
   "app/api/workspace/integration-skill/route.ts",
   "app/api/workspace/performance-report/route.ts",
-  "app/api/v2/agent/workspaces/[id]/integration-skill/route.ts",
+  "app/api/v3/pow/workspaces/[id]/integration-skill/route.ts",
 ];
 
 function walk(dir, out = []) {

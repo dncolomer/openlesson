@@ -8,7 +8,8 @@ export async function GET(req: NextRequest) {
 
   const workspaceId = req.nextUrl.searchParams.get("workspaceId");
 
-  // Dashboard Insights = bookmarks originating from workspaces only (not Performance).
+  // Workspace Insights (Knowledge) = bookmarks originating from workspaces only.
+  // Optional workspaceId scopes the list to a single workspace Knowledge view.
   let query = supabase
     .from("insights")
     .select("id, title, summary, workspace_id, block_id, session_id, aesthetic_image, share_token, created_at")

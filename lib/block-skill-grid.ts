@@ -14,6 +14,10 @@ export interface SkillGridNode {
   span_w?: number;
   /** Height in cells (≥1). Default 1. */
   span_h?: number;
+  /**
+   * Freeform mask: relative {dr,dc} from anchor. Null/empty = solid span_w×span_h.
+   */
+  shape_cells?: Array<{ dr: number; dc: number }> | null;
 }
 
 export interface GridCell {
@@ -176,7 +180,46 @@ function nodeSpanH(node: SkillGridNode) {
   return typeof node.span_h === "number" && node.span_h >= 1 ? Math.min(node.span_h, 24) : 1;
 }
 
-/** Mark every cell in a rectangular footprint as occupied by blockId. Returns false if any cell taken. */
+/** Absolute occupied cells for a node (freeform mask or solid rectangle). */
+export function skillNodeOccupiedCells(node: SkillGridNode): GridCell[] {
+  if (!hasGridPosition(node)) return [];
+  const shape = Array.isArray(node.shape_cells) ? node.shape_cells : null;
+  if (shape && shape.length > 0) {
+    return shape
+      .filter((o) => Number.isInteger(o?.dr) && Number.isInteger(o?.dc))
+      .map((o) => ({
+        row: node.position_y! + o.dr,
+        col: node.position_x! + o.dc,
+      }));
+  }
+  const spanW = nodeSpanW(node);
+  const spanH = nodeSpanH(node);
+  const cells: GridCell[] = [];
+  for (let dr = 0; dr < spanH; dr++) {
+    for (let dc = 0; dc < spanW; dc++) {
+      cells.push({ row: node.position_y! + dr, col: node.position_x! + dc });
+    }
+  }
+  return cells;
+}
+
+/** Claim absolute cells for blockId. Returns false if any cell taken. */
+function claimCells(
+  occupancy: Map<string, string>,
+  blockId: string,
+  cells: GridCell[],
+): boolean {
+  const keys: string[] = [];
+  for (const cell of cells) {
+    const key = getCellKey(cell.row, cell.col);
+    if (occupancy.has(key)) return false;
+    keys.push(key);
+  }
+  for (const key of keys) occupancy.set(key, blockId);
+  return true;
+}
+
+/** Mark every cell in a rectangular footprint as occupied by blockId. */
 function claimFootprint(
   occupancy: Map<string, string>,
   blockId: string,
@@ -185,23 +228,21 @@ function claimFootprint(
   spanW: number,
   spanH: number,
 ): boolean {
-  const keys: string[] = [];
+  const cells: GridCell[] = [];
   for (let dr = 0; dr < spanH; dr++) {
     for (let dc = 0; dc < spanW; dc++) {
-      const key = getCellKey(row + dr, col + dc);
-      if (occupancy.has(key)) return false;
-      keys.push(key);
+      cells.push({ row: row + dr, col: col + dc });
     }
   }
-  for (const key of keys) occupancy.set(key, blockId);
-  return true;
+  return claimCells(occupancy, blockId, cells);
 }
 
-/** World-space layout: honors saved grid cells (with multi-cell spans), then fills gaps radially from origin. */
+/** World-space layout: honors freeform masks and multi-cell spans, then radial fill. */
 export function buildSkillGridLayout(nodes: SkillGridNode[]) {
   const ordered = getOrderedSkillGridNodes(nodes);
   const placements = new Map<string, GridCell>();
   const spans = new Map<string, { span_w: number; span_h: number }>();
+  const shapes = new Map<string, Array<{ dr: number; dc: number }>>();
   const occupancy = new Map<string, string>();
 
   for (const node of nodes) {
@@ -209,9 +250,14 @@ export function buildSkillGridLayout(nodes: SkillGridNode[]) {
     const spanW = nodeSpanW(node);
     const spanH = nodeSpanH(node);
     const cell = { row: node.position_y!, col: node.position_x! };
-    if (!claimFootprint(occupancy, node.id, cell.row, cell.col, spanW, spanH)) continue;
+    const occupied = skillNodeOccupiedCells(node);
+    if (occupied.length === 0) continue;
+    if (!claimCells(occupancy, node.id, occupied)) continue;
     placements.set(node.id, cell);
     spans.set(node.id, { span_w: spanW, span_h: spanH });
+    if (Array.isArray(node.shape_cells) && node.shape_cells.length > 0) {
+      shapes.set(node.id, node.shape_cells);
+    }
   }
 
   const unplaced = ordered.filter((node) => !placements.has(node.id));
@@ -235,7 +281,7 @@ export function buildSkillGridLayout(nodes: SkillGridNode[]) {
   const startNode = ordered.find((node) => node.is_start) ?? ordered[0];
   const startCell = startNode ? (placements.get(startNode.id) ?? { row: 0, col: 0 }) : { row: 0, col: 0 };
 
-  return { ordered, placements, occupancy, spans, startCell };
+  return { ordered, placements, occupancy, spans, shapes, startCell };
 }
 
 export function getNeighborTitles(

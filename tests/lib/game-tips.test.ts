@@ -20,7 +20,7 @@ describe("game demo helpers", () => {
 
   it("extracts full direction and event coaching from gap analysis", () => {
     const report = {
-      overall_score: 62,
+      score: 62, vertical: 'verification' as const,
       suggestions: [],
       growth_areas: [],
       gap_analysis: {

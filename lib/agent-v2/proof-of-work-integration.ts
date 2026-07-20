@@ -25,7 +25,10 @@ import {
   formatDualSurfaceGuidance,
   recommendIntegrationActions,
 } from "./integration-discovery";
-import { buildPerformanceReportContract, type PerformanceReportContract } from "./performance-report";
+import {
+  buildVerticalScoreReportContract,
+  type PerformanceReportContract,
+} from "./performance-report";
 import {
   buildInterruptionContract,
   formatInterruptionContractForSkillPrompt,
@@ -33,27 +36,28 @@ import {
   type ProofOfWorkApiInterruption,
 } from "./predictive-interruption";
 import { callXaiResponsesWithFiles } from "@/lib/xai-client";
+import {
+  evalWorkspaceResource,
+  powWorkspaceResource,
+} from "@/lib/api/agent-api-paths";
 
 export const EVIDENCE_SPEC_VERSION = "1.3";
 
 export function buildProofOfWorkSchemaApiPath(workspaceId: string, baseUrl: string): string {
-  const base = baseUrl.replace(/\/$/, "");
-  return `${base}/api/v2/agent/workspaces/${workspaceId}/proof-of-work-schema`;
+  return powWorkspaceResource(workspaceId, "proof-of-work-schema", baseUrl);
 }
 
 export function buildProofOfWorkUploadApiPath(workspaceId: string, baseUrl: string): string {
-  const base = baseUrl.replace(/\/$/, "");
-  return `${base}/api/v2/agent/workspaces/${workspaceId}/proof-of-work`;
+  return powWorkspaceResource(workspaceId, "proof-of-work", baseUrl);
 }
 
 export function buildIntegrationSkillApiPath(workspaceId: string, baseUrl: string): string {
-  const base = baseUrl.replace(/\/$/, "");
-  return `${base}/api/v2/agent/workspaces/${workspaceId}/integration-skill`;
+  return powWorkspaceResource(workspaceId, "integration-skill", baseUrl);
 }
 
+/** Primary verification score endpoint (Evaluation API). */
 export function buildPerformanceApiPath(workspaceId: string, baseUrl: string): string {
-  const base = baseUrl.replace(/\/$/, "");
-  return `${base}/api/v2/agent/workspaces/${workspaceId}/performance`;
+  return evalWorkspaceResource(workspaceId, "verification-score", baseUrl);
 }
 
 export function buildContinuousEvaluationPolicy(
@@ -94,7 +98,7 @@ export function buildContinuousEvaluationPolicy(
     principle:
       "Uncertain Systems verification is continuous. The proof-of-work spec and integration skill are living documents derived from workspace context and accumulated proof of work.",
     more_evidence_improves:
-      "The more tool usage, artifacts, and session proof of work you submit, the richer workspace context becomes and the better POST .../performance can learn, score, and surface gaps.",
+      "The more tool usage, artifacts, and session proof of work you submit, the richer workspace context becomes and the better POST .../verification-score can learn, score, and surface gaps.",
     regeneration_required: true,
     proof_of_work_spec: {
       api_path: proofOfWorkSpecPath,
@@ -139,7 +143,7 @@ export function enrichProofOfWorkSpecResult(
   } | null,
   workspaceMeta?: {
     title?: string;
-    conversion_goal?: string | null;
+    workspace_goal?: string | null;
   }
 ): ProofOfWorkEvalSchemaResult {
   const proofOfWorkSpecPath = buildProofOfWorkSchemaApiPath(workspaceId, baseUrl);
@@ -147,7 +151,7 @@ export function enrichProofOfWorkSpecResult(
 
   const performanceContract: PerformanceReportContract =
     result.performance_report_contract ?? {
-      ...buildPerformanceReportContract(baseUrl),
+      ...buildVerticalScoreReportContract("verification", baseUrl),
       endpoint_pattern: buildPerformanceApiPath(workspaceId, baseUrl),
     };
 
@@ -171,11 +175,16 @@ export function enrichProofOfWorkSpecResult(
     workspace_id: workspaceId,
     block_id: blockId ?? null,
     performance_report_contract: performanceContract,
+    vertical_score_contracts: result.vertical_score_contracts ?? {
+      verification: performanceContract,
+      augmentation: buildVerticalScoreReportContract("augmentation", baseUrl),
+      optimization: buildVerticalScoreReportContract("optimization", baseUrl),
+    },
     continuous_evaluation: continuousEvaluation,
     continuous_evaluation_mcp: continuousEvaluationMcp,
     uncertain_systems_scope: buildUncertainSystemsScopeForWorkspace({
       workspaceTitle: workspaceMeta?.title || result.schema_name,
-      conversionGoal: workspaceMeta?.conversion_goal,
+      workspaceGoal: workspaceMeta?.workspace_goal,
       blockCount,
       proofOfWorkCount,
     }),
@@ -183,7 +192,7 @@ export function enrichProofOfWorkSpecResult(
     recommended_next_actions: recommendIntegrationActions({
       proof_of_work_artifacts: proofOfWorkCount,
       blocks: blockCount,
-      has_conversion_goal: Boolean(workspaceMeta?.conversion_goal?.trim()),
+      has_workspace_goal: Boolean(workspaceMeta?.workspace_goal?.trim()),
     }),
     collection_guidance: [
       result.collection_guidance,
@@ -229,7 +238,7 @@ ${spec.continuous_evaluation?.more_evidence_improves || ""}
 Regenerate proof-of-work spec: ${spec.continuous_evaluation?.proof_of_work_spec.api_path || spec.proof_of_work_spec_api_path}
 Regenerate integration skill: ${spec.continuous_evaluation?.integration_skill.api_path || "(workspace)/integration-skill"}
 Upload proof of work: ${spec.continuous_evaluation?.proof_of_work_spec.api_path ? spec.proof_of_work_upload_api_path : "(workspace)/proof-of-work"}
-Request refreshed performance: ${spec.continuous_evaluation?.performance.api_path || "(workspace)/performance"}
+Request refreshed performance: ${spec.continuous_evaluation?.performance.api_path || "(workspace)/verification-score"}
 REST cadence: ${spec.continuous_evaluation?.recommended_cadence || "upload → re-fetch spec → regenerate skill → performance"}
 
 Continuous evaluation — MCP (same loop, tool names):
@@ -237,29 +246,31 @@ ${spec.continuous_evaluation_mcp?.principle || spec.continuous_evaluation?.princ
 MCP endpoint: ${spec.continuous_evaluation_mcp?.mcp_endpoint_pattern || "POST /api/mcp"} (Authorization: Bearer <api_key>)
 generate_proof_of_work_schema ↔ ${spec.continuous_evaluation?.proof_of_work_spec.api_path || "REST proof-of-work-schema"}
 upload_proof_of_work ↔ ${spec.proof_of_work_upload_api_path || "REST proof of work"}
-analyze_performance ↔ ${spec.continuous_evaluation?.performance.api_path || "REST performance"}
+verification_score / augmentation_score / optimization_score ↔ REST .../*-score endpoints
 get_learning_progress — one-call progress snapshot + recommended_next_actions
 MCP cadence: ${spec.continuous_evaluation_mcp?.recommended_cadence || "schema → upload → performance → repeat"}
 
 Integration surfaces: REST Bearer auth + MCP JSON-RPC (full parity — document both, prefer live API paths over static copies).
 
-Performance report contract (MUST appear in skill.md — every report includes scores + gaps):
-Endpoint: ${spec.performance_report_contract?.endpoint_pattern || spec.continuous_evaluation?.performance.api_path || "(workspace)/performance"}
-Required fields: ${(spec.performance_report_contract?.required_fields || ["overall_score", "conversion_score", "conversion_goal", "marker_scores", "gap_analysis.gaps"]).join(", ")}
-overall_score: ${spec.performance_report_contract?.overall_score.range || "0-100"} integer learning verification score
-conversion_score: ${spec.performance_report_contract?.conversion_score?.range || "0-100"} integer estimated conversion likelihood
-conversion_goal: ${spec.performance_report_contract?.conversion_goal?.description || "workspace-specific outcome goal"}
+Vertical score contracts (MUST appear in skill.md — each vertical returns one primary score + spider + analysis + next actions):
+Endpoints: POST .../verification-score | .../augmentation-score | .../optimization-score
+MCP tools: verification_score, augmentation_score, optimization_score
+Default/TAP: verification-score only
+Required fields: ${(spec.performance_report_contract?.required_fields || ["score", "verification_score", "workspace_goal", "marker_scores", "gap_analysis.gaps", "gap_analysis.next_steps"]).join(", ")}
+primary score: ${spec.performance_report_contract?.primary_score?.range || "0-100"} integer for the requested vertical
+workspace_goal: ${spec.performance_report_contract?.workspace_goal?.description || "inferred or owner-set workspace goal"}
 marker_scores: ${spec.performance_report_contract?.marker_scores.visualization || "spider_radar"} chart with ${spec.performance_report_contract?.marker_scores.min_markers || 4}-${spec.performance_report_contract?.marker_scores.max_markers || 8} competency axes (id, label, score, rationale)
 gap_analysis.gaps: required list of gaps (title, proof_of_work, severity, suggested_repair) — product/workflow remediation only; never TAP, block completion, or ILE
 gap_analysis.next_steps: directions (domain goals) and events (granular product/tool actions) — same remediation rules
-Example report shape:
+Example verification score shape:
 ${JSON.stringify(
     spec.performance_report_contract?.example_report || {
-      overall_score: 0,
-      conversion_score: 0,
-      conversion_goal: "Workspace goal conversion",
+      vertical: "verification" as const,
+      score: 0,
+      verification_score: 0,
+      workspace_goal: "Workspace goal",
       marker_scores: [],
-      gap_analysis: { gaps: [] },
+      gap_analysis: { gaps: [], next_steps: { directions: [], events: [] } },
     },
     null,
     2
@@ -305,7 +316,7 @@ export async function generateOpaqueWorkspaceProofOfWorkSpec(
 
   const { data: workspace } = await supabase
     .from("workspaces")
-    .select("id, title, evaluation_mode, protocol_config, external_refs, conversion_goal")
+    .select("id, title, evaluation_mode, protocol_config, external_refs, workspace_goal")
     .eq("id", workspaceId)
     .single();
 
@@ -331,7 +342,7 @@ export async function generateOpaqueWorkspaceProofOfWorkSpec(
     context.payload.counts,
     {
       title: workspace.title || meta.protocol_config.protocol_id,
-      conversion_goal: workspace.conversion_goal,
+      workspace_goal: workspace.workspace_goal,
     }
   );
 
@@ -355,11 +366,32 @@ export async function generateWorkspaceProofOfWorkSpec(
     blockId,
   });
 
+  // Bias collection guidance from durable learning world model evidence appetite when present.
+  let worldModelAppetiteGuidance: string | null = null;
+  try {
+    const { loadLearningWorldModel } = await import("./learning-world-model-store");
+    const { formatEvidenceAppetiteGuidance } = await import("@/lib/prompt-kernel/world-model");
+    const { subjectFromAuthAndParticipants } = await import("./learning-world-model-store");
+    const subject = subjectFromAuthAndParticipants({
+      authUserId: auth.user_id,
+      authGuestUserId: auth.guest_user_id,
+    });
+    const { model } = await loadLearningWorldModel(supabase, workspaceId, subject);
+    worldModelAppetiteGuidance = formatEvidenceAppetiteGuidance(model) || null;
+  } catch {
+    worldModelAppetiteGuidance = null;
+  }
+
   const schemaResult = await callXaiResponsesWithFiles<ProofOfWorkEvalSchemaResult>(
     buildProofOfWorkSchemaPrompt(workspaceTitle),
     context.fileIds,
     {
-      instructions: buildProofOfWorkSchemaInstructions(request, blockId, context.payload),
+      instructions: buildProofOfWorkSchemaInstructions(
+        request,
+        blockId,
+        context.payload,
+        worldModelAppetiteGuidance,
+      ),
       temperature: 0.25,
       maxOutputTokens: 6144,
       fetchTimeout: 120000,
@@ -379,7 +411,7 @@ export async function generateWorkspaceProofOfWorkSpec(
     context.payload.counts,
     {
       title: workspaceTitle,
-      conversion_goal: context.payload.workspace.conversion_goal,
+      workspace_goal: context.payload.workspace.workspace_goal,
     }
   );
 

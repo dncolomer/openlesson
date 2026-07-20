@@ -20,12 +20,23 @@ export interface BlockFootprint {
   span_h: number;
 }
 
+/** Relative cell offset from block anchor (position_y, position_x). */
+export interface ShapeOffset {
+  dr: number;
+  dc: number;
+}
+
 export interface PlacedBlockRef {
   id: string;
   position_x: number;
   position_y: number;
   span_w?: number;
   span_h?: number;
+  /**
+   * Freeform mask relative to anchor. When null/empty, occupancy is the full
+   * solid rectangle span_w×span_h.
+   */
+  shape_cells?: ShapeOffset[] | null;
 }
 
 export function normalizeSpan(value: unknown, fallback = 1): number {
@@ -39,7 +50,7 @@ export function normalizeSpan(value: unknown, fallback = 1): number {
   return fallback;
 }
 
-/** All absolute cells covered by a rectangular footprint. */
+/** All absolute cells covered by a solid rectangular footprint. */
 export function footprintCells(fp: BlockFootprint): GridCell[] {
   const spanW = Math.max(1, fp.span_w);
   const spanH = Math.max(1, fp.span_h);
@@ -50,6 +61,206 @@ export function footprintCells(fp: BlockFootprint): GridCell[] {
     }
   }
   return cells;
+}
+
+/** Parse shape_cells from DB/JSON into normalized offsets. */
+export function parseShapeCells(raw: unknown): ShapeOffset[] | null {
+  if (!Array.isArray(raw) || raw.length === 0) return null;
+  const out: ShapeOffset[] = [];
+  const seen = new Set<string>();
+  for (const item of raw) {
+    if (!item || typeof item !== "object") continue;
+    const rec = item as Record<string, unknown>;
+    const dr = Number(rec.dr ?? rec.dRow ?? rec.row);
+    const dc = Number(rec.dc ?? rec.dCol ?? rec.col);
+    if (!Number.isInteger(dr) || !Number.isInteger(dc)) continue;
+    const key = `${dr}:${dc}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push({ dr, dc });
+  }
+  return out.length > 0 ? out : null;
+}
+
+/**
+ * Absolute cells occupied by a placed block (freeform mask or solid rectangle).
+ */
+export function placedBlockCells(block: PlacedBlockRef): GridCell[] {
+  const offsets = parseShapeCells(block.shape_cells ?? null);
+  if (offsets && offsets.length > 0) {
+    return offsets.map((o) => ({
+      row: block.position_y + o.dr,
+      col: block.position_x + o.dc,
+    }));
+  }
+  return footprintCells({
+    position_x: block.position_x,
+    position_y: block.position_y,
+    span_w: normalizeSpan(block.span_w),
+    span_h: normalizeSpan(block.span_h),
+  });
+}
+
+/**
+ * Build freeform placement from any cell selection (anchor = top-left of bbox,
+ * shape_cells = relative offsets). Caller must ensure contiguity if required.
+ */
+export function freeformShapeFromCells(cells: GridCell[]): {
+  footprint: BlockFootprint;
+  shape_cells: ShapeOffset[];
+  absoluteCells: GridCell[];
+  isSolidRectangle: boolean;
+} | null {
+  const unique = cellsFromSelection(cells);
+  if (unique.length === 0) return null;
+  const footprint = footprintFromCells(unique)!;
+  const shape_cells: ShapeOffset[] = unique.map((c) => ({
+    dr: c.row - footprint.position_y,
+    dc: c.col - footprint.position_x,
+  }));
+  const required = footprint.span_w * footprint.span_h;
+  const isSolidRectangle = shape_cells.length === required;
+  // Omit shape_cells storage for pure rectangles (legacy-compatible null).
+  return {
+    footprint,
+    shape_cells: isSolidRectangle ? shape_cells : shape_cells,
+    absoluteCells: unique,
+    isSolidRectangle,
+  };
+}
+
+/** 4-connected contiguity of absolute cells (any freeform lecture shape). */
+export function cellsAreContiguous(cells: GridCell[]): boolean {
+  const unique = cellsFromSelection(cells);
+  if (unique.length === 0) return false;
+  if (unique.length === 1) return true;
+  const ortho: ReadonlyArray<readonly [number, number]> = [
+    [0, 1],
+    [0, -1],
+    [1, 0],
+    [-1, 0],
+  ];
+  const keys = new Set(unique.map((c) => getCellKey(c.row, c.col)));
+  const start = unique[0];
+  const seen = new Set<string>([getCellKey(start.row, start.col)]);
+  const queue: GridCell[] = [start];
+  while (queue.length > 0) {
+    const cur = queue.shift()!;
+    for (const [dr, dc] of ortho) {
+      const nr = cur.row + dr;
+      const nc = cur.col + dc;
+      const k = getCellKey(nr, nc);
+      if (!keys.has(k) || seen.has(k)) continue;
+      seen.add(k);
+      queue.push({ row: nr, col: nc });
+    }
+  }
+  return seen.size === unique.length;
+}
+
+/** Whether selected empty cells form a freeform lecture region. */
+export function selectionIsFreeformLectureShape(cells: GridCell[]): {
+  ok: boolean;
+  footprint: BlockFootprint | null;
+  shape_cells: ShapeOffset[] | null;
+  selectedCount: number;
+  reason: "empty" | "not_contiguous" | "ok";
+} {
+  const unique = cellsFromSelection(cells);
+  if (unique.length === 0) {
+    return {
+      ok: false,
+      footprint: null,
+      shape_cells: null,
+      selectedCount: 0,
+      reason: "empty",
+    };
+  }
+  const freeform = freeformShapeFromCells(unique)!;
+  if (!cellsAreContiguous(unique)) {
+    return {
+      ok: false,
+      footprint: freeform.footprint,
+      shape_cells: freeform.shape_cells,
+      selectedCount: unique.length,
+      reason: "not_contiguous",
+    };
+  }
+  return {
+    ok: true,
+    footprint: freeform.footprint,
+    shape_cells: freeform.isSolidRectangle ? null : freeform.shape_cells,
+    selectedCount: unique.length,
+    reason: "ok",
+  };
+}
+
+/** Cells occupied by a selection (only the selected cells — not the full bbox). */
+export function canPlaceAbsoluteCells(
+  cells: GridCell[],
+  occupancy: Map<string, string>,
+  ignoreIds: Iterable<string> = [],
+): boolean {
+  const ignore = new Set(ignoreIds);
+  for (const cell of cellsFromSelection(cells)) {
+    const occupant = occupancy.get(getCellKey(cell.row, cell.col));
+    if (occupant && !ignore.has(occupant)) return false;
+  }
+  return true;
+}
+
+/** External edges of a cell within a freeform shape (true = draw border). */
+export function freeformCellExternalEdges(
+  cell: GridCell,
+  shapeKeys: Set<string>,
+): { top: boolean; right: boolean; bottom: boolean; left: boolean } {
+  return {
+    top: !shapeKeys.has(getCellKey(cell.row - 1, cell.col)),
+    right: !shapeKeys.has(getCellKey(cell.row, cell.col + 1)),
+    bottom: !shapeKeys.has(getCellKey(cell.row + 1, cell.col)),
+    left: !shapeKeys.has(getCellKey(cell.row, cell.col - 1)),
+  };
+}
+
+/**
+ * Tile size so adjacent freeform cells fill the grid gap and read as one solid shape.
+ * Extends into the pitch gap toward neighbors that belong to the same shape.
+ */
+export function freeformTilePixelSize(
+  cell: GridCell,
+  shapeKeys: Set<string>,
+  cellSize: number,
+  gap: number,
+): { width: number; height: number } {
+  const extendRight = shapeKeys.has(getCellKey(cell.row, cell.col + 1));
+  const extendBottom = shapeKeys.has(getCellKey(cell.row + 1, cell.col));
+  return {
+    width: cellSize + (extendRight ? gap : 0),
+    height: cellSize + (extendBottom ? gap : 0),
+  };
+}
+
+/** Best cell to place the block title (closest to centroid of the freeform). */
+export function freeformLabelCell(cells: GridCell[]): GridCell {
+  const unique = cellsFromSelection(cells);
+  if (unique.length === 0) return { row: 0, col: 0 };
+  if (unique.length === 1) return unique[0];
+  const avgRow = unique.reduce((s, c) => s + c.row, 0) / unique.length;
+  const avgCol = unique.reduce((s, c) => s + c.col, 0) / unique.length;
+  let best = unique[0];
+  let bestDist = Infinity;
+  for (const cell of unique) {
+    const d = Math.abs(cell.row - avgRow) + Math.abs(cell.col - avgCol);
+    if (d < bestDist) {
+      bestDist = d;
+      best = cell;
+    }
+  }
+  return best;
+}
+
+export function freeformShapeKeySet(cells: GridCell[]): Set<string> {
+  return new Set(cellsFromSelection(cells).map((c) => getCellKey(c.row, c.col)));
 }
 
 export function cellsFromSelection(cells: GridCell[]): GridCell[] {
@@ -87,7 +298,78 @@ export function footprintFromCells(cells: GridCell[]): BlockFootprint | null {
   };
 }
 
+/**
+ * Whether selected empty cells form a filled rectangle (required for generate-in-shape).
+ * A sparse/L-shaped selection still has a bounding box; without this check the
+ * bounding box can include occupied cells the user never selected.
+ */
+export function selectionIsSolidRectangle(cells: GridCell[]): {
+  ok: boolean;
+  footprint: BlockFootprint | null;
+  selectedCount: number;
+  requiredCount: number;
+  reason: "empty" | "not_solid" | "ok";
+} {
+  const unique = cellsFromSelection(cells);
+  const footprint = footprintFromCells(unique);
+  if (!footprint) {
+    return { ok: false, footprint: null, selectedCount: 0, requiredCount: 0, reason: "empty" };
+  }
+  const required = footprintCells(footprint);
+  const selectedKeys = new Set(unique.map((c) => getCellKey(c.row, c.col)));
+  if (selectedKeys.size !== required.length) {
+    return {
+      ok: false,
+      footprint,
+      selectedCount: selectedKeys.size,
+      requiredCount: required.length,
+      reason: "not_solid",
+    };
+  }
+  for (const cell of required) {
+    if (!selectedKeys.has(getCellKey(cell.row, cell.col))) {
+      return {
+        ok: false,
+        footprint,
+        selectedCount: selectedKeys.size,
+        requiredCount: required.length,
+        reason: "not_solid",
+      };
+    }
+  }
+  return {
+    ok: true,
+    footprint,
+    selectedCount: selectedKeys.size,
+    requiredCount: required.length,
+    reason: "ok",
+  };
+}
+
+/** Occupied cells inside a footprint (excluding ignoreIds). */
+export function occupiedCellsInFootprint(
+  fp: BlockFootprint,
+  occupancy: Map<string, string>,
+  ignoreIds: Iterable<string> = [],
+): GridCell[] {
+  const ignore = new Set(ignoreIds);
+  const hits: GridCell[] = [];
+  for (const cell of footprintCells(fp)) {
+    const occupant = occupancy.get(getCellKey(cell.row, cell.col));
+    if (occupant && !ignore.has(occupant)) hits.push(cell);
+  }
+  return hits;
+}
+
 export function footprintFromBlock(block: PlacedBlockRef): BlockFootprint {
+  const offsets = parseShapeCells(block.shape_cells ?? null);
+  if (offsets && offsets.length > 0) {
+    const abs = offsets.map((o) => ({
+      row: block.position_y + o.dr,
+      col: block.position_x + o.dc,
+    }));
+    return footprintFromCells(abs)!;
+  }
   return {
     position_x: block.position_x,
     position_y: block.position_y,
@@ -96,14 +378,82 @@ export function footprintFromBlock(block: PlacedBlockRef): BlockFootprint {
   };
 }
 
-/** Merge multiple block footprints into one bounding rectangle. */
+/** Merge multiple block footprints into one bounding rectangle (legacy helper). */
 export function mergeBlockFootprints(blocks: PlacedBlockRef[]): BlockFootprint | null {
+  return mergeBlocksToFreeform(blocks)?.footprint ?? null;
+}
+
+/** Union of placed blocks as freeform lecture shape (any contiguous multi-block region). */
+export function mergeBlocksToFreeform(blocks: PlacedBlockRef[]): {
+  footprint: BlockFootprint;
+  shape_cells: ShapeOffset[] | null;
+  absoluteCells: GridCell[];
+  isSolidRectangle: boolean;
+} | null {
   if (blocks.length === 0) return null;
   const cells: GridCell[] = [];
   for (const block of blocks) {
-    cells.push(...footprintCells(footprintFromBlock(block)));
+    cells.push(...placedBlockCells(block));
   }
-  return footprintFromCells(cells);
+  const freeform = freeformShapeFromCells(cells);
+  if (!freeform) return null;
+  return {
+    footprint: freeform.footprint,
+    shape_cells: freeform.isSolidRectangle ? null : freeform.shape_cells,
+    absoluteCells: freeform.absoluteCells,
+    isSolidRectangle: freeform.isSolidRectangle,
+  };
+}
+
+const ORTHO_NEIGHBORS: ReadonlyArray<readonly [number, number]> = [
+  [0, 1],
+  [0, -1],
+  [1, 0],
+  [-1, 0],
+];
+
+/** True when two blocks share an orthogonal (edge) neighbor cell — not diagonal-only. */
+export function blocksShareEdge(a: PlacedBlockRef, b: PlacedBlockRef): boolean {
+  const cellsA = placedBlockCells(a);
+  const keysB = new Set(placedBlockCells(b).map((c) => getCellKey(c.row, c.col)));
+  for (const cell of cellsA) {
+    for (const [dr, dc] of ORTHO_NEIGHBORS) {
+      if (keysB.has(getCellKey(cell.row + dr, cell.col + dc))) return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * Whether selected blocks form a single contiguous region (4-connected dual graph).
+ * Empty selection → false. One block → true. Multiple → every block reachable via edge adjacency.
+ */
+export function areBlocksContiguous(blocks: PlacedBlockRef[]): boolean {
+  if (blocks.length === 0) return false;
+  if (blocks.length === 1) return true;
+
+  const n = blocks.length;
+  const adj: number[][] = Array.from({ length: n }, () => []);
+  for (let i = 0; i < n; i++) {
+    for (let j = i + 1; j < n; j++) {
+      if (blocksShareEdge(blocks[i], blocks[j])) {
+        adj[i].push(j);
+        adj[j].push(i);
+      }
+    }
+  }
+
+  const seen = new Set<number>([0]);
+  const queue = [0];
+  while (queue.length > 0) {
+    const i = queue.shift()!;
+    for (const j of adj[i]) {
+      if (seen.has(j)) continue;
+      seen.add(j);
+      queue.push(j);
+    }
+  }
+  return seen.size === n;
 }
 
 /** Split a footprint into one 1×1 cell per occupied square. */
@@ -120,7 +470,7 @@ export function splitFootprintToSingles(fp: BlockFootprint): BlockFootprint[] {
 export function splitBlocksToSingles(blocks: PlacedBlockRef[]): Array<BlockFootprint & { sourceId: string }> {
   const result: Array<BlockFootprint & { sourceId: string }> = [];
   for (const block of blocks) {
-    for (const cell of footprintCells(footprintFromBlock(block))) {
+    for (const cell of placedBlockCells(block)) {
       result.push({
         sourceId: block.id,
         position_x: cell.col,
@@ -167,8 +517,15 @@ export function translateBlocksPreservingShape(
   const claimed = new Set<string>();
 
   for (const block of moving) {
-    const translated = translateFootprint(footprintFromBlock(block), dRow, dCol);
-    for (const cell of footprintCells(translated)) {
+    const offsets = parseShapeCells(block.shape_cells ?? null);
+    const nextPos = {
+      position_x: block.position_x + dCol,
+      position_y: block.position_y + dRow,
+      span_w: normalizeSpan(block.span_w),
+      span_h: normalizeSpan(block.span_h),
+      shape_cells: offsets,
+    };
+    for (const cell of placedBlockCells({ id: block.id, ...nextPos })) {
       const key = getCellKey(cell.row, cell.col);
       if (claimed.has(key)) return null;
       const occupant = occupancy.get(key);
@@ -177,17 +534,18 @@ export function translateBlocksPreservingShape(
     }
     next.push({
       id: block.id,
-      position_x: translated.position_x,
-      position_y: translated.position_y,
-      span_w: translated.span_w,
-      span_h: translated.span_h,
+      position_x: nextPos.position_x,
+      position_y: nextPos.position_y,
+      span_w: nextPos.span_w,
+      span_h: nextPos.span_h,
+      ...(offsets ? { shape_cells: offsets } : {}),
     });
   }
 
   return next;
 }
 
-/** Whether a footprint can be placed without colliding with occupancy (except ignored ids). */
+/** Whether a rectangular footprint can be placed without colliding (except ignored ids). */
 export function canPlaceFootprint(
   fp: BlockFootprint,
   occupancy: Map<string, string>,
@@ -201,12 +559,12 @@ export function canPlaceFootprint(
   return true;
 }
 
-/** Build occupancy map: cellKey → blockId, honoring multi-cell spans. */
+/** Build occupancy map: cellKey → blockId, honoring freeform masks and solid spans. */
 export function buildOccupancyFromPlaced(blocks: PlacedBlockRef[]): Map<string, string> {
   const occupancy = new Map<string, string>();
   for (const block of blocks) {
     if (block.position_x == null || block.position_y == null) continue;
-    for (const cell of footprintCells(footprintFromBlock(block))) {
+    for (const cell of placedBlockCells(block)) {
       const key = getCellKey(cell.row, cell.col);
       if (!occupancy.has(key)) occupancy.set(key, block.id);
     }
@@ -217,13 +575,21 @@ export function buildOccupancyFromPlaced(blocks: PlacedBlockRef[]): Map<string, 
 export function placedFromSkillNodes(nodes: SkillGridNode[]): PlacedBlockRef[] {
   return nodes
     .filter((n) => n.position_x != null && n.position_y != null)
-    .map((n) => ({
-      id: n.id,
-      position_x: n.position_x!,
-      position_y: n.position_y!,
-      span_w: normalizeSpan((n as SkillGridNode & { span_w?: number }).span_w),
-      span_h: normalizeSpan((n as SkillGridNode & { span_h?: number }).span_h),
-    }));
+    .map((n) => {
+      const withShape = n as SkillGridNode & {
+        span_w?: number;
+        span_h?: number;
+        shape_cells?: unknown;
+      };
+      return {
+        id: n.id,
+        position_x: n.position_x!,
+        position_y: n.position_y!,
+        span_w: normalizeSpan(withShape.span_w),
+        span_h: normalizeSpan(withShape.span_h),
+        shape_cells: parseShapeCells(withShape.shape_cells ?? null),
+      };
+    });
 }
 
 /** Relative offsets of each moving block from the group's top-left anchor. */

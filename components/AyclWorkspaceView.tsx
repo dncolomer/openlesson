@@ -3,16 +3,21 @@
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
 import { SessionList } from "@/components/SessionList";
-import { WorkspaceChat } from "@/components/WorkspaceChat";
-import { WorkspaceBuilderShell } from "@/components/WorkspaceBuilderShell";
 import { WorkspacePerformancePanel } from "@/components/WorkspacePerformancePanel";
-import { WorkspaceTabBar, type WorkspaceTabKey } from "@/components/WorkspaceTabBar";
+import { WorkspaceIntegrationPanel } from "@/components/WorkspaceIntegrationPanel";
+import { WorkspaceSectionSurface } from "@/components/WorkspaceSectionSurface";
+import { WorkspaceNotesFilesPanel } from "@/components/WorkspaceNotesFilesPanel";
+import { WorkspaceSectionNav } from "@/components/WorkspaceSectionNav";
 import { aestheticImageForId } from "@/lib/aesthetics";
 import { useI18n } from "@/lib/i18n";
 import type { Block, Workspace } from "@/components/WorkspaceView";
+import {
+  availableWorkspaceSections,
+  resolveActiveSection,
+  resolveWorkspaceSectionLayout,
+  type WorkspaceSectionKey,
+} from "@/lib/workspace-sections";
 
 interface AyclWorkspaceViewProps {
   accessToken: string;
@@ -20,8 +25,6 @@ interface AyclWorkspaceViewProps {
   initialPlan: Workspace;
   initialNodes: Block[];
 }
-
-type AyclTab = "graph" | "notes" | "performance";
 
 export function AyclWorkspaceView({
   accessToken,
@@ -35,7 +38,9 @@ export function AyclWorkspaceView({
   const [nodes, setNodes] = useState(initialNodes);
   const [workspaceImage] = useState(() => aestheticImageForId(plan.id));
   const [copied, setCopied] = useState(false);
-  const [activeTab, setActiveTab] = useState<AyclTab>("graph");
+  // AYCL token holder is owner-equivalent for this purchased workspace.
+  const isOwner = true;
+  const [activeSection, setActiveSection] = useState<WorkspaceSectionKey>("workspace");
   const [notesContent, setNotesContent] = useState(initialPlan.notes || "");
   const [isEditingNotes, setIsEditingNotes] = useState(false);
   const [savingNotes, setSavingNotes] = useState(false);
@@ -54,6 +59,13 @@ export function AyclWorkspaceView({
   useEffect(() => {
     void refreshWorkspace();
   }, [refreshWorkspace]);
+
+  const selectSection = useCallback((section: WorkspaceSectionKey) => {
+    setActiveSection(resolveActiveSection(section, { isOwner }));
+    if (section === "workspace") {
+      setMobileColumn("workspace");
+    }
+  }, []);
 
   const handleCopyLink = () => {
     navigator.clipboard.writeText(window.location.href);
@@ -103,16 +115,13 @@ export function AyclWorkspaceView({
     }
   };
 
-  const handleTabChange = (key: WorkspaceTabKey) => {
-    if (key === "graph" || key === "notes" || key === "performance") {
-      setActiveTab(key);
-    }
-  };
+  const sectionLayout = resolveWorkspaceSectionLayout(activeSection);
+  const visibleSections = availableWorkspaceSections({ isOwner });
 
-  const tabConfig = [
+  const sectionConfig = [
     {
-      key: "graph" as const,
-      label: t("planView.planBuilder"),
+      key: "workspace" as const,
+      label: t("planView.sectionWorkspace"),
       icon: (
         <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
           <path
@@ -123,32 +132,40 @@ export function AyclWorkspaceView({
         </svg>
       ),
     },
-    {
-      key: "performance" as const,
-      label: t("planView.performance"),
-      icon: (
-        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z"
-          />
-        </svg>
-      ),
-    },
-    {
-      key: "notes" as const,
-      label: t("planView.notes"),
-      icon: (
-        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"
-          />
-        </svg>
-      ),
-    },
+    ...(visibleSections.includes("knowledge")
+      ? [
+          {
+            key: "knowledge" as const,
+            label: t("planView.sectionKnowledge"),
+            icon: (
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456z"
+                />
+              </svg>
+            ),
+          },
+        ]
+      : []),
+    ...(visibleSections.includes("settings")
+      ? [
+          {
+            key: "settings" as const,
+            label: t("planView.sectionSetting"),
+            icon: (
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M17.25 6.75L22.5 12l-5.25 5.25m-10.5 0L1.5 12l5.25-5.25M14.25 4.5l-4.5 15"
+                />
+              </svg>
+            ),
+          },
+        ]
+      : []),
   ];
 
   return (
@@ -177,190 +194,155 @@ export function AyclWorkspaceView({
         </button>
       </header>
 
-      <div className="flex min-h-0 flex-1 flex-col md:flex-row">
-        <aside
-          className={`${mobileColumn === "sessions" ? "flex" : "hidden"} min-h-0 flex-1 flex-col border-b border-neutral-800/50 bg-[#0b0b0b] md:flex md:h-full md:w-1/2 md:border-b-0 md:border-r`}
-        >
-          <SessionList
-            nodes={nodes}
-            onSelect={() => {}}
-            onDelete={() => {}}
-            onFork={() => {}}
-            isOwner
-            isGroupPlan={false}
-            isLoggedIn={false}
-            planTopic={plan.root_topic}
-            workspaceId={plan.id}
-            onRefresh={refreshWorkspace}
-            onNodesUpdate={setNodes}
-            hideTap
-            onCustomStart={handleCustomStart}
-            ayclToken={accessToken}
-          />
-        </aside>
+      <WorkspaceSectionNav
+        sections={sectionConfig}
+        activeSection={activeSection}
+        onChange={selectSection}
+        variant="bar"
+        workspaceTitle={plan.title || plan.root_topic}
+      />
 
-        <section
-          className={`${mobileColumn === "workspace" ? "flex" : "hidden"} relative min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-[#080808] md:flex`}
+      {sectionLayout.mountsPerformancePanel && (
+        <WorkspaceSectionSurface
+          kind="knowledge"
+          imageSrc={workspaceImage}
+          identity={{
+            title: plan.title || plan.root_topic,
+            topic: plan.root_topic,
+            description: plan.description,
+            notes: plan.notes,
+            workspaceId: plan.id,
+            isOwner: true,
+          }}
         >
-          {workspaceImage ? (
-            <img
-              src={workspaceImage}
-              alt=""
-              className="absolute inset-0 h-full w-full object-cover opacity-35 saturate-75"
+          <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-xl border border-neutral-800/70 bg-neutral-950/80 shadow-[0_10px_40px_rgba(0,0,0,0.4)] backdrop-blur-md">
+            <WorkspacePerformancePanel
+              workspaceId={plan.id}
+              isOwner
+              currentUserId={ownerUserId}
+              hideTap
+              ayclToken={accessToken}
             />
-          ) : null}
-          <div className="absolute inset-0 bg-black/35" />
-          <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/20 to-black/70" />
+          </div>
+        </WorkspaceSectionSurface>
+      )}
 
-          <div className="relative z-20 hidden shrink-0 px-3 pt-3 pb-1 sm:px-4 md:block">
-            <div className="overflow-visible rounded-xl border border-neutral-800/70 bg-neutral-950/90 shadow-[0_10px_40px_rgba(0,0,0,0.45)] backdrop-blur-md">
-              <div className="border-b border-neutral-800/60 px-4 py-3">
-                <p className="text-sm text-neutral-300">{plan.title || plan.root_topic}</p>
-                {plan.description ? (
-                  <p className="mt-1 line-clamp-2 text-xs text-neutral-500">{plan.description}</p>
-                ) : null}
-              </div>
-              <WorkspaceTabBar
-                tabs={tabConfig}
-                activeTab={activeTab}
-                onChange={handleTabChange}
-                variant="integrated"
+      {sectionLayout.mountsIntegrationPanel && (
+        <WorkspaceSectionSurface
+          kind="settings"
+          imageSrc={workspaceImage}
+          identity={{
+            title: plan.title || plan.root_topic,
+            topic: plan.root_topic,
+            description: plan.description,
+            notes: plan.notes,
+            workspaceId: plan.id,
+            isOwner: true,
+          }}
+        >
+          <WorkspaceIntegrationPanel
+            workspaceId={plan.id}
+            workspaceTitle={plan.title || plan.root_topic}
+            planTopic={plan.root_topic}
+            planDescription={plan.description}
+            planNotes={plan.notes}
+            isOwner
+            currentUserId={ownerUserId}
+          />
+        </WorkspaceSectionSurface>
+      )}
+
+      {sectionLayout.showBlockMapChrome && (
+        <>
+          <div className="flex min-h-0 flex-1 flex-col md:flex-row">
+            <aside
+              className={`${mobileColumn === "sessions" ? "flex" : "hidden"} min-h-0 flex-1 flex-col border-b border-neutral-800/50 bg-[#0b0b0b] md:flex md:h-full md:w-1/2 md:border-b-0 md:border-r`}
+            >
+              <SessionList
+                nodes={nodes}
+                onSelect={() => {}}
+                onDelete={() => {}}
+                onFork={() => {}}
+                isOwner
+                isGroupPlan={false}
+                isLoggedIn={false}
+                planTopic={plan.root_topic}
+                workspaceId={plan.id}
+                onRefresh={refreshWorkspace}
+                onNodesUpdate={setNodes}
+                hideTap
+                onCustomStart={handleCustomStart}
+                ayclToken={accessToken}
               />
+            </aside>
+
+            <section
+              className={`${mobileColumn === "workspace" ? "flex" : "hidden"} relative min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-[#080808] md:flex`}
+            >
+              {workspaceImage ? (
+                <img
+                  src={workspaceImage}
+                  alt=""
+                  className="absolute inset-0 h-full w-full object-cover opacity-35 saturate-75"
+                />
+              ) : null}
+              <div className="absolute inset-0 bg-black/35" />
+              <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/20 to-black/70" />
+
+              <div className="relative z-20 hidden shrink-0 px-3 pt-3 pb-1 sm:px-4 md:block">
+                <div className="overflow-visible rounded-xl border border-neutral-800/70 bg-neutral-950/90 shadow-[0_10px_40px_rgba(0,0,0,0.45)] backdrop-blur-md">
+                  <div className="border-b border-neutral-800/60 px-4 py-3">
+                    <p className="text-sm text-neutral-300">{plan.title || plan.root_topic}</p>
+                    {plan.description ? (
+                      <p className="mt-1 line-clamp-2 text-xs text-neutral-500">{plan.description}</p>
+                    ) : null}
+                  </div>
+                </div>
+              </div>
+
+              <main className="relative z-10 min-h-0 flex-1 overflow-hidden p-3 pb-3 sm:p-4 sm:pb-4">
+                <WorkspaceNotesFilesPanel
+                  notesContent={notesContent}
+                  setNotesContent={setNotesContent}
+                  isEditingNotes={isEditingNotes}
+                  setIsEditingNotes={setIsEditingNotes}
+                  savingNotes={savingNotes}
+                  onSaveNotes={saveNotes}
+                  onCancelNotes={() => {
+                    setNotesContent(plan.notes || "");
+                    setIsEditingNotes(false);
+                  }}
+                  isOwner
+                  workspaceId={plan.id}
+                  showFiles={false}
+                />
+              </main>
+            </section>
+          </div>
+
+          <div className="shrink-0 border-t border-neutral-800/70 bg-[#0b0b0b] px-3 py-2 md:hidden">
+            <div className="grid grid-cols-2 gap-2 rounded-md border border-neutral-800 bg-neutral-950/70 p-1">
+              {[
+                { key: "sessions" as const, label: "Blocks" },
+                { key: "workspace" as const, label: "Notes" },
+              ].map(({ key, label }) => (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => setMobileColumn(key)}
+                  className={`rounded px-2 py-2 text-xs font-medium transition-colors ${
+                    mobileColumn === key
+                      ? "bg-neutral-700/80 text-white"
+                      : "text-neutral-500 hover:text-neutral-300"
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
             </div>
           </div>
-
-          <main className="relative z-10 min-h-0 flex-1 overflow-hidden p-3 pb-3 sm:p-4 sm:pb-4">
-            {activeTab === "graph" && (
-              <div className="hidden h-full md:block">
-                <WorkspaceBuilderShell
-                  needsFork={false}
-                  isLoggedIn={false}
-                  publicLoginHref="/all-you-can-learn"
-                  onFork={() => {}}
-                >
-                  <WorkspaceChat
-                    plan={plan}
-                    nodes={nodes}
-                    workspaceId={plan.id}
-                    onRefresh={refreshWorkspace}
-                    onNodesUpdate={setNodes}
-                    isOwner
-                    currentUserId={ownerUserId}
-                    isGroupPlan={false}
-                    hideSessions
-                    embedded
-                    ayclToken={accessToken}
-                  />
-                </WorkspaceBuilderShell>
-              </div>
-            )}
-
-            {activeTab === "graph" && (
-              <div className="h-full md:hidden">
-                <WorkspaceChat
-                  plan={plan}
-                  nodes={nodes}
-                  workspaceId={plan.id}
-                  onRefresh={refreshWorkspace}
-                  onNodesUpdate={setNodes}
-                  isOwner
-                  currentUserId={ownerUserId}
-                  isGroupPlan={false}
-                  hideSessions
-                  ayclToken={accessToken}
-                />
-              </div>
-            )}
-
-            {activeTab === "performance" && (
-              <div className="h-full min-h-0">
-                <WorkspacePerformancePanel
-                  workspaceId={plan.id}
-                  isOwner
-                  currentUserId={ownerUserId}
-                  isGroupPlan={false}
-                  hideTap
-                  ayclToken={accessToken}
-                />
-              </div>
-            )}
-
-            {activeTab === "notes" && (
-              <div className="h-full overflow-y-auto">
-                {isEditingNotes ? (
-                  <div className="space-y-3">
-                    <textarea
-                      value={notesContent}
-                      onChange={(e) => setNotesContent(e.target.value)}
-                      placeholder={t("planView.notesPlaceholder")}
-                      className="h-[60vh] w-full resize-none rounded-md border border-neutral-800 bg-neutral-900/50 px-4 py-3 font-mono text-sm text-white focus:border-neutral-400 focus:outline-none"
-                      autoFocus
-                    />
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => void saveNotes()}
-                        disabled={savingNotes}
-                        className="rounded-md bg-white px-4 py-2 text-sm text-black transition-colors hover:bg-neutral-200 disabled:bg-neutral-700 disabled:text-white"
-                      >
-                        {savingNotes ? t("common.saving") : t("common.save")}
-                      </button>
-                      <button
-                        onClick={() => {
-                          setNotesContent(plan.notes || "");
-                          setIsEditingNotes(false);
-                        }}
-                        className="rounded-md bg-neutral-800 px-4 py-2 text-sm text-white transition-colors hover:bg-neutral-700"
-                      >
-                        {t("common.cancel")}
-                      </button>
-                    </div>
-                  </div>
-                ) : notesContent ? (
-                  <div
-                    className="prose prose-invert prose-sm max-w-none cursor-pointer rounded-md border border-transparent p-5 transition-colors hover:border-neutral-800/50 hover:bg-neutral-900/30"
-                    onClick={() => setIsEditingNotes(true)}
-                  >
-                    <ReactMarkdown remarkPlugins={[remarkGfm]}>{notesContent}</ReactMarkdown>
-                    <p className="mt-4 text-xs italic text-neutral-600">{t("planView.clickToEdit")}</p>
-                  </div>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => setIsEditingNotes(true)}
-                    className="flex w-full flex-col items-center gap-3 rounded-md border border-dashed border-neutral-800 py-16 text-neutral-600 transition-all hover:border-neutral-700 hover:text-neutral-400"
-                  >
-                    <span className="text-sm">{t("planView.addNotes")}</span>
-                  </button>
-                )}
-              </div>
-            )}
-          </main>
-
-          <div className="relative z-10 shrink-0 px-3 pb-2 md:hidden">
-            <WorkspaceTabBar tabs={tabConfig} activeTab={activeTab} onChange={handleTabChange} variant="mobile" />
-          </div>
-        </section>
-      </div>
-
-      <div className="shrink-0 border-t border-neutral-800/70 bg-[#0b0b0b] px-3 py-2 md:hidden">
-        <div className="grid grid-cols-2 gap-2 rounded-md border border-neutral-800 bg-neutral-950/70 p-1">
-          {[
-            { key: "sessions" as const, label: "Blocks" },
-            { key: "workspace" as const, label: "Workspace" },
-          ].map(({ key, label }) => (
-            <button
-              key={key}
-              type="button"
-              onClick={() => setMobileColumn(key)}
-              className={`rounded px-2 py-2 text-xs font-medium transition-colors ${
-                mobileColumn === key ? "bg-neutral-700/80 text-white" : "text-neutral-500 hover:text-neutral-300"
-              }`}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-      </div>
+        </>
+      )}
     </div>
   );
 }

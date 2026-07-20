@@ -31,7 +31,7 @@ The core thesis is simple: when you speak your reasoning out loud, gaps become a
 - **Session reports** — AI-generated post-session reports covering gaps, progress, strengths, and next steps
 - **Muse EEG integration** — Real-time brainwave monitoring via Muse headband over Web Bluetooth
 - **Face tracking** — MediaPipe-based engagement and attention signals
-- **Agent API** — Full REST API for AI agents to use Uncertain Systems as a skill programmatically
+- **Proof-of-Work API** — Full REST API for AI agents to use Uncertain Systems as a skill programmatically
 - **YouTube-based plans** — Generate structured learning plans from YouTube video URLs
 
 ## Tech Stack
@@ -112,7 +112,7 @@ The app will be available at `http://localhost:3000`.
 
 ```
 ├── app/                  # Next.js App Router pages & API routes
-│   ├── api/              # 123 API routes (ILE sessions, workspaces, TAP, agent v2, admin, demo)
+│   ├── api/              # 123 API routes (ILE sessions, workspaces, TAP, PoW/Eval API, admin, demo)
 │   ├── session/          # Active ILE tutoring session pages
 │   ├── workspace/        # Workspace & block graph views (/plan/:id redirects here)
 │   ├── tap/              # Think Aloud Protocol (TAP) scoring sessions
@@ -128,7 +128,7 @@ The app will be available at `http://localhost:3000`.
 │   ├── xai-client.ts     # xAI API client (chat, JSON schema, files)
 │   ├── prompts.ts        # Helios prompt templates
 │   ├── storage.ts        # Supabase session & workspace persistence
-│   ├── agent-v2/         # Agentic API v2 (auth, MCP, proof-of-work, TAP links)
+│   ├── agent-v2/         # Proof-of-Work API (auth, MCP, proof-of-work, TAP links)
 │   ├── tap-score*.ts     # TAP scoring logic
 │   └── ...
 ├── supabase/             # Database schema & migrations
@@ -136,9 +136,9 @@ The app will be available at `http://localhost:3000`.
 └── public/               # Static assets; skill.md for agent integrations
 ```
 
-## Agent API (v2)
+## Proof-of-Work & Evaluation API (v3)
 
-Uncertain Systems exposes a scoped REST API and MCP transport for AI agents. Generate an API key from the dashboard (`/dashboard`) and use it to:
+Uncertain Systems exposes a scoped REST API and MCP transport for integrators and agents. Generate an API key from the dashboard (`/dashboard`) and use it to:
 
 - Create and manage verification workspaces and blocks
 - Issue Think Aloud Protocol (TAP) links, poll completion via `GET .../tap-links`, and score via unified performance analysis

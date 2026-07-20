@@ -58,9 +58,10 @@ export interface TapScoreMarker {
 }
 
 export interface TapScoreAnalysis {
-  overall_score: number;
-  conversion_score: number;
-  conversion_goal: string;
+  score: number;
+  verification_score: number;
+  workspace_goal: string;
+  vertical: "verification";
   markers: TapScoreMarker[];
   gap_analysis: {
     summary: string;

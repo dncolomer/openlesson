@@ -152,12 +152,14 @@ describe("shipped Knowledge / Setting aesthetic wiring", () => {
     expect(surface).not.toContain("SECTION_SURFACE_HEADER_CLASS");
   });
 
-  it("Knowledge and Settings share compact WorkspaceSectionSubTabs + tab content", () => {
+  it("Knowledge and Settings share WorkspaceSectionSubTabs sized like section nav + tab content", () => {
     expect(subTabs).toContain("WorkspaceSectionSubTabs");
     expect(subTabs).toContain('role="tablist"');
-    expect(subTabs).toContain("border-b-2");
-    expect(subTabs).toContain("text-xs font-medium");
-    expect(subTabs).toContain("px-3 py-2");
+    // Match WorkspaceSectionNav bar tab height/size (not the old compact strip).
+    expect(subTabs).toContain("text-sm font-medium");
+    expect(subTabs).toContain("px-3 py-2.5");
+    expect(subTabs).toContain("sm:px-5");
+    expect(subTabs).toContain("h-0.5 rounded-full");
 
     expect(knowledge).toContain("WorkspaceSectionSubTabs");
     expect(knowledge).toContain("SECTION_TAB_CONTENT_CLASS");

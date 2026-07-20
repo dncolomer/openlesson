@@ -1,8 +1,9 @@
 "use client";
 
 /**
- * Shared compact sub-tab strip for Knowledge and Settings section panels.
- * Underline tabs, horizontal scroll if needed, no extra chrome.
+ * Shared sub-tab strip for Knowledge and Settings section panels.
+ * Matches WorkspaceSectionNav bar tab height/size (py-2.5, text-sm, underline).
+ * Horizontal scroll if needed, no extra chrome.
  */
 export function WorkspaceSectionSubTabs<T extends string>({
   activeId,
@@ -20,7 +21,7 @@ export function WorkspaceSectionSubTabs<T extends string>({
 }) {
   return (
     <div
-      className="shrink-0 border-b border-neutral-800/60 px-3 sm:px-4"
+      className="shrink-0 border-b border-neutral-800/60"
       {...(dataAttr === "settings"
         ? { "data-settings-tabs": true }
         : dataAttr === "knowledge"
@@ -29,7 +30,7 @@ export function WorkspaceSectionSubTabs<T extends string>({
       data-section-subtabs={dataAttr ?? true}
     >
       <div
-        className="-mb-px flex gap-0.5 overflow-x-auto pb-px [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        className="flex min-w-0 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         role="tablist"
         aria-label={ariaLabel}
         {...(dataAttr === "settings" ? { "data-settings-tablist": true } : {})}
@@ -54,13 +55,17 @@ export function WorkspaceSectionSubTabs<T extends string>({
                     }
                   : {})}
               onClick={() => onChange(tab.id)}
-              className={`flex shrink-0 items-center border-b-2 px-3 py-2 text-left transition ${
-                isActive
-                  ? "border-white text-white"
-                  : "border-transparent text-neutral-500 hover:border-neutral-600 hover:text-neutral-300"
+              className={`group relative flex min-w-0 shrink-0 items-center justify-center gap-2 px-3 py-2.5 transition-colors sm:px-5 ${
+                isActive ? "text-white" : "text-neutral-500 hover:text-neutral-300"
               }`}
             >
-              <span className="whitespace-nowrap text-xs font-medium">{tab.label}</span>
+              <span className="truncate text-sm font-medium">{tab.label}</span>
+              <span
+                aria-hidden
+                className={`absolute inset-x-3 bottom-0 h-0.5 rounded-full transition-opacity sm:inset-x-4 ${
+                  isActive ? "bg-white/80 opacity-100" : "opacity-0"
+                }`}
+              />
             </button>
           );
         })}

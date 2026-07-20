@@ -1,11 +1,4 @@
-import { randomUUID } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import {
-  fallbackWorkspaceGoal,
-  finalizeVerticalScoreReport,
-  normalizeWorkspaceGoal,
-  WORKSPACE_GENERATION_GOAL_RULE,
-} from "./workspace-goal";
 import { parseProofOfWorkSchemaRequest } from "./proof-of-work-schema";
 import {
   generateOpaqueWorkspaceProofOfWorkSpec,
@@ -14,15 +7,6 @@ import {
 } from "./proof-of-work-integration";
 import { CreateTapLinkError, createWorkspaceTapLink } from "./create-tap-link";
 import { rejectProgrammaticWorkspaceCreate } from "./workspace-create-ui-only";
-import {
-  buildPrivacyMetadata,
-  extractGoalRefFromWorkspaceGoal,
-  isOpaqueWorkspace,
-  lintOpaquePayload,
-  parseWorkspaceEvaluationMeta,
-  redactOpaqueFileName,
-  sanitizeOpaqueMetadata,
-} from "./opaque-evaluation";
 import { runVerticalScore } from "./run-vertical-score";
 import type { ScoreVertical } from "./performance-report";
 import {
@@ -38,18 +22,9 @@ import {
 } from "./integration-skill";
 import { buildWorkspacePerformanceContext } from "./performance-context";
 import type { ApiKeyScope, AuthContext } from "./types";
-import { createdByApiKeyId, hasScope } from "./auth";
+import { hasScope } from "./auth";
 import { canAccessAgentWorkspace } from "./workspace-access";
-import {
-  defaultProofOfWorkFileName,
-  isAllowedProofOfWorkMime,
-  MAX_WORKSPACE_PROOF_OF_WORK_BYTES,
-  normalizeProofOfWorkType,
-} from "./workspace-proof-of-work";
-import { persistSkillGridPositions, skillGridNodesFromRefs } from "@/lib/skill-grid-positions";
 import { callXaiResponsesWithFiles } from "@/lib/xai-client";
-import { deleteFileFromXAI, uploadFileToXAI } from "@/lib/xai-files";
-import { assertCanSubmitProofOfWork } from "@/lib/usage-enforcement";
 import {
   buildContinuousEvaluationMcpPolicy,
   buildIntegrationSurfaces,
@@ -68,12 +43,54 @@ import {
   type InterruptionContext,
   withProofOfWorkApiResponse,
 } from "./predictive-interruption";
+import {
+  getAgentLearningProgress,
+  listAgentWorkspaces,
+} from "./agent-workspace-ops";
+import {
+  getUploadProofOfWorkMeta,
+  uploadWorkspaceProofOfWork,
+} from "./upload-workspace-proof-of-work";
+import { countWorkspaceProofOfWorkForPlan } from "./workspace-proof-of-work";
+import { loadLearningWorldModel } from "./learning-world-model-store";
+import { resolveEvaluationSubject } from "./evaluation-subject";
+import {
+  loadLatestKnowledgeConfig,
+  loadKnowledgeConfigTrajectory,
+  projectTrajectory2D,
+  trajectoryPathLength,
+} from "./knowledge-config-store";
+import {
+  KNOWLEDGE_CONFIG_DIM,
+  KNOWLEDGE_CONFIG_EMBEDDING_MODEL_ID,
+  emptyKnowledgeConfig,
+} from "@/lib/knowledge-config";
+import { computeKnowledgeDistanceForSubject } from "./custom-verification-model-store";
+import {
+  createCustomVerificationModelFromSubjects,
+  evalSubjectAgainstCustomVerificationModel,
+  listCustomVerificationModels,
+  listSubjectsWithKnowledgeConfig,
+} from "./custom-verification-model-store";
+import {
+  listEvalRunHistory,
+  resolveHistorySubjectScope,
+} from "./eval-run-history-store";
+import { SCORE_VERTICALS } from "./performance-report";
+import {
+  bufferSubjectId,
+  getStashBufferSize,
+  ingestStashUnit,
+  stashBufferedProofOfWork,
+  submitBufferedProofOfWork,
+} from "./stash-api";
+
 
 export const MCP_PROOF_OF_WORK_PROTOCOL_VERSION = "2025-03-26";
 export const MCP_PROOF_OF_WORK_SERVER_NAME = "uncertain-systems-proof-of-work-api";
 export const MCP_PROOF_OF_WORK_SERVER_VERSION = "1.3.0";
 
-export const MCP_PROOF_OF_WORK_SERVER_INSTRUCTIONS = `Uncertain Systems Proof-of-Work API MCP — full parity with Proof-of-Work API REST.
+export const MCP_PROOF_OF_WORK_SERVER_INSTRUCTIONS = `Uncertain Systems Proof-of-Work API MCP — 100% parity with public agent REST under /api/v3/{pow,eval,stash} (workspace ops). Workspace create is UI-only. API key CRUD is browser-session only (not MCP).
 
 ## What Uncertain Systems is
 ${UNCERTAIN_SYSTEMS_SCOPE.mission}
@@ -81,7 +98,7 @@ Pillars: ${UNCERTAIN_SYSTEMS_SCOPE.pillars.join(" | ")}
 
 ## Workspace & progress model
 ${UNCERTAIN_SYSTEMS_SCOPE.workspace_model}
-Progress signals: proof_of_work_artifact counts; verification_score / augmentation_score / optimization_score (each vertical returns one primary score + spider + analysis + next actions); workspace_goal.
+Progress signals: proof_of_work_artifact counts; verification_score / augmentation_score / optimization_score; workspace_goal; learning world model; knowledge config.
 
 ## Predictive interruptions (TIM)
 Every tool result includes top-level \`interruption\` (object or null). When non-null, schedule intervention after delay_ms unless a later Proof-of-Work API call supersedes it. Read interruption_contract from generate_proof_of_work_schema. Resource: uncertain-systems://predictive-interruptions
@@ -90,29 +107,20 @@ Every tool result includes top-level \`interruption\` (object or null). When non
 Workspaces are created **only in the product UI** (\`/workspace/new\`). Programmatic create (\`create_workspace\` / \`POST /workspaces\`) is not available.
 - **semantic** (default): performance reports use semantic gap analysis against the workspace goal and blocks.
 - **opaque**: privacy-preserving structural verification — prompts are not stored, semantic inference is disabled, uploads are plaintext-linted.
-  - \`generate_proof_of_work_schema\`: opaque workspaces use \`definition_ref\` + \`contract.event_verbs\` (not \`definition\`).
-  - \`upload_proof_of_work\`: metadata allowlist only; tool payloads reject file paths unless \`metadata.allow_plaintext=true\`.
-  - Vertical score tools (\`verification_score\`, \`augmentation_score\`, \`optimization_score\`): add \`evaluation_mode\`, \`privacy\`, and \`protocol_report\` (structural compliance) on opaque workspaces.
-
-Canonical protocol \`agent-trace-v3\` phases: enumerate → fingerprint → aggregate → emit → validate.
 
 ## Start here
 1. list_workspaces or get_learning_progress(workspace_id) — orient on an existing UI-created workspace
-2. generate_proof_of_work_schema — returns continuous_evaluation (REST) AND continuous_evaluation_mcp (tools); read both
-3. upload_proof_of_work after product actions (repeat)
-4. verification_score / augmentation_score / optimization_score for scorecards (each one primary score + spider + analysis + next actions)
+2. generate_proof_of_work_schema — returns continuous_evaluation (REST) AND continuous_evaluation_mcp (tools)
+3. upload_proof_of_work (or buffer_proof_of_work → stash_proof_of_work / submit_stashed_proof_of_work)
+4. verification_score / augmentation_score / optimization_score; optional get_world_model / get_knowledge_config / list_eval_history
 5. Re-fetch schema + regenerate skill as proof of work grows
 Note: TAP auto-results always use verification_score only. Workspace creation is UI-only.
 
-REST mirror: capture via Bearer auth on /api/v3/pow/workspaces/{id}/...; scores via /api/v3/eval/workspaces/{id}/... (POST .../verification-score | .../augmentation-score | .../optimization-score).
+REST mirror: /api/v3/pow (capture), /api/v3/eval (scores + LWM/knowledge), /api/v3/stash (alaTAP buffer).
 
-Resources: resources/read uncertain-systems://integration-scope and uncertain-systems://proof-of-work-loop
+Resources: uncertain-systems://integration-scope, proof-of-work-loop, predictive-interruptions
 
-TAP links (create_tap_link): bearer URLs at /tap/session/{token}. Scope to the full workspace (omit block_id) or a single block. Works for workspace owners and guests — open the link yourself or share with a learner. guest_email/guest_user_id are optional (org admins only).
-
-Partner agents: call generate_integration_skill for a workspace-specific skill.md, then use MCP tools proactively per that skill's checkpoint policy.
-
-Scopes: workspaces:read, workspaces:write, tap:read, tap:write. Teams tier. Auth: Authorization: Bearer <api_key or OAuth token> on POST /api/mcp.`;
+Scopes: workspaces:read, workspaces:write, tap:read, tap:write. Teams tier (error code api_plan_required). Auth: Authorization: Bearer <api_key or OAuth token> on POST /api/mcp.`;
 
 export const MCP_EVIDENCE_TOOLS = [
   {
@@ -342,6 +350,199 @@ export const MCP_EVIDENCE_TOOLS = [
       additionalProperties: false,
     },
   },
+  {
+    name: "get_world_model",
+    description:
+      "Durable learning world model for workspace × subject. REST: GET /api/v3/eval/workspaces/{id}/world-model.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        workspace_id: { type: "string" },
+        user_id: { type: "string" },
+        guest_user_id: { type: "string" },
+      },
+      required: ["workspace_id"],
+      additionalProperties: false,
+    },
+    annotations: { readOnlyHint: true },
+  },
+  {
+    name: "get_knowledge_config",
+    description:
+      "Latest knowledge config embedding (knowledgecfg-v1-d64). REST: GET .../knowledge-config.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        workspace_id: { type: "string" },
+        user_id: { type: "string" },
+        guest_user_id: { type: "string" },
+        embedding_model_id: { type: "string" },
+      },
+      required: ["workspace_id"],
+      additionalProperties: false,
+    },
+    annotations: { readOnlyHint: true },
+  },
+  {
+    name: "get_knowledge_config_trajectory",
+    description:
+      "Knowledge config trajectory + optional 2D projection. REST: GET .../knowledge-config/trajectory.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        workspace_id: { type: "string" },
+        user_id: { type: "string" },
+        guest_user_id: { type: "string" },
+        from: { type: "string" },
+        to: { type: "string" },
+        max_points: { type: "number" },
+        project: { type: "boolean" },
+        embedding_model_id: { type: "string" },
+      },
+      required: ["workspace_id"],
+      additionalProperties: false,
+    },
+    annotations: { readOnlyHint: true },
+  },
+  {
+    name: "knowledge_distance",
+    description:
+      "Knowledge distance (user ↔ region) in knowledgecfg space — not a vertical Eval. REST: POST .../knowledge-distance.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        workspace_id: { type: "string" },
+        region_id: { type: "string" },
+        user_id: { type: "string" },
+        guest_user_id: { type: "string" },
+      },
+      required: ["workspace_id", "region_id"],
+      additionalProperties: false,
+    },
+    annotations: { readOnlyHint: true },
+  },
+  {
+    name: "list_eval_history",
+    description:
+      "Prior vertical eval scorecards. REST: GET .../eval-history.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        workspace_id: { type: "string" },
+        user_id: { type: "string" },
+        guest_user_id: { type: "string" },
+        user_ids: { type: "string", description: "Comma-separated cohort user ids." },
+        guest_user_ids: { type: "string" },
+        vertical: { type: "string", description: "verification | augmentation | optimization" },
+        from: { type: "string" },
+        to: { type: "string" },
+        limit: { type: "number" },
+        offset: { type: "number" },
+      },
+      required: ["workspace_id"],
+      additionalProperties: false,
+    },
+    annotations: { readOnlyHint: true },
+  },
+  {
+    name: "list_custom_verification_models",
+    description:
+      "List custom verification models and subjects. REST: GET .../custom-verification-models.",
+    inputSchema: {
+      type: "object",
+      properties: { workspace_id: { type: "string" } },
+      required: ["workspace_id"],
+      additionalProperties: false,
+    },
+    annotations: { readOnlyHint: true },
+  },
+  {
+    name: "create_custom_verification_model",
+    description:
+      "Create custom verification model from subjects. REST: POST .../custom-verification-models action=create.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        workspace_id: { type: "string" },
+        name: { type: "string" },
+        description: { type: "string" },
+        subjects: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              user_id: { type: "string" },
+              guest_user_id: { type: "string" },
+              label: { type: "string" },
+            },
+          },
+        },
+      },
+      required: ["workspace_id", "name"],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "eval_custom_verification_model",
+    description:
+      "Score a subject against a custom verification model. REST: POST .../custom-verification-models action=eval.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        workspace_id: { type: "string" },
+        model_id: { type: "string" },
+        user_id: { type: "string" },
+        guest_user_id: { type: "string" },
+      },
+      required: ["workspace_id", "model_id"],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "buffer_proof_of_work",
+    description:
+      "Buffer a PoW unit in Stash API memory until stash or submit (alaTAP). REST: POST /api/v3/stash/workspaces/{id}/proof-of-work.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        workspace_id: { type: "string" },
+        type: { type: "string" },
+        mime_type: { type: "string" },
+        data: { type: "string" },
+        block_id: { type: "string" },
+        session_id: { type: "string" },
+        file_name: { type: "string" },
+        tool_name: { type: "string" },
+        tool_action: { type: "string" },
+        metadata: { type: "object" },
+        timestamp_ms: { type: "number" },
+      },
+      required: ["workspace_id", "type", "mime_type", "data"],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "stash_proof_of_work",
+    description:
+      "Flush buffered PoW as System 1 (stash). REST: POST .../stash.",
+    inputSchema: {
+      type: "object",
+      properties: { workspace_id: { type: "string" } },
+      required: ["workspace_id"],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "submit_stashed_proof_of_work",
+    description:
+      "Flush buffered PoW as System 2 (submit). REST: POST .../submit.",
+    inputSchema: {
+      type: "object",
+      properties: { workspace_id: { type: "string" } },
+      required: ["workspace_id"],
+      additionalProperties: false,
+    },
+  },
 ] as const;
 
 export type McpProofOfWorkToolContext = {
@@ -489,38 +690,12 @@ export async function callMcpProofOfWorkTool(
   const { auth, supabase, origin } = ctx;
   if (name === "list_workspaces") {
     requireScope(auth.scopes, "workspaces:read");
-    const limit = boundedInt(args.limit, 20, 1, 100);
-    const offset = boundedInt(args.offset, 0, 0, 10_000);
-    const status = stringArg(args, "status");
-
-    let query = supabase
-      .from("workspaces")
-      .select("id, title, root_topic, status, notes, created_at, updated_at", { count: "exact" })
-      .or(
-        auth.user_id
-          ? `user_id.eq.${auth.user_id},organization_id.eq.${auth.organization_id}`
-          : `organization_id.eq.${auth.organization_id}`
-      )
-      .order("created_at", { ascending: false })
-      .range(offset, offset + limit - 1);
-
-    if (status) query = query.eq("status", status);
-
-    const { data, error, count } = await query;
-    if (error) throw new Error(error.message);
-
-    return await evidenceToolResult(
-      {
-        workspaces: data || [],
-        pagination: {
-          total: count ?? 0,
-          limit,
-          offset,
-          has_more: offset + limit < (count ?? 0),
-        },
-      },
-      { endpoint: "list_workspaces" }
-    );
+    const payload = await listAgentWorkspaces(supabase, auth, {
+      status: stringArg(args, "status"),
+      limit: args.limit,
+      offset: args.offset,
+    });
+    return await evidenceToolResult(payload, { endpoint: "list_workspaces" });
   }
 
   if (name === "get_workspace") {
@@ -538,67 +713,13 @@ export async function callMcpProofOfWorkTool(
     requireScope(auth.scopes, "workspaces:read");
     const workspaceId = stringArg(args, "workspace_id");
     if (!workspaceId) throw new Error("workspace_id is required.");
-
-    const workspace = await loadWorkspace(supabase, auth, workspaceId);
-    const { data: blocks, error: blocksError } = await supabase
-      .from("blocks")
-      .select("id, title, description, is_start, status, created_at")
-      .eq("workspace_id", workspaceId)
-      .order("created_at", { ascending: true });
-
-    if (blocksError) throw new Error(blocksError.message);
-
-    const context = await buildWorkspacePerformanceContext({
-      supabase,
-      auth,
-      workspaceId,
-      blockId: null,
+    const progress = await getAgentLearningProgress(supabase, auth, workspaceId, origin);
+    const { counts, workspace_row: _ws, ...payload } = progress;
+    return await evidenceToolResult(payload, {
+      endpoint: "get_learning_progress",
+      workspace_id: workspaceId,
+      proof_of_work_artifacts: counts.proof_of_work_artifacts,
     });
-    const counts = context.payload.counts;
-    const workspaceTitle = workspace.title || workspace.root_topic || "workspace";
-
-    return await evidenceToolResult(
-      withProgressGuidance(
-        {
-          workspace: {
-            id: workspace.id,
-            title: workspace.title,
-            root_topic: workspace.root_topic,
-            workspace_goal: workspace.workspace_goal,
-            status: workspace.status,
-          },
-          blocks: blocks || [],
-          proof_of_work_summary: counts,
-          continuous_evaluation: buildContinuousEvaluationPolicy(workspaceId, origin, counts),
-          rest_quick_reference: {
-            evidence_schema: buildProofOfWorkSchemaApiPath(workspaceId, origin),
-            integration_skill: buildIntegrationSkillApiPath(workspaceId, origin),
-            performance: buildPerformanceApiPath(workspaceId, origin),
-          },
-          progress_interpretation: {
-            learning_verification: "Call verification_score for verification_score + marker_scores.",
-            learning_augmentation: "Call augmentation_score for practice readiness.",
-            learning_optimization: "Call optimization_score for progress toward workspace_goal.",
-            evidence_health:
-              counts.proof_of_work_artifacts === 0
-                ? "No artifacts yet — call generate_proof_of_work_schema then upload_proof_of_work."
-                : `${counts.proof_of_work_artifacts} artifact(s) — ${counts.proof_of_work_artifacts < 5 ? "early signal" : "enough for scoring"}.`,
-          },
-        },
-        {
-          origin,
-          workspaceId,
-          counts,
-          workspaceGoal: workspace.workspace_goal,
-          workspaceTitle,
-        }
-      ),
-      {
-        endpoint: "get_learning_progress",
-        workspace_id: workspaceId,
-        proof_of_work_artifacts: counts.proof_of_work_artifacts,
-      }
-    );
   }
 
   if (name === "create_workspace") {
@@ -845,116 +966,57 @@ export async function callMcpProofOfWorkTool(
     if (!workspaceId) throw new Error("workspace_id is required.");
 
     const workspace = await loadWorkspace(supabase, auth, workspaceId);
-
-    const evidenceType = normalizeProofOfWorkType(args.type);
-    const mimeType = typeof args.mime_type === "string" ? args.mime_type.trim().toLowerCase() : "";
-    const base64 = typeof args.data === "string" ? args.data : "";
     const blockId = typeof args.block_id === "string" ? args.block_id : null;
-    const sessionId = typeof args.session_id === "string" ? args.session_id : null;
 
-    if (!evidenceType) {
-      throw new Error("type must be one of: tool, screen, screenshot, video, eeg");
-    }
-    if (!mimeType || !base64) throw new Error("mime_type and data (base64) are required.");
-    if (!isAllowedProofOfWorkMime(evidenceType, mimeType)) {
-      throw new Error(`mime_type ${mimeType} is not allowed for type ${evidenceType}`);
-    }
-
-    const fileBytes = Buffer.from(base64, "base64");
-    if (!fileBytes.length) throw new Error("data must be non-empty base64 content.");
-    if (fileBytes.length > MAX_WORKSPACE_PROOF_OF_WORK_BYTES) {
-      throw new Error("Proof-of-work file exceeds 10 MB limit.");
-    }
-
-    if (blockId) await assertBlockInWorkspace(supabase, workspaceId, blockId);
-    if (sessionId) {
-      const { data: session } = await supabase.from("sessions").select("id").eq("id", sessionId).single();
-      if (!session) throw new Error("session_id not found.");
-    }
-
-    const ownerUserId = auth.user_id || workspace.user_id;
-    if (!ownerUserId) {
-      throw new Error("Workspace owner is missing.");
-    }
-    await assertCanSubmitProofOfWork(supabase, ownerUserId);
-
-    const evalMeta = parseWorkspaceEvaluationMeta(workspace);
-    const opaque = isOpaqueWorkspace(evalMeta);
-    const rawMetadata =
-      args.metadata && typeof args.metadata === "object" && !Array.isArray(args.metadata)
-        ? (args.metadata as Record<string, unknown>)
-        : {};
-    const allowPlaintext = opaque && rawMetadata.allow_plaintext === true;
-
-    if (opaque && evidenceType === "tool") {
-      const lint = lintOpaquePayload(fileBytes.toString("utf8"), { allowPlaintext });
-      if (!lint.passed) {
-        throw new Error(`Opaque mode plaintext lint failed: ${lint.violations.join(", ")}`);
-      }
-    }
-
-    const artifactId = randomUUID();
-    const fileName = opaque
-      ? redactOpaqueFileName(artifactId)
-      : defaultProofOfWorkFileName(evidenceType, typeof args.file_name === "string" ? args.file_name : undefined);
-
-    const uploaded = await uploadFileToXAI(fileName, mimeType, base64);
-    const metadata = opaque ? sanitizeOpaqueMetadata(rawMetadata, allowPlaintext) : rawMetadata;
-
-    const { data: row, error } = await supabase
-      .from("workspace_proof_of_work")
-      .insert({
-        workspace_id: workspaceId,
+    const row = await uploadWorkspaceProofOfWork(
+      supabase,
+      auth,
+      {
+        id: workspace.id,
+        user_id: workspace.user_id,
+        organization_id: workspace.organization_id,
+        evaluation_mode: workspace.evaluation_mode,
+        protocol_config: workspace.protocol_config,
+        external_refs: workspace.external_refs,
+        title: workspace.title,
+        root_topic: workspace.root_topic,
+        workspace_goal: workspace.workspace_goal,
+      },
+      {
+        workspaceId,
+        type: typeof args.type === "string" ? args.type : "",
+        mime_type: typeof args.mime_type === "string" ? args.mime_type : "",
+        data: typeof args.data === "string" ? args.data : "",
         block_id: blockId,
-        session_id: sessionId,
-        proof_of_work_type: evidenceType,
-        file_name: fileName,
-        mime_type: mimeType,
-        file_size: fileBytes.length,
-        xai_file_id: uploaded.file_id,
-        timestamp_ms: typeof args.timestamp_ms === "number" ? args.timestamp_ms : Date.now(),
-        chunk_index: 0,
-        metadata,
-        tool_name: typeof args.tool_name === "string" ? args.tool_name : null,
-        tool_action: typeof args.tool_action === "string" ? args.tool_action : null,
-        user_id: ownerUserId,
-        guest_user_id: auth.guest_user_id,
-        organization_id: auth.organization_id || workspace.organization_id,
-        created_by_api_key_id: createdByApiKeyId(auth),
-      })
-      .select(
-        "id, workspace_id, block_id, session_id, proof_of_work_type, file_name, mime_type, file_size, xai_file_id, timestamp_ms, metadata, tool_name, tool_action, created_at"
-      )
-      .single();
+        session_id: typeof args.session_id === "string" ? args.session_id : null,
+        file_name: typeof args.file_name === "string" ? args.file_name : undefined,
+        timestamp_ms: typeof args.timestamp_ms === "number" ? args.timestamp_ms : undefined,
+        tool_name: typeof args.tool_name === "string" ? args.tool_name : undefined,
+        tool_action: typeof args.tool_action === "string" ? args.tool_action : undefined,
+        metadata:
+          args.metadata && typeof args.metadata === "object" && !Array.isArray(args.metadata)
+            ? (args.metadata as Record<string, unknown>)
+            : undefined,
+        require_existing_session: true,
+      },
+    );
 
-    if (error || !row) {
-      await deleteFileFromXAI(uploaded.file_id).catch(() => {});
-      throw new Error("Failed to store workspace proof of work.");
-    }
-
-    const { count: proofOfWorkCount } = await supabase
-      .from("workspace_proof_of_work")
-      .select("id", { count: "exact", head: true })
-      .eq("workspace_id", workspaceId);
+    const meta = getUploadProofOfWorkMeta(row);
+    const proofOfWorkCount = await countWorkspaceProofOfWorkForPlan(supabase, workspaceId);
 
     return await evidenceToolResult(
       {
-        proof_of_work: {
-          ...row,
-          workspace_id: row.workspace_id,
-          block_id: row.block_id,
-          type: row.proof_of_work_type,
-        },
-        evaluation_mode: evalMeta.evaluation_mode,
-        privacy: opaque ? buildPrivacyMetadata(evalMeta) : undefined,
-        plaintext_lint: opaque ? { passed: true, violations: [] } : undefined,
+        proof_of_work: row,
+        evaluation_mode: meta.evaluation_mode,
+        privacy: meta.privacy,
+        plaintext_lint: meta.plaintext_lint,
       },
       {
         endpoint: "upload_proof_of_work",
         workspace_id: workspaceId,
         block_id: blockId,
         proof_of_work_artifacts: proofOfWorkCount ?? 1,
-        tool_name: row.tool_name,
+        tool_name: typeof row.tool_name === "string" ? row.tool_name : null,
       }
     );
   }
@@ -1082,6 +1144,407 @@ export async function callMcpProofOfWorkTool(
       if (error instanceof CreateTapLinkError) throw new Error(error.message);
       throw error;
     }
+  }
+
+  if (name === "get_world_model") {
+    requireScope(auth.scopes, "workspaces:read");
+    const workspaceId = stringArg(args, "workspace_id");
+    if (!workspaceId) throw new Error("workspace_id is required.");
+    const workspace = await loadWorkspace(supabase, auth, workspaceId);
+    const isWorkspaceOwner = Boolean(auth.user_id && workspace.user_id === auth.user_id);
+    const subject = resolveEvaluationSubject(
+      auth,
+      {
+        user_id: stringArg(args, "user_id") || auth.user_id,
+        guest_user_id: stringArg(args, "guest_user_id"),
+      },
+      { isWorkspaceOwner },
+    );
+    const { id, model } = await loadLearningWorldModel(supabase, workspaceId, subject);
+    return await evidenceToolResult(
+      { workspace_id: workspaceId, subject, lwm_id: id, learning_world_model: model },
+      { endpoint: "get_world_model", workspace_id: workspaceId },
+    );
+  }
+
+  if (name === "get_knowledge_config") {
+    requireScope(auth.scopes, "workspaces:read");
+    const workspaceId = stringArg(args, "workspace_id");
+    if (!workspaceId) throw new Error("workspace_id is required.");
+    const workspace = await loadWorkspace(supabase, auth, workspaceId);
+    const isWorkspaceOwner = Boolean(auth.user_id && workspace.user_id === auth.user_id);
+    const subject = resolveEvaluationSubject(
+      auth,
+      {
+        user_id: stringArg(args, "user_id") || auth.user_id,
+        guest_user_id: stringArg(args, "guest_user_id"),
+      },
+      { isWorkspaceOwner },
+    );
+    const modelId = stringArg(args, "embedding_model_id") || KNOWLEDGE_CONFIG_EMBEDDING_MODEL_ID;
+    const [latest, lwm] = await Promise.all([
+      loadLatestKnowledgeConfig(supabase, workspaceId, subject, modelId),
+      loadLearningWorldModel(supabase, workspaceId, subject),
+    ]);
+    if (!latest) {
+      const empty = emptyKnowledgeConfig();
+      return await evidenceToolResult(
+        {
+          workspace_id: workspaceId,
+          subject,
+          embedding_model_id: empty.embedding_model_id,
+          dim: empty.dim,
+          vector: empty.vector,
+          as_of: empty.as_of,
+          as_of_ms: empty.as_of_ms,
+          confidence: 0,
+          pow_event_count: 0,
+          lwm_updated_at: lwm.model.updated_at,
+          empty: true,
+        },
+        { endpoint: "get_knowledge_config", workspace_id: workspaceId },
+      );
+    }
+    return await evidenceToolResult(
+      {
+        workspace_id: workspaceId,
+        subject,
+        embedding_model_id: latest.embedding_model_id,
+        dim: latest.dim || KNOWLEDGE_CONFIG_DIM,
+        vector: latest.vector,
+        as_of: new Date(latest.as_of_ms).toISOString(),
+        as_of_ms: latest.as_of_ms,
+        confidence: latest.confidence,
+        pow_event_count: latest.pow_event_count,
+        trigger: latest.trigger,
+        lwm_updated_at: lwm.model.updated_at,
+        empty: false,
+      },
+      { endpoint: "get_knowledge_config", workspace_id: workspaceId },
+    );
+  }
+
+  if (name === "get_knowledge_config_trajectory") {
+    requireScope(auth.scopes, "workspaces:read");
+    const workspaceId = stringArg(args, "workspace_id");
+    if (!workspaceId) throw new Error("workspace_id is required.");
+    const workspace = await loadWorkspace(supabase, auth, workspaceId);
+    const isWorkspaceOwner = Boolean(auth.user_id && workspace.user_id === auth.user_id);
+    const subject = resolveEvaluationSubject(
+      auth,
+      {
+        user_id: stringArg(args, "user_id") || auth.user_id,
+        guest_user_id: stringArg(args, "guest_user_id"),
+      },
+      { isWorkspaceOwner },
+    );
+    const maxPoints = boundedInt(args.max_points, 100, 2, 500);
+    const includeProjection = args.project !== false;
+    const modelId = stringArg(args, "embedding_model_id") || KNOWLEDGE_CONFIG_EMBEDDING_MODEL_ID;
+    const parseMs = (value: unknown): number | null => {
+      if (typeof value !== "string" || !value) return null;
+      if (/^\d+$/.test(value)) return Number(value);
+      const t = Date.parse(value);
+      return Number.isFinite(t) ? t : null;
+    };
+    const points = await loadKnowledgeConfigTrajectory(supabase, {
+      workspaceId,
+      subject,
+      fromMs: parseMs(args.from),
+      toMs: parseMs(args.to),
+      maxPoints,
+      embeddingModelId: modelId,
+    });
+    return await evidenceToolResult(
+      {
+        workspace_id: workspaceId,
+        subject,
+        embedding_model_id: modelId,
+        point_count: points.length,
+        path_length: trajectoryPathLength(points),
+        points,
+        projection: includeProjection
+          ? {
+              frame_id: `${modelId}:ui2d`,
+              embedding_model_id: modelId,
+              coords: projectTrajectory2D(points),
+            }
+          : undefined,
+      },
+      { endpoint: "get_knowledge_config_trajectory", workspace_id: workspaceId },
+    );
+  }
+
+  if (name === "knowledge_distance") {
+    requireScope(auth.scopes, "workspaces:read");
+    const workspaceId = stringArg(args, "workspace_id");
+    const regionId = stringArg(args, "region_id");
+    if (!workspaceId) throw new Error("workspace_id is required.");
+    if (!regionId) throw new Error("region_id is required.");
+    const workspace = await loadWorkspace(supabase, auth, workspaceId);
+    const isWorkspaceOwner = Boolean(auth.user_id && workspace.user_id === auth.user_id);
+    const subject = resolveEvaluationSubject(
+      auth,
+      {
+        user_id: stringArg(args, "user_id") || auth.user_id,
+        guest_user_id: stringArg(args, "guest_user_id"),
+      },
+      { isWorkspaceOwner },
+    );
+    const computed = await computeKnowledgeDistanceForSubject(supabase, {
+      workspaceId,
+      regionId,
+      subject: { user_id: subject.user_id, guest_user_id: subject.guest_user_id },
+    });
+    return await evidenceToolResult(
+      {
+        workspace_id: workspaceId,
+        computation: "knowledge_distance",
+        note: "Pure embedding-space geometry — not a vertical Eval and not archived.",
+        region: {
+          id: computed.region.id,
+          name: computed.region.name,
+          embedding_model_id: computed.region.embedding_model_id,
+          cosine_threshold: computed.region.cosine_threshold,
+        },
+        subject: computed.subject,
+        knowledge_distance: computed.knowledge_distance,
+      },
+      { endpoint: "knowledge_distance", workspace_id: workspaceId },
+    );
+  }
+
+  if (name === "list_eval_history") {
+    requireScope(auth.scopes, "workspaces:read");
+    const workspaceId = stringArg(args, "workspace_id");
+    if (!workspaceId) throw new Error("workspace_id is required.");
+    const workspace = await loadWorkspace(supabase, auth, workspaceId);
+    const isWorkspaceOwner = Boolean(auth.user_id && workspace.user_id === auth.user_id);
+    const parseCsv = (value: string | null): string[] =>
+      value
+        ? value
+            .split(",")
+            .map((s) => s.trim())
+            .filter(Boolean)
+        : [];
+    const requestedUserIds = parseCsv(stringArg(args, "user_ids"));
+    const requestedGuestUserIds = parseCsv(stringArg(args, "guest_user_ids"));
+    const requestedSubject =
+      stringArg(args, "user_id") || stringArg(args, "guest_user_id")
+        ? resolveEvaluationSubject(
+            auth,
+            {
+              user_id: stringArg(args, "user_id"),
+              guest_user_id: stringArg(args, "guest_user_id"),
+            },
+            { isWorkspaceOwner },
+          )
+        : null;
+    const scope = resolveHistorySubjectScope({
+      authUserId: auth.user_id,
+      authGuestUserId: auth.guest_user_id,
+      isOrgAdmin: auth.is_org_admin,
+      isWorkspaceOwner,
+      requestedUserIds: requestedUserIds.length > 0 ? requestedUserIds : null,
+      requestedGuestUserIds: requestedGuestUserIds.length > 0 ? requestedGuestUserIds : null,
+      requestedSubject,
+    });
+    const verticalRaw = stringArg(args, "vertical");
+    const vertical =
+      verticalRaw && (SCORE_VERTICALS as readonly string[]).includes(verticalRaw)
+        ? (verticalRaw as ScoreVertical)
+        : null;
+    const limit = boundedInt(args.limit, 50, 1, 500);
+    const offset = boundedInt(args.offset, 0, 0, 10_000);
+    const runs = await listEvalRunHistory(supabase, {
+      workspaceId,
+      subject: scope.subject,
+      userIds: scope.userIds,
+      guestUserIds: scope.guestUserIds,
+      vertical,
+      from: stringArg(args, "from"),
+      to: stringArg(args, "to"),
+      limit,
+      offset,
+    });
+    return await evidenceToolResult(
+      {
+        workspace_id: workspaceId,
+        scope: {
+          restricted: scope.restricted,
+          subject: scope.subject ?? null,
+          user_ids: scope.userIds ?? null,
+          guest_user_ids: scope.guestUserIds ?? null,
+        },
+        count: runs.length,
+        runs,
+        limit,
+        offset,
+      },
+      { endpoint: "list_eval_history", workspace_id: workspaceId },
+    );
+  }
+
+  if (name === "list_custom_verification_models") {
+    requireScope(auth.scopes, "workspaces:read");
+    const workspaceId = stringArg(args, "workspace_id");
+    if (!workspaceId) throw new Error("workspace_id is required.");
+    await loadWorkspace(supabase, auth, workspaceId);
+    const [models, subjects] = await Promise.all([
+      listCustomVerificationModels(supabase, workspaceId),
+      listSubjectsWithKnowledgeConfig(supabase, workspaceId),
+    ]);
+    return await evidenceToolResult(
+      { workspace_id: workspaceId, models, subjects },
+      { endpoint: "list_custom_verification_models", workspace_id: workspaceId },
+    );
+  }
+
+  if (name === "create_custom_verification_model") {
+    requireScope(auth.scopes, "workspaces:write");
+    const workspaceId = stringArg(args, "workspace_id");
+    if (!workspaceId) throw new Error("workspace_id is required.");
+    await loadWorkspace(supabase, auth, workspaceId);
+    const modelName = stringArg(args, "name") || "";
+    const subjects = Array.isArray(args.subjects) ? args.subjects : [];
+    const { model, spec } = await createCustomVerificationModelFromSubjects(supabase, {
+      workspaceId,
+      name: modelName,
+      description: stringArg(args, "description"),
+      subjects: subjects.map((s: Record<string, unknown>) => ({
+        user_id: typeof s.user_id === "string" ? s.user_id : null,
+        guest_user_id: typeof s.guest_user_id === "string" ? s.guest_user_id : null,
+        label: typeof s.label === "string" ? s.label : null,
+      })),
+      createdBy: auth.user_id,
+    });
+    return await evidenceToolResult(
+      { workspace_id: workspaceId, model, spec, action: "create" },
+      { endpoint: "create_custom_verification_model", workspace_id: workspaceId },
+    );
+  }
+
+  if (name === "eval_custom_verification_model") {
+    requireScope(auth.scopes, "workspaces:write");
+    const workspaceId = stringArg(args, "workspace_id");
+    const modelId = stringArg(args, "model_id");
+    if (!workspaceId) throw new Error("workspace_id is required.");
+    if (!modelId) throw new Error("model_id is required.");
+    const workspace = await loadWorkspace(supabase, auth, workspaceId);
+    const isWorkspaceOwner = Boolean(auth.user_id && workspace.user_id === auth.user_id);
+    const subject = resolveEvaluationSubject(
+      auth,
+      {
+        user_id: stringArg(args, "user_id") || auth.user_id,
+        guest_user_id: stringArg(args, "guest_user_id"),
+      },
+      { isWorkspaceOwner },
+    );
+    const scored = await evalSubjectAgainstCustomVerificationModel(supabase, {
+      workspaceId,
+      modelId,
+      subject: { user_id: subject.user_id, guest_user_id: subject.guest_user_id },
+    });
+    return await evidenceToolResult(
+      {
+        workspace_id: workspaceId,
+        model: { id: scored.model.id, name: scored.model.name },
+        score: scored.score,
+        action: "eval",
+      },
+      { endpoint: "eval_custom_verification_model", workspace_id: workspaceId },
+    );
+  }
+
+  if (name === "buffer_proof_of_work") {
+    requireScope(auth.scopes, "workspaces:write");
+    const workspaceId = stringArg(args, "workspace_id");
+    if (!workspaceId) throw new Error("workspace_id is required.");
+    await loadWorkspace(supabase, auth, workspaceId);
+    const subjectId = bufferSubjectId(auth);
+    const ingested = ingestStashUnit(workspaceId, subjectId, args);
+    if (!ingested.ok) throw new Error(ingested.message);
+    const buffered = getStashBufferSize(workspaceId, subjectId);
+    return await evidenceToolResult(
+      {
+        buffered: true,
+        unit: {
+          id: ingested.unit.id,
+          type: ingested.unit.type,
+          type_raw: ingested.unit.type_raw,
+          mime_type: ingested.unit.mime_type,
+          file_name: ingested.unit.file_name ?? null,
+          block_id: ingested.unit.block_id,
+          session_id: ingested.unit.session_id,
+          tool_name: ingested.unit.tool_name,
+          tool_action: ingested.unit.tool_action,
+          timestamp_ms: ingested.unit.timestamp_ms,
+          buffered_at: ingested.unit.buffered_at,
+        },
+        buffer_count: buffered,
+        workspace_id: workspaceId,
+        user_id: auth.user_id,
+        guest_user_id: auth.guest_user_id,
+        next: {
+          stash: `POST /api/v3/stash/workspaces/${workspaceId}/stash`,
+          submit: `POST /api/v3/stash/workspaces/${workspaceId}/submit`,
+        },
+        note: "Proof of work is held temporarily until Stash (System 1) or Submit (System 2).",
+      },
+      { endpoint: "buffer_proof_of_work", workspace_id: workspaceId },
+    );
+  }
+
+  if (name === "stash_proof_of_work" || name === "submit_stashed_proof_of_work") {
+    requireScope(auth.scopes, "workspaces:write");
+    const workspaceId = stringArg(args, "workspace_id");
+    if (!workspaceId) throw new Error("workspace_id is required.");
+    const workspace = await loadWorkspace(supabase, auth, workspaceId);
+    const subjectId = bufferSubjectId(auth);
+    const flush =
+      name === "stash_proof_of_work"
+        ? await stashBufferedProofOfWork({
+            workspaceId,
+            subjectId,
+            auth,
+            workspace: {
+              id: workspace.id,
+              user_id: workspace.user_id || auth.user_id || "",
+              organization_id: workspace.organization_id ?? auth.organization_id,
+            },
+            supabase,
+          })
+        : await submitBufferedProofOfWork({
+            workspaceId,
+            subjectId,
+            auth,
+            workspace: {
+              id: workspace.id,
+              user_id: workspace.user_id || auth.user_id || "",
+              organization_id: workspace.organization_id ?? auth.organization_id,
+            },
+            supabase,
+          });
+    if (!flush.ok) throw new Error(flush.error);
+    const decision = name === "stash_proof_of_work" ? "stash" : "submit";
+    return await evidenceToolResult(
+      {
+        decision,
+        system: flush.system,
+        system_label: decision === "stash" ? "System 1" : "System 2",
+        flushed: flush.flushed,
+        empty: flush.empty,
+        proof_of_work: flush.proof_of_work,
+        buffer_remaining: flush.buffer_remaining,
+        workspace_id: workspaceId,
+        user_id: auth.user_id,
+        guest_user_id: auth.guest_user_id,
+        note: flush.empty
+          ? `No buffered proof of work — nothing to ${decision}.`
+          : `Buffered units flushed to PoW API as ${decision === "stash" ? "System 1 (stash)" : "System 2 (submit)"}; buffer reset.`,
+      },
+      { endpoint: name, workspace_id: workspaceId },
+    );
   }
 
   throw new Error(`Unknown tool: ${name}`);

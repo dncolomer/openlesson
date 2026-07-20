@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   defaultProofOfWorkFileName,
@@ -15,6 +16,14 @@ import {
   attachFileToOrgCollection,
   ensureOrgXaiApiKey,
 } from "@/lib/organization/ensure-xai-resources";
+import {
+  buildPrivacyMetadata,
+  lintOpaquePayload,
+  normalizeEvaluationMode,
+  parseWorkspaceEvaluationMeta,
+  redactOpaqueFileName,
+  sanitizeOpaqueMetadata,
+} from "./opaque-evaluation";
 
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -67,6 +76,18 @@ async function resolveProofOfWorkSession(
   };
 }
 
+export interface UploadWorkspaceProofOfWorkWorkspace {
+  id: string;
+  user_id: string | null;
+  organization_id: string | null;
+  evaluation_mode?: string | null;
+  protocol_config?: unknown;
+  external_refs?: unknown;
+  title?: string | null;
+  root_topic?: string | null;
+  workspace_goal?: string | null;
+}
+
 export interface UploadWorkspaceProofOfWorkInput {
   workspaceId: string;
   type: string;
@@ -76,17 +97,43 @@ export interface UploadWorkspaceProofOfWorkInput {
   session_id?: string | null;
   file_name?: string;
   timestamp_ms?: number;
+  chunk_index?: number;
   tool_name?: string;
   tool_action?: string;
   metadata?: Record<string, unknown>;
+  band_powers?: Record<string, number> | null;
+  device_name?: string | null;
+  sample_count?: number | null;
+  /** When true, missing session_id raises (agent REST strict mode). Default false keeps session soft-resolve. */
+  require_existing_session?: boolean;
 }
+
+export type UploadWorkspaceProofOfWorkResult = {
+  proof_of_work: Record<string, unknown> & {
+    workspace_id: string;
+    block_id: string | null;
+    type: string;
+    tool_name?: string | null;
+    tool_action?: string | null;
+    metadata?: unknown;
+  };
+  evaluation_mode: "semantic" | "opaque";
+  privacy?: ReturnType<typeof buildPrivacyMetadata>;
+  plaintext_lint?: { passed: boolean; violations: string[] };
+};
 
 export async function uploadWorkspaceProofOfWork(
   supabase: SupabaseClient,
   auth: AuthContext,
-  workspace: { id: string; user_id: string; organization_id: string | null },
+  workspace: UploadWorkspaceProofOfWorkWorkspace,
   input: UploadWorkspaceProofOfWorkInput
-) {
+): Promise<UploadWorkspaceProofOfWorkResult["proof_of_work"] & {
+  _upload_meta?: {
+    evaluation_mode: "semantic" | "opaque";
+    privacy?: ReturnType<typeof buildPrivacyMetadata>;
+    plaintext_lint?: { passed: boolean; violations: string[] };
+  };
+}> {
   const evidenceType = normalizeProofOfWorkType(input.type);
   const mimeType = input.mime_type.trim().toLowerCase();
   const base64 = input.data;
@@ -128,19 +175,54 @@ export async function uploadWorkspaceProofOfWork(
     if (!block) throw new Error("Block not found in this workspace");
   }
 
-  const fileName = defaultProofOfWorkFileName(evidenceType, input.file_name);
+  if (input.require_existing_session && input.session_id) {
+    const { data: session } = await supabase
+      .from("sessions")
+      .select("id")
+      .eq("id", input.session_id)
+      .single();
+    if (!session) throw new Error("session_id not found");
+  }
 
-  const { session_id: resolvedSessionId, metadata } = await resolveProofOfWorkSession(
+  const evalMeta = parseWorkspaceEvaluationMeta(workspace);
+  const isOpaque = normalizeEvaluationMode(workspace.evaluation_mode) === "opaque";
+  const rawMetadata =
+    input.metadata && typeof input.metadata === "object" && !Array.isArray(input.metadata)
+      ? input.metadata
+      : {};
+  const allowPlaintext = isOpaque && rawMetadata.allow_plaintext === true;
+
+  if (isOpaque && evidenceType === "tool") {
+    const lint = lintOpaquePayload(fileBytes.toString("utf8"), { allowPlaintext });
+    if (!lint.passed) {
+      throw new Error(`Opaque mode plaintext lint failed: ${lint.violations.join(", ")}`);
+    }
+  }
+
+  const artifactId = randomUUID();
+  const fileName = isOpaque
+    ? redactOpaqueFileName(artifactId)
+    : defaultProofOfWorkFileName(evidenceType, input.file_name);
+
+  const { session_id: resolvedSessionId, metadata: sessionMeta } = await resolveProofOfWorkSession(
     supabase,
-    input.session_id,
-    input.metadata || {}
+    input.require_existing_session ? null : input.session_id,
+    rawMetadata
   );
+  // When require_existing_session, we already validated session_id above — keep it.
+  const finalSessionId = input.require_existing_session
+    ? input.session_id || null
+    : resolvedSessionId;
+  const metadataBase = input.require_existing_session ? rawMetadata : sessionMeta;
+  const metadata = isOpaque
+    ? sanitizeOpaqueMetadata(metadataBase, allowPlaintext)
+    : metadataBase;
+
   const organizationId = await resolveOrganizationId(
     supabase,
     auth.organization_id || workspace.organization_id
   );
 
-  // Prefer org-scoped xAI API key for cost attribution in the xAI console
   let xaiApiKey: string | undefined;
   if (organizationId) {
     try {
@@ -157,7 +239,6 @@ export async function uploadWorkspaceProofOfWork(
   });
   const xaiFileId = uploaded.file_id;
 
-  // Best-effort: group PoW file into the org's xAI Collection
   let xaiCollectionId: string | null = null;
   if (organizationId) {
     try {
@@ -176,7 +257,7 @@ export async function uploadWorkspaceProofOfWork(
   const { row, error } = await insertWorkspaceProofOfWorkRow(supabase, {
     workspace_id: input.workspaceId,
     block_id: input.block_id || null,
-    session_id: resolvedSessionId,
+    session_id: finalSessionId,
     proof_of_work_type: evidenceType,
     file_name: fileName,
     mime_type: mimeType,
@@ -184,11 +265,14 @@ export async function uploadWorkspaceProofOfWork(
     xai_file_id: xaiFileId,
     xai_collection_id: xaiCollectionId,
     timestamp_ms: input.timestamp_ms ?? Date.now(),
-    chunk_index: 0,
+    chunk_index: input.chunk_index ?? 0,
     metadata,
     tool_name: input.tool_name || null,
     tool_action: input.tool_action || null,
-    user_id: participantUserId,
+    band_powers: input.band_powers ?? null,
+    device_name: input.device_name ?? null,
+    sample_count: input.sample_count ?? null,
+    user_id: participantUserId || billingUserId,
     guest_user_id: participantGuestUserId,
     organization_id: organizationId,
     created_by_api_key_id: createdByApiKeyId(auth),
@@ -199,16 +283,55 @@ export async function uploadWorkspaceProofOfWork(
     console.error("[upload-workspace-proof-of-work] DB insert failed:", error);
     throw new Error(
       formatDbError(
-        error ? "Failed to store workspace proof of work" : "Failed to store workspace proof of work: insert returned no rows",
+        error
+          ? "Failed to store workspace proof of work"
+          : "Failed to store workspace proof of work: insert returned no rows",
         error
       )
     );
   }
 
-  return {
+  const proof_of_work = {
     ...row,
     workspace_id: row.workspace_id,
     block_id: row.block_id,
     type: row.proof_of_work_type,
   };
+
+  // Attach non-enumerable meta for agent response builders without breaking callers that spread row.
+  Object.defineProperty(proof_of_work, "_upload_meta", {
+    value: {
+      evaluation_mode: evalMeta.evaluation_mode,
+      privacy: isOpaque ? buildPrivacyMetadata(evalMeta) : undefined,
+      plaintext_lint: isOpaque ? { passed: true, violations: [] as string[] } : undefined,
+    },
+    enumerable: false,
+  });
+
+  return proof_of_work as typeof proof_of_work & {
+    _upload_meta: {
+      evaluation_mode: "semantic" | "opaque";
+      privacy?: ReturnType<typeof buildPrivacyMetadata>;
+      plaintext_lint?: { passed: boolean; violations: string[] };
+    };
+  };
+}
+
+/** Extract opaque/eval metadata attached by uploadWorkspaceProofOfWork. */
+export function getUploadProofOfWorkMeta(
+  row: { _upload_meta?: UploadWorkspaceProofOfWorkResult extends never ? never : {
+    evaluation_mode: "semantic" | "opaque";
+    privacy?: ReturnType<typeof buildPrivacyMetadata>;
+    plaintext_lint?: { passed: boolean; violations: string[] };
+  } }
+): {
+  evaluation_mode: "semantic" | "opaque";
+  privacy?: ReturnType<typeof buildPrivacyMetadata>;
+  plaintext_lint?: { passed: boolean; violations: string[] };
+} {
+  return (
+    row._upload_meta || {
+      evaluation_mode: "semantic",
+    }
+  );
 }

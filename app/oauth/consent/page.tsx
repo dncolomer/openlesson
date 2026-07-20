@@ -39,7 +39,16 @@ export default function OAuthConsentPage() {
       });
       const data = await res.json();
       if (!res.ok) {
-        throw new Error(data.message || data.error || "Authorization failed");
+        const errObj = data?.error;
+        const message =
+          typeof errObj === "object" && errObj && typeof errObj.message === "string"
+            ? errObj.message
+            : typeof data.message === "string"
+              ? data.message
+              : typeof errObj === "string"
+                ? errObj
+                : "Authorization failed";
+        throw new Error(message);
       }
       if (data.redirect_to) {
         window.location.href = data.redirect_to;

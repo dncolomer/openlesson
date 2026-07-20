@@ -55,7 +55,7 @@ export async function authenticateOAuthAccessToken(
   if (!isTeams) {
     return errorResponse(
       403,
-      "teams_required",
+      "api_plan_required",
       "Proof-of-Work API organization and guest features require the Teams tier.",
       { renew_url: "https://uncertain.systems/pricing" }
     );

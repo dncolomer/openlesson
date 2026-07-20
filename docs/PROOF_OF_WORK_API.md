@@ -1,12 +1,18 @@
 # Uncertain Systems Proof-of-Work API
 
 Capture base path: **`/api/v3/pow`**  
-Evaluation base path: **`/api/v3/eval`**
+Evaluation base path: **`/api/v3/eval`**  
+Stash base path: **`/api/v3/stash`** (alaTAP buffer)
 
-- **PoW (`/api/v3/pow`)** — workspace read, proof-of-work upload, proof-of-work schema, integration skill, blocks, TAP links, API keys, org guests. **Workspace creation is UI-only** (`/workspace/new`); `POST /workspaces` is not available.
-- **Eval (`/api/v3/eval`)** — vertical scores (`verification-score`, `augmentation-score`, `optimization-score`), durable learning world model, knowledge-config latest + trajectory, and pure **Knowledge distance** geometry (user ↔ knowledge region; not a vertical Eval).
+- **PoW (`/api/v3/pow`)** — list/get workspaces, learning-progress, proof-of-work upload, schema, integration skill, blocks, TAP links, API keys (browser session), org guests. **Workspace creation is UI-only** (`/workspace/new`); `POST /workspaces` is not available.
+- **Eval (`/api/v3/eval`)** — vertical scores, learning world model, knowledge-config + trajectory, knowledge distance, eval-history, custom verification models.
+- **Stash (`/api/v3/stash`)** — temporary PoW buffer, then **stash** (System 1) or **submit** (System 2) flush into regular PoW.
+
+**MCP (`POST /api/mcp`)** exposes the same agent workspace ops with 100% tool ↔ REST parity (workspace create and key CRUD remain non-MCP: UI-only create; browser-session keys).
 
 There is no `/api/v2/*` agent surface.
+
+Public agent bodies use **snake_case**. Plan-gate failures return **`403` with `error.code = "api_plan_required"`** (Teams tier).
 
 ## Evaluation API (scores, world model, knowledge config)
 
@@ -56,29 +62,43 @@ Canonical protocol `agent-trace-v3` phases: `enumerate` → `fingerprint` → `a
 
 ## Endpoints (capture — base `/api/v3/pow`)
 
-| Method | Path | Scope | Description |
-| :--- | :--- | :--- | :--- |
-| `GET` | `/workspaces/{workspace_id}/blocks` | `workspaces:read` | List available blocks in the workspace. |
-| `POST` | `/workspaces/{workspace_id}/proof-of-work-schema` | `workspaces:read` | Grok-generated JSON Schema for ideal tool proof of work input given workspace context + eval definition. |
-| `POST` | `/workspaces/{workspace_id}/integration-skill` | `workspaces:read` | Grok-generated workspace-specific `skill.md` integration guide for a partner agent. |
-| `POST` | `/workspaces/{workspace_id}/proof-of-work` | `workspaces:write` | Upload tool usage, screenshots, video, or EEG to xAI and link to workspace/block. |
-| `POST` | `/workspaces/{workspace_id}/tap-links` | `tap:write` | Request a private Think Aloud Protocol (TAP) link for the full workspace (optional body `block_id` scopes to a block). |
-| `POST` | `/workspaces/{workspace_id}/blocks/{block_id}/tap-links` | `tap:write` | Request a private TAP link scoped to a single block. |
-| `GET` | `/workspaces/{workspace_id}/tap-links` | `tap:read` | List existing TAP links and completion status. TAP evidence is uploaded to proof-of-work; score with `POST /api/v3/eval/.../verification-score`. |
-| `POST` | `/org/guests` | `org:write` | Organization admins create guest users by email and issue guest API keys. |
+| Method | Path | Scope | MCP tool | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| `GET` | `/workspaces` | `workspaces:read` | `list_workspaces` | List accessible workspaces (`?status=&limit=&offset=`). |
+| `GET` | `/workspaces/{workspace_id}` | `workspaces:read` | `get_workspace` | Workspace metadata + `workspace_goal`. |
+| `GET` | `/workspaces/{workspace_id}/learning-progress` | `workspaces:read` | `get_learning_progress` | One-call progress snapshot (goal, blocks, counts, next actions). |
+| `GET` | `/workspaces/{workspace_id}/blocks` | `workspaces:read` | `list_blocks` | List available blocks in the workspace. |
+| `POST` | `/workspaces/{workspace_id}/proof-of-work-schema` | `workspaces:read` | `generate_proof_of_work_schema` | Grok-generated JSON Schema for ideal tool proof of work input. |
+| `POST` | `/workspaces/{workspace_id}/integration-skill` | `workspaces:read` | `generate_integration_skill` | Grok-generated workspace-specific `skill.md`. |
+| `POST` | `/workspaces/{workspace_id}/proof-of-work` | `workspaces:write` | `upload_proof_of_work` | Upload tool usage, screenshots, video, or EEG. |
+| `POST` | `/workspaces/{workspace_id}/tap-links` | `tap:write` | `create_tap_link` | Request a private TAP link (optional body `block_id`). |
+| `POST` | `/workspaces/{workspace_id}/blocks/{block_id}/tap-links` | `tap:write` | `create_tap_link` | Block-scoped TAP link. |
+| `GET` | `/workspaces/{workspace_id}/tap-links` | `tap:read` | `list_tap_links` | List TAP links and completion status. |
+| `POST` | `/org/guests` | `org:write` | — | Org admins create guest users (not an MCP tool). |
+| `GET`/`POST`/`DELETE`/`PATCH` | `/keys…` | browser session | — | API key CRUD is browser-session only (not MCP). |
 
 ## Endpoints (evaluation — base `/api/v3/eval`)
 
-| Method | Path | Scope | Description |
-| :--- | :--- | :--- | :--- |
-| `POST` | `/workspaces/{workspace_id}/verification-score` | `workspaces:read` | Learning verification score (0–100) + spider, analysis, next actions. TAP auto-results use this only. |
-| `POST` | `/workspaces/{workspace_id}/augmentation-score` | `workspaces:read` | Learning augmentation / practice-readiness score (0–100). |
-| `POST` | `/workspaces/{workspace_id}/optimization-score` | `workspaces:read` | Learning optimization score toward `workspace_goal` (0–100). |
-| `GET` | `/workspaces/{workspace_id}/world-model` | `workspaces:read` | Durable learning world model for a subject. |
-| `GET` | `/workspaces/{workspace_id}/knowledge-config` | `workspaces:read` | Latest knowledge config embedding (`knowledgecfg-v1-d64`). |
-| `GET` | `/workspaces/{workspace_id}/knowledge-config/trajectory` | `workspaces:read` | Knowledge config trajectory + optional 2D projection. |
-| `GET` / `POST` | `/workspaces/{workspace_id}/knowledge-distance` | `workspaces:read` | Knowledge distance (user ↔ region) in knowledgecfg space. Query/body: `region_id`, `user_id` and/or `guest_user_id` (unique IDs; omit to default to the authenticated caller). Returns `knowledge_distance`, `l2_distance`, `cosine_similarity`, `cosine_distance`, `in_region`. Not a score endpoint and does not archive history. |
-| `GET` | `/workspaces/{workspace_id}/eval-history` | `workspaces:read` | Prior vertical eval scorecards; workspace / subject / multi-user (`user_ids`) filters. |
+| Method | Path | Scope | MCP tool | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| `POST` | `/workspaces/{workspace_id}/verification-score` | `workspaces:read` | `verification_score` | Learning verification score (0–100). TAP auto-results use this only. |
+| `POST` | `/workspaces/{workspace_id}/augmentation-score` | `workspaces:read` | `augmentation_score` | Learning augmentation / practice-readiness score (0–100). |
+| `POST` | `/workspaces/{workspace_id}/optimization-score` | `workspaces:read` | `optimization_score` | Learning optimization score toward `workspace_goal` (0–100). |
+| `GET` | `/workspaces/{workspace_id}/world-model` | `workspaces:read` | `get_world_model` | Durable learning world model for a subject. |
+| `GET` | `/workspaces/{workspace_id}/knowledge-config` | `workspaces:read` | `get_knowledge_config` | Latest knowledge config embedding (`knowledgecfg-v1-d64`). |
+| `GET` | `/workspaces/{workspace_id}/knowledge-config/trajectory` | `workspaces:read` | `get_knowledge_config_trajectory` | Knowledge config trajectory + optional 2D projection. |
+| `GET` / `POST` | `/workspaces/{workspace_id}/knowledge-distance` | `workspaces:read` | `knowledge_distance` | Knowledge distance (user ↔ region). Body/query: `region_id`, `user_id` / `guest_user_id` (snake_case). Not a vertical Eval. |
+| `GET` | `/workspaces/{workspace_id}/eval-history` | `workspaces:read` | `list_eval_history` | Prior vertical eval scorecards. |
+| `GET` | `/workspaces/{workspace_id}/custom-verification-models` | `workspaces:read` | `list_custom_verification_models` | List models + subjects with knowledge config. |
+| `POST` | `/workspaces/{workspace_id}/custom-verification-models` | `workspaces:write` | `create_custom_verification_model` / `eval_custom_verification_model` | Body `action`: `create` (default) or `eval` (`model_id` + subject). |
+
+## Endpoints (stash / alaTAP — base `/api/v3/stash`)
+
+| Method | Path | Scope | MCP tool | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| `POST` | `/workspaces/{workspace_id}/proof-of-work` | `workspaces:write` | `buffer_proof_of_work` | Buffer a PoW unit (same payload as PoW upload) until stash/submit. |
+| `POST` | `/workspaces/{workspace_id}/stash` | `workspaces:write` | `stash_proof_of_work` | Flush buffer as System 1 (stash) into regular PoW. |
+| `POST` | `/workspaces/{workspace_id}/submit` | `workspaces:write` | `submit_stashed_proof_of_work` | Flush buffer as System 2 (submit) into regular PoW. |
 
 ## Predictive Interruptions (TIM)
 
@@ -233,7 +253,7 @@ Create workspaces manually in the product UI at **`/workspace/new`** (blank, tem
 }
 ```
 
-Only `15` and `30` minute sessions are supported. Any other value defaults to `15`.
+Session length: **1–120 minutes** (default **15**). Values outside the range are clamped.
 
 The response includes a private URL for the TAP session UI. Think Aloud Protocol (TAP) captures live human cognition. The private URL is a bearer link: opening `/tap/session/{token}` authenticates that TAP session directly without requiring an Uncertain Systems login or an Proof-of-Work API key.
 

@@ -40,63 +40,8 @@ export interface AuthContext {
   oauth_client_id?: string;
 }
 
-// --- Proof Types ---
-
-export type ProofType =
-  | "plan_created"
-  | "plan_adapted"
-  | "session_started"
-  | "session_paused"
-  | "session_resumed"
-  | "session_ended"
-  | "analysis_heartbeat"
-  | "assistant_query"
-  | "session_batch";
-
-export const PROOF_TYPE_VALUES: Record<ProofType, number> = {
-  plan_created: 0,
-  plan_adapted: 1,
-  session_started: 2,
-  session_paused: 3,
-  session_resumed: 4,
-  session_ended: 5,
-  analysis_heartbeat: 6,
-  assistant_query: 7,
-  session_batch: 8,
-};
-
-export interface Proof {
-  id: string;
-  type: ProofType;
-  fingerprint: string;
-  timestamp: string;
-  session_id?: string | null;
-  workspace_id?: string | null;
-  previous_proof_id?: string | null;
-  input_hash?: string | null;
-  output_hash?: string | null;
-  data_hash: string;
-  data?: Record<string, unknown> | null;
-  anchored: boolean;
-  anchor_tx_signature?: string | null;
-  anchor_slot?: number | null;
-  anchor_timestamp?: string | null;
-}
-
-export interface ProofBatch {
-  id: string;
-  session_id: string;
-  user_id: string;
-  merkle_root: string;
-  proof_ids: string[];
-  proof_count: number;
-  anchored: boolean;
-  anchor_tx_signature?: string | null;
-  anchor_slot?: number | null;
-  anchor_timestamp?: string | null;
-}
-
 // --- Error Types ---
+// Legacy blockchain / proof-tracking types were removed from the agent surface.
 
 export type ErrorCode =
   | "unauthorized"
@@ -112,7 +57,9 @@ export type ErrorCode =
   | "usage_limit_reached"
   | "block_not_found"
   | "tap_link_not_found"
+  /** @deprecated Prefer api_plan_required — kept for reading older client payloads only. */
   | "teams_required"
+  /** Canonical plan-gate code for Teams tier / API plan requirements. */
   | "api_plan_required"
   | "guest_not_found"
   | "internal_error"

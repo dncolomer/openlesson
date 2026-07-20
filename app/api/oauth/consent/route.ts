@@ -57,8 +57,10 @@ export async function POST(req: NextRequest) {
   if (!isTeams) {
     return NextResponse.json(
       {
-        error: "teams_required",
-        message: "MCP OAuth access requires an active Teams subscription.",
+        error: {
+          code: "api_plan_required",
+          message: "MCP OAuth access requires an active Teams subscription.",
+        },
       },
       { status: 403 }
     );

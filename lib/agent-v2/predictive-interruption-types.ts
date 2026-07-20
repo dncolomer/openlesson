@@ -53,4 +53,15 @@ export type ProofOfWorkApiEndpoint =
   | "get_learning_progress"
   | "list_tap_links"
   | "create_tap_link"
-  | "get_workspace_detail";
+  | "get_workspace_detail"
+  | "get_world_model"
+  | "get_knowledge_config"
+  | "get_knowledge_config_trajectory"
+  | "knowledge_distance"
+  | "list_eval_history"
+  | "list_custom_verification_models"
+  | "create_custom_verification_model"
+  | "eval_custom_verification_model"
+  | "buffer_proof_of_work"
+  | "stash_proof_of_work"
+  | "submit_stashed_proof_of_work";

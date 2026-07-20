@@ -11,18 +11,17 @@ Use this skill when an agent needs to work with existing Verification Workspaces
 
 The Proof-of-Work API supports **only** this workflow:
 
-1. Resolve an existing Verification Workspace created in the product UI (`/workspace/new`) — use `list_workspaces` / `get_workspace` / `get_learning_progress`. **Do not** call `POST /workspaces` or MCP `create_workspace` (rejected: create is UI-only).
+1. Resolve an existing Verification Workspace created in the product UI (`/workspace/new`) — use `list_workspaces` / `get_workspace` / `get_learning_progress` (REST + MCP). **Do not** call `POST /workspaces` or MCP `create_workspace` (rejected: create is UI-only).
 2. List blocks in that workspace.
 3. *(Optional)* Generate an ideal proof-of-work input JSON schema (`POST .../proof-of-work-schema`) or a custom integration `skill.md` (`POST .../integration-skill`) from workspace context.
-4. Upload performance proof of work (tool usage, screenshots, video, EEG) to xAI storage, linked to the workspace and/or a block.
-5. Request learning and gap analysis over workspace proof of work (free-form Q&A or structured report).
-6. Create a private TAP link for a block (`15` or `30` minutes).
-7. List TAP links and completion status.
-8. Poll TAP completion (`list_tap_links` / `GET .../tap-links`); score TAP proof of work via `POST .../verification-score` only (TAP is a verification tool).
+4. Upload proof of work (`POST .../proof-of-work`) **or** buffer via Stash API then stash/submit.
+5. Run vertical scores (`verification-score` / `augmentation-score` / `optimization-score`) and optional eval reads (world-model, knowledge-config, eval-history).
+6. Create a private TAP link (minutes **1–120**, default **15**).
+7. List TAP links and completion status; score TAP via `POST .../verification-score` only.
 
-**Out of scope** — do not describe or call removed features: programmatic workspace create, blockchain tracking, proof anchoring, live tutoring session control, heartbeats, or plan adaptation. Legacy web-session upload routes (`/api/session-files/*`) are separate from this API; agents should use `POST .../proof-of-work` for workspace-linked artifacts.
+**Out of scope** — programmatic workspace create, blockchain tracking, proof anchoring, live tutoring session control, heartbeats, or plan adaptation. Key CRUD is browser-session only (`/api/v3/pow/keys`). Legacy `/api/session-files/*` is separate from this API.
 
-**Teams tier required.** All `/api/v3/pow/*` routes require an active `pro_teams` subscription (platform admins bypass). Individual-tier keys are rejected with `403 teams_required`.
+**Teams tier required.** Agent routes under `/api/v3/{pow,eval,stash}` require Teams (platform admins bypass). Plan-gate failures return **`403` with `error.code = "api_plan_required"`**.
 
 ---
 
@@ -75,7 +74,7 @@ Content-Type: application/json
 }
 ```
 
-Common codes: `unauthorized`, `forbidden`, `teams_required`, `validation_error`, `workspace_not_found`, `block_not_found`, `tap_link_not_found`, `rate_limit_exceeded`.
+Common codes: `unauthorized`, `forbidden`, `api_plan_required`, `validation_error`, `workspace_not_found`, `block_not_found`, `tap_link_not_found`, `rate_limit_exceeded`, `no_new_pow`.
 
 ---
 
@@ -134,11 +133,13 @@ Content-Type: application/json
 { "jsonrpc": "2.0", "id": 1, "method": "tools/list" }
 ```
 
-**Tools (REST parity for capture/score; create is UI-only):** `list_workspaces`, `get_workspace`, `get_learning_progress`, `list_blocks`, `generate_proof_of_work_schema`, `generate_integration_skill`, `upload_proof_of_work`, `verification_score`, `augmentation_score`, `optimization_score`, `list_tap_links`, `create_tap_link`
+**Tools (100% parity with public agent REST under `/api/v3/{pow,eval,stash}`; create is UI-only; key CRUD is browser-session only):**
 
-Workspace creation is **not** available via MCP or REST — create workspaces in the product UI at `/workspace/new`. Opaque mode is supported on existing workspaces for `generate_proof_of_work_schema` (`definition_ref`, `contract`), `upload_proof_of_work` (metadata allowlist + plaintext lint), and vertical score tools (`protocol_report`).
+`list_workspaces`, `get_workspace`, `get_learning_progress`, `list_blocks`, `generate_proof_of_work_schema`, `generate_integration_skill`, `upload_proof_of_work`, `verification_score`, `augmentation_score`, `optimization_score`, `list_tap_links`, `create_tap_link`, `get_world_model`, `get_knowledge_config`, `get_knowledge_config_trajectory`, `knowledge_distance`, `list_eval_history`, `list_custom_verification_models`, `create_custom_verification_model`, `eval_custom_verification_model`, `buffer_proof_of_work`, `stash_proof_of_work`, `submit_stashed_proof_of_work`
 
-**Partner agents:** call `get_learning_progress` to orient, then `upload_proof_of_work` and the vertical score tools (`verification_score` / `augmentation_score` / `optimization_score`) per your agent policy. PumaDoc policy snippets: `/customer-agent-uncertain-systems-policy.md`, `/pumaclaw-mentor-uncertain-systems-policy.md`.
+Workspace creation is **not** available via MCP or REST — create workspaces in the product UI at `/workspace/new`.
+
+**Partner agents:** call `get_learning_progress` to orient, then `upload_proof_of_work` (or Stash buffer tools) and vertical scores. PumaDoc policy snippets: `/customer-agent-uncertain-systems-policy.md`, `/pumaclaw-mentor-uncertain-systems-policy.md`.
 
 Every MCP tool result includes `interruption` (TIM) with the same semantics as REST.
 
@@ -166,6 +167,28 @@ Programmatic workspace creation is **disabled**. This endpoint returns `403 forb
   }
 }
 ```
+
+---
+
+### `GET /api/v3/pow/workspaces` — `workspaces:read`
+
+List workspaces accessible to the API key. MCP: `list_workspaces`.
+
+Query: `status`, `limit` (1–100, default 20), `offset`.
+
+**Response `200`:** `{ "workspaces": [ ... ], "pagination": { "total", "limit", "offset", "has_more" } }`
+
+---
+
+### `GET /api/v3/pow/workspaces/{workspace_id}` — `workspaces:read`
+
+Workspace metadata including `workspace_goal`. MCP: `get_workspace`.
+
+---
+
+### `GET /api/v3/pow/workspaces/{workspace_id}/learning-progress` — `workspaces:read`
+
+One-call progress snapshot (goal, blocks, counts, recommended next actions). MCP: `get_learning_progress`.
 
 ---
 
@@ -448,7 +471,7 @@ Create a private Think Aloud Protocol (TAP) link for a block.
 }
 ```
 
-- `minutes`: `15` or `30` only (anything else → `15`)
+- `minutes`: integer **1–120** (default **15**; values outside the range are clamped)
 - Org **admins** may assign a link to a guest via `guest_user_id` or `guest_email`
 - **Guest keys** automatically attach the link to their own guest identity (no extra fields)
 

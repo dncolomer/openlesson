@@ -1,0 +1,241 @@
+/**
+ * Single inventory of public agent tools (MCP tools/list + REST twins).
+ * Workspace create is intentionally absent — UI-only at /workspace/new.
+ * Key CRUD (/api/v3/pow/keys) is browser-session only and excluded.
+ */
+
+import {
+  EVAL_API_BASE,
+  POW_API_BASE,
+  STASH_API_BASE,
+} from "@/lib/api/agent-api-paths";
+import type { ApiKeyScope } from "./types";
+
+export type AgentToolSurfaceEntry = {
+  name: string;
+  scope: ApiKeyScope;
+  summary: string;
+  /** REST twin — method + path pattern with {workspace_id} placeholder */
+  rest: { method: "GET" | "POST" | "PATCH"; path: string };
+};
+
+/** Canonical agent workspace ops — every entry has REST + MCP parity. */
+export const AGENT_TOOL_SURFACE = [
+  {
+    name: "list_workspaces",
+    scope: "workspaces:read",
+    summary: "List accessible Verification Workspaces.",
+    rest: { method: "GET", path: `${POW_API_BASE}/workspaces` },
+  },
+  {
+    name: "get_learning_progress",
+    scope: "workspaces:read",
+    summary:
+      "Progress snapshot: workspace_goal, blocks, counts, recommended_next_actions (REST + MCP).",
+    rest: {
+      method: "GET",
+      path: `${POW_API_BASE}/workspaces/{workspace_id}/learning-progress`,
+    },
+  },
+  {
+    name: "get_workspace",
+    scope: "workspaces:read",
+    summary: "Read workspace metadata and workspace_goal.",
+    rest: { method: "GET", path: `${POW_API_BASE}/workspaces/{workspace_id}` },
+  },
+  {
+    name: "list_blocks",
+    scope: "workspaces:read",
+    summary: "List assessable blocks.",
+    rest: {
+      method: "GET",
+      path: `${POW_API_BASE}/workspaces/{workspace_id}/blocks`,
+    },
+  },
+  {
+    name: "generate_proof_of_work_schema",
+    scope: "workspaces:read",
+    summary:
+      "Generate formal proof-of-work spec (tool JSON schemas, interruption_contract, TIM interruption).",
+    rest: {
+      method: "POST",
+      path: `${POW_API_BASE}/workspaces/{workspace_id}/proof-of-work-schema`,
+    },
+  },
+  {
+    name: "generate_integration_skill",
+    scope: "workspaces:read",
+    summary: "Generate partner skill.md with dynamic API references.",
+    rest: {
+      method: "POST",
+      path: `${POW_API_BASE}/workspaces/{workspace_id}/integration-skill`,
+    },
+  },
+  {
+    name: "upload_proof_of_work",
+    scope: "workspaces:write",
+    summary: "Upload tool/screen/video/EEG proof of work.",
+    rest: {
+      method: "POST",
+      path: `${POW_API_BASE}/workspaces/{workspace_id}/proof-of-work`,
+    },
+  },
+  {
+    name: "verification_score",
+    scope: "workspaces:read",
+    summary:
+      "Learning verification score (0–100) + spider markers, analysis, next actions. REST: POST .../verification-score. TAP auto-results use this only.",
+    rest: {
+      method: "POST",
+      path: `${EVAL_API_BASE}/workspaces/{workspace_id}/verification-score`,
+    },
+  },
+  {
+    name: "augmentation_score",
+    scope: "workspaces:read",
+    summary:
+      "Learning augmentation score (0–100 practice readiness) + spider, analysis, next actions. REST: POST .../augmentation-score.",
+    rest: {
+      method: "POST",
+      path: `${EVAL_API_BASE}/workspaces/{workspace_id}/augmentation-score`,
+    },
+  },
+  {
+    name: "optimization_score",
+    scope: "workspaces:read",
+    summary:
+      "Learning optimization score (0–100 toward workspace_goal) + spider, analysis, next actions. REST: POST .../optimization-score.",
+    rest: {
+      method: "POST",
+      path: `${EVAL_API_BASE}/workspaces/{workspace_id}/optimization-score`,
+    },
+  },
+  {
+    name: "list_tap_links",
+    scope: "tap:read",
+    summary: "List TAP session links and status.",
+    rest: {
+      method: "GET",
+      path: `${POW_API_BASE}/workspaces/{workspace_id}/tap-links`,
+    },
+  },
+  {
+    name: "create_tap_link",
+    scope: "tap:write",
+    summary: "Create a private TAP link for a workspace or block.",
+    rest: {
+      method: "POST",
+      path: `${POW_API_BASE}/workspaces/{workspace_id}/tap-links`,
+    },
+  },
+  {
+    name: "get_world_model",
+    scope: "workspaces:read",
+    summary: "Durable learning world model for a workspace × subject.",
+    rest: {
+      method: "GET",
+      path: `${EVAL_API_BASE}/workspaces/{workspace_id}/world-model`,
+    },
+  },
+  {
+    name: "get_knowledge_config",
+    scope: "workspaces:read",
+    summary: "Latest knowledge configuration embedding (knowledgecfg-v1-d64).",
+    rest: {
+      method: "GET",
+      path: `${EVAL_API_BASE}/workspaces/{workspace_id}/knowledge-config`,
+    },
+  },
+  {
+    name: "get_knowledge_config_trajectory",
+    scope: "workspaces:read",
+    summary: "Knowledge config trajectory + optional 2D projection.",
+    rest: {
+      method: "GET",
+      path: `${EVAL_API_BASE}/workspaces/{workspace_id}/knowledge-config/trajectory`,
+    },
+  },
+  {
+    name: "knowledge_distance",
+    scope: "workspaces:read",
+    summary:
+      "Knowledge distance (user ↔ region) in knowledgecfg space — not a vertical Eval.",
+    rest: {
+      method: "POST",
+      path: `${EVAL_API_BASE}/workspaces/{workspace_id}/knowledge-distance`,
+    },
+  },
+  {
+    name: "list_eval_history",
+    scope: "workspaces:read",
+    summary: "Prior vertical eval scorecards for a workspace / subject / cohort.",
+    rest: {
+      method: "GET",
+      path: `${EVAL_API_BASE}/workspaces/{workspace_id}/eval-history`,
+    },
+  },
+  {
+    name: "list_custom_verification_models",
+    scope: "workspaces:read",
+    summary: "List custom verification models and subjects with knowledge config.",
+    rest: {
+      method: "GET",
+      path: `${EVAL_API_BASE}/workspaces/{workspace_id}/custom-verification-models`,
+    },
+  },
+  {
+    name: "create_custom_verification_model",
+    scope: "workspaces:write",
+    summary: "Create a custom verification model from subject embeddings.",
+    rest: {
+      method: "POST",
+      path: `${EVAL_API_BASE}/workspaces/{workspace_id}/custom-verification-models`,
+    },
+  },
+  {
+    name: "eval_custom_verification_model",
+    scope: "workspaces:write",
+    summary: "Score a subject against a custom verification model.",
+    rest: {
+      method: "POST",
+      path: `${EVAL_API_BASE}/workspaces/{workspace_id}/custom-verification-models`,
+    },
+  },
+  {
+    name: "buffer_proof_of_work",
+    scope: "workspaces:write",
+    summary:
+      "Buffer a PoW unit in Stash API temporary memory (alaTAP) until stash or submit.",
+    rest: {
+      method: "POST",
+      path: `${STASH_API_BASE}/workspaces/{workspace_id}/proof-of-work`,
+    },
+  },
+  {
+    name: "stash_proof_of_work",
+    scope: "workspaces:write",
+    summary: "Flush buffered PoW as System 1 (stash) into the regular PoW stack.",
+    rest: {
+      method: "POST",
+      path: `${STASH_API_BASE}/workspaces/{workspace_id}/stash`,
+    },
+  },
+  {
+    name: "submit_stashed_proof_of_work",
+    scope: "workspaces:write",
+    summary: "Flush buffered PoW as System 2 (submit) into the regular PoW stack.",
+    rest: {
+      method: "POST",
+      path: `${STASH_API_BASE}/workspaces/{workspace_id}/submit`,
+    },
+  },
+] as const satisfies readonly AgentToolSurfaceEntry[];
+
+export type AgentToolName = (typeof AGENT_TOOL_SURFACE)[number]["name"];
+
+export function agentToolNames(): AgentToolName[] {
+  return AGENT_TOOL_SURFACE.map((t) => t.name);
+}
+
+/** Canonical plan-gate error code for Teams/API plan requirements. */
+export const PLAN_GATE_ERROR_CODE = "api_plan_required" as const;

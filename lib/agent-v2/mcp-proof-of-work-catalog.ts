@@ -1,46 +1,23 @@
-/** Client-safe catalog for workspace integration UI (no server imports). */
+/**
+ * Client-safe catalog for workspace integration UI (no server imports).
+ * Tool names/summaries come from AGENT_TOOL_SURFACE (single source of truth).
+ *
+ * Score tools (REST path ↔ MCP name): verification-score ↔ verification_score,
+ * augmentation-score ↔ augmentation_score, optimization-score ↔ optimization_score.
+ * workspace_goal is the outcome field used across score + progress tools.
+ */
 
-export const MCP_PROOF_OF_WORK_TOOL_CATALOG = [
-  { name: "list_workspaces", scope: "workspaces:read", summary: "List accessible Verification Workspaces." },
-  {
-    name: "get_learning_progress",
-    scope: "workspaces:read",
-    summary: "Progress snapshot: workspace_goal, blocks, counts, recommended_next_actions (REST + MCP).",
-  },
-  { name: "get_workspace", scope: "workspaces:read", summary: "Read workspace metadata and workspace_goal." },
-  { name: "list_blocks", scope: "workspaces:read", summary: "List assessable blocks." },
-  {
-    name: "generate_proof_of_work_schema",
-    scope: "workspaces:read",
-    summary: "Generate formal proof-of-work spec (tool JSON schemas, interruption_contract, TIM interruption).",
-  },
-  {
-    name: "generate_integration_skill",
-    scope: "workspaces:read",
-    summary: "Generate partner skill.md with dynamic API references.",
-  },
-  { name: "upload_proof_of_work", scope: "workspaces:write", summary: "Upload tool/screen/video/EEG proof of work." },
-  {
-    name: "verification_score",
-    scope: "workspaces:read",
-    summary:
-      "Learning verification score (0–100) + spider markers, analysis, next actions. REST: POST .../verification-score. TAP auto-results use this only.",
-  },
-  {
-    name: "augmentation_score",
-    scope: "workspaces:read",
-    summary:
-      "Learning augmentation score (0–100 practice readiness) + spider, analysis, next actions. REST: POST .../augmentation-score.",
-  },
-  {
-    name: "optimization_score",
-    scope: "workspaces:read",
-    summary:
-      "Learning optimization score (0–100 toward workspace_goal) + spider, analysis, next actions. REST: POST .../optimization-score.",
-  },
-  { name: "list_tap_links", scope: "tap:read", summary: "List TAP session links and status." },
-  { name: "create_tap_link", scope: "tap:write", summary: "Create a private TAP link for a workspace or block." },
-] as const;
+import { AGENT_TOOL_SURFACE } from "./agent-tool-surface";
+
+export const MCP_PROOF_OF_WORK_TOOL_CATALOG = AGENT_TOOL_SURFACE.map((tool) => ({
+  name: tool.name,
+  scope: tool.scope,
+  summary: tool.summary,
+})) as ReadonlyArray<{
+  name: (typeof AGENT_TOOL_SURFACE)[number]["name"];
+  scope: (typeof AGENT_TOOL_SURFACE)[number]["scope"];
+  summary: string;
+}>;
 
 export function buildMcpEndpointUrl(origin: string): string {
   const base = origin.replace(/\/$/, "");

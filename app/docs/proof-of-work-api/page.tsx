@@ -62,6 +62,42 @@ const ENDPOINT_SPECS: EndpointSpec[] = [
     ],
   },
   {
+    id: "list-workspaces",
+    method: "GET",
+    path: "/api/v3/pow/workspaces",
+    scope: "workspaces:read",
+    summary: "List Verification Workspaces accessible to the API key (MCP list_workspaces twin).",
+    status: "200 OK",
+    queryParams: [
+      { name: "status", type: "string", description: "Optional workspace status filter." },
+      { name: "limit", type: "integer", description: "1–100, default 20." },
+      { name: "offset", type: "integer", description: "Pagination offset, default 0." },
+    ],
+    responseBody: [
+      { name: "workspaces", type: "array", description: "Workspace summaries." },
+      { name: "pagination", type: "object", description: "total, limit, offset, has_more." },
+    ],
+    notes: ["MCP tool: list_workspaces."],
+  },
+  {
+    id: "learning-progress",
+    method: "GET",
+    path: "/api/v3/pow/workspaces/{workspace_id}/learning-progress",
+    scope: "workspaces:read",
+    summary: "One-call learning progress snapshot (MCP get_learning_progress twin).",
+    status: "200 OK",
+    pathParams: [
+      { name: "workspace_id", type: "uuid", required: true, description: "Workspace ID." },
+    ],
+    responseBody: [
+      { name: "workspace", type: "object", description: "id, title, workspace_goal, status." },
+      { name: "blocks", type: "array", description: "Assessable blocks." },
+      { name: "proof_of_work_summary", type: "object", description: "Artifact / block counts." },
+      { name: "recommended_next_actions", type: "array", description: "Suggested next agent steps." },
+    ],
+    notes: ["MCP tool: get_learning_progress."],
+  },
+  {
     id: "list-blocks",
     method: "GET",
     path: "/api/v3/pow/workspaces/{workspace_id}/blocks",
@@ -907,7 +943,7 @@ const ENDPOINT_SPECS: EndpointSpec[] = [
   "api_key": "sk_7f3a9b2c1d4e5f6789012345678abcdef"
 }`,
     notes: [
-      "Requires Teams tier (403 teams_required).",
+      "Requires Teams tier (403 api_plan_required).",
       "Valid scopes: *, workspaces:read, workspaces:write, tap:read, tap:write, org:read, org:write.",
       "403 if more than 10 active keys or if non-admin requests org scopes.",
     ],
@@ -1109,7 +1145,7 @@ Content-Type: application/json`}</code>
 }`}</code>
             </pre>
             <p className="mt-2 text-sm text-neutral-500">
-              Common codes: unauthorized, key_revoked, key_expired, forbidden, teams_required, validation_error,
+              Common codes: unauthorized, key_revoked, key_expired, forbidden, api_plan_required, validation_error,
               workspace_not_found, block_not_found, tap_link_not_found, guest_not_found, not_found, rate_limit_exceeded
               (429).
             </p>

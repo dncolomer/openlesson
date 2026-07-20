@@ -73,6 +73,13 @@ const NO_INTERRUPTION_ENDPOINTS = new Set<ProofOfWorkApiEndpoint>([
   "get_workspace_detail",
   "list_blocks",
   "list_tap_links",
+  "get_world_model",
+  "get_knowledge_config",
+  "get_knowledge_config_trajectory",
+  "knowledge_distance",
+  "list_eval_history",
+  "list_custom_verification_models",
+  "get_learning_progress",
 ]);
 
 const DEFAULT_EXAMPLE: PredictiveInterruption = {

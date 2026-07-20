@@ -138,12 +138,12 @@ The app will be available at `http://localhost:3000`.
 
 ## Proof-of-Work & Evaluation API (v3)
 
-Uncertain Systems exposes a scoped REST API and MCP transport for integrators and agents. Generate an API key from the dashboard (`/dashboard`) and use it to:
+Uncertain Systems exposes a scoped REST API and MCP transport for integrators and agents. **Workspaces are created in the product UI** (`/workspace/new`) — not via API or MCP. Generate an API key from the dashboard (`/dashboard`) and use it to:
 
-- Create and manage verification workspaces and blocks
-- Issue Think Aloud Protocol (TAP) links, poll completion via `GET .../tap-links`, and score via unified performance analysis
-- Upload proof-of-work artifacts and request performance context
-- Connect via MCP OAuth (`/api/mcp`) for tool-based integrations
+- List and read existing verification workspaces and blocks
+- Issue Think Aloud Protocol (TAP) links, poll completion via `GET .../tap-links`, and score via vertical Evaluation endpoints
+- Upload proof-of-work artifacts (or buffer via the Stash API), then request scores / world model / knowledge config
+- Connect via MCP (`/api/mcp`, Bearer or OAuth) with **100% parity** to public agent REST under `/api/v3/{pow,eval,stash}`
 
 See [`public/skill.md`](public/skill.md) and [`docs/PROOF_OF_WORK_API.md`](docs/PROOF_OF_WORK_API.md) for full documentation. Interactive reference: [`/docs/proof-of-work-api`](/docs/proof-of-work-api).
 

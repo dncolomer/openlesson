@@ -17,6 +17,11 @@ import {
 import { MCP_EVIDENCE_TOOLS } from "@/lib/agent-v2/mcp-proof-of-work-server";
 import { MCP_PROOF_OF_WORK_TOOL_CATALOG } from "@/lib/agent-v2/mcp-proof-of-work-catalog";
 import {
+  AGENT_TOOL_SURFACE,
+  PLAN_GATE_ERROR_CODE,
+  agentToolNames,
+} from "@/lib/agent-v2/agent-tool-surface";
+import {
   TAP_LINK_DEFAULT_MINUTES,
   TAP_LINK_MAX_MINUTES,
   TAP_LINK_MIN_MINUTES,
@@ -36,17 +41,38 @@ function collectRouteTs(dir: string, acc: string[] = []): string[] {
   return acc;
 }
 
-/** Map App Router filesystem path under app/api to URL path prefix. */
-function routeFileToUrlPath(absRouteTs: string): string {
-  const rel = absRouteTs.replace(join(ROOT, "app"), "").replace(/\/route\.ts$/, "");
-  return rel.replace(/\[([^\]]+)\]/g, "{$1}");
+/** Map REST path pattern to App Router file under app/. */
+function restPathToRouteFile(path: string): string {
+  // /api/v3/pow/workspaces/{workspace_id}/blocks → app/api/v3/pow/workspaces/[id]/blocks/route.ts
+  const withoutApi = path.replace(/^\/api\//, "");
+  const fsPath = withoutApi
+    .replace(/\{workspace_id\}/g, "[id]")
+    .replace(/\{block_id\}/g, "[blockId]")
+    .replace(/\{id\}/g, "[id]");
+  // Collection GET /workspaces has no trailing resource
+  if (fsPath.endsWith("/workspaces") || fsPath.endsWith("/workspaces/")) {
+    return join(ROOT, "app/api", fsPath.replace(/\/$/, ""), "route.ts");
+  }
+  return join(ROOT, "app/api", fsPath, "route.ts");
 }
 
 describe("API ↔ MCP surface contract (shipped code)", () => {
-  it("UI catalog tool names match MCP server tools/list catalog exactly", () => {
+  it("AGENT_TOOL_SURFACE names match UI catalog and MCP tools/list exactly", () => {
+    const surface = agentToolNames().sort();
     const uiNames = MCP_PROOF_OF_WORK_TOOL_CATALOG.map((t) => t.name).sort();
     const serverNames = MCP_EVIDENCE_TOOLS.map((t) => t.name).sort();
-    expect(uiNames).toEqual(serverNames);
+    expect(uiNames).toEqual(surface);
+    expect(serverNames).toEqual(surface);
+  });
+
+  it("every agent tool has a corresponding existing v3 REST route (except create)", () => {
+    expect(agentToolNames()).not.toContain("create_workspace");
+    for (const tool of AGENT_TOOL_SURFACE) {
+      const routeFile = restPathToRouteFile(tool.rest.path);
+      expect(existsSync(routeFile), `${tool.name} → ${tool.rest.path} missing ${routeFile}`).toBe(
+        true,
+      );
+    }
   });
 
   it("path builders resolve to existing v3 route handlers", () => {
@@ -55,6 +81,10 @@ describe("API ↔ MCP surface contract (shipped code)", () => {
       {
         built: powWorkspaceResource(workspaceId, "proof-of-work"),
         routeRel: "app/api/v3/pow/workspaces/[id]/proof-of-work/route.ts",
+      },
+      {
+        built: powWorkspaceResource(workspaceId, "learning-progress"),
+        routeRel: "app/api/v3/pow/workspaces/[id]/learning-progress/route.ts",
       },
       {
         built: powWorkspaceResource(workspaceId, "blocks"),
@@ -88,58 +118,72 @@ describe("API ↔ MCP surface contract (shipped code)", () => {
         built: stashWorkspaceResource(workspaceId, "submit"),
         routeRel: "app/api/v3/stash/workspaces/[id]/submit/route.ts",
       },
+      {
+        built: stashWorkspaceResource(workspaceId, "proof-of-work"),
+        routeRel: "app/api/v3/stash/workspaces/[id]/proof-of-work/route.ts",
+      },
     ];
 
     for (const { built, routeRel } of cases) {
-      expect(built.startsWith(POW_API_BASE) || built.startsWith(EVAL_API_BASE) || built.startsWith(STASH_API_BASE)).toBe(
-        true,
-      );
+      expect(
+        built.startsWith(POW_API_BASE) ||
+          built.startsWith(EVAL_API_BASE) ||
+          built.startsWith(STASH_API_BASE),
+      ).toBe(true);
       expect(existsSync(join(ROOT, routeRel))).toBe(true);
     }
   });
 
-  it("list_workspaces is MCP-only: no REST GET collection on /api/v3/pow/workspaces", () => {
+  it("REST list workspaces GET exists; POST create remains forbidden", () => {
     const collectionRoute = join(ROOT, "app/api/v3/pow/workspaces/route.ts");
     expect(existsSync(collectionRoute)).toBe(true);
     const src = readFileSync(collectionRoute, "utf8");
-    // Collection route exists only to reject create (POST); no GET list.
+    expect(src).toMatch(/export async function GET/);
     expect(src).toMatch(/export async function POST/);
-    expect(src).not.toMatch(/export async function GET/);
+    expect(src).toMatch(/WORKSPACE_CREATE_UI_ONLY|UI-only|not available/i);
     expect(MCP_EVIDENCE_TOOLS.map((t) => t.name)).toContain("list_workspaces");
+    expect(MCP_EVIDENCE_TOOLS.map((t) => t.name)).not.toContain("create_workspace");
   });
 
-  it("get_learning_progress is MCP-only: no REST route segment for learning-progress", () => {
+  it("REST learning-progress route exists as MCP get_learning_progress twin", () => {
     expect(MCP_EVIDENCE_TOOLS.map((t) => t.name)).toContain("get_learning_progress");
-    const powRoutes = collectRouteTs(join(ROOT, "app/api/v3/pow"));
-    const evalRoutes = collectRouteTs(join(ROOT, "app/api/v3/eval"));
-    const urls = [...powRoutes, ...evalRoutes].map(routeFileToUrlPath);
-    expect(urls.some((u) => u.includes("learning-progress") || u.includes("learning_progress"))).toBe(
-      false,
-    );
+    expect(
+      existsSync(join(ROOT, "app/api/v3/pow/workspaces/[id]/learning-progress/route.ts")),
+    ).toBe(true);
   });
 
-  it("eval REST surface is broader than MCP score tools (world-model / knowledge / history)", () => {
+  it("MCP includes eval read + stash tools matching REST", () => {
     const mcpNames = new Set(MCP_EVIDENCE_TOOLS.map((t) => t.name));
-    // Score tools exist on MCP
-    expect(mcpNames.has("verification_score")).toBe(true);
-    // Eval-only REST routes ship without MCP tools
-    expect(existsSync(join(ROOT, "app/api/v3/eval/workspaces/[id]/world-model/route.ts"))).toBe(true);
-    expect(existsSync(join(ROOT, "app/api/v3/eval/workspaces/[id]/knowledge-distance/route.ts"))).toBe(
-      true,
-    );
-    expect(existsSync(join(ROOT, "app/api/v3/eval/workspaces/[id]/eval-history/route.ts"))).toBe(true);
-    expect(mcpNames.has("get_world_model")).toBe(false);
-    expect(mcpNames.has("knowledge_distance")).toBe(false);
-    expect(mcpNames.has("eval_history")).toBe(false);
+    for (const name of [
+      "get_world_model",
+      "get_knowledge_config",
+      "get_knowledge_config_trajectory",
+      "knowledge_distance",
+      "list_eval_history",
+      "list_custom_verification_models",
+      "create_custom_verification_model",
+      "eval_custom_verification_model",
+      "buffer_proof_of_work",
+      "stash_proof_of_work",
+      "submit_stashed_proof_of_work",
+    ] as const) {
+      expect(mcpNames.has(name)).toBe(true);
+    }
   });
 
-  it("stash API routes ship as a third v3 surface", () => {
-    const stashRoutes = collectRouteTs(join(ROOT, "app/api/v3/stash"));
-    expect(stashRoutes.length).toBeGreaterThanOrEqual(3);
-    expect(STASH_API_BASE).toBe("/api/v3/stash");
-    // No stash tools on MCP catalog
-    const mcpBlob = MCP_EVIDENCE_TOOLS.map((t) => t.name).join(",");
-    expect(mcpBlob).not.toMatch(/stash|submit_buffer|alaTAP/i);
+  it("v3 PoW upload route uses shared uploadWorkspaceProofOfWork helper", () => {
+    const src = readFileSync(
+      join(ROOT, "app/api/v3/pow/workspaces/[id]/proof-of-work/route.ts"),
+      "utf8",
+    );
+    expect(src).toMatch(/uploadWorkspaceProofOfWork/);
+    expect(src).not.toMatch(/uploadFileToXAI/);
+    expect(src).not.toMatch(/insertWorkspaceProofOfWorkRow/);
+  });
+
+  it("MCP upload_proof_of_work uses the same shared helper", () => {
+    const src = readFileSync(join(ROOT, "lib/agent-v2/mcp-proof-of-work-server.ts"), "utf8");
+    expect(src).toMatch(/uploadWorkspaceProofOfWork/);
   });
 
   it("TAP minutes clamp uses 1–120 (not 15/30-only), default 15", () => {
@@ -154,20 +198,30 @@ describe("API ↔ MCP surface contract (shipped code)", () => {
     expect(normalizeTapLinkMinutes("nope")).toBe(15);
   });
 
-  it("auth plan gate error code is api_plan_required (not teams_required alone)", () => {
-    // Shipped authenticate path uses api_plan_required; both codes exist on the type.
+  it("auth plan gate uses canonical api_plan_required", () => {
+    expect(PLAN_GATE_ERROR_CODE).toBe("api_plan_required");
     expect(toErrorCode("api_plan_required")).toBe("api_plan_required");
-    expect(toErrorCode("teams_required")).toBe("teams_required");
     const authSrc = readFileSync(join(ROOT, "lib/agent-v2/auth.ts"), "utf8");
     expect(authSrc).toContain('"api_plan_required"');
-    // Docs/skill still often say teams_required for the same gate — keep code source of truth asserted here.
     expect(authSrc).not.toMatch(/errorResponse\(\s*403,\s*"teams_required"/);
+    const oauthSrc = readFileSync(
+      join(ROOT, "lib/agent-v2/mcp-oauth/authenticate-oauth-token.ts"),
+      "utf8",
+    );
+    expect(oauthSrc).toContain('"api_plan_required"');
+    expect(oauthSrc).not.toMatch(/errorResponse\(\s*403,\s*"teams_required"/);
   });
 
-  it("GET single workspace REST route exists (MCP get_workspace mirror)", () => {
-    expect(existsSync(join(ROOT, "app/api/v3/pow/workspaces/[id]/route.ts"))).toBe(true);
-    const src = readFileSync(join(ROOT, "app/api/v3/pow/workspaces/[id]/route.ts"), "utf8");
-    expect(src).toMatch(/export async function GET/);
-    expect(MCP_EVIDENCE_TOOLS.map((t) => t.name)).toContain("get_workspace");
+  it("dead blockchain/proof types are removed from agent types", () => {
+    const typesSrc = readFileSync(join(ROOT, "lib/agent-v2/types.ts"), "utf8");
+    expect(typesSrc).not.toMatch(/export type ProofType/);
+    expect(typesSrc).not.toMatch(/export interface Proof\b/);
+    expect(typesSrc).not.toMatch(/export interface ProofBatch/);
+    expect(typesSrc).not.toMatch(/anchor_tx_signature/);
+  });
+
+  it("docs no longer claim TAP is 15/30-only", () => {
+    const powDocs = readFileSync(join(ROOT, "docs/PROOF_OF_WORK_API.md"), "utf8");
+    expect(powDocs).not.toMatch(/Only `15` and `30` minute sessions are supported/);
   });
 });

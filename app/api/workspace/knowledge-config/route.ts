@@ -13,6 +13,7 @@ import {
   loadLatestKnowledgeConfigForSubjects,
   loadKnowledgeConfigTrajectory,
   projectTrajectory2D,
+  projectionFrameIdForAlgorithm,
   trajectoryPathLength,
   type TrajectorySubjectFilter,
 } from "@/lib/agent-v2/knowledge-config-store";
@@ -28,6 +29,7 @@ import {
 import {
   KNOWLEDGE_CONFIG_EMBEDDING_MODEL_ID,
   emptyKnowledgeConfig,
+  parseProjectionAlgorithmId,
 } from "@/lib/knowledge-config";
 import { listSubjectsWithKnowledgeConfig } from "@/lib/agent-v2/custom-verification-model-store";
 import type { LearningWorldModelV0 } from "@/lib/prompt-kernel/world-model";
@@ -126,6 +128,10 @@ async function handle(
   access: { isOwner: boolean },
 ) {
   const maxPoints = Math.min(500, Math.max(2, Number(getParam(query, "max_points") || 100) || 100));
+  const projectionAlgorithm = parseProjectionAlgorithmId(
+    getParam(query, "projection_algorithm") ?? getParam(query, "algorithm"),
+    "random",
+  );
   const fromRaw = getParam(query, "from");
   const toRaw = getParam(query, "to");
   const fromMs = fromRaw
@@ -242,8 +248,9 @@ async function handle(
       path_length: trajectoryPathLength(points),
       points,
       projection: {
-        frame_id: `${KNOWLEDGE_CONFIG_EMBEDDING_MODEL_ID}:ui2d`,
-        coords: projectTrajectory2D(points),
+        algorithm: projectionAlgorithm,
+        frame_id: projectionFrameIdForAlgorithm(projectionAlgorithm),
+        coords: projectTrajectory2D(points, projectionAlgorithm),
       },
     },
   };

@@ -227,9 +227,12 @@ describe("knowledge config / LWM feature surfaces", () => {
     expect(models).not.toContain("<CustomVerificationModelsPanel");
     expect(models).not.toContain('data-section="custom-models"');
     expect(models).toContain("data-region-overlay-picker");
-    expect(models).toContain("projectKnowledgeRegionsToOverlays");
+    expect(models).toContain("projectTrajectoryAndRegions");
     expect(models).toContain("regionOverlays");
     expect(models).toContain("data-projection-widget");
+    expect(models).toContain("data-projection-algorithm-select");
+    expect(models).toContain("PROJECTION_ALGORITHM_OPTIONS");
+    expect(models).toContain("projectionAlgorithm");
     expect(models).toContain("data-projection-professional");
     expect(models).toContain("data-projection-grid");
     expect(models).toContain("min-h-[28rem]");

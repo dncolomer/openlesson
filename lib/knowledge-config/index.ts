@@ -30,6 +30,29 @@ export {
 } from "./encoder";
 
 export {
+  PROJECTION_ALGORITHM_IDS,
+  PROJECTION_ALGORITHM_OPTIONS,
+  isProjectionAlgorithmId,
+  parseProjectionAlgorithmId,
+  projectionFrameId,
+  pairwiseL2Distances,
+  jacobiEigendecomposition,
+  projectPca,
+  projectClassicalMds,
+  projectSmacof,
+  projectVectors2D,
+  projectTrajectoryAndRegions,
+  projectTrajectoryPoints2D,
+  estimateDistanceScale,
+  type ProjectionAlgorithmId,
+  type Point2D,
+  type TrajectoryPointInput,
+  type RegionCentroidInput,
+  type RegionOverlayProjected,
+  type JointProjectionResult,
+} from "./project-2d";
+
+export {
   createCustomVerificationModelFromVectors,
   computeKnowledgeDistance,
   scoreAgainstCustomVerificationModel,

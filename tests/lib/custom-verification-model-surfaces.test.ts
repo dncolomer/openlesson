@@ -59,8 +59,9 @@ describe("custom verification model surfaces", () => {
     expect(brain).not.toContain("<CustomVerificationModelsPanel");
     expect(brain).toContain("data-region-overlay-picker");
     expect(brain).toContain("data-region-overlay");
-    expect(brain).toContain("projectKnowledgeRegionsToOverlays");
+    expect(brain).toContain("projectTrajectoryAndRegions");
     expect(brain).toContain("regionOverlays");
+    expect(brain).toContain("data-projection-algorithm-select");
     expect(brain).toContain('action: "knowledge_distance"');
     expect(brain).toContain("data-knowledge-distance");
     expect(brain).toContain("data-region-overlay-distances");

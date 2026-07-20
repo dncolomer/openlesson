@@ -14,7 +14,9 @@ import {
   type ModelsTabSubjectRef,
 } from "@/lib/agent-v2/models-tab-scope";
 import {
-  projectKnowledgeRegionsToOverlays,
+  projectTrajectoryAndRegions,
+  PROJECTION_ALGORITHM_OPTIONS,
+  parseProjectionAlgorithmId,
   computeProjectionFitBounds,
   selectProjectionDisplayPoints,
   fitViewTransform,
@@ -29,9 +31,8 @@ import {
   type ViewTransform,
   type ScreenRect,
   type ProjectionDisplayMode,
+  type ProjectionAlgorithmId,
 } from "@/lib/knowledge-config";
-
-type TimeScale = "1h" | "24h" | "7d" | "all";
 
 interface ProjectionCoord {
   t: string;
@@ -100,25 +101,21 @@ interface KnowledgeConfigResponse {
   trajectory: {
     point_count: number;
     path_length: number;
+    /** High-D snapshots used for client-side re-projection under any algorithm. */
+    points?: Array<{
+      t: string;
+      as_of_ms: number;
+      vector: number[];
+      confidence: number;
+      trigger?: string;
+      pow_event_count?: number;
+    }>;
     projection: {
+      algorithm?: string;
       frame_id: string;
       coords: ProjectionCoord[];
     };
   };
-}
-
-const SCALES: Array<{ id: TimeScale; label: string; ms: number | null }> = [
-  { id: "1h", label: "1h", ms: 3600_000 },
-  { id: "24h", label: "24h", ms: 24 * 3600_000 },
-  { id: "7d", label: "7d", ms: 7 * 24 * 3600_000 },
-  { id: "all", label: "All", ms: null },
-];
-
-function rangeForScale(scale: TimeScale): { from?: string; to?: string } {
-  const def = SCALES.find((s) => s.id === scale);
-  if (!def?.ms) return {};
-  const to = Date.now();
-  return { from: String(to - def.ms), to: String(to) };
 }
 
 function subjectOptionKey(s: ModelsTabSubjectRef): string {
@@ -235,7 +232,6 @@ function ProjectionSpaceWidget({
       : "";
 
   const last = coords.length > 0 ? coords[coords.length - 1] : null;
-  const first = showTrajectory && coords.length > 0 ? coords[0] : null;
 
   const onWheel = (e: React.WheelEvent<SVGSVGElement>) => {
     e.preventDefault();
@@ -539,38 +535,86 @@ function ProjectionSpaceWidget({
               ? displayCoords.map((c, i) => {
                   const p = mapPoint(c.x, c.y);
                   const isLast = i === displayCoords.length - 1;
+                  const isFirst = i === 0;
+                  const order = i + 1;
+                  const fill = isLast ? "#22d3ee" : isFirst ? "#a78bfa" : "#818cf8";
+                  const r = isLast ? 5 : isFirst ? 3.5 : 2.75;
                   return (
-                    <circle
+                    <g
                       key={`${c.as_of_ms}-${i}`}
-                      cx={p.x}
-                      cy={p.y}
-                      r={isLast ? 5 : 2.75}
-                      fill={isLast ? "#22d3ee" : "#818cf8"}
-                      opacity={0.5 + 0.5 * Math.min(1, c.confidence)}
-                      data-projection-point={isLast ? "latest" : "path"}
-                    />
+                      data-projection-point={isLast ? "latest" : isFirst ? "start" : "path"}
+                      data-projection-order={order}
+                    >
+                      <circle
+                        cx={p.x}
+                        cy={p.y}
+                        r={r}
+                        fill={fill}
+                        opacity={0.5 + 0.5 * Math.min(1, c.confidence)}
+                      />
+                      <text
+                        x={p.x + 6}
+                        y={p.y - 5}
+                        fill={isLast ? "#a5f3fc" : isFirst ? "#ddd6fe" : "#c7d2fe"}
+                        fontSize="10"
+                        fontFamily="ui-monospace, SFMono-Regular, Menlo, monospace"
+                        fontWeight={isFirst || isLast ? 600 : 500}
+                        className="select-none"
+                        paintOrder="stroke"
+                        stroke="#070708"
+                        strokeWidth="2.5"
+                        strokeLinejoin="round"
+                        data-projection-order-label={order}
+                      >
+                        {order}
+                      </text>
+                    </g>
                   );
                 })
               : null}
-            {first && showTrajectory ? (
-              <circle
-                cx={mapPoint(first.x, first.y).x}
-                cy={mapPoint(first.x, first.y).y}
-                r={3.5}
-                fill="#a78bfa"
-                data-projection-point="start"
-              />
+            {last && !showTrajectory ? (
+              <g
+                data-projection-point="latest"
+                data-projection-latest-position
+                data-projection-order={coords.length}
+              >
+                <circle
+                  cx={mapPoint(last.x, last.y).x}
+                  cy={mapPoint(last.x, last.y).y}
+                  r={7}
+                  fill="#22d3ee"
+                  stroke="#ecfeff"
+                  strokeWidth="1.25"
+                />
+                <text
+                  x={mapPoint(last.x, last.y).x + 8}
+                  y={mapPoint(last.x, last.y).y - 6}
+                  fill="#a5f3fc"
+                  fontSize="10"
+                  fontFamily="ui-monospace, SFMono-Regular, Menlo, monospace"
+                  fontWeight={600}
+                  className="select-none"
+                  paintOrder="stroke"
+                  stroke="#070708"
+                  strokeWidth="2.5"
+                  strokeLinejoin="round"
+                  data-projection-order-label={coords.length}
+                >
+                  {coords.length}
+                </text>
+              </g>
             ) : null}
-            {last ? (
+            {last && showTrajectory ? (
               <circle
                 cx={mapPoint(last.x, last.y).x}
                 cy={mapPoint(last.x, last.y).y}
-                r={displayMode === "latest" ? 7 : 6}
+                r={6}
                 fill="#22d3ee"
                 stroke="#ecfeff"
                 strokeWidth="1.25"
                 data-projection-point="latest"
                 data-projection-latest-position
+                pointerEvents="none"
               />
             ) : null}
           </g>
@@ -747,7 +791,6 @@ export function KnowledgeConfigTrajectoryPanel({
   const showModels = panelView === "models";
   const showLwm = panelView === "lwm";
   const canInspectOthers = Boolean(isOwner);
-  const [scale, setScale] = useState<TimeScale>("7d");
 
   // Independent per-section user pickers (no global user/user_group/all scope).
   const [embUserId, setEmbUserId] = useState("");
@@ -770,6 +813,8 @@ export function KnowledgeConfigTrajectoryPanel({
   const [regionsError, setRegionsError] = useState<string | null>(null);
   const [projectionDisplayMode, setProjectionDisplayMode] =
     useState<ProjectionDisplayMode>("trajectory");
+  const [projectionAlgorithm, setProjectionAlgorithm] =
+    useState<ProjectionAlgorithmId>("random");
   /** Knowledge distance for overlaid regions vs the selected Embeddings user. */
   const [overlayDistances, setOverlayDistances] = useState<
     Record<
@@ -818,14 +863,13 @@ export function KnowledgeConfigTrajectoryPanel({
   );
 
   const fetchKnowledgeConfig = useCallback(
-    async (query: Record<string, string | undefined>, range: { from?: string; to?: string }) => {
+    async (query: Record<string, string | undefined>) => {
       const response = await fetch("/api/workspace/knowledge-config", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           workspaceId,
           max_points: 120,
-          ...range,
           ...query,
           ...(ayclToken ? { ayclToken } : {}),
         }),
@@ -852,7 +896,7 @@ export function KnowledgeConfigTrajectoryPanel({
     setEmbLoading(true);
     setEmbError(null);
     try {
-      const payload = await fetchKnowledgeConfig(embScope.query, rangeForScale(scale));
+      const payload = await fetchKnowledgeConfig(embScope.query);
       setEmbData(payload);
       mergeAvailableSubjects(payload);
     } catch (err) {
@@ -860,14 +904,13 @@ export function KnowledgeConfigTrajectoryPanel({
     } finally {
       setEmbLoading(false);
     }
-  }, [embScope.query, fetchKnowledgeConfig, mergeAvailableSubjects, scale]);
+  }, [embScope.query, fetchKnowledgeConfig, mergeAvailableSubjects]);
 
   const loadLwm = useCallback(async () => {
     setLwmLoading(true);
     setLwmError(null);
     try {
-      // LWM is not time-range filtered the same way; still pass range for API compatibility.
-      const payload = await fetchKnowledgeConfig(lwmScope.query, rangeForScale(scale));
+      const payload = await fetchKnowledgeConfig(lwmScope.query);
       setLwmData(payload);
       mergeAvailableSubjects(payload);
     } catch (err) {
@@ -875,7 +918,7 @@ export function KnowledgeConfigTrajectoryPanel({
     } finally {
       setLwmLoading(false);
     }
-  }, [fetchKnowledgeConfig, lwmScope.query, mergeAvailableSubjects, scale]);
+  }, [fetchKnowledgeConfig, lwmScope.query, mergeAvailableSubjects]);
 
   const loadRegionsForOverlay = useCallback(async () => {
     if (!showModels) return;
@@ -1038,24 +1081,66 @@ export function KnowledgeConfigTrajectoryPanel({
     workspaceId,
   ]);
 
-  const coords = embData?.trajectory.projection.coords ?? [];
   const wm = lwmData?.learning_world_model;
   const scores = wm?.scores_snapshot;
 
-  const regionOverlays = useMemo(() => {
-    const selected = knowledgeRegions.filter((r) => selectedRegionIds.has(r.id) && r.centroid?.length);
-    if (selected.length === 0) return [] as KnowledgeRegionOverlay2D[];
-    return projectKnowledgeRegionsToOverlays(
-      selected.map((r) => ({
-        id: r.id,
-        name: r.name,
-        centroid: r.centroid,
-        mean_radius: r.mean_radius,
-        cosine_threshold: r.cosine_threshold,
-        source: r.description?.includes("[synthetic:grok-4.5]") ? "synthetic:grok-4.5" : "cohort",
-      })),
+  /** Joint 2D layout under the selected algorithm (trajectory + selected regions). */
+  const projectedLayout = useMemo(() => {
+    const selected = knowledgeRegions.filter(
+      (r) => selectedRegionIds.has(r.id) && Array.isArray(r.centroid) && r.centroid.length > 0,
     );
-  }, [knowledgeRegions, selectedRegionIds]);
+    const regionInputs = selected.map((r) => ({
+      id: r.id,
+      name: r.name,
+      centroid: r.centroid,
+      mean_radius: r.mean_radius,
+      cosine_threshold: r.cosine_threshold,
+      source: r.description?.includes("[synthetic:grok-4.5]") ? "synthetic:grok-4.5" : "cohort",
+    }));
+
+    const rawPoints = embData?.trajectory.points;
+    if (Array.isArray(rawPoints) && rawPoints.length > 0) {
+      return projectTrajectoryAndRegions({
+        points: rawPoints.map((p) => ({
+          t: p.t,
+          as_of_ms: p.as_of_ms,
+          vector: Array.isArray(p.vector) ? p.vector : [],
+          confidence: p.confidence,
+        })),
+        regions: regionInputs,
+        algorithm: projectionAlgorithm,
+      });
+    }
+
+    // Fallback: server-provided coords (random frame) when high-D points are absent.
+    const serverCoords = embData?.trajectory.projection.coords ?? [];
+    if (projectionAlgorithm === "random" || serverCoords.length === 0) {
+      const regionOnly = projectTrajectoryAndRegions({
+        points: [],
+        regions: regionInputs,
+        algorithm: projectionAlgorithm,
+      });
+      return {
+        ...regionOnly,
+        coords: serverCoords.map((c) => ({
+          t: c.t,
+          as_of_ms: c.as_of_ms,
+          x: c.x,
+          y: c.y,
+          confidence: c.confidence,
+        })),
+      };
+    }
+
+    return projectTrajectoryAndRegions({
+      points: [],
+      regions: regionInputs,
+      algorithm: projectionAlgorithm,
+    });
+  }, [embData, knowledgeRegions, projectionAlgorithm, selectedRegionIds]);
+
+  const coords = projectedLayout.coords;
+  const regionOverlays = projectedLayout.regionOverlays as KnowledgeRegionOverlay2D[];
 
   const toggleRegionOverlay = (id: string) => {
     setSelectedRegionIds((prev) => {
@@ -1287,24 +1372,8 @@ export function KnowledgeConfigTrajectoryPanel({
                 ) : null}
               </div>
 
-              <div className="mt-auto flex shrink-0 flex-col gap-2 border-t border-neutral-800/80 pt-3">
-                <div className="flex items-center gap-0.5 rounded-lg border border-neutral-800 bg-neutral-950 p-0.5">
-                  {SCALES.map((s) => (
-                    <button
-                      key={s.id}
-                      type="button"
-                      onClick={() => setScale(s.id)}
-                      className={`flex-1 rounded-md px-1.5 py-1 text-[10px] transition ${
-                        scale === s.id
-                          ? "bg-neutral-800 text-white"
-                          : "text-neutral-500 hover:text-neutral-300"
-                      }`}
-                    >
-                      {s.label}
-                    </button>
-                  ))}
-                </div>
-                {summary ? (
+              {summary ? (
+                <div className="mt-auto shrink-0 border-t border-neutral-800/80 pt-3">
                   <dl className="grid grid-cols-2 gap-x-2 gap-y-1 text-[10px]">
                     <div>
                       <dt className="text-neutral-500">Confidence</dt>
@@ -1327,16 +1396,8 @@ export function KnowledgeConfigTrajectoryPanel({
                       <dd className="truncate font-mono text-neutral-300">{summary.model}</dd>
                     </div>
                   </dl>
-                ) : null}
-                <button
-                  type="button"
-                  onClick={() => void loadEmbeddings()}
-                  disabled={embLoading}
-                  className="w-full rounded-md border border-neutral-700 px-2 py-1.5 text-[11px] text-neutral-300 transition hover:border-neutral-500 hover:text-white disabled:opacity-50"
-                >
-                  {embLoading ? "Refreshing…" : "Refresh projections"}
-                </button>
-              </div>
+                </div>
+              ) : null}
             </aside>
 
             {/* Right: projection fills remaining height */}
@@ -1344,6 +1405,74 @@ export function KnowledgeConfigTrajectoryPanel({
               data-embeddings-projection
               className="flex min-h-0 min-w-0 flex-1 flex-col gap-2"
             >
+              <div className="flex shrink-0 flex-wrap items-center justify-between gap-2">
+                <div className="flex min-w-0 flex-wrap items-center gap-2">
+                  <p className="min-w-0 truncate text-[11px] text-neutral-500">
+                    {embScope.label ? (
+                      <span className="text-neutral-400">{embScope.label}</span>
+                    ) : (
+                      <span>Knowledge config trajectory</span>
+                    )}
+                    {summary ? (
+                      <span className="text-neutral-600">
+                        {" "}
+                        · {summary.points} sample{summary.points === 1 ? "" : "s"}
+                      </span>
+                    ) : null}
+                  </p>
+                  <label
+                    className="inline-flex items-center gap-1.5 text-[11px] text-neutral-400"
+                    data-projection-algorithm-picker
+                  >
+                    <span className="shrink-0 text-neutral-500">Projection</span>
+                    <select
+                      value={projectionAlgorithm}
+                      onChange={(e) =>
+                        setProjectionAlgorithm(parseProjectionAlgorithmId(e.target.value, "random"))
+                      }
+                      aria-label="2D projection algorithm"
+                      data-projection-algorithm-select
+                      className="max-w-[11rem] rounded-md border border-neutral-700 bg-neutral-900 px-2 py-1 text-[11px] text-neutral-200 outline-none transition hover:border-neutral-500 focus:border-neutral-500"
+                    >
+                      {PROJECTION_ALGORITHM_OPTIONS.map((opt) => (
+                        <option key={opt.id} value={opt.id} title={opt.description}>
+                          {opt.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => void loadEmbeddings()}
+                  disabled={embLoading}
+                  data-embeddings-refresh
+                  className="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-neutral-700 bg-neutral-900 px-2.5 py-1 text-[11px] text-neutral-300 transition hover:border-neutral-500 hover:text-white disabled:opacity-50"
+                >
+                  <svg
+                    className={`h-3 w-3 ${embLoading ? "animate-spin" : ""}`}
+                    viewBox="0 0 16 16"
+                    fill="none"
+                    aria-hidden
+                  >
+                    <path
+                      d="M13.5 8A5.5 5.5 0 1 1 8 2.5"
+                      stroke="currentColor"
+                      strokeWidth="1.5"
+                      strokeLinecap="round"
+                    />
+                    <path
+                      d="M8 1v3l2-1.5"
+                      stroke="currentColor"
+                      strokeWidth="1.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                  {embLoading ? "Refreshing…" : "Refresh"}
+                </button>
+              </div>
+
               {embError ? (
                 <div className="shrink-0 rounded-md border border-red-900/50 bg-red-950/30 px-3 py-2 text-xs text-red-300">
                   {embError}
@@ -1381,11 +1510,13 @@ export function KnowledgeConfigTrajectoryPanel({
                 <span data-projection-mode-hint>
                   {projectionDisplayMode === "latest"
                     ? "Latest position only · view fits position + selected regions"
-                    : "Full trajectory · fixed 2D frame of ℝ⁶⁴"}
+                    : "Full trajectory · ℝ⁶⁴ → 2D"}
                 </span>
-                {embScope.label ? (
-                  <span className="text-neutral-400">· {embScope.label}</span>
-                ) : null}
+                <span className="text-neutral-400" data-projection-algorithm-hint>
+                  ·{" "}
+                  {PROJECTION_ALGORITHM_OPTIONS.find((o) => o.id === projectionAlgorithm)?.label ??
+                    projectionAlgorithm}
+                </span>
               </div>
             </div>
           </div>

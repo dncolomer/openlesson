@@ -8,12 +8,15 @@ import {
   KNOWLEDGE_CONFIG_EMBEDDING_MODEL_ID,
   encodeKnowledgeConfig,
   isKnowledgeConfigVector,
-  projectKnowledgeConfigTo2D,
+  parseProjectionAlgorithmId,
+  projectTrajectoryPoints2D,
+  projectionFrameId,
   type KnowledgeConfigEmbeddingV1,
   type KnowledgeConfigEncodeInput,
   type KnowledgeConfigSnapshotTrigger,
   type KnowledgeConfigTrajectoryPoint,
   type PowFeatureRow,
+  type ProjectionAlgorithmId,
 } from "@/lib/knowledge-config";
 import type { LearningWorldModelV0 } from "@/lib/prompt-kernel/world-model";
 import { l2Distance } from "@/lib/knowledge-config/math";
@@ -341,19 +344,24 @@ export function trajectoryPathLength(points: KnowledgeConfigTrajectoryPoint[]): 
   return len;
 }
 
-export function projectTrajectory2D(points: KnowledgeConfigTrajectoryPoint[]) {
-  return points.map((p) => {
-    const { x, y } = isKnowledgeConfigVector(p.vector)
-      ? projectKnowledgeConfigTo2D(p.vector)
-      : { x: 0, y: 0 };
-    return {
-      t: p.t,
-      as_of_ms: p.as_of_ms,
-      x,
-      y,
-      confidence: p.confidence,
-    };
-  });
+export function projectTrajectory2D(
+  points: KnowledgeConfigTrajectoryPoint[],
+  algorithm: ProjectionAlgorithmId | string = "random",
+) {
+  const algo = parseProjectionAlgorithmId(algorithm, "random");
+  const validPoints = points.map((p) => ({
+    t: p.t,
+    as_of_ms: p.as_of_ms,
+    vector: isKnowledgeConfigVector(p.vector) ? p.vector : new Array(KNOWLEDGE_CONFIG_DIM).fill(0),
+    confidence: p.confidence,
+  }));
+  return projectTrajectoryPoints2D(validPoints, algo);
+}
+
+export function projectionFrameIdForAlgorithm(
+  algorithm: ProjectionAlgorithmId | string = "random",
+): string {
+  return projectionFrameId(parseProjectionAlgorithmId(algorithm, "random"));
 }
 
 export function powRowsFromPerformanceContext(

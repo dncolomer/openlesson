@@ -116,6 +116,46 @@ export async function getCustomVerificationModel(
 }
 
 /**
+ * Delete a workspace-scoped custom knowledge region.
+ * Returns the deleted row when found; throws when missing or delete fails.
+ */
+export async function deleteCustomVerificationModel(
+  supabase: SupabaseClient,
+  options: {
+    workspaceId: string;
+    modelId: string;
+  },
+): Promise<CustomVerificationModelRow> {
+  const modelId = options.modelId.trim();
+  if (!modelId) {
+    throw new CustomVerificationModelError("modelId is required");
+  }
+
+  const existing = await getCustomVerificationModel(
+    supabase,
+    options.workspaceId,
+    modelId,
+  );
+  if (!existing) {
+    throw new CustomVerificationModelError("knowledge region not found");
+  }
+
+  const { error } = await supabase
+    .from("custom_verification_models")
+    .delete()
+    .eq("workspace_id", options.workspaceId)
+    .eq("id", modelId);
+
+  if (error) {
+    throw new CustomVerificationModelError(
+      error.message || "failed to delete knowledge region",
+    );
+  }
+
+  return existing;
+}
+
+/**
  * Load latest knowledge configs for each subject, build model, persist.
  */
 export async function createCustomVerificationModelFromSubjects(

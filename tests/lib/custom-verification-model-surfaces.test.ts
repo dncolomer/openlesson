@@ -33,14 +33,17 @@ describe("custom verification model surfaces", () => {
     expect(src).toContain("validation_score");
   });
 
-  it("workspace UI wires Custom Knowledge Regions cohort + synthetic create", () => {
+  it("workspace UI wires Custom Knowledge Regions cohort + synthetic create + remove", () => {
     const ui = read("components/CustomVerificationModelsPanel.tsx");
     expect(ui).toContain("data-custom-knowledge-regions");
     expect(ui).toContain("Create from selected users");
     expect(ui).toContain("Generate synthetic knowledge region");
     expect(ui).toContain('action: "create"');
     expect(ui).toContain('action: "create_synthetic"');
-    // Settings region cards are create/list only — distance lives on Embeddings overlays.
+    expect(ui).toContain('action: "delete"');
+    expect(ui).toContain("data-remove-knowledge-region");
+    expect(ui).toContain("Remove knowledge region?");
+    // Settings region cards are create/list/remove — distance lives on Embeddings overlays.
     expect(ui).not.toContain('action: "eval"');
     expect(ui).not.toContain('action: "knowledge_distance"');
     expect(ui).not.toContain("data-knowledge-distance-btn");
@@ -78,11 +81,13 @@ describe("custom verification model surfaces", () => {
     expect(settings).toContain('activeSubview === "regions"');
   });
 
-  it("API routes expose cohort create, synthetic create, eval, knowledge distance, and listing", () => {
+  it("API routes expose cohort create, synthetic create, delete, eval, knowledge distance, and listing", () => {
     const cookie = read("app/api/workspace/custom-verification-models/route.ts");
     expect(cookie).toContain("createCustomVerificationModelFromSubjects");
     expect(cookie).toContain("createSyntheticCustomVerificationModel");
+    expect(cookie).toContain("deleteCustomVerificationModel");
     expect(cookie).toContain("create_synthetic");
+    expect(cookie).toContain('action === "delete"');
     expect(cookie).toContain("evalSubjectAgainstCustomVerificationModel");
     expect(cookie).toContain("computeKnowledgeDistanceForSubject");
     expect(cookie).toContain("knowledge_distance");
@@ -93,6 +98,7 @@ describe("custom verification model surfaces", () => {
     expect(store).toContain("DEFAULT_MODEL");
     expect(store).toContain("createSyntheticKnowledgeRegionFromProfile");
     expect(store).toContain("computeKnowledgeDistance");
+    expect(store).toContain("deleteCustomVerificationModel");
 
     const evalApi = read("app/api/v3/eval/workspaces/[id]/custom-verification-models/route.ts");
     expect(evalApi).toContain("createCustomVerificationModelFromSubjects");

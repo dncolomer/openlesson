@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useConfirm } from "@/lib/useConfirm";
 
 export interface KnowledgeRegionListItem {
   id: string;
@@ -52,6 +53,7 @@ export function CustomVerificationModelsPanel({
   onRegionsChange,
 }: CustomVerificationModelsPanelProps) {
   void _currentUserId;
+  const { confirm, confirmDialog } = useConfirm();
   const [subjects, setSubjects] = useState<SubjectRow[]>([]);
   const [models, setModels] = useState<KnowledgeRegionListItem[]>([]);
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -61,6 +63,7 @@ export function CustomVerificationModelsPanel({
   const [loading, setLoading] = useState(false);
   const [creating, setCreating] = useState(false);
   const [synthesizing, setSynthesizing] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
@@ -182,8 +185,49 @@ export function CustomVerificationModelsPanel({
     }
   };
 
+  const removeRegion = async (region: KnowledgeRegionListItem) => {
+    const ok = await confirm({
+      title: "Remove knowledge region?",
+      description: `“${region.name}” will be permanently deleted. Overlays and knowledge distance for this region will no longer work.`,
+      variant: "destructive",
+      confirmLabel: "Remove",
+      cancelLabel: "Cancel",
+    });
+    if (!ok) return;
+
+    setDeletingId(region.id);
+    setError(null);
+    try {
+      const res = await fetch("/api/workspace/custom-verification-models", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "delete",
+          workspaceId,
+          modelId: region.id,
+          ...(ayclToken ? { ayclToken } : {}),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to remove knowledge region");
+
+      // Optimistic local update so the list responds immediately; load() stays source of truth.
+      setModels((prev) => {
+        const next = prev.filter((m) => m.id !== region.id);
+        onRegionsChange?.(next);
+        return next;
+      });
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to remove knowledge region");
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
   return (
     <div className="w-full space-y-4" data-custom-verification-models data-custom-knowledge-regions>
+      {confirmDialog}
       {error && (
         <div className="rounded-lg border border-red-900/50 bg-red-950/30 px-3 py-2 text-xs text-red-300">
           {error}
@@ -303,18 +347,31 @@ export function CustomVerificationModelsPanel({
             <ul className="space-y-2" data-knowledge-regions-list>
               {models.map((m) => {
                 const synthetic = isSyntheticRegion(m);
+                const isDeleting = deletingId === m.id;
                 return (
                   <li
                     key={m.id}
-                    className="rounded-lg border border-neutral-800 bg-neutral-900/50 p-3"
+                    className="flex items-start gap-3 rounded-lg border border-neutral-800 bg-neutral-900/50 p-3"
                     data-knowledge-region-id={m.id}
                   >
-                    <div className="text-sm font-medium text-white">{m.name}</div>
-                    <div className="mt-0.5 text-[10px] text-neutral-500">
-                      {synthetic ? "Synthetic" : `${m.subject_count} users · cohort`} · cohesion{" "}
-                      {(m.cohort_cohesion * 100).toFixed(0)}% · threshold{" "}
-                      {m.cosine_threshold.toFixed(2)}
+                    <div className="min-w-0 flex-1">
+                      <div className="text-sm font-medium text-white">{m.name}</div>
+                      <div className="mt-0.5 text-[10px] text-neutral-500">
+                        {synthetic ? "Synthetic" : `${m.subject_count} users · cohort`} · cohesion{" "}
+                        {(m.cohort_cohesion * 100).toFixed(0)}% · threshold{" "}
+                        {m.cosine_threshold.toFixed(2)}
+                      </div>
                     </div>
+                    <button
+                      type="button"
+                      disabled={isDeleting || deletingId !== null}
+                      onClick={() => void removeRegion(m)}
+                      className="shrink-0 rounded-lg border border-neutral-700 px-2.5 py-1.5 text-[11px] font-medium text-neutral-400 transition hover:border-red-500/40 hover:bg-red-500/10 hover:text-red-300 disabled:cursor-not-allowed disabled:opacity-40"
+                      data-remove-knowledge-region={m.id}
+                      title={`Remove ${m.name}`}
+                    >
+                      {isDeleting ? "Removing…" : "Remove"}
+                    </button>
                   </li>
                 );
               })}

@@ -2,8 +2,9 @@
 /**
  * Dedicated Proof-of-Work API product E2E.
  *
- * Teams (pro_teams): direct REST + MCP access — workspaces, proof of work, performance scoring, TAP links.
- * Individual (regular_2026): Proof-of-Work API gated (teams_required); proof of work via ILE/TAP web routes + workspace Performance tab.
+ * Teams (pro_teams): direct REST + MCP access — list/read workspaces, proof of work, scores, TAP links.
+ * Workspace create is UI-only (POST /api/v3/pow/workspaces → 403) for all keys.
+ * Individual (regular_2026): Proof-of-Work API gated (api_plan_required); proof of work via ILE/TAP web routes + Performance tab.
  */
 import { readFileSync, existsSync, writeFileSync } from "node:fs";
 import crypto from "node:crypto";
@@ -201,16 +202,35 @@ async function runTierGates(admin, regularJar) {
     record("teams-gate", "E2E_TEAMS_API_KEY configured", false, "missing");
     return null;
   }
-  const probe = await agentJson("/api/v3/pow/workspaces", teamsKey, {
+
+  // Workspace create is product UI-only for all keys (including Teams).
+  const createBlocked = await agentJson("/api/v3/pow/workspaces", teamsKey, {
     method: "POST",
-    body: JSON.stringify({ initial_prompt: "[E2E-PoW] Teams gate probe — recursion basics." }),
+    body: JSON.stringify({ initial_prompt: "[E2E-PoW] Teams create probe — must be rejected." }),
   });
-  const workspaceId = probe.body?.workspace?.id;
+  const createCode = planGateCode(createBlocked.body);
+  const createMsg = JSON.stringify(createBlocked.body || {});
   record(
     "teams-gate",
-    "teams API key can create workspace",
-    probe.res.status === 201 && !!workspaceId,
-    workspaceId || `HTTP ${probe.res.status}`,
+    "teams API key cannot create workspace (UI-only)",
+    createBlocked.res.status === 403 &&
+      (createCode === "forbidden" || /not available via API|UI-only|\/workspace\/new/i.test(createMsg)),
+    `HTTP ${createBlocked.res.status} code=${createCode || "n/a"}`,
+  );
+
+  // Resolve a workspace for the Teams REST/MCP suite via list (or optional env override).
+  const listed = await agentJson("/api/v3/pow/workspaces?limit=10", teamsKey);
+  let workspaceId =
+    (Array.isArray(listed.body?.workspaces) && listed.body.workspaces[0]?.id) ||
+    env.E2E_TEAMS_WORKSPACE_ID ||
+    null;
+  record(
+    "teams-gate",
+    "teams API key can list workspaces",
+    listed.res.status === 200 && Array.isArray(listed.body?.workspaces),
+    workspaceId
+      ? `workspace=${workspaceId} total=${listed.body?.pagination?.total ?? listed.body?.workspaces?.length ?? "?"}`
+      : `HTTP ${listed.res.status} empty_list=${listed.res.status === 200}`,
   );
   return workspaceId;
 }
@@ -387,20 +407,59 @@ async function runTeamsMcp(apiKey, workspaceId) {
     return;
   }
 
+  // New PoW so the re-run gate allows another verification after the REST score suite.
+  const mcpUpload = await mcpCall(
+    apiKey,
+    "tools/call",
+    {
+      name: "upload_proof_of_work",
+      arguments: {
+        workspace_id: workspaceId,
+        type: "tool",
+        mime_type: "application/json",
+        data: Buffer.from(
+          JSON.stringify({
+            tool_name: "e2e-mcp-pow",
+            events: [{ action: "mcp_score_preflight", detail: "fresh pow for mcp verification" }],
+          }),
+        ).toString("base64"),
+      },
+    },
+    23,
+  );
+  const mcpUploadData = mcpToolText(mcpUpload.body);
+  const uploadOk =
+    mcpUpload.res.status === 200 &&
+    !!(mcpUploadData?.proof_of_work?.id || mcpUploadData?.proof_of_work);
+  record(
+    "teams-mcp",
+    "upload_proof_of_work tool (pre-score)",
+    uploadOk,
+    mcpUploadData?.proof_of_work?.id ||
+      mcpUpload.body?.error?.message ||
+      `HTTP ${mcpUpload.res.status}`,
+  );
+
   const perf = await mcpCall(
     apiKey,
     "tools/call",
     { name: "verification_score", arguments: { workspace_id: workspaceId } },
-    23,
+    24,
   );
   const perfData = mcpToolText(perf.body);
   const scoreReport = perfData?.report || perfData;
+  const scoreOk =
+    perf.res.status === 200 &&
+    (isVerticalScoreReport(perfData) || typeof scoreReport?.score === "number");
   record(
     "teams-mcp",
     "verification_score tool",
-    perf.res.status === 200 &&
-      (isVerticalScoreReport(perfData) || typeof scoreReport?.score === "number"),
-    scoreReport?.score != null ? `score=${scoreReport.score}` : "no score",
+    scoreOk,
+    scoreReport?.score != null
+      ? `score=${scoreReport.score}`
+      : perfData?.error?.message ||
+          perf.body?.error?.message ||
+          (perfData ? `keys=${Object.keys(perfData).slice(0, 8).join(",")}` : "no score"),
   );
 }
 
@@ -521,16 +580,13 @@ async function runIndividualIndirect(admin, regularJar) {
     );
   }
 
-  const noBearer = await fetch(`${baseUrl}/api/v3/pow/workspaces`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ initial_prompt: "individual has no bearer key" }),
-  });
+  // Unauthenticated list requires Bearer; create is UI-only (403) even without auth.
+  const noBearerList = await fetch(`${baseUrl}/api/v3/pow/workspaces`, { method: "GET" });
   record(
     "individual-indirect",
     "Proof-of-Work API requires Bearer key (individual uses web routes)",
-    noBearer.status === 401,
-    `HTTP ${noBearer.status}`,
+    noBearerList.status === 401,
+    `HTTP ${noBearerList.status}`,
   );
 
   if (!liveWrites) {

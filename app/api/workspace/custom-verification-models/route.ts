@@ -4,6 +4,7 @@ import {
   computeKnowledgeDistanceForSubject,
   createCustomVerificationModelFromSubjects,
   createSyntheticCustomVerificationModel,
+  deleteCustomVerificationModel,
   evalSubjectAgainstCustomVerificationModel,
   listCustomVerificationModels,
   listSubjectsWithKnowledgeConfig,
@@ -15,7 +16,7 @@ export const runtime = "nodejs";
 /**
  * Cookie-auth surface for workspace custom knowledge regions (custom verification models).
  * GET  ?workspaceId=  → list regions + subjects with embeddings (includes centroids for overlay)
- * POST { action: "create" | "create_synthetic" | "eval" | "knowledge_distance", workspaceId, ... }
+ * POST { action: "create" | "create_synthetic" | "delete" | "eval" | "knowledge_distance", workspaceId, ... }
  */
 export async function GET(req: NextRequest) {
   try {
@@ -158,6 +159,36 @@ export async function POST(req: NextRequest) {
           cohort_cohesion: spec.cohort_cohesion,
           embedding_model_id: spec.embedding_model_id,
           dim: spec.dim,
+        },
+      });
+    }
+
+    if (action === "delete") {
+      const modelId =
+        typeof body.modelId === "string"
+          ? body.modelId
+          : typeof body.regionId === "string"
+            ? body.regionId
+            : typeof body.region_id === "string"
+              ? body.region_id
+              : typeof body.model_id === "string"
+                ? body.model_id
+                : "";
+      if (!modelId.trim()) {
+        return NextResponse.json({ error: "modelId / regionId is required" }, { status: 400 });
+      }
+
+      const deleted = await deleteCustomVerificationModel(auth.supabase, {
+        workspaceId,
+        modelId,
+      });
+
+      return NextResponse.json({
+        workspace_id: workspaceId,
+        deleted: true,
+        model: {
+          id: deleted.id,
+          name: deleted.name,
         },
       });
     }

@@ -1,11 +1,18 @@
 {
-  "ran_at": "2026-07-19T10:42:50.989Z",
+  "ran_at": "2026-07-20T21:56:58.315Z",
   "base_url": "http://127.0.0.1:3000",
   "live_writes": true,
-  "total": 25,
+  "total": 26,
   "passed": 25,
-  "failed": 0,
-  "failures": [],
+  "failed": 1,
+  "failures": [
+    {
+      "area": "teams-mcp",
+      "name": "verification_score tool",
+      "ok": false,
+      "detail": "no score"
+    }
+  ],
   "all": [
     {
       "area": "auth",
@@ -23,19 +30,25 @@
       "area": "individual-gate",
       "name": "regular-owned API key rejected (plan gate)",
       "ok": true,
-      "detail": "HTTP 403 code=api_plan_required"
+      "detail": "HTTP 403 code=forbidden"
     },
     {
       "area": "teams-gate",
-      "name": "teams API key can create workspace",
+      "name": "teams API key cannot create workspace (UI-only)",
       "ok": true,
-      "detail": "e320b7ca-bc5b-48b9-a624-c981144a1690"
+      "detail": "HTTP 403 code=forbidden"
+    },
+    {
+      "area": "teams-gate",
+      "name": "teams API key can list workspaces",
+      "ok": true,
+      "detail": "workspace=87408283-89d3-4f44-b9ae-0a05429c3a64 total=12"
     },
     {
       "area": "teams-rest",
       "name": "GET /workspaces/{id}",
       "ok": true,
-      "detail": "Recursion Basics Teams Gate"
+      "detail": "Guest Verification Workspace Creation"
     },
     {
       "area": "teams-rest",
@@ -47,7 +60,7 @@
       "area": "teams-rest",
       "name": "POST /proof-of-work-schema",
       "ok": true,
-      "detail": "eval_input_recursion_mental_model_pow"
+      "detail": "eval_input_guest_access_foundations_pow"
     },
     {
       "area": "teams-rest",
@@ -59,37 +72,37 @@
       "area": "teams-rest",
       "name": "POST /proof-of-work",
       "ok": true,
-      "detail": "fefcaa42-72d9-49af-ac56-a74bc521a5f7"
+      "detail": "723221d7-7db2-499c-8c83-307987b36dd6"
     },
     {
       "area": "teams-rest",
       "name": "POST /api/v3/eval/.../verification-score (score + marker_scores)",
       "ok": true,
-      "detail": "score=12 markers=6"
+      "detail": "score=28 markers=6"
     },
     {
       "area": "teams-rest",
       "name": "verification-score response includes proof_of_work_summary",
       "ok": true,
-      "detail": "artifacts=1"
+      "detail": "artifacts=3"
     },
     {
       "area": "teams-rest",
       "name": "POST /blocks/{id}/tap-links",
       "ok": true,
-      "detail": "7ac862cc-e0dd-4bba-8a88-cac8aa0af270"
+      "detail": "bdd4ea37-a36e-4cc3-93fb-52a414d9c542"
     },
     {
       "area": "teams-rest",
       "name": "GET /tap-links",
       "ok": true,
-      "detail": "1 links"
+      "detail": "2 links"
     },
     {
       "area": "teams-mcp",
       "name": "tools/list (catalog non-empty)",
       "ok": true,
-      "detail": "14 tools"
+      "detail": "23 tools"
     },
     {
       "area": "teams-mcp",
@@ -101,43 +114,43 @@
       "area": "teams-mcp",
       "name": "get_learning_progress",
       "ok": true,
-      "detail": "artifacts=1"
+      "detail": "artifacts=3"
     },
     {
       "area": "teams-mcp",
       "name": "get_workspace",
       "ok": true,
-      "detail": "Recursion Basics Teams Gate"
+      "detail": "Guest Verification Workspace Creation"
     },
     {
       "area": "teams-mcp",
       "name": "verification_score tool",
-      "ok": true,
-      "detail": "score=8"
+      "ok": false,
+      "detail": "no score"
     },
     {
       "area": "individual-indirect",
       "name": "create workspace via web (not Proof-of-Work API)",
       "ok": true,
-      "detail": "9f81ad34-6bcc-4f07-b990-41af0e0d4d27"
+      "detail": "7d748b78-308a-489b-acae-1a9b6ea7cc2c"
     },
     {
       "area": "individual-indirect",
       "name": "workspace has block",
       "ok": true,
-      "detail": "PoW Mindset Foundations"
+      "detail": "PoW Workspace Foundations"
     },
     {
       "area": "individual-indirect",
       "name": "ILE proof-of-work upload (cookie auth)",
       "ok": true,
-      "detail": "5c7e55f4-5db7-4636-87cc-7f974d315440"
+      "detail": "2b360ee3-9b46-407e-a2a9-4b733fa11526"
     },
     {
       "area": "individual-indirect",
       "name": "TAP session start (workspace UI route)",
       "ok": true,
-      "detail": "b8295f9b-3cca-47fd-8491-954a0a1faf8b"
+      "detail": "e45673be-8779-4dcb-90d3-54459dff42cf"
     },
     {
       "area": "individual-indirect",

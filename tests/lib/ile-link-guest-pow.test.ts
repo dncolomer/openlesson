@@ -76,10 +76,11 @@ describe("shareable ILE guest PoW wiring", () => {
     expect(sessionSource).toContain("ileToken ? { ileToken }");
   });
 
-  it("renders TAP&ILE knowledge subview full width", () => {
-    expect(perfSource).toContain('activeSubview === "tap"');
-    expect(perfSource).toMatch(/activeSubview === "tap"[\s\S]*?max-w-none/);
-    expect(perfSource).not.toMatch(/activeSubview === "tap"[\s\S]*?max-w-3xl/);
+  it("keeps TAP/ILE guest links out of performance subviews (Settings surface)", () => {
+    // TAP&ILE links moved out of the Knowledge/performance tab body; subviews are score/pow/knowledge/lwm/insights only.
+    expect(perfSource).not.toContain('activeSubview === "tap"');
+    expect(perfSource).toMatch(/type PerformanceSubview = "score" \| "pow" \| "knowledge" \| "lwm" \| "insights"/);
+    expect(perfSource).toMatch(/@deprecated TAP\/ILE guest links live in Settings/);
   });
 
   it("treats /ile/session as a public middleware route like TAP", () => {

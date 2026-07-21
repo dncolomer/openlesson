@@ -656,11 +656,32 @@ describe("pitch deck content (platform only)", () => {
     expect(highlightsAt).toBeLessThan(cardGridAt);
 
     // Full-size follow-ons after thesis cards: terrance, mechaarm2, embeddings
+    // (1-based slides 10–12 when thesis is slide 9 / index 8)
     expect(PLATFORM_PITCH_DECK.slides[thesisIdx + 1]?.image).toBe("/terrance.png");
     expect(PLATFORM_PITCH_DECK.slides[thesisIdx + 2]?.image).toBe("/mechaarm2.jpg");
     expect(PLATFORM_PITCH_DECK.slides[thesisIdx + 3]?.image).toBe("/embeddings.png");
     for (const asset of ["/mechaarm2.jpg", "/terrance.png", "/embeddings.png"]) {
       expect(publicAssetExists(asset), `missing public asset: ${asset}`).toBe(true);
+    }
+
+    // Card thumbnails link to matching fullImage slides; those have Back → thesis
+    expect(deckUi).toContain("resolveFullImageSlideForAsset");
+    expect(deckUi).toContain("resolveBackSlideForFullImage");
+    expect(deckUi).toContain("data-pitch-card-image-link");
+    expect(deckUi).toContain("data-pitch-full-image-back");
+    for (const [cardImage, zoomOffset] of [
+      ["/terrance.png", 1],
+      ["/mechaarm2.jpg", 2],
+      ["/embeddings.png", 3],
+    ] as const) {
+      const zoomIdx = thesisIdx + zoomOffset;
+      expect(PLATFORM_PITCH_DECK.slides[zoomIdx]?.layout).toBe("fullImage");
+      expect(PLATFORM_PITCH_DECK.slides[zoomIdx]?.image).toBe(cardImage);
+      // Back target is the thesis statement that owns the card
+      const ownerIdx = PLATFORM_PITCH_DECK.slides.findIndex((s) =>
+        (s.cards ?? []).some((c) => c.image === cardImage),
+      );
+      expect(ownerIdx).toBe(thesisIdx);
     }
 
     const thesisCorpus = [

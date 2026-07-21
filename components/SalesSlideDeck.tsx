@@ -183,6 +183,30 @@ function resolveBulletSlideTargets(
   });
 }
 
+/** Find fullImage zoom slide that shows the same asset as a card thumbnail. */
+function resolveFullImageSlideForAsset(
+  image: string | undefined,
+  deckSlides: SalesSlide[],
+): number | null {
+  if (!image) return null;
+  const idx = deckSlides.findIndex(
+    (s) => s.layout === "fullImage" && s.image === image,
+  );
+  return idx >= 0 ? idx : null;
+}
+
+/** Find the statement (or other) slide that owns a card thumbnail for this zoom asset. */
+function resolveBackSlideForFullImage(
+  image: string | undefined,
+  deckSlides: SalesSlide[],
+): number | null {
+  if (!image) return null;
+  const idx = deckSlides.findIndex((s) =>
+    (s.cards ?? []).some((c) => c.image === image),
+  );
+  return idx >= 0 ? idx : null;
+}
+
 /**
  * Emphasized thesis callouts (science hypothesis + PoW proxy).
  * Stronger border, brighter fill, larger type than regular bullets.
@@ -287,13 +311,32 @@ function PitchCardArticle({
   card,
   fill = false,
   compactBody = false,
+  imageGoToSlide = null,
+  onGoToSlide,
 }: {
   card: PitchCard;
   fill?: boolean;
   /** Smaller body type when cards sit in a dense multi-cell grid. */
   compactBody?: boolean;
+  /** When set, the card thumbnail jumps to this deck slide index (zoomed fullImage). */
+  imageGoToSlide?: number | null;
+  onGoToSlide?: (slideIndex: number) => void;
 }) {
   const hasIdeas = (card.ideas?.length ?? 0) > 0;
+  const imageClickable =
+    typeof imageGoToSlide === "number" &&
+    imageGoToSlide >= 0 &&
+    typeof onGoToSlide === "function";
+
+  const imageEl = card.image ? (
+    // eslint-disable-next-line @next/next/no-img-element -- pitch deck public assets
+    <img
+      src={card.image}
+      alt={card.imageAlt ?? card.label}
+      className="mx-auto h-auto w-full max-h-28 object-contain object-center sm:max-h-32"
+    />
+  ) : null;
+
   return (
     <article
       data-pitch-card
@@ -317,18 +360,27 @@ function PitchCardArticle({
           {card.body}
         </p>
       )}
-      {card.image ? (
-        <div
-          data-pitch-card-image
-          className="mt-2.5 shrink-0 overflow-hidden rounded border border-white/15 bg-black/40 sm:mt-3"
-        >
-          {/* eslint-disable-next-line @next/next/no-img-element -- pitch deck public assets */}
-          <img
-            src={card.image}
-            alt={card.imageAlt ?? card.label}
-            className="mx-auto h-auto w-full max-h-28 object-contain object-center sm:max-h-32"
-          />
-        </div>
+      {card.image && imageEl ? (
+        imageClickable ? (
+          <button
+            type="button"
+            data-pitch-card-image
+            data-pitch-card-image-link
+            data-pitch-card-image-target={imageGoToSlide}
+            onClick={() => onGoToSlide(imageGoToSlide)}
+            aria-label={`Open larger view: ${card.imageAlt ?? card.label}`}
+            className="mt-2.5 shrink-0 cursor-pointer overflow-hidden rounded border border-white/15 bg-black/40 text-left transition hover:border-cyan-300/50 hover:ring-1 hover:ring-cyan-300/30 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-300/70 sm:mt-3"
+          >
+            {imageEl}
+          </button>
+        ) : (
+          <div
+            data-pitch-card-image
+            className="mt-2.5 shrink-0 overflow-hidden rounded border border-white/15 bg-black/40 sm:mt-3"
+          >
+            {imageEl}
+          </div>
+        )
       ) : null}
       {card.ideas && card.ideas.length > 0 ? (
         <div
@@ -385,14 +437,29 @@ function CardGrid({
    * Expects cards ordered [TAP, ILE, Stash API, PoW API].
    */
   productStack = false,
+  deckSlides = [],
+  onGoToSlide,
 }: {
   cards: PitchCard[];
   /** Stretch cards to fill remaining slide height (e.g. products stack). */
   fill?: boolean;
   twoByTwo?: boolean;
   productStack?: boolean;
+  deckSlides?: SalesSlide[];
+  onGoToSlide?: (slideIndex: number) => void;
 }) {
   const hasIdeas = cards.some((card) => (card.ideas?.length ?? 0) > 0);
+
+  const renderCard = (card: PitchCard, opts?: { compactBody?: boolean }) => (
+    <PitchCardArticle
+      key={card.label}
+      card={card}
+      fill={fill}
+      compactBody={opts?.compactBody}
+      imageGoToSlide={resolveFullImageSlideForAsset(card.image, deckSlides)}
+      onGoToSlide={onGoToSlide}
+    />
+  );
 
   if (productStack && cards.length === 4) {
     const [topLeft, topRight, middle, bottom] = cards;
@@ -409,20 +476,20 @@ function CardGrid({
           data-pitch-card-stack-row="top"
           className={`grid grid-cols-2 gap-2.5 sm:gap-3 ${fill ? "min-h-0 flex-1" : ""}`}
         >
-          <PitchCardArticle card={topLeft} fill={fill} />
-          <PitchCardArticle card={topRight} fill={fill} />
+          {renderCard(topLeft)}
+          {renderCard(topRight)}
         </div>
         <div
           data-pitch-card-stack-row="middle"
           className={fill ? "min-h-0 flex-1" : undefined}
         >
-          <PitchCardArticle card={middle} fill={fill} />
+          {renderCard(middle)}
         </div>
         <div
           data-pitch-card-stack-row="bottom"
           className={fill ? "min-h-0 flex-1" : undefined}
         >
-          <PitchCardArticle card={bottom} fill={fill} />
+          {renderCard(bottom)}
         </div>
       </div>
     );
@@ -447,14 +514,7 @@ function CardGrid({
         fill ? "min-h-0 flex-1 auto-rows-fr grid-rows-2" : ""
       }`}
     >
-      {cards.map((card) => (
-        <PitchCardArticle
-          key={card.label}
-          card={card}
-          fill={fill}
-          compactBody={is2x2}
-        />
-      ))}
+      {cards.map((card) => renderCard(card, { compactBody: is2x2 }))}
     </div>
   );
 }
@@ -552,7 +612,11 @@ function SlideContent({
             )}
             {slide.cards && slide.cards.length > 0 && (
               <div className="mt-5 w-full">
-                <CardGrid cards={slide.cards} />
+                <CardGrid
+                  cards={slide.cards}
+                  deckSlides={deckSlides}
+                  onGoToSlide={onGoToSlide}
+                />
               </div>
             )}
           </div>
@@ -591,12 +655,29 @@ function SlideContent({
 
   if (slide.layout === "fullImage") {
     // Full-stage image — no side copy; fills the available slide viewport.
+    const backTarget = resolveBackSlideForFullImage(slide.image, deckSlides);
+    const canGoBack =
+      typeof backTarget === "number" &&
+      backTarget >= 0 &&
+      typeof onGoToSlide === "function";
+
     return (
       <SlideFrame>
         <figure
           data-pitch-full-image
           className="relative flex h-full min-h-0 w-full flex-1 flex-col overflow-hidden rounded-md border border-white/10 bg-black/55 shadow-[0_20px_60px_rgba(0,0,0,0.4)] backdrop-blur-md"
         >
+          {canGoBack ? (
+            <button
+              type="button"
+              data-pitch-full-image-back
+              data-pitch-full-image-back-target={backTarget}
+              onClick={() => onGoToSlide(backTarget)}
+              className="absolute left-3 top-3 z-10 rounded-sm border border-white/20 bg-black/70 px-3 py-1.5 font-mono text-[10px] uppercase tracking-[1.4px] text-zinc-100 shadow-lg backdrop-blur-sm transition hover:border-cyan-300/50 hover:bg-black/85 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-300/70 sm:left-4 sm:top-4 sm:text-[11px]"
+            >
+              ← Back
+            </button>
+          ) : null}
           {slide.image ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
@@ -658,7 +739,13 @@ function SlideContent({
               (CardGrid/HighlightCallouts default mt-* is for below titles, not side columns).
             */}
             <div className="min-h-0 min-w-0 order-2 overflow-y-auto md:order-1 [&>*:first-child]:!mt-0">
-              {slide.cards && slide.cards.length > 0 && <CardGrid cards={slide.cards} />}
+              {slide.cards && slide.cards.length > 0 && (
+                <CardGrid
+                  cards={slide.cards}
+                  deckSlides={deckSlides}
+                  onGoToSlide={onGoToSlide}
+                />
+              )}
               {slide.highlights && slide.highlights.length > 0 && (
                 <HighlightCallouts
                   items={slide.highlights}
@@ -763,6 +850,8 @@ function SlideContent({
               fill={isProductsStack}
               twoByTwo={isProducts2x2}
               productStack={isProductLayerStack}
+              deckSlides={deckSlides}
+              onGoToSlide={onGoToSlide}
             />
           )}
           {/* Product stacks keep all copy inside cards — never bullets under the grid. */}
@@ -782,7 +871,13 @@ function SlideContent({
         <ContentPanel>
           {slide.kicker && <Eyebrow>{slide.kicker}</Eyebrow>}
           <h2 className={TITLE_H2}>{slide.title}</h2>
-          {slide.cards && slide.cards.length > 0 && <CardGrid cards={slide.cards} />}
+          {slide.cards && slide.cards.length > 0 && (
+            <CardGrid
+              cards={slide.cards}
+              deckSlides={deckSlides}
+              onGoToSlide={onGoToSlide}
+            />
+          )}
           {slide.highlights && slide.highlights.length > 0 && (
             <HighlightCallouts
               items={slide.highlights}

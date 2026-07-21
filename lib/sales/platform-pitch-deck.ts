@@ -52,6 +52,9 @@ const PLATFORM_THESIS: SalesSlide[] = [
     highlights: [
       "Treat “knows X” as a function of inputs — not a binary score. Those inputs cannot be hand-picked: the degrees of freedom of cognition alone are intractable, let alone measured or computed on.",
     ],
+    highlightImages: ["/flywire.png"],
+    highlightImageAlts: ["Flywire — knowledge as a function of many inputs"],
+    highlightImageSources: ["Source: flywire.ai"],
     cards: [
       {
         label: "Configuration space",

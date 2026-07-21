@@ -142,35 +142,73 @@ function BulletList({
 /**
  * Emphasized thesis callouts (science hypothesis + PoW proxy).
  * Stronger border, brighter fill, larger type than regular bullets.
+ * Optional left image + source credit (same index as items).
  */
 function HighlightCallouts({
   items,
   labels,
+  images,
+  imageAlts,
+  imageSources,
 }: {
   items: string[];
   labels?: string[];
+  images?: (string | undefined)[];
+  imageAlts?: (string | undefined)[];
+  imageSources?: (string | undefined)[];
 }) {
   return (
     <div
       data-pitch-highlights
       className="mt-4 flex w-full flex-col gap-3 text-left sm:mt-5 sm:gap-3.5"
     >
-      {items.map((item, index) => (
-        <div
-          key={`${index}-${item.slice(0, 48)}`}
-          data-pitch-highlight
-          className="rounded-md border border-white/25 bg-white/[0.08] px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] sm:px-5 sm:py-3.5"
-        >
-          {labels?.[index] && (
-            <p className="mb-1.5 font-mono text-[10px] font-semibold uppercase tracking-[1.8px] text-cyan-200/90 sm:text-[11px]">
-              {labels[index]}
-            </p>
-          )}
-          <p className="text-left text-[clamp(1.05rem,0.55vw+0.9rem,1.3rem)] font-medium leading-snug text-white">
-            {item}
-          </p>
-        </div>
-      ))}
+      {items.map((item, index) => {
+        const image = images?.[index];
+        const imageSource = imageSources?.[index];
+        return (
+          <div
+            key={`${index}-${item.slice(0, 48)}`}
+            data-pitch-highlight
+            className="rounded-md border border-white/25 bg-white/[0.08] px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] sm:px-5 sm:py-3.5"
+          >
+            <div className={image ? "flex flex-col gap-3 sm:flex-row sm:items-start sm:gap-4" : undefined}>
+              {image ? (
+                <div
+                  data-pitch-highlight-image
+                  className="flex w-full shrink-0 flex-col items-start gap-1.5 sm:w-[min(32%,11rem)]"
+                >
+                  <div className="w-full overflow-hidden rounded border border-white/15 bg-black/40">
+                    {/* eslint-disable-next-line @next/next/no-img-element -- pitch deck public assets */}
+                    <img
+                      src={image}
+                      alt={imageAlts?.[index] ?? labels?.[index] ?? "Highlight illustration"}
+                      className="mx-auto h-auto w-full max-h-28 object-contain object-center sm:max-h-32"
+                    />
+                  </div>
+                  {imageSource ? (
+                    <p
+                      data-pitch-highlight-source
+                      className="font-mono text-[9px] uppercase tracking-[1.4px] text-zinc-400 sm:text-[10px]"
+                    >
+                      {imageSource}
+                    </p>
+                  ) : null}
+                </div>
+              ) : null}
+              <div className="min-w-0 flex-1">
+                {labels?.[index] && (
+                  <p className="mb-1.5 font-mono text-[10px] font-semibold uppercase tracking-[1.8px] text-cyan-200/90 sm:text-[11px]">
+                    {labels[index]}
+                  </p>
+                )}
+                <p className="text-left text-[clamp(1.05rem,0.55vw+0.9rem,1.3rem)] font-medium leading-snug text-white">
+                  {item}
+                </p>
+              </div>
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -507,7 +545,13 @@ function SlideContent({ slide }: { slide: SalesSlide }) {
             <div className="min-h-0 min-w-0 order-2 overflow-y-auto md:order-1 [&>*:first-child]:!mt-0">
               {slide.cards && slide.cards.length > 0 && <CardGrid cards={slide.cards} />}
               {slide.highlights && slide.highlights.length > 0 && (
-                <HighlightCallouts items={slide.highlights} labels={slide.highlightLabels} />
+                <HighlightCallouts
+                  items={slide.highlights}
+                  labels={slide.highlightLabels}
+                  images={slide.highlightImages}
+                  imageAlts={slide.highlightImageAlts}
+                  imageSources={slide.highlightImageSources}
+                />
               )}
               {slide.bullets && slide.bullets.length > 0 && <BulletList items={slide.bullets} />}
             </div>
@@ -586,7 +630,13 @@ function SlideContent({ slide }: { slide: SalesSlide }) {
           )}
           {/* Lead-in / callouts sit above concept boxes when both are present. */}
           {slide.highlights && slide.highlights.length > 0 && (
-            <HighlightCallouts items={slide.highlights} labels={slide.highlightLabels} />
+            <HighlightCallouts
+              items={slide.highlights}
+              labels={slide.highlightLabels}
+              images={slide.highlightImages}
+              imageAlts={slide.highlightImageAlts}
+              imageSources={slide.highlightImageSources}
+            />
           )}
           {slide.cards && slide.cards.length > 0 && (
             <CardGrid
@@ -612,7 +662,13 @@ function SlideContent({ slide }: { slide: SalesSlide }) {
           <h2 className={TITLE_H2}>{slide.title}</h2>
           {slide.cards && slide.cards.length > 0 && <CardGrid cards={slide.cards} />}
           {slide.highlights && slide.highlights.length > 0 && (
-            <HighlightCallouts items={slide.highlights} labels={slide.highlightLabels} />
+            <HighlightCallouts
+              items={slide.highlights}
+              labels={slide.highlightLabels}
+              images={slide.highlightImages}
+              imageAlts={slide.highlightImageAlts}
+              imageSources={slide.highlightImageSources}
+            />
           )}
           {slide.bullets && slide.bullets.length > 0 && <BulletList items={slide.bullets} />}
         </ContentPanel>

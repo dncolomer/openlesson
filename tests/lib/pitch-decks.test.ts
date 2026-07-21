@@ -59,6 +59,9 @@ function collectImagePaths(deck: SolutionSlideDeck): string[] {
     for (const card of slide.cards ?? []) {
       if (card.image) paths.add(card.image);
     }
+    for (const highlightImage of slide.highlightImages ?? []) {
+      if (highlightImage) paths.add(highlightImage);
+    }
   }
   return [...paths];
 }
@@ -600,6 +603,12 @@ describe("pitch deck content (platform only)", () => {
     expect(leadIn).toMatch(/function/);
     expect(leadIn).toMatch(/intractable|hand-pick|hand.?craft/);
     expect(leadIn).toMatch(/measure|comput/);
+    // Flywire image on the left of the lead-in box + source credit
+    expect(platformThesis!.highlightImages?.[0]).toBe("/flywire.png");
+    expect(platformThesis!.highlightImageSources?.[0]?.toLowerCase()).toMatch(/flywire\.ai/);
+    expect(publicAssetExists("/flywire.png")).toBe(true);
+    expect(deckUi).toContain("data-pitch-highlight-image");
+    expect(deckUi).toContain("data-pitch-highlight-source");
     // Statement layout renders highlights before CardGrid (above the boxes)
     const statementBranch = deckUi.slice(deckUi.indexOf('slide.layout === "statement"'));
     const highlightsAt = statementBranch.indexOf("HighlightCallouts");

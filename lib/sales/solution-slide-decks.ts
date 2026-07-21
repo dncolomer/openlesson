@@ -23,6 +23,18 @@ export type SalesSlide = {
   /** Optional short labels for each highlight (same order as highlights). */
   highlightLabels?: string[];
   /**
+   * Optional left-side image per highlight (same order as highlights; public path).
+   * Sparse: omit or leave empty slots for highlights without media.
+   */
+  highlightImages?: (string | undefined)[];
+  /** Optional alt text per highlight image (same order as highlightImages). */
+  highlightImageAlts?: (string | undefined)[];
+  /**
+   * Optional small source credit per highlight (same order), e.g. "Source: flywire.ai".
+   * Shown inside the callout near the image.
+   */
+  highlightImageSources?: (string | undefined)[];
+  /**
    * Framed pillar/vertical boxes (e.g. title slide: verification · optimization · augmentation).
    * Prefer 3 cards for a balanced grid on presentation widths.
    * Optional `ideas` nest idea-boxes under the tool/column title (icon + title + body each).

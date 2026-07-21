@@ -33,7 +33,7 @@ export function buildPrivacyDataSlides(): SalesSlide[] {
     {
       layout: "statement",
       kicker: "Data Privacy and Confidential Learning · 2/2",
-      title: "Custom verification models in hashed knowledge config space.",
+      title: "Custom verification regions in hashed knowledge config space.",
       subtitle:
         "Distill internal talent into a high-validation region, then evaluate candidates on that geometry — with hashed or redacted traces only.",
       backgroundImage: PITCH_ASSETS.aesthetics.products,

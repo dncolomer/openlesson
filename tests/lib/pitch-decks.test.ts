@@ -95,14 +95,28 @@ describe("pitch deck content (platform only)", () => {
     assertNonEmptyTitles(PLATFORM_PITCH_DECK);
 
     const founderSlides = buildFounderSlides("platform");
-    // Section titles (5) + founder content + thesis (4: statement + terrance + mechaarm + embeddings)
-    // + method (2) + privacy×2 + products stack (1)
+    // Cover + TOC + section titles (5) + founder content + thesis (4) + method (2) + privacy×2 + products (1)
     expect(PLATFORM_PITCH_DECK.slides).toHaveLength(
-      5 + founderSlides.length + 4 + 2 + 2 + 1,
+      2 + 5 + founderSlides.length + 4 + 2 + 2 + 1,
     );
+
+    // Cover + TOC open the deck
+    expect(PLATFORM_PITCH_DECK.slides[0]?.layout).toBe("title");
+    expect(PLATFORM_PITCH_DECK.slides[0]?.title).toBe("Uncertain Systems");
+    expect(PLATFORM_PITCH_DECK.slides[0]?.image).toBe(PITCH_ASSETS.logo);
+    expect(PLATFORM_PITCH_DECK.slides[1]?.title).toMatch(/table of contents/i);
+    expect(PLATFORM_PITCH_DECK.slides[1]?.layout).toBe("bullets");
+    expect(PLATFORM_PITCH_DECK.slides[1]?.bullets).toEqual([
+      "Founder",
+      "What is Uncertain Systems?",
+      "How do we ensure high quality data?",
+      "Data Privacy and Confidential Learning",
+      "Our products",
+    ]);
 
     const sectionTitles = PLATFORM_PITCH_DECK.slides.filter((s) => s.layout === "title");
     expect(sectionTitles.map((s) => s.title)).toEqual([
+      "Uncertain Systems",
       "Founder",
       "What is Uncertain Systems?",
       "How do we ensure high quality data?",
@@ -113,15 +127,19 @@ describe("pitch deck content (platform only)", () => {
     expect(sectionTitles.every((s) => s.image === PITCH_ASSETS.logo)).toBe(true);
     expect(sectionTitles.map((s) => s.title)).not.toContain("Productized");
 
-    // Founder section title then founder content
-    expect(PLATFORM_PITCH_DECK.slides[0]?.layout).toBe("title");
-    expect(PLATFORM_PITCH_DECK.slides[0]?.title).toBe("Founder");
-    const founderBlock = PLATFORM_PITCH_DECK.slides.slice(1, 1 + founderSlides.length);
+    // After cover + TOC: Founder section title then founder content
+    const openOffset = 2;
+    expect(PLATFORM_PITCH_DECK.slides[openOffset]?.layout).toBe("title");
+    expect(PLATFORM_PITCH_DECK.slides[openOffset]?.title).toBe("Founder");
+    const founderBlock = PLATFORM_PITCH_DECK.slides.slice(
+      openOffset + 1,
+      openOffset + 1 + founderSlides.length,
+    );
     expect(founderBlock.map((s) => s.title)).toEqual(founderSlides.map((s) => s.title));
     expect(founderBlock[0]?.layout).toBe("founder");
 
     // Thesis section after founder block
-    const thesisStart = 1 + founderSlides.length;
+    const thesisStart = openOffset + 1 + founderSlides.length;
     expect(PLATFORM_PITCH_DECK.slides[thesisStart]?.title).toMatch(/What is Uncertain Systems\?/);
     expect(PLATFORM_PITCH_DECK.slides[thesisStart + 1]?.kicker?.toLowerCase()).toMatch(/thesis/);
     expect(PLATFORM_PITCH_DECK.slides[thesisStart + 2]?.image).toBe("/terrance.png");
@@ -192,8 +210,9 @@ describe("pitch deck content (platform only)", () => {
     expect(integrationHits.length).toBeGreaterThanOrEqual(3);
 
     const founderCount = buildFounderSlides("platform").length;
-    // After: Founder title + founder slides
-    const thesisTitleIdx = 1 + founderCount;
+    // After: cover + TOC + Founder title + founder slides
+    const openOffset = 2;
+    const thesisTitleIdx = openOffset + 1 + founderCount;
     const titleSlide = PLATFORM_PITCH_DECK.slides[thesisTitleIdx];
     expect(titleSlide?.layout).toBe("title");
     expect(titleSlide?.title).toBe("What is Uncertain Systems?");
@@ -354,7 +373,7 @@ describe("pitch deck content (platform only)", () => {
     }
   });
 
-  it("buildFounderSlides is the shared source; platform places founders first", () => {
+  it("buildFounderSlides is the shared source; platform places founders after cover + TOC", () => {
     const founderSlides = buildFounderSlides("platform");
     expect(founderSlides.length).toBeGreaterThanOrEqual(3);
     expect(founderSlides.some((s: SalesSlide) => s.layout === "founder")).toBe(true);
@@ -376,25 +395,31 @@ describe("pitch deck content (platform only)", () => {
     expect(founderText).toContain("i*");
     expect(founderText).toMatch(/modeling goals using i\*/);
 
-    // Platform: Founder section title, founder content, then thesis section title
-    expect(PLATFORM_PITCH_DECK.slides[0]?.layout).toBe("title");
-    expect(PLATFORM_PITCH_DECK.slides[0]?.title).toBe("Founder");
-    const platformFounder = PLATFORM_PITCH_DECK.slides.slice(1, 1 + founderSlides.length);
+    // Platform: cover + TOC, then Founder section title, founder content, then thesis section title
+    const openOffset = 2;
+    expect(PLATFORM_PITCH_DECK.slides[0]?.title).toBe("Uncertain Systems");
+    expect(PLATFORM_PITCH_DECK.slides[1]?.title).toMatch(/table of contents/i);
+    expect(PLATFORM_PITCH_DECK.slides[openOffset]?.layout).toBe("title");
+    expect(PLATFORM_PITCH_DECK.slides[openOffset]?.title).toBe("Founder");
+    const platformFounder = PLATFORM_PITCH_DECK.slides.slice(
+      openOffset + 1,
+      openOffset + 1 + founderSlides.length,
+    );
     expect(platformFounder.map((s) => s.title)).toEqual(founderSlides.map((s) => s.title));
     const platformTrajectory = platformFounder.find((s) => s.kicker === "Trajectory");
     expect(platformTrajectory?.title).toMatch(
       /From modeling goals using i\* to building learning verification, optimization, and augmentation tech/,
     );
-    expect(PLATFORM_PITCH_DECK.slides[1 + founderSlides.length]?.layout).toBe("title");
-    expect(PLATFORM_PITCH_DECK.slides[1 + founderSlides.length]?.title).toMatch(
+    expect(PLATFORM_PITCH_DECK.slides[openOffset + 1 + founderSlides.length]?.layout).toBe("title");
+    expect(PLATFORM_PITCH_DECK.slides[openOffset + 1 + founderSlides.length]?.title).toMatch(
       /What is Uncertain Systems\?/,
     );
-    expect(PLATFORM_PITCH_DECK.slides[2 + founderSlides.length]?.kicker?.toLowerCase()).toMatch(
-      /thesis/,
-    );
+    expect(
+      PLATFORM_PITCH_DECK.slides[openOffset + 2 + founderSlides.length]?.kicker?.toLowerCase(),
+    ).toMatch(/thesis/);
   });
 
-  it("pitch index: platform only; no vertical decks listed", () => {
+  it("pitch index: platform only; no vertical decks listed; sales route removed", () => {
     expect(PITCH_PATHS).toEqual(["/pitch"]);
     expect(PITCH_INDEX).toHaveLength(1);
     expect(LIVE_PITCH_PATHS).toEqual(["/pitch"]);
@@ -410,11 +435,8 @@ describe("pitch deck content (platform only)", () => {
     expect(fs.existsSync(path.join(REPO_ROOT, "app/pitch-optimization/page.tsx"))).toBe(false);
     expect(fs.existsSync(path.join(REPO_ROOT, "app/pitch-augmentation/page.tsx"))).toBe(false);
     expect(fs.existsSync(path.join(REPO_ROOT, "lib/sales/product-pitch-deck.ts"))).toBe(false);
-
-    const salesPage = fs.readFileSync(path.join(REPO_ROOT, "app/sales/page.tsx"), "utf8");
-    expect(salesPage).toContain("PITCH_INDEX");
-    expect(salesPage).toContain("data-sales-index");
-    expect(salesPage).not.toMatch(/Vertical deep-dives are coming soon/);
+    expect(fs.existsSync(path.join(REPO_ROOT, "app/sales/page.tsx"))).toBe(false);
+    expect(fs.existsSync(path.join(REPO_ROOT, "app/sales"))).toBe(false);
   });
 
   it("route page module: platform pitch only", () => {
@@ -574,10 +596,11 @@ describe("pitch deck content (platform only)", () => {
     expect(deckUi).toContain("data-pitch-card-image");
     expect(deckUi).toMatch(/card\.image/);
 
-    // 0-based index 6 / 1-based slide 7 after founder block + section title
+    // After cover + TOC + founder block + section title
+    const openOffset = 2;
     const founderCount = buildFounderSlides("platform").length;
-    const thesisIdx = 2 + founderCount;
-    expect(thesisIdx).toBe(6);
+    const thesisIdx = openOffset + 2 + founderCount;
+    expect(thesisIdx).toBe(8);
     const platformThesis = PLATFORM_PITCH_DECK.slides[thesisIdx];
     expect(platformThesis).toBeTruthy();
     expect(platformThesis!.kicker?.toLowerCase()).toMatch(/our thesis/);
@@ -651,9 +674,13 @@ describe("pitch deck content (platform only)", () => {
     expect(thesisCorpus).toMatch(/function/);
     expect(thesisCorpus).toMatch(/intractable/);
 
-    // Thesis comes after Founder title + founder slides + What is Uncertain Systems? title
-    expect(PLATFORM_PITCH_DECK.slides[0]?.title).toBe("Founder");
-    expect(PLATFORM_PITCH_DECK.slides[1 + founderCount]?.title).toMatch(/What is Uncertain Systems\?/);
+    // Thesis comes after cover + TOC + Founder title + founder slides + What is Uncertain Systems? title
+    expect(PLATFORM_PITCH_DECK.slides[0]?.title).toBe("Uncertain Systems");
+    expect(PLATFORM_PITCH_DECK.slides[1]?.title).toMatch(/table of contents/i);
+    expect(PLATFORM_PITCH_DECK.slides[openOffset]?.title).toBe("Founder");
+    expect(PLATFORM_PITCH_DECK.slides[openOffset + 1 + founderCount]?.title).toMatch(
+      /What is Uncertain Systems\?/,
+    );
     expect(PLATFORM_PITCH_DECK.slides[thesisIdx]).toBe(platformThesis);
   });
 
@@ -765,10 +792,10 @@ describe("pitch deck content (platform only)", () => {
     expect(platformText).toMatch(/proprietary|confidential|anonymiz|hash/);
   });
 
-  it("middleware exempts /sales and pitch prefix", () => {
+  it("middleware exempts pitch prefix; sales route gone", () => {
     const middleware = fs.readFileSync(path.join(REPO_ROOT, "middleware.ts"), "utf8");
     expect(middleware).toContain('"/pitch"');
-    expect(middleware).toContain('"/sales"');
+    expect(middleware).not.toContain('"/sales"');
 
     const prefixesMatch =
       middleware.includes("pathname.startsWith(prefix)") ||

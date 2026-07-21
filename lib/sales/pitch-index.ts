@@ -6,13 +6,13 @@ export type PitchIndexEntry = {
   title: string;
   description: string;
   vertical: string;
-  /** When true, listed on /sales but not openable (greyed out). */
+  /** When true, listed but not openable (greyed out). */
   comingSoon?: boolean;
   /** Present for live decks; omitted or unused when comingSoon. */
   deck?: SolutionSlideDeck;
 };
 
-/** Canonical list of pitch routes linked from /sales — platform only for now. */
+/** Canonical list of pitch routes — platform only for now. */
 export const PITCH_INDEX: PitchIndexEntry[] = [
   {
     path: "/pitch",

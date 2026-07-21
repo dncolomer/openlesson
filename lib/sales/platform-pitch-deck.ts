@@ -27,9 +27,28 @@ function sectionTitle(
 }
 
 /**
- * Platform pitch = section title before each block, founder first.
+ * Platform pitch = cover + TOC, then section title before each block.
  * Sections: Founder · What is Uncertain Systems? · How do we ensure high quality data? · Data Privacy and Confidential Learning · Our products
  */
+const PLATFORM_OPEN: SalesSlide[] = [
+  sectionTitle("Uncertain Systems", {
+    backgroundImage: PITCH_ASSETS.aesthetics.title,
+  }),
+  {
+    layout: "bullets",
+    kicker: "Agenda",
+    title: "Table of contents",
+    backgroundImage: PITCH_ASSETS.aesthetics.title,
+    bullets: [
+      "Founder",
+      "What is Uncertain Systems?",
+      "How do we ensure high quality data?",
+      "Data Privacy and Confidential Learning",
+      "Our products",
+    ],
+  },
+];
+
 const PLATFORM_FOUNDER: SalesSlide[] = [
   sectionTitle("Founder", {
     backgroundImage: PITCH_ASSETS.aesthetics.founder,
@@ -228,5 +247,11 @@ export const PLATFORM_PITCH_DECK: SolutionSlideDeck = {
   vertical: "pitch",
   label: "Platform Pitch",
   backgroundImage: PITCH_ASSETS.aesthetics.science,
-  slides: [...PLATFORM_FOUNDER, ...PLATFORM_THESIS, ...PLATFORM_METHOD, ...PLATFORM_CLOSE],
+  slides: [
+    ...PLATFORM_OPEN,
+    ...PLATFORM_FOUNDER,
+    ...PLATFORM_THESIS,
+    ...PLATFORM_METHOD,
+    ...PLATFORM_CLOSE,
+  ],
 };

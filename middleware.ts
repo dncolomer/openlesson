@@ -24,7 +24,6 @@ const SUBSCRIPTION_EXEMPT_PREFIXES = [
   "/use-cases",
   "/products",
   "/pitch",
-  "/sales",
   "/new-design",
   "/marketing/",
   "/click-moments/",

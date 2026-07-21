@@ -46,7 +46,7 @@ const PLATFORM_THESIS: SalesSlide[] = [
     kicker: "Our thesis",
     title: "Knowledge cannot be measured as a ratio of correct test answers.",
     subtitle:
-      "We need a measurement system based on knowledge configuration space — not hand-crafted rubrics of “knows X.”",
+      "We need a measurement system based on something abstracted away from pure result samples.",
     backgroundImage: PITCH_ASSETS.aesthetics.science,
     // Lead-in above the three concept boxes (rendered before CardGrid on statement layout).
     highlights: [

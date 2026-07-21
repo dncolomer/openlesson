@@ -575,7 +575,9 @@ describe("pitch deck content (platform only)", () => {
     expect(platformThesis).toBeTruthy();
     expect(platformThesis!.kicker?.toLowerCase()).toMatch(/our thesis/);
     expect(platformThesis!.title.toLowerCase()).toMatch(/ratio of correct|correct (test )?answers/);
-    expect(platformThesis!.subtitle?.toLowerCase()).toMatch(/knowledge configuration space/);
+    expect(platformThesis!.subtitle?.toLowerCase()).toMatch(
+      /abstracted away from pure result samples/,
+    );
     expect(platformThesis!.cards).toHaveLength(3);
     expect(platformThesis!.cards?.map((c) => c.label.toLowerCase())).toEqual([
       "configuration space",

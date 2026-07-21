@@ -58,16 +58,16 @@ const PLATFORM_THESIS: SalesSlide[] = [
     highlightImageSources: ["Source: flywire.ai"],
     cards: [
       {
-        label: "Configuration space",
-        body: "Beyond the brain — tools, workplace, applied context.",
-        image: "/mechaarm2.jpg",
-        imageAlt: "Configuration space — proximity to a cognitive target",
-      },
-      {
         label: "Proof of Work proxy",
         body: "Accredited expert work as the signal we can capture.",
         image: "/terrance.png",
         imageAlt: "Proof of Work — expert signal",
+      },
+      {
+        label: "Configuration space",
+        body: "Beyond the brain — tools, workplace, applied context.",
+        image: "/mechaarm2.jpg",
+        imageAlt: "Configuration space — proximity to a cognitive target",
       },
       {
         label: "Distance to “knowing X”",

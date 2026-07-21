@@ -580,8 +580,8 @@ describe("pitch deck content (platform only)", () => {
     );
     expect(platformThesis!.cards).toHaveLength(3);
     expect(platformThesis!.cards?.map((c) => c.label.toLowerCase())).toEqual([
-      "configuration space",
       "proof of work proxy",
+      "configuration space",
       "distance to “knowing x”",
     ]);
     // Cards stay scannable; small images replace the old four bullets.
@@ -591,8 +591,8 @@ describe("pitch deck content (platform only)", () => {
       expect(card.image?.trim().length).toBeGreaterThan(0);
     }
     expect(platformThesis!.cards?.map((c) => c.image)).toEqual([
-      "/mechaarm2.jpg",
       "/terrance.png",
+      "/mechaarm2.jpg",
       "/embeddings.png",
     ]);
     // No non-empty bullet list under the cards

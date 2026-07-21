@@ -50,7 +50,7 @@ const PLATFORM_THESIS: SalesSlide[] = [
     backgroundImage: PITCH_ASSETS.aesthetics.science,
     // Lead-in above the three concept boxes (rendered before CardGrid on statement layout).
     highlights: [
-      "Treat “knows X” as a function of inputs — not a binary score. Those inputs cannot be hand-picked: the degrees of freedom of cognition alone are intractable, let alone measured or computed on.",
+      "Treat “Knowing <X>” as a function of inputs — not a binary score. Those inputs cannot be hand-picked: the degrees of freedom of cognition alone are intractable, let alone measured or computed on.",
     ],
     highlightLabels: ["The Hypothesis"],
     highlightImages: ["/flywire.png"],

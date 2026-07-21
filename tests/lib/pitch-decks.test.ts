@@ -608,6 +608,7 @@ describe("pitch deck content (platform only)", () => {
     // Flywire image on the left of the lead-in box + source credit
     expect(platformThesis!.highlightImages?.[0]).toBe("/flywire.png");
     expect(platformThesis!.highlightImageSources?.[0]?.toLowerCase()).toMatch(/flywire\.ai/);
+    expect(platformThesis!.highlightLabels?.[0]).toMatch(/the hypothesis/i);
     expect(publicAssetExists("/flywire.png")).toBe(true);
     expect(deckUi).toContain("data-pitch-highlight-image");
     expect(deckUi).toContain("data-pitch-highlight-source");
@@ -690,9 +691,10 @@ describe("pitch deck content (platform only)", () => {
     const platformHighlights = PLATFORM_PITCH_DECK.slides.filter(
       (s) => (s.highlights?.length ?? 0) > 0 && (s.highlightLabels?.length ?? 0) > 0,
     );
-    // Thesis uses three cards; method / productized / privacy still use highlights.
+    // Thesis lead-in + method / privacy slides use labeled highlights.
     expect(platformHighlights.length).toBeGreaterThanOrEqual(3);
-    expect(platformHighlights.every((s) => !/our thesis/i.test(s.kicker ?? ""))).toBe(true);
+    const thesisLabeled = platformHighlights.find((s) => /our thesis/i.test(s.kicker ?? ""));
+    expect(thesisLabeled?.highlightLabels?.[0]).toMatch(/the hypothesis/i);
   });
 
   it("media layout is side-by-side grid; Karpathy media + TAP video media on platform", () => {

@@ -56,6 +56,9 @@ function collectImagePaths(deck: SolutionSlideDeck): string[] {
   for (const slide of deck.slides) {
     if (slide.backgroundImage) paths.add(slide.backgroundImage);
     if (slide.image) paths.add(slide.image);
+    for (const card of slide.cards ?? []) {
+      if (card.image) paths.add(card.image);
+    }
   }
   return [...paths];
 }
@@ -554,14 +557,20 @@ describe("pitch deck content (platform only)", () => {
     }
   });
 
-  it("platform Our thesis slide: short concept cards then supporting bullets", () => {
+  it("platform Our thesis slide: three concept cards with small images, no supporting bullets", () => {
     const deckUi = fs.readFileSync(path.join(REPO_ROOT, "components/SalesSlideDeck.tsx"), "utf8");
     expect(deckUi).toContain("CardGrid");
     expect(deckUi).toContain("data-pitch-card-grid");
-    expect(deckUi).toContain("data-pitch-bullet-list");
+    expect(deckUi).toContain("data-pitch-card-image");
+    expect(deckUi).toMatch(/card\.image/);
 
-    const platformThesis = PLATFORM_PITCH_DECK.slides.find((s) => /our thesis/i.test(s.kicker ?? ""));
+    // 0-based index 6 / 1-based slide 7 after founder block + section title
+    const founderCount = buildFounderSlides("platform").length;
+    const thesisIdx = 2 + founderCount;
+    expect(thesisIdx).toBe(6);
+    const platformThesis = PLATFORM_PITCH_DECK.slides[thesisIdx];
     expect(platformThesis).toBeTruthy();
+    expect(platformThesis!.kicker?.toLowerCase()).toMatch(/our thesis/);
     expect(platformThesis!.title.toLowerCase()).toMatch(/ratio of correct|correct (test )?answers/);
     expect(platformThesis!.subtitle?.toLowerCase()).toMatch(/knowledge configuration space/);
     expect(platformThesis!.cards).toHaveLength(3);
@@ -570,17 +579,47 @@ describe("pitch deck content (platform only)", () => {
       "proof of work proxy",
       "distance to “knowing x”",
     ]);
-    // Cards stay scannable; depth lives in bullets underneath.
+    // Cards stay scannable; small images replace the old four bullets.
     for (const card of platformThesis!.cards ?? []) {
       expect(card.body?.trim().length).toBeGreaterThan(10);
       expect(card.body!.trim().length).toBeLessThan(90);
+      expect(card.image?.trim().length).toBeGreaterThan(0);
     }
-    expect(platformThesis!.bullets?.length).toBeGreaterThanOrEqual(3);
+    expect(platformThesis!.cards?.map((c) => c.image)).toEqual([
+      "/mechaarm2.jpg",
+      "/terrance.png",
+      "/embeddings.png",
+    ]);
+    // No non-empty bullet list under the cards
+    const nonEmptyBullets = (platformThesis!.bullets ?? []).filter((b) => b.trim().length > 0);
+    expect(nonEmptyBullets).toHaveLength(0);
+
+    // Lead-in text section above the three boxes: knowledge-as-function + intractability
+    expect(platformThesis!.highlights?.length).toBeGreaterThanOrEqual(1);
+    const leadIn = (platformThesis!.highlights ?? []).join(" ").toLowerCase();
+    expect(leadIn).toMatch(/function/);
+    expect(leadIn).toMatch(/intractable|hand-pick|hand.?craft/);
+    expect(leadIn).toMatch(/measure|comput/);
+    // Statement layout renders highlights before CardGrid (above the boxes)
+    const statementBranch = deckUi.slice(deckUi.indexOf('slide.layout === "statement"'));
+    const highlightsAt = statementBranch.indexOf("HighlightCallouts");
+    const cardGridAt = statementBranch.indexOf("<CardGrid");
+    expect(highlightsAt).toBeGreaterThan(-1);
+    expect(cardGridAt).toBeGreaterThan(-1);
+    expect(highlightsAt).toBeLessThan(cardGridAt);
+
+    // Same assets as fullImage slides 8 and 9 (1-based); terrance is middle-only
+    expect(PLATFORM_PITCH_DECK.slides[thesisIdx + 1]?.image).toBe("/mechaarm2.jpg");
+    expect(PLATFORM_PITCH_DECK.slides[thesisIdx + 2]?.image).toBe("/embeddings.png");
+    for (const asset of ["/mechaarm2.jpg", "/terrance.png", "/embeddings.png"]) {
+      expect(publicAssetExists(asset), `missing public asset: ${asset}`).toBe(true);
+    }
+
     const thesisCorpus = [
       platformThesis!.title,
       platformThesis!.subtitle,
+      ...(platformThesis!.highlights ?? []),
       ...(platformThesis!.cards ?? []).flatMap((c) => [c.label, c.body]),
-      ...(platformThesis!.bullets ?? []),
     ]
       .join("\n")
       .toLowerCase();
@@ -588,13 +627,14 @@ describe("pitch deck content (platform only)", () => {
     expect(thesisCorpus).toMatch(/proof of work|pow/);
     expect(thesisCorpus).toMatch(/embedding|distance/);
     expect(thesisCorpus).toMatch(/tools/);
-    expect(thesisCorpus).toMatch(/intractable|proxy|ways of thinking/);
+    expect(thesisCorpus).toMatch(/proxy/);
+    expect(thesisCorpus).toMatch(/function/);
+    expect(thesisCorpus).toMatch(/intractable/);
 
     // Thesis comes after Founder title + founder slides + What is Uncertain Systems? title
-    const founderCount = buildFounderSlides("platform").length;
     expect(PLATFORM_PITCH_DECK.slides[0]?.title).toBe("Founder");
     expect(PLATFORM_PITCH_DECK.slides[1 + founderCount]?.title).toMatch(/What is Uncertain Systems\?/);
-    expect(PLATFORM_PITCH_DECK.slides[2 + founderCount]).toBe(platformThesis);
+    expect(PLATFORM_PITCH_DECK.slides[thesisIdx]).toBe(platformThesis);
   });
 
   it("pitch slide copy avoids mocking theater/theatre framing", () => {

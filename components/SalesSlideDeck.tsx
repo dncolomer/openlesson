@@ -204,6 +204,8 @@ function CardGrid({
     label: string;
     body?: string;
     ideas?: Array<{ title: string; body: string }>;
+    image?: string;
+    imageAlt?: string;
   }>;
   /** Stretch cards to fill remaining slide height (e.g. products stack). */
   fill?: boolean;
@@ -253,6 +255,19 @@ function CardGrid({
               {card.body}
             </p>
           )}
+          {card.image ? (
+            <div
+              data-pitch-card-image
+              className="mt-2.5 shrink-0 overflow-hidden rounded border border-white/15 bg-black/40 sm:mt-3"
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element -- pitch deck public assets */}
+              <img
+                src={card.image}
+                alt={card.imageAlt ?? card.label}
+                className="mx-auto h-20 w-full max-h-24 object-cover object-center sm:h-24 sm:max-h-28"
+              />
+            </div>
+          ) : null}
           {card.ideas && card.ideas.length > 0 ? (
             <div
               data-pitch-idea-list
@@ -569,15 +584,16 @@ function SlideContent({ slide }: { slide: SalesSlide }) {
           {slide.subtitle && (
             <p className={isProducts2x2 ? SUBTITLE_COMPACT : SUBTITLE}>{slide.subtitle}</p>
           )}
+          {/* Lead-in / callouts sit above concept boxes when both are present. */}
+          {slide.highlights && slide.highlights.length > 0 && (
+            <HighlightCallouts items={slide.highlights} labels={slide.highlightLabels} />
+          )}
           {slide.cards && slide.cards.length > 0 && (
             <CardGrid
               cards={slide.cards}
               fill={isProductsStack}
               twoByTwo={isProducts2x2}
             />
-          )}
-          {slide.highlights && slide.highlights.length > 0 && (
-            <HighlightCallouts items={slide.highlights} labels={slide.highlightLabels} />
           )}
           {/* Products 2×2 keeps all copy inside cards — never bullets under the grid. */}
           {!isProducts2x2 && slide.bullets && slide.bullets.length > 0 && (

@@ -48,26 +48,31 @@ const PLATFORM_THESIS: SalesSlide[] = [
     subtitle:
       "We need a measurement system based on knowledge configuration space — not hand-crafted rubrics of “knows X.”",
     backgroundImage: PITCH_ASSETS.aesthetics.science,
+    // Lead-in above the three concept boxes (rendered before CardGrid on statement layout).
+    highlights: [
+      "Treat “knows X” as a function of inputs — not a binary score. Those inputs cannot be hand-picked: the degrees of freedom of cognition alone are intractable, let alone measured or computed on.",
+    ],
     cards: [
       {
         label: "Configuration space",
         body: "Beyond the brain — tools, workplace, applied context.",
+        image: "/mechaarm2.jpg",
+        imageAlt: "Configuration space — proximity to a cognitive target",
       },
       {
         label: "Proof of Work proxy",
         body: "Accredited expert work as the signal we can capture.",
+        image: "/terrance.png",
+        imageAlt: "Proof of Work — expert signal",
       },
       {
         label: "Distance to “knowing X”",
         body: "Embeddings + labeled regions instead of pass-rates.",
+        image: "/embeddings.png",
+        imageAlt: "High-dimensional embeddings with labeled knowing-X regions",
       },
     ],
-    bullets: [
-      "“Knows X” is a function of inputs we cannot hand-craft — the degrees of freedom of cognition alone are intractable.",
-      "We cannot fully model knowledge, but we can find solid proxies. Proof of Work from accredited experts is one.",
-      "Expert PoW → high-dimensional embeddings → regions labeled “knows X.”",
-      "Distance of new traces to those regions measures more than correctness: ways of thinking and tools used.",
-    ],
+    // No supporting bullets — lead-in + three concept cards + fullImage slides that follow.
   },
   {
     layout: "fullImage",

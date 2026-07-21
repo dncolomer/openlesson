@@ -33,6 +33,12 @@ export type SalesSlide = {
     body?: string;
     /** Nested idea boxes under the column title (e.g. product pitch use-case slide). */
     ideas?: Array<{ title: string; body: string }>;
+    /**
+     * Optional small in-card thumbnail (public path). Rendered thumbnail-scale
+     * inside the framed box — not full-stage media.
+     */
+    image?: string;
+    imageAlt?: string;
   }>;
   left?: { label: string; items: string[] };
   right?: { label: string; items: string[] };

@@ -113,9 +113,14 @@ function Eyebrow({ children }: { children: React.ReactNode }) {
 function BulletList({
   items,
   variant = "dot",
+  itemTargets,
+  onGoToSlide,
 }: {
   items: string[];
   variant?: "dot" | "number";
+  /** When set, items with a non-negative target index become clickable jump links. */
+  itemTargets?: Array<number | null | undefined>;
+  onGoToSlide?: (slideIndex: number) => void;
 }) {
   return (
     <ul
@@ -123,20 +128,59 @@ function BulletList({
       data-pitch-single-column
       className="mt-4 flex w-full flex-col gap-3 text-left sm:mt-5 sm:gap-3.5"
     >
-      {items.map((item, bulletIndex) => (
-        <li key={`${bulletIndex}-${item}`} className={`flex gap-3 ${BODY}`}>
-          {variant === "number" ? (
+      {items.map((item, bulletIndex) => {
+        const target = itemTargets?.[bulletIndex];
+        const clickable =
+          typeof target === "number" && target >= 0 && typeof onGoToSlide === "function";
+        const marker =
+          variant === "number" ? (
             <span className="mt-0.5 shrink-0 font-mono text-[0.85em] text-zinc-300">
               {bulletIndex + 1}.
             </span>
           ) : (
             <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-zinc-200/90" />
-          )}
-          <span className="min-w-0">{item}</span>
-        </li>
-      ))}
+          );
+
+        return (
+          <li key={`${bulletIndex}-${item}`} className={BODY}>
+            {clickable ? (
+              <button
+                type="button"
+                data-pitch-toc-link
+                data-pitch-toc-target={target}
+                onClick={() => onGoToSlide(target)}
+                className="flex w-full gap-3 rounded-md border border-transparent px-1 py-1 text-left transition hover:border-white/20 hover:bg-white/[0.06] hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-300/70"
+              >
+                {marker}
+                <span className="min-w-0 underline decoration-white/25 underline-offset-4">
+                  {item}
+                </span>
+              </button>
+            ) : (
+              <div className="flex gap-3">
+                {marker}
+                <span className="min-w-0">{item}</span>
+              </div>
+            )}
+          </li>
+        );
+      })}
     </ul>
   );
+}
+
+/** Resolve TOC (or any bullet) labels to slide indices by matching title slides. */
+function resolveBulletSlideTargets(
+  items: string[] | undefined,
+  deckSlides: SalesSlide[],
+): Array<number | null> {
+  if (!items?.length) return [];
+  return items.map((item) => {
+    const idx = deckSlides.findIndex(
+      (s) => s.layout === "title" && s.title.trim() === item.trim(),
+    );
+    return idx >= 0 ? idx : null;
+  });
 }
 
 /**
@@ -395,7 +439,15 @@ function StackedSections({
   );
 }
 
-function SlideContent({ slide }: { slide: SalesSlide }) {
+function SlideContent({
+  slide,
+  deckSlides = [],
+  onGoToSlide,
+}: {
+  slide: SalesSlide;
+  deckSlides?: SalesSlide[];
+  onGoToSlide?: (slideIndex: number) => void;
+}) {
   if (slide.layout === "title") {
     // Section title beats: true center both axes (dedicated shell, not ContentPanel overrides).
     return (
@@ -655,6 +707,8 @@ function SlideContent({ slide }: { slide: SalesSlide }) {
   }
 
   if (slide.layout === "bullets") {
+    const tocTargets = resolveBulletSlideTargets(slide.bullets, deckSlides);
+    const hasTocLinks = tocTargets.some((t) => t !== null);
     return (
       <SlideFrame>
         <ContentPanel>
@@ -670,7 +724,13 @@ function SlideContent({ slide }: { slide: SalesSlide }) {
               imageSources={slide.highlightImageSources}
             />
           )}
-          {slide.bullets && slide.bullets.length > 0 && <BulletList items={slide.bullets} />}
+          {slide.bullets && slide.bullets.length > 0 && (
+            <BulletList
+              items={slide.bullets}
+              itemTargets={hasTocLinks ? tocTargets : undefined}
+              onGoToSlide={hasTocLinks ? onGoToSlide : undefined}
+            />
+          )}
         </ContentPanel>
       </SlideFrame>
     );
@@ -788,7 +848,13 @@ export function SalesSlideDeck({ deck }: SalesSlideDeckProps) {
 
       <main className="relative z-10 flex min-h-0 flex-1 flex-col overflow-hidden px-4 pb-2 pt-1 md:px-8 md:pb-3 md:pt-2 lg:px-10">
         <div key={index} className="sales-slide-enter flex min-h-0 w-full flex-1 overflow-hidden">
-          {slide && <SlideContent slide={slide} />}
+          {slide && (
+            <SlideContent
+              slide={slide}
+              deckSlides={deck.slides}
+              onGoToSlide={(slideIndex) => setIndex(slideIndex)}
+            />
+          )}
         </div>
       </main>
 

@@ -113,6 +113,17 @@ describe("pitch deck content (platform only)", () => {
       "Data Privacy and Confidential Learning",
       "Our products",
     ]);
+    // Each TOC item matches a title-layout section slide (click targets).
+    for (const item of PLATFORM_PITCH_DECK.slides[1]?.bullets ?? []) {
+      const targetIdx = PLATFORM_PITCH_DECK.slides.findIndex(
+        (s) => s.layout === "title" && s.title === item,
+      );
+      expect(targetIdx, `TOC missing title slide for: ${item}`).toBeGreaterThanOrEqual(0);
+    }
+    const deckUi = fs.readFileSync(path.join(REPO_ROOT, "components/SalesSlideDeck.tsx"), "utf8");
+    expect(deckUi).toContain("data-pitch-toc-link");
+    expect(deckUi).toContain("resolveBulletSlideTargets");
+    expect(deckUi).toContain("onGoToSlide");
 
     const sectionTitles = PLATFORM_PITCH_DECK.slides.filter((s) => s.layout === "title");
     expect(sectionTitles.map((s) => s.title)).toEqual([

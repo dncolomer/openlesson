@@ -264,7 +264,7 @@ function CardGrid({
               <img
                 src={card.image}
                 alt={card.imageAlt ?? card.label}
-                className="mx-auto h-20 w-full max-h-24 object-cover object-center sm:h-24 sm:max-h-28"
+                className="mx-auto h-auto w-full max-h-28 object-contain object-center sm:max-h-32"
               />
             </div>
           ) : null}

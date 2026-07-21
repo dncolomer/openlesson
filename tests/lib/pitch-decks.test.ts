@@ -95,10 +95,10 @@ describe("pitch deck content (platform only)", () => {
     assertNonEmptyTitles(PLATFORM_PITCH_DECK);
 
     const founderSlides = buildFounderSlides("platform");
-    // Section titles (5) + founder content + thesis (3) + method (2) + privacy×2 + products stack (1)
-    // = 1+founders + 1+3 + 1+2 + 1+2 + 1+1
+    // Section titles (5) + founder content + thesis (4: statement + terrance + mechaarm + embeddings)
+    // + method (2) + privacy×2 + products stack (1)
     expect(PLATFORM_PITCH_DECK.slides).toHaveLength(
-      5 + founderSlides.length + 3 + 2 + 2 + 1,
+      5 + founderSlides.length + 4 + 2 + 2 + 1,
     );
 
     const sectionTitles = PLATFORM_PITCH_DECK.slides.filter((s) => s.layout === "title");
@@ -124,11 +124,12 @@ describe("pitch deck content (platform only)", () => {
     const thesisStart = 1 + founderSlides.length;
     expect(PLATFORM_PITCH_DECK.slides[thesisStart]?.title).toMatch(/What is Uncertain Systems\?/);
     expect(PLATFORM_PITCH_DECK.slides[thesisStart + 1]?.kicker?.toLowerCase()).toMatch(/thesis/);
-    expect(PLATFORM_PITCH_DECK.slides[thesisStart + 2]?.image).toBe("/mechaarm2.jpg");
-    expect(PLATFORM_PITCH_DECK.slides[thesisStart + 3]?.image).toBe("/embeddings.png");
+    expect(PLATFORM_PITCH_DECK.slides[thesisStart + 2]?.image).toBe("/terrance.png");
+    expect(PLATFORM_PITCH_DECK.slides[thesisStart + 3]?.image).toBe("/mechaarm2.jpg");
+    expect(PLATFORM_PITCH_DECK.slides[thesisStart + 4]?.image).toBe("/embeddings.png");
 
     // Method section
-    const methodStart = thesisStart + 4;
+    const methodStart = thesisStart + 5;
     expect(PLATFORM_PITCH_DECK.slides[methodStart]?.title).toBe(
       "How do we collect high quality data?",
     );
@@ -207,20 +208,26 @@ describe("pitch deck content (platform only)", () => {
       publicAssetExists(thesisSlide?.backgroundImage ?? PLATFORM_PITCH_DECK.backgroundImage ?? ""),
     ).toBe(true);
 
-    const configSlide = PLATFORM_PITCH_DECK.slides[thesisTitleIdx + 2];
+    const terranceSlide = PLATFORM_PITCH_DECK.slides[thesisTitleIdx + 2];
+    expect(terranceSlide?.layout).toBe("fullImage");
+    expect(terranceSlide?.image).toBe("/terrance.png");
+    expect(publicAssetExists(terranceSlide?.image ?? "")).toBe(true);
+    expect(terranceSlide?.imageCaption?.trim().length).toBeGreaterThan(0);
+
+    const configSlide = PLATFORM_PITCH_DECK.slides[thesisTitleIdx + 3];
     expect(configSlide?.layout).toBe("fullImage");
     expect(configSlide?.image).toBe("/mechaarm2.jpg");
     expect(publicAssetExists(configSlide?.image ?? "")).toBe(true);
     expect(configSlide?.imageCaption?.trim().length).toBeGreaterThan(0);
 
-    const embeddingsSlide = PLATFORM_PITCH_DECK.slides[thesisTitleIdx + 3];
+    const embeddingsSlide = PLATFORM_PITCH_DECK.slides[thesisTitleIdx + 4];
     expect(embeddingsSlide?.layout).toBe("fullImage");
     expect(embeddingsSlide?.image).toBe("/embeddings.png");
     expect(publicAssetExists(embeddingsSlide?.image ?? "")).toBe(true);
     expect(embeddingsSlide?.imageCaption?.trim().length).toBeGreaterThan(0);
 
     // Method section title + TAP media
-    const methodTitleIdx = thesisTitleIdx + 4;
+    const methodTitleIdx = thesisTitleIdx + 5;
     expect(PLATFORM_PITCH_DECK.slides[methodTitleIdx]?.title).toBe(
       "How do we collect high quality data?",
     );
@@ -620,9 +627,10 @@ describe("pitch deck content (platform only)", () => {
     expect(cardGridAt).toBeGreaterThan(-1);
     expect(highlightsAt).toBeLessThan(cardGridAt);
 
-    // Same assets as fullImage slides 8 and 9 (1-based); terrance is middle-only
-    expect(PLATFORM_PITCH_DECK.slides[thesisIdx + 1]?.image).toBe("/mechaarm2.jpg");
-    expect(PLATFORM_PITCH_DECK.slides[thesisIdx + 2]?.image).toBe("/embeddings.png");
+    // Full-size follow-ons after thesis cards: terrance, mechaarm2, embeddings
+    expect(PLATFORM_PITCH_DECK.slides[thesisIdx + 1]?.image).toBe("/terrance.png");
+    expect(PLATFORM_PITCH_DECK.slides[thesisIdx + 2]?.image).toBe("/mechaarm2.jpg");
+    expect(PLATFORM_PITCH_DECK.slides[thesisIdx + 3]?.image).toBe("/embeddings.png");
     for (const asset of ["/mechaarm2.jpg", "/terrance.png", "/embeddings.png"]) {
       expect(publicAssetExists(asset), `missing public asset: ${asset}`).toBe(true);
     }

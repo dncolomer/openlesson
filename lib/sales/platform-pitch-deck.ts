@@ -80,6 +80,14 @@ const PLATFORM_THESIS: SalesSlide[] = [
   },
   {
     layout: "fullImage",
+    title: "Proof of Work · expert signal",
+    backgroundImage: PITCH_ASSETS.aesthetics.science,
+    image: "/terrance.png",
+    imageAlt: "Proof of Work — expert signal",
+    imageCaption: "Proof of Work · expert signal",
+  },
+  {
+    layout: "fullImage",
     title: "Knowledge config · proximity model",
     backgroundImage: PITCH_ASSETS.aesthetics.science,
     image: "/mechaarm2.jpg",

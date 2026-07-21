@@ -52,6 +52,12 @@ export type SalesSlide = {
     image?: string;
     imageAlt?: string;
   }>;
+  /**
+   * Card arrangement override for statement slides.
+   * - `product-stack`: top TAP|ILE 50/50, then Stash full-width, PoW full-width at bottom.
+   *   Expect cards ordered [TAP, ILE, Stash API, PoW API].
+   */
+  cardLayout?: "product-stack";
   left?: { label: string; items: string[] };
   right?: { label: string; items: string[] };
   footnote?: string;

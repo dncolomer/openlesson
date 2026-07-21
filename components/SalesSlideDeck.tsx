@@ -275,25 +275,159 @@ function IdeaIcon() {
   );
 }
 
+type PitchCard = {
+  label: string;
+  body?: string;
+  ideas?: Array<{ title: string; body: string }>;
+  image?: string;
+  imageAlt?: string;
+};
+
+function PitchCardArticle({
+  card,
+  fill = false,
+  compactBody = false,
+}: {
+  card: PitchCard;
+  fill?: boolean;
+  /** Smaller body type when cards sit in a dense multi-cell grid. */
+  compactBody?: boolean;
+}) {
+  const hasIdeas = (card.ideas?.length ?? 0) > 0;
+  return (
+    <article
+      data-pitch-card
+      className={`flex min-h-0 flex-col overflow-hidden rounded-md border border-white/25 bg-black/55 p-3 shadow-[0_16px_40px_rgba(0,0,0,0.35)] backdrop-blur-sm sm:p-4 md:p-5 ${
+        fill ? "h-full min-h-0" : "h-full"
+      }`}
+    >
+      <p className="shrink-0 font-mono text-[10px] font-semibold uppercase tracking-[1.8px] text-cyan-200/90 sm:text-[11px]">
+        {card.label}
+      </p>
+      {card.body && (
+        <p
+          className={`mt-1.5 shrink-0 whitespace-pre-line font-medium leading-snug text-white sm:mt-2 ${
+            compactBody && hasIdeas
+              ? "text-[clamp(0.78rem,0.28vw+0.72rem,0.98rem)] text-zinc-100"
+              : hasIdeas
+                ? "text-[clamp(0.92rem,0.35vw+0.82rem,1.1rem)] text-zinc-100"
+                : "text-[clamp(0.95rem,0.4vw+0.85rem,1.15rem)]"
+          }`}
+        >
+          {card.body}
+        </p>
+      )}
+      {card.image ? (
+        <div
+          data-pitch-card-image
+          className="mt-2.5 shrink-0 overflow-hidden rounded border border-white/15 bg-black/40 sm:mt-3"
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element -- pitch deck public assets */}
+          <img
+            src={card.image}
+            alt={card.imageAlt ?? card.label}
+            className="mx-auto h-auto w-full max-h-28 object-contain object-center sm:max-h-32"
+          />
+        </div>
+      ) : null}
+      {card.ideas && card.ideas.length > 0 ? (
+        <div
+          data-pitch-idea-list
+          className={`mt-2 flex min-h-0 flex-col gap-2 sm:mt-2.5 sm:gap-2.5 ${fill ? "flex-1" : ""}`}
+        >
+          {card.ideas.map((idea) => (
+            <div
+              key={`${card.label}-${idea.title}`}
+              data-pitch-idea
+              className={`min-h-0 overflow-hidden rounded-md border border-white/15 bg-white/[0.05] px-2.5 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] sm:px-3 sm:py-2.5 ${
+                fill ? "flex flex-1 flex-col" : ""
+              }`}
+            >
+              <div className="flex min-h-0 gap-2">
+                <IdeaIcon />
+                <div className="min-w-0 min-h-0 flex-1 overflow-hidden">
+                  <p
+                    className={`text-left font-semibold leading-snug text-white ${
+                      compactBody
+                        ? "text-[clamp(0.82rem,0.28vw+0.75rem,1rem)]"
+                        : "text-[clamp(0.95rem,0.4vw+0.85rem,1.12rem)]"
+                    }`}
+                  >
+                    {idea.title}
+                  </p>
+                  <p
+                    className={`mt-1 text-left leading-snug text-zinc-200 ${
+                      compactBody
+                        ? "text-[clamp(0.75rem,0.25vw+0.7rem,0.95rem)]"
+                        : "text-[clamp(0.88rem,0.32vw+0.78rem,1.05rem)]"
+                    }`}
+                  >
+                    {idea.body}
+                  </p>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : null}
+    </article>
+  );
+}
+
 /** Equal framed boxes for pillars / synergy steps (e.g. three verticals, 2×2 products). */
 function CardGrid({
   cards,
   fill = false,
   /** Force a 2×2 layout (products stack) instead of a 1×4 row. */
   twoByTwo = false,
+  /**
+   * Layer stack: top TAP|ILE 50/50, then Stash full-width, PoW foundation at bottom.
+   * Expects cards ordered [TAP, ILE, Stash API, PoW API].
+   */
+  productStack = false,
 }: {
-  cards: Array<{
-    label: string;
-    body?: string;
-    ideas?: Array<{ title: string; body: string }>;
-    image?: string;
-    imageAlt?: string;
-  }>;
+  cards: PitchCard[];
   /** Stretch cards to fill remaining slide height (e.g. products stack). */
   fill?: boolean;
   twoByTwo?: boolean;
+  productStack?: boolean;
 }) {
   const hasIdeas = cards.some((card) => (card.ideas?.length ?? 0) > 0);
+
+  if (productStack && cards.length === 4) {
+    const [topLeft, topRight, middle, bottom] = cards;
+    return (
+      <div
+        data-pitch-card-grid
+        data-pitch-card-grid-product-stack="true"
+        data-pitch-card-grid-fill={fill ? "true" : undefined}
+        className={`mt-3 flex w-full flex-col gap-2.5 text-left sm:mt-4 sm:gap-3 ${
+          fill ? "min-h-0 flex-1" : ""
+        }`}
+      >
+        <div
+          data-pitch-card-stack-row="top"
+          className={`grid grid-cols-2 gap-2.5 sm:gap-3 ${fill ? "min-h-0 flex-1" : ""}`}
+        >
+          <PitchCardArticle card={topLeft} fill={fill} />
+          <PitchCardArticle card={topRight} fill={fill} />
+        </div>
+        <div
+          data-pitch-card-stack-row="middle"
+          className={fill ? "min-h-0 flex-1" : undefined}
+        >
+          <PitchCardArticle card={middle} fill={fill} />
+        </div>
+        <div
+          data-pitch-card-stack-row="bottom"
+          className={fill ? "min-h-0 flex-1" : undefined}
+        >
+          <PitchCardArticle card={bottom} fill={fill} />
+        </div>
+      </div>
+    );
+  }
+
   const is2x2 = twoByTwo || cards.length === 4;
   const colClass = is2x2
     ? "grid-cols-2"
@@ -314,83 +448,12 @@ function CardGrid({
       }`}
     >
       {cards.map((card) => (
-        <article
+        <PitchCardArticle
           key={card.label}
-          data-pitch-card
-          className={`flex min-h-0 flex-col overflow-hidden rounded-md border border-white/25 bg-black/55 p-3 shadow-[0_16px_40px_rgba(0,0,0,0.35)] backdrop-blur-sm sm:p-4 md:p-5 ${
-            fill ? "h-full min-h-0" : "h-full"
-          }`}
-        >
-          <p className="shrink-0 font-mono text-[10px] font-semibold uppercase tracking-[1.8px] text-cyan-200/90 sm:text-[11px]">
-            {card.label}
-          </p>
-          {card.body && (
-            <p
-              className={`mt-1.5 shrink-0 whitespace-pre-line font-medium leading-snug text-white sm:mt-2 ${
-                is2x2 && hasIdeas
-                  ? "text-[clamp(0.78rem,0.28vw+0.72rem,0.98rem)] text-zinc-100"
-                  : hasIdeas
-                    ? "text-[clamp(0.92rem,0.35vw+0.82rem,1.1rem)] text-zinc-100"
-                    : "text-[clamp(0.95rem,0.4vw+0.85rem,1.15rem)]"
-              }`}
-            >
-              {card.body}
-            </p>
-          )}
-          {card.image ? (
-            <div
-              data-pitch-card-image
-              className="mt-2.5 shrink-0 overflow-hidden rounded border border-white/15 bg-black/40 sm:mt-3"
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element -- pitch deck public assets */}
-              <img
-                src={card.image}
-                alt={card.imageAlt ?? card.label}
-                className="mx-auto h-auto w-full max-h-28 object-contain object-center sm:max-h-32"
-              />
-            </div>
-          ) : null}
-          {card.ideas && card.ideas.length > 0 ? (
-            <div
-              data-pitch-idea-list
-              className={`mt-2 flex min-h-0 flex-col gap-2 sm:mt-2.5 sm:gap-2.5 ${fill ? "flex-1" : ""}`}
-            >
-              {card.ideas.map((idea) => (
-                <div
-                  key={`${card.label}-${idea.title}`}
-                  data-pitch-idea
-                  className={`min-h-0 overflow-hidden rounded-md border border-white/15 bg-white/[0.05] px-2.5 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] sm:px-3 sm:py-2.5 ${
-                    fill ? "flex flex-1 flex-col" : ""
-                  }`}
-                >
-                  <div className="flex min-h-0 gap-2">
-                    <IdeaIcon />
-                    <div className="min-w-0 min-h-0 flex-1 overflow-hidden">
-                      <p
-                        className={`text-left font-semibold leading-snug text-white ${
-                          is2x2
-                            ? "text-[clamp(0.82rem,0.28vw+0.75rem,1rem)]"
-                            : "text-[clamp(0.95rem,0.4vw+0.85rem,1.12rem)]"
-                        }`}
-                      >
-                        {idea.title}
-                      </p>
-                      <p
-                        className={`mt-1 text-left leading-snug text-zinc-200 ${
-                          is2x2
-                            ? "text-[clamp(0.75rem,0.25vw+0.7rem,0.95rem)]"
-                            : "text-[clamp(0.88rem,0.32vw+0.78rem,1.05rem)]"
-                        }`}
-                      >
-                        {idea.body}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : null}
-        </article>
+          card={card}
+          fill={fill}
+          compactBody={is2x2}
+        />
       ))}
     </div>
   );
@@ -660,11 +723,15 @@ function SlideContent({
     // Single-product idea slides (one card with nested ideas) must fit without scroll.
     const isSingleProductIdeas =
       slide.cards?.length === 1 && (slide.cards[0]?.ideas?.length ?? 0) > 0;
-    // Product stack cards with examples (3 or 4) — fill the stage; 4 → 2×2, no bullets.
+    // Layer stack (TAP|ILE → Stash → PoW) or legacy 2×2 idea cards — fill the stage.
+    const isProductLayerStack = slide.cardLayout === "product-stack";
     const isProductsStack =
-      (slide.cards?.length === 3 || slide.cards?.length === 4) &&
-      slide.cards.every((c) => (c.ideas?.length ?? 0) >= 1);
-    const isProducts2x2 = isProductsStack && slide.cards?.length === 4;
+      isProductLayerStack ||
+      ((slide.cards?.length === 3 || slide.cards?.length === 4) &&
+        slide.cards.every((c) => (c.ideas?.length ?? 0) >= 1));
+    const isProducts2x2 =
+      !isProductLayerStack && isProductsStack && slide.cards?.length === 4;
+    const isProductsDense = isProductLayerStack || isProducts2x2;
 
     return (
       <SlideFrame>
@@ -676,9 +743,9 @@ function SlideContent({
           }
         >
           {slide.kicker && <Eyebrow>{slide.kicker}</Eyebrow>}
-          <h2 className={isProducts2x2 ? TITLE_H2_COMPACT : TITLE_H2}>{slide.title}</h2>
+          <h2 className={isProductsDense ? TITLE_H2_COMPACT : TITLE_H2}>{slide.title}</h2>
           {slide.subtitle && (
-            <p className={isProducts2x2 ? SUBTITLE_COMPACT : SUBTITLE}>{slide.subtitle}</p>
+            <p className={isProductsDense ? SUBTITLE_COMPACT : SUBTITLE}>{slide.subtitle}</p>
           )}
           {/* Lead-in / callouts sit above concept boxes when both are present. */}
           {slide.highlights && slide.highlights.length > 0 && (
@@ -695,10 +762,11 @@ function SlideContent({
               cards={slide.cards}
               fill={isProductsStack}
               twoByTwo={isProducts2x2}
+              productStack={isProductLayerStack}
             />
           )}
-          {/* Products 2×2 keeps all copy inside cards — never bullets under the grid. */}
-          {!isProducts2x2 && slide.bullets && slide.bullets.length > 0 && (
+          {/* Product stacks keep all copy inside cards — never bullets under the grid. */}
+          {!isProductsDense && slide.bullets && slide.bullets.length > 0 && (
             <BulletList items={slide.bullets} />
           )}
         </ContentPanel>

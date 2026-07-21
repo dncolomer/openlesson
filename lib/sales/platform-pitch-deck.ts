@@ -196,50 +196,26 @@ const PLATFORM_CLOSE: SalesSlide[] = [
     subtitle:
       "PoW API, Think Aloud Protocol, ILE, and Stash API are different surfaces for the same knowledge configuration model — measure proximity to “knowing X,” not quiz pass rates.",
     backgroundImage: PITCH_ASSETS.aesthetics.useCase,
+    // Visual stack top→bottom: TAP|ILE shared layer → Stash → PoW foundation.
+    cardLayout: "product-stack",
     cards: [
       {
-        label: "PoW API",
-        body: "Pipe real work and agent traces into scoring endpoints. Capability gates in product, CI, and hiring without a separate quiz stack.",
-        ideas: [
-          {
-            title: "Dynamic SaaS onboarding",
-            body: "After signup, score the first real workflow — import, configure, ship a unit of value. Severity-ranked gaps open only the failed skill blocks; power users skip the checklist entirely.",
-          },
-        ],
-      },
-      {
         label: "TAP",
-        body: "Think Aloud Protocol externalizes genuine thinking under probe — for humans you hire, interview, or need to verify live.",
-        ideas: [
-          {
-            title: "TAP-cha",
-            body: "A short Think Aloud that proves a live human is behind the keyboard: hesitations, self-corrections, and causal answers under probe that AI-fed polish cannot fake.",
-          },
-        ],
+        body: "Think Aloud Protocol — live probes that externalize genuine human reasoning under pressure.",
       },
       {
         label: "ILE",
-        body: "Integrated Learning Environment — coached practice that closes the gaps verification found, in-product, under the same markers.",
-        ideas: [
-          {
-            title: "Onboarding repair loops",
-            body: "When PoW flags a failed skill, drop the learner into a coached scenario for that block only. Practice until the marker moves — then return them to product.",
-          },
-        ],
+        body: "Integrated Learning Environment — coached practice that closes gaps verification found.",
       },
       {
         label: "Stash API",
-        // Same content as landing ProductTable Stash API row (pitch + description).
-        body: "Evaluate Agentic Knowledge by probing their Systems 1 and 2 traces",
-        ideas: [
-          {
-            title: "Pure-API Think Aloud for agents",
-            body: "Buffer agent proof of work, then Stash (System 1) or Submit (System 2) into the regular PoW API — pure-API Think Aloud for agents.",
-          },
-        ],
+        body: "Buffer agent proof of work, then Stash (System 1) or Submit (System 2) into PoW — Think Aloud for agents.",
+      },
+      {
+        label: "PoW API",
+        body: "Score real work and agent traces at the API layer — the measurement foundation every product shares.",
       },
     ],
-    // No bullets under the 2×2 product grid — all copy lives in the four cards (no-scroll stage).
   },
 ];
 

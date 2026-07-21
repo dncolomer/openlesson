@@ -183,11 +183,12 @@ describe("pitch deck content (platform only)", () => {
     expect(PLATFORM_PITCH_DECK.slides[closeStart + 4]?.kicker?.toLowerCase()).toMatch(
       /our products/,
     );
+    expect(PLATFORM_PITCH_DECK.slides[closeStart + 4]?.cardLayout).toBe("product-stack");
     expect(PLATFORM_PITCH_DECK.slides[closeStart + 4]?.cards?.map((c) => c.label.toLowerCase())).toEqual([
-      "pow api",
       "tap",
       "ile",
       "stash api",
+      "pow api",
     ]);
     // Former “One interface: Proof of Work with stash / submit” slide is gone
     expect(
@@ -295,42 +296,35 @@ describe("pitch deck content (platform only)", () => {
 
     const productsTitleIdx = dataTitleIdx + 3;
     expect(PLATFORM_PITCH_DECK.slides[productsTitleIdx]?.title).toBe("Our products");
-    // Four-product stack only (interface slide removed)
+    // Four-product layer stack: TAP|ILE top → Stash → PoW bottom (no integration examples)
     const productsSlide = PLATFORM_PITCH_DECK.slides[productsTitleIdx + 1];
     expect(productsSlide?.layout).toBe("statement");
     expect(productsSlide?.kicker?.toLowerCase()).toMatch(/our products/);
     expect(productsSlide?.title.toLowerCase()).toMatch(/four products/);
+    expect(productsSlide?.cardLayout).toBe("product-stack");
     expect(productsSlide?.cards?.map((c) => c.label.toLowerCase())).toEqual([
-      "pow api",
       "tap",
       "ile",
       "stash api",
+      "pow api",
     ]);
     expect(productsSlide?.cards).toHaveLength(4);
     for (const card of productsSlide?.cards ?? []) {
-      expect(card.body?.trim().length).toBeGreaterThan(40);
-      expect(card.ideas?.length).toBe(1);
-      expect(card.ideas?.[0]?.title.trim().length).toBeGreaterThan(0);
-      expect(card.ideas?.[0]?.body.trim().length).toBeGreaterThan(40);
+      expect(card.body?.trim().length).toBeGreaterThan(20);
+      expect(card.ideas ?? []).toHaveLength(0);
     }
-    // 2×2 product grid only — no bullets outside the cards (no-scroll stage)
+    // Layer stack only — no bullets outside the cards (no-scroll stage)
     expect(productsSlide?.bullets ?? []).toHaveLength(0);
     const productsCorpus = [
       productsSlide?.subtitle,
-      ...(productsSlide?.cards ?? []).flatMap((c) => [
-        c.label,
-        c.body,
-        ...(c.ideas ?? []).flatMap((i) => [i.title, i.body]),
-      ]),
+      ...(productsSlide?.cards ?? []).flatMap((c) => [c.label, c.body]),
     ]
       .join("\n")
       .toLowerCase();
     expect(productsCorpus).toMatch(/pow api/);
-    expect(productsCorpus).toMatch(/dynamic saas onboarding|dynamic onboarding/);
-    expect(productsCorpus).toMatch(/tap-cha/);
-    expect(productsCorpus).toMatch(/onboarding repair|repair loop/);
+    expect(productsCorpus).toMatch(/think aloud protocol/);
+    expect(productsCorpus).toMatch(/integrated learning environment/);
     expect(productsCorpus).toMatch(/stash api/);
-    expect(productsCorpus).toMatch(/evaluate agentic knowledge|systems? 1 and 2/);
     expect(productsCorpus).toMatch(/buffer agent proof of work|stash \(system 1\)|submit \(system 2\)/);
     expect(productsCorpus).toMatch(/knowledge config|measurement/);
     expect(
@@ -343,9 +337,9 @@ describe("pitch deck content (platform only)", () => {
       path.join(REPO_ROOT, "components/SalesSlideDeck.tsx"),
       "utf8",
     );
-    expect(deckUiProducts).toContain("data-pitch-card-grid-2x2");
+    expect(deckUiProducts).toContain("data-pitch-card-grid-product-stack");
     expect(deckUiProducts).toMatch(/grid-cols-2/);
-    expect(deckUiProducts).toMatch(/isProducts2x2/);
+    expect(deckUiProducts).toMatch(/productStack|isProductLayerStack/);
 
     const deckUi = fs.readFileSync(path.join(REPO_ROOT, "components/SalesSlideDeck.tsx"), "utf8");
     expect(deckUi).toContain("data-pitch-idea");
@@ -573,9 +567,9 @@ describe("pitch deck content (platform only)", () => {
       "proximity",
       "stash",
       "submit",
-      "tap-cha",
       "ile",
       "stash api",
+      "pow api",
     ]) {
       expect(platformText).toContain(anchor);
     }

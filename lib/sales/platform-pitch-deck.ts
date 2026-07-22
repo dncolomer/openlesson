@@ -175,7 +175,7 @@ const PLATFORM_METHOD: SalesSlide[] = [
   {
     layout: "media",
     kicker: "What is Proof of Work Data?",
-    title: "Real World Grounded and extremely hard to game",
+    title: "Real World Grounded and impossible to game in practice",
     subtitle:
       "The protocol stays tool-agnostic and enforces purity so sessions remain verifiable even under real AI use.",
     backgroundImage: PITCH_ASSETS.aesthetics.products,

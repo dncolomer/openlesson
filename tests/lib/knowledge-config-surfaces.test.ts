@@ -130,6 +130,13 @@ describe("knowledge config / LWM feature surfaces", () => {
     expect(lwm).toContain("data-lwm-last-updated");
     expect(lwm).toContain("Last snapshot");
     expect(lwm).toMatch(/lwmUpdatedLabel|last_eval_at|as_of/);
+    // Split layout: controls + LWM vs embeddings copy | skill card
+    expect(lwm).toContain("data-lwm-split-layout");
+    expect(lwm).toContain("data-lwm-controls-column");
+    expect(lwm).toContain("data-lwm-card-column");
+    expect(lwm).toContain("data-lwm-vs-embeddings");
+    expect(lwm).toMatch(/LWM \(this tab\)|symbolic skill card/);
+    expect(lwm).toMatch(/Embeddings \(Models tab\)|geometry over time/);
   });
 
   it("Embeddings region overlay picker is always mounted with visible control surface", () => {

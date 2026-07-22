@@ -1655,8 +1655,14 @@ export function KnowledgeConfigTrajectoryPanel({
       {showLwm ? (
       <SectionCard
         data-section="lwm"
-        description="Learning World Model for the selected user — LWM Snapshot score, GHC, evidence appetite, strengths, and exploration signals."
+        description="Select a user, generate a snapshot, and read the skill card on the right."
       >
+        <div
+          className="grid w-full gap-5 lg:grid-cols-2 lg:items-start lg:gap-6"
+          data-lwm-split-layout
+        >
+          {/* Left: user + controls + how to read LWM vs Embeddings */}
+          <div className="flex min-w-0 flex-col gap-4" data-lwm-controls-column>
         <UserPicker
           data-picker="lwm"
           ariaLabel="Learning world model user"
@@ -1705,6 +1711,44 @@ export function KnowledgeConfigTrajectoryPanel({
           ) : null}
         </div>
 
+        <button
+          type="button"
+          onClick={() => void loadLwm()}
+          disabled={lwmLoading}
+          className="w-full rounded-lg border border-neutral-700 px-3 py-2 text-xs text-neutral-300 transition hover:border-neutral-500 hover:text-white disabled:opacity-50"
+        >
+          {lwmLoading ? "Refreshing…" : "Refresh LWM"}
+        </button>
+
+        <div
+          className="rounded-xl border border-neutral-800 bg-neutral-950/60 p-4 text-xs leading-relaxed text-neutral-400"
+          data-lwm-vs-embeddings
+        >
+          <p className="font-mono text-[10px] font-semibold uppercase tracking-[1.4px] text-neutral-300">
+            How to read this
+          </p>
+          <p className="mt-2 text-neutral-300">
+            <span className="font-medium text-white">LWM (this tab)</span> is a{" "}
+            <span className="text-cyan-200/90">symbolic skill card</span>: score, strengths,
+            friction, evidence appetite, and exploration for one person at the last snapshot.
+            Use it when you want a scannable read of readiness and gaps.
+          </p>
+          <p className="mt-2">
+            <span className="font-medium text-white">Embeddings (Models tab)</span> is{" "}
+            <span className="text-violet-200/90">geometry over time</span>: fixed-dimension
+            knowledge configs projected in 2D, trajectories, and distance to knowledge regions.
+            Use it when you want motion, cohort regions, and proximity — not a prose profile.
+          </p>
+          <ul className="mt-3 list-disc space-y-1.5 pl-4 text-neutral-500">
+            <li>Same proof of work feeds both; LWM is the narrative scorecard.</li>
+            <li>Embeddings answer “where is this person in knowledge space?”</li>
+            <li>Generate a new snapshot after new PoW to refresh both.</li>
+          </ul>
+        </div>
+          </div>
+
+          {/* Right: skill card */}
+          <div className="min-w-0" data-lwm-card-column>
         {lwmError ? (
           <div className="rounded-lg border border-red-900/50 bg-red-950/30 px-3 py-2 text-xs text-red-300">
             {lwmError}
@@ -1874,15 +1918,8 @@ export function KnowledgeConfigTrajectoryPanel({
             </div>
           </div>
         )}
-
-        <button
-          type="button"
-          onClick={() => void loadLwm()}
-          disabled={lwmLoading}
-          className="w-full rounded-lg border border-neutral-700 px-3 py-2 text-xs text-neutral-300 transition hover:border-neutral-500 hover:text-white disabled:opacity-50"
-        >
-          {lwmLoading ? "Refreshing…" : "Refresh LWM"}
-        </button>
+          </div>
+        </div>
       </SectionCard>
       ) : null}
 

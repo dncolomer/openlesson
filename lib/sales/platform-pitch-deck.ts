@@ -245,3 +245,13 @@ export const PLATFORM_PITCH_DECK: SolutionSlideDeck = {
     ...PLATFORM_CLOSE,
   ],
 };
+
+/** Thesis / science hypothesis slide (1-based index 10 in the platform deck). */
+export const PLATFORM_THESIS_SLIDE_INDEX = 10 as const;
+
+/** 1-based slide index (slide 10 = thesis). Returns null if out of range. */
+export function getPlatformPitchSlide(oneBasedIndex: number) {
+  const idx = Math.trunc(oneBasedIndex) - 1;
+  if (idx < 0 || idx >= PLATFORM_PITCH_DECK.slides.length) return null;
+  return PLATFORM_PITCH_DECK.slides[idx];
+}

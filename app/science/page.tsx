@@ -1,8 +1,13 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { Footer } from "@/components/Footer";
 import { LandingNav } from "@/components/LandingNav";
+import {
+  getPlatformPitchSlide,
+  PLATFORM_THESIS_SLIDE_INDEX,
+} from "@/lib/sales/platform-pitch-deck";
 
 export const metadata: Metadata = {
   title: "Science",
@@ -52,6 +57,9 @@ const PRINCIPLES = [
   },
 ];
 
+/** Platform pitch slide 10 (thesis) — rendered at the top of /science. */
+const thesisSlide = getPlatformPitchSlide(PLATFORM_THESIS_SLIDE_INDEX);
+
 export default function SciencePage() {
   return (
     <main className="relative min-h-screen overflow-hidden bg-[#0a0a0a] text-zinc-200 selection:bg-zinc-700">
@@ -78,6 +86,108 @@ export default function SciencePage() {
           as the measure of knowing, and education technology as a path toward transformation with less wasted effort.
         </p>
       </section>
+
+      {/* Platform pitch slide 10 — Our thesis — at top of science content */}
+      {thesisSlide ? (
+        <section
+          id="science-thesis-slide"
+          data-science-pitch-slide={PLATFORM_THESIS_SLIDE_INDEX}
+          data-science-slide-kicker={thesisSlide.kicker ?? ""}
+          aria-labelledby="science-thesis-heading"
+          className="relative z-10 mx-auto max-w-6xl px-6 pb-10 sm:pb-12"
+        >
+          <article className="border border-zinc-800 bg-zinc-950/75 p-6 backdrop-blur-sm sm:p-8">
+            {thesisSlide.kicker ? (
+              <p className="mb-3 font-mono text-[10px] uppercase tracking-[2px] text-cyan-200/80">
+                {thesisSlide.kicker}
+              </p>
+            ) : null}
+            <h2
+              id="science-thesis-heading"
+              className="max-w-4xl text-2xl font-medium tracking-[-0.8px] text-white sm:text-3xl lg:text-[34px] lg:leading-tight"
+            >
+              {thesisSlide.title}
+            </h2>
+
+            {(thesisSlide.highlights ?? []).map((item, index) => {
+              const label = thesisSlide.highlightLabels?.[index];
+              const image = thesisSlide.highlightImages?.[index];
+              const imageAlt = thesisSlide.highlightImageAlts?.[index];
+              const imageSource = thesisSlide.highlightImageSources?.[index];
+              return (
+                <div
+                  key={`hl-${index}`}
+                  data-science-pitch-highlight
+                  className="mt-6 rounded-sm border border-white/20 bg-white/[0.05] p-4 sm:p-5"
+                >
+                  <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:gap-6">
+                    {image ? (
+                      <figure className="w-full shrink-0 sm:w-48">
+                        <div className="overflow-hidden rounded-sm border border-zinc-800 bg-black/40">
+                          <Image
+                            src={image}
+                            alt={imageAlt || label || "Thesis illustration"}
+                            width={480}
+                            height={320}
+                            className="h-auto w-full object-contain"
+                          />
+                        </div>
+                        {imageSource ? (
+                          <figcaption className="mt-1.5 font-mono text-[9px] uppercase tracking-[1.4px] text-zinc-500">
+                            {imageSource}
+                          </figcaption>
+                        ) : null}
+                      </figure>
+                    ) : null}
+                    <div className="min-w-0 flex-1">
+                      {label ? (
+                        <p className="mb-2 font-mono text-[10px] font-semibold uppercase tracking-[1.8px] text-cyan-200/90">
+                          {label}
+                        </p>
+                      ) : null}
+                      <p className="text-base font-medium leading-relaxed text-zinc-100 sm:text-lg">
+                        {item}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+
+            {(thesisSlide.cards ?? []).length > 0 ? (
+              <div
+                data-science-pitch-cards
+                className="mt-6 grid gap-3 sm:grid-cols-3"
+              >
+                {(thesisSlide.cards ?? []).map((card) => (
+                  <div
+                    key={card.label}
+                    className="flex flex-col overflow-hidden border border-zinc-800 bg-black/30"
+                  >
+                    {card.image ? (
+                      <div className="relative aspect-[16/10] w-full border-b border-zinc-800 bg-black/50">
+                        <Image
+                          src={card.image}
+                          alt={card.imageAlt || card.label}
+                          fill
+                          className="object-cover object-center"
+                          sizes="(max-width: 640px) 100vw, 33vw"
+                        />
+                      </div>
+                    ) : null}
+                    <div className="flex flex-1 flex-col p-4">
+                      <p className="text-sm font-medium text-white">{card.label}</p>
+                      {card.body ? (
+                        <p className="mt-1.5 text-xs leading-relaxed text-zinc-400">{card.body}</p>
+                      ) : null}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : null}
+          </article>
+        </section>
+      ) : null}
 
       <section className="relative z-10 mx-auto max-w-6xl px-6 py-10 sm:py-12">
         <div className="space-y-6">

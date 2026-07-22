@@ -83,11 +83,11 @@ const PLATFORM_THESIS: SalesSlide[] = [
     backgroundImage: PITCH_ASSETS.aesthetics.science,
     // Lead-in above the three concept boxes (rendered before CardGrid on statement layout).
     highlights: [
-      "Treat “Knowing <X>” as a function of inputs that can tell us how much someone “knows <X>.” Those inputs cannot be hand-picked: the degrees of freedom of cognition alone are intractable, let alone measured or computed on.",
+      "We cannot map a brain, biomarkers, or a fancy predictive model. Cognition is too complex to model that way. As a proxy, we watch how they solve problems, turn those signals into a mathematical space, and compare them to regions that correspond to the target knowledge we are validating.",
     ],
     highlightLabels: ["The Hypothesis"],
     highlightImages: ["/flywire.png"],
-    highlightImageAlts: ["Flywire — knowledge as a function of many inputs"],
+    highlightImageAlts: ["Flywire — problem-solving signals mapped into knowledge space"],
     highlightImageSources: ["Source: flywire.ai"],
     cards: [
       {

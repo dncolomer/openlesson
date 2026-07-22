@@ -671,12 +671,12 @@ describe("pitch deck content (platform only)", () => {
     const nonEmptyBullets = (platformThesis!.bullets ?? []).filter((b) => b.trim().length > 0);
     expect(nonEmptyBullets).toHaveLength(0);
 
-    // Lead-in text section above the three boxes: knowledge-as-function + intractability
+    // Lead-in above the three boxes: brain unmodelable + problem-solving proxy in math space
     expect(platformThesis!.highlights?.length).toBeGreaterThanOrEqual(1);
     const leadIn = (platformThesis!.highlights ?? []).join(" ").toLowerCase();
-    expect(leadIn).toMatch(/function/);
-    expect(leadIn).toMatch(/intractable|hand-pick|hand.?craft/);
-    expect(leadIn).toMatch(/measure|comput/);
+    expect(leadIn).toMatch(/brain|biomarker|complex/);
+    expect(leadIn).toMatch(/proxy|solve|signal/);
+    expect(leadIn).toMatch(/mathematical space|region|validat/);
     // Flywire image on the left of the lead-in box + source credit
     expect(platformThesis!.highlightImages?.[0]).toBe("/flywire.png");
     expect(platformThesis!.highlightImageSources?.[0]?.toLowerCase()).toMatch(/flywire\.ai/);
@@ -734,8 +734,8 @@ describe("pitch deck content (platform only)", () => {
     expect(thesisCorpus).toMatch(/embedding|distance/);
     expect(thesisCorpus).toMatch(/tools/);
     expect(thesisCorpus).toMatch(/proxy/);
-    expect(thesisCorpus).toMatch(/function/);
-    expect(thesisCorpus).toMatch(/intractable/);
+    expect(thesisCorpus).toMatch(/mathematical space|region/);
+    expect(thesisCorpus).toMatch(/solve|signal|complex/);
 
     // Thesis comes after cover + TOC + Founder title + founder slides + What is Uncertain Systems? title
     expect(PLATFORM_PITCH_DECK.slides[0]?.title).toBe("Uncertain Systems");

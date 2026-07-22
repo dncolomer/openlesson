@@ -140,6 +140,7 @@ export default function DashboardPage() {
   const [workspaceSearch, setPlanSearch] = useState("");
   const [showArchivedWorkspaces, setShowArchivedPlans] = useState(false);
   const [archivingWorkspaceId, setArchivingPlanId] = useState<string | null>(null);
+  const [snapshottingWorkspaceId, setSnapshottingWorkspaceId] = useState<string | null>(null);
   const [workspacePage, setPlanPage] = useState(1);
   const workspacePageSize = 10;
 
@@ -676,6 +677,43 @@ export default function DashboardPage() {
     }
   };
 
+  const handleSnapshotAll = async (workspace: Workspace) => {
+    const title = workspace.title || workspace.root_topic || "this workspace";
+    if (
+      !confirm(
+        `Run LWM Snapshot for all users of “${title}”? This may take a while and uses proof-of-work for each subject.`,
+      )
+    ) {
+      return;
+    }
+    setSnapshottingWorkspaceId(workspace.id);
+    try {
+      const res = await fetch(`/api/workspaces/${workspace.id}/snapshot-all`, {
+        method: "POST",
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(
+          typeof data.error === "string" ? data.error : "Failed to snapshot workspace users",
+        );
+      }
+      const succeeded = Number(data.succeeded) || 0;
+      const skipped = Number(data.skipped) || 0;
+      const failed = Number(data.failed) || 0;
+      const total = Number(data.total) || 0;
+      alert(
+        total === 0
+          ? "No subjects found for this workspace."
+          : `Snapshot complete: ${succeeded} succeeded, ${skipped} skipped, ${failed} failed (${total} subjects).`,
+      );
+    } catch (err) {
+      console.error("Snapshot all error:", err);
+      alert(err instanceof Error ? err.message : "Failed to snapshot workspace users");
+    } finally {
+      setSnapshottingWorkspaceId(null);
+    }
+  };
+
   const filteredWorkspaces = workspaces.filter((p) => {
     const matchesSearch = workspaceSearch === "" || 
       p.root_topic.toLowerCase().includes(workspaceSearch.toLowerCase()) ||
@@ -966,13 +1004,14 @@ export default function DashboardPage() {
                 </Link>
               </div>
             ) : (
-              <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+              <div className="grid gap-6 md:grid-cols-2" data-workspace-cards-grid>
                 {paginatedPlans.map((plan) => (
                   <WorkspaceDashboardCard
                     key={plan.id}
                     plan={plan}
                     formatDate={formatDate}
                     archivingWorkspaceId={archivingWorkspaceId}
+                    snapshottingWorkspaceId={snapshottingWorkspaceId}
                     publicLabel={t("dashboard.public")}
                     privateLabel={t("dashboard.private")}
                     onArchive={handleArchivePlan}
@@ -997,6 +1036,7 @@ export default function DashboardPage() {
                         console.error("Error toggling visibility:", err);
                       }
                     }}
+                    onSnapshotAll={handleSnapshotAll}
                   />
                 ))}
               </div>

@@ -18,9 +18,13 @@ interface WorkspaceDashboardCardProps {
   archivingWorkspaceId: string | null;
   publicLabel: string;
   privateLabel: string;
+  /** When set, Snapshot button shows loading for this workspace. */
+  snapshottingWorkspaceId?: string | null;
   onArchive: (workspaceId: string) => void;
   onRestore: (workspaceId: string) => void;
   onToggleVisibility: (plan: Workspace) => void;
+  /** Owner: run LWM Snapshot for all users of this workspace. */
+  onSnapshotAll?: (plan: Workspace) => void;
 }
 
 export function WorkspaceDashboardCard({
@@ -29,24 +33,30 @@ export function WorkspaceDashboardCard({
   archivingWorkspaceId,
   publicLabel,
   privateLabel,
+  snapshottingWorkspaceId = null,
   onArchive,
   onRestore,
   onToggleVisibility,
+  onSnapshotAll,
 }: WorkspaceDashboardCardProps) {
   const isPublic = plan.is_public ?? false;
+  const isSnapshotting = snapshottingWorkspaceId === plan.id;
   const subtitle =
     plan.root_topic !== plan.title && plan.title
       ? plan.root_topic
       : plan.source_summary || "A guided path toward your next aha moment.";
 
   return (
-    <article className="group overflow-hidden rounded-xl border border-neutral-800/90 bg-neutral-950/80 transition hover:border-neutral-600 hover:bg-neutral-900/70">
+    <article
+      className="group overflow-hidden rounded-xl border border-neutral-800/90 bg-neutral-950/80 transition hover:border-neutral-600 hover:bg-neutral-900/70"
+      data-workspace-dashboard-card
+    >
       <Link href={`/workspace/${plan.id}`} className="block">
         <WorkspaceCardHero
           workspaceId={plan.id}
           coverImageUrl={plan.cover_image_url}
           fallback="aesthetic"
-          heightClassName="h-44"
+          heightClassName="h-52 sm:h-56"
           badges={
             <>
               {heroBadge(plan.source_type === "youtube" ? "Video" : "Workspace")}
@@ -56,9 +66,9 @@ export function WorkspaceDashboardCard({
         />
       </Link>
 
-      <div className="p-5">
+      <div className="p-5 sm:p-6">
         <Link href={`/workspace/${plan.id}`} className="block">
-          <h4 className="line-clamp-2 text-lg font-medium leading-snug text-neutral-100 transition group-hover:text-white">
+          <h4 className="line-clamp-2 text-xl font-medium leading-snug text-neutral-100 transition group-hover:text-white">
             {plan.title || plan.root_topic}
           </h4>
           <p className="mt-2 line-clamp-2 text-sm leading-relaxed text-neutral-500">{subtitle}</p>
@@ -122,6 +132,18 @@ export function WorkspaceDashboardCard({
             >
               {isPublic ? publicLabel : privateLabel}
             </button>
+            {onSnapshotAll ? (
+              <button
+                type="button"
+                onClick={() => onSnapshotAll(plan)}
+                disabled={isSnapshotting || plan.status === "archived"}
+                data-workspace-snapshot-all
+                title="Generate an LWM Snapshot for every user of this workspace"
+                className="rounded-md border border-cyan-800/70 bg-cyan-950/30 px-2.5 py-1 text-xs text-cyan-300 transition hover:border-cyan-600/80 hover:bg-cyan-950/50 hover:text-cyan-100 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {isSnapshotting ? "Snapshotting…" : "Snapshot"}
+              </button>
+            ) : null}
           </div>
         </div>
       </div>

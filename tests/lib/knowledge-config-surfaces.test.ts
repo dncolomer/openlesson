@@ -124,17 +124,21 @@ describe("knowledge config / LWM feature surfaces", () => {
     expect(lwm).toContain("/api/workspace/performance-report");
     expect(lwm).toContain("snapshot-history");
     expect(lwm).not.toContain('params.set("subject", "me")');
-    // Skill-card LWM display + visible last-snapshot stamp
+    // Skill-card LWM display + floating last-snapshot stamp + GHC beside snapshot
     expect(lwm).toContain("data-lwm-skill-card");
     expect(lwm).toContain("data-lwm-skill-score");
+    expect(lwm).toContain("data-lwm-ghc-score");
     expect(lwm).toContain("data-lwm-last-updated");
     expect(lwm).toContain("Last snapshot");
+    expect(lwm).toMatch(/absolute right-3 top-3|absolute right-4 top-4/);
     expect(lwm).toMatch(/lwmUpdatedLabel|last_eval_at|as_of/);
-    // Split layout: controls + LWM vs embeddings copy | skill card
+    // Split layout: controls + LWM vs embeddings + GHC copy | skill card
     expect(lwm).toContain("data-lwm-split-layout");
     expect(lwm).toContain("data-lwm-controls-column");
     expect(lwm).toContain("data-lwm-card-column");
     expect(lwm).toContain("data-lwm-vs-embeddings");
+    expect(lwm).toContain("data-lwm-ghc-explain");
+    expect(lwm).toMatch(/Genuine Human Cognition/);
     expect(lwm).toMatch(/LWM \(this tab\)|symbolic skill card/);
     expect(lwm).toMatch(/Embeddings \(Models tab\)|geometry over time/);
   });

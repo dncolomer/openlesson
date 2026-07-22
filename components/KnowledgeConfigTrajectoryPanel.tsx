@@ -1739,6 +1739,14 @@ export function KnowledgeConfigTrajectoryPanel({
             knowledge configs projected in 2D, trajectories, and distance to knowledge regions.
             Use it when you want motion, cohort regions, and proximity — not a prose profile.
           </p>
+          <p className="mt-3 text-neutral-300" data-lwm-ghc-explain>
+            <span className="font-medium text-white">GHC (Genuine Human Cognition)</span> is a{" "}
+            <span className="text-amber-200/90">secondary authenticity signal</span> on the same
+            snapshot (0–100). It reflects how much the proof of work looks like real human
+            reasoning under pressure — think-aloud pacing, hesitation/repair, System 1 vs System 2
+            traces — not just correct final answers. High LWM Snapshot with low GHC can mean
+            polished outputs without grounded cognition; both scores should be read together.
+          </p>
           <ul className="mt-3 list-disc space-y-1.5 pl-4 text-neutral-500">
             <li>Same proof of work feeds both; LWM is the narrative scorecard.</li>
             <li>Embeddings answer “where is this person in knowledge space?”</li>
@@ -1768,9 +1776,22 @@ export function KnowledgeConfigTrajectoryPanel({
               className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-cyan-400/50 to-transparent"
               aria-hidden
             />
-            {/* Header: score + last update */}
-            <div className="flex flex-wrap items-start justify-between gap-4 border-b border-white/5 px-4 py-4 sm:px-5">
-              <div className="flex min-w-0 items-start gap-3">
+            {/* Floating last-snapshot timestamp */}
+            <div
+              className="absolute right-3 top-3 z-10 max-w-[min(100%,14rem)] rounded-lg border border-white/15 bg-black/70 px-2.5 py-1.5 text-right shadow-lg backdrop-blur-sm sm:right-4 sm:top-4"
+              data-lwm-last-updated
+            >
+              <p className="font-mono text-[9px] font-semibold uppercase tracking-[1.4px] text-neutral-400">
+                Last snapshot
+              </p>
+              <p className="mt-0.5 text-xs font-medium tabular-nums text-white sm:text-sm">
+                {lwmUpdatedLabel || "Not yet"}
+              </p>
+            </div>
+
+            {/* Header: Snapshot score + GHC side by side */}
+            <div className="border-b border-white/5 px-4 pb-4 pt-12 sm:px-5 sm:pt-14">
+              <div className="flex min-w-0 flex-wrap items-start gap-3 pr-0 sm:pr-2">
                 <div
                   className="flex h-16 w-16 shrink-0 flex-col items-center justify-center rounded-2xl border border-cyan-500/30 bg-cyan-500/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]"
                   data-lwm-skill-score
@@ -1781,12 +1802,23 @@ export function KnowledgeConfigTrajectoryPanel({
                       : "—"}
                   </span>
                   <span className="mt-1 font-mono text-[9px] uppercase tracking-[1.2px] text-cyan-300/80">
-                    / 100
+                    snap
                   </span>
                 </div>
-                <div className="min-w-0 pt-0.5">
+                <div
+                  className="flex h-16 w-16 shrink-0 flex-col items-center justify-center rounded-2xl border border-amber-500/30 bg-amber-500/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]"
+                  data-lwm-ghc-score
+                >
+                  <span className="font-mono text-2xl font-semibold tabular-nums leading-none text-amber-100">
+                    {scores?.ghc_score != null ? Math.round(scores.ghc_score) : "—"}
+                  </span>
+                  <span className="mt-1 font-mono text-[9px] uppercase tracking-[1.2px] text-amber-300/80">
+                    GHC
+                  </span>
+                </div>
+                <div className="min-w-0 flex-1 pt-0.5">
                   <p className="font-mono text-[10px] font-medium uppercase tracking-[1.6px] text-cyan-300/90">
-                    LWM Snapshot
+                    LWM Snapshot · GHC
                   </p>
                   <p className="mt-1 truncate text-sm font-medium text-white">
                     {lwmScope.label || "Selected user"}
@@ -1800,31 +1832,10 @@ export function KnowledgeConfigTrajectoryPanel({
                   )}
                 </div>
               </div>
-              <div
-                className="shrink-0 rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-right"
-                data-lwm-last-updated
-              >
-                <p className="font-mono text-[9px] font-semibold uppercase tracking-[1.4px] text-neutral-400">
-                  Last snapshot
-                </p>
-                <p className="mt-1 text-sm font-medium tabular-nums text-white">
-                  {lwmUpdatedLabel || "Not yet"}
-                </p>
-                {snapshotEligibility?.last_eval_at &&
-                kc?.as_of &&
-                snapshotEligibility.last_eval_at !== kc.as_of ? (
-                  <p className="mt-0.5 text-[10px] text-neutral-500">
-                    Config {new Date(kc.as_of).toLocaleString(undefined, { dateStyle: "medium" })}
-                  </p>
-                ) : null}
-              </div>
             </div>
 
             {/* Secondary metrics */}
             <div className="flex flex-wrap gap-2 border-b border-white/5 px-4 py-3 sm:px-5">
-              {scores?.ghc_score != null ? (
-                <Chip tone="cyan">GHC {Math.round(scores.ghc_score)}</Chip>
-              ) : null}
               {kc && !kc.empty ? (
                 <Chip>
                   conf {(kc.confidence * 100).toFixed(0)}% · {kc.pow_event_count} PoW

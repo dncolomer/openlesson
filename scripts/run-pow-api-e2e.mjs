@@ -302,7 +302,7 @@ async function runTeamsPowApi(apiKey, workspaceId) {
   }
 
   const report = await agentJson(
-    `/api/v3/eval/workspaces/${workspaceId}/lwm-snapshot`,
+    `/api/v3/snapshot/workspaces/${workspaceId}/lwm-snapshot`,
     apiKey,
     {
       method: "POST",
@@ -311,7 +311,7 @@ async function runTeamsPowApi(apiKey, workspaceId) {
   );
   record(
     "teams-rest",
-    "POST /api/v3/eval/.../lwm-snapshot (score + marker_scores)",
+    "POST /api/v3/snapshot/.../lwm-snapshot (score + marker_scores)",
     report.res.status === 200 && isVerticalScoreReport(report.body),
     report.res.status === 200
       ? `score=${report.body?.report?.score} markers=${report.body?.report?.marker_scores?.length}`

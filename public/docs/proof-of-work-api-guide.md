@@ -2,7 +2,7 @@
 
 The Proof-of-Work API exposes the workspace workflow on **UI-created** workspaces: upload proof of work, run an **LWM Snapshot** (`lwm-snapshot` — sole product score strategy; GHC secondary), issue Think Aloud Protocol (TAP) links, and poll TAP completion. Workspace creation is product UI only (`/workspace/new`).
 
-Capture: `/api/v3/pow` · Evaluation: `/api/v3/eval`
+Capture: `/api/v3/pow` · Evaluation: `/api/v3/snapshot`
 
 Authenticate with `Authorization: Bearer <api_key>`.
 
@@ -21,7 +21,7 @@ Opaque mode stores partner references (`goal_ref`, `external_refs`) without sema
 | :--- | :--- | :--- | :--- |
 | `GET` | `/workspaces/{workspace_id}/blocks` | `workspaces:read` | List available blocks in a workspace. |
 | `POST` | `/workspaces/{workspace_id}/proof-of-work` | `workspaces:write` | Upload tool usage, screenshots, video, or EEG linked to workspace/block. |
-| `POST` | `/workspaces/{workspace_id}/lwm-snapshot` | `workspaces:read` | LWM Snapshot score (0–100; LWM Snapshot strategy) + spider, analysis, next actions. **TAP/ILE end always use this path.** |
+| `POST` | `/workspaces/{workspace_id}/lwm-snapshot` | `workspaces:read` | LWM Snapshot score (0–100; LWM Snapshot strategy) + spider, analysis, next actions. Manual / Snapshot API (not auto on TAP/ILE end). |
 | `POST` | `/workspaces/{workspace_id}/tap-links` | `tap:write` | Request a private TAP link for the full workspace (optional body `block_id`). Links open `/tap/session/{token}`. |
 | `POST` | `/workspaces/{workspace_id}/blocks/{block_id}/tap-links` | `tap:write` | Request a private TAP link scoped to a single block. |
 | `GET` | `/workspaces/{workspace_id}/tap-links` | `tap:read` | List existing TAP links and completion status. |
@@ -55,7 +55,7 @@ Each score endpoint returns **one** primary 0–100 score for that vertical, plu
 | :--- | :--- | :--- |
 | `POST .../lwm-snapshot` | `lwm_snapshot` | `lwm_snapshot_score` |
 
-- **Verification** — learning verification (knowledge coverage). TAP/ILE end always run LWM Snapshot (`lwm-snapshot`).
+- **Verification** — learning verification (knowledge coverage). LWM Snapshot (`lwm-snapshot`) is manual or Snapshot API/MCP.
 - **Augmentation** — practice / improvement readiness.
 - **Optimization** — progress toward the inferred `workspace_goal` (score units 0–100; replaces former conversion %).
 

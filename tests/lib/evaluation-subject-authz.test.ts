@@ -362,9 +362,9 @@ describe("Knowledge eval UI + web routes structural", () => {
     expect(web).not.toMatch(/plan\.user_id !== user\.id/);
   });
 
-  it("eval-history uses privileged client after authz", () => {
+  it("snapshot-history uses privileged client after authz", () => {
     const web = readFileSync(
-      join(process.cwd(), "app/api/workspace/eval-history/route.ts"),
+      join(process.cwd(), "app/api/workspace/snapshot-history/route.ts"),
       "utf8",
     );
     expect(web).toContain("canAccessWorkspaceEval");
@@ -394,7 +394,7 @@ describe("Knowledge eval UI + web routes structural", () => {
     );
     expect(lwm).toContain("data-lwm-generate-snapshot");
     expect(lwm).toContain("/api/workspace/performance-report");
-    expect(lwm).toContain("eval-history");
+    expect(lwm).toContain("snapshot-history");
     // Owner may target selected subject; self uses current user.
     expect(lwm).toMatch(/user_id|lwmUserId/);
   });
@@ -419,14 +419,14 @@ describe("Knowledge eval UI + web routes structural", () => {
 
   it("v3 score routes allow workspace owner participant targeting", () => {
     const primary = readFileSync(
-      join(process.cwd(), "app/api/v3/eval/workspaces/[id]/lwm-snapshot/route.ts"),
+      join(process.cwd(), "app/api/v3/snapshot/workspaces/[id]/lwm-snapshot/route.ts"),
       "utf8",
     );
     expect(primary).toContain("resolveScoreParticipantIds");
     expect(primary).toContain("isWorkspaceOwner");
     for (const name of ["verification-score", "augmentation-score", "optimization-score"] as const) {
       expect(
-        existsSync(join(process.cwd(), "app/api/v3/eval/workspaces/[id]", name, "route.ts")),
+        existsSync(join(process.cwd(), "app/api/v3/snapshot/workspaces/[id]", name, "route.ts")),
       ).toBe(false);
     }
   });

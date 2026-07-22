@@ -19,8 +19,9 @@ export const runtime = "nodejs";
 export const maxDuration = 120;
 
 /**
- * ILE post-session LWM Snapshot — always runs the single durable snapshot generator
- * (eval_run_history + LWM + knowledge-config), same as TAP / Knowledge UI.
+ * Optional ILE-session helper to run LWM Snapshot for a participant.
+ * Product snapshot generation is manual (Knowledge UI) or Snapshot API
+ * POST .../lwm-snapshot / MCP lwm_snapshot — not invoked automatically on ILE end.
  */
 export async function POST(req: NextRequest) {
   try {

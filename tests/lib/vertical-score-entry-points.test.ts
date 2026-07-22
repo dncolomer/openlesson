@@ -26,7 +26,7 @@ const ROOT = join(__dirname, "../..");
  */
 const SCORE_SURFACE_FILES = [
   // REST + demo
-  "app/api/v3/eval/workspaces/[id]/lwm-snapshot/route.ts",
+  "app/api/v3/snapshot/workspaces/[id]/lwm-snapshot/route.ts",
   "app/api/workspace/performance-report/route.ts",
   "app/api/workspace-tap-score/performance/route.ts",
   "app/api/workspace-ile/performance/route.ts",
@@ -107,7 +107,7 @@ describe("LWM Snapshot entry points (shipped wiring)", () => {
   });
 
   it("REST lwm-snapshot route exists and runs the shared generator", () => {
-    const path = join(ROOT, "app/api/v3/eval/workspaces/[id]/lwm-snapshot/route.ts");
+    const path = join(ROOT, "app/api/v3/snapshot/workspaces/[id]/lwm-snapshot/route.ts");
     expect(existsSync(path)).toBe(true);
     const src = readFileSync(path, "utf8");
     expect(src).toContain("SNAPSHOT_VERTICAL");
@@ -122,7 +122,7 @@ describe("LWM Snapshot entry points (shipped wiring)", () => {
 
   it("legacy verification/aug/opt score routes are fully removed", () => {
     for (const name of ["verification-score", "augmentation-score", "optimization-score"] as const) {
-      const path = join(ROOT, "app/api/v3/eval/workspaces/[id]", name, "route.ts");
+      const path = join(ROOT, "app/api/v3/snapshot/workspaces/[id]", name, "route.ts");
       expect(existsSync(path), `legacy route still ships: ${name}`).toBe(false);
     }
   });
@@ -210,7 +210,7 @@ describe("LWM Snapshot entry points (shipped wiring)", () => {
     }
   });
 
-  it("TAP and ILE auto-snapshot paths use the single generator", () => {
+  it("LWM Snapshot is manual UI or Snapshot API — not auto on TAP/ILE end", () => {
     expect(TAP_AUTO_SCORE_VERTICAL).toBe("verification");
     const tapRoute = readFileSync(
       join(ROOT, "app/api/workspace-tap-score/performance/route.ts"),
@@ -219,6 +219,7 @@ describe("LWM Snapshot entry points (shipped wiring)", () => {
     expect(tapRoute).toContain("TAP_AUTO_SCORE_VERTICAL");
     expect(tapRoute).toContain("runVerticalScore");
     expect(tapRoute).toContain('historySource: "tap"');
+    expect(tapRoute).toMatch(/not invoked automatically|not auto/i);
 
     const ileRoute = readFileSync(
       join(ROOT, "app/api/workspace-ile/performance/route.ts"),
@@ -227,10 +228,22 @@ describe("LWM Snapshot entry points (shipped wiring)", () => {
     expect(ileRoute).toContain("runVerticalScore");
     expect(ileRoute).toContain('historySource: "ile"');
     expect(ileRoute).toContain("SESSION_AUTO_SNAPSHOT_VERTICAL");
+    expect(ileRoute).toMatch(/not invoked automatically|not auto/i);
+
+    const tapClient = readFileSync(join(ROOT, "components/TapScoreClient.tsx"), "utf8");
+    expect(tapClient).not.toContain("/api/workspace-tap-score/performance");
+    expect(tapClient).toMatch(/not auto-run on TAP end|manual/);
 
     const sessionView = readFileSync(join(ROOT, "components/SessionView.tsx"), "utf8");
-    expect(sessionView).toContain("ILE_POW_API_PATHS.performance");
-    expect(sessionView).toMatch(/LWM Snapshot|post-session/);
+    expect(sessionView).not.toContain("ILE_POW_API_PATHS.performance");
+    expect(sessionView).toMatch(/not auto-run on ILE end|manual/);
+
+    const lwmRoute = readFileSync(
+      join(ROOT, "app/api/v3/snapshot/workspaces/[id]/lwm-snapshot/route.ts"),
+      "utf8",
+    );
+    expect(lwmRoute).toContain("runVerticalScore");
+    expect(lwmRoute).toContain("SNAPSHOT_VERTICAL");
 
     const panel = readFileSync(join(ROOT, "components/WorkspacePerformancePanel.tsx"), "utf8");
     // Eval tab removed

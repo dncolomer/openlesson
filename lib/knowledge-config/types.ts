@@ -23,7 +23,7 @@ export interface KnowledgeConfigSubject {
   guest_user_id?: string | null;
 }
 
-/** Pointer stored on learning world model / returned by Evaluation API. */
+/** Pointer stored on learning world model / returned by Snapshot API. */
 export interface KnowledgeConfigPointer {
   embedding_model_id: KnowledgeConfigEmbeddingModelId | string;
   dim: number;

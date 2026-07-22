@@ -17,7 +17,7 @@ interface RouteProps {
 }
 
 /**
- * GET /api/v3/eval/workspaces/{id}/knowledge-config
+ * GET /api/v3/snapshot/workspaces/{id}/knowledge-config
  * Latest knowledge configuration embedding for workspace × subject.
  */
 export async function GET(req: NextRequest, { params }: RouteProps) {

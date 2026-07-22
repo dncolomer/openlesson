@@ -103,8 +103,8 @@ describe("computeKnowledgeDistance (shipped geometry)", () => {
 });
 
 describe("Knowledge distance surfaces", () => {
-  it("ships Evaluation API knowledge-distance route without vertical eval pipeline", () => {
-    const rel = "app/api/v3/eval/workspaces/[id]/knowledge-distance/route.ts";
+  it("ships Snapshot API knowledge-distance route without vertical eval pipeline", () => {
+    const rel = "app/api/v3/snapshot/workspaces/[id]/knowledge-distance/route.ts";
     expect(existsSync(join(ROOT, rel))).toBe(true);
     const src = read(rel);
     expect(src).toContain("computeKnowledgeDistanceForSubject");
@@ -118,7 +118,7 @@ describe("Knowledge distance surfaces", () => {
   });
 
   it("workspace cookie route exposes knowledge_distance action", () => {
-    const src = read("app/api/workspace/custom-verification-models/route.ts");
+    const src = read("app/api/workspace/custom-knowledge-regions/route.ts");
     expect(src).toContain("knowledge_distance");
     expect(src).toContain("computeKnowledgeDistanceForSubject");
     expect(src).not.toMatch(/knowledge_distance[\s\S]{0,80}runVerticalScore/);
@@ -141,7 +141,7 @@ describe("Knowledge distance surfaces", () => {
     expect(settings).toContain("Embeddings tab");
   });
 
-  it("docs list knowledge-distance under Evaluation API", () => {
+  it("docs list knowledge-distance under Snapshot API", () => {
     const docs = read("docs/PROOF_OF_WORK_API.md");
     expect(docs).toContain("knowledge-distance");
     expect(docs).toMatch(/Knowledge distance/i);

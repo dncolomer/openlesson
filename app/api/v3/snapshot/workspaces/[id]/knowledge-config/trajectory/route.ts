@@ -25,7 +25,7 @@ function parseMs(value: string | null): number | null {
 }
 
 /**
- * GET /api/v3/eval/workspaces/{id}/knowledge-config/trajectory
+ * GET /api/v3/snapshot/workspaces/{id}/knowledge-config/trajectory
  * Time series of knowledge config embeddings + optional fixed 2D projection.
  */
 export async function GET(req: NextRequest, { params }: RouteProps) {

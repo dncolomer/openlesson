@@ -342,11 +342,11 @@ describe("updateLearnerStateAfterScore persists eval history", () => {
 describe("eval history API surfaces", () => {
   it("ships eval REST + workspace routes", () => {
     const evalRoute = readFileSync(
-      join(process.cwd(), "app/api/v3/eval/workspaces/[id]/eval-history/route.ts"),
+      join(process.cwd(), "app/api/v3/snapshot/workspaces/[id]/snapshot-history/route.ts"),
       "utf8",
     );
     const webRoute = readFileSync(
-      join(process.cwd(), "app/api/workspace/eval-history/route.ts"),
+      join(process.cwd(), "app/api/workspace/snapshot-history/route.ts"),
       "utf8",
     );
     expect(evalRoute).toContain("listEvalRunHistory");
@@ -423,7 +423,7 @@ describe("eval history API surfaces", () => {
       limit: 50,
     });
 
-    // Matches GET /api/v3/eval/workspaces/{id}/eval-history response body shape.
+    // Matches GET /api/v3/snapshot/workspaces/{id}/snapshot-history response body shape.
     const body = {
       workspace_id: ws,
       is_group: true,
@@ -444,6 +444,6 @@ describe("eval history API surfaces", () => {
     expect(body.runs[0].ran_at).toBe("2026-07-11T09:00:00.000Z");
 
     mkdirSync(SCRATCH, { recursive: true });
-    writeFileSync(join(SCRATCH, "eval-history-query.json"), JSON.stringify(body, null, 2));
+    writeFileSync(join(SCRATCH, "snapshot-history-query.json"), JSON.stringify(body, null, 2));
   });
 });

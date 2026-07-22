@@ -77,7 +77,7 @@ describe("eval pow gate wiring", () => {
     );
     expect(run).toContain("assertEvalAllowedWithNewPow");
     expect(web).toContain("NO_NEW_POW");
-    expect(lwm).toContain("eval-history");
+    expect(lwm).toContain("snapshot-history");
     expect(lwm).toContain("data-lwm-generate-snapshot");
     expect(lwm).toContain("snapshotEligibility");
   });

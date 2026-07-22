@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuthenticatedUser } from "@/lib/api/require-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { CreateIleLinkError, createWorkspaceIleLink } from "@/lib/pow-api/create-ile-link";
+import {
+  CreateIleLinkError,
+  createWorkspaceIleLink,
+  reissueWorkspaceIleLink,
+} from "@/lib/pow-api/create-ile-link";
 import type { AuthContext } from "@/lib/pow-api/types";
 
 export const runtime = "nodejs";
@@ -93,17 +97,35 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const workspaceId = typeof body.workspaceId === "string" ? body.workspaceId.trim() : "";
     const blockId = typeof body.blockId === "string" ? body.blockId.trim() : "";
+    const reissueLinkId =
+      typeof body.reissue_link_id === "string"
+        ? body.reissue_link_id.trim()
+        : typeof body.reissueLinkId === "string"
+          ? body.reissueLinkId.trim()
+          : "";
 
     if (!workspaceId) {
       return NextResponse.json({ error: "workspaceId is required" }, { status: 400 });
-    }
-    if (!blockId) {
-      return NextResponse.json({ error: "blockId is required for ILE links" }, { status: 400 });
     }
 
     const access = await resolveWebAuth(workspaceId);
     if ("error" in access) {
       return NextResponse.json({ error: access.error }, { status: access.status });
+    }
+
+    if (reissueLinkId) {
+      const ileLink = await reissueWorkspaceIleLink({
+        supabase: access.supabase,
+        auth: access.auth,
+        workspaceId,
+        linkId: reissueLinkId,
+        baseUrl: baseUrl(req),
+      });
+      return NextResponse.json({ ile_link: ileLink }, { status: 200 });
+    }
+
+    if (!blockId) {
+      return NextResponse.json({ error: "blockId is required for ILE links" }, { status: 400 });
     }
 
     const ileLink = await createWorkspaceIleLink({

@@ -11,8 +11,8 @@ function read(rel: string) {
 const SURFACES = [
   "lib/knowledge-config/custom-verification-model.ts",
   "lib/pow-api/custom-verification-model-store.ts",
-  "app/api/workspace/custom-verification-models/route.ts",
-  "app/api/v3/eval/workspaces/[id]/custom-verification-models/route.ts",
+  "app/api/workspace/custom-knowledge-regions/route.ts",
+  "app/api/v3/snapshot/workspaces/[id]/custom-knowledge-regions/route.ts",
   "components/CustomVerificationModelsPanel.tsx",
   "components/KnowledgeConfigTrajectoryPanel.tsx",
   "lib/sales/privacy-data-slide.ts",
@@ -55,7 +55,7 @@ describe("custom verification model surfaces", () => {
     // Synthetic generate only requires a prompt (name is optional / auto-derived).
     expect(ui).toContain("disabled={synthesizing || !syntheticPrompt.trim()}");
     expect(ui).toContain("subjects");
-    expect(ui).toContain("data-custom-verification-models");
+    expect(ui).toContain("data-custom-knowledge-regions");
 
     // Custom Knowledge Regions live in Settings; Embeddings overlays regions + distance.
     const brain = read("components/KnowledgeConfigTrajectoryPanel.tsx");
@@ -82,7 +82,7 @@ describe("custom verification model surfaces", () => {
   });
 
   it("API routes expose cohort create, synthetic create, delete, eval, knowledge distance, and listing", () => {
-    const cookie = read("app/api/workspace/custom-verification-models/route.ts");
+    const cookie = read("app/api/workspace/custom-knowledge-regions/route.ts");
     expect(cookie).toContain("createCustomVerificationModelFromSubjects");
     expect(cookie).toContain("createSyntheticCustomVerificationModel");
     expect(cookie).toContain("deleteCustomVerificationModel");
@@ -100,11 +100,11 @@ describe("custom verification model surfaces", () => {
     expect(store).toContain("computeKnowledgeDistance");
     expect(store).toContain("deleteCustomVerificationModel");
 
-    const evalApi = read("app/api/v3/eval/workspaces/[id]/custom-verification-models/route.ts");
+    const evalApi = read("app/api/v3/snapshot/workspaces/[id]/custom-knowledge-regions/route.ts");
     expect(evalApi).toContain("createCustomVerificationModelFromSubjects");
     expect(evalApi).toContain("evalSubjectAgainstCustomVerificationModel");
 
-    const kdApi = read("app/api/v3/eval/workspaces/[id]/knowledge-distance/route.ts");
+    const kdApi = read("app/api/v3/snapshot/workspaces/[id]/knowledge-distance/route.ts");
     expect(kdApi).toContain("computeKnowledgeDistanceForSubject");
     expect(kdApi).not.toMatch(/from ["']@\/lib\/pow-api\/run-vertical-score["']/);
   });

@@ -14,7 +14,7 @@ import { CustomVerificationModelError } from "@/lib/knowledge-config/custom-veri
 export const runtime = "nodejs";
 
 /**
- * Cookie-auth surface for workspace custom knowledge regions (custom verification models).
+ * Cookie-auth surface for workspace custom knowledge regions (custom knowledge regions).
  * GET  ?workspaceId=  → list regions + subjects with embeddings (includes centroids for overlay)
  * POST { action: "create" | "create_synthetic" | "delete" | "eval" | "knowledge_distance", workspaceId, ... }
  */
@@ -39,8 +39,8 @@ export async function GET(req: NextRequest) {
       subjects,
     });
   } catch (error) {
-    console.error("[workspace/custom-verification-models] GET failed:", error);
-    return NextResponse.json({ error: "Failed to load custom verification models" }, { status: 500 });
+    console.error("[workspace/custom-knowledge-regions] GET failed:", error);
+    return NextResponse.json({ error: "Failed to load custom knowledge regions" }, { status: 500 });
   }
 }
 
@@ -232,7 +232,7 @@ export async function POST(req: NextRequest) {
     if (error instanceof CustomVerificationModelError) {
       return NextResponse.json({ error: error.message }, { status: 400 });
     }
-    console.error("[workspace/custom-verification-models] POST failed:", error);
+    console.error("[workspace/custom-knowledge-regions] POST failed:", error);
     return NextResponse.json({ error: "Failed to process custom knowledge region" }, { status: 500 });
   }
 }

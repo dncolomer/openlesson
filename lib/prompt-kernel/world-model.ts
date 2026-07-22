@@ -51,7 +51,7 @@ export interface LearningWorldModelV0 {
     optimization_score: number | null;
     ghc_score: number | null;
   };
-  /** Latest knowledge config pointer (vector lives in snapshots table / Evaluation API). */
+  /** Latest knowledge config pointer (vector lives in snapshots table / Snapshot API). */
   knowledge_config?: KnowledgeConfigPointer | null;
 }
 

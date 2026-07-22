@@ -31,8 +31,8 @@ function parseRegionId(source: {
  *
  * NOT a vertical Eval: geometry-only computation (no vertical score pipeline, no history archive).
  *
- * GET  /api/v3/eval/workspaces/{id}/knowledge-distance?region_id=&user_id=
- * POST /api/v3/eval/workspaces/{id}/knowledge-distance
+ * GET  /api/v3/snapshot/workspaces/{id}/knowledge-distance?region_id=&user_id=
+ * POST /api/v3/snapshot/workspaces/{id}/knowledge-distance
  *      { region_id, user_id?, guest_user_id? }
  * Subject addressing uses unique user_id / guest_user_id only.
  */

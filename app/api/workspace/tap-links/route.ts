@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { ayclTokenFromBody, guardWorkspaceRoute, requireAuthenticatedUser } from "@/lib/api/require-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { CreateTapLinkError, createWorkspaceTapLink } from "@/lib/pow-api/create-tap-link";
+import {
+  CreateTapLinkError,
+  createWorkspaceTapLink,
+  reissueWorkspaceTapLink,
+} from "@/lib/pow-api/create-tap-link";
 import type { AuthContext } from "@/lib/pow-api/types";
 
 export const runtime = "nodejs";
@@ -94,6 +98,12 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const workspaceId = typeof body.workspaceId === "string" ? body.workspaceId.trim() : "";
     const blockId = typeof body.blockId === "string" ? body.blockId.trim() : "";
+    const reissueLinkId =
+      typeof body.reissue_link_id === "string"
+        ? body.reissue_link_id.trim()
+        : typeof body.reissueLinkId === "string"
+          ? body.reissueLinkId.trim()
+          : "";
 
     if (!workspaceId) {
       return NextResponse.json({ error: "workspaceId is required" }, { status: 400 });
@@ -102,6 +112,17 @@ export async function POST(req: NextRequest) {
     const access = await resolveWebAuth(workspaceId);
     if ("error" in access) {
       return NextResponse.json({ error: access.error }, { status: access.status });
+    }
+
+    if (reissueLinkId) {
+      const tapLink = await reissueWorkspaceTapLink({
+        supabase: access.supabase,
+        auth: access.auth,
+        workspaceId,
+        linkId: reissueLinkId,
+        baseUrl: baseUrl(req),
+      });
+      return NextResponse.json({ tap_link: tapLink }, { status: 200 });
     }
 
     const tapLink = await createWorkspaceTapLink({

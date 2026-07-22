@@ -1826,38 +1826,8 @@ export function SessionView({
       await saveSession(finalSession);
     }
 
-    // Always run LWM Snapshot after ILE end (same durable generator as TAP).
-    const ileWorkspaceId =
-      typeof finalSession.metadata?.workspace_id === "string"
-        ? finalSession.metadata.workspace_id
-        : getWorkspaceId();
-    if (ileWorkspaceId) {
-      try {
-        const snapshotRes = await fetch(ILE_POW_API_PATHS.performance, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            workspaceId: ileWorkspaceId,
-            sessionId: finalSession.id,
-            blockId:
-              typeof finalSession.metadata?.block_id === "string"
-                ? finalSession.metadata.block_id
-                : undefined,
-            ...(ayclToken ? { ayclToken } : {}),
-            ...(ileToken ? { ileToken } : {}),
-          }),
-        });
-        if (!snapshotRes.ok) {
-          const payload = await snapshotRes.json().catch(() => ({}));
-          console.warn(
-            "[ile] post-session LWM Snapshot failed:",
-            (payload as { error?: string }).error || snapshotRes.status,
-          );
-        }
-      } catch (snapshotErr) {
-        console.warn("[ile] post-session LWM Snapshot error:", snapshotErr);
-      }
-    }
+    // LWM Snapshot is manual (Knowledge UI) or Snapshot API POST .../lwm-snapshot —
+    // not auto-run on ILE end. PoW is already flushed above.
 
     handleDisconnectMuse();
 

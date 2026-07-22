@@ -13,7 +13,7 @@ export const UNCERTAIN_SYSTEMS_SCOPE = {
   mission:
     "Verify learning and measure readiness-to-perform using real product proof of work — not quizzes in isolation.",
   pillars: [
-    "LWM Snapshot — lwm_snapshot (Learning World Model Snapshot) + GHC from tool traces, artifacts, and sessions (TAP/ILE end always snapshot)",
+    "LWM Snapshot — lwm_snapshot (Learning World Model Snapshot) + GHC from tool traces, artifacts, and sessions (manual UI or Snapshot API/MCP)",
     "Proof of work — upload_proof_of_work / POST .../proof-of-work streams observable actions as durable artifacts",
     "Predictive interruptions (TIM) — every response includes interruption (object or null) with delay_ms and intervention hints",
   ],
@@ -164,7 +164,7 @@ export function buildContinuousEvaluationMcpPolicy(
         "LWM Snapshot (lwm_snapshot): one primary 0–100 score + GHC + spider + analysis + next actions. Sole product snapshot strategy.",
       when_to_call: [
         "After each meaningful proof-of-work batch (e.g. every 3-10 uploads)",
-        "Call lwm_snapshot for LWM Snapshot (TAP/ILE end always run this path)",
+        "Call lwm_snapshot for LWM Snapshot (manual; not auto on TAP/ILE end)",
       ],
     },
     progress_snapshot: {

@@ -382,7 +382,7 @@ export function buildProofOfWorkSchemaInstructions(
 
 You are an Uncertain Systems proof-of-work architect. Produce a **formal proof-of-work specification** that tells integrators exactly how to submit tool usage and related artifacts for learning verification.
 
-Uncertain Systems scope: single LWM Snapshot strategy — lwm_snapshot (Learning World Model Snapshot, 0–100). GHC (ghc_score + ghc_confidence) is a secondary cognition signal on the same report. Collect proof-of-work via proof-of-work uploads. Scoring is **continuous** — specs and skills regenerate as proof of work grows. TAP/ILE end always run the LWM Snapshot path.
+Uncertain Systems scope: single LWM Snapshot strategy — lwm_snapshot (Learning World Model Snapshot, 0–100). GHC (ghc_score + ghc_confidence) is a secondary cognition signal on the same report. Collect proof-of-work via proof-of-work uploads. Scoring is **on demand** — Knowledge UI Generate new snapshot or Snapshot API POST .../lwm-snapshot / MCP lwm_snapshot (not auto on TAP/ILE end).
 
 Integrators may use **REST** (Bearer API key: POST .../proof-of-work, POST .../lwm-snapshot) or **MCP** (JSON-RPC tools upload_proof_of_work, lwm_snapshot, generate_proof_of_work_schema) with identical semantics. Document REST paths in contracts; the platform also attaches continuous_evaluation_mcp with tool names after generation — your continuous_evaluation_summary must mention both surfaces.
 
@@ -409,7 +409,7 @@ Output rules:
    - common_fields: proof_of_work_type, data, mime_type, file_name, block_id, session_id, timestamp_ms, tool_name, tool_action, metadata
 5. Optimize payloads for the LWM Snapshot endpoint: time-ordered events, learner reflections, goals achieved, artifact summaries, decision rationale, outcomes, block-relevant competencies. Each snapshot call returns one primary score (0-100 lwm_snapshot_score), workspace_goal, ghc_score + ghc_confidence (secondary), marker_scores (spider/radar), summary analysis, and gap_analysis with next_steps.
 6. "performance_report_contract" must formally describe POST .../lwm-snapshot (LWM Snapshot — sole strategy; TAP/ILE end use this):
-   - endpoint_pattern: "POST /api/v3/eval/workspaces/{workspace_id}/lwm-snapshot"
+   - endpoint_pattern: "POST /api/v3/snapshot/workspaces/{workspace_id}/lwm-snapshot"
    - response_mode: "score"
    - required_fields: score, lwm_snapshot_score, vertical, workspace_goal, marker_scores, gap_analysis, gap_analysis.gaps, gap_analysis.next_steps, summary, strengths, growth_areas, suggestions, confidence
    - score / lwm_snapshot_score: integer 0-100 LWM Snapshot

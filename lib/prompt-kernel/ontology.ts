@@ -19,7 +19,7 @@ GOALS:
 - workspace_goal is stored on the workspace when known, otherwise inferred from title, notes, blocks, and accumulating PoW; inference may evolve as evidence grows.
 
 LEARNING WORLD MODEL vs KNOWLEDGE CONFIG vs TIM:
-- Learning world model: evolving symbolic representation of how the learner explores blocks, strengths/friction, temporal patterns, evidence appetite (what PoW types still help), and latest scores snapshot (LWM Snapshot primary + GHC). Workspace- and subject-scoped; exportable/transferable when serialized. Durable via Evaluation API.
+- Learning world model: evolving symbolic representation of how the learner explores blocks, strengths/friction, temporal patterns, evidence appetite (what PoW types still help), and latest scores snapshot (LWM Snapshot primary + GHC). Workspace- and subject-scoped; exportable/transferable when serialized. Durable via Snapshot API.
 - Knowledge config: fixed-dimensional embedding (knowledgecfg-v1-d64, D=64) of learner state in a globally comparable configuration space. Same axes across workspaces/users; distance = proximity. Trajectories support time analysis; expert regions (future) are densities in this space.
 - TIM (Trace Interruption Model): interruption world model. On (nearly) every PoW API success response, TIM may recommend a timed intervention (interruption: null | { delay_ms, intervention, … }). Consumers schedule, supersede on later responses, and never stack timers. TIM may read LWM + scores when provided.
 - Evaluation surface (LWM Snapshot, LWM, knowledge config) is conceptually separate from PoW capture; both share workspace auth.
@@ -39,5 +39,5 @@ REMEDIATION RULE:
 
 /** Shorter preamble when token budget is tight (TIM, heartbeats). */
 export const WORKSPACE_ONTOLOGY_COMPACT = `
-Uncertain Systems: workspaces never end; PoW API is the primary capture interface; Evaluation API exposes LWM Snapshot (lwm_snapshot), learning world model, and knowledge config (knowledgecfg-v1-d64). Single snapshot strategy; GHC is secondary. TAP/ILE end always updates the snapshot. TIM may attach interruption on PoW responses. LWM is symbolic; knowledge config is fixed-D geometry for proximity and trajectories.
+Uncertain Systems: workspaces never end; PoW API is the primary capture interface; Snapshot API exposes LWM Snapshot (lwm_snapshot), learning world model, and knowledge config (knowledgecfg-v1-d64). Single snapshot strategy; GHC is secondary. LWM Snapshot is manual (Knowledge UI) or Snapshot API / MCP — not auto-run on TAP/ILE end. TIM may attach interruption on PoW responses. LWM is symbolic; knowledge config is fixed-D geometry for proximity and trajectories.
 `.trim();

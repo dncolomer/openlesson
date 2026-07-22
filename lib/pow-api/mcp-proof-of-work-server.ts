@@ -90,7 +90,7 @@ export const MCP_PROOF_OF_WORK_PROTOCOL_VERSION = "2025-03-26";
 export const MCP_PROOF_OF_WORK_SERVER_NAME = "uncertain-systems-proof-of-work-api";
 export const MCP_PROOF_OF_WORK_SERVER_VERSION = "1.3.0";
 
-export const MCP_PROOF_OF_WORK_SERVER_INSTRUCTIONS = `Uncertain Systems Proof-of-Work API MCP — 100% parity with public agent REST under /api/v3/{pow,eval,stash} (workspace ops). Workspace create is UI-only. API key CRUD is browser-session only (not MCP).
+export const MCP_PROOF_OF_WORK_SERVER_INSTRUCTIONS = `Uncertain Systems Proof-of-Work API MCP — 100% parity with public agent REST under /api/v3/{pow,snapshot,stash} (workspace ops). Workspace create is UI-only. API key CRUD is browser-session only (not MCP).
 
 ## What Uncertain Systems is
 ${UNCERTAIN_SYSTEMS_SCOPE.mission}
@@ -112,11 +112,11 @@ Workspaces are created **only in the product UI** (\`/workspace/new\`). Programm
 1. list_workspaces or get_learning_progress(workspace_id) — orient on an existing UI-created workspace
 2. generate_proof_of_work_schema — returns continuous_evaluation (REST) AND continuous_evaluation_mcp (tools)
 3. upload_proof_of_work (or buffer_proof_of_work → stash_proof_of_work / submit_stashed_proof_of_work)
-4. lwm_snapshot (LWM Snapshot — sole strategy); optional get_world_model / get_knowledge_config / list_eval_history
+4. lwm_snapshot (LWM Snapshot — sole strategy); optional get_world_model / get_knowledge_config / list_snapshot_history
 5. Re-fetch schema + regenerate skill as proof of work grows
-Note: TAP/ILE end always runs LWM Snapshot (lwm_snapshot). Workspace creation is UI-only.
+Note: LWM Snapshot (lwm_snapshot) is manual via Knowledge UI or this API/MCP — not auto-run on TAP/ILE end. Workspace creation is UI-only.
 
-REST mirror: /api/v3/pow (capture), /api/v3/eval (scores + LWM/knowledge), /api/v3/stash (alaTAP buffer).
+REST mirror: /api/v3/pow (capture), /api/v3/snapshot (scores + LWM/knowledge), /api/v3/stash (alaTAP buffer).
 
 Resources: uncertain-systems://integration-scope, proof-of-work-loop, predictive-interruptions
 
@@ -256,7 +256,7 @@ export const MCP_EVIDENCE_TOOLS = [
   {
     name: "lwm_snapshot",
     description:
-      "LWM Snapshot (Learning World Model Snapshot) score (0–100) plus GHC, spider marker_scores, analysis (summary/gaps), and next actions. Sole product snapshot strategy. TAP/ILE session end always runs this path. Opaque workspaces also return evaluation_mode, privacy, and protocol_report. REST: POST .../lwm-snapshot.",
+      "LWM Snapshot (Learning World Model Snapshot) score (0–100) plus GHC, spider marker_scores, analysis (summary/gaps), and next actions. Sole product snapshot strategy. Run via Knowledge UI Generate new snapshot or this tool/REST — not auto on TAP/ILE end. Opaque workspaces also return evaluation_mode, privacy, and protocol_report. REST: POST .../lwm-snapshot.",
     inputSchema: {
       type: "object",
       properties: {
@@ -317,7 +317,7 @@ export const MCP_EVIDENCE_TOOLS = [
   {
     name: "get_world_model",
     description:
-      "Durable learning world model for workspace × subject. REST: GET /api/v3/eval/workspaces/{id}/world-model.",
+      "Durable learning world model for workspace × subject. REST: GET /api/v3/snapshot/workspaces/{id}/world-model.",
     inputSchema: {
       type: "object",
       properties: {
@@ -386,9 +386,9 @@ export const MCP_EVIDENCE_TOOLS = [
     annotations: { readOnlyHint: true },
   },
   {
-    name: "list_eval_history",
+    name: "list_snapshot_history",
     description:
-      "Prior vertical eval scorecards. REST: GET .../eval-history.",
+      "Prior vertical eval scorecards. REST: GET .../snapshot-history.",
     inputSchema: {
       type: "object",
       properties: {
@@ -409,9 +409,9 @@ export const MCP_EVIDENCE_TOOLS = [
     annotations: { readOnlyHint: true },
   },
   {
-    name: "list_custom_verification_models",
+    name: "list_custom_knowledge_regions",
     description:
-      "List custom verification models and subjects. REST: GET .../custom-verification-models.",
+      "List custom knowledge regions and subjects. REST: GET .../custom-knowledge-regions.",
     inputSchema: {
       type: "object",
       properties: { workspace_id: { type: "string" } },
@@ -421,9 +421,9 @@ export const MCP_EVIDENCE_TOOLS = [
     annotations: { readOnlyHint: true },
   },
   {
-    name: "create_custom_verification_model",
+    name: "create_custom_knowledge_region",
     description:
-      "Create custom verification model from subjects. REST: POST .../custom-verification-models action=create.",
+      "Create custom knowledge region from subjects. REST: POST .../custom-knowledge-regions action=create.",
     inputSchema: {
       type: "object",
       properties: {
@@ -447,9 +447,9 @@ export const MCP_EVIDENCE_TOOLS = [
     },
   },
   {
-    name: "eval_custom_verification_model",
+    name: "eval_custom_knowledge_region",
     description:
-      "Score a subject against a custom verification model. REST: POST .../custom-verification-models action=eval.",
+      "Score a subject against a custom knowledge region. REST: POST .../custom-knowledge-regions action=eval.",
     inputSchema: {
       type: "object",
       properties: {
@@ -1277,7 +1277,7 @@ export async function callMcpProofOfWorkTool(
     );
   }
 
-  if (name === "list_eval_history") {
+  if (name === "list_snapshot_history") {
     requireScope(auth.scopes, "workspaces:read");
     const workspaceId = stringArg(args, "workspace_id");
     if (!workspaceId) throw new Error("workspace_id is required.");
@@ -1344,11 +1344,11 @@ export async function callMcpProofOfWorkTool(
         limit,
         offset,
       },
-      { endpoint: "list_eval_history", workspace_id: workspaceId },
+      { endpoint: "list_snapshot_history", workspace_id: workspaceId },
     );
   }
 
-  if (name === "list_custom_verification_models") {
+  if (name === "list_custom_knowledge_regions") {
     requireScope(auth.scopes, "workspaces:read");
     const workspaceId = stringArg(args, "workspace_id");
     if (!workspaceId) throw new Error("workspace_id is required.");
@@ -1359,11 +1359,11 @@ export async function callMcpProofOfWorkTool(
     ]);
     return await evidenceToolResult(
       { workspace_id: workspaceId, models, subjects },
-      { endpoint: "list_custom_verification_models", workspace_id: workspaceId },
+      { endpoint: "list_custom_knowledge_regions", workspace_id: workspaceId },
     );
   }
 
-  if (name === "create_custom_verification_model") {
+  if (name === "create_custom_knowledge_region") {
     requireScope(auth.scopes, "workspaces:write");
     const workspaceId = stringArg(args, "workspace_id");
     if (!workspaceId) throw new Error("workspace_id is required.");
@@ -1383,11 +1383,11 @@ export async function callMcpProofOfWorkTool(
     });
     return await evidenceToolResult(
       { workspace_id: workspaceId, model, spec, action: "create" },
-      { endpoint: "create_custom_verification_model", workspace_id: workspaceId },
+      { endpoint: "create_custom_knowledge_region", workspace_id: workspaceId },
     );
   }
 
-  if (name === "eval_custom_verification_model") {
+  if (name === "eval_custom_knowledge_region") {
     requireScope(auth.scopes, "workspaces:write");
     const workspaceId = stringArg(args, "workspace_id");
     const modelId = stringArg(args, "model_id");
@@ -1415,7 +1415,7 @@ export async function callMcpProofOfWorkTool(
         score: scored.score,
         action: "eval",
       },
-      { endpoint: "eval_custom_verification_model", workspace_id: workspaceId },
+      { endpoint: "eval_custom_knowledge_region", workspace_id: workspaceId },
     );
   }
 

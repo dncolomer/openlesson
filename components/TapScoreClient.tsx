@@ -770,34 +770,10 @@ export function TapScoreClient({ workspaceId, blockId, sessionId, privateToken, 
       const resolvedRedirectUrl =
         typeof payload.redirectUrl === "string" ? payload.redirectUrl : configuredRedirectUrl;
 
-      // Always run LWM Snapshot after TAP complete so LWM + knowledge-config
-      // embeddings update (not only when showing results UI).
-      setPhase("saving");
-      const reportResponse = await fetch("/api/workspace-tap-score/performance", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          privateToken,
-          workspaceId: payload.workspaceId || resolvedWorkspaceId,
-          tapSessionId: tapSessionIdRef.current,
-          blockId,
-        }),
-      });
-      const reportPayload = await reportResponse.json();
-      if (!reportResponse.ok) {
-        if (resolvedPostSession === "show_results") {
-          setResultsError(reportPayload.error || "Could not generate performance results");
-          setPhase("error");
-          isEndingRef.current = false;
-          return;
-        }
-        // Session PoW is already saved; allow redirect/dashboard even if eval fails.
-        console.warn(
-          "[tap] post-session verification eval failed:",
-          reportPayload.error || reportResponse.status,
-        );
-      } else if (resolvedPostSession === "show_results") {
-        setPerformanceReport(reportPayload.report);
+      // LWM Snapshot is manual (Knowledge UI “Generate new snapshot”) or Snapshot API
+      // POST .../lwm-snapshot — not auto-run on TAP end.
+      if (resolvedPostSession === "show_results") {
+        setPerformanceReport(null);
         setPhase("results");
         return;
       }
@@ -1013,26 +989,24 @@ export function TapScoreClient({ workspaceId, blockId, sessionId, privateToken, 
           <section className="flex flex-1 items-center justify-center">
             <LoadingStatusMessage
               tone="muted"
-              message={
-                postSession === "show_results"
-                  ? t("tap.postSession.generatingResults")
-                  : t("tap.postSession.savingAndReturning")
-              }
+              message={t("tap.postSession.savingAndReturning")}
             />
           </section>
         )}
-        {phase === "results" && performanceReport ? (
+        {phase === "results" ? (
           <section className="mx-auto flex w-full max-w-4xl flex-1 flex-col overflow-y-auto py-6">
             <h1 className="text-2xl font-medium text-neutral-100">{t("tap.postSession.resultsTitle")}</h1>
             <p className="mt-2 max-w-2xl text-sm text-neutral-400">{t("tap.postSession.resultsHint")}</p>
-            <div className="mt-6 min-h-0 flex-1 rounded-lg border border-neutral-800 bg-neutral-950/50 p-4 md:p-5">
-              <PerformanceReportCard
-                report={performanceReport}
-                layout="spacious"
-                fillHeight
-                label={t("tap.postSession.verificationResultsTitle")}
-              />
-            </div>
+            {performanceReport ? (
+              <div className="mt-6 min-h-0 flex-1 rounded-lg border border-neutral-800 bg-neutral-950/50 p-4 md:p-5">
+                <PerformanceReportCard
+                  report={performanceReport}
+                  layout="spacious"
+                  fillHeight
+                  label={t("tap.postSession.verificationResultsTitle")}
+                />
+              </div>
+            ) : null}
           </section>
         ) : null}
         {phase === "error" && (

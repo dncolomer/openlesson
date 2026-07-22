@@ -56,7 +56,7 @@ export const EVAL_SUBJECT_SELF_WRITE_TABLES = [
 ] as const;
 
 /**
- * Resolve subject for Evaluation API from query/body + auth.
+ * Resolve subject for Snapshot API from query/body + auth.
  *
  * Always address subjects by unique IDs (`user_id` / `guest_user_id`).
  * There is no `subject=me` / `subject=self` token — omit IDs to default to the

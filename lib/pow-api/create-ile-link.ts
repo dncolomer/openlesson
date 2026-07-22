@@ -265,3 +265,82 @@ export async function createWorkspaceIleLink(options: CreateIleLinkOptions): Pro
     private_url: buildIleSessionUrl(baseUrl, privateToken),
   };
 }
+
+export interface ReissueIleLinkOptions {
+  supabase: SupabaseClient;
+  auth: AuthContext;
+  workspaceId: string;
+  linkId: string;
+  baseUrl: string;
+}
+
+/**
+ * Rotate the private token on an existing ILE link row.
+ * Keeps guest, block scope, and participant settings on the same card.
+ * Invalidates any previously issued URL for this link.
+ */
+export async function reissueWorkspaceIleLink(
+  options: ReissueIleLinkOptions
+): Promise<CreatedIleLink> {
+  const { supabase, auth, workspaceId, linkId, baseUrl } = options;
+
+  if (!isUuid(linkId)) {
+    throw new CreateIleLinkError("linkId must be a UUID", 400, "validation_error");
+  }
+
+  const { data: existing, error: loadError } = await supabase
+    .from("workspace_ile_links")
+    .select(
+      "id, workspace_id, block_id, status, created_at, participant_type, guest_user_id, assigned_user_id, private_token_hash, workspaces(id, user_id, organization_id, guest_user_id)"
+    )
+    .eq("id", linkId)
+    .eq("workspace_id", workspaceId)
+    .maybeSingle();
+
+  if (loadError) {
+    console.error("[reissue-ile-link] Load error:", loadError);
+    throw new CreateIleLinkError("Failed to load ILE link", 500, "internal_error");
+  }
+  if (!existing?.private_token_hash) {
+    throw new CreateIleLinkError("ILE link not found", 404, "not_found");
+  }
+
+  const workspaceRaw = (existing as { workspaces: unknown }).workspaces;
+  const workspace = (Array.isArray(workspaceRaw) ? workspaceRaw[0] : workspaceRaw) as {
+    id: string;
+    user_id: string | null;
+    organization_id: string | null;
+    guest_user_id: string | null;
+  } | null;
+
+  if (!workspace || !canAccessAgentWorkspace(auth, workspace)) {
+    throw new CreateIleLinkError("Workspace not found", 404, "workspace_not_found");
+  }
+
+  const privateToken = createPrivateToken();
+  const { data: link, error } = await supabase
+    .from("workspace_ile_links")
+    .update({
+      private_token_hash: hashPrivateToken(privateToken),
+      status: "pending",
+      started_at: null,
+      completed_at: null,
+      session_id: null,
+    })
+    .eq("id", linkId)
+    .eq("workspace_id", workspaceId)
+    .select(
+      "id, workspace_id, block_id, status, created_at, participant_type, guest_user_id, assigned_user_id"
+    )
+    .single();
+
+  if (error || !link) {
+    console.error("[reissue-ile-link] Update error:", error);
+    throw new CreateIleLinkError("Failed to reissue ILE link", 500, "internal_error");
+  }
+
+  return {
+    ...link,
+    private_url: buildIleSessionUrl(baseUrl, privateToken),
+  };
+}

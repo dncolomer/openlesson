@@ -16,11 +16,11 @@ const FEATURE_SURFACE_FILES = [
   "lib/pow-api/learner-state-engine.ts",
   "lib/pow-api/evaluation-subject.ts",
   "lib/pow-api/run-vertical-score.ts",
-  // Evaluation API
-  "app/api/v3/eval/workspaces/[id]/world-model/route.ts",
-  "app/api/v3/eval/workspaces/[id]/knowledge-config/route.ts",
-  "app/api/v3/eval/workspaces/[id]/knowledge-config/trajectory/route.ts",
-  "app/api/v3/eval/workspaces/[id]/lwm-snapshot/route.ts",
+  // Snapshot API
+  "app/api/v3/snapshot/workspaces/[id]/world-model/route.ts",
+  "app/api/v3/snapshot/workspaces/[id]/knowledge-config/route.ts",
+  "app/api/v3/snapshot/workspaces/[id]/knowledge-config/trajectory/route.ts",
+  "app/api/v3/snapshot/workspaces/[id]/lwm-snapshot/route.ts",
   // Workspace UI API + panel
   "app/api/workspace/knowledge-config/route.ts",
   "components/KnowledgeConfigTrajectoryPanel.tsx",
@@ -66,11 +66,11 @@ describe("knowledge config / LWM feature surfaces", () => {
     expect(forward).toMatch(/RENAME TO knowledge_config_snapshots/);
   });
 
-  it("Evaluation API routes require workspaces:read and document subject scoping", () => {
+  it("Snapshot API routes require workspaces:read and document subject scoping", () => {
     for (const rel of [
-      "app/api/v3/eval/workspaces/[id]/world-model/route.ts",
-      "app/api/v3/eval/workspaces/[id]/knowledge-config/route.ts",
-      "app/api/v3/eval/workspaces/[id]/knowledge-config/trajectory/route.ts",
+      "app/api/v3/snapshot/workspaces/[id]/world-model/route.ts",
+      "app/api/v3/snapshot/workspaces/[id]/knowledge-config/route.ts",
+      "app/api/v3/snapshot/workspaces/[id]/knowledge-config/trajectory/route.ts",
     ] as const) {
       const src = read(rel);
       expect(src).toContain('authenticateRequest(req, "workspaces:read")');
@@ -80,12 +80,12 @@ describe("knowledge config / LWM feature surfaces", () => {
   });
 
   it("score routes live under eval and call runVerticalScore", () => {
-    const primary = read("app/api/v3/eval/workspaces/[id]/lwm-snapshot/route.ts");
+    const primary = read("app/api/v3/snapshot/workspaces/[id]/lwm-snapshot/route.ts");
     expect(primary).toContain("runVerticalScore");
     expect(primary).not.toContain("app/api/v2/");
     expect(primary).not.toContain("/api/v2/");
     for (const name of ["verification-score", "augmentation-score", "optimization-score"] as const) {
-      expect(existsSync(join(ROOT, "app/api/v3/eval/workspaces/[id]", name, "route.ts"))).toBe(
+      expect(existsSync(join(ROOT, "app/api/v3/snapshot/workspaces/[id]", name, "route.ts"))).toBe(
         false,
       );
     }
@@ -97,7 +97,7 @@ describe("knowledge config / LWM feature surfaces", () => {
     expect(run).toContain("learning_world_model");
     expect(run).toContain("knowledge_config");
 
-    const primary = read("app/api/v3/eval/workspaces/[id]/lwm-snapshot/route.ts");
+    const primary = read("app/api/v3/snapshot/workspaces/[id]/lwm-snapshot/route.ts");
     expect(primary).toContain("learning_world_model");
     expect(primary).toContain("knowledge_config");
 
@@ -122,7 +122,7 @@ describe("knowledge config / LWM feature surfaces", () => {
     const lwm = read("components/KnowledgeConfigTrajectoryPanel.tsx");
     expect(lwm).toContain("data-lwm-generate-snapshot");
     expect(lwm).toContain("/api/workspace/performance-report");
-    expect(lwm).toContain("eval-history");
+    expect(lwm).toContain("snapshot-history");
     expect(lwm).not.toContain('params.set("subject", "me")');
   });
 
@@ -315,9 +315,9 @@ describe("knowledge config / LWM feature surfaces", () => {
     }
   });
 
-  it("docs describe Evaluation API and model contract", () => {
+  it("docs describe Snapshot API and model contract", () => {
     const docs = read("docs/PROOF_OF_WORK_API.md");
-    expect(docs).toContain("/api/v3/eval");
+    expect(docs).toContain("/api/v3/snapshot");
     expect(docs).toContain("knowledge-config");
     expect(docs).toContain("world-model");
     expect(docs).toContain("knowledgecfg-v1-d64");

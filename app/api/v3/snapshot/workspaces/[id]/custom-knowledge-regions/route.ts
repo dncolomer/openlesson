@@ -17,9 +17,13 @@ interface RouteProps {
 }
 
 /**
- * GET  /api/v3/eval/workspaces/{id}/custom-verification-models
- * POST /api/v3/eval/workspaces/{id}/custom-verification-models
+ * Snapshot API — custom knowledge regions (knowledgecfg regions).
+ * GET  /api/v3/snapshot/workspaces/{id}/custom-knowledge-regions
+ * POST /api/v3/snapshot/workspaces/{id}/custom-knowledge-regions
  *      body.action: create | eval
+ *
+ * create: build a region (centroid + radius) from one or more subjects' knowledge-config embeddings.
+ * eval: score another subject's embedding against a model_id (proximity 0–100). Not an LWM Snapshot.
  */
 export async function GET(req: NextRequest, { params }: RouteProps) {
   const result = await authenticateRequest(req, "workspaces:read");
@@ -130,7 +134,7 @@ export async function POST(req: NextRequest, { params }: RouteProps) {
     if (error instanceof CustomVerificationModelError) {
       return errorResponse(400, "custom_verification_model_error", error.message);
     }
-    console.error("[eval/custom-verification-models] failed:", error);
-    return errorResponse(500, "internal_error", "Failed to process custom verification model");
+    console.error("[eval/custom-knowledge-regions] failed:", error);
+    return errorResponse(500, "internal_error", "Failed to process custom knowledge region");
   }
 }

@@ -1,11 +1,11 @@
 # Uncertain Systems Proof-of-Work API
 
 Capture base path: **`/api/v3/pow`**  
-Evaluation base path: **`/api/v3/eval`**  
+Snapshot base path: **`/api/v3/snapshot`**  
 Stash base path: **`/api/v3/stash`** (alaTAP buffer)
 
 - **PoW (`/api/v3/pow`)** — list/get workspaces, learning-progress, proof-of-work upload, schema, integration skill, blocks, TAP links, API keys (browser session), org guests. **Workspace creation is UI-only** (`/workspace/new`); `POST /workspaces` is not available.
-- **Eval (`/api/v3/eval`)** — vertical scores, learning world model, knowledge-config + trajectory, knowledge distance, eval-history, custom verification models.
+- **Snapshot (`/api/v3/snapshot`)** — vertical scores, learning world model, knowledge-config + trajectory, knowledge distance, snapshot-history, custom verification models.
 - **Stash (`/api/v3/stash`)** — temporary PoW buffer, then **stash** (System 1) or **submit** (System 2) flush into regular PoW.
 
 **MCP (`POST /api/mcp`)** exposes the same agent workspace ops with 100% tool ↔ REST parity (workspace create and key CRUD remain non-MCP: UI-only create; browser-session keys).
@@ -14,9 +14,9 @@ There is no `/api/v2/*` agent surface.
 
 Public agent bodies use **snake_case**. Plan-gate failures return **`403` with `error.code = "api_plan_required"`** (Teams tier).
 
-## Evaluation API (scores, world model, knowledge config)
+## Snapshot API (scores, world model, knowledge config)
 
-Base path: `/api/v3/eval`
+Base path: `/api/v3/snapshot`
 
 | Method | Path | Scope | Description |
 | :--- | :--- | :--- | :--- |
@@ -24,12 +24,12 @@ Base path: `/api/v3/eval`
 | `GET` | `/workspaces/{id}/knowledge-config` | `workspaces:read` | Latest **knowledge configuration** embedding (`knowledgecfg-v1-d64`, D=64). Address subject with `user_id` / `guest_user_id`. |
 | `GET` | `/workspaces/{id}/knowledge-config/trajectory` | `workspaces:read` | Time series of knowledge config snapshots + fixed 2D projection (`?from=&to=&max_points=&project=`). Subject via unique `user_id` / `guest_user_id`. |
 | `GET` / `POST` | `/workspaces/{id}/knowledge-distance` | `workspaces:read` | **Knowledge distance** between a user (`user_id` / `guest_user_id`) and a custom knowledge region (`region_id`). Pure embedding geometry — **not** a vertical Eval and **not** written to `eval_run_history`. |
-| `GET` | `/workspaces/{id}/eval-history` | `workspaces:read` | Append-only **eval run history** (full scorecards). Filter by unique `user_id` / `guest_user_id`, multi-user cohort `user_ids=a,b`, guests `guest_user_ids=`, `vertical=`, `from=`, `to=`, `limit=`. Non-admins are scoped to self; owners/org admins may list workspace or group cohorts. |
+| `GET` | `/workspaces/{id}/snapshot-history` | `workspaces:read` | Append-only **eval run history** (full scorecards). Filter by unique `user_id` / `guest_user_id`, multi-user cohort `user_ids=a,b`, guests `guest_user_ids=`, `vertical=`, `from=`, `to=`, `limit=`. Non-admins are scoped to self; owners/org admins may list workspace or group cohorts. |
 | `POST` | `/workspaces/{id}/lwm-snapshot` | `workspaces:read` | LWM Snapshot (sole strategy) + optional `learning_world_model` / `knowledge_config` after persistence. |
 
 **Knowledge config contract:** all vectors share model id `knowledgecfg-v1-d64` (dimension 64). Vectors with different model ids are not comparable. Workspace scopes trajectories; the axes are global so expert regions and cross-user distance are well-defined.
 
-**Subject addressing:** Evaluation APIs address learners with unique `user_id` and/or `guest_user_id` only. There is no `subject=me` / `subject=self` token — pass the caller's UUID explicitly, or omit IDs to default to the authenticated identity.
+**Subject addressing:** Snapshot APIs address learners with unique `user_id` and/or `guest_user_id` only. There is no `subject=me` / `subject=self` token — pass the caller's UUID explicitly, or omit IDs to default to the authenticated identity.
 
 **Learning world model:** symbolic state (exploration, evidence appetite, scores). Co-evolves with knowledge config on each vertical score. Score responses may include `learning_world_model` and `knowledge_config` after a successful evaluation.
 
@@ -75,18 +75,18 @@ Canonical protocol `agent-trace-v3` phases: `enumerate` → `fingerprint` → `a
 | `POST` | `/org/guests` | `org:write` | — | Org admins create guest users (not an MCP tool). |
 | `GET`/`POST`/`DELETE`/`PATCH` | `/keys…` | browser session | — | API key CRUD is browser-session only (not MCP). |
 
-## Endpoints (evaluation — base `/api/v3/eval`)
+## Endpoints (snapshot — base `/api/v3/snapshot`)
 
 | Method | Path | Scope | MCP tool | Description |
 | :--- | :--- | :--- | :--- | :--- |
-| `POST` | `/workspaces/{workspace_id}/lwm-snapshot` | `workspaces:read` | `lwm_snapshot` | LWM Snapshot score (0–100; sole strategy). TAP/ILE end always use this. |
+| `POST` | `/workspaces/{workspace_id}/lwm-snapshot` | `workspaces:read` | `lwm_snapshot` | LWM Snapshot score (0–100; sole strategy). Manual / explicit API (not auto on TAP/ILE end). |
 | `GET` | `/workspaces/{workspace_id}/world-model` | `workspaces:read` | `get_world_model` | Durable learning world model for a subject. |
 | `GET` | `/workspaces/{workspace_id}/knowledge-config` | `workspaces:read` | `get_knowledge_config` | Latest knowledge config embedding (`knowledgecfg-v1-d64`). |
 | `GET` | `/workspaces/{workspace_id}/knowledge-config/trajectory` | `workspaces:read` | `get_knowledge_config_trajectory` | Knowledge config trajectory + optional 2D projection. |
 | `GET` / `POST` | `/workspaces/{workspace_id}/knowledge-distance` | `workspaces:read` | `knowledge_distance` | Knowledge distance (user ↔ region). Body/query: `region_id`, `user_id` / `guest_user_id` (snake_case). Not a vertical Eval. |
-| `GET` | `/workspaces/{workspace_id}/eval-history` | `workspaces:read` | `list_eval_history` | Prior vertical eval scorecards. |
-| `GET` | `/workspaces/{workspace_id}/custom-verification-models` | `workspaces:read` | `list_custom_verification_models` | List models + subjects with knowledge config. |
-| `POST` | `/workspaces/{workspace_id}/custom-verification-models` | `workspaces:write` | `create_custom_verification_model` / `eval_custom_verification_model` | Body `action`: `create` (default) or `eval` (`model_id` + subject). |
+| `GET` | `/workspaces/{workspace_id}/snapshot-history` | `workspaces:read` | `list_snapshot_history` | Prior vertical eval scorecards. |
+| `GET` | `/workspaces/{workspace_id}/custom-knowledge-regions` | `workspaces:read` | `list_custom_knowledge_regions` | List custom knowledge regions + subjects with knowledge config. |
+| `POST` | `/workspaces/{workspace_id}/custom-knowledge-regions` | `workspaces:write` | `create_custom_knowledge_region` / `eval_custom_knowledge_region` | Body `action`: `create` (default) or `eval` (`model_id` + subject). |
 
 ## Endpoints (stash / alaTAP — base `/api/v3/stash`)
 
@@ -212,7 +212,7 @@ Three dedicated score endpoints — one primary 0–100 score per call (not a mu
 
 | Path | MCP tool | Primary field | Meaning |
 | :--- | :--- | :--- | :--- |
-| `POST .../lwm-snapshot` | `lwm_snapshot` | `lwm_snapshot_score` / `score` | LWM Snapshot primary. **TAP/ILE end always use this path.** |
+| `POST .../lwm-snapshot` | `lwm_snapshot` | `lwm_snapshot_score` / `score` | LWM Snapshot primary. Manual Knowledge UI or this Snapshot API/MCP tool. |
 
 **Request body** (all three):
 
@@ -259,7 +259,7 @@ Organization-owned workspaces are visible to all real users and guest users in t
 
 ## TAP Evidence
 
-Think Aloud Protocol sessions upload proof of work continuously during the session (`tap-thought-trace` system1/system2, `tap-helios-chat`, `tap-speech-segment`, `tap-idle-heartbeat`) and a final `tap-transcript` on complete. Product TAP auto-results run a durable **verification** eval (eval history + learning world model + knowledge-config embedding). Integrators can also poll `GET .../tap-links` for link `status`, then call `POST .../lwm-snapshot` (TAP is always verification-only).
+Think Aloud Protocol sessions upload proof of work continuously during the session (`tap-thought-trace` system1/system2, `tap-helios-chat`, `tap-speech-segment`, `tap-idle-heartbeat`) and a final `tap-transcript` on complete. LWM Snapshot is **not** auto-run on TAP end — generate via Knowledge UI **Generate new snapshot** or `POST .../lwm-snapshot` (MCP `lwm_snapshot`). Integrators can poll `GET .../tap-links` for link `status`, then call the Snapshot API when ready.
 
 **Reusable guest links:** TAP and ILE private URLs are multi-use. Reopening the same link starts another run while keeping `guest_user_id` stable (so embeddings / eval history stay on the same subject). Creating a new link with body `guest_user_id` reuses that guest when the caller owns the workspace or is an org admin for that guest.
 

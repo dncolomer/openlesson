@@ -9,9 +9,9 @@ export const runtime = "nodejs";
 export const maxDuration = 120;
 
 /**
- * TAP post-session always runs the single LWM Snapshot generator
- * (eval_run_history + LWM + knowledge-config embedding) — same path as
- * Knowledge UI / ILE end / Evaluation API. Not a display-only scorecard.
+ * Optional TAP-session helper to run LWM Snapshot for a participant.
+ * Product snapshot generation is manual (Knowledge UI) or Snapshot API
+ * POST .../lwm-snapshot / MCP lwm_snapshot — not invoked automatically on TAP end.
  */
 export async function POST(req: NextRequest) {
   try {

@@ -1,18 +1,24 @@
 /**
- * Canonical public API bases (v3): Proof-of-Work + Evaluation + Stash (alaTAP).
- * Capture lives under POW; scores / LWM / knowledge-config under EVAL;
+ * Canonical public API bases (v3): Proof-of-Work + Snapshot + Stash (alaTAP).
+ * Capture lives under POW; LWM Snapshot / world model / knowledge-config under SNAPSHOT;
  * agent stash/submit buffering under STASH.
  */
 
 export const POW_API_BASE = "/api/v3/pow" as const;
-export const EVAL_API_BASE = "/api/v3/eval" as const;
+export const SNAPSHOT_API_BASE = "/api/v3/snapshot" as const;
 export const STASH_API_BASE = "/api/v3/stash" as const;
 
-export type PowEvalApiSurface = "pow" | "eval";
-export type AgentApiSurface = PowEvalApiSurface | "stash";
+/** @deprecated Use SNAPSHOT_API_BASE — former Evaluation API base name. */
+export const EVAL_API_BASE = SNAPSHOT_API_BASE;
 
-export function agentApiBase(surface: PowEvalApiSurface): string {
-  return surface === "pow" ? POW_API_BASE : EVAL_API_BASE;
+export type PowSnapshotApiSurface = "pow" | "snapshot";
+/** @deprecated Use PowSnapshotApiSurface */
+export type PowEvalApiSurface = PowSnapshotApiSurface | "eval";
+export type AgentApiSurface = PowSnapshotApiSurface | "stash";
+
+export function agentApiBase(surface: PowSnapshotApiSurface | "eval"): string {
+  if (surface === "pow") return POW_API_BASE;
+  return SNAPSHOT_API_BASE;
 }
 
 export function stashWorkspacesPath(baseUrl?: string | null): string {
@@ -51,35 +57,62 @@ export function powWorkspaceResource(
   return `${powWorkspacePath(workspaceId, baseUrl)}/${resource.replace(/^\//, "")}`;
 }
 
-export function evalWorkspacePath(workspaceId: string, baseUrl?: string | null): string {
+export function snapshotWorkspacePath(workspaceId: string, baseUrl?: string | null): string {
   const base = (baseUrl || "").replace(/\/$/, "");
-  return `${base}${EVAL_API_BASE}/workspaces/${workspaceId}`;
+  return `${base}${SNAPSHOT_API_BASE}/workspaces/${workspaceId}`;
 }
 
+/** @deprecated Use snapshotWorkspacePath */
+export function evalWorkspacePath(workspaceId: string, baseUrl?: string | null): string {
+  return snapshotWorkspacePath(workspaceId, baseUrl);
+}
+
+export function snapshotWorkspaceResource(
+  workspaceId: string,
+  resource: string,
+  baseUrl?: string | null,
+): string {
+  return `${snapshotWorkspacePath(workspaceId, baseUrl)}/${resource.replace(/^\//, "")}`;
+}
+
+/** @deprecated Use snapshotWorkspaceResource */
 export function evalWorkspaceResource(
   workspaceId: string,
   resource: string,
   baseUrl?: string | null,
 ): string {
-  return `${evalWorkspacePath(workspaceId, baseUrl)}/${resource.replace(/^\//, "")}`;
+  return snapshotWorkspaceResource(workspaceId, resource, baseUrl);
 }
 
 /** Contract pattern for docs / structured output (placeholder workspace id). */
-export function evalScoreEndpointPattern(
+export function snapshotScoreEndpointPattern(
   verticalPath: string,
   baseUrl?: string | null,
 ): string {
-  const path = `${EVAL_API_BASE}/workspaces/{workspace_id}/${verticalPath}`;
+  const path = `${SNAPSHOT_API_BASE}/workspaces/{workspace_id}/${verticalPath}`;
   if (baseUrl) {
     return `${baseUrl.replace(/\/$/, "")}${path}`;
   }
   return `POST ${path}`;
 }
 
+/** @deprecated Use snapshotScoreEndpointPattern */
+export function evalScoreEndpointPattern(
+  verticalPath: string,
+  baseUrl?: string | null,
+): string {
+  return snapshotScoreEndpointPattern(verticalPath, baseUrl);
+}
+
 export function powEndpointPattern(resource: string, method = "POST"): string {
   return `${method} ${POW_API_BASE}/workspaces/{workspace_id}/${resource.replace(/^\//, "")}`;
 }
 
+export function snapshotEndpointPattern(resource: string, method = "GET"): string {
+  return `${method} ${SNAPSHOT_API_BASE}/workspaces/{workspace_id}/${resource.replace(/^\//, "")}`;
+}
+
+/** @deprecated Use snapshotEndpointPattern */
 export function evalEndpointPattern(resource: string, method = "GET"): string {
-  return `${method} ${EVAL_API_BASE}/workspaces/{workspace_id}/${resource.replace(/^\//, "")}`;
+  return snapshotEndpointPattern(resource, method);
 }

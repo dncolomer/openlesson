@@ -62,11 +62,11 @@ describe("API subject unique IDs (no subject=me)", () => {
 
   it("eval routes and docs do not prescribe subject=me self addressing", () => {
     const routes = [
-      "app/api/v3/eval/workspaces/[id]/knowledge-distance/route.ts",
-      "app/api/v3/eval/workspaces/[id]/knowledge-config/route.ts",
-      "app/api/v3/eval/workspaces/[id]/world-model/route.ts",
-      "app/api/v3/eval/workspaces/[id]/eval-history/route.ts",
-      "app/api/workspace/eval-history/route.ts",
+      "app/api/v3/snapshot/workspaces/[id]/knowledge-distance/route.ts",
+      "app/api/v3/snapshot/workspaces/[id]/knowledge-config/route.ts",
+      "app/api/v3/snapshot/workspaces/[id]/world-model/route.ts",
+      "app/api/v3/snapshot/workspaces/[id]/snapshot-history/route.ts",
+      "app/api/workspace/snapshot-history/route.ts",
       "components/WorkspacePerformancePanel.tsx",
     ];
     for (const rel of routes) {

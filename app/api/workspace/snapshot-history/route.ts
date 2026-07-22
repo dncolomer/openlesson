@@ -246,7 +246,7 @@ export async function GET(req: NextRequest) {
     }
     return NextResponse.json(result.body);
   } catch (error) {
-    console.error("[workspace/eval-history] GET failed:", error);
+    console.error("[workspace/snapshot-history] GET failed:", error);
     return NextResponse.json({ error: "Failed to load eval history" }, { status: 500 });
   }
 }
@@ -292,7 +292,7 @@ export async function POST(req: NextRequest) {
     }
     return NextResponse.json(result.body);
   } catch (error) {
-    console.error("[workspace/eval-history] POST failed:", error);
+    console.error("[workspace/snapshot-history] POST failed:", error);
     return NextResponse.json({ error: "Failed to load eval history" }, { status: 500 });
   }
 }

@@ -11,7 +11,7 @@ interface RouteProps {
 }
 
 /**
- * GET /api/v3/eval/workspaces/{id}/world-model
+ * GET /api/v3/snapshot/workspaces/{id}/world-model
  * Durable merged learning world model for a workspace × subject.
  */
 export async function GET(req: NextRequest, { params }: RouteProps) {

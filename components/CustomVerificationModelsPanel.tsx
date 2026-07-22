@@ -71,7 +71,7 @@ export function CustomVerificationModelsPanel({
     setError(null);
     try {
       const res = await fetch(
-        `/api/workspace/custom-verification-models?workspaceId=${encodeURIComponent(workspaceId)}`,
+        `/api/workspace/custom-knowledge-regions?workspaceId=${encodeURIComponent(workspaceId)}`,
       );
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to load custom knowledge regions");
@@ -123,7 +123,7 @@ export function CustomVerificationModelsPanel({
     setCreating(true);
     setError(null);
     try {
-      const res = await fetch("/api/workspace/custom-verification-models", {
+      const res = await fetch("/api/workspace/custom-knowledge-regions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -162,7 +162,7 @@ export function CustomVerificationModelsPanel({
     setSynthesizing(true);
     setError(null);
     try {
-      const res = await fetch("/api/workspace/custom-verification-models", {
+      const res = await fetch("/api/workspace/custom-knowledge-regions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -198,7 +198,7 @@ export function CustomVerificationModelsPanel({
     setDeletingId(region.id);
     setError(null);
     try {
-      const res = await fetch("/api/workspace/custom-verification-models", {
+      const res = await fetch("/api/workspace/custom-knowledge-regions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

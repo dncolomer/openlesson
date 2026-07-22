@@ -890,7 +890,10 @@ export function recoverPerformanceReportFromModelText(
   return recoverVerticalScoreReportFromModelText(text, "verification");
 }
 
-/** TAP / ILE post-session auto-snapshot always uses the single LWM Snapshot strategy. */
+/**
+ * Wire key for session-adjacent snapshot helpers (same strategy as Snapshot API lwm-snapshot).
+ * Snapshots are manual (Knowledge UI) or explicit API/MCP — not auto-run on TAP/ILE end.
+ */
 export const TAP_AUTO_SCORE_VERTICAL: ScoreVertical = SNAPSHOT_VERTICAL;
 /** @alias TAP_AUTO_SCORE_VERTICAL */
 export const SESSION_AUTO_SNAPSHOT_VERTICAL: ScoreVertical = SNAPSHOT_VERTICAL;

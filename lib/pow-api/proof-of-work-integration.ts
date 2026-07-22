@@ -55,7 +55,7 @@ export function buildIntegrationSkillApiPath(workspaceId: string, baseUrl: strin
   return powWorkspaceResource(workspaceId, "integration-skill", baseUrl);
 }
 
-/** Primary LWM Snapshot endpoint (Evaluation API). */
+/** Primary LWM Snapshot endpoint (Snapshot API). */
 export function buildPerformanceApiPath(workspaceId: string, baseUrl: string): string {
   return evalWorkspaceResource(workspaceId, "lwm-snapshot", baseUrl);
 }
@@ -255,7 +255,7 @@ Integration surfaces: REST Bearer auth + MCP JSON-RPC (full parity — document 
 LWM Snapshot contract (MUST appear in skill.md — sole product score strategy; one primary score + GHC secondary + spider + analysis + next actions):
 Endpoint: POST .../lwm-snapshot
 MCP tool: lwm_snapshot
-TAP/ILE end: always run lwm-snapshot (LWM Snapshot)
+LWM Snapshot: manual Knowledge UI or POST .../lwm-snapshot / MCP lwm_snapshot (not auto on TAP/ILE end)
 Required fields: ${(spec.performance_report_contract?.required_fields || ["score", "lwm_snapshot_score", "workspace_goal", "ghc_score", "marker_scores", "gap_analysis.gaps", "gap_analysis.next_steps"]).join(", ")}
 primary score: ${spec.performance_report_contract?.primary_score?.range || "0-100"} integer (lwm_snapshot_score / LWM Snapshot)
 workspace_goal: ${spec.performance_report_contract?.workspace_goal?.description || "inferred or owner-set workspace goal"}

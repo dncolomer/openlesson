@@ -177,10 +177,7 @@ export function WorkspaceGuestLinksPanel({
   }, [currentUserId, isOwner, loadTapResources]);
 
   const createTapLink = useCallback(
-    async (
-      participantType: "anonymous" | "user",
-      options?: { guestUserId?: string | null },
-    ) => {
+    async (participantType: "anonymous" | "user") => {
       setCreatingLink(true);
       setCreateError(null);
       try {
@@ -196,11 +193,7 @@ export function WorkspaceGuestLinksPanel({
         if (postSession === "redirect_url") {
           body.redirect_url = redirectUrl.trim();
         }
-        if (options?.guestUserId) {
-          body.guest_user_id = options.guestUserId;
-          body.participant_type = "anonymous";
-        }
-        if (participantType === "user" && !options?.guestUserId) {
+        if (participantType === "user") {
           if (!selectedMemberId) throw new Error(t("planView.tapLinksSelectMember"));
           body.user_id = selectedMemberId;
         }
@@ -236,28 +229,48 @@ export function WorkspaceGuestLinksPanel({
     ],
   );
 
+  /** Same card: rotate private URL; keep guest, scope, duration, post-session. */
+  const reissueTapLink = useCallback(
+    async (linkId: string) => {
+      setCreatingLink(true);
+      setCreateError(null);
+      try {
+        const response = await fetch("/api/workspace/tap-links", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ workspaceId, reissue_link_id: linkId }),
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || t("planView.tapLinksCreateError"));
+
+        const privateUrl = data.tap_link?.private_url as string | undefined;
+        if (privateUrl && data.tap_link?.id) {
+          setCreatedLinks((current) => ({ ...current, [data.tap_link.id]: privateUrl }));
+        }
+        await loadTapResources();
+      } catch (error) {
+        setCreateError(error instanceof Error ? error.message : t("planView.tapLinksCreateError"));
+      } finally {
+        setCreatingLink(false);
+      }
+    },
+    [loadTapResources, t, workspaceId],
+  );
+
   const createIleLink = useCallback(
-    async (
-      participantType: "anonymous" | "user",
-      options?: { guestUserId?: string | null; blockId?: string | null },
-    ) => {
+    async (participantType: "anonymous" | "user") => {
       setCreatingIleLink(true);
       setCreateIleError(null);
       try {
-        const blockId = options?.blockId || selectedIleBlockId;
-        if (!blockId) {
+        if (!selectedIleBlockId) {
           throw new Error(t("planView.ileLinksSelectBlock"));
         }
         const body: Record<string, unknown> = {
           workspaceId,
-          blockId,
+          blockId: selectedIleBlockId,
           participant_type: participantType,
         };
-        if (options?.guestUserId) {
-          body.guest_user_id = options.guestUserId;
-          body.participant_type = "anonymous";
-        }
-        if (participantType === "user" && !options?.guestUserId) {
+        if (participantType === "user") {
           if (!selectedIleMemberId) throw new Error(t("planView.tapLinksSelectMember"));
           body.user_id = selectedIleMemberId;
         }
@@ -284,6 +297,36 @@ export function WorkspaceGuestLinksPanel({
       }
     },
     [loadTapResources, selectedIleBlockId, selectedIleMemberId, t, workspaceId],
+  );
+
+  /** Same card: rotate private URL; keep guest and block scope. */
+  const reissueIleLink = useCallback(
+    async (linkId: string) => {
+      setCreatingIleLink(true);
+      setCreateIleError(null);
+      try {
+        const response = await fetch("/api/workspace/ile-links", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ workspaceId, reissue_link_id: linkId }),
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || t("planView.ileLinksCreateError"));
+
+        const privateUrl = data.ile_link?.private_url as string | undefined;
+        if (privateUrl && data.ile_link?.id) {
+          setCreatedLinks((current) => ({ ...current, [data.ile_link.id]: privateUrl }));
+        }
+        await loadTapResources();
+      } catch (error) {
+        setCreateIleError(
+          error instanceof Error ? error.message : t("planView.ileLinksCreateError"),
+        );
+      } finally {
+        setCreatingIleLink(false);
+      }
+    },
+    [loadTapResources, t, workspaceId],
   );
 
   const copyLink = useCallback(
@@ -466,9 +509,7 @@ export function WorkspaceGuestLinksPanel({
                         <button
                           type="button"
                           disabled={creatingLink}
-                          onClick={() =>
-                            void createTapLink("anonymous", { guestUserId: link.guest_user_id })
-                          }
+                          onClick={() => void reissueTapLink(link.id)}
                           className="rounded-md border border-neutral-700 px-2.5 py-1.5 text-xs text-neutral-300 transition hover:border-neutral-500"
                         >
                           {t("planView.tapLinksReuseGuest")}
@@ -604,12 +645,7 @@ export function WorkspaceGuestLinksPanel({
                         <button
                           type="button"
                           disabled={creatingIleLink}
-                          onClick={() =>
-                            void createIleLink("anonymous", {
-                              guestUserId: link.guest_user_id,
-                              blockId: link.block_id,
-                            })
-                          }
+                          onClick={() => void reissueIleLink(link.id)}
                           className="rounded-md border border-neutral-700 px-2.5 py-1.5 text-xs text-neutral-300 transition hover:border-neutral-500"
                         >
                           {t("planView.ileLinksReuseGuest")}

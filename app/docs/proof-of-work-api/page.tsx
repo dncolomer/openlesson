@@ -64,10 +64,10 @@ const ENDPOINT_SPECS: EndpointSpec[] = [
   {
     id: "lwm-snapshot",
     method: "POST",
-    path: "/api/v3/eval/workspaces/{workspace_id}/lwm-snapshot",
+    path: "/api/v3/snapshot/workspaces/{workspace_id}/lwm-snapshot",
     scope: "workspaces:read",
     summary:
-      "LWM Snapshot score (0–100) + GHC + spider markers, analysis, and next actions. Sole product snapshot strategy. TAP/ILE end always use this path.",
+      "LWM Snapshot score (0–100) + GHC + spider markers, analysis, and next actions. Sole product snapshot strategy. Manual Knowledge UI or Snapshot API/MCP (not auto on TAP/ILE end).",
     status: "200 OK",
     pathParams: [
       { name: "workspace_id", type: "uuid", required: true, description: "Workspace ID." },

@@ -29,7 +29,7 @@ function parseVertical(value: string | null): ScoreVertical | null {
 }
 
 /**
- * GET /api/v3/eval/workspaces/{id}/eval-history
+ * GET /api/v3/snapshot/workspaces/{id}/snapshot-history
  *
  * List prior vertical eval scorecards for retroactive inspection.
  *

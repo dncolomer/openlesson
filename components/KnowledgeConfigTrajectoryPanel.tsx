@@ -943,7 +943,7 @@ export function KnowledgeConfigTrajectoryPanel({
       if (lwmGuestUserId) params.set("guest_user_id", lwmGuestUserId);
       else if (subjectUser) params.set("user_id", subjectUser);
 
-      const response = await fetch(`/api/workspace/eval-history?${params.toString()}`);
+      const response = await fetch(`/api/workspace/snapshot-history?${params.toString()}`);
       const data = await response.json().catch(() => ({}));
       if (!response.ok) {
         setSnapshotEligibility({ allowed: true });
@@ -1020,7 +1020,7 @@ export function KnowledgeConfigTrajectoryPanel({
     setRegionsError(null);
     try {
       const res = await fetch(
-        `/api/workspace/custom-verification-models?workspaceId=${encodeURIComponent(workspaceId)}`,
+        `/api/workspace/custom-knowledge-regions?workspaceId=${encodeURIComponent(workspaceId)}`,
       );
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -1103,7 +1103,7 @@ export function KnowledgeConfigTrajectoryPanel({
       await Promise.all(
         ids.map(async (regionId) => {
           try {
-            const res = await fetch("/api/workspace/custom-verification-models", {
+            const res = await fetch("/api/workspace/custom-knowledge-regions", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({

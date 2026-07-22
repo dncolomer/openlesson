@@ -5,8 +5,8 @@
  */
 
 import {
-  EVAL_API_BASE,
   POW_API_BASE,
+  SNAPSHOT_API_BASE,
   STASH_API_BASE,
 } from "@/lib/api/agent-api-paths";
 import type { ApiKeyScope } from "./types";
@@ -84,10 +84,10 @@ export const AGENT_TOOL_SURFACE = [
     name: "lwm_snapshot",
     scope: "workspaces:read",
     summary:
-      "LWM Snapshot (Learning World Model Snapshot) score (0–100) + GHC + spider markers, analysis, next actions. REST: POST .../lwm-snapshot. Sole product snapshot strategy; TAP/ILE end always run this path.",
+      "LWM Snapshot (Learning World Model Snapshot) score (0–100) + GHC + spider markers, analysis, next actions. REST: POST .../lwm-snapshot. Sole product snapshot strategy; run via Knowledge UI or this Snapshot API/MCP tool (not auto on TAP/ILE end).",
     rest: {
       method: "POST",
-      path: `${EVAL_API_BASE}/workspaces/{workspace_id}/lwm-snapshot`,
+      path: `${SNAPSHOT_API_BASE}/workspaces/{workspace_id}/lwm-snapshot`,
     },
   },
   {
@@ -114,7 +114,7 @@ export const AGENT_TOOL_SURFACE = [
     summary: "Durable learning world model for a workspace × subject.",
     rest: {
       method: "GET",
-      path: `${EVAL_API_BASE}/workspaces/{workspace_id}/world-model`,
+      path: `${SNAPSHOT_API_BASE}/workspaces/{workspace_id}/world-model`,
     },
   },
   {
@@ -123,7 +123,7 @@ export const AGENT_TOOL_SURFACE = [
     summary: "Latest knowledge configuration embedding (knowledgecfg-v1-d64).",
     rest: {
       method: "GET",
-      path: `${EVAL_API_BASE}/workspaces/{workspace_id}/knowledge-config`,
+      path: `${SNAPSHOT_API_BASE}/workspaces/{workspace_id}/knowledge-config`,
     },
   },
   {
@@ -132,53 +132,53 @@ export const AGENT_TOOL_SURFACE = [
     summary: "Knowledge config trajectory + optional 2D projection.",
     rest: {
       method: "GET",
-      path: `${EVAL_API_BASE}/workspaces/{workspace_id}/knowledge-config/trajectory`,
+      path: `${SNAPSHOT_API_BASE}/workspaces/{workspace_id}/knowledge-config/trajectory`,
     },
   },
   {
     name: "knowledge_distance",
     scope: "workspaces:read",
     summary:
-      "Knowledge distance (user ↔ region) in knowledgecfg space — not a vertical Eval.",
+      "Knowledge distance (user ↔ region) in knowledgecfg space — not an LWM Snapshot scorecard.",
     rest: {
       method: "POST",
-      path: `${EVAL_API_BASE}/workspaces/{workspace_id}/knowledge-distance`,
+      path: `${SNAPSHOT_API_BASE}/workspaces/{workspace_id}/knowledge-distance`,
     },
   },
   {
-    name: "list_eval_history",
+    name: "list_snapshot_history",
     scope: "workspaces:read",
-    summary: "Prior vertical eval scorecards for a workspace / subject / cohort.",
+    summary: "Prior LWM Snapshot scorecards for a workspace / subject / cohort.",
     rest: {
       method: "GET",
-      path: `${EVAL_API_BASE}/workspaces/{workspace_id}/eval-history`,
+      path: `${SNAPSHOT_API_BASE}/workspaces/{workspace_id}/snapshot-history`,
     },
   },
   {
-    name: "list_custom_verification_models",
+    name: "list_custom_knowledge_regions",
     scope: "workspaces:read",
-    summary: "List custom verification models and subjects with knowledge config.",
+    summary: "List custom knowledge regions and subjects with knowledge config.",
     rest: {
       method: "GET",
-      path: `${EVAL_API_BASE}/workspaces/{workspace_id}/custom-verification-models`,
+      path: `${SNAPSHOT_API_BASE}/workspaces/{workspace_id}/custom-knowledge-regions`,
     },
   },
   {
-    name: "create_custom_verification_model",
+    name: "create_custom_knowledge_region",
     scope: "workspaces:write",
-    summary: "Create a custom verification model from subject embeddings.",
+    summary: "Create a custom knowledge region from subject embeddings.",
     rest: {
       method: "POST",
-      path: `${EVAL_API_BASE}/workspaces/{workspace_id}/custom-verification-models`,
+      path: `${SNAPSHOT_API_BASE}/workspaces/{workspace_id}/custom-knowledge-regions`,
     },
   },
   {
-    name: "eval_custom_verification_model",
+    name: "eval_custom_knowledge_region",
     scope: "workspaces:write",
-    summary: "Score a subject against a custom verification model.",
+    summary: "Score a subject against a custom knowledge region.",
     rest: {
       method: "POST",
-      path: `${EVAL_API_BASE}/workspaces/{workspace_id}/custom-verification-models`,
+      path: `${SNAPSHOT_API_BASE}/workspaces/{workspace_id}/custom-knowledge-regions`,
     },
   },
   {

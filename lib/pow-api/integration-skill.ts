@@ -310,7 +310,7 @@ Required content:
    - Do NOT embed a static schema as the source of truth; reference the API path above
 8. Workspace-specific block mapping guidance and example tool JSON payloads that match the proof of work spec (illustrative only).
 9. **LWM Snapshot (required section)** — sole product score strategy (LWM Snapshot strategy). Each call returns ONE primary score plus GHC secondary, spider breakdown, analysis, and next actions:
-   - POST .../lwm-snapshot (MCP lwm_snapshot) — LWM Snapshot; **TAP/ILE end always run this path**
+   - POST .../lwm-snapshot (MCP lwm_snapshot) — LWM Snapshot; manual / explicit API (not auto on TAP/ILE end)
    - Every score response MUST include: score + lwm_snapshot_score, vertical, workspace_goal, ghc_score, marker_scores (4-8 spider axes: id, label, score, rationale), gap_analysis with gaps[] and next_steps { directions[], events[] }, summary, strengths, growth_areas, suggestions, confidence
    - Remediation must be product/workflow-specific; never TAP, block completion, ILE, or Uncertain Systems platform tasks
    - Reference performance_report_contract from the proof of work spec API for machine-readable contracts

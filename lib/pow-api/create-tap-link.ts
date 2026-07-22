@@ -315,3 +315,83 @@ export async function createWorkspaceTapLink(options: CreateTapLinkOptions): Pro
     private_url: buildTapScoreSessionUrl(baseUrl, privateToken),
   };
 }
+
+export interface ReissueTapLinkOptions {
+  supabase: SupabaseClient;
+  auth: AuthContext;
+  workspaceId: string;
+  linkId: string;
+  baseUrl: string;
+}
+
+/**
+ * Rotate the private token on an existing TAP link row.
+ * Keeps guest, scope, duration, and post-session settings on the same card.
+ * Invalidates any previously issued URL for this link.
+ */
+export async function reissueWorkspaceTapLink(
+  options: ReissueTapLinkOptions
+): Promise<CreatedTapLink> {
+  const { supabase, auth, workspaceId, linkId, baseUrl } = options;
+
+  if (!isUuid(linkId)) {
+    throw new CreateTapLinkError("linkId must be a UUID", 400, "validation_error");
+  }
+
+  const { data: existing, error: loadError } = await supabase
+    .from("workspace_tap_sessions")
+    .select(
+      "id, workspace_id, block_id, status, requested_duration_seconds, focus_block_ids, created_at, participant_type, post_session, redirect_url, guest_user_id, assigned_user_id, private_token_hash, workspaces(id, user_id, organization_id, guest_user_id)"
+    )
+    .eq("id", linkId)
+    .eq("workspace_id", workspaceId)
+    .maybeSingle();
+
+  if (loadError) {
+    console.error("[reissue-tap-link] Load error:", loadError);
+    throw new CreateTapLinkError("Failed to load TAP link", 500, "internal_error");
+  }
+  if (!existing?.private_token_hash) {
+    throw new CreateTapLinkError("TAP link not found", 404, "not_found");
+  }
+
+  const workspaceRaw = (existing as { workspaces: unknown }).workspaces;
+  const workspace = (Array.isArray(workspaceRaw) ? workspaceRaw[0] : workspaceRaw) as {
+    id: string;
+    user_id: string | null;
+    organization_id: string | null;
+    guest_user_id: string | null;
+  } | null;
+
+  if (!workspace || !canAccessAgentWorkspace(auth, workspace)) {
+    throw new CreateTapLinkError("Workspace not found", 404, "workspace_not_found");
+  }
+
+  const privateToken = createPrivateToken();
+  const { data: link, error } = await supabase
+    .from("workspace_tap_sessions")
+    .update({
+      private_token_hash: hashPrivateToken(privateToken),
+      status: "pending",
+      started_at: null,
+      completed_at: null,
+      session_id: null,
+      duration_seconds: 0,
+    })
+    .eq("id", linkId)
+    .eq("workspace_id", workspaceId)
+    .select(
+      "id, workspace_id, block_id, status, requested_duration_seconds, focus_block_ids, created_at, participant_type, post_session, redirect_url, guest_user_id, assigned_user_id"
+    )
+    .single();
+
+  if (error || !link) {
+    console.error("[reissue-tap-link] Update error:", error);
+    throw new CreateTapLinkError("Failed to reissue TAP link", 500, "internal_error");
+  }
+
+  return {
+    ...link,
+    private_url: buildTapScoreSessionUrl(baseUrl, privateToken),
+  };
+}

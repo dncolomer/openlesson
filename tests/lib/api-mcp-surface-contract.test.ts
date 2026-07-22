@@ -7,10 +7,10 @@ import { describe, expect, it } from "vitest";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import {
-  EVAL_API_BASE,
   POW_API_BASE,
+  SNAPSHOT_API_BASE,
   STASH_API_BASE,
-  evalWorkspaceResource,
+  snapshotWorkspaceResource,
   powWorkspaceResource,
   stashWorkspaceResource,
 } from "@/lib/api/agent-api-paths";
@@ -42,7 +42,7 @@ describe("lib/pow-api package path (renamed from agent-v2)", () => {
     const samples = [
       "app/api/mcp/route.ts",
       "app/api/v3/pow/workspaces/route.ts",
-      "app/api/v3/eval/workspaces/[id]/lwm-snapshot/route.ts",
+      "app/api/v3/snapshot/workspaces/[id]/lwm-snapshot/route.ts",
       "app/api/v3/stash/workspaces/[id]/stash/route.ts",
     ];
     for (const rel of samples) {
@@ -117,20 +117,20 @@ describe("API ↔ MCP surface contract (shipped code)", () => {
         routeRel: "app/api/v3/pow/workspaces/[id]/tap-links/route.ts",
       },
       {
-        built: evalWorkspaceResource(workspaceId, "lwm-snapshot"),
-        routeRel: "app/api/v3/eval/workspaces/[id]/lwm-snapshot/route.ts",
+        built: snapshotWorkspaceResource(workspaceId, "lwm-snapshot"),
+        routeRel: "app/api/v3/snapshot/workspaces/[id]/lwm-snapshot/route.ts",
       },
       {
-        built: evalWorkspaceResource(workspaceId, "world-model"),
-        routeRel: "app/api/v3/eval/workspaces/[id]/world-model/route.ts",
+        built: snapshotWorkspaceResource(workspaceId, "world-model"),
+        routeRel: "app/api/v3/snapshot/workspaces/[id]/world-model/route.ts",
       },
       {
-        built: evalWorkspaceResource(workspaceId, "knowledge-config"),
-        routeRel: "app/api/v3/eval/workspaces/[id]/knowledge-config/route.ts",
+        built: snapshotWorkspaceResource(workspaceId, "knowledge-config"),
+        routeRel: "app/api/v3/snapshot/workspaces/[id]/knowledge-config/route.ts",
       },
       {
-        built: evalWorkspaceResource(workspaceId, "eval-history"),
-        routeRel: "app/api/v3/eval/workspaces/[id]/eval-history/route.ts",
+        built: snapshotWorkspaceResource(workspaceId, "snapshot-history"),
+        routeRel: "app/api/v3/snapshot/workspaces/[id]/snapshot-history/route.ts",
       },
       {
         built: stashWorkspaceResource(workspaceId, "stash"),
@@ -149,7 +149,7 @@ describe("API ↔ MCP surface contract (shipped code)", () => {
     for (const { built, routeRel } of cases) {
       expect(
         built.startsWith(POW_API_BASE) ||
-          built.startsWith(EVAL_API_BASE) ||
+          built.startsWith(SNAPSHOT_API_BASE) ||
           built.startsWith(STASH_API_BASE),
       ).toBe(true);
       expect(existsSync(join(ROOT, routeRel))).toBe(true);
@@ -181,16 +181,38 @@ describe("API ↔ MCP surface contract (shipped code)", () => {
       "get_knowledge_config",
       "get_knowledge_config_trajectory",
       "knowledge_distance",
-      "list_eval_history",
-      "list_custom_verification_models",
-      "create_custom_verification_model",
-      "eval_custom_verification_model",
+      "list_snapshot_history",
+      "list_custom_knowledge_regions",
+      "create_custom_knowledge_region",
+      "eval_custom_knowledge_region",
       "buffer_proof_of_work",
       "stash_proof_of_work",
       "submit_stashed_proof_of_work",
     ] as const) {
       expect(mcpNames.has(name)).toBe(true);
     }
+  });
+
+  it("custom knowledge regions path replaces custom-verification-models on public surface", () => {
+    const regionTools = AGENT_TOOL_SURFACE.filter((t) =>
+      t.name.includes("custom_knowledge_region"),
+    );
+    expect(regionTools.length).toBe(3);
+    for (const tool of regionTools) {
+      expect(tool.rest.path).toContain("/custom-knowledge-regions");
+      expect(tool.rest.path).not.toContain("custom-verification-models");
+      expect(tool.rest.path).toContain(SNAPSHOT_API_BASE);
+      expect(existsSync(restPathToRouteFile(tool.rest.path))).toBe(true);
+    }
+    expect(agentToolNames()).not.toContain("list_custom_verification_models");
+    expect(agentToolNames()).not.toContain("create_custom_verification_model");
+    expect(agentToolNames()).not.toContain("eval_custom_verification_model");
+    expect(
+      existsSync(join(ROOT, "app/api/v3/snapshot/workspaces/[id]/custom-verification-models/route.ts")),
+    ).toBe(false);
+    expect(
+      existsSync(join(ROOT, "app/api/workspace/custom-verification-models/route.ts")),
+    ).toBe(false);
   });
 
   it("v3 PoW upload route uses shared uploadWorkspaceProofOfWork helper", () => {

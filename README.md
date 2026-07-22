@@ -128,7 +128,7 @@ The app will be available at `http://localhost:3000`.
 │   ├── xai-client.ts     # xAI API client (chat, JSON schema, files)
 │   ├── prompts.ts        # Helios prompt templates
 │   ├── storage.ts        # Supabase session & workspace persistence
-│   ├── pow-api/         # PoW / Eval / Stash / MCP libs (/api/v3/{pow,eval,stash}, /api/mcp)
+│   ├── pow-api/         # PoW / Snapshot / Stash / MCP libs (/api/v3/{pow,snapshot,stash}, /api/mcp)
 │   ├── tap-score*.ts     # TAP scoring logic
 │   └── ...
 ├── supabase/             # Database schema & migrations
@@ -136,14 +136,14 @@ The app will be available at `http://localhost:3000`.
 └── public/               # Static assets; skill.md for agent integrations
 ```
 
-## Proof-of-Work & Evaluation API (v3)
+## Proof-of-Work & Snapshot API (v3)
 
 Uncertain Systems exposes a scoped REST API and MCP transport for integrators and agents. **Workspaces are created in the product UI** (`/workspace/new`) — not via API or MCP. Generate an API key from the dashboard (`/dashboard`) and use it to:
 
 - List and read existing verification workspaces and blocks
-- Issue Think Aloud Protocol (TAP) links, poll completion via `GET .../tap-links`, and score via vertical Evaluation endpoints
-- Upload proof-of-work artifacts (or buffer via the Stash API), then request scores / world model / knowledge config
-- Connect via MCP (`/api/mcp`, Bearer or OAuth) with **100% parity** to public agent REST under `/api/v3/{pow,eval,stash}`
+- Issue Think Aloud Protocol (TAP) links, poll completion via `GET .../tap-links`, and score via Snapshot API endpoints
+- Upload proof-of-work artifacts (or buffer via the Stash API), then request LWM Snapshot / world model / knowledge config
+- Connect via MCP (`/api/mcp`, Bearer or OAuth) with **100% parity** to public agent REST under `/api/v3/{pow,snapshot,stash}`
 
 See [`public/skill.md`](public/skill.md) and [`docs/PROOF_OF_WORK_API.md`](docs/PROOF_OF_WORK_API.md) for full documentation. Interactive reference: [`/docs/proof-of-work-api`](/docs/proof-of-work-api).
 

@@ -69,6 +69,7 @@ interface KnowledgeConfigResponse {
     empty?: boolean;
   };
   learning_world_model?: {
+    updated_at?: string;
     exploration?: {
       blind_spots?: string[];
       pathways_touched?: string[];
@@ -1182,6 +1183,34 @@ export function KnowledgeConfigTrajectoryPanel({
 
   const wm = lwmData?.learning_world_model;
   const scores = wm?.scores_snapshot;
+  const kc = lwmData?.knowledge_config;
+  const lwmUpdatedAt = useMemo(() => {
+    const candidates = [
+      wm?.updated_at,
+      kc?.as_of,
+      snapshotEligibility?.last_eval_at,
+    ].filter((v): v is string => typeof v === "string" && v.trim().length > 0);
+    if (candidates.length === 0) return null;
+    let best: { iso: string; ms: number } | null = null;
+    for (const iso of candidates) {
+      const ms = Date.parse(iso);
+      if (!Number.isFinite(ms)) continue;
+      if (!best || ms > best.ms) best = { iso, ms };
+    }
+    return best;
+  }, [kc?.as_of, snapshotEligibility?.last_eval_at, wm?.updated_at]);
+
+  const lwmUpdatedLabel = useMemo(() => {
+    if (!lwmUpdatedAt) return null;
+    try {
+      return new Intl.DateTimeFormat(undefined, {
+        dateStyle: "medium",
+        timeStyle: "short",
+      }).format(new Date(lwmUpdatedAt.ms));
+    } catch {
+      return lwmUpdatedAt.iso;
+    }
+  }, [lwmUpdatedAt]);
 
   /** Joint 2D layout under the selected algorithm (trajectory + selected regions). */
   const projectedLayout = useMemo(() => {
@@ -1687,117 +1716,162 @@ export function KnowledgeConfigTrajectoryPanel({
         ) : !wm ? (
           <p className="text-xs text-neutral-500">No learning world model for this user yet.</p>
         ) : (
-          <div className="w-full space-y-3">
-            {wm.inferred_goal?.text ? (
-              <div>
-                <div className="text-[11px] font-medium uppercase tracking-wide text-neutral-500">
-                  Inferred goal
+          <div
+            className="relative w-full overflow-hidden rounded-2xl border border-cyan-900/40 bg-gradient-to-br from-neutral-950 via-neutral-950 to-cyan-950/30 shadow-[0_0_0_1px_rgba(34,211,238,0.06),0_20px_50px_rgba(0,0,0,0.45)]"
+            data-lwm-skill-card
+          >
+            <div
+              className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-cyan-400/50 to-transparent"
+              aria-hidden
+            />
+            {/* Header: score + last update */}
+            <div className="flex flex-wrap items-start justify-between gap-4 border-b border-white/5 px-4 py-4 sm:px-5">
+              <div className="flex min-w-0 items-start gap-3">
+                <div
+                  className="flex h-16 w-16 shrink-0 flex-col items-center justify-center rounded-2xl border border-cyan-500/30 bg-cyan-500/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]"
+                  data-lwm-skill-score
+                >
+                  <span className="font-mono text-2xl font-semibold tabular-nums leading-none text-cyan-100">
+                    {scores?.verification_score != null
+                      ? Math.round(scores.verification_score)
+                      : "—"}
+                  </span>
+                  <span className="mt-1 font-mono text-[9px] uppercase tracking-[1.2px] text-cyan-300/80">
+                    / 100
+                  </span>
                 </div>
-                <p className="mt-1 text-xs text-neutral-300">{wm.inferred_goal.text}</p>
-              </div>
-            ) : null}
-
-            {scores && (
-              <div className="space-y-1.5">
-                <div className="text-[11px] font-medium uppercase tracking-wide text-neutral-500">
-                  LWM Snapshot
-                  {lwmScope.label ? ` · ${lwmScope.label}` : ""}
-                </div>
-                <div className="flex flex-wrap gap-1.5">
-                  {scores.verification_score != null && (
-                    <Chip tone="cyan">
-                      LWM Snapshot {Math.round(scores.verification_score)}
-                    </Chip>
+                <div className="min-w-0 pt-0.5">
+                  <p className="font-mono text-[10px] font-medium uppercase tracking-[1.6px] text-cyan-300/90">
+                    LWM Snapshot
+                  </p>
+                  <p className="mt-1 truncate text-sm font-medium text-white">
+                    {lwmScope.label || "Selected user"}
+                  </p>
+                  {wm.inferred_goal?.text ? (
+                    <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-neutral-400">
+                      {wm.inferred_goal.text}
+                    </p>
+                  ) : (
+                    <p className="mt-1 text-xs text-neutral-500">Learning World Model skill profile</p>
                   )}
-                  {scores.ghc_score != null && (
-                    <Chip>GHC {Math.round(scores.ghc_score)}</Chip>
-                  )}
-                  {scores.verification_score == null && scores.ghc_score == null && (
-                    <span className="text-xs text-neutral-500">No scores yet</span>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {wm.evidence_appetite &&
-              ((wm.evidence_appetite.want_more?.length ?? 0) > 0 ||
-                (wm.evidence_appetite.saturated?.length ?? 0) > 0) && (
-                <div className="space-y-1.5 border-t border-neutral-800 pt-3">
-                  <div className="text-[11px] font-medium uppercase tracking-wide text-neutral-500">
-                    Evidence appetite
-                  </div>
-                  <div className="flex flex-wrap gap-1">
-                    {(wm.evidence_appetite.want_more || []).map((item) => (
-                      <Chip key={`want-${item}`} tone="cyan">
-                        + {item}
-                      </Chip>
-                    ))}
-                    {(wm.evidence_appetite.saturated || []).map((item) => (
-                      <Chip key={`sat-${item}`} tone="amber">
-                        sat {item}
-                      </Chip>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-            {wm.learning_profile?.strengths && wm.learning_profile.strengths.length > 0 && (
-              <div className="space-y-1.5 border-t border-neutral-800 pt-3">
-                <div className="text-[11px] font-medium uppercase tracking-wide text-neutral-500">
-                  Strengths
-                </div>
-                <div className="flex flex-wrap gap-1">
-                  {wm.learning_profile.strengths.slice(0, 12).map((s) => (
-                    <Chip key={s}>{s}</Chip>
-                  ))}
                 </div>
               </div>
-            )}
-
-            {wm.learning_profile?.friction_patterns &&
-              wm.learning_profile.friction_patterns.length > 0 && (
-                <div className="space-y-1.5 border-t border-neutral-800 pt-3">
-                  <div className="text-[11px] font-medium uppercase tracking-wide text-neutral-500">
-                    Friction patterns
-                  </div>
-                  <div className="flex flex-wrap gap-1">
-                    {wm.learning_profile.friction_patterns.slice(0, 8).map((s) => (
-                      <Chip key={s} tone="amber">
-                        {s}
-                      </Chip>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-            {wm.exploration &&
-              ((wm.exploration.blind_spots?.length ?? 0) > 0 ||
-                (wm.exploration.pathways_touched?.length ?? 0) > 0) && (
-                <div className="space-y-1.5 border-t border-neutral-800 pt-3">
-                  <div className="text-[11px] font-medium uppercase tracking-wide text-neutral-500">
-                    Exploration
-                  </div>
-                  <div className="flex flex-wrap gap-1">
-                    {(wm.exploration.pathways_touched || []).slice(0, 6).map((p) => (
-                      <Chip key={`path-${p}`}>{p}</Chip>
-                    ))}
-                    {(wm.exploration.blind_spots || []).slice(0, 6).map((b) => (
-                      <Chip key={`blind-${b}`} tone="amber">
-                        blind: {b}
-                      </Chip>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-            {!scores?.verification_score &&
-              !(wm.evidence_appetite?.want_more?.length || wm.evidence_appetite?.saturated?.length) &&
-              !(wm.learning_profile?.strengths?.length) && (
-                <p className="text-xs text-neutral-500">
-                  LWM is empty for this user. Generate a new snapshot when proof of work exists
-                  to fill evidence appetite and strengths.
+              <div
+                className="shrink-0 rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-right"
+                data-lwm-last-updated
+              >
+                <p className="font-mono text-[9px] font-semibold uppercase tracking-[1.4px] text-neutral-400">
+                  Last snapshot
                 </p>
+                <p className="mt-1 text-sm font-medium tabular-nums text-white">
+                  {lwmUpdatedLabel || "Not yet"}
+                </p>
+                {snapshotEligibility?.last_eval_at &&
+                kc?.as_of &&
+                snapshotEligibility.last_eval_at !== kc.as_of ? (
+                  <p className="mt-0.5 text-[10px] text-neutral-500">
+                    Config {new Date(kc.as_of).toLocaleString(undefined, { dateStyle: "medium" })}
+                  </p>
+                ) : null}
+              </div>
+            </div>
+
+            {/* Secondary metrics */}
+            <div className="flex flex-wrap gap-2 border-b border-white/5 px-4 py-3 sm:px-5">
+              {scores?.ghc_score != null ? (
+                <Chip tone="cyan">GHC {Math.round(scores.ghc_score)}</Chip>
+              ) : null}
+              {kc && !kc.empty ? (
+                <Chip>
+                  conf {(kc.confidence * 100).toFixed(0)}% · {kc.pow_event_count} PoW
+                </Chip>
+              ) : null}
+              {scores?.verification_score == null && scores?.ghc_score == null ? (
+                <span className="text-xs text-neutral-500">No scores yet</span>
+              ) : null}
+            </div>
+
+            <div className="space-y-4 px-4 py-4 sm:px-5">
+              {wm.evidence_appetite &&
+                ((wm.evidence_appetite.want_more?.length ?? 0) > 0 ||
+                  (wm.evidence_appetite.saturated?.length ?? 0) > 0) && (
+                  <div className="space-y-1.5">
+                    <div className="text-[11px] font-medium uppercase tracking-wide text-neutral-500">
+                      Evidence appetite
+                    </div>
+                    <div className="flex flex-wrap gap-1">
+                      {(wm.evidence_appetite.want_more || []).map((item) => (
+                        <Chip key={`want-${item}`} tone="cyan">
+                          + {item}
+                        </Chip>
+                      ))}
+                      {(wm.evidence_appetite.saturated || []).map((item) => (
+                        <Chip key={`sat-${item}`} tone="amber">
+                          sat {item}
+                        </Chip>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+              {wm.learning_profile?.strengths && wm.learning_profile.strengths.length > 0 && (
+                <div className="space-y-1.5">
+                  <div className="text-[11px] font-medium uppercase tracking-wide text-neutral-500">
+                    Strengths
+                  </div>
+                  <div className="flex flex-wrap gap-1">
+                    {wm.learning_profile.strengths.slice(0, 12).map((s) => (
+                      <Chip key={s}>{s}</Chip>
+                    ))}
+                  </div>
+                </div>
               )}
+
+              {wm.learning_profile?.friction_patterns &&
+                wm.learning_profile.friction_patterns.length > 0 && (
+                  <div className="space-y-1.5">
+                    <div className="text-[11px] font-medium uppercase tracking-wide text-neutral-500">
+                      Friction patterns
+                    </div>
+                    <div className="flex flex-wrap gap-1">
+                      {wm.learning_profile.friction_patterns.slice(0, 8).map((s) => (
+                        <Chip key={s} tone="amber">
+                          {s}
+                        </Chip>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+              {wm.exploration &&
+                ((wm.exploration.blind_spots?.length ?? 0) > 0 ||
+                  (wm.exploration.pathways_touched?.length ?? 0) > 0) && (
+                  <div className="space-y-1.5">
+                    <div className="text-[11px] font-medium uppercase tracking-wide text-neutral-500">
+                      Exploration
+                    </div>
+                    <div className="flex flex-wrap gap-1">
+                      {(wm.exploration.pathways_touched || []).slice(0, 6).map((p) => (
+                        <Chip key={`path-${p}`}>{p}</Chip>
+                      ))}
+                      {(wm.exploration.blind_spots || []).slice(0, 6).map((b) => (
+                        <Chip key={`blind-${b}`} tone="amber">
+                          blind: {b}
+                        </Chip>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+              {!scores?.verification_score &&
+                !(wm.evidence_appetite?.want_more?.length || wm.evidence_appetite?.saturated?.length) &&
+                !(wm.learning_profile?.strengths?.length) && (
+                  <p className="text-xs text-neutral-500">
+                    LWM is empty for this user. Generate a new snapshot when proof of work exists
+                    to fill evidence appetite and strengths.
+                  </p>
+                )}
+            </div>
           </div>
         )}
 

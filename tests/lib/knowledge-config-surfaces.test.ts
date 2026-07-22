@@ -124,6 +124,12 @@ describe("knowledge config / LWM feature surfaces", () => {
     expect(lwm).toContain("/api/workspace/performance-report");
     expect(lwm).toContain("snapshot-history");
     expect(lwm).not.toContain('params.set("subject", "me")');
+    // Skill-card LWM display + visible last-snapshot stamp
+    expect(lwm).toContain("data-lwm-skill-card");
+    expect(lwm).toContain("data-lwm-skill-score");
+    expect(lwm).toContain("data-lwm-last-updated");
+    expect(lwm).toContain("Last snapshot");
+    expect(lwm).toMatch(/lwmUpdatedLabel|last_eval_at|as_of/);
   });
 
   it("Embeddings region overlay picker is always mounted with visible control surface", () => {

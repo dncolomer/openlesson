@@ -285,8 +285,9 @@ describe("knowledge config / LWM feature surfaces", () => {
     const models = read("components/KnowledgeConfigTrajectoryPanel.tsx");
     // User-visible Knowledge/Models copy must not label people as learners.
     expect(models).not.toMatch(/\blearner(s)?\b/i);
-    expect(models).toContain("Learning World Model for the selected user");
+    expect(models).toContain("Select a user, generate a snapshot");
     expect(models).toContain("User");
+    expect(models).toContain("data-lwm-vs-embeddings");
 
     const panel = read("components/WorkspacePerformancePanel.tsx");
     // Performance panel source must not expose learner-person wording in UI strings.

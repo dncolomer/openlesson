@@ -1711,15 +1711,6 @@ export function KnowledgeConfigTrajectoryPanel({
           ) : null}
         </div>
 
-        <button
-          type="button"
-          onClick={() => void loadLwm()}
-          disabled={lwmLoading}
-          className="w-full rounded-lg border border-neutral-700 px-3 py-2 text-xs text-neutral-300 transition hover:border-neutral-500 hover:text-white disabled:opacity-50"
-        >
-          {lwmLoading ? "Refreshing…" : "Refresh LWM"}
-        </button>
-
         <div
           className="rounded-xl border border-neutral-800 bg-neutral-950/60 p-4 text-xs leading-relaxed text-neutral-400"
           data-lwm-vs-embeddings

@@ -1889,8 +1889,8 @@
     "startTap": "Start Think Aloud Protocol",
     "signInForTap": "Sign in to start a TAP session for this workspace.",
     "tapLinksTitle": "Shareable TAP links",
-    "tapLinksHint": "Private links for anonymous guests or org members. Save the URL when you create or reissue it; the secret is only shown once. Reopen the same URL for another run, or use “New link, same guest” to rotate the URL on this card while keeping the guest UUID, time, scope, and after-session action.",
-    "tapLinksReuseGuest": "New link, same guest",
+    "tapLinksHint": "Private links for anonymous guests or org members. Save the URL when you create or reissue it; the secret is only shown once. After a session, guests see a thank-you screen confirming Proof of Work data was stored. Use Regenerate Link to rotate the URL on this card while keeping the guest UUID, time, and scope.",
+    "tapLinksReuseGuest": "Regenerate Link",
     "tapLinksMinutes": "Duration (minutes)",
     "tapLinksPostSession": "After session",
     "tapLinksPostSessionRedirectWorkspace": "Return to workspace",
@@ -1919,8 +1919,8 @@
     "tapLinksCreateError": "Could not create TAP link.",
     "tapIleLinksOwnerOnly": "Sign in as the workspace owner to generate shareable TAP and ILE links.",
     "ileLinksTitle": "Shareable ILE links",
-    "ileLinksHint": "Private ILE practice links for a single block. Save the URL when you create or reissue it; the secret is only shown once. Reopen the same URL after a completed run, or use “New link, same guest” to rotate the URL on this card while keeping the guest UUID and block scope.",
-    "ileLinksReuseGuest": "New link, same guest",
+    "ileLinksHint": "Private ILE practice links for a single block. Save the URL when you create or reissue it; the secret is only shown once. Reopen the same URL after a completed run, or use Regenerate Link to rotate the URL on this card while keeping the guest UUID and block scope.",
+    "ileLinksReuseGuest": "Regenerate Link",
     "ileLinksBlock": "Practice block",
     "ileLinksSelectBlock": "Select a block",
     "ileLinksCreateAnonymous": "Create anonymous ILE link",
@@ -2596,11 +2596,14 @@
       "topicsLoading": "Generating starting topics…"
     },
     "postSession": {
-      "savingAndReturning": "Saving proof of work and returning to workspace…",
+      "savingAndReturning": "Saving proof of work…",
       "generatingResults": "Saving proof of work…",
       "resultsTitle": "Session complete",
       "resultsHint": "Your proof of work is saved. LWM Snapshot is not generated automatically — the workspace owner runs Generate new snapshot in Knowledge, or calls the Snapshot API POST .../lwm-snapshot.",
-      "verificationResultsTitle": "LWM Snapshot"
+      "verificationResultsTitle": "LWM Snapshot",
+      "thankYouTitle": "Thank you",
+      "thankYouBody": "Your Proof of Work data has been stored.",
+      "exploreUncertainSystems": "Explore Uncertain Systems"
     },
     "welcome": {
       "greeting": "Hi, I'm {name}.",

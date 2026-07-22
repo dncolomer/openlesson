@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useI18n } from "@/lib/i18n";
-import type { TapPostSessionMode } from "@/lib/pow-api/tap-link-config";
 import {
   TAP_LINK_DEFAULT_MINUTES,
   TAP_LINK_MAX_MINUTES,
@@ -91,8 +90,6 @@ export function WorkspaceGuestLinksPanel({
   const [selectedMemberId, setSelectedMemberId] = useState("");
   const [selectedIleMemberId, setSelectedIleMemberId] = useState("");
   const [minutes, setMinutes] = useState(TAP_LINK_DEFAULT_MINUTES);
-  const [postSession, setPostSession] = useState<TapPostSessionMode>("redirect_workspace");
-  const [redirectUrl, setRedirectUrl] = useState("");
   const [linksLoading, setLinksLoading] = useState(false);
   const [linksError, setLinksError] = useState<string | null>(null);
   const [creatingLink, setCreatingLink] = useState(false);
@@ -181,17 +178,15 @@ export function WorkspaceGuestLinksPanel({
       setCreatingLink(true);
       setCreateError(null);
       try {
+        // Session links always end with thank-you (no after-session redirect/results choices).
         const body: Record<string, unknown> = {
           workspaceId,
           minutes,
           participant_type: participantType,
-          post_session: postSession,
+          post_session: "show_results",
         };
         if (selectedBlockId) {
           body.blockId = selectedBlockId;
-        }
-        if (postSession === "redirect_url") {
-          body.redirect_url = redirectUrl.trim();
         }
         if (participantType === "user") {
           if (!selectedMemberId) throw new Error(t("planView.tapLinksSelectMember"));
@@ -217,16 +212,7 @@ export function WorkspaceGuestLinksPanel({
         setCreatingLink(false);
       }
     },
-    [
-      loadTapResources,
-      minutes,
-      postSession,
-      redirectUrl,
-      selectedBlockId,
-      selectedMemberId,
-      t,
-      workspaceId,
-    ],
+    [loadTapResources, minutes, selectedBlockId, selectedMemberId, t, workspaceId],
   );
 
   /** Same card: rotate private URL; keep guest, scope, duration, post-session. */
@@ -391,34 +377,6 @@ export function WorkspaceGuestLinksPanel({
               className={fieldClass}
             />
           </label>
-
-          <label className="block text-xs text-neutral-400 sm:col-span-2">
-            {t("planView.tapLinksPostSession")}
-            <select
-              value={postSession}
-              onChange={(event) => setPostSession(event.target.value as TapPostSessionMode)}
-              className={fieldClass}
-            >
-              <option value="redirect_workspace">
-                {t("planView.tapLinksPostSessionRedirectWorkspace")}
-              </option>
-              <option value="show_results">{t("planView.tapLinksPostSessionShowResults")}</option>
-              <option value="redirect_url">{t("planView.tapLinksPostSessionRedirectUrl")}</option>
-            </select>
-          </label>
-
-          {postSession === "redirect_url" ? (
-            <label className="block text-xs text-neutral-400 sm:col-span-2">
-              {t("planView.tapLinksRedirectUrl")}
-              <input
-                type="url"
-                value={redirectUrl}
-                onChange={(event) => setRedirectUrl(event.target.value)}
-                placeholder="https://"
-                className={fieldClass}
-              />
-            </label>
-          ) : null}
         </div>
 
         <div className="mt-4 flex flex-wrap gap-2">
@@ -500,9 +458,7 @@ export function WorkspaceGuestLinksPanel({
                           </span>
                         ) : null}
                       </p>
-                      <p>
-                        {Math.round(link.requested_duration_seconds / 60)} min · {link.post_session}
-                      </p>
+                      <p>{Math.round(link.requested_duration_seconds / 60)} min</p>
                     </div>
                     <div className="flex shrink-0 flex-wrap items-center gap-2">
                       {link.guest_user_id ? (

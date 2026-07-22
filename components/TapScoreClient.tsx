@@ -766,12 +766,18 @@ export function TapScoreClient({ workspaceId, blockId, sessionId, privateToken, 
       const payload = await response.json();
       if (!response.ok) throw new Error(payload.error || "Could not save TAP session");
 
+      // Private session links: thank-you only (no redirect / results scorecard).
+      // LWM Snapshot remains manual (Knowledge UI / Snapshot API) for owners.
+      if (privateToken) {
+        setPerformanceReport(null);
+        setPhase("results");
+        return;
+      }
+
       const resolvedPostSession = (payload.postSession as TapPostSessionMode) || postSession;
       const resolvedRedirectUrl =
         typeof payload.redirectUrl === "string" ? payload.redirectUrl : configuredRedirectUrl;
 
-      // LWM Snapshot is manual (Knowledge UI “Generate new snapshot”) or Snapshot API
-      // POST .../lwm-snapshot — not auto-run on TAP end.
       if (resolvedPostSession === "show_results") {
         setPerformanceReport(null);
         setPhase("results");
@@ -994,20 +1000,41 @@ export function TapScoreClient({ workspaceId, blockId, sessionId, privateToken, 
           </section>
         )}
         {phase === "results" ? (
-          <section className="mx-auto flex w-full max-w-4xl flex-1 flex-col overflow-y-auto py-6">
-            <h1 className="text-2xl font-medium text-neutral-100">{t("tap.postSession.resultsTitle")}</h1>
-            <p className="mt-2 max-w-2xl text-sm text-neutral-400">{t("tap.postSession.resultsHint")}</p>
-            {performanceReport ? (
-              <div className="mt-6 min-h-0 flex-1 rounded-lg border border-neutral-800 bg-neutral-950/50 p-4 md:p-5">
-                <PerformanceReportCard
-                  report={performanceReport}
-                  layout="spacious"
-                  fillHeight
-                  label={t("tap.postSession.verificationResultsTitle")}
-                />
-              </div>
-            ) : null}
-          </section>
+          privateToken ? (
+            <section
+              className="mx-auto flex w-full max-w-xl flex-1 flex-col items-center justify-center px-4 py-10 text-center"
+              data-tap-session-thank-you
+            >
+              <h1 className="text-2xl font-medium text-neutral-100 sm:text-3xl">
+                {t("tap.postSession.thankYouTitle")}
+              </h1>
+              <p className="mt-4 max-w-md text-sm leading-relaxed text-neutral-300 sm:text-base">
+                {t("tap.postSession.thankYouBody")}
+              </p>
+              <a
+                href="/"
+                data-tap-explore-uncertain-systems
+                className="mt-8 inline-flex items-center justify-center rounded-md bg-white px-5 py-2.5 text-sm font-medium text-black transition hover:bg-neutral-200"
+              >
+                {t("tap.postSession.exploreUncertainSystems")}
+              </a>
+            </section>
+          ) : (
+            <section className="mx-auto flex w-full max-w-4xl flex-1 flex-col overflow-y-auto py-6">
+              <h1 className="text-2xl font-medium text-neutral-100">{t("tap.postSession.resultsTitle")}</h1>
+              <p className="mt-2 max-w-2xl text-sm text-neutral-400">{t("tap.postSession.resultsHint")}</p>
+              {performanceReport ? (
+                <div className="mt-6 min-h-0 flex-1 rounded-lg border border-neutral-800 bg-neutral-950/50 p-4 md:p-5">
+                  <PerformanceReportCard
+                    report={performanceReport}
+                    layout="spacious"
+                    fillHeight
+                    label={t("tap.postSession.verificationResultsTitle")}
+                  />
+                </div>
+              ) : null}
+            </section>
+          )
         ) : null}
         {phase === "error" && (
           <section className="flex flex-1 flex-col items-center justify-center text-center">

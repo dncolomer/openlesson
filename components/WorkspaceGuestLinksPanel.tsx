@@ -462,9 +462,6 @@ export function WorkspaceGuestLinksPanel({
                       </p>
                     </div>
                     <div className="flex shrink-0 flex-wrap items-center gap-2">
-                      <span className="rounded border border-neutral-700 px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-neutral-500">
-                        {t("planView.tapLinksReusable")}
-                      </span>
                       {link.guest_user_id ? (
                         <button
                           type="button"
@@ -603,9 +600,6 @@ export function WorkspaceGuestLinksPanel({
                       </p>
                     </div>
                     <div className="flex shrink-0 flex-wrap items-center gap-2">
-                      <span className="rounded border border-neutral-700 px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-neutral-500">
-                        {t("planView.tapLinksReusable")}
-                      </span>
                       {link.guest_user_id ? (
                         <button
                           type="button"

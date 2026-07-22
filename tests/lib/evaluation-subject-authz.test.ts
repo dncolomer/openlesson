@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { mkdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   canAccessWorkspaceEval,
@@ -19,7 +19,6 @@ import { updateLearnerStateAfterScore } from "@/lib/pow-api/learner-state-engine
 import { createLearnerStateMockDb } from "../helpers/mock-supabase-learner-state";
 import type { VerticalScoreReport } from "@/lib/pow-api/performance-report";
 import type { AuthContext } from "@/lib/pow-api/types";
-import { readFileSync } from "node:fs";
 
 const SCRATCH =
   process.env.EVAL_HISTORY_SCRATCH ||
@@ -354,7 +353,9 @@ describe("Knowledge eval UI + web routes structural", () => {
     expect(web).toContain("resolveScoreParticipantIds");
     expect(web).toContain("eval_history_saved");
     expect(web).toContain("eval_run_history_error");
-    expect(web).toContain("updateLearnerStateAfterScore");
+    // Learner state update is inside runVerticalScore (shared LWM Snapshot generator).
+    expect(web).toContain("runVerticalScore");
+    expect(web).toContain("SNAPSHOT_VERTICAL");
     expect(web).toContain("participantUserId");
     expect(web).toContain("is_group");
     // Must NOT hard-require plan.user_id === user.id only.
@@ -374,40 +375,31 @@ describe("Knowledge eval UI + web routes structural", () => {
     expect(web).toContain("is_group");
   });
 
-  it("panel always runs evals for current user (no learner picker)", () => {
+  it("LWM panel hosts snapshot generation (Eval tab removed)", () => {
     const panel = readFileSync(
       join(process.cwd(), "components/WorkspacePerformancePanel.tsx"),
       "utf8",
     );
-    // No multi-learner subject picker on Eval tab.
+    // Eval tab removed — no multi-learner score subview.
     expect(panel).not.toContain("data-eval-subject-picker");
     expect(panel).not.toContain("subjectFocus");
-    expect(panel).not.toContain("performanceEvalSubjectLabel");
-    // History uses authenticated unique user_id (not guest targeting, not me-token).
-    expect(panel).toContain('params.set("user_id", currentUserId)');
-    expect(panel).not.toContain('params.set("guest_user_id"');
-    expect(panel).not.toContain('params.set("subject", "me")');
-    expect(panel).toContain("data-eval-self-only");
-    expect(panel).toContain("scoreSubjectBody");
-    expect(panel).toContain("eval_history_saved");
-    expect(panel).toContain("data-eval-save-warning");
-    expect(panel).toContain("formatEvalSubjectLabel");
-    expect(panel).toContain("isGroup");
-    // Live scorecard from response.report — not only history reload.
-    expect(panel).toContain("setLiveReport");
-    expect(panel).toContain("liveReport");
-    expect(panel).toContain("data-eval-scorecard");
-    expect(panel).toContain("result.report");
-    // Score POST must not inject other-user / guest targeting from this UI.
-    expect(panel).toContain("const scoreSubjectBody = useMemo(() => ({} as Record<string, never>), [])");
-    // scoreSubjectBody is spread into the POST body but must stay empty (self-only).
-    expect(panel).toContain("...scoreSubjectBody");
-    expect(panel).not.toMatch(/scoreSubjectBody[\s\S]{0,200}user_id/);
-    expect(panel).not.toMatch(/return \{\s*user_id:/);
-    expect(panel).not.toMatch(/return \{\s*guest_user_id:/);
+    expect(panel).not.toContain('id: "score"');
+    expect(panel).not.toContain("data-knowledge-eval");
+    expect(panel).toContain("lwm");
+    expect(panel).toContain("KnowledgeConfigTrajectoryPanel");
+
+    const lwm = readFileSync(
+      join(process.cwd(), "components/KnowledgeConfigTrajectoryPanel.tsx"),
+      "utf8",
+    );
+    expect(lwm).toContain("data-lwm-generate-snapshot");
+    expect(lwm).toContain("/api/workspace/performance-report");
+    expect(lwm).toContain("eval-history");
+    // Owner may target selected subject; self uses current user.
+    expect(lwm).toMatch(/user_id|lwmUserId/);
   });
 
-  it("Eval tab i18n copy is always-self and uses user not learner", () => {
+  it("LWM Snapshot i18n copy uses user not learner", () => {
     const en = readFileSync(join(process.cwd(), "messages/en.json"), "utf8");
     const messages = JSON.parse(en) as {
       planView?: Record<string, string>;
@@ -416,31 +408,26 @@ describe("Knowledge eval UI + web routes structural", () => {
     expect(planView.performanceEvalRoleOwner).toBeTruthy();
     expect(planView.performanceEvalRoleOwner).not.toMatch(/other learners/i);
     expect(planView.performanceEvalRoleOwner).not.toMatch(/\blearner(s)?\b/i);
-    expect(planView.performanceEvalRoleOwner).toMatch(/own proof of work/i);
+    expect(planView.performanceEvalRoleOwner).toMatch(/proof of work/i);
     expect(planView.performanceScoreHint).toBeTruthy();
     expect(planView.performanceScoreHint).not.toMatch(/for a learner/i);
     expect(planView.performanceScoreHint).not.toMatch(/\blearner(s)?\b/i);
-    expect(planView.performanceScoreHint).toMatch(/your own proof of work/i);
+    expect(planView.performanceScoreHint).toMatch(/LWM Snapshot|snapshot/i);
     expect(planView.performanceEvalSubjectLabel).toBe("User");
     expect(planView.performanceEvalSubjectAllHint || "").not.toMatch(/\blearner(s)?\b/i);
-    // Panel still binds these keys for the live role/hint UI.
-    const panel = readFileSync(
-      join(process.cwd(), "components/WorkspacePerformancePanel.tsx"),
-      "utf8",
-    );
-    expect(panel).toContain("performanceEvalRoleOwner");
-    expect(panel).toContain("performanceScoreHint");
   });
 
   it("v3 score routes allow workspace owner participant targeting", () => {
-    for (const rel of [
-      "app/api/v3/eval/workspaces/[id]/verification-score/route.ts",
-      "app/api/v3/eval/workspaces/[id]/augmentation-score/route.ts",
-      "app/api/v3/eval/workspaces/[id]/optimization-score/route.ts",
-    ]) {
-      const src = readFileSync(join(process.cwd(), rel), "utf8");
-      expect(src).toContain("resolveScoreParticipantIds");
-      expect(src).toContain("isWorkspaceOwner");
+    const primary = readFileSync(
+      join(process.cwd(), "app/api/v3/eval/workspaces/[id]/lwm-snapshot/route.ts"),
+      "utf8",
+    );
+    expect(primary).toContain("resolveScoreParticipantIds");
+    expect(primary).toContain("isWorkspaceOwner");
+    for (const name of ["verification-score", "augmentation-score", "optimization-score"] as const) {
+      expect(
+        existsSync(join(process.cwd(), "app/api/v3/eval/workspaces/[id]", name, "route.ts")),
+      ).toBe(false);
     }
   });
 

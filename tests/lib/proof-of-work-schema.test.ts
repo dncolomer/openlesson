@@ -136,7 +136,7 @@ describe("evidence integration helpers", () => {
     expect(enriched.continuous_evaluation?.regeneration_required).toBe(true);
     expect(enriched.continuous_evaluation?.integration_skill.api_path).toContain("/integration-skill");
     expect(enriched.continuous_evaluation_mcp?.proof_of_work_spec.mcp_tool).toBe("generate_proof_of_work_schema");
-    expect(enriched.continuous_evaluation_mcp?.performance.rest_equivalent).toContain("/verification-score");
+    expect(enriched.continuous_evaluation_mcp?.performance.rest_equivalent).toContain("/lwm-snapshot");
     expect(enriched.integration_surfaces?.length).toBe(2);
     expect(enriched.uncertain_systems_scope).toBeTruthy();
     expect(enriched.recommended_next_actions?.length).toBeGreaterThan(0);
@@ -181,8 +181,9 @@ describe("evidence integration helpers", () => {
 
     expect(text).toContain("proof-of-work-schema");
     expect(text).toContain("demo");
-    expect(text).toContain("Vertical score contracts");
-    expect(text).toContain("verification_score");
+    expect(text).toMatch(/LWM Snapshot contract/i);
+    expect(text).toContain("lwm_snapshot");
+    expect(text).not.toMatch(/MCP tools: verification_score, augmentation_score, optimization_score/);
     expect(text).toContain("spider_radar");
   });
 
@@ -221,7 +222,7 @@ describe("buildIntegrationSkillInstructions", () => {
     expect(instructions).toContain("Predictive interruptions");
     expect(instructions).toContain("do not tell them to invent ad-hoc JSON");
     expect(instructions).toContain("regenerate");
-    expect(instructions).toContain("verification_score");
+    expect(instructions).toContain("lwm_snapshot");
     expect(instructions).toContain("marker_scores");
     expect(instructions).toContain("performance_report_contract");
     expect(instructions).toContain("Predictive interruptions");

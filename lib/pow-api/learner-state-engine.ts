@@ -78,10 +78,12 @@ function scoresDeltaFromReport(
     ghc_score: report.ghc_score ?? scoresFromDelta.ghc_score ?? null,
   };
 
-  // Authoritative primary score for this evaluation always wins for its vertical.
+  // Authoritative primary score: LWM Snapshot always writes history wire key verification_score
+  // (scores_snapshot; not a product score type name). Legacy archives still map by vertical.
   if (vertical === "verification") scores.verification_score = report.score;
-  if (vertical === "augmentation") scores.augmentation_score = report.score;
-  if (vertical === "optimization") scores.optimization_score = report.score;
+  else if (vertical === "augmentation") scores.augmentation_score = report.score;
+  else if (vertical === "optimization") scores.optimization_score = report.score;
+  else scores.verification_score = report.score;
 
   // Drop null entries so merge keeps prior LWM values for other verticals.
   const scores_snapshot = Object.fromEntries(

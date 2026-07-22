@@ -1,8 +1,15 @@
 import { parseJsonLoose } from "@/lib/xai-client";
 import { composePrompt } from "@/lib/prompt-kernel/compose";
 import {
+  LWM_SNAPSHOT_FULL_LABEL,
+  LWM_SNAPSHOT_LABEL,
   SCORE_FIELD_DESCRIPTIONS,
   SCORE_VERTICALS,
+  SNAPSHOT_HISTORY_SCORE_FIELD,
+  SNAPSHOT_MCP_TOOL,
+  SNAPSHOT_REST_PATH,
+  SNAPSHOT_SCORE_FIELD,
+  SNAPSHOT_VERTICAL,
   VERTICAL_MCP_TOOL,
   VERTICAL_REST_PATH,
   VERTICAL_SCORE_FIELD,
@@ -19,7 +26,14 @@ import { evalScoreEndpointPattern } from "@/lib/api/agent-api-paths";
 
 export type { GhcConfidence, ScoreVertical };
 export {
+  LWM_SNAPSHOT_FULL_LABEL,
+  LWM_SNAPSHOT_LABEL,
   SCORE_VERTICALS,
+  SNAPSHOT_HISTORY_SCORE_FIELD,
+  SNAPSHOT_MCP_TOOL,
+  SNAPSHOT_REST_PATH,
+  SNAPSHOT_SCORE_FIELD,
+  SNAPSHOT_VERTICAL,
   VERTICAL_MCP_TOOL,
   VERTICAL_REST_PATH,
   VERTICAL_SCORE_FIELD,
@@ -75,23 +89,28 @@ export interface PerformanceGapAnalysis {
 }
 
 /**
- * One vertical score report: a single primary 0–100 score plus spider breakdown,
+ * LWM Snapshot report: a single primary 0–100 score plus spider breakdown,
  * analysis (summary/strengths/growth/gaps), and next actions (gap_analysis.next_steps).
+ * GHC is a secondary signal on the same report.
  */
 export interface VerticalScoreReport {
   vertical: ScoreVertical;
-  /** Primary 0–100 score for this vertical only. */
+  /** Primary 0–100 LWM Snapshot score. */
   score: number;
   /**
-   * Named primary field matching the vertical (verification_score | augmentation_score | optimization_score).
-   * Always equals `score` for the active vertical.
+   * Product named primary field for LWM Snapshot (equals `score`).
+   */
+  lwm_snapshot_score?: number;
+  /**
+   * History-compatible mirror of the primary score (LWM scores_snapshot key).
+   * Not a product-facing score type name.
    */
   verification_score?: number;
   augmentation_score?: number;
   optimization_score?: number;
   /** Inferred or owner-set workspace goal. */
   workspace_goal: string;
-  /** Genuine Human Cognition — secondary signal, not a fourth primary vertical. */
+  /** Genuine Human Cognition — secondary signal, not a second primary strategy. */
   ghc_score: number;
   ghc_confidence: GhcConfidence;
   temporal_summary?: string;
@@ -205,20 +224,21 @@ export const PERFORMANCE_GAP_ITEM_SCHEMA = {
 } as const;
 
 function primaryScoreDescription(vertical: ScoreVertical): string {
-  switch (vertical) {
-    case "verification":
-      return SCORE_FIELD_DESCRIPTIONS.verification_score;
-    case "augmentation":
-      return SCORE_FIELD_DESCRIPTIONS.augmentation_score;
-    case "optimization":
-      return SCORE_FIELD_DESCRIPTIONS.optimization_score;
-  }
+  // Product strategy is always LWM Snapshot.
+  if (vertical === "verification") return SCORE_FIELD_DESCRIPTIONS.lwm_snapshot_score;
+  if (vertical === "augmentation") return SCORE_FIELD_DESCRIPTIONS.augmentation_score;
+  return SCORE_FIELD_DESCRIPTIONS.optimization_score;
 }
 
 export function buildVerticalScoreReportSchema(vertical: ScoreVertical) {
-  const primaryField = VERTICAL_SCORE_FIELD[vertical];
+  // Product primary named field is always lwm_snapshot_score for the snapshot strategy.
+  const primaryField =
+    vertical === SNAPSHOT_VERTICAL ? SNAPSHOT_SCORE_FIELD : VERTICAL_SCORE_FIELD[vertical];
   return {
-    name: `workspace_${vertical}_score_report`,
+    name:
+      vertical === SNAPSHOT_VERTICAL
+        ? "workspace_lwm_snapshot_score_report"
+        : `workspace_${vertical}_score_report`,
     schema: {
       type: "object",
       properties: {
@@ -389,9 +409,25 @@ export const EXAMPLE_AUGMENTATION_SCORE_REPORT = exampleReportForVertical("augme
 export const EXAMPLE_OPTIMIZATION_SCORE_REPORT = exampleReportForVertical("optimization");
 
 export function applyNamedScoreField(report: VerticalScoreReport): VerticalScoreReport {
+  const isSnapshot =
+    report.vertical === SNAPSHOT_VERTICAL ||
+    report.vertical === "verification" ||
+    !report.vertical;
+  if (isSnapshot) {
+    return {
+      ...report,
+      vertical: SNAPSHOT_VERTICAL,
+      augmentation_score: undefined,
+      optimization_score: undefined,
+      // Product named field + history-compatible mirror for LWM scores_snapshot.
+      lwm_snapshot_score: report.score,
+      verification_score: report.score,
+    };
+  }
   const field = VERTICAL_SCORE_FIELD[report.vertical];
   return {
     ...report,
+    lwm_snapshot_score: undefined,
     verification_score: undefined,
     augmentation_score: undefined,
     optimization_score: undefined,
@@ -407,13 +443,16 @@ export function buildVerticalScoreReportContract(
   vertical: ScoreVertical,
   baseUrl?: string
 ): VerticalScoreReportContract {
-  const path = VERTICAL_REST_PATH[vertical];
+  const path = vertical === SNAPSHOT_VERTICAL ? SNAPSHOT_REST_PATH : VERTICAL_REST_PATH[vertical];
   const endpoint = evalScoreEndpointPattern(path, baseUrl);
-  const primaryField = VERTICAL_SCORE_FIELD[vertical];
+  const primaryField =
+    vertical === SNAPSHOT_VERTICAL ? SNAPSHOT_SCORE_FIELD : VERTICAL_SCORE_FIELD[vertical];
+  const mcpTool =
+    vertical === SNAPSHOT_VERTICAL ? SNAPSHOT_MCP_TOOL : VERTICAL_MCP_TOOL[vertical];
 
   return {
     endpoint_pattern: endpoint,
-    mcp_tool: VERTICAL_MCP_TOOL[vertical],
+    mcp_tool: mcpTool,
     vertical,
     primary_score_field: primaryField,
     response_mode: "score",
@@ -473,9 +512,14 @@ export function buildVerticalScoreReportContract(
   };
 }
 
-/** Build contracts for all three vertical score endpoints. */
+/** Build contracts for the single LWM Snapshot endpoint. */
 export function buildAllVerticalScoreContracts(baseUrl?: string): VerticalScoreReportContract[] {
   return SCORE_VERTICALS.map((v) => buildVerticalScoreReportContract(v, baseUrl));
+}
+
+/** Alias for the sole snapshot contract. */
+export function buildLwmSnapshotContract(baseUrl?: string): VerticalScoreReportContract {
+  return buildVerticalScoreReportContract(SNAPSHOT_VERTICAL, baseUrl);
 }
 
 /** @deprecated Prefer buildVerticalScoreReportContract / buildAllVerticalScoreContracts */
@@ -540,18 +584,18 @@ export function buildVerticalScoreInstructions(
 ): string {
   const scope = blockId ? "a single workspace block" : "the full workspace";
   const goalLine = workspaceGoal?.trim()
-    ? `\nAuthoritative workspace goal (use exactly for workspace_goal; score ${VERTICAL_SCORE_FIELD[vertical]} against this):\n"${workspaceGoal.trim()}"\n`
+    ? `\nAuthoritative workspace goal (use exactly for workspace_goal; score the LWM Snapshot primary against this):\n"${workspaceGoal.trim()}"\n`
     : "";
 
   const verticalLabel =
     vertical === "verification"
-      ? "learning verification"
+      ? LWM_SNAPSHOT_FULL_LABEL
       : vertical === "augmentation"
-        ? "learning augmentation (practice readiness)"
-        : "learning optimization (progress toward workspace goal)";
+        ? "legacy augmentation (maps to LWM Snapshot)"
+        : "legacy optimization (maps to LWM Snapshot)";
 
   const task = `You produce a structured **${verticalLabel}** score report for ${scope} in Uncertain Systems.
-This call scores ONLY the ${vertical} vertical. Return one primary score field ("score") plus spider breakdown, analysis, and next actions.
+This call produces the single LWM Snapshot strategy (primary score + GHC). Return one primary score field ("score") plus spider breakdown, analysis, and next actions.
 ${goalLine}
 
 Use the attached workspace performance JSON and artifact files **as PoW context catalogs and file refs** — score only from the proof-of-work they reference (see SCORE GENERATION CONTEXT). Return only JSON matching the schema.
@@ -658,19 +702,25 @@ export function normalizeVerticalScoreReport(
 ): VerticalScoreReport {
   const gap_analysis = normalizePerformanceGapAnalysis(report.gap_analysis);
   const resolvedVertical =
-    report.vertical && SCORE_VERTICALS.includes(report.vertical as ScoreVertical)
-      ? (report.vertical as ScoreVertical)
+    report.vertical === "verification" ||
+    report.vertical === "augmentation" ||
+    report.vertical === "optimization"
+      ? report.vertical
       : vertical;
 
   // Accept named primary fields from model output if score is missing
+  const raw = report as Record<string, unknown>;
   const namedField = VERTICAL_SCORE_FIELD[resolvedVertical];
-  const namedValue = (report as Record<string, unknown>)[namedField];
+  const namedValue = raw[namedField];
+  const productNamed = raw.lwm_snapshot_score;
   const score = clampPerformanceScore(
     typeof report.score === "number"
       ? report.score
-      : typeof namedValue === "number"
-        ? namedValue
-        : 0
+      : typeof productNamed === "number"
+        ? productNamed
+        : typeof namedValue === "number"
+          ? namedValue
+          : 0
   );
   const ghc_score = clampPerformanceScore(report.ghc_score);
   const ghc_confidence = normalizeGhcConfidence(report.ghc_confidence);
@@ -840,5 +890,7 @@ export function recoverPerformanceReportFromModelText(
   return recoverVerticalScoreReportFromModelText(text, "verification");
 }
 
-/** TAP post-session auto-results always use verification only. */
-export const TAP_AUTO_SCORE_VERTICAL: ScoreVertical = "verification";
+/** TAP / ILE post-session auto-snapshot always uses the single LWM Snapshot strategy. */
+export const TAP_AUTO_SCORE_VERTICAL: ScoreVertical = SNAPSHOT_VERTICAL;
+/** @alias TAP_AUTO_SCORE_VERTICAL */
+export const SESSION_AUTO_SNAPSHOT_VERTICAL: ScoreVertical = SNAPSHOT_VERTICAL;

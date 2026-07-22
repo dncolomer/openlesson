@@ -12,7 +12,7 @@ export interface InterruptionIntervention {
   message: string;
   /** Why this intervention is predicted at this moment. */
   rationale?: string;
-  /** Machine-oriented hint for the consumer system (e.g. call verification_score). */
+  /** Machine-oriented hint for the consumer system (e.g. call_lwm_snapshot). */
   consumer_action?: string;
   block_id?: string | null;
 }
@@ -47,9 +47,7 @@ export type ProofOfWorkApiEndpoint =
   | "upload_ile_chat"
   | "upload_ile_idle"
   | "upload_ile_speech"
-  | "verification_score"
-  | "augmentation_score"
-  | "optimization_score"
+  | "lwm_snapshot"
   | "get_learning_progress"
   | "list_tap_links"
   | "create_tap_link"

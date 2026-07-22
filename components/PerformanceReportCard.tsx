@@ -391,12 +391,8 @@ export function PerformanceReportCard({
   const primaryScore = clampScore(report.score);
   const workspaceGoalText =
     workspaceGoalProp?.trim() || report.workspace_goal?.trim() || null;
-  const verticalLabel =
-    report.vertical === "augmentation"
-      ? t("performanceReportCard.augmentation")
-      : report.vertical === "optimization"
-        ? t("performanceReportCard.optimization")
-        : t("performanceReportCard.verification");
+  // Sole product strategy — always surface as LWM Snapshot (GHC is secondary on the card).
+  const verticalLabel = t("performanceReportCard.verification");
   const markerScores = report.marker_scores ?? [];
   const gapAnalysis = useMemo(
     () => normalizePerformanceGapAnalysis(report.gap_analysis),

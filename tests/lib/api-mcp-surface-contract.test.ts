@@ -42,7 +42,7 @@ describe("lib/pow-api package path (renamed from agent-v2)", () => {
     const samples = [
       "app/api/mcp/route.ts",
       "app/api/v3/pow/workspaces/route.ts",
-      "app/api/v3/eval/workspaces/[id]/verification-score/route.ts",
+      "app/api/v3/eval/workspaces/[id]/lwm-snapshot/route.ts",
       "app/api/v3/stash/workspaces/[id]/stash/route.ts",
     ];
     for (const rel of samples) {
@@ -117,8 +117,8 @@ describe("API ↔ MCP surface contract (shipped code)", () => {
         routeRel: "app/api/v3/pow/workspaces/[id]/tap-links/route.ts",
       },
       {
-        built: evalWorkspaceResource(workspaceId, "verification-score"),
-        routeRel: "app/api/v3/eval/workspaces/[id]/verification-score/route.ts",
+        built: evalWorkspaceResource(workspaceId, "lwm-snapshot"),
+        routeRel: "app/api/v3/eval/workspaces/[id]/lwm-snapshot/route.ts",
       },
       {
         built: evalWorkspaceResource(workspaceId, "world-model"),

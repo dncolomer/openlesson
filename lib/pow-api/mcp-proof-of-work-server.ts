@@ -98,7 +98,7 @@ Pillars: ${UNCERTAIN_SYSTEMS_SCOPE.pillars.join(" | ")}
 
 ## Workspace & progress model
 ${UNCERTAIN_SYSTEMS_SCOPE.workspace_model}
-Progress signals: proof_of_work_artifact counts; verification_score / augmentation_score / optimization_score; workspace_goal; learning world model; knowledge config.
+Progress signals: proof_of_work_artifact counts; LWM Snapshot (lwm_snapshot) + GHC; workspace_goal; learning world model; knowledge config.
 
 ## Predictive interruptions (TIM)
 Every tool result includes top-level \`interruption\` (object or null). When non-null, schedule intervention after delay_ms unless a later Proof-of-Work API call supersedes it. Read interruption_contract from generate_proof_of_work_schema. Resource: uncertain-systems://predictive-interruptions
@@ -112,9 +112,9 @@ Workspaces are created **only in the product UI** (\`/workspace/new\`). Programm
 1. list_workspaces or get_learning_progress(workspace_id) — orient on an existing UI-created workspace
 2. generate_proof_of_work_schema — returns continuous_evaluation (REST) AND continuous_evaluation_mcp (tools)
 3. upload_proof_of_work (or buffer_proof_of_work → stash_proof_of_work / submit_stashed_proof_of_work)
-4. verification_score / augmentation_score / optimization_score; optional get_world_model / get_knowledge_config / list_eval_history
+4. lwm_snapshot (LWM Snapshot — sole strategy); optional get_world_model / get_knowledge_config / list_eval_history
 5. Re-fetch schema + regenerate skill as proof of work grows
-Note: TAP auto-results always use verification_score only. Workspace creation is UI-only.
+Note: TAP/ILE end always runs LWM Snapshot (lwm_snapshot). Workspace creation is UI-only.
 
 REST mirror: /api/v3/pow (capture), /api/v3/eval (scores + LWM/knowledge), /api/v3/stash (alaTAP buffer).
 
@@ -254,45 +254,9 @@ export const MCP_EVIDENCE_TOOLS = [
     },
   },
   {
-    name: "verification_score",
+    name: "lwm_snapshot",
     description:
-      "Learning verification score (0–100) plus spider marker_scores, analysis (summary/gaps), and next actions. TAP auto-results use this only. Opaque workspaces also return evaluation_mode, privacy, and protocol_report. REST: POST .../verification-score.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        workspace_id: { type: "string" },
-        block_id: { type: "string" },
-        style_prompt: {
-          type: "string",
-          description: "Optional voice/tone (e.g. second person, formal coach).",
-        },
-      },
-      required: ["workspace_id"],
-      additionalProperties: false,
-    },
-  },
-  {
-    name: "augmentation_score",
-    description:
-      "Learning augmentation score (0–100 practice readiness) plus spider marker_scores, analysis, and next actions. REST: POST .../augmentation-score.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        workspace_id: { type: "string" },
-        block_id: { type: "string" },
-        style_prompt: {
-          type: "string",
-          description: "Optional voice/tone (e.g. second person, formal coach).",
-        },
-      },
-      required: ["workspace_id"],
-      additionalProperties: false,
-    },
-  },
-  {
-    name: "optimization_score",
-    description:
-      "Learning optimization score (0–100 toward workspace_goal) plus spider marker_scores, analysis, and next actions. REST: POST .../optimization-score.",
+      "LWM Snapshot (Learning World Model Snapshot) score (0–100) plus GHC, spider marker_scores, analysis (summary/gaps), and next actions. Sole product snapshot strategy. TAP/ILE session end always runs this path. Opaque workspaces also return evaluation_mode, privacy, and protocol_report. REST: POST .../lwm-snapshot.",
     inputSchema: {
       type: "object",
       properties: {
@@ -1021,16 +985,13 @@ export async function callMcpProofOfWorkTool(
     );
   }
 
-  if (
-    name === "verification_score" ||
-    name === "augmentation_score" ||
-    name === "optimization_score"
-  ) {
+  // Sole public score tool: LWM Snapshot.
+  if (name === "lwm_snapshot") {
     requireScope(auth.scopes, "workspaces:read");
     const workspaceId = stringArg(args, "workspace_id");
     if (!workspaceId) throw new Error("workspace_id is required.");
 
-    const vertical = name.replace("_score", "") as ScoreVertical;
+    const vertical = "verification" as ScoreVertical;
     const workspace = await loadWorkspace(supabase, auth, workspaceId);
     const stylePrompt = typeof args.style_prompt === "string" ? args.style_prompt.trim() : "";
     const blockId = typeof args.block_id === "string" ? args.block_id : null;
@@ -1051,6 +1012,8 @@ export async function callMcpProofOfWorkTool(
         {
           mode: "score",
           vertical,
+          strategy: "lwm_snapshot",
+          label: "LWM Snapshot",
           evaluation_mode: scored.evaluation_mode,
           privacy: scored.privacy,
           workspace_goal: scored.workspace_goal,
@@ -1074,7 +1037,7 @@ export async function callMcpProofOfWorkTool(
         }
       ),
       {
-        endpoint: name as "verification_score" | "augmentation_score" | "optimization_score",
+        endpoint: "lwm_snapshot",
         workspace_id: workspaceId,
         block_id: blockId,
         mode: "score",

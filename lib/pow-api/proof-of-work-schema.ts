@@ -80,13 +80,11 @@ export interface ProofOfWorkEvalSchemaResult {
   uncertain_systems_scope?: Record<string, unknown>;
   integration_surfaces?: IntegrationSurfaceRef[];
   recommended_next_actions?: RecommendedIntegrationAction[];
-  /** Primary verification score contract (TAP / default). */
+  /** Primary LWM Snapshot (verification) score contract (TAP/ILE / default). */
   performance_report_contract?: PerformanceReportContract;
-  /** Contracts for all three vertical score endpoints. */
+  /** Snapshot score contracts — sole product strategy is LWM Snapshot (verification wire key). */
   vertical_score_contracts?: {
     verification: PerformanceReportContract;
-    augmentation: PerformanceReportContract;
-    optimization: PerformanceReportContract;
   };
   /** Trace Interruption Model contract — every Proof-of-Work API response also carries top-level interruption. */
   interruption_contract?: InterruptionContract;
@@ -179,7 +177,7 @@ export const EVIDENCE_EVAL_SCHEMA_OUTPUT = {
       performance_report_contract: {
         type: "object",
         description:
-          "Formal contract for POST .../verification-score: score (verification_score), workspace_goal, marker_scores (spider/radar), analysis, and gap_analysis next actions",
+          "Formal contract for POST .../lwm-snapshot: score (lwm_snapshot_score), workspace_goal, marker_scores (spider/radar), analysis, and gap_analysis next actions",
         properties: {
           endpoint_pattern: { type: "string" },
           response_mode: { type: "string", enum: ["score", "report"] },
@@ -240,7 +238,7 @@ export const EVIDENCE_EVAL_SCHEMA_OUTPUT = {
       vertical_score_contracts: {
         type: "object",
         description:
-          "Contracts for verification-score, augmentation-score, and optimization-score endpoints",
+          "LWM Snapshot contract only (lwm-snapshot / lwm_snapshot / lwm_snapshot_score). Sole product strategy; GHC is secondary on the same report.",
         additionalProperties: true,
       },
       predicted_interruption: {
@@ -384,9 +382,9 @@ export function buildProofOfWorkSchemaInstructions(
 
 You are an Uncertain Systems proof-of-work architect. Produce a **formal proof-of-work specification** that tells integrators exactly how to submit tool usage and related artifacts for learning verification.
 
-Uncertain Systems scope: three vertical scores — verification_score (learning verification), augmentation_score (practice readiness), optimization_score (progress toward workspace_goal, 0–100 score units). Each vertical has its own endpoint (*-score). GHC (ghc_score + ghc_confidence) is a secondary cognition signal. Collect proof-of-work via proof-of-work uploads. Scoring is **continuous** — specs and skills regenerate as proof of work grows. TAP auto-results always use verification score only.
+Uncertain Systems scope: single LWM Snapshot strategy — lwm_snapshot (Learning World Model Snapshot, 0–100). GHC (ghc_score + ghc_confidence) is a secondary cognition signal on the same report. Collect proof-of-work via proof-of-work uploads. Scoring is **continuous** — specs and skills regenerate as proof of work grows. TAP/ILE end always run the LWM Snapshot path.
 
-Integrators may use **REST** (Bearer API key: POST .../proof-of-work, POST .../verification-score | .../augmentation-score | .../optimization-score) or **MCP** (JSON-RPC tools upload_proof_of_work, verification_score, augmentation_score, optimization_score, generate_proof_of_work_schema) with identical semantics. Document REST paths in contracts; the platform also attaches continuous_evaluation_mcp with tool names after generation — your continuous_evaluation_summary must mention both surfaces.
+Integrators may use **REST** (Bearer API key: POST .../proof-of-work, POST .../lwm-snapshot) or **MCP** (JSON-RPC tools upload_proof_of_work, lwm_snapshot, generate_proof_of_work_schema) with identical semantics. Document REST paths in contracts; the platform also attaches continuous_evaluation_mcp with tool names after generation — your continuous_evaluation_summary must mention both surfaces.
 
 Use the full workspace context: attached JSON summary, block titles/descriptions, existing proof of work patterns, plan files, and Think Aloud Protocol (TAP) session signals when present. TAP and ILE may inform scoring — but score report remediation (gaps, next_steps, suggestions) must stay product-independent: never recommend TAP sessions, block completion, ILE, or other Uncertain Systems platform mechanics.
 
@@ -409,22 +407,22 @@ Output rules:
    - encoding: "base64"
    - proof_of_work_types: tool (application/json, text/plain), screen (image/png, image/jpeg, image/webp), video (video/mp4, video/webm), eeg (application/json) with when_to_use guidance
    - common_fields: proof_of_work_type, data, mime_type, file_name, block_id, session_id, timestamp_ms, tool_name, tool_action, metadata
-5. Optimize payloads for vertical score endpoints: time-ordered events, learner reflections, goals achieved, artifact summaries, decision rationale, outcomes, block-relevant competencies. Each vertical score call returns one primary score (0-100), workspace_goal, ghc_score + ghc_confidence (secondary), marker_scores (spider/radar), summary analysis, and gap_analysis with next_steps.
-6. "performance_report_contract" must formally describe POST .../verification-score (primary/default; TAP uses this):
-   - endpoint_pattern: "POST /api/v3/eval/workspaces/{workspace_id}/verification-score"
+5. Optimize payloads for the LWM Snapshot endpoint: time-ordered events, learner reflections, goals achieved, artifact summaries, decision rationale, outcomes, block-relevant competencies. Each snapshot call returns one primary score (0-100 lwm_snapshot_score), workspace_goal, ghc_score + ghc_confidence (secondary), marker_scores (spider/radar), summary analysis, and gap_analysis with next_steps.
+6. "performance_report_contract" must formally describe POST .../lwm-snapshot (LWM Snapshot — sole strategy; TAP/ILE end use this):
+   - endpoint_pattern: "POST /api/v3/eval/workspaces/{workspace_id}/lwm-snapshot"
    - response_mode: "score"
-   - required_fields: score, verification_score, vertical, workspace_goal, marker_scores, gap_analysis, gap_analysis.gaps, gap_analysis.next_steps, summary, strengths, growth_areas, suggestions, confidence
-   - score / verification_score: integer 0-100 learning verification
+   - required_fields: score, lwm_snapshot_score, vertical, workspace_goal, marker_scores, gap_analysis, gap_analysis.gaps, gap_analysis.next_steps, summary, strengths, growth_areas, suggestions, confidence
+   - score / lwm_snapshot_score: integer 0-100 LWM Snapshot
    - workspace_goal: inferred or owner-set success outcome for this workspace
    - marker_scores: 4-8 competency axes for spider/radar
    - gap_analysis.next_steps: directions and events (product/workflow language only — never TAP, block completion, or ILE)
-   Also document augmentation-score and optimization-score as sibling endpoints with the same shape but augmentation_score / optimization_score primary fields.
-7. "collection_guidance" explains cadence, checkpoint timing, block-scoped vs workspace-global uploads, and that **more proof of work submitted improves verification, augmentation, and optimization scores**. Encourage ongoing uploads, not one-time dumps. When learning world model evidence appetite is provided above, bias collection_guidance and tool_submissions toward want_more types and de-emphasize saturated types.
+   Do not document other score endpoints — LWM Snapshot is the sole product strategy.
+7. "collection_guidance" explains cadence, checkpoint timing, block-scoped vs workspace-global uploads, and that **more proof of work submitted improves LWM Snapshot and GHC**. Encourage ongoing uploads, not one-time dumps. When learning world model evidence appetite is provided above, bias collection_guidance and tool_submissions toward want_more types and de-emphasize saturated types.
 8. "continuous_evaluation_summary" must state clearly that:
    - This proof-of-work spec is a snapshot derived from current workspace context and proof-of-work history
    - Integrators must **re-fetch** POST .../proof-of-work-schema (REST) or call generate_proof_of_work_schema (MCP) as proof of work accumulates
    - Integrators must **regenerate** POST .../integration-skill (REST) or generate_integration_skill (MCP) so skill.md stays aligned
-   - Progress tracking uses verification_score / augmentation_score / optimization_score MCP tools and REST .../*-score endpoints
+   - Progress tracking uses lwm_snapshot (LWM Snapshot) MCP tool and REST .../lwm-snapshot
    - get_learning_progress (MCP) orients agents mid-session; REST equivalents remain authoritative in API paths
    - Continuous evaluation is the intended operating model, not a one-time setup
 9. schema_name must be snake_case prefixed with "eval_input_".
@@ -432,7 +430,7 @@ Output rules:
 11. "predicted_interruption" — Trace Interruption Model (TIM) prediction for the consumer system (TIM is a swappable interruption world model; consumer envelope stays stable):
    - Return null when no intervention is predicted (user is on track, or context is too thin).
    - When non-null, set delay_ms (15000-600000) and intervention { type, message, optional rationale, consumer_action, block_id }.
-   - Types: reflection_prompt (articulate reasoning), checkpoint_probe (verify understanding), coaching_nudge (gap-driven nudge), proof_of_work_reminder (upload proof-of-work), performance_review (request verification score).
+   - Types: reflection_prompt (articulate reasoning), checkpoint_probe (verify understanding), coaching_nudge (gap-driven nudge), proof_of_work_reminder (upload proof-of-work), performance_review (request LWM Snapshot).
    - Ground predictions in workspace blocks, eval definition, proof-of-work history, evidence appetite, and collection_guidance — not generic coaching.
    - The consumer schedules the intervention after delay_ms unless any later Proof-of-Work API response supersedes it.
 

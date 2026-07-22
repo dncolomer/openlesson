@@ -82,6 +82,7 @@ interface KnowledgeConfigResponse {
       friction_patterns?: string[];
     };
     scores_snapshot?: {
+      /** History wire key for LWM Snapshot primary score (not a product score type name). */
       verification_score?: number | null;
       augmentation_score?: number | null;
       optimization_score?: number | null;
@@ -210,8 +211,8 @@ function ProjectionSpaceWidget({
         data-projection-widget
         data-projection-empty
       >
-        No knowledge config samples yet for this user. Run a verification, augmentation, or
-        optimization score to snapshot a trajectory — or overlay a knowledge region.
+        No knowledge config samples yet for this user. Generate an LWM Snapshot when new
+        proof of work exists — or overlay a knowledge region.
       </div>
     );
   }
@@ -797,6 +798,14 @@ export function KnowledgeConfigTrajectoryPanel({
   const [embGuestUserId, setEmbGuestUserId] = useState("");
   const [lwmUserId, setLwmUserId] = useState("");
   const [lwmGuestUserId, setLwmGuestUserId] = useState("");
+  const [snapshotLoading, setSnapshotLoading] = useState(false);
+  const [snapshotError, setSnapshotError] = useState<string | null>(null);
+  const [snapshotEligibility, setSnapshotEligibility] = useState<{
+    allowed: boolean;
+    message?: string;
+    last_eval_at?: string | null;
+    new_pow_count?: number | null;
+  } | null>(null);
 
   const [availableSubjects, setAvailableSubjects] = useState<AvailableSubject[]>([]);
   const [embData, setEmbData] = useState<KnowledgeConfigResponse | null>(null);
@@ -920,6 +929,91 @@ export function KnowledgeConfigTrajectoryPanel({
     }
   }, [fetchKnowledgeConfig, lwmScope.query, mergeAvailableSubjects]);
 
+  const loadSnapshotEligibility = useCallback(async () => {
+    if (!currentUserId && !lwmUserId && !lwmGuestUserId) {
+      setSnapshotEligibility(null);
+      return;
+    }
+    try {
+      const params = new URLSearchParams();
+      params.set("workspaceId", workspaceId);
+      params.set("limit", "1");
+      if (ayclToken) params.set("ayclToken", ayclToken);
+      const subjectUser = lwmUserId || currentUserId;
+      if (lwmGuestUserId) params.set("guest_user_id", lwmGuestUserId);
+      else if (subjectUser) params.set("user_id", subjectUser);
+
+      const response = await fetch(`/api/workspace/eval-history?${params.toString()}`);
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        setSnapshotEligibility({ allowed: true });
+        return;
+      }
+      const eligibility = (data.eligibility || {}) as Record<
+        string,
+        { allowed?: boolean; message?: string; last_eval_at?: string | null; new_pow_count?: number | null }
+      >;
+      // Single strategy: verification / lwm snapshot gate
+      const status = eligibility.verification ?? Object.values(eligibility)[0];
+      if (!status) {
+        setSnapshotEligibility({ allowed: true });
+        return;
+      }
+      setSnapshotEligibility({
+        allowed: status.allowed !== false,
+        message: status.message,
+        last_eval_at: status.last_eval_at,
+        new_pow_count: status.new_pow_count,
+      });
+    } catch {
+      setSnapshotEligibility({ allowed: true });
+    }
+  }, [ayclToken, currentUserId, lwmGuestUserId, lwmUserId, workspaceId]);
+
+  const generateSnapshot = useCallback(async () => {
+    if (snapshotEligibility && !snapshotEligibility.allowed) {
+      setSnapshotError(
+        snapshotEligibility.message ||
+          "No new proof of work since the last LWM Snapshot for this user.",
+      );
+      return;
+    }
+    setSnapshotLoading(true);
+    setSnapshotError(null);
+    try {
+      const body: Record<string, string> = { workspaceId };
+      if (ayclToken) body.ayclToken = ayclToken;
+      if (lwmGuestUserId) body.guest_user_id = lwmGuestUserId;
+      else if (lwmUserId) body.user_id = lwmUserId;
+
+      const response = await fetch("/api/workspace/performance-report", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(
+          typeof data.error === "string" ? data.error : "Failed to generate LWM Snapshot",
+        );
+      }
+      await loadLwm();
+      await loadSnapshotEligibility();
+    } catch (err) {
+      setSnapshotError(err instanceof Error ? err.message : "Failed to generate LWM Snapshot");
+    } finally {
+      setSnapshotLoading(false);
+    }
+  }, [
+    ayclToken,
+    loadLwm,
+    loadSnapshotEligibility,
+    lwmGuestUserId,
+    lwmUserId,
+    snapshotEligibility,
+    workspaceId,
+  ]);
+
   const loadRegionsForOverlay = useCallback(async () => {
     if (!showModels) return;
     setRegionsLoading(true);
@@ -981,6 +1075,11 @@ export function KnowledgeConfigTrajectoryPanel({
     if (!showLwm) return;
     void loadLwm();
   }, [loadLwm, showLwm]);
+
+  useEffect(() => {
+    if (!showLwm) return;
+    void loadSnapshotEligibility();
+  }, [loadSnapshotEligibility, showLwm]);
 
   // When regions are overlaid, compute Knowledge distance for the selected Embeddings user.
   useEffect(() => {
@@ -1527,7 +1626,7 @@ export function KnowledgeConfigTrajectoryPanel({
       {showLwm ? (
       <SectionCard
         data-section="lwm"
-        description="Symbolic user state for the selected user — scores, evidence appetite, strengths, and exploration signals."
+        description="Learning World Model for the selected user — LWM Snapshot score, GHC, evidence appetite, strengths, and exploration signals."
       >
         <UserPicker
           data-picker="lwm"
@@ -1542,6 +1641,40 @@ export function KnowledgeConfigTrajectoryPanel({
             setLwmGuestUserId(guestUserId);
           }}
         />
+
+        {/* Generate new snapshot — enabled only when selected user has unsnapshotted PoW */}
+        <div className="space-y-2" data-lwm-snapshot-controls>
+          <button
+            type="button"
+            onClick={() => void generateSnapshot()}
+            disabled={
+              snapshotLoading ||
+              (!currentUserId && !lwmUserId && !lwmGuestUserId) ||
+              snapshotEligibility?.allowed === false
+            }
+            title={
+              snapshotEligibility?.allowed === false
+                ? snapshotEligibility.message ||
+                  "No new proof of work since the last LWM Snapshot for this user."
+                : "Generate a new Learning World Model Snapshot for the selected user"
+            }
+            className="w-full rounded-lg bg-white px-3 py-2 text-xs font-medium text-black transition hover:bg-neutral-200 disabled:cursor-not-allowed disabled:opacity-40"
+            data-lwm-generate-snapshot
+          >
+            {snapshotLoading ? "Generating snapshot…" : "Generate new snapshot"}
+          </button>
+          {snapshotEligibility?.allowed === false ? (
+            <p className="text-[11px] text-neutral-500" data-lwm-snapshot-gate>
+              {snapshotEligibility.message ||
+                "No new proof of work since the last snapshot for this user."}
+            </p>
+          ) : null}
+          {snapshotError ? (
+            <p className="text-xs text-red-400" data-lwm-snapshot-error>
+              {snapshotError}
+            </p>
+          ) : null}
+        </div>
 
         {lwmError ? (
           <div className="rounded-lg border border-red-900/50 bg-red-950/30 px-3 py-2 text-xs text-red-300">
@@ -1567,26 +1700,21 @@ export function KnowledgeConfigTrajectoryPanel({
             {scores && (
               <div className="space-y-1.5">
                 <div className="text-[11px] font-medium uppercase tracking-wide text-neutral-500">
-                  Score snapshot
+                  LWM Snapshot
                   {lwmScope.label ? ` · ${lwmScope.label}` : ""}
                 </div>
                 <div className="flex flex-wrap gap-1.5">
                   {scores.verification_score != null && (
-                    <Chip tone="cyan">V {Math.round(scores.verification_score)}</Chip>
+                    <Chip tone="cyan">
+                      LWM Snapshot {Math.round(scores.verification_score)}
+                    </Chip>
                   )}
-                  {scores.augmentation_score != null && (
-                    <Chip>A {Math.round(scores.augmentation_score)}</Chip>
+                  {scores.ghc_score != null && (
+                    <Chip>GHC {Math.round(scores.ghc_score)}</Chip>
                   )}
-                  {scores.optimization_score != null && (
-                    <Chip>O {Math.round(scores.optimization_score)}</Chip>
+                  {scores.verification_score == null && scores.ghc_score == null && (
+                    <span className="text-xs text-neutral-500">No scores yet</span>
                   )}
-                  {scores.ghc_score != null && <Chip>GHC {Math.round(scores.ghc_score)}</Chip>}
-                  {scores.verification_score == null &&
-                    scores.augmentation_score == null &&
-                    scores.optimization_score == null &&
-                    scores.ghc_score == null && (
-                      <span className="text-xs text-neutral-500">No scores yet</span>
-                    )}
                 </div>
               </div>
             )}
@@ -1663,13 +1791,11 @@ export function KnowledgeConfigTrajectoryPanel({
               )}
 
             {!scores?.verification_score &&
-              !scores?.augmentation_score &&
-              !scores?.optimization_score &&
               !(wm.evidence_appetite?.want_more?.length || wm.evidence_appetite?.saturated?.length) &&
               !(wm.learning_profile?.strengths?.length) && (
                 <p className="text-xs text-neutral-500">
-                  LWM is empty for this user. Score runs with enough proof of work will fill
-                  evidence appetite and strengths.
+                  LWM is empty for this user. Generate a new snapshot when proof of work exists
+                  to fill evidence appetite and strengths.
                 </p>
               )}
           </div>

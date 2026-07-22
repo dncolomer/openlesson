@@ -272,24 +272,22 @@ Suggested share path: ${sharePath}
 Proof-of-work spec API (dynamic — MUST document prominently): POST ${proofOfWorkSchemaPath}
 Proof-of-work upload API: POST ${evidenceUploadPath}
 Integration skill regeneration API (self-update — MUST document prominently): POST ${integrationSkillPath}
-Vertical score APIs (re-run as proof of work grows):
-- Verification (TAP default): POST ${performancePath}
-- Augmentation: POST ${performancePath.replace("/verification-score", "/augmentation-score")}
-- Optimization: POST ${performancePath.replace("/verification-score", "/optimization-score")}
+LWM Snapshot API (re-run as proof of work grows; sole product strategy):
+- LWM Snapshot: POST ${performancePath} (MCP lwm_snapshot). GHC is secondary on the same report.
 
 Sections to include: ${sections.join(", ")}
 ${proofOfWorkSpecSection}
 
 Required content:
-1. Purpose — what this partner agent verifies **given the current workspace status** and how proof of work + the three vertical scores fit the workflow.
+1. Purpose — what this partner agent verifies **given the current workspace status** and how proof of work + LWM Snapshot fit the workflow.
 2. Design principles — checkpoint-agnostic timing, block-scoped vs workspace-global analysis, tool usage as core signal, always fetch the live proof-of-work spec before uploading, **more proof of work improves evaluation quality**.
 3. **Continuous evaluation and regeneration (required section)** — this is a must-have operating model, not optional maintenance. Include:
-   - Principle: verification is continuous; the more data and proof of work submitted, the better Uncertain Systems can learn and evaluate
+   - Principle: evaluation is continuous; the more data and proof of work submitted, the better Uncertain Systems can learn and snapshot
    - This skill.md is a snapshot; partner agents must **regenerate** it via POST ${integrationSkillPath} as proof of work accumulates
    - Re-fetch the proof of work spec via POST ${proofOfWorkSchemaPath} on a recurring basis (e.g. after every 5-10 new uploads, when blocks change, or when scores feel stale)
-   - Re-request vertical scores via POST .../verification-score | .../augmentation-score | .../optimization-score after meaningful proof-of-work batches
+   - Re-request LWM Snapshot via POST .../lwm-snapshot after meaningful proof-of-work batches
    - Explicit warning: treating the initial skill.md or spec as permanent will degrade evaluation quality over time
-   - Recommended loop: upload proof of work → re-fetch spec → regenerate skill → request vertical scores → repeat
+   - Recommended loop: upload proof of work → re-fetch spec → regenerate skill → request LWM Snapshot → repeat
    - Reference the \`continuous_evaluation\` object returned by the proof of work spec API for machine-readable self-update triggers
 4. **Predictive interruptions (required section)** — Trace Interruption Model (TIM) on every Proof-of-Work API response:
    - Every REST and MCP success response includes top-level \`interruption\` (object or null).
@@ -300,26 +298,24 @@ Required content:
    - Include JSON examples for active interruption and null (empty).
 5. Authentication table (Bearer sk_ / gsk_, Teams tier, scopes).
 6. Endpoints table covering REST and MCP with **dual documentation** (never hide REST behind MCP):
-   - REST: GET /blocks, POST /proof-of-work-schema, POST /proof-of-work, POST /verification-score, POST /augmentation-score, POST /optimization-score, POST /integration-skill (workspace create is UI-only; do not document POST /workspaces or MCP create_workspace as supported)
-   - MCP (JSON-RPC at POST /api/mcp with Bearer auth): list_workspaces, get_workspace, get_learning_progress, list_blocks, generate_proof_of_work_schema, upload_proof_of_work, verification_score, augmentation_score, optimization_score, generate_integration_skill, create_tap_link, list_tap_links
+   - REST: GET /blocks, POST /proof-of-work-schema, POST /proof-of-work, POST /lwm-snapshot (LWM Snapshot), POST /integration-skill (workspace create is UI-only; do not document POST /workspaces or MCP create_workspace as supported)
+   - MCP (JSON-RPC at POST /api/mcp with Bearer auth): list_workspaces, get_workspace, get_learning_progress, list_blocks, generate_proof_of_work_schema, upload_proof_of_work, lwm_snapshot (LWM Snapshot), generate_integration_skill, create_tap_link, list_tap_links
    - State that MCP tools have parity with REST for capture/score flows; workspace creation is product UI only (/workspace/new); proof-of-work spec responses include both continuous_evaluation (REST paths) and continuous_evaluation_mcp (tool names)
    - Recommend get_learning_progress / generate_proof_of_work_schema first for progress orientation on an existing workspace
 7. **Proof-of-work specification (required section)** — explain that payloads are defined by the formal proof-of-work spec returned from POST ${proofOfWorkSchemaPath}. Include:
    - When to call the proof of work spec endpoint (before first upload, after proof-of-work milestones, when eval definition or blocks change)
    - Example request body with definition, optional block_id, and integration_hints
-   - That the response includes tool_submissions, proof_of_work_upload_contract, performance_report_contract (verification default), vertical_score_contracts, interruption_contract, continuous_evaluation, schema_name, example_payload, collection_guidance, and top-level interruption
+   - That the response includes tool_submissions, proof_of_work_upload_contract, performance_report_contract (LWM Snapshot), interruption_contract, continuous_evaluation, schema_name, example_payload, collection_guidance, and top-level interruption
    - Instruction to validate tool payloads against the fetched schema before upload
    - Do NOT embed a static schema as the source of truth; reference the API path above
 8. Workspace-specific block mapping guidance and example tool JSON payloads that match the proof of work spec (illustrative only).
-9. **Vertical scores (required section)** — document the three score endpoints (not a unified multi-score card). Each call returns ONE primary score for that vertical plus spider breakdown, analysis, and next actions:
-   - POST .../verification-score (MCP verification_score) — learning verification; **TAP auto-results use this only**
-   - POST .../augmentation-score (MCP augmentation_score) — practice / improvement readiness
-   - POST .../optimization-score (MCP optimization_score) — progress toward workspace_goal (0–100 score units)
-   - Every score response MUST include: score + named primary field, vertical, workspace_goal, marker_scores (4-8 spider axes: id, label, score, rationale), gap_analysis with gaps[] and next_steps { directions[], events[] }, summary, strengths, growth_areas, suggestions, confidence
+9. **LWM Snapshot (required section)** — sole product score strategy (LWM Snapshot strategy). Each call returns ONE primary score plus GHC secondary, spider breakdown, analysis, and next actions:
+   - POST .../lwm-snapshot (MCP lwm_snapshot) — LWM Snapshot; **TAP/ILE end always run this path**
+   - Every score response MUST include: score + lwm_snapshot_score, vertical, workspace_goal, ghc_score, marker_scores (4-8 spider axes: id, label, score, rationale), gap_analysis with gaps[] and next_steps { directions[], events[] }, summary, strengths, growth_areas, suggestions, confidence
    - Remediation must be product/workflow-specific; never TAP, block completion, ILE, or Uncertain Systems platform tasks
-   - Reference performance_report_contract / vertical_score_contracts from the proof of work spec API for machine-readable contracts
-   - Include a full JSON example for verification-score with score, verification_score, workspace_goal, marker_scores, and at least one gap + next_steps
-10. Quick integration checklist: fetch proof-of-work spec → honor interruption scheduling → upload proof of work per contract → regenerate skill → request vertical scores → repeat as proof of work grows.
+   - Reference performance_report_contract from the proof of work spec API for machine-readable contracts
+   - Include a full JSON example for lwm-snapshot with score, lwm_snapshot_score, ghc_score, workspace_goal, marker_scores, and at least one gap + next_steps
+10. Quick integration checklist: fetch proof-of-work spec → honor interruption scheduling → upload proof of work per contract → regenerate skill → request LWM Snapshot → repeat as proof of work grows.
 
 Canonical API reference links: ${request.base_url}/skill.md and ${request.base_url}/docs/proof-of-work-api
 

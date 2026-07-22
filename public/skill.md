@@ -15,9 +15,9 @@ The Proof-of-Work API supports **only** this workflow:
 2. List blocks in that workspace.
 3. *(Optional)* Generate an ideal proof-of-work input JSON schema (`POST .../proof-of-work-schema`) or a custom integration `skill.md` (`POST .../integration-skill`) from workspace context.
 4. Upload proof of work (`POST .../proof-of-work`) **or** buffer via Stash API then stash/submit.
-5. Run vertical scores (`verification-score` / `augmentation-score` / `optimization-score`) and optional eval reads (world-model, knowledge-config, eval-history).
+5. Run LWM Snapshot (`lwm-snapshot` / `lwm_snapshot`) and optional eval reads (world-model, knowledge-config, eval-history).
 6. Create a private TAP link (minutes **1–120**, default **15**).
-7. List TAP links and completion status; score TAP via `POST .../verification-score` only.
+7. List TAP links and completion status; score TAP via `POST .../lwm-snapshot` only.
 
 **Out of scope** — programmatic workspace create, blockchain tracking, proof anchoring, live tutoring session control, heartbeats, or plan adaptation. Key CRUD is browser-session only (`/api/v3/pow/keys`). Legacy `/api/session-files/*` is separate from this API.
 
@@ -29,7 +29,7 @@ The Proof-of-Work API supports **only** this workflow:
 
 | Mode | When to use | Create | Schema | Performance |
 |------|-------------|--------|--------|-------------|
-| `semantic` | Default — full learning verification | **UI only** (`/workspace/new`) | `definition` | Vertical scores (`verification_score` / `augmentation_score` / `optimization_score`), semantic gap analysis |
+| `semantic` | Default — full learning verification | **UI only** (`/workspace/new`) | `definition` | LWM Snapshot (`lwm_snapshot` + GHC secondary), semantic gap analysis |
 | `opaque` | Privacy-preserving structural verification | **UI only** (`/workspace/new`) | `definition_ref` + `contract.event_verbs` | `protocol_report`, `privacy`; no semantic inference |
 
 **Opaque guardrails:**
@@ -135,7 +135,7 @@ Content-Type: application/json
 
 **Tools (100% parity with public agent REST under `/api/v3/{pow,eval,stash}`; create is UI-only; key CRUD is browser-session only):**
 
-`list_workspaces`, `get_workspace`, `get_learning_progress`, `list_blocks`, `generate_proof_of_work_schema`, `generate_integration_skill`, `upload_proof_of_work`, `verification_score`, `augmentation_score`, `optimization_score`, `list_tap_links`, `create_tap_link`, `get_world_model`, `get_knowledge_config`, `get_knowledge_config_trajectory`, `knowledge_distance`, `list_eval_history`, `list_custom_verification_models`, `create_custom_verification_model`, `eval_custom_verification_model`, `buffer_proof_of_work`, `stash_proof_of_work`, `submit_stashed_proof_of_work`
+`list_workspaces`, `get_workspace`, `get_learning_progress`, `list_blocks`, `generate_proof_of_work_schema`, `generate_integration_skill`, `upload_proof_of_work`, `lwm_snapshot` (LWM Snapshot), `list_tap_links`, `create_tap_link`, `get_world_model`, `get_knowledge_config`, `get_knowledge_config_trajectory`, `knowledge_distance`, `list_eval_history`, `list_custom_verification_models`, `create_custom_verification_model`, `eval_custom_verification_model`, `buffer_proof_of_work`, `stash_proof_of_work`, `submit_stashed_proof_of_work`
 
 Workspace creation is **not** available via MCP or REST — create workspaces in the product UI at `/workspace/new`.
 
@@ -372,21 +372,17 @@ Max **10 MB** per upload. Guest keys attach proof of work to their guest identit
 
 ---
 
-### Vertical scores — `workspaces:read`
+### LWM Snapshot — `workspaces:read`
 
-Three dedicated score endpoints (one primary 0–100 score per call). Each returns spider/radar `marker_scores`, analysis (`summary`, strengths/growth/gaps), and next actions (`gap_analysis.next_steps`).
+Sole product score strategy (one primary 0–100 score per call + GHC secondary). Returns spider/radar `marker_scores`, analysis (`summary`, strengths/growth/gaps), and next actions (`gap_analysis.next_steps`). **TAP/ILE end always run this path.**
 
 | Method | Path | MCP tool | Primary field |
 | :--- | :--- | :--- | :--- |
-| `POST` | `/api/v3/eval/workspaces/{workspace_id}/verification-score` | `verification_score` | `verification_score` |
-| `POST` | `/api/v3/eval/workspaces/{workspace_id}/augmentation-score` | `augmentation_score` | `augmentation_score` |
-| `POST` | `/api/v3/eval/workspaces/{workspace_id}/optimization-score` | `optimization_score` | `optimization_score` |
+| `POST` | `/api/v3/eval/workspaces/{workspace_id}/lwm-snapshot` | `lwm_snapshot` | `lwm_snapshot_score` / `score` |
 
-- **Verification** — learning verification (knowledge coverage / demonstrated competency). **TAP auto-results always use verification only.**
-- **Augmentation** — practice / improvement readiness from proof of work.
-- **Optimization** — progress toward the inferred `workspace_goal` (0–100 score units; replaces the former conversion % branding).
+**Product name:** LWM Snapshot (Learning World Model Snapshot). Do not present `verification_score` or “verification score” as the product score type.
 
-**Request** (all three endpoints share the same body shape):
+**Request:**
 
 ```json
 {
@@ -400,13 +396,13 @@ Three dedicated score endpoints (one primary 0–100 score per call). Each retur
 ```json
 {
   "mode": "score",
-  "vertical": "verification",
+  "strategy": "lwm_snapshot",
+  "label": "LWM Snapshot",
   "workspace_goal": "Trial-to-paid subscription activation",
   "workspace_goal_source": "workspace",
   "report": {
-    "vertical": "verification",
     "score": 72,
-    "verification_score": 72,
+    "lwm_snapshot_score": 72,
     "workspace_goal": "Trial-to-paid subscription activation",
     "marker_scores": [
       {
@@ -576,7 +572,7 @@ Facilitation style: Socratic — one concise question at a time, follow-ups from
 | List TAP link status | ✅ | ✅ (own links) |
 | Create guest + issue `gsk_` | ✅ `org:write` + `is_org_admin` | ❌ |
 
-**Integration pattern:** Org admin provisions guests with `gsk_` keys. Workspaces are created in the product UI; guests use their keys for proof-of-work upload, block reads, and TAP links on accessible workspaces. TAP transcripts and thought traces land in proof-of-work — score with `POST .../verification-score` only.
+**Integration pattern:** Org admin provisions guests with `gsk_` keys. Workspaces are created in the product UI; guests use their keys for proof-of-work upload, block reads, and TAP links on accessible workspaces. TAP transcripts and thought traces land in proof-of-work — score with `POST .../lwm-snapshot` only.
 
 ---
 
@@ -587,8 +583,8 @@ Facilitation style: Socratic — one concise question at a time, follow-ups from
 3. `list_workspaces` / `GET .../blocks` → map blocks to your workflow steps.
 4. *(Optional)* `POST .../proof-of-work-schema` — semantic: `definition`; opaque: `definition_ref` + `contract.event_verbs`; or `POST .../integration-skill` for a custom `skill.md`.
 5. `POST .../proof-of-work` as learners produce tool usage, screenshots, video, or EEG (optional `block_id`).
-6. `POST .../verification-score` | `.../augmentation-score` | `.../optimization-score` for scorecards.
+6. `POST .../lwm-snapshot` (LWM Snapshot) for scorecards.
 7. `POST .../tap-links` → send `private_url` to the learner.
 8. Poll `GET .../tap-links` until the link `status === "completed"`.
-9. `POST .../verification-score` to score TAP proof of work (verification only) together with other artifacts.
+9. `POST .../lwm-snapshot` to score TAP proof of work (verification only) together with other artifacts.
 10. For external learners without accounts: `POST /org/guests` → give them `gsk_` + private TAP URL.

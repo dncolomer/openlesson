@@ -461,11 +461,7 @@ export function SmartCoachOverlay({
         {primaryScore !== null ? (
           <div className="mt-3 flex gap-4 font-mono text-[10px] uppercase tracking-wide text-[#6b6b80]">
             <span>
-              {(report?.vertical === "augmentation"
-                ? "Augment"
-                : report?.vertical === "optimization"
-                  ? "Optimize"
-                  : "Verify")}{" "}
+              LWM Snapshot{" "}
               <span className="text-white">{primaryScore}</span>/100
             </span>
           </div>

@@ -35,12 +35,7 @@ export function DemoPerformanceHud({
 }) {
   const coaching = useMemo(() => extractGameCoaching(report), [report]);
   const primaryScore = clampScore(report?.score);
-  const verticalLabel =
-    report?.vertical === "augmentation"
-      ? "Augment"
-      : report?.vertical === "optimization"
-        ? "Optimize"
-        : "Verify";
+  const verticalLabel = "LWM Snapshot";
   const goalText = workspaceGoal?.trim() || report?.workspace_goal?.trim() || null;
   const hasCoaching =
     coaching.directions.length > 0 || coaching.events.length > 0 || coaching.gapRepairs.length > 0;

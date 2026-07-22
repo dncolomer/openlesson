@@ -69,13 +69,13 @@
     },
     {
       "area": "teams-rest",
-      "name": "POST /api/v3/eval/.../verification-score (score + marker_scores)",
+      "name": "POST /api/v3/eval/.../lwm-snapshot (score + marker_scores)",
       "ok": true,
       "detail": "score=28 markers=6"
     },
     {
       "area": "teams-rest",
-      "name": "verification-score response includes proof_of_work_summary",
+      "name": "lwm-snapshot response includes proof_of_work_summary",
       "ok": true,
       "detail": "artifacts=4"
     },
@@ -123,7 +123,7 @@
     },
     {
       "area": "teams-mcp",
-      "name": "verification_score tool",
+      "name": "lwm_snapshot tool",
       "ok": true,
       "detail": "score=18"
     },

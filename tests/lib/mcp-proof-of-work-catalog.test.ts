@@ -2,21 +2,19 @@ import { describe, expect, it } from "vitest";
 import { MCP_PROOF_OF_WORK_TOOL_CATALOG } from "@/lib/pow-api/mcp-proof-of-work-catalog";
 
 describe("MCP_PROOF_OF_WORK_TOOL_CATALOG", () => {
-  it("includes the three vertical score tools by name", () => {
+  it("includes the single LWM Snapshot score tool (lwm_snapshot)", () => {
     const names = MCP_PROOF_OF_WORK_TOOL_CATALOG.map((tool) => tool.name);
-    expect(names).toContain("verification_score");
-    expect(names).toContain("augmentation_score");
-    expect(names).toContain("optimization_score");
+    expect(names).toContain("lwm_snapshot");
+    expect(names).not.toContain("verification_score");
+    expect(names).not.toContain("augmentation_score");
+    expect(names).not.toContain("optimization_score");
   });
 
-  it("documents REST path equivalence in summaries", () => {
-    const verification = MCP_PROOF_OF_WORK_TOOL_CATALOG.find((t) => t.name === "verification_score");
-    const augmentation = MCP_PROOF_OF_WORK_TOOL_CATALOG.find((t) => t.name === "augmentation_score");
-    const optimization = MCP_PROOF_OF_WORK_TOOL_CATALOG.find((t) => t.name === "optimization_score");
-    expect(verification?.summary).toContain("verification-score");
-    expect(augmentation?.summary).toContain("augmentation-score");
-    expect(optimization?.summary).toContain("optimization-score");
-    expect(verification?.summary.toLowerCase()).toContain("tap");
+  it("documents REST path equivalence and LWM Snapshot in summary", () => {
+    const snapshot = MCP_PROOF_OF_WORK_TOOL_CATALOG.find((t) => t.name === "lwm_snapshot");
+    expect(snapshot?.summary).toContain("lwm-snapshot");
+    expect(snapshot?.summary).toMatch(/LWM Snapshot/i);
+    expect(snapshot?.summary.toLowerCase()).toMatch(/tap|ile/);
   });
 
   it("does not expose analyze_performance chat tooling", () => {

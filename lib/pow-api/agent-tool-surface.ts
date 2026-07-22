@@ -81,33 +81,13 @@ export const AGENT_TOOL_SURFACE = [
     },
   },
   {
-    name: "verification_score",
+    name: "lwm_snapshot",
     scope: "workspaces:read",
     summary:
-      "Learning verification score (0–100) + spider markers, analysis, next actions. REST: POST .../verification-score. TAP auto-results use this only.",
+      "LWM Snapshot (Learning World Model Snapshot) score (0–100) + GHC + spider markers, analysis, next actions. REST: POST .../lwm-snapshot. Sole product snapshot strategy; TAP/ILE end always run this path.",
     rest: {
       method: "POST",
-      path: `${EVAL_API_BASE}/workspaces/{workspace_id}/verification-score`,
-    },
-  },
-  {
-    name: "augmentation_score",
-    scope: "workspaces:read",
-    summary:
-      "Learning augmentation score (0–100 practice readiness) + spider, analysis, next actions. REST: POST .../augmentation-score.",
-    rest: {
-      method: "POST",
-      path: `${EVAL_API_BASE}/workspaces/{workspace_id}/augmentation-score`,
-    },
-  },
-  {
-    name: "optimization_score",
-    scope: "workspaces:read",
-    summary:
-      "Learning optimization score (0–100 toward workspace_goal) + spider, analysis, next actions. REST: POST .../optimization-score.",
-    rest: {
-      method: "POST",
-      path: `${EVAL_API_BASE}/workspaces/{workspace_id}/optimization-score`,
+      path: `${EVAL_API_BASE}/workspaces/{workspace_id}/lwm-snapshot`,
     },
   },
   {

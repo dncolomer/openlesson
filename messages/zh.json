@@ -614,7 +614,7 @@
     "mcpToolsTitle": "MCP tools (parity with REST)",
     "mcpScopeNote": "Scopes: workspaces:read, workspaces:write, tap:read, tap:write on your API key.",
     "mcpWorkflowTitle": "Recommended agent workflow",
-    "mcpWorkflowSteps": "1. get_learning_progress(workspace_id) — orient on workspace_goal\n2. generate_proof_of_work_schema — read continuous_evaluation (REST) + continuous_evaluation_mcp (tools)\n3. upload_proof_of_work after product actions (repeat)\n4. verification_score / augmentation_score / optimization_score for scorecards\n5. Re-fetch schema as proof of work grows",
+    "mcpWorkflowSteps": "1. get_learning_progress(workspace_id) — orient on workspace_goal\n2. generate_proof_of_work_schema — read continuous_evaluation (REST) + continuous_evaluation_mcp (tools)\n3. upload_proof_of_work after product actions (repeat)\n4. lwm_snapshot (LWM Snapshot — sole strategy)\n5. Re-fetch schema as proof of work grows",
     "mcpDualNote": "Schema responses include both REST paths and MCP tool names. Use either transport — they stay in sync.",
     "mcpResourcesTitle": "MCP resources",
     "mcpResourcesHint": "resources/read → uncertain-systems://integration-scope · uncertain-systems://proof-of-work-loop",
@@ -1778,7 +1778,7 @@
     "forkToEditPointOwnCopy": "复刻会创建可编辑、改编和扩展的私有副本",
     "forkToEditCta": "复刻工作区",
     "forkToEditSignInCta": "登录以复刻",
-    "performanceSubTabScore": "评估",
+    "performanceSubTabScore": "LWM Snapshot",
     "performanceSubTabTap": "访客链接",
     "performanceScoreTitle": "工作区评分",
     "performanceScoreHint": "根据会话、TAP 区块和上传的证据生成评分卡，与 Proof-of-Work API 性能报告相同的契约。",
@@ -1793,9 +1793,9 @@
     "performanceScoreGenerateAll": "All evals",
     "performanceScoreGeneratingAll": "Running all evals…",
     "performanceScorePartialError": "Some evals failed: {details}",
-    "performanceScoreTitleVerification": "Verification score",
-    "performanceScoreTitleAugmentation": "Augmentation score",
-    "performanceScoreTitleOptimization": "Optimization score",
+    "performanceScoreTitleVerification": "LWM Snapshot",
+    "performanceScoreTitleAugmentation": "LWM Snapshot",
+    "performanceScoreTitleOptimization": "LWM Snapshot",
     "sectionWorkspace": "工作区",
     "sectionKnowledge": "知识",
     "sectionSetting": "设置",
@@ -1839,7 +1839,7 @@
     "advancedTitle": "高级 MCP 参考",
     "mcpTitle": "MCP 连接器（Proof-of-Work API）",
     "mcpWorkflowTitle": "推荐智能体流程",
-    "mcpWorkflowSteps": "0. get_learning_progress — orient on workspace_goal and recommended_next_actions\n1. generate_proof_of_work_schema — read continuous_evaluation (REST) + continuous_evaluation_mcp (tools)\n2. upload_proof_of_work after product actions (repeat)\n3. verification_score / augmentation_score / optimization_score for scorecards\n4. Regenerate schema and skill as proof of work grows — REST and MCP stay in sync",
+    "mcpWorkflowSteps": "0. get_learning_progress — orient on workspace_goal and recommended_next_actions\n1. generate_proof_of_work_schema — read continuous_evaluation (REST) + continuous_evaluation_mcp (tools)\n2. upload_proof_of_work after product actions (repeat)\n3. lwm_snapshot (LWM Snapshot — sole strategy)\n4. Regenerate schema and skill as proof of work grows — REST and MCP stay in sync",
     "mcpToolsTitle": "MCP 工具（与 REST 对等）",
     "mcpScopeNote": "作用域：workspaces:read、workspaces:write、tap:read、tap:write（API 密钥）。",
     "mcpResourcesTitle": "MCP 资源",
@@ -2407,7 +2407,7 @@
       "skipTyping": "跳过打字"
     },
     "postSession": {
-      "verificationResultsTitle": "Verification score"
+      "verificationResultsTitle": "LWM Snapshot"
     }
   },
   "performanceReportCard": {
@@ -2424,8 +2424,8 @@
     "confidenceClear": "信号清晰",
     "confidenceDeveloping": "发展中",
     "confidenceEmerging": "初现",
-    "learning": "学习",
-    "conversion": "优化",
+    "learning": "LWM Snapshot",
+    "conversion": "LWM Snapshot",
     "ghc": "GHC",
     "ghcFull": "真实人类认知",
     "ghcConfidenceHigh": "高信号",
@@ -2450,9 +2450,9 @@
     "historyActionOne": "项行动",
     "historyActionMany": "项行动",
     "historyMetrics": "{gaps} 个差距 · {goals} 个目标 · {events} 个事件",
-    "verification": "验证",
-    "augmentation": "增强",
-    "optimization": "优化",
+    "verification": "LWM Snapshot",
+    "augmentation": "LWM Snapshot",
+    "optimization": "LWM Snapshot",
     "workspaceGoal": "工作区目标"
   },
   "onboardingGuide": {

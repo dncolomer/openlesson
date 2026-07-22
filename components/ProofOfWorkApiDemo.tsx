@@ -1248,12 +1248,7 @@ function DemoStatusBar({
     typeof report?.score === "number"
       ? Math.round(Math.max(0, Math.min(100, report.score)))
       : null;
-  const verticalLabel =
-    report?.vertical === "augmentation"
-      ? "Augmentation"
-      : report?.vertical === "optimization"
-        ? "Optimization"
-        : "Verification";
+  const verticalLabel = "LWM Snapshot";
   const scoreMetrics = getScoreCardMetrics(report);
 
   return (

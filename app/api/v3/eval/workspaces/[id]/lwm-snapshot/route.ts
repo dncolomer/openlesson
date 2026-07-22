@@ -4,6 +4,7 @@ import { canAccessAgentWorkspace } from "@/lib/pow-api/workspace-access";
 import { runVerticalScore } from "@/lib/pow-api/run-vertical-score";
 import { withProofOfWorkApiResponse } from "@/lib/pow-api/predictive-interruption";
 import { toErrorCode } from "@/lib/pow-api/types";
+import { LWM_SNAPSHOT_LABEL, SNAPSHOT_VERTICAL } from "@/lib/pow-api/performance-report";
 
 export const runtime = "nodejs";
 export const maxDuration = 120;
@@ -12,6 +13,10 @@ interface RouteProps {
   params: Promise<{ id: string }>;
 }
 
+/**
+ * Primary LWM Snapshot score endpoint (sole product snapshot strategy).
+ * GHC is secondary on the same report.
+ */
 export async function POST(req: NextRequest, { params }: RouteProps) {
   const result = await authenticateRequest(req, "workspaces:read");
   if (result instanceof NextResponse) return result;
@@ -64,7 +69,7 @@ export async function POST(req: NextRequest, { params }: RouteProps) {
       supabase,
       auth,
       workspaceId,
-      vertical: "verification",
+      vertical: SNAPSHOT_VERTICAL,
       blockId,
       stylePrompt,
       participantUserId,
@@ -76,7 +81,9 @@ export async function POST(req: NextRequest, { params }: RouteProps) {
       await withProofOfWorkApiResponse(
         {
           mode: "score",
-          vertical: "verification",
+          strategy: "lwm_snapshot",
+          vertical: SNAPSHOT_VERTICAL,
+          label: LWM_SNAPSHOT_LABEL,
           evaluation_mode: scored.evaluation_mode,
           privacy: scored.privacy,
           workspace_goal: scored.workspace_goal,
@@ -89,7 +96,7 @@ export async function POST(req: NextRequest, { params }: RouteProps) {
           knowledge_config: scored.knowledge_config ?? undefined,
         },
         {
-          endpoint: "verification_score",
+          endpoint: "lwm_snapshot",
           workspace_id: workspaceId,
           block_id: blockId,
           mode: "score",
@@ -99,13 +106,14 @@ export async function POST(req: NextRequest, { params }: RouteProps) {
           workspace_goal: workspace.workspace_goal,
           learning_world_model: scored.learning_world_model,
           artifact_summary:
-            scored.report.summary || `Verification score ${scored.report.score}`,
+            scored.report.summary || `${LWM_SNAPSHOT_LABEL} ${scored.report.score}`,
         }
       )
     );
   } catch (error) {
-    console.error("[agent/verification-score] failed:", error);
-    const message = error instanceof Error ? error.message : "Failed to generate verification score";
+    console.error("[agent/lwm-snapshot] failed:", error);
+    const message =
+      error instanceof Error ? error.message : `Failed to generate ${LWM_SNAPSHOT_LABEL}`;
     const code = toErrorCode(
       error && typeof error === "object" && "code" in error
         ? (error as { code: unknown }).code

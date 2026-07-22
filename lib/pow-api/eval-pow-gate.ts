@@ -1,11 +1,15 @@
 /**
- * Gate re-running a vertical eval until new proof of work is available.
- * Per vertical: verification / augmentation / optimization are independent.
+ * Gate re-running an LWM Snapshot until new proof of work is available.
+ * Single strategy only (LWM Snapshot strategy).
  */
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { AuthContext } from "./types";
-import type { ScoreVertical } from "./performance-report";
+import {
+  LWM_SNAPSHOT_LABEL,
+  SNAPSHOT_VERTICAL,
+  type ScoreVertical,
+} from "./performance-report";
 import {
   subjectFromAuthAndParticipants,
   type SubjectRef,
@@ -18,9 +22,9 @@ export const NO_NEW_POW_CODE = "no_new_pow" as const;
 export interface EvalPowGateStatus {
   vertical: ScoreVertical;
   allowed: boolean;
-  /** ISO timestamp of the last eval of this type for the subject, if any. */
+  /** ISO timestamp of the last snapshot for the subject, if any. */
   last_eval_at: string | null;
-  /** New PoW artifacts since last_eval_at; null when never evaluated. */
+  /** New PoW artifacts since last_eval_at; null when never snapshotted. */
   new_pow_count: number | null;
   code?: typeof NO_NEW_POW_CODE;
   message?: string;
@@ -28,34 +32,29 @@ export interface EvalPowGateStatus {
 
 export interface EvalPowGateOptions {
   workspaceId: string;
-  vertical: ScoreVertical;
+  /** Ignored for product gating — always uses SNAPSHOT_VERTICAL. Kept for call-site compat. */
+  vertical?: ScoreVertical;
   auth: AuthContext;
   participantUserId?: string | null;
   participantGuestUserId?: string | null;
   blockId?: string | null;
 }
 
-export function verticalLabel(vertical: ScoreVertical): string {
-  switch (vertical) {
-    case "augmentation":
-      return "augmentation";
-    case "optimization":
-      return "optimization";
-    default:
-      return "verification";
-  }
+export function verticalLabel(_vertical?: ScoreVertical): string {
+  return LWM_SNAPSHOT_LABEL;
 }
 
 /**
  * Pure decision helper for tests and UI previews.
- * First eval of a type is always allowed; re-runs require new_pow_count > 0.
+ * First snapshot is always allowed; re-runs require new_pow_count > 0.
  */
 export function decideEvalPowGate(input: {
-  vertical: ScoreVertical;
+  vertical?: ScoreVertical;
   lastEvalAt: string | null;
   newPowCount: number;
 }): EvalPowGateStatus {
-  const { vertical, lastEvalAt, newPowCount } = input;
+  const vertical = SNAPSHOT_VERTICAL;
+  const { lastEvalAt, newPowCount } = input;
   if (!lastEvalAt) {
     return {
       vertical,
@@ -72,14 +71,13 @@ export function decideEvalPowGate(input: {
       new_pow_count: newPowCount,
     };
   }
-  const label = verticalLabel(vertical);
   return {
     vertical,
     allowed: false,
     last_eval_at: lastEvalAt,
     new_pow_count: 0,
     code: NO_NEW_POW_CODE,
-    message: `No new proof of work since the last ${label} eval. Upload more proof of work before re-running this eval type.`,
+    message: `No new proof of work since the last ${LWM_SNAPSHOT_LABEL}. Upload more proof of work before generating a new snapshot.`,
   };
 }
 
@@ -144,25 +142,32 @@ export async function countProofOfWorkSince(
   return typeof count === "number" && Number.isFinite(count) ? count : 0;
 }
 
+/**
+ * Latest snapshot ran_at for the subject.
+ * Treats historical verification (and any prior vertical) as the same snapshot timeline
+ * so re-runs still require new PoW after any prior score archive.
+ */
 export async function getLatestEvalRanAt(
   supabase: SupabaseClient,
   options: {
     workspaceId: string;
     subject?: SubjectRef | null;
-    vertical: ScoreVertical;
+    vertical?: ScoreVertical;
   },
 ): Promise<string | null> {
+  // Single strategy: look at all history for subject (limit 1 by ran_at desc).
+  // Do not filter by vertical so legacy aug/opt archives still gate re-snapshots.
   const rows = await listEvalRunHistory(supabase, {
     workspaceId: options.workspaceId,
     subject: options.subject,
-    vertical: options.vertical,
+    vertical: null,
     limit: 1,
   });
   return rows[0]?.ran_at ?? null;
 }
 
 /**
- * Whether a vertical eval may run given prior history and new PoW availability.
+ * Whether an LWM Snapshot may run given prior history and new PoW availability.
  */
 export async function getEvalPowGateStatus(
   supabase: SupabaseClient,
@@ -178,12 +183,12 @@ export async function getEvalPowGateStatus(
   const lastEvalAt = await getLatestEvalRanAt(supabase, {
     workspaceId: options.workspaceId,
     subject,
-    vertical: options.vertical,
+    vertical: SNAPSHOT_VERTICAL,
   });
 
   if (!lastEvalAt) {
     return decideEvalPowGate({
-      vertical: options.vertical,
+      vertical: SNAPSHOT_VERTICAL,
       lastEvalAt: null,
       newPowCount: 0,
     });
@@ -199,42 +204,57 @@ export async function getEvalPowGateStatus(
   });
 
   return decideEvalPowGate({
-    vertical: options.vertical,
+    vertical: SNAPSHOT_VERTICAL,
     lastEvalAt,
     newPowCount,
   });
 }
 
-/**
- * Status for all three verticals (workspace Eval tab / eligibility APIs).
- */
+/** @deprecated Prefer getEvalPowGateStatus — single strategy only. */
 export async function getAllEvalPowGateStatuses(
   supabase: SupabaseClient,
   options: Omit<EvalPowGateOptions, "vertical">,
 ): Promise<Record<ScoreVertical, EvalPowGateStatus>> {
-  const verticals: ScoreVertical[] = ["verification", "augmentation", "optimization"];
-  const entries = await Promise.all(
-    verticals.map(async (vertical) => {
-      const status = await getEvalPowGateStatus(supabase, { ...options, vertical });
-      return [vertical, status] as const;
-    }),
-  );
-  return Object.fromEntries(entries) as Record<ScoreVertical, EvalPowGateStatus>;
+  const status = await getEvalPowGateStatus(supabase, {
+    ...options,
+    vertical: SNAPSHOT_VERTICAL,
+  });
+  // Only snapshot is product-runnable; expose under verification key for call-site compat.
+  return {
+    verification: status,
+    augmentation: {
+      ...status,
+      vertical: "augmentation",
+      allowed: false,
+      message: "Augmentation is no longer a peer score type. Use LWM Snapshot.",
+      code: NO_NEW_POW_CODE,
+    },
+    optimization: {
+      ...status,
+      vertical: "optimization",
+      allowed: false,
+      message: "Optimization is no longer a peer score type. Use LWM Snapshot.",
+      code: NO_NEW_POW_CODE,
+    },
+  };
 }
 
 /**
- * Throw if re-running the same vertical without new PoW.
+ * Throw if re-running snapshot without new PoW.
  * Call after empty-evidence checks and before expensive score generation.
  */
 export async function assertEvalAllowedWithNewPow(
   supabase: SupabaseClient,
   options: EvalPowGateOptions,
 ): Promise<EvalPowGateStatus> {
-  const status = await getEvalPowGateStatus(supabase, options);
+  const status = await getEvalPowGateStatus(supabase, {
+    ...options,
+    vertical: SNAPSHOT_VERTICAL,
+  });
   if (!status.allowed) {
     const err = new Error(
       status.message ||
-        `No new proof of work since the last ${verticalLabel(options.vertical)} eval.`,
+        `No new proof of work since the last ${LWM_SNAPSHOT_LABEL}.`,
     );
     (err as Error & { code?: string; status?: number }).code = NO_NEW_POW_CODE;
     (err as Error & { code?: string; status?: number }).status = 409;

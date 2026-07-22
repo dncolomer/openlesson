@@ -17,7 +17,10 @@ describe("Proof-of-Work API demo registry", () => {
     expect(demo.useCase.length).toBeGreaterThan(8);
     expect(demo.scenarioTitle.length).toBeGreaterThan(8);
     expect(demo.workspacePrompt.length).toBeGreaterThan(80);
-    expect(demo.modelDoc).toContain("verification_score");
+    expect(demo.modelDoc).toMatch(/lwm_snapshot_score|LWM Snapshot/i);
+    expect(demo.modelDoc).toMatch(/lwm[-_]snapshot/);
+    expect(demo.modelDoc).not.toMatch(/\bverification_score\b/);
+    expect(demo.modelDoc).not.toMatch(/\boptimization_score\b/);
     expect(demo.modelDoc).toContain(demo.useCase);
     expect(demo.modelDoc).not.toMatch(/fictional|Proof-of-Work API demo|Demo workspace|simulation|simulate/i);
     expect(demo.scenarioTitle).not.toMatch(/simulation/i);

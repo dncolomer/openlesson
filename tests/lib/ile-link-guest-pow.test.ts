@@ -77,10 +77,11 @@ describe("shareable ILE guest PoW wiring", () => {
   });
 
   it("keeps TAP/ILE guest links out of performance subviews (Settings surface)", () => {
-    // TAP&ILE links moved out of the Knowledge/performance tab body; subviews are score/pow/knowledge/lwm/insights only.
+    // TAP&ILE links moved out of the Knowledge/performance tab body; Eval tab removed.
     expect(perfSource).not.toContain('activeSubview === "tap"');
-    expect(perfSource).toMatch(/type PerformanceSubview = "score" \| "pow" \| "knowledge" \| "lwm" \| "insights"/);
+    expect(perfSource).toMatch(/type PerformanceSubview = "pow" \| "knowledge" \| "lwm" \| "insights"/);
     expect(perfSource).toMatch(/@deprecated TAP\/ILE guest links live in Settings/);
+    expect(perfSource).not.toContain('id: "score"');
   });
 
   it("treats /ile/session as a public middleware route like TAP", () => {

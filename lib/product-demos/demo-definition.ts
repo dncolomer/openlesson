@@ -137,13 +137,14 @@ ${competencyRows}
 ## Proof-of-work contract
 - **Tool events**: JSON payloads via \`POST .../proof-of-work\` (type: tool)
 - **Time gaps**: \`time_gap_elapsed\` events with \`days_elapsed\` when calendar idle time matters
-- **Performance reports**: \`verification_score\`, \`optimization_score\`, \`workspace_goal\`, \`marker_scores\` (spider/radar), \`gap_analysis.gaps[]\`, \`gap_analysis.next_steps.directions[]\`, \`gap_analysis.next_steps.events[]\`
+- **LWM Snapshot reports** (sole product score strategy): \`score\` / \`lwm_snapshot_score\` (primary 0–100), \`ghc_score\` (secondary), \`workspace_goal\`, \`marker_scores\` (spider/radar), \`gap_analysis.gaps[]\`, \`gap_analysis.next_steps.directions[]\`, \`gap_analysis.next_steps.events[]\`
+- **REST / MCP**: \`POST .../lwm-snapshot\` / MCP \`lwm_snapshot\` (compat aliases for old path names are non-product)
 - **Remediation rule**: gaps, next_steps, and suggestions must stay product-independent — never recommend TAP sessions, block completion, or ILE; use domain/tool event language only
 - **Continuous evaluation**: re-fetch \`proof-of-work-schema\`, regenerate \`integration-skill\` as artifacts grow
 
 ## Integration agent
 - **Name**: ${demo.integrationName}
 - **Partner role**: Emits ${demo.productName} product events and uploads proof of work to Uncertain Systems
-- **Operating model**: Upload proof of work → re-fetch spec → regenerate skill → request performance → surface product-specific coaching from score cards → repeat
+- **Operating model**: Upload proof of work → re-fetch spec → regenerate skill → request LWM Snapshot → surface product-specific coaching from score cards → repeat
 `;
 }

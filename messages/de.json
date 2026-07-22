@@ -614,7 +614,7 @@
     "mcpToolsTitle": "MCP tools (parity with REST)",
     "mcpScopeNote": "Scopes: workspaces:read, workspaces:write, tap:read, tap:write on your API key.",
     "mcpWorkflowTitle": "Recommended agent workflow",
-    "mcpWorkflowSteps": "1. get_learning_progress(workspace_id) — orient on workspace_goal\n2. generate_proof_of_work_schema — read continuous_evaluation (REST) + continuous_evaluation_mcp (tools)\n3. upload_proof_of_work after product actions (repeat)\n4. verification_score / augmentation_score / optimization_score for scorecards\n5. Re-fetch schema as proof of work grows",
+    "mcpWorkflowSteps": "1. get_learning_progress(workspace_id) — orient on workspace_goal\n2. generate_proof_of_work_schema — read continuous_evaluation (REST) + continuous_evaluation_mcp (tools)\n3. upload_proof_of_work after product actions (repeat)\n4. lwm_snapshot (LWM Snapshot — sole strategy)\n5. Re-fetch schema as proof of work grows",
     "mcpDualNote": "Schema responses include both REST paths and MCP tool names. Use either transport — they stay in sync.",
     "mcpResourcesTitle": "MCP resources",
     "mcpResourcesHint": "resources/read → uncertain-systems://integration-scope · uncertain-systems://proof-of-work-loop",
@@ -1778,7 +1778,7 @@
     "forkToEditPointOwnCopy": "Forken erstellt eine private Kopie, die Sie bearbeiten, remixen und erweitern können",
     "forkToEditCta": "Arbeitsbereich forken",
     "forkToEditSignInCta": "Anmelden zum Forken",
-    "performanceSubTabScore": "Eval",
+    "performanceSubTabScore": "LWM Snapshot",
     "performanceSubTabTap": "Gäste-Links",
     "performanceScoreTitle": "Arbeitsbereich-Bewertung",
     "performanceScoreHint": "Erzeuge eine Scorecard aus Sitzungen, TAP-Blöcken und hochgeladener Evidenz, derselbe Vertrag wie der Proof-of-Work-API-Performance-Report.",
@@ -1793,9 +1793,9 @@
     "performanceScoreGenerateAll": "All evals",
     "performanceScoreGeneratingAll": "Running all evals…",
     "performanceScorePartialError": "Some evals failed: {details}",
-    "performanceScoreTitleVerification": "Verification score",
-    "performanceScoreTitleAugmentation": "Augmentation score",
-    "performanceScoreTitleOptimization": "Optimization score",
+    "performanceScoreTitleVerification": "LWM Snapshot",
+    "performanceScoreTitleAugmentation": "LWM Snapshot",
+    "performanceScoreTitleOptimization": "LWM Snapshot",
     "sectionWorkspace": "Arbeitsbereich",
     "sectionKnowledge": "Wissen",
     "sectionSetting": "Einstellungen",
@@ -1839,7 +1839,7 @@
     "advancedTitle": "Erweiterte MCP-Referenz",
     "mcpTitle": "MCP-Connector (Proof-of-Work API)",
     "mcpWorkflowTitle": "Empfohlener Agent-Workflow",
-    "mcpWorkflowSteps": "0. get_learning_progress — orient on workspace_goal and recommended_next_actions\n1. generate_proof_of_work_schema — read continuous_evaluation (REST) + continuous_evaluation_mcp (tools)\n2. upload_proof_of_work after product actions (repeat)\n3. verification_score / augmentation_score / optimization_score for scorecards\n4. Regenerate schema and skill as proof of work grows — REST and MCP stay in sync",
+    "mcpWorkflowSteps": "0. get_learning_progress — orient on workspace_goal and recommended_next_actions\n1. generate_proof_of_work_schema — read continuous_evaluation (REST) + continuous_evaluation_mcp (tools)\n2. upload_proof_of_work after product actions (repeat)\n3. lwm_snapshot (LWM Snapshot — sole strategy)\n4. Regenerate schema and skill as proof of work grows — REST and MCP stay in sync",
     "mcpToolsTitle": "MCP-Tools (Parität mit REST)",
     "mcpScopeNote": "Scopes: workspaces:read, workspaces:write, tap:read, tap:write auf deinem API-Schlüssel.",
     "mcpResourcesTitle": "MCP-Ressourcen",
@@ -2407,7 +2407,7 @@
       "skipTyping": "Tippen überspringen"
     },
     "postSession": {
-      "verificationResultsTitle": "Verification score"
+      "verificationResultsTitle": "LWM Snapshot"
     }
   },
   "performanceReportCard": {
@@ -2424,8 +2424,8 @@
     "confidenceClear": "Klares Signal",
     "confidenceDeveloping": "In Entwicklung",
     "confidenceEmerging": "Aufkommend",
-    "learning": "Lernen",
-    "conversion": "Optimierung",
+    "learning": "LWM Snapshot",
+    "conversion": "LWM Snapshot",
     "ghc": "GHC",
     "ghcFull": "Genuine Human Cognition",
     "ghcConfidenceHigh": "Hohes Signal",
@@ -2450,9 +2450,9 @@
     "historyActionOne": "Aktion",
     "historyActionMany": "Aktionen",
     "historyMetrics": "{gaps} Lücken · {goals} Ziele · {events} Ereignisse",
-    "verification": "Verifikation",
-    "augmentation": "Augmentation",
-    "optimization": "Optimierung",
+    "verification": "LWM Snapshot",
+    "augmentation": "LWM Snapshot",
+    "optimization": "LWM Snapshot",
     "workspaceGoal": "Workspace-Ziel"
   },
   "onboardingGuide": {

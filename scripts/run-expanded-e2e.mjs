@@ -94,7 +94,7 @@ async function webFetch(path, jar, init = {}) {
 
 async function agentJson(path, apiKey, init = {}) {
   const long =
-    /proof-of-work-schema|verification-score|augmentation-score|optimization-score|performance|integration-skill/i.test(
+    /proof-of-work-schema|lwm-snapshot|performance|integration-skill/i.test(
       path,
     );
   try {

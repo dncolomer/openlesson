@@ -84,7 +84,9 @@ describe("API subject unique IDs (no subject=me)", () => {
     expect(docs).toMatch(/no `subject=me`/);
     expect(docs).not.toMatch(/\?subject=me/);
 
-    const panel = read("components/WorkspacePerformancePanel.tsx");
-    expect(panel).toContain('params.set("user_id", currentUserId)');
+    // Snapshot subject addressing lives in LWM panel (Eval tab removed).
+    const lwm = read("components/KnowledgeConfigTrajectoryPanel.tsx");
+    expect(lwm).toMatch(/params\.set\("user_id"/);
+    expect(lwm).not.toMatch(/params\.set\("subject", "me"\)/);
   });
 });

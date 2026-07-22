@@ -134,9 +134,8 @@ export async function getAgentLearningProgress(
       has_workspace_goal: Boolean(workspace.workspace_goal?.trim()),
     }),
     progress_interpretation: {
-      learning_verification: "Call verification_score for verification_score + marker_scores.",
-      learning_augmentation: "Call augmentation_score for practice readiness.",
-      learning_optimization: "Call optimization_score for progress toward workspace_goal.",
+      lwm_snapshot:
+        "Call lwm_snapshot (REST POST .../lwm-snapshot) for the sole LWM Snapshot score + GHC + marker_scores.",
       evidence_health:
         counts.proof_of_work_artifacts === 0
           ? "No artifacts yet — call generate_proof_of_work_schema then upload_proof_of_work."

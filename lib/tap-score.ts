@@ -59,7 +59,13 @@ export interface TapScoreMarker {
 
 export interface TapScoreAnalysis {
   score: number;
-  verification_score: number;
+  /** Product primary named field (equals score). */
+  lwm_snapshot_score: number;
+  /**
+   * History-compatible mirror of score for LWM scores_snapshot wire key.
+   * Not a product-facing score type name.
+   */
+  verification_score?: number;
   workspace_goal: string;
   vertical: "verification";
   markers: TapScoreMarker[];

@@ -2,10 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { ayclTokenFromBody, requireAuthenticatedUser } from "@/lib/api/require-auth";
 import { resolveAyclAccess } from "@/lib/aycl-session-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { finalizeVerticalScoreReport } from "@/lib/pow-api/workspace-goal";
-import { generateWorkspaceVerticalScoreReport } from "@/lib/pow-api/generate-performance-report";
-import { buildWorkspacePerformanceContext } from "@/lib/pow-api/performance-context";
-import { SCORE_VERTICALS, type ScoreVertical } from "@/lib/pow-api/performance-report";
+import {
+  LWM_SNAPSHOT_LABEL,
+  SNAPSHOT_VERTICAL,
+} from "@/lib/pow-api/performance-report";
+import { runVerticalScore } from "@/lib/pow-api/run-vertical-score";
 import {
   canAccessWorkspaceEval,
   resolveEvalPersistenceClientMode,
@@ -14,19 +15,14 @@ import {
 import type { AuthContext } from "@/lib/pow-api/types";
 import type { User } from "@supabase/supabase-js";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { NO_NEW_POW_CODE } from "@/lib/pow-api/eval-pow-gate";
+import { toErrorCode } from "@/lib/pow-api/types";
 
 export const runtime = "nodejs";
 export const maxDuration = 120;
 
-function parseVertical(value: unknown): ScoreVertical {
-  if (typeof value === "string" && (SCORE_VERTICALS as readonly string[]).includes(value)) {
-    return value as ScoreVertical;
-  }
-  return "verification";
-}
-
 /**
- * Cookie/AYCL auth for Knowledge score. After access is granted, returns a
+ * Cookie/AYCL auth for Knowledge LWM Snapshot. After access is granted, returns a
  * privileged (service-role) Supabase client for context + learner persistence —
  * same contract as TAP/ILE web routes. Authz is always checked against the
  * session user first.
@@ -105,6 +101,10 @@ async function resolveWebEvalAuth(
   };
 }
 
+/**
+ * Generate a new LWM Snapshot for a subject (single strategy — former verification path).
+ * Used by the LWM box "Generate new snapshot" control and any web callers.
+ */
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
@@ -113,7 +113,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "workspaceId is required" }, { status: 400 });
     }
 
-    const vertical = parseVertical(body.vertical);
     const auth = await resolveWebEvalAuth(workspaceId, ayclTokenFromBody(body));
     if (!auth.ok) return auth.response;
 
@@ -122,7 +121,7 @@ export async function POST(req: NextRequest) {
     const { data: plan, error: planError } = await supabase
       .from("workspaces")
       .select(
-        "id, user_id, title, root_topic, description, notes, workspace_goal, is_group, organization_id",
+        "id, user_id, title, root_topic, description, notes, workspace_goal, is_group, organization_id, evaluation_mode, protocol_config, external_refs",
       )
       .eq("id", workspaceId)
       .single();
@@ -168,136 +167,63 @@ export async function POST(req: NextRequest) {
       requestedGuestUserId: typeof body.guest_user_id === "string" ? body.guest_user_id : null,
     });
 
-    // Privileged client: group-member PoW/history + guest subject rows after server authz.
-    const context = await buildWorkspacePerformanceContext({
-      supabase,
-      auth: authCtx,
-      workspaceId,
-      participantUserId: participants.participantUserId,
-      participantGuestUserId: participants.participantGuestUserId,
-    });
-
-    if (
-      context.payload.counts.proof_of_work_artifacts === 0 &&
-      context.payload.counts.linked_sessions === 0 &&
-      context.payload.counts.workspace_files === 0
-    ) {
-      return NextResponse.json(
-        {
-          error:
-            "No performance proof of work yet. Complete sessions, upload proof of work, or run a TAP block first.",
-        },
-        { status: 400 },
-      );
-    }
-
-    const { assertEvalAllowedWithNewPow, NO_NEW_POW_CODE } = await import(
-      "@/lib/pow-api/eval-pow-gate"
-    );
     try {
-      await assertEvalAllowedWithNewPow(supabase, {
-        workspaceId,
-        vertical,
+      const scored = await runVerticalScore({
+        supabase,
         auth: authCtx,
+        workspaceId,
+        vertical: SNAPSHOT_VERTICAL,
         participantUserId: participants.participantUserId,
         participantGuestUserId: participants.participantGuestUserId,
+        workspaceRow: plan,
+        historySource: "web",
       });
-    } catch (gateErr) {
-      const code =
-        gateErr && typeof gateErr === "object" && "code" in gateErr
-          ? String((gateErr as { code: string }).code)
-          : null;
+
+      if (scored.empty) {
+        return NextResponse.json(
+          {
+            error:
+              "No performance proof of work yet. Complete sessions, upload proof of work, or run a TAP block first.",
+          },
+          { status: 400 },
+        );
+      }
+
+      return NextResponse.json({
+        report: scored.report,
+        vertical: SNAPSHOT_VERTICAL,
+        strategy: "lwm_snapshot",
+        label: LWM_SNAPSHOT_LABEL,
+        workspace_goal: scored.workspace_goal,
+        workspace_goal_source: scored.workspace_goal_source,
+        learning_world_model: scored.learning_world_model ?? null,
+        knowledge_config: scored.knowledge_config ?? null,
+        subject: participants.subject,
+        eval_run_history_id: scored.eval_run_history_id ?? null,
+        eval_history_saved: Boolean(scored.eval_run_history_id),
+        eval_run_history_error: scored.eval_run_history_error ?? null,
+        report_available: true,
+      });
+    } catch (scoreErr) {
+      const code = toErrorCode(
+        scoreErr && typeof scoreErr === "object" && "code" in scoreErr
+          ? (scoreErr as { code: unknown }).code
+          : undefined,
+      );
       if (code === NO_NEW_POW_CODE) {
         return NextResponse.json(
           {
             error:
-              gateErr instanceof Error
-                ? gateErr.message
-                : "No new proof of work since the last eval of this type.",
+              scoreErr instanceof Error
+                ? scoreErr.message
+                : `No new proof of work since the last ${LWM_SNAPSHOT_LABEL}.`,
             code: NO_NEW_POW_CODE,
           },
           { status: 409 },
         );
       }
-      throw gateErr;
+      throw scoreErr;
     }
-
-    const generation = await generateWorkspaceVerticalScoreReport({
-      workspaceId,
-      workspaceTitle: plan.title,
-      workspaceRootTopic: plan.root_topic,
-      storedWorkspaceGoal: plan.workspace_goal,
-      fileIds: context.fileIds,
-      vertical,
-    });
-
-    if (!generation.success || !generation.data) {
-      return NextResponse.json(
-        {
-          error: generation.error || "Failed to generate report",
-          code: generation.code || "performance_report_generation_failed",
-        },
-        { status: 502 },
-      );
-    }
-
-    const finalized = finalizeVerticalScoreReport(
-      generation.data,
-      plan.workspace_goal,
-      {
-        title: plan.title,
-        description: plan.description,
-        notes: plan.notes,
-        root_topic: plan.root_topic,
-      },
-      vertical,
-    );
-
-    let learning_world_model = null;
-    let knowledge_config = null;
-    let eval_run_history_id: string | null = null;
-    let eval_run_history_error: string | null = null;
-    try {
-      const { updateLearnerStateAfterScore } = await import(
-        "@/lib/pow-api/learner-state-engine"
-      );
-      const state = await updateLearnerStateAfterScore({
-        supabase,
-        workspaceId,
-        auth: authCtx,
-        report: finalized.report,
-        vertical,
-        participantUserId: participants.participantUserId,
-        participantGuestUserId: participants.participantGuestUserId,
-        proofOfWork: context.payload.proof_of_work,
-        totalBlocks: context.payload.blocks.length,
-        trigger: "score",
-        historySource: "web",
-      });
-      learning_world_model = state.worldModel;
-      knowledge_config = state.knowledgeConfig;
-      eval_run_history_id = state.evalRunHistoryId;
-      eval_run_history_error = state.evalRunHistoryError ?? null;
-    } catch (stateErr) {
-      console.warn("[performance-report] learner state update failed:", stateErr);
-      eval_run_history_error =
-        stateErr instanceof Error ? stateErr.message : "Learner state update failed";
-    }
-
-    return NextResponse.json({
-      report: finalized.report,
-      vertical,
-      workspace_goal: finalized.workspace_goal,
-      workspace_goal_source: finalized.workspace_goal_source,
-      learning_world_model,
-      knowledge_config,
-      subject: participants.subject,
-      eval_run_history_id,
-      eval_history_saved: Boolean(eval_run_history_id),
-      eval_run_history_error,
-      /** Always present on success so UI can show scorecard even if archive fails. */
-      report_available: true,
-    });
   } catch (error) {
     console.error("[performance-report] Error:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });

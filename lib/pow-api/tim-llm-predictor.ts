@@ -63,7 +63,7 @@ const TIM_LLM_SCHEMA = {
       consumer_action: {
         type: "string",
         description:
-          "Machine hint for the consumer (e.g. present_reflection_prompt, call_verification_score, present_verbal_probe).",
+          "Machine hint for the consumer (e.g. present_reflection_prompt, call_lwm_snapshot, present_verbal_probe).",
       },
     },
     required: ["should_interrupt"],
@@ -101,7 +101,7 @@ ${TIM_SYSTEM_ROLE}`),
 Feature envelope (schema_version ${features.schema_version}):
 ${JSON.stringify(compact, null, 2)}
 
-Return should_interrupt: false unless a specific, contextual intervention would improve verification_score, augmentation_score, optimization_score, GHC signal quality, or fill evidence_appetite.want_more right now.`),
+Return should_interrupt: false unless a specific, contextual intervention would improve LWM Snapshot (lwm_snapshot), GHC signal quality, or fill evidence_appetite.want_more right now.`),
   ];
 }
 

@@ -624,7 +624,7 @@ parts.push(
       "User-overridable": "No",
       Variables: "`{transcript}`, `{durationSeconds}`, `{tapSessionId}` — uses `buildTapTranscriptPayload` + `uploadWorkspaceProofOfWork`",
     },
-    "No LLM scoring prompt. On completion, serializes transcript to tool proof of work (`tool_name: tap-transcript`), marks `workspace_tap_sessions.status = completed`, and returns the learner to the workspace. Score via POST .../verification-score (MCP verification_score).",
+    "No LLM scoring prompt. On completion, serializes transcript to tool proof of work (`tool_name: tap-transcript`), marks `workspace_tap_sessions.status = completed`, and returns the learner to the workspace. Score via POST .../lwm-snapshot (MCP lwm_snapshot).",
   ),
 );
 

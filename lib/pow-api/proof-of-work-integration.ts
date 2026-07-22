@@ -55,9 +55,9 @@ export function buildIntegrationSkillApiPath(workspaceId: string, baseUrl: strin
   return powWorkspaceResource(workspaceId, "integration-skill", baseUrl);
 }
 
-/** Primary verification score endpoint (Evaluation API). */
+/** Primary LWM Snapshot endpoint (Evaluation API). */
 export function buildPerformanceApiPath(workspaceId: string, baseUrl: string): string {
-  return evalWorkspaceResource(workspaceId, "verification-score", baseUrl);
+  return evalWorkspaceResource(workspaceId, "lwm-snapshot", baseUrl);
 }
 
 export function buildContinuousEvaluationPolicy(
@@ -98,7 +98,7 @@ export function buildContinuousEvaluationPolicy(
     principle:
       "Uncertain Systems verification is continuous. The proof-of-work spec and integration skill are living documents derived from workspace context and accumulated proof of work.",
     more_evidence_improves:
-      "The more tool usage, artifacts, and session proof of work you submit, the richer workspace context becomes and the better POST .../verification-score can learn, score, and surface gaps.",
+      "The more tool usage, artifacts, and session proof of work you submit, the richer workspace context becomes and the better POST .../lwm-snapshot can learn, score, and surface gaps.",
     regeneration_required: true,
     proof_of_work_spec: {
       api_path: proofOfWorkSpecPath,
@@ -175,10 +175,10 @@ export function enrichProofOfWorkSpecResult(
     workspace_id: workspaceId,
     block_id: blockId ?? null,
     performance_report_contract: performanceContract,
-    vertical_score_contracts: result.vertical_score_contracts ?? {
-      verification: performanceContract,
-      augmentation: buildVerticalScoreReportContract("augmentation", baseUrl),
-      optimization: buildVerticalScoreReportContract("optimization", baseUrl),
+    // Sole product strategy: LWM Snapshot (verification). Do not ship peer aug/opt contracts.
+    vertical_score_contracts: {
+      verification:
+        result.vertical_score_contracts?.verification ?? performanceContract,
     },
     continuous_evaluation: continuousEvaluation,
     continuous_evaluation_mcp: continuousEvaluationMcp,
@@ -238,7 +238,7 @@ ${spec.continuous_evaluation?.more_evidence_improves || ""}
 Regenerate proof-of-work spec: ${spec.continuous_evaluation?.proof_of_work_spec.api_path || spec.proof_of_work_spec_api_path}
 Regenerate integration skill: ${spec.continuous_evaluation?.integration_skill.api_path || "(workspace)/integration-skill"}
 Upload proof of work: ${spec.continuous_evaluation?.proof_of_work_spec.api_path ? spec.proof_of_work_upload_api_path : "(workspace)/proof-of-work"}
-Request refreshed performance: ${spec.continuous_evaluation?.performance.api_path || "(workspace)/verification-score"}
+Request refreshed performance: ${spec.continuous_evaluation?.performance.api_path || "(workspace)/lwm-snapshot"}
 REST cadence: ${spec.continuous_evaluation?.recommended_cadence || "upload → re-fetch spec → regenerate skill → performance"}
 
 Continuous evaluation — MCP (same loop, tool names):
@@ -246,28 +246,28 @@ ${spec.continuous_evaluation_mcp?.principle || spec.continuous_evaluation?.princ
 MCP endpoint: ${spec.continuous_evaluation_mcp?.mcp_endpoint_pattern || "POST /api/mcp"} (Authorization: Bearer <api_key>)
 generate_proof_of_work_schema ↔ ${spec.continuous_evaluation?.proof_of_work_spec.api_path || "REST proof-of-work-schema"}
 upload_proof_of_work ↔ ${spec.proof_of_work_upload_api_path || "REST proof of work"}
-verification_score / augmentation_score / optimization_score ↔ REST .../*-score endpoints
+lwm_snapshot ↔ REST POST .../lwm-snapshot
 get_learning_progress — one-call progress snapshot + recommended_next_actions
-MCP cadence: ${spec.continuous_evaluation_mcp?.recommended_cadence || "schema → upload → performance → repeat"}
+MCP cadence: ${spec.continuous_evaluation_mcp?.recommended_cadence || "schema → upload → LWM Snapshot → repeat"}
 
 Integration surfaces: REST Bearer auth + MCP JSON-RPC (full parity — document both, prefer live API paths over static copies).
 
-Vertical score contracts (MUST appear in skill.md — each vertical returns one primary score + spider + analysis + next actions):
-Endpoints: POST .../verification-score | .../augmentation-score | .../optimization-score
-MCP tools: verification_score, augmentation_score, optimization_score
-Default/TAP: verification-score only
-Required fields: ${(spec.performance_report_contract?.required_fields || ["score", "verification_score", "workspace_goal", "marker_scores", "gap_analysis.gaps", "gap_analysis.next_steps"]).join(", ")}
-primary score: ${spec.performance_report_contract?.primary_score?.range || "0-100"} integer for the requested vertical
+LWM Snapshot contract (MUST appear in skill.md — sole product score strategy; one primary score + GHC secondary + spider + analysis + next actions):
+Endpoint: POST .../lwm-snapshot
+MCP tool: lwm_snapshot
+TAP/ILE end: always run lwm-snapshot (LWM Snapshot)
+Required fields: ${(spec.performance_report_contract?.required_fields || ["score", "lwm_snapshot_score", "workspace_goal", "ghc_score", "marker_scores", "gap_analysis.gaps", "gap_analysis.next_steps"]).join(", ")}
+primary score: ${spec.performance_report_contract?.primary_score?.range || "0-100"} integer (lwm_snapshot_score / LWM Snapshot)
 workspace_goal: ${spec.performance_report_contract?.workspace_goal?.description || "inferred or owner-set workspace goal"}
 marker_scores: ${spec.performance_report_contract?.marker_scores.visualization || "spider_radar"} chart with ${spec.performance_report_contract?.marker_scores.min_markers || 4}-${spec.performance_report_contract?.marker_scores.max_markers || 8} competency axes (id, label, score, rationale)
 gap_analysis.gaps: required list of gaps (title, proof_of_work, severity, suggested_repair) — product/workflow remediation only; never TAP, block completion, or ILE
 gap_analysis.next_steps: directions (domain goals) and events (granular product/tool actions) — same remediation rules
-Example verification score shape:
+Example LWM Snapshot score shape:
 ${JSON.stringify(
     spec.performance_report_contract?.example_report || {
       vertical: "verification" as const,
       score: 0,
-      verification_score: 0,
+      lwm_snapshot_score: 0,
       workspace_goal: "Workspace goal",
       marker_scores: [],
       gap_analysis: { gaps: [], next_steps: { directions: [], events: [] } },

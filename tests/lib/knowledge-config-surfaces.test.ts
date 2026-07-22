@@ -20,9 +20,7 @@ const FEATURE_SURFACE_FILES = [
   "app/api/v3/eval/workspaces/[id]/world-model/route.ts",
   "app/api/v3/eval/workspaces/[id]/knowledge-config/route.ts",
   "app/api/v3/eval/workspaces/[id]/knowledge-config/trajectory/route.ts",
-  "app/api/v3/eval/workspaces/[id]/verification-score/route.ts",
-  "app/api/v3/eval/workspaces/[id]/augmentation-score/route.ts",
-  "app/api/v3/eval/workspaces/[id]/optimization-score/route.ts",
+  "app/api/v3/eval/workspaces/[id]/lwm-snapshot/route.ts",
   // Workspace UI API + panel
   "app/api/workspace/knowledge-config/route.ts",
   "components/KnowledgeConfigTrajectoryPanel.tsx",
@@ -82,15 +80,14 @@ describe("knowledge config / LWM feature surfaces", () => {
   });
 
   it("score routes live under eval and call runVerticalScore", () => {
-    for (const rel of [
-      "app/api/v3/eval/workspaces/[id]/verification-score/route.ts",
-      "app/api/v3/eval/workspaces/[id]/augmentation-score/route.ts",
-      "app/api/v3/eval/workspaces/[id]/optimization-score/route.ts",
-    ] as const) {
-      const src = read(rel);
-      expect(src).toContain("runVerticalScore");
-      expect(src).not.toContain("app/api/v2/");
-      expect(src).not.toContain("/api/v2/");
+    const primary = read("app/api/v3/eval/workspaces/[id]/lwm-snapshot/route.ts");
+    expect(primary).toContain("runVerticalScore");
+    expect(primary).not.toContain("app/api/v2/");
+    expect(primary).not.toContain("/api/v2/");
+    for (const name of ["verification-score", "augmentation-score", "optimization-score"] as const) {
+      expect(existsSync(join(ROOT, "app/api/v3/eval/workspaces/[id]", name, "route.ts"))).toBe(
+        false,
+      );
     }
   });
 
@@ -100,36 +97,33 @@ describe("knowledge config / LWM feature surfaces", () => {
     expect(run).toContain("learning_world_model");
     expect(run).toContain("knowledge_config");
 
-    for (const rel of [
-      "app/api/v3/eval/workspaces/[id]/verification-score/route.ts",
-      "app/api/v3/eval/workspaces/[id]/augmentation-score/route.ts",
-      "app/api/v3/eval/workspaces/[id]/optimization-score/route.ts",
-    ] as const) {
-      const src = read(rel);
-      expect(src).toContain("learning_world_model");
-      expect(src).toContain("knowledge_config");
-    }
+    const primary = read("app/api/v3/eval/workspaces/[id]/lwm-snapshot/route.ts");
+    expect(primary).toContain("learning_world_model");
+    expect(primary).toContain("knowledge_config");
 
     const web = read("app/api/workspace/performance-report/route.ts");
-    expect(web).toContain("updateLearnerStateAfterScore");
+    // Learner state update is inside runVerticalScore (shared generator).
+    expect(web).toContain("runVerticalScore");
+    expect(web).toContain("learning_world_model");
   });
 
-  it("workspace performance UI exposes Models tab + always-self Eval + live scorecard", () => {
+  it("workspace performance UI exposes Models + LWM snapshot control (Eval tab removed)", () => {
     const panel = read("components/WorkspacePerformancePanel.tsx");
     expect(panel).toContain("KnowledgeConfigTrajectoryPanel");
     expect(panel).toContain('"knowledge"');
     expect(panel).toContain("performanceSubTabModels");
-    // Eval tab: no learner picker; always current-user subject.
+    // Eval tab removed — snapshot generation lives in LWM box.
     expect(panel).not.toContain("data-eval-subject-picker");
     expect(panel).not.toContain("subjectFocus");
-    expect(panel).toContain("data-eval-self-only");
-    expect(panel).toContain('params.set("user_id", currentUserId)');
-    expect(panel).not.toContain('params.set("subject", "me")');
-    expect(panel).toContain("scoreSubjectBody");
-    expect(panel).toContain("eval_history_saved");
-    expect(panel).toContain("setLiveReport");
-    expect(panel).toContain("data-eval-scorecard");
+    expect(panel).not.toContain('id: "score"');
+    expect(panel).not.toContain("data-knowledge-eval");
     expect(panel).toContain("isOwner={isOwner}");
+
+    const lwm = read("components/KnowledgeConfigTrajectoryPanel.tsx");
+    expect(lwm).toContain("data-lwm-generate-snapshot");
+    expect(lwm).toContain("/api/workspace/performance-report");
+    expect(lwm).toContain("eval-history");
+    expect(lwm).not.toContain('params.set("subject", "me")');
   });
 
   it("Embeddings region overlay picker is always mounted with visible control surface", () => {
@@ -278,7 +272,7 @@ describe("knowledge config / LWM feature surfaces", () => {
     const models = read("components/KnowledgeConfigTrajectoryPanel.tsx");
     // User-visible Knowledge/Models copy must not label people as learners.
     expect(models).not.toMatch(/\blearner(s)?\b/i);
-    expect(models).toContain("Symbolic user state");
+    expect(models).toContain("Learning World Model for the selected user");
     expect(models).toContain("User");
 
     const panel = read("components/WorkspacePerformancePanel.tsx");

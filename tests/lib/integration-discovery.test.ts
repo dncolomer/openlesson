@@ -24,7 +24,7 @@ describe("integration-discovery", () => {
     expect(policy.proof_of_work_spec.mcp_tool).toBe("generate_proof_of_work_schema");
     expect(policy.proof_of_work_spec.rest_equivalent).toContain("/proof-of-work-schema");
     expect(policy.upload_proof_of_work?.mcp_tool).toBe("upload_proof_of_work");
-    expect(policy.performance.mcp_tool).toBe("verification_score");
+    expect(policy.performance.mcp_tool).toBe("lwm_snapshot");
     expect(policy.progress_snapshot.mcp_tool).toBe("get_learning_progress");
   });
 
@@ -43,8 +43,8 @@ describe("integration-discovery", () => {
 
       has_workspace_goal: true,
     });
-    expect(warm.some((a) => a.mcp_tool === "verification_score")).toBe(true);
-    expect(warm.some((a) => a.rest_equivalent.includes("verification-score"))).toBe(true);
+    expect(warm.some((a) => a.mcp_tool === "lwm_snapshot")).toBe(true);
+    expect(warm.some((a) => a.rest_equivalent.includes("lwm-snapshot"))).toBe(true);
   });
 
   it("serves MCP resource markdown for scope and proof-of-work loop", () => {

@@ -44,7 +44,9 @@ export interface LearningWorldModelV0 {
     saturated: string[];
   };
   scores_snapshot: {
+    /** Primary LWM Snapshot score (history wire key — not a product score type name). */
     verification_score: number | null;
+    /** Legacy fields — not written by the single snapshot strategy. */
     augmentation_score: number | null;
     optimization_score: number | null;
     ghc_score: number | null;
@@ -227,5 +229,5 @@ Optional world_model_delta: when enough proof of work exists, return a partial l
 - exploration.block_coverage / blind_spots
 - learning_profile strengths, friction_patterns, preferred_modalities, temporal_patterns
 - evidence_appetite.want_more vs saturated (what PoW types TIM and schema generation should bias toward next)
-- scores_snapshot mirroring verification_score, augmentation_score, optimization_score, ghc_score (include the primary vertical score from this evaluation)
+- scores_snapshot mirroring the LWM Snapshot primary score and ghc_score and ghc_score from this evaluation — do not invent separate augmentation/optimization primaries
 `.trim();

@@ -199,7 +199,7 @@ function printManualTeamsChecklist() {
     "Create org guest via API or POST /api/v3/pow/org/guests (requires migration 045 guest columns)",
     "POST /api/v3/pow/keys works even if dashboard key UI still says Pro-only (known gap)",
     "Complete one private TAP session via bearer link in incognito (no login required)",
-    "GET .../tap-links shows status=completed after TAP; score via POST .../verification-score",
+    "GET .../tap-links shows status=completed after TAP; score via POST .../lwm-snapshot",
   ];
   steps.forEach((step, i) => console.log(`${i + 1}. ${step}`));
 }

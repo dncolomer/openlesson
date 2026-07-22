@@ -21,7 +21,6 @@ This setup runs **once per chat start**, not only at phase boundaries. Monitorin
 ## When predefined progress phases are complete
 
 - Call the appropriate vertical score tool(s) on the learner's workspace:
-  - `verification_score` / REST `POST .../verification-score` — learning verification
-  - `augmentation_score` / REST `POST .../augmentation-score` — practice readiness
-  - `optimization_score` / REST `POST .../optimization-score` — progress toward `workspace_goal`
+  - `lwm_snapshot` / REST `POST .../lwm-snapshot` — LWM Snapshot
+  - *(removed as peer type)* — use `lwm_snapshot` (LWM Snapshot)
 - Post **one** chat message with efficiency results and recommendations from the report (`gap_analysis`, `suggestions`, `growth_areas`).

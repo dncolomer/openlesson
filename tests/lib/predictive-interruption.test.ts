@@ -66,11 +66,11 @@ describe("predictive-interruption", () => {
             intervention: {
               type: "performance_review",
               message: "Run a performance report to see updated marker scores and gaps.",
-              consumer_action: "call_verification_score",
+              consumer_action: "call_lwm_snapshot",
             },
           };
         }
-        if (endpoint === "verification_score" && features.performance_summary) {
+        if (endpoint === "lwm_snapshot" && features.performance_summary) {
           return {
             interruption_id: "int_perf",
             delay_ms: 45_000,
@@ -149,13 +149,13 @@ describe("predictive-interruption", () => {
 
   it("predicts coaching nudge from performance report context", async () => {
     const interruption = await predictInterruption({
-      endpoint: "verification_score",
+      endpoint: "lwm_snapshot",
       workspace_id: "ws-1",
       mode: "score",
       report: {
         vertical: "verification",
         score: 55,
-        verification_score: 55,
+        lwm_snapshot_score: 55,
         workspace_goal: "Activation",
         ghc_score: 20,
         ghc_confidence: "low",

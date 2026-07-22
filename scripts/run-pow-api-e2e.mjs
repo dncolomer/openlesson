@@ -69,7 +69,7 @@ async function makeSessionClient(email, password) {
 
 async function agentJson(path, apiKey, init = {}) {
   const long =
-    /proof-of-work-schema|verification-score|augmentation-score|optimization-score|performance|integration-skill/i.test(
+    /proof-of-work-schema|lwm-snapshot|performance|integration-skill/i.test(
       path,
     );
   const res = await fetch(`${baseUrl}${path}`, {
@@ -297,12 +297,12 @@ async function runTeamsPowApi(apiKey, workspaceId) {
   );
 
   if (!liveWrites) {
-    record("teams-rest", "POST /verification-score", false, "E2E_ALLOW_LIVE_WRITES not set");
+    record("teams-rest", "POST /lwm-snapshot", false, "E2E_ALLOW_LIVE_WRITES not set");
     return blockId;
   }
 
   const report = await agentJson(
-    `/api/v3/eval/workspaces/${workspaceId}/verification-score`,
+    `/api/v3/eval/workspaces/${workspaceId}/lwm-snapshot`,
     apiKey,
     {
       method: "POST",
@@ -311,7 +311,7 @@ async function runTeamsPowApi(apiKey, workspaceId) {
   );
   record(
     "teams-rest",
-    "POST /api/v3/eval/.../verification-score (score + marker_scores)",
+    "POST /api/v3/eval/.../lwm-snapshot (score + marker_scores)",
     report.res.status === 200 && isVerticalScoreReport(report.body),
     report.res.status === 200
       ? `score=${report.body?.report?.score} markers=${report.body?.report?.marker_scores?.length}`
@@ -319,7 +319,7 @@ async function runTeamsPowApi(apiKey, workspaceId) {
   );
   record(
     "teams-rest",
-    "verification-score response includes proof_of_work_summary",
+    "lwm-snapshot response includes proof_of_work_summary",
     report.res.status === 200 && !!report.body?.proof_of_work_summary,
     report.body?.proof_of_work_summary
       ? `artifacts=${report.body.proof_of_work_summary.proof_of_work_artifacts}`
@@ -403,11 +403,11 @@ async function runTeamsMcp(apiKey, workspaceId) {
   );
 
   if (!liveWrites) {
-    record("teams-mcp", "verification_score tool", false, "E2E_ALLOW_LIVE_WRITES not set");
+    record("teams-mcp", "lwm_snapshot tool", false, "E2E_ALLOW_LIVE_WRITES not set");
     return;
   }
 
-  // New PoW so the re-run gate allows another verification after the REST score suite.
+  // New PoW so the re-run gate allows another LWM Snapshot after the REST score suite.
   const mcpUpload = await mcpCall(
     apiKey,
     "tools/call",
@@ -420,7 +420,7 @@ async function runTeamsMcp(apiKey, workspaceId) {
         data: Buffer.from(
           JSON.stringify({
             tool_name: "e2e-mcp-pow",
-            events: [{ action: "mcp_score_preflight", detail: "fresh pow for mcp verification" }],
+            events: [{ action: "mcp_score_preflight", detail: "fresh pow for mcp lwm_snapshot" }],
           }),
         ).toString("base64"),
       },
@@ -443,7 +443,7 @@ async function runTeamsMcp(apiKey, workspaceId) {
   const perf = await mcpCall(
     apiKey,
     "tools/call",
-    { name: "verification_score", arguments: { workspace_id: workspaceId } },
+    { name: "lwm_snapshot", arguments: { workspace_id: workspaceId } },
     24,
   );
   const perfData = mcpToolText(perf.body);
@@ -453,7 +453,7 @@ async function runTeamsMcp(apiKey, workspaceId) {
     (isVerticalScoreReport(perfData) || typeof scoreReport?.score === "number");
   record(
     "teams-mcp",
-    "verification_score tool",
+    "lwm_snapshot tool",
     scoreOk,
     scoreReport?.score != null
       ? `score=${scoreReport.score}`

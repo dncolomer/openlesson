@@ -2,8 +2,9 @@
  * Client-safe catalog for workspace integration UI (no server imports).
  * Tool names/summaries come from AGENT_TOOL_SURFACE (single source of truth).
  *
- * Score tools (REST path ↔ MCP name): verification-score ↔ verification_score,
- * augmentation-score ↔ augmentation_score, optimization-score ↔ optimization_score.
+ * Score tools (REST path ↔ MCP name): lwm-snapshot ↔ lwm_snapshot
+ * (LWM Snapshot — sole product snapshot strategy; GHC secondary on the same report).
+ * No legacy verification/augmentation/optimization score routes or tools.
  * workspace_goal is the outcome field used across score + progress tools.
  */
 

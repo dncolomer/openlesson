@@ -25,9 +25,7 @@ Base path: `/api/v3/eval`
 | `GET` | `/workspaces/{id}/knowledge-config/trajectory` | `workspaces:read` | Time series of knowledge config snapshots + fixed 2D projection (`?from=&to=&max_points=&project=`). Subject via unique `user_id` / `guest_user_id`. |
 | `GET` / `POST` | `/workspaces/{id}/knowledge-distance` | `workspaces:read` | **Knowledge distance** between a user (`user_id` / `guest_user_id`) and a custom knowledge region (`region_id`). Pure embedding geometry — **not** a vertical Eval and **not** written to `eval_run_history`. |
 | `GET` | `/workspaces/{id}/eval-history` | `workspaces:read` | Append-only **eval run history** (full scorecards). Filter by unique `user_id` / `guest_user_id`, multi-user cohort `user_ids=a,b`, guests `guest_user_ids=`, `vertical=`, `from=`, `to=`, `limit=`. Non-admins are scoped to self; owners/org admins may list workspace or group cohorts. |
-| `POST` | `/workspaces/{id}/verification-score` | `workspaces:read` | Learning verification score + optional `learning_world_model` / `knowledge_config` after persistence. |
-| `POST` | `/workspaces/{id}/augmentation-score` | `workspaces:read` | Learning augmentation / practice-readiness score. |
-| `POST` | `/workspaces/{id}/optimization-score` | `workspaces:read` | Learning optimization score toward `workspace_goal`. |
+| `POST` | `/workspaces/{id}/lwm-snapshot` | `workspaces:read` | LWM Snapshot (sole strategy) + optional `learning_world_model` / `knowledge_config` after persistence. |
 
 **Knowledge config contract:** all vectors share model id `knowledgecfg-v1-d64` (dimension 64). Vectors with different model ids are not comparable. Workspace scopes trajectories; the axes are global so expert regions and cross-user distance are well-defined.
 
@@ -37,7 +35,7 @@ Base path: `/api/v3/eval`
 
 **Eval run history:** every successful vertical score appends an immutable row (`eval_run_history`) with the full report JSON, workspace, subject, vertical, and timestamp. Use this for retroactive inspection; LWM/knowledge config remain latest-state and geometry, not scorecard archives.
 
-**Re-run gate:** re-running the **same** vertical (`verification` / `augmentation` / `optimization`) for the same subject requires **new proof of work** since that vertical’s last eval (`ran_at`). Other verticals stay independent. Without new PoW, score endpoints return `409` with `code: no_new_pow`.
+**Re-run gate:** re-running an **LWM Snapshot** for the same subject requires **new proof of work** since the last snapshot (`ran_at`). Single strategy only. Without new PoW, score endpoints return `409` with `code: no_new_pow`.
 
 ## Authentication
 
@@ -53,7 +51,7 @@ Workspaces support two evaluation modes (stored on `workspaces.evaluation_mode`)
 
 | Mode | How workspaces are created | Schema | Performance |
 | :--- | :--- | :--- | :--- |
-| `semantic` (default) | **UI only** (`/workspace/new`) | `definition` rubric text | Vertical scores (`verification_score` / `augmentation_score` / `optimization_score` each with `marker_scores`, analysis, next actions) |
+| `semantic` (default) | **UI only** (`/workspace/new`) | `definition` rubric text | LWM Snapshot (`lwm_snapshot` / score + GHC secondary) |
 | `opaque` | **UI only** (`/workspace/new`) | `definition_ref` + `contract.event_verbs` | Structural protocol report (`protocol_report`, `privacy`; no semantic inference) |
 
 **Opaque mode** is for privacy-preserving verification: partner-owned references (`goal_ref`, `definition_ref`, `external_refs`) are stored but never semantically interpreted. Upload metadata is allowlisted; tool payloads are plaintext-linted (file paths rejected unless `metadata.allow_plaintext=true`).
@@ -81,9 +79,7 @@ Canonical protocol `agent-trace-v3` phases: `enumerate` → `fingerprint` → `a
 
 | Method | Path | Scope | MCP tool | Description |
 | :--- | :--- | :--- | :--- | :--- |
-| `POST` | `/workspaces/{workspace_id}/verification-score` | `workspaces:read` | `verification_score` | Learning verification score (0–100). TAP auto-results use this only. |
-| `POST` | `/workspaces/{workspace_id}/augmentation-score` | `workspaces:read` | `augmentation_score` | Learning augmentation / practice-readiness score (0–100). |
-| `POST` | `/workspaces/{workspace_id}/optimization-score` | `workspaces:read` | `optimization_score` | Learning optimization score toward `workspace_goal` (0–100). |
+| `POST` | `/workspaces/{workspace_id}/lwm-snapshot` | `workspaces:read` | `lwm_snapshot` | LWM Snapshot score (0–100; sole strategy). TAP/ILE end always use this. |
 | `GET` | `/workspaces/{workspace_id}/world-model` | `workspaces:read` | `get_world_model` | Durable learning world model for a subject. |
 | `GET` | `/workspaces/{workspace_id}/knowledge-config` | `workspaces:read` | `get_knowledge_config` | Latest knowledge config embedding (`knowledgecfg-v1-d64`). |
 | `GET` | `/workspaces/{workspace_id}/knowledge-config/trajectory` | `workspaces:read` | `get_knowledge_config_trajectory` | Knowledge config trajectory + optional 2D projection. |
@@ -216,9 +212,7 @@ Three dedicated score endpoints — one primary 0–100 score per call (not a mu
 
 | Path | MCP tool | Primary field | Meaning |
 | :--- | :--- | :--- | :--- |
-| `POST .../verification-score` | `verification_score` | `verification_score` | Learning verification. **TAP auto-results use this only.** |
-| `POST .../augmentation-score` | `augmentation_score` | `augmentation_score` | Practice / improvement readiness |
-| `POST .../optimization-score` | `optimization_score` | `optimization_score` | Progress toward `workspace_goal` (0–100 score units) |
+| `POST .../lwm-snapshot` | `lwm_snapshot` | `lwm_snapshot_score` / `score` | LWM Snapshot primary. **TAP/ILE end always use this path.** |
 
 **Request body** (all three):
 
@@ -228,7 +222,7 @@ Three dedicated score endpoints — one primary 0–100 score per call (not a mu
 
 Score responses always include:
 - `mode: "score"`, `vertical`
-- `score` / named primary field (`verification_score` | `augmentation_score` | `optimization_score`) — one 0–100 score per vertical call
+- `score` / named primary field `lwm_snapshot_score` — 0–100 LWM Snapshot (sole strategy); GHC is secondary on the same report
 - `workspace_goal` (inferred or owner-set workspace goal)
 - `marker_scores[]` (spider/radar competency axes: `id`, `label`, `score`, `rationale`)
 - `summary` analysis, strengths, growth_areas
@@ -265,7 +259,7 @@ Organization-owned workspaces are visible to all real users and guest users in t
 
 ## TAP Evidence
 
-Think Aloud Protocol sessions upload proof of work continuously during the session (`tap-thought-trace` system1/system2, `tap-helios-chat`, `tap-speech-segment`, `tap-idle-heartbeat`) and a final `tap-transcript` on complete. Product TAP auto-results run a durable **verification** eval (eval history + learning world model + knowledge-config embedding). Integrators can also poll `GET .../tap-links` for link `status`, then call `POST .../verification-score` (TAP is always verification-only).
+Think Aloud Protocol sessions upload proof of work continuously during the session (`tap-thought-trace` system1/system2, `tap-helios-chat`, `tap-speech-segment`, `tap-idle-heartbeat`) and a final `tap-transcript` on complete. Product TAP auto-results run a durable **verification** eval (eval history + learning world model + knowledge-config embedding). Integrators can also poll `GET .../tap-links` for link `status`, then call `POST .../lwm-snapshot` (TAP is always verification-only).
 
 **Reusable guest links:** TAP and ILE private URLs are multi-use. Reopening the same link starts another run while keeping `guest_user_id` stable (so embeddings / eval history stay on the same subject). Creating a new link with body `guest_user_id` reuses that guest when the caller owns the workspace or is an org admin for that guest.
 

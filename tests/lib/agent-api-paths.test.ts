@@ -38,7 +38,7 @@ describe("Proof-of-Work API v3 path contract", () => {
     expect(buildProofOfWorkSchemaApiPath("ws-1", base)).toContain("/api/v3/pow/");
     expect(buildIntegrationSkillApiPath("ws-1", base)).toContain("/api/v3/pow/");
     expect(buildPerformanceApiPath("ws-1", base)).toBe(
-      "https://example.com/api/v3/eval/workspaces/ws-1/verification-score",
+      "https://example.com/api/v3/eval/workspaces/ws-1/lwm-snapshot",
     );
 
     for (const vertical of ["verification", "augmentation", "optimization"] as const) {
@@ -46,7 +46,7 @@ describe("Proof-of-Work API v3 path contract", () => {
       expect(contract.endpoint_pattern).toContain("/api/v3/eval/");
       expect(contract.endpoint_pattern).not.toContain("/api/v3/pow/");
       expect(contract.endpoint_pattern).not.toContain("/api/v2/");
-      expect(contract.endpoint_pattern).toContain(`${vertical}-score`);
+      expect(contract.endpoint_pattern).toContain("lwm-snapshot");
     }
 
     const surfaces = buildIntegrationSurfaces(base);
@@ -73,7 +73,7 @@ describe("Proof-of-Work API v3 path contract", () => {
       existsSync(join(ROOT, "app/api/v3/pow/workspaces/[id]/proof-of-work/route.ts")),
     ).toBe(true);
     expect(
-      existsSync(join(ROOT, "app/api/v3/eval/workspaces/[id]/verification-score/route.ts")),
+      existsSync(join(ROOT, "app/api/v3/eval/workspaces/[id]/lwm-snapshot/route.ts")),
     ).toBe(true);
     expect(
       existsSync(join(ROOT, "app/api/v3/eval/workspaces/[id]/world-model/route.ts")),
@@ -82,9 +82,15 @@ describe("Proof-of-Work API v3 path contract", () => {
       existsSync(join(ROOT, "app/api/v3/eval/workspaces/[id]/knowledge-config/route.ts")),
     ).toBe(true);
 
+    // Legacy score routes removed
+    for (const name of ["verification-score", "augmentation-score", "optimization-score"] as const) {
+      expect(existsSync(join(ROOT, "app/api/v3/eval/workspaces/[id]", name, "route.ts"))).toBe(
+        false,
+      );
+    }
     // Scores only under eval
     expect(
-      existsSync(join(ROOT, "app/api/v3/pow/workspaces/[id]/verification-score/route.ts")),
+      existsSync(join(ROOT, "app/api/v3/pow/workspaces/[id]/lwm-snapshot/route.ts")),
     ).toBe(false);
 
     // No v2 handlers

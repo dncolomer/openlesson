@@ -62,368 +62,12 @@ const ENDPOINT_SPECS: EndpointSpec[] = [
     ],
   },
   {
-    id: "list-workspaces",
-    method: "GET",
-    path: "/api/v3/pow/workspaces",
-    scope: "workspaces:read",
-    summary: "List Verification Workspaces accessible to the API key (MCP list_workspaces twin).",
-    status: "200 OK",
-    queryParams: [
-      { name: "status", type: "string", description: "Optional workspace status filter." },
-      { name: "limit", type: "integer", description: "1–100, default 20." },
-      { name: "offset", type: "integer", description: "Pagination offset, default 0." },
-    ],
-    responseBody: [
-      { name: "workspaces", type: "array", description: "Workspace summaries." },
-      { name: "pagination", type: "object", description: "total, limit, offset, has_more." },
-    ],
-    notes: ["MCP tool: list_workspaces."],
-  },
-  {
-    id: "learning-progress",
-    method: "GET",
-    path: "/api/v3/pow/workspaces/{workspace_id}/learning-progress",
-    scope: "workspaces:read",
-    summary: "One-call learning progress snapshot (MCP get_learning_progress twin).",
-    status: "200 OK",
-    pathParams: [
-      { name: "workspace_id", type: "uuid", required: true, description: "Workspace ID." },
-    ],
-    responseBody: [
-      { name: "workspace", type: "object", description: "id, title, workspace_goal, status." },
-      { name: "blocks", type: "array", description: "Assessable blocks." },
-      { name: "proof_of_work_summary", type: "object", description: "Artifact / block counts." },
-      { name: "recommended_next_actions", type: "array", description: "Suggested next agent steps." },
-    ],
-    notes: ["MCP tool: get_learning_progress."],
-  },
-  {
-    id: "list-blocks",
-    method: "GET",
-    path: "/api/v3/pow/workspaces/{workspace_id}/blocks",
-    scope: "workspaces:read",
-    summary: "List assessable blocks in a workspace.",
-    status: "200 OK",
-    pathParams: [
-      { name: "workspace_id", type: "uuid", required: true, description: "Workspace ID." },
-    ],
-    responseBody: [
-      { name: "blocks", type: "array", description: "All blocks for the workspace, ordered by created_at ascending." },
-      { name: "blocks[].id", type: "uuid", description: "Block ID." },
-      { name: "blocks[].title", type: "string", description: "Block title." },
-      { name: "blocks[].description", type: "string", description: "Demonstration objective." },
-      { name: "blocks[].is_start", type: "boolean", description: "Entry block flag." },
-      { name: "blocks[].next_block_ids", type: "uuid[]", description: "Next block IDs." },
-      { name: "blocks[].status", type: "string", description: "available | in_progress | completed" },
-      { name: "blocks[].created_at", type: "ISO-8601", description: "Creation timestamp." },
-    ],
-    responseExample: `{
-  "blocks": [
-    {
-      "id": "e57844a6-1b69-465c-9120-d0812d6339ae",
-      "title": "Context & Procurement Tactics",
-      "description": "Demonstrate knowledge of renewal cycles.",
-      "is_start": true,
-      "next_block_ids": ["b454f31a-3045-4c23-a60e-820b43d0e9ce"],
-      "status": "available",
-      "created_at": "2026-06-23T13:01:32.691293+00:00"
-    }
-  ]
-}`,
-    notes: ["404 workspace_not_found if the key cannot access the workspace."],
-  },
-  {
-    id: "proof-of-work-schema",
+    id: "lwm-snapshot",
     method: "POST",
-    path: "/api/v3/pow/workspaces/{workspace_id}/proof-of-work-schema",
+    path: "/api/v3/eval/workspaces/{workspace_id}/lwm-snapshot",
     scope: "workspaces:read",
     summary:
-      "Given workspace context (blocks, plan files on xAI, proof-of-work metadata) plus an evaluation definition, Grok returns a JSON Schema for the ideal tool proof-of-work payload.",
-    status: "200 OK",
-    pathParams: [
-      { name: "workspace_id", type: "uuid", required: true, description: "Workspace ID." },
-    ],
-    requestBody: [
-      { name: "evaluation_mode", type: "string", description: "semantic | opaque. Defaults from workspace when omitted." },
-      {
-        name: "definition",
-        type: "string",
-        description: "Semantic mode: what to evaluate — rubric text, competency description, or eval spec.",
-      },
-      {
-        name: "definition_ref",
-        type: "string",
-        description: "Opaque mode: opaque reference token (required with contract.event_verbs).",
-      },
-      {
-        name: "contract",
-        type: "object",
-        description: "Opaque mode: event_verbs required; optional goal_tokens, required_event_fields, token_fields.",
-      },
-      { name: "block_id", type: "uuid", description: "Optional: scope schema design to one block." },
-      {
-        name: "integration_hints",
-        type: "object",
-        description: "Optional hints to tailor the schema: tool_name, partner_agent, event_verbs[], goals[].",
-      },
-      { name: "integration_hints.tool_name", type: "string", description: "Tool identifier (e.g. pumadoc, canvas)." },
-      { name: "integration_hints.partner_agent", type: "string", description: "Partner agent name for context." },
-      { name: "integration_hints.event_verbs", type: "string[]", description: "Actions your agent serializes (e.g. run_simulation, edit_field)." },
-      { name: "integration_hints.goals", type: "string[]", description: "High-level goals to encode (e.g. simulation_completed)." },
-    ],
-    requestExample: `// Semantic
-{
-  "definition": "Evaluate whether the learner can articulate a crisp ICP with segment rationale",
-  "integration_hints": {
-    "tool_name": "pumadoc",
-    "event_verbs": ["run_simulation", "edit_field"]
-  }
-}
-
-// Opaque
-{
-  "evaluation_mode": "opaque",
-  "definition_ref": "trace-audit-v3",
-  "contract": {
-    "event_verbs": ["enumerate", "fingerprint", "aggregate", "emit", "validate"]
-  }
-}`,
-    responseBody: [
-      { name: "schema", type: "object", description: "JSON Schema (draft-07 style) for the ideal tool proof-of-work payload inside the upload data field." },
-      { name: "schema_name", type: "string", description: "Snake_case identifier, typically prefixed eval_input_." },
-      { name: "rationale", type: "string", description: "Why these fields capture optimal eval signal for this workspace." },
-      { name: "example_payload", type: "object", description: "Example JSON matching the schema conceptually." },
-      { name: "recommended_mime_type", type: "string", description: "Usually application/json for tool proof of work." },
-      { name: "recommended_proof_of_work_type", type: "string", description: "tool | screen | video | eeg" },
-      { name: "required_fields", type: "string[]", description: "Top-level field names integrators should always include." },
-      { name: "optional_fields", type: "string[]", description: "Enrichment fields (reflections, media refs, etc.)." },
-      { name: "collection_guidance", type: "string", description: "When and how often to upload proof of work for this definition." },
-      {
-        name: "performance_report_contract",
-        type: "object",
-        description:
-          "Formal contract for POST .../verification-score (and sibling augmentation-score / optimization-score): one primary score, workspace_goal, marker_scores (spider_radar), gap_analysis, next actions.",
-      },
-      { name: "workspace_id", type: "uuid", description: "Echo of path workspace_id." },
-      { name: "block_id", type: "uuid | null", description: "Echo of request block_id." },
-      { name: "definition", type: "string", description: "Echo of request definition (semantic)." },
-      { name: "definition_ref", type: "string", description: "Echo of opaque definition_ref." },
-      { name: "evaluation_mode", type: "string", description: "semantic | opaque" },
-      { name: "privacy", type: "object", description: "Present for opaque responses." },
-      { name: "workspace_summary", type: "object", description: "id, title, root_topic." },
-      { name: "context_counts", type: "object", description: "blocks, tap_sessions, proof_of_work_artifacts, linked_sessions, workspace_files." },
-      { name: "file_ids", type: "string[]", description: "xAI file IDs used for generation (workspace JSON + plan files)." },
-    ],
-    responseExample: `{
-  "schema": {
-    "type": "object",
-    "properties": {
-      "events": {
-        "type": "array",
-        "items": {
-          "type": "object",
-          "properties": {
-            "verb": { "type": "string" },
-            "timestamp_ms": { "type": "integer" },
-            "payload": { "type": "object" }
-          },
-          "required": ["verb", "timestamp_ms"]
-        }
-      },
-      "goals_achieved": { "type": "array", "items": { "type": "string" } },
-      "learner_reflection": { "type": "string" }
-    },
-    "required": ["events"]
-  },
-  "schema_name": "eval_input_icp_clarity",
-  "rationale": "Time-ordered events plus goals_achieved give performance analysis enough signal to assess ICP clarity without a fixed rubric.",
-  "example_payload": {
-    "events": [
-      { "verb": "run_simulation", "timestamp_ms": 1710000000000, "payload": { "simulation_id": "icp-v1" } }
-    ],
-    "goals_achieved": ["simulation_completed"],
-    "learner_reflection": "Segment B has stronger willingness-to-pay signals."
-  },
-  "recommended_mime_type": "application/json",
-  "recommended_proof_of_work_type": "tool",
-  "required_fields": ["events"],
-  "optional_fields": ["goals_achieved", "learner_reflection"],
-  "collection_guidance": "Upload after each simulation run or when the learner publishes an ICP artifact.",
-  "workspace_id": "a3090aa0-3498-4be8-aa87-32a1a6591641",
-  "block_id": "e57844a6-1b69-465c-9120-d0812d6339ae",
-  "definition": "Evaluate whether the learner can articulate a crisp ICP...",
-  "workspace_summary": {
-    "id": "a3090aa0-3498-4be8-aa87-32a1a6591641",
-    "title": "Customer Development Mastery",
-    "root_topic": "Founder ICP validation"
-  },
-  "context_counts": {
-    "blocks": 5,
-    "tap_sessions": 0,
-    "proof_of_work_artifacts": 0,
-    "linked_sessions": 0,
-    "workspace_files": 2
-  },
-  "file_ids": ["file_814439bd-4894-4e11-852d-314e9f777a7f"]
-}`,
-    notes: [
-      "Semantic: definition required. Opaque: definition_ref + contract.event_verbs required.",
-      "Use before POST .../proof-of-work when you want a concrete JSON contract for what your agent should serialize.",
-      "Builds the same workspace context bundle as performance (JSON summary + up to 19 xAI artifact refs).",
-      "404 block_not_found if block_id is not in this workspace.",
-      "Grok-generated (semantic); opaque specs are structural and deterministic.",
-    ],
-  },
-  {
-    id: "integration-skill",
-    method: "POST",
-    path: "/api/v3/pow/workspaces/{workspace_id}/integration-skill",
-    scope: "workspaces:read",
-    summary:
-      "Generate a workspace-specific skill.md integration guide via POST .../integration-skill for a custom partner agent.",
-    status: "200 OK",
-    pathParams: [
-      { name: "workspace_id", type: "uuid", required: true, description: "Workspace ID." },
-    ],
-    requestBody: [
-      { name: "integration_name", type: "string", required: true, description: "Partner integration slug or display name (e.g. acme-sales-copilot)." },
-      { name: "partner_description", type: "string", description: "What the external agent does; Grok uses this to tailor examples." },
-      { name: "block_id", type: "uuid", description: "Optional: focus the skill on one block." },
-      { name: "base_url", type: "string", description: "Origin for example URLs; default https://uncertain.systems." },
-      {
-        name: "include_sections",
-        type: "string[]",
-        description: "Sections to include. Default: purpose, design_principles, auth, endpoints, proof_of_work_payload, performance, checklist.",
-      },
-    ],
-    requestExample: `{
-  "integration_name": "acme-sales-copilot",
-  "partner_description": "Guides reps through discovery calls and objection handling",
-  "base_url": "https://uncertain.systems",
-  "include_sections": ["purpose", "auth", "endpoints", "proof_of_work_payload", "performance", "checklist"]
-}`,
-    responseBody: [
-      { name: "skill_md", type: "string", description: "Full markdown document with YAML frontmatter (name, description)." },
-      { name: "skill_name", type: "string", description: "Derived frontmatter name, e.g. acme-sales-copilot-uncertain-systems-proof-of-work-performance." },
-      { name: "suggested_share_path", type: "string", description: "Suggested public path, e.g. /acme-sales-copilot-skill.md." },
-      { name: "workspace_summary", type: "object", description: "id, title, root_topic, block_count." },
-      { name: "context_counts", type: "object | null", description: "Workspace context counts used during generation." },
-      { name: "file_ids", type: "string[]", description: "xAI file IDs attached during generation." },
-    ],
-    responseExample: `{
-  "skill_md": "---\\nname: acme-sales-copilot-uncertain-systems-proof-of-work-performance\\ndescription: Acme Sales Copilot integration skill for Uncertain Systems proof-of-work upload and performance analysis.\\n---\\n\\n# Acme Sales Copilot — Uncertain Systems Proof-of-Work & Performance\\n\\n...",
-  "skill_name": "acme-sales-copilot-uncertain-systems-proof-of-work-performance",
-  "suggested_share_path": "/acme-sales-copilot-skill.md",
-  "workspace_summary": {
-    "id": "a3090aa0-3498-4be8-aa87-32a1a6591641",
-    "title": "Discovery Mastery",
-    "root_topic": "B2B sales discovery",
-    "block_count": 5
-  },
-  "context_counts": {
-    "blocks": 5,
-    "tap_sessions": 0,
-    "proof_of_work_artifacts": 0,
-    "linked_sessions": 0,
-    "workspace_files": 1
-  },
-  "file_ids": ["file_814439bd-4894-4e11-852d-314e9f777a7f"]
-}`,
-    notes: [
-      "Host skill_md at suggested_share_path or inject directly into your agent's skill system.",
-      "References canonical /skill.md and /docs/proof-of-work-api; includes workspace-specific block mapping and payload examples.",
-      "404 block_not_found if block_id is not in this workspace.",
-      "Grok-generated markdown; may take up to ~120s.",
-    ],
-  },
-  {
-    id: "upload-proof-of-work",
-    method: "POST",
-    path: "/api/v3/pow/workspaces/{workspace_id}/proof-of-work",
-    scope: "workspaces:write",
-    summary: "Upload tool usage, screenshots, video, or EEG to xAI Files and link to workspace/block/session.",
-    status: "201 Created",
-    pathParams: [
-      { name: "workspace_id", type: "uuid", required: true, description: "Workspace ID." },
-    ],
-    requestBody: [
-      { name: "type", type: "string", required: true, description: "tool | screen | screenshot | video | eeg (screenshot aliases to screen)." },
-      { name: "mime_type", type: "string", required: true, description: "Must match type (see MIME table below)." },
-      { name: "data", type: "string (base64)", required: true, description: "Artifact bytes, max 10 MB." },
-      { name: "file_name", type: "string", description: "Optional filename; default derived from type." },
-      { name: "block_id", type: "uuid", description: "Optional block to scope proof of work." },
-      { name: "session_id", type: "uuid", description: "Optional linked session ID." },
-      { name: "timestamp_ms", type: "integer", description: "Client timestamp; defaults to server time." },
-      { name: "chunk_index", type: "integer", description: "Chunk sequence for streaming artifacts; default 0." },
-      { name: "metadata", type: "object", description: "Arbitrary JSON metadata stored on the proof of work row." },
-      { name: "tool_name", type: "string", description: "For type=tool: tool identifier (e.g. canvas, pumadoc)." },
-      { name: "tool_action", type: "string", description: "For type=tool: action name (e.g. draw, step_completed)." },
-      { name: "band_powers", type: "object", description: "For type=eeg: band power map (numeric values)." },
-      { name: "device_name", type: "string", description: "For type=eeg: device label (e.g. Muse)." },
-      { name: "sample_count", type: "integer", description: "For type=eeg: sample count in chunk." },
-    ],
-    requestExample: `{
-  "type": "tool",
-  "file_name": "renewal-workbench-trace.json",
-  "mime_type": "application/json",
-  "data": "<base64>",
-  "block_id": "e57844a6-1b69-465c-9120-d0812d6339ae",
-  "metadata": { "source": "pumadoc-customer-agent" },
-  "tool_name": "renewal-workbench",
-  "tool_action": "session_trace"
-}`,
-    responseBody: [
-      { name: "proof_of_work.id", type: "uuid", description: "workspace_proof_of_work.id" },
-      { name: "proof_of_work.workspace_id", type: "uuid", description: "Same as workspace_id." },
-      { name: "proof_of_work.block_id", type: "uuid | null", description: "block_id if scoped." },
-      { name: "proof_of_work.session_id", type: "uuid | null", description: "Optional session link." },
-      { name: "proof_of_work.type", type: "string", description: "tool | screen | video | eeg" },
-      { name: "proof_of_work.file_name", type: "string", description: "Stored filename." },
-      { name: "proof_of_work.mime_type", type: "string", description: "MIME type." },
-      { name: "proof_of_work.file_size", type: "integer", description: "Decoded byte length." },
-      { name: "proof_of_work.xai_file_id", type: "string", description: "xAI Files API file_id." },
-      { name: "proof_of_work.timestamp_ms", type: "integer", description: "Client or server timestamp." },
-      { name: "proof_of_work.chunk_index", type: "integer", description: "Chunk index." },
-      { name: "proof_of_work.metadata", type: "object", description: "Stored metadata JSON." },
-      { name: "proof_of_work.tool_name", type: "string | null", description: "Tool name when type=tool." },
-      { name: "proof_of_work.tool_action", type: "string | null", description: "Tool action when type=tool." },
-      { name: "proof_of_work.device_name", type: "string | null", description: "EEG device when type=eeg." },
-      { name: "proof_of_work.sample_count", type: "integer | null", description: "EEG samples when type=eeg." },
-      { name: "proof_of_work.created_at", type: "ISO-8601", description: "Upload timestamp." },
-    ],
-    responseExample: `{
-  "proof_of_work": {
-    "id": "3d2a15c4-3e21-4e11-bf9c-c007ef0c82b4",
-    "workspace_id": "a3090aa0-3498-4be8-aa87-32a1a6591641",
-    "block_id": "e57844a6-1b69-465c-9120-d0812d6339ae",
-    "session_id": null,
-    "type": "tool",
-    "file_name": "renewal-workbench-trace.json",
-    "mime_type": "application/json",
-    "file_size": 992,
-    "xai_file_id": "file_9f395df1-ecfd-4587-87fd-4f2e8d3cea3d",
-    "timestamp_ms": 1782219694763,
-    "chunk_index": 0,
-    "metadata": { "source": "pumadoc-customer-agent" },
-    "tool_name": "renewal-workbench",
-    "tool_action": "session_trace",
-    "device_name": null,
-    "sample_count": null,
-    "created_at": "2026-06-23T13:01:34.791176+00:00"
-  }
-}`,
-    notes: [
-      "MIME by type: tool → application/json, text/plain, text/markdown; screen → image/png, image/jpeg, image/webp; video → video/mp4, video/webm, video/quicktime; eeg → application/json, text/plain.",
-      "Opaque: metadata allowlist (trace_token, goal_ref, anon, event_count, schema_version, protocol_id, phase_id, allow_plaintext). Tool payloads plaintext-linted unless allow_plaintext=true.",
-      "404 block_not_found if block_id is not in this workspace.",
-    ],
-  },
-  {
-    id: "verification-score",
-    method: "POST",
-    path: "/api/v3/eval/workspaces/{workspace_id}/verification-score",
-    scope: "workspaces:read",
-    summary: 'Learning verification score (0–100) + spider markers, analysis, and next actions. TAP auto-results use this only.',
+      "LWM Snapshot score (0–100) + GHC + spider markers, analysis, and next actions. Sole product snapshot strategy. TAP/ILE end always use this path.",
     status: "200 OK",
     pathParams: [
       { name: "workspace_id", type: "uuid", required: true, description: "Workspace ID." },
@@ -436,70 +80,29 @@ const ENDPOINT_SPECS: EndpointSpec[] = [
     requestExample: `{ "block_id": "e57844a6-1b69-465c-9120-d0812d6339ae" }`,
     responseBody: [
       { name: "mode", type: '"score"', description: "Always score for this endpoint." },
-      { name: "vertical", type: "string", description: "verification | augmentation | optimization" },
-      { name: "evaluation_mode", type: "string", description: "semantic | opaque" },
-      { name: "privacy", type: "object", description: "Opaque workspaces: semantic_inference, plaintext_lint, stored_prompt." },
-      { name: "protocol_report", type: "object", description: "Opaque: protocol_compliance_score, phase_coverage, trace_integrity, structural_gaps." },
+      { name: "strategy", type: "string", description: "lwm_snapshot" },
+      { name: "label", type: "string", description: "LWM Snapshot" },
       { name: "workspace_goal", type: "string", description: "Inferred or owner-set workspace goal." },
-      { name: "workspace_goal_source", type: "string", description: "workspace | inferred | opaque_ref" },
-      { name: "report", type: "object", description: "Vertical score report payload." },
-      { name: "report.score", type: "integer", description: "0–100 primary score for this vertical." },
-      { name: "report.vertical", type: "string", description: "Matches the endpoint vertical." },
-      { name: "report.workspace_goal", type: "string", description: "Same as top-level workspace_goal when finalized." },
-      {
-        name: "report.marker_scores",
-        type: "array",
-        description: "Spider/radar competency axes: id, label, score (0–100), rationale, optional block_id.",
-      },
-      { name: "report.summary", type: "string", description: "Executive analysis." },
-      { name: "report.strengths", type: "string[]", description: "Demonstrated strengths." },
-      { name: "report.growth_areas", type: "string[]", description: "Areas needing development." },
-      { name: "report.gap_analysis.summary", type: "string", description: "Gap analysis overview." },
-      { name: "report.gap_analysis.gaps", type: "array", description: "title, proof_of_work, severity (low|medium|high), suggested_repair." },
-      { name: "report.gap_analysis.next_steps", type: "object", description: "directions (string[]) and events (string[]) for domain next actions." },
-      { name: "report.suggestions", type: "string[]", description: "Additional recommendations." },
-      { name: "report.confidence", type: "string", description: "emerging | developing | clear | well-connected" },
+      { name: "report", type: "object", description: "LWM Snapshot score report payload." },
+      { name: "report.score", type: "integer", description: "0–100 primary LWM Snapshot score." },
+      { name: "report.lwm_snapshot_score", type: "integer", description: "Named primary field (equals score)." },
+      { name: "report.ghc_score", type: "integer", description: "0–100 secondary GHC signal." },
       { name: "proof_of_work_summary", type: "object | null", description: "Counts used in context." },
       { name: "file_ids", type: "string[]", description: "xAI file IDs for follow-up calls." },
     ],
     responseExample: `{
   "mode": "score",
-  "vertical": "verification",
+  "strategy": "lwm_snapshot",
+  "label": "LWM Snapshot",
   "workspace_goal": "Trial-to-paid subscription activation",
-  "workspace_goal_source": "workspace",
   "report": {
-    "vertical": "verification",
     "score": 68,
-    "verification_score": 68,
+    "lwm_snapshot_score": 68,
+    "ghc_score": 40,
     "workspace_goal": "Trial-to-paid subscription activation",
-    "marker_scores": [
-      {
-        "id": "negotiation_prep",
-        "label": "Negotiation Preparation",
-        "score": 74,
-        "rationale": "Used CRM and ROI table before price discussion."
-      }
-    ],
-    "summary": "Learner prepared for renewal negotiation using simulated tool traces.",
-    "strengths": ["Used CRM and ROI table before price discussion"],
-    "growth_areas": ["Did not quantify churn risk"],
-    "gap_analysis": {
-      "summary": "Missing churn risk quantification.",
-      "gaps": [
-        {
-          "title": "Missing churn risk quantification",
-          "proof_of_work": "Reflection states churn risk was not modeled.",
-          "severity": "medium",
-          "suggested_repair": "Add probability-weighted revenue loss to ROI table."
-        }
-      ],
-      "next_steps": {
-        "directions": ["Build a repeatable churn model habit before pricing talks"],
-        "events": ["Run 3 simulated procurement scenarios with churn math"]
-      }
-    },
-    "suggestions": ["Practice live role-play with procurement pushback"],
-    "confidence": "emerging"
+    "marker_scores": [],
+    "summary": "...",
+    "confidence": "developing"
   },
   "proof_of_work_summary": {
     "blocks": 1,
@@ -510,201 +113,7 @@ const ENDPOINT_SPECS: EndpointSpec[] = [
   "file_ids": ["file_814439bd-4894-4e11-852d-314e9f777a7f"]
 }`,
     notes: [
-      "One primary score per call — not a multi-vertical unified scorecard.",
-      "First call with empty file_ids uploads a workspace performance JSON summary + up to 19 artifact files to xAI.",
-      "If no proof of work exists, returns 200 with an empty-data score template.",
-    ],
-  },
-  {
-    id: "augmentation-score",
-    method: "POST",
-    path: "/api/v3/eval/workspaces/{workspace_id}/augmentation-score",
-    scope: "workspaces:read",
-    summary: 'Learning augmentation / practice-readiness score (0–100) + spider markers, analysis, and next actions.',
-    status: "200 OK",
-    pathParams: [
-      { name: "workspace_id", type: "uuid", required: true, description: "Workspace ID." },
-    ],
-    requestBody: [
-      { name: "block_id", type: "uuid", description: "Optional: scope analysis to one block." },
-      { name: "style_prompt", type: "string", description: "Optional voice/tone for narrative fields." },
-      { name: "file_ids", type: "string[]", description: "Optional xAI file IDs from a prior score call. Empty → rebuild context bundle." },
-    ],
-    requestExample: `{ "block_id": "e57844a6-1b69-465c-9120-d0812d6339ae" }`,
-    responseBody: [
-      { name: "mode", type: '"score"', description: "Always score for this endpoint." },
-      { name: "vertical", type: "string", description: "verification | augmentation | optimization" },
-      { name: "evaluation_mode", type: "string", description: "semantic | opaque" },
-      { name: "privacy", type: "object", description: "Opaque workspaces: semantic_inference, plaintext_lint, stored_prompt." },
-      { name: "protocol_report", type: "object", description: "Opaque: protocol_compliance_score, phase_coverage, trace_integrity, structural_gaps." },
-      { name: "workspace_goal", type: "string", description: "Inferred or owner-set workspace goal." },
-      { name: "workspace_goal_source", type: "string", description: "workspace | inferred | opaque_ref" },
-      { name: "report", type: "object", description: "Vertical score report payload." },
-      { name: "report.score", type: "integer", description: "0–100 primary score for this vertical." },
-      { name: "report.vertical", type: "string", description: "Matches the endpoint vertical." },
-      { name: "report.workspace_goal", type: "string", description: "Same as top-level workspace_goal when finalized." },
-      {
-        name: "report.marker_scores",
-        type: "array",
-        description: "Spider/radar competency axes: id, label, score (0–100), rationale, optional block_id.",
-      },
-      { name: "report.summary", type: "string", description: "Executive analysis." },
-      { name: "report.strengths", type: "string[]", description: "Demonstrated strengths." },
-      { name: "report.growth_areas", type: "string[]", description: "Areas needing development." },
-      { name: "report.gap_analysis.summary", type: "string", description: "Gap analysis overview." },
-      { name: "report.gap_analysis.gaps", type: "array", description: "title, proof_of_work, severity (low|medium|high), suggested_repair." },
-      { name: "report.gap_analysis.next_steps", type: "object", description: "directions (string[]) and events (string[]) for domain next actions." },
-      { name: "report.suggestions", type: "string[]", description: "Additional recommendations." },
-      { name: "report.confidence", type: "string", description: "emerging | developing | clear | well-connected" },
-      { name: "proof_of_work_summary", type: "object | null", description: "Counts used in context." },
-      { name: "file_ids", type: "string[]", description: "xAI file IDs for follow-up calls." },
-    ],
-    responseExample: `{
-  "mode": "score",
-  "vertical": "augmentation",
-  "workspace_goal": "Trial-to-paid subscription activation",
-  "workspace_goal_source": "workspace",
-  "report": {
-    "vertical": "augmentation",
-    "score": 68,
-    "augmentation_score": 68,
-    "workspace_goal": "Trial-to-paid subscription activation",
-    "marker_scores": [
-      {
-        "id": "negotiation_prep",
-        "label": "Negotiation Preparation",
-        "score": 74,
-        "rationale": "Used CRM and ROI table before price discussion."
-      }
-    ],
-    "summary": "Learner prepared for renewal negotiation using simulated tool traces.",
-    "strengths": ["Used CRM and ROI table before price discussion"],
-    "growth_areas": ["Did not quantify churn risk"],
-    "gap_analysis": {
-      "summary": "Missing churn risk quantification.",
-      "gaps": [
-        {
-          "title": "Missing churn risk quantification",
-          "proof_of_work": "Reflection states churn risk was not modeled.",
-          "severity": "medium",
-          "suggested_repair": "Add probability-weighted revenue loss to ROI table."
-        }
-      ],
-      "next_steps": {
-        "directions": ["Build a repeatable churn model habit before pricing talks"],
-        "events": ["Run 3 simulated procurement scenarios with churn math"]
-      }
-    },
-    "suggestions": ["Practice live role-play with procurement pushback"],
-    "confidence": "emerging"
-  },
-  "proof_of_work_summary": {
-    "blocks": 1,
-    "proof_of_work_artifacts": 2,
-    "linked_sessions": 0,
-    "workspace_files": 0
-  },
-  "file_ids": ["file_814439bd-4894-4e11-852d-314e9f777a7f"]
-}`,
-    notes: [
-      "One primary score per call — not a multi-vertical unified scorecard.",
-      "First call with empty file_ids uploads a workspace performance JSON summary + up to 19 artifact files to xAI.",
-      "If no proof of work exists, returns 200 with an empty-data score template.",
-    ],
-  },
-  {
-    id: "optimization-score",
-    method: "POST",
-    path: "/api/v3/eval/workspaces/{workspace_id}/optimization-score",
-    scope: "workspaces:read",
-    summary: 'Learning optimization score toward workspace_goal (0–100) + spider markers, analysis, and next actions.',
-    status: "200 OK",
-    pathParams: [
-      { name: "workspace_id", type: "uuid", required: true, description: "Workspace ID." },
-    ],
-    requestBody: [
-      { name: "block_id", type: "uuid", description: "Optional: scope analysis to one block." },
-      { name: "style_prompt", type: "string", description: "Optional voice/tone for narrative fields." },
-      { name: "file_ids", type: "string[]", description: "Optional xAI file IDs from a prior score call. Empty → rebuild context bundle." },
-    ],
-    requestExample: `{ "block_id": "e57844a6-1b69-465c-9120-d0812d6339ae" }`,
-    responseBody: [
-      { name: "mode", type: '"score"', description: "Always score for this endpoint." },
-      { name: "vertical", type: "string", description: "verification | augmentation | optimization" },
-      { name: "evaluation_mode", type: "string", description: "semantic | opaque" },
-      { name: "privacy", type: "object", description: "Opaque workspaces: semantic_inference, plaintext_lint, stored_prompt." },
-      { name: "protocol_report", type: "object", description: "Opaque: protocol_compliance_score, phase_coverage, trace_integrity, structural_gaps." },
-      { name: "workspace_goal", type: "string", description: "Inferred or owner-set workspace goal." },
-      { name: "workspace_goal_source", type: "string", description: "workspace | inferred | opaque_ref" },
-      { name: "report", type: "object", description: "Vertical score report payload." },
-      { name: "report.score", type: "integer", description: "0–100 primary score for this vertical." },
-      { name: "report.vertical", type: "string", description: "Matches the endpoint vertical." },
-      { name: "report.workspace_goal", type: "string", description: "Same as top-level workspace_goal when finalized." },
-      {
-        name: "report.marker_scores",
-        type: "array",
-        description: "Spider/radar competency axes: id, label, score (0–100), rationale, optional block_id.",
-      },
-      { name: "report.summary", type: "string", description: "Executive analysis." },
-      { name: "report.strengths", type: "string[]", description: "Demonstrated strengths." },
-      { name: "report.growth_areas", type: "string[]", description: "Areas needing development." },
-      { name: "report.gap_analysis.summary", type: "string", description: "Gap analysis overview." },
-      { name: "report.gap_analysis.gaps", type: "array", description: "title, proof_of_work, severity (low|medium|high), suggested_repair." },
-      { name: "report.gap_analysis.next_steps", type: "object", description: "directions (string[]) and events (string[]) for domain next actions." },
-      { name: "report.suggestions", type: "string[]", description: "Additional recommendations." },
-      { name: "report.confidence", type: "string", description: "emerging | developing | clear | well-connected" },
-      { name: "proof_of_work_summary", type: "object | null", description: "Counts used in context." },
-      { name: "file_ids", type: "string[]", description: "xAI file IDs for follow-up calls." },
-    ],
-    responseExample: `{
-  "mode": "score",
-  "vertical": "optimization",
-  "workspace_goal": "Trial-to-paid subscription activation",
-  "workspace_goal_source": "workspace",
-  "report": {
-    "vertical": "optimization",
-    "score": 68,
-    "optimization_score": 68,
-    "workspace_goal": "Trial-to-paid subscription activation",
-    "marker_scores": [
-      {
-        "id": "negotiation_prep",
-        "label": "Negotiation Preparation",
-        "score": 74,
-        "rationale": "Used CRM and ROI table before price discussion."
-      }
-    ],
-    "summary": "Learner prepared for renewal negotiation using simulated tool traces.",
-    "strengths": ["Used CRM and ROI table before price discussion"],
-    "growth_areas": ["Did not quantify churn risk"],
-    "gap_analysis": {
-      "summary": "Missing churn risk quantification.",
-      "gaps": [
-        {
-          "title": "Missing churn risk quantification",
-          "proof_of_work": "Reflection states churn risk was not modeled.",
-          "severity": "medium",
-          "suggested_repair": "Add probability-weighted revenue loss to ROI table."
-        }
-      ],
-      "next_steps": {
-        "directions": ["Build a repeatable churn model habit before pricing talks"],
-        "events": ["Run 3 simulated procurement scenarios with churn math"]
-      }
-    },
-    "suggestions": ["Practice live role-play with procurement pushback"],
-    "confidence": "emerging"
-  },
-  "proof_of_work_summary": {
-    "blocks": 1,
-    "proof_of_work_artifacts": 2,
-    "linked_sessions": 0,
-    "workspace_files": 0
-  },
-  "file_ids": ["file_814439bd-4894-4e11-852d-314e9f777a7f"]
-}`,
-    notes: [
-      "One primary score per call — not a multi-vertical unified scorecard.",
+      "Sole product score strategy — no verification/augmentation/optimization score routes.",
       "First call with empty file_ids uploads a workspace performance JSON summary + up to 19 artifact files to xAI.",
       "If no proof of work exists, returns 200 with an empty-data score template.",
     ],
@@ -782,7 +191,7 @@ const ENDPOINT_SPECS: EndpointSpec[] = [
       { name: "tap_links[].requested_duration_seconds", type: "integer", description: "Requested duration." },
       { name: "tap_links[].duration_seconds", type: "integer", description: "Actual duration (0 until completed)." },
       { name: "tap_links[].focus_block_ids", type: "uuid[]", description: "Focused blocks." },
-      { name: "tap_links[].verification_score", type: "integer | null", description: "Score when completed." },
+      { name: "tap_links[].score", type: "integer | null", description: "Score when completed." },
       { name: "tap_links[].created_at", type: "ISO-8601", description: "Created at." },
       { name: "tap_links[].started_at", type: "ISO-8601 | null", description: "Started at." },
       { name: "tap_links[].completed_at", type: "ISO-8601 | null", description: "Completed at." },
@@ -798,7 +207,7 @@ const ENDPOINT_SPECS: EndpointSpec[] = [
       "requested_duration_seconds": 900,
       "duration_seconds": 120,
       "focus_block_ids": ["88a43ad8-62f8-4252-a847-2cbc0b754a57"],
-      "verification_score": 72,
+      "lwm_snapshot_score": 72,
       "created_at": "2026-06-23T01:29:03.861663+00:00",
       "started_at": "2026-06-23T01:30:00+00:00",
       "completed_at": "2026-06-23T01:32:21.492+00:00"
@@ -1190,9 +599,9 @@ Content-Type: application/json`}</code>
           <FieldTable
             title="Scope reference"
             fields={[
-              { name: "workspaces:read", type: "scope", description: "List blocks; generate proof-of-work schemas and integration skills; call verification-score / augmentation-score / optimization-score." },
+              { name: "workspaces:read", type: "scope", description: "List blocks; generate proof-of-work schemas and integration skills; call lwm-snapshot (LWM Snapshot)." },
               { name: "workspaces:write", type: "scope", description: "Upload proof of work (workspace create is UI-only)." },
-              { name: "tap:read", type: "scope", description: "List TAP links and poll completion status (score via POST .../verification-score)." },
+              { name: "tap:read", type: "scope", description: "List TAP links and poll completion status (score via POST .../lwm-snapshot)." },
               { name: "tap:write", type: "scope", description: "Create Think Aloud Protocol (TAP) links for blocks." },
               { name: "org:read", type: "scope", description: "Reserved for org admin keys (future org read endpoints)." },
               { name: "org:write", type: "scope", description: "Create guest users and issue gsk_ keys." },

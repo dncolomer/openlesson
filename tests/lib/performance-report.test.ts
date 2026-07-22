@@ -20,19 +20,19 @@ import {
 } from "@/lib/pow-api/performance-report";
 
 describe("vertical score naming", () => {
-  it("exposes verification-score, augmentation-score, optimization-score paths and tools", () => {
-    expect(VERTICAL_REST_PATH.verification).toBe("verification-score");
-    expect(VERTICAL_REST_PATH.augmentation).toBe("augmentation-score");
-    expect(VERTICAL_REST_PATH.optimization).toBe("optimization-score");
-    expect(VERTICAL_MCP_TOOL.verification).toBe("verification_score");
-    expect(VERTICAL_MCP_TOOL.augmentation).toBe("augmentation_score");
-    expect(VERTICAL_MCP_TOOL.optimization).toBe("optimization_score");
+  it("exposes LWM Snapshot primary path/tool and history-compatible fields", () => {
+    expect(VERTICAL_REST_PATH.verification).toBe("lwm-snapshot");
+    expect(VERTICAL_REST_PATH.augmentation).toBe("lwm-snapshot");
+    expect(VERTICAL_REST_PATH.optimization).toBe("lwm-snapshot");
+    expect(VERTICAL_MCP_TOOL.verification).toBe("lwm_snapshot");
+    expect(VERTICAL_MCP_TOOL.augmentation).toBe("lwm_snapshot");
+    expect(VERTICAL_MCP_TOOL.optimization).toBe("lwm_snapshot");
     expect(VERTICAL_SCORE_FIELD.verification).toBe("verification_score");
     expect(VERTICAL_SCORE_FIELD.augmentation).toBe("augmentation_score");
     expect(VERTICAL_SCORE_FIELD.optimization).toBe("optimization_score");
   });
 
-  it("TAP auto-results always select verification only", () => {
+  it("TAP auto-results always select the snapshot strategy wire key", () => {
     expect(TAP_AUTO_SCORE_VERTICAL).toBe("verification");
   });
 });
@@ -43,7 +43,11 @@ describe("buildVerticalScoreReportSchema", () => {
     (vertical) => {
       const schema = buildVerticalScoreReportSchema(vertical);
       expect(schema.vertical).toBe(vertical);
-      expect(schema.primary_field).toBe(VERTICAL_SCORE_FIELD[vertical]);
+      if (vertical === "verification") {
+        expect(schema.primary_field).toBe("lwm_snapshot_score");
+      } else {
+        expect(schema.primary_field).toBe(VERTICAL_SCORE_FIELD[vertical]);
+      }
       expect(schema.schema.required).toContain("score");
       expect(schema.schema.required).toContain("workspace_goal");
       expect(schema.schema.required).toContain("marker_scores");
@@ -90,13 +94,13 @@ describe("buildVerticalScoreInstructions", () => {
 });
 
 describe("buildVerticalScoreReportContract", () => {
-  it("describes each vertical endpoint without conversion fields", () => {
+  it("describes the single LWM Snapshot endpoint without conversion fields", () => {
     const contracts = buildAllVerticalScoreContracts("https://uncertain.systems");
-    expect(contracts).toHaveLength(3);
+    expect(contracts).toHaveLength(1);
     for (const contract of contracts) {
       expect(contract.endpoint_pattern).toContain(`/${VERTICAL_REST_PATH[contract.vertical]}`);
       expect(contract.mcp_tool).toBe(VERTICAL_MCP_TOOL[contract.vertical]);
-      expect(contract.primary_score_field).toBe(VERTICAL_SCORE_FIELD[contract.vertical]);
+      expect(contract.primary_score_field).toBe("lwm_snapshot_score");
       expect(contract.response_mode).toBe("score");
       expect(contract.marker_scores.visualization).toBe("spider_radar");
       expect(contract.gap_analysis.next_steps_required).toBe(true);
@@ -113,9 +117,11 @@ describe("buildVerticalScoreReportContract", () => {
     }
   });
 
-  it("verification contract is the TAP default path", () => {
+  it("LWM Snapshot contract is the TAP/ILE default path", () => {
     const contract = buildVerticalScoreReportContract("verification", "https://uncertain.systems");
-    expect(contract.endpoint_pattern).toContain("verification-score");
+    expect(contract.endpoint_pattern).toContain("lwm-snapshot");
+    expect(contract.mcp_tool).toBe("lwm_snapshot");
+    expect(contract.primary_score_field).toBe("lwm_snapshot_score");
     expect(contract.example_report.vertical).toBe("verification");
     expect(EXAMPLE_VERIFICATION_SCORE_REPORT.vertical).toBe("verification");
     expect(EXAMPLE_AUGMENTATION_SCORE_REPORT.vertical).toBe("augmentation");

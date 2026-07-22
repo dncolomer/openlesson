@@ -13,16 +13,14 @@ export const UNCERTAIN_SYSTEMS_SCOPE = {
   mission:
     "Verify learning and measure readiness-to-perform using real product proof of work — not quizzes in isolation.",
   pillars: [
-    "Learning verification — verification_score and marker_scores from tool traces, artifacts, and sessions (TAP uses verification only)",
-    "Learning augmentation — augmentation_score measures practice / improvement readiness from proof of work",
-    "Learning optimization — optimization_score measures progress toward workspace_goal (0–100 score units)",
+    "LWM Snapshot — lwm_snapshot (Learning World Model Snapshot) + GHC from tool traces, artifacts, and sessions (TAP/ILE end always snapshot)",
     "Proof of work — upload_proof_of_work / POST .../proof-of-work streams observable actions as durable artifacts",
     "Predictive interruptions (TIM) — every response includes interruption (object or null) with delay_ms and intervention hints",
   ],
   workspace_model:
-    "A Verification Workspace has blocks (assessable units), a workspace_goal (what success means), and accumulates proof of work. Progress is continuous: upload → re-fetch spec → score → repeat.",
+    "A Verification Workspace has blocks (assessable units), a workspace_goal (what success means), and accumulates proof of work. Progress is continuous: upload → re-fetch spec → LWM Snapshot → repeat.",
   integrator_model:
-    "Partner agents instrument their product, upload proof of work after meaningful actions, and call vertical score tools for gap reports and next actions. Both REST (Bearer API key) and MCP (JSON-RPC with Bearer auth) expose the same capabilities.",
+    "Partner agents instrument their product, upload proof of work after meaningful actions, and call lwm_snapshot (LWM Snapshot) for gap reports and next actions. Both REST (Bearer API key) and MCP (JSON-RPC with Bearer auth) expose the same capabilities.",
   docs: {
     api_reference: "/skill.md",
     human_guide: "/docs/proof-of-work-api",
@@ -130,7 +128,7 @@ export function buildContinuousEvaluationMcpPolicy(
   return {
     principle: UNCERTAIN_SYSTEMS_SCOPE.workspace_model,
     more_evidence_improves:
-      "More upload_proof_of_work / POST .../proof-of-work calls improve verification, augmentation, and optimization score accuracy.",
+      "More upload_proof_of_work / POST .../proof-of-work calls improve LWM Snapshot (lwm_snapshot) and GHC accuracy.",
     regeneration_required: true,
     mcp_endpoint_pattern: buildMcpEndpointPattern(baseUrl),
     proof_of_work_spec: {
@@ -160,13 +158,13 @@ export function buildContinuousEvaluationMcpPolicy(
       ],
     },
     performance: {
-      mcp_tool: "verification_score",
+      mcp_tool: "lwm_snapshot",
       rest_equivalent: performanceRest,
-      purpose: "Vertical scores: verification_score / augmentation_score / optimization_score — each one primary score + spider + analysis + next actions",
+      purpose:
+        "LWM Snapshot (lwm_snapshot): one primary 0–100 score + GHC + spider + analysis + next actions. Sole product snapshot strategy.",
       when_to_call: [
         "After each meaningful proof-of-work batch (e.g. every 3-10 uploads)",
-        "Call verification_score for learning verification (TAP auto-results use this)",
-        "Call augmentation_score for practice readiness; optimization_score for workspace_goal progress",
+        "Call lwm_snapshot for LWM Snapshot (TAP/ILE end always run this path)",
       ],
     },
     progress_snapshot: {
@@ -176,11 +174,11 @@ export function buildContinuousEvaluationMcpPolicy(
         "One-call orientation: workspace_goal, block map, proof-of-work counts, recommended next MCP tool and REST equivalent",
       when_to_call: [
         "When connecting MCP mid-session and need workspace progress context",
-        "Before choosing between upload_proof_of_work vs verification_score / augmentation_score / optimization_score",
+        "Before choosing between upload_proof_of_work vs lwm_snapshot (LWM Snapshot)",
         "After long idle gaps to re-orient the agent",
       ],
     },
-    recommended_cadence: `MCP loop: generate_proof_of_work_schema → upload_proof_of_work (repeat) → verification_score|augmentation_score|optimization_score → regenerate schema/skill. REST mirror: ${uploadRest} → ${proofOfWorkSpecRest} → ${performanceRest}.`,
+    recommended_cadence: `MCP loop: generate_proof_of_work_schema → upload_proof_of_work (repeat) → lwm_snapshot (LWM Snapshot) → regenerate schema/skill. REST mirror: ${uploadRest} → ${proofOfWorkSpecRest} → ${performanceRest}.`,
   };
 }
 
@@ -229,8 +227,8 @@ export function recommendIntegrationActions(options: {
   if (proof_of_work_artifacts >= 1 && (proof_of_work_artifacts < 3 || proof_of_work_artifacts % 3 === 0)) {
     actions.push({
       priority: 5,
-      mcp_tool: "verification_score",
-      rest_equivalent: "POST .../verification-score",
+      mcp_tool: "lwm_snapshot",
+      rest_equivalent: "POST .../lwm-snapshot",
       reason: "Enough signal to score — request scorecard (no prompt) for marker_scores and gap_analysis.",
     });
   }
@@ -277,7 +275,7 @@ export function buildUncertainSystemsScopeForWorkspace(options: {
       block_count: options.blockCount,
       proof_of_work_artifact_count: options.proofOfWorkCount,
       progress_interpretation:
-        "Learning progress = proof-of-work volume + quality of marker_scores/gaps from the three vertical score tools, measured against workspace_goal.",
+        "Learning progress = proof-of-work volume + quality of marker_scores/gaps from LWM Snapshot (lwm_snapshot) + GHC, measured against workspace_goal.",
     },
   };
 }
@@ -349,12 +347,13 @@ Progress is **continuous**, not one-time setup.
 1. **generate_proof_of_work_schema** / POST .../proof-of-work-schema — get tool_submissions + contracts
 2. **list_blocks** / GET .../blocks — map competencies to block_id
 3. **upload_proof_of_work** / POST .../proof-of-work — after each meaningful product action (repeat)
-4. **verification_score** / **augmentation_score** / **optimization_score** — vertical scorecards
+4. **lwm_snapshot** — LWM Snapshot (sole strategy; GHC secondary on the same report)
 5. Re-fetch schema + regenerate skill as proof of work grows
 
 ## Progress signals
 - \`proof_of_work_summary.proof_of_work_artifacts\` — how much signal exists
-- \`report.score\` / named \`verification_score\` | \`augmentation_score\` | \`optimization_score\` — primary 0-100 for that vertical
+- \`report.score\` / named \`lwm_snapshot_score\` — primary 0-100 LWM Snapshot
+- \`report.ghc_score\` — secondary Genuine Human Cognition signal
 - \`report.workspace_goal\` — inferred or owner-set workspace goal
 - \`report.marker_scores\` — per-competency spider/radar axes
 - \`report.gap_analysis\` — analysis + product-language next actions

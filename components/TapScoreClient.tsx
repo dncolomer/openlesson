@@ -770,8 +770,8 @@ export function TapScoreClient({ workspaceId, blockId, sessionId, privateToken, 
       const resolvedRedirectUrl =
         typeof payload.redirectUrl === "string" ? payload.redirectUrl : configuredRedirectUrl;
 
-      // Always run a durable verification eval after TAP complete so LWM +
-      // knowledge-config embeddings update (not only when showing results UI).
+      // Always run LWM Snapshot after TAP complete so LWM + knowledge-config
+      // embeddings update (not only when showing results UI).
       setPhase("saving");
       const reportResponse = await fetch("/api/workspace-tap-score/performance", {
         method: "POST",

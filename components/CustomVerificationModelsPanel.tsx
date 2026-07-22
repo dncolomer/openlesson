@@ -243,7 +243,7 @@ export function CustomVerificationModelsPanel({
             <p className="text-xs text-neutral-500">Loading users with embeddings…</p>
           ) : subjects.length === 0 ? (
             <p className="text-xs text-neutral-500">
-              No knowledge config snapshots yet. Run a verification score so embeddings exist, then
+              No knowledge config snapshots yet. Generate an LWM Snapshot so embeddings exist, then
               group users here.
             </p>
           ) : (

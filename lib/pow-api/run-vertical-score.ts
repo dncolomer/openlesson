@@ -1,5 +1,6 @@
 /**
- * Shared generator path for the three vertical score REST/MCP entry points.
+ * Shared generator path for the single LWM Snapshot strategy
+ * (former LWM Snapshot REST/MCP entry points).
  */
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { AuthContext } from "./types";
@@ -12,6 +13,7 @@ import {
 } from "./opaque-evaluation";
 import {
   emptyVerticalScoreReport,
+  SNAPSHOT_VERTICAL,
   type ScoreVertical,
   type VerticalScoreReport,
 } from "./performance-report";
@@ -26,7 +28,8 @@ export interface RunVerticalScoreInput {
   supabase: SupabaseClient;
   auth: AuthContext;
   workspaceId: string;
-  vertical: ScoreVertical;
+  /** Always forced to SNAPSHOT_VERTICAL (LWM Snapshot). Accepted for call-site compat. */
+  vertical?: ScoreVertical;
   blockId?: string | null;
   stylePrompt?: string | null;
   participantUserId?: string | null;
@@ -81,12 +84,13 @@ export async function runVerticalScore(
     supabase,
     auth,
     workspaceId,
-    vertical,
     blockId,
     stylePrompt,
     participantUserId,
     participantGuestUserId,
   } = input;
+  // Product path: single LWM Snapshot strategy only (former verification).
+  const vertical: ScoreVertical = SNAPSHOT_VERTICAL;
   const shouldUpdateLearnerState = input.updateLearnerState !== false;
 
   let workspace = input.workspaceRow;
@@ -272,3 +276,6 @@ export async function runVerticalScore(
     eval_run_history_error,
   };
 }
+
+/** Preferred name for the single LWM Snapshot generator (alias of runVerticalScore). */
+export const runLwmSnapshot = runVerticalScore;

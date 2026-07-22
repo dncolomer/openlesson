@@ -382,8 +382,6 @@ export function buildOpaqueProofOfWorkSpec(
     performance_report_contract: buildOpaqueVerticalScoreContract("verification"),
     vertical_score_contracts: {
       verification: buildOpaqueVerticalScoreContract("verification"),
-      augmentation: buildOpaqueVerticalScoreContract("augmentation"),
-      optimization: buildOpaqueVerticalScoreContract("optimization"),
     },
     spec_version: "1.5-opaque",
     workspace_id: workspaceId,
@@ -399,16 +397,12 @@ export function buildOpaqueVerticalScoreContract(
   example.workspace_goal = "goal_ref:example";
   return {
     ...base,
-    endpoint_pattern: `(workspace)/${vertical}-score`,
+    endpoint_pattern: `(workspace)/lwm-snapshot`,
     primary_score: {
       type: "integer",
       range: "0-100",
       description:
-        vertical === "verification"
-          ? "Structural trace completeness / phase coverage score (opaque mode)"
-          : vertical === "optimization"
-            ? "Protocol compliance score — goals_achieved and phase coverage (opaque mode)"
-            : "Structural practice-readiness from phase completeness (opaque mode)",
+        "Structural LWM Snapshot score — phase coverage / protocol compliance (opaque mode)",
     },
     workspace_goal: {
       type: "string",
@@ -442,14 +436,10 @@ export function buildOpaqueVerticalScoreInstructions(
     : "";
 
   const verticalHint =
-    vertical === "verification"
-      ? "score — structural trace completeness / phase coverage (0-100) as verification_score"
-      : vertical === "optimization"
-        ? "score — protocol compliance: phase coverage + goals_achieved presence (0-100) as optimization_score"
-        : "score — structural practice readiness from phase completeness (0-100) as augmentation_score";
+    "score — structural LWM Snapshot primary (0-100) as lwm_snapshot_score from phase coverage / protocol compliance";
 
-  const task = `You produce a **structural-only** ${vertical} score for ${scope} in opaque evaluation mode.
-This call scores ONLY the ${vertical} vertical.
+  const task = `You produce a **structural-only** LWM Snapshot score for ${scope} in opaque evaluation mode.
+This call produces the sole LWM Snapshot strategy (primary score + GHC).
 ${goalLine}
 ${OPAQUE_INFERENCE_GUARDRAILS}
 

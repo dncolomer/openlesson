@@ -9,12 +9,9 @@ export const runtime = "nodejs";
 export const maxDuration = 120;
 
 /**
- * TAP post-session auto-results always use the verification score only —
- * TAP is a verification tool.
- *
- * This path runs a full durable verification eval (eval_run_history + LWM +
- * knowledge-config embedding), same as Knowledge UI / Evaluation API —
- * not a display-only scorecard.
+ * TAP post-session always runs the single LWM Snapshot generator
+ * (eval_run_history + LWM + knowledge-config embedding) — same path as
+ * Knowledge UI / ILE end / Evaluation API. Not a display-only scorecard.
  */
 export async function POST(req: NextRequest) {
   try {

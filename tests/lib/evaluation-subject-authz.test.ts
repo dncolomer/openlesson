@@ -86,14 +86,14 @@ describe("canAccessWorkspaceEval", () => {
     ).toEqual({ allowed: false, isOwner: false });
   });
 
-  it("allows non-owner on group workspace (self-eval path)", () => {
+  it("denies non-owner even when isGroup is set (group mode retired)", () => {
     expect(
       canAccessWorkspaceEval({
         callerUserId: "member",
         workspaceOwnerId: "owner",
         isGroup: true,
       }),
-    ).toEqual({ allowed: true, isOwner: false });
+    ).toEqual({ allowed: false, isOwner: false });
   });
 });
 
@@ -463,7 +463,7 @@ describe("Knowledge eval UI + web routes structural", () => {
     };
     mkdirSync(SCRATCH, { recursive: true });
     writeFileSync(join(SCRATCH, "eval-subject-authz.json"), JSON.stringify(evidence, null, 2));
-    expect(evidence.canAccess.memberGroup.allowed).toBe(true);
+    expect(evidence.canAccess.memberGroup.allowed).toBe(false);
     expect(evidence.ownerTargetGuest.subject).toEqual({ guest_user_id: "guest-uuid-1" });
     expect(evidence.memberCannotTarget.subject).toEqual({ user_id: "m" });
   });

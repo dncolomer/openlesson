@@ -272,13 +272,15 @@ describe("WorkspaceView section shell wiring", () => {
     expect(viewSource).not.toContain("addDescriptionBtn");
   });
 
-  it("moves public / group / Paid(AYCL) access controls into Settings", () => {
+  it("moves public / Paid(AYCL) access controls into Settings; group mode removed", () => {
     expect(viewSource).toContain("plan={plan}");
     expect(viewSource).toContain("onPlanUpdate={setPlan}");
     expect(integrationSource).toContain("WorkspaceAccessSettings");
     expect(accessSource).toContain("data-workspace-access-settings");
     expect(accessSource).toContain("makePublic");
-    expect(accessSource).toContain("makeGroupPlan");
+    expect(accessSource).not.toContain("makeGroupPlan");
+    expect(accessSource).not.toContain("is_group");
+    expect(accessSource).not.toContain("/group");
     expect(accessSource).toContain("Enable Paid (AYCL)");
     expect(accessSource).toContain("/api/demo/status");
     // Removed from identity overflow menu

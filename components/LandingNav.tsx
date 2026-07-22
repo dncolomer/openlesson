@@ -1,13 +1,20 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
-import { Menu, X } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { ChevronDown, Menu, X } from "lucide-react";
 import { BrandLogo } from "@/components/BrandLogo";
 import { TrackedCtaLink } from "@/components/TrackedCtaLink";
 
 const CTA = "Create your Workspace";
 const CTA_HREF = "/workspace/new";
+
+const COMMUNITY_LINKS = [
+  { href: "/all-you-can-learn", label: "All-You-Can-Learn" },
+  { href: "/vision", label: "Vision" },
+  { href: "/science", label: "Science" },
+  { href: "/map-of-knowledge", label: "Map of Knowledge" },
+] as const;
 
 function PrimaryCta({ compact = false }: { compact?: boolean }) {
   return (
@@ -29,6 +36,27 @@ type LandingNavProps = {
 
 export function LandingNav({ overlay = false }: LandingNavProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [communityOpen, setCommunityOpen] = useState(false);
+  const [mobileCommunityOpen, setMobileCommunityOpen] = useState(false);
+  const communityRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!communityOpen) return;
+    const onPointerDown = (event: MouseEvent) => {
+      if (!communityRef.current?.contains(event.target as Node)) {
+        setCommunityOpen(false);
+      }
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setCommunityOpen(false);
+    };
+    document.addEventListener("mousedown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [communityOpen]);
 
   return (
     <header
@@ -50,18 +78,47 @@ export function LandingNav({ overlay = false }: LandingNavProps) {
           <Link href="/#products" className="transition hover:text-white">
             Products
           </Link>
-          <Link href="/all-you-can-learn" className="transition hover:text-white">
-            All-You-Can-Learn
-          </Link>
           <Link href="/pricing" className="transition hover:text-white">
             Pricing
           </Link>
-          <Link href="/vision" className="transition hover:text-white">
-            Vision
-          </Link>
-          <Link href="/science" className="transition hover:text-white">
-            Science
-          </Link>
+
+          <div className="relative" ref={communityRef}>
+            <button
+              type="button"
+              className="inline-flex items-center gap-1 transition hover:text-white"
+              aria-expanded={communityOpen}
+              aria-haspopup="menu"
+              aria-controls="community-menu"
+              onClick={() => setCommunityOpen((open) => !open)}
+            >
+              Community
+              <ChevronDown
+                size={14}
+                className={`transition-transform ${communityOpen ? "rotate-180" : ""}`}
+                aria-hidden
+              />
+            </button>
+            {communityOpen && (
+              <div
+                id="community-menu"
+                role="menu"
+                aria-label="Community"
+                className="absolute left-0 top-full z-50 mt-2 min-w-[12.5rem] border border-zinc-800 bg-[#0a0a0a]/95 py-1 shadow-xl shadow-black/40 backdrop-blur-md"
+              >
+                {COMMUNITY_LINKS.map((link) => (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    role="menuitem"
+                    className="block px-3 py-2 text-sm text-zinc-400 transition hover:bg-white/5 hover:text-white"
+                    onClick={() => setCommunityOpen(false)}
+                  >
+                    {link.label}
+                  </Link>
+                ))}
+              </div>
+            )}
+          </div>
         </nav>
 
         <div className="hidden items-center gap-3 md:flex">
@@ -95,24 +152,39 @@ export function LandingNav({ overlay = false }: LandingNavProps) {
               </Link>
             </li>
             <li>
-              <Link href="/all-you-can-learn" className="block rounded-sm px-2 py-2 text-zinc-300" onClick={() => setMobileOpen(false)}>
-                All-You-Can-Learn
-              </Link>
-            </li>
-            <li>
               <Link href="/pricing" className="block rounded-sm px-2 py-2 text-zinc-300" onClick={() => setMobileOpen(false)}>
                 Pricing
               </Link>
             </li>
             <li>
-              <Link href="/vision" className="block rounded-sm px-2 py-2 text-zinc-300" onClick={() => setMobileOpen(false)}>
-                Vision
-              </Link>
-            </li>
-            <li>
-              <Link href="/science" className="block rounded-sm px-2 py-2 text-zinc-300" onClick={() => setMobileOpen(false)}>
-                Science
-              </Link>
+              <button
+                type="button"
+                className="flex w-full items-center justify-between rounded-sm px-2 py-2 text-left text-zinc-300"
+                aria-expanded={mobileCommunityOpen}
+                onClick={() => setMobileCommunityOpen((open) => !open)}
+              >
+                Community
+                <ChevronDown
+                  size={14}
+                  className={`transition-transform ${mobileCommunityOpen ? "rotate-180" : ""}`}
+                  aria-hidden
+                />
+              </button>
+              {mobileCommunityOpen && (
+                <ul className="mb-1 ml-2 space-y-0.5 border-l border-zinc-800 pl-2">
+                  {COMMUNITY_LINKS.map((link) => (
+                    <li key={link.href}>
+                      <Link
+                        href={link.href}
+                        className="block rounded-sm px-2 py-2 text-zinc-400"
+                        onClick={() => setMobileOpen(false)}
+                      >
+                        {link.label}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </li>
             <li>
               <Link href="/login" className="block rounded-sm px-2 py-2 text-zinc-300" onClick={() => setMobileOpen(false)}>

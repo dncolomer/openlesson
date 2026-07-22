@@ -137,7 +137,7 @@ export async function getTapScoreBriefForUser(workspaceId: string, userId: strin
       throw new Error("Not authorized");
     }
   }
-  if (!requireOwnership && !plan.is_public && !plan.is_group && plan.user_id !== userId) {
+  if (!requireOwnership && !plan.is_public && plan.user_id !== userId) {
     const { data: profile } = await supabase
       .from("profiles")
       .select("organization_id")

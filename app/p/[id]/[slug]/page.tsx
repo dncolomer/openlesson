@@ -37,7 +37,7 @@ async function getPlan(workspaceId: string) {
     .from("workspaces")
     .select("*")
     .eq("id", workspaceId)
-    .or("is_public.eq.true,is_group.eq.true")
+    .eq("is_public", true)
     .single();
 
   if (error || !plan) {

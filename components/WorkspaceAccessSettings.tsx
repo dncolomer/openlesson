@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Eye, EyeOff, Users } from "lucide-react";
+import { Eye, EyeOff } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import type { Workspace } from "@/components/WorkspaceView";
 
@@ -13,7 +13,8 @@ interface WorkspaceAccessSettingsProps {
 }
 
 /**
- * Owner access controls: public/private, group plan, Paid (AYCL admin).
+ * Owner access controls: public/private, Paid (AYCL admin).
+ * Public workspaces contribute embeddings, regions, and PoW to the Map of Knowledge.
  * Lives under Settings — not on workspace identity chrome.
  */
 export function WorkspaceAccessSettings({
@@ -25,7 +26,7 @@ export function WorkspaceAccessSettings({
   const { t } = useI18n();
   const [isAdmin, setIsAdmin] = useState(false);
   const [togglingAycl, setTogglingAycl] = useState(false);
-  const [busy, setBusy] = useState<"public" | "group" | null>(null);
+  const [busy, setBusy] = useState<"public" | null>(null);
 
   useEffect(() => {
     if (!isOwner) return;
@@ -36,24 +37,6 @@ export function WorkspaceAccessSettings({
   }, [isOwner]);
 
   if (!isOwner) return null;
-
-  const toggleGroup = async () => {
-    setBusy("group");
-    try {
-      const isGroup = plan.is_group ?? false;
-      const res = await fetch(`/api/workspaces/${workspaceId}/group`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ is_group: !isGroup }),
-      });
-      const data = await res.json();
-      if (data.success) onPlanUpdate({ ...plan, is_group: !isGroup });
-    } catch (err) {
-      console.error("Error toggling group mode:", err);
-    } finally {
-      setBusy(null);
-    }
-  };
 
   const togglePublic = async () => {
     setBusy("public");
@@ -102,27 +85,11 @@ export function WorkspaceAccessSettings({
       <div className="min-w-0">
         <h2 className="text-sm font-medium text-white">{t("planView.sectionAccess")}</h2>
         <p className="mt-1 max-w-2xl text-sm text-neutral-400">
-          Control who can view this workspace and how it is offered.
+          Public workspaces publish PoW, embeddings, blocks, and regions to the Map of Knowledge.
         </p>
       </div>
 
       <div className="mt-5 flex flex-col gap-2">
-        <button
-          type="button"
-          onClick={() => void toggleGroup()}
-          disabled={busy === "group"}
-          className={`flex w-full items-center gap-3 rounded-md border px-3 py-2.5 text-left text-sm transition-all disabled:opacity-50 ${
-            plan.is_group
-              ? "border-white/25 bg-white/15 text-white hover:bg-white/20"
-              : "border-white/10 bg-white/5 text-neutral-300 hover:bg-white/10 hover:text-white"
-          }`}
-        >
-          <Users className="h-4 w-4 shrink-0" />
-          <span className="min-w-0">
-            {plan.is_group ? t("planView.groupPlan") : t("planView.makeGroupPlan")}
-          </span>
-        </button>
-
         <button
           type="button"
           onClick={() => void togglePublic()}

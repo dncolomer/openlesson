@@ -7,7 +7,6 @@ import { createClient, type SupabaseBrowserClient } from "@/lib/supabase/client"
 import { useI18n } from "../lib/i18n";
 import { aestheticImageForId, fetchAestheticPackages } from "@/lib/aesthetics";
 import { BlockDetailCard } from "./BlockDetailCard";
-import { PublicWorkspaceForkCallout } from "./PublicWorkspaceForkCallout";
 
 interface Block {
   id: string;
@@ -32,7 +31,9 @@ interface SessionItemProps {
   onToggleExpand?: () => void;
   allNodes?: Block[];
   isOwner?: boolean;
+  /** @deprecated Group plan mode removed. */
   isGroupPlan?: boolean;
+  /** @deprecated Public fork gate removed. */
   maskProgress?: boolean;
   onRequestFork?: () => void;
   forkLoginHref?: string;
@@ -58,11 +59,8 @@ export function SessionItem({
   isExpanded = false,
   onToggleExpand,
   isOwner = true,
-  isGroupPlan = false,
-  maskProgress = false,
-  onRequestFork,
-  forkLoginHref,
-  isLoggedIn = false,
+  isGroupPlan: _isGroupPlan = false,
+  maskProgress: _maskProgress = false,
   supabase: propSupabase,
   planTopic,
   workspaceId,
@@ -71,6 +69,8 @@ export function SessionItem({
   hideTap = false,
   onCustomStart,
 }: SessionItemProps) {
+  void _isGroupPlan;
+  void _maskProgress;
   const { t } = useI18n();
   const router = useRouter();
   const supabase =
@@ -131,46 +131,30 @@ export function SessionItem({
         return;
       }
 
-      if (isGroupPlan && !isOwner) {
-        const res = await fetch("/api/group-workspace/start-session", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            workspaceId,
-            blockId: node.id,
-            blockTitle: node.title,
-            planningPrompt: editedPlanningPrompt || undefined,
-          }),
-        });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || "Failed to start session");
-        router.push(`/session?id=${data.session.id}`);
-      } else {
-        if (editedPlanningPrompt !== (node.planning_prompt || "")) {
-          await supabase.from("blocks").update({ planning_prompt: editedPlanningPrompt || null }).eq("id", node.id);
-        }
-        await supabase.from("blocks").update({ status: "in_progress" }).eq("id", node.id);
-        const { createSession } = await import("@/lib/storage");
-        const session = await createSession(
-          node.title,
-          undefined,
-          editedPlanningPrompt || undefined,
-          undefined,
-          workspaceId || undefined,
-        );
-        await supabase.from("blocks").update({ session_id: session.id }).eq("id", node.id);
-
-        if (workspaceId) {
-          await supabase.from("block_sessions").insert({
-            block_id: node.id,
-            session_id: session.id,
-            user_id: (await supabase.auth.getUser()).data.user?.id,
-            workspace_id: workspaceId,
-          });
-        }
-
-        router.push(`/session?id=${session.id}`);
+      if (editedPlanningPrompt !== (node.planning_prompt || "")) {
+        await supabase.from("blocks").update({ planning_prompt: editedPlanningPrompt || null }).eq("id", node.id);
       }
+      await supabase.from("blocks").update({ status: "in_progress" }).eq("id", node.id);
+      const { createSession } = await import("@/lib/storage");
+      const session = await createSession(
+        node.title,
+        undefined,
+        editedPlanningPrompt || undefined,
+        undefined,
+        workspaceId || undefined,
+      );
+      await supabase.from("blocks").update({ session_id: session.id }).eq("id", node.id);
+
+      if (workspaceId) {
+        await supabase.from("block_sessions").insert({
+          block_id: node.id,
+          session_id: session.id,
+          user_id: (await supabase.auth.getUser()).data.user?.id,
+          workspace_id: workspaceId,
+        });
+      }
+
+      router.push(`/session?id=${session.id}`);
     } catch (err) {
       console.error("Failed to start session:", err);
       setIsStarting(false);
@@ -208,7 +192,7 @@ export function SessionItem({
 
   const detailButtonClass =
     "w-full rounded-md px-3 py-2 text-xs font-medium transition-colors disabled:opacity-40";
-  const actionButtons = !isLocked && (isOwner || isGroupPlan) && (
+  const actionButtons = !isLocked && isOwner && (
     <div className={`flex gap-1.5 ${isDetail ? "w-[10.5rem] shrink-0 flex-col" : "pt-0.5"}`}>
       {isCompleted ? (
         <button
@@ -304,13 +288,11 @@ export function SessionItem({
   );
 
   if (isDetail) {
-    const progressRing = maskProgress
-      ? "neutral"
-      : isCompleted
-        ? "completed"
-        : isInProgress
-          ? "in_progress"
-          : "neutral";
+    const progressRing = isCompleted
+      ? "completed"
+      : isInProgress
+        ? "in_progress"
+        : "neutral";
     const thumbnailSrc = aestheticImageForId(node.id, aestheticImages ?? undefined);
     const detailPromptSection = isOwner ? (
       <div>
@@ -354,19 +336,9 @@ export function SessionItem({
           evalLabel={t("sessionItem.evalCtaLabel")}
           isStarting={isStarting}
           isLocked={isLocked}
-          showActions={!isLocked && (isOwner || isGroupPlan) && !maskProgress}
+          showActions={!isLocked && isOwner}
           onStartIle={() => void handleStart()}
           onStartEval={hideTap ? undefined : handleStartGhl}
-          forkCallout={
-            maskProgress && onRequestFork && forkLoginHref ? (
-              <PublicWorkspaceForkCallout
-                isLoggedIn={isLoggedIn}
-                loginHref={forkLoginHref}
-                onFork={onRequestFork}
-                variant="dark"
-              />
-            ) : undefined
-          }
           promptSection={detailLayout === "drawer" ? undefined : detailPromptSection}
           highlighted={highlighted}
           highlightOpacity={highlightOpacity}

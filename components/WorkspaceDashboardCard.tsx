@@ -50,7 +50,6 @@ export function WorkspaceDashboardCard({
           badges={
             <>
               {heroBadge(plan.source_type === "youtube" ? "Video" : "Workspace")}
-              {plan.is_group ? heroBadge("Group") : null}
               {isPublic ? heroBadge("Public") : null}
             </>
           }

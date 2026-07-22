@@ -1,11 +1,10 @@
 "use client";
 
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import Link from "next/link";
 import { Navbar } from "@/components/Navbar";
-import { RemixModal } from "@/components/RemixModal";
 import { useI18n } from "../lib/i18n";
 import { WorkspacePerformancePanel } from "@/components/WorkspacePerformancePanel";
 import { SessionList } from "@/components/SessionList";
@@ -88,7 +87,6 @@ export function WorkspaceView({ initialPlan, initialNodes }: WorkspaceViewProps)
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   /** Org admin for this workspace's organization (or platform admin). */
   const [isOrgAdmin, setIsOrgAdmin] = useState(false);
-  const [showRemixModal, setShowRemixModal] = useState(false);
   const [copied, setCopied] = useState(false);
   const [activeSection, setActiveSection] = useState<WorkspaceSectionKey>(
     () => sectionFromUrl ?? "workspace",
@@ -98,8 +96,6 @@ export function WorkspaceView({ initialPlan, initialNodes }: WorkspaceViewProps)
   const [savingNotes, setSavingNotes] = useState(false);
   const [mobileColumn, setMobileColumn] = useState<"plan" | "sessions" | "workspace">("plan");
   const [workspaceImage, setWorkspaceImage] = useState(() => aestheticImageForId(workspaceId));
-  const [authChecked, setAuthChecked] = useState(false);
-  const forkModalAutoOpenedRef = useRef(false);
   
   const supabase = createClient();
 
@@ -108,10 +104,6 @@ export function WorkspaceView({ initialPlan, initialNodes }: WorkspaceViewProps)
     isOwner,
     isOrgAdmin,
   });
-  const needsFork = authChecked && !!plan?.is_public && !plan?.is_group && !isOwner;
-  const publicLoginHref = plan
-    ? `/login?redirect=${encodeURIComponent(`/p/${workspaceId}/${planShareSlug(plan)}`)}`
-    : `/login?redirect=${encodeURIComponent(`/workspace/${workspaceId}`)}`;
 
   const refreshNodes = () => {
     setRefreshKey(k => k + 1);
@@ -169,7 +161,7 @@ export function WorkspaceView({ initialPlan, initialNodes }: WorkspaceViewProps)
         return;
       }
 
-      if (!planData.is_public && !planData.is_group) {
+      if (!planData.is_public) {
         if (!user) {
           router.push("/login?redirect=/workspace/" + workspaceId);
           return;
@@ -179,12 +171,6 @@ export function WorkspaceView({ initialPlan, initialNodes }: WorkspaceViewProps)
           setLoading(false);
           return;
         }
-      }
-
-      // Group plans require authentication
-      if (planData.is_group && !planData.is_public && !user) {
-        router.push("/login?redirect=/workspace/" + workspaceId);
-        return;
       }
 
       // Org admin of the workspace's organization (or platform admin) may open Knowledge/Settings.
@@ -247,80 +233,13 @@ export function WorkspaceView({ initialPlan, initialNodes }: WorkspaceViewProps)
         }
 
         setNodes(finalNodes);
-
-        // For group plan participants (non-owner): overlay their own
-        // session statuses from block_sessions
-        if (planData.is_group && user && planData.user_id !== user.id) {
-          const { data: pnsLinks } = await supabase
-            .from("block_sessions")
-            .select("block_id, session_id")
-            .eq("workspace_id", workspaceId)
-            .eq("user_id", user.id);
-
-          if (pnsLinks && pnsLinks.length > 0) {
-            const pnsSessionIds = pnsLinks.map(l => l.session_id);
-            const { data: pnsSessions } = await supabase
-              .from("sessions")
-              .select("id, status")
-              .in("id", pnsSessionIds);
-
-            if (pnsSessions) {
-              // Map block_id -> best session status
-              const nodeStatusMap = new Map<string, string>();
-              const sessionStatusMap = new Map(pnsSessions.map(s => [s.id, s.status]));
-              for (const link of pnsLinks) {
-                const sStatus = sessionStatusMap.get(link.session_id);
-                if (!sStatus) continue;
-                const existing = nodeStatusMap.get(link.block_id);
-                // Completed > in_progress/active > not_started
-                if (sStatus === "completed" || sStatus === "ended_by_tutor") {
-                  nodeStatusMap.set(link.block_id, "completed");
-                } else if ((sStatus === "active" || sStatus === "paused") && existing !== "completed") {
-                  nodeStatusMap.set(link.block_id, "in_progress");
-                }
-              }
-
-              // Also build a map of node -> active session for resuming
-              const nodeActiveSessionMap = new Map<string, string>();
-              for (const link of pnsLinks) {
-                const sStatus = sessionStatusMap.get(link.session_id);
-                if (sStatus === "active" || sStatus === "paused") {
-                  nodeActiveSessionMap.set(link.block_id, link.session_id);
-                }
-              }
-
-              setNodes(prev => prev.map(n => {
-                const overrideStatus = nodeStatusMap.get(n.id);
-                const activeSessionId = nodeActiveSessionMap.get(n.id);
-                if (overrideStatus || activeSessionId) {
-                  return {
-                    ...n,
-                    status: overrideStatus || n.status,
-                    session_id: activeSessionId || n.session_id,
-                  };
-                }
-                return n;
-              }));
-            }
-          }
-        }
       }
 
       setLoading(false);
-      setAuthChecked(true);
     }
 
     loadPlan();
   }, [workspaceId, supabase, router, refreshKey]);
-
-  useEffect(() => {
-    if (!needsFork) return;
-    setMobileColumn("workspace");
-    if (!forkModalAutoOpenedRef.current && currentUserId) {
-      forkModalAutoOpenedRef.current = true;
-      setShowRemixModal(true);
-    }
-  }, [needsFork, currentUserId]);
 
   useEffect(() => {
     if (plan?.notes !== undefined) {
@@ -458,7 +377,6 @@ export function WorkspaceView({ initialPlan, initialNodes }: WorkspaceViewProps)
               workspaceId={workspaceId}
               isOwner={isOwner}
               currentUserId={currentUserId}
-              isGroup={plan.is_group === true}
               initialSubview={
                 knowledgeSubviewFromUrl === "insights" ||
                 knowledgeSubviewFromUrl === "score" ||
@@ -507,15 +425,9 @@ export function WorkspaceView({ initialPlan, initialNodes }: WorkspaceViewProps)
             <div className="space-y-2">
               <h1 className="text-lg font-semibold leading-snug text-white">{plan.title || plan.root_topic}</h1>
               <div className="flex flex-wrap items-center gap-1.5 text-xs">
-                {plan.is_group && (
-                  <span className="rounded border border-white/15 bg-white/10 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wider text-neutral-300">
-                    {t("planView.group")}
-                  </span>
-                )}
-                {plan.is_public && (plan.remix_count ?? 0) > 0 && (
-                  <span className="text-neutral-500">
-                    {plan.remix_count}{" "}
-                    {(plan.remix_count || 0) === 1 ? t("planView.fork") : t("planView.forks", { count: plan.remix_count || 0 })}
+                {plan.is_public && (
+                  <span className="rounded border border-green-500/25 bg-green-500/10 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wider text-green-400/90">
+                    {t("planView.public")}
                   </span>
                 )}
                 {plan.original_workspace_id && <span className="font-medium text-neutral-400">{t("planView.remixed")}</span>}
@@ -580,7 +492,7 @@ export function WorkspaceView({ initialPlan, initialNodes }: WorkspaceViewProps)
                 </div>
               </div>
 
-              {(plan.is_public || plan.is_group) && (
+              {plan.is_public && (
                 <div className="space-y-1.5">
                   <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-neutral-600">{t("planView.sectionShare")}</p>
                   <button
@@ -589,6 +501,12 @@ export function WorkspaceView({ initialPlan, initialNodes }: WorkspaceViewProps)
                   >
                     {copied ? t("planView.copied") : t("planView.share")}
                   </button>
+                  <Link
+                    href="/map-of-knowledge"
+                    className="block w-full rounded-md border border-cyan-500/20 bg-cyan-950/20 px-3 py-2 text-center text-xs text-cyan-200/90 transition-all hover:bg-cyan-950/40"
+                  >
+                    Map of Knowledge
+                  </Link>
                 </div>
               )}
 
@@ -604,55 +522,6 @@ export function WorkspaceView({ initialPlan, initialNodes }: WorkspaceViewProps)
                   </button>
                 </div>
               )}
-
-              {(isOwner && plan.is_public) || (currentUserId && !isOwner && !plan.is_group) || (!currentUserId && !plan.is_group) ? (
-                <div className="space-y-1.5">
-                  <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-neutral-600">{t("planView.sectionCommunity")}</p>
-                  {isOwner && plan.is_public ? (
-                    <button
-                      onClick={() => setShowRemixModal(true)}
-                      className="w-full rounded-md border border-neutral-800 px-3 py-2 text-xs text-neutral-500 transition-colors hover:bg-neutral-900 hover:text-neutral-300"
-                    >
-                      {t("planView.forkRemix")}
-                    </button>
-                  ) : currentUserId ? (
-                    <button
-                      onClick={() => setShowRemixModal(true)}
-                      className="w-full rounded-md border border-white/15 bg-white/10 px-3 py-2 text-xs text-neutral-200 transition-all hover:bg-white/15"
-                    >
-                      {t("planView.forkRemix")}
-                    </button>
-                  ) : (
-                    <Link
-                      href="/pricing"
-                      className="block w-full rounded-md border border-white/15 bg-white/10 px-3 py-2 text-center text-xs text-neutral-200 transition-all hover:bg-white/15"
-                    >
-                      {t("planView.forkRemix")}
-                    </Link>
-                  )}
-                </div>
-              ) : null}
-
-              {currentUserId && !isOwner && plan.is_group && (
-                <div className="space-y-1.5">
-                  <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-neutral-600">{t("planView.sectionAccess")}</p>
-                  <span className="block rounded-md border border-white/15 bg-white/10 px-3 py-2 text-center text-xs text-neutral-300">
-                    {t("planView.groupParticipant")}
-                  </span>
-                </div>
-              )}
-
-              {!currentUserId && plan.is_group && (
-                <div className="space-y-1.5">
-                  <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-neutral-600">{t("planView.sectionAccess")}</p>
-                  <Link
-                    href={`/login?redirect=/p/${workspaceId}/${planShareSlug(plan)}`}
-                    className="block w-full rounded-md border border-white/15 bg-white/10 px-3 py-2 text-center text-xs text-neutral-200 transition-all hover:bg-white/15"
-                  >
-                    {t("planView.signInToJoin")}
-                  </Link>
-                </div>
-              )}
             </div>
           </div>
         </aside>
@@ -664,10 +533,6 @@ export function WorkspaceView({ initialPlan, initialNodes }: WorkspaceViewProps)
             onDelete={() => {}}
             onFork={() => {}}
             isOwner={isOwner}
-            isGroupPlan={plan.is_group === true}
-            maskProgress={needsFork}
-            onRequestFork={() => setShowRemixModal(true)}
-            forkLoginHref={publicLoginHref}
             isLoggedIn={!!currentUserId}
             supabase={supabase}
             planTopic={plan.root_topic}
@@ -747,16 +612,6 @@ export function WorkspaceView({ initialPlan, initialNodes }: WorkspaceViewProps)
       </div>
       )}
 
-      {showRemixModal && (
-        <RemixModal
-          plan={{ id: plan.id, root_topic: plan.root_topic, remix_count: plan.remix_count || 0 }}
-          onClose={() => setShowRemixModal(false)}
-          onComplete={(newPlanId) => {
-            setShowRemixModal(false);
-            router.push(`/workspace/${newPlanId}`);
-          }}
-        />
-      )}
     </div>
   );
 }

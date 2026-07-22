@@ -1,0 +1,516 @@
+"use client";
+
+import { useEffect, useRef, useState } from "react";
+import * as THREE from "three";
+import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
+import { mapDotColor, type MapRegion, type MapUserLocation } from "@/lib/map-of-knowledge";
+
+export type MapOfKnowledge3DProps = {
+  userLocations: MapUserLocation[];
+  regions: MapRegion[];
+  className?: string;
+  /** When true, stretch to fill parent flex area. */
+  fill?: boolean;
+};
+
+type HoverInfo = {
+  title: string;
+  subtitle: string;
+  x: number;
+  y: number;
+};
+
+const ILE_COLOR = 0xfbbf24;
+const TAP_COLOR = 0x94a3b8;
+const GRID_COLOR = 0x3f3f46;
+const AXIS_COLOR = 0x52525b;
+
+function boundsScale(points: Array<{ x: number; y: number; z: number }>): number {
+  if (points.length === 0) return 1;
+  let max = 0.01;
+  for (const p of points) {
+    max = Math.max(max, Math.abs(p.x), Math.abs(p.y), Math.abs(p.z));
+  }
+  // Target ~5 unit radius for comfortable orbit
+  return 5 / max;
+}
+
+/** Canvas texture sprite with short user-id preview next to a map dot. */
+function makeIdLabelSprite(preview: string, isIle: boolean): THREE.Sprite {
+  const text = (preview || "—").slice(0, 8);
+  const canvas = document.createElement("canvas");
+  canvas.width = 128;
+  canvas.height = 48;
+  const ctx = canvas.getContext("2d");
+  if (ctx) {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.font = "600 22px ui-monospace, SFMono-Regular, Menlo, monospace";
+    ctx.textAlign = "left";
+    ctx.textBaseline = "middle";
+    // soft plate for readability
+    const metrics = ctx.measureText(text);
+    const padX = 10;
+    const w = Math.min(canvas.width - 4, metrics.width + padX * 2);
+    const h = 30;
+    const x0 = 2;
+    const y0 = (canvas.height - h) / 2;
+    ctx.fillStyle = "rgba(0,0,0,0.55)";
+    ctx.fillRect(x0, y0, w, h);
+    ctx.strokeStyle = isIle ? "rgba(251,191,36,0.45)" : "rgba(148,163,184,0.35)";
+    ctx.lineWidth = 1;
+    ctx.strokeRect(x0 + 0.5, y0 + 0.5, w - 1, h - 1);
+    ctx.fillStyle = isIle ? "#fde68a" : "#e4e4e7";
+    ctx.fillText(text, x0 + padX, canvas.height / 2 + 1);
+  }
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.needsUpdate = true;
+  const material = new THREE.SpriteMaterial({
+    map: texture,
+    transparent: true,
+    depthTest: false,
+    depthWrite: false,
+  });
+  const sprite = new THREE.Sprite(material);
+  sprite.scale.set(0.95, 0.36, 1);
+  sprite.position.set(0.28, 0.18, 0);
+  sprite.userData = { isLabel: true };
+  return sprite;
+}
+
+/**
+ * Interactive Three.js embedding-space explorer.
+ * Orbit: left-drag rotate · right-drag / two-finger pan · scroll zoom · double-click reset.
+ */
+export function MapOfKnowledge3D({
+  userLocations,
+  regions,
+  className = "",
+  fill = false,
+}: MapOfKnowledge3DProps) {
+  const mountRef = useRef<HTMLDivElement>(null);
+  const [hover, setHover] = useState<HoverInfo | null>(null);
+  const [ready, setReady] = useState(false);
+  const controlsRef = useRef<OrbitControls | null>(null);
+  const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
+  const defaultCamRef = useRef({ position: new THREE.Vector3(8, 6, 10), target: new THREE.Vector3(0, 0, 0) });
+
+  // Scene setup once
+  useEffect(() => {
+    const mount = mountRef.current;
+    if (!mount) return;
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x09090b);
+    scene.fog = new THREE.Fog(0x09090b, 28, 70);
+
+    const width = Math.max(1, mount.clientWidth);
+    const height = Math.max(1, mount.clientHeight);
+
+    const camera = new THREE.PerspectiveCamera(50, width / height, 0.1, 200);
+    camera.position.set(8, 6, 10);
+    cameraRef.current = camera;
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    renderer.setSize(width, height);
+    renderer.domElement.style.display = "block";
+    renderer.domElement.style.width = "100%";
+    renderer.domElement.style.height = "100%";
+    renderer.domElement.style.touchAction = "none";
+    renderer.domElement.setAttribute("data-map-3d-canvas", "true");
+    renderer.domElement.setAttribute("aria-label", "3D Map of Knowledge embedding space");
+    mount.appendChild(renderer.domElement);
+
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.08;
+    controls.minDistance = 1.5;
+    controls.maxDistance = 40;
+    controls.enablePan = true;
+    controls.screenSpacePanning = true;
+    controls.target.set(0, 0, 0);
+    controls.update();
+    controlsRef.current = controls;
+
+    // Lights
+    scene.add(new THREE.AmbientLight(0xffffff, 0.55));
+    const key = new THREE.DirectionalLight(0xcffafe, 0.85);
+    key.position.set(6, 10, 4);
+    scene.add(key);
+    const rim = new THREE.DirectionalLight(0xa78bfa, 0.35);
+    rim.position.set(-5, 3, -6);
+    scene.add(rim);
+
+    // Grid + axes
+    const grid = new THREE.GridHelper(20, 20, GRID_COLOR, GRID_COLOR);
+    (grid.material as THREE.Material).transparent = true;
+    (grid.material as THREE.Material).opacity = 0.35;
+    scene.add(grid);
+
+    const axes = new THREE.AxesHelper(3.5);
+    // Dim axes slightly
+    const axesMat = axes.material as THREE.LineBasicMaterial | THREE.LineBasicMaterial[];
+    if (Array.isArray(axesMat)) {
+      axesMat.forEach((m) => {
+        m.transparent = true;
+        m.opacity = 0.7;
+      });
+    } else {
+      axesMat.transparent = true;
+      axesMat.opacity = 0.7;
+    }
+    scene.add(axes);
+
+    // Soft floor disc
+    const floorGeo = new THREE.CircleGeometry(12, 64);
+    const floorMat = new THREE.MeshBasicMaterial({
+      color: 0x0e7490,
+      transparent: true,
+      opacity: 0.04,
+      side: THREE.DoubleSide,
+    });
+    const floor = new THREE.Mesh(floorGeo, floorMat);
+    floor.rotation.x = -Math.PI / 2;
+    floor.position.y = -0.01;
+    scene.add(floor);
+
+    // Content group rebuilt when data changes
+    const content = new THREE.Group();
+    content.name = "map-content";
+    scene.add(content);
+
+    // Raycast pickables
+    const pickables: THREE.Object3D[] = [];
+    const raycaster = new THREE.Raycaster();
+    const pointer = new THREE.Vector2();
+
+    type UserData =
+      | { kind: "user"; title: string; subtitle: string }
+      | { kind: "region"; title: string; subtitle: string };
+
+    const state = {
+      content,
+      pickables,
+      disposed: false,
+    };
+
+    // Expose rebuild via custom event on mount element
+    const rebuild = (locations: MapUserLocation[], regs: MapRegion[]) => {
+      while (content.children.length) {
+        const child = content.children[0];
+        content.remove(child);
+        child.traverse((obj) => {
+          if (obj instanceof THREE.Mesh || obj instanceof THREE.Line || obj instanceof THREE.Points) {
+            obj.geometry?.dispose?.();
+            const mat = obj.material;
+            if (Array.isArray(mat)) mat.forEach((m) => m.dispose());
+            else mat?.dispose?.();
+          }
+        });
+      }
+      pickables.length = 0;
+
+      const allPts = [
+        ...locations.map((p) => ({ x: p.x, y: p.y, z: p.z })),
+        ...regs.map((r) => ({ x: r.x, y: r.y, z: r.z })),
+      ];
+      const s = boundsScale(allPts);
+
+      // Regions first (behind dots visually)
+      regs.forEach((region, i) => {
+        const hue = (i * 47) % 360;
+        const color = new THREE.Color(`hsl(${hue}, 70%, 58%)`);
+        const radius = Math.max(0.35, (region.radius || 0.35) * s * 2.2);
+
+        const sphereGeo = new THREE.SphereGeometry(radius, 24, 18);
+        const fillMat = new THREE.MeshStandardMaterial({
+          color,
+          transparent: true,
+          opacity: 0.12,
+          roughness: 0.6,
+          metalness: 0.05,
+          depthWrite: false,
+        });
+        const fill = new THREE.Mesh(sphereGeo, fillMat);
+        fill.position.set(region.x * s, region.y * s, region.z * s);
+
+        const wireGeo = new THREE.SphereGeometry(radius, 16, 12);
+        const wireMat = new THREE.MeshBasicMaterial({
+          color,
+          wireframe: true,
+          transparent: true,
+          opacity: 0.35,
+        });
+        const wire = new THREE.Mesh(wireGeo, wireMat);
+        wire.position.copy(fill.position);
+
+        const ud: UserData = {
+          kind: "region",
+          title: region.name,
+          subtitle: `${region.workspace_title} · region`,
+        };
+        fill.userData = ud;
+        wire.userData = ud;
+        content.add(fill);
+        content.add(wire);
+        pickables.push(fill);
+      });
+
+      // User dots + short id preview labels
+      locations.forEach((p) => {
+        const isIle = p.kind === "ile";
+        const colorHex = isIle ? ILE_COLOR : TAP_COLOR;
+        const radius = isIle ? 0.14 : 0.11;
+        const geo = new THREE.SphereGeometry(radius, 20, 16);
+        const mat = new THREE.MeshStandardMaterial({
+          color: colorHex,
+          emissive: colorHex,
+          emissiveIntensity: isIle ? 0.55 : 0.2,
+          roughness: 0.35,
+          metalness: isIle ? 0.45 : 0.15,
+        });
+        const mesh = new THREE.Mesh(geo, mat);
+        mesh.position.set(p.x * s, p.y * s, p.z * s);
+        const preview =
+          p.id_preview ||
+          p.subject_label.replace(/^(user|guest|id):/, "").slice(0, 6) ||
+          "—";
+        mesh.userData = {
+          kind: "user",
+          title: preview,
+          subtitle: `${p.subject_label} · ${p.workspace_title} · ${p.kind.toUpperCase()}`,
+        } satisfies UserData;
+
+        // Soft glow shell for ILE
+        if (isIle) {
+          const glowGeo = new THREE.SphereGeometry(radius * 1.7, 16, 12);
+          const glowMat = new THREE.MeshBasicMaterial({
+            color: ILE_COLOR,
+            transparent: true,
+            opacity: 0.18,
+            depthWrite: false,
+          });
+          const glow = new THREE.Mesh(glowGeo, glowMat);
+          mesh.add(glow);
+        }
+
+        const label = makeIdLabelSprite(preview, isIle);
+        mesh.add(label);
+
+        content.add(mesh);
+        pickables.push(mesh);
+      });
+
+      // Empty state marker
+      if (locations.length === 0 && regs.length === 0) {
+        const emptyGeo = new THREE.SphereGeometry(0.25, 16, 12);
+        const emptyMat = new THREE.MeshBasicMaterial({
+          color: AXIS_COLOR,
+          wireframe: true,
+        });
+        content.add(new THREE.Mesh(emptyGeo, emptyMat));
+      }
+    };
+
+    // Initial build
+    rebuild(userLocations, regions);
+    setReady(true);
+
+    // Store rebuild on mount for data updates without remounting whole WebGL context
+    (mount as HTMLDivElement & { __rebuildMap3d?: typeof rebuild }).__rebuildMap3d = rebuild;
+
+    const onPointerMove = (event: PointerEvent) => {
+      const rect = renderer.domElement.getBoundingClientRect();
+      pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+      pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+      raycaster.setFromCamera(pointer, camera);
+      const hits = raycaster.intersectObjects(pickables, false);
+      if (hits.length > 0) {
+        const ud = hits[0].object.userData as UserData;
+        if (ud?.title) {
+          setHover({
+            title: ud.title,
+            subtitle: ud.subtitle,
+            x: event.clientX - rect.left,
+            y: event.clientY - rect.top,
+          });
+          renderer.domElement.style.cursor = "pointer";
+          return;
+        }
+      }
+      setHover(null);
+      renderer.domElement.style.cursor = "grab";
+    };
+
+    const onPointerLeave = () => {
+      setHover(null);
+      renderer.domElement.style.cursor = "grab";
+    };
+
+    const onDblClick = () => {
+      const cam = cameraRef.current;
+      const ctrl = controlsRef.current;
+      if (!cam || !ctrl) return;
+      cam.position.copy(defaultCamRef.current.position);
+      ctrl.target.copy(defaultCamRef.current.target);
+      ctrl.update();
+    };
+
+    renderer.domElement.addEventListener("pointermove", onPointerMove);
+    renderer.domElement.addEventListener("pointerleave", onPointerLeave);
+    renderer.domElement.addEventListener("dblclick", onDblClick);
+
+    let frame = 0;
+    const animate = () => {
+      if (state.disposed) return;
+      frame = requestAnimationFrame(animate);
+      controls.update();
+      renderer.render(scene, camera);
+    };
+    animate();
+
+    const onResize = () => {
+      if (!mount || state.disposed) return;
+      const w = Math.max(1, mount.clientWidth);
+      const h = Math.max(1, mount.clientHeight);
+      camera.aspect = w / h;
+      camera.updateProjectionMatrix();
+      renderer.setSize(w, h);
+    };
+    const ro = new ResizeObserver(onResize);
+    ro.observe(mount);
+    window.addEventListener("resize", onResize);
+
+    return () => {
+      state.disposed = true;
+      cancelAnimationFrame(frame);
+      ro.disconnect();
+      window.removeEventListener("resize", onResize);
+      renderer.domElement.removeEventListener("pointermove", onPointerMove);
+      renderer.domElement.removeEventListener("pointerleave", onPointerLeave);
+      renderer.domElement.removeEventListener("dblclick", onDblClick);
+      controls.dispose();
+      renderer.dispose();
+      scene.traverse((obj) => {
+        if (obj instanceof THREE.Mesh || obj instanceof THREE.Line || obj instanceof THREE.Points) {
+          obj.geometry?.dispose?.();
+          const mat = obj.material;
+          if (Array.isArray(mat)) mat.forEach((m) => m.dispose());
+          else mat?.dispose?.();
+        }
+      });
+      if (renderer.domElement.parentNode === mount) {
+        mount.removeChild(renderer.domElement);
+      }
+      delete (mount as HTMLDivElement & { __rebuildMap3d?: typeof rebuild }).__rebuildMap3d;
+      controlsRef.current = null;
+      cameraRef.current = null;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount once; data via rebuild
+  }, []);
+
+  // Rebuild content when data / region filters change
+  useEffect(() => {
+    const mount = mountRef.current as
+      | (HTMLDivElement & {
+          __rebuildMap3d?: (l: MapUserLocation[], r: MapRegion[]) => void;
+        })
+      | null;
+    mount?.__rebuildMap3d?.(userLocations, regions);
+  }, [userLocations, regions]);
+
+  const resetView = () => {
+    const cam = cameraRef.current;
+    const ctrl = controlsRef.current;
+    if (!cam || !ctrl) return;
+    cam.position.set(8, 6, 10);
+    ctrl.target.set(0, 0, 0);
+    ctrl.update();
+  };
+
+  return (
+    <div
+      className={`relative bg-zinc-950 ${fill ? "min-h-0 flex-1" : "h-[min(58vh,480px)]"} ${className}`}
+      data-map-3d-root
+    >
+      <div ref={mountRef} className="absolute inset-0" />
+
+      {!ready && (
+        <div className="pointer-events-none absolute inset-0 flex items-center justify-center text-sm text-zinc-500">
+          Initializing 3D embedding space…
+        </div>
+      )}
+
+      {/* Control legend */}
+      <div
+        className="pointer-events-none absolute bottom-3 left-3 z-10 max-w-[16rem] border border-zinc-800/90 bg-black/70 px-3 py-2.5 backdrop-blur-sm"
+        data-map-3d-legend
+      >
+        <p className="font-mono text-[9px] uppercase tracking-[1.5px] text-zinc-500">Controls</p>
+        <ul className="mt-1.5 space-y-1 text-[11px] leading-snug text-zinc-400">
+          <li>
+            <span className="text-zinc-200">Drag</span> — orbit / rotate
+          </li>
+          <li>
+            <span className="text-zinc-200">Right-drag</span> or{" "}
+            <span className="text-zinc-200">two-finger</span> — pan
+          </li>
+          <li>
+            <span className="text-zinc-200">Scroll</span> / pinch — zoom
+          </li>
+          <li>
+            <span className="text-zinc-200">Double-click</span> — reset view
+          </li>
+          <li>
+            <span className="text-zinc-200">Hover</span> — inspect point / region
+          </li>
+        </ul>
+        <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 border-t border-zinc-800/80 pt-2 text-[10px] text-zinc-500">
+          <span className="inline-flex items-center gap-1">
+            <span className="h-2 w-2 rounded-full bg-amber-400" /> ILE
+          </span>
+          <span className="inline-flex items-center gap-1">
+            <span className="h-2 w-2 rounded-full bg-slate-400" /> TAP
+          </span>
+          <span className="inline-flex items-center gap-1">
+            <span className="h-2 w-2 rounded-full border border-dashed border-pink-400/70" /> Region
+          </span>
+        </div>
+      </div>
+
+      <button
+        type="button"
+        onClick={resetView}
+        className="absolute right-3 top-3 z-10 rounded-sm border border-zinc-700 bg-black/60 px-2.5 py-1.5 font-mono text-[10px] tracking-wide text-zinc-300 backdrop-blur-sm transition hover:border-zinc-500 hover:text-white"
+      >
+        Reset view
+      </button>
+
+      {hover && (
+        <div
+          className="pointer-events-none absolute z-20 max-w-[14rem] border border-zinc-700 bg-black/90 px-2.5 py-1.5 text-xs shadow-lg"
+          style={{
+            left: Math.min(hover.x + 12, (mountRef.current?.clientWidth || 300) - 160),
+            top: Math.max(8, hover.y - 40),
+          }}
+        >
+          <p className="font-medium text-white">{hover.title}</p>
+          <p className="mt-0.5 text-[10px] text-zinc-400">{hover.subtitle}</p>
+        </div>
+      )}
+
+      {userLocations.length === 0 && regions.length === 0 && ready && (
+        <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+          <p className="max-w-xs text-center font-mono text-xs text-zinc-600">
+            Awaiting public embeddings — make a workspace public to appear
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** Exported for tests / legend color parity with 2D map. */
+export function map3dDotCssColor(kind: string): string {
+  return mapDotColor(kind === "ile" ? "ile" : "tap");
+}

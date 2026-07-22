@@ -22,6 +22,8 @@ export function Navbar({ breadcrumbs = [], showNav = true }: NavbarProps) {
   const router = useRouter();
   const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [communityOpen, setCommunityOpen] = useState(false);
+  const [mobileCommunityOpen, setMobileCommunityOpen] = useState(false);
   const { t } = useI18n();
 
   const supabase = createClient();
@@ -47,7 +49,7 @@ export function Navbar({ breadcrumbs = [], showNav = true }: NavbarProps) {
     router.refresh();
   };
 
-  // Logged-in: product nav only (Upgrade + Dashboard). Vision/Science stay for guests.
+  // Logged-in: product nav only (Upgrade + Dashboard). Community (Vision/Science/Map) for guests.
   const navLinks =
     isLoggedIn === true
       ? [
@@ -56,10 +58,17 @@ export function Navbar({ breadcrumbs = [], showNav = true }: NavbarProps) {
         ]
       : [
           { href: "/pricing", label: "Upgrade" },
-          { href: "/vision", label: "Vision" },
-          { href: "/science", label: "Science" },
           { href: "/dashboard", label: t("nav.dashboard") },
         ];
+
+  const communityLinks = [
+    { href: "/all-you-can-learn", label: "All-You-Can-Learn" },
+    { href: "/vision", label: "Vision" },
+    { href: "/science", label: "Science" },
+    { href: "/map-of-knowledge", label: "Map of Knowledge" },
+  ];
+
+  const showCommunity = isLoggedIn !== true;
 
   const solutionLinks = [
     { href: "/", label: t('nav.forIndividuals') },
@@ -113,6 +122,52 @@ export function Navbar({ breadcrumbs = [], showNav = true }: NavbarProps) {
                 {link.label}
               </Link>
             ))}
+
+            {showCommunity && (
+              <div
+                className="relative"
+                onMouseEnter={() => setCommunityOpen(true)}
+                onMouseLeave={() => setCommunityOpen(false)}
+              >
+                <button
+                  type="button"
+                  className="inline-flex items-center gap-1 text-xs sm:text-sm text-neutral-500 transition-colors hover:text-white"
+                  aria-expanded={communityOpen}
+                  aria-haspopup="menu"
+                  onClick={() => setCommunityOpen((open) => !open)}
+                >
+                  Community
+                  <svg
+                    className={`h-3.5 w-3.5 transition-transform ${communityOpen ? "rotate-180" : ""}`}
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    aria-hidden
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+                {communityOpen && (
+                  <div
+                    role="menu"
+                    aria-label="Community"
+                    className="absolute right-0 top-full z-50 mt-1 min-w-[11.5rem] border border-neutral-800 bg-[#0a0a0a]/95 py-1 shadow-xl shadow-black/40 backdrop-blur-md"
+                  >
+                    {communityLinks.map((link) => (
+                      <Link
+                        key={link.href}
+                        href={link.href}
+                        role="menuitem"
+                        className="block px-3 py-2 text-xs text-neutral-400 transition-colors hover:bg-white/5 hover:text-white sm:text-sm"
+                        onClick={() => setCommunityOpen(false)}
+                      >
+                        {link.label}
+                      </Link>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
 
             <LanguageSwitcher />
             
@@ -182,6 +237,42 @@ export function Navbar({ breadcrumbs = [], showNav = true }: NavbarProps) {
                 {link.label}
               </Link>
             ))}
+
+            {showCommunity && (
+              <div>
+                <button
+                  type="button"
+                  className="flex w-full items-center justify-between text-left text-sm text-neutral-400 transition-colors hover:text-white"
+                  aria-expanded={mobileCommunityOpen}
+                  onClick={() => setMobileCommunityOpen((open) => !open)}
+                >
+                  Community
+                  <svg
+                    className={`h-4 w-4 transition-transform ${mobileCommunityOpen ? "rotate-180" : ""}`}
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    aria-hidden
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+                {mobileCommunityOpen && (
+                  <div className="mt-2 flex flex-col gap-2 border-l border-neutral-800 pl-3">
+                    {communityLinks.map((link) => (
+                      <Link
+                        key={link.href}
+                        href={link.href}
+                        onClick={() => setMobileMenuOpen(false)}
+                        className="text-sm text-neutral-500 transition-colors hover:text-white"
+                      >
+                        {link.label}
+                      </Link>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
             
             {isLoggedIn === true ? (
               <button

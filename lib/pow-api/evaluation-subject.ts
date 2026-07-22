@@ -15,18 +15,20 @@ export function canInspectOtherSubjects(options: {
 /**
  * Cookie/web access to Knowledge eval APIs for a workspace.
  * - Owner: full access (self + others)
- * - Group workspace (any authenticated member): self-only
  * - Private personal workspace: owner only
+ *
+ * Group-mode participant access is retired (`isGroup` ignored).
  */
 export function canAccessWorkspaceEval(options: {
   callerUserId: string;
   workspaceOwnerId: string | null | undefined;
+  /** @deprecated Ignored — group mode no longer admits non-owners. */
   isGroup?: boolean | null;
 }): { allowed: boolean; isOwner: boolean } {
   const ownerId = options.workspaceOwnerId?.trim() || null;
   const isOwner = Boolean(ownerId && ownerId === options.callerUserId);
   if (isOwner) return { allowed: true, isOwner: true };
-  if (options.isGroup) return { allowed: true, isOwner: false };
+  void options.isGroup;
   return { allowed: false, isOwner: false };
 }
 

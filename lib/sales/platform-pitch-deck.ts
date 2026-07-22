@@ -28,7 +28,7 @@ function sectionTitle(
 
 /**
  * Platform pitch = cover + TOC, then section title before each block.
- * Sections: Founder · What is Uncertain Systems? · How do we ensure high quality data? · Data Privacy and Confidential Learning · Our products
+ * Sections: Founder · What is Uncertain Systems? · What is Proof of Work Data? · Data Privacy and Confidential Learning · Our products
  */
 const PLATFORM_OPEN: SalesSlide[] = [
   sectionTitle("Uncertain Systems", {
@@ -42,7 +42,7 @@ const PLATFORM_OPEN: SalesSlide[] = [
     bullets: [
       "Founder",
       "What is Uncertain Systems?",
-      "How do we ensure high quality data?",
+      "What is Proof of Work Data?",
       "Data Privacy and Confidential Learning",
       "Our products",
     ],
@@ -138,12 +138,12 @@ const PLATFORM_THESIS: SalesSlide[] = [
 ];
 
 const PLATFORM_METHOD: SalesSlide[] = [
-  sectionTitle("How do we ensure high quality data?", {
+  sectionTitle("What is Proof of Work Data?", {
     backgroundImage: PITCH_ASSETS.aesthetics.products,
   }),
   {
     layout: "media",
-    kicker: "How do we ensure high quality data?",
+    kicker: "What is Proof of Work Data?",
     title: "The Think Aloud Protocol.",
     subtitle:
       "A structured protocol to externalize and capture genuine thinking while staying practical with today's AI and LLMs. Example: “Does Person X know Algebra?”",
@@ -174,7 +174,7 @@ const PLATFORM_METHOD: SalesSlide[] = [
   },
   {
     layout: "media",
-    kicker: "How do we ensure high quality data?",
+    kicker: "What is Proof of Work Data?",
     title: "Real World Grounded and extremely hard to game",
     subtitle:
       "The protocol stays tool-agnostic and enforces purity so sessions remain verifiable even under real AI use.",

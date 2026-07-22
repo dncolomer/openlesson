@@ -109,7 +109,7 @@ describe("pitch deck content (platform only)", () => {
     expect(PLATFORM_PITCH_DECK.slides[1]?.bullets).toEqual([
       "Founder",
       "What is Uncertain Systems?",
-      "How do we ensure high quality data?",
+      "What is Proof of Work Data?",
       "Data Privacy and Confidential Learning",
       "Our products",
     ]);
@@ -130,7 +130,7 @@ describe("pitch deck content (platform only)", () => {
       "Uncertain Systems",
       "Founder",
       "What is Uncertain Systems?",
-      "How do we ensure high quality data?",
+      "What is Proof of Work Data?",
       "Data Privacy and Confidential Learning",
       "Our products",
     ]);
@@ -161,7 +161,7 @@ describe("pitch deck content (platform only)", () => {
     // Method section
     const methodStart = thesisStart + 6;
     expect(PLATFORM_PITCH_DECK.slides[methodStart]?.title).toBe(
-      "How do we ensure high quality data?",
+      "What is Proof of Work Data?",
     );
     expect(PLATFORM_PITCH_DECK.slides[methodStart + 1]?.title.toLowerCase()).toMatch(/think aloud/);
     expect(PLATFORM_PITCH_DECK.slides[methodStart + 2]?.title.toLowerCase()).toMatch(
@@ -273,7 +273,7 @@ describe("pitch deck content (platform only)", () => {
     // Method section title + TAP media (after Problem + Thesis + 3 fullImage slides)
     const methodTitleIdx = thesisTitleIdx + 6;
     expect(PLATFORM_PITCH_DECK.slides[methodTitleIdx]?.title).toBe(
-      "How do we ensure high quality data?",
+      "What is Proof of Work Data?",
     );
     const tapSlide = PLATFORM_PITCH_DECK.slides[methodTitleIdx + 1];
     expect(tapSlide?.layout).toBe("media");

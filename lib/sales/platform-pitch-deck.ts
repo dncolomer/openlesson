@@ -62,9 +62,23 @@ const PLATFORM_THESIS: SalesSlide[] = [
   }),
   {
     layout: "statement",
-    kicker: "Our thesis",
+    kicker: "Problem",
     title: "Knowledge cannot be measured as a ratio of correct test answers.",
     subtitle:
+      "Traditional learning and skill validation has become impossible under AI.",
+    bullets: [
+      "Hiring is higher stakes than ever: leaner hybrid human and agent teams mean one bad hire compounds across agents, pipelines, and production. Resumes and multiple-choice screens no longer prove real skill when candidates can generate polished answers in seconds.",
+      "Certification programs lose signal when exam banks and study packs are fully AI-solvable. A pass rate no longer means the holder can perform under real constraints.",
+      "Complex physical and digital processes (ops, manufacturing, clinical, infra) need judgment under incomplete information. Quiz items cannot capture whether someone can actually run the system.",
+      "Enterprise readiness of new hires is invisible until they are already on the job. Traditional onboarding quizzes miss whether someone can work with tools, agents, and teammates in context.",
+      "Internal training (a new sales rep, a new SRE engineer) looks complete when modules are finished, but completion and quiz scores do not show whether behavior changed or whether the person can execute under load.",
+    ],
+    backgroundImage: PITCH_ASSETS.aesthetics.science,
+  },
+  {
+    layout: "statement",
+    kicker: "Our thesis",
+    title:
       "We need a measurement system based on something abstracted away from pure result samples.",
     backgroundImage: PITCH_ASSETS.aesthetics.science,
     // Lead-in above the three concept boxes (rendered before CardGrid on statement layout).
@@ -221,7 +235,7 @@ const PLATFORM_CLOSE: SalesSlide[] = [
 
 export const PLATFORM_PITCH_DECK: SolutionSlideDeck = {
   vertical: "pitch",
-  label: "Platform Pitch",
+  label: "Verification Pitch",
   backgroundImage: PITCH_ASSETS.aesthetics.science,
   slides: [
     ...PLATFORM_OPEN,

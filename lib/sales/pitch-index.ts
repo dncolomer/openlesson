@@ -6,20 +6,20 @@ export type PitchIndexEntry = {
   title: string;
   description: string;
   vertical: string;
-  /** When true, listed but not openable (greyed out). */
+  /** When true, listed on /sales but not openable (greyed out). */
   comingSoon?: boolean;
   /** Present for live decks; omitted or unused when comingSoon. */
   deck?: SolutionSlideDeck;
 };
 
-/** Canonical list of pitch routes — platform only for now. */
+/** Canonical list of pitch routes linked from /sales. */
 export const PITCH_INDEX: PitchIndexEntry[] = [
   {
     path: "/pitch",
-    title: "Platform Pitch",
+    title: "Verification Pitch",
     description:
-      "Founder story first, then product thesis and method: proximity over quiz scores, Think Aloud Protocol, and use cases across PoW · TAP · ILE · Stash API (alaTAP).",
-    vertical: "platform",
+      "Founder story first, then problem, thesis, and method: measurement beyond quiz scores, Think Aloud Protocol, and use cases across PoW · TAP · ILE · Stash API.",
+    vertical: "verification",
     deck: PLATFORM_PITCH_DECK,
   },
 ];

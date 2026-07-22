@@ -91,13 +91,13 @@ const FOUNDER_FACT_ANCHORS = [
 describe("pitch deck content (platform only)", () => {
   it("platform deck opens each section with a centered title slide", () => {
     expect(PLATFORM_PITCH_DECK.vertical).toBe("pitch");
-    expect(PLATFORM_PITCH_DECK.label.toLowerCase()).toContain("platform");
+    expect(PLATFORM_PITCH_DECK.label.toLowerCase()).toContain("verification");
     assertNonEmptyTitles(PLATFORM_PITCH_DECK);
 
     const founderSlides = buildFounderSlides("platform");
-    // Cover + TOC + section titles (5) + founder content + thesis (4) + method (2) + privacy×2 + products (1)
+    // Cover + TOC + section titles (5) + founder content + problem + thesis (4) + method (2) + privacy×2 + products (1)
     expect(PLATFORM_PITCH_DECK.slides).toHaveLength(
-      2 + 5 + founderSlides.length + 4 + 2 + 2 + 1,
+      2 + 5 + founderSlides.length + 1 + 4 + 2 + 2 + 1,
     );
 
     // Cover + TOC open the deck
@@ -149,16 +149,17 @@ describe("pitch deck content (platform only)", () => {
     expect(founderBlock.map((s) => s.title)).toEqual(founderSlides.map((s) => s.title));
     expect(founderBlock[0]?.layout).toBe("founder");
 
-    // Thesis section after founder block
+    // Thesis section after founder block: section title → Problem → Our thesis → fullImages
     const thesisStart = openOffset + 1 + founderSlides.length;
     expect(PLATFORM_PITCH_DECK.slides[thesisStart]?.title).toMatch(/What is Uncertain Systems\?/);
-    expect(PLATFORM_PITCH_DECK.slides[thesisStart + 1]?.kicker?.toLowerCase()).toMatch(/thesis/);
-    expect(PLATFORM_PITCH_DECK.slides[thesisStart + 2]?.image).toBe("/terrance.png");
-    expect(PLATFORM_PITCH_DECK.slides[thesisStart + 3]?.image).toBe("/mechaarm2.jpg");
-    expect(PLATFORM_PITCH_DECK.slides[thesisStart + 4]?.image).toBe("/embeddings.png");
+    expect(PLATFORM_PITCH_DECK.slides[thesisStart + 1]?.kicker?.toLowerCase()).toMatch(/problem/);
+    expect(PLATFORM_PITCH_DECK.slides[thesisStart + 2]?.kicker?.toLowerCase()).toMatch(/thesis/);
+    expect(PLATFORM_PITCH_DECK.slides[thesisStart + 3]?.image).toBe("/terrance.png");
+    expect(PLATFORM_PITCH_DECK.slides[thesisStart + 4]?.image).toBe("/mechaarm2.jpg");
+    expect(PLATFORM_PITCH_DECK.slides[thesisStart + 5]?.image).toBe("/embeddings.png");
 
     // Method section
-    const methodStart = thesisStart + 5;
+    const methodStart = thesisStart + 6;
     expect(PLATFORM_PITCH_DECK.slides[methodStart]?.title).toBe(
       "How do we ensure high quality data?",
     );
@@ -231,34 +232,46 @@ describe("pitch deck content (platform only)", () => {
     expect(titleSlide?.image).toBe(PITCH_ASSETS.logo);
     expect(publicAssetExists(titleSlide?.image ?? "")).toBe(true);
 
-    const thesisSlide = PLATFORM_PITCH_DECK.slides[thesisTitleIdx + 1];
+    const problemSlide = PLATFORM_PITCH_DECK.slides[thesisTitleIdx + 1];
+    expect(problemSlide?.layout).toBe("statement");
+    expect(problemSlide?.kicker?.toLowerCase()).toMatch(/problem/);
+    expect(problemSlide?.title.toLowerCase()).toMatch(/ratio of correct|correct (test )?answers/);
+    expect(problemSlide?.subtitle?.toLowerCase()).toMatch(/impossible under ai/);
+    expect(problemSlide?.bullets?.join(" ").toLowerCase()).toMatch(
+      /recruitment|certification|enterprise readiness|internal training/,
+    );
+
+    const thesisSlide = PLATFORM_PITCH_DECK.slides[thesisTitleIdx + 2];
     expect(thesisSlide?.layout).toBe("statement");
     expect(thesisSlide?.kicker?.toLowerCase()).toMatch(/thesis/);
+    expect(thesisSlide?.title.toLowerCase()).toMatch(
+      /abstracted away from pure result samples/,
+    );
     expect(thesisSlide?.video).toBeUndefined();
     expect(
       publicAssetExists(thesisSlide?.backgroundImage ?? PLATFORM_PITCH_DECK.backgroundImage ?? ""),
     ).toBe(true);
 
-    const terranceSlide = PLATFORM_PITCH_DECK.slides[thesisTitleIdx + 2];
+    const terranceSlide = PLATFORM_PITCH_DECK.slides[thesisTitleIdx + 3];
     expect(terranceSlide?.layout).toBe("fullImage");
     expect(terranceSlide?.image).toBe("/terrance.png");
     expect(publicAssetExists(terranceSlide?.image ?? "")).toBe(true);
     expect(terranceSlide?.imageCaption?.trim().length).toBeGreaterThan(0);
 
-    const configSlide = PLATFORM_PITCH_DECK.slides[thesisTitleIdx + 3];
+    const configSlide = PLATFORM_PITCH_DECK.slides[thesisTitleIdx + 4];
     expect(configSlide?.layout).toBe("fullImage");
     expect(configSlide?.image).toBe("/mechaarm2.jpg");
     expect(publicAssetExists(configSlide?.image ?? "")).toBe(true);
     expect(configSlide?.imageCaption?.trim().length).toBeGreaterThan(0);
 
-    const embeddingsSlide = PLATFORM_PITCH_DECK.slides[thesisTitleIdx + 4];
+    const embeddingsSlide = PLATFORM_PITCH_DECK.slides[thesisTitleIdx + 5];
     expect(embeddingsSlide?.layout).toBe("fullImage");
     expect(embeddingsSlide?.image).toBe("/embeddings.png");
     expect(publicAssetExists(embeddingsSlide?.image ?? "")).toBe(true);
     expect(embeddingsSlide?.imageCaption?.trim().length).toBeGreaterThan(0);
 
-    // Method section title + TAP media
-    const methodTitleIdx = thesisTitleIdx + 5;
+    // Method section title + TAP media (after Problem + Thesis + 3 fullImage slides)
+    const methodTitleIdx = thesisTitleIdx + 6;
     expect(PLATFORM_PITCH_DECK.slides[methodTitleIdx]?.title).toBe(
       "How do we ensure high quality data?",
     );
@@ -421,16 +434,20 @@ describe("pitch deck content (platform only)", () => {
     );
     expect(
       PLATFORM_PITCH_DECK.slides[openOffset + 2 + founderSlides.length]?.kicker?.toLowerCase(),
+    ).toMatch(/problem/);
+    expect(
+      PLATFORM_PITCH_DECK.slides[openOffset + 3 + founderSlides.length]?.kicker?.toLowerCase(),
     ).toMatch(/thesis/);
   });
 
-  it("pitch index: platform only; no vertical decks listed; sales route removed", () => {
+  it("pitch index: Verification Pitch on /pitch; /sales index lists it; no extra vertical routes", () => {
     expect(PITCH_PATHS).toEqual(["/pitch"]);
     expect(PITCH_INDEX).toHaveLength(1);
     expect(LIVE_PITCH_PATHS).toEqual(["/pitch"]);
     expect(PITCH_INDEX[0]?.comingSoon).toBeFalsy();
     expect(PITCH_INDEX[0]?.deck).toBe(PLATFORM_PITCH_DECK);
-    expect(PITCH_INDEX.map((e) => e.vertical)).toEqual(["platform"]);
+    expect(PITCH_INDEX[0]?.title).toBe("Verification Pitch");
+    expect(PITCH_INDEX.map((e) => e.vertical)).toEqual(["verification"]);
     expect(PITCH_PATHS).not.toContain("/pitch-product");
     expect(PITCH_PATHS).not.toContain("/pitch-verification");
     expect(PITCH_PATHS).not.toContain("/pitch-optimization");
@@ -440,15 +457,18 @@ describe("pitch deck content (platform only)", () => {
     expect(fs.existsSync(path.join(REPO_ROOT, "app/pitch-optimization/page.tsx"))).toBe(false);
     expect(fs.existsSync(path.join(REPO_ROOT, "app/pitch-augmentation/page.tsx"))).toBe(false);
     expect(fs.existsSync(path.join(REPO_ROOT, "lib/sales/product-pitch-deck.ts"))).toBe(false);
-    expect(fs.existsSync(path.join(REPO_ROOT, "app/sales/page.tsx"))).toBe(false);
-    expect(fs.existsSync(path.join(REPO_ROOT, "app/sales"))).toBe(false);
+    expect(fs.existsSync(path.join(REPO_ROOT, "app/sales/page.tsx"))).toBe(true);
+    const salesSource = fs.readFileSync(path.join(REPO_ROOT, "app/sales/page.tsx"), "utf8");
+    expect(salesSource).toContain("PITCH_INDEX");
+    expect(salesSource).toContain("data-sales-index");
+    expect(salesSource).toContain("data-pitch-links");
   });
 
-  it("route page module: platform pitch only", () => {
+  it("route page module: verification pitch on /pitch", () => {
     const source = fs.readFileSync(path.join(REPO_ROOT, "app/pitch/page.tsx"), "utf8");
     expect(source).toContain("PLATFORM_PITCH_DECK");
     expect(source).toContain("SalesSlideDeck");
-    expect(source).toContain("Platform Pitch");
+    expect(source).toContain("Verification Pitch");
     expect(source).toMatch(/robots:\s*\{[\s\S]*index:\s*false/);
   });
 
@@ -601,16 +621,33 @@ describe("pitch deck content (platform only)", () => {
     expect(deckUi).toContain("data-pitch-card-image");
     expect(deckUi).toMatch(/card\.image/);
 
-    // After cover + TOC + founder block + section title
+    // After cover + TOC + founder block + section title + Problem slide
     const openOffset = 2;
     const founderCount = buildFounderSlides("platform").length;
-    const thesisIdx = openOffset + 2 + founderCount;
-    expect(thesisIdx).toBe(8);
+    const problemIdx = openOffset + 2 + founderCount;
+    const thesisIdx = problemIdx + 1;
+    expect(problemIdx).toBe(8);
+    expect(thesisIdx).toBe(9);
+    const problemSlide = PLATFORM_PITCH_DECK.slides[problemIdx];
+    expect(problemSlide).toBeTruthy();
+    expect(problemSlide!.kicker?.toLowerCase()).toMatch(/problem/);
+    expect(problemSlide!.title.toLowerCase()).toMatch(/ratio of correct|correct (test )?answers/);
+    expect(problemSlide!.subtitle?.toLowerCase()).toMatch(/impossible under ai/);
+    expect(problemSlide!.bullets?.length).toBeGreaterThanOrEqual(5);
+    const problemBullets = (problemSlide!.bullets ?? []).join(" ").toLowerCase();
+    expect(problemBullets).toMatch(/hybrid|hiring|hire/);
+    expect(problemBullets).toMatch(/certification/);
+    expect(problemBullets).toMatch(/physical|digital/);
+    expect(problemBullets).toMatch(/enterprise readiness|new hires/);
+    expect(problemBullets).toMatch(/internal training|sales rep|sre/);
+    // No em dashes; plain subtitle + bullets (no special stakes box).
+    expect(problemBullets).not.toMatch(/—|–/);
+    expect(problemSlide!.subtitle ?? "").not.toMatch(/—|–/);
+    expect(deckUi).not.toContain("data-pitch-stakes-box");
     const platformThesis = PLATFORM_PITCH_DECK.slides[thesisIdx];
     expect(platformThesis).toBeTruthy();
     expect(platformThesis!.kicker?.toLowerCase()).toMatch(/our thesis/);
-    expect(platformThesis!.title.toLowerCase()).toMatch(/ratio of correct|correct (test )?answers/);
-    expect(platformThesis!.subtitle?.toLowerCase()).toMatch(
+    expect(platformThesis!.title.toLowerCase()).toMatch(
       /abstracted away from pure result samples/,
     );
     expect(platformThesis!.cards).toHaveLength(3);
@@ -656,7 +693,7 @@ describe("pitch deck content (platform only)", () => {
     expect(highlightsAt).toBeLessThan(cardGridAt);
 
     // Full-size follow-ons after thesis cards: terrance, mechaarm2, embeddings
-    // (1-based slides 10–12 when thesis is slide 9 / index 8)
+    // (1-based slides 11–13 when thesis is slide 10 / index 9; Problem is slide 9)
     expect(PLATFORM_PITCH_DECK.slides[thesisIdx + 1]?.image).toBe("/terrance.png");
     expect(PLATFORM_PITCH_DECK.slides[thesisIdx + 2]?.image).toBe("/mechaarm2.jpg");
     expect(PLATFORM_PITCH_DECK.slides[thesisIdx + 3]?.image).toBe("/embeddings.png");
@@ -818,10 +855,10 @@ describe("pitch deck content (platform only)", () => {
     expect(platformText).toMatch(/proprietary|confidential|anonymiz|hash/);
   });
 
-  it("middleware exempts pitch prefix; sales route gone", () => {
+  it("middleware exempts pitch and sales prefixes", () => {
     const middleware = fs.readFileSync(path.join(REPO_ROOT, "middleware.ts"), "utf8");
     expect(middleware).toContain('"/pitch"');
-    expect(middleware).not.toContain('"/sales"');
+    expect(middleware).toContain('"/sales"');
 
     const prefixesMatch =
       middleware.includes("pathname.startsWith(prefix)") ||

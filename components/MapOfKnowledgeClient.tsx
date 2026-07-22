@@ -35,7 +35,7 @@ export function MapOfKnowledgeClient() {
   const [viewMode, setViewMode] = useState<ViewMode>("2d");
   const [projectionAlgorithm, setProjectionAlgorithm] =
     useState<ProjectionAlgorithmId>("pca");
-  const [embeddingModelId, setEmbeddingModelId] = useState(
+  const [embeddingModelId, setEmbeddingModelId] = useState<string>(
     KNOWLEDGE_CONFIG_EMBEDDING_MODEL_ID,
   );
   const [enabledRegions, setEnabledRegions] = useState<Set<string>>(new Set());

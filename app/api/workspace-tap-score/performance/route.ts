@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { resolveTapSessionAccess } from "@/lib/tap-score-session-auth";
-import { finalizeVerticalScoreReport } from "@/lib/pow-api/workspace-goal";
-import { buildWorkspacePerformanceContext } from "@/lib/pow-api/performance-context";
-import { generateWorkspaceVerticalScoreReport } from "@/lib/pow-api/generate-performance-report";
+import { runVerticalScore } from "@/lib/pow-api/run-vertical-score";
 import { TAP_AUTO_SCORE_VERTICAL } from "@/lib/pow-api/performance-report";
+import type { AuthContext } from "@/lib/pow-api/types";
+import { toErrorCode } from "@/lib/pow-api/types";
 
 export const runtime = "nodejs";
 export const maxDuration = 120;
@@ -11,6 +11,10 @@ export const maxDuration = 120;
 /**
  * TAP post-session auto-results always use the verification score only —
  * TAP is a verification tool.
+ *
+ * This path runs a full durable verification eval (eval_run_history + LWM +
+ * knowledge-config embedding), same as Knowledge UI / Evaluation API —
+ * not a display-only scorecard.
  */
 export async function POST(req: NextRequest) {
   try {
@@ -32,7 +36,9 @@ export async function POST(req: NextRequest) {
 
     const { data: workspace } = await access.supabase
       .from("workspaces")
-      .select("id, user_id, title, root_topic, description, notes, workspace_goal")
+      .select(
+        "id, user_id, title, root_topic, description, notes, workspace_goal, evaluation_mode, protocol_config, external_refs",
+      )
       .eq("id", access.workspaceId)
       .single();
 
@@ -40,72 +46,66 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Workspace not found" }, { status: 404 });
     }
 
-    const context = await buildWorkspacePerformanceContext({
+    const auth: AuthContext = {
+      user_id: access.guestUserId ? null : access.userId,
+      guest_user_id: access.guestUserId,
+      organization_id: access.organizationId,
+      is_org_admin: false,
+      key_id: "tap-performance",
+      scopes: ["workspaces:read"],
+    };
+
+    const participantUserId = access.guestUserId ? null : access.userId;
+    const participantGuestUserId = access.guestUserId;
+
+    const scored = await runVerticalScore({
       supabase: access.supabase,
-      auth: {
-        user_id: access.guestUserId ? null : access.userId,
-        guest_user_id: access.guestUserId,
-        organization_id: access.organizationId,
-        is_org_admin: false,
-        key_id: "tap-performance",
-        scopes: ["workspaces:read"],
-      },
+      auth,
       workspaceId: access.workspaceId,
+      vertical: TAP_AUTO_SCORE_VERTICAL,
       blockId: blockId || access.blockId,
-      participantUserId: access.guestUserId ? null : access.userId,
-      participantGuestUserId: access.guestUserId,
+      participantUserId,
+      participantGuestUserId,
+      workspaceRow: workspace,
+      historySource: "tap",
     });
 
-    if (
-      context.payload.counts.proof_of_work_artifacts === 0 &&
-      context.payload.counts.linked_sessions === 0 &&
-      context.payload.counts.workspace_files === 0
-    ) {
+    if (scored.empty) {
       return NextResponse.json(
         { error: "No performance proof of work yet for this participant." },
-        { status: 400 }
+        { status: 400 },
       );
     }
-
-    const generation = await generateWorkspaceVerticalScoreReport({
-      workspaceId: access.workspaceId,
-      workspaceTitle: workspace.title,
-      workspaceRootTopic: workspace.root_topic,
-      storedWorkspaceGoal: workspace.workspace_goal,
-      fileIds: context.fileIds,
-      vertical: TAP_AUTO_SCORE_VERTICAL,
-    });
-
-    if (!generation.success || !generation.data) {
-      return NextResponse.json(
-        {
-          error: generation.error || "Failed to generate report",
-          code: generation.code || "performance_report_generation_failed",
-        },
-        { status: 502 }
-      );
-    }
-
-    const finalized = finalizeVerticalScoreReport(
-      generation.data,
-      workspace.workspace_goal,
-      {
-        title: workspace.title,
-        description: workspace.description,
-        notes: workspace.notes,
-      },
-      TAP_AUTO_SCORE_VERTICAL
-    );
 
     return NextResponse.json({
-      report: finalized.report,
+      report: scored.report,
       vertical: TAP_AUTO_SCORE_VERTICAL,
-      workspace_goal: finalized.workspace_goal,
-      workspace_goal_source: finalized.workspace_goal_source,
+      workspace_goal: scored.workspace_goal,
+      workspace_goal_source: scored.workspace_goal_source,
+      learning_world_model: scored.learning_world_model ?? null,
+      knowledge_config: scored.knowledge_config ?? null,
+      eval_run_history_id: scored.eval_run_history_id ?? null,
+      eval_history_saved: Boolean(scored.eval_run_history_id),
+      eval_run_history_error: scored.eval_run_history_error ?? null,
+      report_available: true,
     });
   } catch (error) {
     console.error("[workspace-tap-score/performance] Error:", error);
     const message = error instanceof Error ? error.message : "Internal server error";
-    return NextResponse.json({ error: message }, { status: 500 });
+    const code = toErrorCode(
+      error && typeof error === "object" && "code" in error
+        ? (error as { code: unknown }).code
+        : undefined,
+    );
+    const status =
+      error && typeof error === "object" && "status" in error
+        ? Number((error as { status: number }).status)
+        : code === "no_new_pow"
+          ? 409
+          : 500;
+    return NextResponse.json(
+      { error: message, code: code !== "internal_error" ? code : undefined },
+      { status },
+    );
   }
 }

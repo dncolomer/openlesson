@@ -110,6 +110,10 @@ export async function resolveIleLinkSessionAccess(
 /**
  * Ensure an ILE practice session exists for this link (create or resume).
  * Sessions run as the workspace owner with guest attribution in metadata.
+ *
+ * Links are multi-use: after a run completes, reopening the same private URL
+ * starts a fresh practice session while keeping the same guest_user_id so
+ * knowledge-config / eval identity stays stable.
  */
 export async function ensureIleLinkSession(
   ctx: ResolvedIleLinkContext
@@ -119,11 +123,9 @@ export async function ensureIleLinkSession(
 > {
   const { supabase, workspaceId, blockId, ownerUserId, linkId, guestUserId } = ctx;
 
-  if (ctx.status === "completed") {
-    return { error: "This ILE practice session is complete", status: 410 };
-  }
-
-  if (ctx.sessionId) {
+  // Resume only when the linked practice session is still live.
+  // Completed / ended / missing sessions fall through to a new run (same guest).
+  if (ctx.sessionId && ctx.status !== "completed") {
     const { data: existing } = await supabase
       .from("sessions")
       .select("id, status")
@@ -209,6 +211,7 @@ export async function ensureIleLinkSession(
       session_id: session.id,
       status: "active",
       started_at: now,
+      completed_at: null,
     })
     .eq("id", linkId);
 

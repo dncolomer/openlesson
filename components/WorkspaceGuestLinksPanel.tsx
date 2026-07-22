@@ -177,7 +177,10 @@ export function WorkspaceGuestLinksPanel({
   }, [currentUserId, isOwner, loadTapResources]);
 
   const createTapLink = useCallback(
-    async (participantType: "anonymous" | "user") => {
+    async (
+      participantType: "anonymous" | "user",
+      options?: { guestUserId?: string | null },
+    ) => {
       setCreatingLink(true);
       setCreateError(null);
       try {
@@ -193,7 +196,11 @@ export function WorkspaceGuestLinksPanel({
         if (postSession === "redirect_url") {
           body.redirect_url = redirectUrl.trim();
         }
-        if (participantType === "user") {
+        if (options?.guestUserId) {
+          body.guest_user_id = options.guestUserId;
+          body.participant_type = "anonymous";
+        }
+        if (participantType === "user" && !options?.guestUserId) {
           if (!selectedMemberId) throw new Error(t("planView.tapLinksSelectMember"));
           body.user_id = selectedMemberId;
         }
@@ -230,19 +237,27 @@ export function WorkspaceGuestLinksPanel({
   );
 
   const createIleLink = useCallback(
-    async (participantType: "anonymous" | "user") => {
+    async (
+      participantType: "anonymous" | "user",
+      options?: { guestUserId?: string | null; blockId?: string | null },
+    ) => {
       setCreatingIleLink(true);
       setCreateIleError(null);
       try {
-        if (!selectedIleBlockId) {
+        const blockId = options?.blockId || selectedIleBlockId;
+        if (!blockId) {
           throw new Error(t("planView.ileLinksSelectBlock"));
         }
         const body: Record<string, unknown> = {
           workspaceId,
-          blockId: selectedIleBlockId,
+          blockId,
           participant_type: participantType,
         };
-        if (participantType === "user") {
+        if (options?.guestUserId) {
+          body.guest_user_id = options.guestUserId;
+          body.participant_type = "anonymous";
+        }
+        if (participantType === "user" && !options?.guestUserId) {
           if (!selectedIleMemberId) throw new Error(t("planView.tapLinksSelectMember"));
           body.user_id = selectedIleMemberId;
         }
@@ -446,17 +461,34 @@ export function WorkspaceGuestLinksPanel({
                         {Math.round(link.requested_duration_seconds / 60)} min · {link.post_session}
                       </p>
                     </div>
-                    {privateUrl ? (
-                      <button
-                        type="button"
-                        onClick={() => void copyLink(link.id, privateUrl)}
-                        className="shrink-0 rounded-md border border-neutral-600 px-2.5 py-1.5 text-xs text-white transition hover:border-neutral-400"
-                      >
-                        {copiedLinkId === link.id
-                          ? t("planView.tapLinksCopied")
-                          : t("planView.tapLinksCopy")}
-                      </button>
-                    ) : null}
+                    <div className="flex shrink-0 flex-wrap items-center gap-2">
+                      <span className="rounded border border-neutral-700 px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-neutral-500">
+                        {t("planView.tapLinksReusable")}
+                      </span>
+                      {link.guest_user_id ? (
+                        <button
+                          type="button"
+                          disabled={creatingLink}
+                          onClick={() =>
+                            void createTapLink("anonymous", { guestUserId: link.guest_user_id })
+                          }
+                          className="rounded-md border border-neutral-700 px-2.5 py-1.5 text-xs text-neutral-300 transition hover:border-neutral-500"
+                        >
+                          {t("planView.tapLinksReuseGuest")}
+                        </button>
+                      ) : null}
+                      {privateUrl ? (
+                        <button
+                          type="button"
+                          onClick={() => void copyLink(link.id, privateUrl)}
+                          className="rounded-md border border-neutral-600 px-2.5 py-1.5 text-xs text-white transition hover:border-neutral-400"
+                        >
+                          {copiedLinkId === link.id
+                            ? t("planView.tapLinksCopied")
+                            : t("planView.tapLinksCopy")}
+                        </button>
+                      ) : null}
+                    </div>
                   </li>
                 );
               })}
@@ -570,17 +602,37 @@ export function WorkspaceGuestLinksPanel({
                         ) : null}
                       </p>
                     </div>
-                    {privateUrl ? (
-                      <button
-                        type="button"
-                        onClick={() => void copyLink(link.id, privateUrl)}
-                        className="shrink-0 rounded-md border border-neutral-600 px-2.5 py-1.5 text-xs text-white transition hover:border-neutral-400"
-                      >
-                        {copiedLinkId === link.id
-                          ? t("planView.tapLinksCopied")
-                          : t("planView.tapLinksCopy")}
-                      </button>
-                    ) : null}
+                    <div className="flex shrink-0 flex-wrap items-center gap-2">
+                      <span className="rounded border border-neutral-700 px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-neutral-500">
+                        {t("planView.tapLinksReusable")}
+                      </span>
+                      {link.guest_user_id ? (
+                        <button
+                          type="button"
+                          disabled={creatingIleLink}
+                          onClick={() =>
+                            void createIleLink("anonymous", {
+                              guestUserId: link.guest_user_id,
+                              blockId: link.block_id,
+                            })
+                          }
+                          className="rounded-md border border-neutral-700 px-2.5 py-1.5 text-xs text-neutral-300 transition hover:border-neutral-500"
+                        >
+                          {t("planView.ileLinksReuseGuest")}
+                        </button>
+                      ) : null}
+                      {privateUrl ? (
+                        <button
+                          type="button"
+                          onClick={() => void copyLink(link.id, privateUrl)}
+                          className="rounded-md border border-neutral-600 px-2.5 py-1.5 text-xs text-white transition hover:border-neutral-400"
+                        >
+                          {copiedLinkId === link.id
+                            ? t("planView.tapLinksCopied")
+                            : t("planView.tapLinksCopy")}
+                        </button>
+                      ) : null}
+                    </div>
                   </li>
                 );
               })}

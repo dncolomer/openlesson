@@ -35,6 +35,8 @@ export interface RunVerticalScoreInput {
   fileIds?: string[];
   /** When false, skip durable LWM + knowledge-config snapshot (tests / dry runs). Default true. */
   updateLearnerState?: boolean;
+  /** Tag for eval_run_history (api | web | tap | score | test). Default "api". */
+  historySource?: string;
   workspaceRow?: {
     id: string;
     title: string | null;
@@ -241,7 +243,7 @@ export async function runVerticalScore(
         totalBlocks,
         trigger: "score",
         blockId: blockId ?? null,
-        historySource: "api",
+        historySource: input.historySource ?? "api",
       });
       learning_world_model = state.worldModel;
       knowledge_config = state.knowledgeConfig;

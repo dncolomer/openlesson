@@ -265,7 +265,9 @@ Organization-owned workspaces are visible to all real users and guest users in t
 
 ## TAP Evidence
 
-Think Aloud Protocol sessions upload proof of work (`tap-thought-trace`, `tap-transcript`) to the workspace. Poll `GET .../tap-links` for link `status`, then call `POST .../verification-score` for verification scoring (TAP auto-results are always verification-only).
+Think Aloud Protocol sessions upload proof of work continuously during the session (`tap-thought-trace` system1/system2, `tap-helios-chat`, `tap-speech-segment`, `tap-idle-heartbeat`) and a final `tap-transcript` on complete. Product TAP auto-results run a durable **verification** eval (eval history + learning world model + knowledge-config embedding). Integrators can also poll `GET .../tap-links` for link `status`, then call `POST .../verification-score` (TAP is always verification-only).
+
+**Reusable guest links:** TAP and ILE private URLs are multi-use. Reopening the same link starts another run while keeping `guest_user_id` stable (so embeddings / eval history stay on the same subject). Creating a new link with body `guest_user_id` reuses that guest when the caller owns the workspace or is an org admin for that guest.
 
 ## Removed From Proof-of-Work API
 

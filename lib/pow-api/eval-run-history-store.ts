@@ -10,7 +10,7 @@ import {
   type SubjectRef,
 } from "./learning-world-model-store";
 
-export type EvalRunHistorySource = "score" | "web" | "api" | "test";
+export type EvalRunHistorySource = "score" | "web" | "api" | "tap" | "test";
 
 export interface EvalRunHistoryRow {
   id: string;

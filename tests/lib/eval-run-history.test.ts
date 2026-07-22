@@ -365,8 +365,14 @@ describe("eval history API surfaces", () => {
       join(process.cwd(), "app/api/workspace/performance-report/route.ts"),
       "utf8",
     );
+    const tap = readFileSync(
+      join(process.cwd(), "app/api/workspace-tap-score/performance/route.ts"),
+      "utf8",
+    );
     expect(run).toContain("historySource");
     expect(web).toContain('historySource: "web"');
+    expect(tap).toContain('historySource: "tap"');
+    expect(tap).toContain("runVerticalScore");
     expect(run).toContain("updateLearnerStateAfterScore");
   });
 

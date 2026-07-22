@@ -770,25 +770,33 @@ export function TapScoreClient({ workspaceId, blockId, sessionId, privateToken, 
       const resolvedRedirectUrl =
         typeof payload.redirectUrl === "string" ? payload.redirectUrl : configuredRedirectUrl;
 
-      if (resolvedPostSession === "show_results") {
-        setPhase("saving");
-        const reportResponse = await fetch("/api/workspace-tap-score/performance", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            privateToken,
-            workspaceId: payload.workspaceId || resolvedWorkspaceId,
-            tapSessionId: tapSessionIdRef.current,
-            blockId,
-          }),
-        });
-        const reportPayload = await reportResponse.json();
-        if (!reportResponse.ok) {
+      // Always run a durable verification eval after TAP complete so LWM +
+      // knowledge-config embeddings update (not only when showing results UI).
+      setPhase("saving");
+      const reportResponse = await fetch("/api/workspace-tap-score/performance", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          privateToken,
+          workspaceId: payload.workspaceId || resolvedWorkspaceId,
+          tapSessionId: tapSessionIdRef.current,
+          blockId,
+        }),
+      });
+      const reportPayload = await reportResponse.json();
+      if (!reportResponse.ok) {
+        if (resolvedPostSession === "show_results") {
           setResultsError(reportPayload.error || "Could not generate performance results");
           setPhase("error");
           isEndingRef.current = false;
           return;
         }
+        // Session PoW is already saved; allow redirect/dashboard even if eval fails.
+        console.warn(
+          "[tap] post-session verification eval failed:",
+          reportPayload.error || reportResponse.status,
+        );
+      } else if (resolvedPostSession === "show_results") {
         setPerformanceReport(reportPayload.report);
         setPhase("results");
         return;

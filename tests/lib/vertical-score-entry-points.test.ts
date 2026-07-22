@@ -214,13 +214,15 @@ describe("vertical score entry points (shipped wiring)", () => {
     }
   });
 
-  it("TAP auto-results path is verification-only in source", () => {
+  it("TAP auto-results path is verification-only and runs durable eval", () => {
     expect(TAP_AUTO_SCORE_VERTICAL).toBe("verification");
     const tapRoute = readFileSync(
       join(ROOT, "app/api/workspace-tap-score/performance/route.ts"),
       "utf8"
     );
     expect(tapRoute).toContain("TAP_AUTO_SCORE_VERTICAL");
+    expect(tapRoute).toContain("runVerticalScore");
+    expect(tapRoute).toContain('historySource: "tap"');
     expect(tapRoute).toContain("verification");
     expect(tapRoute).not.toContain("augmentation");
     expect(tapRoute).not.toContain("optimization");

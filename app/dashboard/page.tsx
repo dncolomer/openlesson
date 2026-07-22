@@ -139,6 +139,10 @@ export default function DashboardPage() {
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [workspaceSearch, setPlanSearch] = useState("");
   const [showArchivedWorkspaces, setShowArchivedPlans] = useState(false);
+  /** Filter workspace cards by visibility: all | public | private */
+  const [workspaceVisibilityFilter, setWorkspaceVisibilityFilter] = useState<
+    "all" | "public" | "private"
+  >("all");
   const [archivingWorkspaceId, setArchivingPlanId] = useState<string | null>(null);
   const [snapshottingWorkspaceId, setSnapshottingWorkspaceId] = useState<string | null>(null);
   const [workspacePage, setPlanPage] = useState(1);
@@ -715,10 +719,15 @@ export default function DashboardPage() {
   };
 
   const filteredWorkspaces = workspaces.filter((p) => {
-    const matchesSearch = workspaceSearch === "" || 
+    const matchesSearch =
+      workspaceSearch === "" ||
       p.root_topic.toLowerCase().includes(workspaceSearch.toLowerCase()) ||
       (p.title || "").toLowerCase().includes(workspaceSearch.toLowerCase());
-    return matchesSearch;
+    if (!matchesSearch) return false;
+    const isPublic = p.is_public ?? false;
+    if (workspaceVisibilityFilter === "public") return isPublic;
+    if (workspaceVisibilityFilter === "private") return !isPublic;
+    return true;
   });
 
   const totalPlanPages = Math.ceil(filteredWorkspaces.length / workspacePageSize);
@@ -976,15 +985,39 @@ export default function DashboardPage() {
 
             <div className="flex flex-wrap items-center justify-between gap-3">
               <h3 className="text-lg font-semibold">{t('dashboard.allWorkspaces')}</h3>
-              <label className="flex items-center gap-2 text-xs text-neutral-400">
-                <input
-                  type="checkbox"
-                  checked={showArchivedWorkspaces}
-                  onChange={(e) => setShowArchivedPlans(e.target.checked)}
-                  className="rounded border-neutral-700 bg-neutral-900"
-                />
-                Show archived
-              </label>
+              <div className="flex flex-wrap items-center gap-3">
+                <label
+                  className="flex items-center gap-2 text-xs text-neutral-400"
+                  data-workspace-visibility-filter
+                >
+                  <span className="text-neutral-500">Visibility</span>
+                  <select
+                    value={workspaceVisibilityFilter}
+                    onChange={(e) => {
+                      const next = e.target.value;
+                      if (next === "all" || next === "public" || next === "private") {
+                        setWorkspaceVisibilityFilter(next);
+                        setPlanPage(1);
+                      }
+                    }}
+                    className="rounded border border-neutral-700 bg-neutral-900 px-2 py-1 text-xs text-neutral-300 focus:border-neutral-500 focus:outline-none"
+                    aria-label="Filter workspaces by public or private"
+                  >
+                    <option value="all">All</option>
+                    <option value="public">{t("dashboard.public")}</option>
+                    <option value="private">{t("dashboard.private")}</option>
+                  </select>
+                </label>
+                <label className="flex items-center gap-2 text-xs text-neutral-400">
+                  <input
+                    type="checkbox"
+                    checked={showArchivedWorkspaces}
+                    onChange={(e) => setShowArchivedPlans(e.target.checked)}
+                    className="rounded border-neutral-700 bg-neutral-900"
+                  />
+                  Show archived
+                </label>
+              </div>
             </div>
             <div className="flex-1">
               <input

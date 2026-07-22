@@ -73,4 +73,16 @@ describe("workspace dashboard card snapshot UX", () => {
     expect(routeSrc).toContain("runVerticalScore");
     expect(routeSrc).toContain("Only the workspace owner");
   });
+
+  it("filters workspaces by public / private next to archived", () => {
+    const dashSrc = readFileSync(join(root, "app/dashboard/page.tsx"), "utf8");
+    expect(dashSrc).toContain("data-workspace-visibility-filter");
+    expect(dashSrc).toContain("workspaceVisibilityFilter");
+    expect(dashSrc).toContain('value="public"');
+    expect(dashSrc).toContain('value="private"');
+    expect(dashSrc).toContain("Show archived");
+    // Visibility filter applied in list filtering
+    expect(dashSrc).toMatch(/workspaceVisibilityFilter === "public"/);
+    expect(dashSrc).toMatch(/workspaceVisibilityFilter === "private"/);
+  });
 });

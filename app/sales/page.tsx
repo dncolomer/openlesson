@@ -2,10 +2,11 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { PITCH_INDEX } from "@/lib/sales/pitch-index";
+import { SALES_PRODUCT_CARDS } from "@/lib/sales/product-cards";
 import { PITCH_ASSETS } from "@/lib/sales/solution-slide-decks";
 
 export const metadata: Metadata = {
-  title: "Sales Decks",
+  title: "Sales",
   robots: {
     index: false,
     follow: false,
@@ -36,72 +37,110 @@ export default function SalesIndexPage() {
           SALES
         </div>
         <h1 className="max-w-4xl text-5xl font-medium leading-[1.03] tracking-[-2.4px] text-white sm:text-6xl lg:text-[64px]">
-          Pitch decks
+          Sales materials
         </h1>
         <p className="mt-6 max-w-2xl text-lg leading-relaxed text-zinc-400">
-          Live presentation decks for Uncertain Systems.
+          Product cards and pitch decks for Uncertain Systems. Share direct links — noindex.
         </p>
 
-        <ul className="mt-10 space-y-4" data-pitch-links>
-          {PITCH_INDEX.map((entry) => {
-            if (entry.comingSoon) {
-              return (
-                <li key={entry.path}>
-                  <div
-                    className="flex flex-col gap-3 border border-zinc-900/80 bg-zinc-950/40 p-5 opacity-45 sm:flex-row sm:items-center sm:justify-between sm:p-6"
-                    data-pitch-coming-soon
-                    aria-disabled="true"
-                  >
-                    <div className="min-w-0">
-                      <p className="font-mono text-[10px] uppercase tracking-[1.6px] text-zinc-600">
-                        {entry.vertical}
-                      </p>
-                      <h2 className="mt-2 text-xl font-medium tracking-[-0.6px] text-zinc-500 sm:text-2xl">
-                        {entry.title}
-                      </h2>
-                      <p className="mt-2 max-w-2xl text-sm leading-relaxed text-zinc-600 sm:text-base">
-                        {entry.description}
-                      </p>
-                      <p className="mt-3 font-mono text-xs text-zinc-700">{entry.path}</p>
-                    </div>
-                    <span className="inline-flex shrink-0 items-center rounded-sm border border-zinc-800 bg-zinc-950/60 px-2.5 py-1 font-mono text-[10px] uppercase tracking-[1.4px] text-zinc-600">
-                      Coming soon
-                    </span>
-                  </div>
-                </li>
-              );
-            }
-
-            return (
-              <li key={entry.path}>
+        <section className="mt-12" data-product-card-links>
+          <h2 className="font-mono text-[11px] uppercase tracking-[1.8px] text-zinc-500">
+            Product cards
+          </h2>
+          <ul className="mt-4 space-y-4">
+            {SALES_PRODUCT_CARDS.map((card) => (
+              <li key={card.path}>
                 <Link
-                  href={entry.path}
+                  href={card.path}
                   className="group flex flex-col gap-3 border border-zinc-800 bg-zinc-950/70 p-5 transition hover:border-zinc-600 sm:flex-row sm:items-center sm:justify-between sm:p-6"
                 >
                   <div className="min-w-0">
                     <p className="font-mono text-[10px] uppercase tracking-[1.6px] text-zinc-500">
-                      {entry.vertical}
+                      {card.eyebrow}
                     </p>
-                    <h2 className="mt-2 text-xl font-medium tracking-[-0.6px] text-white sm:text-2xl">
-                      {entry.title}
-                    </h2>
+                    <h3 className="mt-2 text-xl font-medium tracking-[-0.6px] text-white sm:text-2xl">
+                      {card.title}
+                    </h3>
                     <p className="mt-2 max-w-2xl text-sm leading-relaxed text-zinc-500 sm:text-base">
-                      {entry.description}
+                      {card.oneLine}
                     </p>
-                    <p className="mt-3 font-mono text-xs text-zinc-600">{entry.path}</p>
+                    <p className="mt-3 font-mono text-xs text-zinc-600">{card.path}</p>
                   </div>
                   <span className="inline-flex shrink-0 items-center gap-1.5 text-sm font-medium text-zinc-300 transition group-hover:text-white">
-                    Open deck
+                    Open card
                     <ArrowRight size={14} />
                   </span>
                 </Link>
               </li>
-            );
-          })}
-        </ul>
+            ))}
+          </ul>
+        </section>
+
+        <section className="mt-14">
+          <h2 className="font-mono text-[11px] uppercase tracking-[1.8px] text-zinc-500">
+            Pitch decks
+          </h2>
+          <ul className="mt-4 space-y-4" data-pitch-links>
+            {PITCH_INDEX.map((entry) => {
+              if (entry.comingSoon) {
+                return (
+                  <li key={entry.path}>
+                    <div
+                      className="flex flex-col gap-3 border border-zinc-900/80 bg-zinc-950/40 p-5 opacity-45 sm:flex-row sm:items-center sm:justify-between sm:p-6"
+                      data-pitch-coming-soon
+                      aria-disabled="true"
+                    >
+                      <div className="min-w-0">
+                        <p className="font-mono text-[10px] uppercase tracking-[1.6px] text-zinc-600">
+                          {entry.vertical}
+                        </p>
+                        <h3 className="mt-2 text-xl font-medium tracking-[-0.6px] text-zinc-500 sm:text-2xl">
+                          {entry.title}
+                        </h3>
+                        <p className="mt-2 max-w-2xl text-sm leading-relaxed text-zinc-600 sm:text-base">
+                          {entry.description}
+                        </p>
+                        <p className="mt-3 font-mono text-xs text-zinc-700">{entry.path}</p>
+                      </div>
+                      <span className="inline-flex shrink-0 items-center rounded-sm border border-zinc-800 bg-zinc-950/60 px-2.5 py-1 font-mono text-[10px] uppercase tracking-[1.4px] text-zinc-600">
+                        Coming soon
+                      </span>
+                    </div>
+                  </li>
+                );
+              }
+
+              return (
+                <li key={entry.path}>
+                  <Link
+                    href={entry.path}
+                    className="group flex flex-col gap-3 border border-zinc-800 bg-zinc-950/70 p-5 transition hover:border-zinc-600 sm:flex-row sm:items-center sm:justify-between sm:p-6"
+                  >
+                    <div className="min-w-0">
+                      <p className="font-mono text-[10px] uppercase tracking-[1.6px] text-zinc-500">
+                        {entry.vertical}
+                      </p>
+                      <h3 className="mt-2 text-xl font-medium tracking-[-0.6px] text-white sm:text-2xl">
+                        {entry.title}
+                      </h3>
+                      <p className="mt-2 max-w-2xl text-sm leading-relaxed text-zinc-500 sm:text-base">
+                        {entry.description}
+                      </p>
+                      <p className="mt-3 font-mono text-xs text-zinc-600">{entry.path}</p>
+                    </div>
+                    <span className="inline-flex shrink-0 items-center gap-1.5 text-sm font-medium text-zinc-300 transition group-hover:text-white">
+                      Open deck
+                      <ArrowRight size={14} />
+                    </span>
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
 
         <p className="mt-10 font-mono text-[11px] uppercase tracking-[1.6px] text-zinc-600">
-          Arrow keys navigate slides · Noindex · Subscription-exempt
+          Product cards · Pitch decks · Noindex · Subscription-exempt
         </p>
       </div>
     </main>

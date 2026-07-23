@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useState } from "react";
 import { ArrowRight } from "lucide-react";
 import { Footer } from "@/components/Footer";
@@ -65,11 +64,11 @@ export default function B2BLandingPage() {
           <div className="mt-9 flex flex-col gap-3 sm:flex-row sm:items-center">
             <PrimaryCta location="landing_hero" />
             <a
-              href="#products"
-              onClick={() => trackCtaClick({ location: "landing_hero", label: "See the products", href: "#products", page: "/" })}
+              href="#platform"
+              onClick={() => trackCtaClick({ location: "landing_hero", label: "See the platform", href: "#platform", page: "/" })}
               className="inline-flex min-h-12 items-center justify-center rounded-sm border border-zinc-800 bg-zinc-950/60 px-5 py-3 text-sm font-medium text-zinc-300 transition hover:border-zinc-700 hover:text-white"
             >
-              See the products
+              See the platform
             </a>
           </div>
           <p className="mt-6 font-mono text-[11px] uppercase tracking-[1.6px] text-zinc-600">Trace Interruption Model • Proof-of-Work API • Stash API • Think Aloud Protocol • ILE • Agentic Learning Environment</p>
@@ -100,10 +99,10 @@ export default function B2BLandingPage() {
         </div>
       </section>
 
-      <section id="products" className="relative z-10 mx-auto max-w-6xl px-6 py-10 sm:py-12">
-        <SectionHeading eyebrow="PRODUCTS" title="A Product Suite for Humans and AI Agents" />
+      <section id="platform" className="relative z-10 mx-auto max-w-6xl px-6 py-10 sm:py-12">
+        <SectionHeading eyebrow="PLATFORM" title="A Product Suite for Humans and AI Agents" />
         <p className="mt-3 max-w-2xl text-sm text-zinc-500">
-          Verify and augment learning for humans and agents — same workspace, linked product pages below.
+          Verify and augment learning for humans and agents — same workspace, one measurement stack.
         </p>
         <div className="mt-5">
           <ProductTable />
@@ -151,21 +150,6 @@ function HeroPillarCard({
           <li key={item}>{item}</li>
         ))}
       </ul>
-      <Link
-        href={pillar.path}
-        onClick={() =>
-          trackCtaClick({
-            location: "landing_hero_pillar",
-            label: "Learn more",
-            href: pillar.path,
-            page: "/",
-          })
-        }
-        className="mt-4 inline-flex items-center gap-1.5 text-sm font-medium text-zinc-300 transition hover:text-white"
-      >
-        Learn more
-        <ArrowRight size={14} />
-      </Link>
     </div>
   );
 }

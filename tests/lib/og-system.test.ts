@@ -28,10 +28,6 @@ import {
   truncateOgText,
   truncateOgTitle,
 } from "@/lib/og/text";
-import { productPageMetadata } from "@/lib/seo/product-page";
-import { TIM_PAGE } from "@/lib/seo/product-page";
-import { buildUseCasePageMetadata, LEARNING_VERIFICATION_PAGE } from "@/lib/seo/use-case-page";
-
 const REPO_ROOT = path.resolve(__dirname, "../..");
 
 describe("OG text helpers", () => {
@@ -178,35 +174,7 @@ describe("OG metadata image URLs", () => {
   it("maps routes to opengraph-image paths", () => {
     expect(openGraphImagePathForRoute("/")).toBe("/opengraph-image");
     expect(openGraphImagePathForRoute("/pricing")).toBe("/pricing/opengraph-image");
-    expect(openGraphImagePathForRoute("/products/proof-of-work-api")).toBe(
-      "/products/proof-of-work-api/opengraph-image",
-    );
-  });
-
-  it("product and use-case metadata builders emit composed OG image URLs", () => {
-    const firstImageUrl = (images: unknown): string => {
-      if (Array.isArray(images)) {
-        const first = images[0];
-        if (typeof first === "string") return first;
-        if (first && typeof first === "object" && "url" in first) {
-          return String((first as { url: string | URL }).url);
-        }
-      }
-      if (typeof images === "string") return images;
-      if (images && typeof images === "object" && "url" in images) {
-        return String((images as { url: string | URL }).url);
-      }
-      return "";
-    };
-
-    const productMeta = productPageMetadata(TIM_PAGE);
-    const productUrl = firstImageUrl(productMeta.openGraph?.images);
-    expect(productUrl).toBe("/products/trace-interruption-model/opengraph-image");
-    expect(productUrl.includes("/aesthetics/")).toBe(false);
-
-    const useCaseMeta = buildUseCasePageMetadata(LEARNING_VERIFICATION_PAGE);
-    const useCaseUrl = firstImageUrl(useCaseMeta.openGraph?.images);
-    expect(useCaseUrl).toBe("/use-cases/learning-verification/opengraph-image");
+    expect(openGraphImagePathForRoute("/science")).toBe("/science/opengraph-image");
   });
 
   it("openGraphImagesForRoutePath returns width/height for crawlers", () => {
@@ -232,15 +200,6 @@ describe("OG entrypoint wiring (static audit)", () => {
     "app/science/opengraph-image.tsx",
     "app/demo/opengraph-image.tsx",
     "app/docs/proof-of-work-api/opengraph-image.tsx",
-    "app/use-cases/opengraph-image.tsx",
-    "app/use-cases/learning-verification/opengraph-image.tsx",
-    "app/use-cases/learning-optimization/opengraph-image.tsx",
-    "app/use-cases/reasoning-augmentation/opengraph-image.tsx",
-    "app/products/trace-interruption-model/opengraph-image.tsx",
-    "app/products/proof-of-work-api/opengraph-image.tsx",
-    "app/products/think-aloud-protocol/opengraph-image.tsx",
-    "app/products/integrated-learning-environment/opengraph-image.tsx",
-    "app/products/agentic-learning-environment/opengraph-image.tsx",
   ];
 
   it("ships opengraph-image entrypoints that use the shared compositor", () => {

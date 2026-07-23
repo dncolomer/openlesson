@@ -7,7 +7,6 @@ import { useI18n } from "@/lib/i18n";
 const productLinks = [
   { labelKey: "footer.vision", href: "/vision" },
   { labelKey: "footer.science", href: "/science" },
-  { labelKey: "footer.useCases", href: "/use-cases" },
   { labelKey: "footer.pricing", href: "/pricing" },
   { labelKey: "footer.agenticApi", href: "/docs/proof-of-work-api" },
 ];

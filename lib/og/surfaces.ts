@@ -1,20 +1,4 @@
 import { aestheticImageForId, FALLBACK_AESTHETIC_IMAGES } from "@/lib/aesthetics";
-import {
-  ALE_PAGE,
-  ILE_PAGE,
-  POW_API_PAGE,
-  STASH_API_PAGE,
-  TAP_PAGE,
-  TIM_PAGE,
-  type SeoProductPageConfig,
-} from "@/lib/seo/product-page";
-import {
-  LEARNING_AUGMENTATION_PAGE,
-  LEARNING_OPTIMIZATION_PAGE,
-  LEARNING_VERIFICATION_PAGE,
-  type SeoUseCasePageConfig,
-} from "@/lib/seo/use-case-page";
-import { shortTitleFromMeta } from "@/lib/og/text";
 import { resolveOgAestheticPath } from "@/lib/og/aesthetic";
 import { openGraphImagePathForRoute, openGraphImagesForRoutePath } from "@/lib/og/paths";
 
@@ -40,34 +24,6 @@ export type OgSurface = {
 };
 
 const BRAND = "Uncertain Systems";
-
-function productSurface(page: SeoProductPageConfig, extras?: Partial<OgSurface>): OgSurface {
-  return {
-    id: `product:${page.slug}`,
-    path: page.path,
-    title: shortTitleFromMeta(page.metaTitle) || page.eyebrow,
-    description: page.metaDescription,
-    eyebrow: page.eyebrow,
-    brand: BRAND,
-    footerLabel: "Product",
-    aestheticSeed: page.path,
-    ...extras,
-  };
-}
-
-function buildUseCaseSurface(page: SeoUseCasePageConfig, extras?: Partial<OgSurface>): OgSurface {
-  return {
-    id: `use-case:${page.slug}`,
-    path: page.path,
-    title: shortTitleFromMeta(page.metaTitle) || page.eyebrow,
-    description: page.metaDescription,
-    eyebrow: page.eyebrow,
-    brand: BRAND,
-    footerLabel: "Use case",
-    aestheticSeed: page.path,
-    ...extras,
-  };
-}
 
 /**
  * Declarative registry of public share surfaces.
@@ -142,26 +98,6 @@ export const OG_SURFACES: Record<string, OgSurface> = {
     footerLabel: "API reference",
     aestheticSeed: "/docs/proof-of-work-api",
   },
-  "use-cases": {
-    id: "use-cases",
-    path: "/use-cases",
-    title: "Use cases & products",
-    description:
-      "Learning verification, learning optimization, and reasoning augmentation — plus Proof-of-Work API, TAP, ILE, and ALE.",
-    eyebrow: "Use cases",
-    brand: BRAND,
-    footerLabel: "Hub",
-    aestheticSeed: "use-cases-hub",
-  },
-  "product:trace-interruption-model": productSurface(TIM_PAGE),
-  "product:proof-of-work-api": productSurface(POW_API_PAGE),
-  "product:stash-api": productSurface(STASH_API_PAGE),
-  "product:think-aloud-protocol": productSurface(TAP_PAGE),
-  "product:integrated-learning-environment": productSurface(ILE_PAGE),
-  "product:agentic-learning-environment": productSurface(ALE_PAGE),
-  "use-case:learning-verification": buildUseCaseSurface(LEARNING_VERIFICATION_PAGE),
-  "use-case:learning-optimization": buildUseCaseSurface(LEARNING_OPTIMIZATION_PAGE),
-  "use-case:reasoning-augmentation": buildUseCaseSurface(LEARNING_AUGMENTATION_PAGE),
   /** Entity chrome — title/description filled at request time. */
   insight: {
     id: "insight",
@@ -196,16 +132,6 @@ export const REQUIRED_SHARE_SURFACE_IDS = [
   "science",
   "demo",
   "docs-proof-of-work-api",
-  "use-cases",
-  "product:trace-interruption-model",
-  "product:proof-of-work-api",
-  "product:stash-api",
-  "product:think-aloud-protocol",
-  "product:integrated-learning-environment",
-  "product:agentic-learning-environment",
-  "use-case:learning-verification",
-  "use-case:learning-optimization",
-  "use-case:reasoning-augmentation",
   "insight",
   "public-workspace",
 ] as const;

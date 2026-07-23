@@ -393,7 +393,9 @@ describe("Stash API product surfaces", () => {
     expect(product).toBeTruthy();
     expect(product?.title).toBe("Stash API");
     expect(product?.forAgent?.summary.toLowerCase()).toMatch(/alatap|evaluate agents|tap/);
-    expect(product?.forAgent?.href).toBe("/products/stash-api");
+    // No public product detail route — home platform listing only
+    expect(product?.forAgent?.href).toBeUndefined();
+    expect(product?.forAgent?.ctaLabel).toBeUndefined();
     expect(AGENT_COLUMN_PRODUCTS.some((p) => p.id === "stash-api")).toBe(true);
 
     const landing = LANDING_PRODUCT_ROWS.find((r) => r.name === "Stash API");
@@ -401,12 +403,13 @@ describe("Stash API product surfaces", () => {
     expect(landing?.pitch.toLowerCase()).toMatch(
       /evaluate agentic knowledge.*systems? 1 and 2 traces/,
     );
-    expect(landing?.href).toBe("/products/stash-api");
+    expect(landing?.href).toBeUndefined();
+    expect(landing?.ctaLabel).toBeUndefined();
     expect(STASH_API_PRODUCT.name).toBe("Stash API");
   });
 
-  it("product page module ships for Stash API", () => {
-    expect(existsSync(join(ROOT, "app/products/stash-api/page.tsx"))).toBe(true);
+  it("Stash API SEO module remains; public product landing route is gone", () => {
+    expect(existsSync(join(ROOT, "app/products/stash-api/page.tsx"))).toBe(false);
     const page = readFileSync(join(ROOT, "lib/seo/product-page.ts"), "utf8");
     expect(page).toContain("STASH_API_PAGE");
     expect(page).toMatch(/evaluate agents the same way we evaluate humans with TAP/i);

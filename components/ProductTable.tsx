@@ -6,6 +6,7 @@ export type ProductTableRow = {
   name: string;
   pitch: string;
   description: string;
+  /** Optional CTA only for non-detail destinations (e.g. create workspace). */
   href?: string;
   ctaLabel?: string;
   upcoming?: boolean;
@@ -28,7 +29,6 @@ export const LANDING_PRODUCT_ROWS: ProductTableRow[] = [
     pitch: "The shared model behind every product — not a standalone SKU.",
     description:
       "Trained to predict optimal interruptions on the learning path: when to probe, coach, or request proof instead of waiting for the next linear analytics event.",
-    href: "/products/trace-interruption-model",
   },
   {
     name: "Proof-of-Work API",
@@ -36,7 +36,6 @@ export const LANDING_PRODUCT_ROWS: ProductTableRow[] = [
     pitch: "Build custom apps on an evolving measurement layer.",
     description:
       "Headless scoring, agentic MCP tools, and TIM-powered interruption hints — the programmable base for verification, optimization, and augmentation you own end to end.",
-    href: "/products/proof-of-work-api",
   },
   {
     name: "Stash API",
@@ -44,7 +43,6 @@ export const LANDING_PRODUCT_ROWS: ProductTableRow[] = [
     pitch: "Evaluate Agentic Knowledge by probing their Systems 1 and 2 traces",
     description:
       "Buffer agent proof of work, then Stash (System 1) or Submit (System 2) into the regular PoW API — pure-API Think Aloud for agents.",
-    href: "/products/stash-api",
   },
   {
     name: "Think Aloud Protocol",
@@ -52,7 +50,6 @@ export const LANDING_PRODUCT_ROWS: ProductTableRow[] = [
     pitch: "Live verification links with Socratic probe.",
     description:
       "Candidates and learners think aloud while they work. TIM targets reasoning gaps in the moment — including TAP-cha human checks bots cannot fake.",
-    href: "/products/think-aloud-protocol",
   },
   {
     name: "Integrated Learning Environment",
@@ -60,7 +57,6 @@ export const LANDING_PRODUCT_ROWS: ProductTableRow[] = [
     pitch: "Hosted practice when depth beats checkbox tests.",
     description:
       "Coached scenarios wired to verified gaps — a take-home and quiz replacement for complex cognition, with interruptions timed to what the model already knows.",
-    href: "/products/integrated-learning-environment",
   },
   {
     name: "Agentic Learning Environment",
@@ -68,20 +64,19 @@ export const LANDING_PRODUCT_ROWS: ProductTableRow[] = [
     pitch: "Evolve agent skills from real runs.",
     description:
       "Iterate skill.md files and validate tool-use inside your data boundary until deploy readiness clears — same workspace and TIM loop as human products.",
-    href: "/products/agentic-learning-environment",
   },
 ];
 
-function LearnMoreButton({
+function RowCta({
   href,
-  label = "Learn more",
+  label,
   disabled,
 }: {
   href?: string;
   label?: string;
   disabled?: boolean;
 }) {
-  if (!href || disabled) return null;
+  if (!href || !label || disabled) return null;
 
   return (
     <Link
@@ -116,11 +111,7 @@ function ProductRow({ row }: { row: ProductTableRow }) {
           <p className="mt-2 text-sm leading-relaxed text-zinc-500">{row.description}</p>
         </div>
       </div>
-      <LearnMoreButton
-        href={row.href}
-        label={row.ctaLabel ?? "Learn more"}
-        disabled={row.upcoming}
-      />
+      <RowCta href={row.href} label={row.ctaLabel} disabled={row.upcoming} />
     </div>
   );
 }
@@ -129,20 +120,11 @@ export function ProductTable({ rows = LANDING_PRODUCT_ROWS }: { rows?: ProductTa
   return (
     <div className="border border-zinc-800 bg-zinc-950/70 backdrop-blur-sm">
       <div className="border-b border-zinc-800 px-4 py-2.5 font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-600 sm:px-5">
-        Product
+        Platform
       </div>
       {rows.map((row) => (
         <ProductRow key={row.name} row={row} />
       ))}
-      <div className="border-t border-zinc-800/90 px-4 py-3 sm:px-5">
-        <Link
-          href="/use-cases"
-          className="inline-flex items-center gap-1.5 text-sm text-zinc-400 transition hover:text-white"
-        >
-          Browse use cases
-          <ArrowRight size={14} />
-        </Link>
-      </div>
     </div>
   );
 }

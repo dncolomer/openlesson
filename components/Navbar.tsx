@@ -136,7 +136,7 @@ export function Navbar({ breadcrumbs = [], showNav = true }: NavbarProps) {
                   aria-haspopup="menu"
                   onClick={() => setCommunityOpen((open) => !open)}
                 >
-                  Community
+                  Projects & Community
                   <svg
                     className={`h-3.5 w-3.5 transition-transform ${communityOpen ? "rotate-180" : ""}`}
                     fill="none"
@@ -150,7 +150,7 @@ export function Navbar({ breadcrumbs = [], showNav = true }: NavbarProps) {
                 {communityOpen && (
                   <div
                     role="menu"
-                    aria-label="Community"
+                    aria-label="Projects & Community"
                     className="absolute right-0 top-full z-50 mt-1 min-w-[11.5rem] border border-neutral-800 bg-[#0a0a0a]/95 py-1 shadow-xl shadow-black/40 backdrop-blur-md"
                   >
                     {communityLinks.map((link) => (
@@ -246,7 +246,7 @@ export function Navbar({ breadcrumbs = [], showNav = true }: NavbarProps) {
                   aria-expanded={mobileCommunityOpen}
                   onClick={() => setMobileCommunityOpen((open) => !open)}
                 >
-                  Community
+                  Projects & Community
                   <svg
                     className={`h-4 w-4 transition-transform ${mobileCommunityOpen ? "rotate-180" : ""}`}
                     fill="none"

@@ -72,11 +72,8 @@ export function LandingNav({ overlay = false }: LandingNavProps) {
         </Link>
 
         <nav className="hidden items-center gap-6 text-sm text-zinc-500 md:flex" aria-label="Main navigation">
-          <Link href="/use-cases" className="transition hover:text-white">
-            Use cases
-          </Link>
-          <Link href="/#products" className="transition hover:text-white">
-            Products
+          <Link href="/#platform" className="transition hover:text-white">
+            Platform
           </Link>
           <Link href="/pricing" className="transition hover:text-white">
             Pricing
@@ -91,7 +88,7 @@ export function LandingNav({ overlay = false }: LandingNavProps) {
               aria-controls="community-menu"
               onClick={() => setCommunityOpen((open) => !open)}
             >
-              Community
+              Projects & Community
               <ChevronDown
                 size={14}
                 className={`transition-transform ${communityOpen ? "rotate-180" : ""}`}
@@ -102,7 +99,7 @@ export function LandingNav({ overlay = false }: LandingNavProps) {
               <div
                 id="community-menu"
                 role="menu"
-                aria-label="Community"
+                aria-label="Projects & Community"
                 className="absolute left-0 top-full z-50 mt-2 min-w-[12.5rem] border border-zinc-800 bg-[#0a0a0a]/95 py-1 shadow-xl shadow-black/40 backdrop-blur-md"
               >
                 {COMMUNITY_LINKS.map((link) => (
@@ -142,13 +139,8 @@ export function LandingNav({ overlay = false }: LandingNavProps) {
         <nav className="mx-auto mt-4 max-w-6xl border-t border-zinc-900 pt-4 md:hidden" aria-label="Mobile navigation">
           <ul className="space-y-1 text-sm">
             <li>
-              <Link href="/use-cases" className="block rounded-sm px-2 py-2 text-zinc-300" onClick={() => setMobileOpen(false)}>
-                Use cases
-              </Link>
-            </li>
-            <li>
-              <Link href="/#products" className="block rounded-sm px-2 py-2 text-zinc-300" onClick={() => setMobileOpen(false)}>
-                Products
+              <Link href="/#platform" className="block rounded-sm px-2 py-2 text-zinc-300" onClick={() => setMobileOpen(false)}>
+                Platform
               </Link>
             </li>
             <li>
@@ -163,7 +155,7 @@ export function LandingNav({ overlay = false }: LandingNavProps) {
                 aria-expanded={mobileCommunityOpen}
                 onClick={() => setMobileCommunityOpen((open) => !open)}
               >
-                Community
+                Projects & Community
                 <ChevronDown
                   size={14}
                   className={`transition-transform ${mobileCommunityOpen ? "rotate-180" : ""}`}

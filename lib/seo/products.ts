@@ -50,8 +50,6 @@ export const PRODUCTS: ProductDefinition[] = [
         "Learning optimization tied to conversion — not completion rates",
         "Fits onboarding, certification, and QA gates",
       ],
-      href: "/products/proof-of-work-api",
-      ctaLabel: "Learn more",
     },
     forAgent: {
       summary:
@@ -60,8 +58,6 @@ export const PRODUCTS: ProductDefinition[] = [
         "Scores agent runs from real tool use",
         "Fits CI, eval harnesses, and deploy gates",
       ],
-      href: "/products/proof-of-work-api",
-      ctaLabel: "Learn more",
     },
   },
   {
@@ -75,8 +71,6 @@ export const PRODUCTS: ProductDefinition[] = [
         "Same PoW types as Proof-of-Work API — tool, screen, video, EEG",
         "Temporary memory until Stash or Submit; intent is first-class evidence",
       ],
-      href: "/products/stash-api",
-      ctaLabel: "Learn more",
     },
   },
   {
@@ -90,8 +84,6 @@ export const PRODUCTS: ProductDefinition[] = [
         "Captures live cognition under Socratic probe",
         "Shareable links per workspace or practice block",
       ],
-      href: "/products/think-aloud-protocol",
-      ctaLabel: "Learn more",
     },
   },
   {
@@ -105,8 +97,6 @@ export const PRODUCTS: ProductDefinition[] = [
         "Depth over checkbox completion",
         "Progress tracked in the same workspace",
       ],
-      href: "/products/integrated-learning-environment",
-      ctaLabel: "Learn more",
     },
   },
   {
@@ -120,8 +110,6 @@ export const PRODUCTS: ProductDefinition[] = [
         "Skill evolution driven by proof of work, not one-shot prompt edits",
         "Validate before deploy inside your data boundary",
       ],
-      href: "/products/agentic-learning-environment",
-      ctaLabel: "Learn more",
     },
   },
 ];

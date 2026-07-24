@@ -169,9 +169,13 @@ export async function buildWorkspacePerformanceContext({
 
   if (blockId) proofOfWorkQuery = proofOfWorkQuery.eq("block_id", blockId);
   if (evidenceFilter.restrictToGuest && evidenceFilter.guestUserId) {
+    // Guest isolation: match guest id only (ignore any legacy owner user_id on row).
     proofOfWorkQuery = proofOfWorkQuery.eq("guest_user_id", evidenceFilter.guestUserId);
   } else if (evidenceFilter.restrictToUser && evidenceFilter.userId) {
-    proofOfWorkQuery = proofOfWorkQuery.eq("user_id", evidenceFilter.userId);
+    // Owner/member isolation: their own rows only — exclude guest-attributed evidence.
+    proofOfWorkQuery = proofOfWorkQuery
+      .eq("user_id", evidenceFilter.userId)
+      .is("guest_user_id", null);
   }
 
   const { data: rawProofOfWorkRows } = await proofOfWorkQuery;

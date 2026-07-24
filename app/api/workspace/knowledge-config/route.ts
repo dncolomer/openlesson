@@ -31,7 +31,7 @@ import {
   emptyKnowledgeConfig,
   parseProjectionAlgorithmId,
 } from "@/lib/knowledge-config";
-import { listSubjectsWithKnowledgeConfig } from "@/lib/pow-api/custom-verification-model-store";
+import { listWorkspaceAvailableSubjectsForUi } from "@/lib/pow-api/workspace-snapshot-subjects";
 import type { LearningWorldModelV0 } from "@/lib/prompt-kernel/world-model";
 
 export const runtime = "nodejs";
@@ -207,8 +207,9 @@ async function handle(
     lwmPromise = loadLearningWorldModel(supabase, workspaceId, subject).then((r) => r.model);
   }
 
+  // Owners see PoW guests + link guests + prior knowledge subjects (not KC-only).
   const subjectsPromise = access.isOwner
-    ? listSubjectsWithKnowledgeConfig(supabase, workspaceId)
+    ? listWorkspaceAvailableSubjectsForUi(supabase, workspaceId, userId)
     : Promise.resolve([]);
 
   const [latest, learning_world_model, points, available_subjects] = await Promise.all([

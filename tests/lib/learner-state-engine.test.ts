@@ -82,16 +82,17 @@ function scoreReport(overrides: Partial<VerticalScoreReport> = {}): VerticalScor
 }
 
 describe("scoresDeltaFromReport", () => {
-  it("promotes report strengths and growth into LWM learning_profile even without world_model_delta", () => {
+  it("promotes report strengths, growth, gaps, and appetite without world_model_delta", () => {
     const delta = scoresDeltaFromReport(
       scoreReport({
         world_model_delta: undefined,
         strengths: ["clear definitions", "worked examples"],
         growth_areas: ["edge cases"],
+        suggestions: ["Upload more worked examples"],
         gap_analysis: {
           summary: "thin transfer",
           gaps: [{ title: "Transfer to new domains", proof_of_work: "none", severity: "medium", suggested_repair: "try" }],
-          next_steps: { directions: [], events: [] },
+          next_steps: { directions: ["Practice transfer"], events: ["tool_decision"] },
         },
       }),
       "verification",
@@ -106,6 +107,9 @@ describe("scoresDeltaFromReport", () => {
     );
     expect(delta.exploration?.blind_spots).toEqual(
       expect.arrayContaining(["Transfer to new domains"]),
+    );
+    expect(delta.evidence_appetite?.want_more).toEqual(
+      expect.arrayContaining(["tool_decision", "Practice transfer", "Upload more worked examples"]),
     );
   });
 

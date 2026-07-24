@@ -33,6 +33,8 @@ import {
   type ProjectionDisplayMode,
   type ProjectionAlgorithmId,
 } from "@/lib/knowledge-config";
+import { PerformanceReportCard } from "@/components/PerformanceReportCard";
+import type { PerformanceReport } from "@/lib/pow-api/performance-report";
 
 interface ProjectionCoord {
   t: string;
@@ -815,6 +817,8 @@ export function KnowledgeConfigTrajectoryPanel({
   const [lwmLoading, setLwmLoading] = useState(false);
   const [embError, setEmbError] = useState<string | null>(null);
   const [lwmError, setLwmError] = useState<string | null>(null);
+  /** Latest LWM Snapshot report for the selected subject (full narrative card). */
+  const [latestSnapshotReport, setLatestSnapshotReport] = useState<PerformanceReport | null>(null);
 
   /** Saved knowledge regions (cohort + synthetic) for multi-select overlay. */
   const [knowledgeRegions, setKnowledgeRegions] = useState<KnowledgeRegionListItem[]>([]);
@@ -916,6 +920,35 @@ export function KnowledgeConfigTrajectoryPanel({
     }
   }, [embScope.query, fetchKnowledgeConfig, mergeAvailableSubjects]);
 
+  const loadLatestSnapshotReport = useCallback(async () => {
+    if (!showLwm) return;
+    try {
+      const params = new URLSearchParams({
+        workspaceId,
+        limit: "1",
+        vertical: "verification",
+      });
+      if (ayclToken) params.set("ayclToken", ayclToken);
+      if (lwmGuestUserId) params.set("guest_user_id", lwmGuestUserId);
+      else if (lwmUserId) params.set("user_id", lwmUserId);
+      else if (currentUserId) params.set("user_id", currentUserId);
+
+      const response = await fetch(`/api/workspace/snapshot-history?${params.toString()}`);
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        setLatestSnapshotReport(null);
+        return;
+      }
+      const runs = Array.isArray(data.runs) ? data.runs : [];
+      const report = runs[0]?.report;
+      setLatestSnapshotReport(
+        report && typeof report === "object" ? (report as PerformanceReport) : null,
+      );
+    } catch {
+      setLatestSnapshotReport(null);
+    }
+  }, [ayclToken, currentUserId, lwmGuestUserId, lwmUserId, showLwm, workspaceId]);
+
   const loadLwm = useCallback(async () => {
     setLwmLoading(true);
     setLwmError(null);
@@ -923,12 +956,13 @@ export function KnowledgeConfigTrajectoryPanel({
       const payload = await fetchKnowledgeConfig(lwmScope.query);
       setLwmData(payload);
       mergeAvailableSubjects(payload);
+      await loadLatestSnapshotReport();
     } catch (err) {
       setLwmError(err instanceof Error ? err.message : "Failed to load learning world model");
     } finally {
       setLwmLoading(false);
     }
-  }, [fetchKnowledgeConfig, lwmScope.query, mergeAvailableSubjects]);
+  }, [fetchKnowledgeConfig, loadLatestSnapshotReport, lwmScope.query, mergeAvailableSubjects]);
 
   const loadSnapshotEligibility = useCallback(async () => {
     if (!currentUserId && !lwmUserId && !lwmGuestUserId) {
@@ -1920,6 +1954,21 @@ export function KnowledgeConfigTrajectoryPanel({
             </div>
           </div>
         )}
+
+        {latestSnapshotReport ? (
+          <div className="mt-4 min-w-0" data-lwm-latest-snapshot-report>
+            <p className="mb-2 font-mono text-[10px] uppercase tracking-[1.4px] text-neutral-500">
+              Latest snapshot detail
+            </p>
+            <div className="rounded-xl border border-neutral-800 bg-neutral-950/60 p-3 sm:p-4">
+              <PerformanceReportCard
+                report={latestSnapshotReport}
+                layout="spacious"
+                label="LWM Snapshot report"
+              />
+            </div>
+          </div>
+        ) : null}
           </div>
         </div>
       </SectionCard>

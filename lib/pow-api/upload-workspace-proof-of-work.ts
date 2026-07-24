@@ -277,7 +277,10 @@ export async function uploadWorkspaceProofOfWork(
     band_powers: input.band_powers ?? null,
     device_name: input.device_name ?? null,
     sample_count: input.sample_count ?? null,
-    user_id: participantUserId || billingUserId,
+    // Guest PoW must not inherit the workspace owner user_id — that collapses
+    // every guest link into "You" for subject pickers and owner-scoped snapshots.
+    // Billing is already gated above via assertCanSubmitProofOfWork(billingUserId).
+    user_id: participantGuestUserId ? null : participantUserId || billingUserId,
     guest_user_id: participantGuestUserId,
     organization_id: organizationId,
     created_by_api_key_id: createdByApiKeyId(auth),

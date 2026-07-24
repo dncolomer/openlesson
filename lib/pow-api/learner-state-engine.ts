@@ -153,6 +153,22 @@ export function scoresDeltaFromReport(
     };
   }
 
+  // Promote narrative "what to collect next" into evidence appetite when the
+  // model omitted world_model_delta.evidence_appetite (common structured-output miss).
+  const wantMore = uniqueNonEmptyStrings([
+    ...(base.evidence_appetite?.want_more ?? []),
+    ...(report.gap_analysis?.next_steps?.events ?? []),
+    ...(report.gap_analysis?.next_steps?.directions ?? []),
+    ...(report.suggestions ?? []),
+  ]);
+  const saturated = uniqueNonEmptyStrings([...(base.evidence_appetite?.saturated ?? [])]);
+  if (wantMore.length > 0 || saturated.length > 0 || base.evidence_appetite) {
+    delta.evidence_appetite = {
+      want_more: wantMore.length > 0 ? wantMore : (base.evidence_appetite?.want_more ?? []),
+      saturated: saturated.length > 0 ? saturated : (base.evidence_appetite?.saturated ?? []),
+    };
+  }
+
   if (report.workspace_goal?.trim()) {
     delta.inferred_goal = {
       ...(base.inferred_goal || {

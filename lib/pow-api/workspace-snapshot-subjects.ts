@@ -72,14 +72,15 @@ export function collectWorkspaceSnapshotSubjects(input: {
 
 /**
  * Load distinct workspace subjects that may receive an LWM Snapshot.
- * Owner always included; also anyone with PoW, block_sessions, or prior knowledge configs.
+ * Owner always included; also anyone with PoW, TAP/ILE link guests,
+ * block_sessions, or prior knowledge configs.
  */
 export async function listWorkspaceSnapshotSubjects(
   supabase: SupabaseClient,
   workspaceId: string,
   ownerUserId?: string | null,
 ): Promise<SnapshotSubjectRef[]> {
-  const [powRes, sessionsRes, kcRes] = await Promise.all([
+  const [powRes, sessionsRes, kcRes, tapRes, ileRes] = await Promise.all([
     supabase
       .from("workspace_proof_of_work")
       .select("user_id, guest_user_id")
@@ -95,6 +96,16 @@ export async function listWorkspaceSnapshotSubjects(
       .select("subject_user_id, subject_guest_user_id")
       .eq("workspace_id", workspaceId)
       .limit(1000),
+    supabase
+      .from("workspace_tap_sessions")
+      .select("guest_user_id, assigned_user_id")
+      .eq("workspace_id", workspaceId)
+      .limit(1000),
+    supabase
+      .from("workspace_ile_links")
+      .select("guest_user_id, assigned_user_id")
+      .eq("workspace_id", workspaceId)
+      .limit(1000),
   ]);
 
   if (powRes.error) {
@@ -106,14 +117,60 @@ export async function listWorkspaceSnapshotSubjects(
   if (kcRes.error) {
     console.warn("[workspace-snapshot-subjects] knowledge list:", kcRes.error.message);
   }
+  if (tapRes.error) {
+    console.warn("[workspace-snapshot-subjects] tap links list:", tapRes.error.message);
+  }
+  if (ileRes.error) {
+    console.warn("[workspace-snapshot-subjects] ile links list:", ileRes.error.message);
+  }
+
+  const linkSubjects: SnapshotSubjectRef[] = [];
+  for (const row of [...(tapRes.data || []), ...(ileRes.data || [])]) {
+    if (row.guest_user_id) {
+      linkSubjects.push({ guest_user_id: row.guest_user_id as string, user_id: null });
+    }
+    if (row.assigned_user_id) {
+      linkSubjects.push({ user_id: row.assigned_user_id as string, guest_user_id: null });
+    }
+  }
 
   return collectWorkspaceSnapshotSubjects({
     ownerUserId,
     powRows: powRes.data || [],
     sessionRows: sessionsRes.data || [],
-    knowledgeSubjects: (kcRes.data || []).map((r) => ({
-      user_id: r.subject_user_id as string | null,
-      guest_user_id: r.subject_guest_user_id as string | null,
-    })),
+    knowledgeSubjects: [
+      ...(kcRes.data || []).map((r) => ({
+        user_id: r.subject_user_id as string | null,
+        guest_user_id: r.subject_guest_user_id as string | null,
+      })),
+      ...linkSubjects,
+    ],
   });
+}
+
+/**
+ * UI subject list for Knowledge/LWM pickers: knowledge-config subjects enriched
+ * with PoW + guest-link identities (first-class guests even before first snapshot).
+ */
+export async function listWorkspaceAvailableSubjectsForUi(
+  supabase: SupabaseClient,
+  workspaceId: string,
+  ownerUserId?: string | null,
+): Promise<
+  Array<{
+    user_id: string | null;
+    guest_user_id: string | null;
+    embedding_model_id?: string | null;
+    as_of_ms?: number | null;
+    confidence?: number | null;
+  }>
+> {
+  const subjects = await listWorkspaceSnapshotSubjects(supabase, workspaceId, ownerUserId);
+  return subjects.map((s) => ({
+    user_id: s.user_id ?? null,
+    guest_user_id: s.guest_user_id ?? null,
+    embedding_model_id: null,
+    as_of_ms: null,
+    confidence: null,
+  }));
 }

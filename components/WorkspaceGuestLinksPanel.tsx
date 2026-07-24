@@ -7,7 +7,16 @@ import {
   TAP_LINK_MAX_MINUTES,
   TAP_LINK_MIN_MINUTES,
 } from "@/lib/pow-api/tap-link-config";
+import {
+  buildGuestLinkBrowseRows,
+  collectGuestLinkBrowseStatuses,
+  filterGuestLinkBrowseRows,
+  type GuestLinkBrowseKindFilter,
+  type GuestLinkBrowseRow,
+  type GuestLinkBrowseStatusFilter,
+} from "@/lib/guest-link-browse";
 import { LoadingStatusMessage } from "@/components/LoadingStatusMessage";
+import { WorkspaceSectionSubTabs } from "@/components/WorkspaceSectionSubTabs";
 
 interface WorkspaceBlock {
   id: string;
@@ -46,6 +55,8 @@ interface OrgMember {
   username: string | null;
 }
 
+type GuestLinksInnerTab = "create" | "browse";
+
 function participantLabel(
   link: {
     participant_type: string | null;
@@ -73,7 +84,8 @@ interface WorkspaceGuestLinksPanelProps {
 }
 
 /**
- * Owner settings: create and list TAP / ILE guest links for the workspace.
+ * Owner settings: create and browse TAP / ILE guest links for the workspace.
+ * Create and Browse are separate inner tabs so large link lists stay manageable.
  */
 export function WorkspaceGuestLinksPanel({
   workspaceId,
@@ -81,6 +93,7 @@ export function WorkspaceGuestLinksPanel({
   currentUserId,
 }: WorkspaceGuestLinksPanelProps) {
   const { t } = useI18n();
+  const [innerTab, setInnerTab] = useState<GuestLinksInnerTab>("create");
   const [blocks, setBlocks] = useState<WorkspaceBlock[]>([]);
   const [tapLinks, setTapLinks] = useState<TapLinkRow[]>([]);
   const [ileLinks, setIleLinks] = useState<IleLinkRow[]>([]);
@@ -101,6 +114,9 @@ export function WorkspaceGuestLinksPanel({
   const [copiedLinkId, setCopiedLinkId] = useState<string | null>(null);
   const [createdLinks, setCreatedLinks] = useState<Record<string, string>>({});
   const [invalidating, setInvalidating] = useState(false);
+  const [browseQuery, setBrowseQuery] = useState("");
+  const [browseKind, setBrowseKind] = useState<GuestLinkBrowseKindFilter>("all");
+  const [browseStatus, setBrowseStatus] = useState<GuestLinkBrowseStatusFilter>("all");
 
   const fieldClass =
     "mt-1 w-full rounded-md border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-white";
@@ -112,6 +128,27 @@ export function WorkspaceGuestLinksPanel({
   const blockTitleById = useMemo(() => {
     return new Map(blocks.map((block) => [block.id, block.title || block.id]));
   }, [blocks]);
+
+  const browseRows = useMemo(() => {
+    return buildGuestLinkBrowseRows(tapLinks, ileLinks, {
+      blockTitleById,
+      entireWorkspaceLabel: t("planView.tapLinksEntireWorkspace"),
+      participantLabelFor: (link) => participantLabel(link, t),
+    });
+  }, [blockTitleById, ileLinks, t, tapLinks]);
+
+  const filteredBrowseRows = useMemo(() => {
+    return filterGuestLinkBrowseRows(browseRows, {
+      query: browseQuery,
+      kind: browseKind,
+      status: browseStatus,
+    });
+  }, [browseKind, browseQuery, browseRows, browseStatus]);
+
+  const browseStatuses = useMemo(
+    () => collectGuestLinkBrowseStatuses(browseRows),
+    [browseRows],
+  );
 
   const loadTapResources = useCallback(async () => {
     if (!currentUserId || !isOwner) return;
@@ -213,6 +250,7 @@ export function WorkspaceGuestLinksPanel({
           setCreatedLinks((current) => ({ ...current, [data.tap_link.id]: linkUrl }));
         }
         await loadTapResources();
+        setInnerTab("browse");
       } catch (error) {
         setCreateError(error instanceof Error ? error.message : t("planView.tapLinksCreateError"));
       } finally {
@@ -349,6 +387,7 @@ export function WorkspaceGuestLinksPanel({
           setCreatedLinks((current) => ({ ...current, [data.ile_link.id]: linkUrl }));
         }
         await loadTapResources();
+        setInnerTab("browse");
       } catch (error) {
         setCreateIleError(
           error instanceof Error ? error.message : t("planView.ileLinksCreateError"),
@@ -466,6 +505,103 @@ export function WorkspaceGuestLinksPanel({
     [t],
   );
 
+  const renderBrowseRow = (link: GuestLinkBrowseRow) => {
+    const isRevoked = link.status === "revoked";
+    // Revoked links are not copyable (keep expression shape for structural tests).
+    const privateUrl = isRevoked ? undefined : createdLinks[link.id];
+    const isTap = link.kind === "tap";
+    const busy = invalidating || (isTap ? creatingLink : creatingIleLink);
+
+    return (
+      <li
+        key={`${link.kind}-${link.id}`}
+        data-guest-link-status={link.status}
+        data-guest-link-kind={link.kind}
+        className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-neutral-800 px-3 py-2 text-xs"
+      >
+        <div className="min-w-0 text-neutral-400">
+          <p className="text-neutral-300">
+            <span className="mr-2 rounded border border-neutral-700 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-neutral-300">
+              {isTap ? "TAP" : "ILE"}
+            </span>
+            {t("planView.tapLinksStatus")}: {link.status}
+            {isRevoked ? (
+              <span className="ml-1 text-red-400/90">
+                (
+                {isTap
+                  ? t("planView.tapLinksRevokedHint")
+                  : t("planView.ileLinksRevokedHint")}
+                )
+              </span>
+            ) : null}
+          </p>
+          <p>
+            {isTap ? t("planView.tapLinksScope") : t("planView.ileLinksBlock")}: {link.scopeLabel}
+          </p>
+          <p>
+            {t("planView.tapLinksParticipant")}: {link.participantLabel}
+            {link.guest_user_id ? (
+              <span className="ml-1 font-mono text-neutral-500">
+                ({link.guest_user_id.slice(0, 8)}…)
+              </span>
+            ) : null}
+          </p>
+          {isTap && link.requested_duration_seconds != null ? (
+            <p>{Math.round(link.requested_duration_seconds / 60)} min</p>
+          ) : null}
+          <p className="font-mono text-[10px] text-neutral-600">{link.id}</p>
+        </div>
+        <div className="flex shrink-0 flex-wrap items-center gap-2">
+          {link.guest_user_id ? (
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() =>
+                void (isTap ? reissueTapLink(link.id) : reissueIleLink(link.id))
+              }
+              className="rounded-md border border-neutral-700 px-2.5 py-1.5 text-xs text-neutral-300 transition hover:border-neutral-500"
+            >
+              {isTap ? t("planView.tapLinksReuseGuest") : t("planView.ileLinksReuseGuest")}
+            </button>
+          ) : null}
+          {!isRevoked && isTap ? (
+            <button
+              type="button"
+              disabled={invalidating || creatingLink}
+              onClick={() => void invalidateTapLink(link.id)}
+              data-guest-link-invalidate="tap"
+              className="rounded-md border border-red-900/60 px-2.5 py-1.5 text-xs text-red-300 transition hover:border-red-700 disabled:opacity-40"
+            >
+              {t("planView.tapLinksInvalidate")}
+            </button>
+          ) : null}
+          {!isRevoked && !isTap ? (
+            <button
+              type="button"
+              disabled={invalidating || creatingIleLink}
+              onClick={() => void invalidateIleLink(link.id)}
+              data-guest-link-invalidate="ile"
+              className="rounded-md border border-red-900/60 px-2.5 py-1.5 text-xs text-red-300 transition hover:border-red-700 disabled:opacity-40"
+            >
+              {t("planView.ileLinksInvalidate")}
+            </button>
+          ) : null}
+          {privateUrl ? (
+            <button
+              type="button"
+              onClick={() => void copyLink(link.id, privateUrl)}
+              className="rounded-md border border-neutral-600 px-2.5 py-1.5 text-xs text-white transition hover:border-neutral-400"
+            >
+              {copiedLinkId === link.id
+                ? t("planView.tapLinksCopied")
+                : t("planView.tapLinksCopy")}
+            </button>
+          ) : null}
+        </div>
+      </li>
+    );
+  };
+
   if (!isOwner || !currentUserId) {
     return (
       <section
@@ -477,375 +613,321 @@ export function WorkspaceGuestLinksPanel({
     );
   }
 
+  const innerTabs = [
+    { id: "create" as const, label: t("planView.guestLinksTabCreate") },
+    { id: "browse" as const, label: t("planView.guestLinksTabBrowse") },
+  ];
+
   return (
-    <div className="flex w-full flex-col gap-5" data-settings-section="guest-links">
-      <div className="rounded-xl border border-neutral-800/80 bg-neutral-950/75 p-5 backdrop-blur-md sm:p-6">
-        <h3 className="text-sm font-medium text-white">{t("planView.tapLinksTitle")}</h3>
-        <p className="mt-1 max-w-2xl text-xs leading-relaxed text-neutral-500">
-          {t("planView.tapLinksHint")}
-        </p>
+    <div className="flex w-full flex-col gap-0" data-settings-section="guest-links">
+      <div
+        className="rounded-xl border border-neutral-800/80 bg-neutral-950/75 backdrop-blur-md"
+        data-guest-links-inner-tabs
+      >
+        <WorkspaceSectionSubTabs
+          activeId={innerTab}
+          onChange={setInnerTab}
+          tabs={innerTabs}
+          ariaLabel={t("planView.guestLinksInnerTabsAria")}
+        />
 
-        <div className="mt-4 grid gap-3 sm:grid-cols-2">
-          <label className="block text-xs text-neutral-400">
-            {t("planView.tapLinksScope")}
-            <select
-              value={selectedBlockId}
-              onChange={(event) => setSelectedBlockId(event.target.value)}
-              className={fieldClass}
-            >
-              <option value="">{t("planView.tapLinksEntireWorkspace")}</option>
-              {blocks.map((block) => (
-                <option key={block.id} value={block.id}>
-                  {block.title || block.id}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label className="block text-xs text-neutral-400">
-            {t("planView.tapLinksMinutes")}
-            <input
-              type="number"
-              min={TAP_LINK_MIN_MINUTES}
-              max={TAP_LINK_MAX_MINUTES}
-              value={minutes}
-              onChange={(event) =>
-                setMinutes(Number(event.target.value) || TAP_LINK_DEFAULT_MINUTES)
-              }
-              className={fieldClass}
-            />
-          </label>
-        </div>
-
-        <label className="mt-4 flex cursor-pointer items-start gap-2.5 text-xs text-neutral-400">
-          <input
-            type="checkbox"
-            className="mt-0.5 rounded border-neutral-700 bg-neutral-900"
-            checked={showEndSession}
-            onChange={(e) => setShowEndSession(e.target.checked)}
-            data-guest-link-show-end-session
-          />
-          <span>
-            <span className="font-medium text-neutral-300">Show End Session button</span>
-            <span className="mt-0.5 block text-neutral-500">
-              Default on. Uncheck for open-ended runs. Share the same link with different query
-              params (e.g. ?candidate_id=…) to attribute PoW to different guests.
-            </span>
-          </span>
-        </label>
-
-        <div className="mt-4 flex flex-wrap gap-2">
-          <button
-            type="button"
-            disabled={creatingLink}
-            onClick={() => void createTapLink("anonymous")}
-            className={primaryBtnClass}
+        {innerTab === "create" ? (
+          <div
+            className="flex flex-col gap-5 p-5 sm:p-6"
+            data-guest-links-inner-tab="create"
+            role="tabpanel"
           >
-            {creatingLink ? t("planView.tapLinksCreating") : t("planView.tapLinksCreateAnonymous")}
-          </button>
+            <div>
+              <h3 className="text-sm font-medium text-white">{t("planView.tapLinksTitle")}</h3>
+              <p className="mt-1 max-w-2xl text-xs leading-relaxed text-neutral-500">
+                {t("planView.tapLinksHint")}
+              </p>
 
-          {orgMembers.length > 0 ? (
-            <>
-              <select
-                value={selectedMemberId}
-                onChange={(event) => setSelectedMemberId(event.target.value)}
-                className="rounded-md border border-neutral-700 bg-neutral-900 px-3 py-2 text-xs text-white"
-              >
-                <option value="">{t("planView.tapLinksSelectMember")}</option>
-                {orgMembers.map((member) => (
-                  <option key={member.id} value={member.id}>
-                    {memberLabel(member)}
-                  </option>
-                ))}
-              </select>
-              <button
-                type="button"
-                disabled={creatingLink || !selectedMemberId}
-                onClick={() => void createTapLink("user")}
-                className={secondaryBtnClass}
-              >
-                {creatingLink ? t("planView.tapLinksCreating") : t("planView.tapLinksCreateMember")}
-              </button>
-            </>
-          ) : null}
-        </div>
-
-        {createError ? <p className="mt-3 text-xs text-red-400">{createError}</p> : null}
-
-        <div className="mt-5">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <h4 className="text-xs font-medium uppercase tracking-wide text-neutral-500">
-              {t("planView.tapLinksListTitle")}
-            </h4>
-            {tapLinks.some((link) => link.status !== "revoked") ? (
-              <button
-                type="button"
-                disabled={invalidating || creatingLink}
-                onClick={() => void invalidateAllTapLinks()}
-                data-guest-link-invalidate-all="tap"
-                className="rounded-md border border-red-900/60 px-2.5 py-1.5 text-xs text-red-300 transition hover:border-red-700 disabled:opacity-40"
-              >
-                {invalidating
-                  ? t("planView.tapLinksInvalidating")
-                  : t("planView.tapLinksInvalidateAll")}
-              </button>
-            ) : null}
-          </div>
-          {linksLoading ? (
-            <div className="mt-3">
-              <LoadingStatusMessage
-                size="sm"
-                tone="subtle"
-                message={t("planView.tapLinksCreating")}
-              />
-            </div>
-          ) : tapLinks.length === 0 ? (
-            <p className="mt-3 text-xs text-neutral-600">{t("planView.tapLinksEmpty")}</p>
-          ) : (
-            <ul className="mt-3 space-y-2">
-              {tapLinks.map((link) => {
-                const isRevoked = link.status === "revoked";
-                const privateUrl = isRevoked ? undefined : createdLinks[link.id];
-                const scopeLabel = link.block_id
-                  ? blockTitleById.get(link.block_id) || link.block_id
-                  : t("planView.tapLinksEntireWorkspace");
-                return (
-                  <li
-                    key={link.id}
-                    data-guest-link-status={link.status}
-                    className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-neutral-800 px-3 py-2 text-xs"
+              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                <label className="block text-xs text-neutral-400">
+                  {t("planView.tapLinksScope")}
+                  <select
+                    value={selectedBlockId}
+                    onChange={(event) => setSelectedBlockId(event.target.value)}
+                    className={fieldClass}
                   >
-                    <div className="min-w-0 text-neutral-400">
-                      <p className="text-neutral-300">
-                        {t("planView.tapLinksStatus")}: {link.status}
-                        {isRevoked ? (
-                          <span className="ml-1 text-red-400/90">
-                            ({t("planView.tapLinksRevokedHint")})
-                          </span>
-                        ) : null}
-                      </p>
-                      <p>
-                        {t("planView.tapLinksScope")}: {scopeLabel}
-                      </p>
-                      <p>
-                        {t("planView.tapLinksParticipant")}: {participantLabel(link, t)}
-                        {link.guest_user_id ? (
-                          <span className="ml-1 font-mono text-neutral-500">
-                            ({link.guest_user_id.slice(0, 8)}…)
-                          </span>
-                        ) : null}
-                      </p>
-                      <p>{Math.round(link.requested_duration_seconds / 60)} min</p>
-                    </div>
-                    <div className="flex shrink-0 flex-wrap items-center gap-2">
-                      {link.guest_user_id ? (
-                        <button
-                          type="button"
-                          disabled={creatingLink || invalidating}
-                          onClick={() => void reissueTapLink(link.id)}
-                          className="rounded-md border border-neutral-700 px-2.5 py-1.5 text-xs text-neutral-300 transition hover:border-neutral-500"
-                        >
-                          {t("planView.tapLinksReuseGuest")}
-                        </button>
-                      ) : null}
-                      {!isRevoked ? (
-                        <button
-                          type="button"
-                          disabled={invalidating || creatingLink}
-                          onClick={() => void invalidateTapLink(link.id)}
-                          data-guest-link-invalidate="tap"
-                          className="rounded-md border border-red-900/60 px-2.5 py-1.5 text-xs text-red-300 transition hover:border-red-700 disabled:opacity-40"
-                        >
-                          {t("planView.tapLinksInvalidate")}
-                        </button>
-                      ) : null}
-                      {privateUrl ? (
-                        <button
-                          type="button"
-                          onClick={() => void copyLink(link.id, privateUrl)}
-                          className="rounded-md border border-neutral-600 px-2.5 py-1.5 text-xs text-white transition hover:border-neutral-400"
-                        >
-                          {copiedLinkId === link.id
-                            ? t("planView.tapLinksCopied")
-                            : t("planView.tapLinksCopy")}
-                        </button>
-                      ) : null}
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-        </div>
-      </div>
+                    <option value="">{t("planView.tapLinksEntireWorkspace")}</option>
+                    {blocks.map((block) => (
+                      <option key={block.id} value={block.id}>
+                        {block.title || block.id}
+                      </option>
+                    ))}
+                  </select>
+                </label>
 
-      <div className="rounded-xl border border-neutral-800/80 bg-neutral-950/75 p-5 backdrop-blur-md sm:p-6">
-        <h3 className="text-sm font-medium text-white">{t("planView.ileLinksTitle")}</h3>
-        <p className="mt-1 max-w-2xl text-xs leading-relaxed text-neutral-500">
-          {t("planView.ileLinksHint")}
-        </p>
+                <label className="block text-xs text-neutral-400">
+                  {t("planView.tapLinksMinutes")}
+                  <input
+                    type="number"
+                    min={TAP_LINK_MIN_MINUTES}
+                    max={TAP_LINK_MAX_MINUTES}
+                    value={minutes}
+                    onChange={(event) =>
+                      setMinutes(Number(event.target.value) || TAP_LINK_DEFAULT_MINUTES)
+                    }
+                    className={fieldClass}
+                  />
+                </label>
+              </div>
 
-        <div className="mt-4 grid gap-3 sm:grid-cols-2">
-          <label className="block text-xs text-neutral-400 sm:col-span-2">
-            {t("planView.ileLinksBlock")}
-            <select
-              value={selectedIleBlockId}
-              onChange={(event) => setSelectedIleBlockId(event.target.value)}
-              className={fieldClass}
-            >
-              <option value="">{t("planView.ileLinksSelectBlock")}</option>
-              {blocks.map((block) => (
-                <option key={block.id} value={block.id}>
-                  {block.title || block.id}
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
+              <label className="mt-4 flex cursor-pointer items-start gap-2.5 text-xs text-neutral-400">
+                <input
+                  type="checkbox"
+                  className="mt-0.5 rounded border-neutral-700 bg-neutral-900"
+                  checked={showEndSession}
+                  onChange={(e) => setShowEndSession(e.target.checked)}
+                  data-guest-link-show-end-session
+                />
+                <span>
+                  <span className="font-medium text-neutral-300">Show End Session button</span>
+                  <span className="mt-0.5 block text-neutral-500">
+                    Default on. Uncheck for open-ended runs. Share the same link with different query
+                    params (e.g. ?candidate_id=…) to attribute PoW to different guests.
+                  </span>
+                </span>
+              </label>
 
-        <div className="mt-4 flex flex-wrap gap-2">
-          <button
-            type="button"
-            disabled={creatingIleLink || !selectedIleBlockId}
-            onClick={() => void createIleLink("anonymous")}
-            className={primaryBtnClass}
+              <div className="mt-4 flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  disabled={creatingLink}
+                  onClick={() => void createTapLink("anonymous")}
+                  className={primaryBtnClass}
+                >
+                  {creatingLink
+                    ? t("planView.tapLinksCreating")
+                    : t("planView.tapLinksCreateAnonymous")}
+                </button>
+
+                {orgMembers.length > 0 ? (
+                  <>
+                    <select
+                      value={selectedMemberId}
+                      onChange={(event) => setSelectedMemberId(event.target.value)}
+                      className="rounded-md border border-neutral-700 bg-neutral-900 px-3 py-2 text-xs text-white"
+                    >
+                      <option value="">{t("planView.tapLinksSelectMember")}</option>
+                      {orgMembers.map((member) => (
+                        <option key={member.id} value={member.id}>
+                          {memberLabel(member)}
+                        </option>
+                      ))}
+                    </select>
+                    <button
+                      type="button"
+                      disabled={creatingLink || !selectedMemberId}
+                      onClick={() => void createTapLink("user")}
+                      className={secondaryBtnClass}
+                    >
+                      {creatingLink
+                        ? t("planView.tapLinksCreating")
+                        : t("planView.tapLinksCreateMember")}
+                    </button>
+                  </>
+                ) : null}
+              </div>
+
+              {createError ? <p className="mt-3 text-xs text-red-400">{createError}</p> : null}
+            </div>
+
+            <div className="border-t border-neutral-800/80 pt-5">
+              <h3 className="text-sm font-medium text-white">{t("planView.ileLinksTitle")}</h3>
+              <p className="mt-1 max-w-2xl text-xs leading-relaxed text-neutral-500">
+                {t("planView.ileLinksHint")}
+              </p>
+
+              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                <label className="block text-xs text-neutral-400 sm:col-span-2">
+                  {t("planView.ileLinksBlock")}
+                  <select
+                    value={selectedIleBlockId}
+                    onChange={(event) => setSelectedIleBlockId(event.target.value)}
+                    className={fieldClass}
+                  >
+                    <option value="">{t("planView.ileLinksSelectBlock")}</option>
+                    {blocks.map((block) => (
+                      <option key={block.id} value={block.id}>
+                        {block.title || block.id}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+
+              <div className="mt-4 flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  disabled={creatingIleLink || !selectedIleBlockId}
+                  onClick={() => void createIleLink("anonymous")}
+                  className={primaryBtnClass}
+                >
+                  {creatingIleLink
+                    ? t("planView.ileLinksCreating")
+                    : t("planView.ileLinksCreateAnonymous")}
+                </button>
+
+                {orgMembers.length > 0 ? (
+                  <>
+                    <select
+                      value={selectedIleMemberId}
+                      onChange={(event) => setSelectedIleMemberId(event.target.value)}
+                      className="rounded-md border border-neutral-700 bg-neutral-900 px-3 py-2 text-xs text-white"
+                    >
+                      <option value="">{t("planView.tapLinksSelectMember")}</option>
+                      {orgMembers.map((member) => (
+                        <option key={member.id} value={member.id}>
+                          {memberLabel(member)}
+                        </option>
+                      ))}
+                    </select>
+                    <button
+                      type="button"
+                      disabled={creatingIleLink || !selectedIleBlockId || !selectedIleMemberId}
+                      onClick={() => void createIleLink("user")}
+                      className={secondaryBtnClass}
+                    >
+                      {creatingIleLink
+                        ? t("planView.ileLinksCreating")
+                        : t("planView.ileLinksCreateMember")}
+                    </button>
+                  </>
+                ) : null}
+              </div>
+
+              {createIleError ? (
+                <p className="mt-3 text-xs text-red-400">{createIleError}</p>
+              ) : null}
+              {linksError ? <p className="mt-3 text-xs text-red-400">{linksError}</p> : null}
+            </div>
+          </div>
+        ) : null}
+
+        {innerTab === "browse" ? (
+          <div
+            className="flex flex-col gap-4 p-5 sm:p-6"
+            data-guest-links-inner-tab="browse"
+            role="tabpanel"
           >
-            {creatingIleLink
-              ? t("planView.ileLinksCreating")
-              : t("planView.ileLinksCreateAnonymous")}
-          </button>
-
-          {orgMembers.length > 0 ? (
-            <>
-              <select
-                value={selectedIleMemberId}
-                onChange={(event) => setSelectedIleMemberId(event.target.value)}
-                className="rounded-md border border-neutral-700 bg-neutral-900 px-3 py-2 text-xs text-white"
-              >
-                <option value="">{t("planView.tapLinksSelectMember")}</option>
-                {orgMembers.map((member) => (
-                  <option key={member.id} value={member.id}>
-                    {memberLabel(member)}
-                  </option>
-                ))}
-              </select>
-              <button
-                type="button"
-                disabled={creatingIleLink || !selectedIleBlockId || !selectedIleMemberId}
-                onClick={() => void createIleLink("user")}
-                className={secondaryBtnClass}
-              >
-                {creatingIleLink ? t("planView.ileLinksCreating") : t("planView.ileLinksCreateMember")}
-              </button>
-            </>
-          ) : null}
-        </div>
-
-        {createIleError ? <p className="mt-3 text-xs text-red-400">{createIleError}</p> : null}
-        {linksError ? <p className="mt-3 text-xs text-red-400">{linksError}</p> : null}
-
-        <div className="mt-5">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <h4 className="text-xs font-medium uppercase tracking-wide text-neutral-500">
-              {t("planView.ileLinksListTitle")}
-            </h4>
-            {ileLinks.some((link) => link.status !== "revoked") ? (
-              <button
-                type="button"
-                disabled={invalidating || creatingIleLink}
-                onClick={() => void invalidateAllIleLinks()}
-                data-guest-link-invalidate-all="ile"
-                className="rounded-md border border-red-900/60 px-2.5 py-1.5 text-xs text-red-300 transition hover:border-red-700 disabled:opacity-40"
-              >
-                {invalidating
-                  ? t("planView.ileLinksInvalidating")
-                  : t("planView.ileLinksInvalidateAll")}
-              </button>
-            ) : null}
-          </div>
-          {linksLoading ? (
-            <div className="mt-3">
-              <LoadingStatusMessage
-                size="sm"
-                tone="subtle"
-                message={t("planView.ileLinksCreating")}
-              />
+            <div>
+              <h3 className="text-sm font-medium text-white">
+                {t("planView.guestLinksBrowseTitle")}
+              </h3>
+              <p className="mt-1 max-w-2xl text-xs leading-relaxed text-neutral-500">
+                {t("planView.guestLinksBrowseHint")}
+              </p>
             </div>
-          ) : ileLinks.length === 0 ? (
-            <p className="mt-3 text-xs text-neutral-600">{t("planView.ileLinksEmpty")}</p>
-          ) : (
-            <ul className="mt-3 space-y-2">
-              {ileLinks.map((link) => {
-                const isRevoked = link.status === "revoked";
-                const privateUrl = isRevoked ? undefined : createdLinks[link.id];
-                const scopeLabel = blockTitleById.get(link.block_id) || link.block_id;
-                return (
-                  <li
-                    key={link.id}
-                    data-guest-link-status={link.status}
-                    className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-neutral-800 px-3 py-2 text-xs"
+
+            <div className="grid gap-3 sm:grid-cols-3">
+              <label className="block text-xs text-neutral-400 sm:col-span-1">
+                {t("planView.guestLinksSearchLabel")}
+                <input
+                  type="search"
+                  value={browseQuery}
+                  onChange={(event) => setBrowseQuery(event.target.value)}
+                  placeholder={t("planView.guestLinksSearchPlaceholder")}
+                  className={fieldClass}
+                  data-guest-links-search
+                />
+              </label>
+              <label className="block text-xs text-neutral-400">
+                {t("planView.guestLinksFilterKind")}
+                <select
+                  value={browseKind}
+                  onChange={(event) =>
+                    setBrowseKind(event.target.value as GuestLinkBrowseKindFilter)
+                  }
+                  className={fieldClass}
+                  data-guest-links-filter-kind
+                >
+                  <option value="all">{t("planView.guestLinksFilterKindAll")}</option>
+                  <option value="tap">{t("planView.guestLinksFilterKindTap")}</option>
+                  <option value="ile">{t("planView.guestLinksFilterKindIle")}</option>
+                </select>
+              </label>
+              <label className="block text-xs text-neutral-400">
+                {t("planView.guestLinksFilterStatus")}
+                <select
+                  value={browseStatus}
+                  onChange={(event) => setBrowseStatus(event.target.value)}
+                  className={fieldClass}
+                  data-guest-links-filter-status
+                >
+                  <option value="all">{t("planView.guestLinksFilterStatusAll")}</option>
+                  {browseStatuses.map((status) => (
+                    <option key={status} value={status}>
+                      {status}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="text-xs text-neutral-500">
+                {t("planView.guestLinksBrowseCount")
+                  .replace("{shown}", String(filteredBrowseRows.length))
+                  .replace("{total}", String(browseRows.length))}
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {tapLinks.some((link) => link.status !== "revoked") ? (
+                  <button
+                    type="button"
+                    disabled={invalidating || creatingLink}
+                    onClick={() => void invalidateAllTapLinks()}
+                    data-guest-link-invalidate-all="tap"
+                    className="rounded-md border border-red-900/60 px-2.5 py-1.5 text-xs text-red-300 transition hover:border-red-700 disabled:opacity-40"
                   >
-                    <div className="min-w-0 text-neutral-400">
-                      <p className="text-neutral-300">
-                        {t("planView.tapLinksStatus")}: {link.status}
-                        {isRevoked ? (
-                          <span className="ml-1 text-red-400/90">
-                            ({t("planView.ileLinksRevokedHint")})
-                          </span>
-                        ) : null}
-                      </p>
-                      <p>
-                        {t("planView.ileLinksBlock")}: {scopeLabel}
-                      </p>
-                      <p>
-                        {t("planView.tapLinksParticipant")}: {participantLabel(link, t)}
-                        {link.guest_user_id ? (
-                          <span className="ml-1 font-mono text-neutral-500">
-                            ({link.guest_user_id.slice(0, 8)}…)
-                          </span>
-                        ) : null}
-                      </p>
-                    </div>
-                    <div className="flex shrink-0 flex-wrap items-center gap-2">
-                      {link.guest_user_id ? (
-                        <button
-                          type="button"
-                          disabled={creatingIleLink || invalidating}
-                          onClick={() => void reissueIleLink(link.id)}
-                          className="rounded-md border border-neutral-700 px-2.5 py-1.5 text-xs text-neutral-300 transition hover:border-neutral-500"
-                        >
-                          {t("planView.ileLinksReuseGuest")}
-                        </button>
-                      ) : null}
-                      {!isRevoked ? (
-                        <button
-                          type="button"
-                          disabled={invalidating || creatingIleLink}
-                          onClick={() => void invalidateIleLink(link.id)}
-                          data-guest-link-invalidate="ile"
-                          className="rounded-md border border-red-900/60 px-2.5 py-1.5 text-xs text-red-300 transition hover:border-red-700 disabled:opacity-40"
-                        >
-                          {t("planView.ileLinksInvalidate")}
-                        </button>
-                      ) : null}
-                      {privateUrl ? (
-                        <button
-                          type="button"
-                          onClick={() => void copyLink(link.id, privateUrl)}
-                          className="rounded-md border border-neutral-600 px-2.5 py-1.5 text-xs text-white transition hover:border-neutral-400"
-                        >
-                          {copiedLinkId === link.id
-                            ? t("planView.tapLinksCopied")
-                            : t("planView.tapLinksCopy")}
-                        </button>
-                      ) : null}
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-        </div>
+                    {invalidating
+                      ? t("planView.tapLinksInvalidating")
+                      : t("planView.tapLinksInvalidateAll")}
+                  </button>
+                ) : null}
+                {ileLinks.some((link) => link.status !== "revoked") ? (
+                  <button
+                    type="button"
+                    disabled={invalidating || creatingIleLink}
+                    onClick={() => void invalidateAllIleLinks()}
+                    data-guest-link-invalidate-all="ile"
+                    className="rounded-md border border-red-900/60 px-2.5 py-1.5 text-xs text-red-300 transition hover:border-red-700 disabled:opacity-40"
+                  >
+                    {invalidating
+                      ? t("planView.ileLinksInvalidating")
+                      : t("planView.ileLinksInvalidateAll")}
+                  </button>
+                ) : null}
+              </div>
+            </div>
+
+            {createError ? <p className="text-xs text-red-400">{createError}</p> : null}
+            {createIleError ? <p className="text-xs text-red-400">{createIleError}</p> : null}
+            {linksError ? <p className="text-xs text-red-400">{linksError}</p> : null}
+
+            {linksLoading ? (
+              <div>
+                <LoadingStatusMessage
+                  size="sm"
+                  tone="subtle"
+                  message={t("planView.tapLinksCreating")}
+                />
+              </div>
+            ) : browseRows.length === 0 ? (
+              <p className="text-xs text-neutral-600">{t("planView.guestLinksBrowseEmpty")}</p>
+            ) : filteredBrowseRows.length === 0 ? (
+              <p className="text-xs text-neutral-600">
+                {t("planView.guestLinksBrowseNoMatches")}
+              </p>
+            ) : (
+              <ul className="space-y-2" data-guest-links-browse-list>
+                {filteredBrowseRows.map((row) => renderBrowseRow(row))}
+              </ul>
+            )}
+          </div>
+        ) : null}
       </div>
     </div>
   );

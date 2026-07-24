@@ -22,12 +22,14 @@ interface TapStartingTopicCardsProps {
 
 function TopicCardSkeleton() {
   return (
-    <div className="overflow-hidden rounded-xl border border-neutral-800 bg-neutral-950">
+    <div className="flex h-full flex-col overflow-hidden rounded-xl border border-neutral-800 bg-neutral-950">
       <div className="h-28 animate-pulse bg-neutral-900 sm:h-32" />
-      <div className="space-y-2 p-3">
-        <div className="h-4 w-2/3 animate-pulse rounded bg-neutral-800" />
-        <div className="h-3 w-full animate-pulse rounded bg-neutral-900" />
-        <div className="h-8 w-24 animate-pulse rounded-full bg-neutral-800" />
+      <div className="flex flex-1 flex-col gap-3 p-3">
+        <div className="space-y-2">
+          <div className="h-3 w-full animate-pulse rounded bg-neutral-900" />
+          <div className="h-3 w-4/5 animate-pulse rounded bg-neutral-900" />
+        </div>
+        <div className="mt-auto h-8 w-24 animate-pulse rounded-full bg-neutral-800" />
       </div>
     </div>
   );
@@ -78,20 +80,20 @@ function PracticeFirstCard({
   return (
     <article
       data-tap-practice-first
-      className="group flex flex-col overflow-hidden rounded-xl border border-cyan-400/35 bg-cyan-950/30 transition hover:border-cyan-300/55"
+      className="group flex h-full flex-col overflow-hidden rounded-xl border border-cyan-400/35 bg-cyan-950/30 transition hover:border-cyan-300/55"
     >
       <div className="relative flex h-28 flex-col justify-end bg-gradient-to-br from-cyan-950/80 via-neutral-950 to-black p-3 sm:h-32">
         <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-cyan-300/80">Warm-up</p>
         <p className="mt-1 font-serif text-base leading-tight text-cyan-50">{title}</p>
       </div>
-      <div className="flex flex-1 items-center justify-between gap-3 p-3">
-        <p className="min-w-0 flex-1 text-xs leading-relaxed text-cyan-100/70">{subtitle}</p>
+      <div className="flex flex-1 flex-col gap-3 p-3">
+        <p className="line-clamp-2 text-xs leading-snug text-cyan-100/70">{subtitle}</p>
         <button
           type="button"
           disabled={isStarting}
           onClick={onPracticeFirst}
           aria-busy={isThisStarting}
-          className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-full border border-cyan-300/40 bg-cyan-400/15 px-4 py-2 text-xs font-semibold text-cyan-50 transition hover:bg-cyan-400/25 disabled:cursor-wait disabled:opacity-70"
+          className="mt-auto inline-flex w-full items-center justify-center gap-1.5 rounded-full border border-cyan-300/40 bg-cyan-400/15 px-4 py-2 text-xs font-semibold text-cyan-50 transition hover:bg-cyan-400/25 disabled:cursor-wait disabled:opacity-70"
         >
           {isThisStarting ? (
             <svg className="size-3.5 shrink-0 animate-spin" fill="none" viewBox="0 0 24 24" aria-hidden>
@@ -132,7 +134,7 @@ function TopicCard({
   startingLabel: string;
 }) {
   return (
-    <article className="group overflow-hidden rounded-xl border border-neutral-800/90 bg-neutral-950 transition hover:border-neutral-600">
+    <article className="group flex h-full flex-col overflow-hidden rounded-xl border border-neutral-800/90 bg-neutral-950 transition hover:border-neutral-600">
       <div className="relative h-28 overflow-hidden sm:h-32">
         <div
           className="absolute inset-0 scale-105 bg-cover bg-center transition duration-500 group-hover:scale-110"
@@ -142,17 +144,17 @@ function TopicCard({
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black via-black/55 to-black/15" />
         <div className="absolute inset-x-0 bottom-0 p-3">
-          <p className="font-serif text-base leading-tight text-white">{topic.title}</p>
+          <p className="line-clamp-2 font-serif text-base leading-tight text-white">{topic.title}</p>
         </div>
       </div>
-      <div className="flex items-center justify-between gap-3 p-3">
-        <p className="min-w-0 flex-1 text-xs leading-relaxed text-neutral-400">{topic.subtitle}</p>
+      <div className="flex flex-1 flex-col gap-3 p-3">
+        <p className="line-clamp-2 text-xs leading-snug text-neutral-400">{topic.subtitle}</p>
         <button
           type="button"
           disabled={isStarting}
           onClick={() => onStartTopic(topic)}
           aria-busy={isThisStarting}
-          className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-full bg-white px-4 py-2 text-xs font-semibold text-neutral-950 transition hover:bg-neutral-100 disabled:cursor-wait disabled:opacity-70"
+          className="mt-auto inline-flex w-full items-center justify-center gap-1.5 rounded-full bg-white px-4 py-2 text-xs font-semibold text-neutral-950 transition hover:bg-neutral-100 disabled:cursor-wait disabled:opacity-70"
         >
           {isThisStarting ? (
             <svg className="size-3.5 shrink-0 animate-spin" fill="none" viewBox="0 0 24 24" aria-hidden>
@@ -182,7 +184,7 @@ export function TapStartingTopicCards({
   onStartTopic,
   onPracticeFirst,
   practiceTitle = "Practice First",
-  practiceSubtitle = "1-minute warm-up with full mechanics. PoW is flagged as Practice PoW.",
+  practiceSubtitle = "1 minute warm-up. Practice PoW.",
   practiceStartLabel = "Practice",
   practiceStartingLabel = "Starting…",
   loadingLabel = "Loading topics…",

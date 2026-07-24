@@ -2617,7 +2617,7 @@
     },
     "practice": {
       "practiceFirst": "Practice First",
-      "practiceFirstHint": "Always 1 minute. Full mechanics; PoW flagged as Practice PoW.",
+      "practiceFirstHint": "1 minute warm-up. Practice PoW.",
       "cardStart": "1 min",
       "starting": "Starting practice…",
       "bannerKicker": "Practice mode",

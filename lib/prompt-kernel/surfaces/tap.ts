@@ -122,8 +122,8 @@ Return JSON only:
   "topics": [
     {
       "id": "short-slug",
-      "title": "Short card title (max 6 words)",
-      "subtitle": "One inviting line for the card (max 18 words)",
+      "title": "Short card title (max 5 words)",
+      "subtitle": "One short line for the card (max 10 words)",
       "openingQuestion": "One opening knowledge-check prompt if the learner picks this topic"
     }
   ]

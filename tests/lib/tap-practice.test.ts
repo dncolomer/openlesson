@@ -103,6 +103,18 @@ describe("TAP client practice surface (not ILE)", () => {
     expect(en.tap.practice.doneTitle.toLowerCase()).toContain("practice session is done");
   });
 
+  it("keeps Practice start label width stable while loading (no card reflow)", () => {
+    const cards = fs.readFileSync(path.join(ROOT, "components/TapStartingTopicCards.tsx"), "utf8");
+    // Dual-label grid reserves space for both idle and busy text
+    expect(cards).toContain("data-stable-start-label");
+    expect(cards).toContain("StableStartButtonLabel");
+    expect(cards).toMatch(/inline-grid place-items-center/);
+    // Must not swap a single span's text (that grew the button and shifted the card)
+    expect(cards).not.toMatch(
+      /data-tap-practice-first[\s\S]*?<span>\{\s*isThisStarting\s*\?\s*startingLabel\s*:\s*startLabel\s*\}<\/span>/,
+    );
+  });
+
   it("API write paths accept practice and stamp Practice PoW", () => {
     for (const rel of [
       "app/api/workspace-tap-score/trace/route.ts",

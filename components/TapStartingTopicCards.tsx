@@ -33,6 +33,31 @@ function TopicCardSkeleton() {
   );
 }
 
+/**
+ * Idle + loading labels occupy the same box so swapping text does not grow the
+ * button and reflow the card (Practice → Starting… was shifting the 2×2 grid).
+ */
+function StableStartButtonLabel({
+  idle,
+  busy,
+  isBusy,
+}: {
+  idle: string;
+  busy: string;
+  isBusy: boolean;
+}) {
+  return (
+    <span className="relative inline-grid place-items-center text-center" data-stable-start-label>
+      <span className={`col-start-1 row-start-1 ${isBusy ? "invisible" : ""}`} aria-hidden={isBusy}>
+        {idle}
+      </span>
+      <span className={`col-start-1 row-start-1 ${isBusy ? "" : "invisible"}`} aria-hidden={!isBusy}>
+        {busy}
+      </span>
+    </span>
+  );
+}
+
 function PracticeFirstCard({
   isStarting,
   isThisStarting,
@@ -65,10 +90,11 @@ function PracticeFirstCard({
           type="button"
           disabled={isStarting}
           onClick={onPracticeFirst}
+          aria-busy={isThisStarting}
           className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-full border border-cyan-300/40 bg-cyan-400/15 px-4 py-2 text-xs font-semibold text-cyan-50 transition hover:bg-cyan-400/25 disabled:cursor-wait disabled:opacity-70"
         >
           {isThisStarting ? (
-            <svg className="size-3.5 animate-spin" fill="none" viewBox="0 0 24 24" aria-hidden>
+            <svg className="size-3.5 shrink-0 animate-spin" fill="none" viewBox="0 0 24 24" aria-hidden>
               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
               <path
                 className="opacity-75"
@@ -77,11 +103,11 @@ function PracticeFirstCard({
               />
             </svg>
           ) : (
-            <svg className="size-3.5" fill="currentColor" viewBox="0 0 24 24" aria-hidden>
+            <svg className="size-3.5 shrink-0" fill="currentColor" viewBox="0 0 24 24" aria-hidden>
               <path d="M8 5v14l11-7z" />
             </svg>
           )}
-          <span>{isThisStarting ? startingLabel : startLabel}</span>
+          <StableStartButtonLabel idle={startLabel} busy={startingLabel} isBusy={isThisStarting} />
         </button>
       </div>
     </article>
@@ -125,10 +151,11 @@ function TopicCard({
           type="button"
           disabled={isStarting}
           onClick={() => onStartTopic(topic)}
+          aria-busy={isThisStarting}
           className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-full bg-white px-4 py-2 text-xs font-semibold text-neutral-950 transition hover:bg-neutral-100 disabled:cursor-wait disabled:opacity-70"
         >
           {isThisStarting ? (
-            <svg className="size-3.5 animate-spin" fill="none" viewBox="0 0 24 24" aria-hidden>
+            <svg className="size-3.5 shrink-0 animate-spin" fill="none" viewBox="0 0 24 24" aria-hidden>
               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
               <path
                 className="opacity-75"
@@ -137,11 +164,11 @@ function TopicCard({
               />
             </svg>
           ) : (
-            <svg className="size-3.5" fill="currentColor" viewBox="0 0 24 24" aria-hidden>
+            <svg className="size-3.5 shrink-0" fill="currentColor" viewBox="0 0 24 24" aria-hidden>
               <path d="M8 5v14l11-7z" />
             </svg>
           )}
-          <span>{isThisStarting ? startingLabel : startLabel}</span>
+          <StableStartButtonLabel idle={startLabel} busy={startingLabel} isBusy={isThisStarting} />
         </button>
       </div>
     </article>

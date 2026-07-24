@@ -177,8 +177,13 @@ export async function resolveTapSessionAccess(input: {
       completion_webhook_url?: string | null;
       workspaces?: { user_id?: string } | Array<{ user_id?: string }> | null;
     };
-    const participant = participantAuthFromSession(sessionRow);
-    const workspaceOwnerUserId = workspaceOwnerFromSession(sessionRow);
+    // participantAuthFromSession rejects workspaces: null — coerce to undefined.
+    const sessionForAuth = {
+      ...sessionRow,
+      workspaces: sessionRow.workspaces ?? undefined,
+    };
+    const participant = participantAuthFromSession(sessionForAuth);
+    const workspaceOwnerUserId = workspaceOwnerFromSession(sessionForAuth);
 
     return {
       supabase,

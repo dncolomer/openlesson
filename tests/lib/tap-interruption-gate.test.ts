@@ -166,6 +166,23 @@ describe("createTapInterruptionScheduler forming-thought gate", () => {
     vi.advanceTimersByTime(3_000);
     expect(onIntervention).not.toHaveBeenCalled();
   });
+
+  it("skipped idle while forming does not wipe a pending origin:other timer", () => {
+    const onIntervention = vi.fn();
+    let forming = { hasPendingTranscription: false, isTranscriptionActive: false };
+    const scheduler = createTapInterruptionScheduler(onIntervention, () => forming);
+
+    scheduler.applyInterruption(sampleInterruption("chat_pending", 5_000), { origin: "other" });
+    forming = { hasPendingTranscription: true, isTranscriptionActive: false };
+    // Idle recommendation arrives while learner is composing — must not clear chat timer.
+    scheduler.applyInterruption(sampleInterruption("idle_noise", 1_000), { origin: "idle" });
+    vi.advanceTimersByTime(5_000);
+    expect(onIntervention).toHaveBeenCalledTimes(1);
+    expect(onIntervention).toHaveBeenCalledWith({
+      interruptionId: "chat_pending",
+      message: "Msg chat_pending",
+    });
+  });
 });
 
 describe("TAP idle + interruption wiring (static)", () => {

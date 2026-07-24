@@ -46,10 +46,15 @@ export function createTapInterruptionScheduler(
     options: ApplyInterruptionOptions = {},
   ) => {
     const origin = options.origin ?? "other";
-    clearPending();
-    if (!interruption) return;
+
+    // Explicit null supersedes any pending timer (TIM contract).
+    if (!interruption) {
+      clearPending();
+      return;
+    }
 
     const forming = getFormingThought();
+    // Skipped silence-origin recs must not wipe a pending chat/send timer.
     if (
       shouldSkipSilenceInterruptionWhileFormingThought({
         origin,
@@ -60,6 +65,8 @@ export function createTapInterruptionScheduler(
       return;
     }
 
+    // Only clear previous when we are actually scheduling a new intervention.
+    clearPending();
     const interruptionId = interruption.interruption_id;
     pendingId = interruptionId;
     pendingOrigin = origin;

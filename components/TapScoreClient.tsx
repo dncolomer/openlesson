@@ -1327,9 +1327,12 @@ export function TapScoreClient({
                 </div>
 
                 <div className="shrink-0 min-w-0 overflow-hidden rounded-2xl border border-neutral-900/80 bg-neutral-950/55 p-3 backdrop-blur-md">
-                <div className="mb-3 flex w-full flex-wrap items-center justify-between gap-2 border-b border-neutral-900/80 pb-3">
-                  <div className="flex flex-wrap items-start gap-5">
-                    <div className="flex flex-col gap-1">
+                <div
+                  className="mb-3 flex w-full flex-wrap items-end justify-between gap-3 border-b border-neutral-900/80 pb-3"
+                  data-tap-live-control-strip
+                >
+                  <div className="flex min-w-0 flex-1 flex-wrap items-end gap-4 sm:gap-5">
+                    <div className="flex shrink-0 flex-col gap-1">
                       <div className="font-mono text-[10px] uppercase leading-none tracking-[2px] text-neutral-600">
                         Time left
                       </div>
@@ -1342,7 +1345,7 @@ export function TapScoreClient({
                       </div>
                     </div>
                     <div
-                      className="flex flex-col gap-1"
+                      className="flex shrink-0 flex-col gap-1"
                       data-tap-session-purity
                       aria-label={t("tap.live.sessionPurityAria", { purity: sessionPurity, max: TAP_SESSION_PURITY_MAX })}
                     >
@@ -1375,9 +1378,13 @@ export function TapScoreClient({
                         </span>
                       </div>
                     </div>
+                    {/* Purity → Auto-stash context → End session */}
+                    <div className="min-w-[8rem] max-w-md flex-1 self-end pb-0.5">
+                      <AutoStashContextBar data-surface="tap" text={crystallizableText} />
+                    </div>
                   </div>
                   {showEndSession ? (
-                    <div className="flex flex-wrap items-center gap-2" data-tap-end-session>
+                    <div className="flex shrink-0 flex-wrap items-center gap-2 self-end" data-tap-end-session>
                       <ThoughtButton size="sm" variant="primary" onClick={() => void endSession()}>
                         End session
                       </ThoughtButton>
@@ -1385,56 +1392,53 @@ export function TapScoreClient({
                   ) : null}
                 </div>
 
-                <div className="flex min-w-0 flex-col gap-2">
-                  <div className="flex min-w-0 items-center gap-1.5 overflow-hidden">
-                    <div
-                      className="flex h-8 min-w-0 flex-1 items-center rounded-md border border-neutral-900 bg-black/70 px-2.5 text-xs text-neutral-300 transition-opacity duration-150"
-                      style={{
-                        opacity: shouldFadeLiveBar(transcriptSilenceMs)
-                          ? transcriptFadeOpacity(transcriptSilenceMs)
-                          : 1,
-                      }}
-                      data-tap-transcript-fade
-                    >
-                      <SlidingTranscript
-                        text={formatSpeechTranscriptDisplay({
-                          text: crystallizableText,
-                          speechError,
-                          speechSupported,
-                          isListening,
-                          // Speech strip only mounts in live phase; keep enabled tied to it.
-                          enabled: phase === "live",
-                        })}
-                        className={`w-full ${speechError ? "text-amber-300/90" : "text-neutral-300"}`}
-                      />
-                    </div>
-                    {speechSupported !== false && !isListening ? (
-                      <ThoughtButton size="sm" variant="primary" onClick={() => void retryMicrophone()}>
-                        {speechError ? "Retry" : "Start"}
-                      </ThoughtButton>
-                    ) : null}
-                    <div className="flex shrink-0 items-center gap-0.5">
-                      <ThoughtCompactAction
-                        shortcut="↵"
-                        label="Send"
-                        disabled={!crystallizableText || isSending}
-                        onClick={() => void sendCurrentTranscription()}
-                      />
-                      <ThoughtCompactAction
-                        shortcut="Del"
-                        label="Stash"
-                        disabled={!crystallizableText}
-                        onClick={() => stashCurrentTranscription()}
-                      />
-                      <ThoughtCompactAction
-                        shortcut="E"
-                        label="Edit"
-                        disabled={!crystallizableText}
-                        onClick={beginEditTranscription}
-                      />
-                    </div>
+                <div className="flex min-w-0 items-center gap-1.5 overflow-hidden">
+                  <div
+                    className="flex h-8 min-w-0 flex-1 items-center rounded-md border border-neutral-900 bg-black/70 px-2.5 text-xs text-neutral-300 transition-opacity duration-150"
+                    style={{
+                      opacity: shouldFadeLiveBar(transcriptSilenceMs)
+                        ? transcriptFadeOpacity(transcriptSilenceMs)
+                        : 1,
+                    }}
+                    data-tap-transcript-fade
+                  >
+                    <SlidingTranscript
+                      text={formatSpeechTranscriptDisplay({
+                        text: crystallizableText,
+                        speechError,
+                        speechSupported,
+                        isListening,
+                        // Speech strip only mounts in live phase; keep enabled tied to it.
+                        enabled: phase === "live",
+                      })}
+                      className={`w-full ${speechError ? "text-amber-300/90" : "text-neutral-300"}`}
+                    />
                   </div>
-                  <AutoStashContextBar data-surface="tap" text={crystallizableText} />
+                  {speechSupported !== false && !isListening ? (
+                    <ThoughtButton size="sm" variant="primary" onClick={() => void retryMicrophone()}>
+                      {speechError ? "Retry" : "Start"}
+                    </ThoughtButton>
+                  ) : null}
+                  <div className="flex shrink-0 items-center gap-0.5">
+                    <ThoughtCompactAction
+                      shortcut="↵"
+                      label="Send"
+                      disabled={!crystallizableText || isSending}
+                      onClick={() => void sendCurrentTranscription()}
+                    />
+                    <ThoughtCompactAction
+                      shortcut="Del"
+                      label="Stash"
+                      disabled={!crystallizableText}
+                      onClick={() => stashCurrentTranscription()}
+                    />
+                    <ThoughtCompactAction
+                      shortcut="E"
+                      label="Edit"
+                      disabled={!crystallizableText}
+                      onClick={beginEditTranscription}
+                    />
+                  </div>
                 </div>
 
                 <div className="mt-3 border-t border-neutral-900/80 pt-3">

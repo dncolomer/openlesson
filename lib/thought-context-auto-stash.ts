@@ -3,8 +3,11 @@
  * Distinct from silence auto-stash — context full does NOT degrade purity.
  */
 
-/** Max characters of live unstashed thought before auto-stash. */
-export const THOUGHT_CONTEXT_AUTO_STASH_MAX_CHARS = 600;
+/**
+ * Max characters of live unstashed thought before auto-stash.
+ * 400 = two-thirds of the prior 600 capacity (fills ≥⅓ faster).
+ */
+export const THOUGHT_CONTEXT_AUTO_STASH_MAX_CHARS = 400;
 
 export const AUTO_STASH_CONTEXT_LABEL = "Auto-stash context";
 

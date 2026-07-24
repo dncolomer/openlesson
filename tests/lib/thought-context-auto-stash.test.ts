@@ -15,11 +15,17 @@ const ROOT = process.cwd();
 
 describe("thought-context-auto-stash helpers", () => {
   it("computes fill ratio from char count / max", () => {
-    expect(THOUGHT_CONTEXT_AUTO_STASH_MAX_CHARS).toBe(600);
+    // ≤400 and ≥⅓ smaller than the prior 600 capacity.
+    expect(THOUGHT_CONTEXT_AUTO_STASH_MAX_CHARS).toBeLessThanOrEqual(400);
+    expect(THOUGHT_CONTEXT_AUTO_STASH_MAX_CHARS).toBeLessThanOrEqual(Math.floor(600 * (2 / 3)));
+    expect(THOUGHT_CONTEXT_AUTO_STASH_MAX_CHARS).toBe(400);
     expect(thoughtContextFillRatio("", 100)).toBe(0);
     expect(thoughtContextFillRatio("a".repeat(50), 100)).toBe(0.5);
     expect(thoughtContextFillRatio("a".repeat(100), 100)).toBe(1);
     expect(thoughtContextFillRatio("a".repeat(150), 100)).toBe(1);
+    // Fixed length fills faster vs old 600 max.
+    const sample = "a".repeat(300);
+    expect(thoughtContextFillRatio(sample, 400)).toBeGreaterThan(thoughtContextFillRatio(sample, 600));
   });
 
   it("color bands: green <50%, yellow ≥50%, red ≥75%", () => {
@@ -76,12 +82,16 @@ describe("TAP + ILE mount Auto-stash context bar", () => {
     expect(ile).toContain("shouldAutoStashOnContextFull");
     expect(ile).toContain("stashCurrentTranscription");
 
-    // Layout: bar colocated with transcript chrome (JSX use, not import line).
-    const tapBarJsx = tap.lastIndexOf("<AutoStashContextBar");
-    const tapTranscript = tap.indexOf("data-tap-transcript-fade");
-    expect(tapBarJsx).toBeGreaterThan(tapTranscript);
-    expect(tapBarJsx - tapTranscript).toBeLessThan(2000);
+    // TAP strip order: purity → Auto-stash context bar → End session
+    const purityIdx = tap.indexOf("data-tap-session-purity");
+    const barIdx = tap.lastIndexOf("<AutoStashContextBar");
+    const endIdx = tap.indexOf("data-tap-end-session");
+    expect(purityIdx).toBeGreaterThan(-1);
+    expect(barIdx).toBeGreaterThan(purityIdx);
+    expect(endIdx).toBeGreaterThan(barIdx);
+    expect(tap).toContain("data-tap-live-control-strip");
 
+    // ILE bar remains with transcript chrome
     const ileBarJsx = ile.lastIndexOf("<AutoStashContextBar");
     const ileTranscript = ile.lastIndexOf("<SlidingTranscript");
     expect(ileBarJsx).toBeGreaterThan(ileTranscript);

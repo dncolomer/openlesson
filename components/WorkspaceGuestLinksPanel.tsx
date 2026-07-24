@@ -92,6 +92,11 @@ export function WorkspaceGuestLinksPanel({
   const [minutes, setMinutes] = useState(TAP_LINK_DEFAULT_MINUTES);
   /** Default yes — guest TAP/ILE sessions show End Session unless unchecked. */
   const [showEndSession, setShowEndSession] = useState(true);
+  /**
+   * When true, mint a stable public link (anyone with the URL; query params stored on open).
+   * Default private (secret bearer token).
+   */
+  const [accessModePublic, setAccessModePublic] = useState(false);
   const [linksLoading, setLinksLoading] = useState(false);
   const [linksError, setLinksError] = useState<string | null>(null);
   const [creatingLink, setCreatingLink] = useState(false);
@@ -187,6 +192,7 @@ export function WorkspaceGuestLinksPanel({
           participant_type: participantType,
           post_session: "show_results",
           show_end_session: showEndSession,
+          access_mode: accessModePublic ? "public" : "private",
         };
         if (selectedBlockId) {
           body.blockId = selectedBlockId;
@@ -204,9 +210,11 @@ export function WorkspaceGuestLinksPanel({
         const data = await response.json();
         if (!response.ok) throw new Error(data.error || t("planView.tapLinksCreateError"));
 
-        const privateUrl = data.tap_link?.private_url as string | undefined;
-        if (privateUrl && data.tap_link?.id) {
-          setCreatedLinks((current) => ({ ...current, [data.tap_link.id]: privateUrl }));
+        const linkUrl =
+          (data.tap_link?.url as string | undefined) ||
+          (data.tap_link?.private_url as string | undefined);
+        if (linkUrl && data.tap_link?.id) {
+          setCreatedLinks((current) => ({ ...current, [data.tap_link.id]: linkUrl }));
         }
         await loadTapResources();
       } catch (error) {
@@ -215,7 +223,16 @@ export function WorkspaceGuestLinksPanel({
         setCreatingLink(false);
       }
     },
-    [loadTapResources, minutes, selectedBlockId, selectedMemberId, showEndSession, t, workspaceId],
+    [
+      accessModePublic,
+      loadTapResources,
+      minutes,
+      selectedBlockId,
+      selectedMemberId,
+      showEndSession,
+      t,
+      workspaceId,
+    ],
   );
 
   /** Same card: rotate private URL; keep guest, scope, duration, post-session. */
@@ -232,9 +249,11 @@ export function WorkspaceGuestLinksPanel({
         const data = await response.json();
         if (!response.ok) throw new Error(data.error || t("planView.tapLinksCreateError"));
 
-        const privateUrl = data.tap_link?.private_url as string | undefined;
-        if (privateUrl && data.tap_link?.id) {
-          setCreatedLinks((current) => ({ ...current, [data.tap_link.id]: privateUrl }));
+        const linkUrl =
+          (data.tap_link?.url as string | undefined) ||
+          (data.tap_link?.private_url as string | undefined);
+        if (linkUrl && data.tap_link?.id) {
+          setCreatedLinks((current) => ({ ...current, [data.tap_link.id]: linkUrl }));
         }
         await loadTapResources();
       } catch (error) {
@@ -259,6 +278,7 @@ export function WorkspaceGuestLinksPanel({
           blockId: selectedIleBlockId,
           participant_type: participantType,
           show_end_session: showEndSession,
+          access_mode: accessModePublic ? "public" : "private",
         };
         if (participantType === "user") {
           if (!selectedIleMemberId) throw new Error(t("planView.tapLinksSelectMember"));
@@ -273,9 +293,11 @@ export function WorkspaceGuestLinksPanel({
         const data = await response.json();
         if (!response.ok) throw new Error(data.error || t("planView.ileLinksCreateError"));
 
-        const privateUrl = data.ile_link?.private_url as string | undefined;
-        if (privateUrl && data.ile_link?.id) {
-          setCreatedLinks((current) => ({ ...current, [data.ile_link.id]: privateUrl }));
+        const linkUrl =
+          (data.ile_link?.url as string | undefined) ||
+          (data.ile_link?.private_url as string | undefined);
+        if (linkUrl && data.ile_link?.id) {
+          setCreatedLinks((current) => ({ ...current, [data.ile_link.id]: linkUrl }));
         }
         await loadTapResources();
       } catch (error) {
@@ -286,7 +308,15 @@ export function WorkspaceGuestLinksPanel({
         setCreatingIleLink(false);
       }
     },
-    [loadTapResources, selectedIleBlockId, selectedIleMemberId, showEndSession, t, workspaceId],
+    [
+      accessModePublic,
+      loadTapResources,
+      selectedIleBlockId,
+      selectedIleMemberId,
+      showEndSession,
+      t,
+      workspaceId,
+    ],
   );
 
   /** Same card: rotate private URL; keep guest and block scope. */
@@ -303,9 +333,11 @@ export function WorkspaceGuestLinksPanel({
         const data = await response.json();
         if (!response.ok) throw new Error(data.error || t("planView.ileLinksCreateError"));
 
-        const privateUrl = data.ile_link?.private_url as string | undefined;
-        if (privateUrl && data.ile_link?.id) {
-          setCreatedLinks((current) => ({ ...current, [data.ile_link.id]: privateUrl }));
+        const linkUrl =
+          (data.ile_link?.url as string | undefined) ||
+          (data.ile_link?.private_url as string | undefined);
+        if (linkUrl && data.ile_link?.id) {
+          setCreatedLinks((current) => ({ ...current, [data.ile_link.id]: linkUrl }));
         }
         await loadTapResources();
       } catch (error) {
@@ -383,21 +415,39 @@ export function WorkspaceGuestLinksPanel({
           </label>
         </div>
 
-        <label className="mt-4 flex cursor-pointer items-start gap-2.5 text-xs text-neutral-400">
-          <input
-            type="checkbox"
-            className="mt-0.5 rounded border-neutral-700 bg-neutral-900"
-            checked={showEndSession}
-            onChange={(e) => setShowEndSession(e.target.checked)}
-            data-guest-link-show-end-session
-          />
-          <span>
-            <span className="font-medium text-neutral-300">Show End Session button</span>
-            <span className="mt-0.5 block text-neutral-500">
-              Default on for TAP and ILE links. Uncheck for open-ended public runs where guests should not self-end.
+        <div className="mt-4 space-y-3">
+          <label className="flex cursor-pointer items-start gap-2.5 text-xs text-neutral-400">
+            <input
+              type="checkbox"
+              className="mt-0.5 rounded border-neutral-700 bg-neutral-900"
+              checked={accessModePublic}
+              onChange={(e) => setAccessModePublic(e.target.checked)}
+              data-guest-link-access-mode-public
+            />
+            <span>
+              <span className="font-medium text-neutral-300">Public link</span>
+              <span className="mt-0.5 block text-neutral-500">
+                Stable URL anyone can open (not a secret). On each open, all query parameters on the
+                URL are stored on the link for later reference. Applies to TAP and ILE creates below.
+              </span>
             </span>
-          </span>
-        </label>
+          </label>
+          <label className="flex cursor-pointer items-start gap-2.5 text-xs text-neutral-400">
+            <input
+              type="checkbox"
+              className="mt-0.5 rounded border-neutral-700 bg-neutral-900"
+              checked={showEndSession}
+              onChange={(e) => setShowEndSession(e.target.checked)}
+              data-guest-link-show-end-session
+            />
+            <span>
+              <span className="font-medium text-neutral-300">Show End Session button</span>
+              <span className="mt-0.5 block text-neutral-500">
+                Default on for TAP and ILE links. Uncheck for open-ended public runs where guests should not self-end.
+              </span>
+            </span>
+          </label>
+        </div>
 
         <div className="mt-4 flex flex-wrap gap-2">
           <button

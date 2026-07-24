@@ -2608,8 +2608,8 @@
       "thankYouTitle": "Thank you",
       "thankYouBody": "Your Proof of Work data has been stored.",
       "exploreUncertainSystems": "Explore Uncertain Systems",
-      "impureTitle": "Session closed",
-      "impureBody": "PoW data stored and flagged as low quality / impure. Want to try again?",
+      "impureTitle": "Session Invalidated",
+      "impureBody": "Session purity tracks continuous think-aloud engagement. When you go silent for several seconds, the live transcript fades and is auto-stashed — each auto-stash lowers purity. At zero purity this session is closed, and all Proof of Work from it is stored and flagged as low quality / impure.\n\nWant to try again?",
       "impureTryAgain": "Try again"
     },
     "welcome": {

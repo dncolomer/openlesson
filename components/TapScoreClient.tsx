@@ -1044,28 +1044,34 @@ export function TapScoreClient({
 
                 <div className="shrink-0 min-w-0 overflow-hidden rounded-2xl border border-neutral-900/80 bg-neutral-950/55 p-3 backdrop-blur-md">
                 <div className="mb-3 flex w-full flex-wrap items-center justify-between gap-2 border-b border-neutral-900/80 pb-3">
-                  <div className="flex flex-wrap items-end gap-5">
-                    <div>
-                      <div className="font-mono text-[10px] uppercase tracking-[2px] text-neutral-600">Time left</div>
+                  <div className="flex flex-wrap items-start gap-5">
+                    <div className="flex flex-col gap-1">
+                      <div className="font-mono text-[10px] uppercase leading-none tracking-[2px] text-neutral-600">
+                        Time left
+                      </div>
                       <div
-                        className={`font-mono text-lg tabular-nums tracking-tight ${
+                        className={`flex h-7 items-center font-mono text-lg leading-none tabular-nums tracking-tight ${
                           remainingSeconds <= 60 ? "text-amber-300" : "text-white"
                         }`}
                       >
                         {formatCountdown(remainingSeconds)}
                       </div>
                     </div>
-                    <div data-tap-session-purity aria-label={t("tap.live.sessionPurityAria", { purity: sessionPurity, max: TAP_SESSION_PURITY_MAX })}>
-                      <div className="font-mono text-[10px] uppercase tracking-[2px] text-neutral-600">
+                    <div
+                      className="flex flex-col gap-1"
+                      data-tap-session-purity
+                      aria-label={t("tap.live.sessionPurityAria", { purity: sessionPurity, max: TAP_SESSION_PURITY_MAX })}
+                    >
+                      <div className="font-mono text-[10px] uppercase leading-none tracking-[2px] text-neutral-600">
                         {t("tap.live.sessionPurity")}
                       </div>
-                      <div className="mt-1 flex items-center gap-1.5">
+                      <div className="flex h-7 items-center gap-1.5">
                         {Array.from({ length: TAP_SESSION_PURITY_MAX }, (_, index) => {
                           const filled = index < sessionPurity;
                           return (
                             <span
                               key={index}
-                              className={`h-2.5 w-2.5 rounded-full border transition-colors ${
+                              className={`h-2.5 w-2.5 shrink-0 rounded-full border transition-colors ${
                                 filled
                                   ? sessionPurity === 1
                                     ? "border-amber-300/80 bg-amber-300"
@@ -1077,7 +1083,7 @@ export function TapScoreClient({
                           );
                         })}
                         <span
-                          className={`ml-1 font-mono text-xs tabular-nums ${
+                          className={`ml-0.5 font-mono text-sm leading-none tabular-nums ${
                             sessionPurity <= 1 ? "text-amber-300" : "text-neutral-400"
                           }`}
                         >
@@ -1188,7 +1194,7 @@ export function TapScoreClient({
               <h1 className="text-2xl font-medium text-neutral-100 sm:text-3xl">
                 {t("tap.postSession.impureTitle")}
               </h1>
-              <p className="mt-4 max-w-md text-sm leading-relaxed text-neutral-300 sm:text-base">
+              <p className="mt-4 max-w-lg whitespace-pre-line text-sm leading-relaxed text-neutral-300 sm:text-base">
                 {t("tap.postSession.impureBody")}
               </p>
               <ThoughtButton

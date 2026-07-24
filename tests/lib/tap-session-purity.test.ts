@@ -91,6 +91,12 @@ describe("TAP client wires purity UX (not ILE)", () => {
     expect(client).toContain("sessionQuality");
     expect(client).toContain("window.location.reload()");
     expect(client).toContain("tap.postSession.impureBody");
+    const en = JSON.parse(fs.readFileSync(path.join(ROOT, "messages/en.json"), "utf8")) as {
+      tap: { postSession: { impureTitle: string; impureBody: string } };
+    };
+    expect(en.tap.postSession.impureTitle).toBe("Session Invalidated");
+    expect(en.tap.postSession.impureBody.toLowerCase()).toContain("session purity");
+    expect(en.tap.postSession.impureBody.toLowerCase()).toContain("auto-stash");
   });
 
   it("trace route accepts auto_stash and complete flags session PoW impure", () => {

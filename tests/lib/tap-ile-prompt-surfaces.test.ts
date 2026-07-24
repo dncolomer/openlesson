@@ -212,23 +212,66 @@ describe("TAP prompt surface (shipped builders)", () => {
 });
 
 describe("ILE prompt surface (shipped builders + registry)", () => {
-  it("frames optimize/augment without Socratic identity", () => {
+  it("frames chapter-aware optimize/augment (not TAP dual-stream primary)", () => {
     expect(ILE_SURFACE).toMatch(/Optimize/i);
     expect(ILE_SURFACE).toMatch(/Augment/i);
-    expect(ILE_SURFACE).toMatch(/proof of work|PoW|tools/i);
+    expect(ILE_SURFACE).toMatch(/current chapter/i);
+    expect(ILE_SURFACE).toMatch(/Canvas|Notebook|tools/i);
+    // Dual-stream must not be the primary ILE conversation goal.
+    expect(ILE_SURFACE).toMatch(/NOT a TAP dual-stream|not TAP dual-stream|not optimize for System 1/i);
     expectNoSocraticIdentity(ILE_SURFACE, "ILE_SURFACE");
 
     const chat = buildIleHeliosChatSystemPrompt();
     expect(chat).toMatch(/practice coach|Optimize|Augment|Mark as Done/i);
-    expect(chat).toMatch(/tool/i);
+    expect(chat).toMatch(/current chapter/i);
+    expect(chat).toMatch(/Canvas|Notebook|tool/i);
+    expect(chat).toMatch(/next (or adjacent )?chapter|adjacent chapter|next chapter/i);
+    expect(chat).not.toMatch(/primary goal.*System 1|elicit System 1 and System 2/i);
     expectNoSocraticIdentity(chat, "Helios chat system");
 
-    expectNoSocraticIdentity(buildIleWelcomeSystemPrompt(), "welcome system");
+    const welcome = buildIleWelcomeSystemPrompt();
+    expect(welcome).toMatch(/chapter/i);
+    expectNoSocraticIdentity(welcome, "welcome system");
     expectNoSocraticIdentity(ILE_CONTEXT_BODY, "ILE_CONTEXT_BODY");
     expect(ILE_CONTEXT).toBe(ILE_CONTEXT_BODY);
+    expect(ILE_CONTEXT_BODY).toMatch(/current.?chapter|Mark as Done|Canvas/i);
   });
 
-  it("registry defaults are goal-oriented (getPrompt path)", () => {
+  it("bans cringe out-loud stage directions and platform product talk in learner-visible ILE speech rules", () => {
+    const chat = buildIleHeliosChatSystemPrompt();
+    const welcome = buildIleWelcomeSystemPrompt();
+
+    for (const [label, text] of [
+      ["ILE_SURFACE", ILE_SURFACE],
+      ["ILE_CONTEXT_BODY", ILE_CONTEXT_BODY],
+      ["heliosChat", chat],
+      ["welcome", welcome],
+      ["opening_probe", getPrompt("opening_probe")],
+      ["probe_generation", getPrompt("probe_generation")],
+      ["session_plan_create", getPrompt("session_plan_create")],
+      ["session_plan_update", getPrompt("session_plan_update")],
+    ] as const) {
+      // Ban rules present (may name forbidden terms only as bans).
+      expect(text, label).toMatch(/out loud/i);
+      expect(text, label).toMatch(
+        /NEVER use think-aloud stage directions|Never use "say\/talk\/think|never use "out loud"|NEVER use "out loud"|No "out loud"|never use "out loud"|Say\/talk\/think … out loud|never put "out loud"/i,
+      );
+      expect(text, label).toMatch(/Uncertain Systems|PoW|Proof of Work/i);
+      expect(text, label).toMatch(
+        /Never (?:mention|put)|NEVER mention|never mention|Mentions of Uncertain Systems/i,
+      );
+      // No prescribed TAP-style dual-stream primary goal for ILE coaching speech.
+      expect(text, label).not.toMatch(/"say the next sentence out loud"|Say the causal link out loud|Talk through what you learned here out loud/i);
+    }
+
+    // Practice tools remain allowed for routing deeper work.
+    expect(ILE_SURFACE).toMatch(/Canvas|Notebook|Grokipedia|screen share/i);
+    expect(chat).toMatch(/Canvas|Notebook|Grokipedia|screen share/i);
+    expect(DEFAULT_PROMPTS.opening_probe).toMatch(/Canvas|Notebook/);
+    expect(DEFAULT_PROMPTS.probe_generation).toMatch(/Canvas|Notebook|Grokipedia/);
+  });
+
+  it("registry defaults are chapter-aware tool-driving practice coaches (getPrompt path)", () => {
     for (const key of [
       "opening_probe",
       "probe_generation",
@@ -237,9 +280,10 @@ describe("ILE prompt surface (shipped builders + registry)", () => {
     ] as const) {
       const text = getPrompt(key);
       expectNoSocraticIdentity(text, `DEFAULT_PROMPTS.${key}`);
+      expect(text, key).toMatch(/chapter/i);
     }
 
-    expect(DEFAULT_PROMPTS.session_plan_create).toMatch(/optimize|augment|proof of work/i);
+    expect(DEFAULT_PROMPTS.session_plan_create).toMatch(/optimize|augment|proof of work|practice artifacts/i);
     expect(DEFAULT_PROMPTS.session_plan_create).toMatch(/task|checkpoint|tool/i);
     // Explicitly rejects validate-for-its-own-sake plan design
     expect(DEFAULT_PROMPTS.session_plan_create).toMatch(/not validate-for-validation|Optimize for forward progress/i);
@@ -251,10 +295,13 @@ describe("ILE prompt surface (shipped builders + registry)", () => {
     expect(DEFAULT_PROMPTS.session_plan_create).toContain("{target_step_count}");
     expect(DEFAULT_PROMPTS.session_plan_create).toContain("{min_steps}");
     expect(DEFAULT_PROMPTS.session_plan_create).toContain("{max_steps}");
+    expect(DEFAULT_PROMPTS.session_plan_create).not.toMatch(/ILE session planner for Uncertain Systems/);
 
     expect(DEFAULT_PROMPTS.session_plan_update).toMatch(/practice coach|Optimize|good enough|Mark as Done/i);
-    expect(DEFAULT_PROMPTS.opening_probe).toMatch(/practice coach|proof of work|Canvas|task/i);
-    expect(DEFAULT_PROMPTS.probe_generation).toMatch(/practice coach|tool|Optimize/i);
+    expect(DEFAULT_PROMPTS.session_plan_update).toMatch(/next or adjacent chapter|adjacent chapter|next chapter/i);
+    expect(DEFAULT_PROMPTS.session_plan_update).toMatch(/not TAP System 1|not TAP dual-stream/i);
+    expect(DEFAULT_PROMPTS.opening_probe).toMatch(/practice coach|Canvas|task|deeper work|chapter/i);
+    expect(DEFAULT_PROMPTS.probe_generation).toMatch(/practice coach|tool|Optimize|chapter/i);
     expect(DEFAULT_PROMPTS).not.toHaveProperty("stuck_policy_recommendation");
   });
 });

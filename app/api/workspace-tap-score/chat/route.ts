@@ -166,7 +166,7 @@ export async function POST(req: NextRequest) {
         metadata: chatMetadata,
         tool_name: TAP_CHAT_TOOL_NAME,
         tool_action: "chat_exchange",
-        user_id: access.userId,
+        user_id: access.guestUserId ? null : access.userId,
         guest_user_id: access.guestUserId,
         organization_id: access.organizationId,
       });

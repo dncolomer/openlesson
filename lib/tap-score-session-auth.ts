@@ -12,6 +12,8 @@ import {
   isGuestLinkRevoked,
   TAP_LINK_REVOKED_MESSAGE,
 } from "@/lib/pow-api/invalidate-guest-links";
+import { createAnonymousTapGuest } from "@/lib/pow-api/anonymous-tap-guest";
+import { resolveGuestLinkAttribution } from "@/lib/session-participant-identity";
 
 export interface ResolvedTapSessionContext {
   supabase: ReturnType<typeof createAdminClient>;
@@ -52,8 +54,9 @@ export function workspaceOwnerFromSession(session: {
 }
 
 /**
- * Participant identity for access + PoW attribution.
- * Does NOT substitute assignee/guest for workspace owner (brief uses workspaceOwnerFromSession).
+ * Participant identity for access + PoW attribution on a TAP link row.
+ * Guest links never fall back to the workspace owner — caller must provision a guest.
+ * Map-UI / cookie sessions use resolveTapSessionAccess without privateToken instead.
  */
 export function participantAuthFromSession(session: {
   user_id: string | null;
@@ -77,8 +80,9 @@ export function participantAuthFromSession(session: {
     };
   }
 
+  // Do not attribute guest-link PoW to the workspace owner when guest is missing.
   return {
-    userId: workspaceOwnerFromSession(session),
+    userId: null,
     guestUserId: null,
     assignedUserId: null,
   };
@@ -210,13 +214,37 @@ export async function resolveTapSessionAccess(input: {
         params: entryQueryParams,
       });
       guestUserId = resolved.guestUserId;
+
+      // Guest share links must always have a guest subject — never owner.
+      if (!guestUserId) {
+        const created = await createAnonymousTapGuest(supabase, {
+          workspaceId: sessionRow.workspace_id,
+          organizationId: sessionRow.organization_id,
+          createdByUserId: workspaceOwnerUserId,
+          guestType: "anonymous_tap_link",
+        });
+        guestUserId = created.id;
+        await supabase
+          .from("workspace_tap_sessions")
+          .update({ guest_user_id: guestUserId })
+          .eq("id", sessionRow.id);
+        sessionRow.guest_user_id = guestUserId;
+      }
+    }
+
+    const attribution = resolveGuestLinkAttribution({
+      guestUserId,
+      assignedUserId: participant.assignedUserId,
+    });
+    if (!attribution.userId && !attribution.guestUserId) {
+      return { error: "TAP guest participant is not provisioned", status: 500 };
     }
 
     return {
       supabase,
       workspaceId: sessionRow.workspace_id,
-      userId: participant.assignedUserId ? participant.userId : guestUserId ? null : participant.userId,
-      guestUserId: participant.assignedUserId ? null : guestUserId,
+      userId: attribution.userId,
+      guestUserId: attribution.guestUserId,
       assignedUserId: participant.assignedUserId,
       workspaceOwnerUserId,
       organizationId: sessionRow.organization_id || null,

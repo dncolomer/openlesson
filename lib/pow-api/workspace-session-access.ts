@@ -241,9 +241,19 @@ export async function requireSessionWorkspaceProofOfWorkAccess(
       return NextResponse.json({ error: "Workspace not found" }, { status: 404 });
     }
 
+    // Guest-link PoW is attributed to guest (or assigned member), never the owner.
+    const participantUserId = ile.assignedUserId;
+    const participantGuestUserId = ile.assignedUserId ? null : ile.guestUserId;
+    if (!participantUserId && !participantGuestUserId) {
+      return NextResponse.json(
+        { error: "ILE guest participant is not provisioned", code: "guest_missing" },
+        { status: 500 },
+      );
+    }
+
     const auth: AuthContext = {
-      user_id: ile.ownerUserId,
-      guest_user_id: ile.guestUserId,
+      user_id: participantUserId,
+      guest_user_id: participantGuestUserId,
       organization_id: workspace.organization_id,
       is_org_admin: false,
       key_id: "ile-link",
@@ -251,7 +261,8 @@ export async function requireSessionWorkspaceProofOfWorkAccess(
     };
 
     return {
-      userId: ile.ownerUserId,
+      // Prefer participant user id; fall back to owner only as a non-attribution carrier.
+      userId: participantUserId || ile.ownerUserId,
       workspace,
       auth,
       supabase: ile.supabase,
@@ -276,7 +287,9 @@ export async function requireSessionWorkspaceProofOfWorkAccess(
       .single(),
     supabase
       .from("workspaces")
-      .select("id, title, root_topic, description, notes, workspace_goal, user_id, organization_id")
+      .select(
+        "id, title, root_topic, description, notes, workspace_goal, user_id, organization_id, is_group",
+      )
       .eq("id", normalizedWorkspaceId)
       .single(),
   ]);
@@ -285,13 +298,13 @@ export async function requireSessionWorkspaceProofOfWorkAccess(
     return NextResponse.json({ error: "Workspace not found" }, { status: 404 });
   }
 
-  if (workspace.user_id !== user.id) {
-    return NextResponse.json(
-      { error: "Only the workspace owner can upload proof of work", code: "forbidden" },
-      { status: 403 },
-    );
-  }
+  const isOwner = workspace.user_id === user.id;
+  const isOrgMemberOfGroup =
+    workspace.is_group === true &&
+    !!workspace.organization_id &&
+    profile?.organization_id === workspace.organization_id;
 
+  let sessionRow: { id: string; user_id: string | null; metadata: unknown } | null = null;
   if (sessionId) {
     const { data: session } = await supabase
       .from("sessions")
@@ -302,9 +315,7 @@ export async function requireSessionWorkspaceProofOfWorkAccess(
     if (!session) {
       return NextResponse.json({ error: "Session not found" }, { status: 404 });
     }
-    if (session.user_id !== user.id) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
+    sessionRow = session;
 
     const linkedWorkspaceId =
       session.metadata &&
@@ -321,6 +332,18 @@ export async function requireSessionWorkspaceProofOfWorkAccess(
     }
   }
 
+  const isSessionParticipant = Boolean(sessionRow && sessionRow.user_id === user.id);
+  if (!isOwner && !isSessionParticipant && !isOrgMemberOfGroup) {
+    return NextResponse.json(
+      {
+        error: "Only the workspace owner, session participant, or group org member can upload proof of work",
+        code: "forbidden",
+      },
+      { status: 403 },
+    );
+  }
+
+  // Map UI: always attribute to the signed-in user opening the session.
   const auth: AuthContext = {
     user_id: user.id,
     guest_user_id: null,

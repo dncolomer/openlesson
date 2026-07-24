@@ -1,12 +1,14 @@
 "use client";
 
 import { SessionView } from "@/components/SessionView";
+import type { PowParticipantIdentity } from "@/lib/session-participant-identity";
 
 export function IleGuestSessionClient({
   sessionId,
   ileToken,
   showEndSession = true,
   entryQueryParams = {},
+  participantIdentity = null,
 }: {
   sessionId: string;
   ileToken: string;
@@ -15,6 +17,7 @@ export function IleGuestSessionClient({
   showEndSession?: boolean;
   /** Share URL query params → param-scoped guest identity for PoW. */
   entryQueryParams?: Record<string, string | string[]>;
+  participantIdentity?: PowParticipantIdentity | null;
 }) {
   return (
     <SessionView
@@ -22,6 +25,7 @@ export function IleGuestSessionClient({
       ileToken={ileToken}
       showEndSession={showEndSession}
       entryQueryParams={entryQueryParams}
+      participantIdentity={participantIdentity}
     />
   );
 }

@@ -9,6 +9,7 @@ import {
   collectEntryQueryParams,
   recordGuestLinkEntryQueryParams,
 } from "@/lib/guest-link-access";
+import { buildPowParticipantIdentity } from "@/lib/session-participant-identity";
 
 interface PageProps {
   params: Promise<{ token: string }>;
@@ -53,6 +54,11 @@ export default async function PrivateIleSessionPage({ params, searchParams }: Pa
     );
   }
 
+  const participantIdentity = buildPowParticipantIdentity({
+    guestUserId: access.guestUserId,
+    assignedUserId: access.assignedUserId,
+  });
+
   return (
     <IleGuestSessionClient
       sessionId={ensured.sessionId}
@@ -60,6 +66,7 @@ export default async function PrivateIleSessionPage({ params, searchParams }: Pa
       blockTitle={ensured.blockTitle}
       showEndSession={access.showEndSession}
       entryQueryParams={entryParams}
+      participantIdentity={participantIdentity}
     />
   );
 }

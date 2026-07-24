@@ -38,6 +38,11 @@ import { ExcalidrawCanvas } from "./ExcalidrawCanvas";
 import { ToolsPanel, type Tool } from "./ToolsPanel";
 import { MobileBlockScreen } from "./MobileBlockScreen";
 import { LoadingStatusMessage } from "./LoadingStatusMessage";
+import { SessionIdentityBadge } from "@/components/SessionIdentityBadge";
+import {
+  buildPowParticipantIdentity,
+  type PowParticipantIdentity,
+} from "@/lib/session-participant-identity";
 import { type ChatMessage, type PendingChatMessage, type StuckAction } from "./HeliosChat";
 import { DataInputTool } from "./DataInputTool";
 import { LogsTool, type LogEntry } from "./LogsTool";
@@ -129,6 +134,7 @@ export function SessionView({
   ileToken,
   showEndSession = true,
   entryQueryParams = {},
+  participantIdentity: participantIdentityProp = null,
 }: {
   sessionId: string;
   ayclToken?: string;
@@ -141,9 +147,33 @@ export function SessionView({
   showEndSession?: boolean;
   /** Share URL query params → param-scoped guest identity for PoW. */
   entryQueryParams?: Record<string, string | string[]>;
+  /** Server-resolved guest/assigned identity for share links. */
+  participantIdentity?: PowParticipantIdentity | null;
 }) {
   const guestAccessKind: "aycl" | "ile" | null = ayclToken ? "aycl" : ileToken ? "ile" : null;
   const allowEndSession = showEndSession !== false;
+  const [participantIdentity, setParticipantIdentity] = useState<PowParticipantIdentity | null>(
+    participantIdentityProp,
+  );
+
+  useEffect(() => {
+    if (participantIdentityProp) {
+      setParticipantIdentity(participantIdentityProp);
+      return;
+    }
+    // Map UI / owner session: signed-in user.
+    if (ileToken || ayclToken) return;
+    let cancelled = false;
+    const supabase = createClient();
+    void supabase.auth.getUser().then(({ data }: { data: { user: { id?: string } | null } }) => {
+      if (cancelled) return;
+      const id = data.user?.id ?? null;
+      if (id) setParticipantIdentity(buildPowParticipantIdentity({ userId: id }));
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [participantIdentityProp, ileToken, ayclToken]);
   const guestAccessBody = useMemo(
     () =>
       guestAccessKind === "aycl" && ayclToken
@@ -2884,6 +2914,11 @@ export function SessionView({
             <button onClick={() => setError(null)} className="ml-auto text-red-400/60 hover:text-red-400 text-xs">✕</button>
           </div>
         )}
+        {participantIdentity && !showWelcomeModal ? (
+          <div className="flex shrink-0 justify-end border-b border-neutral-900/80 px-4 py-1.5">
+            <SessionIdentityBadge identity={participantIdentity} />
+          </div>
+        ) : null}
         <div className="flex-1 flex min-h-0 overflow-hidden">
           {/* Tools | Helios */}
           <div className="flex flex-1 min-h-0 min-w-0 overflow-hidden">

@@ -7,6 +7,7 @@ import {
   collectEntryQueryParams,
   recordGuestLinkEntryQueryParams,
 } from "@/lib/guest-link-access";
+import { buildPowParticipantIdentity } from "@/lib/session-participant-identity";
 import { resolveGuestForLinkQueryParams } from "@/lib/guest-link-query-guest";
 
 interface PageProps {
@@ -76,7 +77,8 @@ export default async function PrivateTapSessionPage({ params, searchParams }: Pa
     ).catch(() => {});
   }
 
-  // Warm-create param-scoped guest so first API call is not race-only.
+  // Resolve (and warm-create) guest subject so badge + first PoW match.
+  let resolvedGuestUserId = (session.guest_user_id as string | null) ?? null;
   if (!session.assigned_user_id && typeof session.id === "string") {
     const workspaces = session.workspaces as
       | { user_id?: string }
@@ -85,15 +87,20 @@ export default async function PrivateTapSessionPage({ params, searchParams }: Pa
     const wsOwner = Array.isArray(workspaces) ? workspaces[0]?.user_id : workspaces?.user_id;
     const ownerUserId = (session.user_id as string | null) || wsOwner || null;
     if (ownerUserId) {
-      await resolveGuestForLinkQueryParams(supabase, {
-        linkKind: "tap",
-        linkId: session.id,
-        workspaceId: String(session.workspace_id),
-        organizationId: (session.organization_id as string | null) ?? null,
-        ownerUserId,
-        baseGuestUserId: (session.guest_user_id as string | null) ?? null,
-        params: entryParams,
-      }).catch(() => {});
+      try {
+        const resolved = await resolveGuestForLinkQueryParams(supabase, {
+          linkKind: "tap",
+          linkId: session.id,
+          workspaceId: String(session.workspace_id),
+          organizationId: (session.organization_id as string | null) ?? null,
+          ownerUserId,
+          baseGuestUserId: resolvedGuestUserId,
+          params: entryParams,
+        });
+        if (resolved.guestUserId) resolvedGuestUserId = resolved.guestUserId;
+      } catch {
+        // API access path will provision if needed
+      }
     }
   }
 
@@ -105,9 +112,15 @@ export default async function PrivateTapSessionPage({ params, searchParams }: Pa
   const showEndSession = session.show_end_session !== false;
   const initialSession = {
     ...session,
+    guest_user_id: resolvedGuestUserId,
     workspaceTitle: workspaceTitle || "Workspace",
     show_end_session: showEndSession,
   };
+
+  const participantIdentity = buildPowParticipantIdentity({
+    guestUserId: resolvedGuestUserId,
+    assignedUserId: (session.assigned_user_id as string | null) ?? null,
+  });
 
   return (
     <TapScoreClient
@@ -118,6 +131,7 @@ export default async function PrivateTapSessionPage({ params, searchParams }: Pa
       initialSession={initialSession}
       showEndSession={showEndSession}
       entryQueryParams={entryParams}
+      participantIdentity={participantIdentity}
     />
   );
 }

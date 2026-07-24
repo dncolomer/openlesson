@@ -7,6 +7,8 @@ import {
   ILE_LINK_REVOKED_MESSAGE,
   isGuestLinkRevoked,
 } from "@/lib/pow-api/invalidate-guest-links";
+import { createAnonymousTapGuest } from "@/lib/pow-api/anonymous-tap-guest";
+import { resolveGuestLinkAttribution } from "@/lib/session-participant-identity";
 
 export interface ResolvedIleLinkContext {
   supabase: ReturnType<typeof createAdminClient>;
@@ -89,6 +91,29 @@ export async function resolveIleLinkAccess(
       params: entryQueryParams,
     });
     guestUserId = resolved.guestUserId;
+
+    // Guest share links must always have a guest subject — never owner.
+    if (!guestUserId) {
+      const created = await createAnonymousTapGuest(supabase, {
+        workspaceId: String(link.workspace_id),
+        organizationId: (link as { organization_id?: string | null }).organization_id ?? null,
+        createdByUserId: ownerUserId,
+        guestType: "anonymous_ile_link",
+      });
+      guestUserId = created.id;
+      await supabase
+        .from("workspace_ile_links")
+        .update({ guest_user_id: guestUserId })
+        .eq("id", String(link.id));
+    }
+  }
+
+  const attribution = resolveGuestLinkAttribution({
+    guestUserId,
+    assignedUserId,
+  });
+  if (!attribution.userId && !attribution.guestUserId) {
+    return { error: "ILE guest participant is not provisioned", status: 500 };
   }
 
   return {
@@ -97,8 +122,8 @@ export async function resolveIleLinkAccess(
     workspaceId: String(link.workspace_id),
     blockId: String(link.block_id),
     ownerUserId,
-    guestUserId,
-    assignedUserId,
+    guestUserId: attribution.guestUserId,
+    assignedUserId: attribution.userId,
     sessionId: (link.session_id as string | null) ?? null,
     status: String(link.status),
     participantType: (link.participant_type as string | null) ?? null,

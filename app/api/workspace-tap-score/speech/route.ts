@@ -97,7 +97,7 @@ export async function POST(req: NextRequest) {
         metadata,
         tool_name: TAP_SPEECH_TOOL_NAME,
         tool_action: `speech_${event}`,
-        user_id: access.userId,
+        user_id: access.guestUserId ? null : access.userId,
         guest_user_id: access.guestUserId,
         organization_id: access.organizationId,
       })

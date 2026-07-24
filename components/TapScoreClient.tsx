@@ -70,6 +70,11 @@ import {
   TAP_PRACTICE_DURATION_SECONDS,
   resolveTapLiveMinutes,
 } from "@/lib/tap-practice";
+import {
+  buildPowParticipantIdentity,
+  type PowParticipantIdentity,
+} from "@/lib/session-participant-identity";
+import { SessionIdentityBadge } from "@/components/SessionIdentityBadge";
 
 interface TapScoreClientProps {
   workspaceId?: string;
@@ -84,6 +89,8 @@ interface TapScoreClientProps {
    * same guest subject; different params → different guests.
    */
   entryQueryParams?: Record<string, string | string[]>;
+  /** Server-resolved participant for guest links; map UI resolves signed-in user client-side. */
+  participantIdentity?: PowParticipantIdentity | null;
 }
 
 /** Resolve whether End Session UI should show (default yes). */
@@ -228,6 +235,7 @@ export function TapScoreClient({
   initialSession,
   showEndSession: showEndSessionProp,
   entryQueryParams = {},
+  participantIdentity: participantIdentityProp = null,
 }: TapScoreClientProps) {
   const showEndSession = resolveTapShowEndSession({
     showEndSession: showEndSessionProp,
@@ -239,6 +247,39 @@ export function TapScoreClient({
   }, [entryQueryParams]);
   const router = useRouter();
   const { t } = useI18n();
+  const [participantIdentity, setParticipantIdentity] = useState<PowParticipantIdentity | null>(
+    () => {
+      if (participantIdentityProp) return participantIdentityProp;
+      if (privateToken && initialSession) {
+        return buildPowParticipantIdentity({
+          guestUserId: initialSession.guest_user_id ?? null,
+          assignedUserId: initialSession.assigned_user_id ?? null,
+        });
+      }
+      return null;
+    },
+  );
+
+  useEffect(() => {
+    if (participantIdentityProp) {
+      setParticipantIdentity(participantIdentityProp);
+      return;
+    }
+    // Map UI (no private token): attribute to signed-in user.
+    if (privateToken) return;
+    let cancelled = false;
+    const supabase = createClient();
+    void supabase.auth.getUser().then(({ data }: { data: { user: { id?: string } | null } }) => {
+      if (cancelled) return;
+      const id = data.user?.id ?? null;
+      if (id) {
+        setParticipantIdentity(buildPowParticipantIdentity({ userId: id }));
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [participantIdentityProp, privateToken]);
   const [phase, setPhase] = useState<Phase>("briefing");
   const [minutes, setMinutes] = useState(resolveInitialMinutes(initialSession?.requested_duration_seconds));
   const postSession = (initialSession?.post_session as TapPostSessionMode) || "redirect_workspace";
@@ -1193,6 +1234,11 @@ export function TapScoreClient({
 
         {phase === "live" && (
           <section className="flex min-h-0 flex-1 flex-col overflow-hidden">
+            {participantIdentity ? (
+              <div className="mb-2 flex shrink-0 justify-end">
+                <SessionIdentityBadge identity={participantIdentity} />
+              </div>
+            ) : null}
             {isPracticeMode ? (
               <div
                 data-tap-practice-banner

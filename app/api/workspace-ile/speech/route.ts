@@ -80,7 +80,7 @@ export async function POST(req: NextRequest) {
         metadata,
         tool_name: ILE_SPEECH_TOOL_NAME,
         tool_action: `speech_${event}`,
-        user_id: access.userId,
+        user_id: access.auth.guest_user_id ? null : access.auth.user_id,
         guest_user_id: access.auth.guest_user_id,
         organization_id: access.workspace.organization_id,
       })

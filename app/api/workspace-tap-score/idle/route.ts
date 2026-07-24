@@ -85,7 +85,7 @@ export async function POST(req: NextRequest) {
         metadata,
         tool_name: TAP_IDLE_TOOL_NAME,
         tool_action: "idle_heartbeat",
-        user_id: access.userId,
+        user_id: access.guestUserId ? null : access.userId,
         guest_user_id: access.guestUserId,
         organization_id: access.organizationId,
       })

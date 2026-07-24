@@ -68,7 +68,7 @@ export async function POST(req: NextRequest) {
     }
 
     const auth: AuthContext = {
-      user_id: access.userId,
+      user_id: access.guestUserId ? null : access.userId,
       guest_user_id: access.guestUserId,
       organization_id: access.organizationId,
       is_org_admin: false,
@@ -165,7 +165,7 @@ export async function POST(req: NextRequest) {
           .eq("id", resolvedTapSessionId)
       : access.supabase.from("workspace_tap_sessions").insert({
           workspace_id: access.workspaceId,
-          user_id: access.userId,
+          user_id: access.guestUserId ? null : access.userId,
           guest_user_id: access.guestUserId,
           organization_id: access.organizationId,
           duration_seconds: durationSeconds,

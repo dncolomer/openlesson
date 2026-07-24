@@ -29,6 +29,23 @@ export function shouldAutoStashOnSilence(
   return hasTranscript && silenceMs >= thresholdMs;
 }
 
+/**
+ * After stash/submit the bar is empty ("Listening…"). Prolonged silence with no
+ * new speech still degrades purity (same threshold as auto-stash).
+ */
+export function shouldPenalizeEmptyBarSilence(
+  silenceMs: number,
+  hasTranscript: boolean,
+  thresholdMs: number = TAP_SILENCE_AUTO_STASH_MS,
+): boolean {
+  return !hasTranscript && silenceMs >= thresholdMs;
+}
+
+/** Fade the live bar (transcript or Listening…) during the silence window. */
+export function shouldFadeLiveBar(silenceMs: number): boolean {
+  return silenceMs > 0;
+}
+
 export function nextSessionPurityAfterAutoStash(current: number): number {
   return Math.max(0, Math.trunc(current) - 1);
 }

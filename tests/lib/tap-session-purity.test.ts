@@ -7,6 +7,8 @@ import {
   isSessionPurityDepleted,
   nextSessionPurityAfterAutoStash,
   shouldAutoStashOnSilence,
+  shouldFadeLiveBar,
+  shouldPenalizeEmptyBarSilence,
   stampPoWQuality,
   transcriptFadeOpacity,
   withImpurePoWData,
@@ -32,6 +34,14 @@ describe("tap-session-purity helpers", () => {
     expect(shouldAutoStashOnSilence(4_999, true)).toBe(false);
     expect(shouldAutoStashOnSilence(5_000, true)).toBe(true);
     expect(shouldAutoStashOnSilence(5_000, false)).toBe(false);
+  });
+
+  it("penalizes empty-bar silence (Listening… after stash/submit) at the same threshold", () => {
+    expect(shouldPenalizeEmptyBarSilence(4_999, false)).toBe(false);
+    expect(shouldPenalizeEmptyBarSilence(5_000, false)).toBe(true);
+    expect(shouldPenalizeEmptyBarSilence(5_000, true)).toBe(false);
+    expect(shouldFadeLiveBar(0)).toBe(false);
+    expect(shouldFadeLiveBar(1)).toBe(true);
   });
 
   it("decrements purity and detects depletion", () => {

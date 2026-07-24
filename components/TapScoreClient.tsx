@@ -61,6 +61,8 @@ import {
   isSessionPurityDepleted,
   nextSessionPurityAfterAutoStash,
   shouldAutoStashOnSilence,
+  shouldFadeLiveBar,
+  shouldPenalizeEmptyBarSilence,
   transcriptFadeOpacity,
 } from "@/lib/tap-session-purity";
 import {
@@ -279,7 +281,14 @@ export function TapScoreClient({
   const isEndingRef = useRef(false);
   const endAndScoreRef = useRef<(options?: { impure?: boolean }) => void>(() => {});
   const autoStashInFlightRef = useRef(false);
-  const lastTranscriptActivityAtRef = useRef(Date.now());
+  /** Last non-empty speech OR intentional clear (stash/send) — drives silence clock. */
+  const lastSpeechActivityAtRef = useRef(Date.now());
+  const crystallizableTextRef = useRef("");
+  /**
+   * After intentional clear, empty recognition results may keep the bar empty.
+   * Otherwise empty onResult (recognition restart) must not wipe text mid-fade.
+   */
+  const acceptEmptyTranscriptRef = useRef(true);
 
   useEffect(() => {
     tapSessionIdRef.current = tapSessionId;
@@ -569,7 +578,24 @@ export function TapScoreClient({
     finalBufferRef.current = [];
     setInterimText("");
     setCrystallizableText("");
+    crystallizableTextRef.current = "";
+    // Intentional clear: allow empty bar + start silence clock for post-stash purity.
+    acceptEmptyTranscriptRef.current = true;
+    lastSpeechActivityAtRef.current = Date.now();
+    setTranscriptSilenceMs(0);
   }
+
+  const applyPurityHit = useCallback(() => {
+    setSessionPurity((current) => {
+      const next = nextSessionPurityAfterAutoStash(current);
+      if (isSessionPurityDepleted(next)) {
+        window.setTimeout(() => {
+          endAndScoreRef.current({ impure: true });
+        }, 0);
+      }
+      return next;
+    });
+  }, []);
 
   const speechBindings = useMemo<LiveSpeechRecognitionBindings>(
     () => ({
@@ -590,8 +616,25 @@ export function TapScoreClient({
         }
         finalBufferRef.current = finals;
         const displayText = normalize(`${finals.join(" ")} ${interim}`.trim());
+
+        // Empty recognition frames (common on Chrome restart) must not wipe a held
+        // live transcript mid-silence-fade — unless we intentionally cleared.
+        if (!displayText) {
+          if (!acceptEmptyTranscriptRef.current && crystallizableTextRef.current) {
+            return;
+          }
+          setInterimText("");
+          setCrystallizableText("");
+          crystallizableTextRef.current = "";
+          return;
+        }
+
+        acceptEmptyTranscriptRef.current = false;
+        lastSpeechActivityAtRef.current = Date.now();
+        setTranscriptSilenceMs(0);
         setInterimText(interim);
         setCrystallizableText(displayText);
+        crystallizableTextRef.current = displayText;
         notifySpeechResultRef.current(displayText);
       },
       onListeningChange: setIsListening,
@@ -619,34 +662,24 @@ export function TapScoreClient({
 
   const stashCurrentTranscription = useCallback(
     (options?: { auto?: boolean }) => {
-      const text = normalize(crystallizableText);
+      const text = normalize(crystallizableTextRef.current || crystallizableText);
       clearTranscriptionDisplay();
       restartSpeechRecognitionSession();
-      setTranscriptSilenceMs(0);
-      lastTranscriptActivityAtRef.current = Date.now();
       if (!text) {
         autoStashInFlightRef.current = false;
         return;
       }
       addThought(text, options?.auto ? "auto_stash" : "pause_finalize");
       if (options?.auto) {
-        setSessionPurity((current) => {
-          const next = nextSessionPurityAfterAutoStash(current);
-          if (isSessionPurityDepleted(next)) {
-            // Close after purity hits 0; allow the auto-stash PoW to flush first.
-            window.setTimeout(() => {
-              endAndScoreRef.current({ impure: true });
-            }, 0);
-          }
-          return next;
-        });
+        applyPurityHit();
       }
       autoStashInFlightRef.current = false;
     },
-    [crystallizableText, restartSpeechRecognitionSession],
+    [crystallizableText, restartSpeechRecognitionSession, applyPurityHit],
   );
 
-  // TAP-only: fade live transcript over 5s silence, then auto-stash (degrades session purity).
+  // TAP-only: silence clock always runs live — with text → fade + auto-stash;
+  // empty bar after stash/submit → fade Listening… + purity hit if still silent.
   useEffect(() => {
     if (phase !== "live") {
       setTranscriptSilenceMs(0);
@@ -654,33 +687,36 @@ export function TapScoreClient({
       return;
     }
 
-    const hasTranscript = Boolean(normalize(crystallizableText));
-    if (!hasTranscript) {
-      setTranscriptSilenceMs(0);
-      lastTranscriptActivityAtRef.current = Date.now();
-      autoStashInFlightRef.current = false;
-      return;
-    }
-
-    // Any transcript change (speech) resets the silence window.
-    lastTranscriptActivityAtRef.current = Date.now();
-    setTranscriptSilenceMs(0);
-
     const tick = window.setInterval(() => {
-      const silenceMs = Date.now() - lastTranscriptActivityAtRef.current;
+      if (isEndingRef.current) return;
+      const silenceMs = Date.now() - lastSpeechActivityAtRef.current;
       setTranscriptSilenceMs(silenceMs);
+      const hasTranscript = Boolean(normalize(crystallizableTextRef.current));
+
       if (
-        shouldAutoStashOnSilence(silenceMs, true, TAP_SILENCE_AUTO_STASH_MS) &&
-        !autoStashInFlightRef.current &&
-        !isEndingRef.current
+        shouldAutoStashOnSilence(silenceMs, hasTranscript, TAP_SILENCE_AUTO_STASH_MS) &&
+        !autoStashInFlightRef.current
       ) {
         autoStashInFlightRef.current = true;
         stashCurrentTranscription({ auto: true });
+        return;
+      }
+
+      if (
+        shouldPenalizeEmptyBarSilence(silenceMs, hasTranscript, TAP_SILENCE_AUTO_STASH_MS) &&
+        !autoStashInFlightRef.current
+      ) {
+        // Empty-bar silence after stash/submit (Listening… with no new speech).
+        autoStashInFlightRef.current = true;
+        applyPurityHit();
+        lastSpeechActivityAtRef.current = Date.now();
+        setTranscriptSilenceMs(0);
+        autoStashInFlightRef.current = false;
       }
     }, 100);
 
     return () => window.clearInterval(tick);
-  }, [phase, crystallizableText, stashCurrentTranscription]);
+  }, [phase, stashCurrentTranscription, applyPurityHit]);
 
   useEffect(() => {
     if (phase !== "live") {
@@ -1205,10 +1241,9 @@ export function TapScoreClient({
                   <div
                     className="flex h-8 min-w-0 flex-1 items-center rounded-md border border-neutral-900 bg-black/70 px-2.5 text-xs text-neutral-300 transition-opacity duration-150"
                     style={{
-                      opacity:
-                        crystallizableText && transcriptSilenceMs > 0
-                          ? transcriptFadeOpacity(transcriptSilenceMs)
-                          : 1,
+                      opacity: shouldFadeLiveBar(transcriptSilenceMs)
+                        ? transcriptFadeOpacity(transcriptSilenceMs)
+                        : 1,
                     }}
                     data-tap-transcript-fade
                   >

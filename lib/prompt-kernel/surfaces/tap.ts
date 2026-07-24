@@ -82,19 +82,37 @@ ${params.workspaceBlock}`;
   return composePrompt({ ontology: "compact", surface: TAP_SURFACE, task });
 }
 
-export function buildTapSelectiveThoughtSystemPrompt(facilitatorContext: string): string {
+export function buildTapSelectiveThoughtSystemPrompt(
+  facilitatorContext: string,
+  options?: { practice?: boolean },
+): string {
+  const practiceOverlay = options?.practice ? `\n\n${TAP_PRACTICE_THOUGHT_OVERLAY}` : "";
   return composePrompt({
     ontology: "none",
     surface: TAP_SURFACE,
     task: `${facilitatorContext}
 
-${TAP_SELECTIVE_THOUGHT_OVERLAY}`,
+${TAP_SELECTIVE_THOUGHT_OVERLAY}${practiceOverlay}`,
   });
 }
 
 export function buildTapOpeningQuestionTask(): string {
   return `Generate exactly ONE opening prompt to start the knowledge-verification conversation. It must invite a concrete demonstration of learning about the workspace/block context — definitions, core idea, causal mechanism, or a worked example — not a generic icebreaker, not a meta question about their "approach," and not stage directions about speaking out loud. Prefer concrete demonstration of knowledge. One sentence only. No preamble, no quotes, just the prompt. Never mention Uncertain Systems, PoW, TAP, tools, or product names.`;
 }
+
+/** Practice warm-up: still domain-grounded, but easy entry-level elicitation. */
+export function buildTapPracticeOpeningQuestionTask(): string {
+  return `Generate exactly ONE opening prompt for a short PRACTICE warm-up (not a scored session). Stay on the workspace/block topic, but keep difficulty simple — introductory vocabulary, a basic definition, or the most everyday example of the core idea. Avoid deep transfer, edge cases, multi-step causal chains, or advanced synthesis. One friendly sentence only. No preamble, no quotes. Never mention practice mode, Uncertain Systems, PoW, TAP, tools, scoring, or product names.`;
+}
+
+export const TAP_PRACTICE_THOUGHT_OVERLAY = `
+PRACTICE MODE (model-private):
+This is a short warm-up, not a scored demonstration. Stay on the same domain as the workspace/block, but keep difficulty easy:
+- Prefer simple definitions, plain-language restatements, and one everyday example.
+- Avoid advanced edge cases, multi-hop causal chains, or transfer-to-new-domain challenges.
+- Keep replies short: one easy elicitation (optionally a brief friendly mirror of their words).
+- Still natural knowledge-checking dialogue — never mention practice, scoring, PoW, or platform product names.
+`.trim();
 
 export function buildTapStartingTopicsTask(topicCount: number): string {
   return `Generate exactly ${topicCount} distinct starting topics for a knowledge-verification conversation. Each topic is a concrete angle for demonstrating understanding from the workspace context — not generic study advice, not think-aloud stage directions, and not platform/product language.

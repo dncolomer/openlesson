@@ -23,9 +23,11 @@ export { composePrompt, type ComposePromptOptions, type OntologyDensity } from "
 export {
   TAP_SURFACE,
   TAP_SELECTIVE_THOUGHT_OVERLAY,
+  TAP_PRACTICE_THOUGHT_OVERLAY,
   buildTapFacilitatorInstructions,
   buildTapSelectiveThoughtSystemPrompt,
   buildTapOpeningQuestionTask,
+  buildTapPracticeOpeningQuestionTask,
   buildTapStartingTopicsTask,
 } from "./surfaces/tap";
 export {

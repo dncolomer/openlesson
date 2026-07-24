@@ -1142,13 +1142,7 @@ export function TapScoreClient({
                   </div>
                 </div>
 
-                <div
-                  className={`shrink-0 min-w-0 overflow-hidden rounded-2xl border p-3 backdrop-blur-md ${
-                    isPracticeMode
-                      ? "border-cyan-400/30 bg-cyan-950/40"
-                      : "border-neutral-900/80 bg-neutral-950/55"
-                  }`}
-                >
+                <div className="shrink-0 min-w-0 overflow-hidden rounded-2xl border border-neutral-900/80 bg-neutral-950/55 p-3 backdrop-blur-md">
                 <div className="mb-3 flex w-full flex-wrap items-center justify-between gap-2 border-b border-neutral-900/80 pb-3">
                   <div className="flex flex-wrap items-start gap-5">
                     <div className="flex flex-col gap-1">

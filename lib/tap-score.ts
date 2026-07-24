@@ -5,6 +5,7 @@ import { callXai, callXaiJSON, systemMessage, userMessage } from "@/lib/xai-clie
 import {
   buildTapFacilitatorInstructions,
   buildTapOpeningQuestionTask,
+  buildTapPracticeOpeningQuestionTask,
   buildTapStartingTopicsTask,
 } from "@/lib/prompt-kernel/surfaces/tap";
 
@@ -400,22 +401,34 @@ export async function generateTapStartingTopics(brief: TapScoreBrief, minutes: n
   return buildTapStartingTopicsFallback(brief);
 }
 
-export async function generateTapOpeningQuestion(brief: TapScoreBrief, minutes: number) {
+export function buildTapPracticeOpeningQuestionFallback(brief: TapScoreBrief): string {
+  const focusedBlock = brief.nodes.length === 1 ? brief.nodes[0] : null;
+  const target = focusedBlock?.title || brief.plan.title || brief.plan.root_topic || "this topic";
+  return `In simple terms, what is "${target}" — just the basic idea in a sentence or two?`;
+}
+
+export async function generateTapOpeningQuestion(
+  brief: TapScoreBrief,
+  minutes: number,
+  options?: { practice?: boolean },
+) {
+  const practice = options?.practice === true;
   const context = buildTapScoreInstructions(brief, "curious", minutes);
   const focusedBlock = brief.nodes.length === 1 ? brief.nodes[0] : null;
   const target = focusedBlock?.title || brief.plan.title;
+  const task = practice ? buildTapPracticeOpeningQuestionTask() : buildTapOpeningQuestionTask();
+  const userAsk = practice
+    ? `Generate an easy practice warm-up opening about (stay on topic, keep difficulty simple): ${target}`
+    : `Generate the opening knowledge-verification prompt for demonstrating learning about: ${target}`;
 
   const response = await callXai(
-    [
-      systemMessage(`${context}\n\n${buildTapOpeningQuestionTask()}`),
-      userMessage(`Generate the opening knowledge-verification prompt for demonstrating learning about: ${target}`),
-    ],
-    { maxTokens: 120, temperature: 0.55, fetchTimeout: 30000 },
+    [systemMessage(`${context}\n\n${task}`), userMessage(userAsk)],
+    { maxTokens: 120, temperature: practice ? 0.4 : 0.55, fetchTimeout: 30000 },
   );
 
   if (response.success && response.data?.trim()) {
     return response.data.trim();
   }
 
-  return buildTapOpeningQuestionFallback(brief);
+  return practice ? buildTapPracticeOpeningQuestionFallback(brief) : buildTapOpeningQuestionFallback(brief);
 }

@@ -96,11 +96,11 @@ export async function POST(req: NextRequest) {
       .join("\n\n");
 
     const response = await callXai([
-      systemMessage(buildTapSelectiveThoughtSystemPrompt(context)),
+      systemMessage(buildTapSelectiveThoughtSystemPrompt(context, { practice })),
       userMessage(`Conversation so far:\n${history || "None"}\n\nLatest submitted thought:\n${latestThought}`),
     ], {
-      maxTokens: 500,
-      temperature: 0.55,
+      maxTokens: practice ? 280 : 500,
+      temperature: practice ? 0.4 : 0.55,
       fetchTimeout: 60000,
     });
 

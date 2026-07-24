@@ -50,7 +50,9 @@ export async function POST(req: NextRequest) {
       resolvedFocusSessionId
     );
     const requestedOpeningQuestion = body.openingQuestion ? String(body.openingQuestion).trim() : "";
-    const openingQuestion = requestedOpeningQuestion || (await generateTapOpeningQuestion(brief, minutes));
+    const openingQuestion =
+      requestedOpeningQuestion ||
+      (await generateTapOpeningQuestion(brief, minutes, { practice }));
 
     // Private TAP links are multi-use: reopening a completed link restarts a run
     // on the same row, preserving guest_user_id / assigned_user_id for identity.

@@ -13,6 +13,12 @@ import {
   withPracticePoWData,
 } from "@/lib/tap-practice";
 import { buildTapTranscriptPayload } from "@/lib/tap-score-traces";
+import { buildTapPracticeOpeningQuestionFallback } from "@/lib/tap-score";
+import {
+  buildTapPracticeOpeningQuestionTask,
+  buildTapSelectiveThoughtSystemPrompt,
+  TAP_PRACTICE_THOUGHT_OVERLAY,
+} from "@/lib/prompt-kernel/surfaces/tap";
 
 const ROOT = process.cwd();
 
@@ -119,5 +125,36 @@ describe("TAP client practice surface (not ILE)", () => {
     expect(ile).not.toContain("data-tap-practice-first");
     expect(ile).not.toContain("Practice First");
     expect(ile).not.toContain("tap-practice");
+  });
+
+  it("keeps practice cue on banner only — stash/submit box stays neutral", () => {
+    const client = fs.readFileSync(path.join(ROOT, "components/TapScoreClient.tsx"), "utf8");
+    expect(client).toContain("data-tap-practice-banner");
+    // Stash/submit panel is always neutral (no practice cyan on that box)
+    expect(client).toContain(
+      'className="shrink-0 min-w-0 overflow-hidden rounded-2xl border border-neutral-900/80 bg-neutral-950/55 p-3 backdrop-blur-md"',
+    );
+    expect(client).not.toMatch(/isPracticeMode\s*\?\s*[\s\S]*border-cyan-400\/30 bg-cyan-950\/40/);
+  });
+
+  it("practice conversation prompts stay on-topic but easier", () => {
+    const task = buildTapPracticeOpeningQuestionTask();
+    expect(task.toLowerCase()).toMatch(/practice|simple|easy|introductory/);
+    expect(task.toLowerCase()).toMatch(/workspace|block|topic|domain/);
+    expect(TAP_PRACTICE_THOUGHT_OVERLAY.toLowerCase()).toContain("practice mode");
+    expect(TAP_PRACTICE_THOUGHT_OVERLAY.toLowerCase()).toMatch(/easy|simple/);
+
+    const practicePrompt = buildTapSelectiveThoughtSystemPrompt("ctx", { practice: true });
+    const scoredPrompt = buildTapSelectiveThoughtSystemPrompt("ctx", { practice: false });
+    expect(practicePrompt).toContain(TAP_PRACTICE_THOUGHT_OVERLAY);
+    expect(scoredPrompt).not.toContain(TAP_PRACTICE_THOUGHT_OVERLAY);
+
+    const fallback = buildTapPracticeOpeningQuestionFallback({
+      plan: { id: "p1", title: "Orbital Mechanics", root_topic: "orbits" },
+      nodes: [{ id: "n1", title: "Kepler's laws", description: null, status: null }],
+      sessions: [],
+    });
+    expect(fallback).toContain("Kepler's laws");
+    expect(fallback.toLowerCase()).toMatch(/simple|basic/);
   });
 });

@@ -2,8 +2,12 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { AuthContext } from "./types";
 import { filterResolvableXaiFileIds, isXaiFileId, uploadFileToXAI } from "@/lib/xai-files";
 import { proofOfWorkQueryForAuth } from "./workspace-proof-of-work";
+import { filterSnapshotEligibleProofOfWorkRows } from "./pow-quality";
 
 const MAX_ARTIFACT_FILE_REFS = 19;
+/** Oversample before excluding practice/impure so scored context stays full. */
+const POW_FETCH_LIMIT = 150;
+const POW_CONTEXT_LIMIT = 50;
 
 export interface PerformanceConversationMessage {
   role: "user" | "assistant";
@@ -161,7 +165,7 @@ export async function buildWorkspacePerformanceContext({
     )
     .eq("workspace_id", workspaceId)
     .order("created_at", { ascending: false })
-    .limit(50);
+    .limit(POW_FETCH_LIMIT);
 
   if (blockId) proofOfWorkQuery = proofOfWorkQuery.eq("block_id", blockId);
   if (evidenceFilter.restrictToGuest && evidenceFilter.guestUserId) {
@@ -170,13 +174,18 @@ export async function buildWorkspacePerformanceContext({
     proofOfWorkQuery = proofOfWorkQuery.eq("user_id", evidenceFilter.userId);
   }
 
-  const { data: proofOfWorkRows } = await proofOfWorkQuery;
+  const { data: rawProofOfWorkRows } = await proofOfWorkQuery;
+  // Snapshots ignore practice PoW and impure (low-quality purity) TAP sessions.
+  const proofOfWorkRows = filterSnapshotEligibleProofOfWorkRows(rawProofOfWorkRows).slice(
+    0,
+    POW_CONTEXT_LIMIT,
+  );
 
   const sessionIds = Array.from(
     new Set(
       [
         ...(blocks || []).map((block) => block.session_id).filter(Boolean),
-        ...(proofOfWorkRows || []).map((row) => row.session_id).filter(Boolean),
+        ...proofOfWorkRows.map((row) => row.session_id).filter(Boolean),
       ] as string[]
     )
   );
@@ -210,7 +219,7 @@ export async function buildWorkspacePerformanceContext({
       is_start: block.is_start,
       session_id: block.session_id,
     })),
-    proof_of_work: (proofOfWorkRows || []).map((row) => ({
+    proof_of_work: proofOfWorkRows.map((row) => ({
       id: row.id,
       type: row.proof_of_work_type,
       block_id: row.block_id,
@@ -243,7 +252,7 @@ export async function buildWorkspacePerformanceContext({
     })),
     counts: {
       blocks: blocks?.length || 0,
-      proof_of_work_artifacts: proofOfWorkRows?.length || 0,
+      proof_of_work_artifacts: proofOfWorkRows.length,
       linked_sessions: sessions?.length || 0,
       workspace_files: workspaceFiles?.length || 0,
     },
@@ -264,7 +273,7 @@ export async function buildWorkspacePerformanceContext({
   const candidateArtifactIds = Array.from(
     new Set(
       [
-        ...(proofOfWorkRows || []).map((row) => row.xai_file_id),
+        ...proofOfWorkRows.map((row) => row.xai_file_id),
         ...(workspaceFiles || []).map((file) => file.xai_file_id),
       ].filter(isXaiFileId)
     )

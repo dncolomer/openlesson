@@ -4,7 +4,6 @@ import { useMemo, useState } from "react";
 import { useI18n } from "@/lib/i18n";
 import { KnowledgeConfigTrajectoryPanel } from "@/components/KnowledgeConfigTrajectoryPanel";
 import { ProofOfWorkStatsPanel } from "@/components/ProofOfWorkStatsPanel";
-import { InsightsDashboardTab } from "@/components/InsightsDashboardTab";
 import { WorkspaceSectionSubTabs } from "@/components/WorkspaceSectionSubTabs";
 import { SECTION_TAB_CONTENT_CLASS } from "@/lib/workspace-section-surface";
 
@@ -23,16 +22,12 @@ interface WorkspacePerformancePanelProps {
   initialSubview?: PerformanceSubview | "score";
 }
 
-const PERFORMANCE_SUBVIEWS: readonly PerformanceSubview[] = [
-  "lwm",
-  "knowledge",
-  "insights",
-  "pow",
-];
+/** Insights temporarily hidden from nav (may return later). */
+const PERFORMANCE_SUBVIEWS: readonly PerformanceSubview[] = ["lwm", "knowledge", "pow"];
 
 /**
- * Knowledge surface: LWM (with Generate new snapshot), Models, Insights, PoW.
- * Eval tab removed — snapshot generation lives inside the LWM box.
+ * Knowledge surface: LWM (with Generate new snapshot), Models, PoW.
+ * Insights tab hidden for now. Eval removed — snapshot generation lives in LWM.
  */
 export function WorkspacePerformancePanel({
   workspaceId,
@@ -48,6 +43,8 @@ export function WorkspacePerformancePanel({
   const { t } = useI18n();
   const [activeSubview, setActiveSubview] = useState<PerformanceSubview>(() => {
     if (initialSubview === "score") return "lwm";
+    // Deep-links to insights fall back to LWM while the tab is hidden.
+    if (initialSubview === "insights") return "lwm";
     if (initialSubview && (PERFORMANCE_SUBVIEWS as readonly string[]).includes(initialSubview)) {
       return initialSubview as PerformanceSubview;
     }
@@ -58,7 +55,6 @@ export function WorkspacePerformancePanel({
     () => [
       { id: "lwm", label: t("planView.performanceSubTabLwm") },
       { id: "knowledge", label: t("planView.performanceSubTabModels") },
-      { id: "insights", label: t("planView.performanceSubTabInsights") },
       { id: "pow", label: t("planView.performanceSubTabPow") },
     ],
     [t],
@@ -75,12 +71,6 @@ export function WorkspacePerformancePanel({
       />
 
       <div className={SECTION_TAB_CONTENT_CLASS} data-knowledge-tab-body={activeSubview}>
-        {activeSubview === "insights" && (
-          <section className="min-h-0 flex-1 overflow-y-auto">
-            <InsightsDashboardTab workspaceId={workspaceId} compact />
-          </section>
-        )}
-
         {activeSubview === "pow" && (
           <ProofOfWorkStatsPanel
             workspaceId={workspaceId}

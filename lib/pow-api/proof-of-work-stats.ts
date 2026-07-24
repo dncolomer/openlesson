@@ -3,6 +3,11 @@ import {
   WORKSPACE_PROOF_OF_WORK_TYPES,
   type WorkspaceProofOfWorkType,
 } from "@/lib/pow-api/workspace-proof-of-work";
+import {
+  classifyPowQuality,
+  matchesPowQualityFilter,
+  type PowQualityFilter,
+} from "@/lib/pow-api/pow-quality";
 
 /** Max rows scanned for breakdowns. Exact total still uses a head count. */
 export const POW_STATS_SAMPLE_LIMIT = 2000;
@@ -18,6 +23,9 @@ export interface ProofOfWorkStatsRow {
   device_name: string | null;
   timestamp_ms: number | null;
   created_at: string;
+  metadata?: unknown;
+  user_id?: string | null;
+  guest_user_id?: string | null;
 }
 
 export interface ProofOfWorkTypeBreakdown {
@@ -39,6 +47,16 @@ export interface ProofOfWorkRecentEvent {
   file_size: number | null;
   created_at: string;
   timestamp_ms: number | null;
+  quality: "scored" | "practice" | "impure";
+}
+
+export interface ProofOfWorkSubjectBreakdown {
+  /** Stable key for UI filter: `user:<id>`, `guest:<id>`, or `unknown`. */
+  key: string;
+  user_id: string | null;
+  guest_user_id: string | null;
+  label: string;
+  count: number;
 }
 
 export interface WorkspaceProofOfWorkStats {
@@ -47,6 +65,10 @@ export interface WorkspaceProofOfWorkStats {
   total_artifacts: number;
   sampled_artifacts: number;
   sample_capped: boolean;
+  /** Sample counts by quality (before subject/quality UI filter). */
+  scored_artifacts: number;
+  practice_artifacts: number;
+  impure_artifacts: number;
   by_type: ProofOfWorkTypeBreakdown[];
   unique_sessions: number;
   unique_blocks: number;
@@ -61,7 +83,21 @@ export interface WorkspaceProofOfWorkStats {
   last_7d: number;
   top_tools: ProofOfWorkToolBreakdown[];
   recent: ProofOfWorkRecentEvent[];
+  subjects: ProofOfWorkSubjectBreakdown[];
+  /** Echo of filters used for the detail aggregates (quality breakdown always unfiltered sample). */
+  filters: {
+    quality: PowQualityFilter;
+    subject_key: string;
+  };
 }
+
+export type ProofOfWorkStatsFilters = {
+  quality?: PowQualityFilter;
+  /** Subject key from subjects[], or "all". */
+  subjectKey?: string;
+  /** When subjectKey is "me", match this authenticated user id. */
+  currentUserId?: string | null;
+};
 
 function emptyByType(): ProofOfWorkTypeBreakdown[] {
   return WORKSPACE_PROOF_OF_WORK_TYPES.map((type) => ({ type, count: 0 }));
@@ -82,11 +118,84 @@ function eventTimeMs(row: ProofOfWorkStatsRow): number {
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
+export function subjectKeyForRow(row: {
+  user_id?: string | null;
+  guest_user_id?: string | null;
+}): string {
+  if (row.guest_user_id) return `guest:${row.guest_user_id}`;
+  if (row.user_id) return `user:${row.user_id}`;
+  return "unknown";
+}
+
+export function subjectLabelForRow(row: {
+  user_id?: string | null;
+  guest_user_id?: string | null;
+}): string {
+  if (row.guest_user_id) {
+    const short = row.guest_user_id.slice(0, 8);
+    return `Guest ${short}`;
+  }
+  if (row.user_id) {
+    const short = row.user_id.slice(0, 8);
+    return `User ${short}`;
+  }
+  return "Unknown subject";
+}
+
+function matchesSubjectFilter(
+  row: ProofOfWorkStatsRow,
+  subjectKey: string,
+  currentUserId?: string | null,
+): boolean {
+  if (!subjectKey || subjectKey === "all") return true;
+  if (subjectKey === "me") {
+    if (!currentUserId) return false;
+    return row.user_id === currentUserId && !row.guest_user_id;
+  }
+  return subjectKeyForRow(row) === subjectKey;
+}
+
 export function aggregateProofOfWorkStats(
   workspaceId: string,
   totalArtifacts: number,
-  rows: ProofOfWorkStatsRow[]
+  rows: ProofOfWorkStatsRow[],
+  filters: ProofOfWorkStatsFilters = {},
 ): WorkspaceProofOfWorkStats {
+  const qualityFilter: PowQualityFilter = filters.quality || "all";
+  const subjectKey = filters.subjectKey || "all";
+
+  let scored_artifacts = 0;
+  let practice_artifacts = 0;
+  let impure_artifacts = 0;
+  const subjectMap = new Map<string, ProofOfWorkSubjectBreakdown>();
+
+  for (const row of rows) {
+    const quality = classifyPowQuality(row.metadata);
+    if (quality === "scored") scored_artifacts += 1;
+    else if (quality === "practice") practice_artifacts += 1;
+    else impure_artifacts += 1;
+
+    const key = subjectKeyForRow(row);
+    const existing = subjectMap.get(key);
+    if (existing) {
+      existing.count += 1;
+    } else {
+      subjectMap.set(key, {
+        key,
+        user_id: row.user_id ?? null,
+        guest_user_id: row.guest_user_id ?? null,
+        label: subjectLabelForRow(row),
+        count: 1,
+      });
+    }
+  }
+
+  const filtered = rows.filter(
+    (row) =>
+      matchesPowQualityFilter(row.metadata, qualityFilter) &&
+      matchesSubjectFilter(row, subjectKey, filters.currentUserId),
+  );
+
   const byTypeMap = new Map<WorkspaceProofOfWorkType | "other", number>();
   for (const type of WORKSPACE_PROOF_OF_WORK_TYPES) byTypeMap.set(type, 0);
 
@@ -107,7 +216,7 @@ export function aggregateProofOfWorkStats(
   let last24h = 0;
   let last7d = 0;
 
-  for (const row of rows) {
+  for (const row of filtered) {
     const typeKey = asTypeKey(row.proof_of_work_type);
     byTypeMap.set(typeKey, (byTypeMap.get(typeKey) || 0) + 1);
 
@@ -158,7 +267,7 @@ export function aggregateProofOfWorkStats(
     .sort((a, b) => b.count - a.count || a.tool_name.localeCompare(b.tool_name))
     .slice(0, 8);
 
-  const recent = [...rows]
+  const recent = [...filtered]
     .sort((a, b) => eventTimeMs(b) - eventTimeMs(a))
     .slice(0, 12)
     .map((row) => ({
@@ -170,7 +279,12 @@ export function aggregateProofOfWorkStats(
       file_size: row.file_size,
       created_at: row.created_at,
       timestamp_ms: row.timestamp_ms,
+      quality: classifyPowQuality(row.metadata),
     }));
+
+  const subjects = Array.from(subjectMap.values()).sort(
+    (a, b) => b.count - a.count || a.label.localeCompare(b.label),
+  );
 
   return {
     workspace_id: workspaceId,
@@ -178,6 +292,9 @@ export function aggregateProofOfWorkStats(
     total_artifacts: totalArtifacts,
     sampled_artifacts: rows.length,
     sample_capped: totalArtifacts > rows.length,
+    scored_artifacts,
+    practice_artifacts,
+    impure_artifacts,
     by_type,
     unique_sessions: sessions.size,
     unique_blocks: blocks.size,
@@ -192,13 +309,24 @@ export function aggregateProofOfWorkStats(
     last_7d: last7d,
     top_tools,
     recent,
+    subjects,
+    filters: {
+      quality: qualityFilter,
+      subject_key: subjectKey,
+    },
   };
 }
 
 export async function loadWorkspaceProofOfWorkStats(
   supabase: SupabaseClient,
   workspaceId: string,
-  options?: { userId?: string | null; restrictToUser?: boolean }
+  options?: {
+    userId?: string | null;
+    restrictToUser?: boolean;
+    quality?: PowQualityFilter;
+    subjectKey?: string;
+    currentUserId?: string | null;
+  },
 ): Promise<WorkspaceProofOfWorkStats> {
   let countQuery = supabase
     .from("workspace_proof_of_work")
@@ -208,7 +336,7 @@ export async function loadWorkspaceProofOfWorkStats(
   let rowsQuery = supabase
     .from("workspace_proof_of_work")
     .select(
-      "proof_of_work_type, tool_name, tool_action, block_id, session_id, file_size, mime_type, device_name, timestamp_ms, created_at"
+      "proof_of_work_type, tool_name, tool_action, block_id, session_id, file_size, mime_type, device_name, timestamp_ms, created_at, metadata, user_id, guest_user_id",
     )
     .eq("workspace_id", workspaceId)
     .order("created_at", { ascending: false })
@@ -231,7 +359,12 @@ export async function loadWorkspaceProofOfWorkStats(
   return aggregateProofOfWorkStats(
     workspaceId,
     countRes.count ?? 0,
-    (rowsRes.data || []) as ProofOfWorkStatsRow[]
+    (rowsRes.data || []) as ProofOfWorkStatsRow[],
+    {
+      quality: options?.quality,
+      subjectKey: options?.subjectKey,
+      currentUserId: options?.currentUserId ?? options?.userId,
+    },
   );
 }
 

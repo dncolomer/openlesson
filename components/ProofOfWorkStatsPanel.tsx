@@ -7,6 +7,7 @@ import {
   formatProofOfWorkBytes,
   type WorkspaceProofOfWorkStats,
 } from "@/lib/pow-api/proof-of-work-stats";
+import type { PowQualityFilter } from "@/lib/pow-api/pow-quality";
 
 interface ProofOfWorkStatsPanelProps {
   workspaceId: string;
@@ -54,6 +55,9 @@ function StatCard({
   );
 }
 
+const selectClass =
+  "rounded-md border border-neutral-700 bg-neutral-900 px-2.5 py-1.5 text-xs text-neutral-200 outline-none focus:border-neutral-500";
+
 export function ProofOfWorkStatsPanel({
   workspaceId,
   currentUserId = null,
@@ -64,6 +68,8 @@ export function ProofOfWorkStatsPanel({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [nowMs, setNowMs] = useState(() => Date.now());
+  const [qualityFilter, setQualityFilter] = useState<PowQualityFilter>("all");
+  const [subjectKey, setSubjectKey] = useState<string>("all");
 
   const load = useCallback(async () => {
     if (!currentUserId && !ayclToken) return;
@@ -75,6 +81,8 @@ export function ProofOfWorkStatsPanel({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           workspaceId,
+          quality: qualityFilter,
+          subjectKey,
           ...(ayclToken ? { ayclToken } : {}),
         }),
       });
@@ -87,7 +95,7 @@ export function ProofOfWorkStatsPanel({
     } finally {
       setLoading(false);
     }
-  }, [ayclToken, currentUserId, t, workspaceId]);
+  }, [ayclToken, currentUserId, qualityFilter, subjectKey, t, workspaceId]);
 
   useEffect(() => {
     void load();
@@ -101,8 +109,10 @@ export function ProofOfWorkStatsPanel({
     );
   }
 
+  const subjects = stats?.subjects ?? [];
+
   return (
-    <section className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto">
+    <section className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto" data-pow-stats-panel>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2 className="text-sm font-medium text-white">{t("planView.powStatsTitle")}</h2>
@@ -118,6 +128,42 @@ export function ProofOfWorkStatsPanel({
         >
           {loading ? t("planView.powStatsRefreshing") : t("planView.powStatsRefresh")}
         </button>
+      </div>
+
+      <div className="flex flex-wrap items-end gap-3 rounded-lg border border-neutral-800 bg-neutral-950/40 px-3 py-3">
+        <label className="flex min-w-[9rem] flex-col gap-1 text-[10px] uppercase tracking-wide text-neutral-500">
+          {t("planView.powStatsFilterQuality")}
+          <select
+            className={selectClass}
+            value={qualityFilter}
+            data-pow-quality-filter
+            onChange={(event) => setQualityFilter(event.target.value as PowQualityFilter)}
+          >
+            <option value="all">{t("planView.powStatsFilterQualityAll")}</option>
+            <option value="scored">{t("planView.powStatsFilterQualityScored")}</option>
+            <option value="practice">{t("planView.powStatsFilterQualityPractice")}</option>
+            <option value="impure">{t("planView.powStatsFilterQualityImpure")}</option>
+          </select>
+        </label>
+        <label className="flex min-w-[11rem] flex-1 flex-col gap-1 text-[10px] uppercase tracking-wide text-neutral-500">
+          {t("planView.powStatsFilterUser")}
+          <select
+            className={selectClass}
+            value={subjectKey}
+            data-pow-subject-filter
+            onChange={(event) => setSubjectKey(event.target.value)}
+          >
+            <option value="all">{t("planView.powStatsFilterUserAll")}</option>
+            {currentUserId ? (
+              <option value="me">{t("planView.powStatsFilterUserMe")}</option>
+            ) : null}
+            {subjects.map((subject) => (
+              <option key={subject.key} value={subject.key}>
+                {subject.label} ({subject.count})
+              </option>
+            ))}
+          </select>
+        </label>
       </div>
 
       {error ? (
@@ -152,6 +198,24 @@ export function ProofOfWorkStatsPanel({
 
           <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
             <StatCard label={t("planView.powStatsTotal")} value={stats.total_artifacts} />
+            <StatCard
+              label={t("planView.powStatsScored")}
+              value={stats.scored_artifacts}
+              hint={t("planView.powStatsScoredHint")}
+            />
+            <StatCard
+              label={t("planView.powStatsPractice")}
+              value={stats.practice_artifacts}
+              hint={t("planView.powStatsPracticeHint")}
+            />
+            <StatCard
+              label={t("planView.powStatsImpure")}
+              value={stats.impure_artifacts}
+              hint={t("planView.powStatsImpureHint")}
+            />
+          </div>
+
+          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
             <StatCard
               label={t("planView.powStatsSessions")}
               value={stats.unique_sessions}

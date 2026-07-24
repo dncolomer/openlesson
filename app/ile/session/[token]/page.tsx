@@ -18,7 +18,8 @@ interface PageProps {
 export default async function PrivateIleSessionPage({ params, searchParams }: PageProps) {
   const { token } = await params;
   const query = await searchParams;
-  const access = await resolveIleLinkAccess(token);
+  const entryParams = collectEntryQueryParams(query);
+  const access = await resolveIleLinkAccess(token, entryParams);
   if ("error" in access) notFound();
 
   if (access.assignedUserId) {
@@ -34,7 +35,6 @@ export default async function PrivateIleSessionPage({ params, searchParams }: Pa
     }
   }
 
-  const entryParams = collectEntryQueryParams(query);
   if (Object.keys(entryParams).length > 0) {
     await recordGuestLinkEntryQueryParams(
       access.supabase,
@@ -59,6 +59,7 @@ export default async function PrivateIleSessionPage({ params, searchParams }: Pa
       ileToken={token}
       blockTitle={ensured.blockTitle}
       showEndSession={access.showEndSession}
+      entryQueryParams={entryParams}
     />
   );
 }

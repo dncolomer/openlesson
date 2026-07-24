@@ -107,7 +107,7 @@ export function buildTapScoreSessionUrl(baseUrl: string, privateToken: string) {
 }
 
 export function listenerStyle(_mode: TapScoreMode) {
-  return "a neutral TAP facilitator who elicits System 1 and System 2 think-aloud traces so later analysis can see what the learner can explain, connect, apply, and repair";
+  return "a neutral knowledge-verification facilitator who elicits both spontaneous (System 1 / stashed-or-unsent) and deliberate (System 2 / send-edit-skip-resend) knowledge traces through natural domain questions so later analysis can see what the learner can explain, connect, apply, and repair — without stage directions or platform talk in learner-visible turns";
 }
 
 export async function getTapScoreBrief(workspaceId: string, focusNodeIds: string[] = [], focusSessionId?: string | null) {
@@ -385,7 +385,7 @@ export async function generateTapStartingTopics(brief: TapScoreBrief, minutes: n
   const response = await callXaiJSON<{ topics?: TapStartingTopic[] }>(
     [
       systemMessage(`${context}\n\n${buildTapStartingTopicsTask(TAP_STARTING_TOPIC_COUNT)}`),
-      userMessage(`Generate ${TAP_STARTING_TOPIC_COUNT} starting topics for think-aloud demonstration about: ${target}`),
+      userMessage(`Generate ${TAP_STARTING_TOPIC_COUNT} starting topics for knowledge-verification demonstration about: ${target}`),
     ],
     { maxTokens: 900, temperature: 0.45, fetchTimeout: 45000 },
   );
@@ -408,7 +408,7 @@ export async function generateTapOpeningQuestion(brief: TapScoreBrief, minutes: 
   const response = await callXai(
     [
       systemMessage(`${context}\n\n${buildTapOpeningQuestionTask()}`),
-      userMessage(`Generate the opening think-aloud prompt for demonstrating learning about: ${target}`),
+      userMessage(`Generate the opening knowledge-verification prompt for demonstrating learning about: ${target}`),
     ],
     { maxTokens: 120, temperature: 0.55, fetchTimeout: 30000 },
   );

@@ -15,4 +15,6 @@ export interface SessionPowContext {
   blockId?: string;
   privateToken?: string;
   tapSessionId?: string | null;
+  /** Share-link query params for param-scoped guest identity. */
+  entryQueryParams?: Record<string, string | string[]>;
 }

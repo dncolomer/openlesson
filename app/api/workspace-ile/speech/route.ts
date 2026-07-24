@@ -11,7 +11,7 @@ import {
 import { uploadFileToXAI } from "@/lib/xai-files";
 import { countWorkspaceProofOfWorkForPlan } from "@/lib/pow-api/workspace-proof-of-work";
 import { withProofOfWorkApiResponse } from "@/lib/pow-api/predictive-interruption";
-import { stampSourceLinkMetadata } from "@/lib/guest-link-access";
+import { entryQueryParamsFromBody, stampSourceLinkMetadata } from "@/lib/guest-link-access";
 
 export const runtime = "nodejs";
 export const maxDuration = 30;
@@ -38,6 +38,7 @@ export async function POST(req: NextRequest) {
 
     const access = await requireSessionWorkspaceProofOfWorkAccess(workspaceId, sessionId, {
       ileToken: ileTokenFromPowBody(body as Record<string, unknown>),
+      entryQueryParams: entryQueryParamsFromBody(body as Record<string, unknown>),
     });
     if (access instanceof NextResponse) return access;
 

@@ -15,18 +15,15 @@ import {
 import { createPrivateToken, hashPrivateToken } from "@/lib/private-token";
 
 describe("normalizeGuestLinkAccessMode", () => {
-  it("defaults to private and accepts public variants", () => {
+  it("is private-only (collapsed link type)", () => {
     expect(normalizeGuestLinkAccessMode({})).toBe("private");
-    expect(normalizeGuestLinkAccessMode({ access_mode: "private" })).toBe("private");
-    expect(normalizeGuestLinkAccessMode({ access_mode: "public" })).toBe("public");
-    expect(normalizeGuestLinkAccessMode({ accessMode: "PUBLIC" })).toBe("public");
-    expect(normalizeGuestLinkAccessMode({ public: true })).toBe("public");
-    expect(normalizeGuestLinkAccessMode({ public: false })).toBe("private");
+    expect(normalizeGuestLinkAccessMode({ access_mode: "public" })).toBe("private");
+    expect(normalizeGuestLinkAccessMode({ public: true })).toBe("private");
   });
 });
 
-describe("private vs public token model", () => {
-  it("private bearer uses hash lookup shape (secret rotates independently of id)", () => {
+describe("private link token model", () => {
+  it("bearer uses hash lookup shape (secret rotates independently of id)", () => {
     const secret = createPrivateToken();
     const hash = hashPrivateToken(secret);
     expect(hash).toHaveLength(64);
@@ -34,14 +31,13 @@ describe("private vs public token model", () => {
     expect(hashPrivateToken(secret + "x")).not.toBe(hash);
   });
 
-  it("public link URL is stable when the same public token is reused", () => {
-    const publicToken = createPrivateToken();
-    const url1 = buildGuestLinkUrl("https://uncertain.systems/", "tap", publicToken);
-    const url2 = buildGuestLinkUrl("https://uncertain.systems", "tap", publicToken);
-    expect(url1).toBe(url2);
-    expect(url1).toBe(`https://uncertain.systems/tap/session/${publicToken}`);
-    expect(buildGuestLinkUrl("https://uncertain.systems", "ile", publicToken)).toBe(
-      `https://uncertain.systems/ile/session/${publicToken}`,
+  it("session URL is built from the bearer token", () => {
+    const token = createPrivateToken();
+    expect(buildGuestLinkUrl("https://uncertain.systems/", "tap", token)).toBe(
+      `https://uncertain.systems/tap/session/${token}`,
+    );
+    expect(buildGuestLinkUrl("https://uncertain.systems", "ile", token)).toBe(
+      `https://uncertain.systems/ile/session/${token}`,
     );
   });
 });
@@ -178,10 +174,8 @@ describe("PoW source link traceability", () => {
     });
   });
 
-  it("create modules accept access_mode and expose url fields in types (static + helper)", async () => {
-    // Drive normalize used by createWorkspaceTapLink / createWorkspaceIleLink bodies
-    expect(normalizeGuestLinkAccessMode({ access_mode: "public" })).toBe("public");
-    // create-* modules re-export path through guest-link helpers
+  it("create modules force private access mode via normalize", async () => {
+    expect(normalizeGuestLinkAccessMode({ access_mode: "public" })).toBe("private");
     const createTap = await import("@/lib/pow-api/create-tap-link");
     const createIle = await import("@/lib/pow-api/create-ile-link");
     expect(typeof createTap.createWorkspaceTapLink).toBe("function");

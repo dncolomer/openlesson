@@ -17,6 +17,8 @@ export interface UploadIleProofOfWorkInput {
   sample_count?: number | null;
   /** Shareable ILE guest link token so unauthenticated guests can upload PoW. */
   ileToken?: string;
+  /** Share URL query params for param-scoped guest identity. */
+  entryQueryParams?: Record<string, string | string[]>;
 }
 
 export interface UploadIleProofOfWorkResult {
@@ -53,7 +55,7 @@ export async function uploadIleProofOfWork(
   input: UploadIleProofOfWorkInput,
 ): Promise<UploadIleProofOfWorkResult> {
   try {
-    const { sessionId, ileToken, ...rest } = input;
+    const { sessionId, ileToken, entryQueryParams, ...rest } = input;
     const res = await fetch("/api/workspace/proof-of-work", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -61,6 +63,9 @@ export async function uploadIleProofOfWork(
         ...rest,
         session_id: sessionId,
         ...(ileToken ? { ileToken } : {}),
+        ...(entryQueryParams && Object.keys(entryQueryParams).length > 0
+          ? { entryQueryParams }
+          : {}),
       }),
     });
     const body = await res.json().catch(() => ({}));
@@ -82,6 +87,7 @@ export async function uploadIleEvidenceItem(
   sessionId: string,
   item: IleProofOfWorkUploadItem,
   ileToken?: string,
+  entryQueryParams?: Record<string, string | string[]>,
 ): Promise<UploadIleProofOfWorkResult> {
   return uploadIleProofOfWork({
     workspaceId,
@@ -98,6 +104,7 @@ export async function uploadIleEvidenceItem(
     device_name: item.deviceName,
     sample_count: item.sampleCount,
     ...(ileToken ? { ileToken } : {}),
+    ...(entryQueryParams ? { entryQueryParams } : {}),
   });
 }
 
@@ -106,6 +113,7 @@ export async function uploadIleScreenshot(
   sessionId: string,
   screenshot: IleBufferedScreenshot,
   ileToken?: string,
+  entryQueryParams?: Record<string, string | string[]>,
 ): Promise<UploadIleProofOfWorkResult> {
   const mime = screenshot.blob.type || "image/png";
   return uploadIleProofOfWork({
@@ -118,5 +126,6 @@ export async function uploadIleScreenshot(
     timestamp_ms: screenshot.timestampMs,
     metadata: { size: screenshot.blob.size },
     ...(ileToken ? { ileToken } : {}),
+    ...(entryQueryParams ? { entryQueryParams } : {}),
   });
 }

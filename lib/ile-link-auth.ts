@@ -1,7 +1,8 @@
 import type { User } from "@supabase/supabase-js";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { hashPrivateToken } from "@/lib/ile-link";
-import type { GuestLinkAccessMode } from "@/lib/guest-link-access";
+import type { EntryQueryParams, GuestLinkAccessMode } from "@/lib/guest-link-access";
+import { resolveGuestForLinkQueryParams } from "@/lib/guest-link-query-guest";
 
 export interface ResolvedIleLinkContext {
   supabase: ReturnType<typeof createAdminClient>;
@@ -22,10 +23,11 @@ export interface ResolvedIleLinkContext {
 }
 
 const LINK_SELECT =
-  "id, workspace_id, block_id, user_id, guest_user_id, assigned_user_id, session_id, status, participant_type, private_token_hash, access_mode, public_token, entry_query_params, show_end_session";
+  "id, workspace_id, block_id, user_id, guest_user_id, assigned_user_id, organization_id, session_id, status, participant_type, private_token_hash, access_mode, public_token, entry_query_params, show_end_session";
 
 export async function resolveIleLinkAccess(
-  accessToken: string
+  accessToken: string,
+  entryQueryParams: EntryQueryParams = {},
 ): Promise<ResolvedIleLinkContext | { error: string; status: number }> {
   const token = accessToken.trim();
   if (!token) return { error: "Access token required", status: 401 };
@@ -33,7 +35,7 @@ export async function resolveIleLinkAccess(
   const supabase = createAdminClient();
   const tokenHash = hashPrivateToken(token);
 
-  // Private: hash match. Public: stable public_token (also hashed at mint so hash match works).
+  // Private bearer hash; legacy public_token still resolves existing rows.
   let link: Record<string, unknown> | null = null;
   const { data: byHash } = await supabase
     .from("workspace_ile_links")
@@ -67,29 +69,47 @@ export async function resolveIleLinkAccess(
   const accessMode: GuestLinkAccessMode =
     link.access_mode === "public" ? "public" : "private";
   const showEndSession = link.show_end_session !== false;
+  const ownerUserId = String(link.user_id);
+  const baseGuestUserId = (link.guest_user_id as string | null) ?? null;
+  const assignedUserId = (link.assigned_user_id as string | null) ?? null;
+
+  let guestUserId = baseGuestUserId;
+  if (!assignedUserId) {
+    const resolved = await resolveGuestForLinkQueryParams(supabase, {
+      linkKind: "ile",
+      linkId: String(link.id),
+      workspaceId: String(link.workspace_id),
+      organizationId: (link as { organization_id?: string | null }).organization_id ?? null,
+      ownerUserId,
+      baseGuestUserId,
+      params: entryQueryParams,
+    });
+    guestUserId = resolved.guestUserId;
+  }
 
   return {
     supabase,
     linkId: String(link.id),
     workspaceId: String(link.workspace_id),
     blockId: String(link.block_id),
-    ownerUserId: String(link.user_id),
-    guestUserId: (link.guest_user_id as string | null) ?? null,
-    assignedUserId: (link.assigned_user_id as string | null) ?? null,
+    ownerUserId,
+    guestUserId,
+    assignedUserId,
     sessionId: (link.session_id as string | null) ?? null,
     status: String(link.status),
     participantType: (link.participant_type as string | null) ?? null,
     accessMode,
     showEndSession,
-    actingUser: { id: String(link.user_id) },
+    actingUser: { id: ownerUserId },
   };
 }
 
 export async function resolveIleLinkSessionAccess(
   accessToken: string,
-  sessionId: string
+  sessionId: string,
+  entryQueryParams: EntryQueryParams = {},
 ): Promise<ResolvedIleLinkContext | { error: string; status: number }> {
-  const base = await resolveIleLinkAccess(accessToken);
+  const base = await resolveIleLinkAccess(accessToken, entryQueryParams);
   if ("error" in base) return base;
 
   if (base.sessionId && base.sessionId === sessionId) {

@@ -7,7 +7,7 @@ import {
 } from "@/lib/tap-score-traces";
 import { uploadWorkspaceProofOfWork } from "@/lib/pow-api/upload-workspace-proof-of-work";
 import type { AuthContext } from "@/lib/pow-api/types";
-import { stampSourceLinkMetadata } from "@/lib/guest-link-access";
+import {stampSourceLinkMetadata, entryQueryParamsFromBody} from "@/lib/guest-link-access";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -34,6 +34,8 @@ export async function POST(req: NextRequest) {
       tapSessionId,
       blockId,
       focusSessionId,
+    ,
+      entryQueryParams: entryQueryParamsFromBody(body as Record<string, unknown>),
     });
     if ("error" in access) {
       return NextResponse.json({ error: access.error }, { status: access.status });

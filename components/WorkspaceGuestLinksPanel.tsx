@@ -92,11 +92,6 @@ export function WorkspaceGuestLinksPanel({
   const [minutes, setMinutes] = useState(TAP_LINK_DEFAULT_MINUTES);
   /** Default yes — guest TAP/ILE sessions show End Session unless unchecked. */
   const [showEndSession, setShowEndSession] = useState(true);
-  /**
-   * When true, mint a stable public link (anyone with the URL; query params stored on open).
-   * Default private (secret bearer token).
-   */
-  const [accessModePublic, setAccessModePublic] = useState(false);
   const [linksLoading, setLinksLoading] = useState(false);
   const [linksError, setLinksError] = useState<string | null>(null);
   const [creatingLink, setCreatingLink] = useState(false);
@@ -192,7 +187,7 @@ export function WorkspaceGuestLinksPanel({
           participant_type: participantType,
           post_session: "show_results",
           show_end_session: showEndSession,
-          access_mode: accessModePublic ? "public" : "private",
+          access_mode: "private",
         };
         if (selectedBlockId) {
           body.blockId = selectedBlockId;
@@ -223,16 +218,7 @@ export function WorkspaceGuestLinksPanel({
         setCreatingLink(false);
       }
     },
-    [
-      accessModePublic,
-      loadTapResources,
-      minutes,
-      selectedBlockId,
-      selectedMemberId,
-      showEndSession,
-      t,
-      workspaceId,
-    ],
+    [loadTapResources, minutes, selectedBlockId, selectedMemberId, showEndSession, t, workspaceId],
   );
 
   /** Same card: rotate private URL; keep guest, scope, duration, post-session. */
@@ -278,7 +264,7 @@ export function WorkspaceGuestLinksPanel({
           blockId: selectedIleBlockId,
           participant_type: participantType,
           show_end_session: showEndSession,
-          access_mode: accessModePublic ? "public" : "private",
+          access_mode: "private",
         };
         if (participantType === "user") {
           if (!selectedIleMemberId) throw new Error(t("planView.tapLinksSelectMember"));
@@ -308,15 +294,7 @@ export function WorkspaceGuestLinksPanel({
         setCreatingIleLink(false);
       }
     },
-    [
-      accessModePublic,
-      loadTapResources,
-      selectedIleBlockId,
-      selectedIleMemberId,
-      showEndSession,
-      t,
-      workspaceId,
-    ],
+    [loadTapResources, selectedIleBlockId, selectedIleMemberId, showEndSession, t, workspaceId],
   );
 
   /** Same card: rotate private URL; keep guest and block scope. */
@@ -415,39 +393,22 @@ export function WorkspaceGuestLinksPanel({
           </label>
         </div>
 
-        <div className="mt-4 space-y-3">
-          <label className="flex cursor-pointer items-start gap-2.5 text-xs text-neutral-400">
-            <input
-              type="checkbox"
-              className="mt-0.5 rounded border-neutral-700 bg-neutral-900"
-              checked={accessModePublic}
-              onChange={(e) => setAccessModePublic(e.target.checked)}
-              data-guest-link-access-mode-public
-            />
-            <span>
-              <span className="font-medium text-neutral-300">Public link</span>
-              <span className="mt-0.5 block text-neutral-500">
-                Stable URL anyone can open (not a secret). On each open, all query parameters on the
-                URL are stored on the link for later reference. Applies to TAP and ILE creates below.
-              </span>
+        <label className="mt-4 flex cursor-pointer items-start gap-2.5 text-xs text-neutral-400">
+          <input
+            type="checkbox"
+            className="mt-0.5 rounded border-neutral-700 bg-neutral-900"
+            checked={showEndSession}
+            onChange={(e) => setShowEndSession(e.target.checked)}
+            data-guest-link-show-end-session
+          />
+          <span>
+            <span className="font-medium text-neutral-300">Show End Session button</span>
+            <span className="mt-0.5 block text-neutral-500">
+              Default on. Uncheck for open-ended runs. Share the same link with different query
+              params (e.g. ?candidate_id=…) to attribute PoW to different guests.
             </span>
-          </label>
-          <label className="flex cursor-pointer items-start gap-2.5 text-xs text-neutral-400">
-            <input
-              type="checkbox"
-              className="mt-0.5 rounded border-neutral-700 bg-neutral-900"
-              checked={showEndSession}
-              onChange={(e) => setShowEndSession(e.target.checked)}
-              data-guest-link-show-end-session
-            />
-            <span>
-              <span className="font-medium text-neutral-300">Show End Session button</span>
-              <span className="mt-0.5 block text-neutral-500">
-                Default on for TAP and ILE links. Uncheck for open-ended public runs where guests should not self-end.
-              </span>
-            </span>
-          </label>
-        </div>
+          </span>
+        </label>
 
         <div className="mt-4 flex flex-wrap gap-2">
           <button

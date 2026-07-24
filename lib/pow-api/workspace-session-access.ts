@@ -200,6 +200,8 @@ export interface SessionWorkspaceProofOfWorkAccess {
 export type SessionWorkspaceProofOfWorkAccessOptions = {
   /** Private token for shareable ILE guest links (`/ile/session/{token}`). */
   ileToken?: string | null;
+  /** URL query params from the share link — param-scoped guest identity. */
+  entryQueryParams?: import("@/lib/guest-link-access").EntryQueryParams | null;
 };
 
 /**
@@ -218,9 +220,10 @@ export async function requireSessionWorkspaceProofOfWorkAccess(
 
   const ileToken = options?.ileToken?.trim() || "";
   if (ileToken) {
+    const entryQueryParams = options?.entryQueryParams ?? {};
     const ile = sessionId
-      ? await resolveIleLinkSessionAccess(ileToken, sessionId)
-      : await resolveIleLinkAccess(ileToken);
+      ? await resolveIleLinkSessionAccess(ileToken, sessionId, entryQueryParams)
+      : await resolveIleLinkAccess(ileToken, entryQueryParams);
     if ("error" in ile) {
       return NextResponse.json({ error: ile.error }, { status: ile.status });
     }

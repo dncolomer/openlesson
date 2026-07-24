@@ -6,6 +6,8 @@ import {
   hashPrivateToken,
 } from "@/lib/tap-score";
 import type { TapPostSessionMode } from "@/lib/pow-api/tap-link-config";
+import type { EntryQueryParams } from "@/lib/guest-link-access";
+import { resolveGuestForLinkQueryParams } from "@/lib/guest-link-query-guest";
 
 export interface ResolvedTapSessionContext {
   supabase: ReturnType<typeof createAdminClient>;
@@ -122,9 +124,12 @@ export async function resolveTapSessionAccess(input: {
   tapSessionId?: string;
   blockId?: string | null;
   focusSessionId?: string | null;
+  /** URL query params from the share link — select param-scoped guest subject. */
+  entryQueryParams?: EntryQueryParams | null;
 }): Promise<ResolvedTapSessionContext | { error: string; status: number }> {
   const privateToken = input.privateToken?.trim() || "";
   const tapSessionId = input.tapSessionId?.trim() || "";
+  const entryQueryParams = input.entryQueryParams ?? {};
 
   if (privateToken) {
     const supabase = createAdminClient();
@@ -137,6 +142,7 @@ export async function resolveTapSessionAccess(input: {
       .maybeSingle();
     session = byHash;
 
+    // Legacy public tokens still resolve for existing rows.
     if (!session) {
       const { data: byPublic } = await supabase
         .from("workspace_tap_sessions")
@@ -185,11 +191,25 @@ export async function resolveTapSessionAccess(input: {
     const participant = participantAuthFromSession(sessionForAuth);
     const workspaceOwnerUserId = workspaceOwnerFromSession(sessionForAuth);
 
+    let guestUserId = participant.guestUserId;
+    if (!sessionRow.assigned_user_id && workspaceOwnerUserId) {
+      const resolved = await resolveGuestForLinkQueryParams(supabase, {
+        linkKind: "tap",
+        linkId: sessionRow.id,
+        workspaceId: sessionRow.workspace_id,
+        organizationId: sessionRow.organization_id,
+        ownerUserId: workspaceOwnerUserId,
+        baseGuestUserId: sessionRow.guest_user_id,
+        params: entryQueryParams,
+      });
+      guestUserId = resolved.guestUserId;
+    }
+
     return {
       supabase,
       workspaceId: sessionRow.workspace_id,
-      userId: participant.userId,
-      guestUserId: participant.guestUserId,
+      userId: participant.assignedUserId ? participant.userId : guestUserId ? null : participant.userId,
+      guestUserId: participant.assignedUserId ? null : guestUserId,
       assignedUserId: participant.assignedUserId,
       workspaceOwnerUserId,
       organizationId: sessionRow.organization_id || null,

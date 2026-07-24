@@ -10,7 +10,7 @@ import {
 import { uploadFileToXAI } from "@/lib/xai-files";
 import { countWorkspaceProofOfWorkForPlan } from "@/lib/pow-api/workspace-proof-of-work";
 import { withProofOfWorkApiResponse } from "@/lib/pow-api/predictive-interruption";
-import { stampSourceLinkMetadata } from "@/lib/guest-link-access";
+import {stampSourceLinkMetadata, entryQueryParamsFromBody} from "@/lib/guest-link-access";
 
 export const runtime = "nodejs";
 export const maxDuration = 30;
@@ -55,6 +55,8 @@ export async function POST(req: NextRequest) {
       tapSessionId,
       blockId,
       focusSessionId,
+    ,
+      entryQueryParams: entryQueryParamsFromBody(body as Record<string, unknown>),
     });
     if ("error" in access) {
       return NextResponse.json({ error: access.error }, { status: access.status });

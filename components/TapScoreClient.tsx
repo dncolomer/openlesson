@@ -64,6 +64,11 @@ interface TapScoreClientProps {
   initialSession?: any;
   /** When false, hide End Session control. Default true. */
   showEndSession?: boolean;
+  /**
+   * Query params from the share URL. Same names+values (any order) map PoW to the
+   * same guest subject; different params → different guests.
+   */
+  entryQueryParams?: Record<string, string | string[]>;
 }
 
 /** Resolve whether End Session UI should show (default yes). */
@@ -206,11 +211,16 @@ export function TapScoreClient({
   privateToken,
   initialSession,
   showEndSession: showEndSessionProp,
+  entryQueryParams = {},
 }: TapScoreClientProps) {
   const showEndSession = resolveTapShowEndSession({
     showEndSession: showEndSessionProp,
     initialSession,
   });
+  const entryQueryParamsRef = useRef(entryQueryParams);
+  useEffect(() => {
+    entryQueryParamsRef.current = entryQueryParams;
+  }, [entryQueryParams]);
   const router = useRouter();
   const { t } = useI18n();
   const [phase, setPhase] = useState<Phase>("briefing");
@@ -284,8 +294,9 @@ export function TapScoreClient({
       sessionId,
       privateToken,
       tapSessionId,
+      entryQueryParams,
     }),
-    [workspaceId, blockId, sessionId, privateToken, tapSessionId],
+    [workspaceId, blockId, sessionId, privateToken, tapSessionId, entryQueryParams],
   );
 
   const {
@@ -330,6 +341,7 @@ export function TapScoreClient({
           sessionId,
           privateToken,
           tapSessionId: activeTapSessionId,
+          entryQueryParams: entryQueryParamsRef.current,
           ...input,
         }),
       })
@@ -432,6 +444,7 @@ export function TapScoreClient({
             blockId,
             sessionId,
             privateToken,
+          entryQueryParams: entryQueryParamsRef.current,
             minutes,
             tapSessionId: tapSessionIdRef.current,
           }),
@@ -657,6 +670,7 @@ export function TapScoreClient({
           blockId,
           sessionId,
           privateToken,
+          entryQueryParams: entryQueryParamsRef.current,
           tapSessionId: tapSessionIdRef.current,
           minutes,
           thought: clean,
@@ -718,6 +732,7 @@ export function TapScoreClient({
           blockId,
           sessionId,
           privateToken,
+          entryQueryParams: entryQueryParamsRef.current,
           minutes,
           tapSessionId: tapSessionIdRef.current,
           openingQuestion: topic?.openingQuestion,
@@ -780,6 +795,7 @@ export function TapScoreClient({
           blockId,
           sessionId,
           privateToken,
+          entryQueryParams: entryQueryParamsRef.current,
           tapSessionId: tapSessionIdRef.current,
           transcript,
           durationSeconds,

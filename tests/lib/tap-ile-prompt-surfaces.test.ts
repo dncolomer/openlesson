@@ -11,7 +11,13 @@ import {
   buildIleHeliosChatSystemPrompt,
   buildIleWelcomeSystemPrompt,
 } from "@/lib/prompt-kernel";
-import { buildTapScoreInstructions, type TapScoreBrief } from "@/lib/tap-score";
+import {
+  buildTapOpeningQuestionFallback,
+  buildTapScoreInstructions,
+  buildTapStartingTopicsFallback,
+  listenerStyle,
+  type TapScoreBrief,
+} from "@/lib/tap-score";
 import { DEFAULT_PROMPTS, ILE_CONTEXT, getPrompt } from "@/lib/prompts";
 import { buildTraceScoringInstructions } from "@/lib/tap-score-traces";
 
@@ -19,8 +25,30 @@ import { buildTraceScoringInstructions } from "@/lib/tap-score-traces";
 const SOCRATIC_IDENTITY =
   /Socratic companion|Socratic method|Socratic learning demonstration|Socratic tutor|Socratic style|Socratic essence|Socratic questioning|Socratic probe|Socratic exchange|Socratic opening/i;
 
+/** Legacy prescribed stage-direction copy that must not reappear as model speech examples. */
+const LEGACY_CRINGE_EXAMPLES = [
+  /"say the next sentence out loud"/i,
+  /Say the causal link out loud/i,
+  /Talk through what you learned here out loud/i,
+  /You facilitate a TAP session for Uncertain Systems/i,
+] as const;
+
 function expectNoSocraticIdentity(text: string, label: string) {
   expect(text, label).not.toMatch(SOCRATIC_IDENTITY);
+}
+
+/** Extract the suggested opening line the model is told to use (not ban-list quotes). */
+function suggestedOpeningSpeech(text: string): string {
+  const match = text.match(
+    /Suggested opening[\s\S]*?\n"([^"]+)"/i,
+  );
+  return match?.[1] ?? "";
+}
+
+function expectNoLegacyCringeExamples(text: string, label: string) {
+  for (const pattern of LEGACY_CRINGE_EXAMPLES) {
+    expect(text, label).not.toMatch(pattern);
+  }
 }
 
 const sampleBrief: TapScoreBrief = {
@@ -44,7 +72,7 @@ const sampleBrief: TapScoreBrief = {
 };
 
 describe("TAP prompt surface (shipped builders)", () => {
-  it("frames System 1/2 elicitation without Socratic identity", () => {
+  it("frames dual-stream System 1/2 elicitation without Socratic identity", () => {
     expect(TAP_SURFACE).toMatch(/System 1/);
     expect(TAP_SURFACE).toMatch(/System 2/);
     expect(TAP_SURFACE).toMatch(/proof of work|PoW/i);
@@ -53,13 +81,13 @@ describe("TAP prompt surface (shipped builders)", () => {
 
     const facilitator = buildTapFacilitatorInstructions({
       assessmentTarget: 'the performance block "ICP"',
-      listenerStyle: "a neutral TAP facilitator",
+      listenerStyle: "a neutral knowledge-verification facilitator",
       markers: "Conceptual Clarity, Causal Reasoning",
       minutes: 15,
       workspaceBlock: "Workspace: Onboarding",
     });
-    expect(facilitator).toMatch(/System 1|System 2|think-aloud|thought trace/i);
-    expect(facilitator).toMatch(/TAP/);
+    expect(facilitator).toMatch(/System 1|System 2|thought-trace|thought trace/i);
+    expect(facilitator).toMatch(/knowledge-verification|knowledge verification|knowledge-check/i);
     expectNoSocraticIdentity(facilitator, "buildTapFacilitatorInstructions");
 
     const selective = buildTapSelectiveThoughtSystemPrompt(facilitator);
@@ -71,12 +99,112 @@ describe("TAP prompt surface (shipped builders)", () => {
     expectNoSocraticIdentity(buildTapStartingTopicsTask(3), "topics task");
   });
 
+  it("forbids cringe out-loud stage directions in learner-facing speech examples", () => {
+    const facilitator = buildTapFacilitatorInstructions({
+      assessmentTarget: 'the performance block "ICP"',
+      listenerStyle: listenerStyle("curious"),
+      markers: "Conceptual Clarity, Causal Reasoning",
+      minutes: 15,
+      workspaceBlock: "Workspace: Onboarding",
+    });
+    const selective = buildTapSelectiveThoughtSystemPrompt(facilitator);
+    const openingTask = buildTapOpeningQuestionTask();
+    const topicsTask = buildTapStartingTopicsTask(3);
+    const runtime = buildTapScoreInstructions(sampleBrief, "curious", 15);
+
+    for (const [label, text] of [
+      ["TAP_SURFACE", TAP_SURFACE],
+      ["TAP_SELECTIVE_THOUGHT_OVERLAY", TAP_SELECTIVE_THOUGHT_OVERLAY],
+      ["facilitator", facilitator],
+      ["selective", selective],
+      ["openingTask", openingTask],
+      ["topicsTask", topicsTask],
+      ["buildTapScoreInstructions", runtime],
+    ] as const) {
+      // Surface must ban the pattern as a speech rule, not prescribe it as an example tactic.
+      expect(text, label).toMatch(/out loud/i);
+      expect(text, label).toMatch(
+        /NEVER use think-aloud stage directions|Never use "say\/talk\/think|never stage-direct with "out loud"|No "out loud"|not stage directions about speaking out loud/i,
+      );
+      expectNoLegacyCringeExamples(text, label);
+    }
+
+    // Suggested opening the model may copy must be natural knowledge verification.
+    const opening = suggestedOpeningSpeech(facilitator);
+    expect(opening.length).toBeGreaterThan(20);
+    expect(opening).toMatch(/core idea|explain/i);
+    expect(opening).not.toMatch(/out loud|Uncertain Systems|Proof of Work|\bPoW\b|TAP|ILE/i);
+
+    const runtimeOpening = suggestedOpeningSpeech(runtime);
+    expect(runtimeOpening).toBe(opening);
+    expect(suggestedOpeningSpeech(selective)).toBe(opening);
+
+    // Opening/topic fallbacks are learner-visible copy — must be clean.
+    const openingFallback = buildTapOpeningQuestionFallback(sampleBrief);
+    const topicsFallback = buildTapStartingTopicsFallback(sampleBrief);
+    expect(openingFallback).not.toMatch(/out loud/i);
+    expect(openingFallback).toMatch(/core idea|learned|explain/i);
+    expect(openingFallback).not.toMatch(/Uncertain Systems|Proof of Work|\bPoW\b/i);
+    for (const topic of topicsFallback) {
+      expect(topic.openingQuestion).not.toMatch(/out loud/i);
+      expect(topic.title + topic.subtitle + topic.openingQuestion).not.toMatch(
+        /Uncertain Systems|Proof of Work|\bPoW\b|Think Aloud Protocol/i,
+      );
+    }
+  });
+
+  it("requires learner-visible turns never leak platform/product mechanics", () => {
+    const facilitator = buildTapFacilitatorInstructions({
+      assessmentTarget: 'the performance block "ICP"',
+      listenerStyle: listenerStyle("curious"),
+      markers: "Conceptual Clarity",
+      minutes: 10,
+      workspaceBlock: "Workspace: Onboarding",
+    });
+    const selective = buildTapSelectiveThoughtSystemPrompt(facilitator);
+    const runtime = buildTapScoreInstructions(sampleBrief, "curious", 15);
+
+    for (const [label, text] of [
+      ["TAP_SURFACE", TAP_SURFACE],
+      ["TAP_SELECTIVE_THOUGHT_OVERLAY", TAP_SELECTIVE_THOUGHT_OVERLAY],
+      ["facilitator", facilitator],
+      ["selective", selective],
+      ["runtime", runtime],
+      ["openingTask", buildTapOpeningQuestionTask()],
+      ["topicsTask", buildTapStartingTopicsTask(3)],
+    ] as const) {
+      // Explicit speech ban present (model is told not to say these to the learner).
+      expect(text, label).toMatch(/Never (?:mention|reference)|NEVER mention/i);
+      expect(text, label).toMatch(/Uncertain Systems/);
+      expect(text, label).toMatch(/PoW|Proof of Work/i);
+      expectNoLegacyCringeExamples(text, label);
+    }
+
+    // Positive knowledge-verification framing (not protocol theater).
+    expect(TAP_SURFACE).toMatch(/definitions, causal links, examples, comparisons, predictions/i);
+    expect(TAP_SELECTIVE_THOUGHT_OVERLAY).toMatch(
+      /definitions, causal steps, examples|application\/transfer|comparisons, predictions/i,
+    );
+
+    // listenerStyle keeps dual-stream goals for the model while forbidding stage directions / platform talk.
+    const style = listenerStyle("curious");
+    expect(style).toMatch(/System 1/);
+    expect(style).toMatch(/System 2/);
+    expect(style).toMatch(/knowledge-verification|knowledge verification/i);
+    expect(style).toMatch(/without stage directions|platform talk/i);
+  });
+
   it("buildTapScoreInstructions uses the TAP surface (runtime entry)", () => {
     const text = buildTapScoreInstructions(sampleBrief, "curious", 15);
-    expect(text).toMatch(/PRODUCT SURFACE: Think Aloud Protocol|TAP facilitator|System 1/i);
+    expect(text).toMatch(/PRODUCT SURFACE: Think Aloud Protocol|knowledge-verification facilitator|System 1/i);
     expect(text).toContain("Onboarding mastery");
     expect(text).toContain("ICP");
+    expect(text).toMatch(/System 1/);
+    expect(text).toMatch(/System 2/);
+    expect(text).toMatch(/definitions|causal|examples|comparisons|predictions|repairs/i);
     expectNoSocraticIdentity(text, "buildTapScoreInstructions");
+    // Identity is not "facilitator for Uncertain Systems" as a product pitch to the learner.
+    expect(text).not.toMatch(/You facilitate a TAP session for Uncertain Systems/);
   });
 });
 

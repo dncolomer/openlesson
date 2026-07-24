@@ -14,7 +14,7 @@ import { uploadFileToXAI } from "@/lib/xai-files";
 import { countWorkspaceProofOfWorkForPlan } from "@/lib/pow-api/workspace-proof-of-work";
 import { withProofOfWorkApiResponse } from "@/lib/pow-api/predictive-interruption";
 import { buildTapInProgressPatch } from "@/lib/tap-started-at";
-import { stampSourceLinkMetadata } from "@/lib/guest-link-access";
+import {stampSourceLinkMetadata, entryQueryParamsFromBody} from "@/lib/guest-link-access";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -42,6 +42,8 @@ export async function POST(req: NextRequest) {
       tapSessionId: tapSessionId || undefined,
       blockId,
       focusSessionId,
+    ,
+      entryQueryParams: entryQueryParamsFromBody(body as Record<string, unknown>),
     });
 
     if ("error" in access) {

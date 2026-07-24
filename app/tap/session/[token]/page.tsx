@@ -7,6 +7,7 @@ import {
   collectEntryQueryParams,
   recordGuestLinkEntryQueryParams,
 } from "@/lib/guest-link-access";
+import { resolveGuestForLinkQueryParams } from "@/lib/guest-link-query-guest";
 
 interface PageProps {
   params: Promise<{ token: string }>;
@@ -23,17 +24,18 @@ export default async function PrivateTapSessionPage({ params, searchParams }: Pa
   const { data: byHash } = await supabase
     .from("workspace_tap_sessions")
     .select(
-      "id, workspace_id, block_id, session_id, status, requested_duration_seconds, mode, voice_id, analysis, overall_score, marker_scores, assigned_user_id, post_session, redirect_url, access_mode, public_token, show_end_session, workspaces(title)"
+      "id, workspace_id, block_id, session_id, status, requested_duration_seconds, mode, voice_id, analysis, overall_score, marker_scores, assigned_user_id, guest_user_id, organization_id, user_id, post_session, redirect_url, show_end_session, workspaces(title, user_id)"
     )
     .eq("private_token_hash", tokenHash)
     .maybeSingle();
   session = byHash;
 
+  // Legacy public rows still open.
   if (!session) {
     const { data: byPublic } = await supabase
       .from("workspace_tap_sessions")
       .select(
-        "id, workspace_id, block_id, session_id, status, requested_duration_seconds, mode, voice_id, analysis, overall_score, marker_scores, assigned_user_id, post_session, redirect_url, access_mode, public_token, show_end_session, workspaces(title)"
+        "id, workspace_id, block_id, session_id, status, requested_duration_seconds, mode, voice_id, analysis, overall_score, marker_scores, assigned_user_id, guest_user_id, organization_id, user_id, post_session, redirect_url, show_end_session, workspaces(title, user_id)"
       )
       .eq("public_token", token)
       .eq("access_mode", "public")
@@ -56,7 +58,6 @@ export default async function PrivateTapSessionPage({ params, searchParams }: Pa
     }
   }
 
-  // Persist all URL query params for later reference (esp. public campaign links).
   const entryParams = collectEntryQueryParams(query);
   if (Object.keys(entryParams).length > 0 && typeof session.id === "string") {
     await recordGuestLinkEntryQueryParams(
@@ -65,6 +66,27 @@ export default async function PrivateTapSessionPage({ params, searchParams }: Pa
       session.id,
       entryParams,
     ).catch(() => {});
+  }
+
+  // Warm-create param-scoped guest so first API call is not race-only.
+  if (!session.assigned_user_id && typeof session.id === "string") {
+    const workspaces = session.workspaces as
+      | { user_id?: string }
+      | Array<{ user_id?: string }>
+      | undefined;
+    const wsOwner = Array.isArray(workspaces) ? workspaces[0]?.user_id : workspaces?.user_id;
+    const ownerUserId = (session.user_id as string | null) || wsOwner || null;
+    if (ownerUserId) {
+      await resolveGuestForLinkQueryParams(supabase, {
+        linkKind: "tap",
+        linkId: session.id,
+        workspaceId: String(session.workspace_id),
+        organizationId: (session.organization_id as string | null) ?? null,
+        ownerUserId,
+        baseGuestUserId: (session.guest_user_id as string | null) ?? null,
+        params: entryParams,
+      }).catch(() => {});
+    }
   }
 
   const workspaces = session.workspaces as { title?: string } | { title?: string }[] | undefined;
@@ -87,6 +109,7 @@ export default async function PrivateTapSessionPage({ params, searchParams }: Pa
       blockId={(session.block_id as string) || undefined}
       initialSession={initialSession}
       showEndSession={showEndSession}
+      entryQueryParams={entryParams}
     />
   );
 }

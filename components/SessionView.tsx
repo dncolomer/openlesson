@@ -128,6 +128,7 @@ export function SessionView({
   ayclToken,
   ileToken,
   showEndSession = true,
+  entryQueryParams = {},
 }: {
   sessionId: string;
   ayclToken?: string;
@@ -138,6 +139,8 @@ export function SessionView({
    * (guest ILE links can configure this; default true).
    */
   showEndSession?: boolean;
+  /** Share URL query params → param-scoped guest identity for PoW. */
+  entryQueryParams?: Record<string, string | string[]>;
 }) {
   const guestAccessKind: "aycl" | "ile" | null = ayclToken ? "aycl" : ileToken ? "ile" : null;
   const allowEndSession = showEndSession !== false;
@@ -146,9 +149,14 @@ export function SessionView({
       guestAccessKind === "aycl" && ayclToken
         ? { ayclToken }
         : guestAccessKind === "ile" && ileToken
-          ? { ileToken }
+          ? {
+              ileToken,
+              ...(entryQueryParams && Object.keys(entryQueryParams).length > 0
+                ? { entryQueryParams }
+                : {}),
+            }
           : {},
-    [guestAccessKind, ayclToken, ileToken]
+    [guestAccessKind, ayclToken, ileToken, entryQueryParams]
   );
   const router = useRouter();
   const { t, locale, supportedLocales } = useI18n();
@@ -598,6 +606,9 @@ export function SessionView({
               helios_reply: content,
             },
             ...(ileToken ? { ileToken } : {}),
+            ...(entryQueryParams && Object.keys(entryQueryParams).length > 0
+              ? { entryQueryParams }
+              : {}),
           });
           if (chatPow.ok) {
             handlePowInterruptionRef.current(chatPow.interruption);
@@ -1239,13 +1250,14 @@ export function SessionView({
         currentSession.id,
         item,
         ileToken,
+        entryQueryParams,
       );
       recordTransferEvent(channel, result.ok, result.error);
       if (result.ok && result.interruption) {
         handlePowInterruptionRef.current(result.interruption);
       }
     },
-    [getWorkspaceId, recordTransferEvent, ileToken],
+    [getWorkspaceId, recordTransferEvent, ileToken, entryQueryParams],
   );
 
   const uploadScreenshotPow = useCallback(
@@ -1259,6 +1271,7 @@ export function SessionView({
         currentSession.id,
         { blob, timestampMs },
         ileToken,
+        entryQueryParams,
       );
       recordTransferEvent("screenshots", result.ok, result.error);
       if (result.ok) {
@@ -1268,7 +1281,7 @@ export function SessionView({
         }
       }
     },
-    [getWorkspaceId, recordTransferEvent, ileToken],
+    [getWorkspaceId, recordTransferEvent, ileToken, entryQueryParams],
   );
 
   const tryUploadFacialBatch = useCallback(
@@ -1456,8 +1469,9 @@ export function SessionView({
       privateToken: ileToken || undefined,
       blockId:
         typeof session?.metadata?.block_id === "string" ? session.metadata.block_id : undefined,
+      entryQueryParams,
     }),
-    [getWorkspaceId, session?.id, session?.metadata?.block_id, ileToken],
+    [getWorkspaceId, session?.id, session?.metadata?.block_id, ileToken, entryQueryParams],
   );
 
   const { applyInterruption, clearPendingInterruption } = useTapPredictiveInterruption(
@@ -1549,13 +1563,16 @@ export function SessionView({
           combined: payload.combined ?? false,
         },
         ...(ileToken ? { ileToken } : {}),
+        ...(entryQueryParams && Object.keys(entryQueryParams).length > 0
+          ? { entryQueryParams }
+          : {}),
       });
       recordTransferEvent("tools", result.ok, result.error);
       if (result.ok) {
         handlePowInterruption(result.interruption);
       }
     },
-    [getWorkspaceId, recordTransferEvent, handlePowInterruption, ileToken],
+    [getWorkspaceId, recordTransferEvent, handlePowInterruption, ileToken, entryQueryParams],
   );
 
   const logToolRef = useRef<

@@ -4,6 +4,7 @@ import { runVerticalScore } from "@/lib/pow-api/run-vertical-score";
 import { TAP_AUTO_SCORE_VERTICAL } from "@/lib/pow-api/performance-report";
 import type { AuthContext } from "@/lib/pow-api/types";
 import { toErrorCode } from "@/lib/pow-api/types";
+import { entryQueryParamsFromBody } from "@/lib/guest-link-access";
 
 export const runtime = "nodejs";
 export const maxDuration = 120;
@@ -26,6 +27,8 @@ export async function POST(req: NextRequest) {
       workspaceId,
       tapSessionId,
       blockId,
+    ,
+      entryQueryParams: entryQueryParamsFromBody(body as Record<string, unknown>),
     });
     if ("error" in access) {
       return NextResponse.json({ error: access.error }, { status: access.status });

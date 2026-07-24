@@ -7,7 +7,7 @@ import {
 import { countWorkspaceProofOfWorkForPlan } from "@/lib/pow-api/workspace-proof-of-work";
 import { withProofOfWorkApiResponse } from "@/lib/pow-api/predictive-interruption";
 import { resolvePowInterruptionContext } from "@/lib/pow-interruption-resolver";
-import { stampSourceLinkMetadata } from "@/lib/guest-link-access";
+import { entryQueryParamsFromBody, stampSourceLinkMetadata } from "@/lib/guest-link-access";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -34,6 +34,7 @@ export async function POST(req: NextRequest) {
           : null;
     const access = await requireSessionWorkspaceProofOfWorkAccess(workspaceId, sessionId, {
       ileToken: ileTokenFromPowBody(body),
+      entryQueryParams: entryQueryParamsFromBody(body),
     });
     if (access instanceof NextResponse) return access;
 

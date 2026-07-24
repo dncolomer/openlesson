@@ -1,7 +1,12 @@
 /**
- * Shared helpers for guest TAP/ILE link access modes, entry query capture,
- * and Proof of Work source-link attribution.
+ * Shared helpers for guest TAP/ILE links: entry query capture, param fingerprint
+ * (guest identity), and Proof of Work source-link attribution.
+ *
+ * Links are always private bearer tokens. Query params on the share URL select
+ * which guest subject receives PoW (order-independent; name+value identity).
  */
+
+import crypto from "crypto";
 
 export const GUEST_LINK_ACCESS_MODES = ["private", "public"] as const;
 export type GuestLinkAccessMode = (typeof GUEST_LINK_ACCESS_MODES)[number];
@@ -16,25 +21,53 @@ export type EntryQueryCapture = {
   params: EntryQueryParams;
 };
 
-/** Normalize create-body access_mode / accessMode / public flag. Default private. */
-export function normalizeGuestLinkAccessMode(input: {
+/**
+ * Access mode is collapsed to private-only for new links.
+ * Still accepts legacy body keys but always returns private.
+ */
+export function normalizeGuestLinkAccessMode(_input?: {
   access_mode?: unknown;
   accessMode?: unknown;
   public?: unknown;
 }): GuestLinkAccessMode {
-  const raw =
-    typeof input.access_mode === "string"
-      ? input.access_mode
-      : typeof input.accessMode === "string"
-        ? input.accessMode
-        : input.public === true
-          ? "public"
-          : input.public === false
-            ? "private"
-            : "";
-  const normalized = raw.trim().toLowerCase();
-  if (normalized === "public") return "public";
   return "private";
+}
+
+/**
+ * Canonical form for param identity: sorted keys, each multi-value sorted.
+ * Order of query keys/values does not matter — only names and values.
+ */
+export function canonicalizeEntryQueryParams(
+  params: EntryQueryParams,
+): Array<[string, string[]]> {
+  const keys = Object.keys(params)
+    .map((k) => k.trim())
+    .filter(Boolean)
+    .sort((a, b) => a.localeCompare(b));
+  return keys.map((key) => {
+    const raw = params[key];
+    const values = (Array.isArray(raw) ? raw : [raw])
+      .map((v) => String(v))
+      .sort((a, b) => a.localeCompare(b));
+    return [key, values];
+  });
+}
+
+/** SHA-256 hex of canonical params; empty string when no params. */
+export function fingerprintEntryQueryParams(params: EntryQueryParams): string {
+  const canonical = canonicalizeEntryQueryParams(params);
+  if (canonical.length === 0) return "";
+  return crypto.createHash("sha256").update(JSON.stringify(canonical)).digest("hex");
+}
+
+/** Parse entryQueryParams / entry_query_params from API JSON bodies. */
+export function entryQueryParamsFromBody(
+  body: Record<string, unknown> | null | undefined,
+): EntryQueryParams {
+  if (!body || typeof body !== "object") return {};
+  const raw = body.entryQueryParams ?? body.entry_query_params;
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return {};
+  return collectEntryQueryParams(raw as Record<string, string | string[] | undefined | null>);
 }
 
 /**

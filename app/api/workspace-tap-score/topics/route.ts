@@ -25,7 +25,6 @@ export async function POST(req: NextRequest) {
       tapSessionId,
       blockId,
       focusSessionId,
-    ,
       entryQueryParams: entryQueryParamsFromBody(body as Record<string, unknown>),
     });
     if ("error" in access) {

@@ -55,6 +55,14 @@ import {
   type ThoughtButtonSize,
   type ThoughtButtonVariant,
 } from "@/lib/tap-score-client-helpers";
+import {
+  TAP_SESSION_PURITY_MAX,
+  TAP_SILENCE_AUTO_STASH_MS,
+  isSessionPurityDepleted,
+  nextSessionPurityAfterAutoStash,
+  shouldAutoStashOnSilence,
+  transcriptFadeOpacity,
+} from "@/lib/tap-session-purity";
 
 interface TapScoreClientProps {
   workspaceId?: string;
@@ -254,9 +262,14 @@ export function TapScoreClient({
   const [tapSessionId, setTapSessionId] = useState<string | null>(initialSession?.id ?? null);
   const tapSessionIdRef = useRef<string | null>(initialSession?.id ?? null);
   const resolvedWorkspaceId = workspaceId || initialSession?.workspace_id;
+  const [sessionPurity, setSessionPurity] = useState(TAP_SESSION_PURITY_MAX);
+  const [transcriptSilenceMs, setTranscriptSilenceMs] = useState(0);
+  const [sessionEndedImpure, setSessionEndedImpure] = useState(false);
 
   const isEndingRef = useRef(false);
-  const endAndScoreRef = useRef<() => void>(() => {});
+  const endAndScoreRef = useRef<(options?: { impure?: boolean }) => void>(() => {});
+  const autoStashInFlightRef = useRef(false);
+  const lastTranscriptActivityAtRef = useRef(Date.now());
 
   useEffect(() => {
     tapSessionIdRef.current = tapSessionId;
@@ -422,6 +435,10 @@ export function TapScoreClient({
     setStartingTopics([]);
     setStartingTopicId(null);
     setTopicsError("");
+    setSessionPurity(TAP_SESSION_PURITY_MAX);
+    setTranscriptSilenceMs(0);
+    setSessionEndedImpure(false);
+    autoStashInFlightRef.current = false;
     speechResultsLengthRef.current = 0;
     consumedResultsIndexRef.current = 0;
     finalBufferRef.current = [];
@@ -487,7 +504,10 @@ export function TapScoreClient({
   }
 
   function addThought(text: string, system1Action: TapSystem1Action = "pause_finalize") {
-    bumpUserActivity();
+    // Auto-stash is silence-driven; do not treat it as positive user activity for idle PoW.
+    if (system1Action !== "auto_stash") {
+      bumpUserActivity();
+    }
     setThoughts((current) => {
       const thought = buildThoughtRecord(text, current);
       if (!thought) return current;
@@ -580,12 +600,70 @@ export function TapScoreClient({
     if (text) addThought(text);
   }
 
-  const stashCurrentTranscription = useCallback(() => {
-    const text = normalize(crystallizableText);
-    clearTranscriptionDisplay();
-    restartSpeechRecognitionSession();
-    if (text) addThought(text);
-  }, [crystallizableText, restartSpeechRecognitionSession]);
+  const stashCurrentTranscription = useCallback(
+    (options?: { auto?: boolean }) => {
+      const text = normalize(crystallizableText);
+      clearTranscriptionDisplay();
+      restartSpeechRecognitionSession();
+      setTranscriptSilenceMs(0);
+      lastTranscriptActivityAtRef.current = Date.now();
+      if (!text) {
+        autoStashInFlightRef.current = false;
+        return;
+      }
+      addThought(text, options?.auto ? "auto_stash" : "pause_finalize");
+      if (options?.auto) {
+        setSessionPurity((current) => {
+          const next = nextSessionPurityAfterAutoStash(current);
+          if (isSessionPurityDepleted(next)) {
+            // Close after purity hits 0; allow the auto-stash PoW to flush first.
+            window.setTimeout(() => {
+              endAndScoreRef.current({ impure: true });
+            }, 0);
+          }
+          return next;
+        });
+      }
+      autoStashInFlightRef.current = false;
+    },
+    [crystallizableText, restartSpeechRecognitionSession],
+  );
+
+  // TAP-only: fade live transcript over 5s silence, then auto-stash (degrades session purity).
+  useEffect(() => {
+    if (phase !== "live") {
+      setTranscriptSilenceMs(0);
+      autoStashInFlightRef.current = false;
+      return;
+    }
+
+    const hasTranscript = Boolean(normalize(crystallizableText));
+    if (!hasTranscript) {
+      setTranscriptSilenceMs(0);
+      lastTranscriptActivityAtRef.current = Date.now();
+      autoStashInFlightRef.current = false;
+      return;
+    }
+
+    // Any transcript change (speech) resets the silence window.
+    lastTranscriptActivityAtRef.current = Date.now();
+    setTranscriptSilenceMs(0);
+
+    const tick = window.setInterval(() => {
+      const silenceMs = Date.now() - lastTranscriptActivityAtRef.current;
+      setTranscriptSilenceMs(silenceMs);
+      if (
+        shouldAutoStashOnSilence(silenceMs, true, TAP_SILENCE_AUTO_STASH_MS) &&
+        !autoStashInFlightRef.current &&
+        !isEndingRef.current
+      ) {
+        autoStashInFlightRef.current = true;
+        stashCurrentTranscription({ auto: true });
+      }
+    }, 100);
+
+    return () => window.clearInterval(tick);
+  }, [phase, crystallizableText, stashCurrentTranscription]);
 
   useEffect(() => {
     if (phase !== "live") {
@@ -720,6 +798,10 @@ export function TapScoreClient({
     setThoughts([]);
     setMemoryThoughtIds(new Set());
     setSentThoughtIds(new Set());
+    setSessionPurity(TAP_SESSION_PURITY_MAX);
+    setTranscriptSilenceMs(0);
+    setSessionEndedImpure(false);
+    autoStashInFlightRef.current = false;
     clearDialogueMessages(dialogueStorageKey);
     startLiveSpeechRecognition(speechBindings, "en-US");
 
@@ -773,15 +855,22 @@ export function TapScoreClient({
     }
   }
 
-  async function endSession() {
+  async function endSession(options?: { impure?: boolean }) {
     if (isEndingRef.current) return;
     isEndingRef.current = true;
+    const impure = options?.impure === true;
+    setSessionEndedImpure(impure);
     clearPendingInterruption();
     flushSpeechSegment();
     resetIdleTracking();
     resetSpeechTracking();
     setHeliosTurnMode("idle");
-    flushFinalBuffer();
+    if (!impure) {
+      flushFinalBuffer();
+    } else {
+      // Impure close: drop any remaining live text without counting another stash.
+      clearTranscriptionDisplay();
+    }
     setPhase("saving");
     stopLiveSpeechRecognition(speechBindings);
     try {
@@ -800,10 +889,19 @@ export function TapScoreClient({
           transcript,
           durationSeconds,
           requestedDurationSeconds: minutes * 60,
+          sessionQuality: impure ? "impure" : "pure",
+          impure,
         }),
       });
       const payload = await response.json();
       if (!response.ok) throw new Error(payload.error || "Could not save TAP session");
+
+      // Impure purity depletion: always show retry UI (refresh the link).
+      if (impure) {
+        setPerformanceReport(null);
+        setPhase("results");
+        return;
+      }
 
       // Private session links: thank-you only (no redirect / results scorecard).
       // LWM Snapshot remains manual (Knowledge UI / Snapshot API) for owners.
@@ -946,19 +1044,51 @@ export function TapScoreClient({
 
                 <div className="shrink-0 min-w-0 overflow-hidden rounded-2xl border border-neutral-900/80 bg-neutral-950/55 p-3 backdrop-blur-md">
                 <div className="mb-3 flex w-full flex-wrap items-center justify-between gap-2 border-b border-neutral-900/80 pb-3">
-                  <div>
-                    <div className="font-mono text-[10px] uppercase tracking-[2px] text-neutral-600">Time left</div>
-                    <div
-                      className={`font-mono text-lg tabular-nums tracking-tight ${
-                        remainingSeconds <= 60 ? "text-amber-300" : "text-white"
-                      }`}
-                    >
-                      {formatCountdown(remainingSeconds)}
+                  <div className="flex flex-wrap items-end gap-5">
+                    <div>
+                      <div className="font-mono text-[10px] uppercase tracking-[2px] text-neutral-600">Time left</div>
+                      <div
+                        className={`font-mono text-lg tabular-nums tracking-tight ${
+                          remainingSeconds <= 60 ? "text-amber-300" : "text-white"
+                        }`}
+                      >
+                        {formatCountdown(remainingSeconds)}
+                      </div>
+                    </div>
+                    <div data-tap-session-purity aria-label={t("tap.live.sessionPurityAria", { purity: sessionPurity, max: TAP_SESSION_PURITY_MAX })}>
+                      <div className="font-mono text-[10px] uppercase tracking-[2px] text-neutral-600">
+                        {t("tap.live.sessionPurity")}
+                      </div>
+                      <div className="mt-1 flex items-center gap-1.5">
+                        {Array.from({ length: TAP_SESSION_PURITY_MAX }, (_, index) => {
+                          const filled = index < sessionPurity;
+                          return (
+                            <span
+                              key={index}
+                              className={`h-2.5 w-2.5 rounded-full border transition-colors ${
+                                filled
+                                  ? sessionPurity === 1
+                                    ? "border-amber-300/80 bg-amber-300"
+                                    : "border-emerald-400/70 bg-emerald-400"
+                                  : "border-neutral-700 bg-transparent"
+                              }`}
+                              aria-hidden
+                            />
+                          );
+                        })}
+                        <span
+                          className={`ml-1 font-mono text-xs tabular-nums ${
+                            sessionPurity <= 1 ? "text-amber-300" : "text-neutral-400"
+                          }`}
+                        >
+                          {sessionPurity}/{TAP_SESSION_PURITY_MAX}
+                        </span>
+                      </div>
                     </div>
                   </div>
                   {showEndSession ? (
                     <div className="flex flex-wrap items-center gap-2" data-tap-end-session>
-                      <ThoughtButton size="sm" variant="primary" onClick={endSession}>
+                      <ThoughtButton size="sm" variant="primary" onClick={() => void endSession()}>
                         End session
                       </ThoughtButton>
                     </div>
@@ -966,7 +1096,16 @@ export function TapScoreClient({
                 </div>
 
                 <div className="flex min-w-0 items-center gap-1.5 overflow-hidden">
-                  <div className="flex h-8 min-w-0 flex-1 items-center rounded-md border border-neutral-900 bg-black/70 px-2.5 text-xs text-neutral-300">
+                  <div
+                    className="flex h-8 min-w-0 flex-1 items-center rounded-md border border-neutral-900 bg-black/70 px-2.5 text-xs text-neutral-300 transition-opacity duration-150"
+                    style={{
+                      opacity:
+                        crystallizableText && transcriptSilenceMs > 0
+                          ? transcriptFadeOpacity(transcriptSilenceMs)
+                          : 1,
+                    }}
+                    data-tap-transcript-fade
+                  >
                     <SlidingTranscript
                       text={formatSpeechTranscriptDisplay({
                         text: crystallizableText,
@@ -1041,7 +1180,28 @@ export function TapScoreClient({
           </section>
         )}
         {phase === "results" ? (
-          privateToken ? (
+          sessionEndedImpure ? (
+            <section
+              className="mx-auto flex w-full max-w-xl flex-1 flex-col items-center justify-center px-4 py-10 text-center"
+              data-tap-session-impure
+            >
+              <h1 className="text-2xl font-medium text-neutral-100 sm:text-3xl">
+                {t("tap.postSession.impureTitle")}
+              </h1>
+              <p className="mt-4 max-w-md text-sm leading-relaxed text-neutral-300 sm:text-base">
+                {t("tap.postSession.impureBody")}
+              </p>
+              <ThoughtButton
+                size="md"
+                variant="primary"
+                className="mt-8"
+                data-tap-impure-retry
+                onClick={() => window.location.reload()}
+              >
+                {t("tap.postSession.impureTryAgain")}
+              </ThoughtButton>
+            </section>
+          ) : privateToken ? (
             <section
               className="mx-auto flex w-full max-w-xl flex-1 flex-col items-center justify-center px-4 py-10 text-center"
               data-tap-session-thank-you

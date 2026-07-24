@@ -20,6 +20,10 @@ export interface TapTranscriptPayload {
   transcript: TapTranscriptEntry[];
   duration_seconds: number;
   completed_at: string;
+  /** Embedded in PoW JSON for export — not a separate DB column. */
+  quality?: "pure" | "impure";
+  impure?: boolean;
+  session_quality?: "pure" | "impure";
 }
 
 export function buildTapTranscriptPayload(input: {
@@ -30,8 +34,10 @@ export function buildTapTranscriptPayload(input: {
   transcript: TapTranscriptEntry[];
   durationSeconds: number;
   completedAt?: string;
+  /** When impure, flags are written into the PoW payload itself. */
+  sessionQuality?: "pure" | "impure";
 }): TapTranscriptPayload {
-  return {
+  const base: TapTranscriptPayload = {
     type: "uncertain_systems_tap_transcript",
     tap_session_id: input.tapSessionId,
     workspace_id: input.workspaceId,
@@ -41,11 +47,21 @@ export function buildTapTranscriptPayload(input: {
     duration_seconds: input.durationSeconds,
     completed_at: input.completedAt ?? new Date().toISOString(),
   };
+  if (input.sessionQuality === "impure") {
+    return {
+      ...base,
+      quality: "impure",
+      impure: true,
+      session_quality: "impure",
+    };
+  }
+  return base;
 }
 
 export type TapTraceType = "system1" | "system2";
 
-export type TapSystem1Action = "crystallize" | "pause_finalize";
+/** pause_finalize = deliberate stash; auto_stash = silence-driven stash (degrades session purity). */
+export type TapSystem1Action = "crystallize" | "pause_finalize" | "auto_stash";
 export type TapSystem2Action = "send" | "skip" | "select" | "deselect" | "resend" | "edit";
 
 export interface TapChatExchangePayload {
@@ -160,6 +176,47 @@ export async function fetchTapSessionTraces(
 
   if (error) throw new Error(error.message);
   return data;
+}
+
+/**
+ * Flag every PoW row for a TAP session as impure inside `metadata` (no new DB column).
+ * Makes session quality part of the exportable PoW data blob.
+ */
+export async function flagTapSessionProofOfWorkImpure(
+  supabase: SupabaseClient,
+  workspaceId: string,
+  tapSessionId: string,
+): Promise<number> {
+  const { data, error } = await queryWorkspaceProofOfWorkRows<{
+    id: string;
+    metadata: Record<string, unknown> | null;
+  }>(
+    supabase
+      .from("workspace_proof_of_work")
+      .select("id, metadata")
+      .eq("workspace_id", workspaceId)
+      .contains("metadata", { tap_session_id: tapSessionId }),
+  );
+
+  if (error) throw new Error(error.message);
+  if (!data.length) return 0;
+
+  let updated = 0;
+  for (const row of data) {
+    const nextMetadata = {
+      ...(row.metadata && typeof row.metadata === "object" ? row.metadata : {}),
+      quality: "impure",
+      impure: true,
+      session_quality: "impure",
+    };
+    const { error: updateError } = await supabase
+      .from("workspace_proof_of_work")
+      .update({ metadata: nextMetadata })
+      .eq("id", row.id)
+      .eq("workspace_id", workspaceId);
+    if (!updateError) updated += 1;
+  }
+  return updated;
 }
 
 // xAI Responses allows at most 20 file attachments per request.

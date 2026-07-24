@@ -2595,6 +2595,10 @@
       "shortcutSendStashed": "Send stashed thought 1, 2, or 3",
       "topicsLoading": "Generating starting topics…"
     },
+    "live": {
+      "sessionPurity": "Session purity",
+      "sessionPurityAria": "Session purity {purity} of {max}. Auto-stash on long silence lowers purity; at 0 the session ends as impure."
+    },
     "postSession": {
       "savingAndReturning": "Saving proof of work…",
       "generatingResults": "Saving proof of work…",
@@ -2603,7 +2607,10 @@
       "verificationResultsTitle": "LWM Snapshot",
       "thankYouTitle": "Thank you",
       "thankYouBody": "Your Proof of Work data has been stored.",
-      "exploreUncertainSystems": "Explore Uncertain Systems"
+      "exploreUncertainSystems": "Explore Uncertain Systems",
+      "impureTitle": "Session closed",
+      "impureBody": "PoW data stored and flagged as low quality / impure. Want to try again?",
+      "impureTryAgain": "Try again"
     },
     "welcome": {
       "greeting": "Hi, I'm {name}.",

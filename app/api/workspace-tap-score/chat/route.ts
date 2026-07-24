@@ -42,7 +42,6 @@ export async function POST(req: NextRequest) {
       tapSessionId: tapSessionId || undefined,
       blockId,
       focusSessionId,
-    ,
       entryQueryParams: entryQueryParamsFromBody(body as Record<string, unknown>),
     });
 

@@ -3,6 +3,7 @@ import { resolveTapSessionAccess } from "@/lib/tap-score-session-auth";
 import { hashPrivateToken } from "@/lib/tap-score";
 import {
   buildTapTranscriptPayload,
+  flagTapSessionProofOfWorkImpure,
   TAP_TRANSCRIPT_TOOL_NAME,
 } from "@/lib/tap-score-traces";
 import { uploadWorkspaceProofOfWork } from "@/lib/pow-api/upload-workspace-proof-of-work";
@@ -23,6 +24,8 @@ export async function POST(req: NextRequest) {
     const blockId = body.blockId ? String(body.blockId) : null;
     const focusSessionId = body.sessionId ? String(body.sessionId) : null;
     const tapSessionId = body.tapSessionId ? String(body.tapSessionId) : "";
+    const sessionQuality =
+      body.sessionQuality === "impure" || body.impure === true ? "impure" : "pure";
 
     if (transcript.length === 0) {
       return NextResponse.json({ error: "transcript is required" }, { status: 400 });
@@ -34,7 +37,6 @@ export async function POST(req: NextRequest) {
       tapSessionId,
       blockId,
       focusSessionId,
-    ,
       entryQueryParams: entryQueryParamsFromBody(body as Record<string, unknown>),
     });
     if ("error" in access) {
@@ -65,6 +67,15 @@ export async function POST(req: NextRequest) {
       scopes: ["workspaces:write"],
     };
 
+    if (sessionQuality === "impure") {
+      // Stamp every existing session PoW row in metadata (exportable, no new column).
+      await flagTapSessionProofOfWorkImpure(
+        access.supabase,
+        access.workspaceId,
+        resolvedTapSessionId,
+      );
+    }
+
     const transcriptPayload = buildTapTranscriptPayload({
       tapSessionId: resolvedTapSessionId,
       workspaceId: access.workspaceId,
@@ -76,9 +87,18 @@ export async function POST(req: NextRequest) {
         at: entry.at ? String(entry.at) : undefined,
       })),
       durationSeconds,
+      sessionQuality,
     });
 
     const transcriptJson = JSON.stringify(transcriptPayload, null, 2);
+    const transcriptMetadataBase = {
+      tap_session_id: resolvedTapSessionId,
+      duration_seconds: durationSeconds,
+      message_count: transcript.length,
+      ...(sessionQuality === "impure"
+        ? { quality: "impure", impure: true, session_quality: "impure" }
+        : {}),
+    };
     await uploadWorkspaceProofOfWork(access.supabase, auth, workspace, {
       workspaceId: access.workspaceId,
       type: "tool",
@@ -89,15 +109,11 @@ export async function POST(req: NextRequest) {
       file_name: `tap-transcript-${resolvedTapSessionId}.json`,
       timestamp_ms: Date.now(),
       tool_name: TAP_TRANSCRIPT_TOOL_NAME,
-      tool_action: "complete",
-      metadata: stampSourceLinkMetadata(
-        {
-          tap_session_id: resolvedTapSessionId,
-          duration_seconds: durationSeconds,
-          message_count: transcript.length,
-        },
-        { kind: "tap", linkId: resolvedTapSessionId },
-      ),
+      tool_action: sessionQuality === "impure" ? "complete_impure" : "complete",
+      metadata: stampSourceLinkMetadata(transcriptMetadataBase, {
+        kind: "tap",
+        linkId: resolvedTapSessionId,
+      }),
     });
 
     const completedAt = new Date().toISOString();
@@ -174,6 +190,7 @@ export async function POST(req: NextRequest) {
       tapSession: row,
       postSession: access.postSession,
       redirectUrl: access.redirectUrl,
+      sessionQuality,
     });
   } catch (error) {
     console.error("[workspace-tap-score/complete] Error:", error);

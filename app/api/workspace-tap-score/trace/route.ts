@@ -15,7 +15,7 @@ import {stampSourceLinkMetadata, entryQueryParamsFromBody} from "@/lib/guest-lin
 export const runtime = "nodejs";
 export const maxDuration = 30;
 
-const SYSTEM1_ACTIONS = new Set<TapSystem1Action>(["crystallize", "pause_finalize"]);
+const SYSTEM1_ACTIONS = new Set<TapSystem1Action>(["crystallize", "pause_finalize", "auto_stash"]);
 const SYSTEM2_ACTIONS = new Set<TapSystem2Action>(["send", "skip", "select", "deselect", "resend", "edit"]);
 
 export async function POST(req: NextRequest) {
@@ -55,7 +55,6 @@ export async function POST(req: NextRequest) {
       tapSessionId,
       blockId,
       focusSessionId,
-    ,
       entryQueryParams: entryQueryParamsFromBody(body as Record<string, unknown>),
     });
     if ("error" in access) {

@@ -1,4 +1,6 @@
 import { describe, expect, it } from "vitest";
+import fs from "fs";
+import path from "path";
 import {
   TAP_SURFACE,
   TAP_SELECTIVE_THOUGHT_OVERLAY,
@@ -20,6 +22,7 @@ import {
 } from "@/lib/tap-score";
 import { DEFAULT_PROMPTS, ILE_CONTEXT, getPrompt } from "@/lib/prompts";
 import { buildTraceScoringInstructions } from "@/lib/tap-score-traces";
+import { entryQueryParamsFromBody } from "@/lib/guest-link-access";
 
 /** Identity phrases that must not appear as positive framing on TAP/ILE surfaces. */
 const SOCRATIC_IDENTITY =
@@ -266,5 +269,48 @@ describe("TAP trace scoring addendum", () => {
     });
     expect(text).toMatch(/System 1|System 2|GHC/i);
     expectNoSocraticIdentity(text, "buildTraceScoringInstructions");
+  });
+});
+
+/** TAP conversation API routes that assemble resolveTapSessionAccess for chat/topics/start/etc. */
+const TAP_SCORE_ROUTES = [
+  "chat",
+  "complete",
+  "idle",
+  "speech",
+  "start",
+  "topics",
+  "performance",
+  "trace",
+] as const;
+
+describe("TAP score routes (shipped source integrity)", () => {
+  it("pass entryQueryParams into resolveTapSessionAccess without lone-comma syntax", () => {
+    for (const name of TAP_SCORE_ROUTES) {
+      const filePath = path.join(
+        process.cwd(),
+        "app/api/workspace-tap-score",
+        name,
+        "route.ts",
+      );
+      const source = fs.readFileSync(filePath, "utf8");
+      // TS1136 regression: a lone comma line inside object literals breaks every TAP route.
+      expect(source, name).not.toMatch(/^\s*,\s*$/m);
+      expect(source, name).toContain("resolveTapSessionAccess");
+      expect(source, name).toContain("entryQueryParamsFromBody");
+      expect(source, name).toMatch(
+        /entryQueryParams:\s*entryQueryParamsFromBody\(body/,
+      );
+    }
+  });
+
+  it("entryQueryParamsFromBody (shipped helper used by TAP routes) normalizes body params", () => {
+    // Drive the real helper the routes call — not a reimplementation.
+    const params = entryQueryParamsFromBody({
+      entryQueryParams: { cohort: "a", role: ["lead", "ic"] },
+      privateToken: "secret",
+    });
+    expect(params).toEqual({ cohort: "a", role: ["lead", "ic"] });
+    expect(entryQueryParamsFromBody({})).toEqual({});
   });
 });

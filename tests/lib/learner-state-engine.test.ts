@@ -14,7 +14,10 @@ import {
   projectTrajectory2D,
   trajectoryPathLength,
 } from "@/lib/pow-api/knowledge-config-store";
-import { updateLearnerStateAfterScore } from "@/lib/pow-api/learner-state-engine";
+import {
+  scoresDeltaFromReport,
+  updateLearnerStateAfterScore,
+} from "@/lib/pow-api/learner-state-engine";
 import { resolveEvaluationSubject } from "@/lib/pow-api/evaluation-subject";
 import {
   KNOWLEDGE_CONFIG_DIM,
@@ -77,6 +80,42 @@ function scoreReport(overrides: Partial<VerticalScoreReport> = {}): VerticalScor
     ...overrides,
   };
 }
+
+describe("scoresDeltaFromReport", () => {
+  it("promotes report strengths and growth into LWM learning_profile even without world_model_delta", () => {
+    const delta = scoresDeltaFromReport(
+      scoreReport({
+        world_model_delta: undefined,
+        strengths: ["clear definitions", "worked examples"],
+        growth_areas: ["edge cases"],
+        gap_analysis: {
+          summary: "thin transfer",
+          gaps: [{ title: "Transfer to new domains", proof_of_work: "none", severity: "medium", suggested_repair: "try" }],
+          next_steps: { directions: [], events: [] },
+        },
+      }),
+      "verification",
+    );
+    expect(delta.scores_snapshot?.verification_score).toBe(70);
+    expect(delta.scores_snapshot?.ghc_score).toBe(40);
+    expect(delta.learning_profile?.strengths).toEqual(
+      expect.arrayContaining(["clear definitions", "worked examples"]),
+    );
+    expect(delta.learning_profile?.friction_patterns).toEqual(
+      expect.arrayContaining(["edge cases"]),
+    );
+    expect(delta.exploration?.blind_spots).toEqual(
+      expect.arrayContaining(["Transfer to new domains"]),
+    );
+  });
+
+  it("merges report strengths with world_model_delta strengths", () => {
+    const delta = scoresDeltaFromReport(scoreReport(), "verification");
+    expect(delta.learning_profile?.strengths).toEqual(
+      expect.arrayContaining(["definitions"]),
+    );
+  });
+});
 
 describe("subject normalization", () => {
   it("prefers guest over user when both present", () => {

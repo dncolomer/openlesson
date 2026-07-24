@@ -51,7 +51,26 @@ export interface UpdateLearnerStateAfterScoreOptions {
   historySource?: string;
 }
 
-function scoresDeltaFromReport(
+function uniqueNonEmptyStrings(values: unknown[]): string[] {
+  const out: string[] = [];
+  const seen = new Set<string>();
+  for (const raw of values) {
+    if (typeof raw !== "string") continue;
+    const t = raw.trim();
+    if (!t || seen.has(t)) continue;
+    seen.add(t);
+    out.push(t);
+  }
+  return out;
+}
+
+/**
+ * Map a score report into an LWM delta.
+ * Always writes scores; also promotes top-level narrative fields (strengths,
+ * growth_areas, gaps) into learning_profile / exploration so the LWM skill card
+ * is not score-only when the model fills report.* but omits world_model_delta.
+ */
+export function scoresDeltaFromReport(
   report: VerticalScoreReport,
   vertical: ScoreVertical,
 ): LearningWorldModelDelta {
@@ -90,10 +109,49 @@ function scoresDeltaFromReport(
     Object.entries(scores).filter(([, v]) => v != null),
   ) as LearningWorldModelDelta["scores_snapshot"];
 
+  const strengths = uniqueNonEmptyStrings([
+    ...(base.learning_profile?.strengths ?? []),
+    ...(report.strengths ?? []),
+  ]);
+  const friction = uniqueNonEmptyStrings([
+    ...(base.learning_profile?.friction_patterns ?? []),
+    ...(report.growth_areas ?? []),
+  ]);
+  const blindSpots = uniqueNonEmptyStrings([
+    ...(base.exploration?.blind_spots ?? []),
+    ...((report.gap_analysis?.gaps ?? []).map((g) => g?.title).filter(Boolean) as string[]),
+  ]);
+  const pathways = uniqueNonEmptyStrings([...(base.exploration?.pathways_touched ?? [])]);
+
   const delta: LearningWorldModelDelta = {
     ...base,
     scores_snapshot,
   };
+
+  if (strengths.length > 0 || friction.length > 0 || base.learning_profile) {
+    delta.learning_profile = {
+      strengths: strengths.length > 0 ? strengths : (base.learning_profile?.strengths ?? []),
+      friction_patterns:
+        friction.length > 0 ? friction : (base.learning_profile?.friction_patterns ?? []),
+      preferred_modalities: base.learning_profile?.preferred_modalities ?? [],
+      temporal_patterns: base.learning_profile?.temporal_patterns ?? {
+        avg_dwell_ms: null,
+        idle_bursts: null,
+      },
+    };
+  }
+
+  if (
+    blindSpots.length > 0 ||
+    pathways.length > 0 ||
+    (base.exploration?.block_coverage?.length ?? 0) > 0
+  ) {
+    delta.exploration = {
+      block_coverage: base.exploration?.block_coverage ?? [],
+      pathways_touched: pathways,
+      blind_spots: blindSpots,
+    };
+  }
 
   if (report.workspace_goal?.trim()) {
     delta.inferred_goal = {

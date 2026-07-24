@@ -14,6 +14,12 @@ import { ActiveThoughtSlots } from "@/components/thought-ui/ActiveThoughtSlots";
 import { ThoughtEditPanel } from "@/components/thought-ui/ThoughtEditPanel";
 import { ThoughtMemoryPanel } from "@/components/thought-ui/ThoughtMemoryPanel";
 import { SlidingTranscript } from "@/components/thought-ui/SlidingTranscript";
+import { AutoStashContextBar } from "@/components/thought-ui/AutoStashContextBar";
+import {
+  THOUGHT_CONTEXT_AUTO_STASH_MAX_CHARS,
+  shouldAutoStashOnContextFull,
+  thoughtContextFillRatio,
+} from "@/lib/thought-context-auto-stash";
 import { SessionOnboardingGuide } from "@/components/SessionOnboardingGuide";
 import { TapStartingTopicCards } from "@/components/TapStartingTopicCards";
 import { LoadingStatusMessage } from "@/components/LoadingStatusMessage";
@@ -325,6 +331,8 @@ export function TapScoreClient({
   const isSendingRef = useRef(false);
   const endAndScoreRef = useRef<(options?: { impure?: boolean }) => void>(() => {});
   const autoStashInFlightRef = useRef(false);
+  /** Guard context-capacity auto-stash (no purity). */
+  const contextStashInFlightRef = useRef(false);
   /** Last non-empty speech OR intentional clear (stash/send) — drives silence clock. */
   const lastSpeechActivityAtRef = useRef(Date.now());
   const crystallizableTextRef = useRef("");
@@ -751,12 +759,19 @@ export function TapScoreClient({
   }
 
   const stashCurrentTranscription = useCallback(
-    (options?: { auto?: boolean }) => {
+    (options?: { auto?: boolean; fromContext?: boolean }) => {
       const text = normalize(crystallizableTextRef.current || crystallizableText);
       clearTranscriptionDisplay();
       restartSpeechRecognitionSession();
       if (!text) {
         autoStashInFlightRef.current = false;
+        contextStashInFlightRef.current = false;
+        return;
+      }
+      // Context-full auto-stash: same stash outcome as deliberate, no purity hit.
+      if (options?.fromContext) {
+        addThought(text, "pause_finalize");
+        contextStashInFlightRef.current = false;
         return;
       }
       addThought(text, options?.auto ? "auto_stash" : "pause_finalize");
@@ -824,6 +839,27 @@ export function TapScoreClient({
 
     return () => window.clearInterval(tick);
   }, [phase, stashCurrentTranscription, applyPurityHit]);
+
+  // Thought context capacity: auto-stash at max chars — does NOT affect purity.
+  useEffect(() => {
+    if (phase !== "live") {
+      contextStashInFlightRef.current = false;
+      return;
+    }
+    if (isEndingRef.current) return;
+    const ratio = thoughtContextFillRatio(
+      crystallizableText,
+      THOUGHT_CONTEXT_AUTO_STASH_MAX_CHARS,
+    );
+    if (
+      shouldAutoStashOnContextFull(ratio) &&
+      !contextStashInFlightRef.current &&
+      normalize(crystallizableText)
+    ) {
+      contextStashInFlightRef.current = true;
+      stashCurrentTranscription({ fromContext: true });
+    }
+  }, [phase, crystallizableText, stashCurrentTranscription]);
 
   useEffect(() => {
     if (phase !== "live") {
@@ -1349,53 +1385,56 @@ export function TapScoreClient({
                   ) : null}
                 </div>
 
-                <div className="flex min-w-0 items-center gap-1.5 overflow-hidden">
-                  <div
-                    className="flex h-8 min-w-0 flex-1 items-center rounded-md border border-neutral-900 bg-black/70 px-2.5 text-xs text-neutral-300 transition-opacity duration-150"
-                    style={{
-                      opacity: shouldFadeLiveBar(transcriptSilenceMs)
-                        ? transcriptFadeOpacity(transcriptSilenceMs)
-                        : 1,
-                    }}
-                    data-tap-transcript-fade
-                  >
-                    <SlidingTranscript
-                      text={formatSpeechTranscriptDisplay({
-                        text: crystallizableText,
-                        speechError,
-                        speechSupported,
-                        isListening,
-                        // Speech strip only mounts in live phase; keep enabled tied to it.
-                        enabled: phase === "live",
-                      })}
-                      className={`w-full ${speechError ? "text-amber-300/90" : "text-neutral-300"}`}
-                    />
+                <div className="flex min-w-0 flex-col gap-2">
+                  <div className="flex min-w-0 items-center gap-1.5 overflow-hidden">
+                    <div
+                      className="flex h-8 min-w-0 flex-1 items-center rounded-md border border-neutral-900 bg-black/70 px-2.5 text-xs text-neutral-300 transition-opacity duration-150"
+                      style={{
+                        opacity: shouldFadeLiveBar(transcriptSilenceMs)
+                          ? transcriptFadeOpacity(transcriptSilenceMs)
+                          : 1,
+                      }}
+                      data-tap-transcript-fade
+                    >
+                      <SlidingTranscript
+                        text={formatSpeechTranscriptDisplay({
+                          text: crystallizableText,
+                          speechError,
+                          speechSupported,
+                          isListening,
+                          // Speech strip only mounts in live phase; keep enabled tied to it.
+                          enabled: phase === "live",
+                        })}
+                        className={`w-full ${speechError ? "text-amber-300/90" : "text-neutral-300"}`}
+                      />
+                    </div>
+                    {speechSupported !== false && !isListening ? (
+                      <ThoughtButton size="sm" variant="primary" onClick={() => void retryMicrophone()}>
+                        {speechError ? "Retry" : "Start"}
+                      </ThoughtButton>
+                    ) : null}
+                    <div className="flex shrink-0 items-center gap-0.5">
+                      <ThoughtCompactAction
+                        shortcut="↵"
+                        label="Send"
+                        disabled={!crystallizableText || isSending}
+                        onClick={() => void sendCurrentTranscription()}
+                      />
+                      <ThoughtCompactAction
+                        shortcut="Del"
+                        label="Stash"
+                        disabled={!crystallizableText}
+                        onClick={() => stashCurrentTranscription()}
+                      />
+                      <ThoughtCompactAction
+                        shortcut="E"
+                        label="Edit"
+                        disabled={!crystallizableText}
+                        onClick={beginEditTranscription}
+                      />
+                    </div>
                   </div>
-                  {speechSupported !== false && !isListening ? (
-                    <ThoughtButton size="sm" variant="primary" onClick={() => void retryMicrophone()}>
-                      {speechError ? "Retry" : "Start"}
-                    </ThoughtButton>
-                  ) : null}
-                  <div className="flex shrink-0 items-center gap-0.5">
-                    <ThoughtCompactAction
-                      shortcut="↵"
-                      label="Send"
-                      disabled={!crystallizableText || isSending}
-                      onClick={() => void sendCurrentTranscription()}
-                    />
-                    <ThoughtCompactAction
-                      shortcut="Del"
-                      label="Stash"
-                      disabled={!crystallizableText}
-                      onClick={stashCurrentTranscription}
-                    />
-                    <ThoughtCompactAction
-                      shortcut="E"
-                      label="Edit"
-                      disabled={!crystallizableText}
-                      onClick={beginEditTranscription}
-                    />
-                  </div>
+                  <AutoStashContextBar data-surface="tap" text={crystallizableText} />
                 </div>
 
                 <div className="mt-3 border-t border-neutral-900/80 pt-3">

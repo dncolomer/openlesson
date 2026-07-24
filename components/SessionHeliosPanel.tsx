@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useI18n } from "@/lib/i18n";
 import { LoadingStatusMessage } from "@/components/LoadingStatusMessage";
 import { formatSpeechTranscriptDisplay, type SessionThoughtInterface } from "@/lib/useSessionThoughtInterface";
@@ -16,6 +16,12 @@ import { SessionOnboardingGuide } from "@/components/SessionOnboardingGuide";
 import { ActiveThoughtSlots } from "@/components/thought-ui/ActiveThoughtSlots";
 import { ThoughtEditPanel } from "@/components/thought-ui/ThoughtEditPanel";
 import { SlidingTranscript } from "@/components/thought-ui/SlidingTranscript";
+import { AutoStashContextBar } from "@/components/thought-ui/AutoStashContextBar";
+import {
+  THOUGHT_CONTEXT_AUTO_STASH_MAX_CHARS,
+  shouldAutoStashOnContextFull,
+  thoughtContextFillRatio,
+} from "@/lib/thought-context-auto-stash";
 
 interface SessionHeliosPanelProps {
   lastUserTurn: DialogueMessage | null;
@@ -70,11 +76,39 @@ export function SessionHeliosPanel({
   const { t } = useI18n();
 
   const [bgImage, setBgImage] = useState("");
+  const contextStashInFlightRef = useRef(false);
 
   useEffect(() => {
     const pool = aestheticImages?.length ? aestheticImages : THOUGHT_BACKGROUND_IMAGES;
     setBgImage(pool[Math.floor(Math.random() * pool.length)]);
   }, [aestheticImages, sessionId]);
+
+  // Thought context capacity auto-stash (ILE has no purity clock).
+  useEffect(() => {
+    if (!isSessionActive || !thought.speechEnabled) {
+      contextStashInFlightRef.current = false;
+      return;
+    }
+    const text = thought.crystallizableText || "";
+    const ratio = thoughtContextFillRatio(text, THOUGHT_CONTEXT_AUTO_STASH_MAX_CHARS);
+    if (
+      shouldAutoStashOnContextFull(ratio) &&
+      !contextStashInFlightRef.current &&
+      text.trim()
+    ) {
+      contextStashInFlightRef.current = true;
+      thought.stashCurrentTranscription();
+      // Allow next fill cycle after stash clears the forming text.
+      window.setTimeout(() => {
+        contextStashInFlightRef.current = false;
+      }, 300);
+    }
+  }, [
+    isSessionActive,
+    thought.crystallizableText,
+    thought.speechEnabled,
+    thought.stashCurrentTranscription,
+  ]);
 
   if (showWelcome) {
     return (
@@ -148,50 +182,53 @@ export function SessionHeliosPanel({
                   {sessionControls}
                 </div>
               )}
-              <div className="flex min-w-0 items-center gap-1.5 overflow-hidden">
-                <div className="flex h-8 min-w-0 flex-1 items-center rounded-md border border-neutral-900 bg-black/70 px-2.5 text-xs text-neutral-300">
-                  <SlidingTranscript
-                    text={formatSpeechTranscriptDisplay({
-                      text: thought.crystallizableText,
-                      speechError: thought.speechError,
-                      speechSupported: thought.speechSupported,
-                      isListening: thought.isListening,
-                      enabled: thought.speechEnabled,
-                    })}
-                    className={`w-full ${thought.speechError ? "text-amber-300/90" : "text-neutral-300"}`}
-                  />
+              <div className="flex min-w-0 flex-col gap-2">
+                <div className="flex min-w-0 items-center gap-1.5 overflow-hidden">
+                  <div className="flex h-8 min-w-0 flex-1 items-center rounded-md border border-neutral-900 bg-black/70 px-2.5 text-xs text-neutral-300">
+                    <SlidingTranscript
+                      text={formatSpeechTranscriptDisplay({
+                        text: thought.crystallizableText,
+                        speechError: thought.speechError,
+                        speechSupported: thought.speechSupported,
+                        isListening: thought.isListening,
+                        enabled: thought.speechEnabled,
+                      })}
+                      className={`w-full ${thought.speechError ? "text-amber-300/90" : "text-neutral-300"}`}
+                    />
+                  </div>
+                  {thought.speechEnabled &&
+                  thought.speechSupported !== false &&
+                  !thought.isListening ? (
+                    <button
+                      type="button"
+                      onClick={() => void thought.retryMicrophone()}
+                      className="shrink-0 rounded-md border border-amber-500/40 bg-amber-500/10 px-2 py-1 text-[10px] font-medium text-amber-200 transition hover:border-amber-400/60 hover:bg-amber-500/20"
+                    >
+                      {thought.speechError ? "Retry" : "Start"}
+                    </button>
+                  ) : null}
+                  <div className="flex shrink-0 items-center gap-0.5">
+                    <ThoughtCompactAction
+                      shortcut="↵"
+                      label="Send"
+                      disabled={!thought.crystallizableText || thought.isSending}
+                      onClick={() => void thought.sendCurrentTranscription()}
+                    />
+                    <ThoughtCompactAction
+                      shortcut="Del"
+                      label="Stash"
+                      disabled={!thought.crystallizableText}
+                      onClick={thought.stashCurrentTranscription}
+                    />
+                    <ThoughtCompactAction
+                      shortcut="E"
+                      label="Edit"
+                      disabled={!thought.crystallizableText}
+                      onClick={thought.beginEditTranscription}
+                    />
+                  </div>
                 </div>
-                {thought.speechEnabled &&
-                thought.speechSupported !== false &&
-                !thought.isListening ? (
-                  <button
-                    type="button"
-                    onClick={() => void thought.retryMicrophone()}
-                    className="shrink-0 rounded-md border border-amber-500/40 bg-amber-500/10 px-2 py-1 text-[10px] font-medium text-amber-200 transition hover:border-amber-400/60 hover:bg-amber-500/20"
-                  >
-                    {thought.speechError ? "Retry" : "Start"}
-                  </button>
-                ) : null}
-                <div className="flex shrink-0 items-center gap-0.5">
-                  <ThoughtCompactAction
-                    shortcut="↵"
-                    label="Send"
-                    disabled={!thought.crystallizableText || thought.isSending}
-                    onClick={() => void thought.sendCurrentTranscription()}
-                  />
-                  <ThoughtCompactAction
-                    shortcut="Del"
-                    label="Stash"
-                    disabled={!thought.crystallizableText}
-                    onClick={thought.stashCurrentTranscription}
-                  />
-                  <ThoughtCompactAction
-                    shortcut="E"
-                    label="Edit"
-                    disabled={!thought.crystallizableText}
-                    onClick={thought.beginEditTranscription}
-                  />
-                </div>
+                <AutoStashContextBar data-surface="ile" text={thought.crystallizableText} />
               </div>
 
               <div className="mt-3 border-t border-neutral-900/80 pt-3">

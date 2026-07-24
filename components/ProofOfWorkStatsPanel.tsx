@@ -7,7 +7,6 @@ import {
   formatProofOfWorkBytes,
   type WorkspaceProofOfWorkStats,
 } from "@/lib/pow-api/proof-of-work-stats";
-import type { PowQualityFilter } from "@/lib/pow-api/pow-quality";
 
 interface ProofOfWorkStatsPanelProps {
   workspaceId: string;
@@ -37,7 +36,10 @@ function formatAbsolute(iso: string | null): string {
   return new Date(t).toLocaleString();
 }
 
-function StatCard({
+const selectClass =
+  "w-full min-w-[11rem] rounded-md border border-neutral-700 bg-neutral-900 px-2.5 py-1.5 text-xs text-neutral-200 outline-none focus:border-neutral-500";
+
+function StatsRow({
   label,
   value,
   hint,
@@ -47,16 +49,24 @@ function StatCard({
   hint?: string;
 }) {
   return (
-    <div className="rounded-lg border border-neutral-800 bg-neutral-950/50 px-3 py-3">
-      <div className="text-[10px] font-medium uppercase tracking-wide text-neutral-500">{label}</div>
-      <div className="mt-1 font-mono text-xl text-white tabular-nums">{value}</div>
-      {hint ? <p className="mt-1 text-[10px] leading-snug text-neutral-600">{hint}</p> : null}
-    </div>
+    <tr className="border-t border-neutral-800/80" data-pow-stats-row>
+      <th
+        scope="row"
+        className="px-3 py-2 text-left text-[11px] font-medium text-neutral-400"
+      >
+        <span className="block">{label}</span>
+        {hint ? (
+          <span className="mt-0.5 block text-[10px] font-normal leading-snug text-neutral-600">
+            {hint}
+          </span>
+        ) : null}
+      </th>
+      <td className="px-3 py-2 text-right font-mono text-sm tabular-nums text-neutral-100">
+        {value}
+      </td>
+    </tr>
   );
 }
-
-const selectClass =
-  "rounded-md border border-neutral-700 bg-neutral-900 px-2.5 py-1.5 text-xs text-neutral-200 outline-none focus:border-neutral-500";
 
 export function ProofOfWorkStatsPanel({
   workspaceId,
@@ -68,7 +78,7 @@ export function ProofOfWorkStatsPanel({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [nowMs, setNowMs] = useState(() => Date.now());
-  const [qualityFilter, setQualityFilter] = useState<PowQualityFilter>("all");
+  /** User/subject filter only — quality is not filtered on this panel. */
   const [subjectKey, setSubjectKey] = useState<string>("all");
 
   const load = useCallback(async () => {
@@ -81,7 +91,6 @@ export function ProofOfWorkStatsPanel({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           workspaceId,
-          quality: qualityFilter,
           subjectKey,
           ...(ayclToken ? { ayclToken } : {}),
         }),
@@ -95,7 +104,7 @@ export function ProofOfWorkStatsPanel({
     } finally {
       setLoading(false);
     }
-  }, [ayclToken, currentUserId, qualityFilter, subjectKey, t, workspaceId]);
+  }, [ayclToken, currentUserId, subjectKey, t, workspaceId]);
 
   useEffect(() => {
     void load();
@@ -130,21 +139,10 @@ export function ProofOfWorkStatsPanel({
         </button>
       </div>
 
-      <div className="flex flex-wrap items-end gap-3 rounded-lg border border-neutral-800 bg-neutral-950/40 px-3 py-3">
-        <label className="flex min-w-[9rem] flex-col gap-1 text-[10px] uppercase tracking-wide text-neutral-500">
-          {t("planView.powStatsFilterQuality")}
-          <select
-            className={selectClass}
-            value={qualityFilter}
-            data-pow-quality-filter
-            onChange={(event) => setQualityFilter(event.target.value as PowQualityFilter)}
-          >
-            <option value="all">{t("planView.powStatsFilterQualityAll")}</option>
-            <option value="scored">{t("planView.powStatsFilterQualityScored")}</option>
-            <option value="practice">{t("planView.powStatsFilterQualityPractice")}</option>
-            <option value="impure">{t("planView.powStatsFilterQualityImpure")}</option>
-          </select>
-        </label>
+      <div
+        className="flex flex-wrap items-end gap-3 rounded-lg border border-neutral-800 bg-neutral-950/40 px-3 py-3"
+        data-pow-stats-filters
+      >
         <label className="flex min-w-[11rem] flex-1 flex-col gap-1 text-[10px] uppercase tracking-wide text-neutral-500">
           {t("planView.powStatsFilterUser")}
           <select
@@ -196,88 +194,100 @@ export function ProofOfWorkStatsPanel({
             </p>
           ) : null}
 
-          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-            <StatCard label={t("planView.powStatsTotal")} value={stats.total_artifacts} />
-            <StatCard
-              label={t("planView.powStatsScored")}
-              value={stats.scored_artifacts}
-              hint={t("planView.powStatsScoredHint")}
-            />
-            <StatCard
-              label={t("planView.powStatsPractice")}
-              value={stats.practice_artifacts}
-              hint={t("planView.powStatsPracticeHint")}
-            />
-            <StatCard
-              label={t("planView.powStatsImpure")}
-              value={stats.impure_artifacts}
-              hint={t("planView.powStatsImpureHint")}
-            />
-          </div>
-
-          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-            <StatCard
-              label={t("planView.powStatsSessions")}
-              value={stats.unique_sessions}
-              hint={t("planView.powStatsSessionsHint")}
-            />
-            <StatCard
-              label={t("planView.powStatsBlocks")}
-              value={stats.unique_blocks}
-              hint={t("planView.powStatsBlocksHint")}
-            />
-            <StatCard
-              label={t("planView.powStatsTools")}
-              value={stats.unique_tools}
-              hint={t("planView.powStatsToolsHint")}
-            />
-          </div>
-
-          <div className="space-y-3 rounded-xl border border-neutral-800 bg-neutral-950/50 p-4">
-            <div className="text-[11px] font-medium uppercase tracking-wide text-neutral-500">
-              {t("planView.powStatsActivity")}
-            </div>
-            <dl className="grid grid-cols-2 gap-3 text-xs sm:grid-cols-3 lg:grid-cols-4">
-              <div>
-                <dt className="text-neutral-500">{t("planView.powStatsLast24h")}</dt>
-                <dd className="mt-0.5 font-mono text-neutral-200 tabular-nums">{stats.last_24h}</dd>
-              </div>
-              <div>
-                <dt className="text-neutral-500">{t("planView.powStatsLast7d")}</dt>
-                <dd className="mt-0.5 font-mono text-neutral-200 tabular-nums">{stats.last_7d}</dd>
-              </div>
-              <div>
-                <dt className="text-neutral-500">{t("planView.powStatsFirst")}</dt>
-                <dd className="mt-0.5 text-neutral-300" title={formatAbsolute(stats.first_at)}>
-                  {formatRelative(stats.first_at, nowMs)}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-neutral-500">{t("planView.powStatsLast")}</dt>
-                <dd className="mt-0.5 text-neutral-300" title={formatAbsolute(stats.last_at)}>
-                  {formatRelative(stats.last_at, nowMs)}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-neutral-500">{t("planView.powStatsTotalBytes")}</dt>
-                <dd className="mt-0.5 font-mono text-neutral-200">
-                  {formatProofOfWorkBytes(stats.total_bytes)}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-neutral-500">{t("planView.powStatsAvgBytes")}</dt>
-                <dd className="mt-0.5 font-mono text-neutral-200">
-                  {formatProofOfWorkBytes(stats.avg_bytes)}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-neutral-500">{t("planView.powStatsScoped")}</dt>
-                <dd className="mt-0.5 font-mono text-neutral-200 tabular-nums">
-                  {stats.with_block}
-                  <span className="text-neutral-600"> / {stats.without_block} workspace</span>
-                </dd>
-              </div>
-            </dl>
+          <div
+            className="overflow-hidden rounded-xl border border-neutral-800 bg-neutral-950/50"
+            data-pow-stats-table-wrap
+          >
+            <table className="w-full border-collapse text-sm" data-pow-stats-table>
+              <caption className="sr-only">{t("planView.powStatsTitle")}</caption>
+              <thead>
+                <tr className="bg-neutral-900/60">
+                  <th
+                    scope="col"
+                    className="px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-wide text-neutral-500"
+                  >
+                    Metric
+                  </th>
+                  <th
+                    scope="col"
+                    className="px-3 py-2 text-right text-[10px] font-semibold uppercase tracking-wide text-neutral-500"
+                  >
+                    Value
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                <StatsRow label={t("planView.powStatsTotal")} value={stats.total_artifacts} />
+                <StatsRow
+                  label={t("planView.powStatsScored")}
+                  value={stats.scored_artifacts}
+                  hint={t("planView.powStatsScoredHint")}
+                />
+                <StatsRow
+                  label={t("planView.powStatsPractice")}
+                  value={stats.practice_artifacts}
+                  hint={t("planView.powStatsPracticeHint")}
+                />
+                <StatsRow
+                  label={t("planView.powStatsImpure")}
+                  value={stats.impure_artifacts}
+                  hint={t("planView.powStatsImpureHint")}
+                />
+                <StatsRow
+                  label={t("planView.powStatsSessions")}
+                  value={stats.unique_sessions}
+                  hint={t("planView.powStatsSessionsHint")}
+                />
+                <StatsRow
+                  label={t("planView.powStatsBlocks")}
+                  value={stats.unique_blocks}
+                  hint={t("planView.powStatsBlocksHint")}
+                />
+                <StatsRow
+                  label={t("planView.powStatsTools")}
+                  value={stats.unique_tools}
+                  hint={t("planView.powStatsToolsHint")}
+                />
+                <StatsRow label={t("planView.powStatsLast24h")} value={stats.last_24h} />
+                <StatsRow label={t("planView.powStatsLast7d")} value={stats.last_7d} />
+                <StatsRow
+                  label={t("planView.powStatsFirst")}
+                  value={
+                    <span title={formatAbsolute(stats.first_at)}>
+                      {formatRelative(stats.first_at, nowMs)}
+                    </span>
+                  }
+                />
+                <StatsRow
+                  label={t("planView.powStatsLast")}
+                  value={
+                    <span title={formatAbsolute(stats.last_at)}>
+                      {formatRelative(stats.last_at, nowMs)}
+                    </span>
+                  }
+                />
+                <StatsRow
+                  label={t("planView.powStatsTotalBytes")}
+                  value={formatProofOfWorkBytes(stats.total_bytes)}
+                />
+                <StatsRow
+                  label={t("planView.powStatsAvgBytes")}
+                  value={formatProofOfWorkBytes(stats.avg_bytes)}
+                />
+                <StatsRow
+                  label={t("planView.powStatsScoped")}
+                  value={
+                    <>
+                      {stats.with_block}
+                      <span className="text-neutral-600">
+                        {" "}
+                        / {stats.without_block} workspace
+                      </span>
+                    </>
+                  }
+                />
+              </tbody>
+            </table>
           </div>
         </>
       ) : null}

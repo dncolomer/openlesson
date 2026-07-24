@@ -124,23 +124,28 @@ describe("knowledge config / LWM feature surfaces", () => {
     expect(lwm).toContain("/api/workspace/performance-report");
     expect(lwm).toContain("snapshot-history");
     expect(lwm).not.toContain('params.set("subject", "me")');
-    // Skill-card LWM display + floating last-snapshot stamp + GHC beside snapshot
+    // Timeline LWM: scores hero + dual trends + history selection
     expect(lwm).toContain("data-lwm-skill-card");
     expect(lwm).toContain("data-lwm-skill-score");
     expect(lwm).toContain("data-lwm-ghc-score");
     expect(lwm).toContain("data-lwm-last-updated");
-    expect(lwm).toContain("Last snapshot");
+    expect(lwm).toContain("data-lwm-timeline");
+    expect(lwm).toContain("data-lwm-date-from");
+    expect(lwm).toContain("data-lwm-date-to");
+    expect(lwm).toContain("data-lwm-score-trend");
+    expect(lwm).toContain("loadSnapshotHistory");
+    expect(lwm).toContain("selectedLwmRunId");
+    expect(lwm).toContain("filterLwmHistoryByDateWindow");
+    expect(lwm).toContain("dualScoreSeriesFromRuns");
     expect(lwm).toMatch(/absolute right-3 top-3|absolute right-4 top-4/);
     expect(lwm).toMatch(/lwmUpdatedLabel|last_eval_at|as_of/);
-    // Split layout: controls + LWM vs embeddings + GHC copy | skill card
-    expect(lwm).toContain("data-lwm-split-layout");
+    // Filters + card; no long-form LWM-vs-embeddings teaching copy
+    expect(lwm).toContain("data-lwm-filters");
     expect(lwm).toContain("data-lwm-controls-column");
     expect(lwm).toContain("data-lwm-card-column");
-    expect(lwm).toContain("data-lwm-vs-embeddings");
-    expect(lwm).toContain("data-lwm-ghc-explain");
-    expect(lwm).toMatch(/Genuine Human Cognition/);
-    expect(lwm).toMatch(/LWM \(this tab\)|symbolic skill card/);
-    expect(lwm).toMatch(/Embeddings \(Models tab\)|geometry over time/);
+    expect(lwm).not.toContain("data-lwm-vs-embeddings");
+    expect(lwm).not.toContain("data-lwm-ghc-explain");
+    expect(lwm).not.toContain("data-lwm-split-layout");
   });
 
   it("Embeddings region overlay picker is always mounted with visible control surface", () => {
@@ -267,6 +272,11 @@ describe("knowledge config / LWM feature surfaces", () => {
     expect(models).not.toContain("max-w-3xl");
     expect(models).toContain("w-full");
     expect(models).toContain("resolveModelsTabScope");
+    expect(models).toContain("resolveEmbeddingsSubjectSelection");
+    expect(models).toContain("EmbeddingsUserMultiPicker");
+    expect(models).toContain('data-embeddings-user-multiselect="true"');
+    expect(models).toContain("embSelectedKeys");
+    expect(models).toContain("data-embeddings-user-toggle");
     // Sidebar + projection layout (not the old projection|LWM grid).
     expect(models).toContain('data-embeddings-layout="sidebar-projection"');
     expect(models).not.toContain("lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]");
@@ -289,9 +299,9 @@ describe("knowledge config / LWM feature surfaces", () => {
     const models = read("components/KnowledgeConfigTrajectoryPanel.tsx");
     // User-visible Knowledge/Models copy must not label people as learners.
     expect(models).not.toMatch(/\blearner(s)?\b/i);
-    expect(models).toContain("Select a user, generate a snapshot");
+    expect(models).toContain("data-lwm-timeline");
     expect(models).toContain("User");
-    expect(models).toContain("data-lwm-vs-embeddings");
+    expect(models).not.toContain("data-lwm-vs-embeddings");
 
     const panel = read("components/WorkspacePerformancePanel.tsx");
     // Performance panel source must not expose learner-person wording in UI strings.

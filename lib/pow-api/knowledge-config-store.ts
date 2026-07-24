@@ -208,6 +208,8 @@ export async function loadKnowledgeConfigTrajectory(
 
   const rows = (data || []).map((row) => {
     const asOfMs = Number(row.as_of_ms);
+    const subject_user_id = (row.subject_user_id as string | null) ?? null;
+    const subject_guest_user_id = (row.subject_guest_user_id as string | null) ?? null;
     return {
       t: new Date(asOfMs).toISOString(),
       as_of_ms: asOfMs,
@@ -215,6 +217,8 @@ export async function loadKnowledgeConfigTrajectory(
       confidence: Number(row.confidence) || 0,
       trigger: (row.trigger as string) || "score",
       pow_event_count: Number(row.pow_event_count) || 0,
+      subject_user_id,
+      subject_guest_user_id,
     } satisfies KnowledgeConfigTrajectoryPoint;
   });
 

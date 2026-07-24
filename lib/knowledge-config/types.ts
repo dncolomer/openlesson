@@ -53,6 +53,9 @@ export interface KnowledgeConfigTrajectoryPoint {
   confidence: number;
   trigger: KnowledgeConfigSnapshotTrigger | string;
   pow_event_count: number;
+  /** Present when trajectory rows are loaded with subject identity (multi-subject viz). */
+  subject_user_id?: string | null;
+  subject_guest_user_id?: string | null;
 }
 
 export interface KnowledgeConfigProjection2D {

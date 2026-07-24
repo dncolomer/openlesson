@@ -1,11 +1,11 @@
 /**
- * TAP-only practice mode: fixed 1-minute dry run before scored topic pick.
- * Practice still records PoW, flagged as "Practice PoW" in payload/metadata
- * (no new DB column).
+ * TAP-only practice mode: fixed 5-minute warm-up before scored topic pick.
+ * Learner may stop early or hit purity invalidation — all PoW is still
+ * flagged as "Practice PoW" in payload/metadata (no new DB column).
  */
 
-export const TAP_PRACTICE_DURATION_MINUTES = 1;
-export const TAP_PRACTICE_DURATION_SECONDS = 60;
+export const TAP_PRACTICE_DURATION_MINUTES = 5;
+export const TAP_PRACTICE_DURATION_SECONDS = 300;
 /** Stable exportable label on practice artifacts. */
 export const TAP_PRACTICE_POW_LABEL = "Practice PoW";
 
@@ -13,7 +13,7 @@ export function isTapPracticeRequest(value: unknown): boolean {
   return value === true || value === "true" || value === 1 || value === "1";
 }
 
-/** Scored sessions keep requested minutes; practice is always 1 minute. */
+/** Scored sessions keep requested minutes; practice is always the warm-up length. */
 export function resolveTapLiveMinutes(input: {
   practice?: boolean;
   minutes?: number;

@@ -6,6 +6,16 @@
 /** Silence on a non-empty live transcript before auto-stash. */
 export const TAP_SILENCE_AUTO_STASH_MS = 5_000;
 
+/**
+ * While Helios is answering (send in flight / responding), purity silence
+ * checks must not run — waiting is not a learner silence failure.
+ */
+export function shouldEvaluateSessionPurity(options: {
+  waitingForHelios: boolean;
+}): boolean {
+  return !options.waitingForHelios;
+}
+
 /** Starting purity; each auto-stash subtracts one. */
 export const TAP_SESSION_PURITY_MAX = 3;
 

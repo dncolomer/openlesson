@@ -3,8 +3,11 @@ import {
   aggregateLearningWorldModels,
   dedupeSubjectRefs,
   parseIdList,
+  parseSubjectOptionKey,
+  resolveEmbeddingsSubjectSelection,
   resolveModelsTabScope,
   resolveModelsTabScopeFromRequest,
+  subjectOptionKeyFromRef,
 } from "@/lib/pow-api/models-tab-scope";
 import { emptyLearningWorldModel } from "@/lib/prompt-kernel/world-model";
 
@@ -129,6 +132,73 @@ describe("resolveModelsTabScopeFromRequest", () => {
     expect(r.mode).toBe("user");
     expect(r.query.user_id).toBe(ME);
     expect(r.query).not.toHaveProperty("subject");
+  });
+});
+
+describe("resolveEmbeddingsSubjectSelection", () => {
+  it("non-inspectors always resolve to self regardless of selected keys", () => {
+    const r = resolveEmbeddingsSubjectSelection({
+      selectedKeys: [`u:${OTHER}`, `g:${GUEST}`],
+      currentUserId: ME,
+      canInspectOthers: false,
+    });
+    expect(r.mode).toBe("user");
+    expect(r.kind).toBe("single");
+    expect(r.subjects).toEqual([{ user_id: ME }]);
+    expect(r.query).toEqual({ scope: "user", user_id: ME });
+  });
+
+  it("0 selected keys falls back to self (owner)", () => {
+    const r = resolveEmbeddingsSubjectSelection({
+      selectedKeys: [],
+      currentUserId: ME,
+      canInspectOthers: true,
+    });
+    expect(r.kind).toBe("single");
+    expect(r.query).toEqual({ scope: "user", user_id: ME });
+  });
+
+  it("1 selected key uses single user scope", () => {
+    const r = resolveEmbeddingsSubjectSelection({
+      selectedKeys: [`u:${OTHER}`],
+      currentUserId: ME,
+      canInspectOthers: true,
+    });
+    expect(r.mode).toBe("user");
+    expect(r.kind).toBe("single");
+    expect(r.query.user_id).toBe(OTHER);
+    expect(r.query.user_ids).toBeUndefined();
+  });
+
+  it("1 guest key uses single guest scope", () => {
+    const r = resolveEmbeddingsSubjectSelection({
+      selectedKeys: [`g:${GUEST}`],
+      currentUserId: ME,
+      canInspectOthers: true,
+    });
+    expect(r.kind).toBe("single");
+    expect(r.query.guest_user_id).toBe(GUEST);
+  });
+
+  it("2+ keys use user_group multi scope with id lists", () => {
+    const r = resolveEmbeddingsSubjectSelection({
+      selectedKeys: [`u:${ME}`, `u:${OTHER}`, `g:${GUEST}`, `u:${OTHER}`],
+      currentUserId: ME,
+      canInspectOthers: true,
+    });
+    expect(r.mode).toBe("user_group");
+    expect(r.kind).toBe("multi");
+    expect(r.subjects).toHaveLength(3);
+    expect(r.query.scope).toBe("user_group");
+    expect(r.query.user_ids?.split(",").sort()).toEqual([ME, OTHER].sort());
+    expect(r.query.guest_user_ids).toBe(GUEST);
+  });
+
+  it("parseSubjectOptionKey / subjectOptionKeyFromRef round-trip", () => {
+    expect(parseSubjectOptionKey(`u:${ME}`)).toEqual({ user_id: ME });
+    expect(parseSubjectOptionKey(`g:${GUEST}`)).toEqual({ guest_user_id: GUEST });
+    expect(subjectOptionKeyFromRef({ user_id: ME })).toBe(`u:${ME}`);
+    expect(subjectOptionKeyFromRef({ guest_user_id: GUEST })).toBe(`g:${GUEST}`);
   });
 });
 

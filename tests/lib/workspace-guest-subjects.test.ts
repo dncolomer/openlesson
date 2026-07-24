@@ -42,8 +42,8 @@ describe("guest subjects + isolation", () => {
       path.join(ROOT, "components/KnowledgeConfigTrajectoryPanel.tsx"),
       "utf8",
     );
-    expect(panel).toContain("data-lwm-latest-snapshot-report");
+    expect(panel).toContain("data-lwm-selected-snapshot-report");
     expect(panel).toContain("PerformanceReportCard");
-    expect(panel).toContain("loadLatestSnapshotReport");
+    expect(panel).toContain("loadSnapshotHistory");
   });
 });

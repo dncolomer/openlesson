@@ -176,6 +176,83 @@ export function resolveModelsTabScope(input: ModelsTabScopeInput): ResolvedModel
   };
 }
 
+/**
+ * Parse a picker option key (`u:<uuid>` / `g:<uuid>`) into a subject ref.
+ */
+export function parseSubjectOptionKey(key: string | null | undefined): ModelsTabSubjectRef | null {
+  const raw = typeof key === "string" ? key.trim() : "";
+  if (!raw) return null;
+  if (raw.startsWith("u:")) {
+    const id = cleanId(raw.slice(2));
+    return id ? { user_id: id } : null;
+  }
+  if (raw.startsWith("g:")) {
+    const id = cleanId(raw.slice(2));
+    return id ? { guest_user_id: id } : null;
+  }
+  // Bare uuid → treat as user
+  const bare = cleanId(raw);
+  return bare ? { user_id: bare } : null;
+}
+
+/**
+ * Embeddings multiselect → Models tab scope.
+ * 0 selected → self (if any); 1 → single user scope; 2+ → user_group.
+ */
+export function resolveEmbeddingsSubjectSelection(input: {
+  selectedKeys: string[];
+  currentUserId?: string | null;
+  canInspectOthers?: boolean;
+}): ResolvedModelsTabScope {
+  const canInspect = Boolean(input.canInspectOthers);
+  const me = cleanId(input.currentUserId);
+  const keys = Array.isArray(input.selectedKeys) ? input.selectedKeys : [];
+
+  if (!canInspect) {
+    return resolveModelsTabScope({
+      mode: "user",
+      currentUserId: me,
+      canInspectOthers: false,
+    });
+  }
+
+  const members = dedupeSubjectRefs(
+    keys.map((k) => parseSubjectOptionKey(k)).filter(Boolean) as ModelsTabSubjectRef[],
+  );
+
+  if (members.length === 0) {
+    return resolveModelsTabScope({
+      mode: "user",
+      currentUserId: me,
+      targetUserId: me,
+      canInspectOthers: true,
+    });
+  }
+
+  if (members.length === 1) {
+    const only = members[0];
+    return resolveModelsTabScope({
+      mode: "user",
+      currentUserId: me,
+      targetUserId: only.user_id ?? null,
+      targetGuestUserId: only.guest_user_id ?? null,
+      canInspectOthers: true,
+    });
+  }
+
+  return resolveModelsTabScope({
+    mode: "user_group",
+    currentUserId: me,
+    groupMembers: members,
+    canInspectOthers: true,
+  });
+}
+
+/** Stable option key for a subject ref (matches UI `u:` / `g:` keys). */
+export function subjectOptionKeyFromRef(s: ModelsTabSubjectRef): string {
+  return subjectKey(s);
+}
+
 /** Parse comma-separated id lists from request query/body. */
 export function parseIdList(raw: string | null | undefined): string[] {
   if (!raw || typeof raw !== "string") return [];

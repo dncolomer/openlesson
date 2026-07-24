@@ -97,6 +97,77 @@ describe("aggregateProofOfWorkStats", () => {
   });
 });
 
+describe("aggregateProofOfWorkStats subject filter (panel path)", () => {
+  it("narrows detail aggregates by subjectKey without requiring quality filter", () => {
+    const now = Date.now();
+    const rows: ProofOfWorkStatsRow[] = [
+      row({
+        created_at: new Date(now).toISOString(),
+        user_id: "alice",
+        tool_name: "canvas",
+        session_id: "s-a",
+        file_size: 100,
+      }),
+      row({
+        created_at: new Date(now - 1000).toISOString(),
+        user_id: "alice",
+        tool_name: "canvas",
+        session_id: "s-a",
+        file_size: 50,
+      }),
+      row({
+        created_at: new Date(now - 2000).toISOString(),
+        user_id: "bob",
+        tool_name: "muse",
+        session_id: "s-b",
+        file_size: 200,
+      }),
+      row({
+        created_at: new Date(now - 3000).toISOString(),
+        guest_user_id: "guest-1",
+        tool_name: "tap",
+        session_id: "s-g",
+        file_size: 30,
+      }),
+    ];
+
+    // Default panel load: no quality param → all quality, all subjects.
+    const all = aggregateProofOfWorkStats("ws-1", 4, rows);
+    expect(all.filters.quality).toBe("all");
+    expect(all.filters.subject_key).toBe("all");
+    expect(all.unique_sessions).toBe(3);
+    expect(all.unique_tools).toBe(3);
+    expect(all.total_bytes).toBe(380);
+
+    const alice = aggregateProofOfWorkStats("ws-1", 4, rows, {
+      subjectKey: "user:alice",
+    });
+    expect(alice.filters.subject_key).toBe("user:alice");
+    expect(alice.filters.quality).toBe("all");
+    expect(alice.unique_sessions).toBe(1);
+    expect(alice.unique_tools).toBe(1);
+    expect(alice.top_tools[0]?.tool_name).toBe("canvas");
+    expect(alice.total_bytes).toBe(150);
+    expect(alice.recent.every((r) => r.tool_name === "canvas")).toBe(true);
+
+    const me = aggregateProofOfWorkStats("ws-1", 4, rows, {
+      subjectKey: "me",
+      currentUserId: "bob",
+    });
+    expect(me.filters.subject_key).toBe("me");
+    expect(me.unique_tools).toBe(1);
+    expect(me.top_tools[0]?.tool_name).toBe("muse");
+    expect(me.total_bytes).toBe(200);
+
+    const guest = aggregateProofOfWorkStats("ws-1", 4, rows, {
+      subjectKey: "guest:guest-1",
+    });
+    expect(guest.unique_tools).toBe(1);
+    expect(guest.top_tools[0]?.tool_name).toBe("tap");
+    expect(guest.total_bytes).toBe(30);
+  });
+});
+
 describe("formatProofOfWorkBytes", () => {
   it("formats common sizes", () => {
     expect(formatProofOfWorkBytes(null)).toBe("—");

@@ -184,7 +184,7 @@ export function TapStartingTopicCards({
   onStartTopic,
   onPracticeFirst,
   practiceTitle = "Practice First",
-  practiceSubtitle = "1 minute warm-up. Practice PoW.",
+  practiceSubtitle = "5 minute warm-up. Always Practice PoW.",
   practiceStartLabel = "Practice",
   practiceStartingLabel = "Starting…",
   loadingLabel = "Loading topics…",

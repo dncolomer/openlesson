@@ -155,8 +155,11 @@ describe("projection widget surface (Embeddings)", () => {
     expect(src).toContain("data-projection-mode-latest");
     expect(src).toContain("data-projection-mode-trajectory");
     expect(src).toContain("data-projection-latest-position");
-    expect(src).toContain("selectProjectionDisplayPoints");
+    // Multi-subject display uses panel-local selectDisplayCoords (latest-per-subject).
+    expect(src).toContain("selectDisplayCoords");
     expect(src).toContain("computeProjectionFitBounds");
+    expect(src).toContain("resolveEmbeddingsSubjectSelection");
+    expect(src).toContain("data-embeddings-user-multiselect");
     expect(src).toContain("min-h-[28rem]");
     expect(src).not.toMatch(/className="h-56 w-full rounded-xl border border-neutral-800 bg-neutral-950\/80"/);
     expect(src).toContain("fitViewTransform");

@@ -7,6 +7,7 @@ import {
   isSessionPurityDepleted,
   nextSessionPurityAfterAutoStash,
   shouldAutoStashOnSilence,
+  shouldEvaluateSessionPurity,
   shouldFadeLiveBar,
   shouldPenalizeEmptyBarSilence,
   stampPoWQuality,
@@ -34,6 +35,14 @@ describe("tap-session-purity helpers", () => {
     expect(shouldAutoStashOnSilence(4_999, true)).toBe(false);
     expect(shouldAutoStashOnSilence(5_000, true)).toBe(true);
     expect(shouldAutoStashOnSilence(5_000, false)).toBe(false);
+  });
+
+  it("disables purity evaluation while waiting for Helios; allows when idle", () => {
+    expect(shouldEvaluateSessionPurity({ waitingForHelios: true })).toBe(false);
+    expect(shouldEvaluateSessionPurity({ waitingForHelios: false })).toBe(true);
+    // Helpers themselves are unchanged for non-waiting inputs.
+    expect(shouldAutoStashOnSilence(5_000, true)).toBe(true);
+    expect(shouldPenalizeEmptyBarSilence(5_000, false)).toBe(true);
   });
 
   it("penalizes empty-bar silence (Listening… after stash/submit) at the same threshold", () => {
@@ -101,6 +110,12 @@ describe("TAP client wires purity UX (not ILE)", () => {
     expect(client).toContain("sessionQuality");
     expect(client).toContain("window.location.reload()");
     expect(client).toContain("tap.postSession.impureBody");
+    // Purity silence ticks skip while Helios is answering (isSending).
+    expect(client).toContain("shouldEvaluateSessionPurity");
+    expect(client).toContain("isSendingRef");
+    expect(client).toContain("waitingForHelios: isSendingRef.current");
+    expect(client).toContain("shouldAutoStashOnSilence");
+    expect(client).toContain("shouldPenalizeEmptyBarSilence");
     const en = JSON.parse(fs.readFileSync(path.join(ROOT, "messages/en.json"), "utf8")) as {
       tap: { postSession: { impureTitle: string; impureBody: string } };
     };

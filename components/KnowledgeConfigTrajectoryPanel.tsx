@@ -10,15 +10,23 @@ import {
 } from "react";
 import type { KnowledgeRegionListItem } from "@/components/CustomVerificationModelsPanel";
 import {
+  resolveEmbeddingsSubjectSelection,
   resolveModelsTabScope,
   type ModelsTabSubjectRef,
 } from "@/lib/pow-api/models-tab-scope";
+import {
+  dualScoreSeriesFromRuns,
+  filterLwmHistoryByDateWindow,
+  scoreSeriesPolyline,
+  selectLwmHistoryRun,
+  timelineMarkersFromRuns,
+  type LwmHistoryRunLike,
+} from "@/lib/pow-api/lwm-snapshot-history-ui";
 import {
   projectTrajectoryAndRegions,
   PROJECTION_ALGORITHM_OPTIONS,
   parseProjectionAlgorithmId,
   computeProjectionFitBounds,
-  selectProjectionDisplayPoints,
   fitViewTransform,
   zoomViewTransform,
   panViewTransform,
@@ -36,12 +44,25 @@ import {
 import { PerformanceReportCard } from "@/components/PerformanceReportCard";
 import type { PerformanceReport } from "@/lib/pow-api/performance-report";
 
+/** Snapshot-history row shape used by LWM timeline. */
+interface LwmSnapshotHistoryRun extends LwmHistoryRunLike {
+  id: string;
+  ran_at: string;
+  score: number;
+  ghc_score: number | null;
+  report?: PerformanceReport | null;
+  source?: string;
+  vertical?: string;
+}
+
 interface ProjectionCoord {
   t: string;
   as_of_ms: number;
   x: number;
   y: number;
   confidence: number;
+  /** Stable subject key `u:<id>` / `g:<id>` for multi-subject coloring. */
+  subjectKey?: string;
 }
 
 const REGION_OVERLAY_COLORS = [
@@ -51,6 +72,18 @@ const REGION_OVERLAY_COLORS = [
   "#fbbf24",
   "#60a5fa",
   "#fb7185",
+];
+
+/** Distinct colors for multi-subject trajectory points / paths. */
+const SUBJECT_TRAJECTORY_COLORS = [
+  "#a78bfa",
+  "#22d3ee",
+  "#f472b6",
+  "#34d399",
+  "#fbbf24",
+  "#60a5fa",
+  "#fb7185",
+  "#c084fc",
 ];
 
 interface AvailableSubject {
@@ -113,6 +146,8 @@ interface KnowledgeConfigResponse {
       confidence: number;
       trigger?: string;
       pow_event_count?: number;
+      subject_user_id?: string | null;
+      subject_guest_user_id?: string | null;
     }>;
     projection: {
       algorithm?: string;
@@ -120,6 +155,42 @@ interface KnowledgeConfigResponse {
       coords: ProjectionCoord[];
     };
   };
+}
+
+function trajectoryPointSubjectKey(p: {
+  subject_user_id?: string | null;
+  subject_guest_user_id?: string | null;
+}): string | undefined {
+  const guest = p.subject_guest_user_id?.trim();
+  if (guest) return `g:${guest}`;
+  const user = p.subject_user_id?.trim();
+  if (user) return `u:${user}`;
+  return undefined;
+}
+
+/** Latest mode: one last point per subject when multi; else single last point. */
+function selectDisplayCoords(
+  coords: ProjectionCoord[],
+  mode: ProjectionDisplayMode,
+): ProjectionCoord[] {
+  if (!coords.length) return [];
+  if (mode === "trajectory") return coords;
+  const keys = new Set(coords.map((c) => c.subjectKey).filter(Boolean) as string[]);
+  if (keys.size <= 1) return [coords[coords.length - 1]];
+  const latestByKey = new Map<string, ProjectionCoord>();
+  for (const c of coords) {
+    const k = c.subjectKey || "aggregate";
+    const prev = latestByKey.get(k);
+    if (!prev || c.as_of_ms >= prev.as_of_ms) latestByKey.set(k, c);
+  }
+  return Array.from(latestByKey.values());
+}
+
+function subjectColorForKey(key: string | undefined, keyOrder: string[]): string {
+  if (!key || keyOrder.length === 0) return "#a78bfa";
+  const idx = keyOrder.indexOf(key);
+  const i = idx >= 0 ? idx : 0;
+  return SUBJECT_TRAJECTORY_COLORS[i % SUBJECT_TRAJECTORY_COLORS.length];
 }
 
 function subjectOptionKey(s: ModelsTabSubjectRef): string {
@@ -160,19 +231,29 @@ function ProjectionSpaceWidget({
   onDisplayModeChange?: (mode: ProjectionDisplayMode) => void;
 }) {
   const displayCoords = useMemo(
-    () => selectProjectionDisplayPoints(coords, displayMode),
+    () => selectDisplayCoords(coords, displayMode),
     [coords, displayMode],
   );
 
-  const bounds = useMemo(
-    () =>
-      computeProjectionFitBounds(
-        coords.map((c) => ({ x: c.x, y: c.y })),
-        regionOverlays.map((r) => ({ x: r.x, y: r.y, radius: r.radius })),
-        displayMode,
-      ),
-    [coords, regionOverlays, displayMode],
-  );
+  const subjectKeyOrder = useMemo(() => {
+    const seen: string[] = [];
+    for (const c of coords) {
+      if (c.subjectKey && !seen.includes(c.subjectKey)) seen.push(c.subjectKey);
+    }
+    return seen;
+  }, [coords]);
+
+  const multiSubject = subjectKeyOrder.length > 1;
+
+  const bounds = useMemo(() => {
+    // Fit on the points actually shown (latest-per-subject when multi) + regions.
+    const fitPts = selectDisplayCoords(coords, displayMode);
+    return computeProjectionFitBounds(
+      fitPts.map((c) => ({ x: c.x, y: c.y })),
+      regionOverlays.map((r) => ({ x: r.x, y: r.y, radius: r.radius })),
+      "trajectory", // already filtered; avoid double-trimming to a single last point
+    );
+  }, [coords, regionOverlays, displayMode]);
 
   const [view, setView] = useState<ViewTransform | null>(null);
   const [cursorData, setCursorData] = useState<{ x: number; y: number } | null>(null);
@@ -225,17 +306,41 @@ function ProjectionSpaceWidget({
   const m = PROJECTION_SCREEN.margin;
 
   const showTrajectory = displayMode === "trajectory";
-  const path =
-    showTrajectory && displayCoords.length > 1
-      ? displayCoords
-          .map((c, i) => {
-            const p = mapPoint(c.x, c.y);
-            return `${i === 0 ? "M" : "L"} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`;
-          })
-          .join(" ")
-      : "";
+  const latestPoints = selectDisplayCoords(coords, "latest");
 
-  const last = coords.length > 0 ? coords[coords.length - 1] : null;
+  /** One path per subject when multi-select; single chronological path otherwise. */
+  const subjectPaths: Array<{ key: string; d: string }> = (() => {
+    if (!showTrajectory || displayCoords.length < 2) return [];
+    if (!multiSubject) {
+      const d = displayCoords
+        .map((c, i) => {
+          const p = mapPoint(c.x, c.y);
+          return `${i === 0 ? "M" : "L"} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`;
+        })
+        .join(" ");
+      return d ? [{ key: "all", d }] : [];
+    }
+    const byKey = new Map<string, ProjectionCoord[]>();
+    for (const c of displayCoords) {
+      const k = c.subjectKey || "aggregate";
+      const list = byKey.get(k) || [];
+      list.push(c);
+      byKey.set(k, list);
+    }
+    const out: Array<{ key: string; d: string }> = [];
+    for (const [key, pts] of byKey) {
+      if (pts.length < 2) continue;
+      const sorted = [...pts].sort((a, b) => a.as_of_ms - b.as_of_ms);
+      const d = sorted
+        .map((c, i) => {
+          const p = mapPoint(c.x, c.y);
+          return `${i === 0 ? "M" : "L"} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`;
+        })
+        .join(" ");
+      out.push({ key, d });
+    }
+    return out;
+  })();
 
   const onWheel = (e: React.WheelEvent<SVGSVGElement>) => {
     e.preventDefault();
@@ -525,29 +630,53 @@ function ProjectionSpaceWidget({
               );
             })}
 
-            {path ? (
+            {subjectPaths.map((sp) => (
               <path
-                d={path}
+                key={sp.key}
+                d={sp.d}
                 fill="none"
-                stroke="url(#knowledgecfg-path)"
+                stroke={
+                  multiSubject
+                    ? subjectColorForKey(sp.key === "all" ? undefined : sp.key, subjectKeyOrder)
+                    : "url(#knowledgecfg-path)"
+                }
                 strokeWidth="2.25"
                 strokeLinejoin="round"
+                strokeOpacity={multiSubject ? 0.9 : 1}
                 data-projection-path
+                data-projection-path-subject={sp.key === "all" ? undefined : sp.key}
               />
-            ) : null}
+            ))}
             {showTrajectory
               ? displayCoords.map((c, i) => {
                   const p = mapPoint(c.x, c.y);
-                  const isLast = i === displayCoords.length - 1;
-                  const isFirst = i === 0;
                   const order = i + 1;
-                  const fill = isLast ? "#22d3ee" : isFirst ? "#a78bfa" : "#818cf8";
-                  const r = isLast ? 5 : isFirst ? 3.5 : 2.75;
+                  const latestForSubject =
+                    multiSubject && c.subjectKey
+                      ? latestPoints.some(
+                          (lp) =>
+                            lp.subjectKey === c.subjectKey && lp.as_of_ms === c.as_of_ms,
+                        )
+                      : i === displayCoords.length - 1;
+                  const isFirst = multiSubject
+                    ? displayCoords.findIndex((x) => x.subjectKey === c.subjectKey) === i
+                    : i === 0;
+                  const fill = multiSubject
+                    ? subjectColorForKey(c.subjectKey, subjectKeyOrder)
+                    : latestForSubject
+                      ? "#22d3ee"
+                      : isFirst
+                        ? "#a78bfa"
+                        : "#818cf8";
+                  const r = latestForSubject ? 5 : isFirst ? 3.5 : 2.75;
                   return (
                     <g
-                      key={`${c.as_of_ms}-${i}`}
-                      data-projection-point={isLast ? "latest" : isFirst ? "start" : "path"}
+                      key={`${c.subjectKey || "s"}-${c.as_of_ms}-${i}`}
+                      data-projection-point={
+                        latestForSubject ? "latest" : isFirst ? "start" : "path"
+                      }
                       data-projection-order={order}
+                      data-projection-subject={c.subjectKey}
                     >
                       <circle
                         cx={p.x}
@@ -559,10 +688,10 @@ function ProjectionSpaceWidget({
                       <text
                         x={p.x + 6}
                         y={p.y - 5}
-                        fill={isLast ? "#a5f3fc" : isFirst ? "#ddd6fe" : "#c7d2fe"}
+                        fill={latestForSubject ? "#a5f3fc" : isFirst ? "#ddd6fe" : "#c7d2fe"}
                         fontSize="10"
                         fontFamily="ui-monospace, SFMono-Regular, Menlo, monospace"
-                        fontWeight={isFirst || isLast ? 600 : 500}
+                        fontWeight={isFirst || latestForSubject ? 600 : 500}
                         className="select-none"
                         paintOrder="stroke"
                         stroke="#070708"
@@ -576,42 +705,52 @@ function ProjectionSpaceWidget({
                   );
                 })
               : null}
-            {last && !showTrajectory ? (
-              <g
-                data-projection-point="latest"
-                data-projection-latest-position
-                data-projection-order={coords.length}
-              >
-                <circle
-                  cx={mapPoint(last.x, last.y).x}
-                  cy={mapPoint(last.x, last.y).y}
-                  r={7}
-                  fill="#22d3ee"
-                  stroke="#ecfeff"
-                  strokeWidth="1.25"
-                />
-                <text
-                  x={mapPoint(last.x, last.y).x + 8}
-                  y={mapPoint(last.x, last.y).y - 6}
-                  fill="#a5f3fc"
-                  fontSize="10"
-                  fontFamily="ui-monospace, SFMono-Regular, Menlo, monospace"
-                  fontWeight={600}
-                  className="select-none"
-                  paintOrder="stroke"
-                  stroke="#070708"
-                  strokeWidth="2.5"
-                  strokeLinejoin="round"
-                  data-projection-order-label={coords.length}
-                >
-                  {coords.length}
-                </text>
-              </g>
-            ) : null}
-            {last && showTrajectory ? (
+            {!showTrajectory
+              ? latestPoints.map((lp, i) => {
+                  const p = mapPoint(lp.x, lp.y);
+                  const fill = multiSubject
+                    ? subjectColorForKey(lp.subjectKey, subjectKeyOrder)
+                    : "#22d3ee";
+                  return (
+                    <g
+                      key={`latest-${lp.subjectKey || "s"}-${lp.as_of_ms}-${i}`}
+                      data-projection-point="latest"
+                      data-projection-latest-position
+                      data-projection-subject={lp.subjectKey}
+                      data-projection-order={i + 1}
+                    >
+                      <circle
+                        cx={p.x}
+                        cy={p.y}
+                        r={7}
+                        fill={fill}
+                        stroke="#ecfeff"
+                        strokeWidth="1.25"
+                      />
+                      <text
+                        x={p.x + 8}
+                        y={p.y - 6}
+                        fill="#a5f3fc"
+                        fontSize="10"
+                        fontFamily="ui-monospace, SFMono-Regular, Menlo, monospace"
+                        fontWeight={600}
+                        className="select-none"
+                        paintOrder="stroke"
+                        stroke="#070708"
+                        strokeWidth="2.5"
+                        strokeLinejoin="round"
+                        data-projection-order-label={i + 1}
+                      >
+                        {i + 1}
+                      </text>
+                    </g>
+                  );
+                })
+              : null}
+            {showTrajectory && !multiSubject && latestPoints[0] ? (
               <circle
-                cx={mapPoint(last.x, last.y).x}
-                cy={mapPoint(last.x, last.y).y}
+                cx={mapPoint(latestPoints[0].x, latestPoints[0].y).x}
+                cy={mapPoint(latestPoints[0].x, latestPoints[0].y).y}
                 r={6}
                 fill="#22d3ee"
                 stroke="#ecfeff"
@@ -770,6 +909,149 @@ function UserPicker({
   );
 }
 
+/**
+ * Embeddings multiselect: owners pick multiple subjects; non-owners locked to self.
+ * Selection keys are `u:<id>` / `g:<id>` (same as available-subjects options).
+ */
+function EmbeddingsUserMultiPicker({
+  selectedKeys,
+  currentUserId,
+  availableSubjects,
+  canInspectOthers,
+  onChange,
+  ariaLabel,
+}: {
+  selectedKeys: string[];
+  currentUserId?: string | null;
+  availableSubjects: AvailableSubject[];
+  canInspectOthers: boolean;
+  onChange: (keys: string[]) => void;
+  ariaLabel: string;
+}) {
+  const selected = useMemo(() => new Set(selectedKeys), [selectedKeys]);
+  const selfKey = currentUserId ? `u:${currentUserId}` : "";
+
+  if (!canInspectOthers) {
+    return (
+      <div
+        className="w-full"
+        data-models-user-picker="embeddings"
+        data-embeddings-user-multiselect="false"
+      >
+        <label className="block w-full">
+          <span className="mb-1 block text-[11px] font-medium uppercase tracking-wide text-neutral-500">
+            User
+          </span>
+          <select
+            value={selfKey}
+            disabled
+            className="w-full rounded-md border border-neutral-700 bg-neutral-900 px-3 py-2 text-xs text-white"
+            aria-label={ariaLabel}
+            data-models-user-select="embeddings"
+          >
+            <option value={selfKey}>You</option>
+          </select>
+        </label>
+      </div>
+    );
+  }
+
+  const options: AvailableSubject[] = [];
+  const seen = new Set<string>();
+  if (currentUserId) {
+    options.push({
+      user_id: currentUserId,
+      guest_user_id: null,
+      embedding_model_id: "",
+      as_of_ms: 0,
+      confidence: 0,
+    });
+    seen.add(selfKey);
+  }
+  for (const s of availableSubjects) {
+    const key = subjectOptionKey(s);
+    if (key === "aggregate" || seen.has(key)) continue;
+    seen.add(key);
+    options.push(s);
+  }
+
+  const toggle = (key: string) => {
+    const next = new Set(selected);
+    if (next.has(key)) {
+      // Keep at least one subject when possible (prefer self).
+      if (next.size <= 1) return;
+      next.delete(key);
+    } else {
+      next.add(key);
+    }
+    onChange(Array.from(next));
+  };
+
+  return (
+    <div
+      className="w-full"
+      data-models-user-picker="embeddings"
+      data-embeddings-user-multiselect="true"
+    >
+      <div className="mb-1 flex items-center justify-between gap-2">
+        <span className="text-[11px] font-medium uppercase tracking-wide text-neutral-500">
+          Users
+        </span>
+        <span className="text-[10px] text-neutral-500" data-embeddings-selected-count>
+          {selectedKeys.length || 0} selected
+        </span>
+      </div>
+      <ul
+        className="flex max-h-40 flex-col gap-0.5 overflow-y-auto rounded-md border border-neutral-800 bg-neutral-950/50 p-1"
+        role="group"
+        aria-label={ariaLabel}
+        data-models-user-select="embeddings"
+        data-embeddings-user-multi-list
+      >
+        {options.length === 0 ? (
+          <li className="px-1.5 py-1.5 text-[11px] text-neutral-500">No subjects yet</li>
+        ) : (
+          options.map((s, i) => {
+            const key = subjectOptionKey(s);
+            const checked = selected.has(key);
+            const color = SUBJECT_TRAJECTORY_COLORS[i % SUBJECT_TRAJECTORY_COLORS.length];
+            return (
+              <li key={key}>
+                <label
+                  className={`flex cursor-pointer items-center gap-2 rounded-md px-1.5 py-1.5 text-xs transition ${
+                    checked
+                      ? "bg-neutral-800/80 text-white"
+                      : "text-neutral-300 hover:bg-neutral-900 hover:text-white"
+                  }`}
+                >
+                  <input
+                    type="checkbox"
+                    checked={checked}
+                    onChange={() => toggle(key)}
+                    className="rounded border-neutral-500"
+                    data-embeddings-user-toggle={key}
+                  />
+                  <span
+                    className="inline-block h-2.5 w-2.5 shrink-0 rounded-full"
+                    style={{ backgroundColor: color }}
+                    aria-hidden
+                  />
+                  <span className="min-w-0 flex-1 truncate">
+                    {subjectOptionLabel(s, currentUserId)}
+                  </span>
+                </label>
+              </li>
+            );
+          })
+        )}
+      </ul>
+      <p className="mt-1 text-[10px] leading-snug text-neutral-500">
+        Multi-select to compare trajectories on the projection.
+      </p>
+    </div>
+  );
+}
+
 export type KnowledgePanelView = "models" | "lwm";
 
 interface KnowledgeConfigTrajectoryPanelProps {
@@ -796,9 +1078,8 @@ export function KnowledgeConfigTrajectoryPanel({
   const showLwm = panelView === "lwm";
   const canInspectOthers = Boolean(isOwner);
 
-  // Independent per-section user pickers (no global user/user_group/all scope).
-  const [embUserId, setEmbUserId] = useState("");
-  const [embGuestUserId, setEmbGuestUserId] = useState("");
+  // Embeddings: multiselect subject keys (`u:` / `g:`). LWM stays single-select.
+  const [embSelectedKeys, setEmbSelectedKeys] = useState<string[]>([]);
   const [lwmUserId, setLwmUserId] = useState("");
   const [lwmGuestUserId, setLwmGuestUserId] = useState("");
   const [snapshotLoading, setSnapshotLoading] = useState(false);
@@ -817,8 +1098,14 @@ export function KnowledgeConfigTrajectoryPanel({
   const [lwmLoading, setLwmLoading] = useState(false);
   const [embError, setEmbError] = useState<string | null>(null);
   const [lwmError, setLwmError] = useState<string | null>(null);
-  /** Latest LWM Snapshot report for the selected subject (full narrative card). */
-  const [latestSnapshotReport, setLatestSnapshotReport] = useState<PerformanceReport | null>(null);
+  /** Full snapshot-history list for the selected LWM subject (timeline + trends). */
+  const [lwmHistoryRuns, setLwmHistoryRuns] = useState<LwmSnapshotHistoryRun[]>([]);
+  const [lwmHistoryLoading, setLwmHistoryLoading] = useState(false);
+  const [selectedLwmRunId, setSelectedLwmRunId] = useState<string | null>(null);
+  /** Date window (yyyy-mm-dd) focusing the timeline + trends. */
+  const [lwmFromDate, setLwmFromDate] = useState("");
+  const [lwmToDate, setLwmToDate] = useState("");
+  const [lwmReportOpen, setLwmReportOpen] = useState(true);
 
   /** Saved knowledge regions (cohort + synthetic) for multi-select overlay. */
   const [knowledgeRegions, setKnowledgeRegions] = useState<KnowledgeRegionListItem[]>([]);
@@ -845,24 +1132,35 @@ export function KnowledgeConfigTrajectoryPanel({
   >({});
   const [overlayDistancesLoading, setOverlayDistancesLoading] = useState(false);
 
-  // Default both pickers to current user when empty.
+  // Default pickers to current user when empty.
   useEffect(() => {
     if (!currentUserId) return;
-    if (!embUserId && !embGuestUserId) setEmbUserId(currentUserId);
+    setEmbSelectedKeys((prev) => (prev.length === 0 ? [`u:${currentUserId}`] : prev));
     if (!lwmUserId && !lwmGuestUserId) setLwmUserId(currentUserId);
-  }, [currentUserId, embGuestUserId, embUserId, lwmGuestUserId, lwmUserId]);
+  }, [currentUserId, lwmGuestUserId, lwmUserId]);
+
+  // Non-owners cannot keep multi-select; force self.
+  useEffect(() => {
+    if (canInspectOthers || !currentUserId) return;
+    const selfKey = `u:${currentUserId}`;
+    setEmbSelectedKeys((prev) =>
+      prev.length === 1 && prev[0] === selfKey ? prev : [selfKey],
+    );
+  }, [canInspectOthers, currentUserId]);
 
   const embScope = useMemo(
     () =>
-      resolveModelsTabScope({
-        mode: "user",
+      resolveEmbeddingsSubjectSelection({
+        selectedKeys: embSelectedKeys,
         currentUserId,
-        targetUserId: embUserId || null,
-        targetGuestUserId: embGuestUserId || null,
         canInspectOthers,
       }),
-    [canInspectOthers, currentUserId, embGuestUserId, embUserId],
+    [canInspectOthers, currentUserId, embSelectedKeys],
   );
+
+  /** Primary subject for Knowledge-distance overlay (first selected / self). */
+  const embUserId = embScope.subjects[0]?.user_id ?? "";
+  const embGuestUserId = embScope.subjects[0]?.guest_user_id ?? "";
 
   const lwmScope = useMemo(
     () =>
@@ -920,34 +1218,65 @@ export function KnowledgeConfigTrajectoryPanel({
     }
   }, [embScope.query, fetchKnowledgeConfig, mergeAvailableSubjects]);
 
-  const loadLatestSnapshotReport = useCallback(async () => {
+  const loadSnapshotHistory = useCallback(async () => {
     if (!showLwm) return;
+    setLwmHistoryLoading(true);
     try {
       const params = new URLSearchParams({
         workspaceId,
-        limit: "1",
+        limit: "100",
         vertical: "verification",
       });
       if (ayclToken) params.set("ayclToken", ayclToken);
       if (lwmGuestUserId) params.set("guest_user_id", lwmGuestUserId);
       else if (lwmUserId) params.set("user_id", lwmUserId);
       else if (currentUserId) params.set("user_id", currentUserId);
+      // Server-side date bounds when set (also re-windowed client-side for focus).
+      if (lwmFromDate) params.set("from", `${lwmFromDate}T00:00:00.000Z`);
+      if (lwmToDate) params.set("to", `${lwmToDate}T23:59:59.999Z`);
 
       const response = await fetch(`/api/workspace/snapshot-history?${params.toString()}`);
       const data = await response.json().catch(() => ({}));
       if (!response.ok) {
-        setLatestSnapshotReport(null);
+        setLwmHistoryRuns([]);
         return;
       }
-      const runs = Array.isArray(data.runs) ? data.runs : [];
-      const report = runs[0]?.report;
-      setLatestSnapshotReport(
-        report && typeof report === "object" ? (report as PerformanceReport) : null,
-      );
+      const runs = (Array.isArray(data.runs) ? data.runs : []).map(
+        (r: Record<string, unknown>) =>
+          ({
+            id: String(r.id || ""),
+            ran_at: String(r.ran_at || r.created_at || ""),
+            score: typeof r.score === "number" ? r.score : Number(r.score) || 0,
+            ghc_score:
+              r.ghc_score == null
+                ? null
+                : typeof r.ghc_score === "number"
+                  ? r.ghc_score
+                  : Number(r.ghc_score),
+            report:
+              r.report && typeof r.report === "object"
+                ? (r.report as PerformanceReport)
+                : null,
+            source: typeof r.source === "string" ? r.source : undefined,
+            vertical: typeof r.vertical === "string" ? r.vertical : undefined,
+          }) satisfies LwmSnapshotHistoryRun,
+      ).filter((r: LwmSnapshotHistoryRun) => r.id && r.ran_at);
+      setLwmHistoryRuns(runs);
     } catch {
-      setLatestSnapshotReport(null);
+      setLwmHistoryRuns([]);
+    } finally {
+      setLwmHistoryLoading(false);
     }
-  }, [ayclToken, currentUserId, lwmGuestUserId, lwmUserId, showLwm, workspaceId]);
+  }, [
+    ayclToken,
+    currentUserId,
+    lwmFromDate,
+    lwmGuestUserId,
+    lwmToDate,
+    lwmUserId,
+    showLwm,
+    workspaceId,
+  ]);
 
   const loadLwm = useCallback(async () => {
     setLwmLoading(true);
@@ -956,13 +1285,13 @@ export function KnowledgeConfigTrajectoryPanel({
       const payload = await fetchKnowledgeConfig(lwmScope.query);
       setLwmData(payload);
       mergeAvailableSubjects(payload);
-      await loadLatestSnapshotReport();
+      await loadSnapshotHistory();
     } catch (err) {
       setLwmError(err instanceof Error ? err.message : "Failed to load learning world model");
     } finally {
       setLwmLoading(false);
     }
-  }, [fetchKnowledgeConfig, loadLatestSnapshotReport, lwmScope.query, mergeAvailableSubjects]);
+  }, [fetchKnowledgeConfig, loadSnapshotHistory, lwmScope.query, mergeAvailableSubjects]);
 
   const loadSnapshotEligibility = useCallback(async () => {
     if (!currentUserId && !lwmUserId && !lwmGuestUserId) {
@@ -1218,33 +1547,78 @@ export function KnowledgeConfigTrajectoryPanel({
   const wm = lwmData?.learning_world_model;
   const scores = wm?.scores_snapshot;
   const kc = lwmData?.knowledge_config;
-  const lwmUpdatedAt = useMemo(() => {
-    const candidates = [
-      wm?.updated_at,
-      kc?.as_of,
-      snapshotEligibility?.last_eval_at,
-    ].filter((v): v is string => typeof v === "string" && v.trim().length > 0);
-    if (candidates.length === 0) return null;
-    let best: { iso: string; ms: number } | null = null;
-    for (const iso of candidates) {
-      const ms = Date.parse(iso);
-      if (!Number.isFinite(ms)) continue;
-      if (!best || ms > best.ms) best = { iso, ms };
+
+  /** Client-side date window focus (also sent server-side on history load). */
+  const windowedLwmRuns = useMemo(
+    () =>
+      filterLwmHistoryByDateWindow(lwmHistoryRuns, {
+        from: lwmFromDate || null,
+        to: lwmToDate || null,
+      }),
+    [lwmFromDate, lwmHistoryRuns, lwmToDate],
+  );
+
+  const selectedLwmRun = useMemo(
+    () => selectLwmHistoryRun(windowedLwmRuns, selectedLwmRunId),
+    [selectedLwmRunId, windowedLwmRuns],
+  );
+
+  // Keep selection valid when window / subject history changes.
+  useEffect(() => {
+    if (!selectedLwmRun) {
+      if (selectedLwmRunId) setSelectedLwmRunId(null);
+      return;
     }
-    return best;
-  }, [kc?.as_of, snapshotEligibility?.last_eval_at, wm?.updated_at]);
+    if (selectedLwmRun.id !== selectedLwmRunId) {
+      setSelectedLwmRunId(selectedLwmRun.id);
+    }
+  }, [selectedLwmRun, selectedLwmRunId]);
+
+  const lwmTimelineMarkers = useMemo(
+    () => timelineMarkersFromRuns(windowedLwmRuns),
+    [windowedLwmRuns],
+  );
+
+  const lwmScoreSeries = useMemo(
+    () => dualScoreSeriesFromRuns(windowedLwmRuns),
+    [windowedLwmRuns],
+  );
+
+  const selectedRunReport = useMemo(() => {
+    const report = selectedLwmRun?.report;
+    return report && typeof report === "object" ? (report as PerformanceReport) : null;
+  }, [selectedLwmRun]);
+
+  /** Prefer selected history scores; fall back to live LWM snapshot scores. */
+  const displaySnapScore =
+    selectedLwmRun != null
+      ? Math.round(selectedLwmRun.score)
+      : scores?.verification_score != null
+        ? Math.round(scores.verification_score)
+        : null;
+  const displayGhcScore =
+    selectedLwmRun != null
+      ? selectedLwmRun.ghc_score != null
+        ? Math.round(selectedLwmRun.ghc_score)
+        : null
+      : scores?.ghc_score != null
+        ? Math.round(scores.ghc_score)
+        : null;
 
   const lwmUpdatedLabel = useMemo(() => {
-    if (!lwmUpdatedAt) return null;
+    const iso = selectedLwmRun?.ran_at || wm?.updated_at || kc?.as_of || null;
+    if (!iso) return null;
+    const ms = Date.parse(iso);
+    if (!Number.isFinite(ms)) return iso;
     try {
       return new Intl.DateTimeFormat(undefined, {
         dateStyle: "medium",
         timeStyle: "short",
-      }).format(new Date(lwmUpdatedAt.ms));
+      }).format(new Date(ms));
     } catch {
-      return lwmUpdatedAt.iso;
+      return iso;
     }
-  }, [lwmUpdatedAt]);
+  }, [kc?.as_of, selectedLwmRun?.ran_at, wm?.updated_at]);
 
   /** Joint 2D layout under the selected algorithm (trajectory + selected regions). */
   const projectedLayout = useMemo(() => {
@@ -1262,7 +1636,7 @@ export function KnowledgeConfigTrajectoryPanel({
 
     const rawPoints = embData?.trajectory.points;
     if (Array.isArray(rawPoints) && rawPoints.length > 0) {
-      return projectTrajectoryAndRegions({
+      const layout = projectTrajectoryAndRegions({
         points: rawPoints.map((p) => ({
           t: p.t,
           as_of_ms: p.as_of_ms,
@@ -1272,6 +1646,14 @@ export function KnowledgeConfigTrajectoryPanel({
         regions: regionInputs,
         algorithm: projectionAlgorithm,
       });
+      // Re-attach subject identity by index (joint layout preserves point order).
+      return {
+        ...layout,
+        coords: layout.coords.map((c, i) => ({
+          ...c,
+          subjectKey: trajectoryPointSubjectKey(rawPoints[i] || {}),
+        })),
+      };
     }
 
     // Fallback: server-provided coords (random frame) when high-D points are absent.
@@ -1290,6 +1672,7 @@ export function KnowledgeConfigTrajectoryPanel({
           x: c.x,
           y: c.y,
           confidence: c.confidence,
+          subjectKey: c.subjectKey,
         })),
       };
     }
@@ -1356,19 +1739,17 @@ export function KnowledgeConfigTrajectoryPanel({
                 regions from Settings.
               </p>
 
-              <UserPicker
-                data-picker="embeddings"
-                ariaLabel="Embeddings projections user"
-                valueUserId={embUserId}
-                valueGuestUserId={embGuestUserId}
-                currentUserId={currentUserId}
-                availableSubjects={availableSubjects}
-                canInspectOthers={canInspectOthers}
-                onChange={({ userId, guestUserId }) => {
-                  setEmbUserId(userId);
-                  setEmbGuestUserId(guestUserId);
-                }}
-              />
+              {/* data-picker="embeddings" anchors sidebar layout tests + multiselect control */}
+              <div data-picker="embeddings" className="w-full">
+                <EmbeddingsUserMultiPicker
+                  ariaLabel="Embeddings projections users"
+                  selectedKeys={embSelectedKeys}
+                  currentUserId={currentUserId}
+                  availableSubjects={availableSubjects}
+                  canInspectOthers={canInspectOthers}
+                  onChange={setEmbSelectedKeys}
+                />
+              </div>
 
               <div className="w-full" data-projection-algorithm-picker>
                 <label className="block w-full">
@@ -1657,22 +2038,57 @@ export function KnowledgeConfigTrajectoryPanel({
               )}
 
               <div className="flex shrink-0 flex-wrap gap-2 text-[10px] text-neutral-500">
-                {projectionDisplayMode === "trajectory" ? (
-                  <span className="inline-flex items-center gap-1">
-                    <span className="h-2 w-2 rounded-full bg-violet-400" /> start
-                  </span>
-                ) : null}
-                <span className="inline-flex items-center gap-1">
-                  <span className="h-2 w-2 rounded-full bg-cyan-400" /> latest
-                </span>
+                {embScope.kind === "multi" && embScope.subjects.length > 1 ? (
+                  embScope.subjects.map((s, i) => {
+                    const key = subjectOptionKey(s);
+                    const color =
+                      SUBJECT_TRAJECTORY_COLORS[i % SUBJECT_TRAJECTORY_COLORS.length];
+                    const label =
+                      s.guest_user_id
+                        ? `Guest ${s.guest_user_id.slice(0, 8)}…`
+                        : s.user_id && s.user_id === currentUserId
+                          ? "You"
+                          : s.user_id
+                            ? `User ${s.user_id.slice(0, 8)}…`
+                            : key;
+                    return (
+                      <span
+                        key={key}
+                        className="inline-flex items-center gap-1"
+                        data-embeddings-subject-legend={key}
+                      >
+                        <span
+                          className="h-2 w-2 rounded-full"
+                          style={{ backgroundColor: color }}
+                        />{" "}
+                        {label}
+                      </span>
+                    );
+                  })
+                ) : (
+                  <>
+                    {projectionDisplayMode === "trajectory" ? (
+                      <span className="inline-flex items-center gap-1">
+                        <span className="h-2 w-2 rounded-full bg-violet-400" /> start
+                      </span>
+                    ) : null}
+                    <span className="inline-flex items-center gap-1">
+                      <span className="h-2 w-2 rounded-full bg-cyan-400" /> latest
+                    </span>
+                  </>
+                )}
                 <span className="inline-flex items-center gap-1">
                   <span className="h-2 w-2 rounded-full border border-pink-400 bg-pink-400/30" />{" "}
                   region overlay
                 </span>
                 <span data-projection-mode-hint>
                   {projectionDisplayMode === "latest"
-                    ? "Latest position only · view fits position + selected regions"
-                    : "Full trajectory · ℝ⁶⁴ → 2D"}
+                    ? embScope.kind === "multi"
+                      ? "Latest position per selected user · view fits positions + regions"
+                      : "Latest position only · view fits position + selected regions"
+                    : embScope.kind === "multi"
+                      ? "Multi-user trajectories · ℝ⁶⁴ → 2D"
+                      : "Full trajectory · ℝ⁶⁴ → 2D"}
                 </span>
                 <span className="text-neutral-400" data-projection-algorithm-hint>
                   ·{" "}
@@ -1685,293 +2101,416 @@ export function KnowledgeConfigTrajectoryPanel({
         </div>
       ) : null}
 
-      {/* Learning World Model (own Knowledge tab) */}
+      {/* Learning World Model — timeline + dual score trends + selected snapshot card */}
       {showLwm ? (
-      <SectionCard
-        data-section="lwm"
-        description="Select a user, generate a snapshot, and read the skill card on the right."
-      >
-        <div
-          className="grid w-full gap-5 lg:grid-cols-2 lg:items-start lg:gap-6"
-          data-lwm-split-layout
+        <section
+          data-section="lwm"
+          data-lwm-layout="timeline"
+          className="flex w-full min-h-0 flex-1 flex-col gap-4 overflow-y-auto pb-4"
         >
-          {/* Left: user + controls + how to read LWM vs Embeddings */}
-          <div className="flex min-w-0 flex-col gap-4" data-lwm-controls-column>
-        <UserPicker
-          data-picker="lwm"
-          ariaLabel="Learning world model user"
-          valueUserId={lwmUserId}
-          valueGuestUserId={lwmGuestUserId}
-          currentUserId={currentUserId}
-          availableSubjects={availableSubjects}
-          canInspectOthers={canInspectOthers}
-          onChange={({ userId, guestUserId }) => {
-            setLwmUserId(userId);
-            setLwmGuestUserId(guestUserId);
-          }}
-        />
-
-        {/* Generate new snapshot — enabled only when selected user has unsnapshotted PoW */}
-        <div className="space-y-2" data-lwm-snapshot-controls>
-          <button
-            type="button"
-            onClick={() => void generateSnapshot()}
-            disabled={
-              snapshotLoading ||
-              (!currentUserId && !lwmUserId && !lwmGuestUserId) ||
-              snapshotEligibility?.allowed === false
-            }
-            title={
-              snapshotEligibility?.allowed === false
-                ? snapshotEligibility.message ||
-                  "No new proof of work since the last LWM Snapshot for this user."
-                : "Generate a new Learning World Model Snapshot for the selected user"
-            }
-            className="w-full rounded-lg bg-white px-3 py-2 text-xs font-medium text-black transition hover:bg-neutral-200 disabled:cursor-not-allowed disabled:opacity-40"
-            data-lwm-generate-snapshot
-          >
-            {snapshotLoading ? "Generating snapshot…" : "Generate new snapshot"}
-          </button>
-          {snapshotEligibility?.allowed === false ? (
-            <p className="text-[11px] text-neutral-500" data-lwm-snapshot-gate>
-              {snapshotEligibility.message ||
-                "No new proof of work since the last snapshot for this user."}
-            </p>
-          ) : null}
-          {snapshotError ? (
-            <p className="text-xs text-red-400" data-lwm-snapshot-error>
-              {snapshotError}
-            </p>
-          ) : null}
-        </div>
-
-        <div
-          className="rounded-xl border border-neutral-800 bg-neutral-950/60 p-4 text-xs leading-relaxed text-neutral-400"
-          data-lwm-vs-embeddings
-        >
-          <p className="font-mono text-[10px] font-semibold uppercase tracking-[1.4px] text-neutral-300">
-            How to read this
-          </p>
-          <p className="mt-2 text-neutral-300">
-            <span className="font-medium text-white">LWM (this tab)</span> is a{" "}
-            <span className="text-cyan-200/90">symbolic skill card</span>: score, strengths,
-            friction, evidence appetite, and exploration for one person at the last snapshot.
-            Use it when you want a scannable read of readiness and gaps.
-          </p>
-          <p className="mt-2">
-            <span className="font-medium text-white">Embeddings (Models tab)</span> is{" "}
-            <span className="text-violet-200/90">geometry over time</span>: fixed-dimension
-            knowledge configs projected in 2D, trajectories, and distance to knowledge regions.
-            Use it when you want motion, cohort regions, and proximity — not a prose profile.
-          </p>
-          <p className="mt-3 text-neutral-300" data-lwm-ghc-explain>
-            <span className="font-medium text-white">GHC (Genuine Human Cognition)</span> is a{" "}
-            <span className="text-amber-200/90">secondary authenticity signal</span> on the same
-            snapshot (0–100). It reflects how much the proof of work looks like real human
-            reasoning under pressure — think-aloud pacing, hesitation/repair, System 1 vs System 2
-            traces — not just correct final answers. High LWM Snapshot with low GHC can mean
-            polished outputs without grounded cognition; both scores should be read together.
-          </p>
-          <ul className="mt-3 list-disc space-y-1.5 pl-4 text-neutral-500">
-            <li>Same proof of work feeds both; LWM is the narrative scorecard.</li>
-            <li>Embeddings answer “where is this person in knowledge space?”</li>
-            <li>Generate a new snapshot after new PoW to refresh both.</li>
-          </ul>
-        </div>
-          </div>
-
-          {/* Right: skill card */}
-          <div className="min-w-0" data-lwm-card-column>
-        {lwmError ? (
-          <div className="rounded-lg border border-red-900/50 bg-red-950/30 px-3 py-2 text-xs text-red-300">
-            {lwmError}
-          </div>
-        ) : null}
-
-        {lwmLoading && !wm ? (
-          <p className="text-xs text-neutral-500">Loading learning world model…</p>
-        ) : !wm ? (
-          <p className="text-xs text-neutral-500">No learning world model for this user yet.</p>
-        ) : (
+          {/* Nav: user + date window + generate */}
           <div
-            className="relative w-full overflow-hidden rounded-2xl border border-cyan-900/40 bg-gradient-to-br from-neutral-950 via-neutral-950 to-cyan-950/30 shadow-[0_0_0_1px_rgba(34,211,238,0.06),0_20px_50px_rgba(0,0,0,0.45)]"
-            data-lwm-skill-card
+            className="flex flex-wrap items-end gap-3 rounded-xl border border-neutral-800 bg-neutral-950/50 p-3"
+            data-lwm-filters
           >
-            <div
-              className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-cyan-400/50 to-transparent"
-              aria-hidden
-            />
-            {/* Floating last-snapshot timestamp */}
-            <div
-              className="absolute right-3 top-3 z-10 max-w-[min(100%,14rem)] rounded-lg border border-white/15 bg-black/70 px-2.5 py-1.5 text-right shadow-lg backdrop-blur-sm sm:right-4 sm:top-4"
-              data-lwm-last-updated
-            >
-              <p className="font-mono text-[9px] font-semibold uppercase tracking-[1.4px] text-neutral-400">
-                Last snapshot
-              </p>
-              <p className="mt-0.5 text-xs font-medium tabular-nums text-white sm:text-sm">
-                {lwmUpdatedLabel || "Not yet"}
-              </p>
-            </div>
-
-            {/* Header: Snapshot score + GHC side by side */}
-            <div className="border-b border-white/5 px-4 pb-4 pt-12 sm:px-5 sm:pt-14">
-              <div className="flex min-w-0 flex-wrap items-start gap-3 pr-0 sm:pr-2">
-                <div
-                  className="flex h-16 w-16 shrink-0 flex-col items-center justify-center rounded-2xl border border-cyan-500/30 bg-cyan-500/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]"
-                  data-lwm-skill-score
-                >
-                  <span className="font-mono text-2xl font-semibold tabular-nums leading-none text-cyan-100">
-                    {scores?.verification_score != null
-                      ? Math.round(scores.verification_score)
-                      : "—"}
-                  </span>
-                  <span className="mt-1 font-mono text-[9px] uppercase tracking-[1.2px] text-cyan-300/80">
-                    snap
-                  </span>
-                </div>
-                <div
-                  className="flex h-16 w-16 shrink-0 flex-col items-center justify-center rounded-2xl border border-amber-500/30 bg-amber-500/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]"
-                  data-lwm-ghc-score
-                >
-                  <span className="font-mono text-2xl font-semibold tabular-nums leading-none text-amber-100">
-                    {scores?.ghc_score != null ? Math.round(scores.ghc_score) : "—"}
-                  </span>
-                  <span className="mt-1 font-mono text-[9px] uppercase tracking-[1.2px] text-amber-300/80">
-                    GHC
-                  </span>
-                </div>
-                <div className="min-w-0 flex-1 pt-0.5">
-                  <p className="font-mono text-[10px] font-medium uppercase tracking-[1.6px] text-cyan-300/90">
-                    LWM Snapshot · GHC
-                  </p>
-                  <p className="mt-1 truncate text-sm font-medium text-white">
-                    {lwmScope.label || "Selected user"}
-                  </p>
-                  {wm.inferred_goal?.text ? (
-                    <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-neutral-400">
-                      {wm.inferred_goal.text}
-                    </p>
-                  ) : (
-                    <p className="mt-1 text-xs text-neutral-500">Learning World Model skill profile</p>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Secondary metrics */}
-            <div className="flex flex-wrap gap-2 border-b border-white/5 px-4 py-3 sm:px-5">
-              {kc && !kc.empty ? (
-                <Chip>
-                  conf {(kc.confidence * 100).toFixed(0)}% · {kc.pow_event_count} PoW
-                </Chip>
-              ) : null}
-              {scores?.verification_score == null && scores?.ghc_score == null ? (
-                <span className="text-xs text-neutral-500">No scores yet</span>
-              ) : null}
-            </div>
-
-            <div className="space-y-4 px-4 py-4 sm:px-5">
-              {wm.evidence_appetite &&
-                ((wm.evidence_appetite.want_more?.length ?? 0) > 0 ||
-                  (wm.evidence_appetite.saturated?.length ?? 0) > 0) && (
-                  <div className="space-y-1.5">
-                    <div className="text-[11px] font-medium uppercase tracking-wide text-neutral-500">
-                      Evidence appetite
-                    </div>
-                    <div className="flex flex-wrap gap-1">
-                      {(wm.evidence_appetite.want_more || []).map((item) => (
-                        <Chip key={`want-${item}`} tone="cyan">
-                          + {item}
-                        </Chip>
-                      ))}
-                      {(wm.evidence_appetite.saturated || []).map((item) => (
-                        <Chip key={`sat-${item}`} tone="amber">
-                          sat {item}
-                        </Chip>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-              {wm.learning_profile?.strengths && wm.learning_profile.strengths.length > 0 && (
-                <div className="space-y-1.5">
-                  <div className="text-[11px] font-medium uppercase tracking-wide text-neutral-500">
-                    Strengths
-                  </div>
-                  <div className="flex flex-wrap gap-1">
-                    {wm.learning_profile.strengths.slice(0, 12).map((s) => (
-                      <Chip key={s}>{s}</Chip>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {wm.learning_profile?.friction_patterns &&
-                wm.learning_profile.friction_patterns.length > 0 && (
-                  <div className="space-y-1.5">
-                    <div className="text-[11px] font-medium uppercase tracking-wide text-neutral-500">
-                      Friction patterns
-                    </div>
-                    <div className="flex flex-wrap gap-1">
-                      {wm.learning_profile.friction_patterns.slice(0, 8).map((s) => (
-                        <Chip key={s} tone="amber">
-                          {s}
-                        </Chip>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-              {wm.exploration &&
-                ((wm.exploration.blind_spots?.length ?? 0) > 0 ||
-                  (wm.exploration.pathways_touched?.length ?? 0) > 0) && (
-                  <div className="space-y-1.5">
-                    <div className="text-[11px] font-medium uppercase tracking-wide text-neutral-500">
-                      Exploration
-                    </div>
-                    <div className="flex flex-wrap gap-1">
-                      {(wm.exploration.pathways_touched || []).slice(0, 6).map((p) => (
-                        <Chip key={`path-${p}`}>{p}</Chip>
-                      ))}
-                      {(wm.exploration.blind_spots || []).slice(0, 6).map((b) => (
-                        <Chip key={`blind-${b}`} tone="amber">
-                          blind: {b}
-                        </Chip>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-              {!scores?.verification_score &&
-                !(wm.evidence_appetite?.want_more?.length || wm.evidence_appetite?.saturated?.length) &&
-                !(wm.learning_profile?.strengths?.length) && (
-                  <p className="text-xs text-neutral-500">
-                    LWM is empty for this user. Generate a new snapshot when proof of work exists
-                    to fill evidence appetite and strengths.
-                  </p>
-                )}
-            </div>
-          </div>
-        )}
-
-        {latestSnapshotReport ? (
-          <div className="mt-4 min-w-0" data-lwm-latest-snapshot-report>
-            <p className="mb-2 font-mono text-[10px] uppercase tracking-[1.4px] text-neutral-500">
-              Latest snapshot detail
-            </p>
-            <div className="rounded-xl border border-neutral-800 bg-neutral-950/60 p-3 sm:p-4">
-              <PerformanceReportCard
-                report={latestSnapshotReport}
-                layout="spacious"
-                label="LWM Snapshot report"
+            <div className="min-w-[11rem] flex-1" data-lwm-controls-column>
+              <UserPicker
+                data-picker="lwm"
+                ariaLabel="Learning world model user"
+                valueUserId={lwmUserId}
+                valueGuestUserId={lwmGuestUserId}
+                currentUserId={currentUserId}
+                availableSubjects={availableSubjects}
+                canInspectOthers={canInspectOthers}
+                onChange={({ userId, guestUserId }) => {
+                  setLwmUserId(userId);
+                  setLwmGuestUserId(guestUserId);
+                  setSelectedLwmRunId(null);
+                }}
               />
             </div>
+            <label className="flex flex-col gap-1 text-[10px] uppercase tracking-wide text-neutral-500">
+              From
+              <input
+                type="date"
+                value={lwmFromDate}
+                onChange={(e) => setLwmFromDate(e.target.value)}
+                data-lwm-date-from
+                className="rounded-md border border-neutral-700 bg-neutral-900 px-2.5 py-1.5 text-xs text-neutral-200 outline-none focus:border-neutral-500"
+              />
+            </label>
+            <label className="flex flex-col gap-1 text-[10px] uppercase tracking-wide text-neutral-500">
+              To
+              <input
+                type="date"
+                value={lwmToDate}
+                onChange={(e) => setLwmToDate(e.target.value)}
+                data-lwm-date-to
+                className="rounded-md border border-neutral-700 bg-neutral-900 px-2.5 py-1.5 text-xs text-neutral-200 outline-none focus:border-neutral-500"
+              />
+            </label>
+            {(lwmFromDate || lwmToDate) && (
+              <button
+                type="button"
+                data-lwm-date-clear
+                onClick={() => {
+                  setLwmFromDate("");
+                  setLwmToDate("");
+                }}
+                className="rounded-md border border-neutral-700 px-2.5 py-1.5 text-[11px] text-neutral-400 hover:border-neutral-500 hover:text-neutral-200"
+              >
+                Clear dates
+              </button>
+            )}
+            <div className="ml-auto flex flex-col items-stretch gap-1" data-lwm-snapshot-controls>
+              <button
+                type="button"
+                onClick={() => void generateSnapshot()}
+                disabled={
+                  snapshotLoading ||
+                  (!currentUserId && !lwmUserId && !lwmGuestUserId) ||
+                  snapshotEligibility?.allowed === false
+                }
+                title={
+                  snapshotEligibility?.allowed === false
+                    ? snapshotEligibility.message ||
+                      "No new proof of work since the last LWM Snapshot for this user."
+                    : "Generate a new Learning World Model Snapshot for the selected user"
+                }
+                className="rounded-lg bg-white px-3 py-2 text-xs font-medium text-black transition hover:bg-neutral-200 disabled:cursor-not-allowed disabled:opacity-40"
+                data-lwm-generate-snapshot
+              >
+                {snapshotLoading ? "Generating…" : "Generate snapshot"}
+              </button>
+              {snapshotEligibility?.allowed === false ? (
+                <p className="max-w-[14rem] text-[10px] text-neutral-500" data-lwm-snapshot-gate>
+                  {snapshotEligibility.message || "No new PoW since last snapshot."}
+                </p>
+              ) : null}
+              {snapshotError ? (
+                <p className="max-w-[14rem] text-[10px] text-red-400" data-lwm-snapshot-error>
+                  {snapshotError}
+                </p>
+              ) : null}
+            </div>
           </div>
-        ) : null}
+
+          {lwmError ? (
+            <div className="rounded-lg border border-red-900/50 bg-red-950/30 px-3 py-2 text-xs text-red-300">
+              {lwmError}
+            </div>
+          ) : null}
+
+          {/* Horizontal snapshot timeline */}
+          <div
+            className="rounded-xl border border-neutral-800 bg-neutral-950/60 px-4 py-4"
+            data-lwm-timeline
+            role="listbox"
+            aria-label="Snapshot timeline"
+          >
+            <div className="mb-3 flex items-center justify-between gap-2">
+              <span className="font-mono text-[10px] font-semibold uppercase tracking-[1.4px] text-neutral-400">
+                Timeline
+              </span>
+              <span className="text-[10px] text-neutral-500" data-lwm-timeline-count>
+                {lwmHistoryLoading
+                  ? "Loading…"
+                  : `${windowedLwmRuns.length} snapshot${windowedLwmRuns.length === 1 ? "" : "s"}`}
+              </span>
+            </div>
+            {windowedLwmRuns.length === 0 ? (
+              <p className="py-6 text-center text-xs text-neutral-500" data-lwm-timeline-empty>
+                {lwmHistoryLoading
+                  ? "Loading snapshots…"
+                  : "No snapshots in this window. Generate one or widen the date range."}
+              </p>
+            ) : (
+              <div className="relative mx-2 h-16" data-lwm-timeline-track>
+                <div
+                  className="absolute left-0 right-0 top-1/2 h-px -translate-y-1/2 bg-neutral-700"
+                  aria-hidden
+                />
+                {lwmTimelineMarkers.map((m) => {
+                  const selected = selectedLwmRun?.id === m.id;
+                  return (
+                    <button
+                      key={m.id}
+                      type="button"
+                      role="option"
+                      aria-selected={selected}
+                      data-lwm-timeline-point={m.id}
+                      title={`${m.ran_at} · snap ${m.snapshotScore ?? "—"} · GHC ${m.ghcScore ?? "—"}`}
+                      onClick={() => setSelectedLwmRunId(m.id)}
+                      className="absolute top-1/2 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-1"
+                      style={{ left: `${m.t * 100}%` }}
+                    >
+                      <span
+                        className={`block h-3.5 w-3.5 rounded-full border-2 transition ${
+                          selected
+                            ? "scale-125 border-cyan-200 bg-cyan-400 shadow-[0_0_12px_rgba(34,211,238,0.55)]"
+                            : "border-neutral-500 bg-neutral-800 hover:border-cyan-400/80 hover:bg-cyan-900/50"
+                        }`}
+                      />
+                      <span
+                        className={`max-w-[4.5rem] truncate font-mono text-[9px] tabular-nums ${
+                          selected ? "text-cyan-200" : "text-neutral-500"
+                        }`}
+                      >
+                        {new Date(m.atMs).toLocaleDateString(undefined, {
+                          month: "short",
+                          day: "numeric",
+                        })}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
-        </div>
-      </SectionCard>
+
+          {/* Dual score trend */}
+          <div
+            className="rounded-xl border border-neutral-800 bg-neutral-950/60 p-4"
+            data-lwm-score-trend
+          >
+            <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+              <span className="font-mono text-[10px] font-semibold uppercase tracking-[1.4px] text-neutral-400">
+                Score trends
+              </span>
+              <div className="flex items-center gap-3 text-[10px] text-neutral-500">
+                <span className="inline-flex items-center gap-1.5">
+                  <span className="h-1.5 w-4 rounded-full bg-cyan-400" /> Snapshot
+                </span>
+                <span className="inline-flex items-center gap-1.5">
+                  <span className="h-1.5 w-4 rounded-full bg-amber-400" /> GHC
+                </span>
+              </div>
+            </div>
+            {lwmScoreSeries.length < 1 ? (
+              <p className="py-8 text-center text-xs text-neutral-500">No score history yet.</p>
+            ) : (
+              <svg
+                viewBox="0 0 480 140"
+                className="h-36 w-full"
+                role="img"
+                aria-label="Snapshot and GHC scores over time"
+                data-lwm-score-trend-chart
+              >
+                {[0, 25, 50, 75, 100].map((y) => {
+                  const py = 8 + (1 - y / 100) * 124;
+                  return (
+                    <g key={y}>
+                      <line
+                        x1={8}
+                        x2={472}
+                        y1={py}
+                        y2={py}
+                        stroke="#262626"
+                        strokeWidth={1}
+                      />
+                      <text x={4} y={py + 3} fill="#525252" fontSize={9} textAnchor="start">
+                        {y}
+                      </text>
+                    </g>
+                  );
+                })}
+                {(() => {
+                  const snap = scoreSeriesPolyline(lwmScoreSeries, "snapshotScore", 480, 140, 8);
+                  const ghc = scoreSeriesPolyline(lwmScoreSeries, "ghcScore", 480, 140, 8);
+                  return (
+                    <>
+                      {ghc ? (
+                        <polyline
+                          fill="none"
+                          stroke="#fbbf24"
+                          strokeWidth={2}
+                          strokeLinejoin="round"
+                          strokeLinecap="round"
+                          points={ghc}
+                          data-lwm-trend-ghc
+                        />
+                      ) : null}
+                      {snap ? (
+                        <polyline
+                          fill="none"
+                          stroke="#22d3ee"
+                          strokeWidth={2.25}
+                          strokeLinejoin="round"
+                          strokeLinecap="round"
+                          points={snap}
+                          data-lwm-trend-snapshot
+                        />
+                      ) : null}
+                      {lwmScoreSeries.map((p) => {
+                        if (p.snapshotScore == null) return null;
+                        const minT = lwmScoreSeries[0].atMs;
+                        const maxT = lwmScoreSeries[lwmScoreSeries.length - 1].atMs;
+                        const span = Math.max(1, maxT - minT);
+                        const x = 8 + ((p.atMs - minT) / span) * 464;
+                        const y = 8 + (1 - p.snapshotScore / 100) * 124;
+                        const selected = selectedLwmRun?.id === p.id;
+                        return (
+                          <circle
+                            key={p.id}
+                            cx={x}
+                            cy={y}
+                            r={selected ? 4.5 : 3}
+                            fill={selected ? "#a5f3fc" : "#22d3ee"}
+                            className="cursor-pointer"
+                            onClick={() => setSelectedLwmRunId(p.id)}
+                            data-lwm-trend-point={p.id}
+                          />
+                        );
+                      })}
+                    </>
+                  );
+                })()}
+              </svg>
+            )}
+          </div>
+
+          {/* Unified selected snapshot card */}
+          <div className="min-w-0" data-lwm-card-column>
+            {lwmLoading && !wm && windowedLwmRuns.length === 0 ? (
+              <p className="text-xs text-neutral-500">Loading learning world model…</p>
+            ) : !selectedLwmRun && !wm ? (
+              <p className="text-xs text-neutral-500" data-lwm-empty>
+                No snapshots yet for this user.
+              </p>
+            ) : (
+              <div
+                className="relative w-full overflow-hidden rounded-2xl border border-cyan-900/40 bg-gradient-to-br from-neutral-950 via-neutral-950 to-cyan-950/30 shadow-[0_0_0_1px_rgba(34,211,238,0.06),0_20px_50px_rgba(0,0,0,0.45)]"
+                data-lwm-skill-card
+                data-lwm-selected-run={selectedLwmRun?.id || undefined}
+              >
+                <div
+                  className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-cyan-400/50 to-transparent"
+                  aria-hidden
+                />
+                <div
+                  className="absolute right-3 top-3 z-10 max-w-[min(100%,14rem)] rounded-lg border border-white/15 bg-black/70 px-2.5 py-1.5 text-right shadow-lg backdrop-blur-sm sm:right-4 sm:top-4"
+                  data-lwm-last-updated
+                >
+                  <p className="font-mono text-[9px] font-semibold uppercase tracking-[1.4px] text-neutral-400">
+                    Snapshot
+                  </p>
+                  <p className="mt-0.5 text-xs font-medium tabular-nums text-white sm:text-sm">
+                    {lwmUpdatedLabel || "Not yet"}
+                  </p>
+                </div>
+
+                <div className="border-b border-white/5 px-4 pb-4 pt-12 sm:px-5 sm:pt-14">
+                  <div className="flex min-w-0 flex-wrap items-start gap-3 pr-0 sm:pr-2">
+                    <div
+                      className="flex h-20 w-20 shrink-0 flex-col items-center justify-center rounded-2xl border border-cyan-500/30 bg-cyan-500/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]"
+                      data-lwm-skill-score
+                    >
+                      <span className="font-mono text-3xl font-semibold tabular-nums leading-none text-cyan-100">
+                        {displaySnapScore != null ? displaySnapScore : "—"}
+                      </span>
+                      <span className="mt-1 font-mono text-[9px] uppercase tracking-[1.2px] text-cyan-300/80">
+                        snap
+                      </span>
+                    </div>
+                    <div
+                      className="flex h-20 w-20 shrink-0 flex-col items-center justify-center rounded-2xl border border-amber-500/30 bg-amber-500/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]"
+                      data-lwm-ghc-score
+                    >
+                      <span className="font-mono text-3xl font-semibold tabular-nums leading-none text-amber-100">
+                        {displayGhcScore != null ? displayGhcScore : "—"}
+                      </span>
+                      <span className="mt-1 font-mono text-[9px] uppercase tracking-[1.2px] text-amber-300/80">
+                        GHC
+                      </span>
+                    </div>
+                    <div className="min-w-0 flex-1 pt-0.5">
+                      <p className="font-mono text-[10px] font-medium uppercase tracking-[1.6px] text-cyan-300/90">
+                        LWM Snapshot · GHC
+                      </p>
+                      <p className="mt-1 truncate text-sm font-medium text-white">
+                        {lwmScope.label || "Selected user"}
+                      </p>
+                      {selectedRunReport?.summary || wm?.inferred_goal?.text ? (
+                        <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-neutral-400">
+                          {typeof selectedRunReport?.summary === "string"
+                            ? selectedRunReport.summary
+                            : wm?.inferred_goal?.text}
+                        </p>
+                      ) : null}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap gap-2 border-b border-white/5 px-4 py-3 sm:px-5">
+                  {kc && !kc.empty ? (
+                    <Chip>
+                      conf {(kc.confidence * 100).toFixed(0)}% · {kc.pow_event_count} PoW
+                    </Chip>
+                  ) : null}
+                  {selectedLwmRun?.source ? <Chip>{selectedLwmRun.source}</Chip> : null}
+                  {windowedLwmRuns.length > 0 ? (
+                    <Chip tone="cyan">{windowedLwmRuns.length} in window</Chip>
+                  ) : null}
+                </div>
+
+                {wm ? (
+                  <div className="space-y-3 border-b border-white/5 px-4 py-3 sm:px-5">
+                    {wm.learning_profile?.strengths && wm.learning_profile.strengths.length > 0 ? (
+                      <div className="flex flex-wrap gap-1">
+                        {wm.learning_profile.strengths.slice(0, 8).map((s) => (
+                          <Chip key={s}>{s}</Chip>
+                        ))}
+                      </div>
+                    ) : null}
+                    {wm.evidence_appetite &&
+                    ((wm.evidence_appetite.want_more?.length ?? 0) > 0 ||
+                      (wm.evidence_appetite.saturated?.length ?? 0) > 0) ? (
+                      <div className="flex flex-wrap gap-1">
+                        {(wm.evidence_appetite.want_more || []).slice(0, 6).map((item) => (
+                          <Chip key={`want-${item}`} tone="cyan">
+                            + {item}
+                          </Chip>
+                        ))}
+                        {(wm.evidence_appetite.saturated || []).slice(0, 4).map((item) => (
+                          <Chip key={`sat-${item}`} tone="amber">
+                            sat {item}
+                          </Chip>
+                        ))}
+                      </div>
+                    ) : null}
+                  </div>
+                ) : null}
+
+                <div className="px-4 py-3 sm:px-5" data-lwm-selected-snapshot-report>
+                  <button
+                    type="button"
+                    data-lwm-report-toggle
+                    onClick={() => setLwmReportOpen((v) => !v)}
+                    className="mb-2 flex w-full items-center justify-between text-left font-mono text-[10px] uppercase tracking-[1.4px] text-neutral-400 hover:text-neutral-200"
+                  >
+                    <span>Report detail</span>
+                    <span className="text-neutral-500">{lwmReportOpen ? "Hide" : "Show"}</span>
+                  </button>
+                  {lwmReportOpen ? (
+                    selectedRunReport ? (
+                      <div className="rounded-xl border border-neutral-800 bg-neutral-950/60 p-3 sm:p-4">
+                        <PerformanceReportCard
+                          report={selectedRunReport}
+                          layout="spacious"
+                          label="Snapshot report"
+                        />
+                      </div>
+                    ) : (
+                      <p className="text-xs text-neutral-500">
+                        No report payload on this snapshot.
+                      </p>
+                    )
+                  ) : null}
+                </div>
+              </div>
+            )}
+          </div>
+        </section>
       ) : null}
 
     </div>

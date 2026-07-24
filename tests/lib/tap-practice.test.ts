@@ -23,11 +23,11 @@ import {
 const ROOT = process.cwd();
 
 describe("tap-practice pure helpers", () => {
-  it("forces practice duration to 1 minute / 60 seconds", () => {
-    expect(TAP_PRACTICE_DURATION_MINUTES).toBe(1);
-    expect(TAP_PRACTICE_DURATION_SECONDS).toBe(60);
-    expect(resolveTapLiveMinutes({ practice: true, minutes: 30 })).toBe(1);
-    expect(resolveTapLiveDurationSeconds({ practice: true, minutes: 30 })).toBe(60);
+  it("forces practice duration to 5 minutes / 300 seconds", () => {
+    expect(TAP_PRACTICE_DURATION_MINUTES).toBe(5);
+    expect(TAP_PRACTICE_DURATION_SECONDS).toBe(300);
+    expect(resolveTapLiveMinutes({ practice: true, minutes: 30 })).toBe(5);
+    expect(resolveTapLiveDurationSeconds({ practice: true, minutes: 30 })).toBe(300);
     expect(resolveTapLiveMinutes({ practice: false, minutes: 30 })).toBe(30);
   });
 
@@ -70,6 +70,34 @@ describe("tap-practice pure helpers", () => {
     expect(practice.pow_label).toBe(TAP_PRACTICE_POW_LABEL);
     expect(practice.practice).toBe(true);
   });
+
+  it("practice + impure still keeps Practice PoW flags (early stop or invalidated)", () => {
+    const both = buildTapTranscriptPayload({
+      tapSessionId: "t1",
+      workspaceId: "w1",
+      transcript: [{ role: "assistant", text: "hi" }],
+      durationSeconds: 12,
+      practice: true,
+      sessionQuality: "impure",
+    });
+    expect(both.practice).toBe(true);
+    expect(both.pow_label).toBe(TAP_PRACTICE_POW_LABEL);
+    expect(both.impure).toBe(true);
+    expect(both.session_quality).toBe("impure");
+    expect(isPracticePoWMetadata(both as Record<string, unknown>)).toBe(true);
+
+    // Complete path stamps practice after impure so practice flags survive.
+    const complete = fs.readFileSync(
+      path.join(ROOT, "app/api/workspace-tap-score/complete/route.ts"),
+      "utf8",
+    );
+    expect(complete).toContain("flagTapSessionProofOfWorkPractice");
+    expect(complete).toContain("flagTapSessionProofOfWorkImpure");
+    expect(complete).toContain("complete_practice_impure");
+    const impureIdx = complete.indexOf("flagTapSessionProofOfWorkImpure");
+    const practiceIdx = complete.indexOf("flagTapSessionProofOfWorkPractice");
+    expect(practiceIdx).toBeGreaterThan(impureIdx);
+  });
 });
 
 describe("TAP client practice surface (not ILE)", () => {
@@ -99,8 +127,13 @@ describe("TAP client practice surface (not ILE)", () => {
       tap: { practice: Record<string, string> };
     };
     expect(en.tap.practice.practiceFirst.toLowerCase()).toContain("practice first");
-    expect(en.tap.practice.practiceFirstHint.toLowerCase()).toContain("1 minute");
+    expect(en.tap.practice.practiceFirstHint.toLowerCase()).toContain("5 minute");
+    expect(en.tap.practice.bannerTitle.toLowerCase()).toContain("5-minute");
     expect(en.tap.practice.doneTitle.toLowerCase()).toContain("practice session is done");
+    // Early stop / impure still practice
+    expect(client).toContain("practice: isPracticeModeRef.current");
+    expect(client).toContain("sessionQuality: impure ? \"impure\" : \"pure\"");
+    expect(client).toContain('setPhase("practice_done")');
   });
 
   it("keeps Practice start label width stable while loading (no card reflow)", () => {

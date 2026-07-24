@@ -2647,16 +2647,16 @@
     },
     "practice": {
       "practiceFirst": "Practice First",
-      "practiceFirstHint": "1 minute warm-up. Practice PoW.",
-      "cardStart": "1 min",
+      "practiceFirstHint": "5 minute warm-up. Always Practice PoW.",
+      "cardStart": "5 min",
       "starting": "Starting practice…",
       "bannerKicker": "Practice mode",
-      "bannerTitle": "1-minute practice run",
-      "bannerHint": "Same interface as a real session. PoW is recorded and flagged as Practice PoW.",
+      "bannerTitle": "5-minute practice warm-up",
+      "bannerHint": "Stop anytime or get invalidated — all PoW is still Practice PoW.",
       "saving": "Saving practice proof of work…",
       "doneKicker": "Practice complete",
       "doneTitle": "Practice session is done",
-      "doneBody": "Your practice PoW was stored and flagged as Practice PoW. You can practice again anytime, or pick a topic for a scored session.",
+      "doneBody": "Your practice PoW was stored and flagged as Practice PoW — even if you stopped early or purity hit zero. You can practice again anytime, or pick a topic for a scored session.",
       "restart": "Restart flow"
     },
     "postSession": {

@@ -61,6 +61,7 @@ import {
   isSessionPurityDepleted,
   nextSessionPurityAfterAutoStash,
   shouldAutoStashOnSilence,
+  shouldEvaluateSessionPurity,
   shouldFadeLiveBar,
   shouldPenalizeEmptyBarSilence,
   transcriptFadeOpacity,
@@ -315,11 +316,13 @@ export function TapScoreClient({
   const [transcriptSilenceMs, setTranscriptSilenceMs] = useState(0);
   const [sessionEndedImpure, setSessionEndedImpure] = useState(false);
   const [isPracticeMode, setIsPracticeMode] = useState(false);
-  /** Duration for the active live run (practice is always 1 minute). */
+  /** Duration for the active live run (practice is always the warm-up length). */
   const [liveMinutes, setLiveMinutes] = useState(resolveInitialMinutes(initialSession?.requested_duration_seconds));
   const isPracticeModeRef = useRef(false);
 
   const isEndingRef = useRef(false);
+  /** True while Helios chat is in flight — purity silence checks must not run. */
+  const isSendingRef = useRef(false);
   const endAndScoreRef = useRef<(options?: { impure?: boolean }) => void>(() => {});
   const autoStashInFlightRef = useRef(false);
   /** Last non-empty speech OR intentional clear (stash/send) — drives silence clock. */
@@ -765,8 +768,19 @@ export function TapScoreClient({
     [crystallizableText, restartSpeechRecognitionSession, applyPurityHit],
   );
 
-  // TAP-only: silence clock always runs live — with text → fade + auto-stash;
+  // Keep purity interval off the stale isSending closure; reset silence when Helios starts.
+  useEffect(() => {
+    isSendingRef.current = isSending;
+    if (isSending) {
+      lastSpeechActivityAtRef.current = Date.now();
+      setTranscriptSilenceMs(0);
+      autoStashInFlightRef.current = false;
+    }
+  }, [isSending]);
+
+  // TAP-only: silence clock while live — with text → fade + auto-stash;
   // empty bar after stash/submit → fade Listening… + purity hit if still silent.
+  // Disabled entirely while waiting for Helios so wait latency is not a purity hit.
   useEffect(() => {
     if (phase !== "live") {
       setTranscriptSilenceMs(0);
@@ -776,6 +790,12 @@ export function TapScoreClient({
 
     const tick = window.setInterval(() => {
       if (isEndingRef.current) return;
+      // Helios in flight: freeze silence clock; do not auto-stash or empty-bar penalize.
+      if (!shouldEvaluateSessionPurity({ waitingForHelios: isSendingRef.current })) {
+        lastSpeechActivityAtRef.current = Date.now();
+        setTranscriptSilenceMs(0);
+        return;
+      }
       const silenceMs = Date.now() - lastSpeechActivityAtRef.current;
       setTranscriptSilenceMs(silenceMs);
       const hasTranscript = Boolean(normalize(crystallizableTextRef.current));

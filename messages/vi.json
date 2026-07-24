@@ -2408,7 +2408,8 @@
     },
     "postSession": {
       "verificationResultsTitle": "LWM Snapshot"
-    }
+    },
+    "briefing": {}
   },
   "performanceReportCard": {
     "defaultLabel": "Báo cáo hiệu suất",
@@ -2492,18 +2493,18 @@
       "back": "Back",
       "next": "Next",
       "step1": {
-        "title": "Timed demonstration",
+        "title": "What you'll do",
         "imageAlt": "Think Aloud Protocol overview",
-        "body": "TAP is a timed demonstration: explain what you learned while Helios listens, then answer Socratic follow-ups to surface gaps and strengths.\n\nSession length and keyboard shortcuts are on the right. When time runs out, you'll return to the workspace — open the Performance tab when you're ready for unified scoring."
+        "body": "Think out loud on a timer. Helios listens and asks short follow-up questions.\n\nWhen time ends, your proof of work is saved."
       },
       "step2": {
-        "title": "Stash or send",
+        "title": "How the interface works",
         "imageAlt": "Selective thought interface",
-        "body": "Browser transcription turns speech into a live bar that keeps accumulating until you send or stash it.\n\nPress Enter to send the live transcription to Helios. Press Del to stash into the stashed-thoughts pool below. Press 1, 2, or 3 to send from that pool. Press E to edit before sending. The full shortcut list is on the right during briefing.\n\nHelios responds under the avatar with one question at a time. Thought Memory keeps every trace so you can resend or bookmark insights."
+        "body": "Speak — your words appear in the live bar at the bottom.\n\n• Enter — send to Helios\n• Del — stash for later\n• 1 / 2 / 3 — send a stashed thought\n• E — edit before sending\n\nStay speaking. After 5 seconds of silence, the bar fades and auto-stashes. That lowers session purity. At zero purity, the session is invalidated."
       },
       "step3": {
         "title": "Pick your starting focus",
-        "body": "Helios generated three entry points from your workspace. Choose the angle you want to demonstrate first — the timer starts and your session opens with that topic's question.",
+        "body": "Choose a starting angle. The timer begins and Helios opens with that topic’s question.",
         "quoteText": "The expert in anything was once a beginner who refused to give up.",
         "quoteAuthor": "",
         "start": "Play",

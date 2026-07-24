@@ -163,6 +163,7 @@ function TapBriefingConfig({
     { keys: ["Del"], label: t("tap.briefing.shortcutStash") },
     { keys: ["E"], label: t("tap.briefing.shortcutEdit") },
     { keys: ["1", "2", "3"], label: t("tap.briefing.shortcutSendStashed") },
+    { keys: ["5s"], label: t("tap.briefing.shortcutSilence") },
   ];
 
   return (

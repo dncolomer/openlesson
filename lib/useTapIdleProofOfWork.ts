@@ -5,6 +5,7 @@ import type { ProofOfWorkApiInterruption } from "@/lib/pow-api/predictive-interr
 import { TAP_IDLE_POW_INTERVAL_MS } from "@/lib/tap-idle-proof-of-work";
 import type { SessionPowContext } from "@/lib/session-pow-api-paths";
 import { ILE_POW_API_PATHS, TAP_POW_API_PATHS } from "@/lib/session-pow-api-paths";
+import { shouldSendIdleProofOfWork } from "@/lib/tap-interruption-gate";
 
 const IDLE_CHECK_MS = 5_000;
 
@@ -77,7 +78,17 @@ export function useTapIdleProofOfWork(
       const activeContext = contextRef.current;
       const sessionKey = activeContext.tapSessionId || activeContext.sessionId;
       if (!sessionKey || idleInFlightRef.current) return;
-      if (isTranscriptionActiveRef.current) return;
+
+      // Skip idle heartbeats while thought is forming (pending bar and/or speaking).
+      const hasPendingTranscription = Boolean(speechTextRef.current.trim());
+      if (
+        !shouldSendIdleProofOfWork({
+          hasPendingTranscription,
+          isTranscriptionActive: isTranscriptionActiveRef.current,
+        })
+      ) {
+        return;
+      }
 
       const now = Date.now();
       const idleDurationMs = now - lastActivityAtRef.current;
@@ -101,7 +112,7 @@ export function useTapIdleProofOfWork(
             entryQueryParams: activeContext.entryQueryParams,
             practice: activeContext.practice === true,
             idleDurationMs,
-            hasPendingTranscription: Boolean(speechTextRef.current.trim()),
+            hasPendingTranscription,
             timestampMs: now,
           }),
         });

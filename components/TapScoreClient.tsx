@@ -302,7 +302,21 @@ export function TapScoreClient({
     setBgImage(BACKGROUND_IMAGES[Math.floor(Math.random() * BACKGROUND_IMAGES.length)]);
   }, []);
 
-  const { applyInterruption, clearPendingInterruption } = useTapPredictiveInterruption(
+  const isTranscriptionActiveRef = useRef(false);
+
+  const getFormingThought = useCallback(
+    () => ({
+      hasPendingTranscription: Boolean(normalize(crystallizableTextRef.current)),
+      isTranscriptionActive: isTranscriptionActiveRef.current,
+    }),
+    [],
+  );
+
+  const {
+    applyInterruption,
+    clearPendingInterruption,
+    clearPendingSilenceInterruption,
+  } = useTapPredictiveInterruption(
     useCallback(({ message }) => {
       const assistant: ChatMessage = {
         id: `int_${Date.now()}`,
@@ -313,14 +327,32 @@ export function TapScoreClient({
       setMessages((current) => [...current, assistant]);
       setHeliosTurnMode("interruption");
     }, []),
+    getFormingThought,
   );
 
   const handlePowInterruption = useCallback(
-    (interruption: ProofOfWorkApiInterruption | undefined) => {
+    (
+      interruption: ProofOfWorkApiInterruption | undefined,
+      origin: "idle" | "speech" | "other" = "other",
+    ) => {
       if (interruption === undefined) return;
-      applyInterruption(interruption);
+      applyInterruption(interruption, { origin });
     },
     [applyInterruption],
+  );
+
+  const handleIdleInterruption = useCallback(
+    (interruption: ProofOfWorkApiInterruption) => {
+      handlePowInterruption(interruption, "idle");
+    },
+    [handlePowInterruption],
+  );
+
+  const handleSpeechInterruption = useCallback(
+    (interruption: ProofOfWorkApiInterruption) => {
+      handlePowInterruption(interruption, "speech");
+    },
+    [handlePowInterruption],
   );
 
   const idlePowContext = useMemo(
@@ -341,12 +373,26 @@ export function TapScoreClient({
     notifySpeechResult,
     flushSpeechSegment,
     resetSpeechTracking,
-  } = useTapSpeechProofOfWork(phase === "live", idlePowContext, handlePowInterruption);
+  } = useTapSpeechProofOfWork(phase === "live", idlePowContext, handleSpeechInterruption);
+
+  useEffect(() => {
+    isTranscriptionActiveRef.current = isTranscriptionActive;
+    // Cancel silence-scheduled interventions once the learner starts speaking again.
+    if (isTranscriptionActive) {
+      clearPendingSilenceInterruption();
+    }
+  }, [isTranscriptionActive, clearPendingSilenceInterruption]);
+
+  useEffect(() => {
+    if (normalize(crystallizableText)) {
+      clearPendingSilenceInterruption();
+    }
+  }, [crystallizableText, clearPendingSilenceInterruption]);
 
   const { bumpUserActivity, resetIdleTracking } = useTapIdleProofOfWork(
     phase === "live",
     idlePowContext,
-    handlePowInterruption,
+    handleIdleInterruption,
     { speechText: crystallizableText, isTranscriptionActive },
   );
 

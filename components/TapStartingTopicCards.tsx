@@ -9,16 +9,20 @@ interface TapStartingTopicCardsProps {
   isStarting?: boolean;
   startingTopicId?: string | null;
   onStartTopic: (topic: TapStartingTopic) => void;
+  /** When set, first card is Practice First (no aesthetic image) in a 2×2 grid. */
+  onPracticeFirst?: () => void;
+  practiceTitle?: string;
+  practiceSubtitle?: string;
+  practiceStartLabel?: string;
+  practiceStartingLabel?: string;
   loadingLabel?: string;
   startLabel?: string;
   startingLabel?: string;
 }
 
-function TopicCardSkeleton({ wide = false }: { wide?: boolean }) {
+function TopicCardSkeleton() {
   return (
-    <div
-      className={`overflow-hidden rounded-xl border border-neutral-800 bg-neutral-950 ${wide ? "col-span-2" : ""}`}
-    >
+    <div className="overflow-hidden rounded-xl border border-neutral-800 bg-neutral-950">
       <div className="h-28 animate-pulse bg-neutral-900 sm:h-32" />
       <div className="space-y-2 p-3">
         <div className="h-4 w-2/3 animate-pulse rounded bg-neutral-800" />
@@ -26,6 +30,61 @@ function TopicCardSkeleton({ wide = false }: { wide?: boolean }) {
         <div className="h-8 w-24 animate-pulse rounded-full bg-neutral-800" />
       </div>
     </div>
+  );
+}
+
+function PracticeFirstCard({
+  isStarting,
+  isThisStarting,
+  onPracticeFirst,
+  title,
+  subtitle,
+  startLabel,
+  startingLabel,
+}: {
+  isStarting: boolean;
+  isThisStarting: boolean;
+  onPracticeFirst: () => void;
+  title: string;
+  subtitle: string;
+  startLabel: string;
+  startingLabel: string;
+}) {
+  return (
+    <article
+      data-tap-practice-first
+      className="group flex flex-col overflow-hidden rounded-xl border border-cyan-400/35 bg-cyan-950/30 transition hover:border-cyan-300/55"
+    >
+      <div className="relative flex h-28 flex-col justify-end bg-gradient-to-br from-cyan-950/80 via-neutral-950 to-black p-3 sm:h-32">
+        <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-cyan-300/80">Warm-up</p>
+        <p className="mt-1 font-serif text-base leading-tight text-cyan-50">{title}</p>
+      </div>
+      <div className="flex flex-1 items-center justify-between gap-3 p-3">
+        <p className="min-w-0 flex-1 text-xs leading-relaxed text-cyan-100/70">{subtitle}</p>
+        <button
+          type="button"
+          disabled={isStarting}
+          onClick={onPracticeFirst}
+          className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-full border border-cyan-300/40 bg-cyan-400/15 px-4 py-2 text-xs font-semibold text-cyan-50 transition hover:bg-cyan-400/25 disabled:cursor-wait disabled:opacity-70"
+        >
+          {isThisStarting ? (
+            <svg className="size-3.5 animate-spin" fill="none" viewBox="0 0 24 24" aria-hidden>
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+              <path
+                className="opacity-75"
+                fill="currentColor"
+                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+              />
+            </svg>
+          ) : (
+            <svg className="size-3.5" fill="currentColor" viewBox="0 0 24 24" aria-hidden>
+              <path d="M8 5v14l11-7z" />
+            </svg>
+          )}
+          <span>{isThisStarting ? startingLabel : startLabel}</span>
+        </button>
+      </div>
+    </article>
   );
 }
 
@@ -37,7 +96,6 @@ function TopicCard({
   onStartTopic,
   startLabel,
   startingLabel,
-  wide = false,
 }: {
   topic: TapStartingTopic;
   imageSrc: string;
@@ -46,15 +104,10 @@ function TopicCard({
   onStartTopic: (topic: TapStartingTopic) => void;
   startLabel: string;
   startingLabel: string;
-  wide?: boolean;
 }) {
   return (
-    <article
-      className={`group overflow-hidden rounded-xl border border-neutral-800/90 bg-neutral-950 transition hover:border-neutral-600 ${
-        wide ? "col-span-2" : ""
-      }`}
-    >
-      <div className={`relative overflow-hidden ${wide ? "h-32 sm:h-36" : "h-28 sm:h-32"}`}>
+    <article className="group overflow-hidden rounded-xl border border-neutral-800/90 bg-neutral-950 transition hover:border-neutral-600">
+      <div className="relative h-28 overflow-hidden sm:h-32">
         <div
           className="absolute inset-0 scale-105 bg-cover bg-center transition duration-500 group-hover:scale-110"
           style={{ backgroundImage: `url(${imageSrc})` }}
@@ -100,19 +153,38 @@ export function TapStartingTopicCards({
   isStarting = false,
   startingTopicId = null,
   onStartTopic,
+  onPracticeFirst,
+  practiceTitle = "Practice First",
+  practiceSubtitle = "1-minute warm-up with full mechanics. PoW is flagged as Practice PoW.",
+  practiceStartLabel = "Practice",
+  practiceStartingLabel = "Starting…",
   loadingLabel = "Loading topics…",
   startLabel = "Start",
   startingLabel = "Starting…",
 }: TapStartingTopicCardsProps) {
   const topicImages = aestheticImagesForSlots(3);
+  const showPractice = typeof onPracticeFirst === "function";
 
   if (topics.length === 0) {
     return (
       <div className="mt-4">
         <div className="grid grid-cols-2 gap-3">
+          {showPractice ? (
+            <PracticeFirstCard
+              isStarting={isStarting}
+              isThisStarting={isStarting && startingTopicId === "practice"}
+              onPracticeFirst={onPracticeFirst}
+              title={practiceTitle}
+              subtitle={practiceSubtitle}
+              startLabel={practiceStartLabel}
+              startingLabel={practiceStartingLabel}
+            />
+          ) : (
+            <TopicCardSkeleton />
+          )}
           <TopicCardSkeleton />
           <TopicCardSkeleton />
-          <TopicCardSkeleton wide />
+          <TopicCardSkeleton />
         </div>
         <div className="mt-3 flex justify-center">
           <LoadingStatusMessage size="sm" tone="subtle" message={loadingLabel} />
@@ -121,42 +193,52 @@ export function TapStartingTopicCards({
     );
   }
 
-  const [topLeft, topRight, bottom] = topics;
+  const [first, second, third] = topics;
 
   return (
-    <div className="mt-4 grid grid-cols-2 gap-3">
-      {topLeft ? (
+    <div className="mt-4 grid grid-cols-2 gap-3" data-tap-topic-grid={showPractice ? "2x2-practice" : "topics"}>
+      {showPractice ? (
+        <PracticeFirstCard
+          isStarting={isStarting}
+          isThisStarting={isStarting && startingTopicId === "practice"}
+          onPracticeFirst={onPracticeFirst}
+          title={practiceTitle}
+          subtitle={practiceSubtitle}
+          startLabel={practiceStartLabel}
+          startingLabel={practiceStartingLabel}
+        />
+      ) : null}
+      {first ? (
         <TopicCard
-          topic={topLeft}
+          topic={first}
           imageSrc={topicImages[0]}
           isStarting={isStarting}
-          isThisStarting={isStarting && startingTopicId === topLeft.id}
+          isThisStarting={isStarting && startingTopicId === first.id}
           onStartTopic={onStartTopic}
           startLabel={startLabel}
           startingLabel={startingLabel}
         />
       ) : null}
-      {topRight ? (
+      {second ? (
         <TopicCard
-          topic={topRight}
+          topic={second}
           imageSrc={topicImages[1]}
           isStarting={isStarting}
-          isThisStarting={isStarting && startingTopicId === topRight.id}
+          isThisStarting={isStarting && startingTopicId === second.id}
           onStartTopic={onStartTopic}
           startLabel={startLabel}
           startingLabel={startingLabel}
         />
       ) : null}
-      {bottom ? (
+      {third ? (
         <TopicCard
-          topic={bottom}
+          topic={third}
           imageSrc={topicImages[2]}
           isStarting={isStarting}
-          isThisStarting={isStarting && startingTopicId === bottom.id}
+          isThisStarting={isStarting && startingTopicId === third.id}
           onStartTopic={onStartTopic}
           startLabel={startLabel}
           startingLabel={startingLabel}
-          wide
         />
       ) : null}
     </div>

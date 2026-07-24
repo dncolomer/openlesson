@@ -1070,37 +1070,16 @@ export function TapScoreClient({
                   hideStep3Quote
                   renderStep3Action={() => (
                     <>
-                      <div className="mt-4 flex flex-col items-stretch gap-3">
-                        <button
-                          type="button"
-                          data-tap-practice-first
-                          disabled={isStartingSession}
-                          onClick={() => void startSession({ practice: true })}
-                          className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-cyan-400/40 bg-cyan-400/10 px-5 py-3 text-sm font-semibold text-cyan-50 transition hover:border-cyan-300/60 hover:bg-cyan-400/15 disabled:cursor-wait disabled:opacity-70"
-                        >
-                          {isStartingSession && startingTopicId === "practice" ? (
-                            <svg className="size-4 animate-spin" fill="none" viewBox="0 0 24 24" aria-hidden>
-                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                              <path
-                                className="opacity-75"
-                                fill="currentColor"
-                                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                              />
-                            </svg>
-                          ) : null}
-                          <span>
-                            {isStartingSession && startingTopicId === "practice"
-                              ? t("tap.practice.starting")
-                              : t("tap.practice.practiceFirst")}
-                          </span>
-                        </button>
-                        <p className="text-center text-xs text-neutral-500">{t("tap.practice.practiceFirstHint")}</p>
-                      </div>
                       <TapStartingTopicCards
                         topics={startingTopics}
                         isStarting={isStartingSession}
                         startingTopicId={startingTopicId}
                         onStartTopic={(selectedTopic) => void startSession(selectedTopic)}
+                        onPracticeFirst={() => void startSession({ practice: true })}
+                        practiceTitle={t("tap.practice.practiceFirst")}
+                        practiceSubtitle={t("tap.practice.practiceFirstHint")}
+                        practiceStartLabel={t("tap.practice.cardStart")}
+                        practiceStartingLabel={t("tap.practice.starting")}
                         loadingLabel={t("tap.briefing.topicsLoading")}
                         startLabel={t("onboardingGuide.tap.step3.start")}
                         startingLabel={t("onboardingGuide.tap.step3.starting")}

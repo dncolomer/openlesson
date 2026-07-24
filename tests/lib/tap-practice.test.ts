@@ -67,15 +67,21 @@ describe("tap-practice pure helpers", () => {
 });
 
 describe("TAP client practice surface (not ILE)", () => {
-  it("exposes Practice First (1 minute), practice banner, done+restart, and live mechanics", () => {
+  it("exposes Practice First as first 2×2 card, practice banner, done+restart, and live mechanics", () => {
     const client = fs.readFileSync(path.join(ROOT, "components/TapScoreClient.tsx"), "utf8");
-    expect(client).toContain("data-tap-practice-first");
+    const cards = fs.readFileSync(path.join(ROOT, "components/TapStartingTopicCards.tsx"), "utf8");
+    expect(cards).toContain("data-tap-practice-first");
+    expect(cards).toContain('data-tap-topic-grid={showPractice ? "2x2-practice"');
+    expect(cards).toContain("PracticeFirstCard");
+    expect(client).toContain("onPracticeFirst");
     expect(client).toContain("data-tap-practice-banner");
     expect(client).toContain("data-tap-practice-done");
     expect(client).toContain("data-tap-practice-restart");
     expect(client).toContain("practice: true");
     expect(client).toContain("TAP_PRACTICE_DURATION");
     expect(client).toContain("restartBriefingFlow");
+    // No separate full-width practice button above the grid
+    expect(client).not.toContain("data-tap-practice-first");
     // Full live mechanics still present on the shared live phase
     expect(client).toContain("TAP_SILENCE_AUTO_STASH_MS");
     expect(client).toContain("data-tap-session-purity");
@@ -87,7 +93,7 @@ describe("TAP client practice surface (not ILE)", () => {
       tap: { practice: Record<string, string> };
     };
     expect(en.tap.practice.practiceFirst.toLowerCase()).toContain("practice first");
-    expect(en.tap.practice.practiceFirst.toLowerCase()).toContain("1 minute");
+    expect(en.tap.practice.practiceFirstHint.toLowerCase()).toContain("1 minute");
     expect(en.tap.practice.doneTitle.toLowerCase()).toContain("practice session is done");
   });
 

@@ -6,6 +6,11 @@ import {
   createWorkspaceTapLink,
   reissueWorkspaceTapLink,
 } from "@/lib/pow-api/create-tap-link";
+import {
+  InvalidateGuestLinkError,
+  invalidateTapLinkOne,
+  invalidateTapLinksAll,
+} from "@/lib/pow-api/invalidate-guest-links";
 import type { AuthContext } from "@/lib/pow-api/types";
 
 export const runtime = "nodejs";
@@ -104,6 +109,17 @@ export async function POST(req: NextRequest) {
         : typeof body.reissueLinkId === "string"
           ? body.reissueLinkId.trim()
           : "";
+    const invalidateLinkId =
+      typeof body.invalidate_link_id === "string"
+        ? body.invalidate_link_id.trim()
+        : typeof body.invalidateLinkId === "string"
+          ? body.invalidateLinkId.trim()
+          : "";
+    const invalidateAll =
+      body.invalidate_all === true ||
+      body.invalidateAll === true ||
+      body.invalidate_all === "true" ||
+      body.invalidateAll === "true";
 
     if (!workspaceId) {
       return NextResponse.json({ error: "workspaceId is required" }, { status: 400 });
@@ -112,6 +128,25 @@ export async function POST(req: NextRequest) {
     const access = await resolveWebAuth(workspaceId);
     if ("error" in access) {
       return NextResponse.json({ error: access.error }, { status: access.status });
+    }
+
+    if (invalidateAll) {
+      const result = await invalidateTapLinksAll({
+        supabase: access.supabase,
+        auth: access.auth,
+        workspaceId,
+      });
+      return NextResponse.json({ invalidated: result }, { status: 200 });
+    }
+
+    if (invalidateLinkId) {
+      const tapLink = await invalidateTapLinkOne({
+        supabase: access.supabase,
+        auth: access.auth,
+        workspaceId,
+        linkId: invalidateLinkId,
+      });
+      return NextResponse.json({ tap_link: tapLink }, { status: 200 });
     }
 
     if (reissueLinkId) {
@@ -137,7 +172,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ tap_link: tapLink }, { status: 201 });
   } catch (error) {
-    if (error instanceof CreateTapLinkError) {
+    if (error instanceof CreateTapLinkError || error instanceof InvalidateGuestLinkError) {
       return NextResponse.json({ error: error.message, code: error.code }, { status: error.status });
     }
     console.error("[workspace/tap-links] Create error:", error);

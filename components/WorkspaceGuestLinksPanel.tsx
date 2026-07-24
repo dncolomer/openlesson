@@ -100,6 +100,7 @@ export function WorkspaceGuestLinksPanel({
   const [createIleError, setCreateIleError] = useState<string | null>(null);
   const [copiedLinkId, setCopiedLinkId] = useState<string | null>(null);
   const [createdLinks, setCreatedLinks] = useState<Record<string, string>>({});
+  const [invalidating, setInvalidating] = useState(false);
 
   const fieldClass =
     "mt-1 w-full rounded-md border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-white";
@@ -251,6 +252,68 @@ export function WorkspaceGuestLinksPanel({
     [loadTapResources, t, workspaceId],
   );
 
+  const invalidateTapLink = useCallback(
+    async (linkId: string) => {
+      if (!window.confirm(t("planView.tapLinksInvalidateConfirm"))) return;
+      setInvalidating(true);
+      setCreateError(null);
+      try {
+        const response = await fetch("/api/workspace/tap-links", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ workspaceId, invalidate_link_id: linkId }),
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || t("planView.tapLinksInvalidateError"));
+        setCreatedLinks((current) => {
+          const next = { ...current };
+          delete next[linkId];
+          return next;
+        });
+        await loadTapResources();
+      } catch (error) {
+        setCreateError(
+          error instanceof Error ? error.message : t("planView.tapLinksInvalidateError"),
+        );
+      } finally {
+        setInvalidating(false);
+      }
+    },
+    [loadTapResources, t, workspaceId],
+  );
+
+  const invalidateAllTapLinks = useCallback(async () => {
+    if (!window.confirm(t("planView.tapLinksInvalidateAllConfirm"))) return;
+    setInvalidating(true);
+    setCreateError(null);
+    try {
+      const response = await fetch("/api/workspace/tap-links", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ workspaceId, invalidate_all: true }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || t("planView.tapLinksInvalidateError"));
+      const ids = Array.isArray(data.invalidated?.ids) ? (data.invalidated.ids as string[]) : [];
+      setCreatedLinks((current) => {
+        const next = { ...current };
+        for (const id of ids) delete next[id];
+        // Drop any other TAP ids we still hold if bulk succeeded
+        for (const id of Object.keys(next)) {
+          if (tapLinks.some((link) => link.id === id)) delete next[id];
+        }
+        return next;
+      });
+      await loadTapResources();
+    } catch (error) {
+      setCreateError(
+        error instanceof Error ? error.message : t("planView.tapLinksInvalidateError"),
+      );
+    } finally {
+      setInvalidating(false);
+    }
+  }, [loadTapResources, t, tapLinks, workspaceId]);
+
   const createIleLink = useCallback(
     async (participantType: "anonymous" | "user") => {
       setCreatingIleLink(true);
@@ -328,6 +391,67 @@ export function WorkspaceGuestLinksPanel({
     },
     [loadTapResources, t, workspaceId],
   );
+
+  const invalidateIleLink = useCallback(
+    async (linkId: string) => {
+      if (!window.confirm(t("planView.ileLinksInvalidateConfirm"))) return;
+      setInvalidating(true);
+      setCreateIleError(null);
+      try {
+        const response = await fetch("/api/workspace/ile-links", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ workspaceId, invalidate_link_id: linkId }),
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || t("planView.ileLinksInvalidateError"));
+        setCreatedLinks((current) => {
+          const next = { ...current };
+          delete next[linkId];
+          return next;
+        });
+        await loadTapResources();
+      } catch (error) {
+        setCreateIleError(
+          error instanceof Error ? error.message : t("planView.ileLinksInvalidateError"),
+        );
+      } finally {
+        setInvalidating(false);
+      }
+    },
+    [loadTapResources, t, workspaceId],
+  );
+
+  const invalidateAllIleLinks = useCallback(async () => {
+    if (!window.confirm(t("planView.ileLinksInvalidateAllConfirm"))) return;
+    setInvalidating(true);
+    setCreateIleError(null);
+    try {
+      const response = await fetch("/api/workspace/ile-links", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ workspaceId, invalidate_all: true }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || t("planView.ileLinksInvalidateError"));
+      const ids = Array.isArray(data.invalidated?.ids) ? (data.invalidated.ids as string[]) : [];
+      setCreatedLinks((current) => {
+        const next = { ...current };
+        for (const id of ids) delete next[id];
+        for (const id of Object.keys(next)) {
+          if (ileLinks.some((link) => link.id === id)) delete next[id];
+        }
+        return next;
+      });
+      await loadTapResources();
+    } catch (error) {
+      setCreateIleError(
+        error instanceof Error ? error.message : t("planView.ileLinksInvalidateError"),
+      );
+    } finally {
+      setInvalidating(false);
+    }
+  }, [ileLinks, loadTapResources, t, workspaceId]);
 
   const copyLink = useCallback(
     async (linkId: string, url: string) => {
@@ -449,9 +573,24 @@ export function WorkspaceGuestLinksPanel({
         {createError ? <p className="mt-3 text-xs text-red-400">{createError}</p> : null}
 
         <div className="mt-5">
-          <h4 className="text-xs font-medium uppercase tracking-wide text-neutral-500">
-            {t("planView.tapLinksListTitle")}
-          </h4>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h4 className="text-xs font-medium uppercase tracking-wide text-neutral-500">
+              {t("planView.tapLinksListTitle")}
+            </h4>
+            {tapLinks.some((link) => link.status !== "revoked") ? (
+              <button
+                type="button"
+                disabled={invalidating || creatingLink}
+                onClick={() => void invalidateAllTapLinks()}
+                data-guest-link-invalidate-all="tap"
+                className="rounded-md border border-red-900/60 px-2.5 py-1.5 text-xs text-red-300 transition hover:border-red-700 disabled:opacity-40"
+              >
+                {invalidating
+                  ? t("planView.tapLinksInvalidating")
+                  : t("planView.tapLinksInvalidateAll")}
+              </button>
+            ) : null}
+          </div>
           {linksLoading ? (
             <div className="mt-3">
               <LoadingStatusMessage
@@ -465,18 +604,25 @@ export function WorkspaceGuestLinksPanel({
           ) : (
             <ul className="mt-3 space-y-2">
               {tapLinks.map((link) => {
-                const privateUrl = createdLinks[link.id];
+                const isRevoked = link.status === "revoked";
+                const privateUrl = isRevoked ? undefined : createdLinks[link.id];
                 const scopeLabel = link.block_id
                   ? blockTitleById.get(link.block_id) || link.block_id
                   : t("planView.tapLinksEntireWorkspace");
                 return (
                   <li
                     key={link.id}
+                    data-guest-link-status={link.status}
                     className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-neutral-800 px-3 py-2 text-xs"
                   >
                     <div className="min-w-0 text-neutral-400">
                       <p className="text-neutral-300">
                         {t("planView.tapLinksStatus")}: {link.status}
+                        {isRevoked ? (
+                          <span className="ml-1 text-red-400/90">
+                            ({t("planView.tapLinksRevokedHint")})
+                          </span>
+                        ) : null}
                       </p>
                       <p>
                         {t("planView.tapLinksScope")}: {scopeLabel}
@@ -495,11 +641,22 @@ export function WorkspaceGuestLinksPanel({
                       {link.guest_user_id ? (
                         <button
                           type="button"
-                          disabled={creatingLink}
+                          disabled={creatingLink || invalidating}
                           onClick={() => void reissueTapLink(link.id)}
                           className="rounded-md border border-neutral-700 px-2.5 py-1.5 text-xs text-neutral-300 transition hover:border-neutral-500"
                         >
                           {t("planView.tapLinksReuseGuest")}
+                        </button>
+                      ) : null}
+                      {!isRevoked ? (
+                        <button
+                          type="button"
+                          disabled={invalidating || creatingLink}
+                          onClick={() => void invalidateTapLink(link.id)}
+                          data-guest-link-invalidate="tap"
+                          className="rounded-md border border-red-900/60 px-2.5 py-1.5 text-xs text-red-300 transition hover:border-red-700 disabled:opacity-40"
+                        >
+                          {t("planView.tapLinksInvalidate")}
                         </button>
                       ) : null}
                       {privateUrl ? (
@@ -588,9 +745,24 @@ export function WorkspaceGuestLinksPanel({
         {linksError ? <p className="mt-3 text-xs text-red-400">{linksError}</p> : null}
 
         <div className="mt-5">
-          <h4 className="text-xs font-medium uppercase tracking-wide text-neutral-500">
-            {t("planView.ileLinksListTitle")}
-          </h4>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h4 className="text-xs font-medium uppercase tracking-wide text-neutral-500">
+              {t("planView.ileLinksListTitle")}
+            </h4>
+            {ileLinks.some((link) => link.status !== "revoked") ? (
+              <button
+                type="button"
+                disabled={invalidating || creatingIleLink}
+                onClick={() => void invalidateAllIleLinks()}
+                data-guest-link-invalidate-all="ile"
+                className="rounded-md border border-red-900/60 px-2.5 py-1.5 text-xs text-red-300 transition hover:border-red-700 disabled:opacity-40"
+              >
+                {invalidating
+                  ? t("planView.ileLinksInvalidating")
+                  : t("planView.ileLinksInvalidateAll")}
+              </button>
+            ) : null}
+          </div>
           {linksLoading ? (
             <div className="mt-3">
               <LoadingStatusMessage
@@ -604,16 +776,23 @@ export function WorkspaceGuestLinksPanel({
           ) : (
             <ul className="mt-3 space-y-2">
               {ileLinks.map((link) => {
-                const privateUrl = createdLinks[link.id];
+                const isRevoked = link.status === "revoked";
+                const privateUrl = isRevoked ? undefined : createdLinks[link.id];
                 const scopeLabel = blockTitleById.get(link.block_id) || link.block_id;
                 return (
                   <li
                     key={link.id}
+                    data-guest-link-status={link.status}
                     className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-neutral-800 px-3 py-2 text-xs"
                   >
                     <div className="min-w-0 text-neutral-400">
                       <p className="text-neutral-300">
                         {t("planView.tapLinksStatus")}: {link.status}
+                        {isRevoked ? (
+                          <span className="ml-1 text-red-400/90">
+                            ({t("planView.ileLinksRevokedHint")})
+                          </span>
+                        ) : null}
                       </p>
                       <p>
                         {t("planView.ileLinksBlock")}: {scopeLabel}
@@ -631,11 +810,22 @@ export function WorkspaceGuestLinksPanel({
                       {link.guest_user_id ? (
                         <button
                           type="button"
-                          disabled={creatingIleLink}
+                          disabled={creatingIleLink || invalidating}
                           onClick={() => void reissueIleLink(link.id)}
                           className="rounded-md border border-neutral-700 px-2.5 py-1.5 text-xs text-neutral-300 transition hover:border-neutral-500"
                         >
                           {t("planView.ileLinksReuseGuest")}
+                        </button>
+                      ) : null}
+                      {!isRevoked ? (
+                        <button
+                          type="button"
+                          disabled={invalidating || creatingIleLink}
+                          onClick={() => void invalidateIleLink(link.id)}
+                          data-guest-link-invalidate="ile"
+                          className="rounded-md border border-red-900/60 px-2.5 py-1.5 text-xs text-red-300 transition hover:border-red-700 disabled:opacity-40"
+                        >
+                          {t("planView.ileLinksInvalidate")}
                         </button>
                       ) : null}
                       {privateUrl ? (

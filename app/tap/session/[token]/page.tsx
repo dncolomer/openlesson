@@ -45,6 +45,14 @@ export default async function PrivateTapSessionPage({ params, searchParams }: Pa
 
   if (!session) notFound();
 
+  if (session.status === "revoked") {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#0a0a0a] px-4">
+        <p className="text-sm text-red-400">This TAP link has been revoked</p>
+      </div>
+    );
+  }
+
   if (session.assigned_user_id) {
     const authSupabase = await createClient();
     const {

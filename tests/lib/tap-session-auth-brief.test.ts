@@ -4,7 +4,17 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const getUser = vi.fn();
 const single = vi.fn();
-const eq = vi.fn(() => ({ single }));
+const maybeSingle = vi.fn();
+const eqChain: {
+  single: typeof single;
+  maybeSingle: typeof maybeSingle;
+  eq: (...args: unknown[]) => typeof eqChain;
+} = {
+  single,
+  maybeSingle,
+  eq: (..._args: unknown[]) => eqChain,
+};
+const eq = vi.fn(() => eqChain);
 const select = vi.fn(() => ({ eq }));
 const from = vi.fn(() => ({ select }));
 
@@ -43,6 +53,7 @@ describe("TAP session auth brief vs participant", () => {
   beforeEach(() => {
     getUser.mockReset();
     single.mockReset();
+    maybeSingle.mockReset();
     from.mockClear();
     select.mockClear();
     eq.mockClear();
@@ -153,6 +164,7 @@ describe("TAP session auth brief vs participant", () => {
       workspaces: { user_id: "owner-1" },
     };
 
+    maybeSingle.mockResolvedValue({ data: guestSession, error: null });
     single.mockResolvedValue({ data: guestSession, error: null });
 
     const access = await resolveTapSessionAccess({
@@ -206,6 +218,7 @@ describe("TAP session auth brief vs participant", () => {
       workspaces: { user_id: "owner-1" },
     };
 
+    maybeSingle.mockResolvedValue({ data: assignedSession, error: null });
     single.mockResolvedValue({ data: assignedSession, error: null });
 
     const access = await resolveTapSessionAccess({

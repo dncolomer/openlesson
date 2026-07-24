@@ -3,6 +3,10 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { hashPrivateToken } from "@/lib/ile-link";
 import type { EntryQueryParams, GuestLinkAccessMode } from "@/lib/guest-link-access";
 import { resolveGuestForLinkQueryParams } from "@/lib/guest-link-query-guest";
+import {
+  ILE_LINK_REVOKED_MESSAGE,
+  isGuestLinkRevoked,
+} from "@/lib/pow-api/invalidate-guest-links";
 
 export interface ResolvedIleLinkContext {
   supabase: ReturnType<typeof createAdminClient>;
@@ -58,8 +62,8 @@ export async function resolveIleLinkAccess(
     return { error: "Invalid or expired access link", status: 404 };
   }
 
-  if (link.status === "revoked") {
-    return { error: "This ILE link has been revoked", status: 403 };
+  if (isGuestLinkRevoked(link.status as string | null | undefined)) {
+    return { error: ILE_LINK_REVOKED_MESSAGE, status: 403 };
   }
 
   if (!link.user_id) {

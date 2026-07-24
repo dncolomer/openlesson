@@ -8,6 +8,10 @@ import {
 import type { TapPostSessionMode } from "@/lib/pow-api/tap-link-config";
 import type { EntryQueryParams } from "@/lib/guest-link-access";
 import { resolveGuestForLinkQueryParams } from "@/lib/guest-link-query-guest";
+import {
+  isGuestLinkRevoked,
+  TAP_LINK_REVOKED_MESSAGE,
+} from "@/lib/pow-api/invalidate-guest-links";
 
 export interface ResolvedTapSessionContext {
   supabase: ReturnType<typeof createAdminClient>;
@@ -154,6 +158,9 @@ export async function resolveTapSessionAccess(input: {
     }
 
     if (!session) return { error: "TAP block not found", status: 404 };
+    if (isGuestLinkRevoked(session.status as string | null | undefined)) {
+      return { error: TAP_LINK_REVOKED_MESSAGE, status: 403 };
+    }
     if (tapSessionId && session.id !== tapSessionId) {
       return { error: "TAP session ID does not match private link", status: 403 };
     }

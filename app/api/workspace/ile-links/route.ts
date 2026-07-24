@@ -6,6 +6,11 @@ import {
   createWorkspaceIleLink,
   reissueWorkspaceIleLink,
 } from "@/lib/pow-api/create-ile-link";
+import {
+  InvalidateGuestLinkError,
+  invalidateIleLinkOne,
+  invalidateIleLinksAll,
+} from "@/lib/pow-api/invalidate-guest-links";
 import type { AuthContext } from "@/lib/pow-api/types";
 
 export const runtime = "nodejs";
@@ -103,6 +108,17 @@ export async function POST(req: NextRequest) {
         : typeof body.reissueLinkId === "string"
           ? body.reissueLinkId.trim()
           : "";
+    const invalidateLinkId =
+      typeof body.invalidate_link_id === "string"
+        ? body.invalidate_link_id.trim()
+        : typeof body.invalidateLinkId === "string"
+          ? body.invalidateLinkId.trim()
+          : "";
+    const invalidateAll =
+      body.invalidate_all === true ||
+      body.invalidateAll === true ||
+      body.invalidate_all === "true" ||
+      body.invalidateAll === "true";
 
     if (!workspaceId) {
       return NextResponse.json({ error: "workspaceId is required" }, { status: 400 });
@@ -111,6 +127,25 @@ export async function POST(req: NextRequest) {
     const access = await resolveWebAuth(workspaceId);
     if ("error" in access) {
       return NextResponse.json({ error: access.error }, { status: access.status });
+    }
+
+    if (invalidateAll) {
+      const result = await invalidateIleLinksAll({
+        supabase: access.supabase,
+        auth: access.auth,
+        workspaceId,
+      });
+      return NextResponse.json({ invalidated: result }, { status: 200 });
+    }
+
+    if (invalidateLinkId) {
+      const ileLink = await invalidateIleLinkOne({
+        supabase: access.supabase,
+        auth: access.auth,
+        workspaceId,
+        linkId: invalidateLinkId,
+      });
+      return NextResponse.json({ ile_link: ileLink }, { status: 200 });
     }
 
     if (reissueLinkId) {
@@ -140,7 +175,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ ile_link: ileLink }, { status: 201 });
   } catch (error) {
-    if (error instanceof CreateIleLinkError) {
+    if (error instanceof CreateIleLinkError || error instanceof InvalidateGuestLinkError) {
       return NextResponse.json({ error: error.message, code: error.code }, { status: error.status });
     }
     console.error("[workspace/ile-links] Create error:", error);

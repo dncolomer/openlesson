@@ -2495,7 +2495,8 @@
       "step1": {
         "title": "What you'll do",
         "imageAlt": "Think Aloud Protocol overview",
-        "body": "Think out loud on a timer. Helios listens and asks short follow-up questions.\n\nWhen time ends, your proof of work is saved."
+        "body": "Think out loud on a timer. Helios listens and asks short follow-up questions.\n\nWhen time ends, your proof of work is saved.",
+        "highlight": "Thinking out loud also means reading the question out loud. It’s easier if you imagine you’re explaining this to someone — or recording a live stream for an online audience."
       },
       "step2": {
         "title": "How the interface works",

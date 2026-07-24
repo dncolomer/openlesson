@@ -5,6 +5,11 @@ import {
 } from "@/lib/tap-score-session-auth";
 import { generateTapOpeningQuestion } from "@/lib/tap-score";
 import { entryQueryParamsFromBody } from "@/lib/guest-link-access";
+import {
+  isTapPracticeRequest,
+  resolveTapLiveMinutes,
+  TAP_PRACTICE_DURATION_SECONDS,
+} from "@/lib/tap-practice";
 
 export const runtime = "nodejs";
 export const maxDuration = 30;
@@ -16,7 +21,12 @@ export async function POST(req: NextRequest) {
     const workspaceId = body.workspaceId ? String(body.workspaceId) : "";
     const blockId = body.blockId ? String(body.blockId) : null;
     const focusSessionId = body.sessionId ? String(body.sessionId) : null;
-    const minutes = Math.max(1, Number(body.minutes || 15));
+    const practice = isTapPracticeRequest(body.practice);
+    const minutes = resolveTapLiveMinutes({
+      practice,
+      minutes: Number(body.minutes || 15),
+    });
+    const requestedDurationSeconds = practice ? TAP_PRACTICE_DURATION_SECONDS : minutes * 60;
     const tapSessionId = body.tapSessionId ? String(body.tapSessionId) : "";
 
     const access = await resolveTapSessionAccess({
@@ -52,7 +62,7 @@ export async function POST(req: NextRequest) {
           started_at: new Date().toISOString(),
           completed_at: null,
           duration_seconds: 0,
-          requested_duration_seconds: minutes * 60,
+          requested_duration_seconds: requestedDurationSeconds,
           transcript: [],
           summary: null,
           analysis: {},
@@ -63,7 +73,12 @@ export async function POST(req: NextRequest) {
         })
         .eq("id", access.existingSession.id);
 
-      return NextResponse.json({ tapSessionId: access.existingSession.id, openingQuestion });
+      return NextResponse.json({
+        tapSessionId: access.existingSession.id,
+        openingQuestion,
+        practice,
+        minutes,
+      });
     }
 
     if (privateToken) {
@@ -77,7 +92,7 @@ export async function POST(req: NextRequest) {
         user_id: access.userId,
         block_id: blockId,
         session_id: focusSessionId,
-        requested_duration_seconds: minutes * 60,
+        requested_duration_seconds: requestedDurationSeconds,
         status: "in_progress",
         started_at: new Date().toISOString(),
       })
@@ -88,7 +103,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: error?.message || "Could not start TAP session" }, { status: 500 });
     }
 
-    return NextResponse.json({ tapSessionId: row.id, openingQuestion });
+    return NextResponse.json({ tapSessionId: row.id, openingQuestion, practice, minutes });
   } catch (error) {
     console.error("[workspace-tap-score/start] Error:", error);
     const message = error instanceof Error ? error.message : "Internal server error";

@@ -99,6 +99,7 @@ export function useTapIdleProofOfWork(
             ileToken: activeContext.privateToken,
             tapSessionId: activeContext.tapSessionId,
             entryQueryParams: activeContext.entryQueryParams,
+            practice: activeContext.practice === true,
             idleDurationMs,
             hasPendingTranscription: Boolean(speechTextRef.current.trim()),
             timestampMs: now,

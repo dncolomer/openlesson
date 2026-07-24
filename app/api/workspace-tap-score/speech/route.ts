@@ -9,6 +9,7 @@ import { uploadFileToXAI } from "@/lib/xai-files";
 import { countWorkspaceProofOfWorkForPlan } from "@/lib/pow-api/workspace-proof-of-work";
 import { withProofOfWorkApiResponse } from "@/lib/pow-api/predictive-interruption";
 import {stampSourceLinkMetadata, entryQueryParamsFromBody} from "@/lib/guest-link-access";
+import { isTapPracticeRequest, stampPoWPracticeFlag } from "@/lib/tap-practice";
 
 export const runtime = "nodejs";
 export const maxDuration = 30;
@@ -23,6 +24,7 @@ export async function POST(req: NextRequest) {
     const blockId = body.blockId ? String(body.blockId) : null;
     const focusSessionId = body.sessionId ? String(body.sessionId) : null;
     const tapSessionId = String(body.tapSessionId || "");
+    const practice = isTapPracticeRequest(body.practice);
     const event = String(body.event || "") as TapSpeechSegmentEvent;
     const segmentDurationMs =
       typeof body.segmentDurationMs === "number" ? Math.max(0, Math.trunc(body.segmentDurationMs)) : undefined;
@@ -48,29 +50,35 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: access.error }, { status: access.status });
     }
 
-    const payload = buildTapSpeechSegmentPayload({
-      event,
-      tapSessionId: access.tapSessionId,
-      workspaceId: access.workspaceId,
-      blockId: blockId || access.blockId,
-      focusSessionId: focusSessionId || access.focusSessionId,
-      segmentDurationMs,
-      transcriptSnapshot,
-      timestampMs,
-    });
+    const payload = stampPoWPracticeFlag(
+      buildTapSpeechSegmentPayload({
+        event,
+        tapSessionId: access.tapSessionId,
+        workspaceId: access.workspaceId,
+        blockId: blockId || access.blockId,
+        focusSessionId: focusSessionId || access.focusSessionId,
+        segmentDurationMs,
+        transcriptSnapshot,
+        timestampMs,
+      }),
+      practice,
+    );
 
     const fileName = `tap-speech-${event}-${access.tapSessionId}-${timestampMs}.json`;
     const base64 = Buffer.from(JSON.stringify(payload, null, 2), "utf8").toString("base64");
     const uploaded = await uploadFileToXAI(fileName, "application/json", base64);
 
-    const metadata = stampSourceLinkMetadata(
-      {
-        tap_session_id: access.tapSessionId,
-        event,
-        segment_duration_ms: segmentDurationMs ?? null,
-        transcript_snapshot: transcriptSnapshot || null,
-      },
-      { kind: "tap", linkId: access.tapSessionId },
+    const metadata = stampPoWPracticeFlag(
+      stampSourceLinkMetadata(
+        {
+          tap_session_id: access.tapSessionId,
+          event,
+          segment_duration_ms: segmentDurationMs ?? null,
+          transcript_snapshot: transcriptSnapshot || null,
+        },
+        { kind: "tap", linkId: access.tapSessionId },
+      ),
+      practice,
     );
 
     const { data: row, error } = await access.supabase

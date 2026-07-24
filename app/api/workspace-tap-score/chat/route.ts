@@ -15,6 +15,7 @@ import { countWorkspaceProofOfWorkForPlan } from "@/lib/pow-api/workspace-proof-
 import { withProofOfWorkApiResponse } from "@/lib/pow-api/predictive-interruption";
 import { buildTapInProgressPatch } from "@/lib/tap-started-at";
 import {stampSourceLinkMetadata, entryQueryParamsFromBody} from "@/lib/guest-link-access";
+import { isTapPracticeRequest, stampPoWPracticeFlag } from "@/lib/tap-practice";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -30,6 +31,7 @@ export async function POST(req: NextRequest) {
     const blockId = body.blockId ? String(body.blockId) : null;
     let focusSessionId = body.sessionId ? String(body.sessionId) : null;
     const tapSessionId = body.tapSessionId ? String(body.tapSessionId) : "";
+    const practice = isTapPracticeRequest(body.practice);
     const messages = Array.isArray(body.messages) ? body.messages : [];
     const latestThought = String(body.thought || "").trim();
 
@@ -112,15 +114,18 @@ export async function POST(req: NextRequest) {
     // Fail closed: when a TAP session is in play, PoW must be recorded or we error.
     if (access.tapSessionId) {
       const timestampMs = Date.now();
-      const payload = buildTapChatExchangePayload({
-        tapSessionId: access.tapSessionId,
-        workspaceId: access.workspaceId,
-        blockId: blockId || access.blockId,
-        focusSessionId: focusSessionId || access.focusSessionId,
-        learnerThought: latestThought,
-        heliosReply,
-        timestampMs,
-      });
+      const payload = stampPoWPracticeFlag(
+        buildTapChatExchangePayload({
+          tapSessionId: access.tapSessionId,
+          workspaceId: access.workspaceId,
+          blockId: blockId || access.blockId,
+          focusSessionId: focusSessionId || access.focusSessionId,
+          learnerThought: latestThought,
+          heliosReply,
+          timestampMs,
+        }),
+        practice,
+      );
 
       const fileName = `tap-chat-${access.tapSessionId}-${timestampMs}.json`;
       const base64 = Buffer.from(JSON.stringify(payload, null, 2), "utf8").toString("base64");
@@ -135,6 +140,18 @@ export async function POST(req: NextRequest) {
         );
       }
 
+      const chatMetadata = stampPoWPracticeFlag(
+        stampSourceLinkMetadata(
+          {
+            tap_session_id: access.tapSessionId,
+            learner_thought: latestThought,
+            helios_reply: heliosReply,
+          },
+          { kind: "tap", linkId: access.tapSessionId },
+        ),
+        practice,
+      );
+
       const { error: insertError } = await access.supabase.from("workspace_proof_of_work").insert({
         workspace_id: access.workspaceId,
         block_id: blockId || access.blockId,
@@ -146,14 +163,7 @@ export async function POST(req: NextRequest) {
         xai_file_id: uploaded.file_id,
         timestamp_ms: timestampMs,
         chunk_index: 0,
-        metadata: stampSourceLinkMetadata(
-          {
-            tap_session_id: access.tapSessionId,
-            learner_thought: latestThought,
-            helios_reply: heliosReply,
-          },
-          { kind: "tap", linkId: access.tapSessionId },
-        ),
+        metadata: chatMetadata,
         tool_name: TAP_CHAT_TOOL_NAME,
         tool_action: "chat_exchange",
         user_id: access.userId,

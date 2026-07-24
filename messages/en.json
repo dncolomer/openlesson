@@ -2566,7 +2566,8 @@
       "step1": {
         "title": "What you'll do",
         "imageAlt": "Think Aloud Protocol overview",
-        "body": "Think out loud on a timer. Helios listens and asks short follow-up questions.\n\nWhen time ends, your proof of work is saved."
+        "body": "Think out loud on a timer. Helios listens and asks short follow-up questions.\n\nWhen time ends, your proof of work is saved.",
+        "highlight": "Thinking out loud also means reading the question out loud. It’s easier if you imagine you’re explaining this to someone — or recording a live stream for an online audience."
       },
       "step2": {
         "title": "How the interface works",
@@ -2599,6 +2600,19 @@
     "live": {
       "sessionPurity": "Session purity",
       "sessionPurityAria": "Session purity {purity} of {max}. Auto-stash on long silence lowers purity; at 0 the session ends as impure."
+    },
+    "practice": {
+      "practiceFirst": "Practice First (1 minute)",
+      "practiceFirstHint": "Optional warm-up. Always 1 minute. Full mechanics; PoW is flagged as Practice PoW. Practice as many times as you want.",
+      "starting": "Starting practice…",
+      "bannerKicker": "Practice mode",
+      "bannerTitle": "1-minute practice run",
+      "bannerHint": "Same interface as a real session. PoW is recorded and flagged as Practice PoW.",
+      "saving": "Saving practice proof of work…",
+      "doneKicker": "Practice complete",
+      "doneTitle": "Practice session is done",
+      "doneBody": "Your practice PoW was stored and flagged as Practice PoW. You can practice again anytime, or pick a topic for a scored session.",
+      "restart": "Restart flow"
     },
     "postSession": {
       "savingAndReturning": "Saving proof of work…",

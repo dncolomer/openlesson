@@ -158,6 +158,14 @@ export function SessionOnboardingGuide({
   const tt = (key: string, params?: Record<string, string | number>) =>
     translateWithLocale(lang, `${prefix}.${key}`, params);
 
+  /** Optional strings: missing keys resolve to the dotted path — treat that as absent. */
+  const ttOptional = (key: string): string | null => {
+    const fullKey = `${prefix}.${key}`;
+    const value = translateWithLocale(lang, fullKey);
+    if (!value || value === fullKey) return null;
+    return value;
+  };
+
   type GuideSlide =
     | {
         kind: "visual";
@@ -166,6 +174,7 @@ export function SessionOnboardingGuide({
         imageAlt: string;
         imageSrc?: string;
         videoSrc?: string;
+        highlight?: string | null;
       }
     | {
         kind: "closing";
@@ -192,6 +201,7 @@ export function SessionOnboardingGuide({
       imageAlt: tt("step1.imageAlt"),
       imageSrc: step1ImageSrc,
       videoSrc: step1Video,
+      highlight: ttOptional("step1.highlight"),
     },
     {
       kind: "visual",
@@ -199,6 +209,7 @@ export function SessionOnboardingGuide({
       body: tt("step2.body"),
       imageAlt: tt("step2.imageAlt"),
       videoSrc: step2VideoSrc,
+      highlight: ttOptional("step2.highlight"),
     },
     {
       kind: "closing",
@@ -278,6 +289,17 @@ export function SessionOnboardingGuide({
               <p className="mt-2 text-sm leading-relaxed text-neutral-400 whitespace-pre-line">
                 {slide.body}
               </p>
+              {slide.kind === "visual" && slide.highlight ? (
+                <aside
+                  className="mt-4 rounded-xl border border-amber-400/35 bg-amber-400/10 px-3.5 py-3 text-sm leading-relaxed text-amber-50/95"
+                  data-onboarding-highlight
+                >
+                  <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-amber-200/80">
+                    Tip
+                  </p>
+                  <p className="mt-1.5 whitespace-pre-line">{slide.highlight}</p>
+                </aside>
+              ) : null}
 
               {index === 2 && renderStep3Action ? renderStep3Action() : null}
               {index === 2 && showStartAction && !renderStep3Action ? (

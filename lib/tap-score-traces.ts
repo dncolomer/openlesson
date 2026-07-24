@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { queryWorkspaceProofOfWorkRows } from "@/lib/pow-api/workspace-proof-of-work";
+import { withPracticePoWData } from "@/lib/tap-practice";
 
 export const TAP_TRACE_TOOL_NAME = "tap-thought-trace";
 export const TAP_CHAT_TOOL_NAME = "tap-helios-chat";
@@ -24,6 +25,10 @@ export interface TapTranscriptPayload {
   quality?: "pure" | "impure";
   impure?: boolean;
   session_quality?: "pure" | "impure";
+  practice?: boolean;
+  practice_pow?: boolean;
+  pow_kind?: "practice";
+  pow_label?: string;
 }
 
 export function buildTapTranscriptPayload(input: {
@@ -36,8 +41,10 @@ export function buildTapTranscriptPayload(input: {
   completedAt?: string;
   /** When impure, flags are written into the PoW payload itself. */
   sessionQuality?: "pure" | "impure";
+  /** Practice runs still store PoW, flagged as Practice PoW. */
+  practice?: boolean;
 }): TapTranscriptPayload {
-  const base: TapTranscriptPayload = {
+  let base: TapTranscriptPayload = {
     type: "uncertain_systems_tap_transcript",
     tap_session_id: input.tapSessionId,
     workspace_id: input.workspaceId,
@@ -48,12 +55,15 @@ export function buildTapTranscriptPayload(input: {
     completed_at: input.completedAt ?? new Date().toISOString(),
   };
   if (input.sessionQuality === "impure") {
-    return {
+    base = {
       ...base,
       quality: "impure",
       impure: true,
       session_quality: "impure",
     };
+  }
+  if (input.practice) {
+    base = withPracticePoWData(base);
   }
   return base;
 }
@@ -187,6 +197,33 @@ export async function flagTapSessionProofOfWorkImpure(
   workspaceId: string,
   tapSessionId: string,
 ): Promise<number> {
+  return patchTapSessionProofOfWorkMetadata(supabase, workspaceId, tapSessionId, {
+    quality: "impure",
+    impure: true,
+    session_quality: "impure",
+  });
+}
+
+/** Ensure every session PoW row carries Practice PoW flags in metadata. */
+export async function flagTapSessionProofOfWorkPractice(
+  supabase: SupabaseClient,
+  workspaceId: string,
+  tapSessionId: string,
+): Promise<number> {
+  return patchTapSessionProofOfWorkMetadata(
+    supabase,
+    workspaceId,
+    tapSessionId,
+    withPracticePoWData({}),
+  );
+}
+
+async function patchTapSessionProofOfWorkMetadata(
+  supabase: SupabaseClient,
+  workspaceId: string,
+  tapSessionId: string,
+  patch: Record<string, unknown>,
+): Promise<number> {
   const { data, error } = await queryWorkspaceProofOfWorkRows<{
     id: string;
     metadata: Record<string, unknown> | null;
@@ -205,9 +242,7 @@ export async function flagTapSessionProofOfWorkImpure(
   for (const row of data) {
     const nextMetadata = {
       ...(row.metadata && typeof row.metadata === "object" ? row.metadata : {}),
-      quality: "impure",
-      impure: true,
-      session_quality: "impure",
+      ...patch,
     };
     const { error: updateError } = await supabase
       .from("workspace_proof_of_work")

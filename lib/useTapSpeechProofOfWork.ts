@@ -65,6 +65,7 @@ export function useTapSpeechProofOfWork(
             ileToken: activeContext.privateToken,
             tapSessionId: activeContext.tapSessionId,
             entryQueryParams: activeContext.entryQueryParams,
+            practice: activeContext.practice === true,
             event: input.event,
             segmentDurationMs: input.segmentDurationMs,
             transcriptSnapshot: input.transcriptSnapshot,

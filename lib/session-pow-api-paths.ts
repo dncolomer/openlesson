@@ -17,4 +17,6 @@ export interface SessionPowContext {
   tapSessionId?: string | null;
   /** Share-link query params for param-scoped guest identity. */
   entryQueryParams?: Record<string, string | string[]>;
+  /** TAP practice run — PoW is still recorded, flagged as Practice PoW. */
+  practice?: boolean;
 }

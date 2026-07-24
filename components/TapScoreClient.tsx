@@ -63,6 +63,11 @@ import {
   shouldAutoStashOnSilence,
   transcriptFadeOpacity,
 } from "@/lib/tap-session-purity";
+import {
+  TAP_PRACTICE_DURATION_MINUTES,
+  TAP_PRACTICE_DURATION_SECONDS,
+  resolveTapLiveMinutes,
+} from "@/lib/tap-practice";
 
 interface TapScoreClientProps {
   workspaceId?: string;
@@ -266,6 +271,10 @@ export function TapScoreClient({
   const [sessionPurity, setSessionPurity] = useState(TAP_SESSION_PURITY_MAX);
   const [transcriptSilenceMs, setTranscriptSilenceMs] = useState(0);
   const [sessionEndedImpure, setSessionEndedImpure] = useState(false);
+  const [isPracticeMode, setIsPracticeMode] = useState(false);
+  /** Duration for the active live run (practice is always 1 minute). */
+  const [liveMinutes, setLiveMinutes] = useState(resolveInitialMinutes(initialSession?.requested_duration_seconds));
+  const isPracticeModeRef = useRef(false);
 
   const isEndingRef = useRef(false);
   const endAndScoreRef = useRef<(options?: { impure?: boolean }) => void>(() => {});
@@ -275,6 +284,10 @@ export function TapScoreClient({
   useEffect(() => {
     tapSessionIdRef.current = tapSessionId;
   }, [tapSessionId]);
+
+  useEffect(() => {
+    isPracticeModeRef.current = isPracticeMode;
+  }, [isPracticeMode]);
 
   useEffect(() => {
     setBgImage(BACKGROUND_IMAGES[Math.floor(Math.random() * BACKGROUND_IMAGES.length)]);
@@ -309,8 +322,9 @@ export function TapScoreClient({
       privateToken,
       tapSessionId,
       entryQueryParams,
+      practice: isPracticeMode,
     }),
-    [workspaceId, blockId, sessionId, privateToken, tapSessionId, entryQueryParams],
+    [workspaceId, blockId, sessionId, privateToken, tapSessionId, entryQueryParams, isPracticeMode],
   );
 
   const {
@@ -356,6 +370,7 @@ export function TapScoreClient({
           privateToken,
           tapSessionId: activeTapSessionId,
           entryQueryParams: entryQueryParamsRef.current,
+          practice: isPracticeModeRef.current,
           ...input,
         }),
       })
@@ -439,6 +454,7 @@ export function TapScoreClient({
     setSessionPurity(TAP_SESSION_PURITY_MAX);
     setTranscriptSilenceMs(0);
     setSessionEndedImpure(false);
+    setIsPracticeMode(false);
     autoStashInFlightRef.current = false;
     speechResultsLengthRef.current = 0;
     consumedResultsIndexRef.current = 0;
@@ -668,7 +684,13 @@ export function TapScoreClient({
 
   useEffect(() => {
     if (phase !== "live") {
-      if (phase === "briefing" || phase === "saving" || phase === "results" || phase === "error") {
+      if (
+        phase === "briefing" ||
+        phase === "saving" ||
+        phase === "results" ||
+        phase === "practice_done" ||
+        phase === "error"
+      ) {
         stopLiveSpeechRecognition(speechBindings);
       }
       return;
@@ -751,7 +773,8 @@ export function TapScoreClient({
           privateToken,
           entryQueryParams: entryQueryParamsRef.current,
           tapSessionId: tapSessionIdRef.current,
-          minutes,
+          minutes: liveMinutes,
+          practice: isPracticeModeRef.current,
           thought: clean,
           messages: nextMessages,
         }),
@@ -783,14 +806,27 @@ export function TapScoreClient({
     startLiveSpeechRecognition(speechBindings, "en-US");
   }
 
-  async function startSession(topic?: TapStartingTopic) {
+  async function startSession(topicOrOptions?: TapStartingTopic | { practice?: boolean; topic?: TapStartingTopic }) {
+    const practice =
+      !!topicOrOptions &&
+      "practice" in topicOrOptions &&
+      topicOrOptions.practice === true;
+    const topic =
+      topicOrOptions && "practice" in topicOrOptions
+        ? topicOrOptions.topic
+        : (topicOrOptions as TapStartingTopic | undefined);
+
     isEndingRef.current = false;
     clearPendingInterruption();
     resetIdleTracking();
     resetSpeechTracking();
     setHeliosTurnMode("idle");
     setIsStartingSession(true);
-    setStartingTopicId(topic?.id ?? null);
+    setStartingTopicId(practice ? "practice" : topic?.id ?? null);
+    setIsPracticeMode(practice);
+    isPracticeModeRef.current = practice;
+    const sessionMinutes = resolveTapLiveMinutes({ practice, minutes });
+    setLiveMinutes(sessionMinutes);
     setError("");
     setSpeechError(null);
     speechResultsLengthRef.current = 0;
@@ -816,7 +852,8 @@ export function TapScoreClient({
           sessionId,
           privateToken,
           entryQueryParams: entryQueryParamsRef.current,
-          minutes,
+          minutes: sessionMinutes,
+          practice,
           tapSessionId: tapSessionIdRef.current,
           openingQuestion: topic?.openingQuestion,
           topicId: topic?.id,
@@ -835,7 +872,7 @@ export function TapScoreClient({
 
       const started = Date.now();
       setStartedAt(started);
-      setRemainingSeconds(minutes * 60);
+      setRemainingSeconds(sessionMinutes * 60);
       setMessages([
         {
           id: OPENING_MESSAGE_ID,
@@ -849,6 +886,8 @@ export function TapScoreClient({
       setPhase("live");
     } catch (err) {
       stopLiveSpeechRecognition(speechBindings);
+      setIsPracticeMode(false);
+      isPracticeModeRef.current = false;
       setError(err instanceof Error ? err.message : "Could not start TAP session");
     } finally {
       setIsStartingSession(false);
@@ -856,10 +895,40 @@ export function TapScoreClient({
     }
   }
 
+  function restartBriefingFlow() {
+    isEndingRef.current = false;
+    setIsPracticeMode(false);
+    isPracticeModeRef.current = false;
+    setSessionEndedImpure(false);
+    setPerformanceReport(null);
+    setResultsError("");
+    setError("");
+    setMessages([]);
+    setThoughts([]);
+    setInterimText("");
+    setCrystallizableText("");
+    setMemoryThoughtIds(new Set());
+    setSentThoughtIds(new Set());
+    setEditingTranscription(null);
+    setHeliosTurnMode("idle");
+    setSessionPurity(TAP_SESSION_PURITY_MAX);
+    setTranscriptSilenceMs(0);
+    setStartedAt(null);
+    setRemainingSeconds(0);
+    setLiveMinutes(minutes);
+    autoStashInFlightRef.current = false;
+    clearPendingInterruption();
+    resetIdleTracking();
+    resetSpeechTracking();
+    clearDialogueMessages(dialogueStorageKey);
+    setPhase("briefing");
+  }
+
   async function endSession(options?: { impure?: boolean }) {
     if (isEndingRef.current) return;
     isEndingRef.current = true;
     const impure = options?.impure === true;
+    const practice = isPracticeModeRef.current;
     setSessionEndedImpure(impure);
     clearPendingInterruption();
     flushSpeechSegment();
@@ -877,6 +946,11 @@ export function TapScoreClient({
     try {
       const durationSeconds = startedAt ? Math.floor((Date.now() - startedAt) / 1000) : 0;
       const transcript = messages.map((message) => ({ role: message.role, text: message.content, at: message.at }));
+      // Complete requires a non-empty transcript; practice opening always provides one.
+      const safeTranscript =
+        transcript.length > 0
+          ? transcript
+          : [{ role: "assistant", text: "Practice session", at: new Date().toISOString() }];
       const response = await fetch("/api/workspace-tap-score/complete", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -887,15 +961,23 @@ export function TapScoreClient({
           privateToken,
           entryQueryParams: entryQueryParamsRef.current,
           tapSessionId: tapSessionIdRef.current,
-          transcript,
+          transcript: safeTranscript,
           durationSeconds,
-          requestedDurationSeconds: minutes * 60,
+          requestedDurationSeconds: practice ? TAP_PRACTICE_DURATION_SECONDS : liveMinutes * 60,
           sessionQuality: impure ? "impure" : "pure",
           impure,
+          practice,
         }),
       });
       const payload = await response.json();
       if (!response.ok) throw new Error(payload.error || "Could not save TAP session");
+
+      // Practice always returns to a practice-done screen (unlimited retries).
+      if (practice) {
+        setPerformanceReport(null);
+        setPhase("practice_done");
+        return;
+      }
 
       // Impure purity depletion: always show retry UI (refresh the link).
       if (impure) {
@@ -947,7 +1029,7 @@ export function TapScoreClient({
 
     const tick = () => {
       const elapsed = Math.floor((Date.now() - startedAt) / 1000);
-      const remaining = Math.max(0, minutes * 60 - elapsed);
+      const remaining = Math.max(0, liveMinutes * 60 - elapsed);
       setRemainingSeconds(remaining);
       if (remaining <= 0) {
         endAndScoreRef.current();
@@ -957,7 +1039,7 @@ export function TapScoreClient({
     tick();
     const interval = window.setInterval(tick, 1000);
     return () => window.clearInterval(interval);
-  }, [phase, startedAt, minutes]);
+  }, [phase, startedAt, liveMinutes]);
 
   function beginEditTranscription() {
     const text = normalize(crystallizableText);
@@ -988,6 +1070,32 @@ export function TapScoreClient({
                   hideStep3Quote
                   renderStep3Action={() => (
                     <>
+                      <div className="mt-4 flex flex-col items-stretch gap-3">
+                        <button
+                          type="button"
+                          data-tap-practice-first
+                          disabled={isStartingSession}
+                          onClick={() => void startSession({ practice: true })}
+                          className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-cyan-400/40 bg-cyan-400/10 px-5 py-3 text-sm font-semibold text-cyan-50 transition hover:border-cyan-300/60 hover:bg-cyan-400/15 disabled:cursor-wait disabled:opacity-70"
+                        >
+                          {isStartingSession && startingTopicId === "practice" ? (
+                            <svg className="size-4 animate-spin" fill="none" viewBox="0 0 24 24" aria-hidden>
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                              <path
+                                className="opacity-75"
+                                fill="currentColor"
+                                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                              />
+                            </svg>
+                          ) : null}
+                          <span>
+                            {isStartingSession && startingTopicId === "practice"
+                              ? t("tap.practice.starting")
+                              : t("tap.practice.practiceFirst")}
+                          </span>
+                        </button>
+                        <p className="text-center text-xs text-neutral-500">{t("tap.practice.practiceFirstHint")}</p>
+                      </div>
                       <TapStartingTopicCards
                         topics={startingTopics}
                         isStarting={isStartingSession}
@@ -1024,6 +1132,18 @@ export function TapScoreClient({
 
         {phase === "live" && (
           <section className="flex min-h-0 flex-1 flex-col overflow-hidden">
+            {isPracticeMode ? (
+              <div
+                data-tap-practice-banner
+                className="mb-3 shrink-0 rounded-xl border border-cyan-400/40 bg-cyan-400/10 px-4 py-2.5 text-center"
+              >
+                <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-cyan-200/90">
+                  {t("tap.practice.bannerKicker")}
+                </p>
+                <p className="mt-0.5 text-sm font-medium text-cyan-50">{t("tap.practice.bannerTitle")}</p>
+                <p className="mt-0.5 text-xs text-cyan-100/70">{t("tap.practice.bannerHint")}</p>
+              </div>
+            ) : null}
             <div className="grid h-full min-h-0 gap-4 grid-rows-[minmax(0,1fr)_minmax(0,24rem)] lg:grid-cols-[minmax(0,1fr)_22rem] lg:grid-rows-[minmax(0,1fr)]">
               <div className="flex min-h-0 min-w-0 flex-col gap-4 overflow-hidden lg:row-span-1">
                 <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-neutral-900 bg-neutral-950/65 backdrop-blur-sm">
@@ -1043,7 +1163,13 @@ export function TapScoreClient({
                   </div>
                 </div>
 
-                <div className="shrink-0 min-w-0 overflow-hidden rounded-2xl border border-neutral-900/80 bg-neutral-950/55 p-3 backdrop-blur-md">
+                <div
+                  className={`shrink-0 min-w-0 overflow-hidden rounded-2xl border p-3 backdrop-blur-md ${
+                    isPracticeMode
+                      ? "border-cyan-400/30 bg-cyan-950/40"
+                      : "border-neutral-900/80 bg-neutral-950/55"
+                  }`}
+                >
                 <div className="mb-3 flex w-full flex-wrap items-center justify-between gap-2 border-b border-neutral-900/80 pb-3">
                   <div className="flex flex-wrap items-start gap-5">
                     <div className="flex flex-col gap-1">
@@ -1182,10 +1308,39 @@ export function TapScoreClient({
           <section className="flex flex-1 items-center justify-center">
             <LoadingStatusMessage
               tone="muted"
-              message={t("tap.postSession.savingAndReturning")}
+              message={
+                isPracticeMode
+                  ? t("tap.practice.saving")
+                  : t("tap.postSession.savingAndReturning")
+              }
             />
           </section>
         )}
+        {phase === "practice_done" ? (
+          <section
+            className="mx-auto flex w-full max-w-xl flex-1 flex-col items-center justify-center px-4 py-10 text-center"
+            data-tap-practice-done
+          >
+            <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-cyan-300/80">
+              {t("tap.practice.doneKicker")}
+            </p>
+            <h1 className="mt-2 text-2xl font-medium text-neutral-100 sm:text-3xl">
+              {t("tap.practice.doneTitle")}
+            </h1>
+            <p className="mt-4 max-w-md text-sm leading-relaxed text-neutral-300 sm:text-base">
+              {t("tap.practice.doneBody")}
+            </p>
+            <ThoughtButton
+              size="md"
+              variant="primary"
+              className="mt-8"
+              data-tap-practice-restart
+              onClick={restartBriefingFlow}
+            >
+              {t("tap.practice.restart")}
+            </ThoughtButton>
+          </section>
+        ) : null}
         {phase === "results" ? (
           sessionEndedImpure ? (
             <section

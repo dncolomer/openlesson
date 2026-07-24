@@ -11,6 +11,7 @@ import { uploadFileToXAI } from "@/lib/xai-files";
 import { countWorkspaceProofOfWorkForPlan } from "@/lib/pow-api/workspace-proof-of-work";
 import { withProofOfWorkApiResponse } from "@/lib/pow-api/predictive-interruption";
 import {stampSourceLinkMetadata, entryQueryParamsFromBody} from "@/lib/guest-link-access";
+import { isTapPracticeRequest, stampPoWPracticeFlag } from "@/lib/tap-practice";
 
 export const runtime = "nodejs";
 export const maxDuration = 30;
@@ -26,6 +27,7 @@ export async function POST(req: NextRequest) {
     const blockId = body.blockId ? String(body.blockId) : null;
     const focusSessionId = body.sessionId ? String(body.sessionId) : null;
     const tapSessionId = String(body.tapSessionId || "");
+    const practice = isTapPracticeRequest(body.practice);
     const traceType = String(body.traceType || "") as TapTraceType;
     const action = String(body.action || "");
     const thoughtId = body.thoughtId ? String(body.thoughtId) : undefined;
@@ -61,39 +63,45 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: access.error }, { status: access.status });
     }
 
-    const payload = buildTapThoughtTracePayload({
-      traceType,
-      action: action as TapSystem1Action | TapSystem2Action,
-      tapSessionId: access.tapSessionId,
-      workspaceId: access.workspaceId,
-      blockId: blockId || access.blockId,
-      focusSessionId: focusSessionId || access.focusSessionId,
-      thoughtId,
-      thoughtIds,
-      chainId,
-      text,
-      originalText,
-      combined,
-      timestampMs,
-    });
+    const payload = stampPoWPracticeFlag(
+      buildTapThoughtTracePayload({
+        traceType,
+        action: action as TapSystem1Action | TapSystem2Action,
+        tapSessionId: access.tapSessionId,
+        workspaceId: access.workspaceId,
+        blockId: blockId || access.blockId,
+        focusSessionId: focusSessionId || access.focusSessionId,
+        thoughtId,
+        thoughtIds,
+        chainId,
+        text,
+        originalText,
+        combined,
+        timestampMs,
+      }),
+      practice,
+    );
 
     const fileName = `tap-trace-${traceType}-${action}-${thoughtId || timestampMs}.json`;
     const base64 = Buffer.from(JSON.stringify(payload, null, 2), "utf8").toString("base64");
     const uploaded = await uploadFileToXAI(fileName, "application/json", base64);
 
-    const metadata = stampSourceLinkMetadata(
-      {
-        tap_session_id: access.tapSessionId,
-        trace_type: traceType,
-        action,
-        thought_id: thoughtId || null,
-        thought_ids: thoughtIds || null,
-        chain_id: chainId || null,
-        text: text || null,
-        original_text: originalText || null,
-        combined,
-      },
-      { kind: "tap", linkId: access.tapSessionId },
+    const metadata = stampPoWPracticeFlag(
+      stampSourceLinkMetadata(
+        {
+          tap_session_id: access.tapSessionId,
+          trace_type: traceType,
+          action,
+          thought_id: thoughtId || null,
+          thought_ids: thoughtIds || null,
+          chain_id: chainId || null,
+          text: text || null,
+          original_text: originalText || null,
+          combined,
+        },
+        { kind: "tap", linkId: access.tapSessionId },
+      ),
+      practice,
     );
 
     const { data: row, error } = await access.supabase

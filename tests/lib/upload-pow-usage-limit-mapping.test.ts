@@ -26,16 +26,16 @@ function inactiveProfile(): UserProfile {
   };
 }
 
-/** Active paid plan with a finite monthly PoW pool (limit > 0). */
-function activeRegularProfile(): UserProfile {
+/** Token regular: finite monthly PoW pool (limit = 25). */
+function tokenRegularExhaustedProfile(): UserProfile {
   return {
-    plan: "regular_2026",
+    plan: "inactive",
     is_admin: false,
-    subscription_status: "active",
+    subscription_status: "inactive",
     extra_lessons: 0,
-    current_period_end: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-    token_tier: null,
-    token_validity_expires_at: null,
+    current_period_end: null,
+    token_tier: "regular",
+    token_validity_expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
   };
 }
 
@@ -50,8 +50,8 @@ describe("upload PoW usage-limit → 402 mapping (REST catch path)", () => {
   });
 
   it("maps real canSubmitProofOfWork exhaustion reason to 402 usage_limit_reached", () => {
-    // Active regular plan, used >= limit → "You've used all N Proof-of-Work submissions this month..."
-    const check = canSubmitProofOfWork(activeRegularProfile(), 10_000);
+    // Token regular, used >= limit → "You've used all N Proof-of-Work submissions this month..."
+    const check = canSubmitProofOfWork(tokenRegularExhaustedProfile(), 10_000);
     expect(check.allowed).toBe(false);
     expect(check.reason).toBeTruthy();
     expect(check.reason).toMatch(/You've used all \d+ Proof-of-Work submissions this month/);
@@ -83,7 +83,7 @@ describe("upload PoW usage-limit → 402 mapping (REST catch path)", () => {
   });
 
   it("maps plain Error with real reason text (re-wrapped) to 402", () => {
-    const check = canSubmitProofOfWork(activeRegularProfile(), 9999);
+    const check = canSubmitProofOfWork(tokenRegularExhaustedProfile(), 9999);
     expect(check.allowed).toBe(false);
     const plain = new Error(check.reason!);
     const mapped = mapUploadWorkspaceProofOfWorkError(plain);

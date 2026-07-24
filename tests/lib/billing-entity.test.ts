@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  billingEntityHasApiAccess,
   billingEntityHasProductAccess,
   isOrgEntitled,
   resolveBillingEntity,
@@ -20,10 +21,10 @@ const baseProfile = {
 
 const entitledOrg: OrgBillingRow = {
   id: "org-1",
-  plan: "pro_teams",
+  plan: "api_metered",
   subscription_status: "active",
   current_period_end: "2099-01-01T00:00:00.000Z",
-  extra_lessons: 1500,
+  extra_lessons: 0,
   billing_mode: "subscription",
   kind: "team",
   archived_at: null,
@@ -61,6 +62,11 @@ describe("isOrgEntitled", () => {
       isOrgEntitled({ ...entitledOrg, archived_at: "2026-01-01T00:00:00.000Z" })
     ).toBe(false);
   });
+
+  it("does not entitle removed plan ids without migration", () => {
+    expect(isOrgEntitled({ ...entitledOrg, plan: "pro_teams" })).toBe(false);
+    expect(isOrgEntitled({ ...entitledOrg, plan: "regular_2026" })).toBe(false);
+  });
 });
 
 describe("resolveBillingEntity", () => {
@@ -74,7 +80,7 @@ describe("resolveBillingEntity", () => {
     expect(entity.limit).toBeNull();
   });
 
-  it("uses org billing when member of entitled org (even if personal plan inactive)", () => {
+  it("uses org billing when member of entitled api_metered org", () => {
     const entity = resolveBillingEntity(
       { ...baseProfile, organization_id: "org-1" },
       entitledOrg
@@ -82,8 +88,8 @@ describe("resolveBillingEntity", () => {
     expect(entity.source).toBe("organization");
     expect(entity.entitled).toBe(true);
     if (entity.source === "organization") {
-      expect(entity.plan).toBe("pro_teams");
-      expect(entity.limit).toBe(1000 + 1500);
+      expect(entity.plan).toBe("api_metered");
+      expect(entity.limit).toBeNull();
     }
   });
 
@@ -99,96 +105,37 @@ describe("resolveBillingEntity", () => {
     );
     expect(entity.source).toBe("organization");
     expect(entity.entitled).toBe(false);
-    expect(billingEntityHasProductAccess(entity)).toBe(false);
   });
 
-  it("uses partner org without Stripe period", () => {
-    const entity = resolveBillingEntity(
+  it("grants API access only for api_metered", () => {
+    const metered = resolveBillingEntity(
       { ...baseProfile, organization_id: "org-1" },
-      {
-        ...entitledOrg,
-        billing_mode: "partner",
-        subscription_status: "inactive",
-        current_period_end: null,
-        plan: "regular_2026",
-        extra_lessons: 0,
-      }
+      entitledOrg
     );
-    expect(entity.entitled).toBe(true);
-    if (entity.source === "organization") {
-      expect(entity.limit).toBe(100);
-      expect(entity.billingMode).toBe("partner");
-    }
-  });
+    expect(billingEntityHasApiAccess(metered)).toBe(true);
+    expect(billingEntityHasProductAccess(metered)).toBe(true);
 
-  it("denies product access without organization (personal plan not authoritative)", () => {
-    const entity = resolveBillingEntity(
-      {
-        ...baseProfile,
-        plan: "regular_2026",
-        subscription_status: "active",
-        current_period_end: "2099-01-01T00:00:00.000Z",
-      },
-      null
+    const trial = resolveBillingEntity(
+      { ...baseProfile, organization_id: "org-1" },
+      { ...entitledOrg, plan: "trial" }
     );
-    expect(entity.source).toBe("none");
-    expect(entity.entitled).toBe(false);
-  });
-});
-
-describe("hasProductAccess with org", () => {
-  it("no longer grants access from organization_id alone", () => {
-    expect(
-      hasProductAccess({
-        plan: "inactive",
-        subscription_status: "inactive",
-        is_admin: false,
-        token_tier: null,
-        token_validity_expires_at: null,
-        organization_id: "org-1",
-      })
-    ).toBe(false);
+    expect(billingEntityHasApiAccess(trial)).toBe(false);
+    expect(billingEntityHasProductAccess(trial)).toBe(true);
   });
 
-  it("grants access for entitled subscription org", () => {
+  it("aligns with hasProductAccess for org members", () => {
     expect(
       hasProductAccess(
         {
-          plan: "inactive",
-          subscription_status: "inactive",
-          is_admin: false,
-          token_tier: null,
-          token_validity_expires_at: null,
+          ...baseProfile,
           organization_id: "org-1",
         },
         {
           id: "org-1",
-          plan: "pro_teams",
+          plan: "api_metered",
           subscription_status: "active",
           current_period_end: "2099-01-01T00:00:00.000Z",
           billing_mode: "subscription",
-        }
-      )
-    ).toBe(true);
-  });
-
-  it("grants access for partner org", () => {
-    expect(
-      hasProductAccess(
-        {
-          plan: "inactive",
-          subscription_status: "inactive",
-          is_admin: false,
-          token_tier: null,
-          token_validity_expires_at: null,
-          organization_id: "org-1",
-        },
-        {
-          id: "org-1",
-          plan: "pro_teams",
-          subscription_status: "inactive",
-          current_period_end: null,
-          billing_mode: "partner",
         }
       )
     ).toBe(true);

@@ -3,7 +3,7 @@
  * Used by scripts/migrate-org-model.mjs and unit tests.
  */
 
-import { normalizePlanId, type PlanId } from "@/lib/plans";
+import { migratePlanIdToCurrent, normalizePlanId, type PlanId } from "@/lib/plans";
 
 export type ProfileBillingSnapshot = {
   id: string;
@@ -42,17 +42,14 @@ export type OrgBillingPatch = {
   kind?: "personal" | "team" | "partner";
 };
 
-const PAID_PLANS = new Set<PlanId>(["trial", "regular_2026", "pro_teams", "api_metered"]);
+const PAID_PLANS = new Set<PlanId>(["trial", "api_metered"]);
 
 function planRank(plan: string | null | undefined): number {
-  const p = normalizePlanId(plan);
+  // migratePlanIdToCurrent maps removed paid tiers → api_metered for ranking during data migration
+  const p = migratePlanIdToCurrent(plan);
   switch (p) {
     case "api_metered":
       return 50;
-    case "pro_teams":
-      return 40;
-    case "regular_2026":
-      return 30;
     case "trial":
       return 20;
     default:
@@ -66,7 +63,7 @@ function isActiveStatus(status: string | null | undefined): boolean {
 
 /** True when profile holds a paid entitlement we should copy onto an org. */
 export function profileHasMigratableEntitlement(profile: ProfileBillingSnapshot): boolean {
-  const plan = normalizePlanId(profile.plan);
+  const plan = migratePlanIdToCurrent(profile.plan);
   if (!PAID_PLANS.has(plan)) return false;
   if (plan === "trial") {
     if (!profile.current_period_end) return false;
@@ -77,7 +74,7 @@ export function profileHasMigratableEntitlement(profile: ProfileBillingSnapshot)
 
 /** Map a single profile's billing fields onto an org patch. */
 export function mapProfileBillingToOrg(profile: ProfileBillingSnapshot): OrgBillingPatch {
-  const plan = normalizePlanId(profile.plan);
+  const plan = migratePlanIdToCurrent(profile.plan);
   const entitled = profileHasMigratableEntitlement(profile);
   return {
     plan: entitled ? plan : "inactive",

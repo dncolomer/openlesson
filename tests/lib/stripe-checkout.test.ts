@@ -2,24 +2,33 @@ import { describe, expect, it } from "vitest";
 import {
   checkoutModeForPriceType,
   extraLessonsForCheckout,
+  isGuestCheckoutPriceType,
   planIdFromPriceType,
   profileUpdateFromCheckout,
 } from "@/lib/stripe-checkout";
 import { TRIAL_ACCESS_DAYS } from "@/lib/plans";
 
 describe("stripe checkout helpers", () => {
-  it("maps price types to plan ids", () => {
+  it("maps price types to plan ids (only trial + api_metered grant paid plans)", () => {
     expect(planIdFromPriceType("trial_3day")).toBe("trial");
-    expect(planIdFromPriceType("regular_2026")).toBe("regular_2026");
     expect(planIdFromPriceType("api_metered")).toBe("api_metered");
+    expect(planIdFromPriceType("regular_2026")).toBe("inactive");
+    expect(planIdFromPriceType("pro_teams")).toBe("inactive");
     expect(planIdFromPriceType("regular")).toBe("inactive");
     expect(planIdFromPriceType("pro")).toBe("inactive");
   });
 
-  it("uses payment mode for trial checkout", () => {
+  it("uses payment mode for trial and subscription for api_metered", () => {
     expect(checkoutModeForPriceType("trial_3day")).toBe("payment");
     expect(checkoutModeForPriceType("all_you_can_learn")).toBe("payment");
-    expect(checkoutModeForPriceType("regular_2026")).toBe("subscription");
+    expect(checkoutModeForPriceType("api_metered")).toBe("subscription");
+  });
+
+  it("allows guest checkout for trial and api_metered only", () => {
+    expect(isGuestCheckoutPriceType("trial_3day")).toBe(true);
+    expect(isGuestCheckoutPriceType("api_metered")).toBe(true);
+    expect(isGuestCheckoutPriceType("regular_2026")).toBe(false);
+    expect(isGuestCheckoutPriceType("pro_teams")).toBe(false);
   });
 
   it("builds a trial profile patch with a 3-day window", () => {
@@ -36,8 +45,21 @@ describe("stripe checkout helpers", () => {
     expect(patch.stripe_customer_id).toBe("cus_123");
   });
 
-  it("computes extra proof-of-work for volume tiers", () => {
-    expect(extraLessonsForCheckout("regular_2026", 250, "regular_2026")).toBe(150);
+  it("builds api_metered patch with zero volume overage", () => {
+    const patch = profileUpdateFromCheckout({
+      priceType: "api_metered",
+      monthlyVolume: 999,
+      stripeCustomerId: "cus_m",
+      stripeSubscriptionId: "sub_m",
+      currentPeriodEnd: "2099-01-01T00:00:00.000Z",
+    });
+    expect(patch.plan).toBe("api_metered");
+    expect(patch.extra_lessons).toBe(0);
+    expect(patch.subscription_status).toBe("active");
+  });
+
+  it("never computes volume-tier extra lessons for current checkouts", () => {
+    expect(extraLessonsForCheckout("api_metered", 250, "api_metered")).toBe(0);
     expect(extraLessonsForCheckout("trial_3day", 0, "trial")).toBe(0);
   });
 });

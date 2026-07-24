@@ -24,7 +24,7 @@ const base = (over: Partial<OrgXaiKeyEligibility> = {}): OrgXaiKeyEligibility =>
 describe("orgNeedsXaiApiKey", () => {
   it("skips orgs that already have a ready key", () => {
     const org = base({
-      plan: "pro_teams",
+      plan: "api_metered",
       subscription_status: "active",
       xai_api_key_status: "ready",
       xai_api_key_id: "key-1",
@@ -38,16 +38,20 @@ describe("orgNeedsXaiApiKey", () => {
   it("provisions active paid subscription orgs", () => {
     expect(
       orgNeedsXaiApiKey(
-        base({ plan: "regular_2026", subscription_status: "active" })
+        base({ plan: "api_metered", subscription_status: "active" })
       )
     ).toBe(true);
     expect(
       orgNeedsXaiApiKeyReason(
-        base({ plan: "pro_teams", subscription_status: "active" })
+        base({ plan: "trial", subscription_status: "active" })
       )
     ).toBe("entitled");
     expect(orgIsProductEntitled(base({ plan: "api_metered", subscription_status: "active" }))).toBe(
       true
+    );
+    // Removed tiers are not product-entitled until migrated
+    expect(orgIsProductEntitled(base({ plan: "pro_teams", subscription_status: "active" }))).toBe(
+      false
     );
   });
 
@@ -55,7 +59,7 @@ describe("orgNeedsXaiApiKey", () => {
     expect(
       orgNeedsXaiApiKey(
         base({
-          plan: "pro_teams",
+          plan: "api_metered",
           subscription_status: "inactive",
           billing_mode: "partner",
         })
@@ -94,14 +98,14 @@ describe("orgNeedsXaiApiKey", () => {
       orgNeedsXaiApiKey(
         base({
           archived_at: "2026-01-01T00:00:00Z",
-          plan: "pro_teams",
+          plan: "api_metered",
           subscription_status: "active",
         })
       )
     ).toBe(false);
     expect(
       orgNeedsXaiApiKeyReason(
-        base({ archived_at: "2026-01-01T00:00:00Z", plan: "pro_teams", subscription_status: "active" })
+        base({ archived_at: "2026-01-01T00:00:00Z", plan: "api_metered", subscription_status: "active" })
       )
     ).toBe("archived");
   });

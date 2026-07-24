@@ -13,56 +13,57 @@ import {
   hasProofOfWorkApiAccess,
   isApiMeteredPlan,
   isBillingPeriodActive,
+  isExternalApiPowUsage,
+  migratePlanIdToCurrent,
   normalizePlanId,
-  normalizeStripeVolumeToProofOfWork,
   POW_API_CALL_PRICE_CENTS,
-  resolveCheckoutVolume,
-  REGULAR_VOLUME_PRICES,
-  TEAM_VOLUME_PRICES,
+  TAP_SESSION_PRICE_CENTS,
+  ILE_SESSION_PRICE_CENTS,
+  PLANS,
+  type PlanId,
 } from "@/lib/plans";
 
-describe("plans pricing", () => {
-  it("normalizes legacy session volumes to proof-of-work counts", () => {
-    expect(normalizeStripeVolumeToProofOfWork(25)).toBe(100);
-    expect(normalizeStripeVolumeToProofOfWork(250)).toBe(1000);
-    expect(normalizeStripeVolumeToProofOfWork(100)).toBe(400);
-    expect(normalizeStripeVolumeToProofOfWork(100, "proof_of_work")).toBe(100);
-    expect(normalizeStripeVolumeToProofOfWork(250, "proof_of_work")).toBe(250);
-    expect(normalizeStripeVolumeToProofOfWork(200)).toBe(200);
+describe("plans pricing model", () => {
+  it("only exposes inactive, trial, and api_metered plan ids", () => {
+    const ids = Object.keys(PLANS).sort();
+    expect(ids).toEqual(["api_metered", "inactive", "trial"]);
+    const invalid = "regular_2026" as PlanId;
+    expect(PLANS[invalid]).toBeUndefined();
   });
 
-  it("resolves checkout volumes", () => {
-    expect(resolveCheckoutVolume("regular_2026", 250)).toBe(250);
-    expect(resolveCheckoutVolume("regular_2026", 999)).toBe(100);
-    expect(resolveCheckoutVolume("regular_2026", 100)).toBe(100);
-    expect(resolveCheckoutVolume("pro_teams", 2500)).toBe(2500);
-    expect(resolveCheckoutVolume("pro_teams", 1)).toBe(1000);
+  it("sets Metered rates: 0.05 cents/PoW, $1 TAP, $10 ILE, $99 platform", () => {
+    expect(POW_API_CALL_PRICE_CENTS).toBe(0.05);
+    expect(TAP_SESSION_PRICE_CENTS).toBe(100);
+    expect(ILE_SESSION_PRICE_CENTS).toBe(1000);
+    expect(API_METERED_PLATFORM_FEE_CENTS).toBe(9900);
   });
 
-  it("formats 2026 monthly prices", () => {
-    expect(formatPlanMonthlyPrice("regular_2026")).toBe("$49/month");
-    expect(formatPlanMonthlyPrice("regular_2026", 500)).toBe("$149/month");
-    expect(formatPlanMonthlyPrice("pro_teams")).toBe("$599/month");
-    expect(formatPlanMonthlyPrice("pro_teams", 5000)).toBe("$1499/month");
+  it("formats api metered monthly price with usage rates", () => {
+    const label = formatPlanMonthlyPrice("api_metered");
+    expect(label).toContain("$99/month");
+    expect(label).toMatch(/0\.05/);
+    expect(label).toContain("$1/TAP");
+    expect(label).toContain("$10/ILE");
   });
 
-  it("keeps stripe volume tables aligned with monotonic volume discounts", () => {
-    expect(REGULAR_VOLUME_PRICES[100]).toBe(4900);
-    expect(REGULAR_VOLUME_PRICES[250]).toBe(9900);
-    expect(REGULAR_VOLUME_PRICES[500]).toBe(14900);
-    expect(TEAM_VOLUME_PRICES[1000]).toBe(59900);
-    expect(TEAM_VOLUME_PRICES[2500]).toBe(99900);
-    expect(TEAM_VOLUME_PRICES[5000]).toBe(149900);
-    expect(TEAM_VOLUME_PRICES[10000]).toBe(249900);
+  it("normalizes removed tier names to inactive (no backwards-compat plan ids)", () => {
+    expect(normalizePlanId("free")).toBe("inactive");
+    expect(normalizePlanId("regular")).toBe("inactive");
+    expect(normalizePlanId("pro")).toBe("inactive");
+    expect(normalizePlanId("regular_2026")).toBe("inactive");
+    expect(normalizePlanId("pro_teams")).toBe("inactive");
+    expect(normalizePlanId("trial")).toBe("trial");
+    expect(normalizePlanId("api_metered")).toBe("api_metered");
+  });
 
-    const individualPerSub = [100, 250, 500].map((vol) => REGULAR_VOLUME_PRICES[vol] / vol);
-    expect(individualPerSub[1]).toBeLessThan(individualPerSub[0]);
-    expect(individualPerSub[2]).toBeLessThan(individualPerSub[1]);
-
-    const teamPerSub = [1000, 2500, 5000, 10000].map((vol) => TEAM_VOLUME_PRICES[vol] / vol);
-    expect(teamPerSub[1]).toBeLessThan(teamPerSub[0]);
-    expect(teamPerSub[2]).toBeLessThan(teamPerSub[1]);
-    expect(teamPerSub[3]).toBeLessThan(teamPerSub[2]);
+  it("migratePlanIdToCurrent rewrites removed paid tiers to api_metered", () => {
+    expect(migratePlanIdToCurrent("regular_2026")).toBe("api_metered");
+    expect(migratePlanIdToCurrent("pro_teams")).toBe("api_metered");
+    expect(migratePlanIdToCurrent("regular")).toBe("api_metered");
+    expect(migratePlanIdToCurrent("pro")).toBe("api_metered");
+    expect(migratePlanIdToCurrent("trial")).toBe("trial");
+    expect(migratePlanIdToCurrent("inactive")).toBe("inactive");
+    expect(migratePlanIdToCurrent("api_metered")).toBe("api_metered");
   });
 });
 
@@ -77,9 +78,9 @@ describe("plans workspace limits", () => {
     token_validity_expires_at: null,
   };
 
-  it("gives paid plans unlimited workspaces", () => {
-    expect(getWorkspaceLimit({ ...baseProfile, plan: "regular_2026" })).toBeNull();
-    expect(getWorkspaceLimit({ ...baseProfile, plan: "pro_teams" })).toBeNull();
+  it("gives api_metered unlimited workspaces", () => {
+    expect(getWorkspaceLimit({ ...baseProfile, plan: "api_metered" })).toBeNull();
+    expect(getWorkspaceLimit({ ...baseProfile, plan: "trial" })).toBeNull();
   });
 
   it("blocks inactive workspace creation", () => {
@@ -89,42 +90,6 @@ describe("plans workspace limits", () => {
     );
     expect(result.allowed).toBe(false);
     expect(result.limit).toBe(0);
-  });
-});
-
-describe("plans usage", () => {
-  it("allows active regular_2026 within proof-of-work limit", () => {
-    const result = canSubmitProofOfWork(
-      {
-        plan: "regular_2026",
-        is_admin: false,
-        extra_lessons: 0,
-        subscription_status: "active",
-        current_period_end: "2026-12-31",
-        token_tier: null,
-        token_validity_expires_at: null,
-      },
-      50
-    );
-    expect(result.allowed).toBe(true);
-    expect(result.limit).toBe(100);
-  });
-
-  it("gates product usage when proof-of-work allowance is exhausted", () => {
-    const result = canSubmitProofOfWork(
-      {
-        plan: "regular_2026",
-        is_admin: false,
-        extra_lessons: 0,
-        subscription_status: "active",
-        current_period_end: "2026-12-31",
-        token_tier: null,
-        token_validity_expires_at: null,
-      },
-      100
-    );
-    expect(result.allowed).toBe(false);
-    expect(result.limit).toBe(100);
   });
 });
 
@@ -139,26 +104,49 @@ describe("plans proof-of-work limits", () => {
     token_validity_expires_at: null,
   };
 
-  it("resolves proof-of-work allowance from plan base plus extras", () => {
-    expect(getProofOfWorkAllowance({ ...baseProfile, plan: "inactive", subscription_status: "inactive" }).limit).toBe(0);
-    expect(getProofOfWorkAllowance({ ...baseProfile, plan: "regular_2026" }).limit).toBe(100);
+  it("gives unlimited proof-of-work for active api_metered and trial", () => {
     expect(getProofOfWorkAllowance({ ...baseProfile, plan: "api_metered" }).limit).toBeNull();
+    expect(
+      getProofOfWorkAllowance({
+        ...baseProfile,
+        plan: "trial",
+        current_period_end: "2099-01-01T00:00:00.000Z",
+      }).limit
+    ).toBeNull();
+    expect(
+      getProofOfWorkAllowance({ ...baseProfile, plan: "inactive", subscription_status: "inactive" })
+        .limit
+    ).toBe(0);
   });
 
-  it("blocks proof-of-work submissions at monthly cap", () => {
+  it("blocks inactive proof-of-work submissions", () => {
     const result = canSubmitProofOfWork(
-      { ...baseProfile, plan: "regular_2026" },
-      100
+      { ...baseProfile, plan: "inactive", subscription_status: "inactive" },
+      0
     );
     expect(result.allowed).toBe(false);
-    expect(result.limit).toBe(100);
+    expect(result.limit).toBe(0);
   });
 
-  it("normalizes legacy plan ids to inactive", () => {
-    expect(normalizePlanId("free")).toBe("inactive");
-    expect(normalizePlanId("regular")).toBe("inactive");
-    expect(normalizePlanId("pro")).toBe("inactive");
-    expect(normalizePlanId("regular_2026")).toBe("regular_2026");
+  it("allows api_metered PoW without a hard monthly cap", () => {
+    const result = canSubmitProofOfWork({ ...baseProfile, plan: "api_metered" }, 10_000);
+    expect(result.allowed).toBe(true);
+    expect(result.limit).toBeNull();
+  });
+
+  it("enforces token_tier regular finite pool", () => {
+    const result = canSubmitProofOfWork(
+      {
+        ...baseProfile,
+        plan: "inactive",
+        subscription_status: "inactive",
+        token_tier: "regular",
+        token_validity_expires_at: "2099-01-01T00:00:00.000Z",
+      },
+      25
+    );
+    expect(result.allowed).toBe(false);
+    expect(result.limit).toBe(25);
   });
 });
 
@@ -213,17 +201,6 @@ describe("billing period", () => {
         }
       )
     ).toBe(true);
-    expect(
-      getProofOfWorkAllowance({
-        plan: "trial",
-        subscription_status: "active",
-        current_period_end: "2099-01-01T00:00:00.000Z",
-        is_admin: false,
-        extra_lessons: 0,
-        token_tier: null,
-        token_validity_expires_at: null,
-      }).limit
-    ).toBeNull();
   });
 
   it("demotes expired trials to inactive + trial_expired", () => {
@@ -242,17 +219,6 @@ describe("billing period", () => {
         current_period_end: "2099-01-01T00:00:00.000Z",
       })
     ).toBeNull();
-
-    expect(
-      hasProductAccess({
-        plan: "inactive",
-        subscription_status: "trial_expired",
-        current_period_end: "2000-01-01T00:00:00.000Z",
-        is_admin: false,
-        token_tier: null,
-        token_validity_expires_at: null,
-      })
-    ).toBe(false);
   });
 });
 
@@ -267,10 +233,9 @@ describe("product access", () => {
         token_validity_expires_at: null,
       })
     ).toBe(false);
-    // Personal plan without org is not product truth
     expect(
       hasProductAccess({
-        plan: "regular_2026",
+        plan: "api_metered",
         subscription_status: "active",
         is_admin: false,
         token_tier: null,
@@ -289,7 +254,7 @@ describe("product access", () => {
         },
         {
           id: "org-1",
-          plan: "pro_teams",
+          plan: "api_metered",
           subscription_status: "active",
           current_period_end: "2099-01-01T00:00:00.000Z",
           billing_mode: "subscription",
@@ -308,36 +273,6 @@ describe("product access", () => {
         token_validity_expires_at: null,
       })
     ).toBe(true);
-    // Membership alone is not enough
-    expect(
-      hasProductAccess({
-        plan: "inactive",
-        subscription_status: "inactive",
-        is_admin: false,
-        organization_id: "org-1",
-        token_tier: null,
-        token_validity_expires_at: null,
-      })
-    ).toBe(false);
-    expect(
-      hasProductAccess(
-        {
-          plan: "inactive",
-          subscription_status: "inactive",
-          is_admin: false,
-          organization_id: "org-1",
-          token_tier: null,
-          token_validity_expires_at: null,
-        },
-        {
-          id: "org-1",
-          plan: "pro_teams",
-          subscription_status: "active",
-          current_period_end: "2099-01-01T00:00:00.000Z",
-          billing_mode: "subscription",
-        }
-      )
-    ).toBe(true);
     expect(
       hasProductAccess({
         plan: "inactive",
@@ -348,47 +283,8 @@ describe("product access", () => {
       })
     ).toBe(true);
   });
-});
 
-describe("agent api key plans", () => {
-  it("recognizes pro_teams and api_metered", () => {
-    expect(hasAgentApiKeyPlan("pro_teams")).toBe(true);
-    expect(hasAgentApiKeyPlan("api_metered")).toBe(true);
-    expect(hasAgentApiKeyPlan("regular_2026")).toBe(false);
-    expect(hasAgentApiKeyPlan("inactive")).toBe(false);
-  });
-
-  it("grants proof-of-work API access on active api_metered", () => {
-    expect(hasProofOfWorkApiAccess("api_metered", "active")).toBe(true);
-    expect(hasProofOfWorkApiAccess("api_metered", "inactive")).toBe(false);
-    expect(hasProofOfWorkApiAccess("pro_teams", "active")).toBe(true);
-  });
-});
-
-describe("api metered pricing", () => {
-  it("estimates monthly invoice from API call count", () => {
-    const estimate = estimateApiMeteredInvoice(50);
-    expect(estimate.platformCents).toBe(API_METERED_PLATFORM_FEE_CENTS);
-    expect(estimate.usageCents).toBe(50 * POW_API_CALL_PRICE_CENTS);
-    expect(estimate.totalCents).toBe(API_METERED_PLATFORM_FEE_CENTS + 50 * POW_API_CALL_PRICE_CENTS);
-    expect(isApiMeteredPlan("api_metered")).toBe(true);
-  });
-
-  it("gives unlimited proof-of-work allowance for active api_metered", () => {
-    expect(
-      getProofOfWorkAllowance({
-        plan: "api_metered",
-        is_admin: false,
-        extra_lessons: 0,
-        subscription_status: "active",
-        current_period_end: "2026-12-31",
-        token_tier: null,
-        token_validity_expires_at: null,
-      }).limit
-    ).toBeNull();
-  });
-
-  it("includes api_metered in product access via org", () => {
+  it("does not treat removed tier ids as product access", () => {
     expect(
       hasProductAccess(
         {
@@ -397,21 +293,97 @@ describe("api metered pricing", () => {
           is_admin: false,
           token_tier: null,
           token_validity_expires_at: null,
-          organization_id: "org-api",
+          organization_id: "org-1",
         },
         {
-          id: "org-api",
-          plan: "api_metered",
+          id: "org-1",
+          plan: "pro_teams",
           subscription_status: "active",
           current_period_end: "2099-01-01T00:00:00.000Z",
           billing_mode: "subscription",
         }
       )
-    ).toBe(true);
+    ).toBe(false);
+    expect(
+      hasProductAccess(
+        {
+          plan: "inactive",
+          subscription_status: "inactive",
+          is_admin: false,
+          token_tier: null,
+          token_validity_expires_at: null,
+          organization_id: "org-1",
+        },
+        {
+          id: "org-1",
+          plan: "regular_2026",
+          subscription_status: "active",
+          current_period_end: "2099-01-01T00:00:00.000Z",
+          billing_mode: "subscription",
+        }
+      )
+    ).toBe(false);
+  });
+});
+
+describe("agent api key plans", () => {
+  it("grants API access only for active api_metered", () => {
+    expect(hasAgentApiKeyPlan("api_metered")).toBe(true);
+    expect(hasAgentApiKeyPlan("pro_teams")).toBe(false);
+    expect(hasAgentApiKeyPlan("regular_2026")).toBe(false);
+    expect(hasAgentApiKeyPlan("inactive")).toBe(false);
+    expect(hasAgentApiKeyPlan("trial")).toBe(false);
+
+    expect(hasProofOfWorkApiAccess("api_metered", "active")).toBe(true);
+    expect(hasProofOfWorkApiAccess("api_metered", "inactive")).toBe(false);
+    expect(hasProofOfWorkApiAccess("pro_teams", "active")).toBe(false);
+  });
+});
+
+describe("api metered invoice estimate", () => {
+  it("bills external PoW at 0.05 cents and sessions at $1/$10", () => {
+    const estimate = estimateApiMeteredInvoice(50, 3, 2);
+    expect(estimate.platformCents).toBe(API_METERED_PLATFORM_FEE_CENTS);
+    expect(estimate.externalPowCents).toBe(50 * POW_API_CALL_PRICE_CENTS);
+    expect(estimate.externalPowCents).toBe(2.5);
+    expect(estimate.tapSessionCents).toBe(3 * TAP_SESSION_PRICE_CENTS);
+    expect(estimate.ileSessionCents).toBe(2 * ILE_SESSION_PRICE_CENTS);
+    expect(estimate.usageCents).toBe(2.5 + 300 + 2000);
+    expect(estimate.usageCentsRounded).toBe(Math.round(2.5 + 300 + 2000));
+    expect(estimate.totalCents).toBe(
+      API_METERED_PLATFORM_FEE_CENTS + estimate.usageCentsRounded
+    );
+    expect(isApiMeteredPlan("api_metered")).toBe(true);
   });
 
-  it("formats api metered monthly price label", () => {
-    expect(formatPlanMonthlyPrice("api_metered")).toContain("$99/month");
-    expect(formatPlanMonthlyPrice("api_metered")).toContain("$1.99");
+  it("does not charge TAP/ILE-generated PoW as external API PoW", () => {
+    // Internal product PoW (no API key) → not billed at PoW rate; sessions are separate.
+    expect(isExternalApiPowUsage(null)).toBe(false);
+    expect(isExternalApiPowUsage(undefined)).toBe(false);
+    expect(isExternalApiPowUsage("")).toBe(false);
+    expect(isExternalApiPowUsage("key-abc")).toBe(true);
+
+    // Only external count feeds PoW line; session counts feed session lines.
+    const estimate = estimateApiMeteredInvoice(0, 5, 1);
+    expect(estimate.externalPowCents).toBe(0);
+    expect(estimate.tapSessionCents).toBe(500);
+    expect(estimate.ileSessionCents).toBe(1000);
+  });
+
+  it("rounds sub-cent PoW for Stripe whole-cent totals", () => {
+    // 10 * 0.05 = 0.5 cents → rounds to 1 or 0 depending on half-up; Math.round(0.5)=1
+    const half = estimateApiMeteredInvoice(10, 0, 0);
+    expect(half.externalPowCents).toBe(0.5);
+    expect(half.usageCentsRounded).toBe(1);
+
+    // 1 * 0.05 = 0.05 → rounds to 0 whole cents
+    const one = estimateApiMeteredInvoice(1, 0, 0);
+    expect(one.externalPowCents).toBe(0.05);
+    expect(one.usageCentsRounded).toBe(0);
+
+    // 20 * 0.05 = 1.0 → exactly 1 cent
+    const twenty = estimateApiMeteredInvoice(20, 0, 0);
+    expect(twenty.externalPowCents).toBe(1);
+    expect(twenty.usageCentsRounded).toBe(1);
   });
 });

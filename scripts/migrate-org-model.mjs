@@ -44,7 +44,9 @@ function slugify(s) {
 }
 
 function normalizePlan(plan) {
-  if (["trial", "regular_2026", "pro_teams", "api_metered"].includes(plan)) return plan;
+  if (plan === "trial" || plan === "api_metered") return plan;
+  // Removed paid tiers collapse onto the sole remaining paid plan
+  if (["regular_2026", "pro_teams", "regular", "pro"].includes(plan)) return "api_metered";
   return "inactive";
 }
 
@@ -52,10 +54,6 @@ function planRank(plan) {
   switch (normalizePlan(plan)) {
     case "api_metered":
       return 50;
-    case "pro_teams":
-      return 40;
-    case "regular_2026":
-      return 30;
     case "trial":
       return 20;
     default:
@@ -387,10 +385,10 @@ async function verify(client, lines, migrateMeta = {}) {
       (SELECT count(*)::int FROM public.profiles) AS profiles_total,
       (SELECT count(*)::int FROM public.profiles WHERE organization_id IS NULL) AS profiles_without_org,
       (SELECT count(*)::int FROM public.organizations
-         WHERE plan IN ('trial','regular_2026','pro_teams','api_metered')
+         WHERE plan IN ('trial','api_metered')
            AND archived_at IS NULL) AS orgs_with_paid_plan,
       (SELECT count(*)::int FROM public.profiles
-         WHERE plan IN ('trial','regular_2026','pro_teams','api_metered')
+         WHERE plan IN ('trial','api_metered')
            AND subscription_status = 'active') AS profiles_still_personally_active
   `);
 
@@ -416,7 +414,7 @@ async function verify(client, lines, migrateMeta = {}) {
     SELECT count(*)::int AS n
     FROM public.profiles p
     JOIN public.organizations o ON o.id = p.organization_id
-    WHERE o.plan IN ('trial','regular_2026','pro_teams','api_metered')
+    WHERE o.plan IN ('trial','api_metered')
       AND (
         o.billing_mode = 'partner'
         OR (o.subscription_status = 'active')

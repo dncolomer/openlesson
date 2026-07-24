@@ -531,8 +531,6 @@ export default function OrganizationDetailPage() {
             >
               <option value="inactive">Inactive</option>
               <option value="trial">3-Day Trial</option>
-              <option value="regular_2026">Individual</option>
-              <option value="pro_teams">Pro / Teams</option>
               <option value="api_metered">API Metered</option>
             </select>
           </div>

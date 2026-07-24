@@ -31,8 +31,6 @@ interface Stats {
   tierBreakdown: {
     inactive: number;
     trial: number;
-    regular_2026: number;
-    pro_teams: number;
     api_metered: number;
     trial_expired: number;
   };
@@ -310,8 +308,6 @@ export default function AdminPage() {
           <div className="flex flex-wrap gap-4 text-sm text-neutral-400">
             <span>Inactive: {stats.tierBreakdown.inactive}</span>
             <span className="text-white">Trial: {stats.tierBreakdown.trial}</span>
-            <span className="text-white">Individual: {stats.tierBreakdown.regular_2026}</span>
-            <span className="text-white">Teams: {stats.tierBreakdown.pro_teams}</span>
             <span className="text-neutral-200">API Metered: {stats.tierBreakdown.api_metered}</span>
             <span className="text-orange-300">
               Trial expired: {stats.tierBreakdown.trial_expired}

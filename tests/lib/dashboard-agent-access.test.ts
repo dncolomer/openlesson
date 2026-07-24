@@ -2,10 +2,10 @@ import { describe, expect, it } from "vitest";
 import { dashboardUsesAgenticKeys } from "@/lib/dashboard-agent-access";
 
 describe("dashboardUsesAgenticKeys", () => {
-  it("uses org-resolved pro_teams from usage even when user.plan is demoted inactive", () => {
+  it("uses org-resolved api_metered from usage even when user.plan is demoted inactive", () => {
     expect(
       dashboardUsesAgenticKeys({
-        usagePlan: "pro_teams",
+        usagePlan: "api_metered",
         canUseAgentApi: true,
         userPlan: "inactive",
         userIsAdmin: false,
@@ -32,13 +32,18 @@ describe("dashboardUsesAgenticKeys", () => {
     ).toBe(false);
   });
 
-  it("does not treat stale user.plan=pro_teams as enough without usage when usage says inactive", () => {
-    // When usage loaded as inactive org, prefer usagePlan over stale userPlan
+  it("does not treat stale removed plan names as enough without usage when usage says inactive", () => {
     expect(
       dashboardUsesAgenticKeys({
         usagePlan: "inactive",
         canUseAgentApi: false,
         userPlan: "pro_teams",
+      })
+    ).toBe(false);
+    expect(
+      dashboardUsesAgenticKeys({
+        usagePlan: "pro_teams",
+        userPlan: "inactive",
       })
     ).toBe(false);
   });

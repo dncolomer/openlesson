@@ -245,9 +245,7 @@ export function OrganizationDashboardTab() {
   };
 
   const planLabel = (plan: string) => {
-    if (plan === "pro_teams") return "Pro / Teams";
     if (plan === "api_metered") return "API Metered";
-    if (plan === "regular_2026") return "Individual";
     if (plan === "trial") return "Trial";
     if (plan === "inactive") return "Inactive";
     return plan;

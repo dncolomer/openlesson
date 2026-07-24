@@ -1,6 +1,5 @@
 import {
   normalizePlanId,
-  PLANS,
   type PlanId,
   type UserProfile,
 } from "@/lib/plans";
@@ -73,12 +72,10 @@ function powLimitForPlan(
   plan: PlanId,
   subscriptionStatus: string,
   currentPeriodEnd: string | null,
-  extraLessons: number,
+  _extraLessons: number,
   isAdmin: boolean
 ): number | null {
   if (isAdmin) return null;
-
-  const planDef = PLANS[plan];
 
   if (plan === "api_metered" && subscriptionStatus === "active") {
     return null;
@@ -90,10 +87,6 @@ function powLimitForPlan(
     (!currentPeriodEnd || new Date(currentPeriodEnd) > new Date())
   ) {
     return null;
-  }
-
-  if ((plan === "regular_2026" || plan === "pro_teams") && subscriptionStatus === "active") {
-    return (planDef.proofOfWorkPerPeriod ?? 0) + extraLessons;
   }
 
   return 0;
@@ -121,7 +114,7 @@ export function isOrgEntitled(org: OrgBillingRow): boolean {
     return false;
   }
 
-  return plan === "trial" || plan === "regular_2026" || plan === "pro_teams" || plan === "api_metered";
+  return plan === "trial" || plan === "api_metered";
 }
 
 export function orgToUserProfileShape(org: OrgBillingRow, isAdmin = false): UserProfile {
@@ -243,11 +236,11 @@ export function billingEntityHasProductAccess(entity: ResolvedBillingEntity): bo
   return entity.entitled;
 }
 
-/** Proof-of-Work REST/MCP API access for pro_teams / api_metered (org or personal). */
+/** Proof-of-Work REST/MCP API access for active api_metered (org or personal). */
 export function billingEntityHasApiAccess(entity: ResolvedBillingEntity): boolean {
   if (entity.source === "admin") return true;
   if (!entity.entitled) return false;
-  return entity.plan === "pro_teams" || entity.plan === "api_metered";
+  return entity.plan === "api_metered";
 }
 
 export function billingEntityToUserProfile(entity: ResolvedBillingEntity): UserProfile {
@@ -305,3 +298,4 @@ export function billingEntityToUserProfile(entity: ResolvedBillingEntity): UserP
     token_validity_expires_at: null,
   };
 }
+

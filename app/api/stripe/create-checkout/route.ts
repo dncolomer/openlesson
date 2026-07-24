@@ -1,14 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireAuthenticatedUser } from "@/lib/api/require-auth";
 import Stripe from "stripe";
 import { createClient } from "@/lib/supabase/server";
 import {
   API_METERED_PLATFORM_FEE_CENTS,
-  POW_API_CALL_PRICE_CENTS,
-  REGULAR_VOLUME_PRICES,
-  TEAM_VOLUME_PRICES,
+  formatIleSessionPrice,
+  formatPowApiCallPrice,
+  formatTapSessionPrice,
   TRIAL_PRICE_CENTS,
-  resolveCheckoutVolume,
 } from "@/lib/plans";
 import { AYCL_PRICE_CENTS, createPendingAyclPurchase } from "@/lib/aycl";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -24,8 +22,6 @@ function getStripe() {
 }
 
 const GUEST_CHECKOUT_TYPES = new Set<CheckoutPriceType>([
-  "regular_2026",
-  "pro_teams",
   "api_metered",
   "trial_3day",
 ]);
@@ -40,15 +36,11 @@ export async function POST(request: NextRequest) {
 
     const {
       priceType,
-      monthlyVolume: rawMonthlyVolume,
       workspaceId: rawWorkspaceId,
     } = await request.json();
-    const monthlyVolume = resolveCheckoutVolume(priceType, rawMonthlyVolume);
 
     if (
       ![
-        "regular_2026",
-        "pro_teams",
         "api_metered",
         "trial_3day",
         "all_you_can_learn",
@@ -73,31 +65,7 @@ export async function POST(request: NextRequest) {
     const mode = checkoutModeForPriceType(priceType as CheckoutPriceType);
     let lineItem: Stripe.Checkout.SessionCreateParams.LineItem | null = null;
 
-    if (priceType === "regular_2026") {
-      lineItem = {
-        price_data: {
-          currency: "usd",
-          unit_amount: REGULAR_VOLUME_PRICES[monthlyVolume],
-          recurring: { interval: "month" },
-          product_data: {
-            name: `Uncertain Systems Individual - ${monthlyVolume.toLocaleString()} Proof-of-Work submissions/mo`,
-          },
-        },
-        quantity: 1,
-      };
-    } else if (priceType === "pro_teams") {
-      lineItem = {
-        price_data: {
-          currency: "usd",
-          unit_amount: TEAM_VOLUME_PRICES[monthlyVolume],
-          recurring: { interval: "month" },
-          product_data: {
-            name: `Uncertain Systems Pro / Teams - ${monthlyVolume.toLocaleString()} Proof-of-Work submissions/mo`,
-          },
-        },
-        quantity: 1,
-      };
-    } else if (priceType === "api_metered") {
+    if (priceType === "api_metered") {
       lineItem = {
         price_data: {
           currency: "usd",
@@ -105,7 +73,7 @@ export async function POST(request: NextRequest) {
           recurring: { interval: "month" },
           product_data: {
             name: "Uncertain Systems API Metered — platform access",
-            description: `Unlimited API usage. Proof-of-Work API submissions billed at $${(POW_API_CALL_PRICE_CENTS / 100).toFixed(2)} each on your monthly invoice.`,
+            description: `Usage billed monthly: ${formatPowApiCallPrice()} per external/API PoW, ${formatTapSessionPrice()} per TAP session, ${formatIleSessionPrice()} per ILE session. TAP/ILE-generated PoW is not billed as API PoW.`,
           },
         },
         quantity: 1,
@@ -190,8 +158,8 @@ export async function POST(request: NextRequest) {
     const metadata: Record<string, string> = {
       price_type: priceType,
       quantity: "1",
-      monthly_volume: String(monthlyVolume),
-      volume_unit: priceType === "regular_2026" || priceType === "pro_teams" ? "proof_of_work" : "",
+      monthly_volume: "0",
+      volume_unit: "",
       ...(user ? { supabase_user_id: user.id } : {}),
       ...(priceType === "all_you_can_learn" ? { workspace_id: workspaceId } : {}),
     };

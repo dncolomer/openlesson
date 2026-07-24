@@ -74,7 +74,7 @@ export async function resolveUserBilling(
   };
 }
 
-/** True when user may use PoW API / Teams features (admin or org plan pro_teams|api_metered). */
+/** True when user may use PoW API features (admin or org plan api_metered). */
 export async function userHasOrgApiAccess(
   supabase: SupabaseClient,
   userId: string

@@ -24,7 +24,7 @@ describe("org-resolved workspace and API gates (post-migrate)", () => {
 
   const entitledOrg = {
     id: "org-1",
-    plan: "regular_2026",
+    plan: "api_metered",
     subscription_status: "active",
     current_period_end: "2099-01-01T00:00:00.000Z",
     extra_lessons: 0,
@@ -35,7 +35,7 @@ describe("org-resolved workspace and API gates (post-migrate)", () => {
   it("allows workspace create for entitled org member with demoted personal plan", () => {
     const entity = resolveBillingEntity(inactivePersonal, entitledOrg);
     const userProfile = billingEntityToUserProfile(entity);
-    expect(userProfile.plan).toBe("regular_2026");
+    expect(userProfile.plan).toBe("api_metered");
     expect(userProfile.subscription_status).toBe("active");
     const check = canCreateWorkspace(userProfile, 0);
     expect(check.allowed).toBe(true);
@@ -45,9 +45,9 @@ describe("org-resolved workspace and API gates (post-migrate)", () => {
     const entity = resolveBillingEntity(
       {
         ...inactivePersonal,
-        plan: "pro_teams",
+        plan: "api_metered",
         subscription_status: "active",
-        extra_lessons: 5000,
+        extra_lessons: 0,
         current_period_end: "2099-01-01T00:00:00.000Z",
       },
       {
@@ -63,19 +63,19 @@ describe("org-resolved workspace and API gates (post-migrate)", () => {
     expect(check.allowed).toBe(false);
   });
 
-  it("grants API access from org pro_teams not personal plan", () => {
+  it("grants API access from org api_metered not personal plan", () => {
     const entity = resolveBillingEntity(inactivePersonal, {
       ...entitledOrg,
-      plan: "pro_teams",
+      plan: "api_metered",
     });
     expect(billingEntityHasApiAccess(entity)).toBe(true);
   });
 
-  it("denies API access when personal was teams but org is inactive", () => {
+  it("denies API access when personal was metered but org is inactive", () => {
     const entity = resolveBillingEntity(
       {
         ...inactivePersonal,
-        plan: "pro_teams",
+        plan: "api_metered",
         subscription_status: "active",
       },
       {

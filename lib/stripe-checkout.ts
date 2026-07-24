@@ -1,33 +1,23 @@
 import type Stripe from "stripe";
 import {
-  BASE_INCLUDED_PROOF_OF_WORK,
   TRIAL_ACCESS_DAYS,
   type PlanId,
 } from "@/lib/plans";
 
 export type CheckoutPriceType =
-  | "regular_2026"
-  | "pro_teams"
   | "api_metered"
   | "trial_3day"
   | "all_you_can_learn"
   | "rabbit_hole_plays";
 
 export function isGuestCheckoutPriceType(priceType: string): boolean {
-  return [
-    "regular_2026",
-    "pro_teams",
-    "api_metered",
-    "trial_3day",
-  ].includes(priceType);
+  return ["api_metered", "trial_3day"].includes(priceType);
 }
 
 export function planIdFromPriceType(priceType: string): PlanId {
   if (priceType === "trial_3day") return "trial";
   if (priceType === "api_metered") return "api_metered";
-  if (priceType === "pro_teams") return "pro_teams";
-  if (priceType === "regular_2026") return "regular_2026";
-  // Unknown / removed legacy price types do not grant a paid plan
+  // Unknown / removed legacy price types (regular_2026, pro_teams, etc.) do not grant a paid plan
   return "inactive";
 }
 
@@ -56,14 +46,14 @@ export function periodEndForCheckout(priceType: string, subscription?: Stripe.Su
   return null;
 }
 
+/** Volume overages are no longer sold; always 0 for current checkout types. */
 export function extraLessonsForCheckout(
   priceType: string,
-  monthlyVolume: number,
-  plan: PlanId
+  _monthlyVolume: number,
+  _plan: PlanId
 ): number {
-  if (priceType === "trial_3day") return 0;
-  const base = BASE_INCLUDED_PROOF_OF_WORK[plan] ?? 0;
-  return Math.max(0, monthlyVolume - base);
+  if (priceType === "trial_3day" || priceType === "api_metered") return 0;
+  return 0;
 }
 
 export function normalizeCheckoutEmail(email: string | null | undefined): string | null {

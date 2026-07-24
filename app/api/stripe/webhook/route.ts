@@ -2,9 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
-  BASE_INCLUDED_PROOF_OF_WORK,
-  POW_API_CALL_PRICE_CENTS,
-  normalizeStripeVolumeToProofOfWork,
+  estimateApiMeteredInvoice,
+  formatIleSessionPrice,
+  formatPowApiCallPrice,
+  formatTapSessionPrice,
 } from "@/lib/plans";
 import { upsertPendingCheckoutFromSession } from "@/lib/pending-checkout";
 import {
@@ -13,7 +14,13 @@ import {
   profileUpdateFromCheckout,
 } from "@/lib/stripe-checkout";
 import { fulfillAyclPurchase } from "@/lib/aycl";
-import { countPowApiSubmissions } from "@/lib/usage-metrics";
+import {
+  countIleSessions,
+  countOrgIleSessions,
+  countOrgTapSessions,
+  countPowApiSubmissions,
+  countTapSessions,
+} from "@/lib/usage-metrics";
 import {
   applyBillingToUserOrganization,
   cancelOrgBillingForUser,
@@ -29,6 +36,15 @@ function getStripe() {
 
 function getAdminClient() {
   return createAdminClient();
+}
+
+/** Only api_metered remains as a subscription plan id from Stripe price_type. */
+function subscriptionPlanFromPriceType(priceType: string | null | undefined): "api_metered" | null {
+  if (priceType === "api_metered") return "api_metered";
+  // Legacy Individual / Teams price types are no longer applied as distinct plans.
+  // In-app migration moves those entitlements to api_metered; new Stripe events for
+  // old price objects are ignored so we do not reintroduce removed tier names.
+  return null;
 }
 
 export async function POST(request: NextRequest) {
@@ -125,23 +141,7 @@ export async function POST(request: NextRequest) {
         if (!userId) break;
 
         const priceType = subscription.metadata?.price_type;
-        const monthlyVolume = normalizeStripeVolumeToProofOfWork(
-          Math.max(
-            1,
-            Number(subscription.metadata?.monthly_volume) ||
-              BASE_INCLUDED_PROOF_OF_WORK[priceType || ""] ||
-              0
-          ),
-          subscription.metadata?.volume_unit
-        );
-        const plan =
-          priceType === "api_metered"
-            ? "api_metered"
-            : priceType === "pro_teams"
-              ? "pro_teams"
-              : priceType === "regular_2026"
-                ? "regular_2026"
-                : null;
+        const plan = subscriptionPlanFromPriceType(priceType);
 
         if (!plan) {
           console.warn(
@@ -164,7 +164,7 @@ export async function POST(request: NextRequest) {
               ? "active"
               : subscription.status,
           currentPeriodEnd: periodEnd ? new Date(periodEnd * 1000).toISOString() : null,
-          extraLessons: Math.max(0, monthlyVolume - (BASE_INCLUDED_PROOF_OF_WORK[plan] || 0)),
+          extraLessons: 0,
           stripeCustomerId,
           stripeSubscriptionId: subscription.id,
         });
@@ -199,35 +199,83 @@ export async function POST(request: NextRequest) {
         const periodStartUnix = subscription.items?.data?.[0]?.current_period_start;
         const periodStart = periodStartUnix ? new Date(periodStartUnix * 1000) : null;
 
-        // Prefer org-wide API PoW when user has an org
         const { data: profile } = await supabase
           .from("profiles")
           .select("organization_id")
           .eq("id", userId)
           .maybeSingle();
 
-        let apiCalls = 0;
+        let externalPow = 0;
+        let tapSessions = 0;
+        let ileSessions = 0;
+
         if (profile?.organization_id) {
           const { data: members } = await supabase
             .from("profiles")
             .select("id")
             .eq("organization_id", profile.organization_id);
+          const memberIds = (members || []).map((m) => m.id);
           for (const m of members || []) {
-            apiCalls += await countPowApiSubmissions(supabase, m.id, periodStart);
+            externalPow += await countPowApiSubmissions(supabase, m.id, periodStart);
+          }
+          if (periodStart && memberIds.length > 0) {
+            tapSessions = await countOrgTapSessions(supabase, memberIds, periodStart);
+            ileSessions = await countOrgIleSessions(supabase, memberIds, periodStart);
           }
         } else {
-          apiCalls = await countPowApiSubmissions(supabase, userId, periodStart);
+          externalPow = await countPowApiSubmissions(supabase, userId, periodStart);
+          tapSessions = await countTapSessions(supabase, userId, periodStart);
+          ileSessions = await countIleSessions(supabase, userId, periodStart);
         }
 
-        if (apiCalls > 0 && invoice.id) {
-          const customerId =
-            typeof invoice.customer === "string" ? invoice.customer : invoice.customer?.id;
-          if (customerId) {
+        const estimate = estimateApiMeteredInvoice(externalPow, tapSessions, ileSessions);
+        const customerId =
+          typeof invoice.customer === "string" ? invoice.customer : invoice.customer?.id;
+
+        if (customerId && invoice.id && estimate.usageCentsRounded > 0) {
+          // Prefer separate line items when each component has whole-cent amount;
+          // otherwise one combined usage line with rounded total (sub-cent PoW).
+          const powRounded = Math.round(estimate.externalPowCents);
+          const tapRounded = estimate.tapSessionCents;
+          const ileRounded = estimate.ileSessionCents;
+
+          if (powRounded > 0) {
             await getStripe().invoiceItems.create({
               customer: customerId,
               invoice: invoice.id,
-              description: `${apiCalls.toLocaleString()} Proof-of-Work API submission${apiCalls === 1 ? "" : "s"} @ $${(POW_API_CALL_PRICE_CENTS / 100).toFixed(2)}`,
-              amount: apiCalls * POW_API_CALL_PRICE_CENTS,
+              description: `${externalPow.toLocaleString()} external/API Proof-of-Work submission${externalPow === 1 ? "" : "s"} @ ${formatPowApiCallPrice()} (rounded to whole cents)`,
+              amount: powRounded,
+              currency: "usd",
+            });
+          }
+          if (tapRounded > 0) {
+            await getStripe().invoiceItems.create({
+              customer: customerId,
+              invoice: invoice.id,
+              description: `${tapSessions.toLocaleString()} TAP session${tapSessions === 1 ? "" : "s"} @ ${formatTapSessionPrice()}`,
+              amount: tapRounded,
+              currency: "usd",
+            });
+          }
+          if (ileRounded > 0) {
+            await getStripe().invoiceItems.create({
+              customer: customerId,
+              invoice: invoice.id,
+              description: `${ileSessions.toLocaleString()} ILE session${ileSessions === 1 ? "" : "s"} @ ${formatIleSessionPrice()}`,
+              amount: ileRounded,
+              currency: "usd",
+            });
+          }
+
+          // Catch fractional PoW remainder if component rounding undershoots total
+          const componentsSum = powRounded + tapRounded + ileRounded;
+          const remainder = estimate.usageCentsRounded - componentsSum;
+          if (remainder > 0) {
+            await getStripe().invoiceItems.create({
+              customer: customerId,
+              invoice: invoice.id,
+              description: "API Metered usage rounding adjustment",
+              amount: remainder,
               currency: "usd",
             });
           }
@@ -284,22 +332,7 @@ export async function POST(request: NextRequest) {
 
         const subscription = await getStripe().subscriptions.retrieve(subscriptionId).catch(() => null);
         const priceType = subscription?.metadata?.price_type;
-        const plan =
-          priceType === "api_metered"
-            ? "api_metered"
-            : priceType === "pro_teams"
-              ? "pro_teams"
-              : priceType === "regular_2026"
-                ? "regular_2026"
-                : null;
-        const monthlyVolume = normalizeStripeVolumeToProofOfWork(
-          Math.max(
-            0,
-            Number(subscription?.metadata?.monthly_volume) ||
-              (plan ? BASE_INCLUDED_PROOF_OF_WORK[plan] : 0)
-          ),
-          subscription?.metadata?.volume_unit
-        );
+        const plan = subscriptionPlanFromPriceType(priceType);
         const periodEnd = subscription?.items?.data?.[0]?.current_period_end;
 
         if (plan) {
@@ -308,7 +341,7 @@ export async function POST(request: NextRequest) {
             plan,
             subscriptionStatus: "active",
             currentPeriodEnd: periodEnd ? new Date(periodEnd * 1000).toISOString() : null,
-            extraLessons: Math.max(0, monthlyVolume - BASE_INCLUDED_PROOF_OF_WORK[plan]),
+            extraLessons: 0,
             stripeSubscriptionId: subscriptionId,
           });
         }

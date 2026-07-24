@@ -55,8 +55,6 @@ export async function GET() {
     const tierBreakdown: Record<string, number> = {
       inactive: 0,
       trial: 0,
-      regular_2026: 0,
-      pro_teams: 0,
       api_metered: 0,
       trial_expired: 0,
     };

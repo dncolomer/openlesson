@@ -16,7 +16,7 @@ export type OrgXaiKeyEligibility = {
   xai_collection_status?: string | null;
 };
 
-const PAID_PLANS = new Set(["trial", "regular_2026", "pro_teams", "api_metered"]);
+const PAID_PLANS = new Set(["trial", "api_metered"]);
 
 /** True when org already has a usable individual xAI key stored. */
 export function orgHasReadyXaiApiKey(org: OrgXaiKeyEligibility): boolean {

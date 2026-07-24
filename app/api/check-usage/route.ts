@@ -21,6 +21,10 @@ import {
   countProofOfWorkSubmissions,
   countOrgProofOfWorkSubmissions,
   countPowApiSubmissions,
+  countIleSessions,
+  countTapSessions,
+  countOrgIleSessions,
+  countOrgTapSessions,
   loadUsageProfile,
 } from "@/lib/usage-metrics";
 import {
@@ -155,6 +159,8 @@ export async function GET() {
     const workspaceResult = canCreateWorkspace(userProfile, workspaceCount);
 
     let apiPowCallsUsed = 0;
+    let tapSessionsUsed = 0;
+    let ileSessionsUsed = 0;
     let apiMeteredInvoice: ReturnType<typeof estimateApiMeteredInvoice> | null = null;
     if (isApiMeteredPlan(userProfile.plan)) {
       if (entity.source === "organization" && profile.organization_id && periodStart) {
@@ -163,14 +169,24 @@ export async function GET() {
           .select("id")
           .eq("organization_id", profile.organization_id);
         const memberIds = (orgMembers || []).map((m) => m.id);
-        // Sum API PoW across members (simple sequential; fine for admin-scale orgs)
+        // Sum external/API PoW across members (created_by_api_key_id set — not TAP/ILE internal PoW)
         for (const memberId of memberIds) {
           apiPowCallsUsed += await countPowApiSubmissions(admin, memberId, periodStart);
         }
+        if (memberIds.length > 0) {
+          tapSessionsUsed = await countOrgTapSessions(admin, memberIds, periodStart);
+          ileSessionsUsed = await countOrgIleSessions(admin, memberIds, periodStart);
+        }
       } else {
         apiPowCallsUsed = await countPowApiSubmissions(supabase, user.id, periodStart);
+        tapSessionsUsed = await countTapSessions(supabase, user.id, periodStart);
+        ileSessionsUsed = await countIleSessions(supabase, user.id, periodStart);
       }
-      apiMeteredInvoice = estimateApiMeteredInvoice(apiPowCallsUsed);
+      apiMeteredInvoice = estimateApiMeteredInvoice(
+        apiPowCallsUsed,
+        tapSessionsUsed,
+        ileSessionsUsed
+      );
     }
 
     const proofOfWorkPayload = {
@@ -179,7 +195,10 @@ export async function GET() {
       proofOfWorkLimit: result.limit,
       canSubmitProofOfWork: result.allowed,
       evidenceReason: result.reason,
+      /** External/API-direct PoW only (created_by_api_key_id); not TAP/ILE-generated PoW. */
       apiPowCallsUsed,
+      tapSessionsUsed,
+      ileSessionsUsed,
       apiMeteredInvoice,
     };
 
@@ -279,9 +298,8 @@ export async function GET() {
       periodEnd,
       /** Org inference cost from xAI Management API (per org API key + period). */
       xaiUsage,
-      // Teams / API Metered product features (org-resolved plan)
-      canUseAgentApi:
-        result.isAdmin || result.plan === "pro_teams" || result.plan === "api_metered",
+      // API Metered product features (org-resolved plan)
+      canUseAgentApi: result.isAdmin || result.plan === "api_metered",
       ...proofOfWorkPayload,
     });
   } catch (error) {

@@ -27,7 +27,7 @@ const MANAGEMENT_BASE = "https://management-api.x.ai";
 const ALGO = "aes-256-gcm";
 const IV_LENGTH = 12;
 const TAG_LENGTH = 16;
-const PAID_PLANS = new Set(["trial", "regular_2026", "pro_teams", "api_metered"]);
+const PAID_PLANS = new Set(["trial", "api_metered"]);
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 function log(msg, lines) {
@@ -123,8 +123,8 @@ async function countGaps(client) {
       (SELECT count(*)::int FROM organizations
         WHERE archived_at IS NULL
           AND (
-            (billing_mode = 'partner' AND plan IN ('trial','regular_2026','pro_teams','api_metered'))
-            OR (subscription_status = 'active' AND plan IN ('trial','regular_2026','pro_teams','api_metered'))
+            (billing_mode = 'partner' AND plan IN ('trial','api_metered'))
+            OR (subscription_status = 'active' AND plan IN ('trial','api_metered'))
           )
           AND NOT (
             xai_api_key_status = 'ready'

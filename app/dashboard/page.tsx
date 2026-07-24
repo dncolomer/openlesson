@@ -92,12 +92,21 @@ export default function DashboardPage() {
     /** Org partner billing = Stripe bypass; hide commercial billing UI. */
     billingMode?: "subscription" | "partner" | null;
     canUseAgentApi?: boolean;
+    /** External/API-direct PoW only (not TAP/ILE-generated PoW). */
     apiPowCallsUsed?: number;
+    tapSessionsUsed?: number;
+    ileSessionsUsed?: number;
     apiMeteredInvoice?: {
       platformCents: number;
       usageCents: number;
+      usageCentsRounded?: number;
       totalCents: number;
-      apiCallCount: number;
+      externalPowCount?: number;
+      tapSessionCount?: number;
+      ileSessionCount?: number;
+      externalPowCents?: number;
+      tapSessionCents?: number;
+      ileSessionCents?: number;
     } | null;
     /** Inference spend for the org's dedicated xAI API key (period-filtered). */
     xaiUsage?: {
@@ -287,6 +296,8 @@ export default function DashboardPage() {
               profile?.is_admin === true ||
               hasAgentApiKeyPlan(orgResolvedPlan),
             apiPowCallsUsed: usageResult.apiPowCallsUsed ?? 0,
+            tapSessionsUsed: usageResult.tapSessionsUsed ?? 0,
+            ileSessionsUsed: usageResult.ileSessionsUsed ?? 0,
             apiMeteredInvoice: usageResult.apiMeteredInvoice ?? null,
             xaiUsage: usageResult.xaiUsage ?? null,
           });
@@ -590,9 +601,7 @@ export default function DashboardPage() {
 
   function planDisplayName(plan: string, isAdmin?: boolean) {
     if (isAdmin) return "Platform admin";
-    if (plan === "pro_teams") return "Pro / Teams";
     if (plan === "api_metered") return "API Metered";
-    if (plan === "regular_2026") return "Individual";
     if (plan === "trial") return "3-Day Trial";
     if (plan === "inactive") return "Inactive";
     return plan;
@@ -1124,13 +1133,6 @@ export default function DashboardPage() {
                 </span>
               );
             }
-            if (usageData?.plan === "pro_teams") {
-              return (
-                <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[10px] uppercase tracking-[1.4px] text-neutral-400">
-                  Teams
-                </span>
-              );
-            }
             if (usageData?.plan === "api_metered") {
               return (
                 <span className="rounded-full border border-amber-500/30 bg-amber-500/10 px-2.5 py-1 text-[10px] uppercase tracking-[1.4px] text-amber-100/90">
@@ -1142,13 +1144,6 @@ export default function DashboardPage() {
               return (
                 <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 text-[10px] uppercase tracking-[1.4px] text-emerald-100/90">
                   Trial
-                </span>
-              );
-            }
-            if (usageData?.plan === "regular_2026") {
-              return (
-                <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[10px] uppercase tracking-[1.4px] text-neutral-400">
-                  {t("dashboard.regular")}
                 </span>
               );
             }
@@ -1302,12 +1297,10 @@ export default function DashboardPage() {
                             </div>
                             <p className="mt-2 text-sm text-neutral-500">
                               {usageData.plan === "api_metered"
-                                ? "API usage is tallied through this date and added to your monthly invoice."
-                                : usageData.plan === "pro_teams"
-                                  ? "Organization Proof-of-Work pool resets each billing period."
-                                  : usageData.plan === "trial"
-                                    ? "Trial access ends on this date."
-                                    : t("dashboard.regularResetDesc")}
+                                ? "Usage (external API PoW, TAP sessions, ILE sessions) is tallied through this date and added to your monthly invoice."
+                                : usageData.plan === "trial"
+                                  ? "Trial access ends on this date."
+                                  : t("dashboard.regularResetDesc")}
                             </p>
                           </>
                         ) : (
@@ -1327,7 +1320,6 @@ export default function DashboardPage() {
                         {!usageData.isAdmin &&
                           (usageData.plan === "inactive" ||
                             usageData.subscriptionStatus === "trial_expired" ||
-                            usageData.plan === "regular_2026" ||
                             usageData.plan === "trial") && (
                             <Link
                               href="/pricing"
@@ -1449,7 +1441,7 @@ export default function DashboardPage() {
                           {usageData.organization.guestCount} guests
                           {isBillingBypass
                             ? " · Shared pool for this period"
-                            : " · Shared monthly pool (TAP, ILE, API)"}
+                            : " · Org usage this period"}
                         </p>
                       </div>
                     )}
@@ -1477,16 +1469,40 @@ export default function DashboardPage() {
                             <p className={usageLabelClass}>API Metered invoice (this period)</p>
                             <div className="mt-4 grid gap-4 sm:grid-cols-3">
                               <div>
-                                <p className="text-xs text-neutral-500">API submissions</p>
+                                <p className="text-xs text-neutral-500">External API PoW</p>
                                 <p className="mt-1 text-2xl font-medium text-white">
                                   {usageData.apiPowCallsUsed ?? 0}
                                 </p>
+                                <p className="mt-1 text-xs text-neutral-500">0.05¢ each</p>
                               </div>
+                              <div>
+                                <p className="text-xs text-neutral-500">TAP sessions</p>
+                                <p className="mt-1 text-2xl font-medium text-white">
+                                  {usageData.tapSessionsUsed ??
+                                    usageData.apiMeteredInvoice.tapSessionCount ??
+                                    0}
+                                </p>
+                                <p className="mt-1 text-xs text-neutral-500">$1 each</p>
+                              </div>
+                              <div>
+                                <p className="text-xs text-neutral-500">ILE sessions</p>
+                                <p className="mt-1 text-2xl font-medium text-white">
+                                  {usageData.ileSessionsUsed ??
+                                    usageData.apiMeteredInvoice.ileSessionCount ??
+                                    0}
+                                </p>
+                                <p className="mt-1 text-xs text-neutral-500">$10 each</p>
+                              </div>
+                            </div>
+                            <div className="mt-4 grid gap-4 border-t border-neutral-800 pt-4 sm:grid-cols-2">
                               <div>
                                 <p className="text-xs text-neutral-500">Usage charges</p>
                                 <p className="mt-1 text-2xl font-medium text-white">
                                   $
-                                  {(usageData.apiMeteredInvoice.usageCents / 100).toFixed(2)}
+                                  {(
+                                    (usageData.apiMeteredInvoice.usageCentsRounded ??
+                                      usageData.apiMeteredInvoice.usageCents) / 100
+                                  ).toFixed(2)}
                                 </p>
                               </div>
                               <div>
@@ -1496,7 +1512,7 @@ export default function DashboardPage() {
                                   {(usageData.apiMeteredInvoice.totalCents / 100).toFixed(2)}
                                 </p>
                                 <p className="mt-1 text-xs text-neutral-500">
-                                  Includes $99 platform + usage
+                                  Includes $99 platform + usage (TAP/ILE PoW not billed as API PoW)
                                 </p>
                               </div>
                             </div>
@@ -1655,7 +1671,7 @@ export default function DashboardPage() {
                     </Link>
                   )}
                   <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[10px] uppercase tracking-[1.4px] text-neutral-400">
-                    {usesAgenticV2Keys ? "Teams" : t("dashboard.experimental")}
+                    {usesAgenticV2Keys ? "API Metered" : t("dashboard.experimental")}
                   </span>
                 </div>
               </div>
@@ -1666,9 +1682,7 @@ export default function DashboardPage() {
               </p>
               {!usesAgenticV2Keys && (
                 <div className="rounded-md border border-neutral-800 bg-black/40 p-4 text-sm text-neutral-400">
-                  {effectivePlan === "regular_2026"
-                    ? t("dashboard.proofOfWorkApiTeamsRequired")
-                    : `${t("dashboard.apiKeysAvailableOnPro")} `}
+                  {`${t("dashboard.apiKeysAvailableOnPro")} `}
                   <Link href="/pricing" className="text-neutral-200 underline decoration-neutral-600 underline-offset-4 hover:text-white">
                     {t("dashboard.upgradeToPro")}
                   </Link>{" "}

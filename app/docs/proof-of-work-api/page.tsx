@@ -511,7 +511,7 @@ export default function AgenticV2DocsPage() {
             generation, integration skill generation, proof-of-work upload, performance analysis, TAP links, ILE practice, guest
             provisioning, and dashboard key management. Bearer endpoints use base path{" "}
             <code className="text-neutral-300">/api/v3/pow</code> and require active{" "}
-            <code className="text-neutral-300">pro_teams</code>.
+            <code className="text-neutral-300">api_metered</code>.
           </p>
           <div className="mt-6 flex flex-wrap gap-3">
             <Link

@@ -5,12 +5,10 @@ import { PLANS, TRIAL_ACCESS_DAYS, isTrialExpiredStatus, normalizePlanId } from 
 export const ADMIN_TIER_OPTIONS = [
   { id: "inactive" as const, label: "Inactive", description: "No paid entitlement · use for demotion" },
   { id: "trial" as const, label: "3-Day Trial", description: "$19.99 one-time · full access for 3 days" },
-  { id: "regular_2026" as const, label: "Individual", description: "from $49/mo · 100+ Proof-of-Work submissions" },
-  { id: "pro_teams" as const, label: "Pro / Teams", description: "from $599/mo · 1,000+ Proof-of-Work submissions + org" },
   {
     id: "api_metered" as const,
     label: "API Metered",
-    description: "$99/mo platform · $1.99 per API submission (monthly invoice)",
+    description: "$99/mo platform · 0.05¢/API PoW · $1/TAP · $10/ILE",
   },
 ] as const;
 
@@ -45,13 +43,12 @@ export function planFilterBucket(user: { plan: string; subscription_status: stri
 }
 
 export function tierLabel(plan: string): string {
-  if (plan === "regular_2026") return "Individual";
-  if (plan === "pro_teams") return "Pro / Teams";
   if (plan === "api_metered") return "API Metered";
   if (plan === "trial") return "3-Day Trial";
   if (plan === "inactive" || plan === "free") return "Inactive";
-  if (plan === "regular") return "Individual (legacy)";
-  if (plan === "pro") return "Pro (legacy)";
+  // Removed tiers — surface generically if raw DB still has them pre-migration
+  if (plan === "regular_2026" || plan === "regular") return "Migrated (was Individual)";
+  if (plan === "pro_teams" || plan === "pro") return "Migrated (was Pro/Teams)";
   return plan;
 }
 
@@ -74,6 +71,10 @@ export function describePlanLimits(plan: string, extraLessons = 0, _extraWorkspa
   const normalized = normalizePlanId(plan);
   const def = PLANS[normalized];
   if (!def) return "Unknown plan";
+
+  if (normalized === "api_metered") {
+    return "Unlimited PoW · metered: 0.05¢/API PoW · $1/TAP · $10/ILE · unlimited workspaces";
+  }
 
   const proofOfWork =
     def.proofOfWorkPerPeriod === null

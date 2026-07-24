@@ -17,23 +17,26 @@ const paidProfile = (over: Partial<ProfileBillingSnapshot> = {}): ProfileBilling
   username: "alice",
   organization_id: null,
   is_org_admin: true,
-  plan: "pro_teams",
+  plan: "api_metered",
   subscription_status: "active",
   current_period_end: "2099-06-01T00:00:00.000Z",
-  extra_lessons: 1500,
+  extra_lessons: 0,
   stripe_customer_id: "cus_1",
   stripe_subscription_id: "sub_1",
   ...over,
 });
 
 describe("migrate-to-orgs pure helpers", () => {
-  it("maps paid profile billing onto org patch", () => {
+  it("maps paid profile billing onto org patch (collapses removed tiers to api_metered)", () => {
     const patch = mapProfileBillingToOrg(paidProfile());
-    expect(patch.plan).toBe("pro_teams");
+    expect(patch.plan).toBe("api_metered");
     expect(patch.subscription_status).toBe("active");
-    expect(patch.extra_lessons).toBe(1500);
     expect(patch.stripe_subscription_id).toBe("sub_1");
     expect(patch.kind).toBe("personal");
+
+    // Historical Individual/Teams rows migrate onto the sole remaining paid tier
+    expect(mapProfileBillingToOrg(paidProfile({ plan: "pro_teams" })).plan).toBe("api_metered");
+    expect(mapProfileBillingToOrg(paidProfile({ plan: "regular_2026" })).plan).toBe("api_metered");
   });
 
   it("does not migrate inactive personal plan as entitled", () => {
@@ -54,20 +57,19 @@ describe("migrate-to-orgs pure helpers", () => {
       paidProfile({
         id: "member",
         is_org_admin: false,
-        plan: "regular_2026",
+        plan: "trial",
         extra_lessons: 0,
-        stripe_subscription_id: "sub_reg",
+        stripe_subscription_id: "sub_trial",
       }),
       paidProfile({
         id: "admin",
         is_org_admin: true,
-        plan: "pro_teams",
-        extra_lessons: 4000,
-        stripe_subscription_id: "sub_teams",
+        plan: "api_metered",
+        extra_lessons: 0,
+        stripe_subscription_id: "sub_metered",
       }),
     ]);
-    expect(best?.plan).toBe("pro_teams");
-    expect(best?.extra_lessons).toBe(4000);
+    expect(best?.plan).toBe("api_metered");
     expect(best?.kind).toBe("team");
   });
 
@@ -78,10 +80,10 @@ describe("migrate-to-orgs pure helpers", () => {
           id: "o1",
           kind: "partner",
           billing_mode: "partner",
-          plan: "pro_teams",
+          plan: "api_metered",
           subscription_status: "inactive",
           current_period_end: null,
-          extra_lessons: 9000,
+          extra_lessons: 0,
           stripe_customer_id: null,
           stripe_subscription_id: null,
           archived_at: null,
@@ -150,7 +152,7 @@ describe("migrate-to-orgs pure helpers", () => {
 });
 
 describe("post-migrate entitlement is org-only", () => {
-  it("inactive personal plan + entitled org → access and org PoW limit", () => {
+  it("inactive personal plan + entitled api_metered org → access and unlimited PoW", () => {
     const entity = resolveBillingEntity(
       {
         plan: "inactive",
@@ -164,17 +166,17 @@ describe("post-migrate entitlement is org-only", () => {
       },
       {
         id: "org-1",
-        plan: "regular_2026",
+        plan: "api_metered",
         subscription_status: "active",
         current_period_end: "2099-01-01T00:00:00.000Z",
-        extra_lessons: 150,
+        extra_lessons: 0,
         billing_mode: "subscription",
         archived_at: null,
       }
     );
     expect(entity.source).toBe("organization");
     expect(entity.entitled).toBe(true);
-    expect(entity.limit).toBe(250); // 100 + 150
+    expect(entity.limit).toBeNull();
     expect(
       hasProductAccess(
         {
@@ -187,7 +189,7 @@ describe("post-migrate entitlement is org-only", () => {
         },
         {
           id: "org-1",
-          plan: "regular_2026",
+          plan: "api_metered",
           subscription_status: "active",
           current_period_end: "2099-01-01T00:00:00.000Z",
           billing_mode: "subscription",
@@ -199,9 +201,9 @@ describe("post-migrate entitlement is org-only", () => {
   it("does not fall back to personal paid plan when org is present but inactive", () => {
     const entity = resolveBillingEntity(
       {
-        plan: "pro_teams",
+        plan: "api_metered",
         is_admin: false,
-        extra_lessons: 5000,
+        extra_lessons: 0,
         subscription_status: "active",
         current_period_end: "2099-01-01T00:00:00.000Z",
         token_tier: null,

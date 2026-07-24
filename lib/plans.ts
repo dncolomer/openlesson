@@ -4,9 +4,10 @@
 
 /**
  * Current product plans. `inactive` = no personal paid entitlement.
- * Legacy free/regular/pro plan ids are removed; use inactive + subscription_status.
+ * Single paid subscription tier: api_metered. Trial is one-time full access.
+ * Legacy Individual / Pro-Teams plan ids are removed; migrate rows to api_metered.
  */
-export type PlanId = "inactive" | "trial" | "regular_2026" | "pro_teams" | "api_metered";
+export type PlanId = "inactive" | "trial" | "api_metered";
 
 /** Subscription statuses we set intentionally (Stripe may pass through others). */
 export type SubscriptionStatus =
@@ -29,26 +30,14 @@ export interface PlanDef {
   stripePriceEnv: string | null; // env var name for Stripe Price ID
 }
 
-export interface VolumeTier {
-  /** Proof-of-Work submissions per month (stored as monthly_volume in Stripe). */
-  proofOfWork: number;
-  priceCents: number;
-}
-
-/** Multiplier when converting legacy session-count Stripe volume metadata to PoW submissions. */
-export const PROOF_OF_WORK_SUBMISSIONS_PER_SESSION = 4;
-
-/** Pre–PoW-only pricing stored session counts in Stripe metadata (Jul 2026). */
-export const LEGACY_SESSION_VOLUME_TIERS = new Set([25, 50, 100, 250, 500, 1000, 2500]);
-
-export const PROOF_OF_WORK_ALLOWANCE_LABEL = "Proof-of-Work submissions";
-
 /** One-time trial: full product access for this many days after payment. */
 export const TRIAL_ACCESS_DAYS = 3;
 export const TRIAL_PRICE_CENTS = 1999;
 
 /** Token-tier regular: fixed PoW allowance when a valid token is present. */
 export const TOKEN_REGULAR_PROOF_OF_WORK_LIMIT = 25;
+
+export const PROOF_OF_WORK_ALLOWANCE_LABEL = "Proof-of-Work submissions";
 
 export const PLANS: Record<PlanId, PlanDef> = {
   inactive: {
@@ -79,38 +68,6 @@ export const PLANS: Record<PlanId, PlanDef> = {
     ],
     stripePriceEnv: null,
   },
-  regular_2026: {
-    id: "regular_2026",
-    name: "Individual",
-    price: "$49",
-    priceAmount: 4900,
-    proofOfWorkPerPeriod: 100,
-    workspacesPerPeriod: null,
-    features: [
-      "100+ Proof-of-Work submissions/mo",
-      "Unlimited Workspaces",
-      "Volume upgrades before checkout",
-      "Session reports & history",
-    ],
-    stripePriceEnv: null,
-  },
-  pro_teams: {
-    id: "pro_teams",
-    name: "Pro / Teams",
-    price: "$599",
-    priceAmount: 59900,
-    proofOfWorkPerPeriod: 1000,
-    workspacesPerPeriod: null,
-    features: [
-      "1,000+ Proof-of-Work submissions/mo",
-      "Unlimited Workspaces",
-      "Volume upgrades before checkout",
-      "Org guests and team API keys",
-      "Readiness proof of work and history",
-      "Priority support",
-    ],
-    stripePriceEnv: null,
-  },
   api_metered: {
     id: "api_metered",
     name: "API Metered",
@@ -119,12 +76,13 @@ export const PLANS: Record<PlanId, PlanDef> = {
     proofOfWorkPerPeriod: null,
     workspacesPerPeriod: null,
     features: [
-      "Unlimited Proof-of-Work API usage (no monthly cap)",
-      "$1.99 per API submission — invoiced monthly",
+      "Unlimited product usage (no monthly cap)",
+      "0.05¢ per external/API-direct PoW submission",
+      "$1 per TAP session · $10 per ILE session",
       "$99/mo platform access",
       "Unlimited Workspaces",
       "Proof-of-Work API keys + MCP",
-      "TAP / ILE included without per-call API metering",
+      "Internal TAP/ILE PoW not billed as API PoW",
       "Priority support",
     ],
     stripePriceEnv: null,
@@ -134,103 +92,52 @@ export const PLANS: Record<PlanId, PlanDef> = {
 /** Monthly platform fee for API Metered (cents). */
 export const API_METERED_PLATFORM_FEE_CENTS = 9900;
 
-/** Per Proof-of-Work API submission on API Metered (cents) — higher than bundled tiers. */
-export const POW_API_CALL_PRICE_CENTS = 199;
+/**
+ * Per external/API-direct Proof-of-Work submission on API Metered (cents).
+ * 0.05 cents = $0.0005. App-side accounting uses fractional cents;
+ * Stripe invoice line items round to whole cents (see estimateApiMeteredInvoice).
+ */
+export const POW_API_CALL_PRICE_CENTS = 0.05;
 
-/** 2026 volume tiers (PoW + price). Canonical source for Stripe checkout. */
-export const REGULAR_VOLUME_TIERS: readonly VolumeTier[] = [
-  { proofOfWork: 100, priceCents: 4900 },
-  { proofOfWork: 250, priceCents: 9900 },
-  { proofOfWork: 500, priceCents: 14900 },
-];
+/** Per TAP session on API Metered (cents) — $1. */
+export const TAP_SESSION_PRICE_CENTS = 100;
 
-export const TEAM_VOLUME_TIERS: readonly VolumeTier[] = [
-  { proofOfWork: 1000, priceCents: 59900 },
-  { proofOfWork: 2500, priceCents: 99900 },
-  { proofOfWork: 5000, priceCents: 149900 },
-  { proofOfWork: 10000, priceCents: 249900 },
-];
-
-/** Intermediate PoW tiers already stored as PoW counts in Stripe metadata — do not multiply. */
-export const LEGACY_POW_VOLUME_TIERS = new Set([200, 400, 2000, 4000]);
-
-export const REGULAR_VOLUME_PRICES: Record<number, number> = Object.fromEntries(
-  REGULAR_VOLUME_TIERS.map((tier) => [tier.proofOfWork, tier.priceCents])
-);
-
-export const TEAM_VOLUME_PRICES: Record<number, number> = Object.fromEntries(
-  TEAM_VOLUME_TIERS.map((tier) => [tier.proofOfWork, tier.priceCents])
-);
-
-export const DEFAULT_REGULAR_VOLUME = REGULAR_VOLUME_TIERS[0].proofOfWork;
-export const DEFAULT_TEAM_VOLUME = TEAM_VOLUME_TIERS[0].proofOfWork;
-
-export const BASE_INCLUDED_PROOF_OF_WORK: Record<string, number> = {
-  regular_2026: 100,
-  pro_teams: 1000,
-};
+/** Per ILE session on API Metered (cents) — $10. */
+export const ILE_SESSION_PRICE_CENTS = 1000;
 
 /**
- * Convert Stripe `monthly_volume` to Proof-of-Work submissions.
- * Legacy subscriptions stored session counts; new ones set metadata.volume_unit = "proof_of_work".
+ * Removed plan ids that should be rewritten to api_metered by data migration.
+ * Not part of PlanId — only used by migration helpers.
  */
-export function normalizeStripeVolumeToProofOfWork(
-  volume: number,
-  volumeUnit?: string | null
-): number {
-  if (!Number.isFinite(volume) || volume <= 0) return volume;
-  if (volumeUnit === "proof_of_work") return volume;
-  if (LEGACY_POW_VOLUME_TIERS.has(volume)) return volume;
-  if (LEGACY_SESSION_VOLUME_TIERS.has(volume)) {
-    return volume * PROOF_OF_WORK_SUBMISSIONS_PER_SESSION;
+export const REMOVED_PLAN_IDS_MIGRATED_TO_API_METERED = [
+  "regular_2026",
+  "pro_teams",
+  "regular",
+  "pro",
+] as const;
+
+/**
+ * Map a stored plan string onto the current PlanId set.
+ * Removed paid tiers (Individual / Teams) become api_metered so migration/scripts
+ * and any unmigrated rows still land on the sole remaining paid tier.
+ * Truly unknown / free ids become inactive.
+ */
+export function migratePlanIdToCurrent(plan: string | null | undefined): PlanId {
+  if (plan === "trial" || plan === "api_metered") return plan;
+  if (
+    plan === "regular_2026" ||
+    plan === "pro_teams" ||
+    plan === "regular" ||
+    plan === "pro"
+  ) {
+    return "api_metered";
   }
-  return volume;
+  return "inactive";
 }
 
-export function formatProofOfWorkAllowance(count: number): string {
-  return `${count.toLocaleString()} Proof-of-Work submission${count === 1 ? "" : "s"}/mo`;
-}
-
-export function formatVolumeTierLabel(tier: VolumeTier): string {
-  return formatProofOfWorkAllowance(tier.proofOfWork);
-}
-
-function findVolumeTier(priceType: string, proofOfWork: number): VolumeTier | null {
-  const tiers = priceType === "pro_teams" ? TEAM_VOLUME_TIERS : priceType === "regular_2026" ? REGULAR_VOLUME_TIERS : [];
-  return tiers.find((tier) => tier.proofOfWork === proofOfWork) ?? null;
-}
-
-export function resolveCheckoutVolume(priceType: string, rawVolume: unknown): number {
-  const requested = Number(rawVolume);
-  if (priceType === "regular_2026") {
-    return REGULAR_VOLUME_PRICES[requested] ? requested : DEFAULT_REGULAR_VOLUME;
-  }
-  if (priceType === "pro_teams") {
-    return TEAM_VOLUME_PRICES[requested] ? requested : DEFAULT_TEAM_VOLUME;
-  }
-  return 1;
-}
-
-export function getVolumeTier(priceType: string, proofOfWorkVolume: number): VolumeTier | null {
-  return findVolumeTier(priceType, proofOfWorkVolume);
-}
-
-export function formatPlanMonthlyPrice(
-  plan: PlanId | string,
-  volume?: number
-): string {
-  if (plan === "regular_2026") {
-    const vol = volume ?? DEFAULT_REGULAR_VOLUME;
-    const cents = REGULAR_VOLUME_PRICES[vol] ?? REGULAR_VOLUME_PRICES[DEFAULT_REGULAR_VOLUME];
-    return `$${cents / 100}/month`;
-  }
-  if (plan === "pro_teams") {
-    const vol = volume ?? DEFAULT_TEAM_VOLUME;
-    const cents = TEAM_VOLUME_PRICES[vol] ?? TEAM_VOLUME_PRICES[DEFAULT_TEAM_VOLUME];
-    return `$${cents / 100}/month`;
-  }
+export function formatPlanMonthlyPrice(plan: PlanId | string, _volume?: number): string {
   if (plan === "api_metered") {
-    return `$${API_METERED_PLATFORM_FEE_CENTS / 100}/month + $${POW_API_CALL_PRICE_CENTS / 100} per API submission`;
+    return `$${API_METERED_PLATFORM_FEE_CENTS / 100}/month + usage (0.05¢/API PoW · $1/TAP · $10/ILE)`;
   }
   if (plan === "trial") return `$${TRIAL_PRICE_CENTS / 100} one-time`;
   if (plan === "inactive") return "$0";
@@ -246,8 +153,13 @@ export function isTrialExpiredStatus(status: string | null | undefined): boolean
   return status === "trial_expired";
 }
 
+/**
+ * Normalize a plan string to a known PlanId.
+ * Removed tier names are not kept for compatibility — unknown/removed → inactive.
+ * Call migratePlanIdToCurrent when rewriting stored entitlements.
+ */
 export function normalizePlanId(plan: string | null | undefined): PlanId {
-  if (plan === "trial" || plan === "regular_2026" || plan === "pro_teams" || plan === "api_metered") {
+  if (plan === "trial" || plan === "api_metered") {
     return plan;
   }
   return "inactive";
@@ -271,8 +183,8 @@ export interface UserProfile {
   plan: PlanId;
   is_admin: boolean;
   /**
-   * Volume-tier overage above the plan base (profiles.extra_lessons column).
-   * Set by Stripe from monthly_volume − base; not a one-time purchase pack.
+   * Historical volume overage column (profiles.extra_lessons / orgs.extra_lessons).
+   * No longer used for product limits under the single metered tier; kept for schema compat.
    */
   extra_lessons: number;
   extra_workspaces?: number;
@@ -301,12 +213,7 @@ export type ProductAccessOrg = {
   extra_lessons?: number | null;
 };
 
-const PAID_PRODUCT_PLANS = new Set<PlanId>([
-  "trial",
-  "regular_2026",
-  "pro_teams",
-  "api_metered",
-]);
+const PAID_PRODUCT_PLANS = new Set<PlanId>(["trial", "api_metered"]);
 
 /** True when subscription_status is active and the billing window has not ended. */
 export function isBillingPeriodActive(
@@ -375,7 +282,7 @@ export interface UsageCheckResult {
   used: number;
   limit: number | null; // null = unlimited
   isAdmin: boolean;
-  /** User's own Proof-of-Work submissions in the current period (org members on Teams). */
+  /** User's own Proof-of-Work submissions in the current period (org members). */
   personalUsed?: number;
   organization?: OrgUsageSummary | null;
 }
@@ -421,16 +328,15 @@ export function getWorkspaceLimit(profile: UserProfile): number | null {
 
 /**
  * Resolve the effective Proof-of-Work submission allowance for a profile.
+ * Trial + api_metered are unlimited (metered billing applies to external API PoW + sessions).
  */
 export function getProofOfWorkAllowance(profile: UserProfile): Pick<UsageCheckResult, "plan" | "limit" | "isAdmin"> {
-  const { plan, is_admin, extra_lessons, subscription_status, current_period_end, token_tier, token_validity_expires_at } = profile;
+  const { plan, is_admin, subscription_status, current_period_end, token_tier, token_validity_expires_at } = profile;
   const normalized = normalizePlanId(plan);
 
   if (is_admin) {
     return { plan: normalized, limit: null, isAdmin: true };
   }
-
-  const planDef = PLANS[normalized];
 
   const isTokenValid = token_tier && (
     token_validity_expires_at === null || new Date(token_validity_expires_at) > new Date()
@@ -453,18 +359,13 @@ export function getProofOfWorkAllowance(profile: UserProfile): Pick<UsageCheckRe
     return { plan: normalized, limit: null, isAdmin: false };
   }
 
-  if ((normalized === "regular_2026" || normalized === "pro_teams") && subscription_status === "active") {
-    const effectiveLimit = (planDef.proofOfWorkPerPeriod ?? 0) + extra_lessons;
-    return { plan: normalized, limit: effectiveLimit, isAdmin: false };
-  }
-
   // Inactive / expired / unknown — no freemium PoW pool
   return { plan: "inactive", limit: 0, isAdmin: false };
 }
 
 /**
  * Check whether a user can submit another Proof-of-Work artifact this billing period.
- * TAP, ILE, and API uploads all meter against this allowance.
+ * TAP, ILE, and API uploads all meter against this allowance (unlimited on api_metered).
  */
 export function canSubmitProofOfWork(
   profile: UserProfile,
@@ -538,22 +439,76 @@ export function isApiMeteredPlan(plan: PlanId | string | null | undefined): bool
   return plan === "api_metered";
 }
 
+/** Format the external PoW unit price for display (0.05 cents). */
 export function formatPowApiCallPrice(): string {
-  return `$${(POW_API_CALL_PRICE_CENTS / 100).toFixed(2)}`;
+  return "0.05¢";
 }
 
-export function estimateApiMeteredInvoice(apiCallCount: number): {
+export function formatTapSessionPrice(): string {
+  return `$${(TAP_SESSION_PRICE_CENTS / 100).toFixed(0)}`;
+}
+
+export function formatIleSessionPrice(): string {
+  return `$${(ILE_SESSION_PRICE_CENTS / 100).toFixed(0)}`;
+}
+
+/**
+ * True when a PoW row should be billed at the external/API rate.
+ * Shipped signal: created via API key (Bearer key or OAuth) → created_by_api_key_id set.
+ * TAP/ILE product-generated PoW leaves this null and is billed via session rates instead.
+ */
+export function isExternalApiPowUsage(createdByApiKeyId: string | null | undefined): boolean {
+  return createdByApiKeyId != null && createdByApiKeyId !== "";
+}
+
+export type ApiMeteredInvoiceEstimate = {
   platformCents: number;
+  /** External/API-direct PoW usage (fractional cents allowed before Stripe rounding). */
+  externalPowCents: number;
+  tapSessionCents: number;
+  ileSessionCents: number;
   usageCents: number;
+  /** Whole-cent total suitable for Stripe line items (rounded usage + platform). */
   totalCents: number;
-  apiCallCount: number;
-} {
-  const usageCents = Math.max(0, apiCallCount) * POW_API_CALL_PRICE_CENTS;
+  /** Whole-cent usage total for Stripe (rounded). */
+  usageCentsRounded: number;
+  externalPowCount: number;
+  tapSessionCount: number;
+  ileSessionCount: number;
+};
+
+/**
+ * Estimate API Metered invoice from usage counts.
+ * - externalPowCount: API-direct PoW only (not TAP/ILE-generated PoW)
+ * - tapSessionCount / ileSessionCount: session rates ($1 / $10)
+ */
+export function estimateApiMeteredInvoice(
+  externalPowCount: number,
+  tapSessionCount = 0,
+  ileSessionCount = 0
+): ApiMeteredInvoiceEstimate {
+  const pow = Math.max(0, externalPowCount);
+  const tap = Math.max(0, tapSessionCount);
+  const ile = Math.max(0, ileSessionCount);
+
+  const externalPowCents = pow * POW_API_CALL_PRICE_CENTS;
+  const tapSessionCents = tap * TAP_SESSION_PRICE_CENTS;
+  const ileSessionCents = ile * ILE_SESSION_PRICE_CENTS;
+  const usageCents = externalPowCents + tapSessionCents + ileSessionCents;
+  // Stripe amounts are integer cents; round half-up on total usage.
+  const usageCentsRounded = Math.round(usageCents);
+
   return {
     platformCents: API_METERED_PLATFORM_FEE_CENTS,
+    externalPowCents,
+    tapSessionCents,
+    ileSessionCents,
     usageCents,
-    totalCents: API_METERED_PLATFORM_FEE_CENTS + usageCents,
-    apiCallCount: Math.max(0, apiCallCount),
+    usageCentsRounded,
+    totalCents: API_METERED_PLATFORM_FEE_CENTS + usageCentsRounded,
+    externalPowCount: pow,
+    tapSessionCount: tap,
+    ileSessionCount: ile,
   };
 }
 
@@ -563,10 +518,10 @@ export function hasProofOfWorkApiAccess(
   subscriptionStatus?: string | null,
 ): boolean {
   if (subscriptionStatus !== "active") return false;
-  return plan === "pro_teams" || plan === "api_metered";
+  return plan === "api_metered";
 }
 
 /** Plans that may create Proof-of-Work API keys (v2 /api/v3/pow/keys). */
 export function hasAgentApiKeyPlan(plan: PlanId | string | null | undefined): boolean {
-  return plan === "pro_teams" || plan === "api_metered";
+  return plan === "api_metered";
 }

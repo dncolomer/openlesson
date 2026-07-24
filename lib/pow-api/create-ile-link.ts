@@ -3,9 +3,10 @@ import { createAnonymousTapGuest } from "./anonymous-tap-guest";
 import { createdByApiKeyId } from "./auth";
 import type { AuthContext, ErrorCode } from "./types";
 import { canAccessAgentWorkspace } from "./workspace-access";
-import { buildIleSessionUrl, createPrivateToken, hashPrivateToken } from "@/lib/ile-link";
+import { createPrivateToken, hashPrivateToken } from "@/lib/ile-link";
 import {
   normalizeTapParticipantType,
+  resolveShowEndSessionFromBody,
   resolveTapParticipantType,
   type CreateTapLinkInput,
   type TapParticipantType,
@@ -15,6 +16,11 @@ import {
   isUuid,
   ResolveWorkspaceGuestError,
 } from "./resolve-workspace-guest";
+import {
+  buildGuestLinkUrl,
+  normalizeGuestLinkAccessMode,
+  type GuestLinkAccessMode,
+} from "@/lib/guest-link-access";
 
 export class CreateIleLinkError extends Error {
   constructor(
@@ -47,7 +53,38 @@ export interface CreatedIleLink {
   participant_type: TapParticipantType | null;
   guest_user_id: string | null;
   assigned_user_id: string | null;
+  access_mode: GuestLinkAccessMode;
+  public_token: string | null;
+  entry_query_params: unknown;
+  show_end_session: boolean;
+  url: string;
   private_url: string;
+}
+
+const ILE_LINK_SELECT =
+  "id, workspace_id, block_id, status, created_at, participant_type, guest_user_id, assigned_user_id, access_mode, public_token, entry_query_params, show_end_session";
+
+function withIleLinkUrl(
+  link: Omit<CreatedIleLink, "url" | "private_url" | "show_end_session"> & {
+    access_mode?: string | null;
+    public_token?: string | null;
+    show_end_session?: boolean | null;
+  },
+  baseUrl: string,
+  sessionToken: string,
+): CreatedIleLink {
+  const access_mode: GuestLinkAccessMode =
+    link.access_mode === "public" ? "public" : "private";
+  const url = buildGuestLinkUrl(baseUrl, "ile", sessionToken);
+  return {
+    ...link,
+    access_mode,
+    public_token: access_mode === "public" ? link.public_token ?? sessionToken : null,
+    entry_query_params: link.entry_query_params ?? [],
+    show_end_session: link.show_end_session !== false,
+    url,
+    private_url: url,
+  };
 }
 
 async function resolveGuestUserId(
@@ -235,7 +272,11 @@ export async function createWorkspaceIleLink(options: CreateIleLinkOptions): Pro
     throw new CreateIleLinkError("Failed to provision anonymous ILE participant", 500, "internal_error");
   }
 
-  const privateToken = createPrivateToken();
+  const accessMode = normalizeGuestLinkAccessMode(body);
+  const showEndSession = resolveShowEndSessionFromBody(body);
+  const sessionToken = createPrivateToken();
+  const publicToken = accessMode === "public" ? sessionToken : null;
+
   const { data: link, error } = await supabase
     .from("workspace_ile_links")
     .insert({
@@ -246,13 +287,15 @@ export async function createWorkspaceIleLink(options: CreateIleLinkOptions): Pro
       assigned_user_id: assignedUserId,
       organization_id: auth.organization_id || workspace.organization_id,
       created_by_api_key_id: createdByApiKeyId(auth),
-      private_token_hash: hashPrivateToken(privateToken),
+      private_token_hash: hashPrivateToken(sessionToken),
+      access_mode: accessMode,
+      public_token: publicToken,
+      entry_query_params: [],
+      show_end_session: showEndSession,
       status: "pending",
       participant_type: participantType,
     })
-    .select(
-      "id, workspace_id, block_id, status, created_at, participant_type, guest_user_id, assigned_user_id"
-    )
+    .select(ILE_LINK_SELECT)
     .single();
 
   if (error || !link) {
@@ -260,10 +303,7 @@ export async function createWorkspaceIleLink(options: CreateIleLinkOptions): Pro
     throw new CreateIleLinkError("Failed to create ILE link", 500, "internal_error");
   }
 
-  return {
-    ...link,
-    private_url: buildIleSessionUrl(baseUrl, privateToken),
-  };
+  return withIleLinkUrl(link, baseUrl, sessionToken);
 }
 
 export interface ReissueIleLinkOptions {
@@ -291,7 +331,7 @@ export async function reissueWorkspaceIleLink(
   const { data: existing, error: loadError } = await supabase
     .from("workspace_ile_links")
     .select(
-      "id, workspace_id, block_id, status, created_at, participant_type, guest_user_id, assigned_user_id, private_token_hash, workspaces(id, user_id, organization_id, guest_user_id)"
+      "id, workspace_id, block_id, status, created_at, participant_type, guest_user_id, assigned_user_id, private_token_hash, access_mode, public_token, entry_query_params, workspaces(id, user_id, organization_id, guest_user_id)"
     )
     .eq("id", linkId)
     .eq("workspace_id", workspaceId)
@@ -301,7 +341,7 @@ export async function reissueWorkspaceIleLink(
     console.error("[reissue-ile-link] Load error:", loadError);
     throw new CreateIleLinkError("Failed to load ILE link", 500, "internal_error");
   }
-  if (!existing?.private_token_hash) {
+  if (!existing?.private_token_hash && !existing?.public_token) {
     throw new CreateIleLinkError("ILE link not found", 404, "not_found");
   }
 
@@ -317,11 +357,20 @@ export async function reissueWorkspaceIleLink(
     throw new CreateIleLinkError("Workspace not found", 404, "workspace_not_found");
   }
 
-  const privateToken = createPrivateToken();
+  const isPublic = existing.access_mode === "public";
+  const sessionToken = isPublic
+    ? String(existing.public_token || "")
+    : createPrivateToken();
+  if (!sessionToken) {
+    throw new CreateIleLinkError("Public ILE link is missing public_token", 500, "internal_error");
+  }
+
   const { data: link, error } = await supabase
     .from("workspace_ile_links")
     .update({
-      private_token_hash: hashPrivateToken(privateToken),
+      ...(isPublic
+        ? {}
+        : { private_token_hash: hashPrivateToken(sessionToken), public_token: null }),
       status: "pending",
       started_at: null,
       completed_at: null,
@@ -329,9 +378,7 @@ export async function reissueWorkspaceIleLink(
     })
     .eq("id", linkId)
     .eq("workspace_id", workspaceId)
-    .select(
-      "id, workspace_id, block_id, status, created_at, participant_type, guest_user_id, assigned_user_id"
-    )
+    .select(ILE_LINK_SELECT)
     .single();
 
   if (error || !link) {
@@ -339,8 +386,5 @@ export async function reissueWorkspaceIleLink(
     throw new CreateIleLinkError("Failed to reissue ILE link", 500, "internal_error");
   }
 
-  return {
-    ...link,
-    private_url: buildIleSessionUrl(baseUrl, privateToken),
-  };
+  return withIleLinkUrl(link, baseUrl, sessionToken);
 }

@@ -7,6 +7,7 @@ import {
 import { countWorkspaceProofOfWorkForPlan } from "@/lib/pow-api/workspace-proof-of-work";
 import { withProofOfWorkApiResponse } from "@/lib/pow-api/predictive-interruption";
 import { resolvePowInterruptionContext } from "@/lib/pow-interruption-resolver";
+import { stampSourceLinkMetadata } from "@/lib/guest-link-access";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -43,10 +44,14 @@ export async function POST(req: NextRequest) {
 
     const toolName = typeof body.tool_name === "string" ? body.tool_name : undefined;
     const toolAction = typeof body.tool_action === "string" ? body.tool_action : undefined;
-    const metadata =
+    const rawMetadata =
       body.metadata && typeof body.metadata === "object" && !Array.isArray(body.metadata)
         ? (body.metadata as Record<string, unknown>)
         : { source: "ile_session" };
+    const metadata =
+      access.ileLinkId
+        ? stampSourceLinkMetadata(rawMetadata, { kind: "ile", linkId: access.ileLinkId })
+        : rawMetadata;
 
     const row = await uploadWorkspaceProofOfWork(
       access.supabase,

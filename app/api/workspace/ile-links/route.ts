@@ -79,7 +79,7 @@ export async function GET(req: NextRequest) {
   const { data: links, error } = await access.supabase
     .from("workspace_ile_links")
     .select(
-      "id, workspace_id, block_id, status, participant_type, guest_user_id, assigned_user_id, session_id, created_at, started_at, completed_at"
+      "id, workspace_id, block_id, status, participant_type, guest_user_id, assigned_user_id, session_id, created_at, started_at, completed_at, access_mode, public_token, entry_query_params, show_end_session"
     )
     .eq("workspace_id", workspaceId)
     .order("created_at", { ascending: false });

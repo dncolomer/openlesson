@@ -127,13 +127,20 @@ export function SessionView({
   sessionId,
   ayclToken,
   ileToken,
+  showEndSession = true,
 }: {
   sessionId: string;
   ayclToken?: string;
   /** Private token for guest ILE practice links (`/ile/session/{token}`). */
   ileToken?: string;
+  /**
+   * When false, hide End Session / stop-end chrome for this session
+   * (guest ILE links can configure this; default true).
+   */
+  showEndSession?: boolean;
 }) {
   const guestAccessKind: "aycl" | "ile" | null = ayclToken ? "aycl" : ileToken ? "ile" : null;
+  const allowEndSession = showEndSession !== false;
   const guestAccessBody = useMemo(
     () =>
       guestAccessKind === "aycl" && ayclToken
@@ -3059,17 +3066,19 @@ export function SessionView({
 
         </div>
       </div>
-      <ConfirmDialog
-        open={showEndDialog}
-        onCancel={() => setShowEndDialog(false)}
-        onConfirm={handleConfirmEnd}
-        variant="info"
-        title={t('session.tutorSuggestsEnd')}
-        description={endReason}
-        confirmLabel={t('sessionEnd.endSession')}
-        cancelLabel={t('common.keepGoing')}
-        confirmTone="primary"
-      />
+      {allowEndSession ? (
+        <ConfirmDialog
+          open={showEndDialog}
+          onCancel={() => setShowEndDialog(false)}
+          onConfirm={handleConfirmEnd}
+          variant="info"
+          title={t('session.tutorSuggestsEnd')}
+          description={endReason}
+          confirmLabel={t('sessionEnd.endSession')}
+          cancelLabel={t('common.keepGoing')}
+          confirmTone="primary"
+        />
+      ) : null}
 
       {/* SessionPrepModal removed -- loading progress now inline in welcome modal */}
 
@@ -3079,12 +3088,16 @@ export function SessionView({
         onCancel={() => setShowPlanCompleteModal(false)}
         onConfirm={() => {
           setShowPlanCompleteModal(false);
-          handleConfirmEnd();
+          if (allowEndSession) {
+            handleConfirmEnd();
+          }
         }}
         variant="neutral"
         title={t('session.sessionComplete')}
         description={t('session.congratulationsComplete')}
-        confirmLabel={t('sessionEnd.returnToWorkspace')}
+        confirmLabel={
+          allowEndSession ? t('sessionEnd.returnToWorkspace') : t('common.keepGoing')
+        }
         confirmTone="primary"
         hideCancel
       />

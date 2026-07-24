@@ -1,6 +1,7 @@
 import type { User } from "@supabase/supabase-js";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { hashPrivateToken } from "@/lib/ile-link";
+import type { GuestLinkAccessMode } from "@/lib/guest-link-access";
 
 export interface ResolvedIleLinkContext {
   supabase: ReturnType<typeof createAdminClient>;
@@ -13,12 +14,15 @@ export interface ResolvedIleLinkContext {
   sessionId: string | null;
   status: string;
   participantType: string | null;
+  accessMode: GuestLinkAccessMode;
+  /** When true (default), guest UI shows End Session. */
+  showEndSession: boolean;
   /** Synthetic user for routes that expect a user id (workspace owner). */
   actingUser: Pick<User, "id">;
 }
 
 const LINK_SELECT =
-  "id, workspace_id, block_id, user_id, guest_user_id, assigned_user_id, session_id, status, participant_type, private_token_hash";
+  "id, workspace_id, block_id, user_id, guest_user_id, assigned_user_id, session_id, status, participant_type, private_token_hash, access_mode, public_token, entry_query_params, show_end_session";
 
 export async function resolveIleLinkAccess(
   accessToken: string
@@ -29,13 +33,26 @@ export async function resolveIleLinkAccess(
   const supabase = createAdminClient();
   const tokenHash = hashPrivateToken(token);
 
-  const { data: link, error } = await supabase
+  // Private: hash match. Public: stable public_token (also hashed at mint so hash match works).
+  let link: Record<string, unknown> | null = null;
+  const { data: byHash } = await supabase
     .from("workspace_ile_links")
     .select(LINK_SELECT)
     .eq("private_token_hash", tokenHash)
     .maybeSingle();
+  link = byHash;
 
-  if (error || !link) {
+  if (!link) {
+    const { data: byPublic } = await supabase
+      .from("workspace_ile_links")
+      .select(LINK_SELECT)
+      .eq("public_token", token)
+      .eq("access_mode", "public")
+      .maybeSingle();
+    link = byPublic;
+  }
+
+  if (!link) {
     return { error: "Invalid or expired access link", status: 404 };
   }
 
@@ -47,18 +64,24 @@ export async function resolveIleLinkAccess(
     return { error: "Workspace owner is missing", status: 500 };
   }
 
+  const accessMode: GuestLinkAccessMode =
+    link.access_mode === "public" ? "public" : "private";
+  const showEndSession = link.show_end_session !== false;
+
   return {
     supabase,
-    linkId: link.id,
-    workspaceId: link.workspace_id,
-    blockId: link.block_id,
-    ownerUserId: link.user_id,
-    guestUserId: link.guest_user_id,
-    assignedUserId: link.assigned_user_id,
-    sessionId: link.session_id,
-    status: link.status,
-    participantType: link.participant_type,
-    actingUser: { id: link.user_id },
+    linkId: String(link.id),
+    workspaceId: String(link.workspace_id),
+    blockId: String(link.block_id),
+    ownerUserId: String(link.user_id),
+    guestUserId: (link.guest_user_id as string | null) ?? null,
+    assignedUserId: (link.assigned_user_id as string | null) ?? null,
+    sessionId: (link.session_id as string | null) ?? null,
+    status: String(link.status),
+    participantType: (link.participant_type as string | null) ?? null,
+    accessMode,
+    showEndSession,
+    actingUser: { id: String(link.user_id) },
   };
 }
 
@@ -176,6 +199,8 @@ export async function ensureIleLinkSession(
         block_id: blockId,
         block_title: blockTitle,
         ile_link_id: linkId,
+        source_link_kind: "ile",
+        source_link_id: linkId,
         guest_user_id: guestUserId,
         ile_guest_access: true,
       },

@@ -193,6 +193,8 @@ export interface SessionWorkspaceProofOfWorkAccess {
   workspace: WorkspaceSessionPlan;
   auth: AuthContext;
   supabase: SupabaseClient;
+  /** When PoW is authorized via an ILE guest link token. */
+  ileLinkId?: string | null;
 }
 
 export type SessionWorkspaceProofOfWorkAccessOptions = {
@@ -250,6 +252,7 @@ export async function requireSessionWorkspaceProofOfWorkAccess(
       workspace,
       auth,
       supabase: ile.supabase,
+      ileLinkId: ile.linkId,
     };
   }
 

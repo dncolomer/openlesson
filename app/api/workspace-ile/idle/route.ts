@@ -7,6 +7,7 @@ import { buildIleIdleHeartbeatPayload, ILE_IDLE_TOOL_NAME } from "@/lib/ile-thou
 import { uploadFileToXAI } from "@/lib/xai-files";
 import { countWorkspaceProofOfWorkForPlan } from "@/lib/pow-api/workspace-proof-of-work";
 import { withProofOfWorkApiResponse } from "@/lib/pow-api/predictive-interruption";
+import { stampSourceLinkMetadata } from "@/lib/guest-link-access";
 
 export const runtime = "nodejs";
 export const maxDuration = 30;
@@ -42,11 +43,14 @@ export async function POST(req: NextRequest) {
     const base64 = Buffer.from(JSON.stringify(payload, null, 2), "utf8").toString("base64");
     const uploaded = await uploadFileToXAI(fileName, "application/json", base64);
 
-    const metadata = {
+    const baseMetadata = {
       session_id: sessionId,
       idle_duration_ms: idleDurationMs,
       has_pending_transcription: hasPendingTranscription,
     };
+    const metadata = access.ileLinkId
+      ? stampSourceLinkMetadata(baseMetadata, { kind: "ile", linkId: access.ileLinkId })
+      : baseMetadata;
 
     const { data: row, error } = await access.supabase
       .from("workspace_proof_of_work")
@@ -64,6 +68,7 @@ export async function POST(req: NextRequest) {
         tool_name: ILE_IDLE_TOOL_NAME,
         tool_action: "idle_heartbeat",
         user_id: access.userId,
+        guest_user_id: access.auth.guest_user_id,
         organization_id: access.workspace.organization_id,
       })
       .select("id, xai_file_id, timestamp_ms, metadata, tool_action")

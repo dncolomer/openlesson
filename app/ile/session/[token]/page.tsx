@@ -5,13 +5,19 @@ import {
   resolveIleLinkAccess,
 } from "@/lib/ile-link-auth";
 import { IleGuestSessionClient } from "@/components/IleGuestSessionClient";
+import {
+  collectEntryQueryParams,
+  recordGuestLinkEntryQueryParams,
+} from "@/lib/guest-link-access";
 
 interface PageProps {
   params: Promise<{ token: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
 
-export default async function PrivateIleSessionPage({ params }: PageProps) {
+export default async function PrivateIleSessionPage({ params, searchParams }: PageProps) {
   const { token } = await params;
+  const query = await searchParams;
   const access = await resolveIleLinkAccess(token);
   if ("error" in access) notFound();
 
@@ -28,6 +34,16 @@ export default async function PrivateIleSessionPage({ params }: PageProps) {
     }
   }
 
+  const entryParams = collectEntryQueryParams(query);
+  if (Object.keys(entryParams).length > 0) {
+    await recordGuestLinkEntryQueryParams(
+      access.supabase,
+      "workspace_ile_links",
+      access.linkId,
+      entryParams,
+    ).catch(() => {});
+  }
+
   const ensured = await ensureIleLinkSession(access);
   if ("error" in ensured) {
     return (
@@ -42,6 +58,7 @@ export default async function PrivateIleSessionPage({ params }: PageProps) {
       sessionId={ensured.sessionId}
       ileToken={token}
       blockTitle={ensured.blockTitle}
+      showEndSession={access.showEndSession}
     />
   );
 }

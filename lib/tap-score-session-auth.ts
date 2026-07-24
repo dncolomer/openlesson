@@ -30,10 +30,10 @@ export interface ResolvedTapSessionContext {
 }
 
 export const TAP_SESSION_SELECT =
-  "id, workspace_id, user_id, guest_user_id, assigned_user_id, organization_id, block_id, session_id, status, started_at, requested_duration_seconds, focus_block_ids, post_session, redirect_url, completion_webhook_url, workspaces!inner(user_id)";
+  "id, workspace_id, user_id, guest_user_id, assigned_user_id, organization_id, block_id, session_id, status, started_at, requested_duration_seconds, focus_block_ids, post_session, redirect_url, completion_webhook_url, access_mode, public_token, entry_query_params, workspaces!inner(user_id)";
 
 const TAP_SESSION_SELECT_NO_JOIN =
-  "id, workspace_id, user_id, guest_user_id, assigned_user_id, organization_id, block_id, session_id, status, started_at, requested_duration_seconds, focus_block_ids, post_session, redirect_url, completion_webhook_url";
+  "id, workspace_id, user_id, guest_user_id, assigned_user_id, organization_id, block_id, session_id, status, started_at, requested_duration_seconds, focus_block_ids, post_session, redirect_url, completion_webhook_url, access_mode, public_token, entry_query_params";
 
 export function workspaceOwnerFromSession(session: {
   user_id?: string | null;
@@ -128,13 +128,26 @@ export async function resolveTapSessionAccess(input: {
 
   if (privateToken) {
     const supabase = createAdminClient();
-    const { data: session, error } = await supabase
+    const tokenHash = hashPrivateToken(privateToken);
+    let session: Record<string, unknown> | null = null;
+    const { data: byHash } = await supabase
       .from("workspace_tap_sessions")
       .select(TAP_SESSION_SELECT)
-      .eq("private_token_hash", hashPrivateToken(privateToken))
-      .single();
+      .eq("private_token_hash", tokenHash)
+      .maybeSingle();
+    session = byHash;
 
-    if (error || !session) return { error: "TAP block not found", status: 404 };
+    if (!session) {
+      const { data: byPublic } = await supabase
+        .from("workspace_tap_sessions")
+        .select(TAP_SESSION_SELECT)
+        .eq("public_token", privateToken)
+        .eq("access_mode", "public")
+        .maybeSingle();
+      session = byPublic;
+    }
+
+    if (!session) return { error: "TAP block not found", status: 404 };
     if (tapSessionId && session.id !== tapSessionId) {
       return { error: "TAP session ID does not match private link", status: 403 };
     }
@@ -150,24 +163,38 @@ export async function resolveTapSessionAccess(input: {
       }
     }
 
-    const participant = participantAuthFromSession(session);
-    const workspaceOwnerUserId = workspaceOwnerFromSession(session);
+    const sessionRow = session as {
+      id: string;
+      workspace_id: string;
+      user_id: string | null;
+      guest_user_id: string | null;
+      assigned_user_id: string | null;
+      organization_id: string | null;
+      block_id: string | null;
+      session_id: string | null;
+      post_session?: string | null;
+      redirect_url?: string | null;
+      completion_webhook_url?: string | null;
+      workspaces?: { user_id?: string } | Array<{ user_id?: string }> | null;
+    };
+    const participant = participantAuthFromSession(sessionRow);
+    const workspaceOwnerUserId = workspaceOwnerFromSession(sessionRow);
 
     return {
       supabase,
-      workspaceId: session.workspace_id,
+      workspaceId: sessionRow.workspace_id,
       userId: participant.userId,
       guestUserId: participant.guestUserId,
       assignedUserId: participant.assignedUserId,
       workspaceOwnerUserId,
-      organizationId: session.organization_id || null,
-      blockId: session.block_id || null,
-      focusSessionId: session.session_id || null,
-      tapSessionId: session.id,
-      postSession: (session.post_session as TapPostSessionMode) || "redirect_workspace",
-      redirectUrl: session.redirect_url || null,
-      completionWebhookUrl: session.completion_webhook_url || null,
-      existingSession: session,
+      organizationId: sessionRow.organization_id || null,
+      blockId: sessionRow.block_id || null,
+      focusSessionId: sessionRow.session_id || null,
+      tapSessionId: sessionRow.id,
+      postSession: (sessionRow.post_session as TapPostSessionMode) || "redirect_workspace",
+      redirectUrl: sessionRow.redirect_url || null,
+      completionWebhookUrl: sessionRow.completion_webhook_url || null,
+      existingSession: sessionRow as unknown as Record<string, unknown>,
     };
   }
 

@@ -7,6 +7,7 @@ import {
 } from "@/lib/tap-score-traces";
 import { uploadWorkspaceProofOfWork } from "@/lib/pow-api/upload-workspace-proof-of-work";
 import type { AuthContext } from "@/lib/pow-api/types";
+import { stampSourceLinkMetadata } from "@/lib/guest-link-access";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -87,11 +88,14 @@ export async function POST(req: NextRequest) {
       timestamp_ms: Date.now(),
       tool_name: TAP_TRANSCRIPT_TOOL_NAME,
       tool_action: "complete",
-      metadata: {
-        tap_session_id: resolvedTapSessionId,
-        duration_seconds: durationSeconds,
-        message_count: transcript.length,
-      },
+      metadata: stampSourceLinkMetadata(
+        {
+          tap_session_id: resolvedTapSessionId,
+          duration_seconds: durationSeconds,
+          message_count: transcript.length,
+        },
+        { kind: "tap", linkId: resolvedTapSessionId },
+      ),
     });
 
     const completedAt = new Date().toISOString();

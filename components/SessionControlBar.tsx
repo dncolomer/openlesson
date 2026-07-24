@@ -11,6 +11,8 @@ interface SessionControlBarProps {
   onPause: () => void;
   onResume: () => void;
   variant?: "top" | "panel" | "embedded";
+  /** When false, hide Stop / End Session. Default true. */
+  showEndSession?: boolean;
 }
 
 export function SessionControlBar({
@@ -22,6 +24,7 @@ export function SessionControlBar({
   onPause,
   onResume,
   variant = "top",
+  showEndSession = true,
 }: SessionControlBarProps) {
   const { t } = useI18n();
   const isStopped = !isRecording && !isPaused;
@@ -103,20 +106,23 @@ export function SessionControlBar({
           </button>
 
           {/* Stop / End */}
-          <button
-            onClick={() => onStopRecording()}
-            disabled={isStopped}
-            className={`flex items-center justify-center ${isPanel || isEmbedded ? "w-8 h-8" : "w-9 h-9"} rounded-lg transition-all ${
-              isStopped
-                ? "text-red-500/20 cursor-default"
-                : "text-red-400 hover:bg-red-500/20 hover:text-red-300"
-            }`}
-            title={t('sessionEnd.endSession')}
-          >
-            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-              <rect x="6" y="6" width="12" height="12" rx="1" />
-            </svg>
-          </button>
+          {showEndSession ? (
+            <button
+              data-session-end-control
+              onClick={() => onStopRecording()}
+              disabled={isStopped}
+              className={`flex items-center justify-center ${isPanel || isEmbedded ? "w-8 h-8" : "w-9 h-9"} rounded-lg transition-all ${
+                isStopped
+                  ? "text-red-500/20 cursor-default"
+                  : "text-red-400 hover:bg-red-500/20 hover:text-red-300"
+              }`}
+              title={t('sessionEnd.endSession')}
+            >
+              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                <rect x="6" y="6" width="12" height="12" rx="1" />
+              </svg>
+            </button>
+          ) : null}
         </div>
 
         {/* Status label */}

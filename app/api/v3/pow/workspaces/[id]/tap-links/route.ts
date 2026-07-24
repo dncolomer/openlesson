@@ -32,7 +32,7 @@ export async function GET(req: NextRequest, { params }: RouteProps) {
 
   let query = supabase
     .from("workspace_tap_sessions")
-    .select("id, workspace_id, block_id, status, requested_duration_seconds, duration_seconds, focus_block_ids, overall_score, created_at, started_at, completed_at, participant_type, post_session, redirect_url, guest_user_id, assigned_user_id")
+    .select("id, workspace_id, block_id, status, requested_duration_seconds, duration_seconds, focus_block_ids, overall_score, created_at, started_at, completed_at, participant_type, post_session, redirect_url, guest_user_id, assigned_user_id, access_mode, public_token, entry_query_params, show_end_session")
     .eq("workspace_id", id)
     .order("created_at", { ascending: false });
 

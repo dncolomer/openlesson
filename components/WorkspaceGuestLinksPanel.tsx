@@ -90,6 +90,8 @@ export function WorkspaceGuestLinksPanel({
   const [selectedMemberId, setSelectedMemberId] = useState("");
   const [selectedIleMemberId, setSelectedIleMemberId] = useState("");
   const [minutes, setMinutes] = useState(TAP_LINK_DEFAULT_MINUTES);
+  /** Default yes — guest TAP/ILE sessions show End Session unless unchecked. */
+  const [showEndSession, setShowEndSession] = useState(true);
   const [linksLoading, setLinksLoading] = useState(false);
   const [linksError, setLinksError] = useState<string | null>(null);
   const [creatingLink, setCreatingLink] = useState(false);
@@ -184,6 +186,7 @@ export function WorkspaceGuestLinksPanel({
           minutes,
           participant_type: participantType,
           post_session: "show_results",
+          show_end_session: showEndSession,
         };
         if (selectedBlockId) {
           body.blockId = selectedBlockId;
@@ -212,7 +215,7 @@ export function WorkspaceGuestLinksPanel({
         setCreatingLink(false);
       }
     },
-    [loadTapResources, minutes, selectedBlockId, selectedMemberId, t, workspaceId],
+    [loadTapResources, minutes, selectedBlockId, selectedMemberId, showEndSession, t, workspaceId],
   );
 
   /** Same card: rotate private URL; keep guest, scope, duration, post-session. */
@@ -255,6 +258,7 @@ export function WorkspaceGuestLinksPanel({
           workspaceId,
           blockId: selectedIleBlockId,
           participant_type: participantType,
+          show_end_session: showEndSession,
         };
         if (participantType === "user") {
           if (!selectedIleMemberId) throw new Error(t("planView.tapLinksSelectMember"));
@@ -282,7 +286,7 @@ export function WorkspaceGuestLinksPanel({
         setCreatingIleLink(false);
       }
     },
-    [loadTapResources, selectedIleBlockId, selectedIleMemberId, t, workspaceId],
+    [loadTapResources, selectedIleBlockId, selectedIleMemberId, showEndSession, t, workspaceId],
   );
 
   /** Same card: rotate private URL; keep guest and block scope. */
@@ -378,6 +382,22 @@ export function WorkspaceGuestLinksPanel({
             />
           </label>
         </div>
+
+        <label className="mt-4 flex cursor-pointer items-start gap-2.5 text-xs text-neutral-400">
+          <input
+            type="checkbox"
+            className="mt-0.5 rounded border-neutral-700 bg-neutral-900"
+            checked={showEndSession}
+            onChange={(e) => setShowEndSession(e.target.checked)}
+            data-guest-link-show-end-session
+          />
+          <span>
+            <span className="font-medium text-neutral-300">Show End Session button</span>
+            <span className="mt-0.5 block text-neutral-500">
+              Default on for TAP and ILE links. Uncheck for open-ended public runs where guests should not self-end.
+            </span>
+          </span>
+        </label>
 
         <div className="mt-4 flex flex-wrap gap-2">
           <button

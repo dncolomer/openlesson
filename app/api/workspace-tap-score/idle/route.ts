@@ -4,6 +4,7 @@ import { buildTapIdleHeartbeatPayload, TAP_IDLE_TOOL_NAME } from "@/lib/tap-idle
 import { uploadFileToXAI } from "@/lib/xai-files";
 import { countWorkspaceProofOfWorkForPlan } from "@/lib/pow-api/workspace-proof-of-work";
 import { withProofOfWorkApiResponse } from "@/lib/pow-api/predictive-interruption";
+import { stampSourceLinkMetadata } from "@/lib/guest-link-access";
 
 export const runtime = "nodejs";
 export const maxDuration = 30;
@@ -50,11 +51,14 @@ export async function POST(req: NextRequest) {
     const base64 = Buffer.from(JSON.stringify(payload, null, 2), "utf8").toString("base64");
     const uploaded = await uploadFileToXAI(fileName, "application/json", base64);
 
-    const metadata = {
-      tap_session_id: access.tapSessionId,
-      idle_duration_ms: idleDurationMs,
-      has_pending_transcription: hasPendingTranscription,
-    };
+    const metadata = stampSourceLinkMetadata(
+      {
+        tap_session_id: access.tapSessionId,
+        idle_duration_ms: idleDurationMs,
+        has_pending_transcription: hasPendingTranscription,
+      },
+      { kind: "tap", linkId: access.tapSessionId },
+    );
 
     const { data: row, error } = await access.supabase
       .from("workspace_proof_of_work")

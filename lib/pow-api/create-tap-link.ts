@@ -4,7 +4,6 @@ import { createdByApiKeyId } from "./auth";
 import type { AuthContext, ErrorCode } from "./types";
 import { canAccessAgentWorkspace } from "./workspace-access";
 import {
-  buildTapScoreSessionUrl,
   createPrivateToken,
   getTapScoreBriefForUser,
   hashPrivateToken,
@@ -14,6 +13,7 @@ import {
   normalizeTapLinkMinutes,
   normalizeTapPostSession,
   normalizeWebhookUrl,
+  resolveShowEndSessionFromBody,
   resolveTapParticipantType,
   type CreateTapLinkInput,
   type TapParticipantType,
@@ -23,6 +23,11 @@ import {
   isUuid,
   ResolveWorkspaceGuestError,
 } from "./resolve-workspace-guest";
+import {
+  buildGuestLinkUrl,
+  normalizeGuestLinkAccessMode,
+  type GuestLinkAccessMode,
+} from "@/lib/guest-link-access";
 
 export class CreateTapLinkError extends Error {
   constructor(
@@ -59,7 +64,41 @@ export interface CreatedTapLink {
   redirect_url: string | null;
   guest_user_id: string | null;
   assigned_user_id: string | null;
+  access_mode: GuestLinkAccessMode;
+  public_token: string | null;
+  entry_query_params: unknown;
+  /** When true (default), guest TAP UI shows End Session. */
+  show_end_session: boolean;
+  /** Shareable session URL (stable for public; secret bearer for private). */
+  url: string;
+  /** Alias of url for backward compatibility. */
   private_url: string;
+}
+
+const TAP_LINK_SELECT =
+  "id, workspace_id, block_id, status, requested_duration_seconds, focus_block_ids, created_at, participant_type, post_session, redirect_url, guest_user_id, assigned_user_id, access_mode, public_token, entry_query_params, show_end_session";
+
+function withTapLinkUrl(
+  link: Omit<CreatedTapLink, "url" | "private_url" | "show_end_session"> & {
+    access_mode?: string | null;
+    public_token?: string | null;
+    show_end_session?: boolean | null;
+  },
+  baseUrl: string,
+  sessionToken: string,
+): CreatedTapLink {
+  const access_mode: GuestLinkAccessMode =
+    link.access_mode === "public" ? "public" : "private";
+  const url = buildGuestLinkUrl(baseUrl, "tap", sessionToken);
+  return {
+    ...link,
+    access_mode,
+    public_token: access_mode === "public" ? link.public_token ?? sessionToken : null,
+    entry_query_params: link.entry_query_params ?? [],
+    show_end_session: link.show_end_session !== false,
+    url,
+    private_url: url,
+  };
 }
 
 async function resolveGuestUserId(
@@ -278,7 +317,12 @@ export async function createWorkspaceTapLink(options: CreateTapLinkOptions): Pro
     throw new CreateTapLinkError(message, 403, "forbidden");
   }
 
-  const privateToken = createPrivateToken();
+  const accessMode = normalizeGuestLinkAccessMode(body);
+  const showEndSession = resolveShowEndSessionFromBody(body);
+  // Session path token: secret for private; stable non-rotating public_token for public.
+  const sessionToken = createPrivateToken();
+  const publicToken = accessMode === "public" ? sessionToken : null;
+
   const { data: link, error } = await supabase
     .from("workspace_tap_sessions")
     .insert({
@@ -288,7 +332,11 @@ export async function createWorkspaceTapLink(options: CreateTapLinkOptions): Pro
       assigned_user_id: assignedUserId,
       organization_id: auth.organization_id || workspace.organization_id,
       created_by_api_key_id: createdByApiKeyId(auth),
-      private_token_hash: hashPrivateToken(privateToken),
+      private_token_hash: hashPrivateToken(sessionToken),
+      access_mode: accessMode,
+      public_token: publicToken,
+      entry_query_params: [],
+      show_end_session: showEndSession,
       requested_duration_seconds: Math.round(minutes * 60),
       block_id: blockId,
       mode: "curious",
@@ -300,9 +348,7 @@ export async function createWorkspaceTapLink(options: CreateTapLinkOptions): Pro
       redirect_url: postSession === "redirect_url" ? redirectUrl : null,
       completion_webhook_url: webhookUrl,
     })
-    .select(
-      "id, workspace_id, block_id, status, requested_duration_seconds, focus_block_ids, created_at, participant_type, post_session, redirect_url, guest_user_id, assigned_user_id"
-    )
+    .select(TAP_LINK_SELECT)
     .single();
 
   if (error || !link) {
@@ -310,10 +356,7 @@ export async function createWorkspaceTapLink(options: CreateTapLinkOptions): Pro
     throw new CreateTapLinkError("Failed to create TAP link", 500, "internal_error");
   }
 
-  return {
-    ...link,
-    private_url: buildTapScoreSessionUrl(baseUrl, privateToken),
-  };
+  return withTapLinkUrl(link, baseUrl, sessionToken);
 }
 
 export interface ReissueTapLinkOptions {
@@ -341,7 +384,7 @@ export async function reissueWorkspaceTapLink(
   const { data: existing, error: loadError } = await supabase
     .from("workspace_tap_sessions")
     .select(
-      "id, workspace_id, block_id, status, requested_duration_seconds, focus_block_ids, created_at, participant_type, post_session, redirect_url, guest_user_id, assigned_user_id, private_token_hash, workspaces(id, user_id, organization_id, guest_user_id)"
+      "id, workspace_id, block_id, status, requested_duration_seconds, focus_block_ids, created_at, participant_type, post_session, redirect_url, guest_user_id, assigned_user_id, private_token_hash, access_mode, public_token, entry_query_params, workspaces(id, user_id, organization_id, guest_user_id)"
     )
     .eq("id", linkId)
     .eq("workspace_id", workspaceId)
@@ -351,7 +394,7 @@ export async function reissueWorkspaceTapLink(
     console.error("[reissue-tap-link] Load error:", loadError);
     throw new CreateTapLinkError("Failed to load TAP link", 500, "internal_error");
   }
-  if (!existing?.private_token_hash) {
+  if (!existing?.private_token_hash && !existing?.public_token) {
     throw new CreateTapLinkError("TAP link not found", 404, "not_found");
   }
 
@@ -367,11 +410,21 @@ export async function reissueWorkspaceTapLink(
     throw new CreateTapLinkError("Workspace not found", 404, "workspace_not_found");
   }
 
-  const privateToken = createPrivateToken();
+  const isPublic = existing.access_mode === "public";
+  // Public URLs stay stable ("always the same"); only private bearer tokens rotate.
+  const sessionToken = isPublic
+    ? String(existing.public_token || "")
+    : createPrivateToken();
+  if (!sessionToken) {
+    throw new CreateTapLinkError("Public TAP link is missing public_token", 500, "internal_error");
+  }
+
   const { data: link, error } = await supabase
     .from("workspace_tap_sessions")
     .update({
-      private_token_hash: hashPrivateToken(privateToken),
+      ...(isPublic
+        ? {}
+        : { private_token_hash: hashPrivateToken(sessionToken), public_token: null }),
       status: "pending",
       started_at: null,
       completed_at: null,
@@ -380,9 +433,7 @@ export async function reissueWorkspaceTapLink(
     })
     .eq("id", linkId)
     .eq("workspace_id", workspaceId)
-    .select(
-      "id, workspace_id, block_id, status, requested_duration_seconds, focus_block_ids, created_at, participant_type, post_session, redirect_url, guest_user_id, assigned_user_id"
-    )
+    .select(TAP_LINK_SELECT)
     .single();
 
   if (error || !link) {
@@ -390,8 +441,5 @@ export async function reissueWorkspaceTapLink(
     throw new CreateTapLinkError("Failed to reissue TAP link", 500, "internal_error");
   }
 
-  return {
-    ...link,
-    private_url: buildTapScoreSessionUrl(baseUrl, privateToken),
-  };
+  return withTapLinkUrl(link, baseUrl, sessionToken);
 }

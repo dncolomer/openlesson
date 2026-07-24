@@ -62,6 +62,18 @@ interface TapScoreClientProps {
   sessionId?: string;
   privateToken?: string;
   initialSession?: any;
+  /** When false, hide End Session control. Default true. */
+  showEndSession?: boolean;
+}
+
+/** Resolve whether End Session UI should show (default yes). */
+export function resolveTapShowEndSession(input: {
+  showEndSession?: boolean;
+  initialSession?: { show_end_session?: boolean | null } | null;
+}): boolean {
+  if (typeof input.showEndSession === "boolean") return input.showEndSession;
+  if (input.initialSession && input.initialSession.show_end_session === false) return false;
+  return true;
 }
 
 function ThoughtButton({
@@ -187,7 +199,18 @@ function TapBriefingConfig({
 
 
 
-export function TapScoreClient({ workspaceId, blockId, sessionId, privateToken, initialSession }: TapScoreClientProps) {
+export function TapScoreClient({
+  workspaceId,
+  blockId,
+  sessionId,
+  privateToken,
+  initialSession,
+  showEndSession: showEndSessionProp,
+}: TapScoreClientProps) {
+  const showEndSession = resolveTapShowEndSession({
+    showEndSession: showEndSessionProp,
+    initialSession,
+  });
   const router = useRouter();
   const { t } = useI18n();
   const [phase, setPhase] = useState<Phase>("briefing");
@@ -917,11 +940,13 @@ export function TapScoreClient({ workspaceId, blockId, sessionId, privateToken, 
                       {formatCountdown(remainingSeconds)}
                     </div>
                   </div>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <ThoughtButton size="sm" variant="primary" onClick={endSession}>
-                      End session
-                    </ThoughtButton>
-                  </div>
+                  {showEndSession ? (
+                    <div className="flex flex-wrap items-center gap-2" data-tap-end-session>
+                      <ThoughtButton size="sm" variant="primary" onClick={endSession}>
+                        End session
+                      </ThoughtButton>
+                    </div>
+                  ) : null}
                 </div>
 
                 <div className="flex min-w-0 items-center gap-1.5 overflow-hidden">

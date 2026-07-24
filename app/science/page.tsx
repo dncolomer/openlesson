@@ -8,6 +8,10 @@ import {
   getPlatformPitchSlide,
   PLATFORM_THESIS_SLIDE_INDEX,
 } from "@/lib/sales/platform-pitch-deck";
+import {
+  TAP_WHITEPAPER_PATH,
+  TAP_STASH_SUBMIT_WHITEPAPER,
+} from "@/lib/science/tap-stash-submit-whitepaper";
 
 export const metadata: Metadata = {
   title: "Science",
@@ -209,6 +213,44 @@ export default function SciencePage() {
             </article>
           ))}
         </div>
+      </section>
+
+      <section
+        id="research"
+        data-science-research
+        className="relative z-10 mx-auto max-w-6xl px-6 pb-10 sm:pb-12"
+        aria-labelledby="science-research-heading"
+      >
+        <div className="mb-3 font-mono text-[10px] uppercase tracking-[2px] text-zinc-500">Research</div>
+        <h2
+          id="science-research-heading"
+          className="max-w-3xl text-3xl font-medium leading-[1.08] tracking-[-1.4px] text-white sm:text-4xl"
+        >
+          Methods &amp; planned experiments
+        </h2>
+        <p className="mt-4 max-w-2xl text-base leading-relaxed text-zinc-400">
+          Academic working papers on how we externalize cognition as Proof of Work and how we plan to
+          embed that data into a Map of Knowledge.
+        </p>
+        <Link
+          href={TAP_WHITEPAPER_PATH}
+          data-science-research-link
+          className="mt-6 group block border border-zinc-800 bg-zinc-950/70 p-5 transition hover:border-zinc-600 sm:p-6"
+        >
+          <p className="font-mono text-[10px] uppercase tracking-[1.6px] text-zinc-500">
+            Working paper · {TAP_STASH_SUBMIT_WHITEPAPER.meta.date}
+          </p>
+          <h3 className="mt-2 text-xl font-medium tracking-[-0.5px] text-white sm:text-2xl">
+            {TAP_STASH_SUBMIT_WHITEPAPER.meta.shortTitle}
+          </h3>
+          <p className="mt-3 max-w-3xl text-sm leading-relaxed text-zinc-400 sm:text-base">
+            {TAP_STASH_SUBMIT_WHITEPAPER.meta.description}
+          </p>
+          <span className="mt-4 inline-flex items-center gap-1.5 text-sm font-medium text-zinc-300 transition group-hover:text-white">
+            Read the white paper
+            <ArrowRight size={14} />
+          </span>
+        </Link>
       </section>
 
       <section className="relative z-10 mx-auto max-w-6xl px-6 pb-16">

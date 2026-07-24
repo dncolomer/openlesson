@@ -23,6 +23,41 @@ export interface CreateTapLinkInput {
   post_session?: unknown;
   redirect_url?: unknown;
   completion_webhook_url?: unknown;
+  /** private (default) | public — stable open URL for public links */
+  access_mode?: unknown;
+  accessMode?: unknown;
+  /** Shorthand: true → public */
+  public?: unknown;
+  /** When true (default), guest UI shows End Session. */
+  show_end_session?: unknown;
+  showEndSession?: unknown;
+  allow_end_session?: unknown;
+  allowEndSession?: unknown;
+}
+
+/**
+ * Whether the guest session UI should show an End Session control.
+ * Default **true** (yes) when omitted or unrecognized.
+ */
+export function normalizeShowEndSession(value: unknown): boolean {
+  if (value === false || value === 0) return false;
+  if (value === true || value === 1) return true;
+  if (typeof value === "string") {
+    const raw = value.trim().toLowerCase();
+    if (raw === "false" || raw === "0" || raw === "no" || raw === "off") return false;
+    if (raw === "true" || raw === "1" || raw === "yes" || raw === "on") return true;
+  }
+  return true;
+}
+
+/** Resolve show_end_session from create body keys (snake/camel). Default true. */
+export function resolveShowEndSessionFromBody(body: CreateTapLinkInput | Record<string, unknown>): boolean {
+  const record = body as Record<string, unknown>;
+  if ("show_end_session" in record) return normalizeShowEndSession(record.show_end_session);
+  if ("showEndSession" in record) return normalizeShowEndSession(record.showEndSession);
+  if ("allow_end_session" in record) return normalizeShowEndSession(record.allow_end_session);
+  if ("allowEndSession" in record) return normalizeShowEndSession(record.allowEndSession);
+  return true;
 }
 
 export function normalizeTapLinkMinutes(value: unknown, fallback = TAP_LINK_DEFAULT_MINUTES): number {

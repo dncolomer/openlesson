@@ -14,6 +14,7 @@ import { uploadFileToXAI } from "@/lib/xai-files";
 import { countWorkspaceProofOfWorkForPlan } from "@/lib/pow-api/workspace-proof-of-work";
 import { withProofOfWorkApiResponse } from "@/lib/pow-api/predictive-interruption";
 import { buildTapInProgressPatch } from "@/lib/tap-started-at";
+import { stampSourceLinkMetadata } from "@/lib/guest-link-access";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -144,11 +145,14 @@ export async function POST(req: NextRequest) {
         xai_file_id: uploaded.file_id,
         timestamp_ms: timestampMs,
         chunk_index: 0,
-        metadata: {
-          tap_session_id: access.tapSessionId,
-          learner_thought: latestThought,
-          helios_reply: heliosReply,
-        },
+        metadata: stampSourceLinkMetadata(
+          {
+            tap_session_id: access.tapSessionId,
+            learner_thought: latestThought,
+            helios_reply: heliosReply,
+          },
+          { kind: "tap", linkId: access.tapSessionId },
+        ),
         tool_name: TAP_CHAT_TOOL_NAME,
         tool_action: "chat_exchange",
         user_id: access.userId,

@@ -83,13 +83,13 @@ export default function B2BLandingPage() {
         <p className="mt-4 max-w-3xl text-base leading-relaxed text-zinc-400 sm:text-lg">
           Every workspace projects people and roles into a shared embedding geometry. Overlay role regions,
           multi-select subjects, and read{" "}
-          <span className="text-zinc-200">knowledge distance</span> live — who is already in region for Backend,
+          <span className="text-zinc-200">knowledge distance</span> live: who is already in region for Backend,
           who sits outside SRE, and how the team cohort is moving over time.
         </p>
         <p className="mt-3 max-w-3xl text-base leading-relaxed text-zinc-500 sm:text-[15px]">
           Create{" "}
           <span className="text-zinc-300">custom knowledge regions</span> from internal experts, including{" "}
-          <span className="text-zinc-300">private</span> ones when “knowing X” is proprietary — then evaluate
+          <span className="text-zinc-300">private</span> ones when “knowing X” is proprietary, then evaluate
           candidates and teammates against that geometry.
         </p>
         <div
@@ -99,7 +99,7 @@ export default function B2BLandingPage() {
           <div className="relative aspect-[16/9] w-full sm:aspect-[2918/1656]">
             <Image
               src="/knowledgeg2.png"
-              alt="Uncertain Systems Knowledge embeddings — multi-user projection with role regions and knowledge distance"
+              alt="Uncertain Systems Knowledge embeddings: multi-user projection with role regions and knowledge distance"
               fill
               className="object-cover object-top"
               sizes="(max-width: 1152px) 100vw, 1152px"
@@ -111,7 +111,7 @@ export default function B2BLandingPage() {
               Knowledge · Embeddings · Role regions · Proof of Work
             </p>
             <p className="mt-1.5 max-w-3xl text-sm leading-relaxed text-zinc-400">
-              Same stack that powers verification, optimization, and augmentation — a living map of proximity to
+              Same stack that powers verification, optimization, and augmentation: a living map of proximity to
               “knowing X,” grounded in real work traces rather than multiple-choice pass rates.
             </p>
           </div>
@@ -125,8 +125,8 @@ export default function B2BLandingPage() {
         />
         <div className="mt-6 border border-zinc-800 bg-zinc-950/70 p-6 text-lg leading-relaxed text-zinc-400 backdrop-blur-sm sm:p-8">
           <p>
-            Uncertain Systems builds a learning world model from real work — skills, scenarios, proof of work, and
-            where reasoning breaks — instead of stitching together linear funnel analytics. The Trace
+            Uncertain Systems builds a learning world model from real work: skills, scenarios, proof of work, and
+            where reasoning breaks, instead of stitching together linear funnel analytics. The Trace
             Interruption Model uses that live picture to drive verification, optimization, and augmentation
             in context.
           </p>
@@ -136,7 +136,7 @@ export default function B2BLandingPage() {
             <span className="text-zinc-200">Optimization</span> routes the next practice or coaching step
             when gaps show up in the model.{" "}
             <span className="text-zinc-200">Augmentation</span> interrupts shallow fluency with probes tuned
-            to what the workspace already knows. One model, three verticals — embedded in your existing
+            to what the workspace already knows. One model, three verticals, embedded in your existing
             tools.
           </p>
         </div>
@@ -154,13 +154,13 @@ export default function B2BLandingPage() {
               VERIFICATION AT SCALE
             </div>
             <h2 className="max-w-xl text-3xl font-medium leading-[1.1] tracking-[-1.2px] text-white sm:text-4xl">
-              Hire, screen, and rank against your bar — at volume.
+              Hire, screen, and rank against your bar at volume.
             </h2>
             <div className="mt-4 space-y-3 text-base leading-relaxed text-zinc-400 sm:text-[15px]">
               <p>
-                The same measurement stack scales human verification — from{" "}
+                The same measurement stack scales human verification, from{" "}
                 <span className="text-zinc-200">recruitment at volume</span> to internal mobility and agent
-                deploy gates — without stuffing proprietary skill into a public quiz bank.
+                deploy gates, without stuffing proprietary skill into a public quiz bank.
               </p>
               <p>
                 Hosted{" "}

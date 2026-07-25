@@ -19,7 +19,7 @@ Scope: `` production TypeScript
 | Rabbit Hole continue | `rabbit-hole/continue/route.ts` | `POST /api/rabbit-hole/continue` | No |
 | v2 workspace create | `v3/pow/workspaces/route.ts` | `POST /api/v3/pow/workspaces` | No |
 | `buildPerformanceReportInstructions` | `pow-api/performance-report.ts` | v2 performance report, MCP | No |
-| `buildPerformanceChatInstructions` | `pow-api/performance-context.ts` | Orbit demo performance chat | No |
+| `buildPerformanceChatInstructions` | `pow-api/performance-context.ts` | Demo performance chat | No |
 | `buildProofOfWorkSchemaInstructions` | `pow-api/proof-of-work-schema.ts` | proof-of-work-schema API, MCP | No |
 | `buildIntegrationSkillInstructions` | `pow-api/integration-skill.ts` | integration-skill API, MCP | No |
 | `buildTapScoreInstructions` | `lib/tap-score.ts` | TAP chat | No |
@@ -1464,7 +1464,6 @@ Turn learner thought traces into one insight bookmark. Return JSON: { "title": "
 ### `createVerificationWorkspaceFromPrompt` userMessage
 
 - **File**: `lib/pow-api/create-verification-workspace.ts`
-- **Call chain**: `POST /api/demo/workspace` → `createVerificationWorkspaceFromPrompt`; also `POST /api/v3/pow/workspaces` uses a related template
 - **Purpose**: Generate 3–6 assessable workspace blocks with conversion_goal from natural-language prompt (+ optional files)
 - **User-overridable**: No
 - **Variables**: `{initialPrompt}`, `{fileContext}`, appended `WORKSPACE_GENERATION_CONVERSION_GOAL_RULE`
@@ -1477,8 +1476,6 @@ Create a performance learning workspace from this prompt. Break it into assessab
 
 ### demo/workspace route (consumer)
 
-- **File**: `app/api/demo/workspace/route.ts`
-- **Call chain**: `POST /api/demo/workspace` → `createVerificationWorkspaceFromPrompt(demo.workspacePrompt, …)`
 - **Purpose**: Demo admin: materialize verification workspace from demo definition prompt
 - **User-overridable**: No
 - **Delegates to**: `lib/pow-api/create-verification-workspace.ts` — see verbatim userMessage above
@@ -1512,9 +1509,6 @@ Discovered via `scripts/discover-llm-prompts.mjs` at 2026-07-22T01:27:33.649Z: *
 
 | Path | Category |
 |---|---|
-| `app/api/demo/integration-skill/route.ts` | buildIntegrationSkillInstructions consumer |
-| `app/api/demo/performance/route.ts` | buildPerformanceReportInstructions + buildPerformanceChatInstructions + Orbit context |
-| `app/api/demo/workspace/route.ts` | Consumer → createVerificationWorkspaceFromPrompt (lib/pow-api/create-verification-workspace.ts) |
 | `app/api/insights/create/route.ts` | call-site |
 | `app/api/insights/suggest/route.ts` | call-site |
 | `app/api/prep-material/route.ts` | call-site |

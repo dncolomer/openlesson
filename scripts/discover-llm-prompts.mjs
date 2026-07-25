@@ -35,8 +35,6 @@ const SUPPLEMENTAL = [
 
 /** Routes that delegate to lib helpers (no inline prompt strings) */
 const CONSUMER_PATHS = [
-  "app/api/demo/workspace/route.ts",
-  "app/api/demo/integration-skill/route.ts",
   "app/api/workspace/integration-skill/route.ts",
   "app/api/workspace/performance-report/route.ts",
   "app/api/v3/pow/workspaces/[id]/integration-skill/route.ts",

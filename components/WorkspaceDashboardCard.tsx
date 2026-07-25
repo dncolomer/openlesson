@@ -20,10 +20,13 @@ interface WorkspaceDashboardCardProps {
   privateLabel: string;
   /** When set, Snapshot button shows loading for this workspace. */
   snapshottingWorkspaceId?: string | null;
+  /** Whether this workspace is pinned to the top of the Dashboard list. */
+  isPinned?: boolean;
   onArchive: (workspaceId: string) => void;
   onRestore: (workspaceId: string) => void;
   onToggleVisibility: (plan: Workspace) => void;
-  /** Owner: run LWM Snapshot for all users of this workspace. */
+  onTogglePin?: (plan: Workspace) => void;
+  /** Owner: run LWM Snapshot for every user of this workspace. */
   onSnapshotAll?: (plan: Workspace) => void;
 }
 
@@ -34,9 +37,11 @@ export function WorkspaceDashboardCard({
   publicLabel,
   privateLabel,
   snapshottingWorkspaceId = null,
+  isPinned = false,
   onArchive,
   onRestore,
   onToggleVisibility,
+  onTogglePin,
   onSnapshotAll,
 }: WorkspaceDashboardCardProps) {
   const isPublic = plan.is_public ?? false;
@@ -50,6 +55,7 @@ export function WorkspaceDashboardCard({
     <article
       className="group overflow-hidden rounded-xl border border-neutral-800/90 bg-neutral-950/80 transition hover:border-neutral-600 hover:bg-neutral-900/70"
       data-workspace-dashboard-card
+      data-workspace-pinned={isPinned ? "true" : "false"}
     >
       <Link href={`/workspace/${plan.id}`} className="block">
         <WorkspaceCardHero
@@ -61,18 +67,39 @@ export function WorkspaceDashboardCard({
             <>
               {heroBadge(plan.source_type === "youtube" ? "Video" : "Workspace")}
               {isPublic ? heroBadge("Public") : null}
+              {isPinned ? heroBadge("Pinned") : null}
             </>
           }
         />
       </Link>
 
       <div className="p-5 sm:p-6">
-        <Link href={`/workspace/${plan.id}`} className="block">
-          <h4 className="line-clamp-2 text-xl font-medium leading-snug text-neutral-100 transition group-hover:text-white">
-            {plan.title || plan.root_topic}
-          </h4>
-          <p className="mt-2 line-clamp-2 text-sm leading-relaxed text-neutral-500">{subtitle}</p>
-        </Link>
+        <div className="flex items-start justify-between gap-3">
+          <Link href={`/workspace/${plan.id}`} className="block min-w-0 flex-1">
+            <h4 className="line-clamp-2 text-xl font-medium leading-snug text-neutral-100 transition group-hover:text-white">
+              {plan.title || plan.root_topic}
+            </h4>
+            <p className="mt-2 line-clamp-2 text-sm leading-relaxed text-neutral-500">{subtitle}</p>
+          </Link>
+          {onTogglePin ? (
+            <button
+              type="button"
+              onClick={() => onTogglePin(plan)}
+              data-workspace-pin
+              data-workspace-pin-state={isPinned ? "pinned" : "unpinned"}
+              aria-pressed={isPinned}
+              aria-label={isPinned ? "Unpin workspace" : "Pin workspace"}
+              title={isPinned ? "Unpin from top of list" : "Pin to top of list"}
+              className={`shrink-0 rounded-md border px-2.5 py-1 text-xs transition ${
+                isPinned
+                  ? "border-amber-600/70 bg-amber-950/40 text-amber-200 hover:border-amber-500 hover:bg-amber-950/60"
+                  : "border-neutral-700 bg-neutral-900/60 text-neutral-400 hover:border-neutral-500 hover:text-neutral-200"
+              }`}
+            >
+              {isPinned ? "Unpin" : "Pin"}
+            </button>
+          ) : null}
+        </div>
 
         <div className="mt-4 flex flex-wrap items-center gap-2 text-[11px] text-neutral-500">
           <span>{formatDate(plan.created_at)}</span>

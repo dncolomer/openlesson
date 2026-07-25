@@ -16,6 +16,12 @@ import { buildMcpClientConfig } from "@/lib/pow-api/mcp-proof-of-work-catalog";
 import { IntegrationQuickAccess } from "@/components/IntegrationQuickAccess";
 import { DEFAULT_MODEL } from "@/lib/xai-models";
 import { LoadingStatusMessage } from "@/components/LoadingStatusMessage";
+import {
+  loadPinnedWorkspaceIds,
+  savePinnedWorkspaceIds,
+  sortWorkspacesPinnedFirst,
+  togglePinnedWorkspaceId,
+} from "@/lib/dashboard-workspace-pins";
 
 const DASHBOARD_BACKGROUND = "/aesthetics/Greco-futurism/HHnTrgVaQAAP-_3.jpeg";
 
@@ -69,10 +75,15 @@ export default function DashboardPage() {
   );
   // User state
   const [user, setUser] = useState<{
+    id?: string;
     email?: string;
     plan?: string;
     isAdmin?: boolean;
   } | null>(null);
+  /** User-scoped pinned workspace ids (persisted in localStorage). */
+  const [pinnedWorkspaceIds, setPinnedWorkspaceIds] = useState<Set<string>>(
+    () => new Set(),
+  );
 
   // Usage tab
   const [usageData, setUsageData] = useState<{
@@ -209,7 +220,8 @@ export default function DashboardPage() {
         return;
       }
 
-      setUser({ email: authUser.email });
+      setUser({ id: authUser.id, email: authUser.email });
+      setPinnedWorkspaceIds(loadPinnedWorkspaceIds(authUser.id));
 
       // Fetch profile
       const { data: profile } = await supabase
@@ -220,6 +232,7 @@ export default function DashboardPage() {
 
       if (profile) {
         setUser({
+          id: authUser.id,
           email: authUser.email,
           plan: profile.plan || "inactive",
           isAdmin: profile.is_admin || false,
@@ -306,6 +319,7 @@ export default function DashboardPage() {
           // Keep user.plan aligned with org-resolved entitlement (not demoted personal plan)
           setUser((prev) => ({
             ...prev,
+            id: authUser.id,
             email: authUser.email,
             plan: orgResolvedPlan,
             isAdmin: usageResult.isAdmin === true || profile?.is_admin === true || prev?.isAdmin,
@@ -727,23 +741,34 @@ export default function DashboardPage() {
     }
   };
 
-  const filteredWorkspaces = workspaces.filter((p) => {
-    const matchesSearch =
-      workspaceSearch === "" ||
-      p.root_topic.toLowerCase().includes(workspaceSearch.toLowerCase()) ||
-      (p.title || "").toLowerCase().includes(workspaceSearch.toLowerCase());
-    if (!matchesSearch) return false;
-    const isPublic = p.is_public ?? false;
-    if (workspaceVisibilityFilter === "public") return isPublic;
-    if (workspaceVisibilityFilter === "private") return !isPublic;
-    return true;
-  });
+  const filteredWorkspaces = useMemo(() => {
+    const filtered = workspaces.filter((p) => {
+      const matchesSearch =
+        workspaceSearch === "" ||
+        p.root_topic.toLowerCase().includes(workspaceSearch.toLowerCase()) ||
+        (p.title || "").toLowerCase().includes(workspaceSearch.toLowerCase());
+      if (!matchesSearch) return false;
+      const isPublic = p.is_public ?? false;
+      if (workspaceVisibilityFilter === "public") return isPublic;
+      if (workspaceVisibilityFilter === "private") return !isPublic;
+      return true;
+    });
+    return sortWorkspacesPinnedFirst(filtered, pinnedWorkspaceIds);
+  }, [workspaces, workspaceSearch, workspaceVisibilityFilter, pinnedWorkspaceIds]);
 
   const totalPlanPages = Math.ceil(filteredWorkspaces.length / workspacePageSize);
   const paginatedPlans = filteredWorkspaces.slice(
     (workspacePage - 1) * workspacePageSize,
     workspacePage * workspacePageSize
   );
+
+  const handleTogglePin = (workspace: Workspace) => {
+    setPinnedWorkspaceIds((prev) => {
+      const next = togglePinnedWorkspaceId(prev, workspace.id);
+      savePinnedWorkspaceIds(user?.id, next);
+      return next;
+    });
+  };
 
   const setDashboardTab = (tab: Tab) => {
     setActiveTab(tab);
@@ -1056,6 +1081,8 @@ export default function DashboardPage() {
                     snapshottingWorkspaceId={snapshottingWorkspaceId}
                     publicLabel={t("dashboard.public")}
                     privateLabel={t("dashboard.private")}
+                    isPinned={pinnedWorkspaceIds.has(plan.id)}
+                    onTogglePin={handleTogglePin}
                     onArchive={handleArchivePlan}
                     onRestore={handleRestorePlan}
                     onToggleVisibility={async (workspace) => {

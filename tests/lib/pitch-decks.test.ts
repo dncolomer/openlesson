@@ -156,7 +156,7 @@ describe("pitch deck content (platform only)", () => {
     expect(PLATFORM_PITCH_DECK.slides[thesisStart + 2]?.kicker?.toLowerCase()).toMatch(/thesis/);
     expect(PLATFORM_PITCH_DECK.slides[thesisStart + 3]?.image).toBe("/terrance.png");
     expect(PLATFORM_PITCH_DECK.slides[thesisStart + 4]?.image).toBe("/mechaarm2.jpg");
-    expect(PLATFORM_PITCH_DECK.slides[thesisStart + 5]?.image).toBe("/embeddings.png");
+    expect(PLATFORM_PITCH_DECK.slides[thesisStart + 5]?.image).toBe("/knowledgeg2.png");
 
     // Method section
     const methodStart = thesisStart + 6;
@@ -266,7 +266,7 @@ describe("pitch deck content (platform only)", () => {
 
     const embeddingsSlide = PLATFORM_PITCH_DECK.slides[thesisTitleIdx + 5];
     expect(embeddingsSlide?.layout).toBe("fullImage");
-    expect(embeddingsSlide?.image).toBe("/embeddings.png");
+    expect(embeddingsSlide?.image).toBe("/knowledgeg2.png");
     expect(publicAssetExists(embeddingsSlide?.image ?? "")).toBe(true);
     expect(embeddingsSlide?.imageCaption?.trim().length).toBeGreaterThan(0);
 
@@ -665,7 +665,7 @@ describe("pitch deck content (platform only)", () => {
     expect(platformThesis!.cards?.map((c) => c.image)).toEqual([
       "/terrance.png",
       "/mechaarm2.jpg",
-      "/embeddings.png",
+      "/knowledgeg2.png",
     ]);
     // No non-empty bullet list under the cards
     const nonEmptyBullets = (platformThesis!.bullets ?? []).filter((b) => b.trim().length > 0);
@@ -692,12 +692,12 @@ describe("pitch deck content (platform only)", () => {
     expect(cardGridAt).toBeGreaterThan(-1);
     expect(highlightsAt).toBeLessThan(cardGridAt);
 
-    // Full-size follow-ons after thesis cards: terrance, mechaarm2, embeddings
+    // Full-size follow-ons after thesis cards: terrance, mechaarm2, knowledgeg2
     // (1-based slides 11–13 when thesis is slide 10 / index 9; Problem is slide 9)
     expect(PLATFORM_PITCH_DECK.slides[thesisIdx + 1]?.image).toBe("/terrance.png");
     expect(PLATFORM_PITCH_DECK.slides[thesisIdx + 2]?.image).toBe("/mechaarm2.jpg");
-    expect(PLATFORM_PITCH_DECK.slides[thesisIdx + 3]?.image).toBe("/embeddings.png");
-    for (const asset of ["/mechaarm2.jpg", "/terrance.png", "/embeddings.png"]) {
+    expect(PLATFORM_PITCH_DECK.slides[thesisIdx + 3]?.image).toBe("/knowledgeg2.png");
+    for (const asset of ["/mechaarm2.jpg", "/terrance.png", "/knowledgeg2.png"]) {
       expect(publicAssetExists(asset), `missing public asset: ${asset}`).toBe(true);
     }
 
@@ -709,7 +709,7 @@ describe("pitch deck content (platform only)", () => {
     for (const [cardImage, zoomOffset] of [
       ["/terrance.png", 1],
       ["/mechaarm2.jpg", 2],
-      ["/embeddings.png", 3],
+      ["/knowledgeg2.png", 3],
     ] as const) {
       const zoomIdx = thesisIdx + zoomOffset;
       expect(PLATFORM_PITCH_DECK.slides[zoomIdx]?.layout).toBe("fullImage");

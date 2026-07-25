@@ -72,6 +72,9 @@ describe("workspace dashboard card snapshot UX", () => {
     expect(routeSrc).toContain("listWorkspaceSnapshotSubjects");
     expect(routeSrc).toContain("runVerticalScore");
     expect(routeSrc).toContain("Only the workspace owner");
+    // Progressive NDJSON for LWM; JSON summary still default for dashboard
+    expect(routeSrc).toContain("application/x-ndjson");
+    expect(routeSrc).toContain("stream");
   });
 
   it("filters workspaces by public / private next to archived", () => {

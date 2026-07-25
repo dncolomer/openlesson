@@ -30,7 +30,7 @@ export function WorkspaceAccessSettings({
 
   useEffect(() => {
     if (!isOwner) return;
-    fetch("/api/demo/status")
+    fetch("/api/me/status")
       .then((res) => res.json())
       .then((data) => setIsAdmin(Boolean(data.isAdmin)))
       .catch(() => setIsAdmin(false));

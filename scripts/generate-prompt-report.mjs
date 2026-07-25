@@ -118,9 +118,6 @@ const FILE_MAP = {
   "app/api/workspace/integration-skill/route.ts": "buildIntegrationSkillInstructions consumer",
   "app/api/rabbit-hole/continue/route.ts": "Rabbit Hole plan generator user prompt (not in rg.log)",
   "app/api/v3/pow/workspaces/route.ts": "Workspace block generation user prompt (not in rg.log)",
-  "app/api/demo/performance/route.ts": "buildPerformanceReportInstructions + buildPerformanceChatInstructions + Orbit context",
-  "app/api/demo/integration-skill/route.ts": "buildIntegrationSkillInstructions consumer",
-  "app/api/demo/workspace/route.ts": "Consumer → createVerificationWorkspaceFromPrompt (lib/pow-api/create-verification-workspace.ts)",
   "app/api/v3/pow/workspaces/[id]/integration-skill/route.ts": "buildIntegrationSkillInstructions consumer",
   "app/api/workspace-tap-score/chat/route.ts": "buildTapScoreInstructions + TAP chat overlay",
   "app/api/workspace-tap-score/complete/route.ts": "TAP complete scoring system + user prompts",
@@ -202,7 +199,7 @@ Scope: \`\` production TypeScript
 | Rabbit Hole continue | \`rabbit-hole/continue/route.ts\` | \`POST /api/rabbit-hole/continue\` | No |
 | v2 workspace create | \`v3/pow/workspaces/route.ts\` | \`POST /api/v3/pow/workspaces\` | No |
 | \`buildPerformanceReportInstructions\` | \`pow-api/performance-report.ts\` | v2 performance report, MCP | No |
-| \`buildPerformanceChatInstructions\` | \`pow-api/performance-context.ts\` | Orbit demo performance chat | No |
+| \`buildPerformanceChatInstructions\` | \`pow-api/performance-context.ts\` | Performance chat instructions | No |
 | \`buildProofOfWorkSchemaInstructions\` | \`pow-api/proof-of-work-schema.ts\` | proof-of-work-schema API, MCP | No |
 | \`buildIntegrationSkillInstructions\` | \`pow-api/integration-skill.ts\` | integration-skill API, MCP | No |
 | \`buildTapScoreInstructions\` | \`lib/tap-score.ts\` | TAP chat | No |
@@ -729,7 +726,7 @@ parts.push(
     "`buildPerformanceChatInstructions`",
     {
       File: "`lib/pow-api/performance-context.ts`",
-      "Call chain": "demo performance chat (Orbit); not a public Proof-of-Work API surface",
+      "Call chain": "performance chat; not a public Proof-of-Work API surface",
       Purpose: "Conversational performance analysis grounded in attachments",
       Variables: "`{blockId}`, `{stylePrompt}`",
     },
@@ -809,7 +806,7 @@ parts.push(
   ),
 );
 
-// create-verification-workspace + demo/workspace consumer
+// create-verification-workspace (used by PoW API workspace create)
 const cvwSrc = read("lib/pow-api/create-verification-workspace.ts");
 const cvwUsers = extractUserMessageTemplates(cvwSrc);
 parts.push("---\n\n## Domain 6b: Verification Workspace Generation\n\n");
@@ -819,27 +816,13 @@ parts.push(
     {
       File: "`lib/pow-api/create-verification-workspace.ts`",
       "Call chain":
-        "`POST /api/demo/workspace` → `createVerificationWorkspaceFromPrompt`; also `POST /api/v3/pow/workspaces` uses a related template",
+        "`POST /api/v3/pow/workspaces` → `createVerificationWorkspaceFromPrompt`",
       Purpose:
         "Generate 3–6 assessable workspace blocks with conversion_goal from natural-language prompt (+ optional files)",
       "User-overridable": "No",
       Variables: "`{initialPrompt}`, `{fileContext}`, appended `WORKSPACE_GENERATION_CONVERSION_GOAL_RULE`",
     },
     cvwUsers[0] || "(not found)",
-  ),
-);
-
-parts.push(
-  block(
-    "demo/workspace route (consumer)",
-    {
-      File: "`app/api/demo/workspace/route.ts`",
-      "Call chain": "`POST /api/demo/workspace` → `createVerificationWorkspaceFromPrompt(demo.workspacePrompt, …)`",
-      Purpose: "Demo admin: materialize verification workspace from demo definition prompt",
-      "User-overridable": "No",
-      "Delegates to": "`lib/pow-api/create-verification-workspace.ts` — see verbatim userMessage above",
-    },
-    "This route has no inline prompt strings. Prompt text lives in createVerificationWorkspaceFromPrompt.",
   ),
 );
 

@@ -15,6 +15,7 @@ import {
   type ModelsTabSubjectRef,
 } from "@/lib/pow-api/models-tab-scope";
 import {
+  defaultLwmTimelineDateWindow,
   dualScoreSeriesFromRuns,
   filterLwmHistoryByDateWindow,
   scoreSeriesPolyline,
@@ -43,6 +44,13 @@ import {
 } from "@/lib/knowledge-config";
 import { PerformanceReportCard } from "@/components/PerformanceReportCard";
 import type { PerformanceReport } from "@/lib/pow-api/performance-report";
+import {
+  consumeSnapshotAllNdjson,
+  formatSnapshotAllProgress,
+  initialSnapshotAllProgress,
+  reduceSnapshotAllProgress,
+  type SnapshotAllProgressState,
+} from "@/lib/pow-api/snapshot-all-progress";
 
 /** Snapshot-history row shape used by LWM timeline. */
 interface LwmSnapshotHistoryRun extends LwmHistoryRunLike {
@@ -920,6 +928,8 @@ function EmbeddingsUserMultiPicker({
   canInspectOthers,
   onChange,
   ariaLabel,
+  /** When true, list fills remaining sidebar height instead of a short max-h cap. */
+  fillHeight = false,
 }: {
   selectedKeys: string[];
   currentUserId?: string | null;
@@ -927,6 +937,7 @@ function EmbeddingsUserMultiPicker({
   canInspectOthers: boolean;
   onChange: (keys: string[]) => void;
   ariaLabel: string;
+  fillHeight?: boolean;
 }) {
   const selected = useMemo(() => new Set(selectedKeys), [selectedKeys]);
   const selfKey = currentUserId ? `u:${currentUserId}` : "";
@@ -989,11 +1000,16 @@ function EmbeddingsUserMultiPicker({
 
   return (
     <div
-      className="w-full"
+      className={
+        fillHeight
+          ? "flex min-h-0 w-full flex-1 flex-col"
+          : "w-full"
+      }
       data-models-user-picker="embeddings"
       data-embeddings-user-multiselect="true"
+      data-embeddings-user-list-fill={fillHeight ? "true" : "false"}
     >
-      <div className="mb-1 flex items-center justify-between gap-2">
+      <div className="mb-1 flex shrink-0 items-center justify-between gap-2">
         <span className="text-[11px] font-medium uppercase tracking-wide text-neutral-500">
           Users
         </span>
@@ -1002,7 +1018,11 @@ function EmbeddingsUserMultiPicker({
         </span>
       </div>
       <ul
-        className="flex max-h-40 flex-col gap-0.5 overflow-y-auto rounded-md border border-neutral-800 bg-neutral-950/50 p-1"
+        className={
+          fillHeight
+            ? "flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto overscroll-contain rounded-md border border-neutral-800 bg-neutral-950/50 p-1"
+            : "flex max-h-40 flex-col gap-0.5 overflow-y-auto rounded-md border border-neutral-800 bg-neutral-950/50 p-1"
+        }
         role="group"
         aria-label={ariaLabel}
         data-models-user-select="embeddings"
@@ -1045,7 +1065,7 @@ function EmbeddingsUserMultiPicker({
           })
         )}
       </ul>
-      <p className="mt-1 text-[10px] leading-snug text-neutral-500">
+      <p className="mt-1 shrink-0 text-[10px] leading-snug text-neutral-500">
         Multi-select to compare trajectories on the projection.
       </p>
     </div>
@@ -1090,6 +1110,10 @@ export function KnowledgeConfigTrajectoryPanel({
     last_eval_at?: string | null;
     new_pow_count?: number | null;
   } | null>(null);
+  /** Owner-only multi-subject LWM Snapshot-all with live NDJSON progress. */
+  const [snapshotAllProgress, setSnapshotAllProgress] = useState<SnapshotAllProgressState>(
+    () => initialSnapshotAllProgress(),
+  );
 
   const [availableSubjects, setAvailableSubjects] = useState<AvailableSubject[]>([]);
   const [embData, setEmbData] = useState<KnowledgeConfigResponse | null>(null);
@@ -1102,10 +1126,21 @@ export function KnowledgeConfigTrajectoryPanel({
   const [lwmHistoryRuns, setLwmHistoryRuns] = useState<LwmSnapshotHistoryRun[]>([]);
   const [lwmHistoryLoading, setLwmHistoryLoading] = useState(false);
   const [selectedLwmRunId, setSelectedLwmRunId] = useState<string | null>(null);
-  /** Date window (yyyy-mm-dd) focusing the timeline + trends. */
-  const [lwmFromDate, setLwmFromDate] = useState("");
-  const [lwmToDate, setLwmToDate] = useState("");
-  const [lwmReportOpen, setLwmReportOpen] = useState(true);
+  /** Date window (yyyy-mm-dd) focusing the timeline + trends. Defaults to last 7 days. */
+  const [lwmFromDate, setLwmFromDate] = useState(() => {
+    return defaultLwmTimelineDateWindow({ days: 7 }).from;
+  });
+  const [lwmToDate, setLwmToDate] = useState(() => {
+    // Pair with from on first paint; same helper + days keeps window coherent.
+    return defaultLwmTimelineDateWindow({ days: 7 }).to;
+  });
+  /** Full report is secondary — start collapsed for a cleaner LWM hero. */
+  const [lwmReportOpen, setLwmReportOpen] = useState(false);
+  /** Timeline + score trends grouped under progressive “History” disclosure. */
+  const [lwmHistoryOpen, setLwmHistoryOpen] = useState(false);
+  /** Browser fullscreen for the embeddings visual (covers navbar via Fullscreen API). */
+  const [embeddingsFullscreen, setEmbeddingsFullscreen] = useState(false);
+  const embeddingsShellRef = useRef<HTMLDivElement | null>(null);
 
   /** Saved knowledge regions (cohort + synthetic) for multi-select overlay. */
   const [knowledgeRegions, setKnowledgeRegions] = useState<KnowledgeRegionListItem[]>([]);
@@ -1116,6 +1151,53 @@ export function KnowledgeConfigTrajectoryPanel({
     useState<ProjectionDisplayMode>("trajectory");
   const [projectionAlgorithm, setProjectionAlgorithm] =
     useState<ProjectionAlgorithmId>("random");
+
+  const enterEmbeddingsFullscreen = useCallback(async () => {
+    setEmbeddingsFullscreen(true);
+    const el = embeddingsShellRef.current;
+    if (el && typeof el.requestFullscreen === "function") {
+      try {
+        await el.requestFullscreen();
+      } catch {
+        // CSS fixed overlay fallback (still z above app chrome)
+      }
+    }
+  }, []);
+
+  const exitEmbeddingsFullscreen = useCallback(async () => {
+    setEmbeddingsFullscreen(false);
+    if (typeof document !== "undefined" && document.fullscreenElement) {
+      try {
+        await document.exitFullscreen();
+      } catch {
+        // ignore
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    const onFsChange = () => {
+      if (!document.fullscreenElement) setEmbeddingsFullscreen(false);
+    };
+    document.addEventListener("fullscreenchange", onFsChange);
+    return () => document.removeEventListener("fullscreenchange", onFsChange);
+  }, []);
+
+  useEffect(() => {
+    if (!embeddingsFullscreen) return;
+    const onKey = (e: KeyboardEvent) => {
+      // Browser Fullscreen API usually handles Esc; this covers CSS-fallback mode.
+      if (e.key === "Escape") void exitEmbeddingsFullscreen();
+    };
+    document.addEventListener("keydown", onKey);
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.body.style.overflow = prev;
+    };
+  }, [embeddingsFullscreen, exitEmbeddingsFullscreen]);
+
   /** Knowledge distance for overlaid regions vs the selected Embeddings user. */
   const [overlayDistances, setOverlayDistances] = useState<
     Record<
@@ -1375,6 +1457,130 @@ export function KnowledgeConfigTrajectoryPanel({
     lwmGuestUserId,
     lwmUserId,
     snapshotEligibility,
+    workspaceId,
+  ]);
+
+  const snapshotAllRunning = snapshotAllProgress.phase === "running";
+  const snapshotAllProgressText = useMemo(
+    () => formatSnapshotAllProgress(snapshotAllProgress),
+    [snapshotAllProgress],
+  );
+
+  /**
+   * Owner-only: run LWM Snapshot for every workspace subject with live progress
+   * via NDJSON stream from POST /api/workspaces/:id/snapshot-all.
+   */
+  const generateSnapshotAll = useCallback(async () => {
+    if (!isOwner || snapshotAllRunning || snapshotLoading) return;
+    setSnapshotError(null);
+    setSnapshotAllProgress(
+      reduceSnapshotAllProgress(initialSnapshotAllProgress(), {
+        type: "start",
+        workspace_id: workspaceId,
+        total: 0,
+      }),
+    );
+
+    try {
+      const response = await fetch(`/api/workspaces/${workspaceId}/snapshot-all`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/x-ndjson",
+        },
+        body: JSON.stringify({ stream: true }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(
+          typeof data.error === "string"
+            ? data.error
+            : "Failed to snapshot all users",
+        );
+      }
+
+      // Non-stream fallback (should not happen when stream:true is accepted)
+      const contentType = response.headers.get("content-type") || "";
+      if (!contentType.includes("ndjson") && !contentType.includes("stream")) {
+        const data = await response.json().catch(() => ({}));
+        setSnapshotAllProgress(
+          reduceSnapshotAllProgress(initialSnapshotAllProgress(), {
+            type: "complete",
+            workspace_id: workspaceId,
+            total: Number(data.total) || 0,
+            succeeded: Number(data.succeeded) || 0,
+            skipped: Number(data.skipped) || 0,
+            failed: Number(data.failed) || 0,
+          }),
+        );
+        await loadLwm();
+        await loadSnapshotEligibility();
+        return;
+      }
+
+      if (!response.body) {
+        throw new Error("No progress stream from snapshot-all");
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      let state = reduceSnapshotAllProgress(initialSnapshotAllProgress(), {
+        type: "start",
+        workspace_id: workspaceId,
+        total: 0,
+      });
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        const chunk = decoder.decode(value, { stream: true });
+        const { events, rest } = consumeSnapshotAllNdjson(buffer, chunk);
+        buffer = rest;
+        for (const event of events) {
+          state = reduceSnapshotAllProgress(state, event);
+          setSnapshotAllProgress({ ...state });
+        }
+      }
+      // Flush trailing line
+      if (buffer.trim()) {
+        const { events } = consumeSnapshotAllNdjson(buffer, "\n");
+        for (const event of events) {
+          state = reduceSnapshotAllProgress(state, event);
+          setSnapshotAllProgress({ ...state });
+        }
+      }
+
+      if (state.phase === "running") {
+        // Stream ended without complete event — synthesize terminal state
+        state = reduceSnapshotAllProgress(state, {
+          type: "complete",
+          workspace_id: workspaceId,
+          total: state.total,
+          succeeded: state.succeeded,
+          skipped: state.skipped,
+          failed: state.failed,
+        });
+        setSnapshotAllProgress(state);
+      }
+
+      await loadLwm();
+      await loadSnapshotEligibility();
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Failed to snapshot all users";
+      setSnapshotAllProgress((prev) =>
+        reduceSnapshotAllProgress(prev, { type: "error", error: message }),
+      );
+      setSnapshotError(message);
+    }
+  }, [
+    isOwner,
+    loadLwm,
+    loadSnapshotEligibility,
+    snapshotAllRunning,
+    snapshotLoading,
     workspaceId,
   ]);
 
@@ -1718,29 +1924,68 @@ export function KnowledgeConfigTrajectoryPanel({
       data-lwm-tab={showLwm ? "true" : undefined}
       data-knowledge-panel-view={panelView}
     >
-      {/* Embeddings: left sidebar (user + regions) | right projection — no whole-tab scroll */}
+      {/* Embeddings: left pickers | center projection | right selected regions — no whole-tab scroll */}
       {showModels ? (
         <div
+          ref={embeddingsShellRef}
           data-section="embeddings-projections"
           data-models-section="embeddings-projections"
-          data-embeddings-layout="sidebar-projection"
-          className="flex min-h-0 w-full flex-1 flex-col gap-2"
+          data-embeddings-layout="left-canvas-right-regions"
+          data-embeddings-fullscreen={embeddingsFullscreen ? "true" : "false"}
+          className={
+            embeddingsFullscreen
+              ? // True browser FS paints this element full viewport; fixed+z-[100] is CSS fallback over navbar
+                "fixed inset-0 z-[100] flex h-full min-h-0 w-full flex-col gap-2 bg-neutral-950 p-3"
+              : "flex min-h-0 w-full flex-1 flex-col gap-2"
+          }
           aria-label="Embeddings Projections"
+          role={embeddingsFullscreen ? "dialog" : undefined}
+          aria-modal={embeddingsFullscreen ? true : undefined}
         >
           <div className="flex min-h-0 flex-1 gap-3">
-            {/* Left sidebar: pickers only */}
+            {/* Left: algorithm + tall users list (fills remaining height) + summary */}
             <aside
               data-embeddings-sidebar
-              className="flex w-56 shrink-0 flex-col gap-3 overflow-y-auto sm:w-64"
+              className={`flex min-h-0 shrink-0 flex-col gap-3 overflow-hidden ${
+                embeddingsFullscreen ? "w-48 sm:w-52" : "w-52 sm:w-56"
+              }`}
             >
-              <p className="text-[11px] leading-relaxed text-neutral-500">
-                Trajectory in{" "}
-                <span className="font-mono text-neutral-400">knowledgecfg-v1-d64</span>. Overlay
-                regions from Settings.
-              </p>
+              <div className="shrink-0 space-y-3">
+                <p className="text-[11px] leading-relaxed text-neutral-500">
+                  Trajectory in{" "}
+                  <span className="font-mono text-neutral-400">knowledgecfg-v1-d64</span>. Overlay
+                  regions on the right.
+                </p>
+
+                <div className="w-full" data-projection-algorithm-picker>
+                  <label className="block w-full">
+                    <span className="mb-1 block text-[11px] font-medium uppercase tracking-wide text-neutral-500">
+                      Projection
+                    </span>
+                    <select
+                      value={projectionAlgorithm}
+                      onChange={(e) =>
+                        setProjectionAlgorithm(parseProjectionAlgorithmId(e.target.value, "random"))
+                      }
+                      aria-label="2D projection algorithm"
+                      data-projection-algorithm-select
+                      className="w-full rounded-md border border-neutral-700 bg-neutral-900 px-3 py-2 text-xs text-white outline-none transition hover:border-neutral-500 focus:border-neutral-500"
+                    >
+                      {PROJECTION_ALGORITHM_OPTIONS.map((opt) => (
+                        <option key={opt.id} value={opt.id} title={opt.description}>
+                          {opt.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
+              </div>
 
               {/* data-picker="embeddings" anchors sidebar layout tests + multiselect control */}
-              <div data-picker="embeddings" className="w-full">
+              <div
+                data-picker="embeddings"
+                className="flex min-h-0 flex-1 flex-col"
+              >
                 <EmbeddingsUserMultiPicker
                   ariaLabel="Embeddings projections users"
                   selectedKeys={embSelectedKeys}
@@ -1748,198 +1993,12 @@ export function KnowledgeConfigTrajectoryPanel({
                   availableSubjects={availableSubjects}
                   canInspectOthers={canInspectOthers}
                   onChange={setEmbSelectedKeys}
+                  fillHeight
                 />
               </div>
 
-              <div className="w-full" data-projection-algorithm-picker>
-                <label className="block w-full">
-                  <span className="mb-1 block text-[11px] font-medium uppercase tracking-wide text-neutral-500">
-                    Projection
-                  </span>
-                  <select
-                    value={projectionAlgorithm}
-                    onChange={(e) =>
-                      setProjectionAlgorithm(parseProjectionAlgorithmId(e.target.value, "random"))
-                    }
-                    aria-label="2D projection algorithm"
-                    data-projection-algorithm-select
-                    className="w-full rounded-md border border-neutral-700 bg-neutral-900 px-3 py-2 text-xs text-white outline-none transition hover:border-neutral-500 focus:border-neutral-500"
-                  >
-                    {PROJECTION_ALGORITHM_OPTIONS.map((opt) => (
-                      <option key={opt.id} value={opt.id} title={opt.description}>
-                        {opt.label}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              </div>
-
-              <div
-                data-region-overlay-picker
-                aria-label="Region overlay multi-select"
-                className="flex min-h-0 flex-1 flex-col gap-2"
-              >
-                <div className="flex items-center justify-between gap-2">
-                  <div className="text-[11px] font-semibold uppercase tracking-wide text-neutral-300">
-                    Overlay knowledge regions
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => void loadRegionsForOverlay()}
-                    disabled={regionsLoading}
-                    className="shrink-0 text-[11px] text-neutral-400 underline decoration-neutral-700 underline-offset-2 transition hover:text-neutral-200 disabled:opacity-40"
-                    data-region-overlay-refresh
-                  >
-                    {regionsLoading ? "Loading…" : "Refresh"}
-                  </button>
-                </div>
-
-                <div data-region-overlay-body className="min-h-0 flex-1">
-                  {regionsLoading && knowledgeRegions.length === 0 ? (
-                    <p className="text-xs text-neutral-500" data-region-overlay-loading>
-                      Loading knowledge regions…
-                    </p>
-                  ) : regionsError ? (
-                    <div className="text-xs text-red-300" data-region-overlay-error>
-                      <p>{regionsError}</p>
-                      <button
-                        type="button"
-                        onClick={() => void loadRegionsForOverlay()}
-                        className="mt-1 text-[11px] text-red-200 underline decoration-red-800 underline-offset-2 hover:text-white"
-                      >
-                        Retry
-                      </button>
-                    </div>
-                  ) : knowledgeRegions.length === 0 ? (
-                    <div className="text-xs text-neutral-400" data-region-overlay-empty>
-                      <p className="font-medium text-neutral-300">No knowledge regions yet</p>
-                      <p className="mt-1 text-neutral-500">
-                        Create under Settings → Custom Knowledge Regions, then multi-select here.
-                      </p>
-                    </div>
-                  ) : (
-                    <ul
-                      className="flex flex-col gap-1"
-                      data-region-overlay-list
-                      role="group"
-                      aria-label="Select regions to overlay"
-                    >
-                      {knowledgeRegions.map((r, i) => {
-                        const checked = selectedRegionIds.has(r.id);
-                        const color = REGION_OVERLAY_COLORS[i % REGION_OVERLAY_COLORS.length];
-                        const hasCentroid = Array.isArray(r.centroid) && r.centroid.length > 0;
-                        const dist = checked ? overlayDistances[r.id] : undefined;
-                        return (
-                          <li key={r.id}>
-                            <label
-                              className={`flex cursor-pointer items-center gap-2 rounded-md px-1.5 py-1.5 text-xs transition ${
-                                checked
-                                  ? "bg-neutral-800/80 text-white"
-                                  : "text-neutral-300 hover:bg-neutral-900 hover:text-white"
-                              } ${!hasCentroid ? "opacity-50" : ""}`}
-                            >
-                              <input
-                                type="checkbox"
-                                checked={checked}
-                                disabled={!hasCentroid}
-                                onChange={() => toggleRegionOverlay(r.id)}
-                                className="rounded border-neutral-500"
-                                data-region-overlay-toggle={r.id}
-                              />
-                              <span
-                                className="inline-block h-2.5 w-2.5 shrink-0 rounded-full"
-                                style={{ backgroundColor: color }}
-                                aria-hidden
-                              />
-                              <span className="min-w-0 flex-1 truncate">{r.name}</span>
-                              {!hasCentroid ? (
-                                <span className="shrink-0 text-[10px] text-neutral-500">
-                                  no centroid
-                                </span>
-                              ) : null}
-                              {checked && dist && !dist.error && Number.isFinite(dist.knowledge_distance) ? (
-                                <span
-                                  className="shrink-0 font-mono text-[10px] text-violet-200"
-                                  data-knowledge-distance-inline={r.id}
-                                  title={`Knowledge distance ${dist.knowledge_distance.toFixed(4)}`}
-                                >
-                                  d={dist.knowledge_distance.toFixed(3)}
-                                </span>
-                              ) : null}
-                            </label>
-                          </li>
-                        );
-                      })}
-                    </ul>
-                  )}
-                </div>
-
-                {regionOverlays.length > 0 ? (
-                  <div className="space-y-2" data-region-overlay-distances>
-                    <p className="text-[11px] text-cyan-200/80" data-region-overlay-count>
-                      {regionOverlays.length} region{regionOverlays.length === 1 ? "" : "s"} selected
-                      {overlayDistancesLoading ? " · computing distance…" : ""}
-                    </p>
-                    <ul className="space-y-1.5" data-knowledge-distance-list>
-                      {regionOverlays.map((overlay, i) => {
-                        const dist = overlayDistances[overlay.id];
-                        const color =
-                          REGION_OVERLAY_COLORS[i % REGION_OVERLAY_COLORS.length];
-                        return (
-                          <li
-                            key={overlay.id}
-                            className="rounded-md bg-neutral-900/70 px-2 py-1.5 text-[10px]"
-                            data-knowledge-distance={overlay.id}
-                          >
-                            <div className="flex items-center gap-1.5 text-neutral-200">
-                              <span
-                                className="inline-block h-2 w-2 shrink-0 rounded-full"
-                                style={{ backgroundColor: color }}
-                                aria-hidden
-                              />
-                              <span className="min-w-0 flex-1 truncate font-medium">
-                                {overlay.name}
-                              </span>
-                            </div>
-                            {dist?.error ? (
-                              <p className="mt-0.5 text-amber-200/90">{dist.error}</p>
-                            ) : dist && Number.isFinite(dist.knowledge_distance) ? (
-                              <div className="mt-1 flex flex-wrap gap-1.5 text-neutral-400">
-                                <span className="rounded-full border border-violet-800/60 bg-violet-950/40 px-1.5 py-0.5 font-mono text-violet-100">
-                                  dist {dist.knowledge_distance.toFixed(4)}
-                                </span>
-                                <span className="rounded-full border border-neutral-700 px-1.5 py-0.5 font-mono">
-                                  cos {dist.cosine_similarity.toFixed(3)}
-                                </span>
-                                <span
-                                  className={`rounded-full border px-1.5 py-0.5 ${
-                                    dist.in_region
-                                      ? "border-emerald-800 text-emerald-300"
-                                      : "border-amber-900 text-amber-200"
-                                  }`}
-                                >
-                                  {dist.in_region ? "In region" : "Outside"}
-                                </span>
-                              </div>
-                            ) : overlayDistancesLoading ? (
-                              <p className="mt-0.5 text-neutral-500">Computing…</p>
-                            ) : (
-                              <p className="mt-0.5 text-neutral-500">—</p>
-                            )}
-                          </li>
-                        );
-                      })}
-                    </ul>
-                  </div>
-                ) : knowledgeRegions.length > 0 && !regionsLoading ? (
-                  <p className="text-[11px] text-neutral-500" data-region-overlay-hint>
-                    Select regions to draw on the projection and see Knowledge distance.
-                  </p>
-                ) : null}
-              </div>
-
               {summary ? (
-                <div className="mt-auto shrink-0 border-t border-neutral-800/80 pt-3">
+                <div className="shrink-0 border-t border-neutral-800/80 pt-3">
                   <dl className="grid grid-cols-2 gap-x-2 gap-y-1 text-[10px]">
                     <div>
                       <dt className="text-neutral-500">Confidence</dt>
@@ -1966,9 +2025,10 @@ export function KnowledgeConfigTrajectoryPanel({
               ) : null}
             </aside>
 
-            {/* Right: projection fills remaining height */}
+            {/* Center: projection canvas */}
             <div
               data-embeddings-projection
+              data-embeddings-projection-surface
               className="flex min-h-0 min-w-0 flex-1 flex-col gap-2"
             >
               <div className="flex shrink-0 flex-wrap items-center justify-between gap-2">
@@ -1985,35 +2045,91 @@ export function KnowledgeConfigTrajectoryPanel({
                     </span>
                   ) : null}
                 </p>
-                <button
-                  type="button"
-                  onClick={() => void loadEmbeddings()}
-                  disabled={embLoading}
-                  data-embeddings-refresh
-                  className="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-neutral-700 bg-neutral-900 px-2.5 py-1 text-[11px] text-neutral-300 transition hover:border-neutral-500 hover:text-white disabled:opacity-50"
-                >
-                  <svg
-                    className={`h-3 w-3 ${embLoading ? "animate-spin" : ""}`}
-                    viewBox="0 0 16 16"
-                    fill="none"
-                    aria-hidden
+                <div className="flex shrink-0 items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      void (
+                        embeddingsFullscreen
+                          ? exitEmbeddingsFullscreen()
+                          : enterEmbeddingsFullscreen()
+                      )
+                    }
+                    data-embeddings-fullscreen-toggle
+                    data-embeddings-fullscreen-action={
+                      embeddingsFullscreen ? "exit" : "enter"
+                    }
+                    aria-pressed={embeddingsFullscreen}
+                    title={
+                      embeddingsFullscreen
+                        ? "Exit browser fullscreen (Esc)"
+                        : "Enter browser fullscreen"
+                    }
+                    aria-label={
+                      embeddingsFullscreen
+                        ? "Exit browser fullscreen embedding visual"
+                        : "Enter browser fullscreen embedding visual"
+                    }
+                    className="inline-flex items-center gap-1.5 rounded-md border border-neutral-700 bg-neutral-900 px-2.5 py-1 text-[11px] text-neutral-300 transition hover:border-neutral-500 hover:text-white"
                   >
-                    <path
-                      d="M13.5 8A5.5 5.5 0 1 1 8 2.5"
-                      stroke="currentColor"
-                      strokeWidth="1.5"
-                      strokeLinecap="round"
-                    />
-                    <path
-                      d="M8 1v3l2-1.5"
-                      stroke="currentColor"
-                      strokeWidth="1.5"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
-                  {embLoading ? "Refreshing…" : "Refresh"}
-                </button>
+                    {embeddingsFullscreen ? (
+                      <>
+                        <svg className="h-3 w-3" viewBox="0 0 16 16" fill="none" aria-hidden>
+                          <path
+                            d="M5 3H3v2M11 3h2v2M5 13H3v-2M11 13h2v-2"
+                            stroke="currentColor"
+                            strokeWidth="1.5"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                        </svg>
+                        Exit full screen
+                      </>
+                    ) : (
+                      <>
+                        <svg className="h-3 w-3" viewBox="0 0 16 16" fill="none" aria-hidden>
+                          <path
+                            d="M3 6V3h3M10 3h3v3M3 10v3h3M13 10v3h-3"
+                            stroke="currentColor"
+                            strokeWidth="1.5"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                        </svg>
+                        Full screen
+                      </>
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void loadEmbeddings()}
+                    disabled={embLoading}
+                    data-embeddings-refresh
+                    className="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-neutral-700 bg-neutral-900 px-2.5 py-1 text-[11px] text-neutral-300 transition hover:border-neutral-500 hover:text-white disabled:opacity-50"
+                  >
+                    <svg
+                      className={`h-3 w-3 ${embLoading ? "animate-spin" : ""}`}
+                      viewBox="0 0 16 16"
+                      fill="none"
+                      aria-hidden
+                    >
+                      <path
+                        d="M13.5 8A5.5 5.5 0 1 1 8 2.5"
+                        stroke="currentColor"
+                        strokeWidth="1.5"
+                        strokeLinecap="round"
+                      />
+                      <path
+                        d="M8 1v3l2-1.5"
+                        stroke="currentColor"
+                        strokeWidth="1.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                    {embLoading ? "Refreshing…" : "Refresh"}
+                  </button>
+                </div>
               </div>
 
               {embError ? (
@@ -2097,286 +2213,281 @@ export function KnowledgeConfigTrajectoryPanel({
                 </span>
               </div>
             </div>
+
+            {/* Right: selected regions + knowledge-distance cards */}
+            <aside
+              data-embeddings-regions-rail
+              className={`flex shrink-0 flex-col overflow-hidden ${
+                embeddingsFullscreen ? "w-56 sm:w-64" : "w-56 sm:w-64"
+              }`}
+            >
+              {/*
+                Region list + distance cards are siblings with reserved vertical space:
+                list scrolls (flex-1 min-h-0 overflow-y-auto); distances are shrink-0 with
+                their own max-height scroll so multi-select never covers the checklist.
+              */}
+              <div
+                data-region-overlay-picker
+                aria-label="Region overlay multi-select"
+                className="flex min-h-0 flex-1 flex-col gap-0 overflow-hidden rounded-lg border border-neutral-800/80 bg-neutral-950/40"
+              >
+                <div className="flex shrink-0 items-center justify-between gap-2 border-b border-neutral-800/60 px-2.5 py-2">
+                  <div className="text-[11px] font-semibold uppercase tracking-wide text-neutral-300">
+                    Overlay knowledge regions
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => void loadRegionsForOverlay()}
+                    disabled={regionsLoading}
+                    className="shrink-0 text-[11px] text-neutral-400 underline decoration-neutral-700 underline-offset-2 transition hover:text-neutral-200 disabled:opacity-40"
+                    data-region-overlay-refresh
+                  >
+                    {regionsLoading ? "Loading…" : "Refresh"}
+                  </button>
+                </div>
+
+                <div
+                  data-region-overlay-body
+                  className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-1.5 py-1.5"
+                >
+                  {regionsLoading && knowledgeRegions.length === 0 ? (
+                    <p className="px-1 text-xs text-neutral-500" data-region-overlay-loading>
+                      Loading knowledge regions…
+                    </p>
+                  ) : regionsError ? (
+                    <div className="px-1 text-xs text-red-300" data-region-overlay-error>
+                      <p>{regionsError}</p>
+                      <button
+                        type="button"
+                        onClick={() => void loadRegionsForOverlay()}
+                        className="mt-1 text-[11px] text-red-200 underline decoration-red-800 underline-offset-2 hover:text-white"
+                      >
+                        Retry
+                      </button>
+                    </div>
+                  ) : knowledgeRegions.length === 0 ? (
+                    <div className="px-1 text-xs text-neutral-400" data-region-overlay-empty>
+                      <p className="font-medium text-neutral-300">No knowledge regions yet</p>
+                      <p className="mt-1 text-neutral-500">
+                        Create under Settings → Custom Knowledge Regions, then multi-select here.
+                      </p>
+                    </div>
+                  ) : (
+                    <ul
+                      className="flex flex-col gap-0.5"
+                      data-region-overlay-list
+                      role="group"
+                      aria-label="Select regions to overlay"
+                    >
+                      {knowledgeRegions.map((r, i) => {
+                        const checked = selectedRegionIds.has(r.id);
+                        const color = REGION_OVERLAY_COLORS[i % REGION_OVERLAY_COLORS.length];
+                        const hasCentroid = Array.isArray(r.centroid) && r.centroid.length > 0;
+                        const dist = checked ? overlayDistances[r.id] : undefined;
+                        return (
+                          <li key={r.id}>
+                            <label
+                              className={`flex cursor-pointer items-center gap-2 rounded-md px-1.5 py-1.5 text-xs transition ${
+                                checked
+                                  ? "bg-neutral-800/80 text-white"
+                                  : "text-neutral-300 hover:bg-neutral-900 hover:text-white"
+                              } ${!hasCentroid ? "opacity-50" : ""}`}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={checked}
+                                disabled={!hasCentroid}
+                                onChange={() => toggleRegionOverlay(r.id)}
+                                className="rounded border-neutral-500"
+                                data-region-overlay-toggle={r.id}
+                              />
+                              <span
+                                className="inline-block h-2.5 w-2.5 shrink-0 rounded-full"
+                                style={{ backgroundColor: color }}
+                                aria-hidden
+                              />
+                              <span className="min-w-0 flex-1 truncate">{r.name}</span>
+                              {!hasCentroid ? (
+                                <span className="shrink-0 text-[10px] text-neutral-500">
+                                  no centroid
+                                </span>
+                              ) : null}
+                              {checked && dist && !dist.error && Number.isFinite(dist.knowledge_distance) ? (
+                                <span
+                                  className="shrink-0 font-mono text-[10px] text-violet-200"
+                                  data-knowledge-distance-inline={r.id}
+                                  title={`Knowledge distance ${dist.knowledge_distance.toFixed(4)}`}
+                                >
+                                  d={dist.knowledge_distance.toFixed(3)}
+                                </span>
+                              ) : null}
+                            </label>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  )}
+                </div>
+
+                {regionOverlays.length > 0 ? (
+                  <div
+                    className="flex max-h-[42%] shrink-0 flex-col gap-1.5 overflow-hidden border-t border-neutral-800/80 bg-neutral-950/70"
+                    data-region-overlay-distances
+                  >
+                    <p
+                      className="shrink-0 px-2.5 pt-2 text-[11px] text-cyan-200/80"
+                      data-region-overlay-count
+                    >
+                      {regionOverlays.length} region{regionOverlays.length === 1 ? "" : "s"} selected
+                      {overlayDistancesLoading ? " · computing distance…" : ""}
+                    </p>
+                    <ul
+                      className="min-h-0 flex-1 space-y-1.5 overflow-y-auto overscroll-contain px-2 pb-2"
+                      data-knowledge-distance-list
+                    >
+                      {regionOverlays.map((overlay, i) => {
+                        const dist = overlayDistances[overlay.id];
+                        const color =
+                          REGION_OVERLAY_COLORS[i % REGION_OVERLAY_COLORS.length];
+                        return (
+                          <li
+                            key={overlay.id}
+                            className="rounded-md bg-neutral-900/70 px-2 py-1.5 text-[10px]"
+                            data-knowledge-distance={overlay.id}
+                          >
+                            <div className="flex items-center gap-1.5 text-neutral-200">
+                              <span
+                                className="inline-block h-2 w-2 shrink-0 rounded-full"
+                                style={{ backgroundColor: color }}
+                                aria-hidden
+                              />
+                              <span className="min-w-0 flex-1 truncate font-medium">
+                                {overlay.name}
+                              </span>
+                            </div>
+                            {dist?.error ? (
+                              <p className="mt-0.5 text-amber-200/90">{dist.error}</p>
+                            ) : dist && Number.isFinite(dist.knowledge_distance) ? (
+                              <div className="mt-1 flex flex-wrap gap-1.5 text-neutral-400">
+                                <span className="rounded-full border border-violet-800/60 bg-violet-950/40 px-1.5 py-0.5 font-mono text-violet-100">
+                                  dist {dist.knowledge_distance.toFixed(4)}
+                                </span>
+                                <span className="rounded-full border border-neutral-700 px-1.5 py-0.5 font-mono">
+                                  cos {dist.cosine_similarity.toFixed(3)}
+                                </span>
+                                <span
+                                  className={`rounded-full border px-1.5 py-0.5 ${
+                                    dist.in_region
+                                      ? "border-emerald-800 text-emerald-300"
+                                      : "border-amber-900 text-amber-200"
+                                  }`}
+                                >
+                                  {dist.in_region ? "In region" : "Outside"}
+                                </span>
+                              </div>
+                            ) : overlayDistancesLoading ? (
+                              <p className="mt-0.5 text-neutral-500">Computing…</p>
+                            ) : (
+                              <p className="mt-0.5 text-neutral-500">—</p>
+                            )}
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </div>
+                ) : knowledgeRegions.length > 0 && !regionsLoading ? (
+                  <p
+                    className="shrink-0 border-t border-neutral-800/60 px-2.5 py-2 text-[11px] text-neutral-500"
+                    data-region-overlay-hint
+                  >
+                    Select regions to draw on the projection and see Knowledge distance.
+                  </p>
+                ) : null}
+              </div>
+            </aside>
           </div>
         </div>
       ) : null}
 
-      {/* Learning World Model — timeline + dual score trends + selected snapshot card */}
+      {/* Learning World Model — hero scores first, progressive history/report */}
       {showLwm ? (
         <section
           data-section="lwm"
-          data-lwm-layout="timeline"
-          className="flex w-full min-h-0 flex-1 flex-col gap-4 overflow-y-auto pb-4"
+          data-lwm-layout="hero-first"
+          className="flex w-full min-h-0 flex-1 flex-col gap-3 overflow-y-auto pb-4"
         >
-          {/* Nav: user + date window + generate */}
-          <div
-            className="flex flex-wrap items-end gap-3 rounded-xl border border-neutral-800 bg-neutral-950/50 p-3"
-            data-lwm-filters
-          >
-            <div className="min-w-[11rem] flex-1" data-lwm-controls-column>
-              <UserPicker
-                data-picker="lwm"
-                ariaLabel="Learning world model user"
-                valueUserId={lwmUserId}
-                valueGuestUserId={lwmGuestUserId}
-                currentUserId={currentUserId}
-                availableSubjects={availableSubjects}
-                canInspectOthers={canInspectOthers}
-                onChange={({ userId, guestUserId }) => {
-                  setLwmUserId(userId);
-                  setLwmGuestUserId(guestUserId);
-                  setSelectedLwmRunId(null);
-                }}
-              />
-            </div>
-            <label className="flex flex-col gap-1 text-[10px] uppercase tracking-wide text-neutral-500">
-              From
-              <input
-                type="date"
-                value={lwmFromDate}
-                onChange={(e) => setLwmFromDate(e.target.value)}
-                data-lwm-date-from
-                className="rounded-md border border-neutral-700 bg-neutral-900 px-2.5 py-1.5 text-xs text-neutral-200 outline-none focus:border-neutral-500"
-              />
-            </label>
-            <label className="flex flex-col gap-1 text-[10px] uppercase tracking-wide text-neutral-500">
-              To
-              <input
-                type="date"
-                value={lwmToDate}
-                onChange={(e) => setLwmToDate(e.target.value)}
-                data-lwm-date-to
-                className="rounded-md border border-neutral-700 bg-neutral-900 px-2.5 py-1.5 text-xs text-neutral-200 outline-none focus:border-neutral-500"
-              />
-            </label>
-            {(lwmFromDate || lwmToDate) && (
-              <button
-                type="button"
-                data-lwm-date-clear
-                onClick={() => {
-                  setLwmFromDate("");
-                  setLwmToDate("");
-                }}
-                className="rounded-md border border-neutral-700 px-2.5 py-1.5 text-[11px] text-neutral-400 hover:border-neutral-500 hover:text-neutral-200"
-              >
-                Clear dates
-              </button>
-            )}
-            <div className="ml-auto flex flex-col items-stretch gap-1" data-lwm-snapshot-controls>
-              <button
-                type="button"
-                onClick={() => void generateSnapshot()}
-                disabled={
-                  snapshotLoading ||
-                  (!currentUserId && !lwmUserId && !lwmGuestUserId) ||
-                  snapshotEligibility?.allowed === false
-                }
-                title={
-                  snapshotEligibility?.allowed === false
-                    ? snapshotEligibility.message ||
-                      "No new proof of work since the last LWM Snapshot for this user."
-                    : "Generate a new Learning World Model Snapshot for the selected user"
-                }
-                className="rounded-lg bg-white px-3 py-2 text-xs font-medium text-black transition hover:bg-neutral-200 disabled:cursor-not-allowed disabled:opacity-40"
-                data-lwm-generate-snapshot
-              >
-                {snapshotLoading ? "Generating…" : "Generate snapshot"}
-              </button>
-              {snapshotEligibility?.allowed === false ? (
-                <p className="max-w-[14rem] text-[10px] text-neutral-500" data-lwm-snapshot-gate>
-                  {snapshotEligibility.message || "No new PoW since last snapshot."}
-                </p>
-              ) : null}
-              {snapshotError ? (
-                <p className="max-w-[14rem] text-[10px] text-red-400" data-lwm-snapshot-error>
-                  {snapshotError}
-                </p>
-              ) : null}
-            </div>
-          </div>
-
           {lwmError ? (
             <div className="rounded-lg border border-red-900/50 bg-red-950/30 px-3 py-2 text-xs text-red-300">
               {lwmError}
             </div>
           ) : null}
 
-          {/* Horizontal snapshot timeline */}
-          <div
-            className="rounded-xl border border-neutral-800 bg-neutral-950/60 px-4 py-4"
-            data-lwm-timeline
-            role="listbox"
-            aria-label="Snapshot timeline"
-          >
-            <div className="mb-3 flex items-center justify-between gap-2">
-              <span className="font-mono text-[10px] font-semibold uppercase tracking-[1.4px] text-neutral-400">
-                Timeline
-              </span>
-              <span className="text-[10px] text-neutral-500" data-lwm-timeline-count>
-                {lwmHistoryLoading
-                  ? "Loading…"
-                  : `${windowedLwmRuns.length} snapshot${windowedLwmRuns.length === 1 ? "" : "s"}`}
-              </span>
-            </div>
-            {windowedLwmRuns.length === 0 ? (
-              <p className="py-6 text-center text-xs text-neutral-500" data-lwm-timeline-empty>
-                {lwmHistoryLoading
-                  ? "Loading snapshots…"
-                  : "No snapshots in this window. Generate one or widen the date range."}
-              </p>
-            ) : (
-              <div className="relative mx-2 h-16" data-lwm-timeline-track>
-                <div
-                  className="absolute left-0 right-0 top-1/2 h-px -translate-y-1/2 bg-neutral-700"
-                  aria-hidden
-                />
-                {lwmTimelineMarkers.map((m) => {
-                  const selected = selectedLwmRun?.id === m.id;
-                  return (
-                    <button
-                      key={m.id}
-                      type="button"
-                      role="option"
-                      aria-selected={selected}
-                      data-lwm-timeline-point={m.id}
-                      title={`${m.ran_at} · snap ${m.snapshotScore ?? "—"} · GHC ${m.ghcScore ?? "—"}`}
-                      onClick={() => setSelectedLwmRunId(m.id)}
-                      className="absolute top-1/2 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-1"
-                      style={{ left: `${m.t * 100}%` }}
-                    >
-                      <span
-                        className={`block h-3.5 w-3.5 rounded-full border-2 transition ${
-                          selected
-                            ? "scale-125 border-cyan-200 bg-cyan-400 shadow-[0_0_12px_rgba(34,211,238,0.55)]"
-                            : "border-neutral-500 bg-neutral-800 hover:border-cyan-400/80 hover:bg-cyan-900/50"
-                        }`}
-                      />
-                      <span
-                        className={`max-w-[4.5rem] truncate font-mono text-[9px] tabular-nums ${
-                          selected ? "text-cyan-200" : "text-neutral-500"
-                        }`}
-                      >
-                        {new Date(m.atMs).toLocaleDateString(undefined, {
-                          month: "short",
-                          day: "numeric",
-                        })}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-
-          {/* Dual score trend */}
-          <div
-            className="rounded-xl border border-neutral-800 bg-neutral-950/60 p-4"
-            data-lwm-score-trend
-          >
-            <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-              <span className="font-mono text-[10px] font-semibold uppercase tracking-[1.4px] text-neutral-400">
-                Score trends
-              </span>
-              <div className="flex items-center gap-3 text-[10px] text-neutral-500">
-                <span className="inline-flex items-center gap-1.5">
-                  <span className="h-1.5 w-4 rounded-full bg-cyan-400" /> Snapshot
-                </span>
-                <span className="inline-flex items-center gap-1.5">
-                  <span className="h-1.5 w-4 rounded-full bg-amber-400" /> GHC
-                </span>
-              </div>
-            </div>
-            {lwmScoreSeries.length < 1 ? (
-              <p className="py-8 text-center text-xs text-neutral-500">No score history yet.</p>
-            ) : (
-              <svg
-                viewBox="0 0 480 140"
-                className="h-36 w-full"
-                role="img"
-                aria-label="Snapshot and GHC scores over time"
-                data-lwm-score-trend-chart
-              >
-                {[0, 25, 50, 75, 100].map((y) => {
-                  const py = 8 + (1 - y / 100) * 124;
-                  return (
-                    <g key={y}>
-                      <line
-                        x1={8}
-                        x2={472}
-                        y1={py}
-                        y2={py}
-                        stroke="#262626"
-                        strokeWidth={1}
-                      />
-                      <text x={4} y={py + 3} fill="#525252" fontSize={9} textAnchor="start">
-                        {y}
-                      </text>
-                    </g>
-                  );
-                })}
-                {(() => {
-                  const snap = scoreSeriesPolyline(lwmScoreSeries, "snapshotScore", 480, 140, 8);
-                  const ghc = scoreSeriesPolyline(lwmScoreSeries, "ghcScore", 480, 140, 8);
-                  return (
-                    <>
-                      {ghc ? (
-                        <polyline
-                          fill="none"
-                          stroke="#fbbf24"
-                          strokeWidth={2}
-                          strokeLinejoin="round"
-                          strokeLinecap="round"
-                          points={ghc}
-                          data-lwm-trend-ghc
-                        />
-                      ) : null}
-                      {snap ? (
-                        <polyline
-                          fill="none"
-                          stroke="#22d3ee"
-                          strokeWidth={2.25}
-                          strokeLinejoin="round"
-                          strokeLinecap="round"
-                          points={snap}
-                          data-lwm-trend-snapshot
-                        />
-                      ) : null}
-                      {lwmScoreSeries.map((p) => {
-                        if (p.snapshotScore == null) return null;
-                        const minT = lwmScoreSeries[0].atMs;
-                        const maxT = lwmScoreSeries[lwmScoreSeries.length - 1].atMs;
-                        const span = Math.max(1, maxT - minT);
-                        const x = 8 + ((p.atMs - minT) / span) * 464;
-                        const y = 8 + (1 - p.snapshotScore / 100) * 124;
-                        const selected = selectedLwmRun?.id === p.id;
-                        return (
-                          <circle
-                            key={p.id}
-                            cx={x}
-                            cy={y}
-                            r={selected ? 4.5 : 3}
-                            fill={selected ? "#a5f3fc" : "#22d3ee"}
-                            className="cursor-pointer"
-                            onClick={() => setSelectedLwmRunId(p.id)}
-                            data-lwm-trend-point={p.id}
-                          />
-                        );
-                      })}
-                    </>
-                  );
-                })()}
-              </svg>
-            )}
-          </div>
-
-          {/* Unified selected snapshot card */}
-          <div className="min-w-0" data-lwm-card-column>
+          {/* PRIMARY: selected snapshot scores + actions */}
+          <div className="min-w-0" data-lwm-primary data-lwm-card-column>
             {lwmLoading && !wm && windowedLwmRuns.length === 0 ? (
               <p className="text-xs text-neutral-500">Loading learning world model…</p>
             ) : !selectedLwmRun && !wm ? (
-              <p className="text-xs text-neutral-500" data-lwm-empty>
-                No snapshots yet for this user.
-              </p>
+              <div
+                className="rounded-2xl border border-dashed border-neutral-700 bg-neutral-950/40 px-5 py-8 text-center"
+                data-lwm-empty
+              >
+                <p className="text-sm font-medium text-neutral-200">No snapshots yet</p>
+                <p className="mx-auto mt-1 max-w-sm text-xs leading-relaxed text-neutral-500">
+                  Generate a Learning World Model Snapshot for the selected person when they have
+                  new proof of work.
+                </p>
+                <div
+                  className="mt-4 flex flex-col items-center gap-2"
+                  data-lwm-snapshot-controls
+                >
+                  <div className="flex flex-wrap items-center justify-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => void generateSnapshot()}
+                      disabled={
+                        snapshotLoading ||
+                        snapshotAllRunning ||
+                        (!currentUserId && !lwmUserId && !lwmGuestUserId) ||
+                        snapshotEligibility?.allowed === false
+                      }
+                      title={
+                        snapshotEligibility?.allowed === false
+                          ? snapshotEligibility.message ||
+                            "No new proof of work since the last LWM Snapshot for this user."
+                          : "Generate a new Learning World Model Snapshot for the selected user"
+                      }
+                      className="rounded-lg bg-white px-4 py-2.5 text-xs font-medium text-black transition hover:bg-neutral-200 disabled:cursor-not-allowed disabled:opacity-40"
+                      data-lwm-generate-snapshot
+                    >
+                      {snapshotLoading ? "Generating…" : "Generate new snapshot"}
+                    </button>
+                    {isOwner ? (
+                      <button
+                        type="button"
+                        onClick={() => void generateSnapshotAll()}
+                        disabled={snapshotLoading || snapshotAllRunning}
+                        title="Generate LWM Snapshots for every user/subject in this workspace (async with progress)"
+                        className="rounded-lg border border-cyan-700/70 bg-cyan-950/40 px-4 py-2.5 text-xs font-medium text-cyan-100 transition hover:border-cyan-500 hover:bg-cyan-950/70 disabled:cursor-not-allowed disabled:opacity-40"
+                        data-lwm-generate-snapshot-all
+                      >
+                        {snapshotAllRunning
+                          ? `All users… ${snapshotAllProgress.completed}/${Math.max(snapshotAllProgress.total, 1)}`
+                          : "Snapshot all users"}
+                      </button>
+                    ) : null}
+                  </div>
+                  {snapshotEligibility?.allowed === false ? (
+                    <p className="max-w-xs text-[10px] text-neutral-500" data-lwm-snapshot-gate>
+                      {snapshotEligibility.message || "No new PoW since last snapshot."}
+                    </p>
+                  ) : null}
+                  {snapshotError ? (
+                    <p className="max-w-xs text-[10px] text-red-400" data-lwm-snapshot-error>
+                      {snapshotError}
+                    </p>
+                  ) : null}
+                </div>
+              </div>
             ) : (
               <div
                 className="relative w-full overflow-hidden rounded-2xl border border-cyan-900/40 bg-gradient-to-br from-neutral-950 via-neutral-950 to-cyan-950/30 shadow-[0_0_0_1px_rgba(34,211,238,0.06),0_20px_50px_rgba(0,0,0,0.45)]"
@@ -2387,74 +2498,140 @@ export function KnowledgeConfigTrajectoryPanel({
                   className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-cyan-400/50 to-transparent"
                   aria-hidden
                 />
-                <div
-                  className="absolute right-3 top-3 z-10 max-w-[min(100%,14rem)] rounded-lg border border-white/15 bg-black/70 px-2.5 py-1.5 text-right shadow-lg backdrop-blur-sm sm:right-4 sm:top-4"
-                  data-lwm-last-updated
-                >
-                  <p className="font-mono text-[9px] font-semibold uppercase tracking-[1.4px] text-neutral-400">
-                    Snapshot
-                  </p>
-                  <p className="mt-0.5 text-xs font-medium tabular-nums text-white sm:text-sm">
-                    {lwmUpdatedLabel || "Not yet"}
-                  </p>
-                </div>
 
-                <div className="border-b border-white/5 px-4 pb-4 pt-12 sm:px-5 sm:pt-14">
-                  <div className="flex min-w-0 flex-wrap items-start gap-3 pr-0 sm:pr-2">
-                    <div
-                      className="flex h-20 w-20 shrink-0 flex-col items-center justify-center rounded-2xl border border-cyan-500/30 bg-cyan-500/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]"
-                      data-lwm-skill-score
-                    >
-                      <span className="font-mono text-3xl font-semibold tabular-nums leading-none text-cyan-100">
-                        {displaySnapScore != null ? displaySnapScore : "—"}
-                      </span>
-                      <span className="mt-1 font-mono text-[9px] uppercase tracking-[1.2px] text-cyan-300/80">
-                        snap
-                      </span>
-                    </div>
-                    <div
-                      className="flex h-20 w-20 shrink-0 flex-col items-center justify-center rounded-2xl border border-amber-500/30 bg-amber-500/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]"
-                      data-lwm-ghc-score
-                    >
-                      <span className="font-mono text-3xl font-semibold tabular-nums leading-none text-amber-100">
-                        {displayGhcScore != null ? displayGhcScore : "—"}
-                      </span>
-                      <span className="mt-1 font-mono text-[9px] uppercase tracking-[1.2px] text-amber-300/80">
-                        GHC
-                      </span>
-                    </div>
-                    <div className="min-w-0 flex-1 pt-0.5">
+                {/* Hero header: scores dominate */}
+                <div className="flex flex-col gap-4 px-4 pb-4 pt-5 sm:px-5 sm:pt-6">
+                  <div className="flex min-w-0 flex-wrap items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
                       <p className="font-mono text-[10px] font-medium uppercase tracking-[1.6px] text-cyan-300/90">
-                        LWM Snapshot · GHC
+                        Latest snapshot
                       </p>
-                      <p className="mt-1 truncate text-sm font-medium text-white">
+                      <p className="mt-0.5 truncate text-base font-medium text-white sm:text-lg">
                         {lwmScope.label || "Selected user"}
                       </p>
-                      {selectedRunReport?.summary || wm?.inferred_goal?.text ? (
-                        <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-neutral-400">
-                          {typeof selectedRunReport?.summary === "string"
-                            ? selectedRunReport.summary
-                            : wm?.inferred_goal?.text}
+                      <p
+                        className="mt-0.5 text-xs tabular-nums text-neutral-400"
+                        data-lwm-last-updated
+                      >
+                        {lwmUpdatedLabel || "Not yet"}
+                      </p>
+                    </div>
+                    <div
+                      className="flex shrink-0 flex-col items-end gap-1.5"
+                      data-lwm-snapshot-controls
+                    >
+                      <div className="flex flex-wrap items-center justify-end gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => void generateSnapshot()}
+                          disabled={
+                            snapshotLoading ||
+                            snapshotAllRunning ||
+                            (!currentUserId && !lwmUserId && !lwmGuestUserId) ||
+                            snapshotEligibility?.allowed === false
+                          }
+                          title={
+                            snapshotEligibility?.allowed === false
+                              ? snapshotEligibility.message ||
+                                "No new proof of work since the last LWM Snapshot for this user."
+                              : "Generate a new Learning World Model Snapshot for the selected user"
+                          }
+                          className="rounded-lg bg-white px-3 py-2 text-xs font-medium text-black transition hover:bg-neutral-200 disabled:cursor-not-allowed disabled:opacity-40"
+                          data-lwm-generate-snapshot
+                        >
+                          {snapshotLoading ? "Generating…" : "Generate new snapshot"}
+                        </button>
+                        {isOwner ? (
+                          <button
+                            type="button"
+                            onClick={() => void generateSnapshotAll()}
+                            disabled={snapshotLoading || snapshotAllRunning}
+                            title="Generate LWM Snapshots for every user/subject in this workspace (async with progress)"
+                            className="rounded-lg border border-cyan-700/70 bg-cyan-950/40 px-3 py-2 text-xs font-medium text-cyan-100 transition hover:border-cyan-500 hover:bg-cyan-950/70 disabled:cursor-not-allowed disabled:opacity-40"
+                            data-lwm-generate-snapshot-all
+                          >
+                            {snapshotAllRunning
+                              ? `All users… ${snapshotAllProgress.completed}/${Math.max(snapshotAllProgress.total, 1)}`
+                              : "Snapshot all users"}
+                          </button>
+                        ) : null}
+                      </div>
+                      {snapshotEligibility?.allowed === false ? (
+                        <p
+                          className="max-w-[14rem] text-right text-[10px] text-neutral-500"
+                          data-lwm-snapshot-gate
+                        >
+                          {snapshotEligibility.message || "No new PoW since last snapshot."}
+                        </p>
+                      ) : null}
+                      {snapshotError ? (
+                        <p
+                          className="max-w-[14rem] text-right text-[10px] text-red-400"
+                          data-lwm-snapshot-error
+                        >
+                          {snapshotError}
                         </p>
                       ) : null}
                     </div>
                   </div>
+
+                  <div className="flex min-w-0 flex-wrap items-stretch gap-3">
+                    <div
+                      className="flex h-[5.5rem] w-[5.5rem] shrink-0 flex-col items-center justify-center rounded-2xl border border-cyan-500/30 bg-cyan-500/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] sm:h-24 sm:w-24"
+                      data-lwm-skill-score
+                    >
+                      <span className="font-mono text-3xl font-semibold tabular-nums leading-none text-cyan-100 sm:text-4xl">
+                        {displaySnapScore != null ? displaySnapScore : "—"}
+                      </span>
+                      <span className="mt-1.5 font-mono text-[9px] uppercase tracking-[1.2px] text-cyan-300/80">
+                        snap
+                      </span>
+                    </div>
+                    <div
+                      className="flex h-[5.5rem] w-[5.5rem] shrink-0 flex-col items-center justify-center rounded-2xl border border-amber-500/30 bg-amber-500/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] sm:h-24 sm:w-24"
+                      data-lwm-ghc-score
+                    >
+                      <span className="font-mono text-3xl font-semibold tabular-nums leading-none text-amber-100 sm:text-4xl">
+                        {displayGhcScore != null ? displayGhcScore : "—"}
+                      </span>
+                      <span className="mt-1.5 font-mono text-[9px] uppercase tracking-[1.2px] text-amber-300/80">
+                        GHC
+                      </span>
+                    </div>
+                    <div className="flex min-w-0 flex-1 flex-col justify-center gap-2">
+                      {selectedRunReport?.summary || wm?.inferred_goal?.text ? (
+                        <p className="line-clamp-3 text-sm leading-relaxed text-neutral-300">
+                          {typeof selectedRunReport?.summary === "string"
+                            ? selectedRunReport.summary
+                            : wm?.inferred_goal?.text}
+                        </p>
+                      ) : (
+                        <p className="text-xs text-neutral-500">
+                          Snapshot scores for this person. Open history or report for more detail.
+                        </p>
+                      )}
+                      <div className="flex flex-wrap gap-1.5">
+                        {kc && !kc.empty ? (
+                          <Chip>
+                            conf {(kc.confidence * 100).toFixed(0)}% · {kc.pow_event_count} PoW
+                          </Chip>
+                        ) : null}
+                        {selectedLwmRun?.source ? <Chip>{selectedLwmRun.source}</Chip> : null}
+                        {windowedLwmRuns.length > 0 ? (
+                          <Chip tone="cyan">
+                            {windowedLwmRuns.length} in window
+                          </Chip>
+                        ) : null}
+                      </div>
+                    </div>
+                  </div>
                 </div>
 
-                <div className="flex flex-wrap gap-2 border-b border-white/5 px-4 py-3 sm:px-5">
-                  {kc && !kc.empty ? (
-                    <Chip>
-                      conf {(kc.confidence * 100).toFixed(0)}% · {kc.pow_event_count} PoW
-                    </Chip>
-                  ) : null}
-                  {selectedLwmRun?.source ? <Chip>{selectedLwmRun.source}</Chip> : null}
-                  {windowedLwmRuns.length > 0 ? (
-                    <Chip tone="cyan">{windowedLwmRuns.length} in window</Chip>
-                  ) : null}
-                </div>
-
-                {wm ? (
-                  <div className="space-y-3 border-b border-white/5 px-4 py-3 sm:px-5">
+                {wm &&
+                ((wm.learning_profile?.strengths?.length ?? 0) > 0 ||
+                  (wm.evidence_appetite?.want_more?.length ?? 0) > 0 ||
+                  (wm.evidence_appetite?.saturated?.length ?? 0) > 0) ? (
+                  <div className="space-y-2 border-t border-white/5 px-4 py-3 sm:px-5">
                     {wm.learning_profile?.strengths && wm.learning_profile.strengths.length > 0 ? (
                       <div className="flex flex-wrap gap-1">
                         {wm.learning_profile.strengths.slice(0, 8).map((s) => (
@@ -2481,19 +2658,24 @@ export function KnowledgeConfigTrajectoryPanel({
                   </div>
                 ) : null}
 
-                <div className="px-4 py-3 sm:px-5" data-lwm-selected-snapshot-report>
+                <div
+                  className="border-t border-white/5 px-4 py-3 sm:px-5"
+                  data-lwm-selected-snapshot-report
+                >
                   <button
                     type="button"
                     data-lwm-report-toggle
                     onClick={() => setLwmReportOpen((v) => !v)}
-                    className="mb-2 flex w-full items-center justify-between text-left font-mono text-[10px] uppercase tracking-[1.4px] text-neutral-400 hover:text-neutral-200"
+                    className="flex w-full items-center justify-between gap-2 text-left text-xs text-neutral-300 transition hover:text-white"
                   >
-                    <span>Report detail</span>
-                    <span className="text-neutral-500">{lwmReportOpen ? "Hide" : "Show"}</span>
+                    <span className="font-medium">Full report</span>
+                    <span className="font-mono text-[10px] uppercase tracking-wide text-neutral-500">
+                      {lwmReportOpen ? "Hide" : "Show"}
+                    </span>
                   </button>
                   {lwmReportOpen ? (
                     selectedRunReport ? (
-                      <div className="rounded-xl border border-neutral-800 bg-neutral-950/60 p-3 sm:p-4">
+                      <div className="mt-3 rounded-xl border border-neutral-800 bg-neutral-950/60 p-3 sm:p-4">
                         <PerformanceReportCard
                           report={selectedRunReport}
                           layout="spacious"
@@ -2501,7 +2683,7 @@ export function KnowledgeConfigTrajectoryPanel({
                         />
                       </div>
                     ) : (
-                      <p className="text-xs text-neutral-500">
+                      <p className="mt-2 text-xs text-neutral-500">
                         No report payload on this snapshot.
                       </p>
                     )
@@ -2509,6 +2691,345 @@ export function KnowledgeConfigTrajectoryPanel({
                 </div>
               </div>
             )}
+          </div>
+
+          {/* Snapshot-all progress (owner) — sits under primary actions */}
+          {isOwner && snapshotAllProgress.phase !== "idle" ? (
+            <div
+              className="rounded-xl border border-neutral-800 bg-neutral-950/80 px-3 py-2.5"
+              data-lwm-snapshot-all-progress
+              data-lwm-snapshot-all-phase={snapshotAllProgress.phase}
+            >
+              <div className="mb-1 flex items-center justify-between gap-2">
+                <span className="text-[11px] font-medium text-neutral-300">All users</span>
+                <span
+                  className="font-mono text-[10px] tabular-nums text-cyan-200/90"
+                  data-lwm-snapshot-all-counts
+                >
+                  {snapshotAllProgress.completed}/{snapshotAllProgress.total || "…"}
+                </span>
+              </div>
+              {snapshotAllProgress.total > 0 ? (
+                <div
+                  className="mb-1.5 h-1.5 overflow-hidden rounded-full bg-neutral-800"
+                  data-lwm-snapshot-all-bar
+                  role="progressbar"
+                  aria-valuemin={0}
+                  aria-valuemax={snapshotAllProgress.total}
+                  aria-valuenow={snapshotAllProgress.completed}
+                >
+                  <div
+                    className={`h-full rounded-full transition-all ${
+                      snapshotAllProgress.phase === "error"
+                        ? "bg-red-500"
+                        : snapshotAllProgress.phase === "complete"
+                          ? "bg-emerald-500"
+                          : "bg-cyan-400"
+                    }`}
+                    style={{
+                      width: `${Math.min(
+                        100,
+                        (snapshotAllProgress.completed /
+                          Math.max(1, snapshotAllProgress.total)) *
+                          100,
+                      )}%`,
+                    }}
+                  />
+                </div>
+              ) : snapshotAllRunning ? (
+                <div className="mb-1.5 h-1.5 animate-pulse rounded-full bg-cyan-900/60" />
+              ) : null}
+              <p
+                className={`text-[10px] leading-snug ${
+                  snapshotAllProgress.phase === "error"
+                    ? "text-red-400"
+                    : snapshotAllProgress.phase === "complete"
+                      ? "text-emerald-300/90"
+                      : "text-neutral-400"
+                }`}
+                data-lwm-snapshot-all-status
+              >
+                {snapshotAllProgressText}
+              </p>
+            </div>
+          ) : null}
+
+          {/* SECONDARY: subject + date filters (compact) */}
+          <div
+            className="flex flex-wrap items-end gap-2.5 rounded-xl border border-neutral-800/80 bg-neutral-950/40 px-3 py-2.5"
+            data-lwm-filters
+          >
+            <div className="min-w-[10rem] max-w-xs flex-1" data-lwm-controls-column data-picker="lwm">
+              <UserPicker
+                ariaLabel="Learning world model user"
+                valueUserId={lwmUserId}
+                valueGuestUserId={lwmGuestUserId}
+                currentUserId={currentUserId}
+                availableSubjects={availableSubjects}
+                canInspectOthers={canInspectOthers}
+                onChange={({ userId, guestUserId }) => {
+                  setLwmUserId(userId);
+                  setLwmGuestUserId(guestUserId);
+                  setSelectedLwmRunId(null);
+                }}
+              />
+            </div>
+            <label className="flex flex-col gap-0.5 text-[10px] uppercase tracking-wide text-neutral-500">
+              From
+              <input
+                type="date"
+                value={lwmFromDate}
+                onChange={(e) => setLwmFromDate(e.target.value)}
+                data-lwm-date-from
+                className="rounded-md border border-neutral-700 bg-neutral-900 px-2 py-1.5 text-xs text-neutral-200 outline-none focus:border-neutral-500"
+              />
+            </label>
+            <label className="flex flex-col gap-0.5 text-[10px] uppercase tracking-wide text-neutral-500">
+              To
+              <input
+                type="date"
+                value={lwmToDate}
+                onChange={(e) => setLwmToDate(e.target.value)}
+                data-lwm-date-to
+                className="rounded-md border border-neutral-700 bg-neutral-900 px-2 py-1.5 text-xs text-neutral-200 outline-none focus:border-neutral-500"
+              />
+            </label>
+            <button
+              type="button"
+              data-lwm-date-last-7d
+              onClick={() => {
+                const w = defaultLwmTimelineDateWindow({ days: 7 });
+                setLwmFromDate(w.from);
+                setLwmToDate(w.to);
+              }}
+              className="rounded-md border border-neutral-700 px-2 py-1.5 text-[11px] text-neutral-400 hover:border-neutral-500 hover:text-neutral-200"
+              title="Set timeline window to the last 7 calendar days"
+            >
+              Last 7 days
+            </button>
+            {(lwmFromDate || lwmToDate) && (
+              <button
+                type="button"
+                data-lwm-date-clear
+                onClick={() => {
+                  setLwmFromDate("");
+                  setLwmToDate("");
+                }}
+                className="rounded-md border border-neutral-700 px-2 py-1.5 text-[11px] text-neutral-400 hover:border-neutral-500 hover:text-neutral-200"
+              >
+                Clear dates
+              </button>
+            )}
+          </div>
+
+          {/* SECONDARY: history (timeline + trends) — progressive disclosure */}
+          <div
+            className="rounded-xl border border-neutral-800/80 bg-neutral-950/40"
+            data-lwm-history-section
+          >
+            <button
+              type="button"
+              data-lwm-history-toggle
+              aria-expanded={lwmHistoryOpen}
+              onClick={() => setLwmHistoryOpen((v) => !v)}
+              className="flex w-full items-center justify-between gap-2 px-3.5 py-2.5 text-left transition hover:bg-neutral-900/50"
+            >
+              <span className="text-xs font-medium text-neutral-200">History</span>
+              <span className="flex items-center gap-2 text-[10px] text-neutral-500">
+                <span data-lwm-timeline-count>
+                  {lwmHistoryLoading
+                    ? "Loading…"
+                    : `${windowedLwmRuns.length} snapshot${windowedLwmRuns.length === 1 ? "" : "s"}`}
+                </span>
+                <span className="font-mono uppercase tracking-wide">
+                  {lwmHistoryOpen ? "Hide" : "Show"}
+                </span>
+              </span>
+            </button>
+
+            {lwmHistoryOpen ? (
+              <div className="space-y-3 border-t border-neutral-800/80 px-3.5 pb-3.5 pt-3">
+                {/* Horizontal snapshot timeline */}
+                <div
+                  className="rounded-lg border border-neutral-800/60 bg-neutral-950/50 px-3 py-3"
+                  data-lwm-timeline
+                  role="listbox"
+                  aria-label="Snapshot timeline"
+                >
+                  <div className="mb-2 flex items-center justify-between gap-2">
+                    <span className="text-[11px] font-medium text-neutral-400">Timeline</span>
+                  </div>
+                  {windowedLwmRuns.length === 0 ? (
+                    <p
+                      className="py-4 text-center text-xs text-neutral-500"
+                      data-lwm-timeline-empty
+                    >
+                      {lwmHistoryLoading
+                        ? "Loading snapshots…"
+                        : "No snapshots in this window. Generate one or widen the date range."}
+                    </p>
+                  ) : (
+                    <div className="relative mx-1 h-14" data-lwm-timeline-track>
+                      <div
+                        className="absolute left-0 right-0 top-1/2 h-px -translate-y-1/2 bg-neutral-700"
+                        aria-hidden
+                      />
+                      {lwmTimelineMarkers.map((m) => {
+                        const selected = selectedLwmRun?.id === m.id;
+                        return (
+                          <button
+                            key={m.id}
+                            type="button"
+                            role="option"
+                            aria-selected={selected}
+                            data-lwm-timeline-point={m.id}
+                            title={`${m.ran_at} · snap ${m.snapshotScore ?? "—"} · GHC ${m.ghcScore ?? "—"}`}
+                            onClick={() => setSelectedLwmRunId(m.id)}
+                            className="absolute top-1/2 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-1"
+                            style={{ left: `${m.t * 100}%` }}
+                          >
+                            <span
+                              className={`block h-3 w-3 rounded-full border-2 transition ${
+                                selected
+                                  ? "scale-125 border-cyan-200 bg-cyan-400 shadow-[0_0_12px_rgba(34,211,238,0.55)]"
+                                  : "border-neutral-500 bg-neutral-800 hover:border-cyan-400/80 hover:bg-cyan-900/50"
+                              }`}
+                            />
+                            <span
+                              className={`max-w-[4.5rem] truncate font-mono text-[9px] tabular-nums ${
+                                selected ? "text-cyan-200" : "text-neutral-500"
+                              }`}
+                            >
+                              {new Date(m.atMs).toLocaleDateString(undefined, {
+                                month: "short",
+                                day: "numeric",
+                              })}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                {/* Dual score trend */}
+                <div
+                  className="rounded-lg border border-neutral-800/60 bg-neutral-950/50 p-3"
+                  data-lwm-score-trend
+                >
+                  <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                    <span className="text-[11px] font-medium text-neutral-400">Score trends</span>
+                    <div className="flex items-center gap-3 text-[10px] text-neutral-500">
+                      <span className="inline-flex items-center gap-1.5">
+                        <span className="h-1.5 w-4 rounded-full bg-cyan-400" /> Snapshot
+                      </span>
+                      <span className="inline-flex items-center gap-1.5">
+                        <span className="h-1.5 w-4 rounded-full bg-amber-400" /> GHC
+                      </span>
+                    </div>
+                  </div>
+                  {lwmScoreSeries.length < 1 ? (
+                    <p className="py-6 text-center text-xs text-neutral-500">No score history yet.</p>
+                  ) : (
+                    <svg
+                      viewBox="0 0 480 140"
+                      className="h-32 w-full"
+                      role="img"
+                      aria-label="Snapshot and GHC scores over time"
+                      data-lwm-score-trend-chart
+                    >
+                      {[0, 25, 50, 75, 100].map((y) => {
+                        const py = 8 + (1 - y / 100) * 124;
+                        return (
+                          <g key={y}>
+                            <line
+                              x1={8}
+                              x2={472}
+                              y1={py}
+                              y2={py}
+                              stroke="#262626"
+                              strokeWidth={1}
+                            />
+                            <text
+                              x={4}
+                              y={py + 3}
+                              fill="#525252"
+                              fontSize={9}
+                              textAnchor="start"
+                            >
+                              {y}
+                            </text>
+                          </g>
+                        );
+                      })}
+                      {(() => {
+                        const snap = scoreSeriesPolyline(
+                          lwmScoreSeries,
+                          "snapshotScore",
+                          480,
+                          140,
+                          8,
+                        );
+                        const ghc = scoreSeriesPolyline(
+                          lwmScoreSeries,
+                          "ghcScore",
+                          480,
+                          140,
+                          8,
+                        );
+                        return (
+                          <>
+                            {ghc ? (
+                              <polyline
+                                fill="none"
+                                stroke="#fbbf24"
+                                strokeWidth={2}
+                                strokeLinejoin="round"
+                                strokeLinecap="round"
+                                points={ghc}
+                                data-lwm-trend-ghc
+                              />
+                            ) : null}
+                            {snap ? (
+                              <polyline
+                                fill="none"
+                                stroke="#22d3ee"
+                                strokeWidth={2.25}
+                                strokeLinejoin="round"
+                                strokeLinecap="round"
+                                points={snap}
+                                data-lwm-trend-snapshot
+                              />
+                            ) : null}
+                            {lwmScoreSeries.map((p) => {
+                              if (p.snapshotScore == null) return null;
+                              const minT = lwmScoreSeries[0].atMs;
+                              const maxT = lwmScoreSeries[lwmScoreSeries.length - 1].atMs;
+                              const span = Math.max(1, maxT - minT);
+                              const x = 8 + ((p.atMs - minT) / span) * 464;
+                              const y = 8 + (1 - p.snapshotScore / 100) * 124;
+                              const selected = selectedLwmRun?.id === p.id;
+                              return (
+                                <circle
+                                  key={p.id}
+                                  cx={x}
+                                  cy={y}
+                                  r={selected ? 4.5 : 3}
+                                  fill={selected ? "#a5f3fc" : "#22d3ee"}
+                                  className="cursor-pointer"
+                                  onClick={() => setSelectedLwmRunId(p.id)}
+                                  data-lwm-trend-point={p.id}
+                                />
+                              );
+                            })}
+                          </>
+                        );
+                      })()}
+                    </svg>
+                  )}
+                </div>
+              </div>
+            ) : null}
           </div>
         </section>
       ) : null}

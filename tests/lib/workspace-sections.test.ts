@@ -282,7 +282,7 @@ describe("WorkspaceView section shell wiring", () => {
     expect(accessSource).not.toContain("is_group");
     expect(accessSource).not.toContain("/group");
     expect(accessSource).toContain("Enable Paid (AYCL)");
-    expect(accessSource).toContain("/api/demo/status");
+    expect(accessSource).toContain("/api/me/status");
     // Removed from identity overflow menu
     expect(identitySource).not.toContain("togglePublic");
     expect(identitySource).not.toContain("toggleGroup");

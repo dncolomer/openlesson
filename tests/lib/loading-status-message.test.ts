@@ -36,8 +36,6 @@ const GATE_FILES = [
   "components/WorkspaceFilesTab.tsx",
   "components/SessionHeliosPanel.tsx",
   "components/ChapterMapPanel.tsx",
-  "components/orbit/OrbitApp.tsx",
-  "components/ProofOfWorkApiDemo.tsx",
   "app/admin/workspaces/[workspaceId]/page.tsx",
   "app/admin/organizations/[orgId]/page.tsx",
 ] as const;

@@ -356,36 +356,33 @@ async function main() {
       `HTTP ${orgPage.res.status}`
     );
 
-    const demoStatus = await webFetch("/api/demo/status", teamsJar);
+    // Product /demo hub removed — me/status is the non-demo admin gate for workspace settings.
+    const meStatus = await webFetch("/api/me/status", teamsJar);
     record(
-      "demo-api",
-      "GET /api/demo/status (auth gate, not 404)",
-      demoStatus.res.status !== 404 && typeof demoStatus.body === "object",
-      `HTTP ${demoStatus.res.status}`
+      "me-api",
+      "GET /api/me/status (auth profile gate)",
+      meStatus.res.status === 200 && typeof meStatus.body === "object",
+      `HTTP ${meStatus.res.status}`
     );
 
-    const demoSchema = await webFetch("/api/demo/proof-of-work-schema", teamsJar, {
+    const removedDemoWorkspace = await webFetch("/api/demo/workspace", teamsJar, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({}),
     });
     record(
       "demo-api",
-      "POST /api/demo/proof-of-work-schema exists (not 404)",
-      demoSchema.res.status !== 404,
-      `HTTP ${demoSchema.res.status}`
+      "POST /api/demo/workspace removed (404)",
+      removedDemoWorkspace.res.status === 404,
+      `HTTP ${removedDemoWorkspace.res.status}`
     );
 
-    const legacyDemoEvidence = await webFetch("/api/demo/evidence", teamsJar, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({}),
-    });
+    const removedDemoPage = await webFetch("/demo", teamsJar);
     record(
       "demo-api",
-      "legacy /api/demo/evidence absent",
-      legacyDemoEvidence.res.status === 404 || legacyDemoEvidence.res.status === 403,
-      `HTTP ${legacyDemoEvidence.res.status}`
+      "GET /demo removed (404)",
+      removedDemoPage.res.status === 404,
+      `HTTP ${removedDemoPage.res.status}`
     );
   }
 

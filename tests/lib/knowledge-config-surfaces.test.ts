@@ -132,12 +132,22 @@ describe("knowledge config / LWM feature surfaces", () => {
     expect(lwm).toContain("data-lwm-timeline");
     expect(lwm).toContain("data-lwm-date-from");
     expect(lwm).toContain("data-lwm-date-to");
+    expect(lwm).toContain("data-lwm-date-last-7d");
+    expect(lwm).toContain("defaultLwmTimelineDateWindow");
     expect(lwm).toContain("data-lwm-score-trend");
     expect(lwm).toContain("loadSnapshotHistory");
     expect(lwm).toContain("selectedLwmRunId");
     expect(lwm).toContain("filterLwmHistoryByDateWindow");
     expect(lwm).toContain("dualScoreSeriesFromRuns");
-    expect(lwm).toMatch(/absolute right-3 top-3|absolute right-4 top-4/);
+    // Timeline filters default to last 7 days (not empty window).
+    expect(lwm).toContain("defaultLwmTimelineDateWindow({ days: 7 })");
+    expect(lwm).not.toMatch(
+      /const \[lwmFromDate,\s*setLwmFromDate\]\s*=\s*useState\(""\)/,
+    );
+    // Hero-first layout: primary scores + progressive history (not floating timestamp badge)
+    expect(lwm).toContain('data-lwm-layout="hero-first"');
+    expect(lwm).toContain("data-lwm-primary");
+    expect(lwm).toContain("data-lwm-history-section");
     expect(lwm).toMatch(/lwmUpdatedLabel|last_eval_at|as_of/);
     // Filters + card; no long-form LWM-vs-embeddings teaching copy
     expect(lwm).toContain("data-lwm-filters");
@@ -187,31 +197,54 @@ describe("knowledge config / LWM feature surfaces", () => {
     );
   });
 
-  it("Embeddings uses left sidebar pickers + right projection without whole-tab scroll", () => {
+  it("Embeddings uses left pickers + center canvas + right regions without whole-tab scroll", () => {
     const models = read("components/KnowledgeConfigTrajectoryPanel.tsx");
-    expect(models).toContain('data-embeddings-layout="sidebar-projection"');
+    expect(models).toContain('data-embeddings-layout="left-canvas-right-regions"');
     expect(models).toContain("data-embeddings-sidebar");
     expect(models).toContain("data-embeddings-projection");
+    expect(models).toContain("data-embeddings-regions-rail");
     expect(models).toContain('data-picker="embeddings"');
     expect(models).toContain("data-region-overlay-picker");
     expect(models).toContain("data-projection-algorithm-picker");
     expect(models).toContain("data-projection-widget");
-    // Sidebar hosts user + projection algorithm + region pickers; canvas is the right pane.
+    // Left: user + algorithm; center: canvas; right: region multi-select + distances.
     const sidebarIdx = models.indexOf("data-embeddings-sidebar");
     const projectionIdx = models.indexOf("data-embeddings-projection");
+    const railIdx = models.indexOf("data-embeddings-regions-rail");
     const pickerIdx = models.indexOf('data-picker="embeddings"');
     const algoPickerIdx = models.indexOf("data-projection-algorithm-picker");
     const regionPickerIdx = models.indexOf("data-region-overlay-picker");
     expect(sidebarIdx).toBeGreaterThan(-1);
     expect(projectionIdx).toBeGreaterThan(sidebarIdx);
+    expect(railIdx).toBeGreaterThan(projectionIdx);
     expect(pickerIdx).toBeGreaterThan(sidebarIdx);
     expect(pickerIdx).toBeLessThan(projectionIdx);
-    // Projection dropdown sits directly under the user dropdown in the sidebar.
-    expect(algoPickerIdx).toBeGreaterThan(pickerIdx);
-    expect(algoPickerIdx).toBeLessThan(regionPickerIdx);
+    // Projection algorithm is compact chrome above the tall users list (fills left rail height).
+    expect(algoPickerIdx).toBeGreaterThan(sidebarIdx);
+    expect(algoPickerIdx).toBeLessThan(pickerIdx);
     expect(algoPickerIdx).toBeLessThan(projectionIdx);
-    expect(regionPickerIdx).toBeGreaterThan(sidebarIdx);
-    expect(regionPickerIdx).toBeLessThan(projectionIdx);
+    // Users list expands to fill remaining left-rail height (not max-h-40 only).
+    expect(models).toContain("data-embeddings-user-list-fill");
+    expect(models).toContain("fillHeight");
+    expect(models).toMatch(/fillHeight[\s\S]{0,80}true|fillHeight\s*\/>/);
+    // Region picker lives on the right rail (after projection in DOM).
+    expect(regionPickerIdx).toBeGreaterThan(projectionIdx);
+    expect(regionPickerIdx).toBeGreaterThan(railIdx);
+    // Browser Fullscreen API for the embedding visual (covers navbar / full viewport).
+    expect(models).toContain("data-embeddings-fullscreen");
+    expect(models).toContain("data-embeddings-fullscreen-toggle");
+    expect(models).toContain("data-embeddings-fullscreen-action");
+    expect(models).toContain("data-embeddings-projection-surface");
+    expect(models).toContain("embeddingsFullscreen");
+    expect(models).toContain("enterEmbeddingsFullscreen");
+    expect(models).toContain("exitEmbeddingsFullscreen");
+    expect(models).toContain("embeddingsShellRef");
+    expect(models).toContain("requestFullscreen");
+    expect(models).toContain("exitFullscreen");
+    expect(models).toContain("fullscreenchange");
+    // CSS fallback still covers app chrome above navbar stacking context.
+    expect(models).toContain("fixed inset-0");
+    expect(models).toContain("z-[100]");
     // Fill-height flex; models root avoids overflow-y-auto (no whole-tab scroll).
     expect(models).toContain("overflow-hidden");
     expect(models).toMatch(
@@ -277,8 +310,9 @@ describe("knowledge config / LWM feature surfaces", () => {
     expect(models).toContain('data-embeddings-user-multiselect="true"');
     expect(models).toContain("embSelectedKeys");
     expect(models).toContain("data-embeddings-user-toggle");
-    // Sidebar + projection layout (not the old projection|LWM grid).
-    expect(models).toContain('data-embeddings-layout="sidebar-projection"');
+    // Left canvas right-regions layout (not the old projection|LWM grid).
+    expect(models).toContain('data-embeddings-layout="left-canvas-right-regions"');
+    expect(models).toContain("data-embeddings-regions-rail");
     expect(models).not.toContain("lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]");
 
     const panel = read("components/WorkspacePerformancePanel.tsx");

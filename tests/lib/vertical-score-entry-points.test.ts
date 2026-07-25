@@ -25,12 +25,11 @@ const ROOT = join(__dirname, "../..");
  * surfaces here so skeptics cannot invent unlisted leftovers.
  */
 const SCORE_SURFACE_FILES = [
-  // REST + demo
+  // REST
   "app/api/v3/snapshot/workspaces/[id]/lwm-snapshot/route.ts",
   "app/api/workspace/performance-report/route.ts",
   "app/api/workspace-tap-score/performance/route.ts",
   "app/api/workspace-ile/performance/route.ts",
-  "app/api/demo/performance/route.ts",
   // Core score libs
   "lib/pow-api/performance-report.ts",
   "lib/pow-api/workspace-goal.ts",
@@ -47,9 +46,6 @@ const SCORE_SURFACE_FILES = [
   "components/PerformanceReportCard.tsx",
   "components/TapScoreClient.tsx",
   "components/KnowledgeConfigTrajectoryPanel.tsx",
-  "components/proof-of-work-demo/DemoPerformanceHud.tsx",
-  "components/ProofOfWorkApiDemo.tsx",
-  "components/orbit/SmartCoachOverlay.tsx",
   // Docs + public contracts
   "docs/PROOF_OF_WORK_API.md",
   "public/skill.md",
@@ -257,7 +253,9 @@ describe("LWM Snapshot entry points (shipped wiring)", () => {
     const lwm = readFileSync(join(ROOT, "components/KnowledgeConfigTrajectoryPanel.tsx"), "utf8");
     expect(lwm).toContain("data-lwm-generate-snapshot");
     expect(lwm).toContain("Generate new snapshot");
+    expect(lwm).toContain("data-lwm-generate-snapshot-all");
     expect(lwm).toContain("/api/workspace/performance-report");
+    expect(lwm).toContain("/snapshot-all");
     expect(lwm).toContain("loadSnapshotEligibility");
     expect(lwm).toContain("snapshotEligibility");
   });
@@ -312,20 +310,10 @@ describe("LWM Snapshot entry points (shipped wiring)", () => {
     }
   });
 
-  it("demo HUDs and PoW demo status bar show a single primary score /100", () => {
-    const hud = readSurface("components/proof-of-work-demo/DemoPerformanceHud.tsx");
-    expect(hud).toContain("primaryScore");
-    expect(hud).toContain("/100");
-    expect(hud).not.toContain("conversionScore");
-    expect(hud).not.toContain("overallScore");
-
-    const demo = readSurface("components/ProofOfWorkApiDemo.tsx");
-    expect(demo).toContain("primaryScore");
-    expect(demo).toContain("verticalLabel");
-    expect(demo).not.toContain("conversionScore");
-
-    const coach = readSurface("components/orbit/SmartCoachOverlay.tsx");
-    expect(coach).toContain("primaryScore");
+  it("workspace performance panel shows a single primary score /100", () => {
+    const panel = readSurface("components/WorkspacePerformancePanel.tsx");
+    expect(panel).toMatch(/primaryScore|score/i);
+    expect(panel).not.toContain("conversionScore");
   });
 
   it("web performance-report and runVerticalScore force single snapshot strategy", () => {

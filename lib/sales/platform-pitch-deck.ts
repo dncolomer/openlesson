@@ -105,7 +105,7 @@ const PLATFORM_THESIS: SalesSlide[] = [
       {
         label: "Distance to “knowing X”",
         body: "Embeddings + labeled regions instead of pass-rates.",
-        image: "/embeddings.png",
+        image: "/knowledgeg2.png",
         imageAlt: "High-dimensional embeddings with labeled knowing-X regions",
       },
     ],
@@ -131,7 +131,7 @@ const PLATFORM_THESIS: SalesSlide[] = [
     layout: "fullImage",
     title: "Embeddings · knowing-X regions",
     backgroundImage: PITCH_ASSETS.aesthetics.science,
-    image: "/embeddings.png",
+    image: "/knowledgeg2.png",
     imageAlt: "High-dimensional embeddings with labeled knowing-X regions",
     imageCaption: "Embeddings · knowing-X regions",
   },

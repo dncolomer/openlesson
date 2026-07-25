@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
+  defaultLwmTimelineDateWindow,
   dualScoreSeriesFromRuns,
   filterLwmHistoryByDateWindow,
+  formatDateInputLocal,
   scoreSeriesPolyline,
   selectLwmHistoryRun,
   timelineMarkersFromRuns,
@@ -17,6 +19,27 @@ function run(
     ...partial,
   };
 }
+
+describe("defaultLwmTimelineDateWindow", () => {
+  it("defaults to last 7 calendar days inclusive of today", () => {
+    // Local noon avoids DST edge quirks when constructing from y/m/d parts.
+    const now = new Date(2026, 6, 25, 12, 0, 0); // 25 Jul 2026 local
+    const w = defaultLwmTimelineDateWindow({ days: 7, now });
+    expect(w.to).toBe("2026-07-25");
+    expect(w.from).toBe("2026-07-19"); // today and previous 6 days
+  });
+
+  it("respects custom day count and month boundaries", () => {
+    const now = new Date(2026, 2, 3, 9, 0, 0); // 3 Mar 2026
+    const w = defaultLwmTimelineDateWindow({ days: 7, now });
+    expect(w.to).toBe("2026-03-03");
+    expect(w.from).toBe("2026-02-25");
+  });
+
+  it("formatDateInputLocal zero-pads month and day", () => {
+    expect(formatDateInputLocal(new Date(2026, 0, 5))).toBe("2026-01-05");
+  });
+});
 
 describe("filterLwmHistoryByDateWindow", () => {
   const rows = [

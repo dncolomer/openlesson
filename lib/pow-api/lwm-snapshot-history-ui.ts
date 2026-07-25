@@ -181,3 +181,31 @@ export function isoToDateInputValue(iso: string | null | undefined): string {
   if (!Number.isFinite(ms)) return "";
   return new Date(ms).toISOString().slice(0, 10);
 }
+
+/** Local calendar yyyy-mm-dd for `<input type="date">` values. */
+export function formatDateInputLocal(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+/**
+ * Default LWM timeline filters: last N calendar days inclusive of today
+ * (e.g. days=7 → from today−6 through today).
+ */
+export function defaultLwmTimelineDateWindow(options?: {
+  /** Inclusive day count ending today. Default 7. */
+  days?: number;
+  now?: Date;
+}): { from: string; to: string } {
+  const days = Math.max(1, Math.floor(options?.days ?? 7));
+  const now = options?.now ?? new Date();
+  const toDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const fromDate = new Date(toDate);
+  fromDate.setDate(fromDate.getDate() - (days - 1));
+  return {
+    from: formatDateInputLocal(fromDate),
+    to: formatDateInputLocal(toDate),
+  };
+}

@@ -80,17 +80,9 @@ export async function middleware(request: NextRequest) {
 
   const pathname = request.nextUrl.pathname;
 
-  const isDemoPage =
-    pathname === "/demo" ||
-    pathname.startsWith("/demo/") ||
-    pathname === "/demo-app" ||
-    pathname.startsWith("/demo-app/");
-  const isDemoApi = pathname.startsWith("/api/demo");
-
   // Protected routes - require authentication
   const protectedRoutes = ["/session", "/dashboard", "/results", "/admin"];
-  const isProtectedRoute =
-    protectedRoutes.some((route) => pathname.startsWith(route)) || isDemoPage;
+  const isProtectedRoute = protectedRoutes.some((route) => pathname.startsWith(route));
 
   // Public routes that should skip all auth logic (shareable TAP/ILE guest links)
   const publicRoutes = ["/pricing", "/tap/session", "/ile/session", "/insights", "/learn"];
@@ -125,25 +117,6 @@ export async function middleware(request: NextRequest) {
     const redirectUrl = new URL("/login", request.url);
     redirectUrl.searchParams.set("redirect", pathname);
     return NextResponse.redirect(redirectUrl);
-  }
-
-  if (isDemoApi && !user) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-  }
-
-  if ((isDemoPage || isDemoApi) && user) {
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("is_admin")
-      .eq("id", user.id)
-      .single();
-
-    if (!profile?.is_admin) {
-      if (isDemoApi) {
-        return NextResponse.json({ error: "Admin access required" }, { status: 403 });
-      }
-      return NextResponse.redirect(new URL("/dashboard", request.url));
-    }
   }
 
   if (user && (isAuthRoute || !isSubscriptionExemptPath(pathname))) {
@@ -217,7 +190,5 @@ export async function middleware(request: NextRequest) {
 export const config = {
   matcher: [
     "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$|api).*)",
-    // Refresh Supabase session cookies for demo API routes (excluded from the matcher above).
-    "/api/demo/:path*",
   ],
 };

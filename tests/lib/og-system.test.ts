@@ -178,12 +178,12 @@ describe("OG metadata image URLs", () => {
   });
 
   it("openGraphImagesForRoutePath returns width/height for crawlers", () => {
-    const images = openGraphImagesForRoutePath("/demo", "Demo");
+    const images = openGraphImagesForRoutePath("/pricing", "Pricing");
     expect(images[0]).toMatchObject({
-      url: "/demo/opengraph-image",
+      url: "/pricing/opengraph-image",
       width: 1200,
       height: 630,
-      alt: "Demo",
+      alt: "Pricing",
     });
   });
 });
@@ -198,7 +198,6 @@ describe("OG entrypoint wiring (static audit)", () => {
     "app/pricing/opengraph-image.tsx",
     "app/vision/opengraph-image.tsx",
     "app/science/opengraph-image.tsx",
-    "app/demo/opengraph-image.tsx",
     "app/docs/proof-of-work-api/opengraph-image.tsx",
   ];
 

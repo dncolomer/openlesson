@@ -22,7 +22,9 @@
     "db:migrate:staging": "node scripts/apply-migrations.mjs --staging",
     "db:check-drift": "node scripts/check-migration-drift.mjs",
     "db:check-drift:staging": "node scripts/check-migration-drift.mjs --staging",
-    "db:verify-rls": "node scripts/verify-rls-policies.mjs"
+    "db:verify-rls": "node scripts/verify-rls-policies.mjs",
+    "db:seed-saas-tech-demo:staging": "vite-node --config vitest.config.ts scripts/seed-saas-tech-team-demo-workspace.ts",
+    "db:verify-saas-tech-demo:staging": "vite-node --config vitest.config.ts scripts/verify-saas-tech-team-demo-workspace.ts"
   },
   "dependencies": {
     "@coral-xyz/anchor": "^0.30.1",

@@ -35,10 +35,6 @@ const XAI_USAGE = {
 };
 
 const CONSUMER_DELEGATES = {
-  "app/api/demo/workspace/route.ts":
-    "lib/pow-api/create-verification-workspace.ts → createVerificationWorkspaceFromPrompt",
-  "app/api/demo/integration-skill/route.ts":
-    "lib/pow-api/integration-skill.ts → buildIntegrationSkillInstructions",
   "app/api/workspace/integration-skill/route.ts":
     "lib/pow-api/integration-skill.ts → buildIntegrationSkillInstructions",
   "app/api/workspace/performance-report/route.ts":

@@ -7,7 +7,7 @@ import { ProofOfWorkStatsPanel } from "@/components/ProofOfWorkStatsPanel";
 import { WorkspaceSectionSubTabs } from "@/components/WorkspaceSectionSubTabs";
 import { SECTION_TAB_CONTENT_CLASS } from "@/lib/workspace-section-surface";
 
-type PerformanceSubview = "pow" | "knowledge" | "lwm" | "insights";
+type PerformanceSubview = "pow" | "knowledge" | "lwm" | "ranking" | "insights";
 
 interface WorkspacePerformancePanelProps {
   workspaceId: string;
@@ -23,10 +23,15 @@ interface WorkspacePerformancePanelProps {
 }
 
 /** Insights temporarily hidden from nav (may return later). */
-const PERFORMANCE_SUBVIEWS: readonly PerformanceSubview[] = ["lwm", "knowledge", "pow"];
+const PERFORMANCE_SUBVIEWS: readonly PerformanceSubview[] = [
+  "lwm",
+  "ranking",
+  "knowledge",
+  "pow",
+];
 
 /**
- * Knowledge surface: LWM (with Generate new snapshot), Models, PoW.
+ * Knowledge surface: LWM (Generate new snapshot), Ranking, Models, PoW.
  * Insights tab hidden for now. Eval removed — snapshot generation lives in LWM.
  */
 export function WorkspacePerformancePanel({
@@ -54,6 +59,7 @@ export function WorkspacePerformancePanel({
   const subTabs: Array<{ id: PerformanceSubview; label: string }> = useMemo(
     () => [
       { id: "lwm", label: t("planView.performanceSubTabLwm") },
+      { id: "ranking", label: t("planView.performanceSubTabRanking") },
       { id: "knowledge", label: t("planView.performanceSubTabModels") },
       { id: "pow", label: t("planView.performanceSubTabPow") },
     ],
@@ -96,6 +102,16 @@ export function WorkspacePerformancePanel({
             isOwner={isOwner}
             ayclToken={ayclToken}
             panelView="lwm"
+          />
+        )}
+
+        {activeSubview === "ranking" && (
+          <KnowledgeConfigTrajectoryPanel
+            workspaceId={workspaceId}
+            currentUserId={currentUserId}
+            isOwner={isOwner}
+            ayclToken={ayclToken}
+            panelView="ranking"
           />
         )}
       </div>

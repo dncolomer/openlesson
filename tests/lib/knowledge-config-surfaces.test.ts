@@ -318,8 +318,11 @@ describe("knowledge config / LWM feature surfaces", () => {
     const panel = read("components/WorkspacePerformancePanel.tsx");
     expect(panel).toContain('panelView="models"');
     expect(panel).toContain('panelView="lwm"');
+    expect(panel).toContain('panelView="ranking"');
     expect(panel).toContain('id: "lwm"');
+    expect(panel).toContain('id: "ranking"');
     expect(panel).toContain("performanceSubTabLwm");
+    expect(panel).toContain("performanceSubTabRanking");
 
     const api = read("app/api/workspace/knowledge-config/route.ts");
     expect(api).toContain("resolveModelsTabScopeFromRequest");

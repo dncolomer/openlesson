@@ -43,7 +43,18 @@ import {
   type ProjectionAlgorithmId,
 } from "@/lib/knowledge-config";
 import { PerformanceReportCard } from "@/components/PerformanceReportCard";
+import { MarkerRadarChart } from "@/components/MarkerRadarChart";
 import type { PerformanceReport } from "@/lib/pow-api/performance-report";
+import {
+  normalizePerformanceReport,
+} from "@/lib/pow-api/performance-report";
+import { normalizePerformanceGapAnalysis } from "@/lib/pow-api/performance-context";
+import {
+  buildKnowledgeRanking,
+  formatRankingScore,
+  type KnowledgeRankingCard,
+  type KnowledgeRankingRunLike,
+} from "@/lib/pow-api/knowledge-ranking";
 import {
   consumeSnapshotAllNdjson,
   formatSnapshotAllProgress,
@@ -1072,7 +1083,7 @@ function EmbeddingsUserMultiPicker({
   );
 }
 
-export type KnowledgePanelView = "models" | "lwm";
+export type KnowledgePanelView = "models" | "lwm" | "ranking";
 
 interface KnowledgeConfigTrajectoryPanelProps {
   workspaceId: string;
@@ -1083,6 +1094,7 @@ interface KnowledgeConfigTrajectoryPanelProps {
   /**
    * models — embeddings + custom knowledge regions
    * lwm — Learning World Model only (own Knowledge tab)
+   * ranking — all-subjects latest Snapshot + GHC leaderboard
    */
   panelView?: KnowledgePanelView;
 }
@@ -1096,6 +1108,7 @@ export function KnowledgeConfigTrajectoryPanel({
 }: KnowledgeConfigTrajectoryPanelProps) {
   const showModels = panelView === "models";
   const showLwm = panelView === "lwm";
+  const showRanking = panelView === "ranking";
   const canInspectOthers = Boolean(isOwner);
 
   // Embeddings: multiselect subject keys (`u:` / `g:`). LWM stays single-select.
@@ -1126,6 +1139,12 @@ export function KnowledgeConfigTrajectoryPanel({
   const [lwmHistoryRuns, setLwmHistoryRuns] = useState<LwmSnapshotHistoryRun[]>([]);
   const [lwmHistoryLoading, setLwmHistoryLoading] = useState(false);
   const [selectedLwmRunId, setSelectedLwmRunId] = useState<string | null>(null);
+  /** Multi-subject latest snapshot rows for Ranking tab. */
+  const [rankingRuns, setRankingRuns] = useState<KnowledgeRankingRunLike[]>([]);
+  const [rankingLoading, setRankingLoading] = useState(false);
+  const [rankingError, setRankingError] = useState<string | null>(null);
+  /** Selected ranking subject key (`u:` / `g:`); defaults to #1 when list loads. */
+  const [selectedRankingKey, setSelectedRankingKey] = useState<string | null>(null);
   /** Date window (yyyy-mm-dd) focusing the timeline + trends. Defaults to last 7 days. */
   const [lwmFromDate, setLwmFromDate] = useState(() => {
     return defaultLwmTimelineDateWindow({ days: 7 }).from;
@@ -1299,6 +1318,91 @@ export function KnowledgeConfigTrajectoryPanel({
       setEmbLoading(false);
     }
   }, [embScope.query, fetchKnowledgeConfig, mergeAvailableSubjects]);
+
+  const loadRanking = useCallback(async () => {
+    if (!showRanking) return;
+    setRankingLoading(true);
+    setRankingError(null);
+    try {
+      // Seed subject roster (owners get available_subjects; non-owners self).
+      try {
+        const payload = await fetchKnowledgeConfig(
+          resolveModelsTabScope({
+            mode: "user",
+            currentUserId,
+            targetUserId: currentUserId,
+            targetGuestUserId: null,
+            canInspectOthers,
+          }).query,
+        );
+        mergeAvailableSubjects(payload);
+      } catch {
+        // Ranking can still use history subjects alone.
+      }
+
+      const params = new URLSearchParams({
+        workspaceId,
+        limit: "500",
+        vertical: "verification",
+      });
+      if (ayclToken) params.set("ayclToken", ayclToken);
+      // Owners: omit subject filter → full workspace history (latest-per-subject client-side).
+      // Non-owners: API forces self; optional explicit self for clarity.
+      if (!canInspectOthers && currentUserId) {
+        params.set("user_id", currentUserId);
+      }
+
+      const response = await fetch(`/api/workspace/snapshot-history?${params.toString()}`);
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(
+          typeof data.error === "string" ? data.error : "Failed to load ranking snapshots",
+        );
+      }
+      const runs = (Array.isArray(data.runs) ? data.runs : []).map(
+        (r: Record<string, unknown>) =>
+          ({
+            id: String(r.id || ""),
+            ran_at: String(r.ran_at || r.created_at || ""),
+            score:
+              r.score == null
+                ? null
+                : typeof r.score === "number"
+                  ? r.score
+                  : Number(r.score),
+            ghc_score:
+              r.ghc_score == null
+                ? null
+                : typeof r.ghc_score === "number"
+                  ? r.ghc_score
+                  : Number(r.ghc_score),
+            subject_user_id:
+              typeof r.subject_user_id === "string" ? r.subject_user_id : null,
+            subject_guest_user_id:
+              typeof r.subject_guest_user_id === "string"
+                ? r.subject_guest_user_id
+                : null,
+            vertical: typeof r.vertical === "string" ? r.vertical : "verification",
+            report:
+              r.report && typeof r.report === "object" ? r.report : null,
+          }) satisfies KnowledgeRankingRunLike,
+      );
+      setRankingRuns(runs);
+    } catch (err) {
+      setRankingRuns([]);
+      setRankingError(err instanceof Error ? err.message : "Failed to load ranking");
+    } finally {
+      setRankingLoading(false);
+    }
+  }, [
+    ayclToken,
+    canInspectOthers,
+    currentUserId,
+    fetchKnowledgeConfig,
+    mergeAvailableSubjects,
+    showRanking,
+    workspaceId,
+  ]);
 
   const loadSnapshotHistory = useCallback(async () => {
     if (!showLwm) return;
@@ -1651,6 +1755,11 @@ export function KnowledgeConfigTrajectoryPanel({
     void loadSnapshotEligibility();
   }, [loadSnapshotEligibility, showLwm]);
 
+  useEffect(() => {
+    if (!showRanking) return;
+    void loadRanking();
+  }, [loadRanking, showRanking]);
+
   // When regions are overlaid, compute Knowledge distance for the selected Embeddings user.
   useEffect(() => {
     if (!showModels) return;
@@ -1913,15 +2022,57 @@ export function KnowledgeConfigTrajectoryPanel({
     };
   }, [embData]);
 
+  const rankingCards: KnowledgeRankingCard[] = useMemo(() => {
+    if (!showRanking) return [];
+    const subjects = availableSubjects.map((s) => ({
+      user_id: s.user_id,
+      guest_user_id: s.guest_user_id,
+      label: subjectOptionLabel(s, currentUserId),
+    }));
+    return buildKnowledgeRanking({
+      subjects,
+      runs: rankingRuns,
+      currentUserId,
+    });
+  }, [availableSubjects, currentUserId, rankingRuns, showRanking]);
+
+  // Preselect #1 (or keep selection if still present after refresh).
+  useEffect(() => {
+    if (!showRanking) return;
+    if (rankingCards.length === 0) {
+      setSelectedRankingKey(null);
+      return;
+    }
+    setSelectedRankingKey((prev) => {
+      if (prev && rankingCards.some((c) => c.subjectKey === prev)) return prev;
+      return rankingCards[0].subjectKey;
+    });
+  }, [rankingCards, showRanking]);
+
+  const selectedRankingCard = useMemo(() => {
+    if (!selectedRankingKey) return rankingCards[0] ?? null;
+    return rankingCards.find((c) => c.subjectKey === selectedRankingKey) ?? rankingCards[0] ?? null;
+  }, [rankingCards, selectedRankingKey]);
+
+  const selectedRankingReport = useMemo((): PerformanceReport | null => {
+    if (!selectedRankingCard?.report) return null;
+    try {
+      return normalizePerformanceReport(selectedRankingCard.report as PerformanceReport);
+    } catch {
+      return null;
+    }
+  }, [selectedRankingCard]);
+
   return (
     <div
       className={
-        showModels
+        showModels || showRanking
           ? "flex w-full min-h-0 flex-1 flex-col overflow-hidden"
           : "flex w-full min-h-0 flex-1 flex-col gap-5 overflow-y-auto"
       }
       data-models-tab={showModels ? "true" : undefined}
       data-lwm-tab={showLwm ? "true" : undefined}
+      data-ranking-tab={showRanking ? "true" : undefined}
       data-knowledge-panel-view={panelView}
     >
       {/* Embeddings: left pickers | center projection | right selected regions — no whole-tab scroll */}
@@ -3031,6 +3182,287 @@ export function KnowledgeConfigTrajectoryPanel({
               </div>
             ) : null}
           </div>
+        </section>
+      ) : null}
+
+      {/* Ranking — left list (#1 preselected) | right spider + strengths + gaps */}
+      {showRanking ? (
+        <section
+          data-section="ranking"
+          data-ranking-layout="list-detail"
+          className="flex min-h-0 w-full flex-1 flex-col gap-3 overflow-hidden"
+          aria-label="Knowledge ranking"
+        >
+          <div className="flex shrink-0 flex-wrap items-end justify-between gap-3">
+            <div>
+              <p className="text-[11px] font-medium uppercase tracking-wide text-neutral-500">
+                Ranking
+              </p>
+              <p className="mt-0.5 text-sm text-neutral-400">
+                Latest Snapshot + GHC per person
+                {canInspectOthers ? " — select a card for spider, strengths, and gaps" : ""}.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => void loadRanking()}
+              disabled={rankingLoading}
+              data-ranking-refresh
+              className="inline-flex items-center gap-1.5 rounded-md border border-neutral-700 bg-neutral-900 px-2.5 py-1 text-[11px] text-neutral-300 transition hover:border-neutral-500 hover:text-white disabled:opacity-50"
+            >
+              {rankingLoading ? "Refreshing…" : "Refresh"}
+            </button>
+          </div>
+
+          {rankingError ? (
+            <div
+              className="shrink-0 rounded-lg border border-red-900/50 bg-red-950/30 px-3 py-2 text-xs text-red-300"
+              data-ranking-error
+            >
+              {rankingError}
+            </div>
+          ) : null}
+
+          {rankingLoading && rankingCards.length === 0 ? (
+            <p className="text-xs text-neutral-500" data-ranking-loading>
+              Loading ranking…
+            </p>
+          ) : rankingCards.length === 0 ? (
+            <div
+              className="rounded-2xl border border-dashed border-neutral-700 bg-neutral-950/40 px-5 py-8 text-center"
+              data-ranking-empty
+            >
+              <p className="text-sm font-medium text-neutral-200">No subjects yet</p>
+              <p className="mx-auto mt-1 max-w-sm text-xs leading-relaxed text-neutral-500">
+                Generate LWM Snapshots from the Learning World Model tab to populate ranks.
+              </p>
+            </div>
+          ) : (
+            <div className="flex min-h-0 flex-1 gap-3">
+              {/* Left: single-column ranking list */}
+              <aside
+                className="flex w-64 shrink-0 flex-col overflow-hidden sm:w-72"
+                data-ranking-sidebar
+              >
+                <ol
+                  className="min-h-0 flex-1 space-y-2 overflow-y-auto overscroll-contain pr-0.5"
+                  data-ranking-list
+                  data-ranking-count={rankingCards.length}
+                >
+                  {rankingCards.map((card) => {
+                    const selected =
+                      (selectedRankingCard?.subjectKey ?? rankingCards[0]?.subjectKey) ===
+                      card.subjectKey;
+                    return (
+                      <li key={card.subjectKey}>
+                        <button
+                          type="button"
+                          onClick={() => setSelectedRankingKey(card.subjectKey)}
+                          className={`w-full rounded-xl border px-3 py-2.5 text-left transition ${
+                            selected
+                              ? "border-cyan-700/70 bg-cyan-950/30 ring-1 ring-cyan-800/40"
+                              : "border-neutral-800/90 bg-neutral-950/70 hover:border-neutral-600 hover:bg-neutral-900/60"
+                          }`}
+                          data-ranking-card={card.subjectKey}
+                          data-ranking-rank={card.rank}
+                          data-ranking-has-snapshot={card.hasSnapshot ? "true" : "false"}
+                          data-ranking-selected={selected ? "true" : "false"}
+                          aria-pressed={selected}
+                        >
+                          <div className="flex items-center justify-between gap-2">
+                            <p className="font-mono text-[10px] uppercase tracking-[1.2px] text-neutral-500">
+                              #{card.rank}
+                            </p>
+                            <div className="flex items-center gap-1.5 text-[10px] font-mono tabular-nums">
+                              <span
+                                className="rounded-full border border-cyan-900/50 bg-cyan-950/40 px-1.5 py-0.5 text-cyan-100"
+                                data-ranking-snapshot-score
+                              >
+                                {formatRankingScore(card.snapshotScore)}
+                              </span>
+                              <span
+                                className="rounded-full border border-amber-900/50 bg-amber-950/40 px-1.5 py-0.5 text-amber-100"
+                                data-ranking-ghc-score
+                              >
+                                {formatRankingScore(card.ghcScore)}
+                              </span>
+                            </div>
+                          </div>
+                          <p
+                            className="mt-1 truncate text-sm font-medium text-neutral-100"
+                            data-ranking-label
+                            title={card.label}
+                          >
+                            {card.label}
+                          </p>
+                          {card.ranAt ? (
+                            <p className="mt-0.5 text-[10px] text-neutral-500" data-ranking-ran-at>
+                              {new Date(card.ranAt).toLocaleString()}
+                            </p>
+                          ) : (
+                            <p
+                              className="mt-0.5 text-[10px] text-neutral-600"
+                              data-ranking-no-snapshot
+                            >
+                              No snapshot yet
+                            </p>
+                          )}
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ol>
+              </aside>
+
+              {/* Right: selected report highlights — spider, strengths, gaps only */}
+              <div
+                className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto overscroll-contain rounded-xl border border-neutral-800/90 bg-neutral-950/50"
+                data-ranking-detail
+                data-ranking-detail-subject={selectedRankingCard?.subjectKey ?? ""}
+              >
+                {selectedRankingCard ? (
+                  <div className="flex flex-col gap-4 p-4 sm:p-5">
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="font-mono text-[10px] uppercase tracking-[1.2px] text-neutral-500">
+                          #{selectedRankingCard.rank} · detail
+                        </p>
+                        <h3
+                          className="mt-0.5 truncate text-lg font-medium text-white"
+                          data-ranking-detail-label
+                        >
+                          {selectedRankingCard.label}
+                        </h3>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        <div className="rounded-lg border border-cyan-900/40 bg-cyan-950/20 px-3 py-1.5">
+                          <p className="text-[10px] uppercase tracking-wide text-cyan-300/80">
+                            Snapshot
+                          </p>
+                          <p className="font-mono text-xl font-semibold tabular-nums text-cyan-100">
+                            {formatRankingScore(selectedRankingCard.snapshotScore)}
+                          </p>
+                        </div>
+                        <div className="rounded-lg border border-amber-900/40 bg-amber-950/20 px-3 py-1.5">
+                          <p className="text-[10px] uppercase tracking-wide text-amber-300/80">
+                            GHC
+                          </p>
+                          <p className="font-mono text-xl font-semibold tabular-nums text-amber-100">
+                            {formatRankingScore(selectedRankingCard.ghcScore)}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {!selectedRankingCard.hasSnapshot || !selectedRankingReport ? (
+                      <div
+                        className="rounded-lg border border-dashed border-neutral-700 px-4 py-8 text-center text-sm text-neutral-500"
+                        data-ranking-detail-empty
+                      >
+                        {selectedRankingCard.hasSnapshot
+                          ? "This snapshot has no report body (spider / strengths / gaps unavailable)."
+                          : "No snapshot for this person yet — generate one from Learning World Model."}
+                      </div>
+                    ) : (
+                      <>
+                        {/* Spider / competency radar */}
+                        <div
+                          className="rounded-lg border border-neutral-800 bg-black/20 px-3 py-4"
+                          data-ranking-detail-spider
+                        >
+                          <div className="font-mono text-[10px] uppercase tracking-[1.5px] text-neutral-500">
+                            Competency profile
+                          </div>
+                          {(selectedRankingReport.marker_scores ?? []).length > 0 ? (
+                            <div className="mt-3 flex justify-center">
+                              <MarkerRadarChart
+                                markers={selectedRankingReport.marker_scores ?? []}
+                                variant="large"
+                                ariaLabel="Competency marker scores"
+                                className="aspect-square h-auto w-full max-w-[min(100%,22rem)]"
+                              />
+                            </div>
+                          ) : (
+                            <p className="mt-3 text-xs text-neutral-500">
+                              No marker scores on this snapshot.
+                            </p>
+                          )}
+                        </div>
+
+                        {/* Strengths */}
+                        <div data-ranking-detail-strengths>
+                          <div className="font-mono text-[10px] uppercase tracking-[1.5px] text-neutral-500">
+                            Strengths
+                          </div>
+                          {(selectedRankingReport.strengths ?? []).length > 0 ? (
+                            <ul className="mt-2 space-y-1.5 text-sm leading-relaxed text-neutral-300">
+                              {selectedRankingReport.strengths.map((item) => (
+                                <li key={item} className="flex gap-2">
+                                  <span className="text-emerald-500/80">+</span>
+                                  <span>{item}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          ) : (
+                            <p className="mt-2 text-xs text-neutral-500">No strengths listed.</p>
+                          )}
+                        </div>
+
+                        {/* Gaps only (no next steps) */}
+                        <div data-ranking-detail-gaps>
+                          <div className="font-mono text-[10px] uppercase tracking-[1.5px] text-neutral-500">
+                            Gaps
+                          </div>
+                          {(() => {
+                            const gapAnalysis = normalizePerformanceGapAnalysis(
+                              selectedRankingReport.gap_analysis,
+                            );
+                            if (gapAnalysis.gaps.length === 0) {
+                              return (
+                                <p className="mt-2 text-xs text-neutral-500">
+                                  {gapAnalysis.summary || "No gaps identified."}
+                                </p>
+                              );
+                            }
+                            return (
+                              <div className="mt-2 space-y-2">
+                                {gapAnalysis.summary ? (
+                                  <p className="text-xs leading-relaxed text-neutral-400">
+                                    {gapAnalysis.summary}
+                                  </p>
+                                ) : null}
+                                <ul className="space-y-2">
+                                  {gapAnalysis.gaps.map((gap) => (
+                                    <li
+                                      key={gap.title}
+                                      className="rounded-md border border-neutral-800 bg-neutral-950/60 px-3 py-2 text-xs"
+                                      data-ranking-gap={gap.title}
+                                    >
+                                      <div className="font-medium text-neutral-200">{gap.title}</div>
+                                      {gap.proof_of_work ? (
+                                        <p className="mt-1 leading-relaxed text-neutral-400">
+                                          {gap.proof_of_work}
+                                        </p>
+                                      ) : null}
+                                      {gap.suggested_repair ? (
+                                        <p className="mt-1 text-neutral-500">
+                                          Repair: {gap.suggested_repair}
+                                        </p>
+                                      ) : null}
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            );
+                          })()}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                ) : null}
+              </div>
+            </div>
+          )}
         </section>
       ) : null}
 

@@ -49,6 +49,8 @@ import { DEFAULT_MODEL } from "@/lib/xai-models";
 const MODEL_STORAGE_KEY = "planner-model";
 const DEFAULT_PLANNER_MODEL = DEFAULT_MODEL;
 const APPEAR_STAGGER_MS = 140;
+/** Stable default — a fresh `[]` each render would re-fire the appear effect forever. */
+const EMPTY_APPEARING_NODE_IDS: string[] = [];
 
 interface BlockSkillGridProps {
   nodes: SkillGridNode[];
@@ -241,7 +243,7 @@ export function BlockSkillGrid({
   followCell = null,
   onAddBlock,
   onGridOp,
-  appearingNodeIds = [],
+  appearingNodeIds = EMPTY_APPEARING_NODE_IDS,
   onAppearingComplete,
   labels,
 }: BlockSkillGridProps) {
@@ -365,15 +367,23 @@ export function BlockSkillGrid({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [followCell?.row, followCell?.col, viewportSize.width, viewportSize.height]);
 
-  // Sequential appear animation for AI-added blocks
+  // Sequential appear animation for AI-added blocks.
+  // Depend on id *contents* (not array identity) and keep onAppearingComplete in a ref so
+  // unstable parent callbacks cannot restart the effect every render.
+  const appearingKey = appearingNodeIds.join("\0");
+  const onAppearingCompleteRef = useRef(onAppearingComplete);
+  onAppearingCompleteRef.current = onAppearingComplete;
+
   useEffect(() => {
-    if (!appearingNodeIds.length) {
-      setVisibleAppearing(new Set());
+    if (!appearingKey) {
+      // Only clear when non-empty — setState(new Set()) every time loops max update depth.
+      setVisibleAppearing((prev) => (prev.size === 0 ? prev : new Set()));
       return;
     }
+    const ids = appearingKey.split("\0").filter(Boolean);
     setVisibleAppearing(new Set());
     const timers: ReturnType<typeof setTimeout>[] = [];
-    appearingNodeIds.forEach((id, index) => {
+    ids.forEach((id, index) => {
       timers.push(
         setTimeout(() => {
           setVisibleAppearing((prev) => new Set(prev).add(id));
@@ -381,11 +391,11 @@ export function BlockSkillGrid({
       );
     });
     const done = setTimeout(() => {
-      onAppearingComplete?.(appearingNodeIds);
-    }, appearingNodeIds.length * APPEAR_STAGGER_MS + 420);
+      onAppearingCompleteRef.current?.(ids);
+    }, ids.length * APPEAR_STAGGER_MS + 420);
     timers.push(done);
     return () => timers.forEach(clearTimeout);
-  }, [appearingNodeIds, onAppearingComplete]);
+  }, [appearingKey]);
 
   const recenter = useCallback(() => {
     const nextZoom = getDefaultSkillGridZoom(viewportSize.width, viewportSize.height);

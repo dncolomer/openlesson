@@ -91,6 +91,12 @@ describe("workspace create + builder static wiring", () => {
     expect(grid).toContain("appearingNodeIds");
     expect(grid).toContain("APPEAR_STAGGER_MS");
     expect(grid).toMatch(/opacity|fade|shadow/);
+    // Avoid max-update-depth: stable empty default + content key + no setState(new Set()) every empty run
+    expect(grid).toContain("EMPTY_APPEARING_NODE_IDS");
+    expect(grid).toContain("appearingKey");
+    expect(grid).toContain("onAppearingCompleteRef");
+    expect(grid).toMatch(/prev\.size === 0 \? prev : new Set\(\)/);
+    expect(grid).not.toMatch(/appearingNodeIds = \[\]/);
     const list = read("components/SessionList.tsx");
     expect(list).toContain("appearingNodeIds");
     expect(list).toContain("setAppearingNodeIds");

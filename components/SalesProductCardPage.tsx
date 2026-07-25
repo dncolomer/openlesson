@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { ArrowLeft, ArrowRight, Calendar } from "lucide-react";
 import type { SalesProductCard } from "@/lib/sales/product-cards";
@@ -150,6 +151,29 @@ export function SalesProductCardPage({ card }: SalesProductCardPageProps) {
             uncertain.systems · noindex
           </p>
         </div>
+
+        {card.image ? (
+          <figure
+            className="mt-8 overflow-hidden rounded-sm border border-zinc-800 bg-zinc-950/80 shadow-[0_20px_60px_-28px_rgba(0,0,0,0.9)]"
+            data-sales-product-visual
+            data-sales-product-image={card.image}
+          >
+            <Image
+              src={card.image}
+              alt={card.imageAlt || card.title}
+              width={2080}
+              height={1644}
+              className="h-auto w-full object-cover object-top"
+              sizes="(max-width: 768px) 100vw, 768px"
+              priority
+            />
+            {card.imageCaption ? (
+              <figcaption className="border-t border-zinc-800/90 px-4 py-3 font-mono text-[10px] uppercase tracking-[1.4px] text-zinc-500 sm:px-5">
+                {card.imageCaption}
+              </figcaption>
+            ) : null}
+          </figure>
+        ) : null}
 
         <div className="mt-10 space-y-5">
           <Section title="What it is">

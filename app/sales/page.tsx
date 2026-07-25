@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { PITCH_INDEX } from "@/lib/sales/pitch-index";
@@ -52,9 +53,24 @@ export default function SalesIndexPage() {
               <li key={card.path}>
                 <Link
                   href={card.path}
-                  className="group flex flex-col gap-3 border border-zinc-800 bg-zinc-950/70 p-5 transition hover:border-zinc-600 sm:flex-row sm:items-center sm:justify-between sm:p-6"
+                  className="group flex flex-col gap-4 border border-zinc-800 bg-zinc-950/70 p-5 transition hover:border-zinc-600 sm:flex-row sm:items-stretch sm:gap-5 sm:p-6"
+                  data-sales-index-product={card.slug}
                 >
-                  <div className="min-w-0">
+                  {card.image ? (
+                    <div
+                      className="relative aspect-[16/11] w-full shrink-0 overflow-hidden rounded-sm border border-zinc-800/90 bg-zinc-950 sm:aspect-auto sm:h-auto sm:w-44 md:w-52"
+                      data-sales-index-thumb={card.image}
+                    >
+                      <Image
+                        src={card.image}
+                        alt={card.imageAlt || card.title}
+                        fill
+                        className="object-cover object-top transition duration-300 group-hover:scale-[1.02]"
+                        sizes="(max-width: 640px) 100vw, 208px"
+                      />
+                    </div>
+                  ) : null}
+                  <div className="flex min-w-0 flex-1 flex-col justify-center">
                     <p className="font-mono text-[10px] uppercase tracking-[1.6px] text-zinc-500">
                       {card.eyebrow}
                     </p>
@@ -66,7 +82,7 @@ export default function SalesIndexPage() {
                     </p>
                     <p className="mt-3 font-mono text-xs text-zinc-600">{card.path}</p>
                   </div>
-                  <span className="inline-flex shrink-0 items-center gap-1.5 text-sm font-medium text-zinc-300 transition group-hover:text-white">
+                  <span className="inline-flex shrink-0 items-center gap-1.5 self-start text-sm font-medium text-zinc-300 transition group-hover:text-white sm:self-center">
                     Open card
                     <ArrowRight size={14} />
                   </span>

@@ -17,6 +17,13 @@ export type SalesProductCard = {
   eyebrow: string;
   oneLine: string;
   whatItIs: string;
+  /**
+   * Optional product visual (public path). Same assets as landing PLATFORM /
+   * Verification at Scale sections when relevant.
+   */
+  image?: string;
+  imageAlt?: string;
+  imageCaption?: string;
   specs: SalesTableRow[];
   inputsHeading: string;
   inputs: SalesTableRow[];
@@ -56,6 +63,10 @@ export const SALES_PRODUCT_CARDS: SalesProductCard[] = [
       "Candidates open a private link, complete a ~15-minute self-service think-aloud evaluation, and the client receives a role ranking plus optional per-candidate strength/weakness reports.",
     whatItIs:
       "An async screening product for high-volume hiring. Each candidate gets a link, goes through a timed self-service evaluation (~15 minutes), and thinks out loud through an interactive dialog (Think Aloud Protocol). No interviewer needs to be on the call.",
+    image: "/ranking_app.png",
+    imageAlt:
+      "Role ranking UI — candidates ordered by latest Snapshot and GHC scores with strengths and gaps detail",
+    imageCaption: "Client deliverable · role ranking + per-candidate Snapshot / GHC detail",
     specs: [
       { label: "Format", value: "Private session link" },
       { label: "Duration", value: "~15 minutes, timed" },
@@ -180,6 +191,11 @@ export const SALES_PRODUCT_CARDS: SalesProductCard[] = [
       "Candidates complete an open-ended, multi-block assignment inside the tool (discussion, diagrams, notes, and more); the client gets a role ranking and per-applicant strengths/weaknesses — without the classic take-home cost curve.",
     whatItIs:
       "An autonomous take-home where candidates work through multiple blocks in the product — not a single timed chat and not a silent weekend PDF. Work can include interactive discussion, diagrams, written notes, and other real work artifacts produced in-session. Built for depth (assignment / project-style judgment) while remaining structured and scoreable across a full hiring cohort.",
+    image: "/knowledgeg2.png",
+    imageAlt:
+      "Knowledge embeddings projection with role regions and multi-subject trajectories",
+    imageCaption:
+      "In-product signal · multi-block work projected into knowledge space with role regions",
     specs: [
       { label: "Format", value: "Private assignment journey (multi-block)" },
       { label: "Scope", value: "Open-ended work sample across several blocks" },

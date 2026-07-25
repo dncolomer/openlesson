@@ -178,10 +178,10 @@ export default function B2BLandingPage() {
               data-landing-ranking-visual
             >
               <Image
-                src="/ranking.jpg"
+                src="/ranking_app.png"
                 alt="Candidate ranking by proximity to a knowledge region bar"
-                width={1312}
-                height={784}
+                width={2080}
+                height={1644}
                 className="h-auto w-full object-cover object-center"
                 sizes="(max-width: 768px) 100vw, 560px"
                 priority

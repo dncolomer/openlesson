@@ -78,13 +78,19 @@ export default function B2BLandingPage() {
       <section id="platform" className="relative z-10 mx-auto max-w-6xl px-6 pb-8 pt-2 sm:pb-10">
         <SectionHeading
           eyebrow="PLATFORM"
-          title="See skill as distance in knowledge space — not a quiz score."
+          title="See skill as distance in knowledge space."
         />
         <p className="mt-4 max-w-3xl text-base leading-relaxed text-zinc-400 sm:text-lg">
           Every workspace projects people and roles into a shared embedding geometry. Overlay role regions,
           multi-select subjects, and read{" "}
           <span className="text-zinc-200">knowledge distance</span> live — who is already in region for Backend,
           who sits outside SRE, and how the team cohort is moving over time.
+        </p>
+        <p className="mt-3 max-w-3xl text-base leading-relaxed text-zinc-500 sm:text-[15px]">
+          Create{" "}
+          <span className="text-zinc-300">custom knowledge regions</span> from internal experts, including{" "}
+          <span className="text-zinc-300">private</span> ones when “knowing X” is proprietary — then evaluate
+          candidates and teammates against that geometry.
         </p>
         <div
           className="mt-6 overflow-hidden rounded-sm border border-zinc-800 bg-zinc-950/80 shadow-[0_0_0_1px_rgba(255,255,255,0.03)]"
@@ -112,7 +118,7 @@ export default function B2BLandingPage() {
         </div>
       </section>
 
-      <section id="approach" className="relative z-10 mx-auto max-w-6xl px-6 pb-10 sm:pb-12">
+      <section id="approach" className="relative z-10 mx-auto max-w-6xl px-6 pb-8 sm:pb-10">
         <SectionHeading
           eyebrow="THE APPROACH"
           title="A learning world model, not linear analytics."
@@ -133,6 +139,55 @@ export default function B2BLandingPage() {
             to what the workspace already knows. One model, three verticals — embedded in your existing
             tools.
           </p>
+        </div>
+      </section>
+
+      {/* Last content section before footer */}
+      <section
+        id="scale"
+        className="relative z-10 mx-auto max-w-6xl px-6 pb-12 sm:pb-16"
+        data-landing-scale-section
+      >
+        <div className="grid items-center gap-8 md:grid-cols-2 md:gap-10 lg:gap-12">
+          <div className="min-w-0">
+            <div className="mb-3 font-mono text-[10px] uppercase tracking-[2px] text-zinc-500">
+              VERIFICATION AT SCALE
+            </div>
+            <h2 className="max-w-xl text-3xl font-medium leading-[1.1] tracking-[-1.2px] text-white sm:text-4xl">
+              Hire, screen, and rank against your bar — at volume.
+            </h2>
+            <div className="mt-4 space-y-3 text-base leading-relaxed text-zinc-400 sm:text-[15px]">
+              <p>
+                The same measurement stack scales human verification — from{" "}
+                <span className="text-zinc-200">recruitment at volume</span> to internal mobility and agent
+                deploy gates — without stuffing proprietary skill into a public quiz bank.
+              </p>
+              <p>
+                Hosted{" "}
+                <span className="text-zinc-200">TAP</span> links run live, time-framed screening for high-volume
+                hiring without building your own UX.{" "}
+                <span className="text-zinc-200">ILE</span> adds open-ended assignment depth when judgment and
+                tradeoffs matter. Compare applicants on the same role region; surface reasoning multiple-choice
+                cannot fake.
+              </p>
+            </div>
+          </div>
+          <div className="min-w-0 w-full md:justify-self-end">
+            <figure
+              className="overflow-hidden rounded-sm border border-zinc-800 bg-zinc-950/80 shadow-[0_20px_60px_-24px_rgba(0,0,0,0.85)] md:max-w-lg lg:max-w-xl md:ml-auto"
+              data-landing-ranking-visual
+            >
+              <Image
+                src="/ranking.jpg"
+                alt="Candidate ranking by proximity to a knowledge region bar"
+                width={1312}
+                height={784}
+                className="h-auto w-full object-cover object-center"
+                sizes="(max-width: 768px) 100vw, 560px"
+                priority
+              />
+            </figure>
+          </div>
         </div>
       </section>
 

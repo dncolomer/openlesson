@@ -55,9 +55,23 @@ describe("marketing nav and platform rename", () => {
     expect(page).toContain("See the platform");
     expect(page).toContain("/knowledgeg2.png");
     expect(page).toContain("data-landing-knowledge-visual");
+    expect(page).toContain("knowledge distance");
+    expect(page).toContain("custom knowledge regions");
+    expect(page).toContain("private");
+    // Scale is the last content section (after THE APPROACH) with ranking visual
+    expect(page).toContain('id="scale"');
+    expect(page).toContain("data-landing-scale-section");
+    expect(page).toContain("data-landing-ranking-visual");
+    expect(page).toContain("/ranking.jpg");
+    expect(page).toMatch(/recruitment at volume|high-volume hiring/i);
     expect(page).toContain('eyebrow="THE APPROACH"');
-    // Platform section appears before THE APPROACH in source order
+    expect(page).not.toContain("— not a quiz score.");
+    // Platform → approach → scale (last before footer)
     expect(page.indexOf('id="platform"')).toBeLessThan(page.indexOf('id="approach"'));
+    expect(page.indexOf('id="approach"')).toBeLessThan(page.indexOf('id="scale"'));
+    expect(page.indexOf('id="scale"')).toBeLessThan(page.indexOf("<Footer"));
+    // Ranking asset ships in public/
+    expect(existsSync(join(ROOT, "public/ranking.jpg"))).toBe(true);
     // Former product-list suite section is gone
     expect(page).not.toContain("A Product Suite for Humans and AI Agents");
     expect(page).not.toContain("ProductTable");

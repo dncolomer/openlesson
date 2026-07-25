@@ -58,8 +58,13 @@ describe("TAP + ILE mount Auto-stash context bar", () => {
     expect(bar).toContain("AUTO_STASH_CONTEXT_LABEL");
     expect(bar).toContain("data-auto-stash-context-bar");
     expect(bar).toContain("data-auto-stash-context-label");
+    expect(bar).toContain("data-auto-stash-context-track");
     expect(bar).toContain("animate-pulse");
     expect(bar).toContain("thoughtContextBarToneClass");
+    // Same vertical geometry as purity markers (label + h-7 content)
+    expect(bar).toContain("flex-col gap-1");
+    expect(bar).toContain("h-7");
+    expect(bar).not.toContain("mb-1 flex items-center justify-between");
 
     const tap = fs.readFileSync(path.join(ROOT, "components/TapScoreClient.tsx"), "utf8");
     expect(tap).toContain("AutoStashContextBar");
@@ -75,6 +80,8 @@ describe("TAP + ILE mount Auto-stash context bar", () => {
     // Silence purity path still present
     expect(tap).toContain("shouldAutoStashOnSilence");
     expect(tap).toContain("applyPurityHit");
+    // No misaligned self-end/padding wrapper around the bar
+    expect(tap).not.toMatch(/self-end pb-0\.5[\s\S]{0,80}AutoStashContextBar/);
 
     const ile = fs.readFileSync(path.join(ROOT, "components/SessionHeliosPanel.tsx"), "utf8");
     expect(ile).toContain("AutoStashContextBar");

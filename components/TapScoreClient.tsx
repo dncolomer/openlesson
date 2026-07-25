@@ -1331,6 +1331,7 @@ export function TapScoreClient({
                   className="mb-3 flex w-full flex-wrap items-end justify-between gap-3 border-b border-neutral-900/80 pb-3"
                   data-tap-live-control-strip
                 >
+                  {/* items-end + shared label/h-7 columns keep Time, Purity, Auto-stash vertically aligned */}
                   <div className="flex min-w-0 flex-1 flex-wrap items-end gap-4 sm:gap-5">
                     <div className="flex shrink-0 flex-col gap-1">
                       <div className="font-mono text-[10px] uppercase leading-none tracking-[2px] text-neutral-600">
@@ -1378,13 +1379,13 @@ export function TapScoreClient({
                         </span>
                       </div>
                     </div>
-                    {/* Purity → Auto-stash context → End session */}
-                    <div className="min-w-[8rem] max-w-md flex-1 self-end pb-0.5">
+                    {/* Purity → Auto-stash context → End session (same column geometry as purity) */}
+                    <div className="min-w-[8rem] max-w-md flex-1">
                       <AutoStashContextBar data-surface="tap" text={crystallizableText} />
                     </div>
                   </div>
                   {showEndSession ? (
-                    <div className="flex shrink-0 flex-wrap items-center gap-2 self-end" data-tap-end-session>
+                    <div className="flex h-[calc(0.625rem+0.25rem+1.75rem)] shrink-0 flex-wrap items-end gap-2" data-tap-end-session>
                       <ThoughtButton size="sm" variant="primary" onClick={() => void endSession()}>
                         End session
                       </ThoughtButton>

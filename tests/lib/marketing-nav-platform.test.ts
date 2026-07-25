@@ -47,12 +47,20 @@ describe("marketing nav and platform rename", () => {
     expect(footer).not.toContain("footer.useCases");
   });
 
-  it("home platform section uses #platform / PLATFORM wording, not products section chrome", () => {
+  it("home platform section is knowledge visual above THE APPROACH (no product suite table)", () => {
     const page = read("app/page.tsx");
     expect(page).toContain('id="platform"');
     expect(page).toContain('eyebrow="PLATFORM"');
     expect(page).toContain("#platform");
     expect(page).toContain("See the platform");
+    expect(page).toContain("/knowledgeg2.png");
+    expect(page).toContain("data-landing-knowledge-visual");
+    expect(page).toContain('eyebrow="THE APPROACH"');
+    // Platform section appears before THE APPROACH in source order
+    expect(page.indexOf('id="platform"')).toBeLessThan(page.indexOf('id="approach"'));
+    // Former product-list suite section is gone
+    expect(page).not.toContain("A Product Suite for Humans and AI Agents");
+    expect(page).not.toContain("ProductTable");
     expect(page).not.toContain('id="products"');
     expect(page).not.toContain('eyebrow="PRODUCTS"');
     expect(page).not.toContain("See the products");

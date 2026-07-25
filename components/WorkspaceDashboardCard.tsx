@@ -18,16 +18,12 @@ interface WorkspaceDashboardCardProps {
   archivingWorkspaceId: string | null;
   publicLabel: string;
   privateLabel: string;
-  /** When set, Snapshot button shows loading for this workspace. */
-  snapshottingWorkspaceId?: string | null;
   /** Whether this workspace is pinned to the top of the Dashboard list. */
   isPinned?: boolean;
   onArchive: (workspaceId: string) => void;
   onRestore: (workspaceId: string) => void;
   onToggleVisibility: (plan: Workspace) => void;
   onTogglePin?: (plan: Workspace) => void;
-  /** Owner: run LWM Snapshot for every user of this workspace. */
-  onSnapshotAll?: (plan: Workspace) => void;
 }
 
 export function WorkspaceDashboardCard({
@@ -36,16 +32,13 @@ export function WorkspaceDashboardCard({
   archivingWorkspaceId,
   publicLabel,
   privateLabel,
-  snapshottingWorkspaceId = null,
   isPinned = false,
   onArchive,
   onRestore,
   onToggleVisibility,
   onTogglePin,
-  onSnapshotAll,
 }: WorkspaceDashboardCardProps) {
   const isPublic = plan.is_public ?? false;
-  const isSnapshotting = snapshottingWorkspaceId === plan.id;
   const subtitle =
     plan.root_topic !== plan.title && plan.title
       ? plan.root_topic
@@ -159,18 +152,6 @@ export function WorkspaceDashboardCard({
             >
               {isPublic ? publicLabel : privateLabel}
             </button>
-            {onSnapshotAll ? (
-              <button
-                type="button"
-                onClick={() => onSnapshotAll(plan)}
-                disabled={isSnapshotting || plan.status === "archived"}
-                data-workspace-snapshot-all
-                title="Generate an LWM Snapshot for every user of this workspace"
-                className="rounded-md border border-cyan-800/70 bg-cyan-950/30 px-2.5 py-1 text-xs text-cyan-300 transition hover:border-cyan-600/80 hover:bg-cyan-950/50 hover:text-cyan-100 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {isSnapshotting ? "Snapshotting…" : "Snapshot"}
-              </button>
-            ) : null}
           </div>
         </div>
       </div>

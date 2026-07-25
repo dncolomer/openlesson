@@ -1,10 +1,14 @@
 /**
- * Staging-only verification for the SaaS tech-team demo workspace.
- * Reads via connectTarget("staging") and asserts acceptance criteria.
+ * Verify the Helios Cloud (SaaS tech-team) demo workspace on staging or production.
+ *
+ * SAFETY: default target is staging. Production only when explicitly requested:
+ *   --target=prod
  *
  * Usage:
  *   ./node_modules/vite-node/vite-node.mjs --config vitest.config.ts \
  *     scripts/verify-saas-tech-team-demo-workspace.ts
+ *   ./node_modules/vite-node/vite-node.mjs --config vitest.config.ts \
+ *     scripts/verify-saas-tech-team-demo-workspace.ts --target=prod
  */
 
 import { connectTarget } from "./db-connection.mjs";
@@ -24,10 +28,17 @@ import {
   KNOWLEDGE_CONFIG_EMBEDDING_MODEL_ID,
   scoreAgainstCustomVerificationModel,
 } from "../lib/knowledge-config";
+import { parseSaasTechDemoSeedTarget } from "./saas-tech-demo-target";
 
 async function main() {
-  const { client, via } = await connectTarget("staging");
-  console.log(`[verify-saas-tech-demo] connected via ${via}`);
+  const target = parseSaasTechDemoSeedTarget(process.argv);
+  console.log(`[verify-saas-tech-demo] target=${target} marker=${SAAS_TECH_DEMO_MARKER}`);
+  if (target === "prod") {
+    console.log("[verify-saas-tech-demo] PRODUCTION READ: intentional --target=prod");
+  }
+
+  const { client, via } = await connectTarget(target);
+  console.log(`[verify-saas-tech-demo] connected target=${target} via ${via}`);
 
   try {
     const ws = await client.query(
@@ -243,7 +254,7 @@ async function main() {
 
     const summary = {
       success: true,
-      target: "staging",
+      target,
       workspace_id: workspaceId,
       title,
       owner_email: ownerEmail,

@@ -43,8 +43,8 @@ describe("workspace snapshot-all subjects (pure)", () => {
   });
 });
 
-describe("workspace dashboard card snapshot UX", () => {
-  it("shows two cards per row and Snapshot next to public/private", () => {
+describe("workspace dashboard card layout", () => {
+  it("shows two cards per row; no Snapshot button on dashboard cards", () => {
     const card = join(root, "components/WorkspaceDashboardCard.tsx");
     const dash = join(root, "app/dashboard/page.tsx");
     const route = join(root, "app/api/workspaces/[id]/snapshot-all/route.ts");
@@ -56,23 +56,25 @@ describe("workspace dashboard card snapshot UX", () => {
     const dashSrc = readFileSync(dash, "utf8");
     const routeSrc = readFileSync(route, "utf8");
 
-    expect(cardSrc).toContain("Snapshot");
-    expect(cardSrc).toContain("data-workspace-snapshot-all");
-    expect(cardSrc).toContain("onSnapshotAll");
-    // Private/public still present
+    // Snapshot is LWM-only; dashboard cards keep pin / archive / visibility only
+    expect(cardSrc).not.toContain("data-workspace-snapshot-all");
+    expect(cardSrc).not.toContain("onSnapshotAll");
+    expect(cardSrc).not.toMatch(/>\s*Snapshot\s*</);
     expect(cardSrc).toContain("publicLabel");
     expect(cardSrc).toContain("privateLabel");
+    expect(cardSrc).toContain("onTogglePin");
 
-    expect(dashSrc).toContain('md:grid-cols-2');
+    expect(dashSrc).toContain("md:grid-cols-2");
     expect(dashSrc).not.toContain("xl:grid-cols-3");
     expect(dashSrc).toContain("data-workspace-cards-grid");
-    expect(dashSrc).toContain("handleSnapshotAll");
-    expect(dashSrc).toContain("/snapshot-all");
+    expect(dashSrc).not.toContain("handleSnapshotAll");
+    expect(dashSrc).not.toContain("onSnapshotAll");
+    expect(dashSrc).not.toContain("snapshottingWorkspaceId");
 
+    // snapshot-all API remains for in-workspace LWM
     expect(routeSrc).toContain("listWorkspaceSnapshotSubjects");
     expect(routeSrc).toContain("runVerticalScore");
     expect(routeSrc).toContain("Only the workspace owner");
-    // Progressive NDJSON for LWM; JSON summary still default for dashboard
     expect(routeSrc).toContain("application/x-ndjson");
     expect(routeSrc).toContain("stream");
   });

@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import { ArrowRight } from "lucide-react";
 import { Footer } from "@/components/Footer";
 import { LandingNav } from "@/components/LandingNav";
-import { ProductTable } from "@/components/ProductTable";
 import { TrackedCtaLink } from "@/components/TrackedCtaLink";
 import { trackCtaClick } from "@/lib/analytics";
 import { HERO_PILLAR_PAGES } from "@/lib/seo/use-case-page";
@@ -75,7 +75,44 @@ export default function B2BLandingPage() {
         </div>
       </section>
 
-      <section id="approach" className="relative z-10 mx-auto max-w-6xl px-6 pb-4 sm:pb-6">
+      <section id="platform" className="relative z-10 mx-auto max-w-6xl px-6 pb-8 pt-2 sm:pb-10">
+        <SectionHeading
+          eyebrow="PLATFORM"
+          title="See skill as distance in knowledge space — not a quiz score."
+        />
+        <p className="mt-4 max-w-3xl text-base leading-relaxed text-zinc-400 sm:text-lg">
+          Every workspace projects people and roles into a shared embedding geometry. Overlay role regions,
+          multi-select subjects, and read{" "}
+          <span className="text-zinc-200">knowledge distance</span> live — who is already in region for Backend,
+          who sits outside SRE, and how the team cohort is moving over time.
+        </p>
+        <div
+          className="mt-6 overflow-hidden rounded-sm border border-zinc-800 bg-zinc-950/80 shadow-[0_0_0_1px_rgba(255,255,255,0.03)]"
+          data-landing-knowledge-visual
+        >
+          <div className="relative aspect-[16/9] w-full sm:aspect-[2918/1656]">
+            <Image
+              src="/knowledgeg2.png"
+              alt="Uncertain Systems Knowledge embeddings — multi-user projection with role regions and knowledge distance"
+              fill
+              className="object-cover object-top"
+              sizes="(max-width: 1152px) 100vw, 1152px"
+              priority
+            />
+          </div>
+          <div className="border-t border-zinc-800/90 px-4 py-3 sm:px-5 sm:py-3.5">
+            <p className="font-mono text-[10px] uppercase tracking-[1.6px] text-zinc-500">
+              Knowledge · Embeddings · Role regions · Proof of Work
+            </p>
+            <p className="mt-1.5 max-w-3xl text-sm leading-relaxed text-zinc-400">
+              Same stack that powers verification, optimization, and augmentation — a living map of proximity to
+              “knowing X,” grounded in real work traces rather than multiple-choice pass rates.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section id="approach" className="relative z-10 mx-auto max-w-6xl px-6 pb-10 sm:pb-12">
         <SectionHeading
           eyebrow="THE APPROACH"
           title="A learning world model, not linear analytics."
@@ -96,16 +133,6 @@ export default function B2BLandingPage() {
             to what the workspace already knows. One model, three verticals — embedded in your existing
             tools.
           </p>
-        </div>
-      </section>
-
-      <section id="platform" className="relative z-10 mx-auto max-w-6xl px-6 py-10 sm:py-12">
-        <SectionHeading eyebrow="PLATFORM" title="A Product Suite for Humans and AI Agents" />
-        <p className="mt-3 max-w-2xl text-sm text-zinc-500">
-          Verify and augment learning for humans and agents — same workspace, one measurement stack.
-        </p>
-        <div className="mt-5">
-          <ProductTable />
         </div>
       </section>
 

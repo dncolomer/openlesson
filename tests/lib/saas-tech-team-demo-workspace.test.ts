@@ -3,6 +3,8 @@
  * Exercises shipped knowledge-config / custom-verification APIs — no hardcoded vectors.
  */
 import { describe, expect, it } from "vitest";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import {
   KNOWLEDGE_CONFIG_DIM,
   KNOWLEDGE_CONFIG_EMBEDDING_MODEL_ID,
@@ -32,6 +34,7 @@ import {
   roleRegionByKey,
   scoreSubjectsAgainstRoleRegions,
 } from "@/lib/demo/saas-tech-team-demo-workspace";
+import { parseSaasTechDemoSeedTarget } from "../../scripts/saas-tech-demo-target";
 
 describe("saas tech-team demo workspace (pure helpers)", () => {
   it("workspace copy is authentic multi-role SaaS use case with stable demo marker", () => {
@@ -203,5 +206,48 @@ describe("saas tech-team demo workspace (pure helpers)", () => {
     expect(all.length).toBe(DEMO_SUBJECTS.length + 1);
     expect(all.some((e) => e.subject.isOwnerUser)).toBe(true);
     expect(all.filter((e) => !e.subject.isOwnerUser)).toHaveLength(DEMO_SUBJECTS.length);
+  });
+});
+
+describe("saas tech-team demo seed target selection", () => {
+  it("defaults to staging; requires explicit --target=prod for production", () => {
+    expect(parseSaasTechDemoSeedTarget(["node", "script.ts"])).toBe("staging");
+    expect(parseSaasTechDemoSeedTarget(["node", "script.ts", "--target=staging"])).toBe(
+      "staging",
+    );
+    expect(parseSaasTechDemoSeedTarget(["node", "script.ts", "--target=prod"])).toBe("prod");
+    expect(parseSaasTechDemoSeedTarget(["node", "script.ts", "--target=production"])).toBe(
+      "prod",
+    );
+    expect(() =>
+      parseSaasTechDemoSeedTarget(["node", "script.ts", "--target=preview"]),
+    ).toThrow(/Refusing target/);
+  });
+
+  it("seed and verify scripts wire parse + connectTarget for staging and prod", () => {
+    const root = join(__dirname, "../..");
+    const seed = readFileSync(
+      join(root, "scripts/seed-saas-tech-team-demo-workspace.ts"),
+      "utf8",
+    );
+    const verify = readFileSync(
+      join(root, "scripts/verify-saas-tech-team-demo-workspace.ts"),
+      "utf8",
+    );
+    const targetHelper = readFileSync(
+      join(root, "scripts/saas-tech-demo-target.ts"),
+      "utf8",
+    );
+    expect(targetHelper).toContain("parseSaasTechDemoSeedTarget");
+    expect(seed).toContain("parseSaasTechDemoSeedTarget");
+    expect(seed).toContain('connectTarget(target)');
+    expect(seed).toContain("--target=prod");
+    expect(seed).toMatch(/default target is staging/i);
+    expect(verify).toContain("parseSaasTechDemoSeedTarget");
+    expect(verify).toContain("connectTarget(target)");
+    expect(verify).toContain("--target=prod");
+    // No longer hard-locked to staging-only
+    expect(seed).not.toContain('const ALLOWED_TARGET = "staging"');
+    expect(verify).not.toContain('connectTarget("staging")');
   });
 });

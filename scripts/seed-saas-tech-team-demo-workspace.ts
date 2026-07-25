@@ -1,16 +1,22 @@
 /**
- * Seed a staging-only demo workspace with:
+ * Seed the Helios Cloud (SaaS tech-team) demo workspace with:
  *  - authentic multi-role SaaS tech-team copy + blocks
  *  - faked PoW rows for multiple subjects
  *  - knowledge_config_snapshots (real encoder vectors)
  *  - role regions (synthetic:grok-4.5 style)
  *  - one cohort region built from user PoW (no synthetic tag)
  *
- * SAFETY: connects via connectTarget("staging") only. Refuses any other target.
+ * SAFETY: default target is staging. Production only when explicitly requested:
+ *   --target=prod
+ * Refuses unknown targets.
  *
  * Usage:
+ *   # staging (safe default)
  *   ./node_modules/vite-node/vite-node.mjs --config vitest.config.ts \
  *     scripts/seed-saas-tech-team-demo-workspace.ts
+ *   # production (intentional)
+ *   ./node_modules/vite-node/vite-node.mjs --config vitest.config.ts \
+ *     scripts/seed-saas-tech-team-demo-workspace.ts --target=prod
  *
  * Idempotent: finds workspace by notes marker SAAS_TECH_DEMO_MARKER and replaces it.
  */
@@ -38,18 +44,16 @@ import {
   KNOWLEDGE_CONFIG_EMBEDDING_MODEL_ID,
   KNOWLEDGE_CONFIG_DIM,
 } from "../lib/knowledge-config";
+import {
+  parseSaasTechDemoSeedTarget,
+  type SaasTechDemoTarget,
+} from "./saas-tech-demo-target";
 
-// Re-export guard for accidental prod
-const ALLOWED_TARGET = "staging" as const;
+// Re-export for callers that import from the seed script path.
+export { parseSaasTechDemoSeedTarget } from "./saas-tech-demo-target";
 
-function argTarget(): "staging" {
-  const raw = process.argv.find((a) => a.startsWith("--target="))?.slice("--target=".length);
-  if (raw && raw !== "staging") {
-    throw new Error(
-      `Refusing target "${raw}". This seed is staging-only (use --target=staging or omit).`,
-    );
-  }
-  return ALLOWED_TARGET;
+function argTarget(): SaasTechDemoTarget {
+  return parseSaasTechDemoSeedTarget(process.argv);
 }
 
 async function resolveOwner(client: {
@@ -96,7 +100,7 @@ async function resolveOwner(client: {
   }
 
   throw new Error(
-    "No staging admin (is_admin) or org-admin profile with organization_id found to own the demo workspace",
+    "No admin (is_admin) or org-admin profile with organization_id found to own the demo workspace",
   );
 }
 
@@ -200,11 +204,26 @@ async function ensureGuest(
 async function main() {
   const target = argTarget();
   console.log(`[seed-saas-tech-demo] target=${target} marker=${SAAS_TECH_DEMO_MARKER}`);
+  if (target === "prod") {
+    console.log(
+      "[seed-saas-tech-demo] PRODUCTION WRITE: intentional --target=prod; idempotent on demo marker",
+    );
+  }
 
-  // Guard: env must have staging URL (connectTarget also enforces).
+  // Guard: env must have the chosen target's Supabase URL (connectTarget also enforces).
   const env = loadEnvFile(".env.local");
-  if (!env.STAGING_NEXT_PUBLIC_SUPABASE_URL) {
+  if (target === "staging" && !env.STAGING_NEXT_PUBLIC_SUPABASE_URL) {
     console.error("[seed-saas-tech-demo] SKIP: Missing STAGING_NEXT_PUBLIC_SUPABASE_URL");
+    process.exitCode = 2;
+    return;
+  }
+  if (
+    target === "prod" &&
+    !(env.PROD_NEXT_PUBLIC_SUPABASE_URL || env.NEXT_PUBLIC_SUPABASE_URL)
+  ) {
+    console.error(
+      "[seed-saas-tech-demo] SKIP: Missing PROD_NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_URL",
+    );
     process.exitCode = 2;
     return;
   }
@@ -217,14 +236,14 @@ async function main() {
     via = conn.via;
   } catch (err) {
     console.error(
-      "[seed-saas-tech-demo] SKIP: staging connect failed:",
+      `[seed-saas-tech-demo] SKIP: ${target} connect failed:`,
       err instanceof Error ? err.message : err,
     );
     process.exitCode = 2;
     return;
   }
 
-  console.log(`[seed-saas-tech-demo] connected via ${via}`);
+  console.log(`[seed-saas-tech-demo] connected target=${target} via ${via}`);
 
   try {
     await client.query("BEGIN");
@@ -244,7 +263,7 @@ async function main() {
     }
 
     const workspaceId = randomUUID();
-    // Staging uses workspace_goal (not conversion_goal) for the success objective text.
+    // workspace_goal holds the success objective text (conversion_goal in pure demo def).
     await client.query(
       `INSERT INTO public.workspaces (
          id, user_id, title, root_topic, status, payment_status,
@@ -576,7 +595,7 @@ async function main() {
       JSON.stringify(
         {
           success: true,
-          target: "staging",
+          target,
           workspace_id: workspaceId,
           title: SAAS_TECH_DEMO_WORKSPACE.title,
           owner_email: owner.email,
@@ -614,4 +633,5 @@ async function main() {
   }
 }
 
-main();
+// Entry script: always run (target parser lives in saas-tech-demo-target.ts).
+void main();

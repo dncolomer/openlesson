@@ -23,6 +23,8 @@ import {
 import { SessionOnboardingGuide } from "@/components/SessionOnboardingGuide";
 import { TapStartingTopicCards } from "@/components/TapStartingTopicCards";
 import { LoadingStatusMessage } from "@/components/LoadingStatusMessage";
+import { MobileBlockScreen } from "@/components/MobileBlockScreen";
+import { isSmartphoneClient } from "@/lib/is-smartphone";
 import { useI18n } from "@/lib/i18n";
 import type { TapStartingTopic } from "@/lib/tap-score";
 import type { TapPostSessionMode } from "@/lib/pow-api/tap-link-config";
@@ -254,6 +256,14 @@ export function TapScoreClient({
   }, [entryQueryParams]);
   const router = useRouter();
   const { t } = useI18n();
+  // Smartphone → desktop-only gate (same product rule as ILE SessionView)
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const check = () => setIsMobile(isSmartphoneClient());
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
   const [participantIdentity, setParticipantIdentity] = useState<PowParticipantIdentity | null>(
     () => {
       if (participantIdentityProp) return participantIdentityProp;
@@ -1225,6 +1235,15 @@ export function TapScoreClient({
     if (!text) return;
     bumpUserActivity();
     setEditingTranscription({ draft: text, originalText: text });
+  }
+
+  if (isMobile) {
+    return (
+      <MobileBlockScreen
+        product="tap"
+        showDashboardLink={!privateToken}
+      />
+    );
   }
 
   return (

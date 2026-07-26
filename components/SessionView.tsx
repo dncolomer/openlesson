@@ -37,6 +37,7 @@ import { ResizablePane, type ResizablePaneHandle } from "./ResizablePane";
 import { ExcalidrawCanvas } from "./ExcalidrawCanvas";
 import { ToolsPanel, type Tool } from "./ToolsPanel";
 import { MobileBlockScreen } from "./MobileBlockScreen";
+import { isSmartphoneClient } from "@/lib/is-smartphone";
 import { LoadingStatusMessage } from "./LoadingStatusMessage";
 import { SessionIdentityBadge } from "@/components/SessionIdentityBadge";
 import {
@@ -288,10 +289,10 @@ export function SessionView({
   // non-destructive "pause + back to dashboard" alternative.
 
 
-  // Mobile detection
+  // Smartphone / narrow viewport → desktop-only gate (ILE + full sessions)
   const [isMobile, setIsMobile] = useState(false);
   useEffect(() => {
-    const check = () => setIsMobile(window.innerWidth < 768 || /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent));
+    const check = () => setIsMobile(isSmartphoneClient());
     check();
     window.addEventListener("resize", check);
     return () => window.removeEventListener("resize", check);
@@ -2270,7 +2271,12 @@ export function SessionView({
   }, []);
 
   if (isMobile) {
-    return <MobileBlockScreen />;
+    return (
+      <MobileBlockScreen
+        product={ileToken ? "ile" : "session"}
+        showDashboardLink={!ileToken && !ayclToken}
+      />
+    );
   }
 
   if (!session || isSaving) {

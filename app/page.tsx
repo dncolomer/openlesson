@@ -52,8 +52,8 @@ export default function B2BLandingPage() {
               <span className="text-zinc-200">augmentation</span>.
             </p>
             <p className="text-zinc-500 sm:text-base">
-              Verify skills before hire, deploy, or certify. Optimize learning until adoption and outcomes
-              improve. Augment how people think inside onboarding, courses, and prep.
+              Verify hard skills before hiring a human or deploying an agent to production. Optimize learning
+              until adoption and outcomes improve. Augment how humans and agentic systems learn.
             </p>
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
               {HERO_PILLAR_PAGES.map((pillar, index) => (
@@ -71,7 +71,6 @@ export default function B2BLandingPage() {
               See the platform
             </a>
           </div>
-          <p className="mt-6 font-mono text-[11px] uppercase tracking-[1.6px] text-zinc-600">Trace Interruption Model • Proof-of-Work API • Stash API • Think Aloud Protocol • ILE • Agentic Learning Environment</p>
         </div>
       </section>
 
@@ -80,17 +79,16 @@ export default function B2BLandingPage() {
           eyebrow="PLATFORM"
           title="See skill as distance in knowledge space."
         />
-        <p className="mt-4 max-w-3xl text-base leading-relaxed text-zinc-400 sm:text-lg">
-          Every workspace projects people and roles into a shared embedding geometry. Overlay role regions,
-          multi-select subjects, and read{" "}
-          <span className="text-zinc-200">knowledge distance</span> live: who is already in region for Backend,
-          who sits outside SRE, and how the team cohort is moving over time.
+        <p className="mt-4 max-w-5xl text-base leading-relaxed text-zinc-400 sm:text-lg">
+          Every workspace puts people and roles into a shared embedding geometry. Create role regions,
+          multi-select users, and read{" "}
+          <span className="text-zinc-200">distance to knowledge</span> live: see how humans and agents alike
+          do against your defined regions of knowledge.
         </p>
-        <p className="mt-3 max-w-3xl text-base leading-relaxed text-zinc-500 sm:text-[15px]">
+        <p className="mt-3 max-w-5xl text-base leading-relaxed text-zinc-500 sm:text-[15px]">
           Create{" "}
-          <span className="text-zinc-300">custom knowledge regions</span> from internal experts, including{" "}
-          <span className="text-zinc-300">private</span> ones when “knowing X” is proprietary, then evaluate
-          candidates and teammates against that geometry.
+          <span className="text-zinc-300">custom knowledge regions</span> from internal expert data and measure
+          your workforce readiness without sharing confidential information about your internal systems.
         </p>
         <div
           className="mt-6 overflow-hidden rounded-sm border border-zinc-800 bg-zinc-950/80 shadow-[0_0_0_1px_rgba(255,255,255,0.03)]"
@@ -110,9 +108,10 @@ export default function B2BLandingPage() {
             <p className="font-mono text-[10px] uppercase tracking-[1.6px] text-zinc-500">
               Knowledge · Embeddings · Role regions · Proof of Work
             </p>
-            <p className="mt-1.5 max-w-3xl text-sm leading-relaxed text-zinc-400">
-              Same stack that powers verification, optimization, and augmentation: a living map of proximity to
-              “knowing X,” grounded in real work traces rather than multiple-choice pass rates.
+            <p className="mt-1.5 max-w-5xl text-sm leading-relaxed text-zinc-400">
+              We help you build a living map of proximity to any kind of knowledge. We ground our results on real
+              and genuine work traces rather than tests, benchmarks or project uploads that can be easily cheated
+              and faked.
             </p>
           </div>
         </div>
@@ -125,19 +124,21 @@ export default function B2BLandingPage() {
         />
         <div className="mt-6 border border-zinc-800 bg-zinc-950/70 p-6 text-lg leading-relaxed text-zinc-400 backdrop-blur-sm sm:p-8">
           <p>
-            Uncertain Systems builds a learning world model from real work: skills, scenarios, proof of work, and
-            where reasoning breaks, instead of stitching together linear funnel analytics. The Trace
-            Interruption Model uses that live picture to drive verification, optimization, and augmentation
-            in context.
+            Uncertain Systems builds a learning world model from real work: skills, scenarios, proof of work,
+            and where reasoning breaks, instead of stitching together linear funnel analytics. Our hosted
+            interfaces as well as our API products are all specially designed to elicit genuine raw work data
+            from the user while at the same time minimizing the disruption of the natural cognitive process.
           </p>
-          <p className="mt-5 text-zinc-300">
-            <span className="text-zinc-200">Verification</span> scores whether humans and agents can
-            perform before hire, deploy, or certify.{" "}
-            <span className="text-zinc-200">Optimization</span> routes the next practice or coaching step
-            when gaps show up in the model.{" "}
-            <span className="text-zinc-200">Augmentation</span> interrupts shallow fluency with probes tuned
-            to what the workspace already knows. One model, three verticals, embedded in your existing
-            tools.
+          <p className="mt-5">
+            We go beyond LLM judged tests and benchmarks. Our conversational interfaces run on top of an
+            interruption model (
+            <span className="text-zinc-200">TIM — Trace Interruption Model</span>) that uses the evolving
+            learner model to proactively steer the thinking process.
+          </p>
+          <p className="mt-5">
+            We score whether humans and agents can perform before being hired or deployed. We optimize routes
+            for the next practice or coaching step when gaps show up in the model. We augment by helping you
+            outsource the right type of thinking but not the actual learning.
           </p>
         </div>
       </section>
@@ -154,21 +155,22 @@ export default function B2BLandingPage() {
               VERIFICATION AT SCALE
             </div>
             <h2 className="max-w-xl text-3xl font-medium leading-[1.1] tracking-[-1.2px] text-white sm:text-4xl">
-              Hire, screen, and rank against your bar at volume.
+              Hire, screen, and rank against your own knowledge requirements at volume.
             </h2>
             <div className="mt-4 space-y-3 text-base leading-relaxed text-zinc-400 sm:text-[15px]">
               <p>
                 The same measurement stack scales human verification, from{" "}
                 <span className="text-zinc-200">recruitment at volume</span> to internal mobility and agent
-                deploy gates, without stuffing proprietary skill into a public quiz bank.
+                deployment gates, without sharing proprietary skills and specs into a public repository or
+                database.
               </p>
               <p>
-                Hosted{" "}
-                <span className="text-zinc-200">TAP</span> links run live, time-framed screening for high-volume
-                hiring without building your own UX.{" "}
-                <span className="text-zinc-200">ILE</span> adds open-ended assignment depth when judgment and
-                tradeoffs matter. Compare applicants on the same role region; surface reasoning multiple-choice
-                cannot fake.
+                Our hosted{" "}
+                <span className="text-zinc-200">Think Aloud Protocol (TAP)</span> runs live, time-framed
+                screening for high-volume hiring without building your own UX. With our{" "}
+                <span className="text-zinc-200">Integrated Learning Environment (ILE)</span> we add open-ended
+                assignment depth that is more affordable and scalable than traditional take-home assignments. We
+                help you surface data that no traditional tech can beat.
               </p>
             </div>
           </div>
@@ -226,7 +228,7 @@ function HeroPillarCard({
         wideOnMd ? "md:col-span-2 lg:col-span-1" : ""
       }`}
     >
-      <HeroPillarTitle lead={pillar.lead} highlightLines={pillar.titleLines} fullWidth />
+      <HeroPillarTitle highlightLines={pillar.titleLines} fullWidth />
       <ul className="mt-3 space-y-1 text-sm leading-snug text-zinc-400">
         {pillar.cardSummary.map((item) => (
           <li key={item}>{item}</li>
@@ -237,30 +239,25 @@ function HeroPillarCard({
 }
 
 function HeroPillarTitle({
-  lead,
   highlightLines,
   fullWidth = false,
 }: {
-  lead: string;
   highlightLines: string[];
   fullWidth?: boolean;
 }) {
   return (
-    <div>
-      <p className="text-sm leading-snug text-zinc-500">{lead}</p>
-      <div className="mt-2 text-[1.45rem] font-medium leading-[1.05] tracking-[-0.8px] text-white sm:text-[1.6rem]">
-        <span
-          className={`border-l-[3px] border-white/30 bg-white/[0.06] px-3 py-1.5 text-white ${
-            fullWidth ? "block w-full" : "inline-block"
-          }`}
-        >
-          {highlightLines.map((line) => (
-            <span key={line} className="block">
-              {line}
-            </span>
-          ))}
-        </span>
-      </div>
+    <div className="text-[1.45rem] font-medium leading-[1.05] tracking-[-0.8px] text-white sm:text-[1.6rem]">
+      <span
+        className={`border-l-[3px] border-white/30 bg-white/[0.06] px-3 py-1.5 text-white ${
+          fullWidth ? "block w-full" : "inline-block"
+        }`}
+      >
+        {highlightLines.map((line) => (
+          <span key={line} className="block">
+            {line}
+          </span>
+        ))}
+      </span>
     </div>
   );
 }

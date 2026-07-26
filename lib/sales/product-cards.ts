@@ -306,6 +306,194 @@ export const SALES_PRODUCT_CARDS: SalesProductCard[] = [
     footer: "Uncertain Systems — work samples that scale without scaling review chaos.",
     demoUrl: DEMO_BOOKING_URL,
   },
+  {
+    slug: "post-session-learning-check",
+    path: "/sales/post-session-learning-check",
+    title: "Post-Session Learning Check",
+    eyebrow: "Learning product",
+    oneLine:
+      "After a class, tutorial video, group project, master class, or reading session — or mid–live stream — drive a customizable-length learning check via link or API so learners validate understanding and you get gap insights plus reteach guidance in near real time, not a quiz score AI can fake.",
+    whatItIs:
+      "A post-session (and mid-session) learning check for tutors, teachers, course creators, livestream hosts, and L&D. You trigger a private link after or during instruction (live class, livestream, tutorial video, group project, master class, book or article reading, workshop block). Learners open the check for a session of customizable length and work through a think-aloud / process-based flow that validates what they actually understood. Everything can be driven programmatically via API — issue links, collect completions, and pull gap reports — so the same product works for async courses and for livestreaming or live teaching where you need checks in real time. You receive cohort and per-learner reports: remaining knowledge gaps, where reasoning broke, and concrete guidance on how to correct those gaps — without relying on multiple-choice tests, open-book uploads, or project dumps that AI can polish and fake.",
+    image: "/gaps.png",
+    imageAlt:
+      "Strengths and gaps cohort view — shared patterns and knowledge gap map for post-session learning checks",
+    imageCaption:
+      "Tutor deliverable · gap map + reteach guidance from real work traces, not cheatable test scores",
+    specs: [
+      { label: "Format", value: "Shareable private learner link and/or API-issued sessions" },
+      {
+        label: "Duration",
+        value: "Customizable length (short pulse check through deeper comprehension block)",
+      },
+      {
+        label: "Mode",
+        value:
+          "Self-service for learners; async, parallelizable, and programmatically triggerable in real time",
+      },
+      {
+        label: "Core activity",
+        value:
+          "Process-based validation of understanding (think-aloud dialog and in-session work traces)",
+      },
+      {
+        label: "Who is present",
+        value: "Learner only during the check; tutor reviews reports and guidance after (or live via API)",
+      },
+      {
+        label: "Automation",
+        value:
+          "Fully API-driven: issue checks, track completion, retrieve gap reports — including during livestreams",
+      },
+      {
+        label: "Iterations",
+        value: "Repeatable over time on the same cohort or topic to track learning evolution",
+      },
+    ],
+    inputsHeading: "Inputs",
+    inputs: [
+      {
+        label: "Session or content context",
+        value:
+          "Required. What just happened (or is happening live): class topic, stream segment, video/tutorial outline, project brief, master-class agenda, or reading selection (for reading comprehension).",
+      },
+      {
+        label: "Learning goals / success bar",
+        value:
+          "Recommended. What “got it” looks like for this session — concepts, skills, or transfer you care about.",
+      },
+      {
+        label: "Check length",
+        value:
+          "Configurable. Short pulse mid-stream or after a lecture, medium block after a video series, longer after a multi-day project or reading unit.",
+      },
+      {
+        label: "Prior check history (optional)",
+        value:
+          "Optional. Earlier Post-Session Learning Check runs on the same learners or topic so the next report shows movement, not a one-off score.",
+      },
+    ],
+    inputsNote:
+      "You can stand up a first check from session notes or a syllabus snippet — or fire checks from your LMS, streaming stack, or bot via API. Length and depth scale from a 10-minute post-video pulse to a richer post-project block, including real-time pulses during a live session.",
+    integration: {
+      title: "Integration (API) — including livestreams",
+      body: "The full product surface can be driven programmatically so checks run without a manual “send link” step:",
+      bullets: [
+        "Issue and track check links from your LMS, webinar tool, livestream bot, or custom app",
+        "Trigger a check mid-stream or at chapter boundaries when the instructional moment happens",
+        "Receive completion and gap-report payloads in near real time for live reteach decisions",
+        "Automate multi-iteration runs across a unit or ongoing live series",
+      ],
+      note: "Use hosted links for a fast pilot; use the API when learning is livestreamed or must stay in sync with a live instructional timeline.",
+    },
+    experience: [
+      "Receive a private link after class, video, project, master class, reading — or mid-livestream via automation.",
+      "Open the check for the configured duration — no proctor, no multi-day homework packet.",
+      "Work through prompts that surface real understanding: reason out loud, explain, apply, revise.",
+      "Complete the session; the product captures process signal, not only a final answer upload.",
+    ],
+    experienceNote:
+      "Designed so every learner can run in parallel after the same instructional moment — lecture hall, cohort Zoom, livestream, async video course, or book club / reading unit — and so hosts can trigger checks programmatically in real time.",
+    deliverables: [
+      {
+        label: "Cohort gap report",
+        value:
+          "Where the group still struggles: shared misconceptions, thin spots, and topics that did not stick after the session.",
+      },
+      {
+        label: "Per-learner insight pack",
+        value:
+          "Individual remaining knowledge gaps plus strengths, grounded in work traces from the check.",
+      },
+      {
+        label: "Reteach / correction guidance",
+        value:
+          "Actionable guidance for the tutor or teacher on how to close those gaps in the next session, office hours, or follow-up materials.",
+      },
+      {
+        label: "Evolution over iterations",
+        value:
+          "Run multiple checks over a unit or term and track whether gaps close — without treating a single test score as proof of learning.",
+      },
+    ],
+    deliverablesNote:
+      "Signal comes from genuine process and work traces inside the check, not from scores on tests or polished project uploads that AI can fabricate.",
+    whenToUse: [
+      "Immediately after a live class, workshop, or master class to see what landed",
+      "During or right after a livestream / live cohort session — trigger checks programmatically in real time",
+      "After a tutorial video or module in an online course — before the next unit unlocks",
+      "After a group project milestone to separate team gloss from individual understanding",
+      "After a reading or book session when you need real reading comprehension, not a skim-and-quiz pass",
+      "Anytime you want multi-iteration tracking of learning evolution without cheatable test banks",
+      "When learning ops need API automation (LMS, streaming stack, bots) rather than manual link blasts",
+    ],
+    comparisonTitle: "Why it beats “check your knowledge” quizzes",
+    comparisonWithoutLabel: "Without this product",
+    comparisonWithLabel: "With Post-Session Learning Check",
+    comparison: [
+      {
+        without: "Multiple-choice or short quiz AI can complete in seconds",
+        with: "Process-based check hard to fake with polished final answers",
+      },
+      {
+        without: "Pass rates that hide what the cohort still does not understand",
+        with: "Gap map + reteach guidance for the tutor",
+      },
+      {
+        without: "One-shot scores with no learning trajectory",
+        with: "Multiple iterations track evolution over time",
+      },
+      {
+        without: "Project uploads or essays that look “done” but were ghostwritten",
+        with: "In-session work traces tied to the instructional moment you just taught",
+      },
+      {
+        without: "Customizable length only means shorter/longer tests of the same weak signal",
+        with: "Customizable duration with the same process depth model",
+      },
+      {
+        without: "Manual quiz blasts that cannot keep up with a livestream timeline",
+        with: "Fully programmatic checks — issue, complete, and report in real time mid-stream",
+      },
+    ],
+    valueModes: [
+      {
+        title: "A. Pulse after instruction",
+        body: "After a class, video, or reading block, send a short customizable-length link while the material is fresh. Validate understanding before the next session and get immediate gap + reteach guidance.",
+      },
+      {
+        title: "B. Multi-iteration unit tracking",
+        body: "Repeat the product across a unit, course, or project arc. Compare gap reports over time so you teach to what is still broken — not to vanity completion or test scores AI can fake.",
+      },
+      {
+        title: "C. Livestream / real-time API",
+        body: "Drive the entire product from your stack: open checks for viewers mid-livestream or at live session breakpoints, collect process signal in parallel, and pull gap insights while the room (or stream) is still running — not only after the recording ends.",
+      },
+    ],
+    funnel: `Instructional moment (class / livestream / video / project / master class / reading)
+     → Post-Session Learning Check (link or API, customizable length)  ← this product
+     → Tutor / host gap report + reteach guidance (near real time via API if needed)
+     → Next segment, session, materials, or office hours
+     → Optional next iteration of the check (track evolution)`,
+    funnelNote:
+      "Place it as close as practical to the instructional moment — including mid-livestream via API. Iterate weekly, per module, or per live segment when you need a learning trajectory, not a single grade.",
+    pilot: [
+      "Pick one class, livestream, video module, project milestone, or reading unit.",
+      "Define learning goals and a first check length (pulse vs. deeper block).",
+      "Send links manually or issue them via API at the live breakpoint.",
+      "Review cohort gaps and reteach guidance with the instructor/host; adjust the next segment or session.",
+      "Run a second iteration on the same topic or unit and compare gap movement.",
+    ],
+    successMetrics:
+      "completion rate, time-to-gap-insight for the tutor/host (including mid-stream), share of gaps closed on iteration 2+, reduction in re-teaching blind spots, learner trajectory quality vs. prior quiz-only process, API-triggered check latency for live formats.",
+    ask: [
+      "Pick the instructional format and cohort for a pilot (class, livestream, video, project, or reading).",
+      "Book a demo with a real syllabus snippet, stream outline, or session plan — and say if you need API automation.",
+    ],
+    footer:
+      "Uncertain Systems — validate learning after the session or mid-stream; teach the gaps that remain.",
+    demoUrl: DEMO_BOOKING_URL,
+  },
 ];
 
 export function getSalesProductCard(slug: string): SalesProductCard | undefined {

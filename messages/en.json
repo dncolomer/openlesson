@@ -1826,6 +1826,7 @@
     "performanceSubTabModels": "Embeddings",
     "performanceSubTabLwm": "Learning World Model",
     "performanceSubTabRanking": "Ranking",
+    "performanceSubTabStrengthsGaps": "Strengths & Gaps",
     "performanceSectionsAriaLabel": "Knowledge views",
     "performanceScoreTitle": "LWM Snapshot",
     "performanceScoreHint": "Generate a Learning World Model Snapshot for the selected user when new proof of work exists. GHC is included as a secondary signal.",

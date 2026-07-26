@@ -7,7 +7,13 @@ import { ProofOfWorkStatsPanel } from "@/components/ProofOfWorkStatsPanel";
 import { WorkspaceSectionSubTabs } from "@/components/WorkspaceSectionSubTabs";
 import { SECTION_TAB_CONTENT_CLASS } from "@/lib/workspace-section-surface";
 
-type PerformanceSubview = "pow" | "knowledge" | "lwm" | "ranking" | "insights";
+type PerformanceSubview =
+  | "pow"
+  | "knowledge"
+  | "lwm"
+  | "ranking"
+  | "strengths_gaps"
+  | "insights";
 
 interface WorkspacePerformancePanelProps {
   workspaceId: string;
@@ -24,14 +30,15 @@ interface WorkspacePerformancePanelProps {
 
 /** Insights temporarily hidden from nav (may return later). */
 const PERFORMANCE_SUBVIEWS: readonly PerformanceSubview[] = [
-  "lwm",
   "ranking",
+  "strengths_gaps",
+  "lwm",
   "knowledge",
   "pow",
 ];
 
 /**
- * Knowledge surface: LWM (Generate new snapshot), Ranking, Models, PoW.
+ * Knowledge surface: Ranking, Strengths & Gaps, LWM (next to Embeddings), Embeddings, PoW.
  * Insights tab hidden for now. Eval removed — snapshot generation lives in LWM.
  */
 export function WorkspacePerformancePanel({
@@ -58,8 +65,9 @@ export function WorkspacePerformancePanel({
 
   const subTabs: Array<{ id: PerformanceSubview; label: string }> = useMemo(
     () => [
-      { id: "lwm", label: t("planView.performanceSubTabLwm") },
       { id: "ranking", label: t("planView.performanceSubTabRanking") },
+      { id: "strengths_gaps", label: t("planView.performanceSubTabStrengthsGaps") },
+      { id: "lwm", label: t("planView.performanceSubTabLwm") },
       { id: "knowledge", label: t("planView.performanceSubTabModels") },
       { id: "pow", label: t("planView.performanceSubTabPow") },
     ],
@@ -112,6 +120,16 @@ export function WorkspacePerformancePanel({
             isOwner={isOwner}
             ayclToken={ayclToken}
             panelView="ranking"
+          />
+        )}
+
+        {activeSubview === "strengths_gaps" && (
+          <KnowledgeConfigTrajectoryPanel
+            workspaceId={workspaceId}
+            currentUserId={currentUserId}
+            isOwner={isOwner}
+            ayclToken={ayclToken}
+            panelView="strengths_gaps"
           />
         )}
       </div>

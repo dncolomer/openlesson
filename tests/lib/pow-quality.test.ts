@@ -142,7 +142,10 @@ describe("wiring: snapshots exclude + UI surfaces", () => {
       "utf8",
     );
     expect(perf).not.toContain("InsightsDashboardTab");
-    expect(perf).toContain('const PERFORMANCE_SUBVIEWS: readonly PerformanceSubview[] = ["lwm", "knowledge", "pow"]');
+    // Visible Knowledge subtabs (Insights remains hidden / not in PERFORMANCE_SUBVIEWS).
+    expect(perf).toMatch(
+      /const PERFORMANCE_SUBVIEWS: readonly PerformanceSubview\[] = \[\s*"ranking",\s*"strengths_gaps",\s*"lwm",\s*"knowledge",\s*"pow",\s*\]/,
+    );
     expect(perf).not.toContain('id: "insights"');
   });
 });

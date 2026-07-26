@@ -62,6 +62,7 @@ import {
   reduceSnapshotAllProgress,
   type SnapshotAllProgressState,
 } from "@/lib/pow-api/snapshot-all-progress";
+import { StrengthsGapsPanel } from "@/components/StrengthsGapsPanel";
 
 /** Snapshot-history row shape used by LWM timeline. */
 interface LwmSnapshotHistoryRun extends LwmHistoryRunLike {
@@ -1083,7 +1084,7 @@ function EmbeddingsUserMultiPicker({
   );
 }
 
-export type KnowledgePanelView = "models" | "lwm" | "ranking";
+export type KnowledgePanelView = "models" | "lwm" | "ranking" | "strengths_gaps";
 
 interface KnowledgeConfigTrajectoryPanelProps {
   workspaceId: string;
@@ -1095,6 +1096,7 @@ interface KnowledgeConfigTrajectoryPanelProps {
    * models — embeddings + custom knowledge regions
    * lwm — Learning World Model only (own Knowledge tab)
    * ranking — all-subjects latest Snapshot + GHC leaderboard
+   * strengths_gaps — browsable strengths/gaps + PoW-linked analysis (same snapshot source as ranking)
    */
   panelView?: KnowledgePanelView;
 }
@@ -1109,6 +1111,9 @@ export function KnowledgeConfigTrajectoryPanel({
   const showModels = panelView === "models";
   const showLwm = panelView === "lwm";
   const showRanking = panelView === "ranking";
+  const showStrengthsGaps = panelView === "strengths_gaps";
+  /** Ranking + Strengths & Gaps share latest-per-subject snapshot history. */
+  const needsSubjectSnapshots = showRanking || showStrengthsGaps;
   const canInspectOthers = Boolean(isOwner);
 
   // Embeddings: multiselect subject keys (`u:` / `g:`). LWM stays single-select.
@@ -1320,7 +1325,7 @@ export function KnowledgeConfigTrajectoryPanel({
   }, [embScope.query, fetchKnowledgeConfig, mergeAvailableSubjects]);
 
   const loadRanking = useCallback(async () => {
-    if (!showRanking) return;
+    if (!needsSubjectSnapshots) return;
     setRankingLoading(true);
     setRankingError(null);
     try {
@@ -1337,7 +1342,7 @@ export function KnowledgeConfigTrajectoryPanel({
         );
         mergeAvailableSubjects(payload);
       } catch {
-        // Ranking can still use history subjects alone.
+        // Ranking / Strengths & Gaps can still use history subjects alone.
       }
 
       const params = new URLSearchParams({
@@ -1400,7 +1405,7 @@ export function KnowledgeConfigTrajectoryPanel({
     currentUserId,
     fetchKnowledgeConfig,
     mergeAvailableSubjects,
-    showRanking,
+    needsSubjectSnapshots,
     workspaceId,
   ]);
 
@@ -1756,9 +1761,9 @@ export function KnowledgeConfigTrajectoryPanel({
   }, [loadSnapshotEligibility, showLwm]);
 
   useEffect(() => {
-    if (!showRanking) return;
+    if (!needsSubjectSnapshots) return;
     void loadRanking();
-  }, [loadRanking, showRanking]);
+  }, [loadRanking, needsSubjectSnapshots]);
 
   // When regions are overlaid, compute Knowledge distance for the selected Embeddings user.
   useEffect(() => {
@@ -2023,7 +2028,7 @@ export function KnowledgeConfigTrajectoryPanel({
   }, [embData]);
 
   const rankingCards: KnowledgeRankingCard[] = useMemo(() => {
-    if (!showRanking) return [];
+    if (!needsSubjectSnapshots) return [];
     const subjects = availableSubjects.map((s) => ({
       user_id: s.user_id,
       guest_user_id: s.guest_user_id,
@@ -2034,7 +2039,7 @@ export function KnowledgeConfigTrajectoryPanel({
       runs: rankingRuns,
       currentUserId,
     });
-  }, [availableSubjects, currentUserId, rankingRuns, showRanking]);
+  }, [availableSubjects, currentUserId, rankingRuns, needsSubjectSnapshots]);
 
   // Preselect #1 (or keep selection if still present after refresh).
   useEffect(() => {
@@ -2066,13 +2071,14 @@ export function KnowledgeConfigTrajectoryPanel({
   return (
     <div
       className={
-        showModels || showRanking
+        showModels || showRanking || showStrengthsGaps
           ? "flex w-full min-h-0 flex-1 flex-col overflow-hidden"
           : "flex w-full min-h-0 flex-1 flex-col gap-5 overflow-y-auto"
       }
       data-models-tab={showModels ? "true" : undefined}
       data-lwm-tab={showLwm ? "true" : undefined}
       data-ranking-tab={showRanking ? "true" : undefined}
+      data-strengths-gaps-tab={showStrengthsGaps ? "true" : undefined}
       data-knowledge-panel-view={panelView}
     >
       {/* Embeddings: left pickers | center projection | right selected regions — no whole-tab scroll */}
@@ -3464,6 +3470,16 @@ export function KnowledgeConfigTrajectoryPanel({
             </div>
           )}
         </section>
+      ) : null}
+
+      {/* Strengths & Gaps — deeper browse + PoW-linked analysis (same snapshot source as Ranking) */}
+      {showStrengthsGaps ? (
+        <StrengthsGapsPanel
+          cards={rankingCards}
+          loading={rankingLoading}
+          error={rankingError}
+          onRefresh={() => void loadRanking()}
+        />
       ) : null}
 
     </div>

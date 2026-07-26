@@ -55,11 +55,11 @@ export default function B2BLandingPage() {
               Verify hard skills before hiring a human or deploying an agent to production. Optimize learning
               until adoption and outcomes improve. Augment how humans and agentic systems learn.
             </p>
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {HERO_PILLAR_PAGES.map((pillar, index) => (
-                <HeroPillarCard key={pillar.path} pillar={pillar} wideOnMd={index === 2} />
-              ))}
-            </div>
+          </div>
+          <div className="mt-6 grid w-full gap-4 sm:grid-cols-2 lg:grid-cols-3 lg:gap-5">
+            {HERO_PILLAR_PAGES.map((pillar) => (
+              <HeroPillarCard key={pillar.path} pillar={pillar} />
+            ))}
           </div>
           <div className="mt-9 flex flex-col gap-3 sm:flex-row sm:items-center">
             <PrimaryCta location="landing_hero" />
@@ -217,41 +217,27 @@ function PrimaryCta({ compact = false, location = "landing" }: { compact?: boole
 
 function HeroPillarCard({
   pillar,
-  wideOnMd = false,
 }: {
   pillar: (typeof HERO_PILLAR_PAGES)[number];
-  wideOnMd?: boolean;
 }) {
   return (
-    <div
-      className={`flex min-h-0 flex-col border border-zinc-800 bg-zinc-950/70 p-5 sm:p-6 ${
-        wideOnMd ? "md:col-span-2 lg:col-span-1" : ""
-      }`}
-    >
-      <HeroPillarTitle highlightLines={pillar.titleLines} fullWidth />
-      <ul className="mt-3 space-y-1 text-sm leading-snug text-zinc-400">
+    <div className="flex min-h-0 min-w-0 flex-col border border-zinc-800 bg-zinc-950/70 p-6 sm:p-7 lg:p-8">
+      <HeroPillarTitle highlightLines={pillar.titleLines} />
+      <ul className="mt-5 flex-1 space-y-2.5 text-[15px] leading-relaxed text-zinc-400 sm:text-base">
         {pillar.cardSummary.map((item) => (
-          <li key={item}>{item}</li>
+          <li key={item} className="max-w-none">
+            {item}
+          </li>
         ))}
       </ul>
     </div>
   );
 }
 
-function HeroPillarTitle({
-  highlightLines,
-  fullWidth = false,
-}: {
-  highlightLines: string[];
-  fullWidth?: boolean;
-}) {
+function HeroPillarTitle({ highlightLines }: { highlightLines: string[] }) {
   return (
-    <div className="text-[1.45rem] font-medium leading-[1.05] tracking-[-0.8px] text-white sm:text-[1.6rem]">
-      <span
-        className={`border-l-[3px] border-white/30 bg-white/[0.06] px-3 py-1.5 text-white ${
-          fullWidth ? "block w-full" : "inline-block"
-        }`}
-      >
+    <div className="w-full text-[1.5rem] font-medium leading-[1.08] tracking-[-0.8px] text-white sm:text-[1.7rem]">
+      <span className="block w-full border-l-[3px] border-white/30 bg-white/[0.06] px-3.5 py-2 text-white sm:px-4 sm:py-2.5">
         {highlightLines.map((line) => (
           <span key={line} className="block">
             {line}

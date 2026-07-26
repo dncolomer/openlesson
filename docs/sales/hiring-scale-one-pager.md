@@ -16,7 +16,7 @@ You need to hire **~50 people in ~2 months**. That is not “run a few more inte
 | **Signal** | AI-assisted applications and polished take-homes look “senior” without proving judgment under real work |
 | **Fairness & consistency** | Different interviewers, different bars → noise, bias, and rework |
 
-**Wedge:** (1) **Early self-service screening** that scores role fit at volume, and (2) an **autonomous take-home** that is economical for high-volume roles *and* cheaper to run on high-profile ones.
+**Wedge:** (1) **Early self-service screening** that scores role fit at volume, and (2) an **self-service take-home** that is economical for high-volume roles *and* cheaper to run on high-profile ones.
 
 ---
 
@@ -25,7 +25,7 @@ You need to hire **~50 people in ~2 months**. That is not “run a few more inte
 | Product | One line | Inputs | Full brief |
 |---------|----------|--------|------------|
 | **Early Self-Service Screening** | ~15 min private link, think-out-loud dialog → role ranking + per-candidate strengths/weaknesses; **API automation available** | **JD (req.)** + culture / hiring brief (opt.) | [product-early-self-service-screening.md](./product-early-self-service-screening.md) |
-| **Autonomous Take-Home Assignment** | Multi-block open-ended work sample → same ranking + per-applicant report; viable at volume or cheaper on premium roles | Screening signals (opt.) + exercise description (rec., or **we design it**) | [product-autonomous-take-home-assignment.md](./product-autonomous-take-home-assignment.md) |
+| **Self-service Take-Home Assignment** | Multi-block open-ended work sample → same ranking + per-applicant report; viable at volume or cheaper on premium roles | Screening signals (opt.) + exercise description (rec., or **we design it**) | [product-self-service-take-home-assignment.md](./product-self-service-take-home-assignment.md) |
 
 ---
 
@@ -45,7 +45,7 @@ You need to hire **~50 people in ~2 months**. That is not “run a few more inte
 Apply → (optional) resume/screen
      → Early Self-Service Screening (~15 min)   ← volume + early signal
      → HM / tech interview                      ← only strong ranks
-     → Autonomous Take-Home (multi-block)       ← depth / work sample
+     → Self-service Take-Home (multi-block)       ← depth / work sample
      → Offer
 ```
 
@@ -58,7 +58,7 @@ Use **only Card 1** when speed is everything; **Card 1 + Card 2** when you need 
 | Without Uncertain Systems | With these two products |
 |---------------------------|-------------------------|
 | Interview capacity is the bottleneck | Screening runs async, in parallel |
-| Take-homes are too expensive for volume roles | Autonomous multi-block take-homes become viable |
+| Take-homes are too expensive for volume roles | Self-service multi-block take-homes become viable |
 | High-profile take-homes burn senior review time | Same reports reduce evaluation load |
 | AI-polished packets look identical | Think-aloud + process markers surface real skill |
 | Weak hires discovered after start | Strengths/weaknesses visible **before** offer |
@@ -69,7 +69,7 @@ Use **only Card 1** when speed is everything; **Card 1 + Card 2** when you need 
 
 1. Pick **1–2 high-volume roles** in the 50-hire plan.  
 2. Stand up **Early Self-Service Screening** (15-min link + role ranking).  
-3. Optionally add **Autonomous Take-Home** for finalists or for one premium track.  
+3. Optionally add **Self-service Take-Home** for finalists or for one premium track.  
 4. Calibrate pass/fail on the first N reports with hiring managers.  
 5. Roll the same products across the rest of the ramp.
 

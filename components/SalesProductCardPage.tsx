@@ -15,13 +15,17 @@ function Section({
   eyebrow,
   title,
   children,
+  className = "",
 }: {
   eyebrow?: string;
   title: string;
   children: ReactNode;
+  className?: string;
 }) {
   return (
-    <section className="border border-zinc-800 bg-zinc-950/70 p-5 backdrop-blur-sm sm:p-6">
+    <section
+      className={`border border-zinc-800 bg-zinc-950/70 p-5 backdrop-blur-sm sm:p-6 lg:p-7 ${className}`}
+    >
       {eyebrow ? (
         <p className="font-mono text-[10px] uppercase tracking-[1.6px] text-zinc-500">{eyebrow}</p>
       ) : null}
@@ -119,7 +123,7 @@ export function SalesProductCardPage({ card }: SalesProductCardPageProps) {
       <div className="fixed inset-0 z-0 bg-[radial-gradient(circle_at_72%_8%,rgba(14,116,144,0.22),transparent_31%),radial-gradient(circle_at_12%_18%,rgba(39,39,42,0.62),transparent_32%)]" />
       <div className="fixed inset-0 z-0 bg-[linear-gradient(rgba(255,255,255,0.025)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.025)_1px,transparent_1px)] bg-[size:72px_72px] opacity-40" />
 
-      <div className="relative z-10 mx-auto w-full max-w-3xl px-6 pt-10 pb-16 sm:pt-12">
+      <div className="relative z-10 mx-auto w-full max-w-6xl px-6 pt-10 pb-16 sm:pt-12">
         <Link
           href="/sales"
           className="inline-flex items-center gap-1.5 text-sm text-zinc-500 transition hover:text-zinc-300"
@@ -128,56 +132,60 @@ export function SalesProductCardPage({ card }: SalesProductCardPageProps) {
           Sales
         </Link>
 
-        <div className="mt-8 mb-4 inline-block rounded-sm border border-zinc-800 bg-zinc-950/80 px-3 py-1 font-mono text-[10px] tracking-[2px] text-zinc-500">
-          {card.eyebrow.toUpperCase()}
+        <div className="mt-8 grid items-start gap-8 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)] lg:gap-10">
+          <div className="min-w-0">
+            <div className="mb-4 inline-block rounded-sm border border-zinc-800 bg-zinc-950/80 px-3 py-1 font-mono text-[10px] tracking-[2px] text-zinc-500">
+              {card.eyebrow.toUpperCase()}
+            </div>
+            <h1 className="text-4xl font-medium leading-[1.05] tracking-[-1.8px] text-white sm:text-5xl lg:text-[52px]">
+              {card.title}
+            </h1>
+            <p className="mt-5 max-w-3xl text-lg leading-relaxed text-zinc-400">{card.oneLine}</p>
+
+            <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:items-center">
+              <a
+                href={card.demoUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-sm bg-white px-5 py-2.5 text-sm font-medium text-black transition hover:bg-zinc-200"
+              >
+                <Calendar size={15} />
+                Book a demo
+                <ArrowRight size={14} />
+              </a>
+              <p className="font-mono text-[11px] uppercase tracking-[1.4px] text-zinc-600">
+                uncertain.systems · noindex
+              </p>
+            </div>
+          </div>
+
+          {card.image ? (
+            <figure
+              className="overflow-hidden rounded-sm border border-zinc-800 bg-zinc-950/80 shadow-[0_20px_60px_-28px_rgba(0,0,0,0.9)] lg:sticky lg:top-8"
+              data-sales-product-visual
+              data-sales-product-image={card.image}
+            >
+              <Image
+                src={card.image}
+                alt={card.imageAlt || card.title}
+                width={2080}
+                height={1644}
+                className="h-auto w-full object-cover object-top"
+                sizes="(max-width: 1024px) 100vw, 520px"
+                priority
+              />
+              {card.imageCaption ? (
+                <figcaption className="border-t border-zinc-800/90 px-4 py-3 font-mono text-[10px] uppercase tracking-[1.4px] text-zinc-500 sm:px-5">
+                  {card.imageCaption}
+                </figcaption>
+              ) : null}
+            </figure>
+          ) : null}
         </div>
-        <h1 className="max-w-3xl text-4xl font-medium leading-[1.05] tracking-[-1.8px] text-white sm:text-5xl">
-          {card.title}
-        </h1>
-        <p className="mt-5 text-lg leading-relaxed text-zinc-400">{card.oneLine}</p>
 
-        <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:items-center">
-          <a
-            href={card.demoUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-sm bg-white px-5 py-2.5 text-sm font-medium text-black transition hover:bg-zinc-200"
-          >
-            <Calendar size={15} />
-            Book a demo
-            <ArrowRight size={14} />
-          </a>
-          <p className="font-mono text-[11px] uppercase tracking-[1.4px] text-zinc-600">
-            uncertain.systems · noindex
-          </p>
-        </div>
-
-        {card.image ? (
-          <figure
-            className="mt-8 overflow-hidden rounded-sm border border-zinc-800 bg-zinc-950/80 shadow-[0_20px_60px_-28px_rgba(0,0,0,0.9)]"
-            data-sales-product-visual
-            data-sales-product-image={card.image}
-          >
-            <Image
-              src={card.image}
-              alt={card.imageAlt || card.title}
-              width={2080}
-              height={1644}
-              className="h-auto w-full object-cover object-top"
-              sizes="(max-width: 768px) 100vw, 768px"
-              priority
-            />
-            {card.imageCaption ? (
-              <figcaption className="border-t border-zinc-800/90 px-4 py-3 font-mono text-[10px] uppercase tracking-[1.4px] text-zinc-500 sm:px-5">
-                {card.imageCaption}
-              </figcaption>
-            ) : null}
-          </figure>
-        ) : null}
-
-        <div className="mt-10 space-y-5">
-          <Section title="What it is">
-            <p>{card.whatItIs}</p>
+        <div className="mt-10 grid gap-5 lg:grid-cols-2">
+          <Section title="What it is" className="lg:col-span-2">
+            <p className="max-w-4xl">{card.whatItIs}</p>
             <SpecTable rows={card.specs} />
           </Section>
 
@@ -205,33 +213,23 @@ export function SalesProductCardPage({ card }: SalesProductCardPageProps) {
           </Section>
 
           {card.valueModes && card.valueModes.length > 0 ? (
-            <Section title="Two ways this product creates value">
-              {card.valueModes.map((mode) => (
-                <div key={mode.title}>
-                  <h3 className="text-base font-medium text-zinc-200">{mode.title}</h3>
-                  <p className="mt-2">{mode.body}</p>
-                </div>
-              ))}
+            <Section title="Two ways this product creates value" className="lg:col-span-2">
+              <div className="grid gap-5 sm:grid-cols-2">
+                {card.valueModes.map((mode) => (
+                  <div
+                    key={mode.title}
+                    className="border border-zinc-800/80 bg-zinc-950/50 p-4 sm:p-5"
+                  >
+                    <h3 className="text-base font-medium text-zinc-200">{mode.title}</h3>
+                    <p className="mt-2">{mode.body}</p>
+                  </div>
+                ))}
+              </div>
             </Section>
           ) : null}
 
           <Section title="When to use it">
             <BulletList items={card.whenToUse} />
-          </Section>
-
-          <Section title={card.comparisonTitle}>
-            <ComparisonTable
-              withoutLabel={card.comparisonWithoutLabel}
-              withLabel={card.comparisonWithLabel}
-              rows={card.comparison}
-            />
-          </Section>
-
-          <Section title="Suggested placement in the funnel">
-            <pre className="overflow-x-auto whitespace-pre-wrap rounded-sm border border-zinc-800 bg-zinc-950/90 p-4 font-mono text-xs leading-relaxed text-zinc-400 sm:text-sm">
-              {card.funnel}
-            </pre>
-            {card.funnelNote ? <p>{card.funnelNote}</p> : null}
           </Section>
 
           <Section title="Pilot sketch">
@@ -242,18 +240,35 @@ export function SalesProductCardPage({ card }: SalesProductCardPageProps) {
             </p>
           </Section>
 
-          <Section title="Ask / next step">
-            <BulletList items={card.ask} />
-            <a
-              href={card.demoUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-sm bg-white px-5 py-2.5 text-sm font-medium text-black transition hover:bg-zinc-200"
-            >
-              <Calendar size={15} />
-              Book a demo
-              <ArrowRight size={14} />
-            </a>
+          <Section title={card.comparisonTitle} className="lg:col-span-2">
+            <ComparisonTable
+              withoutLabel={card.comparisonWithoutLabel}
+              withLabel={card.comparisonWithLabel}
+              rows={card.comparison}
+            />
+          </Section>
+
+          <Section title="Suggested placement in the funnel" className="lg:col-span-2">
+            <pre className="overflow-x-auto whitespace-pre-wrap rounded-sm border border-zinc-800 bg-zinc-950/90 p-4 font-mono text-xs leading-relaxed text-zinc-400 sm:text-sm">
+              {card.funnel}
+            </pre>
+            {card.funnelNote ? <p>{card.funnelNote}</p> : null}
+          </Section>
+
+          <Section title="Ask / next step" className="lg:col-span-2">
+            <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+              <BulletList items={card.ask} />
+              <a
+                href={card.demoUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-sm bg-white px-5 py-2.5 text-sm font-medium text-black transition hover:bg-zinc-200"
+              >
+                <Calendar size={15} />
+                Book a demo
+                <ArrowRight size={14} />
+              </a>
+            </div>
           </Section>
         </div>
 

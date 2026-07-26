@@ -14,7 +14,7 @@ describe("sales product cards embed LP product visuals", () => {
       (c) => c.slug === "early-self-service-screening",
     );
     const takeHome = SALES_PRODUCT_CARDS.find(
-      (c) => c.slug === "autonomous-take-home-assignment",
+      (c) => c.slug === "self-service-take-home-assignment",
     );
     expect(screening?.image).toBe("/ranking_app.png");
     expect(takeHome?.image).toBe("/knowledgeg2.png");

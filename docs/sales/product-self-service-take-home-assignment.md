@@ -1,4 +1,4 @@
-# Autonomous Take-Home Assignment
+# Self-service Take-Home Assignment
 
 **Uncertain Systems · Hiring product**  
 **Website:** [uncertain.systems](https://uncertain.systems) · **Demo:** [cal.com/daniel-colomer](https://cal.com/daniel-colomer-lvwg8w/openlesson-demo)
@@ -13,7 +13,7 @@ Candidates complete an **open-ended, multi-block assignment** inside the tool (d
 
 ## What it is
 
-An **autonomous take-home** where candidates work through **multiple blocks** in the product — not a single timed chat and not a silent weekend PDF. Work can include:
+An **self-service take-home** where candidates work through **multiple blocks** in the product — not a single timed chat and not a silent weekend PDF. Work can include:
 
 - Interactive discussion  
 - Diagrams  
@@ -72,7 +72,7 @@ Same reporting model as Early Self-Service Screening:
 
 For high-volume roles, classic take-homes fail economics: too many submissions, too much senior review time, slow cycle time.
 
-**Autonomous Take-Home** makes a real work sample **economically viable** because evaluation is structured and report-driven — you can run take-homes on roles that previously skipped them.
+**Self-service Take-Home** makes a real work sample **economically viable** because evaluation is structured and report-driven — you can run take-homes on roles that previously skipped them.
 
 ### B. Lower cost on high-profile offers
 
@@ -93,7 +93,7 @@ Use this product to **reduce cost and resources** to run and evaluate take-homes
 
 ## Why it fits “hire a lot, fast”
 
-| Without this product | With Autonomous Take-Home |
+| Without this product | With Self-service Take-Home |
 |----------------------|---------------------------|
 | Take-homes only for a few premium roles | Viable work samples at higher volume |
 | Multi-day lag and uneven grading | Structured multi-block journey + role ranking |
@@ -107,7 +107,7 @@ Use this product to **reduce cost and resources** to run and evaluate take-homes
 ```
 Apply → early screen (resume and/or Early Self-Service Screening)
      → HM / tech interview (optional order)
-     → Autonomous Take-Home Assignment   ← this product
+     → Self-service Take-Home Assignment   ← this product
      → Offer
 ```
 

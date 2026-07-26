@@ -183,14 +183,14 @@ export const SALES_PRODUCT_CARDS: SalesProductCard[] = [
     demoUrl: DEMO_BOOKING_URL,
   },
   {
-    slug: "autonomous-take-home-assignment",
-    path: "/sales/autonomous-take-home-assignment",
-    title: "Autonomous Take-Home Assignment",
+    slug: "self-service-take-home-assignment",
+    path: "/sales/self-service-take-home-assignment",
+    title: "Self-service Take-Home Assignment",
     eyebrow: "Hiring product",
     oneLine:
       "Candidates complete an open-ended, multi-block assignment inside the tool (discussion, diagrams, notes, and more); the client gets a role ranking and per-applicant strengths/weaknesses — without the classic take-home cost curve.",
     whatItIs:
-      "An autonomous take-home where candidates work through multiple blocks in the product — not a single timed chat and not a silent weekend PDF. Work can include interactive discussion, diagrams, written notes, and other real work artifacts produced in-session. Built for depth (assignment / project-style judgment) while remaining structured and scoreable across a full hiring cohort.",
+      "A self-service take-home where candidates work through multiple blocks in the product — not a single timed chat and not a silent weekend PDF. Work can include interactive discussion, diagrams, written notes, and other real work artifacts produced in-session. Built for depth (assignment / project-style judgment) while remaining structured and scoreable across a full hiring cohort.",
     image: "/knowledgeg2.png",
     imageAlt:
       "Knowledge embeddings projection with role regions and multi-subject trajectories",
@@ -250,7 +250,7 @@ export const SALES_PRODUCT_CARDS: SalesProductCard[] = [
     valueModes: [
       {
         title: "A. Take-homes where they were not viable before",
-        body: "For high-volume roles, classic take-homes fail economics: too many submissions, too much senior review time, slow cycle time. Autonomous Take-Home makes a real work sample economically viable because evaluation is structured and report-driven — you can run take-homes on roles that previously skipped them.",
+        body: "For high-volume roles, classic take-homes fail economics: too many submissions, too much senior review time, slow cycle time. Self-service Take-Home makes a real work sample economically viable because evaluation is structured and report-driven — you can run take-homes on roles that previously skipped them.",
       },
       {
         title: "B. Lower cost on high-profile offers",
@@ -265,7 +265,7 @@ export const SALES_PRODUCT_CARDS: SalesProductCard[] = [
     ],
     comparisonTitle: "Why it fits “hire a lot, fast”",
     comparisonWithoutLabel: "Without this product",
-    comparisonWithLabel: "With Autonomous Take-Home",
+    comparisonWithLabel: "With Self-service Take-Home",
     comparison: [
       {
         without: "Take-homes only for a few premium roles",
@@ -286,7 +286,7 @@ export const SALES_PRODUCT_CARDS: SalesProductCard[] = [
     ],
     funnel: `Apply → early screen (resume and/or Early Self-Service Screening)
      → HM / tech interview (optional order)
-     → Autonomous Take-Home Assignment   ← this product
+     → Self-service Take-Home Assignment   ← this product
      → Offer`,
     funnelNote:
       "Can also run before final interview when you want a ranked shortlist of deep work samples first.",

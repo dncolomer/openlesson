@@ -11,7 +11,7 @@ export type SalesComparisonRow = {
 };
 
 /** Sales index grouping (vertical / product line). */
-export type SalesProductLine = "verification" | "optimization";
+export type SalesProductLine = "verification" | "optimization" | "augmentation";
 
 export type SalesProductCard = {
   slug: string;
@@ -39,8 +39,15 @@ export type SalesProductCard = {
     bullets: string[];
     note?: string;
   };
+  /**
+   * Section heading for the experience flow (defaults to hiring “Candidate experience”).
+   * Non-verification products should set a product-context label.
+   */
+  experienceHeading?: string;
   experience: string[];
   experienceNote?: string;
+  /** Defaults to “What the client gets”. */
+  deliverablesHeading?: string;
   deliverables: SalesTableRow[];
   deliverablesNote?: string;
   whenToUse: string[];
@@ -48,7 +55,11 @@ export type SalesProductCard = {
   comparisonWithoutLabel: string;
   comparisonWithLabel: string;
   comparison: SalesComparisonRow[];
+  /** Defaults to “Two ways this product creates value”. */
+  valueModesHeading?: string;
   valueModes?: Array<{ title: string; body: string }>;
+  /** Defaults to “Suggested placement in the funnel”. */
+  funnelHeading?: string;
   funnel: string;
   funnelNote?: string;
   pilot: string[];
@@ -394,6 +405,7 @@ export const SALES_PRODUCT_CARDS: SalesProductCard[] = [
       ],
       note: "Use hosted links for a fast pilot; use the API when learning is livestreamed or must stay in sync with a live instructional timeline.",
     },
+    experienceHeading: "Learner experience",
     experience: [
       "Receive a private link after class, video, project, master class, reading — or mid-livestream via automation.",
       "Open the check for the configured duration — no proctor, no multi-day homework packet.",
@@ -402,6 +414,7 @@ export const SALES_PRODUCT_CARDS: SalesProductCard[] = [
     ],
     experienceNote:
       "Designed so every learner can run in parallel after the same instructional moment — lecture hall, cohort Zoom, livestream, async video course, or book club / reading unit — and so hosts can trigger checks programmatically in real time.",
+    deliverablesHeading: "What the tutor / host gets",
     deliverables: [
       {
         label: "Cohort gap report",
@@ -478,6 +491,8 @@ export const SALES_PRODUCT_CARDS: SalesProductCard[] = [
         body: "Drive the entire product from your stack: open checks for viewers mid-livestream or at live session breakpoints, collect process signal in parallel, and pull gap insights while the room (or stream) is still running — not only after the recording ends.",
       },
     ],
+    valueModesHeading: "How this product creates value",
+    funnelHeading: "Where it sits in the learning flow",
     funnel: `Instructional moment (class / livestream / video / project / master class / reading)
      → Learning Loop (link or API, customizable length)  ← this product
      → Tutor / host gap report + reteach guidance (near real time via API if needed)
@@ -502,10 +517,211 @@ export const SALES_PRODUCT_CARDS: SalesProductCard[] = [
       "Uncertain Systems — validate learning after the session or mid-stream; teach the gaps that remain.",
     demoUrl: DEMO_BOOKING_URL,
   },
+  {
+    slug: "pow-augmented-apps",
+    path: "/sales/pow-augmented-apps",
+    title: "PoW Augmented Apps",
+    productLine: "augmentation",
+    eyebrow: "Augmentation product",
+    oneLine:
+      "Stream proof-of-work data from your product in real time, then use our API to enrich the in-app experience with learning insights — gaps, strengths, achievements, and next-step suggestions that replace static UI tours.",
+    whatItIs:
+      "PoW Augmented Apps turns your product into a learning-aware surface. You send proof-of-work (tool events, screen/UI traces, agent actions, session activity) in real time as users or agents use your app. Our API returns learning insights you render natively: where understanding breaks (gaps), what is already working (strengths) for positive feedback loops and achievements, and concrete suggestions for what the user (or agent) should do next. Positioned as a living replacement for static, old-school UI tours and checklist onboarding — guidance that updates from real work, not a one-time walkthrough. Especially useful for agentic interfaces, where agents must learn your UI and workflows from live interaction rather than fixed scripted tours.",
+    image: "/embeddings.png",
+    imageAlt:
+      "Knowledge embeddings projection — in-app learning state from real-time proof of work",
+    imageCaption:
+      "App enrichment · real-time PoW → gaps, strengths, achievements, and next-step suggestions",
+    specs: [
+      {
+        label: "Format",
+        value: "Real-time PoW stream into Uncertain Systems + insight API into your app",
+      },
+      {
+        label: "Latency",
+        value: "Designed for live session enrichment (stream events; pull or push insights)",
+      },
+      {
+        label: "Mode",
+        value: "Headless enrichment — your UX, our learning signal",
+      },
+      {
+        label: "Core activity",
+        value:
+          "Ingest product/agent proof of work; return gaps, strengths, achievements, and next actions",
+      },
+      {
+        label: "Who experiences it",
+        value:
+          "End users and agents inside your product; your app owns UI (badges, nudges, tours, coach marks)",
+      },
+      {
+        label: "Integration",
+        value: "API-first: emit PoW events and query enrichment payloads per user/session/agent",
+      },
+    ],
+    inputsHeading: "Inputs",
+    inputs: [
+      {
+        label: "Real-time PoW stream",
+        value:
+          "Required. Tool calls, UI/navigation events, agent steps, screen or session traces, and other observable work as it happens in your app.",
+      },
+      {
+        label: "User / agent identity",
+        value:
+          "Required. Stable subject id (human user, guest, or agent run) so insights accumulate across a session and over time.",
+      },
+      {
+        label: "Product / workflow context",
+        value:
+          "Recommended. Feature areas, goals, or “success looks like” for the surfaces you want to augment (onboarding, core workflows, agent tool space).",
+      },
+      {
+        label: "Presentation preferences (optional)",
+        value:
+          "Optional. Whether you want gap-first coach marks, strength-based achievements, suggestion lists, or all three for a given surface.",
+      },
+    ],
+    inputsNote:
+      "You keep full control of UI. Uncertain Systems does not replace your app shell — it supplies learning state derived from the PoW you already produce (or can instrument).",
+    integration: {
+      title: "Integration (API) — real-time PoW → in-app insights",
+      body: "Wire your product to stream PoW and pull enrichment continuously:",
+      bullets: [
+        "Emit proof-of-work events as users or agents act (tools, UI steps, session segments)",
+        "Request learning insights for a subject/session: gaps, strengths, achievements, next-step suggestions",
+        "Render those insights as coach marks, achievement toasts, progress, or agent guidance — instead of a static UI tour",
+        "Refresh insights as new PoW arrives so the experience stays live during a session",
+      ],
+      note: "Hosted Uncertain Systems UIs are optional. PoW Augmented Apps is built for embedding learning intelligence into your own product and agent surfaces.",
+    },
+    experienceHeading: "In-app / agent flow",
+    experience: [
+      "User or agent works in your product; your client/server streams PoW events as work happens.",
+      "Uncertain Systems updates learning state from those traces in near real time.",
+      "Your app queries insights and surfaces gaps, strengths/achievements, and suggested next actions in your own UI.",
+      "As behavior continues, insights refresh — no static tour to go stale after day one.",
+    ],
+    experienceNote:
+      "Works for human onboarding, continuous in-product learning, and agentic interfaces where agents must learn tools and UI paths from live interaction.",
+    deliverablesHeading: "What your product can surface",
+    deliverables: [
+      {
+        label: "Gap signals",
+        value:
+          "Where understanding or successful use is failing — for targeted in-app help instead of a generic tour step.",
+      },
+      {
+        label: "Strengths & achievements",
+        value:
+          "What the user or agent already does well — fuel for positive feedback loops, badges, and progress moments inside your product.",
+      },
+      {
+        label: "Next-step suggestions",
+        value:
+          "Concrete “what else to try” guidance grounded in recent PoW, not a fixed checklist of every feature.",
+      },
+      {
+        label: "Session-live enrichment payload",
+        value:
+          "API-shaped learning insights you can poll or subscribe to while the session is active.",
+      },
+    ],
+    deliverablesNote:
+      "Insights are derived from real work traces you send — designed to be harder to fake than “clicked Next on the tour.”",
+    whenToUse: [
+      "You want to retire static UI tours and checklist onboarding that users skip or forget",
+      "Your product has complex workflows and you need adaptive in-app coaching from real usage",
+      "You ship agentic interfaces or tool-using agents that must learn your UI and APIs from live runs",
+      "You already (or can) emit product events / tool traces and want learning value on top",
+      "You care about positive reinforcement (strengths, achievements) as much as gap remediation",
+      "You need continuous enrichment mid-session, not a one-shot post-onboarding quiz",
+    ],
+    comparisonTitle: "Why it beats static UI tours",
+    comparisonWithoutLabel: "Without this product",
+    comparisonWithLabel: "With PoW Augmented Apps",
+    comparison: [
+      {
+        without: "Static UI tour that is the same for every user and goes stale",
+        with: "Live insights from real-time PoW that adapt as the session unfolds",
+      },
+      {
+        without: "Onboarding only points at features, never measures understanding",
+        with: "Gaps and strengths from actual tool/UI work traces",
+      },
+      {
+        without: "No positive feedback when someone already knows a path",
+        with: "Strength signals power achievements and reinforcing loops in-app",
+      },
+      {
+        without: "Agents get scripted demos that do not match live tool behavior",
+        with: "Agentic interfaces learn from streamed PoW and get next-step suggestions",
+      },
+      {
+        without: "Help content disconnected from what the user just did",
+        with: "Suggestions of what else to do, grounded in recent proof of work",
+      },
+    ],
+    valueModes: [
+      {
+        title: "A. Human product onboarding & continuous help",
+        body: "Replace or augment the classic tour with PoW-driven coach marks: celebrate strengths, close gaps, and suggest next actions as people actually use the product.",
+      },
+      {
+        title: "B. Agentic interface learning",
+        body: "As agents explore tools and UI, stream their actions as PoW. Return gaps (failed or shallow use), strengths (stable successful patterns), and suggested next tool/UI steps so agents improve mid-run—not only offline evals.",
+      },
+      {
+        title: "C. In-app achievements & engagement loops",
+        body: "Use strength surfaces for badges, streaks, and “you’re solid here” moments while still routing weak spots into targeted guidance—learning-positive product design, not guilt-only onboarding.",
+      },
+    ],
+    valueModesHeading: "How this product creates value",
+    funnelHeading: "Where it sits in the product loop",
+    funnel: `User or agent acts in your app
+     → Stream PoW events (real time)  ← this product
+     → Insight API (gaps · strengths · achievements · suggestions)
+     → Your UI / agent policy updates mid-session
+     → More PoW → refreshed insights`,
+    funnelNote:
+      "No separate “training mode” required. Instrument the real product path; enrichment rides on the same traffic that creates proof of work.",
+    pilot: [
+      "Pick one high-friction onboarding or agent workflow surface.",
+      "Instrument a minimal real-time PoW event set (tools, key UI steps, outcomes).",
+      "Wire insight fetch into one in-app channel (coach mark, side panel, or agent prompt inject).",
+      "Show gaps + at least one strength/achievement and one next-step suggestion.",
+      "Compare completion, time-to-value, and agent success vs. static tour baseline.",
+    ],
+    successMetrics:
+      "tour drop-off, time-to-first-success, insight refresh latency, share of sessions with strength achievements shown, gap-close rate after suggestions, agent task success on instrumented workflows vs. static tour/script baseline.",
+    ask: [
+      "Pick the host app surface (human onboarding, live product, or agent interface).",
+      "Book a demo with a sample PoW event schema from your product or agent stack.",
+    ],
+    footer:
+      "Uncertain Systems — stream proof of work; enrich your app with learning that stays alive.",
+    demoUrl: DEMO_BOOKING_URL,
+  },
 ];
 
 export function getSalesProductCard(slug: string): SalesProductCard | undefined {
   return SALES_PRODUCT_CARDS.find((card) => card.slug === slug);
+}
+
+/** Resolved section titles for the shared sales product page (hiring defaults). */
+export function resolveSalesProductSectionHeadings(card: SalesProductCard): {
+  experience: string;
+  deliverables: string;
+  valueModes: string;
+  funnel: string;
+} {
+  return {
+    experience: card.experienceHeading?.trim() || "Candidate experience",
+    deliverables: card.deliverablesHeading?.trim() || "What the client gets",
+    valueModes: card.valueModesHeading?.trim() || "Two ways this product creates value",
+    funnel: card.funnelHeading?.trim() || "Suggested placement in the funnel",
+  };
 }
 
 export type SalesProductGroup = {
@@ -521,6 +737,7 @@ export function groupSalesProductCards(
 ): SalesProductGroup[] {
   const verification = cards.filter((c) => c.productLine === "verification");
   const optimization = cards.filter((c) => c.productLine === "optimization");
+  const augmentation = cards.filter((c) => c.productLine === "augmentation");
   return [
     {
       id: "verification",
@@ -531,6 +748,11 @@ export function groupSalesProductCards(
       id: "optimization",
       label: "Optimization Product",
       cards: [...optimization],
+    },
+    {
+      id: "augmentation",
+      label: "Augmentation Product",
+      cards: [...augmentation],
     },
   ].filter((g) => g.cards.length > 0);
 }

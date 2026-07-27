@@ -2,7 +2,10 @@ import type { ReactNode } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowLeft, ArrowRight, Calendar } from "lucide-react";
-import type { SalesProductCard } from "@/lib/sales/product-cards";
+import {
+  resolveSalesProductSectionHeadings,
+  type SalesProductCard,
+} from "@/lib/sales/product-cards";
 import { PITCH_ASSETS } from "@/lib/sales/solution-slide-decks";
 
 const BACKGROUND_IMAGE = PITCH_ASSETS.aesthetics.useCase;
@@ -108,6 +111,8 @@ function BulletList({ items }: { items: string[] }) {
 }
 
 export function SalesProductCardPage({ card }: SalesProductCardPageProps) {
+  const headings = resolveSalesProductSectionHeadings(card);
+
   return (
     <main
       className="relative min-h-screen overflow-hidden bg-[#0a0a0a] text-zinc-200 selection:bg-zinc-700"
@@ -202,18 +207,18 @@ export function SalesProductCardPage({ card }: SalesProductCardPageProps) {
             </Section>
           ) : null}
 
-          <Section title="Candidate experience">
+          <Section title={headings.experience}>
             <NumberedList items={card.experience} />
             {card.experienceNote ? <p>{card.experienceNote}</p> : null}
           </Section>
 
-          <Section title="What the client gets">
+          <Section title={headings.deliverables}>
             {card.deliverablesNote ? <p>{card.deliverablesNote}</p> : null}
             <SpecTable rows={card.deliverables} />
           </Section>
 
           {card.valueModes && card.valueModes.length > 0 ? (
-            <Section title="Two ways this product creates value" className="lg:col-span-2">
+            <Section title={headings.valueModes} className="lg:col-span-2">
               <div className="grid gap-5 sm:grid-cols-2">
                 {card.valueModes.map((mode) => (
                   <div
@@ -248,7 +253,7 @@ export function SalesProductCardPage({ card }: SalesProductCardPageProps) {
             />
           </Section>
 
-          <Section title="Suggested placement in the funnel" className="lg:col-span-2">
+          <Section title={headings.funnel} className="lg:col-span-2">
             <pre className="overflow-x-auto whitespace-pre-wrap rounded-sm border border-zinc-800 bg-zinc-950/90 p-4 font-mono text-xs leading-relaxed text-zinc-400 sm:text-sm">
               {card.funnel}
             </pre>

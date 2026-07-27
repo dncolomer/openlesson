@@ -7,6 +7,7 @@ import { join } from "node:path";
 import {
   getSalesProductCard,
   groupSalesProductCards,
+  resolveSalesProductSectionHeadings,
   SALES_PRODUCT_CARDS,
   type SalesProductCard,
 } from "@/lib/sales/product-cards";
@@ -36,21 +37,28 @@ const EXPECTED_PRODUCTS = [
     title: "Self-Service Skill Check",
     path: "/sales/self-service-skill-check",
     image: "/ranking_app.png",
-    oldPath: "early-self-service-screening",
+    oldPath: "early-self-service-screening" as string | null,
   },
   {
     slug: "self-service-take-home",
     title: "Self-Service Take-Home",
     path: "/sales/self-service-take-home",
     image: "/knowledgeg2.png",
-    oldPath: "self-service-take-home-assignment",
+    oldPath: "self-service-take-home-assignment" as string | null,
   },
   {
     slug: "learning-loop",
     title: "Learning Loop",
     path: "/sales/learning-loop",
     image: "/gaps.png",
-    oldPath: "post-session-learning-check",
+    oldPath: "post-session-learning-check" as string | null,
+  },
+  {
+    slug: "pow-augmented-apps",
+    title: "PoW Augmented Apps",
+    path: "/sales/pow-augmented-apps",
+    image: "/embeddings.png",
+    oldPath: null,
   },
 ] as const;
 
@@ -97,8 +105,8 @@ describe("sales product cards embed LP product visuals", () => {
 });
 
 describe("sales product catalog renames", () => {
-  it("registers Self-Service Skill Check, Self-Service Take-Home, and Learning Loop", () => {
-    expect(SALES_PRODUCT_CARDS.length).toBeGreaterThanOrEqual(3);
+  it("registers Skill Check, Take-Home, Learning Loop, and PoW Augmented Apps", () => {
+    expect(SALES_PRODUCT_CARDS.length).toBeGreaterThanOrEqual(4);
 
     // Old primary titles must not remain as catalog titles
     const titles = SALES_PRODUCT_CARDS.map((c) => c.title);
@@ -162,20 +170,28 @@ describe("sales product catalog renames", () => {
     }
   });
 
-  it("groups first two as Verification Products and Learning Loop as Optimization Product", () => {
+  it("groups Verification, Optimization, and Augmentation product lines", () => {
     const groups = groupSalesProductCards();
-    expect(groups.map((g) => g.id)).toEqual(["verification", "optimization"]);
+    expect(groups.map((g) => g.id)).toEqual([
+      "verification",
+      "optimization",
+      "augmentation",
+    ]);
     expect(groups[0].label).toBe("Verification Products");
     expect(groups[1].label).toBe("Optimization Product");
+    expect(groups[2].label).toBe("Augmentation Product");
     expect(groups[0].cards.map((c) => c.slug)).toEqual([
       "self-service-skill-check",
       "self-service-take-home",
     ]);
     expect(groups[1].cards.map((c) => c.slug)).toEqual(["learning-loop"]);
+    expect(groups[2].cards.map((c) => c.slug)).toEqual(["pow-augmented-apps"]);
     for (const card of SALES_PRODUCT_CARDS) {
-      expect(card.productLine === "verification" || card.productLine === "optimization").toBe(
-        true,
-      );
+      expect(
+        card.productLine === "verification" ||
+          card.productLine === "optimization" ||
+          card.productLine === "augmentation",
+      ).toBe(true);
     }
 
     const index = readFileSync(join(ROOT, "app/sales/page.tsx"), "utf8");
@@ -185,6 +201,100 @@ describe("sales product catalog renames", () => {
     expect(index).toContain("group.label");
     expect(catalog).toContain("Verification Products");
     expect(catalog).toContain("Optimization Product");
+    expect(catalog).toContain("Augmentation Product");
+  });
+
+  it("uses context section headings for non-verification cards (not Candidate experience)", () => {
+    const page = readFileSync(join(ROOT, "components/SalesProductCardPage.tsx"), "utf8");
+    expect(page).toContain("resolveSalesProductSectionHeadings");
+    expect(page).toContain("headings.experience");
+    expect(page).not.toMatch(/title=\{?"Candidate experience"?\}/);
+
+    const skill = getSalesProductCard("self-service-skill-check");
+    const takeHome = getSalesProductCard("self-service-take-home");
+    const loop = getSalesProductCard("learning-loop");
+    const pow = getSalesProductCard("pow-augmented-apps");
+    expect(skill && takeHome && loop && pow).toBeTruthy();
+    if (!skill || !takeHome || !loop || !pow) return;
+
+    // Verification keeps hiring defaults
+    expect(resolveSalesProductSectionHeadings(skill).experience).toBe("Candidate experience");
+    expect(resolveSalesProductSectionHeadings(takeHome).experience).toBe("Candidate experience");
+    expect(resolveSalesProductSectionHeadings(skill).deliverables).toBe("What the client gets");
+    expect(resolveSalesProductSectionHeadings(skill).funnel).toBe(
+      "Suggested placement in the funnel",
+    );
+
+    // Learning Loop — learner / tutor-host
+    expect(loop.experienceHeading).toBe("Learner experience");
+    expect(loop.deliverablesHeading).toBe("What the tutor / host gets");
+    expect(loop.funnelHeading).toBe("Where it sits in the learning flow");
+    const loopH = resolveSalesProductSectionHeadings(loop);
+    expect(loopH.experience).toBe("Learner experience");
+    expect(loopH.experience.toLowerCase()).not.toContain("candidate");
+    expect(loopH.deliverables.toLowerCase()).not.toContain("client");
+
+    // PoW Augmented Apps — in-app / agent
+    expect(pow.experienceHeading).toBe("In-app / agent flow");
+    expect(pow.deliverablesHeading).toBe("What your product can surface");
+    expect(pow.funnelHeading).toBe("Where it sits in the product loop");
+    const powH = resolveSalesProductSectionHeadings(pow);
+    expect(powH.experience).toBe("In-app / agent flow");
+    expect(powH.experience.toLowerCase()).not.toContain("candidate");
+
+    for (const card of [loop, pow]) {
+      expect(card.productLine).not.toBe("verification");
+      expect(card.experienceHeading).toBeTruthy();
+      expect(card.experienceHeading).not.toBe("Candidate experience");
+      const exp = card.experience.join(" ").toLowerCase();
+      expect(exp).not.toMatch(/\bcandidate\b/);
+    }
+  });
+
+  it("PoW Augmented Apps covers real-time PoW enrichment narrative", () => {
+    const card = getSalesProductCard("pow-augmented-apps");
+    expect(card).toBeDefined();
+    if (!card) return;
+    expect(card.title).toBe("PoW Augmented Apps");
+    expect(card.path).toBe("/sales/pow-augmented-apps");
+    expect(card.productLine).toBe("augmentation");
+    assertCardShape(card);
+
+    const blob = [
+      card.oneLine,
+      card.whatItIs,
+      ...card.specs.map((r) => `${r.label} ${r.value}`),
+      ...card.inputs.map((r) => `${r.label} ${r.value}`),
+      ...card.experience,
+      ...card.deliverables.map((r) => `${r.label} ${r.value}`),
+      ...(card.deliverablesNote ? [card.deliverablesNote] : []),
+      ...card.whenToUse,
+      ...card.comparison.flatMap((r) => [r.without, r.with]),
+      card.funnel,
+      ...(card.funnelNote ? [card.funnelNote] : []),
+      ...card.pilot,
+      card.successMetrics,
+      ...(card.valueModes?.map((m) => `${m.title} ${m.body}`) ?? []),
+      ...(card.integration
+        ? [
+            card.integration.title,
+            card.integration.body,
+            ...card.integration.bullets,
+            card.integration.note ?? "",
+          ]
+        : []),
+    ]
+      .join("\n")
+      .toLowerCase();
+
+    expect(blob).toMatch(/real[- ]?time|stream/);
+    expect(blob).toMatch(/proof of work|pow/);
+    expect(blob).toMatch(/api/);
+    expect(blob).toMatch(/gap/);
+    expect(blob).toMatch(/strength|achievement|positive/);
+    expect(blob).toMatch(/suggest|next/);
+    expect(blob).toMatch(/tour|walkthrough/);
+    expect(blob).toMatch(/agent/);
   });
 
   it("detail route modules resolve new slugs; old paths redirect", () => {
@@ -198,12 +308,14 @@ describe("sales product catalog renames", () => {
       expect(page).toContain("SalesProductCardPage");
       expect(page).toContain("notFound");
 
-      const oldPage = readFileSync(
-        join(ROOT, `app/sales/${expected.oldPath}/page.tsx`),
-        "utf8",
-      );
-      expect(oldPage).toContain("redirect");
-      expect(oldPage).toContain(expected.path);
+      if (expected.oldPath) {
+        const oldPage = readFileSync(
+          join(ROOT, `app/sales/${expected.oldPath}/page.tsx`),
+          "utf8",
+        );
+        expect(oldPage).toContain("redirect");
+        expect(oldPage).toContain(expected.path);
+      }
     }
 
     const autonomous = readFileSync(

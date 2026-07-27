@@ -1,4 +1,4 @@
-# Early Self-Service Screening
+# Self-Service Skill Check
 
 **Uncertain Systems · Hiring product**  
 **Website:** [uncertain.systems](https://uncertain.systems) · **Demo:** [cal.com/daniel-colomer](https://cal.com/daniel-colomer-lvwg8w/openlesson-demo)
@@ -82,7 +82,7 @@ Designed for **hundreds of applicants in parallel** when you are hiring at scale
 
 ## Why it fits “hire a lot, fast”
 
-| Without this product | With Early Self-Service Screening |
+| Without this product | With Self-Service Skill Check |
 |----------------------|-----------------------------------|
 | Screeners and engineers bottleneck volume | Dozens of evaluations run async in parallel |
 | Weak candidates reach expensive interviews | Role-ranked shortlist before HM time |
@@ -95,7 +95,7 @@ Designed for **hundreds of applicants in parallel** when you are hiring at scale
 
 ```
 Apply → (optional) resume screen
-     → Early Self-Service Screening (~15 min)  ← this product
+     → Self-Service Skill Check (~15 min)  ← this product
      → HM / tech interview
      → deeper work sample (optional)
      → Offer

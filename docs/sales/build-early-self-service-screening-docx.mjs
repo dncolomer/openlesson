@@ -285,7 +285,7 @@ const doc = new Document({
         }),
       },
       children: [
-        h1("Early Self-Service Screening"),
+        h1("Self-Service Skill Check"),
 
         h2("In One line"),
         body(
@@ -411,7 +411,7 @@ const doc = new Document({
         twoColTable([
           {
             0: "Without this product",
-            1: "With Early Self-Service Screening",
+            1: "With Self-Service Skill Check",
             isHeader: true,
           },
           [

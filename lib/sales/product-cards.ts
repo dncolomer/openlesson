@@ -10,10 +10,15 @@ export type SalesComparisonRow = {
   with: string;
 };
 
+/** Sales index grouping (vertical / product line). */
+export type SalesProductLine = "verification" | "optimization";
+
 export type SalesProductCard = {
   slug: string;
   path: string;
   title: string;
+  /** Index section: Verification Products vs Optimization Product. */
+  productLine: SalesProductLine;
   eyebrow: string;
   oneLine: string;
   whatItIs: string;
@@ -55,9 +60,10 @@ export type SalesProductCard = {
 
 export const SALES_PRODUCT_CARDS: SalesProductCard[] = [
   {
-    slug: "early-self-service-screening",
-    path: "/sales/early-self-service-screening",
-    title: "Early Self-Service Screening",
+    slug: "self-service-skill-check",
+    path: "/sales/self-service-skill-check",
+    title: "Self-Service Skill Check",
+    productLine: "verification",
     eyebrow: "Hiring product",
     oneLine:
       "Candidates open a private link, complete a ~15-minute self-service think-aloud evaluation, and the client receives a role ranking plus optional per-candidate strength/weakness reports.",
@@ -142,7 +148,7 @@ export const SALES_PRODUCT_CARDS: SalesProductCard[] = [
     ],
     comparisonTitle: "Why it fits “hire a lot, fast”",
     comparisonWithoutLabel: "Without this product",
-    comparisonWithLabel: "With Early Self-Service Screening",
+    comparisonWithLabel: "With Self-Service Skill Check",
     comparison: [
       {
         without: "Screeners and engineers bottleneck volume",
@@ -162,7 +168,7 @@ export const SALES_PRODUCT_CARDS: SalesProductCard[] = [
       },
     ],
     funnel: `Apply → (optional) resume screen
-     → Early Self-Service Screening (~15 min)  ← this product
+     → Self-Service Skill Check (~15 min)  ← this product
      → HM / tech interview
      → deeper work sample (optional)
      → Offer`,
@@ -183,9 +189,10 @@ export const SALES_PRODUCT_CARDS: SalesProductCard[] = [
     demoUrl: DEMO_BOOKING_URL,
   },
   {
-    slug: "self-service-take-home-assignment",
-    path: "/sales/self-service-take-home-assignment",
-    title: "Self-service Take-Home Assignment",
+    slug: "self-service-take-home",
+    path: "/sales/self-service-take-home",
+    title: "Self-Service Take-Home",
+    productLine: "verification",
     eyebrow: "Hiring product",
     oneLine:
       "Candidates complete an open-ended, multi-block assignment inside the tool (discussion, diagrams, notes, and more); the client gets a role ranking and per-applicant strengths/weaknesses — without the classic take-home cost curve.",
@@ -212,7 +219,7 @@ export const SALES_PRODUCT_CARDS: SalesProductCard[] = [
     inputsHeading: "Inputs",
     inputs: [
       {
-        label: "Signals from Early Self-Service Screening",
+        label: "Signals from Self-Service Skill Check",
         value:
           "Optional. Rankings and strength/weakness packs from the first product — used to personalize depth, route candidates, or calibrate the take-home bar.",
       },
@@ -246,11 +253,11 @@ export const SALES_PRODUCT_CARDS: SalesProductCard[] = [
         value: "Same blocks and markers for every candidate on that role.",
       },
     ],
-    deliverablesNote: "Same reporting model as Early Self-Service Screening.",
+    deliverablesNote: "Same reporting model as Self-Service Skill Check.",
     valueModes: [
       {
         title: "A. Take-homes where they were not viable before",
-        body: "For high-volume roles, classic take-homes fail economics: too many submissions, too much senior review time, slow cycle time. Self-service Take-Home makes a real work sample economically viable because evaluation is structured and report-driven — you can run take-homes on roles that previously skipped them.",
+        body: "For high-volume roles, classic take-homes fail economics: too many submissions, too much senior review time, slow cycle time. Self-Service Take-Home makes a real work sample economically viable because evaluation is structured and report-driven — you can run take-homes on roles that previously skipped them.",
       },
       {
         title: "B. Lower cost on high-profile offers",
@@ -258,14 +265,14 @@ export const SALES_PRODUCT_CARDS: SalesProductCard[] = [
       },
     ],
     whenToUse: [
-      "After a light screen or Early Self-Service Screening, as a work sample",
+      "After a light screen or Self-Service Skill Check, as a work sample",
       "For roles that should have a take-home but review cost blocked it",
       "For high-profile pipelines where take-home quality matters and reviewer load is painful",
       "Anytime you need depth + consistency across many applicants for the same job position",
     ],
     comparisonTitle: "Why it fits “hire a lot, fast”",
     comparisonWithoutLabel: "Without this product",
-    comparisonWithLabel: "With Self-service Take-Home",
+    comparisonWithLabel: "With Self-Service Take-Home",
     comparison: [
       {
         without: "Take-homes only for a few premium roles",
@@ -284,9 +291,9 @@ export const SALES_PRODUCT_CARDS: SalesProductCard[] = [
         with: "Reports first; humans on exceptions and finals",
       },
     ],
-    funnel: `Apply → early screen (resume and/or Early Self-Service Screening)
+    funnel: `Apply → early screen (resume and/or Self-Service Skill Check)
      → HM / tech interview (optional order)
-     → Self-service Take-Home Assignment   ← this product
+     → Self-Service Take-Home   ← this product
      → Offer`,
     funnelNote:
       "Can also run before final interview when you want a ranked shortlist of deep work samples first.",
@@ -307,9 +314,10 @@ export const SALES_PRODUCT_CARDS: SalesProductCard[] = [
     demoUrl: DEMO_BOOKING_URL,
   },
   {
-    slug: "post-session-learning-check",
-    path: "/sales/post-session-learning-check",
-    title: "Post-Session Learning Check",
+    slug: "learning-loop",
+    path: "/sales/learning-loop",
+    title: "Learning Loop",
+    productLine: "optimization",
     eyebrow: "Learning product",
     oneLine:
       "After a class, tutorial video, group project, master class, or reading session — or mid–live stream — drive a customizable-length learning check via link or API so learners validate understanding and you get gap insights plus reteach guidance in near real time, not a quiz score AI can fake.",
@@ -370,7 +378,7 @@ export const SALES_PRODUCT_CARDS: SalesProductCard[] = [
       {
         label: "Prior check history (optional)",
         value:
-          "Optional. Earlier Post-Session Learning Check runs on the same learners or topic so the next report shows movement, not a one-off score.",
+          "Optional. Earlier Learning Loop runs on the same learners or topic so the next report shows movement, not a one-off score.",
       },
     ],
     inputsNote:
@@ -429,7 +437,7 @@ export const SALES_PRODUCT_CARDS: SalesProductCard[] = [
     ],
     comparisonTitle: "Why it beats “check your knowledge” quizzes",
     comparisonWithoutLabel: "Without this product",
-    comparisonWithLabel: "With Post-Session Learning Check",
+    comparisonWithLabel: "With Learning Loop",
     comparison: [
       {
         without: "Multiple-choice or short quiz AI can complete in seconds",
@@ -471,7 +479,7 @@ export const SALES_PRODUCT_CARDS: SalesProductCard[] = [
       },
     ],
     funnel: `Instructional moment (class / livestream / video / project / master class / reading)
-     → Post-Session Learning Check (link or API, customizable length)  ← this product
+     → Learning Loop (link or API, customizable length)  ← this product
      → Tutor / host gap report + reteach guidance (near real time via API if needed)
      → Next segment, session, materials, or office hours
      → Optional next iteration of the check (track evolution)`,
@@ -498,4 +506,31 @@ export const SALES_PRODUCT_CARDS: SalesProductCard[] = [
 
 export function getSalesProductCard(slug: string): SalesProductCard | undefined {
   return SALES_PRODUCT_CARDS.find((card) => card.slug === slug);
+}
+
+export type SalesProductGroup = {
+  id: SalesProductLine;
+  /** Section heading on the sales index. */
+  label: string;
+  cards: SalesProductCard[];
+};
+
+/** Ordered groups for the sales index product list. */
+export function groupSalesProductCards(
+  cards: readonly SalesProductCard[] = SALES_PRODUCT_CARDS,
+): SalesProductGroup[] {
+  const verification = cards.filter((c) => c.productLine === "verification");
+  const optimization = cards.filter((c) => c.productLine === "optimization");
+  return [
+    {
+      id: "verification",
+      label: "Verification Products",
+      cards: [...verification],
+    },
+    {
+      id: "optimization",
+      label: "Optimization Product",
+      cards: [...optimization],
+    },
+  ].filter((g) => g.cards.length > 0);
 }

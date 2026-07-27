@@ -6,6 +6,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   getSalesProductCard,
+  groupSalesProductCards,
   SALES_PRODUCT_CARDS,
   type SalesProductCard,
 } from "@/lib/sales/product-cards";
@@ -29,6 +30,30 @@ const REQUIRED_STRING_KEYS: (keyof SalesProductCard)[] = [
   "demoUrl",
 ];
 
+const EXPECTED_PRODUCTS = [
+  {
+    slug: "self-service-skill-check",
+    title: "Self-Service Skill Check",
+    path: "/sales/self-service-skill-check",
+    image: "/ranking_app.png",
+    oldPath: "early-self-service-screening",
+  },
+  {
+    slug: "self-service-take-home",
+    title: "Self-Service Take-Home",
+    path: "/sales/self-service-take-home",
+    image: "/knowledgeg2.png",
+    oldPath: "self-service-take-home-assignment",
+  },
+  {
+    slug: "learning-loop",
+    title: "Learning Loop",
+    path: "/sales/learning-loop",
+    image: "/gaps.png",
+    oldPath: "post-session-learning-check",
+  },
+] as const;
+
 function assertCardShape(card: SalesProductCard) {
   for (const key of REQUIRED_STRING_KEYS) {
     const value = card[key];
@@ -51,14 +76,10 @@ function assertCardShape(card: SalesProductCard) {
 }
 
 describe("sales product cards embed LP product visuals", () => {
-  it("maps screening → ranking_app and take-home → knowledgeg2", () => {
-    const screening = SALES_PRODUCT_CARDS.find(
-      (c) => c.slug === "early-self-service-screening",
-    );
-    const takeHome = SALES_PRODUCT_CARDS.find(
-      (c) => c.slug === "self-service-take-home-assignment",
-    );
-    expect(screening?.image).toBe("/ranking_app.png");
+  it("maps skill-check → ranking_app and take-home → knowledgeg2", () => {
+    const skillCheck = SALES_PRODUCT_CARDS.find((c) => c.slug === "self-service-skill-check");
+    const takeHome = SALES_PRODUCT_CARDS.find((c) => c.slug === "self-service-take-home");
+    expect(skillCheck?.image).toBe("/ranking_app.png");
     expect(takeHome?.image).toBe("/knowledgeg2.png");
     expect(existsSync(join(ROOT, "public/ranking_app.png"))).toBe(true);
     expect(existsSync(join(ROOT, "public/knowledgeg2.png"))).toBe(true);
@@ -75,19 +96,33 @@ describe("sales product cards embed LP product visuals", () => {
   });
 });
 
-describe("sales product catalog includes Post-Session Learning Check", () => {
-  it("registers a third card with path, title, and full narrative shape", () => {
+describe("sales product catalog renames", () => {
+  it("registers Self-Service Skill Check, Self-Service Take-Home, and Learning Loop", () => {
     expect(SALES_PRODUCT_CARDS.length).toBeGreaterThanOrEqual(3);
 
-    const card = getSalesProductCard("post-session-learning-check");
+    // Old primary titles must not remain as catalog titles
+    const titles = SALES_PRODUCT_CARDS.map((c) => c.title);
+    expect(titles).not.toContain("Early Self-Service Screening");
+    expect(titles).not.toContain("Post-Session Learning Check");
+    expect(titles).not.toContain("Self-service Take-Home Assignment");
+
+    for (const expected of EXPECTED_PRODUCTS) {
+      const card = getSalesProductCard(expected.slug);
+      expect(card, expected.slug).toBeDefined();
+      if (!card) continue;
+      expect(card.title).toBe(expected.title);
+      expect(card.path).toBe(expected.path);
+      expect(card.image).toBe(expected.image);
+      assertCardShape(card);
+    }
+  });
+
+  it("Learning Loop keeps post-session learning narrative fields", () => {
+    const card = getSalesProductCard("learning-loop");
     expect(card).toBeDefined();
     if (!card) return;
 
-    expect(card.title).toBe("Post-Session Learning Check");
-    expect(card.path).toBe("/sales/post-session-learning-check");
     expect(card.eyebrow.toLowerCase()).toContain("learning");
-    assertCardShape(card);
-
     const blob = [
       card.oneLine,
       card.whatItIs,
@@ -107,19 +142,15 @@ describe("sales product catalog includes Post-Session Learning Check", () => {
       .join("\n")
       .toLowerCase();
 
-    // Customizable link duration
     expect(blob).toMatch(/customizable/);
     expect(blob).toMatch(/length|duration/);
-    // Post-session instructional contexts
     expect(blob).toMatch(/class/);
     expect(blob).toMatch(/video|tutorial/);
     expect(blob).toMatch(/project/);
     expect(blob).toMatch(/read/);
-    // Tutor gap insights + correction guidance
     expect(blob).toMatch(/gap/);
     expect(blob).toMatch(/tutor|teacher/);
     expect(blob).toMatch(/reteach|correct|guidance/);
-    // Multi-iteration vs cheatable tests / AI fakes
     expect(blob).toMatch(/iteration|evolution|over time/);
     expect(blob).toMatch(/ai|cheat|fake|quiz/);
   });
@@ -131,28 +162,60 @@ describe("sales product catalog includes Post-Session Learning Check", () => {
     }
   });
 
-  it("detail route modules resolve the card the same way as existing product routes", () => {
-    const screening = readFileSync(
-      join(ROOT, "app/sales/early-self-service-screening/page.tsx"),
-      "utf8",
-    );
-    const learningCheck = readFileSync(
-      join(ROOT, "app/sales/post-session-learning-check/page.tsx"),
-      "utf8",
-    );
+  it("groups first two as Verification Products and Learning Loop as Optimization Product", () => {
+    const groups = groupSalesProductCards();
+    expect(groups.map((g) => g.id)).toEqual(["verification", "optimization"]);
+    expect(groups[0].label).toBe("Verification Products");
+    expect(groups[1].label).toBe("Optimization Product");
+    expect(groups[0].cards.map((c) => c.slug)).toEqual([
+      "self-service-skill-check",
+      "self-service-take-home",
+    ]);
+    expect(groups[1].cards.map((c) => c.slug)).toEqual(["learning-loop"]);
+    for (const card of SALES_PRODUCT_CARDS) {
+      expect(card.productLine === "verification" || card.productLine === "optimization").toBe(
+        true,
+      );
+    }
+
     const index = readFileSync(join(ROOT, "app/sales/page.tsx"), "utf8");
+    const catalog = readFileSync(join(ROOT, "lib/sales/product-cards.ts"), "utf8");
+    expect(index).toContain("groupSalesProductCards");
+    expect(index).toContain("data-sales-product-group");
+    expect(index).toContain("group.label");
+    expect(catalog).toContain("Verification Products");
+    expect(catalog).toContain("Optimization Product");
+  });
 
-    expect(screening).toContain('const SLUG = "early-self-service-screening"');
-    expect(screening).toContain("getSalesProductCard(SLUG)");
-    expect(screening).toContain("SalesProductCardPage");
+  it("detail route modules resolve new slugs; old paths redirect", () => {
+    for (const expected of EXPECTED_PRODUCTS) {
+      const page = readFileSync(
+        join(ROOT, `app/sales/${expected.slug}/page.tsx`),
+        "utf8",
+      );
+      expect(page).toContain(`const SLUG = "${expected.slug}"`);
+      expect(page).toContain("getSalesProductCard(SLUG)");
+      expect(page).toContain("SalesProductCardPage");
+      expect(page).toContain("notFound");
 
-    expect(learningCheck).toContain('const SLUG = "post-session-learning-check"');
-    expect(learningCheck).toContain("getSalesProductCard(SLUG)");
-    expect(learningCheck).toContain("SalesProductCardPage");
-    expect(learningCheck).toContain("notFound");
+      const oldPage = readFileSync(
+        join(ROOT, `app/sales/${expected.oldPath}/page.tsx`),
+        "utf8",
+      );
+      expect(oldPage).toContain("redirect");
+      expect(oldPage).toContain(expected.path);
+    }
 
-    // Index lists from full catalog — no hardcoded two-card list
-    expect(index).toContain("SALES_PRODUCT_CARDS.map");
+    const autonomous = readFileSync(
+      join(ROOT, "app/sales/autonomous-take-home-assignment/page.tsx"),
+      "utf8",
+    );
+    expect(autonomous).toContain("redirect");
+    expect(autonomous).toContain("/sales/self-service-take-home");
+
+    const index = readFileSync(join(ROOT, "app/sales/page.tsx"), "utf8");
+    // Index lists from catalog groups (not a hardcoded two-card slice)
+    expect(index).toContain("groupSalesProductCards");
     expect(index).not.toMatch(/SALES_PRODUCT_CARDS\.slice\(0,\s*2\)/);
   });
 });

@@ -24,8 +24,8 @@ You need to hire **~50 people in ~2 months**. That is not “run a few more inte
 
 | Product | One line | Inputs | Full brief |
 |---------|----------|--------|------------|
-| **Early Self-Service Screening** | ~15 min private link, think-out-loud dialog → role ranking + per-candidate strengths/weaknesses; **API automation available** | **JD (req.)** + culture / hiring brief (opt.) | [product-early-self-service-screening.md](./product-early-self-service-screening.md) |
-| **Self-service Take-Home Assignment** | Multi-block open-ended work sample → same ranking + per-applicant report; viable at volume or cheaper on premium roles | Screening signals (opt.) + exercise description (rec., or **we design it**) | [product-self-service-take-home-assignment.md](./product-self-service-take-home-assignment.md) |
+| **Self-Service Skill Check** | ~15 min private link, think-out-loud dialog → role ranking + per-candidate strengths/weaknesses; **API automation available** | **JD (req.)** + culture / hiring brief (opt.) | [product-early-self-service-screening.md](./product-early-self-service-screening.md) |
+| **Self-Service Take-Home** | Multi-block open-ended work sample → same ranking + per-applicant report; viable at volume or cheaper on premium roles | Screening signals (opt.) + exercise description (rec., or **we design it**) | [product-self-service-take-home-assignment.md](./product-self-service-take-home-assignment.md) |
 
 ---
 
@@ -43,9 +43,9 @@ You need to hire **~50 people in ~2 months**. That is not “run a few more inte
 
 ```
 Apply → (optional) resume/screen
-     → Early Self-Service Screening (~15 min)   ← volume + early signal
+     → Self-Service Skill Check (~15 min)   ← volume + early signal
      → HM / tech interview                      ← only strong ranks
-     → Self-service Take-Home (multi-block)       ← depth / work sample
+     → Self-Service Take-Home (multi-block)       ← depth / work sample
      → Offer
 ```
 
@@ -68,8 +68,8 @@ Use **only Card 1** when speed is everything; **Card 1 + Card 2** when you need 
 ## Pilot (2–4 weeks)
 
 1. Pick **1–2 high-volume roles** in the 50-hire plan.  
-2. Stand up **Early Self-Service Screening** (15-min link + role ranking).  
-3. Optionally add **Self-service Take-Home** for finalists or for one premium track.  
+2. Stand up **Self-Service Skill Check** (15-min link + role ranking).  
+3. Optionally add **Self-Service Take-Home** for finalists or for one premium track.  
 4. Calibrate pass/fail on the first N reports with hiring managers.  
 5. Roll the same products across the rest of the ramp.
 

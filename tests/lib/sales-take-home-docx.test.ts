@@ -24,7 +24,7 @@ function extractDocxText(path: string): string {
     .replace(/&#x201D;/g, '"');
 }
 
-describe("Self-service Take-Home Assignment docx", () => {
+describe("Self-Service Take-Home docx", () => {
   it("ships a non-empty Word package with OOXML parts", () => {
     expect(existsSync(buildScript)).toBe(true);
     expect(existsSync(docxPath)).toBe(true);
@@ -43,7 +43,7 @@ describe("Self-service Take-Home Assignment docx", () => {
 
   it("extracts title and major section anchors from the real docx", () => {
     const text = extractDocxText(docxPath);
-    expect(text).toContain("Self-service Take-Home Assignment");
+    expect(text).toContain("Self-Service Take-Home");
     expect(text).toMatch(/In One line/i);
     expect(text.toLowerCase()).toContain("multi-block");
     expect(text).toContain("Interactive discussion");
@@ -54,14 +54,14 @@ describe("Self-service Take-Home Assignment docx", () => {
     expect(text.toLowerCase()).toMatch(/hire a lot/);
     expect(text).toContain("Uncertain Systems");
     expect(text).toMatch(/strengths and weaknesses/i);
-    expect(text).toMatch(/Early Self-Service Screening/);
+    expect(text).toMatch(/Self-Service Skill Check/);
   });
 });
 
 const screeningDocx = join(root, "docs/sales/early-self-service-screening.docx");
 const screeningBuild = join(root, "docs/sales/build-early-self-service-screening-docx.mjs");
 
-describe("Early Self-Service Screening docx", () => {
+describe("Self-Service Skill Check docx", () => {
   it("ships a non-empty Word package with OOXML parts", () => {
     expect(existsSync(screeningBuild)).toBe(true);
     expect(existsSync(screeningDocx)).toBe(true);
@@ -72,7 +72,7 @@ describe("Early Self-Service Screening docx", () => {
 
   it("extracts title and major section anchors from the real docx", () => {
     const text = extractDocxText(screeningDocx);
-    expect(text).toContain("Early Self-Service Screening");
+    expect(text).toContain("Self-Service Skill Check");
     expect(text).toMatch(/In One line/i);
     expect(text).toMatch(/15-minute|~15 minute/i);
     expect(text).toContain("Think Aloud Protocol");

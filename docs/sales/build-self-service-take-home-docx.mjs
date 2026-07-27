@@ -279,7 +279,7 @@ const doc = new Document({
         }),
       },
       children: [
-        h1("Self-service Take-Home Assignment"),
+        h1("Self-Service Take-Home"),
 
         h2("In One line"),
         body(
@@ -318,7 +318,7 @@ const doc = new Document({
           ["Input", "Required?", "Notes"],
           [
             [
-              "Signals from Early Self-Service Screening",
+              "Signals from Self-Service Skill Check",
               "Optional",
               "Rankings and strength/weakness packs from the first product used to personalize depth, route candidates, or calibrate the take-home bar.",
             ],
@@ -347,7 +347,7 @@ const doc = new Document({
         ),
 
         h2("What the client gets"),
-        body("Same reporting model as Early Self-Service Screening:"),
+        body("Same reporting model as Self-Service Skill Check:"),
         twoColTable([
           { 0: "Deliverable", 1: "Description", isHeader: true },
           [
@@ -382,7 +382,7 @@ const doc = new Document({
 
         h2("When to use it"),
         bullet(
-          "After a light screen or Early Self-Service Screening, as a work sample",
+          "After a light screen or Self-Service Skill Check, as a work sample",
           "bullets2",
         ),
         bullet(
@@ -402,7 +402,7 @@ const doc = new Document({
         twoColTable([
           {
             0: "Without this product",
-            1: "With Self-service Take-Home",
+            1: "With Self-Service Take-Home",
             isHeader: true,
           },
           [

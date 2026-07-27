@@ -3,7 +3,10 @@ import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { PITCH_INDEX } from "@/lib/sales/pitch-index";
-import { SALES_PRODUCT_CARDS } from "@/lib/sales/product-cards";
+import {
+  groupSalesProductCards,
+  type SalesProductCard,
+} from "@/lib/sales/product-cards";
 import { PITCH_ASSETS } from "@/lib/sales/solution-slide-decks";
 
 export const metadata: Metadata = {
@@ -44,52 +47,21 @@ export default function SalesIndexPage() {
           Product cards and pitch decks for Uncertain Systems. Share direct links — noindex.
         </p>
 
-        <section className="mt-12" data-product-card-links>
-          <h2 className="font-mono text-[11px] uppercase tracking-[1.8px] text-zinc-500">
-            Product cards
-          </h2>
-          <ul className="mt-4 space-y-4">
-            {SALES_PRODUCT_CARDS.map((card) => (
-              <li key={card.path}>
-                <Link
-                  href={card.path}
-                  className="group flex flex-col gap-4 border border-zinc-800 bg-zinc-950/70 p-5 transition hover:border-zinc-600 sm:flex-row sm:items-stretch sm:gap-5 sm:p-6"
-                  data-sales-index-product={card.slug}
-                >
-                  {card.image ? (
-                    <div
-                      className="relative aspect-[16/11] w-full shrink-0 overflow-hidden rounded-sm border border-zinc-800/90 bg-zinc-950 sm:aspect-auto sm:h-auto sm:w-44 md:w-52"
-                      data-sales-index-thumb={card.image}
-                    >
-                      <Image
-                        src={card.image}
-                        alt={card.imageAlt || card.title}
-                        fill
-                        className="object-cover object-top transition duration-300 group-hover:scale-[1.02]"
-                        sizes="(max-width: 640px) 100vw, 208px"
-                      />
-                    </div>
-                  ) : null}
-                  <div className="flex min-w-0 flex-1 flex-col justify-center">
-                    <p className="font-mono text-[10px] uppercase tracking-[1.6px] text-zinc-500">
-                      {card.eyebrow}
-                    </p>
-                    <h3 className="mt-2 text-xl font-medium tracking-[-0.6px] text-white sm:text-2xl">
-                      {card.title}
-                    </h3>
-                    <p className="mt-2 max-w-2xl text-sm leading-relaxed text-zinc-500 sm:text-base">
-                      {card.oneLine}
-                    </p>
-                    <p className="mt-3 font-mono text-xs text-zinc-600">{card.path}</p>
-                  </div>
-                  <span className="inline-flex shrink-0 items-center gap-1.5 self-start text-sm font-medium text-zinc-300 transition group-hover:text-white sm:self-center">
-                    Open card
-                    <ArrowRight size={14} />
-                  </span>
-                </Link>
-              </li>
-            ))}
-          </ul>
+        <section className="mt-12 space-y-10" data-product-card-links>
+          {groupSalesProductCards().map((group) => (
+            <div key={group.id} data-sales-product-group={group.id}>
+              <h2 className="font-mono text-[11px] uppercase tracking-[1.8px] text-zinc-500">
+                {group.label}
+              </h2>
+              <ul className="mt-4 space-y-4">
+                {group.cards.map((card) => (
+                  <li key={card.path}>
+                    <SalesIndexProductLink card={card} />
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
         </section>
 
         <section className="mt-14">
@@ -160,5 +132,47 @@ export default function SalesIndexPage() {
         </p>
       </div>
     </main>
+  );
+}
+
+function SalesIndexProductLink({ card }: { card: SalesProductCard }) {
+  return (
+    <Link
+      href={card.path}
+      className="group flex flex-col gap-4 border border-zinc-800 bg-zinc-950/70 p-5 transition hover:border-zinc-600 sm:flex-row sm:items-stretch sm:gap-5 sm:p-6"
+      data-sales-index-product={card.slug}
+      data-sales-product-line={card.productLine}
+    >
+      {card.image ? (
+        <div
+          className="relative aspect-[16/11] w-full shrink-0 overflow-hidden rounded-sm border border-zinc-800/90 bg-zinc-950 sm:aspect-auto sm:h-auto sm:w-44 md:w-52"
+          data-sales-index-thumb={card.image}
+        >
+          <Image
+            src={card.image}
+            alt={card.imageAlt || card.title}
+            fill
+            className="object-cover object-top transition duration-300 group-hover:scale-[1.02]"
+            sizes="(max-width: 640px) 100vw, 208px"
+          />
+        </div>
+      ) : null}
+      <div className="flex min-w-0 flex-1 flex-col justify-center">
+        <p className="font-mono text-[10px] uppercase tracking-[1.6px] text-zinc-500">
+          {card.eyebrow}
+        </p>
+        <h3 className="mt-2 text-xl font-medium tracking-[-0.6px] text-white sm:text-2xl">
+          {card.title}
+        </h3>
+        <p className="mt-2 max-w-2xl text-sm leading-relaxed text-zinc-500 sm:text-base">
+          {card.oneLine}
+        </p>
+        <p className="mt-3 font-mono text-xs text-zinc-600">{card.path}</p>
+      </div>
+      <span className="inline-flex shrink-0 items-center gap-1.5 self-start text-sm font-medium text-zinc-300 transition group-hover:text-white sm:self-center">
+        Open card
+        <ArrowRight size={14} />
+      </span>
+    </Link>
   );
 }

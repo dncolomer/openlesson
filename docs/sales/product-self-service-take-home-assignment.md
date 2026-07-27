@@ -1,4 +1,4 @@
-# Self-service Take-Home Assignment
+# Self-Service Take-Home
 
 **Uncertain Systems · Hiring product**  
 **Website:** [uncertain.systems](https://uncertain.systems) · **Demo:** [cal.com/daniel-colomer](https://cal.com/daniel-colomer-lvwg8w/openlesson-demo)
@@ -36,7 +36,7 @@ Built for depth (assignment / project-style judgment) while remaining **structur
 
 | Input | Required? | Notes |
 |-------|-----------|--------|
-| **Signals from Early Self-Service Screening** | Optional | Rankings and strength/weakness packs from the first product — used to personalize depth, route candidates, or calibrate the take-home bar. |
+| **Signals from Self-Service Skill Check** | Optional | Rankings and strength/weakness packs from the first product — used to personalize depth, route candidates, or calibrate the take-home bar. |
 | **Take-home exercise description** | Recommended, but optional | Your brief for the multi-block assignment. **If you do not have one, we can design the exercise ourselves** from the role (and optional screening signals). |
 
 You can start with only a job/role context and let us author the blocks, or bring an existing take-home and we turn it into a structured multi-block journey.
@@ -56,7 +56,7 @@ Unlike a classic take-home, the system captures **how** the candidate works, not
 
 ## What the client gets
 
-Same reporting model as Early Self-Service Screening:
+Same reporting model as Self-Service Skill Check:
 
 | Deliverable | Description |
 |-------------|-------------|
@@ -72,7 +72,7 @@ Same reporting model as Early Self-Service Screening:
 
 For high-volume roles, classic take-homes fail economics: too many submissions, too much senior review time, slow cycle time.
 
-**Self-service Take-Home** makes a real work sample **economically viable** because evaluation is structured and report-driven — you can run take-homes on roles that previously skipped them.
+**Self-Service Take-Home** makes a real work sample **economically viable** because evaluation is structured and report-driven — you can run take-homes on roles that previously skipped them.
 
 ### B. Lower cost on high-profile offers
 
@@ -84,7 +84,7 @@ Use this product to **reduce cost and resources** to run and evaluate take-homes
 
 ## When to use it
 
-- After a light screen or Early Self-Service Screening, as a **work sample**  
+- After a light screen or Self-Service Skill Check, as a **work sample**  
 - For roles that **should** have a take-home but review cost blocked it  
 - For **high-profile** pipelines where take-home quality matters and reviewer load is painful  
 - Anytime you need **depth + consistency** across many applicants for the same job position  
@@ -93,7 +93,7 @@ Use this product to **reduce cost and resources** to run and evaluate take-homes
 
 ## Why it fits “hire a lot, fast”
 
-| Without this product | With Self-service Take-Home |
+| Without this product | With Self-Service Take-Home |
 |----------------------|---------------------------|
 | Take-homes only for a few premium roles | Viable work samples at higher volume |
 | Multi-day lag and uneven grading | Structured multi-block journey + role ranking |
@@ -105,9 +105,9 @@ Use this product to **reduce cost and resources** to run and evaluate take-homes
 ## Suggested placement in the funnel
 
 ```
-Apply → early screen (resume and/or Early Self-Service Screening)
+Apply → early screen (resume and/or Self-Service Skill Check)
      → HM / tech interview (optional order)
-     → Self-service Take-Home Assignment   ← this product
+     → Self-Service Take-Home   ← this product
      → Offer
 ```
 

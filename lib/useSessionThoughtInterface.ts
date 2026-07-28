@@ -10,8 +10,15 @@ export interface SessionThought {
 }
 
 export type SessionTraceType = "system1" | "system2";
-export type SessionSystem1Action = "crystallize" | "pause_finalize";
-export type SessionSystem2Action = "send" | "skip" | "select" | "deselect" | "resend" | "edit";
+export type SessionSystem1Action = "crystallize" | "pause_finalize" | "auto_stash";
+export type SessionSystem2Action =
+  | "send"
+  | "skip"
+  | "select"
+  | "deselect"
+  | "resend"
+  | "edit"
+  | "remove";
 
 export type SpeechRecognitionResultLike = {
   readonly isFinal: boolean;
@@ -526,6 +533,12 @@ export function useSessionThoughtInterface({
     if (text) addThought(text);
   }, [crystallizableText, restartSpeechRecognitionSession]);
 
+  /** Clear live speech bar without stashing or logging (e.g. Project Mode dual-list path). */
+  const clearCurrentTranscription = useCallback(() => {
+    clearTranscriptionDisplay();
+    restartSpeechRecognitionSession();
+  }, [restartSpeechRecognitionSession]);
+
   useEffect(() => {
     if (!enabled) {
       stopLiveSpeechRecognition(speechBindings);
@@ -692,6 +705,7 @@ export function useSessionThoughtInterface({
     memoryThoughtIds,
     speechSupported,
     stashCurrentTranscription,
+    clearCurrentTranscription,
     sendCurrentTranscription,
     sendThought,
     beginEditTranscription,

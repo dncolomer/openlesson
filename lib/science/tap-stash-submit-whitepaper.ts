@@ -105,7 +105,7 @@ export const TAP_STASH_SUBMIT_WHITEPAPER: TapWhitepaper = {
       heading: "1. Introduction",
       paragraphs: [
         "Skill verification and learning analytics increasingly face a measurement crisis: generative models can produce fluent final answers that obscure whether a human (or agent) can retrieve, apply, and transform knowledge under real constraints. Multiple-choice scores and deliverable-only portfolios sample thin output slices. Classic think-aloud methods (Ericsson & Simon, 1980/1993) remain a gold standard for process evidence, but they were not designed for AI-saturated workflows, shareable session links, or machine-readable dual streams of spontaneous versus filtered thought.",
-        "We present an implementation of TAP that keeps the core scientific commitment—externalize thinking while it occurs—while adding a selective thought interface. Learners think out loud; each crystallized fragment is either stashed (kept private relative to the dialogue partner) or submitted into the Socratic exchange. The intentionality of that choice is itself signal. The resulting dual stream becomes Proof of Work data: artifacts of process that can be scored, embedded, and compared against labeled regions of knowledge space.",
+        "We present an implementation of TAP that keeps the core scientific commitment—externalize thinking while it occurs—while adding a selective thought interface. Learners think out loud; each crystallized fragment is either stashed (kept private relative to the dialogue partner) or submitted into the dialogue. The intentionality of that choice is itself signal. The resulting dual stream becomes Proof of Work data: artifacts of process that can be scored, embedded, and compared against labeled regions of knowledge space.",
         "This paper is a methods and design document. It does not claim completed empirical region-learning results. Section 5 describes the experiment we plan to run.",
       ],
     },
@@ -130,7 +130,7 @@ export const TAP_STASH_SUBMIT_WHITEPAPER: TapWhitepaper = {
       ],
       bullets: [
         "Session goal: externalize cognition about a workspace-scoped target under time bounds.",
-        "Elicitation: brief Socratic or directed prompts that thicken traces (example, causal link, repair), not multi-paragraph lectures.",
+        "Elicitation: brief directed prompts that thicken traces (example, causal link, repair), not multi-paragraph lectures.",
         "Stash: fragment is crystallized and retained as System 1 / unsent PoW without becoming the dialogue turn of record.",
         "Submit (and related deliberate actions): fragment or revision enters System 2 dialogue evidence.",
         "Both streams are first-class: later analysis may contrast what was said privately versus what was advanced publicly.",
@@ -141,15 +141,14 @@ export const TAP_STASH_SUBMIT_WHITEPAPER: TapWhitepaper = {
       heading: "4. Proof of Work data model",
       kicker: "What is captured and how it is used",
       paragraphs: [
-        "We use Proof of Work (PoW) to mean machine- and human-inspectable process artifacts that stand as a proxy for proximity to a target knowledge configuration—not a blockchain metaphor and not a single correctness bit. In TAP, PoW includes the dialogue transcript, System 1 and System 2 thought-trace files, timestamps and inter-event structure (for example dwell before send, idle before crystallize), and session-level manifests that list attached traces.",
-        "After the session, analysis may jointly consider transcript and traces. Scoring instructions treat System 1 counts (spontaneous and stashed speech) and System 2 counts (deliberate dialogue actions) as primary genuine-cognition signal: unsent knowledge can reveal gaps and metacognitive filtering; submitted reasoning can reveal what the learner is willing to stand behind. Snapshots and related workspace analyses use these artifacts as input evidence for marker scores, gap analysis, and temporal summaries—without requiring that live TAP announce scores to the learner.",
+        "We use Proof of Work (PoW) to mean machine- and human-inspectable process artifacts that stand as a proxy for proximity to a target knowledge configuration. In TAP, PoW includes the dialogue transcript, System 1 and System 2 thought-trace files, timestamps and inter-event structure (for example dwell before send, idle before crystallize), and session-level manifests that list attached traces.",
+        "After the session, analysis may jointly consider transcript and traces. Scoring instructions treat System 1 counts (spontaneous and stashed speech) and System 2 counts (deliberate dialogue actions) as primary genuine-cognition signal: unsent knowledge can reveal gaps and metacognitive filtering; submitted reasoning can reveal what the learner is willing to stand behind.",
         "Separately, agent-facing APIs mirror the same intent taxonomy (buffer, then Stash or Submit into the regular PoW stack), so human TAP and agent evaluation can share a dual-stream PoW ontology. This paper focuses on the human TAP Stash/Submit method; the shared ontology is noted for completeness of the measurement stack.",
       ],
       bullets: [
         "Captured: verbalized fragments, Stash vs Submit (and edit/skip/select/resend) decisions, timestamps, dialogue context, workspace target labels.",
         "Retained: stashed/unsent traces as System 1 PoW; submitted turns and deliberate actions as System 2 PoW.",
         "Downstream: performance snapshots and related analyses consume both streams; polished finals alone are insufficient.",
-        "Privacy posture: selective sharing is first-class—stash is not failure, it is evidence of filtering under the protocol.",
       ],
     },
     {

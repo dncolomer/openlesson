@@ -22,6 +22,8 @@ interface ExcalidrawCanvasProps {
   onSceneChange?: (data: { elements: any[]; appState: any; files: any }) => void;
   onSubmitToHelios?: (dataUrl?: string | null) => Promise<void> | void;
   canSubmitToHelios?: boolean;
+  /** Override default "Submit to Helios" label (e.g. Project Mode "To solution"). */
+  submitLabel?: string;
   chapterLabel?: string;
 }
 
@@ -56,9 +58,11 @@ export function ExcalidrawCanvas({
   onSceneChange,
   onSubmitToHelios,
   canSubmitToHelios = true,
+  submitLabel,
   chapterLabel,
 }: ExcalidrawCanvasProps) {
   const { t } = useI18n();
+  const submitButtonLabel = submitLabel || t("whiteboard.submitToHelios");
   const excalidrawAPIRef = useRef<ExcalidrawAPIRef>(null);
   const cameraVideoRef = useRef<HTMLVideoElement | null>(null);
   const cameraStreamRef = useRef<MediaStream | null>(null);
@@ -368,7 +372,7 @@ export function ExcalidrawCanvas({
                 ? t("whiteboard.submitHint")
                 : t("whiteboard.alreadySubmitted")
             }
-            aria-label={t("whiteboard.submitToHelios")}
+            aria-label={submitButtonLabel}
             className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs text-white bg-white/10 border border-white/30 hover:bg-white/20 hover:border-white/50 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-colors"
           >
             {isSubmittingToHelios ? (
@@ -405,7 +409,7 @@ export function ExcalidrawCanvas({
             <span className="whitespace-nowrap">
               {isSubmittingToHelios
                 ? t("whiteboard.submitting")
-                : t("whiteboard.submitToHelios")}
+                : submitButtonLabel}
             </span>
           </button>
         )}

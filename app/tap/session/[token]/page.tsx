@@ -1,5 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import { TapScoreClient } from "@/components/TapScoreClient";
+import { ExerciseTapClient } from "@/components/ExerciseTapClient";
 import { hashPrivateToken } from "@/lib/tap-score";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
@@ -9,6 +10,7 @@ import {
 } from "@/lib/guest-link-access";
 import { buildPowParticipantIdentity } from "@/lib/session-participant-identity";
 import { resolveGuestForLinkQueryParams } from "@/lib/guest-link-query-guest";
+import { resolveTapShellFromSession } from "@/lib/exercise-tap";
 
 interface PageProps {
   params: Promise<{ token: string }>;
@@ -21,12 +23,13 @@ export default async function PrivateTapSessionPage({ params, searchParams }: Pa
   const supabase = createAdminClient();
   const tokenHash = hashPrivateToken(token);
 
+  const tapSessionSelect =
+    "id, workspace_id, block_id, session_id, status, requested_duration_seconds, mode, voice_id, analysis, overall_score, marker_scores, assigned_user_id, guest_user_id, organization_id, user_id, post_session, redirect_url, show_end_session, interaction_kind, workspaces(title, user_id)";
+
   let session: Record<string, unknown> | null = null;
   const { data: byHash } = await supabase
     .from("workspace_tap_sessions")
-    .select(
-      "id, workspace_id, block_id, session_id, status, requested_duration_seconds, mode, voice_id, analysis, overall_score, marker_scores, assigned_user_id, guest_user_id, organization_id, user_id, post_session, redirect_url, show_end_session, workspaces(title, user_id)"
-    )
+    .select(tapSessionSelect)
     .eq("private_token_hash", tokenHash)
     .maybeSingle();
   session = byHash;
@@ -35,9 +38,7 @@ export default async function PrivateTapSessionPage({ params, searchParams }: Pa
   if (!session) {
     const { data: byPublic } = await supabase
       .from("workspace_tap_sessions")
-      .select(
-        "id, workspace_id, block_id, session_id, status, requested_duration_seconds, mode, voice_id, analysis, overall_score, marker_scores, assigned_user_id, guest_user_id, organization_id, user_id, post_session, redirect_url, show_end_session, workspaces(title, user_id)"
-      )
+      .select(tapSessionSelect)
       .eq("public_token", token)
       .eq("access_mode", "public")
       .maybeSingle();
@@ -122,16 +123,26 @@ export default async function PrivateTapSessionPage({ params, searchParams }: Pa
     assignedUserId: (session.assigned_user_id as string | null) ?? null,
   });
 
-  return (
-    <TapScoreClient
-      workspaceId={String(session.workspace_id)}
-      privateToken={token}
-      sessionId={(session.session_id as string) || undefined}
-      blockId={(session.block_id as string) || undefined}
-      initialSession={initialSession}
-      showEndSession={showEndSession}
-      entryQueryParams={entryParams}
-      participantIdentity={participantIdentity}
-    />
-  );
+  const shell = resolveTapShellFromSession({
+    interaction_kind: session.interaction_kind,
+    initialSession: {
+      interaction_kind: session.interaction_kind,
+    },
+  });
+  const clientProps = {
+    workspaceId: String(session.workspace_id),
+    privateToken: token,
+    sessionId: (session.session_id as string) || undefined,
+    blockId: (session.block_id as string) || undefined,
+    initialSession,
+    showEndSession,
+    entryQueryParams: entryParams,
+    participantIdentity,
+  };
+
+  if (shell === "exercise") {
+    return <ExerciseTapClient {...clientProps} />;
+  }
+
+  return <TapScoreClient {...clientProps} />;
 }

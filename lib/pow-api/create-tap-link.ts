@@ -14,8 +14,10 @@ import {
   normalizeTapPostSession,
   normalizeWebhookUrl,
   resolveShowEndSessionFromBody,
+  resolveTapInteractionKindFromBody,
   resolveTapParticipantType,
   type CreateTapLinkInput,
+  type TapInteractionKind,
   type TapParticipantType,
 } from "./tap-link-config";
 import {
@@ -69,6 +71,8 @@ export interface CreatedTapLink {
   entry_query_params: unknown;
   /** When true (default), guest TAP UI shows End Session. */
   show_end_session: boolean;
+  /** conversational (default) | exercise — which TAP shell to open. */
+  interaction_kind: TapInteractionKind;
   /** Shareable session URL (stable for public; secret bearer for private). */
   url: string;
   /** Alias of url for backward compatibility. */
@@ -76,13 +80,14 @@ export interface CreatedTapLink {
 }
 
 const TAP_LINK_SELECT =
-  "id, workspace_id, block_id, status, requested_duration_seconds, focus_block_ids, created_at, participant_type, post_session, redirect_url, guest_user_id, assigned_user_id, access_mode, public_token, entry_query_params, show_end_session";
+  "id, workspace_id, block_id, status, requested_duration_seconds, focus_block_ids, created_at, participant_type, post_session, redirect_url, guest_user_id, assigned_user_id, access_mode, public_token, entry_query_params, show_end_session, interaction_kind";
 
 function withTapLinkUrl(
-  link: Omit<CreatedTapLink, "url" | "private_url" | "show_end_session"> & {
+  link: Omit<CreatedTapLink, "url" | "private_url" | "show_end_session" | "interaction_kind"> & {
     access_mode?: string | null;
     public_token?: string | null;
     show_end_session?: boolean | null;
+    interaction_kind?: string | null;
   },
   baseUrl: string,
   sessionToken: string,
@@ -90,12 +95,15 @@ function withTapLinkUrl(
   const access_mode: GuestLinkAccessMode =
     link.access_mode === "public" ? "public" : "private";
   const url = buildGuestLinkUrl(baseUrl, "tap", sessionToken);
+  const interaction_kind: TapInteractionKind =
+    link.interaction_kind === "exercise" ? "exercise" : "conversational";
   return {
     ...link,
     access_mode,
     public_token: access_mode === "public" ? link.public_token ?? sessionToken : null,
     entry_query_params: link.entry_query_params ?? [],
     show_end_session: link.show_end_session !== false,
+    interaction_kind,
     url,
     private_url: url,
   };
@@ -319,6 +327,7 @@ export async function createWorkspaceTapLink(options: CreateTapLinkOptions): Pro
 
   const accessMode = normalizeGuestLinkAccessMode(body);
   const showEndSession = resolveShowEndSessionFromBody(body);
+  const interactionKind = resolveTapInteractionKindFromBody(body);
   // Session path token: secret for private; stable non-rotating public_token for public.
   const sessionToken = createPrivateToken();
   const publicToken = accessMode === "public" ? sessionToken : null;
@@ -337,6 +346,7 @@ export async function createWorkspaceTapLink(options: CreateTapLinkOptions): Pro
       public_token: publicToken,
       entry_query_params: [],
       show_end_session: showEndSession,
+      interaction_kind: interactionKind,
       requested_duration_seconds: Math.round(minutes * 60),
       block_id: blockId,
       mode: "curious",

@@ -9,6 +9,11 @@ import {
 } from "@/lib/pow-api/invalidate-guest-links";
 import { createAnonymousTapGuest } from "@/lib/pow-api/anonymous-tap-guest";
 import { resolveGuestLinkAttribution } from "@/lib/session-participant-identity";
+import {
+  ILE_SESSION_MODE_DEFAULT,
+  normalizeIleSessionMode,
+  type IleSessionMode,
+} from "@/lib/ile-mode";
 
 export interface ResolvedIleLinkContext {
   supabase: ReturnType<typeof createAdminClient>;
@@ -24,12 +29,14 @@ export interface ResolvedIleLinkContext {
   accessMode: GuestLinkAccessMode;
   /** When true (default), guest UI shows End Session. */
   showEndSession: boolean;
+  /** learning (default) | project — durable on the share link. */
+  sessionMode: IleSessionMode;
   /** Synthetic user for routes that expect a user id (workspace owner). */
   actingUser: Pick<User, "id">;
 }
 
 const LINK_SELECT =
-  "id, workspace_id, block_id, user_id, guest_user_id, assigned_user_id, organization_id, session_id, status, participant_type, private_token_hash, access_mode, public_token, entry_query_params, show_end_session";
+  "id, workspace_id, block_id, user_id, guest_user_id, assigned_user_id, organization_id, session_id, status, participant_type, private_token_hash, access_mode, public_token, entry_query_params, show_end_session, session_mode";
 
 export async function resolveIleLinkAccess(
   accessToken: string,
@@ -75,6 +82,10 @@ export async function resolveIleLinkAccess(
   const accessMode: GuestLinkAccessMode =
     link.access_mode === "public" ? "public" : "private";
   const showEndSession = link.show_end_session !== false;
+  const sessionMode = normalizeIleSessionMode(
+    (link as { session_mode?: unknown }).session_mode,
+    ILE_SESSION_MODE_DEFAULT,
+  );
   const ownerUserId = String(link.user_id);
   const baseGuestUserId = (link.guest_user_id as string | null) ?? null;
   const assignedUserId = (link.assigned_user_id as string | null) ?? null;
@@ -129,6 +140,7 @@ export async function resolveIleLinkAccess(
     participantType: (link.participant_type as string | null) ?? null,
     accessMode,
     showEndSession,
+    sessionMode,
     actingUser: { id: ownerUserId },
   };
 }
@@ -190,21 +202,35 @@ export async function resolveIleLinkSessionAccess(
 export async function ensureIleLinkSession(
   ctx: ResolvedIleLinkContext
 ): Promise<
-  | { sessionId: string; resumed: boolean; blockTitle: string }
+  | { sessionId: string; resumed: boolean; blockTitle: string; sessionMode: IleSessionMode }
   | { error: string; status: number }
 > {
-  const { supabase, workspaceId, blockId, ownerUserId, linkId, guestUserId } = ctx;
+  const { supabase, workspaceId, blockId, ownerUserId, linkId, guestUserId, sessionMode } = ctx;
 
   // Resume only when the linked practice session is still live.
   // Completed / ended / missing sessions fall through to a new run (same guest).
   if (ctx.sessionId && ctx.status !== "completed") {
     const { data: existing } = await supabase
       .from("sessions")
-      .select("id, status")
+      .select("id, status, metadata")
       .eq("id", ctx.sessionId)
       .maybeSingle();
 
     if (existing && (existing.status === "active" || existing.status === "paused")) {
+      // Keep durable mode on resume (link is source of truth if metadata missing).
+      const meta = (existing.metadata || {}) as Record<string, unknown>;
+      if (meta.session_mode !== sessionMode || meta.ile_session_mode !== sessionMode) {
+        await supabase
+          .from("sessions")
+          .update({
+            metadata: {
+              ...meta,
+              session_mode: sessionMode,
+              ile_session_mode: sessionMode,
+            },
+          })
+          .eq("id", existing.id);
+      }
       const { data: block } = await supabase
         .from("blocks")
         .select("title")
@@ -214,6 +240,7 @@ export async function ensureIleLinkSession(
         sessionId: existing.id,
         resumed: true,
         blockTitle: block?.title || "Practice",
+        sessionMode,
       };
     }
   }
@@ -252,6 +279,8 @@ export async function ensureIleLinkSession(
         source_link_id: linkId,
         guest_user_id: guestUserId,
         ile_guest_access: true,
+        session_mode: sessionMode,
+        ile_session_mode: sessionMode,
       },
     })
     .select("id")
@@ -289,5 +318,5 @@ export async function ensureIleLinkSession(
     })
     .eq("id", linkId);
 
-  return { sessionId: session.id, resumed: false, blockTitle };
+  return { sessionId: session.id, resumed: false, blockTitle, sessionMode };
 }

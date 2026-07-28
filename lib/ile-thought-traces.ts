@@ -5,8 +5,16 @@ export const ILE_SPEECH_TOOL_NAME = "ile-speech-segment";
 export const ILE_IDLE_POW_INTERVAL_MS = 60_000;
 
 export type IleTraceType = "system1" | "system2";
-export type IleSystem1Action = "crystallize" | "pause_finalize";
-export type IleSystem2Action = "send" | "skip" | "select" | "deselect" | "resend" | "edit";
+export type IleSystem1Action = "crystallize" | "pause_finalize" | "auto_stash";
+/** send/promote/submit; remove = demote solution → stash (Exercise TAP parity). */
+export type IleSystem2Action =
+  | "send"
+  | "skip"
+  | "select"
+  | "deselect"
+  | "resend"
+  | "edit"
+  | "remove";
 
 export interface IleThoughtTracePayload {
   type: "uncertain_systems_ile_thought_trace";

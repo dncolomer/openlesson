@@ -2,13 +2,19 @@
 
 import { SessionView } from "@/components/SessionView";
 import type { PowParticipantIdentity } from "@/lib/session-participant-identity";
+import {
+  ILE_SESSION_MODE_DEFAULT,
+  normalizeIleSessionMode,
+  type IleSessionMode,
+} from "@/lib/ile-mode";
 
 export function IleGuestSessionClient({
   sessionId,
   ileToken,
   showEndSession = true,
-  entryQueryParams = {},
+  entryQueryParams,
   participantIdentity = null,
+  sessionMode = ILE_SESSION_MODE_DEFAULT,
 }: {
   sessionId: string;
   ileToken: string;
@@ -18,7 +24,10 @@ export function IleGuestSessionClient({
   /** Share URL query params → param-scoped guest identity for PoW. */
   entryQueryParams?: Record<string, string | string[]>;
   participantIdentity?: PowParticipantIdentity | null;
+  /** learning (default) | project — from durable ILE link. */
+  sessionMode?: IleSessionMode | string;
 }) {
+  const mode = normalizeIleSessionMode(sessionMode, ILE_SESSION_MODE_DEFAULT);
   return (
     <SessionView
       sessionId={sessionId}
@@ -26,6 +35,7 @@ export function IleGuestSessionClient({
       showEndSession={showEndSession}
       entryQueryParams={entryQueryParams}
       participantIdentity={participantIdentity}
+      sessionMode={mode}
     />
   );
 }

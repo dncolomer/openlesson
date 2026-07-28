@@ -67,6 +67,7 @@ export default async function PrivateIleSessionPage({ params, searchParams }: Pa
       showEndSession={access.showEndSession}
       entryQueryParams={entryParams}
       participantIdentity={participantIdentity}
+      sessionMode={access.sessionMode ?? ensured.sessionMode}
     />
   );
 }

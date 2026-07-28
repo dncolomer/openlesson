@@ -21,6 +21,12 @@ import {
   normalizeGuestLinkAccessMode,
   type GuestLinkAccessMode,
 } from "@/lib/guest-link-access";
+import {
+  ILE_SESSION_MODE_DEFAULT,
+  normalizeIleSessionMode,
+  resolveIleSessionModeFromBody,
+  type IleSessionMode,
+} from "@/lib/ile-mode";
 
 export class CreateIleLinkError extends Error {
   constructor(
@@ -57,18 +63,21 @@ export interface CreatedIleLink {
   public_token: string | null;
   entry_query_params: unknown;
   show_end_session: boolean;
+  /** learning (default) | project — durable ILE shell mode for this link. */
+  session_mode: IleSessionMode;
   url: string;
   private_url: string;
 }
 
 const ILE_LINK_SELECT =
-  "id, workspace_id, block_id, status, created_at, participant_type, guest_user_id, assigned_user_id, access_mode, public_token, entry_query_params, show_end_session";
+  "id, workspace_id, block_id, status, created_at, participant_type, guest_user_id, assigned_user_id, access_mode, public_token, entry_query_params, show_end_session, session_mode";
 
 function withIleLinkUrl(
-  link: Omit<CreatedIleLink, "url" | "private_url" | "show_end_session"> & {
+  link: Omit<CreatedIleLink, "url" | "private_url" | "show_end_session" | "session_mode"> & {
     access_mode?: string | null;
     public_token?: string | null;
     show_end_session?: boolean | null;
+    session_mode?: string | null;
   },
   baseUrl: string,
   sessionToken: string,
@@ -76,12 +85,14 @@ function withIleLinkUrl(
   const access_mode: GuestLinkAccessMode =
     link.access_mode === "public" ? "public" : "private";
   const url = buildGuestLinkUrl(baseUrl, "ile", sessionToken);
+  const session_mode = normalizeIleSessionMode(link.session_mode, ILE_SESSION_MODE_DEFAULT);
   return {
     ...link,
     access_mode,
     public_token: access_mode === "public" ? link.public_token ?? sessionToken : null,
     entry_query_params: link.entry_query_params ?? [],
     show_end_session: link.show_end_session !== false,
+    session_mode,
     url,
     private_url: url,
   };
@@ -274,6 +285,7 @@ export async function createWorkspaceIleLink(options: CreateIleLinkOptions): Pro
 
   const accessMode = normalizeGuestLinkAccessMode(body);
   const showEndSession = resolveShowEndSessionFromBody(body);
+  const sessionMode = resolveIleSessionModeFromBody(body as Record<string, unknown>);
   const sessionToken = createPrivateToken();
   const publicToken = accessMode === "public" ? sessionToken : null;
 
@@ -292,6 +304,7 @@ export async function createWorkspaceIleLink(options: CreateIleLinkOptions): Pro
       public_token: publicToken,
       entry_query_params: [],
       show_end_session: showEndSession,
+      session_mode: sessionMode,
       status: "pending",
       participant_type: participantType,
     })

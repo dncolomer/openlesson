@@ -11,13 +11,17 @@ export function NotebookSubmitButton({
   onSubmit,
   disabled,
   disabledReason,
+  /** Override default "Submit to Helios" (e.g. Project Mode "To solution"). */
+  label,
 }: {
   onSubmit: () => Promise<void> | void;
   disabled?: boolean;
   disabledReason?: string;
+  label?: string;
 }) {
   const { t } = useI18n();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const displayLabel = label || t("whiteboard.submitToHelios");
   const handleClick = async () => {
     if (isSubmitting || disabled) return;
     setIsSubmitting(true);
@@ -32,7 +36,7 @@ export function NotebookSubmitButton({
       onClick={handleClick}
       disabled={isSubmitting || disabled}
       title={disabled ? (disabledReason ?? "") : t("whiteboard.submitHint")}
-      aria-label={t("whiteboard.submitToHelios")}
+      aria-label={displayLabel}
       className="inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] text-white bg-white/10 border border-white/30 hover:bg-white/20 hover:border-white/50 disabled:opacity-40 disabled:cursor-not-allowed rounded-md transition-colors"
     >
       {isSubmitting ? (
@@ -49,7 +53,7 @@ export function NotebookSubmitButton({
           <path strokeLinecap="round" strokeLinejoin="round" d="M5 12l5 5L20 7" />
         </svg>
       )}
-      <span>{isSubmitting ? t("whiteboard.submitting") : t("whiteboard.submitToHelios")}</span>
+      <span>{isSubmitting ? t("whiteboard.submitting") : displayLabel}</span>
     </button>
   );
 }

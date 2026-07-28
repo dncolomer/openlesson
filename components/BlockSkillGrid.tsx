@@ -45,6 +45,14 @@ import {
   type BlockMapToolId,
 } from "@/lib/block-map-tools";
 import { DEFAULT_MODEL } from "@/lib/xai-models";
+import {
+  MAP_CELL_EMPTY_SELECTED_CLASS,
+  MAP_CELL_MULTI_SELECTED_CLASS,
+  mapCellChromeClasses,
+  mapCellFreeformColors,
+  resolveMapCellStatusIcon,
+} from "@/lib/map-cell-chrome";
+import { Check, Settings } from "lucide-react";
 
 const MODEL_STORAGE_KEY = "planner-model";
 const DEFAULT_PLANNER_MODEL = DEFAULT_MODEL;
@@ -55,9 +63,9 @@ const EMPTY_APPEARING_NODE_IDS: string[] = [];
 interface BlockSkillGridProps {
   nodes: SkillGridNode[];
   selectedNodeId: string | null;
-  /** Loaded / focused node (e.g. active chapter) — amber ring in chapter mode. */
+  /** Loaded / focused node (e.g. active chapter) — white highlight (same language as selected). */
   focusedNodeId?: string | null;
-  /** Focus / open block detail. Null clears focus (e.g. Select mode closes TAP/ILE drawer). */
+  /** Focus / open block detail. Null clears focus (e.g. Select mode closes practice drawer). */
   onSelectNode: (blockId: string | null) => void;
   canEdit: boolean;
   showProgress?: boolean;
@@ -200,25 +208,50 @@ function ToolIcon({ id }: { id: BlockMapToolId }) {
 
 const PAN_CLICK_THRESHOLD = 6;
 
+/** @deprecated Prefer mapCellChromeClasses — kept as thin alias for any external callers. */
 function cellStatusClass(status: string, selected: boolean, focused: boolean, showProgress: boolean) {
-  const base = selected
-    ? "ring-2 ring-white/50 ring-offset-2 ring-offset-[#0b0b0b] "
-    : focused
-      ? "ring-2 ring-amber-400/55 ring-offset-2 ring-offset-[#0b0b0b] "
-      : "";
-  if (!showProgress) {
-    return `${base}border-neutral-700/80 bg-neutral-950/75 text-neutral-200`;
+  return mapCellChromeClasses({ status, selected, focused, showProgress });
+}
+
+function MapCellStatusGlyph({
+  status,
+  showProgress,
+  title,
+}: {
+  status: string;
+  showProgress: boolean;
+  title: string;
+}) {
+  const icon = resolveMapCellStatusIcon(status, showProgress);
+  if (icon === "gear") {
+    return (
+      <span
+        className="flex flex-col items-center justify-center gap-1"
+        data-map-cell-status="in_progress"
+        title={title}
+        aria-label={`${title} (in progress)`}
+      >
+        <Settings className="h-5 w-5 text-neutral-200" strokeWidth={1.75} aria-hidden />
+      </span>
+    );
   }
-  if (status === "completed") {
-    return `${base}border-emerald-500/50 bg-emerald-950/40 text-emerald-100 shadow-[0_0_12px_rgba(16,185,129,0.15)]`;
+  if (icon === "tick") {
+    return (
+      <span
+        className="flex flex-col items-center justify-center gap-1"
+        data-map-cell-status="completed"
+        title={title}
+        aria-label={`${title} (done)`}
+      >
+        <Check className="h-5 w-5 text-neutral-200" strokeWidth={2.25} aria-hidden />
+      </span>
+    );
   }
-  if (status === "in_progress") {
-    return `${base}border-amber-400/55 bg-amber-950/35 text-amber-50 shadow-[0_0_12px_rgba(245,158,11,0.14)]`;
-  }
-  if (status === "locked") {
-    return `${base}border-neutral-800 bg-neutral-950/50 text-neutral-500 opacity-70`;
-  }
-  return `${base}border-neutral-700/80 bg-neutral-950/75 text-neutral-100`;
+  return (
+    <span className="line-clamp-3 text-[11px] font-medium leading-tight" data-map-cell-status="title">
+      {title}
+    </span>
+  );
 }
 
 function cellKey(cell: GridCell) {
@@ -549,7 +582,7 @@ export function BlockSkillGrid({
 
   const handleBlockDoubleClick = useCallback(
     (blockId: string) => {
-      // Explicit open for TAP/ILE / detail (only path that opens the overlay)
+      // Explicit open for practice detail (only path that opens the overlay)
       onSelectNode(blockId);
     },
     [onSelectNode],
@@ -1116,12 +1149,12 @@ export function BlockSkillGrid({
                   disabled={!canEdit || busy}
                   onClick={(e) => handleEmptyCellClick(cell, e)}
                   onDoubleClick={() => handleEmptyCellDoubleClick(cell)}
-                  className={`flex h-full w-full flex-col items-center justify-center rounded-lg border border-dashed text-neutral-600 transition ${
+                  className={`flex h-full w-full flex-col items-center justify-center rounded-lg border border-dashed transition ${
                     selectedEmpty
-                      ? "border-cyan-400/70 bg-cyan-500/15 text-cyan-100 ring-2 ring-cyan-400/40"
+                      ? MAP_CELL_EMPTY_SELECTED_CLASS
                       : canEdit
-                        ? "border-neutral-700/90 bg-neutral-950/35 hover:border-neutral-500 hover:bg-neutral-900/50 hover:text-neutral-300"
-                        : "border-neutral-800/70 bg-neutral-950/20 opacity-50"
+                        ? "border-neutral-700/90 bg-neutral-950/35 text-neutral-600 hover:border-neutral-500 hover:bg-neutral-900/50 hover:text-neutral-300"
+                        : "border-neutral-800/70 bg-neutral-950/20 text-neutral-600 opacity-50"
                   }`}
                   title={
                     canEdit
@@ -1164,17 +1197,16 @@ export function BlockSkillGrid({
                 ? blockDragOffset.dRow * SKILL_GRID_PITCH
                 : 0;
 
-            // Match empty-cell cyan multi-select chrome (white ring from cellStatusClass
-            // was invisible / conflicted with cyan on filled blocks).
+            // Neutral status chrome + white selection (single or multi).
+            const singleSelected =
+              focusedNodeId === node.id || (!multiSelected && selectedNodeId === node.id);
             const baseStatus = cellStatusClass(
               node.status,
+              multiSelected || singleSelected,
               false,
-              focusedNodeId === node.id || (!multiSelected && selectedNodeId === node.id),
               showProgress,
             );
-            const multiChrome = multiSelected
-              ? "border-cyan-400/80 bg-cyan-500/20 text-cyan-50 ring-2 ring-cyan-400/70 shadow-[0_0_18px_rgba(34,211,238,0.3)]"
-              : "";
+            const multiChrome = multiSelected ? MAP_CELL_MULTI_SELECTED_CLASS : "";
             const tileClass = `relative flex h-full w-full flex-col items-center justify-center rounded-lg border px-2 text-center transition hover:brightness-110 ${
               multiSelected ? multiChrome : baseStatus
             } ${
@@ -1186,7 +1218,7 @@ export function BlockSkillGrid({
             } ${
               isAppearingTarget
                 ? appeared
-                  ? "opacity-100 scale-100 shadow-[0_0_18px_rgba(34,211,238,0.35)]"
+                  ? "opacity-100 scale-100 shadow-[0_0_14px_rgba(255,255,255,0.12)]"
                   : "opacity-0 scale-95"
                 : ""
             }`;
@@ -1202,13 +1234,10 @@ export function BlockSkillGrid({
             if (freeform) {
               const shapeKeys = freeformShapeKeySet(occupiedCells);
               const labelCell = freeformLabelCell(occupiedCells);
-              const freeformFill = multiSelected
-                ? "rgba(6, 182, 212, 0.22)"
-                : "rgba(10, 10, 12, 0.88)";
-              const freeformBorder = multiSelected
-                ? "rgba(34, 211, 238, 0.85)"
-                : "rgba(82, 82, 91, 0.9)";
-              const freeformText = multiSelected ? "rgb(207, 250, 254)" : "rgb(229, 229, 229)";
+              const freeformColors = mapCellFreeformColors(multiSelected);
+              const freeformFill = freeformColors.fill;
+              const freeformBorder = freeformColors.border;
+              const freeformText = freeformColors.text;
               return (
                 <div
                   key={`block-${node.id}`}
@@ -1288,9 +1317,7 @@ export function BlockSkillGrid({
                             borderTopRightRadius: edges.top && edges.right ? radius : 0,
                             borderBottomRightRadius: edges.bottom && edges.right ? radius : 0,
                             borderBottomLeftRadius: edges.bottom && edges.left ? radius : 0,
-                            boxShadow: multiSelected
-                              ? "0 0 18px rgba(34,211,238,0.28)"
-                              : undefined,
+                            boxShadow: multiSelected ? freeformColors.shadow : undefined,
                           }}
                           title={node.title}
                         >
@@ -1305,9 +1332,11 @@ export function BlockSkillGrid({
                                   Start
                                 </span>
                               )}
-                              <span className="line-clamp-3 text-[11px] font-medium leading-snug">
-                                {node.title}
-                              </span>
+                              <MapCellStatusGlyph
+                                status={node.status}
+                                showProgress={showProgress}
+                                title={node.title}
+                              />
                             </>
                           ) : null}
                         </button>
@@ -1362,7 +1391,11 @@ export function BlockSkillGrid({
                       Start
                     </span>
                   )}
-                  <span className="line-clamp-3 text-[11px] font-medium leading-tight">{node.title}</span>
+                  <MapCellStatusGlyph
+                    status={node.status}
+                    showProgress={showProgress}
+                    title={node.title}
+                  />
                 </button>
               </div>
             );
@@ -1373,7 +1406,7 @@ export function BlockSkillGrid({
           <div className="pointer-events-none absolute bottom-2 left-2 right-2 z-10 max-w-[min(100%,22rem)] rounded-md border border-neutral-800/80 bg-neutral-950/80 px-2 py-1 text-[10px] text-neutral-500">
             {manipulationMode
               ? activeTool === "select"
-                ? `Select: click boxes to multi-select (${selectedBlockIds.length} blocks · ${selectedEmptyCells.length} empty) · double-click empty to add · double-click block for TAP/ILE`
+                ? `Select: click boxes to multi-select (${selectedBlockIds.length} blocks · ${selectedEmptyCells.length} empty) · double-click empty to add · double-click block to practice`
                 : "Move: drag blocks · click empties to multi-select for Generate in shape"
               : labels.multiSelectHint ||
                 "Select: click empty or filled boxes to multi-select. Double-click empty to add a single cell."}

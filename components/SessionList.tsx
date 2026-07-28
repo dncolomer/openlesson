@@ -2,13 +2,12 @@
 
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { SessionItem } from "./SessionItem";
 import { BlockSkillGrid } from "./BlockSkillGrid";
-import { BlockDetailDrawer } from "./BlockDetailDrawer";
 import { buildSkillGridLayout, getWeightedNeighborhood } from "@/lib/block-skill-grid";
 import { type SupabaseBrowserClient } from "@/lib/supabase/client";
 import { useI18n } from "@/lib/i18n";
 import { DEFAULT_MODEL } from "@/lib/xai-models";
+import { nextWorkspaceBlockSelection } from "@/lib/workspace-right-pane";
 
 const MODEL_STORAGE_KEY = "planner-model";
 const DEFAULT_PLANNER_MODEL = DEFAULT_MODEL;
@@ -50,9 +49,16 @@ interface SessionListProps {
   hideTap?: boolean;
   onCustomStart?: (node: Block) => Promise<void>;
   ayclToken?: string;
+  /**
+   * Controlled open-block id for the workspace right pane (double-click detail).
+   * When provided with onExpandedNodeIdChange, SessionList does not host a modal.
+   */
+  expandedNodeId?: string | null;
+  onExpandedNodeIdChange?: (blockId: string | null) => void;
 }
 
-function getOrderedSessions(nodes: Block[]): Block[] {
+/** Ordered block list (start → next links, then orphans). Shared with right-pane detail. */
+export function getOrderedSessions(nodes: Block[]): Block[] {
   if (nodes.length === 0) return [];
 
   const visited = new Set<string>();
@@ -107,13 +113,31 @@ export function SessionList({
   hideTap = false,
   onCustomStart,
   ayclToken,
+  expandedNodeId: expandedNodeIdProp,
+  onExpandedNodeIdChange,
 }: SessionListProps) {
   const router = useRouter();
-  const [expandedNodeId, setExpandedNodeId] = useState<string | null>(null);
+  const [internalExpandedNodeId, setInternalExpandedNodeId] = useState<string | null>(null);
+  const isExpandedControlled =
+    expandedNodeIdProp !== undefined && typeof onExpandedNodeIdChange === "function";
+  const expandedNodeId = isExpandedControlled ? expandedNodeIdProp : internalExpandedNodeId;
+  const setExpandedNodeId = useCallback(
+    (blockId: string | null) => {
+      const next = nextWorkspaceBlockSelection(expandedNodeId, blockId);
+      if (isExpandedControlled) {
+        onExpandedNodeIdChange?.(next);
+      } else {
+        setInternalExpandedNodeId(next);
+      }
+    },
+    [expandedNodeId, isExpandedControlled, onExpandedNodeIdChange],
+  );
   const [isAddingBlock, setIsAddingBlock] = useState(false);
   const [appearingNodeIds, setAppearingNodeIds] = useState<string[]>([]);
   const prevNodeIdsRef = useRef<Set<string>>(new Set());
   const gridBackfillAttemptedRef = useRef<string | null>(null);
+  /** Mobile non-owner auto-open runs at most once so X close can restore notes/files. */
+  const mobileAutoExpandAttemptedRef = useRef(false);
   const { t, locale } = useI18n();
 
   // Track newly added nodes for sequential appear animation (AI builder path)
@@ -132,12 +156,21 @@ export function SessionList({
   useEffect(() => {
     // Owners edit the map with Select/drag tools — do not auto-open TAP/ILE detail.
     if (isOwner) return;
-    if (expandedNodeId) return;
-    if (window.matchMedia("(min-width: 768px)").matches) return;
+    // Only auto-open once per mount. Re-running when expandedNodeId becomes null
+    // after X would immediately re-select the first block and never restore notes/files.
+    if (mobileAutoExpandAttemptedRef.current) return;
+    if (expandedNodeId) {
+      mobileAutoExpandAttemptedRef.current = true;
+      return;
+    }
+    if (typeof window !== "undefined" && window.matchMedia("(min-width: 768px)").matches) {
+      return;
+    }
     const ordered = getOrderedSessions(nodes);
     const first = ordered.find((n) => n.status !== "completed") ?? ordered[0];
+    mobileAutoExpandAttemptedRef.current = true;
     if (first) setExpandedNodeId(first.id);
-  }, [expandedNodeId, isOwner, nodes]);
+  }, [expandedNodeId, isOwner, nodes, setExpandedNodeId]);
 
   useEffect(() => {
     if (!workspaceId || !isOwner) return;
@@ -320,46 +353,10 @@ export function SessionList({
     [ayclToken, isOwner, locale, nodes, onNodesUpdate, onRefresh, workspaceId, router],
   );
 
-  const selectedGridNode = nodes.find((node) => node.id === expandedNodeId) ?? null;
-  const selectedGridIndex = selectedGridNode
-    ? getOrderedSessions(nodes).findIndex((node) => node.id === selectedGridNode.id)
-    : -1;
-
-  // Owners use Select multi-select on the map — never cover it with a full-screen
-  // detail modal except when they explicitly double-click a block (expandedNodeId set
-  // from double-click / after create). Still allow detail when expanded is set.
-  // The modal's backdrop dismisses via onClose → setExpandedNodeId(null).
-  const showBlockDetail = selectedGridNode != null && selectedGridIndex >= 0;
-
-  const renderBlockDetail = () =>
-    showBlockDetail && selectedGridNode ? (
-      <SessionItem
-        node={selectedGridNode}
-        index={selectedGridIndex}
-        onSelect={() => onSelect(selectedGridNode.id)}
-        onDelete={onDelete}
-        onFork={onFork}
-        highlighted={highlightedNodes?.has(selectedGridNode.id)}
-        highlightOpacity={highlightOpacity}
-        isExpanded
-        isOwner={isOwner}
-        isGroupPlan={isGroupPlan}
-        maskProgress={maskProgress}
-        onRequestFork={onRequestFork}
-        forkLoginHref={forkLoginHref}
-        isLoggedIn={isLoggedIn}
-        supabase={supabase}
-        planTopic={planTopic}
-        workspaceId={workspaceId}
-        variant="detail"
-        detailLayout="drawer"
-        hideTap={hideTap}
-        onCustomStart={onCustomStart}
-      />
-    ) : null;
-
+  // Block detail opens in the workspace right pane (parent). Map stays free of
+  // map-covering modal/dialog chrome; double-click → onExpandedNodeIdChange.
   return (
-    <div className="relative flex h-full flex-col overflow-hidden p-2.5">
+    <div className="relative flex h-full flex-col overflow-hidden p-2.5" data-session-list>
       <div className="flex min-h-0 flex-1 flex-col gap-2.5">
         <div className="min-h-0 flex-1">
           <BlockSkillGrid
@@ -400,18 +397,6 @@ export function SessionList({
           />
         </div>
       </div>
-
-      {showBlockDetail && (
-        <div className="absolute inset-0 z-10 overflow-hidden">
-          <BlockDetailDrawer
-            open
-            onClose={() => setExpandedNodeId(null)}
-            title={selectedGridNode?.title}
-          >
-            {renderBlockDetail()}
-          </BlockDetailDrawer>
-        </div>
-      )}
     </div>
   );
 }

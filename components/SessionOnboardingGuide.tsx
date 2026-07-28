@@ -16,6 +16,11 @@ export type SessionOnboardingGuideProps = {
   showStartAction?: boolean;
   onStart?: () => void;
   isStarting?: boolean;
+  /**
+   * ILE Project Mode: use Project Mode copy (stash/solution in Thoughts tool,
+   * no Helios dialogue). Learning Mode keeps the default ILE strings.
+   */
+  projectMode?: boolean;
   /** TAP-only: replaces the default step-3 play button (e.g. topic cards). */
   renderStep3Action?: () => ReactNode;
   /** TAP-only: hide the quote block on step 3 when showing topic cards. */
@@ -144,6 +149,7 @@ export function SessionOnboardingGuide({
   showStartAction = false,
   onStart,
   isStarting = false,
+  projectMode = false,
   renderStep3Action,
   hideStep3Quote = false,
   stepImages,
@@ -164,6 +170,21 @@ export function SessionOnboardingGuide({
     const value = translateWithLocale(lang, fullKey);
     if (!value || value === fullKey) return null;
     return value;
+  };
+
+  /** Prefer Project Mode body when present; fall back to Learning Mode copy. */
+  const stepBody = (stepKey: "step2" | "step3") => {
+    if (variant === "ile" && projectMode) {
+      return ttOptional(`${stepKey}.bodyProject`) ?? tt(`${stepKey}.body`);
+    }
+    return tt(`${stepKey}.body`);
+  };
+
+  const stepTitle = (stepKey: "step2" | "step3") => {
+    if (variant === "ile" && projectMode) {
+      return ttOptional(`${stepKey}.titleProject`) ?? tt(`${stepKey}.title`);
+    }
+    return tt(`${stepKey}.title`);
   };
 
   type GuideSlide =
@@ -205,16 +226,16 @@ export function SessionOnboardingGuide({
     },
     {
       kind: "visual",
-      title: tt("step2.title"),
-      body: tt("step2.body"),
+      title: stepTitle("step2"),
+      body: stepBody("step2"),
       imageAlt: tt("step2.imageAlt"),
       videoSrc: step2VideoSrc,
       highlight: ttOptional("step2.highlight"),
     },
     {
       kind: "closing",
-      title: tt("step3.title"),
-      body: tt("step3.body"),
+      title: stepTitle("step3"),
+      body: stepBody("step3"),
       quoteText: tt("step3.quoteText"),
       quoteAuthor: tt("step3.quoteAuthor"),
     },

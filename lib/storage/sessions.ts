@@ -54,12 +54,20 @@ function mapDbProbe(p: any): Probe {
 
 // ---- Session CRUD ----
 
-export async function createSession(problem: string, title?: string, planningPrompt?: string, tutoringLanguage?: string, workspaceId?: string): Promise<Session> {
+export async function createSession(
+  problem: string,
+  title?: string,
+  planningPrompt?: string,
+  tutoringLanguage?: string,
+  workspaceId?: string,
+  /** Merged into session metadata (e.g. session_mode for ILE Project Mode). */
+  extraMetadata?: Record<string, unknown>,
+): Promise<Session> {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("Not authenticated");
 
-  const metadata: Record<string, unknown> = {};
+  const metadata: Record<string, unknown> = { ...(extraMetadata || {}) };
   if (title) metadata.title = title;
   if (tutoringLanguage) metadata.tutoringLanguage = tutoringLanguage;
   if (workspaceId) metadata.workspace_id = workspaceId;
@@ -89,7 +97,9 @@ export async function getSession(id: string): Promise<Session | null> {
     .eq("id", id)
     .single();
 
-  console.log("[getSession] DB row:", { id, error, hasAudio: sessionRow?.audio_path });
+  if (error) {
+    console.error("[getSession] Failed to load session:", id, error.message);
+  }
 
   if (!sessionRow) return null;
 

@@ -8,6 +8,13 @@ import {
   TAP_LINK_MIN_MINUTES,
 } from "@/lib/pow-api/tap-link-config";
 import {
+  productIntentClusterLabel,
+  productIntentFromGuestLink,
+  PRODUCT_INTENT_LABELS,
+  resolveProductIntent,
+  type LearningStyle,
+} from "@/lib/product-intent";
+import {
   buildGuestLinkBrowseRows,
   collectGuestLinkBrowseStatuses,
   filterGuestLinkBrowseRows,
@@ -35,6 +42,7 @@ interface TapLinkRow {
   assigned_user_id: string | null;
   created_at: string;
   completed_at: string | null;
+  interaction_kind?: string | null;
 }
 
 interface IleLinkRow {
@@ -47,6 +55,8 @@ interface IleLinkRow {
   session_id: string | null;
   created_at: string;
   completed_at: string | null;
+  /** learning (default) | project */
+  session_mode?: string | null;
 }
 
 interface OrgMember {
@@ -84,8 +94,8 @@ interface WorkspaceGuestLinksPanelProps {
 }
 
 /**
- * Owner settings: create and browse TAP / ILE guest links for the workspace.
- * Create and Browse are separate inner tabs so large link lists stay manageable.
+ * Owner settings: create and browse shareable practice links.
+ * UI is Explore/Drill × Open-ended/Timed (not product code names).
  */
 export function WorkspaceGuestLinksPanel({
   workspaceId,
@@ -103,8 +113,15 @@ export function WorkspaceGuestLinksPanel({
   const [selectedMemberId, setSelectedMemberId] = useState("");
   const [selectedIleMemberId, setSelectedIleMemberId] = useState("");
   const [minutes, setMinutes] = useState(TAP_LINK_DEFAULT_MINUTES);
-  /** Default yes — guest TAP/ILE sessions show End Session unless unchecked. */
+  /** Default yes — guest sessions show End Session unless unchecked. */
   const [showEndSession, setShowEndSession] = useState(true);
+  /** Timed Drill when true; Timed Exploration when false. */
+  const [timedStyle, setTimedStyle] = useState<LearningStyle>("explore");
+  /** Open-ended Drill when true; Open-ended Exploration when false. */
+  const [openEndedStyle, setOpenEndedStyle] = useState<LearningStyle>("explore");
+  // Back-compat aliases used by create payloads
+  const exerciseTap = timedStyle === "drill";
+  const ileProjectMode = openEndedStyle === "drill";
   const [linksLoading, setLinksLoading] = useState(false);
   const [linksError, setLinksError] = useState<string | null>(null);
   const [creatingLink, setCreatingLink] = useState(false);
@@ -226,6 +243,8 @@ export function WorkspaceGuestLinksPanel({
           post_session: "show_results",
           show_end_session: showEndSession,
           access_mode: "private",
+          interaction_kind: resolveProductIntent(timedStyle, "timed").interaction_kind,
+          exercise: timedStyle === "drill",
         };
         if (selectedBlockId) {
           body.blockId = selectedBlockId;
@@ -257,7 +276,16 @@ export function WorkspaceGuestLinksPanel({
         setCreatingLink(false);
       }
     },
-    [loadTapResources, minutes, selectedBlockId, selectedMemberId, showEndSession, t, workspaceId],
+    [
+      timedStyle,
+      loadTapResources,
+      minutes,
+      selectedBlockId,
+      selectedMemberId,
+      showEndSession,
+      t,
+      workspaceId,
+    ],
   );
 
   /** Same card: rotate private URL; keep guest, scope, duration, post-session. */
@@ -366,6 +394,8 @@ export function WorkspaceGuestLinksPanel({
           participant_type: participantType,
           show_end_session: showEndSession,
           access_mode: "private",
+          session_mode: resolveProductIntent(openEndedStyle, "open_ended").session_mode,
+          project: openEndedStyle === "drill",
         };
         if (participantType === "user") {
           if (!selectedIleMemberId) throw new Error(t("planView.tapLinksSelectMember"));
@@ -396,7 +426,15 @@ export function WorkspaceGuestLinksPanel({
         setCreatingIleLink(false);
       }
     },
-    [loadTapResources, selectedIleBlockId, selectedIleMemberId, showEndSession, t, workspaceId],
+    [
+      loadTapResources,
+      selectedIleBlockId,
+      selectedIleMemberId,
+      showEndSession,
+      openEndedStyle,
+      t,
+      workspaceId,
+    ],
   );
 
   /** Same card: rotate private URL; keep guest and block scope. */
@@ -511,20 +549,43 @@ export function WorkspaceGuestLinksPanel({
     const privateUrl = isRevoked ? undefined : createdLinks[link.id];
     const isTap = link.kind === "tap";
     const busy = invalidating || (isTap ? creatingLink : creatingIleLink);
+    const intent = productIntentFromGuestLink({
+      kind: link.kind,
+      session_mode: ileLinks.find((row) => row.id === link.id)?.session_mode,
+      interaction_kind: tapLinks.find((row) => row.id === link.id)?.interaction_kind,
+    });
+    const clusterLabel = productIntentClusterLabel(intent);
 
     return (
       <li
         key={`${link.kind}-${link.id}`}
         data-guest-link-status={link.status}
         data-guest-link-kind={link.kind}
+        data-product-intent-id={intent.id}
         className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-neutral-800 px-3 py-2 text-xs"
       >
         <div className="min-w-0 text-neutral-400">
           <p className="text-neutral-300">
-            <span className="mr-2 rounded border border-neutral-700 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-neutral-300">
-              {isTap ? "TAP" : "ILE"}
+            <span
+              className="mr-2 rounded border border-neutral-600 px-1.5 py-0.5 text-[10px] font-medium tracking-wide text-neutral-200"
+              data-guest-link-intent-badge
+            >
+              {clusterLabel}
             </span>
-            {t("planView.tapLinksStatus")}: {link.status}
+            {isTap && intent.interaction_kind === "exercise" ? (
+              <span
+                data-guest-link-interaction-kind="exercise"
+                className="mr-2 hidden"
+              />
+            ) : null}
+            {!isTap && intent.session_mode === "project" ? (
+              <span
+                data-guest-link-session-mode="project"
+                data-ile-project-mode-badge
+                className="mr-2 hidden"
+              />
+            ) : null}
+            Status: {link.status}
             {isRevoked ? (
               <span className="ml-1 text-red-400/90">
                 (
@@ -637,10 +698,10 @@ export function WorkspaceGuestLinksPanel({
             data-guest-links-inner-tab="create"
             role="tabpanel"
           >
-            <div>
-              <h3 className="text-sm font-medium text-white">{t("planView.tapLinksTitle")}</h3>
+            <div data-product-intent="guest-links-create">
+              <h3 className="text-sm font-medium text-white">Timed runs</h3>
               <p className="mt-1 max-w-2xl text-xs leading-relaxed text-neutral-500">
-                {t("planView.tapLinksHint")}
+                Share a timed practice link. Choose Exploration (dialogue) or Drill (solo exercise).
               </p>
 
               <div className="mt-4 grid gap-3 sm:grid-cols-2">
@@ -692,6 +753,39 @@ export function WorkspaceGuestLinksPanel({
                 </span>
               </label>
 
+              <div className="mt-3 grid gap-2 sm:grid-cols-2" data-product-intent="timed-style">
+                <button
+                  type="button"
+                  data-guest-link-exercise-tap={timedStyle === "drill" ? "false" : "true"}
+                  onClick={() => setTimedStyle("explore")}
+                  className={`rounded-md border px-3 py-2 text-left text-xs transition ${
+                    timedStyle === "explore"
+                      ? "border-white bg-white text-black"
+                      : "border-neutral-700 bg-neutral-900 text-neutral-300 hover:border-neutral-500"
+                  }`}
+                >
+                  <span className="font-medium">{PRODUCT_INTENT_LABELS.timedExplore}</span>
+                  <span className="mt-0.5 block text-[10px] opacity-80">
+                    {PRODUCT_INTENT_LABELS.timedExploreHint}
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  data-guest-link-exercise-tap={timedStyle === "drill" ? "true" : "false"}
+                  onClick={() => setTimedStyle("drill")}
+                  className={`rounded-md border px-3 py-2 text-left text-xs transition ${
+                    timedStyle === "drill"
+                      ? "border-white bg-white text-black"
+                      : "border-neutral-700 bg-neutral-900 text-neutral-300 hover:border-neutral-500"
+                  }`}
+                >
+                  <span className="font-medium">{PRODUCT_INTENT_LABELS.timedDrill}</span>
+                  <span className="mt-0.5 block text-[10px] opacity-80">
+                    {PRODUCT_INTENT_LABELS.timedDrillHint}
+                  </span>
+                </button>
+              </div>
+
               <div className="mt-4 flex flex-wrap gap-2">
                 <button
                   type="button"
@@ -735,10 +829,11 @@ export function WorkspaceGuestLinksPanel({
               {createError ? <p className="mt-3 text-xs text-red-400">{createError}</p> : null}
             </div>
 
-            <div className="border-t border-neutral-800/80 pt-5">
-              <h3 className="text-sm font-medium text-white">{t("planView.ileLinksTitle")}</h3>
+            <div className="border-t border-neutral-800/80 pt-5" data-product-intent="open-ended-create">
+              <h3 className="text-sm font-medium text-white">Open-ended runs</h3>
               <p className="mt-1 max-w-2xl text-xs leading-relaxed text-neutral-500">
-                {t("planView.ileLinksHint")}
+                Share an open-ended practice link for a single block. Choose Exploration (dialogue) or
+                Drill (exercises per chapter).
               </p>
 
               <div className="mt-4 grid gap-3 sm:grid-cols-2">
@@ -757,6 +852,41 @@ export function WorkspaceGuestLinksPanel({
                     ))}
                   </select>
                 </label>
+              </div>
+
+              <div className="mt-3 grid gap-2 sm:grid-cols-2" data-product-intent="open-ended-style">
+                <button
+                  type="button"
+                  data-guest-link-ile-project-mode={openEndedStyle === "drill" ? "false" : "true"}
+                  data-ile-session-mode={openEndedStyle === "drill" ? "learning" : "learning"}
+                  onClick={() => setOpenEndedStyle("explore")}
+                  className={`rounded-md border px-3 py-2 text-left text-xs transition ${
+                    openEndedStyle === "explore"
+                      ? "border-white bg-white text-black"
+                      : "border-neutral-700 bg-neutral-900 text-neutral-300 hover:border-neutral-500"
+                  }`}
+                >
+                  <span className="font-medium">{PRODUCT_INTENT_LABELS.openEndedExplore}</span>
+                  <span className="mt-0.5 block text-[10px] opacity-80">
+                    {PRODUCT_INTENT_LABELS.openEndedExploreHint}
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  data-guest-link-ile-project-mode={openEndedStyle === "drill" ? "true" : "false"}
+                  data-ile-session-mode={openEndedStyle === "drill" ? "project" : "learning"}
+                  onClick={() => setOpenEndedStyle("drill")}
+                  className={`rounded-md border px-3 py-2 text-left text-xs transition ${
+                    openEndedStyle === "drill"
+                      ? "border-white bg-white text-black"
+                      : "border-neutral-700 bg-neutral-900 text-neutral-300 hover:border-neutral-500"
+                  }`}
+                >
+                  <span className="font-medium">{PRODUCT_INTENT_LABELS.openEndedDrill}</span>
+                  <span className="mt-0.5 block text-[10px] opacity-80">
+                    {PRODUCT_INTENT_LABELS.openEndedDrillHint}
+                  </span>
+                </button>
               </div>
 
               <div className="mt-4 flex flex-wrap gap-2">

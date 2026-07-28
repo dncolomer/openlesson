@@ -105,23 +105,39 @@ export async function POST(request: NextRequest) {
     }
     result.plan.steps = validSteps;
 
-    if (existingPlan && force) {
+    // Re-check after LLM: another request may have inserted while we generated.
+    const planAfterGenerate = await getSessionPlan(sessionId, supabase);
+    if (planAfterGenerate && !force) {
+      return NextResponse.json({ plan: planAfterGenerate });
+    }
+
+    if (force || planAfterGenerate || existingPlan) {
+      // Delete by session_id (not only plan id) so concurrent shells and empty
+      // rows cannot leave a unique-constraint collision on insert.
       const { error: deleteError } = await supabase
         .from("session_plans")
         .delete()
-        .eq("id", existingPlan.id);
+        .eq("session_id", sessionId);
       if (deleteError) {
         console.error("[session-plan/create] Failed to delete existing plan:", deleteError);
-        return NextResponse.json({ error: `Could not replace existing plan: ${deleteError.message}` }, { status: 500 });
+        return NextResponse.json(
+          { error: `Could not replace existing plan: ${deleteError.message}` },
+          { status: 500 },
+        );
       }
     }
 
-    const savedPlan = await createSessionPlan(sessionId, {
-      goal: result.plan.goal,
-      strategy: result.plan.strategy,
-      description: result.plan.description,
-      steps: toPersistedCreatePlanSteps(result.plan.steps),
-    }, supabase, { userId: user.id });
+    const savedPlan = await createSessionPlan(
+      sessionId,
+      {
+        goal: result.plan.goal,
+        strategy: result.plan.strategy,
+        description: result.plan.description,
+        steps: toPersistedCreatePlanSteps(result.plan.steps),
+      },
+      supabase,
+      { userId: user.id },
+    );
 
     return NextResponse.json({ plan: savedPlan });
   } catch (error) {

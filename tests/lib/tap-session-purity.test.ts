@@ -2,9 +2,11 @@ import { describe, expect, it } from "vitest";
 import fs from "fs";
 import path from "path";
 import {
+  TAP_PURITY_GRACE_MS,
   TAP_SESSION_PURITY_MAX,
   TAP_SILENCE_AUTO_STASH_MS,
   isSessionPurityDepleted,
+  isWithinTapPurityGrace,
   nextSessionPurityAfterAutoStash,
   shouldAutoStashOnSilence,
   shouldEvaluateSessionPurity,
@@ -19,9 +21,19 @@ import { buildTapTranscriptPayload } from "@/lib/tap-score-traces";
 const ROOT = process.cwd();
 
 describe("tap-session-purity helpers", () => {
-  it("uses a 5s silence threshold and starts purity at 3", () => {
+  it("uses a 5s silence threshold, starts purity at 3, and has a live-entry grace", () => {
     expect(TAP_SILENCE_AUTO_STASH_MS).toBe(5_000);
     expect(TAP_SESSION_PURITY_MAX).toBe(3);
+    expect(TAP_PURITY_GRACE_MS).toBe(3_000);
+  });
+
+  it("isWithinTapPurityGrace freezes purity until grace elapses after live entry", () => {
+    const entered = 1_000_000;
+    expect(isWithinTapPurityGrace(entered, entered)).toBe(true);
+    expect(isWithinTapPurityGrace(entered, entered + 2_999)).toBe(true);
+    expect(isWithinTapPurityGrace(entered, entered + 3_000)).toBe(false);
+    expect(isWithinTapPurityGrace(null, entered)).toBe(true);
+    expect(isWithinTapPurityGrace(undefined, entered)).toBe(true);
   });
 
   it("fades transcript opacity over the silence window", () => {
@@ -116,12 +128,33 @@ describe("TAP client wires purity UX (not ILE)", () => {
     expect(client).toContain("waitingForHelios: isSendingRef.current");
     expect(client).toContain("shouldAutoStashOnSilence");
     expect(client).toContain("shouldPenalizeEmptyBarSilence");
+    // Live-entry grace so briefing elapsed time / UI settle does not burn purity.
+    expect(client).toContain("isWithinTapPurityGrace");
+    expect(client).toContain("liveEnteredAt");
     const en = JSON.parse(fs.readFileSync(path.join(ROOT, "messages/en.json"), "utf8")) as {
       tap: { postSession: { impureTitle: string; impureBody: string } };
     };
     expect(en.tap.postSession.impureTitle).toBe("Session Invalidated");
     expect(en.tap.postSession.impureBody.toLowerCase()).toContain("session purity");
     expect(en.tap.postSession.impureBody.toLowerCase()).toContain("auto-stash");
+    expect(en.tap.postSession.impureBody.toLowerCase()).toContain("why:");
+    expect(en.tap.postSession.impureBody.toLowerCase()).toContain("how to fix");
+    expect(en.tap.postSession.impureTryAgain).toBe("Try again");
+    // Dedicated impure results branch (not generic thank-you)
+    expect(client).toContain("sessionEndedImpure");
+    expect(client).toContain("data-tap-session-impure");
+    expect(client).toContain("data-tap-impure-retry");
+  });
+
+  it("Exercise TAP shows the same Session Invalidated screen on purity close", () => {
+    const exercise = fs.readFileSync(path.join(ROOT, "components/ExerciseTapClient.tsx"), "utf8");
+    expect(exercise).toContain("sessionEndedImpure");
+    expect(exercise).toContain("data-tap-session-impure");
+    expect(exercise).toContain("tap.postSession.impureTitle");
+    expect(exercise).toContain("tap.postSession.impureBody");
+    expect(exercise).toContain("tap.postSession.impureTryAgain");
+    expect(exercise).toContain("data-tap-impure-retry");
+    expect(exercise).toContain("setSessionEndedImpure(impure)");
   });
 
   it("trace route accepts auto_stash and complete flags session PoW impure", () => {

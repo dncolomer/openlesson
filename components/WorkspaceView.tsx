@@ -7,7 +7,9 @@ import Link from "next/link";
 import { Navbar } from "@/components/Navbar";
 import { useI18n } from "../lib/i18n";
 import { WorkspacePerformancePanel } from "@/components/WorkspacePerformancePanel";
-import { SessionList } from "@/components/SessionList";
+import { getOrderedSessions, SessionList } from "@/components/SessionList";
+import { SessionItem } from "@/components/SessionItem";
+import { WorkspaceBlockDetailPane } from "@/components/WorkspaceBlockDetailPane";
 import { aestheticImageForId, fetchAestheticPackages } from "@/lib/aesthetics";
 import { WorkspaceNotesFilesPanel } from "@/components/WorkspaceNotesFilesPanel";
 import { WorkspaceSectionNav } from "@/components/WorkspaceSectionNav";
@@ -21,6 +23,11 @@ import {
   resolveWorkspaceSectionLayout,
   type WorkspaceSectionKey,
 } from "@/lib/workspace-sections";
+import {
+  clearWorkspaceBlockSelection,
+  nextWorkspaceBlockSelection,
+  resolveWorkspaceRightPane,
+} from "@/lib/workspace-right-pane";
 
 export interface Block {
   id: string;
@@ -96,8 +103,30 @@ export function WorkspaceView({ initialPlan, initialNodes }: WorkspaceViewProps)
   const [savingNotes, setSavingNotes] = useState(false);
   const [mobileColumn, setMobileColumn] = useState<"plan" | "sessions" | "workspace">("plan");
   const [workspaceImage, setWorkspaceImage] = useState(() => aestheticImageForId(workspaceId));
-  
+  /** Open block for right-pane detail (double-click). Null → notes/files. */
+  const [expandedBlockId, setExpandedBlockId] = useState<string | null>(null);
+
   const supabase = createClient();
+
+  const handleExpandedBlockChange = useCallback((blockId: string | null) => {
+    const next = nextWorkspaceBlockSelection(expandedBlockId, blockId);
+    setExpandedBlockId(next);
+    if (next) setMobileColumn("workspace");
+  }, [expandedBlockId]);
+
+  const handleCloseBlockDetail = useCallback(() => {
+    setExpandedBlockId(clearWorkspaceBlockSelection());
+  }, []);
+
+  const rightPane = resolveWorkspaceRightPane(expandedBlockId);
+  const orderedBlocks = getOrderedSessions(nodes as Parameters<typeof getOrderedSessions>[0]);
+  const detailBlock =
+    expandedBlockId != null
+      ? orderedBlocks.find((n) => n.id === expandedBlockId) ?? null
+      : null;
+  const detailIndex = detailBlock
+    ? orderedBlocks.findIndex((n) => n.id === detailBlock.id)
+    : -1;
 
   const isOwner = currentUserId ? plan?.user_id === currentUserId : false;
   const canAccessPrivilegedSections = canAccessPrivilegedWorkspaceSections({
@@ -539,6 +568,8 @@ export function WorkspaceView({ initialPlan, initialNodes }: WorkspaceViewProps)
             workspaceId={workspaceId}
             onRefresh={refreshNodes}
             onNodesUpdate={handleNodesUpdate}
+            expandedNodeId={expandedBlockId}
+            onExpandedNodeIdChange={handleExpandedBlockChange}
           />
         </aside>
 
@@ -553,22 +584,49 @@ export function WorkspaceView({ initialPlan, initialNodes }: WorkspaceViewProps)
           <div className="absolute inset-0 bg-black/35" />
           <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/20 to-black/70" />
 
-          <main className="relative z-10 flex min-h-0 flex-1 flex-col overflow-hidden p-3 pb-3 sm:p-4 sm:pb-4">
-            <WorkspaceNotesFilesPanel
-              notesContent={notesContent}
-              setNotesContent={setNotesContent}
-              isEditingNotes={isEditingNotes}
-              setIsEditingNotes={setIsEditingNotes}
-              savingNotes={savingNotes}
-              onSaveNotes={saveNotes}
-              onCancelNotes={() => {
-                setNotesContent(plan.notes || "");
-                setIsEditingNotes(false);
-              }}
-              isOwner={isOwner}
-              workspaceId={workspaceId}
-              showFiles
-            />
+          <main
+            className="relative z-10 flex min-h-0 flex-1 flex-col overflow-hidden p-3 pb-3 sm:p-4 sm:pb-4"
+            data-workspace-right-column
+            data-workspace-right-pane={rightPane}
+          >
+            {rightPane === "block_detail" && detailBlock && detailIndex >= 0 ? (
+              <WorkspaceBlockDetailPane
+                title={detailBlock.title}
+                onClose={handleCloseBlockDetail}
+              >
+                <SessionItem
+                  node={detailBlock}
+                  index={detailIndex}
+                  onSelect={() => {}}
+                  onDelete={() => {}}
+                  onFork={() => {}}
+                  isExpanded
+                  isOwner={isOwner}
+                  isLoggedIn={!!currentUserId}
+                  supabase={supabase}
+                  planTopic={plan.root_topic}
+                  workspaceId={workspaceId}
+                  variant="detail"
+                  detailLayout="inline"
+                />
+              </WorkspaceBlockDetailPane>
+            ) : (
+              <WorkspaceNotesFilesPanel
+                notesContent={notesContent}
+                setNotesContent={setNotesContent}
+                isEditingNotes={isEditingNotes}
+                setIsEditingNotes={setIsEditingNotes}
+                savingNotes={savingNotes}
+                onSaveNotes={saveNotes}
+                onCancelNotes={() => {
+                  setNotesContent(plan.notes || "");
+                  setIsEditingNotes(false);
+                }}
+                isOwner={isOwner}
+                workspaceId={workspaceId}
+                showFiles
+              />
+            )}
           </main>
         </section>
       </div>

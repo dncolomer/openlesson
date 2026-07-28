@@ -31,19 +31,25 @@ describe("plans pricing model", () => {
     expect(PLANS[invalid]).toBeUndefined();
   });
 
-  it("sets Metered rates: 0.05 cents/PoW, $1 TAP, $10 ILE, $99 platform", () => {
+  it("sets Metered rates: 0.05 cents/PoW, $1 timed, $10 open-ended, $99 platform", () => {
     expect(POW_API_CALL_PRICE_CENTS).toBe(0.05);
     expect(TAP_SESSION_PRICE_CENTS).toBe(100);
     expect(ILE_SESSION_PRICE_CENTS).toBe(1000);
     expect(API_METERED_PLATFORM_FEE_CENTS).toBe(9900);
   });
 
-  it("formats api metered monthly price with usage rates", () => {
+  it("formats api metered monthly price with usage rates (no TAP/ILE product brands)", () => {
     const label = formatPlanMonthlyPrice("api_metered");
     expect(label).toContain("$99/month");
     expect(label).toMatch(/0\.05/);
-    expect(label).toContain("$1/TAP");
-    expect(label).toContain("$10/ILE");
+    expect(label).toContain("$1/timed");
+    expect(label).toContain("$10/open-ended");
+    expect(label).not.toMatch(/\$1\/TAP|\$10\/ILE|\bTAP\b|\bILE\b/);
+    const features = PLANS.api_metered.features.join(" ");
+    expect(features).toContain("$1 per timed session");
+    expect(features).toContain("$10 per open-ended session");
+    expect(features).toContain("practice-session PoW");
+    expect(features).not.toMatch(/\bTAP\b|\bILE\b/);
   });
 
   it("normalizes removed tier names to inactive (no backwards-compat plan ids)", () => {

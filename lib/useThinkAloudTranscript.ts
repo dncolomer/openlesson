@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { toSpeechBcp47 } from "@/lib/tutoring-languages";
 
 export interface ThinkAloudThought {
   id: string;
@@ -44,15 +45,6 @@ type SpeechRecognitionLike = EventTarget & {
 
 type SpeechRecognitionConstructor = new () => SpeechRecognitionLike;
 
-const SPEECH_LANGUAGE_BY_TUTOR_LANGUAGE: Record<string, string> = {
-  en: "en-US",
-  es: "es-ES",
-  de: "de-DE",
-  pl: "pl-PL",
-  vi: "vi-VN",
-  zh: "zh-CN",
-};
-
 function getSpeechRecognitionConstructor(): SpeechRecognitionConstructor | null {
   if (typeof window === "undefined") return null;
   if (isMobileBrowser()) return null;
@@ -85,7 +77,7 @@ export function useThinkAloudTranscript({
 }) {
   const recognitionCtor = useMemo(getSpeechRecognitionConstructor, []);
   const isSupported = !!recognitionCtor;
-  const speechLang = SPEECH_LANGUAGE_BY_TUTOR_LANGUAGE[tutoringLanguage || ""] ?? "en-US";
+  const speechLang = toSpeechBcp47(tutoringLanguage);
 
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const shouldListenRef = useRef(false);

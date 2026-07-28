@@ -221,10 +221,11 @@ export function WorkspaceIntegrationPanel({
           >
             <div className="min-w-0 shrink-0">
               <h2 className="text-sm font-medium text-white">
-                {t("planView.performanceSubTabTap")}
+                Shareable practice links
               </h2>
               <p className="mt-1 max-w-2xl text-xs leading-relaxed text-neutral-500">
-                Create shareable TAP and ILE guest links for this workspace.
+                Create shareable practice links for this workspace — open-ended or timed, explore or
+                drill.
               </p>
             </div>
             <WorkspaceGuestLinksPanel

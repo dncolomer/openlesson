@@ -38,10 +38,10 @@ export interface ResolvedTapSessionContext {
 }
 
 export const TAP_SESSION_SELECT =
-  "id, workspace_id, user_id, guest_user_id, assigned_user_id, organization_id, block_id, session_id, status, started_at, requested_duration_seconds, focus_block_ids, post_session, redirect_url, completion_webhook_url, access_mode, public_token, entry_query_params, workspaces!inner(user_id)";
+  "id, workspace_id, user_id, guest_user_id, assigned_user_id, organization_id, block_id, session_id, status, started_at, requested_duration_seconds, focus_block_ids, post_session, redirect_url, completion_webhook_url, access_mode, public_token, entry_query_params, interaction_kind, workspaces!inner(user_id)";
 
 const TAP_SESSION_SELECT_NO_JOIN =
-  "id, workspace_id, user_id, guest_user_id, assigned_user_id, organization_id, block_id, session_id, status, started_at, requested_duration_seconds, focus_block_ids, post_session, redirect_url, completion_webhook_url, access_mode, public_token, entry_query_params";
+  "id, workspace_id, user_id, guest_user_id, assigned_user_id, organization_id, block_id, session_id, status, started_at, requested_duration_seconds, focus_block_ids, post_session, redirect_url, completion_webhook_url, access_mode, public_token, entry_query_params, interaction_kind";
 
 export function workspaceOwnerFromSession(session: {
   user_id?: string | null;

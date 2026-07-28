@@ -84,7 +84,7 @@ export async function GET(req: NextRequest) {
   const { data: links, error } = await access.supabase
     .from("workspace_tap_sessions")
     .select(
-      "id, workspace_id, block_id, status, requested_duration_seconds, duration_seconds, participant_type, post_session, redirect_url, guest_user_id, assigned_user_id, created_at, started_at, completed_at, access_mode, public_token, entry_query_params, show_end_session"
+      "id, workspace_id, block_id, status, requested_duration_seconds, duration_seconds, participant_type, post_session, redirect_url, guest_user_id, assigned_user_id, created_at, started_at, completed_at, access_mode, public_token, entry_query_params, show_end_session, interaction_kind"
     )
     .eq("workspace_id", workspaceId)
     .not("private_token_hash", "is", null)

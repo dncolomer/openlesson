@@ -2,6 +2,13 @@
 
 import { useState, type ReactNode } from "react";
 import { useI18n } from "@/lib/i18n";
+import {
+  allProductLaunchTargets,
+  productIntentClusterHint,
+  productIntentClusterLabel,
+  PRODUCT_INTENT_LABELS,
+  type ProductLaunchTarget,
+} from "@/lib/product-intent";
 
 type ProgressRing = "neutral" | "completed" | "in_progress";
 
@@ -12,12 +19,28 @@ type BlockDetailCardProps = {
   thumbnailSrc: string;
   progressRing: ProgressRing;
   isStart?: boolean;
-  evalLabel: string;
+  /** @deprecated unused — intent UI owns labels */
+  evalLabel?: string;
+  /** @deprecated unused */
+  exerciseLabel?: string;
   isStarting?: boolean;
   isLocked?: boolean;
   showActions: boolean;
-  onStartIle: () => void;
+  /**
+   * Launch by product intent (Explore/Drill × Open-ended/Timed).
+   * Prefer this over the four technical callbacks.
+   */
+  onLaunchIntent?: (target: ProductLaunchTarget) => void;
+  /** Open-ended Explore → ILE learning (fallback if onLaunchIntent omitted). */
+  onStartIle?: () => void;
+  /** Open-ended Drill → ILE project */
+  onStartIleProject?: () => void;
+  /** Timed Explore → TAP conversational */
   onStartEval?: (event: React.MouseEvent) => void;
+  /** Timed Drill → TAP exercise */
+  onStartExercise?: (event: React.MouseEvent) => void;
+  /** When false, hide timed (TAP) options. */
+  allowTimed?: boolean;
   forkCallout?: ReactNode;
   promptSection?: ReactNode;
   highlighted?: boolean;
@@ -26,8 +49,8 @@ type BlockDetailCardProps = {
 
 const HERO_RING_CLASS: Record<ProgressRing, string> = {
   neutral: "ring-white/20",
-  completed: "ring-emerald-400/50",
-  in_progress: "ring-amber-400/55",
+  completed: "ring-white/20",
+  in_progress: "ring-white/20",
 };
 
 function BlockDetailHero({
@@ -153,12 +176,15 @@ export function BlockDetailCard({
   thumbnailSrc,
   progressRing,
   isStart,
-  evalLabel,
   isStarting = false,
   isLocked = false,
   showActions,
+  onLaunchIntent,
   onStartIle,
+  onStartIleProject,
   onStartEval,
+  onStartExercise,
+  allowTimed = true,
   forkCallout,
   promptSection,
   highlighted,
@@ -168,6 +194,35 @@ export function BlockDetailCard({
   const [showHelp, setShowHelp] = useState(false);
   const isStacked = layout === "stacked";
   const isModal = layout === "modal";
+
+  const targets = allProductLaunchTargets().filter((target) => {
+    if (target.product === "tap" && !allowTimed) return false;
+    if (target.id === "open_ended_drill" && !onStartIleProject && !onLaunchIntent) return false;
+    if (target.product === "tap" && !onStartEval && !onStartExercise && !onLaunchIntent) return false;
+    return true;
+  });
+
+  const launch = (target: ProductLaunchTarget, event?: React.MouseEvent) => {
+    if (onLaunchIntent) {
+      onLaunchIntent(target);
+      return;
+    }
+    if (target.id === "open_ended_explore") {
+      onStartIle?.();
+      return;
+    }
+    if (target.id === "open_ended_drill") {
+      onStartIleProject?.();
+      return;
+    }
+    if (target.id === "timed_explore") {
+      onStartEval?.(event as React.MouseEvent);
+      return;
+    }
+    if (target.id === "timed_drill") {
+      onStartExercise?.(event as React.MouseEvent);
+    }
+  };
 
   const cardShellClass = isStacked || isModal
     ? "relative"
@@ -181,28 +236,26 @@ export function BlockDetailCard({
 
   const helpSections = [
     {
-      titleKey: "sessionItem.ileHelpTitle",
-      summaryKey: "sessionItem.ileHelpSummary",
-      pointKeys: [
-        "sessionItem.ileHelpPoint1",
-        "sessionItem.ileHelpPoint2",
-        "sessionItem.ileHelpPoint3",
-      ],
+      title: PRODUCT_INTENT_LABELS.openEndedExplore,
+      summary: PRODUCT_INTENT_LABELS.openEndedExploreHint,
     },
-    ...(onStartEval
+    {
+      title: PRODUCT_INTENT_LABELS.openEndedDrill,
+      summary: PRODUCT_INTENT_LABELS.openEndedDrillHint,
+    },
+    ...(allowTimed
       ? [
           {
-            titleKey: "sessionItem.evalHelpTitle",
-            summaryKey: "sessionItem.evalHelpSummary",
-            pointKeys: [
-              "sessionItem.evalHelpPoint1",
-              "sessionItem.evalHelpPoint2",
-              "sessionItem.evalHelpPoint3",
-            ],
+            title: PRODUCT_INTENT_LABELS.timedExplore,
+            summary: PRODUCT_INTENT_LABELS.timedExploreHint,
+          },
+          {
+            title: PRODUCT_INTENT_LABELS.timedDrill,
+            summary: PRODUCT_INTENT_LABELS.timedDrillHint,
           },
         ]
       : []),
-  ] as const;
+  ];
 
   const heroLayout = isModal ? "modal" : isStacked ? "stacked" : "horizontal";
   const blockHero = (
@@ -218,10 +271,10 @@ export function BlockDetailCard({
   );
 
   const actionButtons = showActions ? (
-    <div>
+    <div data-product-intent="workspace-start">
       <div className="mb-2 flex items-center justify-between gap-2">
         <p className="text-[10px] font-medium uppercase tracking-[0.14em] text-neutral-500">
-          {t("sessionItem.chooseMode")}
+          {PRODUCT_INTENT_LABELS.chooseStyle}
         </p>
         <button
           type="button"
@@ -233,40 +286,45 @@ export function BlockDetailCard({
         </button>
       </div>
 
+      <p className="mb-2 text-[11px] leading-snug text-neutral-500">
+        {PRODUCT_INTENT_LABELS.questionExplore} {PRODUCT_INTENT_LABELS.questionDrill}{" "}
+        {PRODUCT_INTENT_LABELS.questionOpen} {PRODUCT_INTENT_LABELS.questionTimed}
+      </p>
+
       <div
         className={`grid gap-2 ${
-          onStartEval
-            ? isModal
-              ? "grid-cols-2"
-              : isStacked
-                ? "grid-cols-1"
+          targets.length >= 4
+            ? isStacked
+              ? "grid-cols-1"
+              : "grid-cols-1 sm:grid-cols-2"
+            : targets.length === 2
+              ? isModal
+                ? "grid-cols-2"
                 : "grid-cols-1 sm:grid-cols-2"
-            : "grid-cols-1"
+              : "grid-cols-1"
         }`}
+        data-block-mode-tools
+        data-product-intent-grid
       >
-        <button
-          type="button"
-          onClick={onStartIle}
-          disabled={isStarting || isLocked}
-          className="group flex flex-col items-start gap-1 rounded-lg border-2 border-white bg-white px-3 py-2.5 text-left transition hover:bg-neutral-200 disabled:opacity-40"
-        >
-          <span className="text-xs font-semibold tracking-tight text-black">{t("sessionItem.ileCtaLabel")}</span>
-          <span className="text-[10px] leading-snug text-neutral-600 group-hover:text-neutral-700">
-            {isStarting ? t("sessionItem.starting") : t("sessionItem.ileCtaHint")}
-          </span>
-        </button>
-        {onStartEval ? (
-          <button
-            type="button"
-            onClick={onStartEval}
-            className="group flex flex-col items-start gap-1 rounded-lg border-2 border-white/40 bg-transparent px-3 py-2.5 text-left transition hover:border-white/70 hover:bg-white/5"
-          >
-            <span className="text-xs font-semibold tracking-tight text-white">{evalLabel}</span>
-            <span className="text-[10px] leading-snug text-neutral-500 group-hover:text-neutral-400">
-              {t("sessionItem.evalCtaHint")}
-            </span>
-          </button>
-        ) : null}
+        {targets.map((target) => (
+            <button
+              key={target.id}
+              type="button"
+              onClick={(e) => launch(target, e)}
+              disabled={isStarting || isLocked}
+              data-block-tool={target.id}
+              data-product-intent-id={target.id}
+              data-product-tech={target.product}
+              className="group flex flex-col items-start gap-1 rounded-lg border-2 border-white/35 bg-transparent px-3 py-2.5 text-left transition hover:border-white/60 hover:bg-white/5 disabled:opacity-40"
+            >
+              <span className="text-xs font-semibold tracking-tight text-white">
+                {productIntentClusterLabel(target)}
+              </span>
+              <span className="text-[10px] leading-snug text-neutral-500 group-hover:text-neutral-400">
+                {isStarting ? t("sessionItem.starting") : productIntentClusterHint(target)}
+              </span>
+            </button>
+          ))}
       </div>
     </div>
   ) : null;
@@ -291,22 +349,22 @@ export function BlockDetailCard({
             </button>
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div
+            className={`grid gap-3 ${
+              helpSections.length >= 4
+                ? "sm:grid-cols-2"
+                : helpSections.length >= 3
+                  ? "sm:grid-cols-3"
+                  : "sm:grid-cols-2"
+            }`}
+          >
             {helpSections.map((section) => (
               <div
-                key={section.titleKey}
+                key={section.title}
                 className="rounded-lg border border-white/15 bg-neutral-900/50 p-3"
               >
-                <p className="text-xs font-semibold text-white">{t(section.titleKey)}</p>
-                <p className="mt-1.5 text-[11px] leading-relaxed text-neutral-300">{t(section.summaryKey)}</p>
-                <ul className="mt-2 space-y-1.5">
-                  {section.pointKeys.map((pointKey) => (
-                    <li key={pointKey} className="flex gap-2 text-[10px] leading-relaxed text-neutral-400">
-                      <span className="mt-1 h-1 w-1 shrink-0 rounded-full bg-white/35" aria-hidden />
-                      <span>{t(pointKey)}</span>
-                    </li>
-                  ))}
-                </ul>
+                <p className="text-xs font-semibold text-white">{section.title}</p>
+                <p className="mt-1.5 text-[11px] leading-relaxed text-neutral-300">{section.summary}</p>
               </div>
             ))}
           </div>

@@ -309,6 +309,19 @@ export const MCP_EVIDENCE_TOOLS = [
         },
         redirect_url: { type: "string", description: "Required when post_session=redirect_url." },
         completion_webhook_url: { type: "string", description: "Optional webhook URL on TAP completion." },
+        interaction_kind: {
+          type: "string",
+          description:
+            "conversational (default dialogue TAP) | exercise (solo exercise prompt + submitted thoughts, no Helios chat).",
+        },
+        exercise: {
+          type: "boolean",
+          description: "Shorthand: true creates an Exercise TAP (interaction_kind=exercise).",
+        },
+        show_end_session: {
+          type: "boolean",
+          description: "When true (default), guest UI shows End Session.",
+        },
       },
       required: ["workspace_id"],
       additionalProperties: false,

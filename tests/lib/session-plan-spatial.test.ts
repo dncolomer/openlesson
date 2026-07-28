@@ -330,6 +330,19 @@ describe("create surface wiring (structural)", () => {
     expect(llmIdx).toBeGreaterThan(-1);
     expect(deleteIdx).toBeGreaterThan(-1);
     expect(llmIdx).toBeLessThan(deleteIdx);
+    // Race-safe replace: delete by session_id and upsert-friendly create.
+    expect(routeSrc).toContain('.eq("session_id", sessionId)');
+    expect(routeSrc).toContain("planAfterGenerate");
+  });
+
+  it("createSessionPlan upserts on session_id to avoid duplicate key races", () => {
+    const src = readFileSync(
+      path.join(process.cwd(), "lib/storage/session-plans.ts"),
+      "utf8",
+    );
+    expect(src).toContain('onConflict: "session_id"');
+    expect(src).toContain("upsert");
+    expect(src).toContain("session_plans_session_id_key");
   });
 
   it("workspace generate + UI document initial_chapters (programmatic create is UI-only)", () => {

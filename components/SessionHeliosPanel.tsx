@@ -22,6 +22,8 @@ import {
   shouldAutoStashOnContextFull,
   thoughtContextFillRatio,
 } from "@/lib/thought-context-auto-stash";
+import type { ExerciseThought } from "@/lib/exercise-tap";
+import type { ChapterFollowUpSuggestion } from "@/lib/ile-chapter-follow-ups";
 
 interface SessionHeliosPanelProps {
   lastUserTurn: DialogueMessage | null;
@@ -47,6 +49,25 @@ interface SessionHeliosPanelProps {
   sessionControls?: ReactNode;
   thought: SessionThoughtInterface;
   hasPlanSteps?: boolean;
+  /**
+   * Project Mode: no Helios conversation bubbles; exercise prompt + speech only.
+   * Dual-stack stash/solution lives in the Thoughts tool.
+   */
+  projectMode?: boolean;
+  /** When Project Mode chapter is Done — block further thought submits. */
+  chapterThoughtsLocked?: boolean;
+  /** Project Mode dual lists for the active chapter (shown under exercise when Done). */
+  projectStash?: ExerciseThought[];
+  projectSolution?: ExerciseThought[];
+  /** After Done: 3 adjacent-topic follow-ups; picking one adds a chapter next to the completed one. */
+  chapterFollowUps?: ChapterFollowUpSuggestion[];
+  chapterFollowUpsLoading?: boolean;
+  chapterFollowUpsError?: string | null;
+  onSelectChapterFollowUp?: (suggestion: ChapterFollowUpSuggestion) => void;
+  onProjectStash?: () => void;
+  onProjectSubmitToSolution?: () => void;
+  /** Open the Thoughts tool (dual stack in Project Mode / memory in Learning Mode). */
+  onOpenThoughts?: () => void;
 }
 
 export function SessionHeliosPanel({
@@ -72,6 +93,17 @@ export function SessionHeliosPanel({
   sessionControls,
   thought,
   hasPlanSteps = true,
+  projectMode = false,
+  chapterThoughtsLocked = false,
+  projectStash = [],
+  projectSolution = [],
+  chapterFollowUps = [],
+  chapterFollowUpsLoading = false,
+  chapterFollowUpsError = null,
+  onSelectChapterFollowUp,
+  onProjectStash,
+  onProjectSubmitToSolution,
+  onOpenThoughts,
 }: SessionHeliosPanelProps) {
   const { t } = useI18n();
 
@@ -85,7 +117,7 @@ export function SessionHeliosPanel({
 
   // Thought context capacity auto-stash (ILE has no purity clock).
   useEffect(() => {
-    if (!isSessionActive || !thought.speechEnabled) {
+    if (!isSessionActive || !thought.speechEnabled || chapterThoughtsLocked) {
       contextStashInFlightRef.current = false;
       return;
     }
@@ -97,7 +129,11 @@ export function SessionHeliosPanel({
       text.trim()
     ) {
       contextStashInFlightRef.current = true;
-      thought.stashCurrentTranscription();
+      if (projectMode && onProjectStash) {
+        onProjectStash();
+      } else {
+        thought.stashCurrentTranscription();
+      }
       // Allow next fill cycle after stash clears the forming text.
       window.setTimeout(() => {
         contextStashInFlightRef.current = false;
@@ -108,6 +144,9 @@ export function SessionHeliosPanel({
     thought.crystallizableText,
     thought.speechEnabled,
     thought.stashCurrentTranscription,
+    projectMode,
+    chapterThoughtsLocked,
+    onProjectStash,
   ]);
 
   if (showWelcome) {
@@ -121,6 +160,7 @@ export function SessionHeliosPanel({
             presentation="floating"
             language={ttsLanguage}
             showStartAction
+            projectMode={projectMode}
             onStart={() => onWelcomePlay?.()}
             isStarting={isStartingSession}
           />
@@ -157,26 +197,189 @@ export function SessionHeliosPanel({
           </div>
         ) : (
           <>
-            <div className="flex min-h-[42vh] flex-1 flex-col">
-              <DialogueSplit
-                lastUserTurn={lastUserTurn}
-                lastAssistantTurn={lastAssistantTurn}
-                promptText={chapterPrompt}
-                isSending={thought.isSending || isAssistantPending}
-                heliosTurnMode={
-                  heliosTurnMode === "interruption"
-                    ? "interruption"
-                    : thought.isSending || isAssistantPending
-                      ? "responding"
-                      : "idle"
-                }
-                error={thought.sendError}
-                userInitial={userInitial}
-                emptyUserTurnText=""
-              />
-            </div>
+            {projectMode ? (
+              <div
+                data-ile-project-panel
+                data-helios-bubbles="hidden"
+                className="mt-auto flex w-full shrink-0 flex-col"
+              >
+                <div
+                  data-ile-project-exercise-prompt
+                  data-chapter-solved={chapterThoughtsLocked ? "true" : "false"}
+                  className={`rounded-2xl border px-5 py-4 backdrop-blur-md sm:px-6 sm:py-5 ${
+                    chapterThoughtsLocked
+                      ? "border-neutral-600/70 bg-neutral-950/75 shadow-none"
+                      : "border-amber-400/40 bg-neutral-950/80 shadow-[0_0_24px_rgba(251,191,36,0.06)]"
+                  }`}
+                >
+                  <p
+                    className={`font-mono text-[11px] uppercase tracking-[0.14em] ${
+                      chapterThoughtsLocked ? "text-neutral-500" : "text-amber-200/85"
+                    }`}
+                  >
+                    Project Mode · Exercise
+                  </p>
+                  <p
+                    className={`mt-2.5 overflow-y-auto text-base font-medium leading-relaxed text-neutral-50 sm:text-lg sm:leading-relaxed ${
+                      chapterThoughtsLocked
+                        ? "max-h-[8rem] sm:max-h-[9rem]"
+                        : "max-h-[12rem] sm:max-h-[14rem]"
+                    }`}
+                  >
+                    {chapterPrompt}
+                  </p>
+                  {chapterThoughtsLocked ? (
+                    <div
+                      data-ile-chapter-solved-summary
+                      className="mt-3 space-y-3 border-t border-neutral-800/80 pt-3"
+                    >
+                      <p
+                        data-ile-chapter-done-notice
+                        className="text-[10px] font-medium uppercase tracking-[0.12em] text-neutral-500"
+                      >
+                        Chapter solved · final
+                      </p>
 
-            <div className="min-w-0 overflow-hidden rounded-2xl border border-neutral-900/80 bg-neutral-950/55 p-3 backdrop-blur-md">
+                      <div data-ile-solved-solution-summary>
+                        <div className="mb-1.5 flex items-baseline justify-between gap-2">
+                          <p className="font-mono text-[10px] uppercase tracking-[0.12em] text-neutral-400">
+                            Solution
+                          </p>
+                          <p className="text-[10px] text-neutral-600">
+                            {projectSolution.length} thought
+                            {projectSolution.length === 1 ? "" : "s"}
+                          </p>
+                        </div>
+                        {projectSolution.length === 0 ? (
+                          <p className="text-xs text-neutral-600">No solution thoughts submitted.</p>
+                        ) : (
+                          <ul className="max-h-[9rem] space-y-1.5 overflow-y-auto overscroll-y-contain sm:max-h-[11rem]">
+                            {projectSolution.map((item, index) => (
+                              <li
+                                key={item.id}
+                                data-ile-solved-solution-item={item.id}
+                                className="rounded-lg border border-neutral-800/90 bg-black/40 px-2.5 py-2"
+                              >
+                                <p className="font-mono text-[9px] uppercase tracking-wide text-neutral-600">
+                                  Solution {index + 1}
+                                </p>
+                                <p className="mt-0.5 text-xs leading-snug text-neutral-200">
+                                  {item.text}
+                                </p>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </div>
+
+                      <div data-ile-solved-stash-summary>
+                        <div className="mb-1.5 flex items-baseline justify-between gap-2">
+                          <p className="font-mono text-[10px] uppercase tracking-[0.12em] text-neutral-400">
+                            Stash
+                          </p>
+                          <p className="text-[10px] text-neutral-600">
+                            {projectStash.length} thought
+                            {projectStash.length === 1 ? "" : "s"}
+                          </p>
+                        </div>
+                        {projectStash.length === 0 ? (
+                          <p className="text-xs text-neutral-600">No stashed thoughts.</p>
+                        ) : (
+                          <ul className="max-h-[7rem] space-y-1.5 overflow-y-auto overscroll-y-contain sm:max-h-[9rem]">
+                            {projectStash.map((item, index) => (
+                              <li
+                                key={item.id}
+                                data-ile-solved-stash-item={item.id}
+                                className="rounded-lg border border-neutral-800/70 bg-black/30 px-2.5 py-2"
+                              >
+                                <p className="font-mono text-[9px] uppercase tracking-wide text-neutral-600">
+                                  Stash {index + 1}
+                                </p>
+                                <p className="mt-0.5 text-xs leading-snug text-neutral-400">
+                                  {item.text}
+                                </p>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </div>
+
+                      <div
+                        data-ile-chapter-follow-ups
+                        className="border-t border-neutral-800/80 pt-3"
+                      >
+                        <p className="mb-1.5 font-mono text-[10px] uppercase tracking-[0.12em] text-neutral-400">
+                          Next adjacent topics (Optional Follow-ups)
+                        </p>
+                        <p className="mb-2 text-[11px] leading-snug text-neutral-500">
+                          Pick one to add as a new chapter on the closest empty square next to
+                          this one. You can add more anytime.
+                        </p>
+                        {chapterFollowUpsLoading ? (
+                          <p
+                            className="text-xs text-neutral-500"
+                            data-ile-follow-ups-loading
+                          >
+                            Generating follow-ups…
+                          </p>
+                        ) : null}
+                        {chapterFollowUpsError ? (
+                          <p className="text-xs text-amber-300/90" data-ile-follow-ups-error>
+                            {chapterFollowUpsError}
+                          </p>
+                        ) : null}
+                        {!chapterFollowUpsLoading && chapterFollowUps.length > 0 ? (
+                          <ul className="grid gap-2">
+                            {chapterFollowUps.map((suggestion, index) => (
+                              <li key={`${suggestion.title}-${index}`}>
+                                <button
+                                  type="button"
+                                  data-ile-follow-up-topic={index}
+                                  disabled={!onSelectChapterFollowUp}
+                                  onClick={() => onSelectChapterFollowUp?.(suggestion)}
+                                  className="w-full rounded-lg border border-cyan-500/30 bg-cyan-500/5 px-3 py-2.5 text-left transition hover:border-cyan-400/50 hover:bg-cyan-500/10 disabled:opacity-50"
+                                >
+                                  <p className="text-xs font-semibold text-cyan-100">
+                                    {suggestion.title}
+                                  </p>
+                                  {suggestion.description &&
+                                  suggestion.description !== suggestion.title ? (
+                                    <p className="mt-0.5 text-[11px] leading-snug text-neutral-400">
+                                      {suggestion.description}
+                                    </p>
+                                  ) : null}
+                                </button>
+                              </li>
+                            ))}
+                          </ul>
+                        ) : null}
+                      </div>
+                    </div>
+                  ) : null}
+                </div>
+              </div>
+            ) : (
+              <div className="flex min-h-[42vh] flex-1 flex-col" data-helios-bubbles="visible">
+                <DialogueSplit
+                  lastUserTurn={lastUserTurn}
+                  lastAssistantTurn={lastAssistantTurn}
+                  promptText={chapterPrompt}
+                  isSending={thought.isSending || isAssistantPending}
+                  heliosTurnMode={
+                    heliosTurnMode === "interruption"
+                      ? "interruption"
+                      : thought.isSending || isAssistantPending
+                        ? "responding"
+                        : "idle"
+                  }
+                  error={thought.sendError}
+                  userInitial={userInitial}
+                  emptyUserTurnText=""
+                />
+              </div>
+            )}
+
+            <div className="min-w-0 shrink-0 overflow-hidden rounded-2xl border border-neutral-900/80 bg-neutral-950/55 p-3 backdrop-blur-md">
               {sessionControls && (
                 <div className="mb-3 flex w-full flex-col items-center gap-2 border-b border-neutral-900/80 pb-3">
                   {sessionControls}
@@ -208,37 +411,77 @@ export function SessionHeliosPanel({
                     </button>
                   ) : null}
                   <div className="flex shrink-0 items-center gap-0.5">
-                    <ThoughtCompactAction
-                      shortcut="↵"
-                      label="Send"
-                      disabled={!thought.crystallizableText || thought.isSending}
-                      onClick={() => void thought.sendCurrentTranscription()}
-                    />
-                    <ThoughtCompactAction
-                      shortcut="Del"
-                      label="Stash"
-                      disabled={!thought.crystallizableText}
-                      onClick={thought.stashCurrentTranscription}
-                    />
-                    <ThoughtCompactAction
-                      shortcut="E"
-                      label="Edit"
-                      disabled={!thought.crystallizableText}
-                      onClick={thought.beginEditTranscription}
-                    />
+                    {projectMode ? (
+                      <>
+                        <ThoughtCompactAction
+                          shortcut="↵"
+                          label="Solution"
+                          disabled={
+                            chapterThoughtsLocked ||
+                            !thought.crystallizableText ||
+                            thought.isSending
+                          }
+                          onClick={() => onProjectSubmitToSolution?.()}
+                        />
+                        <ThoughtCompactAction
+                          shortcut="Del"
+                          label="Stash"
+                          disabled={chapterThoughtsLocked || !thought.crystallizableText}
+                          onClick={() => onProjectStash?.()}
+                        />
+                      </>
+                    ) : (
+                      <>
+                        <ThoughtCompactAction
+                          shortcut="↵"
+                          label="Send"
+                          disabled={!thought.crystallizableText || thought.isSending}
+                          onClick={() => void thought.sendCurrentTranscription()}
+                        />
+                        <ThoughtCompactAction
+                          shortcut="Del"
+                          label="Stash"
+                          disabled={!thought.crystallizableText}
+                          onClick={thought.stashCurrentTranscription}
+                        />
+                        <ThoughtCompactAction
+                          shortcut="E"
+                          label="Edit"
+                          disabled={!thought.crystallizableText}
+                          onClick={thought.beginEditTranscription}
+                        />
+                      </>
+                    )}
                   </div>
                 </div>
                 <AutoStashContextBar data-surface="ile" text={thought.crystallizableText} />
               </div>
 
-              <div className="mt-3 border-t border-neutral-900/80 pt-3">
-                <p className="mb-2 text-[10px] uppercase tracking-[2px] text-neutral-600">{t("probes.stashedThoughts")}</p>
-                <ActiveThoughtSlots
-                  thoughts={thought.latestThoughts}
-                  isSending={thought.isSending}
-                  onSendThought={(text, thoughtId) => void thought.sendThought(text, [thoughtId])}
-                />
-              </div>
+              {onOpenThoughts ? (
+                <div className="mt-2.5 flex justify-end">
+                  <button
+                    type="button"
+                    data-open-thoughts
+                    onClick={onOpenThoughts}
+                    className="rounded-md border border-neutral-700 bg-neutral-950 px-2.5 py-1.5 text-[11px] font-medium text-neutral-300 transition hover:border-neutral-500 hover:text-white"
+                  >
+                    Open Thoughts
+                  </button>
+                </div>
+              ) : null}
+
+              {!projectMode ? (
+                <div className="mt-3 border-t border-neutral-900/80 pt-3">
+                  <p className="mb-2 text-[10px] uppercase tracking-[2px] text-neutral-600">
+                    {t("probes.stashedThoughts")}
+                  </p>
+                  <ActiveThoughtSlots
+                    thoughts={thought.latestThoughts}
+                    isSending={thought.isSending}
+                    onSendThought={(text, thoughtId) => void thought.sendThought(text, [thoughtId])}
+                  />
+                </div>
+              ) : null}
             </div>
           </>
         )}

@@ -117,16 +117,18 @@ export function SessionItem({
       });
   }, [node.session_id, supabase]);
 
-  const handleStart = async () => {
+  const handleStart = async (ileMode: "learning" | "project" = "learning") => {
     if (isStarting || isLocked) return;
-    if (activeSession) {
+    // Resume only for Learning Mode when an active session already exists.
+    // Project Mode always opens a fresh session so mode is durable for this run.
+    if (activeSession && ileMode === "learning") {
       router.push(`/session?id=${activeSession.id}`);
       return;
     }
 
     setIsStarting(true);
     try {
-      if (onCustomStart) {
+      if (onCustomStart && ileMode === "learning") {
         await onCustomStart(node);
         return;
       }
@@ -142,6 +144,12 @@ export function SessionItem({
         editedPlanningPrompt || undefined,
         undefined,
         workspaceId || undefined,
+        {
+          session_mode: ileMode,
+          ile_session_mode: ileMode,
+          block_id: node.id,
+          block_title: node.title,
+        },
       );
       await supabase.from("blocks").update({ session_id: session.id }).eq("id", node.id);
 
@@ -161,13 +169,34 @@ export function SessionItem({
     }
   };
 
-  const handleStartGhl = (event: React.MouseEvent) => {
-    event.stopPropagation();
+  const handleStartTimed = (
+    interactionKind: "conversational" | "exercise",
+    event?: React.MouseEvent,
+  ) => {
+    event?.stopPropagation();
     if (!workspaceId) return;
     const params = new URLSearchParams({ blockId: node.id });
+    if (interactionKind === "exercise") {
+      params.set("interactionKind", "exercise");
+    }
     const contextualSessionId = activeSession?.id || node.session_id;
     if (contextualSessionId) params.set("sessionId", contextualSessionId);
     router.push(`/workspace/${workspaceId}/tap?${params.toString()}`);
+  };
+
+  const handleLaunchIntent = (target: {
+    id: string;
+    product: string;
+    session_mode?: string;
+    interaction_kind?: string;
+  }) => {
+    if (target.product === "ile") {
+      void handleStart(target.session_mode === "project" ? "project" : "learning");
+      return;
+    }
+    handleStartTimed(
+      target.interaction_kind === "exercise" ? "exercise" : "conversational",
+    );
   };
 
   const savePlanningPrompt = useCallback(async () => {
@@ -198,7 +227,7 @@ export function SessionItem({
         <button
           onClick={(e) => {
             e.stopPropagation();
-            void handleStart();
+            void handleStart("learning");
           }}
           disabled={isStarting}
           className={
@@ -207,13 +236,13 @@ export function SessionItem({
               : "min-w-0 flex-1 rounded-md bg-white px-2 py-1.5 text-xs font-medium text-black transition-colors hover:bg-neutral-200 disabled:bg-neutral-700 disabled:text-neutral-400"
           }
         >
-          {isStarting ? t("sessionItem.starting") : t("sessionItem.runAgain")}
+          {isStarting ? t("sessionItem.starting") : "Run again"}
         </button>
       ) : (
         <button
           onClick={(e) => {
             e.stopPropagation();
-            void handleStart();
+            void handleStart("learning");
           }}
           disabled={isStarting}
           className={
@@ -222,20 +251,24 @@ export function SessionItem({
               : "min-w-0 flex-1 rounded-md bg-white px-2 py-1.5 text-xs font-medium text-black transition-colors hover:bg-neutral-200 disabled:bg-neutral-700 disabled:text-neutral-400"
           }
         >
-          {isStarting ? t("sessionItem.starting") : activeSession ? t("sessionItem.resumeLesson") : t("sessionItem.startLesson")}
+          {isStarting
+            ? t("sessionItem.starting")
+            : activeSession
+              ? "Resume practice"
+              : "Start practice"}
         </button>
       )}
       {!hideTap ? (
         <button
-          onClick={handleStartGhl}
+          onClick={(e) => handleStartTimed("conversational", e)}
           className={
             isDetail
               ? `${detailButtonClass} border border-neutral-600 bg-neutral-900/80 text-white hover:border-neutral-400 hover:bg-neutral-800`
               : "shrink-0 rounded-md border border-neutral-700/80 bg-neutral-900/50 px-2.5 py-1.5 text-xs font-medium text-neutral-300 transition-colors hover:border-neutral-600 hover:text-white"
           }
-          title={t("sessionItem.startEvaluationEnv")}
+          title="Start Timed Exploration"
         >
-          {t("sessionItem.startEvaluationEnv")}
+          Timed
         </button>
       ) : null}
     </div>
@@ -333,12 +366,19 @@ export function SessionItem({
           thumbnailSrc={thumbnailSrc}
           progressRing={progressRing}
           isStart={node.is_start}
-          evalLabel={t("sessionItem.evalCtaLabel")}
           isStarting={isStarting}
           isLocked={isLocked}
           showActions={!isLocked && isOwner}
-          onStartIle={() => void handleStart()}
-          onStartEval={hideTap ? undefined : handleStartGhl}
+          allowTimed={!hideTap}
+          onLaunchIntent={handleLaunchIntent}
+          onStartIle={() => void handleStart("learning")}
+          onStartIleProject={() => void handleStart("project")}
+          onStartEval={
+            hideTap ? undefined : (e) => handleStartTimed("conversational", e)
+          }
+          onStartExercise={
+            hideTap ? undefined : (e) => handleStartTimed("exercise", e)
+          }
           promptSection={detailLayout === "drawer" ? undefined : detailPromptSection}
           highlighted={highlighted}
           highlightOpacity={highlightOpacity}

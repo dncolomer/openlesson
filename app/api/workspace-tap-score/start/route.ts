@@ -10,6 +10,15 @@ import {
   resolveTapLiveMinutes,
   TAP_PRACTICE_DURATION_SECONDS,
 } from "@/lib/tap-practice";
+import {
+  normalizeTapInteractionKind,
+  resolveTapInteractionKindFromBody,
+  type TapInteractionKind,
+} from "@/lib/pow-api/tap-link-config";
+import {
+  buildExercisePromptText,
+  looksLikeConversationalOpening,
+} from "@/lib/exercise-tap";
 
 export const runtime = "nodejs";
 export const maxDuration = 30;
@@ -28,6 +37,7 @@ export async function POST(req: NextRequest) {
     });
     const requestedDurationSeconds = practice ? TAP_PRACTICE_DURATION_SECONDS : minutes * 60;
     const tapSessionId = body.tapSessionId ? String(body.tapSessionId) : "";
+    const bodyInteractionKind = resolveTapInteractionKindFromBody(body as Record<string, unknown>);
 
     const access = await resolveTapSessionAccess({
       privateToken,
@@ -49,10 +59,41 @@ export async function POST(req: NextRequest) {
       focusNodeIds,
       resolvedFocusSessionId
     );
+
+    // Prefer kind already stored on the link row; body can set it for owner starts.
+    const existingKind = normalizeTapInteractionKind(
+      (access.existingSession as { interaction_kind?: unknown } | null | undefined)?.interaction_kind,
+    );
+    const interactionKind: TapInteractionKind =
+      access.existingSession?.id && existingKind === "exercise"
+        ? "exercise"
+        : access.existingSession?.id
+          ? existingKind
+          : bodyInteractionKind;
+
     const requestedOpeningQuestion = body.openingQuestion ? String(body.openingQuestion).trim() : "";
-    const openingQuestion =
-      requestedOpeningQuestion ||
-      (await generateTapOpeningQuestion(brief, minutes, { practice }));
+    let openingQuestion: string;
+
+    if (interactionKind === "exercise") {
+      // Solo exercise: do NOT generate conversational "Teach me…" openings.
+      // Prefer block/workspace framing; only use body text when it is already
+      // exercise-like (not a dialogue partner prompt).
+      const focused = brief.nodes.length === 1 ? brief.nodes[0] : null;
+      const explicitExercise =
+        requestedOpeningQuestion && !looksLikeConversationalOpening(requestedOpeningQuestion)
+          ? requestedOpeningQuestion
+          : null;
+      openingQuestion = buildExercisePromptText({
+        exerciseText: explicitExercise,
+        blockTitle: focused?.title,
+        blockDescription: focused?.description,
+        workspaceTitle: brief.plan.title,
+      });
+    } else {
+      openingQuestion =
+        requestedOpeningQuestion ||
+        (await generateTapOpeningQuestion(brief, minutes, { practice }));
+    }
 
     // Private TAP links are multi-use: reopening a completed link restarts a run
     // on the same row, preserving guest_user_id / assigned_user_id for identity.
@@ -80,6 +121,7 @@ export async function POST(req: NextRequest) {
         openingQuestion,
         practice,
         minutes,
+        interactionKind,
       });
     }
 
@@ -97,6 +139,8 @@ export async function POST(req: NextRequest) {
         requested_duration_seconds: requestedDurationSeconds,
         status: "in_progress",
         started_at: new Date().toISOString(),
+        mode: "curious",
+        interaction_kind: interactionKind,
       })
       .select("id")
       .single();
@@ -105,7 +149,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: error?.message || "Could not start TAP session" }, { status: 500 });
     }
 
-    return NextResponse.json({ tapSessionId: row.id, openingQuestion, practice, minutes });
+    return NextResponse.json({
+      tapSessionId: row.id,
+      openingQuestion,
+      practice,
+      minutes,
+      interactionKind,
+    });
   } catch (error) {
     console.error("[workspace-tap-score/start] Error:", error);
     const message = error instanceof Error ? error.message : "Internal server error";

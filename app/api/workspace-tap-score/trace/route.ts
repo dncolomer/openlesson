@@ -16,8 +16,20 @@ import { isTapPracticeRequest, stampPoWPracticeFlag } from "@/lib/tap-practice";
 export const runtime = "nodejs";
 export const maxDuration = 30;
 
-const SYSTEM1_ACTIONS = new Set<TapSystem1Action>(["crystallize", "pause_finalize", "auto_stash"]);
-const SYSTEM2_ACTIONS = new Set<TapSystem2Action>(["send", "skip", "select", "deselect", "resend", "edit"]);
+const SYSTEM1_ACTIONS = new Set<TapSystem1Action>([
+  "crystallize",
+  "pause_finalize",
+  "auto_stash",
+]);
+const SYSTEM2_ACTIONS = new Set<TapSystem2Action>([
+  "send",
+  "skip",
+  "select",
+  "deselect",
+  "resend",
+  "edit",
+  "remove",
+]);
 
 export async function POST(req: NextRequest) {
   try {

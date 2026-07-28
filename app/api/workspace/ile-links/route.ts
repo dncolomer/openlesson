@@ -81,13 +81,45 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: access.error }, { status: access.status });
   }
 
-  const { data: links, error } = await access.supabase
+  const ILE_LIST_SELECT_WITH_MODE =
+    "id, workspace_id, block_id, status, participant_type, guest_user_id, assigned_user_id, session_id, created_at, started_at, completed_at, access_mode, public_token, entry_query_params, show_end_session, session_mode";
+  /** Fallback when session_mode migration not yet applied on the target DB. */
+  const ILE_LIST_SELECT_LEGACY =
+    "id, workspace_id, block_id, status, participant_type, guest_user_id, assigned_user_id, session_id, created_at, started_at, completed_at, access_mode, public_token, entry_query_params, show_end_session";
+
+  let { data: links, error } = await access.supabase
     .from("workspace_ile_links")
-    .select(
-      "id, workspace_id, block_id, status, participant_type, guest_user_id, assigned_user_id, session_id, created_at, started_at, completed_at, access_mode, public_token, entry_query_params, show_end_session"
-    )
+    .select(ILE_LIST_SELECT_WITH_MODE)
     .eq("workspace_id", workspaceId)
     .order("created_at", { ascending: false });
+
+  // Missing column (migration not applied) → list without session_mode, default learning.
+  if (error) {
+    const msg = `${error.message || ""} ${error.details || ""} ${error.hint || ""}`.toLowerCase();
+    const missingSessionMode =
+      msg.includes("session_mode") ||
+      (msg.includes("column") && msg.includes("does not exist")) ||
+      error.code === "42703";
+    if (missingSessionMode) {
+      console.warn(
+        "[workspace/ile-links] session_mode missing — falling back to legacy select. Apply migration 20260728120000_ile_session_mode.",
+      );
+      const legacy = await access.supabase
+        .from("workspace_ile_links")
+        .select(ILE_LIST_SELECT_LEGACY)
+        .eq("workspace_id", workspaceId)
+        .order("created_at", { ascending: false });
+      if (legacy.error) {
+        console.error("[workspace/ile-links] List error:", legacy.error);
+        return NextResponse.json({ error: "Failed to list ILE links" }, { status: 500 });
+      }
+      links = (legacy.data || []).map((row) => ({
+        ...row,
+        session_mode: "learning",
+      }));
+      error = null;
+    }
+  }
 
   if (error) {
     console.error("[workspace/ile-links] List error:", error);

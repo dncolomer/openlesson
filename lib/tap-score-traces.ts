@@ -72,7 +72,11 @@ export type TapTraceType = "system1" | "system2";
 
 /** pause_finalize = deliberate stash; auto_stash = silence-driven stash (degrades session purity). */
 export type TapSystem1Action = "crystallize" | "pause_finalize" | "auto_stash";
-export type TapSystem2Action = "send" | "skip" | "select" | "deselect" | "resend" | "edit";
+/**
+ * send = promote/submit thought (Exercise submission stack or Helios send);
+ * remove = undo a submitted thought from Exercise submission stack (sys2 undo).
+ */
+export type TapSystem2Action = "send" | "skip" | "select" | "deselect" | "resend" | "edit" | "remove";
 
 export interface TapChatExchangePayload {
   type: "uncertain_systems_tap_chat_exchange";

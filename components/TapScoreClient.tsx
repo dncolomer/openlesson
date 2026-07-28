@@ -22,6 +22,7 @@ import {
 } from "@/lib/thought-context-auto-stash";
 import { SessionOnboardingGuide } from "@/components/SessionOnboardingGuide";
 import { TapStartingTopicCards } from "@/components/TapStartingTopicCards";
+import { TapBriefingConfig } from "@/components/TapBriefingConfig";
 import { LoadingStatusMessage } from "@/components/LoadingStatusMessage";
 import { MobileBlockScreen } from "@/components/MobileBlockScreen";
 import { isSmartphoneClient } from "@/lib/is-smartphone";
@@ -41,6 +42,11 @@ import {
   type SpeechRecognitionEventLike,
   type SpeechRecognitionLike,
 } from "@/lib/useSessionThoughtInterface";
+import {
+  coerceSpokenLocale,
+  toSpeechBcp47,
+  type SpokenLocale,
+} from "@/lib/tutoring-languages";
 
 import {
   type Phase,
@@ -50,9 +56,7 @@ import {
   type TapSystem2Action,
   type TapChatMessage as ChatMessage,
   OPENING_MESSAGE_ID,
-  THINK_ALOUD_PROTOCOL_LABEL,
   CHAIN_GAP_MS,
-  DURATIONS,
   BACKGROUND_IMAGES,
   getDialogueStorageKey,
   clearDialogueMessages,
@@ -67,6 +71,7 @@ import {
   TAP_SESSION_PURITY_MAX,
   TAP_SILENCE_AUTO_STASH_MS,
   isSessionPurityDepleted,
+  isWithinTapPurityGrace,
   nextSessionPurityAfterAutoStash,
   shouldAutoStashOnSilence,
   shouldEvaluateSessionPurity,
@@ -123,118 +128,6 @@ function ThoughtButton({
 }) {
   return <button className={thoughtButtonClasses({ size, variant, className })} {...props} />;
 }
-
-function ThoughtKeyHint({ children }: { children: ReactNode }) {
-  return (
-    <span className="inline-flex h-5 items-center justify-center rounded border border-neutral-600 bg-black/55 px-1.5 font-mono text-[10px] font-medium leading-none text-neutral-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
-      {children}
-    </span>
-  );
-}
-
-function ThoughtShortcutChord({ keys }: { keys: string[] }) {
-  return (
-    <span className="inline-flex items-center gap-0.5">
-      {keys.map((key, index) => (
-        <ThoughtKeyHint key={`${key}-${index}`}>{key}</ThoughtKeyHint>
-      ))}
-    </span>
-  );
-}
-
-function ThoughtButtonLabel({
-  shortcut,
-  children,
-}: {
-  shortcut?: ReactNode | string[];
-  children: ReactNode;
-}) {
-  const shortcutNode =
-    shortcut == null ? null : Array.isArray(shortcut) ? (
-      <ThoughtShortcutChord keys={shortcut} />
-    ) : typeof shortcut === "string" ? (
-      <ThoughtKeyHint>{shortcut}</ThoughtKeyHint>
-    ) : (
-      shortcut
-    );
-
-  return (
-    <span className="inline-flex items-center gap-2">
-      {shortcutNode}
-      <span>{children}</span>
-    </span>
-  );
-}
-
-function TapBriefingConfig({
-  workspaceTitle,
-  minutes,
-  onMinutesChange,
-  showDurationPicker,
-  disabled,
-}: {
-  workspaceTitle: string;
-  minutes: number;
-  onMinutesChange: (minutes: number) => void;
-  showDurationPicker: boolean;
-  disabled?: boolean;
-}) {
-  const { t } = useI18n();
-
-  const shortcutRows: { keys: string[]; label: string }[] = [
-    { keys: ["Enter"], label: t("tap.briefing.shortcutSend") },
-    { keys: ["Del"], label: t("tap.briefing.shortcutStash") },
-    { keys: ["E"], label: t("tap.briefing.shortcutEdit") },
-    { keys: ["1", "2", "3"], label: t("tap.briefing.shortcutSendStashed") },
-    { keys: ["5s"], label: t("tap.briefing.shortcutSilence") },
-  ];
-
-  return (
-    <div className="flex min-h-0 flex-1 flex-col justify-center gap-8 overflow-y-auto px-5 py-8 sm:px-8 lg:px-10">
-      <div>
-        <p className="font-mono text-[10px] uppercase tracking-[2px] text-neutral-500">{workspaceTitle}</p>
-        <h2 className="mt-2 text-2xl font-medium tracking-tight text-neutral-100 sm:text-3xl">
-          {THINK_ALOUD_PROTOCOL_LABEL}
-        </h2>
-        <p className="mt-3 max-w-md text-sm leading-relaxed text-neutral-400">{t("tap.briefing.intro")}</p>
-      </div>
-
-      {showDurationPicker ? (
-        <div>
-          <p className="font-mono text-[10px] uppercase tracking-[1.5px] text-neutral-600">{t("tap.briefing.sessionLength")}</p>
-          <div className="mt-2 grid max-w-xs grid-cols-2 gap-2">
-            {DURATIONS.map((duration) => (
-              <ThoughtButton
-                key={duration}
-                size="lg"
-                variant={minutes === duration ? "toggleOn" : "toggleOff"}
-                className="w-full"
-                disabled={disabled}
-                onClick={() => onMinutesChange(duration)}
-              >
-                {t("tap.briefing.minutes", { minutes: duration })}
-              </ThoughtButton>
-            ))}
-          </div>
-        </div>
-      ) : null}
-
-      <div>
-        <p className="font-mono text-[10px] uppercase tracking-[1.5px] text-neutral-600">{t("tap.briefing.keyboardShortcuts")}</p>
-        <ul className="mt-3 space-y-2.5 text-sm text-neutral-400">
-          {shortcutRows.map((row) => (
-            <li key={row.label} className="flex flex-wrap items-center gap-2">
-              <ThoughtShortcutChord keys={row.keys} />
-              <span>{row.label}</span>
-            </li>
-          ))}
-        </ul>
-      </div>
-    </div>
-  );
-}
-
-
 
 export function TapScoreClient({
   workspaceId,
@@ -299,6 +192,8 @@ export function TapScoreClient({
   }, [participantIdentityProp, privateToken]);
   const [phase, setPhase] = useState<Phase>("briefing");
   const [minutes, setMinutes] = useState(resolveInitialMinutes(initialSession?.requested_duration_seconds));
+  const [conversationLanguage, setConversationLanguage] = useState<SpokenLocale>("en");
+  const speechLang = toSpeechBcp47(conversationLanguage);
   const postSession = (initialSession?.post_session as TapPostSessionMode) || "redirect_workspace";
   const configuredRedirectUrl =
     typeof initialSession?.redirect_url === "string" ? initialSession.redirect_url : null;
@@ -540,11 +435,15 @@ export function TapScoreClient({
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const shouldListenRef = useRef(false);
   const restartTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const langRef = useRef("en-US");
+  const langRef = useRef(speechLang);
   const finalBufferRef = useRef<string[]>([]);
   const finalizeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const speechResultsLengthRef = useRef(0);
   const consumedResultsIndexRef = useRef(0);
+
+  useEffect(() => {
+    langRef.current = speechLang;
+  }, [speechLang]);
 
   useEffect(() => {
     clearDialogueMessages(dialogueStorageKey);
@@ -806,6 +705,7 @@ export function TapScoreClient({
   // TAP-only: silence clock while live — with text → fade + auto-stash;
   // empty bar after stash/submit → fade Listening… + purity hit if still silent.
   // Disabled entirely while waiting for Helios so wait latency is not a purity hit.
+  // Grace after live entry avoids burning purity on briefing time / UI settle.
   useEffect(() => {
     if (phase !== "live") {
       setTranscriptSilenceMs(0);
@@ -813,8 +713,18 @@ export function TapScoreClient({
       return;
     }
 
+    const liveEnteredAt = Date.now();
+    lastSpeechActivityAtRef.current = liveEnteredAt;
+    setTranscriptSilenceMs(0);
+
     const tick = window.setInterval(() => {
       if (isEndingRef.current) return;
+      // Post-entry grace: keep silence clock frozen until UI/mic settle.
+      if (isWithinTapPurityGrace(liveEnteredAt)) {
+        lastSpeechActivityAtRef.current = Date.now();
+        setTranscriptSilenceMs(0);
+        return;
+      }
       // Helios in flight: freeze silence clock; do not auto-stash or empty-bar penalize.
       if (!shouldEvaluateSessionPurity({ waitingForHelios: isSendingRef.current })) {
         lastSpeechActivityAtRef.current = Date.now();
@@ -886,8 +796,8 @@ export function TapScoreClient({
     }
     // Always (re)arm recognition when entering/staying live so a dead mic
     // after pause-like transitions does not leave TAP stuck idle.
-    startLiveSpeechRecognition(speechBindings, "en-US");
-  }, [phase, speechBindings]);
+    startLiveSpeechRecognition(speechBindings, speechLang);
+  }, [phase, speechBindings, speechLang]);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -992,7 +902,7 @@ export function TapScoreClient({
     if (phase !== "live") return;
     setSpeechError(null);
     stopLiveSpeechRecognition(speechBindings);
-    startLiveSpeechRecognition(speechBindings, "en-US");
+    startLiveSpeechRecognition(speechBindings, speechLang);
   }
 
   async function startSession(topicOrOptions?: TapStartingTopic | { practice?: boolean; topic?: TapStartingTopic }) {
@@ -1029,7 +939,7 @@ export function TapScoreClient({
     setSessionEndedImpure(false);
     autoStashInFlightRef.current = false;
     clearDialogueMessages(dialogueStorageKey);
-    startLiveSpeechRecognition(speechBindings, "en-US");
+    startLiveSpeechRecognition(speechBindings, speechLang);
 
     try {
       const response = await fetch("/api/workspace-tap-score/start", {
@@ -1294,6 +1204,10 @@ export function TapScoreClient({
                   workspaceTitle={workspaceTitle}
                   minutes={minutes}
                   onMinutesChange={setMinutes}
+                  conversationLanguage={conversationLanguage}
+                  onConversationLanguageChange={(locale) =>
+                    setConversationLanguage(coerceSpokenLocale(locale))
+                  }
                   showDurationPicker={!privateToken}
                   disabled={isStartingSession}
                 />

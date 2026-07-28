@@ -42,22 +42,55 @@ export async function createSessionPlan(
     userId = user.id;
   }
 
+  // Upsert on session_id: ILE/confirm can race (double-click, Strict Mode, or
+  // force:true while an empty shell already exists) and hit
+  // session_plans_session_id_key on a plain insert.
+  const row = {
+    session_id: sessionId,
+    user_id: userId,
+    goal: plan.goal,
+    strategy: plan.strategy,
+    description: plan.description || null,
+    steps: plan.steps,
+    current_step_index: 0,
+    updated_at: new Date().toISOString(),
+  };
+
   const { data, error } = await supabase
     .from("session_plans")
-    .insert({
-      session_id: sessionId,
-      user_id: userId,
-      goal: plan.goal,
-      strategy: plan.strategy,
-      description: plan.description || null,
-      steps: plan.steps,
-      current_step_index: 0,
-    })
+    .upsert(row, { onConflict: "session_id" })
     .select()
     .single();
 
-  if (error || !data) throw new Error(error?.message || "Failed to create session plan");
-  return mapDbSessionPlan(data);
+  if (!error && data) return mapDbSessionPlan(data);
+
+  // Fallback: unique race / older clients — update existing row by session_id.
+  const isDuplicate =
+    error?.code === "23505" ||
+    (typeof error?.message === "string" &&
+      error.message.includes("session_plans_session_id_key"));
+  if (isDuplicate || error) {
+    const { data: updated, error: updateError } = await supabase
+      .from("session_plans")
+      .update({
+        user_id: userId,
+        goal: plan.goal,
+        strategy: plan.strategy,
+        description: plan.description || null,
+        steps: plan.steps,
+        current_step_index: 0,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("session_id", sessionId)
+      .select()
+      .single();
+    if (!updateError && updated) return mapDbSessionPlan(updated);
+    throw new Error(
+      updateError?.message || error?.message || "Failed to create session plan",
+    );
+  }
+
+  throw new Error(error?.message || "Failed to create session plan");
 }
 
 export async function getSessionPlan(

@@ -14,6 +14,13 @@ export const TAP_PARTICIPANT_TYPES = ["anonymous", "guest", "user"] as const;
 
 export type TapParticipantType = (typeof TAP_PARTICIPANT_TYPES)[number];
 
+/** Session UX kind — independent of facilitator `mode` ("curious"). */
+export const TAP_INTERACTION_KINDS = ["conversational", "exercise"] as const;
+
+export type TapInteractionKind = (typeof TAP_INTERACTION_KINDS)[number];
+
+export const TAP_INTERACTION_KIND_DEFAULT: TapInteractionKind = "conversational";
+
 export interface CreateTapLinkInput {
   minutes?: unknown;
   participant_type?: unknown;
@@ -33,6 +40,13 @@ export interface CreateTapLinkInput {
   showEndSession?: unknown;
   allow_end_session?: unknown;
   allowEndSession?: unknown;
+  /** conversational (default) | exercise — UI shell for the TAP run */
+  interaction_kind?: unknown;
+  interactionKind?: unknown;
+  /** Shorthand checkbox: true → exercise */
+  exercise?: unknown;
+  is_exercise?: unknown;
+  isExercise?: unknown;
 }
 
 /**
@@ -161,4 +175,38 @@ export function resolveTapParticipantType(input: CreateTapLinkInput): TapPartici
   if (userId) return "user";
   if (guestUserId || guestEmail) return "guest";
   return null;
+}
+
+/**
+ * Normalize TAP interaction kind. Invalid / empty → conversational (legacy default).
+ */
+export function normalizeTapInteractionKind(
+  value: unknown,
+  fallback: TapInteractionKind = TAP_INTERACTION_KIND_DEFAULT,
+): TapInteractionKind {
+  if (value === true || value === 1) return "exercise";
+  if (value === false || value === 0) return "conversational";
+  if (typeof value === "string") {
+    const raw = value.trim().toLowerCase();
+    if (raw === "exercise" || raw === "solo" || raw === "prompt") return "exercise";
+    if (raw === "conversational" || raw === "dialogue" || raw === "chat" || raw === "conversation") {
+      return "conversational";
+    }
+    if (raw === "true" || raw === "1" || raw === "yes" || raw === "on") return "exercise";
+    if (raw === "false" || raw === "0" || raw === "no" || raw === "off") return "conversational";
+  }
+  return fallback;
+}
+
+/** Resolve interaction_kind from create body keys (snake/camel + exercise checkbox). */
+export function resolveTapInteractionKindFromBody(
+  body: CreateTapLinkInput | Record<string, unknown>,
+): TapInteractionKind {
+  const record = body as Record<string, unknown>;
+  if ("interaction_kind" in record) return normalizeTapInteractionKind(record.interaction_kind);
+  if ("interactionKind" in record) return normalizeTapInteractionKind(record.interactionKind);
+  if ("exercise" in record) return normalizeTapInteractionKind(record.exercise);
+  if ("is_exercise" in record) return normalizeTapInteractionKind(record.is_exercise);
+  if ("isExercise" in record) return normalizeTapInteractionKind(record.isExercise);
+  return TAP_INTERACTION_KIND_DEFAULT;
 }

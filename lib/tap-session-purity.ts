@@ -7,6 +7,13 @@
 export const TAP_SILENCE_AUTO_STASH_MS = 5_000;
 
 /**
+ * After entering live, wait this long before purity silence penalties arm.
+ * Covers UI mount, mic permission settle, and opening Helios paint — without
+ * burning a charge from briefing time that already elapsed on lastSpeechActivity.
+ */
+export const TAP_PURITY_GRACE_MS = 3_000;
+
+/**
  * While Helios is answering (send in flight / responding), purity silence
  * checks must not run — waiting is not a learner silence failure.
  */
@@ -14,6 +21,19 @@ export function shouldEvaluateSessionPurity(options: {
   waitingForHelios: boolean;
 }): boolean {
   return !options.waitingForHelios;
+}
+
+/**
+ * True during the post-live-entry grace window (purity silence not yet armed).
+ * `liveEnteredAtMs` is when phase became live; null → still in grace (not armed).
+ */
+export function isWithinTapPurityGrace(
+  liveEnteredAtMs: number | null | undefined,
+  nowMs: number = Date.now(),
+  graceMs: number = TAP_PURITY_GRACE_MS,
+): boolean {
+  if (liveEnteredAtMs == null || !Number.isFinite(liveEnteredAtMs)) return true;
+  return nowMs - liveEnteredAtMs < graceMs;
 }
 
 /** Starting purity; each auto-stash subtracts one. */

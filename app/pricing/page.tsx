@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
+import Link from "next/link";
 import { LandingNav } from "@/components/LandingNav";
 import { Footer } from "@/components/Footer";
 import { createClient } from "@/lib/supabase/client";
@@ -10,10 +11,18 @@ import {
   formatIleSessionPrice,
   formatPowApiCallPrice,
   formatTapSessionPrice,
-  TRIAL_PRICE_CENTS,
   hasProductAccess,
   type PlanId,
 } from "@/lib/plans";
+import {
+  estimateScenarioMonthly,
+  formatEstimateUsd,
+  PRICING_SCENARIOS,
+  type PricingScenarioConfig,
+  type PricingScenarioSlug,
+  type ScenarioSliderKey,
+  type ScenarioSliderValues,
+} from "@/lib/pricing/scenarios";
 
 interface UserState {
   authenticated: boolean;
@@ -27,55 +36,224 @@ const BACKGROUND = "/aesthetics/Greco-futurism/HHnTrjJbQAAOz7K.jpeg";
 
 const API_METERED_PLATFORM_PRICE = API_METERED_PLATFORM_FEE_CENTS / 100;
 
-const PLANS: Array<{
-  id: PricingPlanId;
-  name: string;
-  tag?: string;
-  description: string;
-  features: string[];
-  checkout: PricingPlanId;
-  metered?: boolean;
-  trial?: boolean;
-  featured?: boolean;
-}> = [
-  {
-    id: "trial_3day",
-    name: "3-Day Trial",
-    tag: "Try it",
-    description:
-      "Pay once, get full access for 3 days. After checkout you’ll create your account — no email confirmation step.",
-    features: [
-      "Full product access for 3 days",
-      "Unlimited Proof-of-Work submissions",
-      "Unlimited Workspaces",
-      "One-time $19.99 — no subscription",
-    ],
-    checkout: "trial_3day",
-    trial: true,
-  },
-  {
-    id: "api_metered",
-    name: "API Metered",
-    tag: "Metered",
-    description:
-      "The sole ongoing plan: platform access plus metered usage. External API PoW, TAP sessions, and ILE sessions each have their own rate. TAP/ILE-generated PoW is not billed as API PoW.",
-    features: [
-      "Unlimited product usage (no monthly cap)",
-      `${formatPowApiCallPrice()} per external/API-direct PoW submission`,
-      `${formatTapSessionPrice()} per TAP session`,
-      `${formatIleSessionPrice()} per ILE session`,
-      `$${API_METERED_PLATFORM_PRICE}/mo platform access`,
-      "Unlimited Workspaces + API keys + MCP",
-      "Internal TAP/ILE PoW not charged as API PoW",
-    ],
-    checkout: "api_metered",
-    metered: true,
-    featured: true,
-  },
+const METERED_FEATURES = [
+  "Unlimited product usage (no monthly cap)",
+  `${formatPowApiCallPrice()} per external/API-direct PoW submission`,
+  `${formatTapSessionPrice()} per TAP session`,
+  `${formatIleSessionPrice()} per ILE session`,
+  `$${API_METERED_PLATFORM_PRICE}/mo platform access`,
+  "Unlimited Workspaces + API keys + MCP",
+  "Internal TAP/ILE PoW not charged as API PoW",
 ];
 
 function formatTierPrice(price: number) {
   return Number.isInteger(price) ? `$${price}` : `$${price.toFixed(2)}`;
+}
+
+function defaultSliderState(scenario: PricingScenarioConfig): ScenarioSliderValues {
+  const values: ScenarioSliderValues = {};
+  for (const slider of scenario.sliders) {
+    values[slider.key] = slider.defaultValue;
+  }
+  return values;
+}
+
+function ScenarioPanel() {
+  const [activeSlug, setActiveSlug] = useState<PricingScenarioSlug>(
+    PRICING_SCENARIOS[0].slug,
+  );
+  const [sliderByScenario, setSliderByScenario] = useState<
+    Partial<Record<PricingScenarioSlug, ScenarioSliderValues>>
+  >(() => {
+    const init: Partial<Record<PricingScenarioSlug, ScenarioSliderValues>> = {};
+    for (const s of PRICING_SCENARIOS) {
+      init[s.slug] = defaultSliderState(s);
+    }
+    return init;
+  });
+
+  const activeScenario =
+    PRICING_SCENARIOS.find((s) => s.slug === activeSlug) ?? PRICING_SCENARIOS[0];
+  const sliderValues =
+    sliderByScenario[activeScenario.slug] ?? defaultSliderState(activeScenario);
+  const estimate = useMemo(
+    () => estimateScenarioMonthly(activeScenario, sliderValues),
+    [activeScenario, sliderValues],
+  );
+
+  const setSlider = (key: ScenarioSliderKey, value: number) => {
+    setSliderByScenario((prev) => ({
+      ...prev,
+      [activeScenario.slug]: {
+        ...(prev[activeScenario.slug] ?? defaultSliderState(activeScenario)),
+        [key]: value,
+      },
+    }));
+  };
+
+  return (
+    <div
+      data-testid="pricing-scenarios"
+      className="border border-neutral-800 bg-neutral-950/80 p-5 backdrop-blur-sm sm:p-6"
+    >
+      <p className="font-mono text-[10px] uppercase tracking-[1.5px] text-neutral-500">
+        Real-world cost scenarios
+      </p>
+      <h2 className="mt-2 text-lg font-medium text-white">
+        See API Metered under product use cases
+      </h2>
+      <p className="mt-2 text-sm leading-relaxed text-neutral-500">
+        Estimates use the same platform and usage rates as billing. Adjust volume
+        with the sliders — totals update live.
+      </p>
+
+      {/* Tabs */}
+      <div
+        role="tablist"
+        aria-label="Use-case scenarios"
+        className="mt-5 flex flex-wrap gap-1.5"
+      >
+        {PRICING_SCENARIOS.map((scenario) => {
+          const selected = activeSlug === scenario.slug;
+          return (
+            <button
+              key={scenario.slug}
+              type="button"
+              role="tab"
+              aria-selected={selected}
+              data-testid={`scenario-tab-${scenario.slug}`}
+              onClick={() => setActiveSlug(scenario.slug)}
+              className={`rounded-sm border px-2.5 py-1.5 text-left text-xs font-medium transition sm:text-[13px] ${
+                selected
+                  ? "border-white bg-white text-black"
+                  : "border-neutral-700 bg-neutral-950/60 text-neutral-300 hover:border-neutral-500"
+              }`}
+            >
+              {scenario.title}
+            </button>
+          );
+        })}
+      </div>
+
+      <div
+        role="tabpanel"
+        data-testid={`scenario-panel-${activeScenario.slug}`}
+        className="mt-5"
+      >
+        <p className="text-sm leading-relaxed text-neutral-400">{activeScenario.context}</p>
+        <Link
+          href={activeScenario.salesPath}
+          className="mt-2 inline-block font-mono text-[10px] uppercase tracking-[1px] text-neutral-500 underline-offset-2 hover:text-neutral-300 hover:underline"
+        >
+          Sales product →
+        </Link>
+
+        {/* Sliders */}
+        <div className="mt-5 space-y-5">
+          {activeScenario.sliders.map((slider) => {
+            const value = sliderValues[slider.key] ?? slider.defaultValue;
+            return (
+              <div key={slider.key} data-testid={`slider-${slider.key}`}>
+                <div className="flex items-baseline justify-between gap-3">
+                  <label
+                    htmlFor={`scenario-${activeScenario.slug}-${slider.key}`}
+                    className="text-sm font-medium text-neutral-200"
+                  >
+                    {slider.label}
+                  </label>
+                  <span className="font-mono text-sm tabular-nums text-white">
+                    {value.toLocaleString()}
+                  </span>
+                </div>
+                <input
+                  id={`scenario-${activeScenario.slug}-${slider.key}`}
+                  type="range"
+                  min={slider.min}
+                  max={slider.max}
+                  step={slider.step}
+                  value={value}
+                  onChange={(e) => setSlider(slider.key, Number(e.target.value))}
+                  className="mt-2 w-full accent-white"
+                />
+                <p className="mt-1 text-xs text-neutral-600">{slider.hint}</p>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Live estimate */}
+        <div
+          data-testid="scenario-estimate"
+          className="mt-6 border border-neutral-700 bg-black/40 p-4"
+        >
+          <p className="font-mono text-[10px] uppercase tracking-[1.5px] text-neutral-500">
+            Estimated monthly (API Metered)
+          </p>
+          <p
+            data-testid="scenario-estimate-total"
+            className="mt-2 text-3xl font-medium tracking-[-1px] text-white"
+          >
+            {formatEstimateUsd(estimate.totalUsd)}
+            <span className="ml-1 text-sm font-normal text-neutral-500">/ mo</span>
+          </p>
+          <ul className="mt-3 space-y-1 text-xs text-neutral-400">
+            <li>
+              Platform{" "}
+              <span className="text-neutral-200">
+                {formatEstimateUsd(estimate.platformUsd)}
+              </span>
+            </li>
+            <li>
+              Usage{" "}
+              <span className="text-neutral-200">
+                {formatEstimateUsd(estimate.usageUsd)}
+              </span>
+              <span className="text-neutral-600">
+                {" "}
+                (
+                {estimate.units.externalPowCount > 0 && (
+                  <>{estimate.units.externalPowCount.toLocaleString()} API PoW</>
+                )}
+                {estimate.units.externalPowCount > 0 &&
+                  (estimate.units.tapSessionCount > 0 ||
+                    estimate.units.ileSessionCount > 0) &&
+                  " · "}
+                {estimate.units.tapSessionCount > 0 && (
+                  <>{estimate.units.tapSessionCount.toLocaleString()} TAP</>
+                )}
+                {estimate.units.tapSessionCount > 0 &&
+                  estimate.units.ileSessionCount > 0 &&
+                  " · "}
+                {estimate.units.ileSessionCount > 0 && (
+                  <>{estimate.units.ileSessionCount.toLocaleString()} ILE</>
+                )}
+                {estimate.units.externalPowCount === 0 &&
+                  estimate.units.tapSessionCount === 0 &&
+                  estimate.units.ileSessionCount === 0 &&
+                  "no metered usage"}
+                )
+              </span>
+            </li>
+          </ul>
+        </div>
+
+        {/* Assumptions */}
+        <div data-testid="scenario-assumptions" className="mt-5">
+          <p className="font-mono text-[10px] uppercase tracking-[1.5px] text-neutral-500">
+            Assumptions
+          </p>
+          <ul className="mt-2 space-y-1.5 text-xs leading-relaxed text-neutral-500">
+            {activeScenario.assumptions.map((line) => (
+              <li key={line} className="flex gap-2">
+                <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-neutral-600" />
+                <span>{line}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 function PricingPageContent() {
@@ -83,12 +261,6 @@ function PricingPageContent() {
   const [user, setUser] = useState<UserState | null>(null);
   const [needsPlan, setNeedsPlan] = useState(false);
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
-  const [activePlanId, setActivePlanId] = useState<PricingPlanId>("trial_3day");
-
-  const activePlan = useMemo(
-    () => PLANS.find((plan) => plan.id === activePlanId) ?? PLANS[0],
-    [activePlanId],
-  );
 
   useEffect(() => {
     const load = async () => {
@@ -138,11 +310,6 @@ function PricingPageContent() {
           plan,
           isAdmin: profile?.is_admin ?? false,
         });
-        if (plan === "api_metered") {
-          setActivePlanId("api_metered");
-        } else if (plan === "trial") {
-          setActivePlanId("trial_3day");
-        }
         setNeedsPlan(
           searchParams.get("required") === "1" ||
             !hasProductAccess(
@@ -187,15 +354,8 @@ function PricingPageContent() {
     }
   };
 
-  const isCurrentPlan =
-    user?.authenticated &&
-    ((activePlan.id === "trial_3day" && user.plan === "trial") || user.plan === activePlan.id);
-  const checkoutLabel =
-    loadingPlan === activePlan.checkout
-      ? "Loading..."
-      : activePlan.trial
-        ? `Pay $${(TRIAL_PRICE_CENTS / 100).toFixed(2)} — 3 days full access →`
-        : `Start API Metered (${formatTierPrice(API_METERED_PLATFORM_PRICE)}/mo + usage) →`;
+  const isOnMetered = user?.authenticated && user.plan === "api_metered";
+  const isOnTrial = user?.authenticated && user.plan === "trial";
 
   return (
     <main
@@ -205,7 +365,7 @@ function PricingPageContent() {
       <div className="fixed inset-0 bg-black/78" />
       <div className="relative z-10 flex min-h-screen flex-col">
         <LandingNav />
-        <section className="mx-auto w-full max-w-4xl flex-1 px-6 py-16 sm:py-20">
+        <section className="mx-auto w-full max-w-6xl flex-1 px-6 py-16 sm:py-20">
           <div className="mb-8 inline-block rounded-sm border border-neutral-800 bg-neutral-950/80 px-3 py-1 font-mono text-[10px] uppercase tracking-[2px] text-neutral-500">
             LEARNING EFFICIENCY • HUMANS & AGENTS
           </div>
@@ -213,85 +373,50 @@ function PricingPageContent() {
             Pricing built on proof of work.
           </h1>
           <p className="mt-5 max-w-2xl text-base leading-relaxed text-neutral-400 sm:text-lg">
-            Start with a 3-day trial, then stay on API Metered — one tier with clear usage rates.
-            External API PoW is billed separately from TAP and ILE sessions so product usage never
-            double-charges internal PoW.
+            One ongoing plan — API Metered — with clear usage rates. External API PoW is billed
+            separately from TAP and ILE sessions so product usage never double-charges internal PoW.
+            Explore real-world cost scenarios on the right.
           </p>
           {needsPlan && (
             <div className="mt-6 rounded-sm border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
-              Choose a plan to continue. Try the 3-day trial ($19.99) or start API Metered.
+              Choose a plan to continue. Start API Metered or try everything unlimited for 3 days for $19.99.
             </div>
           )}
 
-          {/* Plan selector */}
-          <div className="mt-10">
-            <p className="font-mono text-[10px] uppercase tracking-[1.5px] text-neutral-500">1 · Choose plan</p>
-            <div className="mt-3 flex flex-wrap gap-2">
-              {PLANS.map((plan) => {
-                const selected = activePlanId === plan.id;
-                return (
-                  <button
-                    key={plan.id}
-                    type="button"
-                    onClick={() => setActivePlanId(plan.id)}
-                    className={`rounded-sm border px-4 py-2.5 text-sm font-medium transition ${
-                      selected
-                        ? "border-white bg-white text-black"
-                        : "border-neutral-700 bg-neutral-950/60 text-neutral-300 hover:border-neutral-500"
-                    }`}
-                  >
-                    {plan.name}
-                    {plan.tag && (
-                      <span
-                        className={`ml-2 font-mono text-[9px] uppercase tracking-[1px] ${
-                          selected ? "text-black/45" : "text-neutral-500"
-                        }`}
-                      >
-                        {plan.tag}
-                      </span>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Single plan detail panel */}
+          {/* Two-column: metered plan left, scenarios right — tops aligned */}
           <div
-            className={`mt-8 border bg-neutral-950/80 p-6 backdrop-blur-sm sm:p-8 ${
-              activePlan.featured ? "border-neutral-500" : "border-neutral-800"
-            }`}
+            data-testid="pricing-layout"
+            className="mt-10 grid gap-8 lg:grid-cols-2 lg:items-start lg:gap-10"
           >
-            <div className="flex flex-wrap items-start justify-between gap-4">
-              <div>
-                <h2 className="text-2xl font-medium text-white">{activePlan.name}</h2>
-                <p className="mt-2 max-w-xl text-sm leading-relaxed text-neutral-500">{activePlan.description}</p>
-              </div>
-              {activePlan.tag && (
-                <span
-                  className={`border px-2 py-1 font-mono text-[10px] uppercase tracking-[1.5px] ${
-                    activePlan.metered
-                      ? "border-amber-500/40 text-amber-200/90"
-                      : "border-neutral-700 text-neutral-400"
-                  }`}
-                >
-                  {activePlan.tag}
+            {/* LEFT: single API Metered card + Start / trial CTAs */}
+            <div
+              data-testid="pricing-plans"
+              className="border border-neutral-500 bg-neutral-950/80 p-5 backdrop-blur-sm sm:p-6"
+            >
+              <p className="font-mono text-[10px] uppercase tracking-[1.5px] text-neutral-500">
+                Plan
+              </p>
+              <div className="mt-2 flex flex-wrap items-start justify-between gap-4">
+                <div>
+                  <h2 className="text-2xl font-medium text-white">API Metered</h2>
+                  <p className="mt-2 max-w-xl text-sm leading-relaxed text-neutral-500">
+                    Platform access plus metered usage. External API PoW, TAP sessions, and ILE
+                    sessions each have their own rate. TAP/ILE-generated PoW is not billed as API
+                    PoW.
+                  </p>
+                </div>
+                <span className="border border-amber-500/40 px-2 py-1 font-mono text-[10px] uppercase tracking-[1.5px] text-amber-200/90">
+                  Metered
                 </span>
-              )}
-            </div>
+              </div>
 
-            <div className="mt-6 flex flex-wrap items-baseline gap-x-3 gap-y-1">
-              <span className="text-4xl font-medium tracking-[-1px] text-white">
-                {activePlan.trial
-                  ? `$${(TRIAL_PRICE_CENTS / 100).toFixed(2)}`
-                  : formatTierPrice(API_METERED_PLATFORM_PRICE)}
-              </span>
-              <span className="text-sm text-neutral-500">
-                {activePlan.trial ? "one-time" : "+ usage / mo"}
-              </span>
-            </div>
+              <div className="mt-6 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                <span className="text-4xl font-medium tracking-[-1px] text-white">
+                  {formatTierPrice(API_METERED_PLATFORM_PRICE)}
+                </span>
+                <span className="text-sm text-neutral-500">+ usage / mo</span>
+              </div>
 
-            {activePlan.metered ? (
               <div className="mt-3 space-y-1 text-sm text-neutral-400">
                 <p>
                   + <span className="text-white">{formatPowApiCallPrice()}</span> per external/API
@@ -304,38 +429,63 @@ function PricingPageContent() {
                   + <span className="text-white">{formatIleSessionPrice()}</span> per ILE session
                 </p>
               </div>
-            ) : null}
 
-            <ul className="mt-6 grid gap-2 sm:grid-cols-2">
-              {activePlan.features.map((feature) => (
-                <li key={feature} className="border-t border-neutral-800 pt-3 text-sm text-neutral-400">
-                  {feature}
-                </li>
-              ))}
-            </ul>
+              <ul className="mt-6 grid gap-2">
+                {METERED_FEATURES.map((feature) => (
+                  <li
+                    key={feature}
+                    className="border-t border-neutral-800 pt-3 text-sm text-neutral-400"
+                  >
+                    {feature}
+                  </li>
+                ))}
+              </ul>
 
-            <div className="mt-8">
-              {isCurrentPlan ? (
-                <div className="rounded-sm border border-neutral-800 px-4 py-3 text-center text-sm text-neutral-500">
-                  Current plan
-                </div>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => handleCheckout(activePlan.checkout)}
-                  disabled={loadingPlan === activePlan.checkout}
-                  className="w-full rounded-sm bg-white px-4 py-3 text-sm font-medium text-black transition hover:bg-neutral-200 disabled:opacity-50 sm:w-auto sm:min-w-[280px]"
-                >
-                  {checkoutLabel}
-                </button>
-              )}
+              <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-stretch">
+                {isOnMetered ? (
+                  <div className="flex-1 rounded-sm border border-neutral-800 px-4 py-3 text-center text-sm text-neutral-500">
+                    Current plan
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    data-testid="checkout-start-metered"
+                    onClick={() => handleCheckout("api_metered")}
+                    disabled={loadingPlan === "api_metered"}
+                    className="flex-1 rounded-sm bg-white px-4 py-3 text-sm font-medium text-black transition hover:bg-neutral-200 disabled:opacity-50"
+                  >
+                    {loadingPlan === "api_metered" ? "Loading..." : "Start"}
+                  </button>
+                )}
+                {isOnTrial ? (
+                  <div className="flex-1 rounded-sm border border-neutral-800 px-4 py-3 text-center text-sm text-neutral-500">
+                    On trial
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    data-testid="checkout-trial-3day"
+                    onClick={() => handleCheckout("trial_3day")}
+                    disabled={loadingPlan === "trial_3day" || isOnMetered}
+                    className="flex-1 rounded-sm border border-neutral-600 bg-transparent px-4 py-3 text-sm font-medium text-neutral-200 transition hover:border-neutral-400 hover:bg-neutral-900 disabled:opacity-50"
+                  >
+                    {loadingPlan === "trial_3day"
+                      ? "Loading..."
+                      : "Try everything unlimited for 3 days for $19.99"}
+                  </button>
+                )}
+              </div>
+
+              <p className="mt-4 text-xs text-neutral-600">
+                API Metered bills platform + usage on each invoice. External API PoW is separate
+                from TAP ($1) and ILE ($10) session rates. TAP/ILE-generated PoW is not charged as
+                API PoW.
+              </p>
             </div>
-          </div>
 
-          <p className="mt-6 text-center text-xs text-neutral-600">
-            API Metered bills platform + usage on each invoice. External API PoW is separate from
-            TAP ($1) and ILE ($10) session rates.
-          </p>
+            {/* RIGHT: tabbed real-world scenarios */}
+            <ScenarioPanel />
+          </div>
         </section>
         <Footer />
       </div>

@@ -814,7 +814,7 @@
     "emptySlot": "Leerer Platz",
     "markAsDone": "Als erledigt markieren",
     "loadError": "Block konnte nicht geladen werden",
-    "tutorLanguage": "Tutor-Sprache",
+    "tutorLanguage": "Gesprochene Sprache",
     "aesthetics": "Ästhetik",
     "aestheticsLoading": "Stile werden geladen...",
     "noAestheticsFound": "Keine Ästhetik-Pakete gefunden. Füge Bilder unter public/aesthetics/{folder-name} hinzu.",
@@ -1714,7 +1714,16 @@
     "blockDetailGuideHint2": "Benutzerdefinierte Anweisungen: diesen Block auf Job, Prüfung oder Projekt ausrichten.",
     "blockDetailGuideHint3": "ILE: laut denken, Sprache in Gedanken kristallisieren und sie während der Arbeit an Helios senden.",
     "blockDetailGuideHint4": "Arbeitsbereich-Editor, Blöcke hinzufügen oder umgestalten, wenn du Lücken im Plan entdeckst.",
-    "blockDetailGuideHint5": "TAP: starten, wenn du bereit bist, Können zu demonstrieren, nicht beim ersten Durchlauf."
+    "blockDetailGuideHint5": "TAP: starten, wenn du bereit bist, Können zu demonstrieren, nicht beim ersten Durchlauf.",
+    "ileProjectHelpTitle": "ILE · Project Mode",
+    "ileProjectHelpSummary": "Longer-horizon exercises per chapter — no Helios conversation bubbles; dual-stack Thoughts (stash + solution).",
+    "ileProjectHelpPoint1": "Each chapter is a solo exercise you work through with tools (canvas, notebook, thoughts).",
+    "ileProjectHelpPoint2": "Thoughts tool splits stash (System 1) and solution (System 2); move thoughts between stacks.",
+    "ileProjectHelpPoint3": "Mark as Done is final for that chapter (PoW only) — no on-screen score or evaluation.",
+    "ileLearningCtaLabel": "ILE · Learning Mode",
+    "ileLearningCtaHint": "Helios dialogue — practice & guidance",
+    "ileProjectCtaLabel": "ILE · Project Mode",
+    "ileProjectCtaHint": "Exercises per chapter — dual-stack Thoughts"
   },
   "planView": {
     "addDescription": "Beschreibung für diesen Arbeitsbereich hinzufügen...",
@@ -1816,7 +1825,9 @@
     "guestLinksFilterStatusAll": "Alle Status",
     "guestLinksBrowseCount": "{shown} von {total} angezeigt",
     "guestLinksBrowseEmpty": "Noch keine teilbaren TAP- oder ILE-Links. Erstelle einen im Tab Erstellen.",
-    "guestLinksBrowseNoMatches": "Keine Links entsprechen Suche und Filtern."
+    "guestLinksBrowseNoMatches": "Keine Links entsprechen Suche und Filtern.",
+    "ileLinksProjectMode": "Project Mode",
+    "ileLinksProjectModeHint": "Unchecked = Learning Mode with Helios dialogue. Checked = Project Mode: no conversation bubbles, each chapter is a longer exercise, Thoughts tool has stash + solution stacks, Mark as Done is final (PoW only, no on-screen score)."
   },
   "integrationAccess": {
     "quickStartTitle": "Schnell verbinden",
@@ -2425,7 +2436,9 @@
     "postSession": {
       "verificationResultsTitle": "LWM Snapshot"
     },
-    "briefing": {}
+    "briefing": {
+      "conversationLanguage": "Gesprächssprache"
+    }
   },
   "performanceReportCard": {
     "defaultLabel": "Leistungsbericht",
@@ -2475,7 +2488,7 @@
   "onboardingGuide": {
     "ile": {
       "kicker": "What to expect",
-      "title": "Your learning workspace",
+      "title": "Your Project Workspace",
       "progressLabel": "Onboarding steps",
       "goToStep": "Go to step {step}",
       "imagePlaceholder": "Illustration coming soon",
@@ -2489,7 +2502,9 @@
       "step2": {
         "title": "Think aloud, then send",
         "imageAlt": "Selective thought interface",
-        "body": "Speak your reasoning out loud while you work. Your transcription stays in the bar until you send or stash it.\n\nPress Enter to send the live transcription to Helios. Press Del to stash speech into the stashed-thoughts pool below. Press 1, 2, or 3 to send from that pool. Press E to edit before sending. Thought Memory keeps every trace — select and resend from there, or bookmark insights."
+        "body": "Speak your reasoning out loud while you work. Your transcription stays in the bar until you send or stash it.\n\nPress Enter to send the live transcription to Helios. Press Del to stash speech into the stashed-thoughts pool below. Press 1, 2, or 3 to send from that pool. Press E to edit before sending. Thought Memory keeps every trace — select and resend from there, or bookmark insights.",
+        "titleProject": "Think aloud — stash & solution",
+        "bodyProject": "Speak your reasoning out loud while you work the chapter exercise. Your transcription stays in the bar until you stash or submit it.\n\nPress Enter to put live speech on the Solution stack. Press Del to stash speech (System 1). Open the Thoughts tool (or use Open Thoughts) to see both stacks — Solution on top, Stash on bottom — and move thoughts between them. There is no Helios dialogue in Project Mode."
       },
       "step3": {
         "title": "Depth over speed",
@@ -2497,7 +2512,9 @@
         "quoteText": "Learning is not attained by chance; it must be sought with ardor and attended to with diligence.",
         "quoteAuthor": "Abigail Adams",
         "start": "Start block",
-        "starting": "Starting…"
+        "starting": "Starting…",
+        "titleProject": "Depth over speed",
+        "bodyProject": "When you're ready, press Start block. Recording begins and you work each chapter as an exercise — no Helios conversation bubbles. Use Enter for Solution, Del for Stash, and open the Thoughts tool to manage both stacks. Take your time — messy thinking is how real learning surfaces."
       }
     },
     "tap": {

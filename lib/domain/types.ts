@@ -53,6 +53,8 @@ export type ToolAction =
   // the current notebook/canvas state. Triggers an analysis heartbeat out
   // of band from the 10s timer.
   | "submit_to_helios"
+  // Project Mode: notebook/canvas submit lands on the Solution stack (no Helios).
+  | "submit_to_solution"
   | "stuck_card"
   // Selective thought interface (System 1 / System 2 traces)
   | "crystallize"

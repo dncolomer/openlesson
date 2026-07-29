@@ -123,8 +123,6 @@ export function MapOfKnowledgeClient() {
   const [fullscreen, setFullscreen] = useState(false);
   const [guestIdentity, setGuestIdentity] = useState(() => generateAnonymousGuestIdentity(42));
   const guestName = guestIdentity.display_name;
-  const setGuestName = (name: string) =>
-    setGuestIdentity((prev) => ({ ...prev, display_name: name }));
   const [selectedWorkspaceId, setSelectedWorkspaceId] = useState("");
   const [selectedBlockId, setSelectedBlockId] = useState("");
   /** Timed Exploration session length (5 / 10 / 30 min) chosen before minting. */
@@ -1022,18 +1020,20 @@ export function MapOfKnowledgeClient() {
                     className="h-11 w-11 object-cover"
                   />
                 </span>
-                <input
-                  type="text"
-                  value={guestName}
-                  onChange={(e) => setGuestName(e.target.value)}
-                  className="min-w-0 flex-1 rounded-sm border border-zinc-800 bg-black/40 px-3 py-2.5 text-sm text-white"
+                <span
+                  className="min-w-0 flex-1 truncate rounded-sm border border-zinc-800 bg-black/40 px-3 py-2.5 text-sm text-zinc-200"
+                  data-guest-display-name
                   aria-label="Guest display name"
-                />
+                  title={guestName}
+                >
+                  {guestName}
+                </span>
                 <button
                   type="button"
                   onClick={regenerateGuest}
                   className="rounded-sm border border-zinc-700 px-3 py-2 text-xs text-zinc-300 transition hover:border-zinc-500 hover:text-white"
                   data-guest-reshuffle
+                  title="Generate a new guest name and avatar"
                 >
                   Reshuffle
                 </button>

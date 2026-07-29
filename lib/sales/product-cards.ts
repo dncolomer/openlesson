@@ -738,7 +738,7 @@ export function groupSalesProductCards(
   const verification = cards.filter((c) => c.productLine === "verification");
   const optimization = cards.filter((c) => c.productLine === "optimization");
   const augmentation = cards.filter((c) => c.productLine === "augmentation");
-  return [
+  const groups: SalesProductGroup[] = [
     {
       id: "verification",
       label: "Verification Products",
@@ -754,5 +754,6 @@ export function groupSalesProductCards(
       label: "Augmentation Product",
       cards: [...augmentation],
     },
-  ].filter((g) => g.cards.length > 0);
+  ];
+  return groups.filter((g) => g.cards.length > 0);
 }

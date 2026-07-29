@@ -132,7 +132,7 @@ describe("TAP client wires purity UX (not ILE)", () => {
     expect(client).toContain("isWithinTapPurityGrace");
     expect(client).toContain("liveEnteredAt");
     const en = JSON.parse(fs.readFileSync(path.join(ROOT, "messages/en.json"), "utf8")) as {
-      tap: { postSession: { impureTitle: string; impureBody: string } };
+      tap: { postSession: { impureTitle: string; impureBody: string; impureTryAgain: string } };
     };
     expect(en.tap.postSession.impureTitle).toBe("Session Invalidated");
     expect(en.tap.postSession.impureBody.toLowerCase()).toContain("session purity");

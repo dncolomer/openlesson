@@ -84,7 +84,7 @@ describe("tap-practice pure helpers", () => {
     expect(both.pow_label).toBe(TAP_PRACTICE_POW_LABEL);
     expect(both.impure).toBe(true);
     expect(both.session_quality).toBe("impure");
-    expect(isPracticePoWMetadata(both as Record<string, unknown>)).toBe(true);
+    expect(isPracticePoWMetadata(both as unknown as Record<string, unknown>)).toBe(true);
 
     // Complete path stamps practice after impure so practice flags survive.
     const complete = fs.readFileSync(

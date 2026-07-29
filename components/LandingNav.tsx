@@ -11,9 +11,12 @@ const CTA_HREF = "/workspace/new";
 
 const COMMUNITY_LINKS = [
   { href: "/all-you-can-learn", label: "All-You-Can-Learn" },
+  { href: "/map-of-knowledge", label: "Map of Knowledge" },
+] as const;
+
+const TOP_LINKS = [
   { href: "/vision", label: "Vision" },
   { href: "/science", label: "Science" },
-  { href: "/map-of-knowledge", label: "Map of Knowledge" },
 ] as const;
 
 function PrimaryCta({ compact = false }: { compact?: boolean }) {
@@ -78,6 +81,11 @@ export function LandingNav({ overlay = false }: LandingNavProps) {
           <Link href="/pricing" className="transition hover:text-white">
             Pricing
           </Link>
+          {TOP_LINKS.map((link) => (
+            <Link key={link.href} href={link.href} className="transition hover:text-white">
+              {link.label}
+            </Link>
+          ))}
 
           <div className="relative" ref={communityRef}>
             <button
@@ -148,6 +156,17 @@ export function LandingNav({ overlay = false }: LandingNavProps) {
                 Pricing
               </Link>
             </li>
+            {TOP_LINKS.map((link) => (
+              <li key={link.href}>
+                <Link
+                  href={link.href}
+                  className="block rounded-sm px-2 py-2 text-zinc-300"
+                  onClick={() => setMobileOpen(false)}
+                >
+                  {link.label}
+                </Link>
+              </li>
+            ))}
             <li>
               <button
                 type="button"

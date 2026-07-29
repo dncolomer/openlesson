@@ -49,7 +49,7 @@ export function Navbar({ breadcrumbs = [], showNav = true }: NavbarProps) {
     router.refresh();
   };
 
-  // Logged-in: product nav only (Upgrade + Dashboard). Community (Vision/Science/Map) for guests.
+  // Logged-in: product nav only (Upgrade + Dashboard). Community + Vision/Science for guests.
   const navLinks =
     isLoggedIn === true
       ? [
@@ -61,10 +61,13 @@ export function Navbar({ breadcrumbs = [], showNav = true }: NavbarProps) {
           { href: "/dashboard", label: t("nav.dashboard") },
         ];
 
-  const communityLinks = [
-    { href: "/all-you-can-learn", label: "All-You-Can-Learn" },
+  const topLinks = [
     { href: "/vision", label: "Vision" },
     { href: "/science", label: "Science" },
+  ];
+
+  const communityLinks = [
+    { href: "/all-you-can-learn", label: "All-You-Can-Learn" },
     { href: "/map-of-knowledge", label: "Map of Knowledge" },
   ];
 
@@ -122,6 +125,17 @@ export function Navbar({ breadcrumbs = [], showNav = true }: NavbarProps) {
                 {link.label}
               </Link>
             ))}
+
+            {showCommunity &&
+              topLinks.map((link) => (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  className="text-xs sm:text-sm text-neutral-500 hover:text-white transition-colors"
+                >
+                  {link.label}
+                </Link>
+              ))}
 
             {showCommunity && (
               <div
@@ -237,6 +251,18 @@ export function Navbar({ breadcrumbs = [], showNav = true }: NavbarProps) {
                 {link.label}
               </Link>
             ))}
+
+            {showCommunity &&
+              topLinks.map((link) => (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="text-sm text-neutral-400 hover:text-white transition-colors"
+                >
+                  {link.label}
+                </Link>
+              ))}
 
             {showCommunity && (
               <div>

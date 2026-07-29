@@ -633,12 +633,14 @@ describe("map-of-knowledge product surfaces", () => {
     expect(pageSrc).toContain("LandingNav");
     expect(navSrc).toContain("Projects & Community");
     expect(navSrc).toContain("COMMUNITY_LINKS");
+    expect(navSrc).toContain("TOP_LINKS");
     expect(navSrc).toContain('href: "/map-of-knowledge"');
     expect(navSrc).toContain('href: "/vision"');
     expect(navSrc).toContain('href: "/science"');
     expect(navSrc).toContain("Map of Knowledge");
-    // nested under Projects & Community menu (not top-level flat links)
+    // Map stays under Projects & Community; Vision/Science are top-level nav links
     expect(navSrc).toContain('aria-label="Projects & Community"');
+    expect(navSrc).toMatch(/TOP_LINKS[\s\S]*href: "\/vision"[\s\S]*href: "\/science"/);
     expect(clientSrc).toContain("map-canvas");
     expect(clientSrc).toContain("map-place-yourself");
     // Aggregated PoW stats section removed from Map of Knowledge page

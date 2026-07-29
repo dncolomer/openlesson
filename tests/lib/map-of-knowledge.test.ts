@@ -724,7 +724,10 @@ describe("map-of-knowledge product surfaces", () => {
     expect(clientSrc).toContain("reprojectMapLayout");
     expect(clientSrc).toContain("data-map-projection-select");
     expect(clientSrc).toContain("data-map-embedding-model-select");
-    expect(clientSrc).toContain("data-map-embedding-info");
+    // Embedding-space details panel replaced by Find yourself
+    expect(clientSrc).not.toContain("data-map-embedding-info");
+    expect(clientSrc).toContain("data-map-find-yourself");
+    expect(clientSrc).toContain("data-minted-save-link-reminder");
     expect(clientSrc).toContain("PROJECTION_ALGORITHM_OPTIONS");
     expect(clientSrc).toContain("embedding_model_id");
     expect(threeSrc).toContain("makeIdLabelSprite");

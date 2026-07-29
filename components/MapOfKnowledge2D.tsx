@@ -33,6 +33,8 @@ export type MapOfKnowledge2DProps = {
   projectionAlgorithm?: string;
   className?: string;
   fill?: boolean;
+  /** Highlight a subject (e.g. Find yourself overlay). */
+  focusedUserId?: string | null;
 };
 
 /**
@@ -44,6 +46,7 @@ export function MapOfKnowledge2D({
   projectionAlgorithm = "pca",
   className = "",
   fill = false,
+  focusedUserId = null,
 }: MapOfKnowledge2DProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
@@ -390,13 +393,26 @@ export function MapOfKnowledge2D({
           const preview =
             p.id_preview || p.subject_label.replace(/^(user|guest|id):/, "").slice(0, 6);
           const avatarHref = p.avatar_path || null;
-          const r = 7;
+          const focused = Boolean(focusedUserId && p.id === focusedUserId);
+          const r = focused ? 10 : 7;
           return (
             <g
               key={p.id}
               data-map-user-marker
               data-map-user-avatar={p.avatar_id || undefined}
+              data-map-user-focused={focused ? "true" : undefined}
             >
+              {focused ? (
+                <circle
+                  cx={sx}
+                  cy={sy}
+                  r={r + 6}
+                  fill="none"
+                  stroke="rgba(34,211,238,0.85)"
+                  strokeWidth={2}
+                  data-map-user-focus-ring
+                />
+              ) : null}
               {avatarHref ? (
                 <>
                   <circle
@@ -404,8 +420,14 @@ export function MapOfKnowledge2D({
                     cy={sy}
                     r={r + 1.25}
                     fill="#09090b"
-                    stroke={p.kind === "ile" ? "#fde68a" : "rgba(255,255,255,0.3)"}
-                    strokeWidth={p.kind === "ile" ? 1.5 : 0.9}
+                    stroke={
+                      focused
+                        ? "rgba(34,211,238,0.95)"
+                        : p.kind === "ile"
+                          ? "#fde68a"
+                          : "rgba(255,255,255,0.3)"
+                    }
+                    strokeWidth={focused ? 2 : p.kind === "ile" ? 1.5 : 0.9}
                   />
                   <image
                     href={avatarHref}
@@ -426,11 +448,17 @@ export function MapOfKnowledge2D({
                 <circle
                   cx={sx}
                   cy={sy}
-                  r={4.5}
+                  r={focused ? 6 : 4.5}
                   fill={fill}
                   fillOpacity={0.9}
-                  stroke={p.kind === "ile" ? "#fde68a" : "rgba(255,255,255,0.25)"}
-                  strokeWidth={p.kind === "ile" ? 1.5 : 0.75}
+                  stroke={
+                    focused
+                      ? "rgba(34,211,238,0.95)"
+                      : p.kind === "ile"
+                        ? "#fde68a"
+                        : "rgba(255,255,255,0.25)"
+                  }
+                  strokeWidth={focused ? 2 : p.kind === "ile" ? 1.5 : 0.75}
                   data-map-user-dot-fallback
                 >
                   <title>

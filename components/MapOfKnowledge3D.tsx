@@ -22,6 +22,8 @@ export type MapOfKnowledge3DProps = {
    * Parent reprojects via projectMapVectors; this is for a11y / data attrs.
    */
   projectionAlgorithm?: string;
+  /** Highlight a subject (e.g. Find yourself overlay). */
+  focusedUserId?: string | null;
 };
 
 type HoverInfo = {
@@ -142,6 +144,7 @@ export function MapOfKnowledge3D({
   className = "",
   fill = false,
   projectionAlgorithm = "pca",
+  focusedUserId = null,
 }: MapOfKnowledge3DProps) {
   const mountRef = useRef<HTMLDivElement>(null);
   const [hover, setHover] = useState<HoverInfo | null>(null);
@@ -243,7 +246,11 @@ export function MapOfKnowledge3D({
     };
 
     // Expose rebuild via custom event on mount element
-    const rebuild = (locations: MapUserLocation[], regs: MapRegion[]) => {
+    const rebuild = (
+      locations: MapUserLocation[],
+      regs: MapRegion[],
+      focusId: string | null = null,
+    ) => {
       while (content.children.length) {
         const child = content.children[0];
         content.remove(child);
@@ -307,8 +314,9 @@ export function MapOfKnowledge3D({
       // User markers: STEM mini avatars (sprite) with sphere fallback + id labels
       locations.forEach((p) => {
         const isIle = p.kind === "ile";
-        const colorHex = isIle ? ILE_COLOR : TAP_COLOR;
-        const radius = isIle ? 0.14 : 0.11;
+        const focused = Boolean(focusId && p.id === focusId);
+        const colorHex = focused ? 0x22d3ee : isIle ? ILE_COLOR : TAP_COLOR;
+        const radius = focused ? 0.2 : isIle ? 0.14 : 0.11;
         const preview =
           p.id_preview ||
           p.subject_label.replace(/^(user|guest|id):/, "").slice(0, 6) ||
@@ -319,6 +327,21 @@ export function MapOfKnowledge3D({
           subtitle: `${p.subject_label} · ${p.workspace_title} · ${p.kind.toUpperCase()}`,
         };
 
+        const pos = new THREE.Vector3(p.x * s, p.y * s, p.z * s);
+
+        if (focused) {
+          const ringGeo = new THREE.TorusGeometry(radius * 1.8, 0.02, 8, 32);
+          const ringMat = new THREE.MeshBasicMaterial({
+            color: 0x22d3ee,
+            transparent: true,
+            opacity: 0.9,
+          });
+          const ring = new THREE.Mesh(ringGeo, ringMat);
+          ring.position.copy(pos);
+          ring.rotation.x = Math.PI / 2;
+          content.add(ring);
+        }
+
         const tex =
           (p.avatar_id && avatarTexturesRef.current.get(p.avatar_id)) ||
           (p.avatar_path && avatarTexturesRef.current.get(p.avatar_path)) ||
@@ -326,7 +349,8 @@ export function MapOfKnowledge3D({
 
         if (tex) {
           const sprite = makeAvatarSprite(tex, isIle);
-          sprite.position.set(p.x * s, p.y * s, p.z * s);
+          if (focused) sprite.scale.multiplyScalar(1.35);
+          sprite.position.copy(pos);
           sprite.userData = { ...ud, isAvatarSprite: true };
           const label = makeIdLabelSprite(preview, isIle);
           // Offset label so it sits beside the avatar sprite
@@ -342,20 +366,20 @@ export function MapOfKnowledge3D({
         const mat = new THREE.MeshStandardMaterial({
           color: colorHex,
           emissive: colorHex,
-          emissiveIntensity: isIle ? 0.55 : 0.2,
+          emissiveIntensity: focused ? 0.7 : isIle ? 0.55 : 0.2,
           roughness: 0.35,
           metalness: isIle ? 0.45 : 0.15,
         });
         const mesh = new THREE.Mesh(geo, mat);
-        mesh.position.set(p.x * s, p.y * s, p.z * s);
+        mesh.position.copy(pos);
         mesh.userData = ud;
 
-        if (isIle) {
+        if (isIle || focused) {
           const glowGeo = new THREE.SphereGeometry(radius * 1.7, 16, 12);
           const glowMat = new THREE.MeshBasicMaterial({
-            color: ILE_COLOR,
+            color: focused ? 0x22d3ee : ILE_COLOR,
             transparent: true,
-            opacity: 0.18,
+            opacity: focused ? 0.28 : 0.18,
             depthWrite: false,
           });
           const glow = new THREE.Mesh(glowGeo, glowMat);
@@ -387,11 +411,11 @@ export function MapOfKnowledge3D({
     void loadStemAvatarTextures().then((textures) => {
       if (cancelled) return;
       avatarTexturesRef.current = textures;
-      rebuild(userLocations, regions);
+      rebuild(userLocations, regions, focusedUserId);
       setReady(true);
     });
     // Immediate first paint with sphere fallback until textures resolve
-    rebuild(userLocations, regions);
+    rebuild(userLocations, regions, focusedUserId);
     setReady(true);
 
     const onPointerMove = (event: PointerEvent) => {
@@ -489,11 +513,15 @@ export function MapOfKnowledge3D({
   useEffect(() => {
     const mount = mountRef.current as
       | (HTMLDivElement & {
-          __rebuildMap3d?: (l: MapUserLocation[], r: MapRegion[]) => void;
+          __rebuildMap3d?: (
+            l: MapUserLocation[],
+            r: MapRegion[],
+            focusId?: string | null,
+          ) => void;
         })
       | null;
-    mount?.__rebuildMap3d?.(userLocations, regions);
-  }, [userLocations, regions]);
+    mount?.__rebuildMap3d?.(userLocations, regions, focusedUserId);
+  }, [userLocations, regions, focusedUserId]);
 
   const resetView = () => {
     const cam = cameraRef.current;

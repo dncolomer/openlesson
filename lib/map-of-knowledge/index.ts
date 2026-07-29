@@ -74,6 +74,15 @@ export {
   zoomGlobalMapView,
 } from "@/lib/map-of-knowledge/global-map";
 
+export {
+  buildFindYourselfMapFocus,
+  enabledRegionsForFindYourself,
+  findMapUserForGuestSubject,
+  parsePlacementLinkToken,
+  type FindYourselfResolveErr,
+  type FindYourselfResolveOk,
+} from "@/lib/map-of-knowledge/find-yourself";
+
 export type { MapInfiniteGridTokens } from "@/lib/map-of-knowledge/infinite-grid";
 export {
   MAP_INFINITE_GRID,
@@ -231,6 +240,10 @@ export interface MapUserLocation {
   avatar_id: string;
   /** Public path for the mini avatar asset. */
   avatar_path: string;
+  /** Full guest subject UUID when known (for Find yourself matching). */
+  subject_guest_user_id?: string | null;
+  /** Full user subject UUID when known. */
+  subject_user_id?: string | null;
   vector: number[];
   x: number;
   y: number;
@@ -758,6 +771,8 @@ export function buildMapOfKnowledgePayload(input: {
       kind,
       avatar_id: avatar.id,
       avatar_path: avatar.path,
+      subject_guest_user_id: p.subject_guest_user_id ?? null,
+      subject_user_id: p.subject_user_id ?? null,
       vector: p.vector,
       x: coord.x,
       y: coord.y,

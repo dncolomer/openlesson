@@ -11,12 +11,14 @@ import {
   Sparkles,
 } from "lucide-react";
 import {
+  buildFindYourselfMapFocus,
   enabledRegionsForLocalFocus,
   filterEnabledRegions,
   filterMapPlacementWorkspaces,
   generateAnonymousGuestIdentity,
   groupRegionsByWorkspace,
   KNOWLEDGE_CONFIG_EMBEDDING_MODEL_ID,
+  parsePlacementLinkToken,
   parseProjectionAlgorithmId,
   pickDefaultEnabledRegionsFromOneWorkspace,
   PROJECTION_ALGORITHM_OPTIONS,
@@ -143,7 +145,14 @@ export function MapOfKnowledgeClient() {
   } | null>(null);
   const [mintError, setMintError] = useState<string | null>(null);
   const [linkCopied, setLinkCopied] = useState(false);
-  const [embeddingInfoOpen, setEmbeddingInfoOpen] = useState(false);
+  /** Collapsible “Find yourself” (replaces Embedding space details). */
+  const [findYourselfOpen, setFindYourselfOpen] = useState(false);
+  const [findYourselfLink, setFindYourselfLink] = useState("");
+  const [findYourselfBusy, setFindYourselfBusy] = useState(false);
+  const [findYourselfError, setFindYourselfError] = useState<string | null>(null);
+  const [findYourselfOk, setFindYourselfOk] = useState<string | null>(null);
+  /** Snapshot id of the subject focused via Find yourself (Local Map highlight). */
+  const [focusedUserId, setFocusedUserId] = useState<string | null>(null);
 
   const mapShellRef = useRef<HTMLDivElement>(null);
   const workspaceInitRef = useRef(false);
@@ -458,7 +467,58 @@ export function MapOfKnowledgeClient() {
 
   const activeAlgoMeta = PROJECTION_ALGORITHM_OPTIONS.find((o) => o.id === projectionAlgorithm);
   const embeddingModels = data?.embedding_models || [];
-  const embeddingInfo = data?.embedding_info;
+  const applyFindYourself = useCallback(async () => {
+    setFindYourselfError(null);
+    setFindYourselfOk(null);
+    const token = parsePlacementLinkToken(findYourselfLink);
+    if (!token) {
+      setFindYourselfError("Paste your saved placement link (the full session URL).");
+      return;
+    }
+    if (!data) {
+      setFindYourselfError("Map data is still loading — try again in a moment.");
+      return;
+    }
+    setFindYourselfBusy(true);
+    try {
+      const res = await fetch("/api/map-of-knowledge/find-yourself", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ link: findYourselfLink.trim() }),
+      });
+      const json = await res.json();
+      if (!res.ok || !json.ok) {
+        throw new Error(
+          typeof json.error === "string" ? json.error : "Could not resolve that link",
+        );
+      }
+      const focus = buildFindYourselfMapFocus({
+        users: data.user_locations,
+        regions: data.regions,
+        guest_user_id: String(json.guest_user_id || ""),
+        workspace_id: String(json.workspace_id || ""),
+      });
+      if (!focus.ok) {
+        setFindYourselfError(focus.error);
+        return;
+      }
+      setFocusedUserId(focus.focused_user_id);
+      setEnabledRegions(new Set(focus.enabled_region_ids));
+      if (focus.workspace_id) {
+        setExpandedRegionWorkspaces(new Set([focus.workspace_id]));
+      }
+      setMapScope("local");
+      setViewMode("2d");
+      setFindYourselfOk("Found you — Local Map is focused on your placement.");
+      // Scroll map canvas into view
+      document.getElementById("map-canvas")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    } catch (err) {
+      setFindYourselfError(err instanceof Error ? err.message : "Could not find you on the map");
+    } finally {
+      setFindYourselfBusy(false);
+    }
+  }, [findYourselfLink, data]);
+
   const selectClass =
     "h-8 rounded-sm border border-zinc-700 bg-black/50 px-2 font-mono text-[11px] tracking-wide text-zinc-200 outline-none transition hover:border-zinc-500 focus:border-cyan-500/40";
   const toolBtnClass = (active: boolean) =>
@@ -615,107 +675,95 @@ export function MapOfKnowledgeClient() {
     </div>
   );
 
-  const embeddingExplain = embeddingInfo ? (
+  /** Collapsible Find yourself — replaces the old Embedding space details panel. */
+  const findYourselfPanel = (
     <aside
-      id="map-embedding-info"
-      data-map-embedding-info
-      data-expanded={embeddingInfoOpen ? "true" : "false"}
+      id="map-find-yourself"
+      data-map-find-yourself
+      data-expanded={findYourselfOpen ? "true" : "false"}
       className="mt-3 border border-zinc-800 bg-zinc-950/70 backdrop-blur-sm"
     >
       <button
         type="button"
         className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition hover:bg-white/[0.02]"
-        aria-expanded={embeddingInfoOpen}
-        aria-controls="map-embedding-info-panel"
-        onClick={() => setEmbeddingInfoOpen((open) => !open)}
-        data-map-embedding-info-toggle
+        aria-expanded={findYourselfOpen}
+        aria-controls="map-find-yourself-panel"
+        onClick={() => setFindYourselfOpen((open) => !open)}
+        data-map-find-yourself-toggle
       >
         <div className="min-w-0">
           <p className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-500">
-            Embedding space
+            Placement
           </p>
-          <p className="mt-0.5 truncate text-sm font-medium text-white">
-            {embeddingInfo.label}
-            {embeddingInfo.dim > 0 ? (
-              <span className="ml-2 font-mono text-xs font-normal text-zinc-500">
-                D={embeddingInfo.dim}
-              </span>
-            ) : null}
-          </p>
+          <p className="mt-0.5 text-sm font-medium text-white">Find yourself</p>
         </div>
         <ChevronDown
           size={16}
           className={`shrink-0 text-zinc-500 transition-transform ${
-            embeddingInfoOpen ? "rotate-180" : ""
+            findYourselfOpen ? "rotate-180" : ""
           }`}
           aria-hidden
         />
       </button>
 
-      {embeddingInfoOpen && (
-        <div id="map-embedding-info-panel" className="border-t border-zinc-800/80 px-4 pb-4 pt-3">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div className="min-w-0">
-              <p className="max-w-3xl text-xs leading-relaxed text-zinc-400">
-                {embeddingInfo.description}
-              </p>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <div className="border border-zinc-800 bg-black/40 px-3 py-2 text-center">
-                <p className="font-mono text-[9px] uppercase tracking-[1px] text-zinc-600">Dim</p>
-                <p className="mt-0.5 font-mono text-lg text-cyan-200/90">
-                  {embeddingInfo.dim > 0 ? embeddingInfo.dim : "—"}
-                </p>
-              </div>
-              {typeof embeddingInfo.struct_dim === "number" && (
-                <div className="border border-zinc-800 bg-black/40 px-3 py-2 text-center">
-                  <p className="font-mono text-[9px] uppercase tracking-[1px] text-zinc-600">Struct</p>
-                  <p className="mt-0.5 font-mono text-lg text-zinc-200">{embeddingInfo.struct_dim}</p>
-                </div>
-              )}
-              {typeof embeddingInfo.sem_dim === "number" && (
-                <div className="border border-zinc-800 bg-black/40 px-3 py-2 text-center">
-                  <p className="font-mono text-[9px] uppercase tracking-[1px] text-zinc-600">Sem</p>
-                  <p className="mt-0.5 font-mono text-lg text-zinc-200">{embeddingInfo.sem_dim}</p>
-                </div>
-              )}
-              <div className="border border-zinc-800 bg-black/40 px-3 py-2 text-center">
-                <p className="font-mono text-[9px] uppercase tracking-[1px] text-zinc-600">Points</p>
-                <p className="mt-0.5 font-mono text-lg text-zinc-200">
-                  {embeddingInfo.point_count ?? projectedUsers.length}
-                </p>
-              </div>
-              <div className="border border-zinc-800 bg-black/40 px-3 py-2 text-center">
-                <p className="font-mono text-[9px] uppercase tracking-[1px] text-zinc-600">Regions</p>
-                <p className="mt-0.5 font-mono text-lg text-zinc-200">
-                  {embeddingInfo.region_count ?? projectedLayout.regions.length}
-                </p>
-              </div>
-            </div>
-          </div>
-          <p className="mt-3 font-mono text-[10px] text-zinc-600">
-            model id · <span className="text-zinc-400">{embeddingInfo.id}</span>
-            {activeAlgoMeta ? (
-              <>
-                {" "}
-                · projection · <span className="text-zinc-400">{activeAlgoMeta.label}</span>
-              </>
-            ) : null}
+      {findYourselfOpen && (
+        <div
+          id="map-find-yourself-panel"
+          className="border-t border-zinc-800/80 px-4 pb-4 pt-3"
+          data-map-find-yourself-panel
+        >
+          <p className="text-xs leading-relaxed text-zinc-400">
+            Paste the private session link you saved after minting. Once your practice is processed,
+            we overlay you on the map and open Local Map focused on your workspace.
           </p>
-          {embeddingInfo.notes && embeddingInfo.notes.length > 0 && (
-            <ul className="mt-2 space-y-1 border-t border-zinc-800/80 pt-2 text-[11px] leading-relaxed text-zinc-500">
-              {embeddingInfo.notes.map((note) => (
-                <li key={note} className="flex gap-2">
-                  <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-zinc-600" />
-                  <span>{note}</span>
-                </li>
-              ))}
-            </ul>
-          )}
+          <label className="mt-3 block">
+            <span className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-500">
+              Your placement link
+            </span>
+            <input
+              type="url"
+              value={findYourselfLink}
+              onChange={(e) => {
+                setFindYourselfLink(e.target.value);
+                setFindYourselfError(null);
+                setFindYourselfOk(null);
+              }}
+              placeholder="https://…/tap/session/…"
+              className="mt-1.5 w-full rounded-sm border border-zinc-800 bg-black/40 px-3 py-2.5 font-mono text-xs text-white placeholder:text-zinc-600"
+              data-map-find-yourself-link-input
+              aria-label="Placement session link"
+            />
+          </label>
+          <button
+            type="button"
+            disabled={findYourselfBusy || !findYourselfLink.trim()}
+            onClick={() => void applyFindYourself()}
+            className="mt-3 inline-flex w-full items-center justify-center gap-1.5 rounded-sm border border-cyan-700/50 bg-cyan-950/40 px-3 py-2.5 text-sm font-medium text-cyan-100 transition hover:border-cyan-500 hover:bg-cyan-900/40 disabled:opacity-40"
+            data-map-find-yourself-submit
+          >
+            {findYourselfBusy ? "Looking…" : "Show me on the map"}
+          </button>
+          {findYourselfError ? (
+            <p
+              role="alert"
+              className="mt-2 text-xs leading-relaxed text-red-300"
+              data-map-find-yourself-error
+            >
+              {findYourselfError}
+            </p>
+          ) : null}
+          {findYourselfOk ? (
+            <p
+              className="mt-2 text-xs leading-relaxed text-cyan-200/90"
+              data-map-find-yourself-success
+            >
+              {findYourselfOk}
+            </p>
+          ) : null}
         </div>
       )}
     </aside>
-  ) : null;
+  );
 
   const mapSurface = (
     <div
@@ -760,6 +808,7 @@ export function MapOfKnowledgeClient() {
             userLocations={projectedUsers}
             regions={visibleRegions}
             projectionAlgorithm={projectionAlgorithm}
+            focusedUserId={focusedUserId}
             fill={fullscreen}
             className={fullscreen ? "relative z-[1] h-full min-h-0 flex-1" : "relative z-[1]"}
           />
@@ -768,6 +817,7 @@ export function MapOfKnowledgeClient() {
             userLocations={projectedUsers}
             regions={visibleRegions}
             projectionAlgorithm={projectionAlgorithm}
+            focusedUserId={focusedUserId}
             fill={fullscreen}
             className={fullscreen ? "relative z-[1] h-full min-h-0 flex-1" : "relative z-[1]"}
           />
@@ -966,7 +1016,7 @@ export function MapOfKnowledgeClient() {
             </div>
           )}
 
-          {!fullscreen && embeddingExplain}
+          {!fullscreen && findYourselfPanel}
 
           <div
             className={
@@ -1314,6 +1364,22 @@ export function MapOfKnowledgeClient() {
                     <span className="sm:hidden">{truncateUrl(mintResult.url, 36)}</span>
                     <span className="hidden sm:inline">{truncateUrl(mintResult.url, 64)}</span>
                   </a>
+                </div>
+
+                <div
+                  className="mt-3 rounded-sm border border-amber-500/30 bg-amber-950/25 px-3 py-2.5"
+                  data-minted-save-link-reminder
+                  role="note"
+                >
+                  <p className="text-sm font-medium text-amber-100">
+                    Save this link if you want to find yourself on the map later
+                  </p>
+                  <p className="mt-1 text-xs leading-relaxed text-amber-100/70">
+                    After you finish the session and your practice is processed, come back to Map of
+                    Knowledge, open <span className="text-amber-50">Find yourself</span>, and paste
+                    this URL to overlay your position on Local Map. If you lose the link, we cannot
+                    match you to your dot.
+                  </p>
                 </div>
 
                 <div className="mt-3 flex flex-wrap gap-2">

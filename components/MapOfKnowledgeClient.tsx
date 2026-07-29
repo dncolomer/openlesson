@@ -11,6 +11,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import {
+  MAP_NOT_ON_MAP_MESSAGE,
   buildFindYourselfMapFocus,
   enabledRegionsForLocalFocus,
   filterEnabledRegions,
@@ -151,6 +152,12 @@ export function MapOfKnowledgeClient() {
   const [findYourselfBusy, setFindYourselfBusy] = useState(false);
   const [findYourselfError, setFindYourselfError] = useState<string | null>(null);
   const [findYourselfOk, setFindYourselfOk] = useState<string | null>(null);
+  /** When Find yourself hits not_on_map — offer email notify. */
+  const [findYourselfAwaitingSnapshot, setFindYourselfAwaitingSnapshot] = useState(false);
+  const [notifyEmail, setNotifyEmail] = useState("");
+  const [notifyBusy, setNotifyBusy] = useState(false);
+  const [notifyMessage, setNotifyMessage] = useState<string | null>(null);
+  const [notifyError, setNotifyError] = useState<string | null>(null);
   /** Snapshot id of the subject focused via Find yourself (Local Map highlight). */
   const [focusedUserId, setFocusedUserId] = useState<string | null>(null);
 
@@ -470,6 +477,9 @@ export function MapOfKnowledgeClient() {
   const applyFindYourself = useCallback(async () => {
     setFindYourselfError(null);
     setFindYourselfOk(null);
+    setFindYourselfAwaitingSnapshot(false);
+    setNotifyMessage(null);
+    setNotifyError(null);
     const token = parsePlacementLinkToken(findYourselfLink);
     if (!token) {
       setFindYourselfError("Paste your saved placement link (the full session URL).");
@@ -500,6 +510,9 @@ export function MapOfKnowledgeClient() {
       });
       if (!focus.ok) {
         setFindYourselfError(focus.error);
+        if (focus.code === "not_on_map") {
+          setFindYourselfAwaitingSnapshot(true);
+        }
         return;
       }
       setFocusedUserId(focus.focused_user_id);
@@ -518,6 +531,41 @@ export function MapOfKnowledgeClient() {
       setFindYourselfBusy(false);
     }
   }, [findYourselfLink, data]);
+
+  const submitNotifyWhenReady = useCallback(async () => {
+    setNotifyError(null);
+    setNotifyMessage(null);
+    if (!findYourselfLink.trim()) {
+      setNotifyError("Paste your placement link above first.");
+      return;
+    }
+    setNotifyBusy(true);
+    try {
+      const res = await fetch("/api/map-of-knowledge/notify-when-ready", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          link: findYourselfLink.trim(),
+          email: notifyEmail.trim(),
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok || !json.ok) {
+        throw new Error(
+          typeof json.error === "string" ? json.error : "Could not save email",
+        );
+      }
+      setNotifyMessage(
+        typeof json.message === "string"
+          ? json.message
+          : "We will email you when your map location is ready.",
+      );
+    } catch (err) {
+      setNotifyError(err instanceof Error ? err.message : "Could not save email");
+    } finally {
+      setNotifyBusy(false);
+    }
+  }, [findYourselfLink, notifyEmail]);
 
   const selectClass =
     "h-8 rounded-sm border border-zinc-700 bg-black/50 px-2 font-mono text-[11px] tracking-wide text-zinc-200 outline-none transition hover:border-zinc-500 focus:border-cyan-500/40";
@@ -727,6 +775,9 @@ export function MapOfKnowledgeClient() {
                 setFindYourselfLink(e.target.value);
                 setFindYourselfError(null);
                 setFindYourselfOk(null);
+                setFindYourselfAwaitingSnapshot(false);
+                setNotifyMessage(null);
+                setNotifyError(null);
               }}
               placeholder="https://…/tap/session/…"
               className="mt-1.5 w-full rounded-sm border border-zinc-800 bg-black/40 px-3 py-2.5 font-mono text-xs text-white placeholder:text-zinc-600"
@@ -744,13 +795,55 @@ export function MapOfKnowledgeClient() {
             {findYourselfBusy ? "Looking…" : "Show me on the map"}
           </button>
           {findYourselfError ? (
-            <p
+            <div
               role="alert"
-              className="mt-2 text-xs leading-relaxed text-red-300"
+              className="mt-2 rounded-sm border border-amber-500/25 bg-amber-950/20 px-3 py-2.5"
               data-map-find-yourself-error
+              data-map-not-on-map={findYourselfAwaitingSnapshot ? "true" : undefined}
             >
-              {findYourselfError}
-            </p>
+              <p className="text-xs leading-relaxed text-amber-100/90">{findYourselfError}</p>
+              {findYourselfAwaitingSnapshot ? (
+                <div className="mt-3 space-y-2" data-map-ready-notify>
+                  <label className="block">
+                    <span className="font-mono text-[10px] uppercase tracking-[1.5px] text-amber-200/60">
+                      Email for when you appear
+                    </span>
+                    <input
+                      type="email"
+                      value={notifyEmail}
+                      onChange={(e) => {
+                        setNotifyEmail(e.target.value);
+                        setNotifyError(null);
+                        setNotifyMessage(null);
+                      }}
+                      placeholder="you@example.com"
+                      className="mt-1.5 w-full rounded-sm border border-zinc-700 bg-black/40 px-3 py-2 text-sm text-white placeholder:text-zinc-600"
+                      data-map-ready-notify-email
+                      aria-label="Email for map ready notification"
+                    />
+                  </label>
+                  <button
+                    type="button"
+                    disabled={notifyBusy || !notifyEmail.trim()}
+                    onClick={() => void submitNotifyWhenReady()}
+                    className="inline-flex w-full items-center justify-center rounded-sm border border-white/80 bg-transparent px-3 py-2 text-xs font-medium text-white transition hover:bg-white/10 disabled:opacity-40"
+                    data-map-ready-notify-submit
+                  >
+                    {notifyBusy ? "Saving…" : "Notify me when ready"}
+                  </button>
+                  {notifyError ? (
+                    <p className="text-[11px] text-red-300" data-map-ready-notify-error>
+                      {notifyError}
+                    </p>
+                  ) : null}
+                  {notifyMessage ? (
+                    <p className="text-[11px] text-cyan-200/90" data-map-ready-notify-success>
+                      {notifyMessage}
+                    </p>
+                  ) : null}
+                </div>
+              ) : null}
+            </div>
           ) : null}
           {findYourselfOk ? (
             <p
@@ -1356,6 +1449,8 @@ export function MapOfKnowledgeClient() {
                   </p>
                   <a
                     href={mintResult.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
                     className={`mt-1 block break-all font-mono text-xs leading-relaxed underline-offset-2 hover:underline sm:text-sm ${
                       mintResult.kind === "timed_drill" ? "text-amber-200/90" : "text-cyan-300/90"
                     }`}
@@ -1385,6 +1480,8 @@ export function MapOfKnowledgeClient() {
                 <div className="mt-3 flex flex-wrap gap-2">
                   <a
                     href={mintResult.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
                     className={`inline-flex flex-1 items-center justify-center gap-1.5 rounded-sm px-4 py-2.5 text-sm font-medium transition sm:flex-none ${
                       mintResult.kind === "timed_drill"
                         ? "bg-amber-400 text-black hover:bg-amber-300"

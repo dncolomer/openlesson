@@ -83,6 +83,29 @@ export {
   type FindYourselfResolveOk,
 } from "@/lib/map-of-knowledge/find-yourself";
 
+export {
+  MAP_NOT_ON_MAP_MESSAGE,
+  buildMapReadyNotifyEmail,
+  isValidNotifyEmail,
+  normalizeNotifyEmail,
+  shouldNotifyMapReadyRequest,
+  validateMapReadyNotifyRegistration,
+  type MapReadyNotifyRequestLike,
+} from "@/lib/map-of-knowledge/map-ready-notify";
+
+export {
+  isGuestSubjectOnPublicMap,
+  processPendingMapReadyNotifications,
+  registerMapReadyNotifyRequest,
+} from "@/lib/map-of-knowledge/map-ready-notify-store";
+
+export {
+  sendMapReadyEmail,
+  type MapReadyEmailPayload,
+  type MapReadyEmailSendResult,
+  type MapReadyEmailSender,
+} from "@/lib/map-of-knowledge/send-map-ready-email";
+
 export type { MapInfiniteGridTokens } from "@/lib/map-of-knowledge/infinite-grid";
 export {
   MAP_INFINITE_GRID,

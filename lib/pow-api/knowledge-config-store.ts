@@ -78,7 +78,21 @@ export async function insertKnowledgeConfigSnapshot(
     console.warn("[knowledge-config-store] insert failed:", error.message);
     return { id: null };
   }
-  return { id: (data?.id as string) ?? null };
+  const id = (data?.id as string) ?? null;
+  // Fire-and-forget: email guests waiting on Map of Knowledge location for this subject.
+  if (id && subject_guest_user_id && options.workspaceId) {
+    void import("@/lib/map-of-knowledge/map-ready-notify-store")
+      .then(({ processPendingMapReadyNotifications }) =>
+        processPendingMapReadyNotifications(supabase, {
+          guestUserId: subject_guest_user_id,
+          workspaceId: options.workspaceId,
+        }),
+      )
+      .catch((err) => {
+        console.warn("[knowledge-config-store] map-ready notify skipped:", err);
+      });
+  }
+  return { id };
 }
 
 export async function loadLatestKnowledgeConfig(

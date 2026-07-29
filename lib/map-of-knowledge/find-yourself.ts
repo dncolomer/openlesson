@@ -3,6 +3,7 @@
  */
 
 import type { MapRegion, MapUserLocation } from "./index";
+import { MAP_NOT_ON_MAP_MESSAGE } from "./map-ready-notify";
 
 /** Extract session token from a full placement URL or bare token string. */
 export function parsePlacementLinkToken(input: string): string | null {
@@ -137,8 +138,7 @@ export function buildFindYourselfMapFocus(input: {
   if (!user) {
     return {
       ok: false,
-      error:
-        "You are not on the map yet. Finish the session and wait until your practice is processed, then try again.",
+      error: MAP_NOT_ON_MAP_MESSAGE,
       code: "not_on_map",
     };
   }

@@ -738,7 +738,7 @@ export function MapOfKnowledgeClient() {
             type="button"
             disabled={findYourselfBusy || !findYourselfLink.trim()}
             onClick={() => void applyFindYourself()}
-            className="mt-3 inline-flex w-full items-center justify-center gap-1.5 rounded-sm border border-cyan-700/50 bg-cyan-950/40 px-3 py-2.5 text-sm font-medium text-cyan-100 transition hover:border-cyan-500 hover:bg-cyan-900/40 disabled:opacity-40"
+            className="mt-3 inline-flex w-full items-center justify-center gap-1.5 rounded-sm border border-white bg-transparent px-3 py-2.5 text-sm font-medium text-white transition hover:bg-white/10 disabled:opacity-40"
             data-map-find-yourself-submit
           >
             {findYourselfBusy ? "Looking…" : "Show me on the map"}

@@ -676,6 +676,8 @@ describe("map-of-knowledge product surfaces", () => {
     expect(clientSrc).toContain("data-map-region-workspace-groups");
     expect(clientSrc).toContain("data-map-region-workspace-toggle");
     expect(clientSrc).toContain("data-map-region-workspace-group");
+    expect(clientSrc).toContain("data-map-region-workspace-select-all");
+    expect(clientSrc).toContain("toggleAllRegionsInWorkspace");
     expect(clientSrc).toContain("aria-expanded");
     expect(clientSrc).toContain("expandedRegionWorkspaces");
   });

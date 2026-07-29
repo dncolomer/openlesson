@@ -256,6 +256,21 @@ export function MapOfKnowledgeClient() {
     });
   };
 
+  /** Select all regions in a workspace, or clear them if every region is already on. */
+  const toggleAllRegionsInWorkspace = (regionIds: readonly string[]) => {
+    if (regionIds.length === 0) return;
+    setEnabledRegions((prev) => {
+      const next = new Set(prev);
+      const allOn = regionIds.every((id) => next.has(id));
+      if (allOn) {
+        for (const id of regionIds) next.delete(id);
+      } else {
+        for (const id of regionIds) next.add(id);
+      }
+      return next;
+    });
+  };
+
   const regenerateGuest = () => {
     // Fresh seedless identity reshuffles both display name and STEM mini avatar.
     setGuestIdentity(generateAnonymousGuestIdentity());
@@ -630,6 +645,9 @@ export function MapOfKnowledgeClient() {
               enabledRegions.has(r.id),
             ).length;
             const hasSelection = enabledInGroup > 0;
+            const allSelected =
+              group.regions.length > 0 && enabledInGroup === group.regions.length;
+            const groupRegionIds = group.regions.map((r) => r.id);
             return (
               <li
                 key={group.workspace_id}
@@ -641,39 +659,69 @@ export function MapOfKnowledgeClient() {
                 data-expanded={expanded ? "true" : "false"}
                 data-has-selection={hasSelection ? "true" : "false"}
               >
-                <button
-                  type="button"
-                  onClick={() => toggleRegionWorkspaceGroup(group.workspace_id)}
-                  className={`flex w-full items-center gap-2 px-2.5 py-2 text-left text-xs transition hover:bg-zinc-900/60 ${
-                    hasSelection ? "text-white" : "text-zinc-500"
-                  }`}
-                  aria-expanded={expanded}
-                  data-map-region-workspace-toggle
-                >
-                  <ChevronDown
-                    size={14}
-                    className={`shrink-0 transition-transform ${
-                      expanded ? "rotate-0" : "-rotate-90"
-                    } ${hasSelection ? "text-white" : "text-zinc-600"}`}
-                    aria-hidden
-                  />
-                  <span className="min-w-0 flex-1">
-                    <span
-                      className={`block truncate font-medium ${
-                        hasSelection ? "text-white" : "text-zinc-500"
-                      }`}
-                    >
-                      {group.workspace_title}
+                <div className="flex items-stretch gap-0">
+                  <button
+                    type="button"
+                    onClick={() => toggleRegionWorkspaceGroup(group.workspace_id)}
+                    className={`flex min-w-0 flex-1 items-center gap-2 px-2.5 py-2 text-left text-xs transition hover:bg-zinc-900/60 ${
+                      hasSelection ? "text-white" : "text-zinc-500"
+                    }`}
+                    aria-expanded={expanded}
+                    data-map-region-workspace-toggle
+                  >
+                    <ChevronDown
+                      size={14}
+                      className={`shrink-0 transition-transform ${
+                        expanded ? "rotate-0" : "-rotate-90"
+                      } ${hasSelection ? "text-white" : "text-zinc-600"}`}
+                      aria-hidden
+                    />
+                    <span className="min-w-0 flex-1">
+                      <span
+                        className={`block truncate font-medium ${
+                          hasSelection ? "text-white" : "text-zinc-500"
+                        }`}
+                      >
+                        {group.workspace_title}
+                      </span>
+                      <span
+                        className={`block text-[10px] ${
+                          hasSelection ? "text-zinc-300" : "text-zinc-600"
+                        }`}
+                      >
+                        {enabledInGroup}/{group.regions.length} on
+                      </span>
                     </span>
-                    <span
-                      className={`block text-[10px] ${
-                        hasSelection ? "text-zinc-300" : "text-zinc-600"
-                      }`}
-                    >
-                      {enabledInGroup}/{group.regions.length} on
-                    </span>
-                  </span>
-                </button>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleAllRegionsInWorkspace(groupRegionIds);
+                    }}
+                    className={`shrink-0 border-l px-2.5 text-[10px] font-medium uppercase tracking-wide transition ${
+                      allSelected
+                        ? "border-zinc-600 text-zinc-200 hover:bg-zinc-800/80 hover:text-white"
+                        : hasSelection
+                          ? "border-zinc-600 text-zinc-300 hover:bg-zinc-800/80 hover:text-white"
+                          : "border-zinc-800 text-zinc-500 hover:bg-zinc-900/60 hover:text-zinc-300"
+                    }`}
+                    title={
+                      allSelected
+                        ? `Clear all regions in ${group.workspace_title}`
+                        : `Select all regions in ${group.workspace_title}`
+                    }
+                    aria-label={
+                      allSelected
+                        ? `Unselect all regions in ${group.workspace_title}`
+                        : `Select all regions in ${group.workspace_title}`
+                    }
+                    data-map-region-workspace-select-all
+                    data-select-all-state={allSelected ? "all" : hasSelection ? "partial" : "none"}
+                  >
+                    {allSelected ? "None" : "All"}
+                  </button>
+                </div>
                 {expanded && (
                   <ul className="space-y-1 border-t border-zinc-800/80 px-1.5 py-1.5" data-map-region-list>
                     {group.regions.map((region) => {

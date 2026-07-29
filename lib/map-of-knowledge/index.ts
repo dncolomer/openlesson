@@ -84,27 +84,19 @@ export {
 } from "@/lib/map-of-knowledge/find-yourself";
 
 export {
+  MAP_NEWSLETTER_SUBSCRIBE_NOTE,
+  MAP_NEWSLETTER_SUCCESS_MESSAGE,
   MAP_NOT_ON_MAP_MESSAGE,
-  buildMapReadyNotifyEmail,
   isValidNotifyEmail,
   normalizeNotifyEmail,
-  shouldNotifyMapReadyRequest,
+  validateMapNewsletterRegistration,
   validateMapReadyNotifyRegistration,
-  type MapReadyNotifyRequestLike,
 } from "@/lib/map-of-knowledge/map-ready-notify";
 
 export {
-  isGuestSubjectOnPublicMap,
-  processPendingMapReadyNotifications,
+  registerMapNewsletterLead,
   registerMapReadyNotifyRequest,
 } from "@/lib/map-of-knowledge/map-ready-notify-store";
-
-export {
-  sendMapReadyEmail,
-  type MapReadyEmailPayload,
-  type MapReadyEmailSendResult,
-  type MapReadyEmailSender,
-} from "@/lib/map-of-knowledge/send-map-ready-email";
 
 export type { MapInfiniteGridTokens } from "@/lib/map-of-knowledge/infinite-grid";
 export {

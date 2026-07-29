@@ -111,8 +111,9 @@ describe("findMapUserForGuestSubject + buildFindYourselfMapFocus", () => {
     expect(miss.ok).toBe(false);
     if (miss.ok) return;
     expect(miss.code).toBe("not_on_map");
-    expect(miss.error.toLowerCase()).toMatch(/periodic snapshot|leave your email|map location is ready/);
+    expect(miss.error.toLowerCase()).toMatch(/periodic snapshot|newsletter/);
     expect(miss.error).not.toMatch(/Finish the session and wait until your practice is processed/);
+    expect(miss.error).not.toMatch(/we will notify you when your map location is ready/i);
   });
 
   it("invalid empty guest does not invent a focus", () => {

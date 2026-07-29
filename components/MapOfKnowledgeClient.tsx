@@ -11,7 +11,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import {
-  MAP_NOT_ON_MAP_MESSAGE,
+  MAP_NEWSLETTER_SUBSCRIBE_NOTE,
   buildFindYourselfMapFocus,
   enabledRegionsForLocalFocus,
   filterEnabledRegions,
@@ -558,7 +558,7 @@ export function MapOfKnowledgeClient() {
       setNotifyMessage(
         typeof json.message === "string"
           ? json.message
-          : "We will email you when your map location is ready.",
+          : "Thanks — you're on the Uncertain Systems newsletter list.",
       );
     } catch (err) {
       setNotifyError(err instanceof Error ? err.message : "Could not save email");
@@ -803,10 +803,10 @@ export function MapOfKnowledgeClient() {
             >
               <p className="text-xs leading-relaxed text-amber-100/90">{findYourselfError}</p>
               {findYourselfAwaitingSnapshot ? (
-                <div className="mt-3 space-y-2" data-map-ready-notify>
+                <div className="mt-3 space-y-2" data-map-ready-notify data-map-newsletter-subscribe>
                   <label className="block">
                     <span className="font-mono text-[10px] uppercase tracking-[1.5px] text-amber-200/60">
-                      Email for when you appear
+                      Email
                     </span>
                     <input
                       type="email"
@@ -819,17 +819,25 @@ export function MapOfKnowledgeClient() {
                       placeholder="you@example.com"
                       className="mt-1.5 w-full rounded-sm border border-zinc-700 bg-black/40 px-3 py-2 text-sm text-white placeholder:text-zinc-600"
                       data-map-ready-notify-email
-                      aria-label="Email for map ready notification"
+                      data-map-newsletter-email
+                      aria-label="Email for Uncertain Systems newsletter"
                     />
                   </label>
+                  <p
+                    className="text-[11px] leading-relaxed text-amber-100/55"
+                    data-map-newsletter-subscribe-note
+                  >
+                    {MAP_NEWSLETTER_SUBSCRIBE_NOTE}
+                  </p>
                   <button
                     type="button"
                     disabled={notifyBusy || !notifyEmail.trim()}
                     onClick={() => void submitNotifyWhenReady()}
                     className="inline-flex w-full items-center justify-center rounded-sm border border-white/80 bg-transparent px-3 py-2 text-xs font-medium text-white transition hover:bg-white/10 disabled:opacity-40"
                     data-map-ready-notify-submit
+                    data-map-newsletter-submit
                   >
-                    {notifyBusy ? "Saving…" : "Notify me when ready"}
+                    {notifyBusy ? "Saving…" : "Subscribe to newsletter"}
                   </button>
                   {notifyError ? (
                     <p className="text-[11px] text-red-300" data-map-ready-notify-error>

@@ -427,15 +427,17 @@ export function layoutGlobalMapNodes3D(
       const x = Number.isFinite(n.x) ? n.x : 0;
       const y = Number.isFinite(n.y) ? n.y : 0;
       const z = Number.isFinite(n.z) ? n.z : 0;
-      const core = Math.max(0.1, Math.min(0.85, (n.radius || 0.35) * scale * 0.5));
+      // Compact region dots so the graph stays readable at Global 3D orbit distance.
+      const core = Math.max(0.035, Math.min(0.14, (n.radius || 0.35) * scale * 0.12));
       return {
         ...n,
         wx: x * scale,
         wy: y * scale,
         wz: z * scale,
         display_radius: core,
-        orbit_inside: core * 1.85,
-        orbit_near: core * 1.85 * GLOBAL_MAP_NEAR_RADIUS_FACTOR,
+        // Orbits stay larger than the core so membership rings remain visible.
+        orbit_inside: Math.max(core * 3.2, 0.22),
+        orbit_near: Math.max(core * 3.2 * GLOBAL_MAP_NEAR_RADIUS_FACTOR, 0.38),
       };
     }),
   };

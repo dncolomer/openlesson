@@ -476,10 +476,6 @@ function MapOfKnowledgeGlobal2D({
         }}
       >
         <defs>
-          <radialGradient id="global-map-glow" cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stopColor="rgba(34,211,238,0.18)" />
-            <stop offset="100%" stopColor="rgba(34,211,238,0)" />
-          </radialGradient>
           {(() => {
             const g = mapInfiniteGridPatternAttrs(`${MAP_INFINITE_GRID.patternId}-global`);
             return (
@@ -509,13 +505,6 @@ function MapOfKnowledgeGlobal2D({
         </g>
 
         <g data-map-global-viewport transform={transformAttr}>
-          <circle
-            cx={layout.width / 2}
-            cy={layout.height / 2}
-            r={Math.min(layout.width, layout.height) * 0.42}
-            fill="url(#global-map-glow)"
-          />
-
           {drawnEdges.map((e) => {
             const mx = (e.x1 + e.x2) / 2;
             const my = (e.y1 + e.y2) / 2;

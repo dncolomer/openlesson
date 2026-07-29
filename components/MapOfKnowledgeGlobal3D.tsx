@@ -286,30 +286,33 @@ export function MapOfKnowledgeGlobal3D({
         const group = new THREE.Group();
         group.position.set(n.wx, n.wy, n.wz);
 
+        // Dual orbits at different tilts (not coplanar) for a cooler 3D read.
         // Outer near orbit (amber)
-        const nearGeo = new THREE.TorusGeometry(n.orbit_near, 0.018, 8, 48);
+        const nearGeo = new THREE.TorusGeometry(n.orbit_near, 0.01, 8, 48);
         const nearMat = new THREE.MeshBasicMaterial({
           color: 0xfbbf24,
           transparent: true,
           opacity: selected ? 0.75 : 0.4,
         });
         const nearOrbit = new THREE.Mesh(nearGeo, nearMat);
-        nearOrbit.rotation.x = Math.PI / 2;
+        nearOrbit.rotation.set(Math.PI / 2.35, 0.22, Math.PI / 7);
+        nearOrbit.name = "orbit-near";
         group.add(nearOrbit);
 
-        // Inner inside orbit (cyan)
-        const inGeo = new THREE.TorusGeometry(n.orbit_inside, 0.022, 8, 48);
+        // Inner inside orbit (cyan) — opposing tilt so the pair reads as nested 3D rings
+        const inGeo = new THREE.TorusGeometry(n.orbit_inside, 0.012, 8, 48);
         const inMat = new THREE.MeshBasicMaterial({
           color: 0x22d3ee,
           transparent: true,
           opacity: selected ? 0.95 : 0.55,
         });
         const inOrbit = new THREE.Mesh(inGeo, inMat);
-        inOrbit.rotation.x = Math.PI / 2;
+        inOrbit.rotation.set(Math.PI / 1.75, -0.35, -Math.PI / 9);
+        inOrbit.name = "orbit-inside";
         group.add(inOrbit);
 
-        // Core region sphere
-        const coreGeo = new THREE.SphereGeometry(n.display_radius, 24, 18);
+        // Core region sphere (small dot)
+        const coreGeo = new THREE.SphereGeometry(n.display_radius, 16, 12);
         const coreMat = new THREE.MeshStandardMaterial({
           color: selected ? 0x67e8f9 : 0x22d3ee,
           emissive: selected ? 0x22d3ee : 0x0e7490,

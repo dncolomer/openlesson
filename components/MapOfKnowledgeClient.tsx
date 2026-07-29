@@ -677,7 +677,10 @@ export function MapOfKnowledgeClient() {
     >
       {mapToolbar}
       <div className={`relative min-h-0 ${fullscreen ? "flex-1" : ""}`}>
-        <div className="pointer-events-none absolute inset-0 z-0 bg-[radial-gradient(circle_at_50%_40%,rgba(34,211,238,0.08),transparent_55%)]" />
+        {/* Soft vignette only on Local Map — Global 2D keeps a clean infinite grid */}
+        {mapScope === "local" ? (
+          <div className="pointer-events-none absolute inset-0 z-0 bg-[radial-gradient(circle_at_50%_40%,rgba(34,211,238,0.08),transparent_55%)]" />
+        ) : null}
         {loading ? (
           <div
             className={`relative z-[1] flex items-center justify-center text-sm text-zinc-500 ${

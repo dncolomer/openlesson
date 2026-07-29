@@ -41,6 +41,23 @@ export {
   stemMiniAvatarPath,
 } from "@/lib/map-of-knowledge/stem-avatars";
 
+export type {
+  GlobalMapEdge,
+  GlobalMapModel,
+  GlobalMapRegionNode,
+  GlobalMapUserClass,
+} from "@/lib/map-of-knowledge/global-map";
+export {
+  GLOBAL_MAP_NEAR_RADIUS_FACTOR,
+  buildGlobalMapEdges,
+  buildGlobalMapModel,
+  classifyUserAgainstRegion,
+  countUsersForRegion,
+  formatGlobalMapDistance,
+  regionCentroidDistance,
+  regionMembershipRadius,
+} from "@/lib/map-of-knowledge/global-map";
+
 import {
   pickStemMiniAvatar,
   resolveMapUserAvatar,

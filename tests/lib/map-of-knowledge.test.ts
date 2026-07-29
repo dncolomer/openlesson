@@ -659,6 +659,10 @@ describe("map-of-knowledge product surfaces", () => {
     expect(threeSrc).toMatch(/Drag|orbit/i);
     expect(clientSrc).toContain("MapOfKnowledge3D");
     expect(clientSrc).toContain("MapOfKnowledge2D");
+    expect(clientSrc).toContain("MapOfKnowledgeGlobal");
+    expect(clientSrc).toContain("Local Map");
+    expect(clientSrc).toContain("Global Map");
+    expect(clientSrc).toContain("data-map-scope-toggle");
     expect(clientSrc).not.toMatch(/type="range"/);
     const twoD = join(root, "components/MapOfKnowledge2D.tsx");
     expect(existsSync(twoD)).toBe(true);

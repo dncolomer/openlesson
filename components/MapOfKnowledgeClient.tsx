@@ -28,7 +28,10 @@ import {
 import { PRODUCT_INTENT_LABELS } from "@/lib/product-intent";
 import { MapOfKnowledge2D } from "@/components/MapOfKnowledge2D";
 import { MapOfKnowledge3D } from "@/components/MapOfKnowledge3D";
+import { MapOfKnowledgeGlobal } from "@/components/MapOfKnowledgeGlobal";
 
+/** Parent map representation: Local (embedding 2D/3D) vs Global (region graph). */
+type MapScope = "local" | "global";
 type ViewMode = "2d" | "3d";
 
 /** Map placement product options — both are timed guest sessions (TAP under the hood). */
@@ -72,6 +75,7 @@ export function MapOfKnowledgeClient() {
   const [data, setData] = useState<MapOfKnowledgePayload | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [mapScope, setMapScope] = useState<MapScope>("local");
   const [viewMode, setViewMode] = useState<ViewMode>("2d");
   const [projectionAlgorithm, setProjectionAlgorithm] =
     useState<ProjectionAlgorithmId>("pca");
@@ -403,81 +407,117 @@ export function MapOfKnowledgeClient() {
       <div
         className="inline-flex rounded-sm border border-zinc-800 p-0.5"
         role="group"
-        aria-label="View mode"
+        aria-label="Map scope"
+        data-map-scope-toggle
       >
         <button
           type="button"
-          onClick={() => setViewMode("2d")}
+          onClick={() => setMapScope("local")}
           className={`rounded-sm px-2.5 py-1 font-mono text-[11px] tracking-wide transition ${
-            viewMode === "2d" ? "bg-white/10 text-white" : "text-zinc-500 hover:text-zinc-300"
+            mapScope === "local" ? "bg-white/10 text-white" : "text-zinc-500 hover:text-zinc-300"
           }`}
+          data-map-scope="local"
+          aria-pressed={mapScope === "local"}
         >
-          2D
+          Local Map
         </button>
         <button
           type="button"
-          onClick={() => setViewMode("3d")}
+          onClick={() => setMapScope("global")}
           className={`rounded-sm px-2.5 py-1 font-mono text-[11px] tracking-wide transition ${
-            viewMode === "3d" ? "bg-white/10 text-white" : "text-zinc-500 hover:text-zinc-300"
+            mapScope === "global" ? "bg-white/10 text-white" : "text-zinc-500 hover:text-zinc-300"
           }`}
+          data-map-scope="global"
+          aria-pressed={mapScope === "global"}
         >
-          3D
+          Global Map
         </button>
       </div>
 
-      <span className="hidden h-4 w-px bg-zinc-800 sm:block" aria-hidden />
+      {mapScope === "local" && (
+        <>
+          <span className="hidden h-4 w-px bg-zinc-800 sm:block" aria-hidden />
 
-      <label className="inline-flex items-center gap-1.5">
-        <span className="hidden font-mono text-[9px] uppercase tracking-[1px] text-zinc-600 sm:inline">
-          Model
-        </span>
-        <select
-          value={embeddingModelId}
-          onChange={(e) => setEmbeddingModelId(e.target.value)}
-          className={`${selectClass} max-w-[11rem] sm:max-w-[14rem]`}
-          title="Select embedding model (vectors are only comparable within a model)"
-          aria-label="Embedding model"
-          data-map-embedding-model-select
-        >
-          {(embeddingModels.length > 0
-            ? embeddingModels
-            : [
-                {
-                  id: KNOWLEDGE_CONFIG_EMBEDDING_MODEL_ID,
-                  label: "Knowledge config v1 (D=64)",
-                  dim: 64,
-                },
-              ]
-          ).map((m) => (
-            <option key={m.id} value={m.id}>
-              {m.label}
-              {typeof m.dim === "number" && m.dim > 0 ? ` · D=${m.dim}` : ""}
-            </option>
-          ))}
-        </select>
-      </label>
+          <div
+            className="inline-flex rounded-sm border border-zinc-800 p-0.5"
+            role="group"
+            aria-label="Local view mode"
+          >
+            <button
+              type="button"
+              onClick={() => setViewMode("2d")}
+              className={`rounded-sm px-2.5 py-1 font-mono text-[11px] tracking-wide transition ${
+                viewMode === "2d" ? "bg-white/10 text-white" : "text-zinc-500 hover:text-zinc-300"
+              }`}
+            >
+              2D
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode("3d")}
+              className={`rounded-sm px-2.5 py-1 font-mono text-[11px] tracking-wide transition ${
+                viewMode === "3d" ? "bg-white/10 text-white" : "text-zinc-500 hover:text-zinc-300"
+              }`}
+            >
+              3D
+            </button>
+          </div>
 
-      <label className="inline-flex items-center gap-1.5">
-        <span className="hidden font-mono text-[9px] uppercase tracking-[1px] text-zinc-600 sm:inline">
-          Project
-        </span>
-        <select
-          value={projectionAlgorithm}
-          onChange={(e) =>
-            setProjectionAlgorithm(parseProjectionAlgorithmId(e.target.value, "pca"))
-          }
-          className={selectClass}
-          title={activeAlgoMeta?.description || "Projection algorithm"}
-          aria-label="Projection algorithm"
-          data-map-projection-select
-        >
-          {PROJECTION_ALGORITHM_OPTIONS.map((opt) => (
-            <option key={opt.id} value={opt.id} title={opt.description}>
-              {opt.shortLabel}
-            </option>
-          ))}
-        </select>
-      </label>
+          <span className="hidden h-4 w-px bg-zinc-800 sm:block" aria-hidden />
+
+          <label className="inline-flex items-center gap-1.5">
+            <span className="hidden font-mono text-[9px] uppercase tracking-[1px] text-zinc-600 sm:inline">
+              Model
+            </span>
+            <select
+              value={embeddingModelId}
+              onChange={(e) => setEmbeddingModelId(e.target.value)}
+              className={`${selectClass} max-w-[11rem] sm:max-w-[14rem]`}
+              title="Select embedding model (vectors are only comparable within a model)"
+              aria-label="Embedding model"
+              data-map-embedding-model-select
+            >
+              {(embeddingModels.length > 0
+                ? embeddingModels
+                : [
+                    {
+                      id: KNOWLEDGE_CONFIG_EMBEDDING_MODEL_ID,
+                      label: "Knowledge config v1 (D=64)",
+                      dim: 64,
+                    },
+                  ]
+              ).map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.label}
+                  {typeof m.dim === "number" && m.dim > 0 ? ` · D=${m.dim}` : ""}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label className="inline-flex items-center gap-1.5">
+            <span className="hidden font-mono text-[9px] uppercase tracking-[1px] text-zinc-600 sm:inline">
+              Project
+            </span>
+            <select
+              value={projectionAlgorithm}
+              onChange={(e) =>
+                setProjectionAlgorithm(parseProjectionAlgorithmId(e.target.value, "pca"))
+              }
+              className={selectClass}
+              title={activeAlgoMeta?.description || "Projection algorithm"}
+              aria-label="Projection algorithm"
+              data-map-projection-select
+            >
+              {PROJECTION_ALGORITHM_OPTIONS.map((opt) => (
+                <option key={opt.id} value={opt.id} title={opt.description}>
+                  {opt.shortLabel}
+                </option>
+              ))}
+            </select>
+          </label>
+        </>
+      )}
 
       <button
         type="button"
@@ -600,7 +640,9 @@ export function MapOfKnowledgeClient() {
         fullscreen ? "min-h-0 flex-1" : ""
       }`}
       data-map-surface
-      data-map-view={viewMode}
+      data-map-scope={mapScope}
+      data-map-view={mapScope === "global" ? "global" : viewMode}
+      data-map-fullscreen={fullscreen ? "true" : "false"}
     >
       {mapToolbar}
       <div className={`relative min-h-0 ${fullscreen ? "flex-1" : ""}`}>
@@ -613,6 +655,13 @@ export function MapOfKnowledgeClient() {
           >
             Projecting public embedding space…
           </div>
+        ) : mapScope === "global" ? (
+          <MapOfKnowledgeGlobal
+            userLocations={projectedUsers}
+            regions={visibleRegions}
+            fill={fullscreen}
+            className={fullscreen ? "relative z-[1] h-full min-h-0 flex-1" : "relative z-[1]"}
+          />
         ) : viewMode === "3d" ? (
           <MapOfKnowledge3D
             userLocations={projectedUsers}
@@ -630,12 +679,17 @@ export function MapOfKnowledgeClient() {
           />
         )}
       </div>
-      {viewMode === "3d" && !loading && (
+      {mapScope === "global" && !loading && (
+        <div className="sr-only" aria-live="polite">
+          Global Map: regions as dots with membership orbits; users are counted in bubbles, not plotted as free markers.
+        </div>
+      )}
+      {mapScope === "local" && viewMode === "3d" && !loading && (
         <div className="sr-only" aria-live="polite">
           3D map: drag to orbit, right-drag or two-finger to pan, scroll to zoom, double-click to reset.
         </div>
       )}
-      {viewMode === "2d" && !loading && (
+      {mapScope === "local" && viewMode === "2d" && !loading && (
         <div className="sr-only" aria-live="polite">
           2D map: drag or arrows to pan, scroll or pinch to zoom, plus minus to zoom, zero or R to reset.
         </div>

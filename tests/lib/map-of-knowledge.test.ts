@@ -652,6 +652,15 @@ describe("map-of-knowledge product surfaces", () => {
     expect(clientSrc).toContain("data-mint-timed-explore");
     expect(clientSrc).toContain("data-mint-timed-drill");
     expect(clientSrc).toContain("interaction_kind");
+    // Timed Exploration duration picker (5 / 10 / 30 min) before mint
+    expect(clientSrc).toContain("data-timed-explore-duration-picker");
+    expect(clientSrc).toContain("TIMED_EXPLORE_DURATION_OPTIONS");
+    expect(clientSrc).toContain("timedExploreMinutes");
+    expect(clientSrc).toContain("minutes");
+    const guestApiSrc = readFileSync(guestApi, "utf8");
+    expect(guestApiSrc).toContain("MAP_TIMED_EXPLORE_MINUTES");
+    expect(guestApiSrc).toContain("parseMapPlacementMinutes");
+    expect(guestApiSrc).toMatch(/minutes:\s*minutes|minutes,/);
     expect(clientSrc).not.toMatch(/Mint TAP link|Mint ILE link|Think Aloud Protocol|Integrated Learning Env|Socratic/);
     expect(clientSrc).toMatch(/think aloud/i);
     expect(clientSrc).toMatch(/exploratory dialog|lightweight/i);

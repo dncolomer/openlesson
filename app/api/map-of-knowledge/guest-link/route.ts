@@ -22,6 +22,21 @@ function baseUrl(req: NextRequest) {
   return process.env.NEXT_PUBLIC_APP_URL || `${req.nextUrl.protocol}//${req.nextUrl.host}`;
 }
 
+/** Timed Exploration durations offered on Map of Knowledge (minutes). */
+const MAP_TIMED_EXPLORE_MINUTES = [5, 10, 30] as const;
+const MAP_TIMED_EXPLORE_DEFAULT_MINUTES = 10;
+const MAP_TIMED_DRILL_MINUTES = 20;
+
+function parseMapPlacementMinutes(
+  value: unknown,
+  product: "timed_explore" | "timed_drill" | null,
+): number {
+  if (product === "timed_drill") return MAP_TIMED_DRILL_MINUTES;
+  const n = typeof value === "number" ? value : Number(value);
+  if ((MAP_TIMED_EXPLORE_MINUTES as readonly number[]).includes(n)) return n;
+  return MAP_TIMED_EXPLORE_DEFAULT_MINUTES;
+}
+
 /**
  * POST /api/map-of-knowledge/guest-link
  * Anonymous self-placement: mint a timed guest session (or legacy ILE) on a public workspace block.
@@ -31,6 +46,7 @@ function baseUrl(req: NextRequest) {
  * - link_kind: "tap" | "ile" (technical; map UI uses "tap" for both product options)
  * - interaction_kind?: "conversational" | "exercise" — TAP shell (Timed Exploration vs Timed Drill)
  * - placement_product?: "timed_explore" | "timed_drill" — product label echoed in response
+ * - minutes?: 5 | 10 | 30 for Timed Exploration (default 10); Timed Drill fixed at 20
  * - guest_display_name?
  */
 export async function POST(req: NextRequest) {
@@ -51,6 +67,7 @@ export async function POST(req: NextRequest) {
         : placementProductRaw === "timed_explore" || linkKind === "tap"
           ? "timed_explore"
           : null;
+    const minutes = parseMapPlacementMinutes(body.minutes, placementProduct);
     const guestNameRaw =
       typeof body.guest_display_name === "string" ? body.guest_display_name.trim() : "";
 
@@ -128,7 +145,7 @@ export async function POST(req: NextRequest) {
         workspaceId,
         blockId,
         body: {
-          minutes: 20,
+          minutes,
           participant_type: "anonymous",
           post_session: "show_results",
           interaction_kind: interactionKind,
@@ -147,6 +164,7 @@ export async function POST(req: NextRequest) {
         ...result,
         interaction_kind: interactionKind,
         placement_product: placementProduct ?? "timed_explore",
+        minutes,
       });
     }
 

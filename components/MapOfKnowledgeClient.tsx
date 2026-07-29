@@ -38,6 +38,23 @@ type ViewMode = "2d" | "3d";
 /** Map placement product options — both are timed guest sessions (TAP under the hood). */
 type PlacementProductKind = "timed_explore" | "timed_drill";
 
+/** Allowed Timed Exploration durations on Map of Knowledge (minutes). */
+const TIMED_EXPLORE_DURATION_OPTIONS = [5, 10, 30] as const;
+type TimedExploreDurationMinutes = (typeof TIMED_EXPLORE_DURATION_OPTIONS)[number];
+const TIMED_EXPLORE_DURATION_DEFAULT: TimedExploreDurationMinutes = 10;
+/** Fixed Timed Drill duration (not choosable on this surface). */
+const TIMED_DRILL_DURATION_MINUTES = 20;
+
+function parseTimedExploreDurationMinutes(
+  value: unknown,
+  fallback: TimedExploreDurationMinutes = TIMED_EXPLORE_DURATION_DEFAULT,
+): TimedExploreDurationMinutes {
+  const n = typeof value === "number" ? value : Number(value);
+  return (TIMED_EXPLORE_DURATION_OPTIONS as readonly number[]).includes(n)
+    ? (n as TimedExploreDurationMinutes)
+    : fallback;
+}
+
 const PLACEMENT_PRODUCTS: Record<
   PlacementProductKind,
   {
@@ -97,6 +114,9 @@ export function MapOfKnowledgeClient() {
     setGuestIdentity((prev) => ({ ...prev, display_name: name }));
   const [selectedWorkspaceId, setSelectedWorkspaceId] = useState("");
   const [selectedBlockId, setSelectedBlockId] = useState("");
+  /** Timed Exploration session length (5 / 10 / 30 min) chosen before minting. */
+  const [timedExploreMinutes, setTimedExploreMinutes] =
+    useState<TimedExploreDurationMinutes>(TIMED_EXPLORE_DURATION_DEFAULT);
   const [minting, setMinting] = useState<PlacementProductKind | null>(null);
   const [mintResult, setMintResult] = useState<{
     url: string;
@@ -105,6 +125,7 @@ export function MapOfKnowledgeClient() {
     guest_display_name: string;
     workspace_title: string;
     block_title: string;
+    minutes: number;
   } | null>(null);
   const [mintError, setMintError] = useState<string | null>(null);
   const [linkCopied, setLinkCopied] = useState(false);
@@ -327,6 +348,10 @@ export function MapOfKnowledgeClient() {
     async (kind: PlacementProductKind) => {
       if (!selectedWorkspaceId || !selectedBlockId) return;
       const product = PLACEMENT_PRODUCTS[kind];
+      const minutes =
+        kind === "timed_explore"
+          ? parseTimedExploreDurationMinutes(timedExploreMinutes)
+          : TIMED_DRILL_DURATION_MINUTES;
       setMinting(kind);
       setMintError(null);
       setMintResult(null);
@@ -342,6 +367,7 @@ export function MapOfKnowledgeClient() {
             interaction_kind: product.interaction_kind,
             placement_product: kind,
             guest_display_name: guestName,
+            minutes,
           }),
         });
         const json = await res.json();
@@ -357,6 +383,10 @@ export function MapOfKnowledgeClient() {
           json.interaction_kind === "exercise"
             ? "timed_drill"
             : "timed_explore";
+        const resultMinutes =
+          typeof json.minutes === "number" && Number.isFinite(json.minutes)
+            ? json.minutes
+            : minutes;
         setMintResult({
           url: json.private_url,
           kind: resultKind,
@@ -367,6 +397,7 @@ export function MapOfKnowledgeClient() {
               : guestName,
           workspace_title: wsTitle,
           block_title: blockTitle,
+          minutes: resultMinutes,
         });
         setLinkCopied(false);
       } catch (err) {
@@ -375,7 +406,7 @@ export function MapOfKnowledgeClient() {
         setMinting(null);
       }
     },
-    [selectedWorkspaceId, selectedBlockId, guestName, data],
+    [selectedWorkspaceId, selectedBlockId, guestName, data, timedExploreMinutes],
   );
 
   const copyMintedLink = useCallback(async () => {
@@ -1036,6 +1067,50 @@ export function MapOfKnowledgeClient() {
 
           {/* Timed Exploration / Timed Drill product cards + result */}
           <div className="flex flex-col gap-3">
+            {/* Duration applies only to Timed Exploration — choose before minting the link */}
+            <div
+              className="rounded-sm border border-zinc-800 bg-zinc-950/70 px-3 py-2.5"
+              data-timed-explore-duration-picker
+            >
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <label
+                  className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-500"
+                  id="timed-explore-duration-label"
+                >
+                  Timed Exploration length
+                </label>
+                <div
+                  className="inline-flex rounded-sm border border-zinc-800 p-0.5"
+                  role="group"
+                  aria-labelledby="timed-explore-duration-label"
+                  data-timed-explore-duration-options
+                >
+                  {TIMED_EXPLORE_DURATION_OPTIONS.map((mins) => {
+                    const selected = timedExploreMinutes === mins;
+                    return (
+                      <button
+                        key={mins}
+                        type="button"
+                        onClick={() => setTimedExploreMinutes(mins)}
+                        className={`rounded-sm px-2.5 py-1 font-mono text-[11px] tracking-wide transition ${
+                          selected
+                            ? "bg-white/10 text-white"
+                            : "text-zinc-500 hover:text-zinc-300"
+                        }`}
+                        data-timed-explore-duration={mins}
+                        aria-pressed={selected}
+                      >
+                        {mins} min
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+              <p className="mt-1.5 text-[11px] leading-relaxed text-zinc-600">
+                Pick how long the Timed Exploration session lasts, then mint the link.
+              </p>
+            </div>
+
             <div className="grid gap-3 sm:grid-cols-2">
               <button
                 type="button"
@@ -1044,11 +1119,12 @@ export function MapOfKnowledgeClient() {
                 className="group flex flex-col items-start rounded-sm border border-zinc-700 bg-zinc-950/80 p-4 text-left transition hover:border-zinc-500 hover:bg-zinc-900/80 disabled:opacity-40"
                 data-mint-timed-explore
                 data-mint-tap
+                data-timed-explore-minutes={timedExploreMinutes}
               >
                 <span className="inline-flex items-center gap-2">
                   <span className="h-2.5 w-2.5 rounded-full bg-slate-400 shadow-[0_0_8px_rgba(148,163,184,0.5)]" />
                   <span className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-500">
-                    {PLACEMENT_PRODUCTS.timed_explore.eyebrow}
+                    {PLACEMENT_PRODUCTS.timed_explore.eyebrow} · {timedExploreMinutes} min
                   </span>
                 </span>
                 <span className="mt-2 text-base font-medium text-white">
@@ -1062,7 +1138,7 @@ export function MapOfKnowledgeClient() {
                 <span className="mt-3 inline-flex items-center gap-1 text-xs font-medium text-zinc-300 transition group-hover:text-white">
                   {minting === "timed_explore"
                     ? PLACEMENT_PRODUCTS.timed_explore.mintingLabel
-                    : "Get private session URL"}
+                    : `Get ${timedExploreMinutes}-minute session URL`}
                   <ExternalLink size={12} aria-hidden />
                 </span>
               </button>
@@ -1156,6 +1232,14 @@ export function MapOfKnowledgeClient() {
                         {mintResult.workspace_title}
                         <span className="text-zinc-700"> · </span>
                         {mintResult.block_title}
+                        {mintResult.kind === "timed_explore" && mintResult.minutes > 0 ? (
+                          <>
+                            <span className="text-zinc-700"> · </span>
+                            <span data-minted-duration-minutes={mintResult.minutes}>
+                              {mintResult.minutes} min
+                            </span>
+                          </>
+                        ) : null}
                       </p>
                     </div>
                   </div>

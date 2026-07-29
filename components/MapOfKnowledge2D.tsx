@@ -21,9 +21,10 @@ import {
   type MapUserLocation,
 } from "@/lib/map-of-knowledge";
 
+// Match Global Map viewBox aspect so the infinite grid fills edge-to-edge (no letterbox band).
 const WIDTH = 960;
-const HEIGHT = 480;
-const MARGIN = 24;
+const HEIGHT = 520;
+const MARGIN = 16;
 const SCREEN = { width: WIDTH, height: HEIGHT, margin: MARGIN };
 
 export type MapOfKnowledge2DProps = {
@@ -294,6 +295,8 @@ export function MapOfKnowledge2D({
 
   const mapPoint = (x: number, y: number) => dataToScreen(x, y, view, SCREEN);
 
+  const heightClass = fill ? "min-h-0 flex-1 h-full" : "h-[min(58vh,520px)]";
+
   return (
     <div
       ref={containerRef}
@@ -302,19 +305,20 @@ export function MapOfKnowledge2D({
       aria-label="Interactive 2D Map of Knowledge. Drag to pan, scroll or pinch to zoom, arrow keys or WASD to pan, plus and minus to zoom, zero or R to reset."
       data-map-2d-root
       data-map-2d-interactive
-      className={`relative outline-none focus-visible:ring-1 focus-visible:ring-cyan-500/40 ${
-        fill ? "min-h-0 flex-1" : "h-[min(58vh,480px)]"
-      } ${className}`}
+      className={`relative w-full overflow-hidden outline-none focus-visible:ring-1 focus-visible:ring-cyan-500/40 ${heightClass} ${className}`}
+      style={{ backgroundColor: MAP_INFINITE_GRID.background }}
       onClick={() => containerRef.current?.focus()}
     >
       <svg
         ref={svgRef}
         viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
-        className="h-full w-full touch-none select-none"
+        className="absolute inset-0 h-full w-full touch-none select-none"
         style={{ cursor: "grab", touchAction: "none" }}
         role="img"
         aria-label={`Map of Knowledge 2D embedding projection (${projectionAlgorithm})`}
-        preserveAspectRatio="xMidYMid meet"
+        /* Fill the host box edge-to-edge (Global Map style). "meet" letterboxed and left a
+           solid band with no grid at the top/bottom on wide or tall containers. */
+        preserveAspectRatio="none"
         data-map-2d-svg
         data-projection-algorithm={projectionAlgorithm}
         onWheel={onWheel}

@@ -641,7 +641,9 @@ describe("map-of-knowledge product surfaces", () => {
     expect(navSrc).toContain('aria-label="Projects & Community"');
     expect(clientSrc).toContain("map-canvas");
     expect(clientSrc).toContain("map-place-yourself");
-    expect(clientSrc).toContain("map-stats");
+    // Aggregated PoW stats section removed from Map of Knowledge page
+    expect(clientSrc).not.toContain("map-stats");
+    expect(clientSrc).not.toContain("AGGREGATED PROOF OF WORK");
     expect(clientSrc).toContain("data-map-surface");
     expect(clientSrc).toContain("Fullscreen");
     // Product language on placement cards (not TAP/ILE jargon)
@@ -655,8 +657,10 @@ describe("map-of-knowledge product surfaces", () => {
     expect(clientSrc).toMatch(/exploratory dialog|lightweight/i);
     expect(pageSrc).toMatch(/think aloud|put yourself on the map/i);
     expect(pageSrc).not.toMatch(/TAP or ILE/);
-    // Map section appears before aggregated PoW stats in the client tree
-    expect(clientSrc.indexOf('id="map-canvas"')).toBeLessThan(clientSrc.indexOf('id="map-stats"'));
+    // Map canvas appears before placement section
+    expect(clientSrc.indexOf('id="map-canvas"')).toBeLessThan(
+      clientSrc.indexOf('id="map-place-yourself"'),
+    );
     // Real Three.js 3D explorer (not a yaw slider)
     const three3d = join(root, "components/MapOfKnowledge3D.tsx");
     expect(existsSync(three3d)).toBe(true);
@@ -678,6 +682,11 @@ describe("map-of-knowledge product surfaces", () => {
     const twoDSrc = readFileSync(twoD, "utf8");
     expect(twoDSrc).toContain("data-map-2d-interactive");
     expect(twoDSrc).toContain("data-map-2d-legend");
+    // Local 2D fills the host edge-to-edge (no meet letterbox without grid)
+    expect(twoDSrc).toContain('preserveAspectRatio="none"');
+    expect(twoDSrc).toContain("absolute inset-0");
+    expect(twoDSrc).toContain("MAP_INFINITE_GRID.background");
+    expect(twoDSrc).toContain("data-map-infinite-grid");
     expect(twoDSrc).toContain("panViewTransform");
     expect(twoDSrc).toContain("zoomViewTransform");
     expect(twoDSrc).toMatch(/ArrowLeft|WASD|keydown/);

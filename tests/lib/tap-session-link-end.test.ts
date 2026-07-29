@@ -38,6 +38,19 @@ describe("TAP session link post-session thank-you", () => {
     expect(client).toMatch(/if \(privateToken\)[\s\S]{0,200}setPhase\("results"\)/);
   });
 
+  it("ExerciseTapClient privateToken path matches conversational thank-you + Explore Uncertain Systems", () => {
+    const client = read("components/ExerciseTapClient.tsx");
+    expect(client).toContain("privateToken");
+    expect(client).toContain("data-tap-session-thank-you");
+    expect(client).toContain("data-tap-explore-uncertain-systems");
+    expect(client).toContain('href="/"');
+    expect(client).toContain("exploreUncertainSystems");
+    expect(client).toContain("thankYouTitle");
+    expect(client).toContain("thankYouBody");
+    // Guest private links no longer end on "Run again" only
+    expect(client).not.toMatch(/privateToken \? "Run again"/);
+  });
+
   it("en i18n has PoW stored thank-you and explore CTA copy", () => {
     const en = JSON.parse(read("messages/en.json")) as {
       tap?: { postSession?: Record<string, string> };

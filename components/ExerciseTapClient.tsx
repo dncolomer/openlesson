@@ -1081,29 +1081,42 @@ export function ExerciseTapClient({
                 {t("tap.postSession.impureTryAgain")}
               </ThoughtButton>
             </section>
+          ) : privateToken ? (
+            // Map of Knowledge / guest private links: same thank-you as conversational TAP
+            <section
+              className="mx-auto flex w-full max-w-xl flex-1 flex-col items-center justify-center px-4 py-10 text-center"
+              data-tap-session-thank-you
+              data-exercise-session-thank-you
+            >
+              <h1 className="text-2xl font-medium text-neutral-100 sm:text-3xl">
+                {t("tap.postSession.thankYouTitle")}
+              </h1>
+              <p className="mt-4 max-w-md text-sm leading-relaxed text-neutral-300 sm:text-base">
+                {t("tap.postSession.thankYouBody")}
+              </p>
+              <a
+                href="/"
+                data-tap-explore-uncertain-systems
+                className="mt-8 inline-flex items-center justify-center rounded-md bg-white px-5 py-2.5 text-sm font-medium text-black transition hover:bg-neutral-200"
+              >
+                {t("tap.postSession.exploreUncertainSystems")}
+              </a>
+            </section>
           ) : (
             <section className="mx-auto flex w-full max-w-xl flex-1 flex-col items-center justify-center px-4 py-10 text-center">
               <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-amber-200/80">
                 Exercise TAP complete
               </p>
               <h2 className="mt-2 text-2xl font-medium text-white">
-                {privateToken
-                  ? t("tap.postSession.thankYouTitle")
-                  : t("tap.postSession.resultsTitle")}
+                {t("tap.postSession.resultsTitle")}
               </h2>
               <p className="mt-3 text-sm text-neutral-400">
-                {privateToken
-                  ? t("tap.postSession.thankYouBody")
-                  : "Your spoken exercise and submitted thoughts were recorded as proof of work."}
+                Your spoken exercise and submitted thoughts were recorded as proof of work.
               </p>
               <button
                 type="button"
                 className={cn(thoughtButtonClasses({ size: "md", variant: "primary" }), "mt-8")}
                 onClick={() => {
-                  if (privateToken) {
-                    window.location.reload();
-                    return;
-                  }
                   if (resolvedWorkspaceId) {
                     router.push(
                       getIlePostSessionPath({ metadata: { workspace_id: resolvedWorkspaceId } }),
@@ -1113,7 +1126,7 @@ export function ExerciseTapClient({
                   router.push("/dashboard");
                 }}
               >
-                {privateToken ? "Run again" : "Done"}
+                Done
               </button>
             </section>
           ))}

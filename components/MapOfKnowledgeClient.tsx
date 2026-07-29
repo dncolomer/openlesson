@@ -1067,81 +1067,79 @@ export function MapOfKnowledgeClient() {
 
           {/* Timed Exploration / Timed Drill product cards + result */}
           <div className="flex flex-col gap-3">
-            {/* Duration applies only to Timed Exploration — choose before minting the link */}
-            <div
-              className="rounded-sm border border-zinc-800 bg-zinc-950/70 px-3 py-2.5"
-              data-timed-explore-duration-picker
-            >
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <label
-                  className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-500"
-                  id="timed-explore-duration-label"
-                >
-                  Timed Exploration length
-                </label>
-                <div
-                  className="inline-flex rounded-sm border border-zinc-800 p-0.5"
-                  role="group"
-                  aria-labelledby="timed-explore-duration-label"
-                  data-timed-explore-duration-options
-                >
-                  {TIMED_EXPLORE_DURATION_OPTIONS.map((mins) => {
-                    const selected = timedExploreMinutes === mins;
-                    return (
-                      <button
-                        key={mins}
-                        type="button"
-                        onClick={() => setTimedExploreMinutes(mins)}
-                        className={`rounded-sm px-2.5 py-1 font-mono text-[11px] tracking-wide transition ${
-                          selected
-                            ? "bg-white/10 text-white"
-                            : "text-zinc-500 hover:text-zinc-300"
-                        }`}
-                        data-timed-explore-duration={mins}
-                        aria-pressed={selected}
-                      >
-                        {mins} min
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-              <p className="mt-1.5 text-[11px] leading-relaxed text-zinc-600">
-                Pick how long the Timed Exploration session lasts, then mint the link.
-              </p>
-            </div>
-
             <div className="grid gap-3 sm:grid-cols-2">
-              <button
-                type="button"
-                disabled={!selectedBlockId || minting !== null}
-                onClick={() => void mintLink("timed_explore")}
-                className="group flex flex-col items-start rounded-sm border border-zinc-700 bg-zinc-950/80 p-4 text-left transition hover:border-zinc-500 hover:bg-zinc-900/80 disabled:opacity-40"
-                data-mint-timed-explore
-                data-mint-tap
+              {/* Timed Exploration card: duration options live inside the box so they aren't missed */}
+              <div
+                className="flex flex-col rounded-sm border border-zinc-700 bg-zinc-950/80 p-4 transition hover:border-zinc-500"
+                data-mint-timed-explore-card
                 data-timed-explore-minutes={timedExploreMinutes}
               >
                 <span className="inline-flex items-center gap-2">
                   <span className="h-2.5 w-2.5 rounded-full bg-slate-400 shadow-[0_0_8px_rgba(148,163,184,0.5)]" />
                   <span className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-500">
-                    {PLACEMENT_PRODUCTS.timed_explore.eyebrow} · {timedExploreMinutes} min
+                    {PLACEMENT_PRODUCTS.timed_explore.eyebrow}
                   </span>
                 </span>
                 <span className="mt-2 text-base font-medium text-white">
-                  {minting === "timed_explore"
-                    ? PLACEMENT_PRODUCTS.timed_explore.mintingLabel
-                    : PLACEMENT_PRODUCTS.timed_explore.label}
+                  {PLACEMENT_PRODUCTS.timed_explore.label}
                 </span>
                 <span className="mt-1 text-xs leading-relaxed text-zinc-500">
                   {PLACEMENT_PRODUCTS.timed_explore.shortDiff}
                 </span>
-                <span className="mt-3 inline-flex items-center gap-1 text-xs font-medium text-zinc-300 transition group-hover:text-white">
+
+                <div
+                  className="mt-3 w-full"
+                  data-timed-explore-duration-picker
+                >
+                  <p
+                    className="mb-1.5 font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-500"
+                    id="timed-explore-duration-label"
+                  >
+                    Session length
+                  </p>
+                  <div
+                    className="inline-flex w-full rounded-sm border border-zinc-700 bg-black/40 p-0.5"
+                    role="group"
+                    aria-labelledby="timed-explore-duration-label"
+                    data-timed-explore-duration-options
+                  >
+                    {TIMED_EXPLORE_DURATION_OPTIONS.map((mins) => {
+                      const selected = timedExploreMinutes === mins;
+                      return (
+                        <button
+                          key={mins}
+                          type="button"
+                          onClick={() => setTimedExploreMinutes(mins)}
+                          disabled={minting !== null}
+                          className={`min-w-0 flex-1 rounded-sm px-2 py-1.5 font-mono text-[11px] tracking-wide transition ${
+                            selected
+                              ? "bg-white/15 text-white"
+                              : "text-zinc-500 hover:text-zinc-200"
+                          } disabled:opacity-40`}
+                          data-timed-explore-duration={mins}
+                          aria-pressed={selected}
+                        >
+                          {mins} min
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  disabled={!selectedBlockId || minting !== null}
+                  onClick={() => void mintLink("timed_explore")}
+                  className="mt-3 inline-flex w-full items-center justify-center gap-1.5 rounded-sm border border-zinc-600 bg-zinc-900/80 px-3 py-2 text-xs font-medium text-zinc-100 transition hover:border-zinc-400 hover:bg-zinc-800 hover:text-white disabled:opacity-40"
+                  data-mint-timed-explore
+                  data-mint-tap
+                >
                   {minting === "timed_explore"
                     ? PLACEMENT_PRODUCTS.timed_explore.mintingLabel
                     : `Get ${timedExploreMinutes}-minute session URL`}
                   <ExternalLink size={12} aria-hidden />
-                </span>
-              </button>
+                </button>
+              </div>
 
               <button
                 type="button"

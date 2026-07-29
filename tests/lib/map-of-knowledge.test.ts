@@ -652,11 +652,17 @@ describe("map-of-knowledge product surfaces", () => {
     expect(clientSrc).toContain("data-mint-timed-explore");
     expect(clientSrc).toContain("data-mint-timed-drill");
     expect(clientSrc).toContain("interaction_kind");
-    // Timed Exploration duration picker (5 / 10 / 30 min) before mint
+    // Timed Exploration duration picker lives inside the Timed Exploration card
     expect(clientSrc).toContain("data-timed-explore-duration-picker");
+    expect(clientSrc).toContain("data-mint-timed-explore-card");
     expect(clientSrc).toContain("TIMED_EXPLORE_DURATION_OPTIONS");
     expect(clientSrc).toContain("timedExploreMinutes");
     expect(clientSrc).toContain("minutes");
+    // Duration options are nested under the explore card (not a separate top section)
+    const exploreCardIdx = clientSrc.indexOf("data-mint-timed-explore-card");
+    const durationPickerIdx = clientSrc.indexOf("data-timed-explore-duration-picker");
+    expect(exploreCardIdx).toBeGreaterThan(-1);
+    expect(durationPickerIdx).toBeGreaterThan(exploreCardIdx);
     const guestApiSrc = readFileSync(guestApi, "utf8");
     expect(guestApiSrc).toContain("MAP_TIMED_EXPLORE_MINUTES");
     expect(guestApiSrc).toContain("parseMapPlacementMinutes");

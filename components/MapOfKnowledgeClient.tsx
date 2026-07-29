@@ -124,7 +124,8 @@ export function MapOfKnowledgeClient() {
     () => new Set(),
   );
   const [fullscreen, setFullscreen] = useState(false);
-  const [guestIdentity, setGuestIdentity] = useState(() => generateAnonymousGuestIdentity(42));
+  // Fresh random identity on each page load (not a fixed seed).
+  const [guestIdentity, setGuestIdentity] = useState(() => generateAnonymousGuestIdentity());
   const guestName = guestIdentity.display_name;
   const [selectedWorkspaceId, setSelectedWorkspaceId] = useState("");
   const [selectedBlockId, setSelectedBlockId] = useState("");

@@ -12,7 +12,14 @@ import {
   zoomViewTransform,
   type ViewTransform,
 } from "@/lib/knowledge-config";
-import { mapDotColor, type MapRegion, type MapUserLocation } from "@/lib/map-of-knowledge";
+import {
+  MAP_INFINITE_GRID,
+  mapDotColor,
+  mapInfiniteGridPatternAttrs,
+  mapInfiniteGridPatternFill,
+  type MapRegion,
+  type MapUserLocation,
+} from "@/lib/map-of-knowledge";
 
 const WIDTH = 960;
 const HEIGHT = 480;
@@ -321,17 +328,29 @@ export function MapOfKnowledge2D({
         }}
       >
         <defs>
-          <pattern id="map-grid-2d" width="40" height="40" patternUnits="userSpaceOnUse">
-            <path
-              d="M 40 0 L 0 0 0 40"
-              fill="none"
-              stroke="rgba(63,63,70,0.35)"
-              strokeWidth="0.5"
-            />
-          </pattern>
+          {(() => {
+            const g = mapInfiniteGridPatternAttrs(`${MAP_INFINITE_GRID.patternId}-2d`);
+            return (
+              <pattern
+                id={g.id}
+                width={g.width}
+                height={g.height}
+                patternUnits={g.patternUnits}
+              >
+                <path d={g.pathD} fill="none" stroke={g.stroke} strokeWidth={g.strokeWidth} />
+              </pattern>
+            );
+          })()}
         </defs>
-        <rect width={WIDTH} height={HEIGHT} fill="#09090b" />
-        <rect width={WIDTH} height={HEIGHT} fill="url(#map-grid-2d)" />
+        {/* Infinite grid canvas: fixed screen pattern so pan/zoom of content never ends the field */}
+        <g data-map-infinite-grid data-map-infinite-grid-surface="local-2d">
+          <rect width={WIDTH} height={HEIGHT} fill={MAP_INFINITE_GRID.background} />
+          <rect
+            width={WIDTH}
+            height={HEIGHT}
+            fill={mapInfiniteGridPatternFill(`${MAP_INFINITE_GRID.patternId}-2d`)}
+          />
+        </g>
 
         {regions.map((region, i) => {
           const { x: sx, y: sy } = mapPoint(region.x, region.y);

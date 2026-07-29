@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import {
+  MAP_INFINITE_GRID,
   STEM_MINI_AVATARS,
   mapDotColor,
   type MapRegion,
@@ -32,8 +33,6 @@ type HoverInfo = {
 
 const ILE_COLOR = 0xfbbf24;
 const TAP_COLOR = 0x94a3b8;
-const GRID_COLOR = 0x3f3f46;
-const AXIS_COLOR = 0x52525b;
 
 /** Preload STEM mini-avatar textures once (shared across rebuilds). */
 function loadStemAvatarTextures(): Promise<Map<string, THREE.Texture>> {
@@ -159,13 +158,18 @@ export function MapOfKnowledge3D({
     let cancelled = false;
 
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x09090b);
-    scene.fog = new THREE.Fog(0x09090b, 28, 70);
+    scene.background = new THREE.Color(MAP_INFINITE_GRID.backgroundHex);
+    // Soft fog so the large infinite grid plane fades at distance (no hard edge).
+    scene.fog = new THREE.Fog(
+      MAP_INFINITE_GRID.backgroundHex,
+      MAP_INFINITE_GRID.fogNear3d,
+      MAP_INFINITE_GRID.fogFar3d,
+    );
 
     const width = Math.max(1, mount.clientWidth);
     const height = Math.max(1, mount.clientHeight);
 
-    const camera = new THREE.PerspectiveCamera(50, width / height, 0.1, 200);
+    const camera = new THREE.PerspectiveCamera(50, width / height, 0.1, 400);
     camera.position.set(8, 6, 10);
     cameraRef.current = camera;
 
@@ -177,6 +181,8 @@ export function MapOfKnowledge3D({
     renderer.domElement.style.height = "100%";
     renderer.domElement.style.touchAction = "none";
     renderer.domElement.setAttribute("data-map-3d-canvas", "true");
+    renderer.domElement.setAttribute("data-map-infinite-grid", "true");
+    renderer.domElement.setAttribute("data-map-infinite-grid-surface", "local-3d");
     renderer.domElement.setAttribute("aria-label", "3D Map of Knowledge embedding space");
     mount.appendChild(renderer.domElement);
 
@@ -184,7 +190,7 @@ export function MapOfKnowledge3D({
     controls.enableDamping = true;
     controls.dampingFactor = 0.08;
     controls.minDistance = 1.5;
-    controls.maxDistance = 40;
+    controls.maxDistance = MAP_INFINITE_GRID.maxDistance3d;
     controls.enablePan = true;
     controls.screenSpacePanning = true;
     controls.target.set(0, 0, 0);
@@ -200,38 +206,21 @@ export function MapOfKnowledge3D({
     rim.position.set(-5, 3, -6);
     scene.add(rim);
 
-    // Grid + axes
-    const grid = new THREE.GridHelper(20, 20, GRID_COLOR, GRID_COLOR);
-    (grid.material as THREE.Material).transparent = true;
-    (grid.material as THREE.Material).opacity = 0.35;
-    scene.add(grid);
-
-    const axes = new THREE.AxesHelper(3.5);
-    // Dim axes slightly
-    const axesMat = axes.material as THREE.LineBasicMaterial | THREE.LineBasicMaterial[];
-    if (Array.isArray(axesMat)) {
-      axesMat.forEach((m) => {
-        m.transparent = true;
-        m.opacity = 0.7;
-      });
-    } else {
-      axesMat.transparent = true;
-      axesMat.opacity = 0.7;
+    // Large infinite-style grid plane only (no axis helpers, no finite floor disc).
+    const grid = new THREE.GridHelper(
+      MAP_INFINITE_GRID.size3d,
+      MAP_INFINITE_GRID.divisions3d,
+      MAP_INFINITE_GRID.strokeHex,
+      MAP_INFINITE_GRID.strokeHex,
+    );
+    grid.name = "map-infinite-grid";
+    const gridMats = Array.isArray(grid.material) ? grid.material : [grid.material];
+    for (const mat of gridMats) {
+      const m = mat as THREE.Material & { transparent?: boolean; opacity?: number };
+      m.transparent = true;
+      m.opacity = MAP_INFINITE_GRID.strokeOpacity;
     }
-    scene.add(axes);
-
-    // Soft floor disc
-    const floorGeo = new THREE.CircleGeometry(12, 64);
-    const floorMat = new THREE.MeshBasicMaterial({
-      color: 0x0e7490,
-      transparent: true,
-      opacity: 0.04,
-      side: THREE.DoubleSide,
-    });
-    const floor = new THREE.Mesh(floorGeo, floorMat);
-    floor.rotation.x = -Math.PI / 2;
-    floor.position.y = -0.01;
-    scene.add(floor);
+    scene.add(grid);
 
     // Content group rebuilt when data changes
     const content = new THREE.Group();
@@ -384,7 +373,7 @@ export function MapOfKnowledge3D({
       if (locations.length === 0 && regs.length === 0) {
         const emptyGeo = new THREE.SphereGeometry(0.25, 16, 12);
         const emptyMat = new THREE.MeshBasicMaterial({
-          color: AXIS_COLOR,
+          color: 0x52525b,
           wireframe: true,
         });
         content.add(new THREE.Mesh(emptyGeo, emptyMat));

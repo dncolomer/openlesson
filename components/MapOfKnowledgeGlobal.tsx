@@ -16,7 +16,13 @@ import {
   type GlobalMapRegionSummary,
   type GlobalMapViewTransform,
 } from "@/lib/map-of-knowledge/global-map";
-import type { MapRegion, MapUserLocation } from "@/lib/map-of-knowledge";
+import {
+  MAP_INFINITE_GRID,
+  mapInfiniteGridPatternAttrs,
+  mapInfiniteGridPatternFill,
+  type MapRegion,
+  type MapUserLocation,
+} from "@/lib/map-of-knowledge";
 
 const WIDTH = 960;
 const HEIGHT = 520;
@@ -392,7 +398,8 @@ export function MapOfKnowledgeGlobal({
     <div
       ref={containerRef}
       tabIndex={0}
-      className={`relative w-full overflow-hidden bg-[#09090b] outline-none ${heightClass} ${className}`}
+      className={`relative w-full overflow-hidden outline-none ${heightClass} ${className}`}
+      style={{ backgroundColor: MAP_INFINITE_GRID.background }}
       data-map-global
       data-map-global-surface
       data-map-global-interactive="true"
@@ -421,8 +428,33 @@ export function MapOfKnowledgeGlobal({
             <stop offset="0%" stopColor="rgba(34,211,238,0.18)" />
             <stop offset="100%" stopColor="rgba(34,211,238,0)" />
           </radialGradient>
+          {(() => {
+            const g = mapInfiniteGridPatternAttrs(`${MAP_INFINITE_GRID.patternId}-global`);
+            return (
+              <pattern
+                id={g.id}
+                width={g.width}
+                height={g.height}
+                patternUnits={g.patternUnits}
+              >
+                <path d={g.pathD} fill="none" stroke={g.stroke} strokeWidth={g.strokeWidth} />
+              </pattern>
+            );
+          })()}
         </defs>
-        <rect width={layout.width} height={layout.height} fill="#09090b" />
+        {/* Screen-space infinite grid (outside pan/zoom viewport so canvas never ends) */}
+        <g data-map-infinite-grid data-map-infinite-grid-surface="global">
+          <rect
+            width={layout.width}
+            height={layout.height}
+            fill={MAP_INFINITE_GRID.background}
+          />
+          <rect
+            width={layout.width}
+            height={layout.height}
+            fill={mapInfiniteGridPatternFill(`${MAP_INFINITE_GRID.patternId}-global`)}
+          />
+        </g>
 
         <g data-map-global-viewport transform={transformAttr}>
           <circle

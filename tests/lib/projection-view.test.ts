@@ -148,7 +148,11 @@ describe("projection widget surface (Embeddings)", () => {
     expect(src).toContain("data-projection-widget");
     expect(src).toContain("data-projection-professional");
     expect(src).toContain("data-projection-grid");
-    expect(src).toContain("data-projection-axes");
+    // Axes / tick chrome removed — shared infinite grid only
+    expect(src).not.toContain("data-projection-axes");
+    expect(src).not.toContain("data-projection-tick-x");
+    expect(src).toContain("data-map-infinite-grid");
+    expect(src).toContain("MAP_INFINITE_GRID");
     expect(src).toContain("data-projection-zoom-controls");
     expect(src).toContain("data-projection-canvas");
     expect(src).toContain("data-projection-display-toggle");
@@ -164,6 +168,5 @@ describe("projection widget surface (Embeddings)", () => {
     expect(src).not.toMatch(/className="h-56 w-full rounded-xl border border-neutral-800 bg-neutral-950\/80"/);
     expect(src).toContain("fitViewTransform");
     expect(src).toContain("zoomViewTransform");
-    expect(src).toContain("generateGridTicks");
   });
 });

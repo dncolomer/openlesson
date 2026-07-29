@@ -71,6 +71,26 @@ export {
   zoomGlobalMapView,
 } from "@/lib/map-of-knowledge/global-map";
 
+export type { MapInfiniteGridTokens } from "@/lib/map-of-knowledge/infinite-grid";
+export {
+  MAP_INFINITE_GRID,
+  MAP_INFINITE_GRID_BACKGROUND,
+  MAP_INFINITE_GRID_BACKGROUND_HEX,
+  MAP_INFINITE_GRID_CELL_PX,
+  MAP_INFINITE_GRID_3D_DIVISIONS,
+  MAP_INFINITE_GRID_3D_FOG_FAR,
+  MAP_INFINITE_GRID_3D_FOG_NEAR,
+  MAP_INFINITE_GRID_3D_MAX_DISTANCE,
+  MAP_INFINITE_GRID_3D_SIZE,
+  MAP_INFINITE_GRID_PATTERN_ID,
+  MAP_INFINITE_GRID_STROKE,
+  MAP_INFINITE_GRID_STROKE_HEX,
+  MAP_INFINITE_GRID_STROKE_OPACITY,
+  mapInfiniteGridPatternAttrs,
+  mapInfiniteGridPatternFill,
+  mapInfiniteGridPatternPath,
+} from "@/lib/map-of-knowledge/infinite-grid";
+
 import {
   pickStemMiniAvatar,
   resolveMapUserAvatar,

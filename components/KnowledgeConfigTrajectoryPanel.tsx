@@ -34,7 +34,6 @@ import {
   dataToScreen,
   screenToData,
   mapRadiusToScreen,
-  generateGridTicks,
   clampZoom,
   type KnowledgeRegionOverlay2D,
   type ViewTransform,
@@ -43,7 +42,10 @@ import {
   type ProjectionAlgorithmId,
 } from "@/lib/knowledge-config";
 import {
+  MAP_INFINITE_GRID,
   enabledRegionsForLocalFocus,
+  mapInfiniteGridPatternAttrs,
+  mapInfiniteGridPatternFill,
   reprojectMapLayout,
   workspaceKnowledgeToGlobalMapInputs,
 } from "@/lib/map-of-knowledge";
@@ -243,7 +245,8 @@ function selectValueFromSubject(
   return "";
 }
 
-const PROJECTION_SCREEN: ScreenRect = { width: 960, height: 560, margin: 48 };
+/** Full-bleed infinite grid canvas; small margin keeps points off the absolute edge. */
+const PROJECTION_SCREEN: ScreenRect = { width: 960, height: 560, margin: 16 };
 
 function ProjectionSpaceWidget({
   coords,
@@ -300,11 +303,6 @@ function ProjectionSpaceWidget({
   }, [bounds]);
 
   const activeView = view;
-
-  const ticks = useMemo(
-    () => (activeView ? generateGridTicks(activeView, 8) : { xTicks: [], yTicks: [] }),
-    [activeView],
-  );
 
   const mapPoint = useCallback(
     (x: number, y: number) => {
@@ -510,14 +508,18 @@ function ProjectionSpaceWidget({
         </div>
       </div>
 
-      <div className="relative min-h-0 w-full flex-1 overflow-hidden rounded-xl border border-neutral-800 bg-[#070708]">
+      <div
+        className="relative min-h-0 w-full flex-1 overflow-hidden rounded-xl border border-neutral-800"
+        style={{ backgroundColor: MAP_INFINITE_GRID.background }}
+      >
         <svg
           ref={svgRef}
           viewBox={`0 0 ${w} ${h}`}
           className="h-full min-h-[28rem] w-full cursor-grab touch-none active:cursor-grabbing"
           role="img"
-          aria-label="Knowledge config projection space with grid, coordinates, and zoom"
+          aria-label="Knowledge config projection space with infinite grid and zoom"
           data-projection-canvas
+          data-map-infinite-grid-surface="workspace-local"
           onWheel={onWheel}
           onPointerDown={onPointerDown}
           onPointerMove={onPointerMove}
@@ -533,94 +535,31 @@ function ProjectionSpaceWidget({
               <stop offset="100%" stopColor="#22d3ee" stopOpacity="0.95" />
             </linearGradient>
             <clipPath id="projection-plot-clip">
-              <rect x={m} y={m} width={w - 2 * m} height={h - 2 * m} />
+              <rect x={0} y={0} width={w} height={h} />
             </clipPath>
+            {(() => {
+              const g = mapInfiniteGridPatternAttrs(`${MAP_INFINITE_GRID.patternId}-workspace`);
+              return (
+                <pattern
+                  id={g.id}
+                  width={g.width}
+                  height={g.height}
+                  patternUnits={g.patternUnits}
+                >
+                  <path d={g.pathD} fill="none" stroke={g.stroke} strokeWidth={g.strokeWidth} />
+                </pattern>
+              );
+            })()}
           </defs>
 
-          {/* Plot background */}
-          <rect x={m} y={m} width={w - 2 * m} height={h - 2 * m} fill="#0b0b0d" />
-
-          {/* Coordinate grid */}
-          <g data-projection-grid>
-            {ticks.xTicks.map((t, i) => {
-              const p = mapPoint(t.data, activeView.originY);
-              return (
-                <g key={`vx-${i}-${t.data}`}>
-                  <line
-                    x1={p.x}
-                    y1={m}
-                    x2={p.x}
-                    y2={h - m}
-                    stroke="#1f1f23"
-                    strokeWidth={1}
-                  />
-                  <text
-                    x={p.x}
-                    y={h - m + 16}
-                    fill="#737373"
-                    fontSize="11"
-                    textAnchor="middle"
-                    className="select-none"
-                    data-projection-tick-x
-                  >
-                    {t.label}
-                  </text>
-                </g>
-              );
-            })}
-            {ticks.yTicks.map((t, i) => {
-              const p = mapPoint(activeView.originX, t.data);
-              return (
-                <g key={`hy-${i}-${t.data}`}>
-                  <line
-                    x1={m}
-                    y1={p.y}
-                    x2={w - m}
-                    y2={p.y}
-                    stroke="#1f1f23"
-                    strokeWidth={1}
-                  />
-                  <text
-                    x={m - 8}
-                    y={p.y + 4}
-                    fill="#737373"
-                    fontSize="11"
-                    textAnchor="end"
-                    className="select-none"
-                    data-projection-tick-y
-                  >
-                    {t.label}
-                  </text>
-                </g>
-              );
-            })}
-          </g>
-
-          {/* Axis spines */}
-          <g data-projection-axes>
-            <line x1={m} y1={h - m} x2={w - m} y2={h - m} stroke="#404040" strokeWidth={1.25} />
-            <line x1={m} y1={m} x2={m} y2={h - m} stroke="#404040" strokeWidth={1.25} />
-            <text
-              x={(m + w - m) / 2}
-              y={h - 10}
-              fill="#a3a3a3"
-              fontSize="12"
-              textAnchor="middle"
-              className="select-none"
-            >
-              projection x
-            </text>
-            <text
-              x={14}
-              y={(m + h - m) / 2}
-              fill="#a3a3a3"
-              fontSize="12"
-              textAnchor="middle"
-              transform={`rotate(-90 14 ${(m + h - m) / 2})`}
-              className="select-none"
-            >
-              projection y
-            </text>
+          {/* Shared infinite grid canvas (no axes / tick labels) */}
+          <g data-map-infinite-grid data-projection-grid>
+            <rect width={w} height={h} fill={MAP_INFINITE_GRID.background} />
+            <rect
+              width={w}
+              height={h}
+              fill={mapInfiniteGridPatternFill(`${MAP_INFINITE_GRID.patternId}-workspace`)}
+            />
           </g>
 
           <g clipPath="url(#projection-plot-clip)">

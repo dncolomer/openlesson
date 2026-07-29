@@ -124,8 +124,11 @@ export function MapOfKnowledgeClient() {
     () => new Set(),
   );
   const [fullscreen, setFullscreen] = useState(false);
-  // Fresh random identity on each page load (not a fixed seed).
-  const [guestIdentity, setGuestIdentity] = useState(() => generateAnonymousGuestIdentity());
+  // Stable SSR placeholder; randomized on client mount to avoid hydration mismatch.
+  const [guestIdentity, setGuestIdentity] = useState(() =>
+    generateAnonymousGuestIdentity(0),
+  );
+  const [guestIdentityReady, setGuestIdentityReady] = useState(false);
   const guestName = guestIdentity.display_name;
   const [selectedWorkspaceId, setSelectedWorkspaceId] = useState("");
   const [selectedBlockId, setSelectedBlockId] = useState("");
@@ -164,6 +167,12 @@ export function MapOfKnowledgeClient() {
 
   const mapShellRef = useRef<HTMLDivElement>(null);
   const workspaceInitRef = useRef(false);
+
+  // Randomize guest identity only after mount so SSR HTML matches first client paint.
+  useEffect(() => {
+    setGuestIdentity(generateAnonymousGuestIdentity());
+    setGuestIdentityReady(true);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -372,6 +381,7 @@ export function MapOfKnowledgeClient() {
   const regenerateGuest = () => {
     // Fresh seedless identity reshuffles both display name and STEM mini avatar.
     setGuestIdentity(generateAnonymousGuestIdentity());
+    setGuestIdentityReady(true);
     setMintResult(null);
   };
 
@@ -1161,25 +1171,29 @@ export function MapOfKnowledgeClient() {
                 <span
                   className="relative flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full border border-zinc-700 bg-zinc-900"
                   data-guest-avatar
-                  data-guest-avatar-id={guestIdentity.avatar_id}
-                  title={guestIdentity.avatar_label}
+                  data-guest-avatar-id={guestIdentityReady ? guestIdentity.avatar_id : undefined}
+                  title={guestIdentityReady ? guestIdentity.avatar_label : "Guest avatar"}
                 >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={guestIdentity.avatar_path}
-                    alt={guestIdentity.avatar_label}
-                    width={44}
-                    height={44}
-                    className="h-11 w-11 object-cover"
-                  />
+                  {guestIdentityReady ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={guestIdentity.avatar_path}
+                      alt={guestIdentity.avatar_label}
+                      width={44}
+                      height={44}
+                      className="h-11 w-11 object-cover"
+                    />
+                  ) : (
+                    <span className="h-6 w-6 animate-pulse rounded-full bg-zinc-800" aria-hidden />
+                  )}
                 </span>
                 <span
                   className="min-w-0 flex-1 truncate rounded-sm border border-zinc-800 bg-black/40 px-3 py-2.5 text-sm text-zinc-200"
                   data-guest-display-name
                   aria-label="Guest display name"
-                  title={guestName}
+                  title={guestIdentityReady ? guestName : undefined}
                 >
-                  {guestName}
+                  {guestIdentityReady ? guestName : "…"}
                 </span>
                 <button
                   type="button"

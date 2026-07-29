@@ -958,7 +958,6 @@ export function MapOfKnowledgeClient() {
                 {blocksForWorkspace.map((b) => (
                   <option key={b.id} value={b.id}>
                     {b.title}
-                    {b.is_start ? " (start)" : ""}
                   </option>
                 ))}
               </select>

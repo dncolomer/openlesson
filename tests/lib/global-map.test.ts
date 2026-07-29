@@ -7,8 +7,16 @@ import {
   buildGlobalMapModel,
   classifyUserAgainstRegion,
   countUsersForRegion,
+  GLOBAL_MAP_VIEW_DEFAULT,
+  clampGlobalMapZoom,
+  enabledRegionsForLocalFocus,
   formatGlobalMapDistance,
+  globalMapRegionSummary,
+  globalMapViewTransformAttr,
+  panGlobalMapView,
   regionCentroidDistance,
+  workspaceKnowledgeToGlobalMapInputs,
+  zoomGlobalMapView,
 } from "@/lib/map-of-knowledge/global-map";
 import type { MapRegion, MapUserLocation } from "@/lib/map-of-knowledge";
 
@@ -185,14 +193,101 @@ describe("Global Map pure geometry", () => {
   });
 });
 
+describe("Global Map pan/zoom transform", () => {
+  it("clamps zoom and pans/zooms with pure helpers", () => {
+    expect(clampGlobalMapZoom(0.01)).toBeGreaterThan(0);
+    expect(clampGlobalMapZoom(100)).toBeLessThanOrEqual(8);
+    expect(clampGlobalMapZoom(Number.NaN)).toBe(1);
+
+    const panned = panGlobalMapView(GLOBAL_MAP_VIEW_DEFAULT, 40, -20);
+    expect(panned.panX).toBe(40);
+    expect(panned.panY).toBe(-20);
+    expect(panned.zoom).toBe(1);
+
+    const zoomed = zoomGlobalMapView(GLOBAL_MAP_VIEW_DEFAULT, 2, 480, 260);
+    expect(zoomed.zoom).toBe(2);
+    // Focus point stays fixed: after transform, 480 maps through pan+scale
+    expect(globalMapViewTransformAttr(zoomed)).toContain("scale(2)");
+    expect(globalMapViewTransformAttr(zoomed)).toContain("translate(");
+
+    // Absolute zoom-out toward same focus stays finite and clamps
+    const again = zoomGlobalMapView(zoomed, 0.5, 480, 260);
+    expect(again.zoom).toBe(0.5);
+    expect(Number.isFinite(again.panX)).toBe(true);
+    expect(Number.isFinite(again.panY)).toBe(true);
+    // Restore to 1×
+    const reset = zoomGlobalMapView(again, 1, 480, 260);
+    expect(reset.zoom).toBe(1);
+  });
+});
+
+describe("Global Map focus helpers", () => {
+  it("enabledRegionsForLocalFocus returns only the clicked region id", () => {
+    expect(enabledRegionsForLocalFocus("reg-abc")).toEqual(["reg-abc"]);
+    expect(enabledRegionsForLocalFocus("  ")).toEqual([]);
+    expect(enabledRegionsForLocalFocus("")).toEqual([]);
+  });
+
+  it("globalMapRegionSummary maps node fields for the selection panel", () => {
+    const summary = globalMapRegionSummary({
+      id: "r1",
+      name: "Analysis",
+      workspace_id: "ws",
+      workspace_title: "Mathematics",
+      x: 0,
+      y: 0,
+      radius: 0.4,
+      inside_count: 3,
+      near_count: 2,
+    });
+    expect(summary).toEqual({
+      region_id: "r1",
+      name: "Analysis",
+      workspace_id: "ws",
+      workspace_title: "Mathematics",
+      inside_count: 3,
+      near_count: 2,
+      radius: 0.4,
+    });
+    expect(globalMapRegionSummary(null)).toBeNull();
+  });
+
+  it("workspaceKnowledgeToGlobalMapInputs builds MapRegion/user rows for Knowledge tab", () => {
+    const { regions, users } = workspaceKnowledgeToGlobalMapInputs({
+      workspaceId: "ws-1",
+      workspaceTitle: "Demo",
+      regions: [
+        {
+          id: "region-a",
+          name: "Backend",
+          centroid: [1, 0, 0, 0],
+          mean_radius: 0.3,
+        },
+      ],
+      subjectVectors: [{ id: "u:1", vector: [1, 0, 0, 0], label: "User 1" }],
+      project2d: (v) => ({ x: v[0] ?? 0, y: v[1] ?? 0 }),
+    });
+    expect(regions).toHaveLength(1);
+    expect(regions[0].id).toBe("region-a");
+    expect(regions[0].workspace_id).toBe("ws-1");
+    expect(regions[0].radius).toBe(0.3);
+    expect(users).toHaveLength(1);
+    expect(users[0].workspace_id).toBe("ws-1");
+    expect(users[0].vector[0]).toBe(1);
+  });
+});
+
 describe("Global Map UI structure", () => {
-  it("ships Local Map / Global Map controls and Global Map renderer", () => {
+  it("ships Local Map / Global Map controls and interactive Global Map renderer", () => {
     const client = join(root, "components/MapOfKnowledgeClient.tsx");
     const global = join(root, "components/MapOfKnowledgeGlobal.tsx");
+    const knowledge = join(root, "components/KnowledgeConfigTrajectoryPanel.tsx");
     expect(existsSync(client)).toBe(true);
     expect(existsSync(global)).toBe(true);
+    expect(existsSync(knowledge)).toBe(true);
     const clientSrc = readFileSync(client, "utf8");
     const globalSrc = readFileSync(global, "utf8");
+    const knowledgeSrc = readFileSync(knowledge, "utf8");
 
     expect(clientSrc).toContain("Local Map");
     expect(clientSrc).toContain("Global Map");
@@ -201,12 +296,31 @@ describe("Global Map UI structure", () => {
     expect(clientSrc).toContain('data-map-scope="local"');
     expect(clientSrc).toContain("MapOfKnowledgeGlobal");
     expect(clientSrc).toContain("mapScope");
-    // Fullscreen path reuses mapSurface (global included)
+    // Default map representation is Global Map on both MoK and workspace Knowledge.
+    expect(clientSrc).toMatch(/useState<MapScope>\(["']global["']\)/);
+    expect(knowledgeSrc).toMatch(
+      /useState<["']local["']\s*\|\s*["']global["']>\(["']global["']\)/,
+    );
+    expect(clientSrc).toContain("openLocalMapFocusedOnRegion");
+    expect(clientSrc).toContain("enabledRegionsForLocalFocus");
     expect(clientSrc).toContain("fullscreen");
     expect(clientSrc).toContain("data-map-fullscreen");
     expect(clientSrc).toMatch(/mapScope === ["']global["']/);
 
     expect(globalSrc).toContain("data-map-global");
+    expect(globalSrc).toContain("data-map-global-interactive");
+    expect(globalSrc).toContain("data-map-global-viewport");
+    expect(globalSrc).toContain("data-map-global-zoom-controls");
+    expect(globalSrc).toContain("data-map-global-zoom-in");
+    expect(globalSrc).toContain("data-map-global-zoom-out");
+    expect(globalSrc).toContain("data-map-global-zoom-reset");
+    expect(globalSrc).toContain("onWheel");
+    expect(globalSrc).toContain("onPointerDown");
+    expect(globalSrc).toContain("zoomGlobalMapView");
+    expect(globalSrc).toContain("panGlobalMapView");
+    expect(globalSrc).toContain("data-map-global-legend");
+    expect(globalSrc).toContain("data-map-global-legend-toggle");
+    expect(globalSrc).toMatch(/useState\(false\)/); // legend collapsed by default
     expect(globalSrc).toContain("data-map-global-region-dot");
     expect(globalSrc).toContain("data-map-global-orbit-inside");
     expect(globalSrc).toContain("data-map-global-orbit-near");
@@ -214,9 +328,31 @@ describe("Global Map UI structure", () => {
     expect(globalSrc).toContain("data-map-global-bubble-near");
     expect(globalSrc).toContain("data-map-global-edge");
     expect(globalSrc).toContain("data-map-global-distance");
+    expect(globalSrc).toContain("data-map-global-region-summary");
+    expect(globalSrc).toContain("data-map-global-open-local");
+    expect(globalSrc).toContain("onOpenLocalMap");
     expect(globalSrc).toContain("strokeDasharray");
-    // Users not free-scatter markers
     expect(globalSrc).not.toMatch(/userLocations\.map/);
-    expect(globalSrc).toMatch(/Users are not plotted|not free/i);
+
+    expect(knowledgeSrc).toContain("data-knowledge-map-scope-toggle");
+    expect(knowledgeSrc).toContain("MapOfKnowledgeGlobal");
+    expect(knowledgeSrc).toContain("openLocalMapFocusedOnRegion");
+    expect(knowledgeSrc).toContain("data-knowledge-global-map");
+    expect(knowledgeSrc).toContain("workspaceKnowledgeToGlobalMapInputs");
+    // Project control on both Local and Global Map (MoK toolbar + workspace sidebar)
+    expect(clientSrc).toContain("data-map-projection-select");
+    expect(clientSrc).toContain(
+      "Project: layout algorithm for Local Map dots and Global Map region graph",
+    );
+    expect(knowledgeSrc).toContain("data-projection-algorithm-select");
+    expect(knowledgeSrc).toContain("reprojectMapLayout");
+    expect(knowledgeSrc).toMatch(/algorithm:\s*projectionAlgorithm/);
+    // Region picker matches Map of Knowledge (collapsible group + All/None + sync)
+    expect(knowledgeSrc).toContain("data-map-region-workspace-group");
+    expect(knowledgeSrc).toContain("data-map-region-workspace-select-all");
+    expect(knowledgeSrc).toContain("data-map-region-workspace-toggle");
+    expect(knowledgeSrc).toContain("toggleAllWorkspaceRegions");
+    expect(knowledgeSrc).toContain("selectedRegionIds.has(r.id)");
+    expect(knowledgeSrc).toMatch(/selectedRegionIds\.has\(r\.id\)/);
   });
 });

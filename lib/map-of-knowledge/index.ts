@@ -45,17 +45,29 @@ export type {
   GlobalMapEdge,
   GlobalMapModel,
   GlobalMapRegionNode,
+  GlobalMapRegionSummary,
   GlobalMapUserClass,
+  GlobalMapViewTransform,
 } from "@/lib/map-of-knowledge/global-map";
 export {
+  GLOBAL_MAP_MAX_ZOOM,
+  GLOBAL_MAP_MIN_ZOOM,
   GLOBAL_MAP_NEAR_RADIUS_FACTOR,
+  GLOBAL_MAP_VIEW_DEFAULT,
   buildGlobalMapEdges,
   buildGlobalMapModel,
   classifyUserAgainstRegion,
+  clampGlobalMapZoom,
   countUsersForRegion,
+  enabledRegionsForLocalFocus,
   formatGlobalMapDistance,
+  globalMapRegionSummary,
+  globalMapViewTransformAttr,
+  panGlobalMapView,
   regionCentroidDistance,
   regionMembershipRadius,
+  workspaceKnowledgeToGlobalMapInputs,
+  zoomGlobalMapView,
 } from "@/lib/map-of-knowledge/global-map";
 
 import {

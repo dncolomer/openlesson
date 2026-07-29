@@ -11,6 +11,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import {
+  enabledRegionsForLocalFocus,
   filterEnabledRegions,
   filterMapPlacementWorkspaces,
   generateAnonymousGuestIdentity,
@@ -75,8 +76,10 @@ export function MapOfKnowledgeClient() {
   const [data, setData] = useState<MapOfKnowledgePayload | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [mapScope, setMapScope] = useState<MapScope>("local");
+  const [mapScope, setMapScope] = useState<MapScope>("global");
   const [viewMode, setViewMode] = useState<ViewMode>("2d");
+  /** Global Map region selection (summary panel). */
+  const [globalSelectedRegionId, setGlobalSelectedRegionId] = useState<string | null>(null);
   const [projectionAlgorithm, setProjectionAlgorithm] =
     useState<ProjectionAlgorithmId>("pca");
   const [embeddingModelId, setEmbeddingModelId] = useState<string>(
@@ -297,6 +300,23 @@ export function MapOfKnowledgeClient() {
     });
   };
 
+  /** From Global Map: switch to Local with only this region enabled. */
+  const openLocalMapFocusedOnRegion = useCallback(
+    (regionId: string) => {
+      const ids = enabledRegionsForLocalFocus(regionId);
+      if (ids.length === 0) return;
+      setEnabledRegions(new Set(ids));
+      setGlobalSelectedRegionId(null);
+      setMapScope("local");
+      // Expand the workspace group that owns this region.
+      const region = data?.regions.find((r) => r.id === regionId);
+      if (region?.workspace_id) {
+        setExpandedRegionWorkspaces(new Set([region.workspace_id]));
+      }
+    },
+    [data?.regions],
+  );
+
   const regenerateGuest = () => {
     // Fresh seedless identity reshuffles both display name and STEM mini avatar.
     setGuestIdentity(generateAnonymousGuestIdentity());
@@ -494,30 +514,33 @@ export function MapOfKnowledgeClient() {
               ))}
             </select>
           </label>
-
-          <label className="inline-flex items-center gap-1.5">
-            <span className="hidden font-mono text-[9px] uppercase tracking-[1px] text-zinc-600 sm:inline">
-              Project
-            </span>
-            <select
-              value={projectionAlgorithm}
-              onChange={(e) =>
-                setProjectionAlgorithm(parseProjectionAlgorithmId(e.target.value, "pca"))
-              }
-              className={selectClass}
-              title={activeAlgoMeta?.description || "Projection algorithm"}
-              aria-label="Projection algorithm"
-              data-map-projection-select
-            >
-              {PROJECTION_ALGORITHM_OPTIONS.map((opt) => (
-                <option key={opt.id} value={opt.id} title={opt.description}>
-                  {opt.shortLabel}
-                </option>
-              ))}
-            </select>
-          </label>
         </>
       )}
+
+      {/* Project: layout algorithm for Local Map dots and Global Map region graph */}
+      <span className="hidden h-4 w-px bg-zinc-800 sm:block" aria-hidden />
+
+      <label className="inline-flex items-center gap-1.5">
+        <span className="hidden font-mono text-[9px] uppercase tracking-[1px] text-zinc-600 sm:inline">
+          Project
+        </span>
+        <select
+          value={projectionAlgorithm}
+          onChange={(e) =>
+            setProjectionAlgorithm(parseProjectionAlgorithmId(e.target.value, "pca"))
+          }
+          className={selectClass}
+          title={activeAlgoMeta?.description || "Projection algorithm"}
+          aria-label="Projection algorithm"
+          data-map-projection-select
+        >
+          {PROJECTION_ALGORITHM_OPTIONS.map((opt) => (
+            <option key={opt.id} value={opt.id} title={opt.description}>
+              {opt.shortLabel}
+            </option>
+          ))}
+        </select>
+      </label>
 
       <button
         type="button"
@@ -661,6 +684,11 @@ export function MapOfKnowledgeClient() {
             regions={visibleRegions}
             fill={fullscreen}
             className={fullscreen ? "relative z-[1] h-full min-h-0 flex-1" : "relative z-[1]"}
+            selectedRegionId={globalSelectedRegionId}
+            onSelectRegion={(summary) =>
+              setGlobalSelectedRegionId(summary?.region_id ?? null)
+            }
+            onOpenLocalMap={openLocalMapFocusedOnRegion}
           />
         ) : viewMode === "3d" ? (
           <MapOfKnowledge3D

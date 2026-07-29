@@ -42,6 +42,12 @@ import {
   type ProjectionDisplayMode,
   type ProjectionAlgorithmId,
 } from "@/lib/knowledge-config";
+import {
+  enabledRegionsForLocalFocus,
+  reprojectMapLayout,
+  workspaceKnowledgeToGlobalMapInputs,
+} from "@/lib/map-of-knowledge";
+import { MapOfKnowledgeGlobal } from "@/components/MapOfKnowledgeGlobal";
 import { PerformanceReportCard } from "@/components/PerformanceReportCard";
 import { MarkerRadarChart } from "@/components/MarkerRadarChart";
 import type { PerformanceReport } from "@/lib/pow-api/performance-report";
@@ -1175,6 +1181,11 @@ export function KnowledgeConfigTrajectoryPanel({
     useState<ProjectionDisplayMode>("trajectory");
   const [projectionAlgorithm, setProjectionAlgorithm] =
     useState<ProjectionAlgorithmId>("random");
+  /** Local Map (trajectory projection) vs Global Map (region graph + orbits). */
+  const [knowledgeMapScope, setKnowledgeMapScope] = useState<"local" | "global">("global");
+  const [globalSelectedRegionId, setGlobalSelectedRegionId] = useState<string | null>(null);
+  /** Region list group expanded (Map of Knowledge–style collapsible). Collapsed by default. */
+  const [regionPickerExpanded, setRegionPickerExpanded] = useState(false);
 
   const enterEmbeddingsFullscreen = useCallback(async () => {
     setEmbeddingsFullscreen(true);
@@ -2007,6 +2018,98 @@ export function KnowledgeConfigTrajectoryPanel({
   const coords = projectedLayout.coords;
   const regionOverlays = projectedLayout.regionOverlays as KnowledgeRegionOverlay2D[];
 
+  /** Global Map inputs: only selected regions (synced with picker) + latest subject vectors. */
+  const workspaceGlobalMap = useMemo(() => {
+    const rawPoints = embData?.trajectory.points;
+    const latestBySubject = new Map<
+      string,
+      { id: string; vector: number[]; label?: string; as_of_ms: number }
+    >();
+    if (Array.isArray(rawPoints)) {
+      for (const p of rawPoints) {
+        const vec = Array.isArray(p.vector) ? p.vector : [];
+        if (vec.length === 0) continue;
+        const key =
+          (p.subject_guest_user_id && `g:${p.subject_guest_user_id}`) ||
+          (p.subject_user_id && `u:${p.subject_user_id}`) ||
+          `p:${p.as_of_ms}`;
+        const prev = latestBySubject.get(key);
+        if (!prev || p.as_of_ms >= prev.as_of_ms) {
+          latestBySubject.set(key, {
+            id: key,
+            vector: vec,
+            as_of_ms: p.as_of_ms,
+            label: key.startsWith("g:")
+              ? `Guest ${key.slice(2, 10)}`
+              : key.startsWith("u:")
+                ? `User ${key.slice(2, 10)}`
+                : key,
+          });
+        }
+      }
+    }
+    const subjectVectors = Array.from(latestBySubject.values()).map((s) => ({
+      id: s.id,
+      vector: s.vector,
+      label: s.label,
+    }));
+    // Keep Global Map in lockstep with the region picker selection.
+    const selectedRegions = knowledgeRegions.filter(
+      (r) =>
+        selectedRegionIds.has(r.id) &&
+        Array.isArray(r.centroid) &&
+        r.centroid.length > 0,
+    );
+    // Build high-D rows first, then jointly project x/y under the selected algorithm
+    // (same Project control as Local Map trajectory layout).
+    const base = workspaceKnowledgeToGlobalMapInputs({
+      workspaceId,
+      workspaceTitle: "Workspace",
+      regions: selectedRegions.map((r) => ({
+        id: r.id,
+        name: r.name,
+        centroid: r.centroid,
+        mean_radius: r.mean_radius,
+      })),
+      subjectVectors,
+    });
+    const laidOut = reprojectMapLayout({
+      userLocations: base.users,
+      regions: base.regions,
+      algorithm: projectionAlgorithm,
+    });
+    return { regions: laidOut.regions, users: laidOut.userLocations };
+  }, [
+    embData?.trajectory.points,
+    knowledgeRegions,
+    selectedRegionIds,
+    workspaceId,
+    projectionAlgorithm,
+  ]);
+
+  // Default: select all regions with centroids once when the list first loads (empty selection).
+  useEffect(() => {
+    if (knowledgeRegions.length === 0) return;
+    setSelectedRegionIds((prev) => {
+      if (prev.size > 0) return prev;
+      const next = new Set<string>();
+      for (const r of knowledgeRegions) {
+        if (Array.isArray(r.centroid) && r.centroid.length > 0) next.add(r.id);
+      }
+      return next;
+    });
+  }, [knowledgeRegions]);
+
+  const openLocalMapFocusedOnRegion = useCallback((regionId: string) => {
+    const ids = enabledRegionsForLocalFocus(regionId);
+    if (ids.length === 0) return;
+    setSelectedRegionIds(new Set(ids));
+    setGlobalSelectedRegionId(null);
+    setKnowledgeMapScope("local");
+    setProjectionDisplayMode("latest");
+    setRegionPickerExpanded(true);
+  }, []);
+
   const toggleRegionOverlay = (id: string) => {
     setSelectedRegionIds((prev) => {
       const next = new Set(prev);
@@ -2015,6 +2118,24 @@ export function KnowledgeConfigTrajectoryPanel({
       return next;
     });
   };
+
+  const selectableRegionIds = useMemo(
+    () =>
+      knowledgeRegions
+        .filter((r) => Array.isArray(r.centroid) && r.centroid.length > 0)
+        .map((r) => r.id),
+    [knowledgeRegions],
+  );
+
+  const toggleAllWorkspaceRegions = useCallback(() => {
+    setSelectedRegionIds((prev) => {
+      const allOn =
+        selectableRegionIds.length > 0 &&
+        selectableRegionIds.every((id) => prev.has(id));
+      if (allOn) return new Set();
+      return new Set(selectableRegionIds);
+    });
+  }, [selectableRegionIds]);
 
   const summary = useMemo(() => {
     if (!embData) return null;
@@ -2189,19 +2310,56 @@ export function KnowledgeConfigTrajectoryPanel({
               className="flex min-h-0 min-w-0 flex-1 flex-col gap-2"
             >
               <div className="flex shrink-0 flex-wrap items-center justify-between gap-2">
-                <p className="min-w-0 truncate text-[11px] text-neutral-500">
-                  {embScope.label ? (
-                    <span className="text-neutral-400">{embScope.label}</span>
-                  ) : (
-                    <span>Knowledge config trajectory</span>
-                  )}
-                  {summary ? (
-                    <span className="text-neutral-600">
-                      {" "}
-                      · {summary.points} sample{summary.points === 1 ? "" : "s"}
-                    </span>
-                  ) : null}
-                </p>
+                <div className="flex min-w-0 flex-wrap items-center gap-2">
+                  <div
+                    className="inline-flex rounded-md border border-neutral-700 p-0.5"
+                    role="group"
+                    aria-label="Knowledge map scope"
+                    data-knowledge-map-scope-toggle
+                  >
+                    <button
+                      type="button"
+                      onClick={() => setKnowledgeMapScope("local")}
+                      className={`rounded-sm px-2 py-1 font-mono text-[10px] tracking-wide transition ${
+                        knowledgeMapScope === "local"
+                          ? "bg-white/10 text-white"
+                          : "text-neutral-500 hover:text-neutral-300"
+                      }`}
+                      data-knowledge-map-scope="local"
+                      aria-pressed={knowledgeMapScope === "local"}
+                    >
+                      Local Map
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setKnowledgeMapScope("global")}
+                      className={`rounded-sm px-2 py-1 font-mono text-[10px] tracking-wide transition ${
+                        knowledgeMapScope === "global"
+                          ? "bg-white/10 text-white"
+                          : "text-neutral-500 hover:text-neutral-300"
+                      }`}
+                      data-knowledge-map-scope="global"
+                      aria-pressed={knowledgeMapScope === "global"}
+                    >
+                      Global Map
+                    </button>
+                  </div>
+                  <p className="min-w-0 truncate text-[11px] text-neutral-500">
+                    {knowledgeMapScope === "global" ? (
+                      <span className="text-neutral-400">Region graph · dual orbits</span>
+                    ) : embScope.label ? (
+                      <span className="text-neutral-400">{embScope.label}</span>
+                    ) : (
+                      <span>Knowledge config trajectory</span>
+                    )}
+                    {summary && knowledgeMapScope === "local" ? (
+                      <span className="text-neutral-600">
+                        {" "}
+                        · {summary.points} sample{summary.points === 1 ? "" : "s"}
+                      </span>
+                    ) : null}
+                  </p>
+                </div>
                 <div className="flex shrink-0 items-center gap-1.5">
                   <button
                     type="button"
@@ -2295,9 +2453,31 @@ export function KnowledgeConfigTrajectoryPanel({
                 </div>
               ) : null}
 
-              {embLoading && !embData && regionOverlays.length === 0 ? (
+              {embLoading &&
+              !embData &&
+              regionOverlays.length === 0 &&
+              knowledgeMapScope === "local" ? (
                 <div className="flex min-h-0 flex-1 items-center justify-center text-xs text-neutral-500">
                   Loading trajectory…
+                </div>
+              ) : knowledgeMapScope === "global" ? (
+                <div
+                  className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-md border border-neutral-800"
+                  data-knowledge-global-map
+                  data-embeddings-fullscreen-scope={embeddingsFullscreen ? "true" : "false"}
+                >
+                  <MapOfKnowledgeGlobal
+                    regions={workspaceGlobalMap.regions}
+                    userLocations={workspaceGlobalMap.users}
+                    fill
+                    className="min-h-0 flex-1"
+                    selectedRegionId={globalSelectedRegionId}
+                    onSelectRegion={(summary) =>
+                      setGlobalSelectedRegionId(summary?.region_id ?? null)
+                    }
+                    onOpenLocalMap={openLocalMapFocusedOnRegion}
+                    openLocalLabel="Open Local Map (this region only)"
+                  />
                 </div>
               ) : (
                 <div className="flex min-h-0 flex-1 flex-col">
@@ -2371,9 +2551,10 @@ export function KnowledgeConfigTrajectoryPanel({
               </div>
             </div>
 
-            {/* Right: selected regions + knowledge-distance cards */}
+            {/* Right: Map of Knowledge–style region picker (synced with Global/Local map) */}
             <aside
               data-embeddings-regions-rail
+              data-map-regions-panel
               className={`flex shrink-0 flex-col overflow-hidden ${
                 embeddingsFullscreen ? "w-56 sm:w-64" : "w-56 sm:w-64"
               }`}
@@ -2385,18 +2566,19 @@ export function KnowledgeConfigTrajectoryPanel({
               */}
               <div
                 data-region-overlay-picker
-                aria-label="Region overlay multi-select"
-                className="flex min-h-0 flex-1 flex-col gap-0 overflow-hidden rounded-lg border border-neutral-800/80 bg-neutral-950/40"
+                data-map-region-workspace-groups
+                aria-label="Knowledge regions multi-select"
+                className="flex min-h-0 flex-1 flex-col gap-0 overflow-hidden rounded-lg border border-zinc-800 bg-zinc-950/70"
               >
-                <div className="flex shrink-0 items-center justify-between gap-2 border-b border-neutral-800/60 px-2.5 py-2">
-                  <div className="text-[11px] font-semibold uppercase tracking-wide text-neutral-300">
-                    Overlay knowledge regions
+                <div className="flex shrink-0 items-center justify-between gap-2 border-b border-zinc-800 px-2.5 py-2">
+                  <div className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-500">
+                    Regions
                   </div>
                   <button
                     type="button"
                     onClick={() => void loadRegionsForOverlay()}
                     disabled={regionsLoading}
-                    className="shrink-0 text-[11px] text-neutral-400 underline decoration-neutral-700 underline-offset-2 transition hover:text-neutral-200 disabled:opacity-40"
+                    className="shrink-0 text-[11px] text-zinc-500 underline decoration-zinc-700 underline-offset-2 transition hover:text-zinc-200 disabled:opacity-40"
                     data-region-overlay-refresh
                   >
                     {regionsLoading ? "Loading…" : "Refresh"}
@@ -2408,7 +2590,7 @@ export function KnowledgeConfigTrajectoryPanel({
                   className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-1.5 py-1.5"
                 >
                   {regionsLoading && knowledgeRegions.length === 0 ? (
-                    <p className="px-1 text-xs text-neutral-500" data-region-overlay-loading>
+                    <p className="px-1 text-xs text-zinc-500" data-region-overlay-loading>
                       Loading knowledge regions…
                     </p>
                   ) : regionsError ? (
@@ -2423,66 +2605,167 @@ export function KnowledgeConfigTrajectoryPanel({
                       </button>
                     </div>
                   ) : knowledgeRegions.length === 0 ? (
-                    <div className="px-1 text-xs text-neutral-400" data-region-overlay-empty>
-                      <p className="font-medium text-neutral-300">No knowledge regions yet</p>
-                      <p className="mt-1 text-neutral-500">
+                    <div className="px-1 text-xs text-zinc-400" data-region-overlay-empty>
+                      <p className="font-medium text-zinc-300">No knowledge regions yet</p>
+                      <p className="mt-1 text-zinc-500">
                         Create under Settings → Custom Knowledge Regions, then multi-select here.
                       </p>
                     </div>
                   ) : (
-                    <ul
-                      className="flex flex-col gap-0.5"
-                      data-region-overlay-list
-                      role="group"
-                      aria-label="Select regions to overlay"
-                    >
-                      {knowledgeRegions.map((r, i) => {
-                        const checked = selectedRegionIds.has(r.id);
-                        const color = REGION_OVERLAY_COLORS[i % REGION_OVERLAY_COLORS.length];
-                        const hasCentroid = Array.isArray(r.centroid) && r.centroid.length > 0;
-                        const dist = checked ? overlayDistances[r.id] : undefined;
-                        return (
-                          <li key={r.id}>
-                            <label
-                              className={`flex cursor-pointer items-center gap-2 rounded-md px-1.5 py-1.5 text-xs transition ${
-                                checked
-                                  ? "bg-neutral-800/80 text-white"
-                                  : "text-neutral-300 hover:bg-neutral-900 hover:text-white"
-                              } ${!hasCentroid ? "opacity-50" : ""}`}
-                            >
-                              <input
-                                type="checkbox"
-                                checked={checked}
-                                disabled={!hasCentroid}
-                                onChange={() => toggleRegionOverlay(r.id)}
-                                className="rounded border-neutral-500"
-                                data-region-overlay-toggle={r.id}
-                              />
-                              <span
-                                className="inline-block h-2.5 w-2.5 shrink-0 rounded-full"
-                                style={{ backgroundColor: color }}
-                                aria-hidden
-                              />
-                              <span className="min-w-0 flex-1 truncate">{r.name}</span>
-                              {!hasCentroid ? (
-                                <span className="shrink-0 text-[10px] text-neutral-500">
-                                  no centroid
-                                </span>
-                              ) : null}
-                              {checked && dist && !dist.error && Number.isFinite(dist.knowledge_distance) ? (
+                    (() => {
+                      const enabledInGroup = selectableRegionIds.filter((id) =>
+                        selectedRegionIds.has(id),
+                      ).length;
+                      const hasSelection = enabledInGroup > 0;
+                      const allSelected =
+                        selectableRegionIds.length > 0 &&
+                        enabledInGroup === selectableRegionIds.length;
+                      return (
+                        <ul className="space-y-2" data-region-overlay-list>
+                          <li
+                            className={`rounded-sm border bg-black/20 ${
+                              hasSelection ? "border-zinc-500/80" : "border-zinc-800/90"
+                            }`}
+                            data-map-region-workspace-group
+                            data-workspace-id={workspaceId}
+                            data-expanded={regionPickerExpanded ? "true" : "false"}
+                            data-has-selection={hasSelection ? "true" : "false"}
+                          >
+                            <div className="flex items-stretch gap-0">
+                              <button
+                                type="button"
+                                onClick={() => setRegionPickerExpanded((o) => !o)}
+                                className={`flex min-w-0 flex-1 items-center gap-2 px-2.5 py-2 text-left text-xs transition hover:bg-zinc-900/60 ${
+                                  hasSelection ? "text-white" : "text-zinc-500"
+                                }`}
+                                aria-expanded={regionPickerExpanded}
+                                data-map-region-workspace-toggle
+                              >
                                 <span
-                                  className="shrink-0 font-mono text-[10px] text-violet-200"
-                                  data-knowledge-distance-inline={r.id}
-                                  title={`Knowledge distance ${dist.knowledge_distance.toFixed(4)}`}
+                                  className={`shrink-0 font-mono text-[10px] transition-transform ${
+                                    regionPickerExpanded ? "rotate-0" : "-rotate-90"
+                                  } ${hasSelection ? "text-white" : "text-zinc-600"}`}
+                                  aria-hidden
                                 >
-                                  d={dist.knowledge_distance.toFixed(3)}
+                                  ▾
                                 </span>
-                              ) : null}
-                            </label>
+                                <span className="min-w-0 flex-1">
+                                  <span
+                                    className={`block truncate font-medium ${
+                                      hasSelection ? "text-white" : "text-zinc-500"
+                                    }`}
+                                  >
+                                    Workspace regions
+                                  </span>
+                                  <span
+                                    className={`block text-[10px] ${
+                                      hasSelection ? "text-zinc-300" : "text-zinc-600"
+                                    }`}
+                                  >
+                                    {enabledInGroup}/{selectableRegionIds.length} on
+                                    {knowledgeMapScope === "global"
+                                      ? " · Global Map"
+                                      : " · Local overlay"}
+                                  </span>
+                                </span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  toggleAllWorkspaceRegions();
+                                }}
+                                className={`shrink-0 border-l px-2.5 text-[10px] font-medium uppercase tracking-wide transition ${
+                                  allSelected
+                                    ? "border-zinc-600 text-zinc-200 hover:bg-zinc-800/80 hover:text-white"
+                                    : hasSelection
+                                      ? "border-zinc-600 text-zinc-300 hover:bg-zinc-800/80 hover:text-white"
+                                      : "border-zinc-800 text-zinc-500 hover:bg-zinc-900/60 hover:text-zinc-300"
+                                }`}
+                                title={
+                                  allSelected
+                                    ? "Clear all regions"
+                                    : "Select all regions"
+                                }
+                                aria-label={
+                                  allSelected
+                                    ? "Unselect all regions"
+                                    : "Select all regions"
+                                }
+                                data-map-region-workspace-select-all
+                                data-select-all-state={
+                                  allSelected ? "all" : hasSelection ? "partial" : "none"
+                                }
+                              >
+                                {allSelected ? "None" : "All"}
+                              </button>
+                            </div>
+                            {regionPickerExpanded && (
+                              <ul
+                                className="space-y-1 border-t border-zinc-800/80 px-1.5 py-1.5"
+                                data-map-region-list
+                                role="group"
+                                aria-label="Select regions"
+                              >
+                                {knowledgeRegions.map((r) => {
+                                  const checked = selectedRegionIds.has(r.id);
+                                  const hasCentroid =
+                                    Array.isArray(r.centroid) && r.centroid.length > 0;
+                                  const dist = checked
+                                    ? overlayDistances[r.id]
+                                    : undefined;
+                                  return (
+                                    <li key={r.id}>
+                                      <button
+                                        type="button"
+                                        disabled={!hasCentroid}
+                                        onClick={() => toggleRegionOverlay(r.id)}
+                                        className={`flex w-full items-start gap-2 rounded-sm border px-2.5 py-2 text-left text-xs transition ${
+                                          checked
+                                            ? "border-cyan-500/25 bg-cyan-950/20 text-zinc-200"
+                                            : "border-zinc-800 bg-transparent text-zinc-500 hover:border-zinc-700"
+                                        } ${!hasCentroid ? "cursor-not-allowed opacity-40" : ""}`}
+                                        data-region-overlay-toggle={r.id}
+                                        data-map-region-toggle
+                                        aria-pressed={checked}
+                                      >
+                                        <span
+                                          className={`mt-0.5 h-3 w-3 shrink-0 rounded-sm border ${
+                                            checked
+                                              ? "border-cyan-400 bg-cyan-400/80"
+                                              : "border-zinc-600"
+                                          }`}
+                                        />
+                                        <span className="min-w-0 flex-1">
+                                          <span className="block truncate font-medium">
+                                            {r.name}
+                                          </span>
+                                          {!hasCentroid ? (
+                                            <span className="block text-[10px] text-zinc-600">
+                                              no centroid
+                                            </span>
+                                          ) : checked &&
+                                            dist &&
+                                            !dist.error &&
+                                            Number.isFinite(dist.knowledge_distance) ? (
+                                            <span
+                                              className="block font-mono text-[10px] text-violet-200/90"
+                                              data-knowledge-distance-inline={r.id}
+                                            >
+                                              d={dist.knowledge_distance.toFixed(3)}
+                                            </span>
+                                          ) : null}
+                                        </span>
+                                      </button>
+                                    </li>
+                                  );
+                                })}
+                              </ul>
+                            )}
                           </li>
-                        );
-                      })}
-                    </ul>
+                        </ul>
+                      );
+                    })()
                   )}
                 </div>
 

@@ -126,12 +126,8 @@ export function MapOfKnowledgeClient() {
         const regions = (payload.regions || []) as MapRegion[];
         const defaultPick = pickDefaultEnabledRegionsFromOneWorkspace(regions, 3);
         setEnabledRegions(new Set(defaultPick.regionIds));
-        // Expand the workspace that owns the default highlights (fallback: first group).
-        const groups = groupRegionsByWorkspace(regions);
-        const expandIds = defaultPick.workspace_id
-          ? [defaultPick.workspace_id]
-          : groups.slice(0, 1).map((g) => g.workspace_id);
-        setExpandedRegionWorkspaces(new Set(expandIds));
+        // Region workspace groups start collapsed; users expand to pick.
+        setExpandedRegionWorkspaces(new Set());
         if (!workspaceInitRef.current) {
           workspaceInitRef.current = true;
           const firstWs = (payload.workspaces || [])[0];
@@ -633,33 +629,47 @@ export function MapOfKnowledgeClient() {
             const enabledInGroup = group.regions.filter((r) =>
               enabledRegions.has(r.id),
             ).length;
+            const hasSelection = enabledInGroup > 0;
             return (
               <li
                 key={group.workspace_id}
-                className="rounded-sm border border-zinc-800/90 bg-black/20"
+                className={`rounded-sm border bg-black/20 ${
+                  hasSelection ? "border-zinc-500/80" : "border-zinc-800/90"
+                }`}
                 data-map-region-workspace-group
                 data-workspace-id={group.workspace_id}
                 data-expanded={expanded ? "true" : "false"}
+                data-has-selection={hasSelection ? "true" : "false"}
               >
                 <button
                   type="button"
                   onClick={() => toggleRegionWorkspaceGroup(group.workspace_id)}
-                  className="flex w-full items-center gap-2 px-2.5 py-2 text-left text-xs text-zinc-200 transition hover:bg-zinc-900/60"
+                  className={`flex w-full items-center gap-2 px-2.5 py-2 text-left text-xs transition hover:bg-zinc-900/60 ${
+                    hasSelection ? "text-white" : "text-zinc-500"
+                  }`}
                   aria-expanded={expanded}
                   data-map-region-workspace-toggle
                 >
                   <ChevronDown
                     size={14}
-                    className={`shrink-0 text-zinc-500 transition-transform ${
+                    className={`shrink-0 transition-transform ${
                       expanded ? "rotate-0" : "-rotate-90"
-                    }`}
+                    } ${hasSelection ? "text-white" : "text-zinc-600"}`}
                     aria-hidden
                   />
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate font-medium text-zinc-100">
+                    <span
+                      className={`block truncate font-medium ${
+                        hasSelection ? "text-white" : "text-zinc-500"
+                      }`}
+                    >
                       {group.workspace_title}
                     </span>
-                    <span className="block text-[10px] text-zinc-500">
+                    <span
+                      className={`block text-[10px] ${
+                        hasSelection ? "text-zinc-300" : "text-zinc-600"
+                      }`}
+                    >
                       {enabledInGroup}/{group.regions.length} on
                     </span>
                   </span>

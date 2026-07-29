@@ -1038,12 +1038,6 @@ export function MapOfKnowledgeClient() {
                   Reshuffle
                 </button>
               </div>
-              <p className="mt-1.5 text-[11px] leading-relaxed text-zinc-600">
-                STEM mini avatar{" "}
-                <span className="text-zinc-400">{guestIdentity.avatar_label}</span>
-                {" · "}
-                reshuffle randomizes name and icon.
-              </p>
             </div>
             <div>
               <label className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-500">

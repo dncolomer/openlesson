@@ -24,7 +24,11 @@
     "db:check-drift:staging": "node scripts/check-migration-drift.mjs --staging",
     "db:verify-rls": "node scripts/verify-rls-policies.mjs",
     "db:seed-saas-tech-demo:staging": "vite-node --config vitest.config.ts scripts/seed-saas-tech-team-demo-workspace.ts",
-    "db:verify-saas-tech-demo:staging": "vite-node --config vitest.config.ts scripts/verify-saas-tech-team-demo-workspace.ts"
+    "db:verify-saas-tech-demo:staging": "vite-node --config vitest.config.ts scripts/verify-saas-tech-team-demo-workspace.ts",
+    "db:seed-stem-public:staging": "vite-node --config vitest.config.ts scripts/seed-stem-public-workspaces.ts",
+    "db:verify-stem-public:staging": "vite-node --config vitest.config.ts scripts/verify-stem-public-workspaces.ts",
+    "db:seed-stem-public:prod": "vite-node --config vitest.config.ts scripts/seed-stem-public-workspaces.ts --target=prod",
+    "db:verify-stem-public:prod": "vite-node --config vitest.config.ts scripts/verify-stem-public-workspaces.ts --target=prod"
   },
   "dependencies": {
     "@coral-xyz/anchor": "^0.30.1",

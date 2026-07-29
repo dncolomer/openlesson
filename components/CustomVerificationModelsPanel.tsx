@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useConfirm } from "@/lib/useConfirm";
+import { FileDropZone, type AttachedFile } from "@/components/FileDropZone";
 
 export interface KnowledgeRegionListItem {
   id: string;
@@ -38,6 +39,10 @@ function isSyntheticRegion(m: { description?: string | null; subject_count?: num
   return Boolean(m.description?.includes("[synthetic:grok-4.5]"));
 }
 
+/** Shared Settings primary CTA — cyan, not violet/lila. */
+const PRIMARY_CTA_CLASS =
+  "rounded-lg bg-cyan-600 px-3 py-2 text-xs font-medium text-white transition hover:bg-cyan-500 disabled:opacity-40";
+
 interface CustomVerificationModelsPanelProps {
   workspaceId: string;
   currentUserId: string | null;
@@ -60,6 +65,7 @@ export function CustomVerificationModelsPanel({
   const [name, setName] = useState("");
   const [syntheticName, setSyntheticName] = useState("");
   const [syntheticPrompt, setSyntheticPrompt] = useState("");
+  const [syntheticFiles, setSyntheticFiles] = useState<AttachedFile[]>([]);
   const [loading, setLoading] = useState(false);
   const [creating, setCreating] = useState(false);
   const [synthesizing, setSynthesizing] = useState(false);
@@ -118,6 +124,9 @@ export function CustomVerificationModelsPanel({
     [subjects, selected],
   );
 
+  const canCreateSynthetic =
+    syntheticPrompt.trim().length > 0 || syntheticFiles.length > 0;
+
   const createFromCohort = async () => {
     if (!name.trim() || selectedSubjects.length === 0) return;
     setCreating(true);
@@ -152,13 +161,15 @@ export function CustomVerificationModelsPanel({
 
   const createSynthetic = async () => {
     const prompt = syntheticPrompt.trim();
-    if (!prompt) return;
-    // Prefer explicit synthetic name; fall back to prompt (API requires a name).
+    if (!prompt && syntheticFiles.length === 0) return;
+    // Prefer explicit synthetic name; fall back to prompt / first file name (API requires a name).
     const resolvedName =
       syntheticName.trim() ||
       name.trim() ||
-      prompt.split(/\s+/).slice(0, 6).join(" ").slice(0, 64) ||
-      "Synthetic region";
+      (prompt
+        ? prompt.split(/\s+/).slice(0, 6).join(" ").slice(0, 64)
+        : syntheticFiles[0]?.name.replace(/\.[^.]+$/, "").slice(0, 64)) ||
+      "Custom region";
     setSynthesizing(true);
     setError(null);
     try {
@@ -170,16 +181,26 @@ export function CustomVerificationModelsPanel({
           workspaceId,
           name: resolvedName,
           prompt,
+          ...(syntheticFiles.length > 0
+            ? {
+                files: syntheticFiles.map((f) => ({
+                  name: f.name,
+                  mimeType: f.mimeType,
+                  data: f.data,
+                })),
+              }
+            : {}),
           ...(ayclToken ? { ayclToken } : {}),
         }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to synthesize knowledge region");
+      if (!res.ok) throw new Error(data.error || "Failed to create knowledge region");
       setSyntheticPrompt("");
       setSyntheticName("");
+      setSyntheticFiles([]);
       await load();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to synthesize knowledge region");
+      setError(err instanceof Error ? err.message : "Failed to create knowledge region");
     } finally {
       setSynthesizing(false);
     }
@@ -210,13 +231,6 @@ export function CustomVerificationModelsPanel({
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to remove knowledge region");
-
-      // Optimistic local update so the list responds immediately; load() stays source of truth.
-      setModels((prev) => {
-        const next = prev.filter((m) => m.id !== region.id);
-        onRegionsChange?.(next);
-        return next;
-      });
       await load();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to remove knowledge region");
@@ -234,10 +248,16 @@ export function CustomVerificationModelsPanel({
         </div>
       )}
 
-      <div className="flex w-full flex-col gap-5">
-        <div className="space-y-3">
-          <div className="text-[11px] font-medium uppercase tracking-wide text-neutral-500">
-            Create from user embeddings
+      <div className="flex w-full flex-col gap-6">
+        {/* ── Create from users ── */}
+        <section className="space-y-3" data-region-create-cohort>
+          <div>
+            <div className="text-[11px] font-medium uppercase tracking-wide text-neutral-500">
+              Create from users
+            </div>
+            <p className="mt-1 text-xs leading-relaxed text-neutral-500">
+              Select users with knowledge config embeddings and group them into one region.
+            </p>
           </div>
           {loading && subjects.length === 0 ? (
             <p className="text-xs text-neutral-500">Loading users with embeddings…</p>
@@ -284,7 +304,7 @@ export function CustomVerificationModelsPanel({
               type="button"
               disabled={creating || !name.trim() || selectedSubjects.length === 0}
               onClick={() => void createFromCohort()}
-              className="rounded-lg bg-cyan-600 px-3 py-2 text-xs font-medium text-white transition hover:bg-cyan-500 disabled:opacity-40"
+              className={PRIMARY_CTA_CLASS}
               data-create-cohort-region
             >
               {creating ? "Creating…" : "Create from selected users"}
@@ -294,17 +314,23 @@ export function CustomVerificationModelsPanel({
             {selectedSubjects.length} user{selectedSubjects.length === 1 ? "" : "s"} selected ·
             groups embeddings into one knowledgecfg region
           </p>
-        </div>
+        </section>
 
-        <div className="space-y-3 border-t border-neutral-800 pt-4">
-          <div className="text-[11px] font-medium uppercase tracking-wide text-neutral-500">
-            Synthesize a region
+        {/* ── Create from description / files ── */}
+        <section
+          className="space-y-3 border-t border-neutral-800 pt-5"
+          data-region-create-custom
+        >
+          <div>
+            <div className="text-[11px] font-medium uppercase tracking-wide text-neutral-500">
+              Create from description or files
+            </div>
+            <p className="mt-1 text-xs leading-relaxed text-neutral-500">
+              Describe an ideal competency region and/or attach reference files (docs, rubrics,
+              syllabi). A profile is generated and encoded into the same knowledgecfg-v1-d64 space
+              as user embeddings. Name is optional — defaults from the description or first file.
+            </p>
           </div>
-          <p className="text-xs leading-relaxed text-neutral-500">
-            Describe an ideal competency region. A profile is generated and encoded into the same
-            knowledgecfg-v1-d64 space as user embeddings. Name is optional — defaults from the
-            description.
-          </p>
           <input
             type="text"
             value={syntheticName}
@@ -321,27 +347,56 @@ export function CustomVerificationModelsPanel({
             className="w-full rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-xs text-white placeholder:text-neutral-600"
             data-synthetic-region-prompt
           />
-          <button
-            type="button"
-            disabled={synthesizing || !syntheticPrompt.trim()}
-            onClick={() => void createSynthetic()}
-            className="rounded-lg border border-violet-700/80 bg-violet-950/50 px-3 py-2 text-xs font-medium text-violet-100 transition hover:border-violet-500 hover:text-white disabled:opacity-40"
-            data-create-synthetic-region
-          >
-            {synthesizing ? "Generating…" : "Generate synthetic knowledge region"}
-          </button>
-        </div>
-
-        <div className="space-y-3 border-t border-neutral-800 pt-4">
-          <div className="text-[11px] font-medium uppercase tracking-wide text-neutral-500">
-            Saved knowledge regions
+          <div data-synthetic-region-files data-region-file-attach>
+            <FileDropZone
+              files={syntheticFiles}
+              onChange={setSyntheticFiles}
+              compact
+            />
           </div>
-          <p className="text-[11px] text-neutral-500">
-            Overlay regions and view Knowledge distance on the Embeddings tab.
-          </p>
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              disabled={synthesizing || !canCreateSynthetic}
+              onClick={() => void createSynthetic()}
+              className={PRIMARY_CTA_CLASS}
+              data-create-synthetic-region
+            >
+              {synthesizing
+                ? "Creating…"
+                : syntheticFiles.length > 0
+                  ? "Create region from description & files"
+                  : "Create region"}
+            </button>
+            {(syntheticPrompt.trim() || syntheticFiles.length > 0) && (
+              <span className="text-[10px] text-neutral-600">
+                {[
+                  syntheticPrompt.trim() ? "description" : null,
+                  syntheticFiles.length
+                    ? `${syntheticFiles.length} file${syntheticFiles.length === 1 ? "" : "s"}`
+                    : null,
+                ]
+                  .filter(Boolean)
+                  .join(" · ")}
+              </span>
+            )}
+          </div>
+        </section>
+
+        {/* ── Saved regions ── */}
+        <section className="space-y-3 border-t border-neutral-800 pt-5" data-region-saved-list>
+          <div>
+            <div className="text-[11px] font-medium uppercase tracking-wide text-neutral-500">
+              Saved knowledge regions
+            </div>
+            <p className="mt-1 text-[11px] text-neutral-500">
+              Overlay regions and view Knowledge distance on the Embeddings tab.
+            </p>
+          </div>
           {models.length === 0 ? (
             <p className="text-xs text-neutral-500">
-              No custom knowledge regions yet. Group users or synthesize a region from a description.
+              No custom knowledge regions yet. Group users, or create one from a description or
+              files.
             </p>
           ) : (
             <ul className="space-y-2" data-knowledge-regions-list>
@@ -357,7 +412,7 @@ export function CustomVerificationModelsPanel({
                     <div className="min-w-0 flex-1">
                       <div className="text-sm font-medium text-white">{m.name}</div>
                       <div className="mt-0.5 text-[10px] text-neutral-500">
-                        {synthetic ? "Synthetic" : `${m.subject_count} users · cohort`} · cohesion{" "}
+                        {synthetic ? "Custom" : `${m.subject_count} users · cohort`} · cohesion{" "}
                         {(m.cohort_cohesion * 100).toFixed(0)}% · threshold{" "}
                         {m.cosine_threshold.toFixed(2)}
                       </div>
@@ -377,7 +432,7 @@ export function CustomVerificationModelsPanel({
               })}
             </ul>
           )}
-        </div>
+        </section>
       </div>
     </div>
   );

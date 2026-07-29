@@ -201,8 +201,8 @@ export function WorkspaceIntegrationPanel({
             <div className="min-w-0 shrink-0">
               <h2 className="text-sm font-medium text-white">Custom Knowledge Regions</h2>
               <p className="mt-1 max-w-2xl text-xs leading-relaxed text-neutral-500">
-                High-validation regions in knowledgecfg-v1-d64 — group embeddings from multiple
-                users, or synthesize a compatible region from a description. Overlay them from the
+                High-validation regions in knowledgecfg-v1-d64 — group user embeddings, or create a
+                compatible region from a description and/or reference files. Overlay them from the
                 Embeddings tab projection.
               </p>
             </div>

@@ -24,8 +24,14 @@ function baseUrl(req: NextRequest) {
 
 /**
  * POST /api/map-of-knowledge/guest-link
- * Anonymous self-placement: mint TAP or ILE link on a public workspace block.
- * Body: { workspace_id, block_id, link_kind: "tap"|"ile", guest_display_name? }
+ * Anonymous self-placement: mint a timed guest session (or legacy ILE) on a public workspace block.
+ *
+ * Body:
+ * - workspace_id, block_id (required)
+ * - link_kind: "tap" | "ile" (technical; map UI uses "tap" for both product options)
+ * - interaction_kind?: "conversational" | "exercise" — TAP shell (Timed Exploration vs Timed Drill)
+ * - placement_product?: "timed_explore" | "timed_drill" — product label echoed in response
+ * - guest_display_name?
  */
 export async function POST(req: NextRequest) {
   try {
@@ -33,6 +39,18 @@ export async function POST(req: NextRequest) {
     const workspaceId = typeof body.workspace_id === "string" ? body.workspace_id.trim() : "";
     const blockId = typeof body.block_id === "string" ? body.block_id.trim() : "";
     const linkKind = (typeof body.link_kind === "string" ? body.link_kind.trim() : "") as GuestLinkKind;
+    const interactionKindRaw =
+      typeof body.interaction_kind === "string" ? body.interaction_kind.trim() : "";
+    const interactionKind =
+      interactionKindRaw === "exercise" ? "exercise" : "conversational";
+    const placementProductRaw =
+      typeof body.placement_product === "string" ? body.placement_product.trim() : "";
+    const placementProduct =
+      placementProductRaw === "timed_drill" || interactionKind === "exercise"
+        ? "timed_drill"
+        : placementProductRaw === "timed_explore" || linkKind === "tap"
+          ? "timed_explore"
+          : null;
     const guestNameRaw =
       typeof body.guest_display_name === "string" ? body.guest_display_name.trim() : "";
 
@@ -107,6 +125,7 @@ export async function POST(req: NextRequest) {
           minutes: 20,
           participant_type: "anonymous",
           post_session: "show_results",
+          interaction_kind: interactionKind,
         },
         baseUrl: origin,
         allowAnonymousForNonAdmin: true,
@@ -118,7 +137,11 @@ export async function POST(req: NextRequest) {
         block_id: blockId,
         guest_display_name: guestDisplayName,
       });
-      return NextResponse.json(result);
+      return NextResponse.json({
+        ...result,
+        interaction_kind: interactionKind,
+        placement_product: placementProduct ?? "timed_explore",
+      });
     }
 
     const link = await createWorkspaceIleLink({

@@ -48,8 +48,8 @@ export default function MapOfKnowledgePage() {
           Public knowledge, as geometry.
         </h1>
         <p className="mt-2 max-w-2xl text-sm leading-relaxed text-zinc-400 sm:text-base">
-          Explore public embeddings in 2D and 3D — then place yourself anonymously as a TAP or ILE
-          guest.{" "}
+          Explore public embeddings in 2D and 3D — then put yourself on the map with a timed
+          exploratory dialog or a timed exercise (both require thinking aloud).{" "}
           <Link href="/science" className="text-zinc-300 underline-offset-2 hover:text-white hover:underline">
             The science
           </Link>

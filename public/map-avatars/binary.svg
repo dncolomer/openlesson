@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" role="img" aria-label="binary">
+  <defs>
+    <radialGradient id="g" cx="35%" cy="30%" r="70%">
+      <stop offset="0%" stop-color="#3f3f46"/>
+      <stop offset="100%" stop-color="#18181b"/>
+    </radialGradient>
+  </defs>
+  <circle cx="32" cy="32" r="30" fill="url(#g)" stroke="#52525b" stroke-width="2"/>
+  <circle cx="32" cy="32" r="30" fill="none" stroke="#a1a1aa" stroke-opacity="0.25" stroke-width="1"/>
+  
+  <text x="18" y="26" fill="#4ade80" font-family="ui-monospace,monospace" font-size="11" font-weight="700">01</text>
+  <text x="34" y="26" fill="#86efac" font-family="ui-monospace,monospace" font-size="11" font-weight="700">10</text>
+  <text x="18" y="40" fill="#86efac" font-family="ui-monospace,monospace" font-size="11" font-weight="700">11</text>
+  <text x="34" y="40" fill="#4ade80" font-family="ui-monospace,monospace" font-size="11" font-weight="700">00</text>
+  <text x="22" y="52" fill="#22c55e" font-family="ui-monospace,monospace" font-size="9" font-weight="600">10</text>
+
+</svg>

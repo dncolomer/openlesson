@@ -366,23 +366,57 @@ export function MapOfKnowledge2D({
           const fill = mapDotColor(p.kind);
           const preview =
             p.id_preview || p.subject_label.replace(/^(user|guest|id):/, "").slice(0, 6);
+          const avatarHref = p.avatar_path || null;
+          const r = 7;
           return (
-            <g key={p.id}>
-              <circle
-                cx={sx}
-                cy={sy}
-                r={4.5}
-                fill={fill}
-                fillOpacity={0.9}
-                stroke={p.kind === "ile" ? "#fde68a" : "rgba(255,255,255,0.25)"}
-                strokeWidth={p.kind === "ile" ? 1.5 : 0.75}
-              >
-                <title>
-                  {p.subject_label} · {p.workspace_title} · {p.kind.toUpperCase()}
-                </title>
-              </circle>
+            <g
+              key={p.id}
+              data-map-user-marker
+              data-map-user-avatar={p.avatar_id || undefined}
+            >
+              {avatarHref ? (
+                <>
+                  <circle
+                    cx={sx}
+                    cy={sy}
+                    r={r + 1.25}
+                    fill="#09090b"
+                    stroke={p.kind === "ile" ? "#fde68a" : "rgba(255,255,255,0.3)"}
+                    strokeWidth={p.kind === "ile" ? 1.5 : 0.9}
+                  />
+                  <image
+                    href={avatarHref}
+                    xlinkHref={avatarHref}
+                    x={sx - r}
+                    y={sy - r}
+                    width={r * 2}
+                    height={r * 2}
+                    preserveAspectRatio="xMidYMid meet"
+                    data-map-user-avatar-image
+                  >
+                    <title>
+                      {p.subject_label} · {p.workspace_title} · {p.kind.toUpperCase()}
+                    </title>
+                  </image>
+                </>
+              ) : (
+                <circle
+                  cx={sx}
+                  cy={sy}
+                  r={4.5}
+                  fill={fill}
+                  fillOpacity={0.9}
+                  stroke={p.kind === "ile" ? "#fde68a" : "rgba(255,255,255,0.25)"}
+                  strokeWidth={p.kind === "ile" ? 1.5 : 0.75}
+                  data-map-user-dot-fallback
+                >
+                  <title>
+                    {p.subject_label} · {p.workspace_title} · {p.kind.toUpperCase()}
+                  </title>
+                </circle>
+              )}
               <text
-                x={sx + 7}
+                x={sx + r + 3}
                 y={sy + 3}
                 className="fill-zinc-300"
                 style={{ fontSize: 9, fontFamily: "ui-monospace, monospace" }}

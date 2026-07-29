@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" role="img" aria-label="microscope">
+  <defs>
+    <radialGradient id="g" cx="35%" cy="30%" r="70%">
+      <stop offset="0%" stop-color="#3f3f46"/>
+      <stop offset="100%" stop-color="#18181b"/>
+    </radialGradient>
+  </defs>
+  <circle cx="32" cy="32" r="30" fill="url(#g)" stroke="#52525b" stroke-width="2"/>
+  <circle cx="32" cy="32" r="30" fill="none" stroke="#a1a1aa" stroke-opacity="0.25" stroke-width="1"/>
+  
+  <path d="M22 48h20" stroke="#94a3b8" stroke-width="2.5" stroke-linecap="round"/>
+  <path d="M26 48c0-6 4-10 10-14" fill="none" stroke="#38bdf8" stroke-width="2.2"/>
+  <circle cx="40" cy="28" r="7" fill="none" stroke="#7dd3fc" stroke-width="2"/>
+  <circle cx="40" cy="28" r="3" fill="#0ea5e9" fill-opacity="0.5"/>
+  <path d="M30 34l-6 8h8" fill="#64748b"/>
+  <rect x="28" y="18" width="6" height="10" rx="1" fill="#94a3b8"/>
+
+</svg>

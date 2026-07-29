@@ -33,11 +33,12 @@ describe("custom verification model surfaces", () => {
     expect(src).toContain("validation_score");
   });
 
-  it("workspace UI wires Custom Knowledge Regions cohort + synthetic create + remove", () => {
+  it("workspace UI wires Custom Knowledge Regions cohort + synthetic/file create + remove", () => {
     const ui = read("components/CustomVerificationModelsPanel.tsx");
     expect(ui).toContain("data-custom-knowledge-regions");
     expect(ui).toContain("Create from selected users");
-    expect(ui).toContain("Generate synthetic knowledge region");
+    expect(ui).toContain("Create region");
+    expect(ui).toContain("Create from description or files");
     expect(ui).toContain('action: "create"');
     expect(ui).toContain('action: "create_synthetic"');
     expect(ui).toContain('action: "delete"');
@@ -52,8 +53,23 @@ describe("custom verification model surfaces", () => {
     expect(ui).toContain("data-create-cohort-region");
     expect(ui).toContain("data-synthetic-region-prompt");
     expect(ui).toContain("data-synthetic-region-name");
-    // Synthetic generate only requires a prompt (name is optional / auto-derived).
-    expect(ui).toContain("disabled={synthesizing || !syntheticPrompt.trim()}");
+    // File attach for custom regions (not prompt-only).
+    expect(ui).toContain("data-synthetic-region-files");
+    expect(ui).toContain("data-region-file-attach");
+    expect(ui).toContain("FileDropZone");
+    expect(ui).toContain("syntheticFiles");
+    expect(ui).toContain("files:");
+    // Create allowed when prompt and/or files present (not prompt-only).
+    expect(ui).toContain("disabled={synthesizing || !canCreateSynthetic}");
+    expect(ui).toContain("canCreateSynthetic");
+    // No violet/lila styling on synthetic/file create CTA.
+    const createBtnSlice = ui.slice(
+      ui.indexOf("data-create-synthetic-region") - 200,
+      ui.indexOf("data-create-synthetic-region") + 80,
+    );
+    expect(createBtnSlice).not.toMatch(/violet-/);
+    expect(ui).toContain("bg-cyan-600");
+    expect(ui).toContain("PRIMARY_CTA_CLASS");
     expect(ui).toContain("subjects");
     expect(ui).toContain("data-custom-knowledge-regions");
 
@@ -79,9 +95,10 @@ describe("custom verification model surfaces", () => {
     expect(settings).toContain('id: "regions"');
     expect(settings).toContain('data-settings-tab-panel="regions"');
     expect(settings).toContain('activeSubview === "regions"');
+    expect(settings).toMatch(/description and\/or reference files|files/);
   });
 
-  it("API routes expose cohort create, synthetic create, delete, eval, knowledge distance, and listing", () => {
+  it("API routes expose cohort create, synthetic create with files, delete, eval, knowledge distance, and listing", () => {
     const cookie = read("app/api/workspace/custom-knowledge-regions/route.ts");
     expect(cookie).toContain("createCustomVerificationModelFromSubjects");
     expect(cookie).toContain("createSyntheticCustomVerificationModel");
@@ -92,6 +109,10 @@ describe("custom verification model surfaces", () => {
     expect(cookie).toContain("computeKnowledgeDistanceForSubject");
     expect(cookie).toContain("knowledge_distance");
     expect(cookie).toContain("listSubjectsWithKnowledgeConfig");
+    // File-based synthetic create
+    expect(cookie).toContain("files");
+    expect(cookie).toContain("mimeType");
+    expect(cookie).toContain("prompt or files are required");
 
     const store = read("lib/pow-api/custom-verification-model-store.ts");
     expect(store).toContain("generateSyntheticRegionProfileWithGrok");
@@ -99,6 +120,11 @@ describe("custom verification model surfaces", () => {
     expect(store).toContain("createSyntheticKnowledgeRegionFromProfile");
     expect(store).toContain("computeKnowledgeDistance");
     expect(store).toContain("deleteCustomVerificationModel");
+    expect(store).toContain("buildSyntheticRegionGenerationPrompt");
+    expect(store).toContain("decodeSyntheticRegionFileText");
+    expect(store).toContain("files");
+    expect(store).toContain("fileIds");
+    expect(store).toContain("callXaiResponsesWithFiles");
 
     const evalApi = read("app/api/v3/snapshot/workspaces/[id]/custom-knowledge-regions/route.ts");
     expect(evalApi).toContain("createCustomVerificationModelFromSubjects");

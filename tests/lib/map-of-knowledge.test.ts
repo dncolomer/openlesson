@@ -8,18 +8,25 @@ import {
   filterEnabledRegions,
   filterPublicWorkspaces,
   generateAnonymousGuestIdentity,
+  groupRegionsByWorkspace,
   mapDotColor,
   mapDotIsGolden,
   mapDotKindFromParticipant,
   describeEmbeddingModel,
   KNOWLEDGE_CONFIG_EMBEDDING_MODEL_ID,
   mergeEmbeddingModelCatalog,
+  pickDefaultEnabledRegionsFromOneWorkspace,
   pickRandomEnabledRegionIds,
+  pickStemMiniAvatar,
   projectMapVectors,
   projectVectors3D,
   reprojectMapLayout,
+  resolveMapUserAvatar,
   resolveSelectedEmbeddingModelId,
   shortUserIdPreview,
+  STEM_MINI_AVATARS,
+  stemMiniAvatarCatalogSize,
+  stemMiniAvatarForSubjectId,
   validateGuestPlacement,
 } from "@/lib/map-of-knowledge";
 import { projectVectors2D } from "@/lib/knowledge-config";
@@ -106,19 +113,24 @@ describe("map-of-knowledge pure logic", () => {
     );
     expect(differ).toBe(true);
 
-    const users = vectors.slice(0, 2).map((vector, i) => ({
-      id: `u${i}`,
-      workspace_id: "w",
-      workspace_title: "W",
-      subject_label: `user:abc${i}`,
-      id_preview: `abc${i}00`.slice(0, 6),
-      kind: "tap" as const,
-      vector,
-      x: 0,
-      y: 0,
-      z: 0,
-      confidence: 0.5,
-    }));
+    const users = vectors.slice(0, 2).map((vector, i) => {
+      const avatar = pickStemMiniAvatar(i);
+      return {
+        id: `u${i}`,
+        workspace_id: "w",
+        workspace_title: "W",
+        subject_label: `user:abc${i}`,
+        id_preview: `abc${i}00`.slice(0, 6),
+        kind: "tap" as const,
+        avatar_id: avatar.id,
+        avatar_path: avatar.path,
+        vector,
+        x: 0,
+        y: 0,
+        z: 0,
+        confidence: 0.5,
+      };
+    });
     const regions = vectors.slice(2).map((vector, i) => ({
       id: `r${i}`,
       workspace_id: "w",
@@ -168,6 +180,54 @@ describe("map-of-knowledge pure logic", () => {
     for (const id of picked) expect(ids).toContain(id);
     expect(pickRandomEnabledRegionIds(["only"], 3)).toEqual(["only"]);
     expect(pickRandomEnabledRegionIds([], 3)).toEqual([]);
+  });
+
+  it("defaults to 3 enabled regions from a single randomly chosen workspace", () => {
+    const regions = [
+      { id: "m1", workspace_id: "ws-math" },
+      { id: "m2", workspace_id: "ws-math" },
+      { id: "m3", workspace_id: "ws-math" },
+      { id: "m4", workspace_id: "ws-math" },
+      { id: "p1", workspace_id: "ws-phys" },
+      { id: "p2", workspace_id: "ws-phys" },
+      { id: "p3", workspace_id: "ws-phys" },
+      { id: "c1", workspace_id: "ws-chem" },
+    ];
+    let i = 0;
+    const random = () => {
+      // First call picks workspace index; subsequent shuffle math/phys
+      const seq = [0.6, 0.1, 0.8, 0.3, 0.5, 0.2, 0.9, 0.4];
+      return seq[i++ % seq.length];
+    };
+    const pick = pickDefaultEnabledRegionsFromOneWorkspace(regions, 3, random);
+    expect(pick.workspace_id).toBeTruthy();
+    expect(pick.regionIds.length).toBeGreaterThan(0);
+    expect(pick.regionIds.length).toBeLessThanOrEqual(3);
+    const allowed = new Set(
+      regions.filter((r) => r.workspace_id === pick.workspace_id).map((r) => r.id),
+    );
+    for (const id of pick.regionIds) {
+      expect(allowed.has(id)).toBe(true);
+    }
+    // Never mix workspaces in the default highlight set
+    const workspaces = new Set(
+      pick.regionIds.map(
+        (id) => regions.find((r) => r.id === id)!.workspace_id,
+      ),
+    );
+    expect(workspaces.size).toBe(1);
+
+    // Workspace with fewer than 3 regions → all of that workspace
+    const chemOnly = pickDefaultEnabledRegionsFromOneWorkspace(
+      [{ id: "c1", workspace_id: "ws-chem" }],
+      3,
+      () => 0,
+    );
+    expect(chemOnly).toEqual({ regionIds: ["c1"], workspace_id: "ws-chem" });
+    expect(pickDefaultEnabledRegionsFromOneWorkspace([], 3)).toEqual({
+      regionIds: [],
+      workspace_id: null,
+    });
   });
 
   it("builds short user id previews for map labels", () => {
@@ -340,6 +400,9 @@ describe("map-of-knowledge pure logic", () => {
     for (const u of payload.user_locations) {
       expect(u.id_preview).toMatch(/^[0-9a-f]{6}$|^[a-z0-9]{1,8}$/i);
       expect(u.id_preview.length).toBeLessThanOrEqual(8);
+      expect(u.avatar_id).toBeTruthy();
+      expect(u.avatar_path).toMatch(/^\/map-avatars\//);
+      expect(STEM_MINI_AVATARS.some((a) => a.id === u.avatar_id)).toBe(true);
     }
     expect(payload.pow_stats.total_artifacts).toBe(7);
     expect(payload.pow_stats.workspace_count).toBe(1);
@@ -400,12 +463,71 @@ describe("map-of-knowledge pure logic", () => {
   });
 });
 
+describe("STEM mini avatars", () => {
+  it("ships a multi-entry catalog with pregenerated public assets", () => {
+    expect(stemMiniAvatarCatalogSize()).toBeGreaterThan(1);
+    expect(STEM_MINI_AVATARS.length).toBe(stemMiniAvatarCatalogSize());
+    const ids = new Set(STEM_MINI_AVATARS.map((a) => a.id));
+    expect(ids.size).toBe(STEM_MINI_AVATARS.length);
+    for (const avatar of STEM_MINI_AVATARS) {
+      expect(avatar.path).toMatch(/^\/map-avatars\/.+\.svg$/);
+      const abs = join(root, "public", avatar.path.replace(/^\//, ""));
+      expect(existsSync(abs), `missing asset ${avatar.path}`).toBe(true);
+      const svg = readFileSync(abs, "utf8");
+      expect(svg).toContain("<svg");
+      expect(svg.length).toBeGreaterThan(100);
+    }
+  });
+
+  it("picks catalog members deterministically from seeds", () => {
+    const a = pickStemMiniAvatar(0);
+    const b = pickStemMiniAvatar(0);
+    expect(a.id).toBe(b.id);
+    expect(STEM_MINI_AVATARS.some((x) => x.id === a.id)).toBe(true);
+
+    const catalogIds = new Set(STEM_MINI_AVATARS.map((x) => x.id));
+    const seen = new Set<string>();
+    for (let seed = 0; seed < 200; seed++) {
+      const picked = pickStemMiniAvatar(seed);
+      expect(catalogIds.has(picked.id)).toBe(true);
+      seen.add(picked.id);
+    }
+    // Different seeds must be able to yield more than one catalog member
+    expect(seen.size).toBeGreaterThan(1);
+  });
+
+  it("assigns stable avatars for subject ids and guest identity includes avatar", () => {
+    const once = stemMiniAvatarForSubjectId("subject-abc");
+    const twice = stemMiniAvatarForSubjectId("subject-abc");
+    expect(once.id).toBe(twice.id);
+    const resolved = resolveMapUserAvatar({ id: "loc-1", avatar_id: once.id });
+    expect(resolved.id).toBe(once.id);
+    const fallback = resolveMapUserAvatar({ id: "loc-legacy-no-avatar" });
+    expect(STEM_MINI_AVATARS.some((a) => a.id === fallback.id)).toBe(true);
+
+    const g1 = generateAnonymousGuestIdentity(100);
+    const g2 = generateAnonymousGuestIdentity(100);
+    expect(g1.display_name).toBe(g2.display_name);
+    expect(g1.avatar_id).toBe(g2.avatar_id);
+    expect(g1.avatar_path).toBe(g2.avatar_path);
+    expect(STEM_MINI_AVATARS.some((a) => a.id === g1.avatar_id)).toBe(true);
+    expect(g1.avatar_path).toContain("/map-avatars/");
+
+    // Different seeds can yield different avatars across the catalog
+    const avatarIds = new Set(
+      Array.from({ length: 80 }, (_, i) => generateAnonymousGuestIdentity(i * 13).avatar_id),
+    );
+    expect(avatarIds.size).toBeGreaterThan(1);
+  });
+});
+
 describe("anonymous guest self-placement", () => {
   it("generates deterministic guest names from seed", () => {
     const a = generateAnonymousGuestIdentity(100);
     const b = generateAnonymousGuestIdentity(100);
     expect(a.display_name).toBe(b.display_name);
     expect(a.display_name.length).toBeGreaterThan(3);
+    expect(a.avatar_id).toBe(b.avatar_id);
   });
 
   it("validates public workspace + block for placement", () => {
@@ -481,20 +603,30 @@ describe("map-of-knowledge product surfaces", () => {
     const clientSrc = readFileSync(client, "utf8");
     expect(pageSrc).toContain("The Map of Knowledge");
     expect(pageSrc).toContain("LandingNav");
-    expect(navSrc).toContain("Community");
+    expect(navSrc).toContain("Projects & Community");
     expect(navSrc).toContain("COMMUNITY_LINKS");
     expect(navSrc).toContain('href: "/map-of-knowledge"');
     expect(navSrc).toContain('href: "/vision"');
     expect(navSrc).toContain('href: "/science"');
     expect(navSrc).toContain("Map of Knowledge");
-    // nested under Community menu (not top-level flat links)
-    expect(navSrc).toContain('aria-label="Community"');
-    expect(navSrc).toContain("community-menu");
+    // nested under Projects & Community menu (not top-level flat links)
+    expect(navSrc).toContain('aria-label="Projects & Community"');
     expect(clientSrc).toContain("map-canvas");
     expect(clientSrc).toContain("map-place-yourself");
     expect(clientSrc).toContain("map-stats");
     expect(clientSrc).toContain("data-map-surface");
     expect(clientSrc).toContain("Fullscreen");
+    // Product language on placement cards (not TAP/ILE jargon)
+    expect(clientSrc).toContain("Timed Exploration");
+    expect(clientSrc).toContain("Timed Drill");
+    expect(clientSrc).toContain("data-mint-timed-explore");
+    expect(clientSrc).toContain("data-mint-timed-drill");
+    expect(clientSrc).toContain("interaction_kind");
+    expect(clientSrc).not.toMatch(/Mint TAP link|Mint ILE link|Think Aloud Protocol|Integrated Learning Env|Socratic/);
+    expect(clientSrc).toMatch(/think aloud/i);
+    expect(clientSrc).toMatch(/exploratory dialog|lightweight/i);
+    expect(pageSrc).toMatch(/think aloud|put yourself on the map/i);
+    expect(pageSrc).not.toMatch(/TAP or ILE/);
     // Map section appears before aggregated PoW stats in the client tree
     expect(clientSrc.indexOf('id="map-canvas"')).toBeLessThan(clientSrc.indexOf('id="map-stats"'));
     // Real Three.js 3D explorer (not a yaw slider)
@@ -518,7 +650,8 @@ describe("map-of-knowledge product surfaces", () => {
     expect(twoDSrc).toMatch(/ArrowLeft|WASD|keydown/);
     expect(twoDSrc).toContain("touchstart");
     expect(twoDSrc).toContain("id_preview");
-    expect(clientSrc).toContain("pickRandomEnabledRegionIds");
+    expect(clientSrc).toContain("pickDefaultEnabledRegionsFromOneWorkspace");
+    expect(clientSrc).not.toContain("pickRandomEnabledRegionIds(allRegionIds");
     expect(clientSrc).toContain("reprojectMapLayout");
     expect(clientSrc).toContain("data-map-projection-select");
     expect(clientSrc).toContain("data-map-embedding-model-select");
@@ -527,6 +660,53 @@ describe("map-of-knowledge product surfaces", () => {
     expect(clientSrc).toContain("embedding_model_id");
     expect(threeSrc).toContain("makeIdLabelSprite");
     expect(threeSrc).toContain("id_preview");
+    // STEM mini avatars: guest identity + map markers (not plain dots only)
+    expect(clientSrc).toContain("data-guest-avatar");
+    expect(clientSrc).toContain("avatar_path");
+    expect(clientSrc).toContain("generateAnonymousGuestIdentity");
+    expect(twoDSrc).toContain("avatar_path");
+    expect(twoDSrc).toContain("data-map-user-avatar");
+    expect(twoDSrc).toMatch(/<image[\s\S]*href/);
+    expect(threeSrc).toContain("STEM_MINI_AVATARS");
+    expect(threeSrc).toContain("makeAvatarSprite");
+    expect(threeSrc).toContain("loadStemAvatarTextures");
+    expect(threeSrc).toContain("avatar_id");
+    // Region toggles grouped by collapsible workspace
+    expect(clientSrc).toContain("groupRegionsByWorkspace");
+    expect(clientSrc).toContain("data-map-region-workspace-groups");
+    expect(clientSrc).toContain("data-map-region-workspace-toggle");
+    expect(clientSrc).toContain("data-map-region-workspace-group");
+    expect(clientSrc).toContain("aria-expanded");
+    expect(clientSrc).toContain("expandedRegionWorkspaces");
+  });
+
+  it("groups regions by workspace for collapsible map toggles", () => {
+    const groups = groupRegionsByWorkspace([
+      {
+        id: "r1",
+        workspace_id: "ws-math",
+        workspace_title: "Mathematics",
+        name: "Analysis",
+      },
+      {
+        id: "r2",
+        workspace_id: "ws-phys",
+        workspace_title: "Physics",
+        name: "Quantum",
+      },
+      {
+        id: "r3",
+        workspace_id: "ws-math",
+        workspace_title: "Mathematics",
+        name: "Algebra",
+      },
+    ]);
+    expect(groups).toHaveLength(2);
+    // Sorted by workspace title
+    expect(groups[0].workspace_title).toBe("Mathematics");
+    expect(groups[1].workspace_title).toBe("Physics");
+    expect(groups[0].regions.map((r) => r.name)).toEqual(["Analysis", "Algebra"]);
+    expect(groups[1].regions.map((r) => r.name)).toEqual(["Quantum"]);
   });
 
   it("removes group toggle UX and public fork gates from shipped surfaces", () => {

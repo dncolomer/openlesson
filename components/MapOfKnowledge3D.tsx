@@ -3,7 +3,12 @@
 import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
-import { mapDotColor, type MapRegion, type MapUserLocation } from "@/lib/map-of-knowledge";
+import {
+  STEM_MINI_AVATARS,
+  mapDotColor,
+  type MapRegion,
+  type MapUserLocation,
+} from "@/lib/map-of-knowledge";
 
 export type MapOfKnowledge3DProps = {
   userLocations: MapUserLocation[];
@@ -24,6 +29,52 @@ const ILE_COLOR = 0xfbbf24;
 const TAP_COLOR = 0x94a3b8;
 const GRID_COLOR = 0x3f3f46;
 const AXIS_COLOR = 0x52525b;
+
+/** Preload STEM mini-avatar textures once (shared across rebuilds). */
+function loadStemAvatarTextures(): Promise<Map<string, THREE.Texture>> {
+  const loader = new THREE.TextureLoader();
+  const map = new Map<string, THREE.Texture>();
+  return Promise.all(
+    STEM_MINI_AVATARS.map(
+      (avatar) =>
+        new Promise<void>((resolve) => {
+          loader.load(
+            avatar.path,
+            (tex) => {
+              tex.colorSpace = THREE.SRGBColorSpace;
+              tex.needsUpdate = true;
+              map.set(avatar.id, tex);
+              map.set(avatar.path, tex);
+              resolve();
+            },
+            undefined,
+            () => {
+              // Missing asset → skip; sphere fallback used for that id.
+              resolve();
+            },
+          );
+        }),
+    ),
+  ).then(() => map);
+}
+
+/** Sprite billboard for a STEM mini avatar (replaces plain sphere dots). */
+function makeAvatarSprite(
+  texture: THREE.Texture,
+  isIle: boolean,
+): THREE.Sprite {
+  const material = new THREE.SpriteMaterial({
+    map: texture,
+    transparent: true,
+    depthTest: true,
+    depthWrite: false,
+  });
+  const sprite = new THREE.Sprite(material);
+  const scale = isIle ? 0.42 : 0.36;
+  sprite.scale.set(scale, scale, 1);
+  sprite.userData = { isAvatarSprite: true };
+  return sprite;
+}
 
 function boundsScale(points: Array<{ x: number; y: number; z: number }>): number {
   if (points.length === 0) return 1;
@@ -93,11 +144,13 @@ export function MapOfKnowledge3D({
   const controlsRef = useRef<OrbitControls | null>(null);
   const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
   const defaultCamRef = useRef({ position: new THREE.Vector3(8, 6, 10), target: new THREE.Vector3(0, 0, 0) });
+  const avatarTexturesRef = useRef<Map<string, THREE.Texture>>(new Map());
 
   // Scene setup once
   useEffect(() => {
     const mount = mountRef.current;
     if (!mount) return;
+    let cancelled = false;
 
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0x09090b);
@@ -256,11 +309,40 @@ export function MapOfKnowledge3D({
         pickables.push(fill);
       });
 
-      // User dots + short id preview labels
+      // User markers: STEM mini avatars (sprite) with sphere fallback + id labels
       locations.forEach((p) => {
         const isIle = p.kind === "ile";
         const colorHex = isIle ? ILE_COLOR : TAP_COLOR;
         const radius = isIle ? 0.14 : 0.11;
+        const preview =
+          p.id_preview ||
+          p.subject_label.replace(/^(user|guest|id):/, "").slice(0, 6) ||
+          "—";
+        const ud: UserData = {
+          kind: "user",
+          title: preview,
+          subtitle: `${p.subject_label} · ${p.workspace_title} · ${p.kind.toUpperCase()}`,
+        };
+
+        const tex =
+          (p.avatar_id && avatarTexturesRef.current.get(p.avatar_id)) ||
+          (p.avatar_path && avatarTexturesRef.current.get(p.avatar_path)) ||
+          null;
+
+        if (tex) {
+          const sprite = makeAvatarSprite(tex, isIle);
+          sprite.position.set(p.x * s, p.y * s, p.z * s);
+          sprite.userData = { ...ud, isAvatarSprite: true };
+          const label = makeIdLabelSprite(preview, isIle);
+          // Offset label so it sits beside the avatar sprite
+          label.position.set(0.32, 0.12, 0);
+          sprite.add(label);
+          content.add(sprite);
+          pickables.push(sprite);
+          return;
+        }
+
+        // Fallback: plain sphere when texture not yet loaded / missing
         const geo = new THREE.SphereGeometry(radius, 20, 16);
         const mat = new THREE.MeshStandardMaterial({
           color: colorHex,
@@ -271,17 +353,8 @@ export function MapOfKnowledge3D({
         });
         const mesh = new THREE.Mesh(geo, mat);
         mesh.position.set(p.x * s, p.y * s, p.z * s);
-        const preview =
-          p.id_preview ||
-          p.subject_label.replace(/^(user|guest|id):/, "").slice(0, 6) ||
-          "—";
-        mesh.userData = {
-          kind: "user",
-          title: preview,
-          subtitle: `${p.subject_label} · ${p.workspace_title} · ${p.kind.toUpperCase()}`,
-        } satisfies UserData;
+        mesh.userData = ud;
 
-        // Soft glow shell for ILE
         if (isIle) {
           const glowGeo = new THREE.SphereGeometry(radius * 1.7, 16, 12);
           const glowMat = new THREE.MeshBasicMaterial({
@@ -312,12 +385,19 @@ export function MapOfKnowledge3D({
       }
     };
 
-    // Initial build
-    rebuild(userLocations, regions);
-    setReady(true);
-
     // Store rebuild on mount for data updates without remounting whole WebGL context
     (mount as HTMLDivElement & { __rebuildMap3d?: typeof rebuild }).__rebuildMap3d = rebuild;
+
+    // Preload STEM avatars, then first rebuild (avatars replace sphere dots).
+    void loadStemAvatarTextures().then((textures) => {
+      if (cancelled) return;
+      avatarTexturesRef.current = textures;
+      rebuild(userLocations, regions);
+      setReady(true);
+    });
+    // Immediate first paint with sphere fallback until textures resolve
+    rebuild(userLocations, regions);
+    setReady(true);
 
     const onPointerMove = (event: PointerEvent) => {
       const rect = renderer.domElement.getBoundingClientRect();
@@ -382,6 +462,7 @@ export function MapOfKnowledge3D({
     window.addEventListener("resize", onResize);
 
     return () => {
+      cancelled = true;
       state.disposed = true;
       cancelAnimationFrame(frame);
       ro.disconnect();

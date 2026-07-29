@@ -24,6 +24,28 @@ export {
   KNOWLEDGE_CONFIG_STRUCT_DIM,
 } from "@/lib/knowledge-config";
 
+export type {
+  StemMiniAvatar,
+  StemMiniAvatarId,
+} from "@/lib/map-of-knowledge/stem-avatars";
+export {
+  STEM_MINI_AVATARS,
+  STEM_MINI_AVATAR_BASE_PATH,
+  getStemMiniAvatar,
+  hashStringToSeed,
+  isStemMiniAvatarId,
+  pickStemMiniAvatar,
+  resolveMapUserAvatar,
+  stemMiniAvatarCatalogSize,
+  stemMiniAvatarForSubjectId,
+  stemMiniAvatarPath,
+} from "@/lib/map-of-knowledge/stem-avatars";
+
+import {
+  pickStemMiniAvatar,
+  resolveMapUserAvatar,
+} from "@/lib/map-of-knowledge/stem-avatars";
+
 export type MapDotKind = "tap" | "ile" | "standard";
 
 /** Catalog entry for embedding models shown on the Map of Knowledge. */
@@ -152,6 +174,10 @@ export interface MapUserLocation {
   /** Short user/guest id preview for map labels (e.g. first 6 hex chars). */
   id_preview: string;
   kind: MapDotKind;
+  /** STEM mini avatar catalog id (explicit or deterministically assigned). */
+  avatar_id: string;
+  /** Public path for the mini avatar asset. */
+  avatar_path: string;
   vector: number[];
   x: number;
   y: number;
@@ -485,6 +511,49 @@ export function filterEnabledRegions<T extends { id: string }>(
   return regions.filter((r) => set.has(r.id));
 }
 
+/** Workspace-grouped region list for Map of Knowledge collapsible toggles. */
+export type MapRegionWorkspaceGroup<T extends {
+  id: string;
+  workspace_id: string;
+  workspace_title: string;
+  name: string;
+} = MapRegion> = {
+  workspace_id: string;
+  workspace_title: string;
+  regions: T[];
+};
+
+/**
+ * Group map regions by workspace for collapsible UI.
+ * Pure — order of workspaces is title A–Z; region order within a group is stable input order.
+ */
+export function groupRegionsByWorkspace<
+  T extends {
+    id: string;
+    workspace_id: string;
+    workspace_title: string;
+    name: string;
+  },
+>(regions: readonly T[]): MapRegionWorkspaceGroup<T>[] {
+  const map = new Map<string, MapRegionWorkspaceGroup<T>>();
+  for (const region of regions) {
+    const wsId = (region.workspace_id || "").trim() || "unknown";
+    let group = map.get(wsId);
+    if (!group) {
+      group = {
+        workspace_id: wsId,
+        workspace_title: (region.workspace_title || "").trim() || "Workspace",
+        regions: [],
+      };
+      map.set(wsId, group);
+    }
+    group.regions.push(region);
+  }
+  return Array.from(map.values()).sort((a, b) =>
+    a.workspace_title.localeCompare(b.workspace_title, undefined, { sensitivity: "base" }),
+  );
+}
+
 /**
  * Short preview of a user/guest UUID for map labels.
  * Prefers subject user id, then guest id, then snapshot id.
@@ -506,7 +575,7 @@ export function shortUserIdPreview(input: {
 }
 
 /**
- * Pick up to `count` region ids at random for default-on map state.
+ * Pick up to `count` region ids at random from a flat list.
  * Remaining regions start disabled (user can toggle them back on).
  */
 export function pickRandomEnabledRegionIds(
@@ -524,6 +593,48 @@ export function pickRandomEnabledRegionIds(
     shuffled[j] = tmp;
   }
   return shuffled.slice(0, count);
+}
+
+export type DefaultRegionPickResult = {
+  /** Region ids enabled by default (all from `workspace_id`). */
+  regionIds: string[];
+  /** Workspace that was randomly selected as the default highlight source. */
+  workspace_id: string | null;
+};
+
+/**
+ * Default map highlight: pick one workspace at random, then enable up to
+ * `count` regions from that workspace only (never a mix across workspaces).
+ */
+export function pickDefaultEnabledRegionsFromOneWorkspace(
+  regions: readonly { id: string; workspace_id: string }[],
+  count = 3,
+  random: () => number = Math.random,
+): DefaultRegionPickResult {
+  if (!regions.length) {
+    return { regionIds: [], workspace_id: null };
+  }
+
+  const byWorkspace = new Map<string, string[]>();
+  for (const region of regions) {
+    const wsId = (region.workspace_id || "").trim() || "unknown";
+    const list = byWorkspace.get(wsId);
+    if (list) list.push(region.id);
+    else byWorkspace.set(wsId, [region.id]);
+  }
+
+  const workspaceIds = Array.from(byWorkspace.keys());
+  const workspace_id =
+    workspaceIds[Math.floor(random() * workspaceIds.length)] ?? null;
+  if (!workspace_id) {
+    return { regionIds: [], workspace_id: null };
+  }
+
+  const candidateIds = byWorkspace.get(workspace_id) || [];
+  return {
+    regionIds: pickRandomEnabledRegionIds(candidateIds, count, random),
+    workspace_id,
+  };
 }
 
 export function aggregatePublicPowStats(
@@ -662,6 +773,8 @@ export function buildMapOfKnowledgePayload(input: {
       subject_guest_user_id: p.subject_guest_user_id,
       id: p.id,
     });
+    // Deterministic STEM avatar per subject (no DB field required for legacy rows).
+    const avatar = resolveMapUserAvatar({ id: p.id });
     return {
       id: p.id,
       workspace_id: p.workspace_id,
@@ -673,6 +786,8 @@ export function buildMapOfKnowledgePayload(input: {
           : `id:${id_preview}`,
       id_preview,
       kind,
+      avatar_id: avatar.id,
+      avatar_path: avatar.path,
       vector: p.vector,
       x: coord.x,
       y: coord.y,
@@ -746,10 +861,13 @@ export function buildMapOfKnowledgePayload(input: {
   };
 }
 
-/** Random anonymous guest display identity for Map placement UI. */
+/** Random anonymous guest display identity for Map placement UI (name + STEM mini avatar). */
 export function generateAnonymousGuestIdentity(seed?: number): {
   display_name: string;
   guest_token: string;
+  avatar_id: string;
+  avatar_path: string;
+  avatar_label: string;
 } {
   const adjectives = [
     "Silent",
@@ -782,6 +900,8 @@ export function generateAnonymousGuestIdentity(seed?: number): {
   const adj = adjectives[n % adjectives.length];
   const noun = nouns[Math.floor(n / adjectives.length) % nouns.length];
   const suffix = (n % 9000) + 1000;
+  // Offset seed so avatar variety is not locked 1:1 to the adjective index alone.
+  const avatar = pickStemMiniAvatar(Math.floor(n / 17) + n * 3);
   const guest_token =
     typeof crypto !== "undefined" && "randomUUID" in crypto
       ? crypto.randomUUID()
@@ -789,6 +909,9 @@ export function generateAnonymousGuestIdentity(seed?: number): {
   return {
     display_name: `${adj} ${noun} ${suffix}`,
     guest_token,
+    avatar_id: avatar.id,
+    avatar_path: avatar.path,
+    avatar_label: avatar.label,
   };
 }
 

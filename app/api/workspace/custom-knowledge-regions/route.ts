@@ -130,12 +130,43 @@ export async function POST(req: NextRequest) {
     if (action === "create_synthetic") {
       const name = typeof body.name === "string" ? body.name : "";
       const prompt = typeof body.prompt === "string" ? body.prompt : "";
+      const rawFiles = Array.isArray(body.files) ? body.files : [];
+      const files = rawFiles
+        .map((f: Record<string, unknown>) => {
+          const fileName = typeof f.name === "string" ? f.name : "";
+          const mimeType =
+            typeof f.mimeType === "string"
+              ? f.mimeType
+              : typeof f.mime_type === "string"
+                ? f.mime_type
+                : "";
+          const data = typeof f.data === "string" ? f.data : "";
+          if (!fileName.trim() || !mimeType || !data) return null;
+          return { name: fileName.trim(), mimeType, data };
+        })
+        .filter(
+          (f: { name: string; mimeType: string; data: string } | null): f is {
+            name: string;
+            mimeType: string;
+            data: string;
+          } => Boolean(f),
+        )
+        .slice(0, 5);
+      const fileIds = Array.isArray(body.fileIds)
+        ? body.fileIds.filter((id: unknown): id is string => typeof id === "string" && id.trim().length > 0)
+        : Array.isArray(body.file_ids)
+          ? body.file_ids.filter((id: unknown): id is string => typeof id === "string" && id.trim().length > 0)
+          : [];
+
       if (!name.trim()) {
         return NextResponse.json({ error: "name is required" }, { status: 400 });
       }
-      if (!prompt.trim()) {
+      if (!prompt.trim() && files.length === 0 && fileIds.length === 0) {
         return NextResponse.json(
-          { error: "prompt is required for synthetic knowledge region generation" },
+          {
+            error:
+              "prompt or files are required for synthetic knowledge region generation",
+          },
           { status: 400 },
         );
       }
@@ -144,6 +175,8 @@ export async function POST(req: NextRequest) {
         workspaceId,
         name,
         prompt,
+        files,
+        fileIds,
         description: typeof body.description === "string" ? body.description : null,
         createdBy: auth.user.id,
       });
@@ -152,6 +185,7 @@ export async function POST(req: NextRequest) {
         workspace_id: workspaceId,
         model,
         source: "synthetic:grok-4.5",
+        files_used: files.length + fileIds.length,
         spec: {
           name: spec.name,
           subject_count: spec.subject_count,

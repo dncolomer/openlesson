@@ -136,3 +136,154 @@ describe("synthetic knowledge region (shipped knowledgecfg path)", () => {
     expect(cos).toBeLessThan(0.999);
   });
 });
+
+describe("synthetic region file-aware create path (shipped store)", () => {
+  it("buildSyntheticRegionGenerationPrompt merges prompt + file excerpts", async () => {
+    const {
+      buildSyntheticRegionGenerationPrompt,
+      decodeSyntheticRegionFileText,
+    } = await import("@/lib/pow-api/custom-verification-model-store");
+
+    const textBody = "Rubric: incident commander must run blameless postmortems.";
+    const data = Buffer.from(textBody, "utf8").toString("base64");
+    const excerpt = decodeSyntheticRegionFileText({
+      name: "rubric.md",
+      mimeType: "text/markdown",
+      data,
+    });
+    expect(excerpt).toContain("blameless postmortems");
+
+    const combined = buildSyntheticRegionGenerationPrompt({
+      prompt: "Senior SRE region",
+      files: [
+        {
+          name: "rubric.md",
+          mimeType: "text/markdown",
+          textExcerpt: excerpt,
+        },
+      ],
+    });
+    expect(combined).toContain("Senior SRE region");
+    expect(combined).toContain("rubric.md");
+    expect(combined).toContain("blameless postmortems");
+
+    const filesOnly = buildSyntheticRegionGenerationPrompt({
+      prompt: "",
+      files: [{ name: "only.txt", mimeType: "text/plain", textExcerpt: "solo content" }],
+    });
+    expect(filesOnly).toContain("solo content");
+    expect(filesOnly).toContain("only.txt");
+  });
+
+  it("createSyntheticCustomVerificationModel with files + injected profile persists geometry", async () => {
+    const { createSyntheticCustomVerificationModel } = await import(
+      "@/lib/pow-api/custom-verification-model-store"
+    );
+
+    let inserted: Record<string, unknown> | null = null;
+    const supabase = {
+      from(table: string) {
+        expect(table).toBe("custom_verification_models");
+        return {
+          insert(payload: Record<string, unknown>) {
+            inserted = payload;
+            return {
+              select() {
+                return {
+                  async maybeSingle() {
+                    return {
+                      data: {
+                        id: "region-file-1",
+                        workspace_id: payload.workspace_id,
+                        name: payload.name,
+                        description: payload.description,
+                        embedding_model_id: payload.embedding_model_id,
+                        dim: payload.dim,
+                        centroid: payload.centroid,
+                        cohort_cohesion: payload.cohort_cohesion,
+                        mean_radius: payload.mean_radius,
+                        cosine_threshold: payload.cosine_threshold,
+                        subject_count: payload.subject_count,
+                        subjects: payload.subjects,
+                        created_by: payload.created_by,
+                        created_at: "2026-01-01T00:00:00.000Z",
+                        updated_at: payload.updated_at,
+                      },
+                      error: null,
+                    };
+                  },
+                };
+              },
+            };
+          },
+        };
+      },
+    };
+
+    const fileText = "Competency: strong tool traces, calm runbooks, high GHC.";
+    const result = await createSyntheticCustomVerificationModel(supabase as never, {
+      workspaceId: "ws-files",
+      name: "File-backed SRE bar",
+      prompt: "",
+      files: [
+        {
+          name: "sre-bar.txt",
+          mimeType: "text/plain",
+          data: Buffer.from(fileText, "utf8").toString("base64"),
+        },
+      ],
+      // Inject profile so CI never hits live Grok / xAI upload.
+      profile: {
+        name: "File-backed SRE bar",
+        description: "From sre-bar.txt",
+        verification_score: 88,
+        augmentation_score: 80,
+        optimization_score: 72,
+        ghc_score: 70,
+        strengths: ["runbook-discipline", "tool-traces"],
+        friction_patterns: ["alert-noise"],
+        preferred_modalities: ["tool", "speech"],
+        pow_types: ["tool", "screen", "speech"],
+        tool_names: ["pager", "console"],
+      },
+      createdBy: "user-1",
+    });
+
+    expect(result.model.id).toBe("region-file-1");
+    expect(result.model.name).toBe("File-backed SRE bar");
+    expect(result.model.description).toContain("[synthetic:grok-4.5]");
+    expect(result.model.centroid.length).toBe(KNOWLEDGE_CONFIG_DIM);
+    expect(result.spec.centroid).toHaveLength(KNOWLEDGE_CONFIG_DIM);
+    expect(result.spec.embedding_model_id).toBe(KNOWLEDGE_CONFIG_EMBEDDING_MODEL_ID);
+    expect(result.spec.cosine_threshold).toBeGreaterThan(0.3);
+    expect(result.spec.dim).toBe(KNOWLEDGE_CONFIG_DIM);
+
+    expect(inserted).not.toBeNull();
+    expect(inserted!.workspace_id).toBe("ws-files");
+    expect(Array.isArray(inserted!.centroid)).toBe(true);
+    expect((inserted!.centroid as number[]).length).toBe(KNOWLEDGE_CONFIG_DIM);
+    expect(String(inserted!.description)).toContain("[synthetic:grok-4.5]");
+
+    // Self-score against saved centroid geometry.
+    const score = scoreAgainstCustomVerificationModel(result.spec.centroid, result.spec);
+    expect(score.in_region).toBe(true);
+  });
+
+  it("createSyntheticCustomVerificationModel rejects empty prompt and empty files", async () => {
+    const { createSyntheticCustomVerificationModel } = await import(
+      "@/lib/pow-api/custom-verification-model-store"
+    );
+    const { CustomVerificationModelError } = await import(
+      "@/lib/knowledge-config/custom-verification-model"
+    );
+
+    await expect(
+      createSyntheticCustomVerificationModel({} as never, {
+        workspaceId: "ws",
+        name: "Empty",
+        prompt: "   ",
+        files: [],
+      }),
+    ).rejects.toBeInstanceOf(CustomVerificationModelError);
+  });
+});

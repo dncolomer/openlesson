@@ -13,9 +13,10 @@ import {
 import {
   filterEnabledRegions,
   generateAnonymousGuestIdentity,
+  groupRegionsByWorkspace,
   KNOWLEDGE_CONFIG_EMBEDDING_MODEL_ID,
   parseProjectionAlgorithmId,
-  pickRandomEnabledRegionIds,
+  pickDefaultEnabledRegionsFromOneWorkspace,
   PROJECTION_ALGORITHM_OPTIONS,
   reprojectMapLayout,
   type MapOfKnowledgePayload,
@@ -23,10 +24,48 @@ import {
   type MapUserLocation,
   type ProjectionAlgorithmId,
 } from "@/lib/map-of-knowledge";
+import { PRODUCT_INTENT_LABELS } from "@/lib/product-intent";
 import { MapOfKnowledge2D } from "@/components/MapOfKnowledge2D";
 import { MapOfKnowledge3D } from "@/components/MapOfKnowledge3D";
 
 type ViewMode = "2d" | "3d";
+
+/** Map placement product options — both are timed guest sessions (TAP under the hood). */
+type PlacementProductKind = "timed_explore" | "timed_drill";
+
+const PLACEMENT_PRODUCTS: Record<
+  PlacementProductKind,
+  {
+    label: string;
+    eyebrow: string;
+    shortDiff: string;
+    mintingLabel: string;
+    mintLabel: string;
+    interaction_kind: "conversational" | "exercise";
+    accent: "slate" | "amber";
+  }
+> = {
+  timed_explore: {
+    label: PRODUCT_INTENT_LABELS.timedExplore,
+    eyebrow: "Easy · lightweight",
+    shortDiff:
+      "A timed exploratory dialog — light and quick. You still think aloud; Helios keeps the conversation going as you show what you know.",
+    mintingLabel: "Minting Timed Exploration…",
+    mintLabel: "Mint Timed Exploration link",
+    interaction_kind: "conversational",
+    accent: "slate",
+  },
+  timed_drill: {
+    label: PRODUCT_INTENT_LABELS.timedDrill,
+    eyebrow: "Harder · no dialog",
+    shortDiff:
+      "A timed exercise without dialog — more complex, solo work. You still think aloud as you work through and submit your solution.",
+    mintingLabel: "Minting Timed Drill…",
+    mintLabel: "Mint Timed Drill link",
+    interaction_kind: "exercise",
+    accent: "amber",
+  },
+};
 
 export function MapOfKnowledgeClient() {
   const [data, setData] = useState<MapOfKnowledgePayload | null>(null);
@@ -39,14 +78,21 @@ export function MapOfKnowledgeClient() {
     KNOWLEDGE_CONFIG_EMBEDDING_MODEL_ID,
   );
   const [enabledRegions, setEnabledRegions] = useState<Set<string>>(new Set());
+  /** Workspace ids whose region groups are expanded in the regions panel. */
+  const [expandedRegionWorkspaces, setExpandedRegionWorkspaces] = useState<Set<string>>(
+    () => new Set(),
+  );
   const [fullscreen, setFullscreen] = useState(false);
-  const [guestName, setGuestName] = useState(() => generateAnonymousGuestIdentity(42).display_name);
+  const [guestIdentity, setGuestIdentity] = useState(() => generateAnonymousGuestIdentity(42));
+  const guestName = guestIdentity.display_name;
+  const setGuestName = (name: string) =>
+    setGuestIdentity((prev) => ({ ...prev, display_name: name }));
   const [selectedWorkspaceId, setSelectedWorkspaceId] = useState("");
   const [selectedBlockId, setSelectedBlockId] = useState("");
-  const [minting, setMinting] = useState<"tap" | "ile" | null>(null);
+  const [minting, setMinting] = useState<PlacementProductKind | null>(null);
   const [mintResult, setMintResult] = useState<{
     url: string;
-    kind: "tap" | "ile";
+    kind: PlacementProductKind;
     golden: boolean;
     guest_display_name: string;
     workspace_title: string;
@@ -76,9 +122,16 @@ export function MapOfKnowledgeClient() {
         if (payload.embedding_model_id && payload.embedding_model_id !== embeddingModelId) {
           setEmbeddingModelId(payload.embedding_model_id);
         }
-        // Only 3 regions on by default (random); rest start disabled
-        const allRegionIds = ((payload.regions || []) as MapRegion[]).map((r) => r.id);
-        setEnabledRegions(new Set(pickRandomEnabledRegionIds(allRegionIds, 3)));
+        // Default highlight: 3 regions from one randomly chosen workspace (never mixed).
+        const regions = (payload.regions || []) as MapRegion[];
+        const defaultPick = pickDefaultEnabledRegionsFromOneWorkspace(regions, 3);
+        setEnabledRegions(new Set(defaultPick.regionIds));
+        // Expand the workspace that owns the default highlights (fallback: first group).
+        const groups = groupRegionsByWorkspace(regions);
+        const expandIds = defaultPick.workspace_id
+          ? [defaultPick.workspace_id]
+          : groups.slice(0, 1).map((g) => g.workspace_id);
+        setExpandedRegionWorkspaces(new Set(expandIds));
         if (!workspaceInitRef.current) {
           workspaceInitRef.current = true;
           const firstWs = (payload.workspaces || [])[0];
@@ -193,14 +246,30 @@ export function MapOfKnowledgeClient() {
     });
   };
 
+  const regionWorkspaceGroups = useMemo(() => {
+    if (!data?.regions?.length) return [];
+    return groupRegionsByWorkspace(data.regions);
+  }, [data?.regions]);
+
+  const toggleRegionWorkspaceGroup = (workspaceId: string) => {
+    setExpandedRegionWorkspaces((prev) => {
+      const next = new Set(prev);
+      if (next.has(workspaceId)) next.delete(workspaceId);
+      else next.add(workspaceId);
+      return next;
+    });
+  };
+
   const regenerateGuest = () => {
-    setGuestName(generateAnonymousGuestIdentity().display_name);
+    // Fresh seedless identity reshuffles both display name and STEM mini avatar.
+    setGuestIdentity(generateAnonymousGuestIdentity());
     setMintResult(null);
   };
 
   const mintLink = useCallback(
-    async (kind: "tap" | "ile") => {
+    async (kind: PlacementProductKind) => {
       if (!selectedWorkspaceId || !selectedBlockId) return;
+      const product = PLACEMENT_PRODUCTS[kind];
       setMinting(kind);
       setMintError(null);
       setMintResult(null);
@@ -211,7 +280,10 @@ export function MapOfKnowledgeClient() {
           body: JSON.stringify({
             workspace_id: selectedWorkspaceId,
             block_id: selectedBlockId,
-            link_kind: kind,
+            // Technical surface is always timed TAP; product intent chooses shell.
+            link_kind: "tap",
+            interaction_kind: product.interaction_kind,
+            placement_product: kind,
             guest_display_name: guestName,
           }),
         });
@@ -223,9 +295,14 @@ export function MapOfKnowledgeClient() {
           data?.workspaces.find((w) => w.id === selectedWorkspaceId)?.title || "Workspace";
         const blockTitle =
           data?.blocks.find((b) => b.id === selectedBlockId)?.title || "Block";
+        const resultKind: PlacementProductKind =
+          json.placement_product === "timed_drill" ||
+          json.interaction_kind === "exercise"
+            ? "timed_drill"
+            : "timed_explore";
         setMintResult({
           url: json.private_url,
-          kind: json.link_kind,
+          kind: resultKind,
           golden: Boolean(json.map_dot_golden),
           guest_display_name:
             typeof json.guest_display_name === "string" && json.guest_display_name
@@ -538,40 +615,85 @@ export function MapOfKnowledgeClient() {
       className={`border border-zinc-800 bg-zinc-950/70 p-4 backdrop-blur-sm ${
         fullscreen ? "flex min-h-0 w-full flex-col md:w-72 md:shrink-0" : ""
       }`}
+      data-map-regions-panel
     >
       <p className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-500">Regions</p>
-      <p className="mt-1 text-xs text-zinc-500">Toggle regions from all public workspaces.</p>
+      <p className="mt-1 text-xs text-zinc-500">
+        Grouped by workspace — expand a field, then toggle expert regions.
+      </p>
       <ul
-        className={`mt-3 space-y-1.5 overflow-y-auto pr-1 ${
+        className={`mt-3 space-y-2 overflow-y-auto pr-1 ${
           fullscreen ? "min-h-0 flex-1" : "max-h-[min(52vh,400px)]"
         }`}
+        data-map-region-workspace-groups
       >
-        {data && data.regions.length > 0 ? (
-          data.regions.map((region) => {
-            const on = enabledRegions.has(region.id);
+        {regionWorkspaceGroups.length > 0 ? (
+          regionWorkspaceGroups.map((group) => {
+            const expanded = expandedRegionWorkspaces.has(group.workspace_id);
+            const enabledInGroup = group.regions.filter((r) =>
+              enabledRegions.has(r.id),
+            ).length;
             return (
-              <li key={region.id}>
+              <li
+                key={group.workspace_id}
+                className="rounded-sm border border-zinc-800/90 bg-black/20"
+                data-map-region-workspace-group
+                data-workspace-id={group.workspace_id}
+                data-expanded={expanded ? "true" : "false"}
+              >
                 <button
                   type="button"
-                  onClick={() => toggleRegion(region.id)}
-                  className={`flex w-full items-start gap-2 rounded-sm border px-2.5 py-2 text-left text-xs transition ${
-                    on
-                      ? "border-cyan-500/25 bg-cyan-950/20 text-zinc-200"
-                      : "border-zinc-800 bg-transparent text-zinc-500 hover:border-zinc-700"
-                  }`}
+                  onClick={() => toggleRegionWorkspaceGroup(group.workspace_id)}
+                  className="flex w-full items-center gap-2 px-2.5 py-2 text-left text-xs text-zinc-200 transition hover:bg-zinc-900/60"
+                  aria-expanded={expanded}
+                  data-map-region-workspace-toggle
                 >
-                  <span
-                    className={`mt-0.5 h-3 w-3 shrink-0 rounded-sm border ${
-                      on ? "border-cyan-400 bg-cyan-400/80" : "border-zinc-600"
+                  <ChevronDown
+                    size={14}
+                    className={`shrink-0 text-zinc-500 transition-transform ${
+                      expanded ? "rotate-0" : "-rotate-90"
                     }`}
+                    aria-hidden
                   />
-                  <span className="min-w-0">
-                    <span className="block truncate font-medium">{region.name}</span>
-                    <span className="block truncate text-[10px] text-zinc-500">
-                      {region.workspace_title}
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate font-medium text-zinc-100">
+                      {group.workspace_title}
+                    </span>
+                    <span className="block text-[10px] text-zinc-500">
+                      {enabledInGroup}/{group.regions.length} on
                     </span>
                   </span>
                 </button>
+                {expanded && (
+                  <ul className="space-y-1 border-t border-zinc-800/80 px-1.5 py-1.5" data-map-region-list>
+                    {group.regions.map((region) => {
+                      const on = enabledRegions.has(region.id);
+                      return (
+                        <li key={region.id}>
+                          <button
+                            type="button"
+                            onClick={() => toggleRegion(region.id)}
+                            className={`flex w-full items-start gap-2 rounded-sm border px-2.5 py-2 text-left text-xs transition ${
+                              on
+                                ? "border-cyan-500/25 bg-cyan-950/20 text-zinc-200"
+                                : "border-zinc-800 bg-transparent text-zinc-500 hover:border-zinc-700"
+                            }`}
+                            data-map-region-toggle
+                          >
+                            <span
+                              className={`mt-0.5 h-3 w-3 shrink-0 rounded-sm border ${
+                                on ? "border-cyan-400 bg-cyan-400/80" : "border-zinc-600"
+                              }`}
+                            />
+                            <span className="min-w-0">
+                              <span className="block truncate font-medium">{region.name}</span>
+                            </span>
+                          </button>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
               </li>
             );
           })
@@ -669,9 +791,12 @@ export function MapOfKnowledgeClient() {
           Put yourself on the map
         </h2>
         <p className="mt-2 max-w-2xl text-sm leading-relaxed text-zinc-400">
-          Pick a public workspace and block, then mint a guest session link.{" "}
-          <span className="text-zinc-300">TAP</span> places a standard slate dot;{" "}
-          <span className="text-amber-200/90">ILE</span> places a golden one.
+          Place yourself on the Map of Knowledge by running a short timed session on a public
+          workspace. Choose a{" "}
+          <span className="text-zinc-300">timed exploratory dialog</span> (easy and lightweight) or
+          a <span className="text-amber-200/90">timed exercise without dialog</span> (more complex).
+          In both cases you still <span className="text-zinc-300">think aloud</span> — then you
+          appear on the map after you practice.
         </p>
 
         <div className="mt-5 grid gap-4 lg:grid-cols-[1fr_1.05fr]">
@@ -681,21 +806,44 @@ export function MapOfKnowledgeClient() {
               <label className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-500">
                 Guest identity
               </label>
-              <div className="mt-1.5 flex gap-2">
+              <div className="mt-1.5 flex items-center gap-2">
+                <span
+                  className="relative flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full border border-zinc-700 bg-zinc-900"
+                  data-guest-avatar
+                  data-guest-avatar-id={guestIdentity.avatar_id}
+                  title={guestIdentity.avatar_label}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={guestIdentity.avatar_path}
+                    alt={guestIdentity.avatar_label}
+                    width={44}
+                    height={44}
+                    className="h-11 w-11 object-cover"
+                  />
+                </span>
                 <input
                   type="text"
                   value={guestName}
                   onChange={(e) => setGuestName(e.target.value)}
                   className="min-w-0 flex-1 rounded-sm border border-zinc-800 bg-black/40 px-3 py-2.5 text-sm text-white"
+                  aria-label="Guest display name"
                 />
                 <button
                   type="button"
                   onClick={regenerateGuest}
                   className="rounded-sm border border-zinc-700 px-3 py-2 text-xs text-zinc-300 transition hover:border-zinc-500 hover:text-white"
+                  data-guest-reshuffle
                 >
                   Reshuffle
                 </button>
               </div>
+              <p className="mt-1.5 text-[11px] leading-relaxed text-zinc-600">
+                STEM mini avatar{" "}
+                <span className="text-zinc-400">{guestIdentity.avatar_label}</span>
+                {" · "}
+                reshuffle randomizes name and icon.
+              </p>
             </div>
             <div>
               <label className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-500">
@@ -740,31 +888,35 @@ export function MapOfKnowledgeClient() {
             </p>
           </div>
 
-          {/* TAP / ILE product cards + result */}
+          {/* Timed Exploration / Timed Drill product cards + result */}
           <div className="flex flex-col gap-3">
             <div className="grid gap-3 sm:grid-cols-2">
               <button
                 type="button"
                 disabled={!selectedBlockId || minting !== null}
-                onClick={() => void mintLink("tap")}
+                onClick={() => void mintLink("timed_explore")}
                 className="group flex flex-col items-start rounded-sm border border-zinc-700 bg-zinc-950/80 p-4 text-left transition hover:border-zinc-500 hover:bg-zinc-900/80 disabled:opacity-40"
+                data-mint-timed-explore
                 data-mint-tap
               >
                 <span className="inline-flex items-center gap-2">
                   <span className="h-2.5 w-2.5 rounded-full bg-slate-400 shadow-[0_0_8px_rgba(148,163,184,0.5)]" />
                   <span className="font-mono text-[10px] uppercase tracking-[1.5px] text-zinc-500">
-                    Think Aloud Protocol
+                    {PLACEMENT_PRODUCTS.timed_explore.eyebrow}
                   </span>
                 </span>
                 <span className="mt-2 text-base font-medium text-white">
-                  {minting === "tap" ? "Minting TAP…" : "Mint TAP link"}
+                  {minting === "timed_explore"
+                    ? PLACEMENT_PRODUCTS.timed_explore.mintingLabel
+                    : PLACEMENT_PRODUCTS.timed_explore.label}
                 </span>
                 <span className="mt-1 text-xs leading-relaxed text-zinc-500">
-                  Live cognition under probe. Renders as a{" "}
-                  <span className="text-slate-300">standard slate dot</span> on the map.
+                  {PLACEMENT_PRODUCTS.timed_explore.shortDiff}
                 </span>
                 <span className="mt-3 inline-flex items-center gap-1 text-xs font-medium text-zinc-300 transition group-hover:text-white">
-                  Get private session URL
+                  {minting === "timed_explore"
+                    ? PLACEMENT_PRODUCTS.timed_explore.mintingLabel
+                    : "Get private session URL"}
                   <ExternalLink size={12} aria-hidden />
                 </span>
               </button>
@@ -772,26 +924,29 @@ export function MapOfKnowledgeClient() {
               <button
                 type="button"
                 disabled={!selectedBlockId || minting !== null}
-                onClick={() => void mintLink("ile")}
+                onClick={() => void mintLink("timed_drill")}
                 className="group flex flex-col items-start rounded-sm border border-amber-500/30 bg-amber-950/20 p-4 text-left transition hover:border-amber-400/50 hover:bg-amber-950/35 disabled:opacity-40"
-                data-mint-ile
+                data-mint-timed-drill
               >
                 <span className="inline-flex items-center gap-2">
                   <span className="h-2.5 w-2.5 rounded-full bg-amber-400 shadow-[0_0_10px_rgba(251,191,36,0.65)]" />
                   <span className="font-mono text-[10px] uppercase tracking-[1.5px] text-amber-200/70">
-                    Integrated Learning Env
+                    {PLACEMENT_PRODUCTS.timed_drill.eyebrow}
                   </span>
                 </span>
                 <span className="mt-2 text-base font-medium text-amber-50">
-                  {minting === "ile" ? "Minting ILE…" : "Mint ILE link"}
+                  {minting === "timed_drill"
+                    ? PLACEMENT_PRODUCTS.timed_drill.mintingLabel
+                    : PLACEMENT_PRODUCTS.timed_drill.label}
                 </span>
                 <span className="mt-1 text-xs leading-relaxed text-amber-100/50">
-                  Immersive practice session. Renders as a{" "}
-                  <span className="text-amber-200">golden map dot</span>.
+                  {PLACEMENT_PRODUCTS.timed_drill.shortDiff}
                 </span>
                 <span className="mt-3 inline-flex items-center gap-1 text-xs font-medium text-amber-100/90 transition group-hover:text-amber-50">
                   <Sparkles size={12} aria-hidden />
-                  Get private session URL
+                  {minting === "timed_drill"
+                    ? PLACEMENT_PRODUCTS.timed_drill.mintingLabel
+                    : "Get private session URL"}
                 </span>
               </button>
             </div>
@@ -810,7 +965,7 @@ export function MapOfKnowledgeClient() {
                 data-minted-link-card
                 data-minted-kind={mintResult.kind}
                 className={`rounded-sm border p-4 sm:p-5 ${
-                  mintResult.kind === "ile"
+                  mintResult.kind === "timed_drill"
                     ? "border-amber-500/35 bg-gradient-to-br from-amber-950/40 via-zinc-950/80 to-zinc-950/90"
                     : "border-zinc-600 bg-gradient-to-br from-zinc-900/90 via-zinc-950/90 to-zinc-950"
                 }`}
@@ -819,7 +974,7 @@ export function MapOfKnowledgeClient() {
                   <div className="flex items-start gap-3">
                     <span
                       className={`mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full border ${
-                        mintResult.kind === "ile"
+                        mintResult.kind === "timed_drill"
                           ? "border-amber-400/40 bg-amber-500/15"
                           : "border-slate-400/30 bg-slate-500/10"
                       }`}
@@ -827,7 +982,7 @@ export function MapOfKnowledgeClient() {
                     >
                       <span
                         className={`h-3 w-3 rounded-full ${
-                          mintResult.kind === "ile"
+                          mintResult.kind === "timed_drill"
                             ? "bg-amber-400 shadow-[0_0_12px_rgba(251,191,36,0.8)]"
                             : "bg-slate-400 shadow-[0_0_10px_rgba(148,163,184,0.55)]"
                         }`}
@@ -837,15 +992,15 @@ export function MapOfKnowledgeClient() {
                       <div className="flex flex-wrap items-center gap-2">
                         <span
                           className={`rounded-sm border px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-[1.5px] ${
-                            mintResult.kind === "ile"
+                            mintResult.kind === "timed_drill"
                               ? "border-amber-400/35 bg-amber-500/10 text-amber-200"
                               : "border-zinc-600 bg-zinc-800/80 text-zinc-300"
                           }`}
                         >
-                          {mintResult.kind === "ile" ? "ILE link" : "TAP link"}
+                          {PLACEMENT_PRODUCTS[mintResult.kind].label}
                         </span>
                         <span className="text-[11px] text-zinc-500">
-                          {mintResult.golden ? "Golden map dot" : "Standard map dot"}
+                          Timed guest session · map placement
                         </span>
                       </div>
                       <p className="mt-1.5 text-sm font-medium text-white">
@@ -867,7 +1022,7 @@ export function MapOfKnowledgeClient() {
                   <a
                     href={mintResult.url}
                     className={`mt-1 block break-all font-mono text-xs leading-relaxed underline-offset-2 hover:underline sm:text-sm ${
-                      mintResult.kind === "ile" ? "text-amber-200/90" : "text-cyan-300/90"
+                      mintResult.kind === "timed_drill" ? "text-amber-200/90" : "text-cyan-300/90"
                     }`}
                     title={mintResult.url}
                   >
@@ -880,7 +1035,7 @@ export function MapOfKnowledgeClient() {
                   <a
                     href={mintResult.url}
                     className={`inline-flex flex-1 items-center justify-center gap-1.5 rounded-sm px-4 py-2.5 text-sm font-medium transition sm:flex-none ${
-                      mintResult.kind === "ile"
+                      mintResult.kind === "timed_drill"
                         ? "bg-amber-400 text-black hover:bg-amber-300"
                         : "bg-white text-black hover:bg-zinc-200"
                     }`}
@@ -915,7 +1070,7 @@ export function MapOfKnowledgeClient() {
                   <span className="h-2 w-2 rounded-full bg-slate-500" />
                   <span className="h-2 w-2 rounded-full bg-amber-400/80" />
                 </span>
-                Mint a TAP or ILE link to appear on the map after you practice.
+                Mint a link, think aloud in the session, then appear on the map.
               </div>
             )}
           </div>

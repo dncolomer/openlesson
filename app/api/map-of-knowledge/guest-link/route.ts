@@ -25,14 +25,19 @@ function baseUrl(req: NextRequest) {
 /** Timed Exploration durations offered on Map of Knowledge (minutes). */
 const MAP_TIMED_EXPLORE_MINUTES = [5, 10, 30] as const;
 const MAP_TIMED_EXPLORE_DEFAULT_MINUTES = 10;
-const MAP_TIMED_DRILL_MINUTES = 20;
+/** Timed Drill durations offered on Map of Knowledge (minutes). */
+const MAP_TIMED_DRILL_MINUTES = [15, 30, 45] as const;
+const MAP_TIMED_DRILL_DEFAULT_MINUTES = 30;
 
 function parseMapPlacementMinutes(
   value: unknown,
   product: "timed_explore" | "timed_drill" | null,
 ): number {
-  if (product === "timed_drill") return MAP_TIMED_DRILL_MINUTES;
   const n = typeof value === "number" ? value : Number(value);
+  if (product === "timed_drill") {
+    if ((MAP_TIMED_DRILL_MINUTES as readonly number[]).includes(n)) return n;
+    return MAP_TIMED_DRILL_DEFAULT_MINUTES;
+  }
   if ((MAP_TIMED_EXPLORE_MINUTES as readonly number[]).includes(n)) return n;
   return MAP_TIMED_EXPLORE_DEFAULT_MINUTES;
 }
@@ -46,7 +51,8 @@ function parseMapPlacementMinutes(
  * - link_kind: "tap" | "ile" (technical; map UI uses "tap" for both product options)
  * - interaction_kind?: "conversational" | "exercise" — TAP shell (Timed Exploration vs Timed Drill)
  * - placement_product?: "timed_explore" | "timed_drill" — product label echoed in response
- * - minutes?: 5 | 10 | 30 for Timed Exploration (default 10); Timed Drill fixed at 20
+ * - minutes?: 5 | 10 | 30 for Timed Exploration (default 10);
+ *             15 | 30 | 45 for Timed Drill (default 30)
  * - guest_display_name?
  */
 export async function POST(req: NextRequest) {

@@ -652,21 +652,33 @@ describe("map-of-knowledge product surfaces", () => {
     expect(clientSrc).toContain("data-mint-timed-explore");
     expect(clientSrc).toContain("data-mint-timed-drill");
     expect(clientSrc).toContain("interaction_kind");
-    // Timed Exploration duration picker lives inside the Timed Exploration card
+    // Timed Exploration + Timed Drill duration pickers live inside their product cards
     expect(clientSrc).toContain("data-timed-explore-duration-picker");
     expect(clientSrc).toContain("data-mint-timed-explore-card");
     expect(clientSrc).toContain("TIMED_EXPLORE_DURATION_OPTIONS");
     expect(clientSrc).toContain("timedExploreMinutes");
+    expect(clientSrc).toContain("data-timed-drill-duration-picker");
+    expect(clientSrc).toContain("data-mint-timed-drill-card");
+    expect(clientSrc).toContain("TIMED_DRILL_DURATION_OPTIONS");
+    expect(clientSrc).toContain("timedDrillMinutes");
     expect(clientSrc).toContain("minutes");
-    // Duration options are nested under the explore card (not a separate top section)
+    // Duration options are nested under each product card
     const exploreCardIdx = clientSrc.indexOf("data-mint-timed-explore-card");
-    const durationPickerIdx = clientSrc.indexOf("data-timed-explore-duration-picker");
+    const exploreDurationIdx = clientSrc.indexOf("data-timed-explore-duration-picker");
     expect(exploreCardIdx).toBeGreaterThan(-1);
-    expect(durationPickerIdx).toBeGreaterThan(exploreCardIdx);
+    expect(exploreDurationIdx).toBeGreaterThan(exploreCardIdx);
+    const drillCardIdx = clientSrc.indexOf("data-mint-timed-drill-card");
+    const drillDurationIdx = clientSrc.indexOf("data-timed-drill-duration-picker");
+    expect(drillCardIdx).toBeGreaterThan(-1);
+    expect(drillDurationIdx).toBeGreaterThan(drillCardIdx);
+    // Drill offers 15 / 30 / 45 (not the explore set)
+    expect(clientSrc).toMatch(/TIMED_DRILL_DURATION_OPTIONS\s*=\s*\[\s*15\s*,\s*30\s*,\s*45\s*\]/);
     const guestApiSrc = readFileSync(guestApi, "utf8");
     expect(guestApiSrc).toContain("MAP_TIMED_EXPLORE_MINUTES");
+    expect(guestApiSrc).toContain("MAP_TIMED_DRILL_MINUTES");
     expect(guestApiSrc).toContain("parseMapPlacementMinutes");
     expect(guestApiSrc).toMatch(/minutes:\s*minutes|minutes,/);
+    expect(guestApiSrc).toMatch(/MAP_TIMED_DRILL_MINUTES\s*=\s*\[\s*15\s*,\s*30\s*,\s*45\s*\]/);
     expect(clientSrc).not.toMatch(/Mint TAP link|Mint ILE link|Think Aloud Protocol|Integrated Learning Env|Socratic/);
     expect(clientSrc).toMatch(/think aloud/i);
     expect(clientSrc).toMatch(/exploratory dialog|lightweight/i);

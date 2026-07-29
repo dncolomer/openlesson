@@ -42,8 +42,11 @@ type PlacementProductKind = "timed_explore" | "timed_drill";
 const TIMED_EXPLORE_DURATION_OPTIONS = [5, 10, 30] as const;
 type TimedExploreDurationMinutes = (typeof TIMED_EXPLORE_DURATION_OPTIONS)[number];
 const TIMED_EXPLORE_DURATION_DEFAULT: TimedExploreDurationMinutes = 10;
-/** Fixed Timed Drill duration (not choosable on this surface). */
-const TIMED_DRILL_DURATION_MINUTES = 20;
+
+/** Allowed Timed Drill durations on Map of Knowledge (minutes). */
+const TIMED_DRILL_DURATION_OPTIONS = [15, 30, 45] as const;
+type TimedDrillDurationMinutes = (typeof TIMED_DRILL_DURATION_OPTIONS)[number];
+const TIMED_DRILL_DURATION_DEFAULT: TimedDrillDurationMinutes = 30;
 
 function parseTimedExploreDurationMinutes(
   value: unknown,
@@ -52,6 +55,16 @@ function parseTimedExploreDurationMinutes(
   const n = typeof value === "number" ? value : Number(value);
   return (TIMED_EXPLORE_DURATION_OPTIONS as readonly number[]).includes(n)
     ? (n as TimedExploreDurationMinutes)
+    : fallback;
+}
+
+function parseTimedDrillDurationMinutes(
+  value: unknown,
+  fallback: TimedDrillDurationMinutes = TIMED_DRILL_DURATION_DEFAULT,
+): TimedDrillDurationMinutes {
+  const n = typeof value === "number" ? value : Number(value);
+  return (TIMED_DRILL_DURATION_OPTIONS as readonly number[]).includes(n)
+    ? (n as TimedDrillDurationMinutes)
     : fallback;
 }
 
@@ -117,6 +130,9 @@ export function MapOfKnowledgeClient() {
   /** Timed Exploration session length (5 / 10 / 30 min) chosen before minting. */
   const [timedExploreMinutes, setTimedExploreMinutes] =
     useState<TimedExploreDurationMinutes>(TIMED_EXPLORE_DURATION_DEFAULT);
+  /** Timed Drill session length (15 / 30 / 45 min) chosen before minting. */
+  const [timedDrillMinutes, setTimedDrillMinutes] =
+    useState<TimedDrillDurationMinutes>(TIMED_DRILL_DURATION_DEFAULT);
   const [minting, setMinting] = useState<PlacementProductKind | null>(null);
   const [mintResult, setMintResult] = useState<{
     url: string;
@@ -351,7 +367,7 @@ export function MapOfKnowledgeClient() {
       const minutes =
         kind === "timed_explore"
           ? parseTimedExploreDurationMinutes(timedExploreMinutes)
-          : TIMED_DRILL_DURATION_MINUTES;
+          : parseTimedDrillDurationMinutes(timedDrillMinutes);
       setMinting(kind);
       setMintError(null);
       setMintResult(null);
@@ -406,7 +422,14 @@ export function MapOfKnowledgeClient() {
         setMinting(null);
       }
     },
-    [selectedWorkspaceId, selectedBlockId, guestName, data, timedExploreMinutes],
+    [
+      selectedWorkspaceId,
+      selectedBlockId,
+      guestName,
+      data,
+      timedExploreMinutes,
+      timedDrillMinutes,
+    ],
   );
 
   const copyMintedLink = useCallback(async () => {
@@ -1141,12 +1164,11 @@ export function MapOfKnowledgeClient() {
                 </button>
               </div>
 
-              <button
-                type="button"
-                disabled={!selectedBlockId || minting !== null}
-                onClick={() => void mintLink("timed_drill")}
-                className="group flex flex-col items-start rounded-sm border border-amber-500/30 bg-amber-950/20 p-4 text-left transition hover:border-amber-400/50 hover:bg-amber-950/35 disabled:opacity-40"
-                data-mint-timed-drill
+              {/* Timed Drill card: duration options (15 / 30 / 45) inside the box */}
+              <div
+                className="flex flex-col rounded-sm border border-amber-500/30 bg-amber-950/20 p-4 transition hover:border-amber-400/50"
+                data-mint-timed-drill-card
+                data-timed-drill-minutes={timedDrillMinutes}
               >
                 <span className="inline-flex items-center gap-2">
                   <span className="h-2.5 w-2.5 rounded-full bg-amber-400 shadow-[0_0_10px_rgba(251,191,36,0.65)]" />
@@ -1155,20 +1177,61 @@ export function MapOfKnowledgeClient() {
                   </span>
                 </span>
                 <span className="mt-2 text-base font-medium text-amber-50">
-                  {minting === "timed_drill"
-                    ? PLACEMENT_PRODUCTS.timed_drill.mintingLabel
-                    : PLACEMENT_PRODUCTS.timed_drill.label}
+                  {PLACEMENT_PRODUCTS.timed_drill.label}
                 </span>
                 <span className="mt-1 text-xs leading-relaxed text-amber-100/50">
                   {PLACEMENT_PRODUCTS.timed_drill.shortDiff}
                 </span>
-                <span className="mt-3 inline-flex items-center gap-1 text-xs font-medium text-amber-100/90 transition group-hover:text-amber-50">
+
+                <div className="mt-3 w-full" data-timed-drill-duration-picker>
+                  <p
+                    className="mb-1.5 font-mono text-[10px] uppercase tracking-[1.5px] text-amber-200/60"
+                    id="timed-drill-duration-label"
+                  >
+                    Session length
+                  </p>
+                  <div
+                    className="inline-flex w-full rounded-sm border border-amber-500/25 bg-black/30 p-0.5"
+                    role="group"
+                    aria-labelledby="timed-drill-duration-label"
+                    data-timed-drill-duration-options
+                  >
+                    {TIMED_DRILL_DURATION_OPTIONS.map((mins) => {
+                      const selected = timedDrillMinutes === mins;
+                      return (
+                        <button
+                          key={mins}
+                          type="button"
+                          onClick={() => setTimedDrillMinutes(mins)}
+                          disabled={minting !== null}
+                          className={`min-w-0 flex-1 rounded-sm px-2 py-1.5 font-mono text-[11px] tracking-wide transition ${
+                            selected
+                              ? "bg-amber-500/20 text-amber-50"
+                              : "text-amber-100/45 hover:text-amber-100/80"
+                          } disabled:opacity-40`}
+                          data-timed-drill-duration={mins}
+                          aria-pressed={selected}
+                        >
+                          {mins} min
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  disabled={!selectedBlockId || minting !== null}
+                  onClick={() => void mintLink("timed_drill")}
+                  className="mt-3 inline-flex w-full items-center justify-center gap-1.5 rounded-sm border border-amber-500/40 bg-amber-950/40 px-3 py-2 text-xs font-medium text-amber-50 transition hover:border-amber-400/60 hover:bg-amber-900/40 disabled:opacity-40"
+                  data-mint-timed-drill
+                >
                   <Sparkles size={12} aria-hidden />
                   {minting === "timed_drill"
                     ? PLACEMENT_PRODUCTS.timed_drill.mintingLabel
-                    : "Get private session URL"}
-                </span>
-              </button>
+                    : `Get ${timedDrillMinutes}-minute session URL`}
+                </button>
+              </div>
             </div>
 
             {mintError && (
@@ -1230,7 +1293,7 @@ export function MapOfKnowledgeClient() {
                         {mintResult.workspace_title}
                         <span className="text-zinc-700"> · </span>
                         {mintResult.block_title}
-                        {mintResult.kind === "timed_explore" && mintResult.minutes > 0 ? (
+                        {mintResult.minutes > 0 ? (
                           <>
                             <span className="text-zinc-700"> · </span>
                             <span data-minted-duration-minutes={mintResult.minutes}>

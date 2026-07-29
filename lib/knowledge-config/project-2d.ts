@@ -1,17 +1,17 @@
 /**
- * Multi-algorithm 2D projection for knowledge-config embeddings.
+ * Multi-algorithm 2D and 3D projection for knowledge-config embeddings.
  *
- * Algorithms:
+ * Algorithms (shared ids for Local 2D, Local 3D, and Global Map layout):
  * - random: fixed seeded JL-style linear map (stable global frame)
- * - pca: principal components of the current point set
- * - classical_mds: metric MDS via double-centering + top-2 eigens
+ * - pca: principal components of the current point set (top-2 / top-3)
+ * - classical_mds: metric MDS via double-centering + top-k eigens
  * - smacof: iterative metric MDS (stress majorization) seeded by classical MDS
  *
  * Distance-based methods operate on L2 distances in the high-D input space.
  */
 
 import { projectKnowledgeConfigTo2D } from "./encoder";
-import { l2Distance } from "./math";
+import { hashUnit, l2Distance } from "./math";
 import { KNOWLEDGE_CONFIG_EMBEDDING_MODEL_ID } from "./types";
 
 export type ProjectionAlgorithmId = "random" | "pca" | "classical_mds" | "smacof";
@@ -33,25 +33,29 @@ export const PROJECTION_ALGORITHM_OPTIONS: ReadonlyArray<{
     id: "random",
     label: "Random (JL)",
     shortLabel: "Random",
-    description: "Fixed seeded random linear map — stable global axes across views.",
+    description:
+      "Fixed seeded random linear map — stable global axes for 2D, Local 3D, and Global Map.",
   },
   {
     id: "pca",
     label: "PCA",
     shortLabel: "PCA",
-    description: "Principal components of the current high-D point set.",
+    description:
+      "Principal components of the current high-D point set (top-2 for 2D, top-3 for 3D/Global).",
   },
   {
     id: "classical_mds",
     label: "Classical MDS",
     shortLabel: "MDS",
-    description: "Metric MDS: double-center squared distances, top-2 eigens.",
+    description:
+      "Metric MDS: double-center squared distances, top-k eigens (k=2 plane / k=3 volume).",
   },
   {
     id: "smacof",
     label: "SMACOF",
     shortLabel: "SMACOF",
-    description: "Iterative metric MDS minimizing stress (distance-preserving).",
+    description:
+      "Iterative metric MDS minimizing stress in 2D or 3D (distance-preserving layout).",
   },
 ];
 
@@ -76,6 +80,17 @@ export function projectionFrameId(algorithm: ProjectionAlgorithmId): string {
 export interface Point2D {
   x: number;
   y: number;
+}
+
+export interface Point3D {
+  x: number;
+  y: number;
+  z: number;
+}
+
+/** Stable frame id for 3D / Global Map layouts under a named algorithm. */
+export function projectionFrameId3d(algorithm: ProjectionAlgorithmId): string {
+  return `${KNOWLEDGE_CONFIG_EMBEDDING_MODEL_ID}:ui3d:${algorithm}`;
 }
 
 // ---------------------------------------------------------------------------
@@ -447,6 +462,280 @@ export function projectVectors2D(
     x: Number.isFinite(p.x) ? p.x : 0,
     y: Number.isFinite(p.y) ? p.y : 0,
   }));
+}
+
+// ---------------------------------------------------------------------------
+// 3D algorithms (Local 3D + Global Map region-dot layout)
+// ---------------------------------------------------------------------------
+
+function finitePoint3D(x: number, y: number, z: number): Point3D {
+  return {
+    x: Number.isFinite(x) ? x : 0,
+    y: Number.isFinite(y) ? y : 0,
+    z: Number.isFinite(z) ? z : 0,
+  };
+}
+
+/**
+ * Fixed seeded JL-style map to 3D (stable global frame across views).
+ * Uses the shipped 2D random projector for x/y plus a third Rademacher axis for z.
+ */
+export function projectRandom3D(vectors: number[][]): Point3D[] {
+  return vectors.map((v) => {
+    if (!v.length || !v.every((x) => Number.isFinite(x))) return finitePoint3D(0, 0, 0);
+    try {
+      const xy = projectKnowledgeConfigTo2D(v);
+      // Third axis: independent fixed Rademacher combo (not residual of x/y).
+      let z = 0;
+      for (let i = 0; i < v.length; i++) {
+        const u = hashUnit(`${KNOWLEDGE_CONFIG_EMBEDDING_MODEL_ID}:ui3d:z:${i}`);
+        z += v[i] * ((u < 0.5 ? -1 : 1) / Math.SQRT2);
+      }
+      return finitePoint3D(xy.x, xy.y, z);
+    } catch {
+      return finitePoint3D(0, 0, 0);
+    }
+  });
+}
+
+/**
+ * PCA to 3D: center rows, eigen-decompose covariance, project onto top-3 PCs.
+ */
+export function projectPca3D(vectors: number[][]): Point3D[] {
+  const n = vectors.length;
+  if (n === 0) return [];
+  if (n === 1) return [finitePoint3D(0, 0, 0)];
+
+  const d = vectors[0]?.length ?? 0;
+  if (d === 0) return vectors.map(() => finitePoint3D(0, 0, 0));
+
+  const mean = new Array(d).fill(0);
+  for (const v of vectors) {
+    for (let j = 0; j < d; j++) mean[j] += v[j] ?? 0;
+  }
+  for (let j = 0; j < d; j++) mean[j] /= n;
+
+  const centered = vectors.map((v) => v.map((x, j) => (x ?? 0) - mean[j]));
+
+  const cov = zeros(d);
+  for (let i = 0; i < n; i++) {
+    const row = centered[i];
+    for (let a = 0; a < d; a++) {
+      const ra = row[a];
+      if (ra === 0) continue;
+      for (let b = a; b < d; b++) {
+        cov[a][b] += ra * row[b];
+      }
+    }
+  }
+  for (let a = 0; a < d; a++) {
+    for (let b = a; b < d; b++) {
+      cov[a][b] /= Math.max(1, n - 1);
+      cov[b][a] = cov[a][b];
+    }
+  }
+
+  const { values, vectors: evecs } = jacobiEigendecomposition(cov);
+  const pc0 = values[0] > 1e-12 ? 0 : -1;
+  const pc1 = values[1] > 1e-12 ? 1 : -1;
+  const pc2 = values[2] > 1e-12 ? 2 : -1;
+
+  return centered.map((row) => {
+    let x = 0;
+    let y = 0;
+    let z = 0;
+    if (pc0 >= 0) for (let j = 0; j < d; j++) x += row[j] * evecs[j][pc0];
+    if (pc1 >= 0) for (let j = 0; j < d; j++) y += row[j] * evecs[j][pc1];
+    if (pc2 >= 0) for (let j = 0; j < d; j++) z += row[j] * evecs[j][pc2];
+    return finitePoint3D(x, y, z);
+  });
+}
+
+/**
+ * Classical metric MDS to 3D (top-3 positive eigenvalues of double-centered B).
+ */
+export function projectClassicalMds3D(vectors: number[][]): Point3D[] {
+  const n = vectors.length;
+  if (n === 0) return [];
+  if (n === 1) return [finitePoint3D(0, 0, 0)];
+
+  const dist = pairwiseL2Distances(vectors);
+  const d2 = zeros(n);
+  for (let i = 0; i < n; i++) {
+    for (let j = 0; j < n; j++) {
+      d2[i][j] = dist[i][j] * dist[i][j];
+    }
+  }
+
+  const rowMean = new Array(n).fill(0);
+  const colMean = new Array(n).fill(0);
+  let grand = 0;
+  for (let i = 0; i < n; i++) {
+    for (let j = 0; j < n; j++) {
+      rowMean[i] += d2[i][j];
+      colMean[j] += d2[i][j];
+      grand += d2[i][j];
+    }
+  }
+  for (let i = 0; i < n; i++) {
+    rowMean[i] /= n;
+    colMean[i] /= n;
+  }
+  grand /= n * n;
+
+  const b = zeros(n);
+  for (let i = 0; i < n; i++) {
+    for (let j = 0; j < n; j++) {
+      b[i][j] = -0.5 * (d2[i][j] - rowMean[i] - colMean[j] + grand);
+    }
+  }
+
+  const { values, vectors: evecs } = jacobiEigendecomposition(b);
+  const s0 = Math.sqrt(Math.max(0, values[0] ?? 0));
+  const s1 = Math.sqrt(Math.max(0, values[1] ?? 0));
+  const s2 = Math.sqrt(Math.max(0, values[2] ?? 0));
+
+  const out: Point3D[] = [];
+  for (let i = 0; i < n; i++) {
+    out.push(
+      finitePoint3D(
+        (evecs[i][0] ?? 0) * s0,
+        (evecs[i][1] ?? 0) * s1,
+        (evecs[i][2] ?? 0) * s2,
+      ),
+    );
+  }
+  return out;
+}
+
+/**
+ * SMACOF in 3D: iterative metric MDS seeded by classical MDS 3D.
+ */
+export function projectSmacof3D(
+  vectors: number[][],
+  options: { maxIter?: number; epsilon?: number } = {},
+): Point3D[] {
+  const n = vectors.length;
+  if (n === 0) return [];
+  if (n === 1) return [finitePoint3D(0, 0, 0)];
+
+  const maxIter = options.maxIter ?? 40;
+  const epsilon = options.epsilon ?? 1e-7;
+  const delta = pairwiseL2Distances(vectors);
+
+  let coords = projectClassicalMds3D(vectors);
+  if (
+    coords.every(
+      (p) => Math.abs(p.x) < 1e-15 && Math.abs(p.y) < 1e-15 && Math.abs(p.z) < 1e-15,
+    )
+  ) {
+    coords = coords.map((_, i) => {
+      const t = (2 * Math.PI * i) / n;
+      return finitePoint3D(Math.cos(t) * 0.1, Math.sin(t) * 0.1, Math.sin(2 * t) * 0.05);
+    });
+  }
+
+  const stress = (pts: Point3D[]): number => {
+    let s = 0;
+    for (let i = 0; i < n; i++) {
+      for (let j = i + 1; j < n; j++) {
+        const dx = pts[i].x - pts[j].x;
+        const dy = pts[i].y - pts[j].y;
+        const dz = pts[i].z - pts[j].z;
+        const dij = Math.hypot(dx, dy, dz);
+        const e = delta[i][j] - dij;
+        s += e * e;
+      }
+    }
+    return s;
+  };
+
+  let prevStress = stress(coords);
+
+  for (let iter = 0; iter < maxIter; iter++) {
+    const b = zeros(n);
+    for (let i = 0; i < n; i++) {
+      let rowSum = 0;
+      for (let j = 0; j < n; j++) {
+        if (i === j) continue;
+        const dx = coords[i].x - coords[j].x;
+        const dy = coords[i].y - coords[j].y;
+        const dz = coords[i].z - coords[j].z;
+        const dij = Math.hypot(dx, dy, dz);
+        if (dij < 1e-12) continue;
+        const bij = -delta[i][j] / dij;
+        b[i][j] = bij;
+        rowSum += bij;
+      }
+      b[i][i] = -rowSum;
+    }
+
+    const next: Point3D[] = [];
+    for (let i = 0; i < n; i++) {
+      let x = 0;
+      let y = 0;
+      let z = 0;
+      for (let j = 0; j < n; j++) {
+        x += b[i][j] * coords[j].x;
+        y += b[i][j] * coords[j].y;
+        z += b[i][j] * coords[j].z;
+      }
+      next.push({ x: x / n, y: y / n, z: z / n });
+    }
+
+    let mx = 0;
+    let my = 0;
+    let mz = 0;
+    for (const p of next) {
+      mx += p.x;
+      my += p.y;
+      mz += p.z;
+    }
+    mx /= n;
+    my /= n;
+    mz /= n;
+    for (const p of next) {
+      p.x -= mx;
+      p.y -= my;
+      p.z -= mz;
+    }
+
+    const s = stress(next);
+    coords = next;
+    if (Math.abs(prevStress - s) < epsilon * (1 + prevStress)) break;
+    prevStress = s;
+  }
+
+  return coords.map((p) => finitePoint3D(p.x, p.y, p.z));
+}
+
+/**
+ * Project high-D vectors to 3D with the named algorithm.
+ * Used by Local Map 3D, Global Map region layout, and joint reproject.
+ * All returned coordinates are finite.
+ */
+export function projectVectors3D(
+  vectors: number[][],
+  algorithm: ProjectionAlgorithmId = "pca",
+): Point3D[] {
+  if (!vectors.length) return [];
+  let coords: Point3D[];
+  switch (algorithm) {
+    case "random":
+      coords = projectRandom3D(vectors);
+      break;
+    case "classical_mds":
+      coords = projectClassicalMds3D(vectors);
+      break;
+    case "smacof":
+      coords = projectSmacof3D(vectors);
+      break;
+    case "pca":
+    default:
+      coords = projectPca3D(vectors);
+      break;
+  }
+  return coords.map((p) => finitePoint3D(p.x, p.y, p.z));
 }
 
 // ---------------------------------------------------------------------------

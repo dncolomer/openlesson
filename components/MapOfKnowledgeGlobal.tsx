@@ -9,6 +9,7 @@ import {
   globalMapRegionSummary,
   globalMapViewTransformAttr,
   panGlobalMapView,
+  projectGlobalMapLayoutPoint,
   zoomGlobalMapView,
   type GlobalMapEdge,
   type GlobalMapRegionNode,
@@ -37,6 +38,11 @@ export type MapOfKnowledgeGlobalProps = {
   onOpenLocalMap?: (regionId: string) => void;
   /** Optional CTA label (default: Open Local Map). */
   openLocalLabel?: string;
+  /**
+   * Multi-algo projection id used to layout region dots (x,y,z → isometric plane).
+   * Surfaces expose the shared Project control; this is for data attrs / a11y.
+   */
+  projectionAlgorithm?: string;
 };
 
 function layoutNodes(
@@ -46,15 +52,21 @@ function layoutNodes(
     return { nodes: [], width: WIDTH, height: HEIGHT };
   }
 
+  // Project multi-algo 3D coords (x,y,z) onto Global Map 2D plane so z affects layout.
+  const projected = nodes.map((n) => {
+    const p = projectGlobalMapLayoutPoint(n.x, n.y, n.z);
+    return { ...n, lx: p.lx, ly: p.ly };
+  });
+
   let minX = Infinity;
   let maxX = -Infinity;
   let minY = Infinity;
   let maxY = -Infinity;
-  for (const n of nodes) {
-    minX = Math.min(minX, n.x);
-    maxX = Math.max(maxX, n.x);
-    minY = Math.min(minY, n.y);
-    maxY = Math.max(maxY, n.y);
+  for (const n of projected) {
+    minX = Math.min(minX, n.lx);
+    maxX = Math.max(maxX, n.lx);
+    minY = Math.min(minY, n.ly);
+    maxY = Math.max(maxY, n.ly);
   }
   if (!Number.isFinite(minX)) {
     minX = -1;
@@ -81,10 +93,10 @@ function layoutNodes(
   return {
     width: WIDTH,
     height: HEIGHT,
-    nodes: nodes.map((n) => ({
+    nodes: projected.map((n) => ({
       ...n,
-      sx: WIDTH / 2 + (n.x - cx) * scale,
-      sy: HEIGHT / 2 - (n.y - cy) * scale,
+      sx: WIDTH / 2 + (n.lx - cx) * scale,
+      sy: HEIGHT / 2 - (n.ly - cy) * scale,
     })),
   };
 }
@@ -117,6 +129,7 @@ export function MapOfKnowledgeGlobal({
   onSelectRegion,
   onOpenLocalMap,
   openLocalLabel = "Open Local Map",
+  projectionAlgorithm = "pca",
 }: MapOfKnowledgeGlobalProps) {
   const [uncontrolledSelectedId, setUncontrolledSelectedId] = useState<string | null>(null);
   const [legendOpen, setLegendOpen] = useState(false);
@@ -384,6 +397,8 @@ export function MapOfKnowledgeGlobal({
       data-map-global-surface
       data-map-global-interactive="true"
       data-map-global-zoom={String(clampGlobalMapZoom(view.zoom))}
+      data-projection-algorithm={projectionAlgorithm}
+      data-map-global-projection={projectionAlgorithm}
     >
       <svg
         ref={svgRef}

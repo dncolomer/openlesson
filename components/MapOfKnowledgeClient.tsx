@@ -517,10 +517,10 @@ export function MapOfKnowledgeClient() {
         </>
       )}
 
-      {/* Project: layout algorithm for Local Map dots and Global Map region graph */}
+      {/* Project: 2D / Local 3D / Global Map multi-algo layout (x,y,z) */}
       <span className="hidden h-4 w-px bg-zinc-800 sm:block" aria-hidden />
 
-      <label className="inline-flex items-center gap-1.5">
+      <label className="inline-flex items-center gap-1.5" data-map-projection-picker>
         <span className="hidden font-mono text-[9px] uppercase tracking-[1px] text-zinc-600 sm:inline">
           Project
         </span>
@@ -530,9 +530,10 @@ export function MapOfKnowledgeClient() {
             setProjectionAlgorithm(parseProjectionAlgorithmId(e.target.value, "pca"))
           }
           className={selectClass}
-          title={activeAlgoMeta?.description || "Projection algorithm"}
-          aria-label="Projection algorithm"
+          title={activeAlgoMeta?.description || "2D / 3D / Global projection algorithm"}
+          aria-label="Projection algorithm (2D, Local 3D, and Global Map)"
           data-map-projection-select
+          data-map-3d-projection-select
         >
           {PROJECTION_ALGORITHM_OPTIONS.map((opt) => (
             <option key={opt.id} value={opt.id} title={opt.description}>
@@ -682,6 +683,7 @@ export function MapOfKnowledgeClient() {
           <MapOfKnowledgeGlobal
             userLocations={projectedUsers}
             regions={visibleRegions}
+            projectionAlgorithm={projectionAlgorithm}
             fill={fullscreen}
             className={fullscreen ? "relative z-[1] h-full min-h-0 flex-1" : "relative z-[1]"}
             selectedRegionId={globalSelectedRegionId}
@@ -694,6 +696,7 @@ export function MapOfKnowledgeClient() {
           <MapOfKnowledge3D
             userLocations={projectedUsers}
             regions={visibleRegions}
+            projectionAlgorithm={projectionAlgorithm}
             fill={fullscreen}
             className={fullscreen ? "relative z-[1] h-full min-h-0 flex-1" : "relative z-[1]"}
           />

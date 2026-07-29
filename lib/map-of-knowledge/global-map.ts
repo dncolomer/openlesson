@@ -23,9 +23,11 @@ export type GlobalMapRegionNode = {
   name: string;
   workspace_id: string;
   workspace_title: string;
-  /** Layout position (from projected embedding coords). */
+  /** Layout position (from multi-algo 3D projected embedding coords). */
   x: number;
   y: number;
+  /** Depth from multi-algo 3D projector (used for Global Map isometric layout). */
+  z: number;
   /** High-D radius used for membership (mean_radius). */
   radius: number;
   inside_count: number;
@@ -332,6 +334,7 @@ export function buildGlobalMapModel(
       workspace_title: region.workspace_title,
       x: Number.isFinite(region.x) ? region.x : 0,
       y: Number.isFinite(region.y) ? region.y : 0,
+      z: Number.isFinite(region.z) ? region.z : 0,
       radius: regionMembershipRadius(region),
       inside_count: counts.inside_count,
       near_count: counts.near_count,
@@ -350,6 +353,29 @@ export function formatGlobalMapDistance(distance: number): string {
   if (distance < 0.01) return "0.00";
   if (distance < 10) return distance.toFixed(2);
   return distance.toFixed(1);
+}
+
+/**
+ * Map multi-algo 3D layout coords to a 2D Global Map plane (oblique/isometric-ish).
+ * Pure — so unit tests can assert z influences screen layout without mounting SVG.
+ *
+ *   lx = x * cos30 − y * cos30
+ *   ly = x * sin30 + y * sin30 − z
+ */
+export function projectGlobalMapLayoutPoint(
+  x: number,
+  y: number,
+  z: number = 0,
+): { lx: number; ly: number } {
+  const COS30 = Math.sqrt(3) / 2;
+  const SIN30 = 0.5;
+  const px = Number.isFinite(x) ? x : 0;
+  const py = Number.isFinite(y) ? y : 0;
+  const pz = Number.isFinite(z) ? z : 0;
+  return {
+    lx: px * COS30 - py * COS30,
+    ly: px * SIN30 + py * SIN30 - pz,
+  };
 }
 
 /** SVG pan/zoom state for Global Map interaction (screen-space transform). */

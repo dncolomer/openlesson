@@ -9,7 +9,7 @@ import {
   KNOWLEDGE_CONFIG_SEM_DIM,
   KNOWLEDGE_CONFIG_STRUCT_DIM,
   parseProjectionAlgorithmId,
-  projectVectors2D,
+  projectVectors3D as projectVectors3DMulti,
   type ProjectionAlgorithmId,
 } from "@/lib/knowledge-config";
 
@@ -64,6 +64,7 @@ export {
   globalMapRegionSummary,
   globalMapViewTransformAttr,
   panGlobalMapView,
+  projectGlobalMapLayoutPoint,
   regionCentroidDistance,
   regionMembershipRadius,
   workspaceKnowledgeToGlobalMapInputs,
@@ -391,34 +392,15 @@ export function mapDotIsGolden(kind: MapDotKind): boolean {
 }
 
 /**
- * Project high-D vectors with a named knowledge-config algorithm.
- * - `pca`: full 3D PCA (top-3 PCs)
- * - other algorithms: shipped 2D layout (random / MDS / SMACOF) + soft residual height as z
- *   so 3D explore still has depth while the primary plane matches the algorithm.
+ * Project high-D vectors with a named knowledge-config 3D algorithm.
+ * Shared by Local Map 3D and Global Map region-dot layout (finite x, y, z).
  */
 export function projectMapVectors(
   vectors: number[][],
   algorithm: ProjectionAlgorithmId | string = "pca",
 ): MapPoint3D[] {
   const algo = parseProjectionAlgorithmId(algorithm, "pca");
-  if (algo === "pca") return projectVectors3D(vectors);
-
-  const xy = projectVectors2D(vectors, algo);
-  return xy.map((p, i) => {
-    const v = vectors[i] || [];
-    let z = 0;
-    let n = 0;
-    for (let j = 2; j < v.length; j += 3) {
-      z += v[j] ?? 0;
-      n += 1;
-    }
-    z = n > 0 ? z / n : 0;
-    return {
-      x: p.x,
-      y: p.y,
-      z: Number.isFinite(z) ? z : 0,
-    };
-  });
+  return projectVectors3D(vectors, algo);
 }
 
 /**
@@ -449,127 +431,19 @@ export function reprojectMapLayout(input: {
 }
 
 /**
- * Project high-D vectors to 3D via PCA (top-3 principal components).
- * Reuses the same Jacobi path as knowledge-config 2D projection.
+ * Project high-D vectors to 3D via the selected multi-algo projector
+ * (PCA / Classical MDS / SMACOF / Random). Defaults to PCA.
  */
-export function projectVectors3D(vectors: number[][]): MapPoint3D[] {
-  const n = vectors.length;
-  if (n === 0) return [];
-  if (n === 1) return [{ x: 0, y: 0, z: 0 }];
-
-  const d = vectors[0]?.length ?? 0;
-  if (d === 0) return vectors.map(() => ({ x: 0, y: 0, z: 0 }));
-
-  const mean = new Array(d).fill(0);
-  for (const v of vectors) {
-    for (let j = 0; j < d; j++) mean[j] += v[j] ?? 0;
-  }
-  for (let j = 0; j < d; j++) mean[j] /= n;
-
-  const centered = vectors.map((v) => v.map((x, j) => (x ?? 0) - mean[j]));
-
-  const cov: number[][] = Array.from({ length: d }, () => new Array(d).fill(0));
-  for (let i = 0; i < n; i++) {
-    const row = centered[i];
-    for (let a = 0; a < d; a++) {
-      const ra = row[a];
-      if (ra === 0) continue;
-      for (let b = a; b < d; b++) {
-        cov[a][b] += ra * row[b];
-      }
-    }
-  }
-  for (let a = 0; a < d; a++) {
-    for (let b = a; b < d; b++) {
-      cov[a][b] /= Math.max(1, n - 1);
-      cov[b][a] = cov[a][b];
-    }
-  }
-
-  // Local Jacobi (same algorithm as project-2d) — keep dependency free for client bundles.
-  const { values, vectors: evecs } = jacobiSymmetric(cov);
-  const pc0 = values[0] > 1e-12 ? 0 : -1;
-  const pc1 = values[1] > 1e-12 ? 1 : -1;
-  const pc2 = values[2] > 1e-12 ? 2 : -1;
-
-  return centered.map((row) => {
-    let x = 0;
-    let y = 0;
-    let z = 0;
-    if (pc0 >= 0) for (let j = 0; j < d; j++) x += row[j] * evecs[j][pc0];
-    if (pc1 >= 0) for (let j = 0; j < d; j++) y += row[j] * evecs[j][pc1];
-    if (pc2 >= 0) for (let j = 0; j < d; j++) z += row[j] * evecs[j][pc2];
-    return {
-      x: Number.isFinite(x) ? x : 0,
-      y: Number.isFinite(y) ? y : 0,
-      z: Number.isFinite(z) ? z : 0,
-    };
-  });
-}
-
-function jacobiSymmetric(matrix: number[][]): { values: number[]; vectors: number[][] } {
-  const n = matrix.length;
-  if (n === 0) return { values: [], vectors: [] };
-  if (n === 1) return { values: [matrix[0][0]], vectors: [[1]] };
-
-  const a = matrix.map((row) => row.slice());
-  const v = Array.from({ length: n }, (_, i) => {
-    const row = new Array(n).fill(0);
-    row[i] = 1;
-    return row;
-  });
-
-  for (let sweep = 0; sweep < 48; sweep++) {
-    let maxOff = 0;
-    for (let p = 0; p < n; p++) {
-      for (let q = p + 1; q < n; q++) {
-        maxOff = Math.max(maxOff, Math.abs(a[p][q]));
-        const app = a[p][p];
-        const aqq = a[q][q];
-        const apq = a[p][q];
-        if (Math.abs(apq) < 1e-18) continue;
-        const tau = (aqq - app) / (2 * apq);
-        const sign = tau >= 0 ? 1 : -1;
-        const t = sign / (Math.abs(tau) + Math.sqrt(1 + tau * tau));
-        const c = 1 / Math.sqrt(1 + t * t);
-        const s = t * c;
-        a[p][p] = c * c * app - 2 * s * c * apq + s * s * aqq;
-        a[q][q] = s * s * app + 2 * s * c * apq + c * c * aqq;
-        a[p][q] = 0;
-        a[q][p] = 0;
-        for (let i = 0; i < n; i++) {
-          if (i === p || i === q) continue;
-          const aip = a[i][p];
-          const aiq = a[i][q];
-          a[i][p] = c * aip - s * aiq;
-          a[p][i] = a[i][p];
-          a[i][q] = s * aip + c * aiq;
-          a[q][i] = a[i][q];
-        }
-        for (let i = 0; i < n; i++) {
-          const vip = v[i][p];
-          const viq = v[i][q];
-          v[i][p] = c * vip - s * viq;
-          v[i][q] = s * vip + c * viq;
-        }
-      }
-    }
-    if (maxOff < 1e-12) break;
-  }
-
-  const values = a.map((row, i) => row[i]);
-  const order = values
-    .map((val, i) => ({ val, i }))
-    .sort((x, y) => y.val - x.val);
-  const sortedValues = order.map((o) => o.val);
-  const sortedVectors = Array.from({ length: n }, () => new Array(n).fill(0));
-  for (let col = 0; col < n; col++) {
-    const src = order[col].i;
-    for (let row = 0; row < n; row++) {
-      sortedVectors[row][col] = v[row][src];
-    }
-  }
-  return { values: sortedValues, vectors: sortedVectors };
+export function projectVectors3D(
+  vectors: number[][],
+  algorithm: ProjectionAlgorithmId | string = "pca",
+): MapPoint3D[] {
+  const algo = parseProjectionAlgorithmId(algorithm, "pca");
+  return projectVectors3DMulti(vectors, algo).map((p) => ({
+    x: Number.isFinite(p.x) ? p.x : 0,
+    y: Number.isFinite(p.y) ? p.y : 0,
+    z: Number.isFinite(p.z) ? p.z : 0,
+  }));
 }
 
 /** Keep regions whose ids are in the enabled set (toggleable list). */

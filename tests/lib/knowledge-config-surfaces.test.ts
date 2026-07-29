@@ -161,7 +161,8 @@ describe("knowledge config / LWM feature surfaces", () => {
   it("Embeddings region overlay picker is always mounted with visible control surface", () => {
     const src = read("components/KnowledgeConfigTrajectoryPanel.tsx");
     expect(src).toContain("data-region-overlay-picker");
-    expect(src).toContain("Overlay knowledge regions");
+    // MoK-style collapsible region rail (label "Regions" + multi-select a11y name)
+    expect(src).toContain("Knowledge regions multi-select");
     expect(src).toContain("data-region-overlay-loading");
     expect(src).toContain("data-region-overlay-empty");
     expect(src).toContain("data-region-overlay-error");
@@ -178,6 +179,9 @@ describe("knowledge config / LWM feature surfaces", () => {
     expect(src).toContain("regionOverlays");
     expect(src).toContain("selectedRegionIds");
     expect(src).toContain("ProjectionSpaceWidget");
+    // Shared Project control also drives Local 3D / Global multi-algo layout.
+    expect(src).toContain("data-map-3d-projection-select");
+    expect(src).toContain("reprojectMapLayout");
   });
 
   it("Embeddings and LWM views do not stack duplicate page+section titles", () => {

@@ -16,6 +16,11 @@ export type MapOfKnowledge3DProps = {
   className?: string;
   /** When true, stretch to fill parent flex area. */
   fill?: boolean;
+  /**
+   * Multi-algo 3D projection id that produced x/y/z on locations + regions.
+   * Parent reprojects via projectMapVectors; this is for a11y / data attrs.
+   */
+  projectionAlgorithm?: string;
 };
 
 type HoverInfo = {
@@ -137,6 +142,7 @@ export function MapOfKnowledge3D({
   regions,
   className = "",
   fill = false,
+  projectionAlgorithm = "pca",
 }: MapOfKnowledge3DProps) {
   const mountRef = useRef<HTMLDivElement>(null);
   const [hover, setHover] = useState<HoverInfo | null>(null);
@@ -513,6 +519,9 @@ export function MapOfKnowledge3D({
     <div
       className={`relative bg-zinc-950 ${fill ? "min-h-0 flex-1" : "h-[min(58vh,480px)]"} ${className}`}
       data-map-3d-root
+      data-projection-algorithm={projectionAlgorithm}
+      data-map-3d-projection={projectionAlgorithm}
+      aria-label={`Map of Knowledge 3D embedding projection (${projectionAlgorithm})`}
     >
       <div ref={mountRef} className="absolute inset-0" />
 

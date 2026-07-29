@@ -90,7 +90,7 @@ describe("map-of-knowledge pure logic", () => {
     expect(spread).toBe(true);
   });
 
-  it("projects vectors to 3D with finite coordinates", () => {
+  it("projects vectors to 3D with finite coordinates for every selectable algorithm", () => {
     const vectors = [
       unitVector(8, 0),
       unitVector(8, 1),
@@ -98,13 +98,16 @@ describe("map-of-knowledge pure logic", () => {
       unitVector(8, 3),
       unitVector(8, 0, 1.5),
     ];
-    const coords = projectVectors3D(vectors);
-    expect(coords).toHaveLength(5);
-    for (const c of coords) {
-      expect(Number.isFinite(c.x)).toBe(true);
-      expect(Number.isFinite(c.y)).toBe(true);
-      expect(Number.isFinite(c.z)).toBe(true);
+    for (const algo of ["pca", "random", "classical_mds", "smacof"] as const) {
+      const coords = projectVectors3D(vectors, algo);
+      expect(coords).toHaveLength(5);
+      for (const c of coords) {
+        expect(Number.isFinite(c.x)).toBe(true);
+        expect(Number.isFinite(c.y)).toBe(true);
+        expect(Number.isFinite(c.z)).toBe(true);
+      }
     }
+    const coords = projectVectors3D(vectors, "pca");
     const hasZ = coords.some((c) => Math.abs(c.z) > 1e-9);
     const spread = coords.some((c, i) =>
       coords.some(
@@ -125,11 +128,16 @@ describe("map-of-knowledge pure logic", () => {
     ];
     const pca = projectMapVectors(vectors, "pca");
     const mds = projectMapVectors(vectors, "classical_mds");
+    const random = projectMapVectors(vectors, "random");
     expect(pca).toHaveLength(4);
     expect(mds).toHaveLength(4);
-    // Different algorithms generally produce different primary-plane layouts
+    // Different algorithms produce different true 3D layouts (not residual-z hack)
     const differ = pca.some(
-      (p, i) => Math.abs(p.x - mds[i].x) > 1e-6 || Math.abs(p.y - mds[i].y) > 1e-6,
+      (p, i) =>
+        Math.abs(p.x - mds[i].x) > 1e-6 ||
+        Math.abs(p.y - mds[i].y) > 1e-6 ||
+        Math.abs(p.z - mds[i].z) > 1e-6 ||
+        Math.abs(p.x - random[i].x) > 1e-6,
     );
     expect(differ).toBe(true);
 

@@ -14,11 +14,20 @@ import {
   globalMapRegionSummary,
   globalMapViewTransformAttr,
   panGlobalMapView,
+  projectGlobalMapLayoutPoint,
   regionCentroidDistance,
   workspaceKnowledgeToGlobalMapInputs,
   zoomGlobalMapView,
 } from "@/lib/map-of-knowledge/global-map";
-import type { MapRegion, MapUserLocation } from "@/lib/map-of-knowledge";
+import {
+  reprojectMapLayout,
+  type MapRegion,
+  type MapUserLocation,
+} from "@/lib/map-of-knowledge";
+import {
+  PROJECTION_ALGORITHM_IDS,
+  projectVectors3D,
+} from "@/lib/knowledge-config";
 
 const root = join(__dirname, "../..");
 
@@ -236,6 +245,7 @@ describe("Global Map focus helpers", () => {
       workspace_title: "Mathematics",
       x: 0,
       y: 0,
+      z: 0.2,
       radius: 0.4,
       inside_count: 3,
       near_count: 2,
@@ -250,6 +260,103 @@ describe("Global Map focus helpers", () => {
       radius: 0.4,
     });
     expect(globalMapRegionSummary(null)).toBeNull();
+  });
+
+  it("buildGlobalMapModel carries multi-algo 3D z into region nodes", () => {
+    const model = buildGlobalMapModel(
+      [
+        region({
+          id: "r-z",
+          name: "Depth",
+          workspace_id: "ws",
+          x: 1,
+          y: 2,
+          z: 0.75,
+          vector: unitAt(0),
+        }),
+      ],
+      [],
+    );
+    expect(model.nodes).toHaveLength(1);
+    expect(model.nodes[0].z).toBe(0.75);
+    expect(model.nodes[0].x).toBe(1);
+    expect(model.nodes[0].y).toBe(2);
+  });
+
+  it("projectGlobalMapLayoutPoint uses z so depth changes the plane", () => {
+    const a = projectGlobalMapLayoutPoint(1, 0, 0);
+    const b = projectGlobalMapLayoutPoint(1, 0, 1.5);
+    expect(Number.isFinite(a.lx) && Number.isFinite(a.ly)).toBe(true);
+    expect(Number.isFinite(b.lx) && Number.isFinite(b.ly)).toBe(true);
+    // Same x,y with different z must shift ly (isometric depth term).
+    expect(Math.abs(a.ly - b.ly)).toBeGreaterThan(1e-6);
+  });
+
+  it("reprojectMapLayout + Global nodes use multi-algo 3D for every option", () => {
+    const vectors = [
+      unitAt(0, 6, 1),
+      unitAt(1, 6, 1.2),
+      unitAt(2, 6, 0.8),
+      unitAt(3, 6, 1.5),
+    ];
+    const users = vectors.slice(0, 2).map((vector, i) =>
+      user({
+        id: `u${i}`,
+        workspace_id: "ws",
+        vector,
+        x: 0,
+        y: 0,
+        z: 0,
+      }),
+    );
+    const regions = vectors.slice(2).map((vector, i) =>
+      region({
+        id: `r${i}`,
+        name: `R${i}`,
+        workspace_id: "ws",
+        vector,
+        x: 0,
+        y: 0,
+        z: 0,
+      }),
+    );
+
+    const layouts: Array<{ algo: string; zs: number[] }> = [];
+    for (const algo of PROJECTION_ALGORITHM_IDS) {
+      const laid = reprojectMapLayout({
+        userLocations: users,
+        regions,
+        algorithm: algo,
+      });
+      for (const r of laid.regions) {
+        expect(Number.isFinite(r.x)).toBe(true);
+        expect(Number.isFinite(r.y)).toBe(true);
+        expect(Number.isFinite(r.z)).toBe(true);
+      }
+      for (const u of laid.userLocations) {
+        expect(Number.isFinite(u.x) && Number.isFinite(u.y) && Number.isFinite(u.z)).toBe(
+          true,
+        );
+      }
+      const model = buildGlobalMapModel(laid.regions, laid.userLocations);
+      expect(model.nodes.every((n) => Number.isFinite(n.z))).toBe(true);
+      layouts.push({ algo, zs: laid.regions.map((r) => r.z) });
+      // Direct multi-algo 3D entry agrees with reproject for region vectors alone
+      const direct = projectVectors3D(
+        laid.regions.map((r) => r.vector),
+        algo,
+      );
+      expect(direct).toHaveLength(laid.regions.length);
+    }
+    // At least two algorithms differ in z (true multi-option 3D, not a fixed residual).
+    const differ = layouts.some((a, i) =>
+      layouts.some(
+        (b, j) =>
+          i < j &&
+          a.zs.some((z, k) => Math.abs(z - b.zs[k]) > 1e-6),
+      ),
+    );
+    expect(differ).toBe(true);
   });
 
   it("workspaceKnowledgeToGlobalMapInputs builds MapRegion/user rows for Knowledge tab", () => {
@@ -339,14 +446,25 @@ describe("Global Map UI structure", () => {
     expect(knowledgeSrc).toContain("openLocalMapFocusedOnRegion");
     expect(knowledgeSrc).toContain("data-knowledge-global-map");
     expect(knowledgeSrc).toContain("workspaceKnowledgeToGlobalMapInputs");
-    // Project control on both Local and Global Map (MoK toolbar + workspace sidebar)
+    // Project control drives 2D, Local 3D, and Global Map multi-algo 3D layout
     expect(clientSrc).toContain("data-map-projection-select");
-    expect(clientSrc).toContain(
-      "Project: layout algorithm for Local Map dots and Global Map region graph",
-    );
+    expect(clientSrc).toContain("data-map-3d-projection-select");
+    expect(clientSrc).toContain("2D / Local 3D / Global Map multi-algo layout");
+    expect(clientSrc).toContain("projectionAlgorithm={projectionAlgorithm}");
+    expect(clientSrc).toContain("MapOfKnowledge3D");
     expect(knowledgeSrc).toContain("data-projection-algorithm-select");
+    expect(knowledgeSrc).toContain("data-map-3d-projection-select");
     expect(knowledgeSrc).toContain("reprojectMapLayout");
     expect(knowledgeSrc).toMatch(/algorithm:\s*projectionAlgorithm/);
+    expect(knowledgeSrc).toContain("projectionAlgorithm={projectionAlgorithm}");
+    expect(globalSrc).toContain("projectGlobalMapLayoutPoint");
+    expect(globalSrc).toContain("data-map-global-projection");
+    expect(globalSrc).toContain("projectionAlgorithm");
+    const threeD = join(root, "components/MapOfKnowledge3D.tsx");
+    expect(existsSync(threeD)).toBe(true);
+    const threeDSrc = readFileSync(threeD, "utf8");
+    expect(threeDSrc).toContain("data-map-3d-projection");
+    expect(threeDSrc).toContain("projectionAlgorithm");
     // Region picker matches Map of Knowledge (collapsible group + All/None + sync)
     expect(knowledgeSrc).toContain("data-map-region-workspace-group");
     expect(knowledgeSrc).toContain("data-map-region-workspace-select-all");

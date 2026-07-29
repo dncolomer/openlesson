@@ -7,12 +7,18 @@ import {
   l2Distance,
   parseProjectionAlgorithmId,
   projectClassicalMds,
+  projectClassicalMds3D,
   projectPca,
+  projectPca3D,
+  projectRandom3D,
   projectSmacof,
+  projectSmacof3D,
   projectTrajectoryAndRegions,
   projectTrajectoryPoints2D,
   projectVectors2D,
+  projectVectors3D,
   projectionFrameId,
+  projectionFrameId3d,
   type ProjectionAlgorithmId,
 } from "@/lib/knowledge-config";
 import { projectTrajectory2D } from "@/lib/pow-api/knowledge-config-store";
@@ -82,6 +88,68 @@ describe("projectVectors2D — shipped multi-algo entry", () => {
     expect(sameAs(random, mds)).toBe(false);
     // PCA and MDS both valid finite layouts; at least one pair differs.
     expect(sameAs(random, pca) && sameAs(pca, mds)).toBe(false);
+  });
+});
+
+describe("projectVectors3D — shipped multi-algo 3D entry", () => {
+  // Non-planar high-D set so z is informative under PCA / MDS.
+  const highD3 = [
+    vec(8, { 0: 0, 1: 0, 2: 0 }),
+    vec(8, { 0: 0.15, 1: 0, 2: 0.05 }),
+    vec(8, { 0: 3, 1: 0.2, 2: 0.1 }),
+    vec(8, { 0: 0.1, 1: 2.5, 2: 0.4 }),
+    vec(8, { 0: 0.5, 1: 0.5, 2: 2.8 }),
+  ];
+
+  it("every selectable algorithm yields finite x,y,z for every input", () => {
+    for (const algorithm of PROJECTION_ALGORITHM_IDS) {
+      const coords = projectVectors3D(highD3, algorithm);
+      expect(coords).toHaveLength(highD3.length);
+      for (const p of coords) {
+        expect(Number.isFinite(p.x)).toBe(true);
+        expect(Number.isFinite(p.y)).toBe(true);
+        expect(Number.isFinite(p.z)).toBe(true);
+      }
+    }
+  });
+
+  it("at least two algorithms produce different 3D layouts on non-degenerate inputs", () => {
+    const random = projectVectors3D(highD3, "random");
+    const mds = projectVectors3D(highD3, "classical_mds");
+    const pca = projectVectors3D(highD3, "pca");
+    const smacof = projectVectors3D(highD3, "smacof");
+    const sameAs = (
+      a: Array<{ x: number; y: number; z: number }>,
+      b: Array<{ x: number; y: number; z: number }>,
+    ) =>
+      a.every(
+        (p, i) =>
+          Math.abs(p.x - b[i].x) < 1e-9 &&
+          Math.abs(p.y - b[i].y) < 1e-9 &&
+          Math.abs(p.z - b[i].z) < 1e-9,
+      );
+    expect(sameAs(random, mds)).toBe(false);
+    expect(sameAs(random, pca) && sameAs(pca, mds) && sameAs(mds, smacof)).toBe(false);
+  });
+
+  it("named 3D helpers match projectVectors3D dispatch", () => {
+    expect(projectVectors3D(highD3, "pca")).toEqual(projectPca3D(highD3));
+    expect(projectVectors3D(highD3, "classical_mds")).toEqual(projectClassicalMds3D(highD3));
+    expect(projectVectors3D(highD3, "random")).toEqual(projectRandom3D(highD3));
+    // SMACOF is iterative; same entry for equal options
+    const a = projectVectors3D(highD3, "smacof");
+    const b = projectSmacof3D(highD3);
+    expect(a).toHaveLength(b.length);
+    for (let i = 0; i < a.length; i++) {
+      expect(Math.abs(a[i].x - b[i].x)).toBeLessThan(1e-9);
+      expect(Math.abs(a[i].y - b[i].y)).toBeLessThan(1e-9);
+      expect(Math.abs(a[i].z - b[i].z)).toBeLessThan(1e-9);
+    }
+  });
+
+  it("projectionFrameId3d tags the 3D frame", () => {
+    expect(projectionFrameId3d("pca")).toContain("ui3d:pca");
+    expect(projectionFrameId("pca")).toContain("ui2d:pca");
   });
 });
 

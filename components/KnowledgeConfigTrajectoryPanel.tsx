@@ -2235,7 +2235,7 @@ export function KnowledgeConfigTrajectoryPanel({
                   regions on the right.
                 </p>
 
-                <div className="w-full" data-projection-algorithm-picker>
+                <div className="w-full" data-projection-algorithm-picker data-map-projection-picker>
                   <label className="block w-full">
                     <span className="mb-1 block text-[11px] font-medium uppercase tracking-wide text-neutral-500">
                       Projection
@@ -2245,8 +2245,9 @@ export function KnowledgeConfigTrajectoryPanel({
                       onChange={(e) =>
                         setProjectionAlgorithm(parseProjectionAlgorithmId(e.target.value, "random"))
                       }
-                      aria-label="2D projection algorithm"
+                      aria-label="Projection algorithm (2D Local, 3D volume, and Global Map)"
                       data-projection-algorithm-select
+                      data-map-3d-projection-select
                       className="w-full rounded-md border border-neutral-700 bg-neutral-900 px-3 py-2 text-xs text-white outline-none transition hover:border-neutral-500 focus:border-neutral-500"
                     >
                       {PROJECTION_ALGORITHM_OPTIONS.map((opt) => (
@@ -2469,6 +2470,7 @@ export function KnowledgeConfigTrajectoryPanel({
                   <MapOfKnowledgeGlobal
                     regions={workspaceGlobalMap.regions}
                     userLocations={workspaceGlobalMap.users}
+                    projectionAlgorithm={projectionAlgorithm}
                     fill
                     className="min-h-0 flex-1"
                     selectedRegionId={globalSelectedRegionId}
